@@ -27,7 +27,7 @@
 
 #if PC_ENABLE_AUTH_LOCKOUT
 
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 
 /**
  * @brief Remaining lockout time for @p ip at @p now_ms, in milliseconds.

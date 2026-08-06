@@ -19,9 +19,9 @@
 #define PROTOCORE_NETWORK_H
 
 #include "network_drivers/network/dns/dns.h"
-#include "network_drivers/network/ip.h"
 #include "network_drivers/network/route.h" // RouteNs: carried below as network.route
 #include "protocore_config.h"
+#include "shared_primitives/ip.h"
 
 PROTO_BEGIN_DECLS
 

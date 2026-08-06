@@ -605,7 +605,7 @@ Open follow-ups discovered during the above:
 - [x] **IPv6 dual-stack** - _phase 1 landed (v4.83.0); phase 2 landed (v4.89.0); HW-verified 2026-07-19._ `PC_ENABLE_IPV6`
       enables IPv6 on the netif (`init_ipv6_physical` / `net_global_ipv6` / `pc_ipv6_ready`); the
       listeners already bind `IPADDR_TYPE_ANY`, so the server accepts v6 once an address is up. The
-      `pc_ip` address core (`network_drivers/network/ip.h`) parses / formats / classifies both
+      `pc_ip` address core (`shared_primitives/ip.h`) parses / formats / classifies both
       families (`native_ip`; RFC 4291 + 5952). Example IPv6; both cores compiled. **Phase 2
       (done):** the transport carries the peer as a protocol-agnostic family-tagged `pc_ip`
       (`pc_conn_remote_addr()` / `pc_lwip_to_ip()`), and every IP-keyed abuse-prevention feature

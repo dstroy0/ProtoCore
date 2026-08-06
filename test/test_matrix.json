@@ -143,7 +143,7 @@
     "native_ip": {
       "desc": "IP address core (network_drivers/network/pc_ip): RFC 4291 IPv4/IPv6 text parsing,\nRFC 5952 canonical formatting (:: zero-compression, v4-mapped), and scope classification\n(loopback / link-local / private-ULA / multicast / global). Pure host tests.",
       "flags": [],
-      "src": ["+<network_drivers/network/ip.c>"],
+      "src": ["+<shared_primitives/ip.c>"],
       "tests": ["test_ip"]
     },
     "native_arena": {
@@ -289,7 +289,7 @@
       "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 §5.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0"],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -349,7 +349,7 @@
       "desc": "Transport observability (PC_ENABLE_OBSERVABILITY): the pc_conn_on_event\nhook, by-reason counters, the live CONN_CLOSING gauge, and that the real lwIP\ncallbacks (recv FIN / error / timeout / local close / backpressure) drive the\nright counter. Pure L4 core - host-tested.",
       "flags": ["-DPC_ENABLE_OBSERVABILITY=1"],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/listener.c>",
         "+<server/clock/clock.c>"
@@ -366,7 +366,7 @@
       "desc": "DiffServ QoS marking (PC_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0),\nthe server-wide and UDP DSCP defaults (set/get, 6-bit mask), the per-connection setter\n(pc_conn_set_dscp writes pcb->tos on the host path), and the per-listener override\n(pc_listen_set_dscp incl. the UNSET sentinel + mask + unknown-port miss). Compiles the\nflag-guarded transport paths no other env builds. Pure L4 core - host-tested.",
       "flags": ["-DPC_ENABLE_DIFFSERV=1"],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/diffserv.c>",
@@ -389,7 +389,7 @@
         "-DPC_IP_ALLOWLIST_SLOTS=4"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -414,7 +414,7 @@
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0", "-DPC_ENABLE_OTA=1"],
       "src": [
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/network/ip.c>"
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_http_ota"]
     },
@@ -601,7 +601,7 @@
       "desc": "SSH wired through the real transport/session layers (PROTO_SSH byte-pump)",
       "flags": ["-DPC_ENABLE_SSH=1"],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -694,7 +694,7 @@
         "-DPC_ENABLE_WEBSOCKET=1"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -841,7 +841,7 @@
         "-DPC_ENABLE_WEBSOCKET=1"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -929,7 +929,7 @@
       "desc": "Telnet server (RFC 854 IAC negotiation + line editing) wired through the real\ntransport ring buffer; output checked via the tcp_write capture mock.",
       "flags": ["-DPC_ENABLE_TELNET=1"],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/presentation/telnet/telnet.c>",
@@ -986,7 +986,7 @@
       "desc": "CloudEvents v1.0 envelope (services/iot/cloudevents): the structured-JSON builder\n(over the JSON writer) + the binary-mode ce-* header reader. Pure host tests.",
       "flags": ["-DPC_ENABLE_CLOUDEVENTS=1"],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<services/iot/cloudevents/cloudevents.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
@@ -1372,7 +1372,7 @@
       "flags": ["-DPC_ENABLE_IFACE_BRIDGE=1"],
       "src": [
         "+<services/net/iface_bridge/iface_bridge.c>",
-        "+<network_drivers/network/ip.c>"
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_iface_bridge"]
     },
@@ -1634,7 +1634,7 @@
         "-DPC_ENABLE_FILE_SERVING=1"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/codec/hpack_prim/hpack_prim.c>",
         "+<network_drivers/presentation/http/http2/hpack.c>",
         "+<network_drivers/presentation/http/http3/qpack.c>",
@@ -1709,7 +1709,7 @@
         "-DPC_KEEPALIVE_MAX_REQUESTS=3"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -1753,7 +1753,7 @@
         "-DPC_ENABLE_KEEPALIVE=1"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -2047,7 +2047,7 @@
         "-DBODY_BUF_SIZE=64"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -2098,7 +2098,7 @@
       "desc": "RFC-compliance suite: builds with all enforcement at production defaults\n(PC_ENFORCE_HOST_HEADER=1) and exercises the strict behaviors.",
       "src": [
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/network/ip.c>"
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_compliance"]
     },
@@ -2223,7 +2223,7 @@
         "-DPC_ENABLE_WEBSOCKET=1"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
@@ -2271,7 +2271,7 @@
       "flags": ["-DPC_ENABLE_AUTH=1", "-DPC_ENABLE_AUTH_LOCKOUT=1"],
       "src": [
         "+<services/security/auth_lockout/auth_lockout.c>",
-        "+<network_drivers/network/ip.c>"
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_auth_lockout"]
     },
@@ -2284,7 +2284,7 @@
       ],
       "src": [
         "+<services/security/forwarded_trust/forwarded_trust.c>",
-        "+<network_drivers/network/ip.c>"
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_forwarded_trust"]
     },
@@ -2686,7 +2686,7 @@
       "flags": ["-DPC_ENABLE_HAPPY_EYEBALLS=1"],
       "src": [
         "+<services/net/happy_eyeballs/happy_eyeballs.c>",
-        "+<network_drivers/network/ip.c>"
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_happy_eyeballs"]
     },
@@ -2752,7 +2752,7 @@
       "flags": ["-DPC_ENABLE_WISUN=1"],
       "src": [
         "+<services/radio/wisun/wisun.c>",
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<mmgr/protostr.c>"
       ],
       "tests": ["test_wisun"]
@@ -2806,7 +2806,7 @@
       "desc": "Core-partitioning invariant at N=2 (PC_WORKER_COUNT=2): each worker reaps\nonly its owned slots (check_timeouts ownership). Per-worker queue routing is\nhardware-verified (the host queue mock ignores the handle).",
       "flags": ["-DPC_WORKER_COUNT=2"],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/session/worker.c>",
@@ -2904,7 +2904,7 @@
         "-DPC_ENABLE_SSE=1"
       ],
       "src": [
-        "+<network_drivers/network/ip.c>",
+        "+<shared_primitives/ip.c>",
         "${env:native_stack_http.build_src_filter}",
         "+<services/security/audit_log/audit_log.c>",
         "+<services/security/oidc/oidc.c>",

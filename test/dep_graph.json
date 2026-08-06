@@ -3575,7 +3575,7 @@
 "native_upload",
 "native_web_terminal"
 ],
-"src/network_drivers/network/ip.c": [
+"src/shared_primitives/ip.c": [
 "native_accept_gate",
 "native_application",
 "native_auth_lockout",
@@ -3607,7 +3607,7 @@
 "native_wisun",
 "native_workers"
 ],
-"src/network_drivers/network/ip.h": [
+"src/shared_primitives/ip.h": [
 "native_accept_gate",
 "native_application",
 "native_auth_lockout",

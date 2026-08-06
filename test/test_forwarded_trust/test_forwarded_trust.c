@@ -7,7 +7,7 @@
 // directly. The security-critical property under test: a direct/untrusted peer's forwarded header is
 // NEVER honored, and any malformed / obfuscated / unspecified token falls back to the TCP peer.
 
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 #include "services/security/forwarded_trust/forwarded_trust.h"
 #include <unity.h>
 

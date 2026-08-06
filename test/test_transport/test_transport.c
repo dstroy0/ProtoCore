@@ -5,7 +5,7 @@
 // ring-buffer arithmetic, timeout logic, event-queue behavior, and
 // sustained-load correctness.
 
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 #include "network_drivers/transport/listener.h"
 #include "network_drivers/transport/tcp.h"
 #include <string.h>

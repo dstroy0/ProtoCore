@@ -11,7 +11,7 @@
 // links http_parser.cpp without also linking test_http_parser.cpp, so it is where that
 // edge case's own coverage must be demonstrated for this build.
 
-#include "network_drivers/network/ip.h" // PC_IP_STR_MAX for the bracketed-IPv6 overflow case
+#include "shared_primitives/ip.h" // PC_IP_STR_MAX for the bracketed-IPv6 overflow case
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include <stdio.h>
 #include <string.h>

@@ -8,7 +8,7 @@
 // a parameter, so the host drives a synthetic clock - no real time, no ESP32. Uses the
 // default sizing (THRESHOLD=5, BASE=1000 ms, MAX=300000 ms) from protocore_config.h.
 
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 #include "services/security/auth_lockout/auth_lockout.h"
 #include <unity.h>
 

@@ -25,7 +25,7 @@
 
 #if PC_ENABLE_FORWARDED_TRUST
 
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 
 /** @brief Empty the trusted-upstream table (trust no forwarded header). */
 void pc_forwarded_trust_reset(void);

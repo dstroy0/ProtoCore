@@ -21,8 +21,8 @@
 #ifndef PROTOCORE_WISUN_H
 #define PROTOCORE_WISUN_H
 
-#include "network_drivers/network/ip.h"
 #include "protocore_config.h"
+#include "shared_primitives/ip.h"
 
 PROTO_BEGIN_DECLS
 

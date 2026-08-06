@@ -5,7 +5,7 @@
 // parsing, RFC 5952 canonical formatting, scope classification, v4-mapped handling, and
 // malformed-input rejection. Pure host tests.
 
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 #include <string.h>
 
 #include <unity.h>

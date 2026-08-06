@@ -32,7 +32,7 @@
 
 #if PC_ENABLE_IFACE_BRIDGE
 
-#include "network_drivers/network/ip.h" // pc_ip (carry the full bind address, never a flattened one)
+#include "shared_primitives/ip.h" // pc_ip (carry the full bind address, never a flattened one)
 
 // PC_BRIDGE_MAX_RULES is defined in protocore_config.h (the config owner).
 

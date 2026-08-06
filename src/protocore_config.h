@@ -895,7 +895,7 @@ from halves and is slower than the width it decomposes into"
  * When set, init_ipv6_physical() turns on IPv6 for the Wi-Fi netif (SLAAC link-local plus any
  * router-advertised global address). The TCP and UDP listeners already bind IPADDR_TYPE_ANY, so
  * the server accepts IPv6 connections the moment the interface has a v6 address; the pc_ip core
- * (network_drivers/network/ip.h) parses / formats / classifies both families. Requires an
+ * (shared_primitives/ip.h) parses / formats / classifies both families. Requires an
  * lwIP built with LWIP_IPV6=1 (the stock Arduino-ESP32 core ships it).
  */
 #ifndef PC_ENABLE_IPV6

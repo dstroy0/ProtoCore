@@ -11,7 +11,7 @@
  */
 
 #include "http_parser.h"
-#include "network_drivers/network/ip.h" // validate a recovered proxy client IP (v4/v6)
+#include "shared_primitives/ip.h" // validate a recovered proxy client IP (v4/v6)
 
 HttpReq http_pool[CONN_POOL_SLOTS];
 

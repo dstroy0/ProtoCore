@@ -15,7 +15,7 @@
 //   ACCEPT_THROTTLE_MAX 3 / PC_WINDOW 1000   PER_IP_MAX 2 / PC_WINDOW 1000 / SLOTS 4   ALLOWLIST_SLOTS 4
 // Pure host tests.
 
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/listener.h"
 #include "server/clock/clock.h"

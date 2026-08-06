@@ -21,8 +21,8 @@
 #define PROTOCORE_PHYSICAL_H
 
 #include "board_drivers/board_profiles/pc_platform.h" // PC_VENDOR_* selector (picks the L1 backend)
-#include "network_drivers/network/ip.h"
-#include "protocore_config.h" // pc_iface
+#include "protocore_config.h"                         // pc_iface
+#include "shared_primitives/ip.h"
 
 // Does the selected vendor ship a physical (L1) backend? The real bring-up (radio / Ethernet PHY /
 // lwIP netif access) lives in a per-vendor subdir - physical/esp/ and physical/mock/ today; add

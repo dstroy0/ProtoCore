@@ -4,14 +4,14 @@
 // IPv6 address the server answers over v6 with no extra work. PC_ENABLE_IPV6 turns IPv6 on
 // for the Wi-Fi netif (init_ipv6_physical() -> SLAAC: a link-local address, plus a global one
 // if the network advertises a prefix). The pc_ip address core
-// (network_drivers/network/ip.h) parses, formats (RFC 5952 canonical), and classifies both
+// (shared_primitives/ip.h) parses, formats (RFC 5952 canonical), and classifies both
 // families - used here to print and report the acquired address.
 //
 // Build flag (whole build, not just this sketch):
 //   PC_ENABLE_IPV6=1
 
 #include "protocore.h"
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 #include "network_drivers/physical/physical.h"
 
 static const char *SSID = "YOUR_SSID";

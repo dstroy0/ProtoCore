@@ -11,7 +11,7 @@
  * 16 bytes, find the zero run to compress, classify one family).
  */
 
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
 // -------------------------------------------------------------------------------------------
