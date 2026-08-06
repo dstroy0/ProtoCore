@@ -3,8 +3,8 @@
 //
 // Unit tests for the preempting work queue (services/system/preempt_queue) host core: the
 // fixed ring's order (FIFO), urgent-to-front, fail-closed-when-full, high-water,
-// and the drain/handler dispatch. The ARDUINO FreeRTOS task + ISR post + preempt
-// latency are HW-verified separately (the host has no tasks/ISRs).
+// and the drain/handler dispatch. The post and the drain run here through the keyed
+// queue mock; only the interrupt itself and the preempt latency need hardware.
 
 #include "network_drivers/session/preempt_queue.h"
 // memcpy
@@ -176,7 +176,7 @@ void test_lanes_are_isolated()
     TEST_ASSERT_TRUE(PreemptQueue.start(PC_PQ_LANE_DMA, &dma));
 
     uint32_t u = 11, d = 22;
-    TEST_ASSERT_TRUE(pc_pq_post(&u, 0));                      // -> USER
+    TEST_ASSERT_TRUE(pc_pq_post(&u, 0));                        // -> USER
     TEST_ASSERT_TRUE(PreemptQueue.post(PC_PQ_LANE_DMA, &d, 0)); // -> DMA
 
     // Draining one lane must not touch the other's queue or handler.

@@ -5,12 +5,10 @@
 // only ever touches the connection slots it owns. The idle-timeout sweep is the
 // one place a worker writes slot state from its own task, so it must reap ONLY its
 // owned slots - otherwise two workers could write the same slot. The per-worker
-// event-queue ROUTING is verified on hardware (the host FreeRTOS queue is a stub
-// that ignores the queue handle).
+// event-queue routing is checked here: the host queue is keyed by the handle create
+// returns, so a post lands in one worker's queue and not another's.
 
 #include "network_drivers/session/worker.h"
-#include "network_drivers/session/worker.h"
-#include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/tcp.h"
 #include <Arduino.h> // set_millis
 #include <unity.h>
@@ -132,8 +130,8 @@ void test_accept_cb_round_robins_slot_owner(void)
 {
     Tcp.conn->init(NULL);
     TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add(0, 80, PROTO_HTTP, PROTO_FALSE)); // also exercises the
-                                                                              // WORKER_COUNT>1 branch
-                                                                              // of Tcp.listener->add() itself
+                                                                                   // WORKER_COUNT>1 branch
+                                                                                   // of Tcp.listener->add() itself
     pc_pcb pcb1 = {0}, pcb2 = {0}, pcb3 = {0};
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb1, PC_NET_OK));
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb2, PC_NET_OK));

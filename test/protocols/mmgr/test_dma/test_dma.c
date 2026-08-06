@@ -4,8 +4,8 @@
 // Unit tests for the DMA ingest / egress simulator (mmgr/dma) host core: an ingress
 // feed surfaces as RX completion events, a full buffer ping-pong flips and re-arms, egress
 // DMA is captured, TX is one-in-flight fail-closed, and a loopback channel round-trips its
-// own TX into RX. The ARDUINO ISR-post + preempt-queue hand-off is HW-verified separately
-// (the host has no ISRs); the same simulator drives that device self-test.
+// own TX into RX. The preempt-queue hand-off is observable here through the keyed queue
+// mock; only the interrupt that triggers it needs hardware.
 //
 // The env sizes PC_DMA_BUF_SIZE = 8, PC_DMA_CHANNELS = 2 (staging = 24).
 

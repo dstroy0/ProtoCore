@@ -6,7 +6,7 @@
 // fail-closed when there is no sink / an unknown port / the rate cap is hit / the sink
 // refuses; a downlink routes to the port transmit callback; the topic helper formats
 // <prefix>/<port>/<addr>; and the port table limits hold. Pure host tests; the DMA +
-// FORWARD-lane ingest that feeds it is HW-verified separately.
+// FORWARD-lane ingest that feeds it is covered by native_dma and native_forward.
 //
 // The env sizes PC_GW_MAX_PORTS = 4.
 

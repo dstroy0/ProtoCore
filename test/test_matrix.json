@@ -1,5 +1,5 @@
 {
-  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini.",
+  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. PROTOCORE_HOT is host-testable: base an env on native_hot_base and the mocks under test/mocks stand in for silicon, including a queue keyed by handle.",
   "envs": {
     "native_canopen": {
       "desc": "CANopen (CiA 301) message codec (services/fieldbus/canopen): NMT, SYNC, heartbeat, EMCY,\nPDO, and expedited SDO read/write/abort + the COB-ID classifier, over the shared CAN\nframe (shared_primitives/can.h). Pure host tests.",
@@ -1034,7 +1034,7 @@
       "tests": ["unit/http/test_webdav"]
     },
     "native_modbus": {
-      "desc": "Modbus TCP slave core + RTU framing (Modbus Application Protocol): the data\nmodel + MBAP/PDU codec + the RTU ADU codec (CRC16 + [addr][PDU][CRC]). Pure core\n- the transports are ARDUINO-gated - so it unit-tests on the host from modbus.cpp alone.",
+      "desc": "Modbus TCP slave core + RTU framing (Modbus Application Protocol): the data\nmodel + MBAP/PDU codec + the RTU ADU codec (CRC16 + [addr][PDU][CRC]). Pure core\n- the transports are ARDUINO-gated - so it unit-tests on the host from modbus.c alone.",
       "flags": ["-DPC_ENABLE_MODBUS=1", "-DPC_ENABLE_MODBUS_RTU=1"],
       "src": ["+<services/fieldbus/modbus/modbus.c>"],
       "tests": ["unit/fieldbus/test_modbus"]
@@ -1088,7 +1088,7 @@
       "tests": ["unit/iot/test_protobuf"]
     },
     "native_preempt_queue": {
-      "desc": "Preempting work queue (services/system/preempt_queue), v5 real-time ingest: the host\nfixed-ring core - FIFO order, urgent-to-front, fail-closed when full, high-water,\nand drain/handler dispatch. The ARDUINO FreeRTOS task + ISR post + preempt latency\nare HW-verified separately (the host has no tasks/ISRs).",
+      "desc": "Preempting work queue (network_drivers/session/preempt_queue), v5 real-time ingest: the host\nfixed-ring core - FIFO order, urgent-to-front, fail-closed when full, high-water,\nand drain/handler dispatch. The post and the drain run on the host through the\nkeyed queue mock; only the interrupt itself and the preempt latency need hardware.",
       "flags": [
         "-DPC_ENABLE_PREEMPT_QUEUE=1",
         "-DPC_PQ_DEPTH=4",
@@ -1098,7 +1098,7 @@
       "tests": ["unit/session/test_preempt_queue"]
     },
     "native_dma": {
-      "desc": "DMA peripheral ingest / egress simulator (mmgr/dma), v5 hardware ingest: an\ningress feed surfaces as RX completion events, a full buffer ping-pongs and re-arms,\negress DMA is captured, TX is one-in-flight fail-closed, and a loopback channel\nround-trips its own TX into RX. The ARDUINO ISR-post + preempt-queue hand-off is\nHW-verified separately (the host has no ISRs).",
+      "desc": "DMA peripheral ingest / egress simulator (mmgr/dma), v5 hardware ingest: an\ningress feed surfaces as RX completion events, a full buffer ping-pongs and re-arms,\negress DMA is captured, TX is one-in-flight fail-closed, and a loopback channel\nround-trips its own TX into RX. The preempt-queue hand-off is observable on the host\nthrough the keyed queue mock; only the interrupt that triggers it needs hardware.",
       "flags": [
         "-DPC_ENABLE_DMA=1",
         "-DPC_DMA_BUF_SIZE=8",
@@ -1120,7 +1120,7 @@
       "tests": ["unit/peripherals/test_ad9238"]
     },
     "native_forward": {
-      "desc": "Interface forwarding plane (network_drivers/network/forward), v5 bridge / router: default-deny,\nan ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the\nsource, the per-rule rate cap (host test clock), send-failure counting, the interface /\nrule table limits, the ingress ACL (byte-pattern permit/deny, first-match, default\naction), policy routing (byte-pattern -> egress, precedence + fail-closed), and the opt-in\ninspection hook. Pure host tests; the DMA-driven wiring is HW-verified.",
+      "desc": "Interface forwarding plane (network_drivers/network/forward), v5 bridge / router: default-deny,\nan ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the\nsource, the per-rule rate cap (host test clock), send-failure counting, the interface /\nrule table limits, the ingress ACL (byte-pattern permit/deny, first-match, default\naction), policy routing (byte-pattern -> egress, precedence + fail-closed), and the opt-in\ninspection hook. Pure host tests; the DMA-driven wiring is covered by native_dma over the same host queue.",
       "flags": [
         "-DPC_ENABLE_FORWARD=1",
         "-DPC_PHY_MAX_IFACES=4",
@@ -1138,7 +1138,7 @@
       "tests": ["protocols/net/test_forward"]
     },
     "native_gateway": {
-      "desc": "Radio / wireless gateway bridge (services/net/gateway), v5 southbound-to-northbound: an\nuplink envelopes a received frame (src address / port / rssi / seq) and publishes it,\nfail-closed on no sink / unknown port / rate cap / sink refusal; a downlink routes to the\nport transmit callback; the topic helper formats <prefix>/<port>/<addr>; port table limits.\nPure host tests; the DMA + FORWARD-lane ingest is HW-verified separately.",
+      "desc": "Radio / wireless gateway bridge (services/net/gateway), v5 southbound-to-northbound: an\nuplink envelopes a received frame (src address / port / rssi / seq) and publishes it,\nfail-closed on no sink / unknown port / rate cap / sink refusal; a downlink routes to the\nport transmit callback; the topic helper formats <prefix>/<port>/<addr>; port table limits.\nPure host tests; the DMA + FORWARD-lane ingest is covered by native_dma and native_forward.",
       "flags": ["-DPC_ENABLE_GATEWAY=1", "-DPC_GW_MAX_PORTS=4"],
       "src": ["+<services/net/gateway/gateway.c>", "+<server/clock/clock.c>"],
       "tests": ["protocols/net/test_gateway"]
@@ -1192,7 +1192,7 @@
       "tests": ["unit/radio/test_thread"]
     },
     "native_udp_transport": {
-      "desc": "UDP transport multicast receive (network_drivers/transport/udp.cpp): joining an IPv4\nmulticast group by dotted-quad, rejecting a non-multicast or malformed group, delivering a group\ndatagram to the registered handler, and leaving the group (releasing the listener slot). Drives the\nhost UDP mock's inject seam.",
+      "desc": "UDP transport multicast receive (network_drivers/transport/udp.c): joining an IPv4\nmulticast group by dotted-quad, rejecting a non-multicast or malformed group, delivering a group\ndatagram to the registered handler, and leaving the group (releasing the listener slot). Drives the\nhost UDP mock's inject seam.",
       "flags": [],
       "src": [
         "+<network_drivers/transport/udp.c>",
@@ -2263,7 +2263,7 @@
       "tests": ["unit/http/test_ws_client"]
     },
     "native_plaintext": {
-      "desc": "The plaintext pool accessor (server/mmgr/plaintext): bump-allocate + reset semantics,\nalignment, and fail-closed exhaustion. Pure host tests - no lwIP/sockets - so it builds from\nthe accessor and the pool mechanism alone.",
+      "desc": "The plaintext pool accessor (mmgr/plaintext): bump-allocate + reset semantics,\nalignment, and fail-closed exhaustion. Pure host tests - no lwIP/sockets - so it builds from\nthe accessor and the pool mechanism alone.",
       "src": [
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
@@ -2461,7 +2461,7 @@
       "tests": ["unit/iot/test_telemetry"]
     },
     "native_dashboard": {
-      "desc": "Dashboard widget-table JSON serializers (services/web/dashboard core). Pure logic;\nthe route/SSE wiring (dashboard_routes.cpp) is excluded so this tests on the\nhost without the server.",
+      "desc": "Dashboard widget-table JSON serializers (services/web/dashboard core). Pure logic;\nthe route/SSE wiring (dashboard_routes.c) is excluded so this tests on the\nhost without the server.",
       "flags": ["-DPC_ENABLE_DASHBOARD=1", "-DPC_ENABLE_SSE=1"],
       "src": [
         "+<services/web/dashboard/dashboard.c>",
@@ -2488,7 +2488,7 @@
       "tests": ["unit/physical/test_net_egress"]
     },
     "native_client": {
-      "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.cpp), the pooled\nlayer-4 peer of tcp.cpp used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_DET_CLIENT). The tcpip_api_call-marshaled lwIP path is\nARDUINO-only; on native this file compiles to just the !NEED stub (fail-closed: no\nlwIP on the host, so every call reports no connection), host-tested here for its own sake\nsince no other env's build_src_filter pulls this file in at all.",
+      "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.c), the pooled\nlayer-4 peer of tcp.c used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_DET_CLIENT). The tcpip_api_call-marshaled lwIP path is\nARDUINO-only; on native this file compiles to just the !NEED stub (fail-closed: no\nlwIP on the host, so every call reports no connection), host-tested here for its own sake\nsince no other env's build_src_filter pulls this file in at all.",
       "src": [
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
@@ -3675,19 +3675,19 @@
       "tests": ["unit/ssh/test_ssh_ecdsa"]
     },
     "native_frame": {
-      "desc": "The declarative frame builder (shared_primitives/frame.h + frame.cpp): the single engine that\nturns a static pc_field spec into wire bytes, so the ~160 formatting sites in this library carry\na table rather than a hand-written append sequence. Covers every field kind and width, the\nfail-closed contract at the exact byte boundary (a frame that does not fit reports 0 AND leaves a\nvalid empty string, which is what a length comparison against snprintf's would-be length silently\ngot wrong), the append rewind that keeps a header line whole-or-absent, NULL string handling, and\na differential check of the numeric and float conversions against the libc printf whose output\nthese frames replace byte for byte.",
+      "desc": "The declarative frame builder (mmgr/frame.h + frame.c): the single engine that\nturns a static pc_field spec into wire bytes, so the ~160 formatting sites in this library carry\na table rather than a hand-written append sequence. Covers every field kind and width, the\nfail-closed contract at the exact byte boundary (a frame that does not fit reports 0 AND leaves a\nvalid empty string, which is what a length comparison against snprintf's would-be length silently\ngot wrong), the append rewind that keeps a header line whole-or-absent, NULL string handling, and\na differential check of the numeric and float conversions against the libc printf whose output\nthese frames replace byte for byte.",
       "flags": [],
       "src": ["-<*>", "+<mmgr/frame.c>", "+<mmgr/protostr.c>"],
       "tests": ["unit/mmgr/test_frame"]
     },
     "native_span": {
-      "desc": "The bounded byte region (server/mmgr/span.h): a pointer and the capacity that belongs to\nit, bound together. Rule 19 converts stack arrays - whose length the compiler ties to the object -\ninto borrowed regions, and the naive rewrite to a bare pointer plus a separate cap argument is\nwhere a 4-byte sizeof() or a mismatched capacity slips through with no diagnostic. Covers the\nextent recovered from the array type, the normalization that makes {nullptr, n} unconstructible\nso an omitted check writes nothing instead of dereferencing null, and the sub-span clamping that\nkeeps a truncated frame from producing a pointer past the allocation.",
+      "desc": "The bounded byte region (mmgr/span.h): a pointer and the capacity that belongs to\nit, bound together. Rule 19 converts stack arrays - whose length the compiler ties to the object -\ninto borrowed regions, and the naive rewrite to a bare pointer plus a separate cap argument is\nwhere a 4-byte sizeof() or a mismatched capacity slips through with no diagnostic. Covers the\nextent recovered from the array type, the normalization that makes {nullptr, n} unconstructible\nso an omitted check writes nothing instead of dereferencing null, and the sub-span clamping that\nkeeps a truncated frame from producing a pointer past the allocation.",
       "flags": [],
       "src": ["-<*>"],
       "tests": ["unit/mmgr/test_span"]
     },
     "native_secure_pool": {
-      "desc": "The secure pool accessor (server/mmgr/secure): the SAME pool mechanism as the plaintext side\n(server/mmgr/arena) instantiated a second time at a disjoint address, so only what differs is\ncovered here - the access and control layer. Reclaiming WIPES, and wipes before the bytes become\navailable again, so a secret cannot survive its borrow or reach the next tenant; the scope guard\nmakes that hold on the early-return paths a hand-written wipe gets forgotten on. And the two\npools being disjoint regions means ownership is decided by address alone - a secure pointer can\nnever be accepted where a plaintext one is required, or the reverse, with no per-allocation\nmetadata. Allocator mechanics themselves belong to test_arena.",
+      "desc": "The secure pool accessor (mmgr/secure): the SAME pool mechanism as the plaintext side\n(mmgr/arena) instantiated a second time at a disjoint address, so only what differs is\ncovered here - the access and control layer. Reclaiming WIPES, and wipes before the bytes become\navailable again, so a secret cannot survive its borrow or reach the next tenant; the scope guard\nmakes that hold on the early-return paths a hand-written wipe gets forgotten on. And the two\npools being disjoint regions means ownership is decided by address alone - a secure pointer can\nnever be accepted where a plaintext one is required, or the reverse, with no per-allocation\nmetadata. Allocator mechanics themselves belong to test_arena.",
       "flags": [],
       "src": [
         "-<*>",

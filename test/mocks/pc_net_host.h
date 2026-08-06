@@ -8,7 +8,7 @@
 // same shapes, and the same member layout the core reads. That is what lets a transport TU be
 // compiled and driven on the host instead of only on silicon.
 //
-// It is deliberately inert: pcbs come from a fixed table, sends are captured, and callbacks are
+// Pcbs come from a fixed table, sends are captured, and callbacks are
 // stored so a test can fire them. Nothing here talks to a socket. A test that wants behavior
 // drives it through the pc_net_host_* entry points at the bottom.
 //

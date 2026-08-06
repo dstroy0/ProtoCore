@@ -17,8 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include <unity.h>
 
 static const pc_mnt_backend *g_fs; // the mock store the serve_static mounts read through
 static proto_bool handler_called = PROTO_FALSE;
@@ -214,9 +214,8 @@ void test_empty_file_returns_200_with_zero_length()
 void test_large_file_body_fully_sent()
 {
     // A body far larger than one send-buffer window: the cross-loop file pump must
-    // deliver every byte, not truncate at the window. (The host mock never returns
-    // ERR_MEM, so this guards the pump's body-length accounting; the real TCP
-    // send-window paging is verified on hardware.)
+    // deliver every byte, not truncate at the window. Backpressure is drivable here with
+    // pc_net_host_write_fail_after() and MOCK_SNDBUF.
 #define BIG_N 16000
     static uint8_t big[BIG_N];
     for (size_t i = 0; i < BIG_N; i++)

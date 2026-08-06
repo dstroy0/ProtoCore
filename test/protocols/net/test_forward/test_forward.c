@@ -5,7 +5,7 @@
 // ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the
 // source, the per-rule rate cap (driven by the host test clock), send-failure counting,
 // and the interface / rule table limits. Pure host tests. The DMA-driven wiring (DMA-
-// complete -> FORWARD lane -> ingress -> egress DMA) is HW-verified separately.
+// complete -> FORWARD lane -> ingress -> egress DMA) is covered by native_dma.
 //
 // The env sizes PC_PHY_MAX_IFACES = 4 (layer 1 owns the interfaces), PC_FWD_MAX_RULES = 4.
 
@@ -189,7 +189,7 @@ void test_add_rule_table_full()
 void test_unregistered_destination_is_inert()
 {
     add_if(1);
-    Forward.add_rule(1, 9, PC_FWD_ALLOW, 0);  // dst 9 never registered
+    Forward.add_rule(1, 9, PC_FWD_ALLOW, 0);     // dst 9 never registered
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "x")); // nothing to forward to
 }
 
@@ -197,7 +197,7 @@ void test_rule_with_mismatched_src_is_ignored()
 {
     add_if(1);
     add_if(2);
-    Forward.add_rule(9, 2, PC_FWD_ALLOW, 0);  // registered but for a different src
+    Forward.add_rule(9, 2, PC_FWD_ALLOW, 0);     // registered but for a different src
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "x")); // no applicable rule -> default deny
     TEST_ASSERT_EQUAL_UINT32(0, stats().forwarded);
 }
@@ -220,7 +220,7 @@ void test_get_stats_null_pointer_is_noop()
     add_if(2);
     Forward.add_rule(1, 2, PC_FWD_ALLOW, 0);
     ingress(1, "x");
-    Forward.get_stats(NULL);                     // must be a safe no-op
+    Forward.get_stats(NULL);                        // must be a safe no-op
     TEST_ASSERT_EQUAL_UINT32(1, stats().forwarded); // state unaffected
 }
 
@@ -311,8 +311,8 @@ void test_acl_short_frame_skips_entry()
     Forward.add_rule(1, 2, PC_FWD_ALLOW, 0);
     uint8_t pat[2] = {0x11, 0x22}, msk[2] = {0xFF, 0xFF};
     Forward.acl_add(1, 4, pat, msk, 2, PC_FWD_DENY); // needs len >= 6
-    uint8_t shortf[3] = {0x11, 0x22, 0x33};             // too short at offset 4 -> ACE inapplicable
-    TEST_ASSERT_EQUAL_UINT8(1, in1(shortf, 3));         // default allow -> forwarded
+    uint8_t shortf[3] = {0x11, 0x22, 0x33};          // too short at offset 4 -> ACE inapplicable
+    TEST_ASSERT_EQUAL_UINT8(1, in1(shortf, 3));      // default allow -> forwarded
 }
 
 void test_acl_add_validation_and_table_full()
@@ -348,7 +348,7 @@ void test_route_selects_egress_and_falls_through()
     add_if(1);
     add_if(2);
     add_if(3);
-    Forward.add_rule(1, 2, PC_FWD_ALLOW, 0);                  // normal path 1 -> 2
+    Forward.add_rule(1, 2, PC_FWD_ALLOW, 0);                     // normal path 1 -> 2
     TEST_ASSERT_TRUE(route_firstbyte(PC_FWD_IF_ANY, 'X', 3, 0)); // policy: 'X...' -> if 3 only
 
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "Xyz")); // matched -> routed only to if 3
@@ -386,7 +386,7 @@ void test_route_src_specific_filters_by_source()
     add_if(2);
     add_if(3);
     TEST_ASSERT_TRUE(route_firstbyte(1, 'Y', 3, 0)); // route scoped to src 1 only
-    Forward.add_rule(2, 3, PC_FWD_ALLOW, 0);      // normal fallback path for src 2
+    Forward.add_rule(2, 3, PC_FWD_ALLOW, 0);         // normal fallback path for src 2
 
     TEST_ASSERT_EQUAL_UINT8(1, ingress(2, "Yes")); // route src doesn't match -> falls through to the rule
     TEST_ASSERT_EQUAL_size_t(1, g_cap[3].count);
@@ -512,7 +512,7 @@ void test_inspect_cleared_by_null()
     add_if(2);
     Forward.add_rule(1, 2, PC_FWD_ALLOW, 0);
     Forward.set_inspector(inspect_drop_D, NULL);
-    Forward.set_inspector(NULL, NULL);           // clear it
+    Forward.set_inspector(NULL, NULL);              // clear it
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "Drop")); // would drop, but inspector is gone
     TEST_ASSERT_EQUAL_size_t(1, g_cap[2].count);
     TEST_ASSERT_EQUAL_UINT32(0, stats().inspect_dropped);
