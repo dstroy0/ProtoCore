@@ -15,6 +15,7 @@
 #include "mmgr/membuild.h"                 // pc_sb frame builder (replaces snprintf)
 #include "network_drivers/transport/tcp.h" // conn_pool, Tcp.conn->send, TcpConn/ConnState
 #include "protocore.h"
+#include "network_drivers/presentation/http/http.h"
 #include "shared_primitives/hex.h"  // pc_hex_u32 (chunk size-line writer)
 #include "shared_primitives/mime.h" // PC_MIME_*, mime tables
 #include <stdio.h>
@@ -260,7 +261,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     pc_sb_lit(&hb, "HTTP/1.1 ");
     pc_sb_u32(&hb, (uint32_t)code);
     pc_sb_lit(&hb, " ");
-    pc_sb_put(&hb, status_text(code));
+    pc_sb_put(&hb, Http.status_text(code));
     pc_sb_lit(&hb, "\r\nContent-Type: ");
     pc_sb_put(&hb, content_type);
     pc_sb_lit(&hb, "\r\nContent-Length: ");
@@ -269,7 +270,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     int hlen = (int)pc_sb_finish(&hb);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
-    proto_bool head = req_is_head(slot_id);
+    proto_bool head = Http.req_is_head(slot_id);
 
     Tcp.conn->send(slot_id, header, (proto_u16)hlen);
     // Pass 2: stream the rendered body (HEAD carries headers only).
@@ -328,7 +329,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     }
     pc_sb_u32(&hb2, (uint32_t)code);
     pc_sb_put(&hb2, " ");
-    pc_sb_put(&hb2, status_text(code));
+    pc_sb_put(&hb2, Http.status_text(code));
     pc_sb_put(&hb2, "\r\nContent-Type: ");
     pc_sb_put(&hb2, content_type);
     pc_sb_put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
@@ -338,7 +339,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     Tcp.conn->send(slot_id, header, (proto_u16)hlen);
 
     // HEAD carries the headers but no body or terminator.
-    if (req_is_head(slot_id) || !source)
+    if (Http.req_is_head(slot_id) || !source)
     {
         pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
         return;

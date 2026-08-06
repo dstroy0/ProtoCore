@@ -13,6 +13,7 @@
  */
 
 #include "network_drivers/application/file_serving/file_serving.h"
+#include "network_drivers/presentation/http/http.h"
 
 #include "mmgr/membuild.h"                          // pc_sb frame builder
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (shared with the edge cache)
@@ -405,7 +406,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
     pc_sb_put(&sb_header, "HTTP/1.1 ");
     pc_sb_i64(&sb_header, (int64_t)(status));
     pc_sb_put(&sb_header, " ");
-    pc_sb_put(&sb_header, status_text(status));
+    pc_sb_put(&sb_header, Http.status_text(status));
     pc_sb_put(&sb_header, "\r\nContent-Type: ");
     pc_sb_put(&sb_header, content_type);
     pc_sb_put(&sb_header, "\r\nContent-Length: ");
@@ -523,7 +524,7 @@ void file_send_pump(uint8_t slot_id)
 
 void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_path, const char *content_type)
 {
-    serve_file_internal(slot_id, req_is_head(slot_id), file_sys, fs_path, content_type, NULL);
+    serve_file_internal(slot_id, Http.req_is_head(slot_id), file_sys, fs_path, content_type, NULL);
 }
 
 void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
@@ -533,7 +534,7 @@ void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const 
     {
         return;
     }
-    // Store the pattern as a wildcard so path_matches() does a prefix match.
+    // Store the pattern as a wildcard so Http.path_matches() does a prefix match.
     //
     // The pattern is built BEFORE a route slot is taken, because a prefix that does not fit must
     // not be registered at all. Formatting this with snprintf truncated an over-long prefix to
@@ -615,7 +616,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
     }
 
     const char *ctype = mime_type(fs_path);
-    proto_bool head = req_is_head(slot_id);
+    proto_bool head = Http.req_is_head(slot_id);
 
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.

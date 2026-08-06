@@ -12,6 +12,7 @@
  */
 
 #include "server/webdav_handler.h"
+#include "network_drivers/presentation/http/http.h"
 #include "mmgr/membuild.h"
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/network/route.h"
@@ -100,7 +101,7 @@ static int dav_resolve_path(const Route *r, const char *reqpath, char *out, size
     {
         plen--;
     }
-    // path_matches() against this same route, which already required reqpath to carry the mount
+    // Http.path_matches() against this same route, which already required reqpath to carry the mount
     // prefix, so the length test always holds. Kept so a future caller that resolves without
     // matching first still cannot index past the end of reqpath.
     const char *sub = (strnlen(reqpath, MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
@@ -223,7 +224,7 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         {
             continue;
         }
-        if (!path_matches(r->path, r->is_wildcard, req->path))
+        if (!Http.path_matches(r->path, r->is_wildcard, req->path))
         {
             continue;
         }
@@ -344,7 +345,7 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     pc_sb_put(&sb_header, "HTTP/1.1 ");
     pc_sb_i64(&sb_header, (int64_t)(code));
     pc_sb_put(&sb_header, " ");
-    pc_sb_put(&sb_header, status_text(code));
+    pc_sb_put(&sb_header, Http.status_text(code));
     pc_sb_put(&sb_header, "\r\n");
     pc_sb_put(&sb_header, extra_headers ? extra_headers : "");
     pc_sb_put(&sb_header, "Content-Length: 0\r\n");
@@ -366,7 +367,7 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
         {
             continue;
         }
-        if (!path_matches(r->path, r->is_wildcard, req->path))
+        if (!Http.path_matches(r->path, r->is_wildcard, req->path))
         {
             continue;
         }

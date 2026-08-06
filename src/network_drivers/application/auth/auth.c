@@ -20,6 +20,7 @@
 #include "network_drivers/presentation/codec/base64/base64.h" // pc_base64_decode (Basic)
 #include "network_drivers/transport/tcp.h"                    // conn_pool, Tcp.conn->send, TcpConn/ConnState
 #include "protocore.h"
+#include "network_drivers/presentation/http/http.h"
 #include "server/clock/clock.h"    // pc_millis() for the stateless nonce
 #include "shared_primitives/hex.h" // pc_hex_encode/decode
 
@@ -351,7 +352,7 @@ static void challenge(uint8_t slot_id, uint8_t id, proto_bool stale)
 
     // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
     // follows the header.
-    if (!req_is_head(slot_id))
+    if (!Http.req_is_head(slot_id))
     {
         Tcp.conn->send(slot_id, header, (proto_u16)hlen);
         Tcp.conn->send_flush(slot_id, body, (proto_u16)(sizeof(body) - 1));

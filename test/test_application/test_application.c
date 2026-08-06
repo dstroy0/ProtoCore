@@ -1414,7 +1414,7 @@ typedef struct
     const char *reason;
 } StatusCase;
 
-// status_text() renders the reason phrase for every code the server emits.
+// Http.status_text() renders the reason phrase for every code the server emits.
 // send() formats "HTTP/1.1 <code> <reason>", so drive it across the codes that
 // higher-level tests do not already exercise (plus an unknown code -> default).
 void test_status_text_reason_phrases(void)
@@ -1496,7 +1496,7 @@ void test_send_binary_body_with_nul(void)
 }
 
 // A 405 lists every method registered for the matched path in the Allow header;
-// method_name() renders each token. Register PATCH/HEAD/OPTIONS on one path and
+// Http.method_name() renders each token. Register PATCH/HEAD/OPTIONS on one path and
 // request it with an unregistered method.
 void test_allow_header_lists_methods(void)
 {
@@ -1504,7 +1504,7 @@ void test_allow_header_lists_methods(void)
     on_http("/m", HTTP_OPTIONS, record_handler);
     on_http("/m", HTTP_HEAD, record_handler);
     on_http("/m", HTTP_PUT, record_handler);
-    on_http("/m", HTTP_METHOD_UNKNOWN, record_handler); // -> method_name() default ""
+    on_http("/m", HTTP_METHOD_UNKNOWN, record_handler); // -> Http.method_name() default ""
     arm_slot(0, "DELETE /m HTTP/1.1\r\n\r\n");
     conn_pool[0].pcb = pc_net_host_pcb(); // arm_slot leaves pcb null; the 405 must emit
     tcp_capture_reset();

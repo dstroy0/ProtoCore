@@ -601,7 +601,6 @@ proto_bool rate_limit_check(uint8_t slot_id);
  * @param req_path    Null-terminated path from the parsed request.
  * @return True if the route matches the request path.
  */
-proto_bool path_matches(const char *route, proto_bool is_wildcard, const char *req_path);
 
 /// @brief Record a response for stats + the access-log hook. Reads method/path from http_pool[slot_id].
 void note_response(uint8_t slot_id, int code, int body_len);
@@ -1439,7 +1438,6 @@ void pc_sse_broadcast(const char *path, const char *data, const char *event, con
 // declaration is a reader, never the storage, so the owner stays the only writer.
 
 /** @brief Reason phrase for an HTTP status code (e.g. 404 -> "Not Found"). */
-const char *status_text(int code);
 
 /**
  * @brief The fixed reply sent when a response's own headers will not fit RESP_HDR_BUF_SIZE.
@@ -1460,7 +1458,6 @@ void fill_route_base(Route *r, const char *path);
 // http_rfc1123: file_serving.h
 
 /** @brief True if the request in slot @p slot_id used the HEAD method (send headers, no body). */
-proto_bool req_is_head(uint8_t slot_id);
 
 /** @brief Whole-path regex match (anchored both ends; bounded by RE_MAX_STEPS, fails closed). */
 proto_bool regex_match(const char *pattern, const char *path);

@@ -748,7 +748,8 @@
         "+<server/filesystem/mnt.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/http/http.c>"
       ],
       "tests": []
     },
@@ -900,7 +901,8 @@
         "+<mmgr/protomem.c>",
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
-        "+<mmgr/secure.c>"
+        "+<mmgr/secure.c>",
+        "+<network_drivers/presentation/http/http.c>"
       ],
       "tests": ["test_webdav_handler"]
     },
@@ -1800,7 +1802,8 @@
         "+<mmgr/protomem.c>",
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
-        "+<mmgr/secure.c>"
+        "+<mmgr/secure.c>",
+        "+<network_drivers/presentation/http/http.c>"
       ],
       "tests": ["test_keepalive"]
     },
@@ -1851,7 +1854,8 @@
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<mmgr/secure.c>"
+        "+<mmgr/secure.c>",
+        "+<network_drivers/presentation/http/http.c>"
       ],
       "tests": ["test_range"]
     },
@@ -2153,7 +2157,8 @@
         "+<server/filesystem/mnt.c>",
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
-        "+<mmgr/secure.c>"
+        "+<mmgr/secure.c>",
+        "+<network_drivers/presentation/http/http.c>"
       ],
       "tests": ["test_upload"]
     },

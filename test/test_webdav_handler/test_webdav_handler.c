@@ -883,7 +883,7 @@ void test_webdav_status_on_dead_connection()
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len()); // nothing written to a dead slot
 }
 
-// status_text() maps every status code the server can emit to its RFC reason phrase, and
+// Http.status_text() maps every status code the server can emit to its RFC reason phrase, and
 // anything else to "Unknown". This env is the only one that compiles the WebDAV-gated arms
 // (207 / 412 / 423 / 502), so the whole table is pinned here.
 void test_webdav_status_text_table()
@@ -924,13 +924,13 @@ void test_webdav_status_text_table()
     };
     for (size_t i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
     {
-        TEST_ASSERT_EQUAL_STRING(expect[i].phrase, status_text(expect[i].code));
+        TEST_ASSERT_EQUAL_STRING(expect[i].phrase, Http.status_text(expect[i].code));
     }
 
     // Anything outside the table falls to the default arm rather than reading off the end.
-    TEST_ASSERT_EQUAL_STRING("Unknown", status_text(299));
-    TEST_ASSERT_EQUAL_STRING("Unknown", status_text(0));
-    TEST_ASSERT_EQUAL_STRING("Unknown", status_text(-1));
+    TEST_ASSERT_EQUAL_STRING("Unknown", Http.status_text(299));
+    TEST_ASSERT_EQUAL_STRING("Unknown", Http.status_text(0));
+    TEST_ASSERT_EQUAL_STRING("Unknown", Http.status_text(-1));
 }
 
 // dav_join's separator handling when the request is the bare mount prefix under a root that
