@@ -1130,18 +1130,6 @@ void handle();
 void service_once(int worker_id);
 
 /**
- * @brief The instance-bound HTTP poll pump for one slot (the HTTP ProtoHandler's on_poll).
- *
- * Installed into the HTTP handler at begin() via http_proto_set_poll() so the worker dispatch
- * loop pumps HTTP through the same uniform ProtoHandler seam as every other protocol - there is no
- * HTTP special case in the loop. Runs the file/chunk send pumps, the WebSocket + SSE drains, the
- * keep-alive re-parse, and dispatches a completed request into this server's routes. Public only so
- * the poll trampoline can reach it (like service_once); application code never calls it directly.
- * @param slot_id Connection slot to pump.
- */
-void http_poll_slot(uint8_t slot_id);
-
-/**
  * @brief Run @p fn(@p arg) on the worker that owns connection @p slot.
  *
  * The thread-safe way to push to a connection from outside a handler - e.g. an

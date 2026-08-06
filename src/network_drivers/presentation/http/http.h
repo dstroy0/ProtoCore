@@ -44,6 +44,10 @@ typedef void (*Handler)(uint8_t slot_id, HttpReq *request);
  * @var HttpNs::match_path_params  whether a `:name` route matches, capturing each segment into the request
  * @var HttpNs::req_is_head        whether the request on a slot used HEAD
  * @var HttpNs::allow_append       add a method token to a comma-separated Allow list, skipping a repeat
+ * @var HttpNs::match_and_execute  run a completed request on a slot through the route table
+ * @var HttpNs::set_not_found      the handler a request runs when no route matched
+ * @var HttpNs::poll_slot          the ProtoHandler on_poll for an HTTP slot: pumps, drains, dispatches
+ * @var HttpNs::set_edge_poll      the edge-cache origin fetch that owns a slot while it is in flight
  */
 typedef struct
 {
@@ -56,6 +60,10 @@ typedef struct
     void (*allow_append)(char *buf, size_t cap, const char *m);
     void (*match_and_execute)(uint8_t slot_id);
     void (*set_not_found)(Handler cb);
+    void (*poll_slot)(uint8_t slot);
+#if PC_ENABLE_EDGE_CACHE
+    void (*set_edge_poll)(proto_bool (*fn)(uint8_t slot));
+#endif
 } HttpNs;
 
 /** @brief The one symbol this module exports. */

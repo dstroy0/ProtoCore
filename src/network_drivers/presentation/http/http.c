@@ -29,6 +29,9 @@
 typedef struct
 {
     Handler not_found;
+#if PC_ENABLE_EDGE_CACHE
+    proto_bool (*edge_poll)(uint8_t slot);
+#endif
 } HttpCtx;
 static HttpCtx s_http;
 
@@ -36,6 +39,15 @@ static void set_not_found(Handler cb)
 {
     s_http.not_found = cb;
 }
+
+#if PC_ENABLE_EDGE_CACHE
+// Edge-cache async-fetch pump seam (see pc_http_set_edge_poll / services/web/edge_cache/edge_cache_proxy):
+// a cache miss suspends the client request and drives the non-blocking origin fetch from this slot's poll.
+static void set_edge_poll(proto_bool (*fn)(uint8_t slot))
+{
+    s_http.edge_poll = fn;
+}
+#endif
 
 /**
  * @brief Convert an HTTP status code to its standard reason phrase.
@@ -722,5 +734,171 @@ void match_and_execute(uint8_t slot_id)
     }
 }
 
+// HTTP's poll pump, installed as the HTTP ProtoHandler's on_poll so the worker dispatch loop pumps
+// HTTP through the same uniform seam as every other protocol, with no HTTP special case in the
+// loop. Runs the file/chunk send pumps, the WebSocket and SSE drains, the keep-alive re-parse, and
+// dispatches a completed request into the route table.
+static void poll_slot(uint8_t i)
+{
+#if PC_ENABLE_EDGE_CACHE
+    // An edge-cache origin fetch in flight for this slot owns it: pump the fetch and skip the rest of the
+    // HTTP pipeline until it completes (and hands off to send_chunked for the cached response).
+    if (s_http.edge_poll != NULL && s_http.edge_poll(i))
+    {
+        return;
+    }
+#endif
+#if PC_ENABLE_FILE_SERVING
+    // A file response in flight owns the slot: page out the next window and
+    // skip the rest of the pipeline until the whole body has been sent.
+    if (pc_file_holds_slot(i))
+    {
+        file_send_pump(i);
+        return;
+    }
+#endif
+    // Likewise a chunked response in flight: pull + frame the next window.
+    if (pc_resp_holds_slot(i))
+    {
+        chunk_send_pump(i);
+        return;
+    }
+
+#if PC_ENABLE_WEBSOCKET
+    // WebSocket slot - drain ring buffer and dispatch ready frames
+    WsConn *ws = ws_find(i);
+    if (ws)
+    {
+#if PC_ENABLE_TLS
+        if (conn_pool[i].tls)
+        {
+            // wss://: the rx ring holds ciphertext, so decrypt records here and
+            // feed the frame parser, dispatching each completed frame as it
+            // finishes (one TLS record may carry several WS frames).
+            uint8_t tbuf[256];
+            int n;
+            while ((n = pc_tls_read(i, tbuf, sizeof(tbuf))) > 0)
+            {
+                for (int k = 0; k < n; k++)
+                {
+                    ws_feed_byte(ws, tbuf[k]);
+                    if (ws->parse_state == WS_FRAME_READY)
+                    {
+                        ws_dispatch_message(ws);
+                        ws_reset_frame(ws);
+                    }
+                    else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
+                    {
+                        break;
+                    }
+                }
+                if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
+                {
+                    break;
+                }
+            }
+            if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR || n < 0)
+            {
+                ws_dispatch_close(ws);
+                ws_free(i);
+                Tcp.conn->abort_slot(i); // transport owns TLS-free + detach + reset + RST
+                http_reset(i);
+            }
+            return;
+        }
+#endif // PC_ENABLE_TLS
+
+        ws_parse(ws);
+
+        if (ws->parse_state == WS_FRAME_READY)
+        {
+            ws_dispatch_message(ws);
+            ws_reset_frame(ws);
+        }
+        else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
+        {
+            ws_dispatch_close(ws);
+            ws_free(i);
+            // RFC 6455 5.5.1: close the underlying TCP connection after the close
+            // handshake. begin_close moves the slot out of CONN_ACTIVE so the
+            // post-close bytes are NOT re-parsed as a new HTTP request (the
+            // close-frame the WS layer queued still flushes during the dwell).
+            Tcp.conn->begin_close(i);
+            http_reset(i);
+        }
+        return; // slot is owned by WS; skip HTTP dispatch
+    }
+#endif // PC_ENABLE_WEBSOCKET
+
+#if PC_ENABLE_SSE
+    // SSE slot - connection stays open, nothing to parse from client
+    if (pc_sse_find(i))
+    {
+        return;
+    }
+#endif // PC_ENABLE_SSE
+
+#if PC_ENABLE_KEEPALIVE
+    // Keep-alive: a slot recycled after a response may already hold the next
+    // (pipelined) request in its ring buffer with no new EVT_DATA to trigger a
+    // parse. Drain it here each tick so it gets dispatched. TLS slots are
+    // skipped - their ring holds ciphertext, decrypted in the session layer.
+    if (conn_pool[i].state == CONN_ACTIVE && http_pool[i].parse_state != PARSE_COMPLETE
+#if PC_ENABLE_TLS
+        && !conn_pool[i].tls
+#endif
+    )
+    {
+        http_parse(i);
+    }
+#endif
+
+#if PC_REQUEST_TIMEOUT_MS > 0
+    // Slow-loris defense (the nginx client_header_timeout semantic): bound the request HEADER phase. A
+    // connection that sent its first byte but has not completed its request headers within
+    // PC_REQUEST_TIMEOUT_MS is answered 408 and closed, freeing the slot. Unlike the idle timeout, req_start_ms
+    // is NOT reset by a trickle byte (it is armed once, on the first RX byte), so a drip-fed partial header
+    // cannot hold a slot open indefinitely, which is the connection-slot exhaustion this bounds. The deadline is
+    // scoped to the header phase (parse_state < PARSE_BODY, since every header state precedes PARSE_BODY in the
+    // enum) so it never reaps a legitimate slow body: a large streaming upload sits in PARSE_BODY for its whole
+    // duration and is governed by the streaming handler + idle timer, not this deadline. WebSocket / SSE were
+    // already returned above.
+    if (conn_pool[i].state == CONN_ACTIVE && conn_pool[i].req_start_ms != 0 && http_pool[i].parse_state < PARSE_BODY &&
+        (pc_millis() - conn_pool[i].req_start_ms) >= PC_REQUEST_TIMEOUT_MS)
+    {
+        conn_pool[i].req_start_ms = 0;
+        send_text(i, 408, PC_MIME_TEXT_PLAIN, "Request Timeout"); // terminal error response -> connection closes
+        return;
+    }
+#endif
+
+    // HTTP slot
+    if (http_pool[i].parse_state == PARSE_COMPLETE)
+    {
+        conn_pool[i].req_start_ms = 0; // request complete: disarm; the next keep-alive request re-arms on its 1st byte
+        Http.match_and_execute(i);
+        if (http_pool[i].parse_state == PARSE_COMPLETE)
+        {
+            http_reset(i);
+        }
+    }
+    else if (http_pool[i].parse_state == PARSE_ERROR)
+    {
+        send_text(i, 400, PC_MIME_TEXT_PLAIN, "Bad Request");
+    }
+    else if (http_pool[i].parse_state == PARSE_ENTITY_TOO_LARGE)
+    {
+        send_text(i, 413, PC_MIME_TEXT_PLAIN, "Payload Too Large");
+    }
+    else if (http_pool[i].parse_state == PARSE_URI_TOO_LONG)
+    {
+        send_text(i, 414, PC_MIME_TEXT_PLAIN, "URI Too Long");
+    }
+}
+
 const HttpNs Http = {status_text,       parse_method, method_name,      path_matches,
-                     match_path_params, req_is_head,  allow_append,     match_and_execute, set_not_found};
+                     match_path_params, req_is_head,  allow_append,     match_and_execute, set_not_found, poll_slot,
+#if PC_ENABLE_EDGE_CACHE
+                     set_edge_poll
+#endif
+};

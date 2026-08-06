@@ -12,7 +12,7 @@
 #if PC_ENABLE_EDGE_CACHE
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_get_header, http_pool
-#include "network_drivers/presentation/presentation.h"                 // pc_http_set_edge_poll
+#include "network_drivers/presentation/http/http.h"                    // Http.set_edge_poll
 #include "network_drivers/transport/tcp.h"                          // pc_client_*
 #include "network_drivers/transport/tcp.h"                             // pc_conn_active
 #include "protocore.h"                                                 // PC, Middleware, MwResult, ChunkSource
@@ -1243,7 +1243,7 @@ void pc_edge_cache_enable(void)
     if (!s_ctx.registered)
     {
         use(edge_cache_mw);
-        pc_http_set_edge_poll(edge_cache_poll);
+        Http.set_edge_poll(edge_cache_poll);
         s_ctx.registered = PROTO_TRUE;
     }
 }
