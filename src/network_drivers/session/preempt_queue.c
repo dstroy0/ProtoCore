@@ -50,7 +50,7 @@ static proto_bool lane_ok(pc_pq_lane lane)
 
 // Default task priority per lane: internal lanes rank above the user lane (DMA highest),
 // staying below the network stack's own tasks so networking is never starved.
-uint8_t pc_pq_lane_priority(pc_pq_lane lane)
+static uint8_t pc_pq_lane_priority(pc_pq_lane lane)
 {
     switch (lane)
     {
@@ -108,7 +108,7 @@ static void pq_task(void *arg)
     }
 }
 
-proto_bool pc_pq_start_lane(pc_pq_lane lane, const pc_pq_config *cfg)
+static proto_bool pc_pq_start_lane(pc_pq_lane lane, const pc_pq_config *cfg)
 {
     if (!lane_ok(lane) || s_pqq.run[(size_t)lane] || !cfg || !cfg->handler)
     {
@@ -138,7 +138,7 @@ proto_bool pc_pq_start_lane(pc_pq_lane lane, const pc_pq_config *cfg)
     return PROTO_TRUE;
 }
 
-proto_bool pc_pq_post_lane(pc_pq_lane lane, const void *item, uint32_t timeout_ticks)
+static proto_bool pc_pq_post_lane(pc_pq_lane lane, const void *item, uint32_t timeout_ticks)
 {
     if (!lane_ok(lane) || !s_pqq.q[(size_t)lane] || !item)
     {
@@ -152,7 +152,7 @@ proto_bool pc_pq_post_lane(pc_pq_lane lane, const void *item, uint32_t timeout_t
     return PROTO_TRUE;
 }
 
-proto_bool pc_pq_post_lane_urgent(pc_pq_lane lane, const void *item, uint32_t timeout_ticks)
+static proto_bool pc_pq_post_lane_urgent(pc_pq_lane lane, const void *item, uint32_t timeout_ticks)
 {
     if (!lane_ok(lane) || !s_pqq.q[(size_t)lane] || !item)
     {
@@ -166,7 +166,7 @@ proto_bool pc_pq_post_lane_urgent(pc_pq_lane lane, const void *item, uint32_t ti
     return PROTO_TRUE;
 }
 
-proto_bool pc_pq_post_lane_from_isr(pc_pq_lane lane, const void *item)
+static proto_bool pc_pq_post_lane_from_isr(pc_pq_lane lane, const void *item)
 {
     if (!lane_ok(lane) || !s_pqq.q[(size_t)lane] || !item)
     {
@@ -182,13 +182,13 @@ proto_bool pc_pq_post_lane_from_isr(pc_pq_lane lane, const void *item)
     return PROTO_TRUE;
 }
 
-void pc_pq_drain_lane(pc_pq_lane lane)
+static void pc_pq_drain_lane(pc_pq_lane lane)
 {
     (void)lane;
     // The lane's task drains on device; nothing to do here.
 }
 
-void pc_pq_stop_lane(pc_pq_lane lane)
+static void pc_pq_stop_lane(pc_pq_lane lane)
 {
     if (!lane_ok(lane))
     {
@@ -202,12 +202,12 @@ void pc_pq_stop_lane(pc_pq_lane lane)
     }
 }
 
-proto_bool pc_pq_running_lane(pc_pq_lane lane)
+static proto_bool pc_pq_running_lane(pc_pq_lane lane)
 {
     return lane_ok(lane) && s_pqq.run[(size_t)lane];
 }
 
-size_t pc_pq_high_water_lane(pc_pq_lane lane)
+static size_t pc_pq_high_water_lane(pc_pq_lane lane)
 {
     return lane_ok(lane) ? s_pq.high_water[(size_t)lane] : 0;
 }
@@ -234,7 +234,7 @@ static void note_count(pc_pq_lane lane)
     }
 }
 
-proto_bool pc_pq_start_lane(pc_pq_lane lane, const pc_pq_config *cfg)
+static proto_bool pc_pq_start_lane(pc_pq_lane lane, const pc_pq_config *cfg)
 {
     if (!lane_ok(lane) || s_pqr.started[(size_t)lane] || !cfg || !cfg->handler)
     {
@@ -250,7 +250,7 @@ proto_bool pc_pq_start_lane(pc_pq_lane lane, const pc_pq_config *cfg)
     return PROTO_TRUE;
 }
 
-proto_bool pc_pq_post_lane(pc_pq_lane lane, const void *item, uint32_t timeout_ticks)
+static proto_bool pc_pq_post_lane(pc_pq_lane lane, const void *item, uint32_t timeout_ticks)
 {
     (void)timeout_ticks;
     if (!lane_ok(lane) || !item || s_pqr.count[(size_t)lane] >= PC_PQ_DEPTH)
@@ -264,7 +264,7 @@ proto_bool pc_pq_post_lane(pc_pq_lane lane, const void *item, uint32_t timeout_t
     return PROTO_TRUE;
 }
 
-proto_bool pc_pq_post_lane_urgent(pc_pq_lane lane, const void *item, uint32_t timeout_ticks)
+static proto_bool pc_pq_post_lane_urgent(pc_pq_lane lane, const void *item, uint32_t timeout_ticks)
 {
     (void)timeout_ticks;
     if (!lane_ok(lane) || !item || s_pqr.count[(size_t)lane] >= PC_PQ_DEPTH)
@@ -279,12 +279,12 @@ proto_bool pc_pq_post_lane_urgent(pc_pq_lane lane, const void *item, uint32_t ti
     return PROTO_TRUE;
 }
 
-proto_bool pc_pq_post_lane_from_isr(pc_pq_lane lane, const void *item)
+static proto_bool pc_pq_post_lane_from_isr(pc_pq_lane lane, const void *item)
 {
     return pc_pq_post_lane(lane, item, 0); // no ISRs on host
 }
 
-void pc_pq_drain_lane(pc_pq_lane lane)
+static void pc_pq_drain_lane(pc_pq_lane lane)
 {
     if (!lane_ok(lane))
     {
@@ -302,7 +302,7 @@ void pc_pq_drain_lane(pc_pq_lane lane)
     }
 }
 
-void pc_pq_stop_lane(pc_pq_lane lane)
+static void pc_pq_stop_lane(pc_pq_lane lane)
 {
     if (lane_ok(lane))
     {
@@ -310,16 +310,20 @@ void pc_pq_stop_lane(pc_pq_lane lane)
     }
 }
 
-proto_bool pc_pq_running_lane(pc_pq_lane lane)
+static proto_bool pc_pq_running_lane(pc_pq_lane lane)
 {
     return lane_ok(lane) && s_pqr.started[(size_t)lane];
 }
 
-size_t pc_pq_high_water_lane(pc_pq_lane lane)
+static size_t pc_pq_high_water_lane(pc_pq_lane lane)
 {
     return lane_ok(lane) ? s_pq.high_water[(size_t)lane] : 0;
 }
 
 #endif // PROTOCORE_HOT
+
+const PreemptQueueNs PreemptQueue = {pc_pq_post_lane_from_isr, pc_pq_post_lane_urgent, pc_pq_high_water_lane,
+                                     pc_pq_lane_priority,      pc_pq_running_lane,     pc_pq_start_lane,
+                                     pc_pq_post_lane,          pc_pq_drain_lane,       pc_pq_stop_lane};
 
 #endif // PC_ENABLE_PREEMPT_QUEUE

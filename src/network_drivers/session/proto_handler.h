@@ -35,27 +35,28 @@ typedef struct ProtoHandler
     void (*on_poll)(uint8_t slot);   ///< Called for an active slot each handle() loop (nullable).
 } ProtoHandler;
 
-/** @brief Register @p h for protocol @p proto (replaces any previous handler). */
-void proto_register(ConnProto proto, const ProtoHandler *h);
-
 /**
- * @brief Register every built-in protocol's handler (the policy list).
- *
- * Defined in server/proto_builtins.c - the one place that knows which protocols exist.
- * Each built-in's handler lives in its own module (http in presentation, ssh in
- * ssh_conn, ...) behind a `*_proto_handler()` accessor; this installs each. The
- * session dispatcher calls this once (lazily, on first lookup) so it never names a
- * protocol itself. Optional runtime-gated handlers (e.g. the SSH remote-forward
- * listener) self-register at their own opt-in entry point instead.
+ * @brief Install every handler the build compiled in. Defined in server/proto_builtins.c, the
+ *        policy list: this layer owns the mechanism and names no protocol.
  */
 void proto_register_builtins(void);
 
 /**
- * @brief Look up the handler for @p proto.
- * @return the registered handler, or nullptr if @p proto is ConnProto::PROTO_NONE or has
- *         no registered handler (no implicit fallback; the event is dropped).
+ * @brief The protocol registry.
+ *
+ * @var ProtoRegistryNs::register_builtins  install every handler the build compiled in
+ * @var ProtoRegistryNs::add                bind one handler to one protocol
+ * @var ProtoRegistryNs::get                the handler for a protocol, or null if none is bound
  */
-const ProtoHandler *proto_get(ConnProto proto);
+typedef struct
+{
+    void (*register_builtins)(void);
+    void (*add)(ConnProto proto, const ProtoHandler *h);
+    const ProtoHandler *(*get)(ConnProto proto);
+} ProtoRegistryNs;
+
+/** @brief The one symbol this module exports. ProtoHandler is the per-protocol record above. */
+extern const ProtoRegistryNs Protocols;
 
 PROTO_END_DECLS
 

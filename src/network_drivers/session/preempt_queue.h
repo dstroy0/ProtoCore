@@ -87,83 +87,108 @@ typedef struct
  * @brief Create a lane's queue and start its processing task.
  *
  * Idempotent per lane: a second call while that lane runs is a no-op returning false. On
- * host no task is started (drive with pc_pq_drain_lane()). If `cfg->priority` is 0 the
+ * host no task is started (drive with PreemptQueue.drain()). If `cfg->priority` is 0 the
  * lane's default priority is used (internal lanes default above the user lane).
  * @return true if started; false on a bad lane / null handler / already running.
  */
-proto_bool pc_pq_start_lane(pc_pq_lane lane, const pc_pq_config *cfg);
+proto_bool PreemptQueue.start(pc_pq_lane lane, const pc_pq_config *cfg);
 
 /** @brief Post to the back of a lane from a task context (copies PC_PQ_ITEM_SIZE
  *         bytes, blocks up to @p timeout_ticks, then fails closed). */
-proto_bool pc_pq_post_lane(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
+proto_bool PreemptQueue.post(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
 
 /** @brief Post to the FRONT of a lane (urgent) from a task context. */
-proto_bool pc_pq_post_lane_urgent(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
+proto_bool PreemptQueue.post_urgent(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
 
 /** @brief Post to a lane from an ISR (interrupt-safe; requests an immediate switch). */
-proto_bool pc_pq_post_lane_from_isr(pc_pq_lane lane, const void *item);
+proto_bool PreemptQueue.post_from_isr(pc_pq_lane lane, const void *item);
 
 /** @brief Run the handler over every currently-queued item on a lane (host / inline
  *         drive). A no-op wherever the lane has a task of its own to drain it. */
-void pc_pq_drain_lane(pc_pq_lane lane);
+void PreemptQueue.drain(pc_pq_lane lane);
 
 /** @brief Stop a lane's processing task (no-op on host). */
-void pc_pq_stop_lane(pc_pq_lane lane);
+void PreemptQueue.stop(pc_pq_lane lane);
 
 /** @brief True while a lane's processing task is running (always false on host). */
-proto_bool pc_pq_running_lane(pc_pq_lane lane);
+proto_bool PreemptQueue.running(pc_pq_lane lane);
 
 /** @brief Peak items ever queued at once on a lane (for sizing PC_PQ_DEPTH). */
-size_t pc_pq_high_water_lane(pc_pq_lane lane);
-
-/** @brief The default task priority for a lane (internal lanes rank above the user lane;
- *         DMA highest). Used when a config passes priority 0. */
-uint8_t pc_pq_lane_priority(pc_pq_lane lane);
+size_t PreemptQueue.high_water(pc_pq_lane lane);
 
 // --- User-lane API (drives PC_PQ_LANE_USER) --------------------------------------------
 
 /** @brief Start the USER lane. @see pc_pq_start_lane. */
 PC_INLINE proto_bool pc_pq_start(const pc_pq_config *cfg)
 {
-    return pc_pq_start_lane(PC_PQ_LANE_USER, cfg);
+    return PreemptQueue.start(PC_PQ_LANE_USER, cfg);
 }
 /** @brief Post to the back of the USER lane. */
 PC_INLINE proto_bool pc_pq_post(const void *item, uint32_t timeout_ticks)
 {
-    return pc_pq_post_lane(PC_PQ_LANE_USER, item, timeout_ticks);
+    return PreemptQueue.post(PC_PQ_LANE_USER, item, timeout_ticks);
 }
 /** @brief Post to the front of the USER lane (urgent). */
 PC_INLINE proto_bool pc_pq_post_urgent(const void *item, uint32_t timeout_ticks)
 {
-    return pc_pq_post_lane_urgent(PC_PQ_LANE_USER, item, timeout_ticks);
+    return PreemptQueue.post_urgent(PC_PQ_LANE_USER, item, timeout_ticks);
 }
 /** @brief Post to the USER lane from an ISR. */
 PC_INLINE proto_bool pc_pq_post_from_isr(const void *item)
 {
-    return pc_pq_post_lane_from_isr(PC_PQ_LANE_USER, item);
+    return PreemptQueue.post_from_isr(PC_PQ_LANE_USER, item);
 }
 /** @brief Drain the USER lane (host / inline drive). */
 PC_INLINE void pc_pq_drain(void)
 {
-    pc_pq_drain_lane(PC_PQ_LANE_USER);
+    PreemptQueue.drain(PC_PQ_LANE_USER);
 }
 /** @brief Stop the USER lane's task. */
 PC_INLINE void pc_pq_stop(void)
 {
-    pc_pq_stop_lane(PC_PQ_LANE_USER);
+    PreemptQueue.stop(PC_PQ_LANE_USER);
 }
 /** @brief True while the USER lane's task is running. */
 PC_INLINE proto_bool pc_pq_running(void)
 {
-    return pc_pq_running_lane(PC_PQ_LANE_USER);
+    return PreemptQueue.running(PC_PQ_LANE_USER);
 }
 /** @brief Peak items ever queued on the USER lane. */
 PC_INLINE size_t pc_pq_high_water(void)
 {
-    return pc_pq_high_water_lane(PC_PQ_LANE_USER);
+    return PreemptQueue.high_water(PC_PQ_LANE_USER);
 }
 
 #endif // PC_ENABLE_PREEMPT_QUEUE
+
+/**
+ * @brief The PreemptQueue module.
+ *
+ * @var PreemptQueueNs::post_from_isr
+ * @var PreemptQueueNs::post_urgent
+ * @var PreemptQueueNs::high_water
+ * @var PreemptQueueNs::priority
+ * @var PreemptQueueNs::running
+ * @var PreemptQueueNs::start
+ * @var PreemptQueueNs::post
+ * @var PreemptQueueNs::drain
+ * @var PreemptQueueNs::stop
+ */
+typedef struct
+{
+    proto_bool (*post_from_isr)(pc_pq_lane lane, const void *item);
+    proto_bool (*post_urgent)(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
+    size_t (*high_water)(pc_pq_lane lane);
+    uint8_t (*priority)(pc_pq_lane lane);
+    proto_bool (*running)(pc_pq_lane lane);
+    proto_bool (*start)(pc_pq_lane lane, const pc_pq_config *cfg);
+    proto_bool (*post)(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
+    void (*drain)(pc_pq_lane lane);
+    void (*stop)(pc_pq_lane lane);
+} PreemptQueueNs;
+
+/** @brief The one symbol this module exports. */
+extern const PreemptQueueNs PreemptQueue;
 
 PROTO_END_DECLS
 

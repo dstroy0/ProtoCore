@@ -47,7 +47,7 @@ static void stop_all_lanes()
 {
     for (int l = 0; l < (int)PC_PQ_LANE_COUNT; l++)
     {
-        pc_pq_stop_lane((pc_pq_lane)l);
+        Session.workers->queue->stop((pc_pq_lane)l);
     }
 }
 
@@ -162,9 +162,9 @@ void test_drain_empties_and_reuses()
 void test_internal_lanes_outrank_user()
 {
     // DMA highest, then forward, then device, all above the user lane.
-    TEST_ASSERT_GREATER_THAN_UINT8(pc_pq_lane_priority(PC_PQ_LANE_FORWARD), pc_pq_lane_priority(PC_PQ_LANE_DMA));
-    TEST_ASSERT_GREATER_THAN_UINT8(pc_pq_lane_priority(PC_PQ_LANE_DEVICE), pc_pq_lane_priority(PC_PQ_LANE_FORWARD));
-    TEST_ASSERT_GREATER_THAN_UINT8(pc_pq_lane_priority(PC_PQ_LANE_USER), pc_pq_lane_priority(PC_PQ_LANE_DEVICE));
+    TEST_ASSERT_GREATER_THAN_UINT8(Session.workers->queue->priority(PC_PQ_LANE_FORWARD), Session.workers->queue->priority(PC_PQ_LANE_DMA));
+    TEST_ASSERT_GREATER_THAN_UINT8(Session.workers->queue->priority(PC_PQ_LANE_DEVICE), Session.workers->queue->priority(PC_PQ_LANE_FORWARD));
+    TEST_ASSERT_GREATER_THAN_UINT8(Session.workers->queue->priority(PC_PQ_LANE_USER), Session.workers->queue->priority(PC_PQ_LANE_DEVICE));
 }
 
 void test_lanes_are_isolated()
@@ -173,14 +173,14 @@ void test_lanes_are_isolated()
     pc_pq_config dma = {0};
     dma.handler = on_item_dma;
     dma.core = 1;
-    TEST_ASSERT_TRUE(pc_pq_start_lane(PC_PQ_LANE_DMA, &dma));
+    TEST_ASSERT_TRUE(Session.workers->queue->start(PC_PQ_LANE_DMA, &dma));
 
     uint32_t u = 11, d = 22;
     TEST_ASSERT_TRUE(pc_pq_post(&u, 0));                      // -> USER
-    TEST_ASSERT_TRUE(pc_pq_post_lane(PC_PQ_LANE_DMA, &d, 0)); // -> DMA
+    TEST_ASSERT_TRUE(Session.workers->queue->post(PC_PQ_LANE_DMA, &d, 0)); // -> DMA
 
     // Draining one lane must not touch the other's queue or handler.
-    pc_pq_drain_lane(PC_PQ_LANE_DMA);
+    Session.workers->queue->drain(PC_PQ_LANE_DMA);
     TEST_ASSERT_EQUAL_size_t(0, g_seen_n);
     TEST_ASSERT_EQUAL_size_t(1, g_seen_dma_n);
     TEST_ASSERT_EQUAL_UINT32(22, g_seen_dma[0]);
@@ -192,30 +192,30 @@ void test_lanes_are_isolated()
 
 void test_lane_start_stop_running_independent()
 {
-    TEST_ASSERT_TRUE(pc_pq_running_lane(PC_PQ_LANE_USER)); // setUp started it
-    TEST_ASSERT_FALSE(pc_pq_running_lane(PC_PQ_LANE_DMA));
+    TEST_ASSERT_TRUE(Session.workers->queue->running(PC_PQ_LANE_USER)); // setUp started it
+    TEST_ASSERT_FALSE(Session.workers->queue->running(PC_PQ_LANE_DMA));
 
     pc_pq_config dma = {0};
     dma.handler = on_item_dma;
-    TEST_ASSERT_TRUE(pc_pq_start_lane(PC_PQ_LANE_DMA, &dma));
-    TEST_ASSERT_TRUE(pc_pq_running_lane(PC_PQ_LANE_DMA));
-    TEST_ASSERT_FALSE(pc_pq_start_lane(PC_PQ_LANE_DMA, &dma)); // double start is a no-op
+    TEST_ASSERT_TRUE(Session.workers->queue->start(PC_PQ_LANE_DMA, &dma));
+    TEST_ASSERT_TRUE(Session.workers->queue->running(PC_PQ_LANE_DMA));
+    TEST_ASSERT_FALSE(Session.workers->queue->start(PC_PQ_LANE_DMA, &dma)); // double start is a no-op
 
-    pc_pq_stop_lane(PC_PQ_LANE_DMA);
-    TEST_ASSERT_FALSE(pc_pq_running_lane(PC_PQ_LANE_DMA));
-    TEST_ASSERT_TRUE(pc_pq_running_lane(PC_PQ_LANE_USER)); // USER unaffected
+    Session.workers->queue->stop(PC_PQ_LANE_DMA);
+    TEST_ASSERT_FALSE(Session.workers->queue->running(PC_PQ_LANE_DMA));
+    TEST_ASSERT_TRUE(Session.workers->queue->running(PC_PQ_LANE_USER)); // USER unaffected
 }
 
 void test_lane_high_water_is_per_lane()
 {
     pc_pq_config dma = {0};
     dma.handler = on_item_dma;
-    TEST_ASSERT_TRUE(pc_pq_start_lane(PC_PQ_LANE_DMA, &dma));
+    TEST_ASSERT_TRUE(Session.workers->queue->start(PC_PQ_LANE_DMA, &dma));
     uint32_t v = 5;
-    pc_pq_post_lane(PC_PQ_LANE_DMA, &v, 0);
-    pc_pq_post_lane(PC_PQ_LANE_DMA, &v, 0);
-    TEST_ASSERT_GREATER_OR_EQUAL_size_t(2, pc_pq_high_water_lane(PC_PQ_LANE_DMA));
-    TEST_ASSERT_EQUAL_size_t(0, pc_pq_high_water_lane(PC_PQ_LANE_DEVICE)); // untouched lane
+    Session.workers->queue->post(PC_PQ_LANE_DMA, &v, 0);
+    Session.workers->queue->post(PC_PQ_LANE_DMA, &v, 0);
+    TEST_ASSERT_GREATER_OR_EQUAL_size_t(2, Session.workers->queue->high_water(PC_PQ_LANE_DMA));
+    TEST_ASSERT_EQUAL_size_t(0, Session.workers->queue->high_water(PC_PQ_LANE_DEVICE)); // untouched lane
 }
 
 void test_lane_api_urgent_and_drain()
@@ -223,19 +223,19 @@ void test_lane_api_urgent_and_drain()
     stop_all_lanes();
     pc_pq_config cfg = {0};
     cfg.handler = on_item_dma;
-    TEST_ASSERT_TRUE(pc_pq_start_lane(PC_PQ_LANE_DMA, &cfg));
+    TEST_ASSERT_TRUE(Session.workers->queue->start(PC_PQ_LANE_DMA, &cfg));
     uint32_t a = 10, b = 20;
-    TEST_ASSERT_TRUE(pc_pq_post_lane(PC_PQ_LANE_DMA, &a, 0));
-    TEST_ASSERT_TRUE(pc_pq_post_lane_urgent(PC_PQ_LANE_DMA, &b, 0)); // urgent -> jumps the queue
-    pc_pq_drain_lane(PC_PQ_LANE_DMA);
+    TEST_ASSERT_TRUE(Session.workers->queue->post(PC_PQ_LANE_DMA, &a, 0));
+    TEST_ASSERT_TRUE(Session.workers->queue->post_urgent(PC_PQ_LANE_DMA, &b, 0)); // urgent -> jumps the queue
+    Session.workers->queue->drain(PC_PQ_LANE_DMA);
     TEST_ASSERT_EQUAL_UINT32(2u, (uint32_t)g_seen_dma_n);
     TEST_ASSERT_EQUAL_UINT32(20u, g_seen_dma[0]); // urgent item first
     TEST_ASSERT_EQUAL_UINT32(10u, g_seen_dma[1]);
     // Guards: urgent-post to a bad lane / with a null item fails closed; drain of a bad lane is a no-op.
-    TEST_ASSERT_FALSE(pc_pq_post_lane_urgent((pc_pq_lane)PC_PQ_LANE_COUNT, &a, 0));
-    TEST_ASSERT_FALSE(pc_pq_post_lane_urgent(PC_PQ_LANE_DMA, NULL, 0));
-    pc_pq_drain_lane((pc_pq_lane)PC_PQ_LANE_COUNT);
-    pc_pq_stop_lane(PC_PQ_LANE_DMA);
+    TEST_ASSERT_FALSE(Session.workers->queue->post_urgent((pc_pq_lane)PC_PQ_LANE_COUNT, &a, 0));
+    TEST_ASSERT_FALSE(Session.workers->queue->post_urgent(PC_PQ_LANE_DMA, NULL, 0));
+    Session.workers->queue->drain((pc_pq_lane)PC_PQ_LANE_COUNT);
+    Session.workers->queue->stop(PC_PQ_LANE_DMA);
 }
 
 void test_lane_guards_reject_bad_lane_and_null_item()
@@ -246,14 +246,14 @@ void test_lane_guards_reject_bad_lane_and_null_item()
     pc_pq_lane bad = (pc_pq_lane)PC_PQ_LANE_COUNT;
     pc_pq_config cfg = {0};
     cfg.handler = on_item_dma;
-    TEST_ASSERT_FALSE(pc_pq_start_lane(bad, &cfg));
+    TEST_ASSERT_FALSE(Session.workers->queue->start(bad, &cfg));
     uint32_t v = 1;
-    TEST_ASSERT_FALSE(pc_pq_post_lane(bad, &v, 0));
-    TEST_ASSERT_FALSE(pc_pq_running_lane(bad));
-    TEST_ASSERT_EQUAL_size_t(0, pc_pq_high_water_lane(bad));
-    pc_pq_stop_lane(bad); // must not crash; no state to change
+    TEST_ASSERT_FALSE(Session.workers->queue->post(bad, &v, 0));
+    TEST_ASSERT_FALSE(Session.workers->queue->running(bad));
+    TEST_ASSERT_EQUAL_size_t(0, Session.workers->queue->high_water(bad));
+    Session.workers->queue->stop(bad); // must not crash; no state to change
 
-    TEST_ASSERT_FALSE(pc_pq_post_lane(PC_PQ_LANE_FORWARD, NULL, 0));
+    TEST_ASSERT_FALSE(Session.workers->queue->post(PC_PQ_LANE_FORWARD, NULL, 0));
 }
 
 void test_post_lane_urgent_fails_closed_when_full()
@@ -261,16 +261,16 @@ void test_post_lane_urgent_fails_closed_when_full()
     stop_all_lanes();
     pc_pq_config cfg = {0};
     cfg.handler = on_item_dma;
-    TEST_ASSERT_TRUE(pc_pq_start_lane(PC_PQ_LANE_DMA, &cfg));
+    TEST_ASSERT_TRUE(Session.workers->queue->start(PC_PQ_LANE_DMA, &cfg));
     for (uint32_t i = 0; i < PC_PQ_DEPTH; i++)
     {
-        TEST_ASSERT_TRUE(pc_pq_post_lane(PC_PQ_LANE_DMA, &i, 0));
+        TEST_ASSERT_TRUE(Session.workers->queue->post(PC_PQ_LANE_DMA, &i, 0));
     }
     uint32_t urgent = 999;
-    TEST_ASSERT_FALSE(pc_pq_post_lane_urgent(PC_PQ_LANE_DMA, &urgent, 0)); // full -> dropped, not bumped in
-    pc_pq_drain_lane(PC_PQ_LANE_DMA);
+    TEST_ASSERT_FALSE(Session.workers->queue->post_urgent(PC_PQ_LANE_DMA, &urgent, 0)); // full -> dropped, not bumped in
+    Session.workers->queue->drain(PC_PQ_LANE_DMA);
     TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen_dma_n);
-    pc_pq_stop_lane(PC_PQ_LANE_DMA);
+    Session.workers->queue->stop(PC_PQ_LANE_DMA);
 }
 
 void test_drain_lane_without_handler_skips_call_safely()
@@ -279,8 +279,8 @@ void test_drain_lane_without_handler_skips_call_safely()
     // post_lane() doesn't require the lane to be 'started', so an item can still be queued
     // directly; draining it must skip the callback instead of invoking a null handler.
     uint32_t v = 42;
-    TEST_ASSERT_TRUE(pc_pq_post_lane(PC_PQ_LANE_FORWARD, &v, 0));
-    pc_pq_drain_lane(PC_PQ_LANE_FORWARD); // must not crash with a null handler
+    TEST_ASSERT_TRUE(Session.workers->queue->post(PC_PQ_LANE_FORWARD, &v, 0));
+    Session.workers->queue->drain(PC_PQ_LANE_FORWARD); // must not crash with a null handler
     TEST_ASSERT_EQUAL_size_t(0, g_seen_n);
     TEST_ASSERT_EQUAL_size_t(0, g_seen_dma_n);
 }

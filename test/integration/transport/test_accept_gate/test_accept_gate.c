@@ -236,14 +236,14 @@ void test_ip_allowlist_rejects_bad_and_full()
     TEST_ASSERT_FALSE(Tcp.listener->ip_allow_add(&overflow, 32)); // table full
 }
 
-// proto_register_builtins() installs the always-present HTTP handler; this env compiles no
+// Session.proto->register_builtins() installs the always-present HTTP handler; this env compiles no
 // other protocol module (telnet/ssh/modbus/opcua are all off), so no handler is installed for
 // a protocol this build never registers.
 void test_proto_register_builtins_installs_http(void)
 {
-    proto_register_builtins();
-    TEST_ASSERT_NOT_NULL(proto_get(PROTO_HTTP));
-    TEST_ASSERT_NULL(proto_get(PROTO_TELNET));
+    Session.proto->register_builtins();
+    TEST_ASSERT_NOT_NULL(Session.proto->get(PROTO_HTTP));
+    TEST_ASSERT_NULL(Session.proto->get(PROTO_TELNET));
 }
 
 // With no custom clock installed, pc_millis() falls through to the platform millis() mock.

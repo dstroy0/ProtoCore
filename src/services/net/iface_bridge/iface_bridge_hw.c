@@ -333,7 +333,7 @@ proto_bool pc_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgePro
     bus_begin(&rule->target);
     if (!s_ctx.registered)
     {
-        proto_register(PROTO_BRIDGE, &s_bridge_handler);
+        Session.proto->add(PROTO_BRIDGE, &s_bridge_handler);
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;

@@ -29,7 +29,7 @@
 #include <mbedtls/ssl.h>             // MBEDTLS_ERR_SSL_WANT_READ / WANT_WRITE
 #endif
 #if PC_ENABLE_EDGE_MESH
-#include "network_drivers/session/proto_handler.h" // ProtoHandler / proto_register (PROTO_MESH serving)
+#include "network_drivers/session/proto_handler.h" // ProtoHandler / Session.proto->add(PROTO_MESH serving)
 #include "services/web/edge_cache/edge_mesh.h"     // mesh sibling-cache codec + peer-query engine
 #endif
 #include <stdio.h>
@@ -1339,7 +1339,7 @@ void pc_edge_cache_mesh_serve(void)
 {
     if (!s_ctx.mesh_registered)
     {
-        proto_register(PROTO_MESH, &s_mesh_handler);
+        Session.proto->add(PROTO_MESH, &s_mesh_handler);
         s_ctx.mesh_registered = PROTO_TRUE;
     }
 }

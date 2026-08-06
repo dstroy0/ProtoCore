@@ -99,7 +99,7 @@ void pc_ssh_conn_setup()
     pc_ssh_server_set_emit_cb(ssh_emit);
 }
 
-// The SSH connection ProtoHandler (Layer 5 dispatch seam) - installed by proto_register_builtins()
+// The SSH connection ProtoHandler (Layer 5 dispatch seam) - installed by Session.proto->register_builtins()
 // via this accessor, so this module carries no dependency on the session layer.
 static const ProtoHandler s_ssh_handler = {pc_ssh_conn_accept, pc_ssh_conn_rx, pc_ssh_conn_close, pc_ssh_conn_poll};
 const ProtoHandler *ssh_proto_handler(void)

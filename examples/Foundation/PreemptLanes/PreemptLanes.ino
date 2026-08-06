@@ -42,7 +42,7 @@ void setup()
     pc_pq_config dma = {};
     dma.handler = on_critical;
     dma.core = 1;
-    pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &dma);
+    Session.workers->queue->start(pc_pq_lane::PC_PQ_LANE_DMA, &dma);
 
     // User lane via the no-arg API (unchanged from PreemptQueue).
     pc_pq_config user = {};
@@ -52,8 +52,8 @@ void setup()
     pc_pq_start(&user);
 
     Serial.printf("lane priorities  DMA=%u  FORWARD=%u  DEVICE=%u  USER=%u\n",
-                  pc_pq_lane_priority(pc_pq_lane::PC_PQ_LANE_DMA), pc_pq_lane_priority(pc_pq_lane::PC_PQ_LANE_FORWARD),
-                  pc_pq_lane_priority(pc_pq_lane::PC_PQ_LANE_DEVICE), pc_pq_lane_priority(pc_pq_lane::PC_PQ_LANE_USER));
+                  Session.workers->queue->priority(pc_pq_lane::PC_PQ_LANE_DMA), Session.workers->queue->priority(pc_pq_lane::PC_PQ_LANE_FORWARD),
+                  Session.workers->queue->priority(pc_pq_lane::PC_PQ_LANE_DEVICE), Session.workers->queue->priority(pc_pq_lane::PC_PQ_LANE_USER));
     Serial.println("internal lanes outrank the user lane -> internal work preempts user work");
 }
 
@@ -65,7 +65,7 @@ void loop()
     // before the user-lane task whenever both are runnable.
     pq_item it = {};
     it.seq = g_seq++;
-    pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_DMA, &it, 0); // critical -> internal lane
+    Session.workers->queue->post(pc_pq_lane::PC_PQ_LANE_DMA, &it, 0); // critical -> internal lane
     pc_pq_post(&it, 0);                                  // background -> user lane
     delay(1000);
 }

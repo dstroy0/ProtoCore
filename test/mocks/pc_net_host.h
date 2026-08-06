@@ -586,7 +586,7 @@ static inline int pc_platform_queue_send_isr(pc_platform_queue q, const void *it
     }
     return PC_PLATFORM_OK;
 }
-// Staged-event buffer: a test calls queue_stage_raw() before server_tick(), and the receive below
+// Staged-event buffer: a test calls queue_stage_raw() before Session.tick(), and the receive below
 // drains those items FIFO and then reports empty, which is what a real queue does once emptied.
 // A send is still inert (the host runs the pipeline inline), so the only way an item enters is a
 // test staging it deliberately. One instance for the whole program - the test stages from its own

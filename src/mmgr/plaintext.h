@@ -104,7 +104,7 @@ pc_span pc_plaintext_span(size_t n, size_t align);
 /**
  * @brief Reclaim the whole arena (empties it).
  *
- * Called by server_tick() before each event dispatch. Invalidates every pointer
+ * Called by Session.tick() before each event dispatch. Invalidates every pointer
  * previously returned by pc_plaintext_alloc().
  */
 void pc_plaintext_reset(void);

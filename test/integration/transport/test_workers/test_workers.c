@@ -71,11 +71,11 @@ void test_worker_self_id_roundtrip(void)
 void test_host_worker_lifecycle_is_noops(void)
 {
     // On host there is no worker task: start/stop/wake are no-ops and running() stays false.
-    pc_workers_start(NULL);
-    TEST_ASSERT_FALSE(pc_workers_running());
-    pc_worker_wake(0);
-    pc_workers_stop();
-    TEST_ASSERT_FALSE(pc_workers_running());
+    Session.workers->start(NULL);
+    TEST_ASSERT_FALSE(Session.workers->running());
+    Session.workers->wake(0);
+    Session.workers->stop();
+    TEST_ASSERT_FALSE(Session.workers->running());
 }
 
 static void set_flag_to_42(void *arg)
@@ -86,9 +86,9 @@ void test_host_defer_runs_inline_and_rejects_null(void)
 {
     // On host the caller and pipeline are the same thread, so pc_defer runs the callback inline
     // immediately; a null callback is rejected.
-    TEST_ASSERT_FALSE(pc_defer(0, NULL, NULL));
+    TEST_ASSERT_FALSE(Session.workers->defer(0, NULL, NULL));
     int flag = 0;
-    TEST_ASSERT_TRUE(pc_defer(0, set_flag_to_42, &flag));
+    TEST_ASSERT_TRUE(Session.workers->defer(0, set_flag_to_42, &flag));
     TEST_ASSERT_EQUAL_INT(42, flag);
 }
 

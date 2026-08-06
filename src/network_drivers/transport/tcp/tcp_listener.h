@@ -10,7 +10,7 @@
  * `conn_pool`, wires the standard per-connection callbacks, and posts
  * `EVT_CONNECT` to the owning listener's queue.
  *
- * The session layer drains all active listener queues each `server_tick()`,
+ * The session layer drains all active listener queues each `Session.tick()`,
  * routing events to the correct protocol handler via `TcpConn::proto`.
  *
  * **Single accept callback**

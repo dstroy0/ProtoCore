@@ -11,7 +11,7 @@
 // To keep the fixed PC_PQ_DEPTH=4 lane from saturating (which would collapse every post into the
 // fail-closed early-return), a high-priority sink task drains the lane concurrently on the OTHER
 // core (core 0) while this bench task posts from core 1 - the "hardware event -> process now" shape
-// the service exists for. Draining on device is done by that task; pc_pq_drain_lane() is a no-op
+// the service exists for. Draining on device is done by that task; Session.queue->drain() is a no-op
 // here (host-only), so we never call it. Items are 4-byte u32s, matching PC_PQ_ITEM_SIZE=4 and the
 // known-good payloads in test/test_preempt_queue/test_preempt_queue.cpp.
 //
@@ -63,7 +63,7 @@ static void preempt_queue_bench_task(void *)
         // ISR-style post: xQueueSendToBackFromISR + a (no-op cross-core) yield request.
         DBENCH_OP("pc_pq_post_from_isr", 20000, sink += pc_pq_post_from_isr(&item) ? 1u : 0u);
         // Pure scheduler math: the per-lane default priority switch (no queue touched).
-        DBENCH_OP("pc_pq_lane_priority", 200000, psink += pc_pq_lane_priority(pc_pq_lane::PC_PQ_LANE_DMA));
+        DBENCH_OP("pc_pq_lane_priority", 200000, psink += Session.queue->priority(pc_pq_lane::PC_PQ_LANE_DMA));
 
         (void)sink;
         (void)psink;

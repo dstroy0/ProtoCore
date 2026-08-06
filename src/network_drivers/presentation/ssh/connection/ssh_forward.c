@@ -462,7 +462,7 @@ void pc_ssh_forward_begin()
     pc_ssh_channel_set_rforward_open_cb(on_rforward_open);
     pc_ssh_channel_set_rforward_cancel_cb(on_rforward_cancel);
     pc_ssh_channel_set_forward_confirm_cb(on_forward_confirm);
-    proto_register(PROTO_SSH_RFWD, &s_rfwd_handler);
+    Session.proto->add(PROTO_SSH_RFWD, &s_rfwd_handler);
 }
 
 void pc_ssh_forward_pump(uint8_t ssh_slot)

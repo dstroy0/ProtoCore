@@ -578,7 +578,7 @@ void pc_modbus_rx(uint8_t slot)
 
 // The Modbus ProtoHandler (Layer 5 dispatch seam) - only a data handler; a partial ADU waits in the
 // rx ring, so there is no per-connection accept/close/poll state. Returned by accessor (no session
-// dependency); proto_register_builtins() installs it.
+// dependency); Session.proto->register_builtins() installs it.
 static const ProtoHandler s_modbus_handler = {NULL, pc_modbus_rx, NULL, NULL};
 const ProtoHandler *pc_modbus_proto_handler(void)
 {

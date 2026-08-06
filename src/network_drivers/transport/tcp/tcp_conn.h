@@ -7,7 +7,7 @@
  *
  * Defines the static connection pool and the per-connection event plumbing.
  * Each listener port owns its own event queue (see listener.h); the
- * session layer drains all active queues each tick via server_tick().
+ * session layer drains all active queues each tick via Session.tick().
  *
  * This layer and tls/ are the only two that speak the platform network stack, so the
  * stack's types appear in the signatures below. Every layer above reaches the connection

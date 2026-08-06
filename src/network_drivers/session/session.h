@@ -20,26 +20,29 @@
 
 #include "../transport/tcp_evt.h" // EvtType, TcpEvt: the events this layer drains
 
+#include "network_drivers/session/proto_handler.h" // ProtoRegistryNs: carried below as Session.proto
+#include "network_drivers/session/worker.h"        // WorkerNs: carried below as Session.workers
+
 /**
- * @brief Drive the session layer for one Arduino loop iteration.
+ * @brief Layer 5, and the modules it carries.
  *
- * Call this function from your `loop()` (or indirectly via
- * handle()).  It performs three actions in order:
+ * @var SessionNs::tick    drive the layer for one loop iteration: sweep, drain, dispatch
+ * @var SessionNs::proto   the protocol registry a connection is dispatched through
+ * @var SessionNs::workers the worker tasks that turn the pipeline, their deferred-callback
+ *                         path, and the queue they jump when one is compiled in
  *
- * 1. **Timeout sweep** - calls DeterministicAsyncTCP::check_timeouts()
- *    to force-close connections that have been idle for > CONN_TIMEOUT_MS.
- *
- * 2. **Event drain** - dequeues all pending TcpEvt records from the
- *    FreeRTOS queue.  Each event is dispatched:
- *    - `EvtType::EVT_CONNECT / EvtType::EVT_DISCONNECT / EvtType::EVT_ERROR` → http_reset()
- *    - `EvtType::EVT_DATA` → http_parse()
- *
- * 3. **Returns** - upper layers may then inspect http_pool[] for
- *    PARSE_COMPLETE slots and send responses.
- *
- * @note The event-drain loop is bounded by the queue depth (16 entries).
- *       Even in the absolute worst case this function executes in O(1).
+ * A child is a pointer: a table in one translation unit is not a constant expression in another.
+ * A child behind a feature flag is declared under it, so the layer names only what the image
+ * contains.
  */
-void server_tick(int worker_id);
+typedef struct
+{
+    void (*tick)(int worker_id);
+    const ProtoRegistryNs *proto;
+    const WorkerNs *workers;
+} SessionNs;
+
+/** @brief The one symbol this module exports. */
+extern const SessionNs Session;
 
 #endif

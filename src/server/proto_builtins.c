@@ -6,7 +6,7 @@
  * @brief Installs the built-in protocol handlers.
  *
  * Each built-in exposes a `*_proto_handler()` accessor in its own module; this calls
- * proto_register() for each one behind the matching feature flag.
+ * Session.proto->add() for each one behind the matching feature flag.
  *
  * PROTO_SSH_RFWD self-registers at runtime from pc_ssh_forward_begin().
  */
@@ -32,7 +32,7 @@ static inline void register_if(ConnProto proto, const ProtoHandler *h)
 {
     if (h != NULL)
     {
-        proto_register(proto, h);
+        Session.proto->add(proto, h);
     }
 }
 

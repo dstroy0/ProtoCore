@@ -81,7 +81,7 @@ static void on_dma_complete(const pc_dma_event *ev, void *)
     it.f.len = ev->len;
     uint16_t n = (ev->len < sizeof(it.f.bytes)) ? ev->len : sizeof(it.f.bytes);
     memcpy(it.f.bytes, ev->data, n);
-    pc_pq_post_lane_from_isr(pc_pq_lane::PC_PQ_LANE_FORWARD, &it);
+    Session.workers->queue->post_from_isr(pc_pq_lane::PC_PQ_LANE_FORWARD, &it);
 }
 
 void setup()
@@ -94,7 +94,7 @@ void setup()
     fwd.priority = 0; // FORWARD lane default (above the user lane)
     fwd.core = 1;
     fwd.name = "gw_rx";
-    pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_FORWARD, &fwd);
+    Session.workers->queue->start(pc_pq_lane::PC_PQ_LANE_FORWARD, &fwd);
 
     pc_dma_config a = {};
     a.channel = RADIO_PORT;

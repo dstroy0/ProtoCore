@@ -8,7 +8,7 @@
  * **Dispatch pipeline (called from handle())**
  * ```
  * handle()
- *   └─ server_tick()                 ← drain the session event queue
+ *   └─ Session.tick()                 ← drain the session event queue
  *   └─ for each slot:
  *        PARSE_COMPLETE          → Http.match_and_execute()
  *        PARSE_ERROR             → send_text(400)
@@ -262,7 +262,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #if PROTOCORE_HOT
     // Routes/listeners are now fixed; start the worker task(s) that drive the
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
-    pc_workers_start(pc_pump_trampoline);
+    Session.workers->start(pc_pump_trampoline);
 #endif
     return (int32_t)PC_OK;
 }
@@ -355,7 +355,7 @@ void stop(void)
 {
 #if PROTOCORE_HOT
     // Stop the worker task(s) before tearing down the slots they service.
-    pc_workers_stop();
+    Session.workers->stop();
 #endif
     Tcp.listener->stop_all();
     Tcp.conn->stop();
@@ -572,7 +572,7 @@ void ws_dispatch_close(const WsConn *ws)
 /**
  * @brief Main application tick - tick the session layer then dispatch completed requests.
  *
- * Call this repeatedly from loop(). Each call runs one service_once() pass: a server_tick()
+ * Call this repeatedly from loop(). Each call runs one service_once() pass: a Session.tick()
  * (timeout sweeps + event-queue drain), then a poll of every slot this worker owns, which is
  * where a completed request is dispatched and a parse failure is answered.
  *
@@ -582,7 +582,7 @@ void ws_dispatch_close(const WsConn *ws)
 void handle(void)
 {
 #if PROTOCORE_HOT
-    if (pc_workers_running())
+    if (Session.workers->running())
     {
         return;
     }
@@ -598,7 +598,7 @@ void service_once(int worker_id)
     // poll cadence.
     http_proto_set_poll(pc_http_on_poll);
 
-    server_tick(worker_id);
+    Session.tick(worker_id);
 
 #if PC_ENABLE_HTTP3
     // Drive the QUIC/HTTP-3 server: ingest queued datagrams, run the engines (which dispatch requests
@@ -626,7 +626,7 @@ void service_once(int worker_id)
         // seam, so there is no per-protocol branch here. HTTP reaches it via http_proto_set_poll()
         // -> http_poll_slot(); the singleton pollers (SSH etc.) gate on CONN_ACTIVE
         // inside their own on_poll.
-        const ProtoHandler *ph = proto_get(conn_pool[i].proto);
+        const ProtoHandler *ph = Session.proto->get(conn_pool[i].proto);
         if (ph && ph->on_poll)
         {
             ph->on_poll(i);
@@ -634,7 +634,7 @@ void service_once(int worker_id)
     }
 
     // Run any callbacks app code deferred to this worker (race-free push path).
-    pc_worker_run_deferred(worker_id);
+    Session.workers->run_deferred(worker_id);
 }
 
 proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
@@ -645,7 +645,7 @@ proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
     }
     // HttpRoute to the worker that owns the slot so the callback runs single-threaded
     // alongside that slot's own processing.
-    return pc_defer(conn_pool[slot].owner, fn, arg);
+    return Session.workers->defer(conn_pool[slot].owner, fn, arg);
 }
 
 // ---------------------------------------------------------------------------

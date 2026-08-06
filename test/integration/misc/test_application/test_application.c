@@ -1978,11 +1978,11 @@ void test_slot_poll_requires_registered_handler_with_poll(void)
     TEST_ASSERT_FALSE(handler_called);
 
     static const ProtoHandler no_poll = {NULL, NULL, NULL, NULL};
-    proto_register(PROTO_TELNET, &no_poll); // registered, but nothing to poll
+    Session.proto->add(PROTO_TELNET, &no_poll); // registered, but nothing to poll
     handle();
     TEST_ASSERT_FALSE(handler_called);
 
-    proto_register(PROTO_TELNET, NULL); // restore: telnet is unregistered here
+    Session.proto->add(PROTO_TELNET, NULL); // restore: telnet is unregistered here
     conn_pool[0].proto = PROTO_HTTP;
     handle();
     TEST_ASSERT_TRUE(handler_called); // same slot, now polled

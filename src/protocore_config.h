@@ -377,7 +377,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Depth of each worker's deferred-callback queue.
  *
  * App code on loop() or another task submits work to a slot's owning worker via
- * pc_defer() / pc_defer_slot(); the worker runs it in its own single-thread
+ * Session.workers->defer() / pc_defer_slot(); the worker runs it in its own single-thread
  * context, so an async push (ws_send / pc_sse_send from a timer) is race-free. Each
  * worker has one queue of this depth (entries are a {fn, arg} pair, ~8 bytes).
  */
@@ -5524,7 +5524,7 @@ from halves and is slower than the width it decomposes into"
 #define PC_NEED_DNS_RESOLVER (PC_ENABLE_DNS_RESOLVER || PC_NEED_CLIENT)
 
 // PC_NEED_UDP marks when the datagram transport is built. The listener and client hold rings that
-// only move when someone drains them, and server_tick() is that someone, so the tick references the
+// only move when someone drains them, and Session.tick() is that someone, so the tick references the
 // Udp table only where a feature put it in the image. Every feature that binds a UDP port or sends a
 // datagram lists itself here. Miss one and its rings fill and stop, with nothing on the wire.
 #if PC_ENABLE_COAP || PC_ENABLE_DTLS || PC_ENABLE_STATSD || PC_ENABLE_UDP_TELEMETRY || PC_ENABLE_SNMP ||               \

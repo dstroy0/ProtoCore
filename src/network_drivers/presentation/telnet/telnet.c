@@ -328,7 +328,7 @@ uint8_t pc_telnet_client_count()
     return c;
 }
 
-// The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by proto_register_builtins() via this
+// The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by Session.proto->register_builtins() via this
 // accessor, so this module carries no dependency on the session layer.
 static const ProtoHandler s_telnet_handler = {pc_telnet_accept, pc_telnet_rx, pc_telnet_close, NULL};
 const ProtoHandler *pc_telnet_proto_handler(void)

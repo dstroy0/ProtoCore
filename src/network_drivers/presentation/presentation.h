@@ -101,7 +101,7 @@ void http_parse(uint8_t slot_id);
  * The accept/data/close handlers - the data path multiplexes the TLS handshake,
  * HTTP/2 ALPN, and the WebSocket upgrade before the HTTP/1.1 parser. Returned by
  * accessor (not self-registered) so this module carries no dependency on the
- * session layer; proto_register_builtins() installs it.
+ * session layer; Session.proto->register_builtins() installs it.
  */
 struct ProtoHandler;
 const struct ProtoHandler *http_proto_handler(void);

@@ -9,7 +9,7 @@
 //   RACE SIM  - ordering hazards across tick boundaries
 
 #include "network_drivers/presentation/presentation.h"
-#include "network_drivers/session/proto_handler.h" // proto_register()/proto_get()/ProtoHandler (dispatch table edge cases)
+#include "network_drivers/session/proto_handler.h" // Session.proto->add()/Session.proto->get()/ProtoHandler (dispatch table edge cases)
 #include "network_drivers/session/session.h"
 #include "network_drivers/transport/tcp.h"
 #include <unity.h>
@@ -54,7 +54,7 @@ void tearDown()
 
 void test_empty_queue_does_not_crash()
 {
-    server_tick(0);
+    Session.tick(0);
     TEST_PASS();
 }
 
@@ -79,7 +79,7 @@ void test_tick_fires_check_timeouts_stale_slot_freed()
 {
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS);
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
@@ -87,12 +87,12 @@ void test_tick_does_not_free_fresh_connection()
 {
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS - 1);
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
 // ====================================================================
-// FUNCTION I/O TESTS - server_tick(0)
+// FUNCTION I/O TESTS - Session.tick(0)
 // ====================================================================
 
 // tick() must call Tcp.conn->check_timeouts() BEFORE event drain, so a timed-out
@@ -101,7 +101,7 @@ void test_fn_tick_timeout_before_event_drain_ordering()
 {
     conn_pool[1].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS);
-    server_tick(0); // timeout fires; queue empty (mock returns pdFALSE)
+    Session.tick(0); // timeout fires; queue empty (mock returns pdFALSE)
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
     // http_reset was NOT called by server_tick directly (only check_timeouts),
     // but slot state is CONN_FREE - the connection-level layer is clean.
@@ -120,7 +120,7 @@ void test_fn_tick_only_active_slots_expire()
     conn_pool[3].last_activity_ms = CONN_TIMEOUT_MS; // diff=0 < TIMEOUT_MS
 
     set_millis(CONN_TIMEOUT_MS);
-    server_tick(0);
+    Session.tick(0);
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state); // expired
@@ -139,7 +139,7 @@ void stress_1000_idle_ticks_stable()
     set_millis(0);
     for (int i = 0; i < 1000; i++)
     {
-        server_tick(0);
+        Session.tick(0);
     }
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -160,7 +160,7 @@ void stress_timeout_all_slots_10_cycles()
             conn_pool[i].last_activity_ms = 0;
         }
         set_millis((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
-        server_tick(0);
+        Session.tick(0);
         for (int i = 0; i < MAX_CONNS; i++)
         {
             TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[i].state);
@@ -184,7 +184,7 @@ void stress_mixed_fresh_stale_slots_many_ticks()
     set_millis(CONN_TIMEOUT_MS);
     for (int tick = 0; tick < 200; tick++)
     {
-        server_tick(0);
+        Session.tick(0);
     }
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -194,10 +194,10 @@ void stress_mixed_fresh_stale_slots_many_ticks()
 }
 
 // ====================================================================
-// EVENT DISPATCH TESTS - server_tick(0) queue-drain path
+// EVENT DISPATCH TESTS - Session.tick(0) queue-drain path
 //
 // The FreeRTOS queue mock supports staged events via queue_stage_raw().
-// These tests verify the while(xQueueReceive…) loop in server_tick(0)
+// These tests verify the while(xQueueReceive…) loop in Session.tick(0)
 // dispatches each event type correctly.
 // ====================================================================
 
@@ -209,7 +209,7 @@ void test_evt_connect_calls_http_reset()
 
     TcpEvt evt = {EVT_CONNECT, 1, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick(0);
+    Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[1].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[1].header_count);
@@ -223,7 +223,7 @@ void test_evt_disconnect_calls_http_reset()
 
     TcpEvt evt = {EVT_DISCONNECT, 0, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick(0);
+    Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[0].header_count);
@@ -236,7 +236,7 @@ void test_evt_error_calls_http_reset()
 
     TcpEvt evt = {EVT_ERROR, 2, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick(0);
+    Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[2].parse_state);
 }
@@ -248,7 +248,7 @@ void test_evt_data_calls_http_parse()
 
     TcpEvt evt = {EVT_DATA, 0, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick(0);
+    Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL_STRING("GET", http_pool[0].method);
@@ -273,7 +273,7 @@ void test_multiple_events_drained_in_one_tick()
     TcpEvt e2 = {EVT_DISCONNECT, 2, 0};
     queue_stage_raw(&e2, sizeof(e2));
 
-    server_tick(0);
+    Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[1].parse_state);
@@ -281,20 +281,20 @@ void test_multiple_events_drained_in_one_tick()
 }
 
 // ====================================================================
-// DISPATCH TABLE EDGE CASES - proto_register() / proto_get() / dispatch_event()
+// DISPATCH TABLE EDGE CASES - Session.proto->add() / Session.proto->get() / dispatch_event()
 // ====================================================================
 
 // An out-of-range ConnProto must not write past proto_handlers[] (proto_register)
 // and must resolve to NULL rather than an out-of-bounds read (proto_get).
 void test_proto_register_out_of_range_is_nop()
 {
-    proto_register((ConnProto)250, NULL);
+    Session.proto->add((ConnProto)250, NULL);
     TEST_PASS();
 }
 
 void test_proto_get_out_of_range_returns_null()
 {
-    TEST_ASSERT_NULL(proto_get((ConnProto)250));
+    TEST_ASSERT_NULL(Session.proto->get((ConnProto)250));
 }
 
 // An event for a slot carrying PROTO_NONE (or any unregistered protocol)
@@ -306,35 +306,35 @@ void test_dispatch_drops_unregistered_protocol_event()
 
     TcpEvt evt = {EVT_CONNECT, 0, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick(0);
+    Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // handler never ran
 }
 
 // A registered handler with null callback fields (a protocol module that doesn't implement
 // a given event) must be skipped, not called through a null pointer. PROTO_TELNET
-// is never registered by proto_register_builtins() in this build, so it's free to reuse here.
+// is never registered by Session.proto->register_builtins() in this build, so it's free to reuse here.
 void test_dispatch_skips_null_callback_fields()
 {
     static const ProtoHandler fake_handler = {NULL, NULL, NULL, NULL};
-    proto_register(PROTO_TELNET, &fake_handler);
+    Session.proto->add(PROTO_TELNET, &fake_handler);
 
     conn_pool[0].proto = PROTO_TELNET;
     http_pool[0].parse_state = PARSE_COMPLETE; // sentinel across all three events
 
     TcpEvt e0 = {EVT_CONNECT, 0, 0};
     queue_stage_raw(&e0, sizeof(e0));
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_accept null -> no-op
 
     TcpEvt e1 = {EVT_DATA, 0, 0};
     queue_stage_raw(&e1, sizeof(e1));
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_data null -> no-op
 
     TcpEvt e2 = {EVT_DISCONNECT, 0, 0};
     queue_stage_raw(&e2, sizeof(e2));
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_close null -> no-op
 
     conn_pool[0].proto = PROTO_HTTP; // restore for any later test relying on setUp's default
@@ -349,7 +349,7 @@ void test_dispatch_ignores_unknown_evt_type()
 
     TcpEvt evt = {(EvtType)99, 0, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick(0);
+    Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // no case matched -> no-op
 }
@@ -360,7 +360,7 @@ void test_tick_skips_active_listener_with_null_queue()
 {
     listener_pool[1].active = PROTO_TRUE;
     listener_pool[1].queue = NULL;
-    server_tick(0); // must not crash
+    Session.tick(0); // must not crash
     listener_pool[1].active = PROTO_FALSE;
     TEST_PASS();
 }
@@ -378,11 +378,11 @@ void race_external_free_between_ticks()
 
     // First tick: slot expires inside check_timeouts
     set_millis(CONN_TIMEOUT_MS);
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 
     // Second tick: slot is already free - must not double-free or crash
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
@@ -393,7 +393,7 @@ void race_activity_update_saves_slot_from_timeout()
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS - 1); // one ms before deadline
 
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // safe
 
     // Simulate recv callback updating activity
@@ -401,7 +401,7 @@ void race_activity_update_saves_slot_from_timeout()
 
     // Even at deadline millis, diff = (TIMEOUT-1) - (TIMEOUT-1) = 0 < TIMEOUT
     set_millis(CONN_TIMEOUT_MS);
-    server_tick(0);
+    Session.tick(0);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // still safe
 }
 
@@ -414,13 +414,13 @@ void race_all_expire_then_idle_tick()
         conn_pool[i].last_activity_ms = 0;
     }
     set_millis(CONN_TIMEOUT_MS);
-    server_tick(0); // all freed
+    Session.tick(0); // all freed
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[i].state);
     }
 
-    server_tick(0); // must be no-op
+    Session.tick(0); // must be no-op
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[i].state);
@@ -436,7 +436,7 @@ void race_millis_wraparound_no_spurious_timeout()
     conn_pool[0].last_activity_ms = 0xFFFFFFFF - 100u;
     // now = 0x00000000 + (CONN_TIMEOUT_MS - 200) wraps around to just under deadline
     set_millis((uint32_t)(CONN_TIMEOUT_MS - 200));
-    server_tick(0);
+    Session.tick(0);
     // (now - last) = (TIMEOUT-200) - (UINT32_MAX-100) [unsigned] = TIMEOUT-200 + 101 = TIMEOUT-99 < TIMEOUT
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // must NOT expire
 }
@@ -452,7 +452,7 @@ int main()
     RUN_TEST(test_tick_fires_check_timeouts_stale_slot_freed);
     RUN_TEST(test_tick_does_not_free_fresh_connection);
 
-    // Function I/O: server_tick(0)
+    // Function I/O: Session.tick(0)
     RUN_TEST(test_fn_tick_timeout_before_event_drain_ordering);
     RUN_TEST(test_fn_tick_only_active_slots_expire);
 

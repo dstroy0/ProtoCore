@@ -37,7 +37,7 @@ typedef struct
 } SessionCtx;
 static SessionCtx s_session;
 
-void proto_register(ConnProto proto, const ProtoHandler *h)
+static void proto_register(ConnProto proto, const ProtoHandler *h)
 {
     if ((unsigned)proto < PROTO_MAX_HANDLERS)
     {
@@ -45,7 +45,7 @@ void proto_register(ConnProto proto, const ProtoHandler *h)
     }
 }
 
-const ProtoHandler *proto_get(ConnProto proto)
+static const ProtoHandler *proto_get(ConnProto proto)
 {
     // Install the built-ins on first lookup so dispatch works before begin() (the native test
     // harness drives server_tick() directly). The list itself lives in proto_builtins.c -
@@ -102,7 +102,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     }
 }
 
-void server_tick(int worker_id)
+static void server_tick(int worker_id)
 {
     /*
      * Check timeouts BEFORE draining events.  This ensures that a slot
@@ -154,3 +154,7 @@ void server_tick(int worker_id)
     }
 #endif
 }
+
+const ProtoRegistryNs Protocols = {proto_register_builtins, proto_register, proto_get};
+
+const SessionNs Session = {server_tick, &Protocols, &Workers};

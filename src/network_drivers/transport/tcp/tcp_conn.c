@@ -34,7 +34,7 @@
 #include "tcp_listener.h"       // Listener, listener_pool: the row the accept path stamps onto a slot
 
 #if PROTOCORE_HOT
-#include "network_drivers/session/worker.h" // pc_worker_wake() - resume a paced send when the window drains
+#include "network_drivers/session/worker.h" // Session.workers->wake() - resume a paced send when the window drains
 #endif
 
 #if PC_ENABLE_TLS
@@ -821,7 +821,7 @@ static void pc_conn_begin_close(uint8_t slot_id)
  *
  * Forwards the event to the queue owned by the connection's listener.
  * The enqueue does not block: it returns immediately if the queue is full.
- * A full queue indicates the application is not calling server_tick() fast
+ * A full queue indicates the application is not calling Session.tick() fast
  * enough; dropped events are recoverable via the idle-timeout sweep.
  */
 static inline void enqueue(TcpConn *slot, const TcpEvt *evt)
@@ -1153,7 +1153,7 @@ pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len)
         // (e.g. a large file) resumes now rather than on the next idle sweep.
         else
         {
-            pc_worker_wake(slot->owner);
+            Session.workers->wake(slot->owner);
         }
 #endif
     }

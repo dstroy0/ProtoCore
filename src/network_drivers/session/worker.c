@@ -14,7 +14,7 @@
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
 #include "mmgr/arena.h"                               // pc_worker_set_self: identity lives with the pools it indexes
-#include "mmgr/ring.h"                   // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+#include "mmgr/ring.h"                                // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 
 // ---------------------------------------------------------------------------
 // Worker tasks
@@ -83,7 +83,7 @@ typedef struct
 } DeferStorageCtx;
 static DeferStorageCtx s_defer_store;
 
-void pc_workers_start(pc_worker_pump_fn pump)
+static void pc_workers_start(pc_worker_pump_fn pump)
 {
     if (PROTO_ATOMIC_LOAD(&s_worker.run))
     {
@@ -107,7 +107,7 @@ void pc_workers_start(pc_worker_pump_fn pump)
     }
 }
 
-proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
+static proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
 {
     if (!fn)
     {
@@ -126,7 +126,7 @@ proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
     return PROTO_TRUE;
 }
 
-void pc_worker_wake(int worker_id)
+static void pc_worker_wake(int worker_id)
 {
     if (worker_id < 0 || worker_id >= PC_WORKER_COUNT)
     {
@@ -139,7 +139,7 @@ void pc_worker_wake(int worker_id)
     }
 }
 
-void pc_worker_run_deferred(int worker_id)
+static void pc_worker_run_deferred(int worker_id)
 {
     if (worker_id < 0 || worker_id >= PC_WORKER_COUNT || !s_defer.dq[worker_id])
     {
@@ -155,7 +155,7 @@ void pc_worker_run_deferred(int worker_id)
     }
 }
 
-void pc_workers_stop(void)
+static void pc_workers_stop(void)
 {
     if (!PROTO_ATOMIC_LOAD(&s_worker.run))
     {
@@ -167,32 +167,32 @@ void pc_workers_stop(void)
     pc_platform_task_delay(3);
 }
 
-proto_bool pc_workers_running(void)
+static proto_bool pc_workers_running(void)
 {
     return PROTO_ATOMIC_LOAD(&s_worker.run);
 }
 
 #else // host build - no tasks; handle()/tests drive the pipeline inline
 
-void pc_workers_start(pc_worker_pump_fn pump)
+static void pc_workers_start(pc_worker_pump_fn pump)
 {
     (void)pump;
 }
-void pc_workers_stop(void)
+static void pc_workers_stop(void)
 {
 }
-proto_bool pc_workers_running(void)
+static proto_bool pc_workers_running(void)
 {
     return PROTO_FALSE;
 }
-void pc_worker_wake(int worker_id)
+static void pc_worker_wake(int worker_id)
 {
     (void)worker_id; // no worker task on host - nothing to wake
 }
 
 // No worker task on host: the caller and the pipeline are the same thread, so a
 // deferred callback can run inline immediately (same observable effect, race-free).
-proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
+static proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
 {
     (void)worker_id;
     if (!fn)
@@ -202,9 +202,21 @@ proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
     fn(arg);
     return PROTO_TRUE;
 }
-void pc_worker_run_deferred(int worker_id)
+static void pc_worker_run_deferred(int worker_id)
 {
     (void)worker_id;
 }
 
 #endif // PROTOCORE_HOT
+
+const WorkerNs Workers = {pc_worker_run_deferred,
+                          pc_workers_running,
+                          pc_workers_start,
+                          pc_workers_stop,
+                          pc_worker_wake,
+                          pc_defer
+#if PC_ENABLE_PREEMPT_QUEUE
+                          ,
+                          &PreemptQueue
+#endif
+};
