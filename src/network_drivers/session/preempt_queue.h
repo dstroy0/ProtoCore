@@ -81,40 +81,34 @@ typedef struct
     const char *name;      ///< Lane name (debug); may be NULL.
 } pc_pq_config;
 
-// --- Lane API -------------------------------------------------------------------------
-
 /**
- * @brief Create a lane's queue and start its processing task.
+ * @brief The PreemptQueue module.
  *
- * Idempotent per lane: a second call while that lane runs is a no-op returning false. On
- * host no task is started (drive with PreemptQueue.drain()). If `cfg->priority` is 0 the
- * lane's default priority is used (internal lanes default above the user lane).
- * @return true if started; false on a bad lane / null handler / already running.
+ * @var PreemptQueueNs::post_from_isr
+ * @var PreemptQueueNs::post_urgent
+ * @var PreemptQueueNs::high_water
+ * @var PreemptQueueNs::priority
+ * @var PreemptQueueNs::running
+ * @var PreemptQueueNs::start
+ * @var PreemptQueueNs::post
+ * @var PreemptQueueNs::drain
+ * @var PreemptQueueNs::stop
  */
-proto_bool PreemptQueue.start(pc_pq_lane lane, const pc_pq_config *cfg);
+typedef struct
+{
+    proto_bool (*post_from_isr)(pc_pq_lane lane, const void *item);
+    proto_bool (*post_urgent)(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
+    size_t (*high_water)(pc_pq_lane lane);
+    uint8_t (*priority)(pc_pq_lane lane);
+    proto_bool (*running)(pc_pq_lane lane);
+    proto_bool (*start)(pc_pq_lane lane, const pc_pq_config *cfg);
+    proto_bool (*post)(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
+    void (*drain)(pc_pq_lane lane);
+    void (*stop)(pc_pq_lane lane);
+} PreemptQueueNs;
 
-/** @brief Post to the back of a lane from a task context (copies PC_PQ_ITEM_SIZE
- *         bytes, blocks up to @p timeout_ticks, then fails closed). */
-proto_bool PreemptQueue.post(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
-
-/** @brief Post to the FRONT of a lane (urgent) from a task context. */
-proto_bool PreemptQueue.post_urgent(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
-
-/** @brief Post to a lane from an ISR (interrupt-safe; requests an immediate switch). */
-proto_bool PreemptQueue.post_from_isr(pc_pq_lane lane, const void *item);
-
-/** @brief Run the handler over every currently-queued item on a lane (host / inline
- *         drive). A no-op wherever the lane has a task of its own to drain it. */
-void PreemptQueue.drain(pc_pq_lane lane);
-
-/** @brief Stop a lane's processing task (no-op on host). */
-void PreemptQueue.stop(pc_pq_lane lane);
-
-/** @brief True while a lane's processing task is running (always false on host). */
-proto_bool PreemptQueue.running(pc_pq_lane lane);
-
-/** @brief Peak items ever queued at once on a lane (for sizing PC_PQ_DEPTH). */
-size_t PreemptQueue.high_water(pc_pq_lane lane);
+/** @brief The one symbol this module exports. */
+extern const PreemptQueueNs PreemptQueue;
 
 // --- User-lane API (drives PC_PQ_LANE_USER) --------------------------------------------
 
@@ -160,35 +154,6 @@ PC_INLINE size_t pc_pq_high_water(void)
 }
 
 #endif // PC_ENABLE_PREEMPT_QUEUE
-
-/**
- * @brief The PreemptQueue module.
- *
- * @var PreemptQueueNs::post_from_isr
- * @var PreemptQueueNs::post_urgent
- * @var PreemptQueueNs::high_water
- * @var PreemptQueueNs::priority
- * @var PreemptQueueNs::running
- * @var PreemptQueueNs::start
- * @var PreemptQueueNs::post
- * @var PreemptQueueNs::drain
- * @var PreemptQueueNs::stop
- */
-typedef struct
-{
-    proto_bool (*post_from_isr)(pc_pq_lane lane, const void *item);
-    proto_bool (*post_urgent)(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
-    size_t (*high_water)(pc_pq_lane lane);
-    uint8_t (*priority)(pc_pq_lane lane);
-    proto_bool (*running)(pc_pq_lane lane);
-    proto_bool (*start)(pc_pq_lane lane, const pc_pq_config *cfg);
-    proto_bool (*post)(pc_pq_lane lane, const void *item, uint32_t timeout_ticks);
-    void (*drain)(pc_pq_lane lane);
-    void (*stop)(pc_pq_lane lane);
-} PreemptQueueNs;
-
-/** @brief The one symbol this module exports. */
-extern const PreemptQueueNs PreemptQueue;
 
 PROTO_END_DECLS
 
