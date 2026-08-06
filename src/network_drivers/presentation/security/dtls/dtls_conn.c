@@ -15,6 +15,9 @@
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "server/clock/clock.h" // pc_millis() stamps / checks the HelloRetryRequest cookie freshness
 
+// Called above their definitions; static made the header's declaration unavailable.
+static proto_bool pc_dtls_conn_established(const DtlsConn *c);
+
 // TLS alert codes used here (RFC 8446 §6).
 static const uint8_t ALERT_UNEXPECTED_MESSAGE = 10;
 static const uint8_t ALERT_HANDSHAKE_FAILURE = 40;
