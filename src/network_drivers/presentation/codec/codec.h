@@ -5,22 +5,14 @@
  * @file codec.h
  * @brief One binary codec interface; a wire encoding is an instance of it.
  *
- * CBOR and MessagePack encode the same ten things - unsigned, signed, bytes, string, bool, null,
- * float, array header, map header - into different bytes. Written out separately they were two
- * parallel APIs over two field-identical cursor structs, and a caller had to pick one at the call
- * site, so SenML-over-CBOR and SenML-over-MessagePack could not be the same code.
+ * The interface fixes the operations, their order, and their signatures; a format supplies the
+ * function pointers. The order is the field order of the table, so a format whose operations drift
+ * out of order fails to compile.
  *
- * They are one interface with two instances. The operations, their order, and their signatures are
- * fixed here; a format supplies the function pointers. Order is load-bearing: it is the field order
- * of the table, so a format whose operations drift out of order fails to compile rather than
- * silently binding the wrong encoder.
+ * Dispatch is a `static const` table of function pointers in rodata.
  *
- * Dispatch is a `static const` table of plain function pointers in rodata, the same shape as
- * ProtoHandler. Not virtual, not RTTI, not std::function (SRCBANNED #22): the set of reachable
- * targets stays a closed list the linker can see whole, so the worst-case path is still a number.
- *
- * The region types come from span.h and the byte verbs from bytes.h - a codec does no allocation and
- * owns no buffer; it writes into a pc_span the caller bound and reads from a pc_cspan.
+ * The region types come from span.h and the byte verbs from bytes.h. A codec allocates nothing and
+ * owns no buffer: it writes into a pc_span the caller bound and reads from a pc_cspan.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
