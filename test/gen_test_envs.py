@@ -24,7 +24,7 @@ The table schema (test/test_matrix.json), per env:
         "base":  "native_base" (default) | "env:native_stack_l46" | "env:native_stack_http",
         "flags": ["-DPC_ENABLE_X=1", ...],     # extras beyond the base flags
         "src":   ["+<services/x/x.cpp>", "-<*>"], # build_src_filter lines, verbatim
-        "tests": ["test_x", ...],                 # test_filter entries
+        "tests": ["test_x", ...],                 # test_filter entries; [] means run no suite
         "test_build_src": "no"                    # optional override
     }
 """
@@ -68,6 +68,10 @@ def render_env(name, e):
         lines.append("test_filter =")
         for t in tests:
             lines.append(f"    {t}")
+    else:
+        # A base env other envs extend for its build_src_filter. Without this, pio takes an absent
+        # filter as "every suite in test/" and runs all of them against a src list built for none.
+        lines.append("test_ignore = *")
     if e.get("test_build_src"):
         lines.append(f"test_build_src = {e['test_build_src']}")
     return "\n".join(lines)
