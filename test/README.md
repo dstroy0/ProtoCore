@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **313 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **314 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -183,6 +183,7 @@ The native test matrix has **313 environments**, one per feature, generated from
 | `native_hislip` | `PC_ENABLE_HISLIP=1` | `unit/instrumentation/test_hislip` | HiSLIP (High-Speed LAN Instrument Protocol, IVI-6.1) message codec (services/instrumentation/hislip): the fixed 16-byte header build/parse (HS prologue + type + control + 32-bit param + 64-bit payload... |
 | `native_hmmd` | `PC_ENABLE_HMMD=1` | `unit/peripherals/test_hmmd` | Waveshare HMMD 24GHz mmWave micro-motion radar codec (services/peripherals/hmmd): the LD2410-family little-endian framing, the report parse (detection flag, distance, all 16 gate energies), rejecting ... |
 | `native_hostlink` | `PC_ENABLE_HOSTLINK=1` | `unit/fieldbus/test_hostlink` | Omron Host Link (C-mode) frame codec (services/fieldbus/hostlink): the FCS (XOR), the ASCII command builder (@UU + header + text + FCS + *CR), and the FCS-validating parser + end-code reader. |
+| `native_hot_workers` | `PC_WORKER_COUNT=2` | `integration/transport/test_workers` | PROTOCORE_HOT at PC_WORKER_COUNT=2, which nothing else compiles: native_tcp_hot is single-worker and takes the other arm of listener_enqueue, and native_workers does not set PROTOCORE_HOT, so the mult... |
 | `native_hotswap` | `PC_ENABLE_HOTSWAP=1` | `protocols/storage/test_hotswap` | Removable-storage hot-swap safeties (services/storage/hotswap): the ABSENT/READY/FAULTED state machine - a run of consecutive I/O errors faults a volume while a single one does not, any success resets... |
 | `native_hpack` | `PC_ENABLE_HTTP2=1` | `unit/http/test_hpack` | HPACK header compression for HTTP/2 (RFC 7541): prefix-integer coding (App C.1), the Huffman string code (App B / C.4.1), the first-request decode with dynamic-table insertion (C.3.1), dynamic-table i... |
 | `native_http_client` | `PC_ENABLE_HTTP_CLIENT=1` | `unit/http/test_http_client` | Outbound HTTP client: URL parser + request builder + response parser. |

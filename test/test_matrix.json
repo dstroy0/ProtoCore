@@ -1220,6 +1220,24 @@
       ],
       "tests": ["protocols/transport/test_tcp_hot"]
     },
+    "native_hot_workers": {
+      "desc": "PROTOCORE_HOT at PC_WORKER_COUNT=2, which nothing else compiles: native_tcp_hot is\nsingle-worker and takes the other arm of listener_enqueue, and native_workers does not set\nPROTOCORE_HOT, so the multi-worker hot arm - the per-worker queue routing and the wake that\nfollows it - had no witness in the matrix at all.",
+      "base": "native_hot_base",
+      "flags": ["-DPC_WORKER_COUNT=2"],
+      "src": [
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/transport/diffserv.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
+        "+<shared_primitives/ip.c>",
+        "+<server/clock/clock.c>"
+      ],
+      "tests": ["integration/transport/test_workers"]
+    },
     "native_udp_hot": {
       "desc": "The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand board_drivers/*/mock stands in for silicon). Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
       "base": "native_hot_base",
@@ -2950,7 +2968,7 @@
       "tests": ["unit/storage/test_config_io"]
     },
     "native_workers": {
-      "desc": "Core-partitioning invariant at N=2 (PC_WORKER_COUNT=2): each worker reaps\nonly its owned slots (check_timeouts ownership). Per-worker queue routing is\nhardware-verified (the host queue mock ignores the handle).",
+      "desc": "Core-partitioning invariant at N=2 (PC_WORKER_COUNT=2): each worker reaps\nonly its owned slots (check_timeouts ownership). The host queue is keyed by handle, so\nper-worker routing is checkable here rather than only on hardware.",
       "flags": ["-DPC_WORKER_COUNT=2"],
       "src": [
         "+<shared_primitives/ip.c>",
