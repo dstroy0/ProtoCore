@@ -899,6 +899,7 @@
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_snmp_ber", "test_snmp_agent"]
@@ -919,6 +920,7 @@
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<mmgr/arena.c>",
@@ -957,6 +959,7 @@
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_coap"]
@@ -975,6 +978,7 @@
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_coap"]
@@ -1144,7 +1148,8 @@
       "src": [
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
-        "+<network_drivers/transport/udp/udp_client.c>"
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_udp_transport"]
     },
@@ -1824,7 +1829,8 @@
         "+<services/net/syslog/syslog.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
-        "+<network_drivers/transport/udp/udp_client.c>"
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_syslog"]
     },
@@ -2418,7 +2424,8 @@
         "+<services/iot/statsd/statsd.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
-        "+<network_drivers/transport/udp/udp_client.c>"
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>"
       ],
       "tests": ["test_statsd"]
     },
@@ -3181,6 +3188,7 @@
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/security/dtls/dtls_conn.c>",
         "+<network_drivers/presentation/security/dtls/dtls_record.c>",
         "+<network_drivers/presentation/security/dtls/dtls_handshake.c>",
@@ -3212,6 +3220,7 @@
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/security/dtls/dtls_conn.c>",
         "+<network_drivers/presentation/security/dtls/dtls_record.c>",
         "+<network_drivers/presentation/security/dtls/dtls_handshake.c>",
