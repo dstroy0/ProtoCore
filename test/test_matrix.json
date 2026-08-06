@@ -2442,7 +2442,10 @@
     },
     "native_net_egress": {
       "desc": "Egress-interface reporting (network_drivers/physical). The esp_netif default-\nroute lookups are ESP32-only; the pure interface-key classifier host-tests here.",
-      "src": ["+<network_drivers/physical/physical.c>"],
+      "src": [
+        "+<network_drivers/physical/physical.c>",
+        "+<network_drivers/physical/radio_power.c>"
+      ],
       "tests": ["unit/physical/test_net_egress"]
     },
     "native_client": {
