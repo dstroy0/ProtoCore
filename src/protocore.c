@@ -117,7 +117,6 @@
 // is what turns each entry into a listener_pool[] binding, and from then on transport owns it.
 typedef struct
 {
-    Handler not_found_handler; ///< Called when no route matches; may be null.
     RequestLogCb log_cb;       ///< Per-request access-log hook; may be null.
 
     uint16_t listen_ports[MAX_LISTENERS];   ///< Ports registered via listen() / begin_http().
@@ -773,7 +772,7 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 
 void on_not_found(Handler callback)
 {
-    s_inst.not_found_handler = callback;
+    Http.set_not_found(callback);
 }
 
 // set_cors() / set_cache_control() live in server/response.cpp, with the buffers they fill.

@@ -31,6 +31,9 @@ typedef enum
     HTTP_METHOD_UNKNOWN ///< Unrecognized method token, answered 501
 } HttpMethod;
 
+/** @brief A route's request handler. */
+typedef void (*Handler)(uint8_t slot_id, HttpReq *request);
+
 /**
  * @brief The version-agnostic HTTP surface.
  *
@@ -52,6 +55,7 @@ typedef struct
     proto_bool (*req_is_head)(uint8_t slot_id);
     void (*allow_append)(char *buf, size_t cap, const char *m);
     void (*match_and_execute)(uint8_t slot_id);
+    void (*set_not_found)(Handler cb);
 } HttpNs;
 
 /** @brief The one symbol this module exports. */

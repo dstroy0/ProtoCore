@@ -3207,7 +3207,7 @@
 "native_upload",
 "native_web_terminal"
 ],
-"src/network_drivers/application/auth/auth.c": [
+"src/network_drivers/presentation/http/auth/auth.c": [
 "native_application",
 "native_h3_server",
 "native_json",

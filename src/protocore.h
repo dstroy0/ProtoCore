@@ -55,8 +55,8 @@ PROTO_BEGIN_DECLS
 #include "crypto/cipher/aes256ctr.h"
 #include "crypto/mac/hmac_sha256.h"
 
-#include "network_drivers/application/auth/auth.h"
 #include "network_drivers/physical/physical.h"
+#include "network_drivers/presentation/http/auth/auth.h"
 
 #include "network_drivers/transport/diffserv.h"
 #include "network_drivers/transport/tcp.h"
@@ -381,7 +381,7 @@ typedef struct pc_mnt_backend pc_mnt_backend;
  * @note If the callback returns without calling send_text(), the framework will
  *       reset the slot automatically (no response is sent to the client).
  */
-typedef void (*Handler)(uint8_t slot_id, HttpReq *request);
+// Handler is the HTTP root's, declared in network_drivers/presentation/http/http.h.
 
 /**
  * @brief Resolver for `{{name}}` template placeholders used by send_template().

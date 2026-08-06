@@ -12,7 +12,20 @@
 #include "mmgr/membuild.h"            // pc_sb: the Allow list is appended, not formatted
 #include "mmgr/rawmemcpy.h"           // proto_raw_read: a captured segment moves into our own buffer
 #include "protocore.h"                // http_pool, and the request and route widths
+#include "network_drivers/presentation/http/auth/auth.h"
 #include "shared_primitives/runops.h" // every scan and compare here
+
+// The root's one file-scope mutable: the handler a request runs when no route matched.
+typedef struct
+{
+    Handler not_found;
+} HttpCtx;
+static HttpCtx s_http;
+
+static void set_not_found(Handler cb)
+{
+    s_http.not_found = cb;
+}
 
 /**
  * @brief Convert an HTTP status code to its standard reason phrase.
@@ -681,9 +694,9 @@ void match_and_execute(uint8_t slot_id)
         return;
     }
 
-    if (s_inst.not_found_handler)
+    if (s_http.not_found != NULL)
     {
-        s_inst.not_found_handler(slot_id, req);
+        s_http.not_found(slot_id, req);
     }
     else
     {
@@ -692,4 +705,4 @@ void match_and_execute(uint8_t slot_id)
 }
 
 const HttpNs Http = {status_text,       parse_method, method_name,      path_matches,
-                     match_path_params, req_is_head,  allow_append,     match_and_execute};
+                     match_path_params, req_is_head,  allow_append,     match_and_execute, set_not_found};
