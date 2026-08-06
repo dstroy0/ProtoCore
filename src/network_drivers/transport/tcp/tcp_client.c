@@ -21,8 +21,8 @@
 // PC_NEED_CLIENT in protocore_config.h.
 #if PROTOCORE_HOT && PC_NEED_CLIENT
 
+#include "../diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "board_drivers/board_profiles/pc_platform.h" // the target's TCP, under our names
-#include "../diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/resolver.h" // shared host->IP resolve (one DNS owner)
 #include "server/clock/clock.h"                   // pc_millis()
@@ -37,6 +37,9 @@ typedef struct
     _Atomic size_t head; // producer (stack recv cb); acquire/release SPSC, same as the server ring
     _Atomic size_t tail; // consumer (caller)
 } ClientConn;
+
+static_assert(PC_RING_POW2(PC_CLIENT_RX_BUF),
+              "PC_CLIENT_RX_BUF must be a power of two: a ring index wraps with a mask");
 
 // Outbound client connection pool, owned by one instance (internal linkage): the per-slot
 // ClientConn state. One named owner, unreachable from any other translation unit.

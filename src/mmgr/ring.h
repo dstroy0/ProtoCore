@@ -59,10 +59,22 @@
 // `tail` only (the producer owns `head`). A read reads `tail` once and publishes it
 // once at the end (one release store), not per byte.
 
-/** @brief Bytes available to read (head - tail, modulo cap). */
+/**
+ * @brief A ring capacity is a power of two, so an index wraps with an AND.
+ *
+ * Every owner asserts this over its own capacity. Not every part in the target list has a hardware
+ * divide, and where it is missing the compiler emits a call into a software routine, which a
+ * per-byte wrap would take on every byte.
+ */
+#define PC_RING_POW2(cap) (((cap) & ((cap) - 1)) == 0)
+
+/** @brief Wrap @p i into a ring of @p cap bytes. */
+#define PC_RING_WRAP(i, cap) ((i) & ((cap) - 1))
+
+/** @brief Bytes available to read (head - tail, wrapped). */
 static inline size_t pc_ring_available(const _Atomic size_t *head, const _Atomic size_t *tail, size_t cap)
 {
-    return (PROTO_ATOMIC_LOAD(head) + cap - PROTO_ATOMIC_LOAD(tail)) % cap;
+    return PC_RING_WRAP(PROTO_ATOMIC_LOAD(head) - PROTO_ATOMIC_LOAD(tail), cap);
 }
 
 /** @brief Pop one byte into @p out; false if empty. */
@@ -75,7 +87,7 @@ static inline proto_bool pc_ring_read_byte(const uint8_t *buf, size_t cap, const
         return PROTO_FALSE;
     }
     *out = buf[t];
-    PROTO_ATOMIC_STORE(tail, (t + 1) % cap);
+    PROTO_ATOMIC_STORE(tail, PC_RING_WRAP(t + 1, cap));
     return PROTO_TRUE;
 }
 
@@ -90,7 +102,7 @@ static inline size_t pc_ring_read(const uint8_t *buf, size_t cap, const _Atomic 
     {
         dst[n] = buf[t];
         n++;
-        t = (t + 1) % cap;
+        t = PC_RING_WRAP(t + 1, cap);
     }
     PROTO_ATOMIC_STORE(tail, t);
     return n;
@@ -100,18 +112,18 @@ static inline size_t pc_ring_read(const uint8_t *buf, size_t cap, const _Atomic 
 static inline void pc_ring_peek(const uint8_t *buf, size_t cap, const _Atomic size_t *tail, size_t off, uint8_t *dst,
                                 size_t n)
 {
-    size_t idx = (PROTO_ATOMIC_LOAD(tail) + off) % cap;
+    size_t idx = PC_RING_WRAP(PROTO_ATOMIC_LOAD(tail) + off, cap);
     for (size_t i = 0; i < n; i++)
     {
         dst[i] = buf[idx];
-        idx = (idx + 1) % cap;
+        idx = PC_RING_WRAP(idx + 1, cap);
     }
 }
 
 /** @brief Drop @p n bytes from the tail (advance past already-peeked data). */
 static inline void pc_ring_consume(_Atomic size_t *tail, size_t cap, size_t n)
 {
-    PROTO_ATOMIC_STORE(tail, (PROTO_ATOMIC_LOAD(tail) + n) % cap);
+    PROTO_ATOMIC_STORE(tail, PC_RING_WRAP(PROTO_ATOMIC_LOAD(tail) + n, cap));
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +137,7 @@ static inline void pc_ring_consume(_Atomic size_t *tail, size_t cap, size_t n)
 /** @brief Free space to write: (cap-1) - used, one slot reserved to tell full from empty. */
 static inline size_t pc_ring_free(const _Atomic size_t *head, const _Atomic size_t *tail, size_t cap)
 {
-    size_t used = (PROTO_ATOMIC_LOAD(head) + cap - PROTO_ATOMIC_LOAD(tail)) % cap;
+    size_t used = PC_RING_WRAP(PROTO_ATOMIC_LOAD(head) - PROTO_ATOMIC_LOAD(tail), cap);
     return (cap - 1) - used;
 }
 
@@ -151,11 +163,76 @@ static inline size_t pc_ring_write_span(uint8_t *buf, size_t cap, size_t head, c
             chunk = len;
         }
         proto_raw_read(&buf[head], src, chunk);
-        head = (head + chunk) % cap;
+        head = PC_RING_WRAP(head + chunk, cap);
         src += chunk;
         len -= chunk;
     }
     return head;
+}
+
+// ---------------------------------------------------------------------------
+// Segment ring: one message per segment
+// ---------------------------------------------------------------------------
+// The ring is `nsegs` segments of `seg_size` bytes and one entry fills one segment, so an
+// entry is contiguous and a consumer reads it where it was written. The segments from
+// `rel` up to `claim` are filled and not yet released. The producer advances `claim` and
+// the consumer advances `rel`, one side each, the same rule as the byte ring above.
+// Segments release in order. `nsegs` is a power of two, so the index is a mask.
+
+/** @brief Segments filled and not yet released. */
+static inline size_t pc_seg_inflight(const _Atomic size_t *claim, const _Atomic size_t *rel)
+{
+    return PROTO_ATOMIC_LOAD(claim) - PROTO_ATOMIC_LOAD(rel);
+}
+
+/**
+ * @brief Index of the segment the producer fills next.
+ *
+ * Publishing is separate, so a half-filled segment is never visible to the consumer.
+ * @return false when every segment is in flight.
+ */
+static inline proto_bool pc_seg_next(const _Atomic size_t *claim, const _Atomic size_t *rel, size_t nsegs, size_t *idx)
+{
+    size_t c = PROTO_ATOMIC_LOAD(claim);
+    if ((c - PROTO_ATOMIC_LOAD(rel)) >= nsegs)
+    {
+        return PROTO_FALSE;
+    }
+    *idx = c & (nsegs - 1);
+    return PROTO_TRUE;
+}
+
+/** @brief Make the filled segment visible to the consumer. */
+static inline void pc_seg_publish(_Atomic size_t *claim)
+{
+    PROTO_ATOMIC_STORE(claim, PROTO_ATOMIC_LOAD(claim) + 1);
+}
+
+/**
+ * @brief Index of the segment the consumer sends next.
+ * @return false when none is in flight.
+ */
+static inline proto_bool pc_seg_front(const _Atomic size_t *claim, const _Atomic size_t *rel, size_t nsegs, size_t *idx)
+{
+    size_t r = PROTO_ATOMIC_LOAD(rel);
+    if (PROTO_ATOMIC_LOAD(claim) == r)
+    {
+        return PROTO_FALSE;
+    }
+    *idx = r & (nsegs - 1);
+    return PROTO_TRUE;
+}
+
+/** @brief Free the front segment: the wire has taken those bytes. */
+static inline void pc_seg_release(_Atomic size_t *rel)
+{
+    PROTO_ATOMIC_STORE(rel, PROTO_ATOMIC_LOAD(rel) + 1);
+}
+
+/** @brief The contiguous span of segment @p idx, @p seg_size bytes. */
+static inline uint8_t *pc_seg_at(uint8_t *buf, size_t seg_size, size_t idx)
+{
+    return &buf[idx * seg_size];
 }
 
 #endif // PROTOCORE_RING_H

@@ -427,6 +427,8 @@ static inline pc_net_err pc_tcp_marshal(pc_tcp_op op, uint8_t slot, pc_pcb *pcb,
 }
 #endif // PROTOCORE_HOT
 
+static_assert(PC_RING_POW2(RX_BUF_SIZE), "RX_BUF_SIZE must be a power of two: a ring index wraps with a mask");
+
 TcpConn conn_pool[CONN_POOL_SLOTS];
 
 // Owns the connection pool's own state (unconditional - the state transitions it tracks happen on

@@ -46,7 +46,7 @@
 #define MAX_CONNS 12
 #endif
 #ifndef RX_BUF_SIZE
-#define RX_BUF_SIZE 1536
+#define RX_BUF_SIZE 2048
 #endif
 #ifndef PC_PLAINTEXT_ARENA_SIZE
 #define PC_PLAINTEXT_ARENA_SIZE 10240

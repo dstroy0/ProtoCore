@@ -44,6 +44,8 @@ typedef struct
 } UdpClientCtx;
 static UdpClientCtx s_cli;
 
+static_assert(PC_RING_POW2(PC_UDP_TX_RING), "PC_UDP_TX_RING must be a power of two: a ring index wraps with a mask");
+
 // ---------------------------------------------------------------------------
 // The seam: where a queued datagram goes when it leaves
 // ---------------------------------------------------------------------------

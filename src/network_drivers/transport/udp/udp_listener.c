@@ -56,6 +56,9 @@ typedef struct
 #endif
 } UdpBind;
 
+static_assert(PC_RING_POW2(PC_UDP_RX_RING), "PC_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
+static_assert(PC_RING_POW2(PC_UDP_TX_RING), "PC_UDP_TX_RING must be a power of two: a ring index wraps with a mask");
+
 /**
  * @brief All receiving-side UDP state, owned by one instance.
  *

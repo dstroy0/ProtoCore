@@ -21,8 +21,10 @@
 #include "crypto/asymmetric/ecdsa.h"      // ecdh-sha2-nistp256 + ecdsa host-key verify
 #include "crypto/asymmetric/ed25519.h"    // ssh-ed25519 host key + client auth
 #include "crypto/hash/sha256.h"
-#include "crypto/rng/rng.h"                                        // pc_rand_fill
-#include "network_drivers/presentation/ssh/transport/ssh_dh.h"     // ssh_dh_derive_keys_sid, pc_rand_fill
+#include "crypto/rng/rng.h"                                               // pc_rand_fill
+#include "network_drivers/presentation/ssh/auth/ssh_auth.h"               // SSH_MSG_USERAUTH_*
+#include "network_drivers/presentation/ssh/connection/ssh_flow_control.h" // SSH_MSG_CHANNEL_*, SSH_MSG_GLOBAL_REQUEST
+#include "network_drivers/presentation/ssh/transport/ssh_dh.h"            // ssh_dh_derive_keys_sid
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/tls/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)

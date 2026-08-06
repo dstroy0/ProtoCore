@@ -91,6 +91,11 @@ PROTO_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // SSH message type constants (RFC 4253)
+//
+// RFC 4250 §4.1.1 splits the number space by layer: 1 to 49 transport, 50 to 79 user
+// authentication, 80 to 127 connection. These are the transport's, so these are the ones this
+// header holds. Userauth's are in ssh_auth.h and the connection protocol's are in
+// ssh_flow_control.h, each beside the code that writes those bytes.
 // ---------------------------------------------------------------------------
 
 #define SSH_MSG_DISCONNECT 1
@@ -103,27 +108,6 @@ PROTO_BEGIN_DECLS
 #define SSH_MSG_NEWKEYS 21
 #define SSH_MSG_KEXDH_INIT 30
 #define SSH_MSG_KEXDH_REPLY 31
-#define SSH_MSG_USERAUTH_REQUEST 50
-#define SSH_MSG_USERAUTH_FAILURE 51
-#define SSH_MSG_USERAUTH_SUCCESS 52
-#define SSH_MSG_USERAUTH_PK_OK 60
-// 60 is method-specific: it is PK_OK for publickey and INFO_REQUEST for keyboard-interactive
-// (RFC 4256 §3.2). The current auth phase/state disambiguates which handler owns an inbound 60.
-#define SSH_MSG_USERAUTH_INFO_REQUEST 60  // RFC 4256 §3.2 (keyboard-interactive, server->client)
-#define SSH_MSG_USERAUTH_INFO_RESPONSE 61 // RFC 4256 §3.4 (keyboard-interactive, client->server)
-#define SSH_MSG_GLOBAL_REQUEST 80         // RFC 4254 §4 (e.g. tcpip-forward for ssh -R)
-#define SSH_MSG_REQUEST_SUCCESS 81        // RFC 4254 §4 reply to a want_reply global request
-#define SSH_MSG_REQUEST_FAILURE 82        // RFC 4254 §4 reply: request refused / unrecognized
-#define SSH_MSG_CHANNEL_OPEN 90
-#define SSH_MSG_CHANNEL_OPEN_CONFIRM 91
-#define SSH_MSG_CHANNEL_OPEN_FAILURE 92
-#define SSH_MSG_CHANNEL_WINDOW_ADJUST 93
-#define SSH_MSG_CHANNEL_DATA 94
-#define SSH_MSG_CHANNEL_EOF 96
-#define SSH_MSG_CHANNEL_CLOSE 97
-#define SSH_MSG_CHANNEL_REQUEST 98
-#define SSH_MSG_CHANNEL_SUCCESS 99
-#define SSH_MSG_CHANNEL_FAILURE 100
 
 // ---------------------------------------------------------------------------
 // Disconnect reason codes (RFC 4253 §11.1)
@@ -222,6 +206,54 @@ void ssh_pkt_init(uint8_t i);
  * the s2c one, the mirror of the server. Without this a slot defaults to the server role.
  */
 void ssh_pkt_set_client(uint8_t i);
+
+/**
+ * @brief Where a payload sits inside a wire buffer: past packet_length and padding_length.
+ *
+ * Every cipher mode lays those two fields down ahead of the payload and encrypts from there, so a
+ * caller that writes its message at this offset hands ssh_pkt_send_at() a packet the framer never
+ * has to move. A pipe (forwarding, a channel data pump) reads its source straight into that slot and
+ * the bytes are copied once, into the packet they leave in.
+ */
+#define SSH_WIRE_PAYLOAD_OFF 5
+
+/**
+ * @brief Frame the @p payload_len bytes already written at @p wire + @ref SSH_WIRE_PAYLOAD_OFF.
+ *
+ * The in-place form of ssh_pkt_send(): same framing, padding, encryption and MAC, over a payload the
+ * caller has already placed. @p wire holds the finished packet on return.
+ *
+ * @return 0 on success, -1 on overflow or sequence-number exhaustion.
+ */
+int ssh_pkt_send_at(uint8_t i, uint8_t *wire, size_t payload_len, size_t *out_len, size_t wire_cap);
+
+/**
+ * @brief Carry one finished packet to slot @p slot's wire.
+ *
+ * The seam between the SSH stack and its transport. The integration layer installs it once; every
+ * layer above reaches the wire by calling down to ssh_pkt_emit(), never by calling the integration.
+ */
+typedef void (*SshWireCb)(uint8_t slot, const uint8_t *wire, size_t len);
+
+/** @brief Install the sink every framed packet leaves through. */
+void ssh_pkt_set_wire_cb(SshWireCb cb);
+
+/**
+ * @brief Frame @p payload for slot @p i and hand the packet to the sink.
+ *
+ * Borrows the wire buffer and copies the payload into it, for a caller that already holds its
+ * message somewhere else - handshake and control traffic, which is small and infrequent.
+ * @return 0 on success, -1 if the arena is exhausted, the framing fails, or no sink is installed.
+ */
+int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len);
+
+/**
+ * @brief Hand the packet built at @p wire + @ref SSH_WIRE_PAYLOAD_OFF to the sink.
+ *
+ * The no-copy form: the caller owns the wire borrow and has written its payload in place.
+ * @return 0 on success, -1 if the framing fails or no sink is installed.
+ */
+int ssh_pkt_emit_at(uint8_t i, uint8_t *wire, size_t payload_len, size_t wire_cap);
 
 /**
  * @brief Build and send one SSH binary packet.
