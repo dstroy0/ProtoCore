@@ -5,6 +5,7 @@
 // allocation, alignment, the reset contract, and fail-closed exhaustion. Pure
 // host tests - no sockets, no FreeRTOS (the owner-task tripwire is ESP32-only).
 
+#include "mmgr/arena.h" // pc_worker_set_self()
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
 #include "network_drivers/session/worker.h"

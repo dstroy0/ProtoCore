@@ -104,7 +104,7 @@ void test_persist_init_zero_size()
     // size == 0 must take the ternary's false arm (size > adj is false) rather than underflow.
     pc_arena z;
     pc_arena_init(&z, g_buf, 0);
-    TEST_ASSERT_EQUAL_size_t(0, z.size);
+    TEST_ASSERT_EQUAL_size_t(0, pc_arena_free_bytes(&z));
     TEST_ASSERT_NULL(pc_arena_persist_alloc(&z, 16));
     TEST_ASSERT_NULL(pc_arena_scratch_alloc(&z, 16));
 }
@@ -202,7 +202,7 @@ void test_scratch_release_rejects_invalid_marks()
     size_t used_before = pc_arena_scratch_used(&a);
     pc_arena_scratch_release(&a, 0); // 0 < current scratch_top -> rejected
     TEST_ASSERT_EQUAL_size_t(used_before, pc_arena_scratch_used(&a));
-    pc_arena_scratch_release(&a, a.size + 1000); // beyond the arena -> rejected
+    pc_arena_scratch_release(&a, sizeof(g_buf) + 1000); // beyond the arena -> rejected
     TEST_ASSERT_EQUAL_size_t(used_before, pc_arena_scratch_used(&a));
 }
 
@@ -253,6 +253,103 @@ void test_alignment_various_sizes()
         void *s = pc_arena_scratch_alloc(&a, sizes[i]);
         TEST_ASSERT_TRUE(aligned8(p));
         TEST_ASSERT_TRUE(aligned8(s));
+    }
+}
+
+// ---- the padded-and-aligned law -------------------------------------------
+//
+// A word-at-a-time reader loads whole aligned words and truncates the surplus, so the last word of
+// a borrow of n bytes is read in full even when n is not a multiple of the word. These assert what
+// makes that sound: the base is aligned, and the borrow owns every byte up to the next boundary.
+
+// Round n up the way the arena does, computed here rather than called from the header.
+static size_t oracle_pad(size_t n)
+{
+    return (n + 7u) & ~(size_t)7u;
+}
+
+// A persistent borrow owns its pad: the next borrow starts at or past the end of the rounded-up
+// extent, so a whole-word read of the tail cannot reach another tenant's bytes.
+void test_persist_borrow_owns_its_pad()
+{
+    size_t sizes[] = {1, 2, 3, 5, 7, 9, 15, 17, 31, 33};
+    for (unsigned i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
+    {
+        pc_arena_init(&a, g_buf, sizeof(g_buf));
+        uint8_t *p = (uint8_t *)pc_arena_persist_alloc(&a, sizes[i]);
+        uint8_t *q = (uint8_t *)pc_arena_persist_alloc(&a, 8);
+        TEST_ASSERT_NOT_NULL(p);
+        TEST_ASSERT_NOT_NULL(q);
+        TEST_ASSERT_TRUE(aligned8(p));
+        TEST_ASSERT_TRUE(q >= p + oracle_pad(sizes[i]));
+    }
+}
+
+// The same on the bump end, which grows down: the pad sits above the pointer and below whatever
+// was handed out before it.
+void test_scratch_borrow_owns_its_pad()
+{
+    size_t sizes[] = {1, 2, 3, 5, 7, 9, 15, 17, 31, 33};
+    for (unsigned i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
+    {
+        pc_arena_init(&a, g_buf, sizeof(g_buf));
+        uint8_t *first = (uint8_t *)pc_arena_scratch_alloc(&a, 8);
+        uint8_t *p = (uint8_t *)pc_arena_scratch_alloc(&a, sizes[i]);
+        TEST_ASSERT_NOT_NULL(first);
+        TEST_ASSERT_NOT_NULL(p);
+        TEST_ASSERT_TRUE(aligned8(p));
+        TEST_ASSERT_TRUE(p + oracle_pad(sizes[i]) <= first);
+    }
+}
+
+// The pad is inside the region: reading the last whole word of a borrow that ends at the very top
+// of the arena stays within the backing store.
+void test_pad_stays_inside_the_region()
+{
+    size_t sizes[] = {1, 3, 7, 9, 17, 33, 255};
+    for (unsigned i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
+    {
+        pc_arena_init(&a, g_buf, sizeof(g_buf));
+        uint8_t *p = (uint8_t *)pc_arena_persist_alloc(&a, sizes[i]);
+        uint8_t *s = (uint8_t *)pc_arena_scratch_alloc(&a, sizes[i]);
+        TEST_ASSERT_NOT_NULL(p);
+        TEST_ASSERT_NOT_NULL(s);
+        TEST_ASSERT_TRUE(p + oracle_pad(sizes[i]) <= g_buf + sizeof(g_buf));
+        TEST_ASSERT_TRUE(s + oracle_pad(sizes[i]) <= g_buf + sizeof(g_buf));
+        TEST_ASSERT_TRUE(p >= g_buf && s >= g_buf);
+    }
+}
+
+// A whole-word read and write over the padded extent of a borrow disturbs no neighbour.
+void test_word_write_over_the_pad_hits_no_neighbour()
+{
+    pc_arena_init(&a, g_buf, sizeof(g_buf));
+    uint8_t *p = (uint8_t *)pc_arena_persist_alloc(&a, 13);
+    uint8_t *q = (uint8_t *)pc_arena_persist_alloc(&a, 16);
+    TEST_ASSERT_NOT_NULL(p);
+    TEST_ASSERT_NOT_NULL(q);
+
+    memset(q, 0x5A, 16);
+    memset(p, 0xC3, oracle_pad(13)); // writes the pad too, as a word-at-a-time store would
+    for (unsigned i = 0; i < 16; i++)
+    {
+        TEST_ASSERT_EQUAL_HEX8(0x5A, q[i]);
+    }
+}
+
+// A 16-byte-aligned scratch borrow is padded to the boundary its alignment implies.
+void test_aligned_scratch_borrow_owns_its_pad()
+{
+    pc_arena_init(&a, g_buf, sizeof(g_buf));
+    uint8_t *first = (uint8_t *)pc_arena_scratch_alloc_aligned(&a, 16, 16);
+    TEST_ASSERT_NOT_NULL(first);
+    for (unsigned i = 0; i < 8; i++)
+    {
+        uint8_t *p = (uint8_t *)pc_arena_scratch_alloc_aligned(&a, 17u + i, 16);
+        TEST_ASSERT_NOT_NULL(p);
+        TEST_ASSERT_EQUAL_UINT(0, (unsigned)((uintptr_t)p & 15u));
+        TEST_ASSERT_TRUE(p + oracle_pad(17u + i) <= first);
+        first = p;
     }
 }
 
@@ -346,11 +443,9 @@ void test_set_persist_free_unmatched_pointer_is_noop()
     // Exercise both address-compare arms of the routing test regardless of link layout: a pointer below
     // every region (b >= base is false) and one past every region (b >= base true, b < base+size false).
     // Neither claims the pointer, so both are safe no-ops.
-    uint8_t *b0 = s.region[0].base;
-    uint8_t *b1 = s.region[1].base;
-    uint8_t *below = (b0 < b1 ? b0 : b1) - 16;
-    uint8_t *e0 = b0 + s.region[0].size;
-    uint8_t *e1 = b1 + s.region[1].size;
+    uint8_t *below = (g_r0 < g_r1 ? g_r0 : g_r1) - 16;
+    uint8_t *e0 = g_r0 + sizeof(g_r0);
+    uint8_t *e1 = g_r1 + sizeof(g_r1);
     uint8_t *above = (e0 > e1 ? e0 : e1) + 16;
     pc_arena_set_persist_free(&s, below);
     pc_arena_set_persist_free(&s, above);
@@ -450,6 +545,11 @@ int main()
     RUN_TEST(test_boundary_collision_fail_closed);
     RUN_TEST(test_scratch_reset_frees_middle_for_persist);
     RUN_TEST(test_alignment_various_sizes);
+    RUN_TEST(test_persist_borrow_owns_its_pad);
+    RUN_TEST(test_scratch_borrow_owns_its_pad);
+    RUN_TEST(test_pad_stays_inside_the_region);
+    RUN_TEST(test_word_write_over_the_pad_hits_no_neighbour);
+    RUN_TEST(test_aligned_scratch_borrow_owns_its_pad);
     RUN_TEST(test_scratch_alignment_16);
     RUN_TEST(test_zero_size_and_null_free);
     RUN_TEST(test_set_add_limits);
