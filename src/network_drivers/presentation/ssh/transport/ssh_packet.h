@@ -150,6 +150,19 @@ typedef struct
     // Receive reassembly: we may receive partial packets across TCP segments.
     uint8_t rx_buf[SSH_PKT_BUF_SIZE]; ///< Raw receive buffer (from transport).
     size_t rx_len;                    ///< Bytes currently in rx_buf.
+
+    // One finished packet waiting for a worker to put it on the wire. The codec frames into
+    // tx_wire and raises tx_ready; the worker sends from tx_off and lowers the flag when the last
+    // byte is out. The codec never reaches the wire itself.
+    //
+    // tx_wire is taken once from the secure pool's persistent end - the end no mark walks - and
+    // reused for every packet on this slot. Releasing per packet would wipe the whole wire buffer
+    // each time, and the mark end cannot hold it anyway: mark/release is a bump discipline, so one
+    // slot's release would reclaim another slot's borrow.
+    uint8_t *tx_wire;    ///< The wire buffer for this slot. Null until the first packet.
+    size_t tx_len;       ///< Bytes of the framed packet.
+    size_t tx_off;       ///< Bytes already put on the wire.
+    proto_bool tx_ready; ///< A packet is framed and waiting for a worker.
 } SshPacketState;
 
 /** @brief Static packet state pool (BSS). One entry per SSH slot. */
@@ -228,32 +241,16 @@ void ssh_pkt_set_client(uint8_t i);
 int ssh_pkt_send_at(uint8_t i, uint8_t *wire, size_t payload_len, size_t *out_len, size_t wire_cap);
 
 /**
- * @brief Carry one finished packet to slot @p slot's wire.
+ * @brief Frame @p payload for slot @p i into the secure pool and raise the flag a worker drains.
  *
- * The seam between the SSH stack and its transport. The integration layer installs it once; every
- * layer above reaches the wire by calling down to ssh_pkt_emit(), never by calling the integration.
- */
-typedef void (*SshWireCb)(uint8_t slot, const uint8_t *wire, size_t len);
-
-/** @brief Install the sink every framed packet leaves through. */
-void ssh_pkt_set_wire_cb(SshWireCb cb);
-
-/**
- * @brief Frame @p payload for slot @p i and hand the packet to the sink.
+ * Borrows the wire buffer itself, for a caller that already holds its message somewhere else -
+ * handshake and control traffic, which is small and infrequent. On return the packet is framed and
+ * @ref SshPacketState::tx_ready is set; a worker puts the bytes on the wire and releases the
+ * borrow. This layer never reaches the wire.
  *
- * Borrows the wire buffer and copies the payload into it, for a caller that already holds its
- * message somewhere else - handshake and control traffic, which is small and infrequent.
- * @return 0 on success, -1 if the arena is exhausted, the framing fails, or no sink is installed.
+ * @return 0 on success, -1 if a packet is already pending, the pool is exhausted, or framing fails.
  */
 int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len);
-
-/**
- * @brief Hand the packet built at @p wire + @ref SSH_WIRE_PAYLOAD_OFF to the sink.
- *
- * The no-copy form: the caller owns the wire borrow and has written its payload in place.
- * @return 0 on success, -1 if the framing fails or no sink is installed.
- */
-int ssh_pkt_emit_at(uint8_t i, uint8_t *wire, size_t payload_len, size_t wire_cap);
 
 /**
  * @brief Build and send one SSH binary packet.

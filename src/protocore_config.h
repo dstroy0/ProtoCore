@@ -6536,6 +6536,23 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_MD 96
 #endif
 
+// SSH frames every outbound packet in the secure pool: the payload it carries is the session's own
+// plaintext until the cipher runs over it. Two parts, and they do not nest:
+//
+//   - One wire buffer per SSH slot, taken from the pool's PERSISTENT end and never released, so a
+//     packet is framed over the previous one instead of wiping a whole buffer per packet. Every
+//     slot can hold one at once, so this scales with MAX_SSH_CONNS.
+//   - A transient payload plus wire, live together while pc_ssh_conn_send or an open_forwarded
+//     builds a message and frames it.
+//
+// The wire bound is derived in ssh_packet.h from this same SSH_PKT_BUF_SIZE, so the figure is
+// stated here in units of it and proved against the real SSH_WIRE_CAP by a static_assert in
+// ssh_conn.c. Two per slot covers the framing overhead the wire adds over a full payload,
+// compression's expansion bound included.
+#ifndef PC_WORK_SSH_CONN
+#define PC_WORK_SSH_CONN (((size_t)MAX_SSH_CONNS + 2u) * 2u * (size_t)SSH_PKT_BUF_SIZE)
+#endif
+
 // The two tables a module holds for the life of the program rather than for the life of a call.
 // They take the persistent end of the arena, so they are stated here for the same reason every
 // working set is: the pool is sized off what the build declares, and an undeclared borrow is one
@@ -6590,8 +6607,10 @@ from halves and is slower than the width it decomposes into"
 
 #if PC_ENABLE_SSH || PC_ENABLE_SSH_CLIENT
 #define PC_SECURE_WORK_SSHCIPHER PC_WORK_AES256CTR
+#define PC_SECURE_WORK_SSHCONN PC_WORK_SSH_CONN
 #else
 #define PC_SECURE_WORK_SSHCIPHER 0
+#define PC_SECURE_WORK_SSHCONN 0
 #endif
 
 #if PC_ENABLE_AUTH
@@ -6602,7 +6621,7 @@ from halves and is slower than the width it decomposes into"
 
 #define PC_SECURE_ARENA_SIZE                                                                                           \
     (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_MAC + PC_SECURE_WORK_SMB +                           \
-     PC_SECURE_WORK_SSHCIPHER + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +                              \
+     PC_SECURE_WORK_SSHCIPHER + PC_SECURE_WORK_SSHCONN + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +     \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 
