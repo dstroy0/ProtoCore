@@ -24,6 +24,7 @@
 #define PROTOCORE_PC_NET_HOST_H
 
 #include <Arduino.h> // the virtual clock the host time base reads: millis() / set_millis()
+#include <setjmp.h>  // how a task entry that never returns is unwound; see the task table below
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h> // memcpy / memset: the staging copies below
@@ -525,6 +526,28 @@ typedef uint32_t pc_platform_ticks;
 #define PC_PLATFORM_WAIT_FOREVER 0xFFFFFFFFu
 #define PC_PLATFORM_CORES 1
 
+// Where a task entry is unwound to. A task entry does not return: it loops until the kernel deletes
+// it while it is blocked. Deleting a task abandons its frame, so the host does the same with
+// longjmp - the entry runs until it would block and control resumes in pc_platform_host_task_run.
+// The depth is 0 outside a run, so a blocking call made by ordinary code cannot unwind.
+__attribute__((weak)) jmp_buf pc_task_host_jmp;
+__attribute__((weak)) int pc_task_host_depth;
+__attribute__((weak)) int pc_task_host_budget;
+
+// How many timed waits one run allows before it unwinds. A task that waits on a timeout rather than
+// forever would spin, since nothing else runs here to make its condition true.
+#ifndef PC_TASK_HOST_WAITS
+#define PC_TASK_HOST_WAITS 1
+#endif
+
+static inline void pc_task_host_yield(void)
+{
+    if (pc_task_host_depth > 0)
+    {
+        longjmp(pc_task_host_jmp, 1);
+    }
+}
+
 // Keyed by the handle create hands back, so an enqueue is observable at its consumer and
 // per-worker routing is checkable here rather than only on hardware.
 #define PC_QUEUE_MAX 24
@@ -535,6 +558,7 @@ typedef struct
 {
     void *handle[PC_QUEUE_MAX];
     size_t item[PC_QUEUE_MAX];
+    size_t depth[PC_QUEUE_MAX]; // what create asked for, so a full queue fills where the core says
     size_t head[PC_QUEUE_MAX];
     size_t tail[PC_QUEUE_MAX];
     uint8_t buf[PC_QUEUE_MAX][PC_QUEUE_DEPTH * PC_QUEUE_ITEM];
@@ -581,6 +605,11 @@ static inline pc_platform_queue pc_platform_queue_create(size_t depth, size_t it
     {
         sz = PC_QUEUE_ITEM;
     }
+    size_t d = depth;
+    if (d == 0 || d > PC_QUEUE_DEPTH)
+    {
+        d = PC_QUEUE_DEPTH;
+    }
     int slot = pc_queue_slot(h);
     if (slot < 0)
     {
@@ -590,6 +619,7 @@ static inline pc_platform_queue pc_platform_queue_create(size_t depth, size_t it
     {
         g_pc_queues.handle[slot] = h;
         g_pc_queues.item[slot] = sz;
+        g_pc_queues.depth[slot] = d;
         g_pc_queues.head[slot] = 0;
         g_pc_queues.tail[slot] = 0;
     }
@@ -612,9 +642,9 @@ static inline int pc_queue_push(pc_platform_queue q, const void *item, size_t at
     {
         return PC_PLATFORM_FALSE;
     }
-    if ((g_pc_queues.head[slot] - g_pc_queues.tail[slot]) >= PC_QUEUE_DEPTH)
+    if ((g_pc_queues.head[slot] - g_pc_queues.tail[slot]) >= g_pc_queues.depth[slot])
     {
-        return PC_PLATFORM_FALSE; // full, the way a kernel queue refuses
+        return PC_PLATFORM_FALSE; // full at the depth create asked for, the way a kernel queue refuses
     }
     memcpy(&g_pc_queues.buf[slot][(at % PC_QUEUE_DEPTH) * PC_QUEUE_ITEM], item, g_pc_queues.item[slot]);
     return PC_PLATFORM_OK;
@@ -678,10 +708,15 @@ static inline void queue_stage_reset(void)
 
 static inline int pc_platform_queue_recv(pc_platform_queue q, void *item, uint32_t ticks)
 {
-    (void)ticks;
     int slot = pc_queue_slot(q);
     if (slot < 0 || item == NULL || g_pc_queues.head[slot] == g_pc_queues.tail[slot])
     {
+        // A wait-forever on an empty queue is where a task parks. Nothing else runs here to fill
+        // it, so the entry unwinds instead; a timed or polling receive just reports empty.
+        if (ticks == PC_PLATFORM_WAIT_FOREVER)
+        {
+            pc_task_host_yield();
+        }
         return 0;
     }
     memcpy(item, &g_pc_queues.buf[slot][(g_pc_queues.tail[slot] % PC_QUEUE_DEPTH) * PC_QUEUE_ITEM],
@@ -720,6 +755,7 @@ typedef struct
     pc_platform_task_fn fn[PC_TASK_MAX];
     void *arg[PC_TASK_MAX];
     void *handle[PC_TASK_MAX];
+    const char *name[PC_TASK_MAX]; // what start was given, so one task can be run by itself
     int started[PC_TASK_MAX];
 } PcTaskTable;
 __attribute__((weak)) PcTaskTable g_pc_tasks;
@@ -763,6 +799,7 @@ static inline int pc_platform_task_start(pc_platform_task_fn fn, const char *nam
         {
             g_pc_tasks.fn[i] = fn;
             g_pc_tasks.arg[i] = arg;
+            g_pc_tasks.name[i] = name;
             // The handle is the slot, offset so it is never NULL: the core tests a task handle
             // against NULL to decide there is one.
             g_pc_tasks.handle[i] = (void *)(uintptr_t)(i + 1);
@@ -786,11 +823,10 @@ static inline void pc_platform_task_stop(pc_platform_task t)
 }
 
 /**
- * @brief Run a started task's entry function on this thread, once.
+ * @brief Run a started task's entry function on this thread until it would block.
  *
- * The host has no scheduler, so a task body runs only when a test says so. The entry returns when
- * its own loop condition goes false or when the queue it pumps reports empty, which is why the
- * blocking calls below report rather than block. Returns 0 when no such task is started.
+ * The entry runs until it waits on an empty queue forever, spends its timed-wait budget, or
+ * returns. Returns 0 when no such task is started.
  */
 static inline int pc_platform_host_task_run(pc_platform_task t)
 {
@@ -799,8 +835,31 @@ static inline int pc_platform_host_task_run(pc_platform_task t)
     {
         return 0;
     }
-    g_pc_tasks.fn[slot](g_pc_tasks.arg[slot]);
+    pc_task_host_budget = PC_TASK_HOST_WAITS;
+    pc_task_host_depth++;
+    if (setjmp(pc_task_host_jmp) == 0)
+    {
+        g_pc_tasks.fn[slot](g_pc_tasks.arg[slot]);
+    }
+    pc_task_host_depth--;
     return 1;
+}
+
+/** @brief Run the started task that start was given @p name for. 0 when there is none. */
+static inline int pc_platform_host_task_run_named(const char *name)
+{
+    if (name == NULL)
+    {
+        return 0;
+    }
+    for (int i = 0; i < PC_TASK_MAX; i++)
+    {
+        if (g_pc_tasks.started[i] && g_pc_tasks.name[i] && strcmp(g_pc_tasks.name[i], name) == 0)
+        {
+            return pc_platform_host_task_run(g_pc_tasks.handle[i]);
+        }
+    }
+    return 0;
 }
 
 /** @brief Run every started task's entry function once, lowest slot first. */
@@ -811,8 +870,7 @@ static inline int pc_platform_host_tasks_run_all(void)
     {
         if (g_pc_tasks.started[i] && g_pc_tasks.fn[i])
         {
-            g_pc_tasks.fn[i](g_pc_tasks.arg[i]);
-            ran++;
+            ran += pc_platform_host_task_run(g_pc_tasks.handle[i]);
         }
     }
     return ran;
@@ -832,6 +890,13 @@ static inline uint32_t pc_platform_task_wait(int clear, uint32_t ticks)
 {
     (void)clear;
     (void)ticks;
+    // A timed wait returns on the target when its timeout expires, so it reports here too. Nothing
+    // else runs to notify it, so a task looping on one spends its budget and unwinds.
+    pc_task_host_budget--;
+    if (pc_task_host_budget < 0)
+    {
+        pc_task_host_yield();
+    }
     return 0;
 }
 // Advances the virtual clock by the tick count. The host has no tick timer, so a wait that hands
