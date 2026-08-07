@@ -70,6 +70,11 @@ def render_env(name, e, bases=frozenset()):
         for s in src:
             for b in bases:
                 s = s.replace(f"${{env:{b}.", f"${{{b}.")
+            # build_src_filter resolves against src/, and core_setup/ sits beside it, so a table
+            # entry naming the repo-relative path matches nothing and the file is silently left
+            # out of the link. The table states the path from the repo root, the same way an
+            # #include does; the step up is what the filter needs to reach it.
+            s = s.replace("<core_setup/", "<../core_setup/")
             lines.append(f"    {s}")
     tests = e.get("tests", [])
     if tests:
