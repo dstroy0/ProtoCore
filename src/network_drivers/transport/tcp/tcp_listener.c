@@ -811,24 +811,25 @@ static void listener_stop_dynamic(uint8_t idx)
     }
 }
 
-const TcpListenerNs TcpListener = {listener_add,
-                                   listener_add_dynamic,
-                                   listener_stop,
-                                   listener_stop_all,
-                                   listener_stop_dynamic,
-                                   listener_enqueue,
+// Designated, so a member's position in the struct does not decide what it binds to.
+const TcpListenerNs TcpListener = {.stop = listener_stop,
+                                   .stop_all = listener_stop_all,
+                                   .stop_dynamic = listener_stop_dynamic,
+                                   .add = listener_add,
+                                   .add_dynamic = listener_add_dynamic,
+                                   .enqueue = listener_enqueue,
 #if PC_ENABLE_DIFFSERV
-                                   set_dscp,
+                                   .set_dscp = set_dscp,
 #endif
 #if PC_WORKER_COUNT > 1
-                                   listener_worker_queues_init,
-                                   listener_worker_queue,
+                                   .worker_queues_init = listener_worker_queues_init,
+                                   .worker_queue = listener_worker_queue,
 #endif
-                                   listener_accept_allowed,
-                                   listener_accept_throttle_reset,
-                                   listener_accept_allowed_ip,
-                                   listener_per_ip_throttle_reset,
-                                   listener_ip_allow_add,
-                                   listener_ip_allow_add_cidr,
-                                   listener_ip_allowed,
-                                   listener_ip_allowlist_reset};
+                                   .accept_allowed = listener_accept_allowed,
+                                   .accept_throttle_reset = listener_accept_throttle_reset,
+                                   .accept_allowed_ip = listener_accept_allowed_ip,
+                                   .per_ip_throttle_reset = listener_per_ip_throttle_reset,
+                                   .ip_allow_add = listener_ip_allow_add,
+                                   .ip_allow_add_cidr = listener_ip_allow_add_cidr,
+                                   .ip_allowed = listener_ip_allowed,
+                                   .ip_allowlist_reset = listener_ip_allowlist_reset};
