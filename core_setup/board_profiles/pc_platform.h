@@ -154,6 +154,25 @@
 #endif
 #endif
 
+// mDNS / DNS-SD. 1 = the vendor ships its own responder component and the wrapper drives that;
+// 0 = the portable responder in network_drivers/application/mdns_service, which answers over the
+// UDP listener like every other datagram service.
+//
+// The vendor's does more than advertise: probing, conflict resolution, IPv6 records. Take it where
+// it exists. The portable one is what makes the feature exist at all on a part that has none.
+#ifndef PC_HAS_VENDOR_MDNS
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_MDNS 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_MDNS 0 // a unit-test build has no vendor component to call
+#elif PC_VENDOR_MOCK
+#define PC_HAS_VENDOR_MDNS 0 // the mock vendor ships none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_MDNS (1 = the SDK's own responder component, 0 = the portable responder over the UDP listener). Choosing the portable one is fine; defaulting into it is not."
+#endif
+#endif
+
 // ---------------------------------------------------------------------------
 // Execution context identity
 // ---------------------------------------------------------------------------

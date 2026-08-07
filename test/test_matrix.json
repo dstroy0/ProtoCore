@@ -2023,6 +2023,22 @@
       ],
       "tests": ["unit/application/test_ntp_server"]
     },
+    "native_mdns_service": {
+      "desc": "The portable mDNS / DNS-SD responder (network_drivers/application/mdns_service, RFC 6762 /\nRFC 6763) on the build where PC_HAS_VENDOR_MDNS is 0: joining 224.0.0.251:5353 through the UDP\nlistener, and answering a query for the service-enumeration name, a service type, and an instance's\nSRV / TXT - each answer read back off the wire and decoded by the test's own label reader.",
+      "flags": ["-DPC_ENABLE_MDNS=1"],
+      "src": [
+        "+<network_drivers/application/mdns_service/mdns_service.c>",
+        "+<network_drivers/network/dns/dns_wire.c>",
+        "+<network_drivers/physical/physical.c>",
+        "+<network_drivers/physical/radio_power.c>",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<shared_primitives/ip.c>"
+      ],
+      "tests": ["unit/application/test_mdns_service"]
+    },
     "native_dns_wire": {
       "desc": "The DNS name on the wire (network_drivers/network/dns/dns_wire, RFC 1035 sec 3.1 / 4.1.4):\nlabels to a dotted string and back, compression pointers followed for an answer and refused for a\nquestion, the hop limit that makes a self-referential message terminate, the undefined label types,\nthe label and destination bounds, and the case-insensitive compare names are defined to use.",
       "flags": ["-DPC_ENABLE_DNS_SERVER=1"],

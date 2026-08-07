@@ -2799,9 +2799,39 @@ from halves and is slower than the width it decomposes into"
 // costs no code/RAM/flash unless explicitly enabled).
 // ---------------------------------------------------------------------------
 
-/** @brief mDNS / DNS-SD advertisement (`name.local` + `_http._tcp`) via ESPmDNS. */
+/**
+ * @brief mDNS / DNS-SD advertisement: `<name>.local` plus `_http._tcp` and any service added.
+ *
+ * Answered by the portable responder over the UDP listener (RFC 6762 / RFC 6763), or by the
+ * vendor's own component where PC_HAS_VENDOR_MDNS says one exists.
+ */
 #ifndef PC_ENABLE_MDNS
 #define PC_ENABLE_MDNS 0
+#endif
+
+/** @brief Services the responder advertises at once, `_http._tcp` included. */
+#ifndef PC_MDNS_MAX_SERVICES
+#define PC_MDNS_MAX_SERVICES 4
+#endif
+
+/** @brief Bytes of packed `key=value` TXT strings, each with its own length byte ahead of it. */
+#ifndef PC_MDNS_TXT_MAX
+#define PC_MDNS_TXT_MAX 128
+#endif
+
+/** @brief Longest host label, service type or proto label the responder holds, NUL included. */
+#ifndef PC_MDNS_LABEL_MAX
+#define PC_MDNS_LABEL_MAX 32
+#endif
+
+/**
+ * @brief Response datagram the responder composes.
+ *
+ * One answer set is an A plus, per service, two PTRs, an SRV and a TXT, so this bounds how many
+ * services fit one packet rather than how many may be registered.
+ */
+#ifndef PC_MDNS_TX_MAX
+#define PC_MDNS_TX_MAX 512
 #endif
 
 /** @brief SNTP wall-clock time sync via the ESP-IDF SNTP client. */

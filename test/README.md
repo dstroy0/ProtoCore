@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **325 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **326 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -225,6 +225,7 @@ The native test matrix has **325 environments**, one per feature, generated from
 | `native_mbplus` | `PC_ENABLE_MBPLUS=1` | `unit/fieldbus/test_mbplus` | Modbus Plus HDLC token-bus codec (services/fieldbus/mbplus): the HDLC frame (7E addr ctrl payload CRC-16/X-25 7E) build + validate and the token-rotation ring helper. |
 | `native_mbus` | `PC_ENABLE_MBUS=1` | `unit/fieldbus/test_mbus` | Wired M-Bus codec (services/fieldbus/mbus): the ACK / short / long frame builders + parser (start/stop, doubled length, 8-bit sum checksum) and the EN 13757-3 variable-data record walker (DIF/VIF, DIF... |
 | `native_mdns_adaptive` | `PC_ENABLE_MDNS_ADAPTIVE=1` | `unit/application/test_mdns_adaptive` | Adaptive mDNS beacon scheduling (network_drivers/application/mdns_adaptive): RF-contention backoff/recovery of the announce interval, the TTL/2 continuous-refresher cadence, the announce-due check, an... |
+| `native_mdns_service` | `PC_ENABLE_MDNS=1` | `unit/application/test_mdns_service` | The portable mDNS / DNS-SD responder (network_drivers/application/mdns_service, RFC 6762 / RFC 6763) on the build where PC_HAS_VENDOR_MDNS is 0: joining 224.0.0.251:5353 through the UDP listener, and ... |
 | `native_melsec` | `PC_ENABLE_MELSEC=1` | `unit/fieldbus/test_melsec` | Mitsubishi MELSEC MC binary 3E codec (services/fieldbus/melsec): the batch-read request builder (little-endian, subheader 0x5000, command 0x0401, device code + 24-bit head device) + the 0xD000 respons... |
 | `native_membuild` | default | `unit/mmgr/test_membuild` | The bounded no-heap builder (mmgr/membuild.h): bump-append into a caller-owned region with ok latching false the first time something would not fit, so the caller tests one flag at the end instead of ... |
 | `native_middleware` | default | `integration/transport/test_middleware` | test_middleware against the native_stack_http stack. |
