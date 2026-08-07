@@ -366,6 +366,7 @@
         "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["integration/transport/test_observability"]
@@ -387,6 +388,7 @@
         "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
         "+<network_drivers/transport/diffserv.c>",
         "+<server/clock/clock.c>"
       ],
@@ -996,6 +998,7 @@
         "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
         "+<network_drivers/presentation/telnet/telnet.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
@@ -2526,6 +2529,7 @@
         "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/network/dns/dns_resolver.c>",
         "+<network_drivers/network/dns/dns.c>",

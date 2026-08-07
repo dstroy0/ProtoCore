@@ -711,24 +711,118 @@ static inline void pc_platform_queue_delete(pc_platform_queue q)
     }
 }
 
+// The started tasks, keyed by the handle create hands back, the same way the queue table above is.
+// Nothing here runs on its own: the entry function is kept, and a test runs it when it chooses.
+#define PC_TASK_MAX 16
+
+typedef struct
+{
+    pc_platform_task_fn fn[PC_TASK_MAX];
+    void *arg[PC_TASK_MAX];
+    void *handle[PC_TASK_MAX];
+    int started[PC_TASK_MAX];
+} PcTaskTable;
+__attribute__((weak)) PcTaskTable g_pc_tasks;
+
+static inline int pc_task_slot(pc_platform_task t)
+{
+    for (int i = 0; i < PC_TASK_MAX; i++)
+    {
+        if (g_pc_tasks.started[i] && g_pc_tasks.handle[i] == t)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// One-shot start failure: the next pc_platform_task_start reports no room, the way a kernel out of
+// task control blocks does, so the caller has to unwind what it was bringing up.
+__attribute__((weak)) int pc_platform_task_start_fail_once;
+
+static inline void mock_task_start_fail_once(void)
+{
+    pc_platform_task_start_fail_once = 1;
+}
+
 static inline int pc_platform_task_start(pc_platform_task_fn fn, const char *name, uint32_t stack, void *arg, int prio,
                                          pc_platform_task *out, int core)
 {
-    (void)fn;
     (void)name;
     (void)stack;
-    (void)arg;
     (void)prio;
     (void)core;
-    if (out)
+    if (pc_platform_task_start_fail_once)
     {
-        *out = (void *)1;
+        pc_platform_task_start_fail_once = 0;
+        return PC_PLATFORM_FALSE;
     }
-    return PC_PLATFORM_PASS;
+    for (int i = 0; i < PC_TASK_MAX; i++)
+    {
+        if (!g_pc_tasks.started[i])
+        {
+            g_pc_tasks.fn[i] = fn;
+            g_pc_tasks.arg[i] = arg;
+            // The handle is the slot, offset so it is never NULL: the core tests a task handle
+            // against NULL to decide there is one.
+            g_pc_tasks.handle[i] = (void *)(uintptr_t)(i + 1);
+            g_pc_tasks.started[i] = 1;
+            if (out)
+            {
+                *out = g_pc_tasks.handle[i];
+            }
+            return PC_PLATFORM_PASS;
+        }
+    }
+    return PC_PLATFORM_FALSE;
 }
 static inline void pc_platform_task_stop(pc_platform_task t)
 {
-    (void)t;
+    int slot = pc_task_slot(t);
+    if (slot >= 0)
+    {
+        g_pc_tasks.started[slot] = 0;
+    }
+}
+
+/**
+ * @brief Run a started task's entry function on this thread, once.
+ *
+ * The host has no scheduler, so a task body runs only when a test says so. The entry returns when
+ * its own loop condition goes false or when the queue it pumps reports empty, which is why the
+ * blocking calls below report rather than block. Returns 0 when no such task is started.
+ */
+static inline int pc_platform_host_task_run(pc_platform_task t)
+{
+    int slot = pc_task_slot(t);
+    if (slot < 0 || !g_pc_tasks.fn[slot])
+    {
+        return 0;
+    }
+    g_pc_tasks.fn[slot](g_pc_tasks.arg[slot]);
+    return 1;
+}
+
+/** @brief Run every started task's entry function once, lowest slot first. */
+static inline int pc_platform_host_tasks_run_all(void)
+{
+    int ran = 0;
+    for (int i = 0; i < PC_TASK_MAX; i++)
+    {
+        if (g_pc_tasks.started[i] && g_pc_tasks.fn[i])
+        {
+            g_pc_tasks.fn[i](g_pc_tasks.arg[i]);
+            ran++;
+        }
+    }
+    return ran;
+}
+
+/** @brief Forget every started task, so one case does not inherit another's. */
+static inline void pc_platform_host_tasks_reset(void)
+{
+    memset(&g_pc_tasks, 0, sizeof(g_pc_tasks));
+    pc_platform_task_start_fail_once = 0;
 }
 static inline void pc_platform_task_notify(pc_platform_task t)
 {
