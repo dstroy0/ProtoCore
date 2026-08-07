@@ -6720,6 +6720,7 @@ typedef enum PROTO_ENUM_PACKED
     PROTO_BRIDGE = 8,       ///< address:port -> hardware bus (PC_ENABLE_IFACE_BRIDGE): UART/SPI/I2C device server.
     PROTO_NTRIP_CASTER = 9, ///< NTRIP caster (PC_ENABLE_NTRIP_CASTER): serves RTCM3 corrections to rovers.
     PROTO_MESH = 10, ///< Edge-cache sibling link (PC_ENABLE_EDGE_MESH): answers a peer's content-addressed query.
+    PROTO_UDP = 11,  ///< A bound datagram port. The slot carries the peer per entry, not per slot.
 } ConnProto;
 
 /**
@@ -7233,10 +7234,10 @@ static_assert(sizeof(pc_if_kind) == 1, "pc_if_kind must stay one byte: it is a p
 // -- Core: protocol dispatch + shared outbound transport (always built) --
 /** @brief Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. */
 #ifndef PROTO_MAX_HANDLERS
-#define PROTO_MAX_HANDLERS 11
+#define PROTO_MAX_HANDLERS 12
 #endif
 // proto_register / proto_get index this table by ConnProto id, so it must be wide enough for every id.
-static_assert((unsigned)PROTO_MESH < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must exceed the largest ConnProto id");
+static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must exceed the largest ConnProto id");
 /** @brief Reverse-SSH tunnel: max concurrent forwarded-tcpip channels bridged at once. A relay that
  * forwards to a web UI opens one channel per inbound TCP connection, so this bounds concurrency. */
 #if PC_ENABLE_SSH_CLIENT

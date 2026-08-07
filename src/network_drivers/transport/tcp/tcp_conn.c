@@ -476,15 +476,14 @@ static void pc_conn_set_state(uint8_t slot, ConnState st)
         return;
     }
 #endif
-    const uint32_t bit = 1u << slot;
     if (st == CONN_FREE)
     {
         PROTO_ATOMIC_STORE(&conn_pool[slot].state, st);
-        atomic_fetch_or_explicit(&s_pool.free_mask, bit, memory_order_release);
+        pc_slot_mark(&s_pool.free_mask, slot);
     }
     else
     {
-        atomic_fetch_and_explicit(&s_pool.free_mask, ~bit, memory_order_release);
+        pc_slot_clear(&s_pool.free_mask, slot);
         PROTO_ATOMIC_STORE(&conn_pool[slot].state, st);
     }
 }
@@ -493,9 +492,7 @@ static void pc_conn_set_state(uint8_t slot, ConnState st)
 // is full. Runs in stack context (accept); the acquire load pairs with the release stores above.
 static int32_t pc_conn_alloc_free(void)
 {
-    const uint32_t valid = (MAX_CONNS >= 32) ? 0xFFFFFFFFu : ((1u << MAX_CONNS) - 1u);
-    uint32_t m = atomic_load_explicit(&s_pool.free_mask, memory_order_acquire) & valid;
-    return m ? (int32_t)__builtin_ctz(m) : -1;
+    return pc_slot_next(PROTO_ATOMIC_LOAD(&s_pool.free_mask) & pc_slot_all(MAX_CONNS));
 }
 
 uint32_t pc_ap_ip = 0;

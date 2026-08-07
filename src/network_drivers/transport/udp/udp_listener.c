@@ -41,7 +41,6 @@ typedef struct
     void *ctx;              ///< Opaque context handed back to the handler.
     pc_ip group;            ///< Multicast group this slot joined; meaningful only when mcast is set.
     proto_bool mcast;       ///< The slot joined a group and must leave it on teardown.
-    proto_bool used;        ///< The slot is bound.
 
     uint8_t rx[PC_UDP_RX_RING];
     _Atomic size_t rx_head; ///< Producer: the stack's trampoline.
@@ -58,6 +57,8 @@ typedef struct
 
 static_assert(PC_RING_POW2(PC_UDP_RX_RING), "PC_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
 static_assert(PC_RING_POW2(PC_UDP_TX_RING), "PC_UDP_TX_RING must be a power of two: a ring index wraps with a mask");
+static_assert(PC_MAX_UDP_LISTENERS <= PC_RING_SLOTS_MAX,
+              "the bound-slot bitmask (UdpListenerCtx::bound) is a uint32; raise it or fall back to a scan");
 
 /**
  * @brief All receiving-side UDP state, owned by one instance.
@@ -77,6 +78,7 @@ typedef struct
     uint8_t tx_whdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the send ring's producer.
     uint8_t tx_rhdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the send ring's consumer.
     char group_text[PC_IP_STR_MAX];       ///< Where joined_group() formats the group it reports.
+    _Atomic uint32_t bound;               ///< Bit i set = bind[i] is bound. One ctz instead of a scan.
     proto_bool polling;                   ///< Set for the duration of poll(); a reentrant call returns.
 #if !PROTOCORE_HOT
     proto_bool cap_on;
@@ -111,15 +113,30 @@ static proto_bool addr_is_group(const pc_ip *a)
     return Ip.classify(a) == PC_IP_SCOPE_MULTICAST;
 }
 
+/** @brief The slot index @p b sits at. */
+static size_t bind_idx(const UdpBind *b)
+{
+    return (size_t)(b - s_lst.bind);
+}
+
+/** @brief True when slot @p idx is bound. */
+static proto_bool bind_used(size_t idx)
+{
+    return (PROTO_ATOMIC_LOAD(&s_lst.bound) & pc_slot_bit(idx)) != 0u;
+}
+
 /** @brief The bound slot for @p port, or NULL. */
 static UdpBind *find_bind(uint16_t port)
 {
-    for (int i = 0; i < PC_MAX_UDP_LISTENERS; i++)
+    uint32_t m = PROTO_ATOMIC_LOAD(&s_lst.bound) & pc_slot_all(PC_MAX_UDP_LISTENERS);
+    while (m != 0u)
     {
-        if (s_lst.bind[i].used && s_lst.bind[i].port == port)
+        int32_t i = pc_slot_next(m);
+        if (s_lst.bind[i].port == port)
         {
             return &s_lst.bind[i];
         }
+        m &= ~pc_slot_bit((size_t)i);
     }
     return NULL;
 }
@@ -127,14 +144,13 @@ static UdpBind *find_bind(uint16_t port)
 /** @brief The first free slot, or NULL when the pool is full. */
 static UdpBind *free_bind(void)
 {
-    for (int i = 0; i < PC_MAX_UDP_LISTENERS; i++)
+    uint32_t free_slots = ~PROTO_ATOMIC_LOAD(&s_lst.bound) & pc_slot_all(PC_MAX_UDP_LISTENERS);
+    int32_t i = pc_slot_next(free_slots);
+    if (i < 0)
     {
-        if (!s_lst.bind[i].used)
-        {
-            return &s_lst.bind[i];
-        }
+        return NULL;
     }
-    return NULL;
+    return &s_lst.bind[i];
 }
 
 /** @brief Reset a slot's rings and handler state, leaving it free. */
@@ -146,7 +162,7 @@ static void bind_clear(UdpBind *b)
     b->ctx = NULL;
     b->group = empty;
     b->mcast = PROTO_FALSE;
-    b->used = PROTO_FALSE;
+    pc_slot_clear(&s_lst.bound, bind_idx(b));
     PROTO_ATOMIC_STORE(&b->rx_head, 0);
     PROTO_ATOMIC_STORE(&b->rx_tail, 0);
     PROTO_ATOMIC_STORE(&b->tx_head, 0);
@@ -494,7 +510,7 @@ static proto_bool listen_on(uint16_t port, pc_udp_handler handler, void *ctx)
         b->handler = NULL;
         return PROTO_FALSE;
     }
-    b->used = PROTO_TRUE;
+    pc_slot_mark(&s_lst.bound, bind_idx(b));
     return PROTO_TRUE;
 }
 
@@ -523,7 +539,7 @@ static proto_bool listen_group(const char *group_ip, uint16_t port, pc_udp_handl
         b->handler = NULL;
         return PROTO_FALSE;
     }
-    b->used = PROTO_TRUE;
+    pc_slot_mark(&s_lst.bound, bind_idx(b));
     return PROTO_TRUE;
 }
 
@@ -549,7 +565,7 @@ static void poll_all(void)
     for (int i = 0; i < PC_MAX_UDP_LISTENERS; i++)
     {
         UdpBind *b = &s_lst.bind[i];
-        if (b->used)
+        if (bind_used((size_t)i))
         {
             pc_udp_dgram d = {{PC_IP_NONE, {0}}, 0, 0};
             while (pc_udp_dgram_take(b->rx, PC_UDP_RX_RING, &b->rx_head, &b->rx_tail, s_lst.rx_rhdr, &d, s_lst.rx_stage,
