@@ -245,8 +245,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
         }
     }
 #if PC_ENABLE_HTTP3
-    // Bind the HTTP/3 QUIC server (UDP on device; on host it is fed via pc_quic_server_ingest). Requests
-    // dispatch through the route table via the trampoline; pc_quic_server_poll() runs in service_once.
+    // Bind the HTTP/3 QUIC server's UDP port. Requests dispatch through the route table via the
+    // trampoline; pc_quic_server_poll() runs in service_once.
     if (s_inst.h3_enabled)
     {
         QuicServerConfig h3cfg = {0};

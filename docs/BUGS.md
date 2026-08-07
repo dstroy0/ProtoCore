@@ -10,7 +10,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ## native_quic_server does not link: it builds the HTTP/3 bridge without the HTTP or TCP owners
 
-- **Status:** OPEN, found 2026-08-07 while yanking the host arms out of the presentation layer.
+- **Status:** FIXED, found 2026-08-07 while yanking the host arms out of the presentation layer.
   Pre-existing and not caused by that sweep: building `ac33d37a0` (its base) gives the identical
   link errors.
 - **Symptom:** `pio test -e native_quic_server` ERRORS in the link stage, before any test runs.
@@ -19,8 +19,23 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `pc_h3_resp_sink` and `pc_h3_server_request` reference `conn_pool`, `http_pool`, `http_reset`,
   `Tcp`, and `Http`. It carries neither the HTTP owner nor the TCP owner that define them, so
   `ld` reports eight undefined references out of `h3_server.o`.
-- **Fix:** not written. Either the env carries the bridge's owners the way `native_h3_server`
-  does, or it drops `h3_server.c` and tests `quic_server.c` alone.
+- **Fix:** the env drops `h3_server.c` and tests `quic_server.c` alone. The dispatch bridge is what
+  `native_h3_server` is for: it extends the full-app base, so the route table and the slot pools the
+  bridge reaches are already in the image. The env now also carries the UDP listener, the client, the
+  address mapping and `ip.c`, which is what `quic_server.c` binds its port through.
+
+## pc_quic_server_stop() left the UDP port bound and its handler armed
+
+- **Status:** FIXED, found 2026-08-07 while putting test_quic_server on the real listener.
+- **Symptom:** none on a device, where the server is stopped once at most. A suite that stops and
+  restarts saw the second `pc_quic_server_begin()` take `listen_on`'s already-bound path, which
+  rebinds the handler without a fresh pcb.
+- **Root cause:** `pc_quic_server_stop()` cleared the running flag, the pool and the ring cursors,
+  but never called `Udp.listener->close()`, so the bind outlived the server it belonged to and a
+  datagram arriving after the stop still filled the ingest ring. `quic_server.h` has documented the
+  call as closing the binding since it was written.
+- **Fix:** `pc_quic_server_stop()` closes the port first, before releasing the pool, so nothing more
+  reaches the ring while it is being torn down.
 
 ## The TCP transport's hot path did not compile, and one env was the only witness
 

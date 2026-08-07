@@ -3605,11 +3605,15 @@
       "tests": ["integration/http/test_h3_e2e"]
     },
     "native_quic_server": {
-      "desc": "HTTP/3 server glue (network_drivers/presentation/http/http3/quic_server): the UDP-facing pool\nthat routes datagrams by Destination Connection ID to a pool of QuicConn + H3Conn engines. A QUIC\nclient in the test injects datagrams through the host ingest seam and captures the server's replies\nthrough the output sink, driving a full handshake + HTTP/3 GET and verifying the 200 + body - the\nsame end-to-end flow as test_h3_e2e but through pc_quic_server_begin / poll / respond, exercising the\nconnection-ID routing, the ingest ring, and new-connection creation from a client Initial.",
+      "desc": "HTTP/3 server glue (network_drivers/presentation/http/http3/quic_server): the UDP-facing pool\nthat routes datagrams by Destination Connection ID to a pool of QuicConn + H3Conn engines. A QUIC\nclient in the test hands datagrams to the pcb the server bound and reads its replies back out of the\nhost stack's send log, driving a full handshake + HTTP/3 GET and verifying the 200 + body - the same\nend-to-end flow as test_h3_e2e but through pc_quic_server_begin / poll / respond over the real UDP\nlistener, exercising the connection-ID routing, the ingest ring, and new-connection creation from a\nclient Initial. The HTTP/3 dispatch bridge (h3_server.c) belongs to native_h3_server: it reaches the\nroute table and the TCP slot pools, which this env does not build.",
       "flags": ["-DPC_ENABLE_HTTP3=1"],
       "src": [
         "+<network_drivers/presentation/http/http3/quic_server.c>",
-        "+<network_drivers/presentation/http/http3/h3_server.c>",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http3/h3_conn.c>",
         "+<network_drivers/presentation/http/http3/h3_frame.c>",
         "+<network_drivers/presentation/http/http3/qpack.c>",

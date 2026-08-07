@@ -28,7 +28,11 @@
 #include <string.h>
 
 #include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/udp.h"
+#include "pc_net_host.h"
 #include <unity.h>
+
+#define H3_PORT 443
 
 void setUp()
 {
@@ -69,18 +73,37 @@ static void h_hello(uint8_t slot, HttpReq *req)
     send_text(slot, 200, "text/plain", "bridged h3");
 }
 
-// Captured server -> client datagrams from the current poll.
+// Captured server -> client datagrams from the current round.
 static uint8_t g_out[16][1500];
 static size_t g_out_len[16];
 static int g_out_n;
-static void out_sink(void *, const uint8_t *dg, size_t len, const char *, uint16_t)
+
+// Copy what the host stack was handed since the last reset into the capture the assertions read.
+static void harvest(void)
 {
-    if (g_out_n < 16 && len <= sizeof(g_out[0]))
+    g_out_n = 0;
+    for (size_t i = 0; i < pc_net_host_udp_count() && g_out_n < 16; i++)
     {
-        memcpy(g_out[g_out_n], dg, len);
-        g_out_len[g_out_n] = len;
-        g_out_n++;
+        const pc_net_host_dgram *d = pc_net_host_udp_at(i);
+        if (d->len <= sizeof(g_out[0]))
+        {
+            memcpy(g_out[g_out_n], d->data, d->len);
+            g_out_len[g_out_n] = d->len;
+            g_out_n++;
+        }
     }
+}
+
+// Put one datagram on the wire and run a turn of the app loop. service_once() polls the listener
+// first (which carries the datagram to the server's ingest callback) and runs the server after, so
+// the second poll is what puts its replies out.
+static void feed(const uint8_t *dg, size_t len, const char *ip, uint16_t port)
+{
+    pc_net_host_udp_reset();
+    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(H3_PORT, ip, port, (void *)dg, (uint16_t)len));
+    service_once(0);
+    Udp.listener->poll();
+    harvest();
 }
 
 static void fill()
@@ -330,8 +353,7 @@ void test_h3_request_served_by_route()
     // Bring up an HTTP/3-only PC with one route.
     on_http("/hello", HTTP_GET, h_hello);
     TEST_ASSERT_TRUE(pc_h3_cert(CERT, sizeof(CERT), SERVER_SEED, 443));
-    TEST_ASSERT_EQUAL_INT32(PC_OK, proto_begin(NULL));
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
+    TEST_ASSERT_EQUAL_INT32(PC_OK, proto_begin(NULL)); // binds the HTTP/3 UDP port
 
     QuicInitialSecrets init;
     pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
@@ -354,9 +376,7 @@ void test_h3_request_served_by_route()
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
-    service_once(0); // -> pc_quic_server_poll(): opens the connection, emits the flight
+    feed(dg, dl, "192.0.2.10", 40000); // -> pc_quic_server_poll(): opens the connection, emits the flight
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     // Learn the server's chosen SCID (for the 1-RTT short header) from the flight's long header.
@@ -413,9 +433,7 @@ void test_h3_request_served_by_route()
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(idg, idl + hdl, "192.0.2.10", 40000));
-    service_once(0);
+    feed(idg, idl + hdl, "192.0.2.10", 40000);
 
     // Client HTTP/3 GET on request stream 0 (1-RTT); DCID is the server's SCID.
     uint8_t block[128];
@@ -430,9 +448,8 @@ void test_h3_request_served_by_route()
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), server_scid, server_scid_len, 0, &ap_c, sfr, sfrl);
 
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(s1, s1l, "192.0.2.10", 40000));
-    service_once(0); // -> pc_quic_server_poll -> pc_h3_server_request -> h_hello -> send -> respond
+    // -> pc_quic_server_poll -> pc_h3_server_request -> h_hello -> send -> respond
+    feed(s1, s1l, "192.0.2.10", 40000);
 
     TEST_ASSERT_TRUE(g_handler_ran);                               // the registered route actually ran
     TEST_ASSERT_TRUE(response_ok(&ap_s));                          // its 200 + body came back on the request stream

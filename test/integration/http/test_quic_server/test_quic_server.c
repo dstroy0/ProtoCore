@@ -3,11 +3,12 @@
 //
 // HTTP/3 server-glue test: the same end-to-end flow as test_h3_e2e (a QUIC client completes the
 // TLS 1.3 handshake, sends an HTTP/3 GET, and verifies the 200 + body), but driven THROUGH the
-// pc_quic_server module - pc_quic_server_begin / pc_quic_server_ingest / pc_quic_server_poll /
-// pc_quic_server_respond with the outbound datagrams captured by the host output sink. It exercises what
-// pc_quic_server adds over the raw engines: opening a connection from a client Initial, routing later datagrams by
-// Destination Connection ID (odcid for the long-header handshake packets, our chosen SCID for the
-// 1-RTT short header), the ingest ring, and the request/response callback seam.
+// pc_quic_server module and through the wire it binds. Datagrams are handed to the UDP pcb the
+// server bound, the listener's poll() carries them to its ingest callback, and its replies are read
+// back out of the host stack's send log. It exercises what pc_quic_server adds over the raw engines:
+// opening a connection from a client Initial, routing later datagrams by Destination Connection ID
+// (odcid for the long-header handshake packets, our chosen SCID for the 1-RTT short header), the
+// ingest ring, and the request/response callback seam.
 
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/hash/sha256.h"
@@ -22,16 +23,21 @@
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
+#include "network_drivers/transport/udp.h"
+#include "pc_net_host.h"
 #include <string.h>
 
 #include <unity.h>
 
 void setUp()
 {
+    pc_net_host_reset(); // drop the pcbs and the datagram log a previous case left behind
 }
 void tearDown()
 {
 }
+
+#define H3_PORT 443
 
 static const uint8_t CERT[48] = {0x30, 0x2e, 0x02, 0x01, 0x02};
 static uint8_t SERVER_PRIV[32], SERVER_SEED[32], SERVER_RANDOM[32], CLIENT_PRIV[32];
@@ -60,18 +66,50 @@ static void test_rng(uint8_t *out, size_t len)
     g_rng_call++;
 }
 
-// Captured outbound datagrams (server -> client) from the current poll.
+// Captured outbound datagrams (server -> client) from the current round.
 static uint8_t g_out[16][1500];
 static size_t g_out_len[16];
 static int g_out_n;
-static void out_sink(void *, const uint8_t *dg, size_t len, const char *, uint16_t)
+
+// Copy what the host stack was handed since the last reset into the capture the assertions read.
+static void harvest(void)
 {
-    if (g_out_n < 16 && len <= sizeof(g_out[0]))
+    g_out_n = 0;
+    for (size_t i = 0; i < pc_net_host_udp_count() && g_out_n < 16; i++)
     {
-        memcpy(g_out[g_out_n], dg, len);
-        g_out_len[g_out_n] = len;
-        g_out_n++;
+        const pc_net_host_dgram *d = pc_net_host_udp_at(i);
+        if (d->len <= sizeof(g_out[0]))
+        {
+            memcpy(g_out[g_out_n], d->data, d->len);
+            g_out_len[g_out_n] = d->len;
+            g_out_n++;
+        }
     }
+}
+
+// Hand one datagram to the pcb the server bound, the way the stack's receive callback does. It lands
+// in the listener's receive ring; poll() is what carries it to the ingest callback.
+static void deliver(const uint8_t *dg, size_t len, const char *ip, uint16_t port)
+{
+    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(H3_PORT, ip, port, (void *)dg, (uint16_t)len));
+}
+
+// One turn of the loop: drain the listener into the server's ingest ring, run the server, then put
+// what it queued onto the wire and collect it.
+static void run(uint32_t now_ms)
+{
+    Udp.listener->poll();
+    pc_quic_server_poll(now_ms);
+    Udp.listener->poll();
+    harvest();
+}
+
+// Deliver one datagram and run a turn, keeping only the replies that turn produced.
+static void feed(const uint8_t *dg, size_t len, const char *ip, uint16_t port, uint32_t now_ms)
+{
+    pc_net_host_udp_reset();
+    deliver(dg, len, ip, port);
+    run(now_ms);
 }
 
 // The application handler: capture the request and answer 200 through the server API.
@@ -96,6 +134,16 @@ static void fill()
     g_method[0] = g_path[0] = '\0';
     g_rng_call = 0;
     g_out_n = 0;
+}
+
+// The server config every case starts from.
+static void config(QuicServerConfig *scfg, void (*rng)(uint8_t *, size_t))
+{
+    memset(scfg, 0, sizeof(*scfg));
+    scfg->cert_der = CERT;
+    scfg->cert_len = sizeof(CERT);
+    memcpy(scfg->ed25519_seed, SERVER_SEED, 32);
+    scfg->rng = rng;
 }
 
 // --- packet helpers (client side), identical construction to the engine's -------------------
@@ -243,6 +291,30 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], con
     return p;
 }
 
+// The client's first flight: Initial(CRYPTO(ClientHello)) padded to the 1200-byte minimum. Enough to
+// open a connection and make the server answer with a flight of its own.
+static size_t make_client_initial(uint8_t *dg, size_t cap)
+{
+    QuicInitialSecrets init;
+    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    QuicTransportParams ctp;
+    pc_quic_tp_defaults(&ctp);
+    ctp.initial_max_data = 524288;
+    ctp.initial_max_sd_bidi_local = 131072;
+    uint8_t ctpe[128];
+    size_t ctpl = pc_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
+    uint8_t client_pub[32];
+    pc_x25519_base(client_pub, CLIENT_PRIV);
+    uint8_t ch[512];
+    size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
+    uint8_t frames[1200];
+    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
+    memset(frames + fl, 0, 1100 - fl);
+    fl = 1100;
+    return build_long(dg, cap, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0, &init.client,
+                      frames, fl);
+}
+
 // Where capture_status() copies the :status value it finds.
 typedef struct
 {
@@ -337,15 +409,11 @@ void test_quic_server_http3_get()
 {
     fill();
 
-    // Start the server: it owns the QuicConn + H3Conn pool and routes by connection ID.
+    // Start the server: it binds the UDP port, owns the QuicConn + H3Conn pool, and routes by
+    // connection ID.
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng;
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, test_rng);
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     QuicInitialSecrets init;
     pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
@@ -369,10 +437,8 @@ void test_quic_server_http3_get()
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
 
-    // Deliver it: pc_quic_server opens the connection and produces the server flight.
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
-    pc_quic_server_poll(0);
+    // Put it on the wire: pc_quic_server opens the connection and produces the server flight.
+    feed(dg, dl, "192.0.2.10", 40000, 0);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
     TEST_ASSERT_GREATER_THAN(0, g_out_n); // the coalesced Initial(SH) + Handshake(EE..Finished) flight
 
@@ -423,9 +489,7 @@ void test_quic_server_http3_get()
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(idg, idl + hdl, "192.0.2.10", 40000));
-    pc_quic_server_poll(0); // drains HANDSHAKE_DONE + the server's control/QPACK streams (ignored)
+    feed(idg, idl + hdl, "192.0.2.10", 40000, 0); // drains HANDSHAKE_DONE + the control/QPACK streams
 
     // Client HTTP/3 GET on request stream 0 (1-RTT). The short-header DCID is the server's SCID.
     uint8_t block[128];
@@ -440,9 +504,7 @@ void test_quic_server_http3_get()
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
 
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(s1, s1l, "192.0.2.10", 40000));
-    pc_quic_server_poll(0); // dispatches the request to app_request, which responds; flushed here
+    feed(s1, s1l, "192.0.2.10", 40000, 0); // dispatches to app_request, which responds; flushed here
 
     // The request reached the application through the server callback...
     TEST_ASSERT_EQUAL_STRING("GET", g_method);
@@ -462,42 +524,21 @@ void test_idle_connection_reaped()
     uint32_t now = 100000;
 
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng;
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, test_rng);
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     // Open a connection with a client Initial (the handshake need not complete to hold a slot).
-    QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
-    QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
-    uint8_t ctpe[128];
-    size_t ctpl = pc_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
-    uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
-    uint8_t ch[512];
-    size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
-    uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
-    memset(frames + fl, 0, 1100 - fl);
-    fl = 1100;
     uint8_t dg[1500];
-    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
-                           &init.client, frames, fl);
-    pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000);
-    pc_quic_server_poll(now);
+    size_t dl = make_client_initial(dg, sizeof(dg));
+    feed(dg, dl, "192.0.2.10", 40000, now);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
 
     // Just before the timeout it is kept; just after, a poll reclaims it.
     now += PC_QUIC_IDLE_MS - 1;
-    pc_quic_server_poll(now);
+    run(now);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
     now += 2;
-    pc_quic_server_poll(now);
+    run(now);
     TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
 
     pc_quic_server_stop();
@@ -528,54 +569,82 @@ void test_quic_server_input_guards()
 {
     fill();
     // begin() rejects a null config and a null RNG.
-    TEST_ASSERT_FALSE(pc_quic_server_begin(443, NULL, app_request, NULL));
+    TEST_ASSERT_FALSE(pc_quic_server_begin(H3_PORT, NULL, app_request, NULL));
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = NULL;
-    TEST_ASSERT_FALSE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, NULL);
+    TEST_ASSERT_FALSE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     // poll() before a successful begin is a no-op (running == false).
     pc_quic_server_stop();
     pc_quic_server_poll(0);
 
     scfg.rng = test_rng;
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
-    // ingest() rejects an empty or oversized datagram.
+    // The ingest ring refuses an empty datagram and one longer than PC_QUIC_MAX_DATAGRAM: both reach
+    // the ingest callback and are dropped there, so neither opens a connection or draws a reply.
     uint8_t one[1] = {0x40};
-    TEST_ASSERT_FALSE(pc_quic_server_ingest(one, 0, "192.0.2.1", 1));
+    feed(one, 0, "192.0.2.1", 1, 0);
     static uint8_t huge[PC_QUIC_MAX_DATAGRAM + 1];
-    TEST_ASSERT_FALSE(pc_quic_server_ingest(huge, sizeof(huge), "192.0.2.1", 1));
+    feed(huge, sizeof(huge), "192.0.2.1", 1, 0);
+    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
 
     // respond() with an unknown connection id fails.
     TEST_ASSERT_FALSE(pc_quic_server_respond(999999, 0, 200, "text/plain", NULL, 0));
 
-    // HttpRoute guards via poll: a malformed long header, a too-short short header, and a short header
-    // with an unknown DCID each route to nothing and are dropped.
+    // route() guards: a malformed long header, a too-short short header, and a short header with an
+    // unknown DCID each route to nothing and are dropped.
     uint8_t bad_long[1] = {0xC0}; // long-header bit set but truncated -> parse fails
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(bad_long, 1, "192.0.2.1", 1));
+    feed(bad_long, sizeof(bad_long), "192.0.2.1", 1, 0);
     uint8_t short_tiny[2] = {0x40, 0x00}; // short header shorter than 1 + SCID_LEN
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(short_tiny, 2, "192.0.2.1", 1));
+    feed(short_tiny, sizeof(short_tiny), "192.0.2.1", 1, 0);
     uint8_t short_unknown[1 + PC_QUIC_SCID_LEN] = {0x40, 9, 9, 9, 9, 9, 9, 9, 9}; // no matching conn
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(short_unknown, sizeof(short_unknown), "192.0.2.1", 1));
-    pc_quic_server_poll(0);
+    feed(short_unknown, sizeof(short_unknown), "192.0.2.1", 1, 0);
     TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
 
-    // Ring full: without polling, the ring holds PC_QUIC_INGEST_RING-1 entries, then drops.
-    pc_quic_server_begin(443, &scfg, app_request, NULL); // reset the ring cursors
-    int pushed = 0;
-    for (int i = 0; i < PC_QUIC_INGEST_RING + 4; i++)
+    pc_quic_server_stop();
+}
+
+// The ingest ring is fail-closed: between polls it holds PC_QUIC_INGEST_RING-1 datagrams and drops
+// the rest. Two client Initials go into one listener drain; with junk between them that fits, both
+// open a connection, and with enough to push the second past the ring, only the first does.
+void test_ingest_ring_drops_past_capacity()
+{
+    fill();
+    QuicServerConfig scfg;
+    config(&scfg, bulk_rng); // two connections are opened, so the RNG must serve any call count
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+
+    uint8_t dcid_a[8] = {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7};
+    uint8_t dcid_b[8] = {0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7};
+    uint8_t a[256], b[256], junk[1] = {0x40};
+    size_t al = make_min_initial(a, sizeof(a), dcid_a, sizeof(dcid_a));
+    size_t bl = make_min_initial(b, sizeof(b), dcid_b, sizeof(dcid_b));
+
+    // Both Initials inside the ring's capacity: two connections open.
+    deliver(a, al, "192.0.2.1", 1);
+    for (int i = 0; i < PC_QUIC_INGEST_RING - 3; i++)
     {
-        if (pc_quic_server_ingest(one, 1, "192.0.2.1", 1))
-        {
-            pushed++;
-        }
+        deliver(junk, sizeof(junk), "192.0.2.1", 1);
     }
-    TEST_ASSERT_EQUAL_INT(PC_QUIC_INGEST_RING - 1, pushed);
+    deliver(b, bl, "192.0.2.1", 1);
+    run(0);
+    TEST_ASSERT_EQUAL_UINT8(2, pc_quic_server_active_conns());
+
+    pc_quic_server_stop();
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+
+    // The same pair, with the second pushed past PC_QUIC_INGEST_RING-1: it never reaches the engines.
+    deliver(a, al, "192.0.2.1", 1);
+    for (int i = 0; i < PC_QUIC_INGEST_RING; i++)
+    {
+        deliver(junk, sizeof(junk), "192.0.2.1", 1);
+    }
+    deliver(b, bl, "192.0.2.1", 1);
+    run(0);
+    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+
     pc_quic_server_stop();
 }
 
@@ -583,13 +652,8 @@ void test_quic_server_pool_full()
 {
     fill();
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = bulk_rng; // several connections are opened, so the RNG must serve any call count
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, bulk_rng); // several connections are opened, so the RNG must serve any call count
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     // One more distinct-DCID Initial than the pool holds: the extra alloc_slot()/open_conn() fails.
     for (int i = 0; i <= PC_QUIC_MAX_CONNS; i++)
@@ -597,78 +661,56 @@ void test_quic_server_pool_full()
         uint8_t dcid[8] = {0xA0, (uint8_t)i, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5};
         uint8_t dg[256];
         size_t dl = make_min_initial(dg, sizeof(dg), dcid, sizeof(dcid));
-        TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
+        deliver(dg, dl, "192.0.2.10", 40000);
     }
-    pc_quic_server_poll(0);
+    run(0);
     TEST_ASSERT_EQUAL_UINT8(PC_QUIC_MAX_CONNS, pc_quic_server_active_conns()); // capped at the pool size
     pc_quic_server_stop();
 }
 
-// copy_str (peer-ip capture) is fed a null ip and an ip longer than the 16-byte peer_ip/ring ip
-// fields: the "if (src)" guard and the "n + 1 < cap" capacity guard must each be exercised. The
-// datagram content is irrelevant - a bare short header is enough since it never matches a connection.
-void test_quic_server_copy_str_edges()
+// The peer the ingest callback captured is what the reply is addressed to, and it survives the two
+// 16-byte ip fields it is copied through (the ring entry's and the slot's). The longest dotted quad,
+// 15 characters, is exactly what those fields hold.
+void test_quic_server_replies_to_the_captured_peer()
 {
     fill();
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng;
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, test_rng);
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
-    uint8_t one[1] = {0x40};
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(one, sizeof(one), NULL, 1));
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(one, sizeof(one), "AAAAAAAAAAAAAAAAAAAA", 2)); // 20 chars > ip[16]
+    uint8_t dg[1500];
+    size_t dl = make_client_initial(dg, sizeof(dg));
+    feed(dg, dl, "255.255.255.255", 40009, 0);
+    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
 
-    pc_quic_server_poll(0);
-    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns()); // neither datagram matched or opened a connection
+    TEST_ASSERT_GREATER_THAN(0, (int)pc_net_host_udp_count());
+    const pc_net_host_dgram *d = pc_net_host_udp_at(0);
+    TEST_ASSERT_EQUAL_UINT8(PC_NET_TYPE_V4, d->type);
+    TEST_ASSERT_EQUAL_UINT8(255, d->addr[0]);
+    TEST_ASSERT_EQUAL_UINT8(255, d->addr[3]);
+    TEST_ASSERT_EQUAL_UINT16(40009, d->dst_port);
+    TEST_ASSERT_EQUAL_UINT16(H3_PORT, d->src_port);
 
     pc_quic_server_stop();
 }
 
-// With no output sink registered (host build), server_send's "if (s_quic.out_sink)" guard must
-// silently drop the handshake-response flight rather than call through a null pointer.
-void test_quic_server_no_out_sink()
+// udp_ingest_cb drops a datagram whose sender the listener cannot render - here one that arrived with
+// no source address at all, so peer_addr() has no family to format - before it reaches the ring.
+void test_quic_server_unrenderable_peer_dropped()
 {
     fill();
-    pc_quic_server_set_out_sink_cb(NULL, NULL); // guard against a previous test's sink lingering
-
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng;
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, test_rng);
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
-    QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
-    QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
-    uint8_t ctpe[128];
-    size_t ctpl = pc_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
-    uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
-    uint8_t ch[512];
-    size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
-    uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
-    memset(frames + fl, 0, 1100 - fl);
-    fl = 1100;
     uint8_t dg[1500];
-    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
-                           &init.client, frames, fl);
+    size_t dl = make_client_initial(dg, sizeof(dg));
+    feed(dg, dl, NULL, 40000, 0);
 
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
-    pc_quic_server_poll(0); // generates a handshake-response flight that server_send must drop silently
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
-    TEST_ASSERT_EQUAL_INT(0, g_out_n); // no sink registered -> nothing captured, but no crash either
+    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
 
     pc_quic_server_stop();
-    pc_quic_server_set_out_sink_cb(out_sink, NULL); // restore for any test relying on the global sink
 }
 
 // pc_quic_server_respond() with an unknown conn_id while a real connection IS active: slot_by_id's
@@ -678,18 +720,12 @@ void test_quic_server_respond_unknown_id_with_active_conn()
 {
     fill();
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng;
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, test_rng);
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     uint8_t dg0[256];
     size_t dl0 = make_min_initial(dg0, sizeof(dg0), ODCID, sizeof(ODCID));
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(dg0, dl0, "192.0.2.10", 40000));
-    pc_quic_server_poll(0);
+    feed(dg0, dl0, "192.0.2.10", 40000, 0);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns()); // the one active conn gets id 1 (next_id starts at 1)
 
     TEST_ASSERT_FALSE(pc_quic_server_respond(2, 0, 200, "text/plain", NULL, 0)); // no slot has id 2
@@ -703,13 +739,9 @@ void test_quic_server_begin_default_port()
 {
     fill();
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng;
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
+    config(&scfg, test_rng);
     TEST_ASSERT_TRUE(pc_quic_server_begin(0, &scfg, app_request, NULL));
+    TEST_ASSERT_NOT_NULL(pc_net_host_udp_pcb(PC_HTTP3_PORT)); // the default port is what got bound
     pc_quic_server_stop();
 }
 
@@ -724,19 +756,13 @@ void test_quic_server_route_header_edges()
 {
     fill();
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng; // 3rd rng call yields SERVER_SCID, a known value to address packets to
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, test_rng); // 3rd rng call yields SERVER_SCID, a known value to address packets to
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     // Open one connection so the loops below have a real "used" slot to compare against.
     uint8_t dg0[256];
     size_t dl0 = make_min_initial(dg0, sizeof(dg0), ODCID, sizeof(ODCID));
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(dg0, dl0, "192.0.2.10", 40000));
-    pc_quic_server_poll(0);
+    feed(dg0, dl0, "192.0.2.10", 40000, 0);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
 
     // A long-header HANDSHAKE packet (not INITIAL) with a DCID SHORTER than the open connection's
@@ -746,7 +772,7 @@ void test_quic_server_route_header_edges()
     uint8_t hs_hdr[64];
     size_t hs_len = pc_quic_build_long_header(hs_hdr, sizeof(hs_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, short_dcid,
                                               sizeof(short_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(hs_hdr, hs_len, "192.0.2.11", 40001));
+    deliver(hs_hdr, hs_len, "192.0.2.11", 40001);
 
     // A long-header Initial with an unsupported version: the "version == 1" branch goes false and
     // short-circuits before the type check.
@@ -754,7 +780,7 @@ void test_quic_server_route_header_edges()
     uint8_t ver_hdr[64];
     size_t ver_len = pc_quic_build_long_header(ver_hdr, sizeof(ver_hdr), QUIC_LP_INITIAL, 0xAABBCCDDu, other_dcid,
                                                sizeof(other_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(ver_hdr, ver_len, "192.0.2.12", 40002));
+    deliver(ver_hdr, ver_len, "192.0.2.12", 40002);
 
     // A long-header HANDSHAKE packet whose DCID is exactly the open connection's SCID (SERVER_SCID):
     // cid_eq's alen == blen AND memcmp == 0 both go true, so it matches by SCID directly (the ODCID
@@ -763,9 +789,9 @@ void test_quic_server_route_header_edges()
     size_t scid_hdr_len =
         pc_quic_build_long_header(scid_hdr, sizeof(scid_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, SERVER_SCID,
                                   sizeof(SERVER_SCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(scid_hdr, scid_hdr_len, "192.0.2.13", 40003));
+    deliver(scid_hdr, scid_hdr_len, "192.0.2.13", 40003);
 
-    pc_quic_server_poll(0);
+    run(0);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns()); // still just the one connection
 
     // A short header (1-RTT) with the right length but a SCID that does not match: the memcmp
@@ -776,8 +802,7 @@ void test_quic_server_route_header_edges()
     {
         wrong_scid[1 + i] = (uint8_t)(0xEE + i);
     }
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(wrong_scid, sizeof(wrong_scid), "192.0.2.14", 40004));
-    pc_quic_server_poll(0);
+    feed(wrong_scid, sizeof(wrong_scid), "192.0.2.14", 40004, 0);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
 
     pc_quic_server_stop();
@@ -792,13 +817,8 @@ void test_quic_server_close_reaped_before_idle()
     uint32_t now = 5000;
 
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng;
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, app_request, NULL));
+    config(&scfg, test_rng);
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     QuicInitialSecrets init;
     pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
@@ -808,8 +828,7 @@ void test_quic_server_close_reaped_before_idle()
     uint8_t dg0[256];
     size_t dl0 = build_long(dg0, sizeof(dg0), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             0, &init.client, frames0, fl0);
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(dg0, dl0, "192.0.2.20", 40010));
-    pc_quic_server_poll(now);
+    feed(dg0, dl0, "192.0.2.20", 40010, now);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
 
     uint8_t cc_frames[64];
@@ -817,9 +836,8 @@ void test_quic_server_close_reaped_before_idle()
     uint8_t dg1[256];
     size_t dl1 = build_long(dg1, sizeof(dg1), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, cc_frames, cc_len);
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(dg1, dl1, "192.0.2.20", 40010));
     now += 5; // far short of PC_QUIC_IDLE_MS
-    pc_quic_server_poll(now);
+    feed(dg1, dl1, "192.0.2.20", 40010, now);
     TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns()); // reaped by is_closed(), not by idle
 
     pc_quic_server_stop();
@@ -833,13 +851,8 @@ void test_quic_server_on_request_null()
     fill();
 
     QuicServerConfig scfg;
-    memset(&scfg, 0, sizeof(scfg));
-    scfg.cert_der = CERT;
-    scfg.cert_len = sizeof(CERT);
-    memcpy(scfg.ed25519_seed, SERVER_SEED, 32);
-    scfg.rng = test_rng;
-    pc_quic_server_set_out_sink_cb(out_sink, NULL);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(443, &scfg, NULL, NULL)); // no request callback
+    config(&scfg, test_rng);
+    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, NULL, NULL)); // no request callback
 
     QuicInitialSecrets init;
     pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
@@ -862,9 +875,7 @@ void test_quic_server_on_request_null()
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
 
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
-    pc_quic_server_poll(0);
+    feed(dg, dl, "192.0.2.10", 40000, 0);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
@@ -912,9 +923,7 @@ void test_quic_server_on_request_null()
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(idg, idl + hdl, "192.0.2.10", 40000));
-    pc_quic_server_poll(0);
+    feed(idg, idl + hdl, "192.0.2.10", 40000, 0);
 
     uint8_t block[128];
     size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
@@ -928,10 +937,9 @@ void test_quic_server_on_request_null()
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
 
-    g_out_n = 0;
-    TEST_ASSERT_TRUE(pc_quic_server_ingest(s1, s1l, "192.0.2.10", 40000));
-    pc_quic_server_poll(0); // the H3 engine completes the request and calls pc_h3_on_request, which
-                            // must see s_quic.on_request == NULL and skip forwarding, not crash
+    // The H3 engine completes the request and calls pc_h3_on_request, which must see
+    // s_quic.on_request == NULL and skip forwarding, not crash.
+    feed(s1, s1l, "192.0.2.10", 40000, 0);
 
     TEST_ASSERT_EQUAL_STRING("", g_method); // never invoked: no crash and nothing forwarded
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
@@ -945,9 +953,10 @@ int main(void)
     RUN_TEST(test_quic_server_http3_get);
     RUN_TEST(test_idle_connection_reaped);
     RUN_TEST(test_quic_server_input_guards);
+    RUN_TEST(test_ingest_ring_drops_past_capacity);
     RUN_TEST(test_quic_server_pool_full);
-    RUN_TEST(test_quic_server_copy_str_edges);
-    RUN_TEST(test_quic_server_no_out_sink);
+    RUN_TEST(test_quic_server_replies_to_the_captured_peer);
+    RUN_TEST(test_quic_server_unrenderable_peer_dropped);
     RUN_TEST(test_quic_server_begin_default_port);
     RUN_TEST(test_quic_server_respond_unknown_id_with_active_conn);
     RUN_TEST(test_quic_server_route_header_edges);

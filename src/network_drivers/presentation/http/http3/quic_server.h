@@ -14,9 +14,7 @@
  * Threading (ESP32): pc_udp delivers datagrams on the lwIP thread, but requests must be dispatched
  * on the server's worker/main loop, so the UDP handler only copies each datagram into a lock-free
  * ingest ring; pc_quic_server_poll() (called from the loop) drains the ring, runs the engines, and
- * sends replies. The engines therefore only ever run in one context. On host builds there is no UDP;
- * datagrams are injected with pc_quic_server_ingest() and replies captured through an output sink, so
- * the whole server is exercised by shuttling byte buffers between it and a test client.
+ * sends replies. The engines therefore only ever run in one context.
  *
  * The pool (QuicConn + H3Conn per slot + the ingest ring) is large, so like HTTP/2 it is a
  * PSRAM-class feature. No heap; fixed storage. This module has no PC dependency - the
@@ -73,8 +71,7 @@ typedef struct
 /**
  * @brief Start the HTTP/3 server: install @p cfg, bind @p port over UDP, and route datagrams into the
  * connection pool. @p on_request is invoked (on the poll thread) for each completed request.
- * @return false if UDP is unavailable (host build) or the bind fails; the server is still usable on
- * host builds through pc_quic_server_ingest() / the output sink.
+ * @return false on a null config or RNG, or when the UDP bind fails.
  */
 proto_bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, QuicServerRequestFn on_request, void *app);
 
@@ -99,23 +96,6 @@ uint8_t pc_quic_server_active_conns(void);
 
 /** @brief Stop the server: close the UDP binding and release every pool slot. */
 void pc_quic_server_stop(void);
-
-// ---------------------------------------------------------------------------
-// Host / test seam (no UDP on host builds)
-// ---------------------------------------------------------------------------
-#if !PROTOCORE_HOT
-/** @brief Sink invoked for every outbound datagram (host builds route sends here instead of UDP). */
-typedef void (*QuicServerOutFn)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
-
-/** @brief Register the outbound-datagram sink used on host builds. */
-void pc_quic_server_set_out_sink_cb(QuicServerOutFn fn, void *ctx);
-
-/**
- * @brief Inject a received datagram from @p ip:@p port (the host-build stand-in for the UDP handler).
- * pc_quic_server_poll() then processes it exactly as a real datagram. @return false if the ring is full.
- */
-proto_bool pc_quic_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
-#endif
 
 #endif // PC_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_SERVER_H
