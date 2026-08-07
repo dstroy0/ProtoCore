@@ -2840,6 +2840,16 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief Local UDP port the portable SNTP client asks from.
+ *
+ * Not 123: a device running PC_ENABLE_NTP_SERVER already holds that port, and the client has to
+ * bind one of its own to hear the reply come back.
+ */
+#ifndef PC_NTP_CLIENT_PORT
+#define PC_NTP_CLIENT_PORT 1123
+#endif
+
+/**
  * @brief NTP/SNTP time server (RFC 5905 / RFC 4330 server mode) on UDP/123 (services/pc_ntp_server).
  *
  * Turns the device into a local time source: it answers client NTP requests from its own

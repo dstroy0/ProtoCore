@@ -5,9 +5,15 @@
  * @file ntp_service.h
  * @brief Optional SNTP wall-clock time sync (PC_ENABLE_NTP).
  *
- * Wraps the ESP-IDF SNTP client (`configTzTime`): starts the client, reports
- * sync state, and formats the current time. Compiles to a no-op stub when
- * PC_ENABLE_NTP is 0 or on non-Arduino builds.
+ * Starts a client, reports sync state, and formats the current time.
+ *
+ * Two backends, chosen by PC_HAS_VENDOR_SNTP. Where the SDK ships an SNTP client the wrapper starts
+ * that one and it disciplines the system clock, so `time()` answers everywhere. Where it does not,
+ * the portable client asks a server over the UDP listener, checks the reply echoes the request it
+ * answers, and keeps the epoch in its own state; the monotonic clock carries it between syncs and
+ * nothing else in libc moves. The portable client takes a literal address rather than a name - it
+ * has no resolver of its own - and reports UTC, so the POSIX TZ argument is only meaningful to the
+ * vendor backend.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -77,12 +83,17 @@ time_t pc_ntp_epoch(void);
  */
 uint32_t pc_ntp_time_source(void);
 
-#if PROTOCORE_HOST
+#if !PC_HAS_VENDOR_SNTP
 /**
- * @brief Host-only test seam: sets the wall-clock epoch the accessors above report. 0 = none.
+ * @brief Seed the clock without asking a server: the accessors above report @p epoch from now on.
+ *
+ * The portable client keeps the epoch itself, so setting it is the same operation a reply performs.
+ * A caller that already knows the time (an RTC, a provisioning step, a test) uses this instead of a
+ * round trip. 0 puts the client back to never-synced. Absent on the vendor backend, where the SDK
+ * client owns the system clock.
  */
 void pc_ntp_set_test_epoch(time_t epoch);
-#endif // PROTOCORE_HOST
+#endif // !PC_HAS_VENDOR_SNTP
 
 #endif // PC_ENABLE_NTP
 

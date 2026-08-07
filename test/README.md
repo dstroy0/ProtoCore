@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **326 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **327 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -248,6 +248,7 @@ The native test matrix has **326 environments**, one per feature, generated from
 | `native_nrf24` | `PC_ENABLE_NRF24=1`, `PC_NRF24_PAYLOAD=8` | `protocols/radio/test_nrf24` | nRF24L01+ driver (services/radio/nrf24), v5 radio plugin: the Nordic SPI command protocol (STATUS shifted out first, W/R_REGISTER, W_TX/R_RX_PAYLOAD, write-1-to-clear) exercised against a mock chip - ... |
 | `native_ntcip` | `PC_ENABLE_NTCIP=1` | `unit/transportation/test_ntcip` | NTCIP transportation object OIDs (services/transportation/ntcip): the NTCIP 1202 signal-controller + 1203 DMS object roots under 1.3.6.1.4.1.1206.4.2 and the OID builder (root + instance index), for t... |
 | `native_ntp_server` | `PC_ENABLE_NTP_SERVER=1`, `PC_ENABLE_TIME_SOURCE=1` | `unit/application/test_ntp_server` | NTP/SNTP server (RFC 5905 server mode): the response codec (ntp_server_build_response) - version echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit stamps, big-endian encoding, a... |
+| `native_ntp_service` | `PC_ENABLE_NTP=1` | `unit/application/test_ntp_service` | The portable SNTP client (network_drivers/application/ntp_service, RFC 4330) on the build where PC_HAS_VENDOR_SNTP is 0: the mode-3 request it puts on the wire, the mode-4 reply it accepts, and the on... |
 | `native_ntrip_caster` | `PC_ENABLE_NTRIP_CASTER=1` | `unit/timing_position/test_ntrip_caster` | NTRIP caster protocol codec (services/timing_position/gnss/ntrip_caster): rover request parsing (mountpoint, NTRIP 1.0/2.0 version, HTTP Basic auth), the stream-accept / error responses, and the RTCM ... |
 | `native_nts` | `PC_ENABLE_NTS=1` | `unit/application/test_nts` | Network Time Security codec (network_drivers/application/nts, RFC 8915): the NTS-KE TLV records (build the standard request, parse a response) and the NTS NTP extension-field framing (unique id / cook... |
 | `native_oauth2` | `PC_ENABLE_OAUTH2=1` | `unit/security/test_oauth2` | OAuth2 token-endpoint client (services/security/oauth2) - the form-body builder + JSON token-response parser are host-tested (the parser reuses the JSON reader); the HTTP exchange is ESP32-only. |
@@ -305,7 +306,7 @@ The native test matrix has **326 environments**, one per feature, generated from
 | `native_redis` | `PC_ENABLE_REDIS=1` | `unit/iot/test_redis_resp` | Redis RESP2/RESP3 codec (services/iot/redis_resp): the zero-heap command encoder + the cursor reply parser (RESP2 simple/error/integer/bulk/array/nil plus RESP3 null/boolean/double/big number/bulk err... |
 | `native_regex` | default | `integration/transport/test_regex` | test_regex against the native_stack_http stack. |
 | `native_relay` | `PC_ENABLE_RELAY=1` | `protocols/net/test_relay` | TCP relay / DNAT byte pump (services/net/relay): the bidirectional relay engine that publishes an internal host:port through the server. |
-| `native_response_headers` | default | `integration/application/test_response_headers` | test_response_headers against the native_stack_http stack. |
+| `native_response_headers` | `PC_ENABLE_NTP=1` | `integration/application/test_response_headers` | test_response_headers against the native_stack_http stack. |
 | `native_ring` | default | `unit/mmgr/test_ring` | The shared ring primitive (mmgr/ring.h) and its three views: bytes by head/tail, whole messages by segment, and claimable slots by mask. |
 | `native_roaming` | `PC_ENABLE_ROAMING=1` | `unit/datalink/test_roaming` | Wi-Fi roaming decision layer (network_drivers/network/roaming): the pure policy that fuses the current RSSI, a candidate neighbour list, and an optional 802.11v BTM hint into a roam/stay decision (tar... |
 | `native_robotics` | `PC_ENABLE_OPCUA=1`, `PC_ENABLE_ROBOTICS=1` | `unit/fieldbus/test_robotics` | OPC UA for Robotics (OPC 40010-1) MotionDeviceSystem model (services/machine_tool/robotics) - the Browse hierarchy + the Read resolver over a bound RoboticsMotionDeviceSystem, including the parametric... |

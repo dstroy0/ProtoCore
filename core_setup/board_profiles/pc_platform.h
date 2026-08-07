@@ -173,6 +173,25 @@
 #endif
 #endif
 
+// SNTP. 1 = the vendor ships a wall-clock client and owns the system clock through it; 0 = the
+// portable client in network_drivers/application/ntp_service, which asks a server over the UDP
+// listener and keeps the answer itself.
+//
+// A vendor client usually disciplines libc's clock, so time() answers everywhere. The portable one
+// holds the epoch in its own state and hands it out through pc_ntp_epoch(); nothing else moves.
+#ifndef PC_HAS_VENDOR_SNTP
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_SNTP 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_SNTP 0 // a unit-test build has no SDK client to start
+#elif PC_VENDOR_MOCK
+#define PC_HAS_VENDOR_SNTP 0 // the mock vendor ships none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_SNTP (1 = the SDK's own SNTP client, 0 = the portable client over the UDP listener). Choosing the portable one is fine; defaulting into it is not."
+#endif
+#endif
+
 // ---------------------------------------------------------------------------
 // Execution context identity
 // ---------------------------------------------------------------------------

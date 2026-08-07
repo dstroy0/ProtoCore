@@ -25,13 +25,17 @@
 
 PROTO_BEGIN_DECLS
 
-#if PC_ENABLE_NTP_SERVER
+// The two constants either end of an NTP exchange is measured in, so they sit outside the server's
+// own feature gate: the client (ntp_service) reads the same wire and states them from here rather
+// than a second time.
 
 /** @brief One NTP packet on the wire is exactly 48 octets (no extension/auth fields). */
 #define NTP_PACKET_LEN 48u
 
 /** @brief Seconds between the NTP epoch (1900-01-01) and the Unix epoch (1970-01-01). */
 #define NTP_UNIX_OFFSET 2208988800u
+
+#if PC_ENABLE_NTP_SERVER
 
 /** @brief Reference ID "LOCL" - an undisciplined local clock (RFC 5905 sec 7.3). */
 #define NTP_REFID_LOCL 0x4C4F434Cu

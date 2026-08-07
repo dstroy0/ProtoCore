@@ -811,8 +811,15 @@
       "flags": ["-DPC_ENABLE_FILE_SERVING=1"]
     },
     "native_response_headers": {
-      "desc": "test_response_headers against the native_stack_http stack.",
+      "desc": "test_response_headers against the native_stack_http stack. Carries PC_ENABLE_NTP because the\nDate-header cases drive the clock through the NTP client's own entry points, and with it the UDP\nlistener the portable client binds its reply port on.",
       "base": "env:native_stack_http",
+      "flags": ["-DPC_ENABLE_NTP=1"],
+      "src": [
+        "${env:native_stack_http.build_src_filter}",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>"
+      ],
       "tests": ["integration/application/test_response_headers"]
     },
     "native_form_params": {
@@ -2022,6 +2029,21 @@
         "+<server/clock/clock.c>"
       ],
       "tests": ["unit/application/test_ntp_server"]
+    },
+    "native_ntp_service": {
+      "desc": "The portable SNTP client (network_drivers/application/ntp_service, RFC 4330) on the build\nwhere PC_HAS_VENDOR_SNTP is 0: the mode-3 request it puts on the wire, the mode-4 reply it accepts,\nand the ones it refuses - a wrong mode, a kiss-o'-death stratum, an origin that does not echo the\nrequest's transmit stamp, and a pre-2021 clock. Plus the epoch advancing off the monotonic tick\nbetween syncs.",
+      "flags": ["-DPC_ENABLE_NTP=1"],
+      "src": [
+        "+<network_drivers/application/ntp_service/ntp_service.c>",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<shared_primitives/ip.c>",
+        "+<shared_primitives/http_date.c>",
+        "+<server/clock/clock.c>"
+      ],
+      "tests": ["unit/application/test_ntp_service"]
     },
     "native_mdns_service": {
       "desc": "The portable mDNS / DNS-SD responder (network_drivers/application/mdns_service, RFC 6762 /\nRFC 6763) on the build where PC_HAS_VENDOR_MDNS is 0: joining 224.0.0.251:5353 through the UDP\nlistener, and answering a query for the service-enumeration name, a service type, and an instance's\nSRV / TXT - each answer read back off the wire and decoded by the test's own label reader.",
