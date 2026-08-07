@@ -1106,13 +1106,16 @@
       "tests": ["unit/iot/test_protobuf"]
     },
     "native_preempt_queue": {
-      "desc": "Preempting work queue (network_drivers/session/preempt_queue), v5 real-time ingest: the host\nfixed-ring core - FIFO order, urgent-to-front, fail-closed when full, high-water,\nand drain/handler dispatch. The post and the drain run on the host through the\nkeyed queue mock; only the interrupt itself and the preempt latency need hardware.",
+      "desc": "Preempting work queue (network_drivers/session/preempt_queue), v5 real-time ingest: FIFO order,\nurgent-to-front, fail-closed when full, high-water, and the hand-off from a post to the lane\ntask's handler. The DMA lane is driven end to end by the host DMA driver (mmgr/dma): a fed\ntransfer completes where the ISR would fire, its callback posts the bytes onto the lane, and the\nlane's task does the work. The post and the task run on the host through the keyed queue mock;\nonly the interrupt itself and the preempt latency need hardware.",
       "flags": [
         "-DPC_ENABLE_PREEMPT_QUEUE=1",
         "-DPC_PQ_DEPTH=4",
-        "-DPC_PQ_ITEM_SIZE=4"
+        "-DPC_PQ_ITEM_SIZE=16",
+        "-DPC_ENABLE_DMA=1",
+        "-DPC_DMA_BUF_SIZE=8",
+        "-DPC_DMA_CHANNELS=2"
       ],
-      "src": ["+<network_drivers/session/preempt_queue.c>"],
+      "src": ["+<network_drivers/session/preempt_queue.c>", "+<mmgr/dma.c>"],
       "tests": ["unit/session/test_preempt_queue"]
     },
     "native_dma": {
