@@ -2890,6 +2890,13 @@ from halves and is slower than the width it decomposes into"
 #define PC_ENABLE_TIME_SOURCE 0
 #endif
 
+// The NTP server answers from pc_time_now(), so with the registry off it holds no clock and drops
+// every request instead of serving a wrong one. That is a bind that never answers, so it fails here.
+#define PC_ENABLE_NTP_SERVER_NEEDS_TIME_SOURCE PC_ENABLE_TIME_SOURCE
+#if PC_ENABLE_NTP_SERVER && !PC_ENABLE_NTP_SERVER_NEEDS_TIME_SOURCE
+#error "ProtoCore: PC_ENABLE_NTP_SERVER needs PC_ENABLE_TIME_SOURCE"
+#endif
+
 /** @brief Maximum registered time sources (PC_ENABLE_TIME_SOURCE). */
 #ifndef PC_TIME_SOURCE_MAX
 #define PC_TIME_SOURCE_MAX 4

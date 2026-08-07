@@ -6,6 +6,9 @@
 // reference/receive/transmit stamps, big-endian encoding, and the length guards.
 
 #include "network_drivers/application/ntp_server/ntp_server.h"
+#include "network_drivers/transport/udp.h"
+#include "pc_net_host.h"
+#include "services/timing_position/time_source/time_source.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -136,12 +139,96 @@ void test_root_dispersion_advertised()
     TEST_ASSERT_EQUAL_UINT32(0u, rd_be32(out + 4));          // root delay 0
 }
 
-void test_begin_is_host_stub()
+// --- the UDP/123 binding, over the wire ---------------------------------------------------------
+
+// The epoch the registered time source reports; 0 means the server has no clock to serve from.
+static uint32_t g_epoch = 0;
+static uint32_t fake_clock(void)
 {
-    // On a host build (no ARDUINO/lwIP) pc_ntp_server_begin() cannot bind UDP/123, so it must
-    // always report false regardless of the stratum/refid it is asked to advertise.
-    TEST_ASSERT_FALSE(pc_ntp_server_begin(1, NTP_REFID_GPS));
-    TEST_ASSERT_FALSE(pc_ntp_server_begin(3, NTP_REFID_LOCL));
+    return g_epoch;
+}
+
+// Bind, hand the port one client request, and let the listener carry the reply to the wire. poll()
+// runs the handler and flushes the send ring in the same pass, so one is enough.
+static void serve(const uint8_t *req, const char *from_ip, uint16_t from_port)
+{
+    pc_net_host_udp_reset();
+    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(123, from_ip, from_port, (void *)req, NTP_PACKET_LEN));
+    Udp.listener->poll();
+}
+
+void test_begin_binds_udp_123()
+{
+    pc_net_host_reset();
+    TEST_ASSERT_TRUE(pc_ntp_server_begin(3, NTP_REFID_LOCL));
+    TEST_ASSERT_NOT_NULL(pc_net_host_udp_pcb(123));
+    TEST_ASSERT_TRUE(Udp.listener->close(123));
+}
+
+// A request reaches the handler and the reply reaches the wire, addressed back to the sender: the
+// stratum and refid begin() was given, mode 4, and the client's transmit stamp echoed as the origin.
+void test_request_is_answered_on_the_wire()
+{
+    pc_net_host_reset();
+    pc_time_source_reset();
+    g_epoch = 1700000000u;
+    TEST_ASSERT_TRUE(pc_time_source_add("test", 0, fake_clock));
+    TEST_ASSERT_TRUE(pc_ntp_server_begin(7, NTP_REFID_GPS));
+
+    uint8_t req[NTP_PACKET_LEN];
+    make_request(req, 4, 6, 0xCAFEF00Du, 0x0000FFFFu);
+    serve(req, "192.0.2.5", 40000);
+
+    TEST_ASSERT_EQUAL_INT(1, (int)pc_net_host_udp_count());
+    const pc_net_host_dgram *d = pc_net_host_udp_at(0);
+    TEST_ASSERT_EQUAL_UINT16(NTP_PACKET_LEN, d->len);
+    TEST_ASSERT_EQUAL_UINT16(123, d->src_port);   // answered from the bound port
+    TEST_ASSERT_EQUAL_UINT16(40000, d->dst_port); // back to the client that asked
+    TEST_ASSERT_EQUAL_UINT8(4, d->data[0] & 0x7); // mode 4 (server)
+    TEST_ASSERT_EQUAL_UINT8(7, d->data[1]);       // the stratum begin() was given
+    TEST_ASSERT_EQUAL_UINT32(NTP_REFID_GPS, rd_be32(d->data + 12));
+    TEST_ASSERT_EQUAL_UINT32(0xCAFEF00Du, rd_be32(d->data + 24)); // origin = client transmit
+    TEST_ASSERT_EQUAL_UINT32(g_epoch + NTP_UNIX_OFFSET, rd_be32(d->data + 40));
+
+    TEST_ASSERT_TRUE(Udp.listener->close(123));
+}
+
+// No valid time means no answer: serving a wrong clock is worse than staying silent, so the handler
+// returns before building anything and nothing goes out.
+void test_no_clock_serves_nothing()
+{
+    pc_net_host_reset();
+    pc_time_source_reset();
+    g_epoch = 0;
+    TEST_ASSERT_TRUE(pc_time_source_add("test", 0, fake_clock));
+    TEST_ASSERT_TRUE(pc_ntp_server_begin(3, NTP_REFID_LOCL));
+
+    uint8_t req[NTP_PACKET_LEN];
+    make_request(req, 4, 6, 1, 1);
+    serve(req, "192.0.2.5", 40000);
+
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+
+    TEST_ASSERT_TRUE(Udp.listener->close(123));
+}
+
+// A datagram too short to be an NTP request is dropped by the codec's length guard, so the handler
+// builds nothing and the port stays silent.
+void test_short_request_is_dropped()
+{
+    pc_net_host_reset();
+    pc_time_source_reset();
+    g_epoch = 1700000000u;
+    TEST_ASSERT_TRUE(pc_time_source_add("test", 0, fake_clock));
+    TEST_ASSERT_TRUE(pc_ntp_server_begin(3, NTP_REFID_LOCL));
+
+    uint8_t runt[8] = {0x23, 0, 6, 0, 0, 0, 0, 0};
+    pc_net_host_udp_reset();
+    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(123, "192.0.2.5", 40000, runt, sizeof(runt)));
+    Udp.listener->poll();
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+
+    TEST_ASSERT_TRUE(Udp.listener->close(123));
 }
 
 int main()
@@ -155,6 +242,9 @@ int main()
     RUN_TEST(test_big_endian_encoding);
     RUN_TEST(test_length_guards);
     RUN_TEST(test_root_dispersion_advertised);
-    RUN_TEST(test_begin_is_host_stub);
+    RUN_TEST(test_begin_binds_udp_123);
+    RUN_TEST(test_request_is_answered_on_the_wire);
+    RUN_TEST(test_no_clock_serves_nothing);
+    RUN_TEST(test_short_request_is_dropped);
     return UNITY_END();
 }

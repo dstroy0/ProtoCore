@@ -2009,10 +2009,16 @@
       "tests": ["protocols/net/test_smtp"]
     },
     "native_ntp_server": {
-      "desc": "NTP/SNTP server (RFC 5905 server mode) response codec (ntp_server_build_response):\nversion echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit\nstamps, big-endian encoding, and the length guards. Pure - host-tested, no lwIP.",
-      "flags": ["-DPC_ENABLE_NTP_SERVER=1"],
+      "desc": "NTP/SNTP server (RFC 5905 server mode): the response codec (ntp_server_build_response) -\nversion echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit stamps,\nbig-endian encoding, and the length guards - plus the UDP/123 bind and its handler, driven\nthrough the host stack's pcb so the reply that reaches the wire is the one a client would get.",
+      "flags": ["-DPC_ENABLE_NTP_SERVER=1", "-DPC_ENABLE_TIME_SOURCE=1"],
       "src": [
         "+<network_drivers/application/ntp_server/ntp_server.c>",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<shared_primitives/ip.c>",
+        "+<services/timing_position/time_source/time_source.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["unit/application/test_ntp_server"]
