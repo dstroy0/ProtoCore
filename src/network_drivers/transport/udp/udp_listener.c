@@ -16,8 +16,8 @@
 
 #if PROTOCORE_HOT
 #include "core_setup/board_profiles/pc_platform.h" // the target's UDP, under our names
-#include "network_drivers/transport/diffserv.h"       // DSCP marking; compiles out when off
-#include "network_drivers/transport/net_addr.h"       // NetAddr: the stack's address as a pc_ip
+#include "network_drivers/transport/diffserv.h"    // DSCP marking; compiles out when off
+#include "network_drivers/transport/net_addr.h"    // NetAddr: the stack's address as a pc_ip
 #endif
 
 PROTO_BEGIN_DECLS
@@ -718,11 +718,25 @@ static size_t captured_len(void)
 }
 #endif // !PROTOCORE_HOT
 
-const UdpListenerNs UdpListener = {listen_on,     listen_group, leave_group, poll_all,          reply_to,
-                                   peer_addr_of,  send_from,    sndbuf_of,
+// Designated, so a member's position in the struct does not decide what it binds to.
+const UdpListenerNs UdpListener = {
+    .listen = listen_on,
+    .listen_multicast = listen_group,
+    .leave_multicast = leave_group,
+    .poll = poll_all,
+    .reply = reply_to,
+    .peer_addr = peer_addr_of,
+    .sendto = send_from,
+    .sndbuf = sndbuf_of,
 #if !PROTOCORE_HOT
-                                   inject_one,    reset_all,    group_on,    set_sendto_result, capture_enable,
-                                   capture_reset, captured,     captured_len
+    .inject = inject_one,
+    .reset = reset_all,
+    .joined_group = group_on,
+    .set_sendto_result = set_sendto_result,
+    .capture_enable = capture_enable,
+    .capture_reset = capture_reset,
+    .captured = captured,
+    .captured_len = captured_len,
 #endif
 };
 
