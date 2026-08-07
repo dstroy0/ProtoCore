@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **324 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **325 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -138,6 +138,7 @@ The native test matrix has **324 environments**, one per feature, generated from
 | `native_dnp3` | `PC_ENABLE_DNP3=1` | `unit/energy/test_dnp3` | DNP3 (IEEE 1815) data-link frame codec (services/energy/dnp3): CRC-16/DNP, the frame builder (0x0564 header + CRC'd 16-octet data blocks) and the CRC-validating, de-blocking parser. |
 | `native_dns_resolver` | `PC_ENABLE_DNS_RESOLVER=1` | `unit/network/test_dns_resolver` | DNS resolver answer classifier/verifier (network_drivers/network/dns/dns_resolver): host-tested; the lwIP resolve is ESP32-only. |
 | `native_dns_server` | `PC_ENABLE_DNS_SERVER=1` | `protocols/network/test_dns_server` | Authoritative DNS server (network_drivers/network/dns/dns_server): the A-record response builder (QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed guards), the built-in... |
+| `native_dns_wire` | `PC_ENABLE_DNS_SERVER=1` | `unit/network/test_dns_wire` | The DNS name on the wire (network_drivers/network/dns/dns_wire, RFC 1035 sec 3.1 / 4.1.4): labels to a dotted string and back, compression pointers followed for an answer and refused for a question, t... |
 | `native_docstore` | `PC_ENABLE_WAL=1`, `PC_ENABLE_DBM=1`, `PC_ENABLE_DOCSTORE=1` | `protocols/storage/test_docstore` | Local JSON document store on the WAL (services/storage/docstore): JSON documents addressed by id, stored via dbm on the write-ahead log, plus top-level field queries (find documents whose JSON field e... |
 | `native_dshot` | `PC_ENABLE_DSHOT=1` | `unit/peripherals/test_dshot` | DShot ESC throttle codec (services/peripherals/dshot): the 16-bit frame (11-bit value + telemetry + 4-bit nibble-xor CRC), the bidirectional inverted-CRC variant, decode/validate, and per-rate bit tim... |
 | `native_dtls` | `PC_ENABLE_DTLS=1` | `unit/tls/test_dtls_record` | DTLS 1.3 record layer (network_drivers/presentation/security/dtls/dtls_record, RFC 9147 sec 4): DTLSPlaintext + DTLSCiphertext protect/unprotect, the unified header, sequence-number encryption (sec 4.... |

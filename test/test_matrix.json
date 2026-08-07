@@ -2023,11 +2023,18 @@
       ],
       "tests": ["unit/application/test_ntp_server"]
     },
+    "native_dns_wire": {
+      "desc": "The DNS name on the wire (network_drivers/network/dns/dns_wire, RFC 1035 sec 3.1 / 4.1.4):\nlabels to a dotted string and back, compression pointers followed for an answer and refused for a\nquestion, the hop limit that makes a self-referential message terminate, the undefined label types,\nthe label and destination bounds, and the case-insensitive compare names are defined to use.",
+      "flags": ["-DPC_ENABLE_DNS_SERVER=1"],
+      "src": ["+<network_drivers/network/dns/dns_wire.c>"],
+      "tests": ["unit/network/test_dns_wire"]
+    },
     "native_dns_server": {
       "desc": "Authoritative DNS server (network_drivers/network/dns/dns_server): the A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards), the built-in name->IP table (add / case-insensitive lookup / clear), and begin() binding\nport 53 on the UDP listener, driven against the host pcb driver.",
       "flags": ["-DPC_ENABLE_DNS_SERVER=1"],
       "src": [
         "+<network_drivers/network/dns/dns_server.c>",
+        "+<network_drivers/network/dns/dns_wire.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/net_addr.c>",

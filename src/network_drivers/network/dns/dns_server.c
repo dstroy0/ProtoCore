@@ -13,35 +13,13 @@
 
 #if PC_ENABLE_DNS_SERVER
 
-#include "network_drivers/transport/udp.h" // Udp.listener: the port 53 bind and the reply
-
-// Case-insensitive ASCII string equality (DNS names are case-insensitive).
-static proto_bool ci_eq(const char *a, const char *b)
-{
-    while (*a && *b)
-    {
-        char ca = *a;
-        char cb = *b;
-        if (ca >= 'A' && ca <= 'Z')
-        {
-            ca += 32;
-        }
-        if (cb >= 'A' && cb <= 'Z')
-        {
-            cb += 32;
-        }
-        if (ca != cb)
-        {
-            return PROTO_FALSE;
-        }
-        a++;
-        b++;
-    }
-    return *a == *b;
-}
+#include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves read and write
+#include "network_drivers/transport/udp.h"        // Udp.listener: the port 53 bind and the reply
 
 // Parse the first question: write the dotted name into @p name, set *qtype and *qend (the
-// byte just past QTYPE/QCLASS). Returns false on a malformed or over-long question.
+// byte just past QTYPE/QCLASS). Returns false on a malformed or over-long question. The name is
+// decoded with pointers refused: a question is the first name in its message, so one has nothing
+// earlier to point at.
 static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, uint16_t *qtype,
                                  size_t *qend)
 {
@@ -49,45 +27,11 @@ static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size
     {
         return PROTO_FALSE;
     }
-    size_t i = 12;
-    size_t n = 0;
-    for (;;)
+    size_t i = 0;
+    if (!pc_dns_name_decode(q, qlen, 12, name, name_cap, &i, PROTO_FALSE))
     {
-        if (i >= qlen)
-        {
-            return PROTO_FALSE;
-        }
-        uint8_t len = q[i++];
-        if (len == 0)
-        {
-            break;
-        }
-        if (len & 0xC0) // a compression pointer is illegal inside a question
-        {
-            return PROTO_FALSE;
-        }
-        if (i + len > qlen)
-        {
-            return PROTO_FALSE;
-        }
-        if (n)
-        {
-            if (n + 1 >= name_cap)
-            {
-                return PROTO_FALSE;
-            }
-            name[n++] = '.';
-        }
-        for (uint8_t k = 0; k < len; k++)
-        {
-            if (n + 1 >= name_cap)
-            {
-                return PROTO_FALSE;
-            }
-            name[n++] = (char)q[i++];
-        }
+        return PROTO_FALSE;
     }
-    name[n] = '\0';
     if (i + 4 > qlen)
     {
         return PROTO_FALSE;
@@ -221,7 +165,7 @@ static uint32_t lookup(const char *name)
     }
     for (size_t i = 0; i < s_dns.count; i++)
     {
-        if (ci_eq(s_dns.names[i], name))
+        if (pc_dns_name_eq(s_dns.names[i], name))
         {
             return s_dns.ips[i];
         }
