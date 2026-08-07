@@ -14,7 +14,7 @@
 #
 #   tools/ci_tooling/assets/render_diagrams.sh
 set -euo pipefail
-DIR="$(cd "$(dirname "$0")/../../docs/diagrams" && pwd)"
+DIR="$(cd "$(dirname "$0")/../../../docs/diagrams" && pwd)"
 PPTR="$(mktemp)"
 printf '{"args":["--no-sandbox","--disable-gpu"]}' >"$PPTR"
 

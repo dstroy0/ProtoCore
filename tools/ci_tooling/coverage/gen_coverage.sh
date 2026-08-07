@@ -13,7 +13,7 @@
 # cover a subset (handy locally); default is every native env except codeql and
 # the ThreadSanitizer env (tsan + gcov do not mix). Requires: pio + gcovr.
 set -uo pipefail
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../../.."
 
 export PLATFORMIO_BUILD_DIR="${PLATFORMIO_BUILD_DIR:-.pio_cov}"
 export PLATFORMIO_BUILD_FLAGS="-fprofile-arcs -ftest-coverage -lgcov"

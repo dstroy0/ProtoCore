@@ -10,7 +10,7 @@
 #   tools/ci_tooling/assets/pack_favicons.sh bolt-indigo     # one
 #   tools/ci_tooling/assets/pack_favicons.sh --all            # every favicon
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SRC="$ROOT/src/web/favicons"
 DIST="$ROOT/docs/favicons/dist"
 
