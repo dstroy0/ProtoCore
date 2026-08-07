@@ -20,11 +20,7 @@
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
 
-#if PROTOCORE_HOT
 #include <Arduino.h> // pc_platform_rand_fill()
-#else
-#include <Arduino.h> // mock
-#endif
 
 // ---------------------------------------------------------------------------
 // BSS allocation

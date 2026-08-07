@@ -41,11 +41,9 @@
 #include "mmgr/plaintext.h" // pc_plaintext_alloc for the large hybrid C_INIT
 #endif
 
-#if PROTOCORE_HOT
 #include "mmgr/arena.h"                    // pc_worker_set_self (own scratch slot)
 #include "network_drivers/transport/tcp.h" // pc_client_*
 #include "server/clock/clock.h"            // pc_millis, pcdelay
-#endif
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -387,8 +385,6 @@ static CliChannel *chan_alloc(void)
     }
     return NULL;
 }
-
-#if PROTOCORE_HOT
 
 // ---------------------------------------------------------------------------
 // Transmit
@@ -1693,31 +1689,7 @@ proto_bool pc_ssh_tunnel_up(void)
     return s_cli.state == PC_TUN_UP;
 }
 
-#else // !PROTOCORE_HOT - no client transport in this build; the tunnel stands down.
-
-proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
-{
-    (void)cfg;
-    return PROTO_FALSE;
-}
-void pc_ssh_tunnel_poll(void)
-{
-}
-void pc_ssh_tunnel_end(void)
-{
-}
-pc_ssh_tunnel_state pc_ssh_tunnel_state_get(void)
-{
-    return PC_TUN_IDLE;
-}
-proto_bool pc_ssh_tunnel_up(void)
-{
-    return PROTO_FALSE;
-}
-
-#endif // PROTOCORE_HOT
-
-// Available on both host and device: pure key derivation for provisioning.
+// Key derivation for provisioning: the seed's public half, without a tunnel.
 void pc_ssh_tunnel_pubkey(const uint8_t seed[32], uint8_t pub[32])
 {
     pc_ed25519_pubkey(pub, seed);

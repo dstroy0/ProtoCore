@@ -24,10 +24,6 @@
 #include "server/clock/clock.h"    // pc_millis() for the stateless nonce
 #include "shared_primitives/hex.h" // pc_hex_encode/decode
 
-#if PC_ENABLE_AUTH
-#if PROTOCORE_HOT
-#endif
-#endif
 // ---------------------------------------------------------------------------
 // Basic Auth helpers
 // ---------------------------------------------------------------------------

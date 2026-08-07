@@ -8,6 +8,20 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## native_quic_server does not link: it builds the HTTP/3 bridge without the HTTP or TCP owners
+
+- **Status:** OPEN, found 2026-08-07 while yanking the host arms out of the presentation layer.
+  Pre-existing and not caused by that sweep: building `ac33d37a0` (its base) gives the identical
+  link errors.
+- **Symptom:** `pio test -e native_quic_server` ERRORS in the link stage, before any test runs.
+  `native_h3_server` builds the same file and passes.
+- **Root cause:** the env's `src` list carries `presentation/http/http3/h3_server.c`, whose
+  `pc_h3_resp_sink` and `pc_h3_server_request` reference `conn_pool`, `http_pool`, `http_reset`,
+  `Tcp`, and `Http`. It carries neither the HTTP owner nor the TCP owner that define them, so
+  `ld` reports eight undefined references out of `h3_server.o`.
+- **Fix:** not written. Either the env carries the bridge's owners the way `native_h3_server`
+  does, or it drops `h3_server.c` and tests `quic_server.c` alone.
+
 ## The TCP transport's hot path did not compile, and one env was the only witness
 
 - **Status:** FIXED, found by running the transport envs during the ring work. Pre-existing on

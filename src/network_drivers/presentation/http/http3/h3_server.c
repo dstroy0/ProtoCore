@@ -10,35 +10,29 @@
 
 #if PC_ENABLE_HTTP3
 
-#include "core_setup/board_profiles/pc_platform.h" // pc_platform_rand_u32: the device TRNG
-#include "mmgr/rawmemcpy.h"                           // proto_raw_read: each field moves into the slot
-#include "network_drivers/presentation/http/http.h"   // Http.match_and_execute
-#include "network_drivers/transport/tcp.h"            // TcpConn, conn_pool: the reserved dispatch slot
-#include "protocore.h"                                // http_pool, PC_H3_DISPATCH_SLOT, http_reset
-#include "shared_primitives/runops.h"                 // every scan and search on the mapped fields
+#include "core_setup/board_profiles/pc_platform.h"  // pc_platform_rand_u32: the device TRNG
+#include "mmgr/rawmemcpy.h"                         // proto_raw_read: each field moves into the slot
+#include "network_drivers/presentation/http/http.h" // Http.match_and_execute
+#include "network_drivers/transport/tcp.h"          // TcpConn, conn_pool: the reserved dispatch slot
+#include "protocore.h"                              // http_pool, PC_H3_DISPATCH_SLOT, http_reset
+#include "shared_primitives/runops.h"               // every scan and search on the mapped fields
 
-// Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs: the
-// hardware TRNG on device; a deterministic PRNG on host (test builds carry no security context and
-// have no esp_random).
+// Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs:
+// four bytes per platform draw, the last draw truncated to what is left.
 void pc_h3_server_rng(uint8_t *out, size_t len)
 {
-#if PROTOCORE_HOT
     size_t i = 0;
     while (i < len)
     {
         uint32_t r = pc_platform_rand_u32();
-        size_t n = (len - i) < 4 ? (len - i) : 4;
+        size_t n = 4;
+        if (len - i < n)
+        {
+            n = len - i;
+        }
         proto_raw_read(out + i, &r, n);
         i += n;
     }
-#else
-    static uint32_t s = 0x9e3779b9u;
-    for (size_t i = 0; i < len; i++)
-    {
-        s = s * 1664525u + 1013904223u;
-        out[i] = (uint8_t)(s >> 24);
-    }
-#endif
 }
 
 // Response sink for the HTTP/3 dispatch slot: route (code, content_type, body) onto the QUIC stream
