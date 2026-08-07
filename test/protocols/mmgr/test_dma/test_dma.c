@@ -7,7 +7,8 @@
 // own TX into RX. The preempt-queue hand-off is observable here through the keyed queue
 // mock; only the interrupt that triggers it needs hardware.
 //
-// The env sizes PC_DMA_BUF_SIZE = 8, PC_DMA_CHANNELS = 2 (staging = 24).
+// The env sizes PC_DMA_BUF_SIZE = 8, PC_DMA_CHANNELS = 2. Staging is PC_DMA_HOST_STAGE, four
+// buffers, which the ring needs as a power of two so its index is a mask.
 
 #include "../../../mocks/pc_dma_host.h"
 #include "mmgr/dma.h"
@@ -144,6 +145,8 @@ void test_buffer_fills_then_partial_flush()
         msg[i] = (uint8_t)i;
     }
     TEST_ASSERT_TRUE(pc_dma_host_feed(0, msg, sizeof(msg)));
+    // One transfer completes per poll, so the full buffer and the partial tail are two of them.
+    pc_dma_poll();
     pc_dma_poll();
     // one full-buffer completion + one partial idle-line flush
     TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));
@@ -163,6 +166,7 @@ void test_ping_pong_flips_buffer()
         msg[i] = (uint8_t)(0x40 + i);
     }
     TEST_ASSERT_TRUE(pc_dma_host_feed(0, msg, sizeof(msg)));
+    pc_dma_poll(); // one buffer per poll: two full buffers are two transfers
     pc_dma_poll();
     TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));
     // consecutive completions use different buffers (the engine flipped, not reused)
@@ -229,9 +233,11 @@ void test_loopback_round_trip()
 void test_feed_fail_closed_when_full()
 {
     TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
-    uint8_t big[PC_DMA_BUF_SIZE * 3 + 1] = {0};
+    // The staging ring keeps one slot back to tell full from empty, so its capacity is one under
+    // its size.
+    uint8_t big[PC_DMA_HOST_STAGE] = {0};
     TEST_ASSERT_FALSE(pc_dma_host_feed(0, big, sizeof(big))); // past staging -> reject whole
-    uint8_t ok[PC_DMA_BUF_SIZE * 3] = {0};
+    uint8_t ok[PC_DMA_HOST_STAGE - 1u] = {0};
     TEST_ASSERT_TRUE(pc_dma_host_feed(0, ok, sizeof(ok))); // exactly fits
 }
 

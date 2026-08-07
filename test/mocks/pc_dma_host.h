@@ -51,8 +51,9 @@ typedef struct
     PcDmaStage rx; ///< injected, waiting to complete as ingress
     PcDmaStage tx; ///< transmitted, waiting to be read back
 
-    uint16_t tx_pending;          ///< submitted, not yet completed
-    uint8_t buf[PC_DMA_BUF_SIZE]; ///< the buffer an ingress completion points at
+    uint16_t tx_pending;             ///< submitted, not yet completed
+    uint8_t buf[2][PC_DMA_BUF_SIZE]; ///< the ping-pong pair an ingress completion points at
+    uint8_t bank;                    ///< the half of the pair the next completion fills
     uint16_t seq;
 } PcDmaHostCh;
 
@@ -99,11 +100,17 @@ proto_bool pc_dma_hw_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len)
         return PROTO_FALSE;
     }
     PcDmaHostCh *c = &g_pc_dma[ch];
+    // One transfer in flight per channel: a descriptor still loaded takes no second submit, and
+    // the caller waits for the TX-complete event (mmgr/dma.h).
+    if (c->tx_pending > 0)
+    {
+        return PROTO_FALSE;
+    }
     if (!pc_dma_stage_put(&c->tx, buf, len))
     {
         return PROTO_FALSE;
     }
-    c->tx_pending = (uint16_t)(c->tx_pending + len);
+    c->tx_pending = len;
     return PROTO_TRUE;
 }
 
@@ -154,11 +161,14 @@ void pc_dma_hw_poll(void)
             }
         }
 
-        // One transfer per poll, so a feed larger than the buffer flips through it.
-        uint16_t n = pc_dma_stage_get(&c->rx, c->buf, PC_DMA_BUF_SIZE);
+        // One transfer per poll, so a feed larger than the buffer flips through it. The completed
+        // half stays intact while the engine fills the other, which is what the pair is for: the
+        // callback reads its bytes after the next transfer has already been armed.
+        uint16_t n = pc_dma_stage_get(&c->rx, c->buf[c->bank], PC_DMA_BUF_SIZE);
         if (n > 0)
         {
-            pc_dma_host_complete(c, ch, PC_DMA_RX, c->buf, n);
+            pc_dma_host_complete(c, ch, PC_DMA_RX, c->buf[c->bank], n);
+            c->bank ^= 1u;
         }
     }
 }
