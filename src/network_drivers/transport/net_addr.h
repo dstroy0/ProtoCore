@@ -24,7 +24,6 @@
 
 #include "protocore_config.h"
 
-#if PROTOCORE_HOT
 #include "core_setup/board_profiles/pc_platform.h" // pc_net_ip: the stack's own address type
 #include "shared_primitives/ip.h"                  // pc_ip: the address everything above carries
 
@@ -40,8 +39,7 @@ PROTO_BEGIN_DECLS
  * Both families cross both ways. IPv6 is carried where the stack has it (::PC_NET_HAS_IPV6); where
  * it does not, a v6 address converts to nothing rather than to a wrong v4.
  *
- * No storage member: the conversions read their operands and hold nothing. Present only on a build
- * that has a stack to convert against.
+ * No storage member: the conversions read their operands and hold nothing.
  */
 typedef struct
 {
@@ -53,7 +51,5 @@ typedef struct
 extern const NetAddrNs NetAddr;
 
 PROTO_END_DECLS
-
-#endif // PROTOCORE_HOT
 
 #endif // PROTOCORE_NET_ADDR_H

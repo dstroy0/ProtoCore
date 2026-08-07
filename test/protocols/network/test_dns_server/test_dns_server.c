@@ -1,12 +1,14 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the authoritative DNS server (network_drivers/network/dns/dns_server): the pure response
-// builder (A-record answer, NXDOMAIN, non-A query, malformed guards, header flags) and the
-// built-in name->IP table (add / case-insensitive lookup / clear).
+// Unit tests for the authoritative DNS server (network_drivers/network/dns/dns_server): the response
+// builder (A-record answer, NXDOMAIN, non-A query, malformed guards, header flags), the built-in
+// name->IP table (add / case-insensitive lookup / clear), and begin() serving a query on port 53
+// through the host pcb driver.
 
 #include "network_drivers/network/dns/dns_server.h"
-#include "protocore_config.h" // PC_DNS_NAME_MAX / PC_DNS_SERVER_MAX_RECORDS
+#include "network_drivers/transport/udp.h" // Udp.listener: the port 53 bind begin() makes
+#include "protocore_config.h"              // PC_DNS_NAME_MAX / PC_DNS_SERVER_MAX_RECORDS
 #include <stdint.h>
 #include <stdio.h> // snprintf
 #include <string.h>
@@ -269,10 +271,44 @@ void test_dns_add_and_lookup_guards()
     TEST_ASSERT_EQUAL_HEX32(0u, DnsServer.lookup(NULL));
 }
 
-// The host build's DnsServer.begin() is a stub (no lwIP) and reports failure.
-void test_dns_begin_host_stub()
+// begin() binds port 53 and routes what lands there through the codec: a query for a name in the
+// table comes back as an A answer, addressed to the port it arrived from.
+void test_dns_begin_answers_a_query_over_the_wire()
 {
-    TEST_ASSERT_FALSE(DnsServer.begin());
+    (void)Udp.listener->close(53);
+    pc_net_host_udp_reset();
+    DnsServer.clear();
+    TEST_ASSERT_TRUE(DnsServer.add("gw.lan", 192, 168, 1, 1));
+    TEST_ASSERT_TRUE(DnsServer.begin());
+
+    uint8_t q[256];
+    size_t qn = make_query(q, 0x1234, "gw.lan", 1, PROTO_TRUE);
+    pc_net_host_udp_deliver(53, "192.168.1.50", 40000, q, (uint16_t)qn);
+    Udp.listener->poll();
+
+    TEST_ASSERT_EQUAL_size_t(1, pc_net_host_udp_count());
+    const pc_net_host_dgram *d = pc_net_host_udp_at(0);
+    TEST_ASSERT_EQUAL_UINT16(40000, d->dst_port);
+    TEST_ASSERT_EQUAL_HEX8(0x12, d->data[0]); // the query's id, echoed
+    TEST_ASSERT_EQUAL_HEX8(0x34, d->data[1]);
+    TEST_ASSERT_EQUAL_HEX8(0x84, d->data[2] & 0xFC); // QR=1, AA=1
+    TEST_ASSERT_EQUAL_HEX8(0x01, d->data[7]);        // ANCOUNT = 1
+    // The A record's four octets are the last four bytes of the answer.
+    TEST_ASSERT_EQUAL_UINT8(192, d->data[d->len - 4]);
+    TEST_ASSERT_EQUAL_UINT8(168, d->data[d->len - 3]);
+    TEST_ASSERT_EQUAL_UINT8(1, d->data[d->len - 2]);
+    TEST_ASSERT_EQUAL_UINT8(1, d->data[d->len - 1]);
+
+    // A name the table does not hold is answered NXDOMAIN, not dropped.
+    pc_net_host_udp_reset();
+    qn = make_query(q, 0x5678, "absent.lan", 1, PROTO_TRUE);
+    pc_net_host_udp_deliver(53, "192.168.1.50", 40000, q, (uint16_t)qn);
+    Udp.listener->poll();
+    TEST_ASSERT_EQUAL_size_t(1, pc_net_host_udp_count());
+    TEST_ASSERT_EQUAL_HEX8(0x03, pc_net_host_udp_at(0)->data[3] & 0x0F); // RCODE = NXDOMAIN
+    TEST_ASSERT_EQUAL_HEX8(0x00, pc_net_host_udp_at(0)->data[7]);        // ANCOUNT = 0
+
+    (void)Udp.listener->close(53);
 }
 
 int main()
@@ -290,6 +326,6 @@ int main()
     RUN_TEST(test_dns_oversized_name);
     RUN_TEST(test_dns_question_exceeds_out_cap);
     RUN_TEST(test_dns_add_and_lookup_guards);
-    RUN_TEST(test_dns_begin_host_stub);
+    RUN_TEST(test_dns_begin_answers_a_query_over_the_wire);
     return UNITY_END();
 }

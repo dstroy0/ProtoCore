@@ -12,8 +12,11 @@
 
 #include "network_drivers/transport/tcp.h"
 
+// Designated, so a member's position in the struct does not decide what it binds to.
 const TcpNs Tcp = {
-    &ConnPool,
-    &TcpListener,
-    &TcpClient,
+    .conn = &ConnPool,
+    .listener = &TcpListener,
+#if PC_NEED_CLIENT
+    .client = &TcpClient,
+#endif
 };

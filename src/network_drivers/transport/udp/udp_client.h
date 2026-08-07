@@ -45,14 +45,6 @@ typedef struct
     proto_bool (*sendto)(const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len);
     void (*poll)(void);
     size_t (*sndbuf)(void);
-#if !PROTOCORE_HOT
-    // Host test seam: the last datagram this side sent. The listener's replies go to the listener's
-    // own capture, so a test reads the side it drove.
-    void (*capture_enable)(void);
-    void (*capture_reset)(void);
-    const uint8_t *(*captured)(void);
-    size_t (*captured_len)(void);
-#endif
 } UdpClientNs;
 
 /** @brief The one symbol this module exports. */

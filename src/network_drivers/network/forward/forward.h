@@ -107,7 +107,10 @@ typedef pc_fwd_verdict (*pc_fwd_inspect_fn)(uint8_t src_if, const uint8_t *data,
  * @var ForwardNs::set_inspector   install the ingress inspection hook
  * @var ForwardNs::ingress         forward one received frame; returns the destinations it reached
  * @var ForwardNs::get_stats       copy out the counters
- * @var ForwardNs::test_set_now    host only: drive the clock the rate cap reads
+ *
+ * The rate cap reads pc_millis() (server/clock/clock.h), the library's one time source. A caller
+ * that needs to drive it - a test stepping the rate window - installs its own clock with
+ * pc_set_clock(), which governs every module at once.
  */
 typedef struct
 {
@@ -123,9 +126,6 @@ typedef struct
 #endif
     uint8_t (*ingress)(uint8_t src_if, const uint8_t *data, uint16_t len);
     void (*get_stats)(pc_forward_stats *out);
-#if !PROTOCORE_HOT
-    void (*test_set_now)(uint32_t ms);
-#endif
 } ForwardNs;
 
 /** @brief The one symbol this module exports. */

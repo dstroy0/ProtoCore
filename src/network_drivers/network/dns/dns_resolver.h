@@ -9,8 +9,7 @@
  * to tcpip_thread like the http_client), and classifies / verifies the answer:
  * a remote name resolving to 0.0.0.0, the broadcast address, loopback, or a
  * multicast address is rejected as a spoof / DNS-rebinding indicator. The
- * classifier + verifier are pure and host-tested; the resolve is ESP32-only and
- * blocking (call it off the request hot path).
+ * resolve is blocking (call it off the request hot path).
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -51,7 +50,7 @@ typedef enum PROTO_ENUM_PACKED
  */
 
 // ---------------------------------------------------------------------------
-// Resolve (ESP32; returns false on host)
+// Resolve
 // ---------------------------------------------------------------------------
 
 /**
@@ -65,11 +64,6 @@ typedef enum PROTO_ENUM_PACKED
  * @brief Resolve @p host and require the answer to pass @ref ResolverNs::verify.
  * @return true only if it resolved AND the address is a plausible answer.
  */
-
-#if !PROTOCORE_HOT
-/** @brief Host test hook: make @ref ResolverNs::resolve return @p ip (host order) when @p ok, else fail. */
-
-#endif
 
 /**
  * @brief The DNS resolver.
@@ -88,10 +82,6 @@ typedef struct
     proto_bool (*verify)(uint32_t ip);
     proto_bool (*resolve)(const char *host, uint32_t *out_ip);
     proto_bool (*resolve_verified)(const char *host, uint32_t *out_ip);
-#if !PROTOCORE_HOT
-    /// Host test hook: make @ref ResolverNs::resolve answer @c ip when @c ok, else fail.
-    void (*test_set_resolve)(proto_bool ok, uint32_t ip);
-#endif
 } ResolverNs;
 
 /** @brief The one symbol this module exports. */

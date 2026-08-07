@@ -10,6 +10,7 @@
 //
 // The env sizes PC_GW_MAX_PORTS = 4.
 
+#include "server/clock/clock.h" // pc_set_clock(): the one time source the rate window reads
 #include "services/net/gateway/gateway.h"
 #include <string.h>
 
@@ -98,6 +99,18 @@ static pc_gateway_stats stats()
     return st;
 }
 
+// The library's one time source, driven from the test. The uplink rate window reads pc_millis()
+// like every other module, so stepping it means installing a clock, not reaching into the gateway.
+static uint32_t g_now_ms;
+static uint32_t test_clock(void)
+{
+    return g_now_ms;
+}
+static void set_now(uint32_t ms)
+{
+    g_now_ms = ms;
+}
+
 void setUp()
 {
     g_up_n = 0;
@@ -105,7 +118,8 @@ void setUp()
     g_up_accept = PROTO_TRUE;
     g_tx_accept = PROTO_TRUE;
     pc_gateway_reset();
-    pc_gateway_test_set_now(0);
+    pc_set_clock(test_clock, 1000);
+    set_now(0);
 }
 void tearDown()
 {
@@ -156,7 +170,7 @@ void test_uplink_rate_cap()
     TEST_ASSERT_FALSE(pc_gateway_uplink(0, 1, x, 1, 0)); // 3rd in the window -> dropped
     TEST_ASSERT_EQUAL_size_t(2, g_up_n);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
-    pc_gateway_test_set_now(1000); // next window
+    set_now(1000); // next window
     TEST_ASSERT_TRUE(pc_gateway_uplink(0, 1, x, 1, 0));
     TEST_ASSERT_EQUAL_size_t(3, g_up_n);
 }

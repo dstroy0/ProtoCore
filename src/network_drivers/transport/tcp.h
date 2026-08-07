@@ -36,13 +36,15 @@ PROTO_BEGIN_DECLS
  *
  * @var TcpNs::conn      the pool of accepted connections
  * @var TcpNs::listener  bound ports, their worker queues, and the accept-time gates
- * @var TcpNs::client    dialing out
+ * @var TcpNs::client    dialing out; present only when a client transport is enabled
  */
 typedef struct
 {
     const ConnPoolNs *conn;
     const TcpListenerNs *listener;
+#if PC_NEED_CLIENT
     const TcpClientNs *client;
+#endif
 } TcpNs;
 
 /** @brief The one symbol this module exports. */

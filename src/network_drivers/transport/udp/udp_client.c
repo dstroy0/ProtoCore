@@ -12,11 +12,9 @@
 #include "network_drivers/transport/udp/udp_client.h"
 #include "network_drivers/transport/udp/udp_datagram.h" // the wire layout the ring carries
 
-#if PROTOCORE_HOT
-#include "core_setup/board_profiles/pc_platform.h" // the target's UDP, under our names
-#include "network_drivers/transport/diffserv.h"       // DSCP marking; compiles out when off
-#include "network_drivers/transport/net_addr.h"       // NetAddr: the stack's address as a pc_ip
-#endif
+#include "core_setup/board_profiles/pc_platform.h" // the stack's UDP, under our names
+#include "network_drivers/transport/diffserv.h"    // DSCP marking; compiles out when off
+#include "network_drivers/transport/net_addr.h"    // NetAddr: the stack's address as a pc_ip
 
 PROTO_BEGIN_DECLS
 
@@ -34,23 +32,15 @@ typedef struct
     uint8_t stage[PC_UDP_RX_BUF_SIZE]; ///< Contiguous payload handed to the wire.
     uint8_t whdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the producer.
     uint8_t rhdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the consumer.
-#if PROTOCORE_HOT
-    pc_udp_pcb *out; ///< Shared outbound control block, created on first flush.
-#else
-    proto_bool cap_on;
-    uint8_t cap_buf[PC_UDP_RX_BUF_SIZE];
-    size_t cap_len;
-#endif
+    pc_udp_pcb *out;                   ///< Shared outbound control block, created on first flush.
 } UdpClientCtx;
 static UdpClientCtx s_cli;
 
 static_assert(PC_RING_POW2(PC_UDP_TX_RING), "PC_UDP_TX_RING must be a power of two: a ring index wraps with a mask");
 
 // ---------------------------------------------------------------------------
-// The seam: where a queued datagram goes when it leaves
+// Where a queued datagram goes when it leaves
 // ---------------------------------------------------------------------------
-
-#if PROTOCORE_HOT
 
 typedef struct
 {
@@ -120,24 +110,6 @@ static void drain(void)
     (void)pc_net_call_marshal(flush_do, &k.base);
 }
 
-#else // no stack backend: the wire is a capture a test reads back
-
-static void drain(void)
-{
-    pc_udp_dgram d = {{PC_IP_NONE, {0}}, 0, 0};
-    while (pc_udp_dgram_take(s_cli.tx, PC_UDP_TX_RING, &s_cli.tx_head, &s_cli.tx_tail, s_cli.rhdr, &d, s_cli.stage,
-                             sizeof(s_cli.stage)))
-    {
-        if (s_cli.cap_on && d.len > 0 && d.len <= sizeof(s_cli.cap_buf))
-        {
-            proto_raw_read(s_cli.cap_buf, s_cli.stage, d.len);
-            s_cli.cap_len = d.len;
-        }
-    }
-}
-
-#endif // PROTOCORE_HOT
-
 // ---------------------------------------------------------------------------
 // The bodies behind the table
 // ---------------------------------------------------------------------------
@@ -165,38 +137,7 @@ static size_t sndbuf_of(void)
     return pc_udp_dgram_room(&s_cli.tx_head, &s_cli.tx_tail, PC_UDP_TX_RING);
 }
 
-#if !PROTOCORE_HOT
-static void capture_enable(void)
-{
-    s_cli.cap_on = PROTO_TRUE;
-    s_cli.cap_len = 0;
-}
-
-static void capture_reset(void)
-{
-    s_cli.cap_len = 0;
-}
-
-static const uint8_t *captured(void)
-{
-    if (s_cli.cap_len == 0)
-    {
-        return NULL;
-    }
-    return s_cli.cap_buf;
-}
-
-static size_t captured_len(void)
-{
-    return s_cli.cap_len;
-}
-#endif // !PROTOCORE_HOT
-
-const UdpClientNs UdpClient = {send_to,        poll_out,      sndbuf_of,
-#if !PROTOCORE_HOT
-                               capture_enable, capture_reset, captured,
-                               captured_len
-#endif
-};
+// Designated, so a member's position in the struct does not decide what it binds to.
+const UdpClientNs UdpClient = {.sendto = send_to, .poll = poll_out, .sndbuf = sndbuf_of};
 
 PROTO_END_DECLS

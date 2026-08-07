@@ -33,9 +33,7 @@
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
 #include "tcp_listener.h"       // Listener, listener_pool: the row the accept path stamps onto a slot
 
-#if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // Workers.wake() - resume a paced send when the window drains
-#endif
 
 #if PC_ENABLE_TLS
 #include "network_drivers/tls/tls.h"
@@ -47,9 +45,6 @@
 // arguments (incl. the pc_conn_reason names, which are only declared when the
 // feature is on) are dropped unparsed by the preprocessor.
 // ---------------------------------------------------------------------------
-#if PROTOCORE_HOT
-
-#endif
 #if PC_ENABLE_OBSERVABILITY
 
 // All connection-observability state, owned by one instance (internal linkage): the event
@@ -189,8 +184,6 @@ static void closing_check(uint8_t slot, pc_pcb *pcb);
 // Both are called by the close paths above their definitions.
 static void pc_conn_detach(pc_pcb *pcb);
 static void pc_conn_abort(pc_pcb *pcb);
-
-#if PROTOCORE_HOT
 
 typedef enum PROTO_ENUM_PACKED
 {
@@ -425,7 +418,6 @@ static inline pc_net_err pc_tcp_marshal(pc_tcp_op op, uint8_t slot, pc_pcb *pcb,
     }
     return k.result;
 }
-#endif // PROTOCORE_HOT
 
 static_assert(PC_RING_POW2(RX_BUF_SIZE), "RX_BUF_SIZE must be a power of two: a ring index wraps with a mask");
 
@@ -515,18 +507,8 @@ static proto_bool pc_conn_send(uint8_t slot, const void *data, proto_u16 len)
 {
     // The write target is always the slot's own pcb (ingress reads resolve it the
     // same way) - callers no longer thread it through, so it cannot disagree.
-#if PROTOCORE_HOT
     return pc_tcp_marshal(PC_OP_SEND, slot, conn_pool[slot].pcb, data, len, /*flush=*/PROTO_FALSE) ==
            PC_NET_OK; // the write runs in stack context
-#else
-#if PC_ENABLE_TLS
-    if (conn_pool[slot].tls)
-    {
-        return pc_tls_write(slot, data, len) >= 0;
-    }
-#endif
-    return pc_net_write(conn_pool[slot].pcb, data, len, PC_NET_WRITE_COPY) == PC_NET_OK;
-#endif
 }
 
 static proto_bool pc_conn_send_flush(uint8_t slot, const void *data, proto_u16 len)
@@ -535,22 +517,7 @@ static proto_bool pc_conn_send_flush(uint8_t slot, const void *data, proto_u16 l
     // context, so a small response costs one marshal instead of the send()+flush() pair (each
     // a ~23 us marshal on-device). For a TLS slot this is identical to pc_conn_send: the record
     // BIO already pushes ciphertext per record, so there is no separate flush to fold in.
-#if PROTOCORE_HOT
     return pc_tcp_marshal(PC_OP_SEND, slot, conn_pool[slot].pcb, data, len, /*flush=*/PROTO_TRUE) == PC_NET_OK;
-#else
-#if PC_ENABLE_TLS
-    if (conn_pool[slot].tls)
-    {
-        return pc_tls_write(slot, data, len) >= 0; // TLS BIO already output the record
-    }
-#endif
-    if (pc_net_write(conn_pool[slot].pcb, data, len, PC_NET_WRITE_COPY) != PC_NET_OK)
-    {
-        return PROTO_FALSE;
-    }
-    pc_net_output(conn_pool[slot].pcb);
-    return PROTO_TRUE;
-#endif
 }
 
 static proto_u16 pc_conn_sndbuf(uint8_t slot)
@@ -581,11 +548,7 @@ static void pc_conn_flush(uint8_t slot)
                 // flush must NOT end the session - persistent TLS (wss / TLS SSE) reuses it
     }
 #endif
-#if PROTOCORE_HOT
-    pc_tcp_marshal(PC_OP_OUTPUT, slot, conn_pool[slot].pcb, NULL, 0, /*flush=*/PROTO_FALSE);
-#else
-    pc_net_output(conn_pool[slot].pcb);
-#endif
+    (void)pc_tcp_marshal(PC_OP_OUTPUT, slot, conn_pool[slot].pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 }
 
 #if PC_ENABLE_DIFFSERV
@@ -595,15 +558,10 @@ static proto_bool set_dscp(uint8_t slot, uint8_t dscp)
     {
         return PROTO_FALSE;
     }
-#if PROTOCORE_HOT
     // Marshalled into stack context (PC_OP_SET_TOS) - the stack reads the DS field while building
     // each outbound segment, so setting it from a worker task must not race it.
     return pc_tcp_marshal(PC_OP_SET_TOS, slot, conn_pool[slot].pcb, NULL, pc_dscp_to_tos(dscp),
                           /*flush=*/PROTO_FALSE) == PC_NET_OK;
-#else
-    conn_pool[slot].pcb->tos = pc_dscp_to_tos(dscp); // host: no separate stack thread, set directly
-    return PROTO_TRUE;
-#endif
 }
 #endif // PC_ENABLE_DIFFSERV
 
@@ -628,11 +586,7 @@ static void pc_conn_ack_consumed(uint8_t slot)
         return;
     }
     c->rx_acked = tail; // advance first: the marshaled window update is the slow part
-#if PROTOCORE_HOT
-    pc_tcp_marshal(PC_OP_RECVED, slot, c->pcb, NULL, (proto_u16)consumed, /*flush=*/PROTO_FALSE);
-#else
-    pc_net_recved(c->pcb, (proto_u16)consumed);
-#endif
+    (void)pc_tcp_marshal(PC_OP_RECVED, slot, c->pcb, NULL, (proto_u16)consumed, /*flush=*/PROTO_FALSE);
 }
 
 static proto_bool pc_conn_raw_send(pc_pcb *pcb, const void *data, proto_u16 len)
@@ -641,20 +595,11 @@ static proto_bool pc_conn_raw_send(pc_pcb *pcb, const void *data, proto_u16 len)
     {
         return PROTO_FALSE;
     }
-#if PROTOCORE_HOT
     // pc_tcp_marshal owns the context choice: it runs the raw write inline when already in stack
     // context (a TLS close_notify/alert emitted from inside a raw callback) and marshals it
     // from the worker task (the handshake / read pump), so the write neither races the stack
     // nor self-deadlocks on its mailbox. The RAWSEND op also re-checks the pcb is still bound.
     return pc_tcp_marshal(PC_OP_RAWSEND, 0, pcb, data, len, /*flush=*/PROTO_FALSE) == PC_NET_OK;
-#else
-    pc_net_err e = pc_net_write(pcb, data, len, PC_NET_WRITE_COPY);
-    if (e == PC_NET_OK)
-    {
-        pc_net_output(pcb);
-    }
-    return e == PC_NET_OK;
-#endif
 }
 
 static void pc_conn_close(uint8_t slot)
@@ -678,20 +623,8 @@ static void pc_conn_close(uint8_t slot)
     pc_conn_detach(pcb);
     pc_conn_set_state(c->id, CONN_FREE);
     c->pcb = NULL;
-#if PROTOCORE_HOT
-    pc_tcp_marshal(PC_OP_CLOSE, slot, pcb, NULL, 0, /*flush=*/PROTO_FALSE); // TLS teardown + FIN in stack context
-#else
-#if PC_ENABLE_TLS
-    if (c->tls)
-    {
-        pc_tls_conn_end(slot);
-    }
-#endif
-    if (pc_net_close(pcb) != PC_NET_OK)
-    {
-        pc_net_abort(pcb);
-    }
-#endif
+    // TLS teardown + FIN in stack context.
+    (void)pc_tcp_marshal(PC_OP_CLOSE, slot, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 }
 
 static void pc_conn_abort_slot(uint8_t slot)
@@ -724,21 +657,13 @@ static void pc_conn_detach(pc_pcb *pcb)
 {
     // Disassociate the slot from this pcb's stack callbacks before freeing the
     // slot, so any late callback for the pcb finds a null arg and does nothing.
-#if PROTOCORE_HOT
-    pc_tcp_marshal(PC_OP_DETACH, 0, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
-#else
-    pc_net_arg(pcb, NULL);
-#endif
+    (void)pc_tcp_marshal(PC_OP_DETACH, 0, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 }
 
 static void pc_conn_abort(pc_pcb *pcb)
 {
     // Hard reset (RST) for a fatal condition - no graceful FIN.
-#if PROTOCORE_HOT
-    pc_tcp_marshal(PC_OP_ABORT, 0, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
-#else
-    pc_net_abort(pcb);
-#endif
+    (void)pc_tcp_marshal(PC_OP_ABORT, 0, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 }
 
 // ---------------------------------------------------------------------------
@@ -807,12 +732,8 @@ static void pc_conn_begin_close(uint8_t slot_id)
     PC_OBS_TRANSITION(slot_id, CONN_ACTIVE, CONN_CLOSING, PC_CONN_R_CLOSE_LOCAL);
     // Finalize immediately if the response already drained, else dwell until the
     // sent callback (or the CLOSING-timeout sweep) reclaims it. The control-block read
-    // must happen in stack context, so marshal the check on device.
-#if PROTOCORE_HOT
-    pc_tcp_marshal(PC_OP_CLOSE_CHECK, slot_id, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
-#else
-    closing_check(slot_id, pcb);
-#endif
+    // happens in stack context, so the check is marshaled.
+    (void)pc_tcp_marshal(PC_OP_CLOSE_CHECK, slot_id, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 }
 
 /**
@@ -884,7 +805,6 @@ static uint8_t pc_conn_active_count(void)
 
 static uint32_t pc_conn_remote_ip(uint8_t slot)
 {
-#if PROTOCORE_HOT
     if (slot >= MAX_CONNS)
     {
         return 0;
@@ -894,9 +814,6 @@ static uint32_t pc_conn_remote_ip(uint8_t slot)
     {
         return pc_net_ip4_u32(pc_net_ip_as_v4(&conn->pcb->remote_ip));
     }
-#else
-    (void)slot;
-#endif
     return 0;
 }
 
@@ -906,7 +823,6 @@ static proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
     {
         out->family = PC_IP_NONE;
     }
-#if PROTOCORE_HOT
     if (out == NULL || slot >= MAX_CONNS)
     {
         return PROTO_FALSE;
@@ -916,16 +832,8 @@ static proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
     {
         return PROTO_FALSE;
     }
-    NetAddr.to_ip(&conn->pcb->
-#if PC_ENABLE_DIFFSERV
-                   set_dscp,
-#endif
-                  remote_ip, out);
+    NetAddr.to_ip(&conn->pcb->remote_ip, out);
     return PROTO_TRUE;
-#else
-    (void)slot;
-    return PROTO_FALSE;
-#endif
 }
 
 // Refresh a slot's idle-timeout timestamp from the owning worker while a response body is still
@@ -1147,14 +1055,12 @@ pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len)
         {
             closing_check(slot->id, tpcb); // drained? -> tear down + free the slot
         }
-#if PROTOCORE_HOT
         // The send window just freed: wake the owning worker so a paced response
         // (e.g. a large file) resumes now rather than on the next idle sweep.
         else
         {
             Workers.wake(slot->owner);
         }
-#endif
     }
     (void)len;
     return PC_NET_OK;

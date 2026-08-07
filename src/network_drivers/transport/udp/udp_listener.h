@@ -60,6 +60,8 @@ typedef void (*pc_udp_handler)(const uint8_t *data, size_t len, const struct pc_
  * @var UdpListenerNs::peer_addr         copy a peer's address and port out
  * @var UdpListenerNs::sendto            queue a datagram from a bound port to an arbitrary destination
  * @var UdpListenerNs::sndbuf            bytes a bound port's send ring can still take
+ * @var UdpListenerNs::close             unbind a port and free its slot, leaving any group first
+ * @var UdpListenerNs::joined_group      the group a port joined, formatted, or NULL
  *
  * reply() and sendto() report that the datagram was queued, not that it reached the wire. They
  * return false when the ring cannot take it; the caller retries after the next poll(), or reads
@@ -75,19 +77,8 @@ typedef struct
     proto_bool (*peer_addr)(const struct pc_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out);
     proto_bool (*sendto)(uint16_t listen_port, const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len);
     size_t (*sndbuf)(uint16_t listen_port);
-#if !PROTOCORE_HOT
-    // Host test seams. inject() frames a datagram into the addressed slot's receive ring, the same
-    // producer the stack drives, and poll() delivers it. The capture holds the last datagram this
-    // side sent; the client's sends go to the client's own capture.
-    void (*inject)(uint16_t listen_port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len);
-    void (*reset)(void);
+    proto_bool (*close)(uint16_t port);
     const char *(*joined_group)(uint16_t port);
-    void (*set_sendto_result)(proto_bool ok);
-    void (*capture_enable)(void);
-    void (*capture_reset)(void);
-    const uint8_t *(*captured)(void);
-    size_t (*captured_len)(void);
-#endif
 } UdpListenerNs;
 
 /** @brief The one symbol this module exports. */

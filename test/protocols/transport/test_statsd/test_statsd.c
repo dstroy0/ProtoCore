@@ -11,16 +11,19 @@
 #include <string.h>
 #include <unity.h>
 
-// The client queues; poll() moves the frame to the wire, which is where the capture is written.
+// The client queues; poll() moves the frame to the wire, which is where the host pcb driver
+// records it. The last datagram it recorded is what this side sent.
 static const uint8_t *udp_cap(void)
 {
     Udp.client->poll();
-    return Udp.client->captured();
+    size_t n = pc_net_host_udp_count();
+    return n ? pc_net_host_udp_at(n - 1)->data : NULL;
 }
 static size_t udp_cap_len(void)
 {
     Udp.client->poll();
-    return Udp.client->captured_len();
+    size_t n = pc_net_host_udp_count();
+    return n ? pc_net_host_udp_at(n - 1)->len : 0;
 }
 
 // The captured datagram as a NUL-terminated string. The capture is length-counted, so this
@@ -44,8 +47,7 @@ static const char *captured(void)
 
 void setUp()
 {
-    Udp.client->capture_enable();
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
 }
 void tearDown()
 {
@@ -105,7 +107,7 @@ void test_emit_counter_and_negative()
     pc_statsd_begin("192.0.2.10", 8125, NULL);
     pc_statsd_count("api.hits", 3);
     TEST_ASSERT_EQUAL_STRING("api.hits:3|c", captured());
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_statsd_count("api.hits", -4); // counters may go negative
     TEST_ASSERT_EQUAL_STRING("api.hits:-4|c", captured());
 }
@@ -115,10 +117,10 @@ void test_emit_gauge_and_delta()
     pc_statsd_begin("192.0.2.10", 0, NULL); // 0 -> default port
     pc_statsd_gauge("heap.free", 200000);
     TEST_ASSERT_EQUAL_STRING("heap.free:200000|g", captured());
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_statsd_gauge_delta("conns", 5);
     TEST_ASSERT_EQUAL_STRING("conns:+5|g", captured());
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_statsd_gauge_delta("conns", -2);
     TEST_ASSERT_EQUAL_STRING("conns:-2|g", captured());
 }
@@ -128,10 +130,10 @@ void test_emit_timing_set_sampled()
     pc_statsd_begin("192.0.2.10", 8125, NULL);
     pc_statsd_timing("db.query", 120);
     TEST_ASSERT_EQUAL_STRING("db.query:120|ms", captured());
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_statsd_set("uniques", "device-7");
     TEST_ASSERT_EQUAL_STRING("uniques:device-7|s", captured());
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_statsd_count_sampled("rare", 1, 0.25f);
     TEST_ASSERT_EQUAL_STRING("rare:1|c|@0.25", captured());
 }
@@ -146,7 +148,7 @@ void test_emit_global_tags()
 void test_emit_noop_until_begin()
 {
     pc_statsd_begin(NULL, 0, NULL); // clears the target
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_statsd_count("x", 1); // no target -> nothing sent, no crash
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
@@ -209,7 +211,7 @@ void test_emit_zero_value_and_set_null_member()
     pc_statsd_begin("192.0.2.10", 8125, NULL);
     pc_statsd_timing("db.zero", 0);
     TEST_ASSERT_EQUAL_STRING("db.zero:0|ms", captured());
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_statsd_set("uniques", NULL); // null member -> emitted as an empty value, not a crash
     TEST_ASSERT_EQUAL_STRING("uniques:|s", captured());
 }
@@ -223,7 +225,7 @@ void test_emit_overlong_name_is_noop()
         longname[i] = 'a';
     }
     longname[sizeof(longname) - 1] = '\0';
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_statsd_count(longname, 1); // overflows PC_STATSD_LINE_MAX -> format fails -> nothing sent
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }

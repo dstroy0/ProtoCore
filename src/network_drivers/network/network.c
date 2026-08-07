@@ -19,8 +19,10 @@ static void init(void)
     // No-op: lwIP owns all L3 (IP) operations.
 }
 
-const NetworkNs network = {init, &Dns,
+// Designated, so a member's position in the struct does not decide what it binds to.
+const NetworkNs network = {.init = init,
+                           .dns = &Dns,
 #if PC_ENABLE_FORWARD
-                           &Forward,
+                           .forward = &Forward,
 #endif
-                           &Ip};
+                           .ip = &Ip};

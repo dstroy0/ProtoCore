@@ -731,19 +731,34 @@ void test_dispatch_malformed_pdu()
     TEST_ASSERT_EQUAL_size_t(0, pc_snmp_dispatch_pdu(bare, sizeof(bare), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));
 }
 
+// Deliver one datagram to the pcb bound to @p port, then drain: the callback fills the receive ring
+// and poll() runs the handler.
+static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len)
+{
+    pc_net_host_udp_deliver(port, src_ip, src_port, (void *)(uintptr_t)data, (uint16_t)len);
+    Udp.listener->poll();
+}
+
+// Drop the agent's binding and the record of what it sent, so a case starts from no listener.
+static void reset_udp(void)
+{
+    (void)Udp.listener->close(161);
+    pc_net_host_udp_reset();
+}
+
 void test_udp_handler_via_inject()
 {
-    Udp.listener->reset();
-    Udp.listener->capture_enable();
-    Udp.listener->capture_reset();
+    reset_udp();
     pc_snmp_agent_begin_udp(161);
     uint8_t req[256];
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V2C, "public", (uint8_t)SNMP_TAG_SNMP_PDU_GET, 50, 0, 0,
                           OID_SYSDESCR, 9, NULL);
-    Udp.listener->inject(161, "192.0.2.1", 40000, req, rl);
-    // The bound handler processed the datagram and sent a reply (captured).
-    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
-    Udp.listener->reset();
+    inject(161, "192.0.2.1", 40000, req, rl);
+    // The bound handler processed the datagram and sent a reply, back to the port it came from.
+    TEST_ASSERT_EQUAL_size_t(1, pc_net_host_udp_count());
+    TEST_ASSERT_TRUE(pc_net_host_udp_at(0)->len > 0);
+    TEST_ASSERT_EQUAL_UINT16(40000, pc_net_host_udp_at(0)->dst_port);
+    reset_udp();
 }
 
 void test_malformed_message_guards()
@@ -1083,14 +1098,12 @@ void test_message_truncated_before_community()
 // datagram), rather than sending an empty reply.
 void test_udp_handler_drops_unanswerable()
 {
-    Udp.listener->reset();
-    Udp.listener->capture_enable();
-    Udp.listener->capture_reset();
+    reset_udp();
     pc_snmp_agent_begin_udp(161);
     const uint8_t junk[] = {0x02, 0x01, 0x00}; // not a message wrapper -> agent returns 0
-    Udp.listener->inject(161, "192.0.2.1", 40000, junk, sizeof(junk));
-    TEST_ASSERT_EQUAL_size_t(0, Udp.listener->captured_len()); // nothing sent
-    Udp.listener->reset();
+    inject(161, "192.0.2.1", 40000, junk, sizeof(junk));
+    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count()); // nothing sent
+    reset_udp();
 }
 
 int main()

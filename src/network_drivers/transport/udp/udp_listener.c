@@ -5,20 +5,17 @@
  * @file udp_listener.c
  * @brief Layer 4 UDP receiving side. See udp_listener.h.
  *
- * The ring mechanics are one body. Two things differ between a target and a host build: how a port
- * is bound, and where a queued datagram goes when it leaves. Those are the seam functions below
- * (bind_port, bind_group, unbind_port, wire_send); everything above them is shared. An address is
- * a pc_ip on both, so nothing about parsing, printing, or classifying one has an arm.
+ * One body. A port is bound, and a queued datagram leaves, through the stack surface
+ * pc_platform.h names; a build with no vendor gets that surface from the host driver on its
+ * include path, so this file compiles and runs the same way on both.
  */
 
 #include "network_drivers/transport/udp/udp_listener.h"
 #include "network_drivers/transport/udp/udp_datagram.h" // the wire layout the rings carry
 
-#if PROTOCORE_HOT
-#include "core_setup/board_profiles/pc_platform.h" // the target's UDP, under our names
+#include "core_setup/board_profiles/pc_platform.h" // the stack's UDP, under our names
 #include "network_drivers/transport/diffserv.h"    // DSCP marking; compiles out when off
 #include "network_drivers/transport/net_addr.h"    // NetAddr: the stack's address as a pc_ip
-#endif
 
 PROTO_BEGIN_DECLS
 
@@ -50,9 +47,7 @@ typedef struct
     _Atomic size_t tx_head; ///< Producer: reply() / sendto().
     _Atomic size_t tx_tail; ///< Consumer: the marshaled flush.
 
-#if PROTOCORE_HOT
     pc_udp_pcb *pcb; ///< The stack's control block; NULL when the slot is free.
-#endif
 } UdpBind;
 
 static_assert(PC_RING_POW2(PC_UDP_RX_RING), "PC_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
@@ -80,20 +75,9 @@ typedef struct
     char group_text[PC_IP_STR_MAX];       ///< Where joined_group() formats the group it reports.
     _Atomic uint32_t bound;               ///< Bit i set = bind[i] is bound. One ctz instead of a scan.
     proto_bool polling;                   ///< Set for the duration of poll(); a reentrant call returns.
-#if !PROTOCORE_HOT
-    proto_bool cap_on;
-    uint8_t cap_buf[PC_UDP_RX_BUF_SIZE];
-    size_t cap_len;
-    proto_bool sendto_ok;
-#endif
 } UdpListenerCtx;
 
-#if PROTOCORE_HOT
 static UdpListenerCtx s_lst;
-#else
-// sendto_ok starts true: a test that never touches the knob gets a listener whose sends succeed.
-static UdpListenerCtx s_lst = {.sendto_ok = PROTO_TRUE};
-#endif
 
 /** @brief The reply token a handler is given: the sender, and the slot the datagram arrived on. */
 typedef struct pc_udp_peer
@@ -170,10 +154,8 @@ static void bind_clear(UdpBind *b)
 }
 
 // ---------------------------------------------------------------------------
-// The seam: everything that differs between a target and a host build
+// The stack: binding a port and putting a datagram on the wire
 // ---------------------------------------------------------------------------
-
-#if PROTOCORE_HOT
 
 /** @brief Ops that must run in the stack's thread, reached through pc_net_call_marshal. */
 typedef enum PROTO_ENUM_PACKED
@@ -435,51 +417,6 @@ static void flush_bind(UdpBind *b)
     }
 }
 
-#else // no stack backend: the seam ends at a capture a test reads back
-
-// The host wire is the capture a test reads back.
-static proto_bool wire_send(const uint8_t *data, size_t len)
-{
-    if (s_lst.cap_on && data != NULL && len > 0 && len <= sizeof(s_lst.cap_buf))
-    {
-        proto_raw_read(s_lst.cap_buf, data, len);
-        s_lst.cap_len = len;
-    }
-    return s_lst.sendto_ok;
-}
-
-static void flush_bind(UdpBind *b)
-{
-    pc_udp_dgram d = {{PC_IP_NONE, {0}}, 0, 0};
-    while (pc_udp_dgram_take(b->tx, PC_UDP_TX_RING, &b->tx_head, &b->tx_tail, s_lst.tx_rhdr, &d, s_lst.tx_stage,
-                             sizeof(s_lst.tx_stage)))
-    {
-        (void)wire_send(s_lst.tx_stage, d.len);
-    }
-}
-
-static proto_bool bind_port(UdpBind *b, uint16_t port)
-{
-    (void)b;
-    (void)port;
-    return PROTO_TRUE; // nothing to bind: a host slot is the table entry itself
-}
-
-static proto_bool bind_group(UdpBind *b, uint16_t port, const pc_ip *group)
-{
-    (void)port;
-    b->group = *group;
-    b->mcast = PROTO_TRUE;
-    return PROTO_TRUE;
-}
-
-static void unbind_port(UdpBind *b)
-{
-    (void)b;
-}
-
-#endif // PROTOCORE_HOT
-
 // ---------------------------------------------------------------------------
 // The bodies behind the table
 // ---------------------------------------------------------------------------
@@ -640,39 +577,20 @@ static size_t sndbuf_of(uint16_t listen_port)
     return pc_udp_dgram_room(&b->tx_head, &b->tx_tail, PC_UDP_TX_RING);
 }
 
-#if !PROTOCORE_HOT
-// ---------------------------------------------------------------------------
-// Host test seams
-// ---------------------------------------------------------------------------
-
-static void inject_one(uint16_t listen_port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len)
+// Close @p port: leave its group when it joined one, drop the stack's control block, free the slot.
+static proto_bool close_port(uint16_t port)
 {
-    UdpBind *b = find_bind(listen_port);
-    if (b == NULL || len > PC_UDP_RX_BUF_SIZE)
+    UdpBind *b = find_bind(port);
+    if (b == NULL)
     {
-        return;
+        return PROTO_FALSE;
     }
-    pc_udp_dgram d = {{PC_IP_NONE, {0}}, src_port, (uint16_t)len};
-    if (src_ip != NULL)
-    {
-        (void)Ip.parse(src_ip, &d.addr);
-    }
-    if (pc_udp_dgram_put(b->rx, PC_UDP_RX_RING, &b->rx_head, &b->rx_tail, s_lst.rx_whdr, &d, data, len))
-    {
-        poll_all(); // the same consumer the stack's datagrams reach
-    }
+    unbind_port(b);
+    bind_clear(b);
+    return PROTO_TRUE;
 }
 
-static void reset_all(void)
-{
-    for (int i = 0; i < PC_MAX_UDP_LISTENERS; i++)
-    {
-        bind_clear(&s_lst.bind[i]);
-    }
-    s_lst.sendto_ok = PROTO_TRUE;
-    s_lst.cap_len = 0;
-}
-
+// The group @p port joined, formatted, or NULL when the port is unbound or joined none.
 static const char *group_on(uint16_t port)
 {
     UdpBind *b = find_bind(port);
@@ -687,37 +605,6 @@ static const char *group_on(uint16_t port)
     return s_lst.group_text;
 }
 
-static void set_sendto_result(proto_bool ok)
-{
-    s_lst.sendto_ok = ok;
-}
-
-static void capture_enable(void)
-{
-    s_lst.cap_on = PROTO_TRUE;
-    s_lst.cap_len = 0;
-}
-
-static void capture_reset(void)
-{
-    s_lst.cap_len = 0;
-}
-
-static const uint8_t *captured(void)
-{
-    if (s_lst.cap_len == 0)
-    {
-        return NULL;
-    }
-    return s_lst.cap_buf;
-}
-
-static size_t captured_len(void)
-{
-    return s_lst.cap_len;
-}
-#endif // !PROTOCORE_HOT
-
 // Designated, so a member's position in the struct does not decide what it binds to.
 const UdpListenerNs UdpListener = {
     .listen = listen_on,
@@ -728,16 +615,8 @@ const UdpListenerNs UdpListener = {
     .peer_addr = peer_addr_of,
     .sendto = send_from,
     .sndbuf = sndbuf_of,
-#if !PROTOCORE_HOT
-    .inject = inject_one,
-    .reset = reset_all,
+    .close = close_port,
     .joined_group = group_on,
-    .set_sendto_result = set_sendto_result,
-    .capture_enable = capture_enable,
-    .capture_reset = capture_reset,
-    .captured = captured,
-    .captured_len = captured_len,
-#endif
 };
 
 PROTO_END_DECLS

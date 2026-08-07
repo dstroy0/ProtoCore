@@ -11,14 +11,15 @@
 
 #include "network_drivers/network/dns/dns.h"
 
+// Designated, so a member's position in the struct does not decide what it binds to.
 const DnsNs Dns = {
 #if PC_NEED_DNS_RESOLVER
-    &Resolver,
+    .resolver = &Resolver,
 #endif
 #if PC_ENABLE_DNS_SERVER
-    &DnsServer,
+    .server = &DnsServer,
 #endif
 #if !PC_NEED_DNS_RESOLVER && !PC_ENABLE_DNS_SERVER
-    PROTO_FALSE,
+    .present = PROTO_FALSE,
 #endif
 };

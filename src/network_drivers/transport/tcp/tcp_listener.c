@@ -21,13 +21,11 @@
 #include "../diffserv.h" // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "../net_addr.h" // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "../tcp.h"      // Tcp.conn->: an accept claims its slot through the owner
-#include "core_setup/board_profiles/pc_platform.h" // the target's queues, under our names
-#include "network_drivers/tls/tls.h"                  // TLS handshake begin (self-stubbing)
-#include "tcp_conn.h"                                 // TcpConn, conn_pool: the slots an accept claims
-#if PROTOCORE_HOT
-#include "network_drivers/session/worker.h" // Workers.wake() - nudge the owning worker task
-#endif
-#include "server/clock/clock.h" // pc_millis() pluggable monotonic clock (host-safe)
+#include "core_setup/board_profiles/pc_platform.h" // the stack's queues, under our names
+#include "network_drivers/session/worker.h"        // Workers.wake() - nudge the owning worker task
+#include "network_drivers/tls/tls.h"               // TLS handshake begin (self-stubbing)
+#include "server/clock/clock.h"                    // pc_millis() pluggable monotonic clock
+#include "tcp_conn.h"                              // TcpConn, conn_pool: the slots an accept claims
 
 // Listener pool - all storage in BSS.
 Listener listener_pool[MAX_LISTENERS];
@@ -347,9 +345,7 @@ static proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
     {
         return PROTO_FALSE;
     }
-#if PROTOCORE_HOT
     Workers.wake(owner); // nudge the owning worker so it services this now
-#endif
 #else
     if (listener_id >= MAX_LISTENERS)
     {
@@ -364,9 +360,7 @@ static proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
     {
         return PROTO_FALSE;
     }
-#if PROTOCORE_HOT
     Workers.wake(0); // single worker owns every slot - nudge it now
-#endif
 #endif
     return PROTO_TRUE;
 }
@@ -410,15 +404,11 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
 #endif
 
 #if PC_ENABLE_PER_IP_THROTTLE || PC_ENABLE_IP_ALLOWLIST
-    // Resolve the peer's family-tagged source address once for the accept-time abuse
-    // gates below - the full IPv4 or IPv6 address, never a lossy hash. On native
-    // there is no real lwIP pcb, so it stays unspecified and the gates pass it
-    // through; the host unit tests drive those gates directly with synthetic pc_ip.
+    // Resolve the peer's family-tagged source address once for the accept-time abuse gates
+    // below - the full IPv4 or IPv6 address, never a lossy hash.
     pc_ip remote;
     remote.family = PC_IP_NONE;
-#if PROTOCORE_HOT
     NetAddr.to_ip(&newpcb->remote_ip, &remote);
-#endif
 #endif
 
 #if PC_ENABLE_PER_IP_THROTTLE
@@ -484,17 +474,16 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
     slot->listener_id = idx;
     slot->proto = lst->proto;
 
-    // Tag the ingress interface for per-route STA/AP filtering. On ESP32 compare
-    // the connection's local IP to the configured softAP IP; on native (no real
-    // pcb IP) leave it unclassified for tests to set directly.
-#if PROTOCORE_HOT
+    // Tag the ingress interface for per-route STA/AP filtering: the connection's local IP against
+    // the configured softAP IP.
     {
         uint32_t lip = pc_net_ip4_u32(pc_net_ip_as_v4(&newpcb->local_ip));
-        slot->iface = (pc_ap_ip != 0 && lip == pc_ap_ip) ? PC_IF_WIFI_AP : PC_IF_WIFI_STA;
+        slot->iface = PC_IF_WIFI_STA;
+        if (pc_ap_ip != 0 && lip == pc_ap_ip)
+        {
+            slot->iface = PC_IF_WIFI_AP;
+        }
     }
-#else
-    slot->iface = PC_IF_ANY;
-#endif
 
     pc_net_arg(newpcb, slot);
 
@@ -544,9 +533,7 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
     return PC_NET_OK;
 }
 
-#if PROTOCORE_HOT
 static pc_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool create);
-#endif
 
 static int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, proto_bool tls)
 {
@@ -575,7 +562,6 @@ static int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, proto_b
         return -1;
     }
 
-#if PROTOCORE_HOT
     // Create the listening PCB in tcpip_thread. With lwIP core-locking (arduino-esp32
     // 3.x / IDF 5.x) a raw tcp_new/bind/listen from the app or worker task that calls
     // begin() asserts ("Required to lock TCPIP core functionality"), so marshal it -
@@ -587,30 +573,6 @@ static int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, proto_b
         lst->queue = NULL;
         return -1;
     }
-#else
-    pc_pcb *pcb = pc_net_new(PC_NET_TYPE_ANY);
-    if (!pcb)
-    {
-        return -1;
-    }
-
-    pc_net_err bind_err = pc_net_bind(pcb, PC_NET_ADDR_ANY, port);
-    if (bind_err != PC_NET_OK)
-    {
-        pc_net_abort(pcb);
-        return -1;
-    }
-
-    lst->listen_pcb = pc_net_listen(pcb, MAX_CONNS);
-    if (!lst->listen_pcb)
-    {
-        pc_net_abort(pcb);
-        return -1;
-    }
-
-    pc_net_arg(lst->listen_pcb, (void *)(uintptr_t)idx);
-    pc_net_on_accept(lst->listen_pcb, listener_accept_cb);
-#endif
     lst->active = PROTO_TRUE;
 
     return 1;
@@ -628,18 +590,7 @@ static void listener_stop(uint8_t idx)
         return;
     }
     lst->active = PROTO_FALSE;
-#if PROTOCORE_HOT
-    listener_lwip_marshal(idx, 0, PROTO_FALSE); // close the listen pcb in tcpip_thread
-#else
-    // Hand the pcb back to the stack that issued it. Dropping the reference without saying so
-    // leaves the owner holding a control block nothing will ever use again, and the next
-    // pc_net_new() after the pool is spent returns null.
-    if (lst->listen_pcb != NULL)
-    {
-        pc_net_abort(lst->listen_pcb);
-        lst->listen_pcb = NULL;
-    }
-#endif
+    (void)listener_lwip_marshal(idx, 0, PROTO_FALSE); // close the listen pcb in tcpip_thread
     if (lst->queue)
     {
         pc_platform_queue_delete(lst->queue);
@@ -663,7 +614,6 @@ static void listener_stop_all(void)
 // remote-forward, opened from a worker task) route through here via pc_net_call_marshal().
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
 typedef struct
 {
     pc_net_call base;
@@ -721,7 +671,6 @@ static pc_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool c
     pc_net_call_marshal(listener_lwip_do, &k.base);
     return k.result;
 }
-#endif // PROTOCORE_HOT
 
 #if PC_ENABLE_DIFFSERV
 static proto_bool set_dscp(uint16_t port, uint8_t dscp)
@@ -770,7 +719,6 @@ static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ConnProto proto)
         return -1;
     }
 
-#if PROTOCORE_HOT
     // Create the listening PCB in tcpip_thread. Fields the accept callback reads
     // (proto, queue) are set above, before the pcb can accept anything.
     if (listener_lwip_marshal(idx, port, PROTO_TRUE) != PC_NET_OK)
@@ -779,9 +727,6 @@ static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ConnProto proto)
         lst->queue = NULL;
         return -1;
     }
-#else
-    lst->listen_pcb = NULL; // no stack backend; exercised via the accept-gate unit paths
-#endif
 
     lst->active = PROTO_TRUE;
     return 1;
@@ -799,11 +744,7 @@ static void listener_stop_dynamic(uint8_t idx)
         return;
     }
     lst->active = PROTO_FALSE;
-#if PROTOCORE_HOT
-    listener_lwip_marshal(idx, 0, PROTO_FALSE); // close the listen pcb in tcpip_thread
-#else
-    lst->listen_pcb = NULL;
-#endif
+    (void)listener_lwip_marshal(idx, 0, PROTO_FALSE); // close the listen pcb in tcpip_thread
     if (lst->queue)
     {
         pc_platform_queue_delete(lst->queue);

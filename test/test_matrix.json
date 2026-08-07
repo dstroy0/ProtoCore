@@ -156,7 +156,7 @@
       "desc": "Unified double-ended server arena (network_drivers/session/pc_arena): first-fit\npersistent end (bottom, individual free + coalesce + boundary shrink) + bump scratch end\n(top, mark/release/reset) sharing a floating middle; fail-closed at the boundary. Host tests.",
       "flags": [],
       "src": ["+<mmgr/arena.c>"],
-      "tests": ["unit/session/test_arena"]
+      "tests": ["unit/mmgr/test_arena"]
     },
     "native_ssh_ed25519": {
       "desc": "Modern SSH crypto KATs (curve25519-sha256 KEX + ssh-ed25519 host key / client auth):\nSHA-512 (FIPS 180-4), X25519 (RFC 7748), Ed25519 (RFC 8032). Vectors are the published RFC\ntest vectors + tool-generated digests, grounding the impl against the standards. Pure host tests.",
@@ -292,7 +292,7 @@
       "tests": ["unit/fieldbus/test_iolink"]
     },
     "native_stack_l46": {
-      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 §5.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
+      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 \u00c2\u00a75.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0"],
       "src": [
         "+<shared_primitives/ip.c>",
@@ -301,6 +301,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<mmgr/protostr.c>",
         "+<network_drivers/session/session.c>",
@@ -362,7 +363,9 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/session/worker.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["integration/transport/test_observability"]
@@ -381,7 +384,9 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/session/worker.c>",
         "+<network_drivers/transport/diffserv.c>",
         "+<server/clock/clock.c>"
       ],
@@ -408,6 +413,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<mmgr/protostr.c>",
         "+<network_drivers/session/session.c>",
@@ -634,6 +640,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -731,6 +738,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -884,6 +892,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -940,6 +949,7 @@
         "+<services/net/snmp/snmp_agent.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
@@ -961,6 +971,7 @@
         "+<services/net/snmp/snmp_notify.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>",
         "+<crypto/hash/sha256.c>",
@@ -982,7 +993,9 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/session/worker.c>",
         "+<network_drivers/presentation/telnet/telnet.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
@@ -1002,6 +1015,7 @@
         "+<services/iot/coap/coap.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
@@ -1021,6 +1035,7 @@
         "+<services/iot/coap/coap.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
@@ -1197,6 +1212,7 @@
       "src": [
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>"
       ],
@@ -1244,8 +1260,8 @@
       "flags": [],
       "src": [
         "+<network_drivers/transport/udp/udp_listener.c>",
-        "+<network_drivers/transport/udp/udp_client.c>",
         "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>"
       ],
       "tests": ["integration/transport/test_udp_hot"]
@@ -1773,6 +1789,7 @@
         "+<services/net/snmp/snmp_agent.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<crypto/hash/sha1.c>",
         "+<services/storage/sqlite/sqlite_format.c>",
@@ -1837,6 +1854,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -1888,6 +1906,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -1932,6 +1951,7 @@
         "+<services/net/syslog/syslog.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>"
       ],
@@ -1992,10 +2012,15 @@
       "tests": ["unit/application/test_ntp_server"]
     },
     "native_dns_server": {
-      "desc": "Authoritative DNS server (network_drivers/network/dns/dns_server): the pure A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards) and the built-in name->IP table (add / case-insensitive lookup / clear). No lwIP.",
+      "desc": "Authoritative DNS server (network_drivers/network/dns/dns_server): the A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards), the built-in name->IP table (add / case-insensitive lookup / clear), and begin() binding\nport 53 on the UDP listener, driven against the host pcb driver.",
       "flags": ["-DPC_ENABLE_DNS_SERVER=1"],
       "src": [
         "+<network_drivers/network/dns/dns_server.c>",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<shared_primitives/ip.c>",
         "+<mmgr/protostr.c>"
       ],
       "tests": ["protocols/network/test_dns_server"]
@@ -2194,6 +2219,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -2378,6 +2404,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<mmgr/protostr.c>",
         "+<network_drivers/session/session.c>",
@@ -2491,12 +2518,18 @@
       "tests": ["unit/physical/test_net_egress"]
     },
     "native_client": {
-      "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.c), the pooled\nlayer-4 peer of tcp.c used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_DET_CLIENT). The tcpip_api_call-marshaled lwIP path is\nARDUINO-only; on native this file compiles to just the !NEED stub (fail-closed: no\nlwIP on the host, so every call reports no connection), host-tested here for its own sake\nsince no other env's build_src_filter pulls this file in at all.",
+      "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.c), the pooled\nlayer-4 peer of tcp.c used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_CLIENT). The marshaled path is driven against the host pcb driver:\nthe connect completes inline, sends land in the capture, and received bytes arrive through\nthe recv callback the client armed. Covers the dial, the ring, the peer FIN and pool exhaustion.",
+      "flags": ["-DPC_ENABLE_HTTP_CLIENT=1"],
       "src": [
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/session/worker.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/network/dns/dns_resolver.c>",
+        "+<network_drivers/network/dns/dns.c>",
+        "+<network_drivers/network/network.c>",
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
@@ -2551,6 +2584,7 @@
         "+<services/iot/statsd/statsd.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>"
       ],
@@ -2978,6 +3012,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/arena.c>",
@@ -3078,6 +3113,7 @@
         "${env:native_stack_http.build_src_filter}",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<services/security/audit_log/audit_log.c>",
         "+<services/security/oidc/oidc.c>",
@@ -3318,6 +3354,7 @@
         "+<services/iot/coap/coap.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/security/dtls/dtls_conn.c>",
@@ -3350,6 +3387,7 @@
         "+<services/iot/coap/coap.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/security/dtls/dtls_conn.c>",
@@ -3602,6 +3640,7 @@
         "${env:native_stack_http.build_src_filter}",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<network_drivers/presentation/http/http3/quic_server.c>",
         "+<network_drivers/presentation/http/http3/h3_server.c>",
@@ -3682,6 +3721,72 @@
       "flags": [],
       "src": ["-<*>", "+<mmgr/frame.c>", "+<mmgr/protostr.c>"],
       "tests": ["unit/mmgr/test_frame"]
+    },
+    "native_phy_hot": {
+      "desc": "Layer 1 driven through a REAL backend: base native_hot_base selects PC_VENDOR_MOCK,\nso PC_PHYSICAL_HAS_BACKEND is 1 and core_setup/physical/mock stands in for silicon instead of the\nno-op stubs in physical.c. Nothing else in the tree builds that backend, and without it every L1\nreadout answers empty - which means a caller that mishandles a live link reads exactly like one\nthat works, and no assertion can tell them apart. Here the link actually comes up: the station\nassociates and reports its SSID, channel and a negative dBm RSSI; the softAP takes its own address\nwithout stealing the route; Ethernet then takes the default route from the station, the way a\nstack picks one when both are up. That is also the only way to separate the same-signature members\na stub build cannot - eth->init from eth->ready, ip6->init from ip6->ready, and link->mac from\nlink->egress_mac, which return DIFFERENT addresses once a wired link carries traffic. Addresses\nare RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the MACs are checked for the IEEE 802 U/L and\nI/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global IPv6 address is\nchecked not to be an RFC 4291 sec 2.5.6 link-local. PC_RADIO_WIFI_PS is set to max modem so the\nkeep-awake refcount is provable: the first busy_hold forces sleep off and the balancing release\nrestores the configured mode, which is indistinguishable from the held state at the default of 0.\nThis is the only env that compiles radio_power.c's PROTOCORE_HOT arm at all.",
+      "base": "native_hot_base",
+      "flags": [
+        "-DPC_ENABLE_ETHERNET=1",
+        "-DPC_ENABLE_IPV6=1",
+        "-DPC_ENABLE_RADIO_POWER=1",
+        "-DPC_RADIO_WIFI_PS=2"
+      ],
+      "src": [
+        "-<*>",
+        "+<network_drivers/physical/physical.c>",
+        "+<network_drivers/physical/radio_power.c>",
+        "+<core_setup/physical/mock/physical_mock.c>",
+        "+<shared_primitives/ip.c>"
+      ],
+      "tests": ["unit/physical/test_phy_hot"]
+    },
+    "native_protostr": {
+      "desc": "The bounded-run walks (mmgr/protostr): len, diff, eq, starts, find, has, copy, the\nstep rungs and the classifiers. The number parsers this module also carries are exercised by\nnative_primitives against the numparse contract and are only checked for binding here. Covers the\ntwo opposite cap contracts the header draws - len's nul_cap is a WILLINGNESS to keep looking while\nevery compare's read_cap is a PROMISE that the bytes exist - the first-difference index at every\nposition and every alignment, equality refusing a prefix where starts accepts it (the same walk\nreading the tie the other way), find's first-occurrence rule at every position, its empty needle\nmatching at the start, and a haystack NUL ending the search since a needle byte is never NUL.\nCase folding is checked to touch the letters and NOT '_' vs '?' or '[' vs '{', which differ in the\nsame bit. copy's bound belongs to the destination and always terminates. find is then diffed\nagainst a naive search written in the test over the inputs that break a search: periodic and\nself-overlapping haystacks where a failed match cannot skip the needle's length, needles that are\ntheir own prefix, every substring of the subject taken from every position, a single flipped byte\nat every position of a near-miss, and high-bit bytes that a byte compared as signed would order\nbackwards - each at every offset within a word and under both case rules. Every subject is an\naligned padded region, because that is the only kind of memory the library is ever handed. Plus\none test that each table member is the walk its name says: the table is initialized positionally.",
+      "flags": [],
+      "src": ["-<*>", "+<mmgr/protostr.c>"],
+      "tests": ["unit/mmgr/test_protostr"]
+    },
+    "native_protomem": {
+      "desc": "The byte-span walks (mmgr/protomem): copy, move, compare, find, fill, zero, one\nregister-width load or store per step. cpy and set store a WHOLE word and mask the tail, so the\nlanes between n and the end of the word n stops in go to zero - those lanes are the padding of the\nborrow, which is what lets the store stay a dumb word instead of a byte walk. Every assertion here\nis written against that lane boundary rather than against n, and the destinations are aligned\nbecause a borrow is. Covers every length through two full words, a source at every offset within a\nword (the funnel that assembles the wanted word from the two aligned words holding it), both\noverlap directions of move, cmp's sign taken from the first differing byte at every position and\nordered as UNSIGNED, cmp and chr not stopping at a NUL because a span has no terminator, chr's\nbound and its first-match rule, and the fill splatting a high-bit value into every lane. Plus one\ntest that each table member is the walk its name says: the table is initialized positionally.",
+      "flags": [],
+      "src": ["-<*>", "+<mmgr/protomem.c>"],
+      "tests": ["unit/mmgr/test_protomem"]
+    },
+    "native_float_bits": {
+      "desc": "A double read as the three fields it is (mmgr/float_bits.h): sign at bit 63,\nexponent at 62..52, mantissa at 51..0, by mask and shift, and merged back from those three. The\noracle is the layout written out in the test, not a second accessor. Covers that the three masks\npartition all 64 bits exactly once, the known encodings (1.0 is the bias with a zero mantissa,\n3.14159 is exponent 1024, negative zero differs from zero in the sign alone), the non-finite and\nsubnormal exponent fields, and the round trip: split into fields and merged back is the value that\nwent in, at every one of the 64 bit positions, so no field is a bit short or a bit wide. The merge\nmasks each field to its own width, so a field carrying junk above it cannot reach a neighbour.",
+      "flags": [],
+      "src": ["-<*>"],
+      "tests": ["unit/mmgr/test_float_bits"]
+    },
+    "native_membuild": {
+      "desc": "The bounded no-heap builder (mmgr/membuild.h): bump-append into a caller-owned\nregion with ok latching false the first time something would not fit, so the caller tests one flag\nat the end instead of a return per call. Covers that the capacity reserves a byte for the\nterminator, that a refused append writes nothing and every later append is a no-op, that a\nzero-capacity builder does not even write the terminator, and the two clipping appenders that\ndeliberately do NOT latch - byte-wise for display text, all-or-nothing for a number, since half a\nnumber reads as a different number. The renderings are diffed against libc printf, which is what\nthey replace: %llu, %llx and %0Nu across the 32-bit fast path and the value just past it, %lld\nincluding the minimum where negating the value would overflow, %.<sig>g at every precision from 1\nto 10 over both signs of a value set that includes the rounding ties, the decade carries, the\nsubnormals and the exponent extremes, and %.<n>f over the range that form occupies. Plus the sign\nbit read for negative zero, the infinity and NaN words, and the XML and JSON escapes.",
+      "flags": [],
+      "src": ["-<*>", "+<mmgr/protostr.c>"],
+      "tests": ["unit/mmgr/test_membuild"]
+    },
+    "native_endian": {
+      "desc": "The fixed-width serializers (mmgr/endian.h): a width moved between an integer and\nthe bytes at a pointer, both orders, 16/32/64. Each writer is diffed against a shift loop written\nin the test rather than against its opposite number, so a pair that is wrong the same way both\nways cannot agree its way to a pass. Covers the returned width a caller advances by, the reader\ninverting the writer, a big-endian encoding being the byte reverse of the little-endian one, the\nround trip at every offset within a word (the file writes a byte at a time so a strict-alignment\ndie is served), and a narrow write leaving the bytes above it alone so packed fields do not\nclobber each other.",
+      "flags": [],
+      "src": ["-<*>"],
+      "tests": ["unit/mmgr/test_endian"]
+    },
+    "native_bytes": {
+      "desc": "The byte verbs (mmgr/bytes.h): append into a pc_span, take out of a pc_cspan, and the\noffset-passing reads a parser walks a raw payload with. The append side keeps counting pos past\ncap on overflow, so an undersized region reports the capacity it should have had instead of only\nfailing - asserted on both the single byte and the multi-byte width. The take side is checked at\nthe boundary and one past it, with the sticky error and a refused read leaving both the cursor and\nthe output untouched. The length-prefixed blob reads are the peer-controlled path: the prefix is a\nfull u32 the peer picks, size_t is 32 bits on esp32 and c2000, and every bound here is a\nsubtraction against the space that remains rather than a sum that would wrap - a 0xFFFFFFFF prefix\nis refused with the offset back where it started, and an exact fit is still accepted.",
+      "flags": [],
+      "src": ["-<*>"],
+      "tests": ["unit/mmgr/test_bytes"]
+    },
+    "native_bitio": {
+      "desc": "The LSB-first bit writer (mmgr/bitio.h) the DEFLATE encoder and the SSH\nzlib@openssh.com compressor both write their bitstreams through. Bits are read back by a bit\nreader written in the test, so the packing order is asserted against a decoder's walk rather than\nagainst the writer's own accumulator. Covers the whole-byte spill out of the accumulator, a\nsingle put wider than a byte, the zero padding an align puts in the high bits of a partial byte,\nan align on a boundary emitting nothing, and the capacity edge: an exact fill is not an overflow,\na byte past cap latches it and leaves the byte past cap untouched, and an align with no room\nlatches rather than writing.",
+      "flags": [],
+      "src": ["-<*>"],
+      "tests": ["unit/mmgr/test_bitio"]
+    },
+    "native_rawmemcpy": {
+      "desc": "The raw load (mmgr/rawmemcpy.h): bytes at a pointer read as a wider type in the\nmachine's own order, and the ladder proto_raw_read steps down. Every scalar rung is diffed\nagainst a byte loop written in the test at every offset within a word, so the machine order is\nasserted from a runtime endianness probe rather than from a config macro. PROTO_RAW_WORD is\nchecked against PROTO_WORD_BITS, which the die states, and not against the build machine's\npointer width. The mover is run over the cross product of every destination offset, every source\noffset and lengths through two full words: the head loop aligns the destination, so the source\noffset is what selects the co-aligned branch or the funnel that joins two adjacent aligned source\nwords with a shift pair. Poison outside the moved span is checked on every case, so a rung that\nwrites past its width fails here rather than in the caller that borrowed the next bytes.",
+      "flags": [],
+      "src": ["-<*>"],
+      "tests": ["unit/mmgr/test_rawmemcpy"]
     },
     "native_span": {
       "desc": "The bounded byte region (mmgr/span.h): a pointer and the capacity that belongs to\nit, bound together. Rule 19 converts stack arrays - whose length the compiler ties to the object -\ninto borrowed regions, and the naive rewrite to a bare pointer plus a separate cap argument is\nwhere a 4-byte sizeof() or a mismatched capacity slips through with no diagnostic. Covers the\nextent recovered from the array type, the normalization that makes {nullptr, n} unconstructible\nso an omitted check writes nothing instead of dereferencing null, and the sub-span clamping that\nkeeps a truncated frame from producing a pointer past the allocation.",

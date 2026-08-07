@@ -44,8 +44,8 @@ static char g_peer_ip[8][48];
 
 static uint8_t g_pcap[16384];
 
-// Only the send log and the pbuf pool are cleared between tests. The pcb table is not: the
-// listener holds the pcb it bound, and there is no unlisten on the target path.
+// Only the send log and the pbuf pool are cleared between tests. The pcb table is not: one listener
+// stays bound for the whole suite, so its pcb has to survive setUp.
 void setUp()
 {
     pc_net_host_udp_reset();
@@ -80,34 +80,10 @@ static void ensure_listening(void)
     }
 }
 
-// The bound pcb the listener opened, found the way a stack would reach it.
-static pc_udp_pcb *bound_pcb(uint16_t port)
-{
-    for (int i = 0; i < PC_NET_HOST_PCBS; i++)
-    {
-        if (pc_net_host_udp_pcbs[i].in_use && pc_net_host_udp_pcbs[i].local_port == port)
-        {
-            return &pc_net_host_udp_pcbs[i];
-        }
-    }
-    return NULL;
-}
-
 // Deliver one datagram through the recv callback, which is what lwIP calls on the target.
 static void deliver(const char *src_ip, uint16_t src_port, const uint8_t *data, uint16_t len)
 {
-    pc_udp_pcb *p = bound_pcb(PORT);
-    TEST_ASSERT_NOT_NULL(p);
-    TEST_ASSERT_NOT_NULL(p->on_recv);
-    pc_net_ip src;
-    memset(&src, 0, sizeof(src));
-    TEST_ASSERT_TRUE(pc_net_ip_parse(src_ip, &src));
-    pc_pbuf b;
-    memset(&b, 0, sizeof(b));
-    b.payload = (void *)(uintptr_t)data;
-    b.len = len;
-    b.tot_len = len;
-    p->on_recv(p->arg, p, &b, &src, src_port);
+    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(PORT, src_ip, src_port, (void *)(uintptr_t)data, len));
 }
 
 void test_listener_delivers_in_order_with_boundaries()
@@ -138,7 +114,7 @@ void test_listener_delivers_in_order_with_boundaries()
 void test_listener_peer_carries_v6()
 {
     ensure_listening();
-    pc_udp_pcb *p = bound_pcb(PORT);
+    pc_udp_pcb *p = pc_net_host_udp_pcb(PORT);
     TEST_ASSERT_NOT_NULL(p);
 
     // A v6 source the mock's dotted-quad parser cannot build, so it is set through the v6 seam.

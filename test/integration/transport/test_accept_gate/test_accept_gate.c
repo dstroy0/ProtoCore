@@ -16,6 +16,7 @@
 // Pure host tests.
 
 #include "network_drivers/session/proto_handler.h"
+#include "network_drivers/session/session.h" // Session.proto->: the handler registry this drives
 #include "network_drivers/transport/tcp.h"
 #include "server/clock/clock.h"
 #include "shared_primitives/ip.h"

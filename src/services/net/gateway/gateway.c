@@ -15,9 +15,7 @@
 
 #if PC_ENABLE_GATEWAY
 
-#if PROTOCORE_HOT
-#include "server/clock/clock.h" // pc_millis()
-#endif
+#include "server/clock/clock.h" // pc_millis(): the one time source the rate window reads
 
 typedef struct
 {
@@ -42,23 +40,15 @@ typedef struct
     const char *prefix;
     uint32_t seq;
     pc_gateway_stats stats;
-#if !PROTOCORE_HOT
-    uint32_t now_ms; // host test clock (real builds use pc_millis())
-#endif
 } GatewayCtx;
 static GatewayCtx s_gw = {.prefix = PC_GW_DEFAULT_PREFIX};
 
-#if PROTOCORE_HOT
+// The one time source (server/clock/clock.h). A caller that needs to drive the rate window - a
+// test stepping it - installs its own clock with pc_set_clock(), which governs every module.
 static uint32_t gw_now()
 {
     return pc_millis();
 }
-#else
-static uint32_t gw_now()
-{
-    return s_gw.now_ms;
-}
-#endif
 
 // Returns a mutable port (callers mutate it), so it takes the owner by non-const reference.
 static port *find_port(GatewayCtx *g, uint8_t id)
@@ -256,12 +246,5 @@ void pc_gateway_get_stats(pc_gateway_stats *out)
         *out = s_gw.stats;
     }
 }
-
-#if !PROTOCORE_HOT
-void pc_gateway_test_set_now(uint32_t ms)
-{
-    s_gw.now_ms = ms;
-}
-#endif
 
 #endif // PC_ENABLE_GATEWAY

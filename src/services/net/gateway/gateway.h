@@ -143,13 +143,14 @@ proto_bool pc_gateway_downlink(uint8_t port_id, uint16_t dst_addr, const uint8_t
  */
 uint16_t pc_gateway_topic(const pc_gateway_msg *msg, char *buf, uint16_t buflen);
 
-/** @brief Copy the current gateway counters into @p out. */
+/**
+ * @brief Copy the current gateway counters into @p out.
+ *
+ * The uplink rate window reads pc_millis() (server/clock/clock.h), the library's one time source.
+ * A caller that needs to drive it - a test stepping the window - installs its own clock with
+ * pc_set_clock(), which governs every module at once.
+ */
 void pc_gateway_get_stats(pc_gateway_stats *out);
-
-#if !PROTOCORE_HOT
-/** @brief Host only: set the millisecond clock the rate cap uses (tests drive the window). */
-void pc_gateway_test_set_now(uint32_t ms);
-#endif
 
 #endif // PC_ENABLE_GATEWAY
 

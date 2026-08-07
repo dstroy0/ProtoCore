@@ -797,7 +797,7 @@ void test_dynamic_listener_lifecycle()
     TEST_ASSERT_TRUE(listener_pool[1].active);
     TEST_ASSERT_FALSE(listener_pool[1].tls); // forwarded ports are always plaintext
     TEST_ASSERT_NOT_NULL(listener_pool[1].queue);
-    TEST_ASSERT_NULL(listener_pool[1].listen_pcb); // host build: no real lwIP pcb
+    TEST_ASSERT_NOT_NULL(listener_pool[1].listen_pcb); // the port is really bound and listening
 
     // Re-adding on the same slot cleans up the prior instance first (idempotent create).
     TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add_dynamic(1, 3333, PROTO_HTTP));
@@ -807,6 +807,7 @@ void test_dynamic_listener_lifecycle()
     Tcp.listener->stop_dynamic(1);
     TEST_ASSERT_FALSE(listener_pool[1].active);
     TEST_ASSERT_NULL(listener_pool[1].queue);
+    TEST_ASSERT_NULL(listener_pool[1].listen_pcb); // the pcb went back to the stack, not dropped
 
     Tcp.listener->stop_dynamic(1); // already stopped: idempotent no-op
     TEST_ASSERT_FALSE(listener_pool[1].active);
@@ -916,18 +917,24 @@ void test_send_flush_success_and_write_failure()
     mock_send_fail_after(-1); // restore: never fail
 }
 
-// Tcp.conn->raw_send: null pcb rejected, a normal write succeeds, and a failed write
-// is reported (no tcp_output on failure).
+// Tcp.conn->raw_send: a null pcb is rejected, one no slot owns is rejected (the guard that keeps a
+// torn-down connection's freed pcb off the write path), a bound one writes, and a failed write is
+// reported.
 void test_raw_send_null_success_and_failure()
 {
     TEST_ASSERT_FALSE(Tcp.conn->raw_send(NULL, "x", 1));
 
     pc_pcb fake = {0};
+    TEST_ASSERT_FALSE(Tcp.conn->raw_send(&fake, "hello", 5)); // no slot holds it
+
+    conn_pool[0].pcb = &fake; // now it is a live connection's control block
     TEST_ASSERT_TRUE(Tcp.conn->raw_send(&fake, "hello", 5));
 
     mock_send_fail_after(0);
     TEST_ASSERT_FALSE(Tcp.conn->raw_send(&fake, "x", 1));
     mock_send_fail_after(-1);
+
+    conn_pool[0].pcb = NULL;
 }
 
 // Tcp.conn->close's host tcp_close-fails fallback: tcp_abort is called (proven via the
@@ -1385,8 +1392,25 @@ void test_accept_cb_claims_slot_and_wires_connection()
     TEST_ASSERT_EQUAL(0u, (size_t)c->rx_tail);
     TEST_ASSERT_EQUAL_UINT8(0, c->listener_id);
     TEST_ASSERT_EQUAL_INT((int)PROTO_HTTP, (int)c->proto); // from listener_pool[0] (setUp's listener_add)
-    TEST_ASSERT_EQUAL_INT((int)PC_IF_ANY, (int)c->iface);  // host build: no real pcb IP to classify
-    TEST_ASSERT_EQUAL_UINT8(0, c->tls);                    // PC_ENABLE_TLS is off on native
+    // No softAP address configured, so the accept's local IP cannot match one: it classifies STA.
+    TEST_ASSERT_EQUAL_UINT32(0, pc_ap_ip);
+    TEST_ASSERT_EQUAL_INT((int)PC_IF_WIFI_STA, (int)c->iface);
+    TEST_ASSERT_EQUAL_UINT8(0, c->tls); // PC_ENABLE_TLS is off on native
+}
+
+// The same accept, with the local IP matching the configured softAP address, classifies AP - the
+// half of the ingress tag a per-route STA/AP filter keys on.
+void test_accept_cb_classifies_the_ap_interface()
+{
+    pc_pcb fake;
+    memset(&fake, 0, sizeof(fake));
+    pc_net_ip4_set(&fake.local_ip, 192, 168, 4, 1);
+    pc_ap_ip = pc_net_ip4_u32(pc_net_ip_as_v4(&fake.local_ip));
+
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT((int)PC_IF_WIFI_AP, (int)conn_pool[0].iface);
+
+    pc_ap_ip = 0; // leave the classifier as the rest of the suite expects it
 }
 
 // Two back-to-back accepts on the same listener claim two DIFFERENT slots (not a stale
@@ -1510,6 +1534,7 @@ int main()
     RUN_TEST(test_accept_cb_rejects_out_of_range_listener_idx);
     RUN_TEST(test_accept_cb_rejects_when_pool_full);
     RUN_TEST(test_accept_cb_claims_slot_and_wires_connection);
+    RUN_TEST(test_accept_cb_classifies_the_ap_interface);
     RUN_TEST(test_accept_cb_second_accept_claims_a_different_slot);
     RUN_TEST(test_accept_cb_survives_a_failed_enqueue);
 

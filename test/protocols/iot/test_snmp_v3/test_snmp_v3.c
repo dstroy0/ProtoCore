@@ -21,16 +21,19 @@
 
 #include <unity.h>
 
-// The client queues; poll() moves the frame to the wire, which is where the capture is written.
+// The client queues; poll() moves the frame to the wire, which is where the host pcb driver
+// records it. The last datagram it recorded is what this side sent.
 static const uint8_t *udp_cap(void)
 {
     Udp.client->poll();
-    return Udp.client->captured();
+    size_t n = pc_net_host_udp_count();
+    return n ? pc_net_host_udp_at(n - 1)->data : NULL;
 }
 static size_t udp_cap_len(void)
 {
     Udp.client->poll();
-    return Udp.client->captured_len();
+    size_t n = pc_net_host_udp_count();
+    return n ? pc_net_host_udp_at(n - 1)->len : 0;
 }
 
 static const uint32_t OID_SYSDESCR[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
@@ -585,8 +588,7 @@ static proto_bool find_inform_with_reqid(const uint8_t *d, size_t n, uint32_t re
 void test_inform_v3_builds_informrequest()
 {
     pc_snmp_v3_set_user("myuser", "authpass12", ""); // auth-only -> plaintext scopedPDU
-    Udp.client->capture_enable();
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
 
     const uint32_t reqid = 0x4321;
     proto_bool ok = pc_snmp_inform_v3("127.0.0.1", 162, reqid, OID_SYSDESCR, 9, NULL, 0);
@@ -698,7 +700,6 @@ void test_v3_notify_paths()
     TEST_ASSERT_FALSE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
 
     pc_snmp_v3_set_user("myuser", "authpass12", "privpass12");
-    Udp.client->capture_enable();
     TEST_ASSERT_TRUE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
     TEST_ASSERT_TRUE(udp_cap_len() > 0);
 }
@@ -946,7 +947,6 @@ void test_v3_auth_edge_rejections(void)
 void test_v3_notify_overflow_guards()
 {
     pc_snmp_v3_set_user("myuser", "authpass12", "privpass12");
-    Udp.client->capture_enable();
     uint32_t trap_oid[] = {1, 3, 6, 1, 4, 1, 49374, 0, 1};
     uint32_t vb_oid[] = {1, 3, 6, 1, 4, 1, 49374, 5, 0};
     static uint8_t big[1600];
@@ -1354,24 +1354,34 @@ void test_v3_init_length_guards_and_null_user()
     TEST_ASSERT_EQUAL_UINT32(3u, r.oid[9]);
 }
 
-// A v3 trap reports failure when the transport refuses the datagram. The host UDP stub
-// only accepts a send while capture is armed, so this test MUST run before any test that
-// calls Udp.client->capture_enable() - there is no way to disarm it again.
+// A trap the service cannot address is refused before the ring; one the stack refuses is queued
+// and simply never reaches the wire, because a send reports that the ring took it.
 void test_v3_trap_reports_transport_failure()
 {
     uint32_t trap_oid[] = {1, 3, 6, 1, 4, 1, 49374, 0, 1};
     // A destination the service cannot turn into an address never reaches the ring.
     TEST_ASSERT_FALSE(pc_snmp_trap_v3("not.an.address", 162, trap_oid, 9, NULL, 0));
     TEST_ASSERT_FALSE(pc_snmp_trap_v3(NULL, 162, trap_oid, 9, NULL, 0));
-    // A well-formed one is queued, and the poll that moves it is what puts it on the wire.
+
+    // The stack refuses every datagram: the trap still queues, and nothing lands on the wire.
+    pc_net_host_udp_reset();
+    mock_udp_send_fail_after(0);
     TEST_ASSERT_TRUE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
     Udp.client->poll();
+    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count());
+
+    // With the stack accepting again, the next trap goes out.
+    mock_udp_send_fail_after(-1);
+    TEST_ASSERT_TRUE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
+    Udp.client->poll();
+    TEST_ASSERT_EQUAL_size_t(1, pc_net_host_udp_count());
+    TEST_ASSERT_EQUAL_UINT16(162, pc_net_host_udp_at(0)->dst_port);
 }
 
 int main()
 {
     UNITY_BEGIN();
-    RUN_TEST(test_v3_trap_reports_transport_failure); // must precede any Udp.client->capture_enable()
+    RUN_TEST(test_v3_trap_reports_transport_failure);
     RUN_TEST(test_v3_truncated_fields_fail_closed);
     RUN_TEST(test_v3_outer_tag_and_empty_flags);
     RUN_TEST(test_v3_scoped_truncated_headers);

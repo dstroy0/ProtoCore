@@ -13,11 +13,8 @@
 
 #if PC_ENABLE_DNS_SERVER
 
-// memcpy, strlen
+#include "network_drivers/transport/udp.h" // Udp.listener: the port 53 bind and the reply
 
-#if PROTOCORE_HOT
-#include "network_drivers/transport/udp.h"
-#endif
 // Case-insensitive ASCII string equality (DNS names are case-insensitive).
 static proto_bool ci_eq(const char *a, const char *b)
 {
@@ -182,13 +179,16 @@ static size_t build_response(const uint8_t *query, size_t qlen, uint32_t ttl, Dn
 // Built-in A-record table (host-testable; used by begin()).
 // ---------------------------------------------------------------------------
 
-// All DNS-server state, owned by one instance (internal linkage): the A-record table,
-// grouped so it is one named owner, unreachable from other translation units.
+// All DNS-server state, owned by one instance (internal linkage): the A-record table and the
+// response stage, grouped so it is one named owner, unreachable from other translation units.
+// The stage holds one answer for the length of one handler call, and poll() runs the handler, so
+// no two calls reach it at once.
 typedef struct
 {
     char names[PC_DNS_SERVER_MAX_RECORDS][PC_DNS_NAME_MAX];
     uint32_t ips[PC_DNS_SERVER_MAX_RECORDS];
     size_t count;
+    uint8_t tx[PC_DNS_NAME_MAX + 32]; ///< header + question + one A answer
 } DnsSrvCtx;
 static DnsSrvCtx s_dns;
 
@@ -234,16 +234,13 @@ static void clear()
     s_dns.count = 0;
 }
 
-#if PROTOCORE_HOT
-
 static void udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
     (void)ctx;
-    uint8_t resp[PC_DNS_NAME_MAX + 32]; // header + question + one A answer
-    size_t n = build_response(data, len, PC_DNS_SERVER_TTL, lookup, resp, sizeof(resp));
-    if (n)
+    size_t n = build_response(data, len, PC_DNS_SERVER_TTL, lookup, s_dns.tx, sizeof(s_dns.tx));
+    if (n != 0)
     {
-        Udp.listener->reply(peer, resp, n);
+        (void)Udp.listener->reply(peer, s_dns.tx, n);
     }
 }
 
@@ -252,15 +249,8 @@ static proto_bool begin()
     return Udp.listener->listen(53, udp_handler, NULL);
 }
 
-#else // no UDP backend. The codec + table above are host-tested; begin is a stub.
-
-static proto_bool begin()
-{
-    return PROTO_FALSE;
-}
-
-#endif // PROTOCORE_HOT
-
-const DnsServerNs DnsServer = {build_response, add, clear, begin, lookup};
+// Designated, so a member's position in the struct does not decide what it binds to.
+const DnsServerNs DnsServer = {
+    .build_response = build_response, .add = add, .clear = clear, .begin = begin, .lookup = lookup};
 
 #endif // PC_ENABLE_DNS_SERVER

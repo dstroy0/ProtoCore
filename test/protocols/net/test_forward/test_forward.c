@@ -10,6 +10,7 @@
 // The env sizes PC_PHY_MAX_IFACES = 4 (layer 1 owns the interfaces), PC_FWD_MAX_RULES = 4.
 
 #include "network_drivers/network/forward/forward.h"
+#include "server/clock/clock.h" // pc_set_clock(): the one time source the rate cap reads
 #include <string.h>
 
 #include <unity.h>
@@ -73,13 +74,26 @@ static pc_forward_stats stats(void)
     return st;
 }
 
+// The library's one time source, driven from the test. The rate cap reads pc_millis() like every
+// other module, so stepping the window means installing a clock, not reaching into the plane.
+static uint32_t g_now_ms;
+static uint32_t test_clock(void)
+{
+    return g_now_ms;
+}
+static void set_now(uint32_t ms)
+{
+    g_now_ms = ms;
+}
+
 void setUp()
 {
     cap_reset();
     // The interfaces belong to L1 now, so emptying the plane no longer empties them.
     Physical.iface->reset();
     Forward.reset();
-    Forward.test_set_now(0);
+    pc_set_clock(test_clock, 1000);
+    set_now(0);
 }
 void tearDown()
 {
@@ -150,7 +164,7 @@ void test_rate_cap_drops_then_reopens()
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "c")); // 3rd in the window -> dropped
     TEST_ASSERT_EQUAL_size_t(2, g_cap[2].count);
     TEST_ASSERT_EQUAL_UINT32(1, stats().rate_dropped);
-    Forward.test_set_now(1000); // next window
+    set_now(1000); // next window
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "d"));
     TEST_ASSERT_EQUAL_size_t(3, g_cap[2].count);
 }
@@ -418,7 +432,7 @@ void test_route_rate_cap()
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "X2")); // over cap -> dropped
     TEST_ASSERT_EQUAL_size_t(1, g_cap[2].count);
     TEST_ASSERT_EQUAL_UINT32(1, stats().rate_dropped);
-    Forward.test_set_now(1000); // next window
+    set_now(1000); // next window
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "X3"));
     TEST_ASSERT_EQUAL_size_t(2, g_cap[2].count);
 }

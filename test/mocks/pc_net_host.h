@@ -1069,18 +1069,37 @@ static inline pc_pcb *pc_net_listen(pc_pcb *p, uint8_t backlog)
     }
     return p;
 }
+// One-shot connect refusal: the next pc_net_connect() reports the peer unreachable and never
+// completes, the way a RST to the SYN does.
+__attribute__((weak)) int pc_net_host_connect_fail_once;
+
+static inline void mock_connect_fail_once(void)
+{
+    pc_net_host_connect_fail_once = 1;
+}
+
+// The connect completes inline, the way pc_net_call_marshal runs an op inline: the caller's
+// callback fires before this returns, so a blocking open sees its flag on the first poll.
 static inline pc_net_err pc_net_connect(pc_pcb *p, const pc_net_ip *a, uint16_t port, pc_net_connect_fn cb)
 {
-    (void)cb;
     if (!p)
     {
         return PC_NET_ERR_ARG;
+    }
+    if (pc_net_host_connect_fail_once)
+    {
+        pc_net_host_connect_fail_once = 0;
+        return PC_NET_ERR_CONN;
     }
     if (a)
     {
         p->remote_ip = *a;
     }
     p->remote_port = port;
+    if (cb)
+    {
+        cb(p->arg, p, PC_NET_OK);
+    }
     return PC_NET_OK;
 }
 // One-shot close failure: the next pc_net_close() reports no memory and leaves the pcb open, the
@@ -1394,6 +1413,15 @@ static inline void pc_net_udp_recv(pc_udp_pcb *p, pc_net_udp_recv_fn fn, void *a
         p->arg = arg;
     }
 }
+// After this many successful datagrams the next pc_net_udp_sendto refuses and records nothing, the
+// way a stack with no route to the destination does. -1 never fails.
+__attribute__((weak)) int pc_net_host_udp_fail_after = -1;
+
+static inline void mock_udp_send_fail_after(int n)
+{
+    pc_net_host_udp_fail_after = n;
+}
+
 // Record the datagram. The count keeps rising past the log so a test can tell "sent more than the
 // log holds" from "stopped sending".
 static inline pc_net_err pc_net_udp_sendto(pc_udp_pcb *p, pc_pbuf *b, const pc_net_ip *a, uint16_t port)
@@ -1401,6 +1429,14 @@ static inline pc_net_err pc_net_udp_sendto(pc_udp_pcb *p, pc_pbuf *b, const pc_n
     if (!p || !b || !a)
     {
         return PC_NET_ERR_ARG;
+    }
+    if (pc_net_host_udp_fail_after == 0)
+    {
+        return PC_NET_ERR_RST;
+    }
+    if (pc_net_host_udp_fail_after > 0)
+    {
+        pc_net_host_udp_fail_after--;
     }
     pc_net_host_dgram_sent++;
     if (pc_net_host_dgram_n < PC_NET_HOST_DGRAMS)
@@ -1483,6 +1519,7 @@ static inline void pc_net_host_udp_reset(void)
     pc_net_host_dgram_n = 0;
     pc_net_host_dgram_sent = 0;
     pc_net_host_pbuf_fail_once = 0;
+    pc_net_host_udp_fail_after = -1;
     memset(pc_net_host_pbuf_pool, 0, sizeof(pc_net_host_pbuf_pool));
 }
 
@@ -1546,6 +1583,48 @@ static inline pc_net_err pc_net_host_close_peer(pc_pcb *p)
         return PC_NET_ERR_ARG;
     }
     return p->on_recv(p->arg, p, NULL, PC_NET_OK);
+}
+
+/** @brief The UDP pcb bound to @p port, or NULL when nothing bound it. */
+static inline pc_udp_pcb *pc_net_host_udp_pcb(uint16_t port)
+{
+    for (int i = 0; i < PC_NET_HOST_PCBS; i++)
+    {
+        if (pc_net_host_udp_pcbs[i].in_use && pc_net_host_udp_pcbs[i].local_port == port)
+        {
+            return &pc_net_host_udp_pcbs[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief Deliver @p n bytes to the pcb bound to @p port, as one datagram from @p src_ip:@p src_port.
+ *
+ * Calls the recv callback the core armed, which is the stack's own producer, so what runs is the
+ * receive path the target runs. Returns 0 when no pcb is bound to that port. The payload reaches
+ * the handler on the next poll(), which drains the ring the callback filled.
+ */
+static inline int pc_net_host_udp_deliver(uint16_t port, const char *src_ip, uint16_t src_port, void *data, uint16_t n)
+{
+    pc_udp_pcb *p = pc_net_host_udp_pcb(port);
+    if (!p || !p->on_recv)
+    {
+        return 0;
+    }
+    pc_net_ip src;
+    memset(&src, 0, sizeof(src));
+    if (src_ip)
+    {
+        pc_net_ip_parse(src_ip, &src);
+    }
+    pc_pbuf b;
+    memset(&b, 0, sizeof(b));
+    b.payload = data;
+    b.len = n;
+    b.tot_len = n;
+    p->on_recv(p->arg, p, &b, &src, src_port);
+    return 1;
 }
 
 #endif // PROTOCORE_PC_NET_HOST_H

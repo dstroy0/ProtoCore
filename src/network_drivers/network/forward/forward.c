@@ -15,9 +15,7 @@
 
 #if PC_ENABLE_FORWARD
 
-#if PROTOCORE_HOT
-#include "server/clock/clock.h" // pc_millis()
-#endif
+#include "server/clock/clock.h" // pc_millis(): the one time source the rate cap reads
 
 typedef struct
 {
@@ -70,9 +68,6 @@ typedef struct
     void *inspect_ctx;
 #endif
     pc_forward_stats stats;
-#if !PROTOCORE_HOT
-    uint32_t now_ms; // host test clock (real builds use pc_millis())
-#endif
 } ForwardCtx;
 // acl_default must start at PC_FWD_ALLOW, which is 1: the ACL is opt-in, so an empty table passes
 // everything. pc_forward_reset() also sets it, but nothing in src/ calls that - it is the
@@ -81,17 +76,12 @@ static ForwardCtx s_fwd = {
     .acl_default = PC_FWD_ALLOW,
 };
 
-#if PROTOCORE_HOT
+// The one time source (server/clock/clock.h). A test drives it by overriding that clock rather
+// than by this module keeping a second one of its own.
 static uint32_t fwd_now()
 {
     return pc_millis();
 }
-#else
-static uint32_t fwd_now()
-{
-    return s_fwd.now_ms;
-}
-#endif
 
 // Resolve the action for (src -> dst): a DENY wins; otherwise the first matching ALLOW
 // governs (its index is returned via @p allow_idx); otherwise default-deny (no route).
@@ -427,27 +417,17 @@ static void pc_forward_set_inspector(pc_fwd_inspect_fn fn, void *ctx)
 }
 #endif
 
-#if !PROTOCORE_HOT
-static void pc_forward_test_set_now(uint32_t ms)
-{
-    s_fwd.now_ms = ms;
-}
-#endif
-
-const ForwardNs Forward = {pc_forward_reset,
-                           pc_forward_add_rule,
-                           pc_forward_acl_set_default,
-                           pc_forward_acl_add,
-                           pc_forward_route_add,
+// Designated, so a member's position in the struct does not decide what it binds to - the table is
+// split by a feature flag, where a positional list shifts every member below the arm at once.
+const ForwardNs Forward = {.reset = pc_forward_reset,
+                           .add_rule = pc_forward_add_rule,
+                           .acl_set_default = pc_forward_acl_set_default,
+                           .acl_add = pc_forward_acl_add,
+                           .route_add = pc_forward_route_add,
 #if PC_FWD_INSPECT
-                           pc_forward_set_inspector,
+                           .set_inspector = pc_forward_set_inspector,
 #endif
-                           pc_forward_ingress,
-                           pc_forward_get_stats
-#if !PROTOCORE_HOT
-                           ,
-                           pc_forward_test_set_now
-#endif
-};
+                           .ingress = pc_forward_ingress,
+                           .get_stats = pc_forward_get_stats};
 
 #endif // PC_ENABLE_FORWARD

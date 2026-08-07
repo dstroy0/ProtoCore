@@ -13,13 +13,11 @@
 
 #if PC_NEED_DNS_RESOLVER
 
-#if PROTOCORE_HOT
 #include "lwip/def.h"
 #include "lwip/dns.h"
 #include "lwip/ip_addr.h"
 #include "lwip/priv/tcpip_priv.h"
 #include "server/clock/clock.h" // pc_millis() - the single pluggable monotonic source
-#endif
 static pc_ip_class classify(uint32_t ip)
 {
     if (ip == 0u)
@@ -72,8 +70,6 @@ static proto_bool verify(uint32_t ip)
         return PROTO_TRUE; // private / link-local / public are plausible
     }
 }
-
-#if PROTOCORE_HOT
 
 // All DNS-resolve binding state, owned by one instance (internal linkage): the resolved
 // address plus the done/ok flags the lwIP callback sets, grouped so it is one named owner,
@@ -161,37 +157,6 @@ static proto_bool resolve(const char *host, uint32_t *out_ip)
     return PROTO_TRUE;
 }
 
-#else // host build - no real resolver; a host test can inject a synthetic answer
-
-// The synthetic answer resolve() returns, set by test_set_resolve().
-typedef struct
-{
-    proto_bool ok;
-    uint32_t ip;
-} DnsTestCtx;
-static DnsTestCtx s_dns_test = {PROTO_FALSE, 0};
-
-static void test_set_resolve(proto_bool ok, uint32_t ip)
-{
-    s_dns_test.ok = ok;
-    s_dns_test.ip = ip;
-}
-static proto_bool resolve(const char *host, uint32_t *out_ip)
-{
-    (void)host;
-    if (!s_dns_test.ok)
-    {
-        return PROTO_FALSE;
-    }
-    if (out_ip != NULL)
-    {
-        *out_ip = s_dns_test.ip;
-    }
-    return PROTO_TRUE;
-}
-
-#endif // PROTOCORE_HOT
-
 static proto_bool resolve_verified(const char *host, uint32_t *out_ip)
 {
     uint32_t ip = 0;
@@ -210,10 +175,8 @@ static proto_bool resolve_verified(const char *host, uint32_t *out_ip)
     return PROTO_TRUE;
 }
 
-#if PROTOCORE_HOT
-const ResolverNs Resolver = {classify, verify, resolve, resolve_verified};
-#else
-const ResolverNs Resolver = {classify, verify, resolve, resolve_verified, test_set_resolve};
-#endif
+// Designated, so a member's position in the struct does not decide what it binds to.
+const ResolverNs Resolver = {
+    .classify = classify, .verify = verify, .resolve = resolve, .resolve_verified = resolve_verified};
 
 #endif // PC_NEED_DNS_RESOLVER

@@ -9,8 +9,6 @@
 #include "network_drivers/transport/net_addr.h"
 #include "mmgr/rawmemcpy.h" // proto_raw_read: the byte reads of the stack's address words
 
-#if PROTOCORE_HOT
-
 PROTO_BEGIN_DECLS
 
 /**
@@ -39,6 +37,10 @@ static void to_ip(const pc_net_ip *a, pc_ip *out)
         return;
     }
 #endif
+    if (!pc_net_ip_is_v4(a))
+    {
+        return; // a family this stack did not tag v4; out stays PC_IP_NONE
+    }
     uint32_t raw = pc_net_ip4_u32(pc_net_ip_as_v4(a));
     *out = pc_ip_from_v4_octets(0, 0, 0, 0);
     proto_raw_read(out->bytes, (const uint8_t *)&raw, 4);
@@ -80,13 +82,7 @@ static proto_bool from_ip(const pc_ip *a, pc_net_ip *out)
     return PROTO_TRUE;
 }
 
-const NetAddrNs NetAddr = {to_ip, from_ip};
+// Designated, so a member's position in the struct does not decide what it binds to.
+const NetAddrNs NetAddr = {.to_ip = to_ip, .from_ip = from_ip};
 
 PROTO_END_DECLS
-
-#else
-
-// A build with no stack has no address to convert. The typedef keeps the unit non-empty.
-typedef int pc_net_addr_no_stack;
-
-#endif // PROTOCORE_HOT

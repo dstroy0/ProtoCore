@@ -10,16 +10,19 @@
 
 #include <unity.h>
 
-// The client queues; poll() moves the frame to the wire, which is where the capture is written.
+// The client queues; poll() moves the frame to the wire, which is where the host pcb driver
+// records it. The last datagram it recorded is what this side sent.
 static const uint8_t *udp_cap(void)
 {
     Udp.client->poll();
-    return Udp.client->captured();
+    size_t n = pc_net_host_udp_count();
+    return n ? pc_net_host_udp_at(n - 1)->data : NULL;
 }
 static size_t udp_cap_len(void)
 {
     Udp.client->poll();
-    return Udp.client->captured_len();
+    size_t n = pc_net_host_udp_count();
+    return n ? pc_net_host_udp_at(n - 1)->len : 0;
 }
 
 void setUp()
@@ -83,8 +86,7 @@ void test_length_matches_strlen()
 // pc_syslog_init + pc_syslog_log format the record and hand it to Udp.client->sendto.
 void test_init_and_log_captured()
 {
-    Udp.client->capture_enable();
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_syslog_init("192.168.1.1", 514, "host1", "myapp", SYSLOG_FAC_LOCAL0);
     TEST_ASSERT_TRUE(pc_syslog_log(SYSLOG_INFO, "hello"));
     const char *expect = "<134>1 - host1 myapp - - - hello";
@@ -95,8 +97,7 @@ void test_init_and_log_captured()
 // With no server configured the client is not ready and sends nothing.
 void test_log_not_ready_when_no_server()
 {
-    Udp.client->capture_enable();
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_syslog_init(NULL, 514, "h", "a", SYSLOG_FAC_USER); // null server_ip -> copy_field empties it
     TEST_ASSERT_FALSE(pc_syslog_log(SYSLOG_INFO, "x"));
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
@@ -118,8 +119,7 @@ void test_format_null_and_pri_clamp()
 // An over-long hostname is truncated to PC_SYSLOG_FIELD_MAX - 1 characters.
 void test_init_truncates_long_fields()
 {
-    Udp.client->capture_enable();
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     char longname[PC_SYSLOG_FIELD_MAX + 16];
     memset(longname, 'H', sizeof(longname) - 1);
     longname[sizeof(longname) - 1] = '\0';
@@ -140,8 +140,7 @@ void test_init_truncates_long_fields()
 // not-ready, since server_ip[0] is '\0'.
 void test_init_empty_server_ip_not_ready()
 {
-    Udp.client->capture_enable();
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     pc_syslog_init("", 514, "host", "app", SYSLOG_FAC_LOCAL0);
     TEST_ASSERT_FALSE(pc_syslog_log(SYSLOG_INFO, "x"));
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
@@ -184,8 +183,7 @@ void test_format_append_boundaries()
 // (the `n == 0` true arm, never reached by test_init_and_log_captured's fitting message).
 void test_log_overflow_when_ready()
 {
-    Udp.client->capture_enable();
-    Udp.client->capture_reset();
+    pc_net_host_udp_reset();
     char longname[PC_SYSLOG_FIELD_MAX + 16];
     memset(longname, 'H', sizeof(longname) - 1);
     longname[sizeof(longname) - 1] = '\0';

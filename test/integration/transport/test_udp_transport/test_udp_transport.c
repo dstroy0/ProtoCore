@@ -3,8 +3,9 @@
 //
 // Host tests for the UDP transport's multicast receive path (Udp.listener->listen_multicast /
 // Udp.listener->leave_multicast): group validation, datagram delivery to the handler, and teardown.
-// The device path joins the group via IGMP; on the host the mock records the join so the same
-// call sequence a service makes (join -> receive -> leave) is exercised end to end.
+// These are the lines that ship to silicon: the stack underneath is test/mocks/pc_net_host.h, so a
+// datagram arrives through the recv callback the listener armed and a send is read out of the
+// driver's datagram log.
 
 #include "network_drivers/transport/udp.h"
 #include <string.h>
@@ -37,9 +38,43 @@ static void on_datagram(const uint8_t *data, size_t len, const struct pc_udp_pee
     Udp.listener->peer_addr(peer, g_src_ip, sizeof(g_src_ip), &g_src_port);
 }
 
+// Deliver one datagram to the pcb bound to @p port, then drain: the callback fills the receive ring
+// and poll() runs the handler.
+static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len)
+{
+    pc_net_host_udp_deliver(port, src_ip, src_port, (void *)(uintptr_t)data, (uint16_t)len);
+    Udp.listener->poll();
+}
+
+// The last datagram the listener put on the wire, and its length; 0 / NULL when it sent none.
+static size_t sent_len(void)
+{
+    size_t n = pc_net_host_udp_count();
+    return n ? pc_net_host_udp_at(n - 1)->len : 0;
+}
+
+static const uint8_t *sent_bytes(void)
+{
+    size_t n = pc_net_host_udp_count();
+    return n ? pc_net_host_udp_at(n - 1)->data : NULL;
+}
+
+// Every port this suite binds. close() frees the slot and drops the stack's control block; a port
+// that was never bound reports false, so closing them all is how a case starts from no listeners.
+static void close_all_ports(void)
+{
+    static const uint16_t ports[] = {1111, 1900, 2222, 3333, 4000, 5000, 5353,
+                                     5683, 6000, 6100, 7000, 7001, 7002, 9999};
+    for (size_t i = 0; i < sizeof(ports) / sizeof(ports[0]); i++)
+    {
+        (void)Udp.listener->close(ports[i]);
+    }
+}
+
 void setUp(void)
 {
-    Udp.listener->reset();
+    close_all_ports();
+    pc_net_host_udp_reset();
     g_calls = 0;
     g_last_len = 0;
     g_last[0] = '\0';
@@ -64,7 +99,7 @@ void test_group_datagram_reaches_the_handler()
     int marker = 42;
     TEST_ASSERT_TRUE(Udp.listener->listen_multicast("224.0.0.251", 5353, on_datagram, &marker));
     const char *pkt = "\x00\x00\x84\x00mdns-announce";
-    Udp.listener->inject(5353, "192.168.1.77", 5353, (const uint8_t *)pkt, 17);
+    inject(5353, "192.168.1.77", 5353, (const uint8_t *)pkt, 17);
     TEST_ASSERT_EQUAL_INT(1, g_calls);
     TEST_ASSERT_EQUAL_UINT(17, (unsigned)g_last_len);
     TEST_ASSERT_EQUAL_PTR(&marker, g_ctx_seen);
@@ -78,7 +113,7 @@ void test_counts_repeated_announcements()
     TEST_ASSERT_TRUE(Udp.listener->listen_multicast("224.0.0.251", 5353, on_datagram, NULL));
     for (int i = 0; i < 12; i++)
     {
-        Udp.listener->inject(5353, "192.168.1.5", 5353, (const uint8_t *)"x", 1);
+        inject(5353, "192.168.1.5", 5353, (const uint8_t *)"x", 1);
     }
     TEST_ASSERT_EQUAL_INT(12, g_calls);
 }
@@ -122,7 +157,7 @@ void test_leave_releases_the_slot()
     TEST_ASSERT_FALSE(Udp.listener->leave_multicast(5353));
     TEST_ASSERT_FALSE(Udp.listener->leave_multicast(9999));
     // After leaving, the group no longer delivers.
-    Udp.listener->inject(5353, "192.168.1.5", 5353, (const uint8_t *)"x", 1);
+    inject(5353, "192.168.1.5", 5353, (const uint8_t *)"x", 1);
     TEST_ASSERT_EQUAL_INT(0, g_calls);
 }
 
@@ -131,7 +166,7 @@ void test_leave_ignores_a_plain_listener()
     // A non-multicast listener on the same port must not be torn down by a leave.
     TEST_ASSERT_TRUE(Udp.listener->listen(5353, on_datagram, NULL));
     TEST_ASSERT_FALSE(Udp.listener->leave_multicast(5353));
-    Udp.listener->inject(5353, "192.168.1.5", 5353, (const uint8_t *)"y", 1);
+    inject(5353, "192.168.1.5", 5353, (const uint8_t *)"y", 1);
     TEST_ASSERT_EQUAL_INT(1, g_calls); // still bound
 }
 
@@ -142,7 +177,7 @@ void test_listen_rebinds_existing_port()
     int marker1 = 1, marker2 = 2;
     TEST_ASSERT_TRUE(Udp.listener->listen(5353, on_datagram, &marker1));
     TEST_ASSERT_TRUE(Udp.listener->listen(5353, on_datagram, &marker2)); // rebind, not a second slot
-    Udp.listener->inject(5353, "10.0.0.1", 1234, (const uint8_t *)"z", 1);
+    inject(5353, "10.0.0.1", 1234, (const uint8_t *)"z", 1);
     TEST_ASSERT_EQUAL_INT(1, g_calls);
     TEST_ASSERT_EQUAL_PTR(&marker2, g_ctx_seen); // the rebind's ctx, not the original
     // Only one slot was consumed: a second, different port still gets its own slot
@@ -159,10 +194,10 @@ void test_listen_refuses_a_third_port_when_the_pool_is_full()
     TEST_ASSERT_FALSE(Udp.listener->listen(3333, on_datagram, NULL)); // refused, nothing evicted
 
     // Both bound ports still deliver, and the refused one does not.
-    Udp.listener->inject(1111, "10.0.0.1", 1, (const uint8_t *)"a", 1);
-    Udp.listener->inject(2222, "10.0.0.1", 1, (const uint8_t *)"b", 1);
+    inject(1111, "10.0.0.1", 1, (const uint8_t *)"a", 1);
+    inject(2222, "10.0.0.1", 1, (const uint8_t *)"b", 1);
     TEST_ASSERT_EQUAL_INT(2, g_calls);
-    Udp.listener->inject(3333, "10.0.0.1", 1, (const uint8_t *)"c", 1);
+    inject(3333, "10.0.0.1", 1, (const uint8_t *)"c", 1);
     TEST_ASSERT_EQUAL_INT(2, g_calls);
 }
 
@@ -227,7 +262,7 @@ void test_peer_addr_copies_and_tolerates_null_outparams()
 {
     int marker = 7;
     TEST_ASSERT_TRUE(Udp.listener->listen(6000, on_datagram, &marker));
-    Udp.listener->inject(6000, "203.0.113.9", 4242, (const uint8_t *)"q", 1);
+    inject(6000, "203.0.113.9", 4242, (const uint8_t *)"q", 1);
     TEST_ASSERT_EQUAL_STRING("203.0.113.9", g_src_ip);
     TEST_ASSERT_EQUAL_UINT16(4242, g_src_port);
 }
@@ -249,42 +284,49 @@ static void reply_handler(const uint8_t *data, size_t len, const struct pc_udp_p
 // queueing a datagram and reading it back.
 void test_send_paths_are_captured()
 {
-    Udp.listener->capture_enable();
     TEST_ASSERT_TRUE(Udp.listener->listen(5683, reply_handler, NULL));
-    Udp.listener->inject(5683, "192.168.1.30", 5683, (const uint8_t *)"q", 1);
+    inject(5683, "192.168.1.30", 5683, (const uint8_t *)"q", 1);
     TEST_ASSERT_EQUAL_INT(1, g_calls);
-    TEST_ASSERT_EQUAL_UINT(5, (unsigned)Udp.listener->captured_len());
-    TEST_ASSERT_EQUAL_INT(0, memcmp("reply", Udp.listener->captured(), 5));
+    TEST_ASSERT_EQUAL_UINT(5, (unsigned)sent_len());
+    TEST_ASSERT_EQUAL_INT(0, memcmp("reply", sent_bytes(), 5));
+    // The reply goes back to the peer the handler was given, on the port it came from.
+    TEST_ASSERT_EQUAL_UINT16(5683, pc_net_host_udp_at(pc_net_host_udp_count() - 1)->dst_port);
 
-    Udp.client->capture_enable();
-    TEST_ASSERT_NULL(Udp.client->captured());
+    pc_net_host_udp_reset();
     TEST_ASSERT_TRUE(Udp.client->sendto(addr("192.168.1.10"), 514, (const uint8_t *)"syslog!", 7));
     Udp.client->poll();
-    TEST_ASSERT_EQUAL_UINT(7, (unsigned)Udp.client->captured_len());
+    TEST_ASSERT_EQUAL_UINT(7, (unsigned)sent_len());
+    TEST_ASSERT_EQUAL_UINT16(514, pc_net_host_udp_at(pc_net_host_udp_count() - 1)->dst_port);
 
-    Udp.listener->capture_reset();
+    pc_net_host_udp_reset();
     TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"notify", 6));
     Udp.listener->poll();
-    TEST_ASSERT_EQUAL_UINT(6, (unsigned)Udp.listener->captured_len());
+    TEST_ASSERT_EQUAL_UINT(6, (unsigned)sent_len());
+    TEST_ASSERT_EQUAL_INT(0, memcmp("notify", sent_bytes(), 6));
 }
 
-// sendto() reports that the ring took the datagram, so the unreachable-peer knob shows up at the
-// wire during poll() and not in the call that queued it.
-void test_sendto_result_knob_acts_at_the_wire()
+// sendto() reports that the ring took the datagram, so a stack that refuses it shows up at the wire
+// during poll() and not in the call that queued it.
+void test_a_refused_send_still_queues_and_drains()
 {
-    Udp.listener->capture_enable();
     TEST_ASSERT_TRUE(Udp.listener->listen(5683, on_datagram, NULL));
-    Udp.listener->set_sendto_result(PROTO_FALSE);
+    mock_udp_send_fail_after(0); // the stack refuses every datagram from here
     TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"x", 1)); // queued
     Udp.listener->poll();
-    Udp.listener->set_sendto_result(PROTO_TRUE); // restore for any test that runs after this one
+    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count()); // refused, so nothing reached the wire
+
+    // The refusal does not wedge the ring: the next send goes out once the stack accepts again.
+    mock_udp_send_fail_after(-1);
+    TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"y", 1));
+    Udp.listener->poll();
+    TEST_ASSERT_EQUAL_UINT(1, (unsigned)sent_len());
+    TEST_ASSERT_EQUAL_UINT8('y', sent_bytes()[0]);
 }
 
 // queue_tx() rejects a null payload, a zero length, and a payload larger than a ring frame, so
 // none of them reach the ring and the capture stays empty across the poll.
 void test_send_rejects_null_zero_and_oversized_payload()
 {
-    Udp.listener->capture_enable();
     TEST_ASSERT_TRUE(Udp.listener->listen(6100, on_datagram, NULL));
     TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, NULL, 5));                 // null data
     TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, (const uint8_t *)"x", 0)); // zero length
@@ -292,24 +334,25 @@ void test_send_rejects_null_zero_and_oversized_payload()
     TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, big, sizeof(big)));
     TEST_ASSERT_FALSE(Udp.listener->reply(NULL, (const uint8_t *)"x", 1)); // no peer token
     Udp.listener->poll();
-    TEST_ASSERT_NULL(Udp.listener->captured()); // none of the above landed anything
+    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count()); // none of the above landed anything
 }
 
 // A listener bound with a null handler (a legal Udp.listener->listen() call) must not be invoked -
-// Udp.listener->inject() checks for a handler before calling through.
+// poll() checks for a handler before calling through.
 void test_inject_skips_a_listener_with_no_handler()
 {
     TEST_ASSERT_TRUE(Udp.listener->listen(7000, NULL, NULL));
-    Udp.listener->inject(7000, "10.0.0.1", 1, (const uint8_t *)"x", 1); // must not crash or call anything
+    inject(7000, "10.0.0.1", 1, (const uint8_t *)"x", 1); // must not crash or call anything
     TEST_ASSERT_EQUAL_INT(0, g_calls);
 }
 
-// A null source IP at injection is reported to the handler as an empty string, not a crash.
-void test_inject_null_src_ip_becomes_empty_string()
+// A source address the stack tagged with no family carries no address: it converts to PC_IP_NONE,
+// which peer_addr refuses to format, rather than to a 0.0.0.0 the sender never had.
+void test_an_untagged_source_address_carries_no_address()
 {
     TEST_ASSERT_TRUE(Udp.listener->listen(7001, on_datagram, NULL));
-    Udp.listener->inject(7001, NULL, 1, (const uint8_t *)"x", 1);
-    TEST_ASSERT_EQUAL_INT(1, g_calls);
+    inject(7001, NULL, 1, (const uint8_t *)"x", 1); // NULL: the driver hands over a zeroed address
+    TEST_ASSERT_EQUAL_INT(1, g_calls);              // the payload still reaches the handler
     TEST_ASSERT_EQUAL_STRING("", g_src_ip);
 }
 
@@ -347,7 +390,7 @@ void test_peer_addr_refuses_a_buffer_it_cannot_fill_and_allows_a_null_port_out()
     g_edge_had_ip_out = PROTO_TRUE;
     g_edge_had_port_out = PROTO_FALSE;
     TEST_ASSERT_TRUE(Udp.listener->listen(7002, on_datagram_edge_cases, NULL));
-    Udp.listener->inject(7002, "198.51.100.5", 9, (const uint8_t *)"e", 1);
+    inject(7002, "198.51.100.5", 9, (const uint8_t *)"e", 1);
     TEST_ASSERT_FALSE(g_edge_had_ip_out);  // every unwritable buffer was refused
     TEST_ASSERT_TRUE(g_edge_had_port_out); // the port is the optional half
     TEST_ASSERT_EQUAL_STRING("198.51.100.5", g_edge_ip);
@@ -372,10 +415,10 @@ int main(void)
     RUN_TEST(test_peer_addr_rejects_null_peer);
     RUN_TEST(test_peer_addr_copies_and_tolerates_null_outparams);
     RUN_TEST(test_send_paths_are_captured);
-    RUN_TEST(test_sendto_result_knob_acts_at_the_wire);
+    RUN_TEST(test_a_refused_send_still_queues_and_drains);
     RUN_TEST(test_send_rejects_null_zero_and_oversized_payload);
     RUN_TEST(test_inject_skips_a_listener_with_no_handler);
-    RUN_TEST(test_inject_null_src_ip_becomes_empty_string);
+    RUN_TEST(test_an_untagged_source_address_carries_no_address);
     RUN_TEST(test_multicast_lookup_skips_a_different_multicast_group);
     RUN_TEST(test_peer_addr_refuses_a_buffer_it_cannot_fill_and_allows_a_null_port_out);
     return UNITY_END();

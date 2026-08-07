@@ -15,14 +15,13 @@
 #include "tcp_client.h"
 #include "network_drivers/network/network.h"
 
-// Compiles only on a target build AND only when a client transport is actually enabled
-// (HTTP client / MQTT / WS client). A server-only build leaves DNS_RESOLVER off,
-// so the resolver symbols this unit calls would not be declared - see
-// PC_NEED_CLIENT in protocore_config.h.
-#if PROTOCORE_HOT && PC_NEED_CLIENT
+// Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
+// build leaves DNS_RESOLVER off, so the resolver symbols this unit calls would not be declared -
+// see PC_NEED_CLIENT in protocore_config.h.
+#if PC_NEED_CLIENT
 
 #include "../diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
-#include "core_setup/board_profiles/pc_platform.h" // the target's TCP, under our names
+#include "core_setup/board_profiles/pc_platform.h" // the stack's TCP, under our names
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/dns_resolver.h" // shared host->IP resolve (one DNS owner)
 #include "server/clock/clock.h"                       // pc_millis()
@@ -50,6 +49,9 @@ typedef struct
 static pc_client_ctx s_client;
 
 // Hostname resolution goes through network.dns->resolver.
+
+// Called by the open paths above its definition, to unwind a slot whose connect did not complete.
+static void pc_client_close(int cid);
 
 // --- lwIP callbacks (tcpip_thread); arg = the owning ClientConn* -------------
 
@@ -348,51 +350,13 @@ static void pc_client_close(int cid)
     s_client.cc[cid].in_use = PROTO_FALSE;
 }
 
-#else // host stub - the clients need a target's TCP, so a host build no-ops
+// Designated, so a member's position in the struct does not decide what it binds to.
+const TcpClientNs TcpClient = {.open = pc_client_open,
+                               .connected = pc_client_connected,
+                               .is_closed = pc_client_is_closed,
+                               .send = pc_client_send,
+                               .available = pc_client_available,
+                               .read = pc_client_read,
+                               .close = pc_client_close};
 
-static int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
-{
-    (void)host;
-    (void)port;
-    (void)timeout_ms;
-    return -1;
-}
-static proto_bool pc_client_connected(int cid)
-{
-    (void)cid;
-    return PROTO_FALSE;
-}
-static proto_bool pc_client_is_closed(int cid)
-{
-    (void)cid;
-    return PROTO_TRUE;
-}
-static proto_bool pc_client_send(int cid, const void *data, size_t len)
-{
-    (void)cid;
-    (void)data;
-    (void)len;
-    return PROTO_FALSE;
-}
-static size_t pc_client_available(int cid)
-{
-    (void)cid;
-    return 0;
-}
-static size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
-{
-    (void)cid;
-    (void)buf;
-    (void)cap;
-    return 0;
-}
-static void pc_client_close(int cid)
-{
-    (void)cid;
-    // no-op: the native stub owns no socket to close
-}
-
-#endif // PROTOCORE_HOT && PC_NEED_CLIENT
-
-const TcpClientNs TcpClient = {pc_client_open,      pc_client_connected, pc_client_is_closed, pc_client_send,
-                               pc_client_available, pc_client_read,      pc_client_close};
+#endif // PC_NEED_CLIENT
