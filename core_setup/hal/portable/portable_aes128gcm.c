@@ -13,7 +13,7 @@
  * counter are per record.
  */
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 #include "crypto/aead/aes128gcm.h"
 #include "crypto/cipher/aes_block.h"
 #include "crypto/crypto_opt.h"

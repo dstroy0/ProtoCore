@@ -159,7 +159,7 @@ int bn_is_zero(const pc_bignum *a);
 // Backend-facing
 // ---------------------------------------------------------------------------
 //
-// bn_expmod_group14() is DECLARED here and DEFINED by exactly one backend under board_drivers/,
+// bn_expmod_group14() is DECLARED here and DEFINED by exactly one backend under core_setup/,
 // chosen by the vendor's PC_HAS_HW_BIGNUM. There is no weak default: link no backend and this is an
 // undefined reference; link two and it is a duplicate definition. Software crypto is a legitimate
 // choice - on some parts the only one - but it is always a stated one, never a fallback.

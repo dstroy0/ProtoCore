@@ -31,7 +31,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/application/upload_service/upload_service.h"
-#include "board_drivers/hal/esp/esp_mnt_fs.h" // pc_mnt_fs(): bind an Arduino FS to the storage seam
+#include "core_setup/hal/esp/esp_mnt_fs.h" // pc_mnt_fs(): bind an Arduino FS to the storage seam
 #include "server/filesystem/mnt.h"            // pc_mnt_mount()
 #include <LittleFS.h>
 

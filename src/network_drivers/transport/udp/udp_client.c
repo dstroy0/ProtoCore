@@ -13,7 +13,7 @@
 #include "network_drivers/transport/udp/udp_datagram.h" // the wire layout the ring carries
 
 #if PROTOCORE_HOT
-#include "board_drivers/board_profiles/pc_platform.h" // the target's UDP, under our names
+#include "core_setup/board_profiles/pc_platform.h" // the target's UDP, under our names
 #include "network_drivers/transport/diffserv.h"       // DSCP marking; compiles out when off
 #include "network_drivers/transport/net_addr.h"       // NetAddr: the stack's address as a pc_ip
 #endif

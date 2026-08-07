@@ -663,7 +663,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   cannot override a value handed to it from outside, and `#undef` is banned (SRC_LAW rule 11), so
   no arrangement inside the header could have recovered.
 - **Blast radius:** every one of the 310 native envs carried the flag, and the whole
-  `PROTOCORE_HOT` half of the tree had no test env at all - `board_drivers/*/mock/` exists to stand
+  `PROTOCORE_HOT` half of the tree had no test env at all - `core_setup/*/mock/` exists to stand
   in for silicon and nothing was compiling against it. That is how the `pc_lwip_to_ip` bug above
   survived: its arm was unreachable from the suite.
 - **Fix:** drop `-DPROTOCORE_HOST=1` from `native_base`. It was redundant - nothing on a native
@@ -795,7 +795,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   `#if PROTOCORE_HOT` is still C++, and no native env compiles it, so 307 envs of compile sweep
   cannot see any of it. Found: `namespace fs { class FS; }` plus `fs::FS &` parameters in
   `server/exc_decoder.h` / `server/exc_coredump.c`, `namespace fs` and `fs::FS *` / `fs::File &` in
-  `board_drivers/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace pc_wal_fs_detail` over `fs::File`
+  `core_setup/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace pc_wal_fs_detail` over `fs::File`
   in `services/storage/wal/wal_fs.h`. A target build of any of them is a hard C error.
 - **Root cause:** the conversion was driven by the native suites, which are the only thing that
   compiles during it. `PROTOCORE_HOT` is false on the host, so those regions were never parsed.
@@ -809,7 +809,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   backend (RAM disk, the ESP adapter, the lfs mock), so it is an owner decision rather than a
   mechanical fix.
 - **Also open:** `esp_mnt_fs.{h,c}` legitimately names Arduino's `fs::FS` because wrapping it is the
-  adapter's whole job. Resolved by compiling `board_drivers/hal/esp/` as C++ (owner decision), which
+  adapter's whole job. Resolved by compiling `core_setup/hal/esp/` as C++ (owner decision), which
   needs the build rule and a SYMBOLS.md amendment recording the exemption.
 
 ## A board profile's PC_GPIO_OUT macro rewrote the pc_gpio_dir enum member of the same name
@@ -1072,7 +1072,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   cause 2 actively hides it: `init+setkey+free` timed **alone** is 513 cycles, ~18x under the truth,
   because a loop that never encrypts never takes the AES peripheral. The cost only appears as
   acquire/use/release around real work.
-- **Fix:** the AEAD moved to explicitly-selected backends under `board_drivers/hal/` (vendor / portable,
+- **Fix:** the AEAD moved to explicitly-selected backends under `core_setup/hal/` (vendor / portable,
   no weak symbol), and `pc_aesgcm` became keyed - `pc_aesgcm_key_init` once per key, seal/open per
   record, with the raw-key entry points deleted rather than kept as a shim so no caller can pay the
   lifecycle invisibly. SSH holds a context per direction in its keymat and now stores no raw GCM key at
@@ -1435,7 +1435,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   refreshed only when a segment is **accepted**, never during backpressure (deliberate - a truly stuck connection
   must still be reaped, [[tcp.cpp]] `:850`), so a prolonged sub-window backpressure spell trips the 5 s idle
   timeout and the connection is reset mid-upload.
-- **Fix:** move the resolution out of `protocore_config.h` into `board_drivers/board_profiles/derived_sizing.h` (the sizing layer's
+- **Fix:** move the resolution out of `protocore_config.h` into `core_setup/board_profiles/derived_sizing.h` (the sizing layer's
   job), included last once every feature flag is known, and drop the `DEFAULTED` gate so the floor is enforced
   against whatever set the value - profile, `-D`, or base default - as a monotone raise (below floor -> lift;
   at/above -> untouched, so a deliberately roomy ring is preserved). Because the streaming floor is a full TCP

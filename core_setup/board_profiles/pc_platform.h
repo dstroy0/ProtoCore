@@ -72,7 +72,7 @@
 #define PC_VENDOR_TI 1
 #elif defined(PROTOCORE_HOT_FORCE)
 // No silicon, but the hot path is the thing under test. A mock vendor with real backends under
-// board_drivers/*/mock/ puts PROTOCORE_HOT on a machine that can run the suite, so the target path
+// core_setup/*/mock/ puts PROTOCORE_HOT on a machine that can run the suite, so the target path
 // is exercised by tests rather than only by a flash. Last in the chain: a genuine vendor above wins.
 #define PC_VENDOR_MOCK 1
 #else
@@ -110,16 +110,16 @@
 #endif
 
 // ---------------------------------------------------------------------------
-// Vendor capabilities - what backend a vendor's board_drivers/ provides.
+// Vendor capabilities - what backend a vendor's core_setup/ provides.
 // ---------------------------------------------------------------------------
 //
-// The core never tests these. board_drivers/ does, to decide which backend TU compiles. Each is a
+// The core never tests these. core_setup/ does, to decide which backend TU compiles. Each is a
 // deliberate statement by the vendor, not a default: choosing software crypto is legitimate (on some
 // parts it is the only option) but it must be chosen. There is no weak symbol behind any of these -
 // linking no backend is an undefined reference, linking two is a duplicate definition, and both fail
 // the build rather than silently selecting one.
 
-// AES-GCM. 1 = the vendor supplies an accelerated AEAD (board_drivers/hal/<vendor>); 0 = the portable
+// AES-GCM. 1 = the vendor supplies an accelerated AEAD (core_setup/hal/<vendor>); 0 = the portable
 // software backend, which is software AES plus a table GHASH.
 //
 // Not a small difference and not a preference: measured sealing 1 KiB on an ESP32-S3 at 240 MHz, the
@@ -134,12 +134,12 @@
 #define PC_HAS_HW_AESGCM 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
-    "ProtoCore: this vendor must state PC_HAS_HW_AESGCM (1 = accelerated AEAD in board_drivers/hal/<vendor>, 0 = portable software AES + table GHASH, ~7.6x slower where measured). Choosing software is fine; defaulting into it is not."
+    "ProtoCore: this vendor must state PC_HAS_HW_AESGCM (1 = accelerated AEAD in core_setup/hal/<vendor>, 0 = portable software AES + table GHASH, ~7.6x slower where measured). Choosing software is fine; defaulting into it is not."
 #endif
 #endif
 
 // DH-2048 / RSA modexp. 1 = the vendor supplies an accelerated backend; 0 = the portable software
-// Montgomery backend (board_drivers/hal/portable), which is data-dependent and NOT constant time -
+// Montgomery backend (core_setup/hal/portable), which is data-dependent and NOT constant time -
 // see SECURITY.md, timing.
 #ifndef PC_HAS_HW_BIGNUM
 #if PC_VENDOR_ESP
@@ -150,7 +150,7 @@
 #define PC_HAS_HW_BIGNUM 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
-    "ProtoCore: this vendor must state PC_HAS_HW_BIGNUM (1 = accelerated backend in board_drivers/hal/<vendor>, 0 = portable software Montgomery, which is not constant time). Choosing software crypto is fine; defaulting into it is not."
+    "ProtoCore: this vendor must state PC_HAS_HW_BIGNUM (1 = accelerated backend in core_setup/hal/<vendor>, 0 = portable software Montgomery, which is not constant time). Choosing software crypto is fine; defaulting into it is not."
 #endif
 #endif
 

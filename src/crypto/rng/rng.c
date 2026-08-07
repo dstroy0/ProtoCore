@@ -18,7 +18,7 @@
 
 #include "crypto/rng/rng.h"
 
-#include "board_drivers/board_profiles/pc_platform.h" // pc_platform_rand_fill: the entropy source
+#include "core_setup/board_profiles/pc_platform.h" // pc_platform_rand_fill: the entropy source
 #include "crypto/cipher/chacha20.h"
 #include "mmgr/arena.h" // pc_worker_self: the slot the pools index by
 #include "mmgr/protomem.h"

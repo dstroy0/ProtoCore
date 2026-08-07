@@ -33,7 +33,7 @@ host machine, separate from the hardware wrappers. The split is two macros that
 are exact complements: `PROTOCORE_HOT` is the target build, `PROTOCORE_HOST` is
 the test build. Neither is spelled `ARDUINO` - naming one vendor's toolchain put
 every non-Espressif target on the host path. Which vendor a target build speaks
-to is `board_drivers/`' job, and no vendor header appears in the core.
+to is `core_setup/`' job, and no vendor header appears in the core.
 
 - **Native tests** (fast, no hardware): every feature has a `native_*` test
   environment. Run one with:

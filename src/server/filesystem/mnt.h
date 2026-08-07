@@ -19,7 +19,7 @@
  *    and target. It is what lets the SFTP/SCP/WebDAV servers run under a native test.
  *
  *  - **Arduino FS** (board layer): wraps a real `fs::FS` (LittleFS / SD / SPIFFS) for persistent
- *    storage. It lives in board_drivers/ because it speaks a vendor framework, which the core does
+ *    storage. It lives in core_setup/ because it speaks a vendor framework, which the core does
  *    not.
  *
  * Handles are small ints the backend assigns, and a directory cursor is one of them - so ::close

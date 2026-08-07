@@ -13,7 +13,7 @@
  * PROTO_BEGIN_DECLS and PROTO_END_DECLS, so the names it exports are C names.
  */
 
-#include "board_drivers/hal/nvs.h"
+#include "core_setup/hal/nvs.h"
 
 #if PC_VENDOR_ESP
 

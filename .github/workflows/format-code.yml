@@ -85,7 +85,7 @@ jobs:
       - name: Test-coverage guard (every src/ TU has a test env)
         # A module ships with its native_<name> Unity env or it does not ship. Ratcheted: fails on a
         # src/ translation unit that no env's build_src_filter names, while the recorded gaps are
-        # worked down. board_drivers/ is exempt - it only runs on silicon.
+        # worked down. core_setup/ is exempt - it only runs on silicon.
         run: python3 -m tools.ci_tooling.check.check_test_coverage
 
       - name: Banned-constructs guard (src/ hard bans)

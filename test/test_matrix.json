@@ -187,12 +187,12 @@
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
         "+<crypto/kdf/hkdf.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/crypto/test_crypto_kat"]
     },
@@ -313,7 +313,7 @@
         "+<network_drivers/presentation/http/websocket/websocket.c>",
         "+<network_drivers/presentation/http/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": []
@@ -420,7 +420,7 @@
         "+<network_drivers/presentation/http/websocket/websocket.c>",
         "+<network_drivers/presentation/http/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["integration/transport/test_accept_gate"]
@@ -462,10 +462,10 @@
         "+<crypto/aead/chachapoly.c>",
         "+<crypto/cipher/aes256ctr.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
@@ -483,7 +483,7 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -509,10 +509,10 @@
         "+<crypto/aead/chachapoly.c>",
         "+<crypto/cipher/aes256ctr.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
@@ -530,7 +530,7 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -553,10 +553,10 @@
         "+<crypto/aead/chachapoly.c>",
         "+<crypto/cipher/aes256ctr.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
@@ -577,7 +577,7 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -597,10 +597,10 @@
         "+<crypto/mac/hmac_sha512.c>",
         "+<crypto/cipher/aes256ctr.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
@@ -618,7 +618,7 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -655,10 +655,10 @@
         "+<crypto/mac/hmac_sha512.c>",
         "+<crypto/cipher/aes256ctr.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
@@ -674,7 +674,7 @@
         "+<network_drivers/presentation/ssh/connection/ssh_server.c>",
         "+<network_drivers/presentation/ssh/connection/ssh_conn.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -756,7 +756,7 @@
         "+<network_drivers/application/web_assets.c>",
         "+<services/web/web_terminal/web_terminal.c>",
         "+<network_drivers/application/ntp_service/ntp_service.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
@@ -911,7 +911,7 @@
         "+<network_drivers/application/web_assets.c>",
         "+<services/web/web_terminal/web_terminal.c>",
         "+<network_drivers/application/webdav/webdav.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<server/filesystem/filesystem.c>",
@@ -969,7 +969,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["protocols/iot/test_snmp_v3"]
@@ -1203,7 +1203,7 @@
       "tests": ["integration/transport/test_udp_transport"]
     },
     "native_tcp_hot": {
-      "desc": "The TCP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand board_drivers/*/mock stands in for silicon). This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
+      "desc": "The TCP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand core_setup/*/mock stands in for silicon). This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
       "base": "native_hot_base",
       "flags": [],
       "src": [
@@ -1239,7 +1239,7 @@
       "tests": ["integration/transport/test_workers"]
     },
     "native_udp_hot": {
-      "desc": "The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand board_drivers/*/mock stands in for silicon). Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
+      "desc": "The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand core_setup/*/mock stands in for silicon). Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
       "base": "native_hot_base",
       "flags": [],
       "src": [
@@ -1364,11 +1364,11 @@
         "+<crypto/mac/hmac_sha256.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -1376,7 +1376,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/security/test_ikev2", "unit/security/test_ikev2_natt"]
     },
@@ -1386,12 +1386,12 @@
       "src": [
         "+<services/system/esp/esp.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/system/test_esp"]
     },
@@ -1402,12 +1402,12 @@
         "+<services/system/esp/ipsec_db.c>",
         "+<services/system/esp/esp.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/system/test_ipsec_db"]
     },
@@ -1636,14 +1636,14 @@
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/hash/sha512.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
       "tests": ["unit/security/test_oidc"]
@@ -1787,8 +1787,8 @@
         "+<network_drivers/application/smb/ntlmssp.c>",
         "+<network_drivers/application/smb/ntlm.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/aead/aesccm.c>",
         "+<crypto/hash/md.c>",
         "+<services/machine_tool/dnc/dnc.c>",
@@ -1817,7 +1817,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -1860,7 +1860,7 @@
         "+<server/regex.c>",
         "+<server/middleware.c>",
         "+<server/webdav_handler.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
@@ -1916,7 +1916,7 @@
         "+<server/regex.c>",
         "+<server/middleware.c>",
         "+<server/webdav_handler.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
@@ -1942,9 +1942,9 @@
       "flags": ["-DPC_ENABLE_SMB=1"],
       "src": [
         "+<network_drivers/application/smb/smb2.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<crypto/aead/aesccm.c>",
         "+<crypto/hash/md.c>",
         "+<network_drivers/application/smb/ntlm.c>",
@@ -1960,7 +1960,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/smb/test_smb2",
@@ -2175,7 +2175,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
       "tests": ["unit/security/test_jwt"]
@@ -2218,7 +2218,7 @@
         "+<server/middleware.c>",
         "+<server/webdav_handler.c>",
         "+<network_drivers/application/upload_service/upload_service.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
@@ -2271,7 +2271,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/secure.c>"
       ],
       "tests": ["unit/mmgr/test_plaintext"]
@@ -2333,10 +2333,10 @@
         "+<crypto/aead/chachapoly.c>",
         "+<crypto/cipher/aes256ctr.c>",
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
@@ -2358,7 +2358,7 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -2392,7 +2392,7 @@
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["integration/http/test_websocket"]
@@ -2408,7 +2408,7 @@
       "flags": ["-DPC_ENABLE_CONFIG_STORE=1"],
       "src": [
         "+<services/storage/config_store/config_store.c>",
-        "+<board_drivers/hal/host/host_nvs.c>"
+        "+<core_setup/hal/host/host_nvs.c>"
       ],
       "tests": ["unit/storage/test_config_store"]
     },
@@ -2452,7 +2452,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
       "tests": ["unit/security/test_csrf"]
@@ -2964,7 +2964,7 @@
       "src": [
         "+<services/storage/config_store/config_store.c>",
         "+<services/storage/config_io/config_io.c>",
-        "+<board_drivers/hal/host/host_nvs.c>",
+        "+<core_setup/hal/host/host_nvs.c>",
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -3090,13 +3090,13 @@
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<board_drivers/hal/portable/portable_bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha512.c>",
         "+<services/security/csrf/csrf.c>",
         "+<services/security/auth_lockout/auth_lockout.c>",
         "+<services/timing_position/time_source/time_source.c>",
         "+<services/storage/config_store/config_store.c>",
-        "+<board_drivers/hal/host/host_nvs.c>",
+        "+<core_setup/hal/host/host_nvs.c>",
         "+<server/signaling/device_id.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
@@ -3174,7 +3174,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -3228,7 +3228,7 @@
       "flags": ["-DPC_ENABLE_HTTP3=1"],
       "src": [
         "+<crypto/kdf/hkdf.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<network_drivers/presentation/http/http3/quic_crypto.c>",
         "+<network_drivers/presentation/http/http3/quic_packet.c>",
         "+<crypto/hash/sha256.c>",
@@ -3237,7 +3237,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/http/test_quic_crypto"]
     },
@@ -3248,14 +3248,14 @@
         "+<network_drivers/presentation/security/dtls/dtls_record.c>",
         "+<network_drivers/tls/tls13_kdf.c>",
         "+<crypto/kdf/hkdf.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/tls/test_dtls_record"]
     },
@@ -3270,7 +3270,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["protocols/tls/test_dtls_handshake"]
     },
@@ -3295,7 +3295,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/tls/tls13_kdf.c>",
         "+<crypto/kdf/hkdf.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<crypto/hash/sha512.c>",
@@ -3305,7 +3305,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["protocols/tls/test_dtls_conn"]
@@ -3326,7 +3326,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/tls/tls13_kdf.c>",
         "+<crypto/kdf/hkdf.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<crypto/hash/sha512.c>",
@@ -3336,7 +3336,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["integration/iot/test_coaps"]
@@ -3358,7 +3358,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/tls/tls13_kdf.c>",
         "+<crypto/kdf/hkdf.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<crypto/hash/sha512.c>",
@@ -3368,7 +3368,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["integration/iot/test_coaps_server"]
@@ -3385,7 +3385,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/tls/test_tls13_kdf"]
     },
@@ -3418,7 +3418,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/presentation/http/http3/quic_tp.c>",
         "+<network_drivers/presentation/http/http3/quic_crypto.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/kdf/hkdf.c>",
         "+<network_drivers/presentation/http/http3/quic_packet.c>",
         "+<network_drivers/presentation/http/http3/quic_varint.c>",
@@ -3431,7 +3431,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/http/test_quic_tls"]
     },
@@ -3448,7 +3448,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/presentation/http/http3/quic_tp.c>",
         "+<network_drivers/presentation/http/http3/quic_crypto.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/kdf/hkdf.c>",
         "+<network_drivers/presentation/http/http3/quic_packet.c>",
         "+<network_drivers/presentation/http/http3/quic_varint.c>",
@@ -3463,7 +3463,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/http/test_quic_tls"]
     },
@@ -3477,7 +3477,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/presentation/http/http3/quic_tp.c>",
         "+<network_drivers/presentation/http/http3/quic_crypto.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/kdf/hkdf.c>",
         "+<network_drivers/presentation/http/http3/quic_packet.c>",
         "+<network_drivers/presentation/http/http3/quic_frame.c>",
@@ -3491,7 +3491,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["protocols/http/test_quic_conn"]
     },
@@ -3509,7 +3509,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/presentation/http/http3/quic_tp.c>",
         "+<network_drivers/presentation/http/http3/quic_crypto.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/kdf/hkdf.c>",
         "+<network_drivers/presentation/http/http3/quic_packet.c>",
         "+<network_drivers/presentation/http/http3/quic_frame.c>",
@@ -3523,7 +3523,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["protocols/http/test_h3_conn"]
     },
@@ -3541,7 +3541,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/presentation/http/http3/quic_tp.c>",
         "+<network_drivers/presentation/http/http3/quic_crypto.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/kdf/hkdf.c>",
         "+<network_drivers/presentation/http/http3/quic_packet.c>",
         "+<network_drivers/presentation/http/http3/quic_frame.c>",
@@ -3555,7 +3555,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["integration/http/test_h3_e2e"]
     },
@@ -3575,7 +3575,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/presentation/http/http3/quic_tp.c>",
         "+<network_drivers/presentation/http/http3/quic_crypto.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/kdf/hkdf.c>",
         "+<network_drivers/presentation/http/http3/quic_packet.c>",
         "+<network_drivers/presentation/http/http3/quic_frame.c>",
@@ -3589,7 +3589,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["integration/http/test_quic_server"]
@@ -3611,7 +3611,7 @@
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<network_drivers/presentation/http/http3/quic_tp.c>",
         "+<network_drivers/presentation/http/http3/quic_crypto.c>",
-        "+<board_drivers/hal/portable/portable_aes128gcm.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
         "+<crypto/kdf/hkdf.c>",
         "+<network_drivers/presentation/http/http3/quic_packet.c>",
         "+<network_drivers/presentation/http/http3/quic_frame.c>",
@@ -3629,7 +3629,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["integration/http/test_h3_server"]
     },
@@ -3644,7 +3644,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/ssh/test_ssh_chachapoly"]
     },
@@ -3653,12 +3653,12 @@
       "flags": [],
       "src": [
         "+<crypto/aead/aesgcm.c>",
-        "+<board_drivers/hal/portable/portable_aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/ssh/test_ssh_aesgcm"]
     },
@@ -3673,7 +3673,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/ssh/test_ssh_ecdsa"]
     },
@@ -3704,7 +3704,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/mmgr/test_secure_pool"]
     },
@@ -3717,7 +3717,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/mmgr/test_plaintext", "unit/mmgr/test_secure_pool"]
     },

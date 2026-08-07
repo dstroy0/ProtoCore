@@ -42,7 +42,7 @@ PROTO_BEGIN_DECLS
 // AES-128 single-block primitive (used by GCM and by header protection)
 // ---------------------------------------------------------------------------
 
-// Opaque: the definition is private to the backend under board_drivers/ that this build selected -
+// Opaque: the definition is private to the backend under core_setup/ that this build selected -
 // consumers know only the symbol and hold it via struct pc_aes128*. No vendor type is named here.
 struct pc_aes128;
 

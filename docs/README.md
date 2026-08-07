@@ -1553,7 +1553,7 @@ guards at compile time.
 | `QUERY_VAL_LEN` | `48` | Maximum query-parameter value length. |
 | `RESP_HDR_BUF_SIZE` | `768` | Stack buffer for HTTP response header lines in send() / send_empty() / send_unauth() / serve_file(). |
 | `RE_MAX_STEPS` | `2000` | Step budget for the regex route matcher (see on_regex()). |
-| `RX_BUF_SIZE` | `1024` | Ring-buffer capacity in bytes per connection slot (feature floors enforced last, in board_drivers/board_profiles/derived_sizing.h - a value below what an enabled feature needs is raised there). |
+| `RX_BUF_SIZE` | `1024` | Ring-buffer capacity in bytes per connection slot (feature floors enforced last, in core_setup/board_profiles/derived_sizing.h - a value below what an enabled feature needs is raised there). |
 | `SNMP_COMMUNITY_MAX` | `32` | Maximum SNMP community-string length (including null terminator). |
 | `SNMP_MAX_MIB_ENTRIES` | `16` | Maximum registered MIB objects (the agent's fixed OID table). |
 | `SNMP_MAX_OID_LEN` | `32` | Maximum sub-identifiers (arcs) in an SNMP object identifier. |

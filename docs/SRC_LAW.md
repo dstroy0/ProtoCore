@@ -9,7 +9,7 @@ standards in the bibliography. Two companion documents carry the other halves:
 
 ## 0. The language is C11
 
-**`src/` is C11.** `.c` and `.h` are the only extensions, with the three `board_drivers/` vendor
+**`src/` is C11.** `.c` and `.h` are the only extensions, with the three `core_setup/` vendor
 adapters SYMBOLS.md section 4 records. `examples/` are Arduino sketches; `test/` is unconstrained.
 The target list and the reasoning are in SYMBOLS.md.
 

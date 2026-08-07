@@ -10,7 +10,7 @@
  * and needs no interpretation.
  */
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 
 #if PC_VENDOR_ESP
 

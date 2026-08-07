@@ -1,9 +1,9 @@
 [
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_application/src/board_drivers/hal/portable/portable_platform.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -DPC_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_platform.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_application/src/core_setup/hal/portable/portable_platform.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -DPC_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/portable/portable_platform.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/portable/portable_platform.c",
-    "output": ".pio/build/native_application/src/board_drivers/hal/portable/portable_platform.o"
+    "file": "src/core_setup/hal/portable/portable_platform.c",
+    "output": ".pio/build/native_application/src/core_setup/hal/portable/portable_platform.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_application/src/crypto/hash/sha1.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -DPC_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha1.c",
@@ -318,10 +318,10 @@
     "output": ".pio/build/native_swar/src/services/iot/coap/coap.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_h3_server/src/board_drivers/hal/portable/portable_aes128gcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -DPC_ENABLE_HTTP3=1 -I.pio/libdeps/native_h3_server/littlefs/include -I.pio/libdeps/native_h3_server/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aes128gcm.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_h3_server/src/core_setup/hal/portable/portable_aes128gcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -DPC_ENABLE_HTTP3=1 -I.pio/libdeps/native_h3_server/littlefs/include -I.pio/libdeps/native_h3_server/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/portable/portable_aes128gcm.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/portable/portable_aes128gcm.c",
-    "output": ".pio/build/native_h3_server/src/board_drivers/hal/portable/portable_aes128gcm.o"
+    "file": "src/core_setup/hal/portable/portable_aes128gcm.c",
+    "output": ".pio/build/native_h3_server/src/core_setup/hal/portable/portable_aes128gcm.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_h3_server/src/crypto/asymmetric/curve25519.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -DPC_ENABLE_HTTP3=1 -I.pio/libdeps/native_h3_server/littlefs/include -I.pio/libdeps/native_h3_server/littlefs/src -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/curve25519.c",
@@ -624,10 +624,10 @@
     "output": ".pio/build/native_swar/src/services/radio/enocean/enocean.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/board_drivers/hal/portable/portable_aesgcm.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -I.pio/libdeps/native_ssh_conn/littlefs/include -I.pio/libdeps/native_ssh_conn/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aesgcm.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/core_setup/hal/portable/portable_aesgcm.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -I.pio/libdeps/native_ssh_conn/littlefs/include -I.pio/libdeps/native_ssh_conn/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/portable/portable_aesgcm.cpp",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/portable/portable_aesgcm.cpp",
-    "output": ".pio/build/native_ssh_conn/src/board_drivers/hal/portable/portable_aesgcm.o"
+    "file": "src/core_setup/hal/portable/portable_aesgcm.cpp",
+    "output": ".pio/build/native_ssh_conn/src/core_setup/hal/portable/portable_aesgcm.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/aead/aesgcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/crypto/aead/aesgcm.c",
@@ -936,10 +936,10 @@
     "output": ".pio/build/native_swar/src/services/net/iface_bridge/iface_bridge.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/board_drivers/hal/portable/portable_bignum.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -I.pio/libdeps/native_ssh_conn/littlefs/include -I.pio/libdeps/native_ssh_conn/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_bignum.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/core_setup/hal/portable/portable_bignum.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -I.pio/libdeps/native_ssh_conn/littlefs/include -I.pio/libdeps/native_ssh_conn/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/portable/portable_bignum.cpp",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/portable/portable_bignum.cpp",
-    "output": ".pio/build/native_ssh_conn/src/board_drivers/hal/portable/portable_bignum.o"
+    "file": "src/core_setup/hal/portable/portable_bignum.cpp",
+    "output": ".pio/build/native_ssh_conn/src/core_setup/hal/portable/portable_bignum.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_oidc/src/crypto/asymmetric/bignum.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DPC_ENABLE_OIDC=1 -I.pio/libdeps/native_oidc/littlefs/include -I.pio/libdeps/native_oidc/littlefs/src -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/bignum.c",
@@ -1758,64 +1758,64 @@
     "output": ".pio/build/native_swar/src/services/energy/sunspec/sunspec.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_aes128gcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_aes128gcm.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/esp/esp_aes128gcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/esp/esp_aes128gcm.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/esp/esp_aes128gcm.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_aes128gcm.o"
+    "file": "src/core_setup/hal/esp/esp_aes128gcm.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/esp/esp_aes128gcm.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_aesgcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_aesgcm.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/esp/esp_aesgcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/esp/esp_aesgcm.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/esp/esp_aesgcm.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_aesgcm.o"
+    "file": "src/core_setup/hal/esp/esp_aesgcm.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/esp/esp_aesgcm.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_bignum.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_bignum.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/esp/esp_bignum.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/esp/esp_bignum.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/esp/esp_bignum.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_bignum.o"
+    "file": "src/core_setup/hal/esp/esp_bignum.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/esp/esp_bignum.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_bus.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_bus.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/esp/esp_bus.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/esp/esp_bus.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/esp/esp_bus.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_bus.o"
+    "file": "src/core_setup/hal/esp/esp_bus.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/esp/esp_bus.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_crypto_hal.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_crypto_hal.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/esp/esp_crypto_hal.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/esp/esp_crypto_hal.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/esp/esp_crypto_hal.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_crypto_hal.o"
+    "file": "src/core_setup/hal/esp/esp_crypto_hal.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/esp/esp_crypto_hal.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_mnt_fs.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_mnt_fs.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/esp/esp_mnt_fs.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/esp/esp_mnt_fs.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/esp/esp_mnt_fs.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_mnt_fs.o"
+    "file": "src/core_setup/hal/esp/esp_mnt_fs.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/esp/esp_mnt_fs.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_platform.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_platform.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/esp/esp_platform.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/esp/esp_platform.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/esp/esp_platform.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_platform.o"
+    "file": "src/core_setup/hal/esp/esp_platform.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/esp/esp_platform.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/mock/mock_platform.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/mock/mock_platform.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/mock/mock_platform.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/mock/mock_platform.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/mock/mock_platform.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/mock/mock_platform.o"
+    "file": "src/core_setup/hal/mock/mock_platform.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/mock/mock_platform.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/physical/esp/physical_esp.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/physical/esp/physical_esp.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/physical/esp/physical_esp.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/physical/esp/physical_esp.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/physical/esp/physical_esp.c",
-    "output": ".pio/build/native_swar/src/board_drivers/physical/esp/physical_esp.o"
+    "file": "src/core_setup/physical/esp/physical_esp.c",
+    "output": ".pio/build/native_swar/src/core_setup/physical/esp/physical_esp.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/physical/mock/physical_mock.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/physical/mock/physical_mock.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/physical/mock/physical_mock.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/physical/mock/physical_mock.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/physical/mock/physical_mock.c",
-    "output": ".pio/build/native_swar/src/board_drivers/physical/mock/physical_mock.o"
+    "file": "src/core_setup/physical/mock/physical_mock.c",
+    "output": ".pio/build/native_swar/src/core_setup/physical/mock/physical_mock.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/binary_asset_blobs.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/application/binary_asset_blobs.c",
@@ -2250,10 +2250,10 @@
     "output": ".pio/build/native_smb/lib525/littlefs/lfs_util.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/board_drivers/hal/portable/portable_aesgcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aesgcm.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/core_setup/hal/portable/portable_aesgcm.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/portable/portable_aesgcm.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/portable/portable_aesgcm.c",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/portable/portable_aesgcm.o"
+    "file": "src/core_setup/hal/portable/portable_aesgcm.c",
+    "output": ".pio/build/native_swar/src/core_setup/hal/portable/portable_aesgcm.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_ssh/lib4ac/littlefs/lfs.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -I.pio/libdeps/native_ssh/littlefs/include -I.pio/libdeps/native_ssh/littlefs/src -Itest/mocks -Itest/support -Isrc .pio/libdeps/native_ssh/littlefs/src/lfs.c",
@@ -2268,10 +2268,10 @@
     "output": ".pio/build/native_ssh/lib4ac/littlefs/lfs_util.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_oidc/src/board_drivers/hal/portable/portable_bignum.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DPC_ENABLE_OIDC=1 -I.pio/libdeps/native_oidc/littlefs/include -I.pio/libdeps/native_oidc/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_bignum.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_oidc/src/core_setup/hal/portable/portable_bignum.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DPC_ENABLE_OIDC=1 -I.pio/libdeps/native_oidc/littlefs/include -I.pio/libdeps/native_oidc/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/portable/portable_bignum.c",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/portable/portable_bignum.c",
-    "output": ".pio/build/native_oidc/src/board_drivers/hal/portable/portable_bignum.o"
+    "file": "src/core_setup/hal/portable/portable_bignum.c",
+    "output": ".pio/build/native_oidc/src/core_setup/hal/portable/portable_bignum.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/ssh/auth/ssh_auth.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/auth/ssh_auth.c",
@@ -3030,9 +3030,9 @@
     "output": ".pio/build/native_signaling/lib08f/littlefs/lfs_util.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_mnt_fs.o -c -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_mnt_fs.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/core_setup/hal/esp/esp_mnt_fs.o -c -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/core_setup/hal/esp/esp_mnt_fs.cpp",
     "directory": "@ROOT@",
-    "file": "src/board_drivers/hal/esp/esp_mnt_fs.cpp",
-    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_mnt_fs.o"
+    "file": "src/core_setup/hal/esp/esp_mnt_fs.cpp",
+    "output": ".pio/build/native_swar/src/core_setup/hal/esp/esp_mnt_fs.o"
   }
 ]

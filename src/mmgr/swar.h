@@ -14,7 +14,7 @@
  * **The width is a typedef, not a decision.** The algebra is identical at any width - the lane masks
  * are derived from ::pc_swar_word rather than written out, so the carrier follows ::PROTO_SWAR_BITS
  * and every constant follows it. That knob defaults to the register width the die declares in
- * board_drivers/board_profiles/, so nothing here infers a width from the toolchain.
+ * core_setup/board_profiles/, so nothing here infers a width from the toolchain.
  *
  * **This is the access layer.** Load a word, test its lanes, name the lane that fired. Nothing here
  * walks a buffer or takes a capacity, which is what keeps the byte-order claim under

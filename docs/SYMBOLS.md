@@ -49,9 +49,9 @@ every C library's token space.
 the most collided identifiers in embedded C, and the preprocessor has no scope to protect ours from a
 vendor SDK's. Every capacity bound carries `PROTO_MAX_`, with no exception.
 
-**One exemption: `src/board_drivers/`.** That is where vendor SDKs are spoken to, and their headers
-are full of names this law does not govern. A vendor symbol appears verbatim inside `board_drivers/`
-and nowhere else, and everything `board_drivers/` _exports_ still obeys the table above. The
+**One exemption: `src/core_setup/`.** That is where vendor SDKs are spoken to, and their headers
+are full of names this law does not govern. A vendor symbol appears verbatim inside `core_setup/`
+and nowhere else, and everything `core_setup/` _exports_ still obeys the table above. The
 exemption covers what a driver must consume, never what it publishes.
 
 ## 1. Prefixes, no namespaces
@@ -178,15 +178,15 @@ case-sensitivity trap where a repository developed on Windows breaks on Linux.
 of what this law decides stops being a rule the moment a file can declare a namespace. `examples/`
 keeps `.ino` and `performance_benching/` keeps `.cpp`; neither is governed by this document.
 
-**One exception, the same boundary section 1 draws.** A `board_drivers/` adapter whose entire job is
+**One exception, the same boundary section 1 draws.** A `core_setup/` adapter whose entire job is
 to wrap a C++ vendor API keeps `.cpp`, because the extension selects the compiler and the vendor type
 cannot be named from C at all. Today that is three files:
 
-| File                                          | The C++ it wraps                                          |
-| --------------------------------------------- | --------------------------------------------------------- |
-| `board_drivers/hal/esp/esp_mnt_fs.cpp`        | an Arduino `fs::FS`, turned into a `pc_mnt_backend`       |
-| `board_drivers/hal/esp/esp_nvs.cpp`           | an Arduino `Preferences` namespace, behind `nvs.h`        |
-| `board_drivers/physical/esp/physical_esp.cpp` | the Arduino `WiFi` and `ETH` objects, behind `physical.h` |
+| File                                       | The C++ it wraps                                          |
+| ------------------------------------------ | --------------------------------------------------------- |
+| `core_setup/hal/esp/esp_mnt_fs.cpp`        | an Arduino `fs::FS`, turned into a `pc_mnt_backend`       |
+| `core_setup/hal/esp/esp_nvs.cpp`           | an Arduino `Preferences` namespace, behind `nvs.h`        |
+| `core_setup/physical/esp/physical_esp.cpp` | the Arduino `WiFi` and `ETH` objects, behind `physical.h` |
 
 It covers what a driver must consume, never what it publishes: every name `physical_esp.cpp` defines
 is declared in `physical.h` between `PROTO_BEGIN_DECLS` and `PROTO_END_DECLS`, so every caller above
@@ -195,7 +195,7 @@ type, is a violation rather than an instance of this. The list is written down b
 unrecorded exception gets "fixed" by the next mechanical pass.
 
 Markdown is the documented exception to `snake_case`: docs use `UPPER_SNAKE`, including the per-die
-register references under `board_drivers/hal/esp/`.
+register references under `core_setup/hal/esp/`.
 
 **Test environments and suites carry no house prefix.** They are `native_<topic>` and `test_<topic>`.
 A prefix prevents collisions in a shared global namespace; a test environment name lives only in

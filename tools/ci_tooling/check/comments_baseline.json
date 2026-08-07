@@ -74,7 +74,7 @@
   "measurement|src/services/storage/wal/wal.c|// faster than the bit-by-bit form on the ESP32-S3, where the WAL write path is CRC-bound (~4.4 MB/s ->",
   "measurement|src/services/timing_position/gnss/gnss_survey.c|// on the polar axis: latitude is +/-90, height is measured along z",
   "measurement|src/services/timing_position/nmea2000/nmea2000.h|///< measured pressure (Pa, 0.1 Pa/bit, signed)",
-  "meta|src/crypto/cipher/aes256ctr.c|// per-vendor constant that belongs in board_drivers/ (see the handover) - stated here for now.",
+  "meta|src/crypto/cipher/aes256ctr.c|// per-vendor constant that belongs in core_setup/ (see the handover) - stated here for now.",
   "meta|src/network_drivers/presentation/http/http3/h3_conn.c|// ignore regular headers for now (routing is by method + path)",
   "meta|src/services/web/dashboard/dashboard_routes.c|// to infer it from, and \"has this service started\" was always the real question.",
   "meta|src/services/web/edge_cache/edge_cache_proxy.c|// `registered` is the whole test now: it was always the real question, and the stored server",

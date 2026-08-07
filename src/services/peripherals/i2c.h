@@ -29,7 +29,7 @@
 #ifndef PROTOCORE_I2C_H
 #define PROTOCORE_I2C_H
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 #include "protocore_config.h"
 
 /** @brief Bus clock for the shared peripheral bus; 100 kHz standard mode. */

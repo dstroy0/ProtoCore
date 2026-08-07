@@ -39,7 +39,7 @@
 #define PROTOCORE_TCP_CONN_H
 
 #include "../tcp_evt.h" // EvtType, TcpEvt: what this layer posts to a listener queue
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
 #include "protocore_config.h"
 #include "shared_primitives/ip.h" // pc_ip (family-tagged peer address)

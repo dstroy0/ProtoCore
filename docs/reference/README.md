@@ -1,7 +1,7 @@
 # Espressif SoC datasheets (reference)
 
 Authoritative hardware references for the per-variant defaults in
-[`src/board_drivers/board_profiles/`](../../src/board_drivers/board_profiles/). The board profiles size the library's
+[`src/core_setup/board_profiles/`](../../src/core_setup/board_profiles/). The board profiles size the library's
 static pools and gate hardware-crypto paths per die, so the numbers below (internal SRAM,
 crypto accelerators, radios, PSRAM support) come straight from these datasheets and each
 target's ESP-IDF `soc_caps.h`.

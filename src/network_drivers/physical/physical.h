@@ -6,7 +6,7 @@
  * @brief Layer 1 (Physical) - link bring-up and live egress-interface reporting.
  *
  * The "physical" link is the 802.11 radio or a wired Ethernet PHY, brought up by
- * the vendor backend selected with PC_VENDOR_* (board_drivers/physical/<vendor>/).
+ * the vendor backend selected with PC_VENDOR_* (core_setup/physical/<vendor>/).
  * Failover between interfaces is owned by the network stack itself (it reselects the
  * default route when a link drops) - this layer adds no manager and no polling
  * tick; it only *reports* which interface currently carries outbound traffic via
@@ -20,8 +20,8 @@
 #ifndef PROTOCORE_PHYSICAL_H
 #define PROTOCORE_PHYSICAL_H
 
-#include "board_drivers/board_profiles/pc_platform.h" // PC_VENDOR_* selector (picks the L1 backend)
-#include "protocore_config.h"                         // pc_if_kind
+#include "core_setup/board_profiles/pc_platform.h" // PC_VENDOR_* selector (picks the L1 backend)
+#include "protocore_config.h"                      // pc_if_kind
 #include "shared_primitives/ip.h"
 
 // Does the selected vendor ship a physical (L1) backend? The real bring-up (radio / Ethernet PHY /
@@ -186,7 +186,7 @@ pc_if_kind pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_i
  *
  * Power save and monitor mode are properties of the radio, so they belong to the layer that owns
  * the radio. The core's API names no vendor; the flavoring happens at the edge, in
- * board_drivers/physical/<vendor>/.
+ * core_setup/physical/<vendor>/.
  *
  * Every entry point below returns false / does nothing when the selected vendor has no radio
  * backend (PC_PHYSICAL_HAS_BACKEND == 0), so callers build and run headless on any target.

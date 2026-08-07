@@ -70,7 +70,7 @@ PROTO_BEGIN_DECLS
  * Below the top rung a move shifts down: each rung is half the one above, so the tail costs at most
  * one pass each.
  *
- * Taken from PROTO_WORD_BITS, which the die states in board_drivers/board_profiles/, rather than
+ * Taken from PROTO_WORD_BITS, which the die states in core_setup/board_profiles/, rather than
  * from UINTPTR_MAX. Reading the pointer width measures the BUILD MACHINE: the host toolchain is
  * 64-bit, so that inference gave the host an 8-byte ladder while every target in the list steps 4,
  * and a move is then a different shape in the test than in the thing being tested.

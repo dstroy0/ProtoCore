@@ -35,7 +35,7 @@
 #ifndef PROTOCORE_SPI_H
 #define PROTOCORE_SPI_H
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 #include "protocore_config.h"
 
 /** @brief Bus clock for the shared peripheral bus; 1 MHz is safe on every part on it. */

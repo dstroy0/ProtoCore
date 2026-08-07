@@ -16,7 +16,7 @@
  * Vendor headers are fine here: this is board_drivers, the partition vendor code is segregated to.
  */
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 #include "crypto/aead/aes128gcm.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"

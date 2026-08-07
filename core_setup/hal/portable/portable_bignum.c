@@ -15,7 +15,7 @@
  * on it silently; with no weak symbol anywhere in the chain, it cannot.
  */
 
-#include "board_drivers/board_profiles/pc_platform.h" // PC_HAS_HW_BIGNUM
+#include "core_setup/board_profiles/pc_platform.h" // PC_HAS_HW_BIGNUM
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"

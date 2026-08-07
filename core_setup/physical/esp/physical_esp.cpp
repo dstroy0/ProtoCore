@@ -7,11 +7,11 @@
  *        live egress readout, straight off the Arduino-ESP32 WiFi/ETH wrappers and lwIP's default netif.
  *
  * The vendor-specific half of the physical layer. The common API is in network_drivers/physical/physical.h and the
- * vendor is chosen by the PC_VENDOR_* selector (board_drivers/board_profiles/pc_platform.h); this whole TU compiles to
+ * vendor is chosen by the PC_VENDOR_* selector (core_setup/board_profiles/pc_platform.h); this whole TU compiles to
  * nothing on any non-ESP vendor, where physical.c's fallback stubs stand in (PC_PHYSICAL_HAS_BACKEND == 0). WiFi
  * station bring-up is asynchronous (poll wifi_ready()); pc_net_egress() reads the live default-route netif and hands it
  * to the pure pc_net_classify_ip() that lives in physical.c. Adding STM/RP/TI = a sibling
- * board_drivers/physical/<vendor>/ TU guarded by that vendor's macro, no change here.
+ * core_setup/physical/<vendor>/ TU guarded by that vendor's macro, no change here.
  *
  * C++, because WiFi and ETH are Arduino objects whose methods cannot be named from C
  * (docs/SYMBOLS.md section 4). physical.h declares everything this file defines between

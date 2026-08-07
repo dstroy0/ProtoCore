@@ -38,7 +38,7 @@
 // Per-variant default sizing (chip / PSRAM / flash profiles). Included before the sizing
 // defaults below so a board profile can raise them for a larger target; your -D / build_opt.h
 // overrides still win (every profile default is #ifndef-guarded).
-#include "board_drivers/board_profiles/board_profile.h"
+#include "core_setup/board_profiles/board_profile.h"
 
 // ---------------------------------------------------------------------------
 // Platform widths
@@ -56,7 +56,7 @@
  * not cheaper on any part in the target list - it costs the mask or sign-extend that keeps the
  * unused half correct - so the library states the register once and narrows only at a boundary.
  */
-// The die states its register width in board_drivers/board_profiles/ (PC_HW_WORD_BITS, floored at
+// The die states its register width in core_setup/board_profiles/ (PC_HW_WORD_BITS, floored at
 // 32 for every part in the target list); this only names it. It is NOT read off the toolchain: the
 // host toolchain is 64-bit, so inferring would give the host build 8-byte lane math, an 8-byte move
 // ladder and 64-bit index arithmetic - a shape no target executes, measured on a machine that does
@@ -117,7 +117,7 @@ from halves and is slower than the width it decomposes into"
  * cannot reach a header-only library at all, since `#pragma GCC optimize` binds only to functions
  * parsed after it and the bodies arrive with the include.
  *
- * board_drivers/board_profiles/pc_platform.h states the same definition and is reached above, so
+ * core_setup/board_profiles/pc_platform.h states the same definition and is reached above, so
  * this is the fallback for a translation unit that arrives without it.
  *
  * Leaves only. On a composite, forcing the inline trades one call for a copy of the whole body at
@@ -204,7 +204,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief Ring-buffer capacity in bytes per connection slot (feature floors enforced last, in
- *  board_drivers/board_profiles/derived_sizing.h - a value below what an enabled feature needs is raised there). */
+ *  core_setup/board_profiles/derived_sizing.h - a value below what an enabled feature needs is raised there). */
 #ifndef RX_BUF_SIZE
 #define RX_BUF_SIZE 1024
 #endif
@@ -4179,7 +4179,7 @@ from halves and is slower than the width it decomposes into"
 #define PC_EDGE_FETCH_BUF_MIN 2560
 #endif
 
-// PC_EDGE_CACHE_SLOTS and PC_EDGE_BODY_MAX come from board_drivers/board_profiles/ (classic floor, raised
+// PC_EDGE_CACHE_SLOTS and PC_EDGE_BODY_MAX come from core_setup/board_profiles/ (classic floor, raised
 // per chip/PSRAM by board_profile.h above); override with -D as usual.
 #ifndef PC_EDGE_KEY_MAX
 #define PC_EDGE_KEY_MAX 128 // largest canonical cache key (method\nhost\npath[\nquery])
@@ -4213,7 +4213,7 @@ from halves and is slower than the width it decomposes into"
 #ifndef PC_EDGE_ORIGIN_URL_MAX
 #define PC_EDGE_ORIGIN_URL_MAX 128 // largest origin base URL in a route mapping
 #endif
-// PC_EDGE_FETCH_SLOTS comes from board_drivers/board_profiles/ (classic floor, raised per chip/PSRAM).
+// PC_EDGE_FETCH_SLOTS comes from core_setup/board_profiles/ (classic floor, raised per chip/PSRAM).
 #ifndef PC_EDGE_FETCH_BUF
 #define PC_EDGE_FETCH_BUF PC_EDGE_FETCH_BUF_MIN // per-fetch origin-response accumulation buffer
 #endif
@@ -4249,7 +4249,7 @@ from halves and is slower than the width it decomposes into"
 #if PC_ENABLE_EDGE_MESH && !PC_ENABLE_EDGE_MESH_NEEDS_EDGE_CACHE
 #error "ProtoCore: PC_ENABLE_EDGE_MESH needs PC_ENABLE_EDGE_CACHE"
 #endif
-// PC_MESH_MAX_PEERS and PC_MESH_MAX_CONNS come from board_drivers/board_profiles/ (classic floor, raised
+// PC_MESH_MAX_PEERS and PC_MESH_MAX_CONNS come from core_setup/board_profiles/ (classic floor, raised
 // per chip/PSRAM).
 #ifndef PC_MESH_QUERY_MS
 #define PC_MESH_QUERY_MS 300 // per-peer query deadline before moving on (miss) / to the origin
@@ -5232,7 +5232,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 // The RX-ring feature floors (streaming needs a full TCP window, SSH/TLS a full first flight) are
-// resolved by board_drivers/board_profiles/derived_sizing.h, included at the end of this file once every feature
+// resolved by core_setup/board_profiles/derived_sizing.h, included at the end of this file once every feature
 // flag is known - that is the sizing layer's job, not this file's.
 
 /** @brief First-boot WiFi provisioning: softAP + captive-portal credentials form. */
@@ -7097,7 +7097,7 @@ static_assert(sizeof(pc_if_kind) == 1, "pc_if_kind must stay one byte: it is a p
 
 // SFTP and SCP need the channel layer to carry them and the mount to store into (PC_ENABLE_MNT is
 // required above). They do NOT need FILE_SERVING: that dependency was the fs::FS seam, and the seam
-// now lives with the vendor code in board_drivers/, behind the mount backend.
+// now lives with the vendor code in core_setup/, behind the mount backend.
 #define PC_ENABLE_SSH_SFTP_NEEDS_SSH PC_ENABLE_SSH
 #if PC_ENABLE_SSH_SFTP && !PC_ENABLE_SSH_SFTP_NEEDS_SSH
 #error "ProtoCore: PC_ENABLE_SSH_SFTP needs PC_ENABLE_SSH"
@@ -7520,6 +7520,6 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
 
 // Final sizing pass: raise buffers to the floors the enabled features require (every PC_ENABLE_*
 // flag is resolved by this point). Kept in the board-profile layer, not inline above.
-#include "board_drivers/board_profiles/derived_sizing.h" // PC_ALLOW_LATE_INCLUDE: ordered - derives sizes from the PC_ENABLE_* flags resolved above
+#include "core_setup/board_profiles/derived_sizing.h" // PC_ALLOW_LATE_INCLUDE: ordered - derives sizes from the PC_ENABLE_* flags resolved above
 
 #endif

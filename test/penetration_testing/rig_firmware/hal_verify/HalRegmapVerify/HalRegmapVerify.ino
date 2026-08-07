@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Ground-truth cross-check for the self-contained RSA/MPI HAL (src/board_drivers/hal/esp/esp_crypto_hal.h): every PC_
+// Ground-truth cross-check for the self-contained RSA/MPI HAL (src/core_setup/hal/esp/esp_crypto_hal.h): every PC_
 // register value the HAL hardcodes is static_assert'd EQUAL to the manufacturer's own soc macro for the target die. The
 // HAL deliberately includes no soc/ header; THIS test does (it is the only place the two meet), so a mismatch - a typo
 // in our map, or an upstream register change - is a compile error. Compile it per FQBN (verify_regmaps.sh) for every

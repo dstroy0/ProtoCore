@@ -11,7 +11,7 @@
  */
 
 #include "secure.h"
-#include "board_drivers/board_profiles/pc_platform.h" // pc_platform_context_id()
+#include "core_setup/board_profiles/pc_platform.h" // pc_platform_context_id()
 #include "mmgr/arena.h"
 #include <assert.h>
 
@@ -56,7 +56,7 @@ static inline int cur_worker(void)
 static inline void assert_single_owner(int w)
 {
 #if PC_DEBUG_CHECKS
-    // Off by default; see PC_DEBUG_CHECKS. The identity comes from board_drivers/ - the core does
+    // Off by default; see PC_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
     // not name an RTOS.
     static uintptr_t s_owner[PC_SEC_POOL_SLOTS] = {0};
     const uintptr_t cur = pc_platform_context_id();

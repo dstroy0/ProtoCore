@@ -23,7 +23,7 @@
 #ifndef PROTOCORE_UART_H
 #define PROTOCORE_UART_H
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 #include "protocore_config.h"
 
 /** @brief Read timeout in milliseconds, for a driver that takes whatever has arrived. */

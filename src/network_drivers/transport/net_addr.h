@@ -25,8 +25,8 @@
 #include "protocore_config.h"
 
 #if PROTOCORE_HOT
-#include "board_drivers/board_profiles/pc_platform.h" // pc_net_ip: the stack's own address type
-#include "shared_primitives/ip.h"                     // pc_ip: the address everything above carries
+#include "core_setup/board_profiles/pc_platform.h" // pc_net_ip: the stack's own address type
+#include "shared_primitives/ip.h"                  // pc_ip: the address everything above carries
 
 PROTO_BEGIN_DECLS
 

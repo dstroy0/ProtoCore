@@ -10,7 +10,7 @@
  * catch. A vendor that DOES have tasks must supply its own, exactly as Espressif does.
  */
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 
 // "Which execution context is running me" is answered by whoever owns the scheduler, and on the hot
 // path that is always the vendor. Keying this on the path means a vendor whose backend was never

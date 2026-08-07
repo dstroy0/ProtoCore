@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_PROVISIONING && PROTOCORE_HOT
-#include "board_drivers/hal/nvs.h" // the credentials outlive the reboot that applies them
+#include "core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"

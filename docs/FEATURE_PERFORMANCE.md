@@ -607,7 +607,7 @@ ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates 
     calling `mbedtls_gcm` took 1 KiB from 616,567 to 91,215 cyc. The capability macro describes one mode of
     one peripheral; it does not mean the vendor has no fast path, and the vendor's own implementation knows
     what its silicon can do. Host-testability is preserved a different way: the software AEAD still exists
-    as `board_drivers/hal/portable/portable_aesgcm.cpp` and is what native builds compile, so the KATs still
+    as `core_setup/hal/portable/portable_aesgcm.cpp` and is what native builds compile, so the KATs still
     run off-target - it just is not what a chip with an accelerator uses.
 
     _Mistake 2 - we rebuilt the cipher context per record._ The remaining 91,215 vs 81,086 gap was not the
@@ -1029,7 +1029,7 @@ time. Measured on the two S3 rigs and a wired **ESP32-P4** (`rig_s3_tls` twin, [
   ...) and with **x25519 on a die without it** (S3/S2/classic); every curve stays enabled, so it only reorders
   preference. Measured effect: the **P4's default handshake drops from ~160 ms (x25519) to ~29 ms (P-256), a
   5.4x win** (`Server Temp Key: ECDH, prime256v1` confirmed, no client curve forcing), while the **S3 is
-  unchanged at ~498 ms x25519**. Getting there also fixed a latent bug: `board_drivers/board_profiles/board_profile.h` keyed
+  unchanged at ~498 ms x25519**. Getting there also fixed a latent bug: `core_setup/board_profiles/board_profile.h` keyed
   the chip select off `CONFIG_IDF_TARGET_*` but did not pull in `sdkconfig.h`, so any TU that included
   `protocore_config.h` before an esp header (e.g. `tls.c`) saw the macros undefined and **every board silently
   fell through to the classic profile** (`PC_HW_ECC 0`) - the P-256 preference never engaged until the header

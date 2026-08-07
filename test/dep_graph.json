@@ -671,7 +671,7 @@
 ".pio/libdeps/native_web_terminal/littlefs/src/lfs_util.c": [
 "native_web_terminal"
 ],
-"src/board_drivers/board_profiles/board_profile.h": [
+"src/core_setup/board_profiles/board_profile.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",
@@ -947,7 +947,7 @@
 "native_zigbee",
 "native_zwave"
 ],
-"src/board_drivers/board_profiles/classic_defaults.h": [
+"src/core_setup/board_profiles/classic_defaults.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",
@@ -1223,7 +1223,7 @@
 "native_zigbee",
 "native_zwave"
 ],
-"src/board_drivers/board_profiles/derived_sizing.h": [
+"src/core_setup/board_profiles/derived_sizing.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",
@@ -1499,7 +1499,7 @@
 "native_zigbee",
 "native_zwave"
 ],
-"src/board_drivers/board_profiles/pc_platform.h": [
+"src/core_setup/board_profiles/pc_platform.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",
@@ -1797,22 +1797,22 @@
 "native_zigbee",
 "native_zwave"
 ],
-"src/board_drivers/hal/esp/esp_aes128gcm.c": [
+"src/core_setup/hal/esp/esp_aes128gcm.c": [
 "native_swar"
 ],
-"src/board_drivers/hal/esp/esp_aesgcm.c": [
+"src/core_setup/hal/esp/esp_aesgcm.c": [
 "native_swar"
 ],
-"src/board_drivers/hal/esp/esp_bignum.c": [
+"src/core_setup/hal/esp/esp_bignum.c": [
 "native_swar"
 ],
-"src/board_drivers/hal/esp/esp_bus.c": [
+"src/core_setup/hal/esp/esp_bus.c": [
 "native_swar"
 ],
-"src/board_drivers/hal/esp/esp_crypto_hal.c": [
+"src/core_setup/hal/esp/esp_crypto_hal.c": [
 "native_swar"
 ],
-"src/board_drivers/hal/esp/esp_crypto_hal.h": [
+"src/core_setup/hal/esp/esp_crypto_hal.h": [
 "native_coaps",
 "native_coaps_server",
 "native_crypto_kat",
@@ -1835,19 +1835,19 @@
 "native_swar",
 "native_tls13_msg"
 ],
-"src/board_drivers/hal/esp/esp_mnt_fs.cpp": [
+"src/core_setup/hal/esp/esp_mnt_fs.cpp": [
 "native_swar"
 ],
-"src/board_drivers/hal/esp/esp_mnt_fs.h": [
+"src/core_setup/hal/esp/esp_mnt_fs.h": [
 "native_swar"
 ],
-"src/board_drivers/hal/esp/esp_platform.c": [
+"src/core_setup/hal/esp/esp_platform.c": [
 "native_swar"
 ],
-"src/board_drivers/hal/mock/mock_platform.c": [
+"src/core_setup/hal/mock/mock_platform.c": [
 "native_swar"
 ],
-"src/board_drivers/hal/portable/portable_aes128gcm.c": [
+"src/core_setup/hal/portable/portable_aes128gcm.c": [
 "native_coaps",
 "native_coaps_server",
 "native_crypto_kat",
@@ -1864,14 +1864,14 @@
 "native_smb",
 "native_swar"
 ],
-"src/board_drivers/hal/portable/portable_aesgcm.c": [
+"src/core_setup/hal/portable/portable_aesgcm.c": [
 "native_ipsec_db",
 "native_smb",
 "native_ssh",
 "native_ssh_kbdint",
 "native_swar"
 ],
-"src/board_drivers/hal/portable/portable_aesgcm.cpp": [
+"src/core_setup/hal/portable/portable_aesgcm.cpp": [
 "native_esp",
 "native_ikev2",
 "native_ssh_aesgcm",
@@ -1879,19 +1879,19 @@
 "native_ssh_hardened",
 "native_ssh_pqc"
 ],
-"src/board_drivers/hal/portable/portable_bignum.c": [
+"src/core_setup/hal/portable/portable_bignum.c": [
 "native_oidc",
 "native_ssh",
 "native_ssh_kbdint",
 "native_swar"
 ],
-"src/board_drivers/hal/portable/portable_bignum.cpp": [
+"src/core_setup/hal/portable/portable_bignum.cpp": [
 "native_ikev2",
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_pqc"
 ],
-"src/board_drivers/hal/portable/portable_platform.c": [
+"src/core_setup/hal/portable/portable_platform.c": [
 "native_accept_gate",
 "native_application",
 "native_auth",
@@ -1964,10 +1964,10 @@
 "native_websocket",
 "native_ws_deflate"
 ],
-"src/board_drivers/physical/esp/physical_esp.c": [
+"src/core_setup/physical/esp/physical_esp.c": [
 "native_swar"
 ],
-"src/board_drivers/physical/mock/physical_mock.c": [
+"src/core_setup/physical/mock/physical_mock.c": [
 "native_swar"
 ],
 "src/crypto/aead/aes128gcm.h": [

@@ -351,7 +351,7 @@ The native test matrix has **315 environments**, one per feature, generated from
 | `native_sunspec` | `PC_ENABLE_SUNSPEC=1` | `unit/energy/test_sunspec` | SunSpec Modbus model codec (services/energy/sunspec): the map writer (marker / model headers / points / end model) + the model-chain walker + typed point readers (u16 / i16 / u32 / i32 / string). |
 | `native_swar` | default | `unit/mmgr/test_swar` | Lane math (mmgr/swar.h): one 32-bit word as four byte lanes. |
 | `native_syslog` | `PC_ENABLE_SYSLOG=1` | `protocols/transport/test_syslog` | Syslog client (RFC 5424) line formatter. |
-| `native_tcp_hot` | default | `protocols/transport/test_tcp_hot` | The TCP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1 and board_drivers/*/mock stands in for silicon). |
+| `native_tcp_hot` | default | `protocols/transport/test_tcp_hot` | The TCP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1 and core_setup/*/mock stands in for silicon). |
 | `native_telemetry` | `PC_ENABLE_TELEMETRY=1` | `unit/iot/test_telemetry` | Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and totalizer. |
 | `native_telnet` | `PC_ENABLE_TELNET=1` | `integration/session/test_telnet` | Telnet server (RFC 854 IAC negotiation + line editing) wired through the real transport ring buffer; output checked via the tcp_write capture mock. |
 | `native_template` | default | `integration/transport/test_template` | test_template against the native_stack_http stack. |
@@ -365,7 +365,7 @@ The native test matrix has **315 environments**, one per feature, generated from
 | `native_transport` | default | `integration/transport/test_transport` | test_transport against the native_stack_l46 stack. |
 | `native_tsan` | `g`, `O1`, `fsanitize=thread`, `pthread` | `integration/transport/test_concurrency` | Same harness under ThreadSanitizer: proves ZERO data races on the slot fields (the pc_atomic acquire/release happens-before lets the plain rx_buffer[] writes be read on the other core safely). |
 | `native_ubx` | `PC_ENABLE_UBX=1` | `unit/timing_position/test_ubx` | UBX (u-blox binary GNSS protocol) codec (services/timing_position/ubx): B5 62 framing, 8-bit Fletcher checksum, build/poll/parse, and the streaming NMEA+UBX demultiplexer. |
-| `native_udp_hot` | default | `integration/transport/test_udp_hot` | The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1 and board_drivers/*/mock stands in for silicon). |
+| `native_udp_hot` | default | `integration/transport/test_udp_hot` | The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1 and core_setup/*/mock stands in for silicon). |
 | `native_udp_telemetry` | `PC_ENABLE_UDP_TELEMETRY=1` | `unit/transport/test_udp_telemetry` | UDP telemetry line builder (services/iot/udp_telemetry): InfluxDB line-protocol formatting, host-tested. |
 | `native_udp_transport` | default | `integration/transport/test_udp_transport` | UDP transport multicast receive (network_drivers/transport/udp.c): joining an IPv4 multicast group by dotted-quad, rejecting a non-multicast or malformed group, delivering a group datagram to the regi... |
 | `native_umati` | `PC_ENABLE_OPCUA=1`, `PC_ENABLE_UMATI=1` | `unit/fieldbus/test_umati` | umati / OPC UA for Machine Tools (OPC 40501-1) MachineTool model (services/machine_tool/umati) - the Browse hierarchy + the Read resolver over a bound UmatiMachineTool are host-tested here. |

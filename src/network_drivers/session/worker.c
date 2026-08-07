@@ -12,7 +12,7 @@
 
 #include "network_drivers/session/worker.h"
 
-#include "board_drivers/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
+#include "core_setup/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
 #include "mmgr/arena.h"                               // pc_worker_set_self: identity lives with the pools it indexes
 #include "mmgr/ring.h"                                // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 

@@ -32,7 +32,7 @@
 #define PC_ENABLE_MNT 1
 
 #include "protocore.h"
-#include "board_drivers/hal/esp/esp_mnt_fs.h"
+#include "core_setup/hal/esp/esp_mnt_fs.h"
 #include "network_drivers/physical/physical.h"
 #include "server/filesystem/filesystem.h"
 #include <LittleFS.h>

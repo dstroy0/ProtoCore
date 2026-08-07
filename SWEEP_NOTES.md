@@ -156,7 +156,7 @@ downgrade it.
 
 | area                 | dirs | .h  | .cpp | what it is                                                |
 | -------------------- | ---- | --- | ---- | --------------------------------------------------------- |
-| `board_drivers/`     | 8    | 27  | 10   | `board_profiles/` (per-die defaults), `hal/`, `physical/` |
+| `core_setup/`     | 8    | 27  | 10   | `board_profiles/` (per-die defaults), `hal/`, `physical/` |
 | `crypto/`            | 8    | 32  | 24   | `aead cipher hash kdf mac asymmetric pqc`                 |
 | `network_drivers/`   | 32   | 63  | 62   | the OSI stack                                             |
 | `server/`            | 2    | 8   | 13   | request handling + `mmgr/` (the two arena instances)      |
@@ -174,7 +174,7 @@ radio security storage system timing_position transportation web.
 ### API shape rule
 
 **The user surface and the vendor surface are C only.** The API a library consumer calls, and the
-`board_drivers/` boundary where vendor silicon is reached, take no templates and no C++ constructs in
+`core_setup/` boundary where vendor silicon is reached, take no templates and no C++ constructs in
 the signature, because the target list includes c2000 where control-law code is written and reviewed
 as C. Internals between those two surfaces may be C++.
 
@@ -590,7 +590,7 @@ the shape the group needs.
 - **`u16_t` is an lwIP type used in the core** - `Tcp.conn->send(slot, val, (u16_t)vlen)` (82, 113 and
   throughout). It is defined nowhere in `src/`; it comes from lwIP's headers. **31 occurrences**
   across `src/server/` and `protocore.*`. Vendor type in the core's own code, which is what
-  `board_drivers/` exists to contain.
+  `core_setup/` exists to contain.
 - **stale `#include <stdio.h>`** (22) - every `snprintf`/`printf` in the file is inside a comment.
 - **C-style casts** (58, 82, 106, 113, and on) - rule 10.
 - **implicit pointer-to-bool**: `if (!end || ...)` (59), `resolver ? ... : nullptr` (73),
@@ -973,7 +973,7 @@ the accessor. The split is what changed, not just the names:
   length, so the trailing byte is an index, not a scan.
 - The RAM backend grew directories (a flag on the existing name table plus a prefix scan, not a
   tree), which is what makes the file-transfer servers host-testable at all.
-- The Arduino `fs::FS` backend moved to `board_drivers/hal/esp/esp_mnt_fs.cpp`. Core no longer
+- The Arduino `fs::FS` backend moved to `core_setup/hal/esp/esp_mnt_fs.cpp`. Core no longer
   names a vendor filesystem type anywhere.
 
 `PC_ENABLE_VFS` -> `PC_ENABLE_MNT`, `PC_VFS_*` -> `PC_MNT_*`, and `PC_ENABLE_SSH_SFTP` /

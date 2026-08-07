@@ -105,7 +105,7 @@ Wanted, not yet scoped.
       the WiFi MAC and PHY are driven today by precompiled Espressif libraries, and the IP stack
       above them is lwIP. Both are opaque: the pools, the locking and the worst-case paths are
       exactly the things this library states as numbers everywhere else, and neither can be
-      established by reading. The end state is a `board_drivers/` radio driver and a clean stack
+      established by reading. The end state is a `core_setup/` radio driver and a clean stack
       above it that obey the same law as the rest of `src/`.
 
       Groundwork is done and in the tree: `reverse_engineering/esp32_mac/xtensa/RADIO_BLOB_REGISTERS.md` lists
@@ -583,7 +583,7 @@ Each item has a working piece in the tree and an explicit _Remaining_ note.
 
 ### Per-variant default sizing (don't kneecap larger boards)
 
-- [~] **Per-variant default profiles** (M) - **framework shipped** (`src/board_drivers/board_profiles/`): `board_profile.h`
+- [~] **Per-variant default profiles** (M) - **framework shipped** (`src/core_setup/board_profiles/`): `board_profile.h`
   selects, along three independent axes, per-variant default files, each guarded by `#ifndef` so a `-D` /
   `build_opt.h` override always wins. Axes: **chip** (`classic_defaults.h` / `s3_defaults.h` /
   `c6_defaults.h` / `p4_defaults.h`, auto-selected from `CONFIG_IDF_TARGET_*`, holding HW-specific switches +
@@ -1097,7 +1097,7 @@ Settled questions, kept so they are not re-litigated.
 **Decided 2026-07-29. The name is `ProtoCore` and the rename is done.** The library was previously
 `DeterministicESPAsyncWebServer` - literal, but a mouthful, and its "ESP" stopped being true the moment the
 multi-vendor work started. `ProtoCore` is accurate rather than merely shorter: what sits in the middle is
-protocol logic and nothing else, with silicon pushed out to `board_drivers/` and platform shells out to
+protocol logic and nothing else, with silicon pushed out to `core_setup/` and platform shells out to
 `examples/`.
 
 Shipped alongside it: the house prefix is `pc_` / `PC_` / `PROTOCORE`; the namespace question was settled in

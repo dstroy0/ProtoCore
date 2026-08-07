@@ -11,7 +11,7 @@
  * close releases either.
  */
 
-#include "board_drivers/hal/esp/esp_mnt_fs.h"
+#include "core_setup/hal/esp/esp_mnt_fs.h"
 
 #if PC_ENABLE_MNT && defined(ARDUINO)
 

@@ -11,7 +11,7 @@
  * this differs from the device: a test that wants a reboot calls pc_nvs_clear().
  */
 
-#include "board_drivers/hal/nvs.h"
+#include "core_setup/hal/nvs.h"
 
 #if !PC_VENDOR_ESP
 

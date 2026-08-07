@@ -3,7 +3,7 @@
 //
 // Host pcb driver: the target's scheduler + TCP/UDP surface, implemented for the test build.
 //
-// src/board_drivers/board_profiles/pc_platform.h aliases that surface onto the vendor's calls on
+// src/core_setup/board_profiles/pc_platform.h aliases that surface onto the vendor's calls on
 // the hot path. On the test build there is no vendor, so this file supplies the same names, the
 // same shapes, and the same member layout the core reads. That is what lets a transport TU be
 // compiled and driven on the host instead of only on silicon.

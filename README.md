@@ -297,7 +297,7 @@ Per-feature examples are under [`examples/`](examples/).
 
 - **Supported today**: ESP32 - 13 variant profiles (classic, S2, S3, S31, C2, C3, C5, C6, C61,
   H2, H21, H4, P4), each with its own flash / PSRAM defaults under
-  [`src/board_drivers/board_profiles/esp/`](src/board_drivers/board_profiles/esp/).
+  [`src/core_setup/board_profiles/esp/`](src/core_setup/board_profiles/esp/).
 - **Frameworks**: Arduino Core (2.x and 3.x), PlatformIO, ESP-IDF (as an arduino-as-ESP-IDF component)
 - **In progress**: Arm and TI C2000. The core is vendor-neutral C and the HAL selects on variant
   capability rather than on a chip check, so what remains is per-vendor silicon support, tracked

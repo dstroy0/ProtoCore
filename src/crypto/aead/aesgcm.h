@@ -19,7 +19,7 @@
  * Used by SSH aes256-gcm@openssh.com (RFC 5647: advance the invocation counter with
  * pc_aesgcm_iv_increment after every packet) and SMB 3.x transport encryption.
  *
- * The implementation is a backend under board_drivers/ selected by the vendor's PC_HAS_HW_AESGCM.
+ * The implementation is a backend under core_setup/ selected by the vendor's PC_HAS_HW_AESGCM.
  * Host-tested byte-exact against the NIST/McGrew AES-256-GCM vectors.
  *
  * @author  Douglas Quigg (dstroy0)

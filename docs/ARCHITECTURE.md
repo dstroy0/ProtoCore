@@ -310,14 +310,14 @@ designed once, correctly, up front.
 silicon-specific:**
 
 ```
-src/board_drivers/board_profiles/
+src/core_setup/board_profiles/
   board_profile.h            # common: derives (vendor, die, sizes) from build macros
   derived_sizing.h           # common (vendor-agnostic)
   esp/ { s3_defaults.h, p4_defaults.h, c6_defaults.h, ... }   # move existing here
   stm/ { stm32h7_defaults.h, ... }
   rp/  { rp2350_defaults.h, ... }
   ti/  { ... }
-src/board_drivers/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
+src/core_setup/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
   esp/ { esp_crypto_hal.h/.cpp }   # move existing here (RSA/MPI direct-register, 7 dies)
   stm/ { stm_crypto_hal.* }        # STM32 PKA / CRYP / HASH, direct-register
   rp/  { ... }                     # RP2350 SHA-256 block etc, else the crypto/ software path
@@ -333,7 +333,7 @@ src/network_drivers/physical/
   ti/  { ... }
 ```
 
-**Selector (the one new common seam):** a single `src/board_drivers/board_profiles/pc_platform.h`
+**Selector (the one new common seam):** a single `src/core_setup/board_profiles/pc_platform.h`
 maps the toolchain's target macro onto two axes and nothing else pulls vendor
 detail directly:
 
@@ -346,7 +346,7 @@ A **common selector point** then resolves the backend once per layer:
 else -> the portable software path (this is how `board_profile.h` picks the die
 profile). The crypto layer already does the vendor-agnostic thing without a
 dispatcher: `crypto/` is portable C, and each TU keys off the HAL's capability
-macro (`PC_RSA_MODMUL_HW`) that the selected `board_drivers/hal/<vendor>/` backend defines - so
+macro (`PC_RSA_MODMUL_HW`) that the selected `core_setup/hal/<vendor>/` backend defines - so
 `crypto/` never moves and never names a vendor. Common code sees an API/macro, not
 a vendor subdir.
 
@@ -524,7 +524,7 @@ octet-count expressions must replace it - which is mechanically checkable.
 
 **No vendor language or idioms in the core.** Vendor registers reach the library only through a HAL that
 auto-configures per **variant capability**, never through a chip check. This extends the pattern already
-shipped in `board_drivers/hal/` (direct registers, house-owned register map, zero vendor symbols) to every
+shipped in `core_setup/hal/` (direct registers, house-owned register map, zero vendor symbols) to every
 subsystem, and it is what has to happen before the build system can stop depending on `arduino-esp32`.
 
 **Guarantees are proven at the binary.** Where the library promises a behavior, the promise is checked

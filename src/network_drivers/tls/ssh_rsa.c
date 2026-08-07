@@ -17,7 +17,7 @@
 
 // Public host key (BSS - no secret material).
 #if PROTOCORE_HOT
-#include "board_drivers/hal/nvs.h" // the host key is read from non-volatile storage
+#include "core_setup/hal/nvs.h" // the host key is read from non-volatile storage
 #include <mbedtls/md.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>

@@ -32,7 +32,7 @@ PC_CRYPTO_HOT
 #if PROTOCORE_HOT
 
 // The whole working set in one borrow: expanded key schedule + one keystream block. Its size is a
-// per-vendor constant that belongs in board_drivers/ (see the handover) - stated here for now.
+// per-vendor constant that belongs in core_setup/ (see the handover) - stated here for now.
 typedef struct
 {
     mbedtls_aes_context aes;

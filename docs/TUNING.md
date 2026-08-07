@@ -74,7 +74,7 @@ The second argument is the alignment, and it is a **condition the core sets**, n
 favor it does. The core publishes what it provides - storage of a declared span, at a
 declared alignment, for a declared lifetime - and a vendor backend meets those
 conditions or it does not ship. The obligation runs that way round, and it is settled
-in `board_drivers/`, the only place a vendor type is named at all: the backend
+in `core_setup/`, the only place a vendor type is named at all: the backend
 `static_assert`s that its context fits the span and satisfies the alignment, so a
 vendor header that changes underneath us fails the build there, named, instead of
 becoming a run-time surprise in the core.
@@ -178,8 +178,8 @@ not exposed as knobs.
 
 The sizing defaults above are not one flat set. They used to be, tuned to fit the
 smallest classic-ESP32 DRAM ceiling, so a board with far more RAM or flash silently
-inherited the same cramped numbers. Instead, [`src/board_drivers/board_profiles/`](../src/board_drivers/board_profiles/)
-layers defaults along three independent axes, selected in [`board_profile.h`](../src/board_drivers/board_profiles/board_profile.h)
+inherited the same cramped numbers. Instead, [`src/core_setup/board_profiles/`](../src/core_setup/board_profiles/)
+layers defaults along three independent axes, selected in [`board_profile.h`](../src/core_setup/board_profiles/board_profile.h)
 (included first thing in `protocore_config.h`):
 
 - **chip** - one file per ESP-IDF die: `classic_defaults.h` (ESP32), `s2` / `s3` / `c2` /

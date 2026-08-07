@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_HTTP3
 
-#include "board_drivers/board_profiles/pc_platform.h" // pc_platform_rand_u32: the device TRNG
+#include "core_setup/board_profiles/pc_platform.h" // pc_platform_rand_u32: the device TRNG
 #include "mmgr/rawmemcpy.h"                           // proto_raw_read: each field moves into the slot
 #include "network_drivers/presentation/http/http.h"   // Http.match_and_execute
 #include "network_drivers/transport/tcp.h"            // TcpConn, conn_pool: the reserved dispatch slot

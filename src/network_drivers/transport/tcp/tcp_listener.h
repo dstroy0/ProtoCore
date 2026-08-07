@@ -31,7 +31,7 @@
 #define PROTOCORE_TCP_LISTENER_H
 
 #include "../tcp_evt.h" // TcpEvt: what a listener's queue holds. The slots themselves are tcp.h's.
-#include "board_drivers/board_profiles/pc_platform.h" // the target's queues and TCP, under our names
+#include "core_setup/board_profiles/pc_platform.h" // the target's queues and TCP, under our names
 #include "protocore_config.h"
 #include "shared_primitives/ip.h" // pc_ip: the peer address an allowlist matches
 

@@ -21,7 +21,7 @@
 #include "../diffserv.h" // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "../net_addr.h" // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "../tcp.h"      // Tcp.conn->: an accept claims its slot through the owner
-#include "board_drivers/board_profiles/pc_platform.h" // the target's queues, under our names
+#include "core_setup/board_profiles/pc_platform.h" // the target's queues, under our names
 #include "network_drivers/tls/tls.h"                  // TLS handshake begin (self-stubbing)
 #include "tcp_conn.h"                                 // TcpConn, conn_pool: the slots an accept claims
 #if PROTOCORE_HOT

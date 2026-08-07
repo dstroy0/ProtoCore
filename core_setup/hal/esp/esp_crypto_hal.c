@@ -18,7 +18,7 @@
  * registers (always accessible), never the possibly-unclocked RSA block.
  */
 
-#include "board_drivers/hal/esp/esp_crypto_hal.h"
+#include "core_setup/hal/esp/esp_crypto_hal.h"
 
 #ifdef PC_RSA_MODMUL_HW
 

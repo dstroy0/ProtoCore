@@ -6,11 +6,11 @@
  * @brief DH-2048 modexp on the Espressif RSA accelerator, via mbedtls.
  *
  * The bignum backend for a vendor profile that sets PC_HAS_HW_BIGNUM 1. Vendor headers are fine
- * here - this is board_drivers/, the partition vendor code is segregated to. The core names none of
+ * here - this is core_setup/, the partition vendor code is segregated to. The core names none of
  * them and simply calls bn_expmod_group14().
  */
 
-#include "board_drivers/board_profiles/pc_platform.h" // PC_HAS_HW_BIGNUM
+#include "core_setup/board_profiles/pc_platform.h" // PC_HAS_HW_BIGNUM
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"

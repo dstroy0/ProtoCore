@@ -8,7 +8,7 @@
  * The two things here that are not silicon-specific: the IP-egress classifier, and the fallback
  * link stubs used when the selected vendor has no physical backend (PC_PHYSICAL_HAS_BACKEND == 0 -
  * host/native builds, or a vendor whose PHY driver is not written). Each vendor's real bring-up
- * lives in board_drivers/physical/<vendor>/, chosen by the PC_VENDOR_* selector. The stubs never
+ * lives in core_setup/physical/<vendor>/, chosen by the PC_VENDOR_* selector. The stubs never
  * bring a link up, so a target without a backend still builds and runs headless.
  */
 
@@ -265,7 +265,7 @@ static const PhysicalIfaceNs s_iface_ns = {iface_add, iface_reset, iface_present
                                            iface_at,  iface_count, iface_send};
 
 // The sub-tables and the layer handle. Defined here, in the vendor-neutral core, so they name
-// whichever backend the PC_VENDOR_* selector compiled: the stubs below, board_drivers/physical/esp,
+// whichever backend the PC_VENDOR_* selector compiled: the stubs below, core_setup/physical/esp,
 // or the mock. A caller reaches L1 through Physical and never through a vendor symbol.
 static const PhysicalWifiNs s_wifi = {
     init_wifi_radio_physical, init_wifi_ap_physical, init_wifi_physical, wifi_ready, pc_net_ssid,

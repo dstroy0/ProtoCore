@@ -10,7 +10,7 @@
  * honest answer rather than a suppressed one: with a single context no borrow can cross tasks.
  */
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 
 #if PC_VENDOR_MOCK
 
