@@ -18,8 +18,9 @@
 #ifndef PROTOCORE_MEMBUILD_H
 #define PROTOCORE_MEMBUILD_H
 
+#include "mmgr/float_bits.h"       // proto_dbl_sign / proto_dbl_exp / proto_dbl_mant - the field reads
 #include "mmgr/protostr.h"         // str.len - a word per test, bounded by a known width
-#include "mmgr/rawmemcpy.h"        // proto_raw_u64 - the IEEE-754 field reads below
+#include "mmgr/rawmemcpy.h"        // proto_raw_read - the span move pc_sb_put_n is built on
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
 /** @brief Bump-append target; @c ok latches false once an append would overflow @c cap. */
@@ -325,69 +326,22 @@ static inline void pc_sb_i64(pc_sb *b, int64_t v)
     pc_sb_uint(b, mag, 10, 1);
 }
 
-// 10^(2^k). Composing a power of ten from these costs at most 9 multiplies for the whole double
-// range, instead of stepping one decade at a time.
-static const double PC_POW10_BIN[9] = {1e1, 1e2, 1e4, 1e8, 1e16, 1e32, 1e64, 1e128, 1e256};
-
 /** @brief True if @p v carries the IEEE-754 sign bit, including for -0.0 (a mask, not a divide). */
 static inline proto_bool pc_signbit(double v)
 {
-    return (proto_raw_u64(&v) >> 63) != 0;
+    return proto_dbl_sign(v) != 0u;
 }
 
 /** @brief True if @p v is an infinity: all exponent bits set, zero significand. */
 static inline proto_bool pc_isinf(double v)
 {
-    const uint64_t bits = proto_raw_u64(&v);
-    return ((bits >> 52) & 0x7FFu) == 0x7FFu && (bits & 0xFFFFFFFFFFFFFull) == 0;
+    return proto_dbl_exp(v) == 0x7FFu && proto_dbl_mant(v) == 0u;
 }
 
-/** @brief 10^p for p >= 0, by binary composition. */
-static inline double pc_pow10i(int p)
+/** @brief True if @p v is a NaN: all exponent bits set, nonzero significand. */
+static inline proto_bool pc_isnan(double v)
 {
-    double r = 1.0;
-    for (int k = 0; p != 0 && k < 9; k++, p >>= 1)
-    {
-        if (p & 1)
-        {
-            r *= PC_POW10_BIN[k];
-        }
-    }
-    return r;
-}
-
-/**
- * @brief Decimal exponent of @p v (the X such that 10^X <= |v| < 10^(X+1)), for v > 0.
- *
- * The binary exponent is a field of the IEEE-754 encoding, so it is a mask and a shift rather
- * than something to converge on: multiplying it by log10(2) in fixed point (78913/2^18) gives the
- * decimal exponent to within one, which a single comparison settles.
- */
-static inline int pc_dec_exp(double v)
-{
-    int be = (int)((proto_raw_u64(&v) >> 52) & 0x7FFu);
-    int e;
-    if (be == 0) // subnormal: no implicit leading 1, so scale into the normal range first
-    {
-        double s = v * 1e300;
-        be = (int)((proto_raw_u64(&s) >> 52) & 0x7FFu);
-        e = (int)(((int64_t)(be - 1023) * 78913) >> 18) - 300;
-    }
-    else
-    {
-        e = (int)(((int64_t)(be - 1023) * 78913) >> 18);
-    }
-    // The estimate is exact to +/-1; settle it by comparison rather than trusting the constant.
-    double p = (e >= 0) ? pc_pow10i(e) : 1.0 / pc_pow10i(-e);
-    if (p > v)
-    {
-        e--;
-    }
-    else if (v / 10.0 >= p)
-    {
-        e++;
-    }
-    return e;
+    return proto_dbl_exp(v) == 0x7FFu && proto_dbl_mant(v) != 0u;
 }
 
 /**
@@ -414,6 +368,71 @@ static inline void pc_sb_digits(pc_sb *b, uint64_t mant, unsigned digits, unsign
     }
 }
 
+/// @brief Working width of the `n * 2^s` pair below: four bits clear of the top so a decade fits.
+#define PC_G_WORK_BITS 58u
+
+/** @brief Renormalize `n * 2^s` so @p n sits in the top half of the working width. */
+static inline void pc_g_renorm(proto_u64 *n, proto_i32 *s)
+{
+    if (*n == 0u)
+    {
+        return;
+    }
+    while (*n >= (1ull << PC_G_WORK_BITS))
+    {
+        *n >>= 1;
+        *s += 1;
+    }
+    while (*n < (1ull << (PC_G_WORK_BITS - 1u)))
+    {
+        *n <<= 1;
+        *s -= 1;
+    }
+}
+
+/** @brief Multiply the pair by ten. */
+static inline void pc_g_mul10(proto_u64 *n, proto_i32 *s)
+{
+    *n *= 10u;
+    pc_g_renorm(n, s);
+}
+
+/** @brief Divide the pair by ten, shifting up first so the divide keeps the low bits. */
+static inline void pc_g_div10(proto_u64 *n, proto_i32 *s)
+{
+    *n <<= 4;
+    *s -= 4;
+    *n /= 10u;
+    pc_g_renorm(n, s);
+}
+
+/**
+ * @brief The integer part of `n * 2^s`, rounded half to even on the bits below the point.
+ *
+ * printf breaks a tie toward the even digit, and the tie is exactly the case where the bits below
+ * the point are one followed by zeros.
+ */
+static inline proto_u64 pc_g_round(proto_u64 n, proto_i32 s)
+{
+    if (s >= 0)
+    {
+        return n << (unsigned)s;
+    }
+    unsigned sh = (unsigned)(-s);
+    if (sh >= 64u)
+    {
+        return 0u;
+    }
+    proto_u64 r = n >> sh;
+    proto_u64 rem = n - (r << sh);
+    proto_u64 half = 1ull << (sh - 1u);
+    if (rem > half || (rem == half && (r & 1u) != 0u))
+    {
+        r++;
+    }
+    return r;
+}
+
 /**
  * @brief Append @p v with @p sig significant digits, choosing fixed or scientific form - the
  *        printf "%.<sig>g" rendering, including trailing-zero removal.
@@ -437,7 +456,7 @@ static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
     {
         sig = 1;
     }
-    if (v != v) // NaN is the only value that is not equal to itself
+    if (pc_isnan(v))
     {
         pc_sb_put(b, "nan");
         return;
@@ -454,57 +473,68 @@ static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
         pc_sb_put(b, "inf");
         return;
     }
-    if (v == 0.0)
+    proto_u64 be = proto_dbl_exp(v);
+    proto_u64 n = proto_dbl_mant(v);
+    if (be == 0u && n == 0u)
     {
         pc_sb_ch(b, '0');
         return;
     }
 
-    const double v0 = v;
-    const int e0 = pc_dec_exp(v);
-    int e = e0;
+    // The value IS n * 2^s. A normal carries an implicit 1 above the stored mantissa; a subnormal
+    // stores no leading 1 and denotes an exponent field of 1.
+    proto_i32 s = 1 - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
+    if (be != 0u)
+    {
+        n |= 1ull << PROTO_DBL_MANT_BITS;
+        s = (proto_i32)be - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
+    }
+    pc_g_renorm(&n, &s);
 
-    uint64_t limit = 1;
+    proto_u64 limit = 1u;
     for (unsigned i = 0; i < sig; i++)
     {
-        limit *= 10;
-    }
-    // One scaling of the ORIGINAL value, not a round trip: multiply or divide, never both.
-    int p = (int)sig - 1 - e;
-    double scaled;
-    if (p > 300 || p < -300)
-    {
-        // The scale factor alone would overflow, so bring the value to [1,10) first and scale
-        // from there. Costs tie accuracy, which carries no meaning at an exponent this extreme.
-        double norm = (e0 >= 0) ? v0 / pc_pow10i(e0) : v0 * pc_pow10i(-e0);
-        scaled = norm * pc_pow10i((int)sig - 1);
-    }
-    else
-    {
-        double pw = pc_pow10i(p < 0 ? -p : p);
-        scaled = (p >= 0) ? v0 * pw : v0 / pw;
+        limit *= 10u;
     }
 
-    // printf rounds half to even (2.5 at %.1g is "2", not "3"), so a plain +0.5 is wrong on ties.
-    uint64_t mant = (uint64_t)scaled;
-    double frac = scaled - (double)mant;
-    if (frac > 0.5 || (frac == 0.5 && (mant & 1u)))
+    // The binary exponent gives the decimal one to within a step, log10(2) being 78913/2^18. The
+    // renormalize left the value in [2^(WORK-1+s), 2^(WORK+s)), and the settle below closes the step.
+    int e = (int)(((int64_t)((int)PC_G_WORK_BITS - 1 + s) * 78913) >> 18);
+
+    // Whole decades onto the pair, so the scale is a multiply or a divide by ten and never a power
+    // of ten that leaves the range.
+    int p = (int)sig - 1 - e;
+    while (p > 0)
     {
-        mant++;
+        pc_g_mul10(&n, &s);
+        p--;
     }
-    if (mant >= limit) // the round carried into a new decade (9.9995 -> 10.000)
+    while (p < 0)
     {
-        mant /= 10;
-        e++;
+        pc_g_div10(&n, &s);
+        p++;
     }
-    // ...and the same in the other direction. If the scaling lands just under the decade the
-    // mantissa has fewer than `sig` digits, and emitting it with the point after digit one
-    // produces a malformed "0.999...e+300" whose leading digit is zero. A mantissa is always in
-    // [1, 10), so pull it back into range and pay for it in the exponent.
-    if (sig > 1 && mant < limit / 10)
+
+    // A decade out either way is one more step on the pair, then the digits are taken again from
+    // the unrounded value rather than rounded a second time.
+    proto_u64 mant = pc_g_round(n, s);
+    for (unsigned guard = 0; guard < 4u; guard++)
     {
-        mant = mant * 10 + 9; // the missing digit is unknown; 9 is the value that just rounded down
-        e--;
+        if (mant >= limit) // the round carried into a new decade (9.9995 -> 10.000)
+        {
+            pc_g_div10(&n, &s);
+            e++;
+        }
+        else if (sig > 1u && mant < limit / 10u)
+        {
+            pc_g_mul10(&n, &s);
+            e--;
+        }
+        else
+        {
+            break;
+        }
+        mant = pc_g_round(n, s);
     }
 
     unsigned digits = sig;
@@ -558,7 +588,7 @@ static inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
     {
         return;
     }
-    if (v != v)
+    if (pc_isnan(v))
     {
         pc_sb_put(b, "nan");
         return;
@@ -576,30 +606,83 @@ static inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
     }
     // Beyond the 64-bit range the integer part cannot go through uint64 at all - the cast wraps.
     // An exact %f expansion of such a magnitude needs big-integer arithmetic (~309 digits), so it
-    // falls back to the significant-digit form rather than rendering a wrapped value.
-    if (v >= 18446744073709551616.0)
+    // falls back to the significant-digit form rather than rendering a wrapped value. "At or above
+    // 2^64" is the exponent field alone: 64 unbiased is 1023 + 64 biased.
+    if (proto_dbl_exp(v) >= (PROTO_DBL_BIAS + 64))
     {
         pc_sb_g(b, v, 10); // 10 is the precision pc_sb_g is exact to; asking for more only adds noise
         return;
     }
-    double scale = 1.0;
+    if (decimals > 18u) // 10^19 leaves the 64-bit range the carry check below is done in
+    {
+        decimals = 18u;
+    }
+    proto_u64 scale = 1u;
     for (unsigned i = 0; i < decimals; i++)
     {
-        scale *= 10.0;
+        scale *= 10u;
     }
-    // Split before scaling so a large magnitude does not overflow the 64-bit fraction math.
-    double ip = (double)(uint64_t)v;
-    uint64_t frac = (uint64_t)((v - ip) * scale + 0.5);
-    if (frac >= (uint64_t)scale) // the fraction rounded up into the integer part
+
+    // The value IS mant * 2^exp2, so the digits come off those integers. A normal carries an
+    // implicit 1 above the stored mantissa; a subnormal stores no leading 1 and denotes an
+    // exponent field of 1.
+    proto_u64 mant = proto_dbl_mant(v);
+    proto_u64 be = proto_dbl_exp(v);
+    proto_i32 exp2 = 1 - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
+    if (be != 0u)
     {
-        ip += 1.0;
-        frac = 0;
+        mant |= 1ull << PROTO_DBL_MANT_BITS;
+        exp2 = (proto_i32)be - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
     }
-    pc_sb_u64(b, (uint64_t)ip);
+
+    proto_u64 ip = 0u;
+    proto_u64 frac = 0u;
+    if (exp2 >= 0)
+    {
+        ip = mant << (unsigned)exp2; // an integer already: nothing below the point to round
+    }
+    else
+    {
+        unsigned shift = (unsigned)(-exp2);
+        proto_u64 num = mant;
+        if (shift < 64u)
+        {
+            ip = mant >> shift;
+            num = mant - (ip << shift);
+        }
+        // Each digit costs one multiply and one shift, so the numerator must stay clear of the top
+        // four bits. Below 2^-60 of the value there is no digit left to decide.
+        if (shift > 60u)
+        {
+            num >>= (shift - 60u);
+            shift = 60u;
+        }
+        const proto_u64 den = 1ull << shift;
+        for (unsigned i = 0; i < decimals; i++)
+        {
+            num *= 10u;
+            proto_u64 digit = num >> shift;
+            num -= digit << shift;
+            frac = frac * 10u + digit;
+        }
+        // What is left is the remainder over the same denominator, so the tie is num*2 == den, and
+        // printf breaks it toward the even digit.
+        proto_u64 twice = num * 2u;
+        if (twice > den || (twice == den && (frac & 1u) != 0u))
+        {
+            frac++;
+        }
+    }
+    if (frac >= scale) // the fraction rounded up into the integer part
+    {
+        ip++;
+        frac = 0u;
+    }
+    pc_sb_u64(b, ip);
     if (decimals)
     {
         pc_sb_ch(b, '.');
-        pc_sb_u32w(b, (uint32_t)frac, decimals);
+        pc_sb_uint(b, frac, 10, decimals);
     }
 }
 
