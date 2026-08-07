@@ -67,13 +67,21 @@ void test_worker_self_id_roundtrip(void)
     TEST_ASSERT_EQUAL_INT(0, pc_worker_self());
 }
 
-void test_host_worker_lifecycle_is_noops(void)
+// start() raises the run flag and creates the per-worker queues; stop() lowers it. The task the
+// platform starts does not run here, so the pump is whatever the caller drives afterwards.
+void test_worker_lifecycle_raises_and_lowers_the_run_flag(void)
 {
-    // On host there is no worker task: start/stop/wake are no-ops and running() stays false.
-    Workers.start(NULL);
     TEST_ASSERT_FALSE(Workers.running());
-    Workers.wake(0);
+    Workers.start(NULL);
+    TEST_ASSERT_TRUE(Workers.running());
+    Workers.start(NULL); // idempotent: a second start does not restack the tasks
+    TEST_ASSERT_TRUE(Workers.running());
+    Workers.wake(0);  // a bound worker
+    Workers.wake(-1); // out of range, no crash
+    Workers.wake(PC_WORKER_COUNT);
     Workers.stop();
+    TEST_ASSERT_FALSE(Workers.running());
+    Workers.stop(); // idempotent
     TEST_ASSERT_FALSE(Workers.running());
 }
 
@@ -81,14 +89,30 @@ static void set_flag_to_42(void *arg)
 {
     *(int *)arg = 42;
 }
-void test_host_defer_runs_inline_and_rejects_null(void)
+
+// defer() hands the callback to the owning worker's queue; run_deferred() is what runs it, in the
+// worker's own context. The queue exists only once start() has created it.
+void test_defer_queues_and_run_deferred_runs_it(void)
 {
-    // On host the caller and pipeline are the same thread, so pc_defer runs the callback inline
-    // immediately; a null callback is rejected.
-    TEST_ASSERT_FALSE(Workers.defer(0, NULL, NULL));
     int flag = 0;
+    Workers.start(NULL); // the queues are created here, and outlive a stop
+
+    TEST_ASSERT_FALSE(Workers.defer(0, NULL, NULL));             // a null callback is refused
+    TEST_ASSERT_FALSE(Workers.defer(-1, set_flag_to_42, &flag)); // and an id outside the pool
+    TEST_ASSERT_FALSE(Workers.defer(PC_WORKER_COUNT, set_flag_to_42, &flag));
+
     TEST_ASSERT_TRUE(Workers.defer(0, set_flag_to_42, &flag));
+    TEST_ASSERT_EQUAL_INT(0, flag); // queued, not yet run
+    Workers.run_deferred(0);
     TEST_ASSERT_EQUAL_INT(42, flag);
+
+    // Draining twice does not re-run it, and a drain on an id outside the pool is a no-op.
+    flag = 0;
+    Workers.run_deferred(0);
+    Workers.run_deferred(-1);
+    TEST_ASSERT_EQUAL_INT(0, flag);
+
+    Workers.stop();
 }
 
 // The per-worker event-queue table (PC_WORKER_COUNT > 1 only): created idempotently,
@@ -164,11 +188,11 @@ int main(void)
     RUN_TEST(test_check_timeouts_reaps_only_owned_slots);
     RUN_TEST(test_pool_init_defaults_owner_zero);
     RUN_TEST(test_worker_self_id_roundtrip);
-    RUN_TEST(test_host_worker_lifecycle_is_noops);
+    RUN_TEST(test_worker_lifecycle_raises_and_lowers_the_run_flag);
     RUN_TEST(test_listener_worker_queues_init_and_lookup);
     RUN_TEST(test_enqueue_routes_by_slot_owner_and_rejects_bad_owner);
     RUN_TEST(test_accept_cb_round_robins_slot_owner);
     RUN_TEST(test_dynamic_listener_creates_worker_queues);
-    RUN_TEST(test_host_defer_runs_inline_and_rejects_null);
+    RUN_TEST(test_defer_queues_and_run_deferred_runs_it);
     return UNITY_END();
 }

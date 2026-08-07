@@ -13,17 +13,15 @@
 #include "network_drivers/session/worker.h"
 
 #include "core_setup/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
-#include "mmgr/arena.h"                               // pc_worker_set_self: identity lives with the pools it indexes
-#include "mmgr/ring.h"                                // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+#include "mmgr/arena.h"                            // pc_worker_set_self: identity lives with the pools it indexes
+#include "mmgr/ring.h"                             // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 
 // ---------------------------------------------------------------------------
 // Worker tasks
 // ---------------------------------------------------------------------------
 
-// Defined once in each build arm below, and called above both.
+// Called by pc_defer above its definition.
 static void pc_worker_wake(int worker_id);
-
-#if PROTOCORE_HOT
 
 // All worker-task state, owned by one instance (internal linkage): the pump callback, the task
 // handles, and the run flag. One named owner, unreachable from any other translation unit.
@@ -175,51 +173,15 @@ static proto_bool pc_workers_running(void)
     return PROTO_ATOMIC_LOAD(&s_worker.run);
 }
 
-#else // no task backend: handle()/tests drive the pipeline inline
-
-static void pc_workers_start(pc_worker_pump_fn pump)
-{
-    (void)pump;
-}
-static void pc_workers_stop(void)
-{
-}
-static proto_bool pc_workers_running(void)
-{
-    return PROTO_FALSE;
-}
-static void pc_worker_wake(int worker_id)
-{
-    (void)worker_id; // no worker task in this build - nothing to wake
-}
-
-// No worker task on host: the caller and the pipeline are the same thread, so a
-// deferred callback can run inline immediately (same observable effect, race-free).
-static proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
-{
-    (void)worker_id;
-    if (!fn)
-    {
-        return PROTO_FALSE;
-    }
-    fn(arg);
-    return PROTO_TRUE;
-}
-static void pc_worker_run_deferred(int worker_id)
-{
-    (void)worker_id;
-}
-
-#endif // PROTOCORE_HOT
-
-const WorkerNs Workers = {pc_worker_run_deferred,
-                          pc_workers_running,
-                          pc_workers_start,
-                          pc_workers_stop,
-                          pc_worker_wake,
-                          pc_defer
+// Designated, so a member's position in the struct does not decide what it binds to.
+const WorkerNs Workers = {
+    .run_deferred = pc_worker_run_deferred,
+    .running = pc_workers_running,
+    .start = pc_workers_start,
+    .stop = pc_workers_stop,
+    .wake = pc_worker_wake,
+    .defer = pc_defer,
 #if PC_ENABLE_PREEMPT_QUEUE
-                          ,
-                          &PreemptQueue
+    .queue = &PreemptQueue,
 #endif
 };
