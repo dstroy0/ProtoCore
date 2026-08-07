@@ -261,21 +261,36 @@ static proto_bool iface_send(uint8_t id, const uint8_t *data, uint16_t len)
     return r->send(r->id, data, len, r->ctx);
 }
 
-static const PhysicalIfaceNs s_iface_ns = {iface_add, iface_reset, iface_present, iface_kind,
-                                           iface_at,  iface_count, iface_send};
+// Designated, so a member's position in the struct does not decide what it binds to.
+static const PhysicalIfaceNs s_iface_ns = {.add = iface_add,
+                                           .reset = iface_reset,
+                                           .present = iface_present,
+                                           .kind = iface_kind,
+                                           .at = iface_at,
+                                           .count = iface_count,
+                                           .send = iface_send};
 
 // The sub-tables and the layer handle. Defined here, in the vendor-neutral core, so they name
 // whichever backend the PC_VENDOR_* selector compiled: the stubs below, core_setup/physical/esp,
 // or the mock. A caller reaches L1 through Physical and never through a vendor symbol.
-static const PhysicalWifiNs s_wifi = {
-    init_wifi_radio_physical, init_wifi_ap_physical, init_wifi_physical, wifi_ready, pc_net_ssid,
-    pc_net_channel,           pc_net_rssi,           pc_net_ap_ip};
+static const PhysicalWifiNs s_wifi = {.init_radio = init_wifi_radio_physical,
+                                      .init_ap = init_wifi_ap_physical,
+                                      .init = init_wifi_physical,
+                                      .ready = wifi_ready,
+                                      .ssid = pc_net_ssid,
+                                      .channel = pc_net_channel,
+                                      .rssi = pc_net_rssi,
+                                      .ap_ip = pc_net_ap_ip};
 
-static const PhysicalEthNs s_eth = {init_eth_physical, eth_ready};
+static const PhysicalEthNs s_eth = {.init = init_eth_physical, .ready = eth_ready};
 
-static const PhysicalIp6Ns s_ip6 = {init_ipv6_physical, net_global_ipv6, pc_ipv6_ready};
+static const PhysicalIp6Ns s_ip6 = {.init = init_ipv6_physical, .global_addr = net_global_ipv6, .ready = pc_ipv6_ready};
 
-static const PhysicalLinkNs s_link = {pc_net_egress_mac, pc_net_classify_ip, pc_net_egress_ip, pc_net_egress,
-                                      pc_net_mac};
+static const PhysicalLinkNs s_link = {.egress_mac = pc_net_egress_mac,
+                                      .classify_ip = pc_net_classify_ip,
+                                      .egress_ip = pc_net_egress_ip,
+                                      .egress = pc_net_egress,
+                                      .mac = pc_net_mac};
 
-const PhysicalNs Physical = {&s_wifi, &s_eth, &s_ip6, &s_link, &s_iface_ns, &Radio};
+const PhysicalNs Physical = {
+    .wifi = &s_wifi, .eth = &s_eth, .ip6 = &s_ip6, .link = &s_link, .iface = &s_iface_ns, .radio = &Radio};

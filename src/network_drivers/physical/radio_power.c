@@ -80,17 +80,19 @@ static void busy_release(void)
 }
 #endif // PROTOCORE_HOT
 
+// Designated, so a member's position in the struct does not decide what it binds to. The table is
+// split by a feature flag, where a positional list shifts every member below the arm at once.
 const RadioNs Radio = {
 #if PC_ENABLE_RADIO_POWER
-    &s_radio,
-    power,
-    ps_name,
-    busy_hold,
-    busy_release,
+    .ctx = &s_radio,
+    .power = power,
+    .ps_name = ps_name,
+    .busy_hold = busy_hold,
+    .busy_release = busy_release,
 #endif
-    pc_phy_ps_set,
-    pc_phy_ps_get,
-    pc_phy_tx_power_set,
-    pc_phy_monitor_begin,
-    pc_phy_monitor_set_channel,
-    pc_phy_monitor_end};
+    .ps_set = pc_phy_ps_set,
+    .ps_mode = pc_phy_ps_get,
+    .tx_power_set = pc_phy_tx_power_set,
+    .monitor_begin = pc_phy_monitor_begin,
+    .monitor_set_channel = pc_phy_monitor_set_channel,
+    .monitor_end = pc_phy_monitor_end};

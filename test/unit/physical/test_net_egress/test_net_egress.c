@@ -97,9 +97,80 @@ void test_radio_readouts_host_stub()
     TEST_ASSERT_EQUAL_STRING("y", untouched); // cap==0 -> out left untouched
 }
 
+// The MAC readouts are ESP32-only. Both report failure on host and leave the caller's buffer
+// untouched, so a caller that ignores the return transmits nothing it did not write itself.
+void test_mac_readouts_leave_the_buffer_untouched()
+{
+    static const uint8_t before[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02};
+    uint8_t mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02};
+
+    TEST_ASSERT_FALSE(Physical.link->egress_mac(mac));
+    TEST_ASSERT_EQUAL_MEMORY(before, mac, 6);
+    TEST_ASSERT_FALSE(Physical.link->mac(mac));
+    TEST_ASSERT_EQUAL_MEMORY(before, mac, 6);
+
+    TEST_ASSERT_FALSE(Physical.link->egress_mac(NULL)); // a null out is its own reason to refuse
+    TEST_ASSERT_FALSE(Physical.link->mac(NULL));
+}
+
+// Radio control with no radio reports failure rather than pretending: a caller that asks for
+// monitor mode on a target without one must be able to tell, and NONE is the truthful mode when
+// nothing can sleep.
+void test_radio_control_host_stub()
+{
+    // The L1 entry points themselves, not the Radio table that wraps them: RadioNs is incomplete
+    // here by design, so this file reaches physical.c's own stubs directly.
+    TEST_ASSERT_FALSE(pc_phy_ps_set(PC_PHY_PS_MAX_MODEM));
+    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, pc_phy_ps_get()); // the set did not take
+    TEST_ASSERT_FALSE(pc_phy_ps_set(PC_PHY_PS_MIN_MODEM));
+    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, pc_phy_ps_get());
+    TEST_ASSERT_FALSE(pc_phy_tx_power_set(11));
+    TEST_ASSERT_FALSE(pc_phy_tx_power_set(-1));
+    TEST_ASSERT_FALSE(pc_phy_monitor_begin(6, NULL));
+
+    pc_phy_monitor_set_channel(11); // no-ops, and must not crash
+    pc_phy_monitor_end();
+    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, pc_phy_ps_get());
+}
+
+// The layer handle carries every child. A child is a pointer, so a missing one is a null deref at
+// the first call rather than a link error.
+void test_layer_handle_carries_every_child()
+{
+    TEST_ASSERT_NOT_NULL(Physical.wifi);
+    TEST_ASSERT_NOT_NULL(Physical.eth);
+    TEST_ASSERT_NOT_NULL(Physical.ip6);
+    TEST_ASSERT_NOT_NULL(Physical.link);
+    TEST_ASSERT_NOT_NULL(Physical.iface);
+    TEST_ASSERT_NOT_NULL(Physical.radio);
+}
+
+// The classifier is the one link member whose answer varies with its input, so it is the one a
+// swapped binding would show up in. Every arm, and the boundary between them.
+void test_classify_is_bound_to_the_classifier()
+{
+    // Each arm returns a different kind, so no other member could stand in for this one.
+    TEST_ASSERT_EQUAL_INT(PC_IF_ANY, Physical.link->classify_ip(0, 0, 0));
+    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_STA, Physical.link->classify_ip(7u, 7u, 9u));
+    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_AP, Physical.link->classify_ip(9u, 7u, 9u));
+    TEST_ASSERT_EQUAL_INT(PC_IF_ETH, Physical.link->classify_ip(5u, 7u, 9u));
+
+    // A zero station or softAP IP never matches, so an interface that is down cannot claim the
+    // route by comparing equal to a zero egress that was already ruled out.
+    TEST_ASSERT_EQUAL_INT(PC_IF_ETH, Physical.link->classify_ip(5u, 0, 0));
+    TEST_ASSERT_EQUAL_INT(PC_IF_ANY, Physical.link->classify_ip(0, 0, 0));
+
+    // The station is tested before the softAP, so a shared IP reads as the station.
+    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_STA, Physical.link->classify_ip(7u, 7u, 7u));
+}
+
 int main()
 {
     UNITY_BEGIN();
+    RUN_TEST(test_mac_readouts_leave_the_buffer_untouched);
+    RUN_TEST(test_radio_control_host_stub);
+    RUN_TEST(test_layer_handle_carries_every_child);
+    RUN_TEST(test_classify_is_bound_to_the_classifier);
     RUN_TEST(test_classify_sta);
     RUN_TEST(test_classify_ap);
     RUN_TEST(test_classify_eth);
