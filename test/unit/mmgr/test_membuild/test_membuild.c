@@ -371,7 +371,10 @@ void test_fixed_matches_printf()
 void test_xml_escapes_the_metacharacters()
 {
     pc_sb_xml(&b, "a&b<c>d\"e");
-    TEST_ASSERT_EQUAL_size_t(pc_sb_finish(&b), strlen(out));
+    // Sequenced: finish writes the terminator, and the order of two arguments to one call is not
+    // specified, so strlen must not be one of them.
+    size_t n = pc_sb_finish(&b);
+    TEST_ASSERT_EQUAL_size_t(n, strlen(out));
     TEST_ASSERT_EQUAL_STRING("a&amp;b&lt;c&gt;d&quot;e", out);
 
     sb_reset(CAP);
