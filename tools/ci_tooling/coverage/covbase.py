@@ -25,6 +25,7 @@ import time
 
 from tools.ci_tooling.coverage import covmap
 from tools.ci_tooling.coverage import covrun
+from tools.ci_tooling.coverage import dedupe_sonar_cov
 
 ROOT = covmap.ROOT
 SKIP = {"native_pentest", "native_codeql", "native_tsan", "esp32dev"}
@@ -84,6 +85,9 @@ def main() -> int:
         cwd=ROOT,
         check=True,
     )
+    # A header's inline lines arrive once per translation unit that included it; the generic format
+    # requires each line once per file, so the union folds them before SonarQube reads it.
+    dedupe_sonar_cov.dedupe(os.path.join(ROOT, a.out))
     print(f"wrote {a.out}")
     return 1 if failed else 0
 

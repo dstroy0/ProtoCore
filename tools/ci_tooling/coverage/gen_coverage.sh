@@ -38,5 +38,8 @@ for e in $envs; do
 done
 
 gcovr --add-tracefile "coverage_reports/*.json" --sonarqube test/coverage.xml
+# A header's inline lines arrive once per translation unit that included it; the generic format
+# requires each line once per file, so the union folds them before SonarQube reads it.
+python3 -m tools.ci_tooling.coverage.dedupe_sonar_cov test/coverage.xml
 rm -rf coverage_reports
 echo "wrote test/coverage.xml"

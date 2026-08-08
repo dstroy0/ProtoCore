@@ -540,6 +540,10 @@ if [[ $COVERAGE -eq 1 ]]; then
     # coverage its own envs measured; the line-merging modes would fold two implementations into one
     # number instead.
     gcovr --add-tracefile "coverage_reports/*.json" --merge-mode-functions=separate --sonarqube "$_cov_out"
+    # separate also emits a header's inline lines once per translation unit that included it, and the
+    # generic format requires each line once per file - SonarQube rejects the whole report otherwise.
+    # The union folds those; function-level separation above is untouched.
+    (cd "$PROJECT_ROOT" && python3 -m tools.ci_tooling.coverage.dedupe_sonar_cov "$_cov_out")
     rm -rf coverage_reports
     echo "Coverage written: $_cov_out"
 fi
