@@ -4,6 +4,271 @@ All notable changes to ProtoCore are documented here.
 
 ## [Unreleased]
 
+### CI / Build
+
+- bump github/codeql-action from 4.37.4 to 4.37.6 ([`3becdef`](https://github.com/dstroy0/ProtoCore/commit/3becdef912fa08ef5843b95f41bb0669872830d5))
+
+### Changes
+
+- Merge Dependabot #25: build(deps): bump github/codeql-action from 4.37.4 to 4.37.6 ([`fcc991f`](https://github.com/dstroy0/ProtoCore/commit/fcc991f1d11b05ae146f011840320e2a93d4cf78))
+- Merge branch 'c11-target' into main ([`1810f10`](https://github.com/dstroy0/ProtoCore/commit/1810f10f3c7f1ccf8ac810132053d4fcfcb5a1b1))
+
+## [1.0.6] - 2026-08-08
+
+<details>
+<summary><b>Show Changelog for version 1.0.6 - 2026-08-08</b></summary>
+
+### Changes
+
+- Bump version: 1.0.5 → 1.0.6 ([`000a002`](https://github.com/dstroy0/ProtoCore/commit/000a002ef88aa779762b2a2dec08341ff0995919))
+
+### Features
+
+- the SSH host key comes from NVS, and TLS gets a software record layer ([`a476eb7`](https://github.com/dstroy0/ProtoCore/commit/a476eb755669d36fcabf4a0297faadbaf0383427))
+
+### Refactor
+
+- every backend pair selects on its capability, not on the build ([`22d4e53`](https://github.com/dstroy0/ProtoCore/commit/22d4e53a02e8d29924e166162cfec7d490072cd2))
+- the RSA backends select on the capability, not on the build ([`5184397`](https://github.com/dstroy0/ProtoCore/commit/518439782922de663fc65c0bcc891b635f439923))
+
+</details>
+
+## [1.0.5] - 2026-08-08
+
+<details>
+<summary><b>Show Changelog for version 1.0.5 - 2026-08-08</b></summary>
+
+### Bug Fixes
+
+- every buffer in these modules is borrowed, and ban 19 has no waiver ([`ce65d0a`](https://github.com/dstroy0/ProtoCore/commit/ce65d0adb09c1ada4813ab0edb2191b8ae1c9446))
+
+### Changes
+
+- Bump version: 1.0.4 → 1.0.5 ([`6d9549a`](https://github.com/dstroy0/ProtoCore/commit/6d9549a1a38411f1adc85395008a713322c7f616))
+
+### Features
+
+- a portable SNTP client, so the wall clock exists off the SDK's ([`d8ef1ae`](https://github.com/dstroy0/ProtoCore/commit/d8ef1ae10b629c6e8c3b98b37f000ec78641c815))
+
+</details>
+
+## [1.0.4] - 2026-08-07
+
+<details>
+<summary><b>Show Changelog for version 1.0.4 - 2026-08-07</b></summary>
+
+### Bug Fixes
+
+- three shell scripts resolved the repo root one directory short ([`cbb581f`](https://github.com/dstroy0/ProtoCore/commit/cbb581f88702305c2b9a3d453846220462e53786))
+
+### Changes
+
+- Bump version: 1.0.3 → 1.0.4 ([`3ede876`](https://github.com/dstroy0/ProtoCore/commit/3ede876c6c897e213dd033c130f93e45b93eea16))
+
+### Features
+
+- a portable responder, so mDNS exists on a part with no vendor component ([`5650016`](https://github.com/dstroy0/ProtoCore/commit/5650016d0b0dec2500eed0a816a97492769304d7))
+- one DNS name codec, and dns_server reads names through it ([`2fcff15`](https://github.com/dstroy0/ProtoCore/commit/2fcff1588e2c00b627ed064a0704137643e97ac2))
+
+### Refactor
+
+- one path, and the UDP bind is covered on the wire ([`29518f7`](https://github.com/dstroy0/ProtoCore/commit/29518f723da3430386422cae0378d9208296fd26))
+
+</details>
+
+## [1.0.3] - 2026-08-07
+
+<details>
+<summary><b>Show Changelog for version 1.0.3 - 2026-08-07</b></summary>
+
+### Bug Fixes
+
+- the QUIC server closes its port, and its tests drive the real listener ([`f885604`](https://github.com/dstroy0/ProtoCore/commit/f8856044caee60b811f91b301a8783bcfaa57bb7))
+- sequence the finish before the strlen it is compared against ([`1eb34c4`](https://github.com/dstroy0/ProtoCore/commit/1eb34c46ec2e0543c48272a3883da77f51bf0570))
+- build_src_filter reaches core_setup with a step up ([`9101e43`](https://github.com/dstroy0/ProtoCore/commit/9101e43eac3966a4bc92b21cfe50e688017b057c))
+- TcpListener bound add to stop's slot - positional init against a reordered struct ([`c16e6d8`](https://github.com/dstroy0/ProtoCore/commit/c16e6d8e3092ef57f833e176d6d0cee3dbe90810))
+- put the repo root on the include path so core_setup/ resolves from src/ ([`04bbc72`](https://github.com/dstroy0/ProtoCore/commit/04bbc7250f27fbe291cafec662ce79ce9a8a64b0))
+- repoint every board_drivers/ include at core_setup/, which the move left dead ([`8ee96f8`](https://github.com/dstroy0/ProtoCore/commit/8ee96f805e0c889a5ead944ca43d45e714b437d7))
+- the crypto vector generators resolved test/ relative to their own dir, which the move broke ([`f64434d`](https://github.com/dstroy0/ProtoCore/commit/f64434d9b4329d75d895f1c88467b2030157f3d9))
+- drop baseline entries for core_setup, which is not source ([`12913d8`](https://github.com/dstroy0/ProtoCore/commit/12913d833a717d7c1e4b16b7eff45a60fecd146f))
+- two generators could not run, and three wrote the tree when asked to check it ([`1b2dadf`](https://github.com/dstroy0/ProtoCore/commit/1b2dadfce4fc0352c3c4d8b924003341abc11c0a))
+- the paths the move left behind - tools/crypto, core_setup, and the report the two runners disagreed on ([`baae144`](https://github.com/dstroy0/ProtoCore/commit/baae144b4d55dfdd4a5c10ede1a7f9e5b227eed8))
+- rx_feed include landed inside a feature guard in two suites ([`552dfe0`](https://github.com/dstroy0/ProtoCore/commit/552dfe0e2b7ea9692824cbc5f82939120a15938e))
+- unfuck the runners' hook and quic_tls's two dead relative includes ([`6214032`](https://github.com/dstroy0/ProtoCore/commit/621403252fec7f538cebe1acd39e5378fa6af356))
+- the runners were reading Unity output for a tree that no longer exists ([`3f142fe`](https://github.com/dstroy0/ProtoCore/commit/3f142fe93bc5594fc736d080dcbd7d82ded4b898))
+- a checker that scans nothing was exiting 0 ([`31c2342`](https://github.com/dstroy0/ProtoCore/commit/31c23426213c113f4d0c9cf8bfe757a75b4be70d))
+- the code behind arms nothing compiles, which a rename rotted ([`ca2cf36`](https://github.com/dstroy0/ProtoCore/commit/ca2cf36e34df5539b7e6bf033905e8f3bc3c8430))
+- the third wake site, which no build in the matrix compiles ([`4278260`](https://github.com/dstroy0/ProtoCore/commit/42782609926e4d4d705d4a5d7453f126486150fa))
+- the target build of the tcp transport, which reached through the session join for a table it already had ([`64934ac`](https://github.com/dstroy0/ProtoCore/commit/64934acb80f6ea3191543fe6337bd9dace77bfad))
+- each ssh table lands after its declaration region, and children before parents ([`4b57ef0`](https://github.com/dstroy0/ProtoCore/commit/4b57ef0f944f2619d7590b3929bede5933379149))
+- rng's envs link protomem, and test_ssh_pqc finds the KAT the restructure moved ([`be24170`](https://github.com/dstroy0/ProtoCore/commit/be24170db65993ac103794c998edda3ba2c92f9d))
+- dtls_conn forward-declares the one function it calls above its definition ([`459363f`](https://github.com/dstroy0/ProtoCore/commit/459363f38eb51638b7b234f0ab1c59990ce8f326))
+- the OAuth2 form-body builder passed the address of its own parameter ([`771b103`](https://github.com/dstroy0/ProtoCore/commit/771b103f3f7a6f7f5f389ac26ade6d0592835c61))
+- base64.h takes protocore_config.h, the entry point that sets the widths ([`8635bf3`](https://github.com/dstroy0/ProtoCore/commit/8635bf34cb88204643399406d10acce385a75c02))
+- the workers suite names Workers, not the layer above it ([`6101f95`](https://github.com/dstroy0/ProtoCore/commit/6101f9567f8eb8d10bcc9980ae3382bcd80594cb))
+- a module's own policy list and suite name the module, not the layer root ([`c66cb41`](https://github.com/dstroy0/ProtoCore/commit/c66cb4190c8ce9477b7e529b1b3641ba5e71776c))
+- the preempt-queue header order, and two TUs naming Session without it ([`e485fb0`](https://github.com/dstroy0/ProtoCore/commit/e485fb07188d921c3070aec4f2c24d9f572333c8))
+- Physical carries the interface registry it was silently handing the radio ([`889c247`](https://github.com/dstroy0/ProtoCore/commit/889c247f9381ee72e5cb2e9bff0f20f909b8a445))
+- forward reset no longer clears a table it does not own ([`dc441ec`](https://github.com/dstroy0/ProtoCore/commit/dc441eceda7bc13cec503559033e8ab661005031))
+- restore the host busy_hold and busy_release my ps_get removal ate ([`1202db5`](https://github.com/dstroy0/ProtoCore/commit/1202db5c157b55677d2e41c585f99489c17d5f2d))
+- physical is a layer, not a vendor seam, and carries eth and ip6 unconditionally ([`4037f0a`](https://github.com/dstroy0/ProtoCore/commit/4037f0aa5d6ac3bd30703c18f7b850611b2410e2))
+- physical.h names RadioNs instead of including it, so the dependency runs one way ([`c691be3`](https://github.com/dstroy0/ProtoCore/commit/c691be36ac2c9052c747eedbb08aa90eb0fd69a7))
+- forward-declare the two close helpers and take the join header in the listener ([`4f6ea1b`](https://github.com/dstroy0/ProtoCore/commit/4f6ea1bf7baa830af61f4a85446ba82fcc8f0c88))
+- forward-declare the two teardowns and take the join header for Tcp ([`8372f26`](https://github.com/dstroy0/ProtoCore/commit/8372f26aeb99bfc6af4495311b450e89a4aeb274))
+- forward.h drops the flat declarations its definitions no longer match ([`e01684c`](https://github.com/dstroy0/ProtoCore/commit/e01684c29ad31c15b24b5a22b076032dd29eedd0))
+- the generators and the CI drift gate follow the suites into the new tree ([`02eff20`](https://github.com/dstroy0/ProtoCore/commit/02eff20ea94db17b277f58f5475922072076eec7))
+- a stack base is a section, not an env, so nothing has to ignore tests ([`1fc7f09`](https://github.com/dstroy0/ProtoCore/commit/1fc7f0994c624da9a94f2be31f6b9843eab620b8))
+- send_text measures its body with str.len, not a runops scan ([`69f7d6d`](https://github.com/dstroy0/ProtoCore/commit/69f7d6d3b398a3ac38d80fa87c9bd4657a72ec49))
+- response.c takes the runops include send_text needs ([`ae31c0d`](https://github.com/dstroy0/ProtoCore/commit/ae31c0d879926dd78df6f190c1825b5f881c4ad8))
+- the guards the dispatch-chain move left behind in protocore.c ([`e1b59c8`](https://github.com/dstroy0/ProtoCore/commit/e1b59c85d3c63ee74d4aa0efd63a61b49a5b3751))
+- the env that builds protocore.c builds the mount registry it now resets ([`4a910ea`](https://github.com/dstroy0/ProtoCore/commit/4a910eac931fe2e9d26ff1485a44bb7294315852))
+- the mount-point table empties with the routes it is indexed from ([`537e6bf`](https://github.com/dstroy0/ProtoCore/commit/537e6bf3e4a11aa1113176b776bed4336c137622))
+- the credential table empties with the routes it is indexed from ([`b728733`](https://github.com/dstroy0/ProtoCore/commit/b728733b3be8de9fa5851593fe1e14eb68d503e9))
+- the two long-lived tables take the arena end no mark walks, and declare their span ([`c601ae9`](https://github.com/dstroy0/ProtoCore/commit/c601ae95f193772a0591a14dbdfb36812ef8c731))
+- the route table borrowed from an init nothing called, so every registration failed ([`943d1ba`](https://github.com/dstroy0/ProtoCore/commit/943d1ba261562bfe94d48227d93e95dd156d0254))
+- the presentation envs build protostr, which the layer's string ops come through ([`3c79ba6`](https://github.com/dstroy0/ProtoCore/commit/3c79ba6f3259e190f8adb316cfa5fc4118a58479))
+- presentation.c includes runops.h for the header scan, and the route envs build protomem.c ([`d84f016`](https://github.com/dstroy0/ProtoCore/commit/d84f01652aa858233708848c7e97edf8b8a89bcc))
+- every env that builds protocore.c builds the network table it reaches through ([`9ffa670`](https://github.com/dstroy0/ProtoCore/commit/9ffa670da516014496bc07bb03e4687eb29f49e8))
+- native_stack_http never built network.c, whose network table protocore.c reaches through ([`14e3ae3`](https://github.com/dstroy0/ProtoCore/commit/14e3ae3a8e93b9c3b7df4860b66e5f7b3e82d0ab))
+- auth.c closed its feature guard before check() and the Auth table, which need it ([`1122998`](https://github.com/dstroy0/ProtoCore/commit/11229983a4a4f68ba55f3e737570a91225cf6a6a))
+- native_client never built ip.c, whose Ip table the listener's allowlist matches through ([`bf4d521`](https://github.com/dstroy0/ProtoCore/commit/bf4d521a46d9ec0cd31138c10c33895222367e8f))
+- the worker-queue members gate with PC_WORKER_COUNT, and native_client builds the join ([`f348ce3`](https://github.com/dstroy0/ProtoCore/commit/f348ce34a19b46fb22660e92f8d8ddf24e1c4dae))
+- an env that builds the Tcp join builds all three halves it names ([`9d4ecfa`](https://github.com/dstroy0/ProtoCore/commit/9d4ecfa4ac42d54dbf613e704943ad1690cc8cfc))
+- the moved tcp modules reach their siblings, and the observability trio gates with its flag ([`a022535`](https://github.com/dstroy0/ProtoCore/commit/a022535033e4e16cb14ea4f338b08527d0fa5cf4))
+- the moved tcp headers reach tcp_evt.h one directory up ([`e983163`](https://github.com/dstroy0/ProtoCore/commit/e98316312e876c33ac37ad1663c9c88c31611207))
+- rebinding a bound udp port reuses its slot, and the four suites assert the ring contract ([`29e4220`](https://github.com/dstroy0/ProtoCore/commit/29e4220c6c5fd419a58c693c96169937fbc1924b))
+- pc_ip tags its family in .family, not .type ([`cf58a0c`](https://github.com/dstroy0/ProtoCore/commit/cf58a0c3437277a6841e9a4d005f72454e9ec2ff))
+- the udp envs never built ip.c, whose Ip table the halves parse and format through ([`9422e02`](https://github.com/dstroy0/ProtoCore/commit/9422e0244c3778f41ec503e8b3d09ed70f216904))
+- native_stack_http never built protomem.c, so its 25 children failed to link ([`73f0496`](https://github.com/dstroy0/ProtoCore/commit/73f0496af415ee8d0577590cf026c16c2aa77244))
+- the two include breaks a full-matrix run turned up, and the stack bases it ran by mistake ([`0278e26`](https://github.com/dstroy0/ProtoCore/commit/0278e26259ad945b5da2aa16f42e81af86f1ed6a))
+- the base flags that defeated PROTOCORE_HOT_FORCE, so the target path gets a test env ([`8a7a743`](https://github.com/dstroy0/ProtoCore/commit/8a7a743d43ab2d18d7bb994a68df8c5918ec6377))
+- the dns server takes the raw mover's header, not the span module's ([`7ec4a3a`](https://github.com/dstroy0/ProtoCore/commit/7ec4a3ab7b40662f287058009d1e8254d8e3842e))
+
+### CI / Build
+
+- one example-discovery action instead of the same 29 lines in two workflows ([`f19b5b5`](https://github.com/dstroy0/ProtoCore/commit/f19b5b5cc882176324c959ab30f0389c547eaa3f))
+- build the platform the project ships on, and pull before committing to a tree CI writes ([`3b0d362`](https://github.com/dstroy0/ProtoCore/commit/3b0d362b1ff828265b50999f595b0ac6c3b8c131))
+- drop the scratch bucket map that rode along with the test move ([`300d62d`](https://github.com/dstroy0/ProtoCore/commit/300d62d066753cb8592d7055e0e9359d26ccc702))
+- the byte ops and the libc string/stdio includes become enforced bans ([`beadbf0`](https://github.com/dstroy0/ProtoCore/commit/beadbf0d23e7e932b40bb0c80ce791f1adb41c45))
+- the exec bit on the 16 shell scripts that carry a shebang and never had one ([`aee9c25`](https://github.com/dstroy0/ProtoCore/commit/aee9c25589ceedc83d152bd17586beb4a3f6bae7))
+
+### Changes
+
+- Bump version: 1.0.2 → 1.0.3 ([`7e1854b`](https://github.com/dstroy0/ProtoCore/commit/7e1854bdc7ba97700851f844916f463d379daee5))
+- clang-format the tree, and pin the one macro run it cannot converge on ([`c2d5301`](https://github.com/dstroy0/ProtoCore/commit/c2d5301458f708258f8a0d8830ea606e76d011af))
+- clang-format the two rig sketches, and the hook's own package invocation ([`13e8bda`](https://github.com/dstroy0/ProtoCore/commit/13e8bda42200731e8a2ba99fa93b50950e17e4ec))
+- back out the ssh table conversion until it carries per-member feature guards ([`8b329ff`](https://github.com/dstroy0/ProtoCore/commit/8b329ffd747c46e144273bf3666fe7a1a9f13983))
+- Revert "refactor: the listener registry moves to the listener that owns the pool" ([`a4e4145`](https://github.com/dstroy0/ProtoCore/commit/a4e4145cc06f70c4026bdcd328288e7a49577b42))
+
+### Documentation
+
+- name the crypto arms HW path and SW path, and stop calling the fallback a test path ([`12d88ab`](https://github.com/dstroy0/ProtoCore/commit/12d88ab464e38bc5a318701e7a459d69d9cb07fc))
+- stop sending readers to hardware for what the host now covers ([`447abcf`](https://github.com/dstroy0/ProtoCore/commit/447abcf81e82f2e8b64a6cfbeb547116bb0f4874))
+- log the fieldbus audit findings incl. a verified out-of-bounds axis read ([`81bb6ff`](https://github.com/dstroy0/ProtoCore/commit/81bb6ffd920cae1aedb1a75ffcc7220e964e1a73))
+- log the remaining audit findings, all ten scopes now reported ([`d214d2d`](https://github.com/dstroy0/ProtoCore/commit/d214d2d69ce8f39062ed2bbf6a090fd9b78d0e12))
+- log the security, storage and transport audit findings ([`a851419`](https://github.com/dstroy0/ProtoCore/commit/a851419e13a41fd5a8ded55a983402074389f951))
+- log the QUIC and HTTP/3 conformance findings ([`fa1e87b`](https://github.com/dstroy0/ProtoCore/commit/fa1e87b30ae664e4295e0ad37fd6377d34390080))
+- log the audit findings so far, and move the forwarding plane to L3 ([`22b3490`](https://github.com/dstroy0/ProtoCore/commit/22b34907157b99a2da6408859cd7f247efa550fc))
+- log the HTTP/2 spec violations and the untested request bridge ([`798767f`](https://github.com/dstroy0/ProtoCore/commit/798767f006c0eb3f0e41c561d732a3f23a68a43b))
+- the runner comment matches how a base is emitted ([`ed3fec2`](https://github.com/dstroy0/ProtoCore/commit/ed3fec25d8fe3e9fe6ae77ed8174ad97fe65bfd4))
+- drop the BUGS.md entry for a defect I introduced and logged ([`8639666`](https://github.com/dstroy0/ProtoCore/commit/86396660691adfb887c035929ae45df1adb83d56))
+- SRCBANNED is the ban list ([`b260cac`](https://github.com/dstroy0/ProtoCore/commit/b260cac5b86331c9fa4e827620ae598e0cfefe9a))
+- stdio is banned, and every header path in SRCBANNED now resolves ([`2b1715f`](https://github.com/dstroy0/ProtoCore/commit/2b1715f30d4ba722627c001303a09623b4ed4122))
+- cut the three law docs by 55 percent, and correct the type-name row ([`9cfc4f8`](https://github.com/dstroy0/ProtoCore/commit/9cfc4f87f5534aa16d564078ea234e388d5c8b3d))
+- log the arena sizing and id-table reset defects ([`c881d70`](https://github.com/dstroy0/ProtoCore/commit/c881d70ffd89df78efe676c7e103d41b61cca6c8))
+
+### Features
+
+- float_bits.h, and membuild reads IEEE-754 fields through it ([`8d5acf4`](https://github.com/dstroy0/ProtoCore/commit/8d5acf473921101cd80a4a510850bdacc0bf93d0))
+- the ring answers which slot, and what a held one keeps out ([`6498e32`](https://github.com/dstroy0/ProtoCore/commit/6498e32e946cd9c5d84e8f3282167371b82a464b))
+
+### Refactor
+
+- one path through the SSH client, the H3 RNG, and the packet framer ([`0f343c1`](https://github.com/dstroy0/ProtoCore/commit/0f343c17645c17359c59a0e981788b6e04a7dc9e))
+- one path, and the DMA lane runs off the DMA driver ([`aaa2547`](https://github.com/dstroy0/ProtoCore/commit/aaa25471f5713a79331fe1498231c0675854e1dd))
+- one path for the worker tasks, and designate the table ([`6858153`](https://github.com/dstroy0/ProtoCore/commit/6858153c9bdb85213ab8a9859e6789c67025aa34))
+- one path, the redundant host arm is gone ([`9349a6e`](https://github.com/dstroy0/ProtoCore/commit/9349a6ee9fdea7f14c45408880bfa068b93a6979))
+- size the outbound path from the secure pool ([`dae9b42`](https://github.com/dstroy0/ProtoCore/commit/dae9b426182391e0046fb73688baf06f33784050))
+- designate the namespace tables, and cover net egress ([`fda58d0`](https://github.com/dstroy0/ProtoCore/commit/fda58d05c89cd1640aee08a90994eaae11f72473))
+- designate UdpListener's initializer ([`ac33d37`](https://github.com/dstroy0/ProtoCore/commit/ac33d37a0ef6ef11079917bc2ee72baadccfb4a2))
+- one slot allocator - tcp's free_mask and udp's linear scan are pc_slot_* ([`9069585`](https://github.com/dstroy0/ProtoCore/commit/90695855dc3c3e4681d6038697d071a57967045e))
+- one CCOUNT measurement, and the rig build scripts find the repo again ([`c6ae4a2`](https://github.com/dstroy0/ProtoCore/commit/c6ae4a2f58e54b0b7fec33229d4caa2f15c9f405))
+- one repo_root, and gen_theme_blobs imports gen_themes instead of exec'ing it ([`8e0b9b1`](https://github.com/dstroy0/ProtoCore/commit/8e0b9b1ae9ad2c0e27a2d451c21c886d65766472))
+- board_drivers out of src/, the benching trees into test/, ci_tooling under tools/ ([`3e59ead`](https://github.com/dstroy0/ProtoCore/commit/3e59ead69fd26692d46598bf8eafd08c2134f714))
+- one rx-feed helper instead of 24 private copies of the same loop ([`8efdfdd`](https://github.com/dstroy0/ProtoCore/commit/8efdfdddf91ecbbca84629a7b1c7e2be8622e51a))
+- one package, so the tools import each other instead of guessing ([`12af671`](https://github.com/dstroy0/ProtoCore/commit/12af6717d43482e417069a6a695bca11cb88d7c5))
+- name the dns files after their subject, which their guards already did ([`b141a61`](https://github.com/dstroy0/ProtoCore/commit/b141a612ce4d472e44e8e850ca6d5c5f92377425))
+- one dma path, and the host drives the one the target takes ([`8c0eecb`](https://github.com/dstroy0/ProtoCore/commit/8c0eecbb03cab94d6dfabc75cec1fe8121dc21c9))
+- each ssh layer names its own message numbers, and a ring index wraps with a mask ([`0425962`](https://github.com/dstroy0/ProtoCore/commit/04259628e63a0e398bb36ea4834dd05f0c0ff87b))
+- ssh reaches its functions through tables cut along RFC 4251's layering ([`9951a49`](https://github.com/dstroy0/ProtoCore/commit/9951a493cdc7768b948fe712b5870c8eb49067c8))
+- crypto owns the generator, and a caller only ever asks for bytes ([`b4d5399`](https://github.com/dstroy0/ProtoCore/commit/b4d539926528499cdea183f8bbd80a598d7304ca))
+- telnet and the three dtls modules reach their functions through tables ([`3dddfe1`](https://github.com/dstroy0/ProtoCore/commit/3dddfe14fa5de5b31cce267a9d36e2e61cd3c8db))
+- the codec sub-tree reaches its functions through per-module tables ([`a07e3b8`](https://github.com/dstroy0/ProtoCore/commit/a07e3b8234e189653cc85372e4cf61378a724def))
+- base64 reaches its four functions through Base64, and gets its C linkage back ([`633285f`](https://github.com/dstroy0/ProtoCore/commit/633285fe25df3af212c1e1dabd58668dd45a2ff5))
+- layer 5 gets its tables and its root ([`3fbefd2`](https://github.com/dstroy0/ProtoCore/commit/3fbefd2d87f4b9562fe073ba3053315fcaacb3cf))
+- one enum for what an interface is and which one to match ([`f808fd1`](https://github.com/dstroy0/ProtoCore/commit/f808fd1ccc7e9df8bca6b6a8df5a43124c2bd3e9))
+- the interface registry moves to L1, which is what puts bytes on the wire ([`3516c75`](https://github.com/dstroy0/ProtoCore/commit/3516c755c700c2dce488ecde0497aa75418c11a0))
+- one enum for modem sleep ([`b97ec7e`](https://github.com/dstroy0/ProtoCore/commit/b97ec7e9c2cebe083e74c9a88669c1cfd1c0ebcf))
+- every caller above L1 reaches the physical interfaces through the handle ([`369b676`](https://github.com/dstroy0/ProtoCore/commit/369b676b4eeddb5ce5aa83c3e8fac649a3442455))
+- layer 1 gets the namespace struct a device interface should have ([`c57ea07`](https://github.com/dstroy0/ProtoCore/commit/c57ea07727a17860f346fcb4c8a62ddb68147e90))
+- tcp_conn exports one symbol; alloc_free and sndbuf join the table ([`790408c`](https://github.com/dstroy0/ProtoCore/commit/790408cf9cb971e49d71b5f30f373453016df06d))
+- tcp_listener exports one symbol; add and add_dynamic join the table ([`a43155e`](https://github.com/dstroy0/ProtoCore/commit/a43155e87683e0a9e7e9c50a936f253b7ac6fe49))
+- the forwarding plane exports one symbol and the network layer carries it ([`af66f56`](https://github.com/dstroy0/ProtoCore/commit/af66f56476b91f76ef8713d940f0f24d3f30763c))
+- tcp_client drops the flat surface no caller was using ([`d9337b9`](https://github.com/dstroy0/ProtoCore/commit/d9337b9bdaf01d2ee89d8d3114f682f7025d83f9))
+- the per-connection and per-listener DSCP marks move to the objects that own them ([`276e5c5`](https://github.com/dstroy0/ProtoCore/commit/276e5c57652199553ab3ace42c335fb9b9febd2b))
+- session stops re-declaring the presentation functions it does not call ([`6df2655`](https://github.com/dstroy0/ProtoCore/commit/6df265596d5108e890964125c8d054cce13472b2))
+- the HTTP route table leaves the network layer and takes an HTTP name ([`4bfcef0`](https://github.com/dstroy0/ProtoCore/commit/4bfcef0066df7106fe7ccf9ebb738fc82abe8cc7))
+- the HTTP/3 request bridge gets the TU its h2 twin has ([`619e880`](https://github.com/dstroy0/ProtoCore/commit/619e8804ab9196a57b199ea2c7de1c84652e0a82))
+- the HTTP poll pump moves to the HTTP root ([`be71cfe`](https://github.com/dstroy0/ProtoCore/commit/be71cfe27f52bfc04e91256bf421e6073c31672b))
+- the response senders move to server/response.c ([`32d062d`](https://github.com/dstroy0/ProtoCore/commit/32d062d190532be38a25eb5a652d9ea279d64b0a))
+- the QUIC running flag goes back to the QUIC server ([`484ed74`](https://github.com/dstroy0/ProtoCore/commit/484ed74773cb2106dd2599a7cfa8a5cb417b5579))
+- the listener registry moves to the listener that owns the pool ([`e85c964`](https://github.com/dstroy0/ProtoCore/commit/e85c964c3a8fb3b45b9c44fe7f52f88cea208cfc))
+- auth and the no-match fallback move to the HTTP root ([`cee6e7e`](https://github.com/dstroy0/ProtoCore/commit/cee6e7ec19942c9efcc4a688fb66270a0ac5a722))
+- the request dispatch chain moves to the HTTP root ([`4068015`](https://github.com/dstroy0/ProtoCore/commit/4068015a989fa9ffc3906eacdf490bf0a110a24e))
+- HttpMethod is the presentation layer's, not the application layer's ([`c1a761d`](https://github.com/dstroy0/ProtoCore/commit/c1a761d951a758e6fd568d5e588bcf0cfce448c4))
+- the HTTP root takes the version-agnostic surface out of the application layer ([`c10e60e`](https://github.com/dstroy0/ProtoCore/commit/c10e60ef2b08459167d3037cda5e0d23e09200bd))
+- keep-alive is an HTTP/1.1 header rule, so it moves down to presentation beside its tally ([`52a8735`](https://github.com/dstroy0/ProtoCore/commit/52a87350eec122e1f9e0c5f60ec50194713b9f51))
+- tcp splits into conn / listener / client under a Tcp join, and 865 call sites move ([`3efeee8`](https://github.com/dstroy0/ProtoCore/commit/3efeee852ee957eb70f70ac402ee01a9a25cccfa))
+- the udp sends take an address, so a tag is serviced once by the service that owns it ([`2719548`](https://github.com/dstroy0/ProtoCore/commit/2719548aefaff83fed06110fd81d28379caa8d4a))
+- udp.h becomes the join, and every caller moves onto Udp.listener / Udp.client ([`dabd807`](https://github.com/dstroy0/ProtoCore/commit/dabd8078f3ba9757a581a0ca09d02fdb8844415f))
+- diffserv becomes a table ([`67f01c8`](https://github.com/dstroy0/ProtoCore/commit/67f01c896136289b7bee741296dcd393583ff5a2))
+- ip is a shared primitive, not a network-layer module ([`75df9fd`](https://github.com/dstroy0/ProtoCore/commit/75df9fde10b9f5dfa9b596aef7fdee671111e356))
+- ip becomes a table, reached through network ([`0c16338`](https://github.com/dstroy0/ProtoCore/commit/0c16338e5d1705beedcd562491126d6fbab47dbb))
+- the dns server moves off implicit libc onto mem and str ([`0c3a467`](https://github.com/dstroy0/ProtoCore/commit/0c3a4676e445b199dda409076c1ba9e44aeb7365))
+- dns joins under network; Route carries ids, not other modules' state ([`4e123fd`](https://github.com/dstroy0/ProtoCore/commit/4e123fdd63f47c0377b0a1b0eda708b558bc27f3))
+
+### Testing
+
+- unwind a task entry, and honor the queue depth create asked for ([`d23634c`](https://github.com/dstroy0/ProtoCore/commit/d23634c8ed071313332093de88442b0855f4a919))
+- the host platform can run a started task ([`3563ce2`](https://github.com/dstroy0/ProtoCore/commit/3563ce23fb00d6e37089966ff7492a6caa7ea5d5))
+- close two gaps in the DMA host mock ([`3babdc4`](https://github.com/dstroy0/ProtoCore/commit/3babdc445d3cb5aa8ea371b5bb27ad40142f5b27))
+- per-file test groups under the owning layer ([`a766764`](https://github.com/dstroy0/ProtoCore/commit/a7667642ded014af0542d894f382adeb970c7333))
+- a suite for the ring, and the shift it could not survive ([`39caf49`](https://github.com/dstroy0/ProtoCore/commit/39caf49975a04ea8ad64540ee54ae3f95b1f684c))
+- give the multi-worker hot arm a witness ([`24097ea`](https://github.com/dstroy0/ProtoCore/commit/24097ea1d0c0ffd64fbe358fb96ddc1e3e8692fd))
+- the host queue holds what is posted to it ([`f375c11`](https://github.com/dstroy0/ProtoCore/commit/f375c1121bb0278c92b16c8e804b2e619886f3f6))
+- the L1 interface registry gets its own suite, and the dead forward sizing goes ([`14611df`](https://github.com/dstroy0/ProtoCore/commit/14611df28365015f00faca999cc9511533b6760b))
+- native_forward links L1, the layer it now sends through ([`4708320`](https://github.com/dstroy0/ProtoCore/commit/4708320cd3a63f792c1f09f5e1b27d6faa159a41))
+- native_net_egress links the radio the layer handle carries ([`b1bb3e8`](https://github.com/dstroy0/ProtoCore/commit/b1bb3e8db220c6cbbf244b736401625bfd1edd25))
+- native_radio_power links the L1 core whose phy functions the radio table names ([`850301f`](https://github.com/dstroy0/ProtoCore/commit/850301fec2d2b093720a9a1173c94ece953ca8a9))
+- native_tcp_hot links the arena that carries worker identity ([`6c50d36`](https://github.com/dstroy0/ProtoCore/commit/6c50d3628bbad083d1a1fceabff58f5580f39271))
+- native_tcp_hot links the Tcp join and the worker its target arm calls ([`6d0a4e5`](https://github.com/dstroy0/ProtoCore/commit/6d0a4e5a5eed1d345d2ffba6890e3c265bc0f90e))
+- native_tcp_hot drives the TCP target path through the mock harness ([`4021535`](https://github.com/dstroy0/ProtoCore/commit/4021535596c9bd1d7d725e0a65d44a178994e826))
+- the runner finds pio in the venv both Linux envs install it to ([`266e436`](https://github.com/dstroy0/ProtoCore/commit/266e436810bd840cd2337bad0fab731faec01231))
+- a protocol's crypto suite sits with the protocol, not under crypto ([`bab7762`](https://github.com/dstroy0/ProtoCore/commit/bab77625c3945f9b0efa134246558a59b68e2344))
+- the suite tree sorts by what a test stands up, then by the module it covers ([`4d34ef3`](https://github.com/dstroy0/ProtoCore/commit/4d34ef3d254a72dc7ee0c6ba73c06feeb7c18207))
+- a base env says it runs no suite instead of the runner blocklisting it ([`4b47961`](https://github.com/dstroy0/ProtoCore/commit/4b47961a0dee7b67f412b991caba0e1b92a1a65e))
+- native_h3_server builds the bridge TU and calls it by its own name ([`e1b2ac0`](https://github.com/dstroy0/ProtoCore/commit/e1b2ac0988443fbd46ade27526311bbe4163e60a))
+- the v3 trap test asserts the refusal the service actually makes ([`5a8a9ba`](https://github.com/dstroy0/ProtoCore/commit/5a8a9ba759faa75f01b5470df14d8ffc6811cbff))
+- the suites hand the sends an address, and statsd is given one it can parse ([`7aff713`](https://github.com/dstroy0/ProtoCore/commit/7aff7134e18b17f4fa613c42a0a54b9d6f23dbb8))
+- the client-side suites read the client capture, after the poll that writes it ([`49b318e`](https://github.com/dstroy0/ProtoCore/commit/49b318e9b2545bdf8bca82863834584aa7eb9e83))
+
+</details>
+
+## [1.0.2] - 2026-08-05
+
+<details>
+<summary><b>Show Changelog for version 1.0.2 - 2026-08-05</b></summary>
+
 ### Bug Fixes
 
 - the four auth examples now enable PC_ENABLE_AUTH ([`2eaec7a`](https://github.com/dstroy0/ProtoCore/commit/2eaec7a12c0ed9e7a8ae9a8a83e3a5a51fc64b28))
@@ -41,6 +306,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`8c83fb4`](https://github.com/dstroy0/ProtoCore/commit/8c83fb43633f6449f7a6e93bd7c8fc097d413dec))
+- update CHANGELOG.md [skip ci] ([`68d457c`](https://github.com/dstroy0/ProtoCore/commit/68d457cbfc97c130d0b000eb6488f3f9d0ae8fd2))
 - rename the format workflow, since clang-format is one step of several ([`098c792`](https://github.com/dstroy0/ProtoCore/commit/098c792fc28064d64095588d26dfb4ee841fc1a7))
 - gate Python formatting, and keep vendored components out of the C style sweep ([`225a20c`](https://github.com/dstroy0/ProtoCore/commit/225a20c2184840583c8e648516f07411fa991070))
 - unblock the two formatting gates ([`8660430`](https://github.com/dstroy0/ProtoCore/commit/86604301072979c929252f2c3c53ac0cee34b1e9))
@@ -53,6 +320,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Bump version: 1.0.1 → 1.0.2 ([`cf46e12`](https://github.com/dstroy0/ProtoCore/commit/cf46e12721e634b80680771bda4b1dfdc494babe))
 - Merge pull request #24 from dstroy0/c11-target ([`4d9b245`](https://github.com/dstroy0/ProtoCore/commit/4d9b2457562f378c3c27da78300393c9e7f2fbe9))
 - Merge remote-tracking branch 'origin/main' into c11-target ([`a2a5fff`](https://github.com/dstroy0/ProtoCore/commit/a2a5fff60842e82fa7cb978a05eee75ac457d3e3))
 - Merge pull request #23 from dstroy0/c11-target ([`3d74266`](https://github.com/dstroy0/ProtoCore/commit/3d74266b1d59f5f7492bf27af1f41180a02f7958))
@@ -60,6 +328,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- the radio keep-awake note names Radio.busy_hold ([`afe2fcd`](https://github.com/dstroy0/ProtoCore/commit/afe2fcda2f31f8b647952c9f5bd3e91c52ec11ea))
+- update ESP32 build footprints [skip ci] ([`2391111`](https://github.com/dstroy0/ProtoCore/commit/239111185a5b5812356651559e9901fd64234c64))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`8ad23ae`](https://github.com/dstroy0/ProtoCore/commit/8ad23ae384ce2b203ffdb128423865693f34085e))
 - regenerate what the two new feature flags feed, and name the stack idemIP ([`c9587e6`](https://github.com/dstroy0/ProtoCore/commit/c9587e60135f1dc674abbc23b8b515d84377b0d4))
 - regenerate the README feature tables for SMBus and PMBus ([`5905026`](https://github.com/dstroy0/ProtoCore/commit/590502681bc0e295af698f92f9b822be283d74d7))
 - the docs badge names ProtoCore, not the host it sits on ([`1ec8834`](https://github.com/dstroy0/ProtoCore/commit/1ec88344dee7cf34c8bad2c5882b9275d3df0ef7))
@@ -79,6 +350,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Features
 
+- protomem, the byte-span module ([`a24ded6`](https://github.com/dstroy0/ProtoCore/commit/a24ded6694269ec21308787cc6907da7dfc1ee46))
 - gate the comment law, and sweep the CRC history clause ([`f64a89f`](https://github.com/dstroy0/ProtoCore/commit/f64a89f2e00f5440e507d4940974d79c356105d2))
 - per-transfer log with timestamps in the host bus capture ([`4b4e0a3`](https://github.com/dstroy0/ProtoCore/commit/4b4e0a301e66a7ef74aca82df553df3886fb7f70))
 - record the wire on host builds, so driver output is testable end to end ([`af9fe85`](https://github.com/dstroy0/ProtoCore/commit/af9fe85441c08bc5d1eb7603f75828fa68feae65))
@@ -90,6 +362,14 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- mmgr owns the byte layer; auth owns its credentials ([`a469bad`](https://github.com/dstroy0/ProtoCore/commit/a469bad40acad07d3340348911af385860862f40))
+- the route table lives in the secure pool ([`3ef5c5a`](https://github.com/dstroy0/ProtoCore/commit/3ef5c5a508ce3c05bebe39f5c99c38da6fc57b7f))
+- route exports one symbol, carried as network.route ([`b602404`](https://github.com/dstroy0/ProtoCore/commit/b602404e61834867ba2548be2dc9e83f2e87ece1))
+- network exports one symbol, Network ([`3c36382`](https://github.com/dstroy0/ProtoCore/commit/3c36382b19157449fd4810ee4eab16686a0fedd7))
+- roaming moves its bytes through mem ([`8179f74`](https://github.com/dstroy0/ProtoCore/commit/8179f740395bb98c71b03714222bb6f11386c747))
+- roaming exports one symbol, Roam ([`2a41dc3`](https://github.com/dstroy0/ProtoCore/commit/2a41dc3ede270e23344a945906a39162508269e2))
+- datalink exports one symbol, Datalink ([`ad3f5fd`](https://github.com/dstroy0/ProtoCore/commit/ad3f5fd45a8fa330662a439319c1c341807e4ce8))
+- radio_power exports one symbol, Radio ([`7ee0de9`](https://github.com/dstroy0/ProtoCore/commit/7ee0de92b608b240f20faf507de553c8a977addb))
 - fold five copies of the hex digit table onto PC_HEX_LOWER ([`9c0726a`](https://github.com/dstroy0/ProtoCore/commit/9c0726ada37ef9c4c0d8bb162946b4e308d7feff))
 - move the last three drivers onto the bus owners ([`6e5116a`](https://github.com/dstroy0/ProtoCore/commit/6e5116a140e7a81ba4f2daaf71d53b84cd278c93))
 - split the xtensa-only radio tools into their own subdirectory ([`0dd66cd`](https://github.com/dstroy0/ProtoCore/commit/0dd66cdd6656b47a97b5a5765d571da75a17e5fa))
@@ -99,12 +379,22 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- pointer nesting instead of by value ([`3a57057`](https://github.com/dstroy0/ProtoCore/commit/3a57057d1201b6a8a6e89c467a85b0827cd1e2d7))
+- does a layer object embed a module's struct by value across a TU ([`72e1e29`](https://github.com/dstroy0/ProtoCore/commit/72e1e29f89b28bd5729a6ac38f0cc47116ba08eb))
+- roaming borrows its BTM hint instead of declaring it ([`79a31df`](https://github.com/dstroy0/ProtoCore/commit/79a31dfe53cff86b4372ee3f397753668fded7b2))
+- native_roaming builds protomem ([`7a8881a`](https://github.com/dstroy0/ProtoCore/commit/7a8881a42907382922bea5a13a7bb0e646bdc39d))
+- a consumer TU for the converted radio module ([`a8eb1be`](https://github.com/dstroy0/ProtoCore/commit/a8eb1beb3edd5db089626b96cfa97b1ba5581eee))
+- keep the canary's build to the library and its own main ([`ed37c2f`](https://github.com/dstroy0/ProtoCore/commit/ed37c2f4bdc43d89c495d4db5c60a1740d564961))
+- measure whether the namespace-struct fold survives a TU boundary ([`3cfd435`](https://github.com/dstroy0/ProtoCore/commit/3cfd4352550968c4dda2bc9e4669eaa2019d38c8))
+- a C ESP-IDF canary for the conversion ([`339f235`](https://github.com/dstroy0/ProtoCore/commit/339f23584ea6d65b4c50fe06b8111c3467ea521f))
 - price the namespace struct in C on the target toolchain ([`4628a54`](https://github.com/dstroy0/ProtoCore/commit/4628a543d55ff485ff3934cfdc8ff6967d600769))
 - keep the bench leaves out of line so the strip is what gets measured ([`1525354`](https://github.com/dstroy0/ProtoCore/commit/152535472471b6d83321c6f2f571b77b01ce2a46))
 - assert the INA219 wire output instead of a host refusal ([`0b3fc66`](https://github.com/dstroy0/ProtoCore/commit/0b3fc66b388e8f27ec061997124b0f323e7d1709))
 - assert the drivers' wire output instead of a host refusal ([`dfa44ac`](https://github.com/dstroy0/ProtoCore/commit/dfa44ac74a68803ece33d10c48d038ec276ef995))
 - assert the SMBus and PMBus wire output instead of a host refusal ([`8bc0806`](https://github.com/dstroy0/ProtoCore/commit/8bc0806a1ac2541ad86d84c0d90bc6b5292b457d))
 - assert the INA219 register write per transaction, not across the stream ([`9d3db6c`](https://github.com/dstroy0/ProtoCore/commit/9d3db6c9a5994dcbca5f0cf8cd476668f52291ba))
+
+</details>
 
 ## [1.0.1] - 2026-08-04
 
@@ -183,7 +473,7 @@ All notable changes to ProtoCore are documented here.
 - -std=c11 hid strnlen from every native build ([`262ab91`](https://github.com/dstroy0/ProtoCore/commit/262ab9117328b0d44e8bbfbccfe55d04df65aefe))
 - dma.c's byte_ring becomes free functions over a pointer ([`1306696`](https://github.com/dstroy0/ProtoCore/commit/1306696793cebae80b39df6d28ddd2259b2bd6bc))
 - static inline in the C headers ([`52c571e`](https://github.com/dstroy0/ProtoCore/commit/52c571ed8dcf918bc88895cb51807c0a6e8e94de))
-- hand the listen pcb back to the stack on Tcp.listener->stop ([`b70bb7e`](https://github.com/dstroy0/ProtoCore/commit/b70bb7eb79f1881eccd816baec890d2cce10d045))
+- hand the listen pcb back to the stack on listener_stop ([`b70bb7e`](https://github.com/dstroy0/ProtoCore/commit/b70bb7eb79f1881eccd816baec890d2cce10d045))
 - restore the SNMP_TAG_ prefix, WAL pointer params, and the BerEnc forward typedef ([`88efecc`](https://github.com/dstroy0/ProtoCore/commit/88efecc73952d060f17b5378a5058094bb6b0557))
 - refuse to remove a mount root, at the layer that knows it is one ([`a1d50e6`](https://github.com/dstroy0/ProtoCore/commit/a1d50e62f6c72f058df89a8b1b87e22f84776025))
 - search the Allow buffer to its NUL, not to its capacity ([`3a93744`](https://github.com/dstroy0/ProtoCore/commit/3a9374409315b928f31ef27fe29b4e3e12d54e70))
@@ -507,7 +797,7 @@ All notable changes to ProtoCore are documented here.
 - the KAT suite uses the keyed GCM handle and the explicit tag output ([`53c3d6d`](https://github.com/dstroy0/ProtoCore/commit/53c3d6d4c48b10ed61143490eb81b3c4b28da391))
 - typedef the KAT structs, name ntlm's nibble lambda, restore SMB2_SIGN_ALGO_AES_CMAC ([`a06f4da`](https://github.com/dstroy0/ProtoCore/commit/a06f4dafac8ee69ceb81adf2cb65b11b432cffa2))
 - name the hex-nibble lambdas, five more suites to C ([`45046ce`](https://github.com/dstroy0/ProtoCore/commit/45046ce30ccd636f7de8a6a0a83c8b33180b804f))
-- call Tcp.conn->timeout_ms instead of comparing its address ([`569d2c7`](https://github.com/dstroy0/ProtoCore/commit/569d2c79d37b948cbe1a84ed65d381afd9845898))
+- call proto_tcp_conn_timeout_ms instead of comparing its address ([`569d2c7`](https://github.com/dstroy0/ProtoCore/commit/569d2c79d37b948cbe1a84ed65d381afd9845898))
 - the transport helpers the qualifier strip left bare ([`6a3dbe6`](https://github.com/dstroy0/ProtoCore/commit/6a3dbe68dde65896e6558ab5f7ef1d0058875098))
 - the host seam grows the one-shot failure hooks the transport suite drives ([`9ebb0c2`](https://github.com/dstroy0/ProtoCore/commit/9ebb0c28a52b45ca4dddf3eb6da2db5a6865d7d6))
 - give the host seam the one-shot close failure, pass the worker id to the sweep ([`9d9d8be`](https://github.com/dstroy0/ProtoCore/commit/9d9d8bee9e43bddec1149291c9c2346403603483))
