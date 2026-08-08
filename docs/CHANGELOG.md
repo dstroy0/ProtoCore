@@ -6,6 +6,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- Deflate and Inflate bind their instance inside the gate that declares its type ([`e526098`](https://github.com/dstroy0/ProtoCore/commit/e526098d036c4ac86b76d41e0b20564162ea95eb))
+- the bus guards ask for the capability instead of asking about the build ([`aeb242e`](https://github.com/dstroy0/ProtoCore/commit/aeb242e0989b129575397013abf0a2f3ab8657c6))
 - CodeQL traces every native env, and native_codeql links again ([`10c3865`](https://github.com/dstroy0/ProtoCore/commit/10c3865506d5d6e8dab9fdb51ee18cd391a21aad))
 - fold the repeated header lines gcovr emits, which SonarQube rejects outright ([`c3333fe`](https://github.com/dstroy0/ProtoCore/commit/c3333fea268012077a4cad888bb5b2e7d9b68058))
 - gen_compiledb and compile_examples climbed two levels to the repo root, not three ([`9d2e963`](https://github.com/dstroy0/ProtoCore/commit/9d2e9634479bf3e38c705c5b43cce85d3e97ec04))
@@ -13,6 +15,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`94c236e`](https://github.com/dstroy0/ProtoCore/commit/94c236e9602c559cab35c22492818b0b9295d4a2))
 - ratchet the test-coverage floor to 16, closing mdns_service, network and route ([`c493e2e`](https://github.com/dstroy0/ProtoCore/commit/c493e2ee08b86b5aa9dc6a1a71fd896c279e3452))
 - update CHANGELOG.md [skip ci] ([`28256b3`](https://github.com/dstroy0/ProtoCore/commit/28256b3521e7b83c96dc6827e7ca62cadd40f9ea))
 - update CHANGELOG.md [skip ci] ([`2ada79a`](https://github.com/dstroy0/ProtoCore/commit/2ada79a0a2ed8f0714d8eda29c1e019357413674))
@@ -27,6 +30,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Bump version: 1.0.7 → 1.0.8 ([`9701de6`](https://github.com/dstroy0/ProtoCore/commit/9701de6c00b710b2e684f7cf31931d4431e09dc7))
 - Merge Dependabot #22: build(deps): bump actions/cache from 4 to 6 ([`20c8979`](https://github.com/dstroy0/ProtoCore/commit/20c8979accb8fe4d889b0a3711754c9927d61c3f))
 - Merge remote-tracking branch 'origin/main' ([`02ffde5`](https://github.com/dstroy0/ProtoCore/commit/02ffde5f24e009dc0a64d68bb424a99620499c4c))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`a7b482b`](https://github.com/dstroy0/ProtoCore/commit/a7b482ba8f1299aa11891e77156ab60a233fba4a))
