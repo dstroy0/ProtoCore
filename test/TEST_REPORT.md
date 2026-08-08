@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-08 15:53:15
+**Generated:** 2026-08-08 18:55:27
 **Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 5966 passed, 5 failed - 1318s
+**Result:** ❌ 6076 passed, 3 failed - 1885s
 
 ---
 
@@ -2510,7 +2510,7 @@ _Dispatch-level RFC 7231 compliance:_
 
 ---
 
-## test_application - native_application - ✅ 93 passed
+## test_application - native_application - ✅ 95 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -2591,27 +2591,29 @@ _Unit, stress, and race-condition tests for Layer 7 (Application)._
 |  70 | `test_stats_counters_ignore_sub_200_status`                |   ✅   | Stats counters ignore sub 200 status                                                      |
 |  71 | `test_response_trailer_cors_block_and_null_disable`        |   ✅   | Response trailer cors block and null disable                                              |
 |  72 | `test_cache_control_null_clears_header`                    |   ✅   | Cache control null clears header                                                          |
-|  73 | `test_path_param_capture_limits`                           |   ✅   | Path param capture limits                                                                 |
-|  74 | `test_worker_owner_filter_skips_foreign_slot`              |   ✅   | Worker owner filter skips foreign slot                                                    |
-|  75 | `test_slot_poll_requires_registered_handler_with_poll`     |   ✅   | Slot poll requires registered handler with poll                                           |
-|  76 | `test_entity_too_large_auto_413`                           |   ✅   | Entity too large auto 413                                                                 |
-|  77 | `test_allow_header_dedupes_repeated_method`                |   ✅   | Allow header dedupes repeated method                                                      |
-|  78 | `test_error_close_head_and_dead_connection`                |   ✅   | Error close head and dead connection                                                      |
-|  79 | `test_transfer_encoding_on_semantic_ingress_is_501`        |   ✅   | Transfer encoding on semantic ingress is 501                                              |
-|  80 | `test_static_mount_rejects_non_get_methods`                |   ✅   | Static mount rejects non get methods                                                      |
-|  81 | `test_send_null_payload_and_slot_bounds`                   |   ✅   | Send null payload and slot bounds                                                         |
-|  82 | `test_send_body_framing_paths`                             |   ✅   | HEAD: headers only, but Content-Length still describes the would-be body.                 |
-|  83 | `test_send_empty_and_redirect_dead_connection_guards`      |   ✅   | Send empty and redirect dead connection guards                                            |
-|  84 | `test_send_template_placeholder_edges`                     |   ✅   | Send template placeholder edges                                                           |
-|  85 | `test_send_chunked_without_source`                         |   ✅   | Send chunked without source                                                               |
-|  86 | `test_chunked_pump_small_window_and_connection_lost`       |   ✅   | Chunked pump small window and connection lost                                             |
-|  87 | `test_response_header_null_value_empty_attrs_and_overflow` |   ✅   | Response header null value empty attrs and overflow                                       |
-|  88 | `test_mime_type_extension_edges`                           |   ✅   | Mime type extension edges                                                                 |
-|  89 | `test_ws_upgrade_without_connect_handler`                  |   ✅   | Ws upgrade without connect handler                                                        |
-|  90 | `test_ws_dispatch_without_message_or_close_handler`        |   ✅   | Ws dispatch without message or close handler                                              |
-|  91 | `test_ws_upgrade_handshake_gate`                           |   ✅   | Ws upgrade handshake gate                                                                 |
-|  92 | `test_ws_send_api_inactive_error_state_and_dead_slot`      |   ✅   | Ws send api inactive error state and dead slot                                            |
-|  93 | `test_upgrade_entry_points_on_dead_slot`                   |   ✅   | Upgrade entry points on dead slot                                                         |
+|  73 | `test_empty_route_pattern_matches_nothing`                 |   ✅   | Empty route pattern matches nothing                                                       |
+|  74 | `test_path_param_capture_limits`                           |   ✅   | Path param capture limits                                                                 |
+|  75 | `test_path_param_segment_mismatches`                       |   ✅   | Path param segment mismatches                                                             |
+|  76 | `test_worker_owner_filter_skips_foreign_slot`              |   ✅   | Worker owner filter skips foreign slot                                                    |
+|  77 | `test_slot_poll_requires_registered_handler_with_poll`     |   ✅   | Slot poll requires registered handler with poll                                           |
+|  78 | `test_entity_too_large_auto_413`                           |   ✅   | Entity too large auto 413                                                                 |
+|  79 | `test_allow_header_dedupes_repeated_method`                |   ✅   | Allow header dedupes repeated method                                                      |
+|  80 | `test_error_close_head_and_dead_connection`                |   ✅   | Error close head and dead connection                                                      |
+|  81 | `test_transfer_encoding_on_semantic_ingress_is_501`        |   ✅   | Transfer encoding on semantic ingress is 501                                              |
+|  82 | `test_static_mount_rejects_non_get_methods`                |   ✅   | Static mount rejects non get methods                                                      |
+|  83 | `test_send_null_payload_and_slot_bounds`                   |   ✅   | Send null payload and slot bounds                                                         |
+|  84 | `test_send_body_framing_paths`                             |   ✅   | HEAD: headers only, but Content-Length still describes the would-be body.                 |
+|  85 | `test_send_empty_and_redirect_dead_connection_guards`      |   ✅   | Send empty and redirect dead connection guards                                            |
+|  86 | `test_send_template_placeholder_edges`                     |   ✅   | Send template placeholder edges                                                           |
+|  87 | `test_send_chunked_without_source`                         |   ✅   | Send chunked without source                                                               |
+|  88 | `test_chunked_pump_small_window_and_connection_lost`       |   ✅   | Chunked pump small window and connection lost                                             |
+|  89 | `test_response_header_null_value_empty_attrs_and_overflow` |   ✅   | Response header null value empty attrs and overflow                                       |
+|  90 | `test_mime_type_extension_edges`                           |   ✅   | Mime type extension edges                                                                 |
+|  91 | `test_ws_upgrade_without_connect_handler`                  |   ✅   | Ws upgrade without connect handler                                                        |
+|  92 | `test_ws_dispatch_without_message_or_close_handler`        |   ✅   | Ws dispatch without message or close handler                                              |
+|  93 | `test_ws_upgrade_handshake_gate`                           |   ✅   | Ws upgrade handshake gate                                                                 |
+|  94 | `test_ws_send_api_inactive_error_state_and_dead_slot`      |   ✅   | Ws send api inactive error state and dead slot                                            |
+|  95 | `test_upgrade_entry_points_on_dead_slot`                   |   ✅   | Upgrade entry points on dead slot                                                         |
 
 </details>
 
@@ -6826,7 +6828,7 @@ _Host tests for the Waveshare HMMD mmWave radar codec (services/peripherals/hmmd
 
 ---
 
-## test_rcwl0516 - native_rcwl0516 - ✅ 10 passed
+## test_rcwl0516 - native_rcwl0516 - ✅ 12 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -6835,16 +6837,18 @@ _Host tests for the one-GPIO presence facade (services/peripherals/rcwl0516): th
 
 |   # | Test                                                | Status | Description                                                         |
 | --: | :-------------------------------------------------- | :----: | :------------------------------------------------------------------ |
-|   1 | `test_starts_absent`                                |   ✅   | Starts absent                                                       |
-|   2 | `test_high_asserts_only_after_debounce`             |   ✅   | High asserts only after debounce                                    |
-|   3 | `test_chatter_shorter_than_debounce_never_asserts`  |   ✅   | Chatter shorter than debounce never asserts                         |
-|   4 | `test_hold_bridges_the_gap_after_pin_drops`         |   ✅   | Hold bridges the gap after pin drops                                |
-|   5 | `test_retrigger_gaps_stay_one_continuous_span`      |   ✅   | Retrigger gaps stay one continuous span                             |
-|   6 | `test_event_fires_once_per_transition`              |   ✅   | Event fires once per transition                                     |
-|   7 | `test_wrap_safe_across_millis_rollover`             |   ✅   | Wrap safe across millis rollover                                    |
-|   8 | `test_zero_debounce_and_zero_hold_are_pass_through` |   ✅   | Zero debounce and zero hold are pass through                        |
-|   9 | `test_repeated_and_static_now_is_harmless`          |   ✅   | Polling faster than the clock ticks must not stall or double-count. |
-|  10 | `test_rcwl_defaults_and_null_guards`                |   ✅   | Rcwl defaults and null guards                                       |
+|   1 | `test_binding_refuses_before_begin`                 |   ✅   | Binding refuses before begin                                        |
+|   2 | `test_starts_absent`                                |   ✅   | Starts absent                                                       |
+|   3 | `test_high_asserts_only_after_debounce`             |   ✅   | High asserts only after debounce                                    |
+|   4 | `test_chatter_shorter_than_debounce_never_asserts`  |   ✅   | Chatter shorter than debounce never asserts                         |
+|   5 | `test_hold_bridges_the_gap_after_pin_drops`         |   ✅   | Hold bridges the gap after pin drops                                |
+|   6 | `test_retrigger_gaps_stay_one_continuous_span`      |   ✅   | Retrigger gaps stay one continuous span                             |
+|   7 | `test_event_fires_once_per_transition`              |   ✅   | Event fires once per transition                                     |
+|   8 | `test_wrap_safe_across_millis_rollover`             |   ✅   | Wrap safe across millis rollover                                    |
+|   9 | `test_zero_debounce_and_zero_hold_are_pass_through` |   ✅   | Zero debounce and zero hold are pass through                        |
+|  10 | `test_repeated_and_static_now_is_harmless`          |   ✅   | Polling faster than the clock ticks must not stall or double-count. |
+|  11 | `test_rcwl_defaults_and_null_guards`                |   ✅   | Rcwl defaults and null guards                                       |
+|  12 | `test_binding_samples_the_pin`                      |   ✅   | Binding samples the pin                                             |
 
 </details>
 
@@ -6865,7 +6869,7 @@ _Unit tests for the SEN0192 microwave motion sensor's pure presence state machin
 |   4 | `test_active_low_polarity`               |   ✅   | Active low polarity                                                                               |
 |   5 | `test_active_age`                        |   ✅   | Active age                                                                                        |
 |   6 | `test_tick_present_unseeded_holds`       |   ✅   | present && !seeded cannot occur through the public update()/tick() sequence (present is only ever |
-|   7 | `test_host_build_gpio_binding_stubs`     |   ✅   | This test binary is a host (non-ARDUINO) build, so the GPIO-binding functions compile to the      |
+|   7 | `test_binding_samples_the_pin`           |   ✅   | Binding samples the pin                                                                           |
 
 </details>
 
@@ -7032,6 +7036,26 @@ _Unit tests for the ADS1115 ADC codec (services/peripherals/ads1115): building t
 |   4 | `test_raw_to_uv_gain_clamp`               |   ✅   | An out-of-range gain code clamps to GAIN_2 (its FSR), so the conversion never indexes past the |
 |   5 | `test_read_drives_the_bus`                |   ✅   | Read drives the bus                                                                            |
 |   6 | `test_read_fails_when_the_part_is_silent` |   ✅   | Read fails when the part is silent                                                             |
+
+</details>
+
+---
+
+## test_ina219 - native_ina219 - ✅ 6 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Unit tests for the INA219 current/power codec (services/peripherals/ina219): decoding the bus-voltage_
+
+|   # | Test                                 | Status | Description                                                              |
+| --: | :----------------------------------- | :----: | :----------------------------------------------------------------------- |
+|   1 | `test_bus_mv`                        |   ✅   | 3300 mV -> value 825 (0x339) in bits [15:3] -> register 825<<3 = 0x19C8. |
+|   2 | `test_shunt_uv`                      |   ✅   | Shunt uv                                                                 |
+|   3 | `test_calibration`                   |   ✅   | Calibration                                                              |
+|   4 | `test_current_and_power`             |   ✅   | current = raw * current_LSB (uA); power = raw * 20 * current_LSB (uW).   |
+|   5 | `test_begin_and_read_drive_the_bus`  |   ✅   | Begin and read drive the bus                                             |
+|   6 | `test_reads_fail_closed_when_silent` |   ✅   | Reads fail closed when silent                                            |
 
 </details>
 
@@ -10897,6 +10921,27 @@ _Unit tests for mounted storage (server/filesystem/mnt) exercised the way every 
 |  29 | `test_write_file_larger_than_capacity`       |   ✅   | Write file larger than capacity                                                              |
 |  30 | `test_zero_progress_backend_terminates`      |   ✅   | Zero progress backend terminates                                                             |
 |  31 | `test_remove_refuses_the_root_itself`        |   ✅   | Remove refuses the root itself                                                               |
+
+</details>
+
+---
+
+## test_swar - native_swar - ✅ 7 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Unit tests for the lane math (mmgr/swar.h)._
+
+|   # | Test                               | Status | Description                 |
+| --: | :--------------------------------- | :----: | :-------------------------- |
+|   1 | `test_has_zero_finds_any_lane`     |   ✅   | Has zero finds any lane     |
+|   2 | `test_zero_lane_from_mask`         |   ✅   | Zero lane from mask         |
+|   3 | `test_scan_nul_matches_strnlen`    |   ✅   | Scan nul matches strnlen    |
+|   4 | `test_scan_nul_absent_returns_cap` |   ✅   | Scan nul absent returns cap |
+|   5 | `test_scan_nul_ignores_high_bytes` |   ✅   | Scan nul ignores high bytes |
+|   6 | `test_scan_nul_unaligned`          |   ✅   | Scan nul unaligned          |
+|   7 | `test_lane_compares`               |   ✅   | Every lane is >= '0'.       |
 
 </details>
 
