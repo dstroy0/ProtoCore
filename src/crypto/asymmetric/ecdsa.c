@@ -43,19 +43,19 @@
 #include "crypto/asymmetric/ecdsa.h"
 #include "crypto/hash/sha256.h"
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_ECC
 #include "sdkconfig.h" // CONFIG_IDF_TARGET_ESP32S3 - selects the MODMULT field layer
 #endif
 
 // The S3 field/scalar layer drives the RSA peripheral through mbedTLS's port (esp_mpi_*), which only
 // exists in the on-device toolchain and whose MODMULT register map is an S3 specialization.
-#if PROTOCORE_HOT && defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
+#if PC_HAS_HW_ECC && defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
 #define PC_ECDSA_MPI_HW 1
 #endif
 
 // Platform-conditional headers, hoisted here so no #include follows code (no mid-file includes -
 // ci_tooling/check/check_src_banned.py enforces it). The implementation branches below use the same guards.
-#if PROTOCORE_HOT && !defined(PC_ECDSA_MPI_HW)
+#if PC_HAS_HW_ECC && !defined(PC_ECDSA_MPI_HW)
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/ecp.h>
@@ -80,7 +80,7 @@ PC_CRYPTO_HOT
 // HW path without MPI modmult - mbedTLS
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT && !defined(PC_ECDSA_MPI_HW)
+#if PC_HAS_HW_ECC && !defined(PC_ECDSA_MPI_HW)
 
 // RNG callback backed by the ESP32 hardware RNG.
 static int ecdsa_rng(void *ctx, unsigned char *buf, size_t len)
@@ -1007,4 +1007,4 @@ proto_bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const u
     return ok;
 }
 
-#endif // PROTOCORE_HOT path selection
+#endif // PC_HAS_HW_ECC path selection

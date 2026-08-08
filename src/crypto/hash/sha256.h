@@ -33,7 +33,7 @@
  * on every inbound and outbound SSH packet) and the KEX exchange-hash assembled from several
  * separately-encoded fields, so hardware acceleration matters for bulk throughput, not just handshakes.
  */
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 #include <mbedtls/sha256.h>
 typedef struct
 {

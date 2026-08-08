@@ -23,7 +23,7 @@
 // one 256-bit modular multiply on the RSA/MPI accelerator (~4.3x the software/PIE ladder). That field layer is
 // shared with Ed25519 (pc_ed25519.cpp) and defines PC_FE25519_MPI_HW when active (Arduino + S3).
 #include "crypto/asymmetric/fe25519.h"
-#if PROTOCORE_HOT
+#if PC_HAS_HW_ECC
 #include "sdkconfig.h"      // CONFIG_IDF_TARGET_ESP32S3 - selects the vector (PIE) field multiply
 #include <mbedtls/bignum.h> // ESP32: field inversion on the MPI/RSA hardware accelerator
 #endif
@@ -242,7 +242,7 @@ static void gf_inv_sw(pc_gf out, const pc_gf a)
     pc_gf_copy(out, c);
 }
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_ECC
 // p = 2^255 - 19 and the inversion exponent p-2 = 2^255 - 21, big-endian for mbedtls.
 static const uint8_t P25519_BE[32] = {0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                                       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

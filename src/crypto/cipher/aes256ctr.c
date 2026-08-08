@@ -18,7 +18,7 @@
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_AES
 #include <mbedtls/aes.h>
 #else
 #include "crypto/cipher/aes_block.h" // native software AES S-box/blocks (the hot path uses the mbedtls block above)
@@ -29,7 +29,7 @@ PC_CRYPTO_HOT
 // Hot path - hardware-accelerated via mbedtls
 // ============================================================================
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_AES
 
 // The whole working set in one borrow: expanded key schedule + one keystream block. Its size is a
 // per-vendor constant that belongs in core_setup/ (see the handover) - stated here for now.
@@ -112,7 +112,7 @@ void pc_aes256ctr_crypt(const uint8_t key[PC_AES256CTR_KEY_LEN], uint8_t counter
     pc_secure_release(mark);
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_HW_AES
 
 // ---------------------------------------------------------------------------
 // Length peek (used by the SSH recv path; mirrors pc_chachapoly_get_length)
@@ -132,7 +132,7 @@ uint32_t pc_aes256ctr_get_length(const uint8_t key[PC_AES256CTR_KEY_LEN], const 
     }
     Aes256CtrWork *w = (Aes256CtrWork *)ws.buf;
     uint8_t *ks = w->ks;
-#if PROTOCORE_HOT
+#if PC_HAS_HW_AES
     mbedtls_aes_init(&w->aes);
     mbedtls_aes_setkey_enc(&w->aes, key, 256);
     mbedtls_aes_crypt_ecb(&w->aes, MBEDTLS_AES_ENCRYPT, counter, ks);

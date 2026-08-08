@@ -26,7 +26,7 @@
 #define PC_SHA512_BLOCK_LEN 128
 
 /** @brief Streaming SHA-512 context. */
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 #include <mbedtls/sha512.h>
 typedef struct
 {

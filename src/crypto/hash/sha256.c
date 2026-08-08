@@ -13,14 +13,14 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/crypto_opt.h"
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 #include <mbedtls/sha256.h> // hardware SHA accelerator
 #else
 #include "mmgr/endian.h" // native software SHA-256
 #endif
 PC_CRYPTO_HOT
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 
 // ---------------------------------------------------------------------------
 // HW path: streaming + one-shot via mbedtls.
@@ -214,4 +214,4 @@ void pc_sha256(const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_
     pc_sha256_final(&ctx, digest);
 }
 
-#endif // !PROTOCORE_HOT (SW path)
+#endif // !PC_HAS_HW_SHA (SW path)

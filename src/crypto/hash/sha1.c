@@ -12,14 +12,14 @@
 #include "crypto/hash/sha1.h"
 #include "crypto/crypto_opt.h"
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 #include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32
 #else
 #include "mmgr/endian.h" // native software SHA-1
 #endif
 PC_CRYPTO_HOT
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 
 // --- HW path: mbedTLS ------------------------------------------------------
 
@@ -137,4 +137,4 @@ void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN]
     }
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_HW_SHA

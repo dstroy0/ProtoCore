@@ -21,12 +21,12 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // pc_ct_eq
 
-#if !PROTOCORE_HOT
+#if !PC_HAS_HW_AES
 #include "crypto/cipher/aes_block.h" // native software AES-128/256 (mbedtls path uses its own on the hot path)
 #endif
 PC_CRYPTO_HOT
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_AES
 // ===========================================================================
 // Hardware path: mbedtls_ccm -> ESP32 AES peripheral. Detached tag is native. The mbedtls context (AES
 // key schedule) lives in the shared crypto scratch, never on the stack.
@@ -311,5 +311,5 @@ proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t 
     return PROTO_TRUE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_HW_AES
 #endif // PC_ENABLE_SMB

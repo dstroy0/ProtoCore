@@ -69,7 +69,7 @@ extern const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN];
 int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], const uint8_t *msg, size_t msg_len,
                   const uint8_t *sig, size_t sig_len, pc_rsa_hash hash);
 
-#if !PROTOCORE_HOT
+#if !PC_HAS_HW_BIGNUM
 /**
  * @brief Software RSA-2048 PKCS#1 v1.5 sign with a raw private key (SW path).
  *

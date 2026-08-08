@@ -154,6 +154,61 @@
 #endif
 #endif
 
+// SHA-1 / SHA-256 / SHA-512. 1 = the vendor supplies a hashing peripheral and the mbedtls backend
+// over it; 0 = the portable software compression functions.
+//
+// One capability for the family: a part that ships a SHA block ships it for the digests it supports,
+// and a build that has to fall back for one of them falls back for all of them rather than mixing a
+// peripheral digest with a software one inside the same handshake transcript.
+#ifndef PC_HAS_HW_SHA
+#if PC_VENDOR_ESP
+#define PC_HAS_HW_SHA 1
+#elif PROTOCORE_HOST
+#define PC_HAS_HW_SHA 0 // a unit-test build has no silicon by definition
+#elif PC_VENDOR_MOCK
+#define PC_HAS_HW_SHA 0 // the mock vendor has no silicon either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_HW_SHA (1 = a hashing peripheral in core_setup/hal/<vendor>, 0 = the portable software compression functions). Choosing software is fine; defaulting into it is not."
+#endif
+#endif
+
+// AES block, and the CTR / CMAC / CCM modes over it. 1 = the vendor supplies an AES peripheral;
+// 0 = the portable software AES.
+//
+// Separate from PC_HAS_HW_AESGCM: GHASH is its own multiplier and a part can ship one without the
+// other, so a build states each. The block cipher is what this one answers for.
+#ifndef PC_HAS_HW_AES
+#if PC_VENDOR_ESP
+#define PC_HAS_HW_AES 1
+#elif PROTOCORE_HOST
+#define PC_HAS_HW_AES 0 // a unit-test build has no silicon by definition
+#elif PC_VENDOR_MOCK
+#define PC_HAS_HW_AES 0 // the mock vendor has no silicon either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_HW_AES (1 = an AES peripheral in core_setup/hal/<vendor>, 0 = the portable software AES). Choosing software is fine; defaulting into it is not."
+#endif
+#endif
+
+// X25519 and ECDSA over P-256. 1 = the vendor supplies an accelerated curve backend; 0 = the
+// portable software field arithmetic.
+//
+// Not the same axis as PC_HAS_HW_BIGNUM: that one answers for modexp over a 2048-bit modulus, this
+// one for curve point math, and a part can accelerate either alone.
+#ifndef PC_HAS_HW_ECC
+#if PC_VENDOR_ESP
+#define PC_HAS_HW_ECC 1
+#elif PROTOCORE_HOST
+#define PC_HAS_HW_ECC 0 // a unit-test build has no silicon by definition
+#elif PC_VENDOR_MOCK
+#define PC_HAS_HW_ECC 0 // the mock vendor has no silicon either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_HW_ECC (1 = an accelerated curve backend in core_setup/hal/<vendor>, 0 = the portable software field arithmetic, which is not constant time on every curve). Choosing software is fine; defaulting into it is not."
+#endif
+#endif
+
 // mDNS / DNS-SD. 1 = the vendor ships its own responder component and the wrapper drives that;
 // 0 = the portable responder in network_drivers/application/mdns_service, which answers over the
 // UDP listener like every other datagram service.

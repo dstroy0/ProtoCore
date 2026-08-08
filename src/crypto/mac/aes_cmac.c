@@ -13,7 +13,7 @@
 #include "crypto/mac/aes_cmac.h"
 #include "crypto/crypto_opt.h"
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_AES
 #include <mbedtls/aes.h> // AES-128 single-block via the ESP32 AES peripheral
 #else
 #include "crypto/cipher/aes_block.h" // native software AES-128 block
@@ -24,7 +24,7 @@ PC_CRYPTO_HOT
 // AES-128 single-block encrypt seam - one small wrapper, two platform bodies
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_AES
 
 typedef struct
 {
@@ -63,7 +63,7 @@ static inline void blk_free(AesBlk *b)
     (void)b; // the software path holds no vendor allocation to release
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_HW_AES
 
 // ---------------------------------------------------------------------------
 // CMAC construction (RFC 4493 / NIST SP800-38B)
