@@ -6,11 +6,15 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- fold the repeated header lines gcovr emits, which SonarQube rejects outright ([`c3333fe`](https://github.com/dstroy0/ProtoCore/commit/c3333fea268012077a4cad888bb5b2e7d9b68058))
 - gen_compiledb and compile_examples climbed two levels to the repo root, not three ([`9d2e963`](https://github.com/dstroy0/ProtoCore/commit/9d2e9634479bf3e38c705c5b43cce85d3e97ec04))
 - select_envs resolved affected_common under the repo root, which the tools/ move broke ([`9b2cfc9`](https://github.com/dstroy0/ProtoCore/commit/9b2cfc901f33be726688ea77d2fdda35b2a504f5))
 
 ### CI / Build
 
+- bump actions/cache from 4 to 6 ([`10de152`](https://github.com/dstroy0/ProtoCore/commit/10de1523d13a0acc31665233db2ba36e518e529e))
+- update test report + coverage [skip ci] ([`5e388ff`](https://github.com/dstroy0/ProtoCore/commit/5e388ffafeb8d91688ee90230b670241c8358a00))
+- update CHANGELOG.md [skip ci] ([`cb14c58`](https://github.com/dstroy0/ProtoCore/commit/cb14c581142090e56283147d43581ee070e7badc))
 - the SonarCloud scan gets its own workflow, and its paths survive the tools/ move ([`3d64732`](https://github.com/dstroy0/ProtoCore/commit/3d6473214941c97388d45833083fbe02762eedb5))
 - update CHANGELOG.md [skip ci] ([`5d6ad7d`](https://github.com/dstroy0/ProtoCore/commit/5d6ad7de4576063de9e6807df8659b6613904204))
 - update CHANGELOG.md [skip ci] ([`8dd42d5`](https://github.com/dstroy0/ProtoCore/commit/8dd42d526d4430e2639499bb13f5f572a522de1a))
@@ -19,6 +23,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge Dependabot #22: build(deps): bump actions/cache from 4 to 6 ([`20c8979`](https://github.com/dstroy0/ProtoCore/commit/20c8979accb8fe4d889b0a3711754c9927d61c3f))
+- Merge remote-tracking branch 'origin/main' ([`02ffde5`](https://github.com/dstroy0/ProtoCore/commit/02ffde5f24e009dc0a64d68bb424a99620499c4c))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`a7b482b`](https://github.com/dstroy0/ProtoCore/commit/a7b482ba8f1299aa11891e77156ab60a233fba4a))
 
 ### Documentation
