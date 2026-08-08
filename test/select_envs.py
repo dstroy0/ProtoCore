@@ -41,7 +41,7 @@ ROOT = os.path.dirname(HERE)
 INI = os.path.join(ROOT, "platformio.ini")
 DEP_GRAPH = os.path.join(HERE, "dep_graph.json")
 
-sys.path.insert(0, os.path.join(ROOT, "ci_tooling", "lib"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "ci_tooling", "lib"))
 import affected_common as ac  # noqa: E402  (path set above)
 
 # A changed header/source mapping (via the compiler dep graph) to at least this fraction of the
