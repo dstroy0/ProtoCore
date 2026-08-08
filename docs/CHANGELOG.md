@@ -17,6 +17,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9372ec6`](https://github.com/dstroy0/ProtoCore/commit/9372ec6a9383223db35bc2e5184b68775e823c1c))
+- say how many envs built, so the step stops reading as if it did nothing ([`856a679`](https://github.com/dstroy0/ProtoCore/commit/856a679119f434faaa8aa8ed54bb0be1a1276092))
 - update CHANGELOG.md [skip ci] ([`2cd4767`](https://github.com/dstroy0/ProtoCore/commit/2cd47675aaae9245845aaa5aabb4cec2013df066))
 - update CHANGELOG.md [skip ci] ([`452f48f`](https://github.com/dstroy0/ProtoCore/commit/452f48fe7528f6a9d245ad6ebef13e30b64b1d0c))
 - update CHANGELOG.md [skip ci] ([`94c236e`](https://github.com/dstroy0/ProtoCore/commit/94c236e9602c559cab35c22492818b0b9295d4a2))
@@ -34,6 +36,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`06995b6`](https://github.com/dstroy0/ProtoCore/commit/06995b6c422894004b386b6051555e76ff2cab48))
 - Bump version: 1.0.9 → 1.0.10 ([`01e1aef`](https://github.com/dstroy0/ProtoCore/commit/01e1aef0c9b75555c7f49da39e81e28b38c27881))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`748e497`](https://github.com/dstroy0/ProtoCore/commit/748e49788690a68e8d3d3fd157ef9330aaec5360))
 - Bump version: 1.0.8 → 1.0.9 ([`8cbcc98`](https://github.com/dstroy0/ProtoCore/commit/8cbcc98b6b0fd98e6531c46b66b4188ac5c7b31c))
