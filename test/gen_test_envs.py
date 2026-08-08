@@ -25,7 +25,8 @@ The table schema (test/test_matrix.json), per env:
         "flags": ["-DPC_ENABLE_X=1", ...],     # extras beyond the base flags
         "src":   ["+<services/x/x.cpp>", "-<*>"], # build_src_filter lines, verbatim
         "tests": ["test_x", ...],                 # test_filter entries; [] means run no suite
-        "test_build_src": "no"                    # optional override
+        "test_build_src": "no",                   # optional override
+        "extra_scripts": ["pre:test/x.py", ...]   # optional PlatformIO build hooks
     }
 """
 
@@ -83,6 +84,10 @@ def render_env(name, e, bases=frozenset()):
             lines.append(f"    {t}")
     if e.get("test_build_src"):
         lines.append(f"test_build_src = {e['test_build_src']}")
+    if e.get("extra_scripts"):
+        lines.append("extra_scripts =")
+        for s in e["extra_scripts"]:
+            lines.append(f"    {s}")
     return "\n".join(lines)
 
 

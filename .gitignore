@@ -27,6 +27,10 @@ docs/favicons/dist/
 # pentest rig run artifact (generated)
 rig_report.json
 
+# The SSH host keys the suites provision NVS with (tools/crypto/gen_ssh_test_keys.py). One half is
+# a fresh RSA-2048 key made per run, so the file is never the same twice and never committed.
+test/fixtures/ssh_test_host_key/ssh_test_keys.h
+
 # local CodeQL pre-ship gate output (SARIF copied back from a local WSL runner
 # script). The CI CodeQL workflow is the source of truth.
 .codeql-local/

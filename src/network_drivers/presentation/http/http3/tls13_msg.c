@@ -8,7 +8,7 @@
 
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
 #include "crypto/asymmetric/ed25519.h"
 #if PC_ENABLE_PQC_KEX
@@ -731,4 +731,4 @@ size_t pc_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t verify_da
     return w.ok ? w.pos : 0;
 }
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE

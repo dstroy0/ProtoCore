@@ -10,9 +10,9 @@
  * device (it signs the key exchange). This example shows the two ways to give the
  * server one, both starting from a key pair you generate on your workstation with:
  *
- *     python3 tools/gen_ssh_host_key.py --type ed25519 \
+ *     python3 tools/crypto/gen_ssh_host_key.py --type ed25519 \
  *         --header examples/L5-Session/SSHHostKey/host_key.h --symbol HOST_KEY_SEED
- *     python3 tools/gen_ssh_host_key.py --type rsa            # for the NVS path
+ *     python3 tools/crypto/gen_ssh_host_key.py --type rsa            # for the NVS path
  *
  * The script prints a .pub line - add it to your client's ~/.ssh/known_hosts.
  *

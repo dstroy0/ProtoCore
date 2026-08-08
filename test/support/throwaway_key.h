@@ -12,6 +12,11 @@
 // reproduces exactly - which keeps a randomized input honest in a suite that is
 // otherwise deterministic. Known-answer vectors (test_crypto_kat, RFC vectors)
 // stay fixed and must never use this.
+//
+// Ed25519 only: a seed is 32 random bytes, which a test can draw for itself. The RSA-2048 half of
+// the same pairing is generated at build time instead, into
+// test/fixtures/ssh_test_host_key/ssh_test_keys.h by tools/crypto/gen_ssh_test_keys.py -
+// PC_SSH_THROWAWAY_KEY_* new per run beside PC_SSH_BASELINE_KEY_* from the committed fixture.
 
 #ifndef PROTOCORE_TEST_THROWAWAY_KEY_H
 #define PROTOCORE_TEST_THROWAWAY_KEY_H

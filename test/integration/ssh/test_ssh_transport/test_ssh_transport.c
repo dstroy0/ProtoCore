@@ -5,6 +5,7 @@
 // KEXINIT algorithm negotiation.
 
 #include "baseline_keys.h"
+#include "core_setup/hal/nvs.h"
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/asymmetric/ecdsa.h"
 #include "crypto/asymmetric/ed25519.h"
@@ -14,6 +15,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #include "network_drivers/tls/ssh_rsa.h"
+#include "test/fixtures/ssh_test_host_key/ssh_test_keys.h"
 #include "throwaway_key.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -35,11 +37,6 @@ static struct pc_aesgcm_key *gcm_key(const uint8_t *key)
     g_gcm_live = PROTO_TRUE;
     return pc_aesgcm_key_init(g_gcm_ws, key);
 }
-
-// Native RSA test fixture (defined in ssh_rsa.cpp native path).
-extern uint8_t _test_rsa_n[256];
-extern uint8_t _test_rsa_d[256];
-extern uint8_t _test_rsa_e[4];
 
 static void setup_rsa_fixture();
 
@@ -611,18 +608,12 @@ void test_kexdh_build_reply_structure()
 
 // ---- KEXDH orchestration (compute K, sign H, reply, derive keys) ----------
 
+// Provision the host key the way a board is: write the PKCS#8 DER to NVS, then load it.
 static void setup_rsa_fixture()
 {
-    memset(_test_rsa_n, 0, 256);
-    _test_rsa_n[0] = 0xFF; // 2048-bit modulus, larger than any PKCS#1 em
-    _test_rsa_n[255] = 0x01;
-    memset(_test_rsa_d, 0, 256);
-    _test_rsa_d[255] = 0x01; // d = 1 (native test stub)
-    _test_rsa_e[0] = 0x00;
-    _test_rsa_e[1] = 0x01;
-    _test_rsa_e[2] = 0x00;
-    _test_rsa_e[3] = 0x01; // e = 65537
-    pc_ssh_rsa_load_pubkey();
+    TEST_ASSERT_TRUE(pc_nvs_put_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, PC_SSH_BASELINE_KEY_DER,
+                                     PC_SSH_BASELINE_KEY_DER_LEN));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
 }
 
 void test_kexdh_handle_produces_reply_and_installs_keys()
@@ -1044,19 +1035,10 @@ void test_kexdh_handle_rsa_sha512_signature()
     TEST_ASSERT_TRUE(rd_string(sigblob, sb_len, &so, &sig, &sig_len));
     TEST_ASSERT_EQUAL_UINT32(256, sig_len);
 
-    // Rebuild the expected PKCS#1 v1.5 SHA-512 block over H (= session_id) and byte-compare.
-    uint8_t d512[PC_SHA512_DIGEST_LEN];
-    pc_sha512(s->session_id, PC_SHA256_DIGEST_LEN, d512);
-    uint8_t em[256];
-    const size_t total = PC_PKCS1_SHA512_DIGESTINFO_LEN + PC_SHA512_DIGEST_LEN; // 83
-    const size_t pad = 256 - 3 - total;                                         // 170
-    em[0] = 0x00;
-    em[1] = 0x01;
-    memset(em + 2, 0xFF, pad);
-    em[2 + pad] = 0x00;
-    memcpy(em + 3 + pad, pc_pkcs1_sha512_digestinfo, PC_PKCS1_SHA512_DIGESTINFO_LEN);
-    memcpy(em + 3 + pad + PC_PKCS1_SHA512_DIGESTINFO_LEN, d512, PC_SHA512_DIGEST_LEN);
-    TEST_ASSERT_EQUAL_MEMORY(em, sig, 256);
+    // The signature must verify over H (= session_id) under rsa-sha2-512, against the fixture's own
+    // copy of the modulus rather than the one the library parsed.
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(PC_SSH_BASELINE_KEY_N, PC_SSH_BASELINE_KEY_E, s->session_id,
+                                           PC_SHA256_DIGEST_LEN, sig, 256, PC_RSA_HASH_SHA512));
 }
 
 // End-to-end curve25519 + ecdsa-sha2-nistp256 (RFC 5656): the reply K_S carries the P-256

@@ -228,6 +228,27 @@
 #endif
 #endif
 
+// TLS. 1 = the vendor ships a TLS stack and network_drivers/tls drives that (mbedTLS over lwIP on
+// ESP); 0 = the portable TLS 1.3 in network_drivers/tls, the same hand-rolled stack the QUIC and
+// DTLS handshakes already run: TLS_AES_128_GCM_SHA256, X25519, an Ed25519 raw public key.
+//
+// The two differ in what they will talk to, not just in speed. A vendor stack brings X.509: chain
+// validation, name matching, RSA and ECDSA certificates, so a browser will connect. The portable
+// one authenticates by raw public key and is what makes TLS exist at all on a part with no vendor
+// stack. Take the vendor's wherever there is one.
+#ifndef PC_HAS_VENDOR_TLS
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_TLS 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_TLS 0 // a unit-test build has no SDK stack to drive
+#elif PC_VENDOR_MOCK
+#define PC_HAS_VENDOR_TLS 0 // the mock vendor ships none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_TLS (1 = the SDK's own TLS stack with X.509, 0 = the portable TLS 1.3 over the TCP record layer, raw public key only). Choosing the portable one is fine; defaulting into it is not."
+#endif
+#endif
+
 // SNTP. 1 = the vendor ships a wall-clock client and owns the system clock through it; 0 = the
 // portable client in network_drivers/application/ntp_service, which asks a server over the UDP
 // listener and keeps the answer itself.

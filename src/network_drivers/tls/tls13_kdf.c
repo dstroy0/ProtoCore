@@ -8,7 +8,7 @@
 
 #include "network_drivers/tls/tls13_kdf.h"
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
 #include "crypto/hash/sha256.h"
 #include "crypto/kdf/hkdf.h"
@@ -86,4 +86,4 @@ void pc_tls13_finished_mac(const Tls13Kdf *kdf, const uint8_t base_secret[TLS13_
     pc_hmac_sha256(finished_key, sizeof(finished_key), transcript_hash, TLS13_SECRET_LEN, out);
 }
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE

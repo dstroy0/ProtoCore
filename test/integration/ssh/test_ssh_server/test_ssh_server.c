@@ -18,11 +18,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core_setup/hal/nvs.h"
+#include "test/fixtures/ssh_test_host_key/ssh_test_keys.h"
 #include <unity.h>
-
-extern uint8_t _test_rsa_n[256];
-extern uint8_t _test_rsa_d[256];
-extern uint8_t _test_rsa_e[4];
 
 // ---- emit recorder --------------------------------------------------------
 
@@ -72,16 +70,9 @@ void setUp()
     chan_data_count = 0;
     chan_data_len = 0;
 
-    memset(_test_rsa_n, 0, 256);
-    _test_rsa_n[0] = 0xFF;
-    _test_rsa_n[255] = 0x01;
-    memset(_test_rsa_d, 0, 256);
-    _test_rsa_d[255] = 0x01;
-    _test_rsa_e[0] = 0;
-    _test_rsa_e[1] = 1;
-    _test_rsa_e[2] = 0;
-    _test_rsa_e[3] = 1;
-    pc_ssh_rsa_load_pubkey();
+    TEST_ASSERT_TRUE(pc_nvs_put_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, PC_SSH_BASELINE_KEY_DER,
+                                     PC_SSH_BASELINE_KEY_DER_LEN));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
 
     pc_ssh_auth_set_password_cb(pw_cb);
     pc_ssh_channel_set_data_cb(on_chan_data);

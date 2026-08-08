@@ -23,7 +23,7 @@
 #include "mmgr/secure.h"
 #include "protocore_config.h" // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE)
 #if !PC_HAS_HW_AESGCM
 
 PC_CRYPTO_HOT
@@ -256,4 +256,4 @@ proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_
 }
 
 #endif // !PC_HAS_HW_AESGCM
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE

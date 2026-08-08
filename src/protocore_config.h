@@ -2420,6 +2420,19 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief 1 when the portable TLS 1.3 compiles: TLS is on and the vendor has no stack of its own.
+ *
+ * DERIVED from PC_ENABLE_TLS and PC_HAS_VENDOR_TLS (core_setup/board_profiles/pc_platform.h), never
+ * set by hand. It selects the record layer and connection driver in network_drivers/tls, and widens
+ * the guards on the TLS 1.3 pieces the QUIC and DTLS handshakes already share.
+ */
+#if PC_ENABLE_TLS && !PC_HAS_VENDOR_TLS
+#define PC_TLS_SOFTWARE 1
+#else
+#define PC_TLS_SOFTWARE 0
+#endif
+
+/**
  * @brief TLS session resumption via RFC 5077 session tickets (requires PC_ENABLE_TLS).
  *
  * Default off. When set, the TLS 1.2 server issues encrypted session tickets and
@@ -3316,9 +3329,14 @@ from halves and is slower than the width it decomposes into"
 #define PC_CONFIG_KEY_MAX 16
 #endif
 
-/** @brief Max value bytes per entry in the host (test) config backend. */
+/**
+ * @brief Max value bytes per entry in the host (test) config backend.
+ *
+ * Holds the largest blob the seam carries, which is the SSH host key's PKCS#8 DER
+ * (SSH_RSA_KEY_DER_MAX, 1700). A power of two keeps the row stride a shift.
+ */
 #ifndef PC_CONFIG_VAL_MAX
-#define PC_CONFIG_VAL_MAX 64
+#define PC_CONFIG_VAL_MAX 2048
 #endif
 
 /**
@@ -6630,6 +6648,12 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_RNG 72 // the generator: seed(32) + nonce(8) + ratchet scratch(32), for the program's life
 #endif
 
+// The SSH host key on the software RSA backend: the private exponent from the persistent end for the
+// program's life, plus the PKCS#8 DER borrowed while pc_ssh_rsa_load_pubkey walks it.
+#ifndef PC_WORK_SSH_HOST_KEY
+#define PC_WORK_SSH_HOST_KEY (256 + 1700 + 16) // PC_RSA_KEY_BYTES + SSH_RSA_KEY_DER_MAX + alignment
+#endif
+
 /**
  * @brief Size in bytes of the per-slot SECURE pool (see mmgr/secure.h), DERIVED.
  *
@@ -6646,11 +6670,13 @@ from halves and is slower than the width it decomposes into"
  */
 #ifndef PC_SECURE_ARENA_SIZE
 
-// The modexp dominates: one backend or the other is compiled, never both.
+// The modexp dominates: one backend or the other is compiled, never both. The software backend also
+// walks the SSH host key in the pool and holds its private exponent there; the accelerated one hands
+// the key to mbedtls instead.
 #if PC_HAS_HW_BIGNUM
 #define PC_SECURE_WORK_BIGNUM PC_WORK_BIGNUM_HW
 #else
-#define PC_SECURE_WORK_BIGNUM PC_WORK_BIGNUM_SW
+#define PC_SECURE_WORK_BIGNUM (PC_WORK_BIGNUM_SW + PC_WORK_SSH_HOST_KEY)
 #endif
 
 // Feature-gated terms: a build pays only for the code it compiled.

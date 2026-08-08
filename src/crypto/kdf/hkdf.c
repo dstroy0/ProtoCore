@@ -8,7 +8,7 @@
 
 #include "crypto/kdf/hkdf.h"
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
 #include "crypto/mac/hmac_sha256.h"
 
@@ -90,4 +90,4 @@ void pc_hkdf_expand_label(const uint8_t secret[PC_HKDF_HASH_LEN], const char *la
     pc_hkdf_expand_label_ctx(secret, label, NULL, 0, out, out_len, label_prefix);
 }
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE

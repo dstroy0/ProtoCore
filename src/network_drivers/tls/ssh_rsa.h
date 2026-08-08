@@ -6,7 +6,7 @@
  * @brief SSH RSA host-key layer: NVS-backed host key, host-key signing, and "ssh-rsa" blob encoding.
  *
  * This is the SSH-specific wrapper around the shared RSA primitive (crypto/rsa): it owns the device's
- * RSA-2048 host key (loaded from NVS on Arduino, a test fixture on native), signs handshake data with
+ * RSA-2048 host key, loaded from NVS by both backends, signs handshake data with
  * it, and serializes the public key into the RFC 4253 / RFC 8332 "ssh-rsa" blob. The
  * protocol-agnostic RSASSA-PKCS1-v1.5 math (verify, software sign, PKCS#1 encoding, modexp) lives in
  * crypto/rsa (pc_rsa_verify / pc_rsa_sign_sw); peers' signatures are verified via that primitive.
@@ -14,14 +14,16 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * SECURITY MODEL - PRIVATE KEY LIFETIME
  * ═══════════════════════════════════════════════════════════════════════════
- * The RSA-2048 private key MUST NEVER live in static or global memory. On Arduino the parsed key is
- * held in a private mbedtls context for the server lifetime (as an SSH host key normally is) and every
- * sign runs under a mutex; on native the test fixture injects n/d/e and the software sign
- * (pc_rsa_sign_sw) wipes its own temporaries. The signature scheme is PKCS#1 v1.5 (RFC 8017 §8.2),
- * "rsa-sha2-256" / "rsa-sha2-512" (RFC 8332) - only the hash and its DigestInfo OID differ.
+ * The RSA-2048 private key MUST NEVER live in static or global memory. On the accelerated backend the
+ * parsed key is held in a private mbedtls context for the server lifetime (as an SSH host key normally
+ * is) and every sign runs under a mutex; on the software backend the private exponent is a secure-pool
+ * borrow (mmgr/secure.h), the DER it was walked out of is released and wiped before the load returns,
+ * and the software sign (pc_rsa_sign_sw) wipes its own temporaries. The signature scheme is PKCS#1
+ * v1.5 (RFC 8017 §8.2), "rsa-sha2-256" / "rsa-sha2-512" (RFC 8332) - only the hash and its DigestInfo
+ * OID differ.
  *
- * NVS: on Arduino the private key is a DER PKCS#1 RSAPrivateKey in namespace "ssh_host_key" / key
- * "priv_der", parsed by mbedtls. On native, the test fixture injects n, e, d as raw 256-byte arrays.
+ * NVS: the private key is a PKCS#8 DER in namespace "ssh_host_key" / key "priv_der". The accelerated
+ * backend hands it to mbedtls; the software backend walks n, e and d out of it itself.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -83,8 +85,9 @@ extern SshRsaPubKey ssh_host_pubkey;
 /**
  * @brief Load the public portion of the RSA host key into ssh_host_pubkey.
  *
- * Arduino: reads + parses the DER blob from NVS ("ssh_host_key"/"priv_der") and caches the signer
- * context. Native: reads n/e from the test fixture. Call once at startup (single-threaded).
+ * Reads and parses the DER blob from NVS ("ssh_host_key"/"priv_der") and caches the signer: an
+ * mbedtls context on the accelerated backend, the private exponent on the software one. Call once at
+ * startup (single-threaded).
  * @return 0 on success, -1 if the key is absent or malformed.
  */
 int pc_ssh_rsa_load_pubkey(void);

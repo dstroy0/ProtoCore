@@ -493,7 +493,8 @@
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>"
       ],
       "tests": [
         "unit/ssh/test_ssh_crypto",
@@ -501,7 +502,8 @@
         "integration/ssh/test_ssh_auth",
         "integration/ssh/test_ssh_channel",
         "integration/ssh/test_ssh_server"
-      ]
+      ],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_ssh_kbdint": {
       "desc": "SSH keyboard-interactive auth (RFC 4256) built with PC_ENABLE_SSH_KEYBOARD_INTERACTIVE=1: the server sends one non-echoed Password prompt (INFO_REQUEST) and verifies the INFO_RESPONSE via the password callback. Also re-runs test_ssh_auth to confirm the password/publickey methods are unaffected with keyboard-interactive advertised.",
@@ -540,12 +542,14 @@
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>"
       ],
       "tests": [
         "integration/ssh/test_ssh_kbdint",
         "integration/ssh/test_ssh_auth"
-      ]
+      ],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_ssh_pqc": {
       "desc": "mlkem768x25519-sha256 SSH hybrid KEX (draft-ietf-sshm-mlkem-hybrid-kex) end to end: the\nfull SSH transport built with PC_ENABLE_PQC_KEX=1 plus the ML-KEM-768 / SHA-3 core. Verifies the\nhybrid is negotiated, then runs a real server-side key exchange and checks it as a conforming client\nwould - ML-KEM Decaps (an independent reference) + X25519, K = SHA256(K_PQ || K_CL), the string-K\nexchange hash and KDF, and the ed25519 signature over H.",
@@ -587,9 +591,11 @@
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>"
       ],
-      "tests": ["integration/ssh/test_ssh_pqc"]
+      "tests": ["integration/ssh/test_ssh_pqc"],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_ssh_hardened": {
       "desc": "SSH built with password auth disabled (publickey-only hardening)",
@@ -628,9 +634,11 @@
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>"
       ],
-      "tests": ["integration/ssh/test_ssh_hardening"]
+      "tests": ["integration/ssh/test_ssh_hardening"],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_ssh_conn": {
       "desc": "SSH wired through the real transport/session layers (PROTO_SSH byte-pump)",
@@ -685,9 +693,11 @@
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>"
       ],
-      "tests": ["integration/ssh/test_ssh_conn"]
+      "tests": ["integration/ssh/test_ssh_conn"],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_ssh_sftp": {
       "desc": "SFTP protocol v3 wire codec (network_drivers/application/sftp): the SSH_FXP_* request reader + response builders\n(VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (size / perms /\nmtime + the flag word, skipping unknown/extended fields), packet length-framing (need-more vs\nmalformed/too-big), and the ls -l longname formatter. Pure host tests (no fs / no SSH).",
@@ -1411,9 +1421,12 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<mmgr/protomem.c>"
       ],
-      "tests": ["unit/security/test_ikev2", "unit/security/test_ikev2_natt"]
+      "tests": ["unit/security/test_ikev2", "unit/security/test_ikev2_natt"],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_esp": {
       "desc": "ESP (RFC 4303) packet transform with AES-256-GCM (RFC 4106) - the IPsec datapath crypto core\n(services/system/esp): encapsulate a payload into SPI|Seq|IV|AES-GCM(payload|pad|padlen|nexthdr)|ICV and\nverify + decapsulate it, with the SPI|Seq AAD + salt||IV nonce. Gated on the IKEv2 feature. Pure host\ntests cross-checked against a Python AES-256-GCM reference.",
@@ -1688,9 +1701,12 @@
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<mmgr/protomem.c>"
       ],
-      "tests": ["unit/security/test_oidc"]
+      "tests": ["unit/security/test_oidc"],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_graphql": {
       "desc": "GraphQL query subset (services/iot/graphql) - pure parser + executor, host-tested\nwith a demo resolver. No heap; bounds are compile-time.",
@@ -2464,9 +2480,11 @@
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>"
       ],
-      "tests": ["integration/ssh/test_ssh_comp"]
+      "tests": ["integration/ssh/test_ssh_comp"],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_ws_deflate": {
       "desc": "WebSocket permessage-deflate (RFC 7692) inbound path wired through the real WS\nstack: handshake negotiation, the RSV1 frame path, and INFLATE delivery (with\nthe table scratch borrowed from the shared arena). Runs test_websocket with the\nfeature on (the deflate cases are #if-gated).",
@@ -3296,9 +3314,11 @@
         "+<network_drivers/session/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/protomem.c>"
       ],
-      "tests": ["integration/fieldbus/test_dispatch"]
+      "tests": ["integration/fieldbus/test_dispatch"],
+      "extra_scripts": ["pre:test/ensure_test_keys.py"]
     },
     "native_clock": {
       "desc": "Pluggable monotonic clock (server/clock): default millis(), custom clock\ndivided down to the internal 1000 Hz, plus the microsecond base and latency\nbudgeting. Builds server/clock/clock.c, which owns the installed-clock state.",
@@ -3360,6 +3380,25 @@
         "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/http/test_quic_crypto"]
+    },
+    "native_tls_record": {
+      "desc": "TLS 1.3 stream record layer (network_drivers/tls/tls_record, RFC 8446 sec 5), the software arm\nselected when the vendor ships no TLS stack (PC_TLS_SOFTWARE): the 5-byte TLSPlaintext header and\nits length-validating parse, TLSCiphertext protect/unprotect with the real content type sealed\ninside the record, the iv XOR seq nonce, the backward scan that recovers the type past the padding,\nand the record counter that never travels and does not advance on a forged record. The key + record\nKAT is byte-exact against an independent reconstruction (tools/crypto/gen_tls_record_kat.py):\nstdlib HKDF-Expand-Label under the \"tls13 \" prefix plus OpenSSL AES-128-GCM. Pure host tests.",
+      "flags": ["-DPC_ENABLE_TLS=1"],
+      "src": [
+        "+<network_drivers/tls/tls_record.c>",
+        "+<network_drivers/tls/tls13_kdf.c>",
+        "+<crypto/kdf/hkdf.c>",
+        "+<core_setup/hal/portable/portable_aes128gcm.c>",
+        "+<crypto/hash/sha256.c>",
+        "+<crypto/mac/hmac_sha256.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": ["unit/tls/test_tls_record"]
     },
     "native_dtls": {
       "desc": "DTLS 1.3 record layer (network_drivers/presentation/security/dtls/dtls_record, RFC 9147 sec 4):\nDTLSPlaintext + DTLSCiphertext protect/unprotect, the unified header, sequence-number encryption\n(sec 4.2.3) and reconstruction (sec 4.2.2), the AEAD nonce, and the anti-replay window (sec 4.5.1).\nThe key + record KAT is byte-exact against an independent HKDF-Expand-Label + AEAD_AES_128_GCM +\nAES-ECB reconstruction (RFC 5869 / RFC 8446 / SP 800-38D). Pure host tests.",

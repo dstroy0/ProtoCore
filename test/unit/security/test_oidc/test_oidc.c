@@ -7,10 +7,12 @@
 // extraction, aud-as-array, and every rejection (alg, signature, iss, aud, exp,
 // missing key, malformed).
 
+#include "core_setup/hal/nvs.h"       // the host key is provisioned the way a board's is
 #include "crypto/asymmetric/bignum.h" // bn_* direct coverage
 #include "mmgr/plaintext.h"
 #include "network_drivers/tls/ssh_rsa.h" // in-test RS256 signing
 #include "services/security/oidc/oidc.h"
+#include "test/fixtures/ssh_test_host_key/ssh_test_keys.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,11 +20,9 @@
 
 #include <unity.h>
 
-// The native RSA sign fixture (defined in ssh_rsa.cpp) lets us mint RS256 tokens with
-// arbitrary claims so the post-signature-verify guards can be exercised.
-extern uint8_t _test_rsa_n[256];
-extern uint8_t _test_rsa_d[256];
-extern uint8_t _test_rsa_e[4];
+// Provisions the host key so a test can mint RS256 tokens with arbitrary claims and exercise the
+// post-signature-verify guards. Defined below, used before it.
+static void setup_rt_key(pc_oidc_key *key);
 
 // A known RSA-2048 keypair (same as test_ssh_crypto's round-trip fixture).
 static const char RT_N[] = "a855616bbe1ed8ff73463006a1c2e9fcb67d8b3f39e19df514bd17f444697402"
@@ -178,21 +178,8 @@ void test_oidc_parse_edge_guards()
 // custom claims exercise the aud-missing / aud-array / not-yet-valid / empty-payload paths.
 void test_oidc_signed_claim_guards()
 {
-    hex2bytes(_test_rsa_n, RT_N, 256);
-    hex2bytes(_test_rsa_d, RT_D, 256);
-    _test_rsa_e[0] = 0;
-    _test_rsa_e[1] = 1;
-    _test_rsa_e[2] = 0;
-    _test_rsa_e[3] = 1; // e = 65537
-    pc_ssh_rsa_load_pubkey();
-
     pc_oidc_key key;
-    key.loaded = PROTO_TRUE;
-    hex2bytes(key.n, RT_N, 256);
-    key.e[0] = 0;
-    key.e[1] = 1;
-    key.e[2] = 0;
-    key.e[3] = 1;
+    setup_rt_key(&key);
 
     char tok[2048];
     const char *II = "https://issuer.example";
@@ -426,24 +413,17 @@ void test_jwks_malformed_keys()
     TEST_ASSERT_TRUE(pc_oidc_jwks_find("{\"keys\":[{\"n\":\"AAAA\",\"e\":\"AAAAAAA\"}]}", NULL, &key));
 }
 
-// Load the RT keypair into both the in-test signing fixture and @p key, so a test can
-// mint a validly-signed token and verify it. Idempotent - each token-minting test calls it
+// Provision the baseline host key into NVS, the way a board's is, and mirror it into @p key so a
+// test can mint a validly-signed token and verify it. Idempotent - each token-minting test calls it
 // rather than depending on an earlier test having run.
 static void setup_rt_key(pc_oidc_key *key)
 {
-    hex2bytes(_test_rsa_n, RT_N, 256);
-    hex2bytes(_test_rsa_d, RT_D, 256);
-    _test_rsa_e[0] = 0;
-    _test_rsa_e[1] = 1;
-    _test_rsa_e[2] = 0;
-    _test_rsa_e[3] = 1; // e = 65537
-    pc_ssh_rsa_load_pubkey();
+    TEST_ASSERT_TRUE(pc_nvs_put_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, PC_SSH_BASELINE_KEY_DER,
+                                     PC_SSH_BASELINE_KEY_DER_LEN));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
     key->loaded = PROTO_TRUE;
-    hex2bytes(key->n, RT_N, 256);
-    key->e[0] = 0;
-    key->e[1] = 1;
-    key->e[2] = 0;
-    key->e[3] = 1;
+    memcpy(key->n, PC_SSH_BASELINE_KEY_N, 256);
+    memcpy(key->e, PC_SSH_BASELINE_KEY_E, 4);
 }
 
 // Wrap @p hdr_json as the header segment of an otherwise-dummy 3-segment token, so
@@ -855,22 +835,15 @@ void test_bn_expmod_group14_large_operand_needs_reduction(void)
 // SHA-512 is otherwise never reached.
 void test_rsa_sign_verify_sha512(void)
 {
-    hex2bytes(_test_rsa_n, RT_N, 256);
-    hex2bytes(_test_rsa_d, RT_D, 256);
-    _test_rsa_e[0] = 0;
-    _test_rsa_e[1] = 1;
-    _test_rsa_e[2] = 0;
-    _test_rsa_e[3] = 1; // e = 65537
+    pc_oidc_key key;
+    setup_rt_key(&key);
 
     static const char msg[] = "sha512 coverage message";
     uint8_t sig[PC_RSA_SIG_BYTES];
     TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign((const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA512, sig));
 
-    uint8_t n_be[PC_RSA_KEY_BYTES];
-    hex2bytes(n_be, RT_N, 256);
-    uint8_t e_be[4] = {0, 1, 0, 1};
-    TEST_ASSERT_EQUAL_INT(
-        0, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), sig, PC_RSA_SIG_BYTES, PC_RSA_HASH_SHA512));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(PC_SSH_BASELINE_KEY_N, PC_SSH_BASELINE_KEY_E, (const uint8_t *)msg,
+                                           strlen(msg), sig, PC_RSA_SIG_BYTES, PC_RSA_HASH_SHA512));
 }
 
 // bn_modexp_full's private-exponent scan short-circuits to "result = 1" when every limb
@@ -878,16 +851,15 @@ void test_rsa_sign_verify_sha512(void)
 // RSA private key, but directly reachable through the native test fixture.
 void test_rsa_sign_zero_exponent(void)
 {
-    hex2bytes(_test_rsa_n, RT_N, 256);
-    memset(_test_rsa_d, 0, sizeof(_test_rsa_d)); // d == 0
-    _test_rsa_e[0] = 0;
-    _test_rsa_e[1] = 1;
-    _test_rsa_e[2] = 0;
-    _test_rsa_e[3] = 1;
+    // No real key has d == 0, so this goes to the primitive, which takes n and d directly.
+    uint8_t n_be[PC_RSA_KEY_BYTES];
+    uint8_t d_be[PC_RSA_KEY_BYTES];
+    hex2bytes(n_be, RT_N, 256);
+    memset(d_be, 0, sizeof(d_be));
 
     static const char msg[] = "zero exponent";
     uint8_t sig[PC_RSA_SIG_BYTES];
-    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign((const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA256, sig));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_sign_sw(n_be, d_be, (const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA256, sig));
 
     // s = em^0 mod n == 1, encoded big-endian as 255 zero bytes followed by 0x01.
     for (size_t i = 0; i < PC_RSA_SIG_BYTES - 1; i++)
@@ -895,35 +867,30 @@ void test_rsa_sign_zero_exponent(void)
         TEST_ASSERT_EQUAL_HEX8(0x00, sig[i]);
     }
     TEST_ASSERT_EQUAL_HEX8(0x01, sig[PC_RSA_SIG_BYTES - 1]);
-
-    // Restore d for any later test that (re)signs with the RT key.
-    hex2bytes(_test_rsa_d, RT_D, 256);
 }
 
 // bn_reduce_full's "is r >= m" limb scan assumes greater-or-equal and looks MSB-down for
 // the first differing limb to disprove it. With any real 2048-bit RSA modulus the operands
 // differ within the first limb or two, so the scan never runs past a handful of high limbs
 // and never finds every limb equal. A deliberately tiny modulus (n = 5, not a realistic RSA
-// key - a focused unit test of the reduction's comparison loop, reached the only way it can
-// be: through the public sign path with a value large enough to need many reduction steps)
+// key - a focused unit test of the reduction's comparison loop, driven through pc_rsa_sign_sw
+// with a value large enough to need many reduction steps)
 // forces the scan to compare against 63 leading zero limbs on every one of the reduction's
 // ~2048 steps (equal every time - the r[k] == m[k] continuation), and the long run of 0xFF
 // pad bytes in the PKCS#1 block means the running remainder lands on exactly n itself at
 // some steps too, so the scan also completes with no differing limb found at all.
 void test_rsa_sign_tiny_modulus_reduction_equal_limbs(void)
 {
-    memset(_test_rsa_n, 0, PC_RSA_KEY_BYTES);
-    _test_rsa_n[PC_RSA_KEY_BYTES - 1] = 5; // n = 5
-    memset(_test_rsa_d, 0, PC_RSA_KEY_BYTES);
-    _test_rsa_d[PC_RSA_KEY_BYTES - 1] = 1; // d = 1
-    _test_rsa_e[0] = 0;
-    _test_rsa_e[1] = 0;
-    _test_rsa_e[2] = 0;
-    _test_rsa_e[3] = 1;
+    uint8_t n_be[PC_RSA_KEY_BYTES];
+    uint8_t d_be[PC_RSA_KEY_BYTES];
+    memset(n_be, 0, sizeof(n_be));
+    n_be[PC_RSA_KEY_BYTES - 1] = 5; // n = 5
+    memset(d_be, 0, sizeof(d_be));
+    d_be[PC_RSA_KEY_BYTES - 1] = 1; // d = 1
 
     static const char msg[] = "tiny modulus";
     uint8_t sig[PC_RSA_SIG_BYTES];
-    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign((const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA256, sig));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_sign_sw(n_be, d_be, (const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA256, sig));
 
     // Every result is < n == 5, so the high 255 bytes are all zero.
     for (size_t i = 0; i < PC_RSA_SIG_BYTES - 1; i++)
@@ -931,11 +898,6 @@ void test_rsa_sign_tiny_modulus_reduction_equal_limbs(void)
         TEST_ASSERT_EQUAL_HEX8(0x00, sig[i]);
     }
     TEST_ASSERT_TRUE(sig[PC_RSA_SIG_BYTES - 1] < 5);
-
-    // Restore the RT key for any later test that (re)signs with it.
-    hex2bytes(_test_rsa_n, RT_N, 256);
-    hex2bytes(_test_rsa_d, RT_D, 256);
-    _test_rsa_e[1] = 1;
 }
 
 // pc_rsa_verify rejects a signature of the wrong length before touching any bignum
@@ -994,13 +956,9 @@ void test_rsa_encode_pubkey(void)
     size_t out_len = 0;
     TEST_ASSERT_EQUAL_INT(-1, ssh_rsa_encode_pubkey(out, &out_len, sizeof(out)));
 
-    // Load the RT key so n/e are known.
-    hex2bytes(_test_rsa_n, RT_N, 256);
-    _test_rsa_e[0] = 0;
-    _test_rsa_e[1] = 1;
-    _test_rsa_e[2] = 0;
-    _test_rsa_e[3] = 1;
-    TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
+    // Load the baseline key so n/e are known.
+    pc_oidc_key key;
+    setup_rt_key(&key);
 
     // Buffer too small.
     TEST_ASSERT_EQUAL_INT(-1, ssh_rsa_encode_pubkey(out, &out_len, 4));
@@ -1027,13 +985,15 @@ void test_rsa_encode_pubkey(void)
     TEST_ASSERT_EQUAL_HEX8(0x01, out[p + 6]);
     p += 4 + 3;
 
-    // mpint n: top byte 0xa8 has its MSB set -> a 0x00 pad byte precedes it, length 257.
+    // mpint n: an RSA modulus is a full 2048 bits, so its top byte's MSB is always set and a 0x00
+    // pad byte precedes it, length 257.
+    TEST_ASSERT_TRUE((PC_SSH_BASELINE_KEY_N[0] & 0x80u) != 0);
     TEST_ASSERT_EQUAL_HEX8(0, out[p + 0]);
     TEST_ASSERT_EQUAL_HEX8(0, out[p + 1]);
     TEST_ASSERT_EQUAL_HEX8(1, out[p + 2]);
     TEST_ASSERT_EQUAL_HEX8(1, out[p + 3]); // 257 = 0x00000101
     TEST_ASSERT_EQUAL_HEX8(0x00, out[p + 4]);
-    TEST_ASSERT_EQUAL_HEX8(0xa8, out[p + 5]);
+    TEST_ASSERT_EQUAL_HEX8(PC_SSH_BASELINE_KEY_N[0], out[p + 5]);
     p += 4 + 1 + 256;
     TEST_ASSERT_EQUAL_INT((int)p, (int)out_len);
 }
@@ -1046,9 +1006,10 @@ void test_rsa_encode_pubkey(void)
 // 0 produces.
 void test_rsa_encode_pubkey_zero_exponent(void)
 {
-    hex2bytes(_test_rsa_n, RT_N, 256);
-    memset(_test_rsa_e, 0, sizeof(_test_rsa_e)); // e == 0
-    TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
+    // No key carries e == 0, so it is written straight into the public struct the encoder reads.
+    pc_oidc_key key;
+    setup_rt_key(&key);
+    memset(ssh_host_pubkey.e_bytes, 0, sizeof(ssh_host_pubkey.e_bytes));
 
     uint8_t out[SSH_RSA_PUBKEY_BLOB_MAX];
     size_t out_len = 0;
@@ -1064,8 +1025,7 @@ void test_rsa_encode_pubkey_zero_exponent(void)
     p += 4;
 
     // Restore e for any later test.
-    _test_rsa_e[1] = 1;
-    _test_rsa_e[3] = 1;
+    setup_rt_key(&key);
 }
 
 int main()

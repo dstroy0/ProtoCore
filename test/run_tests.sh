@@ -155,6 +155,14 @@ format_output() {
 
 cd "$PROJECT_ROOT"
 
+# One fresh RSA host key for this run, generated before any env starts so the parallel builds all
+# compile the same one. The per-env pre-build hook only fills a missing header, so this is what
+# makes every run use a key it has never seen.
+python3 -m tools.crypto.gen_ssh_test_keys || {
+    echo "error: could not generate the SSH test keys (needs openssl on PATH)" >&2
+    exit 1
+}
+
 RAW_FILE="$(mktemp)"
 CLEAN_FILE="$(mktemp)"
 trap 'rm -f "$RAW_FILE" "$CLEAN_FILE"' EXIT

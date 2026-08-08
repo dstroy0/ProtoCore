@@ -16,11 +16,11 @@ Use the bundled generator (needs `openssl` and `ssh-keygen`):
 
 ```sh
 # Ed25519 (for the compile-time path) - writes a C header you embed:
-python3 tools/gen_ssh_host_key.py --type ed25519 \
+python3 tools/crypto/gen_ssh_host_key.py --type ed25519 \
     --header examples/L5-Session/SSHHostKey/host_key.h --symbol HOST_KEY_SEED
 
 # RSA-2048 (for the NVS path) - writes ssh_host_key.der to store on the device:
-python3 tools/gen_ssh_host_key.py --type rsa --out-dir ./keys
+python3 tools/crypto/gen_ssh_host_key.py --type rsa --out-dir ./keys
 ```
 
 Each run prints a `.pub` line. Trust it on your client:

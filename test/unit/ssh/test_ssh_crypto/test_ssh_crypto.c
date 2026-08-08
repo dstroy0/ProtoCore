@@ -12,6 +12,7 @@
 //   RSA PKCS#1    - pkcs1v15 pad/unpad + sign/verify with a test key
 //   PACKET        - ssh_pkt_send/recv round-trip (unencrypted + encrypted)
 
+#include "core_setup/hal/nvs.h"
 #include "crypto/aead/chachapoly.h"
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/cipher/aes256ctr.h"
@@ -25,15 +26,11 @@
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/tls/ssh_rsa.h"
+#include "test/fixtures/ssh_test_host_key/ssh_test_keys.h"
 #include <stdint.h>
 #include <string.h>
 
 #include <unity.h>
-
-// External test fixture arrays (defined in ssh_rsa.cpp native path).
-extern uint8_t _test_rsa_n[256];
-extern uint8_t _test_rsa_d[256];
-extern uint8_t _test_rsa_e[4];
 
 // ============================================================================
 // Helpers
@@ -534,32 +531,29 @@ static const char TEST_D[] = "009e4a478869b82befe9a5e1adf5e4ac"
                              "2233445566778899aabbccddeeff0011"
                              "2233445566778899aabbccddeeff0001";
 
+// The host key for every test here that needs one loaded: the committed baseline, written to NVS the
+// way a board's is.
 static void setup_test_rsa_key(void)
 {
-    // Use a known 2048-bit n from the hex string above (padded as needed).
-    // This is a synthetic key whose correctness we can check structurally.
-    hex_to_bytes(_test_rsa_n, TEST_N, 128);
-    // For the purpose of PKCS#1 pad + structure tests, d is only needed for
-    // the square-and-multiply expmod.  Use a trivially verifiable d=1 so
-    // s = m^1 mod n = m (i.e., the "signature" equals the padded message).
-    memset(_test_rsa_d, 0, 256);
-    _test_rsa_d[255] = 0x01; // d = 1 in big-endian
-    _test_rsa_e[0] = 0x00;
-    _test_rsa_e[1] = 0x01;
-    _test_rsa_e[2] = 0x00;
-    _test_rsa_e[3] = 0x01; // e = 65537
+    TEST_ASSERT_TRUE(pc_nvs_put_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, PC_SSH_BASELINE_KEY_DER,
+                                     PC_SSH_BASELINE_KEY_DER_LEN));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
 }
 
 static void test_rsa_pkcs1_pad_structure(void)
 {
-    // With d=1, sign(msg) = m^1 mod n = m (the padded message itself).
-    // We can verify the PKCS#1 v1.5 padding structure in the output.
-    setup_test_rsa_key();
-    pc_ssh_rsa_load_pubkey();
+    // The padding, not a host key: pc_rsa_sign_sw takes n and d directly, so the synthetic modulus
+    // above pairs with d = 1 and sign(msg) = m^1 mod n = m - the signature IS the padded message.
+    uint8_t n[256];
+    uint8_t d[256];
+    memset(n, 0, sizeof(n));
+    hex_to_bytes(n, TEST_N, 128);
+    memset(d, 0, sizeof(d));
+    d[255] = 0x01;
 
     const uint8_t msg[] = "test message for PKCS1 padding check";
     uint8_t sig[256];
-    int rc = ssh_rsa_sign(msg, sizeof(msg) - 1, SSH_MAC_HMAC_SHA256, sig);
+    int rc = pc_rsa_sign_sw(n, d, msg, sizeof(msg) - 1, SSH_MAC_HMAC_SHA256, sig);
     TEST_ASSERT_EQUAL_INT(0, rc);
 
     // When d=1 and m < n, sig = m (the padded plaintext).
@@ -598,15 +592,12 @@ static const char RT_D[] = "0568149fe10fdd01f242187e5ce4b3435f90d88f98611ccce2fd
                            "5f6ecea9d3fdb3337c31a11eb498f30c2b47ad9fcff3a68240e23595e406ceb4"
                            "ba73c3d29a97a67517ca45ae871673ca769cdf627a72ccd8b7bb3d57a195c3b5";
 
-static void test_rsa_sign_verify_roundtrip(void)
+// One round trip against a given host key, provisioned into NVS the way a board's is. nbytes is the
+// fixture's own copy of the modulus, so the verify does not read back what the library parsed.
+static void run_rsa_sign_verify_roundtrip(const uint8_t *der, unsigned int der_len, const uint8_t *nbytes)
 {
-    // Install the real keypair into the native sign fixture.
-    hex_to_bytes(_test_rsa_n, RT_N, 256);
-    hex_to_bytes(_test_rsa_d, RT_D, 256);
-    _test_rsa_e[0] = 0x00;
-    _test_rsa_e[1] = 0x01;
-    _test_rsa_e[2] = 0x00;
-    _test_rsa_e[3] = 0x01; // e = 65537
+    TEST_ASSERT_TRUE(pc_nvs_put_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, der, der_len));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
 
     const uint8_t msg[] = "round-trip with a real private exponent";
     uint8_t sig[256];
@@ -630,19 +621,65 @@ static void test_rsa_sign_verify_roundtrip(void)
     TEST_ASSERT_NOT_EQUAL(0, memcmp(sig, em, 256));
 
     // Public verify of our own signature must succeed.
-    uint8_t n[256];
     uint8_t e[4] = {0x00, 0x01, 0x00, 0x01};
-    hex_to_bytes(n, RT_N, 256);
-    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(n, e, msg, sizeof(msg) - 1, sig, 256, SSH_MAC_HMAC_SHA256));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(nbytes, e, msg, sizeof(msg) - 1, sig, 256, SSH_MAC_HMAC_SHA256));
 
     // A tampered message must fail verification of the same signature.
-    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n, e, (const uint8_t *)"different", 9, sig, 256, SSH_MAC_HMAC_SHA256));
+    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(nbytes, e, (const uint8_t *)"different", 9, sig, 256, SSH_MAC_HMAC_SHA256));
+}
+
+// Twice: the committed baseline key, then the key generated for this run. A round trip that turned
+// on one particular modulus shows up as the second run failing.
+static void test_rsa_sign_verify_roundtrip(void)
+{
+    run_rsa_sign_verify_roundtrip(PC_SSH_BASELINE_KEY_DER, PC_SSH_BASELINE_KEY_DER_LEN, PC_SSH_BASELINE_KEY_N);
+    run_rsa_sign_verify_roundtrip(PC_SSH_THROWAWAY_KEY_DER, PC_SSH_THROWAWAY_KEY_DER_LEN, PC_SSH_THROWAWAY_KEY_N);
+}
+
+// The loader takes a bare PKCS#1 RSAPrivateKey as well as the PKCS#8 that wraps it: the same key in
+// either shape must yield the same n and e, and sign the same.
+static void test_rsa_load_pkcs1_and_pkcs8_agree(void)
+{
+    setup_test_rsa_key(); // PKCS#8
+    uint8_t n8[PC_RSA_KEY_BYTES];
+    uint8_t e8[4];
+    memcpy(n8, ssh_host_pubkey.n, sizeof(n8));
+    memcpy(e8, ssh_host_pubkey.e_bytes, sizeof(e8));
+
+    TEST_ASSERT_TRUE(pc_nvs_put_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, PC_SSH_BASELINE_KEY_PKCS1_DER,
+                                     PC_SSH_BASELINE_KEY_PKCS1_DER_LEN));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
+    TEST_ASSERT_EQUAL_MEMORY(n8, ssh_host_pubkey.n, sizeof(n8));
+    TEST_ASSERT_EQUAL_MEMORY(e8, ssh_host_pubkey.e_bytes, sizeof(e8));
+    TEST_ASSERT_EQUAL_MEMORY(PC_SSH_BASELINE_KEY_N, ssh_host_pubkey.n, PC_RSA_KEY_BYTES);
+
+    static const char msg[] = "either shape signs the same";
+    uint8_t sig[256];
+    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign((const uint8_t *)msg, sizeof(msg) - 1, SSH_MAC_HMAC_SHA256, sig));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(PC_SSH_BASELINE_KEY_N, PC_SSH_BASELINE_KEY_E, (const uint8_t *)msg,
+                                           sizeof(msg) - 1, sig, 256, SSH_MAC_HMAC_SHA256));
+
+    setup_test_rsa_key();
+}
+
+// A blob that is not a key, and no blob at all, both fail closed rather than loading garbage.
+static void test_rsa_load_rejects_malformed(void)
+{
+    static const uint8_t junk[] = {0x30, 0x82, 0xFF, 0xFF, 0x02, 0x01, 0x00};
+    TEST_ASSERT_TRUE(pc_nvs_put_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, junk, sizeof(junk)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_rsa_load_pubkey());
+    TEST_ASSERT_FALSE(ssh_host_pubkey.loaded);
+
+    TEST_ASSERT_TRUE(pc_nvs_erase(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_rsa_load_pubkey());
+    TEST_ASSERT_FALSE(ssh_host_pubkey.loaded);
+
+    setup_test_rsa_key();
 }
 
 static void test_rsa_encode_pubkey(void)
 {
     setup_test_rsa_key();
-    pc_ssh_rsa_load_pubkey();
     TEST_ASSERT_TRUE(ssh_host_pubkey.loaded);
 
     uint8_t blob[SSH_RSA_PUBKEY_BLOB_MAX];
@@ -677,7 +714,6 @@ static void test_rsa_verify_and_encode_guards(void)
         -1, pc_rsa_verify(n, e, (const uint8_t *)"m", 1, sig, 256, SSH_MAC_HMAC_SHA256)); // sig not reduced mod n
 
     setup_test_rsa_key();
-    pc_ssh_rsa_load_pubkey();
     uint8_t blob[SSH_RSA_PUBKEY_BLOB_MAX];
     size_t blob_len = 0;
     TEST_ASSERT_EQUAL_INT(-1, ssh_rsa_encode_pubkey(blob, &blob_len, SSH_RSA_PUBKEY_BLOB_MAX - 1)); // out_cap too small
@@ -685,12 +721,11 @@ static void test_rsa_verify_and_encode_guards(void)
     TEST_ASSERT_EQUAL_INT(-1, ssh_rsa_encode_pubkey(blob, &blob_len, sizeof(blob))); // no key loaded
 
     // A zero private exponent takes the modexp exp==0 fast path (result 1), so signing succeeds
-    // and yields s == 1 (0x00..01). Degenerate, but it exercises the guard.
-    setup_test_rsa_key();
-    memset(_test_rsa_d, 0, 256);
-    pc_ssh_rsa_load_pubkey();
+    // and yields s == 1 (0x00..01). No real key has one, so it goes straight to the primitive.
+    uint8_t d0[256];
+    memset(d0, 0, sizeof(d0));
     uint8_t sig0[256];
-    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign((const uint8_t *)"x", 1, SSH_MAC_HMAC_SHA256, sig0));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_sign_sw(n, d0, (const uint8_t *)"x", 1, SSH_MAC_HMAC_SHA256, sig0));
     for (int i = 0; i < 255; i++)
     {
         TEST_ASSERT_EQUAL_UINT8(0, sig0[i]);
@@ -698,7 +733,6 @@ static void test_rsa_verify_and_encode_guards(void)
     TEST_ASSERT_EQUAL_UINT8(1, sig0[255]);
 
     setup_test_rsa_key(); // restore the fixture for any later test
-    pc_ssh_rsa_load_pubkey();
 }
 
 // Real RSA-2048 PKCS#1 v1.5 SHA-256 signature over "hello ssh", produced with
@@ -781,26 +815,24 @@ static const char RSA512_MSG[] = "hello rsa-sha2-512";
 // signature (verifying a rsa-sha2-512 signature as rsa-sha2-256 must fail).
 static void test_rsa_sha512_kat_sign_verify(void)
 {
-    hex_to_bytes(_test_rsa_n, RSA512_N, 256);
-    hex_to_bytes(_test_rsa_d, RSA512_D, 256);
-    _test_rsa_e[0] = 0x00;
-    _test_rsa_e[1] = 0x01;
-    _test_rsa_e[2] = 0x00;
-    _test_rsa_e[3] = 0x01; // e = 65537
+    // A known-answer vector: the signature has to byte-match a reference produced with this exact
+    // key, so the key is fixed and goes straight to the primitive rather than through the host key.
+    uint8_t n[256];
+    uint8_t d[256];
+    hex_to_bytes(n, RSA512_N, 256);
+    hex_to_bytes(d, RSA512_D, 256);
 
     const size_t mlen = sizeof(RSA512_MSG) - 1;
 
     // Native SHA-512 sign must byte-match the openssl/cryptography reference.
     uint8_t sig[256];
-    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign((const uint8_t *)RSA512_MSG, mlen, SSH_MAC_HMAC_SHA512, sig));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_sign_sw(n, d, (const uint8_t *)RSA512_MSG, mlen, SSH_MAC_HMAC_SHA512, sig));
     uint8_t ref[256];
     hex_to_bytes(ref, RSA512_SIG, 256);
     TEST_ASSERT_EQUAL_MEMORY(ref, sig, 256);
 
     // Both our signature and the reference verify under SHA-512.
-    uint8_t n[256];
     uint8_t e[4] = {0x00, 0x01, 0x00, 0x01};
-    hex_to_bytes(n, RSA512_N, 256);
     TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(n, e, (const uint8_t *)RSA512_MSG, mlen, sig, 256, SSH_MAC_HMAC_SHA512));
     TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(n, e, (const uint8_t *)RSA512_MSG, mlen, ref, 256, SSH_MAC_HMAC_SHA512));
 
@@ -812,7 +844,6 @@ static void test_rsa_sha512_kat_sign_verify(void)
         -1, pc_rsa_verify(n, e, (const uint8_t *)"hello rsa-sha2-256", mlen, sig, 256, SSH_MAC_HMAC_SHA512));
 
     setup_test_rsa_key(); // restore the fixture for any later test
-    pc_ssh_rsa_load_pubkey();
 }
 
 // ============================================================================
@@ -1813,6 +1844,8 @@ int main(void)
     // RSA PKCS#1
     RUN_TEST(test_rsa_pkcs1_pad_structure);
     RUN_TEST(test_rsa_sign_verify_roundtrip);
+    RUN_TEST(test_rsa_load_pkcs1_and_pkcs8_agree);
+    RUN_TEST(test_rsa_load_rejects_malformed);
     RUN_TEST(test_rsa_encode_pubkey);
     RUN_TEST(test_rsa_verify_and_encode_guards);
     RUN_TEST(test_rsa_verify_valid_signature);
