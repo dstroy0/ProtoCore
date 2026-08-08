@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- four vendor components become capabilities, named for what they include ([`2d5346a`](https://github.com/dstroy0/ProtoCore/commit/2d5346a157a1a8c97db0d487635d26d6e4cd31b6))
 - external-RAM placement selects on PC_HAS_PSRAM ([`c5632da`](https://github.com/dstroy0/ProtoCore/commit/c5632dad43946360c29cc10aeda5c4f585f532c2))
 - the vendor TLS stack is a capability, not a consequence of not being the host ([`fa574c8`](https://github.com/dstroy0/ProtoCore/commit/fa574c84cc92f054d3e3663fee6df0c58ea0b7cd))
 - pc_server_reset() drops the not-found handler, and native_swar builds no library source ([`c8e8af8`](https://github.com/dstroy0/ProtoCore/commit/c8e8af8a227a246e77bfb136f09cbb15629a50f2))
@@ -19,10 +20,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
-<<<<<<< Updated upstream
-=======
+- update CHANGELOG.md [skip ci] ([`3c111dd`](https://github.com/dstroy0/ProtoCore/commit/3c111ddbd42697af048437359eebe6f4113e451f))
+- update CHANGELOG.md [skip ci] ([`fc09a1a`](https://github.com/dstroy0/ProtoCore/commit/fc09a1a6ad405bd7eb3689e611bdce414bb06050))
 - untrack src/network_drivers/application/ntp/ntp.h, which was swept in by a directory-wide git add. It is uncommitted work in progress and stays in the working tree. ([`a697429`](https://github.com/dstroy0/ProtoCore/commit/a697429b808117f1f992c66e37be89cb63bf1bf0))
->>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`cffe683`](https://github.com/dstroy0/ProtoCore/commit/cffe6835a976bf977a969c51cf6f14d2a3aa9e20))
 - update CHANGELOG.md [skip ci] ([`ff02f5c`](https://github.com/dstroy0/ProtoCore/commit/ff02f5c09367d3e8d1b9d2a68a9c0fd587c128d0))
 - update CHANGELOG.md [skip ci] ([`9372ec6`](https://github.com/dstroy0/ProtoCore/commit/9372ec6a9383223db35bc2e5184b68775e823c1c))
@@ -44,6 +44,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Bump version: 1.0.12 → 1.0.13 ([`ebef7c8`](https://github.com/dstroy0/ProtoCore/commit/ebef7c83b623171babcb65ea60857e1f56fdd0a9))
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`8713b54`](https://github.com/dstroy0/ProtoCore/commit/8713b54be7ac288b0a47dd5a75ff79c73c807a6f))
 - Bump version: 1.0.11 → 1.0.12 ([`bbaa1ff`](https://github.com/dstroy0/ProtoCore/commit/bbaa1ffc53bf2136dd9ccb31666f0e12eda0b434))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`cc80df2`](https://github.com/dstroy0/ProtoCore/commit/cc80df223d930f5e254fc12d5691f4841b38402e))
 - Bump version: 1.0.10 → 1.0.11 ([`a370fce`](https://github.com/dstroy0/ProtoCore/commit/a370fce52634fcec259ebf445a13b509fb44c960))
@@ -59,6 +61,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cb7845d`](https://github.com/dstroy0/ProtoCore/commit/cb7845d706007dc622a78ed0f66ffc7cc5e92339))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`bccef65`](https://github.com/dstroy0/ProtoCore/commit/bccef653ff85aea8200a43f466173c3340ceaa25))
 
 ## [1.0.7] - 2026-08-08
