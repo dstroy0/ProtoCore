@@ -6,12 +6,14 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- CodeQL traces every native env, and native_codeql links again ([`10c3865`](https://github.com/dstroy0/ProtoCore/commit/10c3865506d5d6e8dab9fdb51ee18cd391a21aad))
 - fold the repeated header lines gcovr emits, which SonarQube rejects outright ([`c3333fe`](https://github.com/dstroy0/ProtoCore/commit/c3333fea268012077a4cad888bb5b2e7d9b68058))
 - gen_compiledb and compile_examples climbed two levels to the repo root, not three ([`9d2e963`](https://github.com/dstroy0/ProtoCore/commit/9d2e9634479bf3e38c705c5b43cce85d3e97ec04))
 - select_envs resolved affected_common under the repo root, which the tools/ move broke ([`9b2cfc9`](https://github.com/dstroy0/ProtoCore/commit/9b2cfc901f33be726688ea77d2fdda35b2a504f5))
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2ada79a`](https://github.com/dstroy0/ProtoCore/commit/2ada79a0a2ed8f0714d8eda29c1e019357413674))
 - bump actions/cache from 4 to 6 ([`10de152`](https://github.com/dstroy0/ProtoCore/commit/10de1523d13a0acc31665233db2ba36e518e529e))
 - update test report + coverage [skip ci] ([`5e388ff`](https://github.com/dstroy0/ProtoCore/commit/5e388ffafeb8d91688ee90230b670241c8358a00))
 - update CHANGELOG.md [skip ci] ([`cb14c58`](https://github.com/dstroy0/ProtoCore/commit/cb14c581142090e56283147d43581ee070e7badc))
