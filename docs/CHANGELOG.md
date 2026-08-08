@@ -21,6 +21,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`08496d1`](https://github.com/dstroy0/ProtoCore/commit/08496d1c31dc1761d1c2abab314dc070cdf3e71e))
+- update CHANGELOG.md [skip ci] ([`06b9e5b`](https://github.com/dstroy0/ProtoCore/commit/06b9e5ba4d87e8d35d63b3d0eacff473c14f1dde))
 - update CHANGELOG.md [skip ci] ([`3c7e9bb`](https://github.com/dstroy0/ProtoCore/commit/3c7e9bb27ce2baf5176782881d899908c99bab93))
 - update test report + coverage [skip ci] ([`a7c3a15`](https://github.com/dstroy0/ProtoCore/commit/a7c3a1506f174ec9a3ca2fb16439b7dbe6bc1598))
 - update CHANGELOG.md [skip ci] ([`b86a29b`](https://github.com/dstroy0/ProtoCore/commit/b86a29b9b6bd5655a664c51b671d8273b9ff5352))
@@ -52,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- rf work ([`9f5751c`](https://github.com/dstroy0/ProtoCore/commit/9f5751ced024187455a697726ca27fd157b7359d))
 - Bump version: 1.0.15 → 1.0.16 ([`dcb836c`](https://github.com/dstroy0/ProtoCore/commit/dcb836c02b57b98fb12b532fa3bd4d0cfb149894))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`f64aaf3`](https://github.com/dstroy0/ProtoCore/commit/f64aaf30284428e7e732b890c07dc0d6d5bcec46))
 - Bump version: 1.0.14 → 1.0.15 ([`582ed98`](https://github.com/dstroy0/ProtoCore/commit/582ed9891603147ce7dcf3b97e7cd1b5b57d937c))
@@ -80,6 +83,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the mem Ns replaces every mem* call, and the TLS 1.3 key schedule borrows from the secure pool ([`fa4589c`](https://github.com/dstroy0/ProtoCore/commit/fa4589c7159324ea8bb1955663dd025d8afc6546))
 - the codec frames and flags, the worker moves the bytes ([`2db6b6b`](https://github.com/dstroy0/ProtoCore/commit/2db6b6b539d6464c290f0c0d4f2916276f10bd9d))
 - non-blocking DNS and TCP client open, and the UDP send rings are gone ([`0dbb22d`](https://github.com/dstroy0/ProtoCore/commit/0dbb22d5637a446905f9f02260cbcbce6e782223))
 - one wire format, read from RFC 5905 rather than copied per role ([`8e34117`](https://github.com/dstroy0/ProtoCore/commit/8e341172d1d7c4788bdc3255128517ece85df924))
