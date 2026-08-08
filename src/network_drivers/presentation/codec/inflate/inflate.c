@@ -450,6 +450,6 @@ static InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *ds
     return INFLATE_OK;
 }
 
-#endif // PC_ENABLE_WS_DEFLATE
-
 const InflateNs Inflate = {inflate_raw};
+
+#endif // PC_ENABLE_WS_DEFLATE

@@ -8,6 +8,82 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Deflate and Inflate bind their namespace instance below the gate that declares its type
+
+- **Status:** FIXED, found 2026-08-08 running the envs behind the `PC_HAS_BUS` batch. Pre-existing
+  on `main`: `94c236e9` without the batch gives the identical four errors.
+- **Symptom:** `pio test -e native_swar` ERRORS in the compile stage. `deflate.c:297: unknown type
+name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and the same pair for
+  `InflateNs` / `inflate_raw` at `inflate.c:455`.
+- **Root cause:** both headers declare the namespace type and its `extern` inside
+  `#if PC_ENABLE_WS_DEFLATE` (`deflate.h:67-74`, `inflate.h:35-71`), and both sources close that
+  same gate before defining the instance: `deflate.c:295` is `#endif // PC_ENABLE_WS_DEFLATE` and
+  the definition sits at `:297`, one line past it. With the feature off the type is not in scope but
+  the definition is still compiled, and `native_swar` is an env that builds the codec with
+  `PC_ENABLE_WS_DEFLATE` off.
+- **Fix:** the definition moves above the `#endif` in both files, so the instance is inside the gate
+  that declares what it is. This is the same shape as `radio_power.c`, where six entry points bound
+  outside their gate.
+- **What it uncovered:** `native_swar` still fails, now at the link rather than the compile, on
+  `pc_aesgcm_key_init` / `pc_aesgcm_key_wipe` / `pc_aesgcm_seal` out of `ssh_conn.c`, `ssh_dh.c` and
+  `ssh_packet.c`, plus `bn_expmod_group14`. That is the entry below, and it is why the compile error
+  had been sitting there: nothing downstream of it had ever run.
+
+## An env with no source list builds the whole of src/ and links none of core_setup/
+
+- **Status:** OPEN, found 2026-08-08 behind the `Deflate` / `Inflate` gate fix above.
+- **Symptom:** `pio test -e native_swar` fails at the link with undefined references to
+  `pc_aesgcm_key_init`, `pc_aesgcm_key_wipe`, `pc_aesgcm_seal` and `bn_expmod_group14`, out of
+  translation units the suite has nothing to do with. `test_swar` covers `mmgr/swar.h`, which is
+  header-only lane math.
+- **Root cause:** `test/test_matrix.json` gives `native_swar` `"src": []` and `"flags": []`, so
+  `gen_test_envs.py` emits no `build_src_filter` and PlatformIO falls back to its default of `+<*>`:
+  the env compiles every file under `src/`. With no flags, every `PC_ENABLE_*` takes its default, so
+  SSH is on and `ssh_conn.c` / `ssh_dh.c` / `ssh_packet.c` compile for real. The AEAD and bignum
+  backends they call live under `core_setup/hal/portable`, which sits outside `src/` and so is in no
+  env's default filter. Same family as the `native_quic_server` entry below: an env whose source set
+  does not close over what its sources call.
+- **Scope:** 25 of the 328 envs carry `"src": []` (`native_application`, `native_auth`,
+  `native_base64`, `native_swar`, `native_transport` and 20 more). Most pass, because their `flags`
+  turn the heavy features off before those files compile to anything. `native_swar` has an empty
+  `flags` list as well, which is what makes it the one that links the whole default feature set.
+- **Fix, not yet made:** the narrow answer is a source list for `native_swar` covering what a
+  header-only lane-math suite reaches. The question worth settling first is whether an empty `src`
+  should keep meaning "the whole tree", since that is what lets an env silently acquire a
+  translation unit it was never meant to build.
+
+## test_ina219 asserts on INA219_REG_BUS_VOLTAGE, a name the library never defined
+
+- **Status:** FIXED, found 2026-08-08 the same way. Pre-existing on `main`.
+- **Symptom:** `pio test -e native_ina219` ERRORS in the compile stage:
+  `test_ina219.c:72: 'INA219_REG_BUS_VOLTAGE' undeclared (first use in this function); did you mean
+'INA219_REG_BUS'?`. The identifier appears nowhere else in the tree.
+- **Root cause:** `ina219.h:34-39` names the register pair `INA219_REG_SHUNT` / `INA219_REG_BUS`,
+  matching the doc comments ("shunt voltage" / "bus voltage"). `test_begin_and_read_drive_the_bus`
+  spells the second one out in full. The reference is under no `#if`, so the env cannot compile at
+  all.
+- **Fix:** the test takes the name the library publishes. The header's pair is self-consistent and
+  is what `ina219.c` reads, so the test was the side that was wrong.
+
+## Two route-miss tests in test_application get no 404 on the wire
+
+- **Status:** OPEN, found 2026-08-08 the same way. Pre-existing on `main`: `94c236e9` without the
+  `PC_HAS_BUS` batch fails identically, and the other 36 envs in that run pass.
+- **Symptom:** `pio test -e native_application` reports 96 cases, 2 failed.
+  `test_empty_route_pattern_matches_nothing` (`:1873`) and `test_path_param_segment_mismatches`
+  (`:1930`) both fail the same assertion, `strstr(tcp_captured(), "404")` returning NULL. The
+  `TEST_ASSERT_FALSE(handler_called)` immediately above each one passes, so the matcher is refusing
+  the route correctly and the response is what does not arrive.
+- **What is ruled out:** the capture harness works. `:885` runs the identical
+  `arm_slot` / `pcb` / `tcp_capture_reset` / `handle` / `strstr(out, "404")` sequence on
+  `GET /nope.txt` and passes. Cross-test route pollution is ruled out too: `setUp` calls
+  `pc_server_reset()` (`protocore.c:117`), which resets the route table, the mount points, the
+  response headers, the middleware and the signal table.
+- **What is left:** the two failing requests are `GET /` against a registered `on_http("")`, and
+  `GET /p1` against `on_http("/p1/:a")`. Both are extensionless paths where the matcher runs out of
+  segments; the passing case has an extension. The 404 emit path for a segment-count miss is where
+  to look next.
+
 ## native_quic_server does not link: it builds the HTTP/3 bridge without the HTTP or TCP owners
 
 - **Status:** FIXED, found 2026-08-07 while yanking the host arms out of the presentation layer.

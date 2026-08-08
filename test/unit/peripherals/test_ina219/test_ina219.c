@@ -69,7 +69,7 @@ void test_begin_and_read_drive_the_bus()
     TEST_ASSERT_TRUE(pc_ina219_read_bus_mv(&v));
     w = pc_bus_host_txn_bytes(0, &n);
     TEST_ASSERT_EQUAL_UINT32(1, n);
-    TEST_ASSERT_EQUAL_HEX8(INA219_REG_BUS_VOLTAGE, w[0]);
+    TEST_ASSERT_EQUAL_HEX8(INA219_REG_BUS, w[0]);
 }
 
 // A sensor that does not acknowledge reports failure, so a caller never mistakes an unavailable

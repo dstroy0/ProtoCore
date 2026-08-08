@@ -292,6 +292,6 @@ static DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *ds
     return DEFLATE_OK;
 }
 
-#endif // PC_ENABLE_WS_DEFLATE
-
 const DeflateNs Deflate = {deflate_raw};
+
+#endif // PC_ENABLE_WS_DEFLATE
