@@ -26,7 +26,8 @@
 #include "services/security/csrf/csrf.h"
 #endif
 
-// The root's one file-scope mutable: the handler a request runs when no route matched.
+// The root's file-scope mutables: the handler a request runs when no route matched, and the
+// edge-cache fetch pump.
 typedef struct
 {
     Handler not_found;
@@ -39,6 +40,15 @@ static HttpCtx s_http;
 static void set_not_found(Handler cb)
 {
     s_http.not_found = cb;
+}
+
+// Every other owner pc_server_reset() calls exposes this; without it a handler registered here
+// outlives the reset and answers requests the route table no longer knows about. The blank template
+// lives in rodata, so this is a copy rather than a sizeof(HttpCtx) temporary.
+static void reset(void)
+{
+    static const HttpCtx blank = {0};
+    s_http = blank;
 }
 
 #if PC_ENABLE_EDGE_CACHE
@@ -897,8 +907,9 @@ static void poll_slot(uint8_t i)
     }
 }
 
-const HttpNs Http = {status_text,  parse_method, method_name,       path_matches,  match_path_params,
-                     req_is_head,  allow_append, match_and_execute, set_not_found, poll_slot,
+const HttpNs Http = {status_text,       parse_method, method_name,  path_matches,
+                     match_path_params, req_is_head,  allow_append, match_and_execute,
+                     set_not_found,     poll_slot,    reset,
 #if PC_ENABLE_EDGE_CACHE
                      set_edge_poll
 #endif

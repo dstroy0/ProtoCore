@@ -31,7 +31,8 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
 
 ## An env with no source list builds the whole of src/ and links none of core_setup/
 
-- **Status:** OPEN, found 2026-08-08 behind the `Deflate` / `Inflate` gate fix above.
+- **Status:** FIXED for `native_swar`, found 2026-08-08 behind the `Deflate` / `Inflate` gate fix
+  above. The general question the last bullet raises is still open.
 - **Symptom:** `pio test -e native_swar` fails at the link with undefined references to
   `pc_aesgcm_key_init`, `pc_aesgcm_key_wipe`, `pc_aesgcm_seal` and `bn_expmod_group14`, out of
   translation units the suite has nothing to do with. `test_swar` covers `mmgr/swar.h`, which is
@@ -47,10 +48,14 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   `native_base64`, `native_swar`, `native_transport` and 20 more). Most pass, because their `flags`
   turn the heavy features off before those files compile to anything. `native_swar` has an empty
   `flags` list as well, which is what makes it the one that links the whole default feature set.
-- **Fix, not yet made:** the narrow answer is a source list for `native_swar` covering what a
-  header-only lane-math suite reaches. The question worth settling first is whether an empty `src`
-  should keep meaning "the whole tree", since that is what lets an env silently acquire a
-  translation unit it was never meant to build.
+- **Fix:** `native_swar` takes `"src": ["-<*>"]` and `"test_build_src": "no"`, which is what
+  `native_concurrency` already uses for the same shape. `test_swar` covers `mmgr/swar.h` and
+  `shared_primitives/runops.h`, both header-only `static inline`, so the suite needs no library
+  source at all and now builds none.
+- **Still open:** whether an empty `src` should keep meaning "the whole tree". That default is what
+  let this env silently acquire translation units it was never meant to build, and 24 other envs
+  carry it. They pass only because their `flags` switch the heavy features off before those files
+  compile to anything, which is a coincidence rather than a decision.
 
 ## test_ina219 asserts on INA219_REG_BUS_VOLTAGE, a name the library never defined
 
@@ -65,10 +70,10 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
 - **Fix:** the test takes the name the library publishes. The header's pair is self-consistent and
   is what `ina219.c` reads, so the test was the side that was wrong.
 
-## Two route-miss tests in test_application get no 404 on the wire
+## pc_server_reset() left the not-found handler installed, so no route miss ever answered 404
 
-- **Status:** OPEN, found 2026-08-08 the same way. Pre-existing on `main`: `94c236e9` without the
-  `PC_HAS_BUS` batch fails identically, and the other 36 envs in that run pass.
+- **Status:** FIXED, found 2026-08-08 running the envs behind the `PC_HAS_BUS` batch. Pre-existing on
+  `main`: `94c236e9` without the batch fails identically, and the other 36 envs in that run pass.
 - **Symptom:** `pio test -e native_application` reports 96 cases, 2 failed.
   `test_empty_route_pattern_matches_nothing` (`:1873`) and `test_path_param_segment_mismatches`
   (`:1930`) both fail the same assertion, `strstr(tcp_captured(), "404")` returning NULL. The
@@ -79,10 +84,16 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   `GET /nope.txt` and passes. Cross-test route pollution is ruled out too: `setUp` calls
   `pc_server_reset()` (`protocore.c:117`), which resets the route table, the mount points, the
   response headers, the middleware and the signal table.
-- **What is left:** the two failing requests are `GET /` against a registered `on_http("")`, and
-  `GET /p1` against `on_http("/p1/:a")`. Both are extensionless paths where the matcher runs out of
-  segments; the passing case has an extension. The 404 emit path for a segment-count miss is where
-  to look next.
+- **Root cause:** `http.c:728` answers a route miss with `s_http.not_found` when one is set and the
+  built-in 404 only when it is not. `pc_server_reset()` empties every other owner that holds an app
+  registration - `HttpRoutes.reset()`, `Auth.reset()`, `pc_mnt_point_reset()`, `pc_resp_reset()`,
+  `pc_middleware_reset()`, `pc_signal_reset()` - but HTTP's own `HttpCtx` was not among them, because
+  HTTP was the one owner that never exposed a reset. Two tests near the top of the suite call
+  `on_not_found()`, so from that point on every route miss in the binary ran their handler instead.
+  The path had nothing to do with it; `GET /nope.txt` passed only because it runs before those two.
+- **Fix:** `HttpNs` gains `reset`, which puts `HttpCtx` back to the blank template the same way
+  `pc_server_reset()` does for its own `ServerCtx`, and `pc_server_reset()` calls it. That also
+  clears the edge-cache poll seam, which had the same escape.
 
 ## native_quic_server does not link: it builds the HTTP/3 bridge without the HTTP or TCP owners
 

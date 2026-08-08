@@ -123,6 +123,7 @@ void pc_server_reset(void)
     static const ServerCtx blank = {0};
     s_inst = blank;
     HttpRoutes.reset();
+    Http.reset(); // the not-found handler, which answers instead of the built-in 404 while it is set
 #if PC_ENABLE_AUTH
     // A credential id names a row by index and a route holds that id, so the two tables empty
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
