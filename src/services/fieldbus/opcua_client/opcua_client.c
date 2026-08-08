@@ -12,8 +12,6 @@
 
 #if PC_ENABLE_OPCUA_CLIENT
 
-#include <string.h>
-
 void pc_opcua_client_init(OpcUaClient *c)
 {
     memset(c, 0, sizeof(*c));

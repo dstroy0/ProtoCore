@@ -10,6 +10,7 @@
  */
 
 #include "mmgr/frame.h"
+#include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
 #include "shared_primitives/speed_opt.h"
 
 #ifndef PC_FRAME_SCAN_LITERALS

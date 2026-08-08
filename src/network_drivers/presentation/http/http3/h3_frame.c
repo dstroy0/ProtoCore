@@ -11,7 +11,6 @@
 #if PC_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/quic_varint.h"
-#include <string.h>
 
 proto_bool pc_h3_frame_parse(const uint8_t *buf, size_t len, H3Frame *out)
 {

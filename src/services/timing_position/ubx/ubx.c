@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_UBX
 
-#include <string.h>
-
 void pc_ubx_checksum(const uint8_t *body, size_t len, uint8_t *ck_a, uint8_t *ck_b)
 {
     uint8_t a = 0, b = 0;

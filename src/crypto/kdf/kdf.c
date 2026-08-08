@@ -13,8 +13,8 @@
 #include "crypto/kdf/kdf.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/hash/sha256.h"
-#include "shared_primitives/endian.h"
-#include <string.h>
+#include "mmgr/endian.h"
+
 PC_CRYPTO_HOT
 
 proto_bool pc_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const uint8_t *fixed, size_t fixed_len,

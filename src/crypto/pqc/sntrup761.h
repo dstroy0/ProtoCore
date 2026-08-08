@@ -16,7 +16,7 @@
  * the ring Z_q[x]/(x^761 - x - 1). The algorithm and the byte encodings match OpenSSH's embedded
  * sntrup761 reference (public domain; D. J. Bernstein et al.) so the ciphertext this produces
  * decapsulates byte-for-byte on a real OpenSSH peer. Zero heap; SHA-512 via the SSH sha512 seam,
- * randomness via ssh_rng_fill.
+ * randomness via pc_rand_fill() (crypto/rng).
  */
 
 #ifndef PROTOCORE_SNTRUP761_H
@@ -43,7 +43,7 @@ PROTO_BEGIN_DECLS
 void pc_sntrup761_keypair(uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRUP761_SK_BYTES]);
 
 /**
- * @brief sntrup761 Encapsulation (responder). Draws a fresh short polynomial via ssh_rng_fill,
+ * @brief sntrup761 Encapsulation (responder). Draws a fresh short polynomial via pc_rand_fill(),
  *        encrypts it under @p pk, and derives the session key.
  * @param pk  the peer's public key (PC_SNTRUP761_PK_BYTES).
  * @param ct  out: the ciphertext (PC_SNTRUP761_CT_BYTES).

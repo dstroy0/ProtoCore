@@ -19,7 +19,7 @@
  *    and target. It is what lets the SFTP/SCP/WebDAV servers run under a native test.
  *
  *  - **Arduino FS** (board layer): wraps a real `fs::FS` (LittleFS / SD / SPIFFS) for persistent
- *    storage. It lives in board_drivers/ because it speaks a vendor framework, which the core does
+ *    storage. It lives in core_setup/ because it speaks a vendor framework, which the core does
  *    not.
  *
  * Handles are small ints the backend assigns, and a directory cursor is one of them - so ::close
@@ -119,6 +119,34 @@ typedef struct pc_mnt_backend
 // and never has to enable a service just to name a type. The seam fails closed when nothing is
 // mounted, which is the honest answer rather than an error.
 /** @brief Mount the active backend (call once at setup; NULL unmounts). */
+/** @brief The id a route carries when it serves no mount point. */
+#define PC_MNT_NONE 0xFFu
+
+/**
+ * @brief Record a mount point - a backend and the subtree it serves - and return the id naming it,
+ *        or ::PC_MNT_NONE when full.
+ *
+ * Both registrars that offer a mount describe one with this pair, so it lives with mounting rather
+ * than being copied into each of their route entries. A null @p backend is legal and means whatever
+ * is currently mounted.
+ */
+uint8_t pc_mnt_point_add(const pc_mnt_backend *backend, const char *root);
+
+/// @brief The backend @p id names, or nullptr - which also means "use whatever is mounted".
+const pc_mnt_backend *pc_mnt_point_backend(uint8_t id);
+
+/// @brief The subtree @p id names, as a request-path piece. Empty, never null.
+const char *pc_mnt_point_root(uint8_t id);
+
+/**
+ * @brief Empty the mount-point table.
+ *
+ * An id names a row by index and a route holds that id, so the table empties with the routes it is
+ * indexed from: pc_server_reset() calls both. A table that kept its rows across a reset would reach
+ * ::PC_MNT_NONE after MAX_ROUTES mounts and hand every later mount an id that serves nothing.
+ */
+void pc_mnt_point_reset(void);
+
 void pc_mnt_mount(const pc_mnt_backend *backend);
 
 /**

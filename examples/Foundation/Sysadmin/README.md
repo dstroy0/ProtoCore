@@ -28,7 +28,7 @@ channel, IP) into a JSON object built with `snprintf` into a fixed buffer:
 ```cpp
 snprintf(response_buf, sizeof(response_buf),
          "{\"free_heap\":%u,\"uptime_ms\":%lu,\"reset_reason\":\"%s\",\"wifi_rssi\":%d, ...}",
-         ESP.getFreeHeap(), millis(), get_reset_reason_string(esp_reset_reason()), pc_net_rssi(), ...);
+         ESP.getFreeHeap(), millis(), get_reset_reason_string(esp_reset_reason()), Physical.wifi->rssi(), ...);
 ```
 
 The reset reason is decoded from the ESP-IDF enum into a friendly string by
@@ -167,7 +167,7 @@ bool verify_admin_privileges(const HttpReq *req)
     return (token && strcmp(token, ADMIN_TOKEN) == 0);
 }
 
-// --- Route Handlers ---
+// --- HttpRoute Handlers ---
 
 /** GET / - serve the embedded single-page dashboard straight from flash. */
 void handle_serve_dashboard(uint8_t slot_id, HttpReq *req)
@@ -200,8 +200,8 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
              "\"ip_address\":\"%s\""
              "}",
              ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(), millis(),
-             get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), pc_net_rssi(),
-             ssid, pc_net_channel(), ip_str);
+             get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), Physical.wifi->rssi(),
+             ssid, Physical.wifi->channel(), ip_str);
 
     server.send(slot_id, 200, "application/json", response_buf);
 }
@@ -228,15 +228,15 @@ void setup()
     delay(1000);
     Serial.println("\n--- PC SysAdmin Control Console ---");
 
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(500);
         Serial.print(".");
     }
     Serial.println("\nWiFi Online!");
     Serial.print("Access the dashboard via: http://");
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

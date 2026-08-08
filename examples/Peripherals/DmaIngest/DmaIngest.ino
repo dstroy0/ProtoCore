@@ -19,7 +19,7 @@
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "mmgr/dma.h"
 #include "network_drivers/session/preempt_queue.h"
-#include <string.h>
+
 
 // The preempting-queue item: a SELF-CONTAINED copy of the frame bytes, padded to the
 // queue item size (the queue copies a fixed PC_PQ_ITEM_SIZE bytes). We copy the bytes
@@ -67,7 +67,7 @@ static void on_dma_complete(const pc_dma_event *ev, void *)
     item.msg.channel = ev->channel;
     uint16_t n = (ev->len < sizeof(item.msg.bytes)) ? ev->len : sizeof(item.msg.bytes);
     memcpy(item.msg.bytes, ev->data, n);
-    pc_pq_post_lane_from_isr(pc_pq_lane::PC_PQ_LANE_DMA, &item);
+    Session.workers->queue->post_from_isr(pc_pq_lane::PC_PQ_LANE_DMA, &item);
 }
 
 static uint8_t g_seq = 0;
@@ -84,7 +84,7 @@ void setup()
     pq.priority = 0; // 0 -> pc_pq_lane::PC_PQ_LANE_DMA's default priority (internal > user)
     pq.core = 1;
     pq.name = "dma_rx";
-    if (!pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &pq))
+    if (!Session.workers->queue->start(pc_pq_lane::PC_PQ_LANE_DMA, &pq))
     {
         Serial.println("preempt queue failed to start");
         return;

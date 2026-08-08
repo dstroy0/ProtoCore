@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_CIP
 
-#include <string.h>
-
 // Write one logical segment (class/instance/attribute) for @p id; 8-bit when it fits, else
 // 16-bit (segment byte + pad + LE value). Returns the octets written (2 or 4), or 0 if it
 // does not fit in [p, p+cap).

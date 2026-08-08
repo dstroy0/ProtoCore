@@ -6,18 +6,18 @@
 
 The RMII path ([Ethernet](../Ethernet)) needs a chip with an on-chip Ethernet MAC. The
 **ESP32-S3 has no RMII MAC**, so a wired link there uses an **SPI Ethernet controller** - the
-WIZnet **W5500** - over the HSPI bus. With `PC_ETH_W5500=1`, `init_eth_physical()` calls the
+WIZnet **W5500** - over the HSPI bus. With `PC_ETH_W5500=1`, `Physical.eth->init()` calls the
 arduino-esp32 3.x ETH SPI API (`ETH.begin(ETH_PHY_W5500, ...)`); once the link has a DHCP IP the
 server accepts on it with no other change:
 
 ```cpp
-init_eth_physical();          // ETH.begin(ETH_PHY_W5500, ...) with the PC_ETH_W5500_* pins
-while (!eth_ready()) delay(250);
+Physical.eth->init();          // ETH.begin(ETH_PHY_W5500, ...) with the PC_ETH_W5500_* pins
+while (!Physical.eth->ready()) delay(250);
 // ... server.begin(80) - now serving over W5500 Ethernet
 ```
 
 Nothing else changes: the egress reporting already classifies the wired route as
-`pc_iface::PC_IFACE_ETH`, so `pc_net_egress()`, per-route STA/AP/ETH interface filters, and every
+`pc_if_kind::PC_IF_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and every
 protocol work over the link the moment it has an IP.
 
 ## Wiring (ESP32-S3-DevKitC, HSPI)

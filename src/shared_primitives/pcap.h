@@ -17,8 +17,8 @@
 #ifndef PROTOCORE_PCAP_H
 #define PROTOCORE_PCAP_H
 
-#include "protocore_config.h"         // the entry point: types.h for the widths and PC_INLINE
-#include "shared_primitives/endian.h" // pc_wr32le / pc_wr16le - libpcap headers are little-endian
+#include "mmgr/endian.h"      // pc_wr32le / pc_wr16le - libpcap headers are little-endian
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief libpcap header sizes. */
 #define PC_PCAP_GLOBAL_HDR_LEN 24
@@ -30,6 +30,7 @@
 #define PC_DLT_ETHERNET 1             ///< IEEE 802.3 Ethernet
 #define PC_DLT_IEEE802_15_4_NOFCS 230 ///< raw 802.15.4 MAC frame, no FCS
 #define PC_DLT_IEEE802_15_4_TAP 283   ///< 802.15.4 with a TAP pseudo-header (RSSI / channel TLVs)
+#define PC_DLT_RAW 101                ///< the record starts at the IP header, with no link layer
 
 /**
  * @brief Write the 24-byte libpcap global header (little-endian, microsecond timestamps).

@@ -8,6 +8,735 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## native_quic_server does not link: it builds the HTTP/3 bridge without the HTTP or TCP owners
+
+- **Status:** FIXED, found 2026-08-07 while yanking the host arms out of the presentation layer.
+  Pre-existing and not caused by that sweep: building `ac33d37a0` (its base) gives the identical
+  link errors.
+- **Symptom:** `pio test -e native_quic_server` ERRORS in the link stage, before any test runs.
+  `native_h3_server` builds the same file and passes.
+- **Root cause:** the env's `src` list carries `presentation/http/http3/h3_server.c`, whose
+  `pc_h3_resp_sink` and `pc_h3_server_request` reference `conn_pool`, `http_pool`, `http_reset`,
+  `Tcp`, and `Http`. It carries neither the HTTP owner nor the TCP owner that define them, so
+  `ld` reports eight undefined references out of `h3_server.o`.
+- **Fix:** the env drops `h3_server.c` and tests `quic_server.c` alone. The dispatch bridge is what
+  `native_h3_server` is for: it extends the full-app base, so the route table and the slot pools the
+  bridge reaches are already in the image. The env now also carries the UDP listener, the client, the
+  address mapping and `ip.c`, which is what `quic_server.c` binds its port through.
+
+## pc_quic_server_stop() left the UDP port bound and its handler armed
+
+- **Status:** FIXED, found 2026-08-07 while putting test_quic_server on the real listener.
+- **Symptom:** none on a device, where the server is stopped once at most. A suite that stops and
+  restarts saw the second `pc_quic_server_begin()` take `listen_on`'s already-bound path, which
+  rebinds the handler without a fresh pcb.
+- **Root cause:** `pc_quic_server_stop()` cleared the running flag, the pool and the ring cursors,
+  but never called `Udp.listener->close()`, so the bind outlived the server it belonged to and a
+  datagram arriving after the stop still filled the ingest ring. `quic_server.h` has documented the
+  call as closing the binding since it was written.
+- **Fix:** `pc_quic_server_stop()` closes the port first, before releasing the pool, so nothing more
+  reaches the ring while it is being torn down.
+
+## The TCP transport's hot path did not compile, and one env was the only witness
+
+- **Status:** FIXED, found by running the transport envs during the ring work. Pre-existing on
+  `c11-target`; confirmed by building `8b329ffd7` and getting the identical three errors.
+- **Root cause:** three sites of namespace-conversion residue, all inside `#if PROTOCORE_HOT`.
+  `worker.c` defines `pc_worker_wake` once in each build arm (`:129` under `PROTOCORE_HOT`, `:188`
+  under `#else`) and `pc_defer` calls it at `:125`, above both. With no declaration in scope the
+  call was an implicit non-static declaration, and the static definition below it then contradicted
+  that. Separately, `tcp_conn.c:1156` and `tcp_listener.c:368` called `Session.workers->wake()`;
+  `Session` is declared in `session.h`, which neither file includes. Both already include
+  `worker.h`, whose only purpose is to export `Workers`.
+- **Why nothing caught it:** `native_tcp_hot` is the only env that compiles the `PROTOCORE_HOT`
+  arms of the transport. It runs on the host - `native_hot_base` sets `PROTOCORE_HOT` and the board
+  mocks stand in for silicon - but every other env takes the `#else` arm, where the offending call
+  sites do not exist, so 19 of the 20 SSH and transport envs were green with the hot path broken.
+- **Fix:** a forward declaration above both arms in `worker.c`, so one declaration covers both
+  definitions; and `Workers.wake()` at the call sites, which is the owner they already hold the
+  header for rather than a reach up through the join and back down.
+- **A third site the compiler never named:** `tcp_listener.c:351` had the same
+  `Session.workers->wake()`, under `#if PC_WORKER_COUNT > 1` inside `#if PROTOCORE_HOT`.
+  `native_tcp_hot` builds single-worker so it took the `#else` arm, and the two envs that do set
+  `-DPC_WORKER_COUNT=2` do not set `PROTOCORE_HOT`. **`PROTOCORE_HOT` with `PC_WORKER_COUNT > 1` is
+  compiled by nothing in the matrix**, so that arm was carrying the same break with no witness at
+  all. Fixed the same way. The gap is closable on the host - `native_hot_base` with
+  `-DPC_WORKER_COUNT=2` - and is still open.
+- **A second gap the matrix already names:** `native_workers` records that per-worker queue routing
+  is "hardware-verified (the host queue mock ignores the handle)". `pc_platform_queue_send` in
+  `test/mocks/pc_net_host.h` discards the item and reports success, and the receive drains a
+  separately staged buffer, so no host env can observe an enqueue reaching its consumer. That is
+  what makes the enqueue-then-wake pair untestable here.
+- **Still wrong, and not fixed here:** the call is upward whichever table it names. The worker
+  blocks on a task notification (`worker_task`: `pc_platform_task_wait`), not on the queue it
+  drains, so every producer does `pc_platform_queue_send()` and then a separate wake - and it is
+  that second act that makes layer 4 name layer 5. Three of the four wake sites are literally an
+  enqueue followed by a wake on the next line.
+
+## The OAuth2 form-body builder took the address of its own parameter, and every token request crashed
+
+- **Status:** FIXED, found while building the codec conversion. Pre-existing; not caused by that work.
+- **Root cause:** `put_param` (`oauth2.c:77`) receives a `Buf *b` and then passed `&b` to `put_raw`
+  and `put_enc`, which take a `Buf *`. That is a `Buf **`, so the callee read the stack slot holding
+  the pointer as though it were the struct: `b->o` came out as whatever the adjacent stack held, and
+  the first `b->o[b->n++] = *s` wrote through it. `native_oauth2` did not fail a case, it took
+  SIGSEGV. All four calls at `:79-82` were wrong.
+- **Why nothing caught it:** the compiler did emit `-Wincompatible-pointer-types` on every one of the
+  four, which is a warning rather than an error in this build, and the suite ERRORs rather than
+  FAILs on a signal, so a summary line reading `0 succeeded` never named a case.
+- **Related:** the invariant comment at `:89` argues `b->n < b->cap` holds "for as long as b->ok
+  remains true". That argument was sound for the functions themselves and said nothing about the
+  caller passing the wrong level of indirection.
+- **Fix:** pass `b`. The four calls now match the declarations.
+
+---
+
+## base64.h declared a C API with no C linkage, so every C++ caller asked the linker for a mangled name
+
+- **Status:** FIXED, found during the presentation-layer namespace conversion.
+- **Root cause:** `base64.h` carried no `PROTO_BEGIN_DECLS` / `PROTO_END_DECLS`. It was the only
+  header under `presentation/codec/` missing them; the other eight all have the pair. `base64.c`
+  compiles as C and emits `pc_base64_encode`, while a C++ translation unit that included the header
+  read the declarations as C++ and asked for the Itanium-mangled spelling.
+- **Who reached it:** `performance_benching/network_drivers/presentation/base64/src/main.cpp` and
+  `host.cpp` both include it directly, as does the ota_service bench. Every `src/` caller is C, which
+  is why no library build ever showed it.
+- **Fix:** added the pair, and the `shared_primitives/types.h` include that defines it. The module's
+  four functions are now `static` behind `Base64`, so the object is the only symbol crossing the
+  boundary, and a `const` object at namespace scope is unmangled under the Itanium ABI either way.
+
+---
+
+## A robotics Read indexes past the axis array, in the exact state a test sets up
+
+- **Status:** OPEN, found by the fieldbus audit. Verified in source.
+- **Root cause:** `decode_axis` (`robotics.c:111`) bounds `k` by `axis_count` and nothing else. The
+  Browse path adds `&& a <= PC_ROBOTICS_AXES` at `:357`; the Read path at `:210` does not, and then
+  takes `&mds->device.axes[k - 1]` on an array declared `axes[PC_ROBOTICS_AXES]` (6). A caller that
+  declares `axis_count = 7` and reads axis 7 reads `axes[6]`, one past the end.
+- **Why nothing caught it:** `test_robotics.c:407` is named
+  `test_browse_axes_clamped_to_compiled_maximum` and sets `axis_count = PC_ROBOTICS_AXES + 1`, which
+  is precisely the state that triggers it, but exercises only Browse. The Read path in that state is
+  untested.
+- **Fix:** not applied.
+
+---
+
+## The umati enumerations do not match the companion spec, and the tests compare them to themselves
+
+- **Status:** OPEN, found by the fieldbus audit.
+- **Root cause:** OPC 40501-1 section 12.5 defines `OperationalMode` as Manual=0, Automatic=1,
+  Setup=2, AutoWithManualIntervention=3, Service=4, Other=5. `umati.h:58` has OTHER=0, MANUAL=1,
+  MDA=2, AUTOMATIC=3, SETUP=4: every value differs, and MDA is not in the spec at all. `ChannelState`
+  is wrong the same way against section 12.1 (Active=0, Interrupted=1, Reset=2). `umati.h:56` claims
+  the values follow the companion spec.
+- **Why nothing caught it:** `test_umati.c:194` and `:197` assert the enumerator against itself, so
+  no value is ever pinned to the document.
+- **Same shape elsewhere in the group:** `test_iccp.c:51` pins `0x17` for a timestamp where
+  `utc-time [17] IMPLICIT` is `0x91` and eight octets, not four; `:62` uses `0xA3` for RealQ against
+  `0xA2` for StateQ at `:39`, though both are structures and cannot differ. `test_mms.c:47` pins a
+  bare `0x1A` inside `name [0] ObjectName` where the ASN.1 requires `0x80`, `0xA1{...}` or `0x82`.
+- **Fix:** none applied.
+
+---
+
+## The SunSpec suite would pass with the byte order reversed
+
+- **Status:** OPEN, found by the fieldbus audit.
+- **Root cause:** no big-endian 16-bit register is pinned anywhere in `test_sunspec.c`, on either
+  side. The 32-bit paths are pinned, but `be16` and `write_u16` meet only each other: the truncation
+  case returns false under either order, and the end-of-model marker `0xFFFF` is a palindrome. A
+  symmetric swap in `sunspec.c:14` and `:137` passes the whole suite.
+- **Also open in the same group:** the GOOSE Reserved1 simulation bit is hardcoded to zero
+  (`goose.c:204`) so a simulated frame is indistinguishable to a subscriber; the GOOSE Length field
+  is never validated and VLAN-tagged frames, the normal on-wire form, are rejected (`goose.c:226`);
+  the BACnet Forwarded-NPDU returns the six-octet originating address as the head of the NPDU
+  (`bacnet.c:35`); and the EUROMAP 77 namespace URI is the pre-harmonization `euromap.org` form
+  rather than OPC 40077's.
+- **Fix:** none applied.
+
+---
+
+## Four length fields off the wire wrap on a 32-bit target and pass their own bounds check
+
+- **Status:** OPEN, found across the protocol audits. One class, four sites.
+- **Symptom:** a peer-supplied length near `UINT32_MAX` makes the guard compute a small total, the
+  check passes, and the parser hands back a multi-gigabyte span into a small buffer.
+- **The sites:**
+    - `vxi11.c:89` - `pad = (4 - (len & 3)) & 3` then `r->off + len + pad > r->len`. With `len`
+      0xFFFFFFFD or above, `len + pad` wraps to 0 and `pc_vxi11_parse_read_resp` returns a ~4 GB
+      `data_len`. Reachable from a device reply (RFC 4506 section 4.10 makes the opaque length a
+      wire-supplied unsigned int).
+    - `lsv2.c:90` - `size_t total = PC_LSV2_HEADER_LEN + plen` with `plen` raw off the wire. At
+      0xFFFFFFF9 and above, `total` wraps to 1..7, `len < total` is false, and the telegram is
+      accepted with a payload length up to 4 GB.
+    - `wal.c:112` - `off + WAL_RECORD_HEADER + plen > len`, then `crc32_step(crc, r + 20, plen)`.
+      Same shape at `wal_store.c:273` and `dbm.c:129`.
+- **Why nothing caught it:** `size_t` is 64-bit on the host, so no host suite can reach any of them.
+  The targets that matter (ESP32, Cortex-M, C2000) are all 32-bit.
+- **Fix:** none applied.
+
+---
+
+## Two NMEA 2000 decoders return a not-available sentinel as a real measurement
+
+- **Status:** OPEN, found by the timing and positioning audit.
+- **Root cause:** `nmea2000.c:389` decodes `offset_m` with no validity check, so the
+  not-available `0x7FFF` reads back as +32.767 m of depth offset. `:403` has the same defect on
+  `deviation_rad` and `variation_rad`, where `0x7FFF` becomes +3.2767 rad.
+- **Also in the same cluster:** `ntrip_caster.c:134` `pc_ntrip_request_parse` dereferences `out`
+  through `memset` with no null guard, where every sibling parser guards; and
+  `rtcm3.c:154` `pc_rtcm3_frame_build` with a null payload and a non-zero length skips the copy and
+  CRCs uninitialized bytes, where `pc_ubx_build` refuses the same call.
+- **Fix:** none applied.
+
+---
+
+## A test overflows its own signature buffer before the length guard runs
+
+- **Status:** OPEN, found by the crypto audit.
+- **Root cause:** `test_crypto_kat.c:301` decodes into `uint8_t sig[64]` and only then checks
+  `slen != 64`. Five pinned Ed25519 vectors carry longer signatures, including tcId 34 at 96 bytes,
+  which overruns by 32. Undefined behavior that ASan would trip.
+- **Related, same suite:** the AES-128-GCM table is 40 rows and every one is `result: valid`. The
+  curator's `flagged[:40]` cap consumes exactly the valid rows and truncates immediately before the
+  first `ModifiedTag`, so `KatAead.valid` is emitted and never read. The file header claims
+  "adversarial edge cases: wrong tags, modified IVs"; for AES-128-GCM there are none of either, and
+  the only negative is the test's own tag flip.
+- **Fix:** none applied. `sig[96]` closes the overflow; the coverage gap needs the cap raised or the
+  buckets split.
+
+---
+
+## Every OAuth2 request builder passes a Buf ** where a Buf * is expected, and segfaults
+
+- **Status:** OPEN, found by a spec audit of the security services. Verified in source.
+- **Symptom:** `pc_oauth2_build_code_request()` and `pc_oauth2_build_refresh_request()` crash. Every
+  parameter goes through the broken helper, so the first one does it.
+- **Root cause:** `oauth2.c:77` takes `Buf *b` and then calls `put_raw(&b, "&")` at `:79`, `:80`,
+  `:81` and `put_enc(&b, val)` at `:82`. `put_raw` and `put_enc` take `Buf *` (`:28`, `:48`), so each
+  call passes the address of the pointer. The callee then treats a `Buf **` as a `Buf *` and writes
+  through whatever the first members alias.
+- **Why it compiles:** `-std=c11` makes an incompatible pointer type a warning. This file was a
+  `.cpp` until `667989ac9`, where the C++ compiler rejected it outright as an error; the conversion
+  to C demoted it to a warning and it has been broken since.
+- **Why nothing caught it:** `native_oauth2` builds and the suite passes, because no case calls a
+  builder. `test_oauth2` covers the percent-encoder and the response parser only.
+- **Fix:** not applied, by owner decision. It is `put_raw(b, ...)` four times.
+
+---
+
+## The forwarded-client resolver reads the leftmost element, which is the one the client controls
+
+- **Status:** OPEN, found in the same audit.
+- **Symptom:** an auth lockout is evaded by rotating a header value, and any chosen address can be
+  made to take the blame for another peer's failures.
+- **Root cause:** `http_parser.c:789` returns the first element of `X-Forwarded-For`, and `:743`
+  does the same for `Forwarded`. A proxy appends, so the element it added is the last one and
+  everything left of it came from the client. RFC 7239 section 7.1 says only the element the trusted
+  proxy added may be believed. The trust check still passes, because the peer genuinely is the
+  proxy.
+- **`http.c:538` states the opposite in a comment:** "a spoofed header can neither evade a lockout
+  nor frame another address."
+- **Why nothing caught it:** `test_http_parser.c:417`, `:422` and `:446` assert the leftmost element
+  is what comes back, so the suite pins it. `test_forwarded_trust` never supplies a comma list at
+  all, so the module that exists to stop this never sees the shape.
+- **Fix:** not applied.
+
+---
+
+## pc_totp accepts digits = 0, and then every code verifies
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** `totp.c:53` computes `pow10u(digits)` with no range check. At `digits = 0` the
+  modulus is 1, so the generated code is always 0 and `pc_totp_verify()` accepts 0 from anyone. At
+  `digits = 10` the value overflows `uint32_t`. RFC 4226 section 5.3 fixes the range at 6 to 8.
+- **Related, same module:** the verifier is stateless, so a code stays valid for its whole window;
+  RFC 6238 section 5.2 requires a used code to be refused. `pc_base32_decode` (`:147`) discards a
+  trailing partial group instead of rejecting it, so two different secrets can decode to the same
+  key, and it accepts `=` anywhere rather than only as trailing padding.
+- **Why nothing caught it:** no case passes a `digits` outside 6 to 8, and none replays a code.
+- **Fix:** not applied.
+
+---
+
+## Three writers discard a send result the caller is told succeeded
+
+- **Status:** OPEN. `sse.c` found by the transport audit and verified; the pattern is the one
+  BUGS.md already records under "TX truncation on large responses".
+- **Root cause:** `sse.c:158` calls `Tcp.conn->send(...)` and returns `PROTO_TRUE` unconditionally.
+  Once the TCP send buffer fills, the event is dropped and the subscriber is told it was delivered.
+- **Also found, not send-related but the same class of unbuilt code:**
+    - `udp_telemetry.c:206` names `s_ut.ip`; the member is `collector` (`:188`). It sits under
+      `#if PROTOCORE_HOT`, which no host env compiles, so the file does not build for the target.
+    - `sockpool.c:56` picks its LRU victim by comparing absolute `last_used` values with `<`, which
+      inverts across a `millis()` rollover and evicts the newest slot. Every other window
+      comparison in the tree uses an unsigned delta.
+    - `udp_listener.c:498` (`listen_group`) omits the `find_bind(port)` rebind that `listen_on`
+      carries at `:472` with a comment explaining why, so two slots can hold one port and one is
+      unreachable.
+- **Fix:** none applied.
+
+---
+
+## The accept path wires four callbacks and no test reads any of them
+
+- **Status:** OPEN, found by the transport audit.
+- **Symptom:** none locally. On target, deleting the wiring makes every accepted connection deaf to
+  data, ACKs and errors, and the whole host suite stays green.
+- **Root cause:** `tcp_listener.c:527` registers `pc_net_on_recv`, `pc_net_on_sent` and
+  `pc_net_on_err` on each accepted pcb. The mock stores all four. No test reads them, and the mock's
+  own `pc_net_host_deliver()` and `pc_net_host_close_peer()`, which fire a callback through a pcb,
+  have zero callers. Every TCP test calls `lowlevel_recv_cb` and friends directly.
+  `test_transport.c:1373` is named `test_accept_cb_claims_slot_and_wires_connection` and asserts
+  nine fields, none of them a callback.
+- **The pattern to copy is one directory over:** `test_udp_hot.c:101` asserts `p->on_recv` and
+  drives delivery through it.
+- **Fix:** not applied.
+
+---
+
+## test_concurrency compiles no library source, and ring.h cites it as its proof
+
+- **Status:** OPEN, found by the transport audit.
+- **Root cause:** `native_concurrency` and `native_tsan` both declare `"src": ["-<*>"]` and
+  `"test_build_src": "no"`, so no ProtoCore file is in either binary. The suite hand-rolls its own
+  ring with plain assignments on `_Atomic size_t`, which are sequentially consistent. Production
+  uses acquire/release through `PROTO_ATOMIC_LOAD` and `PROTO_ATOMIC_STORE` (`ring.h:50`, `:53`) and
+  the `pc_ring_*` helpers, none of which are linked into that binary. Weakening the production
+  ordering to relaxed leaves both envs green.
+- **The citation is circular:** `ring.h:44` justifies its ordering by pointing at
+  `test_spsc_ring_no_race`, the test that cannot reach it.
+- **Also:** `test_state_handoff_no_race` discards its observation at `:122` and its only assertion
+  restates the writer thread's last statement after a join, so it cannot fail.
+- **Fix:** not applied.
+
+---
+
+## The QUIC server acknowledges every packet number it never received
+
+- **Status:** OPEN, found by a spec audit of the QUIC engine against RFC 9000.
+- **Symptom:** a peer that skips packet numbers to probe for this sees them acknowledged and is
+  entitled to close the connection with PROTOCOL_VIOLATION (RFC 9000 section 21.4).
+- **Root cause:** `quic_conn.c:452` builds every ACK as
+  `pc_quic_build_ack(buf, cap, s->largest_rx, 0, s->largest_rx)`. Per section 19.3.1 the smallest
+  acknowledged is `largest - ack_range`, which is 0, so the frame claims one contiguous range from
+  packet 0 upward. The engine drops undecryptable packets at `:396` and silently ignores
+  out-of-window CRYPTO and STREAM data, so the claim is routinely false.
+- **Why nothing caught it:** no test decodes the ACK range fields. The suites only assert that an
+  ACK frame is present.
+- **Fix:** not applied.
+
+---
+
+## Six QUIC and HTTP/3 conformance checks the RFC requires are absent
+
+- **Status:** OPEN, found in the same audit. Grouped because each is one missing guard.
+- **The set:**
+    - The Fixed Bit (0x40) is never tested on either header form (`quic_packet.c:30` and `:85`).
+      RFC 9000 section 17.2 requires a packet with it clear to be discarded.
+    - An Initial carried in a datagram under 1200 bytes is accepted, and outbound ack-eliciting
+      Initials are not padded to 1200. RFC 9000 section 14.1 requires both. `test_quic_server.c:517`
+      builds a ~60-byte Initial and asserts it opens a connection, so the suite pins the gap.
+    - Server-only transport parameters from a client are accepted (`quic_tp.c:127`, `:182`):
+      original_destination_connection_id and retry_source_connection_id are applied,
+      stateless_reset_token and preferred_address ignored. RFC 9000 section 18.2 requires
+      TRANSPORT_PARAMETER_ERROR. This parser only ever runs server-side.
+    - `initial_max_streams_*` has no 2^60 ceiling (`quic_tp.c:164`), against section 4.6.
+    - An ACK whose first range exceeds the largest acknowledged is accepted (`quic_frame.c:42`); the
+      parser skips ranges without computing them, so the negative-packet-number check section 19.3.1
+      requires never runs.
+    - SETTINGS identifier 0x00 is silently ignored (`h3_frame.c:93`), against RFC 9114 section
+      7.2.4.1, which requires H3_SETTINGS_ERROR. The switch rejects 0x02 to 0x05 only.
+    - The HTTP/3 control stream does not enforce SETTINGS-first, single-control-stream, or
+      one-SETTINGS-only (RFC 9114 section 6.2.1, 7.2.4). `test_h3_conn.c:502` asserts the opposite,
+      that a GOAWAY arriving first is consumed and ignored.
+- **Also:** `pc_quic_build_version_negotiation` has no caller. Sending a Version Negotiation packet
+  is the server's obligation under RFC 9000 section 6.1; `quic_conn.c:325` drops unknown versions
+  and its comment says version negotiation is a client concern, which is backwards.
+- **Fix:** none applied.
+
+---
+
+## A secure-arena borrow in test_quic_crypto is marked and never released
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** `test_quic_crypto.c:113` takes `size_t scope = pc_secure_mark();`, never uses the
+  value and never calls `pc_secure_release(scope)`, while `pc_aes128_wants()` at `:118` borrows from
+  the secure arena. The borrow is held for the life of the process, and the variable is an
+  unused-variable warning.
+- **Blast radius:** the test binary only.
+- **Fix:** not applied.
+
+---
+
+## Content-Length wraps, so an oversized value frames a short body and desynchronizes the connection
+
+- **Status:** OPEN, found by a spec audit of the HTTP/1.1 parser. Verified in source.
+- **Symptom:** a request whose Content-Length exceeds the width of `size_t` is accepted with a
+  wrapped length. The parser frames that many bytes, reports PARSE_COMPLETE, and leaves the rest in
+  the ring, where it is read as the beginning of the next request. That is request smuggling.
+- **Root cause:** `http_parser.c:380` accumulates `cl = cl * 10 + (*q - '0')` with no overflow
+  check, and the value buffer holds up to `MAX_VAL_LEN - 1` digits. `Content-Length: 4294967301`
+  wraps to 5 on the 32-bit target; `18446744073709551621` wraps to 5 on a 64-bit host. RFC 9112
+  section 6.3 item 5 makes an invalid Content-Length an unrecoverable error requiring 400 and close.
+- **Blast radius:** every HTTP listener, unauthenticated, first request.
+- **Why nothing caught it:** the suites cover a non-digit value, an empty value, a leading `+`, and
+  a conflicting duplicate, but never a value that overflows. The analogous overflow IS tested for
+  Range at `test_range.c:195`, so the pattern was known and not applied here.
+- **Fix:** not applied, by owner decision.
+
+---
+
+## A HEAD request with a Range header is answered 206 with a Content-Range
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** RFC 9110 section 14.2: "A server MUST ignore a Range header field received with a
+  request method that is unrecognized or for which range handling is not defined. For this
+  specification, GET is the only method for which range handling is defined." HEAD with a Range must
+  answer 200 with the full representation length.
+- **Why nothing caught it:** `test_range.c:221` asserts the 206, the `Content-Range: bytes 0-3/20`
+  and the `Content-Length: 4` as the expected result, so the suite pins the violation and a fix
+  fails that test.
+- **Fix:** not applied.
+
+---
+
+## A captured Digest Authorization header replays for the whole nonce lifetime
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** the nonce is stateless (a timestamp plus a keyed MAC) and the client nonce count
+  is not tracked, so nothing detects reuse. RFC 7616 section 3.4 says that if the same nc value is
+  seen twice the request is a replay. The window is `PC_DIGEST_NONCE_LIFETIME_MS`, five minutes.
+- **Why nothing caught it:** every case in `test_digest_auth` uses `nc=00000001`, and no test
+  asserts either refusal or a deliberate decision to accept.
+- **Related:** `test_digest_vectors` exists to be the independent oracle for the Digest chain, but
+  the server's construction lives in a `static` function (`auth.c:408`) that no test can call, so
+  the suite rebuilds the chain itself exactly as `test_digest_auth` does. Both pass if the server
+  drops a field or changes a separator; only the SHA-256 primitive is genuinely pinned.
+- **Fix:** not applied.
+
+---
+
+## One spoofed UDP datagram permanently tears down a DTLS association
+
+- **Status:** OPEN, found by a spec audit of the DTLS layer against RFC 9147.
+- **Symptom:** a CoAPS peer's connection dies and does not recover. The attacker needs no keys and no
+  position in the flow, only the address pair.
+- **Root cause:** `dtls_conn.c:567` answers any AEAD failure with `fail(c, ALERT_DECRYPT_ERROR)` and
+  `DTLS_REC_STEP_FATAL`. RFC 9147 section 4.5.2 says the opposite: "invalid records SHOULD be
+  silently discarded, thus preserving the association", and calls generating alerts "extremely
+  susceptible to denial-of-service" and NOT RECOMMENDED over a datagram transport. The path is
+  reachable from the only in-tree caller: `coaps.c:21` routes every datagram into
+  `pc_dtls_conn_process` during the handshake, and `:45` routes any non-epoch-3 ciphertext there
+  afterwards.
+- **Why nothing caught it:** no case injects a tampered epoch-2 ciphertext into
+  `pc_dtls_conn_process`. The sibling path is correct and is tested: `pc_dtls_conn_open_app`
+  (`dtls_conn.c:763`) returns false without failing the association, covered at
+  `test_dtls_conn.c:1642`. The record layer's own bad-MAC rejection is covered too. Only the
+  connection layer's reaction to it is not.
+- **Fix:** not applied, by owner decision.
+
+---
+
+## The DTLS record layer rejects a legacy_record_version the RFC says to ignore
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** `dtls_record.c:118` drops any DTLSPlaintext whose version is not 0xFEFD. RFC 9147
+  section 4 allows {254,255} on an initial ClientHello for compatibility and says the field "MUST be
+  ignored for all purposes". A backward-compatible initial ClientHello is dropped. Separately, the
+  `epoch` field is parsed at `:123` and never validated, so a plaintext record claiming epoch 7 is
+  processed as if it claimed 0.
+- **Why nothing caught it:** `test_dtls_record.c:207` and `:467` both assert the rejection, so the
+  suite pins the non-conformance and a fix would fail those tests.
+- **Fix:** not applied.
+
+---
+
+## SSH_MSG_NEWKEYS is accepted in any phase, which skips the key exchange entirely
+
+- **Status:** OPEN, found by a spec audit of the SSH server against RFC 4253. Verified in source.
+- **Symptom:** none observed. A peer reaches password authentication without a key exchange and
+  without the host ever proving its key.
+- **Root cause:** `ssh_server.c:146` handles `SSH_MSG_NEWKEYS` with no phase guard. `ssh_transport.c`
+  defines `SSH_PHASE_NEWKEYS` and assigns it at `:1405`, and nothing in `src/` ever reads it. From
+  `SSH_PHASE_KEXINIT`, one plaintext packet carrying the single byte 21 runs
+  `ssh_newkeys_complete()` (`ssh_transport.c:1427`), which sets `enc_in`, clears `kex_active`, and
+  moves the phase to `SSH_PHASE_SERVICE`. No KEX ran, so the key material is still zeroed; the
+  receive path does not consult `ssh_keys[i].active`, and `SSH_CIPHER_AES256CTR` and
+  `SSH_MAC_HMAC_SHA256` are both 0, so the connection proceeds under an all-zero key, IV and MAC
+  key. `SERVICE_REQUEST` and `USERAUTH_REQUEST` then pass the phase checks that were supposed to
+  stop exactly this.
+- **Blast radius:** every SSH listener. Remote, pre-authentication, no credentials needed.
+- **Why nothing caught it:** the guard on `SSH_MSG_SERVICE_REQUEST` (`ssh_server.c:168`) was added
+  for this attack and its comment names it - "stops a client from jumping from DH_INIT straight to
+  userauth in cleartext". `test_ssh_server.c:294` proves that guard works. `SSH_MSG_NEWKEYS` is
+  dispatched in seven places across the suites and every one is in the correct phase, so the door
+  beside the guarded one is never tried.
+- **Fix:** not applied, by owner decision. The guard is to refuse `SSH_MSG_NEWKEYS` unless the phase
+  is `SSH_PHASE_NEWKEYS`, plus a negative test for each of the earlier phases.
+
+---
+
+## The plaintext SSH receive path does not enforce the four-byte minimum padding
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** `ssh_packet.c:707` (`ssh_recv_plain`) checks only `pad_len_byte >= pkt_len`. All
+  four encrypted paths also check `pad_len_byte < 4`. RFC 4253 section 6 requires at least four
+  bytes of padding, and the same path skips the block-size multiple rule.
+- **Blast radius:** the pre-NEWKEYS path only, which is the unauthenticated one.
+- **Why nothing caught it:** `test_ssh_server.c:591` exercises only the `pad >= pkt_len` branch on
+  this path.
+- **Fix:** not applied.
+
+---
+
+## The HTTP/2 engine accepts frames RFC 9113 requires it to reject
+
+- **Status:** OPEN, found by a spec audit of `h2_conn.c` against RFC 9113.
+- **Symptom:** none locally. Every case here is a peer-reachable frame the engine takes instead of
+  answering with the connection or stream error the RFC names.
+- **The set, each with the clause it violates:**
+    - RST_STREAM on stream 0 is accepted (`h2_conn.c:316`). Sec 6.4 makes it a connection error,
+      PROTOCOL_ERROR. `test_h2_conn.c:767` asserts the acceptance, so the suite pins the violation.
+    - DATA on a stream that was never opened is accepted and handed to the application
+      (`h2_conn.c:203`, no state check). Sec 5.1 makes any non-HEADERS/PRIORITY frame on an idle
+      stream a connection error. `test_h2_conn.c:791` asserts the acceptance.
+    - WINDOW_UPDATE with a zero increment is accepted (`h2_conn.c:290`). Sec 6.9 makes it a stream
+      error, or a connection error on stream 0.
+    - WINDOW_UPDATE overflows the window rather than raising FLOW_CONTROL_ERROR (`h2_conn.c:298`
+      and `:305`). Sec 6.9.1 caps a window at 2^31-1. `send_window` starts at the peer's declared
+      `initial_window_size`, so a peer that declares 2^31-1 overflows a signed int32 with a single
+      increment of 1, which is undefined behavior on a remotely supplied value.
+    - The stream identifier on SETTINGS, PING and GOAWAY is never checked (`h2_conn.c:262`), against
+      sec 6.5, 6.7 and 6.8. RST_STREAM, PRIORITY and GOAWAY lengths are never checked, against
+      sec 6.4 and 6.3.
+    - Send-side flow control is accounted and never consulted (`h2_conn.c:471`), so a body past the
+      65535-byte connection window ships anyway, against sec 6.9.1.
+    - A second HEADERS on an open stream is rejected as a connection error (`h2_conn.c:156`), which
+      makes trailers (sec 8.1) unusable. Sec 5.1.1's ascending-id rule governs newly opened streams.
+    - No request-validity checking at all (sec 8.2.2, 8.3.1): the mandatory pseudo-headers are not
+      required and the connection-specific header fields are not banned, and `h2_server.c:107` copies
+      any name and value straight into `HttpReq::headers`.
+- **Fix:** not applied. Each is a separate guard and two of them require deleting a test assertion
+  that currently pins the wrong behavior.
+
+---
+
+## The HTTP/2 request bridge collapses N streams onto one request, and no env builds it
+
+- **Status:** OPEN, found in the same audit.
+- **Symptom:** two concurrent HTTP/2 streams on one connection answer the wrong stream, or one
+  request is lost. Not observed, because nothing exercises it.
+- **Root cause:** `h2_conn` carries `PC_H2_MAX_STREAMS` concurrent streams (8, or 32 on the large
+  PSRAM profiles). The bridge above it keeps one `HttpReq` per connection slot and one
+  `conn_pool[slot].pc_h2_stream`, written at `h2_server.c:127` and read back by
+  `pc_h2_server_respond()` at `:176`. A second stream's HEADERS overwrites both before the first is
+  dispatched. `cb_data` (`:135`) also discards the stream id entirely, so with the idle-stream defect
+  above a peer can append bytes to whatever request is being assembled.
+- **Blast radius:** every concurrent HTTP/2 request. Multiplexing is the reason HTTP/2 exists.
+- **Why nothing caught it:** `h2_server.c` is built by no test environment. It is recorded in
+  `tools/ci_tooling/check/check_test_coverage_baseline.json` as knowingly uncovered, and its only exercise
+  is the hardware-rig interop probe in `test/servers/`. Its HTTP/3 counterpart, `h3_server.c`, is
+  built by two envs. `pc_h2_server_data()` also sends GOAWAY on a recv failure and returns with the
+  socket still open, and the hand-rolled content-length parse at `:115` accepts a partial value and
+  has no overflow guard.
+- **Fix:** not applied. The bridge needs per-stream request state before the guards above are worth
+  adding, so this is a design change rather than a patch.
+
+---
+
+## Two includes in protocore.c were gated on a flag their callers do not carry
+
+- **Status:** FIXED (2026-08-06), found auditing the include block after the dispatch-chain move.
+- **Symptom:** none in any env the matrix builds today, because no env sets `PC_ENABLE_HTTP3` or a
+  nonzero `PC_REQUEST_TIMEOUT_MS` or `PC_ENABLE_HTTP_DELIVERY` with `PC_ENABLE_AUTH` off. Any build
+  that does fails to compile on an implicit declaration.
+- **Root cause:** `server/clock/clock.h` and `http_delivery.h` sat inside `#if PC_ENABLE_AUTH`. Their
+  callers are elsewhere: `pc_millis()` runs the QUIC poll under `PC_ENABLE_HTTP3` and the request
+  timeout under `PC_REQUEST_TIMEOUT_MS`, and `pc_delivery_cache_control()` runs under
+  `PC_ENABLE_HTTP_DELIVERY` alone. An include nested under a flag it does not belong to reads as
+  correct as long as one flag implies the other in every configuration anyone has built.
+- **Fix:** `clock.h` is unconditional and `http_delivery.h` takes its own `PC_ENABLE_HTTP_DELIVERY`
+  guard. `sha1.h`, `base64.h` and `sha256.h` came out with them: nothing in the file names a symbol
+  from any of the three.
+
+---
+
+## Moving a function out of a file left its `#if` behind
+
+- **Status:** FIXED (2026-08-06), found on the first build after the dispatch chain moved to
+  `presentation/http/http.c`.
+- **Symptom:** `native_application` fails to compile with `'Auth' undeclared`, `'HttpRoute' has no
+member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
+- **Root cause:** the extraction script took each function's body and the comment block above it,
+  but not the `#if` on the line before that, and not the `#endif` after. `pc_csrf_gate`,
+  `handle_ws_route`, `proto_authorize_request`, `lockout_client_ip` and `send_too_many_requests`
+  arrived in the new file unguarded, while `protocore.c` kept four `#if`/`#endif` pairs with nothing
+  between them. Every call site was still guarded, so the guards read as intact.
+- **Blast radius:** any build with the moved feature off, which is every env except the ones that
+  set the matching flag.
+- **Fix:** the four guards are restored around the functions in `http.c`, the empty pairs are gone
+  from `protocore.c`, and the CSRF, lockout and forwarded-trust includes moved with the code that
+  names them.
+
+---
+
+## Every id table a route indexes grew forever, because only the route table had a reset
+
+- **Status:** FIXED (2026-08-06), found with the route-table fix above, which unblocked the suites.
+- **Symptom:** `test_auth` passes its early cases and fails its late ones. `test_application` serves
+  a static file in one case and 404s the identical setup two cases later. Nothing distinguishes a
+  passing case from a failing one except how many ran before it.
+- **Root cause:** a route stores an id naming a row in another module's table, and `add()` returns
+  the row index. `pc_server_reset()` emptied the route table and left every one of those tables
+  full. `Auth` and the mount registry both cap at `MAX_ROUTES`, so once the count reached it
+  `Auth.add()` returned `PC_AUTH_NONE` and `pc_mnt_point_add()` returned `PC_MNT_NONE`. A route that
+  holds those answers dispatches unguarded and serves nothing, silently, and both are the
+  fail-open direction.
+- **Blast radius:** any long-lived server that re-registers its routes, and every test suite that
+  registers more than `MAX_ROUTES` protected routes or mounts across its cases.
+- **Fix:** `Auth` publishes a `reset`, `mnt.c` publishes `pc_mnt_point_reset()`, and
+  `pc_server_reset()` calls both beside `network.route->reset()`. An id is a row index, so the
+  tables empty with the routes that index them.
+
+---
+
+## Two long-lived tables borrowed from a pool sized only for crypto working sets
+
+- **Status:** FIXED (2026-08-06), found while chasing the `test_auth` failures above.
+- **Symptom:** in `native_auth`, `Auth.add()` returns `PC_AUTH_NONE` for the first credential set
+  ever registered, so every protected route dispatches unguarded. 17 of 23 cases fail.
+- **Root cause:** `PC_SECURE_ARENA_SIZE` is the sum of the `PC_WORK_*` terms a build compiles, and
+  `protocore_config.h` states the rule that every borrow declares one, proved by a `static_assert`
+  in the owning module. `route.c` and `auth.c` both borrow from the pool and neither declared a
+  term. Measured under `native_auth`: the arena is 1664 bytes (bignum 1408 + 256 round-up), the
+  route table is 1416 and the credential table 1569. The route table binds first and leaves 248,
+  so the credential table never binds.
+- **Both were also on the wrong end of the arena.** `pc_secure_span()` bumps down from the scratch
+  end, which `mark` walks and `release` reclaims. Both tables are held for the life of the program.
+- **Fix:** `secure.h` publishes `pc_secure_persist_span()`, over the arena's persistent end, which
+  no mark reaches and which hands back zeroed bytes. Both tables take it, `PC_WORK_ROUTE_TABLE` and
+  `PC_WORK_AUTH_TABLE` join `PC_SECURE_ARENA_SIZE`, and each module `static_assert`s its struct
+  against its term.
+
+---
+
+## The route table borrowed its storage from an init nothing called, so every route registration failed
+
+- **Status:** FIXED (2026-08-06), found on the first matrix run that could link `native_keepalive`.
+- **Symptom:** `on_http("/res", ...)` registers nothing. Every request answers 404 and no handler
+  fires, while the keep-alive machinery around it behaves correctly, because a 404 is a normal
+  response that keeps the connection alive. Four `test_keepalive` cases fail on the response body and
+  the handler tally; the ones that only assert the Connection header pass.
+- **Root cause:** moving the route table into the secure pool (3ef5c5a50) replaced its BSS with a
+  borrow taken in a new `HttpRouteNs::init`, and no caller anywhere in `src/` calls it. BSS needed no
+  init, so nothing existed to update. `s_route` stays NULL, `add()` returns NULL on its first guard,
+  and every registration path drops the route it was handed. `pc_server_reset()` calls
+  `network.route->reset()`, which is also a no-op on a NULL handle, so the table reads empty and
+  consistent at every seam.
+- **Blast radius:** every HTTP, WebSocket, SSE, file-serving and WebDAV route in the library. The
+  envs that would have caught it were the ones failing to link for unrelated reasons, so it stayed
+  invisible from 2026-08-05 until those were fixed.
+- **Fix:** the borrow moves into a `bind_route()` taken on first use, the shape `auth.c` already
+  uses for the same reason, and `init` leaves `HttpRouteNs`. A registration is the first thing that
+  touches the table and every reader runs after one, so there is no moment a caller has to remember.
+
+---
+
+## The tcp_evt.h split cut 24 test suites off from tcp.h
+
+- **Status:** FIXED (2026-08-05), found on a full-matrix run.
+- **Symptom:** `ConnState`, `TcpConn`, `conn_pool` and `CONN_*` come out undeclared in a test that
+  changed nothing. `native_accept_gate`, `native_presentation` and `native_session` fail to build.
+- **Root cause:** `TcpEvt` and `EvtType` moved out of `tcp.h` into their own `tcp_evt.h`, and
+  `presentation.h`, `session.h` and `listener.h` each narrowed their include to the new header,
+  which is what they need. The slot types stayed in `tcp.h`. 24 white-box suites named the slot
+  types while including only a layer header, so they were reaching `tcp.h` transitively and lost it
+  the moment the layer stopped needing it.
+- **Fix:** each of the 24 suites includes `network_drivers/transport/tcp.h` for the names it uses.
+  The layer headers keep the narrow include.
+- **Note:** only three of the 24 had been reached when the run stopped, so the count is what the
+  symbol sweep found, not what the run reported.
+
+---
+
+## frame.c calls proto_scan_nul without including runops.h
+
+- **Status:** FIXED (2026-08-05), found on the same run.
+- **Symptom:** `native_scp` and `native_ssh_sftp` fail at link with `undefined reference to
+'proto_scan_nul'`, preceded by an implicit-declaration warning at `src/mmgr/frame.c:113`.
+- **Root cause:** `pc_frame_append` calls `proto_scan_nul`, which is a `static inline` in
+  `shared_primitives/runops.h`, and `frame.c` includes only `mmgr/frame.h` and
+  `shared_primitives/speed_opt.h`. Under C99 rules the implicit declaration makes it an external
+  call to a name no TU defines, so it survives compilation and dies at link. Every other env that
+  builds `frame.c` also builds a TU that pulls `runops.h` in ahead of it, which is why only the two
+  filesystem-application envs showed it.
+- **Fix:** `frame.c` includes `shared_primitives/runops.h`.
+
+---
+
+## The native base flags defeat PROTOCORE_HOT_FORCE, so the target path had no test env
+
+- **Status:** FIXED (2026-08-05), found while adding the first env that builds the target path.
+- **Symptom:** a native env that adds `-DPROTOCORE_HOT_FORCE` still compiles the host path.
+  `PC_VENDOR_MOCK` comes out 1 and `PROTOCORE_HOT` comes out 0 at the same time, which the
+  platform header states is impossible ("exact complements, there is no third"). No diagnostic:
+  the env builds and its tests pass, against the wrong arm.
+- **Root cause:** two sources of truth for one macro. `pc_platform.h` derives `PROTOCORE_HOST` from
+  the vendor axis, defining it only in the else-arm reached when no vendor matched, and
+  `PROTOCORE_HOT_FORCE` selects `PC_VENDOR_MOCK` in the arm above it. But `gen_test_envs.py` also
+  passed `-DPROTOCORE_HOST=1` in the flags every native env extends. The command-line define wins:
+  the guard that would have set it is skipped, `#ifndef PROTOCORE_HOST` then finds it already
+  defined, and `#if PROTOCORE_HOST` selects the host path under a mock vendor. The vendor axis
+  cannot override a value handed to it from outside, and `#undef` is banned (SRC_LAW rule 11), so
+  no arrangement inside the header could have recovered.
+- **Blast radius:** every one of the 310 native envs carried the flag, and the whole
+  `PROTOCORE_HOT` half of the tree had no test env at all - `core_setup/*/mock/` exists to stand
+  in for silicon and nothing was compiling against it. That is how the `pc_lwip_to_ip` bug above
+  survived: its arm was unreachable from the suite.
+- **Fix:** drop `-DPROTOCORE_HOST=1` from `native_base`. It was redundant - nothing on a native
+  build matches a vendor, so the else-arm defines it anyway - and dropping it makes the vendor axis
+  the only decider. A new `native_hot_base` extends the base with `-DPROTOCORE_HOT_FORCE`, and an
+  env opts in with `"base": "native_hot_base"`.
+- **Verified:** only 4 files under `src/` read `PROTOCORE_HOST` and each includes the platform
+  chain in its first 40 lines; nothing in `test/mocks` or `test/support` reads it. The first env on
+  the new base (`native_udp_hot`) carries `#error` on `!PROTOCORE_HOT`, so the fallback cannot
+  return silently.
+
+---
+
+## pc_lwip_to_ip reverses the octets on the mock arm
+
+- **Status:** FIXED (2026-08-05), found while giving UDP a wire layout built on `pc_ip`.
+- **Symptom:** `pc_conn_remote_addr()` and the accept-callback address both report `5.0.0.10` where
+  the peer is `10.0.0.5`, on any build that selects `PC_VENDOR_MOCK` (`-DPROTOCORE_HOT_FORCE`). No
+  host suite catches it because the non-hot arm returns `PC_IP_NONE` and never reaches the mapping.
+- **Root cause:** the two backends disagree on what `pc_net_ip4_u32` returns. lwIP's
+  `ip4_addr_get_u32` hands back the stored `u32_t`, whose **memory bytes** are the network octets.
+  The mock (`test/mocks/pc_net_host.h:730`) instead composes a **numeric** value,
+  `bytes[0]<<24 | bytes[1]<<16 | bytes[2]<<8 | bytes[3]`. On a little-endian host those are byte
+  reversed. `pc_lwip_to_ip` (`src/network_drivers/transport/tcp.c:915`) peels with
+  `(uint8_t)be, (uint8_t)(be >> 8), ...`, which is right for lwIP on a little-endian target and
+  backwards for the mock.
+- **Second defect in the same three lines:** that peel is itself endianness-dependent. lwIP's value
+  is network order in memory, so on a big-endian target the first octet is the high byte and the
+  same code reverses there too. The portable read is of the u32's bytes, not of its value.
+- **Blast radius:** `pc_net_ip4_u32` has two other callers that compare or return the value
+  opaquely (`listener.c:486` interface tagging, `tcp.c:890` `pc_conn_remote_ip`), so changing the
+  mock to match lwIP moves those too and needs its own verification pass.
+- **Fix:** the mock returns the u32 lwIP does (the four bytes copied, not composed arithmetically),
+  and the mapping moved out of `tcp.c` into `network_drivers/transport/net_addr.c` as
+  `NetAddr.to_ip()`, where it reads the word's bytes instead of shifting its value and is therefore
+  correct on either endianness. TCP needed it on accept and on the per-slot accessor and UDP needs
+  it per received datagram, so one owner sits beside both rather than inside either.
+- **Verified:** `10.0.0.5`, `192.168.4.1`, `224.0.0.251`, `255.254.253.252` round-trip through
+  `NetAddr.to_ip()` and back out of `Ip.format()` unchanged on the mock arm; a null source leaves
+  the out-param `PC_IP_NONE` rather than stale. Still to re-run: `native_tcp`, the listener suites,
+  and `test_iface` (which asserts on `pc_ap_ip`, the value `listener.c` compares against).
+
+---
+
 ## test_coaps segfaults after its last test passes
 
 - **Status:** OPEN (found 2026-08-05, by the first clean run of the whole native matrix).
@@ -95,7 +824,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `#if PROTOCORE_HOT` is still C++, and no native env compiles it, so 307 envs of compile sweep
   cannot see any of it. Found: `namespace fs { class FS; }` plus `fs::FS &` parameters in
   `server/exc_decoder.h` / `server/exc_coredump.c`, `namespace fs` and `fs::FS *` / `fs::File &` in
-  `board_drivers/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace pc_wal_fs_detail` over `fs::File`
+  `core_setup/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace pc_wal_fs_detail` over `fs::File`
   in `services/storage/wal/wal_fs.h`. A target build of any of them is a hard C error.
 - **Root cause:** the conversion was driven by the native suites, which are the only thing that
   compiles during it. `PROTOCORE_HOT` is false on the host, so those regions were never parsed.
@@ -109,7 +838,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   backend (RAM disk, the ESP adapter, the lfs mock), so it is an owner decision rather than a
   mechanical fix.
 - **Also open:** `esp_mnt_fs.{h,c}` legitimately names Arduino's `fs::FS` because wrapping it is the
-  adapter's whole job. Resolved by compiling `board_drivers/hal/esp/` as C++ (owner decision), which
+  adapter's whole job. Resolved by compiling `core_setup/hal/esp/` as C++ (owner decision), which
   needs the build rule and a SYMBOLS.md amendment recording the exemption.
 
 ## A board profile's PC_GPIO_OUT macro rewrote the pc_gpio_dir enum member of the same name
@@ -321,7 +1050,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Fix:** deleted `web.cpp` and `web.h`. `web_assets.*` is the generated pair
   (`web_assets/wizard/build_assets.py` emits it) and all six consumers already included
   `web_assets.h`; nothing included `web.h`, not even `web.cpp`.
-- **Gate:** `ci_tooling/check/check_duplicate_symbols.py`, wired into CI. It reports a file-scope
+- **Gate:** `tools/ci_tooling/check/check_duplicate_symbols.py`, wired into CI. It reports a file-scope
   variable defined in two `.cpp` files, but only when the definition actually carries external
   linkage - non-`const`, or `const` with an `extern` declaration in a header. That distinction is
   load-bearing: without it the check flags the four codecs that each define their own
@@ -372,7 +1101,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   cause 2 actively hides it: `init+setkey+free` timed **alone** is 513 cycles, ~18x under the truth,
   because a loop that never encrypts never takes the AES peripheral. The cost only appears as
   acquire/use/release around real work.
-- **Fix:** the AEAD moved to explicitly-selected backends under `board_drivers/hal/` (vendor / portable,
+- **Fix:** the AEAD moved to explicitly-selected backends under `core_setup/hal/` (vendor / portable,
   no weak symbol), and `pc_aesgcm` became keyed - `pc_aesgcm_key_init` once per key, seal/open per
   record, with the raw-key entry points deleted rather than kept as a shim so no caller can pay the
   lifecycle invisibly. SSH holds a context per direction in its keymat and now stores no raw GCM key at
@@ -504,13 +1233,13 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 ## 86 example READMEs teach the banned `WiFi.*` API that rule 6 forbids, and no guardrail scans them
 
 - **Status:** FIXED (2026-07-30). 446 vendor calls and 144 bare enum members corrected across 83 READMEs
-  plus the two esp-idf examples; guarded by `ci_tooling/check/check_examples.py`, which reads sketches AND
+  plus the two esp-idf examples; guarded by `tools/ci_tooling/check/check_examples.py`, which reads sketches AND
   README fenced code. The guard was verified by injecting a regression and confirming a non-zero exit.
 - **Second defect, found while writing the guard:** the enum-member harvester used a lazy `.*?` body match,
   so it mis-attributed members between enums and missed most of them entirely - it saw 376 members where
   the tree has 894. The first scoping pass therefore fixed 68 and silently left 76. Bounding the body with
   `[^{}]*` and stripping `#if` lines from it (enum bodies are conditionally compiled, so the flag names were
-  being harvested as members) fixed both. The harvester now lives in `ci_tooling/lib/src_symbols.py` so the
+  being harvested as members) fixed both. The harvester now lives in `tools/ci_tooling/lib/src_symbols.py` so the
   sweep and the checker cannot disagree.
 
 - **Symptom:** 86 of 154 `examples/**/README.md` teach `#include <WiFi.h>`, `WiFi.localIP()`, `WiFiClient`, or
@@ -518,11 +1247,11 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   follows a README instead of reading the sketch next to it writes exactly the code the library bans, and it
   will not link against the transport API the sketch actually uses.
 - **Root cause:** two independent gaps that only bite together. (1) The sketches were migrated to the library
-  transport (`pc_client_*` / `pc_udp_*` / `pc_net_egress_ip()`), but the annotated-source blocks are
+  transport (`pc_client_*` / `pc_udp_*` / `Physical.link->egress_ip()`), but the annotated-source blocks are
   hand-rolled on purpose - the heavy annotation is the teaching content and cannot be generated - so the
   migration updated the code and left 86 hand-written copies behind. (2) `docs/SRCBANNED.md` rule 6 explicitly
   states **"Applies to `examples/` too"** and even documents the check
-  (`rg -n 'WiFiClient|WiFiUDP|AsyncUDP' src/ examples/`), but `ci_tooling/check/check_src_banned.py` scans only `src/`,
+  (`rg -n 'WiFiClient|WiFiUDP|AsyncUDP' src/ examples/`), but `tools/ci_tooling/check/check_src_banned.py` scans only `src/`,
   explicitly exempts `examples/`, and never scans markdown at all. The rule that would have caught this was
   written down and never enforced where it claimed to apply.
 - **Second class, same cause:** 62 READMEs also use **unscoped enum members** - `server.on("/", HTTP_GET, h)`
@@ -571,13 +1300,13 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Symptom:** the physical (L1) link test printed `MAC=00:00:00:00:00:00` on the P4 - an Ethernet-only board
   whose PHY plainly has a MAC (`e8:f6:0a:e0:a7:8d`). The library exposed no way to read the active interface's
   hardware address.
-- **Root cause:** `pc_net_mac()` returns the WiFi _station_ MAC via `WiFi.macAddress()` (what ESP-NOW / WiFi
+- **Root cause:** `Physical.link->mac()` returns the WiFi _station_ MAC via `WiFi.macAddress()` (what ESP-NOW / WiFi
   diagnostics need), which reads back zeros when the WiFi driver was never started, as on the wired P4. It does
   exactly what it is documented to do; the real gap was the absence of an interface-neutral "MAC on the wire"
   accessor for the egress link. Not a regression - the physical-layer vendor-partition HW test just exposed it.
-- **Fix:** added `pc_net_egress_mac()` - reads the live default-route netif's `hwaddr` (lwIP), so it returns
+- **Fix:** added `Physical.link->egress_mac()` - reads the live default-route netif's `hwaddr` (lwIP), so it returns
   the Ethernet PHY's MAC on a wired link and the WiFi STA MAC on a wireless one, independent of which driver
-  started; fallback stub on host / no-backend builds. Clarified `pc_net_mac()`'s doc as WiFi-STA-specific and
+  started; fallback stub on host / no-backend builds. Clarified `Physical.link->mac()`'s doc as WiFi-STA-specific and
   cross-referenced the new accessor. HW-verified: P4 `egress_mac=e8:f6:0a:e0:a7:8d` (with `wifi_sta_mac` zeros);
   S3 `egress_mac=94:a9:90:d1:7a:b8` == its `wifi_sta_mac` (WiFi is the egress there).
 
@@ -735,7 +1464,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   refreshed only when a segment is **accepted**, never during backpressure (deliberate - a truly stuck connection
   must still be reaped, [[tcp.cpp]] `:850`), so a prolonged sub-window backpressure spell trips the 5 s idle
   timeout and the connection is reset mid-upload.
-- **Fix:** move the resolution out of `protocore_config.h` into `board_drivers/board_profiles/derived_sizing.h` (the sizing layer's
+- **Fix:** move the resolution out of `protocore_config.h` into `core_setup/board_profiles/derived_sizing.h` (the sizing layer's
   job), included last once every feature flag is known, and drop the `DEFAULTED` gate so the floor is enforced
   against whatever set the value - profile, `-D`, or base default - as a monotone raise (below floor -> lift;
   at/above -> untouched, so a deliberately roomy ring is preserved). Because the streaming floor is a full TCP
@@ -977,7 +1706,7 @@ SSH_KEXINIT_S_MAX` guard (which had been marked "never exceeds"). The production
 - **Symptom:** the **ESP32 Build** CI job for `InterfaceBridge` failed at link with an undefined reference to
   `pc_bridge_publish()` - chronically red since the example shipped (v6.8.0).
 - **Root cause:** the ESP32 Build discovers each example's `build_flags` by scraping the first documented
-  `pio ci` command from its `README.md` (`ci_tooling/generate/example_footprints.py`). InterfaceBridge's README had no
+  `pio ci` command from its `README.md` (`tools/ci_tooling/generate/example_footprints.py`). InterfaceBridge's README had no
   such command, so CI built it with _empty_ flags: the library's `iface_bridge_hw.cpp` guards its body under
   `#if PC_ENABLE_IFACE_BRIDGE`, so with the flag absent `pc_bridge_publish()` compiled to nothing while the
   sketch (which sets the flag only in its own translation unit) still referenced it. An in-sketch `#define`

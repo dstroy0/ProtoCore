@@ -18,7 +18,7 @@
 #ifndef PROTOCORE_SHA256_H
 #define PROTOCORE_SHA256_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths, PROTOCORE_HOT for the context below
+#include "protocore_config.h" // the entry point: types.h for the widths, PC_HAS_HW_SHA for the context below
 
 /** @brief SHA-256 digest length in bytes. */
 #define PC_SHA256_DIGEST_LEN 32
@@ -33,7 +33,7 @@
  * on every inbound and outbound SSH packet) and the KEX exchange-hash assembled from several
  * separately-encoded fields, so hardware acceleration matters for bulk throughput, not just handshakes.
  */
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 #include <mbedtls/sha256.h>
 typedef struct
 {

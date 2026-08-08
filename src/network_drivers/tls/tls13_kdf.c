@@ -8,12 +8,11 @@
 
 #include "network_drivers/tls/tls13_kdf.h"
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
 #include "crypto/hash/sha256.h"
 #include "crypto/kdf/hkdf.h"
 #include "crypto/mac/hmac_sha256.h"
-#include <string.h>
 
 // RFC 8446 sec 7.1 ("tls13 ") and RFC 9147 sec 5.9 ("dtls13") HKDF-Expand-Label prefixes.
 const Tls13Kdf TLS13_KDF = {"tls13 "};
@@ -87,4 +86,4 @@ void pc_tls13_finished_mac(const Tls13Kdf *kdf, const uint8_t base_secret[TLS13_
     pc_hmac_sha256(finished_key, sizeof(finished_key), transcript_hash, TLS13_SECRET_LEN, out);
 }
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE

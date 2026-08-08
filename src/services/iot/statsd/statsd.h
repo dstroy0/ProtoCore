@@ -15,7 +15,7 @@
  * set (`s`). Optional sample rate (`|@0.1`) and DogStatsD tags (`|#env:prod,host:a`).
  *
  * The line builder (pc_statsd_format) is pure and host-tested; the emit helpers format the value
- * and send via the transport UDP service (pc_udp_sendto), so they are host-testable through
+ * and send via the transport UDP service (Udp.client->sendto), so they are host-testable through
  * its capture seam too. Zero heap; gated by PC_ENABLE_STATSD.
  *
  * @author  Douglas Quigg (dstroy0)

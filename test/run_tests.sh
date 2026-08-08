@@ -5,7 +5,7 @@
 #   ./test/run_tests.sh      # from project root
 #   ./run_tests.sh           # from test/ directory
 #
-# Writes: docs/TEST_REPORT.md
+# Writes: test/TEST_REPORT.md
 #
 # Requires: bash 4.2+, pio (PlatformIO Core), awk, sed, grep, mktemp
 
@@ -56,6 +56,7 @@ REPORT_PATH="${PROJECT_ROOT}/test/TEST_REPORT.md"
 PIO=""
 for _candidate in \
     "pio" \
+    "${HOME}/.pio-venv/bin/pio" \
     "${HOME}/.platformio/penv/bin/pio" \
     "${HOME}/.local/bin/pio" \
     "/usr/local/bin/pio"; do
@@ -88,7 +89,7 @@ format_output() {
         clean_line = line
         gsub(/\x1b\[[0-9;?]*[a-zA-Z]/, "", clean_line)
         
-        # Test line: "test/test_X/test_X.cpp:829: test_name\t[PASSED]"
+        # Test line: "test/unit/<group>/test_X/test_X.c:829: test_name\t[PASSED]"
         if (clean_line ~ /\[(PASSED|FAILED)\]$/) {
             match(line, /[[:space:]]+(\x1b\[[0-9;?]*[a-zA-Z])*\[(PASSED|FAILED)\](\x1b\[[0-9;?]*[a-zA-Z])*$/)
             if (RSTART > 0) {
@@ -154,6 +155,14 @@ format_output() {
 
 cd "$PROJECT_ROOT"
 
+# One fresh RSA host key for this run, generated before any env starts so the parallel builds all
+# compile the same one. The per-env pre-build hook only fills a missing header, so this is what
+# makes every run use a key it has never seen.
+python3 -m tools.crypto.gen_ssh_test_keys || {
+    echo "error: could not generate the SSH test keys (needs openssl on PATH)" >&2
+    exit 1
+}
+
 RAW_FILE="$(mktemp)"
 CLEAN_FILE="$(mktemp)"
 trap 'rm -f "$RAW_FILE" "$CLEAN_FILE"' EXIT
@@ -165,6 +174,8 @@ trap 'rm -f "$RAW_FILE" "$CLEAN_FILE"' EXIT
 #   native_pentest - heavy adversarial fuzzer, run separately (pentest.yml)
 #   native_codeql  - compile-only umbrella for the CodeQL workflow
 #   native_tsan    - ThreadSanitizer; Linux/clang only (run in CI, skipped elsewhere)
+# The stack bases are not listed because they are not envs: an entry naming no suite is emitted as a
+# plain [name] section, which this discovery regex does not match.
 EXCLUDE=("native_pentest" "native_codeql")
 if [[ "$(uname -s 2>/dev/null)" != Linux* ]]; then
     EXCLUDE+=("native_tsan")
@@ -288,15 +299,15 @@ while IFS= read -r line; do
     fi
 
     # Individual test result
-    if [[ "$line" =~ ([^[:space:]]+\.cpp):([0-9]+):[[:space:]]+([^[:space:]]+)[[:space:]]+\[(PASSED|FAILED)\] ]]; then
+    if [[ "$line" =~ ([^[:space:]]+\.c(pp)?):([0-9]+):[[:space:]]+([^[:space:]]+)[[:space:]]+\[(PASSED|FAILED)\] ]]; then
         rel_file="${BASH_REMATCH[1]//\\//}"
-        suite="$(basename "${rel_file%.cpp}")"
+        suite="$(basename "${rel_file%.*}")"
         T_ENV[$T_IDX]="$CUR_ENV"
         T_SUITE[$T_IDX]="$suite"
         T_FILE[$T_IDX]="$rel_file"
-        T_LINE[$T_IDX]="${BASH_REMATCH[2]}"
-        T_NAME[$T_IDX]="${BASH_REMATCH[3]}"
-        T_STATUS[$T_IDX]="${BASH_REMATCH[4]}"
+        T_LINE[$T_IDX]="${BASH_REMATCH[3]}"
+        T_NAME[$T_IDX]="${BASH_REMATCH[4]}"
+        T_STATUS[$T_IDX]="${BASH_REMATCH[5]}"
         (( T_IDX++ )) || true
         continue
     fi
@@ -363,8 +374,10 @@ get_test_comment() {
 # Returns the first meaningful description line from the file-level comment block.
 get_suite_brief() {
     local suite="$1"
-    local abs_file="${PROJECT_ROOT}/test/${suite}/${suite}.cpp"
-    [[ -f "$abs_file" ]] || return 0
+    # Suites sit at test/<tier>/<group>/<suite>/, so the group is not known from the name.
+    local abs_file
+    abs_file="$(find "${PROJECT_ROOT}/test" -type f \( -name "${suite}.c" -o -name "${suite}.cpp" \) -print -quit 2>/dev/null)"
+    [[ -n "$abs_file" && -f "$abs_file" ]] || return 0
 
     awk '
         /^\/\/ (Copyright|SPDX)/ { past_header=1; next }

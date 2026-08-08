@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_MQTT_SN
 
-#include <string.h>
-
 uint8_t pc_mqttsn_make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_bool will, proto_bool clean,
                              uint8_t topic_id_type)
 {

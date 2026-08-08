@@ -26,6 +26,19 @@
 
 PROTO_BEGIN_DECLS
 
+// ---------------------------------------------------------------------------
+// Message type constants (RFC 4250 §4.1.1: 50 to 59 generic, 60 to 79 method specific)
+// ---------------------------------------------------------------------------
+
+#define SSH_MSG_USERAUTH_REQUEST 50
+#define SSH_MSG_USERAUTH_FAILURE 51
+#define SSH_MSG_USERAUTH_SUCCESS 52
+#define SSH_MSG_USERAUTH_PK_OK 60
+// 60 is method-specific: it is PK_OK for publickey and INFO_REQUEST for keyboard-interactive
+// (RFC 4256 §3.2). The current auth phase/state disambiguates which handler owns an inbound 60.
+#define SSH_MSG_USERAUTH_INFO_REQUEST 60  // RFC 4256 §3.2 (keyboard-interactive, server->client)
+#define SSH_MSG_USERAUTH_INFO_RESPONSE 61 // RFC 4256 §3.4 (keyboard-interactive, client->server)
+
 /** @brief Parsed SSH_MSG_USERAUTH_REQUEST. */
 typedef struct
 {

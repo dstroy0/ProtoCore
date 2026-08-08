@@ -8,7 +8,7 @@
  * Opens a Telnet listener via listen(23, ConnProto::PROTO_TELNET). The server
  * negotiates echo + character mode, edits the line for you (backspace works),
  * and delivers each completed line to the command callback; respond with
- * pc_telnet_print/println/printf.
+ * Telnet.print/println/printf.
  *
  * Telnet is PLAINTEXT - no auth, no encryption. Use only on a trusted LAN;
  * prefer SSH (SSH) or the WebSocket terminal (WebTerminal) otherwise.
@@ -45,38 +45,38 @@ void on_command(const char *line, uint8_t conn_id)
     (void)conn_id;
     if (strcmp(line, "help") == 0)
     {
-        pc_telnet_println("commands: help, heap, uptime, <echo>");
+        Telnet.println("commands: help, heap, uptime, <echo>");
     }
     else if (strcmp(line, "heap") == 0)
     {
-        pc_telnet_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        Telnet.frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        pc_telnet_frame(REPLY_UPTIME, (uint32_t)millis());
+        Telnet.frame(REPLY_UPTIME, (uint32_t)millis());
     }
     else if (line[0])
     {
-        pc_telnet_frame(REPLY_ECHO, line);
+        Telnet.frame(REPLY_ECHO, line);
     }
 }
 
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     listen(23, PROTO_TELNET); // open the Telnet port
-    pc_telnet_on_command(on_command);
+    Telnet.on_command(on_command);
 
     begin_http(80, NULL); // also start HTTP (begin() activates all listeners)
     Serial.println("Telnet on port 23 (try: telnet <ip>)");

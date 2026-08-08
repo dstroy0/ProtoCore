@@ -14,7 +14,6 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include <stdio.h>
-#include <string.h>
 
 // Constant-time equality over @p n bytes (no early-out timing oracle).
 static proto_bool ct_eq(const char *a, const char *b, size_t n)
@@ -28,7 +27,7 @@ static proto_bool ct_eq(const char *a, const char *b, size_t n)
 }
 
 // base64url encode/decode are shared with OIDC in the base64 module
-// (pc_base64url_encode / pc_base64url_decode).
+// (Base64.url_encode / Base64.url_decode).
 
 // Split a compact JWT into header.payload (signing input) and the signature.
 // Requires exactly two '.' separators. Returns false on a malformed shape.
@@ -63,7 +62,7 @@ static proto_bool pc_jwt_split(const char *token, size_t token_len, size_t *sign
 static proto_bool pc_jwt_header_alg_is_hs256(const char *header, size_t hlen)
 {
     uint8_t buf[96];
-    size_t n = pc_base64url_decode(header, hlen, buf, sizeof(buf) - 1);
+    size_t n = Base64.url_decode(header, hlen, buf, sizeof(buf) - 1);
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -121,7 +120,7 @@ proto_bool pc_jwt_verify_hs256(const char *token, size_t token_len, const uint8_
     char computed[48];
     // PC_HMAC_SHA256_LEN is a fixed 32 bytes, and unpadded base64url of 32 bytes is always
     // 43 characters, so this length check can never fail.
-    if (pc_base64url_encode(mac, sizeof(mac), computed) != 43)
+    if (Base64.url_encode(mac, sizeof(mac), computed) != 43)
     {
         return PROTO_FALSE;
     }
@@ -209,7 +208,7 @@ proto_bool pc_jwt_claim_int(const char *token, size_t token_len, const char *nam
     size_t payload_len = (size_t)(d2 - payload);
 
     uint8_t buf[PC_JWT_MAX_LEN];
-    size_t n = pc_base64url_decode(payload, payload_len, buf, sizeof(buf) - 1);
+    size_t n = Base64.url_decode(payload, payload_len, buf, sizeof(buf) - 1);
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -280,7 +279,7 @@ proto_bool pc_jwt_claim_str(const char *token, size_t token_len, const char *nam
     size_t payload_len = (size_t)(d2 - payload);
 
     uint8_t buf[PC_JWT_MAX_LEN];
-    size_t n = pc_base64url_decode(payload, payload_len, buf, sizeof(buf) - 1);
+    size_t n = Base64.url_decode(payload, payload_len, buf, sizeof(buf) - 1);
     if (n == 0)
     {
         return PROTO_FALSE;

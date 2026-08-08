@@ -6,22 +6,22 @@
  * @brief SHA-1 implementation (FIPS 180-4).
  *
  * On Arduino (ESP32) targets, delegates to mbedtls_sha1() which uses the hardware SHA accelerator. On
- * native (x86) test targets, uses a portable software implementation so unit tests run without mbedTLS.
+ * the SW path, a software implementation with no mbedTLS dependency.
  */
 
 #include "crypto/hash/sha1.h"
 #include "crypto/crypto_opt.h"
-#include <string.h>
-#if PROTOCORE_HOT
+
+#if PC_HAS_HW_SHA
 #include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32
 #else
-#include "shared_primitives/endian.h" // native software SHA-1
+#include "mmgr/endian.h" // native software SHA-1
 #endif
 PC_CRYPTO_HOT
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 
-// --- ESP32 / Arduino: use mbedTLS (hardware-accelerated on ESP32) ----------
+// --- HW path: mbedTLS ------------------------------------------------------
 
 void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN])
 {
@@ -30,7 +30,7 @@ void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN]
 
 #else
 
-// --- Native / test: software SHA-1, no external dependencies ---------------
+// --- SW path: software SHA-1, no external dependencies ---------------------
 
 static inline uint32_t rot32(uint32_t x, int n)
 {
@@ -137,4 +137,4 @@ void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN]
     }
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_HW_SHA

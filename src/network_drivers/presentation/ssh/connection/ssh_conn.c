@@ -19,9 +19,16 @@
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
 #include "network_drivers/session/proto_handler.h"
+#include "network_drivers/session/worker.h" // Workers.wake(): the owner drains the flagged packet
 #include "network_drivers/transport/tcp.h"
 #include "server/clock/clock.h" // pc_millis() for the server-initiated re-key timer
-#include <string.h>
+
+// The secure-pool term this file declares against PC_SECURE_ARENA_SIZE, proved against what is
+// actually borrowed: one wire buffer per slot held on the persistent end for the life of the
+// program, plus the payload and wire a single outbound call holds at the same time.
+static_assert(PC_WORK_SSH_CONN >= ((size_t)MAX_SSH_CONNS * SSH_WIRE_CAP) + (size_t)SSH_PKT_BUF_SIZE + SSH_WIRE_CAP,
+              "PC_WORK_SSH_CONN must cover a held wire per SSH slot plus one transient payload and "
+              "wire: raise it in protocore_config.h");
 
 // All SSH connection-layer state, owned by one instance (internal linkage): the SSH-slot ->
 // TCP-conn-slot mapping (0xFF = free), the one-time init flag, and the per-slot deferred-close
@@ -65,24 +72,41 @@ static void ssh_emit(uint8_t i, const uint8_t *payload, size_t len)
         return;
     }
 
-    // Borrow the wire buffer from the shared scratch arena (released on return).
-    const size_t wire_cap = SSH_WIRE_CAP;
-    size_t mark = pc_plaintext_mark();
-    uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
-    if (!wire)
+    // Frame it into the secure pool and raise the flag, then wake the worker that owns this slot.
+    // It owns the connection, the session and the pool the packet sits in, so it drains the packet
+    // itself - woken when there is one rather than walking slots that have nothing.
+    if (ssh_pkt_emit(i, payload, len) == 0)
     {
-        pc_plaintext_release(mark);
-        return; // arena exhausted: drop the outbound message (fail closed)
+        Workers.wake(conn->owner);
     }
-    size_t wlen = 0;
-    if (ssh_pkt_send(i, payload, len, wire, &wlen, wire_cap) != 0)
+}
+
+// Put the packet the codec left flagged on the wire. The worker owns this connection, this session
+// and the pool the packet sits in, so it moves the bytes itself: as many as the send window takes
+// now, the rest on a later pass, and the release - which wipes the packet - once the last byte is
+// out. Runs after the codec, so a packet framed during this pass leaves during it.
+static void ssh_tx_drain(uint8_t conn_slot, uint8_t j)
+{
+    SshPacketState *pkt = &ssh_pkt[j];
+    if (!pkt->tx_ready || !pc_conn_active(conn_slot))
     {
-        pc_plaintext_release(mark);
         return;
     }
-    pc_conn_send(conn->id, wire, (proto_u16)wlen);
-    pc_conn_flush(conn->id);
-    pc_plaintext_release(mark);
+    size_t room = (size_t)Tcp.conn->sndbuf(conn_slot);
+    size_t n = pkt->tx_len - pkt->tx_off;
+    if (n > room)
+    {
+        n = room;
+    }
+    if (n > 0 && Tcp.conn->send(conn_slot, pkt->tx_wire + pkt->tx_off, (proto_u16)n))
+    {
+        Tcp.conn->flush(conn_slot);
+        pkt->tx_off += n;
+    }
+    if (pkt->tx_off >= pkt->tx_len)
+    {
+        pkt->tx_ready = PROTO_FALSE; // the buffer stays borrowed for the next packet
+    }
 }
 
 // ssh_pkt_recv handler: dispatch one decrypted message, remember fatal results.
@@ -100,9 +124,13 @@ void pc_ssh_conn_setup()
     pc_ssh_server_set_emit_cb(ssh_emit);
 }
 
-// The SSH connection ProtoHandler (Layer 5 dispatch seam) - installed by proto_register_builtins()
-// via this accessor, so this module carries no dependency on the session layer.
-static const ProtoHandler s_ssh_handler = {pc_ssh_conn_accept, pc_ssh_conn_rx, pc_ssh_conn_close, pc_ssh_conn_poll};
+// The SSH connection ProtoHandler (Layer 5 dispatch seam) - installed by Session.proto->register_builtins()
+// via this accessor, so this module carries no dependency on the session layer. Designated, so a
+// member's position in the struct does not decide what it binds to.
+static const ProtoHandler s_ssh_handler = {.on_accept = pc_ssh_conn_accept,
+                                           .on_data = pc_ssh_conn_rx,
+                                           .on_close = pc_ssh_conn_close,
+                                           .on_poll = pc_ssh_conn_poll};
 const ProtoHandler *ssh_proto_handler(void)
 {
     // Wire the dispatcher's binary-packet emit callback here, at the one seam every consumer must go
@@ -127,33 +155,32 @@ int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, si
     }
 
     // Frame the application bytes as SSH_MSG_CHANNEL_DATA (bounded by the peer
-    // window / max packet), then encrypt+MAC and write to the socket.
-    // Borrow the payload + wire buffers from the shared scratch arena (released on
-    // return); an exhausted arena fails closed.
+    // window / max packet), then encrypt+MAC and write to the socket. Both buffers come from the
+    // secure pool: the payload is session plaintext until the cipher runs, and release wipes.
     const size_t wire_cap = SSH_WIRE_CAP;
-    size_t mark = pc_plaintext_mark();
-    uint8_t *payload = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
-    uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
+    size_t mark = pc_secure_mark();
+    uint8_t *payload = (uint8_t *)pc_secure_alloc(SSH_PKT_BUF_SIZE, 16);
+    uint8_t *wire = (uint8_t *)pc_secure_alloc(wire_cap, 16);
     if (!payload || !wire)
     {
-        pc_plaintext_release(mark);
+        pc_secure_release(mark);
         return -1;
     }
     size_t plen = 0;
     if (pc_ssh_channel_build_data(ssh_slot, channel, data, len, payload, &plen, SSH_PKT_BUF_SIZE) != 0)
     {
-        pc_plaintext_release(mark);
+        pc_secure_release(mark);
         return -1;
     }
     size_t wlen = 0;
     if (ssh_pkt_send(ssh_slot, payload, plen, wire, &wlen, wire_cap) != 0)
     {
-        pc_plaintext_release(mark);
+        pc_secure_release(mark);
         return -1;
     }
-    pc_conn_send(conn->id, wire, (proto_u16)wlen);
-    pc_conn_flush(conn->id);
-    pc_plaintext_release(mark);
+    Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
+    Tcp.conn->flush(conn->id);
+    pc_secure_release(mark);
     return (int)len;
 }
 
@@ -169,22 +196,22 @@ int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
         return -1;
     }
 
-    uint8_t close_msgs[10];
-    size_t clen = 0;
-    if (pc_ssh_channel_build_close(ssh_slot, channel, close_msgs, &clen, sizeof(close_msgs)) != 0 || clen != 10)
+    // The two messages and the wire they are framed into come from the secure pool, which wipes
+    // them on release. close_msgs holds CHANNEL_EOF then CHANNEL_CLOSE; each is its own SSH
+    // message, so the two halves go out as two binary packets (RFC 4253 sec 6).
+    const size_t wire_cap = SSH_WIRE_CAP;
+    size_t mark = pc_secure_mark();
+    uint8_t *close_msgs = (uint8_t *)pc_secure_alloc(10, 16);
+    uint8_t *wire = (uint8_t *)pc_secure_alloc(wire_cap, 16);
+    if (!close_msgs || !wire)
     {
+        pc_secure_release(mark);
         return -1;
     }
-
-    // close_msgs holds CHANNEL_EOF then CHANNEL_CLOSE; each is its own SSH message,
-    // so frame and send the two halves as two binary packets (RFC 4253 6). Borrow
-    // the wire buffer from the shared scratch arena (released on return).
-    const size_t wire_cap = SSH_WIRE_CAP;
-    size_t mark = pc_plaintext_mark();
-    uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
-    if (!wire)
+    size_t clen = 0;
+    if (pc_ssh_channel_build_close(ssh_slot, channel, close_msgs, &clen, 10) != 0 || clen != 10)
     {
-        pc_plaintext_release(mark);
+        pc_secure_release(mark);
         return -1;
     }
     for (size_t off = 0; off < 10; off += 5)
@@ -192,13 +219,13 @@ int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
         size_t wlen = 0;
         if (ssh_pkt_send(ssh_slot, close_msgs + off, 5, wire, &wlen, wire_cap) != 0)
         {
-            pc_plaintext_release(mark);
+            pc_secure_release(mark);
             return -1;
         }
-        pc_conn_send(conn->id, wire, (proto_u16)wlen);
+        Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
     }
-    pc_conn_flush(conn->id);
-    pc_plaintext_release(mark);
+    Tcp.conn->flush(conn->id);
+    pc_secure_release(mark);
     return 0;
 }
 
@@ -215,15 +242,15 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
         return -1;
     }
 
-    // Borrow the payload + wire buffers from the shared scratch arena (released on
-    // return); an exhausted arena fails closed.
+    // Payload and wire come from the secure pool, which wipes them on release; an exhausted pool
+    // fails closed.
     const size_t wire_cap = SSH_WIRE_CAP;
-    size_t mark = pc_plaintext_mark();
-    uint8_t *payload = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
-    uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
+    size_t mark = pc_secure_mark();
+    uint8_t *payload = (uint8_t *)pc_secure_alloc(SSH_PKT_BUF_SIZE, 16);
+    uint8_t *wire = (uint8_t *)pc_secure_alloc(wire_cap, 16);
     if (!payload || !wire)
     {
-        pc_plaintext_release(mark);
+        pc_secure_release(mark);
         return -1;
     }
     size_t plen = 0;
@@ -231,18 +258,18 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
                                            SSH_PKT_BUF_SIZE);
     if (ch < 0)
     {
-        pc_plaintext_release(mark);
+        pc_secure_release(mark);
         return -1; // channel pool full / build failed
     }
     size_t wlen = 0;
     if (ssh_pkt_send(ssh_slot, payload, plen, wire, &wlen, wire_cap) != 0)
     {
-        pc_plaintext_release(mark);
+        pc_secure_release(mark);
         return -1;
     }
-    pc_conn_send(conn->id, wire, (proto_u16)wlen);
-    pc_conn_flush(conn->id);
-    pc_plaintext_release(mark);
+    Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
+    Tcp.conn->flush(conn->id);
+    pc_secure_release(mark);
     return ch;
 }
 
@@ -271,18 +298,22 @@ void pc_ssh_conn_poll(uint8_t conn_slot)
         if (ssh_rekey_due(ssh_pkt[j].seq_no_send, ssh_pkt[j].seq_no_recv, elapsed, SSH_REKEY_PACKET_THRESHOLD,
                           SSH_REKEY_TIME_MS))
         {
-            uint8_t buf[SSH_PKT_BUF_SIZE];
+            size_t mark = pc_secure_mark();
+            uint8_t *buf = (uint8_t *)pc_secure_alloc(SSH_PKT_BUF_SIZE, 16);
             size_t n = 0;
-            if (ssh_transport_begin_rekey(j, buf, &n, sizeof(buf)) == 0)
+            if (buf && ssh_transport_begin_rekey(j, buf, &n, SSH_PKT_BUF_SIZE) == 0)
             {
                 ssh_emit(j, buf, n);
             }
+            pc_secure_release(mark);
         }
     }
 
 #if PC_SSH_PORT_FORWARD
     pc_ssh_forward_pump(j);
 #endif
+
+    ssh_tx_drain(conn_slot, j); // after the codec, so a packet framed on this pass leaves on it
 }
 
 // ---------------------------------------------------------------------------
@@ -307,7 +338,7 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
     if (j == 0xFF)
     {
         // No SSH capacity: drop the connection (transport owns the teardown).
-        pc_conn_close(conn->id);
+        Tcp.conn->close(conn->id);
         return;
     }
 
@@ -322,19 +353,24 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
     ssh_comp_reset(j); // clear compression state for the new connection (not run on a re-key)
 #endif
 
-    // Send the server identification banner (raw, before any binary packet).
-    uint8_t banner[64];
+    // The server identification string, sent raw before any binary packet (RFC 4253 sec 4.2): the
+    // version literal and the CRLF that ends it, which is a compile-time length. It carries nothing
+    // secret, so it comes from the plaintext pool rather than the secure one.
+    const size_t banner_cap = sizeof(SSH_SERVER_VERSION) + 1;
+    size_t mark = pc_plaintext_mark();
+    uint8_t *banner = (uint8_t *)pc_plaintext_alloc(banner_cap, 16);
     size_t blen = 0;
-    if (ssh_transport_server_banner(banner, &blen, sizeof(banner)) == 0 && pc_conn_active(conn->id))
+    if (banner && ssh_transport_server_banner(banner, &blen, banner_cap) == 0 && pc_conn_active(conn->id))
     {
-        pc_conn_send(conn->id, banner, (proto_u16)blen);
-        pc_conn_flush(conn->id);
+        Tcp.conn->send(conn->id, banner, (proto_u16)blen);
+        Tcp.conn->flush(conn->id);
     }
+    pc_plaintext_release(mark);
 }
 
 static void close_conn(uint8_t conn_slot)
 {
-    pc_conn_close(conn_slot); // transport owns detach + slot reset + close
+    Tcp.conn->close(conn_slot); // transport owns detach + slot reset + close
     pc_ssh_conn_close(conn_slot);
 }
 
@@ -379,6 +415,8 @@ void pc_ssh_conn_rx(uint8_t conn_slot)
     }
 
     pc_secure_wipe(buf, n);
+
+    ssh_tx_drain(conn_slot, j); // the reply the dispatch framed leaves on this pass
 
     if (s_sshc.close[j])
     {

@@ -29,14 +29,14 @@
 /**
  * @brief Process one inbound DTLS datagram for a CoAP-over-DTLS connection @p c.
  *
- * While the handshake is in progress the datagram is driven through @ref pc_dtls_conn_process. Once the
+ * While the handshake is in progress the datagram is driven through @ref DtlsServer.process. Once the
  * connection is established, an epoch-3 application record is decrypted, its CoAP request is answered
  * by pc_coap_server_process(), and the response is sealed as an epoch-3 record. A handshake record that
  * arrives after establishment (a retransmitted client Finished whose ACK was lost) is routed back to
  * the state machine so it is re-acknowledged (RFC 9147 §5.8.3).
  *
  * @return bytes written to @p out (0 if there is nothing to send), or -1 on a fatal handshake error
- *         (then @p c is FAILED and @ref pc_dtls_conn_alert gives the reason).
+ *         (then @p c is FAILED and @ref DtlsServer.alert gives the reason).
  */
 int pc_coaps_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap);
 

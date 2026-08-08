@@ -5,12 +5,11 @@
  * @file network.h
  * @brief Layer 3 (Network) - IP routing and packet forwarding.
  *
- * On ESP32 the network layer is fully managed by the lwIP TCP/IP stack.
- * IP address assignment (DHCP or static), routing, and ICMP are all
- * transparent to this library.  This header exists as an architectural
- * placeholder and extension point.
+ * On ESP32 the network layer is fully managed by the lwIP TCP/IP stack. IP address assignment (DHCP
+ * or static), routing, and ICMP are all transparent to this library. This header exists as an
+ * architectural placeholder and extension point. The current implementation is a no-op stub.
  *
- * The current implementation is a no-op stub.
+ * The module exports one symbol, @ref Network. Everything in network.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -19,13 +18,42 @@
 #ifndef PROTOCORE_NETWORK_H
 #define PROTOCORE_NETWORK_H
 
+#include "network_drivers/network/dns/dns.h"
+#include "protocore_config.h" // first: the feature flags the includes below are gated on
+#include "shared_primitives/ip.h"
+#if PC_ENABLE_FORWARD
+#include "network_drivers/network/forward/forward.h" // ForwardNs: carried below as network.forward
+#endif
+
+PROTO_BEGIN_DECLS
+
 /**
- * @brief Initialize the network layer.
+ * @brief The network layer, and the modules it carries.
  *
- * Currently a no-op; lwIP manages IP routing internally.  Call this if you
- * later add static-route configuration, ICMP echo handling, or custom
- * network-layer diagnostics.
+ * @var NetworkNs::init  initialize the layer. Currently a no-op; lwIP manages IP routing internally.
+ *                       Call it if static-route configuration, ICMP echo handling, or custom
+ *                       network-layer diagnostics are added.
+ * @var NetworkNs::forward the forwarding plane: the ingress ACL, the policy routes, the fan-out
+ *
+ * A child is a pointer, because a static initializer takes a constant expression and another
+ * object's value is not one, while its address is. A child behind a feature flag is declared under
+ * that flag, so the layer names only what the image already contains.
+ *
+ * No storage member: the layer itself holds nothing of its own.
  */
-void init_network_layer(void);
+typedef struct
+{
+    void (*init)(void);
+    const DnsNs *dns;
+#if PC_ENABLE_FORWARD
+    const ForwardNs *forward;
+#endif
+    const IpNs *ip;
+} NetworkNs;
+
+/** @brief The one symbol this module exports. */
+extern const NetworkNs network;
+
+PROTO_END_DECLS
 
 #endif

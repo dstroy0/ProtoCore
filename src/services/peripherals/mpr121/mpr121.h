@@ -68,7 +68,7 @@ uint16_t pc_mpr121_word10(uint8_t lsb, uint8_t msb);
  */
 size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n_electrodes, uint8_t touch_thr, uint8_t release_thr);
 
-// --- ESP32 binding (the shared I2C bus owner; no-ops on a host build) -------------------------
+// --- ESP32 binding (the shared I2C bus owner) -------------------------
 
 /** @brief Reset + configure the MPR121 at @p addr over I2C. @return true if it acknowledged. */
 proto_bool pc_mpr121_begin(uint8_t addr);

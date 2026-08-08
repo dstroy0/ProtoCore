@@ -26,6 +26,10 @@
 
 #include "protocore_config.h"
 
+#if PC_ENABLE_PREEMPT_QUEUE
+#include "network_drivers/session/preempt_queue.h" // carried below as Session.workers->queue
+#endif
+
 PROTO_BEGIN_DECLS
 
 // Worker identity (pc_worker_count / pc_worker_self / pc_worker_set_self) is declared in
@@ -46,33 +50,11 @@ PROTO_BEGIN_DECLS
 /** @brief Pump callback run by each worker task with its worker id. */
 typedef void (*pc_worker_pump_fn)(int worker_id);
 
-/** @brief Spawn the worker task(s) and start them running @p pump. No-op on host. */
-void pc_workers_start(pc_worker_pump_fn pump);
-
-/**
- * @brief Wake worker @p worker_id so it services a freshly-queued event now.
- *
- * Each worker blocks between service iterations (it no longer free-runs the poll),
- * so a producer that posts to a worker's event/defer queue must nudge it. This is
- * a FreeRTOS task notification (no allocation, task- and tcpip-thread safe); a
- * nudge that lands between the worker's pump and its block is latched in the
- * notification count, so the next block returns at once and no event is missed.
- * No-op on host (no worker task; the pipeline runs inline). Safe to call with an
- * out-of-range id or before the task exists.
- */
-void pc_worker_wake(int worker_id);
-
-/** @brief Signal the worker task(s) to exit and wait briefly for them. No-op on host. */
-void pc_workers_stop(void);
-
-/** @brief True while worker task(s) are running (always false on host). */
-proto_bool pc_workers_running(void);
-
 // ---------------------------------------------------------------------------
 // Deferred work (thread-safe app -> worker submission)
 // ---------------------------------------------------------------------------
 //
-// Route a callback to a worker so it runs in that worker's single-thread context.
+// HttpRoute a callback to a worker so it runs in that worker's single-thread context.
 // This is how application code on loop() (or any other task) safely pushes to a
 // connection - e.g. an SSE broadcast on a timer, or ws_send from a sensor task:
 // instead of calling the send API directly (which would race the worker that owns
@@ -88,11 +70,32 @@ proto_bool pc_workers_running(void);
 /** @brief Deferred callback signature. */
 typedef void (*pc_deferred_fn)(void *arg);
 
-/** @brief Run @p fn(@p arg) on worker @p worker_id. Returns false if the queue is full. */
-proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg);
+/**
+ * @brief The Workers module.
+ *
+ * @var WorkerNs::run_deferred
+ * @var WorkerNs::running
+ * @var WorkerNs::start
+ * @var WorkerNs::stop
+ * @var WorkerNs::wake
+ * @var WorkerNs::defer
+ */
+typedef struct
+{
+    void (*run_deferred)(int worker_id);
+    proto_bool (*running)(void);
+    void (*start)(pc_worker_pump_fn pump);
+    void (*stop)(void);
+    void (*wake)(int worker_id);
+    proto_bool (*defer)(int worker_id, pc_deferred_fn fn, void *arg);
+#if PC_ENABLE_PREEMPT_QUEUE
+    // The lane the workers jump. They run without it; it only changes what runs first.
+    const PreemptQueueNs *queue;
+#endif
+} WorkerNs;
 
-/** @brief Drain and run worker @p worker_id's deferred callbacks (called by the worker). */
-void pc_worker_run_deferred(int worker_id);
+/** @brief The one symbol this module exports. */
+extern const WorkerNs Workers;
 
 PROTO_END_DECLS
 

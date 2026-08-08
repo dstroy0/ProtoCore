@@ -9,7 +9,7 @@
  * `measurement,tag=v field=val,field2=val2 timestamp` (optional tags + trailing
  * timestamp; integer fields carry the `i` suffix, unsigned `u`, floats are plain)
  * - into a caller buffer, then casts it to a configured
- * collector over UDP (pc_udp_sendto), zero-heap and fire-and-forget (no ACK, no
+ * collector over UDP (Udp.client->sendto), zero-heap and fire-and-forget (no ACK, no
  * retry). The line builder is pure and host-tested; only the send touches the
  * network (ESP32; a no-op on host builds).
  *

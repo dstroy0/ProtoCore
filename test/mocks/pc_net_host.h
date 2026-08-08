@@ -3,12 +3,12 @@
 //
 // Host pcb driver: the target's scheduler + TCP/UDP surface, implemented for the test build.
 //
-// src/board_drivers/board_profiles/pc_platform.h aliases that surface onto the vendor's calls on
+// src/core_setup/board_profiles/pc_platform.h aliases that surface onto the vendor's calls on
 // the hot path. On the test build there is no vendor, so this file supplies the same names, the
 // same shapes, and the same member layout the core reads. That is what lets a transport TU be
 // compiled and driven on the host instead of only on silicon.
 //
-// It is deliberately inert: pcbs come from a fixed table, sends are captured, and callbacks are
+// Pcbs come from a fixed table, sends are captured, and callbacks are
 // stored so a test can fire them. Nothing here talks to a socket. A test that wants behavior
 // drives it through the pc_net_host_* entry points at the bottom.
 //
@@ -24,9 +24,11 @@
 #define PROTOCORE_PC_NET_HOST_H
 
 #include <Arduino.h> // the virtual clock the host time base reads: millis() / set_millis()
+#include <setjmp.h>  // how a task entry that never returns is unwound; see the task table below
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
+#include <string.h> // memcpy / memset: the staging copies below
+
 #include <time.h>
 
 // ---------------------------------------------------------------------------
@@ -524,8 +526,57 @@ typedef uint32_t pc_platform_ticks;
 #define PC_PLATFORM_WAIT_FOREVER 0xFFFFFFFFu
 #define PC_PLATFORM_CORES 1
 
-// The host runs the pipeline inline, so a queue is a handle the core can hold and compare and a
-// task never starts. Depth/'item size' are accepted and ignored.
+// Where a task entry is unwound to. A task entry does not return: it loops until the kernel deletes
+// it while it is blocked. Deleting a task abandons its frame, so the host does the same with
+// longjmp - the entry runs until it would block and control resumes in pc_platform_host_task_run.
+// The depth is 0 outside a run, so a blocking call made by ordinary code cannot unwind.
+__attribute__((weak)) jmp_buf pc_task_host_jmp;
+__attribute__((weak)) int pc_task_host_depth;
+__attribute__((weak)) int pc_task_host_budget;
+
+// How many timed waits one run allows before it unwinds. A task that waits on a timeout rather than
+// forever would spin, since nothing else runs here to make its condition true.
+#ifndef PC_TASK_HOST_WAITS
+#define PC_TASK_HOST_WAITS 1
+#endif
+
+static inline void pc_task_host_yield(void)
+{
+    if (pc_task_host_depth > 0)
+    {
+        longjmp(pc_task_host_jmp, 1);
+    }
+}
+
+// Keyed by the handle create hands back, so an enqueue is observable at its consumer and
+// per-worker routing is checkable here rather than only on hardware.
+#define PC_QUEUE_MAX 24
+#define PC_QUEUE_DEPTH 32
+#define PC_QUEUE_ITEM 64
+
+typedef struct
+{
+    void *handle[PC_QUEUE_MAX];
+    size_t item[PC_QUEUE_MAX];
+    size_t depth[PC_QUEUE_MAX]; // what create asked for, so a full queue fills where the core says
+    size_t head[PC_QUEUE_MAX];
+    size_t tail[PC_QUEUE_MAX];
+    uint8_t buf[PC_QUEUE_MAX][PC_QUEUE_DEPTH * PC_QUEUE_ITEM];
+} PcQueueTable;
+__attribute__((weak)) PcQueueTable g_pc_queues;
+
+static inline int pc_queue_slot(pc_platform_queue q)
+{
+    for (int i = 0; i < PC_QUEUE_MAX; i++)
+    {
+        if (g_pc_queues.handle[i] == q)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 // One-shot creation failure: the next queue create reports no room, the way a kernel out of
 // queue objects does, so the caller has to unwind the listener it was building.
 __attribute__((weak)) int pc_platform_queue_create_fail_once;
@@ -538,14 +589,41 @@ static inline void mock_queue_create_fail_once(void)
 static inline pc_platform_queue pc_platform_queue_create(size_t depth, size_t item, void *storage, void *ctrl)
 {
     (void)depth;
-    (void)item;
     (void)ctrl;
     if (pc_platform_queue_create_fail_once)
     {
         pc_platform_queue_create_fail_once = 0;
         return NULL;
     }
-    return storage ? storage : (void *)1;
+    pc_platform_queue h = storage;
+    if (h == NULL)
+    {
+        h = (void *)1;
+    }
+    size_t sz = item;
+    if (sz > PC_QUEUE_ITEM)
+    {
+        sz = PC_QUEUE_ITEM;
+    }
+    size_t d = depth;
+    if (d == 0 || d > PC_QUEUE_DEPTH)
+    {
+        d = PC_QUEUE_DEPTH;
+    }
+    int slot = pc_queue_slot(h);
+    if (slot < 0)
+    {
+        slot = pc_queue_slot(NULL);
+    }
+    if (slot >= 0)
+    {
+        g_pc_queues.handle[slot] = h;
+        g_pc_queues.item[slot] = sz;
+        g_pc_queues.depth[slot] = d;
+        g_pc_queues.head[slot] = 0;
+        g_pc_queues.tail[slot] = 0;
+    }
+    return h;
 }
 // One-shot send failure: the next pc_platform_queue_send() reports a full queue and clears the
 // latch. Lets a test drive the enqueue path's rejection branch.
@@ -556,115 +634,253 @@ static inline void mock_queue_send_fail_once(void)
     pc_platform_queue_send_fail_once = 1;
 }
 
+// The two send entry points differ only in which end they write, so the bounds and the copy live here.
+static inline int pc_queue_push(pc_platform_queue q, const void *item, size_t at)
+{
+    int slot = pc_queue_slot(q);
+    if (slot < 0 || item == NULL)
+    {
+        return PC_PLATFORM_FALSE;
+    }
+    if ((g_pc_queues.head[slot] - g_pc_queues.tail[slot]) >= g_pc_queues.depth[slot])
+    {
+        return PC_PLATFORM_FALSE; // full at the depth create asked for, the way a kernel queue refuses
+    }
+    memcpy(&g_pc_queues.buf[slot][(at % PC_QUEUE_DEPTH) * PC_QUEUE_ITEM], item, g_pc_queues.item[slot]);
+    return PC_PLATFORM_OK;
+}
+
 static inline int pc_platform_queue_send(pc_platform_queue q, const void *item, uint32_t ticks)
 {
-    (void)q;
-    (void)item;
     (void)ticks;
     if (pc_platform_queue_send_fail_once)
     {
         pc_platform_queue_send_fail_once = 0;
         return PC_PLATFORM_FALSE;
     }
-    return PC_PLATFORM_OK;
+    int slot = pc_queue_slot(q);
+    if (slot < 0)
+    {
+        return PC_PLATFORM_FALSE;
+    }
+    int ok = pc_queue_push(q, item, g_pc_queues.head[slot]);
+    if (ok == PC_PLATFORM_OK)
+    {
+        g_pc_queues.head[slot]++;
+    }
+    return ok;
 }
+
 static inline int pc_platform_queue_send_front(pc_platform_queue q, const void *item, uint32_t ticks)
 {
-    (void)q;
-    (void)item;
     (void)ticks;
-    return PC_PLATFORM_OK;
+    int slot = pc_queue_slot(q);
+    if (slot < 0)
+    {
+        return PC_PLATFORM_FALSE;
+    }
+    int ok = pc_queue_push(q, item, g_pc_queues.tail[slot] - 1);
+    if (ok == PC_PLATFORM_OK)
+    {
+        g_pc_queues.tail[slot]--;
+    }
+    return ok;
 }
+
 static inline int pc_platform_queue_send_isr(pc_platform_queue q, const void *item, int *woke)
 {
-    (void)q;
-    (void)item;
     if (woke)
     {
         *woke = 0;
     }
-    return PC_PLATFORM_OK;
-}
-// Staged-event buffer: a test calls queue_stage_raw() before server_tick(), and the receive below
-// drains those items FIFO and then reports empty, which is what a real queue does once emptied.
-// A send is still inert (the host runs the pipeline inline), so the only way an item enters is a
-// test staging it deliberately. One instance for the whole program - the test stages from its own
-// translation unit and the session layer drains from another - so the definition is weak and the
-// linker collapses it, the same way the millis counter in Arduino.h is shared.
-#define PC_QUEUE_STAGE_MAX 16
-#define PC_QUEUE_STAGE_ITEM 32
-
-typedef struct
-{
-    uint8_t items[PC_QUEUE_STAGE_MAX][PC_QUEUE_STAGE_ITEM];
-    int item_sz[PC_QUEUE_STAGE_MAX];
-    int count;
-    int idx;
-} PcQueueStage;
-__attribute__((weak)) PcQueueStage g_pc_queue_stage;
-
-static inline void queue_stage_raw(const void *item, int sz)
-{
-    if (sz > 0 && sz <= PC_QUEUE_STAGE_ITEM && g_pc_queue_stage.count < PC_QUEUE_STAGE_MAX)
-    {
-        memcpy(g_pc_queue_stage.items[g_pc_queue_stage.count], item, (size_t)sz);
-        g_pc_queue_stage.item_sz[g_pc_queue_stage.count] = sz;
-        g_pc_queue_stage.count++;
-    }
+    return pc_platform_queue_send(q, item, 0);
 }
 
+// Called from setUp so one case cannot inherit another's backlog.
 static inline void queue_stage_reset(void)
 {
-    g_pc_queue_stage.count = 0;
-    g_pc_queue_stage.idx = 0;
+    for (int i = 0; i < PC_QUEUE_MAX; i++)
+    {
+        g_pc_queues.head[i] = 0;
+        g_pc_queues.tail[i] = 0;
+    }
 }
 
 static inline int pc_platform_queue_recv(pc_platform_queue q, void *item, uint32_t ticks)
 {
-    (void)q;
-    (void)ticks;
-    if (g_pc_queue_stage.idx < g_pc_queue_stage.count)
+    int slot = pc_queue_slot(q);
+    if (slot < 0 || item == NULL || g_pc_queues.head[slot] == g_pc_queues.tail[slot])
     {
-        memcpy(item, g_pc_queue_stage.items[g_pc_queue_stage.idx],
-               (size_t)g_pc_queue_stage.item_sz[g_pc_queue_stage.idx]);
-        g_pc_queue_stage.idx++;
-        return PC_PLATFORM_OK;
+        // A wait-forever on an empty queue is where a task parks. Nothing else runs here to fill
+        // it, so the entry unwinds instead; a timed or polling receive just reports empty.
+        if (ticks == PC_PLATFORM_WAIT_FOREVER)
+        {
+            pc_task_host_yield();
+        }
+        return 0;
     }
-    return 0;
+    memcpy(item, &g_pc_queues.buf[slot][(g_pc_queues.tail[slot] % PC_QUEUE_DEPTH) * PC_QUEUE_ITEM],
+           g_pc_queues.item[slot]);
+    g_pc_queues.tail[slot]++;
+    return PC_PLATFORM_OK;
 }
 static inline size_t pc_platform_queue_waiting(pc_platform_queue q)
 {
-    (void)q;
-    return 0;
+    int slot = pc_queue_slot(q);
+    if (slot < 0)
+    {
+        return 0;
+    }
+    return g_pc_queues.head[slot] - g_pc_queues.tail[slot];
 }
 static inline size_t pc_platform_queue_waiting_isr(pc_platform_queue q)
 {
-    (void)q;
-    return 0;
+    return pc_platform_queue_waiting(q);
 }
 static inline void pc_platform_queue_delete(pc_platform_queue q)
 {
-    (void)q;
+    int slot = pc_queue_slot(q);
+    if (slot >= 0)
+    {
+        g_pc_queues.handle[slot] = NULL;
+    }
+}
+
+// The started tasks, keyed by the handle create hands back, the same way the queue table above is.
+// Nothing here runs on its own: the entry function is kept, and a test runs it when it chooses.
+#define PC_TASK_MAX 16
+
+typedef struct
+{
+    pc_platform_task_fn fn[PC_TASK_MAX];
+    void *arg[PC_TASK_MAX];
+    void *handle[PC_TASK_MAX];
+    const char *name[PC_TASK_MAX]; // what start was given, so one task can be run by itself
+    int started[PC_TASK_MAX];
+} PcTaskTable;
+__attribute__((weak)) PcTaskTable g_pc_tasks;
+
+static inline int pc_task_slot(pc_platform_task t)
+{
+    for (int i = 0; i < PC_TASK_MAX; i++)
+    {
+        if (g_pc_tasks.started[i] && g_pc_tasks.handle[i] == t)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// One-shot start failure: the next pc_platform_task_start reports no room, the way a kernel out of
+// task control blocks does, so the caller has to unwind what it was bringing up.
+__attribute__((weak)) int pc_platform_task_start_fail_once;
+
+static inline void mock_task_start_fail_once(void)
+{
+    pc_platform_task_start_fail_once = 1;
 }
 
 static inline int pc_platform_task_start(pc_platform_task_fn fn, const char *name, uint32_t stack, void *arg, int prio,
                                          pc_platform_task *out, int core)
 {
-    (void)fn;
     (void)name;
     (void)stack;
-    (void)arg;
     (void)prio;
     (void)core;
-    if (out)
+    if (pc_platform_task_start_fail_once)
     {
-        *out = (void *)1;
+        pc_platform_task_start_fail_once = 0;
+        return PC_PLATFORM_FALSE;
     }
-    return PC_PLATFORM_PASS;
+    for (int i = 0; i < PC_TASK_MAX; i++)
+    {
+        if (!g_pc_tasks.started[i])
+        {
+            g_pc_tasks.fn[i] = fn;
+            g_pc_tasks.arg[i] = arg;
+            g_pc_tasks.name[i] = name;
+            // The handle is the slot, offset so it is never NULL: the core tests a task handle
+            // against NULL to decide there is one.
+            g_pc_tasks.handle[i] = (void *)(uintptr_t)(i + 1);
+            g_pc_tasks.started[i] = 1;
+            if (out)
+            {
+                *out = g_pc_tasks.handle[i];
+            }
+            return PC_PLATFORM_PASS;
+        }
+    }
+    return PC_PLATFORM_FALSE;
 }
 static inline void pc_platform_task_stop(pc_platform_task t)
 {
-    (void)t;
+    int slot = pc_task_slot(t);
+    if (slot >= 0)
+    {
+        g_pc_tasks.started[slot] = 0;
+    }
+}
+
+/**
+ * @brief Run a started task's entry function on this thread until it would block.
+ *
+ * The entry runs until it waits on an empty queue forever, spends its timed-wait budget, or
+ * returns. Returns 0 when no such task is started.
+ */
+static inline int pc_platform_host_task_run(pc_platform_task t)
+{
+    int slot = pc_task_slot(t);
+    if (slot < 0 || !g_pc_tasks.fn[slot])
+    {
+        return 0;
+    }
+    pc_task_host_budget = PC_TASK_HOST_WAITS;
+    pc_task_host_depth++;
+    if (setjmp(pc_task_host_jmp) == 0)
+    {
+        g_pc_tasks.fn[slot](g_pc_tasks.arg[slot]);
+    }
+    pc_task_host_depth--;
+    return 1;
+}
+
+/** @brief Run the started task that start was given @p name for. 0 when there is none. */
+static inline int pc_platform_host_task_run_named(const char *name)
+{
+    if (name == NULL)
+    {
+        return 0;
+    }
+    for (int i = 0; i < PC_TASK_MAX; i++)
+    {
+        if (g_pc_tasks.started[i] && g_pc_tasks.name[i] && strcmp(g_pc_tasks.name[i], name) == 0)
+        {
+            return pc_platform_host_task_run(g_pc_tasks.handle[i]);
+        }
+    }
+    return 0;
+}
+
+/** @brief Run every started task's entry function once, lowest slot first. */
+static inline int pc_platform_host_tasks_run_all(void)
+{
+    int ran = 0;
+    for (int i = 0; i < PC_TASK_MAX; i++)
+    {
+        if (g_pc_tasks.started[i] && g_pc_tasks.fn[i])
+        {
+            ran += pc_platform_host_task_run(g_pc_tasks.handle[i]);
+        }
+    }
+    return ran;
+}
+
+/** @brief Forget every started task, so one case does not inherit another's. */
+static inline void pc_platform_host_tasks_reset(void)
+{
+    memset(&g_pc_tasks, 0, sizeof(g_pc_tasks));
+    pc_platform_task_start_fail_once = 0;
 }
 static inline void pc_platform_task_notify(pc_platform_task t)
 {
@@ -674,6 +890,13 @@ static inline uint32_t pc_platform_task_wait(int clear, uint32_t ticks)
 {
     (void)clear;
     (void)ticks;
+    // A timed wait returns on the target when its timeout expires, so it reports here too. Nothing
+    // else runs to notify it, so a task looping on one spends its budget and unwinds.
+    pc_task_host_budget--;
+    if (pc_task_host_budget < 0)
+    {
+        pc_task_host_yield();
+    }
     return 0;
 }
 // Advances the virtual clock by the tick count. The host has no tick timer, so a wait that hands
@@ -726,14 +949,24 @@ static inline pc_net_ip *pc_net_host_any(void)
 #define pc_net_ip_as_v4(a) (a)
 #define pc_net_ip_as_v6(a) (a)
 
+// The v6 address as bytes, and the v6 tag: lwIP keeps four network-order words, this keeps the
+// sixteen bytes those words hold, so both answer the same question.
+#define pc_net_ip6_bytes(a) ((const uint8_t *)(a)->bytes)
+#define pc_net_ip6_wbytes(a) ((uint8_t *)(a)->bytes)
+#define pc_net_ip6_mark(a) ((a)->type = PC_NET_TYPE_V6)
+
+// The four octets as a word, the way lwIP's ip4_addr_get_u32 hands them back: the word's memory
+// bytes are the address in network order. Composing the value arithmetically instead would byte
+// reverse it on a little-endian host, and every caller here reads it as lwIP's.
 static inline uint32_t pc_net_ip4_u32(const pc_net_ip *a)
 {
+    uint32_t v = 0;
     if (!a)
     {
         return 0;
     }
-    return ((uint32_t)a->bytes[0] << 24) | ((uint32_t)a->bytes[1] << 16) | ((uint32_t)a->bytes[2] << 8) |
-           (uint32_t)a->bytes[3];
+    memcpy(&v, a->bytes, 4);
+    return v;
 }
 static inline void pc_net_ip4_set(pc_net_ip *a, uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3)
 {
@@ -995,18 +1228,37 @@ static inline pc_pcb *pc_net_listen(pc_pcb *p, uint8_t backlog)
     }
     return p;
 }
+// One-shot connect refusal: the next pc_net_connect() reports the peer unreachable and never
+// completes, the way a RST to the SYN does.
+__attribute__((weak)) int pc_net_host_connect_fail_once;
+
+static inline void mock_connect_fail_once(void)
+{
+    pc_net_host_connect_fail_once = 1;
+}
+
+// The connect completes inline, the way pc_net_call_marshal runs an op inline: the caller's
+// callback fires before this returns, so a blocking open sees its flag on the first poll.
 static inline pc_net_err pc_net_connect(pc_pcb *p, const pc_net_ip *a, uint16_t port, pc_net_connect_fn cb)
 {
-    (void)cb;
     if (!p)
     {
         return PC_NET_ERR_ARG;
+    }
+    if (pc_net_host_connect_fail_once)
+    {
+        pc_net_host_connect_fail_once = 0;
+        return PC_NET_ERR_CONN;
     }
     if (a)
     {
         p->remote_ip = *a;
     }
     p->remote_port = port;
+    if (cb)
+    {
+        cb(p->arg, p, PC_NET_OK);
+    }
     return PC_NET_OK;
 }
 // One-shot close failure: the next pc_net_close() reports no memory and leaves the pcb open, the
@@ -1172,9 +1424,72 @@ static inline void pc_net_opt_set(void *p, uint32_t opt)
     (void)opt;
 }
 
+// ---------------------------------------------------------------------------
+// Packet buffers and the UDP send capture
+// ---------------------------------------------------------------------------
+//
+// pc_net_udp_sendto is where a datagram leaves the core, so it is the only place a test can see
+// what the wire would have carried. It records the destination, the ports and the payload; the
+// renderer in pc_net_pcap.h turns that log into a .pcap the test parses and Wireshark opens.
+//
+// The log holds the fields rather than the pcap bytes because this header is parsed from inside
+// protocore_config.h, before shared_primitives/types.h supplies PC_INLINE - so pcap.h cannot be
+// included here.
+
+#ifndef PC_NET_HOST_PBUFS
+#define PC_NET_HOST_PBUFS 8
+#endif
+#ifndef PC_NET_HOST_DGRAM_LEN
+#define PC_NET_HOST_DGRAM_LEN 1472 // an Ethernet MTU less the IPv4 and UDP headers
+#endif
+#ifndef PC_NET_HOST_DGRAMS
+#define PC_NET_HOST_DGRAMS 64
+#endif
+
+typedef struct
+{
+    pc_pbuf p;
+    uint8_t data[PC_NET_HOST_DGRAM_LEN];
+    int in_use;
+} pc_net_host_pbuf_slot;
+
+__attribute__((weak)) pc_net_host_pbuf_slot pc_net_host_pbuf_pool[PC_NET_HOST_PBUFS];
+__attribute__((weak)) int pc_net_host_pbuf_fail_once;
+
+/** @brief One datagram the core handed to the stack. */
+typedef struct
+{
+    uint8_t type;     // PC_NET_TYPE_V4 / PC_NET_TYPE_V6
+    uint8_t addr[16]; // destination, network order; v4 in the first four
+    uint16_t src_port;
+    uint16_t dst_port;
+    uint8_t tos;
+    uint32_t ms; // virtual-clock millisecond the send happened, the pcap record timestamp
+    uint16_t len;
+    uint8_t data[PC_NET_HOST_DGRAM_LEN];
+} pc_net_host_dgram;
+
+__attribute__((weak)) pc_net_host_dgram pc_net_host_dgrams[PC_NET_HOST_DGRAMS];
+__attribute__((weak)) size_t pc_net_host_dgram_n;    // records kept
+__attribute__((weak)) size_t pc_net_host_dgram_sent; // sends seen, kept or not
+
+// The next pc_net_pbuf_alloc() reports the pool spent, so the send path's refuse branch is reachable.
+static inline void mock_pbuf_fail_once(void)
+{
+    pc_net_host_pbuf_fail_once = 1;
+}
+
+// A pbuf a test built on the stack is not in the pool, so it is left alone.
 static inline void pc_net_pbuf_free(pc_pbuf *p)
 {
-    (void)p;
+    for (int i = 0; i < PC_NET_HOST_PBUFS; i++)
+    {
+        if (&pc_net_host_pbuf_pool[i].p == p)
+        {
+            pc_net_host_pbuf_pool[i].in_use = 0;
+            return;
+        }
+    }
 }
 static inline uint16_t pc_net_pbuf_copy(const pc_pbuf *p, void *dst, uint16_t len, uint16_t off)
 {
@@ -1191,8 +1506,28 @@ static inline pc_pbuf *pc_net_pbuf_alloc(int layer, uint16_t len, int type)
 {
     (void)layer;
     (void)type;
-    (void)len;
-    return NULL; // a test that needs a pbuf builds one and calls the callback directly
+    if (pc_net_host_pbuf_fail_once)
+    {
+        pc_net_host_pbuf_fail_once = 0;
+        return NULL;
+    }
+    if (len > PC_NET_HOST_DGRAM_LEN)
+    {
+        return NULL;
+    }
+    for (int i = 0; i < PC_NET_HOST_PBUFS; i++)
+    {
+        if (!pc_net_host_pbuf_pool[i].in_use)
+        {
+            pc_net_host_pbuf_pool[i].in_use = 1;
+            pc_net_host_pbuf_pool[i].p.next = NULL;
+            pc_net_host_pbuf_pool[i].p.payload = pc_net_host_pbuf_pool[i].data;
+            pc_net_host_pbuf_pool[i].p.len = len;
+            pc_net_host_pbuf_pool[i].p.tot_len = len;
+            return &pc_net_host_pbuf_pool[i].p;
+        }
+    }
+    return NULL;
 }
 
 // First member of the core's call record; fn casts back to that record. lwIP puts a semaphore here.
@@ -1237,12 +1572,45 @@ static inline void pc_net_udp_recv(pc_udp_pcb *p, pc_net_udp_recv_fn fn, void *a
         p->arg = arg;
     }
 }
+// After this many successful datagrams the next pc_net_udp_sendto refuses and records nothing, the
+// way a stack with no route to the destination does. -1 never fails.
+__attribute__((weak)) int pc_net_host_udp_fail_after = -1;
+
+static inline void mock_udp_send_fail_after(int n)
+{
+    pc_net_host_udp_fail_after = n;
+}
+
+// Record the datagram. The count keeps rising past the log so a test can tell "sent more than the
+// log holds" from "stopped sending".
 static inline pc_net_err pc_net_udp_sendto(pc_udp_pcb *p, pc_pbuf *b, const pc_net_ip *a, uint16_t port)
 {
-    (void)p;
-    (void)b;
-    (void)a;
-    (void)port;
+    if (!p || !b || !a)
+    {
+        return PC_NET_ERR_ARG;
+    }
+    if (pc_net_host_udp_fail_after == 0)
+    {
+        return PC_NET_ERR_RST;
+    }
+    if (pc_net_host_udp_fail_after > 0)
+    {
+        pc_net_host_udp_fail_after--;
+    }
+    pc_net_host_dgram_sent++;
+    if (pc_net_host_dgram_n < PC_NET_HOST_DGRAMS)
+    {
+        pc_net_host_dgram *d = &pc_net_host_dgrams[pc_net_host_dgram_n];
+        memset(d, 0, sizeof(*d));
+        d->type = a->type;
+        memcpy(d->addr, a->bytes, sizeof(d->addr));
+        d->src_port = p->local_port;
+        d->dst_port = port;
+        d->tos = p->tos;
+        d->ms = (uint32_t)millis();
+        d->len = pc_net_pbuf_copy(b, d->data, (uint16_t)sizeof(d->data), 0);
+        pc_net_host_dgram_n++;
+    }
     return PC_NET_OK;
 }
 static inline void pc_net_udp_remove(pc_udp_pcb *p)
@@ -1253,6 +1621,7 @@ static inline void pc_net_udp_remove(pc_udp_pcb *p)
     }
 }
 #define PC_NET_HAS_IGMP 1
+#define PC_NET_HAS_IPV6 1
 
 static inline pc_net_err pc_net_igmp_join(const pc_net_ip *nif, const pc_net_ip *grp)
 {
@@ -1281,12 +1650,45 @@ static inline const uint8_t *pc_net_host_sent(size_t *len)
     return pc_net_host_tx;
 }
 
+/** @brief Datagrams held in the log. */
+static inline size_t pc_net_host_udp_count(void)
+{
+    return pc_net_host_dgram_n;
+}
+
+/** @brief Datagrams the core handed to the stack, whether or not the log had room. */
+static inline size_t pc_net_host_udp_sent(void)
+{
+    return pc_net_host_dgram_sent;
+}
+
+/** @brief Datagram @p i, or NULL past the end of the log. */
+static inline const pc_net_host_dgram *pc_net_host_udp_at(size_t i)
+{
+    if (i >= pc_net_host_dgram_n)
+    {
+        return NULL;
+    }
+    return &pc_net_host_dgrams[i];
+}
+
+/** @brief Drop the datagram log and release every pbuf. */
+static inline void pc_net_host_udp_reset(void)
+{
+    pc_net_host_dgram_n = 0;
+    pc_net_host_dgram_sent = 0;
+    pc_net_host_pbuf_fail_once = 0;
+    pc_net_host_udp_fail_after = -1;
+    memset(pc_net_host_pbuf_pool, 0, sizeof(pc_net_host_pbuf_pool));
+}
+
 /** @brief Drop the capture and every pcb, so each test starts from a known state. */
 static inline void pc_net_host_reset(void)
 {
     pc_net_host_tx_len = 0;
     memset(pc_net_host_pcbs, 0, sizeof(pc_net_host_pcbs));
     memset(pc_net_host_udp_pcbs, 0, sizeof(pc_net_host_udp_pcbs));
+    pc_net_host_udp_reset();
 }
 
 // The same capture read as text. A response is a string for most of the suite - it asserts on a
@@ -1340,6 +1742,48 @@ static inline pc_net_err pc_net_host_close_peer(pc_pcb *p)
         return PC_NET_ERR_ARG;
     }
     return p->on_recv(p->arg, p, NULL, PC_NET_OK);
+}
+
+/** @brief The UDP pcb bound to @p port, or NULL when nothing bound it. */
+static inline pc_udp_pcb *pc_net_host_udp_pcb(uint16_t port)
+{
+    for (int i = 0; i < PC_NET_HOST_PCBS; i++)
+    {
+        if (pc_net_host_udp_pcbs[i].in_use && pc_net_host_udp_pcbs[i].local_port == port)
+        {
+            return &pc_net_host_udp_pcbs[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief Deliver @p n bytes to the pcb bound to @p port, as one datagram from @p src_ip:@p src_port.
+ *
+ * Calls the recv callback the core armed, which is the stack's own producer, so what runs is the
+ * receive path the target runs. Returns 0 when no pcb is bound to that port. The payload reaches
+ * the handler on the next poll(), which drains the ring the callback filled.
+ */
+static inline int pc_net_host_udp_deliver(uint16_t port, const char *src_ip, uint16_t src_port, void *data, uint16_t n)
+{
+    pc_udp_pcb *p = pc_net_host_udp_pcb(port);
+    if (!p || !p->on_recv)
+    {
+        return 0;
+    }
+    pc_net_ip src;
+    memset(&src, 0, sizeof(src));
+    if (src_ip)
+    {
+        pc_net_ip_parse(src_ip, &src);
+    }
+    pc_pbuf b;
+    memset(&b, 0, sizeof(b));
+    b.payload = data;
+    b.len = n;
+    b.tot_len = n;
+    p->on_recv(p->arg, p, &b, &src, src_port);
+    return 1;
 }
 
 #endif // PROTOCORE_PC_NET_HOST_H

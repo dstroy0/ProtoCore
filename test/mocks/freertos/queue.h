@@ -6,7 +6,6 @@
 #pragma once
 #include "FreeRTOS.h"
 #include <stdlib.h>
-#include <string.h>
 
 inline QueueHandle_t xQueueCreate(uint32_t, size_t)
 {
@@ -31,7 +30,7 @@ inline QueueHandle_t xQueueCreateStatic(uint32_t, size_t, uint8_t *, StaticQueue
     return (void *)1;
 }
 // Test hook: force the next xQueueSend() call to report a full queue. Models the real
-// FreeRTOS "queue full" case (the application isn't draining server_tick() fast enough)
+// FreeRTOS "queue full" case (the application isn't draining Session.tick() fast enough)
 // so a caller's fallback path (defer-drop, etc.) is host-testable. Auto-clears after one use.
 inline proto_bool &mock_queue_send_fail_once()
 {
@@ -51,7 +50,7 @@ inline int xQueueSend(QueueHandle_t, const void *, uint32_t)
 // ---------------------------------------------------------------------------
 // Programmable staged-event buffer - for testing the event-dispatch path.
 //
-// Call queue_stage_raw(item, size) before server_tick().  xQueueReceive
+// Call queue_stage_raw(item, size) before Session.tick().  xQueueReceive
 // drains staged items FIFO, then returns pdFALSE when empty, matching
 // real FreeRTOS behavior.
 //

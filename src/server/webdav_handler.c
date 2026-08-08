@@ -14,12 +14,12 @@
 #include "server/webdav_handler.h"
 #include "mmgr/membuild.h"
 #include "network_drivers/application/webdav/webdav.h"
-#include "network_drivers/network/route.h"
+#include "network_drivers/presentation/http/http.h"
+#include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/transport/tcp.h"
 #include "protocore.h"
 #include "server/clock/clock.h"
 #include "shared_primitives/mime.h"
-#include <string.h>
 
 #if PC_ENABLE_WEBDAV
 
@@ -48,7 +48,7 @@ static_assert(PC_WEBDAV_BUF_SIZE / PC_WEBDAV_MIN_ENTRY_BYTES < PC_WEBDAV_MAX_ENT
 typedef struct
 {
     // The accessor root every operation here resolves against, bound in dav(). It is the whole
-    // mount: a DAV route carries its own subtree as a request-path piece (Route::static_root), so
+    // mount: a DAV route carries its own subtree as a request-path piece (the mount point), so
     // the subtree is part of the request and one root serves every mount registered.
     int root;
 
@@ -92,7 +92,7 @@ static proto_bool dav_join(const char *root, const char *sub, char *out, size_t 
 // '/'. Returns 0 on success, else the HTTP error code (403 traversal, 414 too
 // long) - the single source of truth for the path check, shared by the request
 // handler and the streaming-PUT begin hook.
-static int dav_resolve_path(const Route *r, const char *reqpath, char *out, size_t cap)
+static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, size_t cap)
 {
     size_t plen = strnlen(r->path, MAX_PATH_LEN);
     // plen == 0 is unreachable: dav() always stores at least "*" - it appends the wildcard when the
@@ -101,7 +101,7 @@ static int dav_resolve_path(const Route *r, const char *reqpath, char *out, size
     {
         plen--;
     }
-    // path_matches() against this same route, which already required reqpath to carry the mount
+    // Http.path_matches() against this same route, which already required reqpath to carry the mount
     // prefix, so the length test always holds. Kept so a future caller that resolves without
     // matching first still cannot index past the end of reqpath.
     const char *sub = (strnlen(reqpath, MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
@@ -109,7 +109,7 @@ static int dav_resolve_path(const Route *r, const char *reqpath, char *out, size
     {
         return 403;
     }
-    const char *root = r->static_root ? r->static_root : "";
+    const char *root = pc_mnt_point_root(r->mnt_id);
     if (!dav_join(root, sub, out, cap))
     {
         return 414;
@@ -215,20 +215,20 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         return PROTO_FALSE;
     }
     uint8_t slot = (uint8_t)(req - http_pool);
-    for (uint8_t i = 0; i < pc_route_count(); i++)
+    for (uint8_t i = 0; i < HttpRoutes.count(); i++)
     {
-        Route *r = pc_route_at(i);
+        HttpRoute *r = HttpRoutes.at(i);
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
         {
             continue;
         }
-        if (!path_matches(r->path, r->is_wildcard, req->path))
+        if (!Http.path_matches(r->path, r->is_wildcard, req->path))
         {
             continue;
         }
-        if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot))
+        if (r->iface_filter != PC_IF_ANY && r->iface_filter != pc_conn_iface(slot))
         {
             continue;
         }
@@ -288,7 +288,7 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
 
 void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
 {
-    Route *r = pc_route_add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -317,9 +317,8 @@ void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_
     }
     fill_route_base(r, pat);
     r->type = ROUTE_DAV;
-    r->method = HTTP_GET;    // unused: WebDAV dispatch keys off the raw method token
-    r->static_fs = file_sys; // null is legal: the accessor uses whatever is mounted
-    r->static_root = fs_root;
+    r->method = HTTP_GET;                            // unused: WebDAV dispatch keys off the raw method token
+    r->mnt_id = pc_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
 
     // Bind the root every operation in this file resolves against. Re-binding a name already bound
     // hands back the same handle, so a second mount costs nothing and both see the same storage.
@@ -346,33 +345,33 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     pc_sb_put(&sb_header, "HTTP/1.1 ");
     pc_sb_i64(&sb_header, (int64_t)(code));
     pc_sb_put(&sb_header, " ");
-    pc_sb_put(&sb_header, status_text(code));
+    pc_sb_put(&sb_header, Http.status_text(code));
     pc_sb_put(&sb_header, "\r\n");
     pc_sb_put(&sb_header, extra_headers ? extra_headers : "");
     pc_sb_put(&sb_header, "Content-Length: 0\r\n");
     pc_sb_put(&sb_header, cl);
     pc_sb_put(&sb_header, "\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
-    pc_conn_send(slot_id, header, (proto_u16)hlen);
+    Tcp.conn->send(slot_id, header, (proto_u16)hlen);
     pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
 proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
 {
-    for (uint8_t i = 0; i < pc_route_count(); i++)
+    for (uint8_t i = 0; i < HttpRoutes.count(); i++)
     {
-        Route *r = pc_route_at(i);
+        HttpRoute *r = HttpRoutes.at(i);
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
         {
             continue;
         }
-        if (!path_matches(r->path, r->is_wildcard, req->path))
+        if (!Http.path_matches(r->path, r->is_wildcard, req->path))
         {
             continue;
         }
-        if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
+        if (r->iface_filter != PC_IF_ANY && r->iface_filter != pc_conn_iface(slot_id))
         {
             continue;
         }
@@ -382,7 +381,7 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
     return PROTO_FALSE;
 }
 
-void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
+void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
     char fs_path[256];
     int rc = dav_resolve_path(r, req->path, fs_path, sizeof(fs_path));
@@ -399,7 +398,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
     {
         plen--;
     }
-    const char *root = r->static_root ? r->static_root : "";
+    const char *root = pc_mnt_point_root(r->mnt_id);
 
     // Expire any timed-out locks (RFC 4918 §6.6) before this request consults the table, so a stale lock
     // never gates a write. The clock is pc_millis() (pluggable); seconds are enough for lock lifetimes.
@@ -430,8 +429,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             dav_send_status(slot_id, 405, ""); // GET on a collection is not a download
             return;
         }
-        serve_file_internal(slot_id, pc_webdav_method(req->method) == DAV_M_HEAD, r->static_fs, fs_path,
-                            mime_type(fs_path), NULL);
+        serve_file_internal(slot_id, pc_webdav_method(req->method) == DAV_M_HEAD, pc_mnt_point_backend(r->mnt_id),
+                            fs_path, mime_type(fs_path), NULL);
         return;
     }
 

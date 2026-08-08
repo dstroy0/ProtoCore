@@ -13,7 +13,6 @@
 
 #include "crypto/cipher/aes_sbox.h"
 #include "crypto/hash/sha256.h"
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // RFC 3414 §2.6 key localization (SHA-256)

@@ -21,7 +21,7 @@ Wi-Fi radio ─pc_promisc_begin()→ sink ─pc_forward_ingress()→ ETH send cb
   swamp the uplink), and every ingress frame is handed to the Ethernet interface's send callback.
 - The **Ethernet egress** here wraps each frame in a **libpcap record** (`pc_pcap_record_header()`
   from `shared_primitives/pcap.h`, link type `PC_DLT_IEEE802_11`) and UDPs it to the collector
-  with `pc_udp_sendto()`, which routes over the wired default route.
+  with `Udp.client->sendto()`, which routes over the wired default route.
 
 On the collector, receive the UDP datagrams, prepend one
 `pc_pcap_global_header(..., PC_DLT_IEEE802_11)`, and you have a `.pcap` **Wireshark** opens

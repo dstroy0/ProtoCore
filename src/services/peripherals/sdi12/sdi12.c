@@ -10,9 +10,8 @@
 
 #if PC_ENABLE_SDI12
 
+#include "mmgr/protostr.h"
 #include "shared_primitives/crc.h" // PC_CRC16_ARC
-#include "shared_primitives/numparse.h"
-#include <string.h>
 
 size_t pc_sdi12_build(char *buf, size_t cap, char addr, const char *body)
 {
@@ -141,12 +140,12 @@ proto_bool pc_sdi12_parse_measure(const char *resp, size_t len, char *addr, uint
     }
     for (int i = 1; i <= 3; i++)
     {
-        if (!pc_np_digit(resp[i]))
+        if (!str.digit(resp[i]))
         {
             return PROTO_FALSE;
         }
     }
-    if (!pc_np_digit(resp[4]))
+    if (!str.digit(resp[4]))
     {
         return PROTO_FALSE;
     }
@@ -160,7 +159,7 @@ proto_bool pc_sdi12_parse_measure(const char *resp, size_t len, char *addr, uint
     }
     // The value count is the remaining digits (1 digit for aM!, 2 for aC!).
     uint16_t count = 0;
-    for (size_t i = 4; i < len && pc_np_digit(resp[i]); i++)
+    for (size_t i = 4; i < len && str.digit(resp[i]); i++)
     {
         count = (uint16_t)(count * 10 + (resp[i] - '0'));
     }
@@ -190,8 +189,8 @@ proto_bool pc_sdi12_parse_values(const char *resp, size_t len, float *out, size_
         {
             const char *start = resp + i;
             const char *end = start;
-            // pc_strtof handles a leading '-'; for '+' parse the magnitude after the sign.
-            float v = (c == '+') ? pc_strtof(start + 1, &end) : pc_strtof(start, &end);
+            // str.to_float handles a leading '-'; for '+' parse the magnitude after the sign.
+            float v = (c == '+') ? str.to_float(start + 1, &end) : str.to_float(start, &end);
             if (end == start || (c == '+' && end == start + 1)) // no digits consumed
             {
                 i++;

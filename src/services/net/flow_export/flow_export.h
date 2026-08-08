@@ -18,7 +18,7 @@
  * (IPFIX), RFC 3954 (NetFlow v9), and the published v5 record layout.
  *
  * This is the wire codec only; the flow cache (the 5-tuple + counters) is the app's, and
- * the datagram send is `pc_udp_sendto`.
+ * the datagram send is `Udp.client->sendto`.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

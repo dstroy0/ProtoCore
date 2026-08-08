@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_CCLINK
 
-#include <string.h>
-
 uint8_t pc_cclink_sum(const uint8_t *bytes, size_t len)
 {
     uint8_t sum = 0;

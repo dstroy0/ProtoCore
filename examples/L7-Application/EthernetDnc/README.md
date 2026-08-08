@@ -138,7 +138,7 @@ pio ci examples/L7-Application/EthernetDnc \
 ## How it works under the hood (for the curious)
 
 `dnc_stream` never touches a socket directly - it calls the two function pointers
-you pass. `cl_send` writes every byte with `pc_client_send`. `cl_recv` does a
+you pass. `cl_send` writes every byte with `Tcp.client->send`. `cl_recv` does a
 **non-blocking** read of the reverse channel: it returns any XON/XOFF bytes
 immediately, returns `0` (after a 1 ms nap) when nothing is waiting so the
 engine's XOFF pause loop does not busy-spin, and returns `-1` if the controller

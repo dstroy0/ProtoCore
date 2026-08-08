@@ -12,17 +12,13 @@
 
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 
 // Remote forwarding (ssh -R) uses the inbound transport + listener layer directly:
 // it allocates a real listener and bridges each accepted socket to a server-initiated
 // forwarded-tcpip channel.
-#include "network_drivers/network/ip.h"
 #include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/listener.h"
-#include "network_drivers/transport/tcp.h"
-
-#include <string.h>
+#include "shared_primitives/ip.h"
 
 // One forwarded TCP connection: an SSH channel bridged to a client-transport slot.
 typedef struct
@@ -238,7 +234,7 @@ static int on_forward_open(uint8_t ssh_slot, uint32_t channel, const char *host,
     {
         return -1; // target administratively denied
     }
-    int cid = pc_client_open(hbuf, port, PC_SSH_FWD_CONNECT_MS); // blocks on DNS + connect
+    int cid = Tcp.client->open(hbuf, port, PC_SSH_FWD_CONNECT_MS); // blocks on DNS + connect
     if (cid < 0)
     {
         return -1; // -> CHANNEL_OPEN_FAILURE (connect failed)
@@ -257,14 +253,14 @@ static void on_forward_data(uint8_t ssh_slot, uint32_t channel, const uint8_t *d
     SshFwd *f = fwd_lookup(ssh_slot, channel);
     if (f)
     {
-        pc_client_send(f->cid, data, len);
+        Tcp.client->send(f->cid, data, len);
         return;
     }
     SshRFwdBridge *br = rbridge_by_channel(ssh_slot, channel);
     if (br && br->confirmed)
     {
-        pc_conn_send(br->conn_slot, data, (proto_u16)len);
-        pc_conn_flush(br->conn_slot);
+        Tcp.conn->send(br->conn_slot, data, (proto_u16)len);
+        Tcp.conn->flush(br->conn_slot);
     }
 }
 
@@ -304,7 +300,7 @@ static int on_rforward_open(uint8_t ssh_slot, const char *addr, size_t addr_len,
         return -1; // no listener capacity
     }
     // Dynamic (tcpip_thread-marshaled) create: this runs in the SSH worker task.
-    if (listener_add_dynamic((uint8_t)li, bind_port, PROTO_SSH_RFWD) != 1)
+    if (Tcp.listener->add_dynamic((uint8_t)li, bind_port, PROTO_SSH_RFWD) != 1)
     {
         return -1; // bind failed (port already in use, etc.)
     }
@@ -329,7 +325,7 @@ static int on_rforward_cancel(uint8_t ssh_slot, const char *addr, size_t addr_le
     {
         return -1;
     }
-    listener_stop_dynamic(b->listener_idx);
+    Tcp.listener->stop_dynamic(b->listener_idx);
     b->active = PROTO_FALSE;
     return 0;
 }
@@ -348,7 +344,7 @@ static void on_forward_confirm(uint8_t ssh_slot, uint32_t channel, proto_bool ok
     }
     else
     {
-        pc_conn_close(br->conn_slot); // client refused the tunnel: drop the accepted socket
+        Tcp.conn->close(br->conn_slot); // client refused the tunnel: drop the accepted socket
         br->active = PROTO_FALSE;
     }
 }
@@ -362,13 +358,13 @@ static void rfwd_on_accept(uint8_t conn_slot)
     SshRFwdBind *b = rbind_by_listener(conn_pool[conn_slot].listener_id);
     if (!b)
     {
-        pc_conn_close(conn_slot); // no binding owns this listener (stale): drop
+        Tcp.conn->close(conn_slot); // no binding owns this listener (stale): drop
         return;
     }
     int idx = rbridge_find_free();
     if (idx < 0)
     {
-        pc_conn_close(conn_slot); // bridge table full
+        Tcp.conn->close(conn_slot); // bridge table full
         return;
     }
     // Originator address (advisory, RFC 4254 §7.2); the peer port is not exposed by the
@@ -376,16 +372,16 @@ static void rfwd_on_accept(uint8_t conn_slot)
     char orig[PC_IP_STR_MAX];
     orig[0] = 0;
     pc_ip rip;
-    if (pc_conn_remote_addr(conn_slot, &rip))
+    if (Tcp.conn->remote_addr(conn_slot, &rip))
     {
-        pc_ip_format(&rip, orig, sizeof(orig));
+        Ip.format(&rip, orig, sizeof(orig));
     }
     // Open the forwarded-tcpip channel back to the client, echoing the requested bind
     // address as the "address that was connected".
     int ch = pc_ssh_conn_open_forwarded(b->ssh_slot, b->bind_addr[0] ? b->bind_addr : "0.0.0.0", b->bind_port, orig, 0);
     if (ch < 0)
     {
-        pc_conn_close(conn_slot); // SSH connection gone or channel pool full
+        Tcp.conn->close(conn_slot); // SSH connection gone or channel pool full
         return;
     }
     s_rfwd.rbridge[idx].active = PROTO_TRUE;
@@ -431,7 +427,7 @@ static void rfwd_on_poll(uint8_t conn_slot)
     // The client closed its side of the channel -> close the accepted socket.
     if (br->channel < PC_SSH_MAX_CHANNELS && !ssh_chan[br->ssh_slot][br->channel].open)
     {
-        pc_conn_close(conn_slot);
+        Tcp.conn->close(conn_slot);
         br->active = PROTO_FALSE;
         return;
     }
@@ -466,7 +462,7 @@ void pc_ssh_forward_begin()
     pc_ssh_channel_set_rforward_open_cb(on_rforward_open);
     pc_ssh_channel_set_rforward_cancel_cb(on_rforward_cancel);
     pc_ssh_channel_set_forward_confirm_cb(on_forward_confirm);
-    proto_register(PROTO_SSH_RFWD, &s_rfwd_handler);
+    Session.proto->add(PROTO_SSH_RFWD, &s_rfwd_handler);
 }
 
 void pc_ssh_forward_pump(uint8_t ssh_slot)
@@ -481,7 +477,7 @@ void pc_ssh_forward_pump(uint8_t ssh_slot)
         }
         if (f->channel >= PC_SSH_MAX_CHANNELS) // defensive: stale binding
         {
-            pc_client_close(f->cid);
+            Tcp.client->close(f->cid);
             f->active = PROTO_FALSE;
             continue;
         }
@@ -490,7 +486,7 @@ void pc_ssh_forward_pump(uint8_t ssh_slot)
         // Client closed its side of the channel: drop the target socket.
         if (!c->open)
         {
-            pc_client_close(f->cid);
+            Tcp.client->close(f->cid);
             f->active = PROTO_FALSE;
             continue;
         }
@@ -498,7 +494,7 @@ void pc_ssh_forward_pump(uint8_t ssh_slot)
         // Target -> client: forward what the peer window allows, bounded per poll.
         for (int burst = 0; burst < kFwdBurst; burst++)
         {
-            size_t avail = pc_client_available(f->cid);
+            size_t avail = Tcp.client->available(f->cid);
             uint32_t win = pc_ssh_flow_peer_window(&c->flow);
             if (avail == 0 || win == 0)
             {
@@ -517,7 +513,7 @@ void pc_ssh_forward_pump(uint8_t ssh_slot)
             {
                 budget = sizeof(buf);
             }
-            size_t n = pc_client_read(f->cid, buf, budget);
+            size_t n = Tcp.client->read(f->cid, buf, budget);
             if (n == 0)
             {
                 break;
@@ -529,10 +525,10 @@ void pc_ssh_forward_pump(uint8_t ssh_slot)
         }
 
         // Target closed (FIN) and fully drained: EOF + CLOSE to the client, free.
-        if (pc_client_is_closed(f->cid) && pc_client_available(f->cid) == 0)
+        if (Tcp.client->is_closed(f->cid) && Tcp.client->available(f->cid) == 0)
         {
             pc_ssh_conn_close_channel(ssh_slot, f->channel);
-            pc_client_close(f->cid);
+            Tcp.client->close(f->cid);
             f->active = PROTO_FALSE;
         }
     }
@@ -545,7 +541,7 @@ void pc_ssh_forward_reset(uint8_t ssh_slot)
     {
         if (s_fwd.fwd[i].active && s_fwd.fwd[i].ssh_slot == ssh_slot)
         {
-            pc_client_close(s_fwd.fwd[i].cid);
+            Tcp.client->close(s_fwd.fwd[i].cid);
             s_fwd.fwd[i].active = PROTO_FALSE;
         }
     }
@@ -555,7 +551,7 @@ void pc_ssh_forward_reset(uint8_t ssh_slot)
     {
         if (s_rfwd.rbind[i].active && s_rfwd.rbind[i].ssh_slot == ssh_slot)
         {
-            listener_stop_dynamic(s_rfwd.rbind[i].listener_idx);
+            Tcp.listener->stop_dynamic(s_rfwd.rbind[i].listener_idx);
             s_rfwd.rbind[i].active = PROTO_FALSE;
         }
     }
@@ -563,7 +559,7 @@ void pc_ssh_forward_reset(uint8_t ssh_slot)
     {
         if (s_rfwd.rbridge[i].active && s_rfwd.rbridge[i].ssh_slot == ssh_slot)
         {
-            pc_conn_close(s_rfwd.rbridge[i].conn_slot);
+            Tcp.conn->close(s_rfwd.rbridge[i].conn_slot);
             s_rfwd.rbridge[i].active = PROTO_FALSE;
         }
     }

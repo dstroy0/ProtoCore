@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_GRPC_WEB
 
-#include <string.h>
-
 size_t pc_grpcweb_frame(uint8_t *buf, size_t cap, uint8_t flags, const uint8_t *body, size_t body_len)
 {
     if (!buf || (body_len && !body) || body_len > 0xFFFFFFFFu)

@@ -19,7 +19,7 @@
 #if PC_ENABLE_TRACE_CAPTURE
 
 #include "server/clock/clock.h" // pc_cycles()
-#include <string.h>             // memset
+                                // memset
 
 typedef struct
 {

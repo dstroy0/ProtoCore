@@ -12,8 +12,6 @@
 
 #if PC_ENABLE_EXC_DECODER
 
-#include <string.h>
-
 static proto_bool hexval(char c, uint8_t *v)
 {
     if (c >= '0' && c <= '9')

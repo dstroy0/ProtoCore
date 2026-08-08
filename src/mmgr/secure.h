@@ -35,8 +35,8 @@
 #ifndef PROTOCORE_SECURE_H
 #define PROTOCORE_SECURE_H
 
+#include "mmgr/span.h"
 #include "protocore_config.h"
-#include "shared_primitives/span.h"
 
 PROTO_BEGIN_DECLS
 
@@ -113,6 +113,18 @@ void *pc_secure_alloc(size_t n, size_t align);
  */
 pc_span pc_secure_span(size_t n, size_t align);
 
+/**
+ * @brief Borrow @p n secure bytes that outlive every mark and release.
+ *
+ * The arena is double ended (mmgr/arena.h): this takes the persistent end, which grows up from the
+ * base, while pc_secure_span() bumps down from the top. A mark walks the top end only, so a table
+ * taken here is not reclaimed by any release, nor by pc_secure_reset(). The bytes come back zeroed.
+ *
+ * For storage a module holds for the life of the program: a credential table, a key schedule bound
+ * once at setup. A working set borrowed and returned within one call takes pc_secure_span().
+ */
+pc_span pc_secure_persist_span(size_t n);
+
 /** @brief Capture the current position, to be handed to pc_secure_release(). */
 size_t pc_secure_mark(void);
 
@@ -149,6 +161,58 @@ proto_bool pc_secure_owns(const void *p);
 
 /** @brief Which secure slot owns @p p, or -1 if @p p is not in the secure pool. */
 int pc_secure_slot_of(const void *p);
+
+/**
+ * @brief The secure pool: the same mechanism as @ref plain, with reclaiming that wipes.
+ *
+ * @var SecureNs::alloc         borrow @c n bytes aligned to @c align, or NULL if it does not fit
+ * @var SecureNs::span          the same borrow as a span, so the length travels with the pointer
+ * @var SecureNs::persist_span  borrow from the end no mark walks, zeroed, for the life of the program
+ * @var SecureNs::reset       wipe and empty the calling worker's arena
+ * @var SecureNs::mark        capture the arena offset, to release back to
+ * @var SecureNs::release     wipe everything borrowed since a mark, then reclaim it, LIFO
+ * @var SecureNs::used        bytes currently handed out
+ * @var SecureNs::high_water  the largest @c used any slot has reached, for sizing the arena
+ * @var SecureNs::capacity    one arena's total extent
+ * @var SecureNs::owns        whether a pointer lies inside the pool
+ * @var SecureNs::slot_of     which slot holds a pointer, or -1
+ *
+ * @ref SecureNs::owns and pc_plaintext_owns() are mutually exclusive: the two pools are disjoint
+ * regions, so a secret can never be handed back where plaintext is expected, or the reverse.
+ *
+ * No storage member. The arenas and their backing bytes belong to secure.c, and a caller reaches its
+ * own by calling - the slot is resolved from the worker, never passed in.
+ */
+typedef struct
+{
+    void *(*alloc)(size_t n, size_t align);
+    pc_span (*span)(size_t n, size_t align);
+    pc_span (*persist_span)(size_t n);
+    void (*reset)(void);
+    size_t (*mark)(void);
+    void (*release)(size_t mark);
+    size_t (*used)(void);
+    size_t (*high_water)(void);
+    size_t (*capacity)(void);
+    proto_bool (*owns)(const void *p);
+    int (*slot_of)(const void *p);
+} SecureNs;
+
+/**
+ * @brief The names, aliased.
+ *
+ * `static const` and initialized here rather than defined in the .c, for the reason secure.c states
+ * about its storage: a table object in the .c names every member, so a build that only ever calls
+ * @ref SecureNs::reset would still reference @ref SecureNs::alloc, and through it `bind()` and the
+ * pool's backing bytes. Initialized here, the member read resolves in the reading translation unit
+ * and the table is dropped, so `--gc-sections` still reclaims the storage from firmware that never
+ * borrows a secret.
+ *
+ * `unused` because this header reaches files that take none of it.
+ */
+static const SecureNs secure __attribute__((unused)) = {
+    pc_secure_alloc, pc_secure_span,       pc_secure_persist_span, pc_secure_reset, pc_secure_mark,   pc_secure_release,
+    pc_secure_used,  pc_secure_high_water, pc_secure_capacity,     pc_secure_owns,  pc_secure_slot_of};
 
 PROTO_END_DECLS
 

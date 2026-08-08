@@ -11,11 +11,10 @@
 #if PC_ENABLE_SNMP_V3
 
 #include "crypto/mac/hmac_sha256.h"
+#include "mmgr/endian.h"
 #include "services/net/snmp/snmp_agent.h"
 #include "services/net/snmp/snmp_ber.h"
 #include "services/net/snmp/snmp_crypto.h"
-#include "shared_primitives/endian.h"
-#include <string.h>
 
 #if PC_ENABLE_SNMP_TRAP
 #include "network_drivers/transport/udp.h"
@@ -30,7 +29,7 @@ static uint32_t pc_snmp_v3_uptime_s()
 #else
 static uint32_t pc_snmp_v3_uptime_s()
 {
-    return 0; // host build: tests drive boots/time via the discovery handshake
+    return 0; // no clock in this build; tests drive boots/time via the discovery handshake
 }
 #endif
 
@@ -636,7 +635,8 @@ static proto_bool send_v3_notify(const char *dst_ip, uint16_t port, uint8_t pdu_
 
     uint8_t out[SNMP_MSG_BUF_SIZE];
     size_t len = build_message((long)request_id, s_v3.auth_set, s_v3.priv_set, s_v3.v3_c, sc.len, out, sizeof(out));
-    return len && pc_udp_sendto(dst_ip, port, out, len);
+    pc_ip dst = {PC_IP_NONE, {0}};
+    return len && Ip.parse(dst_ip, &dst) && Udp.client->sendto(&dst, port, out, len);
 }
 
 proto_bool pc_snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,

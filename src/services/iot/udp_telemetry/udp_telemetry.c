@@ -5,7 +5,7 @@
  * @file udp_telemetry.c
  * @brief InfluxDB line-protocol builder (pure) + UDP cast to a collector.
  *
- * The builder is host-tested; the cast uses pc_udp_sendto on ESP32 and is a
+ * The builder is host-tested; the cast uses Udp.client->sendto on ESP32 and is a
  * no-op on host builds (no transport dependency pulled into the unit test).
  */
 
@@ -15,7 +15,6 @@
 #if PC_ENABLE_UDP_TELEMETRY
 
 #include <stdio.h>
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Line builder (pure)
@@ -186,7 +185,7 @@ proto_bool pc_line_ok(const pc_line *l)
 // endpoint and the begun flag, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    char ip[16];
+    pc_ip collector; // parsed once by begin(); a cast is a build and a queue
     uint16_t port;
     proto_bool begun;
 } UdpTelemetryCtx;
@@ -194,10 +193,8 @@ static UdpTelemetryCtx s_ut;
 
 void pc_udp_telemetry_begin(const char *collector_ip, uint16_t port)
 {
-    strncpy(s_ut.ip, collector_ip ? collector_ip : "", sizeof(s_ut.ip) - 1);
-    s_ut.ip[sizeof(s_ut.ip) - 1] = '\0';
+    s_ut.begun = Ip.parse(collector_ip, &s_ut.collector);
     s_ut.port = port;
-    s_ut.begun = PROTO_TRUE;
 }
 
 proto_bool pc_udp_telemetry_send(const char *data, size_t len)
@@ -206,7 +203,7 @@ proto_bool pc_udp_telemetry_send(const char *data, size_t len)
     {
         return PROTO_FALSE;
     }
-    return pc_udp_sendto(s_ut.ip, s_ut.port, (const uint8_t *)data, len);
+    return Udp.client->sendto(&s_ut.collector, s_ut.port, (const uint8_t *)data, len);
 }
 
 #else // host build - no network

@@ -1,0 +1,41 @@
+name: Discover examples
+description: Select the examples a diff affects, or all of them, as a build matrix.
+
+outputs:
+  matrix:
+    description: JSON array of examples to build; [] when the diff touched none.
+    value: ${{ steps.set.outputs.matrix }}
+
+runs:
+  using: composite
+  steps:
+    - id: set
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        BEFORE: ${{ github.event.before }}
+        PR_BASE: ${{ github.event.pull_request.base.sha }}
+        PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        HEAD_SHA: ${{ github.sha }}
+      run: |
+        set -e
+        FULL=0
+        case "$EVENT" in workflow_dispatch | schedule) FULL=1 ;; esac
+        printf '%s' "$PR_LABELS" | grep -q '"full-ci"' && FULL=1 || true
+        if [ "$EVENT" = "pull_request" ]; then BASE="$PR_BASE"; HEAD="$PR_HEAD"; else BASE="$BEFORE"; HEAD="$HEAD_SHA"; fi
+        if git rev-parse --verify -q "$HEAD^{commit}" >/dev/null; then
+          git log -1 --format=%B "$HEAD" | grep -qiE '\[(ci )?full( ci)?\]' && FULL=1 || true
+        fi
+        if [ "$FULL" = "0" ] && { [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+             || ! git rev-parse --verify -q "$BASE^{commit}" >/dev/null; }; then
+          FULL=1 # first push on a branch / unknown base -> be safe
+        fi
+        if [ "$FULL" = "1" ]; then
+          M="$(python -m tools.ci_tooling.generate.example_footprints matrix </dev/null)"
+        else
+          M="$(git diff --name-only "$BASE" "$HEAD" | python -m tools.ci_tooling.generate.example_footprints matrix --base "$BASE" --head "$HEAD")"
+        fi
+        N="$(printf '%s' "$M" | python -c 'import sys,json;print(len(json.load(sys.stdin)))')"
+        echo "full=$FULL selected=$N example(s)"
+        echo "matrix=$M" >> "$GITHUB_OUTPUT"

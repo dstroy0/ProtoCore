@@ -61,35 +61,30 @@ typedef struct
 {
     MultipartPart parts[MAX_MULTIPART_PARTS]; ///< Parsed parts.
     int part_count;                           ///< Number of valid entries in parts[].
-} Multipart;
+} MultipartBody;
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Parse the body of @p req as multipart/form-data.
+ * @brief The in-place form-data parser.
  *
- * Reads the boundary from the `Content-Type` header, then scans
- * `req->body` in-place, null-terminating each part's headers and data.
- *
- * @param req  Fully-parsed HTTP request (must be in PARSE_COMPLETE state).
- * @param mp   Output structure; filled on success.
- * @return true if at least one part was found, false on parse error.
+ * @var MultipartNs::parse      scan @p req's body as multipart/form-data, reading the boundary from
+ *                              Content-Type and null-terminating each part's headers and data in
+ *                              place. True when at least one part was found. @p req must be
+ *                              PARSE_COMPLETE
+ * @var MultipartNs::get_field  the data pointer of the first part whose name matches @p field, or
+ *                              NULL. The simple-form case, where each field name appears once
  */
-proto_bool pc_multipart_parse(HttpReq *req, Multipart *mp);
+typedef struct
+{
+    proto_bool (*parse)(HttpReq *req, MultipartBody *mp);
+    const char *(*get_field)(const MultipartBody *mp, const char *field);
+} MultipartNs;
 
-/**
- * @brief Look up a field value across all parsed parts by name.
- *
- * Returns the data pointer of the first part whose `name` matches @p field.
- * Useful for simple form submissions where each field has a unique name.
- *
- * @param mp     Parsed multipart result.
- * @param field  Form field name to search for.
- * @return Part data (null-terminated), or nullptr if not found.
- */
-const char *pc_multipart_get_field(const Multipart *mp, const char *field);
+/** @brief The one symbol this module exports. */
+extern const MultipartNs Multipart;
 
 PROTO_END_DECLS
 

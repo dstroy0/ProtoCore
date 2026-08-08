@@ -223,17 +223,17 @@ measured in-firmware by the pentest rig's `/bench` endpoint ([`penetration_testi
 N=20000 warm iterations; three runs agree to within 0.3%, so the figures are stable). These are the real
 device costs of hot pure primitives on the auth and ETag/Digest paths - no network in the measurement.
 
-| Operation                                 | ESP32-S3 cyc/op | ESP32-S3 ns/op |
-| ----------------------------------------- | --------------: | -------------: |
-| `pc_hex_encode` (16 B -> 32 hex)          |             462 |           1925 |
-| `pc_hex_decode` (32 hex -> 16 B)          |             689 |           2870 |
-| `pc_base64_decode` ("admin:admin", 16 ch) |             882 |           3675 |
-| `mime_type` (extension -> content-type)   |             470 |           1958 |
+| Operation                               | ESP32-S3 cyc/op | ESP32-S3 ns/op |
+| --------------------------------------- | --------------: | -------------: |
+| `pc_hex_encode` (16 B -> 32 hex)        |             462 |           1925 |
+| `pc_hex_decode` (32 hex -> 16 B)        |             689 |           2870 |
+| `Base64.decode` ("admin:admin", 16 ch)  |             882 |           3675 |
+| `mime_type` (extension -> content-type) |             470 |           1958 |
 
 - The hex codecs are the in-house table-lookup path: ~1.9 us to hex-encode a 16-byte value (an ETag or a
   Digest-nonce MAC), ~2.9 us to decode. Cheap enough that the conditional-GET / Digest machinery is never
   the bottleneck.
-- `pc_base64_decode` of an 11-byte Basic-auth credential costs ~3.7 us with the default **SWAR** codec -
+- `Base64.decode` of an 11-byte Basic-auth credential costs ~3.7 us with the default **SWAR** codec -
   down from ~21 us (mbedTLS), a **5.36x** speedup (882 vs 4728 cyc); the scalar constant-time fallback
   (`PC_BASE64_SWAR=0`) is ~6.8 us (1639 cyc, 2.88x). SWAR classifies 4 characters per 32-bit word with
   guard-bit range masks and stays constant-time - HW-verified on the ESP32-S3: same-length inputs with wildly
@@ -607,7 +607,7 @@ ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates 
     calling `mbedtls_gcm` took 1 KiB from 616,567 to 91,215 cyc. The capability macro describes one mode of
     one peripheral; it does not mean the vendor has no fast path, and the vendor's own implementation knows
     what its silicon can do. Host-testability is preserved a different way: the software AEAD still exists
-    as `board_drivers/hal/portable/portable_aesgcm.cpp` and is what native builds compile, so the KATs still
+    as `core_setup/hal/portable/portable_aesgcm.cpp` and is what native builds compile, so the KATs still
     run off-target - it just is not what a chip with an accelerator uses.
 
     _Mistake 2 - we rebuilt the cipher context per record._ The remaining 91,215 vs 81,086 gap was not the
@@ -789,7 +789,7 @@ device from the rig `/bench` `smtp_run` op.
 ### syslog client formatter (PC_ENABLE_SYSLOG)
 
 The RFC 5424 syslog client formats one `<PRI>1 - HOSTNAME APP-NAME - - - MSG` line per log call and ships
-it as a UDP datagram (`pc_udp_sendto`). `pc_syslog_format` is the pure per-line hot op (no socket, no heap).
+it as a UDP datagram (`Udp.client->sendto`). `pc_syslog_format` is the pure per-line hot op (no socket, no heap).
 Host from [`performance_benching/bench_syslog.cpp`](../performance_benching/services/syslog/); device from the rig `/bench` `pc_syslog_format`
 op.
 
@@ -911,7 +911,7 @@ from the rig `/bench` `pc_stomp_parse_frame` op.
 ### StatsD metrics client (PC_ENABLE_STATSD)
 
 The StatsD line client the device uses to push metrics: `pc_statsd_format` builds one `name:value|type[|@rate]
-[|#tags]` line and the emit helpers `pc_udp_sendto` it (fire-and-forget UDP). `pc_statsd_format` is the pure
+[|#tags]` line and the emit helpers `Udp.client->sendto` it (fire-and-forget UDP). `pc_statsd_format` is the pure
 per-metric hot op. Host from [`performance_benching/bench_statsd.cpp`](../performance_benching/services/statsd/); device from the rig
 `/bench` `pc_statsd_format` op.
 
@@ -1029,7 +1029,7 @@ time. Measured on the two S3 rigs and a wired **ESP32-P4** (`rig_s3_tls` twin, [
   ...) and with **x25519 on a die without it** (S3/S2/classic); every curve stays enabled, so it only reorders
   preference. Measured effect: the **P4's default handshake drops from ~160 ms (x25519) to ~29 ms (P-256), a
   5.4x win** (`Server Temp Key: ECDH, prime256v1` confirmed, no client curve forcing), while the **S3 is
-  unchanged at ~498 ms x25519**. Getting there also fixed a latent bug: `board_drivers/board_profiles/board_profile.h` keyed
+  unchanged at ~498 ms x25519**. Getting there also fixed a latent bug: `core_setup/board_profiles/board_profile.h` keyed
   the chip select off `CONFIG_IDF_TARGET_*` but did not pull in `sdkconfig.h`, so any TU that included
   `protocore_config.h` before an esp header (e.g. `tls.c`) saw the macros undefined and **every board silently
   fell through to the classic profile** (`PC_HW_ECC 0`) - the P-256 preference never engaged until the header
@@ -1204,7 +1204,7 @@ Notes:
 
 The response side: `chunk_send_pump` (`src/server/response.c`) frames every body piece as an HTTP/1.1
 chunk - `"<hexlen>\r\n<body>\r\n"` - into one send-window buffer so it goes out in a single
-`pc_conn_send`. The body itself is written in place by the `ChunkSource` (file read = section 1, template
+`Tcp.conn->send`. The body itself is written in place by the `ChunkSource` (file read = section 1, template
 render = the request path above), so the pump's own hot cost is just that per-chunk size line. It used
 `snprintf("%x\r\n", n)`; the benchmark measured framing one 1440-byte chunk (one TCP MSS) and pumping a
 64 KiB body (46 chunks). Host = Raspberry Pi 5 `-O2` (relative baseline); ESP32-S3 = the real device at
@@ -1535,8 +1535,8 @@ rate. Keep the front port off untrusted networks (the relay authenticates nothin
 ### Radio keep-awake during transfers (PC_ENABLE_RADIO_POWER)
 
 Modem sleep (the default `WIFI_PS_MIN_MODEM`) parks the radio between DTIM beacons to save power, which is
-exactly what dropped a byte mid-transfer on the first 200 MB run. `pc_radio_busy_hold()` /
-`pc_radio_busy_release()` are reference-counted: the first hold forces `WIFI_PS_NONE`, the last release
+exactly what dropped a byte mid-transfer on the first 200 MB run. `Radio.busy_hold()` /
+`Radio.busy_release()` are reference-counted: the first hold forces `WIFI_PS_NONE`, the last release
 restores the configured `PC_RADIO_WIFI_PS`. The relay holds one while any bridge is active, so a
 port-forward keeps the radio awake for the whole transfer and lets power saving resume when idle - no
 per-app tuning. **Practicality:** on a battery device you still get modem-sleep power savings at rest; you

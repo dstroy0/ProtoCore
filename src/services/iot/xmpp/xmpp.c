@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_XMPP
 
-#include <string.h>
-
 // Append a literal to out[*n], bounded. Returns false on overflow.
 static proto_bool put(char *out, size_t cap, size_t *n, const char *s)
 {

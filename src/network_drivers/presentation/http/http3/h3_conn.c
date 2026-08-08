@@ -12,7 +12,6 @@
 
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
-#include <string.h>
 
 // pc_h3_conn_respond builds its response HEADERS frame from a fixed 256-byte QPACK block into a
 // PC_H3_STREAM_BUF output buffer, which is why that builder's failure guard carries a coverage

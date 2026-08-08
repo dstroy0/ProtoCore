@@ -7,7 +7,7 @@
  *
  * Straight-line field packing at fixed offsets: every packet is a constant size, so each builder
  * checks @p cap once up front and each parser requires the exact length. All integers little-endian
- * through shared_primitives/endian.h; floats are IEEE-754 binary32 moved through a uint32_t with
+ * through mmgr/endian.h; floats are IEEE-754 binary32 moved through a uint32_t with
  * memcpy (no type punning, no strict-aliasing UB) - the same approach as the OPC UA Variant codec.
  */
 
@@ -15,8 +15,8 @@
 
 #if PC_ENABLE_FANUC_J519
 
-#include "shared_primitives/endian.h"
-#include <string.h> // memcpy (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
+#include "mmgr/endian.h"
+// memcpy (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 // --- float <-> little-endian binary32 --------------------------------------------------------
 static size_t wr_f32le(uint8_t *p, float v)

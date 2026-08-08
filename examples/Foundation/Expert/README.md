@@ -15,7 +15,7 @@ connection in a fixed BSS array `conn_pool[MAX_CONNS]`. Including
 and how many unread bytes sit in each slot's RX ring:
 
 ```cpp
-#include "network_drivers/transport/tcp.h" // conn_pool, TcpConn, ConnState
+#include "network_drivers/transport/tcp/tcp_conn.h" // conn_pool, TcpConn, ConnState
 ...
 TcpConn *conn = &conn_pool[i];
 switch (conn->state) { case ConnState::CONN_FREE: ...; case ConnState::CONN_ACTIVE: ...; case ConnState::CONN_CLOSING: ...; }
@@ -90,7 +90,7 @@ added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/tcp.h" // access conn_pool and ConnState
+#include "network_drivers/transport/tcp/tcp_conn.h" // access conn_pool and ConnState
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -158,7 +158,7 @@ void print_connection_pool_stats()
     Serial.println("---------------------------------");
 }
 
-// --- Route handlers with microsecond profiling ---
+// --- HttpRoute handlers with microsecond profiling ---
 
 /** GET /api/diagnostics - telemetry; rate-limited; reports stack headroom. */
 void handle_diagnostics(uint8_t slot_id, HttpReq *req)
@@ -252,15 +252,15 @@ void setup()
     delay(1000);
     Serial.println("\n--- PC Expert Performance Example ---");
 
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(500);
         Serial.print(".");
     }
     Serial.println("\nWiFi online!");
     Serial.print("Local IP: ");
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

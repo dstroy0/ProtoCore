@@ -25,9 +25,9 @@
 #include "protocore_config.h"
 
 // Shared by the HTTP/3 (QUIC) packet protection and the DTLS 1.3 record layer.
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE)
 
-#include "shared_primitives/span.h" // pc_cspan: what the seal produced (empty == it did not)
+#include "mmgr/span.h" // pc_cspan: what the seal produced (empty == it did not)
 
 PROTO_BEGIN_DECLS
 
@@ -42,7 +42,7 @@ PROTO_BEGIN_DECLS
 // AES-128 single-block primitive (used by GCM and by header protection)
 // ---------------------------------------------------------------------------
 
-// Opaque: the definition is private to the backend under board_drivers/ that this build selected -
+// Opaque: the definition is private to the backend under core_setup/ that this build selected -
 // consumers know only the symbol and hold it via struct pc_aes128*. No vendor type is named here.
 struct pc_aes128;
 
@@ -124,6 +124,6 @@ proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_
 
 PROTO_END_DECLS
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE
 
 #endif // PROTOCORE_AES128GCM_H

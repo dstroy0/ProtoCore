@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SIMATIC
 
-#include <string.h>
-
 // ---------------------------------------------------------------------------
 // Big-endian word helpers (Siemens words are big-endian; no stdlib)
 // ---------------------------------------------------------------------------

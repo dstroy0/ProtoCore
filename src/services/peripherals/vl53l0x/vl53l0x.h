@@ -48,7 +48,7 @@ uint8_t pc_vl53l0x_range_status(uint8_t range_status_reg);
 /** @brief True if the range-status field reports a valid measurement (== VL53L0X_RANGE_VALID). */
 proto_bool pc_vl53l0x_range_valid(uint8_t range_status_reg);
 
-// --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
+// --- ESP32 binding (I2C via Wire) ------------------------------------
 
 /** @brief Verify the model id and start continuous back-to-back ranging at @p addr. @return present + ack. */
 proto_bool pc_vl53l0x_begin(uint8_t addr);

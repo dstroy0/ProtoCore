@@ -157,7 +157,7 @@ proto_bool pc_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
     {
         return PROTO_FALSE;
     }
-    uint8_t ch = pc_net_channel();
+    uint8_t ch = Physical.wifi->channel();
     if (ch == 0)
     {
         return PROTO_FALSE; // not associated: there is no channel to pin capture to
@@ -196,7 +196,7 @@ void pc_mdns_adaptive_tick(void)
     uint32_t now = pc_millis();
 
     // Follow the station if it roamed to another channel, so capture stays on the live link.
-    uint8_t ch = pc_net_channel();
+    uint8_t ch = Physical.wifi->channel();
     if (ch != 0 && ch != s_ad.channel)
     {
         pc_promisc_set_channel(ch);

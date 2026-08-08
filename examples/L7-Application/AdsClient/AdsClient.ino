@@ -27,7 +27,7 @@
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "services/fieldbus/ads/ads.h"
 
 static const char *SSID = "YOUR_SSID";
@@ -74,7 +74,7 @@ static AdsRequest next_request()
 // Send one framed request, read one AMS/TCP-framed reply. Returns the total reply length.
 static size_t exchange(int cid, size_t reqlen)
 {
-    if (reqlen == 0 || !pc_client_send(cid, c_req, reqlen))
+    if (reqlen == 0 || !Tcp.client->send(cid, c_req, reqlen))
     {
         return 0;
     }
@@ -83,9 +83,9 @@ static size_t exchange(int cid, size_t reqlen)
     // Read the 6-octet AMS/TCP header first (reserved(2) + length(4)).
     while (got < ADS_AMSTCP_HDR_LEN && millis() < deadline)
     {
-        if (pc_client_available(cid))
+        if (Tcp.client->available(cid))
         {
-            got += pc_client_read(cid, c_resp + got, ADS_AMSTCP_HDR_LEN - got);
+            got += Tcp.client->read(cid, c_resp + got, ADS_AMSTCP_HDR_LEN - got);
         }
     }
     if (got < ADS_AMSTCP_HDR_LEN)
@@ -101,9 +101,9 @@ static size_t exchange(int cid, size_t reqlen)
     }
     while (got < total && millis() < deadline)
     {
-        if (pc_client_available(cid))
+        if (Tcp.client->available(cid))
         {
-            got += pc_client_read(cid, c_resp + got, total - got);
+            got += Tcp.client->read(cid, c_resp + got, total - got);
         }
     }
     return got == total ? total : 0;
@@ -111,7 +111,7 @@ static size_t exchange(int cid, size_t reqlen)
 
 static void run_client(const char *host)
 {
-    int cid = pc_client_open(host, ADS_TCP_PORT, 8000);
+    int cid = Tcp.client->open(host, ADS_TCP_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[ads] connect failed");
@@ -164,7 +164,7 @@ static void run_client(const char *host)
         rr.result != 0 || rr.len < 4)
     {
         Serial.printf("[ads] handle for '%s' failed\n", SYMBOL);
-        pc_client_close(cid);
+        Tcp.client->close(cid);
         return;
     }
     uint32_t handle = (uint32_t)rr.data[0] | ((uint32_t)rr.data[1] << 8) | ((uint32_t)rr.data[2] << 16) |
@@ -190,19 +190,19 @@ static void run_client(const char *host)
     uint8_t hb[4] = {(uint8_t)handle, (uint8_t)(handle >> 8), (uint8_t)(handle >> 16), (uint8_t)(handle >> 24)};
     exchange(cid, pc_ads_build_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_RELEASE_HANDLE, 0, hb, 4));
 
-    pc_client_close(cid);
+    Tcp.client->close(cid);
     Serial.println("[ads] done");
 }
 
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -224,7 +224,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_client(PLC_IP); // pc_client_open resolves the dotted-quad host directly
+        run_client(PLC_IP); // Tcp.client->open resolves the dotted-quad host directly
     }
     delay(10);
 }

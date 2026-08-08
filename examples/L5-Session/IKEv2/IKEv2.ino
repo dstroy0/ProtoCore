@@ -16,8 +16,8 @@
  * IKE_SA_INIT with an INVALID_KE_PAYLOAD / COOKIE notify, which the on_ike_reply() callback parses.
  *
  * The UDP socket is the library's own transport (services bind + exchange datagrams through
- * network_drivers/transport/udp.h - no outside UDP library): pc_udp_listen() binds port 500 to receive
- * the responder's reply, and pc_udp_listener_sendto() sends the request FROM port 500 so the reply
+ * network_drivers/transport/udp.h - no outside UDP library): Udp.listener->listen() binds port 500 to receive
+ * the responder's reply, and Udp.listener->sendto() sends the request FROM port 500 so the reply
  * (addressed back to :500) is delivered to our listener.
  *
  * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_IKEV2=1
@@ -34,6 +34,7 @@ static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 static const char *GATEWAY_IP = ""; // e.g. "192.168.1.1"; leave "" to only build + self-parse
+static pc_ip g_gateway;                   // GATEWAY_IP, parsed once in setup()
 
 static uint8_t msg[512];
 
@@ -168,12 +169,12 @@ static void run_once()
     }
 
     // Bind :500 to receive the reply, then send FROM :500 so the responder's reply reaches our listener.
-    if (!pc_udp_listen(PC_IKEV2_PORT, on_ike_reply, nullptr))
+    if (!Udp.listener->listen(PC_IKEV2_PORT, on_ike_reply, nullptr))
     {
         Serial.println("[ike] could not bind UDP 500");
         return;
     }
-    if (!pc_udp_listener_sendto(PC_IKEV2_PORT, GATEWAY_IP, PC_IKEV2_PORT, msg, n))
+    if (!Udp.listener->sendto(PC_IKEV2_PORT, &g_gateway, PC_IKEV2_PORT, msg, n))
     {
         Serial.println("[ike] send failed");
         return;
@@ -183,13 +184,15 @@ static void run_once()
 
 void setup()
 {
+    Ip.parse(GATEWAY_IP, &g_gateway); // the tag becomes an address once, here
+
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }

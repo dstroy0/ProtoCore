@@ -19,13 +19,8 @@
 #endif
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
-#include <string.h>
 
-#if PROTOCORE_HOT
 #include <Arduino.h> // pc_platform_rand_fill()
-#else
-#include <Arduino.h> // mock
-#endif
 
 // ---------------------------------------------------------------------------
 // BSS allocation
@@ -100,7 +95,11 @@ void ssh_pkt_init(uint8_t i)
         return;
     }
     SshPacketState *s = &ssh_pkt[i];
+    // The wire buffer is a persistent borrow bound to the slot, not to the connection on it: it is
+    // never released, so it carries across to the next connection this slot serves.
+    uint8_t *wire = s->tx_wire;
     memset(s, 0, sizeof(*s)); // is_client defaults false = server role
+    s->tx_wire = wire;
     s->kex_active = PROTO_TRUE;
     s->enc_out = PROTO_FALSE;
     s->enc_in = PROTO_FALSE;
@@ -112,6 +111,45 @@ void ssh_pkt_set_client(uint8_t i)
     {
         ssh_pkt[i].is_client = PROTO_TRUE;
     }
+}
+
+// ---------------------------------------------------------------------------
+// Emit: frame one packet into the secure pool and raise the flag a worker drains
+// ---------------------------------------------------------------------------
+
+int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
+{
+    if (i >= MAX_SSH_CONNS)
+    {
+        return -1;
+    }
+    SshPacketState *s = &ssh_pkt[i];
+    if (s->tx_ready)
+    {
+        return -1; // one packet in flight per slot: the worker has not drained the last one
+    }
+
+    // The wire lives in the secure pool because the payload it carries is the session's own
+    // plaintext until the cipher runs over it. Taken from the persistent end on first use and kept:
+    // the next packet frames over the same bytes, so nothing is wiped between packets.
+    if (s->tx_wire == NULL)
+    {
+        pc_span w = pc_secure_persist_span(SSH_WIRE_CAP);
+        if (!pc_span_ok(w))
+        {
+            return -1;
+        }
+        s->tx_wire = w.buf;
+    }
+    size_t wlen = 0;
+    if (ssh_pkt_send(i, payload, len, s->tx_wire, &wlen, SSH_WIRE_CAP) != 0)
+    {
+        return -1;
+    }
+    s->tx_len = wlen;
+    s->tx_off = 0;
+    s->tx_ready = PROTO_TRUE;
+    return 0;
 }
 
 // ---------------------------------------------------------------------------

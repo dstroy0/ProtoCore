@@ -13,7 +13,6 @@
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
 #include <stdarg.h>
-#include <string.h>
 
 // Telnet protocol bytes (RFC 854 / 858 / 857).
 #define T_SE 240
@@ -76,8 +75,8 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    pc_conn_send(slot, data, (proto_u16)n);
-    pc_conn_flush(slot);
+    Tcp.conn->send(slot, data, (proto_u16)n);
+    Tcp.conn->flush(slot);
 }
 
 // Send Telnet *data* (echo + application output): a literal IAC byte (0xFF) MUST be
@@ -98,24 +97,24 @@ static void send_escaped(uint8_t slot, const void *data, size_t n)
         {
             if (i > start)
             {
-                pc_conn_send(slot, b + start, (proto_u16)(i - start));
+                Tcp.conn->send(slot, b + start, (proto_u16)(i - start));
             }
-            pc_conn_send(slot, "\xff\xff", 2); // doubled IAC
+            Tcp.conn->send(slot, "\xff\xff", 2); // doubled IAC
             start = i + 1;
         }
     }
     if (n > start)
     {
-        pc_conn_send(slot, b + start, (proto_u16)(n - start));
+        Tcp.conn->send(slot, b + start, (proto_u16)(n - start));
     }
-    pc_conn_flush(slot);
+    Tcp.conn->flush(slot);
 }
 
 // ---------------------------------------------------------------------------
 // Connection lifecycle (called from the session layer)
 // ---------------------------------------------------------------------------
 
-void pc_telnet_accept(uint8_t slot)
+static void pc_telnet_accept(uint8_t slot)
 {
     TelnetConn *t = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -129,7 +128,7 @@ void pc_telnet_accept(uint8_t slot)
     if (!t)
     {
         // No Telnet capacity: drop the connection (transport owns the teardown).
-        pc_conn_close(slot);
+        Tcp.conn->close(slot);
         return;
     }
     memset(t, 0, sizeof(*t));
@@ -143,7 +142,7 @@ void pc_telnet_accept(uint8_t slot)
     raw_send(slot, "PC Telnet ready\r\n> ", 22);
 }
 
-void pc_telnet_close(uint8_t slot)
+static void pc_telnet_close(uint8_t slot)
 {
     TelnetConn *t = find_conn(slot);
     if (t)
@@ -191,7 +190,7 @@ static void handle_data(uint8_t slot, TelnetConn *t, uint8_t b)
     }
 }
 
-void pc_telnet_rx(uint8_t slot)
+static void pc_telnet_rx(uint8_t slot)
 {
     TelnetConn *t = find_conn(slot);
     if (!t)
@@ -270,7 +269,7 @@ void pc_telnet_rx(uint8_t slot)
 // Application API
 // ---------------------------------------------------------------------------
 
-void pc_telnet_on_command(TelnetCommandCb cb)
+static void pc_telnet_on_command(TelnetCommandCb cb)
 {
     s_telnet.cmd_cb = cb;
 }
@@ -286,7 +285,7 @@ static void broadcast(const char *s, size_t n)
     }
 }
 
-void pc_telnet_print(const char *s)
+static void pc_telnet_print(const char *s)
 {
     if (s)
     {
@@ -294,7 +293,7 @@ void pc_telnet_print(const char *s)
     }
 }
 
-void pc_telnet_println(const char *s)
+static void pc_telnet_println(const char *s)
 {
     if (s)
     {
@@ -303,7 +302,7 @@ void pc_telnet_println(const char *s)
     broadcast("\r\n", 2);
 }
 
-void pc_telnet_frame(const pc_field *spec, ...)
+static void pc_telnet_frame(const pc_field *spec, ...)
 {
     char buf[TELNET_BUF_SIZE];
     va_list ap;
@@ -316,7 +315,7 @@ void pc_telnet_frame(const pc_field *spec, ...)
     }
 }
 
-uint8_t pc_telnet_client_count()
+static uint8_t pc_telnet_client_count()
 {
     uint8_t c = 0;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -329,12 +328,16 @@ uint8_t pc_telnet_client_count()
     return c;
 }
 
-// The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by proto_register_builtins() via this
+// The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by Session.proto->register_builtins() via this
 // accessor, so this module carries no dependency on the session layer.
 static const ProtoHandler s_telnet_handler = {pc_telnet_accept, pc_telnet_rx, pc_telnet_close, NULL};
-const ProtoHandler *pc_telnet_proto_handler(void)
+static const ProtoHandler *pc_telnet_proto_handler(void)
 {
     return &s_telnet_handler;
 }
+
+const TelnetNs Telnet = {pc_telnet_on_command, pc_telnet_print,        pc_telnet_println,
+                         pc_telnet_frame,      pc_telnet_client_count, pc_telnet_accept,
+                         pc_telnet_rx,         pc_telnet_close,        pc_telnet_proto_handler};
 
 #endif // PC_ENABLE_TELNET

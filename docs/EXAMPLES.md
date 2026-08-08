@@ -33,7 +33,7 @@ pio ci --board=esp32dev --project-option="framework=arduino" \
 - **`begin()` returns negative** - a capacity constant is too small for the configured pools (the compile-time checks in `protocore_config.h` catch most first).
 - **Built but not flashed** - `pio ci` only compiles; use `pio run -t upload` from a project containing the sketch.
 
-<!-- BEGIN GENERATED EXAMPLE INDEX (ci_tooling/generate/gen_examples.py) -->
+<!-- BEGIN GENERATED EXAMPLE INDEX (tools/ci_tooling/generate/gen_examples.py) -->
 
 <!-- prettier-ignore-start -->
 

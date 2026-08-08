@@ -59,19 +59,6 @@
 PROTO_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
-// RNG
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Fill @p len bytes of @p buf with cryptographically random data.
- *
- * On Arduino: uses pc_platform_rand_fill() (hardware RNG seeded by analog noise).
- * On native:  uses pc_platform_rand_fill() from the Arduino.h mock, which is a
- *             time-seeded PRNG - NOT secure, for testing only.
- */
-void ssh_rng_fill(uint8_t *buf, size_t len);
-
-// ---------------------------------------------------------------------------
 // DH key exchange
 // ---------------------------------------------------------------------------
 

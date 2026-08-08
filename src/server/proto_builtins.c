@@ -6,7 +6,7 @@
  * @brief Installs the built-in protocol handlers.
  *
  * Each built-in exposes a `*_proto_handler()` accessor in its own module; this calls
- * proto_register() for each one behind the matching feature flag.
+ * Protocols.add() for each one behind the matching feature flag.
  *
  * PROTO_SSH_RFWD self-registers at runtime from pc_ssh_forward_begin().
  */
@@ -32,7 +32,7 @@ static inline void register_if(ConnProto proto, const ProtoHandler *h)
 {
     if (h != NULL)
     {
-        proto_register(proto, h);
+        Protocols.add(proto, h);
     }
 }
 
@@ -40,7 +40,7 @@ void proto_register_builtins(void)
 {
     register_if(PROTO_HTTP, http_proto_handler()); // always present
 #if PC_ENABLE_TELNET
-    register_if(PROTO_TELNET, pc_telnet_proto_handler());
+    register_if(PROTO_TELNET, Telnet.proto_handler());
 #endif
 #if PC_ENABLE_SSH
     register_if(PROTO_SSH, ssh_proto_handler());

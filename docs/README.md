@@ -28,8 +28,8 @@ void handle_status(uint8_t slot_id, HttpReq *req)
 
 void setup()
 {
-    init_wifi_physical("SSID", "PASSWORD");
-    while (!wifi_ready()) delay(250);
+    Physical.wifi->init("SSID", "PASSWORD");
+    while (!Physical.wifi->ready()) delay(250);
 
     server.on("/status", HTTP_GET, handle_status);
     server.set_cors("*");
@@ -46,9 +46,9 @@ See `examples/Foundation/Configuration/Configuration.ino` for a full reference o
 
 ## Features
 
-A compile-time menu grouped by the OSI layer each feature lives at, alphabetized within each layer: each cell is an optional `PC_ENABLE_*` subsystem (core HTTP/1.1, routing, middleware, JSON, templating, and chunked responses are always on). **Hover an entry for its summary; click through to [FEATURES.md](FEATURES.md) for the full description.** The tables are generated from [FEATURES.md](FEATURES.md) by `ci_tooling/generate/gen_feature_tables.py`, so they never drift.
+A compile-time menu grouped by the OSI layer each feature lives at, alphabetized within each layer: each cell is an optional `PC_ENABLE_*` subsystem (core HTTP/1.1, routing, middleware, JSON, templating, and chunked responses are always on). **Hover an entry for its summary; click through to [FEATURES.md](FEATURES.md) for the full description.** The tables are generated from [FEATURES.md](FEATURES.md) by `tools/ci_tooling/generate/gen_feature_tables.py`, so they never drift.
 
-<!-- BEGIN GENERATED FEATURE TABLES (ci_tooling/generate/gen_feature_tables.py) -->
+<!-- BEGIN GENERATED FEATURE TABLES (tools/ci_tooling/generate/gen_feature_tables.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -91,7 +91,7 @@ Each OSI layer lives in its own subdirectory under `src/network_drivers/`:
 <summary><b>View Directory and OSI Layer Layout</b></summary>
 
 ```
-L7  src/protocore.h/cpp     Route table, dispatch, send()
+L7  src/protocore.h/cpp     HttpRoute table, dispatch, send()
 L6  src/network_drivers/presentation/
         presentation.h/cpp                        Drains ring buffer → parser
         http_parser.h/cpp                         RFC 7230 byte-stream state machine
@@ -119,87 +119,19 @@ L1  src/network_drivers/physical/
 ```
 
 The conceptual layer map above is a summary; the complete file layout is generated
-below from `src/` by `ci_tooling/generate/gen_readme_sections.py` (single-`.h`/`.cpp`
+below from `src/` by `tools/ci_tooling/generate/gen_readme_sections.py` (single-`.h`/`.cpp`
 service folders are collapsed to their name; generated web-asset blobs are counted,
 not listed).
 
 <details>
 <summary><b>Full source tree (every library file)</b></summary>
 
-<!-- BEGIN GENERATED SOURCE-TREE (ci_tooling/generate/gen_readme_sections.py) -->
+<!-- BEGIN GENERATED SOURCE-TREE (tools/ci_tooling/generate/gen_readme_sections.py) -->
 
 <!-- prettier-ignore-start -->
 
 ```text
 src/
-├── board_drivers/
-│   ├── board_profiles/
-│   │   ├── esp/
-│   │   │   ├── 16mbflash.h
-│   │   │   ├── 16mbpsram.h
-│   │   │   ├── 2mbflash.h
-│   │   │   ├── 2mbpsram.h
-│   │   │   ├── 32mbflash.h
-│   │   │   ├── 32mbpsram.h
-│   │   │   ├── 4mbflash.h
-│   │   │   ├── 4mbpsram.h
-│   │   │   ├── 8mbflash.h
-│   │   │   ├── 8mbpsram.h
-│   │   │   ├── c2_defaults.h
-│   │   │   ├── c3_defaults.h
-│   │   │   ├── c5_defaults.h
-│   │   │   ├── c61_defaults.h
-│   │   │   ├── c6_defaults.h
-│   │   │   ├── h21_defaults.h
-│   │   │   ├── h2_defaults.h
-│   │   │   ├── h4_defaults.h
-│   │   │   ├── p4_defaults.h
-│   │   │   ├── s2_defaults.h
-│   │   │   ├── s31_defaults.h
-│   │   │   └── s3_defaults.h
-│   │   ├── board_profile.h
-│   │   ├── classic_defaults.h
-│   │   ├── derived_sizing.h
-│   │   └── pc_platform.h
-│   ├── hal/
-│   │   ├── esp/
-│   │   │   ├── C2_AND_S.md
-│   │   │   ├── C3_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── C6_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── CLASSIC_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── DMA_GDMA.md
-│   │   │   ├── E_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── esp_aes128gcm.c
-│   │   │   ├── esp_aesgcm.c
-│   │   │   ├── esp_bignum.c
-│   │   │   ├── esp_bus.c
-│   │   │   ├── esp_crypto_hal.c
-│   │   │   ├── esp_crypto_hal.h
-│   │   │   ├── esp_mnt_fs.cpp
-│   │   │   ├── esp_mnt_fs.h
-│   │   │   ├── esp_nvs.cpp
-│   │   │   ├── esp_platform.c
-│   │   │   ├── H2_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── P4_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── P4_MIPI_DSI_CSI.md
-│   │   │   ├── P4_MIPI_HELPERS.md
-│   │   │   ├── S2.md
-│   │   │   └── S3_CRYPTO_REG_SYMBOLS.md
-│   │   ├── host/
-│   │   │   └── host_nvs.c
-│   │   ├── mock/
-│   │   │   └── mock_platform.c
-│   │   ├── portable/
-│   │   │   ├── portable_aes128gcm.c
-│   │   │   ├── portable_aesgcm.c
-│   │   │   ├── portable_bignum.c
-│   │   │   └── portable_platform.c
-│   │   └── nvs.h
-│   └── physical/
-│       ├── esp/
-│       │   └── physical_esp.cpp
-│       └── mock/
-│           └── physical_mock.c
 ├── crypto/
 │   ├── aead/
 │   │   ├── aes128gcm.h
@@ -260,24 +192,34 @@ src/
 │   │   ├── mlkem.h
 │   │   ├── sntrup761.c
 │   │   └── sntrup761.h
+│   ├── rng/  (rng.h, rng.c)
 │   ├── crypto_opt.h
 │   └── ct_eq.h
 ├── mmgr/
 │   ├── arena.c
 │   ├── arena.h
+│   ├── bitio.h
+│   ├── bytes.h
 │   ├── dma.c
 │   ├── dma.h
+│   ├── endian.h
 │   ├── frame.c
 │   ├── frame.h
 │   ├── membuild.h
 │   ├── plaintext.c
 │   ├── plaintext.h
+│   ├── protomem.c
+│   ├── protomem.h
+│   ├── protostr.c
+│   ├── protostr.h
+│   ├── rawmemcpy.h
+│   ├── ring.h
 │   ├── secure.c
-│   └── secure.h
+│   ├── secure.h
+│   ├── span.h
+│   └── swar.h
 ├── network_drivers/
 │   ├── application/
-│   │   ├── auth/
-│   │   │   └── auth.c
 │   │   ├── file_serving/  (file_serving.h, file_serving.c)
 │   │   ├── mdns_adaptive/  (mdns_adaptive.h, mdns_adaptive.c)
 │   │   ├── mdns_service/  (mdns_service.h, mdns_service.c)
@@ -320,14 +262,16 @@ src/
 │   │   ├── roaming.c
 │   │   └── roaming.h
 │   ├── network/
-│   │   ├── dns_resolver.c
-│   │   ├── dns_resolver.h
-│   │   ├── ip.c
-│   │   ├── ip.h
+│   │   ├── dns/
+│   │   │   ├── dns.c
+│   │   │   ├── dns.h
+│   │   │   ├── dns_resolver.c
+│   │   │   ├── dns_resolver.h
+│   │   │   ├── dns_server.c
+│   │   │   └── dns_server.h
+│   │   ├── forward/  (forward.h, forward.c)
 │   │   ├── network.c
-│   │   ├── network.h
-│   │   ├── route.c
-│   │   └── route.h
+│   │   └── network.h
 │   ├── physical/
 │   │   ├── physical.c
 │   │   ├── physical.h
@@ -343,9 +287,9 @@ src/
 │   │   │   ├── json/  (json.h, json.c)
 │   │   │   ├── msgpack/  (msgpack.h, msgpack.c)
 │   │   │   ├── multipart/  (multipart.h, multipart.c)
-│   │   │   ├── codec.c
 │   │   │   └── codec.h
 │   │   ├── http/
+│   │   │   ├── auth/  (auth.h, auth.c)
 │   │   │   ├── http2/
 │   │   │   │   ├── h2_conn.c
 │   │   │   │   ├── h2_conn.h
@@ -360,6 +304,8 @@ src/
 │   │   │   │   ├── h3_conn.h
 │   │   │   │   ├── h3_frame.c
 │   │   │   │   ├── h3_frame.h
+│   │   │   │   ├── h3_server.c
+│   │   │   │   ├── h3_server.h
 │   │   │   │   ├── qpack.c
 │   │   │   │   ├── qpack.h
 │   │   │   │   ├── quic_conn.c
@@ -381,8 +327,11 @@ src/
 │   │   │   │   ├── tls13_msg.c
 │   │   │   │   └── tls13_msg.h
 │   │   │   ├── http_parser/  (http_parser.h, http_parser.c)
+│   │   │   ├── route/  (http_route.h, http_route.c)
 │   │   │   ├── sse/  (sse.h, sse.c)
-│   │   │   └── websocket/  (websocket.h, websocket.c)
+│   │   │   ├── websocket/  (websocket.h, websocket.c)
+│   │   │   ├── http.c
+│   │   │   └── http.h
 │   │   ├── security/
 │   │   │   └── dtls/
 │   │   │       ├── dtls_conn.c
@@ -441,12 +390,23 @@ src/
 │   │   ├── tls13_kdf.c
 │   │   └── tls13_kdf.h
 │   └── transport/
-│       ├── client.c
-│       ├── client.h
+│       ├── tcp/
+│       │   ├── tcp_client.c
+│       │   ├── tcp_client.h
+│       │   ├── tcp_conn.c
+│       │   ├── tcp_conn.h
+│       │   ├── tcp_listener.c
+│       │   └── tcp_listener.h
+│       ├── udp/
+│       │   ├── udp_client.c
+│       │   ├── udp_client.h
+│       │   ├── udp_datagram.h
+│       │   ├── udp_listener.c
+│       │   └── udp_listener.h
 │       ├── diffserv.c
 │       ├── diffserv.h
-│       ├── listener.c
-│       ├── listener.h
+│       ├── net_addr.c
+│       ├── net_addr.h
 │       ├── tcp.c
 │       ├── tcp.h
 │       ├── tcp_evt.h
@@ -611,9 +571,7 @@ src/
 │   │   ├── safety_scl/  (safety_scl.h, safety_scl.c)
 │   │   └── umati/  (umati.h, umati.c)
 │   ├── net/
-│   │   ├── dns_server/  (dns_server.h, dns_server.c)
 │   │   ├── flow_export/  (flow_export.h, flow_export.c)
-│   │   ├── forward/  (forward.h, forward.c)
 │   │   ├── gateway/  (gateway.h, gateway.c)
 │   │   ├── happy_eyeballs/  (happy_eyeballs.h, happy_eyeballs.c)
 │   │   ├── http_client/  (http_client.h, http_client.c)
@@ -774,24 +732,18 @@ src/
 │       ├── spa_router/  (spa_router.h, spa_router.c)
 │       └── web_terminal/  (web_terminal.h, web_terminal.c)
 ├── shared_primitives/
-│   ├── bitio.h
-│   ├── bytes.h
 │   ├── can.h
 │   ├── crc.h
-│   ├── endian.h
 │   ├── hex.h
 │   ├── http_date.h
+│   ├── ip.c
+│   ├── ip.h
 │   ├── log.c
 │   ├── log.h
 │   ├── mime.h
-│   ├── numparse.h
 │   ├── pcap.h
-│   ├── rawmemcpy.h
-│   ├── ring.h
 │   ├── runops.h
-│   ├── span.h
 │   ├── speed_opt.h
-│   ├── swar.h
 │   ├── time_compat.h
 │   ├── types.h
 │   └── utf8.h
@@ -810,12 +762,12 @@ src/
 
 Measured flash + static RAM for each optional feature, built in isolation over the
 base server on `esp32dev`. Generated from `docs/footprints.json` (produced by the
-RPi build matrix) by `ci_tooling/generate/gen_readme_sections.py`.
+RPi build matrix) by `tools/ci_tooling/generate/gen_readme_sections.py`.
 
 <details>
 <summary><b>Per-feature build footprint</b></summary>
 
-<!-- BEGIN GENERATED BUILD-FOOTPRINT (ci_tooling/generate/gen_readme_sections.py) -->
+<!-- BEGIN GENERATED BUILD-FOOTPRINT (tools/ci_tooling/generate/gen_readme_sections.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -1004,7 +956,7 @@ Every byte of memory the library uses is accounted for at compile time:
 | `sse_pool[MAX_SSE_CONNS]` - SSE connection state                               | BSS                            |
 | `_queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]` - event queue backing store | BSS                            |
 | `_queue_struct` - FreeRTOS `StaticQueue_t`                                     | BSS                            |
-| Route table `_routes[MAX_ROUTES]`                                              | BSS (inside [`PC`](@ref PC)) |
+| HttpRoute table `_routes[MAX_ROUTES]`                                              | BSS (inside [`PC`](@ref PC)) |
 
 </details>
 
@@ -1041,13 +993,13 @@ Any feature flag set to `0` strips the corresponding code and its includes from 
 ### Feature Flags
 
 The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
-`src/protocore_config.h` by `ci_tooling/generate/gen_readme_sections.py` (see
+`src/protocore_config.h` by `tools/ci_tooling/generate/gen_readme_sections.py` (see
 [FEATURES.md](FEATURES.md) for the full description of each):
 
 <details>
 <summary><b>All feature flags and their defaults</b></summary>
 
-<!-- BEGIN GENERATED FEATURE-FLAGS (ci_tooling/generate/gen_readme_sections.py) -->
+<!-- BEGIN GENERATED FEATURE-FLAGS (tools/ci_tooling/generate/gen_readme_sections.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -1095,7 +1047,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_DNC` | `0` | Opt-in CNC RS-232 DNC drip-feed codec. |
 | `PC_ENABLE_DNP3` | `0` | DNP3 (IEEE 1815) data-link frame codec (`services/dnp3`). |
 | `PC_ENABLE_DNS_RESOLVER` | `0` | Opt-in DNS resolver with answer verification. |
-| `PC_ENABLE_DNS_SERVER` | `0` | Authoritative DNS server (services/net/dns_server) on UDP/53. |
+| `PC_ENABLE_DNS_SERVER` | `0` | Authoritative DNS server (network_drivers/network/dns/dns_server) on UDP/53. |
 | `PC_ENABLE_DOCSTORE` | `0` | Opt-in local JSON document store on the WAL (PC_ENABLE_DOCSTORE, requires DBM + WAL). |
 | `PC_ENABLE_DSHOT` | `0` | Opt-in DShot ESC throttle protocol codec. |
 | `PC_ENABLE_DTLS` | `0` | DTLS 1.3 datagram security (RFC 9147) - the record layer. |
@@ -1318,11 +1270,11 @@ All constants can be overridden using compiler build flags (e.g. `-DMAX_CONNS=6`
 <summary><b>Expand Configuration constants and options</b></summary>
 
 The full list of tunable `#define` constants and their defaults, scraped from
-`src/protocore_config.h` by `ci_tooling/generate/gen_readme_sections.py`. Override any
+`src/protocore_config.h` by `tools/ci_tooling/generate/gen_readme_sections.py`. Override any
 with a build flag (e.g. `-DMAX_CONNS=6`); illegal combinations are caught by `#error`
 guards at compile time.
 
-<!-- BEGIN GENERATED CONFIG-OVERRIDES (ci_tooling/generate/gen_readme_sections.py) -->
+<!-- BEGIN GENERATED CONFIG-OVERRIDES (tools/ci_tooling/generate/gen_readme_sections.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -1395,7 +1347,6 @@ guards at compile time.
 | `PC_DELIVERY_PRECACHE_MAX` | `16` | Most asset paths a service-worker precache manifest may list. |
 | `PC_DMA_BUF_SIZE` | `256` | Bytes per DMA transfer buffer (RX is double-buffered at this size). |
 | `PC_DMA_CHANNELS` | `2` | Number of DMA channels (static-allocated; each is one peripheral link). |
-| `PC_DMA_SIMULATE` | `1` | Route DMA transfers through the ingress/egress simulator (default on). |
 | `PC_DNC_LEADER_LEN` | `32` | Default leader/trailer runout length for the DNC encoder. |
 | `PC_DNC_LINE_MAX` | `128` | Largest G-code block (one line) the DNC decoder reassembles. |
 | `PC_DNC_XOFF_MAX_POLLS` | `200000` | Safety cap on how many times the DNC stream engine polls the reverse channel while paused by an XOFF, before giving up with an I/O error. |
@@ -1421,7 +1372,6 @@ guards at compile time.
 | `PC_FWD_ACL_PATLEN` | `4` | Bytes an ACL entry can match (its pattern / mask length). |
 | `PC_FWD_INSPECT` | `0` | Build-time toggle for the forwarding-path inspection hook (default off, for cost + privacy). |
 | `PC_FWD_MAX_ACL` | `8` | Max ingress access-control entries (byte-pattern permit/deny; static). |
-| `PC_FWD_MAX_IFACES` | `4` | Max interfaces the forwarding plane tracks (static-allocated). |
 | `PC_FWD_MAX_ROUTES` | `8` | Max policy routes (byte-pattern -> egress interface; static). |
 | `PC_FWD_MAX_RULES` | `8` | Max forwarding rules (src -> dst allow/deny + rate cap; static-allocated). |
 | `PC_GPIO_JSON_BUF` | `1024` | Stack buffer for the GPIO-map JSON (bytes). |
@@ -1476,6 +1426,7 @@ guards at compile time.
 | `PC_MQTT_RX_QOS2_SLOTS` | `8` | Inbound QoS 2 packet-id de-duplication ring depth (PUBREC-acknowledged, awaiting PUBREL). |
 | `PC_MTLS_SUBJECT_MAX` | `128` | Maximum length of a verified mTLS peer subject DN string (incl. |
 | `PC_NEED_CLIENT` | `0` |  |
+| `PC_NEED_UDP` | `0` |  |
 | `PC_NRF24_PAYLOAD` | `32` | nRF24 fixed payload width in bytes (1..32; the chip's static payload size). |
 | `PC_NTP_SERVER_STRATUM` | `3` | Stratum the NTP server advertises (distance from a reference clock; 1-15). |
 | `PC_NTRIP_MAX_MOUNTS` | `2` | Max distinct mountpoints a single caster serves (each = one RTCM stream). |
@@ -1491,6 +1442,7 @@ guards at compile time.
 | `PC_PER_IP_THROTTLE_MAX` | `10` | Max accepted connections per window from one source IP (see PC_ENABLE_PER_IP_THROTTLE). |
 | `PC_PER_IP_THROTTLE_SLOTS` | `16` | Number of source IPv4 addresses tracked by the per-IP throttle (BSS bucket table). |
 | `PC_PER_IP_THROTTLE_WINDOW_MS` | `10000` | Per-IP throttle window length in milliseconds (see PC_ENABLE_PER_IP_THROTTLE). |
+| `PC_PHY_MAX_IFACES` | `4` | Interfaces layer 1 can carry: wifi station and softAP, ethernet, a bridged bus, a radio. |
 | `PC_PLAINTEXT_ARENA_SIZE` | `8192` | Size in bytes of the shared per-dispatch scratch arena. |
 | `PC_PN532_MAX_DATA` | `254` | Reject a PN532 normal frame whose declared length exceeds this (framing sanity). |
 | `PC_POWER_BUSY_PCT` | `40` | Load percentage at/above which the ceiling clock is used. |
@@ -1566,8 +1518,10 @@ guards at compile time.
 | `PC_TLS_MAX_FRAG_LEN` | `0` | Cap TLS records via the Maximum Fragment Length extension (RFC 6066). |
 | `PC_TLS_TICKET_LIFETIME_S` | `86400` | Session-ticket lifetime / key-rotation period in seconds (see PC_ENABLE_TLS_RESUMPTION). |
 | `PC_TRUSTED_PROXY_MAX` | `2` | Number of trusted-upstream CIDR rules the forwarded-client resolver holds (BSS table). |
-| `PC_UDP_RX_BUF_SIZE` | `1472` | Shared receive-scratch size for the transport-layer UDP service. |
+| `PC_UDP_RX_BUF_SIZE` | `1472` | Largest UDP datagram a bound port accepts, in bytes. |
+| `PC_UDP_RX_RING` | `2048` | Per-slot UDP receive ring, in bytes. |
 | `PC_UDP_TELEMETRY_BUF` | `256` | Stack buffer for one telemetry line (bytes). |
+| `PC_UDP_TX_RING` | `4096` | UDP send ring, in bytes: per slot on the listener side, one on the client side. |
 | `PC_UMATI_NS` | `1` | NamespaceIndex the umati MachineTool nodes live at (default 1). |
 | `PC_WEBDAV_BUF_SIZE` | `2048` | Buffer (BSS) for a WebDAV 207 Multi-Status response, in bytes (see PC_ENABLE_WEBDAV). |
 | `PC_WEBDAV_MAX_ENTRIES` | `32` | Maximum children listed in a WebDAV Depth-1 PROPFIND (bounds the response). |
@@ -1599,7 +1553,7 @@ guards at compile time.
 | `QUERY_VAL_LEN` | `48` | Maximum query-parameter value length. |
 | `RESP_HDR_BUF_SIZE` | `768` | Stack buffer for HTTP response header lines in send() / send_empty() / send_unauth() / serve_file(). |
 | `RE_MAX_STEPS` | `2000` | Step budget for the regex route matcher (see on_regex()). |
-| `RX_BUF_SIZE` | `1024` | Ring-buffer capacity in bytes per connection slot (feature floors enforced last, in board_drivers/board_profiles/derived_sizing.h - a value below what an enabled feature needs is raised there). |
+| `RX_BUF_SIZE` | `1024` | Ring-buffer capacity in bytes per connection slot (feature floors enforced last, in core_setup/board_profiles/derived_sizing.h - a value below what an enabled feature needs is raised there). |
 | `SNMP_COMMUNITY_MAX` | `32` | Maximum SNMP community-string length (including null terminator). |
 | `SNMP_MAX_MIB_ENTRIES` | `16` | Maximum registered MIB objects (the agent's fixed OID table). |
 | `SNMP_MAX_OID_LEN` | `32` | Maximum sub-identifiers (arcs) in an SNMP object identifier. |
@@ -1767,7 +1721,7 @@ drifts; run any of them locally from the repo root.
 <details>
 <summary><b>Expand Utility Tools and Scripts Guide</b></summary>
 
-**Documentation generators** (`ci_tooling/generate/`)
+**Documentation generators** (`tools/ci_tooling/generate/`)
 
 | Script                   | Generates                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------ |
@@ -1791,7 +1745,7 @@ The suite's own generator lives with the tests: [`test/gen_test_readme.py`](../t
 | `gen_favicons.py`    | build the favicon library + gallery                                                       |
 
 ```bash
-python ci_tooling/generate/gen_readme_sections.py   # refresh this file's generated sections
+python -m tools.ci_tooling.generate.gen_readme_sections   # refresh this file's generated sections
 python web_assets/wizard/build_assets.py          # rebuild the embedded web assets
 ```
 
@@ -1826,7 +1780,7 @@ own reason; they do not overlap by accident.
 | Document                     | Contents                                                                  |
 | ---------------------------- | ------------------------------------------------------------------------- |
 | [SRC_LAW.md](SRC_LAW.md)     | The **why**: determinism and allocation law, derived from MISRA / AUTOSAR  |
-| [ci_tooling/README.md](../ci_tooling/README.md) | The **tooling** law: how generators and checkers must be written, and why. |
+| [tools/ci_tooling/README.md](../ci_tooling/README.md) | The **tooling** law: how generators and checkers must be written, and why. |
 | [SRCBANNED.md](SRCBANNED.md) | The **what**: constructs banned in `src/`, enforced by a checker           |
 | [SYMBOLS.md](SYMBOLS.md)     | The **naming** law: prefixes, macros, enums, include guards                |
 

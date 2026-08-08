@@ -12,7 +12,6 @@
  */
 
 #include "protocore.h" // RE_MAX_STEPS (ServerConfig), fixed-width types
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Bounded regex route matcher (see on_regex()).

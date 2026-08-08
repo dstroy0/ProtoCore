@@ -9,7 +9,7 @@
  * catch-all DNS responder (via the transport-layer UDP service - no add-on library) so any
  * connected client is funneled to a credentials form. Submitted SSID/passphrase
  * are persisted to NVS and the device reboots into station mode. Uses only
- * `init_wifi_ap_physical()`, the library UDP transport, and `Preferences`; compiled to stubs when disabled
+ * `Physical.wifi->init_ap()`, the library UDP transport, and `Preferences`; compiled to stubs when disabled
  * or off-Arduino.
  *
  * The form-field parser (pc_prov_form_field) is always compiled and is the

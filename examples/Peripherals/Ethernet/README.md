@@ -6,17 +6,17 @@
 
 Some deployments want a **wired** uplink - PoE cameras, panel-mount controllers, RF-noisy
 factory floors, anything that can't rely on Wi-Fi. With `PC_ENABLE_ETHERNET` the physical
-layer gains `init_eth_physical()` alongside `init_wifi_physical()`:
+layer gains `Physical.eth->init()` alongside `Physical.wifi->init()`:
 
 ```cpp
-init_eth_physical();          // ETH.begin() with the ETH_PHY_* build-flag config
-while (!eth_ready()) delay(250);
+Physical.eth->init();          // ETH.begin() with the ETH_PHY_* build-flag config
+while (!Physical.eth->ready()) delay(250);
 // ... server.begin(80) - now serving over Ethernet
 ```
 
 It is a thin wrapper over the Arduino **ETH** library for an RMII PHY (LAN8720 / TLK110 /
 RTL8201 / DP83848). Nothing else changes: the egress reporting already classifies a wired
-route as `PC_IFACE_ETH`, so `pc_net_egress()`, per-route STA/AP/ETH interface filters, and
+route as `PC_IF_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and
 every protocol work over the wired link the moment it has an IP. Wi-Fi and Ethernet can also
 run together (dual-homed) - the stack picks the default route.
 
@@ -42,7 +42,7 @@ your hardware.
 
 On the **ESP32-P4** the RMII PHY drives the P4's built-in EMAC (no external SPI chip). A board
 whose arduino-esp32 variant already defines the `ETH_PHY_*` pins needs **no** `ETH_PHY_*` flags -
-`init_eth_physical()`'s no-arg `ETH.begin()` picks them up. **HW-verified (2026-07-19)** on a
+`Physical.eth->init()`'s no-arg `ETH.begin()` picks them up. **HW-verified (2026-07-19)** on a
 **Waveshare ESP32-P4-POE-ETH** (onboard IP101 PHY: `MDC=31 MDIO=52 POWER=51`, `EMAC_CLK_EXT_IN`,
 phy addr 0) built under arduino-esp32 3.x - link came up 100M full-duplex + DHCP and the server
 answered HTTP over pure wired Ethernet:

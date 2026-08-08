@@ -12,30 +12,19 @@ runtime theming links none of it; enabling it embeds the set (each theme is ~1 K
 Output: src/network_drivers/application/binary_asset_blobs.{h,c} (generated + committed, so the
 Arduino-IDE users who never run Python still get it). Re-run after adding/editing a theme.
 
-    python web_assets/wizard/gen_theme_blobs.py            # regenerate
-    python web_assets/wizard/gen_theme_blobs.py --check    # CI: fail if stale
+    python -m web_assets.wizard.gen_theme_blobs            # regenerate
+    python -m web_assets.wizard.gen_theme_blobs --check    # CI: fail if stale
 """
 
 import os
 import re
 import sys
 
+from tools.ci_tooling.lib import doc_region as dr
+from web_assets.wizard import gen_themes
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-# Repo root, located by marker rather than by counting `..` levels: these scripts
-# have moved once already (src/web/wizard -> web_assets/wizard) and level-counting
-# silently retargeted them outside the tree.
-def _repo_root(start):
-    d = os.path.abspath(start)
-    while d != os.path.dirname(d):
-        if os.path.exists(os.path.join(d, "library.json")):
-            return d
-        d = os.path.dirname(d)
-    raise RuntimeError("repo root not found (no library.json above %s)" % start)
-
-
-REPO_ROOT = _repo_root(SCRIPT_DIR)
+REPO_ROOT = dr.repo_root(__file__)
 
 THEMES_DIRS = [
     os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes")),
@@ -52,18 +41,8 @@ BANNER = (
     "// Add or edit a theme under web_assets/themes/ and re-run the generator."
 )
 
-
-def _restricted():
-    """The trademark-named themes (from gen_themes.RESTRICTED) - their blobs are gated for commercial."""
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location("gen_themes", os.path.join(SCRIPT_DIR, "gen_themes.py"))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return set(mod.RESTRICTED)
-
-
-RESTRICTED = _restricted()
+# The trademark-named themes - their blobs are gated for commercial.
+RESTRICTED = set(gen_themes.RESTRICTED)
 
 
 def minify_css(css):
@@ -161,7 +140,7 @@ def render_source(themes):
         "",
         "#if PC_ENABLE_THEMES",
         "",
-        "#include <string.h>",
+        "",
         "",
     ]
     for name, css in themes:

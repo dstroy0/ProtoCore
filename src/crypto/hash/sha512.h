@@ -17,7 +17,7 @@
 #ifndef PROTOCORE_SHA512_H
 #define PROTOCORE_SHA512_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths, PROTOCORE_HOT for the context below
+#include "protocore_config.h" // the entry point: types.h for the widths, PC_HAS_HW_SHA for the context below
 
 /** @brief SHA-512 digest length in bytes. */
 #define PC_SHA512_DIGEST_LEN 64
@@ -26,7 +26,7 @@
 #define PC_SHA512_BLOCK_LEN 128
 
 /** @brief Streaming SHA-512 context. */
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 #include <mbedtls/sha512.h>
 typedef struct
 {

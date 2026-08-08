@@ -24,8 +24,9 @@ The table schema (test/test_matrix.json), per env:
         "base":  "native_base" (default) | "env:native_stack_l46" | "env:native_stack_http",
         "flags": ["-DPC_ENABLE_X=1", ...],     # extras beyond the base flags
         "src":   ["+<services/x/x.cpp>", "-<*>"], # build_src_filter lines, verbatim
-        "tests": ["test_x", ...],                 # test_filter entries
-        "test_build_src": "no"                    # optional override
+        "tests": ["test_x", ...],                 # test_filter entries; [] means run no suite
+        "test_build_src": "no",                   # optional override
+        "extra_scripts": ["pre:test/x.py", ...]   # optional PlatformIO build hooks
     }
 """
 
@@ -43,14 +44,20 @@ BEGIN = "; >>> GENERATED TEST ENVS - do not edit below; edit test/test_matrix.js
 END = "; <<< END GENERATED TEST ENVS <<<"
 
 
-def render_env(name, e):
+def render_env(name, e, bases=frozenset()):
+    # A stack base carries flags and a build_src_filter for the envs that extend it and owns no
+    # suite. It is emitted as a plain section rather than [env:...] so pio never treats it as a
+    # target: an env with no test_filter runs every suite in test/, and test_ignore on it would be
+    # inherited by every child, suppressing theirs. A section is neither.
     base = e.get("base", "native_base")
+    if base.startswith("env:") and base[len("env:") :] in bases:
+        base = base[len("env:") :]
     lines = []
     desc = e.get("desc", "").strip()
     if desc:
         for dl in desc.split("\n"):
             lines.append(f"; {dl}".rstrip())
-    lines.append(f"[env:{name}]")
+    lines.append(f"[{name}]" if name in bases else f"[env:{name}]")
     lines.append(f"extends = {base}")
     flags = e.get("flags", [])
     if flags:
@@ -62,6 +69,13 @@ def render_env(name, e):
     if src:
         lines.append("build_src_filter =")
         for s in src:
+            for b in bases:
+                s = s.replace(f"${{env:{b}.", f"${{{b}.")
+            # build_src_filter resolves against src/, and core_setup/ sits beside it, so a table
+            # entry naming the repo-relative path matches nothing and the file is silently left
+            # out of the link. The table states the path from the repo root, the same way an
+            # #include does; the step up is what the filter needs to reach it.
+            s = s.replace("<core_setup/", "<../core_setup/")
             lines.append(f"    {s}")
     tests = e.get("tests", [])
     if tests:
@@ -70,6 +84,10 @@ def render_env(name, e):
             lines.append(f"    {t}")
     if e.get("test_build_src"):
         lines.append(f"test_build_src = {e['test_build_src']}")
+    if e.get("extra_scripts"):
+        lines.append("extra_scripts =")
+        for s in e["extra_scripts"]:
+            lines.append(f"    {s}")
     return "\n".join(lines)
 
 
@@ -101,7 +119,13 @@ build_flags =
     -I test/mocks
     -I test/support
     -I src
-    -DPROTOCORE_HOST=1
+    ; core_setup/ sits beside src/, not inside it, so the board profile an include names as
+    ; core_setup/board_profiles/... resolves from the repo root rather than from src/.
+    -I .
+    ; PROTOCORE_HOST is NOT defined here. board_profiles/pc_platform.h derives it from the vendor
+    ; axis: nothing on a native build matches a vendor, so its else-arm defines it. Passing it on
+    ; the command line as well made a second source of truth that the vendor axis could not
+    ; override, so -DPROTOCORE_HOT_FORCE selected PC_VENDOR_MOCK and still compiled the host path.
     ; libm is a separate library to the C driver. g++ pulled it in behind libstdc++, so nothing here
     ; ever named it; gcc does not, and every env whose sources call sin / cos / sqrt / atan2 / fabs
     ; fails at the link with an undefined reference instead. It sits in the shared block because
@@ -112,20 +136,35 @@ build_flags =
 ; include lfs.h build it - the dependency finder does not compile what nothing reaches for.
 lib_deps =
     anurag3301/littlefs@^2.11.6
-test_build_src = yes"""
+test_build_src = yes
+
+; The target path, on a machine that can run the suite. PROTOCORE_HOT_FORCE selects PC_VENDOR_MOCK,
+; so PROTOCORE_HOT is 1 and the backends under board_drivers/*/mock/ stand in for silicon. An env
+; sets "base": "native_hot_base" in test/test_matrix.json to build here.
+[native_hot_base]
+extends = native_base
+build_flags =
+    ${native_base.build_flags}
+    -DPROTOCORE_HOT_FORCE"""
 
 
 def render_block(table):
     envs = table["envs"]
+    # An entry that names no suite is a stack base: a section others extend, never a target.
+    bases = frozenset(n for n, e in envs.items() if not e.get("tests"))
     parts = [
         BEGIN,
-        "; Single source of truth: test/test_matrix.json  (" + str(len(envs)) + " native envs)",
+        "; Single source of truth: test/test_matrix.json  ("
+        + str(len(envs) - len(bases))
+        + " native envs, "
+        + str(len(bases))
+        + " stack bases)",
         "",
         NATIVE_BASE,
     ]
     for name, e in envs.items():
         parts.append("")
-        parts.append(render_env(name, e))
+        parts.append(render_env(name, e, bases))
     parts.append("")
     parts.append(END)
     return "\n".join(parts) + "\n"

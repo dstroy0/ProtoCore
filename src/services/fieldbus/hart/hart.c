@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_HART
 
-#include <string.h>
-
 uint8_t pc_hart_checksum(const uint8_t *bytes, size_t len)
 {
     uint8_t x = 0;

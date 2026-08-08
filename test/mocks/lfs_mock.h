@@ -21,7 +21,6 @@
 
 #include "server/filesystem/mnt.h"
 #include <lfs.h>
-#include <string.h>
 
 #define LFSM_READ_SIZE 16
 #define LFSM_PROG_SIZE 16

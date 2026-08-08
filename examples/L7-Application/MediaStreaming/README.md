@@ -31,7 +31,7 @@ also serves large files, generated reports, and firmware images.
 
 ## Routes
 
-| Route        | What it is                                        |
+| HttpRoute    | What it is                                        |
 | ------------ | ------------------------------------------------- |
 | `/`          | a page showing the live video and an audio player |
 | `/video`     | MJPEG video stream (`multipart/x-mixed-replace`)  |

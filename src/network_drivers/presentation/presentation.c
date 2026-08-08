@@ -20,6 +20,7 @@
 #include "presentation.h"
 #include "network_drivers/session/proto_handler.h" // ProtoHandler (the L5 dispatch seam this registers into)
 #include "network_drivers/transport/tcp.h"         // conn_pool: the slot a handler is dispatched on
+#include "shared_primitives/runops.h" // the bounded scan and case-insensitive compare the Connection header needs
 #if PC_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_find()/ws_free(): a WS-upgraded slot must never be HTTP-parsed
 #endif
@@ -31,7 +32,7 @@
 #if PC_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
-#include <string.h> // strcmp (ALPN check)
+// strcmp (ALPN check)
 #endif
 
 #if PC_ENABLE_KEEPALIVE
@@ -102,7 +103,7 @@ void http_parse(uint8_t slot_id)
 
     // Drain via the transport read API - the parser never touches the ring itself.
     // Check the terminal state BEFORE consuming so a pipelined next request is left
-    // in the ring; the window is reopened by the worker's pc_conn_ack_consumed().
+    // in the ring; the window is reopened by the worker's Tcp.conn->ack_consumed().
     while (pc_conn_available(slot_id) > 0)
     {
         switch (req->parse_state)
@@ -148,12 +149,12 @@ void http_parse(uint8_t slot_id)
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_TLS
-// Abort a TLS connection (fatal handshake/read error). pc_conn_abort_slot owns
+// Abort a TLS connection (fatal handshake/read error). Tcp.conn->abort_slot owns
 // the whole teardown: free the TLS context (abrupt), detach the pcb, reset the
 // slot, then RST - so this never reaches into the raw tcp_pcb.
 static void tls_abort(uint8_t slot)
 {
-    pc_conn_abort_slot(slot);
+    Tcp.conn->abort_slot(slot);
     http_reset(slot);
 }
 
@@ -285,3 +286,82 @@ const ProtoHandler *http_proto_handler(void)
 {
     return &s_http_handler;
 }
+
+#if PC_ENABLE_KEEPALIVE || PC_ENABLE_WEBSOCKET
+// Case-insensitive search for @p token as a comma/space-delimited element of a
+// Connection header value (e.g. "keep-alive" in "Keep-Alive, Upgrade"). Shared by
+// keep-alive evaluation and the WebSocket Upgrade-token check.
+proto_bool pc_http_conn_has_token(const char *hdr, const char *token)
+{
+    if (hdr == NULL)
+    {
+        return PROTO_FALSE;
+    }
+    size_t tlen = proto_scan_nul(token, 32);
+    const char *p = hdr;
+    while (*p)
+    {
+        while (*p == ' ' || *p == ',' || *p == '\t')
+        {
+            p++;
+        }
+        const char *start = p;
+        while (*p && *p != ',')
+        {
+            p++;
+        }
+        size_t len = (size_t)(p - start);
+        while (len && (start[len - 1] == ' ' || start[len - 1] == '\t'))
+        {
+            len--;
+        }
+        // The element is a slice of the header value, not its own string, so it has no terminator to
+        // measure against: the trimmed length is the bound, and the length test above it is what
+        // stops a longer token matching on its prefix.
+        if (len == tlen && proto_diff_ci(start, token, tlen) == tlen)
+        {
+            return PROTO_TRUE;
+        }
+        if (*p == ',')
+        {
+            p++;
+        }
+    }
+    return PROTO_FALSE;
+}
+#endif // PC_ENABLE_KEEPALIVE || PC_ENABLE_WEBSOCKET
+
+#if PC_ENABLE_KEEPALIVE
+proto_bool keepalive_eval(uint8_t slot_id)
+{
+    HttpReq *req = &http_pool[slot_id];
+    // Only a cleanly-parsed request has a known message boundary; errors close.
+    if (req->parse_state != PARSE_COMPLETE)
+    {
+        return PROTO_FALSE;
+    }
+
+    const char *c = http_get_header(req, "Connection");
+    proto_bool keep;
+    if (req->version == HTTP_11)
+    {
+        keep = !pc_http_conn_has_token(c, "close"); // 1.1 default: persistent
+    }
+    else
+    {
+        keep = pc_http_conn_has_token(c, "keep-alive"); // 1.0/unknown default: close
+    }
+    if (!keep)
+    {
+        return PROTO_FALSE;
+    }
+
+    // Fairness bound: serve at most PC_KEEPALIVE_MAX_REQUESTS, then close.
+    http_req_count[slot_id]++;
+    if (http_req_count[slot_id] >= PC_KEEPALIVE_MAX_REQUESTS)
+    {
+        return PROTO_FALSE;
+    }
+    return PROTO_TRUE;
+}
+#endif // PC_ENABLE_KEEPALIVE

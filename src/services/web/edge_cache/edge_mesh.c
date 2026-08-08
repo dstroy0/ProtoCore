@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_EDGE_MESH
 
-#include <string.h>
-
 static void put_u16(uint8_t *p, uint16_t v)
 {
     p[0] = (uint8_t)(v & 0xFF);

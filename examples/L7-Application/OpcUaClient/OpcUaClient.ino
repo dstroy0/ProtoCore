@@ -27,7 +27,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "services/fieldbus/opcua/opcua.h"
 #include "services/fieldbus/opcua_client/opcua_client.h"
 
@@ -104,7 +104,7 @@ static uint8_t c_resp[2048];
 
 static size_t exchange(int cid, size_t reqlen)
 {
-    if (reqlen == 0 || !pc_client_send(cid, c_req, reqlen))
+    if (reqlen == 0 || !Tcp.client->send(cid, c_req, reqlen))
     {
         return 0;
     }
@@ -113,9 +113,9 @@ static size_t exchange(int cid, size_t reqlen)
     uint32_t deadline = millis() + 3000;
     while (got < 8 && millis() < deadline)
     {
-        if (pc_client_available(cid))
+        if (Tcp.client->available(cid))
         {
-            got += pc_client_read(cid, c_resp + got, 8 - got);
+            got += Tcp.client->read(cid, c_resp + got, 8 - got);
         }
     }
     if (got < 8)
@@ -130,9 +130,9 @@ static size_t exchange(int cid, size_t reqlen)
     }
     while (got < size && millis() < deadline)
     {
-        if (pc_client_available(cid))
+        if (Tcp.client->available(cid))
         {
-            got += pc_client_read(cid, c_resp + got, size - got);
+            got += Tcp.client->read(cid, c_resp + got, size - got);
         }
     }
     return got == size ? size : 0;
@@ -143,7 +143,7 @@ static void run_client(uint32_t ip)
     char host[16];
     snprintf(host, sizeof(host), "%u.%u.%u.%u", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
              (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
-    int cid = pc_client_open(host, 4840, 8000);
+    int cid = Tcp.client->open(host, 4840, 8000);
     if (cid < 0)
     {
         Serial.println("[opcua-client] connect failed");
@@ -227,20 +227,20 @@ static void run_client(uint32_t ip)
     }
 
     exchange(cid, pc_opcua_client_close_session(&c, c_req, sizeof(c_req)));
-    pc_client_send(cid, c_req, pc_opcua_client_close_channel(c_req, sizeof(c_req)));
-    pc_client_close(cid);
+    Tcp.client->send(cid, c_req, pc_opcua_client_close_channel(c_req, sizeof(c_req)));
+    Tcp.client->close(cid);
     Serial.println("[opcua-client] done");
 }
 
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -266,6 +266,6 @@ void loop()
     if (!done && millis() > 4000)
     {
         done = true;
-        run_client(pc_net_egress_ip()); // pc_client_open resolves the dotted-quad host directly
+        run_client(Physical.link->egress_ip()); // Tcp.client->open resolves the dotted-quad host directly
     }
 }

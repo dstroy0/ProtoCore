@@ -10,8 +10,7 @@
 
 #if PC_NEED_CBOR
 
-#include "shared_primitives/bytes.h"
-#include <string.h>
+#include "mmgr/bytes.h"
 
 static void put(pc_span *w, uint8_t b)
 {
@@ -50,12 +49,12 @@ static void head(pc_span *w, uint8_t major, uint64_t val)
     }
 }
 
-void pc_cbor_uint(pc_span *w, uint64_t v)
+static void pc_cbor_uint(pc_span *w, uint64_t v)
 {
     head(w, 0, v);
 }
 
-void pc_cbor_int(pc_span *w, int64_t v)
+static void pc_cbor_int(pc_span *w, int64_t v)
 {
     if (v >= 0)
     {
@@ -67,7 +66,7 @@ void pc_cbor_int(pc_span *w, int64_t v)
     }
 }
 
-void pc_cbor_bytes(pc_span *w, const uint8_t *data, size_t len)
+static void pc_cbor_bytes(pc_span *w, const uint8_t *data, size_t len)
 {
     head(w, 2, (uint64_t)len);
     for (size_t i = 0; i < len; i++)
@@ -76,7 +75,7 @@ void pc_cbor_bytes(pc_span *w, const uint8_t *data, size_t len)
     }
 }
 
-void pc_cbor_str_n(pc_span *w, const char *s, size_t len)
+static void pc_cbor_str_n(pc_span *w, const char *s, size_t len)
 {
     head(w, 3, (uint64_t)len);
     for (size_t i = 0; i < len; i++)
@@ -85,22 +84,22 @@ void pc_cbor_str_n(pc_span *w, const char *s, size_t len)
     }
 }
 
-void pc_cbor_str(pc_span *w, const char *s)
+static void pc_cbor_str(pc_span *w, const char *s)
 {
     pc_cbor_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
 }
 
-void pc_cbor_bool(pc_span *w, proto_bool b)
+static void pc_cbor_bool(pc_span *w, proto_bool b)
 {
     put(w, b ? 0xf5 : 0xf4);
 }
 
-void pc_cbor_null(pc_span *w)
+static void pc_cbor_null(pc_span *w)
 {
     put(w, 0xf6);
 }
 
-void pc_cbor_float(pc_span *w, float f)
+static void pc_cbor_float(pc_span *w, float f)
 {
     uint32_t bits;
     memcpy(&bits, &f, sizeof(bits));
@@ -108,17 +107,17 @@ void pc_cbor_float(pc_span *w, float f)
     pc_bw_put_be(w, bits, 4);
 }
 
-void pc_cbor_array(pc_span *w, size_t count)
+static void pc_cbor_array(pc_span *w, size_t count)
 {
     head(w, 4, (uint64_t)count);
 }
 
-void pc_cbor_map(pc_span *w, size_t count)
+static void pc_cbor_map(pc_span *w, size_t count)
 {
     head(w, 5, (uint64_t)count);
 }
 
-void pc_cbor_label(pc_span *w, const char *name, int64_t num)
+static void pc_cbor_label(pc_span *w, const char *name, int64_t num)
 {
     (void)name; // CBOR carries the integer label form (RFC 8428 sec 6)
     pc_cbor_int(w, num);
@@ -170,7 +169,7 @@ static proto_bool read_head(pc_cspan *r, uint8_t *major, uint64_t *val)
     return pc_br_take_be(r, need, val);
 }
 
-pc_codec_type pc_cbor_peek(pc_cspan *r)
+static pc_codec_type pc_cbor_peek(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -212,7 +211,7 @@ pc_codec_type pc_cbor_peek(pc_cspan *r)
     }
 }
 
-proto_bool pc_cbor_read_uint(pc_cspan *r, uint64_t *out)
+static proto_bool pc_cbor_read_uint(pc_cspan *r, uint64_t *out)
 {
     uint8_t m;
     uint64_t v;
@@ -229,7 +228,7 @@ proto_bool pc_cbor_read_uint(pc_cspan *r, uint64_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_cbor_read_int(pc_cspan *r, int64_t *out)
+static proto_bool pc_cbor_read_int(pc_cspan *r, int64_t *out)
 {
     uint8_t m;
     uint64_t v;
@@ -253,7 +252,7 @@ proto_bool pc_cbor_read_int(pc_cspan *r, int64_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_cbor_read_bool(pc_cspan *r, proto_bool *out)
+static proto_bool pc_cbor_read_bool(pc_cspan *r, proto_bool *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -278,7 +277,7 @@ proto_bool pc_cbor_read_bool(pc_cspan *r, proto_bool *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_cbor_read_null(pc_cspan *r)
+static proto_bool pc_cbor_read_null(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len || r->buf[r->pos] != 0xf6)
     {
@@ -289,7 +288,7 @@ proto_bool pc_cbor_read_null(pc_cspan *r)
     return PROTO_TRUE;
 }
 
-proto_bool pc_cbor_read_float(pc_cspan *r, float *out)
+static proto_bool pc_cbor_read_float(pc_cspan *r, float *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -346,17 +345,17 @@ static proto_bool read_str(pc_cspan *r, uint8_t want_major, const uint8_t **out,
     return PROTO_TRUE;
 }
 
-proto_bool pc_cbor_read_str(pc_cspan *r, const char **out, size_t *len)
+static proto_bool pc_cbor_read_str(pc_cspan *r, const char **out, size_t *len)
 {
     return read_str(r, 3, (const uint8_t **)out, len);
 }
 
-proto_bool pc_cbor_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
+static proto_bool pc_cbor_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
 {
     return read_str(r, 2, out, len);
 }
 
-proto_bool pc_cbor_read_array(pc_cspan *r, size_t *count)
+static proto_bool pc_cbor_read_array(pc_cspan *r, size_t *count)
 {
     uint8_t m;
     uint64_t v;
@@ -373,7 +372,7 @@ proto_bool pc_cbor_read_array(pc_cspan *r, size_t *count)
     return PROTO_TRUE;
 }
 
-proto_bool pc_cbor_read_map(pc_cspan *r, size_t *count)
+static proto_bool pc_cbor_read_map(pc_cspan *r, size_t *count)
 {
     uint8_t m;
     uint64_t v;
@@ -389,5 +388,13 @@ proto_bool pc_cbor_read_map(pc_cspan *r, size_t *count)
     *count = (size_t)v;
     return PROTO_TRUE;
 }
+
+/** @brief CBOR (RFC 8949) as an instance of the codec interface. */
+const pc_codec Cbor = {
+    pc_cbor_uint,      pc_cbor_int,       pc_cbor_bytes,      pc_cbor_str,      pc_cbor_str_n,      pc_cbor_bool,
+    pc_cbor_null,      pc_cbor_float,     pc_cbor_array,      pc_cbor_map,      pc_cbor_label,      pc_cbor_peek,
+    pc_cbor_read_uint, pc_cbor_read_int,  pc_cbor_read_bytes, pc_cbor_read_str, pc_cbor_read_array, pc_cbor_read_map,
+    pc_cbor_read_bool, pc_cbor_read_null, pc_cbor_read_float,
+};
 
 #endif // PC_NEED_CBOR

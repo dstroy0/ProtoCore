@@ -10,14 +10,11 @@
 
 #if PC_ENABLE_HTTP3
 
+#include "mmgr/ring.h" // pc_atomic
 #include "network_drivers/presentation/http/http3/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_tp.h"
-#include "shared_primitives/ring.h" // pc_atomic
-#include <string.h>
 
-#if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"
-#endif
 
 // The pool (QuicConn + H3Conn per slot) and the ingest ring are large, so on a PSRAM board they can
 // be moved to external RAM (like the HTTP/2 pool). Default is internal DRAM; a build that overflows
@@ -92,23 +89,17 @@ typedef struct
     uint16_t port;
     proto_bool running;
     uint32_t next_id; ///< set to 1 by pc_quic_server_begin(); never handed out as 0
-#if !PROTOCORE_HOT
-    QuicServerOutFn out_sink;
-    void *out_ctx;
-#endif
 } QuicServerCtx;
 static QuicServerCtx s_quic;
 
+// Copy @p src into @p dst, stopping at the NUL or one short of @p cap, and terminate.
 static void copy_str(char *dst, size_t cap, const char *src)
 {
     size_t n = 0;
-    if (src)
+    while (src[n] && n + 1 < cap)
     {
-        while (src[n] && n + 1 < cap)
-        {
-            dst[n] = src[n];
-            n++;
-        }
+        dst[n] = src[n];
+        n++;
     }
     dst[n] = 0;
 }
@@ -120,14 +111,11 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
 
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
-#if PROTOCORE_HOT
-    pc_udp_listener_sendto(s_quic.port, ip, port, data, len);
-#else
-    if (s_quic.out_sink)
+    pc_ip dst = {PC_IP_NONE, {0}};
+    if (Ip.parse(ip, &dst))
     {
-        s_quic.out_sink(s_quic.out_ctx, data, len, ip, port);
+        Udp.listener->sendto(s_quic.port, &dst, port, data, len);
     }
-#endif
 }
 
 // --- ingest ring (SPSC: one producer fills, pc_quic_server_poll consumes) ------------------------
@@ -253,7 +241,7 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     return s; // last_ms is set by the poll that received this datagram
 }
 
-// Route a datagram to its connection by Destination Connection ID. Sets *is_initial when it is an
+// HttpRoute a datagram to its connection by Destination Connection ID. Sets *is_initial when it is an
 // unmatched Initial (the caller opens a new connection) and copies the parsed long header out.
 static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, QuicLongHeader *lh_out)
 {
@@ -333,19 +321,17 @@ static void flush_and_reap(uint32_t now_ms)
     }
 }
 
-#if PROTOCORE_HOT
 static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     char ip[16];
     uint16_t port = 0;
-    if (!pc_udp_peer_addr(peer, ip, sizeof ip, &port))
+    if (!Udp.listener->peer_addr(peer, ip, sizeof ip, &port))
     {
         return;
     }
-    ring_push(data, len, ip, port);
+    (void)ring_push(data, len, ip, port);
 }
-#endif
 
 proto_bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, QuicServerRequestFn on_request, void *app)
 {
@@ -365,11 +351,7 @@ proto_bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, Quic
     s_quic.ring_tail = 0;
     s_quic.next_id = 1;
     s_quic.running = PROTO_TRUE;
-#if PROTOCORE_HOT
-    return pc_udp_listen(s_quic.port, udp_ingest_cb, NULL);
-#else
-    return PROTO_TRUE; // host: fed through pc_quic_server_ingest()
-#endif
+    return Udp.listener->listen(s_quic.port, udp_ingest_cb, NULL);
 }
 
 void pc_quic_server_poll(uint32_t now_ms)
@@ -424,6 +406,7 @@ uint8_t pc_quic_server_active_conns(void)
 
 void pc_quic_server_stop(void)
 {
+    (void)Udp.listener->close(s_quic.port); // drop the bind first: nothing more reaches the ring
     s_quic.running = PROTO_FALSE;
     for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
     {
@@ -432,18 +415,5 @@ void pc_quic_server_stop(void)
     s_quic.ring_head = 0;
     s_quic.ring_tail = 0;
 }
-
-#if !PROTOCORE_HOT
-void pc_quic_server_set_out_sink_cb(QuicServerOutFn fn, void *ctx)
-{
-    s_quic.out_sink = fn;
-    s_quic.out_ctx = ctx;
-}
-
-proto_bool pc_quic_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port)
-{
-    return ring_push(datagram, len, ip, port);
-}
-#endif
 
 #endif // PC_ENABLE_HTTP3

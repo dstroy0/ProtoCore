@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_NEMA_TS2
 
-#include <string.h>
-
 uint16_t pc_nema_ts2_crc(const uint8_t *bytes, size_t len)
 {
     // CRC-16/X-25: reflected poly 0x8408 (reverse of 0x1021), init 0xFFFF, xorout 0xFFFF.

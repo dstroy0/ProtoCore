@@ -21,13 +21,15 @@
 #include "crypto/asymmetric/ecdsa.h"      // ecdh-sha2-nistp256 + ecdsa host-key verify
 #include "crypto/asymmetric/ed25519.h"    // ssh-ed25519 host key + client auth
 #include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/ssh/transport/ssh_dh.h"     // ssh_dh_derive_keys_sid, ssh_rng_fill
+#include "crypto/rng/rng.h"                                               // pc_rand_fill
+#include "network_drivers/presentation/ssh/auth/ssh_auth.h"               // SSH_MSG_USERAUTH_*
+#include "network_drivers/presentation/ssh/connection/ssh_flow_control.h" // SSH_MSG_CHANNEL_*, SSH_MSG_GLOBAL_REQUEST
+#include "network_drivers/presentation/ssh/transport/ssh_dh.h"            // ssh_dh_derive_keys_sid
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/tls/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
 #include "network_drivers/tls/ssh_rsa.h"     // rsa-sha2-256/512 host-key verify
 #include "shared_primitives/log.h"
-#include <string.h>
 
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // mlkem768x25519-sha256 hybrid (client: KeyGen + Decaps)
@@ -39,11 +41,9 @@
 #include "mmgr/plaintext.h" // pc_plaintext_alloc for the large hybrid C_INIT
 #endif
 
-#if PROTOCORE_HOT
-#include "mmgr/arena.h"                       // pc_worker_set_self (own scratch slot)
-#include "network_drivers/transport/client.h" // pc_client_*
-#include "server/clock/clock.h"               // pc_millis, pcdelay
-#endif
+#include "mmgr/arena.h"                    // pc_worker_set_self (own scratch slot)
+#include "network_drivers/transport/tcp.h" // pc_client_*
+#include "server/clock/clock.h"            // pc_millis, pcdelay
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -386,8 +386,6 @@ static CliChannel *chan_alloc(void)
     return NULL;
 }
 
-#if PROTOCORE_HOT
-
 // ---------------------------------------------------------------------------
 // Transmit
 // ---------------------------------------------------------------------------
@@ -400,7 +398,7 @@ static proto_bool cli_send(const uint8_t *payload, size_t len)
     {
         return PROTO_FALSE;
     }
-    return pc_client_send(s_cli.cid, s_cli.wire, wlen);
+    return Tcp.client->send(s_cli.cid, s_cli.wire, wlen);
 }
 
 // The identification line RFC 4253 4.2 puts on the wire first: the version string, then CR LF.
@@ -432,12 +430,12 @@ static void cli_fail(const char *why)
     {
         if (s_cli.chan[i].used && s_cli.chan[i].local_cid >= 0)
         {
-            pc_client_close(s_cli.chan[i].local_cid);
+            Tcp.client->close(s_cli.chan[i].local_cid);
         }
     }
     if (s_cli.cid >= 0)
     {
-        pc_client_close(s_cli.cid);
+        Tcp.client->close(s_cli.cid);
     }
     s_cli.cid = -1;
     ssh_keymat_wipe(SSH_CLI_SLOT);
@@ -507,7 +505,7 @@ static proto_bool build_kexinit(void)
     Wr w = {s_cli.i_c, sizeof(s_cli.i_c), 0, PROTO_TRUE};
     w_u8(&w, SSH_MSG_KEXINIT);
     uint8_t cookie[16];
-    ssh_rng_fill(cookie, 16);
+    pc_rand_fill(cookie, 16);
     w_bytes(&w, cookie, 16);
     w_namelist(&w, KEX_NAMES, sizeof(KEX_NAMES) / sizeof(KEX_NAMES[0]));             // kex
     w_namelist(&w, HOSTKEY_NAMES, sizeof(HOSTKEY_NAMES) / sizeof(HOSTKEY_NAMES[0])); // host key
@@ -535,7 +533,7 @@ static proto_bool build_kex_public(void)
     switch (s_cli.kex)
     {
     case CLI_KEX_CURVE25519:
-        ssh_rng_fill(s_cli.kex_priv, 32);
+        pc_rand_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
         s_cli.qc_len = 32;
         return PROTO_TRUE;
@@ -543,7 +541,7 @@ static proto_bool build_kex_public(void)
         // Draw a valid P-256 scalar (pubkey derivation rejects 0 / >= group order).
         for (int tries = 0; tries < 8; tries++)
         {
-            ssh_rng_fill(s_cli.kex_priv, 32);
+            pc_rand_fill(s_cli.kex_priv, 32);
             if (pc_ecdsa_p256_pubkey(s_cli.qc, s_cli.kex_priv))
             {
                 s_cli.qc_len = PC_ECDSA_P256_PUB_LEN; // 65
@@ -553,7 +551,7 @@ static proto_bool build_kex_public(void)
         return PROTO_FALSE;
     case CLI_KEX_DH_GROUP14: {
         // e = g^x mod p, g = 2 (RFC 3526 group 14). x is a 256-bit exponent.
-        ssh_rng_fill(s_cli.kex_priv, 32);
+        pc_rand_fill(s_cli.kex_priv, 32);
         pc_bignum g, x, e;
         uint8_t two = 2;
         bn_from_bytes(&g, &two, 1);
@@ -570,13 +568,13 @@ static proto_bool build_kex_public(void)
         // ML-KEM-768 keypair (dk kept for Decaps; ek is embedded in dk) + an X25519 ephemeral. C_INIT
         // (ek || Q_C) is assembled at send time; Q_C lives in qc[0..31].
         uint8_t d[32], z[32], ek[MLKEM768_EK_BYTES];
-        ssh_rng_fill(d, sizeof(d));
-        ssh_rng_fill(z, sizeof(z));
+        pc_rand_fill(d, sizeof(d));
+        pc_rand_fill(z, sizeof(z));
         pc_mlkem768_keygen(d, z, ek, s_cli.hyb.mlkem_dk);
         pc_secure_wipe(d, sizeof(d));
         pc_secure_wipe(z, sizeof(z));
         pc_secure_wipe(ek, sizeof(ek)); // ek persists inside mlkem_dk
-        ssh_rng_fill(s_cli.kex_priv, 32);
+        pc_rand_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
         s_cli.qc_len = 32;
         return PROTO_TRUE;
@@ -595,7 +593,7 @@ static proto_bool build_kex_public(void)
         }
         pc_sntrup761_keypair(pk, s_cli.hyb.sntrup_sk);
         pc_plaintext_release(mark); // pk persists inside sntrup_sk at PC_SNTRUP761_SK_PK_OFFSET
-        ssh_rng_fill(s_cli.kex_priv, 32);
+        pc_rand_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
         s_cli.qc_len = 32;
         return PROTO_TRUE;
@@ -1191,7 +1189,7 @@ static void handle_channel_open(const uint8_t *p, size_t len)
     }
 
     // Open the local bridge connection (to the device's own service).
-    int lc = pc_client_open("127.0.0.1", s_cli.cfg.local_port, 3000);
+    int lc = Tcp.client->open("127.0.0.1", s_cli.cfg.local_port, 3000);
     PC_LOGD(LOG_TUNNEL_FWD_OPEN, (uint32_t)s_cli.cfg.local_port, (int64_t)lc);
     if (lc < 0)
     {
@@ -1247,7 +1245,7 @@ static void channel_close(CliChannel *ch)
     }
     if (ch->local_cid >= 0)
     {
-        pc_client_close(ch->local_cid);
+        Tcp.client->close(ch->local_cid);
     }
     memset(ch, 0, sizeof(*ch));
     ch->local_cid = -1;
@@ -1268,7 +1266,7 @@ static void handle_channel_data(const uint8_t *p, size_t len)
     }
     if (ch->local_cid >= 0 && dn)
     {
-        pc_client_send(ch->local_cid, d, dn);
+        Tcp.client->send(ch->local_cid, d, dn);
     }
 
     // Refill the relay's window as we consume, so it can keep sending.
@@ -1315,7 +1313,7 @@ static void pump_channel(CliChannel *ch)
         {
             want = SSH_CLI_MAXPKT;
         }
-        size_t got = pc_client_read(ch->local_cid, buf, want);
+        size_t got = Tcp.client->read(ch->local_cid, buf, want);
         if (got == 0)
         {
             break;
@@ -1339,7 +1337,7 @@ static void pump_channel(CliChannel *ch)
     // closed, or the relay half-closed (relay_eof - the forwarded peer finished, e.g. an HTTP client
     // that already has the full response). The drain loop above exits with got==0, so all currently
     // available local bytes have been forwarded before we half-close.
-    proto_bool local_done = pc_client_is_closed(ch->local_cid) && pc_client_available(ch->local_cid) == 0;
+    proto_bool local_done = Tcp.client->is_closed(ch->local_cid) && Tcp.client->available(ch->local_cid) == 0;
     if ((local_done || ch->relay_eof) && !ch->eof_sent)
     {
         uint8_t out[8];
@@ -1554,7 +1552,7 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     pc_worker_set_self(PC_GHOST_WORKER_SLOT);
 
     uint16_t port = cfg->port ? cfg->port : 22;
-    s_cli.cid = pc_client_open(cfg->host, port, 8000);
+    s_cli.cid = Tcp.client->open(cfg->host, port, 8000);
     if (s_cli.cid < 0)
     {
         s_cli.state = PC_TUN_FAILED;
@@ -1568,7 +1566,7 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     // Send our identification string, then our KEXINIT.
     char banner[64];
     size_t n = pc_frame_build(banner, sizeof(banner), CLI_BANNER, CLIENT_BANNER);
-    if (n == 0 || !pc_client_send(s_cli.cid, (const uint8_t *)banner, n))
+    if (n == 0 || !Tcp.client->send(s_cli.cid, (const uint8_t *)banner, n))
     {
         cli_fail("banner send failed");
         return PROTO_FALSE;
@@ -1623,7 +1621,7 @@ void pc_ssh_tunnel_poll(void)
         return;
     }
 
-    if (pc_client_is_closed(s_cli.cid) && pc_client_available(s_cli.cid) == 0)
+    if (Tcp.client->is_closed(s_cli.cid) && Tcp.client->available(s_cli.cid) == 0)
     {
         cli_fail("relay closed the connection");
         return;
@@ -1635,7 +1633,7 @@ void pc_ssh_tunnel_poll(void)
     }
 
     uint8_t buf[1024];
-    size_t got = pc_client_read(s_cli.cid, buf, sizeof(buf));
+    size_t got = Tcp.client->read(s_cli.cid, buf, sizeof(buf));
     if (got)
     {
         size_t off = 0;
@@ -1666,12 +1664,12 @@ void pc_ssh_tunnel_end(void)
     {
         if (s_cli.chan[i].used && s_cli.chan[i].local_cid >= 0)
         {
-            pc_client_close(s_cli.chan[i].local_cid);
+            Tcp.client->close(s_cli.chan[i].local_cid);
         }
     }
     if (s_cli.cid >= 0)
     {
-        pc_client_close(s_cli.cid);
+        Tcp.client->close(s_cli.cid);
     }
     ssh_keymat_wipe(SSH_CLI_SLOT);
     pc_secure_wipe(s_cli.kex_priv, sizeof(s_cli.kex_priv));
@@ -1691,31 +1689,7 @@ proto_bool pc_ssh_tunnel_up(void)
     return s_cli.state == PC_TUN_UP;
 }
 
-#else // !PROTOCORE_HOT - host builds have no lwIP client transport; the tunnel is device-only.
-
-proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
-{
-    (void)cfg;
-    return PROTO_FALSE;
-}
-void pc_ssh_tunnel_poll(void)
-{
-}
-void pc_ssh_tunnel_end(void)
-{
-}
-pc_ssh_tunnel_state pc_ssh_tunnel_state_get(void)
-{
-    return PC_TUN_IDLE;
-}
-proto_bool pc_ssh_tunnel_up(void)
-{
-    return PROTO_FALSE;
-}
-
-#endif // PROTOCORE_HOT
-
-// Available on both host and device: pure key derivation for provisioning.
+// Key derivation for provisioning: the seed's public half, without a tunnel.
 void pc_ssh_tunnel_pubkey(const uint8_t seed[32], uint8_t pub[32])
 {
     pc_ed25519_pubkey(pub, seed);

@@ -8,7 +8,7 @@
  * The wired counterpart to the Wi-Fi promiscuous tap: put the CAN (TWAI) controller in
  * **listen-only** mode - it receives and decodes every frame on the bus but never ACKs or
  * transmits, so it is invisible to the other nodes - and hand each frame to a sink. Wire the sink
- * into the forwarding plane (services/net/forward) to bridge captured CAN frames to another interface
+ * into the forwarding plane (network_drivers/network/forward) to bridge captured CAN frames to another interface
  * (e.g. stream them to a wired collector over Ethernet), exactly like the Wi-Fi capture path.
  *
  * The pure piece is can_to_socketcan(): format a ::CanFrame as a 16-byte Linux **SocketCAN**

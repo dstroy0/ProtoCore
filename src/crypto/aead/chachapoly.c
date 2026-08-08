@@ -12,7 +12,7 @@
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/poly1305.h"
 #include "mmgr/secure.h" // the secure pool: AEAD working state, wiped on release
-#include <string.h>
+
 PC_CRYPTO_HOT
 
 // The 8-byte ChaCha nonce is the sequence number as a big-endian uint64 (POKE_U64 in OpenSSH); a

@@ -63,7 +63,7 @@ planned and then marked done.
       whatever your clock's rate; default is the platform `millis()` (host-tested).
 - [x] Notification-driven worker drain _(shipped)_ - the worker blocks on its
       FreeRTOS task notification instead of free-running the `vTaskDelay` poll;
-      producers (`listener_enqueue`, `pc_defer`) nudge it the moment work is
+      producers (`Tcp.listener->enqueue`, `pc_defer`) nudge it the moment work is
       queued, so events are serviced immediately. This decouples event latency from
       the idle-sweep cadence: `PC_WORKER_POLL_TICKS` is now purely the idle
       interval (default 1, unchanged), so raising it cuts idle wakeups (CPU/power)
@@ -228,8 +228,8 @@ preempting queue, so sensing shares the real-time ingest path.
       serving from SD**: `bytes=10-19`, `bytes=-5`, and `bytes=995-` each returned byte-exact 206 payloads with
       the correct `Content-Range`, `bytes=5000-6000` returned 416 `bytes */1000`, served files carried the SWR
       header, and `/sw.js` + `/precache.json` served correctly. Example HttpDelivery.
-- [x] CBOR encoder + decoder _(shipped)_ - `PC_ENABLE_CBOR`: a zero-heap RFC 8949 writer plus a cursor decoder (`pc_cbor_peek` / `pc_cbor_read_*`, no-copy strings) over caller buffers - ints / strings / bytes / arrays / maps / bool / null / float; host-tested against the spec vectors + round-trip (example Cbor).
-- [x] MessagePack encoder + decoder _(shipped)_ - `PC_ENABLE_MSGPACK`: a zero-heap streaming writer over a caller buffer - shortest-form ints (fixint / 8 / 16 / 32 / 64) / str / bin / arrays / maps / bool / nil / float32; overflow tracked, fails closed - plus a cursor decoder (`pc_msgpack_peek` / `pc_msgpack_read_*`, no-copy strings, fail-closed on malformed/truncated input, ext reported as INVALID) host-tested against spec vectors + round-trip and fuzzed in the pentest harness (example MsgPack, both directions). Remaining (M-L): Protobuf / FlatBuffers zero-copy.
+- [x] CBOR encoder + decoder _(shipped)_ - `PC_ENABLE_CBOR`: a zero-heap RFC 8949 writer plus a cursor decoder (`Cbor.peek` / `Cbor.get_*`, no-copy strings) over caller buffers - ints / strings / bytes / arrays / maps / bool / null / float; host-tested against the spec vectors + round-trip (example Cbor).
+- [x] MessagePack encoder + decoder _(shipped)_ - `PC_ENABLE_MSGPACK`: a zero-heap streaming writer over a caller buffer - shortest-form ints (fixint / 8 / 16 / 32 / 64) / str / bin / arrays / maps / bool / nil / float32; overflow tracked, fails closed - plus a cursor decoder (`MsgPack.peek` / `MsgPack.get_*`, no-copy strings, fail-closed on malformed/truncated input, ext reported as INVALID) host-tested against spec vectors + round-trip and fuzzed in the pentest harness (example MsgPack, both directions). Remaining (M-L): Protobuf / FlatBuffers zero-copy.
 - [x] GraphQL bounded subset _(shipped)_ - `PC_ENABLE_GRAPHQL`: `services/graphql` parses a query into a fixed AST pool (no heap) and emits `{"data":{...}}` shaped by the selection; schema-free (sub-selection = object, leaf = one resolver call, args collected along the path), with nesting + arguments (example GraphQL). Feature-dependent schema generation remains open (M).
 - [x] Browser diag tools _(shipped, GPIO mapper)_ - `PC_ENABLE_GPIO_MAP`: a compile-time pin table (number / label / direction / live level) served at GET `/gpio` as JSON, with a POST control (`pin`, `level`) that drives a mapped output; the serializer + control parser are host-tested, and the example ships a zero-dependency browser panel (example GpioMap). Remaining (M): ping / tracert panel, web logic analyzer.
 - [x] **SPA micro-routing** + conditional UI streaming (M) _(shipped, HW-verified)_ -
@@ -266,7 +266,7 @@ preempting queue, so sensing shares the real-time ingest path.
 
 ## Networking / connectivity
 
-- [x] Egress-interface reporting _(shipped)_ - `pc_net_egress()` / `pc_net_egress_ip()` read the live lwIP default route so the app always knows which interface (WiFi STA / softAP / Ethernet) its traffic is leaving on; the stack owns the actual failover, so no manager or polling tick is added (example NetEgress). - RNG stays out of the pure core) and `pc_ike_initiator_on_sa_init` consumes the responder's
+- [x] Egress-interface reporting _(shipped)_ - `Physical.link->egress()` / `Physical.link->egress_ip()` read the live lwIP default route so the app always knows which interface (WiFi STA / softAP / Ethernet) its traffic is leaving on; the stack owns the actual failover, so no manager or polling tick is added (example NetEgress). - RNG stays out of the pure core) and `pc_ike_initiator_on_sa_init` consumes the responder's
       reply, captures the responder SPI, and derives the SA keys, failing closed to `IKE_ST_FAILED` on a
       wrong-SPI / non-response / wrong-state message. Driven against a hand-built responder message it
       establishes the same keys the responder derives. **The initiator's IKE_AUTH send is shipped too**:
@@ -398,7 +398,7 @@ preempting queue, so sensing shares the real-time ingest path.
       turn the responder announce-only. (The 5353 approach was tried and reverted: bound after the ESP-IDF
       responder the join fails, bound before it the responder browses but every SRV/TXT/A query times out,
       because lwIP hands a datagram to the first matching PCB and `SO_REUSE_RXTOALL` does not rescue a raw
-      PCB sharing a port with a socket-layer one. The `pc_udp_listen_multicast` primitive built for it was
+      PCB sharing a port with a socket-layer one. The `Udp.listener->listen_multicast` primitive built for it was
       kept - it is correct for any group nothing else owns.) `pc_mdns_contention_sample` turns the capture's
       running frame total into a per-window value (host-tested incl. counter/clock wrap + saturation); the
       transmit is `mdns_service_txt_item_set()` re-applied at its current value (re-announces on every PCB
@@ -407,7 +407,7 @@ preempting queue, so sensing shares the real-time ingest path.
       undiscoverable. Host-tested (`native_mdns_adaptive`, 14 cases). HW-verified on an **S3** against
       avahi: A+SRV+TXT kept resolving while capture ran (the exact case the 5353 approach broke), real
       ambient frames drove the backoff, and it capped below the TTL. Example MdnsAdaptive.
-- [x] Raw-UDP telemetry cast _(shipped)_ - `PC_ENABLE_UDP_TELEMETRY`: `services/udp_telemetry` builds InfluxDB line-protocol records (`measurement field=val,...`, host-tested) and casts them to a collector over UDP via `pc_udp_sendto`, zero-heap fire-and-forget (example UdpTelemetry).
+- [x] Raw-UDP telemetry cast _(shipped)_ - `PC_ENABLE_UDP_TELEMETRY`: `services/udp_telemetry` builds InfluxDB line-protocol records (`measurement field=val,...`, host-tested) and casts them to a collector over UDP via `Udp.client->sendto`, zero-heap fire-and-forget (example UdpTelemetry).
 - [x] **Static-IP fallback + TCP window auto-scaling by free RAM (M)** _(shipped)_ -
       `PC_ENABLE_NETADAPT`: `services/netadapt` `pc_netadapt_window()` sizes the TCP receive window
       from the free heap (a reserve left untouched, then a quarter of the spare, clamped to [min, max]) so
@@ -444,7 +444,7 @@ preempting queue, so sensing shares the real-time ingest path.
 
 ## Security & auth
 
-- [x] Source-IP allowlist / firewall in the accept callback _(shipped)_ - `listener_ip_allow_add_cidr("192.168.1.0/24")` / `listener_ip_allowed` (IPv4 + IPv6 CIDR rules matched on the full address, `PC_ENABLE_IP_ALLOWLIST`; example IpAllowlist).
+- [x] Source-IP allowlist / firewall in the accept callback _(shipped)_ - `Tcp.listener->ip_allow_add_cidr("192.168.1.0/24")` / `Tcp.listener->ip_allowed` (IPv4 + IPv6 CIDR rules matched on the full address, `PC_ENABLE_IP_ALLOWLIST`; example IpAllowlist).
 - [x] Brute-force per-IP exponential lockout _(shipped)_ - `PC_ENABLE_AUTH_LOCKOUT`; `auth_lockout_*` table (keyed on the full IPv4/IPv6 address) issues 429 + Retry-After on the HTTP auth gate (example AuthLockout).
 - [x] CSRF token verification _(shipped)_ - `PC_ENABLE_CSRF`; global enforcement on POST/PUT/PATCH/DELETE via a stateless HMAC-signed `X-CSRF-Token` (built-in `GET /csrf` issues it; example Csrf).
 - [x] Granular API-token scoping _(shipped)_ - `pc_jwt_claim_str()` reads string claims (sub / role / scope) and `pc_jwt_scope_allows()` matches a space-separated OAuth2 scope claim, so a handler can authorize per role/scope on the verified JWT (example JWTAuth).
@@ -612,7 +612,7 @@ aes256-gcm + aes256-ctr, hmac-sha2-256/512 (+ETM), zlib@openssh.com s2c, passwor
       dump uploaded to a live FTP server and then parsed by Espressif's own `esp-coredump -t raw`, which
       reported `StoreProhibitedCause` / `excvaddr 0x0` / `pc <crash_handler+33>` / task `pc_worker`).
       Example CoreDump. The HW run caught a real bug: the new session driver was missing from
-      `PC_NEED_DET_CLIENT`, so `pc_client_open` resolved to the stub that returns -1 and the offload
+      `PC_NEED_DET_CLIENT`, so `Tcp.client->open` resolved to the stub that returns -1 and the offload
       silently never connected.
 - [x] Runtime heap/stack guardrails _(shipped)_ - `PC_ENABLE_GUARDRAILS`: `services/guardrails` samples free heap, the heap low-water mark, the largest free block (fragmentation), and a task's remaining stack, and fires a breach callback when any crosses its `PC_GUARDRAIL_*` floor - a proactive fail-safe hook on top of the passive /metrics numbers; evaluator + JSON host-tested, served at `/health` (example Guardrails).
 - [x] Fail-safe safe-state + deadlock-detection WDT + watchdog-protected coroutine lifelines (M)
@@ -697,7 +697,7 @@ every layer. The current HTTP/1.1 core already tracks the modern HTTP specs
       request/response, the protocol-service parse/build pairs) against the rule that a
       value at a position on ingress sits at the same position on egress. Result: the
       surfaces are symmetric, with one real fix applied - the egress transport API
-      (`pc_conn_send` / `pc_conn_sndbuf` / `pc_conn_flush`, plus the private
+      (`Tcp.conn->send` / `pc_conn_sndbuf` / `Tcp.conn->flush`, plus the private
       `pc_resp_end`) no longer threads a `tcp_pcb *`; it resolves the slot's pcb
       internally, exactly as the RX read path and the client surface already do, so a
       caller can no longer pass a pcb that disagrees with the slot. The remaining LOW
@@ -707,7 +707,7 @@ every layer. The current HTTP/1.1 core already tracks the modern HTTP specs
       footprint tables now track the current build automatically: the **ESP32 Build** workflow
       (`.github/workflows/esp32-build.yml`) rebuilds every example on each push to main, merges the
       totals into `docs/footprints.json`, regenerates `docs/FOOTPRINTS.md` and the per-feature ranges
-      (`ci_tooling/generate/example_footprints.py` + `feature_budget.py`), and commits them
+      (`tools/ci_tooling/generate/example_footprints.py` + `feature_budget.py`), and commits them
       (`docs: update ESP32 build footprints [skip ci]`). So the documented numbers stay current after a
       batch of changes with no manual step - the opt-in codec services added since track through their
       flags, and the auto-commit lands right after each release bump.
@@ -913,7 +913,7 @@ the LXI transports (VXI-11 / HiSLIP) and a GPIB gateway extend reach to older an
       typed parsers for CONNACK / REGACK / PUBACK / SUBACK / PUBLISH / REGISTER, with a
       `pc_mqttsn_make_flags()` helper (DUP / QoS / retain / will / clean / TopicIdType). Wire
       bytes verified against the spec + the Eclipse Paho reference; pure, host-tested. The
-      datagram send (`pc_udp_sendto`), topic-ID registry, and sleep/retransmit state are
+      datagram send (`Udp.client->sendto`), topic-ID registry, and sleep/retransmit state are
       the application's. Pairs with the existing MQTT client.
 
 ### Network telemetry
@@ -927,7 +927,7 @@ the LXI transports (VXI-11 / HiSLIP) and a GPIB gateway extend reach to older an
       (matching Data Set), and `flow_export_finish()` which patches the IPFIX message length
       or the v9 record count (and pads each v9 FlowSet to a 4-octet boundary). Field offsets
       verified against RFC 7011 / RFC 3954 / the published v5 layout; pure, host-tested. The
-      flow cache (5-tuple + counters) and the UDP send (`pc_udp_sendto`) are the app's.
+      flow cache (5-tuple + counters) and the UDP send (`Udp.client->sendto`) are the app's.
 
 ### Building automation
 
@@ -1014,7 +1014,7 @@ BSS, no heap, behind a build flag.
 
 - [x] **Replace the accept free-slot scan with a live-slot bitmask** (M) - DONE. `ConnPoolCtx::free_mask` (a
       `std::atomic<uint32_t>`, bit i = slot i is CONN_FREE) is kept in lock-step with every `conn_pool[i].state`
-      write through one choke point, `pc_conn_set_state()` (the owner pattern - the ~13 scattered state writes
+      write through one choke point, `Tcp.conn->set_state()` (the owner pattern - the ~13 scattered state writes
       now route through it), so the accept path's free-slot lookup is one `__builtin_ctz` (`pc_conn_alloc_free`)
       instead of a `MAX_CONNS` linear scan. Atomic because CONN_FREE is written from both the tcpip callbacks and
       the worker (`check_timeouts`). Measured on the ESP32-S3, worst case (only the last slot free): the real

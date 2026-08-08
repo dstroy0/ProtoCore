@@ -213,7 +213,7 @@ void pc_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, co
  *        UDP service.
  *
  * Callback-driven (no per-loop servicing). Call after WiFi is up. On non-Arduino
- * builds pc_udp_listen() is a stub, so the core remains host-testable.
+ * builds Udp.listener->listen() is a stub, so the core remains host-testable.
  */
 void pc_coap_server_begin(uint16_t port);
 

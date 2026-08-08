@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SNP
 
-#include <string.h>
-
 uint8_t pc_snp_bcc(const uint8_t *bytes, size_t len)
 {
     uint8_t sum = 0;

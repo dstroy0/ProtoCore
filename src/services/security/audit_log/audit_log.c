@@ -20,7 +20,6 @@
 
 #include "crypto/hash/sha256.h"
 #include "server/clock/clock.h"
-#include <string.h>
 
 // All audit-log state, owned by one instance (internal linkage): the record ring, its
 // head/count/seq cursors, the moving chain anchor, and the sink, grouped so it is one

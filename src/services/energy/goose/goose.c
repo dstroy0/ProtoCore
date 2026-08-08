@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_GOOSE
 
-#include <string.h>
-
 // Number of octets to encode a BER definite length.
 static size_t len_octets(size_t len)
 {

@@ -27,7 +27,7 @@
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "services/instrumentation/scpi/scpi.h"
 
 static const char *SSID = "YOUR_SSID";
@@ -45,7 +45,7 @@ static char c_resp[256];
 // (pc_scpi_build does this).
 static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
 {
-    if (cmd_len == 0 || !pc_client_send(cid, cmd, cmd_len))
+    if (cmd_len == 0 || !Tcp.client->send(cid, cmd, cmd_len))
     {
         return 0;
     }
@@ -53,12 +53,12 @@ static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
     unsigned long deadline = millis() + 3000;
     while (got < sizeof(c_resp) - 1 && millis() < deadline)
     {
-        if (!pc_client_available(cid))
+        if (!Tcp.client->available(cid))
         {
             continue;
         }
         uint8_t b = 0;
-        if (pc_client_read(cid, &b, 1) != 1)
+        if (Tcp.client->read(cid, &b, 1) != 1)
         {
             continue;
         }
@@ -78,7 +78,7 @@ static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
 
 static void run_session(const char *host)
 {
-    int cid = pc_client_open(host, PC_SCPI_PORT, 8000);
+    int cid = Tcp.client->open(host, PC_SCPI_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[scpi] connect failed");
@@ -100,7 +100,7 @@ static void run_session(const char *host)
 
     // 2) *CLS - clear status byte + error queue (no response).
     n = pc_scpi_build(c_cmd, sizeof(c_cmd), pc_scpi_common(SCPI_CLS), nullptr, 0);
-    pc_client_send(cid, c_cmd, n);
+    Tcp.client->send(cid, c_cmd, n);
 
     // 3) MEAS:VOLT:DC? - take a DC voltage reading and parse it as a number.
     n = pc_scpi_build(c_cmd, sizeof(c_cmd), "MEASure:VOLTage:DC?", nullptr, 0);
@@ -124,19 +124,19 @@ static void run_session(const char *host)
         Serial.printf("[scpi] SYST:ERR? -> %s\n", c_resp);
     }
 
-    pc_client_close(cid);
+    Tcp.client->close(cid);
     Serial.println("[scpi] done");
 }
 
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -147,7 +147,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_session(INSTRUMENT_IP); // pc_client_open resolves the dotted-quad host directly
+        run_session(INSTRUMENT_IP); // Tcp.client->open resolves the dotted-quad host directly
     }
     delay(10);
 }

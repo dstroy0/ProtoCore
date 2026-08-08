@@ -5,9 +5,9 @@
  * @file diffserv.c
  * @brief DiffServ QoS marking (RFC 2474) - the two server-wide DSCP defaults.
  *
- * Owns the default DSCP applied to outbound TCP connections and the default for UDP datagrams. The
- * per-listener override (pc_listen_set_dscp) lives in listener.c and the per-connection setter
- * (pc_conn_set_dscp) in tcp.c - each next to the pcb pool it touches - but both read these defaults.
+ * Owns the default DSCP applied to outbound TCP connections and the default for UDP datagrams. A
+ * listener's override and a connection's override are set through those objects, each next to the
+ * pcb pool it touches, and both read these defaults.
  */
 
 #include "diffserv.h"
@@ -22,24 +22,26 @@ typedef struct
 } DiffServCtx;
 static DiffServCtx s_diffserv = {0, 0};
 
-void pc_set_default_dscp(uint8_t dscp)
+static void set_default(uint8_t dscp)
 {
     s_diffserv.tcp_dscp = (uint8_t)(dscp & 0x3F);
 }
 
-uint8_t pc_diffserv_default_dscp(void)
+static uint8_t default_dscp(void)
 {
     return s_diffserv.tcp_dscp;
 }
 
-void pc_udp_set_dscp(uint8_t dscp)
+static void set_udp(uint8_t dscp)
 {
     s_diffserv.udp_dscp = (uint8_t)(dscp & 0x3F);
 }
 
-uint8_t pc_diffserv_udp_dscp(void)
+static uint8_t udp_dscp(void)
 {
     return s_diffserv.udp_dscp;
 }
+
+const DiffServNs DiffServ = {set_default, default_dscp, set_udp, udp_dscp};
 
 #endif // PC_ENABLE_DIFFSERV

@@ -12,15 +12,14 @@
 
 #include "network_drivers/transport/udp.h"
 #include <stdio.h>
-#include <string.h>
 
 // All syslog client state, owned by one instance (internal linkage): the collector endpoint,
 // the host/app identity, the facility, the ready flag, and the format scratch (all BSS, no
 // heap), grouped so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    char server_ip[16]; // "255.255.255.255" + NUL
-    uint16_t port;      // set by pc_syslog_init(); every read is gated on `ready`
+    pc_ip server;  // the collector, parsed once by pc_syslog_init()
+    uint16_t port; // set by pc_syslog_init(); every read is gated on `ready`
     char hostname[PC_SYSLOG_FIELD_MAX];
     char appname[PC_SYSLOG_FIELD_MAX];
     SyslogFacility facility; // likewise set by pc_syslog_init()
@@ -43,12 +42,11 @@ static void copy_field(char *dst, size_t cap, const char *src)
 void pc_syslog_init(const char *server_ip, uint16_t port, const char *hostname, const char *appname,
                     SyslogFacility facility)
 {
-    copy_field(s_syslog.server_ip, sizeof(s_syslog.server_ip), server_ip);
+    s_syslog.ready = Ip.parse(server_ip, &s_syslog.server);
     s_syslog.port = port;
     copy_field(s_syslog.hostname, sizeof(s_syslog.hostname), hostname);
     copy_field(s_syslog.appname, sizeof(s_syslog.appname), appname);
     s_syslog.facility = facility;
-    s_syslog.ready = (s_syslog.server_ip[0] != '\0');
 }
 
 // Append `len` bytes at *pos if the line still leaves room for a trailing NUL (content fits in cap-1).
@@ -126,7 +124,7 @@ proto_bool pc_syslog_log(SyslogSeverity severity, const char *msg)
     {
         return PROTO_FALSE;
     }
-    return pc_udp_sendto(s_syslog.server_ip, s_syslog.port, (const uint8_t *)s_syslog.buf, n);
+    return Udp.client->sendto(&s_syslog.server, s_syslog.port, (const uint8_t *)s_syslog.buf, n);
 }
 
 #endif // PC_ENABLE_SYSLOG

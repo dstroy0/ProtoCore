@@ -1,7 +1,7 @@
 // WifiCapture - capture 802.11 frames on Wi-Fi and forward them out Ethernet.
 //
 // A wireless tap: put the radio in promiscuous mode (services/radio/promisc), and hand every captured
-// frame to the forwarding plane (services/net/forward), which bridges it to the Ethernet interface.
+// frame to the forwarding plane (network_drivers/network/forward), which bridges it to the Ethernet interface.
 // The Ethernet egress here streams each frame as a libpcap record over UDP to a wired collector
 // (run `tcpdump -i any -w -` style capture, or a tiny socket that writes a .pcap Wireshark opens
 // as DLT_IEEE802_11). Capture is strictly passive; a rate cap protects the wired uplink.
@@ -16,9 +16,9 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
-#include "services/net/forward/forward.h"
+#include "network_drivers/network/forward/forward.h"
 #include "services/radio/promisc/promisc.h"
-#include <string.h>
+
 
 // Where to stream the captured frames on the wired side.
 static const char *COLLECTOR_IP = "192.168.1.50";
@@ -33,7 +33,7 @@ enum
 };
 
 // Ethernet egress: wrap the frame in a libpcap record (DLT_IEEE802_11) and UDP it to the
-// collector. pc_udp_sendto() routes over the default interface, which is the wired uplink.
+// collector. Udp.client->sendto() routes over the default interface, which is the wired uplink.
 static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
 {
     static uint8_t buf[PC_PCAP_REC_HDR_LEN + 2048];
@@ -44,7 +44,7 @@ static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
     uint32_t us = (uint32_t)micros();
     pc_pcap_record_header(buf, sizeof(buf), us / 1000000u, us % 1000000u, len, len);
     memcpy(buf + PC_PCAP_REC_HDR_LEN, frame, len);
-    return pc_udp_sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PC_PCAP_REC_HDR_LEN + len);
+    return Udp.client->sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PC_PCAP_REC_HDR_LEN + len);
 }
 
 // Wi-Fi is a source only - no rule forwards *to* it, so this is never called.
@@ -65,19 +65,19 @@ void setup()
     Serial.begin(115200);
 
     // Wired uplink to the collector.
-    init_eth_physical();
+    Physical.eth->init();
     Serial.print("Bringing up Ethernet");
-    while (!eth_ready())
+    while (!Physical.eth->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // Ethernet is the egress here
+    uint32_t ip = Physical.link->egress_ip(); // Ethernet is the egress here
     Serial.printf("\nEthernet IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Wi-Fi radio for capture (promiscuous; no association - promisc sets the capture channel).
-    init_wifi_radio_physical(0);
+    Physical.wifi->init_radio(0);
 
     // Forwarding plane: Wi-Fi -> Ethernet, capped so a busy channel can't swamp the uplink.
     pc_forward_reset();

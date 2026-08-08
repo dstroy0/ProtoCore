@@ -15,7 +15,6 @@
 #if PC_ENABLE_HTTP3
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
-#include <string.h>
 
 // QPACK static table (RFC 9204 Appendix A, 0-indexed). {name, value}. Generated from the RFC.
 static const char *const QPACK_STATIC[99][2] = {
@@ -153,17 +152,17 @@ size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
     }
     if (full_idx >= 0) // Indexed Field Line, static: 1 T=1 i(6)
     {
-        return pc_hpack_encode_int(out, cap, 6, 0xC0, (uint32_t)full_idx);
+        return HpackPrim.encode_int(out, cap, 6, 0xC0, (uint32_t)full_idx);
     }
 
     if (name_idx >= 0)
     { // Literal Field Line with Name Reference, static: 01 N=0 T=1 i(4)
-        size_t o = pc_hpack_encode_int(out, cap, 4, 0x50, (uint32_t)name_idx);
+        size_t o = HpackPrim.encode_int(out, cap, 4, 0x50, (uint32_t)name_idx);
         if (!o)
         {
             return 0;
         }
-        size_t vs = pc_hpack_encode_str(out + o, cap - o, value, value_len);
+        size_t vs = HpackPrim.encode_str(out + o, cap - o, value, value_len);
         if (!vs)
         {
             return 0;
@@ -172,17 +171,17 @@ size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
     }
 
     // Literal Field Line with Literal Name: 001 N=0 H NameLen(3), name string, value string.
-    size_t hl = pc_hpack_huff_len(name, name_len);
+    size_t hl = HpackPrim.huff_len(name, name_len);
     proto_bool huff = hl < name_len;
     size_t nbytes = huff ? hl : name_len;
-    size_t o = pc_hpack_encode_int(out, cap, 3, (uint8_t)(0x20 | (huff ? 0x08 : 0x00)), (uint32_t)nbytes);
+    size_t o = HpackPrim.encode_int(out, cap, 3, (uint8_t)(0x20 | (huff ? 0x08 : 0x00)), (uint32_t)nbytes);
     if (!o)
     {
         return 0;
     }
     if (huff)
     {
-        size_t body = pc_hpack_huff_encode(out + o, cap - o, name, name_len);
+        size_t body = HpackPrim.huff_encode(out + o, cap - o, name, name_len);
         if (body != hl)
         {
             return 0;
@@ -198,7 +197,7 @@ size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
         memcpy(out + o, name, name_len);
         o += name_len;
     }
-    size_t vs = pc_hpack_encode_str(out + o, cap - o, value, value_len);
+    size_t vs = HpackPrim.encode_str(out + o, cap - o, value, value_len);
     if (!vs)
     {
         return 0;
@@ -213,7 +212,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
     // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.
     size_t c = 0;
     uint32_t ric = 0;
-    if (!pc_hpack_decode_int(block + pos, len - pos, 8, &c, &ric))
+    if (!HpackPrim.decode_int(block + pos, len - pos, 8, &c, &ric))
     {
         return PROTO_FALSE;
     }
@@ -223,7 +222,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
         return PROTO_FALSE;
     }
     uint32_t base = 0;
-    if (!pc_hpack_decode_int(block + pos, len - pos, 7, &c, &base)) // S bit + Delta Base; ignored when RIC = 0
+    if (!HpackPrim.decode_int(block + pos, len - pos, 7, &c, &base)) // S bit + Delta Base; ignored when RIC = 0
     {
         return PROTO_FALSE;
     }
@@ -239,7 +238,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
                 return PROTO_FALSE;
             }
             uint32_t idx = 0;
-            if (!pc_hpack_decode_int(block + pos, len - pos, 6, &c, &idx) || idx >= 99)
+            if (!HpackPrim.decode_int(block + pos, len - pos, 6, &c, &idx) || idx >= 99)
             {
                 return PROTO_FALSE;
             }
@@ -255,7 +254,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
         { // Literal Field Line with Name Reference (sec 4.5.4): 01 N T i(4)
             proto_bool is_static = (b & 0x10) != 0;
             uint32_t idx = 0;
-            if (!pc_hpack_decode_int(block + pos, len - pos, 4, &c, &idx))
+            if (!HpackPrim.decode_int(block + pos, len - pos, 4, &c, &idx))
             {
                 return PROTO_FALSE;
             }
@@ -272,7 +271,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
             }
             memcpy(scratch, nm, nlen);
             size_t vlen = 0;
-            if (!pc_hpack_decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
+            if (!HpackPrim.decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
             {
                 return PROTO_FALSE;
             }
@@ -285,7 +284,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
         { // Literal Field Line with Literal Name (sec 4.5.6): 001 N H NameLen(3)
             proto_bool huff = (b & 0x08) != 0;
             uint32_t nlen32 = 0;
-            if (!pc_hpack_decode_int(block + pos, len - pos, 3, &c, &nlen32))
+            if (!HpackPrim.decode_int(block + pos, len - pos, 3, &c, &nlen32))
             {
                 return PROTO_FALSE;
             }
@@ -297,7 +296,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
             size_t nlen = 0;
             if (huff)
             {
-                if (!pc_hpack_huff_decode(block + pos, nlen32, scratch, scratch_cap, &nlen))
+                if (!HpackPrim.huff_decode(block + pos, nlen32, scratch, scratch_cap, &nlen))
                 {
                     return PROTO_FALSE;
                 }
@@ -313,7 +312,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
             }
             pos += nlen32;
             size_t vlen = 0;
-            if (!pc_hpack_decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
+            if (!HpackPrim.decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
             {
                 return PROTO_FALSE;
             }

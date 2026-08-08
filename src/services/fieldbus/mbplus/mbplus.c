@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_MBPLUS
 
-#include <string.h>
-
 uint16_t pc_mbplus_crc(const uint8_t *bytes, size_t len)
 {
     // CRC-16/X-25: reflected poly 0x8408, init 0xFFFF, xorout 0xFFFF.

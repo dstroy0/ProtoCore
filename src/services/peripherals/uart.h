@@ -14,7 +14,7 @@
  * reports the depth of the driver's receive ring, and ::pc_uart_read takes what is there up to
  * its timeout. Nothing here waits without a bound (SRC_LAW rule 5).
  *
- * Host builds compile the bodies to a refusal.
+ * The bodies compile wherever the platform states a bus.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -23,7 +23,7 @@
 #ifndef PROTOCORE_UART_H
 #define PROTOCORE_UART_H
 
-#include "board_drivers/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/pc_platform.h"
 #include "protocore_config.h"
 
 /** @brief Read timeout in milliseconds, for a driver that takes whatever has arrived. */

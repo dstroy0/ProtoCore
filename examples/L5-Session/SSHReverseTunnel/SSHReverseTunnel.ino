@@ -86,8 +86,8 @@ void setup()
 {
     Serial.begin(115200);
     delay(300);
-    init_wifi_physical(WIFI_SSID, WIFI_PASS);
-    while (!wifi_ready())
+    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
+    while (!Physical.wifi->ready())
     {
         delay(200);
     }

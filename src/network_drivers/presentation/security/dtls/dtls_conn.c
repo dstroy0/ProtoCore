@@ -14,7 +14,9 @@
 #include "crypto/asymmetric/ed25519.h" // pc_ed25519_pubkey for the RFC 7250 RawPublicKey
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "server/clock/clock.h" // pc_millis() stamps / checks the HelloRetryRequest cookie freshness
-#include <string.h>
+
+// Called above their definitions; static made the header's declaration unavailable.
+static proto_bool pc_dtls_conn_established(const DtlsConn *c);
 
 // TLS alert codes used here (RFC 8446 §6).
 static const uint8_t ALERT_UNEXPECTED_MESSAGE = 10;
@@ -35,7 +37,7 @@ static proto_bool is_ciphertext(uint8_t b0)
 }
 
 // On-wire length of a DTLSCiphertext record from its (plaintext) header, so a datagram carrying more
-// than one record can be walked. Mirrors the header flags pc_dtls_ciphertext_protect writes. @p cid_len is
+// than one record can be walked. Mirrors the header flags DtlsRecord.protect writes. @p cid_len is
 // our negotiated connection id length (the CID is not length-prefixed on the wire, RFC 9146), 0 if none.
 static size_t ciphertext_record_len(const uint8_t *rec, size_t avail, size_t cid_len)
 {
@@ -111,8 +113,8 @@ static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg
     uint8_t msg_type = tls_msg[0];
     uint32_t body_len = (uint32_t)(tls_len - 4);
     uint16_t msg_seq = c->tx_msg_seq++;
-    size_t flen = pc_dtls_hs_frag_build(msg_type, msg_seq, body_len, 0, tls_msg + 4, body_len,
-                                        c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
+    size_t flen = DtlsHandshake.frag_build(msg_type, msg_seq, body_len, 0, tls_msg + 4, body_len,
+                                           c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
     if (!flen)
     {
         return PROTO_FALSE;
@@ -141,14 +143,15 @@ static proto_bool flight_transmit(DtlsConn *c, uint8_t *out, size_t out_cap, siz
         if (epoch == 0)
         {
             seq = c->tx_seq_ep0++;
-            rn = pc_dtls_plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, seq, frag, flen, out + *out_len, out_cap - *out_len);
+            rn = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, seq, frag, flen, out + *out_len,
+                                            out_cap - *out_len);
         }
         else
         {
             seq = c->tx_seq_ep2++;
-            rn = pc_dtls_ciphertext_protect(&c->ep2_srv, seq, PC_DTLS_CT_HANDSHAKE, frag, flen, out + *out_len,
-                                            out_cap - *out_len, c->cid_negotiated ? c->peer_cid : NULL,
-                                            c->cid_negotiated ? c->peer_cid_len : 0);
+            rn = DtlsRecord.protect(&c->ep2_srv, seq, PC_DTLS_CT_HANDSHAKE, frag, flen, out + *out_len,
+                                    out_cap - *out_len, c->cid_negotiated ? c->peer_cid : NULL,
+                                    c->cid_negotiated ? c->peer_cid_len : 0);
         }
         if (!rn)
         {
@@ -200,8 +203,8 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     // Stateless cookie with an empty payload: this connection keeps its own transcript across the
     // retry, so the cookie only has to prove return-routability and bind the client address.
     uint8_t cookie[PC_DTLS_COOKIE_MAX];
-    size_t clen = pc_dtls_cookie_make(c->cfg.cookie_key, pc_millis(), NULL, 0, c->peer_addr, c->peer_addr_len, cookie,
-                                      sizeof(cookie));
+    size_t clen = DtlsHandshake.cookie_make(c->cfg.cookie_key, pc_millis(), NULL, 0, c->peer_addr, c->peer_addr_len,
+                                            cookie, sizeof(cookie));
     if (!clen)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -235,8 +238,8 @@ static proto_bool pc_dtls_hrr_cookie_ok(const DtlsConn *c, const Tls13ClientHell
     uint8_t payload[1];
     size_t plen = 0;
     return ch->cookie &&
-           pc_dtls_cookie_verify(c->cfg.cookie_key, pc_millis(), DTLS_HRR_COOKIE_MAX_AGE_MS, c->peer_addr,
-                                 c->peer_addr_len, ch->cookie, ch->cookie_len, payload, sizeof(payload), &plen);
+           DtlsHandshake.cookie_verify(c->cfg.cookie_key, pc_millis(), DTLS_HRR_COOKIE_MAX_AGE_MS, c->peer_addr,
+                                       c->peer_addr_len, ch->cookie, ch->cookie_len, payload, sizeof(payload), &plen);
 }
 
 // Connection-id negotiation (RFC 9146 / RFC 9147 §9): if the client offered a CID we can hold, store it
@@ -295,7 +298,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
             return -1;
         }
         c->next_recv_msg_seq = (uint16_t)(ch_seq + 1);
-        pc_dtls_hs_reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4, PC_DTLS_CONN_REASM_CAP);
+        DtlsHandshake.reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4, PC_DTLS_CONN_REASM_CAP);
         return 0;
     }
 
@@ -338,8 +341,8 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     snapshot(&c->transcript, hash);
     pc_tls13_ks_early(&DTLS13_KDF, &c->ks);
     pc_tls13_ks_handshake(&c->ks, ecdhe, hash, 32);
-    pc_dtls_record_keys_derive(&c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.server_hs_traffic);
-    pc_dtls_record_keys_derive(&c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.client_hs_traffic);
+    DtlsRecord.keys_derive(&c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.server_hs_traffic);
+    DtlsRecord.keys_derive(&c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.client_hs_traffic);
     c->ep2_ready = PROTO_TRUE;
 
     // Raw Public Key negotiation (RFC 7250): if the client offered server_certificate_type = RawPublicKey,
@@ -407,8 +410,8 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // client's Finished.
     snapshot(&c->transcript, c->hs_finished_hash);
     pc_tls13_ks_master(&c->ks, c->hs_finished_hash);
-    pc_dtls_record_keys_derive(&c->ep3_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.server_ap_traffic);
-    pc_dtls_record_keys_derive(&c->ep3_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.client_ap_traffic);
+    DtlsRecord.keys_derive(&c->ep3_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.server_ap_traffic);
+    DtlsRecord.keys_derive(&c->ep3_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.client_ap_traffic);
     c->ep3_ready = PROTO_TRUE;
 
     if (!flight_transmit(c, out, out_cap, out_len)) // protect the whole flight now that ep2 keys exist
@@ -418,7 +421,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     flight_arm(c); // await the client Finished
     c->state = DTLS_CONN_STATE_WAIT_FINISHED;
     c->next_recv_msg_seq = (uint16_t)(ch_seq + 1);
-    pc_dtls_hs_reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4, PC_DTLS_CONN_REASM_CAP);
+    DtlsHandshake.reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4, PC_DTLS_CONN_REASM_CAP);
     return 0;
 }
 
@@ -445,7 +448,7 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
     flight_disarm(c); // the reply arrived; stop retransmitting the server flight
     // Re-arm the reassembler for the same message_seq so a retransmitted Finished (its ACK was lost)
     // completes again and we re-acknowledge it, instead of being rejected as unexpected (RFC 9147 §5.8.3).
-    pc_dtls_hs_reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4, PC_DTLS_CONN_REASM_CAP);
+    DtlsHandshake.reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4, PC_DTLS_CONN_REASM_CAP);
     return 0;
 }
 
@@ -463,8 +466,8 @@ static int dispatch_message(DtlsConn *c, const uint8_t *tls_msg, size_t tls_len,
     if (c->state == DTLS_CONN_STATE_DONE && tls_msg[0] == TLS_HS_FINISHED)
     {
         c->hs_ack_sent = PROTO_FALSE; // a retransmitted client Finished (our ACK was lost): re-acknowledge it
-        pc_dtls_hs_reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4,
-                              PC_DTLS_CONN_REASM_CAP); // accept the next one too
+        DtlsHandshake.reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4,
+                                 PC_DTLS_CONN_REASM_CAP); // accept the next one too
         return 0;
     }
     return fail(c, ALERT_UNEXPECTED_MESSAGE);
@@ -479,13 +482,13 @@ static int drive_handshake(DtlsConn *c, const uint8_t *payload, size_t plen, uin
     while (p < plen)
     {
         DtlsHsHeader hh;
-        size_t used = pc_dtls_hs_header_parse(payload + p, plen - p, &hh);
+        size_t used = DtlsHandshake.header_parse(payload + p, plen - p, &hh);
         if (!used)
         {
             break;
         }
         p += used;
-        int r = pc_dtls_hs_reasm_add(&c->reasm, &hh); // ignores fragments for other message_seqs
+        int r = DtlsHandshake.reasm_add(&c->reasm, &hh); // ignores fragments for other message_seqs
         if (r < 0)
         {
             return fail(c, ALERT_DECODE_ERROR);
@@ -517,7 +520,7 @@ static void process_ack(DtlsConn *c, const uint8_t *body, size_t len)
     }
     DtlsRecordNumber acked[16];
     size_t count = 0;
-    if (!pc_dtls_ack_parse(body, len, acked, 16, &count))
+    if (!DtlsHandshake.ack_parse(body, len, acked, 16, &count))
     {
         return;
     }
@@ -565,19 +568,18 @@ static DtlsRecStep process_ciphertext_record(DtlsConn *c, const uint8_t *dgram, 
     uint8_t inner[PC_DTLS_CONN_REASM_CAP + PC_DTLS_TAG_LEN];
     DtlsCiphertext info;
     uint64_t next = c->replay_ep2.seeded ? c->replay_ep2.highest + 1 : 0;
-    if (!pc_dtls_ciphertext_unprotect(&c->ep2_cli, next, dgram + *off, rlen, inner, sizeof(inner), &info,
-                                      c->cid_negotiated ? c->local_cid : NULL,
-                                      c->cid_negotiated ? c->local_cid_len : 0))
+    if (!DtlsRecord.unprotect(&c->ep2_cli, next, dgram + *off, rlen, inner, sizeof(inner), &info,
+                              c->cid_negotiated ? c->local_cid : NULL, c->cid_negotiated ? c->local_cid_len : 0))
     {
         fail(c, ALERT_DECRYPT_ERROR);
         return DTLS_REC_STEP_FATAL;
     }
     *off += rlen;
-    if (!pc_dtls_replay_check(&c->replay_ep2, info.seq))
+    if (!DtlsRecord.replay_check(&c->replay_ep2, info.seq))
     {
         return DTLS_REC_STEP_NEXT; // replay: drop, but keep processing the datagram
     }
-    pc_dtls_replay_mark(&c->replay_ep2, info.seq);
+    DtlsRecord.replay_mark(&c->replay_ep2, info.seq);
     proto_bool is_hs = (info.content_type == PC_DTLS_CT_HANDSHAKE);
     if (is_hs)
     {
@@ -599,7 +601,7 @@ static DtlsRecStep process_plaintext_record(DtlsConn *c, const uint8_t *dgram, s
                                             size_t out_cap, size_t *out_len)
 {
     DtlsPlaintext pt;
-    size_t rlen = pc_dtls_plaintext_parse(dgram + *off, len - *off, &pt);
+    size_t rlen = DtlsRecord.plaintext_parse(dgram + *off, len - *off, &pt);
     if (!rlen)
     {
         return DTLS_REC_STEP_STOP;
@@ -624,10 +626,10 @@ static void maybe_send_completion_ack(DtlsConn *c, uint8_t *out, size_t out_cap,
     }
     DtlsRecordNumber rn = {2, c->rx_ep2_seq};
     uint8_t ack_body[2 + 16];
-    size_t bl = pc_dtls_ack_build(&rn, 1, ack_body, sizeof(ack_body));
-    size_t rec = pc_dtls_ciphertext_protect(&c->ep3_srv, c->tx_seq_ep3++, PC_DTLS_CT_ACK, ack_body, bl, out + *out_len,
-                                            out_cap - *out_len, c->cid_negotiated ? c->peer_cid : NULL,
-                                            c->cid_negotiated ? c->peer_cid_len : 0);
+    size_t bl = DtlsHandshake.ack_build(&rn, 1, ack_body, sizeof(ack_body));
+    size_t rec = DtlsRecord.protect(&c->ep3_srv, c->tx_seq_ep3++, PC_DTLS_CT_ACK, ack_body, bl, out + *out_len,
+                                    out_cap - *out_len, c->cid_negotiated ? c->peer_cid : NULL,
+                                    c->cid_negotiated ? c->peer_cid_len : 0);
     if (rec)
     {
         *out_len += rec;
@@ -635,7 +637,7 @@ static void maybe_send_completion_ack(DtlsConn *c, uint8_t *out, size_t out_cap,
     }
 }
 
-void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr, size_t peer_addr_len)
+static void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr, size_t peer_addr_len)
 {
     memset(c, 0, sizeof(*c));
     c->cfg = *cfg;
@@ -650,13 +652,13 @@ void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *
         c->peer_addr_len = (uint8_t)peer_addr_len;
     }
     pc_sha256_init(&c->transcript);
-    pc_dtls_replay_init(&c->replay_ep2);
-    pc_dtls_replay_init(&c->replay_ep3);
+    DtlsRecord.replay_init(&c->replay_ep2);
+    DtlsRecord.replay_init(&c->replay_ep3);
     c->next_recv_msg_seq = 0;
-    pc_dtls_hs_reasm_init(&c->reasm, 0, c->reasm_buf + 4, PC_DTLS_CONN_REASM_CAP);
+    DtlsHandshake.reasm_init(&c->reasm, 0, c->reasm_buf + 4, PC_DTLS_CONN_REASM_CAP);
 }
 
-int pc_dtls_conn_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap)
+static int pc_dtls_conn_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap)
 {
     if (c->state == DTLS_CONN_STATE_FAILED)
     {
@@ -683,7 +685,7 @@ int pc_dtls_conn_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t 
     return (int)out_len;
 }
 
-int pc_dtls_conn_timeout_ms(const DtlsConn *c)
+static int pc_dtls_conn_timeout_ms(const DtlsConn *c)
 {
     if (!c->awaiting_reply || c->state == DTLS_CONN_STATE_FAILED || c->state == DTLS_CONN_STATE_DONE)
     {
@@ -694,7 +696,7 @@ int pc_dtls_conn_timeout_ms(const DtlsConn *c)
     return remaining > 0 ? remaining : 0;
 }
 
-int pc_dtls_conn_on_timeout(DtlsConn *c, uint8_t *out, size_t out_cap)
+static int pc_dtls_conn_on_timeout(DtlsConn *c, uint8_t *out, size_t out_cap)
 {
     if (!c->awaiting_reply || c->state == DTLS_CONN_STATE_FAILED || c->state == DTLS_CONN_STATE_DONE)
     {
@@ -722,27 +724,27 @@ int pc_dtls_conn_on_timeout(DtlsConn *c, uint8_t *out, size_t out_cap)
     return (int)out_len;
 }
 
-proto_bool pc_dtls_conn_established(const DtlsConn *c)
+static proto_bool pc_dtls_conn_established(const DtlsConn *c)
 {
     return c->state == DTLS_CONN_STATE_DONE && c->ep3_ready;
 }
 
-uint8_t pc_dtls_conn_alert(const DtlsConn *c)
+static uint8_t pc_dtls_conn_alert(const DtlsConn *c)
 {
     return c->alert;
 }
 
-DtlsRecordKeys *pc_dtls_conn_app_write_keys(DtlsConn *c)
+static DtlsRecordKeys *pc_dtls_conn_app_write_keys(DtlsConn *c)
 {
     return c->ep3_ready ? &c->ep3_srv : NULL;
 }
 
-DtlsRecordKeys *pc_dtls_conn_app_read_keys(DtlsConn *c)
+static DtlsRecordKeys *pc_dtls_conn_app_read_keys(DtlsConn *c)
 {
     return c->ep3_ready ? &c->ep3_cli : NULL;
 }
 
-size_t pc_dtls_conn_local_cid(const DtlsConn *c, uint8_t *out)
+static size_t pc_dtls_conn_local_cid(const DtlsConn *c, uint8_t *out)
 {
     if (!c->cid_negotiated || c->local_cid_len == 0)
     {
@@ -752,8 +754,8 @@ size_t pc_dtls_conn_local_cid(const DtlsConn *c, uint8_t *out)
     return c->local_cid_len;
 }
 
-proto_bool pc_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
-                                 size_t *out_len)
+static proto_bool pc_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
+                                        size_t *out_len)
 {
     if (!pc_dtls_conn_established(c))
     {
@@ -761,17 +763,16 @@ proto_bool pc_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len
     }
     DtlsCiphertext info;
     uint64_t next = c->replay_ep3.seeded ? c->replay_ep3.highest + 1 : 0;
-    if (!pc_dtls_ciphertext_unprotect(&c->ep3_cli, next, rec, rec_len, out, out_cap, &info,
-                                      c->cid_negotiated ? c->local_cid : NULL,
-                                      c->cid_negotiated ? c->local_cid_len : 0))
+    if (!DtlsRecord.unprotect(&c->ep3_cli, next, rec, rec_len, out, out_cap, &info,
+                              c->cid_negotiated ? c->local_cid : NULL, c->cid_negotiated ? c->local_cid_len : 0))
     {
         return PROTO_FALSE;
     }
-    if (!pc_dtls_replay_check(&c->replay_ep3, info.seq))
+    if (!DtlsRecord.replay_check(&c->replay_ep3, info.seq))
     {
         return PROTO_FALSE; // replay or too old
     }
-    pc_dtls_replay_mark(&c->replay_ep3, info.seq);
+    DtlsRecord.replay_mark(&c->replay_ep3, info.seq);
     if (info.content_type != PC_DTLS_CT_APPLICATION_DATA)
     {
         return PROTO_FALSE;
@@ -780,16 +781,19 @@ proto_bool pc_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len
     return PROTO_TRUE;
 }
 
-size_t pc_dtls_conn_seal_app(DtlsConn *c, const uint8_t *data, size_t len, uint8_t *out, size_t out_cap)
+static size_t pc_dtls_conn_seal_app(DtlsConn *c, const uint8_t *data, size_t len, uint8_t *out, size_t out_cap)
 {
     if (!pc_dtls_conn_established(c))
     {
         return 0;
     }
     // tx_seq_ep3 is shared with the completion ACK, so app records never reuse its sequence number.
-    return pc_dtls_ciphertext_protect(&c->ep3_srv, c->tx_seq_ep3++, PC_DTLS_CT_APPLICATION_DATA, data, len, out,
-                                      out_cap, c->cid_negotiated ? c->peer_cid : NULL,
-                                      c->cid_negotiated ? c->peer_cid_len : 0);
+    return DtlsRecord.protect(&c->ep3_srv, c->tx_seq_ep3++, PC_DTLS_CT_APPLICATION_DATA, data, len, out, out_cap,
+                              c->cid_negotiated ? c->peer_cid : NULL, c->cid_negotiated ? c->peer_cid_len : 0);
 }
 
+const DtlsConnNs DtlsServer = {pc_dtls_conn_init,           pc_dtls_conn_process,       pc_dtls_conn_timeout_ms,
+                               pc_dtls_conn_on_timeout,     pc_dtls_conn_established,   pc_dtls_conn_alert,
+                               pc_dtls_conn_app_write_keys, pc_dtls_conn_app_read_keys, pc_dtls_conn_local_cid,
+                               pc_dtls_conn_open_app,       pc_dtls_conn_seal_app};
 #endif // PC_ENABLE_DTLS

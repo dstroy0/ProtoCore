@@ -5,8 +5,8 @@
  * @file Multipart.ino
  * @brief Parse a multipart/form-data POST body (RFC 7578) in place.
  *
- * POST /upload with a multipart body; pc_multipart_parse() splits it into parts and
- * pc_multipart_get_field() returns a named text field. The whole body must fit in
+ * POST /upload with a multipart body; Multipart.parse() splits it into parts and
+ * Multipart.get_field() returns a named text field. The whole body must fit in
  * BODY_BUF_SIZE (no streaming), so this suits small form fields / tiny uploads.
  * A test form is served at /.
  *
@@ -27,13 +27,13 @@ static const char FORM[] = "<!doctype html><meta charset=utf-8><title>upload</ti
 
 void handle_upload(uint8_t id, HttpReq *req)
 {
-    Multipart mp;
-    if (!pc_multipart_parse(req, &mp))
+    MultipartBody mp;
+    if (!Multipart.parse(req, &mp))
     {
         send_text(id, 400, "text/plain", "expected multipart/form-data (and within BODY_BUF_SIZE)");
         return;
     }
-    const char *name = pc_multipart_get_field(&mp, "name");
+    const char *name = Multipart.get_field(&mp, "name");
     char out[160];
     snprintf(out, sizeof(out), "parsed %d part(s); field 'name' = %s", mp.part_count, name ? name : "(absent)");
     send_text(id, 200, "text/plain", out);
@@ -42,14 +42,14 @@ void handle_upload(uint8_t id, HttpReq *req)
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

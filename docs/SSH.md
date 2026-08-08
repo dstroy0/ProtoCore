@@ -114,7 +114,7 @@ per device:
    bundled generator does both and prints the matching `.pub`:
 
    ```sh
-   python3 tools/gen_ssh_host_key.py --type rsa --out-dir ./keys
+   python3 tools/crypto/gen_ssh_host_key.py --type rsa --out-dir ./keys
    # -> keys/ssh_host_key.der (store in NVS) and keys/ssh_host_key.pub (known_hosts)
    ```
 
@@ -146,9 +146,12 @@ per device:
    provisioning sketch once, then flash your real firmware.
 
 3. **At boot**, call [`pc_ssh_rsa_load_pubkey()`](@ref pc_ssh_rsa_load_pubkey) once (before accepting SSH) so the
-   public half (n, e) is available for the host-key blob; the private key is read
-   straight from NVS into a stack buffer for each signature and wiped immediately
-   after (never held in static memory).
+   public half (n, e) is available for the host-key blob. The private half is
+   parsed by the same call and kept for the server's lifetime, as an SSH host key
+   normally is: on ESP32 inside a private mbedTLS context, on the software backend
+   as a secure-pool borrow ([`mmgr/secure.h`](@ref secure.h)) whose reclaim wipes.
+   Neither holds it in static memory, and the DER it was read from is wiped before
+   the call returns.
 
 The matching public key for clients' `known_hosts` is derived from the same DER
 (`ssh-keygen -y -f ssh_host.pem`).

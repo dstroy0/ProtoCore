@@ -37,7 +37,6 @@
 #include "protocore_config.h"
 #include "server/filesystem/mnt.h" // pc_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store.h"
-#include <string.h>
 
 #if PC_ENABLE_WAL
 

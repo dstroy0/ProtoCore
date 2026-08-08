@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_WISUN
 
-#include <string.h>
-
 // Emit one CoAP option (RFC 7252 sec 3.1): the (delta,length) nibble header + extended bytes + value.
 static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delta, const uint8_t *val, uint16_t vlen)
 {
@@ -193,7 +191,7 @@ proto_bool pc_wisun_node_find(const WisunFan *fan, const pc_ip *addr, size_t *id
     }
     for (size_t i = 0; i < fan->count; i++)
     {
-        if (pc_ip_equal(&fan->nodes[i].addr, addr))
+        if (Ip.equal(&fan->nodes[i].addr, addr))
         {
             if (idx)
             {
@@ -237,7 +235,7 @@ size_t pc_wisun_nodes_json(const WisunFan *fan, char *out, size_t cap)
             pc_sb_put(&b, ",");
         }
         char astr[PC_IP_STR_MAX];
-        pc_ip_format(&fan->nodes[i].addr, astr, sizeof(astr));
+        Ip.format(&fan->nodes[i].addr, astr, sizeof(astr));
         pc_sb_put(&b, "{\"addr\":\"");
         pc_sb_put(&b, astr);
         pc_sb_put(&b, "\",\"joined\":");

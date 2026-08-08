@@ -26,9 +26,9 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "services/machine_tool/dnc/dnc_stream.h" // dnc_stream + DncCfg / DncCode
-#include <string.h>
+
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";
@@ -57,7 +57,7 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        if (!pc_client_send(cid, data + sent, chunk))
+        if (!Tcp.client->send(cid, data + sent, chunk))
         {
             return -1;
         }
@@ -71,12 +71,12 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
 static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     int cid = *(int *)ctx;
-    size_t n = pc_client_read(cid, buf, cap);
+    size_t n = Tcp.client->read(cid, buf, cap);
     if (n > 0)
     {
         return (int)n;
     }
-    if (pc_client_is_closed(cid))
+    if (Tcp.client->is_closed(cid))
     {
         return -1;
     }
@@ -86,7 +86,7 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 
 void send_program()
 {
-    int cid = pc_client_open(CNC_HOST, CNC_PORT, 8000);
+    int cid = Tcp.client->open(CNC_HOST, CNC_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("connect failed - is the controller's program port reachable?");
@@ -109,21 +109,21 @@ void send_program()
         Serial.printf("drip-feed failed (DncStreamResult %d) - see the README troubleshooting table\n", (int)rc);
     }
 
-    pc_client_close(cid);
+    Tcp.client->close(cid);
 }
 
 void setup()
 {
     Serial.begin(115200);
 
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

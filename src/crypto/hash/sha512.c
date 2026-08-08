@@ -5,24 +5,24 @@
  * @file sha512.c
  * @brief SHA-512 implementation (FIPS 180-4).
  *
- * On Arduino builds streaming + one-shot delegate to mbedtls; on native builds the software path below
+ * HW path: streaming + one-shot delegate to mbedtls. SW path: the implementation below,
  * is used. Shared by SSH (Ed25519 / kex), PQC, and SMB 3.1.1 preauth integrity.
  */
 
 #include "crypto/hash/sha512.h"
 #include "crypto/crypto_opt.h"
-#include <string.h>
-#if PROTOCORE_HOT
+
+#if PC_HAS_HW_SHA
 #include <mbedtls/sha512.h> // hardware SHA accelerator
 #else
-#include "shared_primitives/endian.h" // native software SHA-512
+#include "mmgr/endian.h" // native software SHA-512
 #endif
 PC_CRYPTO_HOT
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_SHA
 
 // ---------------------------------------------------------------------------
-// Arduino (ESP32): streaming + one-shot via mbedtls.
+// HW path: streaming + one-shot via mbedtls.
 // ---------------------------------------------------------------------------
 
 void pc_sha512_init(pc_sha512_ctx *ctx)
@@ -62,7 +62,7 @@ void pc_sha512(const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_
 #else // native software path
 
 // ---------------------------------------------------------------------------
-// Software SHA-512 (FIPS 180-4) - native/test builds only
+// SW path: software SHA-512 (FIPS 180-4).
 // ---------------------------------------------------------------------------
 
 static const uint64_t K512[80] = {
@@ -217,4 +217,4 @@ void pc_sha512(const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_
     pc_sha512_final(&ctx, digest);
 }
 
-#endif // !PROTOCORE_HOT (native software path)
+#endif // !PC_HAS_HW_SHA (SW path)

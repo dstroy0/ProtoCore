@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_LSV2
 
-#include <string.h> // memcpy / memcmp / memset (framing + parsing are hand-rolled)
+// memcpy / memcmp / memset (framing + parsing are hand-rolled)
 
 // Write the fixed 8-byte header (big-endian payload length + 4-char mnemonic) once the payload is in
 // place, and return the total telegram length. Callers guarantee the buffer holds header + payload.

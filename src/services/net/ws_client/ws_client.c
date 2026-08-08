@@ -16,14 +16,13 @@
 #include "crypto/hash/sha1.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include <stdio.h>
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Pure codec (host-testable)
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HOT
-#include "network_drivers/transport/client.h" // shared outbound TCP client (L4)
+#include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
 #include <Arduino.h>
 #endif
 #if PROTOCORE_HOT && PC_ENABLE_WS_CLIENT_TLS
@@ -58,7 +57,7 @@ void ws_client_accept_for_key(const char *key_b64, char *out, size_t out_cap)
     {
         return;
     }
-    pc_base64_encode(digest, PC_SHA1_DIGEST_LEN, out);
+    Base64.encode(digest, PC_SHA1_DIGEST_LEN, out);
 }
 
 size_t ws_client_build_handshake(uint8_t *out, size_t cap, const char *host, const char *path, const char *key_b64,
@@ -290,7 +289,7 @@ typedef struct
     proto_bool ws_up;
     proto_bool use_tls;
 
-    // Inbound plaintext ring, fed by a pump in the loop: from pc_client_read for
+    // Inbound plaintext ring, fed by a pump in the loop: from Tcp.client->read for
     // plain ws, from the TLS session (pc_tls_client_session_read) for wss.
     uint8_t rx[PC_WS_CLIENT_BUF_SIZE];
     volatile size_t rx_head;
@@ -329,7 +328,7 @@ static void ring_copy(uint8_t *dst, size_t n)
 
 static proto_bool ws_tx_plain(const uint8_t *data, size_t len)
 {
-    return pc_client_send(s_wsc.cid, data, len);
+    return Tcp.client->send(s_wsc.cid, data, len);
 }
 
 // Drain plaintext wire bytes from the client into the s_wsc.rx ring (plain ws).
@@ -344,10 +343,10 @@ static void ws_pump_plain()
             break;
         }
         size_t want = freey < sizeof(tmp) ? freey : sizeof(tmp);
-        size_t n = pc_client_read(s_wsc.cid, tmp, want);
+        size_t n = Tcp.client->read(s_wsc.cid, tmp, want);
         if (n == 0)
         {
-            if (pc_client_is_closed(s_wsc.cid))
+            if (Tcp.client->is_closed(s_wsc.cid))
             {
                 s_wsc.closed = PROTO_TRUE;
             }
@@ -368,15 +367,15 @@ static int ws_tls_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx;
     size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return pc_client_send(s_wsc.cid, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
+    return Tcp.client->send(s_wsc.cid, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
 }
 static int ws_tls_recv(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    size_t n = pc_client_read(s_wsc.cid, buf, len);
+    size_t n = Tcp.client->read(s_wsc.cid, buf, len);
     if (n == 0)
     {
-        return pc_client_is_closed(s_wsc.cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+        return Tcp.client->is_closed(s_wsc.cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
     }
     return (int)n;
 }
@@ -444,7 +443,7 @@ static void ws_close_tcp()
 #endif
     if (s_wsc.cid >= 0)
     {
-        pc_client_close(s_wsc.cid);
+        Tcp.client->close(s_wsc.cid);
     }
     s_wsc.cid = -1;
     s_wsc.ws_up = PROTO_FALSE;
@@ -571,10 +570,10 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
     uint32_t deadline = pc_millis() + 8000;
 
     // Open the TCP connection (DNS + connect) via the shared client transport.
-    s_wsc.cid = pc_client_open(host, port, 8000);
+    s_wsc.cid = Tcp.client->open(host, port, 8000);
     if (s_wsc.cid < 0)
     {
-        WSC_DBG("[wsc] pc_client_open failed (%d)\n", s_wsc.cid);
+        WSC_DBG("[wsc] Tcp.client->open failed (%d)\n", s_wsc.cid);
         return PROTO_FALSE;
     }
 
@@ -606,7 +605,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
     uint8_t keyraw[16];
     pc_platform_rand_fill(keyraw, sizeof(keyraw));
     char key_b64[25];
-    pc_base64_encode(keyraw, sizeof(keyraw), key_b64);
+    Base64.encode(keyraw, sizeof(keyraw), key_b64);
     char expect[32];
     ws_client_accept_for_key(key_b64, expect, sizeof(expect));
 

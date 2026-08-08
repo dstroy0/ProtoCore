@@ -20,7 +20,6 @@
 // ProtoHandler is named by pc_opcua_proto_handler() in BOTH build arms, so it cannot sit behind
 // the PROTOCORE_HOT guard below.
 #include "network_drivers/session/proto_handler.h"
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Built-in type codec
@@ -1268,12 +1267,12 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    pc_conn_send(slot, data, (proto_u16)n);
-    pc_conn_flush(slot);
+    Tcp.conn->send(slot, data, (proto_u16)n);
+    Tcp.conn->flush(slot);
 }
 static void close_conn(uint8_t slot)
 {
-    pc_conn_close(slot); // transport owns detach + slot reset + close
+    Tcp.conn->close(slot); // transport owns detach + slot reset + close
 }
 
 void pc_opcua_rx(uint8_t slot)
@@ -1449,7 +1448,7 @@ void pc_opcua_rx(uint8_t slot)
 
 // The OPC UA ProtoHandler (Layer 5 dispatch seam) - only a data handler; the handshake reads from
 // the rx ring, so there is no per-connection accept/close/poll state. Returned by accessor (no
-// session dependency); proto_register_builtins() installs it.
+// session dependency); Session.proto->register_builtins() installs it.
 static const ProtoHandler s_opcua_handler = {NULL, pc_opcua_rx, NULL, NULL};
 const ProtoHandler *pc_opcua_proto_handler(void)
 {

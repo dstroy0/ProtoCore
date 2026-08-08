@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_WAVE
 
-#include <string.h>
-
 size_t pc_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
 {
     // P-encoding: the number of leading 1 bits in the first octet gives the length.

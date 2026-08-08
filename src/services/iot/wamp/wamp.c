@@ -21,7 +21,7 @@ static void emit_uint(pc_json_writer *w, uint64_t v)
     size_t n = 0;
     if (v == 0)
     {
-        pc_json_raw(w, "0");
+        Json.put_raw(w, "0");
         return;
     }
     while (v)
@@ -34,7 +34,7 @@ static void emit_uint(pc_json_writer *w, uint64_t v)
         tmp[n++] = rev[--r];
     }
     tmp[n] = '\0';
-    pc_json_raw(w, tmp);
+    Json.put_raw(w, tmp);
 }
 
 static size_t finish(pc_json_writer *w)
@@ -49,10 +49,10 @@ static void emit_args(pc_json_writer *w, const char *args_json, const char *kwar
     {
         return;
     }
-    pc_json_raw(w, args_json ? args_json : "[]"); // kwargs without args still needs a positional Arguments
+    Json.put_raw(w, args_json ? args_json : "[]"); // kwargs without args still needs a positional Arguments
     if (kwargs_json)
     {
-        pc_json_raw(w, kwargs_json);
+        Json.put_raw(w, kwargs_json);
     }
 }
 
@@ -63,12 +63,12 @@ size_t pc_wamp_build_hello(char *buf, size_t cap, const char *realm, const char 
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_HELLO);
-    pc_json_str(&w, realm);
-    pc_json_raw(&w, details_json ? details_json : "{}");
-    pc_json_end_array(&w);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_HELLO);
+    Json.put_str(&w, realm);
+    Json.put_raw(&w, details_json ? details_json : "{}");
+    Json.end_array(&w);
     return finish(&w);
 }
 
@@ -79,12 +79,12 @@ size_t pc_wamp_build_goodbye(char *buf, size_t cap, const char *reason_uri, cons
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_GOODBYE);
-    pc_json_raw(&w, details_json ? details_json : "{}");
-    pc_json_str(&w, reason_uri);
-    pc_json_end_array(&w);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_GOODBYE);
+    Json.put_raw(&w, details_json ? details_json : "{}");
+    Json.put_str(&w, reason_uri);
+    Json.end_array(&w);
     return finish(&w);
 }
 
@@ -95,13 +95,13 @@ size_t pc_wamp_build_subscribe(char *buf, size_t cap, uint64_t request, const ch
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_SUBSCRIBE);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_SUBSCRIBE);
     emit_uint(&w, request);
-    pc_json_raw(&w, options_json ? options_json : "{}");
-    pc_json_str(&w, topic);
-    pc_json_end_array(&w);
+    Json.put_raw(&w, options_json ? options_json : "{}");
+    Json.put_str(&w, topic);
+    Json.end_array(&w);
     return finish(&w);
 }
 
@@ -112,12 +112,12 @@ size_t pc_wamp_build_unsubscribe(char *buf, size_t cap, uint64_t request, uint64
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_UNSUBSCRIBE);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_UNSUBSCRIBE);
     emit_uint(&w, request);
     emit_uint(&w, subscription_id);
-    pc_json_end_array(&w);
+    Json.end_array(&w);
     return finish(&w);
 }
 
@@ -128,12 +128,12 @@ size_t pc_wamp_build_unregister(char *buf, size_t cap, uint64_t request, uint64_
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_UNREGISTER);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_UNREGISTER);
     emit_uint(&w, request);
     emit_uint(&w, registration_id);
-    pc_json_end_array(&w);
+    Json.end_array(&w);
     return finish(&w);
 }
 
@@ -145,14 +145,14 @@ size_t pc_wamp_build_publish(char *buf, size_t cap, uint64_t request, const char
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_PUBLISH);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_PUBLISH);
     emit_uint(&w, request);
-    pc_json_raw(&w, options_json ? options_json : "{}");
-    pc_json_str(&w, topic);
+    Json.put_raw(&w, options_json ? options_json : "{}");
+    Json.put_str(&w, topic);
     emit_args(&w, args_json, kwargs_json);
-    pc_json_end_array(&w);
+    Json.end_array(&w);
     return finish(&w);
 }
 
@@ -164,14 +164,14 @@ size_t pc_wamp_build_call(char *buf, size_t cap, uint64_t request, const char *p
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_CALL);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_CALL);
     emit_uint(&w, request);
-    pc_json_raw(&w, options_json ? options_json : "{}");
-    pc_json_str(&w, procedure);
+    Json.put_raw(&w, options_json ? options_json : "{}");
+    Json.put_str(&w, procedure);
     emit_args(&w, args_json, kwargs_json);
-    pc_json_end_array(&w);
+    Json.end_array(&w);
     return finish(&w);
 }
 
@@ -182,13 +182,13 @@ size_t pc_wamp_build_register(char *buf, size_t cap, uint64_t request, const cha
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_REGISTER);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_REGISTER);
     emit_uint(&w, request);
-    pc_json_raw(&w, options_json ? options_json : "{}");
-    pc_json_str(&w, procedure);
-    pc_json_end_array(&w);
+    Json.put_raw(&w, options_json ? options_json : "{}");
+    Json.put_str(&w, procedure);
+    Json.end_array(&w);
     return finish(&w);
 }
 
@@ -200,13 +200,13 @@ size_t pc_wamp_build_yield(char *buf, size_t cap, uint64_t request, const char *
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
-    pc_json_int(&w, WAMP_YIELD);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
+    Json.put_int(&w, WAMP_YIELD);
     emit_uint(&w, request);
-    pc_json_raw(&w, options_json ? options_json : "{}");
+    Json.put_raw(&w, options_json ? options_json : "{}");
     emit_args(&w, args_json, kwargs_json);
-    pc_json_end_array(&w);
+    Json.end_array(&w);
     return finish(&w);
 }
 

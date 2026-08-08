@@ -35,49 +35,50 @@ PROTO_BEGIN_DECLS
 /** @brief Called with each completed input line (NUL-terminated, no CR/LF) and its client id. */
 typedef void (*TelnetCommandCb)(const char *line, uint8_t conn_id);
 
-// ---- Application API ------------------------------------------------------
-
-/** @brief Register the per-line command handler. */
-void pc_telnet_on_command(TelnetCommandCb cb);
-
-/** @brief Send text to every connected Telnet client (no trailing newline added). */
-void pc_telnet_print(const char *s);
-
-/** @brief Send text + CRLF to every connected Telnet client. */
-void pc_telnet_println(const char *s);
+struct ProtoHandler;
 
 /**
- * @brief Build @p spec and broadcast it to every connected Telnet client.
+ * @brief The console an application drives, and the three arms the session layer turns.
  *
- * The message shape is a `static const pc_field[]` the caller declares, so a console line costs a
- * table walk rather than a format-string parse, and a line longer than TELNET_BUF_SIZE is dropped
- * rather than clipped mid-word.
+ * The first five are the application's; the three after them are called for a
+ * ConnProto::PROTO_TELNET slot and are not an application's business.
+ *
+ * @var TelnetNs::on_command     register the per-line command handler
+ * @var TelnetNs::print          text to every connected client, no trailing newline added
+ * @var TelnetNs::println        text + CRLF to every connected client
+ * @var TelnetNs::frame          build @p spec and broadcast it. The shape is a `static const
+ *                               pc_field[]` the caller declares, so a console line costs a table
+ *                               walk rather than a format-string parse, and one longer than
+ *                               TELNET_BUF_SIZE is dropped rather than clipped mid-word
+ * @var TelnetNs::client_count   connected clients
+ * @var TelnetNs::accept         a connection was accepted on TCP slot @p slot
+ * @var TelnetNs::rx             drain and process received bytes for the connection on @p slot
+ * @var TelnetNs::close          the connection on @p slot closed; release its state
+ * @var TelnetNs::proto_handler  the ProtoHandler the builtins list installs, which is what keeps
+ *                               this module free of a dependency on the session layer
  *
  * @code
  *   static const pc_field HEAP[] = {{PC_FK_LIT, 0, 11, "free heap: "}, PC_U32,
  *                                   {PC_FK_LIT, 0, 8, " bytes\r\n"}, PC_END};
- *   pc_telnet_frame(HEAP, ESP.getFreeHeap());
+ *   Telnet.frame(HEAP, ESP.getFreeHeap());
  * @endcode
  */
-void pc_telnet_frame(const pc_field *spec, ...);
+typedef struct
+{
+    void (*on_command)(TelnetCommandCb cb);
+    void (*print)(const char *s);
+    void (*println)(const char *s);
+    void (*frame)(const pc_field *spec, ...);
+    uint8_t (*client_count)(void);
 
-/** @brief Number of connected Telnet clients. */
-uint8_t pc_telnet_client_count();
+    void (*accept)(uint8_t slot);
+    void (*rx)(uint8_t slot);
+    void (*close)(uint8_t slot);
+    const struct ProtoHandler *(*proto_handler)(void);
+} TelnetNs;
 
-// ---- Connection layer (called by the session layer for ConnProto::PROTO_TELNET slots) -
-
-/** @brief A Telnet connection was accepted on TCP slot @p slot. */
-void pc_telnet_accept(uint8_t slot);
-
-/** @brief Drain and process received bytes for the Telnet connection on @p slot. */
-void pc_telnet_rx(uint8_t slot);
-
-/** @brief The Telnet connection on @p slot closed; release its state. */
-void pc_telnet_close(uint8_t slot);
-
-/** @brief The Telnet ProtoHandler (accessor; installed by the builtins list, no session dep). */
-struct ProtoHandler;
-const struct ProtoHandler *pc_telnet_proto_handler(void);
+/** @brief The one symbol this module exports. */
+extern const TelnetNs Telnet;
 
 #endif // PC_ENABLE_TELNET
 

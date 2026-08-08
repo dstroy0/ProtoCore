@@ -25,7 +25,7 @@
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "services/instrumentation/hislip/hislip.h"
 
 static const char *SSID = "YOUR_SSID";
@@ -44,9 +44,9 @@ static bool hislip_recv(int cid, HislipHeader *h)
     unsigned long deadline = millis() + 3000;
     while (got < PC_HISLIP_HEADER_LEN && millis() < deadline)
     {
-        if (pc_client_available(cid))
+        if (Tcp.client->available(cid))
         {
-            got += pc_client_read(cid, c_resp + got, PC_HISLIP_HEADER_LEN - got);
+            got += Tcp.client->read(cid, c_resp + got, PC_HISLIP_HEADER_LEN - got);
         }
     }
     if (got < PC_HISLIP_HEADER_LEN || !pc_hislip_parse_header(c_resp, got, h))
@@ -60,9 +60,9 @@ static bool hislip_recv(int cid, HislipHeader *h)
     }
     while (got < total && millis() < deadline)
     {
-        if (pc_client_available(cid))
+        if (Tcp.client->available(cid))
         {
-            got += pc_client_read(cid, c_resp + got, total - got);
+            got += Tcp.client->read(cid, c_resp + got, total - got);
         }
     }
     return got == total;
@@ -70,7 +70,7 @@ static bool hislip_recv(int cid, HislipHeader *h)
 
 static void run_session(const char *host)
 {
-    int sync_cid = pc_client_open(host, PC_HISLIP_PORT, 8000);
+    int sync_cid = Tcp.client->open(host, PC_HISLIP_PORT, 8000);
     if (sync_cid < 0)
     {
         Serial.println("[hislip] sync connect failed");
@@ -79,31 +79,31 @@ static void run_session(const char *host)
 
     // 1) Initialize on the sync channel (offer v1.1, vendor "DW", sub-address "hislip0").
     size_t n = pc_hislip_build_initialize(c_buf, sizeof(c_buf), PC_HISLIP_VERSION_1_1, 0x4457, "hislip0");
-    pc_client_send(sync_cid, c_buf, n);
+    Tcp.client->send(sync_cid, c_buf, n);
     HislipHeader h;
     HislipInitializeResponse ir;
     if (!hislip_recv(sync_cid, &h) || !pc_hislip_parse_initialize_response(c_resp, PC_HISLIP_HEADER_LEN, &ir))
     {
         Serial.println("[hislip] no InitializeResponse");
-        pc_client_close(sync_cid);
+        Tcp.client->close(sync_cid);
         return;
     }
     Serial.printf("[hislip] session=%u server-version=0x%04X overlap=%d\n", ir.session_id, ir.protocol_version,
                   ir.overlap);
 
     // 2) Bind the async channel with the negotiated SessionID.
-    int async_cid = pc_client_open(host, PC_HISLIP_PORT, 8000);
+    int async_cid = Tcp.client->open(host, PC_HISLIP_PORT, 8000);
     if (async_cid >= 0)
     {
         n = pc_hislip_build_async_initialize(c_buf, sizeof(c_buf), ir.session_id);
-        pc_client_send(async_cid, c_buf, n);
+        Tcp.client->send(async_cid, c_buf, n);
         hislip_recv(async_cid, &h); // AsyncInitializeResponse (server vendor id in h.parameter)
     }
 
     // 3) Send "*IDN?" as a DataEND on the sync channel, read the identity back.
     uint32_t msg_id = PC_HISLIP_MESSAGE_ID_INIT;
     n = pc_hislip_build_data(c_buf, sizeof(c_buf), true, 0, msg_id, (const uint8_t *)"*IDN?\n", 6);
-    pc_client_send(sync_cid, c_buf, n);
+    Tcp.client->send(sync_cid, c_buf, n);
     msg_id = pc_hislip_next_message_id(msg_id);
     if (hislip_recv(sync_cid, &h) && (h.type == HislipMsg::DATA_END || h.type == HislipMsg::DATA))
     {
@@ -116,21 +116,21 @@ static void run_session(const char *host)
 
     if (async_cid >= 0)
     {
-        pc_client_close(async_cid);
+        Tcp.client->close(async_cid);
     }
-    pc_client_close(sync_cid);
+    Tcp.client->close(sync_cid);
     Serial.println("[hislip] done");
 }
 
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -141,7 +141,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_session(INSTRUMENT_IP); // pc_client_open resolves the dotted-quad host directly
+        run_session(INSTRUMENT_IP); // Tcp.client->open resolves the dotted-quad host directly
     }
     delay(10);
 }

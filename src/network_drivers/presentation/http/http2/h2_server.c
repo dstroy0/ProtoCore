@@ -14,7 +14,6 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/tcp.h"
-#include <string.h>
 
 // The per-slot engines are large (~28 KB each), so the pool does not fit internal DRAM alongside
 // TLS - it lives in PSRAM (PC_H2_POOL_IN_PSRAM). Same mechanism/caveat as the TLS arena: it

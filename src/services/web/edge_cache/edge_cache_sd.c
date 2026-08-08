@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_EDGE_CACHE
 
-#include <string.h>
-
 #define PC_EDGE_SD_VERSION 1
 
 static void put_u16(uint8_t *p, uint16_t v)

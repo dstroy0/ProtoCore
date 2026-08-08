@@ -9,7 +9,7 @@
  * AIS-encapsulated), a comma-separated field list whose first field is the 5-char address
  * (2-char talker id + 3-char sentence type), a `*`, and a two-hex-digit XOR checksum. This
  * codec builds a sentence (adding the `$`, checksum, and CR/LF) and parses one (validating the
- * checksum and splitting the fields), with `pc_strtof` / `pc_strtol` field-value helpers.
+ * checksum and splitting the fields), with `str.to_float` / `str.to_long` field-value helpers.
  *
  * GPS / marine receivers are cheap UART breakouts, so on an ESP32 this is a plain
  * `HardwareSerial` link (commonly 4800 or 9600 baud); the UART is the application's. Pure

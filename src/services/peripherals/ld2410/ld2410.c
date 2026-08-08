@@ -17,8 +17,6 @@
 
 #if PC_ENABLE_LD2410
 
-#include <string.h>
-
 #if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/uart.h" // the shared UART owner
 #endif

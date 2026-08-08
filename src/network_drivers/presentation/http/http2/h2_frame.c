@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_HTTP2
 
-#include <string.h>
-
 static void wr32(uint8_t *p, uint32_t v)
 {
     p[0] = (uint8_t)(v >> 24);

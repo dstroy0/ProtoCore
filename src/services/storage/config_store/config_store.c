@@ -14,8 +14,7 @@
 
 #if PC_ENABLE_CONFIG_STORE
 
-#include "board_drivers/hal/nvs.h"
-#include <string.h>
+#include "core_setup/hal/nvs.h"
 
 // The namespace every call below addresses, owned by one instance (internal linkage): the seam
 // names a namespace per operation, so the one this store was opened on is what it holds.

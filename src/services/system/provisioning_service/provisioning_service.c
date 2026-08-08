@@ -13,14 +13,13 @@
 #include "server/clock/clock.h" // pcdelay
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Form-field parser (always compiled; the only non-trivial logic, unit-tested).
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_PROVISIONING && PROTOCORE_HOT
-#include "board_drivers/hal/nvs.h" // the credentials outlive the reboot that applies them
+#include "core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
@@ -155,7 +154,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct pc_udp_p
     resp[n++] = s_prov.ap_ip[2];
     resp[n++] = s_prov.ap_ip[3];
 
-    pc_udp_send(peer, resp, n);
+    Udp.listener->reply(peer, resp, n);
 }
 
 proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
@@ -211,15 +210,15 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 
 void pc_provisioning_begin(const char *ap_ssid)
 {
-    init_wifi_ap_physical(ap_ssid, NULL); // AP mode is implied by which bring-up you call
-    uint32_t ip = pc_net_ap_ip();         // network byte order
+    Physical.wifi->init_ap(ap_ssid, NULL); // AP mode is implied by which bring-up you call
+    uint32_t ip = Physical.wifi->ap_ip();  // network byte order
     s_prov.ap_ip[0] = (uint8_t)(ip & 0xFF);
     s_prov.ap_ip[1] = (uint8_t)((ip >> 8) & 0xFF);
     s_prov.ap_ip[2] = (uint8_t)((ip >> 16) & 0xFF);
     s_prov.ap_ip[3] = (uint8_t)((ip >> 24) & 0xFF);
 
     // Catch-all DNS on UDP/53 via the transport-layer UDP service (callback-driven).
-    pc_udp_listen(53, prov_dns_recv, NULL);
+    Udp.listener->listen(53, prov_dns_recv, NULL);
 
     on_http("/save", HTTP_POST, prov_save_handler);
     on_http("/*", HTTP_GET, prov_form_handler); // any other path -> the form

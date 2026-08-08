@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_NMEA2000
 
-#include <string.h>
-
 uint8_t pc_n2k_fastpacket_num_frames(uint16_t total_len)
 {
     if (total_len <= N2K_FP_F0_DATA)

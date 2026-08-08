@@ -49,7 +49,7 @@ jobs:
           # Bypasses hidden directories like .git automatically.
           # build_opt.h is excluded: despite the .h suffix it is an Arduino build-options file
           # (a list of -D compiler flags, not C++), and its name is fixed by the Arduino toolchain.
-          # .c is in the list because src/ is C11: the conversion renamed 351 implementation files
+          # .c is in the list because src/ is C11: the conversion renamed every implementation file
           # out from under a glob that only named .cpp, leaving them unchecked.
           # managed_components/ is what the IDF component manager downloads into an example. It is
           # vendored third-party source, not ours to style, and it is gitignored - so a checkout
@@ -58,7 +58,7 @@ jobs:
 
           # 3. Handle empty repository safety edge-case
           if [ -z "$FILES" ]; then
-            echo "No source files found matching (.cpp, .h, .ino). Skipping check."
+            echo "No source files found matching (.c, .cpp, .h, .ino). Skipping check."
             exit 0
           fi
 
@@ -79,31 +79,37 @@ jobs:
       - name: Owner-context guard (no loose file-scope mutables)
         # Enforces the least-privilege owner pattern: every subsystem's mutable state must live in
         # one owned <Name>Ctx, not scattered ambient globals. Uniformity is how the outliers are
-        # caught. See ci_tooling/check/check_owned_context.py for the allow-list rationale (shared substrate).
-        run: python3 ci_tooling/check/check_owned_context.py
+        # caught. See tools/ci_tooling/check/check_owned_context.py for the allow-list rationale (shared substrate).
+        run: python3 -m tools.ci_tooling.check.check_owned_context
 
       - name: Test-coverage guard (every src/ TU has a test env)
         # A module ships with its native_<name> Unity env or it does not ship. Ratcheted: fails on a
         # src/ translation unit that no env's build_src_filter names, while the recorded gaps are
-        # worked down. board_drivers/ is exempt - it only runs on silicon.
-        run: python3 ci_tooling/check/check_test_coverage.py
+        # worked down. core_setup/ is exempt - it only runs on silicon.
+        run: python3 -m tools.ci_tooling.check.check_test_coverage
 
       - name: Banned-constructs guard (src/ hard bans)
         # Server-side twin of the pre-commit hook: fails if any src/ source uses a construct banned
         # by docs/SRCBANNED.md (strlen, <stdlib.h> / heap / parse functions, auto, delay(), a
         # non-reentrant gmtime family call, or an em-dash). Comments / string literals are exempt.
-        run: python3 ci_tooling/check/check_src_banned.py --all
+        run: python3 -m tools.ci_tooling.check.check_src_banned --all
 
       - name: No symbol is defined by two src/ files
         # The native envs compile an explicit source list, so a duplicated .cpp is invisible to
         # them. Arduino compiles every .cpp under src/, so a stray copy breaks all 152 sketches at
         # link time with the host suite still green - which is how a byte-identical second copy of
         # web_assets.cpp shipped.
-        run: python3 ci_tooling/check/check_duplicate_symbols.py
+        run: python3 -m tools.ci_tooling.check.check_duplicate_symbols
+
+      - name: Frame literals declare their real length
+        # Every PC_FK_LIT carries its length as a literal the compiler cannot check. This verifies
+        # each declared length against the string it names, across src/, examples/ and
+        # penetration_testing/. It was written and never wired to anything.
+        run: python3 -m tools.ci_tooling.check.check_frame_specs
 
       - name: Crypto KAT vectors up to date (generated .inc matches vendored JSON)
-        # test/test_crypto_kat/kat_data.inc is generated from the vendored external vectors in
+        # test/unit/crypto/test_crypto_kat/kat_data.inc is generated from the vendored external vectors in
         # test/vectors/*.json. Regenerate and fail if the committed table drifted from its source.
         run: |
-          python3 tools/gen_crypto_vectors.py
-          git diff --exit-code test/test_crypto_kat/kat_data.inc
+          python3 -m tools.crypto.gen_crypto_vectors
+          git diff --exit-code test/unit/crypto/test_crypto_kat/kat_data.inc

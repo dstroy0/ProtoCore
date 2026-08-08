@@ -65,7 +65,7 @@ explanatory comments:
 #define PC_ENABLE_MNT 1
 
 #include "protocore.h"
-#include "board_drivers/hal/esp/esp_mnt_fs.h" // the Arduino FS backend lives in the board layer
+#include "core_setup/hal/esp/esp_mnt_fs.h" // the Arduino FS backend lives in the board layer
 #include "network_drivers/physical/physical.h"
 #include "server/filesystem/filesystem.h"
 #include <LittleFS.h>
@@ -78,10 +78,10 @@ PC server;
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
         delay(250);
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

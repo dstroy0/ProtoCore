@@ -5,8 +5,6 @@
 
 #if PC_ENABLE_IFACE_BRIDGE
 
-#include <string.h>
-
 /// The one owned mutable: the address:port -> bus rule table.
 typedef struct
 {
@@ -56,7 +54,7 @@ proto_bool pc_iface_bridge_map(const char *ip, uint16_t port, BridgeProto proto,
     BridgeRule r;
     memset(&r, 0, sizeof(r));
     r.listen_ip.family = PC_IP_NONE; // "any interface" unless a valid address is given
-    if (ip && ip[0] && !pc_ip_parse(ip, &r.listen_ip))
+    if (ip && ip[0] && !Ip.parse(ip, &r.listen_ip))
     {
         return PROTO_FALSE; // malformed bind address
     }

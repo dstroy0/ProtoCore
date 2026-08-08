@@ -15,7 +15,6 @@
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // pc_mlkem768_encaps (X25519MLKEM768 hybrid)
 #endif
-#include <string.h>
 
 // TLS alert codes we may raise (RFC 8446 sec 6).
 #define TLS_ALERT_UNEXPECTED_MESSAGE 10

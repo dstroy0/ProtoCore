@@ -10,8 +10,7 @@
 
 #if PC_NEED_NMEA0183
 
-#include "shared_primitives/numparse.h"
-#include <string.h>
+#include "mmgr/protostr.h"
 
 uint8_t pc_nmea0183_checksum(const char *s, size_t len)
 {
@@ -164,8 +163,8 @@ proto_bool pc_nmea0183_field_float(const Nmea0183 *m, uint8_t idx, float *out)
         return PROTO_FALSE;
     }
     const char *end = m->fields[idx];
-    // The field is delimited by a ',' or '*' in the source, so pc_strtof stops at the field end.
-    float v = pc_strtof(m->fields[idx], &end);
+    // The field is delimited by a ',' or '*' in the source, so str.to_float stops at the field end.
+    float v = str.to_float(m->fields[idx], &end);
     if (end == m->fields[idx])
     {
         return PROTO_FALSE;
@@ -181,7 +180,7 @@ proto_bool pc_nmea0183_field_int(const Nmea0183 *m, uint8_t idx, long *out)
         return PROTO_FALSE;
     }
     const char *end = m->fields[idx];
-    long v = pc_strtol(m->fields[idx], &end);
+    long v = str.to_long(m->fields[idx], &end);
     if (end == m->fields[idx])
     {
         return PROTO_FALSE;
@@ -216,7 +215,7 @@ static void nmea_time(const Nmea0183 *m, uint8_t idx, uint8_t *h, uint8_t *mi, f
     *h = (uint8_t)((f[0] - '0') * 10 + (f[1] - '0'));
     *mi = (uint8_t)((f[2] - '0') * 10 + (f[3] - '0'));
     const char *end = f + 4;
-    *s = pc_strtof(f + 4, &end); // ss.ss, stopped at the ',' / '*' delimiter
+    *s = str.to_float(f + 4, &end); // ss.ss, stopped at the ',' / '*' delimiter
 }
 
 // Split a ddmmyy date field into day / month / (2-digit) year.

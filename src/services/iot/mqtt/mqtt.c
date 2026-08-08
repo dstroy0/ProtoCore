@@ -13,7 +13,6 @@
 #if PC_ENABLE_MQTT
 
 #include "shared_primitives/utf8.h"
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Pure codec (host-testable)
@@ -21,7 +20,7 @@
 
 // Big-endian 16-bit helpers and a length-prefixed UTF-8 string writer.
 #if PROTOCORE_HOT
-#include "network_drivers/transport/client.h" // shared outbound TCP client (L4)
+#include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
 #include <Arduino.h>
 #endif
 #if PROTOCORE_HOT && PC_ENABLE_MQTT_TLS
@@ -471,7 +470,7 @@ typedef struct
     volatile proto_bool closed; // peer closed / error (set when the pump sees it)
 
     // Inbound plaintext byte ring (consumer = process_rx). It is fed by a pump in
-    // process_rx: for plain TCP from pc_client_read, for MQTTS from the TLS session
+    // process_rx: for plain TCP from Tcp.client->read, for MQTTS from the TLS session
     // (pc_tls_client_session_read), whose BIO in turn reads ciphertext from pc_client.
     uint8_t rx[PC_MQTT_BUF_SIZE];
     volatile size_t rx_head;
@@ -531,7 +530,7 @@ static inline void ring_advance(size_t n)
 // Send raw plaintext bytes to the broker.
 static proto_bool mq_tx_plain(const uint8_t *data, size_t len)
 {
-    return pc_client_send(s_mqtt.cid, data, len);
+    return Tcp.client->send(s_mqtt.cid, data, len);
 }
 
 // Drain plaintext wire bytes from the client into the s_mqtt.rx ring (plain TCP).
@@ -548,10 +547,10 @@ static void mq_pump_plain()
             break;
         }
         size_t want = freey < sizeof(tmp) ? freey : sizeof(tmp);
-        size_t n = pc_client_read(s_mqtt.cid, tmp, want);
+        size_t n = Tcp.client->read(s_mqtt.cid, tmp, want);
         if (n == 0)
         {
-            if (pc_client_is_closed(s_mqtt.cid))
+            if (Tcp.client->is_closed(s_mqtt.cid))
             {
                 s_mqtt.closed = PROTO_TRUE;
             }
@@ -572,15 +571,15 @@ static int mq_tls_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx;
     size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return pc_client_send(s_mqtt.cid, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
+    return Tcp.client->send(s_mqtt.cid, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
 }
 static int mq_tls_recv(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    size_t n = pc_client_read(s_mqtt.cid, buf, len);
+    size_t n = Tcp.client->read(s_mqtt.cid, buf, len);
     if (n == 0)
     {
-        return pc_client_is_closed(s_mqtt.cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+        return Tcp.client->is_closed(s_mqtt.cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
     }
     return (int)n;
 }
@@ -643,7 +642,7 @@ static void mq_close()
 #endif
     if (s_mqtt.cid >= 0)
     {
-        pc_client_close(s_mqtt.cid);
+        Tcp.client->close(s_mqtt.cid);
     }
     s_mqtt.cid = -1;
     s_mqtt.mqtt_up = PROTO_FALSE;
@@ -866,7 +865,7 @@ proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, 
     uint32_t deadline = pc_millis() + 8000;
 
     // Open the TCP connection (DNS + connect) via the shared client transport.
-    s_mqtt.cid = pc_client_open(host, port, 8000);
+    s_mqtt.cid = Tcp.client->open(host, port, 8000);
     if (s_mqtt.cid < 0)
     {
         return PROTO_FALSE;

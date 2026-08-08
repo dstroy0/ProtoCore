@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SMB
 
-#include <string.h>
-
 #include "crypto/aead/aes128gcm.h"  // pc_aes128gcm_* keyed AEAD (SMB 3.x AES-128-GCM)
 #include "crypto/aead/aesccm.h"     // pc_aesccm_seal_tag/open_tag (SMB 3.x AES-128/256-CCM)
 #include "crypto/aead/aesgcm.h"     // pc_aesgcm_* keyed AEAD (SMB 3.x AES-256-GCM)
@@ -19,8 +17,8 @@
 #include "crypto/kdf/kdf.h"         // pc_kdf_ctr_hmac_sha256 for SMB 3.x key derivation
 #include "crypto/mac/aes_cmac.h"    // pc_aes_cmac for SMB 3.x message signing
 #include "crypto/mac/hmac_sha256.h" // pc_hmac_sha256 for SMB 2.x message signing
-#include "mmgr/secure.h"            // the per-call GCM context borrow
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
+#include "mmgr/secure.h" // the per-call GCM context borrow
 
 static const uint8_t SMB2_PROTOCOL_ID[4] = {0xFE, 'S', 'M', 'B'};
 

@@ -115,6 +115,23 @@ uint32_t pc_ssh_flow_peer_window(const SshFlow *f);
 // channel number to a channel is multiplexing, and that stays in ssh_channel.
 // ---------------------------------------------------------------------------
 
+// The connection protocol's message numbers (RFC 4250 §4.1.1: 80 to 89 generic, 90 to 127 channel
+// related). They sit with the builders below, which are what write them onto the wire.
+
+#define SSH_MSG_GLOBAL_REQUEST 80  // RFC 4254 §4 (e.g. tcpip-forward for ssh -R)
+#define SSH_MSG_REQUEST_SUCCESS 81 // RFC 4254 §4 reply to a want_reply global request
+#define SSH_MSG_REQUEST_FAILURE 82 // RFC 4254 §4 reply: request refused / unrecognized
+#define SSH_MSG_CHANNEL_OPEN 90
+#define SSH_MSG_CHANNEL_OPEN_CONFIRM 91
+#define SSH_MSG_CHANNEL_OPEN_FAILURE 92
+#define SSH_MSG_CHANNEL_WINDOW_ADJUST 93
+#define SSH_MSG_CHANNEL_DATA 94
+#define SSH_MSG_CHANNEL_EOF 96
+#define SSH_MSG_CHANNEL_CLOSE 97
+#define SSH_MSG_CHANNEL_REQUEST 98
+#define SSH_MSG_CHANNEL_SUCCESS 99
+#define SSH_MSG_CHANNEL_FAILURE 100
+
 /** @brief CHANNEL_OPEN_FAILURE. @p reason: 1 admin-prohibited, 2 connect-failed, 3 unknown-type, 4 resource. */
 int32_t pc_ssh_sig_build_open_failure(uint8_t *out, size_t cap, uint32_t peer_id, uint32_t reason, size_t *out_len);
 

@@ -24,7 +24,7 @@
 #include "crypto/cipher/aes256ctr.h"
 #include "crypto/hash/sha256.h"
 #include "crypto/mac/hmac_sha256.h"
-#include <string.h>
+
 
 static bool eq(const uint8_t *a, const uint8_t *b, size_t n)
 {

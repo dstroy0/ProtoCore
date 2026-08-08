@@ -56,7 +56,7 @@ attempt every probe interval.
 
 ## Routes
 
-| Route      | What it does                                                                 |
+| HttpRoute  | What it does                                                                 |
 | ---------- | ---------------------------------------------------------------------------- |
 | `/storage` | `{"storage":"ready","mounts":1,"faults":0}` for a health panel               |
 | `/write`   | appends a line, gated on `ready()` and reporting the outcome                 |

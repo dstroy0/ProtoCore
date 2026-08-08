@@ -101,7 +101,7 @@ void print_connection_pool_stats()
     Serial.println("---------------------------------");
 }
 
-// --- Route handlers with microsecond profiling ---
+// --- HttpRoute handlers with microsecond profiling ---
 
 /**
  * @brief GET /api/diagnostics
@@ -205,14 +205,14 @@ void setup()
     delay(1000);
     Serial.println("\n--- PC Expert Performance Example ---");
 
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(500);
         Serial.print(".");
     }
     Serial.println("\nWiFi online!");
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("Local IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

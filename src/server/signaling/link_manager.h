@@ -8,7 +8,7 @@
  * Once a device has more than one network interface (a wired Ethernet PHY brought up alongside WiFi STA,
  * plus maybe a softAP), something has to decide which one carries traffic and when to switch: escalate to
  * the wired link when it comes up (usually faster / more reliable), and fail over to WiFi when it drops.
- * The stack owns the routes and `pc_net_egress()` reports the live one; this is the *policy* that drives
+ * The stack owns the routes and `Physical.link->egress()` reports the live one; this is the *policy* that drives
  * it - a small table of interfaces (each a kind + priority + up/down) with a deterministic "best link
  * that is up" selection, plus change detection so the app only reconfigures on an actual transition.
  *

@@ -3,7 +3,7 @@
 
 /**
  * @file NetEgress.ino
- * @brief Report which interface outbound traffic is using (pc_net_egress()).
+ * @brief Report which interface outbound traffic is using (Physical.link->egress()).
  *
  * The OS (esp_netif) handles failover between links by reselecting the default
  * route; this sketch just *reports* the live egress interface and its IP, queried
@@ -21,15 +21,15 @@ static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 
-static const char *iface_name(pc_iface i)
+static const char *iface_name(pc_if_kind i)
 {
     switch (i)
     {
-    case pc_iface::PC_IFACE_ETH:
+    case pc_if_kind::PC_IF_ETH:
         return "ethernet";
-    case pc_iface::PC_IFACE_AP:
+    case pc_if_kind::PC_IF_WIFI_AP:
         return "softap";
-    case pc_iface::PC_IFACE_STA:
+    case pc_if_kind::PC_IF_WIFI_STA:
         return "wifi-sta";
     default:
         return "none";
@@ -39,23 +39,23 @@ static const char *iface_name(pc_iface i)
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    Serial.printf("egress interface: %s\n", iface_name(pc_net_egress()));
+    Serial.printf("egress interface: %s\n", iface_name(Physical.link->egress()));
 
     on_http("/net", HTTP_GET, [](uint8_t id, HttpReq *) {
-        uint32_t ip = pc_net_egress_ip(); // network byte order
+        uint32_t ip = Physical.link->egress_ip(); // network byte order
         char body[96];
-        snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(pc_net_egress()),
+        snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(Physical.link->egress()),
                  (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF),
                  (unsigned)((ip >> 24) & 0xFF));
         send_text(id, 200, "application/json", body);

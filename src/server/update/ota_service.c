@@ -16,7 +16,6 @@
 #include "protocore.h"
 #include "shared_primitives/mime.h"
 #include <Update.h>
-#include <string.h>
 
 // All OTA-service state, owned by one instance (internal linkage): the server handle, the
 // route path, the Basic-auth credentials, and the per-upload flags (one upload at a time on
@@ -42,7 +41,7 @@ static proto_bool ota_check_auth(HttpReq *req)
     }
 
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
-    size_t n = pc_base64_decode(h + 6, decoded, sizeof(decoded) - 1);
+    size_t n = Base64.decode(h + 6, decoded, sizeof(decoded) - 1);
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -104,7 +103,7 @@ static void ota_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     }
 }
 
-/// @brief Route handler (runs at PARSE_COMPLETE): finalize and reply, then reboot.
+/// @brief HttpRoute handler (runs at PARSE_COMPLETE): finalize and reply, then reboot.
 static void ota_handle(uint8_t slot_id, HttpReq *req)
 {
     if (!req->body_streaming)

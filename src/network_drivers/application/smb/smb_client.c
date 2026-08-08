@@ -15,7 +15,6 @@
 #include "ntlmssp.h"
 #include "smb2.h"
 #include "spnego.h"
-#include <string.h>
 
 // Every request this engine builds has to fit the shared tx buffer, and the request builders report
 // that by returning 0. Pin the relationship instead of leaving each `if (!mlen)` to hope for it:

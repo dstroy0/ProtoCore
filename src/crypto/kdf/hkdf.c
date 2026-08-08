@@ -8,10 +8,9 @@
 
 #include "crypto/kdf/hkdf.h"
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
 #include "crypto/mac/hmac_sha256.h"
-#include <string.h>
 
 void pc_hkdf_extract(const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
                      uint8_t prk[PC_HKDF_HASH_LEN])
@@ -91,4 +90,4 @@ void pc_hkdf_expand_label(const uint8_t secret[PC_HKDF_HASH_LEN], const char *la
     pc_hkdf_expand_label_ctx(secret, label, NULL, 0, out, out_len, label_prefix);
 }
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE

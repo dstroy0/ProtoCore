@@ -185,6 +185,51 @@ extern WsConn ws_pool[MAX_WS_CONNS];
 // ---------------------------------------------------------------------------
 
 /**
+ * @brief Callback fired when a WebSocket connection is established.
+ *
+ * @param ws_id  Index into ws_pool[] for this connection.
+ */
+typedef void (*WsConnectHandler)(uint8_t ws_id);
+
+/**
+ * @brief Callback fired when a WebSocket text or binary frame arrives.
+ *
+ * The payload is in ws_pool[ws_id].buf, null-terminated.  Length is in
+ * ws_pool[ws_id].payload_len.  Opcode is in ws_pool[ws_id].opcode.
+ *
+ * @param ws_id  Index into ws_pool[].
+ */
+typedef void (*WsMessageHandler)(uint8_t ws_id);
+
+/**
+ * @brief Callback fired when a WebSocket connection closes.
+ *
+ * @param ws_id  Index into ws_pool[] (slot is still valid during callback).
+ */
+typedef void (*WsCloseHandler)(uint8_t ws_id);
+
+/** @brief The id a route carries when it serves no WebSocket. */
+#define PC_WS_NONE 0xFFu
+
+/**
+ * @brief Record one route's handlers and return the id naming them, or ::PC_WS_NONE when full.
+ *
+ * The handlers live here, not in the route table: a route decides where a request goes, and what
+ * runs once the socket is open belongs to this module. A route stores the id, so nothing above
+ * holds a pointer into here and the same handler set can serve more than one route.
+ */
+uint8_t ws_route_add(WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close);
+
+/// @brief The connect handler @p id names, or nullptr when @p id names nothing.
+WsConnectHandler ws_route_connect(uint8_t id);
+
+/// @brief The message handler @p id names, or nullptr when @p id names nothing.
+WsMessageHandler ws_route_message(uint8_t id);
+
+/// @brief The close handler @p id names, or nullptr when @p id names nothing.
+WsCloseHandler ws_route_close(uint8_t id);
+
+/**
  * @brief Initialize all WebSocket pool slots to inactive.
  *
  * Called once from begin().
@@ -258,8 +303,8 @@ void ws_reset_frame(WsConn *ws);
  * @brief Send a WebSocket frame to the client.
  *
  * Builds the header (no masking -- server-to-client frames are never masked)
- * and hands both to the transport layer (pc_conn_send()).  The caller is
- * responsible for flushing afterwards (pc_conn_flush()).
+ * and hands both to the transport layer (Tcp.conn->send()).  The caller is
+ * responsible for flushing afterwards (Tcp.conn->flush()).
  *
  * @param ws       WebSocket connection.
  * @param opcode   Frame opcode (WS_OP_TEXT, WS_OP_BINARY, WS_OP_PONG, etc.).

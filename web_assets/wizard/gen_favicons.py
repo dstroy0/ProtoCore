@@ -6,12 +6,12 @@
 A favicon is a **motif** (a small recognizable glyph - bolt, chip, terminal, squid, ...) drawn in a
 foreground color on a shaped background (rounded square / circle), so the set can grow to hundreds
 without hand-drawing each. Each favicon is written as a crisp SVG under web_assets/favicons/; a separate
-step (ci_tooling/assets/pack_favicons.sh) rasterizes each to the standard sizes (16/32/48/180/192/512 + .ico) and
+step (tools/ci_tooling/assets/pack_favicons.sh) rasterizes each to the standard sizes (16/32/48/180/192/512 + .ico) and
 packs a ready-to-drop-in tarball, plus a preview PNG for the gallery.
 
-    python web_assets/wizard/gen_favicons.py            # write web_assets/favicons/*.svg
-    python web_assets/wizard/gen_favicons.py --check     # CI: fail if stale
-    python web_assets/wizard/gen_favicons.py --list       # print every favicon name
+    python -m web_assets.wizard.gen_favicons            # write web_assets/favicons/*.svg
+    python -m web_assets.wizard.gen_favicons --check     # CI: fail if stale
+    python -m web_assets.wizard.gen_favicons --list       # print every favicon name
 """
 
 import os
@@ -105,7 +105,7 @@ def cmd_gallery():
         f"**{len(catalog())} favicons** - {len(MOTIFS)} motifs x {len(PAIRS)} palettes - as crisp SVG under"
         " [`web_assets/favicons/`](../web_assets/favicons/). Package any one as a drop-in favicon set (16/32/48/180/"
         "192/512 PNG + `favicon.ico` + `site.webmanifest`, tarballed) with"
-        " [`ci_tooling/assets/pack_favicons.sh`](../ci_tooling/assets/pack_favicons.sh) `<name>` (needs `rsvg-convert` + ImageMagick).",
+        " [`tools/ci_tooling/assets/pack_favicons.sh`](../ci_tooling/assets/pack_favicons.sh) `<name>` (needs `rsvg-convert` + ImageMagick).",
         "",
     ]
     for motif in MOTIFS:

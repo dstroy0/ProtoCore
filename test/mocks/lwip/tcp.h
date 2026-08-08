@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include <string.h>
 
 typedef int8_t err_t;
 typedef uint16_t u16_t;
@@ -46,7 +45,7 @@ typedef err_t (*tcp_sent_fn)(void *arg, struct tcp_pcb *tpcb, u16_t len);
 typedef void (*tcp_err_fn)(void *arg, err_t err);
 
 // Test hooks: force the next call to report failure, modeling the real-lwIP cases
-// listener_add() guards against (out of PCBs / a port already bound / backlog alloc
+// Tcp.listener->add() guards against (out of PCBs / a port already bound / backlog alloc
 // failure). Each auto-clears after one use.
 inline proto_bool &mock_new_pcb_fail_once()
 {
@@ -142,7 +141,7 @@ inline TcpCapture &_tcp_capture()
 }
 
 // Test hook: after this many successful writes, tcp_write fails (ERR_MEM, nothing
-// queued) - models a full/transient TCP send buffer so pc_conn_send() returns false
+// queued) - models a full/transient TCP send buffer so Tcp.conn->send() returns false
 // and a send pump takes its un-read-and-retry path. -1 (default) never fails.
 inline int &mock_send_fail_after()
 {
@@ -177,7 +176,7 @@ inline err_t tcp_write(struct tcp_pcb *, const void *data, uint16_t len, uint8_t
     int &fa = mock_send_fail_after();
     if (fa == 0)
     {
-        return ERR_MEM; // send buffer full: nothing queued, pc_conn_send() -> false
+        return ERR_MEM; // send buffer full: nothing queued, Tcp.conn->send() -> false
     }
     if (fa > 0)
     {

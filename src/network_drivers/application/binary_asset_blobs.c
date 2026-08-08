@@ -8,7 +8,7 @@
 
 #if PC_ENABLE_THEMES
 
-#include <string.h>
+
 
 static const char PC_THEME_AMBER_CRT[] =
     ":root{--bg:#0a0600;--bg2:#140d00;--card:#140d00;--ink:#ffb000;--muted:#8a6000;--accent:#ffcc33;--accent2:#ff88"

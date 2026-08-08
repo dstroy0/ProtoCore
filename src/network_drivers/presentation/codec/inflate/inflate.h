@@ -52,16 +52,21 @@ typedef enum PROTO_ENUM_PACKED
 } InflateResult;
 
 /**
- * @brief Decompress a raw DEFLATE (RFC 1951) stream.
+ * @brief The one call, and the module's only symbol.
  *
- * @param src,src_len         compressed input.
- * @param dst,dst_cap         output buffer and its capacity (also the window).
- * @param out_len             set to the decompressed length on success.
- * @param scratch,scratch_len caller working memory (>= INFLATE_SCRATCH_SIZE).
- * @return INFLATE_OK (0) on success, else a negative ::InflateResult.
+ * @var InflateNs::raw  Decompress a raw DEFLATE (RFC 1951) stream. @p dst is also the window, so a
+ *                    decompressed message must fit @p dst_cap.
+ *                    @p out_len takes the length on success and @p scratch is caller working memory
+ *                    of at least INFLATE_SCRATCH_SIZE bytes. INFLATE_OK (0), else a negative ::InflateResult
  */
-InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
-                          void *scratch, size_t scratch_len);
+typedef struct
+{
+    InflateResult (*raw)(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
+                         void *scratch, size_t scratch_len);
+} InflateNs;
+
+/** @brief The one symbol this module exports. */
+extern const InflateNs Inflate;
 
 #endif // PC_ENABLE_WS_DEFLATE
 

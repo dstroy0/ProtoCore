@@ -28,7 +28,7 @@
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
-#include <string.h>
+
 PC_CRYPTO_HOT
 
 // The modexp below borrows its Montgomery temporaries from the secure pool as one working set. It does not

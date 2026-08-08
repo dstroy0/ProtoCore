@@ -10,8 +10,7 @@
 
 #if PC_ENABLE_MSGPACK
 
-#include "shared_primitives/bytes.h"
-#include <string.h>
+#include "mmgr/bytes.h"
 
 // Thin local names over the shared byte verbs (bytes.h) so the call sites
 // below read the same as before; the cursor invariants live in one place.
@@ -26,7 +25,7 @@ static void put_be(pc_span *w, uint64_t val, int32_t nbytes)
     pc_bw_put_be(w, val, nbytes);
 }
 
-void pc_msgpack_uint(pc_span *w, uint64_t v)
+static void pc_msgpack_uint(pc_span *w, uint64_t v)
 {
     if (v <= 0x7f)
     {
@@ -54,7 +53,7 @@ void pc_msgpack_uint(pc_span *w, uint64_t v)
     }
 }
 
-void pc_msgpack_int(pc_span *w, int64_t v)
+static void pc_msgpack_int(pc_span *w, int64_t v)
 {
     if (v >= 0)
     {
@@ -87,7 +86,7 @@ void pc_msgpack_int(pc_span *w, int64_t v)
     }
 }
 
-void pc_msgpack_str_n(pc_span *w, const char *s, size_t len)
+static void pc_msgpack_str_n(pc_span *w, const char *s, size_t len)
 {
     if (len <= 31)
     {
@@ -114,12 +113,12 @@ void pc_msgpack_str_n(pc_span *w, const char *s, size_t len)
     }
 }
 
-void pc_msgpack_str(pc_span *w, const char *s)
+static void pc_msgpack_str(pc_span *w, const char *s)
 {
     pc_msgpack_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
 }
 
-void pc_msgpack_bytes(pc_span *w, const uint8_t *data, size_t len)
+static void pc_msgpack_bytes(pc_span *w, const uint8_t *data, size_t len)
 {
     if (len <= 0xff)
     {
@@ -142,17 +141,17 @@ void pc_msgpack_bytes(pc_span *w, const uint8_t *data, size_t len)
     }
 }
 
-void pc_msgpack_bool(pc_span *w, proto_bool b)
+static void pc_msgpack_bool(pc_span *w, proto_bool b)
 {
     put(w, b ? 0xc3 : 0xc2);
 }
 
-void pc_msgpack_null(pc_span *w)
+static void pc_msgpack_null(pc_span *w)
 {
     put(w, 0xc0);
 }
 
-void pc_msgpack_float(pc_span *w, float f)
+static void pc_msgpack_float(pc_span *w, float f)
 {
     uint32_t bits;
     memcpy(&bits, &f, sizeof(bits));
@@ -160,7 +159,7 @@ void pc_msgpack_float(pc_span *w, float f)
     put_be(w, bits, 4);
 }
 
-void pc_msgpack_array(pc_span *w, size_t count)
+static void pc_msgpack_array(pc_span *w, size_t count)
 {
     if (count <= 15)
     {
@@ -178,7 +177,7 @@ void pc_msgpack_array(pc_span *w, size_t count)
     }
 }
 
-void pc_msgpack_map(pc_span *w, size_t count)
+static void pc_msgpack_map(pc_span *w, size_t count)
 {
     if (count <= 15)
     {
@@ -196,7 +195,7 @@ void pc_msgpack_map(pc_span *w, size_t count)
     }
 }
 
-void pc_msgpack_label(pc_span *w, const char *name, int64_t num)
+static void pc_msgpack_label(pc_span *w, const char *name, int64_t num)
 {
     (void)name; // the binary packs carry the integer label form, as CBOR does
     pc_msgpack_int(w, num);
@@ -218,7 +217,7 @@ static proto_bool take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
     return pc_br_take_be(r, nbytes, out);
 }
 
-pc_codec_type pc_msgpack_peek(pc_cspan *r)
+static pc_codec_type pc_msgpack_peek(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -286,7 +285,7 @@ pc_codec_type pc_msgpack_peek(pc_cspan *r)
     }
 }
 
-proto_bool pc_msgpack_read_uint(pc_cspan *r, uint64_t *out)
+static proto_bool pc_msgpack_read_uint(pc_cspan *r, uint64_t *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -335,7 +334,7 @@ proto_bool pc_msgpack_read_uint(pc_cspan *r, uint64_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_msgpack_read_int(pc_cspan *r, int64_t *out)
+static proto_bool pc_msgpack_read_int(pc_cspan *r, int64_t *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -420,7 +419,7 @@ proto_bool pc_msgpack_read_int(pc_cspan *r, int64_t *out)
     }
 }
 
-proto_bool pc_msgpack_read_bool(pc_cspan *r, proto_bool *out)
+static proto_bool pc_msgpack_read_bool(pc_cspan *r, proto_bool *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -445,7 +444,7 @@ proto_bool pc_msgpack_read_bool(pc_cspan *r, proto_bool *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_msgpack_read_null(pc_cspan *r)
+static proto_bool pc_msgpack_read_null(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len || r->buf[r->pos] != 0xc0)
     {
@@ -456,7 +455,7 @@ proto_bool pc_msgpack_read_null(pc_cspan *r)
     return PROTO_TRUE;
 }
 
-proto_bool pc_msgpack_read_float(pc_cspan *r, float *out)
+static proto_bool pc_msgpack_read_float(pc_cspan *r, float *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -550,12 +549,12 @@ static proto_bool read_blob(pc_cspan *r, proto_bool want_str, const uint8_t **ou
     return PROTO_TRUE;
 }
 
-proto_bool pc_msgpack_read_str(pc_cspan *r, const char **out, size_t *len)
+static proto_bool pc_msgpack_read_str(pc_cspan *r, const char **out, size_t *len)
 {
     return read_blob(r, PROTO_TRUE, (const uint8_t **)out, len);
 }
 
-proto_bool pc_msgpack_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
+static proto_bool pc_msgpack_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
 {
     return read_blob(r, PROTO_FALSE, out, len);
 }
@@ -603,14 +602,23 @@ static proto_bool read_count(pc_cspan *r, proto_bool want_map, size_t *count)
     return PROTO_TRUE;
 }
 
-proto_bool pc_msgpack_read_array(pc_cspan *r, size_t *count)
+static proto_bool pc_msgpack_read_array(pc_cspan *r, size_t *count)
 {
     return read_count(r, PROTO_FALSE, count);
 }
 
-proto_bool pc_msgpack_read_map(pc_cspan *r, size_t *count)
+static proto_bool pc_msgpack_read_map(pc_cspan *r, size_t *count)
 {
     return read_count(r, PROTO_TRUE, count);
 }
+
+/** @brief MessagePack as an instance of the codec interface. */
+const pc_codec MsgPack = {
+    pc_msgpack_uint,       pc_msgpack_int,        pc_msgpack_bytes,     pc_msgpack_str,       pc_msgpack_str_n,
+    pc_msgpack_bool,       pc_msgpack_null,       pc_msgpack_float,     pc_msgpack_array,     pc_msgpack_map,
+    pc_msgpack_label,      pc_msgpack_peek,       pc_msgpack_read_uint, pc_msgpack_read_int,  pc_msgpack_read_bytes,
+    pc_msgpack_read_str,   pc_msgpack_read_array, pc_msgpack_read_map,  pc_msgpack_read_bool, pc_msgpack_read_null,
+    pc_msgpack_read_float,
+};
 
 #endif // PC_ENABLE_MSGPACK

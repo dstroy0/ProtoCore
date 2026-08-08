@@ -19,13 +19,12 @@
 
 #if PC_ENABLE_SSH_SFTP
 
+#include "mmgr/endian.h" // the u32 <-> big-endian bytes serializers
 #include "network_drivers/application/sftp/sftp.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // callbacks + setters
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"    // pc_ssh_conn_send / pc_ssh_conn_close_channel
 #include "server/filesystem/filesystem.h"
-#include "shared_primitives/endian.h" // the u32 <-> big-endian bytes serializers
 #include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
-#include <string.h>
 
 // Leave headroom below one SSH packet for the CHANNEL_DATA framing, so pc_ssh_conn_send never rejects a response.
 #define PC_SFTP_RESP_CAP (SSH_PKT_BUF_SIZE - 16)

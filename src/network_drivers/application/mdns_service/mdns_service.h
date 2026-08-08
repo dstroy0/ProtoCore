@@ -5,9 +5,15 @@
  * @file mdns_service.h
  * @brief Optional mDNS / DNS-SD advertisement (PC_ENABLE_MDNS).
  *
- * Wraps the ESP-IDF `mdns` component: responds for `<hostname>.local` and advertises
- * an `_http._tcp` service, with optional TXT records and extra service types.
- * Compiles to a no-op stub when PC_ENABLE_MDNS is 0 or on non-Arduino builds.
+ * Responds for `<hostname>.local` and advertises an `_http._tcp` service, with optional TXT records
+ * and extra service types.
+ *
+ * Two backends, chosen by PC_HAS_VENDOR_MDNS. Where the SDK ships a responder the wrapper drives
+ * that one, because it also probes and resolves name conflicts. Where it does not, the portable
+ * responder answers RFC 6762 / RFC 6763 queries on 224.0.0.251:5353 over the UDP listener: A for the
+ * host, PTR for the enumeration name and each service type, and SRV + TXT per instance. It advertises
+ * rather than defends - no probing, no conflict resolution - so two devices given the same hostname
+ * on one link both answer to it.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -25,7 +31,7 @@ PROTO_BEGIN_DECLS
 /**
  * @brief Start mDNS responder and advertise an HTTP service.
  *
- * Call once after the WiFi link is up (wifi_ready()) and after begin(). The
+ * Call once after the WiFi link is up (Physical.wifi->ready()) and after begin(). The
  * device becomes reachable at `<hostname>.local` and advertises
  * `_http._tcp` on @p http_port.
  *

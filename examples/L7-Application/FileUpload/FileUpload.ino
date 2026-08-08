@@ -31,7 +31,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/application/upload_service/upload_service.h"
-#include "board_drivers/hal/esp/esp_mnt_fs.h" // pc_mnt_fs(): bind an Arduino FS to the storage seam
+#include "core_setup/hal/esp/esp_mnt_fs.h" // pc_mnt_fs(): bind an Arduino FS to the storage seam
 #include "server/filesystem/mnt.h"            // pc_mnt_mount()
 #include <LittleFS.h>
 
@@ -50,14 +50,14 @@ void setup()
         Serial.println("LittleFS mount failed");
     }
 
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

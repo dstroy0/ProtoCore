@@ -14,8 +14,6 @@
 
 #include "server/filesystem/mnt.h"
 
-#include <string.h>
-
 // --- the HAL: which store is mounted -------------------------------------------------------------
 // Ungated, because mnt.h declares it ungated: this is the seam every caller reads through, and the
 // filesystem accessor calls pc_mnt_active() on every operation whether or not the RAM disk is built.
@@ -29,6 +27,61 @@ typedef struct
     const pc_mnt_backend *backend;
 } MntCtx;
 static MntCtx s_hal;
+
+// A mount point: which backend serves a subtree, and which subtree. Both registrars that offer a
+// mount - static file serving and DAV - describe one with this pair, so the pair lives here with the
+// rest of mounting rather than being copied into each of their route entries.
+typedef struct
+{
+    const pc_mnt_backend *backend; ///< null is legal: the accessor uses whatever is mounted
+    const char *root;              ///< the subtree, as a request-path piece
+} MntPoint;
+
+typedef struct
+{
+    MntPoint point[MAX_ROUTES];
+    uint8_t count;
+} MntPointCtx;
+static MntPointCtx s_point;
+
+uint8_t pc_mnt_point_add(const pc_mnt_backend *backend, const char *root)
+{
+    if (s_point.count >= MAX_ROUTES)
+    {
+        return PC_MNT_NONE;
+    }
+    MntPoint *m = &s_point.point[s_point.count];
+    m->backend = backend;
+    m->root = root;
+    return s_point.count++;
+}
+
+const pc_mnt_backend *pc_mnt_point_backend(uint8_t id)
+{
+    if (id >= s_point.count)
+    {
+        return NULL;
+    }
+    return s_point.point[id].backend;
+}
+
+const char *pc_mnt_point_root(uint8_t id)
+{
+    // Empty rather than null, because every caller wants the subtree as a path piece to compare or
+    // append: handing back null would put the same null test at each of them.
+    if (id >= s_point.count || s_point.point[id].root == NULL)
+    {
+        return "";
+    }
+    return s_point.point[id].root;
+}
+
+void pc_mnt_point_reset(void)
+{
+    // The count is the table: a row above it is unreachable, and add() writes both fields before the
+    // count reaches it, so there is nothing to clear here.
+    s_point.count = 0;
+}
 
 void pc_mnt_mount(const pc_mnt_backend *backend)
 {

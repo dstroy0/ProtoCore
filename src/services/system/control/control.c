@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_CONTROL
 
-#include <string.h>
-
 // clamp helper is control_clamp() from control.h (inline) - reused here, not re-declared.
 
 void pid_init(Pid *p, float kp, float ki, float kd)

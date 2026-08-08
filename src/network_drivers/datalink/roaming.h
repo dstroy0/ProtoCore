@@ -67,41 +67,10 @@ typedef struct
     pc_roam_reason reason;   ///< why (see @ref pc_roam_reason)
 } pc_roam_decision;
 
-/**
- * @brief Decide whether and where to roam (pure, stateless).
- *
- * Priority order: a disassociation-imminent BTM forces a roam (to the preferred candidate if it is in the
- * list, else the strongest); a non-imminent BTM with a preferred, no-weaker candidate is honoured next;
- * otherwise, when the current RSSI is at/below the policy threshold and the strongest candidate beats it
- * by at least the hysteresis margin, roam to that candidate. The current AP is never chosen as a target.
- *
- * @param current_bssid    the BSSID we are associated with (excluded from the candidates).
- * @param current_rssi_dbm the current link's RSSI.
- * @param neighbors        candidate APs (@p n of them).
- * @param btm              an optional BTM hint (may be null).
- * @param policy           the thresholds (may be null -> a conservative default is used).
- * @param out              receives the decision (never null).
- */
-void pc_roam_decide(const uint8_t current_bssid[6], int8_t current_rssi_dbm, const pc_roam_neighbor *neighbors,
-                    uint8_t n, const pc_roam_btm *btm, const pc_roam_policy *policy, pc_roam_decision *out);
-
 /** @brief 802.11 Neighbor Report element id (IEEE 802.11 §9.4.2.36). */
 #define PC_ROAM_NR_ELEM_ID 52
-/** @brief Sentinel RSSI meaning "not yet measured" - the caller fills it after scanning the candidate. */
+/** @brief Sentinel RSSI: the candidate carries no signal reading yet, and the caller supplies one. */
 #define PC_ROAM_RSSI_UNKNOWN ((int8_t)-128)
-
-/**
- * @brief Parse a sequence of 802.11k Neighbor Report elements into candidate APs.
- *
- * @p elems is the element list an 802.11k Radio Measurement Neighbor Report Response action frame carries
- * (the caller strips the action header first). Each Neighbor Report element (id 52) supplies a candidate's
- * BSSID and operating channel; other element ids are skipped. The report does not carry RSSI, so each
- * candidate's @c rssi_dbm is set to @ref PC_ROAM_RSSI_UNKNOWN for the caller to fill after measuring, then
- * feed the list to @ref pc_roam_decide.
- * @param out receives up to @p max candidates.
- * @return the number of candidates parsed (0..@p max).
- */
-uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_neighbor *out, uint8_t max);
 
 // 802.11v BSS Transition Management Request (WNM action frame).
 #define PC_ROAM_WNM_CATEGORY 0x0A     ///< WNM action category
@@ -112,16 +81,45 @@ uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_
 #define PC_ROAM_BTM_ESS_DISASSOC 0x10 ///< Request Mode bit 4: an ESS-disassoc Session Info URL is included
 
 /**
- * @brief Parse an 802.11v BSS Transition Management Request action frame into a @ref pc_roam_btm hint.
+ * @brief The roaming module.
  *
- * @p frame starts at the action-frame Category octet (WNM category 0x0A, BTM-Request action 0x07). The
- * Request Mode flags set @c disassoc_imminent (bit 2); when the preferred-candidate-list bit (bit 0) is
- * set, the highest-preference candidate's BSSID (the first Neighbor Report element in the list, decoded
- * past the optional BSS Termination Duration and Session Information URL) becomes @c preferred_bssid. The
- * result feeds @ref pc_roam_decide.
- * @return true iff @p frame is a well-formed BTM Request; false otherwise (@p out is cleared).
+ * @var RoamNs::decide
+ * Decide whether and where to roam (pure, stateless). Priority order: a disassociation-imminent BTM
+ * forces a roam (to the preferred candidate if it is in the list, else the strongest); a non-imminent
+ * BTM with a preferred, no-weaker candidate is honoured next; otherwise, when the current RSSI is
+ * at/below the policy threshold and the strongest candidate beats it by at least the hysteresis
+ * margin, roam to that candidate. The current AP is never chosen as a target. @c current_bssid is the
+ * BSSID we are associated with and is excluded from the candidates; @c btm and @c policy may be null
+ * (a conservative default policy is used); @c out receives the decision and is never null.
+ *
+ * @var RoamNs::parse_neighbor_report
+ * Parse a sequence of 802.11k Neighbor Report elements into up to @c max candidate APs, returning how
+ * many were parsed. @c elems is the element list an 802.11k Neighbor Report Response action frame
+ * carries, with the action header already stripped. Each Neighbor Report element (id 52) supplies a
+ * candidate's BSSID and operating channel; other element ids are skipped. The report carries no signal
+ * strength, so each candidate's @c rssi_dbm comes back as @ref PC_ROAM_RSSI_UNKNOWN for the caller to
+ * fill before feeding the list to @ref RoamNs::decide.
+ *
+ * @var RoamNs::parse_btm_request
+ * Parse an 802.11v BSS Transition Management Request action frame into a @ref pc_roam_btm hint, true
+ * only for a well-formed request (@c out is cleared otherwise). @c frame starts at the action-frame
+ * Category octet (WNM category 0x0A, BTM-Request action 0x07). The Request Mode flags set
+ * @c disassoc_imminent (bit 2); when the preferred-candidate-list bit (bit 0) is set, the
+ * highest-preference candidate's BSSID becomes @c preferred_bssid, decoded past the optional BSS
+ * Termination Duration and Session Information URL.
+ *
+ * No storage member: the policy is pure and holds nothing between calls.
  */
-proto_bool pc_roam_parse_btm_request(const uint8_t *frame, size_t len, pc_roam_btm *out);
+typedef struct
+{
+    void (*decide)(const uint8_t current_bssid[6], int8_t current_rssi_dbm, const pc_roam_neighbor *neighbors,
+                   uint8_t n, const pc_roam_btm *btm, const pc_roam_policy *policy, pc_roam_decision *out);
+    uint8_t (*parse_neighbor_report)(const uint8_t *elems, size_t len, pc_roam_neighbor *out, uint8_t max);
+    proto_bool (*parse_btm_request)(const uint8_t *frame, size_t len, pc_roam_btm *out);
+} RoamNs;
+
+/** @brief The one symbol this module exports. */
+extern const RoamNs Roam;
 
 #endif // PC_ENABLE_ROAMING
 

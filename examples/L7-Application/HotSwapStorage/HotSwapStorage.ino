@@ -119,8 +119,8 @@ void setup()
     pc_hotswap_poll(); // first poll mounts a card that is already in the slot
     Serial.printf("storage at boot: %s\n", pc_hotswap_state_name(pc_hotswap_state()));
 
-    init_wifi_physical(WIFI_SSID, WIFI_PASS);
-    while (!wifi_ready())
+    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
@@ -130,7 +130,7 @@ void setup()
     on_http("/yank", HTTP_GET, yank_handler);
     begin_http(80, NULL);
 
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("http://%u.%u.%u.%u/storage\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }

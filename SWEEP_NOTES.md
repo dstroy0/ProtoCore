@@ -156,7 +156,7 @@ downgrade it.
 
 | area                 | dirs | .h  | .cpp | what it is                                                |
 | -------------------- | ---- | --- | ---- | --------------------------------------------------------- |
-| `board_drivers/`     | 8    | 27  | 10   | `board_profiles/` (per-die defaults), `hal/`, `physical/` |
+| `core_setup/`     | 8    | 27  | 10   | `board_profiles/` (per-die defaults), `hal/`, `physical/` |
 | `crypto/`            | 8    | 32  | 24   | `aead cipher hash kdf mac asymmetric pqc`                 |
 | `network_drivers/`   | 32   | 63  | 62   | the OSI stack                                             |
 | `server/`            | 2    | 8   | 13   | request handling + `mmgr/` (the two arena instances)      |
@@ -174,11 +174,11 @@ radio security storage system timing_position transportation web.
 ### API shape rule
 
 **The user surface and the vendor surface are C only.** The API a library consumer calls, and the
-`board_drivers/` boundary where vendor silicon is reached, take no templates and no C++ constructs in
+`core_setup/` boundary where vendor silicon is reached, take no templates and no C++ constructs in
 the signature, because the target list includes c2000 where control-law code is written and reviewed
 as C. Internals between those two surfaces may be C++.
 
-`shared_primitives/bytes.h` is an internal primitive shared between codecs, so its 9 templated
+`mmgr/bytes.h` is an internal primitive shared between codecs, so its 9 templated
 helpers (`pc_bw_init/_len/_ok/_put/_put_be`, `pc_br_init/_ok/_take_be`) are **not** a C-API
 violation - I called them one and was wrong. New code still adds no templates, so anything added
 there is concrete.
@@ -587,10 +587,10 @@ worst cases instead of guessed.
 (a different group) and already carry file-scope owned contexts `s_stats` / `s_metrics`, which is
 the shape the group needs.
 
-- **`u16_t` is an lwIP type used in the core** - `pc_conn_send(slot, val, (u16_t)vlen)` (82, 113 and
+- **`u16_t` is an lwIP type used in the core** - `Tcp.conn->send(slot, val, (u16_t)vlen)` (82, 113 and
   throughout). It is defined nowhere in `src/`; it comes from lwIP's headers. **31 occurrences**
   across `src/server/` and `protocore.*`. Vendor type in the core's own code, which is what
-  `board_drivers/` exists to contain.
+  `core_setup/` exists to contain.
 - **stale `#include <stdio.h>`** (22) - every `snprintf`/`printf` in the file is inside a comment.
 - **C-style casts** (58, 82, 106, 113, and on) - rule 10.
 - **implicit pointer-to-bool**: `if (!end || ...)` (59), `resolver ? ... : nullptr` (73),
@@ -932,14 +932,14 @@ Fixed in passing, each a real defect rather than a rename artifact:
 
 - `performance_benching/services/oidc/src/main.cpp` included
   `network_drivers/session/scratch.h`, a path that has not existed since the file moved to mmgr.
-- `docs/SRCBANNED.md` and `ci_tooling/check/check_src_banned.py` both asserted
+- `docs/SRCBANNED.md` and `tools/ci_tooling/check/check_src_banned.py` both asserted
   `PC_SCRATCH_SLOTS == PC_WORKER_COUNT`. That was already false before this work - the SSH client
   slot made it `+ 1`.
 - `arena.h` credited the pool accessor's `scratch_reset()` with emptying the arena's scratch end.
   That is `pc_arena_scratch_reset()`; the accessor is a caller, not the mechanism.
 - `plaintext.h` named `xTaskGetCurrentTaskHandle` in the core. The implementation had already moved
   to `pc_platform_context_id()`; only the comment still named the RTOS. Also "DRAM" -> "RAM".
-- `native_span`'s matrix description still pointed at `shared_primitives/span.h`.
+- `native_span`'s matrix description still pointed at `mmgr/span.h`.
 
 `docs/BUGS.md` was deliberately NOT swept. It is a dated log, and rewriting the symbol names in a
 past entry falsifies the record of what the code said when the bug was found.
@@ -973,7 +973,7 @@ the accessor. The split is what changed, not just the names:
   length, so the trailing byte is an index, not a scan.
 - The RAM backend grew directories (a flag on the existing name table plus a prefix scan, not a
   tree), which is what makes the file-transfer servers host-testable at all.
-- The Arduino `fs::FS` backend moved to `board_drivers/hal/esp/esp_mnt_fs.cpp`. Core no longer
+- The Arduino `fs::FS` backend moved to `core_setup/hal/esp/esp_mnt_fs.cpp`. Core no longer
   names a vendor filesystem type anywhere.
 
 `PC_ENABLE_VFS` -> `PC_ENABLE_MNT`, `PC_VFS_*` -> `PC_MNT_*`, and `PC_ENABLE_SSH_SFTP` /
@@ -1003,7 +1003,7 @@ Fixed in passing:
 
 `base64.cpp` carried a private SWAR toolkit - `swar_ge` / `swar_le` / `swar_spread` / `swar_sub7`
 plus the `0x01010101` / `0x80808080` lane constants - in its anonymous namespace, gated behind
-`PC_BASE64_SWAR`. It is now `shared_primitives/swar.h` and base64 includes it; the classification
+`PC_BASE64_SWAR`. It is now `mmgr/swar.h` and base64 includes it; the classification
 of the base64 alphabet stays in base64, which is the part that is actually base64's.
 
 One op was genuinely missing: `pc_swar_has_zero`. With it, `pc_swar_scan_nul(s, cap)` tests four

@@ -741,7 +741,7 @@ the ESP32's built-in Wi-Fi supplies the link.
   number usually matches the last octet of the PLC's IP by convention.
 - **Codec:** `pc_fins_build_command` / `pc_fins_build_memory_area_read` /
   `pc_fins_parse_response`, carried over this library's UDP transport
-  (`pc_udp_sendto`). See `src/services/fieldbus/fins/fins.h`.
+  (`Udp.client->sendto`). See `src/services/fieldbus/fins/fins.h`.
 
 ### BACnet/IP
 
@@ -983,7 +983,7 @@ codec, see [FEATURES.md](FEATURES.md) and [STANDARDS.md](STANDARDS.md).
 
 ## Module reference
 
-<!-- BEGIN GENERATED HARDWARE TABLE (ci_tooling/generate/gen_hardware_ref.py) -->
+<!-- BEGIN GENERATED HARDWARE TABLE (tools/ci_tooling/generate/gen_hardware_ref.py) -->
 
 <!-- prettier-ignore-start -->
 

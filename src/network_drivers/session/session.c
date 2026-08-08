@@ -16,8 +16,9 @@
  */
 
 #include "session.h"
-#include "../transport/listener.h"
+#include "../transport/tcp.h"
 #include "../transport/tcp.h" // TcpConn, conn_pool: the slot an event names
+#include "../transport/udp.h" // Udp: the datagram rings this tick drains
 #include "mmgr/plaintext.h"
 #include "proto_handler.h"
 
@@ -36,7 +37,7 @@ typedef struct
 } SessionCtx;
 static SessionCtx s_session;
 
-void proto_register(ConnProto proto, const ProtoHandler *h)
+static void proto_register(ConnProto proto, const ProtoHandler *h)
 {
     if ((unsigned)proto < PROTO_MAX_HANDLERS)
     {
@@ -44,7 +45,7 @@ void proto_register(ConnProto proto, const ProtoHandler *h)
     }
 }
 
-const ProtoHandler *proto_get(ConnProto proto)
+static const ProtoHandler *proto_get(ConnProto proto)
 {
     // Install the built-ins on first lookup so dispatch works before begin() (the native test
     // harness drives server_tick() directly). The list itself lives in proto_builtins.c -
@@ -69,7 +70,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     // release from accumulating across events.
     pc_plaintext_reset();
 
-    // Route to the slot's protocol handler. PROTO_NONE and any unregistered
+    // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.
     const ProtoHandler *h = proto_get(conn_pool[evt->slot_id].proto);
     if (!h)
@@ -101,7 +102,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     }
 }
 
-void server_tick(int worker_id)
+static void server_tick(int worker_id)
 {
     /*
      * Check timeouts BEFORE draining events.  This ensures that a slot
@@ -110,11 +111,22 @@ void server_tick(int worker_id)
      * http_reset() call for that event is then a clean no-op. Each worker
      * sweeps only the slots it owns.
      */
-    proto_tcp_check_timeouts(worker_id);
+    Tcp.conn->check_timeouts(worker_id);
+
+#if PC_NEED_UDP
+    // One set of datagram rings serves the whole server rather than one per worker, so worker 0
+    // drains them: the receive side runs each bound port's handler, the send side moves queued
+    // frames to the wire.
+    if (worker_id == 0)
+    {
+        Udp.listener->poll();
+        Udp.client->poll();
+    }
+#endif
 
 #if PC_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.
-    pc_platform_queue q = listener_worker_queue(worker_id);
+    pc_platform_queue q = Tcp.listener->worker_queue(worker_id);
     if (!q)
     {
         return;
@@ -142,3 +154,7 @@ void server_tick(int worker_id)
     }
 #endif
 }
+
+const ProtoRegistryNs Protocols = {proto_register_builtins, proto_register, proto_get};
+
+const SessionNs Session = {server_tick, &Protocols, &Workers};

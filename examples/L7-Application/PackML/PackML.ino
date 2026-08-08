@@ -126,12 +126,12 @@ void setup()
 {
     Serial.begin(115200);
     delay(300);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("PackML machine at http://%u.%u.%u.%u/packml\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_RAWL2
 
-#include <string.h>
-
 size_t pc_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, const uint8_t *payload,
                     size_t payload_len, uint8_t *out, size_t cap)
 {

@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_PROFINET
 
-#include <string.h>
-
 size_t pc_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid, uint16_t data_length,
                         uint8_t *out, size_t cap)
 {

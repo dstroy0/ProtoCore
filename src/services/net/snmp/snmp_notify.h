@@ -82,7 +82,7 @@ size_t pc_snmp_notify_build_pdu(BerEnc *e, uint8_t pdu_tag, uint32_t request_id,
                                 size_t trap_oid_len, uint32_t uptime_ticks, const SnmpVarbind *vbs, size_t n);
 
 // ---------------------------------------------------------------------------
-// Transport (ESP32 only; returns false on a host build)
+// Transport (needs a UDP transport)
 // ---------------------------------------------------------------------------
 
 /**

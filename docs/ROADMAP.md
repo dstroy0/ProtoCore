@@ -44,9 +44,9 @@ In flight. Each of these is either being worked or blocks something that is.
       form. `PROTOCORE_` rather than `PC_` because a guard has to be unique in someone else's build,
       where `PC_*` is a plausible name for their own. Two headers exceed the 31-character limit and take
       the documented word-elision exception in [SYMBOLS.md](SYMBOLS.md#4-include-guards-files-and-test-targets).
-      Also fix the 18 macros over the same limit. Measure with `ci_tooling/check/check_symbols.py`, then
+      Also fix the 18 macros over the same limit. Measure with `tools/ci_tooling/check/check_symbols.py`, then
       re-run `--baseline` so the gate ratchets down.
-- [ ] **`ci_tooling/check/check_symbols.py`** (M, CI guard) - enforce the naming law mechanically (prefix and casing per
+- [ ] **`tools/ci_tooling/check/check_symbols.py`** (M, CI guard) - enforce the naming law mechanically (prefix and casing per
       symbol kind, macro scope and length, guard form, absence of `namespace`). Must also check
       TYPE-vs-FUNCTION collisions: normalizing types to snake_case collapsed `PCConnCounters`
       onto `pc_conn_counters()` and only a link error caught it.
@@ -85,7 +85,7 @@ Committed and scoped, not started.
 - [ ] **Migrate the remaining 6 generators onto `doc_region`** (S, dedupe) - `feature_budget`,
       `gen_api_flow`, `gen_examples`, `gen_feature_tables`, `gen_flag_deps`, and
       `gen_readme_sections` still hand-roll the marked-region read/replace/`--check` logic that
-      [`ci_tooling/lib/doc_region.py`](../ci_tooling/lib/doc_region.py) now owns. They use the
+      [`tools/ci_tooling/lib/doc_region.py`](../ci_tooling/lib/doc_region.py) now owns. They use the
       correct `prettier-ignore` mechanism, so they are duplicated rather than wrong; the gate is
       that every `--check` stays green and prettier stays clean.
 
@@ -105,7 +105,7 @@ Wanted, not yet scoped.
       the WiFi MAC and PHY are driven today by precompiled Espressif libraries, and the IP stack
       above them is lwIP. Both are opaque: the pools, the locking and the worst-case paths are
       exactly the things this library states as numbers everywhere else, and neither can be
-      established by reading. The end state is a `board_drivers/` radio driver and a clean stack
+      established by reading. The end state is a `core_setup/` radio driver and a clean stack
       above it that obey the same law as the rest of `src/`.
 
       Groundwork is done and in the tree: `reverse_engineering/esp32_mac/xtensa/RADIO_BLOB_REGISTERS.md` lists
@@ -136,15 +136,27 @@ Wanted, not yet scoped.
           writes and what has to have run first.
     - [ ] Resolve the 222 indirect calls that dispatch through `g_phyFuns` and `g_osi_funcs_p`, so
           the function tables are a closed list.
-    - [ ] Then the stack, **idemIP**: a deterministic TCP/IP with fixed pools and no allocation after
-          `begin()`, replacing lwIP behind the existing `network_drivers/transport` seam, which
-          already hides it from everything above.
+    - [ ] Then the stack, **idemIP**: its own tree under `src/`, carrying its own name, with nothing
+          in it yet. The name is the contract: *idem*, the same every time. An operation's runtime is a number the build states, not a distribution measured
+          afterwards. Fixed pools and no allocation after `begin()` are the memory half, already the
+          law here; the timing half is the new part.
 
-        **Licensing.** The blobs ship under terms that restrict reverse engineering. Reading an
-        instruction stream for interoperability has explicit protection in the EU Software Directive
-        Article 6 and US DMCA 1201(f), and prior art exists in the open (esp32-open-mac), but the
-        question is a real one and belongs in front of a lawyer before any of this ships, not after.
-        The register map above is a disassembly listing, which is the least exposed form of the work.
+          - **No jitter, or jitter normalized.** An operation that finishes early is held to its
+            declared budget, so the observed runtime is the stated one rather than a range. That
+            makes the cost composable and takes protocol timing off the side-channel list.
+          - **Guaranteed runtimes.** Every operation declares a budget the way every module declares
+            `PC_WORK_*` today. Memory is proven by a `static_assert` that fails the build; the timing
+            equivalent is what has to be settled.
+          - **A wait services thread 0.** Waiting is not blocking: while an operation waits it runs
+            thread 0's work. Dead time becomes a bounded service slice, so an operation costs its own
+            work plus a known number of slices, which is still a constant.
+          - **The budgets are the user's.** Knobs in `protocore_config.h` like every other bound, so
+            an application picks its own latency and throughput trade rather than inheriting ours.
+
+          `network_drivers/` stays organized by OSI layer and pulls from idemIP, so the layering a
+          reader follows does not change: the stack is what the layers are built on, not a peer of
+          them. It takes lwIP's place behind the existing `network_drivers/transport` seam, which
+          already hides the stack from everything above.
 
 <!-- prettier-ignore-end -->
 
@@ -197,7 +209,7 @@ Grouped by the area each belongs to.
       grid.
 - [ ] **Per-base-service flash-cost table** (M) - measure and document the incremental flash (and static
       RAM) each base service adds on top of the bare-bones baseline, so a user can budget a build. Extend the
-      footprint tooling (`ci_tooling/generate/example_footprints.py`) to emit a "cost of enabling service X alone" delta
+      footprint tooling (`tools/ci_tooling/generate/example_footprints.py`) to emit a "cost of enabling service X alone" delta
       against the minimal build and land it as a table in `docs/FOOTPRINTS.md`.
 
 #### Split protocore.cpp into single-purpose files
@@ -571,7 +583,7 @@ Each item has a working piece in the tree and an explicit _Remaining_ note.
 
 ### Per-variant default sizing (don't kneecap larger boards)
 
-- [~] **Per-variant default profiles** (M) - **framework shipped** (`src/board_drivers/board_profiles/`): `board_profile.h`
+- [~] **Per-variant default profiles** (M) - **framework shipped** (`src/core_setup/board_profiles/`): `board_profile.h`
   selects, along three independent axes, per-variant default files, each guarded by `#ifndef` so a `-D` /
   `build_opt.h` override always wins. Axes: **chip** (`classic_defaults.h` / `s3_defaults.h` /
   `c6_defaults.h` / `p4_defaults.h`, auto-selected from `CONFIG_IDF_TARGET_*`, holding HW-specific switches +
@@ -752,7 +764,7 @@ Built-in radio:
   a higher-priority interface when it comes up, failover to the next best when it drops, and change
   detection so the app reconfigures the netif only on a real transition. Pure, host-tested
   (`native_link_manager`). The PHY init is **HW-verified (2026-07-19)** on a Waveshare ESP32-P4-POE-ETH
-  (onboard IP101 RMII PHY, arduino-esp32 3.x): the shipped `init_eth_physical()` brought the link up (100M
+  (onboard IP101 RMII PHY, arduino-esp32 3.x): the shipped `Physical.eth->init()` brought the link up (100M
   full-duplex + DHCP) and the PC server answered real HTTP over pure wired Ethernet. _Remaining:_ the
   multi-interface bridge / packet forwarding (the v5 interface-forwarding milestone).
 - [~] IPv6 dual-stack + fallback (L); VPN tunneling + reverse-SSH tunnel to a relay (L) _(dual-stack +
@@ -860,7 +872,7 @@ Built-in radio:
       the first and every root resolves through whichever store was mounted last. Register mount
       points instead, resolve a path to the longest match, and let the backend a caller names select
       among them. The callers are already written for it: `serve_file()`, `serve_static()` and
-      WebDAV all take a `pc_mnt_backend *`, and `Route::static_fs` is documented as "NULL uses
+      WebDAV all take a `pc_mnt_backend *`, and `HttpRoute::static_fs` is documented as "NULL uses
       whatever is mounted" - the selection is passed in and then dropped, because there is only one
       place to resolve to.
 
@@ -879,7 +891,7 @@ Built-in radio:
 ### Build / tooling
 
 - [~] Hierarchical build-flag tree (M); virtual protocol-mocking toggles (M) _(tree shipped)_ - the
-  `ci_tooling/generate/gen_configurator.py` generator parses `src/protocore_config.h` and builds the flags
+  `tools/ci_tooling/generate/gen_configurator.py` generator parses `src/protocore_config.h` and builds the flags
   as a hierarchy grouped under the file's section titles, with the hard dependency edges (`#if child &&
 !parent` guards) encoded - the build-flag tree, kept from drifting by the `check` CI gate. _Remaining:_
   the virtual protocol-mocking toggles (swap a real driver for a mock transport at build time).
@@ -897,7 +909,7 @@ Built-in radio:
   (`asyncua`) 3/3 - all seven protocol families. Adding a protocol is one module in
   `peers/` (documented in its README). Remaining: wiring it into CI containers, and a
   peer per new protocol as it lands.
-- [~] **Server build configurator (CLI + GUI in `configurator/`)** (L) _(GUI + source-of-truth shipped)_ - a guided front end for the ~200 `PC_ENABLE_*` and sizing flags so a user assembles a firmware build without hand-editing `build_flags`. Shipped as `ci_tooling/generate/gen_configurator.py` -> `docs/configurator.html`: it parses [protocore_config.h](../src/protocore_config.h) (the single source of truth, so it never drifts - a `check` CI gate fails on staleness) for every feature flag + tuning knob + section group + the hard `#if child && !parent` dependencies, and emits one self-contained page that ticks features, tunes knobs, resolves dependencies (mutual-exclusion), and copies out a `platformio.ini` `build_flags` block or a `#define` set (only the values that differ from the defaults). Beginner-friendly, ships to Pages. _Remaining:_ a live per-option build-footprint estimate (flash + RAM from the FEATURES tables), advisory "this is unwise, but here you go" guardrails, and a standalone CLI backend (the emission is client-side today).
+- [~] **Server build configurator (CLI + GUI in `configurator/`)** (L) _(GUI + source-of-truth shipped)_ - a guided front end for the ~200 `PC_ENABLE_*` and sizing flags so a user assembles a firmware build without hand-editing `build_flags`. Shipped as `tools/ci_tooling/generate/gen_configurator.py` -> `docs/configurator.html`: it parses [protocore_config.h](../src/protocore_config.h) (the single source of truth, so it never drifts - a `check` CI gate fails on staleness) for every feature flag + tuning knob + section group + the hard `#if child && !parent` dependencies, and emits one self-contained page that ticks features, tunes knobs, resolves dependencies (mutual-exclusion), and copies out a `platformio.ini` `build_flags` block or a `#define` set (only the values that differ from the defaults). Beginner-friendly, ships to Pages. _Remaining:_ a live per-option build-footprint estimate (flash + RAM from the FEATURES tables), advisory "this is unwise, but here you go" guardrails, and a standalone CLI backend (the emission is client-side today).
 
 ### Protocol & transport versions
 
@@ -1085,7 +1097,7 @@ Settled questions, kept so they are not re-litigated.
 **Decided 2026-07-29. The name is `ProtoCore` and the rename is done.** The library was previously
 `DeterministicESPAsyncWebServer` - literal, but a mouthful, and its "ESP" stopped being true the moment the
 multi-vendor work started. `ProtoCore` is accurate rather than merely shorter: what sits in the middle is
-protocol logic and nothing else, with silicon pushed out to `board_drivers/` and platform shells out to
+protocol logic and nothing else, with silicon pushed out to `core_setup/` and platform shells out to
 `examples/`.
 
 Shipped alongside it: the house prefix is `pc_` / `PC_` / `PROTOCORE`; the namespace question was settled in

@@ -74,7 +74,7 @@ The second argument is the alignment, and it is a **condition the core sets**, n
 favor it does. The core publishes what it provides - storage of a declared span, at a
 declared alignment, for a declared lifetime - and a vendor backend meets those
 conditions or it does not ship. The obligation runs that way round, and it is settled
-in `board_drivers/`, the only place a vendor type is named at all: the backend
+in `core_setup/`, the only place a vendor type is named at all: the backend
 `static_assert`s that its context fits the span and satisfies the alignment, so a
 vendor header that changes underneath us fails the build there, named, instead of
 becoming a run-time surprise in the core.
@@ -143,19 +143,19 @@ Both are feature-gated, so a build pays only for the code it compiled.
 
 ## Knobs
 
-| Macro                     | Default              | What it does                                                                                                                                                                                                                                                                            |
-| ------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PC_WORKER_COUNT`         | 1                    | Number of worker tasks. `> 1` partitions slots across cores. Must be `<= MAX_CONNS`.                                                                                                                                                                                                    |
-| `PC_WORKER_CORE`          | 1                    | Core that worker 0 pins to; worker `k` pins to `(PC_WORKER_CORE + k) % cores`.                                                                                                                                                                                                          |
-| `PC_WORKER_TASK_PRIORITY` | 5                    | FreeRTOS priority of the worker task(s).                                                                                                                                                                                                                                                |
-| `PC_WORKER_TASK_STACK`    | 8192                 | Per-worker task stack (bytes). A build guard requires `>= PC_WORKER_STACK_RSA_MIN` when OIDC or SSH is enabled (RSA-2048 verify needs ~7 KB).                                                                                                                                           |
-| `PC_WORKER_STACK_RSA_MIN` | 8192                 | Enforced floor for `PC_WORKER_TASK_STACK` once an RSA-2048 verifier (OIDC/SSH) is compiled in. Lower it only if you marshal RSA verifies off the worker.                                                                                                                                |
-| `PC_WORKER_POLL_TICKS`    | 1                    | Idle-sweep block timeout (ticks). Events wake the worker immediately regardless; this only sets how often an idle worker wakes to run the timeout sweep.                                                                                                                                |
-| `EVT_QUEUE_DEPTH`         | `MAX_CONNS * 4` (32) | Per-queue event slots; tracks `MAX_CONNS` so a raised pool never trips the `>= MAX_CONNS * 4` guard. Raise it to absorb larger connection bursts.                                                                                                                                       |
-| `MAX_CONNS`               | 8                    | Connection pool size. The hard ceiling on concurrent connections.                                                                                                                                                                                                                       |
-| `PROTO_WORD_BITS`         | 32                   | The target's natural register width. Every narrow value is carried in it and truncated at the boundary, because arithmetic narrower than the register costs the mask that keeps the unused half correct. Must be 16, 32 or 64.                                                          |
-| `PROTO_INDEX_BITS`        | 32                   | Width of `proto_idx`, which is every offset, length and capacity the library declares (never `size_t`, whose width is inherited from the pointer and so differs between a device build and the host test). Must be 16 or 32, and `<= PROTO_WORD_BITS`.                                  |
-| `PROTO_SWAR_BITS`         | `PROTO_WORD_BITS`    | Width of the lane carrier the byte-parallel scans and compares work in (`shared_primitives/swar.h`). Must be 8, 16, 32 or 64 and `<= PROTO_WORD_BITS` - a wider carrier is synthesized from halves and is slower than the width it decomposes into. 8 degenerates to one lane per word. |
+| Macro                     | Default              | What it does                                                                                                                                                                                                                                                               |
+| ------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PC_WORKER_COUNT`         | 1                    | Number of worker tasks. `> 1` partitions slots across cores. Must be `<= MAX_CONNS`.                                                                                                                                                                                       |
+| `PC_WORKER_CORE`          | 1                    | Core that worker 0 pins to; worker `k` pins to `(PC_WORKER_CORE + k) % cores`.                                                                                                                                                                                             |
+| `PC_WORKER_TASK_PRIORITY` | 5                    | FreeRTOS priority of the worker task(s).                                                                                                                                                                                                                                   |
+| `PC_WORKER_TASK_STACK`    | 8192                 | Per-worker task stack (bytes). A build guard requires `>= PC_WORKER_STACK_RSA_MIN` when OIDC or SSH is enabled (RSA-2048 verify needs ~7 KB).                                                                                                                              |
+| `PC_WORKER_STACK_RSA_MIN` | 8192                 | Enforced floor for `PC_WORKER_TASK_STACK` once an RSA-2048 verifier (OIDC/SSH) is compiled in. Lower it only if you marshal RSA verifies off the worker.                                                                                                                   |
+| `PC_WORKER_POLL_TICKS`    | 1                    | Idle-sweep block timeout (ticks). Events wake the worker immediately regardless; this only sets how often an idle worker wakes to run the timeout sweep.                                                                                                                   |
+| `EVT_QUEUE_DEPTH`         | `MAX_CONNS * 4` (32) | Per-queue event slots; tracks `MAX_CONNS` so a raised pool never trips the `>= MAX_CONNS * 4` guard. Raise it to absorb larger connection bursts.                                                                                                                          |
+| `MAX_CONNS`               | 8                    | Connection pool size. The hard ceiling on concurrent connections.                                                                                                                                                                                                          |
+| `PROTO_WORD_BITS`         | 32                   | The target's natural register width. Every narrow value is carried in it and truncated at the boundary, because arithmetic narrower than the register costs the mask that keeps the unused half correct. Must be 16, 32 or 64.                                             |
+| `PROTO_INDEX_BITS`        | 32                   | Width of `proto_idx`, which is every offset, length and capacity the library declares (never `size_t`, whose width is inherited from the pointer and so differs between a device build and the host test). Must be 16 or 32, and `<= PROTO_WORD_BITS`.                     |
+| `PROTO_SWAR_BITS`         | `PROTO_WORD_BITS`    | Width of the lane carrier the byte-parallel scans and compares work in (`mmgr/swar.h`). Must be 8, 16, 32 or 64 and `<= PROTO_WORD_BITS` - a wider carrier is synthesized from halves and is slower than the width it decomposes into. 8 degenerates to one lane per word. |
 
 ## Feature buffer & limit knobs
 
@@ -178,8 +178,8 @@ not exposed as knobs.
 
 The sizing defaults above are not one flat set. They used to be, tuned to fit the
 smallest classic-ESP32 DRAM ceiling, so a board with far more RAM or flash silently
-inherited the same cramped numbers. Instead, [`src/board_drivers/board_profiles/`](../src/board_drivers/board_profiles/)
-layers defaults along three independent axes, selected in [`board_profile.h`](../src/board_drivers/board_profiles/board_profile.h)
+inherited the same cramped numbers. Instead, [`src/core_setup/board_profiles/`](../src/core_setup/board_profiles/)
+layers defaults along three independent axes, selected in [`board_profile.h`](../src/core_setup/board_profiles/board_profile.h)
 (included first thing in `protocore_config.h`):
 
 - **chip** - one file per ESP-IDF die: `classic_defaults.h` (ESP32), `s2` / `s3` / `c2` /

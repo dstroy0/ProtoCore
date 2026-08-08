@@ -10,10 +10,8 @@
 
 #if PC_ENABLE_C37118
 
-#include <string.h>
-
+#include "mmgr/endian.h"
 #include "shared_primitives/crc.h" // PC_CRC16_IBM_3740
-#include "shared_primitives/endian.h"
 
 uint16_t pc_c37118_crc(const uint8_t *data, size_t len)
 {

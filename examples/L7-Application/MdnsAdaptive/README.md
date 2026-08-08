@@ -76,9 +76,9 @@ whole window, so it is not shown here.
 
 ## Routes
 
-| Route   | What it does                                                 |
-| ------- | ------------------------------------------------------------ |
-| `/mdns` | `{"interval_ms":N,"contention":N,"announces":N,"channel":N}` |
+| HttpRoute | What it does                                                 |
+| --------- | ------------------------------------------------------------ |
+| `/mdns`   | `{"interval_ms":N,"contention":N,"announces":N,"channel":N}` |
 
 ## Config
 

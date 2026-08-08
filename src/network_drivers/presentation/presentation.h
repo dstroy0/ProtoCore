@@ -43,11 +43,30 @@ void http_reset(uint8_t slot_id);
  * @brief Requests served on each connection slot (HTTP keep-alive fairness bound).
  *
  * Reset to 0 by http_conn_open() when a connection is accepted; incremented by
- * the application layer per response it elects to keep alive. Lives here (not in
+ * keepalive_eval() per response it elects to keep alive. Lives here (not in
  * TcpConn) so the transport layer stays free of HTTP semantics. Defined in
- * presentation.cpp.
+ * presentation.c.
  */
 extern uint16_t http_req_count[MAX_CONNS];
+
+/**
+ * @brief Whether the connection carrying @p slot_id's request is reused for the next one.
+ *
+ * Reads the parsed request: a message whose boundary is not known closes, HTTP/1.1 is persistent
+ * unless Connection carries "close", and 1.0 is the reverse. A kept connection counts against
+ * PC_KEEPALIVE_MAX_REQUESTS and closes once it reaches the bound.
+ */
+proto_bool keepalive_eval(uint8_t slot_id);
+#endif
+
+#if PC_ENABLE_KEEPALIVE || PC_ENABLE_WEBSOCKET
+/**
+ * @brief Whether @p token appears as an element of the Connection header value @p hdr.
+ *
+ * The value is a comma-delimited list ("Keep-Alive, Upgrade"), matched case insensitively on whole
+ * elements so a longer token cannot match on its prefix.
+ */
+proto_bool pc_http_conn_has_token(const char *hdr, const char *token);
 #endif
 
 /**
@@ -82,7 +101,7 @@ void http_parse(uint8_t slot_id);
  * The accept/data/close handlers - the data path multiplexes the TLS handshake,
  * HTTP/2 ALPN, and the WebSocket upgrade before the HTTP/1.1 parser. Returned by
  * accessor (not self-registered) so this module carries no dependency on the
- * session layer; proto_register_builtins() installs it.
+ * session layer; Session.proto->register_builtins() installs it.
  */
 struct ProtoHandler;
 const struct ProtoHandler *http_proto_handler(void);
@@ -96,18 +115,5 @@ const struct ProtoHandler *http_proto_handler(void);
  * exactly like every other protocol, so the L5/worker dispatch loop has no HTTP special case.
  */
 void http_proto_set_poll(void (*fn)(uint8_t slot));
-
-#if PC_ENABLE_EDGE_CACHE
-/**
- * @brief Install the edge-cache per-slot fetch pump (defined in protocore.cpp, called first in
- *        http_poll_slot).
- *
- * A cache miss / stale-entry revalidation suspends the client request and drives a non-blocking origin
- * fetch from the slot's poll. @p fn returns true while it is servicing an in-flight fetch for the slot,
- * so the HTTP pipeline is skipped until the fetch completes and starts the cached response. Nullable
- * (unset = no-op). Installed by pc_edge_cache_enable(); see services/web/edge_cache/edge_cache_proxy.
- */
-void pc_http_set_edge_poll(proto_bool (*fn)(uint8_t slot));
-#endif
 
 #endif

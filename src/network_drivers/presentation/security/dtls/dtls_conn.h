@@ -163,88 +163,38 @@ typedef struct
 } DtlsConn;
 
 /**
- * @brief Initialize a connection for a new handshake. @p cfg is copied (its pointers must outlive @p c).
+ * @brief The server side of a DTLS connection. DtlsConn is the caller's struct; this drives it.
  *
- * @param peer_addr      serialized peer address (e.g. IP || port) the HelloRetryRequest cookie binds,
- *                       so a cookie minted for one peer is worthless to another (RFC 9147 §5.1). May
- *                       be NULL / 0 when no HRR is expected (the one-round-trip happy path).
- * @param peer_addr_len  length of @p peer_addr; clamped to @ref PC_DTLS_PEER_ADDR_MAX.
+ * @var DtlsConnNs::init           bind a connection to its configuration and peer address
+ * @var DtlsConnNs::process        turn one received datagram, writing whatever it owes back into @p out
+ * @var DtlsConnNs::timeout_ms     milliseconds until the flight needs retransmitting
+ * @var DtlsConnNs::on_timeout     retransmit the current flight once that timeout has passed
+ * @var DtlsConnNs::established    whether the handshake has completed
+ * @var DtlsConnNs::alert          the alert that ended the connection, or 0
+ * @var DtlsConnNs::app_write_keys the application-epoch write keys
+ * @var DtlsConnNs::app_read_keys  the application-epoch read keys
+ * @var DtlsConnNs::local_cid      this side's connection id, and its length
+ * @var DtlsConnNs::open_app       open one application-data record once the handshake is done
+ * @var DtlsConnNs::seal_app       seal application data into one record
  */
-void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr, size_t peer_addr_len);
+typedef struct
+{
+    void (*init)(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr, size_t peer_addr_len);
+    int (*process)(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap);
+    int (*timeout_ms)(const DtlsConn *c);
+    int (*on_timeout)(DtlsConn *c, uint8_t *out, size_t out_cap);
+    proto_bool (*established)(const DtlsConn *c);
+    uint8_t (*alert)(const DtlsConn *c);
+    DtlsRecordKeys *(*app_write_keys)(DtlsConn *c);
+    DtlsRecordKeys *(*app_read_keys)(DtlsConn *c);
+    size_t (*local_cid)(const DtlsConn *c, uint8_t *out);
+    proto_bool (*open_app)(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
+                           size_t *out_len);
+    size_t (*seal_app)(DtlsConn *c, const uint8_t *data, size_t len, uint8_t *out, size_t out_cap);
+} DtlsConnNs;
 
-/**
- * @brief Feed one inbound datagram; append any response records to @p out.
- *
- * Demultiplexes the datagram's records (DTLSPlaintext for epoch 0, DTLSCiphertext for epoch 2),
- * unprotects and reassembles the handshake, and drives the state machine, writing the server's
- * response flight to @p out.
- *
- * @return the number of bytes written to @p out (0 if nothing to send), or -1 on a fatal error
- *         (then @c state is FAILED and @ref pc_dtls_conn_alert gives the reason).
- */
-int pc_dtls_conn_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap);
-
-/**
- * @brief Milliseconds (in @ref pc_millis units) until the retransmission timer fires, or -1 if no
- *        timer is running (no flight is outstanding, or the handshake is done or failed).
- *
- * The transport-neutral core keeps no timer of its own; the caller polls this to schedule a wake-up and
- * calls @ref pc_dtls_conn_on_timeout when it expires (RFC 9147 §5.8). 0 means the timer is already due.
- */
-int pc_dtls_conn_timeout_ms(const DtlsConn *c);
-
-/**
- * @brief Fire the retransmission timer: re-send the outstanding flight into @p out with fresh record
- *        sequence numbers and double the timeout (RFC 9147 §5.8.1 exponential backoff).
- *
- * Retransmits only if the PTO has actually elapsed, so a spurious/early call is a no-op (returns 0).
- * After @ref PC_DTLS_MAX_RETRANSMITS attempts the handshake is abandoned (state becomes FAILED, returns -1).
- *
- * @return bytes written to @p out (0 if nothing was due), or -1 if the retransmission ceiling was hit.
- */
-int pc_dtls_conn_on_timeout(DtlsConn *c, uint8_t *out, size_t out_cap);
-
-/** @brief True once the handshake has completed and the application-traffic keys are installed. */
-proto_bool pc_dtls_conn_established(const DtlsConn *c);
-
-/** @brief The alert code (RFC 8446 §6) set when the handshake failed, or 0. */
-uint8_t pc_dtls_conn_alert(const DtlsConn *c);
-
-/** @brief Application-epoch (epoch 3) server write keys - protect outbound application records. */
-DtlsRecordKeys *pc_dtls_conn_app_write_keys(DtlsConn *c);
-
-/** @brief Application-epoch (epoch 3) client read keys - unprotect inbound application records. */
-DtlsRecordKeys *pc_dtls_conn_app_read_keys(DtlsConn *c);
-
-/**
- * @brief The server's connection id (RFC 9146 / RFC 9147 §9) for this connection, if one was negotiated.
- *
- * The client places this id in every record it sends, so a UDP front-end can route inbound records by it
- * and follow the peer across an address change (NAT rebinding). Copies the id to @p out (which must hold
- * at least @ref PC_DTLS_CID_MAX bytes).
- *
- * @return the connection-id length, or 0 if no connection id was negotiated.
- */
-size_t pc_dtls_conn_local_cid(const DtlsConn *c, uint8_t *out);
-
-/**
- * @brief Decrypt one inbound epoch-3 application record into @p out (RFC 9147 §4).
- *
- * Only valid once established. Enforces the epoch-3 anti-replay window (§4.5.1) and that the record's
- * true content type is application_data. A replayed, too-old, or non-application record yields false.
- *
- * @return true and sets @p *out_len on success; false if the connection is not established, the record
- *         fails to open, it is a replay, or it is not application data.
- */
-proto_bool pc_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
-                                 size_t *out_len);
-
-/**
- * @brief Seal @p data as one outbound epoch-3 application record (RFC 9147 §4), advancing the shared
- *        epoch-3 send sequence so it never collides with the handshake-completion ACK.
- * @return record bytes written to @p out, or 0 if not established or on overflow.
- */
-size_t pc_dtls_conn_seal_app(DtlsConn *c, const uint8_t *data, size_t len, uint8_t *out, size_t out_cap);
+/** @brief The one symbol this module exports. */
+extern const DtlsConnNs DtlsServer;
 
 #endif // PC_ENABLE_DTLS
 #endif // PROTOCORE_DTLS_CONN_H

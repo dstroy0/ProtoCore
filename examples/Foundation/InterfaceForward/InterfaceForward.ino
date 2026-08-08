@@ -20,10 +20,10 @@
 //   PC_ENABLE_DMA=1 PC_ENABLE_PREEMPT_QUEUE=1 PC_ENABLE_FORWARD=1 PC_DMA_SIMULATE=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "services/net/forward/forward.h"
+#include "network_drivers/network/forward/forward.h"
 #include "mmgr/dma.h"
 #include "network_drivers/session/preempt_queue.h"
-#include <string.h>
+
 
 static const uint8_t IF_A = 0; // ingress interface (DMA channel 0)
 static const uint8_t IF_B = 1; // egress interface
@@ -71,7 +71,7 @@ static void on_dma_complete(const pc_dma_event *ev, void *)
     it.msg.len = ev->len;
     uint16_t n = (ev->len < sizeof(it.msg.bytes)) ? ev->len : sizeof(it.msg.bytes);
     memcpy(it.msg.bytes, ev->data, n);
-    pc_pq_post_lane_from_isr(pc_pq_lane::PC_PQ_LANE_FORWARD, &it);
+    Session.workers->queue->post_from_isr(pc_pq_lane::PC_PQ_LANE_FORWARD, &it);
 }
 
 void setup()
@@ -85,7 +85,7 @@ void setup()
     fwd.priority = 0; // 0 -> the FORWARD lane default (above the user lane)
     fwd.core = 1;
     fwd.name = "forward";
-    pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_FORWARD, &fwd);
+    Session.workers->queue->start(pc_pq_lane::PC_PQ_LANE_FORWARD, &fwd);
 
     // Interface A ingress: a DMA channel fed by the simulator.
     pc_dma_config a = {};

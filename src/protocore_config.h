@@ -38,13 +38,13 @@
 // Per-variant default sizing (chip / PSRAM / flash profiles). Included before the sizing
 // defaults below so a board profile can raise them for a larger target; your -D / build_opt.h
 // overrides still win (every profile default is #ifndef-guarded).
-#include "board_drivers/board_profiles/board_profile.h"
+#include "core_setup/board_profiles/board_profile.h"
 
 // ---------------------------------------------------------------------------
 // Platform widths
 // ---------------------------------------------------------------------------
 // The three numbers every primitive type and every lane mask is derived from
-// (shared_primitives/types.h, shared_primitives/swar.h). They are `#define`s rather than typedefs
+// (shared_primitives/types.h, mmgr/swar.h). They are `#define`s rather than typedefs
 // so they participate in preprocessor arithmetic, can be tested by `#if`, and can be overridden
 // from build_opt.h or -D like every other knob. Each is checked below, so a bad value stops the
 // build here, naming itself, instead of at the first expression that assumed it.
@@ -56,7 +56,7 @@
  * not cheaper on any part in the target list - it costs the mask or sign-extend that keeps the
  * unused half correct - so the library states the register once and narrows only at a boundary.
  */
-// The die states its register width in board_drivers/board_profiles/ (PC_HW_WORD_BITS, floored at
+// The die states its register width in core_setup/board_profiles/ (PC_HW_WORD_BITS, floored at
 // 32 for every part in the target list); this only names it. It is NOT read off the toolchain: the
 // host toolchain is 64-bit, so inferring would give the host build 8-byte lane math, an 8-byte move
 // ladder and 64-bit index arithmetic - a shape no target executes, measured on a machine that does
@@ -117,7 +117,7 @@ from halves and is slower than the width it decomposes into"
  * cannot reach a header-only library at all, since `#pragma GCC optimize` binds only to functions
  * parsed after it and the bodies arrive with the include.
  *
- * board_drivers/board_profiles/pc_platform.h states the same definition and is reached above, so
+ * core_setup/board_profiles/pc_platform.h states the same definition and is reached above, so
  * this is the fallback for a translation unit that arrives without it.
  *
  * Leaves only. On a composite, forcing the inline trades one call for a copy of the whole body at
@@ -204,7 +204,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief Ring-buffer capacity in bytes per connection slot (feature floors enforced last, in
- *  board_drivers/board_profiles/derived_sizing.h - a value below what an enabled feature needs is raised there). */
+ *  core_setup/board_profiles/derived_sizing.h - a value below what an enabled feature needs is raised there). */
 #ifndef RX_BUF_SIZE
 #define RX_BUF_SIZE 1024
 #endif
@@ -213,8 +213,8 @@ from halves and is slower than the width it decomposes into"
  * @brief Compile-time default for connection idle timeout in milliseconds.
  *
  * The actual runtime value is stored in `WebServerConfig::conn_timeout_ms`,
- * loaded by `proto_tcp_pool_init()` and read back with
- * `proto_tcp_conn_timeout_ms()`.
+ * loaded by `Tcp.conn->init()` and read back with
+ * `Tcp.conn->timeout_ms()`.
  */
 #ifndef CONN_TIMEOUT_MS
 #define CONN_TIMEOUT_MS 5000
@@ -377,7 +377,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Depth of each worker's deferred-callback queue.
  *
  * App code on loop() or another task submits work to a slot's owning worker via
- * pc_defer() / pc_defer_slot(); the worker runs it in its own single-thread
+ * Session.workers->defer() / pc_defer_slot(); the worker runs it in its own single-thread
  * context, so an async push (ws_send / pc_sse_send from a timer) is race-free. Each
  * worker has one queue of this depth (entries are a {fn, arg} pair, ~8 bytes).
  */
@@ -493,12 +493,9 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Route DMA transfers through the ingress/egress simulator (default on).
+ * @brief HttpRoute DMA transfers through the ingress/egress simulator (default on).
  *        Set to 0 to drive real silicon via the pc_dma_hw_* backend hooks.
  */
-#ifndef PC_DMA_SIMULATE
-#define PC_DMA_SIMULATE 1
-#endif
 
 #if PC_ENABLE_DMA && (PC_DMA_CHANNELS < 1 || PC_DMA_BUF_SIZE < 1)
 #error "ProtoCore: PC_DMA_CHANNELS and PC_DMA_BUF_SIZE must be >= 1"
@@ -558,16 +555,17 @@ from halves and is slower than the width it decomposes into"
 // FORWARD lane) is forwarded to every allowed destination, so the device bridges / routes
 // between its interfaces instead of only terminating traffic. Default-deny and fail-closed
 // (a full destination or an exceeded rate cap drops, never blocks). Static tables (zero
-// heap). See services/net/forward/forward.h.
+// heap). See network_drivers/network/forward/forward.h.
 
 /** @brief Enable the interface forwarding plane (default off). */
 #ifndef PC_ENABLE_FORWARD
 #define PC_ENABLE_FORWARD 0
 #endif
 
-/** @brief Max interfaces the forwarding plane tracks (static-allocated). */
-#ifndef PC_FWD_MAX_IFACES
-#define PC_FWD_MAX_IFACES 4
+/** @brief Interfaces layer 1 can carry: wifi station and softAP, ethernet, a bridged bus, a radio.
+ *  The registry is L1's because an interface is a physical thing; the forwarding plane reads it. */
+#ifndef PC_PHY_MAX_IFACES
+#define PC_PHY_MAX_IFACES 4
 #endif
 
 /** @brief Max forwarding rules (src -> dst allow/deny + rate cap; static-allocated). */
@@ -599,8 +597,8 @@ from halves and is slower than the width it decomposes into"
 #define PC_FWD_INSPECT 0
 #endif
 
-#if PC_ENABLE_FORWARD && (PC_FWD_MAX_IFACES < 1 || PC_FWD_MAX_RULES < 1 || PC_FWD_ACL_PATLEN < 1)
-#error "ProtoCore: PC_FWD_MAX_IFACES / PC_FWD_MAX_RULES / PC_FWD_ACL_PATLEN must be >= 1"
+#if PC_ENABLE_FORWARD && (PC_PHY_MAX_IFACES < 1 || PC_FWD_MAX_RULES < 1 || PC_FWD_ACL_PATLEN < 1)
+#error "ProtoCore: PC_PHY_MAX_IFACES / PC_FWD_MAX_RULES / PC_FWD_ACL_PATLEN must be >= 1"
 #endif
 
 // ---------------------------------------------------------------------------
@@ -846,10 +844,10 @@ from halves and is slower than the width it decomposes into"
 // ---------------------------------------------------------------------------
 //
 // Bring up a wired Ethernet link (an RMII PHY: LAN8720 / TLK110 / RTL8201 / DP83848) so the
-// server runs over Ethernet instead of (or alongside) Wi-Fi. init_eth_physical() is a thin
+// server runs over Ethernet instead of (or alongside) Wi-Fi. Physical.eth->init() is a thin
 // wrapper over the Arduino ETH library; the PHY pins / type / clock come from the standard
 // ETH_PHY_* build flags for your board (see example Ethernet). The egress reporting
-// (pc_net_egress -> PC_IFACE_ETH) and the per-route interface classifier already handle a
+// (Physical.link->egress -> PC_IF_ETH) and the per-route interface classifier already handle a
 // wired route, so once the link has an IP the server accepts on it with no other change.
 // Default off (zero cost / the ETH library is not linked). ESP32-only.
 
@@ -860,7 +858,7 @@ from halves and is slower than the width it decomposes into"
 
 // W5500 SPI Ethernet (arduino-esp32 3.x only). Set PC_ETH_W5500=1 to select the SPI PHY over the RMII
 // default; the pins below are the ESP32-S3-DevKitC wiring (HSPI / SPI3). The 2.x ETH library has no W5500,
-// so init_eth_physical() falls back to the RMII ETH.begin() when the core is older.
+// so Physical.eth->init() falls back to the RMII ETH.begin() when the core is older.
 #ifndef PC_ETH_W5500
 #define PC_ETH_W5500 0
 #endif
@@ -892,10 +890,10 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Enable IPv6 on the network interface (dual-stack). Default off.
  *
- * When set, init_ipv6_physical() turns on IPv6 for the Wi-Fi netif (SLAAC link-local plus any
+ * When set, Physical.ip6->init() turns on IPv6 for the Wi-Fi netif (SLAAC link-local plus any
  * router-advertised global address). The TCP and UDP listeners already bind IPADDR_TYPE_ANY, so
  * the server accepts IPv6 connections the moment the interface has a v6 address; the pc_ip core
- * (network_drivers/network/ip.h) parses / formats / classifies both families. Requires an
+ * (shared_primitives/ip.h) parses / formats / classifies both families. Requires an
  * lwIP built with LWIP_IPV6=1 (the stock Arduino-ESP32 core ships it).
  */
 #ifndef PC_ENABLE_IPV6
@@ -1176,7 +1174,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 // ---------------------------------------------------------------------------
-// Multipart form-data sizing constants
+// MultipartBody form-data sizing constants
 // ---------------------------------------------------------------------------
 
 /**
@@ -1389,8 +1387,8 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off. When set, network_drivers/presentation/codec/msgpack/msgpack.h provides a
  * writer that serializes ints, strings, byte strings, arrays, maps, booleans, nil,
- * and float32 into a caller-provided buffer, plus a cursor decoder (pc_msgpack_peek /
- * pc_msgpack_read_*, no-copy strings) over a caller buffer - the MessagePack-format
+ * and float32 into a caller-provided buffer, plus a cursor decoder (MsgPack.peek /
+ * MsgPack.get_*, no-copy strings) over a caller buffer - the MessagePack-format
  * sibling of the CBOR / JSON readers and writers. Pure, no heap, host-tested
  * against the spec encodings and round-trip.
  */
@@ -1611,7 +1609,7 @@ from halves and is slower than the width it decomposes into"
  * strings, gateway discovery, sleeping-client keep-alive). Builds CONNECT / REGISTER /
  * PUBLISH / SUBSCRIBE / PINGREQ / DISCONNECT / SEARCHGW and parses CONNACK / REGACK /
  * PUBACK / SUBACK / PUBLISH / REGISTER, including the 1- and 3-octet Length forms. Pure
- * codec, host-tested; the datagram send (pc_udp_sendto) and topic registry are the app's.
+ * codec, host-tested; the datagram send (Udp.client->sendto) and topic registry are the app's.
  */
 #ifndef PC_ENABLE_MQTT_SN
 #define PC_ENABLE_MQTT_SN 0
@@ -1624,7 +1622,7 @@ from halves and is slower than the width it decomposes into"
  * (fixed 24-octet header + 48-octet records), NetFlow v9 (RFC 3954), and IPFIX (RFC 7011),
  * the latter two via a small cursor that emits a Template then matching Data records and
  * patches the message length (IPFIX) or record count (v9) on finish. Pure codec,
- * host-tested; the flow cache (5-tuple + counters) and the UDP send (pc_udp_sendto) are
+ * host-tested; the flow cache (5-tuple + counters) and the UDP send (Udp.client->sendto) are
  * the application's. Pairs with the telemetry / observability services.
  */
 #ifndef PC_ENABLE_FLOW_EXPORT
@@ -1875,7 +1873,7 @@ from halves and is slower than the width it decomposes into"
  *
  * The pure policy that decides whether and where to roam to a better access point, given the current
  * link RSSI, a candidate neighbor list (from an 802.11k neighbor report or a scan), and an optional
- * 802.11v BSS-Transition-Management hint from the network. `pc_roam_decide` fuses those into a
+ * 802.11v BSS-Transition-Management hint from the network. `Roam.decide` fuses those into a
  * roam/stay decision with a target BSSID + channel and a reason (a disassociation-imminent BTM, a
  * network-suggested BTM, or a weak link with a clearly stronger candidate past a hysteresis margin).
  * Pure, stateless, host-tested; the actual scan / neighbor-report request and the 802.11r fast
@@ -1963,7 +1961,7 @@ from halves and is slower than the width it decomposes into"
  * Network Service (FINS/UDP): `pc_fins_build_command` / `pc_fins_build_memory_area_read` emit the
  * 10-octet routing header + command code + parameters, and `pc_fins_parse_command` /
  * `pc_fins_parse_response` read them back (the response end code MRES/SRES included). Talks to
- * an Omron PLC over the shipped UDP transport (pc_udp_sendto). Pure codec, host-tested.
+ * an Omron PLC over the shipped UDP transport (Udp.client->sendto). Pure codec, host-tested.
  */
 #ifndef PC_ENABLE_FINS
 #define PC_ENABLE_FINS 0
@@ -2422,6 +2420,19 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief 1 when the portable TLS 1.3 compiles: TLS is on and the vendor has no stack of its own.
+ *
+ * DERIVED from PC_ENABLE_TLS and PC_HAS_VENDOR_TLS (core_setup/board_profiles/pc_platform.h), never
+ * set by hand. It selects the record layer and connection driver in network_drivers/tls, and widens
+ * the guards on the TLS 1.3 pieces the QUIC and DTLS handshakes already share.
+ */
+#if PC_ENABLE_TLS && !PC_HAS_VENDOR_TLS
+#define PC_TLS_SOFTWARE 1
+#else
+#define PC_TLS_SOFTWARE 0
+#endif
+
+/**
  * @brief TLS session resumption via RFC 5077 session tickets (requires PC_ENABLE_TLS).
  *
  * Default off. When set, the TLS 1.2 server issues encrypted session tickets and
@@ -2801,14 +2812,54 @@ from halves and is slower than the width it decomposes into"
 // costs no code/RAM/flash unless explicitly enabled).
 // ---------------------------------------------------------------------------
 
-/** @brief mDNS / DNS-SD advertisement (`name.local` + `_http._tcp`) via ESPmDNS. */
+/**
+ * @brief mDNS / DNS-SD advertisement: `<name>.local` plus `_http._tcp` and any service added.
+ *
+ * Answered by the portable responder over the UDP listener (RFC 6762 / RFC 6763), or by the
+ * vendor's own component where PC_HAS_VENDOR_MDNS says one exists.
+ */
 #ifndef PC_ENABLE_MDNS
 #define PC_ENABLE_MDNS 0
+#endif
+
+/** @brief Services the responder advertises at once, `_http._tcp` included. */
+#ifndef PC_MDNS_MAX_SERVICES
+#define PC_MDNS_MAX_SERVICES 4
+#endif
+
+/** @brief Bytes of packed `key=value` TXT strings, each with its own length byte ahead of it. */
+#ifndef PC_MDNS_TXT_MAX
+#define PC_MDNS_TXT_MAX 128
+#endif
+
+/** @brief Longest host label, service type or proto label the responder holds, NUL included. */
+#ifndef PC_MDNS_LABEL_MAX
+#define PC_MDNS_LABEL_MAX 32
+#endif
+
+/**
+ * @brief Response datagram the responder composes.
+ *
+ * One answer set is an A plus, per service, two PTRs, an SRV and a TXT, so this bounds how many
+ * services fit one packet rather than how many may be registered.
+ */
+#ifndef PC_MDNS_TX_MAX
+#define PC_MDNS_TX_MAX 512
 #endif
 
 /** @brief SNTP wall-clock time sync via the ESP-IDF SNTP client. */
 #ifndef PC_ENABLE_NTP
 #define PC_ENABLE_NTP 0
+#endif
+
+/**
+ * @brief Local UDP port the portable SNTP client asks from.
+ *
+ * Not 123: a device running PC_ENABLE_NTP_SERVER already holds that port, and the client has to
+ * bind one of its own to hear the reply come back.
+ */
+#ifndef PC_NTP_CLIENT_PORT
+#define PC_NTP_CLIENT_PORT 1123
 #endif
 
 /**
@@ -2831,7 +2882,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Authoritative DNS server (services/net/dns_server) on UDP/53.
+ * @brief Authoritative DNS server (network_drivers/network/dns/dns_server) on UDP/53.
  *
  * Default off. Resolves a small fixed table of `name -> IPv4` A records you register with
  * pc_dns_server_add(), so devices on an offline / air-gapped LAN can use names instead of raw
@@ -2890,6 +2941,13 @@ from halves and is slower than the width it decomposes into"
  */
 #ifndef PC_ENABLE_TIME_SOURCE
 #define PC_ENABLE_TIME_SOURCE 0
+#endif
+
+// The NTP server answers from pc_time_now(), so with the registry off it holds no clock and drops
+// every request instead of serving a wrong one. That is a bind that never answers, so it fails here.
+#define PC_ENABLE_NTP_SERVER_NEEDS_TIME_SOURCE PC_ENABLE_TIME_SOURCE
+#if PC_ENABLE_NTP_SERVER && !PC_ENABLE_NTP_SERVER_NEEDS_TIME_SOURCE
+#error "ProtoCore: PC_ENABLE_NTP_SERVER needs PC_ENABLE_TIME_SOURCE"
 #endif
 
 /** @brief Maximum registered time sources (PC_ENABLE_TIME_SOURCE). */
@@ -3271,9 +3329,14 @@ from halves and is slower than the width it decomposes into"
 #define PC_CONFIG_KEY_MAX 16
 #endif
 
-/** @brief Max value bytes per entry in the host (test) config backend. */
+/**
+ * @brief Max value bytes per entry in the host (test) config backend.
+ *
+ * Holds the largest blob the seam carries, which is the SSH host key's PKCS#8 DER
+ * (SSH_RSA_KEY_DER_MAX, 1700). A power of two keeps the row stride a shift.
+ */
 #ifndef PC_CONFIG_VAL_MAX
-#define PC_CONFIG_VAL_MAX 64
+#define PC_CONFIG_VAL_MAX 2048
 #endif
 
 /**
@@ -3402,7 +3465,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off. When set, services/iot/udp_telemetry casts metric lines (InfluxDB line
  * protocol: `measurement field=val,field2=val2`) to a configured collector over
- * UDP via pc_udp_sendto - zero-heap, fire-and-forget (no ACK, no retry), ideal
+ * UDP via Udp.client->sendto - zero-heap, fire-and-forget (no ACK, no retry), ideal
  * for shipping device metrics to Telegraf/InfluxDB/a log sink. The line builder is
  * pure and host-tested; only the send touches the network.
  */
@@ -3423,7 +3486,7 @@ from halves and is slower than the width it decomposes into"
  * Graphite/StatsD, Telegraf, Datadog, InfluxDB, etc. Counters, gauges (absolute + delta),
  * timings, and sets, with optional sample-rate (`|@0.1`) and DogStatsD tags (`|#env:prod`).
  * This is the push counterpart to the pull-based Prometheus `/metrics`. The line formatter
- * is pure and host-tested; only the send (pc_udp_sendto) touches the network. Zero heap.
+ * is pure and host-tested; only the send (Udp.client->sendto) touches the network. Zero heap.
  */
 #ifndef PC_ENABLE_STATSD
 #define PC_ENABLE_STATSD 0
@@ -3979,7 +4042,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Each active relay holds two buffers of this size (one per direction) for bytes read from one peer
  * but not yet accepted by the other (backpressure carry). Larger buffers raise throughput per step
- * (fewer cross-thread pc_conn_send marshals per KB) at the cost of RAM per concurrent relay
+ * (fewer cross-thread Tcp.conn->send marshals per KB) at the cost of RAM per concurrent relay
  * (2 * PC_RELAY_BUF * PC_RELAY_MAX_CONNS bytes).
  */
 #ifndef PC_RELAY_BUF
@@ -4181,7 +4244,7 @@ from halves and is slower than the width it decomposes into"
 #define PC_EDGE_FETCH_BUF_MIN 2560
 #endif
 
-// PC_EDGE_CACHE_SLOTS and PC_EDGE_BODY_MAX come from board_drivers/board_profiles/ (classic floor, raised
+// PC_EDGE_CACHE_SLOTS and PC_EDGE_BODY_MAX come from core_setup/board_profiles/ (classic floor, raised
 // per chip/PSRAM by board_profile.h above); override with -D as usual.
 #ifndef PC_EDGE_KEY_MAX
 #define PC_EDGE_KEY_MAX 128 // largest canonical cache key (method\nhost\npath[\nquery])
@@ -4215,7 +4278,7 @@ from halves and is slower than the width it decomposes into"
 #ifndef PC_EDGE_ORIGIN_URL_MAX
 #define PC_EDGE_ORIGIN_URL_MAX 128 // largest origin base URL in a route mapping
 #endif
-// PC_EDGE_FETCH_SLOTS comes from board_drivers/board_profiles/ (classic floor, raised per chip/PSRAM).
+// PC_EDGE_FETCH_SLOTS comes from core_setup/board_profiles/ (classic floor, raised per chip/PSRAM).
 #ifndef PC_EDGE_FETCH_BUF
 #define PC_EDGE_FETCH_BUF PC_EDGE_FETCH_BUF_MIN // per-fetch origin-response accumulation buffer
 #endif
@@ -4251,7 +4314,7 @@ from halves and is slower than the width it decomposes into"
 #if PC_ENABLE_EDGE_MESH && !PC_ENABLE_EDGE_MESH_NEEDS_EDGE_CACHE
 #error "ProtoCore: PC_ENABLE_EDGE_MESH needs PC_ENABLE_EDGE_CACHE"
 #endif
-// PC_MESH_MAX_PEERS and PC_MESH_MAX_CONNS come from board_drivers/board_profiles/ (classic floor, raised
+// PC_MESH_MAX_PEERS and PC_MESH_MAX_CONNS come from core_setup/board_profiles/ (classic floor, raised
 // per chip/PSRAM).
 #ifndef PC_MESH_QUERY_MS
 #define PC_MESH_QUERY_MS 300 // per-peer query deadline before moving on (miss) / to the origin
@@ -4976,7 +5039,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in DNS resolver with answer verification (PC_ENABLE_DNS_RESOLVER).
  *
- * Default off. network_drivers/network/dns_resolver resolves a hostname to an IPv4 address (lwIP
+ * Default off. network_drivers/network/dns/dns_resolver resolves a hostname to an IPv4 address (lwIP
  * dns_gethostbyname, marshalled to tcpip_thread like the http_client) and can
  * reject suspicious answers - 0.0.0.0, broadcast, loopback, multicast - which are
  * spoofing / DNS-rebinding indicators for a remote host. The address classifier /
@@ -4988,6 +5051,22 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief DNS resolve timeout in milliseconds. */
+/**
+ * @brief Nameserver the portable resolver asks when nothing has told it otherwise.
+ *
+ * The vendor backend takes its servers from the stack (DHCP), so this is the portable one's only
+ * starting point. A device that learns a server from DHCP or provisioning should hand it over with
+ * Resolver.set_server() rather than query this one.
+ */
+#ifndef PC_DNS_SERVER
+#define PC_DNS_SERVER "9.9.9.9"
+#endif
+
+/** @brief Local UDP port the portable resolver asks from and hears the answer on. */
+#ifndef PC_DNS_CLIENT_PORT
+#define PC_DNS_CLIENT_PORT 1153
+#endif
+
 #ifndef PC_DNS_TIMEOUT_MS
 #define PC_DNS_TIMEOUT_MS 5000
 #endif
@@ -5234,7 +5313,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 // The RX-ring feature floors (streaming needs a full TCP window, SSH/TLS a full first flight) are
-// resolved by board_drivers/board_profiles/derived_sizing.h, included at the end of this file once every feature
+// resolved by core_setup/board_profiles/derived_sizing.h, included at the end of this file once every feature
 // flag is known - that is the sizing layer's job, not this file's.
 
 /** @brief First-boot WiFi provisioning: softAP + captive-portal credentials form. */
@@ -5509,7 +5588,7 @@ from halves and is slower than the width it decomposes into"
 // build that does not enable a client must not reference the resolver symbols).
 // Every feature that drives the outbound client transport must pull it in: the direct callers
 // (http_client / mqtt / ws_client / relay / smtp / ssh port-forward) and the seam-based engines
-// whose shipped example binds the seam to pc_client (smb / dnc). Miss one and its pc_client_open
+// whose shipped example binds the seam to pc_client (smb / dnc). Miss one and its Tcp.client->open
 // resolves to the !NEED stub that returns -1, so the feature silently never connects on device.
 #if PC_ENABLE_HTTP_CLIENT || PC_ENABLE_MQTT || PC_ENABLE_WS_CLIENT || PC_ENABLE_RELAY || PC_ENABLE_SMTP ||             \
     PC_SSH_PORT_FORWARD || PC_ENABLE_SMB || PC_ENABLE_DNC || PC_ENABLE_FTP_SESSION || PC_ENABLE_SSH_CLIENT
@@ -5521,6 +5600,19 @@ from halves and is slower than the width it decomposes into"
 
 // The client dials by name, so anything that needs the client needs the resolver.
 #define PC_NEED_DNS_RESOLVER (PC_ENABLE_DNS_RESOLVER || PC_NEED_CLIENT)
+
+// PC_NEED_UDP marks when the datagram transport is built. The listener and client hold rings that
+// only move when someone drains them, and Session.tick() is that someone, so the tick references the
+// Udp table only where a feature put it in the image. Every feature that binds a UDP port or sends a
+// datagram lists itself here. Miss one and its rings fill and stop, with nothing on the wire.
+#if PC_ENABLE_COAP || PC_ENABLE_DTLS || PC_ENABLE_STATSD || PC_ENABLE_UDP_TELEMETRY || PC_ENABLE_SNMP ||               \
+    PC_ENABLE_SNMP_TRAP || PC_ENABLE_SNMP_V3 || PC_ENABLE_SYSLOG || PC_ENABLE_FLOW_EXPORT || PC_ENABLE_PROVISIONING || \
+    PC_ENABLE_NTP_SERVER || PC_ENABLE_DNS_SERVER || PC_ENABLE_HTTP3
+#define PC_NEED_UDP 1
+#endif
+#ifndef PC_NEED_UDP
+#define PC_NEED_UDP 0
+#endif
 
 // ---------------------------------------------------------------------------
 // Full Authorization-header capture (internal)
@@ -5566,10 +5658,10 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off (zero cost when unset - the notify points compile to nothing).
  * When set, the transport (L4) fires an application callback on every connection
- * state transition - pc_conn_on_event(slot, old_state, new_state, reason) - and
+ * state transition - Tcp.conn->on_event(slot, old_state, new_state, reason) - and
  * maintains lock-free counters (accepts, closes by reason, idle timeouts, RX
  * backpressure events, dropped deferred events, and a live CONN_CLOSING gauge)
- * readable via pc_conn_counters_get(). This is the only state-transition trace the
+ * readable via Tcp.conn->counters_get(). This is the only state-transition trace the
  * L4/L5 core exposes; pair it with PC_ENABLE_STATS for request-level metrics.
  */
 #ifndef PC_ENABLE_OBSERVABILITY
@@ -5936,14 +6028,55 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Shared receive-scratch size for the transport-layer UDP service.
+ * @brief Largest UDP datagram a bound port accepts, in bytes.
  *
- * One static buffer (lwIP delivers a single datagram at a time) into which each
- * incoming datagram is copied before the handler runs. Must hold the largest
- * datagram any UDP service expects (SNMP messages are the largest user).
+ * Bounds one datagram, both directions: a longer inbound datagram is truncated to this at the
+ * receive trampoline, and a longer send is refused. Sizes the per-slot staging buffer the drain
+ * hands the handler. Must hold the largest datagram any UDP service expects (SNMP messages are the
+ * largest user).
  */
 #ifndef PC_UDP_RX_BUF_SIZE
 #define PC_UDP_RX_BUF_SIZE 1472
+#endif
+
+/**
+ * @brief Per-slot UDP receive ring, in bytes.
+ *
+ * Backs one bound port's receive ring. The stack's trampoline frames each datagram into it and the
+ * drain reads them out, so this is how many bytes of datagram, plus a header each, may wait between
+ * two poll() calls. A datagram that does not fit the free space is dropped.
+ */
+#ifndef PC_UDP_RX_RING
+#define PC_UDP_RX_RING 2048
+#endif
+
+/**
+ * @brief UDP send ring, in bytes: per slot on the listener side, one on the client side.
+ *
+ * Holds framed datagrams between the call that queues one and the poll() that moves it to the wire,
+ * so a burst is written at memory speed and drains at wire speed. A send that does not fit the free
+ * space is refused rather than blocking.
+ */
+#ifndef PC_UDP_TX_RING
+#define PC_UDP_TX_RING 4096
+#endif
+
+// The rings index with `% cap` (mmgr/ring.h). A power-of-two capacity makes that an AND; any other
+// value emits a divide, which on a target without one is a call into a software routine per access.
+#if (PC_UDP_RX_RING & (PC_UDP_RX_RING - 1)) != 0
+#error "ProtoCore: PC_UDP_RX_RING must be a power of two"
+#endif
+#if (PC_UDP_TX_RING & (PC_UDP_TX_RING - 1)) != 0
+#error "ProtoCore: PC_UDP_TX_RING must be a power of two"
+#endif
+
+// A ring holds a frame header plus a payload, and keeps one slot free to tell full from empty, so a
+// ring that cannot take one largest datagram would refuse every send and drop every receive.
+#if PC_UDP_RX_RING < (PC_UDP_RX_BUF_SIZE + 64)
+#error "ProtoCore: PC_UDP_RX_RING must exceed PC_UDP_RX_BUF_SIZE by at least one frame header"
+#endif
+#if PC_UDP_TX_RING < (PC_UDP_RX_BUF_SIZE + 64)
+#error "ProtoCore: PC_UDP_TX_RING must exceed PC_UDP_RX_BUF_SIZE by at least one frame header"
 #endif
 
 /**
@@ -6016,7 +6149,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off (zero cost / no behavior change). When set, the accept callback
  * drops any connection whose source address is not contained in a configured
- * CIDR rule (add rules with listener_ip_allow_add_cidr("192.168.1.0/24") /
+ * CIDR rule (add rules with Tcp.listener->ip_allow_add_cidr("192.168.1.0/24") /
  * "2001:db8::/32"). Matching is a full-address prefix compare per family, so a v4
  * peer never matches a v6 rule and vice versa. An empty allowlist allows
  * everything, so enabling the feature before adding rules never locks the device
@@ -6374,6 +6507,22 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief Bytes a worker's generator draws before it redraws its seed from the platform.
+ *
+ * The generator's own pace, not a caller's: nothing in crypto/rng/rng.h lets a consumer ask for a
+ * reseed, because a consumer that could ask would set the rate, and the module that asked most often
+ * would set it for everyone. A draw is answered from the keystream and the seed is redrawn once this
+ * budget is spent.
+ *
+ * Lower spends more platform entropy for a shorter window per seed; higher does the reverse. The
+ * forward ratchet already makes an earlier draw unrecoverable from the current state, so this bounds
+ * the other direction - how long one platform draw is relied on - rather than backward secrecy.
+ */
+#ifndef PC_RAND_RESEED_BYTES
+#define PC_RAND_RESEED_BYTES (1u << 20)
+#endif
+
+/**
  * @brief Worst-case bytes each module borrows from the secure pool in a single call.
  *
  * Declared here because PC_SECURE_ARENA_SIZE below is derived from them and this is the one
@@ -6468,6 +6617,43 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_MD 96
 #endif
 
+// SSH frames every outbound packet in the secure pool: the payload it carries is the session's own
+// plaintext until the cipher runs over it. Two parts, and they do not nest:
+//
+//   - One wire buffer per SSH slot, taken from the pool's PERSISTENT end and never released, so a
+//     packet is framed over the previous one instead of wiping a whole buffer per packet. Every
+//     slot can hold one at once, so this scales with MAX_SSH_CONNS.
+//   - A transient payload plus wire, live together while pc_ssh_conn_send or an open_forwarded
+//     builds a message and frames it.
+//
+// The wire bound is derived in ssh_packet.h from this same SSH_PKT_BUF_SIZE, so the figure is
+// stated here in units of it and proved against the real SSH_WIRE_CAP by a static_assert in
+// ssh_conn.c. Two per slot covers the framing overhead the wire adds over a full payload,
+// compression's expansion bound included.
+#ifndef PC_WORK_SSH_CONN
+#define PC_WORK_SSH_CONN (((size_t)MAX_SSH_CONNS + 2u) * 2u * (size_t)SSH_PKT_BUF_SIZE)
+#endif
+
+// The two tables a module holds for the life of the program rather than for the life of a call.
+// They take the persistent end of the arena, so they are stated here for the same reason every
+// working set is: the pool is sized off what the build declares, and an undeclared borrow is one
+// the pool has no room for.
+#ifndef PC_WORK_ROUTE_TABLE
+#define PC_WORK_ROUTE_TABLE (MAX_ROUTES * 104 + 16) // HttpRoute is 88 with every gated id compiled
+#endif
+#ifndef PC_WORK_AUTH_TABLE
+#define PC_WORK_AUTH_TABLE (MAX_ROUTES * (3 * MAX_AUTH_LEN + 8) + 32) // AuthCred is 3*MAX_AUTH_LEN + 1
+#endif
+#ifndef PC_WORK_RNG
+#define PC_WORK_RNG 72 // the generator: seed(32) + nonce(8) + ratchet scratch(32), for the program's life
+#endif
+
+// The SSH host key on the software RSA backend: the private exponent from the persistent end for the
+// program's life, plus the PKCS#8 DER borrowed while pc_ssh_rsa_load_pubkey walks it.
+#ifndef PC_WORK_SSH_HOST_KEY
+#define PC_WORK_SSH_HOST_KEY (256 + 1700 + 16) // PC_RSA_KEY_BYTES + SSH_RSA_KEY_DER_MAX + alignment
+#endif
+
 /**
  * @brief Size in bytes of the per-slot SECURE pool (see mmgr/secure.h), DERIVED.
  *
@@ -6484,11 +6670,13 @@ from halves and is slower than the width it decomposes into"
  */
 #ifndef PC_SECURE_ARENA_SIZE
 
-// The modexp dominates: one backend or the other is compiled, never both.
+// The modexp dominates: one backend or the other is compiled, never both. The software backend also
+// walks the SSH host key in the pool and holds its private exponent there; the accelerated one hands
+// the key to mbedtls instead.
 #if PC_HAS_HW_BIGNUM
 #define PC_SECURE_WORK_BIGNUM PC_WORK_BIGNUM_HW
 #else
-#define PC_SECURE_WORK_BIGNUM PC_WORK_BIGNUM_SW
+#define PC_SECURE_WORK_BIGNUM (PC_WORK_BIGNUM_SW + PC_WORK_SSH_HOST_KEY)
 #endif
 
 // Feature-gated terms: a build pays only for the code it compiled.
@@ -6508,13 +6696,22 @@ from halves and is slower than the width it decomposes into"
 
 #if PC_ENABLE_SSH || PC_ENABLE_SSH_CLIENT
 #define PC_SECURE_WORK_SSHCIPHER PC_WORK_AES256CTR
+#define PC_SECURE_WORK_SSHCONN PC_WORK_SSH_CONN
 #else
 #define PC_SECURE_WORK_SSHCIPHER 0
+#define PC_SECURE_WORK_SSHCONN 0
+#endif
+
+#if PC_ENABLE_AUTH
+#define PC_SECURE_WORK_AUTH PC_WORK_AUTH_TABLE
+#else
+#define PC_SECURE_WORK_AUTH 0
 #endif
 
 #define PC_SECURE_ARENA_SIZE                                                                                           \
     (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_MAC + PC_SECURE_WORK_SMB +                           \
-     PC_SECURE_WORK_SSHCIPHER + 256) // + 256: alignment round-up across the individual borrows
+     PC_SECURE_WORK_SSHCIPHER + PC_SECURE_WORK_SSHCONN + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +     \
+     256) // + 256: alignment round-up across the individual borrows
 #endif
 
 // ---------------------------------------------------------------------------
@@ -6595,7 +6792,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Can be declared as `const PROGMEM` (flash) or as a mutable variable (RAM).
  * Pass a pointer to proto_begin() / begin_http() / begin_tls(), which hand it
- * to proto_tcp_pool_init().
+ * to Tcp.conn->init().
  */
 typedef struct WebServerConfig
 {
@@ -6631,28 +6828,33 @@ typedef enum PROTO_ENUM_PACKED
     PROTO_BRIDGE = 8,       ///< address:port -> hardware bus (PC_ENABLE_IFACE_BRIDGE): UART/SPI/I2C device server.
     PROTO_NTRIP_CASTER = 9, ///< NTRIP caster (PC_ENABLE_NTRIP_CASTER): serves RTCM3 corrections to rovers.
     PROTO_MESH = 10, ///< Edge-cache sibling link (PC_ENABLE_EDGE_MESH): answers a peer's content-addressed query.
+    PROTO_UDP = 11,  ///< A bound datagram port. The slot carries the peer per entry, not per slot.
 } ConnProto;
 
 /**
- * @brief Network interface a connection arrived on (for per-route filtering).
+ * @brief What an interface is, and the filter that selects one.
  *
- * Stamped onto each TcpConn at accept time by comparing the connection's local
- * IP to the softAP IP (see set_ap_ip()). Used to gate routes to
- * the station or softAP interface only (on(..., pc_iface)).
+ * One vocabulary for both jobs. A registered interface carries its kind (layer 1 keeps the
+ * registry); a route or a connection carries the same value as a filter, where PC_IF_ANY means
+ * "no filter". The wifi/eth values are what a connection is stamped with at accept time by
+ * comparing its local IP to the softAP IP; a bus or radio interface is registered by the
+ * application and forwarded to like any other.
  */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_IFACE_ANY = 0, ///< Unknown / no filter (matches any interface).
-    PC_IFACE_STA = 1, ///< Station interface (joined to an AP / your LAN).
-    PC_IFACE_AP = 2,  ///< softAP interface (clients joined to the device).
-    PC_IFACE_ETH = 3, ///< Ethernet interface (wired PHY).
-} pc_iface;
+    PC_IF_ANY = 0,      ///< unspecified kind, and the filter that matches any interface
+    PC_IF_WIFI_STA = 1, ///< station interface (joined to an AP / your LAN)
+    PC_IF_WIFI_AP = 2,  ///< softAP interface (clients joined to the device)
+    PC_IF_ETH = 3,      ///< wired Ethernet PHY
+    PC_IF_BUS = 4,      ///< a bus bridged onto the network (uart, spi, can)
+    PC_IF_RADIO = 5,    ///< a non-wifi radio
+} pc_if_kind;
 
 // Both of these are struct members (TcpConn::proto, TcpConn::iface, Listener::proto, and a route's
 // interface gate), so their width is per-slot BSS rather than a detail of the type. Pinned here
 // because the pool sizes in this file are what the footprint is computed from.
 static_assert(sizeof(ConnProto) == 1, "ConnProto must stay one byte: it is a per-slot struct member");
-static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-slot struct member");
+static_assert(sizeof(pc_if_kind) == 1, "pc_if_kind must stay one byte: it is a per-slot struct member");
 
 // ---------------------------------------------------------------------------
 // Compile-time sanity checks
@@ -7003,7 +7205,7 @@ static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-s
 
 // SFTP and SCP need the channel layer to carry them and the mount to store into (PC_ENABLE_MNT is
 // required above). They do NOT need FILE_SERVING: that dependency was the fs::FS seam, and the seam
-// now lives with the vendor code in board_drivers/, behind the mount backend.
+// now lives with the vendor code in core_setup/, behind the mount backend.
 #define PC_ENABLE_SSH_SFTP_NEEDS_SSH PC_ENABLE_SSH
 #if PC_ENABLE_SSH_SFTP && !PC_ENABLE_SSH_SFTP_NEEDS_SSH
 #error "ProtoCore: PC_ENABLE_SSH_SFTP needs PC_ENABLE_SSH"
@@ -7140,10 +7342,10 @@ static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-s
 // -- Core: protocol dispatch + shared outbound transport (always built) --
 /** @brief Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. */
 #ifndef PROTO_MAX_HANDLERS
-#define PROTO_MAX_HANDLERS 11
+#define PROTO_MAX_HANDLERS 12
 #endif
 // proto_register / proto_get index this table by ConnProto id, so it must be wide enough for every id.
-static_assert((unsigned)PROTO_MESH < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must exceed the largest ConnProto id");
+static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must exceed the largest ConnProto id");
 /** @brief Reverse-SSH tunnel: max concurrent forwarded-tcpip channels bridged at once. A relay that
  * forwards to a web UI opens one channel per inbound TCP connection, so this bounds concurrency. */
 #if PC_ENABLE_SSH_CLIENT
@@ -7182,7 +7384,7 @@ static_assert((unsigned)PROTO_MESH < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS mus
  * @brief Per-connection wire receive ring size (bytes).
  *
  * Holds plaintext (plain) or ciphertext (TLS). The transport ACKs on consume
- * (pc_client_read reopens the window), so for a large inbound transfer to never
+ * (Tcp.client->read reopens the window), so for a large inbound transfer to never
  * stall the ring must hold a full TCP receive window: keep PC_CLIENT_RX_BUF >=
  * TCP_WND (~5.7 KB). The 8192 default clears that and a multi-KB TLS handshake
  * flight; a ring below TCP_WND can deadlock a sustained download (the peer would be
@@ -7426,6 +7628,6 @@ static_assert((unsigned)PROTO_MESH < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS mus
 
 // Final sizing pass: raise buffers to the floors the enabled features require (every PC_ENABLE_*
 // flag is resolved by this point). Kept in the board-profile layer, not inline above.
-#include "board_drivers/board_profiles/derived_sizing.h" // PC_ALLOW_LATE_INCLUDE: ordered - derives sizes from the PC_ENABLE_* flags resolved above
+#include "core_setup/board_profiles/derived_sizing.h" // PC_ALLOW_LATE_INCLUDE: ordered - derives sizes from the PC_ENABLE_* flags resolved above
 
 #endif

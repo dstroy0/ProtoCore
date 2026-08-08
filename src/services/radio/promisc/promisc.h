@@ -7,7 +7,7 @@
  *
  * A read-only capture path: instead of joining a network and terminating traffic, listen to
  * every 802.11 frame on a channel and hand it to a sink. The canonical wiring feeds the sink
- * into the forwarding plane (services/net/forward), so captured Wi-Fi frames are bridged to another
+ * into the forwarding plane (network_drivers/network/forward), so captured Wi-Fi frames are bridged to another
  * interface (e.g. Ethernet) for a wired collector - "capture on Wi-Fi, forward to Ethernet".
  *
  * Two host-testable pieces plus the ESP32 radio binding:
@@ -80,7 +80,7 @@ typedef void (*pc_promisc_sink_fn)(const uint8_t *frame, uint16_t len, int8_t rs
 /**
  * @brief Start promiscuous capture on @p channel; every frame is delivered to @p sink.
  *
- * Requires the radio to be up (init_wifi_physical() or init_wifi_radio_physical()).
+ * Requires the radio to be up (Physical.wifi->init() or Physical.wifi->init_radio()).
  * Returns immediately.
  * @return true if capture started; false if @p sink is null or on host builds.
  */

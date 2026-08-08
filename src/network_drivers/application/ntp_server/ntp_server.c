@@ -11,14 +11,13 @@
 
 #if PC_ENABLE_NTP_SERVER
 
-#include "shared_primitives/endian.h"
-#include <string.h> // memset, memcpy
+#include "mmgr/endian.h"
+// memset, memcpy
 
-#if PROTOCORE_HOT
-#include "network_drivers/transport/udp.h"
-#include "server/clock/clock.h"
-#include "services/timing_position/time_source/time_source.h"
-#endif
+#include "network_drivers/transport/udp.h"                    // Udp.listener: the port 123 bind and the reply
+#include "server/clock/clock.h"                               // pc_millis: the sub-second fraction
+#include "services/timing_position/time_source/time_source.h" // pc_time_now: the seconds we serve
+
 size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t stratum, uint32_t refid,
                                     uint32_t pc_ntp_secs, uint32_t pc_ntp_frac, uint8_t *out, size_t out_cap)
 {
@@ -47,8 +46,6 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
     return NTP_PACKET_LEN;
 }
 
-#if PROTOCORE_HOT
-
 // All NTP-server binding state, owned by one instance (internal linkage): the advertised
 // stratum and reference id, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
@@ -76,7 +73,7 @@ static void pc_ntp_server_udp_handler(const uint8_t *data, size_t len, const str
                                             resp, sizeof(resp));
     if (n)
     {
-        pc_udp_send(peer, resp, n);
+        Udp.listener->reply(peer, resp, n);
     }
 }
 
@@ -84,18 +81,7 @@ proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
 {
     s_ntp.stratum = stratum;
     s_ntp.refid = refid;
-    return pc_udp_listen(123, pc_ntp_server_udp_handler, NULL);
+    return Udp.listener->listen(123, pc_ntp_server_udp_handler, NULL);
 }
-
-#else // host build: no lwIP. The codec above is host-tested; the binding is a stub.
-
-proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
-{
-    (void)stratum;
-    (void)refid;
-    return PROTO_FALSE;
-}
-
-#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_NTP_SERVER

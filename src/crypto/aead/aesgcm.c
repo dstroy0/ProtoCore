@@ -10,7 +10,7 @@
  * The working set is a pool borrow, wiped when released. No cipher
  * state ever touches the stack or BSS.
  *
- * The implementation lives in a backend under board_drivers/, chosen by the vendor's
+ * The implementation lives in a backend under core_setup/, chosen by the vendor's
  * PC_HAS_HW_AESGCM: the accelerated AEAD where the silicon has one, the portable software
  * AES + table GHASH where it does not. This file names no vendor and no cipher
  * + GF(2^8) xtime) + software GHASH. The GF(2^128) reduction mirrors aes128gcm.cpp.
@@ -20,7 +20,6 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/mac/ghash.h"
 #include "mmgr/secure.h"
-#include <string.h>
 
 PC_CRYPTO_HOT
 

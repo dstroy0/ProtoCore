@@ -12,13 +12,11 @@
 #if PC_ENABLE_RELAY
 
 #include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/client.h"
 #include "network_drivers/transport/tcp.h"
 #include "relay.h"
 #if PC_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power.h" // keep the radio awake during a relayed transfer
 #endif
-#include <string.h>
 
 // One published front port -> origin.
 typedef struct
@@ -101,29 +99,29 @@ static int a_send(void *c, const uint8_t *buf, size_t len)
     // Send as much as the inbound TCP send window currently allows (partial), not all-or-nothing: a
     // whole PC_RELAY_BUF chunk rarely fits tcp_sndbuf in one shot, and a failed all-or-nothing send
     // forwards zero bytes and stalls the transfer. room==0 is real backpressure - the pump retries.
-    proto_u16 room = pc_conn_sndbuf(br->conn_slot);
+    proto_u16 room = Tcp.conn->sndbuf(br->conn_slot);
     if (room == 0)
     {
         return 0;
     }
     proto_u16 n = (len < (size_t)room) ? (proto_u16)len : room;
-    return pc_conn_send(br->conn_slot, buf, n) ? (int)n : 0;
+    return Tcp.conn->send(br->conn_slot, buf, n) ? (int)n : 0;
 }
 // Origin (b) = the outbound pc_client; it reports EOF through the recv seam.
 static int b_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
-    size_t n = pc_client_read(br->origin_cid, buf, cap);
+    size_t n = Tcp.client->read(br->origin_cid, buf, cap);
     if (n)
     {
         return (int)n;
     }
-    return pc_client_is_closed(br->origin_cid) ? -1 : 0;
+    return Tcp.client->is_closed(br->origin_cid) ? -1 : 0;
 }
 static int b_send(void *c, const uint8_t *buf, size_t len)
 {
     RelayBridge *br = (RelayBridge *)c;
-    return pc_client_send(br->origin_cid, buf, len) ? (int)len : 0;
+    return Tcp.client->send(br->origin_cid, buf, len) ? (int)len : 0;
 }
 
 // Close the origin (and optionally the inbound) and free the bridge. active=false first so a
@@ -132,12 +130,12 @@ static void teardown(RelayBridge *br, proto_bool close_inbound)
 {
     br->active = PROTO_FALSE;
 #if PC_ENABLE_RADIO_POWER
-    pc_radio_busy_release(); // this bridge is done relaying
+    Radio.busy_release(); // this bridge is done relaying
 #endif
-    pc_client_close(br->origin_cid);
+    Tcp.client->close(br->origin_cid);
     if (close_inbound)
     {
-        pc_conn_close(br->conn_slot);
+        Tcp.conn->close(br->conn_slot);
     }
 }
 
@@ -167,7 +165,7 @@ static void service(uint8_t slot)
         }
     }
     // origin closed and everything it sent has been forwarded -> nothing more to do
-    if (pc_client_is_closed(br->origin_cid) && pc_client_available(br->origin_cid) == 0 &&
+    if (Tcp.client->is_closed(br->origin_cid) && Tcp.client->available(br->origin_cid) == 0 &&
         br->relay.b2a_off >= br->relay.b2a_len)
     {
         teardown(br, PROTO_TRUE);
@@ -179,19 +177,19 @@ static void relay_on_accept(uint8_t slot)
     RelayBind *bd = bind_by_listener(pc_conn_listener_id(slot));
     if (!bd)
     {
-        pc_conn_close(slot); // no origin published for this listener
+        Tcp.conn->close(slot); // no origin published for this listener
         return;
     }
     int idx = bridge_find_free();
     if (idx < 0)
     {
-        pc_conn_close(slot); // bridge table full
+        Tcp.conn->close(slot); // bridge table full
         return;
     }
-    int cid = pc_client_open(bd->host, bd->port, PC_RELAY_CONNECT_MS); // blocking connect (LAN origin)
+    int cid = Tcp.client->open(bd->host, bd->port, PC_RELAY_CONNECT_MS); // blocking connect (LAN origin)
     if (cid < 0)
     {
-        pc_conn_close(slot); // origin unreachable
+        Tcp.conn->close(slot); // origin unreachable
         return;
     }
     RelayBridge *br = &s_ctx.bridges[idx];
@@ -202,7 +200,7 @@ static void relay_on_accept(uint8_t slot)
     pc_relay_end b = {b_recv, b_send, NULL, br};
     pc_relay_init(&br->relay, &a, &b);
 #if PC_ENABLE_RADIO_POWER
-    pc_radio_busy_hold(); // hold the radio awake for the life of this bridge
+    Radio.busy_hold(); // hold the radio awake for the life of this bridge
 #endif
 }
 
@@ -261,7 +259,7 @@ proto_bool pc_relay_publish(uint8_t listener_id, const char *origin_host, uint16
     s_ctx.binds[idx].port = origin_port;
     if (!s_ctx.registered)
     {
-        proto_register(PROTO_RELAY, &s_relay_handler);
+        Session.proto->add(PROTO_RELAY, &s_relay_handler);
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;
@@ -279,7 +277,7 @@ void pc_relay_listener_reset(void)
         {
             s_ctx.bridges[i].active = PROTO_FALSE;
 #if PC_ENABLE_RADIO_POWER
-            pc_radio_busy_release(); // balance the hold taken when the bridge was opened
+            Radio.busy_release(); // balance the hold taken when the bridge was opened
 #endif
         }
     }

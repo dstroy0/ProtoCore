@@ -19,7 +19,6 @@
 
 #include <esp_core_dump.h>
 #include <esp_partition.h>
-#include <string.h>
 
 proto_bool pc_exc_coredump_present(ExcCoreDump *out)
 {

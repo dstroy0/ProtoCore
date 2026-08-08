@@ -12,15 +12,16 @@
 
 #include "network_drivers/session/worker.h"
 
-#include "board_drivers/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
-#include "mmgr/arena.h"                               // pc_worker_set_self: identity lives with the pools it indexes
-#include "shared_primitives/ring.h"                   // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+#include "core_setup/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
+#include "mmgr/arena.h"                            // pc_worker_set_self: identity lives with the pools it indexes
+#include "mmgr/ring.h"                             // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 
 // ---------------------------------------------------------------------------
 // Worker tasks
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+// Called by pc_defer above its definition.
+static void pc_worker_wake(int worker_id);
 
 // All worker-task state, owned by one instance (internal linkage): the pump callback, the task
 // handles, and the run flag. One named owner, unreachable from any other translation unit.
@@ -34,7 +35,7 @@ static WorkerCtx s_worker;
 
 // Each worker binds its id, then pumps until asked to stop. Between iterations it
 // blocks on its task notification instead of free-running the poll: a producer
-// (listener_enqueue, pc_defer) nudges it the moment work arrives, so events are
+// (Tcp.listener->enqueue, pc_defer) nudges it the moment work arrives, so events are
 // serviced immediately rather than on the next tick. The block still times out
 // after PC_WORKER_POLL_TICKS so the idle timeout sweep (check_timeouts) keeps
 // reaping stale connections with no events in flight; raising that knob now lowers
@@ -83,7 +84,7 @@ typedef struct
 } DeferStorageCtx;
 static DeferStorageCtx s_defer_store;
 
-void pc_workers_start(pc_worker_pump_fn pump)
+static void pc_workers_start(pc_worker_pump_fn pump)
 {
     if (PROTO_ATOMIC_LOAD(&s_worker.run))
     {
@@ -107,7 +108,7 @@ void pc_workers_start(pc_worker_pump_fn pump)
     }
 }
 
-proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
+static proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
 {
     if (!fn)
     {
@@ -126,7 +127,7 @@ proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
     return PROTO_TRUE;
 }
 
-void pc_worker_wake(int worker_id)
+static void pc_worker_wake(int worker_id)
 {
     if (worker_id < 0 || worker_id >= PC_WORKER_COUNT)
     {
@@ -139,7 +140,7 @@ void pc_worker_wake(int worker_id)
     }
 }
 
-void pc_worker_run_deferred(int worker_id)
+static void pc_worker_run_deferred(int worker_id)
 {
     if (worker_id < 0 || worker_id >= PC_WORKER_COUNT || !s_defer.dq[worker_id])
     {
@@ -155,7 +156,7 @@ void pc_worker_run_deferred(int worker_id)
     }
 }
 
-void pc_workers_stop(void)
+static void pc_workers_stop(void)
 {
     if (!PROTO_ATOMIC_LOAD(&s_worker.run))
     {
@@ -167,44 +168,20 @@ void pc_workers_stop(void)
     pc_platform_task_delay(3);
 }
 
-proto_bool pc_workers_running(void)
+static proto_bool pc_workers_running(void)
 {
     return PROTO_ATOMIC_LOAD(&s_worker.run);
 }
 
-#else // host build - no tasks; handle()/tests drive the pipeline inline
-
-void pc_workers_start(pc_worker_pump_fn pump)
-{
-    (void)pump;
-}
-void pc_workers_stop(void)
-{
-}
-proto_bool pc_workers_running(void)
-{
-    return PROTO_FALSE;
-}
-void pc_worker_wake(int worker_id)
-{
-    (void)worker_id; // no worker task on host - nothing to wake
-}
-
-// No worker task on host: the caller and the pipeline are the same thread, so a
-// deferred callback can run inline immediately (same observable effect, race-free).
-proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg)
-{
-    (void)worker_id;
-    if (!fn)
-    {
-        return PROTO_FALSE;
-    }
-    fn(arg);
-    return PROTO_TRUE;
-}
-void pc_worker_run_deferred(int worker_id)
-{
-    (void)worker_id;
-}
-
-#endif // PROTOCORE_HOT
+// Designated, so a member's position in the struct does not decide what it binds to.
+const WorkerNs Workers = {
+    .run_deferred = pc_worker_run_deferred,
+    .running = pc_workers_running,
+    .start = pc_workers_start,
+    .stop = pc_workers_stop,
+    .wake = pc_worker_wake,
+    .defer = pc_defer,
+#if PC_ENABLE_PREEMPT_QUEUE
+    .queue = &PreemptQueue,
+#endif
+};

@@ -56,12 +56,13 @@ PROTO_BEGIN_DECLS
 #include "crypto/mac/hmac_sha256.h"
 
 #include "network_drivers/physical/physical.h"
+#include "network_drivers/presentation/http/auth/auth.h"
 
-#include "network_drivers/transport/client.h"
 #include "network_drivers/transport/diffserv.h"
-#include "network_drivers/transport/listener.h"
+#include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/udp.h"
 
+#include "network_drivers/presentation/http/http.h"
 #include "network_drivers/session/session.h"
 #include "network_drivers/session/worker.h"
 
@@ -109,6 +110,7 @@ PROTO_BEGIN_DECLS
 #include "mmgr/dma.h"
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
+#include "mmgr/span.h"
 #include "network_drivers/application/file_serving/file_serving.h"
 #include "network_drivers/application/http_range.h"
 #include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
@@ -129,9 +131,12 @@ PROTO_BEGIN_DECLS
 #include "network_drivers/application/upload_service/upload_service.h"
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/datalink/roaming.h"
-#include "network_drivers/network/dns_resolver.h"
-#include "network_drivers/network/route.h"
+#include "network_drivers/network/dns/dns_resolver.h"
+#include "network_drivers/network/dns/dns_server.h"
+#include "network_drivers/network/forward/forward.h"
+#include "network_drivers/network/network.h"
 #include "network_drivers/physical/radio_power.h"
+#include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/session/preempt_queue.h"
 #include "server/clock/clock.h"
 #include "server/exc_decoder.h"
@@ -235,9 +240,7 @@ PROTO_BEGIN_DECLS
 #include "services/machine_tool/robotics/robotics.h"
 #include "services/machine_tool/safety_scl/safety_scl.h"
 #include "services/machine_tool/umati/umati.h"
-#include "services/net/dns_server/dns_server.h"
 #include "services/net/flow_export/flow_export.h"
-#include "services/net/forward/forward.h"
 #include "services/net/gateway/gateway.h"
 #include "services/net/happy_eyeballs/happy_eyeballs.h"
 #include "services/net/http_client/http_client.h"
@@ -343,7 +346,6 @@ PROTO_BEGIN_DECLS
 #include "services/web/httpcache/httpcache.h"
 #include "services/web/spa_router/spa_router.h"
 #include "services/web/web_terminal/web_terminal.h"
-#include "shared_primitives/span.h"
 
 /**
  * @brief A storage backend (server/filesystem/mnt.h), named here only as a pointer.
@@ -359,24 +361,7 @@ typedef struct pc_mnt_backend pc_mnt_backend;
 // HTTP method enumeration
 // ---------------------------------------------------------------------------
 
-/**
- * @brief HTTP request methods supported by the router.
- *
- * Pass one of these values to on() to bind a route to a
- * specific method.  PATCH, HEAD, and OPTIONS were added in v1.0 alongside
- * CORS preflight support.
- */
-typedef enum
-{
-    HTTP_GET,           ///< Safe, idempotent read
-    HTTP_POST,          ///< Non-idempotent create / action
-    HTTP_PUT,           ///< Idempotent replace
-    HTTP_DELETE,        ///< Idempotent delete
-    HTTP_PATCH,         ///< Partial update
-    HTTP_HEAD,          ///< Same as GET but no response body
-    HTTP_OPTIONS,       ///< Capability query / CORS preflight
-    HTTP_METHOD_UNKNOWN ///< Unrecognized method token → 501 Not Implemented
-} HttpMethod;
+// HttpMethod is the presentation layer's, declared in network_drivers/presentation/http/http.h.
 
 // ---------------------------------------------------------------------------
 // Handler and route types
@@ -396,7 +381,7 @@ typedef enum
  * @note If the callback returns without calling send_text(), the framework will
  *       reset the slot automatically (no response is sent to the client).
  */
-typedef void (*Handler)(uint8_t slot_id, HttpReq *request);
+// Handler is the HTTP root's, declared in network_drivers/presentation/http/http.h.
 
 /**
  * @brief Resolver for `{{name}}` template placeholders used by send_template().
@@ -450,64 +435,9 @@ typedef enum
  */
 typedef MwResult (*Middleware)(uint8_t slot_id, HttpReq *request);
 
-#if PC_ENABLE_WEBSOCKET
-/**
- * @brief Callback fired when a WebSocket connection is established.
- *
- * @param ws_id  Index into ws_pool[] for this connection.
- */
-typedef void (*WsConnectHandler)(uint8_t ws_id);
-
-/**
- * @brief Callback fired when a WebSocket text or binary frame arrives.
- *
- * The payload is in ws_pool[ws_id].buf, null-terminated.  Length is in
- * ws_pool[ws_id].payload_len.  Opcode is in ws_pool[ws_id].opcode.
- *
- * @param ws_id  Index into ws_pool[].
- */
-typedef void (*WsMessageHandler)(uint8_t ws_id);
-
-/**
- * @brief Callback fired when a WebSocket connection closes.
- *
- * @param ws_id  Index into ws_pool[] (slot is still valid during callback).
- */
-typedef void (*WsCloseHandler)(uint8_t ws_id);
-#endif // PC_ENABLE_WEBSOCKET
-
-#if PC_ENABLE_SSE
-/**
- * @brief Callback fired when a new SSE client connects.
- *
- * Use pc_sse_send() inside this callback to push an initial event if needed.
- *
- * @param pc_sse_id  Index into pc_sse_pool[] for this connection.
- */
-typedef void (*SseConnectHandler)(uint8_t pc_sse_id);
-#endif // PC_ENABLE_SSE
-
 // ---------------------------------------------------------------------------
-// Route type discriminator
+// HttpRoute type discriminator
 // ---------------------------------------------------------------------------
-
-/** @brief Discriminates between HTTP, WebSocket, and SSE route entries. */
-typedef enum
-{
-    ROUTE_HTTP, ///< Standard HTTP request/response.
-#if PC_ENABLE_WEBSOCKET
-    ROUTE_WS, ///< WebSocket upgrade route.
-#endif
-#if PC_ENABLE_SSE
-    ROUTE_SSE, ///< Server-Sent Events route.
-#endif
-#if PC_ENABLE_FILE_SERVING
-    ROUTE_STATIC, ///< Static-file subtree mount (serve_static()).
-#endif
-#if PC_ENABLE_WEBDAV
-    ROUTE_DAV, ///< WebDAV subtree mount (dav()).
-#endif
-} RouteType;
 
 // ---------------------------------------------------------------------------
 // begin() / listen() / restart() result codes
@@ -526,49 +456,6 @@ typedef enum
     PC_ERR_LISTENER_FULL = -2, ///< listen(): listener pool (MAX_LISTENERS) is full.
     PC_ERR_LISTEN_FAILED = -3  ///< A listener failed to open (bind/listen/lwIP error).
 } pc_result;
-
-/**
- * @brief Internal route entry stored in the routing table.
- *
- * Populated by on(), on_ws(), or on_sse().
- * Application code does not interact with this struct directly.
- */
-typedef struct Route
-{
-    char path[MAX_PATH_LEN]; ///< Null-terminated path pattern.
-    RouteType type;          ///< HTTP, WS, or SSE.
-    HttpMethod method;       ///< HTTP method (ROUTE_HTTP only).
-    Handler callback;        ///< HTTP handler (ROUTE_HTTP only).
-
-#if PC_ENABLE_WEBSOCKET
-    WsConnectHandler ws_connect; ///< Fired on upgrade success.
-    WsMessageHandler ws_message; ///< Fired on each data frame.
-    WsCloseHandler ws_close;     ///< Fired on close.
-#endif
-
-#if PC_ENABLE_SSE
-    SseConnectHandler pc_sse_connect; ///< Fired when client subscribes.
-#endif
-
-#if PC_ENABLE_FILE_SERVING
-    const pc_mnt_backend *static_fs; ///< Backend for this mount; NULL uses whatever is mounted.
-    const char *static_root;         ///< Subtree this mount serves, as a request-path piece.
-#endif
-
-#if PC_ENABLE_AUTH
-    proto_bool auth_required;      ///< True when this route requires authentication.
-    proto_bool auth_digest;        ///< True for Digest auth; false for Basic.
-    char auth_realm[MAX_AUTH_LEN]; ///< WWW-Authenticate realm string.
-    char auth_user[MAX_AUTH_LEN];  ///< Required username.
-    char auth_pass[MAX_AUTH_LEN];  ///< Required password.
-#endif
-
-    proto_bool is_active;   ///< `false` for unused table slots.
-    proto_bool is_wildcard; ///< `true` when path ends with `*`.
-    proto_bool is_param;    ///< `true` when the path contains a `:name` segment.
-    proto_bool is_regex;    ///< `true` when the path is a regex (see on_regex()).
-    pc_iface iface_filter;  ///< Interface gate; PC_IFACE_ANY (0) = match any interface.
-} Route;
 
 // ---------------------------------------------------------------------------
 // Chunked (streaming) response writer
@@ -606,7 +493,7 @@ typedef size_t (*ChunkSource)(uint8_t *buf, size_t cap, void *ctx);
 //
 // Usage:
 //   void handle_api(uint8_t slot_id, HttpReq *req) { send_text(slot_id, 200, "application/json", "{}"); }
-//   void setup()  { init_wifi_physical("SSID", "PW"); on("/api", HTTP_GET, handle_api); begin(80); }
+//   void setup()  { Physical.wifi->init("SSID", "PW"); on("/api", HTTP_GET, handle_api); begin(80); }
 //   void loop()   { handle(); }
 
 /**
@@ -634,7 +521,6 @@ proto_bool rate_limit_check(uint8_t slot_id);
  * @param req_path    Null-terminated path from the parsed request.
  * @return True if the route matches the request path.
  */
-proto_bool path_matches(const char *route, proto_bool is_wildcard, const char *req_path);
 
 /// @brief Record a response for stats + the access-log hook. Reads method/path from http_pool[slot_id].
 void note_response(uint8_t slot_id, int code, int body_len);
@@ -649,7 +535,6 @@ void note_response(uint8_t slot_id, int code, int body_len);
  * incremented; the PC_KEEPALIVE_MAX_REQUESTS-th request returns false so
  * the connection is closed deliberately. Always false with keep-alive off.
  */
-proto_bool keepalive_eval(uint8_t slot_id);
 #endif
 
 /**
@@ -658,7 +543,7 @@ proto_bool keepalive_eval(uint8_t slot_id);
  *        response and resets the HTTP parser either way. Addresses the
  *        connection by slot alone; the transport resolves the pcb internally.
  *
- * @param pre_flushed the caller already emitted the final bytes with pc_conn_send_flush()
+ * @param pre_flushed the caller already emitted the final bytes with Tcp.conn->send_flush()
  *        (write+tcp_output coalesced into one marshal), so skip the redundant flush here.
  */
 void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed);
@@ -684,29 +569,6 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
 /// drained.
 void chunk_send_pump(uint8_t slot_id);
 
-#if PC_ENABLE_AUTH
-/// @brief Validate the request's HTTP Basic credentials against route @p r. @return true if authorized.
-proto_bool check_basic_auth(uint8_t slot_id, HttpReq *req, const Route *r);
-/// @brief Validate an `Authorization: Digest` (RFC 7616, SHA-256, qop=auth) request against route @p r.
-/// @param stale  set true when the credentials verify but the nonce has expired (RFC 7616 3.3): the
-///               caller reissues a fresh challenge with `stale=true` so the client retries without a
-///               re-prompt. Left untouched on a credential mismatch or forged nonce.
-proto_bool check_digest_auth(uint8_t slot_id, HttpReq *req, const Route *r, proto_bool *stale);
-/// @brief Send 401 Unauthorized with a Basic or Digest `WWW-Authenticate` challenge per route @p r.
-/// @param stale  emit `stale=true` in the Digest challenge (expired-nonce transparent retry).
-void send_unauth(uint8_t slot_id, const Route *r, proto_bool stale);
-// The Digest keying secret is NOT here. It lives in network_drivers/application/auth/auth.c's AuthCtx, which is the
-// only file that reads it: a definition in this header gives every translation unit that includes it a separate copy of
-// the secret (and a multiple-definition link error), which is the opposite of one owner. See the comment on AuthCtx.
-/// @brief (Re)seed the Digest keying secret from the CSPRNG.
-void regen_digest_secret();
-/// @brief Mint a fresh stateless nonce (issue time + keyed MAC) into @p out (needs cap >= 48).
-void make_digest_nonce(char *out, size_t cap);
-/// @brief Verify a client nonce's MAC and freshness. @return true if the MAC is authentic (issued by
-///        this server); sets @p *expired when the nonce is authentic but older than its lifetime.
-proto_bool verify_digest_nonce(const char *nonce, proto_bool *expired);
-#endif
-
 // serve_static_request / serve_file_internal / file_send_pump: file_serving.h
 
 // try_serve_dav / serve_dav_request / dav_send_status / dav_stream_put_*: server/webdav_handler.h
@@ -720,34 +582,27 @@ proto_bool verify_digest_nonce(const char *nonce, proto_bool *expired);
  *
  * @param slot_id Connection slot to dispatch.
  */
-void match_and_execute(uint8_t slot_id);
 
-/// @brief Route-selection predicate: true if route @p r is active, its path pattern matches
+/// @brief HttpRoute-selection predicate: true if route @p r is active, its path pattern matches
 ///        @p req, and its interface filter admits this slot's connection. Matching a param route
 ///        captures its path parameters into @p req as a side effect (as the inline match did).
-proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req);
 
 /// @brief Dispatch a route whose path + interface already matched (WS/SSE/STATIC/HTTP + auth).
 /// @return true when a response was sent (the caller stops); false to keep scanning later routes,
 ///         with @p path_matched / @p allow_buf updated for a possible 405.
-proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, proto_bool *path_matched,
-                                  char *allow_buf, size_t allow_cap);
 
 #if PC_ENABLE_CSRF
 /// @brief Built-in CSRF gate: serve the `GET /csrf` token endpoint and enforce a valid
 ///        `X-CSRF-Token` on every state-changing method. @return true if a response was sent.
-proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method);
 #endif
 
 #if PC_ENABLE_WEBSOCKET
 /// @brief Complete (or reject) a ROUTE_WS handshake per RFC 6455 §4.2.1. Always responds.
-void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Route *r);
 #endif
 
 #if PC_ENABLE_AUTH
 /// @brief Enforce route @p r's auth (lockout gate + Digest/Basic credential check, with lockout
 ///        accounting). @return true if authorized; on failure the 401/429 is already sent.
-proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r);
 #endif
 
 #if PC_ENABLE_WEBSOCKET
@@ -793,7 +648,7 @@ int32_t listen(uint16_t port, ConnProto proto);
  * @brief Initialize all connection slots and open all registered listeners.
  *
  * Resets the HTTP parser pool, calls DeterministicAsyncTCP::pool_init(),
- * then calls listener_add() for each port registered via listen().
+ * then calls Tcp.listener->add() for each port registered via listen().
  * Requires at least one prior listen() call.  For the common single-port
  * case use begin(port, cfg) instead.
  *
@@ -895,13 +750,6 @@ int tls_client_subject(uint8_t slot_id, char *out, size_t out_len);
  */
 proto_bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port);
 
-/**
- * @brief Internal: run a completed HTTP/3 request through the shared route dispatcher on the
- * reserved conn-pool slot (called by the pc_quic_server request trampoline, not by app code). The
- * response routes back to @p stream_id on @p conn_id via send_text() -> pc_quic_server_respond.
- */
-void dispatch_h3_request(uint32_t conn_id, uint64_t stream_id, const char *method, const char *path,
-                         const char *authority, const uint8_t *body, size_t body_len);
 #endif // PC_ENABLE_HTTP3
 
 /**
@@ -948,7 +796,7 @@ void on_http(const char *path, HttpMethod method, Handler callback);
  * @brief Register a route that only matches on a specific network interface.
  *
  * Identical to on(path, method, callback) but the route is invisible unless
- * the request arrived on @p iface (pc_iface::PC_IFACE_STA or pc_iface::PC_IFACE_AP). A
+ * the request arrived on @p iface (pc_if_kind::PC_IF_WIFI_STA or pc_if_kind::PC_IF_WIFI_AP). A
  * non-matching interface falls through to other routes / 404, so you can,
  * e.g., expose a provisioning UI only on the softAP and the app API only on
  * the station link. Requires set_ap_ip() to have been called so connections
@@ -957,9 +805,9 @@ void on_http(const char *path, HttpMethod method, Handler callback);
  * @param path     URL path pattern.
  * @param method   HTTP method.
  * @param callback Handler invoked on a match.
- * @param iface    pc_iface::PC_IFACE_STA or pc_iface::PC_IFACE_AP (pc_iface::PC_IFACE_ANY = no filter).
+ * @param iface    pc_if_kind::PC_IF_WIFI_STA or pc_if_kind::PC_IF_WIFI_AP (pc_if_kind::PC_IF_ANY = no filter).
  */
-void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_iface iface);
+void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_if_kind iface);
 
 /**
  * @brief Register a route whose path is a regular expression.
@@ -987,10 +835,10 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback);
 /**
  * @brief Tell the server the softAP IPv4 address for STA/AP route filtering.
  *
- * Each accepted connection is tagged pc_iface::PC_IFACE_AP when its local IP equals
- * @p ap_ip, else pc_iface::PC_IFACE_STA. Call once after starting the softAP, e.g.
- * `server.set_ap_ip(pc_net_ap_ip())` (already network byte order).
- * Without it, every connection is treated as pc_iface::PC_IFACE_STA.
+ * Each accepted connection is tagged pc_if_kind::PC_IF_WIFI_AP when its local IP equals
+ * @p ap_ip, else pc_if_kind::PC_IF_WIFI_STA. Call once after starting the softAP, e.g.
+ * `server.set_ap_ip(Physical.wifi->ap_ip())` (already network byte order).
+ * Without it, every connection is treated as pc_if_kind::PC_IF_WIFI_STA.
  *
  * @param ap_ip softAP IPv4 address in network byte order (0 to clear).
  */
@@ -1209,18 +1057,6 @@ void handle();
  * call handle() rather than this directly.
  */
 void service_once(int worker_id);
-
-/**
- * @brief The instance-bound HTTP poll pump for one slot (the HTTP ProtoHandler's on_poll).
- *
- * Installed into the HTTP handler at begin() via http_proto_set_poll() so the worker dispatch
- * loop pumps HTTP through the same uniform ProtoHandler seam as every other protocol - there is no
- * HTTP special case in the loop. Runs the file/chunk send pumps, the WebSocket + SSE drains, the
- * keep-alive re-parse, and dispatches a completed request into this server's routes. Public only so
- * the poll trampoline can reach it (like service_once); application code never calls it directly.
- * @param slot_id Connection slot to pump.
- */
-void http_poll_slot(uint8_t slot_id);
 
 /**
  * @brief Run @p fn(@p arg) on the worker that owns connection @p slot.
@@ -1496,7 +1332,6 @@ void pc_sse_broadcast(const char *path, const char *data, const char *event, con
 // declaration is a reader, never the storage, so the owner stays the only writer.
 
 /** @brief Reason phrase for an HTTP status code (e.g. 404 -> "Not Found"). */
-const char *status_text(int code);
 
 /**
  * @brief The fixed reply sent when a response's own headers will not fit RESP_HDR_BUF_SIZE.
@@ -1511,13 +1346,12 @@ extern const char PC_RESP_HDR_OVERFLOW[];
 extern const size_t PC_RESP_HDR_OVERFLOW_LEN;
 
 /** @brief Initialize the common fields (path, flags) of a route-table entry from its pattern. */
-void fill_route_base(Route *r, const char *path);
+void fill_route_base(HttpRoute *r, const char *path);
 
 /** @brief Format @p t as an RFC 1123 GMT date into @p out (cap bytes); @p out is emptied for t <= 0. */
 // http_rfc1123: file_serving.h
 
 /** @brief True if the request in slot @p slot_id used the HEAD method (send headers, no body). */
-proto_bool req_is_head(uint8_t slot_id);
 
 /** @brief Whole-path regex match (anchored both ends; bounded by RE_MAX_STEPS, fails closed). */
 proto_bool regex_match(const char *pattern, const char *path);

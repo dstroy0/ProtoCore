@@ -11,7 +11,7 @@
  */
 
 #include "secure.h"
-#include "board_drivers/board_profiles/pc_platform.h" // pc_platform_context_id()
+#include "core_setup/board_profiles/pc_platform.h" // pc_platform_context_id()
 #include "mmgr/arena.h"
 #include <assert.h>
 
@@ -56,7 +56,7 @@ static inline int cur_worker(void)
 static inline void assert_single_owner(int w)
 {
 #if PC_DEBUG_CHECKS
-    // Off by default; see PC_DEBUG_CHECKS. The identity comes from board_drivers/ - the core does
+    // Off by default; see PC_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
     // not name an RTOS.
     static uintptr_t s_owner[PC_SEC_POOL_SLOTS] = {0};
     const uintptr_t cur = pc_platform_context_id();
@@ -121,6 +121,16 @@ void *pc_secure_alloc(size_t n, size_t align)
 pc_span pc_secure_span(size_t n, size_t align)
 {
     return pc_span_from((uint8_t *)pc_secure_alloc(n, align), n);
+}
+
+pc_span pc_secure_persist_span(size_t n)
+{
+    int w = cur_worker();
+    assert_single_owner(w);
+    // The persistent end grows up from the base and the scratch end bumps down from the top, so a
+    // mark taken on the scratch end never reaches this and no release reclaims it. The arena hands
+    // these bytes back zeroed.
+    return pc_span_from((uint8_t *)pc_arena_persist_alloc(bind(w), n), n);
 }
 
 size_t pc_secure_mark(void)

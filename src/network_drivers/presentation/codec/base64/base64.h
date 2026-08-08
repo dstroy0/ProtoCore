@@ -21,58 +21,38 @@
 #ifndef PROTOCORE_BASE64_H
 #define PROTOCORE_BASE64_H
 
+#include "protocore_config.h" // PROTO_BEGIN_DECLS: the .cpp benches and sketches include this header
 #include <stddef.h>
 #include <stdint.h>
 
-/**
- * @brief Encode @p src_len bytes of @p src as Base64.
- *
- * Writes a null-terminated string into @p dst.  @p dst must be at least
- * `((src_len + 2) / 3) * 4 + 1` bytes.
- *
- * @param src     Input bytes.
- * @param src_len Number of input bytes.
- * @param dst     Output buffer (null-terminated Base64 string).
- */
-void pc_base64_encode(const uint8_t *src, size_t src_len, char *dst);
+PROTO_BEGIN_DECLS
 
 /**
- * @brief Decode a null-terminated Base64 string.
+ * @brief The two alphabets, each in both directions.
  *
- * Writes decoded bytes into @p dst, never writing more than @p dst_cap bytes.
- * Returns the number of decoded bytes, or 0 on invalid input or if the decoded
- * output would exceed @p dst_cap (the write is bounded - no overflow). The
- * caller must leave room for any terminator it adds afterward (pass a capacity
- * one less than the buffer size if it will null-terminate at the returned
- * length).
- *
- * @param src     Null-terminated Base64 input string.
- * @param dst     Output byte buffer.
- * @param dst_cap Capacity of @p dst in bytes.
- * @return        Number of bytes written to @p dst, or 0 on error / overflow.
+ * @var Base64Ns::encode      write @p src_len bytes as NUL-terminated base64; @p dst holds at least
+ *                            `((src_len + 2) / 3) * 4 + 1` bytes
+ * @var Base64Ns::decode      read a NUL-terminated base64 string into at most @p dst_cap bytes; the
+ *                            count written, or 0 on an invalid character or an output past the cap.
+ *                            A caller that terminates afterward passes one less than the buffer size
+ * @var Base64Ns::url_encode  the same encode in the '-' '_' alphabet with no '=' padding
+ *                            (RFC 4648 sec 5); the character count written, never longer than encode's
+ * @var Base64Ns::url_decode  read @p src_len base64url characters, stopping at an '='. Strict: the
+ *                            '+' '/' characters are refused, so a JWS segment (RFC 7515) decodes as
+ *                            base64url alone and never as a mixed alphabet. Streaming, so the final
+ *                            group may be 2 or 3 characters. Bounded by @p dst_cap like decode
  */
-size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap);
+typedef struct
+{
+    void (*encode)(const uint8_t *src, size_t src_len, char *dst);
+    size_t (*decode)(const char *src, uint8_t *dst, size_t dst_cap);
+    size_t (*url_encode)(const uint8_t *src, size_t src_len, char *dst);
+    size_t (*url_decode)(const char *src, size_t src_len, uint8_t *dst, size_t dst_cap);
+} Base64Ns;
 
-/**
- * @brief Encode @p src_len bytes as base64url (RFC 4648 section 5): '-' / '_' in
- *        place of '+' / '/', and no '=' padding.
- *
- * Writes a null-terminated string into @p dst, which must hold at least
- * `((src_len + 2) / 3) * 4 + 1` bytes (the same as pc_base64_encode; the URL form is
- * never longer). @return the number of characters written.
- */
-size_t pc_base64url_encode(const uint8_t *src, size_t src_len, char *dst);
+/** @brief The one symbol this module exports. */
+extern const Base64Ns Base64;
 
-/**
- * @brief Decode @p src_len characters of base64url (RFC 4648 section 5, '-'/'_'
- *        alphabet; an '=' ends the input).
- *
- * Strict: the standard '+'/'/' characters are rejected so a JWS/JWT segment is
- * decoded as base64url only (RFC 7515), never as a mixed alphabet. Streaming
- * decoder - no padding or buffer length restriction. Writes at most @p dst_cap
- * bytes; returns the number written, or 0 on an invalid character or if the
- * output would exceed @p dst_cap (the write is bounded - no overflow).
- */
-size_t pc_base64url_decode(const char *src, size_t src_len, uint8_t *dst, size_t dst_cap);
+PROTO_END_DECLS
 
 #endif

@@ -10,9 +10,7 @@
 
 #if PC_ENABLE_CIA402
 
-#include <string.h>
-
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 Cia402State pc_cia402_state(uint16_t sw)
 {

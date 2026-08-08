@@ -40,7 +40,7 @@ static void mdns_handler(uint8_t slot_id, HttpReq *req)
     char json[128];
     snprintf(json, sizeof(json), "{\"interval_ms\":%lu,\"contention\":%u,\"announces\":%lu,\"channel\":%u}",
              (unsigned long)pc_mdns_adaptive_interval_ms(), (unsigned)pc_mdns_adaptive_contention(),
-             (unsigned long)pc_mdns_adaptive_announces(), (unsigned)pc_net_channel());
+             (unsigned long)pc_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
     send_text(slot_id, 200, PC_MIME_JSON, json);
 }
 
@@ -49,8 +49,8 @@ void setup()
     Serial.begin(115200);
     delay(300);
 
-    init_wifi_physical(WIFI_SSID, WIFI_PASS);
-    while (!wifi_ready())
+    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
@@ -78,14 +78,14 @@ void setup()
 
     if (pc_mdns_adaptive_begin(&cfg))
     {
-        Serial.printf("adaptive announcing on channel %u\n", (unsigned)pc_net_channel());
+        Serial.printf("adaptive announcing on channel %u\n", (unsigned)Physical.wifi->channel());
     }
     else
     {
         Serial.println("adaptive begin FAILED (not associated, or promiscuous unavailable)");
     }
 
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("http://%u.%u.%u.%u/mdns  - resolve adaptive.local from the LAN\n", (unsigned)(ip & 0xFF),
                   (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -101,6 +101,6 @@ void loop()
         next = millis() + 5000;
         Serial.printf("interval=%lums contention=%u announces=%lu ch=%u\n",
                       (unsigned long)pc_mdns_adaptive_interval_ms(), (unsigned)pc_mdns_adaptive_contention(),
-                      (unsigned long)pc_mdns_adaptive_announces(), (unsigned)pc_net_channel());
+                      (unsigned long)pc_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
     }
 }

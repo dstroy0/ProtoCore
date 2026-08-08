@@ -16,7 +16,7 @@
 
 #if PC_ENABLE_EUROMAP77
 
-#include <string.h> // strnlen (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
+// strnlen (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 // ---------------------------------------------------------------------------
 // Node identifiers (namespace PC_EM77_NS). Objects end in 0; their variables count up from it.

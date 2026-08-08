@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_IKEV2
 
-#include <string.h>
-
 // addr is within the inclusive [lo, hi] range. Addresses are big-endian, so a byte-wise unsigned compare
 // (memcmp) is the numeric compare.
 static proto_bool in_range(const uint8_t *addr, const uint8_t *lo, const uint8_t *hi, uint8_t len)

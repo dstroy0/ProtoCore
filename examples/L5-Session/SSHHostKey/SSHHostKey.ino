@@ -10,9 +10,9 @@
  * device (it signs the key exchange). This example shows the two ways to give the
  * server one, both starting from a key pair you generate on your workstation with:
  *
- *     python3 tools/gen_ssh_host_key.py --type ed25519 \
+ *     python3 tools/crypto/gen_ssh_host_key.py --type ed25519 \
  *         --header examples/L5-Session/SSHHostKey/host_key.h --symbol HOST_KEY_SEED
- *     python3 tools/gen_ssh_host_key.py --type rsa            # for the NVS path
+ *     python3 tools/crypto/gen_ssh_host_key.py --type rsa            # for the NVS path
  *
  * The script prints a .pub line - add it to your client's ~/.ssh/known_hosts.
  *
@@ -113,14 +113,14 @@ void setup()
 {
     Serial.begin(115200);
 
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

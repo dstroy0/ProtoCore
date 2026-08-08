@@ -15,12 +15,12 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
 #include "mmgr/secure.h"
-#include <string.h>
-#if PROTOCORE_HOT
+
+#if PC_HAS_HW_BIGNUM
 #include <mbedtls/md.h>
 #include <mbedtls/rsa.h>
 #else
-#include "crypto/asymmetric/bignum.h" // native software RSA (test reference)
+#include "crypto/asymmetric/bignum.h" // SW path RSA
 #endif
 PC_CRYPTO_HOT
 
@@ -46,10 +46,10 @@ const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN] = {
     0x04, 0x40                                            // OCTET STRING, length 64 (digest follows)
 };
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
-// Arduino - mbedtls verify path
+// HW path - mbedtls verify
 // ---------------------------------------------------------------------------
 
 int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], const uint8_t *msg, size_t msg_len,
@@ -110,7 +110,7 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
 #else
 
 // ---------------------------------------------------------------------------
-// Native - software RSA path (test reference; NOT constant-time)
+// SW path RSA. NOT constant time - see SECURITY.md, timing.
 // ---------------------------------------------------------------------------
 
 // Hash msg with the selected algorithm and return the matching DigestInfo.
@@ -394,4 +394,4 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
     return pc_ct_eq(em, expected, PC_RSA_KEY_BYTES) ? 0 : -1;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_HW_BIGNUM

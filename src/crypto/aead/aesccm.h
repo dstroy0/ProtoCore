@@ -27,7 +27,7 @@
 // SMB 3.x is the only consumer of AES-CCM today; gate it so non-SMB builds do not carry the code.
 #if PC_ENABLE_SMB
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_AES
 #include <mbedtls/ccm.h> // hardware-backed AES-CCM on ESP32
 #endif
 

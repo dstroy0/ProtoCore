@@ -11,7 +11,6 @@
 #if PC_ENABLE_IKEV2
 
 #include "crypto/hash/sha1.h"
-#include <string.h>
 
 // SPIi(8) | SPIr(8) | IP(4 or 16) | Port(2) - the largest NAT-detection hash input.
 #define PC_NATD_INPUT_MAX (PC_IKE_SPI_LEN + PC_IKE_SPI_LEN + 16 + 2)

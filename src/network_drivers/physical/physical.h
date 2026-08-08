@@ -6,7 +6,7 @@
  * @brief Layer 1 (Physical) - link bring-up and live egress-interface reporting.
  *
  * The "physical" link is the 802.11 radio or a wired Ethernet PHY, brought up by
- * the vendor backend selected with PC_VENDOR_* (board_drivers/physical/<vendor>/).
+ * the vendor backend selected with PC_VENDOR_* (core_setup/physical/<vendor>/).
  * Failover between interfaces is owned by the network stack itself (it reselects the
  * default route when a link drops) - this layer adds no manager and no polling
  * tick; it only *reports* which interface currently carries outbound traffic via
@@ -20,9 +20,9 @@
 #ifndef PROTOCORE_PHYSICAL_H
 #define PROTOCORE_PHYSICAL_H
 
-#include "board_drivers/board_profiles/pc_platform.h" // PC_VENDOR_* selector (picks the L1 backend)
-#include "network_drivers/network/ip.h"
-#include "protocore_config.h" // pc_iface
+#include "core_setup/board_profiles/pc_platform.h" // PC_VENDOR_* selector (picks the L1 backend)
+#include "protocore_config.h"                      // pc_if_kind
+#include "shared_primitives/ip.h"
 
 // Does the selected vendor ship a physical (L1) backend? The real bring-up (radio / Ethernet PHY /
 // lwIP netif access) lives in a per-vendor subdir - physical/esp/ and physical/mock/ today; add
@@ -38,6 +38,12 @@
 // The ESP backend is C++ (it calls the Arduino WiFi and ETH objects), so these names carry C
 // linkage and the C callers above this layer link against them unchanged.
 PROTO_BEGIN_DECLS
+
+// ---------------------------------------------------------------------------
+// Layer 1's own functions. @ref Physical is built from them and is how the layer is reached; the
+// bodies come from whichever backend the PC_VENDOR_* selector compiled, which is a detail of this
+// layer rather than a boundary of it.
+// ---------------------------------------------------------------------------
 
 /**
  * @brief Connect to a WiFi access point.
@@ -80,7 +86,7 @@ proto_bool init_wifi_ap_physical(const char *ssid, const char *password);
  * A thin wrapper over the Arduino ETH library (`ETH.begin()`); the RMII PHY pins / type /
  * clock come from the standard `ETH_PHY_*` build flags for your board. Returns immediately
  * (bring-up is asynchronous); poll eth_ready(). The egress reporting already classifies a
- * wired route as PC_IFACE_ETH, so the server accepts on the link once it has an IP.
+ * wired route as PC_IF_ETH, so the server accepts on the link once it has an IP.
  *
  * @return true if ETH.begin() started the driver; false if Ethernet is disabled at build
  *         time or the driver failed to start (and always false on host builds).
@@ -116,10 +122,10 @@ proto_bool pc_ipv6_ready(void);
  * @brief Which interface currently carries outbound traffic.
  *
  * Reads the live lwIP default route, so it reflects the current state after any
- * failover the stack performed - no polling, no cached state. Returns PC_IFACE_ETH /
- * PC_IFACE_STA / PC_IFACE_AP, or PC_IFACE_ANY when no route is up (and on host builds).
+ * failover the stack performed - no polling, no cached state. Returns PC_IF_ETH /
+ * PC_IF_WIFI_STA / PC_IF_WIFI_AP, or PC_IF_ANY when no route is up (and on host builds).
  */
-pc_iface pc_net_egress(void);
+pc_if_kind pc_net_egress(void);
 
 /** @brief IPv4 (network byte order) of the current egress interface, or 0 if none. */
 uint32_t pc_net_egress_ip(void);
@@ -173,14 +179,14 @@ uint8_t pc_net_channel(void);
  * @param sta_ip    WiFi station IPv4 (network order), 0 if not connected.
  * @param ap_ip     softAP IPv4 (network order), 0 if the softAP is not up.
  */
-pc_iface pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
+pc_if_kind pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
 
 /* --------------------------------------------------------------------------------------------
  * Radio control (L1 capability contract)
  *
  * Power save and monitor mode are properties of the radio, so they belong to the layer that owns
  * the radio. The core's API names no vendor; the flavoring happens at the edge, in
- * board_drivers/physical/<vendor>/.
+ * core_setup/physical/<vendor>/.
  *
  * Every entry point below returns false / does nothing when the selected vendor has no radio
  * backend (PC_PHYSICAL_HAS_BACKEND == 0), so callers build and run headless on any target.
@@ -228,6 +234,113 @@ void pc_phy_monitor_set_channel(uint8_t channel);
 
 /** @brief Leave monitor mode. */
 void pc_phy_monitor_end(void);
+
+/** @brief The Wi-Fi station and softAP interface. */
+typedef struct
+{
+    proto_bool (*init_radio)(uint8_t channel);
+    proto_bool (*init_ap)(const char *ssid, const char *password);
+    proto_bool (*init)(const char *ssid, const char *password);
+    proto_bool (*ready)(void);
+    size_t (*ssid)(char *out, size_t cap);
+    uint8_t (*channel)(void);
+    int8_t (*rssi)(void);
+    uint32_t (*ap_ip)(void);
+} PhysicalWifiNs;
+
+/** @brief The wired Ethernet interface. */
+typedef struct
+{
+    proto_bool (*init)(void);
+    proto_bool (*ready)(void);
+} PhysicalEthNs;
+
+/** @brief The IPv6 dual-stack interface. */
+typedef struct
+{
+    proto_bool (*init)(void);
+    proto_bool (*global_addr)(pc_ip *out);
+    proto_bool (*ready)(void);
+} PhysicalIp6Ns;
+
+/** @brief What the live link reports about itself. */
+typedef struct
+{
+    proto_bool (*egress_mac)(uint8_t out[6]);
+    pc_if_kind (*classify_ip)(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
+    uint32_t (*egress_ip)(void);
+    pc_if_kind (*egress)(void);
+    proto_bool (*mac)(uint8_t out[6]);
+} PhysicalLinkNs;
+
+// ---------------------------------------------------------------------------
+// The interfaces this device has. An interface is an id, a kind, and the callback that puts bytes
+// on the wire - all three physical facts, which is why the registry is here and not in the
+// forwarding plane that merely chooses between them. A device can carry several, of mixed kind: two
+// Ethernet ports, a station and a softAP, a bus bridged to a socket.
+// ---------------------------------------------------------------------------
+
+// pc_if_kind is protocore_config.h's: one vocabulary for the kind and the filter.
+
+/**
+ * @brief Put @p len bytes on interface @p if_id.
+ * @return true if the interface accepted them; false drops.
+ */
+typedef proto_bool (*pc_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
+
+/**
+ * @brief The interface registry.
+ *
+ * @var PhysicalIfaceNs::add     register an interface and how to send on it
+ * @var PhysicalIfaceNs::reset   forget every interface
+ * @var PhysicalIfaceNs::present whether @c id is registered
+ * @var PhysicalIfaceNs::kind    what @c id is
+ * @var PhysicalIfaceNs::at      the id held in registry row @c i, or PC_IF_NONE
+ * @var PhysicalIfaceNs::count   registered interfaces
+ * @var PhysicalIfaceNs::send    put bytes on @c id
+ */
+typedef struct
+{
+    proto_bool (*add)(uint8_t id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
+    void (*reset)(void);
+    proto_bool (*present)(uint8_t id);
+    pc_if_kind (*kind)(uint8_t id);
+    int16_t (*at)(uint8_t i);
+    uint8_t (*count)(void);
+    proto_bool (*send)(uint8_t id, const uint8_t *data, uint16_t len);
+} PhysicalIfaceNs;
+
+/** @brief No interface. Returned by PhysicalIfaceNs::at for an empty row. */
+#define PC_IF_NONE (-1)
+
+/**
+ * @brief The radio interface, defined in radio_power.h.
+ *
+ * Named here rather than included: radio_power.h needs this file's pc_phy_ps and pc_phy_frame_fn, so
+ * the dependency runs one way. A child is a pointer, so its declaration is all this needs.
+ */
+typedef struct RadioNs RadioNs;
+
+/**
+ * @brief Layer 1: the interfaces this device actually has.
+ *
+ * A child is a pointer because a table in one translation unit is not a constant
+ * expression in another, the same reason Tcp carries conn, listener and client that way.
+ * A child behind a feature flag is declared under it, so the layer names only what the
+ * image contains.
+ */
+typedef struct
+{
+    const PhysicalWifiNs *wifi;
+    const PhysicalEthNs *eth;
+    const PhysicalIp6Ns *ip6;
+    const PhysicalLinkNs *link;
+    const PhysicalIfaceNs *iface;
+    const RadioNs *radio;
+} PhysicalNs;
+
+/** @brief The one symbol this module exports. */
+extern const PhysicalNs Physical;
 
 PROTO_END_DECLS
 

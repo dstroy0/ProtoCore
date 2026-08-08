@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_RELAY
 
-#include <string.h>
-
 // Read one non-blocking chunk from src and forward it to dst. Sets *src_eof on a src seam error;
 // returns -1 on a dst send error, else 0. A zero-length read leaves the buffers untouched.
 static int pump_refill(pc_relay_end *src, pc_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off,

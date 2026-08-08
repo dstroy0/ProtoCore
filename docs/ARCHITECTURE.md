@@ -14,7 +14,7 @@ special-cased. The piping is straight; what remains below is the map, not a to-d
 src/network_drivers/
   physical/     WiFi / Ethernet bring-up, link state
   datalink/     L2 framing concerns
-  network/      IPv4 / interface tagging (pc_iface: STA vs AP)
+  network/      IPv4 / interface tagging (pc_if_kind: STA vs AP)
   transport/    lwIP raw-API callbacks, the per-connection RX ring, the TcpEvt
                 event queue, and the pc_conn_* I/O API. OWNS all socket I/O.
   tls/          mbedTLS record layer (static-pool BIO) - plaintext <-> ciphertext
@@ -34,7 +34,7 @@ src/shared_primitives/  layer-agnostic header-only primitives shared across the
                 everywhere). Header-only so nothing has to be added to the per-env
                 test src filters. Two more shared concerns live in their natural
                 module instead of here: base64url (base64 module, used by JWT +
-                OIDC) and host->IP resolution (network_drivers/network/dns_resolver, used by the
+                OIDC) and host->IP resolution (network_drivers/network/dns/dns_resolver, used by the
                 server-adjacent code AND pc_client, so a client has one DNS owner).
 ```
 
@@ -63,14 +63,14 @@ Every layer that sends bytes calls the transport API; nobody calls lwIP `tcp_*`
 directly:
 
 ```
-app / presentation  -->  pc_conn_send / pc_conn_flush / pc_conn_sndbuf
+app / presentation  -->  Tcp.conn->send / Tcp.conn->flush / pc_conn_sndbuf
                          (TLS slots route through pc_tls_write)
                               |
                          pc_tcp_marshal (PC_OP_*)  -->  tcpip_thread: tcp_write / tcp_output
 ```
 
 The **same marshal rule covers every raw lwIP call, not just app data**: the TCP
-listener bring-up (`listener_add` / `listener_stop`), the UDP transport (`pc_udp_*`,
+listener bring-up (`listener_add` / `Tcp.listener->stop`), the UDP transport (`pc_udp_*`,
 used by SNMP / CoAP / captive-DNS / syslog / telemetry), the outbound client
 (`pc_client`), and the DNS resolver all route their `tcp_*` / `udp_*` through
 `tcpip_api_call`. This is mandatory on arduino-esp32 3.x, where lwIP core-locking
@@ -87,7 +87,7 @@ worker:       server_tick -> dispatch_event -> on_data  -->  drain the ring (adv
 ```
 
 **Receive-window flow control: now single-owner (transport).** `recv_cb` no longer
-ACKs on copy. The worker calls `pc_conn_ack_consumed(slot)` once per slot per loop
+ACKs on copy. The worker calls `Tcp.conn->ack_consumed(slot)` once per slot per loop
 and transport reopens the TCP window by exactly the bytes drained since the last ACK
 (ack-on-consume; `tcp_recved` marshaled). The window therefore tracks ring occupancy
 and a slow consumer cannot overflow the ring. **TCP-level requirement:**
@@ -102,7 +102,7 @@ See docs/BUGS.md "RX flow-control deadlock".
 `tls/tls.cpp`, and the conn_pool-ring services `modbus.cpp` / `opcua.cpp` (their
 duplicated `ring_peek/consume/avail` are now thin adapters over the API). The read
 functions only consume; the window is reopened by the worker's single
-`pc_conn_ack_consumed()` per loop - so there is exactly one place that touches the
+`Tcp.conn->ack_consumed()` per loop - so there is exactly one place that touches the
 ring indices for draining and one that ACKs.
 
 ## Outbound clients - the unified client transport (pc_client)
@@ -111,10 +111,10 @@ The device's clients (`http_client`, `mqtt`, `ws_client`) do not each own a raw 
 stack: they share **`pc_client`** (`network_drivers/transport/pc_client.*`), the
 client-side peer of the server transport. It is a small fixed pool of outbound
 connections with the same rules - every raw `tcp_*()` marshaled to tcpip_thread, a
-per-connection wire ring, and **ack-on-consume** (`pc_client_read()` reopens the
+per-connection wire ring, and **ack-on-consume** (`Tcp.client->read()` reopens the
 window as the caller drains; `PC_CLIENT_RX_BUF >= TCP_WND`), so client and server
 share one flow-control model. TLS clients layer `pc_tls_client_session_*` on top, pointing
-the BIO at `pc_client_send` / `pc_client_read` (the ring carries ciphertext).
+the BIO at `Tcp.client->send` / `Tcp.client->read` (the ring carries ciphertext).
 
 The `s_rx` ring inside `mqtt.cpp` / `ws_client.cpp` is a separate **plaintext frame
 buffer** (post-decrypt for TLS, the assembly buffer the protocol parser reads),
@@ -145,7 +145,7 @@ each connection streams to its own file. This fixed the concurrent-PUT clobber
 | Concern              | Owner (target)          | Status                                            |
 | -------------------- | ----------------------- | ------------------------------------------------- |
 | Socket TX            | transport `pc_conn_*`   | DONE                                              |
-| RX receive window    | transport               | DONE (`pc_conn_ack_consumed`, ack-on-consume)     |
+| RX receive window    | transport               | DONE (`Tcp.conn->ack_consumed`, ack-on-consume)   |
 | RX ring read/drain   | transport (read API)    | DONE (`pc_conn_read*`; consumers off the ring)    |
 | Streaming sink state | per-slot, slot-aware    | DONE (`g_dav_put[MAX_CONNS]`, slot-aware hooks)   |
 | Event routing        | session (owner queue)   | DONE                                              |
@@ -158,7 +158,7 @@ each connection streams to its own file. This fixed the concurrent-PUT clobber
    / `pc_conn_read` / `pc_conn_peek` / `pc_conn_consume` (inline, tcp.h).
 2. **DONE - migrate the consumers** - HTTP / websocket / telnet / ssh / tls + the
    conn_pool-ring services (modbus / opcua) all drain through the API; no external
-   `rx_tail` modulo remains. The read functions consume only; `pc_conn_ack_consumed`
+   `rx_tail` modulo remains. The read functions consume only; `Tcp.conn->ack_consumed`
    stays the one place that reopens the window (per loop), so draining and ACKing
    each have exactly one owner. HW: 10/10 50 KB byte-exact, backpressure 0.
 3. **DONE - slot-aware streaming hooks** - `HttpStreamDataCb(HttpReq*, ...)` +
@@ -192,12 +192,12 @@ struct ProtoHandler { on_accept; on_data; on_close; on_poll; }; // all take a sl
 `conn_pool[slot].proto`; `handle()` calls `on_poll` for each active slot. Every
 handler reads its bytes through the transport RX API (`pc_conn_read` copy-out, or
 `pc_conn_peek`+`pc_conn_consume` zero-copy - never the ring internals) and writes
-through `pc_conn_send`/`pc_conn_flush`. So Telnet, SSH (+ `PROTO_SSH_RFWD`), Modbus,
+through `Tcp.conn->send`/`Tcp.conn->flush`. So Telnet, SSH (+ `PROTO_SSH_RFWD`), Modbus,
 and OPC UA are fully homogeneous: each is a module that exposes a `ProtoHandler` and
 touches the core only through those two APIs.
 
 **Connectionless (UDP) services** (SNMP, CoAP, DNS, syslog, flow-export) attach through
-a _different_ but deliberately separate seam - `pc_udp_listen(port, handler, arg)`, one
+a _different_ but deliberately separate seam - `Udp.listener->listen(port, handler, arg)`, one
 datagram-in/datagram-out callback. This heterogeneity is correct, not a defect: UDP has
 no accept/close/slot lifecycle, so folding it into the slot-based `ProtoHandler` table
 would be a forced fit. Two transport models, two matched seams.
@@ -217,11 +217,11 @@ both sit behind one uniform per-connection seam.
 The fully expanded twin of the simplified chart in the README - the same top-to-bottom waterfall, but
 every public API method, every registered protocol, and every Layer-6 module on disk is listed.
 
-<!-- BEGIN GENERATED API FLOW DETAIL (ci_tooling/generate/gen_api_flow.py) -->
+<!-- BEGIN GENERATED API FLOW DETAIL (tools/ci_tooling/generate/gen_api_flow.py) -->
 
 <!-- prettier-ignore-start -->
 
-> Generated from the public API, `proto_builtins.c`, and `presentation/` by `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. This is the fully expanded twin of the simplified request-lifecycle chart in the [README](../README.md): the same top-to-bottom waterfall, but every public method, every registered protocol, and every Layer-6 module on disk is listed (nothing is capped). Color is the OSI layer; the green path is the response. Mermaid source: [`diagrams/api_flow_detail.mmd`](diagrams/api_flow_detail.mmd).
+> Generated from the public API, `proto_builtins.c`, and `presentation/` by `tools/ci_tooling/generate/gen_api_flow.py` - do not edit by hand. This is the fully expanded twin of the simplified request-lifecycle chart in the [README](../README.md): the same top-to-bottom waterfall, but every public method, every registered protocol, and every Layer-6 module on disk is listed (nothing is capped). Color is the OSI layer; the green path is the response. Mermaid source: [`diagrams/api_flow_detail.mmd`](diagrams/api_flow_detail.mmd).
 
 <img alt="Full request lifecycle with every method, protocol, and module" src="diagrams/api_flow_detail.svg">
 
@@ -310,14 +310,14 @@ designed once, correctly, up front.
 silicon-specific:**
 
 ```
-src/board_drivers/board_profiles/
+src/core_setup/board_profiles/
   board_profile.h            # common: derives (vendor, die, sizes) from build macros
   derived_sizing.h           # common (vendor-agnostic)
   esp/ { s3_defaults.h, p4_defaults.h, c6_defaults.h, ... }   # move existing here
   stm/ { stm32h7_defaults.h, ... }
   rp/  { rp2350_defaults.h, ... }
   ti/  { ... }
-src/board_drivers/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
+src/core_setup/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
   esp/ { esp_crypto_hal.h/.cpp }   # move existing here (RSA/MPI direct-register, 7 dies)
   stm/ { stm_crypto_hal.* }        # STM32 PKA / CRYP / HASH, direct-register
   rp/  { ... }                     # RP2350 SHA-256 block etc, else the crypto/ software path
@@ -333,7 +333,7 @@ src/network_drivers/physical/
   ti/  { ... }
 ```
 
-**Selector (the one new common seam):** a single `src/board_drivers/board_profiles/pc_platform.h`
+**Selector (the one new common seam):** a single `src/core_setup/board_profiles/pc_platform.h`
 maps the toolchain's target macro onto two axes and nothing else pulls vendor
 detail directly:
 
@@ -346,7 +346,7 @@ A **common selector point** then resolves the backend once per layer:
 else -> the portable software path (this is how `board_profile.h` picks the die
 profile). The crypto layer already does the vendor-agnostic thing without a
 dispatcher: `crypto/` is portable C, and each TU keys off the HAL's capability
-macro (`PC_RSA_MODMUL_HW`) that the selected `board_drivers/hal/<vendor>/` backend defines - so
+macro (`PC_RSA_MODMUL_HW`) that the selected `core_setup/hal/<vendor>/` backend defines - so
 `crypto/` never moves and never names a vendor. Common code sees an API/macro, not
 a vendor subdir.
 
@@ -524,7 +524,7 @@ octet-count expressions must replace it - which is mechanically checkable.
 
 **No vendor language or idioms in the core.** Vendor registers reach the library only through a HAL that
 auto-configures per **variant capability**, never through a chip check. This extends the pattern already
-shipped in `board_drivers/hal/` (direct registers, house-owned register map, zero vendor symbols) to every
+shipped in `core_setup/hal/` (direct registers, house-owned register map, zero vendor symbols) to every
 subsystem, and it is what has to happen before the build system can stop depending on `arduino-esp32`.
 
 **Guarantees are proven at the binary.** Where the library promises a behavior, the promise is checked

@@ -81,10 +81,10 @@ latched at boot); the policy it feeds is covered by `native_power_mgmt`.
 
 ## Routes
 
-| Route    | What it does                                                           |
-| -------- | ---------------------------------------------------------------------- |
-| `/power` | `{"cpu_mhz":80,"throttled":false,"recovering":false,"temp_c":36}`      |
-| `/busy`  | reports full load for 5 s so the clock can be watched climb and settle |
+| HttpRoute | What it does                                                           |
+| --------- | ---------------------------------------------------------------------- |
+| `/power`  | `{"cpu_mhz":80,"throttled":false,"recovering":false,"temp_c":36}`      |
+| `/busy`   | reports full load for 5 s so the clock can be watched climb and settle |
 
 ## Tunables
 

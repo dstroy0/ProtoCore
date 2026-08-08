@@ -25,8 +25,8 @@
 
 PROTO_BEGIN_DECLS
 
-// Shared by the HTTP/3 (QUIC) key schedule and the DTLS 1.3 record layer.
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
+// Shared by the HTTP/3 (QUIC) key schedule and the DTLS 1.3 and TLS 1.3 record layers.
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
 /** @brief HKDF-SHA256 output block length (== SHA-256 digest length). */
 #define PC_HKDF_HASH_LEN 32
@@ -83,7 +83,7 @@ void pc_hkdf_expand_label(const uint8_t secret[PC_HKDF_HASH_LEN], const char *la
 void pc_hkdf_expand_label_ctx(const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, const uint8_t *context,
                               size_t context_len, uint8_t *out, size_t out_len, const char *label_prefix);
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE
 
 PROTO_END_DECLS
 

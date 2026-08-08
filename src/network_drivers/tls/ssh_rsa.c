@@ -9,26 +9,27 @@
  */
 
 #include "network_drivers/tls/ssh_rsa.h"
+#include "core_setup/hal/nvs.h" // the host key is read from non-volatile storage
 #include "crypto/asymmetric/rsa.h"
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
-#include <string.h>
 
-// Public host key (BSS - no secret material).
-#if PROTOCORE_HOT
-#include "board_drivers/hal/nvs.h" // the host key is read from non-volatile storage
+#if PC_HAS_HW_BIGNUM
 #include <mbedtls/md.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #endif
+
+// Public host key (BSS - no secret material).
 SshRsaPubKey ssh_host_pubkey;
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
-// Arduino - cached mbedtls host-key signer (NVS-backed)
+// Accelerated - cached mbedtls host-key signer over the vendor's modexp (NVS-backed)
 // ---------------------------------------------------------------------------
 
 // RNG callback for mbedtls private-key operations (mbedtls v3 requires a real f_rng for RSA blinding).
@@ -158,31 +159,189 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
 #else
 
 // ---------------------------------------------------------------------------
-// Native - test fixture host key; signing delegates to the crypto/rsa software path.
+// Software - the same NVS host key, walked here; signing runs crypto/rsa's software path.
 // ---------------------------------------------------------------------------
 
-// The native test fixture sets these before calling ssh_rsa_sign(); plain arrays, test-owned.
-uint8_t _test_rsa_n[PC_RSA_KEY_BYTES];
-uint8_t _test_rsa_d[PC_RSA_KEY_BYTES];
-uint8_t _test_rsa_e[4];
+// The private exponent, borrowed from the secure pool. n and e are public and live in
+// ssh_host_pubkey; only d is secret, so only d comes from here. The persistent end is walked by no
+// mark and no release, so the key stays for the life of the program - the lifetime the accelerated
+// arm gives its parsed mbedtls context.
+typedef struct
+{
+    pc_span d;        ///< private exponent, PC_RSA_KEY_BYTES big-endian
+    proto_bool ready; ///< d holds a parsed key
+} SshRsaCtx;
+static SshRsaCtx s_rsa;
+
+_Static_assert(PC_RSA_KEY_BYTES + SSH_RSA_KEY_DER_MAX <= PC_WORK_SSH_HOST_KEY,
+               "PC_WORK_SSH_HOST_KEY must cover the private exponent and the DER walked over it");
+
+// Step over the DER element at *off. Writes the value's offset and length, and advances *off past
+// the element. False if the header or the value runs past len.
+static proto_bool der_step(const uint8_t *der, size_t len, size_t *off, size_t *val, size_t *val_len)
+{
+    size_t p = *off;
+    if (p + 2 > len)
+    {
+        return PROTO_FALSE;
+    }
+    p += 1; // tag
+    size_t n = der[p];
+    p += 1;
+    if ((n & 0x80u) != 0)
+    {
+        // Long form: the low 7 bits count the length bytes that follow, big-endian.
+        size_t k = n & 0x7Fu;
+        if (k == 0 || k > 4 || p + k > len)
+        {
+            return PROTO_FALSE;
+        }
+        n = 0;
+        while (k != 0)
+        {
+            n = (n << 8) | der[p];
+            p += 1;
+            k -= 1;
+        }
+    }
+    // Against the bytes left rather than p + n, which wraps where size_t is 32 bits wide and a
+    // 4-byte length can reach the top of the range.
+    if (n > len - p)
+    {
+        return PROTO_FALSE;
+    }
+    *val = p;
+    *val_len = n;
+    *off = p + n;
+    return PROTO_TRUE;
+}
+
+// Enter the DER element at *off: the value becomes the region, the header is skipped.
+static proto_bool der_enter(const uint8_t *der, size_t len, size_t *off, size_t *end)
+{
+    size_t val = 0;
+    size_t val_len = 0;
+    if (!der_step(der, len, off, &val, &val_len))
+    {
+        return PROTO_FALSE;
+    }
+    *off = val;
+    *end = val + val_len;
+    return PROTO_TRUE;
+}
+
+// Copy the DER INTEGER at *off into a width-byte big-endian field, left-padded with zeros. A
+// leading sign byte is dropped; a magnitude wider than the field fails.
+static proto_bool der_int(const uint8_t *der, size_t len, size_t *off, uint8_t *out, size_t width)
+{
+    size_t val = 0;
+    size_t val_len = 0;
+    if (!der_step(der, len, off, &val, &val_len))
+    {
+        return PROTO_FALSE;
+    }
+    while (val_len != 0 && der[val] == 0)
+    {
+        val += 1;
+        val_len -= 1;
+    }
+    if (val_len > width)
+    {
+        return PROTO_FALSE;
+    }
+    mem.zero(out, width - val_len);
+    mem.cpy(out + width - val_len, der + val, val_len);
+    return PROTO_TRUE;
+}
+
+/** @brief DER tag for a constructed SEQUENCE. */
+#define SSH_RSA_DER_SEQUENCE 0x30
+
+// Read n, e and d out of an RSA private key, in either shape mbedtls accepts.
+//
+// PKCS#1 RSAPrivateKey is SEQUENCE { INTEGER version, n, e, d, p, q, dp, dq, qinv }. PKCS#8 wraps
+// it: SEQUENCE { INTEGER version, SEQUENCE algorithm, OCTET STRING privateKey }, the privateKey
+// holding that same RSAPrivateKey. After the outer SEQUENCE and its version the two are told apart
+// by what comes next - a SEQUENCE is PKCS#8's AlgorithmIdentifier, an INTEGER is PKCS#1's modulus.
+// The CRT factors after d go unread.
+static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
+{
+    size_t off = 0;
+    size_t end = 0;
+    size_t skip = 0;
+    size_t skip_len = 0;
+    if (!der_enter(der, len, &off, &end))
+    {
+        return PROTO_FALSE;
+    }
+    if (!der_step(der, end, &off, &skip, &skip_len)) // version
+    {
+        return PROTO_FALSE;
+    }
+    if (off < end && der[off] == SSH_RSA_DER_SEQUENCE)
+    {
+        if (!der_step(der, end, &off, &skip, &skip_len) || // AlgorithmIdentifier
+            !der_enter(der, end, &off, &end) ||            // privateKey
+            !der_enter(der, end, &off, &end) ||            // the RSAPrivateKey inside it
+            !der_step(der, end, &off, &skip, &skip_len))   // its version
+        {
+            return PROTO_FALSE;
+        }
+    }
+    return der_int(der, end, &off, ssh_host_pubkey.n, PC_RSA_KEY_BYTES) &&
+           der_int(der, end, &off, ssh_host_pubkey.e_bytes, sizeof(ssh_host_pubkey.e_bytes)) &&
+           der_int(der, end, &off, d, PC_RSA_KEY_BYTES);
+}
 
 int pc_ssh_rsa_load_pubkey(void)
 {
-    memcpy(ssh_host_pubkey.n, _test_rsa_n, PC_RSA_KEY_BYTES);
-    memcpy(ssh_host_pubkey.e_bytes, _test_rsa_e, 4);
-    ssh_host_pubkey.loaded = PROTO_TRUE;
+    if (!pc_span_has_storage(s_rsa.d))
+    {
+        s_rsa.d = pc_secure_persist_span(PC_RSA_KEY_BYTES);
+    }
+    if (!pc_span_has_storage(s_rsa.d))
+    {
+        return -1;
+    }
+    s_rsa.ready = PROTO_FALSE;
+    ssh_host_pubkey.loaded = PROTO_FALSE;
+
+    // The DER is a working set: borrowed for this call, wiped by the release on every path out.
+    const size_t mark = pc_secure_mark();
+    pc_span der = pc_secure_span(SSH_RSA_KEY_DER_MAX, 0);
+    if (!pc_span_has_storage(der))
+    {
+        pc_secure_release(mark);
+        return -1;
+    }
+    const size_t der_len = pc_nvs_get_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, der.buf, der.cap);
+    if (der_len != 0 && rsa_key_parse(der.buf, der_len, s_rsa.d.buf))
+    {
+        s_rsa.ready = PROTO_TRUE;
+        ssh_host_pubkey.loaded = PROTO_TRUE;
+    }
+    pc_secure_release(mark);
+    if (!s_rsa.ready)
+    {
+        return -1;
+    }
     return 0;
 }
 
 int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
 {
-    return pc_rsa_sign_sw(_test_rsa_n, _test_rsa_d, msg, msg_len, hash, sig);
+    // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did.
+    if (!s_rsa.ready && pc_ssh_rsa_load_pubkey() != 0)
+    {
+        return -1;
+    }
+    return pc_rsa_sign_sw(ssh_host_pubkey.n, s_rsa.d.buf, msg, msg_len, hash, sig);
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
-// "ssh-rsa" public-key blob serialization (both platforms)
+// "ssh-rsa" public-key blob serialization (both backends)
 // ---------------------------------------------------------------------------
 
 // Write a 4-byte big-endian uint32 to p and advance p by 4.

@@ -21,7 +21,6 @@
 #define PROTOCORE_MNT_MOCK_H
 
 #include "server/filesystem/mnt.h"
-#include <string.h>
 
 #define MOCK_MNT_FILES 16
 #define MOCK_MNT_HANDLES 8

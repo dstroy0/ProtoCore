@@ -84,7 +84,7 @@ void setup()
     Serial.print("ESP-NOW up on channel ");
     Serial.print(CHANNEL);
     Serial.print(", my MAC ");
-    Serial.println(pc_net_mac());
+    Serial.println(Physical.link->mac());
 }
 
 void loop()

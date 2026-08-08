@@ -57,7 +57,7 @@ int32_t pc_sht3x_rh_mpct(uint16_t raw);
  */
 proto_bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_mpct);
 
-// --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
+// --- ESP32 binding (I2C via Wire) ------------------------------------
 
 /** @brief Soft-reset the SHT3x at @p addr over I2C. @return true if it acknowledged. */
 proto_bool pc_sht3x_begin(uint8_t addr);

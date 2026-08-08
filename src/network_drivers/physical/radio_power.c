@@ -3,26 +3,32 @@
 
 /**
  * @file radio_power.c
- * @brief Modem-sleep mode names (pure) + esp_wifi apply/readback (ESP32).
+ * @brief Modem-sleep mode names (pure) + phy apply/readback (ESP32). See radio_power.h.
+ *
+ * Every function here has internal linkage. The module reaches callers through @ref Radio, which is
+ * the only symbol it exports, so nothing in this file can collide with a name anywhere else.
  */
 
 #include "network_drivers/physical/radio_power.h"
 #include "network_drivers/physical/physical.h"
 
-#if PC_ENABLE_RADIO_POWER
+// The module's storage, whose layout radio_power.h only declares. Present on both arms so the
+// module's shape does not change with the build.
+struct RadioCtx
+{
+    int held; ///< bulk-transfer keep-awake refcount
+};
+static struct RadioCtx s_radio;
 
-#if PROTOCORE_HOT
-#include "esp_wifi.h"
-#endif
-const char *pc_radio_ps_name(uint8_t mode)
+static const char *ps_name(pc_phy_ps mode)
 {
     switch (mode)
     {
-    case PC_PS_MIN_MODEM:
+    case PC_PHY_PS_MIN_MODEM:
         return "min_modem";
-    case PC_PS_MAX_MODEM:
+    case PC_PHY_PS_MAX_MODEM:
         return "max_modem";
-    case PC_PS_NONE:
+    case PC_PHY_PS_NONE:
         return "none";
     default:
         return "none";
@@ -31,84 +37,62 @@ const char *pc_radio_ps_name(uint8_t mode)
 
 #if PROTOCORE_HOT
 
-// Service vocabulary -> L1 vocabulary. Both are ours; neither is the vendor's.
-static pc_phy_ps to_phy_ps(uint8_t mode)
+static void power(void)
 {
-    if (mode == PC_PS_MIN_MODEM)
-    {
-        return PC_PHY_PS_MIN_MODEM;
-    }
-    if (mode == PC_PS_MAX_MODEM)
-    {
-        return PC_PHY_PS_MAX_MODEM;
-    }
-    return PC_PHY_PS_NONE;
-}
-
-// Bulk-transfer keep-awake refcount, owned in one context (owner-context guard).
-typedef struct
-{
-    int held;
-} RadioBusyCtx;
-static RadioBusyCtx s_busy;
-
-void pc_radio_power_apply(void)
-{
-    pc_phy_ps_set(to_phy_ps(PC_RADIO_WIFI_PS));
+    pc_phy_ps_set((pc_phy_ps)PC_RADIO_WIFI_PS);
 #if PC_RADIO_MAX_TX_DBM > 0
     pc_phy_tx_power_set((int8_t)PC_RADIO_MAX_TX_DBM); // whole dBm; the backend owns the unit
 #endif
 }
 
-uint8_t pc_radio_ps_get(void)
+static void busy_hold(void)
 {
-    const pc_phy_ps m = pc_phy_ps_get();
-    if (m == PC_PHY_PS_MIN_MODEM)
-    {
-        return PC_PS_MIN_MODEM;
-    }
-    if (m == PC_PHY_PS_MAX_MODEM)
-    {
-        return PC_PS_MAX_MODEM;
-    }
-    return PC_PS_NONE;
-}
-
-void pc_radio_busy_hold(void)
-{
-    if (s_busy.held++ == 0)
+    if (s_radio.held == 0)
     {
         pc_phy_ps_set(PC_PHY_PS_NONE); // modem sleep off during a bulk transfer
     }
+    s_radio.held++;
 }
 
-void pc_radio_busy_release(void)
+static void busy_release(void)
 {
-    if (s_busy.held > 0 && --s_busy.held == 0)
+    if (s_radio.held > 0)
     {
-        pc_radio_power_apply(); // last transfer done: restore the configured mode
+        s_radio.held--;
+        if (s_radio.held == 0)
+        {
+            power(); // last transfer done: restore the configured mode
+        }
     }
 }
 
-#else // host build - no radio
+#else  // no radio backend
 
-void pc_radio_power_apply(void)
+static void power(void)
 {
 }
-uint8_t pc_radio_ps_get(void)
+static void busy_hold(void)
 {
-    return PC_PS_NONE;
+    // No radio backend, so no modem sleep to hold off.
 }
-void pc_radio_busy_hold(void)
+static void busy_release(void)
 {
-    // no-op on the host build: there is no radio to keep awake (the ESP32 branch above holds the
-    // modem-sleep refcount).
 }
-void pc_radio_busy_release(void)
-{
-    // no-op on the host build (see pc_radio_busy_hold).
-}
-
 #endif // PROTOCORE_HOT
 
-#endif // PC_ENABLE_RADIO_POWER
+// Designated, so a member's position in the struct does not decide what it binds to. The table is
+// split by a feature flag, where a positional list shifts every member below the arm at once.
+const RadioNs Radio = {
+#if PC_ENABLE_RADIO_POWER
+    .ctx = &s_radio,
+    .power = power,
+    .ps_name = ps_name,
+    .busy_hold = busy_hold,
+    .busy_release = busy_release,
+#endif
+    .ps_set = pc_phy_ps_set,
+    .ps_mode = pc_phy_ps_get,
+    .tx_power_set = pc_phy_tx_power_set,
+    .monitor_begin = pc_phy_monitor_begin,
+    .monitor_set_channel = pc_phy_monitor_set_channel,
+    .monitor_end = pc_phy_monitor_end};

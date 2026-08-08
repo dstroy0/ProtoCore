@@ -8,9 +8,9 @@
 
 #include "crypto/hash/md.h"
 #include "crypto/crypto_opt.h"
+#include "mmgr/endian.h"
 #include "mmgr/secure.h" // the secure pool: digest state, wiped on release
-#include "shared_primitives/endian.h"
-#include <string.h>
+
 PC_CRYPTO_HOT
 
 // The one definition of MdCtx - private to this TU (md.h forward-declares it). External callers hold it

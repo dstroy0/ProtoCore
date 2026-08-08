@@ -59,30 +59,6 @@ typedef struct
     const uint8_t *fragment; ///< fragment bytes, into the input buffer
 } DtlsHsHeader;
 
-/**
- * @brief Parse one DTLS handshake message fragment.
- *
- * Validates that @p len holds the 12-byte header plus @c fragment_length bytes and that the fragment
- * lies within the declared message length.
- *
- * @return bytes consumed (PC_DTLS_HS_HDR_LEN + fragment_length), or 0 if malformed / truncated.
- */
-size_t pc_dtls_hs_header_parse(const uint8_t *p, size_t len, DtlsHsHeader *out);
-
-/**
- * @brief Build one DTLS handshake message fragment: the 12-byte header followed by the fragment body.
- *
- * @param msg_type     HandshakeType.
- * @param msg_seq      handshake message sequence number.
- * @param full_len     total (reassembled) message body length.
- * @param frag_offset  byte offset of this fragment within the body.
- * @param frag         fragment bytes.
- * @param frag_len     number of fragment bytes.
- * @return total bytes written (PC_DTLS_HS_HDR_LEN + @p frag_len), or 0 on overflow / range error.
- */
-size_t pc_dtls_hs_frag_build(uint8_t msg_type, uint16_t msg_seq, uint32_t full_len, uint32_t frag_offset,
-                             const uint8_t *frag, uint32_t frag_len, uint8_t *out, size_t out_cap);
-
 // ---------------------------------------------------------------------------
 // Message reassembly (RFC 9147 §5.4): overlap-tolerant, no heap
 // ---------------------------------------------------------------------------
@@ -112,25 +88,6 @@ typedef struct
     uint8_t range_count;                            ///< number of active intervals
 } DtlsHsReasm;
 
-/**
- * @brief Prepare a reassembler for the message numbered @p msg_seq into @p buf.
- * @param buf      body buffer the reassembled message is written into.
- * @param buf_cap  capacity of @p buf; a message longer than this is rejected.
- */
-void pc_dtls_hs_reasm_init(DtlsHsReasm *r, uint16_t msg_seq, uint8_t *buf, size_t buf_cap);
-
-/**
- * @brief Feed one parsed fragment into the reassembler.
- *
- * Fragments whose @c msg_seq differs from the target are ignored (return 0): the state machine, not
- * the reassembler, decides what to do with past/future messages.
- *
- * @return 1 if the message is now complete (@ref DtlsHsReasm::buf holds @ref DtlsHsReasm::length
- *         bytes), 0 if accepted but incomplete (or not this message), -1 on error (length overflow,
- *         inconsistent length, or too many distinct ranges).
- */
-int pc_dtls_hs_reasm_add(DtlsHsReasm *r, const DtlsHsHeader *frag);
-
 // ---------------------------------------------------------------------------
 // ACK message (RFC 9147 §7): content type 26
 // ---------------------------------------------------------------------------
@@ -143,22 +100,6 @@ typedef struct
     uint64_t seq;
 } DtlsRecordNumber;
 
-/**
- * @brief Build an ACK message body (RFC 9147 §7): uint16 length prefix then @p count 16-byte record
- *        numbers, big-endian epoch then sequence_number.
- * @return body bytes written (2 + 16*count), or 0 on overflow.
- */
-size_t pc_dtls_ack_build(const DtlsRecordNumber *nums, size_t count, uint8_t *out, size_t out_cap);
-
-/**
- * @brief Parse an ACK message body into record numbers.
- * @param out        destination array.
- * @param out_cap    capacity of @p out in entries.
- * @param out_count  receives the number of record numbers parsed.
- * @return true on a well-formed ACK that fits in @p out; false if malformed or too many entries.
- */
-proto_bool pc_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap, size_t *out_count);
-
 // ---------------------------------------------------------------------------
 // HelloRetryRequest cookie (RFC 9147 §5.1): stateless return-routability
 // ---------------------------------------------------------------------------
@@ -168,42 +109,36 @@ proto_bool pc_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordNumber *
 #define PC_DTLS_COOKIE_MAX 128
 
 /**
- * @brief Build a stateless HRR cookie binding the client address and an opaque server payload.
+ * @brief The handshake carried over the record layer: fragments, reassembly, ACKs, and the HRR cookie.
  *
- * Wire layout: version(1)=1 || timestamp_be(8) || payload_len(2) || payload || HMAC-SHA256(32).
- * The MAC covers version || timestamp || @p client_addr || payload_len || payload, so the client
- * address is authenticated without being stored (RFC 9147 §5.1: embedding the apparent client
- * address stops an attacker forging a cookie for another peer). The @p payload carries whatever the
- * state machine needs to resume statelessly after the retry (e.g. the ClientHello1 transcript hash
- * plus the selected group).
- *
- * @param pc_hmac_key     32-byte server secret (rotate periodically per §5.1).
- * @param timestamp    monotonic value stamped into the cookie for freshness checks.
- * @param payload      opaque server state to carry through the retry.
- * @param client_addr  serialized client address, mixed into the MAC.
- * @return cookie bytes written, or 0 on overflow / oversized payload.
+ * @var DtlsHandshakeNs::header_parse   the 12-byte DTLS handshake header; bytes consumed, or 0 if truncated
+ * @var DtlsHandshakeNs::frag_build     one handshake fragment, header and body; bytes written, or 0 on overflow
+ * @var DtlsHandshakeNs::reasm_init     bind a reassembler to a caller buffer for one message sequence number
+ * @var DtlsHandshakeNs::reasm_add      add one fragment to the reassembly in progress
+ * @var DtlsHandshakeNs::ack_build      an ACK body (RFC 9147 sec 7) over @p count record numbers
+ * @var DtlsHandshakeNs::ack_parse      the same body back into at most @p out_cap record numbers
+ * @var DtlsHandshakeNs::cookie_make    a stateless HelloRetryRequest cookie bound to the client address
+ * @var DtlsHandshakeNs::cookie_verify  the same cookie back, checking the address binding and the age against @p
+ * max_age
  */
-size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timestamp, const uint8_t *payload,
-                           size_t payload_len, const uint8_t *client_addr, size_t addr_len, uint8_t *out,
-                           size_t out_cap);
+typedef struct
+{
+    size_t (*header_parse)(const uint8_t *p, size_t len, DtlsHsHeader *out);
+    size_t (*frag_build)(uint8_t msg_type, uint16_t msg_seq, uint32_t full_len, uint32_t frag_offset,
+                         const uint8_t *frag, uint32_t frag_len, uint8_t *out, size_t out_cap);
+    void (*reasm_init)(DtlsHsReasm *r, uint16_t msg_seq, uint8_t *buf, size_t buf_cap);
+    int (*reasm_add)(DtlsHsReasm *r, const DtlsHsHeader *frag);
+    size_t (*ack_build)(const DtlsRecordNumber *nums, size_t count, uint8_t *out, size_t out_cap);
+    proto_bool (*ack_parse)(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap, size_t *out_count);
+    size_t (*cookie_make)(const uint8_t pc_hmac_key[32], uint64_t timestamp, const uint8_t *payload, size_t payload_len,
+                          const uint8_t *client_addr, size_t addr_len, uint8_t *out, size_t out_cap);
+    proto_bool (*cookie_verify)(const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
+                                const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie, size_t cookie_len,
+                                uint8_t *payload_out, size_t payload_cap, size_t *payload_len_out);
+} DtlsHandshakeNs;
 
-/**
- * @brief Validate a cookie echoed in a second ClientHello and recover its payload.
- *
- * Recomputes the MAC over the cookie fields plus @p client_addr and compares in constant time, then
- * checks the timestamp is within (@p now - @p max_age, @p now]. A cookie minted for a different
- * client address fails the MAC check.
- *
- * @param now          current timestamp in the same units as @ref pc_dtls_cookie_make.
- * @param max_age      maximum accepted age; 0 disables the freshness check.
- * @param payload_out  receives the carried payload on success.
- * @param payload_cap  capacity of @p payload_out.
- * @param payload_len_out  receives the payload length on success.
- * @return true if the cookie is authentic, fresh, and bound to @p client_addr.
- */
-proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
-                                 const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie, size_t cookie_len,
-                                 uint8_t *payload_out, size_t payload_cap, size_t *payload_len_out);
+/** @brief The one symbol this module exports. */
+extern const DtlsHandshakeNs DtlsHandshake;
 
 #endif // PC_ENABLE_DTLS
 

@@ -116,7 +116,7 @@ if [ "${PC_HOOK_NO_BANNED_SCAN:-0}" != "1" ]; then
     mapfile -t SB < <(staged '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' '*.ino')
     if [ "${#SB[@]}" -gt 0 ]; then
         PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
-        if [ -n "$PYBIN" ] && ! "$PYBIN" ci_tooling/check/check_src_banned.py "${SB[@]}"; then
+        if [ -n "$PYBIN" ] && ! "$PYBIN" -m tools.ci_tooling.check.check_src_banned "${SB[@]}"; then
             echo "pre-commit: BLOCKED - fix the banned construct(s) above before committing (docs/SRCBANNED.md)."
             exit 1
         fi

@@ -25,14 +25,11 @@
 
 #include "crypto/pqc/sntrup761.h"
 
+#include "crypto/rng/rng.h" // pc_rand_fill
+
 #if PC_ENABLE_SSH_SNTRUP761
 
 #include "crypto/hash/sha512.h"
-#include <string.h>
-
-// The CSPRNG seam (defined in ssh_dh.cpp) - forward-declared so this PQC primitive does not pull in
-// the SSH key-exchange machinery (ServerConfig / bignum / keymat) that ssh_dh.h transitively includes.
-void ssh_rng_fill(uint8_t *buf, size_t len);
 
 // --- parameters (sntrup761) ---
 // The spec names these p, q, w. Spelled out here because a bare `#define P`
@@ -397,7 +394,7 @@ static void Short_random(small_t *out)
     uint8_t rb[4];
     for (int i = 0; i < PC_SNTRUP_P; ++i)
     {
-        ssh_rng_fill(rb, 4);
+        pc_rand_fill(rb, 4);
         L[i] = (uint32_t)rb[0] | ((uint32_t)rb[1] << 8) | ((uint32_t)rb[2] << 16) | ((uint32_t)rb[3] << 24);
     }
     Short_fromlist(out, L);
@@ -711,7 +708,7 @@ static void Small_random(small_t *out)
     uint8_t rb[4];
     for (int i = 0; i < PC_SNTRUP_P; ++i)
     {
-        ssh_rng_fill(rb, 4);
+        pc_rand_fill(rb, 4);
         uint32_t u = (uint32_t)rb[0] | ((uint32_t)rb[1] << 8) | ((uint32_t)rb[2] << 16) | ((uint32_t)rb[3] << 24);
         out[i] = (small_t)((((u & 0x3fffffff) * 3) >> 30) - 1);
     }
@@ -837,7 +834,7 @@ void pc_sntrup761_keypair(uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRU
     // ...then the pk copy, a random rho for implicit reject, and the cached H(4||pk).
     uint8_t *tail = sk + 2 * PC_SMALL_BYTES; // SecretKeys_bytes = 2 * Small_bytes
     memcpy(tail, pk, PC_PK_BYTES);
-    ssh_rng_fill(tail + PC_PK_BYTES, PC_SMALL_BYTES);
+    pc_rand_fill(tail + PC_PK_BYTES, PC_SMALL_BYTES);
     Hash_prefix(tail + PC_PK_BYTES + PC_SMALL_BYTES, 4, pk, PC_PK_BYTES);
 }
 

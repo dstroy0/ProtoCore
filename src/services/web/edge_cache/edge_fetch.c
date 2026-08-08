@@ -12,7 +12,6 @@
 
 #include "services/net/http_client/http_client.h" // http_client_parse_response
 #include "services/web/edge_cache/edge_cache.h"   // edge_header_value
-#include <string.h>
 
 // Offset just past the CRLFCRLF header terminator, or 0 if the header block is not complete.
 static size_t head_end(const uint8_t *b, size_t n)

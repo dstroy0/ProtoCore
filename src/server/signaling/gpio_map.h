@@ -76,7 +76,7 @@ proto_bool pc_gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t
 proto_bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin);
 
 // ---------------------------------------------------------------------------
-// ESP32 integration (no-ops on host builds)
+// ESP32 integration
 // ---------------------------------------------------------------------------
 
 /** @brief Apply pinMode() for every entry per its direction (call once at setup). */

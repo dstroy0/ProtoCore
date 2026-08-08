@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_WIFI_SNIFFER
 
-#include <string.h>
-
 #if PC_ENABLE_PROMISC
 #include "server/clock/clock.h"             // pc_millis - the monotonic source
 #include "services/radio/promisc/promisc.h" // the promiscuous-capture owner

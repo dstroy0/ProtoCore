@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_LONWORKS
 
-#include <string.h>
-
 size_t pc_lon_build_nv(uint8_t msg_code, uint16_t selector, const uint8_t *value, size_t value_len, uint8_t *out,
                        size_t cap)
 {

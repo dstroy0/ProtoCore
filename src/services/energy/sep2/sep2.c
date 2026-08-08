@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_SEP2
 
-#include <string.h>
-
 static void put_i64(pc_sb *b, int64_t v)
 {
     if (!b->ok)

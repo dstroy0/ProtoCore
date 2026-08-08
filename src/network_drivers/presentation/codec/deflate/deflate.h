@@ -56,21 +56,22 @@ typedef enum PROTO_ENUM_PACKED
 } DeflateResult;
 
 /**
- * @brief Compress @p src into a raw permessage-deflate payload (RFC 7692).
+ * @brief The one call, and the module's only symbol.
  *
- * The output is a fixed-Huffman DEFLATE stream with the trailing 0x00 0x00 0xff
- * 0xff marker removed (RFC 7692 sec 7.2.1), i.e. exactly what a compressed
- * WebSocket data frame carries. To decompress, re-append that 4-byte marker and
- * call inflate_raw().
- *
- * @param src,src_len         input bytes to compress.
- * @param dst,dst_cap         output buffer and its capacity.
- * @param out_len             set to the compressed length on success.
- * @param scratch,scratch_len caller working memory (>= DEFLATE_SCRATCH_SIZE).
- * @return DEFLATE_OK (0) on success, else a negative ::DeflateResult.
+ * @var DeflateNs::raw  Compress @p src into a raw permessage-deflate payload (RFC 7692): a fixed-Huffman
+ *                    DEFLATE stream with the trailing 00 00 ff ff marker removed per sec 7.2.1,
+ *                    which is what a compressed WebSocket data frame carries.
+ *                    @p out_len takes the length on success and @p scratch is caller working memory
+ *                    of at least DEFLATE_SCRATCH_SIZE bytes. DEFLATE_OK (0), else a negative ::DeflateResult
  */
-DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
-                          void *scratch, size_t scratch_len);
+typedef struct
+{
+    DeflateResult (*raw)(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
+                         void *scratch, size_t scratch_len);
+} DeflateNs;
+
+/** @brief The one symbol this module exports. */
+extern const DeflateNs Deflate;
 
 #endif // PC_ENABLE_WS_DEFLATE
 

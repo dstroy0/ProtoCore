@@ -18,7 +18,6 @@
 #include "websocket.h"
 #include "network_drivers/transport/tcp.h"
 #include "shared_primitives/utf8.h"
-#include <string.h>
 
 #if PC_ENABLE_WS_DEFLATE
 #include "mmgr/plaintext.h"
@@ -122,11 +121,63 @@ void ws_reset_frame(WsConn *ws)
 // WebSocket presentation config, owned by one instance (internal linkage): the outbound
 // fragmentation size (RFC 6455 sec 5.4), payload bytes; 0 = one frame per message (default).
 // One named owner, unreachable cross-TU. (The ws_pool[] table is the shared substrate.)
+// One route's handlers. They belong here rather than in the route table: a route decides where a
+// request goes, and what runs once a socket is open is this module's business. A route carries the
+// id that names the set, so nothing above has to hold a pointer into this module.
+typedef struct
+{
+    WsConnectHandler on_connect;
+    WsMessageHandler on_message;
+    WsCloseHandler on_close;
+} WsRoute;
+
 typedef struct
 {
     uint16_t frag_size;
+    WsRoute route[MAX_ROUTES];
+    uint8_t route_count;
 } WsCtx;
 static WsCtx s_ws = {.frag_size = PC_WS_FRAG_SIZE};
+
+uint8_t ws_route_add(WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
+{
+    if (s_ws.route_count >= MAX_ROUTES)
+    {
+        return PC_WS_NONE;
+    }
+    WsRoute *w = &s_ws.route[s_ws.route_count];
+    w->on_connect = on_connect;
+    w->on_message = on_message;
+    w->on_close = on_close;
+    return s_ws.route_count++;
+}
+
+WsConnectHandler ws_route_connect(uint8_t id)
+{
+    if (id >= s_ws.route_count)
+    {
+        return NULL;
+    }
+    return s_ws.route[id].on_connect;
+}
+
+WsMessageHandler ws_route_message(uint8_t id)
+{
+    if (id >= s_ws.route_count)
+    {
+        return NULL;
+    }
+    return s_ws.route[id].on_message;
+}
+
+WsCloseHandler ws_route_close(uint8_t id)
+{
+    if (id >= s_ws.route_count)
+    {
+        return NULL;
+    }
+    return s_ws.route[id].on_close;
+}
 void ws_set_frag_size(uint16_t bytes)
 {
     s_ws.frag_size = bytes;
@@ -151,11 +202,11 @@ static proto_bool ws_emit_one(TcpConn *conn, uint8_t b0, const uint8_t *payload,
         header[3] = (uint8_t)len;
         hlen = 4;
     }
-    if (!pc_conn_send(conn->id, header, hlen))
+    if (!Tcp.conn->send(conn->id, header, hlen))
     {
         return PROTO_FALSE;
     }
-    if (len > 0 && payload && !pc_conn_send(conn->id, payload, len))
+    if (len > 0 && payload && !Tcp.conn->send(conn->id, payload, len))
     {
         return PROTO_FALSE;
     }
@@ -176,7 +227,7 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
     // Compress data frames when permessage-deflate is negotiated. Control frames
     // (close/ping/pong) are never compressed (RFC 7692 sec 5.1). Scratch + output
     // are borrowed from the per-dispatch arena and released when this scope exits;
-    // pc_conn_send copies (TCP_WRITE_FLAG_COPY) so the buffer can go immediately.
+    // Tcp.conn->send copies (TCP_WRITE_FLAG_COPY) so the buffer can go immediately.
     // PC_WS_DEFLATE_MAX bounds what the compressor accepts, so the borrow below has a compile-time
     // worst case and cannot fail. A longer message is sent uncompressed, which the per-message RSV1
     // flag makes legal.
@@ -192,10 +243,10 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
         if (scr && cbuf)
         {
             size_t clen = 0;
-            DeflateResult rc = deflate_raw(payload, len, cbuf, cap, &clen, scr, DEFLATE_SCRATCH_SIZE);
+            DeflateResult rc = Deflate.raw(payload, len, cbuf, cap, &clen, scr, DEFLATE_SCRATCH_SIZE);
             // Only adopt it if it actually shrank the message; otherwise send it
             // uncompressed (the per-message RSV1 flag makes that legal).
-            // rc != DEFLATE_OK is unreachable here: deflate_raw returns non-OK only on
+            // rc != DEFLATE_OK is unreachable here: Deflate.raw returns non-OK only on
             // ERR_SCRATCH (we always pass the full DEFLATE_SCRATCH_SIZE) or ERR_OVERFLOW,
             // and cap = len + len/8 + 16 exactly bounds the fixed-Huffman worst case
             // (all-9-bit literals = 1.125*len, matches only shrink, +16 covers the fixed
@@ -259,7 +310,7 @@ void ws_close(WsConn *ws, WsCloseCode code)
 
     if (pc_conn_active(ws->slot_id))
     {
-        pc_conn_flush(ws->slot_id);
+        Tcp.conn->flush(ws->slot_id);
     }
 
     ws->parse_state = WS_CLOSED;
@@ -292,7 +343,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             ws_send_frame(ws, WS_OP_PONG, ws->ctl_buf, (uint16_t)ws->payload_idx);
             if (pc_conn_active(conn->id))
             {
-                pc_conn_flush(conn->id);
+                Tcp.conn->flush(conn->id);
             }
         }
         else if (ws->opcode == WS_OP_CLOSE)
@@ -340,7 +391,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             in[comp_len + 2] = 0xff;
             in[comp_len + 3] = 0xff;
             size_t dlen = 0;
-            InflateResult rc = inflate_raw(in, comp_len + 4, out, WS_FRAME_SIZE, &dlen, tbl, INFLATE_SCRATCH_SIZE);
+            InflateResult rc = Inflate.raw(in, comp_len + 4, out, WS_FRAME_SIZE, &dlen, tbl, INFLATE_SCRATCH_SIZE);
             if (rc == INFLATE_ERR_OVERFLOW)
             {
                 pc_plaintext_release(pt_mark);

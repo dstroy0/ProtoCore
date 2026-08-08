@@ -64,7 +64,7 @@ uint16_t pc_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr);
 /** @brief Convert a signed 16-bit sample to microvolts for @p gain's full-scale range. */
 int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain);
 
-// --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
+// --- ESP32 binding (I2C via Wire) ------------------------------------
 
 /** @brief Initialize the I2C bus for the ADS1115 at @p addr. @return true on ESP32. */
 proto_bool pc_ads1115_begin(uint8_t addr);

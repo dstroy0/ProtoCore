@@ -12,7 +12,6 @@
 #if PC_ENABLE_LOGBUF
 
 #include <stdio.h>
-#include <string.h>
 
 // A log line is its severity letter, a space, then the message.
 static const pc_field LOG_LINE[] = {PC_CH, {PC_FK_LIT, 0, 1, " "}, PC_STR, PC_END};

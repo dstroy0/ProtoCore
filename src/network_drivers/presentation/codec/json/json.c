@@ -7,17 +7,16 @@
  */
 
 #include "json.h"
-#include "mmgr/membuild.h"         // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protostr.h"
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
-#include "shared_primitives/numparse.h"
 #include <stdio.h>
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // pc_json_writer
 // ---------------------------------------------------------------------------
 
-void pc_json_init(pc_json_writer *w, char *buf, size_t cap)
+static void pc_json_init(pc_json_writer *w, char *buf, size_t cap)
 {
     w->buf = buf;
     w->cap = cap;
@@ -167,24 +166,24 @@ static void json_pop(pc_json_writer *w, char close)
     }
 }
 
-void pc_json_begin_object(pc_json_writer *w)
+static void pc_json_begin_object(pc_json_writer *w)
 {
     json_push(w, '{');
 }
-void pc_json_end_object(pc_json_writer *w)
+static void pc_json_end_object(pc_json_writer *w)
 {
     json_pop(w, '}');
 }
-void pc_json_begin_array(pc_json_writer *w)
+static void pc_json_begin_array(pc_json_writer *w)
 {
     json_push(w, '[');
 }
-void pc_json_end_array(pc_json_writer *w)
+static void pc_json_end_array(pc_json_writer *w)
 {
     json_pop(w, ']');
 }
 
-void pc_json_key(pc_json_writer *w, const char *k)
+static void pc_json_key(pc_json_writer *w, const char *k)
 {
     json_value_prefix(w);
     json_put(w, '"');
@@ -194,7 +193,7 @@ void pc_json_key(pc_json_writer *w, const char *k)
     w->after_key = PROTO_TRUE; // suppress the following value's own comma
 }
 
-void pc_json_str(pc_json_writer *w, const char *v)
+static void pc_json_str(pc_json_writer *w, const char *v)
 {
     json_value_prefix(w);
     json_put(w, '"');
@@ -202,7 +201,7 @@ void pc_json_str(pc_json_writer *w, const char *v)
     json_put(w, '"');
 }
 
-void pc_json_int(pc_json_writer *w, long v)
+static void pc_json_int(pc_json_writer *w, long v)
 {
     char tmp[24];
     pc_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
@@ -215,7 +214,7 @@ void pc_json_int(pc_json_writer *w, long v)
     json_put_raw(w, tmp);
 }
 
-void pc_json_uint(pc_json_writer *w, unsigned long v)
+static void pc_json_uint(pc_json_writer *w, unsigned long v)
 {
     char tmp[24];
     pc_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
@@ -228,50 +227,50 @@ void pc_json_uint(pc_json_writer *w, unsigned long v)
     json_put_raw(w, tmp);
 }
 
-void pc_json_bool(pc_json_writer *w, proto_bool v)
+static void pc_json_bool(pc_json_writer *w, proto_bool v)
 {
     json_value_prefix(w);
     json_put_raw(w, v ? "true" : "false");
 }
 
-void pc_json_null(pc_json_writer *w)
+static void pc_json_null(pc_json_writer *w)
 {
     json_value_prefix(w);
     json_put_raw(w, "null");
 }
 
-void pc_json_raw(pc_json_writer *w, const char *literal)
+static void pc_json_raw(pc_json_writer *w, const char *literal)
 {
     json_value_prefix(w);
     json_put_raw(w, literal);
 }
 
-void pc_json_kv_str(pc_json_writer *w, const char *k, const char *v)
+static void pc_json_kv_str(pc_json_writer *w, const char *k, const char *v)
 {
     pc_json_key(w, k);
     pc_json_str(w, v);
 }
-void pc_json_kv_int(pc_json_writer *w, const char *k, long v)
+static void pc_json_kv_int(pc_json_writer *w, const char *k, long v)
 {
     pc_json_key(w, k);
     pc_json_int(w, v);
 }
-void pc_json_kv_uint(pc_json_writer *w, const char *k, unsigned long v)
+static void pc_json_kv_uint(pc_json_writer *w, const char *k, unsigned long v)
 {
     pc_json_key(w, k);
     pc_json_uint(w, v);
 }
-void pc_json_kv_bool(pc_json_writer *w, const char *k, proto_bool v)
+static void pc_json_kv_bool(pc_json_writer *w, const char *k, proto_bool v)
 {
     pc_json_key(w, k);
     pc_json_bool(w, v);
 }
-void pc_json_kv_null(pc_json_writer *w, const char *k)
+static void pc_json_kv_null(pc_json_writer *w, const char *k)
 {
     pc_json_key(w, k);
     pc_json_null(w);
 }
-void pc_json_kv_raw(pc_json_writer *w, const char *k, const char *literal)
+static void pc_json_kv_raw(pc_json_writer *w, const char *k, const char *literal)
 {
     pc_json_key(w, k);
     pc_json_raw(w, literal);
@@ -585,7 +584,7 @@ static JsonEsc json_decode_escape(const char **p, char *out, size_t *i, size_t o
     return json_emit_utf8((unsigned)cp, out, i, out_cap);
 }
 
-proto_bool json_get_str(const char *json, const char *key, char *out, size_t out_cap)
+static proto_bool json_get_str(const char *json, const char *key, char *out, size_t out_cap)
 {
     if (!out || out_cap == 0)
     {
@@ -631,7 +630,7 @@ proto_bool json_get_str(const char *json, const char *key, char *out, size_t out
     return PROTO_TRUE;
 }
 
-proto_bool json_get_int(const char *json, const char *key, long *out)
+static proto_bool json_get_int(const char *json, const char *key, long *out)
 {
     if (!out)
     {
@@ -643,7 +642,7 @@ proto_bool json_get_int(const char *json, const char *key, long *out)
         return PROTO_FALSE;
     }
     const char *end = NULL;
-    long val = pc_strtol(v, &end);
+    long val = str.to_long(v, &end);
     if (end == v)
     {
         return PROTO_FALSE; // no digits parsed
@@ -652,7 +651,7 @@ proto_bool json_get_int(const char *json, const char *key, long *out)
     return PROTO_TRUE;
 }
 
-proto_bool json_get_bool(const char *json, const char *key, proto_bool *out)
+static proto_bool json_get_bool(const char *json, const char *key, proto_bool *out)
 {
     if (!out)
     {
@@ -675,3 +674,9 @@ proto_bool json_get_bool(const char *json, const char *key, proto_bool *out)
     }
     return PROTO_FALSE;
 }
+
+const JsonNs Json = {pc_json_init,    pc_json_begin_object, pc_json_end_object, pc_json_begin_array, pc_json_end_array,
+                     pc_json_key,     pc_json_str,          pc_json_int,        pc_json_uint,        pc_json_bool,
+                     pc_json_null,    pc_json_raw,          pc_json_kv_str,     pc_json_kv_int,      pc_json_kv_uint,
+                     pc_json_kv_bool, pc_json_kv_null,      pc_json_kv_raw,     json_get_str,        json_get_int,
+                     json_get_bool};

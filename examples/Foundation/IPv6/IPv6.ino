@@ -2,16 +2,16 @@
 //
 // The TCP and UDP listeners already bind IPADDR_TYPE_ANY, so the moment the interface has an
 // IPv6 address the server answers over v6 with no extra work. PC_ENABLE_IPV6 turns IPv6 on
-// for the Wi-Fi netif (init_ipv6_physical() -> SLAAC: a link-local address, plus a global one
+// for the Wi-Fi netif (Physical.ip6->init() -> SLAAC: a link-local address, plus a global one
 // if the network advertises a prefix). The pc_ip address core
-// (network_drivers/network/ip.h) parses, formats (RFC 5952 canonical), and classifies both
+// (shared_primitives/ip.h) parses, formats (RFC 5952 canonical), and classifies both
 // families - used here to print and report the acquired address.
 //
 // Build flag (whole build, not just this sketch):
 //   PC_ENABLE_IPV6=1
 
 #include "protocore.h"
-#include "network_drivers/network/ip.h"
+#include "shared_primitives/ip.h"
 #include "network_drivers/physical/physical.h"
 
 static const char *SSID = "YOUR_SSID";
@@ -41,7 +41,7 @@ void handle_root(uint8_t slot_id, HttpReq *)
 {
     pc_ip v6;
     char buf[160];
-    if (net_global_ipv6(&v6))
+    if (Physical.ip6->global_addr(&v6))
     {
         char addr[PC_IP_STR_MAX];
         pc_ip_format(&v6, addr, sizeof(addr));
@@ -59,25 +59,25 @@ void setup()
 {
     Serial.begin(115200);
 
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    init_ipv6_physical(); // enable IPv6 (SLAAC) on the Wi-Fi netif
+    Physical.ip6->init(); // enable IPv6 (SLAAC) on the Wi-Fi netif
 
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("IPv4: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     Serial.print("Waiting for a global IPv6 address");
-    for (int i = 0; i < 40 && !pc_ipv6_ready(); i++)
+    for (int i = 0; i < 40 && !Physical.ip6->ready(); i++)
     {
         delay(250);
         Serial.print('.');
     }
 
     pc_ip v6;
-    if (net_global_ipv6(&v6))
+    if (Physical.ip6->global_addr(&v6))
     {
         char addr[PC_IP_STR_MAX];
         pc_ip_format(&v6, addr, sizeof(addr));

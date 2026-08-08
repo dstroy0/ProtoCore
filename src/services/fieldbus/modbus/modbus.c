@@ -11,8 +11,6 @@
 
 #if PC_NEED_MODBUS
 
-#include <string.h>
-
 // ---------------------------------------------------------------------------
 // Data model (all BSS - no heap)
 // ---------------------------------------------------------------------------
@@ -528,13 +526,13 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    pc_conn_send(slot, data, (proto_u16)n);
-    pc_conn_flush(slot);
+    Tcp.conn->send(slot, data, (proto_u16)n);
+    Tcp.conn->flush(slot);
 }
 
 static void close_conn(uint8_t slot)
 {
-    pc_conn_close(slot); // transport owns detach + slot reset + close
+    Tcp.conn->close(slot); // transport owns detach + slot reset + close
 }
 
 void pc_modbus_rx(uint8_t slot)
@@ -580,7 +578,7 @@ void pc_modbus_rx(uint8_t slot)
 
 // The Modbus ProtoHandler (Layer 5 dispatch seam) - only a data handler; a partial ADU waits in the
 // rx ring, so there is no per-connection accept/close/poll state. Returned by accessor (no session
-// dependency); proto_register_builtins() installs it.
+// dependency); Session.proto->register_builtins() installs it.
 static const ProtoHandler s_modbus_handler = {NULL, pc_modbus_rx, NULL, NULL};
 const ProtoHandler *pc_modbus_proto_handler(void)
 {

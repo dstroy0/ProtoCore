@@ -7,7 +7,6 @@
  */
 
 #include "multipart.h"
-#include <string.h>
 
 // Length-bounded, binary-safe forward search for needle[0..nlen) within hay[0..hlen).
 // Unlike strstr, it does not stop at a NUL, so a body containing NUL bytes scans correctly.
@@ -53,7 +52,7 @@ static char *extract_quoted_param(char *src, const char *key)
     return p;
 }
 
-proto_bool pc_multipart_parse(HttpReq *req, Multipart *mp)
+static proto_bool pc_multipart_parse(HttpReq *req, MultipartBody *mp)
 {
     mp->part_count = 0;
 
@@ -202,7 +201,7 @@ proto_bool pc_multipart_parse(HttpReq *req, Multipart *mp)
     return mp->part_count > 0;
 }
 
-const char *pc_multipart_get_field(const Multipart *mp, const char *field)
+static const char *pc_multipart_get_field(const MultipartBody *mp, const char *field)
 {
     for (int i = 0; i < mp->part_count; i++)
     {
@@ -213,3 +212,5 @@ const char *pc_multipart_get_field(const Multipart *mp, const char *field)
     }
     return NULL;
 }
+
+const MultipartNs Multipart = {pc_multipart_parse, pc_multipart_get_field};

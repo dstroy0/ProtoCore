@@ -13,8 +13,6 @@
 
 #if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
 
-#include <string.h>
-
 // --- Huffman tables generated from RFC 7541 Appendix B ---------------------------------------
 
 // MSB-aligned code and bit length per symbol 0..255, plus EOS(256).
@@ -84,7 +82,7 @@ static const uint16_t DEC_SYM[257] = {
     251, 252, 253, 254, 2,   3,   4,   5,   6,   7,   8,   11,  12,  14,  15,  16,  17,  18,  19,  20,  21,  23,
     24,  25,  26,  27,  28,  29,  30,  31,  127, 220, 249, 10,  13,  22,  256};
 
-size_t pc_hpack_encode_int(uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_t flags, uint32_t value)
+static size_t pc_hpack_encode_int(uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_t flags, uint32_t value)
 {
     uint8_t max = (uint8_t)((1u << prefix_bits) - 1);
     if (cap < 1)
@@ -116,7 +114,8 @@ size_t pc_hpack_encode_int(uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_
     return i;
 }
 
-proto_bool pc_hpack_decode_int(const uint8_t *in, size_t len, uint8_t prefix_bits, size_t *consumed, uint32_t *value)
+static proto_bool pc_hpack_decode_int(const uint8_t *in, size_t len, uint8_t prefix_bits, size_t *consumed,
+                                      uint32_t *value)
 {
     if (len < 1)
     {
@@ -148,7 +147,7 @@ proto_bool pc_hpack_decode_int(const uint8_t *in, size_t len, uint8_t prefix_bit
     return PROTO_TRUE;
 }
 
-size_t pc_hpack_huff_len(const char *s, size_t n)
+static size_t pc_hpack_huff_len(const char *s, size_t n)
 {
     size_t bits = 0;
     for (size_t i = 0; i < n; i++)
@@ -158,7 +157,7 @@ size_t pc_hpack_huff_len(const char *s, size_t n)
     return (bits + 7) / 8;
 }
 
-size_t pc_hpack_huff_encode(uint8_t *out, size_t cap, const char *s, size_t n)
+static size_t pc_hpack_huff_encode(uint8_t *out, size_t cap, const char *s, size_t n)
 {
     uint64_t acc = 0;
     int nbits = 0;
@@ -190,7 +189,7 @@ size_t pc_hpack_huff_encode(uint8_t *out, size_t cap, const char *s, size_t n)
     return o;
 }
 
-proto_bool pc_hpack_huff_decode(const uint8_t *in, size_t n, char *out, size_t cap, size_t *out_len)
+static proto_bool pc_hpack_huff_decode(const uint8_t *in, size_t n, char *out, size_t cap, size_t *out_len)
 {
     uint32_t code = 0;
     int len = 0;
@@ -253,7 +252,8 @@ proto_bool pc_hpack_huff_decode(const uint8_t *in, size_t n, char *out, size_t c
 
 // --- string literal (RFC 7541 sec 5.2; RFC 9204 reuses it verbatim) -------------------------------
 
-proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *pos, char *out, size_t cap, size_t *out_len)
+static proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *pos, char *out, size_t cap,
+                                      size_t *out_len)
 {
     if (*pos >= len)
     {
@@ -291,7 +291,7 @@ proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *pos, ch
     return PROTO_TRUE;
 }
 
-size_t pc_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_t n)
+static size_t pc_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_t n)
 {
     size_t hl = pc_hpack_huff_len(s, n);
     if (hl < n)
@@ -316,5 +316,8 @@ size_t pc_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_t n)
     memcpy(out + hdr, s, n);
     return hdr + n;
 }
+
+const HpackPrimNs HpackPrim = {pc_hpack_encode_int,  pc_hpack_decode_int, pc_hpack_huff_encode, pc_hpack_huff_len,
+                               pc_hpack_huff_decode, pc_hpack_decode_str, pc_hpack_encode_str};
 
 #endif // PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3

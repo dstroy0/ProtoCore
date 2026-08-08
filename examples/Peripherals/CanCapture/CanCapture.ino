@@ -18,9 +18,9 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
-#include "services/net/forward/forward.h"
+#include "network_drivers/network/forward/forward.h"
 #include "server/signaling/bus_capture.h"
-#include <string.h>
+
 
 static const char *COLLECTOR_IP = "192.168.1.50";
 static const uint16_t COLLECTOR_PORT = 5556;
@@ -45,7 +45,7 @@ static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
     uint32_t us = (uint32_t)micros();
     pc_pcap_record_header(buf, sizeof(buf), us / 1000000u, us % 1000000u, len, len);
     memcpy(buf + PC_PCAP_REC_HDR_LEN, frame, len);
-    return pc_udp_sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PC_PCAP_REC_HDR_LEN + len);
+    return Udp.client->sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PC_PCAP_REC_HDR_LEN + len);
 }
 
 // CAN is a source only - no rule forwards *to* it, so this is never called.
@@ -69,14 +69,14 @@ void setup()
     Serial.begin(115200);
 
     // Wired uplink to the collector.
-    init_eth_physical();
+    Physical.eth->init();
     Serial.print("Bringing up Ethernet");
-    while (!eth_ready())
+    while (!Physical.eth->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // Ethernet is the egress here
+    uint32_t ip = Physical.link->egress_ip(); // Ethernet is the egress here
     Serial.printf("\nEthernet IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

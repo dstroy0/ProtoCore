@@ -16,7 +16,6 @@
 #include "server/filesystem/mnt.h" // the storage seam: pc_mnt_active()
 #include "shared_primitives/mime.h"
 #include <stdio.h>
-#include <string.h>
 
 static const pc_field UPLOAD_OK[] = {{PC_FK_LIT, 0, 3, "OK "}, PC_U32, {PC_FK_LIT, 0, 6, " bytes"}, PC_END};
 
@@ -96,7 +95,7 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     }
 }
 
-/// @brief Route handler (runs at PARSE_COMPLETE): close the file and reply.
+/// @brief HttpRoute handler (runs at PARSE_COMPLETE): close the file and reply.
 static void upload_handle(uint8_t slot_id, HttpReq *req)
 {
     if (!req->body_streaming)

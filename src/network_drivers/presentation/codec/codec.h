@@ -5,22 +5,14 @@
  * @file codec.h
  * @brief One binary codec interface; a wire encoding is an instance of it.
  *
- * CBOR and MessagePack encode the same ten things - unsigned, signed, bytes, string, bool, null,
- * float, array header, map header - into different bytes. Written out separately they were two
- * parallel APIs over two field-identical cursor structs, and a caller had to pick one at the call
- * site, so SenML-over-CBOR and SenML-over-MessagePack could not be the same code.
+ * The interface fixes the operations, their order, and their signatures; a format supplies the
+ * function pointers. The order is the field order of the table, so a format whose operations drift
+ * out of order fails to compile.
  *
- * They are one interface with two instances. The operations, their order, and their signatures are
- * fixed here; a format supplies the function pointers. Order is load-bearing: it is the field order
- * of the table, so a format whose operations drift out of order fails to compile rather than
- * silently binding the wrong encoder.
+ * Dispatch is a `static const` table of function pointers in rodata.
  *
- * Dispatch is a `static const` table of plain function pointers in rodata, the same shape as
- * ProtoHandler. Not virtual, not RTTI, not std::function (SRCBANNED #22): the set of reachable
- * targets stays a closed list the linker can see whole, so the worst-case path is still a number.
- *
- * The region types come from span.h and the byte verbs from bytes.h - a codec does no allocation and
- * owns no buffer; it writes into a pc_span the caller bound and reads from a pc_cspan.
+ * The region types come from span.h and the byte verbs from bytes.h. A codec allocates nothing and
+ * owns no buffer: it writes into a pc_span the caller bound and reads from a pc_cspan.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -29,8 +21,8 @@
 #ifndef PROTOCORE_CODEC_H
 #define PROTOCORE_CODEC_H
 
+#include "mmgr/span.h"
 #include "protocore_config.h" // PC_NEED_CBOR / PC_ENABLE_MSGPACK gate the instances below
-#include "shared_primitives/span.h"
 
 PROTO_BEGIN_DECLS
 
@@ -99,21 +91,9 @@ typedef struct
     proto_bool (*get_float)(pc_cspan *r, float *out);
 } pc_codec;
 
-// --- the formats, as instances ---
-//
-// Storage is opaque: each table is internal linkage in codec.c and reached only through its
-// accessor, so no caller can name it, copy it, or keep a second one. Guarded so a build that
-// compiles a format out has no accessor to call and no table to link.
-
-#if PC_NEED_CBOR
-/** @brief CBOR (RFC 8949) as an instance of the codec interface. */
-const pc_codec *pc_codec_cbor(void);
-#endif
-
-#if PC_ENABLE_MSGPACK
-/** @brief MessagePack as an instance of the codec interface. */
-const pc_codec *pc_codec_msgpack(void);
-#endif
+// Each format declares its own instance in its own header: cbor.h has Cbor, msgpack.h has
+// MsgPack. The instance is the storage, so the format that owns the operations owns the
+// table built from them, and a build that compiles a format out has neither.
 
 PROTO_END_DECLS
 

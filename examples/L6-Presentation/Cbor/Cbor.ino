@@ -56,14 +56,14 @@ static size_t pc_cbor_source(uint8_t *out, size_t cap, void *vctx)
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -71,13 +71,13 @@ void setup()
         static CborCtx ctx; // static: must outlive send_chunked
         pc_span w;
         w = pc_span_from(ctx.buf, sizeof(ctx.buf));
-        pc_cbor_map(&w, 3);
-        pc_cbor_str(&w, "heap");
-        pc_cbor_uint(&w, ESP.getFreeHeap());
-        pc_cbor_str(&w, "uptime");
-        pc_cbor_uint(&w, millis() / 1000);
-        pc_cbor_str(&w, "rssi");
-        pc_cbor_int(&w, pc_net_rssi());
+        Cbor.put_map(&w, 3);
+        Cbor.put_str(&w, "heap");
+        Cbor.put_uint(&w, ESP.getFreeHeap());
+        Cbor.put_str(&w, "uptime");
+        Cbor.put_uint(&w, millis() / 1000);
+        Cbor.put_str(&w, "rssi");
+        Cbor.put_int(&w, Physical.wifi->rssi());
         ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
         send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);

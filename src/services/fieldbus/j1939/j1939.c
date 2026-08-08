@@ -10,8 +10,6 @@
 
 #if PC_NEED_J1939
 
-#include <string.h>
-
 proto_bool pc_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da)
 {
     if (!id || priority > 7 || pgn > 0x3FFFFu)

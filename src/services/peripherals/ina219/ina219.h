@@ -57,7 +57,7 @@ int32_t pc_ina219_current_ua(int16_t raw, uint32_t current_lsb_ua);
 /** @brief Scale the raw power register to microwatts (power LSB is 20 * current LSB). */
 int32_t pc_ina219_power_uw(int16_t raw, uint32_t current_lsb_ua);
 
-// --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
+// --- ESP32 binding (I2C via Wire) ------------------------------------
 
 /**
  * @brief Program the INA219 at @p addr: write the calibration for @p current_lsb_ua (uA/bit) and

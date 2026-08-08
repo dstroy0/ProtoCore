@@ -16,8 +16,6 @@
 
 #if PC_ENABLE_MPR121
 
-#include <string.h>
-
 #if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
 #endif

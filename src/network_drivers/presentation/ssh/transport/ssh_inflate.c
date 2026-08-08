@@ -16,8 +16,6 @@
 
 #if PC_ENABLE_SSH_ZLIB
 
-#include <string.h>
-
 #define PC_MAXBITS 15
 #define PC_MAXLCODES 288
 #define PC_MAXDCODES 32

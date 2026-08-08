@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_LWM2M
 
-#include <string.h>
-
 void pc_lwm2m_tlv_init(Lwm2mTlvWriter *w, uint8_t *buf, size_t cap)
 {
     w->buf = buf;

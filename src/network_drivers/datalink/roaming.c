@@ -7,14 +7,16 @@
  */
 
 #include "network_drivers/datalink/roaming.h"
+#include "mmgr/protomem.h" // mem.cmp / mem.cpy / mem.zero
 
 #if PC_ENABLE_ROAMING
 
-#include <string.h>
+/** @brief A BSSID is six octets, and every compare and copy below moves exactly that. */
+#define PC_ROAM_BSSID_LEN 6u
 
 static proto_bool mac_eq(const uint8_t *a, const uint8_t *b)
 {
-    return memcmp(a, b, 6) == 0;
+    return mem.cmp(a, b, PC_ROAM_BSSID_LEN) == 0;
 }
 
 // Index of the strongest candidate that is not the current AP, or -1 if there is none.
@@ -51,20 +53,20 @@ static int find_bssid(const uint8_t *target, const pc_roam_neighbor *nb, uint8_t
 static void pick(pc_roam_decision *out, const pc_roam_neighbor *nb, int idx, pc_roam_reason reason)
 {
     out->roam = PROTO_TRUE;
-    memcpy(out->target_bssid, nb[idx].bssid, 6);
+    mem.cpy(out->target_bssid, nb[idx].bssid, PC_ROAM_BSSID_LEN);
     out->target_channel = nb[idx].channel;
     out->reason = reason;
 }
 
-void pc_roam_decide(const uint8_t current_bssid[6], int8_t current_rssi_dbm, const pc_roam_neighbor *neighbors,
-                    uint8_t n, const pc_roam_btm *btm, const pc_roam_policy *policy, pc_roam_decision *out)
+static void decide(const uint8_t current_bssid[6], int8_t current_rssi_dbm, const pc_roam_neighbor *neighbors,
+                   uint8_t n, const pc_roam_btm *btm, const pc_roam_policy *policy, pc_roam_decision *out)
 {
     if (!out)
     {
         return;
     }
     out->roam = PROTO_FALSE;
-    memset(out->target_bssid, 0, 6);
+    mem.zero(out->target_bssid, PC_ROAM_BSSID_LEN);
     out->target_channel = 0;
     out->reason = PC_ROAM_NONE;
     if (!current_bssid || (n && !neighbors))
@@ -122,7 +124,7 @@ void pc_roam_decide(const uint8_t current_bssid[6], int8_t current_rssi_dbm, con
     // 4. Otherwise stay put.
 }
 
-uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_neighbor *out, uint8_t max)
+static uint8_t parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_neighbor *out, uint8_t max)
 {
     if (!elems || !out)
     {
@@ -144,7 +146,7 @@ uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_
         if (id == PC_ROAM_NR_ELEM_ID && elen >= NR_BODY_MIN)
         {
             const uint8_t *b = elems + off + 2;
-            memcpy(out[count].bssid, b, 6);
+            mem.cpy(out[count].bssid, b, PC_ROAM_BSSID_LEN);
             out[count].channel = b[11]; // after BSSID(6) + BSSID Info(4) + Operating Class(1)
             out[count].rssi_dbm = PC_ROAM_RSSI_UNKNOWN;
             count++;
@@ -154,13 +156,13 @@ uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_
     return count;
 }
 
-proto_bool pc_roam_parse_btm_request(const uint8_t *frame, size_t len, pc_roam_btm *out)
+static proto_bool parse_btm_request(const uint8_t *frame, size_t len, pc_roam_btm *out)
 {
     if (!out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.zero(out, sizeof(*out));
     // Fixed fields: Category | Action | Dialog Token | Request Mode | Disassoc Timer(2) | Validity(1) = 7.
     if (!frame || len < 7 || frame[0] != PC_ROAM_WNM_CATEGORY || frame[1] != PC_ROAM_BTM_REQ_ACTION)
     {
@@ -188,10 +190,12 @@ proto_bool pc_roam_parse_btm_request(const uint8_t *frame, size_t len, pc_roam_b
     if ((mode & PC_ROAM_BTM_PREF_LIST) && off + 2 + 6 <= len && frame[off] == PC_ROAM_NR_ELEM_ID &&
         frame[off + 1] >= 13)
     {
-        memcpy(out->preferred_bssid, frame + off + 2, 6);
+        mem.cpy(out->preferred_bssid, frame + off + 2, PC_ROAM_BSSID_LEN);
         out->has_preferred = PROTO_TRUE;
     }
     return PROTO_TRUE;
 }
+
+const RoamNs Roam = {decide, parse_neighbor_report, parse_btm_request};
 
 #endif // PC_ENABLE_ROAMING

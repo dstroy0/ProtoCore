@@ -69,8 +69,8 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
  * @brief Build a SenML pack in whichever binary encoding @p c is.
  *
  * The RFC 8428 integer labels and the record structure are the same whatever carries them, so the
- * encoding is a parameter rather than a second copy of this function: pass pc_codec_cbor() for
- * SenML-CBOR, pc_codec_msgpack() for the MessagePack pack.
+ * encoding is a parameter rather than a second copy of this function: pass &Cbor for
+ * SenML-CBOR, &MsgPack for the MessagePack pack.
  *
  * @return bytes written, or 0 if the arguments are bad or the buffer was too small.
  */

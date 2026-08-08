@@ -9,9 +9,37 @@
 #include "sse.h"
 #include "network_drivers/transport/tcp.h"
 #include <stdio.h>
-#include <string.h>
 
 SseConn pc_sse_pool[MAX_SSE_CONNS];
+
+// One route's subscribe handler. It belongs here rather than in the route table: a route decides
+// where a request goes, and what runs once a client subscribes is this module's business. A route
+// carries the id that names the set.
+typedef struct
+{
+    SseConnectHandler on_connect[MAX_ROUTES];
+    uint8_t count;
+} SseRouteCtx;
+static SseRouteCtx s_sse_route;
+
+uint8_t pc_sse_route_add(SseConnectHandler on_connect)
+{
+    if (s_sse_route.count >= MAX_ROUTES)
+    {
+        return PC_SSE_NONE;
+    }
+    s_sse_route.on_connect[s_sse_route.count] = on_connect;
+    return s_sse_route.count++;
+}
+
+SseConnectHandler pc_sse_route_connect(uint8_t id)
+{
+    if (id >= s_sse_route.count)
+    {
+        return NULL;
+    }
+    return s_sse_route.on_connect[id];
+}
 
 void pc_sse_init()
 {
@@ -127,6 +155,6 @@ proto_bool pc_sse_write(SseConn *sse, const char *data, const char *event, const
         return PROTO_FALSE;
     }
 
-    pc_conn_send(sse->slot_id, buf, (proto_u16)pos);
+    Tcp.conn->send(sse->slot_id, buf, (proto_u16)pos);
     return PROTO_TRUE;
 }

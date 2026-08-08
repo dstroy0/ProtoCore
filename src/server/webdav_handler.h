@@ -16,8 +16,8 @@
 #ifndef PROTOCORE_WEBDAV_HANDLER_H
 #define PROTOCORE_WEBDAV_HANDLER_H
 
-#include "network_drivers/network/route.h"                             // Route (by pointer)
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq
+#include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
 #include "protocore_config.h"
 
 PROTO_BEGIN_DECLS
@@ -28,7 +28,7 @@ PROTO_BEGIN_DECLS
 proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req);
 
 /** @brief Dispatch a WebDAV request against the mount @p r (resolves the FS path, then the method). */
-void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r);
+void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r);
 
 /** @brief Send a bodyless WebDAV status with optional extra header lines (each ending in CRLF). */
 void dav_send_status(uint8_t slot_id, int code, const char *extra_headers);

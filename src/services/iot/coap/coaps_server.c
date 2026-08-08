@@ -10,11 +10,10 @@
 
 #if PC_ENABLE_DTLS && PC_ENABLE_COAP
 
+#include "mmgr/ring.h" // pc_atomic (SPSC ingest-ring cursors)
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
 #include "server/clock/clock.h"      // pc_millis() - idle-reap clock (the DTLS PTO uses it internally too)
 #include "services/iot/coap/coaps.h" // pc_coaps_process()
-#include "shared_primitives/ring.h"  // pc_atomic (SPSC ingest-ring cursors)
-#include <string.h>
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"
@@ -152,7 +151,11 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PC_C
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
 #if PROTOCORE_HOT
-    pc_udp_listener_sendto(s_coaps.port, ip, port, data, len);
+    pc_ip dst = {PC_IP_NONE, {0}};
+    if (Ip.parse(ip, &dst))
+    {
+        Udp.listener->sendto(s_coaps.port, &dst, port, data, len);
+    }
 #else
     if (s_coaps.out_sink)
     {
@@ -222,7 +225,7 @@ static CoapsSlot *slot_by_cid(const uint8_t *cid, size_t avail)
         {
             continue;
         }
-        size_t sl = pc_dtls_conn_local_cid(&s->conn, sc);
+        size_t sl = DtlsServer.local_cid(&s->conn, sc);
         if (sl && sl <= avail && memcmp(cid, sc, sl) == 0)
         {
             return s;
@@ -264,7 +267,7 @@ static CoapsSlot *open_conn(const char *ip, uint16_t port)
     s->cfg.cookie_key = s_coaps.cookie_key;
     uint8_t paddr[PC_COAPS_PEER_SER];
     proto_bool ok = serialize_peer(ip, port, paddr);
-    pc_dtls_conn_init(&s->conn, &s->cfg, ok ? paddr : NULL, ok ? sizeof paddr : 0);
+    DtlsServer.init(&s->conn, &s->cfg, ok ? paddr : NULL, ok ? sizeof paddr : 0);
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
     s->peer_port = port;
     return s;
@@ -276,7 +279,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_p
     (void)ctx;
     char ip[16];
     uint16_t port = 0;
-    if (!pc_udp_peer_addr(peer, ip, sizeof ip, &port))
+    if (!Udp.listener->peer_addr(peer, ip, sizeof ip, &port))
     {
         return;
     }
@@ -284,7 +287,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_p
 }
 #endif
 
-// Route one ingested datagram to its peer slot (opening one for a fresh peer's ClientHello) and drive
+// HttpRoute one ingested datagram to its peer slot (opening one for a fresh peer's ClientHello) and drive
 // the DTLS handshake / CoAP exchange through the bridge.
 static void coaps_route_datagram(const CoapsIngest *ig, uint32_t now, uint8_t *out, size_t out_cap)
 {
@@ -331,9 +334,9 @@ static void coaps_service_slot(CoapsSlot *s, uint32_t now, uint8_t *out, size_t 
     {
         return;
     }
-    if (pc_dtls_conn_timeout_ms(&s->conn) == 0) // 0 == due now (-1 == no timer, >0 == still pending)
+    if (DtlsServer.timeout_ms(&s->conn) == 0) // 0 == due now (-1 == no timer, >0 == still pending)
     {
-        int n = pc_dtls_conn_on_timeout(&s->conn, out, out_cap);
+        int n = DtlsServer.on_timeout(&s->conn, out, out_cap);
         if (n > 0)
         {
             server_send(s->peer_ip, s->peer_port, out, (size_t)n);
@@ -370,7 +373,7 @@ proto_bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg)
     s_coaps.ring_tail = 0;
     s_coaps.running = PROTO_TRUE;
 #if PROTOCORE_HOT
-    return pc_udp_listen(s_coaps.port, udp_ingest_cb, NULL);
+    return Udp.listener->listen(s_coaps.port, udp_ingest_cb, NULL);
 #else
     return PROTO_TRUE; // host: fed through pc_coaps_server_ingest()
 #endif

@@ -11,7 +11,7 @@
  */
 
 #include "http_parser.h"
-#include "network_drivers/network/ip.h" // validate a recovered proxy client IP (v4/v6)
+#include "shared_primitives/ip.h" // validate a recovered proxy client IP (v4/v6)
 
 HttpReq http_pool[CONN_POOL_SLOTS];
 
@@ -715,11 +715,11 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     tok[tlen] = '\0';
 
     pc_ip ip;
-    if (!pc_ip_parse(tok, &ip)) // rejects "unknown" / "_obf" / malformed
+    if (!Ip.parse(tok, &ip)) // rejects "unknown" / "_obf" / malformed
     {
         return PROTO_FALSE;
     }
-    return pc_ip_format(&ip, out, cap) > 0; // false if out is too small for the canonical text
+    return Ip.format(&ip, out, cap) > 0; // false if out is too small for the canonical text
 }
 
 proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, proto_bool *is_https)

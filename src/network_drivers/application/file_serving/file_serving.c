@@ -13,17 +13,18 @@
  */
 
 #include "network_drivers/application/file_serving/file_serving.h"
+#include "network_drivers/presentation/http/http.h"
 
 #include "mmgr/membuild.h"                          // pc_sb frame builder
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (shared with the edge cache)
-#include "network_drivers/network/route.h"
+#include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_*, TcpConn/ConnState
 #include "protocore.h"
 #include "server/filesystem/filesystem.h"  // pc_fs_* - the accessor owns the root, the join, and the .. guard
 #include "shared_primitives/mime.h"        // mime_type, PC_MIME_*
 #include "shared_primitives/time_compat.h" // pc_gmtime_r (portable reentrant UTC)
 #include <stdio.h>                         // snprintf, sscanf
-#include <string.h>                        // strncasecmp, strchr, strstr, strncmp, strnlen
+                                           // strncasecmp, strchr, strstr, strncmp, strnlen
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
 
 // ---------------------------------------------------------------------------
@@ -39,7 +40,7 @@
 // A file larger than the TCP send window cannot go out in one dispatch: tcp_write returns ERR_MEM
 // once the window fills and the remainder would be dropped. serve_file_internal sends the headers,
 // opens the file and hands it to this per-slot state; file_send_pump pages out at most
-// pc_conn_sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
+// Tcp.conn->sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
 // Nothing outside this file can name the state: the poll asks pc_file_holds_slot().
 
 // Per-slot file-send continuation: the open file and how much of it is left.
@@ -66,7 +67,7 @@ typedef struct
 static FileCtx s_file = {.root = -1};
 
 // The root file serving resolves against: the whole mount. A static route carries its own subtree as
-// a request-path piece (Route::static_root), so the subtree is part of the request rather than part
+// a request-path piece (the mount point mnt_id names), so the subtree is part of the request rather than part
 // of the root - which is what lets one bound root serve every static mount the application
 // registers, instead of spending a root table entry per serve_static() call.
 //
@@ -321,7 +322,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
         pc_sb_put(&sb_h304, cl);
         pc_sb_put(&sb_h304, "\r\n");
         int n304 = (int)pc_sb_finish(&sb_h304);
-        pc_conn_send_flush(slot_id, h304, (proto_u16)n304); // header-only reply: write and flush in one marshal
+        Tcp.conn->send_flush(slot_id, h304, (proto_u16)n304); // header-only reply: write and flush in one marshal
         pc_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
@@ -365,7 +366,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
         pc_sb_put(&sb_h416, cl);
         pc_sb_put(&sb_h416, "\r\n");
         int n416 = (int)pc_sb_finish(&sb_h416);
-        pc_conn_send_flush(slot_id, h416, (proto_u16)n416);
+        Tcp.conn->send_flush(slot_id, h416, (proto_u16)n416);
         pc_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
@@ -405,7 +406,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
     pc_sb_put(&sb_header, "HTTP/1.1 ");
     pc_sb_i64(&sb_header, (int64_t)(status));
     pc_sb_put(&sb_header, " ");
-    pc_sb_put(&sb_header, status_text(status));
+    pc_sb_put(&sb_header, Http.status_text(status));
     pc_sb_put(&sb_header, "\r\nContent-Type: ");
     pc_sb_put(&sb_header, content_type);
     pc_sb_put(&sb_header, "\r\nContent-Length: ");
@@ -426,7 +427,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
         header[0] = '\0';
     }
 
-    pc_conn_send(slot_id, header, (proto_u16)hlen);
+    Tcp.conn->send(slot_id, header, (proto_u16)hlen);
 
     // HEAD or empty body: headers only, finish now.
     if (head || body_len == 0)
@@ -451,7 +452,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
     file_send_pump(slot_id);
 }
 
-// Page out a pending file response across worker loops: send up to pc_conn_sndbuf()
+// Page out a pending file response across worker loops: send up to Tcp.conn->sndbuf()
 // bytes now and return; the next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
@@ -473,15 +474,15 @@ void file_send_pump(uint8_t slot_id)
 
     // A file body still being paged out is active, not idle: keep the CONN_TIMEOUT_MS idle sweep
     // off it so a transient send stall on a large file cannot reap the slot mid-transfer.
-    pc_conn_touch_active(slot_id);
+    Tcp.conn->touch_active(slot_id);
 
     uint8_t chunk[FILE_CHUNK_SIZE];
     while (s->remaining > 0)
     {
-        proto_u16 avail = pc_conn_sndbuf(slot_id);
+        proto_u16 avail = Tcp.conn->sndbuf(slot_id);
         if (avail == 0)
         {
-            pc_conn_flush(slot_id); // push what is queued; resume on a later loop
+            Tcp.conn->flush(slot_id); // push what is queued; resume on a later loop
             return;
         }
         size_t want = s->remaining < sizeof(chunk) ? s->remaining : sizeof(chunk);
@@ -497,7 +498,7 @@ void file_send_pump(uint8_t slot_id)
             s->remaining = 0; // read error / short file: stop (response will be short)
             break;
         }
-        if (!pc_conn_send(slot_id, chunk, (proto_u16)n))
+        if (!Tcp.conn->send(slot_id, chunk, (proto_u16)n))
         {
             // Un-read the bytes that did not go out so the next loop resends them. A backend that
             // cannot rewind would resume at the wrong offset, so the transfer ends there instead.
@@ -507,7 +508,7 @@ void file_send_pump(uint8_t slot_id)
                 s->active = PROTO_FALSE;
                 s->remaining = 0;
             }
-            pc_conn_flush(slot_id);
+            Tcp.conn->flush(slot_id);
             return;
         }
         s->off += (size_t)(n);
@@ -517,23 +518,23 @@ void file_send_pump(uint8_t slot_id)
     // Whole body queued: finish the response (flush, keep-alive/close, log, reset).
     pc_fs_close(s->fh);
     s->active = PROTO_FALSE;
-    pc_conn_flush(slot_id);
+    Tcp.conn->flush(slot_id);
     pc_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
 void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_path, const char *content_type)
 {
-    serve_file_internal(slot_id, req_is_head(slot_id), file_sys, fs_path, content_type, NULL);
+    serve_file_internal(slot_id, Http.req_is_head(slot_id), file_sys, fs_path, content_type, NULL);
 }
 
 void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
 {
-    Route *r = pc_route_add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
     }
-    // Store the pattern as a wildcard so path_matches() does a prefix match.
+    // Store the pattern as a wildcard so Http.path_matches() does a prefix match.
     //
     // The pattern is built BEFORE a route slot is taken, because a prefix that does not fit must
     // not be registered at all. Formatting this with snprintf truncated an over-long prefix to
@@ -556,13 +557,12 @@ void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const 
     fill_route_base(r, pat);
     r->type = ROUTE_STATIC;
     r->method = HTTP_GET;
-    r->static_fs = file_sys; // null is legal: the accessor uses whatever is mounted
-    r->static_root = fs_root;
+    r->mnt_id = pc_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
 }
 
-void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
+void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
-    // No null-check on static_fs: storage is reached by layer, through the accessor, so the field
+    // No null-check on the backend: storage is reached by layer, through the accessor, so a null
     // names a preference and never the path. A null one is what serve_static() documents as legal
     // and means "whatever is mounted"; 404-ing on it refused every request a caller made without
     // naming a backend it had no way to choose anyway.
@@ -584,7 +584,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
         return;
     }
 
-    const char *root = r->static_root ? r->static_root : "";
+    const char *root = pc_mnt_point_root(r->mnt_id);
     size_t rlen = strnlen(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
@@ -616,7 +616,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
     }
 
     const char *ctype = mime_type(fs_path);
-    proto_bool head = req_is_head(slot_id);
+    proto_bool head = Http.req_is_head(slot_id);
 
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.
@@ -634,11 +634,11 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
         // exercised both ways (see the gzip tests).
         if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(file_root(), gz, ""))
         {
-            serve_file_internal(slot_id, head, r->static_fs, gz, ctype, "gzip");
+            serve_file_internal(slot_id, head, pc_mnt_point_backend(r->mnt_id), gz, ctype, "gzip");
             return;
         }
     }
 
-    serve_file_internal(slot_id, head, r->static_fs, fs_path, ctype, NULL);
+    serve_file_internal(slot_id, head, pc_mnt_point_backend(r->mnt_id), fs_path, ctype, NULL);
 }
 #endif // PC_ENABLE_FILE_SERVING
