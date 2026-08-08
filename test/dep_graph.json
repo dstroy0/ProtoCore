@@ -1343,18 +1343,6 @@
 ".pio/libdeps/native_hostlink/littlefs/src/lfs_util.c": [
 "native_hostlink"
 ],
-".pio/libdeps/native_hot_workers/littlefs/include/lfs.h": [
-"native_hot_workers"
-],
-".pio/libdeps/native_hot_workers/littlefs/include/lfs_util.h": [
-"native_hot_workers"
-],
-".pio/libdeps/native_hot_workers/littlefs/src/lfs.c": [
-"native_hot_workers"
-],
-".pio/libdeps/native_hot_workers/littlefs/src/lfs_util.c": [
-"native_hot_workers"
-],
 ".pio/libdeps/native_hotswap/littlefs/include/lfs.h": [
 "native_hotswap"
 ],
@@ -2267,17 +2255,17 @@
 ".pio/libdeps/native_pentest/littlefs/src/lfs_util.c": [
 "native_pentest"
 ],
-".pio/libdeps/native_phy_hot/littlefs/include/lfs.h": [
-"native_phy_hot"
+".pio/libdeps/native_phy/littlefs/include/lfs.h": [
+"native_phy"
 ],
-".pio/libdeps/native_phy_hot/littlefs/include/lfs_util.h": [
-"native_phy_hot"
+".pio/libdeps/native_phy/littlefs/include/lfs_util.h": [
+"native_phy"
 ],
-".pio/libdeps/native_phy_hot/littlefs/src/lfs.c": [
-"native_phy_hot"
+".pio/libdeps/native_phy/littlefs/src/lfs.c": [
+"native_phy"
 ],
-".pio/libdeps/native_phy_hot/littlefs/src/lfs_util.c": [
-"native_phy_hot"
+".pio/libdeps/native_phy/littlefs/src/lfs_util.c": [
+"native_phy"
 ],
 ".pio/libdeps/native_phy_iface/littlefs/include/lfs.h": [
 "native_phy_iface"
@@ -3419,17 +3407,17 @@
 ".pio/libdeps/native_syslog/littlefs/src/lfs_util.c": [
 "native_syslog"
 ],
-".pio/libdeps/native_tcp_hot/littlefs/include/lfs.h": [
-"native_tcp_hot"
+".pio/libdeps/native_tcp/littlefs/include/lfs.h": [
+"native_tcp"
 ],
-".pio/libdeps/native_tcp_hot/littlefs/include/lfs_util.h": [
-"native_tcp_hot"
+".pio/libdeps/native_tcp/littlefs/include/lfs_util.h": [
+"native_tcp"
 ],
-".pio/libdeps/native_tcp_hot/littlefs/src/lfs.c": [
-"native_tcp_hot"
+".pio/libdeps/native_tcp/littlefs/src/lfs.c": [
+"native_tcp"
 ],
-".pio/libdeps/native_tcp_hot/littlefs/src/lfs_util.c": [
-"native_tcp_hot"
+".pio/libdeps/native_tcp/littlefs/src/lfs_util.c": [
+"native_tcp"
 ],
 ".pio/libdeps/native_telemetry/littlefs/include/lfs.h": [
 "native_telemetry"
@@ -3599,17 +3587,17 @@
 ".pio/libdeps/native_ubx/littlefs/src/lfs_util.c": [
 "native_ubx"
 ],
-".pio/libdeps/native_udp_hot/littlefs/include/lfs.h": [
-"native_udp_hot"
+".pio/libdeps/native_udp/littlefs/include/lfs.h": [
+"native_udp"
 ],
-".pio/libdeps/native_udp_hot/littlefs/include/lfs_util.h": [
-"native_udp_hot"
+".pio/libdeps/native_udp/littlefs/include/lfs_util.h": [
+"native_udp"
 ],
-".pio/libdeps/native_udp_hot/littlefs/src/lfs.c": [
-"native_udp_hot"
+".pio/libdeps/native_udp/littlefs/src/lfs.c": [
+"native_udp"
 ],
-".pio/libdeps/native_udp_hot/littlefs/src/lfs_util.c": [
-"native_udp_hot"
+".pio/libdeps/native_udp/littlefs/src/lfs_util.c": [
+"native_udp"
 ],
 ".pio/libdeps/native_udp_telemetry/littlefs/include/lfs.h": [
 "native_udp_telemetry"
@@ -3839,6 +3827,18 @@
 ".pio/libdeps/native_workers/littlefs/src/lfs_util.c": [
 "native_workers"
 ],
+".pio/libdeps/native_workers_stack/littlefs/include/lfs.h": [
+"native_workers_stack"
+],
+".pio/libdeps/native_workers_stack/littlefs/include/lfs_util.h": [
+"native_workers_stack"
+],
+".pio/libdeps/native_workers_stack/littlefs/src/lfs.c": [
+"native_workers_stack"
+],
+".pio/libdeps/native_workers_stack/littlefs/src/lfs_util.c": [
+"native_workers_stack"
+],
 ".pio/libdeps/native_ws_client/littlefs/include/lfs.h": [
 "native_ws_client"
 ],
@@ -4007,7 +4007,6 @@
 "native_hislip",
 "native_hmmd",
 "native_hostlink",
-"native_hot_workers",
 "native_hotswap",
 "native_hpack",
 "native_http_client",
@@ -4084,7 +4083,7 @@
 "native_path_params",
 "native_pca9685",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_plaintext",
 "native_pmbus",
@@ -4176,7 +4175,7 @@
 "native_stomp",
 "native_sunspec",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telemetry",
 "native_telnet",
 "native_template",
@@ -4190,7 +4189,7 @@
 "native_trace_capture",
 "native_transport",
 "native_ubx",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_umati",
@@ -4210,6 +4209,7 @@
 "native_wifi_sniffer",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate",
 "native_xmpp",
@@ -4324,7 +4324,6 @@
 "native_hislip",
 "native_hmmd",
 "native_hostlink",
-"native_hot_workers",
 "native_hotswap",
 "native_hpack",
 "native_http_client",
@@ -4401,7 +4400,7 @@
 "native_path_params",
 "native_pca9685",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_plaintext",
 "native_pmbus",
@@ -4493,7 +4492,7 @@
 "native_stomp",
 "native_sunspec",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telemetry",
 "native_telnet",
 "native_template",
@@ -4507,7 +4506,7 @@
 "native_trace_capture",
 "native_transport",
 "native_ubx",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_umati",
@@ -4527,6 +4526,7 @@
 "native_wifi_sniffer",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate",
 "native_xmpp",
@@ -4641,7 +4641,6 @@
 "native_hislip",
 "native_hmmd",
 "native_hostlink",
-"native_hot_workers",
 "native_hotswap",
 "native_hpack",
 "native_http_client",
@@ -4718,7 +4717,7 @@
 "native_path_params",
 "native_pca9685",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_plaintext",
 "native_pmbus",
@@ -4810,7 +4809,7 @@
 "native_stomp",
 "native_sunspec",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telemetry",
 "native_telnet",
 "native_template",
@@ -4824,7 +4823,7 @@
 "native_trace_capture",
 "native_transport",
 "native_ubx",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_umati",
@@ -4844,6 +4843,7 @@
 "native_wifi_sniffer",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate",
 "native_xmpp",
@@ -4958,7 +4958,6 @@
 "native_hislip",
 "native_hmmd",
 "native_hostlink",
-"native_hot_workers",
 "native_hotswap",
 "native_hpack",
 "native_http_client",
@@ -5035,7 +5034,7 @@
 "native_path_params",
 "native_pca9685",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_plaintext",
 "native_pmbus",
@@ -5127,7 +5126,7 @@
 "native_stomp",
 "native_sunspec",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telemetry",
 "native_telnet",
 "native_template",
@@ -5141,7 +5140,7 @@
 "native_trace_capture",
 "native_transport",
 "native_ubx",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_umati",
@@ -5161,6 +5160,7 @@
 "native_wifi_sniffer",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate",
 "native_xmpp",
@@ -5326,9 +5326,6 @@
 "native_webdav_handler",
 "native_websocket",
 "native_ws_deflate"
-],
-"core_setup/physical/mock/physical_mock.c": [
-"native_phy_hot"
 ],
 "src/crypto/aead/aes128gcm.h": [
 "native_coaps",
@@ -5685,7 +5682,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_webdav_handler"
 ],
 "src/crypto/cipher/chacha20.h": [
 "native_crypto_kat",
@@ -5695,7 +5693,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_webdav_handler"
 ],
 "src/crypto/crypto_opt.h": [
 "native_accept_gate",
@@ -6331,16 +6330,41 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_webdav_handler"
 ],
 "src/crypto/rng/rng.h": [
+"native_application",
+"native_auth",
+"native_chunked",
+"native_defer",
+"native_diag",
+"native_digest_auth",
+"native_digest_vectors",
+"native_dispatch",
+"native_file_serving",
+"native_form_params",
+"native_h3_server",
+"native_iface",
+"native_json",
+"native_keepalive",
+"native_middleware",
+"native_multipart",
+"native_path_params",
 "native_pqc",
+"native_range",
+"native_regex",
+"native_response_headers",
 "native_ssh",
 "native_ssh_comp",
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_template",
+"native_upload",
+"native_web_terminal",
+"native_webdav_handler"
 ],
 "src/mmgr/arena.c": [
 "native_accept_gate",
@@ -6370,7 +6394,6 @@
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_ikev2",
@@ -6413,7 +6436,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
@@ -6424,6 +6447,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/mmgr/arena.h": [
@@ -6454,7 +6478,6 @@
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_ikev2",
@@ -6497,7 +6520,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
@@ -6508,6 +6531,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/mmgr/bitio.h": [
@@ -6544,7 +6568,7 @@
 "native_ssh_pqc",
 "native_statsd",
 "native_syslog",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport"
 ],
 "src/mmgr/dma.c": [
@@ -6684,7 +6708,7 @@
 "native_tls_record",
 "native_totp",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_vxi11",
@@ -7394,7 +7418,6 @@
 "native_h3_e2e",
 "native_h3_server",
 "native_haas_mdc",
-"native_hot_workers",
 "native_hotswap",
 "native_http_client",
 "native_http_delivery",
@@ -7467,13 +7490,13 @@
 "native_ssh_sftp",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
 "native_tls_record",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_upload",
@@ -7485,6 +7508,7 @@
 "native_websocket",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate"
 ],
@@ -7518,7 +7542,6 @@
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_ikev2",
@@ -7565,19 +7588,20 @@
 "native_ssh_pqc",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
 "native_tls_record",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/mmgr/secure.c": [
@@ -7745,7 +7769,6 @@
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_ikev2",
@@ -7795,19 +7818,20 @@
 "native_ssh_pqc",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
 "native_tls_record",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/mmgr/swar.h": [
@@ -8672,7 +8696,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -8688,7 +8711,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -8697,6 +8720,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/network/dns/dns_resolver.c": [
@@ -8720,7 +8744,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -8736,7 +8759,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -8745,6 +8768,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/network/dns/dns_server.c": [
@@ -8768,7 +8792,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -8785,7 +8808,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -8794,6 +8817,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/network/dns/dns_wire.c": [
@@ -8884,7 +8908,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -8900,7 +8923,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -8909,13 +8932,14 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/physical/physical.c": [
 "native_forward",
 "native_mdns_service",
 "native_net_egress",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_radio_power"
 ],
@@ -8940,7 +8964,7 @@
 "native_multipart",
 "native_net_egress",
 "native_path_params",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_promisc",
 "native_radio_power",
@@ -8956,7 +8980,7 @@
 "native_forward",
 "native_mdns_service",
 "native_net_egress",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_radio_power"
 ],
@@ -8981,7 +9005,7 @@
 "native_multipart",
 "native_net_egress",
 "native_path_params",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_radio_power",
 "native_range",
@@ -10372,7 +10396,6 @@
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_ikev2",
@@ -10414,7 +10437,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
@@ -10425,6 +10448,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/session/worker.h": [
@@ -10454,7 +10478,6 @@
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_ikev2",
@@ -10496,7 +10519,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
@@ -10507,6 +10530,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/tls/ssh_kexhash.h": [
@@ -10553,7 +10577,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -10569,7 +10592,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -10578,6 +10601,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/tls/tls13_kdf.c": [
@@ -10618,8 +10642,8 @@
 ],
 "src/network_drivers/transport/diffserv.c": [
 "native_diffserv",
-"native_hot_workers",
-"native_tcp_hot"
+"native_tcp",
+"native_workers_stack"
 ],
 "src/network_drivers/transport/diffserv.h": [
 "native_accept_gate",
@@ -10643,7 +10667,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -10668,17 +10691,18 @@
 "native_ssh_conn",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/net_addr.c": [
@@ -10703,7 +10727,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -10728,17 +10751,18 @@
 "native_ssh_conn",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/net_addr.h": [
@@ -10763,7 +10787,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -10788,17 +10811,18 @@
 "native_ssh_conn",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp.c": [
@@ -10817,7 +10841,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -10833,7 +10856,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -10842,6 +10865,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp.h": [
@@ -10860,7 +10884,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -10877,7 +10900,7 @@
 "native_signaling",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -10886,6 +10909,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp/tcp_client.c": [
@@ -10904,7 +10928,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -10920,7 +10943,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -10929,6 +10952,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp/tcp_client.h": [
@@ -10947,7 +10971,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -10964,7 +10987,7 @@
 "native_signaling",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -10973,6 +10996,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp/tcp_conn.c": [
@@ -10991,7 +11015,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -11007,7 +11030,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -11016,6 +11039,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp/tcp_conn.h": [
@@ -11034,7 +11058,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -11051,7 +11074,7 @@
 "native_signaling",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -11060,6 +11083,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp/tcp_listener.c": [
@@ -11078,7 +11102,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -11094,7 +11117,7 @@
 "native_session",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -11103,6 +11126,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp/tcp_listener.h": [
@@ -11121,7 +11145,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -11138,7 +11161,7 @@
 "native_signaling",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -11147,6 +11170,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/tcp_evt.h": [
@@ -11165,7 +11189,6 @@
 "native_file_serving",
 "native_form_params",
 "native_h3_server",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_json",
@@ -11183,7 +11206,7 @@
 "native_signaling",
 "native_sse",
 "native_ssh_conn",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
@@ -11192,6 +11215,7 @@
 "native_webdav_handler",
 "native_websocket",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/udp.c": [
@@ -11287,7 +11311,7 @@
 "native_snmp_v3",
 "native_statsd",
 "native_syslog",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport"
 ],
 "src/network_drivers/transport/udp/udp_client.h": [
@@ -11336,7 +11360,7 @@
 "native_syslog",
 "native_template",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
@@ -11363,7 +11387,7 @@
 "native_snmp_v3",
 "native_statsd",
 "native_syslog",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport"
 ],
 "src/network_drivers/transport/udp/udp_listener.c": [
@@ -11385,7 +11409,7 @@
 "native_snmp_v3",
 "native_statsd",
 "native_syslog",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport"
 ],
 "src/network_drivers/transport/udp/udp_listener.h": [
@@ -11434,7 +11458,7 @@
 "native_syslog",
 "native_template",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
@@ -11602,7 +11626,6 @@
 "native_hislip",
 "native_hmmd",
 "native_hostlink",
-"native_hot_workers",
 "native_hotswap",
 "native_hpack",
 "native_http_client",
@@ -11679,7 +11702,7 @@
 "native_path_params",
 "native_pca9685",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_plaintext",
 "native_pmbus",
@@ -11771,7 +11794,7 @@
 "native_stomp",
 "native_sunspec",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telemetry",
 "native_telnet",
 "native_template",
@@ -11785,7 +11808,7 @@
 "native_trace_capture",
 "native_transport",
 "native_ubx",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_umati",
@@ -11805,6 +11828,7 @@
 "native_wifi_sniffer",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate",
 "native_xmpp",
@@ -11845,7 +11869,6 @@
 "native_gateway",
 "native_gpio_map",
 "native_h3_server",
-"native_hot_workers",
 "native_hotswap",
 "native_http_client",
 "native_http_parser",
@@ -11885,7 +11908,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_trace_capture",
@@ -11896,6 +11919,7 @@
 "native_websocket",
 "native_wifi_sniffer",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate"
 ],
@@ -11933,7 +11957,6 @@
 "native_gateway",
 "native_gpio_map",
 "native_h3_server",
-"native_hot_workers",
 "native_hotswap",
 "native_http_client",
 "native_http_parser",
@@ -11974,7 +11997,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_trace_capture",
@@ -11985,6 +12008,7 @@
 "native_websocket",
 "native_wifi_sniffer",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate"
 ],
@@ -18709,7 +18733,6 @@
 "native_h3_server",
 "native_haas_mdc",
 "native_happy_eyeballs",
-"native_hot_workers",
 "native_hotswap",
 "native_http_client",
 "native_http_delivery",
@@ -18738,7 +18761,7 @@
 "native_partition",
 "native_path_params",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_power_mgmt",
 "native_presentation",
 "native_prov",
@@ -18765,11 +18788,11 @@
 "native_ssh_sftp",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_upload",
@@ -18782,6 +18805,7 @@
 "native_websocket",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate"
 ],
@@ -18840,7 +18864,6 @@
 "native_forwarded_trust",
 "native_h3_server",
 "native_happy_eyeballs",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_iface_bridge",
@@ -18856,7 +18879,7 @@
 "native_ota",
 "native_path_params",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_presentation",
 "native_quic_server",
 "native_range",
@@ -18869,11 +18892,11 @@
 "native_ssh_conn",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
@@ -18881,6 +18904,7 @@
 "native_websocket",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/shared_primitives/ip.h": [
@@ -18911,7 +18935,6 @@
 "native_forwarded_trust",
 "native_h3_server",
 "native_happy_eyeballs",
-"native_hot_workers",
 "native_http_parser",
 "native_iface",
 "native_iface_bridge",
@@ -18928,7 +18951,7 @@
 "native_ota",
 "native_path_params",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_presentation",
 "native_promisc",
@@ -18945,11 +18968,11 @@
 "native_ssh_conn",
 "native_statsd",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telnet",
 "native_template",
 "native_transport",
-"native_udp_hot",
+"native_udp",
 "native_udp_transport",
 "native_upload",
 "native_web_terminal",
@@ -18957,6 +18980,7 @@
 "native_websocket",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_deflate"
 ],
 "src/shared_primitives/log.c": [
@@ -19282,7 +19306,6 @@
 "native_hislip",
 "native_hmmd",
 "native_hostlink",
-"native_hot_workers",
 "native_hotswap",
 "native_hpack",
 "native_http_client",
@@ -19359,7 +19382,7 @@
 "native_path_params",
 "native_pca9685",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_plaintext",
 "native_pmbus",
@@ -19451,7 +19474,7 @@
 "native_stomp",
 "native_sunspec",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telemetry",
 "native_telnet",
 "native_template",
@@ -19465,7 +19488,7 @@
 "native_trace_capture",
 "native_transport",
 "native_ubx",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_umati",
@@ -19485,6 +19508,7 @@
 "native_wifi_sniffer",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate",
 "native_xmpp",
@@ -19636,7 +19660,6 @@
 "native_hislip",
 "native_hmmd",
 "native_hostlink",
-"native_hot_workers",
 "native_hotswap",
 "native_hpack",
 "native_http_client",
@@ -19713,7 +19736,7 @@
 "native_path_params",
 "native_pca9685",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_plaintext",
 "native_pmbus",
@@ -19805,7 +19828,7 @@
 "native_stomp",
 "native_sunspec",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telemetry",
 "native_telnet",
 "native_template",
@@ -19819,7 +19842,7 @@
 "native_trace_capture",
 "native_transport",
 "native_ubx",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_umati",
@@ -19839,6 +19862,7 @@
 "native_wifi_sniffer",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate",
 "native_xmpp",
@@ -19953,7 +19977,6 @@
 "native_hislip",
 "native_hmmd",
 "native_hostlink",
-"native_hot_workers",
 "native_hotswap",
 "native_hpack",
 "native_http_client",
@@ -20030,7 +20053,7 @@
 "native_path_params",
 "native_pca9685",
 "native_pentest",
-"native_phy_hot",
+"native_phy",
 "native_phy_iface",
 "native_plaintext",
 "native_pmbus",
@@ -20122,7 +20145,7 @@
 "native_stomp",
 "native_sunspec",
 "native_syslog",
-"native_tcp_hot",
+"native_tcp",
 "native_telemetry",
 "native_telnet",
 "native_template",
@@ -20136,7 +20159,7 @@
 "native_trace_capture",
 "native_transport",
 "native_ubx",
-"native_udp_hot",
+"native_udp",
 "native_udp_telemetry",
 "native_udp_transport",
 "native_umati",
@@ -20156,10 +20179,14 @@
 "native_wifi_sniffer",
 "native_wisun",
 "native_workers",
+"native_workers_stack",
 "native_ws_client",
 "native_ws_deflate",
 "native_xmpp",
 "native_zigbee",
 "native_zwave"
+],
+"test/mocks/physical/physical_mock.c": [
+"native_phy"
 ]
 }
