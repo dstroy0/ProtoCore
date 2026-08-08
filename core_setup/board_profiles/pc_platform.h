@@ -286,6 +286,23 @@
 #endif
 #endif
 
+// External RAM a pool can be placed in. 1 = the toolchain has an attribute that moves a BSS object
+// out of internal DRAM; 0 = there is one memory and a pool stays where it is declared. It answers
+// only for the attribute existing: whether a given board is wired for it, and whether a given pool
+// should use it, are the PC_*_IN_PSRAM flags.
+#ifndef PC_HAS_PSRAM
+#if PC_VENDOR_ESP
+#define PC_HAS_PSRAM 1
+#elif PROTOCORE_HOST
+#define PC_HAS_PSRAM 0 // a unit-test build has one flat address space
+#elif PC_VENDOR_MOCK
+#define PC_HAS_PSRAM 0 // the mock vendor has none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_PSRAM (1 = an external-RAM placement attribute in its toolchain, 0 = one memory, and every pool stays in it). Choosing one memory is fine; defaulting into it is not."
+#endif
+#endif
+
 // ---------------------------------------------------------------------------
 // Execution context identity
 // ---------------------------------------------------------------------------
