@@ -18,7 +18,7 @@
 // (PC_SSH_ZLIB_IN_PSRAM). Same mechanism/caveat as the TLS arena and HTTP/2 pool: it needs a
 // framework built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y (the stock arduino-esp32 core
 // ships it OFF, so EXT_RAM_BSS_ATTR would silently no-op); see tools/psram/README.md.
-#if PC_SSH_ZLIB_IN_PSRAM && PROTOCORE_HOT
+#if PC_SSH_ZLIB_IN_PSRAM && PC_HAS_PSRAM
 #include <esp_attr.h> // pulls in sdkconfig.h -> CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
 #if !defined(CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY)
 #error                                                                                                                 \

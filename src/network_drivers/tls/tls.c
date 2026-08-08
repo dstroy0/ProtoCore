@@ -63,7 +63,7 @@
 // default) if you do OTA / NVS / file-serving concurrently with live TLS. See
 // docs/KNOWN_LIMITATIONS.md (TLS -> "Flash-cache / OTA caveat").
 // ---------------------------------------------------------------------------
-#if PC_TLS_ARENA_IN_PSRAM && PROTOCORE_HOT
+#if PC_TLS_ARENA_IN_PSRAM && PC_HAS_PSRAM
 #include <esp_attr.h> // pulls in sdkconfig.h -> CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
 #if !defined(CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY)
 #error                                                                                                                 \
