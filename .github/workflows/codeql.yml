@@ -50,7 +50,7 @@ jobs:
         run: pip install --upgrade platformio
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.4
+        uses: github/codeql-action/init@v4.37.6
         with:
           languages: c-cpp
           queries: security-and-quality
@@ -70,6 +70,6 @@ jobs:
             -e native_mqtt -e native_ws_client -e native_http_client -e native_jwt
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4.37.4
+        uses: github/codeql-action/analyze@v4.37.6
         with:
           category: "/language:c-cpp"
