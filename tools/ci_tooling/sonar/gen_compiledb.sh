@@ -16,7 +16,7 @@
 #   test/compile_commands.json  the committed, host-independent baseline (`directory` = @ROOT@).
 #   compile_commands.json       the scan copy, @ROOT@ expanded to this checkout (git-ignored).
 set -euo pipefail
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../../.."
 ROOT="$(pwd)"
 BASELINE=test/compile_commands.json
 FRAGS=compiledb_frags

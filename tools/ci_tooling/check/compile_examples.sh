@@ -30,7 +30,7 @@ JOBS="${PC_JOBS:-4}"
 SSID="${PC_TEST_SSID:-q_6}"
 PASS="${PC_TEST_PASS:-12345678!}"
 
-here() { cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd; }
+here() { cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd; }
 ROOT="$(here)"
 WORK="${PC_WORK:-/tmp/pc_examples}"
 
