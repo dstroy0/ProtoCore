@@ -18,7 +18,7 @@
 
 // esp_partition type/subtype constants (mirrors esp_partition_type_t/subtype_t so
 // the classifier stays pure and host-testable without the IDF headers).
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_OTA
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
 #endif
@@ -113,7 +113,7 @@ int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *o
     return (int32_t)pc_frame_append(out, cap, PART_CLOSE);
 }
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_OTA
 
 uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max)
 {
@@ -149,6 +149,6 @@ uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max)
     return 0;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_OTA
 
 #endif // PC_ENABLE_PARTITION_MONITOR

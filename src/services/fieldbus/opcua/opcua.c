@@ -18,13 +18,13 @@
 #if PC_ENABLE_OPCUA
 
 // ProtoHandler is named by pc_opcua_proto_handler() in BOTH build arms, so it cannot sit behind
-// the PROTOCORE_HOT guard below.
+// the PC_HAS_NET_STACK guard below.
 #include "network_drivers/session/proto_handler.h"
 
 // ---------------------------------------------------------------------------
 // Built-in type codec
 // ---------------------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/transport/tcp.h"
 #include <time.h>
 #endif
@@ -666,7 +666,7 @@ typedef struct
     OpcUaReadHandler read_handler;
     OpcUaWriteHandler write_handler;
     OpcUaBrowseHandler browse_handler;
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
     uint8_t msg[PC_OPCUA_BUF]; // single-accessor reassembly buffer
     uint8_t resp[2048];        // single-accessor response buffer (ACK / OPN / MSG response)
     uint32_t channel_id;
@@ -1245,7 +1245,7 @@ void pc_opcua_set_browse_handler(OpcUaBrowseHandler fn)
 // ---------------------------------------------------------------------------
 // ESP32 TCP server (ConnProto::PROTO_OPCUA)
 // ---------------------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 
 // Thin adapters over the transport RX read API - the ring is owned by transport;
 // this service never indexes rx_buffer or advances rx_tail itself.
@@ -1466,6 +1466,6 @@ const ProtoHandler *pc_opcua_proto_handler(void)
     return NULL;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_NET_STACK
 
 #endif // PC_ENABLE_OPCUA

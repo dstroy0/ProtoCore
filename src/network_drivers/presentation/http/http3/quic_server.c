@@ -28,7 +28,7 @@
 // The QuicConn + H3Conn pool plus the ingest ring are tens of KB; on a device that is a deliberate
 // footprint choice. Fail fast (like PC_ENABLE_SSH_ZLIB / PC_ENABLE_HTTP2) so it is not an
 // accidental DRAM overflow: move the pool to PSRAM, or acknowledge the internal-DRAM cost.
-#if PROTOCORE_HOT && !PC_QUIC_SERVER_IN_PSRAM && !PC_QUIC_SERVER_ACK_DRAM
+#if PC_HAS_BOUNDED_DRAM && !PC_QUIC_SERVER_IN_PSRAM && !PC_QUIC_SERVER_ACK_DRAM
 #error                                                                                                                 \
     "ProtoCore: PC_ENABLE_HTTP3 - the pc_quic_server QuicConn+H3Conn pool + ingest ring are tens of KB. Set PC_QUIC_SERVER_IN_PSRAM=1 on a PSRAM board (S3 / P4 / WROVER built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y, tools/psram/README.md), OR set PC_QUIC_SERVER_ACK_DRAM=1 to accept the internal-DRAM cost (fits a small pool on a roomy chip)."
 #endif

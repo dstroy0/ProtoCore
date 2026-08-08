@@ -11,7 +11,7 @@
 
 #include "services/file_transfer/http_delivery/http_delivery.h"
 
-#if PC_ENABLE_HTTP_DELIVERY && PROTOCORE_HOT
+#if PC_ENABLE_HTTP_DELIVERY
 
 #include "network_drivers/application/web_assets.h" // PC_SERVICE_WORKER
 #include "protocore.h"
@@ -65,4 +65,4 @@ proto_bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_HTTP_DELIVERY && PROTOCORE_HOT
+#endif // PC_ENABLE_HTTP_DELIVERY

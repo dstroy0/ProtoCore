@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// The UDP target path, run on the host. The env (native_udp_hot) builds with PROTOCORE_HOT_FORCE,
-// so pc_platform.h selects PC_VENDOR_MOCK and PROTOCORE_HOT is 1: these are the same lines that
+// The UDP target path, run on the host. The env declares the capabilities the stack needs,
+// so these are the same lines that
 // ship to silicon, driven against test/mocks/pc_net_host.h instead of lwIP.
 //
 // What it covers: the listener's RX ring and its send ring, the client's send ring, NetAddr
@@ -29,10 +29,6 @@ static const pc_ip *addr(const char *s)
     Ip.parse(s, &a);
     return &a;
 }
-
-#if !PROTOCORE_HOT
-#error "native_udp_hot must build the target path: check base native_hot_base in test_matrix.json"
-#endif
 
 #define PORT 5353
 

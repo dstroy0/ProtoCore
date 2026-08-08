@@ -20,7 +20,7 @@
 // Line builder (pure)
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/transport/udp.h"
 #endif
 static void line_append(pc_line *l, const char *s)
@@ -179,7 +179,7 @@ proto_bool pc_line_ok(const pc_line *l)
 // Cast
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 
 // All UDP-telemetry cast state, owned by one instance (internal linkage): the collector
 // endpoint and the begun flag, grouped so it is one named owner, unreachable cross-TU.
@@ -221,7 +221,7 @@ proto_bool pc_udp_telemetry_send(const char *buf, size_t pos)
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_NET_STACK
 
 proto_bool pc_udp_telemetry_cast(const pc_line *l)
 {

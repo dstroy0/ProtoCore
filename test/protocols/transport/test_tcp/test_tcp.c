@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// The TCP target path, run on the host. The env (native_tcp_hot) builds with PROTOCORE_HOT_FORCE,
-// so pc_platform.h selects PC_VENDOR_MOCK and PROTOCORE_HOT is 1: tcp_conn.c and tcp_listener.c
+// The TCP target path, run on the host. The env declares the capabilities the stack needs,
+// so tcp_conn.c and tcp_listener.c
 // compile the same lines that ship to silicon, driven against test/mocks/pc_net_host.h.
 //
 // Two things live here that the plain native_transport env cannot reach.
@@ -25,10 +25,6 @@
 
 #include <string.h>
 #include <unity.h>
-
-#if !PROTOCORE_HOT
-#error "native_tcp_hot must build the target path: check base native_hot_base in test_matrix.json"
-#endif
 
 #define PORT 8080
 

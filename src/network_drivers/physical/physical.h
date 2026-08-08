@@ -24,15 +24,18 @@
 #include "protocore_config.h"                      // pc_if_kind
 #include "shared_primitives/ip.h"
 
-// Does the selected vendor ship a physical (L1) backend? The real bring-up (radio / Ethernet PHY /
-// lwIP netif access) lives in a per-vendor subdir - physical/esp/ and physical/mock/ today; add
-// physical/stm/, physical/rp/ as they land, and OR their vendor here. When 0 (host/native, or a
-// vendor whose PHY driver is not written), physical.c supplies no-op stubs so the target still
-// builds headless.
-#if PC_VENDOR_ESP || PC_VENDOR_MOCK
+// Is there a physical (L1) backend to drive? The real bring-up (radio / Ethernet PHY / lwIP netif
+// access) lives beside its owner - core_setup/physical/esp/ for silicon, test/mocks/physical/ for a
+// suite. When 0, physical.c supplies no-op stubs so a build with no PHY still links headless.
+//
+// A detected vendor answers for its silicon; anything else answers 0 and turns it on with
+// -DPC_PHYSICAL_HAS_BACKEND=1, which is how a suite drives the backend path without silicon.
+#ifndef PC_PHYSICAL_HAS_BACKEND
+#if PC_VENDOR_ESP
 #define PC_PHYSICAL_HAS_BACKEND 1
 #else
 #define PC_PHYSICAL_HAS_BACKEND 0
+#endif
 #endif
 
 // The ESP backend is C++ (it calls the Arduino WiFi and ETH objects), so these names carry C

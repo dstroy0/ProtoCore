@@ -1,5 +1,5 @@
 {
-  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. PROTOCORE_HOT is host-testable: base an env on native_hot_base and the mocks under test/mocks stand in for silicon, including a queue keyed by handle.",
+  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. A hardware path is host-testable: an env declares the capability it needs and the mocks under test/mocks stand in for silicon, including a queue keyed by handle.",
   "envs": {
     "native_canopen": {
       "desc": "CANopen (CiA 301) message codec (services/fieldbus/canopen): NMT, SYNC, heartbeat, EMCY,\nPDO, and expedited SDO read/write/abort + the COB-ID classifier, over the shared CAN\nframe (shared_primitives/can.h). Pure host tests.",
@@ -949,7 +949,9 @@
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>",
-        "+<network_drivers/presentation/http/http.c>"
+        "+<network_drivers/presentation/http/http.c>",
+        "+<crypto/cipher/chacha20.c>",
+        "+<crypto/rng/rng.c>"
       ],
       "tests": ["integration/http/test_webdav_handler"]
     },
@@ -1247,9 +1249,8 @@
       ],
       "tests": ["integration/transport/test_udp_transport"]
     },
-    "native_tcp_hot": {
-      "desc": "The TCP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand core_setup/*/mock stands in for silicon). This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
-      "base": "native_hot_base",
+    "native_tcp": {
+      "desc": "The TCP path a stack drives, run on the host against the pcb driver in test/mocks. This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
       "flags": [],
       "src": [
         "+<network_drivers/transport/tcp.c>",
@@ -1263,11 +1264,10 @@
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["protocols/transport/test_tcp_hot"]
+      "tests": ["protocols/transport/test_tcp"]
     },
-    "native_hot_workers": {
-      "desc": "PROTOCORE_HOT at PC_WORKER_COUNT=2, which nothing else compiles: native_tcp_hot is\nsingle-worker and takes the other arm of listener_enqueue, and native_workers does not set\nPROTOCORE_HOT, so the multi-worker hot arm - the per-worker queue routing and the wake that\nfollows it - had no witness in the matrix at all.",
-      "base": "native_hot_base",
+    "native_workers_stack": {
+      "desc": "PC_WORKER_COUNT=2 over the stack path, which nothing else compiles: native_tcp is\nsingle-worker and takes the other arm of listener_enqueue, so the multi-worker arm - the per-worker queue routing and the wake that\nfollows it - had no witness in the matrix at all.",
       "flags": ["-DPC_WORKER_COUNT=2"],
       "src": [
         "+<network_drivers/transport/tcp.c>",
@@ -1283,9 +1283,8 @@
       ],
       "tests": ["integration/transport/test_workers"]
     },
-    "native_udp_hot": {
-      "desc": "The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand core_setup/*/mock stands in for silicon). Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
-      "base": "native_hot_base",
+    "native_udp": {
+      "desc": "The UDP path a stack drives, run on the host against the pcb driver in test/mocks. Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
       "flags": [],
       "src": [
         "+<network_drivers/transport/udp/udp_listener.c>",
@@ -1293,7 +1292,7 @@
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["integration/transport/test_udp_hot"]
+      "tests": ["integration/transport/test_udp"]
     },
     "native_wamp": {
       "desc": "WAMP messaging codec (services/iot/wamp): the JSON-array message builders (HELLO /\nSUBSCRIBE / PUBLISH / CALL / REGISTER / YIELD / GOODBYE over JsonWriter) + the positional\narray parser (type / ids / URIs, nesting-aware). Pure host tests.",
@@ -1742,7 +1741,8 @@
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/fieldbus/opcua_client/opcua_client.c>"
       ],
-      "tests": ["integration/fieldbus/test_opcua_client"]
+      "tests": ["integration/fieldbus/test_opcua_client"],
+      "desc": ""
     },
     "native_umati": {
       "desc": "umati / OPC UA for Machine Tools (OPC 40501-1) MachineTool model (services/machine_tool/umati) - the\nBrowse hierarchy + the Read resolver over a bound UmatiMachineTool are host-tested here.\nRequires the OPC UA codec. No heap, no stdlib.",
@@ -2372,7 +2372,8 @@
     "native_mqtt": {
       "flags": ["-DPC_ENABLE_MQTT=1"],
       "src": ["+<services/iot/mqtt/mqtt.c>", "+<server/clock/clock.c>"],
-      "tests": ["unit/iot/test_mqtt"]
+      "tests": ["unit/iot/test_mqtt"],
+      "desc": ""
     },
     "native_ws_client": {
       "flags": ["-DPC_ENABLE_WS_CLIENT=1"],
@@ -2383,7 +2384,8 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["unit/http/test_ws_client"]
+      "tests": ["unit/http/test_ws_client"],
+      "desc": ""
     },
     "native_plaintext": {
       "desc": "The plaintext pool accessor (mmgr/plaintext): bump-allocate + reset semantics,\nalignment, and fail-closed exhaustion. Pure host tests - no lwIP/sockets - so it builds from\nthe accessor and the pool mechanism alone.",
@@ -2403,7 +2405,8 @@
         "+<services/net/snmp/snmp_ber.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["unit/iot/test_snmp_trap"]
+      "tests": ["unit/iot/test_snmp_trap"],
+      "desc": ""
     },
     "native_inflate": {
       "desc": "RFC 1951 INFLATE core (the WebSocket permessage-deflate decompressor). Pure\ncodec - no sockets - so it unit-tests on the host against zlib-generated\nvectors (scratchpad/gen_vectors.py).",
@@ -3850,10 +3853,10 @@
       "src": ["-<*>", "+<mmgr/frame.c>", "+<mmgr/protostr.c>"],
       "tests": ["unit/mmgr/test_frame"]
     },
-    "native_phy_hot": {
-      "desc": "Layer 1 driven through a REAL backend: base native_hot_base selects PC_VENDOR_MOCK,\nso PC_PHYSICAL_HAS_BACKEND is 1 and core_setup/physical/mock stands in for silicon instead of the\nno-op stubs in physical.c. Nothing else in the tree builds that backend, and without it every L1\nreadout answers empty - which means a caller that mishandles a live link reads exactly like one\nthat works, and no assertion can tell them apart. Here the link actually comes up: the station\nassociates and reports its SSID, channel and a negative dBm RSSI; the softAP takes its own address\nwithout stealing the route; Ethernet then takes the default route from the station, the way a\nstack picks one when both are up. That is also the only way to separate the same-signature members\na stub build cannot - eth->init from eth->ready, ip6->init from ip6->ready, and link->mac from\nlink->egress_mac, which return DIFFERENT addresses once a wired link carries traffic. Addresses\nare RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the MACs are checked for the IEEE 802 U/L and\nI/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global IPv6 address is\nchecked not to be an RFC 4291 sec 2.5.6 link-local. PC_RADIO_WIFI_PS is set to max modem so the\nkeep-awake refcount is provable: the first busy_hold forces sleep off and the balancing release\nrestores the configured mode, which is indistinguishable from the held state at the default of 0.\nThis is the only env that compiles radio_power.c's PROTOCORE_HOT arm at all.",
-      "base": "native_hot_base",
+    "native_phy": {
+      "desc": "Layer 1 driven through a REAL backend: the env declares PC_PHYSICAL_HAS_BACKEND=1,\nso and test/mocks/physical stands in for silicon instead of the\nno-op stubs in physical.c. Nothing else in the tree builds that backend, and without it every L1\nreadout answers empty - which means a caller that mishandles a live link reads exactly like one\nthat works, and no assertion can tell them apart. Here the link actually comes up: the station\nassociates and reports its SSID, channel and a negative dBm RSSI; the softAP takes its own address\nwithout stealing the route; Ethernet then takes the default route from the station, the way a\nstack picks one when both are up. That is also the only way to separate the same-signature members\na stub build cannot - eth->init from eth->ready, ip6->init from ip6->ready, and link->mac from\nlink->egress_mac, which return DIFFERENT addresses once a wired link carries traffic. Addresses\nare RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the MACs are checked for the IEEE 802 U/L and\nI/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global IPv6 address is\nchecked not to be an RFC 4291 sec 2.5.6 link-local. PC_RADIO_WIFI_PS is set to max modem so the\nkeep-awake refcount is provable: the first busy_hold forces sleep off and the balancing release\nrestores the configured mode, which is indistinguishable from the held state at the default of 0.\nThis is the only env that compiles radio_power.c's backend arm at all.",
       "flags": [
+        "-DPC_PHYSICAL_HAS_BACKEND=1",
         "-DPC_ENABLE_ETHERNET=1",
         "-DPC_ENABLE_IPV6=1",
         "-DPC_ENABLE_RADIO_POWER=1",
@@ -3863,10 +3866,10 @@
         "-<*>",
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
-        "+<core_setup/physical/mock/physical_mock.c>",
+        "+<../test/mocks/physical/physical_mock.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["unit/physical/test_phy_hot"]
+      "tests": ["unit/physical/test_phy"]
     },
     "native_protostr": {
       "desc": "The bounded-run walks (mmgr/protostr): len, diff, eq, starts, find, has, copy, the\nstep rungs and the classifiers. The number parsers this module also carries are exercised by\nnative_primitives against the numparse contract and are only checked for binding here. Covers the\ntwo opposite cap contracts the header draws - len's nul_cap is a WILLINGNESS to keep looking while\nevery compare's read_cap is a PROMISE that the bytes exist - the first-difference index at every\nposition and every alignment, equality refusing a prefix where starts accepts it (the same walk\nreading the tie the other way), find's first-occurrence rule at every position, its empty needle\nmatching at the start, and a haystack NUL ending the search since a needle byte is never NUL.\nCase folding is checked to touch the letters and NOT '_' vs '?' or '[' vs '{', which differ in the\nsame bit. copy's bound belongs to the destination and always terminates. find is then diffed\nagainst a naive search written in the test over the inputs that break a search: periodic and\nself-overlapping haystacks where a failed match cannot skip the needle's length, needles that are\ntheir own prefix, every substring of the subject taken from every position, a single flipped byte\nat every position of a near-miss, and high-bit bytes that a byte compared as signed would order\nbackwards - each at every offset within a word and under both case rules. Every subject is an\naligned padded region, because that is the only kind of memory the library is ever handed. Plus\none test that each table member is the walk its name says: the table is initialized positionally.",

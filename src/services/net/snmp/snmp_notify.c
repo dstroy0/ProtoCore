@@ -14,7 +14,7 @@
 #include "services/net/snmp/snmp_ber.h"
 
 // The two mandatory bindings of any v2c/v3 notification (RFC 3416 4.2.6).
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/transport/udp.h"
 #include "server/clock/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
 #endif
@@ -112,7 +112,7 @@ size_t pc_snmp_notify_build_v2c(uint8_t *out, size_t cap, const char *community,
 // ---------------------------------------------------------------------------
 // Transport (ESP32 only)
 // ---------------------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 
 // All SNMP-notify transport state, owned by one instance (internal linkage): the trap
 // request-id counter, so it is one named owner, unreachable from any other translation unit.
@@ -164,6 +164,6 @@ proto_bool pc_snmp_inform_v2c(const char *, uint16_t, const char *, uint32_t, co
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_NET_STACK
 
 #endif // PC_ENABLE_SNMP_TRAP

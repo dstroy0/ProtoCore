@@ -13,7 +13,7 @@
 
 #include "crypto/hash/sha1.h"
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_MAC
 #include <esp_mac.h> // esp_read_mac()
 #endif
 
@@ -60,7 +60,7 @@ void pc_uuid_from_mac(const uint8_t mac[6], char out[PC_UUID_STR_LEN])
     out[oi] = '\0';
 }
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_MAC
 void pc_device_uuid(char out[PC_UUID_STR_LEN])
 {
     uint8_t mac[6] = {0};

@@ -19,9 +19,8 @@
 // ---------------------------------------------------------------------------
 
 // Big-endian 16-bit helpers and a length-prefixed UTF-8 string writer.
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
-#include <Arduino.h>
 #endif
 #if PC_HAS_VENDOR_TLS && PC_ENABLE_MQTT_TLS
 #include "network_drivers/tls/tls.h" // persistent client TLS session (csess)
@@ -443,7 +442,7 @@ proto_bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint
 // Transport (ESP32 only): persistent raw-lwIP TCP client + QoS state machine,
 // with mqtts:// over a persistent client TLS session (pc_tls csess).
 // ---------------------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 
 #ifdef PC_MQTT_DEBUG
 #define MQ_DBG(...) printf(__VA_ARGS__)
@@ -1099,6 +1098,6 @@ void pc_mqtt_disconnect()
 {
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_NET_STACK
 
 #endif // PC_ENABLE_MQTT

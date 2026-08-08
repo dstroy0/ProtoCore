@@ -34,6 +34,7 @@
  */
 
 #include "protocore.h"
+#include "crypto/rng/rng.h" // pc_rand_fill(): the CSRF secret's seed
 #include "mmgr/frame.h"     // the diag document is a frame spec, not a concatenation
 #include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/plaintext.h" // the diag document is borrowed, not a stack array
@@ -172,7 +173,7 @@ int32_t listen(uint16_t port, ConnProto proto)
     return (int32_t)(s_inst.listener_count - 1);
 }
 
-#if PROTOCORE_HOT
+#if PC_HAS_SCHEDULER
 // The worker task's per-tick entry (registered with pc_workers_start below); ESP32-only, so it is
 // compiled only where it is used - on host the pipeline runs inline via handle().
 static void pc_pump_trampoline(int worker_id)
@@ -210,21 +211,10 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #endif
 #if PC_ENABLE_CSRF
     {
-        // Seed the CSRF HMAC secret from the hardware RNG (a fixed dev secret on
-        // native/test builds, which have no esp_random).
+        // Seed the CSRF HMAC secret from the generator, which binds and seeds itself on first use
+        // and redraws from the platform on its own schedule.
         uint8_t sec[32];
-#if PROTOCORE_HOT
-        for (int i = 0; i < 8; i++)
-        {
-            uint32_t r = pc_platform_rand_u32();
-            proto_raw_read(sec + i * 4, &r, 4);
-        }
-#else
-        for (int i = 0; i < 32; i++)
-        {
-            sec[i] = (uint8_t)(0xA5 ^ i);
-        }
-#endif
+        pc_rand_fill(sec, sizeof(sec));
         pc_csrf_set_secret(sec, sizeof(sec));
     }
 #endif
@@ -260,7 +250,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
         (void)pc_quic_server_begin(s_inst.h3_port, &h3cfg, pc_h3_server_request, NULL);
     }
 #endif
-#if PROTOCORE_HOT
+#if PC_HAS_SCHEDULER
     // Routes/listeners are now fixed; start the worker task(s) that drive the
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
     Session.workers->start(pc_pump_trampoline);
@@ -354,7 +344,7 @@ int32_t restart(const WebServerConfig *cfg)
 
 void stop(void)
 {
-#if PROTOCORE_HOT
+#if PC_HAS_SCHEDULER
     // Stop the worker task(s) before tearing down the slots they service.
     Session.workers->stop();
 #endif
@@ -582,7 +572,7 @@ void ws_dispatch_close(const WsConn *ws)
  */
 void handle(void)
 {
-#if PROTOCORE_HOT
+#if PC_HAS_SCHEDULER
     if (Session.workers->running())
     {
         return;

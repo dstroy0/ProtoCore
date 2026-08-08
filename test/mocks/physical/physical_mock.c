@@ -18,7 +18,7 @@
 
 #include "network_drivers/physical/physical.h"
 
-#if PC_VENDOR_MOCK
+#if PC_PHYSICAL_HAS_BACKEND && !PC_VENDOR_ESP
 
 // memcpy / strnlen
 
@@ -340,4 +340,4 @@ void pc_phy_monitor_end(void)
     s_mock.on_frame = NULL;
 }
 
-#endif // PC_VENDOR_MOCK
+#endif // PC_PHYSICAL_HAS_BACKEND && !PC_VENDOR_ESP

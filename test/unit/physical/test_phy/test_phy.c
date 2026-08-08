@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Layer 1 driven through a REAL backend: PROTOCORE_HOT_FORCE selects PC_VENDOR_MOCK, so
-// PC_PHYSICAL_HAS_BACKEND is 1 and core_setup/physical/mock stands in for silicon. These are the
+// Layer 1 driven through a REAL backend: the env declares PC_PHYSICAL_HAS_BACKEND=1, so
+// PC_PHYSICAL_HAS_BACKEND is 1 and test/mocks/physical stands in for silicon. These are the
 // same lines a target runs, against a link state that can actually be up - not the no-op stubs.
 //
 // That is what makes the readouts checkable at all: a stub answers every one of them with an empty

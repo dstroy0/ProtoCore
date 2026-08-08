@@ -642,7 +642,7 @@ void stats(uint8_t slot_id)
     int active = Tcp.conn->active_count();
 
     unsigned long up = pc_millis();
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_HEAP_INFO
     uint32_t heap = ESP.getFreeHeap();
 #else
     uint32_t heap = 0;
@@ -747,7 +747,7 @@ void metrics(uint8_t slot_id)
     int active = Tcp.conn->active_count();
 
     unsigned long up = pc_millis();
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_HEAP_INFO
     uint32_t heap = ESP.getFreeHeap();
     uint32_t min_heap = ESP.getMinFreeHeap();
     uint32_t heap_size = ESP.getHeapSize();

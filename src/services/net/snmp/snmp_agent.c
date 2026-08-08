@@ -15,7 +15,7 @@
 #endif
 
 #include "network_drivers/transport/udp.h"
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "server/clock/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
 static uint32_t pc_snmp_uptime_cs()
 {

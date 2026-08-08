@@ -71,8 +71,6 @@ size_t pc_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char *out, 
  */
 size_t pc_delivery_sw_manifest(const char *const *paths, size_t n, const char *version, char *out, size_t cap);
 
-#if PROTOCORE_HOT
-
 /**
  * @brief Serve the service worker and its precache manifest.
  *
@@ -91,7 +89,6 @@ size_t pc_delivery_sw_manifest(const char *const *paths, size_t n, const char *v
  * @return true if both routes were registered.
  */
 proto_bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *version);
-#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_HTTP_DELIVERY
 

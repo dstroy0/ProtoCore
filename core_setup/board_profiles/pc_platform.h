@@ -70,11 +70,6 @@
 #define PC_VENDOR_RP 1
 #elif defined(__TI_COMPILER_VERSION__) || defined(PC_VENDOR_TI_FORCE)
 #define PC_VENDOR_TI 1
-#elif defined(PROTOCORE_HOT_FORCE)
-// No silicon, but the hot path is the thing under test. A mock vendor with real backends under
-// core_setup/*/mock/ puts PROTOCORE_HOT on a machine that can run the suite, so the target path
-// is exercised by tests rather than only by a flash. Last in the chain: a genuine vendor above wins.
-#define PC_VENDOR_MOCK 1
 #else
 #define PROTOCORE_HOST 1
 #endif
@@ -92,32 +87,25 @@
 #ifndef PC_VENDOR_TI
 #define PC_VENDOR_TI 0
 #endif
-#ifndef PC_VENDOR_MOCK
-#define PC_VENDOR_MOCK 0
-#endif
 #ifndef PROTOCORE_HOST
 #define PROTOCORE_HOST 0
 #endif
 
-// The core's two paths. PROTOCORE_HOT runs on the target, PROTOCORE_HOST is the test build,
-// and they are exact complements - there is no third. A gate in the core keys on these and
-// never on a vendor's own macro: `ARDUINO` names one framework, so it cannot select a path
-// for a core that answers to every vendor. Which vendor is board_drivers' question.
-#if PROTOCORE_HOST
-#define PROTOCORE_HOT 0
-#else
-#define PROTOCORE_HOT 1
-#endif
-
 // ---------------------------------------------------------------------------
-// Vendor capabilities - what backend a vendor's core_setup/ provides.
+// Capabilities - what this part has.
 // ---------------------------------------------------------------------------
 //
-// A capability states what a part has. core_setup/ tests them to decide which backend TU compiles,
-// and src/ tests them where a software path and a hardware path both exist. Each is a
-// deliberate statement by the vendor, not a default: choosing software crypto is legitimate (on some parts it is the
-// only option) but it must be chosen. There is no weak symbol behind any of these - linking no backend is an undefined
-// reference, linking two is a duplicate definition, and both fail the build rather than silently selecting one.
+// There are two paths, and a capability is what selects between them: the hardware path where the
+// part has the thing, the software path where it does not. Nothing keys on which build this is.
+//
+// Each is #ifndef, so a build states what it has by defining it. A detected vendor answers for its
+// silicon below; a build with no vendor answers 0 and turns one on with -DPC_HAS_<X>=1, which is
+// how a suite drives a hardware path on a machine that has no hardware.
+//
+// core_setup/ tests these to decide which backend TU compiles, and src/ tests them where a software
+// path and a hardware path both exist. There is no weak symbol behind any of them - linking no
+// backend is an undefined reference, linking two is a duplicate definition, and both fail the build
+// rather than silently selecting one.
 
 // AES-GCM. 1 = the vendor supplies an accelerated AEAD (core_setup/hal/<vendor>); 0 = the portable
 // software backend, which is software AES plus a table GHASH.
@@ -130,8 +118,6 @@
 #define PC_HAS_HW_AESGCM 1
 #elif PROTOCORE_HOST
 #define PC_HAS_HW_AESGCM 0 // a unit-test build has no silicon by definition
-#elif PC_VENDOR_MOCK
-#define PC_HAS_HW_AESGCM 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_HW_AESGCM (1 = accelerated AEAD in core_setup/hal/<vendor>, 0 = portable software AES + table GHASH, ~7.6x slower where measured). Choosing software is fine; defaulting into it is not."
@@ -146,8 +132,6 @@
 #define PC_HAS_HW_BIGNUM 1
 #elif PROTOCORE_HOST
 #define PC_HAS_HW_BIGNUM 0 // a unit-test build has no silicon by definition
-#elif PC_VENDOR_MOCK
-#define PC_HAS_HW_BIGNUM 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_HW_BIGNUM (1 = accelerated backend in core_setup/hal/<vendor>, 0 = portable software Montgomery, which is not constant time). Choosing software crypto is fine; defaulting into it is not."
@@ -165,8 +149,6 @@
 #define PC_HAS_HW_SHA 1
 #elif PROTOCORE_HOST
 #define PC_HAS_HW_SHA 0 // a unit-test build has no silicon by definition
-#elif PC_VENDOR_MOCK
-#define PC_HAS_HW_SHA 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_HW_SHA (1 = a hashing peripheral in core_setup/hal/<vendor>, 0 = the portable software compression functions). Choosing software is fine; defaulting into it is not."
@@ -183,8 +165,6 @@
 #define PC_HAS_HW_AES 1
 #elif PROTOCORE_HOST
 #define PC_HAS_HW_AES 0 // a unit-test build has no silicon by definition
-#elif PC_VENDOR_MOCK
-#define PC_HAS_HW_AES 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_HW_AES (1 = an AES peripheral in core_setup/hal/<vendor>, 0 = the portable software AES). Choosing software is fine; defaulting into it is not."
@@ -201,8 +181,6 @@
 #define PC_HAS_HW_ECC 1
 #elif PROTOCORE_HOST
 #define PC_HAS_HW_ECC 0 // a unit-test build has no silicon by definition
-#elif PC_VENDOR_MOCK
-#define PC_HAS_HW_ECC 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_HW_ECC (1 = an accelerated curve backend in core_setup/hal/<vendor>, 0 = the portable software field arithmetic, which is not constant time on every curve). Choosing software is fine; defaulting into it is not."
@@ -220,8 +198,6 @@
 #define PC_HAS_VENDOR_MDNS 1
 #elif PROTOCORE_HOST
 #define PC_HAS_VENDOR_MDNS 0 // a unit-test build has no vendor component to call
-#elif PC_VENDOR_MOCK
-#define PC_HAS_VENDOR_MDNS 0 // the mock vendor ships none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_VENDOR_MDNS (1 = the SDK's own responder component, 0 = the portable responder over the UDP listener). Choosing the portable one is fine; defaulting into it is not."
@@ -241,8 +217,6 @@
 #define PC_HAS_VENDOR_TLS 1
 #elif PROTOCORE_HOST
 #define PC_HAS_VENDOR_TLS 0 // a unit-test build has no SDK stack to drive
-#elif PC_VENDOR_MOCK
-#define PC_HAS_VENDOR_TLS 0 // the mock vendor ships none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_VENDOR_TLS (1 = the SDK's own TLS stack with X.509, 0 = the portable TLS 1.3 over the TCP record layer, raw public key only). Choosing the portable one is fine; defaulting into it is not."
@@ -260,8 +234,6 @@
 #define PC_HAS_VENDOR_SNTP 1
 #elif PROTOCORE_HOST
 #define PC_HAS_VENDOR_SNTP 0 // a unit-test build has no SDK client to start
-#elif PC_VENDOR_MOCK
-#define PC_HAS_VENDOR_SNTP 0 // the mock vendor ships none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_VENDOR_SNTP (1 = the SDK's own SNTP client, 0 = the portable client over the UDP listener). Choosing the portable one is fine; defaulting into it is not."
@@ -278,8 +250,6 @@
 #define PC_HAS_VENDOR_DNS_RESOLVER 1
 #elif PROTOCORE_HOST
 #define PC_HAS_VENDOR_DNS_RESOLVER 0 // a unit-test build has no stack resolver to marshal into
-#elif PC_VENDOR_MOCK
-#define PC_HAS_VENDOR_DNS_RESOLVER 0 // the mock vendor has none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_VENDOR_DNS_RESOLVER (1 = the stack's own resolver, 0 = the portable resolver over the UDP listener). Choosing the portable one is fine; defaulting into it is not."
@@ -293,8 +263,6 @@
 #define PC_HAS_VENDOR_OTA 1
 #elif PROTOCORE_HOST
 #define PC_HAS_VENDOR_OTA 0 // a unit-test build has no partition table to write
-#elif PC_VENDOR_MOCK
-#define PC_HAS_VENDOR_OTA 0 // the mock vendor ships none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_VENDOR_OTA (1 = the SDK's own updater + boot selector, 0 = none, and the OTA service does not compile). Choosing none is fine; defaulting into it is not."
@@ -308,8 +276,6 @@
 #define PC_HAS_VENDOR_COREDUMP 1
 #elif PROTOCORE_HOST
 #define PC_HAS_VENDOR_COREDUMP 0 // a unit-test build has no crash partition to read
-#elif PC_VENDOR_MOCK
-#define PC_HAS_VENDOR_COREDUMP 0 // the mock vendor ships none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_VENDOR_COREDUMP (1 = the SDK's own crash-image capture, 0 = none, and only the portable decoder compiles). Choosing none is fine; defaulting into it is not."
@@ -324,8 +290,6 @@
 #define PC_HAS_VENDOR_WIFI 1
 #elif PROTOCORE_HOST
 #define PC_HAS_VENDOR_WIFI 0 // a unit-test build has no radio to put in monitor mode
-#elif PC_VENDOR_MOCK
-#define PC_HAS_VENDOR_WIFI 0 // the mock vendor has none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_VENDOR_WIFI (1 = an SDK WiFi driver reachable below the IP stack, 0 = none, and monitor mode and the peer-to-peer radio refuse). Choosing none is fine; defaulting into it is not."
@@ -339,11 +303,121 @@
 #define PC_HAS_VENDOR_CAN 1
 #elif PROTOCORE_HOST
 #define PC_HAS_VENDOR_CAN 0 // a unit-test build has no controller to open
-#elif PC_VENDOR_MOCK
-#define PC_HAS_VENDOR_CAN 0 // the mock vendor has none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_VENDOR_CAN (1 = an SDK CAN / TWAI driver, 0 = none, and the bus capture refuses). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// A stack with pcbs to bind. 1 = there is one to open a socket on; 0 = there is none, and every
+// listener and outbound client refuses. The transport owners (tcp.h, udp.h) are portable either
+// way - this answers whether anything is underneath them.
+// Declared, not sniffed. Unlike the bus and pin seams, whose owners resolve to a refusing arm on
+// their own, turning this on compiles whole transport translation units into every consumer - so an
+// env states it and carries those sources, rather than inheriting it from a header being reachable.
+#ifndef PC_HAS_NET_STACK
+#if PC_VENDOR_ESP
+#define PC_HAS_NET_STACK 1
+#elif PROTOCORE_HOST
+#define PC_HAS_NET_STACK 0 // until an env declares it and builds the transport
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_NET_STACK (1 = a stack with pcbs to bind, 0 = none, and every listener and client refuses). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Tasks to run on. 1 = there is a scheduler, so the pipeline runs on its own worker and a delay
+// sleeps; 0 = there is one context, the pipeline runs inline from the caller's loop, and a delay
+// spins on the clock.
+#ifndef PC_HAS_SCHEDULER
+#if PC_VENDOR_ESP
+#define PC_HAS_SCHEDULER 1
+#elif PROTOCORE_HOST
+#define PC_HAS_SCHEDULER 0 // one context: the caller's
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_SCHEDULER (1 = tasks the pipeline can run on, 0 = one context and an inline pipeline). Choosing one context is fine; defaulting into it is not."
+#endif
+#endif
+
+// A factory MAC to read. 1 = the SDK hands back a burned-in address the device identity is derived
+// from; 0 = there is none, and the identity comes from wherever the application puts it.
+#ifndef PC_HAS_VENDOR_MAC
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_MAC 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_MAC 0 // a unit-test build has no burned-in address
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_MAC (1 = a burned-in address from the SDK, 0 = none). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Heap and reset introspection. 1 = the SDK reports free / minimum-free heap and why the part last
+// reset, which the health readouts and the guardrails report; 0 = there is none and they report 0.
+#ifndef PC_HAS_VENDOR_HEAP_INFO
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_HEAP_INFO 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_HEAP_INFO 0 // the host allocator is not ours to measure
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_HEAP_INFO (1 = SDK heap and reset-reason readouts, 0 = none, and the health panel reports 0). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Non-volatile key-value storage. 1 = the SDK keeps a key-value store across a reboot, which is
+// what provisioned credentials are written to; 0 = there is none and provisioning has nowhere to
+// put them.
+#ifndef PC_HAS_VENDOR_NVS
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_NVS 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_NVS 0 // nothing here outlives the process
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_NVS (1 = an SDK key-value store that survives a reboot, 0 = none, and provisioning does not compile). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// A Bluetooth controller whose memory can be released. 1 = the SDK ships one; 0 = there is none and
+// there is nothing to release. Its own axis from CONFIG_BT_ENABLED, which says whether a given
+// build compiled it in.
+#ifndef PC_HAS_VENDOR_BT
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_BT 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_BT 0 // no controller, so no memory to hand back
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_BT (1 = an SDK Bluetooth controller, 0 = none). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Power management. 1 = the SDK reports why the part reset, sets the CPU clock, reads the die
+// temperature and gates a radio's power domain; 0 = there is none of that to bind to.
+#ifndef PC_HAS_VENDOR_PM
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_PM 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_PM 0 // no clock to set, no die to measure
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_PM (1 = SDK reset-reason / CPU clock / die temperature / power-domain gating, 0 = none, and the power plan is advice with nothing to apply it to). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// An internal RAM segment a pool can overflow. 1 = link-time placement is bounded and a pool that
+// does not fit has to be moved or acknowledged; 0 = one address space, so the budget guards have
+// nothing to protect.
+#ifndef PC_HAS_BOUNDED_DRAM
+#if PC_VENDOR_ESP
+#define PC_HAS_BOUNDED_DRAM 1
+#elif PROTOCORE_HOST
+#define PC_HAS_BOUNDED_DRAM 0 // the host has as much as it asks for
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_BOUNDED_DRAM (1 = a bounded internal RAM segment the budget guards check, 0 = one address space). Choosing one address space is fine; defaulting into it is not."
 #endif
 #endif
 
@@ -356,8 +430,6 @@
 #define PC_HAS_PSRAM 1
 #elif PROTOCORE_HOST
 #define PC_HAS_PSRAM 0 // a unit-test build has one flat address space
-#elif PC_VENDOR_MOCK
-#define PC_HAS_PSRAM 0 // the mock vendor has none either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_PSRAM (1 = an external-RAM placement attribute in its toolchain, 0 = one memory, and every pool stays in it). Choosing one memory is fine; defaulting into it is not."
@@ -662,15 +734,11 @@ typedef ip_addr_t pc_net_ip;
 #define pc_net_igmp_join igmp_joingroup
 #define pc_net_igmp_leave igmp_leavegroup
 
-#elif PROTOCORE_HOST || PC_VENDOR_MOCK
+#elif PROTOCORE_HOST
 
-// The test build has no vendor stack, so the same surface comes from a host driver the test
-// environment puts on the include path (test/mocks/pc_net_host.h), exactly the way it supplies
-// <Arduino.h>. Guarded on presence so a host build without that path is unchanged: it simply has
-// no transport, which is what it had before this arm existed.
-//
-// The mock vendor shares this arm rather than owning a second copy. It is hot, but it has no more
-// silicon than the test build does, and a stack surface duplicated per path is one that drifts.
+// No vendor stack, so the same surface comes from a host driver the test environment puts on the
+// include path (test/mocks/pc_net_host.h), exactly the way it supplies <Arduino.h>. Guarded on
+// presence, so a build without that path simply has no transport.
 #if defined(__has_include)
 #if __has_include("pc_net_host.h")
 #include "pc_net_host.h" // PC_ALLOW_LATE_INCLUDE: ordered - the host driver for the block above
@@ -692,8 +760,7 @@ typedef ip_addr_t pc_net_ip;
 #ifndef PC_HAS_BUS
 #if PC_VENDOR_ESP
 #define PC_HAS_BUS 1
-#elif PROTOCORE_HOST || PC_VENDOR_MOCK
-// Both take the seam from the one arm above that includes the host driver, so they answer together.
+#elif PROTOCORE_HOST
 #define PC_HAS_BUS PC_PLATFORM_HAS_BUS
 #else
 #error                                                                                                                 \
@@ -714,8 +781,7 @@ typedef ip_addr_t pc_net_ip;
 #ifndef PC_HAS_GPIO
 #if PC_VENDOR_ESP
 #define PC_HAS_GPIO 1
-#elif PROTOCORE_HOST || PC_VENDOR_MOCK
-// Both take the seam from the one arm above that includes the host driver, so they answer together.
+#elif PROTOCORE_HOST
 #define PC_HAS_GPIO PC_PLATFORM_HAS_GPIO
 #else
 #error                                                                                                                 \

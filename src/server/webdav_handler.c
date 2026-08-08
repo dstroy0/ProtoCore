@@ -12,6 +12,7 @@
  */
 
 #include "server/webdav_handler.h"
+#include "crypto/rng/rng.h" // pc_rand_fill(): the lock token's unpredictable half
 #include "mmgr/membuild.h"
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/presentation/http/http.h"
@@ -646,9 +647,9 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             shared = req->body_len && dav_body_has(req, "shared");
             depth_inf = pc_webdav_depth(http_get_header(req, "Depth"), PC_DAV_DEPTH_INFINITY) != 0;
             unsigned long tok = (unsigned long)pc_millis();
-#if PROTOCORE_HOT
-            tok ^= (unsigned long)pc_platform_rand_u32();
-#endif
+            uint32_t tok_rand = 0;
+            pc_rand_fill((uint8_t *)&tok_rand, sizeof(tok_rand)); // boundary: bytes into the scalar
+            tok ^= (unsigned long)tok_rand;
             pc_sb sb_token2 = {token, sizeof(token), 0, PROTO_TRUE};
             pc_sb_put(&sb_token2, "opaquelocktoken:");
             pc_sb_hex(&sb_token2, (uint64_t)(tok), 8);
