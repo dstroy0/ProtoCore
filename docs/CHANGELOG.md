@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- pc_server_reset() drops the not-found handler, and native_swar builds no library source ([`c8e8af8`](https://github.com/dstroy0/ProtoCore/commit/c8e8af8a227a246e77bfb136f09cbb15629a50f2))
 - the pin guards ask for the capability, and the drivers run against the pin table ([`cf45985`](https://github.com/dstroy0/ProtoCore/commit/cf45985521ce8622b5a81575b1dc953b8f584c74))
 - Deflate and Inflate bind their instance inside the gate that declares its type ([`e526098`](https://github.com/dstroy0/ProtoCore/commit/e526098d036c4ac86b76d41e0b20564162ea95eb))
 - the bus guards ask for the capability instead of asking about the build ([`aeb242e`](https://github.com/dstroy0/ProtoCore/commit/aeb242e0989b129575397013abf0a2f3ab8657c6))
@@ -16,6 +17,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2cd4767`](https://github.com/dstroy0/ProtoCore/commit/2cd47675aaae9245845aaa5aabb4cec2013df066))
 - update CHANGELOG.md [skip ci] ([`452f48f`](https://github.com/dstroy0/ProtoCore/commit/452f48fe7528f6a9d245ad6ebef13e30b64b1d0c))
 - update CHANGELOG.md [skip ci] ([`94c236e`](https://github.com/dstroy0/ProtoCore/commit/94c236e9602c559cab35c22492818b0b9295d4a2))
 - ratchet the test-coverage floor to 16, closing mdns_service, network and route ([`c493e2e`](https://github.com/dstroy0/ProtoCore/commit/c493e2ee08b86b5aa9dc6a1a71fd896c279e3452))
@@ -32,6 +34,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Bump version: 1.0.9 → 1.0.10 ([`01e1aef`](https://github.com/dstroy0/ProtoCore/commit/01e1aef0c9b75555c7f49da39e81e28b38c27881))
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`748e497`](https://github.com/dstroy0/ProtoCore/commit/748e49788690a68e8d3d3fd157ef9330aaec5360))
 - Bump version: 1.0.8 → 1.0.9 ([`8cbcc98`](https://github.com/dstroy0/ProtoCore/commit/8cbcc98b6b0fd98e6531c46b66b4188ac5c7b31c))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`1c261c8`](https://github.com/dstroy0/ProtoCore/commit/1c261c888eec7eefa0f1f197c5defaf8a142a12d))
 - Bump version: 1.0.7 → 1.0.8 ([`9701de6`](https://github.com/dstroy0/ProtoCore/commit/9701de6c00b710b2e684f7cf31931d4431e09dc7))
