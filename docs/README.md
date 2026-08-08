@@ -394,6 +394,8 @@ src/
 │   │   ├── tls.h
 │   │   ├── tls13_kdf.c
 │   │   ├── tls13_kdf.h
+│   │   ├── tls_conn.c
+│   │   ├── tls_conn.h
 │   │   ├── tls_record.c
 │   │   └── tls_record.h
 │   └── transport/
@@ -1547,8 +1549,14 @@ guards at compile time.
 | `PC_THEMES_INCLUDE_TRADEMARKED` | `1` | Include the trademark-named themes in the embedded set (default on / open-source). |
 | `PC_THREAD_MAX_DATA` | `256` | Max spinel payload bytes carried in one HDLC-lite frame. |
 | `PC_TIME_SOURCE_MAX` | `4` | Maximum registered time sources. |
+| `PC_TLS13_KS_TERMS` | `12` |  |
+| `PC_TLS13_SECRET_LEN` | `32` |  |
 | `PC_TLS_ACK_MULTI_CONN_DRAM` | `0` | Acknowledge that a MAX_TLS_CONNS > 1 build has been sized to fit. |
 | `PC_TLS_ARENA_IN_PSRAM` | `0` | Place the TLS arena in external PSRAM instead of internal DRAM (ESP32). |
+| `PC_TLS_CONN_MSG_CAP` | `1024` |  |
+| `PC_TLS_CONN_REC_CAP` | `1024` |  |
+| `PC_TLS_CONN_STATE_CAP` | `384` |  |
+| `PC_TLS_CONN_TERMS` | `5` |  |
 | `PC_TLS_MAX_FRAG_LEN` | `0` | Cap TLS records via the Maximum Fragment Length extension (RFC 6066). |
 | `PC_TLS_TICKET_LIFETIME_S` | `86400` | Session-ticket lifetime / key-rotation period in seconds (see PC_ENABLE_TLS_RESUMPTION). |
 | `PC_TRUSTED_PROXY_MAX` | `2` | Number of trusted-upstream CIDR rules the forwarded-client resolver holds (BSS table). |
