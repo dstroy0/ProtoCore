@@ -102,6 +102,23 @@ void *pc_plaintext_alloc(size_t n, size_t align);
 pc_span pc_plaintext_span(size_t n, size_t align);
 
 /**
+ * @brief Borrow @p n bytes that outlive the dispatch, as a span.
+ *
+ * The transient borrows above die at the next pc_plaintext_reset(), which runs before every event.
+ * State that spans dispatches - a receive ring holding a partial message between polls, a packet
+ * held for retransmit until it is acknowledged - comes from here instead: the persistent end grows
+ * up from the arena base while the scratch end bumps down from the top, so the reset never reaches
+ * it. The bytes come back zeroed.
+ *
+ * This is the plaintext half of ::pc_secure_persist_span. Bytes that are key material belong in the
+ * secure pool, whose reclaim wipes; these are not wiped.
+ *
+ * @param n bytes requested.
+ * @return a span over @p n writable bytes, or an empty span if it does not fit.
+ */
+pc_span pc_plaintext_persist_span(size_t n);
+
+/**
  * @brief Reclaim the whole arena (empties it).
  *
  * Called by Session.tick() before each event dispatch. Invalidates every pointer
@@ -164,6 +181,7 @@ int pc_plaintext_slot_of(const void *p);
  *
  * @var PlainNs::alloc       borrow @c n bytes aligned to @c align, or NULL if it does not fit
  * @var PlainNs::span        the same borrow as a span, so the length travels with the pointer
+ * @var PlainNs::persist     a span that outlives the dispatch, for state that spans polls
  * @var PlainNs::reset       empty the calling worker's arena
  * @var PlainNs::mark        capture the arena offset, to release back to
  * @var PlainNs::release     reclaim everything borrowed since a mark, LIFO
@@ -180,6 +198,7 @@ typedef struct
 {
     void *(*alloc)(size_t n, size_t align);
     pc_span (*span)(size_t n, size_t align);
+    pc_span (*persist)(size_t n);
     void (*reset)(void);
     size_t (*mark)(void);
     void (*release)(size_t mark);
@@ -197,9 +216,18 @@ typedef struct
  *
  * `unused` because this header reaches files that take none of it.
  */
-static const PlainNs plain __attribute__((unused)) = {
-    pc_plaintext_alloc, pc_plaintext_span,       pc_plaintext_reset,    pc_plaintext_mark, pc_plaintext_release,
-    pc_plaintext_used,  pc_plaintext_high_water, pc_plaintext_capacity, pc_plaintext_owns, pc_plaintext_slot_of};
+// Designated, so a member's position in the struct does not decide what it binds to.
+static const PlainNs plain __attribute__((unused)) = {.alloc = pc_plaintext_alloc,
+                                                      .span = pc_plaintext_span,
+                                                      .persist = pc_plaintext_persist_span,
+                                                      .reset = pc_plaintext_reset,
+                                                      .mark = pc_plaintext_mark,
+                                                      .release = pc_plaintext_release,
+                                                      .used = pc_plaintext_used,
+                                                      .high_water = pc_plaintext_high_water,
+                                                      .capacity = pc_plaintext_capacity,
+                                                      .owns = pc_plaintext_owns,
+                                                      .slot_of = pc_plaintext_slot_of};
 
 PROTO_END_DECLS
 

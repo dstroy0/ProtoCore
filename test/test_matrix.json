@@ -2374,7 +2374,13 @@
     },
     "native_mqtt": {
       "flags": ["-DPC_ENABLE_MQTT=1"],
-      "src": ["+<services/iot/mqtt/mqtt.c>", "+<server/clock/clock.c>"],
+      "src": [
+        "+<services/iot/mqtt/mqtt.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<network_drivers/session/worker.c>"
+      ],
       "tests": ["unit/iot/test_mqtt"],
       "desc": ""
     },

@@ -129,6 +129,16 @@ pc_span pc_plaintext_span(size_t n, size_t align)
     return pc_span_from((uint8_t *)pc_plaintext_alloc(n, align), n);
 }
 
+pc_span pc_plaintext_persist_span(size_t n)
+{
+    int w = cur_worker();
+    assert_single_owner(w);
+    // The persistent end grows up from the base and the scratch end bumps down from the top, so the
+    // per-dispatch reset never reaches this and no release reclaims it. The arena hands these bytes
+    // back zeroed. The secure pool's half of this is pc_secure_persist_span().
+    return pc_span_from((uint8_t *)pc_arena_persist_alloc(bind(w), n), n);
+}
+
 void pc_plaintext_reset(void)
 {
     int w = cur_worker();

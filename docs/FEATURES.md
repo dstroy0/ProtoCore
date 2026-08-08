@@ -764,7 +764,7 @@ NXP MPR121 12-channel capacitive-touch controller (I2C). Default off. services/p
 
 `PC_ENABLE_MQTT`
 
-MQTT 3.1.1 publish/subscribe client (raw lwIP, optional MQTTS over TLS). Default off. When set, src/services/iot/mqtt/mqtt.h provides a persistent outbound client: connect to a broker, PUBLISH (QoS 0/1/2) and SUBSCRIBE to topics, receive incoming messages via a callback, with keep-alive pings - the dominant IoT messaging pattern, for telemetry push and remote command. The packet codec is host-testable; the transport (DNS + raw lwIP TCP, MQTTS via client-side mbedTLS) is ESP32-only. Full QoS 0/1/2 (outbound DUP retransmit, inbound QoS-2 de-duplication by packet id) and Last-Will are supported.
+MQTT 3.1.1 publish/subscribe client (raw lwIP, optional MQTTS over TLS). Default off. When set, src/services/iot/mqtt/mqtt.h provides a persistent outbound client: connect to a broker, PUBLISH (QoS 0/1/2) and SUBSCRIBE to topics, receive incoming messages via a callback, with keep-alive pings - the dominant IoT messaging pattern, for telemetry push and remote command. Nothing blocks: pc_mqtt_connect() returns as soon as the connect is started and pc_mqtt_loop() steps the link (transport, then TLS handshake, then CONNACK) against PC_MQTT_CONNECT_MS, so the caller polls pc_mqtt_connected() rather than waiting. The codec frames a packet into the client's wire buffer and raises a flag; the worker moves the bytes. The packet codec is host-testable; the transport (DNS + raw lwIP TCP, MQTTS via client-side mbedTLS) is ESP32-only. Full QoS 0/1/2 (outbound DUP retransmit, which marks the packet where it lies and rewinds the send, and inbound QoS-2 de-duplication by packet id) and Last-Will are supported.
 
 ## MQTT SN
 
