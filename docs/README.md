@@ -224,6 +224,8 @@ src/
 │   │   ├── file_serving/  (file_serving.h, file_serving.c)
 │   │   ├── mdns_adaptive/  (mdns_adaptive.h, mdns_adaptive.c)
 │   │   ├── mdns_service/  (mdns_service.h, mdns_service.c)
+│   │   ├── ntp/
+│   │   │   └── ntp.h
 │   │   ├── ntp_server/  (ntp_server.h, ntp_server.c)
 │   │   ├── ntp_service/  (ntp_service.h, ntp_service.c)
 │   │   ├── nts/  (nts.h, nts.c)
