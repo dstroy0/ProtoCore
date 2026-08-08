@@ -267,7 +267,7 @@ Each **green** node is a parent feature and each **blue** node a child that need
 | `PC_ENABLE_TLS` | MAX_TLS_CONNS gt 1 |
 </details>
 
-_44 hard dependencies, 2 PSRAM gates, 7 derived flags._
+_45 hard dependencies, 2 PSRAM gates, 7 derived flags._
 
 <!-- prettier-ignore-end -->
 
@@ -285,7 +285,7 @@ The jump from a bare sketch to a running server is almost entirely the WiFi/lwIP
 
 Measured on `esp32dev` (Arduino core). The **default server** (HTTP + WebSocket + SSE + multipart + file serving + Basic auth) is **735 KB flash / 64.6 KB RAM** on a chip with 1,280 KB flash / 320 KB RAM. Everything past that is opt-in and links only what you name.
 
-**[Per-feature build footprints &rarr;](docs/FOOTPRINTS.md)** - 79 features that add measurable flash, each measured from isolated builds as a range: best case (its dependencies are already linked) to worst case (budget with this). Every example's absolute total is there too.
+**[Per-feature build footprints &rarr;](docs/FOOTPRINTS.md)** - 80 features that add measurable flash, each measured from isolated builds as a range: best case (its dependencies are already linked) to worst case (budget with this). Every example's absolute total is there too.
 
 <!-- prettier-ignore-end -->
 

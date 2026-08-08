@@ -32,6 +32,7 @@ digraph flag_deps {
   MQTT [label="MQTT", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mqtt", target="_blank", tooltip="PC_ENABLE_MQTT - enables 1"];
   MQTT_TLS [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD><FONT COLOR="#e6edf3">MQTT_TLS  </FONT></TD><TD BGCOLOR="#238636"><FONT COLOR="#eaffef" POINT-SIZE="8.5">TLS</FONT></TD></TR></TABLE>>, fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mqtt-tls", target="_blank", tooltip="PC_ENABLE_MQTT_TLS - needs MQTT"];
   MTLS [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD><FONT COLOR="#e6edf3">MTLS  </FONT></TD><TD BGCOLOR="#238636"><FONT COLOR="#eaffef" POINT-SIZE="8.5">TLS</FONT></TD></TR></TABLE>>, fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mtls", target="_blank", tooltip="PC_ENABLE_MTLS"];
+  NTP_SERVER [label="NTP_SERVER", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ntp-server", target="_blank", tooltip="PC_ENABLE_NTP_SERVER - needs TIME_SOURCE"];
   OIDC [label="OIDC", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#oidc", target="_blank", tooltip="PC_ENABLE_OIDC - needs SSH"];
   OPCUA [label="OPCUA", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#opcua", target="_blank", tooltip="PC_ENABLE_OPCUA - enables 4"];
   OPCUA_CLIENT [label="OPCUA_CLIENT", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#opcua-client", target="_blank", tooltip="PC_ENABLE_OPCUA_CLIENT - needs OPCUA"];
@@ -54,6 +55,7 @@ digraph flag_deps {
   SSH_SNTRUP761 [label="SSH_SNTRUP761", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-sntrup761", target="_blank", tooltip="PC_ENABLE_SSH_SNTRUP761 - enables 4"];
   SSH_ZLIB [label="SSH_ZLIB", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-zlib", target="_blank", tooltip="PC_ENABLE_SSH_ZLIB - needs SSH"];
   STATS [label="STATS", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#stats", target="_blank", tooltip="PC_ENABLE_STATS - enables 1"];
+  TIME_SOURCE [label="TIME_SOURCE", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#time-source", target="_blank", tooltip="PC_ENABLE_TIME_SOURCE - enables 1"];
   TLS [label="TLS", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#tls", target="_blank", tooltip="PC_ENABLE_TLS"];
   TLS_RESUMPTION [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD><FONT COLOR="#e6edf3">TLS_RESUMPTION  </FONT></TD><TD BGCOLOR="#238636"><FONT COLOR="#eaffef" POINT-SIZE="8.5">TLS</FONT></TD></TR></TABLE>>, fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#tls-resumption", target="_blank", tooltip="PC_ENABLE_TLS_RESUMPTION"];
   UMATI [label="UMATI", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#umati", target="_blank", tooltip="PC_ENABLE_UMATI - needs OPCUA"];
@@ -97,6 +99,7 @@ digraph flag_deps {
   SSH_SNTRUP761 -> SSH;
   SSH_SNTRUP761 -> SSH_CLIENT;
   STATS -> METRICS;
+  TIME_SOURCE -> NTP_SERVER;
   WEBSOCKET -> WEB_TERMINAL;
   WEBSOCKET -> WS_DEFLATE;
   WS_CLIENT -> WS_CLIENT_TLS;

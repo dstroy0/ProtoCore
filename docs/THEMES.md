@@ -5,7 +5,7 @@
 **112 themes.** Opt a served page into one with a build directive - `<!--#theme dracula-->` or `<!--#theme generated/dracula-->` before `</head>` (see [web_assets/README.md](../web_assets/README.md)). Need an exact color that is not here? Generate your own from one anchor color:
 
 ```sh
-python web_assets/wizard/gen_themes.py custom --base '#36454f' --mode dark --name charcoal --out my.css
+python -m web_assets.wizard.gen_themes custom --base '#36454f' --mode dark --name charcoal --out my.css
 ```
 
 &dagger; = named after a company/product trademark: shipped in the open-source (AGPL) build, but dropped from a commercial build (`PC_THEMES_INCLUDE_TRADEMARKED=0`). The palette is just colors; only the branded name is gated.
