@@ -7,6 +7,7 @@
  */
 
 #include "services/system/control/control.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_CONTROL
 
@@ -122,7 +123,7 @@ static size_t put_u32le(uint8_t *p, uint32_t v)
 static size_t put_f32le(uint8_t *p, float v)
 {
     uint32_t u;
-    memcpy(&u, &v, 4); // reinterpret the IEEE-754 bits, then emit little-endian
+    mem.cpy(&u, &v, 4); // reinterpret the IEEE-754 bits, then emit little-endian
     return put_u32le(p, u);
 }
 
@@ -133,7 +134,7 @@ size_t pid_log_header(uint8_t *buf, size_t cap, const Pid *p, float dt)
         return 0;
     }
     size_t o = 0;
-    memcpy(buf, PID_LOG_MAGIC, 4);
+    mem.cpy(buf, PID_LOG_MAGIC, 4);
     o += 4;
     buf[o++] = PID_LOG_VERSION;
     buf[o++] = 0; // flags (reserved)

@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
+#include "mmgr/protomem.h"
 #include "crypto/asymmetric/ecdsa.h"   // pc_ecdsa_p256_verify() (ecdsa-sha2-nistp256)
 #include "crypto/asymmetric/ed25519.h" // pc_ed25519_verify() (ssh-ed25519 client keys)
 #include "mmgr/bytes.h"                // pc_rd_str() - the RFC 4251 sec 5 string reader
@@ -73,7 +74,7 @@ static proto_bool read_string(const uint8_t *p, size_t len, size_t *off, char *o
         *off = start;       // same contract as pc_rd_str: a failed read leaves the offset on its own field
         return PROTO_FALSE; // does not fit our fixed buffer
     }
-    memcpy(out, s, n);
+    mem.cpy(out, s, n);
     out[n] = '\0';
     return PROTO_TRUE;
 }
@@ -91,8 +92,8 @@ static proto_bool mpint_to_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, 
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, outlen);
-    memcpy(out + (outlen - vlen), m + off, vlen);
+    mem.set(out, 0, outlen);
+    mem.cpy(out + (outlen - vlen), m + off, vlen);
     return PROTO_TRUE;
 }
 
@@ -107,7 +108,7 @@ static proto_bool parse_ssh_rsa_blob(const uint8_t *blob, uint32_t blen, uint8_t
     {
         return PROTO_FALSE;
     }
-    if (type_len != 7 || memcmp(type, "ssh-rsa", 7) != 0)
+    if (type_len != 7 || mem.cmp(type, "ssh-rsa", 7) != 0)
     {
         return PROTO_FALSE;
     }
@@ -149,7 +150,7 @@ static proto_bool parse_pc_ed25519_blob(const uint8_t *blob, uint32_t blen, uint
     {
         return PROTO_FALSE;
     }
-    if (type_len != 11 || memcmp(type, "ssh-ed25519", 11) != 0)
+    if (type_len != 11 || mem.cmp(type, "ssh-ed25519", 11) != 0)
     {
         return PROTO_FALSE;
     }
@@ -163,7 +164,7 @@ static proto_bool parse_pc_ed25519_blob(const uint8_t *blob, uint32_t blen, uint
     {
         return PROTO_FALSE;
     }
-    memcpy(pub, pk, 32);
+    mem.cpy(pub, pk, 32);
     return PROTO_TRUE;
 }
 
@@ -179,7 +180,7 @@ static proto_bool parse_pc_ecdsa_blob(const uint8_t *blob, uint32_t blen, uint8_
     {
         return PROTO_FALSE;
     }
-    if (type_len != 19 || memcmp(type, "ecdsa-sha2-nistp256", 19) != 0)
+    if (type_len != 19 || mem.cmp(type, "ecdsa-sha2-nistp256", 19) != 0)
     {
         return PROTO_FALSE;
     }
@@ -189,7 +190,7 @@ static proto_bool parse_pc_ecdsa_blob(const uint8_t *blob, uint32_t blen, uint8_
     {
         return PROTO_FALSE;
     }
-    if (curve_len != 8 || memcmp(curve, "nistp256", 8) != 0)
+    if (curve_len != 8 || mem.cmp(curve, "nistp256", 8) != 0)
     {
         return PROTO_FALSE;
     }
@@ -203,7 +204,7 @@ static proto_bool parse_pc_ecdsa_blob(const uint8_t *blob, uint32_t blen, uint8_
     {
         return PROTO_FALSE;
     }
-    memcpy(pub, q, PC_ECDSA_P256_PUB_LEN);
+    mem.cpy(pub, q, PC_ECDSA_P256_PUB_LEN);
     return PROTO_TRUE;
 }
 
@@ -254,7 +255,7 @@ int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8
     }
     out[0] = SSH_MSG_SERVICE_ACCEPT;
     pc_wr32be(out + 1, nl);
-    memcpy(out + 5, name, nl);
+    mem.cpy(out + 5, name, nl);
     *out_len = 5 + nl;
     return 0;
 }
@@ -265,7 +266,7 @@ int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8
 
 int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *req)
 {
-    memset(req, 0, sizeof(*req));
+    mem.set(req, 0, sizeof(*req));
     if (len < 1 || payload[0] != SSH_MSG_USERAUTH_REQUEST)
     {
         return -1;
@@ -377,7 +378,7 @@ int pc_ssh_auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_b
     }
     out[0] = SSH_MSG_USERAUTH_FAILURE;
     pc_wr32be(out + 1, ml);
-    memcpy(out + 5, methods, ml);
+    mem.cpy(out + 5, methods, ml);
     out[5 + ml] = partial ? 1 : 0;
     *out_len = 5 + ml + 1;
     return 0;
@@ -407,11 +408,11 @@ static int build_pk_ok(const SshAuthReq *req, uint8_t *out, size_t *out_len, siz
     out[o++] = SSH_MSG_USERAUTH_PK_OK;
     pc_wr32be(out + o, al);
     o += 4;
-    memcpy(out + o, req->pk_algo, al);
+    mem.cpy(out + o, req->pk_algo, al);
     o += al;
     pc_wr32be(out + o, req->pk_blob_len);
     o += 4;
-    memcpy(out + o, req->pk_blob, req->pk_blob_len);
+    mem.cpy(out + o, req->pk_blob, req->pk_blob_len);
     o += req->pk_blob_len;
     *out_len = o;
     return 0;
@@ -441,7 +442,7 @@ static int build_info_request(uint8_t *out, size_t *out_len, size_t cap)
     o += 4;
     pc_wr32be(out + o, pl);
     o += 4;
-    memcpy(out + o, prompt, pl);
+    mem.cpy(out + o, prompt, pl);
     o += pl;
     out[o++] = 0; // echo = FALSE (the response is a password)
     *out_len = o;
@@ -458,11 +459,11 @@ static int build_info_request(uint8_t *out, size_t *out_len, size_t cap)
 static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *out, size_t *out_len, size_t cap)
 {
     // Key type is taken from the blob (the algo name only steers the RSA signature hash).
-    proto_bool is_ed = req->pk_blob_len >= 4 + 11 && memcmp(req->pk_blob,
+    proto_bool is_ed = req->pk_blob_len >= 4 + 11 && mem.cmp(req->pk_blob,
                                                             "\x00\x00\x00\x0b"
                                                             "ssh-ed25519",
                                                             4 + 11) == 0;
-    proto_bool is_ecdsa = req->pk_blob_len >= 4 + 19 && memcmp(req->pk_blob,
+    proto_bool is_ecdsa = req->pk_blob_len >= 4 + 19 && mem.cmp(req->pk_blob,
                                                                "\x00\x00\x00\x13"
                                                                "ecdsa-sha2-nistp256",
                                                                4 + 19) == 0;
@@ -524,9 +525,9 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     size_t sd = 0;
     pc_wr32be(signed_data.buf + sd, (uint32_t)sid_len);
     sd += 4;
-    memcpy(signed_data.buf + sd, ssh_sess[i].session_id, sid_len);
+    mem.cpy(signed_data.buf + sd, ssh_sess[i].session_id, sid_len);
     sd += sid_len;
-    memcpy(signed_data.buf + sd, req->signed_prefix, req->signed_prefix_len);
+    mem.cpy(signed_data.buf + sd, req->signed_prefix, req->signed_prefix_len);
     sd += req->signed_prefix_len;
 
     // For RSA the signature hash is chosen by the client's algorithm name (RFC 8332),
@@ -588,7 +589,7 @@ int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, ui
         }
         s_auth.ki[i].pending = PROTO_TRUE;
         size_t ul = strnlen(req.user, sizeof(s_auth.ki[i].user) - 1);
-        memcpy(s_auth.ki[i].user, req.user, ul);
+        mem.cpy(s_auth.ki[i].user, req.user, ul);
         s_auth.ki[i].user[ul] = '\0';
         return build_info_request(out, out_len, cap);
     }

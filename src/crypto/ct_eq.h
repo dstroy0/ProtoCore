@@ -19,6 +19,7 @@
 #ifndef PROTOCORE_CT_EQ_H
 #define PROTOCORE_CT_EQ_H
 
+#include "mmgr/protomem.h"
 #include "protocore_config.h" // the entry point: types.h for proto_bool / size_t / uint8_t
 
 /**
@@ -26,7 +27,7 @@
  *        independent of where (or whether) they first differ.
  *
  * Use this for every secret-dependent comparison - AEAD tags, MACs, digests, signature check values - so a
- * timing side channel cannot reveal how many leading bytes matched. Never use memcmp() for those (it returns
+ * timing side channel cannot reveal how many leading bytes matched. Never use mem.cmp() for those (it returns
  * early on the first mismatch). The XOR-accumulate has no data-dependent branch; only the final all-zero test
  * (the intended result) is a comparison.
  */

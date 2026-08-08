@@ -20,6 +20,7 @@
  */
 
 #include "crypto/mac/hmac_sha256.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h" // the secure pool: HMAC working state, wiped on release
 
@@ -51,7 +52,7 @@ static_assert(sizeof(HmacWork) <= PC_WORK_HMAC_SHA256,
 static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[64], uint8_t pad_byte,
                             uint8_t scratch[64])
 {
-    memset(scratch, 0, 64);
+    mem.set(scratch, 0, 64);
     if (key_len > 64)
     {
         pc_sha256(key, key_len, scratch); // keys longer than the block are replaced by their SHA-256 hash

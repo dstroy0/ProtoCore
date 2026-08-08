@@ -7,6 +7,7 @@
  */
 
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_WIFI_SNIFFER
 
@@ -22,7 +23,7 @@ proto_bool pc_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out)
         return PROTO_FALSE;
     }
 
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
 
     uint8_t fc0 = frame[0];
     uint8_t fc1 = frame[1];
@@ -35,16 +36,16 @@ proto_bool pc_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out)
     out->protected_frame = (fc1 & 0x40) != 0;
 
     // Address1 always present at this length (offset 4).
-    memcpy(out->addr1, frame + 4, 6);
+    mem.cpy(out->addr1, frame + 4, 6);
     out->naddr = 1;
     if (len >= 16)
     {
-        memcpy(out->addr2, frame + 10, 6);
+        mem.cpy(out->addr2, frame + 10, 6);
         out->naddr = 2;
     }
     if (len >= 24)
     {
-        memcpy(out->addr3, frame + 16, 6);
+        mem.cpy(out->addr3, frame + 16, 6);
         out->naddr = 3;
     }
     return PROTO_TRUE;
@@ -54,7 +55,7 @@ void pc_wifi_stats_reset(WifiStats *s)
 {
     if (s)
     {
-        memset(s, 0, sizeof(*s));
+        mem.set(s, 0, sizeof(*s));
     }
 }
 
@@ -160,7 +161,7 @@ void pc_wifi_survey_reset(WifiSurvey *s, uint8_t first, uint8_t count)
     {
         return;
     }
-    memset(s, 0, sizeof(*s));
+    mem.set(s, 0, sizeof(*s));
     s->first = clamp_channel(first);
     s->count = (count > PC_WIFI_SNIFFER_MAX_CHANNELS) ? (uint8_t)PC_WIFI_SNIFFER_MAX_CHANNELS : count;
     for (uint8_t i = 0; i < PC_WIFI_SNIFFER_MAX_CHANNELS; i++)
@@ -199,7 +200,7 @@ void pc_wifi_survey_add(WifiSurvey *s, uint8_t channel, int8_t rssi, const WifiF
         // The transmitter address is the AP for a beacon; only present once addr2 was decoded.
         if (f && f->naddr >= 2)
         {
-            memcpy(e->best_bssid, f->addr2, 6);
+            mem.cpy(e->best_bssid, f->addr2, 6);
         }
     }
 }

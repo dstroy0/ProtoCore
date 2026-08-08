@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/enip/enip.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_ENIP
 
@@ -53,12 +54,12 @@ size_t pc_eip_build(uint8_t *buf, size_t cap, const EipHeader *h, const uint8_t 
     p += put16(buf + p, (uint16_t)data_len); // length covers the command data only
     p += put32(buf + p, h->session_handle);
     p += put32(buf + p, h->status);
-    memcpy(buf + p, h->sender_context, 8);
+    mem.cpy(buf + p, h->sender_context, 8);
     p += 8;
     p += put32(buf + p, h->options);
     if (data_len)
     {
-        memcpy(buf + p, data, data_len);
+        mem.cpy(buf + p, data, data_len);
         p += data_len;
     }
     return p;
@@ -74,7 +75,7 @@ proto_bool pc_eip_parse(const uint8_t *buf, size_t len, EipHeader *out, const ui
     out->length = get16(buf + 2);
     out->session_handle = get32(buf + 4);
     out->status = get32(buf + 8);
-    memcpy(out->sender_context, buf + 12, 8);
+    mem.cpy(out->sender_context, buf + 12, 8);
     out->options = get32(buf + 20);
     if ((size_t)EIP_HEADER_SIZE + out->length > len) // declared data not fully buffered
     {
@@ -94,11 +95,11 @@ proto_bool pc_eip_parse(const uint8_t *buf, size_t len, EipHeader *out, const ui
 size_t pc_eip_build_register_session(uint8_t *buf, size_t cap, const uint8_t sender_context[8])
 {
     EipHeader h;
-    memset(&h, 0, sizeof(h));
+    mem.set(&h, 0, sizeof(h));
     h.command = EIP_CMD_REGISTER_SESSION;
     if (sender_context)
     {
-        memcpy(h.sender_context, sender_context, 8);
+        mem.cpy(h.sender_context, sender_context, 8);
     }
     uint8_t data[4];
     put16(data, 1);     // protocol version
@@ -110,12 +111,12 @@ size_t pc_eip_build_unregister_session(uint8_t *buf, size_t cap, uint32_t sessio
                                        const uint8_t sender_context[8])
 {
     EipHeader h;
-    memset(&h, 0, sizeof(h));
+    mem.set(&h, 0, sizeof(h));
     h.command = EIP_CMD_UNREGISTER_SESSION;
     h.session_handle = session_handle; // the session to close
     if (sender_context)
     {
-        memcpy(h.sender_context, sender_context, 8);
+        mem.cpy(h.sender_context, sender_context, 8);
     }
     return pc_eip_build(buf, cap, &h, NULL, 0); // no command-specific data
 }
@@ -138,12 +139,12 @@ size_t pc_eip_build_send_rr_data(uint8_t *buf, size_t cap, uint32_t session_hand
     // Write the header (length = the command-data length) then the command data straight into
     // buf - no temp buffer, so a large CIP payload never lands on the stack.
     EipHeader h;
-    memset(&h, 0, sizeof(h));
+    mem.set(&h, 0, sizeof(h));
     h.command = EIP_CMD_SEND_RR_DATA;
     h.session_handle = session_handle;
     if (sender_context)
     {
-        memcpy(h.sender_context, sender_context, 8);
+        mem.cpy(h.sender_context, sender_context, 8);
     }
     if (pc_eip_build(buf, cap, &h, NULL, 0) == 0) // writes only the 24-octet header, length 0
     {
@@ -162,7 +163,7 @@ size_t pc_eip_build_send_rr_data(uint8_t *buf, size_t cap, uint32_t session_hand
     p += put16(buf + p, (uint16_t)pc_cip_len);
     if (pc_cip_len)
     {
-        memcpy(buf + p, cip, pc_cip_len);
+        mem.cpy(buf + p, cip, pc_cip_len);
         p += pc_cip_len;
     }
     return p;
@@ -171,11 +172,11 @@ size_t pc_eip_build_send_rr_data(uint8_t *buf, size_t cap, uint32_t session_hand
 size_t pc_eip_build_list_identity(uint8_t *buf, size_t cap, const uint8_t sender_context[8])
 {
     EipHeader h;
-    memset(&h, 0, sizeof(h));
+    mem.set(&h, 0, sizeof(h));
     h.command = EIP_CMD_LIST_IDENTITY;
     if (sender_context)
     {
-        memcpy(h.sender_context, sender_context, 8);
+        mem.cpy(h.sender_context, sender_context, 8);
     }
     return pc_eip_build(buf, cap, &h, NULL, 0); // no command-specific data
 }

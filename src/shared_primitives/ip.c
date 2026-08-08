@@ -12,6 +12,7 @@
  */
 
 #include "shared_primitives/ip.h"
+#include "mmgr/protomem.h"
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
 // -------------------------------------------------------------------------------------------
@@ -110,7 +111,7 @@ static proto_bool parse_hextet(const char *s, size_t len, uint16_t *out)
 static void assemble_v6(const uint16_t *head, int nhead, const uint16_t *tail, int ntail, uint8_t out[16])
 {
     uint16_t g[8];
-    memset(g, 0, sizeof(g));
+    mem.set(g, 0, sizeof(g));
     for (int k = 0; k < nhead; k++)
     {
         g[k] = head[k];
@@ -159,7 +160,7 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
         i = 2;
         if (i == len) // the whole address is "::"
         {
-            memset(out, 0, 16);
+            mem.set(out, 0, 16);
             return PROTO_TRUE;
         }
     }
@@ -276,7 +277,7 @@ static size_t format_v4(const uint8_t *b, char *out, size_t cap)
     {
         return 0;
     }
-    memcpy(out, tmp, n);
+    mem.cpy(out, tmp, n);
     out[n] = '\0';
     return n;
 }
@@ -460,7 +461,7 @@ static proto_bool parse(const char *s, pc_ip *out)
         return PROTO_FALSE;
     }
 
-    memset(out->bytes, 0, 16);
+    mem.set(out->bytes, 0, 16);
     if (colon)
     {
         if (!parse_v6(s, len, out->bytes))
@@ -508,8 +509,8 @@ static size_t format(const pc_ip *ip, char *out, size_t cap)
         {
             return 0;
         }
-        memcpy(out, "::ffff:", 7);
-        memcpy(out + 7, tail, tn);
+        mem.cpy(out, "::ffff:", 7);
+        mem.cpy(out + 7, tail, tn);
         out[7 + tn] = '\0';
         return 7 + tn;
     }
@@ -552,7 +553,7 @@ static size_t format(const pc_ip *ip, char *out, size_t cap)
     {
         return 0;
     }
-    memcpy(out, tmp, n);
+    mem.cpy(out, tmp, n);
     out[n] = '\0';
     return n;
 }
@@ -598,13 +599,13 @@ static proto_bool equal(const pc_ip *a, const pc_ip *b)
     {
         return PROTO_TRUE; // both the same non-address family (PC_IP_NONE)
     }
-    return memcmp(a->bytes, b->bytes, (size_t)n) == 0;
+    return mem.cmp(a->bytes, b->bytes, (size_t)n) == 0;
 }
 
 pc_ip pc_ip_from_v4_octets(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
     pc_ip ip;
-    memset(&ip, 0, sizeof(ip));
+    mem.set(&ip, 0, sizeof(ip));
     ip.family = PC_IP_V4;
     ip.bytes[0] = a;
     ip.bytes[1] = b;
@@ -617,7 +618,7 @@ pc_ip pc_ip_from_v6_bytes(const uint8_t bytes[16])
 {
     pc_ip ip;
     ip.family = PC_IP_V6;
-    memcpy(ip.bytes, bytes, 16);
+    mem.cpy(ip.bytes, bytes, 16);
     return ip;
 }
 

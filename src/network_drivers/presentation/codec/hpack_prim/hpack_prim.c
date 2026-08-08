@@ -10,6 +10,7 @@
  */
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
 
@@ -284,7 +285,7 @@ static proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *
         {
             return PROTO_FALSE;
         }
-        memcpy(out, block + *pos, slen);
+        mem.cpy(out, block + *pos, slen);
         *out_len = slen;
     }
     *pos += slen;
@@ -313,7 +314,7 @@ static size_t pc_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_
     {
         return 0;
     }
-    memcpy(out + hdr, s, n);
+    mem.cpy(out + hdr, s, n);
     return hdr + n;
 }
 

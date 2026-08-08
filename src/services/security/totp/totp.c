@@ -10,6 +10,7 @@
  */
 
 #include "services/security/totp/totp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_TOTP
 
@@ -25,11 +26,11 @@ static void pc_hmac_sha1_8(const uint8_t *key, size_t keylen, const uint8_t msg[
     {
         uint8_t kh[PC_SHA1_DIGEST_LEN];
         pc_sha1(key, keylen, kh);
-        memcpy(k, kh, PC_SHA1_DIGEST_LEN);
+        mem.cpy(k, kh, PC_SHA1_DIGEST_LEN);
     }
     else
     {
-        memcpy(k, key, keylen);
+        mem.cpy(k, key, keylen);
     }
 
     uint8_t inner_in[PC_BLOCK + 8];
@@ -37,7 +38,7 @@ static void pc_hmac_sha1_8(const uint8_t *key, size_t keylen, const uint8_t msg[
     {
         inner_in[i] = k[i] ^ 0x36; // ipad
     }
-    memcpy(inner_in + PC_BLOCK, msg, 8);
+    mem.cpy(inner_in + PC_BLOCK, msg, 8);
     uint8_t inner[PC_SHA1_DIGEST_LEN];
     pc_sha1(inner_in, sizeof(inner_in), inner);
 
@@ -46,7 +47,7 @@ static void pc_hmac_sha1_8(const uint8_t *key, size_t keylen, const uint8_t msg[
     {
         outer_in[i] = k[i] ^ 0x5c; // opad
     }
-    memcpy(outer_in + PC_BLOCK, inner, PC_SHA1_DIGEST_LEN);
+    mem.cpy(outer_in + PC_BLOCK, inner, PC_SHA1_DIGEST_LEN);
     pc_sha1(outer_in, sizeof(outer_in), out);
 }
 

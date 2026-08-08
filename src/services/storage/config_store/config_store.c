@@ -11,6 +11,7 @@
  */
 
 #include "config_store.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_CONFIG_STORE
 
@@ -60,7 +61,7 @@ size_t pc_config_get_str(const char *key, char *out, size_t out_cap, const char 
     }
     if (n)
     {
-        memcpy(out, def, n);
+        mem.cpy(out, def, n);
     }
     out[n] = '\0';
     return n;

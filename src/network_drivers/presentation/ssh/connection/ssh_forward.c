@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_forward.h"
+#include "mmgr/protomem.h"
 
 #if PC_SSH_PORT_FORWARD
 
@@ -228,7 +229,7 @@ static int on_forward_open(uint8_t ssh_slot, uint32_t channel, const char *host,
     {
         return -1;
     }
-    memcpy(hbuf, host, host_len);
+    mem.cpy(hbuf, host, host_len);
     hbuf[host_len] = 0;
     if (s_fwd.policy && !s_fwd.policy(hbuf, port))
     {
@@ -310,7 +311,7 @@ static int on_rforward_open(uint8_t ssh_slot, const char *addr, size_t addr_len,
     s_rfwd.rbind[bi].listener_idx = (uint8_t)li;
     s_rfwd.rbind[bi].bind_port = bind_port;
     size_t al = addr_len < sizeof(s_rfwd.rbind[bi].bind_addr) - 1 ? addr_len : sizeof(s_rfwd.rbind[bi].bind_addr) - 1;
-    memcpy(s_rfwd.rbind[bi].bind_addr, addr, al);
+    mem.cpy(s_rfwd.rbind[bi].bind_addr, addr, al);
     s_rfwd.rbind[bi].bind_addr[al] = 0;
     return bind_port;
 }

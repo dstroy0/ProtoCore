@@ -8,6 +8,7 @@
  */
 
 #include "network_drivers/application/webdav/webdav.h"
+#include "mmgr/protomem.h"
 #include "shared_primitives/hex.h"
 
 #if PC_ENABLE_WEBDAV
@@ -99,7 +100,7 @@ static proto_bool app(char *buf, size_t cap, size_t *len, const char *s)
     {
         return PROTO_FALSE;
     }
-    memcpy(buf + *len, s, n);
+    mem.cpy(buf + *len, s, n);
     *len += n;
     buf[*len] = '\0';
     return PROTO_TRUE;
@@ -142,7 +143,7 @@ size_t pc_webdav_xml_escape(char *dst, size_t cap, const char *src)
             {
                 break;
             }
-            memcpy(dst + o, rep, rn);
+            mem.cpy(dst + o, rep, rn);
             o += rn;
         }
         else
@@ -436,7 +437,7 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
             size_t tl = copy_end - start;
             if (ok && tl < sizeof(tag))
             {
-                memcpy(tag, &body[start], tl);
+                mem.cpy(tag, &body[start], tl);
                 tag[tl] = '\0';
                 if (app(buf, cap, &len, "        <") && app(buf, cap, &len, tag) && app(buf, cap, &len, "/>\n"))
                 {
@@ -485,7 +486,7 @@ static proto_bool dav_lock_copy(char *dst, size_t cap, const char *src)
     {
         return PROTO_FALSE;
     }
-    memcpy(dst, src, n + 1);
+    mem.cpy(dst, src, n + 1);
     return PROTO_TRUE;
 }
 
@@ -501,7 +502,7 @@ static proto_bool dav_lock_norm(char *dst, size_t cap, const char *path)
     {
         return PROTO_FALSE;
     }
-    memcpy(dst, path, n);
+    mem.cpy(dst, path, n);
     dst[n] = 0;
     return PROTO_TRUE;
 }
@@ -747,7 +748,7 @@ proto_bool pc_dav_if_token(const char *if_header, char *out, size_t cap)
     {
         return PROTO_FALSE;
     }
-    memcpy(out, lt + 1, n);
+    mem.cpy(out, lt + 1, n);
     out[n] = 0;
     return PROTO_TRUE;
 }

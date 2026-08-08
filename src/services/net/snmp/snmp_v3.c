@@ -7,6 +7,7 @@
  */
 
 #include "services/net/snmp/snmp_v3.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SNMP_V3
 
@@ -108,7 +109,7 @@ void pc_snmp_v3_init(const uint8_t *engine_id, size_t engine_id_len)
 {
     if (engine_id && engine_id_len >= 5 && engine_id_len <= SNMP_V3_ENGINEID_MAX)
     {
-        memcpy(s_v3.engine_id, engine_id, engine_id_len);
+        mem.cpy(s_v3.engine_id, engine_id, engine_id_len);
         s_v3.engine_id_len = engine_id_len;
     }
     s_v3.user[0] = '\0';
@@ -235,7 +236,7 @@ static size_t build_message(long msg_id, proto_bool auth, proto_bool priv, const
         uint8_t iv[16];
         pc_wr32be(iv, s_v3.boots);
         pc_wr32be(iv + 4, now);
-        memcpy(iv + 8, salt, SNMP_V3_PRIV_PARAM_LEN);
+        mem.cpy(iv + 8, salt, SNMP_V3_PRIV_PARAM_LEN);
         if (scoped_len > sizeof(s_v3.v3_d))
         {
             return 0;
@@ -258,7 +259,7 @@ static size_t build_message(long msg_id, proto_bool auth, proto_bool priv, const
     {
         auth_off = se.len + 2; // value follows tag + 1-byte length (24 < 128)
         uint8_t zeros[SNMP_V3_AUTH_PARAM_LEN];
-        memset(zeros, 0, sizeof(zeros));
+        mem.set(zeros, 0, sizeof(zeros));
         pc_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, zeros, SNMP_V3_AUTH_PARAM_LEN);
     }
     else
@@ -314,7 +315,7 @@ static size_t build_message(long msg_id, proto_bool auth, proto_bool priv, const
     {
         uint8_t mac[PC_HMAC_SHA256_LEN];
         pc_hmac_sha256(s_v3.auth_key, SNMP_USM_KEY_LEN, resp, total, mac);
-        memcpy(resp + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
+        mem.cpy(resp + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
     return total;
 }
@@ -475,7 +476,7 @@ size_t pc_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, siz
     size_t mdata_len = req_len - d.pos;
 
     // Engine discovery: unknown/empty authoritative engine ID.
-    proto_bool engine_match = (eid_len == s_v3.engine_id_len) && (memcmp(eid, s_v3.engine_id, eid_len) == 0);
+    proto_bool engine_match = (eid_len == s_v3.engine_id_len) && (mem.cmp(eid, s_v3.engine_id, eid_len) == 0);
     if (!engine_match)
     {
         s_v3.stat_unknown_engine++;
@@ -490,7 +491,7 @@ size_t pc_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, siz
 
     // Known user?
     if (!s_v3.auth_set || !(uname_len == strnlen(s_v3.user, SNMP_V3_USER_MAX) && s_v3.user[0] &&
-                            memcmp(uname, s_v3.user, uname_len) == 0))
+                            mem.cmp(uname, s_v3.user, uname_len) == 0))
     {
         s_v3.stat_unknown_user++;
         return build_report(msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_USER, s_v3.stat_unknown_user, 0, resp,
@@ -504,8 +505,8 @@ size_t pc_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, siz
         return build_report(msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST, s_v3.stat_wrong_digest, 0, resp,
                             pc_resp_cap);
     }
-    memcpy(s_v3.v3_a, req, req_len);
-    memset(s_v3.v3_a + aparm_off, 0, SNMP_V3_AUTH_PARAM_LEN);
+    mem.cpy(s_v3.v3_a, req, req_len);
+    mem.set(s_v3.v3_a + aparm_off, 0, SNMP_V3_AUTH_PARAM_LEN);
     uint8_t mac[PC_HMAC_SHA256_LEN];
     pc_hmac_sha256(s_v3.auth_key, SNMP_USM_KEY_LEN, s_v3.v3_a, req_len, mac);
     if (!ct_eq(mac, aparm, SNMP_V3_AUTH_PARAM_LEN))
@@ -554,7 +555,7 @@ size_t pc_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, siz
         uint8_t iv[16];
         pc_wr32be(iv, (uint32_t)req_boots);
         pc_wr32be(iv + 4, (uint32_t)req_time);
-        memcpy(iv + 8, pparm, SNMP_V3_PRIV_PARAM_LEN);
+        mem.cpy(iv + 8, pparm, SNMP_V3_PRIV_PARAM_LEN);
         pc_snmp_aes128_cfb(s_v3.priv_key, iv, ct, s_v3.v3_a, ct_len, PROTO_FALSE);
         scoped = s_v3.v3_a;
         scoped_len = ct_len;

@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/cotp/cotp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_COTP
 
@@ -27,7 +28,7 @@ size_t pc_tpkt_build(uint8_t *buf, size_t cap, const uint8_t *payload, size_t pa
     buf[3] = (uint8_t)(total & 0xFF);
     if (payload_len)
     {
-        memcpy(buf + TPKT_HEADER_SIZE, payload, payload_len);
+        mem.cpy(buf + TPKT_HEADER_SIZE, payload, payload_len);
     }
     return total;
 }
@@ -78,7 +79,7 @@ size_t pc_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, size_t da
     buf[2] = (uint8_t)(eot ? COTP_EOT : 0); // EOT flag | TPDU-NR (0 for class 0)
     if (data_len)
     {
-        memcpy(buf + COTP_DT_HEADER_LEN, data, data_len);
+        mem.cpy(buf + COTP_DT_HEADER_LEN, data, data_len);
     }
     return total;
 }
@@ -111,7 +112,7 @@ size_t pc_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu
     buf[p++] = tpdu_size_code;
     if (extra_len)
     {
-        memcpy(buf + p, extra_params, extra_len);
+        mem.cpy(buf + p, extra_params, extra_len);
         p += extra_len;
     }
     return p;
@@ -145,7 +146,7 @@ size_t pc_cotp_build_cc(uint8_t *buf, size_t cap, uint16_t dst_ref, uint16_t src
     buf[p++] = tpdu_size_code;
     if (extra_len)
     {
-        memcpy(buf + p, extra_params, extra_len);
+        mem.cpy(buf + p, extra_params, extra_len);
         p += extra_len;
     }
     return p;

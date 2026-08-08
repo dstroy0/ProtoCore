@@ -7,6 +7,7 @@
  */
 
 #include "services/peripherals/sdi12/sdi12.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SDI12
 
@@ -26,7 +27,7 @@ size_t pc_sdi12_build(char *buf, size_t cap, char addr, const char *body)
         return 0;
     }
     buf[0] = addr;
-    memcpy(buf + 1, body, blen);
+    mem.cpy(buf + 1, body, blen);
     buf[1 + blen] = '!';
     buf[n] = '\0';
     return n;
@@ -215,13 +216,13 @@ proto_bool pc_sdi12_parse_identify(const char *resp, size_t len, Sdi12Identity *
         return PROTO_FALSE;
     }
     out->addr = resp[0];
-    memcpy(out->sdi_version, resp + 1, 2);
+    mem.cpy(out->sdi_version, resp + 1, 2);
     out->sdi_version[2] = '\0';
-    memcpy(out->vendor, resp + 3, 8);
+    mem.cpy(out->vendor, resp + 3, 8);
     out->vendor[8] = '\0';
-    memcpy(out->model, resp + 11, 6);
+    mem.cpy(out->model, resp + 11, 6);
     out->model[6] = '\0';
-    memcpy(out->sensor_version, resp + 17, 3);
+    mem.cpy(out->sensor_version, resp + 17, 3);
     out->sensor_version[3] = '\0';
     return PROTO_TRUE;
 }
@@ -258,7 +259,7 @@ proto_bool pc_sdi12_check_crc(const char *resp, size_t len)
     size_t data_len = len - SDI12_CRC_CHARS;
     char enc[SDI12_CRC_CHARS];
     pc_sdi12_crc_encode(pc_sdi12_crc16((const uint8_t *)resp, data_len), enc);
-    return memcmp(enc, resp + data_len, SDI12_CRC_CHARS) == 0;
+    return mem.cmp(enc, resp + data_len, SDI12_CRC_CHARS) == 0;
 }
 
 #endif // PC_ENABLE_SDI12

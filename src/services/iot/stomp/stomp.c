@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/stomp/stomp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_STOMP
 
@@ -119,7 +120,7 @@ size_t pc_stomp_build_frame(char *buf, size_t cap, const char *command, const ch
         {
             return 0;
         }
-        memcpy(buf + pos, body, body_len);
+        mem.cpy(buf + pos, body, body_len);
         pos += body_len;
     }
     if (pos + 1 > cap)
@@ -254,7 +255,7 @@ proto_bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, si
             // content-length drives the body length (only the first occurrence is used). A
             // present-but-unparseable / overflowing value is a malformed frame, not a fall-back
             // to NUL-delimited parsing.
-            if (!have_content_length && h->key_len == 14 && memcmp(h->key, "content-length", 14) == 0)
+            if (!have_content_length && h->key_len == 14 && mem.cmp(h->key, "content-length", 14) == 0)
             {
                 if (!parse_len(h->val, h->val_len, &content_length))
                 {
@@ -313,7 +314,7 @@ proto_bool pc_stomp_header(const StompFrame *f, const char *name, const char **v
     size_t nlen = strnlen(name, PC_name_max);
     for (size_t i = 0; i < f->header_count; i++)
     {
-        if (f->headers[i].key_len == nlen && memcmp(f->headers[i].key, name, nlen) == 0)
+        if (f->headers[i].key_len == nlen && mem.cmp(f->headers[i].key, name, nlen) == 0)
         {
             if (val)
             {

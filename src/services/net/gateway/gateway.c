@@ -12,6 +12,7 @@
  */
 
 #include "services/net/gateway/gateway.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_GATEWAY
 
@@ -119,12 +120,12 @@ static proto_bool put_u32(char *buf, uint16_t *pos, uint16_t cap, uint32_t v)
 
 void pc_gateway_reset(void)
 {
-    memset(s_gw.ports, 0, sizeof(s_gw.ports));
+    mem.set(s_gw.ports, 0, sizeof(s_gw.ports));
     s_gw.uplink = NULL;
     s_gw.uplink_ctx = NULL;
     s_gw.prefix = PC_GW_DEFAULT_PREFIX;
     s_gw.seq = 0;
-    memset(&s_gw.stats, 0, sizeof(s_gw.stats));
+    mem.set(&s_gw.stats, 0, sizeof(s_gw.stats));
 }
 
 proto_bool pc_gateway_add_port(const pc_gateway_port_config *cfg)

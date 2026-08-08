@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/application/sftp/sftp.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #include "shared_primitives/time_compat.h" // pc_gmtime_r (portable reentrant UTC)
@@ -176,7 +177,7 @@ void pc_sftp_wr_bytes(SftpWriter *w, const void *b, size_t n)
         w->ovf = PROTO_TRUE;
         return;
     }
-    memcpy(w->p + w->off, b, n);
+    mem.cpy(w->p + w->off, b, n);
     w->off += n;
 }
 
@@ -341,7 +342,7 @@ size_t pc_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_t size,
 
     time_t t = (time_t)mtime;
     struct tm tmv;
-    memset(&tmv, 0, sizeof(tmv));
+    mem.set(&tmv, 0, sizeof(tmv));
     pc_gmtime_r(&t, &tmv); // reentrant; mtime==0 -> epoch, a harmless placeholder date
     // mtime is a uint32_t, so t is always inside the range every gmtime implementation accepts and the
     // conversion yields tm_mon in [0,11] by definition; tmv is zeroed above, so even a failed conversion

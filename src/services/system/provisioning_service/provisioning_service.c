@@ -10,6 +10,7 @@
  */
 
 #include "provisioning_service.h"
+#include "mmgr/protomem.h"
 #include "server/clock/clock.h" // pcdelay
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
@@ -129,7 +130,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct pc_udp_p
     {
         return;
     }
-    memcpy(resp, req, qend);
+    mem.cpy(resp, req, qend);
     resp[2] = 0x81; // QR=1, opcode 0, RD copied
     resp[3] = 0x80; // RA=1, RCODE 0
     resp[6] = 0x00;

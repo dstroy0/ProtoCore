@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/j1939/j1939.h"
+#include "mmgr/protomem.h"
 
 #if PC_NEED_J1939
 
@@ -66,7 +67,7 @@ static proto_bool ext_frame(CanFrame *f, uint8_t priority, uint32_t pgn, uint8_t
     f->extended = PROTO_TRUE;
     f->rtr = PROTO_FALSE;
     f->dlc = dlc;
-    memset(f->data, 0xFF, sizeof(f->data)); // J1939 pads unused octets with 0xFF (not available)
+    mem.set(f->data, 0xFF, sizeof(f->data)); // J1939 pads unused octets with 0xFF (not available)
     return PROTO_TRUE;
 }
 
@@ -83,7 +84,7 @@ proto_bool pc_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn,
     }
     if (len)
     {
-        memcpy(out->data, data, len);
+        mem.cpy(out->data, data, len);
     }
     return PROTO_TRUE;
 }
@@ -189,7 +190,7 @@ proto_bool pc_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t s
         // can't fail
     }
     out->data[0] = seq;                      // sequence number, 1-based
-    memcpy(out->data + 1, chunk, chunk_len); // remaining octets stay 0xFF padding
+    mem.cpy(out->data + 1, chunk, chunk_len); // remaining octets stay 0xFF padding
     return PROTO_TRUE;
 }
 
@@ -197,7 +198,7 @@ void pc_j1939_tp_reset(J1939TpRx *rx)
 {
     if (rx)
     {
-        memset(rx, 0, sizeof(*rx));
+        mem.set(rx, 0, sizeof(*rx));
     }
 }
 
@@ -253,7 +254,7 @@ J1939TpResult pc_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
         }
         uint16_t remaining = (uint16_t)(rx->total_size - rx->received);
         uint8_t take = remaining < J1939_TP_DT_LEN ? (uint8_t)remaining : (uint8_t)J1939_TP_DT_LEN;
-        memcpy(rx->buf + rx->received, f->data + 1, take);
+        mem.cpy(rx->buf + rx->received, f->data + 1, take);
         rx->received = (uint16_t)(rx->received + take);
         rx->next_seq++;
         if (rx->received >= rx->total_size)

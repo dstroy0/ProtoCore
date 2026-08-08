@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http2/h2_server.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP2 && PC_ENABLE_TLS
 
@@ -50,7 +51,7 @@ static void set_field(char *dst, size_t cap, const char *src, size_t n)
     {
         n = cap - 1;
     }
-    memcpy(dst, src, n);
+    mem.cpy(dst, src, n);
     dst[n] = 0;
 }
 
@@ -75,11 +76,11 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
 {
     (void)stream_id;
     HttpReq *r = &http_pool[(uint8_t)(uintptr_t)app];
-    if (nl == 7 && memcmp(n, ":method", 7) == 0)
+    if (nl == 7 && mem.cmp(n, ":method", 7) == 0)
     {
         set_field(r->method, sizeof r->method, v, vl);
     }
-    else if (nl == 5 && memcmp(n, ":path", 5) == 0)
+    else if (nl == 5 && mem.cmp(n, ":path", 5) == 0)
     {
         const char *q = (const char *)memchr(v, '?', vl);
         size_t plen = q ? (size_t)(q - v) : vl;
@@ -91,7 +92,7 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
             r->query_idx = strnlen(r->query, sizeof r->query);
         }
     }
-    else if (nl == 10 && memcmp(n, ":authority", 10) == 0)
+    else if (nl == 10 && mem.cmp(n, ":authority", 10) == 0)
     {
         if (r->header_count < MAX_HEADERS)
         {
@@ -112,7 +113,7 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
             set_field(h->key, sizeof h->key, n, nl);
             set_field(h->val, sizeof h->val, v, vl);
         }
-        if (nl == 14 && memcmp(n, "content-length", 14) == 0)
+        if (nl == 14 && mem.cmp(n, "content-length", 14) == 0)
         {
             size_t cl = 0;
             for (size_t i = 0; i < vl && v[i] >= '0' && v[i] <= '9'; i++)
@@ -148,7 +149,7 @@ static void cb_data(void *app, uint32_t stream_id, const uint8_t *data, size_t l
 void pc_h2_server_open(uint8_t slot)
 {
     H2Callbacks cb;
-    memset(&cb, 0, sizeof cb);
+    mem.set(&cb, 0, sizeof cb);
     cb.write = cb_write;
     cb.on_header = cb_header;
     cb.on_headers_end = cb_headers_end;

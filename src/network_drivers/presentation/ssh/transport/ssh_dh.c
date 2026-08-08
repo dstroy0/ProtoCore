@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
+#include "mmgr/protomem.h"
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/rng/rng.h" // pc_rand_fill: crypto owns the generator, this layer only draws
 #include "mmgr/secure.h"
@@ -143,7 +144,7 @@ void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *se
         ssh_kexhash_final(&h, acc + have);
         have += blk;
     }
-    memcpy(out, acc, out_len);
+    mem.cpy(out, acc, out_len);
 }
 
 // One 32-byte derived value (the only size any negotiated cipher key/IV needs today).
@@ -203,8 +204,8 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
         // CTR mode this slot ends up with no raw GCM key in it at all.
         pc_aesgcm_key_init(km->gcm_ctx_c2s, key_c2s);
         pc_aesgcm_key_init(km->gcm_ctx_s2c, key_s2c);
-        memcpy(km->aes_iv_c2s, iv_c2s, sizeof(km->aes_iv_c2s));
-        memcpy(km->aes_iv_s2c, iv_s2c, sizeof(km->aes_iv_s2c));
+        mem.cpy(km->aes_iv_c2s, iv_c2s, sizeof(km->aes_iv_c2s));
+        mem.cpy(km->aes_iv_s2c, iv_s2c, sizeof(km->aes_iv_s2c));
         pc_secure_wipe(key_c2s, sizeof(key_c2s));
         pc_secure_wipe(key_s2c, sizeof(key_s2c));
         pc_secure_wipe(iv_c2s, sizeof(iv_c2s));
@@ -230,10 +231,10 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
 
     // Store only the raw key + the initial counter (first 16 bytes of the derived IV); the key schedule is
     // rebuilt per packet in the shared crypto scratch, so no expanded key ever lands in the keymat pool.
-    memcpy(km->aes_key_c2s, key_c2s, sizeof(km->aes_key_c2s));
-    memcpy(km->aes_key_s2c, key_s2c, sizeof(km->aes_key_s2c));
-    memcpy(km->aes_iv_c2s, iv_c2s, sizeof(km->aes_iv_c2s));
-    memcpy(km->aes_iv_s2c, iv_s2c, sizeof(km->aes_iv_s2c));
+    mem.cpy(km->aes_key_c2s, key_c2s, sizeof(km->aes_key_c2s));
+    mem.cpy(km->aes_key_s2c, key_s2c, sizeof(km->aes_key_s2c));
+    mem.cpy(km->aes_iv_c2s, iv_c2s, sizeof(km->aes_iv_c2s));
+    mem.cpy(km->aes_iv_s2c, iv_s2c, sizeof(km->aes_iv_s2c));
 
     // Wipe stack temporaries (key material).
     pc_secure_wipe(key_c2s, sizeof(key_c2s));

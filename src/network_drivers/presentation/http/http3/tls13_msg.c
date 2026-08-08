@@ -11,6 +11,7 @@
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
 #include "crypto/asymmetric/ed25519.h"
+#include "mmgr/protomem.h"
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // MLKEM768_EK_BYTES (X25519MLKEM768 share sizing)
 #endif
@@ -74,7 +75,7 @@ static void w_bytes(Writer *w, const uint8_t *b, size_t n)
         w->ok = PROTO_FALSE;
         return;
     }
-    memcpy(w->buf + w->pos, b, n);
+    mem.cpy(w->buf + w->pos, b, n);
     w->pos += n;
 }
 // Reserve a 2- or 3-byte length placeholder; returns its position for w_patch16/24.
@@ -202,14 +203,14 @@ static void parse_key_share(const uint8_t *body, size_t blen, Tls13ClientHello *
         }
         if (group == TLS_GROUP_X25519 && klen == 32)
         {
-            memcpy(out->client_x25519, body + i, 32);
+            mem.cpy(out->client_x25519, body + i, 32);
             out->has_key_share = PROTO_TRUE;
         }
 #if PC_ENABLE_PQC_KEX
         else if (group == TLS_GROUP_X25519MLKEM768 && klen == MLKEM768_EK_BYTES + 32)
         {
             out->client_mlkem_ek = body + i;                              // ML-KEM-768 ek (first)
-            memcpy(out->client_x25519, body + i + MLKEM768_EK_BYTES, 32); // X25519 (second)
+            mem.cpy(out->client_x25519, body + i + MLKEM768_EK_BYTES, 32); // X25519 (second)
             out->has_hybrid_share = PROTO_TRUE;
         }
 #endif
@@ -384,7 +385,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
 
 proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHello *out, proto_bool dtls)
 {
-    memset(out, 0, sizeof(*out));
+    mem.zero(out, sizeof(*out));
 
     Reader r = {msg, len, 0};
     uint8_t type = 0;
@@ -485,7 +486,7 @@ size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t rando
     w_bytes(&w, random, 32);
     w_u8(&w, session_id_len);
     w_bytes(&w, session_id, session_id_len);
-    w_u16(&w, TLS_CIPHER_AES_128_GCM_SHA256);
+    w_u16(&w, PC_TLS_SUITE_AES_128_GCM_SHA256);
     w_u8(&w, 0x00); // legacy_compression_method
 
     size_t ext_len = w_mark(&w, 2);
@@ -539,7 +540,7 @@ size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_
     w_bytes(&w, pc_tls13_hrr_random, 32);
     w_u8(&w, session_id_len);
     w_bytes(&w, session_id, session_id_len);
-    w_u16(&w, TLS_CIPHER_AES_128_GCM_SHA256);
+    w_u16(&w, PC_TLS_SUITE_AES_128_GCM_SHA256);
     w_u8(&w, 0x00); // legacy_compression_method
 
     size_t ext_len = w_mark(&w, 2);
@@ -665,8 +666,8 @@ size_t pc_tls13_ed25519_spki(uint8_t *out, size_t cap, const uint8_t pub[32])
     {
         return 0;
     }
-    memcpy(out, PREFIX, sizeof(PREFIX));
-    memcpy(out + sizeof(PREFIX), pub, 32);
+    mem.cpy(out, PREFIX, sizeof(PREFIX));
+    mem.cpy(out + sizeof(PREFIX), pub, 32);
     return PC_TLS13_ED25519_SPKI_LEN;
 }
 
@@ -693,10 +694,10 @@ size_t pc_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t tran
     {
         return 0;
     }
-    memset(out, 0x20, 64);
-    memcpy(out + 64, ctx, ctx_len);
+    mem.set(out, 0x20, 64);
+    mem.cpy(out + 64, ctx, ctx_len);
     out[64 + ctx_len] = 0x00;
-    memcpy(out + 64 + ctx_len + 1, transcript_hash, 32);
+    mem.cpy(out + 64 + ctx_len + 1, transcript_hash, 32);
     return total;
 }
 

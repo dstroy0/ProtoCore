@@ -10,6 +10,7 @@
  */
 
 #include "services/radio/enocean/enocean.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_ENOCEAN
 
@@ -129,7 +130,7 @@ uint16_t pc_erp1_build(uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *
     out[p++] = rorg;
     if (payload_len)
     {
-        memcpy(out + p, payload, payload_len);
+        mem.cpy(out + p, payload, payload_len);
         p = (uint16_t)(p + payload_len);
     }
     out[p++] = (uint8_t)(sender_id >> 24); // 4-octet sender id, big-endian

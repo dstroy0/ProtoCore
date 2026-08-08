@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/application/ptp/ptp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_PTP
 
@@ -98,14 +99,14 @@ size_t pc_ptp_build_header(uint8_t *buf, size_t cap, const pc_ptp_header *h, uin
     {
         return 0;
     }
-    memset(buf, 0, PC_PTP_HEADER_LEN);
+    mem.set(buf, 0, PC_PTP_HEADER_LEN);
     buf[0] = (uint8_t)((h->transport_specific << 4) | (h->message_type & 0x0F));
     buf[1] = (uint8_t)(h->version & 0x0F);
     put_u16(buf + 2, (uint16_t)(PC_PTP_HEADER_LEN + body_len));
     buf[4] = h->domain;
     put_u16(buf + 6, h->flags);
     put_u64(buf + 8, (uint64_t)h->correction);
-    memcpy(buf + 20, h->clock_identity, 8);
+    mem.cpy(buf + 20, h->clock_identity, 8);
     put_u16(buf + 28, h->port_number);
     put_u16(buf + 30, h->sequence_id);
     buf[32] = h->control;
@@ -126,7 +127,7 @@ proto_bool pc_ptp_parse_header(const uint8_t *s, size_t len, pc_ptp_header *h)
     h->domain = s[4];
     h->flags = get_u16(s + 6);
     h->correction = (int64_t)get_u64(s + 8);
-    memcpy(h->clock_identity, s + 20, 8);
+    mem.cpy(h->clock_identity, s + 20, 8);
     h->port_number = get_u16(s + 28);
     h->sequence_id = get_u16(s + 30);
     h->control = s[32];
@@ -189,7 +190,7 @@ size_t pc_ptp_build_delay_resp(uint8_t *buf, size_t cap, const pc_ptp_header *h,
     uint8_t *p = buf + PC_PTP_HEADER_LEN;
     pc_ptp_ts_write(p, recv);
     p += PC_PTP_TS_LEN;
-    memcpy(p, req_clock_id, 8);
+    mem.cpy(p, req_clock_id, 8);
     p += 8;
     put_u16(p, req_port);
     return PC_PTP_HEADER_LEN + body;
@@ -212,7 +213,7 @@ size_t pc_ptp_build_pdelay_req(uint8_t *buf, size_t cap, const pc_ptp_header *h,
     pc_ptp_build_header(buf, cap, &hh, (uint16_t)body);
     uint8_t *p = buf + PC_PTP_HEADER_LEN;
     pc_ptp_ts_write(p, origin);
-    memset(p + PC_PTP_TS_LEN, 0, 10); // reserved
+    mem.set(p + PC_PTP_TS_LEN, 0, 10); // reserved
     return PC_PTP_HEADER_LEN + body;
 }
 
@@ -237,7 +238,7 @@ static size_t build_pdelay_resp_msg(uint8_t *buf, size_t cap, const pc_ptp_heade
     uint8_t *p = buf + PC_PTP_HEADER_LEN;
     pc_ptp_ts_write(p, ts);
     p += PC_PTP_TS_LEN;
-    memcpy(p, req_clock_id, 8);
+    mem.cpy(p, req_clock_id, 8);
     p += 8;
     put_u16(p, req_port);
     return PC_PTP_HEADER_LEN + body;
@@ -283,7 +284,7 @@ size_t pc_ptp_build_announce(uint8_t *buf, size_t cap, const pc_ptp_header *h, c
     put_u16(p, a->gm_variance);
     p += 2;
     *p++ = a->gm_priority2;
-    memcpy(p, a->gm_identity, 8);
+    mem.cpy(p, a->gm_identity, 8);
     p += 8;
     put_u16(p, a->steps_removed);
     p += 2;
@@ -326,7 +327,7 @@ proto_bool pc_ptp_parse_delay_resp(const uint8_t *s, size_t len, pc_ptp_header *
     const uint8_t *p = s + PC_PTP_HEADER_LEN;
     pc_ptp_ts_read(p, &out->receive);
     p += PC_PTP_TS_LEN;
-    memcpy(out->req_clock_id, p, 8);
+    mem.cpy(out->req_clock_id, p, 8);
     p += 8;
     out->req_port = get_u16(p);
     return PROTO_TRUE;
@@ -369,7 +370,7 @@ static proto_bool parse_pdelay_resp_msg(const uint8_t *s, size_t len, pc_ptp_hea
     const uint8_t *p = s + PC_PTP_HEADER_LEN;
     pc_ptp_ts_read(p, &out->timestamp);
     p += PC_PTP_TS_LEN;
-    memcpy(out->req_clock_id, p, 8);
+    mem.cpy(out->req_clock_id, p, 8);
     p += 8;
     out->req_port = get_u16(p);
     return PROTO_TRUE;
@@ -411,7 +412,7 @@ proto_bool pc_ptp_parse_announce(const uint8_t *s, size_t len, pc_ptp_header *h,
     out->gm_variance = get_u16(p);
     p += 2;
     out->gm_priority2 = *p++;
-    memcpy(out->gm_identity, p, 8);
+    mem.cpy(out->gm_identity, p, 8);
     p += 8;
     out->steps_removed = get_u16(p);
     p += 2;

@@ -7,6 +7,7 @@
  */
 
 #include "ntlm.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SMB
 
@@ -115,21 +116,21 @@ size_t pc_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge
     size_t k = 0;
     temp[k++] = 0x01;       // Responserversion
     temp[k++] = 0x01;       // HiResponserversion
-    memset(temp + k, 0, 6); // Z(6)
+    mem.set(temp + k, 0, 6); // Z(6)
     k += 6;
-    memcpy(temp + k, timestamp, 8);
+    mem.cpy(temp + k, timestamp, 8);
     k += 8;
-    memcpy(temp + k, client_challenge, 8);
+    mem.cpy(temp + k, client_challenge, 8);
     k += 8;
-    memset(temp + k, 0, 4); // Z(4)
+    mem.set(temp + k, 0, 4); // Z(4)
     k += 4;
-    memcpy(temp + k, target_info, ti_len);
+    mem.cpy(temp + k, target_info, ti_len);
     k += ti_len;
-    memset(temp + k, 0, 4); // Z(4) trailer; temp_len (line 83) already accounts for it, so k is done
+    mem.set(temp + k, 0, 4); // Z(4) trailer; temp_len (line 83) already accounts for it, so k is done
 
     uint8_t ntproof[16];
     pc_hmac_md5_2(owf, server_challenge, 8, temp, temp_len, ntproof);
-    memcpy(out, ntproof, 16); // out = NTProofStr || temp
+    mem.cpy(out, ntproof, 16); // out = NTProofStr || temp
     if (session_key)
     {
         pc_hmac_md5(owf, 16, ntproof, 16, session_key);
@@ -150,7 +151,7 @@ size_t pc_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *
     {
         return 0;
     }
-    memcpy(out, target_info, ti_len);
+    mem.cpy(out, target_info, ti_len);
     size_t p = 0;
     proto_bool found = PROTO_FALSE;
     size_t eol = ti_len; // offset of the MsvAvEOL header, if any
@@ -188,7 +189,7 @@ size_t pc_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *
     const size_t at = eol != ti_len ? eol : ti_len;
     if (at < ti_len)
     {
-        memmove(out + at + 8, out + at, ti_len - at); // shift the EOL (and anything after) up by 8
+        mem.move(out + at + 8, out + at, ti_len - at); // shift the EOL (and anything after) up by 8
     }
     out[at + 0] = 0x06;
     out[at + 1] = 0x00;

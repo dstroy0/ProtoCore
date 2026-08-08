@@ -16,6 +16,7 @@
  */
 
 #include "network_drivers/application/sftp/ssh_sftp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SSH_SFTP
 
@@ -143,7 +144,7 @@ static const char *req_path(int slot, const uint8_t *p, uint32_t plen)
     {
         return NULL;
     }
-    memcpy(s_sftp.req[slot], p, plen);
+    mem.cpy(s_sftp.req[slot], p, plen);
     s_sftp.req[slot][plen] = '\0';
     if (plen == 0 || (plen == 1 && s_sftp.req[slot][0] == '.'))
     {
@@ -222,7 +223,7 @@ static size_t build_entry(const pc_mnt_stat *st, const char *name, size_t name_l
         return 0;
     }
     size_t el = w.off - 4;
-    memmove(s_sftp.ent, s_sftp.ent + 4, el); // drop the reserved prefix so the entry bytes start at ent[0]
+    mem.move(s_sftp.ent, s_sftp.ent + 4, el); // drop the reserved prefix so the entry bytes start at ent[0]
     return el;
 }
 
@@ -269,7 +270,7 @@ static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
             }
             else // stash it for the next READDIR
             {
-                memcpy(H->pend, s_sftp.ent, el);
+                mem.cpy(H->pend, s_sftp.ent, el);
                 H->pend_len = (uint16_t)el;
                 H->has_pending = PROTO_TRUE;
             }
@@ -298,7 +299,7 @@ static void keep_req(SftpHandle *H, const char *req)
     {
         n = sizeof(H->req) - 1;
     }
-    memcpy(H->req, req, n);
+    mem.cpy(H->req, req, n);
     H->req[n] = '\0';
 }
 
@@ -669,7 +670,7 @@ static proto_bool process_acc(SftpSession *s)
             size_t chunk = have < datalen ? have : datalen;
             write_stream_bytes(s, s->acc + hdr, chunk);
             size_t consumed = hdr + chunk;
-            memmove(s->acc, s->acc + consumed, s->acc_len - consumed);
+            mem.move(s->acc, s->acc + consumed, s->acc_len - consumed);
             s->acc_len -= (uint16_t)consumed;
             if (s->wr_remaining == 0)
             {
@@ -691,7 +692,7 @@ static proto_bool process_acc(SftpSession *s)
             return PROTO_TRUE; // wait for the rest
         }
         handle_packet(s, s->acc, total);
-        memmove(s->acc, s->acc + total, s->acc_len - total);
+        mem.move(s->acc, s->acc + total, s->acc_len - total);
         s->acc_len -= (uint16_t)total;
     }
 }
@@ -748,7 +749,7 @@ static void pc_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data,
             return;
         }
         size_t take = len < space ? len : space;
-        memcpy(s->acc + s->acc_len, data, take);
+        mem.cpy(s->acc + s->acc_len, data, take);
         s->acc_len += (uint16_t)take;
         data += take;
         len -= take;

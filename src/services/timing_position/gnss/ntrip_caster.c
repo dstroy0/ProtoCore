@@ -7,6 +7,7 @@
  */
 
 #include "services/timing_position/gnss/ntrip_caster.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_NTRIP_CASTER
@@ -133,7 +134,7 @@ static void scan_headers(const char *buf, const char *end, NtripRequest *out)
 
 proto_bool pc_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out)
 {
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     out->version = NTRIP_V1;
 
     // Find the end of the request header block (blank line): CRLFCRLF, or bare LFLF as a fallback.
@@ -181,7 +182,7 @@ proto_bool pc_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out
         {
             mlen = sizeof(out->mountpoint) - 1;
         }
-        memcpy(out->mountpoint, mp, mlen);
+        mem.cpy(out->mountpoint, mp, mlen);
         out->mountpoint[mlen] = '\0';
     }
 
@@ -356,7 +357,7 @@ size_t pc_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, c
     {
         return 0;
     }
-    memcpy(out + pos, ENDLINE, sizeof(ENDLINE) - 1);
+    mem.cpy(out + pos, ENDLINE, sizeof(ENDLINE) - 1);
     pos += sizeof(ENDLINE) - 1;
     out[pos] = '\0';
     return pos;

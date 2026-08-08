@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/sparkplug/sparkplug.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SPARKPLUG
 
@@ -48,24 +49,24 @@ size_t pc_spb_build_topic(char *buf, size_t cap, const char *group, const char *
     }
     size_t p = 0;
     const char *prefix = "spBv1.0/";
-    memcpy(buf + p, prefix, 8);
+    mem.cpy(buf + p, prefix, 8);
     p += 8;
     size_t n = strnlen(group, cap);
-    memcpy(buf + p, group, n);
+    mem.cpy(buf + p, group, n);
     p += n;
     buf[p++] = '/';
     n = strnlen(message_type, cap);
-    memcpy(buf + p, message_type, n);
+    mem.cpy(buf + p, message_type, n);
     p += n;
     buf[p++] = '/';
     n = strnlen(edge_node, cap);
-    memcpy(buf + p, edge_node, n);
+    mem.cpy(buf + p, edge_node, n);
     p += n;
     if (device)
     {
         buf[p++] = '/';
         n = strnlen(device, cap);
-        memcpy(buf + p, device, n);
+        mem.cpy(buf + p, device, n);
         p += n;
     }
     buf[p] = '\0';
@@ -153,7 +154,7 @@ proto_bool pc_spb_parse_payload(const uint8_t *buf, size_t len, SpbPayloadHeader
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     size_t pos = 0;
     PbField f;
     while (pos < len)
@@ -303,7 +304,7 @@ proto_bool pc_spb_parse_metric(const uint8_t *buf, size_t len, SpbMetricDecoded 
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     size_t pos = 0;
     PbField f;
     while (pos < len)

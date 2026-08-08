@@ -7,6 +7,7 @@
  */
 
 #include "services/machine_tool/focas/focas.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_FOCAS
 
@@ -99,7 +100,7 @@ size_t pc_focas_build_request(uint8_t *buf, size_t cap, FocasCmd cmd, int32_t v1
     p += put32be(buf + p, (uint32_t)v5);
     if (extra_len)
     {
-        memcpy(buf + p, extra, extra_len);
+        mem.cpy(buf + p, extra, extra_len);
         p += extra_len;
     }
     return p;
@@ -202,15 +203,15 @@ proto_bool pc_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSys
     }
     out->add_info = get16be(data);
     out->max_axis = get16be(data + 2);
-    memcpy(out->cnc_type, data + 4, 2);
+    mem.cpy(out->cnc_type, data + 4, 2);
     out->cnc_type[2] = '\0';
-    memcpy(out->mt_type, data + 6, 2);
+    mem.cpy(out->mt_type, data + 6, 2);
     out->mt_type[2] = '\0';
-    memcpy(out->series, data + 8, 4);
+    mem.cpy(out->series, data + 8, 4);
     out->series[4] = '\0';
-    memcpy(out->version, data + 12, 4);
+    mem.cpy(out->version, data + 12, 4);
     out->version[4] = '\0';
-    memcpy(out->axes, data + 16, 2);
+    mem.cpy(out->axes, data + 16, 2);
     out->axes[2] = '\0';
     return PROTO_TRUE;
 }

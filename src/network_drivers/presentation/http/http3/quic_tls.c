@@ -7,6 +7,8 @@
  */
 
 #include "network_drivers/presentation/http/http3/quic_tls.h"
+#include "crypto/ct_eq.h" // pc_ct_eq: the Finished compare
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -181,9 +183,9 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
         uint8_t server_pub[32];
         pc_x25519(x_ss, qt->cfg.ephemeral_priv, ch.client_x25519);
         pc_x25519_base(server_pub, qt->cfg.ephemeral_priv);
-        memcpy(server_share + MLKEM768_CT_BYTES, server_pub, 32);
-        memcpy(ecdhe, ml_ss, 32);
-        memcpy(ecdhe + 32, x_ss, 32);
+        mem.cpy(server_share + MLKEM768_CT_BYTES, server_pub, 32);
+        mem.cpy(ecdhe, ml_ss, 32);
+        mem.cpy(ecdhe + 32, x_ss, 32);
         ecdhe_len = 64;
         share_len = MLKEM768_CT_BYTES + 32;
         group = TLS_GROUP_X25519MLKEM768;
@@ -222,8 +224,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     snapshot_hash(&qt->transcript, hash);
     pc_tls13_ks_early(&TLS13_KDF, &qt->ks);
     pc_tls13_ks_handshake(&qt->ks, ecdhe, hash, ecdhe_len);
-    pc_quic_keys_from_secret(qt->ks.client_hs_traffic, &qt->hs_client);
-    pc_quic_keys_from_secret(qt->ks.server_hs_traffic, &qt->hs_server);
+    pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_CLIENT_HS, &qt->hs_client);
+    pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_SERVER_HS, &qt->hs_server);
     qt->hs_keys_ready = PROTO_TRUE;
 
     // Handshake-level flight: EncryptedExtensions, Certificate, CertificateVerify, Finished.
@@ -259,7 +261,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // Server Finished over Transcript-Hash(ClientHello..CertificateVerify).
     snapshot_hash(&qt->transcript, hash);
     uint8_t verify[32];
-    pc_tls13_finished_mac(&TLS13_KDF, qt->ks.server_hs_traffic, hash, verify);
+    pc_tls13_finished_mac(&qt->ks, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
     n = pc_tls13_build_finished(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len, verify);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
@@ -270,8 +272,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // client Finished against.
     snapshot_hash(&qt->transcript, qt->hs_finished_hash);
     pc_tls13_ks_master(&qt->ks, qt->hs_finished_hash);
-    pc_quic_keys_from_secret(qt->ks.client_ap_traffic, &qt->ap_client);
-    pc_quic_keys_from_secret(qt->ks.server_ap_traffic, &qt->ap_server);
+    pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_CLIENT_AP, &qt->ap_client);
+    pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_SERVER_AP, &qt->ap_server);
     qt->ap_keys_ready = PROTO_TRUE;
 
     qt->state = QTLS_WAIT_FINISHED;
@@ -285,14 +287,9 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
         fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
     }
-    uint8_t expected[32];
-    pc_tls13_finished_mac(&TLS13_KDF, qt->ks.client_hs_traffic, qt->hs_finished_hash, expected);
-    uint8_t diff = 0;
-    for (int i = 0; i < 32; i++)
-    {
-        diff |= (uint8_t)(expected[i] ^ msg[4 + i]);
-    }
-    if (diff)
+    pc_tls13_finished_mac(&qt->ks, qt->ks.s + TLS13_KS_CLIENT_HS, qt->hs_finished_hash,
+                          qt->ks.s + TLS13_KS_VERIFY);
+    if (!pc_ct_eq(qt->ks.s + TLS13_KS_VERIFY, msg + 4, TLS13_SECRET_LEN))
     {
         fail(qt, TLS_ALERT_DECRYPT_ERROR);
         return PROTO_FALSE;
@@ -319,7 +316,7 @@ static proto_bool process_message(QuicTls *qt, int level, const uint8_t *msg, si
 
 void pc_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg)
 {
-    memset(qt, 0, sizeof(*qt));
+    mem.zero(qt, sizeof(*qt));
     qt->cfg = *cfg;
     pc_sha256_init(&qt->transcript);
     qt->state = QTLS_START;

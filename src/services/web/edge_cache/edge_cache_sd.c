@@ -7,6 +7,7 @@
  */
 
 #include "services/web/edge_cache/edge_cache_sd.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_EDGE_CACHE
 
@@ -40,7 +41,7 @@ static proto_bool put_str(uint8_t *out, size_t cap, size_t *pos, const char *s)
     }
     put_u16(out + *pos, (uint16_t)sl);
     *pos += 2;
-    memcpy(out + *pos, s, sl);
+    mem.cpy(out + *pos, s, sl);
     *pos += sl;
     return PROTO_TRUE;
 }
@@ -58,7 +59,7 @@ static proto_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out
     {
         return PROTO_FALSE;
     }
-    memcpy(out, buf + *pos, sl);
+    mem.cpy(out, buf + *pos, sl);
     out[sl] = '\0';
     *pos += sl;
     return PROTO_TRUE;
@@ -87,7 +88,7 @@ size_t edge_sd_serialize(const EdgeEntry *e, uint8_t *out, size_t cap)
     }
     put_u16(out + pos, e->body_len);
     pos += 2;
-    memcpy(out + pos, e->body, e->body_len);
+    mem.cpy(out + pos, e->body, e->body_len);
     pos += e->body_len;
     return pos;
 }
@@ -121,7 +122,7 @@ proto_bool edge_sd_deserialize(const uint8_t *buf, size_t len, EdgeEntry *e)
     {
         return PROTO_FALSE;
     }
-    memcpy(e->body, buf + pos, bl);
+    mem.cpy(e->body, buf + pos, bl);
     e->body_len = bl;
     edge_key_digest(e->key, strnlen(e->key, sizeof(e->key)), e->digest); // re-derive the digest from the key
     return PROTO_TRUE;
@@ -205,7 +206,7 @@ static proto_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
         c->full = PROTO_TRUE;
         return PROTO_FALSE; // stop this pass; the caller deletes the batch then re-iterates
     }
-    memcpy(c->batch[c->count++], key, 32);
+    mem.cpy(c->batch[c->count++], key, 32);
     return PROTO_TRUE;
 }
 

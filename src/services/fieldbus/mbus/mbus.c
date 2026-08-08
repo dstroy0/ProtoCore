@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/mbus/mbus.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_MBUS
 
@@ -67,7 +68,7 @@ size_t pc_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_
     buf[6] = ci;
     if (data_len)
     {
-        memcpy(buf + 7, data, data_len);
+        mem.cpy(buf + 7, data, data_len);
     }
     buf[4 + L] = checksum(buf + 4, L); // sum of C..end of user data
     buf[5 + L] = MBUS_STOP;
@@ -367,7 +368,7 @@ proto_bool pc_mbus_record_value_real(const MbusRecord *r, float *out)
     }
     uint32_t bits = (uint32_t)r->data[0] | ((uint32_t)r->data[1] << 8) | ((uint32_t)r->data[2] << 16) |
                     ((uint32_t)r->data[3] << 24);
-    memcpy(out, &bits, 4);
+    mem.cpy(out, &bits, 4);
     return PROTO_TRUE;
 }
 

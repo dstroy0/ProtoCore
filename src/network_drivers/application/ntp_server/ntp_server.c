@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/application/ntp_server/ntp_server.h"
+#include "mmgr/protomem.h"
 #include "protocore_config.h"
 
 #if PC_ENABLE_NTP_SERVER
@@ -28,7 +29,7 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
 
     // LI (2 bits) | VN (3 bits) | Mode (3 bits). Echo the client's version; reply as server (4).
     uint8_t vn = (uint8_t)((req[0] >> 3) & 0x7);
-    memset(out, 0, PC_NTP_PACKET_LEN);
+    mem.set(out, 0, PC_NTP_PACKET_LEN);
     out[0] = (uint8_t)((0u << 6) | (vn << 3) | 4u); // LI = 0 (in sync), VN echoed, Mode = 4 (server)
     out[1] = stratum;
     out[2] = req[2] ? req[2] : 6; // poll interval: echo the client's, else 2^6 s
@@ -38,7 +39,7 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
     pc_wr32be(out + 12, refid);
     pc_wr32be(out + 16, pc_ntp_secs); // reference timestamp (when our clock was last good = now)
     pc_wr32be(out + 20, pc_ntp_frac);
-    memcpy(out + 24, req + 40, 8);    // origin timestamp = the client's transmit timestamp
+    mem.cpy(out + 24, req + 40, 8);    // origin timestamp = the client's transmit timestamp
     pc_wr32be(out + 32, pc_ntp_secs); // receive timestamp
     pc_wr32be(out + 36, pc_ntp_frac);
     pc_wr32be(out + 40, pc_ntp_secs); // transmit timestamp

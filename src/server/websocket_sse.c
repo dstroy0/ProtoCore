@@ -12,6 +12,7 @@
  */
 
 #include "mmgr/membuild.h"
+#include "mmgr/protomem.h"
 #include "network_drivers/transport/tcp.h"
 #include "protocore.h"
 #if PC_ENABLE_WEBSOCKET
@@ -62,8 +63,8 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     }
     size_t magic_len = sizeof(WS_MAGIC) - 1;
     char concat[WS_MAX_KEY_LEN + sizeof(WS_MAGIC)];
-    memcpy(concat, client_key, key_len);
-    memcpy(concat + key_len, WS_MAGIC, magic_len);
+    mem.cpy(concat, client_key, key_len);
+    mem.cpy(concat + key_len, WS_MAGIC, magic_len);
 
     uint8_t digest[PC_SHA1_DIGEST_LEN];
     pc_sha1((const uint8_t *)concat, key_len + magic_len, digest);

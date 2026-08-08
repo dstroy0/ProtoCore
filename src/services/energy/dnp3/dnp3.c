@@ -7,6 +7,7 @@
  */
 
 #include "services/energy/dnp3/dnp3.h"
+#include "mmgr/protomem.h"
 #include "mmgr/endian.h"           // pc_rd16le / pc_rd32le
 #include "shared_primitives/crc.h" // PC_CRC16_DNP
 
@@ -61,7 +62,7 @@ size_t pc_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uint16_t d
         {
             blk = DNP3_BLOCK_LEN;
         }
-        memcpy(buf + p, user_data + off, blk);
+        mem.cpy(buf + p, user_data + off, blk);
         put_crc(buf + p + blk, buf + p, blk); // CRC over this block's data
         p += blk + DNP3_CRC_LEN;
         off += blk;
@@ -129,7 +130,7 @@ proto_bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, u
         {
             return PROTO_FALSE; // block CRC mismatch
         }
-        memcpy(out_user + off, buf + p, blk);
+        mem.cpy(out_user + off, buf + p, blk);
         p += blk + DNP3_CRC_LEN;
         off += blk;
     }
@@ -166,7 +167,7 @@ size_t pc_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir,
     out[0] = pc_dnp3_transport_header(fir, fin, seq);
     if (app_len)
     {
-        memcpy(out + 1, app_data, app_len);
+        mem.cpy(out + 1, app_data, app_len);
     }
     return 1 + app_len;
 }
@@ -225,7 +226,7 @@ int pc_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_t user_
     }
     if (app_len)
     {
-        memcpy(r->buf + r->len, app, app_len);
+        mem.cpy(r->buf + r->len, app, app_len);
     }
     r->len += app_len;
     r->expect_seq = (uint8_t)((r->expect_seq + 1) & DNP3_TR_SEQ_MASK);
@@ -255,7 +256,7 @@ size_t pc_dnp3_build_app_request(uint8_t *out, size_t cap, uint8_t app_control, 
     out[1] = fc;
     if (obj_len)
     {
-        memcpy(out + 2, objects, obj_len);
+        mem.cpy(out + 2, objects, obj_len);
     }
     return 2 + obj_len;
 }
@@ -273,7 +274,7 @@ size_t pc_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_control,
     out[3] = (uint8_t)(iin >> 8); // IIN2
     if (obj_len)
     {
-        memcpy(out + 4, objects, obj_len);
+        mem.cpy(out + 4, objects, obj_len);
     }
     return 4 + obj_len;
 }
@@ -402,7 +403,7 @@ size_t pc_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value)
         return 0;
     }
     uint32_t bits;
-    memcpy(&bits, &value, 4); // the IEEE-754 bit pattern, written little-endian (endian-safe)
+    mem.cpy(&bits, &value, 4); // the IEEE-754 bit pattern, written little-endian (endian-safe)
     pc_wr32le(buf, bits);
     buf[4] = 0x00; // control status: 0 in a request
     return DNP3_AOB_LEN;

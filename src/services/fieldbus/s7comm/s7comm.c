@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/s7comm/s7comm.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_S7COMM
 
@@ -159,7 +160,7 @@ size_t pc_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, con
         p += put16(buf + p, s7_data_wire_len(it->data_transport_size, it->data_len));
         if (it->data_len)
         {
-            memcpy(buf + p, it->data, it->data_len);
+            mem.cpy(buf + p, it->data, it->data_len);
             p += it->data_len;
         }
         if (i + 1 < n && (it->data_len & 1)) // even-pad all but the last

@@ -7,6 +7,7 @@
  */
 
 #include "services/security/ikev2/ikev2.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_IKEV2
 
@@ -62,8 +63,8 @@ size_t pc_ike_hdr_build(uint8_t *buf, size_t cap, const IkeHeader *h)
     {
         return 0;
     }
-    memcpy(buf, h->init_spi, PC_IKE_SPI_LEN);
-    memcpy(buf + 8, h->resp_spi, PC_IKE_SPI_LEN);
+    mem.cpy(buf, h->init_spi, PC_IKE_SPI_LEN);
+    mem.cpy(buf + 8, h->resp_spi, PC_IKE_SPI_LEN);
     buf[16] = (uint8_t)h->next_payload;
     buf[17] = h->version;
     buf[18] = (uint8_t)h->exchange;
@@ -79,13 +80,13 @@ proto_bool pc_ike_hdr_parse(const uint8_t *buf, size_t len, IkeHeader *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     if (!buf || len < PC_IKE_HDR_LEN)
     {
         return PROTO_FALSE;
     }
-    memcpy(out->init_spi, buf, PC_IKE_SPI_LEN);
-    memcpy(out->resp_spi, buf + 8, PC_IKE_SPI_LEN);
+    mem.cpy(out->init_spi, buf, PC_IKE_SPI_LEN);
+    mem.cpy(out->resp_spi, buf + 8, PC_IKE_SPI_LEN);
     out->next_payload = (IkePayloadType)buf[16];
     out->version = buf[17];
     out->exchange = (IkeExchange)buf[18];
@@ -173,7 +174,7 @@ size_t pc_ike_payload_build(uint8_t *buf, size_t cap, IkePayloadType next_payloa
     put16(buf + 2, (uint16_t)total);
     if (body_len)
     {
-        memcpy(buf + PC_IKE_PAYLOAD_HDR_LEN, body, body_len);
+        mem.cpy(buf + PC_IKE_PAYLOAD_HDR_LEN, body, body_len);
     }
     return total;
 }
@@ -243,7 +244,7 @@ size_t pc_ike_sa_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, ui
     pr[7] = num_transforms;
     if (spi_size)
     {
-        memcpy(pr + prop_hdr, spi, spi_size);
+        mem.cpy(pr + prop_hdr, spi, spi_size);
     }
     return sa_total;
 }
@@ -265,7 +266,7 @@ size_t pc_ike_ke_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, ui
     buf[7] = 0;
     if (data_len)
     {
-        memcpy(buf + 8, data, data_len);
+        mem.cpy(buf + 8, data, data_len);
     }
     return total;
 }
@@ -283,7 +284,7 @@ size_t pc_ike_nonce_build(uint8_t *buf, size_t cap, IkePayloadType next_payload,
     }
     if (nonce_len)
     {
-        memcpy(buf + 4, nonce, nonce_len);
+        mem.cpy(buf + 4, nonce, nonce_len);
     }
     return total;
 }
@@ -306,7 +307,7 @@ size_t pc_ike_id_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, Ik
     buf[7] = 0;
     if (data_len)
     {
-        memcpy(buf + 8, data, data_len);
+        mem.cpy(buf + 8, data, data_len);
     }
     return total;
 }
@@ -329,7 +330,7 @@ size_t pc_ike_auth_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, 
     buf[7] = 0;
     if (data_len)
     {
-        memcpy(buf + 8, data, data_len);
+        mem.cpy(buf + 8, data, data_len);
     }
     return total;
 }
@@ -349,7 +350,7 @@ size_t pc_ike_cert_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, 
     buf[4] = cert_encoding;
     if (data_len)
     {
-        memcpy(buf + 5, data, data_len);
+        mem.cpy(buf + 5, data, data_len);
     }
     return total;
 }
@@ -373,12 +374,12 @@ size_t pc_ike_notify_build(uint8_t *buf, size_t cap, IkePayloadType next_payload
     size_t off = 8;
     if (spi_size)
     {
-        memcpy(buf + off, spi, spi_size);
+        mem.cpy(buf + off, spi, spi_size);
         off += spi_size;
     }
     if (data_len)
     {
-        memcpy(buf + off, data, data_len);
+        mem.cpy(buf + off, data, data_len);
     }
     return total;
 }
@@ -405,7 +406,7 @@ size_t pc_ike_delete_build(uint8_t *buf, size_t cap, IkePayloadType next_payload
     put16(buf + 6, num_spis);
     if (spis_len)
     {
-        memcpy(buf + 8, spis, spis_len);
+        mem.cpy(buf + 8, spis, spis_len);
     }
     return total;
 }
@@ -439,8 +440,8 @@ size_t pc_ike_ts_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, co
         put16(buf + off + 2, (uint16_t)sel_len);
         put16(buf + off + 4, s->start_port);
         put16(buf + off + 6, s->end_port);
-        memcpy(buf + off + 8, s->start_addr, s->addr_len);
-        memcpy(buf + off + 8 + s->addr_len, s->end_addr, s->addr_len);
+        mem.cpy(buf + off + 8, s->start_addr, s->addr_len);
+        mem.cpy(buf + off + 8 + s->addr_len, s->end_addr, s->addr_len);
         off += sel_len;
     }
     if (off > 0xFFFF)
@@ -490,7 +491,7 @@ size_t pc_ike_cp_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, Ik
         off += 4;
         if (attrs[i].value_len)
         {
-            memcpy(buf + off, attrs[i].value, attrs[i].value_len);
+            mem.cpy(buf + off, attrs[i].value, attrs[i].value_len);
             off += attrs[i].value_len;
         }
     }
@@ -512,17 +513,17 @@ size_t pc_ike_sk_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, co
     size_t off = PC_IKE_PAYLOAD_HDR_LEN;
     if (iv_len)
     {
-        memcpy(buf + off, iv, iv_len);
+        mem.cpy(buf + off, iv, iv_len);
         off += iv_len;
     }
     if (ct_len)
     {
-        memcpy(buf + off, ciphertext, ct_len);
+        mem.cpy(buf + off, ciphertext, ct_len);
         off += ct_len;
     }
     if (icv_len)
     {
-        memcpy(buf + off, icv, icv_len);
+        mem.cpy(buf + off, icv, icv_len);
     }
     return total;
 }
@@ -551,17 +552,17 @@ size_t pc_ike_skf_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, u
     size_t off = PC_IKE_PAYLOAD_HDR_LEN + 4;
     if (iv_len)
     {
-        memcpy(buf + off, iv, iv_len);
+        mem.cpy(buf + off, iv, iv_len);
         off += iv_len;
     }
     if (ct_len)
     {
-        memcpy(buf + off, ciphertext, ct_len);
+        mem.cpy(buf + off, ciphertext, ct_len);
         off += ct_len;
     }
     if (icv_len)
     {
-        memcpy(buf + off, icv, icv_len);
+        mem.cpy(buf + off, icv, icv_len);
     }
     return body;
 }
@@ -639,7 +640,7 @@ void pc_ike_frag_reasm_init(IkeFragReasm *r, uint8_t *pool, size_t pool_cap)
     }
     r->total = 0;
     r->count = 0;
-    memset(r->present, 0, sizeof(r->present));
+    mem.set(r->present, 0, sizeof(r->present));
     r->pool = pool;
     r->pool_cap = pool_cap;
     r->pool_used = 0;
@@ -674,7 +675,7 @@ proto_bool pc_ike_frag_reasm_add(IkeFragReasm *r, uint16_t frag_num, uint16_t to
     }
     if (len)
     {
-        memcpy(r->pool + r->pool_used, chunk, len);
+        mem.cpy(r->pool + r->pool_used, chunk, len);
     }
     r->off[idx] = r->pool_used;
     r->len[idx] = len;
@@ -704,7 +705,7 @@ size_t pc_ike_frag_reasm_assemble(const IkeFragReasm *r, uint8_t *out, size_t ou
         }
         if (r->len[i])
         {
-            memcpy(out + off, r->pool + r->off[i], r->len[i]);
+            mem.cpy(out + off, r->pool + r->off[i], r->len[i]);
         }
         off += r->len[i];
     }
@@ -1040,7 +1041,7 @@ proto_bool pc_ike_sa_first_proposal(const uint8_t *body, size_t body_len, IkePro
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     if (!body || body_len < 8)
     {
         return PROTO_FALSE;
@@ -1139,7 +1140,7 @@ proto_bool pc_ike_ts_get(const uint8_t *body, size_t body_len, uint8_t index, Ik
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     if (!body || body_len < 4)
     {
         return PROTO_FALSE;
@@ -1286,7 +1287,7 @@ proto_bool pc_ike_prf_plus(const uint8_t *key, size_t key_len, const uint8_t *se
         {
             take = PC_HMAC_SHA256_LEN;
         }
-        memcpy(out + produced, t, take);
+        mem.cpy(out + produced, t, take);
         produced += take;
     }
     return PROTO_TRUE;
@@ -1301,10 +1302,10 @@ static size_t build_ni_nr_spi(uint8_t *s, const uint8_t *ni, size_t ni_len, cons
         return 0;
     }
     size_t nlen = ni_len + nr_len;
-    memcpy(s, ni, ni_len);
-    memcpy(s + ni_len, nr, nr_len);
-    memcpy(s + nlen, spi_i, PC_IKE_SPI_LEN);
-    memcpy(s + nlen + PC_IKE_SPI_LEN, spi_r, PC_IKE_SPI_LEN);
+    mem.cpy(s, ni, ni_len);
+    mem.cpy(s + ni_len, nr, nr_len);
+    mem.cpy(s + nlen, spi_i, PC_IKE_SPI_LEN);
+    mem.cpy(s + nlen + PC_IKE_SPI_LEN, spi_r, PC_IKE_SPI_LEN);
     return nlen + 2 * PC_IKE_SPI_LEN;
 }
 
@@ -1328,19 +1329,19 @@ static proto_bool sk_split_from_skeyseed(const uint8_t skeyseed[PC_IKE_PRF_LEN],
     }
 
     size_t o = 0;
-    memcpy(out->sk_d, ks + o, lens->sk_d);
+    mem.cpy(out->sk_d, ks + o, lens->sk_d);
     o += lens->sk_d;
-    memcpy(out->sk_ai, ks + o, lens->sk_a);
+    mem.cpy(out->sk_ai, ks + o, lens->sk_a);
     o += lens->sk_a;
-    memcpy(out->sk_ar, ks + o, lens->sk_a);
+    mem.cpy(out->sk_ar, ks + o, lens->sk_a);
     o += lens->sk_a;
-    memcpy(out->sk_ei, ks + o, lens->sk_e);
+    mem.cpy(out->sk_ei, ks + o, lens->sk_e);
     o += lens->sk_e;
-    memcpy(out->sk_er, ks + o, lens->sk_e);
+    mem.cpy(out->sk_er, ks + o, lens->sk_e);
     o += lens->sk_e;
-    memcpy(out->sk_pi, ks + o, lens->sk_p);
+    mem.cpy(out->sk_pi, ks + o, lens->sk_p);
     o += lens->sk_p;
-    memcpy(out->sk_pr, ks + o, lens->sk_p);
+    mem.cpy(out->sk_pr, ks + o, lens->sk_p);
     out->sk_d_len = lens->sk_d;
     out->sk_a_len = lens->sk_a;
     out->sk_e_len = lens->sk_e;
@@ -1386,11 +1387,11 @@ proto_bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len
     // Rekey SKEYSEED = prf(SK_d(old), g^ir(new) | Ni | Nr)  (RFC 7296 §2.18) - the OLD SK_d is the key.
     uint8_t seed[PC_IKE_X25519_LEN + 2 * PC_IKE_NONCE_MAX];
     size_t sl = 0;
-    memcpy(seed, dh_secret, dh_len);
+    mem.cpy(seed, dh_secret, dh_len);
     sl = dh_len;
-    memcpy(seed + sl, ni, ni_len);
+    mem.cpy(seed + sl, ni, ni_len);
     sl += ni_len;
-    memcpy(seed + sl, nr, nr_len);
+    mem.cpy(seed + sl, nr, nr_len);
     sl += nr_len;
     uint8_t skeyseed[PC_IKE_PRF_LEN];
     pc_hmac_sha256(sk_d_old, sk_d_old_len, seed, sl, skeyseed);
@@ -1410,8 +1411,8 @@ proto_bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len
 // Build the 12-byte GCM nonce = salt(4) || explicit IV(8) (RFC 5282 §4).
 static void ike_gcm_nonce(uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *salt, const uint8_t *iv)
 {
-    memcpy(nonce, salt, PC_IKE_GCM_SALT_LEN);
-    memcpy(nonce + PC_IKE_GCM_SALT_LEN, iv, PC_IKE_GCM_IV_LEN);
+    mem.cpy(nonce, salt, PC_IKE_GCM_SALT_LEN);
+    mem.cpy(nonce + PC_IKE_GCM_SALT_LEN, iv, PC_IKE_GCM_IV_LEN);
 }
 
 proto_bool pc_ike_sk_aead_seal(const uint8_t key[PC_IKE_AEAD_KEY_LEN], const uint8_t salt[PC_IKE_GCM_SALT_LEN],
@@ -1547,8 +1548,8 @@ size_t pc_ike_sa_init_build(uint8_t *buf, size_t cap, const uint8_t init_spi[PC_
     }
 
     IkeHeader h;
-    memcpy(h.init_spi, init_spi, PC_IKE_SPI_LEN);
-    memcpy(h.resp_spi, resp_spi, PC_IKE_SPI_LEN);
+    mem.cpy(h.init_spi, init_spi, PC_IKE_SPI_LEN);
+    mem.cpy(h.resp_spi, resp_spi, PC_IKE_SPI_LEN);
     h.next_payload = IKE_PL_SA;
     h.version = PC_IKE_VERSION;
     h.exchange = IKE_SA_INIT;
@@ -1594,7 +1595,7 @@ proto_bool pc_ike_sa_init_parse(const uint8_t *msg, size_t len, IkeSaInitMsg *ou
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
 
     IkeHeader h;
     if (!pc_ike_hdr_parse(msg, len, &h))
@@ -1610,8 +1611,8 @@ proto_bool pc_ike_sa_init_parse(const uint8_t *msg, size_t len, IkeSaInitMsg *ou
         return PROTO_FALSE;
     }
 
-    memcpy(out->init_spi, h.init_spi, PC_IKE_SPI_LEN);
-    memcpy(out->resp_spi, h.resp_spi, PC_IKE_SPI_LEN);
+    mem.cpy(out->init_spi, h.init_spi, PC_IKE_SPI_LEN);
+    mem.cpy(out->resp_spi, h.resp_spi, PC_IKE_SPI_LEN);
     out->is_response = (h.flags & PC_IKE_FLAG_RESPONSE) != 0;
 
     IkePayloadIter it;
@@ -1667,8 +1668,8 @@ static size_t sk_message_build(uint8_t *buf, size_t cap, const uint8_t *init_spi
     }
 
     IkeHeader h;
-    memcpy(h.init_spi, init_spi, PC_IKE_SPI_LEN);
-    memcpy(h.resp_spi, resp_spi, PC_IKE_SPI_LEN);
+    mem.cpy(h.init_spi, init_spi, PC_IKE_SPI_LEN);
+    mem.cpy(h.resp_spi, resp_spi, PC_IKE_SPI_LEN);
     h.next_payload = IKE_PL_SK;
     h.version = PC_IKE_VERSION;
     h.exchange = exchange;
@@ -1686,10 +1687,10 @@ static size_t sk_message_build(uint8_t *buf, size_t cap, const uint8_t *init_spi
     put16(buf + IKE_SK_HDR_OFF + 2, (uint16_t)sk_len);
 
     // IV, then the plaintext (inner | Pad Length = 0) built in place at the ciphertext offset.
-    memcpy(buf + IKE_SK_IV_OFF, iv, PC_IKE_GCM_IV_LEN);
+    mem.cpy(buf + IKE_SK_IV_OFF, iv, PC_IKE_GCM_IV_LEN);
     if (inner_len)
     {
-        memcpy(buf + IKE_SK_CT_OFF, inner, inner_len);
+        mem.cpy(buf + IKE_SK_CT_OFF, inner, inner_len);
     }
     buf[IKE_SK_CT_OFF + inner_len] = 0x00; // Pad Length (0 padding bytes)
 
@@ -1789,8 +1790,8 @@ size_t pc_ike_signed_octets(uint8_t *scratch, size_t cap, const uint8_t *real, s
     {
         return 0;
     }
-    memcpy(scratch, real, real_len);
-    memcpy(scratch + real_len, nonce, nonce_len);
+    mem.cpy(scratch, real, real_len);
+    mem.cpy(scratch + real_len, nonce, nonce_len);
     pc_hmac_sha256(sk_p, sk_p_len, id_body, id_body_len, scratch + real_len + nonce_len); // MACedID
     return total;
 }
@@ -1922,12 +1923,12 @@ size_t pc_ike_initiator_start(IkeHandshake *hs, const uint8_t our_spi[PC_IKE_SPI
         return 0;
     }
 
-    memset(hs, 0, sizeof(*hs));
-    memcpy(hs->sa.init_spi, our_spi, PC_IKE_SPI_LEN); // resp_spi stays 0 until the response
+    mem.set(hs, 0, sizeof(*hs));
+    mem.cpy(hs->sa.init_spi, our_spi, PC_IKE_SPI_LEN); // resp_spi stays 0 until the response
     hs->sa.is_initiator = PROTO_TRUE;
     hs->sa.suite = *suite;
-    memcpy(hs->our_dh_priv, our_dh_priv, PC_IKE_X25519_LEN);
-    memcpy(hs->our_nonce, our_nonce, nonce_len);
+    mem.cpy(hs->our_dh_priv, our_dh_priv, PC_IKE_X25519_LEN);
+    mem.cpy(hs->our_nonce, our_nonce, nonce_len);
     hs->our_nonce_len = (uint16_t)nonce_len;
 
     uint8_t zero_spi[PC_IKE_SPI_LEN] = {0};
@@ -1938,7 +1939,7 @@ size_t pc_ike_initiator_start(IkeHandshake *hs, const uint8_t our_spi[PC_IKE_SPI
         hs->state = IKE_ST_FAILED;
         return 0;
     }
-    memcpy(hs->init_msg, out, n);
+    mem.cpy(hs->init_msg, out, n);
     hs->init_msg_len = (uint16_t)n;
     hs->state = IKE_ST_SA_INIT_SENT;
     return n;
@@ -1958,12 +1959,12 @@ proto_bool pc_ike_initiator_on_sa_init(IkeHandshake *hs, const uint8_t *resp, si
         return PROTO_FALSE;
     }
     // It must be a RESPONSE echoing our initiator SPI, offering the group we proposed.
-    if (!m.is_response || memcmp(m.init_spi, hs->sa.init_spi, PC_IKE_SPI_LEN) != 0 || m.dh_group != hs->sa.suite.dh)
+    if (!m.is_response || mem.cmp(m.init_spi, hs->sa.init_spi, PC_IKE_SPI_LEN) != 0 || m.dh_group != hs->sa.suite.dh)
     {
         hs->state = IKE_ST_FAILED;
         return PROTO_FALSE;
     }
-    memcpy(hs->sa.resp_spi, m.resp_spi, PC_IKE_SPI_LEN);
+    mem.cpy(hs->sa.resp_spi, m.resp_spi, PC_IKE_SPI_LEN);
 
     // Capture Nr for the IKE_AUTH octets (must fit our bounded store).
     if (m.nonce_len == 0 || m.nonce_len > PC_IKE_NONCE_MAX)
@@ -1971,7 +1972,7 @@ proto_bool pc_ike_initiator_on_sa_init(IkeHandshake *hs, const uint8_t *resp, si
         hs->state = IKE_ST_FAILED;
         return PROTO_FALSE;
     }
-    memcpy(hs->peer_nonce, m.nonce, m.nonce_len);
+    mem.cpy(hs->peer_nonce, m.nonce, m.nonce_len);
     hs->peer_nonce_len = (uint16_t)m.nonce_len;
 
     // Stash RealMessage2 (the responder's IKE_SA_INIT) - the responder's AUTH later signs over it.
@@ -1980,7 +1981,7 @@ proto_bool pc_ike_initiator_on_sa_init(IkeHandshake *hs, const uint8_t *resp, si
         hs->state = IKE_ST_FAILED;
         return PROTO_FALSE;
     }
-    memcpy(hs->resp_msg, resp, resp_len);
+    mem.cpy(hs->resp_msg, resp, resp_len);
     hs->resp_msg_len = (uint16_t)resp_len;
 
     // Derive the SA keys: for the initiator, Ni = ours, Nr = the responder's.
@@ -2056,7 +2057,7 @@ proto_bool pc_ike_initiator_on_auth_psk(IkeHandshake *hs, const uint8_t *resp, s
 
     // Decrypt SK{ IDr | AUTH } into a scratch copy (open mutates the buffer) with SK_er (responder->initiator).
     uint8_t work[PC_IKE_MSG_MAX];
-    memcpy(work, resp, resp_len);
+    mem.cpy(work, resp, resp_len);
     IkePayloadType first = IKE_PL_NONE;
     const uint8_t *inner = NULL;
     size_t inner_len = 0;
@@ -2149,17 +2150,17 @@ size_t pc_ike_responder_on_sa_init(IkeHandshake *hs, const uint8_t *req, size_t 
         return 0;
     }
 
-    memset(hs, 0, sizeof(*hs));
+    mem.set(hs, 0, sizeof(*hs));
     hs->sa.is_initiator = PROTO_FALSE;
     hs->sa.suite = *suite;
-    memcpy(hs->sa.init_spi, m.init_spi, PC_IKE_SPI_LEN); // the initiator's SPI, echoed
-    memcpy(hs->sa.resp_spi, our_spi, PC_IKE_SPI_LEN);    // our chosen responder SPI
-    memcpy(hs->our_dh_priv, our_dh_priv, PC_IKE_X25519_LEN);
-    memcpy(hs->our_nonce, our_nonce, nonce_len); // Nr
+    mem.cpy(hs->sa.init_spi, m.init_spi, PC_IKE_SPI_LEN); // the initiator's SPI, echoed
+    mem.cpy(hs->sa.resp_spi, our_spi, PC_IKE_SPI_LEN);    // our chosen responder SPI
+    mem.cpy(hs->our_dh_priv, our_dh_priv, PC_IKE_X25519_LEN);
+    mem.cpy(hs->our_nonce, our_nonce, nonce_len); // Nr
     hs->our_nonce_len = (uint16_t)nonce_len;
-    memcpy(hs->peer_nonce, m.nonce, m.nonce_len); // Ni
+    mem.cpy(hs->peer_nonce, m.nonce, m.nonce_len); // Ni
     hs->peer_nonce_len = (uint16_t)m.nonce_len;
-    memcpy(hs->init_msg, req, req_len); // RealMessage1 = the request
+    mem.cpy(hs->init_msg, req, req_len); // RealMessage1 = the request
     hs->init_msg_len = (uint16_t)req_len;
 
     // Emit the IKE_SA_INIT response (echo the initiator SPI, add ours, our KE + nonce).
@@ -2170,7 +2171,7 @@ size_t pc_ike_responder_on_sa_init(IkeHandshake *hs, const uint8_t *req, size_t 
         hs->state = IKE_ST_FAILED;
         return 0;
     }
-    memcpy(hs->resp_msg, out, n); // RealMessage2 = our response
+    mem.cpy(hs->resp_msg, out, n); // RealMessage2 = our response
     hs->resp_msg_len = (uint16_t)n;
 
     // Derive the SA keys: Ni = the initiator's nonce (peer), Nr = ours.
@@ -2249,7 +2250,7 @@ size_t pc_ike_responder_on_auth_psk(IkeHandshake *hs, const uint8_t *req, size_t
 
     // Decrypt the initiator's SK{ IDi | AUTH } with SK_ei (initiator->responder).
     uint8_t work[PC_IKE_MSG_MAX];
-    memcpy(work, req, req_len);
+    mem.cpy(work, req, req_len);
     IkePayloadType first = IKE_PL_NONE;
     const uint8_t *inner = NULL;
     size_t inner_len = 0;
@@ -2362,12 +2363,12 @@ proto_bool pc_ike_child_keymat(const uint8_t *sk_d, size_t sk_d_len, const uint8
     size_t o = 0;
     if (dh_secret && dh_len)
     {
-        memcpy(seed, dh_secret, dh_len);
+        mem.cpy(seed, dh_secret, dh_len);
         o = dh_len;
     }
-    memcpy(seed + o, ni, ni_len);
+    mem.cpy(seed + o, ni, ni_len);
     o += ni_len;
-    memcpy(seed + o, nr, nr_len);
+    mem.cpy(seed + o, nr, nr_len);
     o += nr_len;
     return pc_ike_prf_plus(sk_d, sk_d_len, seed, o, out, out_len);
 }

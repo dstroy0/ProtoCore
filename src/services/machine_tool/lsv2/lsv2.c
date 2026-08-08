@@ -7,6 +7,7 @@
  */
 
 #include "services/machine_tool/lsv2/lsv2.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_LSV2
 
@@ -20,7 +21,7 @@ static size_t finalize(uint8_t *buf, const char *mnemonic, size_t payload_len)
     buf[1] = (uint8_t)(payload_len >> 16);
     buf[2] = (uint8_t)(payload_len >> 8);
     buf[3] = (uint8_t)(payload_len);
-    memcpy(buf + 4, mnemonic, PC_LSV2_MNEMONIC_LEN);
+    mem.cpy(buf + 4, mnemonic, PC_LSV2_MNEMONIC_LEN);
     return PC_LSV2_HEADER_LEN + payload_len;
 }
 
@@ -66,7 +67,7 @@ size_t pc_lsv2_build(uint8_t *buf, size_t cap, const char *mnemonic, const uint8
     }
     if (payload_len)
     {
-        memcpy(buf + PC_LSV2_HEADER_LEN, payload, payload_len);
+        mem.cpy(buf + PC_LSV2_HEADER_LEN, payload, payload_len);
     }
     return finalize(buf, mnemonic, payload_len);
 }
@@ -77,7 +78,7 @@ proto_bool pc_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size
     {
         return PROTO_FALSE;
     }
-    memset(out->mnemonic, 0, PC_LSV2_MNEMONIC_LEN);
+    mem.set(out->mnemonic, 0, PC_LSV2_MNEMONIC_LEN);
     out->payload = NULL;
     out->payload_len = 0;
 
@@ -93,7 +94,7 @@ proto_bool pc_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size
         return PROTO_FALSE; // incomplete - caller accumulates more
     }
 
-    memcpy(out->mnemonic, buf + 4, PC_LSV2_MNEMONIC_LEN);
+    mem.cpy(out->mnemonic, buf + 4, PC_LSV2_MNEMONIC_LEN);
     out->payload = plen ? buf + PC_LSV2_HEADER_LEN : NULL;
     out->payload_len = plen;
     if (consumed)
@@ -105,7 +106,7 @@ proto_bool pc_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size
 
 proto_bool pc_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4)
 {
-    return t && mnemonic4 && memcmp(t->mnemonic, mnemonic4, PC_LSV2_MNEMONIC_LEN) == 0;
+    return t && mnemonic4 && mem.cmp(t->mnemonic, mnemonic4, PC_LSV2_MNEMONIC_LEN) == 0;
 }
 
 size_t pc_lsv2_build_login(uint8_t *buf, size_t cap, const char *login, const char *password)

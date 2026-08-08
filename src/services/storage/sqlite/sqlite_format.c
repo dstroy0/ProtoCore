@@ -7,6 +7,7 @@
  */
 
 #include "services/storage/sqlite/sqlite_format.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SQLITE
 
@@ -87,7 +88,7 @@ uint64_t pc_sqlite_serial_type_size(uint64_t t)
 
 proto_bool pc_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHeader *out)
 {
-    if (len < 100 || memcmp(buf, SQLITE_MAGIC, 16) != 0)
+    if (len < 100 || mem.cmp(buf, SQLITE_MAGIC, 16) != 0)
     {
         return PROTO_FALSE;
     }
@@ -223,7 +224,7 @@ proto_bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t pag
         return PROTO_FALSE;
     }
 
-    memcpy(out, leaf_page + cell->local_off, cell->local_len);
+    mem.cpy(out, leaf_page + cell->local_off, cell->local_len);
     uint32_t got = cell->local_len;
     if (!cell->has_overflow)
     {
@@ -272,7 +273,7 @@ proto_bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t pag
         {
             return PROTO_FALSE;
         }
-        memcpy(out + got, work_page + 4, chunk);
+        mem.cpy(out + got, work_page + 4, chunk);
         got += chunk;
         next = nnext;
     }
@@ -364,7 +365,7 @@ double pc_sqlite_column_float(const uint8_t *val, uint32_t val_len)
         u = (u << 8) | val[i];
     }
     double d = 0.0;
-    memcpy(&d, &u, 8); // u holds the big-endian-read IEEE-754 bit pattern as a native u64
+    mem.cpy(&d, &u, 8); // u holds the big-endian-read IEEE-754 bit pattern as a native u64
     return d;
 }
 
@@ -407,7 +408,7 @@ static proto_bool cursor_descend(SqliteTableCursor *c, uint32_t pgno)
         }
         if (h.type == SQLITE_BTREE_LEAF_TABLE)
         {
-            memcpy(c->leaf, c->work, c->page_size);
+            mem.cpy(c->leaf, c->work, c->page_size);
             c->leaf_hdr = h;
             c->leaf_off = (uint32_t)off;
             c->leaf_pgno = pgno;
@@ -662,14 +663,14 @@ static uint32_t write_value(const SqliteValue *v, uint64_t st, uint32_t vlen, ui
     {
         if (vlen)
         {
-            memcpy(out, v->data, vlen);
+            mem.cpy(out, v->data, vlen);
         }
         return vlen;
     }
     if (v->type == SQLITE_COL_FLOAT)
     {
         uint64_t u = 0;
-        memcpy(&u, &v->f, 8); // native bit pattern -> emit big-endian
+        mem.cpy(&u, &v->f, 8); // native bit pattern -> emit big-endian
         for (int i = 7; i >= 0; i--)
         {
             *out++ = (uint8_t)(u >> (i * 8));
@@ -875,10 +876,10 @@ uint32_t pc_sqlite_build_table_db(uint32_t page_size, const char *table_name, co
         return 0;
     }
 
-    memset(out, 0, (size_t)page_size * 2);
+    mem.set(out, 0, (size_t)page_size * 2);
 
     // --- Page 1: the 100-byte database header ---
-    memcpy(out, SQLITE_MAGIC, 16);
+    mem.cpy(out, SQLITE_MAGIC, 16);
     wr_be16(out + 16, (uint16_t)(page_size == 65536 ? 1 : page_size));
     out[18] = 1;                // write version (legacy)
     out[19] = 1;                // read version (legacy)

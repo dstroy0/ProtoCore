@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "services/net/iface_bridge/iface_bridge.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_IFACE_BRIDGE
 
@@ -52,7 +53,7 @@ proto_bool pc_iface_bridge_map(const char *ip, uint16_t port, BridgeProto proto,
         return PROTO_FALSE;
     }
     BridgeRule r;
-    memset(&r, 0, sizeof(r));
+    mem.set(&r, 0, sizeof(r));
     r.listen_ip.family = PC_IP_NONE; // "any interface" unless a valid address is given
     if (ip && ip[0] && !Ip.parse(ip, &r.listen_ip))
     {
@@ -123,7 +124,7 @@ size_t pc_iface_bridge_txn_build(uint8_t *out, size_t cap, const uint8_t *write_
     out[3] = (uint8_t)read_len;
     if (write_len && write_data)
     {
-        memcpy(out + PC_BRIDGE_TXN_HDR, write_data, write_len);
+        mem.cpy(out + PC_BRIDGE_TXN_HDR, write_data, write_len);
     }
     return need;
 }

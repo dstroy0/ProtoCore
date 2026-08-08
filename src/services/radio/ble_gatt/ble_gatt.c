@@ -7,6 +7,7 @@
  */
 
 #include "services/radio/ble_gatt/ble_gatt.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h"         // pc_sb frame builder
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
@@ -33,7 +34,7 @@ size_t att_read_rsp(const uint8_t *val, size_t vlen, uint8_t *out, size_t cap)
     out[0] = ATT_OP_READ_RSP;
     if (vlen)
     {
-        memcpy(out + 1, val, vlen);
+        mem.cpy(out + 1, val, vlen);
     }
     return 1 + vlen;
 }
@@ -49,7 +50,7 @@ static size_t att_handle_value(uint8_t op, uint16_t handle, const uint8_t *val, 
     out[2] = (uint8_t)(handle >> 8);
     if (vlen)
     {
-        memcpy(out + 3, val, vlen);
+        mem.cpy(out + 3, val, vlen);
     }
     return 3 + vlen;
 }

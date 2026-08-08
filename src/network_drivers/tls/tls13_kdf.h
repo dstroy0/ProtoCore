@@ -36,7 +36,7 @@ PROTO_BEGIN_DECLS
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
 /** @brief SHA-256 secret length; every TLS 1.3 secret here is 32 bytes. */
-#define TLS13_SECRET_LEN 32
+#define TLS13_SECRET_LEN PC_TLS13_SECRET_LEN
 
 /**
  * @brief The one thing that differs between the TLS 1.3 and DTLS 1.3 key schedules: the
@@ -63,16 +63,25 @@ extern const Tls13Kdf DTLS13_KDF;
  * Each step also derives that level's client and server traffic secrets, from which the record/packet
  * keys are made.
  */
+// Offsets into Tls13KeySchedule::s. Each term is one TLS13_SECRET_LEN value.
+#define TLS13_KS_EARLY 0                             ///< HKDF-Extract(0, PSK|0) - no-PSK: Extract(0, 0^32)
+#define TLS13_KS_HANDSHAKE TLS13_SECRET_LEN          ///< HKDF-Extract(Derive(early,"derived"), (EC)DHE)
+#define TLS13_KS_MASTER (2 * TLS13_SECRET_LEN)       ///< HKDF-Extract(Derive(handshake,"derived"), 0^32)
+#define TLS13_KS_CLIENT_HS (3 * TLS13_SECRET_LEN)    ///< Derive-Secret(handshake, "c hs traffic", CH..SH)
+#define TLS13_KS_SERVER_HS (4 * TLS13_SECRET_LEN)    ///< Derive-Secret(handshake, "s hs traffic", CH..SH)
+#define TLS13_KS_CLIENT_AP (5 * TLS13_SECRET_LEN)    ///< Derive-Secret(master, "c ap traffic", CH..SFIN)
+#define TLS13_KS_SERVER_AP (6 * TLS13_SECRET_LEN)    ///< Derive-Secret(master, "s ap traffic", CH..SFIN)
+#define TLS13_KS_EMPTY_HASH (7 * TLS13_SECRET_LEN)   ///< Transcript-Hash("")
+#define TLS13_KS_DERIVED (8 * TLS13_SECRET_LEN)      ///< Derive-Secret(X, "derived", "")
+#define TLS13_KS_FINISHED_KEY (9 * TLS13_SECRET_LEN) ///< HKDF-Expand-Label(traffic, "finished", "", L)
+#define TLS13_KS_ZEROS (10 * TLS13_SECRET_LEN)       ///< 0^Hash.length, never written: the borrow arrives zeroed
+#define TLS13_KS_VERIFY (11 * TLS13_SECRET_LEN)      ///< the Finished verify_data this end built or expects
+#define PC_TLS13_KS_CAP ((size_t)PC_TLS13_KS_TERMS * TLS13_SECRET_LEN)
+
 typedef struct
 {
-    const Tls13Kdf *kdf;                         ///< variant (label prefix) bound by pc_tls13_ks_early()
-    uint8_t early_secret[TLS13_SECRET_LEN];      ///< HKDF-Extract(0, PSK|0) - no-PSK: Extract(0, 0^32)
-    uint8_t handshake_secret[TLS13_SECRET_LEN];  ///< HKDF-Extract(Derive(early,"derived"), (EC)DHE)
-    uint8_t master_secret[TLS13_SECRET_LEN];     ///< HKDF-Extract(Derive(handshake,"derived"), 0^32)
-    uint8_t client_hs_traffic[TLS13_SECRET_LEN]; ///< Derive-Secret(handshake, "c hs traffic", CH..SH)
-    uint8_t server_hs_traffic[TLS13_SECRET_LEN]; ///< Derive-Secret(handshake, "s hs traffic", CH..SH)
-    uint8_t client_ap_traffic[TLS13_SECRET_LEN]; ///< Derive-Secret(master, "c ap traffic", CH..SFIN)
-    uint8_t server_ap_traffic[TLS13_SECRET_LEN]; ///< Derive-Secret(master, "s ap traffic", CH..SFIN)
+    const Tls13Kdf *kdf; ///< variant (label prefix) bound by pc_tls13_ks_early()
+    uint8_t *s;          ///< PC_TLS13_KS_CAP secure bytes, one term per TLS13_KS_* offset
 } Tls13KeySchedule;
 
 /**
@@ -97,7 +106,7 @@ void pc_tls13_derive_secret(const Tls13Kdf *kdf, const uint8_t secret[TLS13_SECR
                             const uint8_t transcript_hash[TLS13_SECRET_LEN], uint8_t out[TLS13_SECRET_LEN]);
 
 /** @brief Step 1: bind the @p kdf variant and compute early_secret = HKDF-Extract(0, 0^32) (no-PSK). */
-void pc_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks);
+proto_bool pc_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks);
 
 /**
  * @brief Step 2: handshake_secret and the client/server handshake traffic secrets.
@@ -136,7 +145,7 @@ void pc_tls13_ks_master(Tls13KeySchedule *ks, const uint8_t ch_sfin_hash[TLS13_S
  * @param transcript_hash  Transcript-Hash of the handshake up to but excluding this Finished.
  * @param out              32-byte verify_data.
  */
-void pc_tls13_finished_mac(const Tls13Kdf *kdf, const uint8_t base_secret[TLS13_SECRET_LEN],
+void pc_tls13_finished_mac(Tls13KeySchedule *ks, const uint8_t base_secret[TLS13_SECRET_LEN],
                            const uint8_t transcript_hash[TLS13_SECRET_LEN], uint8_t out[TLS13_SECRET_LEN]);
 
 #endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE

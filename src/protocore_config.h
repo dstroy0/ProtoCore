@@ -3384,9 +3384,9 @@ from halves and is slower than the width it decomposes into"
  *
  * Off by default: build-time theme injection (`<!--#theme NAME-->`) costs nothing extra, but
  * embedding the whole library for runtime switching links every theme's CSS into flash (~1 KB each).
- * When set, application/binary_asset_blobs.{h,cpp} exposes `pc_theme_css(name)` + the registry
+ * When set, application/binary_asset_blobs.{h,c} exposes `pc_theme_css(name)` + the registry
  * `PC_THEME_BLOBS`, so a route (e.g. `/themes/<name>.css`) or a picker can switch themes live.
- * Regenerate with `web_assets/wizard/gen_theme_blobs.py` after adding a theme.
+ * Regenerate with `src/web_assets/wizard/gen_theme_blobs.py` after adding a theme.
  */
 #ifndef PC_ENABLE_THEMES
 #define PC_ENABLE_THEMES 0
@@ -3398,7 +3398,7 @@ from halves and is slower than the width it decomposes into"
  * A few themes are named after a company or product (Darcula, Windows XP, Discord, Spotify, ...). The
  * palette is just colors, but a commercial product should not ship the branded name, so a commercial
  * build sets this to 0 to drop those blobs from the registry (the list is `RESTRICTED` in
- * `web_assets/wizard/gen_themes.py`). The open-source (AGPL) build keeps them.
+ * `src/web_assets/wizard/gen_themes.py`). The open-source (AGPL) build keeps them.
  */
 #ifndef PC_THEMES_INCLUDE_TRADEMARKED
 #define PC_THEMES_INCLUDE_TRADEMARKED 1
@@ -6625,6 +6625,55 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_SSH_CONN (((size_t)MAX_SSH_CONNS + 2u) * 2u * (size_t)SSH_PKT_BUF_SIZE)
 #endif
 
+// The software TLS 1.3 handshake driver takes one borrow per connection from the secure pool's
+// PERSISTENT end and splits it by offset: TX at 0, where a message is built to send and where a
+// received record is opened; RX at PC_TLS_CONN_MSG_CAP, which the worker fills with one record; and
+// the terms after it - the key share, the ECDHE secret, the transcript hash in hand, the Finished
+// MAC, and Transcript-Hash(CH..server Finished). Every offset is a multiple of 32, so the borrow
+// stays aligned end to end.
+#ifndef PC_TLS_CONN_MSG_CAP
+#define PC_TLS_CONN_MSG_CAP 1024
+#endif
+#ifndef PC_TLS_CONN_REC_CAP
+#define PC_TLS_CONN_REC_CAP 1024
+#endif
+// SHA-256 sizes the TLS 1.3 key schedule, so every schedule term is one of these.
+#ifndef PC_TLS13_SECRET_LEN
+#define PC_TLS13_SECRET_LEN 32
+#endif
+// The key share, the ECDHE secret, the transcript hash in hand, the Finished MAC, and
+// Transcript-Hash(CH..server Finished).
+#ifndef PC_TLS_CONN_TERMS
+#define PC_TLS_CONN_TERMS 5
+#endif
+#ifndef PC_TLS_CONN_TERMS_CAP
+#define PC_TLS_CONN_TERMS_CAP ((size_t)PC_TLS_CONN_TERMS * PC_TLS13_SECRET_LEN)
+#endif
+// The transcript snapshot and the parsed ClientHello, which the driver reaches by pointer. Stated in
+// bytes here and proved against their real sizeof by a static_assert in tls_conn.c.
+#ifndef PC_TLS_CONN_STATE_CAP
+#define PC_TLS_CONN_STATE_CAP 384
+#endif
+// One TLS 1.3 key schedule per handshake in flight, from the persistent end for the life of the
+// connection. Stated in schedules; the per-schedule extent is PC_TLS13_KS_CAP, proved by a
+// static_assert in tls13_kdf.c.
+#ifndef PC_TLS13_KS_SLOTS
+#define PC_TLS13_KS_SLOTS MAX_CONNS
+#endif
+// early, handshake and master secrets; the four traffic secrets; the empty hash, the derived salt,
+// the finished key, the zero IKM, and the Finished verify_data.
+#ifndef PC_TLS13_KS_TERMS
+#define PC_TLS13_KS_TERMS 12
+#endif
+#ifndef PC_WORK_TLS13_KDF
+#define PC_WORK_TLS13_KDF ((size_t)PC_TLS13_KS_SLOTS * PC_TLS13_KS_TERMS * PC_TLS13_SECRET_LEN)
+#endif
+#ifndef PC_WORK_TLS_CONN
+#define PC_WORK_TLS_CONN                                                                                               \
+    ((size_t)MAX_TLS_CONNS * ((size_t)PC_TLS_CONN_MSG_CAP + (size_t)PC_TLS_CONN_REC_CAP +                              \
+                              (size_t)PC_TLS_CONN_TERMS_CAP + (size_t)PC_TLS_CONN_STATE_CAP))
+#endif
+
 // The two tables a module holds for the life of the program rather than for the life of a call.
 // They take the persistent end of the arena, so they are stated here for the same reason every
 // working set is: the pool is sized off what the build declares, and an undeclared borrow is one
@@ -6699,9 +6748,22 @@ from halves and is slower than the width it decomposes into"
 #define PC_SECURE_WORK_AUTH 0
 #endif
 
+#if PC_TLS_SOFTWARE
+#define PC_SECURE_WORK_TLSCONN PC_WORK_TLS_CONN
+#else
+#define PC_SECURE_WORK_TLSCONN 0
+#endif
+
+#if PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE
+#define PC_SECURE_WORK_TLS13KDF PC_WORK_TLS13_KDF
+#else
+#define PC_SECURE_WORK_TLS13KDF 0
+#endif
+
 #define PC_SECURE_ARENA_SIZE                                                                                           \
     (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_MAC + PC_SECURE_WORK_SMB +                           \
-     PC_SECURE_WORK_SSHCIPHER + PC_SECURE_WORK_SSHCONN + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +     \
+     PC_SECURE_WORK_SSHCIPHER + PC_SECURE_WORK_SSHCONN + PC_SECURE_WORK_TLSCONN + PC_SECURE_WORK_TLS13KDF +            \
+     PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +                                                         \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 

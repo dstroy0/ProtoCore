@@ -7,6 +7,7 @@
  */
 
 #include "relay.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_RELAY
 
@@ -96,7 +97,7 @@ void pc_relay_init(pc_relay *r, const pc_relay_end *client, const pc_relay_end *
     {
         return;
     }
-    memset(r, 0, sizeof(*r));
+    mem.set(r, 0, sizeof(*r));
     r->a = *client;
     r->b = *origin;
 }

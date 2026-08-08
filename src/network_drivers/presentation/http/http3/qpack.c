@@ -11,6 +11,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/qpack.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -136,14 +137,14 @@ size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
     int name_idx = -1, full_idx = -1;
     for (int i = 0; i < 99; i++)
     {
-        if (strnlen(QPACK_STATIC[i][0], name_len + 1) == name_len && memcmp(QPACK_STATIC[i][0], name, name_len) == 0)
+        if (strnlen(QPACK_STATIC[i][0], name_len + 1) == name_len && mem.cmp(QPACK_STATIC[i][0], name, name_len) == 0)
         {
             if (name_idx < 0)
             {
                 name_idx = i;
             }
             if (strnlen(QPACK_STATIC[i][1], value_len + 1) == value_len &&
-                memcmp(QPACK_STATIC[i][1], value, value_len) == 0)
+                mem.cmp(QPACK_STATIC[i][1], value, value_len) == 0)
             {
                 full_idx = i;
                 break;
@@ -194,7 +195,7 @@ size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
         {
             return 0;
         }
-        memcpy(out + o, name, name_len);
+        mem.cpy(out + o, name, name_len);
         o += name_len;
     }
     size_t vs = HpackPrim.encode_str(out + o, cap - o, value, value_len);
@@ -269,7 +270,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
             {
                 return PROTO_FALSE;
             }
-            memcpy(scratch, nm, nlen);
+            mem.cpy(scratch, nm, nlen);
             size_t vlen = 0;
             if (!HpackPrim.decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
             {
@@ -307,7 +308,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
                 {
                     return PROTO_FALSE;
                 }
-                memcpy(scratch, block + pos, nlen32);
+                mem.cpy(scratch, block + pos, nlen32);
                 nlen = nlen32;
             }
             pos += nlen32;

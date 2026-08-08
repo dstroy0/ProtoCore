@@ -8,6 +8,7 @@
  */
 
 #include "services/radio/promisc/promisc.h"
+#include "mmgr/protomem.h"
 #include "network_drivers/physical/physical.h"
 
 #if PC_ENABLE_PROMISC
@@ -21,7 +22,7 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
 
     const uint8_t fc0 = frame[0];
     const uint8_t fc1 = frame[1];

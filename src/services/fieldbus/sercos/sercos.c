@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/sercos/sercos.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SERCOS
 
@@ -49,7 +50,7 @@ size_t pc_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_
     out[3] = (uint8_t)(cycle >> 8);
     if (data_len)
     {
-        memcpy(out + SERCOS_HDR_LEN, data, data_len);
+        mem.cpy(out + SERCOS_HDR_LEN, data, data_len);
     }
     return n;
 }

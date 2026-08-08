@@ -11,6 +11,7 @@
  */
 
 #include "crypto/kdf/kdf.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/hash/sha256.h"
 #include "mmgr/endian.h"
@@ -26,14 +27,14 @@ proto_bool pc_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const uint8_
     }
     // The HMAC key is constant across counter iterations, so derive its pads once (RFC 2104).
     uint8_t k[64];
-    memset(k, 0, sizeof(k));
+    mem.set(k, 0, sizeof(k));
     if (ki_len > 64)
     {
         pc_sha256(ki, ki_len, k); // a key longer than the block is hashed to 32 octets first
     }
     else
     {
-        memcpy(k, ki, ki_len);
+        mem.cpy(k, ki, ki_len);
     }
     uint8_t ipad[64], opad[64];
     for (int i = 0; i < 64; i++)
@@ -61,7 +62,7 @@ proto_bool pc_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const uint8_
         pc_sha256_update(&c, inner, 32);
         pc_sha256_final(&c, block);
         size_t take = (out_len - done < 32) ? out_len - done : 32;
-        memcpy(out + done, block, take);
+        mem.cpy(out + done, block, take);
         done += take;
     }
     return PROTO_TRUE;

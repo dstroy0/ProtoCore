@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DTLS
 
@@ -136,7 +137,7 @@ static size_t pc_dtls_hs_frag_build(uint8_t msg_type, uint16_t msg_seq, uint32_t
     out[11] = (uint8_t)frag_len;
     if (frag_len)
     {
-        memcpy(out + PC_DTLS_HS_HDR_LEN, frag, frag_len);
+        mem.cpy(out + PC_DTLS_HS_HDR_LEN, frag, frag_len);
     }
     return total;
 }
@@ -192,7 +193,7 @@ static int pc_dtls_hs_reasm_add(DtlsHsReasm *r, const DtlsHsHeader *frag)
     {
         return 0; // empty fragment of a non-empty message contributes nothing
     }
-    memcpy(r->buf + lo, frag->fragment, frag->frag_length);
+    mem.cpy(r->buf + lo, frag->fragment, frag->frag_length);
     if (reasm_merge(r, lo, hi) < 0)
     {
         return -1;
@@ -284,7 +285,7 @@ static size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timest
     out[10] = (uint8_t)payload_len;
     if (payload_len)
     {
-        memcpy(out + 11, payload, payload_len);
+        mem.cpy(out + 11, payload, payload_len);
     }
     // MAC covers version || timestamp || client_addr || payload_len || payload: the address is
     // authenticated (so a cookie cannot be replayed from another peer) without being stored.
@@ -337,7 +338,7 @@ static proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t 
     }
     if (payload_len)
     {
-        memcpy(payload_out, cookie + 11, payload_len);
+        mem.cpy(payload_out, cookie + 11, payload_len);
     }
     *payload_len_out = payload_len;
     return PROTO_TRUE;

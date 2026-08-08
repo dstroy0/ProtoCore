@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/application/nts/nts.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_NTS
 
@@ -38,7 +39,7 @@ size_t pc_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body,
     put_u16(out + 2, (uint16_t)body_len);
     if (body_len)
     {
-        memcpy(out + 4, body, body_len);
+        mem.cpy(out + 4, body, body_len);
     }
     return n;
 }
@@ -118,7 +119,7 @@ size_t pc_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_len, ui
     put_u16(out + 2, (uint16_t)padded);
     if (value_len)
     {
-        memcpy(out + 4, value, value_len);
+        mem.cpy(out + 4, value, value_len);
     }
     for (size_t i = total; i < padded; i++)
     {

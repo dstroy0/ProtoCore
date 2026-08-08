@@ -12,6 +12,7 @@
  */
 
 #include "server/signaling/gpio_map.h"
+#include "mmgr/protomem.h"
 #include "server/clock/clock.h" // pc_millis()
 
 #if PC_ENABLE_GPIO_MAP
@@ -88,7 +89,7 @@ static proto_bool form_field_uint(const char *body, size_t len, const char *name
     for (size_t i = 0; i + nlen + 1 <= len; i++)
     {
         proto_bool at_field = (i == 0) || body[i - 1] == '&';
-        if (!at_field || memcmp(body + i, name, nlen) != 0 || body[i + nlen] != '=')
+        if (!at_field || mem.cmp(body + i, name, nlen) != 0 || body[i + nlen] != '=')
         {
             continue;
         }

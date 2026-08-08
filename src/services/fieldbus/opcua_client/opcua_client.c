@@ -9,12 +9,13 @@
  */
 
 #include "services/fieldbus/opcua_client/opcua_client.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_OPCUA_CLIENT
 
 void pc_opcua_client_init(OpcUaClient *c)
 {
-    memset(c, 0, sizeof(*c));
+    mem.set(c, 0, sizeof(*c));
 }
 
 // ---------------------------------------------------------------------------
@@ -299,7 +300,7 @@ static proto_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint3
                               uint32_t *service_result)
 {
     UaMsgHeader h;
-    if (!pc_opcua_parse_header(msg, len, &h) || memcmp(h.type, "MSG", 3) != 0 || h.size != len)
+    if (!pc_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "MSG", 3) != 0 || h.size != len)
     {
         return PROTO_FALSE;
     }
@@ -326,7 +327,7 @@ static proto_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint3
 proto_bool pc_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *out)
 {
     UaMsgHeader h;
-    if (!pc_opcua_parse_header(msg, len, &h) || memcmp(h.type, "ACK", 3) != 0)
+    if (!pc_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "ACK", 3) != 0)
     {
         return PROTO_FALSE;
     }
@@ -346,7 +347,7 @@ proto_bool pc_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *
 proto_bool pc_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, size_t len)
 {
     UaMsgHeader h;
-    if (!pc_opcua_parse_header(msg, len, &h) || memcmp(h.type, "OPN", 3) != 0 || h.size != len)
+    if (!pc_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "OPN", 3) != 0 || h.size != len)
     {
         return PROTO_FALSE;
     }
@@ -434,7 +435,7 @@ int32_t pc_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVariant *va
     {
         uint8_t mask = pc_ua_r_u8(&r);
         OpcUaVariant v;
-        memset(&v, 0, sizeof(v));
+        mem.set(&v, 0, sizeof(v));
         uint32_t st = OPCUA_STATUS_GOOD;
         if (mask & 0x01) // Value (Variant) present
         {
@@ -543,7 +544,7 @@ int32_t pc_opcua_client_on_browse(const uint8_t *msg, size_t len, OpcUaClientRef
         for (int32_t j = 0; j < nrefs; j++)
         {
             OpcUaClientRef ref;
-            memset(&ref, 0, sizeof(ref));
+            mem.set(&ref, 0, sizeof(ref));
             UaNodeId rt;
             pc_ua_r_nodeid(&r, &rt);
             ref.ref_type_id = rt.id;

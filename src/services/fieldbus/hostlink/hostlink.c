@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/hostlink/hostlink.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HOSTLINK
 
@@ -68,7 +69,7 @@ size_t pc_hostlink_build(char *buf, size_t cap, uint8_t node, const char *header
     buf[p++] = header_code[1];
     if (text_len)
     {
-        memcpy(buf + p, text, text_len);
+        mem.cpy(buf + p, text, text_len);
         p += text_len;
     }
     uint8_t f = pc_hostlink_fcs(buf, p); // XOR over '@' .. end of text

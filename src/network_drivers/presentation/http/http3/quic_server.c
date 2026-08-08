@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/quic_server.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -106,7 +107,7 @@ static void copy_str(char *dst, size_t cap, const char *src)
 
 static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8_t blen)
 {
-    return alen == blen && memcmp(a, b, alen) == 0;
+    return alen == blen && mem.cmp(a, b, alen) == 0;
 }
 
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
@@ -132,7 +133,7 @@ static proto_bool ring_push(const uint8_t *dg, size_t len, const char *ip, uint1
         return PROTO_FALSE; // ring full: drop (QUIC recovers via retransmission)
     }
     QuicIngest *e = &s_qpool.ring[head];
-    memcpy(e->data, dg, len);
+    mem.cpy(e->data, dg, len);
     e->len = (uint16_t)len;
     copy_str(e->ip, sizeof e->ip, ip);
     e->port = port;
@@ -172,7 +173,7 @@ static QuicSlot *alloc_slot()
         if (!s_qpool.pool[i].used)
         {
             QuicSlot *s = &s_qpool.pool[i];
-            memset(s, 0, sizeof *s);
+            mem.set(s, 0, sizeof *s);
             s->used = PROTO_TRUE;
             s->id = s_quic.next_id++;
             if (s_quic.next_id == 0)
@@ -209,10 +210,10 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     }
 
     QuicTlsConfig tc;
-    memset(&tc, 0, sizeof tc);
+    mem.set(&tc, 0, sizeof tc);
     tc.cert_der = s_quic.cfg.cert_der;
     tc.cert_len = s_quic.cfg.cert_len;
-    memcpy(tc.ed25519_seed, s_quic.cfg.ed25519_seed, sizeof tc.ed25519_seed);
+    mem.cpy(tc.ed25519_seed, s_quic.cfg.ed25519_seed, sizeof tc.ed25519_seed);
     pc_quic_tp_defaults(&tc.params);
     // A real HTTP/3 endpoint must advertise flow-control room, or every request stream (and the
     // client's control / QPACK streams) is blocked - the RFC 9000 sec 18.2 defaults are all zero.
@@ -232,7 +233,7 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     s_quic.cfg.rng(our_scid, sizeof our_scid);
 
     QuicConnCallbacks cb;
-    memset(&cb, 0, sizeof cb); // pc_h3_conn_init installs the real callbacks
+    mem.set(&cb, 0, sizeof cb); // pc_h3_conn_init installs the real callbacks
     pc_quic_conn_init(&s->qc, &tc, lh->dcid, lh->dcid_len, lh->scid, lh->scid_len, our_scid, PC_QUIC_SCID_LEN, &cb);
     pc_h3_conn_init(&s->h3, &s->qc, pc_h3_on_request, s);
 
@@ -288,7 +289,7 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
         QuicSlot *s = &s_qpool.pool[i];
         // scid_len is always PC_QUIC_SCID_LEN (only this server sets it, at conn init above), so its
         // != arm below is a defensive guard no host input can reach.
-        if (s->used && s->qc.scid_len == PC_QUIC_SCID_LEN && memcmp(dg + 1, s->qc.scid, PC_QUIC_SCID_LEN) == 0)
+        if (s->used && s->qc.scid_len == PC_QUIC_SCID_LEN && mem.cmp(dg + 1, s->qc.scid, PC_QUIC_SCID_LEN) == 0)
         {
             return s;
         }

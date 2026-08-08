@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/quic_frame.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -231,7 +232,7 @@ size_t pc_quic_build_padding(uint8_t *out, size_t cap, size_t n)
     {
         return 0;
     }
-    memset(out, 0, n);
+    mem.set(out, 0, n);
     return n;
 }
 
@@ -291,7 +292,7 @@ size_t pc_quic_build_crypto(uint8_t *out, size_t cap, uint64_t offset, const uin
     }
     if (len)
     {
-        memcpy(out + pos, data, len);
+        mem.cpy(out + pos, data, len);
     }
     return pos + len;
 }
@@ -319,7 +320,7 @@ size_t pc_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offs
     }
     if (len)
     {
-        memcpy(out + pos, data, len);
+        mem.cpy(out + pos, data, len);
     }
     return pos + len;
 }
@@ -349,7 +350,7 @@ size_t pc_quic_build_connection_close(uint8_t *out, size_t cap, uint64_t error_c
     }
     if (reason_len)
     {
-        memcpy(out + pos, reason, reason_len);
+        mem.cpy(out + pos, reason, reason_len);
     }
     return pos + reason_len;
 }

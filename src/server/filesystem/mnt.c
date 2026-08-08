@@ -13,6 +13,7 @@
  */
 
 #include "server/filesystem/mnt.h"
+#include "mmgr/protomem.h"
 
 // --- the HAL: which store is mounted -------------------------------------------------------------
 // Ungated, because mnt.h declares it ungated: this is the seam every caller reads through, and the
@@ -272,7 +273,7 @@ static int ram_read(int h, void *buf, size_t n)
     RamFile *f = &s_mnt.rf[s_mnt.rh[h].file];
     size_t avail = (s_mnt.rh[h].pos < f->len) ? (f->len - s_mnt.rh[h].pos) : 0;
     size_t k = n < avail ? n : avail;
-    memcpy(buf, f->data + s_mnt.rh[h].pos, k);
+    mem.cpy(buf, f->data + s_mnt.rh[h].pos, k);
     s_mnt.rh[h].pos += k;
     return (int)(k);
 }
@@ -286,7 +287,7 @@ static int ram_write(int h, const void *buf, size_t n)
     RamFile *f = &s_mnt.rf[s_mnt.rh[h].file];
     size_t cap = (s_mnt.rh[h].pos < PC_MNT_RAM_FILE_SIZE) ? (PC_MNT_RAM_FILE_SIZE - s_mnt.rh[h].pos) : 0;
     size_t k = n < cap ? n : cap;
-    memcpy(f->data + s_mnt.rh[h].pos, buf, k);
+    mem.cpy(f->data + s_mnt.rh[h].pos, buf, k);
     s_mnt.rh[h].pos += k;
     if (s_mnt.rh[h].pos > f->len)
     {
@@ -464,7 +465,7 @@ static proto_bool ram_readdir(int h, pc_mnt_stat *out, char *name, size_t name_c
         {
             continue; // the caller's buffer cannot hold this name - skip it rather than truncate
         }
-        memcpy(name, rest, rl);
+        mem.cpy(name, rest, rl);
         name[rl] = '\0';
         ram_fill_stat(&s_mnt.rf[i], out);
         s_mnt.rh[h].pos = i + 1;

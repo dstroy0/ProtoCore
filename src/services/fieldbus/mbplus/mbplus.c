@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/mbplus/mbplus.h"
+#include "mmgr/protomem.h"
 #include "shared_primitives/crc.h" // PC_CRC16_X25
 
 #if PC_ENABLE_MBPLUS
@@ -36,7 +37,7 @@ size_t pc_mbplus_build(uint8_t address, uint8_t control, const uint8_t *payload,
     out[i++] = control;
     if (payload_len)
     {
-        memcpy(out + i, payload, payload_len);
+        mem.cpy(out + i, payload, payload_len);
         i += payload_len;
     }
     uint16_t crc = pc_mbplus_crc(out + body, (i - body)); // over addr..last payload

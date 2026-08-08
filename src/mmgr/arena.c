@@ -7,6 +7,7 @@
  */
 
 #include "mmgr/arena.h"
+#include "mmgr/protomem.h"
 
 // ---------------------------------------------------------------------------
 // Slot identity
@@ -91,7 +92,7 @@ void *pc_arena_persist_alloc(pc_arena *a, size_t n)
             b->used = 1;
             a->persist_used += b->size;
             void *pl = a->base + off + AHDR;
-            memset(pl, 0, b->size);
+            mem.set(pl, 0, b->size);
             return pl;
         }
         off += AHDR + b->size;
@@ -112,7 +113,7 @@ void *pc_arena_persist_alloc(pc_arena *a, size_t n)
             a->persist_hw = a->persist_end;
         }
         a->persist_used += n;
-        memset(pl, 0, n);
+        mem.set(pl, 0, n);
         return pl;
     }
     return NULL; // fail closed

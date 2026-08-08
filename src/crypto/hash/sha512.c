@@ -10,6 +10,7 @@
  */
 
 #include "crypto/hash/sha512.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 
 #if PC_HAS_HW_SHA
@@ -154,7 +155,7 @@ void pc_sha512_init(pc_sha512_ctx *ctx)
     }
     ctx->n = 0;
     ctx->buflen = 0;
-    memset(ctx->buf, 0, sizeof(ctx->buf));
+    mem.set(ctx->buf, 0, sizeof(ctx->buf));
 }
 
 void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
@@ -164,7 +165,7 @@ void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
     {
         uint32_t space = 128 - ctx->buflen;
         uint32_t take = (uint32_t)len < space ? (uint32_t)len : space;
-        memcpy(ctx->buf + ctx->buflen, data, take);
+        mem.cpy(ctx->buf + ctx->buflen, data, take);
         ctx->buflen += take;
         data += take;
         len -= take;

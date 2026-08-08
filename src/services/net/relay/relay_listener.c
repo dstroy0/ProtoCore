@@ -8,6 +8,7 @@
  */
 
 #include "relay_listener.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_RELAY
 
@@ -258,7 +259,7 @@ proto_bool pc_relay_publish(uint8_t listener_id, const char *origin_host, uint16
     }
     s_ctx.binds[idx].active = PROTO_TRUE;
     s_ctx.binds[idx].listener_id = listener_id;
-    memcpy(s_ctx.binds[idx].host, origin_host, hl + 1);
+    mem.cpy(s_ctx.binds[idx].host, origin_host, hl + 1);
     s_ctx.binds[idx].port = origin_port;
     if (!s_ctx.registered)
     {

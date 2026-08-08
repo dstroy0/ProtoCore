@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/lonworks/lonworks.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_LONWORKS
 
@@ -27,7 +28,7 @@ size_t pc_lon_build_nv(uint8_t msg_code, uint16_t selector, const uint8_t *value
     out[2] = (uint8_t)selector;
     if (value_len)
     {
-        memcpy(out + 3, value, value_len);
+        mem.cpy(out + 3, value, value_len);
     }
     return n;
 }

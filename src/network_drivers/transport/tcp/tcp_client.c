@@ -13,6 +13,7 @@
  */
 
 #include "tcp_client.h"
+#include "mmgr/protomem.h"
 #include "network_drivers/network/network.h"
 
 // Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
@@ -261,7 +262,7 @@ static void cc_pump(ClientConn *c)
     c->resolving = PROTO_FALSE;
 
     CcConnCall k;
-    memset(&k, 0, sizeof(k));
+    mem.set(&k, 0, sizeof(k));
     k.c = c;
     pc_net_ip4_set(&k.addr, (uint8_t)(ip >> 24), (uint8_t)(ip >> 16), (uint8_t)(ip >> 8), (uint8_t)ip);
     k.port = c->port;
@@ -335,7 +336,7 @@ static proto_bool pc_client_send(int cid, const void *data, size_t len)
         return PROTO_FALSE;
     }
     CcSendCall k;
-    memset(&k, 0, sizeof(k));
+    mem.set(&k, 0, sizeof(k));
     k.c = &s_client.cc[cid];
     k.data = data;
     k.len = (proto_u16)(len > 0xFFFF ? 0xFFFF : len);
@@ -370,7 +371,7 @@ static size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
     {
         // Ack-on-consume: reopen the receive window by exactly what we just drained.
         CcRecvedCall k;
-        memset(&k, 0, sizeof(k));
+        mem.set(&k, 0, sizeof(k));
         k.c = c;
         k.len = (proto_u16)n;
         pc_net_call_marshal(cc_do_recved, &k.base);
@@ -385,7 +386,7 @@ static void pc_client_close(int cid)
         return;
     }
     CcSendCall k;
-    memset(&k, 0, sizeof(k));
+    mem.set(&k, 0, sizeof(k));
     k.c = &s_client.cc[cid];
     pc_net_call_marshal(cc_do_close, &k.base);
     s_client.cc[cid].in_use = PROTO_FALSE;

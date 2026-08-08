@@ -7,6 +7,7 @@
  */
 
 #include "services/security/jwt/jwt.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_JWT
@@ -349,7 +350,7 @@ proto_bool pc_jwt_scope_allows(const char *scope_claim, const char *required)
         {
             p++;
         }
-        if ((size_t)(p - start) == rlen && memcmp(start, required, rlen) == 0)
+        if ((size_t)(p - start) == rlen && mem.cmp(start, required, rlen) == 0)
         {
             return PROTO_TRUE;
         }

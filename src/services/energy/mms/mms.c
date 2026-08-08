@@ -7,6 +7,7 @@
  */
 
 #include "services/energy/mms/mms.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_MMS
 
@@ -69,7 +70,7 @@ static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out,
     // path (it assumes val_len >= cap - k, e.g. 5 >= 254) that the n <= cap guard rules out.
     if (n > k)
     {
-        memcpy(out + k, val, n - k); // NOSONAR - see above: bound proven, analyzer follows an infeasible path
+        mem.cpy(out + k, val, n - k); // NOSONAR - see above: bound proven, analyzer follows an infeasible path
     }
     return n;
 }
@@ -196,7 +197,7 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
     {
         return 0;
     }
-    memcpy(body + bn, a0, n); // append the A4 read
+    mem.cpy(body + bn, a0, n); // append the A4 read
     bn += n;
     return tlv(MMS_PDU_CONFIRMED_REQUEST, body, bn, out, cap);
 }
@@ -233,7 +234,7 @@ size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data
     {
         return 0;
     }
-    memcpy(body + bn, svc, n);
+    mem.cpy(body + bn, svc, n);
     bn += n;
     return tlv(MMS_PDU_CONFIRMED_RESPONSE, body, bn, out, cap);
 }

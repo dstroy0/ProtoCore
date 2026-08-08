@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/cclink/cclink.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_CCLINK
 
@@ -37,12 +38,12 @@ size_t pc_cclink_build(uint8_t station, uint8_t command, const uint8_t *bits, si
     out[i++] = command;
     if (bit_len)
     {
-        memcpy(out + i, bits, bit_len);
+        mem.cpy(out + i, bits, bit_len);
         i += bit_len;
     }
     if (word_len)
     {
-        memcpy(out + i, words, word_len);
+        mem.cpy(out + i, words, word_len);
         i += word_len;
     }
     out[i] = pc_cclink_sum(out, i); // checksum over station..last data

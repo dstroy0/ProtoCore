@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/application/scp/scp.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_SSH_SCP
@@ -74,7 +75,7 @@ ScpMode pc_scp_parse_cmd(const char *cmd, size_t cmd_len, char *path_out, size_t
     {
         return SCP_MODE_INVALID;
     }
-    memcpy(path_out, last_tok, last_len);
+    mem.cpy(path_out, last_tok, last_len);
     path_out[last_len] = '\0';
     return mode;
 }
@@ -124,7 +125,7 @@ proto_bool pc_scp_parse_cline(const char *line, size_t len, uint32_t *mode_out, 
     {
         return PROTO_FALSE;
     }
-    memcpy(name_out, line + ns, nlen);
+    mem.cpy(name_out, line + ns, nlen);
     name_out[nlen] = '\0';
 
     if (mode_out)

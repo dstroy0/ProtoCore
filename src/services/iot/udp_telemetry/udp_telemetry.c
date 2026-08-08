@@ -10,6 +10,7 @@
  */
 
 #include "services/iot/udp_telemetry/udp_telemetry.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_UDP_TELEMETRY
@@ -35,7 +36,7 @@ static void line_append(pc_line *l, const char *s)
         l->overflow = PROTO_TRUE;
         return;
     }
-    memcpy(l->buf + l->pos, s, n);
+    mem.cpy(l->buf + l->pos, s, n);
     l->pos += n;
     l->buf[l->pos] = '\0';
 }

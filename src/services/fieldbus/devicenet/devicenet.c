@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/devicenet/devicenet.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DEVICENET
 
@@ -115,11 +116,11 @@ proto_bool pc_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint
     out->extended = PROTO_FALSE;
     out->rtr = PROTO_FALSE;
     out->dlc = (uint8_t)(1 + body_len);
-    memset(out->data, 0, sizeof(out->data));
+    mem.set(out->data, 0, sizeof(out->data));
     out->data[0] = pc_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, mac_id); // not fragmented
     if (body_len)
     {
-        memcpy(out->data + 1, body, body_len);
+        mem.cpy(out->data + 1, body, body_len);
     }
     return PROTO_TRUE;
 }
@@ -143,12 +144,12 @@ proto_bool pc_devicenet_build_fragment(CanFrame *out, DeviceNetGroup group, uint
     out->extended = PROTO_FALSE;
     out->rtr = PROTO_FALSE;
     out->dlc = (uint8_t)(2 + data_len);
-    memset(out->data, 0, sizeof(out->data));
+    mem.set(out->data, 0, sizeof(out->data));
     out->data[0] = pc_devicenet_msg_header(PROTO_TRUE, xid, mac_id); // FRAG set
     out->data[1] = pc_devicenet_frag_octet(frag_type, frag_count);
     if (data_len)
     {
-        memcpy(out->data + 2, data, data_len);
+        mem.cpy(out->data + 2, data, data_len);
     }
     return PROTO_TRUE;
 }
@@ -157,7 +158,7 @@ void pc_devicenet_frag_reset(DeviceNetFragRx *rx)
 {
     if (rx)
     {
-        memset(rx, 0, sizeof(*rx));
+        mem.set(rx, 0, sizeof(*rx));
     }
 }
 
@@ -177,7 +178,7 @@ static proto_bool frag_append(DeviceNetFragRx *rx, const uint8_t *p, uint8_t n)
     {
         return PROTO_FALSE;
     }
-    memcpy(rx->buf + rx->len, p, n);
+    mem.cpy(rx->buf + rx->len, p, n);
     rx->len = (uint16_t)(rx->len + n);
     return PROTO_TRUE;
 }

@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/ads/ads.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_ADS
 
@@ -26,10 +27,10 @@ static size_t write_header(uint8_t *buf, size_t cap, const AdsRequest *r, AdsCom
     buf[p++] = 0x00;
     p += pc_wr32le(buf + p, (uint32_t)ADS_AMS_HDR_LEN + payload_len);
     // AMS header.
-    memcpy(buf + p, r->target.net_id, ADS_NET_ID_LEN);
+    mem.cpy(buf + p, r->target.net_id, ADS_NET_ID_LEN);
     p += ADS_NET_ID_LEN;
     p += pc_wr16le(buf + p, r->target.port);
-    memcpy(buf + p, r->source.net_id, ADS_NET_ID_LEN);
+    mem.cpy(buf + p, r->source.net_id, ADS_NET_ID_LEN);
     p += ADS_NET_ID_LEN;
     p += pc_wr16le(buf + p, r->source.port);
     p += pc_wr16le(buf + p, (uint16_t)cmd); // wire byte in
@@ -81,7 +82,7 @@ size_t pc_ads_build_write(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_
     p += pc_wr32le(buf + p, len);
     if (len)
     {
-        memcpy(buf + p, data, len);
+        mem.cpy(buf + p, data, len);
         p += len;
     }
     return p;
@@ -105,7 +106,7 @@ size_t pc_ads_build_read_write(uint8_t *buf, size_t cap, const AdsRequest *r, ui
     p += pc_wr32le(buf + p, write_len);
     if (write_len)
     {
-        memcpy(buf + p, write_data, write_len);
+        mem.cpy(buf + p, write_data, write_len);
         p += write_len;
     }
     return p;
@@ -128,7 +129,7 @@ size_t pc_ads_build_write_control(uint8_t *buf, size_t cap, const AdsRequest *r,
     p += pc_wr32le(buf + p, len);
     if (len)
     {
-        memcpy(buf + p, data, len);
+        mem.cpy(buf + p, data, len);
         p += len;
     }
     return p;
@@ -150,7 +151,7 @@ size_t pc_ads_build_add_notification(uint8_t *buf, size_t cap, const AdsRequest 
     p += pc_wr32le(buf + p, (uint32_t)mode); // wire byte in
     p += pc_wr32le(buf + p, max_delay);
     p += pc_wr32le(buf + p, cycle_time);
-    memset(buf + p, 0, 16); // reserved
+    mem.set(buf + p, 0, 16); // reserved
     p += 16;
     return p;
 }
@@ -186,9 +187,9 @@ proto_bool pc_ads_parse_ams_header(const uint8_t *buf, size_t len, AdsAmsHeader 
         return PROTO_FALSE;
     }
     const uint8_t *a = buf + ADS_AMSTCP_HDR_LEN;
-    memcpy(out->target.net_id, a, ADS_NET_ID_LEN);
+    mem.cpy(out->target.net_id, a, ADS_NET_ID_LEN);
     out->target.port = pc_rd16le(a + 6);
-    memcpy(out->source.net_id, a + 8, ADS_NET_ID_LEN);
+    mem.cpy(out->source.net_id, a + 8, ADS_NET_ID_LEN);
     out->source.port = pc_rd16le(a + 14);
     out->cmd = (AdsCommand)pc_rd16le(a + 16); // wire byte out
     out->state_flags = pc_rd16le(a + 18);
@@ -252,7 +253,7 @@ proto_bool pc_ads_parse_read_device_info(const uint8_t *data, size_t data_len, A
     out->version_major = data[4];
     out->version_minor = data[5];
     out->version_build = pc_rd16le(data + 6);
-    memcpy(out->device_name, data + 8, ADS_DEVICE_NAME_LEN);
+    mem.cpy(out->device_name, data + 8, ADS_DEVICE_NAME_LEN);
     out->device_name[ADS_DEVICE_NAME_LEN] = '\0'; // the field is not guaranteed NUL-terminated
     return PROTO_TRUE;
 }

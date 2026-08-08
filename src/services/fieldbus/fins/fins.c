@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/fins/fins.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_FINS
 
@@ -56,7 +57,7 @@ size_t pc_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *h, uint
     buf[p++] = src;
     if (params_len)
     {
-        memcpy(buf + p, params, params_len);
+        mem.cpy(buf + p, params, params_len);
         p += params_len;
     }
     return p;
@@ -102,7 +103,7 @@ size_t pc_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeade
         {
             return 0; // the write data does not fit
         }
-        memcpy(buf + n, data, data_len);
+        mem.cpy(buf + n, data, data_len);
     }
     return n + data_len;
 }

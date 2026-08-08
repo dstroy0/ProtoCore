@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/mqtt/mqtt_sn.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_MQTT_SN
 
@@ -102,7 +103,7 @@ size_t pc_mqttsn_build_connect(uint8_t *buf, size_t cap, uint8_t flags, uint16_t
     buf[p++] = MQTTSN_PROTOCOL_ID;
     wr16(buf + p, duration);
     p += 2;
-    memcpy(buf + p, client_id, idlen);
+    mem.cpy(buf + p, client_id, idlen);
     return total;
 }
 
@@ -122,7 +123,7 @@ size_t pc_mqttsn_build_register(uint8_t *buf, size_t cap, uint16_t topic_id, uin
     p += 2;
     wr16(buf + p, msg_id);
     p += 2;
-    memcpy(buf + p, topic_name, nlen);
+    mem.cpy(buf + p, topic_name, nlen);
     return total;
 }
 
@@ -164,7 +165,7 @@ size_t pc_mqttsn_build_publish(uint8_t *buf, size_t cap, uint8_t flags, uint16_t
     p += 2;
     if (data_len)
     {
-        memcpy(buf + p, data, data_len);
+        mem.cpy(buf + p, data, data_len);
     }
     return total;
 }
@@ -203,7 +204,7 @@ size_t pc_mqttsn_build_subscribe_name(uint8_t *buf, size_t cap, uint8_t flags, u
     buf[p++] = flags;
     wr16(buf + p, msg_id);
     p += 2;
-    memcpy(buf + p, topic_name, nlen);
+    mem.cpy(buf + p, topic_name, nlen);
     return total;
 }
 
@@ -239,7 +240,7 @@ size_t pc_mqttsn_build_pingreq(uint8_t *buf, size_t cap, const char *client_id)
     }
     if (idlen)
     {
-        memcpy(buf + p, client_id, idlen);
+        mem.cpy(buf + p, client_id, idlen);
     }
     return total;
 }

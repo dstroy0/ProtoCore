@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/profinet/profinet.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_PROFINET
 
@@ -50,7 +51,7 @@ size_t pc_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, 
     out[3] = (uint8_t)value_len;
     if (value_len)
     {
-        memcpy(out + 4, value, value_len);
+        mem.cpy(out + 4, value, value_len);
     }
     if (pad)
     {

@@ -84,7 +84,7 @@ void test_early_secret()
     hx(EARLY, exp, 32);
     Tls13KeySchedule ks;
     pc_tls13_ks_early(&TLS13_KDF, &ks);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.early_secret, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_EARLY, 32);
 }
 
 void test_handshake_secrets()
@@ -98,11 +98,11 @@ void test_handshake_secrets()
 
     uint8_t exp[32];
     hx(HANDSHAKE, exp, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.handshake_secret, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_HANDSHAKE, 32);
     hx(C_HS, exp, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.client_hs_traffic, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_CLIENT_HS, 32);
     hx(S_HS, exp, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.server_hs_traffic, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_SERVER_HS, 32);
 }
 
 void test_master_secrets()
@@ -118,11 +118,11 @@ void test_master_secrets()
 
     uint8_t exp[32];
     hx(MASTER, exp, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.master_secret, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_MASTER, 32);
     hx(C_AP, exp, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.client_ap_traffic, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_CLIENT_AP, 32);
     hx(S_AP, exp, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.server_ap_traffic, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_SERVER_AP, 32);
 }
 
 // Server handshake write key/iv are HKDF-Expand-Label(s_hs_traffic, "key"/"iv") - the plain TLS
@@ -204,7 +204,9 @@ void test_server_finished()
     uint8_t s_hs[32];
     hx(S_HS, s_hs, 32);
     uint8_t verify[32], exp[32];
-    pc_tls13_finished_mac(&TLS13_KDF, s_hs, thash, verify);
+    Tls13KeySchedule fks;
+    pc_tls13_ks_early(&TLS13_KDF, &fks);
+    pc_tls13_finished_mac(&fks, s_hs, thash, verify);
     hx("9b9b141d906337fbd2cbdce71df4deda4ab42c309572cb7fffee5454b78f0718", exp, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, verify, 32);
 }

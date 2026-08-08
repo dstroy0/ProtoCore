@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/directnet/directnet.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DIRECTNET
 
@@ -73,7 +74,7 @@ size_t pc_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, size_t c
     out[i++] = DNET_STX;
     if (data_len)
     {
-        memcpy(out + i, data, data_len);
+        mem.cpy(out + i, data, data_len);
         i += data_len;
     }
     out[i++] = DNET_ETX;

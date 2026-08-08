@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/lwm2m/lwm2m_tlv.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_LWM2M
 
@@ -76,7 +77,7 @@ proto_bool pc_lwm2m_tlv_write(Lwm2mTlvWriter *w, uint8_t id_type, uint16_t id, c
     }
     if (value_len)
     {
-        memcpy(w->buf + w->pos, value, value_len);
+        mem.cpy(w->buf + w->pos, value, value_len);
         w->pos += value_len;
     }
     return PROTO_TRUE;
@@ -127,7 +128,7 @@ proto_bool pc_lwm2m_tlv_write_string(Lwm2mTlvWriter *w, uint16_t id, const char 
 proto_bool pc_lwm2m_tlv_write_float(Lwm2mTlvWriter *w, uint16_t id, double v)
 {
     uint64_t bits;
-    memcpy(&bits, &v, 8);
+    mem.cpy(&bits, &v, 8);
     uint8_t b[8];
     for (size_t i = 0; i < 8; i++)
     {

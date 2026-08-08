@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/simatic/simatic.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SIMATIC
 
@@ -198,7 +199,7 @@ static void begin_receive(Simatic3964Ctx *ctx, uint32_t now_ms)
 void pc_3964r_init(Simatic3964Ctx *ctx, proto_bool high_priority, proto_bool with_bcc, Simatic3964TxFn tx,
                    Simatic3964RxFn rx, void *user)
 {
-    memset(ctx, 0, sizeof(*ctx));
+    mem.set(ctx, 0, sizeof(*ctx));
     ctx->state = SIMATIC3964_STATE_IDLE;
     ctx->high_priority = high_priority;
     ctx->with_bcc = with_bcc;

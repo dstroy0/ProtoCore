@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/bacnet/bacnet.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_BACNET
 
@@ -27,7 +28,7 @@ size_t pc_bvlc_build(uint8_t *buf, size_t cap, uint8_t function, const uint8_t *
     buf[3] = (uint8_t)(total & 0xFF);
     if (pc_npdu_len)
     {
-        memcpy(buf + BVLC_HEADER_SIZE, npdu, pc_npdu_len);
+        mem.cpy(buf + BVLC_HEADER_SIZE, npdu, pc_npdu_len);
     }
     return total;
 }
@@ -95,14 +96,14 @@ size_t pc_npdu_build(uint8_t *buf, size_t cap, proto_bool expecting_reply, uint8
         buf[p++] = dadr_len;
         if (dadr_len)
         {
-            memcpy(buf + p, dadr, dadr_len);
+            mem.cpy(buf + p, dadr, dadr_len);
             p += dadr_len;
         }
         buf[p++] = hop_count; // follows the (absent) source fields when a destination is present
     }
     if (apdu_len)
     {
-        memcpy(buf + p, apdu, apdu_len);
+        mem.cpy(buf + p, apdu, apdu_len);
         p += apdu_len;
     }
     return p;
@@ -221,7 +222,7 @@ size_t pc_apdu_build_who_is(uint8_t *buf, size_t cap, uint32_t low_limit, uint32
     {
         return 0;
     }
-    memcpy(buf, tmp, p);
+    mem.cpy(buf, tmp, p);
     return p;
 }
 
@@ -251,7 +252,7 @@ size_t pc_apdu_build_i_am(uint8_t *buf, size_t cap, uint32_t device_instance, ui
     {
         return 0;
     }
-    memcpy(buf, tmp, p);
+    mem.cpy(buf, tmp, p);
     return p;
 }
 
@@ -281,7 +282,7 @@ size_t pc_apdu_build_read_property(uint8_t *buf, size_t cap, uint8_t invoke_id, 
     {
         return 0;
     }
-    memcpy(buf, tmp, p);
+    mem.cpy(buf, tmp, p);
     return p;
 }
 
@@ -347,7 +348,7 @@ proto_bool pc_apdu_parse(const uint8_t *apdu, size_t len, BacnetApdu *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     out->pdu_type = (uint8_t)(apdu[0] >> 4);
     size_t p = 1;
     switch (out->pdu_type)

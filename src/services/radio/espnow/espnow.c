@@ -7,6 +7,7 @@
  */
 
 #include "services/radio/espnow/espnow.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_ESPNOW
 
@@ -31,7 +32,7 @@ size_t pc_espnow_encode(uint8_t type, const uint8_t *payload, size_t len, uint8_
     out[2] = (uint8_t)len;
     if (len && payload)
     {
-        memcpy(out + PC_ESPNOW_HDR, payload, len);
+        mem.cpy(out + PC_ESPNOW_HDR, payload, len);
     }
     return len + PC_ESPNOW_HDR;
 }
@@ -88,7 +89,7 @@ static int peer_find(const EspnowCtx *c, const uint8_t mac[6])
 {
     for (int i = 0; i < PC_ESPNOW_MAX_PEERS; i++)
     {
-        if (c->peers[i].used && memcmp(c->peers[i].mac, mac, 6) == 0)
+        if (c->peers[i].used && mem.cmp(c->peers[i].mac, mac, 6) == 0)
         {
             return i;
         }
@@ -118,7 +119,7 @@ proto_bool pc_espnow_peer_add(const uint8_t mac[6])
     {
         if (!s_espnow.peers[i].used)
         {
-            memcpy(s_espnow.peers[i].mac, mac, 6);
+            mem.cpy(s_espnow.peers[i].mac, mac, 6);
             s_espnow.peers[i].used = PROTO_TRUE;
             return PROTO_TRUE;
         }
@@ -186,8 +187,8 @@ static void on_recv(const uint8_t *mac, const uint8_t *data, int len)
 static proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
 {
     esp_now_peer_info_t p;
-    memset(&p, 0, sizeof(p));
-    memcpy(p.peer_addr, mac, 6);
+    mem.set(&p, 0, sizeof(p));
+    mem.cpy(p.peer_addr, mac, 6);
     p.channel = channel;
     p.encrypt = PROTO_FALSE;
     if (esp_now_is_peer_exist(mac))

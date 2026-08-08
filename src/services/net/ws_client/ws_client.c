@@ -8,6 +8,7 @@
  */
 
 #include "services/net/ws_client/ws_client.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h"      // pc_sb frame builder
 #include "server/clock/clock.h" // pcdelay
 
@@ -48,8 +49,8 @@ void ws_client_accept_for_key(const char *key_b64, char *out, size_t out_cap)
     {
         return;
     }
-    memcpy(concat, key_b64, klen);
-    memcpy(concat + klen, WS_MAGIC, mlen);
+    mem.cpy(concat, key_b64, klen);
+    mem.cpy(concat + klen, WS_MAGIC, mlen);
     uint8_t digest[PC_SHA1_DIGEST_LEN];
     pc_sha1((const uint8_t *)concat, klen + mlen, digest);
     if (out_cap < 29) // 28 base64 chars + NUL
@@ -158,7 +159,7 @@ proto_bool ws_client_check_response(const uint8_t *buf, size_t len, const char *
     {
         return PROTO_FALSE;
     }
-    return vlen == strnlen(expected_accept, vlen + 1) && memcmp(acc, expected_accept, vlen) == 0;
+    return vlen == strnlen(expected_accept, vlen + 1) && mem.cmp(acc, expected_accept, vlen) == 0;
 }
 
 size_t ws_client_build_frame(uint8_t *out, size_t cap, WsClientOpcode opcode, const uint8_t *payload, size_t len,
@@ -202,7 +203,7 @@ size_t ws_client_build_frame(uint8_t *out, size_t cap, WsClientOpcode opcode, co
             out[i++] = (uint8_t)((uint64_t)len >> s);
         }
     }
-    memcpy(out + i, mask, 4);
+    mem.cpy(out + i, mask, 4);
     i += 4;
     for (size_t j = 0; j < len; j++)
     {
@@ -471,13 +472,13 @@ static void handle_frame(uint8_t op, proto_bool fin, const uint8_t *payload, siz
         {
             s_wsc.msg_op = op; // first fragment
             s_wsc.msg_len = len < sizeof(s_wsc.msg) ? len : sizeof(s_wsc.msg);
-            memcpy(s_wsc.msg, payload, s_wsc.msg_len);
+            mem.cpy(s_wsc.msg, payload, s_wsc.msg_len);
         }
         break;
     case WSC_OP_CONT:
         if (s_wsc.msg_len + len <= sizeof(s_wsc.msg))
         {
-            memcpy(s_wsc.msg + s_wsc.msg_len, payload, len);
+            mem.cpy(s_wsc.msg + s_wsc.msg_len, payload, len);
             s_wsc.msg_len += len;
         }
         if (fin)

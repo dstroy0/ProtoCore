@@ -7,6 +7,7 @@
  */
 
 #include "smb2.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SMB
 
@@ -32,7 +33,7 @@ size_t pc_smb2_transport_frame(uint8_t *out, size_t cap, const uint8_t *msg, siz
     out[1] = (uint8_t)(msg_len >> 16);
     out[2] = (uint8_t)(msg_len >> 8);
     out[3] = (uint8_t)(msg_len);
-    memcpy(out + 4, msg, msg_len);
+    mem.cpy(out + 4, msg, msg_len);
     return 4 + msg_len;
 }
 
@@ -52,8 +53,8 @@ size_t pc_smb2_build_header(uint8_t *buf, size_t cap, Smb2Command command, uint1
     {
         return 0;
     }
-    memset(buf, 0, PC_SMB2_HEADER_SIZE);
-    memcpy(buf + 0, SMB2_PROTOCOL_ID, 4); // ProtocolId
+    mem.set(buf, 0, PC_SMB2_HEADER_SIZE);
+    mem.cpy(buf + 0, SMB2_PROTOCOL_ID, 4); // ProtocolId
     pc_wr16le(buf + 4, 64);               // StructureSize
     // bytes 6 CreditCharge and 8 Status/ChannelSequence stay zero
     pc_wr16le(buf + 12, (uint16_t)command); // Command
@@ -73,7 +74,7 @@ proto_bool pc_smb2_parse_header(const uint8_t *buf, size_t len, Smb2Header *out)
     {
         return PROTO_FALSE;
     }
-    if (memcmp(buf, SMB2_PROTOCOL_ID, 4) != 0 || pc_rd16le(buf + 4) != 64)
+    if (mem.cmp(buf, SMB2_PROTOCOL_ID, 4) != 0 || pc_rd16le(buf + 4) != 64)
     {
         return PROTO_FALSE;
     }
@@ -103,12 +104,12 @@ size_t pc_smb2_build_negotiate(uint8_t *buf, size_t cap, const uint8_t client_gu
     }
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE; // NEGOTIATE request body
-    memset(b, 0, 36);
+    mem.set(b, 0, 36);
     pc_wr16le(b + 0, 36);            // StructureSize
     pc_wr16le(b + 2, ndialects);     // DialectCount
     pc_wr16le(b + 4, security_mode); // SecurityMode
     // byte 6 Reserved and byte 8 Capabilities stay zero
-    memcpy(b + 12, client_guid, 16); // ClientGuid
+    mem.cpy(b + 12, client_guid, 16); // ClientGuid
     // byte 28 ClientStartTime stays zero; only 3.1.1 reinterprets these 8 bytes as negotiate-context fields
     for (uint16_t i = 0; i < ndialects; i++)
     {
@@ -141,7 +142,7 @@ proto_bool pc_smb2_parse_negotiate_response(const uint8_t *msg, size_t len, Smb2
 
     out->security_mode = pc_rd16le(b + 2);
     out->dialect = pc_rd16le(b + 4);
-    memcpy(out->server_guid, b + 8, 16);
+    mem.cpy(out->server_guid, b + 8, 16);
     out->capabilities = pc_rd32le(b + 24);
     out->max_transact = pc_rd32le(b + 28);
     out->max_read = pc_rd32le(b + 32);
@@ -203,12 +204,12 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
     }
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
-    memset(b, 0, ctx_start - PC_SMB2_HEADER_SIZE); // fixed body + dialects + alignment pad
+    mem.set(b, 0, ctx_start - PC_SMB2_HEADER_SIZE); // fixed body + dialects + alignment pad
     pc_wr16le(b + 0, 36);                          // StructureSize
     pc_wr16le(b + 2, ndialects);                   // DialectCount
     pc_wr16le(b + 4, security_mode);               // SecurityMode
     pc_wr32le(b + 8, SMB2_GLOBAL_CAP_ENCRYPTION);  // Capabilities: advertise encryption support
-    memcpy(b + 12, client_guid, 16);               // ClientGuid
+    mem.cpy(b + 12, client_guid, 16);               // ClientGuid
     pc_wr32le(b + 28, (uint32_t)ctx_start);        // NegotiateContextOffset (overlays ClientStartTime)
     pc_wr16le(b + 32, ctx_count);                  // NegotiateContextCount (preauth + signing [+ encryption])
     for (uint16_t i = 0; i < ndialects; i++)
@@ -224,7 +225,7 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
     pc_wr16le(c + 8, 1);                              // HashAlgorithmCount
     pc_wr16le(c + 10, (uint16_t)salt_len);            // SaltLength
     pc_wr16le(c + 12, SMB2_PREAUTH_INTEGRITY_SHA512); // HashAlgorithms[0]
-    memcpy(c + 14, salt, salt_len);                   // Salt
+    mem.cpy(c + 14, salt, salt_len);                   // Salt
 
     // Context 2 - SIGNING_CAPABILITIES advertising AES-CMAC (the algorithm this client signs 3.x with;
     // the mandatory-to-implement SMB 3.x signer and the Windows default). A 3.1.1 server that accepts it
@@ -232,7 +233,7 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
     uint8_t *c2 = c + preauth_ctx + preauth_pad;
     if (preauth_pad)
     {
-        memset(c + preauth_ctx, 0, preauth_pad);
+        mem.set(c + preauth_ctx, 0, preauth_pad);
     }
     pc_wr16le(c2 + 0, SMB2_SIGNING_CAPABILITIES);
     pc_wr16le(c2 + 2, 4);                      // DataLength
@@ -248,7 +249,7 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
         uint8_t *c3 = c2 + sign_ctx + sign_pad;
         if (sign_pad)
         {
-            memset(c2 + sign_ctx, 0, sign_pad);
+            mem.set(c2 + sign_ctx, 0, sign_pad);
         }
         pc_wr16le(c3 + 0, SMB2_ENCRYPTION_CAPABILITIES);
         pc_wr16le(c3 + 2, (uint16_t)(2 + 2 * cipher_count)); // DataLength = CipherCount(2) + Ciphers[]
@@ -268,7 +269,7 @@ proto_bool pc_smb2_parse_negotiate_contexts(const uint8_t *msg, size_t len, Smb2
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     Smb2Header h;
     if (!pc_smb2_parse_header(msg, len, &h) || h.command != SMB2_NEGOTIATE)
     {
@@ -345,7 +346,7 @@ void pc_smb_preauth_init(SmbPreauth *p)
 {
     if (p)
     {
-        memset(p->hash, 0, sizeof(p->hash)); // the preauth hash starts as 64 zero bytes (MS-SMB2 §3.1.5.2)
+        mem.set(p->hash, 0, sizeof(p->hash)); // the preauth hash starts as 64 zero bytes (MS-SMB2 §3.1.5.2)
     }
 }
 
@@ -358,7 +359,7 @@ void pc_smb_preauth_update(SmbPreauth *p, const uint8_t *msg, size_t len)
     // hash = SHA-512(previous hash || message); chain the current value with the next handshake message.
     // Snapshot the previous hash so the digest input never aliases its output buffer.
     uint8_t prev[PC_SMB2_PREAUTH_HASH_LEN];
-    memcpy(prev, p->hash, sizeof(prev));
+    mem.cpy(prev, p->hash, sizeof(prev));
     pc_sha512_ctx c;
     pc_sha512_init(&c);
     pc_sha512_update(&c, prev, sizeof(prev));
@@ -381,7 +382,7 @@ size_t pc_smb2_build_session_setup(uint8_t *buf, size_t cap, uint64_t message_id
     }
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
-    memset(b, 0, body);
+    mem.set(b, 0, body);
     pc_wr16le(b + 0, 25); // StructureSize (fixed 24 + 1 for the variable buffer)
     b[2] = 0;             // Flags (SMB2_SESSION_FLAG_BINDING only for 3.x channel binding)
     b[3] = security_mode; // SecurityMode (one byte here)
@@ -389,7 +390,7 @@ size_t pc_smb2_build_session_setup(uint8_t *buf, size_t cap, uint64_t message_id
     pc_wr16le(b + 12, (uint16_t)(PC_SMB2_HEADER_SIZE + body)); // SecurityBufferOffset (from the header start)
     pc_wr16le(b + 14, (uint16_t)sec_len);                      // SecurityBufferLength
     // byte 16 PreviousSessionId stays zero for a fresh session
-    memcpy(b + body, sec_buf, sec_len);
+    mem.cpy(b + body, sec_buf, sec_len);
     return total;
 }
 
@@ -448,12 +449,12 @@ size_t pc_smb2_build_tree_connect(uint8_t *buf, size_t cap, uint64_t message_id,
     }
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
-    memset(b, 0, body);
+    mem.set(b, 0, body);
     pc_wr16le(b + 0, 9); // StructureSize
     // byte 2 Flags/Reserved stays zero
     pc_wr16le(b + 4, (uint16_t)(PC_SMB2_HEADER_SIZE + body)); // PathOffset (from the header start) = 72
     pc_wr16le(b + 6, (uint16_t)path_len);                     // PathLength
-    memcpy(b + body, path_utf16, path_len);                   // the \\server\share path (UTF-16LE)
+    mem.cpy(b + body, path_utf16, path_len);                   // the \\server\share path (UTF-16LE)
     return total;
 }
 
@@ -500,7 +501,7 @@ size_t pc_smb2_build_create(uint8_t *buf, size_t cap, uint64_t message_id, uint6
     }
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
-    memset(b, 0, body);
+    mem.set(b, 0, body);
     pc_wr16le(b + 0, 57); // StructureSize (fixed 56 + 1 for the variable buffer)
     // byte 2 SecurityFlags and byte 3 RequestedOplockLevel stay zero (SMB2_OPLOCK_LEVEL_NONE)
     pc_wr32le(b + 4, 2); // ImpersonationLevel = Impersonation
@@ -513,7 +514,7 @@ size_t pc_smb2_build_create(uint8_t *buf, size_t cap, uint64_t message_id, uint6
     pc_wr16le(b + 44, (uint16_t)(PC_SMB2_HEADER_SIZE + body)); // NameOffset (from the header start) = 120
     pc_wr16le(b + 46, (uint16_t)name_len);                     // NameLength
     // bytes 48 CreateContextsOffset and 52 CreateContextsLength stay zero
-    memcpy(b + body, name_utf16, name_len);
+    mem.cpy(b + body, name_utf16, name_len);
     return total;
 }
 
@@ -540,7 +541,7 @@ proto_bool pc_smb2_parse_create_response(const uint8_t *msg, size_t len, Smb2Cre
     out->create_action = pc_rd32le(b + 4);
     out->end_of_file = pc_rd64le(b + 48);
     out->file_attributes = pc_rd32le(b + 56);
-    memcpy(out->file_id, b + 64, 16); // FileId (persistent 8 + volatile 8)
+    mem.cpy(out->file_id, b + 64, 16); // FileId (persistent 8 + volatile 8)
     return PROTO_TRUE;
 }
 
@@ -559,10 +560,10 @@ size_t pc_smb2_build_close(uint8_t *buf, size_t cap, uint64_t message_id, uint64
     }
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
-    memset(b, 0, body);
+    mem.set(b, 0, body);
     pc_wr16le(b + 0, 24); // StructureSize
     // byte 2 Flags stays zero (no POSTQUERY_ATTRIB); byte 4 Reserved stays zero
-    memcpy(b + 8, file_id, 16); // FileId
+    mem.cpy(b + 8, file_id, 16); // FileId
     return total;
 }
 
@@ -606,14 +607,14 @@ size_t pc_smb2_build_read(uint8_t *buf, size_t cap, uint64_t message_id, uint64_
     }
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
-    memset(b, 0, body + 1);
+    mem.set(b, 0, body + 1);
     pc_wr16le(b + 0, 49); // StructureSize
     b[2] =
         (uint8_t)(PC_SMB2_HEADER_SIZE + 16); // Padding: requested data offset in the response (header + 16-byte body)
     // byte 3 Flags stays zero
     pc_wr32le(b + 4, length);    // Length
     pc_wr64le(b + 8, offset);    // Offset
-    memcpy(b + 16, file_id, 16); // FileId
+    mem.cpy(b + 16, file_id, 16); // FileId
     pc_wr32le(b + 32, 1);        // MinimumCount = 1 (fail if the server returns nothing)
     // bytes 36 Channel, 40 RemainingBytes and 44/46 ReadChannelInfoOffset/Length stay zero
     // the one-byte Buffer at b+48 stays zero (already zeroed)
@@ -673,14 +674,14 @@ size_t pc_smb2_build_write(uint8_t *buf, size_t cap, uint64_t message_id, uint64
     }
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
-    memset(b, 0, body);
+    mem.set(b, 0, body);
     pc_wr16le(b + 0, 49);                                     // StructureSize
     pc_wr16le(b + 2, (uint16_t)(PC_SMB2_HEADER_SIZE + body)); // DataOffset (from the header start) = 112
     pc_wr32le(b + 4, (uint32_t)data_len);                     // Length
     pc_wr64le(b + 8, offset);                                 // Offset
-    memcpy(b + 16, file_id, 16);                              // FileId
+    mem.cpy(b + 16, file_id, 16);                              // FileId
     // bytes 32 Channel, 36 RemainingBytes, 40/42 WriteChannelInfoOffset/Length and 44 Flags stay zero
-    memcpy(b + body, data, data_len); // the data to write
+    mem.cpy(b + body, data, data_len); // the data to write
     return total;
 }
 
@@ -724,7 +725,7 @@ static void mac_hmac_sha256(const uint8_t key[16], const uint8_t *msg, size_t le
 {
     uint8_t mac[32];
     pc_hmac_sha256(key, 16, msg, len, mac);
-    memcpy(out16, mac, 16); // Signature = first 16 octets of the HMAC
+    mem.cpy(out16, mac, 16); // Signature = first 16 octets of the HMAC
 }
 
 static void mac_aes_cmac(const uint8_t key[16], const uint8_t *msg, size_t len, uint8_t out16[16])
@@ -739,10 +740,10 @@ static void smb2_sign_framed(const uint8_t key[16], uint8_t *msg, size_t msg_len
         return;
     }
     pc_wr32le(msg + PC_SMB2_FLAGS_OFF, pc_rd32le(msg + PC_SMB2_FLAGS_OFF) | SMB2_FLAGS_SIGNED);
-    memset(msg + PC_SMB2_SIGNATURE_OFF, 0, PC_SMB2_SIGNATURE_LEN); // zero the Signature before the MAC
+    mem.set(msg + PC_SMB2_SIGNATURE_OFF, 0, PC_SMB2_SIGNATURE_LEN); // zero the Signature before the MAC
     uint8_t tag[PC_SMB2_SIGNATURE_LEN];
     mac(key, msg, msg_len, tag);
-    memcpy(msg + PC_SMB2_SIGNATURE_OFF, tag, PC_SMB2_SIGNATURE_LEN);
+    mem.cpy(msg + PC_SMB2_SIGNATURE_OFF, tag, PC_SMB2_SIGNATURE_LEN);
 }
 
 static proto_bool smb2_verify_framed(const uint8_t key[16], uint8_t *msg, size_t msg_len, Smb2MacFn mac)
@@ -752,11 +753,11 @@ static proto_bool smb2_verify_framed(const uint8_t key[16], uint8_t *msg, size_t
         return PROTO_FALSE;
     }
     uint8_t received[PC_SMB2_SIGNATURE_LEN];
-    memcpy(received, msg + PC_SMB2_SIGNATURE_OFF, PC_SMB2_SIGNATURE_LEN);
-    memset(msg + PC_SMB2_SIGNATURE_OFF, 0, PC_SMB2_SIGNATURE_LEN);
+    mem.cpy(received, msg + PC_SMB2_SIGNATURE_OFF, PC_SMB2_SIGNATURE_LEN);
+    mem.set(msg + PC_SMB2_SIGNATURE_OFF, 0, PC_SMB2_SIGNATURE_LEN);
     uint8_t tag[PC_SMB2_SIGNATURE_LEN];
     mac(key, msg, msg_len, tag);
-    memcpy(msg + PC_SMB2_SIGNATURE_OFF, received, PC_SMB2_SIGNATURE_LEN); // restore; the message is unchanged
+    mem.cpy(msg + PC_SMB2_SIGNATURE_OFF, received, PC_SMB2_SIGNATURE_LEN); // restore; the message is unchanged
     uint8_t diff = 0;
     for (size_t i = 0; i < PC_SMB2_SIGNATURE_LEN; i++)
     {
@@ -806,20 +807,20 @@ proto_bool pc_smb3_derive_signing_key(const uint8_t session_key[16], uint16_t di
             return PROTO_FALSE;
         }
         static const char label[] = "SMBSigningKey"; // sizeof == 14 ("SMBSigningKey\0")
-        memcpy(fixed + n, label, sizeof(label));
+        mem.cpy(fixed + n, label, sizeof(label));
         n += sizeof(label);
         fixed[n++] = 0x00;              // Label||0x00 separator
-        memcpy(fixed + n, preauth, 64); // Context = the 64-byte preauth-integrity hash
+        mem.cpy(fixed + n, preauth, 64); // Context = the 64-byte preauth-integrity hash
         n += 64;
     }
     else
     {
         static const char label[] = "SMB2AESCMAC"; // sizeof == 12 ("SMB2AESCMAC\0")
         static const char context[] = "SmbSign";   // sizeof == 8  ("SmbSign\0")
-        memcpy(fixed + n, label, sizeof(label));
+        mem.cpy(fixed + n, label, sizeof(label));
         n += sizeof(label);
         fixed[n++] = 0x00; // separator
-        memcpy(fixed + n, context, sizeof(context));
+        mem.cpy(fixed + n, context, sizeof(context));
         n += sizeof(context);
     }
     // [L] = the derived-key length in bits (128), 32-bit big-endian.
@@ -847,10 +848,10 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
         }
         static const char c2s_label[] = "SMBC2SCipherKey"; // sizeof == 16 (15 chars + NUL)
         static const char s2c_label[] = "SMBS2CCipherKey";
-        memcpy(fixed + n, c2s ? c2s_label : s2c_label, sizeof(c2s_label));
+        mem.cpy(fixed + n, c2s ? c2s_label : s2c_label, sizeof(c2s_label));
         n += sizeof(c2s_label);
         fixed[n++] = 0x00;              // Label||0x00 separator
-        memcpy(fixed + n, preauth, 64); // Context = the 64-byte preauth-integrity hash
+        mem.cpy(fixed + n, preauth, 64); // Context = the 64-byte preauth-integrity hash
         n += 64;
     }
     else
@@ -858,10 +859,10 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
         static const char label[] = "SMB2AESCCM";  // sizeof == 11
         static const char ctx_in[] = "ServerIn ";  // sizeof == 10 (note the trailing space, MS-SMB2 §3.1.4.2)
         static const char ctx_out[] = "ServerOut"; // sizeof == 10
-        memcpy(fixed + n, label, sizeof(label));
+        mem.cpy(fixed + n, label, sizeof(label));
         n += sizeof(label);
         fixed[n++] = 0x00;
-        memcpy(fixed + n, c2s ? ctx_in : ctx_out, sizeof(ctx_in));
+        mem.cpy(fixed + n, c2s ? ctx_in : ctx_out, sizeof(ctx_in));
         n += sizeof(ctx_in);
     }
     const uint32_t l_bits = (uint32_t)(key_len * 8); // [L] = key length in bits, 32-bit big-endian
@@ -896,9 +897,9 @@ size_t pc_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t nonce[
 
     // TRANSFORM_HEADER (MS-SMB2 §2.2.41). Signature (the AEAD tag) is filled after sealing; it and the
     // ProtocolId are outside the AAD, which is the header from the Nonce field to its end (offsets 20..51).
-    memset(out, 0, PC_SMB2_TRANSFORM_HDR_LEN);
+    mem.set(out, 0, PC_SMB2_TRANSFORM_HDR_LEN);
     pc_wr32le(out + 0, PC_SMB2_TRANSFORM_PROTOCOL_ID); // ProtocolId 0xFD 'S' 'M' 'B'
-    memcpy(out + 20, nonce, PC_SMB2_NONCE_FIELD_LEN);  // Nonce field (16 bytes; AEAD uses the leading bytes)
+    mem.cpy(out + 20, nonce, PC_SMB2_NONCE_FIELD_LEN);  // Nonce field (16 bytes; AEAD uses the leading bytes)
     pc_wr32le(out + 36, (uint32_t)msg_len);            // OriginalMessageSize
     pc_wr16le(out + 40, 0);                            // Reserved
     pc_wr16le(out + 42, 0x0001);                       // Flags = Encrypted (3.1.1)
@@ -944,7 +945,7 @@ size_t pc_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t nonce[
     {
         return 0;
     }
-    memcpy(out + 4, tag, 16); // Signature = the 16-byte AEAD tag
+    mem.cpy(out + 4, tag, 16); // Signature = the 16-byte AEAD tag
     return PC_SMB2_TRANSFORM_HDR_LEN + msg_len;
 }
 
@@ -974,8 +975,8 @@ size_t pc_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t *in, s
     // Copying the 48 header bytes makes in-place decryption safe for every cipher. Fails closed on a bad tag.
     uint8_t aad[32];
     uint8_t tag[16];
-    memcpy(aad, in + 20, 32);
-    memcpy(tag, in + 4, 16);
+    mem.cpy(aad, in + 20, 32);
+    mem.cpy(tag, in + 4, 16);
     const uint8_t *ct = in + PC_SMB2_TRANSFORM_HDR_LEN;
     proto_bool ok = PROTO_FALSE;
     switch (cipher)

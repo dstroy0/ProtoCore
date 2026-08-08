@@ -7,6 +7,7 @@
  */
 
 #include "services/transportation/nema_ts2/nema_ts2.h"
+#include "mmgr/protomem.h"
 #include "shared_primitives/crc.h" // PC_CRC16_X25
 
 #if PC_ENABLE_NEMA_TS2
@@ -34,7 +35,7 @@ size_t pc_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_type, c
     out[2] = frame_type;
     if (data_len)
     {
-        memcpy(out + 3, data, data_len);
+        mem.cpy(out + 3, data, data_len);
     }
     uint16_t crc = pc_nema_ts2_crc(out, 3 + data_len);
     out[3 + data_len] = (uint8_t)crc; // FCS low byte first

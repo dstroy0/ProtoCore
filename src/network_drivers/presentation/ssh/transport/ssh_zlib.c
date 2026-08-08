@@ -22,6 +22,7 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_zlib.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SSH_ZLIB
 
@@ -86,7 +87,7 @@ static void build_fixed(SshDeflate *z)
     }
 
     uint16_t bl_count[16];
-    memset(bl_count, 0, sizeof(bl_count));
+    mem.set(bl_count, 0, sizeof(bl_count));
     for (sym = 0; sym < 288; sym++)
     {
         bl_count[z->ll_len[sym]]++;
@@ -219,7 +220,7 @@ int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_
     {
         return -1; // sizing invariant (hist <= PC_WINDOW, src_len <= MAX_IN) should prevent this
     }
-    memcpy(z->work + hist, src, src_len);
+    mem.cpy(z->work + hist, src, src_len);
     size_t total = hist + src_len;
     const uint8_t *buf = z->work;
 
@@ -325,7 +326,7 @@ int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_
     }
     if (keep < total)
     {
-        memmove(z->work, z->work + total - keep, keep);
+        mem.move(z->work, z->work + total - keep, keep);
     }
     z->hist = keep;
 

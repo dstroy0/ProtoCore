@@ -371,7 +371,7 @@ static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
     {
         *p++ = 0x00;
     }
-    memcpy(p, src, src_len);
+    mem.cpy(p, src, src_len);
     return p + src_len;
 }
 
@@ -391,7 +391,7 @@ int ssh_rsa_encode_pubkey(uint8_t *out, size_t *out_len, size_t out_cap)
 
     uint8_t *p = out;
     p = put_u32(p, (uint32_t)alg_len);
-    memcpy(p, alg, alg_len);
+    mem.cpy(p, alg, alg_len);
     p += alg_len;
     p = put_mpint(p, ssh_host_pubkey.e_bytes, sizeof(ssh_host_pubkey.e_bytes));
     p = put_mpint(p, ssh_host_pubkey.n, PC_RSA_KEY_BYTES);

@@ -37,6 +37,14 @@
 
 PROTO_BEGIN_DECLS
 
+/** @brief Where a stepped TLS exchange stands. */
+typedef enum PROTO_ENUM_PACKED
+{
+    PC_TLS_READY = 0, ///< the move landed
+    PC_TLS_BUSY,      ///< the peer's bytes are still in flight; ask again on the next tick
+    PC_TLS_FAILED,    ///< the session did not stand up, or it is closed / fatal
+} pc_tls_state;
+
 #if PC_ENABLE_TLS && PC_HAS_VENDOR_TLS
 
 /**
@@ -148,26 +156,6 @@ proto_bool pc_tls_set_client_ca(const uint8_t *ca, size_t ca_len);
 int pc_tls_peer_subject(uint8_t slot, char *out, size_t out_len);
 #endif // PC_ENABLE_MTLS
 
-#if PC_ENABLE_HTTP_CLIENT_TLS
-/**
- * @brief Run a blocking client-side TLS exchange over caller-supplied BIO callbacks.
- *
- * Performs a TLS 1.2+ client handshake (SNI = @p host, server cert not verified -
- * see note), writes @p req, then reads the decrypted response into @p out until
- * the peer closes or @p out fills. Uses the shared static arena (installs the
- * allocator if the server side has not). Yields with pcdelay() while waiting, up to
- * @p deadline_ms (millis() timestamp).
- *
- * NOTE: server authentication is OFF by default (no trust store on the device);
- * the transport is encrypted but unauthenticated unless a CA and/or a cert pin is
- * installed via pc_tls_client_set_ca() / pc_tls_client_set_pin().
- *
- * @return 0 on success (@p out_len set), <0 on handshake/verification/IO failure.
- */
-int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8_t *out, size_t out_cap,
-                      size_t *out_len, pc_tls_bio_send_fn send_fn, pc_tls_bio_recv_fn recv_fn, uint32_t deadline_ms);
-#endif // PC_ENABLE_HTTP_CLIENT_TLS
-
 #if PC_ENABLE_CLIENT_TLS
 /**
  * @brief Install a CA trust anchor for outbound TLS (HTTPS/MQTTS) verification.
@@ -203,8 +191,9 @@ proto_bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send
  * across all client-TLS users, so a would-be caller checks this to avoid tearing down an active session. */
 proto_bool pc_tls_client_session_active(void);
 
-/** @brief Advance the handshake. @return 1 established (CA/pin checked), 0 pending, <0 fatal. */
-int pc_tls_client_session_handshake(void);
+/** @brief Advance the handshake. @return ::PC_TLS_READY established (CA/pin checked), ::PC_TLS_BUSY
+ *  pending, ::PC_TLS_FAILED fatal. */
+pc_tls_state pc_tls_client_session_handshake(void);
 
 /** @brief Read decrypted application data. @return >0 bytes, 0 none yet, <0 closed/error. */
 int pc_tls_client_session_read(uint8_t *buf, size_t len);
@@ -325,9 +314,9 @@ static inline proto_bool pc_tls_client_session_active(void)
 {
     return PROTO_FALSE;
 }
-static inline int pc_tls_client_session_handshake(void)
+static inline pc_tls_state pc_tls_client_session_handshake(void)
 {
-    return -1;
+    return PC_TLS_FAILED;
 }
 static inline int pc_tls_client_session_read(uint8_t *buf, size_t len)
 {
@@ -348,24 +337,6 @@ static inline void pc_tls_client_session_forget_session(void)
 {
 }
 #endif // PC_ENABLE_CLIENT_TLS
-
-#if PC_ENABLE_HTTP_CLIENT_TLS
-static inline int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8_t *out, size_t out_cap,
-                                    size_t *out_len, pc_tls_bio_send_fn send_fn, pc_tls_bio_recv_fn recv_fn,
-                                    uint32_t deadline_ms)
-{
-    (void)host;
-    (void)req;
-    (void)reqlen;
-    (void)out;
-    (void)out_cap;
-    (void)out_len;
-    (void)send_fn;
-    (void)recv_fn;
-    (void)deadline_ms;
-    return -1;
-}
-#endif // PC_ENABLE_HTTP_CLIENT_TLS
 
 #endif // PC_ENABLE_TLS && PC_HAS_VENDOR_TLS
 

@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h"
+#include "mmgr/protomem.h"
 #include "mmgr/endian.h"      // pc_wr32be - the one source of truth for wire integers
 #include "protocore_config.h" // SSH_CHAN_MAX_PACKET
 
@@ -127,7 +128,7 @@ int32_t pc_ssh_sig_build_data(SshFlow *f, uint32_t peer_id, const uint8_t *data,
     out[0] = SSH_MSG_CHANNEL_DATA;
     pc_wr32be(out + 1, peer_id);
     pc_wr32be(out + 5, (uint32_t)len);
-    memcpy(out + 9, data, len);
+    mem.cpy(out + 9, data, len);
     *out_len = 9 + len;
     pc_ssh_flow_send_take(f, (uint32_t)len);
     return 0;

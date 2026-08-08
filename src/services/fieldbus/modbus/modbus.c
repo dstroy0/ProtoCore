@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/modbus/modbus.h"
+#include "mmgr/protomem.h"
 #include "shared_primitives/crc.h" // PC_CRC16_MODBUS
 
 #if PC_NEED_MODBUS
@@ -50,10 +51,10 @@ static void bit_set(uint8_t *a, uint16_t i, proto_bool v)
 
 void pc_modbus_server_init()
 {
-    memset(s_modbus.coils, 0, sizeof(s_modbus.coils));
-    memset(s_modbus.discrete, 0, sizeof(s_modbus.discrete));
-    memset(s_modbus.holding, 0, sizeof(s_modbus.holding));
-    memset(s_modbus.input, 0, sizeof(s_modbus.input));
+    mem.set(s_modbus.coils, 0, sizeof(s_modbus.coils));
+    mem.set(s_modbus.discrete, 0, sizeof(s_modbus.discrete));
+    mem.set(s_modbus.holding, 0, sizeof(s_modbus.holding));
+    mem.set(s_modbus.input, 0, sizeof(s_modbus.input));
     s_modbus.write_cb = NULL;
 }
 
@@ -171,7 +172,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         }
         out[0] = (uint8_t)fc;
         out[1] = bytes;
-        memset(out + 2, 0, bytes);
+        mem.set(out + 2, 0, bytes);
         for (uint16_t i = 0; i < qty; i++)
         {
             if (bit_get(src, (uint16_t)(start + i)))
@@ -238,7 +239,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         {
             return 0;
         }
-        memcpy(out, pdu, 5); // echo request
+        mem.cpy(out, pdu, 5); // echo request
         return 5;
     }
 
@@ -262,7 +263,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         {
             return 0;
         }
-        memcpy(out, pdu, 5);
+        mem.cpy(out, pdu, 5);
         return 5;
     }
 
@@ -358,7 +359,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         {
             return 0;
         }
-        memcpy(out, pdu, 7); // echo request (address + both masks)
+        mem.cpy(out, pdu, 7); // echo request (address + both masks)
         return 7;
     }
 

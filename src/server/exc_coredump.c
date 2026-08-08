@@ -14,6 +14,7 @@
  */
 
 #include "server/exc_decoder.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_EXC_DECODER && PC_HAS_VENDOR_COREDUMP
 
@@ -50,13 +51,13 @@ proto_bool pc_exc_coredump_summary(ExcInfo *out)
     }
 #if CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH && CONFIG_ESP_COREDUMP_DATA_FORMAT_ELF
     esp_core_dump_summary_t s;
-    memset(&s, 0, sizeof(s));
+    mem.set(&s, 0, sizeof(s));
     if (esp_core_dump_get_summary(&s) != ESP_OK)
     {
         return PROTO_FALSE;
     }
 
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     out->core = -1; // the summary does not name the core; the raw image does
     out->pc = s.exc_pc;
     // The crashing task name is the most useful short label the summary carries, so it fills the

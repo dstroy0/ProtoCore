@@ -7,6 +7,7 @@
  */
 
 #include "crypto/hash/md.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/endian.h"
 #include "mmgr/secure.h" // the secure pool: digest state, wiped on release
@@ -213,7 +214,7 @@ static void md_absorb(struct MdCtx *c, const uint8_t *data, size_t len, md_compr
         {
             take = (uint32_t)len;
         }
-        memcpy(c->buf + c->buf_len, data, take);
+        mem.cpy(c->buf + c->buf_len, data, take);
         c->buf_len += take;
         data += take;
         len -= take;
@@ -284,14 +285,14 @@ void md4(const uint8_t *data, size_t len, uint8_t out[16])
 void pc_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16])
 {
     uint8_t k[64];
-    memset(k, 0, sizeof(k));
+    mem.set(k, 0, sizeof(k));
     if (key_len > 64)
     {
         md5(key, key_len, k); // keys longer than the block are hashed down (leaves 16 bytes, rest zero)
     }
     else
     {
-        memcpy(k, key, key_len);
+        mem.cpy(k, key, key_len);
     }
 
     uint8_t ipad[64];

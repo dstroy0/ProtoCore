@@ -13,6 +13,7 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_inflate.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SSH_ZLIB
 
@@ -491,7 +492,7 @@ int ssh_inflate_packet(SshInflate *z, const uint8_t *src, size_t src_len, uint8_
             {
                 tmp[i] = logical_byte(z->carry, z->carry_len, src, i);
             }
-            memcpy(z->carry, tmp, rem);
+            mem.cpy(z->carry, tmp, rem);
             z->carry_len = (uint8_t)rem;
             z->bit_off = 0;
             *out_len = 0;
@@ -560,7 +561,7 @@ int ssh_inflate_packet(SshInflate *z, const uint8_t *src, size_t src_len, uint8_
     {
         tmp[i] = logical_byte(z->carry, z->carry_len, src, bstart_byte + i);
     }
-    memcpy(z->carry, tmp, rem);
+    mem.cpy(z->carry, tmp, rem);
     z->carry_len = (uint8_t)rem;
     z->bit_off = (uint8_t)(boundary & 7u);
 

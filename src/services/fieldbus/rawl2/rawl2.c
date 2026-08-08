@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/rawl2/rawl2.h"
+#include "mmgr/protomem.h"
 #include "shared_primitives/crc.h" // PC_CRC32_ISO_HDLC
 
 #if PC_ENABLE_RAWL2
@@ -23,13 +24,13 @@ size_t pc_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, 
     {
         return 0;
     }
-    memcpy(out, dst, ETH_ALEN);
-    memcpy(out + ETH_ALEN, src, ETH_ALEN);
+    mem.cpy(out, dst, ETH_ALEN);
+    mem.cpy(out + ETH_ALEN, src, ETH_ALEN);
     out[12] = (uint8_t)(ethertype >> 8);
     out[13] = (uint8_t)ethertype;
     if (payload_len)
     {
-        memcpy(out + ETH_HDR_LEN, payload, payload_len);
+        mem.cpy(out + ETH_HDR_LEN, payload, payload_len);
     }
     return n;
 }
@@ -46,8 +47,8 @@ size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, pr
     {
         return 0;
     }
-    memcpy(out, dst, ETH_ALEN);
-    memcpy(out + ETH_ALEN, src, ETH_ALEN);
+    mem.cpy(out, dst, ETH_ALEN);
+    mem.cpy(out + ETH_ALEN, src, ETH_ALEN);
     out[12] = (uint8_t)(ETH_TPID_8021Q >> 8);
     out[13] = (uint8_t)ETH_TPID_8021Q;
     uint16_t tci = (uint16_t)(((pcp & 0x7) << 13) | ((dei ? 1 : 0) << 12) | (vid & 0x0FFF));
@@ -57,7 +58,7 @@ size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, pr
     out[17] = (uint8_t)ethertype;
     if (payload_len)
     {
-        memcpy(out + ETH_VLAN_HDR_LEN, payload, payload_len);
+        mem.cpy(out + ETH_VLAN_HDR_LEN, payload, payload_len);
     }
     return n;
 }

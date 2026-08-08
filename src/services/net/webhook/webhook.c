@@ -7,6 +7,7 @@
  */
 
 #include "services/net/webhook/webhook.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_WEBHOOK
@@ -25,7 +26,7 @@ static proto_bool put(char *out, size_t cap, size_t *pos, const char *s)
     {
         return PROTO_FALSE;
     }
-    memcpy(out + *pos, s, n);
+    mem.cpy(out + *pos, s, n);
     *pos += n;
     out[*pos] = '\0';
     return PROTO_TRUE;

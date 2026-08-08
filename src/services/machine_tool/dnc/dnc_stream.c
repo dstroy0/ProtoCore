@@ -8,6 +8,7 @@
  */
 
 #include "dnc_stream.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DNC
 
@@ -53,7 +54,7 @@ static proto_bool emit(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx,
 static proto_bool emit_runout(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx, uint16_t count)
 {
     uint8_t zeros[32];
-    memset(zeros, 0, sizeof(zeros));
+    mem.set(zeros, 0, sizeof(zeros));
     while (count)
     {
         uint16_t chunk = count < sizeof(zeros) ? count : (uint16_t)sizeof(zeros);

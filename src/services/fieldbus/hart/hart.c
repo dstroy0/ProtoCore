@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/hart/hart.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HART
 
@@ -40,13 +41,13 @@ size_t pc_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, ui
 
     size_t i = 0;
     out[i++] = delimiter;
-    memcpy(out + i, addr, addr_len);
+    mem.cpy(out + i, addr, addr_len);
     i += addr_len;
     out[i++] = command;
     out[i++] = (uint8_t)data_len; // byte count
     if (data_len)
     {
-        memcpy(out + i, data, data_len);
+        mem.cpy(out + i, data, data_len);
         i += data_len;
     }
     out[i] = pc_hart_checksum(out, i); // XOR over delimiter..last data byte

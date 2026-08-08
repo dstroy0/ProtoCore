@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/melsec/melsec.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_MELSEC
 
@@ -74,7 +75,7 @@ size_t pc_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint
     p += pc_wr16le(buf + p, points);
     if (data_len)
     {
-        memcpy(buf + p, data, data_len);
+        mem.cpy(buf + p, data, data_len);
         p += data_len;
     }
     return p; // == MELSEC_3E_READ_REQ_LEN + data_len

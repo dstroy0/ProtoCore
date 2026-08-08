@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#include "mmgr/protomem.h"
 #include "crypto/asymmetric/bignum.h"     // bn_*, pc_bignum
 #include "crypto/asymmetric/curve25519.h" // pc_x25519 (curve25519-sha256 KEX)
 #include "crypto/asymmetric/ecdsa.h"      // pc_ecdsa_p256_* (ecdsa-sha2-nistp256 host key)
@@ -112,7 +113,7 @@ proto_bool ssh_kex_prefer_rsa(void)
 
 void pc_ssh_hostkey_ed25519_set(const uint8_t seed[32])
 {
-    memcpy(s_sshtr.ed_seed, seed, 32);
+    mem.cpy(s_sshtr.ed_seed, seed, 32);
     pc_ed25519_pubkey(s_sshtr.ed_pub, s_sshtr.ed_seed);
     s_sshtr.ed_have = PROTO_TRUE;
 }
@@ -127,7 +128,7 @@ void pc_ssh_hostkey_ecdsa_set(const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
     {
         return;
     }
-    memcpy(s_sshtr.ecdsa_priv, priv, PC_ECDSA_P256_PRIV_LEN);
+    mem.cpy(s_sshtr.ecdsa_priv, priv, PC_ECDSA_P256_PRIV_LEN);
     s_sshtr.ecdsa_have = PROTO_TRUE;
 }
 proto_bool pc_ssh_hostkey_ecdsa_available(void)
@@ -263,7 +264,7 @@ static void w_bytes(Writer *w, const void *src, size_t n)
         w->ok = PROTO_FALSE;
         return;
     }
-    memcpy(w->p + w->len, src, n); // NOSONAR - bound proven above; analyzer follows an infeasible path
+    mem.cpy(w->p + w->len, src, n); // NOSONAR - bound proven above; analyzer follows an infeasible path
     w->len += n;
 }
 
@@ -331,7 +332,7 @@ static proto_bool namelist_contains(const uint8_t *list, uint32_t len, const cha
         if (i == len || list[i] == ',')
         {
             uint32_t elen = i - start;
-            if (elen == wl && memcmp(list + start, want, wl) == 0)
+            if (elen == wl && mem.cmp(list + start, want, wl) == 0)
             {
                 return PROTO_TRUE;
             }
@@ -359,7 +360,7 @@ static int cand_match(const uint8_t *tok, uint32_t tlen, const AlgCand *cands, i
     for (int c = 0; c < n; c++)
     {
         size_t cl = strnlen(cands[c].name, (size_t)tlen + 1);
-        if (cands[c].avail && cl == tlen && memcmp(tok, cands[c].name, tlen) == 0)
+        if (cands[c].avail && cl == tlen && mem.cmp(tok, cands[c].name, tlen) == 0)
         {
             return c;
         }
@@ -402,7 +403,7 @@ void ssh_transport_init(uint8_t i)
         return;
     }
     SshSession *s = &ssh_sess[i];
-    memset(s, 0, sizeof(*s));
+    mem.set(s, 0, sizeof(*s));
     s->phase = SSH_PHASE_BANNER;
 }
 
@@ -417,7 +418,7 @@ int ssh_transport_server_banner(uint8_t *out, size_t *out_len, size_t cap)
     {
         return -1;
     }
-    memcpy(out, SSH_SERVER_VERSION, vlen);
+    mem.cpy(out, SSH_SERVER_VERSION, vlen);
     out[vlen] = '\r';
     out[vlen + 1] = '\n';
     *out_len = vlen + 2;
@@ -447,13 +448,13 @@ int ssh_transport_recv_banner(uint8_t i, const uint8_t *data, size_t len, size_t
 
             // RFC 4253 §4.2: the server may receive other lines before the
             // identification string; only the line starting with "SSH-" counts.
-            if (n >= 4 && memcmp(s->banner_buf, "SSH-", 4) == 0)
+            if (n >= 4 && mem.cmp(s->banner_buf, "SSH-", 4) == 0)
             {
                 if (n >= SSH_VERSION_MAX)
                 {
                     return -1;
                 }
-                memcpy(s->v_c, s->banner_buf, n);
+                mem.cpy(s->v_c, s->banner_buf, n);
                 s->v_c[n] = '\0';
                 s->v_c_len = n;
                 s->banner_len = 0;
@@ -525,7 +526,7 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
     {
         return -1;
     }
-    memcpy(s->i_s, payload, w.len);
+    mem.cpy(s->i_s, payload, w.len);
     s->i_s_len = (uint16_t)w.len;
 
     *len = w.len;
@@ -619,7 +620,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    memcpy(s->i_c, payload, len);
+    mem.cpy(s->i_c, payload, len);
     s->i_c_len = (uint16_t)len;
 
     size_t off = 1 + 16; // skip msg type + 16-byte cookie
@@ -895,8 +896,8 @@ int ssh_kexdh_parse_init(const uint8_t *payload, size_t len, uint8_t e_be[256])
         return -1; // e exceeds 2048 bits
     }
 
-    memset(e_be, 0, 256);
-    memcpy(e_be + (256 - vlen), m + off, vlen);
+    mem.set(e_be, 0, 256);
+    mem.cpy(e_be + (256 - vlen), m + off, vlen);
     return 0;
 }
 
@@ -936,7 +937,7 @@ static int parse_ecdh_init(const uint8_t *payload, size_t len, uint8_t qc[32])
     {
         return -1;
     }
-    memcpy(qc, payload + 5, 32);
+    mem.cpy(qc, payload + 5, 32);
     return 0;
 }
 
@@ -954,7 +955,7 @@ static int parse_ecdh_init_p256(const uint8_t *payload, size_t len, uint8_t qc[P
     {
         return -1;
     }
-    memcpy(qc, payload + 5, PC_ECDSA_P256_PUB_LEN);
+    mem.cpy(qc, payload + 5, PC_ECDSA_P256_PUB_LEN);
     return 0;
 }
 
@@ -1157,7 +1158,7 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
         pc_secure_wipe(k_cl, sizeof(k_cl));
         return -1;
     }
-    memcpy(s_reply + MLKEM768_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
+    mem.cpy(s_reply + MLKEM768_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
 
     pc_sha256_ctx hc;
     pc_sha256_init(&hc);
@@ -1207,7 +1208,7 @@ static int hybrid_sntrup761_x25519(uint8_t i, const uint8_t *payload, size_t len
         pc_secure_wipe(k_cl, sizeof(k_cl));
         return -1;
     }
-    memcpy(s_reply + PC_SNTRUP761_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
+    mem.cpy(s_reply + PC_SNTRUP761_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
 
     pc_sha512_ctx hc;
     pc_sha512_init(&hc);
@@ -1236,7 +1237,7 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
     //    the hybrid); k_hash / k_hash_len select K's encoding (an mpint for DH / curve, a fixed 32-byte
     //    string for the hybrid). k_be holds K right-aligned so hash_mpint / the KDF strip to minimal.
     uint8_t k_be[256];
-    memset(k_be, 0, sizeof(k_be));
+    mem.set(k_be, 0, sizeof(k_be));
     uint8_t cpub[256];
     uint8_t spub[256]; // client / server public value (right-aligned) for DH / curve25519
     const uint8_t *cpub_p = cpub;
@@ -1272,9 +1273,9 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
             pc_secure_wipe(kk, sizeof(kk));
             return -1;
         }
-        memcpy(k_be + (256 - 32), kk, 32);
-        memcpy(cpub, qc, 32);
-        memcpy(spub, s->ecdh_pk, 32);
+        mem.cpy(k_be + (256 - 32), kk, 32);
+        mem.cpy(cpub, qc, 32);
+        mem.cpy(spub, s->ecdh_pk, 32);
         cpub_len = spub_len = 32;
         pub_is_string = PROTO_TRUE;
         pc_secure_wipe(kk, sizeof(kk));
@@ -1331,9 +1332,9 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
         {
             return -1;
         }
-        memcpy(k_be + (256 - PC_ECDSA_P256_COORD_LEN), kk, PC_ECDSA_P256_COORD_LEN);
-        memcpy(cpub, qc, PC_ECDSA_P256_PUB_LEN);
-        memcpy(spub, qs, PC_ECDSA_P256_PUB_LEN);
+        mem.cpy(k_be + (256 - PC_ECDSA_P256_COORD_LEN), kk, PC_ECDSA_P256_COORD_LEN);
+        mem.cpy(cpub, qc, PC_ECDSA_P256_PUB_LEN);
+        mem.cpy(spub, qs, PC_ECDSA_P256_PUB_LEN);
         cpub_len = PC_ECDSA_P256_PUB_LEN;
         spub_len = PC_ECDSA_P256_PUB_LEN;
         pub_is_string = PROTO_TRUE;
@@ -1357,7 +1358,7 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
         bn_expmod_group14(&K, &e, &ssh_dh[i].y);
         bn_to_bytes(k_be, &K);
         pc_secure_wipe(&K, sizeof(K));
-        memcpy(cpub, e_be, 256);
+        mem.cpy(cpub, e_be, 256);
         bn_to_bytes(spub, &ssh_dh[i].f);
     }
 
@@ -1378,7 +1379,7 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
                           &h_len, k_is_string, is512);
     if (!s->have_session_id)
     {
-        memcpy(s->session_id, H, h_len);
+        mem.cpy(s->session_id, H, h_len);
         s->session_id_len = (uint8_t)h_len;
         s->have_session_id = PROTO_TRUE;
     }

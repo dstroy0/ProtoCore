@@ -12,6 +12,7 @@
  */
 
 #include "network_drivers/network/forward/forward.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_FORWARD
 
@@ -198,15 +199,15 @@ static proto_bool acl_permits(const ForwardCtx *f, uint8_t src, const uint8_t *d
 static void pc_forward_reset(void)
 {
     // The interfaces are L1's; emptying this plane leaves them registered.
-    memset(s_fwd.rules, 0, sizeof(s_fwd.rules));
-    memset(s_fwd.acl, 0, sizeof(s_fwd.acl));
-    memset(s_fwd.routes, 0, sizeof(s_fwd.routes));
+    mem.set(s_fwd.rules, 0, sizeof(s_fwd.rules));
+    mem.set(s_fwd.acl, 0, sizeof(s_fwd.acl));
+    mem.set(s_fwd.routes, 0, sizeof(s_fwd.routes));
     s_fwd.acl_default = PC_FWD_ALLOW;
 #if PC_FWD_INSPECT
     s_fwd.inspector = NULL;
     s_fwd.inspect_ctx = NULL;
 #endif
-    memset(&s_fwd.stats, 0, sizeof(s_fwd.stats));
+    mem.set(&s_fwd.stats, 0, sizeof(s_fwd.stats));
 }
 
 static void pc_forward_acl_set_default(pc_fwd_action action)
@@ -227,8 +228,8 @@ static proto_bool pc_forward_acl_add(uint8_t src_if, uint16_t offset, const uint
         {
             continue;
         }
-        memset(s_fwd.acl[i].pattern, 0, sizeof(s_fwd.acl[i].pattern));
-        memset(s_fwd.acl[i].mask, 0, sizeof(s_fwd.acl[i].mask));
+        mem.set(s_fwd.acl[i].pattern, 0, sizeof(s_fwd.acl[i].pattern));
+        mem.set(s_fwd.acl[i].mask, 0, sizeof(s_fwd.acl[i].mask));
         for (uint8_t k = 0; k < patlen; k++)
         {
             s_fwd.acl[i].pattern[k] = (uint8_t)(pattern[k] & mask[k]); // store already masked
@@ -257,8 +258,8 @@ static proto_bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const ui
         {
             continue;
         }
-        memset(s_fwd.routes[i].pattern, 0, sizeof(s_fwd.routes[i].pattern));
-        memset(s_fwd.routes[i].mask, 0, sizeof(s_fwd.routes[i].mask));
+        mem.set(s_fwd.routes[i].pattern, 0, sizeof(s_fwd.routes[i].pattern));
+        mem.set(s_fwd.routes[i].mask, 0, sizeof(s_fwd.routes[i].mask));
         for (uint8_t k = 0; k < patlen; k++)
         {
             s_fwd.routes[i].pattern[k] = (uint8_t)(pattern[k] & mask[k]); // store already masked

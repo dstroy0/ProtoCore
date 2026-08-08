@@ -12,6 +12,7 @@
  */
 
 #include "services/machine_tool/fanuc_j519/fanuc_j519.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_FANUC_J519
 
@@ -22,14 +23,14 @@
 static size_t wr_f32le(uint8_t *p, float v)
 {
     uint32_t u;
-    memcpy(&u, &v, 4);
+    mem.cpy(&u, &v, 4);
     return pc_wr32le(p, u);
 }
 static float rd_f32le(const uint8_t *p)
 {
     uint32_t u = pc_rd32le(p);
     float v;
-    memcpy(&v, &u, 4);
+    mem.cpy(&v, &u, 4);
     return v;
 }
 

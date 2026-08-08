@@ -7,6 +7,7 @@
  */
 
 #include "services/web/edge_cache/edge_mesh.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_EDGE_MESH
 
@@ -96,15 +97,15 @@ size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, cons
     out[pos++] = PC_EDGE_MESH_MAGIC1;
     out[pos++] = PC_EDGE_MESH_VERSION;
     out[pos++] = PC_EDGE_MESH_OP_GET;
-    memcpy(out + pos, digest, 32);
+    mem.cpy(out + pos, digest, 32);
     pos += 32;
     put_u16(out + pos, (uint16_t)kl);
     pos += 2;
-    memcpy(out + pos, canon, kl);
+    mem.cpy(out + pos, canon, kl);
     pos += kl;
     put_u16(out + pos, (uint16_t)hl);
     pos += 2;
-    memcpy(out + pos, hdrs, hl);
+    mem.cpy(out + pos, hdrs, hl);
     pos += hl;
     return pos;
 }
@@ -164,16 +165,16 @@ EdgeMeshParse edge_mesh_parse_request(const uint8_t *buf, size_t len, uint8_t di
     size_t hdrs_off = pos;
     if (digest_out)
     {
-        memcpy(digest_out, buf + digest_off, 32);
+        mem.cpy(digest_out, buf + digest_off, 32);
     }
     if (canon_out)
     {
-        memcpy(canon_out, buf + key_off, kl);
+        mem.cpy(canon_out, buf + key_off, kl);
         canon_out[kl] = '\0';
     }
     if (hdrs_out)
     {
-        memcpy(hdrs_out, buf + hdrs_off, hl);
+        mem.cpy(hdrs_out, buf + hdrs_off, hl);
         hdrs_out[hl] = '\0';
     }
     return EDGE_MESH_PARSE_HIT; // a complete, valid request
@@ -246,7 +247,7 @@ size_t edge_mesh_build_response(proto_bool hit, const uint8_t *entry, size_t ent
         }
         put_u16(out + pos, (uint16_t)entry_len);
         pos += 2;
-        memcpy(out + pos, entry, entry_len);
+        mem.cpy(out + pos, entry, entry_len);
         pos += entry_len;
     }
     return pos;

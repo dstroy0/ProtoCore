@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
+#include "mmgr/protomem.h"
 #include "crypto/aead/aesgcm.h"
 #include "crypto/aead/chachapoly.h"
 #include "crypto/ct_eq.h" // pc_ct_eq
@@ -98,7 +99,7 @@ void ssh_pkt_init(uint8_t i)
     // The wire buffer is a persistent borrow bound to the slot, not to the connection on it: it is
     // never released, so it carries across to the next connection this slot serves.
     uint8_t *wire = s->tx_wire;
-    memset(s, 0, sizeof(*s)); // is_client defaults false = server role
+    mem.set(s, 0, sizeof(*s)); // is_client defaults false = server role
     s->tx_wire = wire;
     s->kex_active = PROTO_TRUE;
     s->enc_out = PROTO_FALSE;
@@ -302,7 +303,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     // Assemble the plaintext packet into out[].
     write_u32_be(out, (uint32_t)pkt_len);                  // packet_length
     out[4] = (uint8_t)pad_len;                             // padding_length
-    memcpy(out + 5, payload, payload_len);                 // payload
+    mem.cpy(out + 5, payload, payload_len);                 // payload
     pc_platform_rand_fill(out + 5 + payload_len, pad_len); // random padding
 
     const proto_bool cli = s->is_client; // send direction: client uses c2s, server uses s2c
@@ -332,7 +333,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
         uint8_t mac[64];
         compute_mac_mode(km->mac_mode, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len, mac);
         pc_aes256ctr_crypt(km_send_aes_key(km, cli), km_send_aes_iv(km, cli), out, out, 4 + pkt_len);
-        memcpy(out + 4 + pkt_len, mac, tag_len);
+        mem.cpy(out + 4 + pkt_len, mac, tag_len);
         pc_secure_wipe(mac, sizeof(mac));
     }
 
@@ -450,7 +451,7 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     }
 
     size_t consumed = wire_need;
-    memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
+    mem.move(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     pc_secure_wipe(scratch, scratch_sz);
     pc_plaintext_release(scratch_scope);
@@ -526,7 +527,7 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     }
 
     size_t consumed = wire_need;
-    memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
+    mem.move(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     pc_secure_wipe(scratch, scratch_sz);
     pc_plaintext_release(scratch_scope);
@@ -584,7 +585,7 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
         pc_plaintext_release(scratch_scope);
         return -1;
     }
-    memcpy(scratch, s->rx_buf + 4, pkt_len);
+    mem.cpy(scratch, s->rx_buf + 4, pkt_len);
     pc_aes256ctr_crypt(km_recv_aes_key(km, s->is_client), km_recv_aes_iv(km, s->is_client), scratch, scratch, pkt_len);
 
     // scratch = padding_length || payload || padding.
@@ -604,7 +605,7 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     }
 
     size_t consumed = wire_need;
-    memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
+    mem.move(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     pc_secure_wipe(scratch, scratch_sz);
     pc_plaintext_release(scratch_scope);
@@ -664,7 +665,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // Full packet present.  Decrypt EXACTLY the encrypted portion,
     // which advances the recv counter by exactly enc_len/16 blocks and
     // leaves it aligned on the next packet boundary.
-    memcpy(scratch, s->rx_buf, enc_len);
+    mem.cpy(scratch, s->rx_buf, enc_len);
     pc_aes256ctr_crypt(rk, rctr, scratch, scratch, enc_len);
 
     // Verify MAC over seq_no || plaintext(scratch[0..enc_len)).
@@ -713,7 +714,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
 
     // Consume from rx_buf.
     size_t consumed = wire_need;
-    memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
+    mem.move(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     pc_secure_wipe(scratch, scratch_sz);
     pc_plaintext_release(scratch_scope);
@@ -755,7 +756,7 @@ static int ssh_recv_plain(uint8_t i, SshPacketState *s, const SshKeyMat *km, ssh
     }
 
     size_t consumed = wire_need;
-    memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
+    mem.move(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     return 1;
 }
@@ -785,7 +786,7 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
             return -1;
         }
         size_t take = len < space ? len : space;
-        memcpy(s->rx_buf + s->rx_len, data, take);
+        mem.cpy(s->rx_buf + s->rx_len, data, take);
         s->rx_len += take;
         data += take;
         len -= take;

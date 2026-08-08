@@ -7,6 +7,7 @@
  */
 
 #include "server/logbuf.h"
+#include "mmgr/protomem.h"
 #include "mmgr/frame.h" // the one frame engine
 
 #if PC_ENABLE_LOGBUF
@@ -106,7 +107,7 @@ int pc_log_dump(char *out, size_t cap)
             out[0] = '\0';
             return 0;
         }
-        memcpy(out + pos, line, n);
+        mem.cpy(out + pos, line, n);
         pos += n;
         if (i + 1 < s_log.count)
         {

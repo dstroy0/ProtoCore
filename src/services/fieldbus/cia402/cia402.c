@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/cia402/cia402.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_CIA402
 
@@ -147,7 +148,7 @@ static proto_bool sdo_upload_bytes(const CanFrame *f, uint16_t want_index, uint8
     {
         return PROTO_FALSE;
     }
-    memcpy(out, resp.data, need);
+    mem.cpy(out, resp.data, need);
     return PROTO_TRUE;
 }
 

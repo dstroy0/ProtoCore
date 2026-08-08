@@ -7,6 +7,7 @@
  */
 
 #include "msgpack.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_MSGPACK
 
@@ -154,7 +155,7 @@ static void pc_msgpack_null(pc_span *w)
 static void pc_msgpack_float(pc_span *w, float f)
 {
     uint32_t bits;
-    memcpy(&bits, &f, sizeof(bits));
+    mem.cpy(&bits, &f, sizeof(bits));
     put(w, 0xca); // float32
     put_be(w, bits, 4);
 }
@@ -471,7 +472,7 @@ static proto_bool pc_msgpack_read_float(pc_cspan *r, float *out)
             return PROTO_FALSE;
         }
         uint32_t bits = (uint32_t)v;
-        memcpy(out, &bits, sizeof(*out));
+        mem.cpy(out, &bits, sizeof(*out));
         return PROTO_TRUE;
     }
     if (b == 0xcb) // float64 -> narrow to float
@@ -481,7 +482,7 @@ static proto_bool pc_msgpack_read_float(pc_cspan *r, float *out)
             return PROTO_FALSE;
         }
         double d;
-        memcpy(&d, &v, sizeof(d));
+        mem.cpy(&d, &v, sizeof(d));
         *out = (float)d;
         return PROTO_TRUE;
     }

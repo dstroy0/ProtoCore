@@ -7,6 +7,7 @@
  */
 
 #include "services/web/spa_router/spa_router.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SPA_ROUTER
 
@@ -108,7 +109,7 @@ size_t pc_ui_stream_next(pc_ui_stream *s, char *out, size_t cap)
         {
             n++;
         }
-        memcpy(out + written, src, n);
+        mem.cpy(out + written, src, n);
         written += n;
         s->off += n;
         if (src[n] == '\0') // this fragment is fully emitted

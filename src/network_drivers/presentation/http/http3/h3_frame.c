@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/h3_frame.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -111,7 +112,7 @@ size_t pc_h3_build_data(uint8_t *out, size_t cap, const uint8_t *data, size_t le
     }
     if (len)
     {
-        memcpy(out + hn, data, len);
+        mem.cpy(out + hn, data, len);
     }
     return hn + len;
 }
@@ -125,7 +126,7 @@ size_t pc_h3_build_headers(uint8_t *out, size_t cap, const uint8_t *block, size_
     }
     if (len)
     {
-        memcpy(out + hn, block, len);
+        mem.cpy(out + hn, block, len);
     }
     return hn + len;
 }

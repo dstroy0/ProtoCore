@@ -7,6 +7,7 @@
  */
 
 #include "services/system/esp/ipsec_db.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_IKEV2
 
@@ -14,7 +15,7 @@
 // (memcmp) is the numeric compare.
 static proto_bool in_range(const uint8_t *addr, const uint8_t *lo, const uint8_t *hi, uint8_t len)
 {
-    return memcmp(addr, lo, len) >= 0 && memcmp(addr, hi, len) <= 0;
+    return mem.cmp(addr, lo, len) >= 0 && mem.cmp(addr, hi, len) <= 0;
 }
 static proto_bool port_in(uint16_t p, uint16_t lo, uint16_t hi)
 {
@@ -124,14 +125,14 @@ proto_bool pc_ipsec_selector_from_ts(IpsecSelector *out, const IkeTrafficSelecto
         return PROTO_FALSE;
     }
 
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     uint8_t len = (uint8_t)ts_src->addr_len; // addr_len is an IP address length (<= 16), fits a uint8_t
     out->addr_len = len;
     out->ip_protocol = ts_src->ip_protocol ? ts_src->ip_protocol : ts_dst->ip_protocol;
-    memcpy(out->src_lo, ts_src->start_addr, len);
-    memcpy(out->src_hi, ts_src->end_addr, len);
-    memcpy(out->dst_lo, ts_dst->start_addr, len);
-    memcpy(out->dst_hi, ts_dst->end_addr, len);
+    mem.cpy(out->src_lo, ts_src->start_addr, len);
+    mem.cpy(out->src_hi, ts_src->end_addr, len);
+    mem.cpy(out->dst_lo, ts_dst->start_addr, len);
+    mem.cpy(out->dst_hi, ts_dst->end_addr, len);
     out->src_port_lo = ts_src->start_port;
     out->src_port_hi = ts_src->end_port;
     out->dst_port_lo = ts_dst->start_port;
@@ -180,12 +181,12 @@ IpsecSaEntry *pc_ipsec_sad_add(IpsecSad *sad, uint32_t spi, const uint8_t *dst, 
         return NULL;
     }
 
-    memset(e, 0, sizeof(*e));
+    mem.set(e, 0, sizeof(*e));
     e->spi = spi;
     e->addr_len = addr_len;
-    memcpy(e->dst, dst, addr_len);
-    memcpy(e->key, key, PC_ESP_KEY_LEN);
-    memcpy(e->salt, salt, PC_ESP_SALT_LEN);
+    mem.cpy(e->dst, dst, addr_len);
+    mem.cpy(e->key, key, PC_ESP_KEY_LEN);
+    mem.cpy(e->salt, salt, PC_ESP_SALT_LEN);
     e->seq = 0;
     e->inbound = inbound;
     if (inbound)
@@ -220,7 +221,7 @@ proto_bool pc_ipsec_sad_remove(IpsecSad *sad, uint32_t spi)
     {
         return PROTO_FALSE;
     }
-    memset(e, 0, sizeof(*e)); // wipe the key material with the slot
+    mem.set(e, 0, sizeof(*e)); // wipe the key material with the slot
     e->valid = PROTO_FALSE;
     if (sad->count)
     {

@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/h3_conn.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -40,7 +41,7 @@ static H3Stream *pc_h3_stream_get(H3Conn *h3, uint64_t id, proto_bool create)
     {
         return NULL;
     }
-    memset(free_slot, 0, sizeof(*free_slot));
+    mem.set(free_slot, 0, sizeof(*free_slot));
     free_slot->id = id;
     return free_slot;
 }
@@ -52,7 +53,7 @@ static void set_field(char *dst, size_t cap, const char *src, size_t len)
     {
         len = cap - 1;
     }
-    memcpy(dst, src, len);
+    mem.cpy(dst, src, len);
     dst[len] = '\0';
 }
 
@@ -64,15 +65,15 @@ typedef struct
 static proto_bool req_emit(void *ctx, const char *name, size_t nlen, const char *value, size_t vlen)
 {
     H3Stream *st = ((ReqEmit *)ctx)->st;
-    if (nlen == 7 && memcmp(name, ":method", 7) == 0)
+    if (nlen == 7 && mem.cmp(name, ":method", 7) == 0)
     {
         set_field(st->method, sizeof(st->method), value, vlen);
     }
-    else if (nlen == 5 && memcmp(name, ":path", 5) == 0)
+    else if (nlen == 5 && mem.cmp(name, ":path", 5) == 0)
     {
         set_field(st->path, sizeof(st->path), value, vlen);
     }
-    else if (nlen == 10 && memcmp(name, ":authority", 10) == 0)
+    else if (nlen == 10 && mem.cmp(name, ":authority", 10) == 0)
     {
         set_field(st->authority, sizeof(st->authority), value, vlen);
     }
@@ -121,7 +122,7 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
             }
             if (take)
             {
-                memcpy(body + body_len, fp, take);
+                mem.cpy(body + body_len, fp, take);
             }
             body_len += take;
         }
@@ -140,7 +141,7 @@ static void append(H3Stream *st, const uint8_t *data, size_t len)
     {
         len = sizeof(st->buf) - st->buf_len;
     }
-    memcpy(st->buf + st->buf_len, data, len);
+    mem.cpy(st->buf + st->buf_len, data, len);
     st->buf_len += len;
 }
 
@@ -171,7 +172,7 @@ static proto_bool pc_h3_classify_uni_stream(H3Stream *st)
     {
         st->role = H3_ROLE_OTHER_UNI;
     }
-    memmove(st->buf, st->buf + c, st->buf_len - c);
+    mem.move(st->buf, st->buf + c, st->buf_len - c);
     st->buf_len -= c;
     return PROTO_TRUE;
 }
@@ -198,7 +199,7 @@ static void pc_h3_consume_control(H3Conn *h3, H3Stream *st)
         }
         off += fr.header_len + (size_t)fr.length;
     }
-    memmove(st->buf, st->buf + off, st->buf_len - off);
+    mem.move(st->buf, st->buf + off, st->buf_len - off);
     st->buf_len -= off;
 }
 
@@ -270,7 +271,7 @@ static void on_handshake_done(void *app, struct QuicConn *qc)
 
 void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app)
 {
-    memset(h3, 0, sizeof(*h3));
+    mem.set(h3, 0, sizeof(*h3));
     h3->qc = qc;
     h3->on_request = on_request;
     h3->app = app;

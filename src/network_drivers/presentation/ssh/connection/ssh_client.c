@@ -11,6 +11,7 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_client.h"
+#include "mmgr/protomem.h"
 #include "mmgr/frame.h" // the one frame engine
 #include "mmgr/secure.h"
 
@@ -162,7 +163,7 @@ static void w_bytes(Wr *w, const uint8_t *d, size_t n)
         w->ok = PROTO_FALSE;
         return;
     }
-    memcpy(w->buf + w->off, d, n);
+    mem.cpy(w->buf + w->off, d, n);
     w->off += n;
 }
 static void w_string(Wr *w, const void *d, size_t n)
@@ -229,7 +230,7 @@ static proto_bool namelist_has(const uint8_t *list, uint32_t len, const char *wa
     {
         if (i == len || list[i] == ',')
         {
-            if (i - start == wl && memcmp(list + start, want, wl) == 0)
+            if (i - start == wl && mem.cmp(list + start, want, wl) == 0)
             {
                 return PROTO_TRUE;
             }
@@ -460,7 +461,7 @@ static void w_namelist(Wr *w, const char *const *names, size_t n)
         }
         if (o + l <= sizeof(tmp))
         {
-            memcpy(tmp + o, names[i], l);
+            mem.cpy(tmp + o, names[i], l);
             o += l;
         }
     }
@@ -495,8 +496,8 @@ static proto_bool mpint_to_fixed(const uint8_t *v, uint32_t vlen, uint8_t *out, 
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, width);
-    memcpy(out + (width - mag), v + i, mag);
+    mem.set(out, 0, width);
+    mem.cpy(out + (width - mag), v + i, mag);
     return PROTO_TRUE;
 }
 
@@ -610,7 +611,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     {
         return PROTO_FALSE;
     }
-    memcpy(s_cli.i_s, p, len);
+    mem.cpy(s_cli.i_s, p, len);
     s_cli.i_s_len = (uint16_t)len;
 
     Rd r = {p, len, 0, PROTO_TRUE};
@@ -744,7 +745,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
 // Compute the shared secret K (right-aligned into k_be[256]) for the negotiated method.
 static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_t k_be[256])
 {
-    memset(k_be, 0, 256);
+    mem.set(k_be, 0, 256);
     switch (s_cli.kex)
     {
     case CLI_KEX_CURVE25519: {
@@ -754,7 +755,7 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
         }
         uint8_t k32[32];
         pc_x25519(k32, s_cli.kex_priv, srv_pub);
-        memcpy(k_be + (256 - 32), k32, 32);
+        mem.cpy(k_be + (256 - 32), k32, 32);
         pc_secure_wipe(k32, 32);
         return PROTO_TRUE;
     }
@@ -768,7 +769,7 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
         {
             return PROTO_FALSE;
         }
-        memcpy(k_be + (256 - 32), k32, 32);
+        mem.cpy(k_be + (256 - 32), k32, 32);
         pc_secure_wipe(k32, 32);
         return PROTO_TRUE;
     }
@@ -989,7 +990,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     pc_sha256_init(&fc);
     pc_sha256_update(&fc, ks, ks_len);
     pc_sha256_final(&fc, fp);
-    if (memcmp(fp, s_cli.cfg.host_pin, 32) != 0)
+    if (mem.cmp(fp, s_cli.cfg.host_pin, 32) != 0)
     {
         cli_fail("relay host key does not match the pin");
         return PROTO_FALSE;
@@ -1013,7 +1014,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 
     if (!s_cli.have_sid)
     {
-        memcpy(s_cli.session_id, H, h_len);
+        mem.cpy(s_cli.session_id, H, h_len);
         s_cli.session_id_len = (uint8_t)h_len;
         s_cli.have_sid = PROTO_TRUE;
     }
@@ -1153,7 +1154,7 @@ static void handle_channel_open(const uint8_t *p, size_t len)
     uint32_t their_id = r_u32(&r);
     uint32_t their_win = r_u32(&r);
     r_u32(&r); // their max packet
-    if (!r.ok || tn != 15 || memcmp(type, "forwarded-tcpip", 15) != 0)
+    if (!r.ok || tn != 15 || mem.cmp(type, "forwarded-tcpip", 15) != 0)
     {
         // Refuse anything else.
         uint8_t out[64];
@@ -1247,7 +1248,7 @@ static void channel_close(CliChannel *ch)
     {
         Tcp.client->close(ch->local_cid);
     }
-    memset(ch, 0, sizeof(*ch));
+    mem.set(ch, 0, sizeof(*ch));
     ch->local_cid = -1;
 }
 
@@ -1325,8 +1326,8 @@ static void pump_channel(CliChannel *ch)
         w_u32(&w, (uint32_t)got);
         // Assemble header + data into the wire staging buffer via one payload.
         uint8_t payload[9 + sizeof(buf)];
-        memcpy(payload, hdr, w.off);
-        memcpy(payload + w.off, buf, got);
+        mem.cpy(payload, hdr, w.off);
+        mem.cpy(payload + w.off, buf, got);
         if (!cli_send(payload, w.off + got))
         {
             break;
@@ -1538,7 +1539,7 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     }
 
     pc_ssh_tunnel_end();
-    memset(&s_cli, 0, sizeof(s_cli));
+    mem.set(&s_cli, 0, sizeof(s_cli));
     s_cli.cfg = *cfg;
     for (int i = 0; i < PC_SSH_CLIENT_MAX_CHANNELS; i++)
     {
@@ -1596,9 +1597,9 @@ static void drain_banner(const uint8_t *data, size_t len, size_t *consumed)
             {
                 l--;
             }
-            if (l >= 4 && memcmp(s_cli.banner, "SSH-", 4) == 0)
+            if (l >= 4 && mem.cmp(s_cli.banner, "SSH-", 4) == 0)
             {
-                memcpy(s_cli.v_s, s_cli.banner, l);
+                mem.cpy(s_cli.v_s, s_cli.banner, l);
                 s_cli.v_s_len = l;
                 *consumed = i + 1;
                 s_cli.phase = CLI_PHASE_KEXINIT;
@@ -1673,7 +1674,7 @@ void pc_ssh_tunnel_end(void)
     }
     ssh_keymat_wipe(SSH_CLI_SLOT);
     pc_secure_wipe(s_cli.kex_priv, sizeof(s_cli.kex_priv));
-    memset(&s_cli, 0, sizeof(s_cli));
+    mem.set(&s_cli, 0, sizeof(s_cli));
     s_cli.cid = -1;
     s_cli.phase = CLI_PHASE_IDLE;
     s_cli.state = PC_TUN_IDLE;

@@ -7,6 +7,7 @@
  */
 
 #include "services/energy/sunspec/sunspec.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SUNSPEC
 
@@ -127,7 +128,7 @@ static proto_bool ss_put(SunSpecWriter *w, const uint8_t *p, size_t n)
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    memcpy(w->buf + w->pos, p, n);
+    mem.cpy(w->buf + w->pos, p, n);
     w->pos += n;
     return PROTO_TRUE;
 }
