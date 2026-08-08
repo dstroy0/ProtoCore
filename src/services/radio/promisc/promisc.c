@@ -12,7 +12,7 @@
 
 #if PC_ENABLE_PROMISC
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_WIFI
 #include <esp_wifi.h>
 #endif
 proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *out)
@@ -103,7 +103,7 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
 // shared_primitives/pcap.h - shared with the other capture features.
 
 // --- ESP32 radio binding -----------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_WIFI
 
 // All promiscuous-capture state, owned by one instance (internal linkage): the frame sink.
 // One named owner, unreachable from any other translation unit.
@@ -159,6 +159,6 @@ void pc_promisc_end(void)
     // host build: no radio, nothing to stop
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_WIFI
 
 #endif // PC_ENABLE_PROMISC

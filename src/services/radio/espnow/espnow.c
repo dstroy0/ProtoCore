@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_ESPNOW
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_WIFI
 #include <esp_idf_version.h> // ESP_IDF_VERSION / ESP_IDF_VERSION_VAL for the recv-cb ABI guard
 #include <esp_now.h>
 #include <esp_wifi.h>
@@ -77,7 +77,7 @@ typedef struct
 typedef struct
 {
     Peer peers[PC_ESPNOW_MAX_PEERS];
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_WIFI
     pc_espnow_recv_fn recv;
     uint8_t channel;
 #endif
@@ -158,7 +158,7 @@ int pc_espnow_peer_count(void)
 // ---------------------------------------------------------------------------
 // ESP32 radio binding
 // ---------------------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_WIFI
 
 // The ESP-NOW receive callback signature changed in ESP-IDF 5.0 (Arduino-ESP32 3.x): the
 // source MAC moved into an esp_now_recv_info_t. Match whichever the compiled core expects.
@@ -263,6 +263,6 @@ proto_bool pc_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len)
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_WIFI
 
 #endif // PC_ENABLE_ESPNOW

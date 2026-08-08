@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_MDNS_ADAPTIVE
 
-#if PROTOCORE_HOT && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
+#if PC_HAS_VENDOR_WIFI && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
 #include "network_drivers/application/mdns_service/mdns_service.h" // pc_mdns_txt
 #include "network_drivers/physical/physical.h"                     // pc_net_channel
 #include "server/clock/clock.h"                                    // pc_millis
@@ -123,7 +123,7 @@ proto_bool pc_mdns_contention_sample(MdnsContentionWindow *w, uint32_t frames_no
 // Device binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
+#if PC_HAS_VENDOR_WIFI && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
 
 /** @brief Owned state for the live adaptive announcer. */
 typedef struct
@@ -246,6 +246,6 @@ uint32_t pc_mdns_adaptive_announces(void)
     return s_ad.announces;
 }
 
-#endif // PROTOCORE_HOT && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
+#endif // PC_HAS_VENDOR_WIFI && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
 
 #endif // PC_ENABLE_MDNS_ADAPTIVE

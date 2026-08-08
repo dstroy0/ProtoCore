@@ -94,7 +94,7 @@ void pc_mdns_contention_init(MdnsContentionWindow *w, uint32_t window_ms, uint32
  */
 proto_bool pc_mdns_contention_sample(MdnsContentionWindow *w, uint32_t frames_now, uint32_t now_ms, uint16_t *out);
 
-#if PROTOCORE_HOT && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
+#if PC_HAS_VENDOR_WIFI && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
 // ---------------------------------------------------------------------------
 // Device binding (needs PC_ENABLE_MDNS + PC_ENABLE_PROMISC)
 // ---------------------------------------------------------------------------
@@ -145,7 +145,7 @@ uint16_t pc_mdns_adaptive_contention(void);
 
 /** @brief Total announces sent since begin(). */
 uint32_t pc_mdns_adaptive_announces(void);
-#endif // PROTOCORE_HOT && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
+#endif // PC_HAS_VENDOR_WIFI && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
 
 #endif // PC_ENABLE_MDNS_ADAPTIVE
 

@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_OTA_ROLLBACK
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_OTA
 #include "esp_ota_ops.h"
 #include "server/clock/clock.h" // pc_millis() (pulls in Arduino millis())
 #endif
@@ -31,7 +31,7 @@ pc_ota_action pc_ota_decide(uint8_t img_state, proto_bool self_test_ok, uint32_t
     return PC_OTA_WAIT;
 }
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_OTA
 
 uint8_t pc_ota_img_state(void)
 {
@@ -86,6 +86,6 @@ pc_ota_action pc_ota_rollback_tick(proto_bool self_test_ok)
     return PC_OTA_WAIT;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_OTA
 
 #endif // PC_ENABLE_OTA_ROLLBACK

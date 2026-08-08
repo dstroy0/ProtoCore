@@ -286,6 +286,67 @@
 #endif
 #endif
 
+// Self-update. 1 = the SDK ships an updater that writes the other app partition and flips the boot
+// selector; 0 = there is none, and the OTA service and the rollback policy have nothing to drive.
+#ifndef PC_HAS_VENDOR_OTA
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_OTA 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_OTA 0 // a unit-test build has no partition table to write
+#elif PC_VENDOR_MOCK
+#define PC_HAS_VENDOR_OTA 0 // the mock vendor ships none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_OTA (1 = the SDK's own updater + boot selector, 0 = none, and the OTA service does not compile). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Crash-image capture. 1 = the SDK writes a core dump to its own flash partition; 0 = there is none.
+// The decoder that reads one is portable and is not gated on this.
+#ifndef PC_HAS_VENDOR_COREDUMP
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_COREDUMP 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_COREDUMP 0 // a unit-test build has no crash partition to read
+#elif PC_VENDOR_MOCK
+#define PC_HAS_VENDOR_COREDUMP 0 // the mock vendor ships none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_COREDUMP (1 = the SDK's own crash-image capture, 0 = none, and only the portable decoder compiles). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// WiFi driver. 1 = the SDK exposes the radio below the IP stack, which is what monitor mode and a
+// vendor peer-to-peer protocol need; 0 = there is none, and both refuse. Not the same axis as
+// having a network interface: a stack can carry IP over ethernet with no radio underneath it.
+#ifndef PC_HAS_VENDOR_WIFI
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_WIFI 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_WIFI 0 // a unit-test build has no radio to put in monitor mode
+#elif PC_VENDOR_MOCK
+#define PC_HAS_VENDOR_WIFI 0 // the mock vendor has none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_WIFI (1 = an SDK WiFi driver reachable below the IP stack, 0 = none, and monitor mode and the peer-to-peer radio refuse). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// CAN controller. 1 = the SDK ships a CAN / TWAI driver; 0 = there is none and the bus capture
+// refuses. The SocketCAN framing over it is portable and is not gated on this.
+#ifndef PC_HAS_VENDOR_CAN
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_CAN 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_CAN 0 // a unit-test build has no controller to open
+#elif PC_VENDOR_MOCK
+#define PC_HAS_VENDOR_CAN 0 // the mock vendor has none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_CAN (1 = an SDK CAN / TWAI driver, 0 = none, and the bus capture refuses). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
 // External RAM a pool can be placed in. 1 = the toolchain has an attribute that moves a BSS object
 // out of internal DRAM; 0 = there is one memory and a pool stays where it is declared. It answers
 // only for the attribute existing: whether a given board is wired for it, and whether a given pool
