@@ -14,7 +14,7 @@
 // Pure presence state machine (host-tested).
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_GPIO
 #include "server/clock/clock.h" // pc_millis()
 #endif
 void pc_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
@@ -71,10 +71,10 @@ uint32_t pc_sen0192_motion_active_age_ms(const Sen0192Motion *m, uint32_t now_ms
 }
 
 // ---------------------------------------------------------------------------
-// ESP32 GPIO binding
+// Pin binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_GPIO
 
 // The SEN0192 binding state, owned by one instance (internal linkage): the presence tracker and the pin.
 typedef struct
@@ -113,7 +113,7 @@ uint32_t pc_sen0192_motion_count(void)
     return pc_sen0192_motion_events(&s_sen.motion);
 }
 
-#else // host build: no GPIO. The presence state machine above is host-tested.
+#else // no pin seam. The presence state machine above is host-tested.
 
 proto_bool pc_sen0192_begin(void)
 {
@@ -132,6 +132,6 @@ uint32_t pc_sen0192_motion_count(void)
     return 0;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_GPIO
 
 #endif // PC_ENABLE_SEN0192

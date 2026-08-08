@@ -12,8 +12,8 @@
  * sample, so brief gaps between Doppler returns don't make presence flap.
  *
  * The presence state machine (::Sen0192Motion) is pure and host-tested - it takes a sampled line level
- * and a timestamp and needs no clock or GPIO. The ESP32 binding reads PC_SEN0192_PIN each poll (via
- * pc_millis()) and feeds it in; only that read touches hardware. The OUT polarity and hold window come
+ * and a timestamp and needs no clock or GPIO. The binding reads PC_SEN0192_PIN each poll (via
+ * pc_millis()) and feeds it in; only that read reaches the pin seam. The OUT polarity and hold window come
  * from ServerConfig (PC_SEN0192_ACTIVE_HIGH / PC_SEN0192_HOLD_MS / PC_SEN0192_PIN).
  *
  * @author  Douglas Quigg (dstroy0)
@@ -69,11 +69,11 @@ uint32_t pc_sen0192_motion_events(const Sen0192Motion *m);
 /** @brief Milliseconds since the last active-level sample (0 if none yet). */
 uint32_t pc_sen0192_motion_active_age_ms(const Sen0192Motion *m, uint32_t now_ms);
 
-// --- ESP32 binding (GPIO poll) ---------------------------------------
+// --- Pin binding (GPIO poll) -----------------------------------------
 
 /**
  * @brief Configure PC_SEN0192_PIN as an input and start tracking (polarity / hold from ServerConfig).
- * @return true on ESP32, false on a host build.
+ * @return true where the pin was configured, false where there is no pin seam.
  */
 proto_bool pc_sen0192_begin(void);
 

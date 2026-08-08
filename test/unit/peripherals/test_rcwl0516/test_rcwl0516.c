@@ -4,7 +4,8 @@
 // Host tests for the one-GPIO presence facade (services/peripherals/rcwl0516): the debounce that swallows
 // comparator chatter, the hold that bridges the RCWL-0516's retrigger gaps into one continuous
 // presence span, the consume-once edge event, wrap-safety across a millis() rollover, and the
-// degenerate zero-debounce / zero-hold configurations. Pure core, synthetic clock - no GPIO.
+// degenerate zero-debounce / zero-hold configurations, on a synthetic clock. The binding is
+// covered too: it samples the host pin table, which the test drives with pc_gpio_host_set().
 
 #include "services/peripherals/rcwl0516/rcwl0516.h"
 #include <unity.h>
@@ -159,16 +160,44 @@ void test_rcwl_defaults_and_null_guards(void)
     TEST_ASSERT_FALSE(pc_presence_core_update(NULL, PROTO_TRUE, 0));
     TEST_ASSERT_FALSE(pc_presence_core_get(NULL));
     TEST_ASSERT_FALSE(pc_presence_take_event(NULL));
+}
 
-    // host binding stubs
-    TEST_ASSERT_FALSE(pc_rcwl0516_begin(4));
+// The binding samples the real pin: begin() configures it as an input, and a poll after the pin has
+// outlasted the debounce promotes presence. Levels come from the host pin table, so the composition
+// the driver performs is what runs rather than a stub standing in for it.
+void test_binding_samples_the_pin(void)
+{
+    const uint8_t PIN = 4;
+
+    set_millis(1000);
+    pc_gpio_host_set(PIN, 0);
+    TEST_ASSERT_TRUE(pc_rcwl0516_begin((int)PIN));
+    TEST_ASSERT_EQUAL_UINT8(PC_GPIO_IN, pc_gpio_host_mode(PIN));
+    TEST_ASSERT_FALSE(pc_rcwl0516_present());
+
+    // The pin goes high; the first poll only starts the steady-level timer.
+    pc_gpio_host_set(PIN, 1);
+    set_millis(1001);
     TEST_ASSERT_FALSE(pc_rcwl0516_poll());
     TEST_ASSERT_FALSE(pc_rcwl0516_present());
+
+    // Past the debounce the believed level follows, and the edge event is consumed once.
+    set_millis(1001 + PC_RCWL0516_DEBOUNCE_MS + 1);
+    TEST_ASSERT_TRUE(pc_rcwl0516_poll());
+    TEST_ASSERT_TRUE(pc_rcwl0516_present());
+    TEST_ASSERT_FALSE(pc_rcwl0516_poll());
+}
+
+// Nothing is bound until begin() names a pin, so a poll before it reports absent.
+void test_binding_refuses_before_begin(void)
+{
+    TEST_ASSERT_FALSE(pc_rcwl0516_poll());
 }
 
 int main(void)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_binding_refuses_before_begin); // first: begin() latches the pin for the run
     RUN_TEST(test_starts_absent);
     RUN_TEST(test_high_asserts_only_after_debounce);
     RUN_TEST(test_chatter_shorter_than_debounce_never_asserts);
@@ -179,5 +208,6 @@ int main(void)
     RUN_TEST(test_zero_debounce_and_zero_hold_are_pass_through);
     RUN_TEST(test_repeated_and_static_now_is_harmless);
     RUN_TEST(test_rcwl_defaults_and_null_guards);
+    RUN_TEST(test_binding_samples_the_pin);
     return UNITY_END();
 }

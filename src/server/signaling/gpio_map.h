@@ -7,10 +7,10 @@
  *
  * Exposes a compile-time table of GPIO pins (number, label, configured direction,
  * live level) as JSON so a browser diag panel can show the pin map and toggle
- * outputs. The live read (digitalRead) and write (pinMode / digitalWrite) use the
- * Arduino API on ESP32; the JSON serializer and the control-POST parser are pure
- * and host-tested. No allocation: the pin table is caller-owned and the JSON is
- * written into a caller buffer.
+ * outputs. The live read and write go through pc_platform_gpio_* where a pin seam
+ * exists; the JSON serializer and the control-POST parser are pure and host-tested.
+ * No allocation: the pin table is caller-owned and the JSON is written into a
+ * caller buffer.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -76,16 +76,16 @@ proto_bool pc_gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t
 proto_bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin);
 
 // ---------------------------------------------------------------------------
-// ESP32 integration
+// Pin integration (no-ops with no pin seam)
 // ---------------------------------------------------------------------------
 
-/** @brief Apply pinMode() for every entry per its direction (call once at setup). */
+/** @brief Set the mode of every entry per its direction (call once at setup). */
 void pc_gpio_begin_pins(const pc_gpio_pin *pins, uint8_t count);
 
-/** @brief Refresh each pin's live @c level via digitalRead (no-op on host). */
+/** @brief Refresh each pin's live @c level from the seam. */
 void pc_gpio_read(pc_gpio_pin *pins, uint8_t count);
 
-/** @brief Drive an output @p pin to @p level via digitalWrite (no-op on host). */
+/** @brief Drive an output @p pin to @p level. */
 void pc_gpio_write(uint8_t pin, uint8_t level);
 
 /**

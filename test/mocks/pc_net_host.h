@@ -420,6 +420,9 @@ static inline void pc_rand_host_seed(uint32_t seed)
 // A pin table rather than a no-op: a test sets an input level with pc_gpio_host_set() and reads
 // back what the core drove with pc_gpio_host_level(), so pin logic is exercised on the host.
 
+// Tells the pin drivers a seam exists, the same way PC_PLATFORM_HAS_BUS does for the bus owners.
+#define PC_PLATFORM_HAS_GPIO 1
+
 #define PC_GPIO_IN 0
 #define PC_GPIO_OUT 1
 #define PC_GPIO_IN_PULLUP 2

@@ -18,8 +18,8 @@
  *     chip-select (SPI CS gpio) + clock/mode come from the rule's target, so the frame stays generic.
  *
  * This header is the pure, host-tested core: the fixed-capacity rule table (zero heap) and the
- * transaction frame codec. The actual bus I/O (Serial / SPI / Wire) and the PROTO_BRIDGE listener are
- * the ESP32 step (iface_bridge_hw.*), kept separate exactly like the peripheral services.
+ * transaction frame codec. The actual bus I/O (uart.h / spi.h / i2c.h) and the PROTO_BRIDGE listener are
+ * the bus step (iface_bridge_hw.*), kept separate exactly like the peripheral services.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

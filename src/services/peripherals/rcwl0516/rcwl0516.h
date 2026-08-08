@@ -120,10 +120,10 @@ proto_bool pc_presence_take_event(PresenceCore *c);
 void pc_rcwl0516_core_init(PresenceCore *c, uint32_t now);
 
 // ---------------------------------------------------------------------------
-// Binding (no-ops on a host build)
+// Binding (no-ops with no pin seam)
 // ---------------------------------------------------------------------------
 
-/** @brief Configure @p out_pin as an input and start the core. @return true on ESP32. */
+/** @brief Configure @p out_pin as an input and start the core. @return true where the pin was configured. */
 proto_bool pc_rcwl0516_begin(int out_pin);
 
 /** @brief Sample the pin at the current time. @return true if presence changed on this poll. */

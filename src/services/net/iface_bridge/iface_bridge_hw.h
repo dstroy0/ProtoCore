@@ -3,11 +3,11 @@
 
 /**
  * @file iface_bridge_hw.h
- * @brief ESP32 glue for the interface bridge (PC_ENABLE_IFACE_BRIDGE): the PROTO_BRIDGE listener that
+ * @brief Bus glue for the interface bridge (PC_ENABLE_IFACE_BRIDGE): the PROTO_BRIDGE listener that
  *        wires an accepted connection to a UART / SPI / I2C endpoint, plus the bus I/O.
  *
  * The pure core (iface_bridge.h) owns the rule table and the transaction frame codec; this file owns the
- * side that touches hardware: a ConnProto::PROTO_BRIDGE connection handler and the Serial / SPI / Wire
+ * side that reaches the seam: a ConnProto::PROTO_BRIDGE connection handler and the uart.h / spi.h / i2c.h
  * transfers. Layered exactly like services/net/relay - the app opens the listener, then publishes a target:
  *
  * @code
@@ -40,7 +40,7 @@
  * @brief Bind a PROTO_BRIDGE listener to a hardware target and install the handler (first call).
  *
  * Registers the rule in the pure table (pc_iface_bridge_map), records the listener_id -> rule binding used to
- * dispatch accepted connections, and brings up the bus (Serial.begin / SPI CS pin / Wire).
+ * dispatch accepted connections, and brings up the bus (UART open / SPI CS pin / I2C).
  *
  * @param listener_id  the id returned by `server.listen(port, ConnProto::PROTO_BRIDGE)`.
  * @param port         the same listen port (the dispatch key into the rule table).

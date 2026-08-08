@@ -14,8 +14,8 @@
  *
  * This codec is pure and host-tested: ::pc_ld2410_parse_report decodes one report frame, and
  * ::Ld2410Stream reassembles frames byte-by-byte from a UART with resync on noise (no heap,
- * fixed buffer). The command encoders build the config frames. On an ESP32 the binding pumps a
- * `HardwareSerial` and keeps the latest report; only that read/write touches hardware.
+ * fixed buffer). The command encoders build the config frames. Where a bus seam exists the binding
+ * pumps a UART through uart.h and keeps the latest report; only that read/write reaches the seam.
  *
  * A cheap solder-and-bench-test breakout: wire it to a UART, wave a hand, watch presence.
  *

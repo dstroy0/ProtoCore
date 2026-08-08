@@ -4,11 +4,11 @@
 /**
  * @file gpio_map.c
  * @brief GPIO pin-mapper direction names, JSON serializer, control parser, and
- *        the ESP32 digital read / write helpers.
+ *        the digital read / write helpers.
  *
  * The serializer and the `pin=&level=` parser are pure (host-tested); the digital
- * I/O goes through the board profile's pc_platform_gpio_* on a target and is a
- * no-op on host builds. No server dependency lives here.
+ * I/O goes through the board profile's pc_platform_gpio_* where a pin seam exists
+ * and is a no-op where there is none. No server dependency lives here.
  */
 
 #include "server/signaling/gpio_map.h"
@@ -141,7 +141,7 @@ proto_bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin
     return PROTO_FALSE;
 }
 
-#if PROTOCORE_HOT
+#if PC_HAS_GPIO
 
 void pc_gpio_begin_pins(const pc_gpio_pin *pins, uint8_t count)
 {
@@ -187,7 +187,7 @@ void pc_gpio_write(uint8_t pin, uint8_t level)
     pc_platform_gpio_write((uint8_t)(pin), level ? PC_GPIO_HIGH : PC_GPIO_LOW);
 }
 
-#else // host build - no GPIO
+#else // no pin seam
 
 void pc_gpio_begin_pins(const pc_gpio_pin *pins, uint8_t count)
 {
@@ -207,6 +207,6 @@ void pc_gpio_write(uint8_t pin, uint8_t level)
     (void)level;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_GPIO
 
 #endif // PC_ENABLE_GPIO_MAP

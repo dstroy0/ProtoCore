@@ -97,14 +97,32 @@ void test_tick_present_unseeded_holds()
     TEST_ASSERT_TRUE(pc_sen0192_motion_present(&m));
 }
 
-void test_host_build_gpio_binding_stubs()
+// The binding samples the real pin: begin() configures PC_SEN0192_PIN as an input, a poll at the
+// active level reports the clear -> present edge once, and presence ages out past the hold. Levels
+// come from the host pin table, so what runs is the driver's own composition.
+void test_binding_samples_the_pin(void)
 {
-    // This test binary is a host (non-ARDUINO) build, so the GPIO-binding functions compile to the
-    // no-op stubs at the bottom of sen0192.cpp; exercise them for coverage of that build variant.
-    TEST_ASSERT_FALSE(pc_sen0192_begin());
+    const uint8_t PIN = (uint8_t)PC_SEN0192_PIN;
+    const uint8_t ACTIVE = (PC_SEN0192_ACTIVE_HIGH != 0) ? 1u : 0u;
+
+    set_millis(5000);
+    pc_gpio_host_set(PIN, ACTIVE ? 0u : 1u);
+    TEST_ASSERT_TRUE(pc_sen0192_begin());
+    TEST_ASSERT_EQUAL_UINT8(PC_GPIO_IN, pc_gpio_host_mode(PIN));
+    TEST_ASSERT_FALSE(pc_sen0192_present());
+
+    // Active level: the first poll is the clear -> present edge, the second is not.
+    pc_gpio_host_set(PIN, ACTIVE);
+    TEST_ASSERT_TRUE(pc_sen0192_poll());
+    TEST_ASSERT_TRUE(pc_sen0192_present());
+    TEST_ASSERT_FALSE(pc_sen0192_poll());
+    TEST_ASSERT_EQUAL_UINT32(1, pc_sen0192_motion_count());
+
+    // Inactive, and past the hold presence ages out.
+    pc_gpio_host_set(PIN, ACTIVE ? 0u : 1u);
+    set_millis(5000 + PC_SEN0192_HOLD_MS + 1);
     TEST_ASSERT_FALSE(pc_sen0192_poll());
     TEST_ASSERT_FALSE(pc_sen0192_present());
-    TEST_ASSERT_EQUAL_UINT32(0, pc_sen0192_motion_count());
 }
 
 int main()
@@ -116,6 +134,6 @@ int main()
     RUN_TEST(test_active_low_polarity);
     RUN_TEST(test_active_age);
     RUN_TEST(test_tick_present_unseeded_holds);
-    RUN_TEST(test_host_build_gpio_binding_stubs);
+    RUN_TEST(test_binding_samples_the_pin);
     return UNITY_END();
 }

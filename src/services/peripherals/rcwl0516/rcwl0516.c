@@ -17,8 +17,6 @@
 
 #if PC_ENABLE_RCWL0516
 
-#if PROTOCORE_HOT
-#endif
 // Elapsed-time test, wrap-safe across a pc_millis() rollover (unsigned arithmetic is modulo 2^32).
 // A limit of 0 is always satisfied, which is what disables debounce / hold.
 static inline proto_bool elapsed(uint32_t now, uint32_t since, uint32_t limit)
@@ -106,7 +104,7 @@ void pc_rcwl0516_core_init(PresenceCore *c, uint32_t now)
 // Binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_GPIO
 
 // All RCWL-0516 binding state, owned by one instance (internal linkage): the presence core and the
 // pin it samples, grouped so it is one named owner unreachable from any other translation unit.
@@ -141,7 +139,7 @@ proto_bool pc_rcwl0516_present()
     return pc_presence_core_get(&s_rcwl.core);
 }
 
-#else // host build: no GPIO
+#else // no pin seam
 
 proto_bool pc_rcwl0516_begin(int out_pin)
 {
@@ -159,6 +157,6 @@ proto_bool pc_rcwl0516_present()
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_GPIO
 
 #endif // PC_ENABLE_RCWL0516

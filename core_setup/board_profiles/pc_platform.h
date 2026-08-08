@@ -623,6 +623,28 @@ typedef ip_addr_t pc_net_ip;
 #endif
 #endif
 
+// Whether a pin seam exists to call. Silicon has one; a host build has one only when the test mock
+// above supplied it, and the pin drivers key their host arm off this so a driver's real sampling
+// runs against the pin table rather than being stubbed out.
+#ifndef PC_PLATFORM_HAS_GPIO
+#define PC_PLATFORM_HAS_GPIO 0
+#endif
+
+// Digital pins. 1 = there is a seam to drive; 0 = there is none and every pin driver resolves to its
+// refusing arm. Its own capability rather than a term of PC_HAS_BUS: a part can carry pins without
+// carrying an I2C / SPI / UART master.
+#ifndef PC_HAS_GPIO
+#if PC_VENDOR_ESP
+#define PC_HAS_GPIO 1
+#elif PROTOCORE_HOST || PC_VENDOR_MOCK
+// Both take the seam from the one arm above that includes the host driver, so they answer together.
+#define PC_HAS_GPIO PC_PLATFORM_HAS_GPIO
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_GPIO (1 = pc_platform_gpio_mode / _read / _write in core_setup/hal/<vendor>, 0 = none, and every pin driver refuses). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
 // A single "targets real silicon" convenience (any vendor backend, i.e. not the host software floor).
 #define PC_VENDOR_SILICON (PC_VENDOR_ESP || PC_VENDOR_STM || PC_VENDOR_RP || PC_VENDOR_TI)
 
