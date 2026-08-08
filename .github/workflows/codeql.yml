@@ -71,14 +71,24 @@ jobs:
           mapfile -t ENVS < <(grep -oE '^\[env:native[A-Za-z0-9_]*\]' platformio.ini | sed -E 's/\[env:(.*)\]/\1/')
           echo "tracing ${#ENVS[@]} native env(s)"
           FAILED=()
+          BUILT=0
           for e in "${ENVS[@]}"; do
             echo "::group::build $e"
-            pio test --without-testing -e "$e" || FAILED+=("$e")
+            # --without-testing builds and does not run, so PlatformIO's own summary line reads
+            # "0 test cases: 0 succeeded" for every env. That is the flag working, not an empty
+            # build: the build is the "Building..." line above it, and it is what CodeQL traces.
+            if pio test --without-testing -e "$e"; then
+              BUILT=$((BUILT + 1))
+              echo "built $e (tests deliberately not run here; test-report.yml runs them)"
+            else
+              FAILED+=("$e")
+            fi
             echo "::endgroup::"
           done
+          echo "built ${BUILT} of ${#ENVS[@]} env(s) into the CodeQL database"
           {
             echo "### CodeQL extraction"
-            echo "Traced ${#ENVS[@]} env(s), ${#FAILED[@]} failed to build."
+            echo "Built ${BUILT} of ${#ENVS[@]} env(s); ${#FAILED[@]} failed."
             if [ "${#FAILED[@]}" -ne 0 ]; then
               echo ""
               echo "Not extracted (or only partially):"
