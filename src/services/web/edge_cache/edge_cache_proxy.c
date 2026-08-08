@@ -123,6 +123,7 @@ typedef struct
     EdgeFetchTransport transport_tls; // TLS binding over pc_tls_csess, used for https routes
     int tls_cid;                      // underlying pc_client cid of the in-flight TLS fetch (singleton session)
     proto_bool tls_peer_closed;       // latched when the TLS session reports closed / errored
+    proto_bool tls_ready;             // the handshake completed, so the session carries application bytes
 #endif
     char reqbuf[MAX_PATH_LEN + MAX_QUERY_LEN + 256]; // scratch for one origin request line (freed by send)
 #if PC_ENABLE_RANGE
@@ -161,6 +162,11 @@ static int t_open(void *c, const char *host, uint16_t port, uint32_t timeout)
 {
     (void)c;
     return Tcp.client->open(host, port, timeout);
+}
+static proto_bool t_connected(void *c, int cid)
+{
+    (void)c;
+    return Tcp.client->connected(cid);
 }
 static proto_bool t_send(void *c, int cid, const void *d, size_t l)
 {
@@ -214,31 +220,41 @@ static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout
         return -1;
     }
     s_ctx.tls_peer_closed = PROTO_FALSE;
+    s_ctx.tls_ready = PROTO_FALSE;
     if (!pc_tls_client_session_begin(host, edge_tls_bio_send, edge_tls_bio_recv))
     {
         Tcp.client->close(s_ctx.tls_cid);
         s_ctx.tls_cid = -1;
         return -1;
     }
-    // Block through the handshake at connect - the same brief block the MQTT/WS clients take (and that the
-    // plaintext Tcp.client->open already takes on DNS+connect). edge_fetch_begin sends the request
-    // synchronously right after open returns, so the session must be established first. pcdelay() yields to
-    // the network stack between handshake flights so the peer's records arrive.
-    uint32_t deadline = pc_millis() + timeout;
-    int h = 0;
-    while ((h = pc_tls_client_session_handshake()) == 0 && !Tcp.client->is_closed(s_ctx.tls_cid) &&
-           (int32_t)(deadline - pc_millis()) > 0)
-    {
-        pcdelay(5);
-    }
-    if (h != 1)
-    {
-        pc_tls_client_session_end();
-        Tcp.client->close(s_ctx.tls_cid);
-        s_ctx.tls_cid = -1;
-        return -1;
-    }
     return s_ctx.tls_cid;
+}
+
+// Step the TCP open, then the handshake, one flight per call. The BIO reads the wire ring, so a
+// flight the peer has not sent yet leaves the handshake at 0 and the next call takes it further.
+// The fetch pump is what calls this, and its own timeout bounds the whole thing.
+static proto_bool t_tls_connected(void *c, int cid)
+{
+    (void)c;
+    if (!Tcp.client->connected(cid))
+    {
+        return PROTO_FALSE;
+    }
+    if (s_ctx.tls_ready)
+    {
+        return PROTO_TRUE;
+    }
+    int h = pc_tls_client_session_handshake();
+    if (h == 1)
+    {
+        s_ctx.tls_ready = PROTO_TRUE;
+        return PROTO_TRUE;
+    }
+    if (h < 0)
+    {
+        s_ctx.tls_peer_closed = PROTO_TRUE;
+    }
+    return PROTO_FALSE;
 }
 static proto_bool t_tls_send(void *c, int cid, const void *d, size_t l)
 {
@@ -268,6 +284,7 @@ static void t_tls_close(void *c, int cid)
     pc_tls_client_session_end();
     Tcp.client->close(cid);
     s_ctx.tls_cid = -1;
+    s_ctx.tls_ready = PROTO_FALSE;
 }
 #endif // PC_ENABLE_EDGE_ORIGIN_TLS
 
@@ -1215,6 +1232,7 @@ void pc_edge_cache_enable(void)
 #endif
     }
     s_ctx.transport.open = t_open;
+    s_ctx.transport.connected = t_connected;
     s_ctx.transport.send = t_send;
     s_ctx.transport.read = t_read;
     s_ctx.transport.closed = t_closed;
@@ -1222,6 +1240,7 @@ void pc_edge_cache_enable(void)
     s_ctx.transport.ctx = NULL;
 #if PC_ENABLE_EDGE_ORIGIN_TLS
     s_ctx.transport_tls.open = t_tls_open;
+    s_ctx.transport_tls.connected = t_tls_connected;
     s_ctx.transport_tls.send = t_tls_send;
     s_ctx.transport_tls.read = t_tls_read;
     s_ctx.transport_tls.closed = t_tls_closed;
@@ -1229,6 +1248,7 @@ void pc_edge_cache_enable(void)
     s_ctx.transport_tls.ctx = NULL;
     s_ctx.tls_cid = -1;
     s_ctx.tls_peer_closed = PROTO_FALSE;
+    s_ctx.tls_ready = PROTO_FALSE;
 #endif
 #if PC_ENABLE_DBM
     s_ctx.store.on_evict = s_ctx.l2 ? edge_on_evict : NULL; // re-arm write-back after edge_store_init

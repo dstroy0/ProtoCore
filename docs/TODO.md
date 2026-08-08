@@ -42,6 +42,11 @@ non-goal or needs hardware / proprietary docs) - **DONE** (`[x]`, the shipped re
 
 ### OPEN (actionable now)
 
+- **`src/` law sweep - carry-over** - the C11 conversion and the `class PC` decomposition landed; what
+  survived the sweep is the enforcement gap, the plaintext-arena derivation, the ellipsis ban, the
+  fixed-width serializer duplication, and the SSH connection layering. Detail under
+  **[src/ law sweep - carry-over](#src-law-sweep---carry-over)**; the defects among them are logged in
+  [BUGS.md](BUGS.md).
 - **Multi-vendor portability** (architectural track, greenlit) - partition the three silicon-specific layers
   (board profiles, crypto accelerator HAL, physical MAC+PHY) into per-vendor subdirs (`esp/`, `stm/`, `rp/`,
   `ti/`) under common API headers, with a `pc_platform.h` selector so the preprocessor pulls exactly one
@@ -150,6 +155,136 @@ W5500 SPI Ethernet driver (HW-verified on an ESP32-S3), DNC codec, FTP client, H
 helpers, forwarding policy-routing + inspection hook, Ed25519-sign KAT (RFC 8032), a class of
 signed-overflow UB + `10^exp` DoS fixes in the number parsers, multipart binary-safety. Full shipped
 record: the `[x]` items and the collapsed sections below.
+
+## `src/` law sweep - carry-over
+
+Folded out of `SWEEP_NOTES.md` on 2026-08-08, each item re-measured against the tree that day rather
+than inherited from the note. The sweep's two large tracks are closed: `src/` is C (349 `.c`, 378
+`.h`, **zero** `.cpp`/`.hpp`, with the three documented `core_setup/` vendor wrappers outside it), and
+`class PC` is gone. `check_src_banned` and `check_owned_context` both pass. What follows is what did
+not close. Defects have a [BUGS.md](BUGS.md) entry; the rest are work.
+
+### Enforcement
+
+- [ ] **The C11 rule is written in four documents and enforced by nothing.** SRC_LAW sec 0, SYMBOLS
+      sec 3, SRCBANNED and `.github/CONTRIBUTING.md` all state that `.c` and `.h` are the only
+      extensions under `src/`. `check_src_banned.py` still admits `.cc` `.cpp` `.hpp` `.ino` in its
+      `EXTS`, and no ban covers `namespace` / `using X =` / `nullptr` / `_cast` / `template<` /
+      `enum class` / reference parameters / default arguments. SYMBOLS sec 5 claims `check_symbols.py`
+      checks "file naming and extension" - it checks name casing only (`check_symbols.py:131`).
+      **The cost to close this is now zero:** when the note was written the gate would have reported
+      807 violations across 52 `.cpp` files; today it reports none, so the gate lands green and holds
+      the line instead of being a ledger.
+- [ ] **A comment naming a file should have to resolve.** 46 comments in `src/` name a `.cpp` that no
+      longer exists - see BUGS.md. `check_comments.py` already owns the "code that is no longer there"
+      family; a path-resolves rule is the mechanical half of it.
+- [ ] **19 dead `#include <stdio.h>`** and the two debug-`printf` macros - see BUGS.md.
+
+### Sizing
+
+- [ ] **Derive `PC_PLAINTEXT_ARENA_SIZE`** instead of guessing it twelve times, and delete the eleven
+      board-profile defaults that scale it by die RAM - see BUGS.md. The per-TU `PC_PLAINTEXT_WORK_*`
+      terms already exist and are proved at their borrow sites; what is missing is taking the max over
+      them where they are all visible.
+- [ ] **`protocore_config.h`'s file header teaches `PROGMEM` and AVR `pgm_read_*`** (lines 19-24, and
+      again at 6776), then says the library targets ESP32 only - a vendor idiom, a description of what
+      the code is not, and a claim the multi-vendor track contradicts.
+- [ ] **52 unprefixed macros remain in `protocore_config.h`** (`MAX_CONNS`, `MAX_TLS_CONNS`,
+      `SSH_PKT_BUF_SIZE`, seven `SNMP_*`, `TELNET_BUF_SIZE`, `TERM_TX_BUF_SIZE`, `CONN_POOL_SLOTS`, ...),
+      down from 69. Tree-wide `check_symbols` reads 1458 macro-prefix, 146 enum-name, 49 macro-length.
+      The ones a user sets in `build_flags` are the ones that break every sketch when renamed, so they
+      move with a compatibility pass or not at all.
+- [ ] **`crypto/hash/md.c:180-185` - six `#undef`** (SRC_LAW rule 13).
+
+### SRC_LAW rule 14: the ellipsis ban
+
+- [ ] **Five live variadic definitions.** `pc_frame_build` / `pc_frame_append` (`mmgr/frame.{c,h}`),
+      `pc_log_frame` / `pc_log_discard_args` (`shared_primitives/log.{c,h}`), `pc_telnet_frame`
+      (`telnet.c:305`). `pc_web_terminal_frame` is gone. The frame engine's whole argument-passing
+      shape rests on the ellipsis, so this decides whether the frame spec can exist in its current
+      form - it is not a rename.
+- [ ] **Literal-only frames are still routed through the engine.** `GPIO_OPEN` / `GPIO_CLOSE`
+      (`gpio_map.c:67,80`), `PART_OPEN` / `PART_CLOSE` (`partition_monitor.c:99,113`),
+      `DASH_ARRAY_OPEN/CLOSE` and `DASH_OBJECT_OPEN/CLOSE` (`dashboard.c:130,143,157,169`). The bench
+      measured a pure-literal frame through the engine at **2.4x slower** than the `snprintf` it
+      replaced; each of these is a `pc_sb_put`.
+- [ ] **`pc_frame_append` is O(n^2)** in document length - see BUGS.md.
+
+### The fixed-width serializer duplication
+
+- [ ] **Fold the copies into `mmgr/endian.h`.** ~112 fixed-width serializer definitions live in
+      `src/`; 12 of them are `endian.h` and the rest are private near-duplicates across `focas`,
+      `simatic`, `edge_mesh`, `edge_cache_sd`, `mqtt`, `mqtt_sn`, `s7comm`, `sftp`, `enip`, `modbus`,
+      `ssh_channel`, `ptp`, `nts` and more. Each is a distinct symbol carrying its own hand-rolled
+      bounds check, which is where the binary growth is - not one bloated subsystem.
+      **Order, set by the user: the primitive first, then the call sites.** The root cause is that
+      `span.h`, `endian.h` and `bytes.h` cut one concern - a bounded byte region - into three files, so
+      the primitive that knows the width does not know the bound and every caller re-joins them by
+      hand. Bounds live with the region (`pc_span` / `pc_cspan`); the verbs are `pc_bw_*` / `pc_br_*`.
+      **No new name family** - deleting into the owners that already exist is the whole job.
+      _Cleared blocker:_ `pc_br_take_be` no longer skips CBOR's tag byte (msgpack owns its format-byte
+      step at `msgpack.c:209`), so readers can migrate onto it without inheriting a codec's framing.
+
+### SSH
+
+- [ ] **`ssh_client.c` is in no test env** - twelve `native_ssh*` envs, none compiles it. ~1700 lines.
+      This is the precondition for the two entries below: nothing can verify a fix to a file no build
+      touches.
+- [ ] **The peer's maximum packet size is discarded** (`ssh_client.c:1155`) and **the window
+      accounting is duplicated** (`:302-303` vs `SshFlow`) - see BUGS.md.
+- [ ] **`ssh_pkt[]` / `ssh_keys[]` are plain BSS, not the secure pool** - see BUGS.md.
+- [ ] **Finish the layering move.** RFC 4254 puts the mux in `ssh_channel`, forwarding in
+      `ssh_forward`, signaling in `ssh_flow_control` and I/O only in `ssh_conn`. Signaling landed;
+      forwarding did not. Still in `ssh_channel.c`: `ssh_global_request_handle` (`:196`, the sec 7.1
+      `tcpip-forward` / `cancel-tcpip-forward` requests), `pc_ssh_channel_open_forwarded` (`:302`), and
+      the `direct-tcpip` arm of the open handler (`:428`). Still in `ssh_conn.c`, which is meant to be
+      the TCP seam: `pc_ssh_conn_send` (`:145`) takes a channel id and composes the payload through
+      `pc_ssh_channel_build_data`, plus `pc_ssh_conn_close_channel` (`:187`) and
+      `pc_ssh_conn_open_forwarded` (`:232`). Only after this does the client's duplicate have somewhere
+      to dissolve into.
+- [ ] **Six sizing knobs absent from `docs/TUNING.md`**, which the law requires for a sizing constant:
+      `PC_SSH_MAX_CHANNELS`, `PC_SSH_CLIENT_MAX_CHANNELS`, `SSH_CHAN_WINDOW`, `SSH_CLI_WINDOW`,
+      `SSH_CLI_MAXPKT`, and the peer's `max_pkt`. Three of the pairs mean the same thing per role.
+- [ ] **`ssh_flow_control` owes a dedicated native suite.** It is compiled into three envs and covered
+      only through them; CONTRIBUTING requires a suite for new Core code. The SSH bench dir now exists
+      (`test/performance_benching/network_drivers/presentation/ssh/`) but benches `pc_sha256` /
+      `pc_chacha20`, not the flow accounting.
+- [ ] **Bucket audit against RFC 4251, unresolved.** `ssh_kexhash.h` and `ssh_rsa.{c,h}` moved out of
+      `crypto/` into `network_drivers/tls/`; both are transport-layer concerns (the exchange hash is
+      RFC 4253 sec 8, host-key signing is sec 6.6), so `ssh/transport/` is the layer they name.
+      `ssh_client.{c,h}` and `ssh_server.{c,h}` sit under `connection/` but a client and a server are
+      roles spanning all three layers. Placement is a decision, so it is logged, not moved.
+
+### Residue
+
+- [ ] **`protocore.h`**: `MwResult` (`:419`) is the last type name that is not `pc_snake_case` - the
+      other ten renamed. `struct tcp_pcb;` (`:464`) is an lwIP forward declaration with no other use in
+      the file. The doc example at `:928` uses `Serial.printf`, a vendor idiom in public documentation.
+- [ ] **The arena's persist half has no callers.** `pc_arena_persist_alloc` (first-fit with
+      coalescing) and the whole `pc_arena_set_*` multi-region API are referenced nowhere outside
+      `mmgr/arena.c`. Either the class decomposition adopts them for long-lived contexts, as planned,
+      or they delete.
+- [ ] **Two doc paths are stale.** `docs/SYMBOLS.md:179` and `.github/CONTRIBUTING.md:104,115,123` say
+      `performance_benching/`; it is `test/performance_benching/`.
+- [ ] **`u16_t`, the lwIP type, survives at 6 sites** in the core, down from 31. `core_setup/` is where
+      a vendor type is contained.
+
+### Closed by re-measurement on 2026-08-08
+
+Recorded because each was an open finding and a reader of the old note would still chase it. `DONE`
+here means measured that day, not believed.
+
+`src/` is C11 throughout (0 `.cpp`, 0 `.hpp`) - `class PC` is gone - the 11 reserved-identifier
+`_PC_*` macros and the compile-time diag JSON literal they stringified into are gone, diag now
+borrows `PC_PLAINTEXT_WORK_DIAG` at `protocore.c:757` - the truncated-constant corruption is clean (no single-character `#define` in
+`src/` or `core_setup/`) - `bytes.h`'s 32-bit bounds wrap is fixed and the header states the
+subtraction rule - `pc_br_take_be` no longer carries CBOR's tag byte - `SendCtx` / `extern s_send`
+are gone - bare `inline` in `shared_primitives/` headers is gone (all `PC_INLINE`) - `crypto_scratch.h`
+is gone - `enum class pc_mnt_mode` is gone - `regen_digest_secret()` is gone - the unconditional
+`#include <Arduino.h>` is out of `protocore.h` and `fs::FS` is out of the public API (SFTP and SCP go
+through `pc_fs_*`) - `test/dep_graph.json` is regenerated - `check_owned_context` passes clean -
+`pc_web_terminal_frame` is gone - and the two `ASK` conflicts closed on their own: neither `enum class`
+nor `static_cast` is mandated by SYMBOLS or SRCBANNED any more.
 
 ## From the working thread
 

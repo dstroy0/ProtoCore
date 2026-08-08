@@ -10,17 +10,15 @@
 
 #include <unity.h>
 
-// The client queues; poll() moves the frame to the wire, which is where the host pcb driver
-// records it. The last datagram it recorded is what this side sent.
+// The send reaches the wire in the call that makes it, which is where the host pcb driver records
+// it. The last datagram it recorded is what this side sent.
 static const uint8_t *udp_cap(void)
 {
-    Udp.client->poll();
     size_t n = pc_net_host_udp_count();
     return n ? pc_net_host_udp_at(n - 1)->data : NULL;
 }
 static size_t udp_cap_len(void)
 {
-    Udp.client->poll();
     size_t n = pc_net_host_udp_count();
     return n ? pc_net_host_udp_at(n - 1)->len : 0;
 }

@@ -39,14 +39,11 @@ static void wr_be32(uint8_t *p, uint32_t v)
     p[3] = (uint8_t)v;
 }
 
-// Start a sync and let the listener put the request on the wire: begin() queues it on the send ring
-// and poll() is what drains that ring.
+// Start a sync. begin() puts the request on the wire inside its own call.
 static proto_bool sync_with(const char *server)
 {
     pc_net_host_udp_reset();
-    proto_bool ok = pc_ntp_begin(NULL, server, NULL);
-    Udp.listener->poll();
-    return ok;
+    return pc_ntp_begin(NULL, server, NULL);
 }
 
 // The request the client just sent, taken off the wire.

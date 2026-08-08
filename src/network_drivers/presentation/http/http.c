@@ -10,11 +10,11 @@
 
 #include "network_drivers/presentation/http/http.h"
 #include "mmgr/membuild.h"  // pc_sb: the Allow list is appended, not formatted
+#include "mmgr/protostr.h"  // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h" // proto_raw_read: a captured segment moves into our own buffer
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
 #include "protocore.h"                                          // http_pool, and the request and route widths
-#include "shared_primitives/runops.h"                           // every scan and compare here
 #if PC_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // pc_millis() stamps the attempt the lockout counts
 #include "services/security/auth_lockout/auth_lockout.h"
@@ -154,31 +154,31 @@ HttpMethod parse_method(const char *m)
     // from: one more byte than the literal is already enough to decide, because a longer method
     // scans to the bound without finding its terminator and fails on length before any byte is
     // compared. That keeps this function honest about a caller it does not otherwise constrain.
-    if (proto_eq_str(m, "GET", sizeof("GET")))
+    if (str.eq(m, "GET", sizeof("GET"), PROTO_FALSE))
     {
         return HTTP_GET;
     }
-    if (proto_eq_str(m, "POST", sizeof("POST")))
+    if (str.eq(m, "POST", sizeof("POST"), PROTO_FALSE))
     {
         return HTTP_POST;
     }
-    if (proto_eq_str(m, "PUT", sizeof("PUT")))
+    if (str.eq(m, "PUT", sizeof("PUT"), PROTO_FALSE))
     {
         return HTTP_PUT;
     }
-    if (proto_eq_str(m, "DELETE", sizeof("DELETE")))
+    if (str.eq(m, "DELETE", sizeof("DELETE"), PROTO_FALSE))
     {
         return HTTP_DELETE;
     }
-    if (proto_eq_str(m, "PATCH", sizeof("PATCH")))
+    if (str.eq(m, "PATCH", sizeof("PATCH"), PROTO_FALSE))
     {
         return HTTP_PATCH;
     }
-    if (proto_eq_str(m, "HEAD", sizeof("HEAD")))
+    if (str.eq(m, "HEAD", sizeof("HEAD"), PROTO_FALSE))
     {
         return HTTP_HEAD;
     }
-    if (proto_eq_str(m, "OPTIONS", sizeof("OPTIONS")))
+    if (str.eq(m, "OPTIONS", sizeof("OPTIONS"), PROTO_FALSE))
     {
         return HTTP_OPTIONS;
     }
@@ -226,13 +226,13 @@ proto_bool path_matches(const char *route, proto_bool is_wildcard, const char *r
 {
     if (!is_wildcard)
     {
-        return proto_eq_str(route, req_path, MAX_PATH_LEN);
+        return str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
     }
 
     // Prefix match: compare everything up to (but not including) the '*'. A first difference AT the
     // bound is the whole prefix agreeing, which is what the scan returns when it never parts.
-    size_t prefix_len = proto_scan_nul(route, MAX_PATH_LEN) - 1;
-    return proto_diff(route, req_path, prefix_len) == prefix_len;
+    size_t prefix_len = str.len(route, MAX_PATH_LEN) - 1;
+    return str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
 }
 
 // Record one `:name` path parameter (key from the route segment, value from the path segment).
@@ -300,7 +300,7 @@ proto_bool match_path_params(const char *route, const char *path, HttpReq *req)
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
-        else if (rlen != plen || proto_diff(rseg, pseg, rlen) != rlen)
+        else if (rlen != plen || str.diff(rseg, pseg, rlen, PROTO_FALSE) != rlen)
         {
             return PROTO_FALSE; // literal segment mismatch
         }
@@ -315,7 +315,7 @@ proto_bool match_path_params(const char *route, const char *path, HttpReq *req)
 // linkage (declared in protocore.h): the split handler TUs call it.
 proto_bool req_is_head(uint8_t slot_id)
 {
-    return proto_eq_str(http_pool[slot_id].method, "HEAD", sizeof("HEAD"));
+    return str.eq(http_pool[slot_id].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
@@ -327,8 +327,8 @@ void allow_append(char *buf, size_t cap, const char *m)
     // The search runs to the NUL, not to the capacity: the caller sets only buf[0], so every byte
     // past the text is whatever the stack held. Scanning those could match a method that was never
     // appended and return early, and the Allow header would silently lose one.
-    size_t len = proto_scan_nul(buf, cap);
-    if (!m[0] || proto_has(buf, len, m, sizeof("OPTIONS")))
+    size_t len = str.len(buf, cap);
+    if (!m[0] || str.has(buf, len, m, sizeof("OPTIONS"), PROTO_FALSE))
     {
         return;
     }
@@ -367,7 +367,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
         return;
     }
 
-    int blen = (int)proto_scan_nul(body, 0xFFFF);
+    int blen = (int)str.len(body, 0xFFFF);
     char header[RESP_HDR_BUF_SIZE];
     // (send_method_not_allowed, send_too_many_requests) build a non-null header string. Kept so the
     // parameter stays optional for a future caller with nothing extra to add.
@@ -469,7 +469,7 @@ static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 {
     // Built-in token endpoint: GET /csrf issues a signed token (also set as the
     // csrf cookie) for clients to echo in X-CSRF-Token on state-changing requests.
-    if (method == HTTP_GET && proto_eq_str(req->path, "/csrf", sizeof("/csrf")))
+    if (method == HTTP_GET && str.eq(req->path, "/csrf", sizeof("/csrf"), PROTO_FALSE))
     {
         char tok[CSRF_TOKEN_BUF];
         if (pc_csrf_issue(tok, sizeof(tok)) > 0)
@@ -515,7 +515,7 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
     // header that includes the "Upgrade" token.
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
-                               proto_eq_str_ci(upgrade_hdr, "websocket", sizeof("websocket")) &&
+                               str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) &&
                                pc_http_conn_has_token(http_get_header(req, "Connection"), "upgrade");
     if (!is_ws_upgrade)
     {
@@ -524,7 +524,7 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
     }
     // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
     const char *ws_ver = http_get_header(req, "Sec-WebSocket-Version");
-    if (ws_ver == NULL || !proto_eq_str(ws_ver, "13", sizeof("13")))
+    if (ws_ver == NULL || !str.eq(ws_ver, "13", sizeof("13"), PROTO_FALSE))
     {
         ws_send_version_required(slot_id);
         return;

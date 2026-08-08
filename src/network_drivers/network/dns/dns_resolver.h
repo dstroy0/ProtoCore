@@ -7,16 +7,21 @@
  *
  * Resolves a hostname to an IPv4 address and classifies / verifies the answer: a remote name
  * resolving to 0.0.0.0, the broadcast address, loopback, or a multicast address is rejected as a
- * spoof / DNS-rebinding indicator. The resolve is blocking (call it off the request hot path).
+ * spoof / DNS-rebinding indicator.
+ *
+ * Nothing here blocks. The module owns one timer and one in-flight query: ::ResolverNs::resolve
+ * starts the query, marks itself busy and returns ::PC_DNS_BUSY, and the caller asks again on its
+ * own tick. The reply arrives on the UDP listener's normal drain, so the answer lands without this
+ * module pumping anything. Busy is the sending side only - the reply handler is always armed.
  *
  * Two backends, chosen by PC_HAS_VENDOR_DNS_RESOLVER. Where the stack has its own resolver the
  * module marshals into it and inherits its nameserver and its cache. Where it does not, the portable
- * resolver asks PC_DNS_SERVER over the UDP listener - one query per call, no cache - and
+ * resolver asks PC_DNS_SERVER over the UDP listener - one query at a time, no cache - and
  * ::ResolverNs::set_server points it at whatever address DHCP or provisioning turned up.
  *
  * The query and the answer are codecs in their own right, so they are exported and tested as such:
  * ::pc_dns_query_build writes the question, ::pc_dns_answer_parse reads the first A record back, and
- * the blocking resolve is what puts a socket between them.
+ * the resolve is what puts a socket between them.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -42,6 +47,14 @@ typedef enum PROTO_ENUM_PACKED
     PC_IP_BROADCAST,       ///< 255.255.255.255
     PC_IP_PUBLIC,          ///< globally-routable unicast
 } pc_ip_class;
+
+/** @brief Where a resolve stands. */
+typedef enum PROTO_ENUM_PACKED
+{
+    PC_DNS_READY = 0, ///< out_ip holds the address
+    PC_DNS_BUSY,      ///< a query is out; ask again on the next tick
+    PC_DNS_FAILED,    ///< the query did not leave, or the one in flight passed its deadline
+} pc_dns_state;
 
 // ---------------------------------------------------------------------------
 // Host-testable core
@@ -81,35 +94,31 @@ proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Resolve @p host to an IPv4 address (host order) into @p out_ip.
- *
- * Accepts a dotted-quad directly; otherwise queries DNS with a
- * PC_DNS_TIMEOUT_MS deadline. Blocking. @return true on success.
- */
-
-/**
- * @brief Resolve @p host and require the answer to pass @ref ResolverNs::verify.
- * @return true only if it resolved AND the address is a plausible answer.
- */
-
-/**
  * @brief The DNS resolver.
  *
  * @var ResolverNs::classify  what kind of address a host-order IPv4 word names
  * @var ResolverNs::verify    whether that word is a plausible A-record answer for a remote host
- * @var ResolverNs::resolve   resolve a host to an IPv4 address, host order; blocking
- * @var ResolverNs::resolve_verified  resolve, and require the answer to pass @ref ResolverNs::verify
+ * @var ResolverNs::resolve   ask for a host's IPv4 address, host order
+ * @var ResolverNs::resolve_verified  as resolve, and require the answer to pass @ref ResolverNs::verify
+ * @var ResolverNs::busy      a query is out
  * @var ResolverNs::set_server  the nameserver the portable backend asks, as a literal address
  *
- * No storage member: the deadline and the in-flight call belong to dns_resolver.c, and a caller
+ * resolve() answers a dotted quad from the name itself and reports ::PC_DNS_READY. Any other name
+ * starts a query, marks the module busy and reports ::PC_DNS_BUSY; the caller asks again with the
+ * same host on its next tick and gets ::PC_DNS_READY once the reply parses, or ::PC_DNS_FAILED once
+ * PC_DNS_TIMEOUT_MS passes. One query is in flight at a time, so a second host asked while busy
+ * reports ::PC_DNS_BUSY until the first settles.
+ *
+ * No storage member: the timer and the in-flight query belong to dns_resolver.c, and a caller
  * reaches them by calling.
  */
 typedef struct
 {
     pc_ip_class (*classify)(uint32_t ip);
     proto_bool (*verify)(uint32_t ip);
-    proto_bool (*resolve)(const char *host, uint32_t *out_ip);
-    proto_bool (*resolve_verified)(const char *host, uint32_t *out_ip);
+    pc_dns_state (*resolve)(const char *host, uint32_t *out_ip);
+    pc_dns_state (*resolve_verified)(const char *host, uint32_t *out_ip);
+    proto_bool (*busy)(void);
     /**
      * @brief Point the resolver at @p ip, a dotted quad, replacing PC_DNS_SERVER.
      *

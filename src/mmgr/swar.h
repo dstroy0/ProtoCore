@@ -20,12 +20,12 @@
  * walks a buffer or takes a capacity, which is what keeps the byte-order claim under
  * ::pc_swar_zero_lane true: a lane count is the one place address order is decided, and stepping
  * across a word pair is not this file's business. The scans, compares, searches and the bounded copy
- * built on these live in shared_primitives/runops.h.
+ * built on these live in mmgr/protostr.h, behind @ref str.
  *
  * **Constant time.** Every operation here is branchless and data-independent, which is why the
  * base64 decoder classifies characters with ::pc_swar_ge and ::pc_swar_le rather than a table: an
  * address derived from a secret byte leaks it through the cache, and an arithmetic mask cannot. The
- * operations in runops.h are NOT in that class - they stop at the byte they find, which is the whole
+ * walks behind @ref str are NOT in that class - they stop at the byte they find, which is the whole
  * point of a bounded scan. Never run one over a secret.
  *
  * @author  Douglas Quigg (dstroy0)

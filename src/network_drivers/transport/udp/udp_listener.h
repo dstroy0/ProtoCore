@@ -3,18 +3,18 @@
 
 /**
  * @file udp_listener.h
- * @brief Layer 4 UDP, the receiving side: bound ports, their rings, and the drain.
+ * @brief Layer 4 UDP, the receiving side: bound ports, their receive rings, and the drain.
  *
- * One slot per bound port. Each slot owns a receive ring and a send ring.
+ * One slot per bound port, and one receive ring per slot. The stack's receive trampoline is its
+ * sole producer; poll() is its sole consumer and calls the handler once per datagram, so the
+ * handler runs in the task that calls poll(), not in the stack's thread.
  *
- * The stack's receive trampoline is the sole producer of the receive ring; poll() is its sole
- * consumer and calls the handler once per datagram. reply() and sendto() are the sole producers of
- * the send ring; poll() is its sole consumer and moves frames to the wire as the stack accepts
- * them. The handler therefore runs in the task that calls poll(), not in the stack's thread.
+ * The ring carries framed entries: address, port, and length ahead of the payload. A frame is
+ * published once, whole, so the consumer never observes a partial one, and a datagram that does not
+ * fit the free space is dropped at the trampoline.
  *
- * Both rings carry framed entries: address, port, and length ahead of the payload. A frame is
- * published once, whole, so the other side never observes a partial one. A datagram that does not
- * fit the free space is dropped, at the trampoline on receive and by refusing the call on send.
+ * Sending is not queued. reply() and sendto() carry the caller's buffer to the wire inside one
+ * marshaled call and report what the stack did with it.
  *
  * Reached as `Udp.listener->listen(...)`.
  *
@@ -55,17 +55,17 @@ typedef void (*pc_udp_handler)(const uint8_t *data, size_t len, const struct pc_
  * @var UdpListenerNs::listen            bind a port and route its datagrams to a handler
  * @var UdpListenerNs::listen_multicast  bind a port and join an IPv4 group on every interface
  * @var UdpListenerNs::leave_multicast   leave the group bound on a port and free its slot
- * @var UdpListenerNs::poll              deliver received frames to handlers, move sent frames to the wire
- * @var UdpListenerNs::reply             queue an answer to the peer a handler was given
+ * @var UdpListenerNs::poll              deliver received datagrams to their handlers
+ * @var UdpListenerNs::reply             answer the peer a handler was given
  * @var UdpListenerNs::peer_addr         copy a peer's address and port out
- * @var UdpListenerNs::sendto            queue a datagram from a bound port to an arbitrary destination
- * @var UdpListenerNs::sndbuf            bytes a bound port's send ring can still take
+ * @var UdpListenerNs::sendto            send from a bound port to an arbitrary destination
  * @var UdpListenerNs::close             unbind a port and free its slot, leaving any group first
  * @var UdpListenerNs::joined_group      the group a port joined, formatted, or NULL
  *
- * reply() and sendto() report that the datagram was queued, not that it reached the wire. They
- * return false when the ring cannot take it; the caller retries after the next poll(), or reads
- * sndbuf() first and paces.
+ * reply() and sendto() send the caller's bytes from where they already are, and report whether the
+ * stack took them. There is nothing between the caller and the wire: a refusal means the datagram
+ * did not leave, the caller's buffer is untouched, and the caller sends it again. A datagram longer
+ * than ::PC_UDP_RX_BUF_SIZE is refused.
  */
 typedef struct
 {
@@ -76,7 +76,6 @@ typedef struct
     proto_bool (*reply)(const struct pc_udp_peer *peer, const uint8_t *data, size_t len);
     proto_bool (*peer_addr)(const struct pc_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out);
     proto_bool (*sendto)(uint16_t listen_port, const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len);
-    size_t (*sndbuf)(uint16_t listen_port);
     proto_bool (*close)(uint16_t port);
     const char *(*joined_group)(uint16_t port);
 } UdpListenerNs;

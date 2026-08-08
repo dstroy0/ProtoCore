@@ -75,10 +75,18 @@ static void m_close(void *c, int cid)
     m->last_closed = cid;
 }
 
+// The mock origin is up the moment it is opened, so the pump sends on its first call.
+static proto_bool m_connected(void *c, int cid)
+{
+    (void)cid;
+    return ((MockOrigin *)c)->open_ret >= 0;
+}
+
 static EdgeFetchTransport make_transport(MockOrigin *m)
 {
     EdgeFetchTransport t;
     t.open = m_open;
+    t.connected = m_connected;
     t.send = m_send;
     t.read = m_read;
     t.closed = m_closed;
@@ -195,8 +203,9 @@ static void test_resp_complete_unit()
     TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)cd, strlen(cd), PROTO_TRUE, &hl));
 }
 
-// The request could not be handed to the transport: the fetch fails immediately, without waiting
-// out the timeout on a connection the origin will never answer.
+// The request could not be handed to the transport: the fetch fails on the pump that tries to send
+// it, without waiting out the timeout on a connection the origin will never answer. begin() only
+// opens and parks the request, so the failure surfaces one pump later.
 static void test_fetch_send_fail()
 {
     MockOrigin m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 4};
@@ -204,7 +213,8 @@ static void test_fetch_send_fail()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, f.st);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_PENDING, f.st);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, edge_fetch_pump(&f, &t, 1000));
     TEST_ASSERT_EQUAL_INT(4, f.cid); // the connection was opened, so it still has to be released
 }
 

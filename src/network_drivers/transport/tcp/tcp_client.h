@@ -19,9 +19,10 @@
  * layers the shared client-TLS session (`pc_tls_client_session_*`) on top, pointing its
  * BIO at pc_client_send() / pc_client_read().
  *
- * The core is non-blocking (read/available/send), so it suits both a polling
- * client loop (MQTT, WebSocket) and a blocking request (HTTP) that drives its own
- * deadline. Only pc_client_open() blocks, on DNS + connect.
+ * Nothing here blocks. open() takes a slot, starts the resolve and returns a cid straight away; the
+ * slot carries its own timer and steps from resolving to connected each time the caller asks
+ * connected() or is_closed(). The caller drives that from its own loop, and the whole open - the
+ * name lookup included - is bounded by the timeout_ms it passed.
  */
 
 #include "protocore_config.h"
@@ -31,13 +32,17 @@ PROTO_BEGIN_DECLS
 /**
  * @brief The outbound side of TCP.
  *
- * @var TcpClientNs::open       resolve and connect, blocking up to a deadline
- * @var TcpClientNs::connected  the handshake completed
- * @var TcpClientNs::is_closed  the peer closed or the connection errored
+ * @var TcpClientNs::open       take a slot and start resolving; cid >= 0, or < 0 when none is free
+ * @var TcpClientNs::connected  step the open along, and report whether the handshake completed
+ * @var TcpClientNs::is_closed  step the open along, and report a close, an error, or the timeout
  * @var TcpClientNs::send       queue wire bytes for transmission
  * @var TcpClientNs::available  wire bytes buffered and ready to read
  * @var TcpClientNs::read       drain buffered wire bytes
  * @var TcpClientNs::close      tear the connection down and free the slot
+ *
+ * open() returns before the connection exists. @p host is read on every step until the name
+ * resolves, so it has to outlive the open. The caller polls connected() until it is true, or
+ * is_closed() is, and closes the slot on either failure.
  */
 typedef struct
 {

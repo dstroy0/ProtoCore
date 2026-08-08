@@ -10,6 +10,7 @@
 
 #if PC_ENABLE_EDGE_CACHE
 
+#include "mmgr/rawmemcpy.h"                       // proto_raw_read: the request into this fetch's buffer
 #include "services/net/http_client/http_client.h" // http_client_parse_response
 #include "services/web/edge_cache/edge_cache.h"   // edge_header_value
 
@@ -162,16 +163,21 @@ void edge_fetch_begin(EdgeFetch *f, const EdgeFetchTransport *t, const char *hos
     f->cid = -1;
     f->start_ms = now_ms;
     f->st = EDGE_FETCH_STATUS_PENDING;
+    if (request == NULL || req_len == 0 || req_len > sizeof(f->buf))
+    {
+        f->st = EDGE_FETCH_STATUS_FAILED;
+        return;
+    }
     f->cid = t->open(t->ctx, host, port, PC_EDGE_FETCH_TIMEOUT_MS);
     if (f->cid < 0)
     {
         f->st = EDGE_FETCH_STATUS_FAILED;
         return;
     }
-    if (!t->send(t->ctx, f->cid, request, req_len))
-    {
-        f->st = EDGE_FETCH_STATUS_FAILED;
-    }
+    // The connection is not up yet. Nothing has arrived to occupy the response buffer, so the
+    // request waits at the head of it until the pump finds the transport connected.
+    proto_raw_read(f->buf, request, req_len);
+    f->req_len = (uint32_t)req_len;
 }
 
 EdgeFetchStatus edge_fetch_pump(EdgeFetch *f, const EdgeFetchTransport *t, uint32_t now_ms)
@@ -179,6 +185,30 @@ EdgeFetchStatus edge_fetch_pump(EdgeFetch *f, const EdgeFetchTransport *t, uint3
     if (f->st != EDGE_FETCH_STATUS_PENDING)
     {
         return f->st;
+    }
+
+    if (!f->sent)
+    {
+        if (t->closed(t->ctx, f->cid))
+        {
+            f->st = EDGE_FETCH_STATUS_FAILED;
+            return f->st;
+        }
+        if (!t->connected(t->ctx, f->cid))
+        {
+            if (now_ms - f->start_ms >= PC_EDGE_FETCH_TIMEOUT_MS)
+            {
+                f->st = EDGE_FETCH_STATUS_FAILED;
+            }
+            return f->st;
+        }
+        if (!t->send(t->ctx, f->cid, f->buf, f->req_len))
+        {
+            f->st = EDGE_FETCH_STATUS_FAILED;
+            return f->st;
+        }
+        f->sent = PROTO_TRUE;
+        f->got = 0; // the buffer goes back to taking the response
     }
 
     while (f->got < sizeof(f->buf))

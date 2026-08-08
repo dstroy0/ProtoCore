@@ -21,17 +21,15 @@
 
 #include <unity.h>
 
-// The client queues; poll() moves the frame to the wire, which is where the host pcb driver
-// records it. The last datagram it recorded is what this side sent.
+// The send reaches the wire in the call that makes it, which is where the host pcb driver records
+// it. The last datagram it recorded is what this side sent.
 static const uint8_t *udp_cap(void)
 {
-    Udp.client->poll();
     size_t n = pc_net_host_udp_count();
     return n ? pc_net_host_udp_at(n - 1)->data : NULL;
 }
 static size_t udp_cap_len(void)
 {
-    Udp.client->poll();
     size_t n = pc_net_host_udp_count();
     return n ? pc_net_host_udp_at(n - 1)->len : 0;
 }
@@ -1363,17 +1361,15 @@ void test_v3_trap_reports_transport_failure()
     TEST_ASSERT_FALSE(pc_snmp_trap_v3("not.an.address", 162, trap_oid, 9, NULL, 0));
     TEST_ASSERT_FALSE(pc_snmp_trap_v3(NULL, 162, trap_oid, 9, NULL, 0));
 
-    // The stack refuses every datagram: the trap still queues, and nothing lands on the wire.
+    // The stack refuses every datagram: the trap reports the refusal and nothing lands on the wire.
     pc_net_host_udp_reset();
     mock_udp_send_fail_after(0);
-    TEST_ASSERT_TRUE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
-    Udp.client->poll();
+    TEST_ASSERT_FALSE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
     TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count());
 
     // With the stack accepting again, the next trap goes out.
     mock_udp_send_fail_after(-1);
     TEST_ASSERT_TRUE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
-    Udp.client->poll();
     TEST_ASSERT_EQUAL_size_t(1, pc_net_host_udp_count());
     TEST_ASSERT_EQUAL_UINT16(162, pc_net_host_udp_at(0)->dst_port);
 }

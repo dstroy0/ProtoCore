@@ -29,9 +29,16 @@
 typedef struct
 {
     pc_pcb *pcb;
-    volatile proto_bool in_use;
-    volatile proto_bool connected;
-    volatile proto_bool closed; // peer FIN or error
+    // Written by the stack's callbacks in its own thread, read by the caller's task. Atomic for the
+    // same reason the ring indices below are: volatile orders nothing and publishes nothing.
+    _Atomic proto_bool in_use;
+    _Atomic proto_bool connected;
+    _Atomic proto_bool closed;  // peer FIN or error
+    const char *host;           // the caller's name, read each pump until it resolves
+    uint16_t port;
+    uint32_t timer;      // millis the open started at
+    uint32_t timeout_ms; // what the whole open, resolve included, is given
+    proto_bool resolving;
     uint8_t rx[PC_CLIENT_RX_BUF];
     _Atomic size_t head; // producer (stack recv cb); acquire/release SPSC, same as the server ring
     _Atomic size_t tail; // consumer (caller)
@@ -220,8 +227,57 @@ static pc_net_err cc_do_recved(pc_net_call *cd)
 
 // --- public API --------------------------------------------------------------
 
+// Step one slot from resolving to connected. Each call does at most one step and nothing waits: the
+// slot's timer bounds the whole open, and a caller reaches this from its own tick through
+// connected() or is_closed().
+static void cc_pump(ClientConn *c)
+{
+    if (!c->in_use || c->connected || c->closed)
+    {
+        return;
+    }
+    if ((uint32_t)(pc_millis() - c->timer) >= c->timeout_ms)
+    {
+        c->closed = PROTO_TRUE; // out of time, whether it was still resolving or already connecting
+        return;
+    }
+    if (!c->resolving)
+    {
+        return; // the connect is out; cc_connected / cc_err settle it
+    }
+
+    // Resolve through the shared DNS owner, which reports busy until its own answer lands.
+    uint32_t ip = 0;
+    pc_dns_state s = network.dns->resolver->resolve(c->host, &ip);
+    if (s == PC_DNS_BUSY)
+    {
+        return;
+    }
+    if (s == PC_DNS_FAILED)
+    {
+        c->closed = PROTO_TRUE;
+        return;
+    }
+    c->resolving = PROTO_FALSE;
+
+    CcConnCall k;
+    memset(&k, 0, sizeof(k));
+    k.c = c;
+    pc_net_ip4_set(&k.addr, (uint8_t)(ip >> 24), (uint8_t)(ip >> 16), (uint8_t)(ip >> 8), (uint8_t)ip);
+    k.port = c->port;
+    pc_net_call_marshal(cc_do_connect, &k.base);
+    if (k.result != PC_NET_OK)
+    {
+        c->closed = PROTO_TRUE;
+    }
+}
+
 static int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
 {
+    if (host == NULL)
+    {
+        return -2;
+    }
     int cid = -1;
     for (int i = 0; i < PC_CLIENT_CONNS; i++)
     {
@@ -242,45 +298,24 @@ static int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
     c->closed = PROTO_FALSE;
     PROTO_ATOMIC_STORE(&c->head, 0);
     PROTO_ATOMIC_STORE(&c->tail, 0);
+    c->host = host;
+    c->port = port;
+    c->timeout_ms = timeout_ms;
+    c->timer = pc_millis();
+    c->resolving = PROTO_TRUE;
     c->in_use = PROTO_TRUE;
-
-    // Resolve through the shared DNS owner (its own PC_DNS_TIMEOUT_MS budget),
-    // then give the connect its full timeout_ms.
-    uint32_t ip = 0;
-    if (!network.dns->resolver->resolve(host, &ip))
-    {
-        c->in_use = PROTO_FALSE;
-        return -2; // DNS failure
-    }
-    uint32_t deadline = pc_millis() + timeout_ms;
-
-    CcConnCall k;
-    memset(&k, 0, sizeof(k));
-    k.c = c;
-    pc_net_ip4_set(&k.addr, (uint8_t)(ip >> 24), (uint8_t)(ip >> 16), (uint8_t)(ip >> 8), (uint8_t)ip);
-    k.port = port;
-    pc_net_call_marshal(cc_do_connect, &k.base);
-    if (k.result != PC_NET_OK)
-    {
-        pc_client_close(cid);
-        return -3; // connect issue
-    }
-    while (!c->connected && !c->closed && (int32_t)(deadline - pc_millis()) > 0)
-    {
-        pcdelay(5);
-    }
-    if (!c->connected)
-    {
-        pc_client_close(cid);
-        return -4; // connect timeout / refused
-    }
+    cc_pump(c); // a name that needs no query connects here, in the opening call
     return cid;
 }
 
 static proto_bool pc_client_connected(int cid)
 {
-    return cid >= 0 && cid < PC_CLIENT_CONNS && s_client.cc[cid].in_use && s_client.cc[cid].connected &&
-           !s_client.cc[cid].closed;
+    if (cid < 0 || cid >= PC_CLIENT_CONNS || !s_client.cc[cid].in_use)
+    {
+        return PROTO_FALSE;
+    }
+    cc_pump(&s_client.cc[cid]);
+    return s_client.cc[cid].connected && !s_client.cc[cid].closed;
 }
 
 static proto_bool pc_client_is_closed(int cid)
@@ -289,6 +324,7 @@ static proto_bool pc_client_is_closed(int cid)
     {
         return PROTO_TRUE;
     }
+    cc_pump(&s_client.cc[cid]);
     return s_client.cc[cid].closed;
 }
 

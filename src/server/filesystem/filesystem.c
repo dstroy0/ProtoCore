@@ -10,8 +10,8 @@
  */
 
 #include "server/filesystem/filesystem.h"
-#include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
-                                      // strncmp (root-name match), memcpy
+#include "mmgr/protostr.h" // str: the bounded-run walks
+                           // strncmp (root-name match), memcpy
 
 // One bound root. The prefix is a copy, not the caller's pointer, and always ends '/', so the join
 // concatenates `root` and `dir` without adding a separator.
@@ -63,7 +63,7 @@ static const pc_mnt_backend *store(void)
 // name into a different file's.
 static size_t walk_push(char *path, size_t len, const char *child)
 {
-    size_t n = proto_scan_nul(child, PC_FILESYSTEM_PATH_MAX);
+    size_t n = str.len(child, PC_FILESYSTEM_PATH_MAX);
     // The root already IS the separator, so it is the one path that does not get another.
     proto_bool need_sep = !(len == 1 && path[0] == '/');
     if (len + (need_sep ? 1 : 0) + n + 1 > PC_FILESYSTEM_PATH_MAX)
@@ -267,8 +267,8 @@ proto_bool pc_fs_remove(int root, const char *dir, const char *name)
     // Destination resolving here (a mount with an empty fs_root, target "/") turned that into
     // "remove everything", after which the copy failed and answered 409 over an emptied volume.
     const char *rp = s_fs.root[root].path;
-    size_t rlen = proto_scan_nul(rp, PC_FILESYSTEM_PATH_MAX);
-    size_t plen = proto_scan_nul(p, PC_FILESYSTEM_PATH_MAX);
+    size_t rlen = str.len(rp, PC_FILESYSTEM_PATH_MAX);
+    size_t plen = str.len(p, PC_FILESYSTEM_PATH_MAX);
     if (rlen > 0 && rp[rlen - 1] == '/') // the root always carries the separator; a resolve may not
     {
         rlen--;
@@ -357,7 +357,7 @@ proto_bool pc_fs_remove(int root, const char *dir, const char *name)
         {
             return PROTO_FALSE; // refuse a pathologically deep tree rather than walk forever
         }
-        len = proto_scan_nul(s_fs.walk, PC_FILESYSTEM_PATH_MAX);
+        len = str.len(s_fs.walk, PC_FILESYSTEM_PATH_MAX);
         lvl++;
     }
 }
@@ -516,7 +516,7 @@ proto_bool pc_fs_copy(int root, const char *from_dir, const char *from_name, con
         {
             return PROTO_FALSE;
         }
-        slen = proto_scan_nul(s_fs.walk, PC_FILESYSTEM_PATH_MAX);
+        slen = str.len(s_fs.walk, PC_FILESYSTEM_PATH_MAX);
         dlen = ndlen;
         lvl++;
         s_fs.idx[lvl] = 0;

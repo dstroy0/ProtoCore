@@ -3,8 +3,8 @@
 
 /**
  * @file udp_datagram.h
- * @brief The UDP wire protocol: what a queued datagram looks like, and how one goes into a ring and
- *        comes back out.
+ * @brief The UDP wire protocol: what a received datagram looks like in the ring, and how one goes
+ *        in and comes back out.
  *
  * A datagram is a message, so a ring of them carries a fixed 21-byte header ahead of each payload
  * rather than a byte stream:
@@ -20,9 +20,8 @@
  * are the same bytes on every target. The header is built through a pc_span and read through a
  * pc_cspan, which carry the bound and latch an overrun.
  *
- * Both sides of UDP queue the same header, so the layout is stated once here and neither .c restates
- * it. The layout is the contract, so it is published rather than opaque. Internal to transport/udp:
- * no table, no exported symbol.
+ * The layout is the contract, so it is published rather than opaque. Internal to transport/udp: no
+ * table, no exported symbol.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -93,33 +92,6 @@ PC_INLINE proto_bool pc_udp_dgram_decode(pc_cspan *r, pc_udp_dgram *d)
 }
 
 /**
- * @brief Queue one datagram: header, then @p len payload bytes.
- *
- * @p hdr is caller-owned staging of at least ::PC_UDP_DGRAM_HDR bytes, written only by the producer.
- * Checks the whole entry against the free space first and advances a local head across both spans,
- * publishing it with one store, so a consumer never observes a header without its payload.
- */
-PC_INLINE proto_bool pc_udp_dgram_put(uint8_t *ring, size_t cap, _Atomic size_t *head, _Atomic size_t *tail,
-                                      uint8_t *hdr, const pc_udp_dgram *d, const uint8_t *payload, size_t len)
-{
-    if ((PC_UDP_DGRAM_HDR + len) > pc_ring_free(head, tail, cap))
-    {
-        return PROTO_FALSE;
-    }
-    pc_span w = pc_span_from(hdr, PC_UDP_DGRAM_HDR);
-    pc_udp_dgram_encode(&w, d);
-    if (!pc_span_ok(w))
-    {
-        return PROTO_FALSE;
-    }
-    size_t h = PROTO_ATOMIC_LOAD(head);
-    h = pc_ring_write_span(ring, cap, h, hdr, PC_UDP_DGRAM_HDR);
-    h = pc_ring_write_span(ring, cap, h, payload, len);
-    PROTO_ATOMIC_STORE(head, h);
-    return PROTO_TRUE;
-}
-
-/**
  * @brief Dequeue one datagram: @p d takes the header, @p stage takes the payload.
  *
  * @p hdr is caller-owned staging of at least ::PC_UDP_DGRAM_HDR bytes, written only by the consumer.
@@ -153,17 +125,6 @@ PC_INLINE proto_bool pc_udp_dgram_take(uint8_t *ring, size_t cap, _Atomic size_t
     pc_ring_consume(tail, cap, PC_UDP_DGRAM_HDR);
     (void)pc_ring_read(ring, cap, head, tail, stage, d->len);
     return PROTO_TRUE;
-}
-
-/** @brief Payload bytes a ring can still take, after the header the next entry costs. */
-PC_INLINE size_t pc_udp_dgram_room(const _Atomic size_t *head, const _Atomic size_t *tail, size_t cap)
-{
-    size_t free_bytes = pc_ring_free(head, tail, cap);
-    if (free_bytes <= PC_UDP_DGRAM_HDR)
-    {
-        return 0; // not even a header fits, so no payload does
-    }
-    return free_bytes - PC_UDP_DGRAM_HDR;
 }
 
 PROTO_END_DECLS

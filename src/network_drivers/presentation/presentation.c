@@ -18,9 +18,9 @@
  */
 
 #include "presentation.h"
+#include "mmgr/protostr.h"                         // str: the bounded-run walks
 #include "network_drivers/session/proto_handler.h" // ProtoHandler (the L5 dispatch seam this registers into)
 #include "network_drivers/transport/tcp.h"         // conn_pool: the slot a handler is dispatched on
-#include "shared_primitives/runops.h" // the bounded scan and case-insensitive compare the Connection header needs
 #if PC_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_find()/ws_free(): a WS-upgraded slot must never be HTTP-parsed
 #endif
@@ -297,7 +297,7 @@ proto_bool pc_http_conn_has_token(const char *hdr, const char *token)
     {
         return PROTO_FALSE;
     }
-    size_t tlen = proto_scan_nul(token, 32);
+    size_t tlen = str.len(token, 32);
     const char *p = hdr;
     while (*p)
     {
@@ -318,7 +318,7 @@ proto_bool pc_http_conn_has_token(const char *hdr, const char *token)
         // The element is a slice of the header value, not its own string, so it has no terminator to
         // measure against: the trimmed length is the bound, and the length test above it is what
         // stops a longer token matching on its prefix.
-        if (len == tlen && proto_diff_ci(start, token, tlen) == tlen)
+        if (len == tlen && str.diff(start, token, tlen, PROTO_TRUE) == tlen)
         {
             return PROTO_TRUE;
         }

@@ -8,6 +8,170 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The bounded-run walks existed twice, on two owners
+
+- **Status:** FIXED (2026-08-08), found auditing ARCHITECTURE.md against the tree.
+- **Symptom:** none at runtime. `shared_primitives/runops.h` and `mmgr/protostr.c` each carried a
+  full implementation of the same operations on top of `mmgr/swar.h` - the NUL scan, the first-
+  difference index, the agreement walk behind eq/starts, the search behind find/has, and the bounded
+  copy. Neither was built on the other. 44 call sites across 10 files took the header, and the rest
+  of the tree took `str`.
+- **Root cause:** the walks moved into `mmgr/` with the byte layer and the header they came from was
+  left in place, so the two drifted independently. SRCBANNED #13 bans exactly this ("an alias, a
+  wrapper, a second spelling"), and the copies had already diverged in the small: `runops.h` used
+  `?:` (banned by #23, carried in `sweep_baseline.json` as 20 whitelisted ternaries) where
+  `protostr.c` spells the same dispatch as `if`/`else`.
+- **Fix:** every call site rewritten onto `str` (`proto_scan_nul` -> `str.len`, `proto_diff*` ->
+  `str.diff(..., ci)`, `proto_eq_str*` -> `str.eq(..., ci)`, `proto_starts*` -> `str.starts`,
+  `proto_find*` / `proto_has*` -> `str.find` / `str.has`, `proto_copy` -> `str.copy`), and
+  `runops.h` deleted. `native_dns_resolver`, `native_mdns_service`, `native_client` and
+  `native_h3_server` gained `+<mmgr/protostr.c>`: the header was `static inline` and the module is
+  not, so those four linked nothing before and needed the TU.
+- **Note:** `str` is `extern const StrNs`, not the folding `static const` table `mem` and `swar` use,
+  so a call through it is an indirect call the compiler cannot fold. On the hot paths that took the
+  header inline - the HTTP method compare and the route match in `http.c` - that is a real change,
+  measurable on the S3 bench (`test/penetration_testing/rig_firmware/src/main_swarbench.cpp`).
+
+---
+
+## The SSH client reads the peer's maximum packet size and throws it away
+
+- **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
+- **Symptom:** `ssh_client.c:1155` is `r_u32(&r); // their max packet` - the CHANNEL_OPEN_CONFIRMATION
+  field is parsed and discarded. The send pump then clamps to its own `SSH_CLI_MAXPKT` (16384,
+  `:1145`) at `:1312`. Against a peer advertising a smaller maximum we emit an over-long
+  CHANNEL_DATA; a strict peer drops the channel.
+- **Root cause:** RFC 4254 sec 5.1 makes `maximum packet size` half of the same per-channel state as
+  the window, and the client keeps a private copy of that state instead of the one owner:
+  `ssh_client.c:302-303` declares `send_win` / `recv_win` and does its own arithmetic at
+  `:1273-1334` and `:1477`, duplicating `SshFlow` (`ssh_flow_control.h`), which the server side has
+  used since the signaling move. A second implementation of an invariant is a place the invariant
+  can be dropped, and this is the field that was dropped.
+- **Nothing can catch it:** `ssh_client.c` is compiled by **no** test env - all twelve `native_ssh*`
+  entries in `test/test_matrix.json` list other sources, none lists `ssh_client.c`. ~1700 lines of
+  client KEX, host-key verification, user auth and channels with zero coverage.
+- **Fix:** not written. `CliChannel` folds onto `SshFlow`, which stores `peer_max_pkt` at open and
+  gates the send, so the cap is the peer's and the check cannot be forgotten. Wants a
+  `native_ssh_client` env first, or the fix is unverifiable in the same way the bug was.
+
+## SSH packet state and key material sit in plain BSS, outside the secure pool
+
+- **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
+- **Symptom:** `ssh_packet.c:29` `SshPacketState ssh_pkt[MAX_SSH_CONNS];` and
+  `ssh_keymat.c` `SshKeyMat ssh_keys[MAX_SSH_CONNS];` are file-scope arrays with external linkage.
+  They hold decrypted packet bytes, key schedules and HMAC keys, and they are cleared by nothing on
+  release.
+- **Root cause:** their separation is incidental linker placement, which `ssh_keymat.h:85` already
+  says out loud ("physical separation only raises the bar, not a hard wall"). The secure pool exists
+  for exactly this content and wipes on release; as BSS these arrays are outside both it and the
+  plaintext arena, so they are covered by neither derived worst case.
+- **Fix:** not written. Both borrow from the secure pool with a declared `PC_WORK_SSH_*` term proved
+  by a `static_assert` at the borrow site, the shape `crypto/aead/aes128gcm.h` already uses.
+
+## The If-Modified-Since date is parsed with `sscanf`, under a comment that says "no stdlib"
+
+- **Status:** OPEN, found 2026-08-08 auditing stdio use in `src/`.
+- **Symptom:** `file_serving.c:132` calls `sscanf(ims, "%*3s, %d %3s %d %d:%d:%d", ...)`. The comment
+  four lines above it reads "Parses the date by hand (sscanf, no stdlib)". `sscanf` **is** stdlib -
+  the sentence contradicts the line it describes, and a reader auditing for stdlib use believes it.
+- **Root cause:** the file also calls `strftime` and `strstr`, so `<stdio.h>` and `<string.h>` are
+  both live here. SRCBANNED ban 25 bans both headers in `src/`; the sites are in the ratcheted
+  baseline, so the gate stays green and the comment is what a reader actually reads.
+- **Cost:** `sscanf` pulls the full scanf format engine into the link, on a path that parses one
+  fixed RFC 1123 shape - six integers and a three-character month at known positions.
+- **Fix:** not written. Hand-parse the fixed layout with the existing decimal readers, delete both
+  includes, and drop the two baseline entries in the same commit.
+
+## Nineteen translation units carry a stale `#include <stdio.h>`
+
+- **Status:** OPEN, found 2026-08-08 auditing stdio use in `src/`.
+- **Symptom:** 27 files under `src/` include `<stdio.h>` (SRCBANNED ban 25, 31 ratcheted baseline
+  entries whose text reads "nothing in src/ formats"). **19 of them reference no stdio symbol at
+  all** - among them `server/middleware.c:17`, `server/websocket_sse.c:25`, `server/logbuf.c`,
+  `server/power_mgmt.c`, `codec/json/json.c`, `ssh/transport/ssh_transport.c`. Eight more mention a
+  stdio name only inside a comment.
+- **Root cause:** the include outlived the `snprintf` calls that were replaced by `pc_sb`; nothing
+  removes an include that nothing needs, and the baseline records the site rather than expiring it.
+- **Fix:** not written. Delete the 19 dead includes and their baseline entries. The three live users
+  are separate: `file_serving.c` (entry above), and the `WSC_DBG` / `CL_DBG` debug `printf` macros in
+  `ws_client.c:276` and `http_client.c:354`.
+
+## Forty-six comments in `src/` name a `.cpp` file that no longer exists
+
+- **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
+- **Symptom:** `src/` is C: 349 `.c`, 378 `.h`, zero `.cpp`. 46 comments still point at the old
+  names - `bignum.h:48` "see pc_bignum.cpp", `md.h:27` "md.cpp", `presentation.h:14`
+  "http_parser.h / http_parser.cpp", `ssh_flow_control.h:13` "ssh_channel.cpp held the counters",
+  `websocket.c:459` "lowlevel_recv_cb() (tcp.cpp)", `aes256ctr.h:56` "the mode ssh_packet.cpp uses",
+  and 40 more. Every path names a file that cannot be opened.
+- **Root cause:** the `.cpp` -> `.c` conversion renamed files and left the prose. `check_comments.py`
+  already owns the "a sentence about code that is no longer there" family but matches on phrasing,
+  not on whether a path in a comment resolves.
+- **Fix:** not written. Rewrite the 46 references, and add a rule to `check_comments.py` that resolves
+  any `<name>.<ext>` token in a comment against the tree - mechanical, and it cannot regress after.
+
+## `pc_frame_append` re-scans the whole accumulated document on every call
+
+- **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
+- **Symptom:** `frame.c:115` is `size_t used = proto_scan_nul(out, cap);` on entry. Appending n
+  fragments walks the document n times, so the three emitters that build an array in a loop are
+  O(n^2) in document length: `dashboard.c:130-169`, `gpio_map.c:67-80`,
+  `partition_monitor.c:99-113`.
+- **Root cause:** the append takes only `(out, cap)`, so the length it needs is not in the signature
+  and has to be recovered by scanning. `pc_frame_vbuild` returns the length it wrote, so the caller
+  already holds the number the scan re-derives.
+- **Partial mitigation, not a fix:** `proto_scan_nul` is the SWAR scan and tests four bytes per
+  iteration rather than one. That is a constant factor on a quadratic.
+- **Fix:** not written. The append takes the current length as an in/out parameter and returns the
+  new one; the scan goes. Touches the three emitters and any other `pc_frame_append` caller.
+
+## `PC_PLAINTEXT_ARENA_SIZE` is guessed twelve times, and scaled by the wrong quantity
+
+- **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
+- **Symptom:** the arena size is a `#ifndef` default in `protocore_config.h:6469` (8192) and again in
+  all eleven `core_setup/board_profiles/esp/*_defaults.h`, scaled by die RAM: c2/c61/h2/h21/s2 8192,
+  c3/c5/c6/h4 10240, s3/s31 12288, p4 16384.
+- **Root cause:** the scaling axis is wrong. The requirement is set by which features are compiled
+  in, not by which chip runs them - a C2 running SSH plus websocket borrows exactly what a P4 running
+  SSH plus websocket borrows. `core_setup/board_profiles/derived_sizing.h` states that principle in
+  its own header for `RX_BUF_SIZE` and the plaintext pool never got it.
+- **What is already in place:** the per-TU worst-case terms exist and are proved at their borrow
+  sites - `PC_PLAINTEXT_WORK_WS_SEND` / `_WS_RECV` (`websocket.h:76,84`), `_SSH_TRANSPORT`
+  (`ssh_packet.h:197`), `_OIDC` (`oidc.h:58`), `_DIAG` (`protocore.c:757`). Each is `static_assert`ed
+  against the arena individually. The arena is not derived from them.
+- **Consequence today is silent:** a borrow past the guess returns NULL and the call site falls
+  through to a degraded path (websocket sends uncompressed), so no peer, log line or test shows it.
+- **Fix:** not written. The arena becomes the max over the declared `PC_PLAINTEXT_WORK_*` terms -
+  max, not sum, because the arena resets per dispatch - taken in `protocore_config.h`, which is the
+  only file that sees them all. The eleven board-profile defaults then delete, and
+  `pc_plaintext_alloc`'s NULL return becomes unreachable.
+
+## The portable DNS resolve spins on a blocking loop that pumps a listener it does not own
+
+- **Status:** OPEN, found 2026-08-08 removing the UDP send rings.
+- **Symptom:** `dns_resolver.c:432` waits for its answer in
+  `while (!s_dr.done && (int32_t)(deadline - pc_millis()) > 0) { Udp.listener->poll(); pcdelay(5); }`.
+  A resolve issued from inside a UDP handler never sees its reply and always returns false after the
+  full `PC_DNS_TIMEOUT_MS`.
+- **Root cause:** two faults in one loop. `poll_all()` sets `s_lst.polling` for its duration and
+  returns immediately on a reentrant call, so a resolve called from inside a handler polls nothing
+  for every iteration of the wait. And the listener pump belongs to `session.c`, which calls it from
+  worker 0; reaching into it here drains every bound port's ring and runs every other service's
+  handler from inside a DNS call.
+- **Also blocking, same shape:** `dns_resolver.c:303` (vendor arm, `pcdelay` only),
+  `tcp_client.c:268` (connect wait), and the `tls.c` handshake waits at `:915`, `:954`, `:977`.
+- **Fix:** not written. The shape it takes: every TU that needs a delay owns one module-wide timer
+  and never sleeps. A call enters, the functional block sits behind the timer, and
+  `if (now - tu_timer >= delay)` clears busy and runs it; otherwise the call returns busy and the
+  caller comes back on its own tick. Busy is marked on the TX side only, so RX stays open and the
+  reply handler always runs. `resolve()` collapses to one entry point returning READY / BUSY /
+  FAILED, which is the shape `ntp_service.h` already states ("Returns immediately; the first sync
+  arrives asynchronously") and the shape lwIP's `ERR_INPROGRESS` uses.
+- **Blast radius:** one contract change across `dns_resolver.{h,c}` (both arms), `tcp_client.c`
+  (`pc_client_open` blocks on DNS then on connect), `edge_cache_proxy.c:163/211/229`, the AdsClient
+  example, and `test_dns_resolver` / `test_client`. It converts as one piece: `resolve()` moving
+  from `proto_bool` to an enum silently inverts `if (!resolve(...))` at `tcp_client.c:250`.
+
 ## Deflate and Inflate bind their namespace instance below the gate that declares its type
 
 - **Status:** FIXED, found 2026-08-08 running the envs behind the `PC_HAS_BUS` batch. Pre-existing
@@ -49,9 +213,10 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   turn the heavy features off before those files compile to anything. `native_swar` has an empty
   `flags` list as well, which is what makes it the one that links the whole default feature set.
 - **Fix:** `native_swar` takes `"src": ["-<*>"]` and `"test_build_src": "no"`, which is what
-  `native_concurrency` already uses for the same shape. `test_swar` covers `mmgr/swar.h` and
-  `shared_primitives/runops.h`, both header-only `static inline`, so the suite needs no library
-  source at all and now builds none.
+  `native_concurrency` already uses for the same shape. `test_swar` covers `mmgr/swar.h`, which is
+  header-only `static inline`, so the suite needs no library source at all and now builds none.
+  (2026-08-08: the bounded scan it also covered moved to `mmgr/protostr.c` with the runops removal
+  below, and its assertions went with it, so `native_swar` still links nothing.)
 - **Still open:** whether an empty `src` should keep meaning "the whole tree". That default is what
   let this env silently acquire translation units it was never meant to build, and 24 other envs
   carry it. They pass only because their `flags` switch the heavy features off before those files
@@ -759,7 +924,8 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   call to a name no TU defines, so it survives compilation and dies at link. Every other env that
   builds `frame.c` also builds a TU that pulls `runops.h` in ahead of it, which is why only the two
   filesystem-application envs showed it.
-- **Fix:** `frame.c` includes `shared_primitives/runops.h`.
+- **Fix:** `frame.c` includes `shared_primitives/runops.h`. (2026-08-08: that header is gone and the
+  include is now `mmgr/protostr.h` - see the entry below.)
 
 ---
 

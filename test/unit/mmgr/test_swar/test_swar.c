@@ -4,12 +4,12 @@
 // Unit tests for the lane math (mmgr/swar.h).
 //
 // These answer a question about four bytes with two arithmetic operations and no branches, which is
-// only worth doing if the answer is right at every boundary. proto_scan_nul is diffed against
-// strnlen over every length and every NUL position within a window, including the offsets where the
-// word loop hands over to the byte tail - that handover is where a hand-rolled scan gets it wrong.
+// only worth doing if the answer is right at every boundary. swar.h is the access layer and holds no
+// walk, so this suite links no library source: it loads a word, tests its lanes, and reads the lane
+// that fired. The bounded scan built on these lives in mmgr/protostr.c and is diffed against libc in
+// test_protostr.
 
 #include "mmgr/swar.h"
-#include "shared_primitives/runops.h" // proto_scan_nul - the bounded scan moved here with the split
 #include <string.h>
 
 #include <unity.h>
@@ -33,51 +33,6 @@ void test_has_zero_finds_any_lane()
     // A lane whose high bit is already set is not a zero lane - the `& ~w` term is what rules it out.
     TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0x80808080u));
     TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0x80010280u));
-}
-
-// The scan must agree with strnlen for every (length, NUL position) pair across the word boundary.
-void test_scan_nul_matches_strnlen()
-{
-    char buf[40];
-    for (size_t nul_at = 0; nul_at < 24; nul_at++)
-    {
-        memset(buf, 'x', sizeof(buf));
-        buf[nul_at] = '\0';
-        for (size_t cap = 0; cap < 32; cap++)
-        {
-            TEST_ASSERT_EQUAL_UINT32(strnlen(buf, cap), proto_scan_nul(buf, cap));
-        }
-    }
-}
-
-// No NUL inside the window: the answer is the window, never a read past it.
-void test_scan_nul_absent_returns_cap()
-{
-    char buf[16];
-    memset(buf, 'a', sizeof(buf));
-    for (size_t cap = 0; cap <= sizeof(buf); cap++)
-    {
-        TEST_ASSERT_EQUAL_UINT32(cap, proto_scan_nul(buf, cap));
-    }
-}
-
-// High-bit bytes must not read as terminators - the case a naive signed-char scan gets wrong.
-void test_scan_nul_ignores_high_bytes()
-{
-    const char buf[] = {(char)0x80, (char)0xFF, (char)0x7F, (char)0x80, (char)0xFE, '\0'};
-    TEST_ASSERT_EQUAL_UINT32(5, proto_scan_nul(buf, sizeof(buf)));
-}
-
-// The scan is called on unaligned addresses constantly (a string mid-buffer); every offset must agree.
-void test_scan_nul_unaligned()
-{
-    char buf[32];
-    for (size_t off = 0; off < 8; off++)
-    {
-        memset(buf, 'q', sizeof(buf));
-        buf[off + 9] = '\0';
-        TEST_ASSERT_EQUAL_UINT32(9, proto_scan_nul(buf + off, sizeof(buf) - off));
-    }
 }
 
 // The mask states the lane; this pins that reading against a word built from known bytes, at every
@@ -128,10 +83,6 @@ int main()
     UNITY_BEGIN();
     RUN_TEST(test_has_zero_finds_any_lane);
     RUN_TEST(test_zero_lane_from_mask);
-    RUN_TEST(test_scan_nul_matches_strnlen);
-    RUN_TEST(test_scan_nul_absent_returns_cap);
-    RUN_TEST(test_scan_nul_ignores_high_bytes);
-    RUN_TEST(test_scan_nul_unaligned);
     RUN_TEST(test_lane_compares);
     return UNITY_END();
 }

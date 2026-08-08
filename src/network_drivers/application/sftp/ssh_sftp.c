@@ -19,12 +19,12 @@
 
 #if PC_ENABLE_SSH_SFTP
 
-#include "mmgr/endian.h" // the u32 <-> big-endian bytes serializers
+#include "mmgr/endian.h"   // the u32 <-> big-endian bytes serializers
+#include "mmgr/protostr.h" // str: the bounded-run walks
 #include "network_drivers/application/sftp/sftp.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // callbacks + setters
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"    // pc_ssh_conn_send / pc_ssh_conn_close_channel
 #include "server/filesystem/filesystem.h"
-#include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
 
 // Leave headroom below one SSH packet for the CHANNEL_DATA framing, so pc_ssh_conn_send never rejects a response.
 #define PC_SFTP_RESP_CAP (SSH_PKT_BUF_SIZE - 16)
@@ -255,7 +255,7 @@ static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
             H->readdir_done = PROTO_TRUE;
             break;
         }
-        size_t el = build_entry(&st, s_sftp.nm, proto_scan_nul(s_sftp.nm, sizeof(s_sftp.nm)));
+        size_t el = build_entry(&st, s_sftp.nm, str.len(s_sftp.nm, sizeof(s_sftp.nm)));
         if (el == 0)
         {
             continue; // entry could not be serialized (pathological name) - skip it
@@ -293,7 +293,7 @@ static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
 // handle-to-path map. The accessor resolves it again; it is the client's bytes, not a resolved path.
 static void keep_req(SftpHandle *H, const char *req)
 {
-    size_t n = proto_scan_nul(req, sizeof(H->req));
+    size_t n = str.len(req, sizeof(H->req));
     if (n >= sizeof(H->req))
     {
         n = sizeof(H->req) - 1;
