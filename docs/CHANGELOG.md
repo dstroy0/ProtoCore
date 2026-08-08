@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- available() and read() step the open, so a polling caller advances its connect ([`deea2e7`](https://github.com/dstroy0/ProtoCore/commit/deea2e7fad2648557d3ed6fed2fd64a12f765b80))
 - four vendor components become capabilities, named for what they include ([`2d5346a`](https://github.com/dstroy0/ProtoCore/commit/2d5346a157a1a8c97db0d487635d26d6e4cd31b6))
 - external-RAM placement selects on PC_HAS_PSRAM ([`c5632da`](https://github.com/dstroy0/ProtoCore/commit/c5632dad43946360c29cc10aeda5c4f585f532c2))
 - the vendor TLS stack is a capability, not a consequence of not being the host ([`fa574c8`](https://github.com/dstroy0/ProtoCore/commit/fa574c84cc92f054d3e3663fee6df0c58ea0b7cd))
@@ -20,6 +21,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3c7e9bb`](https://github.com/dstroy0/ProtoCore/commit/3c7e9bb27ce2baf5176782881d899908c99bab93))
 - update test report + coverage [skip ci] ([`a7c3a15`](https://github.com/dstroy0/ProtoCore/commit/a7c3a1506f174ec9a3ca2fb16439b7dbe6bc1598))
 - update CHANGELOG.md [skip ci] ([`b86a29b`](https://github.com/dstroy0/ProtoCore/commit/b86a29b9b6bd5655a664c51b671d8273b9ff5352))
 - update test report + coverage [skip ci] ([`1ea1601`](https://github.com/dstroy0/ProtoCore/commit/1ea1601830c7257c2c34d3e3070b98fa49aa0b0d))
