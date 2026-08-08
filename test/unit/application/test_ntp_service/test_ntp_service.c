@@ -5,7 +5,7 @@
 // it puts on the wire, the mode-4 reply it accepts, and the ones it refuses. Replies are built by
 // this file, so the client is checked against the wire rather than against itself.
 
-#include "network_drivers/application/ntp_server/ntp_server.h" // NTP_PACKET_LEN / NTP_UNIX_OFFSET
+#include "network_drivers/application/ntp/ntp.h" // the packet under test
 #include "network_drivers/application/ntp_service/ntp_service.h"
 #include "network_drivers/transport/udp.h"
 #include "pc_net_host.h"
@@ -60,12 +60,12 @@ static const pc_net_host_dgram *request(void)
 // echoing whatever transmit stamp the request carried.
 static void reply_with(uint8_t mode, uint8_t stratum, uint32_t origin, uint32_t unix_secs)
 {
-    uint8_t r[NTP_PACKET_LEN];
+    uint8_t r[PC_NTP_PACKET_LEN];
     memset(r, 0, sizeof(r));
     r[0] = (uint8_t)((4u << 3) | mode);
     r[1] = stratum;
     wr_be32(r + 24, origin);
-    wr_be32(r + 40, unix_secs + NTP_UNIX_OFFSET);
+    wr_be32(r + PC_NTP_OFF_TX_SEC, unix_secs + PC_NTP_UNIX_OFFSET);
     pc_net_host_udp_deliver(PC_NTP_CLIENT_PORT, SERVER_IP, 123, r, sizeof(r));
     Udp.listener->poll();
 }
@@ -84,7 +84,7 @@ void test_begin_sends_a_client_request()
     TEST_ASSERT_TRUE(sync_with(SERVER_IP));
 
     const pc_net_host_dgram *d = request();
-    TEST_ASSERT_EQUAL_UINT16(NTP_PACKET_LEN, d->len);
+    TEST_ASSERT_EQUAL_UINT16(PC_NTP_PACKET_LEN, d->len);
     TEST_ASSERT_EQUAL_UINT16(123, d->dst_port);
     TEST_ASSERT_EQUAL_UINT16(PC_NTP_CLIENT_PORT, d->src_port);
     TEST_ASSERT_EQUAL_UINT8(30, d->addr[3]);           // 192.0.2.30

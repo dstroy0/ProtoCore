@@ -21,14 +21,14 @@
 size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t stratum, uint32_t refid,
                                     uint32_t pc_ntp_secs, uint32_t pc_ntp_frac, uint8_t *out, size_t out_cap)
 {
-    if (req == NULL || out == NULL || req_len < NTP_PACKET_LEN || out_cap < NTP_PACKET_LEN)
+    if (req == NULL || out == NULL || req_len < PC_NTP_PACKET_LEN || out_cap < PC_NTP_PACKET_LEN)
     {
         return 0;
     }
 
     // LI (2 bits) | VN (3 bits) | Mode (3 bits). Echo the client's version; reply as server (4).
     uint8_t vn = (uint8_t)((req[0] >> 3) & 0x7);
-    memset(out, 0, NTP_PACKET_LEN);
+    memset(out, 0, PC_NTP_PACKET_LEN);
     out[0] = (uint8_t)((0u << 6) | (vn << 3) | 4u); // LI = 0 (in sync), VN echoed, Mode = 4 (server)
     out[1] = stratum;
     out[2] = req[2] ? req[2] : 6; // poll interval: echo the client's, else 2^6 s
@@ -43,7 +43,7 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
     pc_wr32be(out + 36, pc_ntp_frac);
     pc_wr32be(out + 40, pc_ntp_secs); // transmit timestamp
     pc_wr32be(out + 44, pc_ntp_frac);
-    return NTP_PACKET_LEN;
+    return PC_NTP_PACKET_LEN;
 }
 
 // All NTP-server binding state, owned by one instance (internal linkage): the advertised
@@ -53,7 +53,7 @@ typedef struct
     uint8_t stratum;
     uint32_t refid;
 } NtpServerCtx;
-static NtpServerCtx s_ntp = {PC_NTP_SERVER_STRATUM, NTP_REFID_LOCL};
+static NtpServerCtx s_ntp = {PC_NTP_SERVER_STRATUM, PC_NTP_REFID_LOCL};
 
 // UDP handler: answer each request from the current time (silent if we have none).
 static void pc_ntp_server_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
@@ -68,8 +68,8 @@ static void pc_ntp_server_udp_handler(const uint8_t *data, size_t len, const str
     // 1 Hz second boundary, so the sub-second component is approximate on this class of clock).
     uint32_t frac = (uint32_t)(((uint64_t)(pc_millis() % 1000u) << 32) / 1000u);
 
-    uint8_t resp[NTP_PACKET_LEN];
-    size_t n = pc_ntp_server_build_response(data, len, s_ntp.stratum, s_ntp.refid, unix_secs + NTP_UNIX_OFFSET, frac,
+    uint8_t resp[PC_NTP_PACKET_LEN];
+    size_t n = pc_ntp_server_build_response(data, len, s_ntp.stratum, s_ntp.refid, unix_secs + PC_NTP_UNIX_OFFSET, frac,
                                             resp, sizeof(resp));
     if (n)
     {

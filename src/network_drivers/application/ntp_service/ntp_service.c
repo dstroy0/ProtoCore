@@ -18,12 +18,12 @@
 #if PC_HAS_VENDOR_SNTP
 #include <Arduino.h> // configTzTime: the SDK's client, which disciplines the system clock
 #else
-#include "mmgr/endian.h"                                       // pc_rd32be / pc_wr32be: the timestamp fields
-#include "mmgr/secure.h"                                       // pc_secure_persist_span: this module's storage
-#include "network_drivers/application/ntp_server/ntp_server.h" // NTP_PACKET_LEN / NTP_UNIX_OFFSET
-#include "network_drivers/transport/udp.h"                     // Udp.listener: the client port and the ask
-#include "server/clock/clock.h"                                // pc_millis: how the epoch advances between syncs
-#include "shared_primitives/ip.h"                              // Ip.parse: a server given as a literal address
+#include "mmgr/endian.h"                         // pc_rd32be / pc_wr32be: the timestamp fields
+#include "mmgr/secure.h"                         // pc_secure_persist_span: this module's storage
+#include "network_drivers/application/ntp/ntp.h" // the packet this role asks with
+#include "network_drivers/transport/udp.h"       // Udp.listener: the client port and the ask
+#include "server/clock/clock.h"                  // pc_millis: how the epoch advances between syncs
+#include "shared_primitives/ip.h"                // Ip.parse: a server given as a literal address
 #endif
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
@@ -54,16 +54,6 @@ time_t pc_ntp_epoch(void)
 
 #else // the portable client
 
-// Mode 3 is a client asking, mode 4 is a server answering (RFC 5905 sec 7.3). Version 4 in the
-// three bits above it: 0x23 is LI 0 | VN 4 | Mode 3.
-#define PC_NTP_REQ_BYTE0 0x23u
-#define PC_NTP_MODE_MASK 0x07u
-#define PC_NTP_MODE_SERVER 4u
-
-// Where the transmit timestamp sits in a packet, and where a reply echoes the one we sent.
-#define PC_NTP_OFF_ORIGIN 24u
-#define PC_NTP_OFF_XMIT 40u
-
 // All SNTP client state, owned by one instance (internal linkage): the epoch the last reply
 // carried, the millisecond it arrived so the clock can advance between syncs, the cookie that
 // reply had to echo, and the request buffer. One named owner, unreachable cross-TU.
@@ -85,7 +75,7 @@ static proto_bool ntp_mem_bind(void)
     {
         return PROTO_TRUE;
     }
-    s_ntp_svc.req = pc_secure_persist_span(NTP_PACKET_LEN);
+    s_ntp_svc.req = pc_secure_persist_span(PC_NTP_PACKET_LEN);
     return pc_span_has_storage(s_ntp_svc.req);
 }
 
@@ -100,28 +90,28 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct pc_udp_peer 
 {
     (void)peer;
     (void)ctx;
-    if (len < NTP_PACKET_LEN)
+    if (len < PC_NTP_PACKET_LEN)
     {
         return;
     }
-    if ((data[0] & PC_NTP_MODE_MASK) != PC_NTP_MODE_SERVER)
+    if (PC_NTP_MODE_OF(data[0]) != PC_NTP_MODE_SERVER)
     {
         return;
     }
-    if (data[1] == 0 || data[1] > 15)
+    if (data[1] == PC_NTP_STRATUM_KOD || data[1] > PC_NTP_STRATUM_MAX)
     {
         return; // stratum 0 is a kiss-o'-death; past 15 is unsynchronized
     }
-    if (pc_rd32be(data + PC_NTP_OFF_ORIGIN) != s_ntp_svc.cookie)
+    if (pc_rd32be(data + PC_NTP_OFF_ORIGIN_SEC) != s_ntp_svc.cookie)
     {
         return; // not an answer to what this client asked
     }
-    uint32_t secs = pc_rd32be(data + PC_NTP_OFF_XMIT);
-    if (secs <= NTP_UNIX_OFFSET)
+    uint32_t secs = pc_rd32be(data + PC_NTP_OFF_TX_SEC);
+    if (secs <= PC_NTP_UNIX_OFFSET)
     {
         return;
     }
-    time_t epoch = (time_t)(secs - NTP_UNIX_OFFSET);
+    time_t epoch = (time_t)(secs - PC_NTP_UNIX_OFFSET);
     if (epoch <= PC_NTP_PLAUSIBLE_EPOCH)
     {
         return; // a server that answers with a pre-2021 clock is not one to follow
@@ -155,13 +145,13 @@ proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2
     // before there is one.
     s_ntp_svc.cookie = pc_millis() | 1u;
     uint8_t *req = s_ntp_svc.req.buf;
-    for (size_t i = 0; i < NTP_PACKET_LEN; i++)
+    for (size_t i = 0; i < PC_NTP_PACKET_LEN; i++)
     {
         req[i] = 0;
     }
-    req[0] = PC_NTP_REQ_BYTE0;
-    pc_wr32be(req + PC_NTP_OFF_XMIT, s_ntp_svc.cookie);
-    return Udp.listener->sendto(PC_NTP_CLIENT_PORT, &dst, 123, req, NTP_PACKET_LEN);
+    req[0] = PC_NTP_LI_VN_MODE(PC_NTP_LI_NONE, PC_NTP_VERSION, PC_NTP_MODE_CLIENT);
+    pc_wr32be(req + PC_NTP_OFF_TX_SEC, s_ntp_svc.cookie);
+    return Udp.listener->sendto(PC_NTP_CLIENT_PORT, &dst, PC_NTP_PORT, req, PC_NTP_PACKET_LEN);
 }
 
 proto_bool pc_ntp_synced(void)
