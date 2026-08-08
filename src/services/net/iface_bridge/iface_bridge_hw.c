@@ -15,7 +15,7 @@
 #include "network_drivers/transport/tcp.h"
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
 
-#if PROTOCORE_HOT
+#if PC_HAS_BUS
 #include "services/peripherals/i2c.h"  // the shared I2C bus owner
 #include "services/peripherals/spi.h"  // the shared SPI bus owner, and chip select
 #include "services/peripherals/uart.h" // the shared UART owner
@@ -56,10 +56,11 @@ static const BridgeRule *rule_for_slot(uint8_t slot)
 }
 
 // ---------------------------------------------------------------------------------------------
-// Bus I/O (ESP32 only). Host builds stub these out - the codec + rule table are host-tested.
+// Bus I/O, compiled where a bus seam exists. With none these are stubs and the codec + rule table
+// are host-tested.
 // ---------------------------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_BUS
 
 // Bring the target's bus up once at publish. UART opens at its baud on the unit's default pins;
 // SPI parks the CS gpio high and starts the shared bus once; I2C uses the shared bus owner.
@@ -168,13 +169,13 @@ static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
     }
 }
 
-#else // host build: no bus. The codec + rule table are host-tested elsewhere.
+#else // no bus seam. The codec + rule table are host-tested elsewhere.
 
-void bus_begin(const BridgeTarget *t)
+static void bus_begin(const BridgeTarget *t)
 {
     (void)t;
 }
-proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
+static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
 {
     (void)t;
     (void)wbuf;
@@ -183,18 +184,18 @@ proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, ui
     (void)rlen;
     return PROTO_FALSE;
 }
-void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
+static void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
 {
     (void)slot;
     (void)t;
 }
-void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
+static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
 {
     (void)slot;
     (void)t;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 // TRANSACTION: drain complete write-then-read frames out of the slot's RX ring, run each against the bus,
 // and send the read bytes back. Peeks a whole frame into a linear scratch so the pure codec stays the one

@@ -17,7 +17,7 @@
 
 #if PC_ENABLE_LD2410
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "services/peripherals/uart.h" // the shared UART owner
 #endif
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
@@ -324,7 +324,7 @@ proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6])
 // UART binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 // Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
 // a whole frame and the read stays bounded (SRC_LAW rule 5).
@@ -399,7 +399,7 @@ proto_bool pc_ld2410_restart(void)
     return ok;
 }
 
-#else // host build: no UART. The codec above is host-tested.
+#else // no bus seam. The codec above is host-tested.
 
 proto_bool pc_ld2410_begin(int rx_pin, int tx_pin)
 {
@@ -425,6 +425,6 @@ proto_bool pc_ld2410_restart(void)
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_LD2410

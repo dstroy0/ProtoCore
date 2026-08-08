@@ -16,8 +16,8 @@
  * (::PC_CRC8_SMBUS in shared_primitives/crc.h) rather than a loop written here. Turn it on with
  * ::pc_smbus_set_pec; a part that does not implement PEC NACKs the extra byte.
  *
- * The PEC computation is pure and host-tested. The transfers are I2C, so a host build refuses
- * them.
+ * The PEC computation is pure and host-tested. The transfers are I2C, so a build with no bus seam
+ * refuses them.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

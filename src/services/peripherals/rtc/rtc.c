@@ -14,7 +14,7 @@
 
 #if PC_ENABLE_RTC
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "services/peripherals/i2c.h"
 #endif
 static int bcd2int(uint8_t b)
@@ -117,7 +117,7 @@ void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 // All RTC I2C-binding state, owned by one instance (internal linkage): the bus frame, which is a
 // register-pointer byte followed by the seven time registers. It is a member rather than a local
@@ -157,7 +157,7 @@ uint32_t pc_rtc_time_source(void)
     return pc_rtc_read_epoch();
 }
 
-#else // host build: no I2C. The BCD<->epoch conversions above are host-tested.
+#else // no bus seam. The BCD<->epoch conversions above are host-tested.
 
 proto_bool pc_rtc_begin(void)
 {
@@ -177,6 +177,6 @@ uint32_t pc_rtc_time_source(void)
     return 0;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_RTC

@@ -11,7 +11,7 @@
 
 #if PC_ENABLE_LDC1614
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #include "services/peripherals/i2c.h"
 #endif
@@ -55,7 +55,7 @@ size_t pc_ldc1614_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16
     return o;
 }
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 // All LDC1614 I2C-binding state, owned by one instance (internal linkage): the device address, the
 // register frame, and the bring-up sequence buffer, so it is one named owner, unreachable from any
@@ -127,6 +127,6 @@ proto_bool pc_ldc1614_read_ch0(uint32_t *out)
     return PROTO_TRUE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_LDC1614

@@ -16,7 +16,7 @@
 
 #if PC_ENABLE_MPR121
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "services/peripherals/i2c.h"
 #endif
 uint16_t pc_mpr121_touched(uint8_t status_lo, uint8_t status_hi)
@@ -90,7 +90,7 @@ size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t touch_t
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 // All MPR121 I2C-binding state, owned by one instance (internal linkage): the device address, the
 // register-pair frame, and the bring-up sequence buffer, so it is one named owner, unreachable
@@ -164,7 +164,7 @@ uint16_t pc_mpr121_read_filtered(uint8_t e)
     return pc_mpr121_word10(s_mpr.frame[0], s_mpr.frame[1]);
 }
 
-#else // host build: no I2C. The decode + init-sequence builder above are host-tested.
+#else // no bus seam. The decode + init-sequence builder above are host-tested.
 
 proto_bool pc_mpr121_begin(uint8_t addr)
 {
@@ -181,6 +181,6 @@ uint16_t pc_mpr121_read_filtered(uint8_t e)
     return 0;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_MPR121

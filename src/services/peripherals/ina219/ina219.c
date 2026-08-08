@@ -11,7 +11,7 @@
 
 #if PC_ENABLE_INA219
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #include "services/peripherals/i2c.h"
 #endif
@@ -51,7 +51,7 @@ int32_t pc_ina219_power_uw(int16_t raw, uint32_t current_lsb_ua)
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 // All INA219 I2C-binding state, owned by one instance (internal linkage): the device address,
 // the current LSB, and the bus frame, grouped so it is one named owner, unreachable from any
@@ -152,7 +152,7 @@ proto_bool pc_ina219_read_power_uw(int32_t *microwatts)
     return PROTO_TRUE;
 }
 
-#else // host build: no I2C. The decode / calibration / scaling above are host-tested.
+#else // no bus seam. The decode / calibration / scaling above are host-tested.
 
 proto_bool pc_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm)
 {
@@ -182,6 +182,6 @@ proto_bool pc_ina219_read_power_uw(int32_t *microwatts)
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_INA219

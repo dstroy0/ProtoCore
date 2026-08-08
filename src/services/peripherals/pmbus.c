@@ -187,7 +187,7 @@ int32_t pc_pmbus_direct_micro(uint16_t word, int16_t m, int16_t b, int8_t r)
     return (int32_t)v;
 }
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 proto_bool pc_pmbus_begin(void)
 {
@@ -259,7 +259,7 @@ proto_bool pc_pmbus_read_mfr_string(uint8_t addr, uint8_t cmd, uint8_t *out, siz
     return pc_smbus_read_block(addr, cmd, out, cap, len);
 }
 
-#else // host build: no bus. The encodings above are host-tested.
+#else // no bus seam. The encodings above are host-tested.
 
 proto_bool pc_pmbus_begin(void)
 {
@@ -336,6 +336,6 @@ proto_bool pc_pmbus_read_mfr_string(uint8_t addr, uint8_t cmd, uint8_t *out, siz
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_PMBUS

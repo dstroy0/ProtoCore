@@ -14,7 +14,7 @@
 
 #if PC_ENABLE_PCA9685
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "server/clock/clock.h" // pc_delay_us: the oscillator settle in begin()
 #include "services/peripherals/i2c.h"
 #endif
@@ -78,7 +78,7 @@ size_t pc_pca9685_set_pwm_bytes(uint8_t *buf, size_t cap, uint8_t channel, uint1
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 // All PCA9685 I2C-binding state, owned by one instance (internal linkage): the device address,
 // the configured PWM frequency, and the bus frame, grouped so it is one named owner, unreachable
@@ -128,7 +128,7 @@ proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds)
     return pc_pca9685_set_pwm(channel, 0, pc_pca9685_us_to_count(microseconds, s_pca.freq));
 }
 
-#else // host build: no I2C. The prescale / count math + encoder above are host-tested.
+#else // no bus seam. The prescale / count math + encoder above are host-tested.
 
 proto_bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)
 {
@@ -150,6 +150,6 @@ proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds)
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_PCA9685

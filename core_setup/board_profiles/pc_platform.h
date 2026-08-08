@@ -113,11 +113,11 @@
 // Vendor capabilities - what backend a vendor's core_setup/ provides.
 // ---------------------------------------------------------------------------
 //
-// The core never tests these. core_setup/ does, to decide which backend TU compiles. Each is a
-// deliberate statement by the vendor, not a default: choosing software crypto is legitimate (on some
-// parts it is the only option) but it must be chosen. There is no weak symbol behind any of these -
-// linking no backend is an undefined reference, linking two is a duplicate definition, and both fail
-// the build rather than silently selecting one.
+// A capability states what a part has. core_setup/ tests them to decide which backend TU compiles,
+// and src/ tests them where a software path and a hardware path both exist. Each is a
+// deliberate statement by the vendor, not a default: choosing software crypto is legitimate (on some parts it is the
+// only option) but it must be chosen. There is no weak symbol behind any of these - linking no backend is an undefined
+// reference, linking two is a duplicate definition, and both fail the build rather than silently selecting one.
 
 // AES-GCM. 1 = the vendor supplies an accelerated AEAD (core_setup/hal/<vendor>); 0 = the portable
 // software backend, which is software AES plus a table GHASH.
@@ -606,6 +606,21 @@ typedef ip_addr_t pc_net_ip;
 // composition runs against the capture rather than being stubbed out at the owner.
 #ifndef PC_PLATFORM_HAS_BUS
 #define PC_PLATFORM_HAS_BUS 0
+#endif
+
+// I2C / SPI / UART master. 1 = there is a seam to drive; 0 = there is none and every bus owner
+// resolves to its refusing arm. It sits here rather than with the vendor capabilities above because
+// it reads the seam macro the block above establishes.
+#ifndef PC_HAS_BUS
+#if PC_VENDOR_ESP
+#define PC_HAS_BUS 1
+#elif PROTOCORE_HOST || PC_VENDOR_MOCK
+// Both take the seam from the one arm above that includes the host driver, so they answer together.
+#define PC_HAS_BUS PC_PLATFORM_HAS_BUS
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_BUS (1 = an I2C / SPI / UART master in core_setup/hal/<vendor>, 0 = none, and every bus owner refuses). Choosing none is fine; defaulting into it is not."
+#endif
 #endif
 
 // A single "targets real silicon" convenience (any vendor backend, i.e. not the host software floor).

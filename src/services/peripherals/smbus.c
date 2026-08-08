@@ -16,7 +16,7 @@
 
 #if PC_ENABLE_SMBUS
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "services/peripherals/i2c.h"
 #endif
 
@@ -77,7 +77,7 @@ proto_bool pc_smbus_pec_enabled(void)
     return s_smb.pec;
 }
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 proto_bool pc_smbus_begin(void)
 {
@@ -295,7 +295,7 @@ proto_bool pc_smbus_block_process_call(uint8_t addr, uint8_t cmd, const uint8_t 
     return PROTO_TRUE;
 }
 
-#else // host build: no bus. The PEC above is host-tested.
+#else // no bus seam. The PEC above is host-tested.
 
 proto_bool pc_smbus_begin(void)
 {
@@ -396,6 +396,6 @@ proto_bool pc_smbus_block_process_call(uint8_t addr, uint8_t cmd, const uint8_t 
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_SMBUS

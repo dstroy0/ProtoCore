@@ -63,7 +63,7 @@
 
 PROTO_BEGIN_DECLS
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 /** @brief Bring up @p host on the given pins; -1 on quadwp / quadhd leaves the bus single or dual. */
 PC_INLINE proto_bool pc_spi_begin_on(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
@@ -158,7 +158,7 @@ PC_INLINE void pc_spi_cs_release(uint8_t pin)
     pc_platform_gpio_write(pin, PC_GPIO_HIGH);
 }
 
-#else // host build: no bus
+#else // no bus seam
 
 PC_INLINE proto_bool pc_spi_begin_on(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
 {
@@ -260,7 +260,7 @@ PC_INLINE void pc_spi_cs_release(uint8_t pin)
     (void)pin;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 PROTO_END_DECLS
 

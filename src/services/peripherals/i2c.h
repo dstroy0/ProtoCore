@@ -61,7 +61,7 @@
 
 PROTO_BEGIN_DECLS
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 /** @brief Bring up @p bus on @p sda / @p scl at @p hz (-1 on a pin = the platform default). */
 PC_INLINE proto_bool pc_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
@@ -313,7 +313,7 @@ PC_INLINE proto_bool pc_i2c_recover(void)
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 PROTO_END_DECLS
 

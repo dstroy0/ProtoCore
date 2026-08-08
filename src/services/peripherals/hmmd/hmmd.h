@@ -162,9 +162,9 @@ proto_bool pc_hmmd_parse_ack(const uint8_t *frame, size_t len, HmmdAck *out);
  */
 proto_bool pc_hmmd_ack_matches(const HmmdAck *ack, uint16_t word);
 
-// --- Binding (no-ops on a host build) ----------------------------------------------------------
+// --- Binding (no-ops with no bus seam) ----------------------------------------------------------
 
-/** @brief Open PC_HMMD_UART at PC_HMMD_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
+/** @brief Open PC_HMMD_UART at PC_HMMD_BAUD on @p rx_pin / @p tx_pin. @return true where the UART opened. */
 proto_bool pc_hmmd_begin(int rx_pin, int tx_pin);
 
 /** @brief Pump the UART through the stream. @return true if a fresh report was decoded. */

@@ -23,8 +23,8 @@
  * milli-degrees Celsius, which is what the other sensor drivers here report in. No float is
  * involved: the exponent is a shift.
  *
- * The encodings are pure and host-tested. The commands ride the SMBus shapes, so a host build
- * refuses them.
+ * The encodings are pure and host-tested. The commands ride the SMBus shapes, so a build with no
+ * bus seam refuses them.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

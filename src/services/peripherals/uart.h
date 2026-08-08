@@ -33,7 +33,7 @@
 
 PROTO_BEGIN_DECLS
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 /** @brief Bring up @p unit at @p baud, 8N1, on @p rx_pin / @p tx_pin (-1 = the unit's default). */
 PC_INLINE proto_bool pc_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int tx_pin)
@@ -108,7 +108,7 @@ PC_INLINE proto_bool pc_uart_read_byte(uint8_t unit, uint8_t *out)
     return pc_uart_read(unit, out, 1, PC_UART_TIMEOUT_MS) == 1u;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 PROTO_END_DECLS
 

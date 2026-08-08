@@ -14,7 +14,7 @@
 
 #if PC_ENABLE_HMMD
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "services/peripherals/uart.h" // the shared UART owner
 #endif
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
@@ -237,7 +237,7 @@ proto_bool pc_hmmd_ack_matches(const HmmdAck *ack, uint16_t word)
 // UART binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 // Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
 // a whole frame and the read stays bounded (SRC_LAW rule 5).
@@ -285,7 +285,7 @@ const HmmdReport *pc_hmmd_last(void)
     return s_hmmd.have ? &s_hmmd.last : NULL;
 }
 
-#else // host build: no UART
+#else // no bus seam
 
 proto_bool pc_hmmd_begin(int rx_pin, int tx_pin)
 {
@@ -304,6 +304,6 @@ const HmmdReport *pc_hmmd_last(void)
     return NULL;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_HMMD

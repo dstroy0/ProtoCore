@@ -46,7 +46,7 @@ proto_bool pc_rtc_regs_to_epoch(const uint8_t regs[RTC_REG_COUNT], uint32_t *epo
  */
 void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t regs[RTC_REG_COUNT]);
 
-/** @brief Initialize the I2C bus for the RTC. @return true on a host build (no-op) or on ESP32. */
+/** @brief Initialize the I2C bus for the RTC. @return true; with no bus seam it is a no-op. */
 proto_bool pc_rtc_begin(void);
 
 /**

@@ -12,7 +12,7 @@
 
 #if PC_ENABLE_ADS1115
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 #include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #include "services/peripherals/i2c.h"
 #endif
@@ -66,7 +66,7 @@ int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain)
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#if PC_HAS_BUS
 
 // All ADS1115 I2C-binding state, owned by one instance (internal linkage): the device address and
 // the bus frame, so it is one named owner, unreachable from any other translation unit. The frame
@@ -144,7 +144,7 @@ proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts
     return PROTO_TRUE;
 }
 
-#else // host build: no I2C. The config encoder + conversion above are host-tested.
+#else // no bus seam. The config encoder + conversion above are host-tested.
 
 proto_bool pc_ads1115_begin(uint8_t addr)
 {
@@ -166,6 +166,6 @@ proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts
     return PROTO_FALSE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_BUS
 
 #endif // PC_ENABLE_ADS1115
