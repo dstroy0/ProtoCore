@@ -15,7 +15,6 @@
   "history|src/services/storage/hotswap/hotswap.c|// through a handle to a card that is no longer there.",
   "history|src/services/web/dashboard/dashboard_routes.c|// its own schedule, so it can arrive first. This used to be inferred from a stored server",
   "history|src/services/web/edge_cache/edge_cache_proxy.c|// is no longer readable there - the window must be resolved against this captured copy.",
-  "history|src/shared_primitives/runops.h|// can no longer reach. A whole aligned load is still in bounds while PC_SWAR_BYTES of them",
   "measurement|src/crypto/aead/aes128gcm.h|* worth of records, but building a cipher context and tearing it down costs ~9,200 cycles on an",
   "measurement|src/crypto/asymmetric/ecdsa.c|// Measured (crypto bench): the S3 P-256 MODMULT path's ~14% -O3 win is carried by -fpeel-loops (bisected",
   "measurement|src/crypto/cipher/chacha20.c|// (bisected on-device); pin just that transform on the -O2 floor. The P4 takes full -O3 via the per-die defau",

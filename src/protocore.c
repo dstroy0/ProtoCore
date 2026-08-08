@@ -38,6 +38,7 @@
 #include "mmgr/frame.h"     // the diag document is a frame spec, not a concatenation
 #include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/plaintext.h" // the diag document is borrowed, not a stack array
+#include "mmgr/protostr.h"  // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h" // proto_raw_read: every move here is into our own buffer
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"
@@ -49,7 +50,6 @@
 #include "server/clock/clock.h"            // pc_millis(): the QUIC poll stamp and the request timeout
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
-#include "shared_primitives/runops.h" // every string scan, compare, copy and search on this layer
 #if PC_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
@@ -79,8 +79,8 @@
 #endif
 #endif
 // No <string.h> and no <stdio.h>: every scan, compare, copy and search on this layer goes through
-// shared_primitives/runops.h, and nothing here formats. strnlen and the strcasecmp pair are POSIX
-// rather than ISO C, so they are absent under -std=c11 on a conforming libc.
+// mmgr/protostr.h, and nothing here formats. strnlen and the strcasecmp pair are POSIX rather than
+// ISO C, so they are absent under -std=c11 on a conforming libc.
 
 // Outbound-transfer state is not held here. Each kind of transfer belongs to the TU that runs it:
 // the chunked-send state to server/response.cpp, the file-send state to
@@ -377,12 +377,12 @@ void fill_route_base(HttpRoute *r, const char *path)
 {
     // The copy terminates the destination itself and hands back what it wrote, so the length the
     // two shape tests need comes out of the move rather than from a second walk over those bytes.
-    size_t len = proto_copy(r->path, path, MAX_PATH_LEN);
+    size_t len = str.copy(r->path, path, MAX_PATH_LEN);
     r->is_active = PROTO_TRUE;
     r->is_wildcard = (len > 0 && r->path[len - 1] == '*');
     // Whether, not where: the sieve sweeps the whole field for a fixed cost rather than stopping at
     // the first `/`, which a route path is full of.
-    r->is_param = proto_has(r->path, MAX_PATH_LEN, "/:", sizeof("/:"));
+    r->is_param = str.has(r->path, MAX_PATH_LEN, "/:", sizeof("/:"), PROTO_FALSE);
     r->is_regex = PROTO_FALSE;
     r->iface_filter = PC_IF_ANY;
 #if PC_ENABLE_AUTH

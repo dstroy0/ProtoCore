@@ -5,13 +5,13 @@
  * @file udp_listener.c
  * @brief Layer 4 UDP receiving side. See udp_listener.h.
  *
- * One body. A port is bound, and a queued datagram leaves, through the stack surface
- * pc_platform.h names; a build with no vendor gets that surface from the host driver on its
- * include path, so this file compiles and runs the same way on both.
+ * One body. A port is bound, and a datagram leaves, through the stack surface pc_platform.h
+ * names; a build with no vendor gets that surface from the host driver on its include path, so
+ * this file compiles and runs the same way on both.
  */
 
 #include "network_drivers/transport/udp/udp_listener.h"
-#include "network_drivers/transport/udp/udp_datagram.h" // the wire layout the rings carry
+#include "network_drivers/transport/udp/udp_datagram.h" // the wire layout the receive ring carries
 
 #include "core_setup/board_profiles/pc_platform.h" // the stack's UDP, under our names
 #include "network_drivers/transport/diffserv.h"    // DSCP marking; compiles out when off
@@ -26,10 +26,10 @@ PROTO_BEGIN_DECLS
 /**
  * @brief State for one bound UDP port.
  *
- * Two rings. The receive ring's producer is the stack's trampoline and its consumer is poll(); the
- * send ring's producer is reply() / sendto() and its consumer is the marshaled flush, which runs in
- * the stack's thread. Each index pair is single-producer / single-consumer, so both are `_Atomic`
- * and reached only through PROTO_ATOMIC_LOAD / PROTO_ATOMIC_STORE.
+ * One ring, on the receive side: its producer is the stack's trampoline and its consumer is poll().
+ * The index pair is single-producer / single-consumer, so both are `_Atomic` and reached only
+ * through PROTO_ATOMIC_LOAD / PROTO_ATOMIC_STORE. A send carries the caller's buffer to the wire
+ * inside one marshaled call, so nothing queues on the way out.
  */
 typedef struct
 {
@@ -43,35 +43,26 @@ typedef struct
     _Atomic size_t rx_head; ///< Producer: the stack's trampoline.
     _Atomic size_t rx_tail; ///< Consumer: poll().
 
-    uint8_t tx[PC_UDP_TX_RING];
-    _Atomic size_t tx_head; ///< Producer: reply() / sendto().
-    _Atomic size_t tx_tail; ///< Consumer: the marshaled flush.
-
     pc_udp_pcb *pcb; ///< The stack's control block; NULL when the slot is free.
 } UdpBind;
 
 static_assert(PC_RING_POW2(PC_UDP_RX_RING), "PC_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
-static_assert(PC_RING_POW2(PC_UDP_TX_RING), "PC_UDP_TX_RING must be a power of two: a ring index wraps with a mask");
 static_assert(PC_MAX_UDP_LISTENERS <= PC_RING_SLOTS_MAX,
               "the bound-slot bitmask (UdpListenerCtx::bound) is a uint32; raise it or fall back to a scan");
 
 /**
  * @brief All receiving-side UDP state, owned by one instance.
  *
- * One staging buffer per role rather than per slot. A payload stage is held for the length of one
- * delivery and one flush, and each header stage belongs to exactly one end of one ring, so no two
- * tasks reach the same buffer: the trampoline writes rx_whdr, poll() reads rx_rhdr, a send writes
- * tx_whdr, and the flush reads tx_rhdr.
+ * One staging buffer per role rather than per slot. The payload stage is held for the length of one
+ * delivery, and each header stage belongs to exactly one end of the receive ring, so no two tasks
+ * reach the same buffer: the trampoline writes rx_whdr and poll() reads rx_rhdr.
  */
 typedef struct
 {
     UdpBind bind[PC_MAX_UDP_LISTENERS];
     uint8_t rx_stage[PC_UDP_RX_BUF_SIZE]; ///< Contiguous payload handed to the handler.
-    uint8_t tx_stage[PC_UDP_RX_BUF_SIZE]; ///< Contiguous payload handed to the wire.
     uint8_t rx_whdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's producer.
     uint8_t rx_rhdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's consumer.
-    uint8_t tx_whdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the send ring's producer.
-    uint8_t tx_rhdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the send ring's consumer.
     char group_text[PC_IP_STR_MAX];       ///< Where joined_group() formats the group it reports.
     _Atomic uint32_t bound;               ///< Bit i set = bind[i] is bound. One ctz instead of a scan.
     proto_bool polling;                   ///< Set for the duration of poll(); a reentrant call returns.
@@ -137,7 +128,7 @@ static UdpBind *free_bind(void)
     return &s_lst.bind[i];
 }
 
-/** @brief Reset a slot's rings and handler state, leaving it free. */
+/** @brief Reset a slot's ring and handler state, leaving it free. */
 static void bind_clear(UdpBind *b)
 {
     pc_ip empty = {PC_IP_NONE, {0}};
@@ -149,8 +140,6 @@ static void bind_clear(UdpBind *b)
     pc_slot_clear(&s_lst.bound, bind_idx(b));
     PROTO_ATOMIC_STORE(&b->rx_head, 0);
     PROTO_ATOMIC_STORE(&b->rx_tail, 0);
-    PROTO_ATOMIC_STORE(&b->tx_head, 0);
-    PROTO_ATOMIC_STORE(&b->tx_tail, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -163,8 +152,7 @@ typedef enum PROTO_ENUM_PACKED
     UDP_OP_BIND,        ///< new + bind + arm recv on a slot
     UDP_OP_BIND_MCAST,  ///< as BIND, plus SO_REUSEADDR + IGMP join
     UDP_OP_LEAVE_MCAST, ///< IGMP leave + remove
-    UDP_OP_UNBIND,      ///< remove
-    UDP_OP_FLUSH        ///< drain a slot's send ring to the wire
+    UDP_OP_UNBIND       ///< remove
 } pc_udp_op;
 
 typedef struct
@@ -177,7 +165,7 @@ typedef struct
     proto_bool result;
 } pc_udp_call;
 
-// Stamp a control block with the configured UDP DSCP, applied per flush so a DiffServ.set_udp()
+// Stamp a control block with the configured UDP DSCP, applied per send so a DiffServ.set_udp()
 // change reaches the next datagram.
 static void apply_dscp(pc_udp_pcb *pcb)
 {
@@ -269,22 +257,6 @@ static void udp_trampoline(void *arg, pc_udp_pcb *pcb, pc_pbuf *p, const pc_net_
     pc_net_pbuf_free(p);
 }
 
-// Drain one slot's send ring to the wire, as the marshaled FLUSH op, so this is the ring's sole
-// consumer and it runs in the stack's thread.
-static void flush_ring(UdpBind *b)
-{
-    apply_dscp(b->pcb);
-    pc_udp_dgram d = {{PC_IP_NONE, {0}}, 0, 0};
-    while (pc_udp_dgram_take(b->tx, PC_UDP_TX_RING, &b->tx_head, &b->tx_tail, s_lst.tx_rhdr, &d, s_lst.tx_stage,
-                             sizeof(s_lst.tx_stage)))
-    {
-        if (b->pcb != NULL)
-        {
-            (void)wire_send(b->pcb, &d.addr, d.port, s_lst.tx_stage, d.len);
-        }
-    }
-}
-
 static pc_net_err udp_do(pc_net_call *c)
 {
     pc_udp_call *k = (pc_udp_call *)c;
@@ -366,10 +338,6 @@ static pc_net_err udp_do(pc_net_call *c)
         k->b->pcb = NULL;
         k->result = PROTO_TRUE;
         break;
-    case UDP_OP_FLUSH:
-        flush_ring(k->b);
-        k->result = PROTO_TRUE;
-        break;
     }
     return PC_NET_OK;
 }
@@ -409,12 +377,44 @@ static void unbind_port(UdpBind *b)
     (void)marshal_op(UDP_OP_UNBIND, b, 0, NULL);
 }
 
-static void flush_bind(UdpBind *b)
+// The datagram, carried to the stack's thread by pointer. The caller's buffer is the send buffer,
+// so nothing is copied into this and it holds no storage of its own.
+typedef struct
 {
-    if (pc_ring_available(&b->tx_head, &b->tx_tail, PC_UDP_TX_RING) > 0)
+    pc_net_call base;
+    UdpBind *b;
+    const pc_ip *dst;
+    const uint8_t *data;
+    size_t len;
+    uint16_t port;
+    proto_bool ok;
+} pc_udp_send_call;
+
+// The send, on the stack's thread, from the slot's bound control block so the peer sees the port it
+// is answering.
+static pc_net_err send_do(pc_net_call *c)
+{
+    pc_udp_send_call *k = (pc_udp_send_call *)c;
+    if (k->b->pcb == NULL)
     {
-        (void)marshal_op(UDP_OP_FLUSH, b, 0, NULL);
+        return PC_NET_OK; // unbound: k->ok stays false and the caller still holds its bytes
     }
+    apply_dscp(k->b->pcb);
+    k->ok = wire_send(k->b->pcb, k->dst, k->port, k->data, k->len);
+    return PC_NET_OK;
+}
+
+// Send one datagram out of slot @p b, from where the caller's bytes already are.
+static proto_bool send_now(UdpBind *b, const pc_ip *a, uint16_t port, const uint8_t *data, size_t len)
+{
+    if (b == NULL || a == NULL || data == NULL || len == 0 || len > PC_UDP_RX_BUF_SIZE)
+    {
+        return PROTO_FALSE;
+    }
+    // The marshal is synchronous, so this outlives the call and carries its answer back.
+    pc_udp_send_call k = {{0}, b, a, data, len, port, PROTO_FALSE};
+    (void)pc_net_call_marshal(send_do, &k.base);
+    return k.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -514,21 +514,9 @@ static void poll_all(void)
                     b->handler(s_lst.rx_stage, d.len, &peer, b->ctx);
                 }
             }
-            flush_bind(b);
         }
     }
     s_lst.polling = PROTO_FALSE;
-}
-
-// Queue one datagram on a slot's send ring.
-static proto_bool queue_tx(UdpBind *b, const pc_ip *a, uint16_t port, const uint8_t *data, size_t len)
-{
-    if (b == NULL || data == NULL || len == 0 || len > PC_UDP_RX_BUF_SIZE)
-    {
-        return PROTO_FALSE;
-    }
-    pc_udp_dgram d = {*a, port, (uint16_t)len};
-    return pc_udp_dgram_put(b->tx, PC_UDP_TX_RING, &b->tx_head, &b->tx_tail, s_lst.tx_whdr, &d, data, len);
 }
 
 static proto_bool reply_to(const struct pc_udp_peer *peer, const uint8_t *data, size_t len)
@@ -537,7 +525,7 @@ static proto_bool reply_to(const struct pc_udp_peer *peer, const uint8_t *data, 
     {
         return PROTO_FALSE;
     }
-    return queue_tx(peer->bind, &peer->addr, peer->port, data, len);
+    return send_now(peer->bind, &peer->addr, peer->port, data, len);
 }
 
 static proto_bool peer_addr_of(const struct pc_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out)
@@ -564,17 +552,7 @@ static proto_bool send_from(uint16_t listen_port, const pc_ip *dst, uint16_t dst
     {
         return PROTO_FALSE;
     }
-    return queue_tx(b, dst, dst_port, data, len);
-}
-
-static size_t sndbuf_of(uint16_t listen_port)
-{
-    UdpBind *b = find_bind(listen_port);
-    if (b == NULL)
-    {
-        return 0;
-    }
-    return pc_udp_dgram_room(&b->tx_head, &b->tx_tail, PC_UDP_TX_RING);
+    return send_now(b, dst, dst_port, data, len);
 }
 
 // Close @p port: leave its group when it joined one, drop the stack's control block, free the slot.
@@ -614,7 +592,6 @@ const UdpListenerNs UdpListener = {
     .reply = reply_to,
     .peer_addr = peer_addr_of,
     .sendto = send_from,
-    .sndbuf = sndbuf_of,
     .close = close_port,
     .joined_group = group_on,
 };

@@ -19,11 +19,11 @@
 
 #if PC_ENABLE_SSH_SCP
 
+#include "mmgr/protostr.h" // str: the bounded-run walks
 #include "network_drivers/application/scp/scp.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #include "server/filesystem/filesystem.h"
-#include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
 
 typedef enum PROTO_ENUM_PACKED
 {
@@ -128,7 +128,7 @@ static void pc_scp_on_open(uint8_t slot, uint32_t channel, const char *cmd, size
     {
         // A '/' terminator is what makes the target a directory, and it is also the separator the
         // accessor's join relies on, so the flag and the string agree without either being rebuilt.
-        size_t pl = proto_scan_nul(c->dest, sizeof(c->dest));
+        size_t pl = str.len(c->dest, sizeof(c->dest));
         c->dest_is_dir = (pl > 0 && c->dest[pl - 1] == '/');
         c->st = WAIT_CLINE;
         ack(c, PC_SCP_ACK_OK); // ready for the control line

@@ -271,25 +271,28 @@ void test_answer_parse_refuses_a_truncated_record()
 void test_resolve_literal_skips_dns()
 {
     uint32_t ip = 0;
-    TEST_ASSERT_TRUE(Resolver.resolve("192.168.4.7", &ip));
+    TEST_ASSERT_EQUAL_INT(PC_DNS_READY, Resolver.resolve("192.168.4.7", &ip));
     TEST_ASSERT_EQUAL_UINT32(IPV4(192, 168, 4, 7), ip);
     TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
     TEST_ASSERT_NULL(pc_net_host_udp_pcb(PC_DNS_CLIENT_PORT));
+    TEST_ASSERT_FALSE(Resolver.busy()); // no query, so nothing to be busy with
 }
 
 void test_resolve_refuses_null_arguments()
 {
     uint32_t ip = 0;
-    TEST_ASSERT_FALSE(Resolver.resolve(NULL, &ip));
-    TEST_ASSERT_FALSE(Resolver.resolve("example.com", NULL));
+    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve(NULL, &ip));
+    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve("example.com", NULL));
 }
 
-// A name puts a query on the wire, addressed to the server that was set.
+// A name puts a query on the wire, addressed to the server that was set, and the call reports busy
+// rather than waiting for the answer.
 void test_resolve_asks_the_configured_server()
 {
     TEST_ASSERT_TRUE(Resolver.set_server("192.168.1.1"));
     uint32_t ip = 0;
-    TEST_ASSERT_FALSE(Resolver.resolve("example.com", &ip)); // nothing answers, so it times out
+    TEST_ASSERT_EQUAL_INT(PC_DNS_BUSY, Resolver.resolve("example.com", &ip));
+    TEST_ASSERT_TRUE(Resolver.busy());
 
     TEST_ASSERT_TRUE(pc_net_host_udp_count() > 0);
     const pc_net_host_dgram *d = pc_net_host_udp_at(0);
@@ -298,15 +301,23 @@ void test_resolve_asks_the_configured_server()
     TEST_ASSERT_EQUAL_UINT8(192, d->addr[0]);
     TEST_ASSERT_EQUAL_UINT8(1, d->addr[3]);
     TEST_ASSERT_EQUAL_UINT8(1, d->data[5]); // one question
+
+    // A second ask while that one is out gets the same answer, and puts no second query on the wire.
+    size_t sent = pc_net_host_udp_count();
+    TEST_ASSERT_EQUAL_INT(PC_DNS_BUSY, Resolver.resolve("elsewhere.example", &ip));
+    TEST_ASSERT_EQUAL_size_t(sent, pc_net_host_udp_count());
 }
 
-// The deadline is what ends a resolve nothing answers.
+// The module's timer is what ends a query nothing answers, and the caller is what advances it.
 void test_resolve_gives_up_at_the_deadline()
 {
-    uint32_t before = millis();
     uint32_t ip = 0;
-    TEST_ASSERT_FALSE(Resolver.resolve("example.com", &ip));
-    TEST_ASSERT_TRUE((millis() - before) >= PC_DNS_TIMEOUT_MS);
+    TEST_ASSERT_EQUAL_INT(PC_DNS_BUSY, Resolver.resolve("example.com", &ip));
+    set_millis(millis() + PC_DNS_TIMEOUT_MS - 1);
+    TEST_ASSERT_EQUAL_INT(PC_DNS_BUSY, Resolver.resolve("example.com", &ip)); // one tick short
+    set_millis(millis() + 1);
+    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve("example.com", &ip));
+    TEST_ASSERT_FALSE(Resolver.busy()); // the timer released it, so the next ask starts a new query
 }
 
 void test_set_server_refuses_what_does_not_parse()
@@ -323,9 +334,9 @@ void test_set_server_refuses_what_does_not_parse()
 void test_resolve_verified_rejects_a_rebinding_answer()
 {
     uint32_t ip = 0;
-    TEST_ASSERT_FALSE(Resolver.resolve_verified("127.0.0.1", &ip)); // loopback
-    TEST_ASSERT_FALSE(Resolver.resolve_verified("224.0.0.251", &ip));
-    TEST_ASSERT_TRUE(Resolver.resolve_verified("93.184.216.34", &ip));
+    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve_verified("127.0.0.1", &ip)); // loopback
+    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve_verified("224.0.0.251", &ip));
+    TEST_ASSERT_EQUAL_INT(PC_DNS_READY, Resolver.resolve_verified("93.184.216.34", &ip));
     TEST_ASSERT_EQUAL_UINT32(IPV4(93, 184, 216, 34), ip);
 }
 

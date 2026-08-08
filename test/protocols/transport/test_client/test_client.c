@@ -43,7 +43,7 @@ void test_the_dial_resolves_a_literal()
     uint32_t ip = 0;
     TEST_ASSERT_NOT_NULL(network.dns);
     TEST_ASSERT_NOT_NULL(network.dns->resolver);
-    TEST_ASSERT_TRUE(network.dns->resolver->resolve(HOST, &ip));
+    TEST_ASSERT_EQUAL_INT(PC_DNS_READY, network.dns->resolver->resolve(HOST, &ip));
     TEST_ASSERT_EQUAL_HEX32(0xC0A8010Au, ip); // 192.168.1.10, host order
 }
 
@@ -61,18 +61,32 @@ void test_open_connects_and_reports_the_slot()
     Tcp.client->close(cid);
 }
 
+// open() hands back a slot before the connection exists, so a failure shows up where the caller
+// drives it: is_closed(). Only a missing name and an exhausted pool are refused at the call.
 void test_open_refuses_a_bad_host_and_a_refused_connect()
 {
     TEST_ASSERT_TRUE(Tcp.client->open(NULL, 80, 1000) < 0); // nothing to resolve
-    TEST_ASSERT_TRUE(Tcp.client->open("", 80, 1000) < 0);   // nor an empty name
-    TEST_ASSERT_TRUE(Tcp.client->open("no.such.host", 80, 10) < 0);
 
-    mock_connect_fail_once(); // the stack refuses the SYN
-    TEST_ASSERT_TRUE(Tcp.client->open(HOST, 80, 100) < 0);
+    // A name that never answers holds its slot until the slot's own timer ends it.
+    int bad = Tcp.client->open("no.such.host", 80, 10);
+    TEST_ASSERT_TRUE(bad >= 0);
+    TEST_ASSERT_FALSE(Tcp.client->connected(bad));
+    set_millis(millis() + 11);
+    TEST_ASSERT_TRUE(Tcp.client->is_closed(bad));
+    Tcp.client->close(bad);
 
-    // A refused open leaves no slot behind: the next one succeeds.
+    // The stack refuses the SYN, so the connect fails inside the first step and never comes up.
+    mock_connect_fail_once();
+    int refused = Tcp.client->open(HOST, 80, 100);
+    TEST_ASSERT_TRUE(refused >= 0);
+    TEST_ASSERT_FALSE(Tcp.client->connected(refused));
+    TEST_ASSERT_TRUE(Tcp.client->is_closed(refused));
+    Tcp.client->close(refused);
+
+    // A closed slot is returned to the pool: the next open takes one and connects.
     int cid = Tcp.client->open(HOST, 80, 1000);
     TEST_ASSERT_TRUE(cid >= 0);
+    TEST_ASSERT_TRUE(Tcp.client->connected(cid));
     Tcp.client->close(cid);
 }
 

@@ -3,8 +3,9 @@
 How bytes and control flow move between the OSI-style layers and who owns each
 cross-layer concern. This is the map referenced by the internal-piping cleanup: the
 rule is **one owner per cross-layer concern, behind a clean API** - no layer reaches
-into another's internals. Both axes are now settled: the data-piping axis (who owns
-RX / TX / window / events / scratch / streaming / client I/O) and the dispatch axis
+into another's internals, and a function that needs a resource asks that resource's
+owner for it. Both axes are now settled: the data-piping axis (who owns
+RX / TX / window / events / memory / streaming / client I/O) and the dispatch axis
 (how each protocol attaches) both meet the one-uniform-seam rule, with no protocol
 special-cased. The piping is straight; what remains below is the map, not a to-do.
 
@@ -18,24 +19,30 @@ src/network_drivers/
   transport/    lwIP raw-API callbacks, the per-connection RX ring, the TcpEvt
                 event queue, and the pc_conn_* I/O API. OWNS all socket I/O.
   tls/          mbedTLS record layer (static-pool BIO) - plaintext <-> ciphertext
-  session/      worker task(s), event dispatch (server_tick), scratch arena,
-                deferred-callback queues, the ProtoHandler dispatch table
+  session/      worker task(s), event dispatch (server_tick), deferred-callback
+                queues, the ProtoHandler dispatch table
   presentation/ http_parser, websocket, telnet, ssh, sse - turn a byte stream
                 into requests/frames
   application/  PC: routes, handlers, serve_file / send_chunked pumps,
                 WebDAV
 src/services/         mqtt, modbus, opcua, snmp, coap, ... (protocol features)
-src/shared_primitives/  layer-agnostic header-only primitives shared across the
-                tree so logic is never duplicated: ring.h (SPSC ring, server +
-                client), hex.h (hex encode/decode), numparse.h (no-stdlib
-                number parsing), bytes.h (byte-cursor mechanics - bounded put +
-                big-endian put/take - shared by the CBOR and MessagePack codecs),
-                mime.h (the Content-Type vocabulary, one copy referenced
-                everywhere). Header-only so nothing has to be added to the per-env
-                test src filters. Two more shared concerns live in their natural
-                module instead of here: base64url (base64 module, used by JWT +
-                OIDC) and host->IP resolution (network_drivers/network/dns/dns_resolver, used by the
+src/mmgr/       the memory manager: the two pools every borrow comes from
+                (plaintext, secure), the arena mechanism under both, the byte
+                region that carries its own bound (span), and every operation
+                that moves a byte (mem, str, swar, endian, ring, membuild,
+                frame). See "mmgr" below.
+src/shared_primitives/  layer-agnostic primitives shared across the tree so
+                logic is never duplicated: crc.h (one parameterized CRC engine),
+                hex.h (base-16), mime.h (the Content-Type vocabulary), utf8.h
+                (RFC 3629 validation), http_date.h (IMF-fixdate), ip.h (a
+                family-tagged IP address), can.h, pcap.h, log.h, and types.h (the
+                one place <stdint.h> appears). Two more shared concerns live in
+                their natural module instead of here: base64url (base64 module,
+                used by JWT + OIDC) and host->IP resolution
+                (network_drivers/network/dns/dns_resolver, used by the
                 server-adjacent code AND pc_client, so a client has one DNS owner).
+core_setup/     NOT under src/: board profiles (per-die sizing and capability
+                macros), the crypto HAL, and the pc_platform selector.
 ```
 
 ## Two threads, two boundaries
@@ -142,15 +149,17 @@ each connection streams to its own file. This fixed the concurrent-PUT clobber
 
 ## Ownership: current vs target
 
-| Concern              | Owner (target)          | Status                                            |
-| -------------------- | ----------------------- | ------------------------------------------------- |
-| Socket TX            | transport `pc_conn_*`   | DONE                                              |
-| RX receive window    | transport               | DONE (`Tcp.conn->ack_consumed`, ack-on-consume)   |
-| RX ring read/drain   | transport (read API)    | DONE (`pc_conn_read*`; consumers off the ring)    |
-| Streaming sink state | per-slot, slot-aware    | DONE (`g_dav_put[MAX_CONNS]`, slot-aware hooks)   |
-| Event routing        | session (owner queue)   | DONE                                              |
-| Scratch memory       | session (per-worker)    | DONE                                              |
-| Outbound client I/O  | transport (`pc_client`) | DONE (pooled, ack-on-consume; all clients use it) |
+| Concern              | Owner (target)              | Status                                            |
+| -------------------- | --------------------------- | ------------------------------------------------- |
+| Socket TX            | transport `pc_conn_*`       | DONE                                              |
+| RX receive window    | transport                   | DONE (`Tcp.conn->ack_consumed`, ack-on-consume)   |
+| RX ring read/drain   | transport (read API)        | DONE (`pc_conn_read*`; consumers off the ring)    |
+| Streaming sink state | per-slot, slot-aware        | DONE (`g_dav_put[MAX_CONNS]`, slot-aware hooks)   |
+| Event routing        | session (owner queue)       | DONE                                              |
+| Working memory       | mmgr `plain` (per slot)     | DONE (worker resets it per dispatch)              |
+| Key material         | mmgr `secure` (per slot)    | DONE (disjoint region; reclaiming wipes)          |
+| Byte moves / parsing | mmgr (`mem`, `str`, `swar`) | DONE (one owner per operation)                    |
+| Outbound client I/O  | transport (`pc_client`)     | DONE (pooled, ack-on-consume; all clients use it) |
 
 ## Straightening plan (phased; each phase host + HW regresses every consumer)
 
@@ -171,9 +180,9 @@ each connection streams to its own file. This fixed the concurrent-PUT clobber
    module-owned and correct as-is.
 
 All phases complete: every cross-layer concern (server TX/RX, RX window, RX read,
-streaming sink state, events, scratch, outbound client I/O) has exactly one owner
+streaming sink state, events, memory, outbound client I/O) has exactly one owner
 behind a clean API, and the server and client ring drain math is a single shared
-primitive (`ring.h`) - two pools, one ring/read core.
+primitive (`mmgr/ring.h`) - two connection pools, one ring/read core.
 
 ## Protocol dispatch (Layer 5) - how every protocol plugs into the core
 
@@ -274,26 +283,199 @@ response encode through the `pc_resp_sink` seam. The worker dispatch loop names 
 special case: HTTP plugs in exactly like SSH, Telnet, Modbus, or OPC UA. The one remaining inherent
 trait is that TLS is an HTTP-only inline transform (item 5). The piping is straight.
 
-## Unified arena primitive (`session/pc_arena`)
+## mmgr - the memory manager (`src/mmgr/`)
 
-A double-ended allocator over one region: a **persistent** end grows up from the
-bottom (first-fit free-list, individual free in any order, adjacent-block coalesce,
-top-block shrink) and a **scratch** end grows down from the top (bump, O(1) reset,
-mark/release savepoints, up to 16-byte alignment). The free space floats in the
-middle, so whichever side needs room takes it, and both ends fail closed rather than
-cross. `pc_arena_set` chains a DRAM base + a PSRAM extension: allocs prefer internal
-RAM and spill into external RAM, frees route to the owning region by address. No heap,
-no stdlib; all state in `pc_arena` (no globals), so it is unit-tested on the host
-(`native_arena`).
+One module owns every byte the library hands out and every operation that moves one.
+Nothing under `src/` declares its own working storage. A caller borrows from a pool,
+and the pool is the only thing that knows where the bytes are, how many there are, and
+who may reach them.
 
-This is the go-forward "unified server arena" for a subsystem that needs long-lived,
-individually-freed allocations (its persistent end) alongside per-dispatch transients
-(its scratch end) - the case the fixed per-slot arrays and the per-worker `scratch`
-bump pool do not cover. The existing per-worker `scratch` pool is **not** re-backed
-onto it: that pool uses only a bump end, so routing it through `pc_arena` would leave
-the persistent end (and the whole floating-boundary win) unused - pure indirection over
-a hot path. The migration waits until a real persistent-end consumer exists; folding it
-in earlier would trade a tested, single-accessor hot path for churn with no benefit.
+This is the general rule, seen from memory: **a function that needs a resource requests
+it from that resource's owner.** It does not reach past the owner, it does not keep a
+private copy, and it does not decide for itself where the bytes live. For memory the
+owner is mmgr, the answer is one of exactly two pools, and the request is a call.
+
+```
+src/mmgr/
+  arena.c/.h      the double-ended allocator, and the worker identity a borrow keys on
+  plaintext.c/.h  the plaintext pool accessor (`plain`)
+  secure.c/.h     the secret pool accessor (`secure`); reclaiming wipes
+  span.h          pc_span / pc_cspan - a byte region that carries its own bound
+  bytes.h         the byte verbs: append into a span, take out of a cspan
+  endian.h        a fixed width moved between an integer and the bytes at a pointer
+  bitio.h         LSB-first bit writer (DEFLATE, ssh zlib)
+  rawmemcpy.h     the raw load and store: PROTO_RAW, PROTO_ALIGN, proto_raw_read
+  swar.h          lane math - one word treated as its byte lanes, branchless
+  protomem.c/.h   the span walks (`mem`): cpy, move, cmp, chr, set, zero
+  protostr.c/.h   the bounded-run walks (`str`): len, diff, eq, starts, find, copy, to_*
+  membuild.h      pc_sb - bounded no-heap builder into bytes the caller already owns
+  frame.c/.h      declarative frame builder: a frame is a static table of typed fields
+  float_bits.h    a double read as the three fields it is
+  ring.h          the SPSC byte ring, the segment ring, and the slot-mask view
+  dma.c/.h        DMA channel ingest / egress (PC_ENABLE_DMA)
+```
+
+### Two pools, one mechanism
+
+`pc_arena` is the mechanism and there is exactly one of it: one contiguous region with
+two allocators growing toward each other and the free space floating in the middle.
+
+```
+[ persistent  --grows up-->        | free |        <--grows down--  scratch ]
+  low addr                    (floating boundary)                   high addr
+```
+
+The **persistent** end is a first-fit free list - individual free in any order,
+adjacent-block coalesce, top-block shrink, and the bytes come back zeroed. The
+**scratch** end is a bump with O(1) reset and mark/release savepoints, aligned up to
+`PC_ARENA_MAX_ALIGN` (16). Whichever side needs room takes it, and both ends fail
+closed (NULL) rather than crossing. `pc_arena_set` chains a DRAM base and a PSRAM
+extension: a borrow takes the first region that fits, a free routes to the owning
+region by address. No heap, no stdlib, all state in `pc_arena` (no globals), so it is
+unit-tested on the host.
+
+`plaintext.c` and `secure.c` are **not** second allocators. Each is an access layer
+that instantiates that one mechanism over its own compile-time-sized storage and
+decides who may reach it. Nothing outside `src/mmgr/` names `pc_arena`.
+
+|                    | plaintext (`plain`)                        | secure (`secure`)                                       |
+| ------------------ | ------------------------------------------ | ------------------------------------------------------- |
+| holds              | anything whose bytes are not secret        | key material only                                       |
+| hand-out           | uninitialized                              | uninitialized                                           |
+| reclaim            | move the offset                            | **wipe, then** move the offset                          |
+| who reclaims       | the worker, once per dispatch              | the borrower, at its own mark/release                   |
+| long-lived storage | (none - the pool is emptied each dispatch) | `secure.persist_span()`, the end no mark walks          |
+| per-slot size      | `PC_PLAINTEXT_ARENA_SIZE`                  | `PC_SECURE_ARENA_SIZE`, derived from the enabled crypto |
+
+The pool is chosen by whether the contents are secret and by nothing else. Lifetime is
+not the axis: both pools carry long-lived and ephemeral borrows. A peer's public point,
+a ciphertext on its way out, a staging buffer for an outbound frame are plaintext;
+putting them in the secure pool only shrinks the room left for real secrets.
+
+### One slot per worker, so a borrow needs no lock
+
+Each pool is cut one arena per slot: one per server worker (`PC_WORKER_COUNT`), plus
+the **ghost** at `PC_GHOST_WORKER_SLOT`, which is the library's own. A borrow resolves
+its slot from `pc_worker_self()` and never takes one as an argument, so a borrow cannot
+cross workers and the bump needs no lock. A caller that is not a server worker clamps
+to the ghost rather than to worker 0. Under `PC_DEBUG_CHECKS` each slot records the
+first execution context to touch it and asserts on a second, turning a future
+cross-core mistake into an immediate visible failure.
+
+That identity lives in `arena.h`, with the thing it indexes: mmgr arbitrates the
+memory, so it owns the identity the arbitration keys on. Starting, waking and stopping
+those workers is scheduling and stays in `session/worker`.
+
+### Who reclaims what
+
+- **Plaintext: the worker.** `dispatch_event()` calls `pc_plaintext_reset()` before
+  handing an event to its protocol handler, so a borrow is valid only until that
+  handler returns and a forgotten release cannot accumulate across events. Inside one
+  dispatch, `plain.mark()` / `plain.release()` nest.
+- **Secure: the borrower, and reclaiming wipes.** `pc_secure_release()` zeroes the
+  reclaimed extent **before** the position moves, so the bytes are already zero at the
+  instant they become available again - there is no window in which the next borrow is
+  handed the previous tenant's key material. The wipe is structural rather than a
+  discipline every return path has to remember, which is the form that had already been
+  missed on two SSH key-exchange error paths. `pc_secure_wipe()` is the same primitive
+  for storage that was never in a pool.
+- **Long-lived secrets: the persistent end.** `secure.persist_span(n)` takes the end no
+  mark walks, so a credential table or a key schedule bound once at setup survives every
+  release and every reset, and comes back zeroed.
+
+### Ownership is an address range
+
+The two pools are disjoint regions, so the owner is recoverable from the pointer alone.
+`pc_plaintext_owns()` and `pc_secure_owns()` are one unsigned subtract and compare
+against a compile-time extent, with no loop, no per-slot comparison and no
+per-allocation metadata, and they are mutually exclusive by construction: a secret can
+never be accepted where plaintext is expected, or the reverse. A pointer below the base
+wraps to a huge offset and fails the same bound as one past the end, so an overrun
+cannot test as still-inside. `slot_of()` answers which slot, so a borrow being handed
+back can be asserted to belong to the calling worker.
+
+`high_water()` reports the peak any slot reached - the number to size the arena by.
+Each pool's backing storage is named only from its `bind()`, on the allocation path, so
+`--gc-sections` reclaims the whole block from firmware that never borrows; that is why
+`reset()` must not bind.
+
+### Every TU declares its own worst case
+
+A pool size is not a chosen number. Each translation unit states the worst-case bytes
+it borrows in a single call as a `PC_WORK_*` constant in `protocore_config.h`, and the
+module that owns the working set proves it where the struct lives:
+
+```c
+static_assert(sizeof(ChachapolyWork) <= PC_WORK_CHACHAPOLY, "...");
+```
+
+`PC_SECURE_ARENA_SIZE` is then the **sum** of the terms a build actually compiles, each
+gated by its feature flag, so a build pays only for the code it has. A sum rather than a
+deepest-nest figure: the sum is a strict upper bound however those working sets nest,
+where a nest depth is only correct while the call graph stays as it is. It buys
+certainty with a little slack.
+
+The consequence is the one that matters: a module whose working set grows past its
+declaration **fails the build, naming itself**, instead of exhausting the pool at run
+time on a part nobody was watching. These are sizes and not offsets, so nothing couples
+one module to another - order is irrelevant and adding a module shifts no one.
+
+### The one memory outside the pools, and how bytes cross it
+
+The RX rings are the exception, and they are the only one: `TcpConn::rx_buffer[]` in
+the static `conn_pool`, and the UDP datagram rings. They exist because the producer is
+not a worker - `tcpip_thread` fills them - so they cannot be a worker-slot borrow. The
+owning worker drains its ring into a pool borrow, and everything from there on is a
+pool pointer:
+
+```
+tcpip_thread  -->  rx ring (conn_pool / udp)          the only memory outside the pools
+worker        -->  drain into a plain or secure borrow
+handler       -->  parse, decrypt, build, all in pool bytes
+worker (TX)   -->  drain the borrow straight to the wire
+```
+
+TX is the mirror: the send functions read out of a plaintext or secure borrow on the
+owning worker and write to the wire, so a byte is never staged into a third buffer on
+the way out.
+
+### The byte layer
+
+Borrowing and moving live in the same module because both are about memory the library
+owns. Every operation below acts on a pool borrow, and each is stated once so a fix
+lands in one place and every codec inherits it.
+
+- **`pc_span` / `pc_cspan`** (span.h) carry storage, capacity, the produced length, and
+  a sticky overflow flag. `pos` keeps counting past `cap` on overflow, so an undersized
+  region reports the capacity it should have had instead of only failing. A failed
+  borrow yields `{NULL, 0}`, never a null with a live capacity, so a caller that skips
+  `pc_span_ok()` writes nothing rather than dereferencing null. `plain.span()` /
+  `secure.span()` are the preferred borrow: one argument sets both fields, so the
+  length cannot drift from what was reserved.
+- **`mem`** (protomem) walks a span a register word at a time; a source not co-aligned
+  with the destination is funneled through two shifts and an OR. `mem.cmp` is not
+  constant time - a secret comparison uses `pc_ct_eq` (crypto/ct_eq.h).
+- **`str`** (protostr) answers where a bounded run ends and where two part company, one
+  word per test, with `ci` folding ASCII case inside the one body. Also the no-stdlib
+  number parsing (`to_long` / `to_ulong` / `to_double` / `to_float`).
+- **`swar`** is the access layer under both: load a word, test its lanes branchless,
+  name the lane that fired. Byte order enters in exactly one place,
+  `pc_swar_zero_lane`. Nothing in it walks a buffer or takes a capacity, which is what
+  keeps that claim true. The walks built on it are `str` and nothing else:
+  `shared_primitives/runops.h` was a second full implementation of the same operations
+  and was removed on 2026-08-08 (docs/BUGS.md), with its 44 call sites rewritten onto
+  `str`.
+- **`rawmemcpy.h`** owns the load itself: `PROTO_RAW` (`aligned(1)` + `may_alias`) for
+  an address that carries no guarantee, `proto_al_load` for one the caller has proven,
+  and `proto_raw_read` for a span move at any alignment. `PROTO_RAW_WORD` follows
+  `PROTO_WORD_BITS` from the board profile, not the build machine's pointer width.
+- **`membuild` / `frame`** build into bytes the caller already owns and never allocate.
+  `pc_sb` latches `ok` false on the first append that does not fit, so the caller tests
+  one flag at the end instead of a return value per call. A frame is a
+  `static const pc_field[]` in rodata walked by one engine, so nothing is parsed at
+  runtime and no float formatter is linked unless a frame declares a float field.
+- **`ring.h`** holds the SPSC drain and fill math both transports share (see the RX
+  path above), plus the segment ring and the slot-mask view.
 
 ## Multi-vendor portability (ESP / STM / RP / TI ...)
 

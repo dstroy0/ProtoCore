@@ -20,10 +20,10 @@
 #include "lwip/ip_addr.h"
 #include "lwip/priv/tcpip_priv.h"
 #else
+#include "mmgr/protostr.h"                 // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h"                // proto_raw_read: the server address moves whole
 #include "network_drivers/transport/udp.h" // Udp.listener: the query port and the ask
 #include "shared_primitives/ip.h"          // Ip.parse: the server, and the dotted-quad fast path
-#include "shared_primitives/runops.h"      // proto_scan_nul: where the caller's address ends
 #endif
 
 // ---------------------------------------------------------------------------
@@ -227,15 +227,17 @@ proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint
 
 #if PC_HAS_VENDOR_DNS_RESOLVER
 
-// All DNS-resolve binding state, owned by one instance (internal linkage): the resolved
-// address plus the done/ok flags the lwIP callback sets, grouped so it is one named owner,
-// unreachable cross-TU. The flags are volatile: the callback runs on tcpip_thread while the
-// resolve loop polls them.
+// All DNS-resolve binding state, owned by one instance (internal linkage): the resolved address,
+// the done/ok flags the lwIP callback sets, and the module's one timer, grouped so it is one named
+// owner, unreachable cross-TU. The flags are atomic: the callback writes them on tcpip_thread while
+// the caller reads them from its own tick, and volatile orders nothing across that seam.
 typedef struct
 {
     ip_addr_t addr;
-    volatile proto_bool done;
-    volatile proto_bool ok;
+    uint32_t timer;  ///< millis the query in flight left at
+    proto_bool busy; ///< a query is out; a second host waits for it
+    _Atomic proto_bool done;
+    _Atomic proto_bool ok;
 } DnsResolverCtx;
 static DnsResolverCtx s_dr;
 
@@ -278,18 +280,45 @@ static uint32_t to_host_order(const ip_addr_t *a)
     return lwip_ntohl(ip4_addr_get_u32(ip_2_ip4(a)));
 }
 
-static proto_bool resolve(const char *host, uint32_t *out_ip)
+// The query in flight, and the timer it is measured against. The stack's callback sets done from its
+// own thread, so the caller only ever reads it.
+static proto_bool dns_busy(void)
+{
+    return s_dr.busy;
+}
+
+static pc_dns_state resolve(const char *host, uint32_t *out_ip)
 {
     if (!host || !out_ip)
     {
-        return PROTO_FALSE;
+        return PC_DNS_FAILED;
     }
 
     ip_addr_t literal;
     if (ipaddr_aton(host, &literal)) // dotted-quad fast path, no DNS
     {
         *out_ip = to_host_order(&literal);
-        return PROTO_TRUE;
+        return PC_DNS_READY;
+    }
+
+    if (s_dr.busy)
+    {
+        if (s_dr.done)
+        {
+            s_dr.busy = PROTO_FALSE;
+            if (!s_dr.ok)
+            {
+                return PC_DNS_FAILED;
+            }
+            *out_ip = to_host_order(&s_dr.addr);
+            return PC_DNS_READY;
+        }
+        if ((uint32_t)(pc_millis() - s_dr.timer) >= PC_DNS_TIMEOUT_MS)
+        {
+            s_dr.busy = PROTO_FALSE;
+            return PC_DNS_FAILED;
+        }
+        return PC_DNS_BUSY;
     }
 
     s_dr.done = PROTO_FALSE;
@@ -299,18 +328,19 @@ static proto_bool resolve(const char *host, uint32_t *out_ip)
     k.host = host;
     tcpip_api_call(do_dns, &k.base); // resolve in the lwIP thread
 
-    uint32_t deadline = pc_millis() + PC_DNS_TIMEOUT_MS;
-    while (!s_dr.done && (int32_t)(deadline - pc_millis()) > 0)
+    // Already cached, so the callback ran inside the marshal and there is nothing to wait for.
+    if (s_dr.done)
     {
-        pcdelay(5);
+        if (!s_dr.ok)
+        {
+            return PC_DNS_FAILED;
+        }
+        *out_ip = to_host_order(&s_dr.addr);
+        return PC_DNS_READY;
     }
-
-    if (!s_dr.ok)
-    {
-        return PROTO_FALSE;
-    }
-    *out_ip = to_host_order(&s_dr.addr);
-    return PROTO_TRUE;
+    s_dr.busy = PROTO_TRUE;
+    s_dr.timer = pc_millis();
+    return PC_DNS_BUSY;
 }
 
 // The stack keeps its own nameserver list, learned from DHCP, so there is nothing here to point.
@@ -323,15 +353,17 @@ static proto_bool set_server(const char *ip)
 #else // the portable resolver
 
 // All portable-resolve state, owned by one instance (internal linkage): the id and answer of the
-// query in flight. The bytes those work on are the borrows in s_dns_mem. resolve() blocks until the
-// answer or the deadline, so only one query is ever in flight and the borrows are its alone.
+// query in flight, and the module's one timer. The bytes those work on are the borrows in s_dns_mem.
+// One query is in flight at a time, so the borrows are its alone.
 typedef struct
 {
     uint16_t id;
     uint32_t answer; ///< host order, 0 until a reply parses
+    uint32_t timer;  ///< millis the query in flight left at
+    proto_bool busy; ///< a query is out; a second host waits for it
     proto_bool done;
 } DnsResolverCtx;
-static DnsResolverCtx s_dr = {0, 0, PROTO_FALSE};
+static DnsResolverCtx s_dr = {0, 0, 0, PROTO_FALSE, PROTO_FALSE};
 
 // Take the query and nameserver borrows on first use, and seat the configured default in the latter.
 static proto_bool dns_client_bind(void)
@@ -350,7 +382,7 @@ static proto_bool dns_client_bind(void)
     {
         return PROTO_FALSE;
     }
-    size_t n = proto_scan_nul(PC_DNS_SERVER, s_dns_mem.server.cap);
+    size_t n = str.len(PC_DNS_SERVER, s_dns_mem.server.cap);
     if (n >= s_dns_mem.server.cap)
     {
         return PROTO_FALSE;
@@ -360,8 +392,9 @@ static proto_bool dns_client_bind(void)
     return PROTO_TRUE;
 }
 
-// Take a reply: anything that does not parse as an answer to the query in flight is ignored, and the
-// resolve keeps waiting rather than failing on it.
+// Take a reply, on the listener's drain. Always armed: busy is the sending side, so this runs
+// whether or not a query is out. Anything that does not parse as an answer to the query in flight is
+// ignored, and that query keeps waiting rather than failing on it.
 static void dns_reply(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
     (void)peer;
@@ -381,7 +414,7 @@ static proto_bool set_server(const char *ip)
     {
         return PROTO_FALSE;
     }
-    size_t n = proto_scan_nul(ip, s_dns_mem.server.cap);
+    size_t n = str.len(ip, s_dns_mem.server.cap);
     if (n >= s_dns_mem.server.cap)
     {
         return PROTO_FALSE;
@@ -391,27 +424,50 @@ static proto_bool set_server(const char *ip)
     return PROTO_TRUE;
 }
 
-static proto_bool resolve(const char *host, uint32_t *out_ip)
+static proto_bool dns_busy(void)
+{
+    return s_dr.busy;
+}
+
+static pc_dns_state resolve(const char *host, uint32_t *out_ip)
 {
     if (host == NULL || out_ip == NULL)
     {
-        return PROTO_FALSE;
+        return PC_DNS_FAILED;
     }
     pc_ip literal = {PC_IP_NONE, {0}};
     if (Ip.parse(host, &literal)) // a dotted quad answers itself, no query
     {
         *out_ip = ((uint32_t)literal.bytes[0] << 24) | ((uint32_t)literal.bytes[1] << 16) |
                   ((uint32_t)literal.bytes[2] << 8) | (uint32_t)literal.bytes[3];
-        return PROTO_TRUE;
+        return PC_DNS_READY;
     }
+
+    // The query already out: the reply landed on the listener's drain, or the timer ran out.
+    if (s_dr.busy)
+    {
+        if (s_dr.done)
+        {
+            s_dr.busy = PROTO_FALSE;
+            *out_ip = s_dr.answer;
+            return PC_DNS_READY;
+        }
+        if ((uint32_t)(pc_millis() - s_dr.timer) >= PC_DNS_TIMEOUT_MS)
+        {
+            s_dr.busy = PROTO_FALSE;
+            return PC_DNS_FAILED;
+        }
+        return PC_DNS_BUSY;
+    }
+
     pc_ip server = {PC_IP_NONE, {0}};
     if (!dns_client_bind() || !Ip.parse((const char *)s_dns_mem.server.buf, &server))
     {
-        return PROTO_FALSE;
+        return PC_DNS_FAILED;
     }
     if (!Udp.listener->listen(PC_DNS_CLIENT_PORT, dns_reply, NULL))
     {
-        return PROTO_FALSE;
+        return PC_DNS_FAILED;
     }
 
     // The id ties the reply to this query. Ticks, so two resolves in a row do not share one.
@@ -421,45 +477,36 @@ static proto_bool resolve(const char *host, uint32_t *out_ip)
     size_t n = pc_dns_query_build(s_dns_mem.tx.buf, s_dns_mem.tx.cap, s_dr.id, host);
     if (n == 0)
     {
-        return PROTO_FALSE;
+        return PC_DNS_FAILED;
     }
     if (!Udp.listener->sendto(PC_DNS_CLIENT_PORT, &server, 53, s_dns_mem.tx.buf, n))
     {
-        return PROTO_FALSE;
+        return PC_DNS_FAILED;
     }
-
-    uint32_t deadline = pc_millis() + PC_DNS_TIMEOUT_MS;
-    while (!s_dr.done && (int32_t)(deadline - pc_millis()) > 0)
-    {
-        Udp.listener->poll(); // the query leaves and the reply arrives on this pump
-        pcdelay(5);
-    }
-    if (!s_dr.done)
-    {
-        return PROTO_FALSE;
-    }
-    *out_ip = s_dr.answer;
-    return PROTO_TRUE;
+    s_dr.busy = PROTO_TRUE;
+    s_dr.timer = pc_millis();
+    return PC_DNS_BUSY;
 }
 
 #endif // PC_HAS_VENDOR_DNS_RESOLVER
 
-static proto_bool resolve_verified(const char *host, uint32_t *out_ip)
+static pc_dns_state resolve_verified(const char *host, uint32_t *out_ip)
 {
     uint32_t ip = 0;
-    if (!resolve(host, &ip))
+    pc_dns_state s = resolve(host, &ip);
+    if (s != PC_DNS_READY)
     {
-        return PROTO_FALSE;
+        return s;
     }
     if (!verify(ip))
     {
-        return PROTO_FALSE;
+        return PC_DNS_FAILED;
     }
     if (out_ip)
     {
         *out_ip = ip;
     }
-    return PROTO_TRUE;
+    return PC_DNS_READY;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -467,6 +514,7 @@ const ResolverNs Resolver = {.classify = classify,
                              .verify = verify,
                              .resolve = resolve,
                              .resolve_verified = resolve_verified,
+                             .busy = dns_busy,
                              .set_server = set_server};
 
 #endif // PC_NEED_DNS_RESOLVER

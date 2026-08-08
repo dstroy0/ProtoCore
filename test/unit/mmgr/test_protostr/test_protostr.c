@@ -1,11 +1,17 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// mmgr/protostr.h: the bounded-run walks. The oracle is a byte loop written here.
+// mmgr/protostr.h: the bounded-run walks. The oracle is libc's own string functions.
+//
+// These walks are hand rolled and step a machine word at a time, so every answer is checked against
+// the libc function that answers the same question a byte at a time. Nothing in protostr is ever the
+// oracle for anything, including itself.
 //
 // The number parsers (to_long, to_ulong, to_float) are exercised by native_primitives against the
 // numparse contract; this group covers the eleven members that had no test and asserts that every
 // member of the table is the walk its name says.
+
+#define _GNU_SOURCE // strcasestr: the case-folding search libc answers find(ci) with
 
 #include "mmgr/protostr.h"
 
@@ -52,40 +58,21 @@ void tearDown(void)
 {
 }
 
-// Index of the first NUL within cap, or cap.
+// Index of the first NUL within cap, or cap. strnlen answers this directly.
 static size_t oracle_len(const char *s, size_t cap)
 {
-    size_t i = 0;
-    while (i < cap && s[i] != '\0')
-    {
-        i++;
-    }
-    return i;
+    return strnlen(s, cap);
 }
 
-static char fold(char c)
-{
-    if (c >= 'A' && c <= 'Z')
-    {
-        return (char)(c - 'A' + 'a');
-    }
-    return c;
-}
-
-// Index of the first byte that differs within cap, or cap.
+// Index of the first byte that differs within cap, or cap. Every comparison is libc's: memcmp for
+// the exact rule, strncasecmp for the folding one, one byte per call.
 static size_t oracle_diff(const char *a, const char *b, size_t cap, int ci)
 {
     size_t i = 0;
     while (i < cap)
     {
-        char x = a[i];
-        char y = b[i];
-        if (ci)
-        {
-            x = fold(x);
-            y = fold(y);
-        }
-        if (x != y)
+        int same = ci ? (strncasecmp(a + i, b + i, 1) == 0) : (memcmp(a + i, b + i, 1) == 0);
+        if (!same)
         {
             return i;
         }
@@ -109,6 +96,55 @@ void test_len_matches_the_oracle()
             TEST_ASSERT_EQUAL_size_t(n, str.len(buf + off, BIG));
             TEST_ASSERT_EQUAL_size_t(oracle_len(buf + off, BIG), str.len(buf + off, BIG));
         }
+    }
+}
+
+// Every (NUL position, cap) pair across the word boundary, including the offsets where the word loop
+// hands over to the byte tail. strnlen answers each one.
+void test_len_matches_strnlen_at_every_cap()
+{
+    static char buf[40];
+    for (size_t nul_at = 0; nul_at < 24u; nul_at++)
+    {
+        memset(buf, 'x', sizeof(buf));
+        buf[nul_at] = '\0';
+        for (size_t cap = 0; cap < 32u; cap++)
+        {
+            TEST_ASSERT_EQUAL_size_t(strnlen(buf, cap), str.len(buf, cap));
+        }
+    }
+}
+
+// No NUL inside the window: the answer is the window, never a read past it.
+void test_len_absent_returns_the_cap()
+{
+    static char buf[16];
+    memset(buf, 'a', sizeof(buf));
+    for (size_t cap = 0; cap <= sizeof(buf); cap++)
+    {
+        TEST_ASSERT_EQUAL_size_t(strnlen(buf, cap), str.len(buf, cap));
+        TEST_ASSERT_EQUAL_size_t(cap, str.len(buf, cap));
+    }
+}
+
+// High-bit bytes are not terminators - the case a signed-char scan gets wrong.
+void test_len_ignores_high_bytes()
+{
+    static const char buf[] = {(char)0x80, (char)0xFF, (char)0x7F, (char)0x80, (char)0xFE, '\0'};
+    TEST_ASSERT_EQUAL_size_t(strnlen(buf, sizeof(buf)), str.len(buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(5, str.len(buf, sizeof(buf)));
+}
+
+// The scan is called on unaligned addresses constantly; every offset must agree.
+void test_len_unaligned()
+{
+    static char buf[32];
+    for (size_t off = 0; off < 8u; off++)
+    {
+        memset(buf, 'q', sizeof(buf));
+        buf[off + 9u] = '\0';
+        TEST_ASSERT_EQUAL_size_t(strnlen(buf + off, sizeof(buf) - off), str.len(buf + off, sizeof(buf) - off));
+        TEST_ASSERT_EQUAL_size_t(9, str.len(buf + off, sizeof(buf) - off));
     }
 }
 
@@ -313,47 +349,26 @@ static const char *put_needle(const char *s)
     return s_ndl;
 }
 
-// A naive search bounded by the haystack's own terminator: what find must agree with, byte for byte.
+// libc's own search, bounded by the haystack's terminator within cap: what find must agree with.
+// strstr and strcasestr take a terminated haystack, so the run under cap is staged into one and the
+// hit is mapped back to the caller's pointer.
+static char s_oracle_hay[128];
+
 static const char *oracle_find(const char *hay, size_t cap, const char *needle, int ci)
 {
-    size_t hl = 0;
-    while (hl < cap && hay[hl] != '\0')
+    size_t hl = strnlen(hay, cap);
+    if (hl >= sizeof(s_oracle_hay))
     {
-        hl++;
+        hl = sizeof(s_oracle_hay) - 1u;
     }
-    size_t nl = strlen(needle);
-    if (nl == 0)
-    {
-        return hay;
-    }
-    if (nl > hl)
+    memcpy(s_oracle_hay, hay, hl);
+    s_oracle_hay[hl] = '\0';
+    const char *hit = ci ? strcasestr(s_oracle_hay, needle) : strstr(s_oracle_hay, needle);
+    if (hit == NULL)
     {
         return NULL;
     }
-    for (size_t i = 0; i + nl <= hl; i++)
-    {
-        size_t j = 0;
-        while (j < nl)
-        {
-            char a = hay[i + j];
-            char b = needle[j];
-            if (ci)
-            {
-                a = fold(a);
-                b = fold(b);
-            }
-            if (a != b)
-            {
-                break;
-            }
-            j++;
-        }
-        if (j == nl)
-        {
-            return hay + i;
-        }
-    }
-    return NULL;
+    return hay + (size_t)(hit - s_oracle_hay);
 }
 
 // Periodic and self-overlapping haystacks are what break a search that assumes a failed match can
@@ -664,6 +679,10 @@ int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_len_matches_the_oracle);
+    RUN_TEST(test_len_matches_strnlen_at_every_cap);
+    RUN_TEST(test_len_absent_returns_the_cap);
+    RUN_TEST(test_len_ignores_high_bytes);
+    RUN_TEST(test_len_unaligned);
     RUN_TEST(test_len_stops_at_the_cap);
     RUN_TEST(test_diff_matches_the_oracle);
     RUN_TEST(test_diff_reports_the_cap_when_equal);

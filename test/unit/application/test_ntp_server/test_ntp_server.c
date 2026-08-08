@@ -149,7 +149,7 @@ static uint32_t fake_clock(void)
 }
 
 // Bind, hand the port one client request, and let the listener carry the reply to the wire. poll()
-// runs the handler and flushes the send ring in the same pass, so one is enough.
+// runs the handler, and the handler's reply leaves inside that call.
 static void serve(const uint8_t *req, const char *from_ip, uint16_t from_port)
 {
     pc_net_host_udp_reset();

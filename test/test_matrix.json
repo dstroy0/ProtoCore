@@ -292,7 +292,7 @@
       "tests": ["unit/fieldbus/test_iolink"]
     },
     "native_stack_l46": {
-      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 §5.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
+      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 \u00a75.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0"],
       "src": [
         "+<shared_primitives/ip.c>",
@@ -1284,7 +1284,7 @@
       "tests": ["integration/transport/test_workers"]
     },
     "native_udp": {
-      "desc": "The UDP path a stack drives, run on the host against the pcb driver in test/mocks. Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
+      "desc": "The UDP path a stack drives, run on the host against the pcb driver in test/mocks. Covers udp_listener + udp_client against the\nhost pcb driver: the receive ring, both send paths reaching the wire in the call that makes them,\nNetAddr carrying v4 and v6 both ways, the pbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
       "flags": [],
       "src": [
         "+<network_drivers/transport/udp/udp_listener.c>",
@@ -1668,7 +1668,8 @@
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<network_drivers/transport/net_addr.c>",
         "+<shared_primitives/ip.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["unit/network/test_dns_resolver"]
     },
@@ -1841,6 +1842,7 @@
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/iot/graphql/graphql.c>",
         "+<network_drivers/network/dns/dns_server.c>",
+        "+<network_drivers/network/dns/dns_wire.c>",
         "+<services/energy/dnp3/dnp3.c>",
         "+<services/iot/stomp/stomp.c>",
         "+<network_drivers/application/smb/smb2.c>",
@@ -2094,7 +2096,8 @@
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<network_drivers/transport/net_addr.c>",
-        "+<shared_primitives/ip.c>"
+        "+<shared_primitives/ip.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["unit/application/test_mdns_service"]
     },
@@ -2636,7 +2639,8 @@
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["protocols/transport/test_client"]
     },
@@ -3234,6 +3238,8 @@
         "+<core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha512.c>",
         "+<services/security/csrf/csrf.c>",
+        "+<crypto/rng/rng.c>",
+        "+<crypto/cipher/chacha20.c>",
         "+<services/security/auth_lockout/auth_lockout.c>",
         "+<services/timing_position/time_source/time_source.c>",
         "+<services/storage/config_store/config_store.c>",
@@ -3799,7 +3805,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["integration/http/test_h3_server"]
     },

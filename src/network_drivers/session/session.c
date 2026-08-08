@@ -120,7 +120,6 @@ static void server_tick(int worker_id)
     if (worker_id == 0)
     {
         Udp.listener->poll();
-        Udp.client->poll();
     }
 #endif
 

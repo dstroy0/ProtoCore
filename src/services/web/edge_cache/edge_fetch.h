@@ -28,6 +28,7 @@ PROTO_BEGIN_DECLS
 typedef struct
 {
     int (*open)(void *ctx, const char *host, uint16_t port, uint32_t timeout_ms); ///< cid >= 0, or < 0 on failure
+    proto_bool (*connected)(void *ctx, int cid); ///< step the open along; true once it is up
     proto_bool (*send)(void *ctx, int cid, const void *data, size_t len);
     size_t (*read)(void *ctx, int cid, uint8_t *buf, size_t cap); ///< 0 = nothing available right now
     proto_bool (*closed)(void *ctx, int cid);                     ///< true once the origin closed its side
@@ -50,15 +51,24 @@ typedef struct
     EdgeFetchStatus st;
     int cid;
     uint32_t start_ms;
-    uint32_t got; ///< bytes accumulated
-    int status;   ///< HTTP status (valid when DONE)
+    uint32_t got;     ///< bytes accumulated
+    uint32_t req_len; ///< request bytes parked at the head of buf until the connection is up
+    proto_bool sent;  ///< the request reached the transport, so buf now takes the response
+    int status;       ///< HTTP status (valid when DONE)
     size_t head_len;
     size_t body_off;
     size_t body_len;
     uint8_t buf[PC_EDGE_FETCH_BUF];
 } EdgeFetch;
 
-/** @brief Open + send @p request; begin receiving. Sets @p st to PENDING, or FAILED on open/send error. */
+/**
+ * @brief Open the origin connection and park @p request; begin the fetch. Sets @p st to PENDING, or
+ *        FAILED when no slot is free or the request does not fit the buffer.
+ *
+ * The connection is not up when this returns, so the request is copied into the fetch's own buffer -
+ * nothing has arrived to occupy it yet - and edge_fetch_pump() sends it on the first pump that finds
+ * the transport connected. Nothing of the caller's has to outlive the call.
+ */
 void edge_fetch_begin(EdgeFetch *f, const EdgeFetchTransport *t, const char *host, uint16_t port, const void *request,
                       size_t req_len, uint32_t now_ms);
 

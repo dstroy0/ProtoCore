@@ -11,11 +11,11 @@
 #if PC_ENABLE_HTTP3
 
 #include "core_setup/board_profiles/pc_platform.h"  // pc_platform_rand_u32: the device TRNG
+#include "mmgr/protostr.h"                          // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h"                         // proto_raw_read: each field moves into the slot
 #include "network_drivers/presentation/http/http.h" // Http.match_and_execute
 #include "network_drivers/transport/tcp.h"          // TcpConn, conn_pool: the reserved dispatch slot
 #include "protocore.h"                              // http_pool, PC_H3_DISPATCH_SLOT, http_reset
-#include "shared_primitives/runops.h"               // every scan and search on the mapped fields
 
 // Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs:
 // four bytes per platform draw, the last draw truncated to what is left.
@@ -53,7 +53,7 @@ void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const
     http_reset(slot);
 
     // Map the semantic request fields into the shared HttpReq (as pc_h2_server does per stream).
-    size_t mn = proto_scan_nul(method, sizeof(r->method));
+    size_t mn = str.len(method, sizeof(r->method));
     if (mn >= sizeof(r->method))
     {
         mn = sizeof(r->method) - 1;
@@ -64,25 +64,25 @@ void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const
     // Bounded by everything the request could occupy here, path and query together, rather than by
     // the path field alone: a '?' past the path cap still names a query this slot has room for, and
     // capping the search at the path would drop it while keeping the truncated path.
-    const char *q = proto_find(path, sizeof(r->path) + sizeof(r->query), "?", sizeof("?"));
-    size_t plen = (q != NULL) ? (size_t)(q - path) : proto_scan_nul(path, sizeof(r->path));
+    const char *q = str.find(path, sizeof(r->path) + sizeof(r->query), "?", sizeof("?"), PROTO_FALSE);
+    size_t plen = (q != NULL) ? (size_t)(q - path) : str.len(path, sizeof(r->path));
     if (plen >= sizeof(r->path))
     {
         plen = sizeof(r->path) - 1;
     }
     proto_raw_read(r->path, path, plen);
     r->path[plen] = 0;
-    r->path_idx = proto_scan_nul(r->path, sizeof(r->path));
+    r->path_idx = str.len(r->path, sizeof(r->path));
     if (q != NULL)
     {
-        size_t ql = proto_scan_nul(q + 1, sizeof(r->query));
+        size_t ql = str.len(q + 1, sizeof(r->query));
         if (ql >= sizeof(r->query))
         {
             ql = sizeof(r->query) - 1;
         }
         proto_raw_read(r->query, q + 1, ql);
         r->query[ql] = 0;
-        r->query_idx = proto_scan_nul(r->query, sizeof(r->query));
+        r->query_idx = str.len(r->query, sizeof(r->query));
     }
 
     // :authority maps to Host, the way the h2 bridge does.
@@ -91,7 +91,7 @@ void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const
         Header *h = &r->headers[r->header_count];
         r->header_count++;
         proto_raw_read(h->key, "host", 5);
-        size_t vl = proto_scan_nul(authority, sizeof(h->val));
+        size_t vl = str.len(authority, sizeof(h->val));
         if (vl >= sizeof(h->val))
         {
             vl = sizeof(h->val) - 1;

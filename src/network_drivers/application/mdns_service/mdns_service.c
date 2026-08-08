@@ -19,12 +19,12 @@
 #if PC_HAS_VENDOR_MDNS
 #include "mdns.h" // the vendor's responder, driven through its own component API
 #else
+#include "mmgr/protostr.h"                        // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h"                       // proto_raw_read: every field moves whole
 #include "mmgr/secure.h"                          // pc_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves share
 #include "network_drivers/physical/physical.h"    // pc_net_egress_ip: the address the A record carries
 #include "network_drivers/transport/udp.h"        // Udp.listener: the 5353 group bind and the reply
-#include "shared_primitives/runops.h"             // proto_scan_nul: where a caller's string ends
 #endif
 
 #if PC_HAS_VENDOR_MDNS
@@ -184,7 +184,7 @@ static size_t name_append(char *out, size_t cap, size_t n, const char *s)
         out[n] = '.';
         n++;
     }
-    size_t l = proto_scan_nul(s, cap - n);
+    size_t l = str.len(s, cap - n);
     if (n + l >= cap)
     {
         return cap;
@@ -447,7 +447,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
 // type would advertise a name nothing resolves.
 static proto_bool label_set(char *dst, size_t cap, const char *src)
 {
-    size_t n = proto_scan_nul(src, cap);
+    size_t n = str.len(src, cap);
     if (n == 0 || n >= cap)
     {
         return PROTO_FALSE;
@@ -488,8 +488,8 @@ proto_bool pc_mdns_txt(const char *key, const char *value)
         return PROTO_FALSE;
     }
     uint8_t *txt = s_mdns.txt.buf;
-    size_t kl = proto_scan_nul(key, s_mdns.txt.cap);
-    size_t vl = proto_scan_nul(value, s_mdns.txt.cap);
+    size_t kl = str.len(key, s_mdns.txt.cap);
+    size_t vl = str.len(value, s_mdns.txt.cap);
     size_t entry = kl + 1 + vl; // "key=value"
     if (kl == 0 || entry > 255 || s_mdns.txt_len + 1 + entry > s_mdns.txt.cap)
     {

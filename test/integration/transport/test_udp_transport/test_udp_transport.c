@@ -268,8 +268,7 @@ void test_peer_addr_copies_and_tolerates_null_outparams()
 }
 
 // A reply needs the peer token its handler was given, so the reply path is driven from inside a
-// handler. The reply lands on the same slot's send ring, which the poll that ran the handler
-// flushes on its way out.
+// handler. The reply leaves from the same slot the datagram arrived on, inside the reply() call.
 static void reply_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
     (void)data;
@@ -280,8 +279,8 @@ static void reply_handler(const uint8_t *data, size_t len, const struct pc_udp_p
 }
 
 // Each side captures what it sent: the listener holds replies and sends from a bound port, the
-// client holds sends from the ephemeral port. Both capture at the wire, so a poll stands between
-// queueing a datagram and reading it back.
+// client holds sends from the ephemeral port. Both capture at the wire, and the call itself puts
+// the datagram there.
 void test_send_paths_are_captured()
 {
     TEST_ASSERT_TRUE(Udp.listener->listen(5683, reply_handler, NULL));
@@ -294,47 +293,42 @@ void test_send_paths_are_captured()
 
     pc_net_host_udp_reset();
     TEST_ASSERT_TRUE(Udp.client->sendto(addr("192.168.1.10"), 514, (const uint8_t *)"syslog!", 7));
-    Udp.client->poll();
     TEST_ASSERT_EQUAL_UINT(7, (unsigned)sent_len());
     TEST_ASSERT_EQUAL_UINT16(514, pc_net_host_udp_at(pc_net_host_udp_count() - 1)->dst_port);
 
     pc_net_host_udp_reset();
     TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"notify", 6));
-    Udp.listener->poll();
     TEST_ASSERT_EQUAL_UINT(6, (unsigned)sent_len());
     TEST_ASSERT_EQUAL_INT(0, memcmp("notify", sent_bytes(), 6));
 }
 
-// sendto() reports that the ring took the datagram, so a stack that refuses it shows up at the wire
-// during poll() and not in the call that queued it.
-void test_a_refused_send_still_queues_and_drains()
+// sendto() reports what the stack did with the datagram, so a stack that refuses it says so in the
+// call that made it and nothing reaches the wire.
+void test_a_refused_send_reports_the_refusal()
 {
     TEST_ASSERT_TRUE(Udp.listener->listen(5683, on_datagram, NULL));
     mock_udp_send_fail_after(0); // the stack refuses every datagram from here
-    TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"x", 1)); // queued
-    Udp.listener->poll();
-    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count()); // refused, so nothing reached the wire
+    TEST_ASSERT_FALSE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"x", 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count());
 
-    // The refusal does not wedge the ring: the next send goes out once the stack accepts again.
+    // The refusal leaves nothing behind: the next send goes out once the stack accepts again.
     mock_udp_send_fail_after(-1);
     TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"y", 1));
-    Udp.listener->poll();
     TEST_ASSERT_EQUAL_UINT(1, (unsigned)sent_len());
     TEST_ASSERT_EQUAL_UINT8('y', sent_bytes()[0]);
 }
 
-// queue_tx() rejects a null payload, a zero length, and a payload larger than a ring frame, so
-// none of them reach the ring and the capture stays empty across the poll.
+// A send rejects a null payload, a zero length, and a payload past PC_UDP_RX_BUF_SIZE before it
+// reaches the stack, so the capture stays empty.
 void test_send_rejects_null_zero_and_oversized_payload()
 {
     TEST_ASSERT_TRUE(Udp.listener->listen(6100, on_datagram, NULL));
     TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, NULL, 5));                 // null data
     TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, (const uint8_t *)"x", 0)); // zero length
-    static uint8_t big[3000] = {0}; // larger than one ring frame's payload
+    static uint8_t big[3000] = {0}; // past the largest datagram a bound port takes
     TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, big, sizeof(big)));
     TEST_ASSERT_FALSE(Udp.listener->reply(NULL, (const uint8_t *)"x", 1)); // no peer token
-    Udp.listener->poll();
-    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count()); // none of the above landed anything
+    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count());                 // none of the above landed anything
 }
 
 // A listener bound with a null handler (a legal Udp.listener->listen() call) must not be invoked -
@@ -415,7 +409,7 @@ int main(void)
     RUN_TEST(test_peer_addr_rejects_null_peer);
     RUN_TEST(test_peer_addr_copies_and_tolerates_null_outparams);
     RUN_TEST(test_send_paths_are_captured);
-    RUN_TEST(test_a_refused_send_still_queues_and_drains);
+    RUN_TEST(test_a_refused_send_reports_the_refusal);
     RUN_TEST(test_send_rejects_null_zero_and_oversized_payload);
     RUN_TEST(test_inject_skips_a_listener_with_no_handler);
     RUN_TEST(test_an_untagged_source_address_carries_no_address);

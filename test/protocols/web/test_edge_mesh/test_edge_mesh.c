@@ -296,10 +296,17 @@ static void p_close(void *c, int cid)
     (void)c;
     (void)cid;
 }
+// The mock peer is up the moment it is opened, so the pump sends on its first call.
+static proto_bool p_connected(void *c, int cid)
+{
+    (void)cid;
+    return ((MockPeer *)c)->open_ret >= 0;
+}
 static EdgeFetchTransport peer_transport(MockPeer *m)
 {
     EdgeFetchTransport t;
     t.open = p_open;
+    t.connected = p_connected;
     t.send = p_send;
     t.read = p_read;
     t.closed = p_closed;

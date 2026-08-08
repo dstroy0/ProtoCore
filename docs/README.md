@@ -224,6 +224,8 @@ src/
 │   │   ├── file_serving/  (file_serving.h, file_serving.c)
 │   │   ├── mdns_adaptive/  (mdns_adaptive.h, mdns_adaptive.c)
 │   │   ├── mdns_service/  (mdns_service.h, mdns_service.c)
+│   │   ├── ntp/
+│   │   │   └── ntp.h
 │   │   ├── ntp_server/  (ntp_server.h, ntp_server.c)
 │   │   ├── ntp_service/  (ntp_service.h, ntp_service.c)
 │   │   ├── nts/  (nts.h, nts.c)
@@ -747,7 +749,6 @@ src/
 │   ├── log.h
 │   ├── mime.h
 │   ├── pcap.h
-│   ├── runops.h
 │   ├── speed_opt.h
 │   ├── time_compat.h
 │   ├── types.h
@@ -1535,7 +1536,6 @@ guards at compile time.
 | `PC_UDP_RX_BUF_SIZE` | `1472` | Largest UDP datagram a bound port accepts, in bytes. |
 | `PC_UDP_RX_RING` | `2048` | Per-slot UDP receive ring, in bytes. |
 | `PC_UDP_TELEMETRY_BUF` | `256` | Stack buffer for one telemetry line (bytes). |
-| `PC_UDP_TX_RING` | `4096` | UDP send ring, in bytes: per slot on the listener side, one on the client side. |
 | `PC_UMATI_NS` | `1` | NamespaceIndex the umati MachineTool nodes live at (default 1). |
 | `PC_WEBDAV_BUF_SIZE` | `2048` | Buffer (BSS) for a WebDAV 207 Multi-Status response, in bytes (see PC_ENABLE_WEBDAV). |
 | `PC_WEBDAV_MAX_ENTRIES` | `32` | Maximum children listed in a WebDAV Depth-1 PROPFIND (bounds the response). |

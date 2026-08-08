@@ -5,13 +5,12 @@
 // so these are the same lines that
 // ship to silicon, driven against test/mocks/pc_net_host.h instead of lwIP.
 //
-// What it covers: the listener's RX ring and its send ring, the client's send ring, NetAddr
-// carrying v4 and v6 in both directions, the pbuf pool refusing, and every datagram the core
-// handed to the stack read back as a DLT_RAW libpcap capture (test/mocks/pc_net_pcap.h) whose
-// IP and UDP headers are checked field by field.
+// What it covers: the listener's RX ring, both send paths reaching the wire in the call that makes
+// them, NetAddr carrying v4 and v6 in both directions, the pbuf pool refusing, and every datagram
+// the core handed to the stack read back as a DLT_RAW libpcap capture (test/mocks/pc_net_pcap.h)
+// whose IP and UDP headers are checked field by field.
 
 #include "network_drivers/transport/udp/udp_client.h"
-#include "network_drivers/transport/udp/udp_datagram.h" // PC_UDP_DGRAM_HDR: the ring entry width
 #include "network_drivers/transport/udp/udp_listener.h"
 #include "shared_primitives/ip.h" // Ip.parse, for the v6 address the mock cannot spell
 
@@ -136,55 +135,42 @@ void test_listener_peer_carries_v6()
     TEST_ASSERT_EQUAL_STRING("2001:db8::dead:beef", g_peer_ip[0]);
 }
 
-void test_listener_send_ring_fills_and_drains()
+void test_listener_sends_from_a_bound_port()
 {
     ensure_listening();
-    size_t before = UdpListener.sndbuf(PORT);
-    TEST_ASSERT_GREATER_THAN_UINT(0, before);
 
     uint8_t pay[64];
     memset(pay, 0xAA, sizeof(pay));
-    TEST_ASSERT_TRUE(UdpListener.sendto(PORT, addr("10.0.0.9"), 99, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(before - (PC_UDP_DGRAM_HDR + sizeof(pay)), UdpListener.sndbuf(PORT));
-
-    int queued = 1;
-    while (UdpListener.sendto(PORT, addr("10.0.0.9"), 99, pay, sizeof(pay)))
+    // Each send stands alone: it reaches the wire in the call that makes it, so the count tracks
+    // the calls and no poll stands between them.
+    for (size_t i = 1; i <= 8; i++)
     {
-        queued++;
-        TEST_ASSERT_LESS_THAN_INT(4096, queued);
+        TEST_ASSERT_TRUE(UdpListener.sendto(PORT, addr("10.0.0.9"), 99, pay, sizeof(pay)));
+        TEST_ASSERT_EQUAL_UINT(i, pc_net_host_udp_sent());
     }
-    TEST_ASSERT_LESS_THAN_UINT(sizeof(pay), UdpListener.sndbuf(PORT));
 
-    UdpListener.poll();
-    TEST_ASSERT_EQUAL_UINT(before, UdpListener.sndbuf(PORT));
-    TEST_ASSERT_EQUAL_UINT((size_t)queued, pc_net_host_udp_sent());
+    // An unbound port has no control block to send from.
+    TEST_ASSERT_FALSE(UdpListener.sendto(PORT + 1, addr("10.0.0.9"), 99, pay, sizeof(pay)));
+    TEST_ASSERT_EQUAL_UINT(8, pc_net_host_udp_sent());
 }
 
-void test_client_refuses_a_malformed_address_without_touching_the_ring()
+void test_client_refuses_a_malformed_address_without_sending()
 {
-    size_t before = UdpClient.sndbuf();
     uint8_t pay[8];
     memset(pay, 0x11, sizeof(pay));
     pc_ip none = {PC_IP_NONE, {0}};
     TEST_ASSERT_FALSE(UdpClient.sendto(&none, 99, pay, sizeof(pay))); // an address it never got
     TEST_ASSERT_FALSE(UdpClient.sendto(NULL, 99, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(before, UdpClient.sndbuf());
-    UdpClient.poll();
     TEST_ASSERT_EQUAL_UINT(0, pc_net_host_udp_sent());
 }
 
-void test_client_send_ring_accounts_both_families()
+void test_client_sends_both_families()
 {
-    size_t before = UdpClient.sndbuf();
     uint8_t pay[64];
     memset(pay, 0xBB, sizeof(pay));
+    // Each send reaches the wire on its own: sendto reports what the stack did, not what a queue took.
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("2001:db8::1"), 99, pay, sizeof(pay)));
-    // The entry is the same width for either family: the address travels as sixteen bytes.
-    TEST_ASSERT_EQUAL_UINT(before - 2u * (PC_UDP_DGRAM_HDR + sizeof(pay)), UdpClient.sndbuf());
-
-    UdpClient.poll();
-    TEST_ASSERT_EQUAL_UINT(before, UdpClient.sndbuf());
     TEST_ASSERT_EQUAL_UINT(2, pc_net_host_udp_count());
     TEST_ASSERT_EQUAL_UINT8(PC_NET_TYPE_V4, pc_net_host_udp_at(0)->type);
     TEST_ASSERT_EQUAL_UINT8(PC_NET_TYPE_V6, pc_net_host_udp_at(1)->type);
@@ -194,15 +180,13 @@ void test_a_spent_pbuf_pool_drops_the_datagram()
 {
     uint8_t pay[8];
     memset(pay, 0x22, sizeof(pay));
-    TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
+    // No pbuf to carry it, so the send is refused where it is made and the stack never sees it.
     mock_pbuf_fail_once();
-    UdpClient.poll();
-    // The ring still drained; the stack never saw it.
+    TEST_ASSERT_FALSE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
     TEST_ASSERT_EQUAL_UINT(0, pc_net_host_udp_sent());
 
     // The pool is available again, so the next send reaches the stack.
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
-    UdpClient.poll();
     TEST_ASSERT_EQUAL_UINT(1, pc_net_host_udp_sent());
 }
 
@@ -213,7 +197,6 @@ void test_every_send_returns_its_pbuf()
     for (int i = 0; i < PC_NET_HOST_PBUFS * 3; i++)
     {
         TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
-        UdpClient.poll();
     }
     TEST_ASSERT_EQUAL_UINT(PC_NET_HOST_PBUFS * 3, pc_net_host_udp_sent());
     // A leaked pbuf would have spent the pool by now.
@@ -228,7 +211,6 @@ void test_capture_renders_a_v4_datagram()
         pay[i] = (uint8_t)(0x40 + i);
     }
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 9999, pay, sizeof(pay)));
-    UdpClient.poll();
     TEST_ASSERT_EQUAL_UINT(1, pc_net_host_udp_count());
 
     size_t n = pc_net_pcap_render(g_pcap, sizeof(g_pcap));
@@ -256,7 +238,6 @@ void test_capture_renders_a_v6_datagram()
     uint8_t pay[17]; // odd length: the checksum pads its tail
     memset(pay, 0x5A, sizeof(pay));
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("2001:db8::1"), 5353, pay, sizeof(pay)));
-    UdpClient.poll();
 
     size_t n = pc_net_pcap_render(g_pcap, sizeof(g_pcap));
     TEST_ASSERT_EQUAL_UINT(PC_PCAP_GLOBAL_HDR_LEN + PC_PCAP_REC_HDR_LEN + 40 + 8 + 17, n);
@@ -280,7 +261,6 @@ void test_capture_refuses_a_buffer_that_cannot_hold_it()
     uint8_t pay[8];
     memset(pay, 0x44, sizeof(pay));
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
-    UdpClient.poll();
     TEST_ASSERT_EQUAL_UINT(0, pc_net_pcap_render(g_pcap, PC_PCAP_GLOBAL_HDR_LEN));
     TEST_ASSERT_EQUAL_UINT(0, pc_net_pcap_render(g_pcap, 8));
 }
@@ -290,9 +270,9 @@ int main()
     UNITY_BEGIN();
     RUN_TEST(test_listener_delivers_in_order_with_boundaries);
     RUN_TEST(test_listener_peer_carries_v6);
-    RUN_TEST(test_listener_send_ring_fills_and_drains);
-    RUN_TEST(test_client_refuses_a_malformed_address_without_touching_the_ring);
-    RUN_TEST(test_client_send_ring_accounts_both_families);
+    RUN_TEST(test_listener_sends_from_a_bound_port);
+    RUN_TEST(test_client_refuses_a_malformed_address_without_sending);
+    RUN_TEST(test_client_sends_both_families);
     RUN_TEST(test_a_spent_pbuf_pool_drops_the_datagram);
     RUN_TEST(test_every_send_returns_its_pbuf);
     RUN_TEST(test_capture_renders_a_v4_datagram);
