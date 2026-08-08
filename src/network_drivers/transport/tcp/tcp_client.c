@@ -350,6 +350,10 @@ static size_t pc_client_available(int cid)
         return 0;
     }
     ClientConn *c = &s_client.cc[cid];
+    // Step the open here too, not only in connected() / is_closed(): a caller that polls a slot by
+    // asking what has arrived would otherwise never advance a connect that has not come up, and sit
+    // on an empty ring until its own timer expired.
+    cc_pump(c);
     return pc_ring_available(&c->head, &c->tail, PC_CLIENT_RX_BUF);
 }
 
@@ -360,6 +364,7 @@ static size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
         return 0;
     }
     ClientConn *c = &s_client.cc[cid];
+    cc_pump(c); // as in available(): a caller that only ever reads still steps its open along
     size_t n = pc_ring_read(c->rx, PC_CLIENT_RX_BUF, &c->head, &c->tail, buf, cap);
     if (n > 0 && c->pcb)
     {
