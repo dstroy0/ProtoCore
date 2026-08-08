@@ -20,6 +20,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`b4f05da`](https://github.com/dstroy0/ProtoCore/commit/b4f05dae410baf6940fe1dd5b912451af7763e5a))
+- update CHANGELOG.md [skip ci] ([`780e60e`](https://github.com/dstroy0/ProtoCore/commit/780e60e3814d744f3379dc6fd2dfb211f4a921b4))
 - update CHANGELOG.md [skip ci] ([`3c111dd`](https://github.com/dstroy0/ProtoCore/commit/3c111ddbd42697af048437359eebe6f4113e451f))
 - update CHANGELOG.md [skip ci] ([`fc09a1a`](https://github.com/dstroy0/ProtoCore/commit/fc09a1a6ad405bd7eb3689e611bdce414bb06050))
 - untrack src/network_drivers/application/ntp/ntp.h, which was swept in by a directory-wide git add. It is uncommitted work in progress and stays in the working tree. ([`a697429`](https://github.com/dstroy0/ProtoCore/commit/a697429b808117f1f992c66e37be89cb63bf1bf0))
@@ -44,6 +46,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Bump version: 1.0.13 → 1.0.14 ([`bd0dac9`](https://github.com/dstroy0/ProtoCore/commit/bd0dac9258c9f0e665282ad89d47bbb9fd5b638e))
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`cb597cd`](https://github.com/dstroy0/ProtoCore/commit/cb597cdd1c65e4cd09eb5d451adff922a8ea60bc))
 - Bump version: 1.0.12 → 1.0.13 ([`ebef7c8`](https://github.com/dstroy0/ProtoCore/commit/ebef7c83b623171babcb65ea60857e1f56fdd0a9))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`8713b54`](https://github.com/dstroy0/ProtoCore/commit/8713b54be7ac288b0a47dd5a75ff79c73c807a6f))
 - Bump version: 1.0.11 → 1.0.12 ([`bbaa1ff`](https://github.com/dstroy0/ProtoCore/commit/bbaa1ffc53bf2136dd9ccb31666f0e12eda0b434))
@@ -61,8 +65,13 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4be7e49`](https://github.com/dstroy0/ProtoCore/commit/4be7e49cdcbcbe87db836f55f5487e8981061ef3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cb7845d`](https://github.com/dstroy0/ProtoCore/commit/cb7845d706007dc622a78ed0f66ffc7cc5e92339))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`bccef65`](https://github.com/dstroy0/ProtoCore/commit/bccef653ff85aea8200a43f466173c3340ceaa25))
+
+### Refactor
+
+- two paths, selected by capability - PROTOCORE_HOT is gone ([`ada42af`](https://github.com/dstroy0/ProtoCore/commit/ada42af36d3aad11625483176455eb180dcfa83e))
 
 ## [1.0.7] - 2026-08-08
 
