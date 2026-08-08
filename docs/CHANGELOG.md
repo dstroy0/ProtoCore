@@ -20,6 +20,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`1ea1601`](https://github.com/dstroy0/ProtoCore/commit/1ea1601830c7257c2c34d3e3070b98fa49aa0b0d))
+- update CHANGELOG.md [skip ci] ([`82db615`](https://github.com/dstroy0/ProtoCore/commit/82db615e34f445b2b9055f918a401c5a569ecf87))
 - update test report + coverage [skip ci] ([`b4f05da`](https://github.com/dstroy0/ProtoCore/commit/b4f05dae410baf6940fe1dd5b912451af7763e5a))
 - update CHANGELOG.md [skip ci] ([`780e60e`](https://github.com/dstroy0/ProtoCore/commit/780e60e3814d744f3379dc6fd2dfb211f4a921b4))
 - update CHANGELOG.md [skip ci] ([`3c111dd`](https://github.com/dstroy0/ProtoCore/commit/3c111ddbd42697af048437359eebe6f4113e451f))
@@ -46,6 +48,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`f64aaf3`](https://github.com/dstroy0/ProtoCore/commit/f64aaf30284428e7e732b890c07dc0d6d5bcec46))
+- Bump version: 1.0.14 → 1.0.15 ([`582ed98`](https://github.com/dstroy0/ProtoCore/commit/582ed9891603147ce7dcf3b97e7cd1b5b57d937c))
 - Bump version: 1.0.13 → 1.0.14 ([`bd0dac9`](https://github.com/dstroy0/ProtoCore/commit/bd0dac9258c9f0e665282ad89d47bbb9fd5b638e))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`cb597cd`](https://github.com/dstroy0/ProtoCore/commit/cb597cdd1c65e4cd09eb5d451adff922a8ea60bc))
 - Bump version: 1.0.12 → 1.0.13 ([`ebef7c8`](https://github.com/dstroy0/ProtoCore/commit/ebef7c83b623171babcb65ea60857e1f56fdd0a9))
@@ -71,6 +75,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- non-blocking DNS and TCP client open, and the UDP send rings are gone ([`0dbb22d`](https://github.com/dstroy0/ProtoCore/commit/0dbb22d5637a446905f9f02260cbcbce6e782223))
+- one wire format, read from RFC 5905 rather than copied per role ([`8e34117`](https://github.com/dstroy0/ProtoCore/commit/8e341172d1d7c4788bdc3255128517ece85df924))
 - two paths, selected by capability - PROTOCORE_HOT is gone ([`ada42af`](https://github.com/dstroy0/ProtoCore/commit/ada42af36d3aad11625483176455eb180dcfa83e))
 
 ## [1.0.7] - 2026-08-08
