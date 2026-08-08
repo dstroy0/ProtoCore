@@ -203,6 +203,7 @@ src/
 │   ├── dma.c
 │   ├── dma.h
 │   ├── endian.h
+│   ├── float_bits.h
 │   ├── frame.c
 │   ├── frame.h
 │   ├── membuild.h
@@ -268,7 +269,9 @@ src/
 │   │   │   ├── dns_resolver.c
 │   │   │   ├── dns_resolver.h
 │   │   │   ├── dns_server.c
-│   │   │   └── dns_server.h
+│   │   │   ├── dns_server.h
+│   │   │   ├── dns_wire.c
+│   │   │   └── dns_wire.h
 │   │   ├── forward/  (forward.h, forward.c)
 │   │   ├── network.c
 │   │   └── network.h
@@ -388,7 +391,9 @@ src/
 │   │   ├── tls.c
 │   │   ├── tls.h
 │   │   ├── tls13_kdf.c
-│   │   └── tls13_kdf.h
+│   │   ├── tls13_kdf.h
+│   │   ├── tls_record.c
+│   │   └── tls_record.h
 │   └── transport/
 │       ├── tcp/
 │       │   ├── tcp_client.c
@@ -782,8 +787,8 @@ Feature Tables workflow from `docs/footprints.json`.
 | `ZWAVE+GATEWAY` | `Drivers/ZWaveGateway` | 268,953 | 21,848 |
 | `DMA+PREEMPT_QUEUE+DMA_SIMULATE` | `Peripherals/DmaIngest` | 269,297 | 28,616 |
 | `ZIGBEE+GATEWAY` | `Drivers/ZigbeeGateway` | 269,357 | 22,104 |
+| `core/SSHCryptoSelfTest` | `L5-Session/SSHCryptoSelfTest` | 269,585 | 24,092 |
 | `SEN0192` | `Drivers/Sen0192` | 269,717 | 21,496 |
-| `core/SSHCryptoSelfTest` | `L5-Session/SSHCryptoSelfTest` | 270,121 | 24,092 |
 | `DMA+PREEMPT_QUEUE+GATEWAY+DMA_SIMULATE` | `Drivers/RadioGateway` | 270,329 | 28,728 |
 | `LD2410` | `Drivers/Ld2410` | 270,605 | 21,656 |
 | `DMA+PREEMPT_QUEUE+FORWARD+DMA_SIMULATE` | `Foundation/InterfaceForward` | 270,993 | 29,104 |
@@ -815,7 +820,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `COAP+COAP_OBSERVE` | `L7-Application/CoapObserve` | 729,985 | 47,332 |
 | `UDP_TELEMETRY` | `L7-Application/UdpTelemetry` | 729,993 | 45,012 |
 | `ESPNOW` | `L7-Application/EspNow` | 731,513 | 43,580 |
-| `DNC` | `L7-Application/EthernetDnc` | 734,029 | 61,124 |
+| `DNC` | `L7-Application/EthernetDnc` | 733,649 | 61,140 |
 | `SMTP` | `L7-Application/SmtpAlert` | 735,301 | 61,140 |
 | `HTTP_CLIENT` | `L7-Application/HttpClient` | 736,785 | 63,188 |
 | `MQTT` | `L7-Application/MqttClient` | 739,985 | 65,340 |
@@ -840,6 +845,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `OTA_ROLLBACK` | `L7-Application/OtaRollback` | 745,349 | 73,836 |
 | `TOTP` | `L7-Application/Totp` | 745,601 | 73,868 |
 | `IP_ALLOWLIST` | `L4-Transport/IpAllowlist` | 745,825 | 73,980 |
+| `core/InterfaceFilter` | `L7-Application/InterfaceFilter` | 746,033 | 73,828 |
 | `SPA_ROUTER` | `L7-Application/SpaFallback` | 746,069 | 73,828 |
 | `DIAG` | `L7-Application/Diagnostics` | 746,305 | 90,220 |
 | `core/Templating` | `L7-Application/Templating` | 746,417 | 73,868 |
@@ -849,23 +855,26 @@ Feature Tables workflow from `docs/footprints.json`.
 | `GPIO_MAP` | `L7-Application/GpioMap` | 746,873 | 73,884 |
 | `MODBUS+MODBUS_MASTER` | `L7-Application/ModbusScan` | 746,893 | 74,108 |
 | `CBOR` | `L6-Presentation/Cbor` | 746,921 | 73,908 |
-| `IPV6` | `Foundation/IPv6` | 746,977 | 73,828 |
+| `IPV6` | `Foundation/IPv6` | 746,949 | 73,828 |
 | `AUDIT_LOG` | `L7-Application/AuditLog` | 747,025 | 76,820 |
 | `JWT` | `L6-Presentation/JWTAuth` | 747,513 | 80,708 |
 | `SYSLOG` | `L7-Application/Syslog` | 747,869 | 75,740 |
 | `MSGPACK` | `L6-Presentation/MsgPack` | 748,109 | 73,908 |
 | `LOGBUF` | `L7-Application/LogBuffer` | 748,121 | 73,076 |
 | `NTP_SERVER+TIME_SOURCE+NMEA0183+NTP` | `L7-Application/NtpServer` | 748,301 | 46,724 |
+| `AUTH` | `L6-Presentation/DigestAuth` | 748,585 | 78,492 |
 | `MODBUS` | `L7-Application/ModbusTcp` | 748,861 | 70,228 |
 | `STATS` | `L7-Application/Stats` | 748,873 | 70,036 |
 | `core/Expert` | `Foundation/Expert` | 749,553 | 69,964 |
 | `CONFIG_STORE+CONFIG_IO` | `L7-Application/ConfigExport` | 749,705 | 73,904 |
+| `AUTH+AUTH_LOCKOUT` | `L6-Presentation/AuthLockout` | 749,829 | 79,068 |
 | `DNS_RESOLVER` | `L7-Application/DnsResolver` | 750,481 | 75,116 |
 | `STATS+METRICS` | `L7-Application/PrometheusMetrics` | 750,797 | 70,076 |
 | `core/Json` | `L6-Presentation/Json` | 750,921 | 69,956 |
 | `GRAPHQL` | `L7-Application/GraphQL` | 751,193 | 78,244 |
 | `COAP` | `L7-Application/CoAP` | 751,333 | 77,548 |
 | `PROVISIONING` | `L7-Application/Provisioning` | 751,917 | 75,448 |
+| `AUTH+AUTH_LOCKOUT+FORWARDED_TRUST` | `L6-Presentation/ForwardedTrust` | 752,913 | 79,108 |
 | `OTA` | `L7-Application/OTA` | 752,969 | 94,540 |
 | `core/Advanced` | `Foundation/Advanced` | 753,277 | 73,940 |
 | `ADS` | `L7-Application/AdsClient` | 753,485 | 44,204 |
@@ -876,12 +885,11 @@ Feature Tables workflow from `docs/footprints.json`.
 | `RELAY` | `L7-Application/PortForward` | 756,761 | 104,564 |
 | `core/WebSocket` | `L6-Presentation/WebSocket` | 756,825 | 81,844 |
 | `HTTP_CLIENT+WEBHOOK` | `L7-Application/Webhook` | 757,109 | 93,580 |
-| `OIDC` | `L7-Application/OidcAuth` | 757,137 | 103,188 |
+| `OIDC` | `L7-Application/OidcAuth` | 757,189 | 103,188 |
 | `core/ServerSentEvents` | `L6-Presentation/ServerSentEvents` | 757,261 | 81,852 |
 | `AUTH_LOCKOUT` | `L6-Presentation/AuthLockout` | 757,345 | 82,420 |
 | `core/Multipart` | `L6-Presentation/Multipart` | 757,597 | 81,844 |
 | `RTC+TIME_SOURCE+NTP` | `Drivers/Rtc` | 757,685 | 48,168 |
-| `core/InterfaceFilter` | `L7-Application/InterfaceFilter` | 758,049 | 81,844 |
 | `core/Sysadmin` | `Foundation/Sysadmin` | 758,429 | 73,844 |
 | `SIMATIC` | `L7-Application/SimaticSerial` | 758,481 | 83,316 |
 | `PACKML` | `L7-Application/PackML` | 758,809 | 81,884 |
@@ -893,18 +901,18 @@ Feature Tables workflow from `docs/footprints.json`.
 | `OPCUA+ROBOTICS` | `L7-Application/Robotics` | 762,349 | 80,596 |
 | `OPCUA` | `L7-Application/OpcUa` | 762,833 | 84,124 |
 | `NTRIP_CASTER` | `L7-Application/NtripCaster` | 765,277 | 72,872 |
+| `SMB` | `L7-Application/SmbFileClient` | 765,545 | 70,292 |
 | `NTP+TIME_SOURCE` | `L7-Application/TimeSourceFallback` | 765,849 | 75,452 |
-| `PROMISC+FORWARD+ETHERNET` | `Peripherals/WifiCapture` | 766,213 | 47,584 |
+| `PROMISC+FORWARD+ETHERNET` | `Peripherals/WifiCapture` | 766,233 | 47,592 |
 | `WEB_TERMINAL` | `L6-Presentation/WebTerminal` | 766,489 | 81,924 |
 | `OPCUA+OPCUA_CLIENT` | `L7-Application/OpcUaClient` | 766,701 | 86,732 |
-| `SMB` | `L7-Application/SmbFileClient` | 768,029 | 70,276 |
 | `MDNS` | `L7-Application/mDNS` | 769,825 | 75,736 |
 | `NTP` | `L7-Application/SNTP` | 770,417 | 76,384 |
 | `MDNS+PROMISC+WIFI_SNIFFER+MDNS_ADAPTIVE` | `L7-Application/MdnsAdaptive` | 771,725 | 75,816 |
-| `BUS_CAPTURE+FORWARD+ETHERNET` | `Peripherals/CanCapture` | 772,165 | 45,568 |
+| `BUS_CAPTURE+FORWARD+ETHERNET` | `Peripherals/CanCapture` | 772,177 | 45,576 |
+| `COAP+DTLS` | `L7-Application/CoapSecure` | 773,197 | 106,268 |
 | `IFACE_BRIDGE` | `L7-Application/InterfaceBridge` | 774,973 | 70,796 |
 | `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT` | `L7-Application/EdgeCache` | 777,933 | 119,324 |
-| `COAP+DTLS` | `L7-Application/CoapSecure` | 778,341 | 102,396 |
 | `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT+EDGE_MESH` | `L7-Application/MeshCache` | 778,433 | 124,240 |
 | `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT+EDGE_MESH+EDGE_CACHE_SLOTS+EDGE_FETCH_SLOTS+MESH_MAX_PEERS` | `L7-Application/MeshCache` | 782,565 | 115,380 |
 | `DASHBOARD` | `L7-Application/Dashboard` | 782,989 | 82,212 |
@@ -1116,7 +1124,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_LWM2M` | `0` | OMA LwM2M TLV codec (`services/lwm2m`). |
 | `PC_ENABLE_MBPLUS` | `0` | Opt-in Modbus Plus HDLC token-bus frame codec. |
 | `PC_ENABLE_MBUS` | `0` | Wired M-Bus (Meter-Bus, EN 13757) frame codec (`services/mbus`). |
-| `PC_ENABLE_MDNS` | `0` | mDNS / DNS-SD advertisement (`name.local` + `_http._tcp`) via ESPmDNS. |
+| `PC_ENABLE_MDNS` | `0` | mDNS / DNS-SD advertisement: `<name>.local` plus `_http._tcp` and any service added. |
 | `PC_ENABLE_MDNS_ADAPTIVE` | `0` | Opt-in adaptive mDNS beacon scheduling. |
 | `PC_ENABLE_MELSEC` | `0` | Mitsubishi MELSEC MC protocol (binary 3E) codec (`services/melsec`). |
 | `PC_ENABLE_METRICS` | `0` | Prometheus `/metrics` endpoint (text exposition format 0.0.4). |
@@ -1337,7 +1345,7 @@ guards at compile time.
 | `PC_COAP_OBSERVE_PORT` | `5683` | Default UDP port the CoAP observe transport notifies from (IANA well-known 5683). |
 | `PC_CONFIG_KEY_MAX` | `16` | Max key length incl. |
 | `PC_CONFIG_MAX_ENTRIES` | `16` | Max key/value entries in the host (test) config backend. |
-| `PC_CONFIG_VAL_MAX` | `64` | Max value bytes per entry in the host (test) config backend. |
+| `PC_CONFIG_VAL_MAX` | `2048` | Max value bytes per entry in the host (test) config backend. |
 | `PC_DASHBOARD_JSON_BUF` | `1024` | Stack buffer for the dashboard layout / values JSON (bytes). |
 | `PC_DASHBOARD_MAX_WIDGETS` | `16` | Maximum widgets in the dashboard table (BSS value array). |
 | `PC_DAV_MAX_DEPTH` | `8` | Deepest tree a WebDAV DELETE / COPY walks before refusing (see PC_ENABLE_WEBDAV). |
@@ -1350,10 +1358,11 @@ guards at compile time.
 | `PC_DNC_LEADER_LEN` | `32` | Default leader/trailer runout length for the DNC encoder. |
 | `PC_DNC_LINE_MAX` | `128` | Largest G-code block (one line) the DNC decoder reassembles. |
 | `PC_DNC_XOFF_MAX_POLLS` | `200000` | Safety cap on how many times the DNC stream engine polls the reverse channel while paused by an XOFF, before giving up with an I/O error. |
+| `PC_DNS_CLIENT_PORT` | `1153` | Local UDP port the portable resolver asks from and hears the answer on. |
 | `PC_DNS_NAME_MAX` | `128` | Max length of a queried/stored DNS name (bytes, incl NUL). |
 | `PC_DNS_SERVER_MAX_RECORDS` | `8` | Max A records in the DNS server's fixed table. |
 | `PC_DNS_SERVER_TTL` | `60` | TTL (seconds) the DNS server puts on its answers. |
-| `PC_DNS_TIMEOUT_MS` | `5000` | DNS resolve timeout in milliseconds. |
+| `PC_DNS_TIMEOUT_MS` | `5000` |  |
 | `PC_EDGE_CENC_MAX` | `32` | Stored Content-Encoding to replay (e.g. |
 | `PC_EDGE_CTYPE_MAX` | `64` | Stored Content-Type to replay. |
 | `PC_EDGE_ETAG_MAX` | `64` | Stored validator (ETag, quotes included). |
@@ -1409,6 +1418,10 @@ guards at compile time.
 | `PC_LOG_LINE_LEN` | `96` | Maximum length of one stored log line (bytes, including null). |
 | `PC_LORA_MAX_PAYLOAD` | `251` | Max LoRa payload bytes (SX127x FIFO is 256; RadioHead uses 251 + 4 header). |
 | `PC_MAX_UDP_LISTENERS` | `2` | Maximum simultaneously bound UDP ports (transport-layer UDP service). |
+| `PC_MDNS_LABEL_MAX` | `32` | Longest host label, service type or proto label the responder holds, NUL included. |
+| `PC_MDNS_MAX_SERVICES` | `4` | Services the responder advertises at once, `_http._tcp` included. |
+| `PC_MDNS_TXT_MAX` | `128` | Bytes of packed `key=value` TXT strings, each with its own length byte ahead of it. |
+| `PC_MDNS_TX_MAX` | `512` | Response datagram the responder composes. |
 | `PC_MODBUS_COILS` | `64` | Number of Modbus coils (FC 1/5/15), single-bit R/W (BSS, bit-packed). |
 | `PC_MODBUS_DISCRETE_INPUTS` | `64` | Number of Modbus discrete inputs (FC 2), single-bit read-only (BSS, bit-packed). |
 | `PC_MODBUS_HOLDING_REGS` | `64` | Number of Modbus holding registers (FC 3/6/16), 16-bit R/W (BSS). |
@@ -1428,6 +1441,7 @@ guards at compile time.
 | `PC_NEED_CLIENT` | `0` |  |
 | `PC_NEED_UDP` | `0` |  |
 | `PC_NRF24_PAYLOAD` | `32` | nRF24 fixed payload width in bytes (1..32; the chip's static payload size). |
+| `PC_NTP_CLIENT_PORT` | `1123` | Local UDP port the portable SNTP client asks from. |
 | `PC_NTP_SERVER_STRATUM` | `3` | Stratum the NTP server advertises (distance from a reference clock; 1-15). |
 | `PC_NTRIP_MAX_MOUNTS` | `2` | Max distinct mountpoints a single caster serves (each = one RTCM stream). |
 | `PC_NTRIP_MAX_ROVERS` | `4` | Max concurrent rover connections a caster serves corrections to (services/timing_position/gnss). |
@@ -1548,7 +1562,7 @@ guards at compile time.
 | `PC_ZIGBEE_MAX_DATA` | `128` | Max ASH payload bytes (an EZSP frame; the ASH data field caps near 128). |
 | `PC_ZWAVE_MAX_DATA` | `64` | Reject a Z-Wave frame whose declared length exceeds this data cap (sanity). |
 | `PROTO_INDEX_BITS` | `32` | Bits in every offset, length and capacity the library declares (pc_idx). |
-| `PROTO_MAX_HANDLERS` | `11` | Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. |
+| `PROTO_MAX_HANDLERS` | `12` | Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. |
 | `QUERY_KEY_LEN` | `24` | Maximum query-parameter key length. |
 | `QUERY_VAL_LEN` | `48` | Maximum query-parameter value length. |
 | `RESP_HDR_BUF_SIZE` | `768` | Stack buffer for HTTP response header lines in send() / send_empty() / send_unauth() / serve_file(). |
