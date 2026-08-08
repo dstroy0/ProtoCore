@@ -103,9 +103,14 @@ def guard_for(rel):
     return guard
 
 
+# Trees under src/ this law does not govern, repo-relative, matched whole. docs/SYMBOLS.md s4.
+EXCLUDE = ("src/web_assets",)
+
+
 def sources():
     for base, dirs, files in os.walk(SRC):
-        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        rel = os.path.relpath(base, ROOT).replace(os.sep, "/")
+        dirs[:] = [d for d in dirs if not d.startswith(".") and f"{rel}/{d}" not in EXCLUDE]
         for f in sorted(files):
             if f.endswith((".h", ".c", ".cpp")):
                 yield os.path.join(base, f)

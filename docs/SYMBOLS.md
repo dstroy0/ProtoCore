@@ -178,6 +178,15 @@ case-sensitivity trap where a repository developed on Windows breaks on Linux.
 of what this law decides stops being a rule the moment a file can declare a namespace. `examples/`
 keeps `.ino` and `performance_benching/` keeps `.cpp`; neither is governed by this document.
 
+**A second exception, `src/web_assets/`.** That directory holds the editable source documents the
+firmware serves and the Python that compiles them, so it carries `.html`, `.css`, `.js`, `.json`,
+`.txt`, `.svg`, `.md` and `.py`. None of them is a translation unit: `build_assets.py` and
+`gen_theme_blobs.py` turn them into `network_drivers/application/web_assets.{h,c}` and
+`binary_asset_blobs.{h,c}`, which are the files this law governs. Every `src/` checker filters on
+`{.c, .cc, .cpp, .h, .hpp, .ino}` and the CMake and PlatformIO source globs name `.c` and `.cpp`, so
+the directory is inert to the build. The rule for it is the input's own: an em-dash in an HTML
+document reaches ban #7 through the generated `.c`.
+
 **One exception, the same boundary section 1 draws.** A `core_setup/` adapter whose entire job is
 to wrap a C++ vendor API keeps `.cpp`, because the extension selects the compiler and the vendor type
 cannot be named from C at all. Today that is three files:
@@ -204,7 +213,7 @@ A prefix prevents collisions in a shared global namespace; a test environment na
 ## 5. Enforcement
 
 ```sh
-python -m tools.ci_tooling.check.check_symbols --all     # this document
+python -m tools.ci_tooling.check.check_symbols --check   # this document
 python -m tools.ci_tooling.check.check_src_banned --all  # docs/SRCBANNED.md hard bans
 python -m tools.ci_tooling.check.check_owned_context     # single-owner state rule
 ```

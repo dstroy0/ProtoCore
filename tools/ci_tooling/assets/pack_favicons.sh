@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package a generated favicon SVG (web_assets/favicons/<name>.svg) into a drop-in favicon set tarball:
+# Package a generated favicon SVG (src/web_assets/favicons/<name>.svg) into a drop-in favicon set tarball:
 # favicon-{16,32,48,180,192,512}.png + apple-touch-icon.png + favicon.ico + favicon.svg +
 # site.webmanifest, as docs/favicons/dist/<name>.tar.gz - unpack it into a web root and it just works.
 #
@@ -11,7 +11,7 @@
 #   tools/ci_tooling/assets/pack_favicons.sh --all            # every favicon
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-SRC="$ROOT/src/web/favicons"
+SRC="$ROOT/src/web_assets/favicons"
 DIST="$ROOT/docs/favicons/dist"
 
 pack() {
