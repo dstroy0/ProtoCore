@@ -6,12 +6,32 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`61a0978`](https://github.com/dstroy0/ProtoCore/commit/61a09783a4537584a7edce46776a76b138d8d65b))
+
+### Changes
+
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`a7b482b`](https://github.com/dstroy0/ProtoCore/commit/a7b482ba8f1299aa11891e77156ab60a233fba4a))
+
+### Documentation
+
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`bccef65`](https://github.com/dstroy0/ProtoCore/commit/bccef653ff85aea8200a43f466173c3340ceaa25))
+
+## [1.0.7] - 2026-08-08
+
+<details>
+<summary><b>Show Changelog for version 1.0.7 - 2026-08-08</b></summary>
+
+### CI / Build
+
 - bump github/codeql-action from 4.37.4 to 4.37.6 ([`3becdef`](https://github.com/dstroy0/ProtoCore/commit/3becdef912fa08ef5843b95f41bb0669872830d5))
 
 ### Changes
 
+- Bump version: 1.0.6 → 1.0.7 ([`dc77779`](https://github.com/dstroy0/ProtoCore/commit/dc7777905300cf86b75964b4f37d0b50fe458ef4))
 - Merge Dependabot #25: build(deps): bump github/codeql-action from 4.37.4 to 4.37.6 ([`fcc991f`](https://github.com/dstroy0/ProtoCore/commit/fcc991f1d11b05ae146f011840320e2a93d4cf78))
 - Merge branch 'c11-target' into main ([`1810f10`](https://github.com/dstroy0/ProtoCore/commit/1810f10f3c7f1ccf8ac810132053d4fcfcb5a1b1))
+
+</details>
 
 ## [1.0.6] - 2026-08-08
 
