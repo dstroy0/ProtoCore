@@ -4,7 +4,7 @@
 
 # ProtoCore (@dstroy0)
 
-[![Version](https://img.shields.io/badge/version-v1.0.4-blue)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.0.5-blue)](docs/CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-4c1)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-ProtoCore-22d3ee)](https://dstroy0.github.io/ProtoCore/)
 [![Features](https://img.shields.io/badge/features-browse-6366f1)](https://dstroy0.github.io/ProtoCore/features.html)
