@@ -19,6 +19,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- untrack src/network_drivers/application/ntp/ntp.h, which was swept in by a directory-wide git add. It is uncommitted work in progress and stays in the working tree. ([`a697429`](https://github.com/dstroy0/ProtoCore/commit/a697429b808117f1f992c66e37be89cb63bf1bf0))
+>>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`cffe683`](https://github.com/dstroy0/ProtoCore/commit/cffe6835a976bf977a969c51cf6f14d2a3aa9e20))
 - update CHANGELOG.md [skip ci] ([`ff02f5c`](https://github.com/dstroy0/ProtoCore/commit/ff02f5c09367d3e8d1b9d2a68a9c0fd587c128d0))
 - update CHANGELOG.md [skip ci] ([`9372ec6`](https://github.com/dstroy0/ProtoCore/commit/9372ec6a9383223db35bc2e5184b68775e823c1c))
