@@ -4,6 +4,27 @@ All notable changes to ProtoCore are documented here.
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- select_envs resolved affected_common under the repo root, which the tools/ move broke ([`9b2cfc9`](https://github.com/dstroy0/ProtoCore/commit/9b2cfc901f33be726688ea77d2fdda35b2a504f5))
+
+### CI / Build
+
+- update CHANGELOG.md [skip ci] ([`61a0978`](https://github.com/dstroy0/ProtoCore/commit/61a09783a4537584a7edce46776a76b138d8d65b))
+
+### Changes
+
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`a7b482b`](https://github.com/dstroy0/ProtoCore/commit/a7b482ba8f1299aa11891e77156ab60a233fba4a))
+
+### Documentation
+
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`bccef65`](https://github.com/dstroy0/ProtoCore/commit/bccef653ff85aea8200a43f466173c3340ceaa25))
+
+## [1.0.7] - 2026-08-08
+
+<details>
+<summary><b>Show Changelog for version 1.0.7 - 2026-08-08</b></summary>
+
 ### CI / Build
 
 - update CHANGELOG.md [skip ci] ([`61a0978`](https://github.com/dstroy0/ProtoCore/commit/61a09783a4537584a7edce46776a76b138d8d65b))
