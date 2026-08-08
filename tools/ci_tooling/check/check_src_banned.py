@@ -164,9 +164,8 @@ _CONSTEXPR_MSG = (
 # The work buffers already exist and are reentrant by construction, so there is no cost to
 # using them: pc_plaintext_alloc()/PlaintextScope borrows from the caller's OWN per-worker arena
 # (one slot per worker plus the ghost, PC_REG_POOL_SLOTS), and crypto leaf math takes fixed offsets in
-# crypto_work via the region map. Exempt: `static` locals (already BSS - ban 16 and
-# check_owned_context.py own those), and a justified `// PC_ALLOW_STACK_ARRAY: <reason>`.
-_ALLOW_STACK_ARRAY = "PC_ALLOW_STACK_ARRAY"
+# crypto_work via the region map. Exempt: `static` locals only (already BSS - ban 16 and
+# check_owned_context.py own those). There is no comment that waives this one.
 
 # Ban #20: snprintf and vsnprintf. A format string is parsed at
 # RUNTIME, every call, to rediscover what the code already knew at compile time - roughly 3x
@@ -199,8 +198,7 @@ _STACK_ARRAY = re.compile(
 _STACK_ARRAY_MSG = (
     "function-local array; stack is outside the deterministic footprint. Borrow it: "
     "PlaintextScope + pc_plaintext_alloc() for handler/IO buffers (fail closed on null), or a "
-    "crypto_work region for crypto leaf math (justify a true exception with "
-    "// PC_ALLOW_STACK_ARRAY: <reason>)"
+    "crypto_work region for crypto leaf math"
 )
 
 
@@ -233,13 +231,7 @@ def scan_file(path):
         # struct/class/union is the owned-context storage this codebase already mandates
         # (opcua's resp[2048] and udp's cap_buf[2048] are fields, not stack), and a
         # file-scope array is BSS. `static` locals are BSS too and belong to ban 16.
-        if (
-            in_block
-            and not agg_at
-            and _STACK_ARRAY.match(line)
-            and not re.search(r"\bstatic\b", line)
-            and _ALLOW_STACK_ARRAY not in raw_lines[line_no - 1]
-        ):
+        if in_block and not agg_at and _STACK_ARRAY.match(line) and not re.search(r"\bstatic\b", line):
             hits.append((str(path), line_no, 19, _STACK_ARRAY_MSG))
         if _SNPRINTF.search(line) and _ALLOW_SNPRINTF not in raw_lines[line_no - 1]:
             hits.append((str(path), line_no, 20, _SNPRINTF_MSG))

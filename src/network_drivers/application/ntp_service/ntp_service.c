@@ -19,7 +19,7 @@
 #include <Arduino.h> // configTzTime: the SDK's client, which disciplines the system clock
 #else
 #include "mmgr/endian.h"                                       // pc_rd32be / pc_wr32be: the timestamp fields
-#include "mmgr/rawmemcpy.h"                                    // proto_raw_read: the request moves whole
+#include "mmgr/secure.h"                                       // pc_secure_persist_span: this module's storage
 #include "network_drivers/application/ntp_server/ntp_server.h" // NTP_PACKET_LEN / NTP_UNIX_OFFSET
 #include "network_drivers/transport/udp.h"                     // Udp.listener: the client port and the ask
 #include "server/clock/clock.h"                                // pc_millis: how the epoch advances between syncs
@@ -72,9 +72,22 @@ typedef struct
     time_t epoch;     ///< Unix seconds at the moment of the last accepted reply, 0 when never synced
     uint32_t sync_ms; ///< pc_millis() when that reply arrived
     uint32_t cookie;  ///< the transmit stamp the reply must echo as its origin
-    uint8_t req[NTP_PACKET_LEN];
+    pc_span req;      ///< the request in flight, borrowed once and held
 } NtpSvcCtx;
-static NtpSvcCtx s_ntp_svc = {0, 0, 0, {0}};
+static NtpSvcCtx s_ntp_svc = {0, 0, 0, {NULL, 0, 0, PROTO_FALSE}};
+
+// Take the request borrow on first use and hold it for the life of the program. The cookie it
+// carries is what authenticates the reply, so the bytes come from the secure pool, whose release
+// wipes. False when the pool cannot cover it, and begin() fails closed on that.
+static proto_bool ntp_mem_bind(void)
+{
+    if (pc_span_has_storage(s_ntp_svc.req))
+    {
+        return PROTO_TRUE;
+    }
+    s_ntp_svc.req = pc_secure_persist_span(NTP_PACKET_LEN);
+    return pc_span_has_storage(s_ntp_svc.req);
+}
 
 /**
  * @brief Take one server reply.
@@ -127,9 +140,9 @@ proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2
         host = server1;
     }
     pc_ip dst = {PC_IP_NONE, {0}};
-    if (!Ip.parse(host, &dst))
+    if (!ntp_mem_bind() || !Ip.parse(host, &dst))
     {
-        return PROTO_FALSE; // a name, and this client has no resolver of its own
+        return PROTO_FALSE; // no storage, or a name and this client has no resolver of its own
     }
     // Bind every time rather than remembering: the listener rebinds a port it already holds, and a
     // port closed underneath this client is exactly the case a remembered flag would send a datagram
@@ -141,13 +154,14 @@ proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2
     // The transmit stamp doubles as the cookie the reply has to echo. Ticks, not a clock: this runs
     // before there is one.
     s_ntp_svc.cookie = pc_millis() | 1u;
+    uint8_t *req = s_ntp_svc.req.buf;
     for (size_t i = 0; i < NTP_PACKET_LEN; i++)
     {
-        s_ntp_svc.req[i] = 0;
+        req[i] = 0;
     }
-    s_ntp_svc.req[0] = PC_NTP_REQ_BYTE0;
-    pc_wr32be(s_ntp_svc.req + PC_NTP_OFF_XMIT, s_ntp_svc.cookie);
-    return Udp.listener->sendto(PC_NTP_CLIENT_PORT, &dst, 123, s_ntp_svc.req, NTP_PACKET_LEN);
+    req[0] = PC_NTP_REQ_BYTE0;
+    pc_wr32be(req + PC_NTP_OFF_XMIT, s_ntp_svc.cookie);
+    return Udp.listener->sendto(PC_NTP_CLIENT_PORT, &dst, 123, req, NTP_PACKET_LEN);
 }
 
 proto_bool pc_ntp_synced(void)

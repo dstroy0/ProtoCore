@@ -20,6 +20,7 @@
 #include "mdns.h" // the vendor's responder, driven through its own component API
 #else
 #include "mmgr/rawmemcpy.h"                       // proto_raw_read: every field moves whole
+#include "mmgr/secure.h"                          // pc_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves share
 #include "network_drivers/physical/physical.h"    // pc_net_egress_ip: the address the A record carries
 #include "network_drivers/transport/udp.h"        // Udp.listener: the 5353 group bind and the reply
@@ -106,25 +107,61 @@ typedef struct
     proto_bool used;
 } MdnsSvc;
 
-// All mDNS responder state, owned by one instance (internal linkage): the host label, the service
-// table, the packed TXT strings, the response stage and the name scratch the composer writes
-// through. One named owner, unreachable cross-TU. The stage and the scratch are live only for the
-// length of one handler call, and poll() runs the handler, so no two calls reach them at once.
+// All mDNS responder state, owned by one instance (internal linkage): the borrows the responder
+// works in, how much TXT it holds, and whether it is bound. One named owner, unreachable cross-TU.
+// The composition borrows are live only for the length of one handler call, and poll() runs the
+// handler, so no two calls reach them at once.
 typedef struct
 {
-    char host[PC_MDNS_LABEL_MAX]; ///< the label alone, no domain
-    char fqdn[PC_DNS_NAME_MAX];   ///< "<host>.local", composed once by begin()
-    MdnsSvc svc[PC_MDNS_MAX_SERVICES];
-    uint8_t txt[PC_MDNS_TXT_MAX]; ///< packed length-prefixed "key=value" strings
+    pc_span host; ///< the label alone, no domain
+    pc_span fqdn; ///< "<host>.local", composed once by begin()
+    pc_span svc;  ///< the MdnsSvc table
+    pc_span txt;  ///< packed length-prefixed "key=value" strings
     size_t txt_len;
-    uint8_t tx[PC_MDNS_TX_MAX];      ///< the response being composed
-    uint8_t rd[PC_DNS_NAME_MAX + 8]; ///< rdata staged for the record being written
-    char qname[PC_DNS_NAME_MAX];     ///< the question being answered
-    char svc_name[PC_DNS_NAME_MAX];  ///< "<type>.<proto>.local"
-    char inst_name[PC_DNS_NAME_MAX]; ///< "<host>.<type>.<proto>.local"
+    pc_span tx;        ///< the response being composed
+    pc_span rd;        ///< rdata staged for the record being written
+    pc_span qname;     ///< the question being answered
+    pc_span svc_name;  ///< "<type>.<proto>.local"
+    pc_span inst_name; ///< "<host>.<type>.<proto>.local"
     proto_bool running;
 } MdnsCtx;
 static MdnsCtx s_mdns;
+
+// Take every borrow once and hold it for the life of the program. A responder answers for the names
+// the device is reached by, so its table and the replies it composes come from the secure pool,
+// whose release wipes. False when the pool cannot cover them; begin() fails closed on that.
+static proto_bool mdns_mem_bind(void)
+{
+    if (pc_span_has_storage(s_mdns.tx))
+    {
+        return PROTO_TRUE;
+    }
+    s_mdns.host = pc_secure_persist_span(PC_MDNS_LABEL_MAX);
+    s_mdns.fqdn = pc_secure_persist_span(PC_DNS_NAME_MAX);
+    s_mdns.svc = pc_secure_persist_span(sizeof(MdnsSvc) * PC_MDNS_MAX_SERVICES);
+    s_mdns.txt = pc_secure_persist_span(PC_MDNS_TXT_MAX);
+    s_mdns.tx = pc_secure_persist_span(PC_MDNS_TX_MAX);
+    s_mdns.rd = pc_secure_persist_span(PC_DNS_NAME_MAX + 8);
+    s_mdns.qname = pc_secure_persist_span(PC_DNS_NAME_MAX);
+    s_mdns.svc_name = pc_secure_persist_span(PC_DNS_NAME_MAX);
+    s_mdns.inst_name = pc_secure_persist_span(PC_DNS_NAME_MAX);
+    return pc_span_has_storage(s_mdns.host) && pc_span_has_storage(s_mdns.fqdn) && pc_span_has_storage(s_mdns.svc) &&
+           pc_span_has_storage(s_mdns.txt) && pc_span_has_storage(s_mdns.tx) && pc_span_has_storage(s_mdns.rd) &&
+           pc_span_has_storage(s_mdns.qname) && pc_span_has_storage(s_mdns.svc_name) &&
+           pc_span_has_storage(s_mdns.inst_name);
+}
+
+/** @brief Service @p i, over the borrow that holds the table. */
+static MdnsSvc *mdns_svc(size_t i)
+{
+    return &((MdnsSvc *)s_mdns.svc.buf)[i];
+}
+
+/** @brief A borrowed span read as the dotted name it holds. */
+static char *mdns_str(pc_span s)
+{
+    return (char *)s.buf;
+}
 
 // Append @p s to the dotted name in @p out as one more label, and report the new length. Returns
 // @p cap when it will not fit, which every caller treats as "compose failed".
@@ -228,9 +265,9 @@ static uint16_t put_a(size_t *n)
     {
         return 0;
     }
-    proto_raw_read(s_mdns.rd, &ip, 4); // network order already, as the stack keeps it
-    if (!rr_put(s_mdns.tx, sizeof s_mdns.tx, n, s_mdns.fqdn, PC_MDNS_T_A, PC_MDNS_C_FLUSH, PC_MDNS_TTL_HOST, s_mdns.rd,
-                4))
+    proto_raw_read(s_mdns.rd.buf, &ip, 4); // network order already, as the stack keeps it
+    if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, mdns_str(s_mdns.fqdn), PC_MDNS_T_A, PC_MDNS_C_FLUSH, PC_MDNS_TTL_HOST,
+                s_mdns.rd.buf, 4))
     {
         return 0;
     }
@@ -240,19 +277,20 @@ static uint16_t put_a(size_t *n)
 // SRV: priority, weight, port, then the target host name (RFC 2782).
 static uint16_t put_srv(const MdnsSvc *s, size_t *n)
 {
-    s_mdns.rd[0] = 0;
-    s_mdns.rd[1] = 0;
-    s_mdns.rd[2] = 0;
-    s_mdns.rd[3] = 0;
-    s_mdns.rd[4] = (uint8_t)(s->port >> 8);
-    s_mdns.rd[5] = (uint8_t)s->port;
-    size_t w = pc_dns_name_encode(s_mdns.rd + 6, sizeof s_mdns.rd - 6, s_mdns.fqdn);
+    uint8_t *rd = s_mdns.rd.buf;
+    rd[0] = 0;
+    rd[1] = 0;
+    rd[2] = 0;
+    rd[3] = 0;
+    rd[4] = (uint8_t)(s->port >> 8);
+    rd[5] = (uint8_t)s->port;
+    size_t w = pc_dns_name_encode(rd + 6, s_mdns.rd.cap - 6, mdns_str(s_mdns.fqdn));
     if (w == 0)
     {
         return 0;
     }
-    if (!rr_put(s_mdns.tx, sizeof s_mdns.tx, n, s_mdns.inst_name, PC_MDNS_T_SRV, PC_MDNS_C_FLUSH, PC_MDNS_TTL_HOST,
-                s_mdns.rd, 6 + w))
+    if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, mdns_str(s_mdns.inst_name), PC_MDNS_T_SRV, PC_MDNS_C_FLUSH,
+                PC_MDNS_TTL_HOST, rd, 6 + w))
     {
         return 0;
     }
@@ -263,16 +301,16 @@ static uint16_t put_srv(const MdnsSvc *s, size_t *n)
 // never zero-length (RFC 6763 sec 6.1).
 static uint16_t put_txt(size_t *n)
 {
-    const uint8_t *rd = s_mdns.txt;
+    const uint8_t *rd = s_mdns.txt.buf;
     size_t rdlen = s_mdns.txt_len;
     if (rdlen == 0)
     {
-        s_mdns.rd[0] = 0;
-        rd = s_mdns.rd;
+        s_mdns.rd.buf[0] = 0;
+        rd = s_mdns.rd.buf;
         rdlen = 1;
     }
-    if (!rr_put(s_mdns.tx, sizeof s_mdns.tx, n, s_mdns.inst_name, PC_MDNS_T_TXT, PC_MDNS_C_FLUSH, PC_MDNS_TTL_SVC, rd,
-                rdlen))
+    if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, mdns_str(s_mdns.inst_name), PC_MDNS_T_TXT, PC_MDNS_C_FLUSH,
+                PC_MDNS_TTL_SVC, rd, rdlen))
     {
         return 0;
     }
@@ -282,12 +320,12 @@ static uint16_t put_txt(size_t *n)
 // A PTR whose rdata is one name.
 static uint16_t put_ptr(const char *owner, const char *target, size_t *n)
 {
-    size_t w = pc_dns_name_encode(s_mdns.rd, sizeof s_mdns.rd, target);
+    size_t w = pc_dns_name_encode(s_mdns.rd.buf, s_mdns.rd.cap, target);
     if (w == 0)
     {
         return 0;
     }
-    if (!rr_put(s_mdns.tx, sizeof s_mdns.tx, n, owner, PC_MDNS_T_PTR, PC_MDNS_C_IN, PC_MDNS_TTL_SVC, s_mdns.rd, w))
+    if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, owner, PC_MDNS_T_PTR, PC_MDNS_C_IN, PC_MDNS_TTL_SVC, s_mdns.rd.buf, w))
     {
         return 0;
     }
@@ -305,33 +343,33 @@ static uint16_t answer_for(const char *qname, uint16_t qtype, size_t *n)
 {
     uint16_t added = 0;
 
-    if (pc_dns_name_eq(qname, s_mdns.fqdn) && wants(qtype, PC_MDNS_T_A))
+    if (pc_dns_name_eq(qname, mdns_str(s_mdns.fqdn)) && wants(qtype, PC_MDNS_T_A))
     {
         added += put_a(n);
     }
 
     for (size_t i = 0; i < PC_MDNS_MAX_SERVICES; i++)
     {
-        const MdnsSvc *s = &s_mdns.svc[i];
+        const MdnsSvc *s = mdns_svc(i);
         if (!s->used)
         {
             continue;
         }
-        if (!name_of(s_mdns.svc_name, sizeof s_mdns.svc_name, s->type, s->proto, NULL) ||
-            !name_of(s_mdns.inst_name, sizeof s_mdns.inst_name, s_mdns.host, s->type, s->proto))
+        if (!name_of(mdns_str(s_mdns.svc_name), s_mdns.svc_name.cap, s->type, s->proto, NULL) ||
+            !name_of(mdns_str(s_mdns.inst_name), s_mdns.inst_name.cap, mdns_str(s_mdns.host), s->type, s->proto))
         {
             continue;
         }
         // The enumeration name lists the types on offer, not the instances.
         if (pc_dns_name_eq(qname, PC_MDNS_ENUM_NAME) && wants(qtype, PC_MDNS_T_PTR))
         {
-            added += put_ptr(PC_MDNS_ENUM_NAME, s_mdns.svc_name, n);
+            added += put_ptr(PC_MDNS_ENUM_NAME, mdns_str(s_mdns.svc_name), n);
         }
-        if (pc_dns_name_eq(qname, s_mdns.svc_name) && wants(qtype, PC_MDNS_T_PTR))
+        if (pc_dns_name_eq(qname, mdns_str(s_mdns.svc_name)) && wants(qtype, PC_MDNS_T_PTR))
         {
-            added += put_ptr(s_mdns.svc_name, s_mdns.inst_name, n);
+            added += put_ptr(mdns_str(s_mdns.svc_name), mdns_str(s_mdns.inst_name), n);
         }
-        if (pc_dns_name_eq(qname, s_mdns.inst_name))
+        if (pc_dns_name_eq(qname, mdns_str(s_mdns.inst_name)))
         {
             if (wants(qtype, PC_MDNS_T_SRV))
             {
@@ -367,18 +405,19 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
     }
 
     // The response header: no id to echo, no questions repeated, QR and AA set (RFC 6762 sec 18).
+    uint8_t *tx = s_mdns.tx.buf;
     for (size_t i = 0; i < 12; i++)
     {
-        s_mdns.tx[i] = 0;
+        tx[i] = 0;
     }
-    s_mdns.tx[2] = 0x84;
+    tx[2] = 0x84;
     size_t n = 12;
 
     uint16_t an = 0;
     size_t off = 12;
     for (uint16_t q = 0; q < qd; q++)
     {
-        if (!pc_dns_name_decode(data, len, off, s_mdns.qname, sizeof s_mdns.qname, &off, PROTO_TRUE))
+        if (!pc_dns_name_decode(data, len, off, mdns_str(s_mdns.qname), s_mdns.qname.cap, &off, PROTO_TRUE))
         {
             return; // a malformed question: the rest of the message cannot be located
         }
@@ -388,19 +427,19 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
         }
         uint16_t qtype = (uint16_t)(((uint16_t)data[off] << 8) | data[off + 1]);
         off += 4;
-        an += answer_for(s_mdns.qname, qtype, &n);
+        an += answer_for(mdns_str(s_mdns.qname), qtype, &n);
     }
     if (an == 0)
     {
         return; // nothing of ours was asked for, so nothing is said
     }
-    s_mdns.tx[6] = (uint8_t)(an >> 8);
-    s_mdns.tx[7] = (uint8_t)an;
+    tx[6] = (uint8_t)(an >> 8);
+    tx[7] = (uint8_t)an;
 
     pc_ip group = {PC_IP_NONE, {0}};
     if (Ip.parse(PC_MDNS_GROUP, &group))
     {
-        (void)Udp.listener->sendto(PC_MDNS_PORT, &group, PC_MDNS_PORT, s_mdns.tx, n);
+        (void)Udp.listener->sendto(PC_MDNS_PORT, &group, PC_MDNS_PORT, tx, n);
     }
 }
 
@@ -420,13 +459,13 @@ static proto_bool label_set(char *dst, size_t cap, const char *src)
 
 proto_bool pc_mdns_add_service(const char *service_type, const char *proto, uint16_t port)
 {
-    if (service_type == NULL || proto == NULL)
+    if (service_type == NULL || proto == NULL || !mdns_mem_bind())
     {
         return PROTO_FALSE;
     }
     for (size_t i = 0; i < PC_MDNS_MAX_SERVICES; i++)
     {
-        MdnsSvc *s = &s_mdns.svc[i];
+        MdnsSvc *s = mdns_svc(i);
         if (s->used)
         {
             continue;
@@ -444,25 +483,26 @@ proto_bool pc_mdns_add_service(const char *service_type, const char *proto, uint
 
 proto_bool pc_mdns_txt(const char *key, const char *value)
 {
-    if (key == NULL || value == NULL)
+    if (key == NULL || value == NULL || !mdns_mem_bind())
     {
         return PROTO_FALSE;
     }
-    size_t kl = proto_scan_nul(key, PC_MDNS_TXT_MAX);
-    size_t vl = proto_scan_nul(value, PC_MDNS_TXT_MAX);
+    uint8_t *txt = s_mdns.txt.buf;
+    size_t kl = proto_scan_nul(key, s_mdns.txt.cap);
+    size_t vl = proto_scan_nul(value, s_mdns.txt.cap);
     size_t entry = kl + 1 + vl; // "key=value"
-    if (kl == 0 || entry > 255 || s_mdns.txt_len + 1 + entry > sizeof s_mdns.txt)
+    if (kl == 0 || entry > 255 || s_mdns.txt_len + 1 + entry > s_mdns.txt.cap)
     {
         return PROTO_FALSE;
     }
     size_t n = s_mdns.txt_len;
-    s_mdns.txt[n] = (uint8_t)entry; // each string carries its own length (RFC 6763 sec 6.1)
+    txt[n] = (uint8_t)entry; // each string carries its own length (RFC 6763 sec 6.1)
     n++;
-    proto_raw_read(s_mdns.txt + n, key, kl);
+    proto_raw_read(txt + n, key, kl);
     n += kl;
-    s_mdns.txt[n] = '=';
+    txt[n] = '=';
     n++;
-    proto_raw_read(s_mdns.txt + n, value, vl);
+    proto_raw_read(txt + n, value, vl);
     n += vl;
     s_mdns.txt_len = n;
     return PROTO_TRUE;
@@ -470,21 +510,21 @@ proto_bool pc_mdns_txt(const char *key, const char *value)
 
 proto_bool pc_mdns_begin(const char *hostname, uint16_t http_port)
 {
-    if (hostname == NULL || hostname[0] == '\0')
+    if (hostname == NULL || hostname[0] == '\0' || !mdns_mem_bind())
     {
         return PROTO_FALSE;
     }
-    if (!label_set(s_mdns.host, sizeof s_mdns.host, hostname))
+    if (!label_set(mdns_str(s_mdns.host), s_mdns.host.cap, hostname))
     {
         return PROTO_FALSE;
     }
-    if (!name_of(s_mdns.fqdn, sizeof s_mdns.fqdn, s_mdns.host, NULL, NULL))
+    if (!name_of(mdns_str(s_mdns.fqdn), s_mdns.fqdn.cap, mdns_str(s_mdns.host), NULL, NULL))
     {
         return PROTO_FALSE;
     }
     for (size_t i = 0; i < PC_MDNS_MAX_SERVICES; i++)
     {
-        s_mdns.svc[i].used = PROTO_FALSE;
+        mdns_svc(i)->used = PROTO_FALSE;
     }
     s_mdns.txt_len = 0;
     if (!pc_mdns_add_service("_http", "_tcp", http_port))

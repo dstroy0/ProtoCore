@@ -192,6 +192,24 @@
 #endif
 #endif
 
+// DNS resolution. 1 = the stack resolves names itself and the module marshals into it; 0 = the
+// portable resolver in network_drivers/network/dns, which asks over the UDP listener.
+//
+// A stack resolver already knows the nameservers DHCP handed it and caches what it learns. The
+// portable one asks PC_DNS_SERVER, once per call, and keeps nothing.
+#ifndef PC_HAS_VENDOR_DNS_RESOLVER
+#if PC_VENDOR_ESP
+#define PC_HAS_VENDOR_DNS_RESOLVER 1
+#elif PROTOCORE_HOST
+#define PC_HAS_VENDOR_DNS_RESOLVER 0 // a unit-test build has no stack resolver to marshal into
+#elif PC_VENDOR_MOCK
+#define PC_HAS_VENDOR_DNS_RESOLVER 0 // the mock vendor has none either: it exists to compile the hot path
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PC_HAS_VENDOR_DNS_RESOLVER (1 = the stack's own resolver, 0 = the portable resolver over the UDP listener). Choosing the portable one is fine; defaulting into it is not."
+#endif
+#endif
+
 // ---------------------------------------------------------------------------
 // Execution context identity
 // ---------------------------------------------------------------------------

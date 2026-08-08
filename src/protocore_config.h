@@ -5033,6 +5033,22 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief DNS resolve timeout in milliseconds. */
+/**
+ * @brief Nameserver the portable resolver asks when nothing has told it otherwise.
+ *
+ * The vendor backend takes its servers from the stack (DHCP), so this is the portable one's only
+ * starting point. A device that learns a server from DHCP or provisioning should hand it over with
+ * Resolver.set_server() rather than query this one.
+ */
+#ifndef PC_DNS_SERVER
+#define PC_DNS_SERVER "9.9.9.9"
+#endif
+
+/** @brief Local UDP port the portable resolver asks from and hears the answer on. */
+#ifndef PC_DNS_CLIENT_PORT
+#define PC_DNS_CLIENT_PORT 1153
+#endif
+
 #ifndef PC_DNS_TIMEOUT_MS
 #define PC_DNS_TIMEOUT_MS 5000
 #endif

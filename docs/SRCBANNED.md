@@ -29,9 +29,3 @@ Numbers are stable and cited from source comments; #16 is folded into #12 and ke
 | 23  | `?:`                                                                                                                                                                               |
 | 24  | `memcpy` `memmove` `memcmp` `memchr` `memset`                                                                                                                                      |
 | 25  | `<stdio.h>` `<cstdio>` `<string.h>` `<cstring>`                                                                                                                                    |
-
-## Exceptions
-
-- `// PC_ALLOW_LATE_INCLUDE: <reason>` (#17)
-- `// PC_ALLOW_STACK_ARRAY: <reason>` (#19)
-- `// PC_ALLOW_SNPRINTF: <reason>` (#20)

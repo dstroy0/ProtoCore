@@ -15,6 +15,7 @@
 #if PC_ENABLE_PREEMPT_QUEUE
 
 #include "core_setup/board_profiles/pc_platform.h"
+#include "mmgr/secure.h" // pc_secure_persist_span: the item a lane's task receives into
 
 // Common preempt-queue state (both host + device), owned by one instance (internal linkage):
 // the per-lane handler, its context, and the high-water mark. The backend-specific state (the
@@ -93,15 +94,19 @@ static void note_depth(pc_pq_lane lane, size_t waiting)
 static void pq_task(void *arg)
 {
     pc_pq_lane lane = (pc_pq_lane)((uintptr_t)arg);
-    // The task's own frame rather than a request-path allocation: pq_task is a task entry point whose
-    // stack depth is stated at creation, and it never returns, so this buffer is permanent and counted.
-    uint8_t item[PC_PQ_ITEM_SIZE]; // PC_ALLOW_STACK_ARRAY: task entry frame, sized at task creation
+    // The entry never returns, so this item is permanent: it comes from the persistent end, which no
+    // reset or release walks. A lane that cannot get one has nowhere to receive into and stops.
+    pc_span item = pc_secure_persist_span(PC_PQ_ITEM_SIZE);
+    if (!pc_span_has_storage(item))
+    {
+        return;
+    }
     for (;;)
     {
-        if (pc_platform_queue_recv(s_pqq.q[(size_t)lane], item, PC_PLATFORM_WAIT_FOREVER) == PC_PLATFORM_OK &&
+        if (pc_platform_queue_recv(s_pqq.q[(size_t)lane], item.buf, PC_PLATFORM_WAIT_FOREVER) == PC_PLATFORM_OK &&
             s_pq.handler[(size_t)lane])
         {
-            s_pq.handler[(size_t)lane](item, s_pq.ctx[(size_t)lane]);
+            s_pq.handler[(size_t)lane](item.buf, s_pq.ctx[(size_t)lane]);
         }
     }
 }

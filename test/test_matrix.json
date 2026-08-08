@@ -292,7 +292,7 @@
       "tests": ["unit/fieldbus/test_iolink"]
     },
     "native_stack_l46": {
-      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 \u00c2\u00a75.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
+      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 §5.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0"],
       "src": [
         "+<shared_primitives/ip.c>",
@@ -1122,7 +1122,13 @@
         "-DPC_DMA_BUF_SIZE=8",
         "-DPC_DMA_CHANNELS=2"
       ],
-      "src": ["+<network_drivers/session/preempt_queue.c>", "+<mmgr/dma.c>"],
+      "src": [
+        "+<network_drivers/session/preempt_queue.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/dma.c>"
+      ],
       "tests": ["unit/session/test_preempt_queue"]
     },
     "native_dma": {
@@ -1637,10 +1643,19 @@
       "tests": ["unit/physical/test_radio_power"]
     },
     "native_dns_resolver": {
-      "desc": "DNS resolver answer classifier/verifier (network_drivers/network/dns/dns_resolver): host-tested;\nthe lwIP resolve is ESP32-only.",
+      "desc": "The portable DNS resolver (network_drivers/network/dns/dns_resolver, RFC 1035) on the build\nwhere PC_HAS_VENDOR_DNS_RESOLVER is 0: the A-record question it writes, the answer it reads back -\nwalking past a CNAME and following the compression pointers a real response uses - and the replies it\nrefuses on a wrong id, a set RCODE, a question rather than an answer, or no A record at all. Plus the\ndotted-quad fast path, the nameserver setter, and the classifier that rejects a loopback or multicast\nanswer as a rebinding indicator.",
       "flags": ["-DPC_ENABLE_DNS_RESOLVER=1"],
       "src": [
         "+<network_drivers/network/dns/dns_resolver.c>",
+        "+<network_drivers/network/dns/dns_wire.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["unit/network/test_dns_resolver"]
@@ -2035,6 +2050,9 @@
       "flags": ["-DPC_ENABLE_NTP=1"],
       "src": [
         "+<network_drivers/application/ntp_service/ntp_service.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/secure.c>",
         "+<network_drivers/transport/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
@@ -2050,6 +2068,9 @@
       "flags": ["-DPC_ENABLE_MDNS=1"],
       "src": [
         "+<network_drivers/application/mdns_service/mdns_service.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/secure.c>",
         "+<network_drivers/network/dns/dns_wire.c>",
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
@@ -2579,6 +2600,7 @@
       "flags": ["-DPC_ENABLE_HTTP_CLIENT=1"],
       "src": [
         "+<network_drivers/transport/tcp.c>",
+        "+<mmgr/secure.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
@@ -2586,8 +2608,12 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/network/dns/dns_resolver.c>",
+        "+<network_drivers/network/dns/dns_wire.c>",
         "+<network_drivers/network/dns/dns.c>",
         "+<network_drivers/network/network.c>",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
