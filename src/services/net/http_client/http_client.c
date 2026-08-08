@@ -25,7 +25,7 @@
 #include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
 #include <Arduino.h>                       // millis()
 #endif
-#if PROTOCORE_HOT && PC_ENABLE_HTTP_CLIENT_TLS
+#if PC_HAS_VENDOR_TLS && PC_ENABLE_HTTP_CLIENT_TLS
 #include "network_drivers/tls/tls.h"
 #include <mbedtls/ssl.h> // MBEDTLS_ERR_SSL_WANT_READ for the BIO recv callback
 #endif
