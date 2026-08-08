@@ -13,6 +13,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- ratchet the test-coverage floor to 16, closing mdns_service, network and route ([`c493e2e`](https://github.com/dstroy0/ProtoCore/commit/c493e2ee08b86b5aa9dc6a1a71fd896c279e3452))
+- update CHANGELOG.md [skip ci] ([`28256b3`](https://github.com/dstroy0/ProtoCore/commit/28256b3521e7b83c96dc6827e7ca62cadd40f9ea))
 - update CHANGELOG.md [skip ci] ([`2ada79a`](https://github.com/dstroy0/ProtoCore/commit/2ada79a0a2ed8f0714d8eda29c1e019357413674))
 - bump actions/cache from 4 to 6 ([`10de152`](https://github.com/dstroy0/ProtoCore/commit/10de1523d13a0acc31665233db2ba36e518e529e))
 - update test report + coverage [skip ci] ([`5e388ff`](https://github.com/dstroy0/ProtoCore/commit/5e388ffafeb8d91688ee90230b670241c8358a00))
