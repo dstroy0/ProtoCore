@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-08 18:55:27
+**Generated:** 2026-08-08 19:49:02
 **Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 6076 passed, 3 failed - 1885s
+**Result:** ❌ 6076 passed, 3 failed - 1856s
 
 ---
 
@@ -4185,12 +4185,12 @@ _Host tests for the UDP transport's multicast receive path (Udp.listener->listen
 
 ---
 
-## test_tcp_hot - native_tcp_hot - ✅ 5 passed
+## test_tcp - native_tcp - ✅ 5 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_The TCP target path, run on the host. The env (native_tcp_hot) builds with PROTOCORE_HOT_FORCE,_
+_The TCP target path, run on the host. The env declares the capabilities the stack needs,_
 
 |   # | Test                                                       | Status | Description                                         |
 | --: | :--------------------------------------------------------- | :----: | :-------------------------------------------------- |
@@ -4204,7 +4204,7 @@ _The TCP target path, run on the host. The env (native_tcp_hot) builds with PROT
 
 ---
 
-## test_workers - native_hot_workers - ✅ 10 passed
+## test_workers - native_workers_stack - ✅ 10 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -4228,12 +4228,12 @@ _Phase 2 core-partitioning invariant (built with PC_WORKER_COUNT=2): a worker_
 
 ---
 
-## test_udp_hot - native_udp_hot - ✅ 10 passed
+## test_udp - native_udp - ✅ 10 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_The UDP target path, run on the host. The env (native_udp_hot) builds with PROTOCORE_HOT_FORCE,_
+_The UDP target path, run on the host. The env declares the capabilities the stack needs,_
 
 |   # | Test                                                                | Status | Description                                                  |
 | --: | :------------------------------------------------------------------ | :----: | :----------------------------------------------------------- |
@@ -10057,7 +10057,7 @@ _CoAP over DTLS (coaps.h) end-to-end. An in-test DTLS 1.3 client completes the h
 
 ---
 
-## test_coaps_server - native_coaps_server - ✅ 12 passed
+## test_coaps_server - native_coaps_server - ✅ 13 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -10077,7 +10077,8 @@ _CoAP-over-DTLS server front-end (coaps_server.h): the per-peer DtlsConn pool + 
 |   9 | `test_fatal_handshake_frees_slot`    |   ✅   | Fatal handshake frees slot    |
 |  10 | `test_pool_full_rejects_new_peer`    |   ✅   | Pool full rejects new peer    |
 |  11 | `test_pto_ceiling_frees_slot`        |   ✅   | Pto ceiling frees slot        |
-|  12 | `test_server_send_without_sink`      |   ✅   | Server send without sink      |
+|  12 | `test_unknown_cid_dropped`           |   ✅   | Unknown cid dropped           |
+|  13 | `test_server_send_without_sink`      |   ✅   | Server send without sink      |
 
 </details>
 
@@ -10479,12 +10480,12 @@ _Unit tests for the declarative frame builder (mmgr/frame.h)._
 
 ---
 
-## test_phy_hot - native_phy_hot - ✅ 15 passed
+## test_phy - native_phy - ✅ 15 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Layer 1 driven through a REAL backend: PROTOCORE_HOT_FORCE selects PC_VENDOR_MOCK, so_
+_Layer 1 driven through a REAL backend: the env declares PC_PHYSICAL_HAS_BACKEND=1, so_
 
 |   # | Test                                                                  | Status | Description                                                    |
 | --: | :-------------------------------------------------------------------- | :----: | :------------------------------------------------------------- |
