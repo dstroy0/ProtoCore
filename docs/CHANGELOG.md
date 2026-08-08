@@ -11,6 +11,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- the SonarCloud scan gets its own workflow, and its paths survive the tools/ move ([`3d64732`](https://github.com/dstroy0/ProtoCore/commit/3d6473214941c97388d45833083fbe02762eedb5))
+- update CHANGELOG.md [skip ci] ([`5d6ad7d`](https://github.com/dstroy0/ProtoCore/commit/5d6ad7de4576063de9e6807df8659b6613904204))
 - update CHANGELOG.md [skip ci] ([`8dd42d5`](https://github.com/dstroy0/ProtoCore/commit/8dd42d526d4430e2639499bb13f5f572a522de1a))
 - update CHANGELOG.md [skip ci] ([`2251a0a`](https://github.com/dstroy0/ProtoCore/commit/2251a0a5e5dba0f19d0d536db414feb0e7ccdb7f))
 - update CHANGELOG.md [skip ci] ([`61a0978`](https://github.com/dstroy0/ProtoCore/commit/61a09783a4537584a7edce46776a76b138d8d65b))
