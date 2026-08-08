@@ -1,11 +1,8 @@
 [
   "src/network_drivers/application/binary_asset_blobs.c",
-  "src/network_drivers/application/mdns_service/mdns_service.c",
   "src/network_drivers/application/scp/ssh_scp.c",
   "src/network_drivers/application/sftp/ssh_sftp.c",
   "src/network_drivers/datalink/datalink.c",
-  "src/network_drivers/network/network.c",
-  "src/network_drivers/network/route.c",
   "src/network_drivers/presentation/http/http2/h2_server.c",
   "src/network_drivers/presentation/ssh/connection/ssh_client.c",
   "src/network_drivers/presentation/ssh/connection/ssh_forward.c",
