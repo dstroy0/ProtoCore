@@ -3307,6 +3307,7 @@
         "+<server/update/ota_rollback.c>",
         "+<services/security/totp/totp.c>",
         "+<services/net/webhook/webhook.c>",
+        "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
