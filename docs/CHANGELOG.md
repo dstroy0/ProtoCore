@@ -6,27 +6,13 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- gen_compiledb and compile_examples climbed two levels to the repo root, not three ([`9d2e963`](https://github.com/dstroy0/ProtoCore/commit/9d2e9634479bf3e38c705c5b43cce85d3e97ec04))
 - select_envs resolved affected_common under the repo root, which the tools/ move broke ([`9b2cfc9`](https://github.com/dstroy0/ProtoCore/commit/9b2cfc901f33be726688ea77d2fdda35b2a504f5))
 
 ### CI / Build
 
-- update CHANGELOG.md [skip ci] ([`61a0978`](https://github.com/dstroy0/ProtoCore/commit/61a09783a4537584a7edce46776a76b138d8d65b))
-
-### Changes
-
-- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`a7b482b`](https://github.com/dstroy0/ProtoCore/commit/a7b482ba8f1299aa11891e77156ab60a233fba4a))
-
-### Documentation
-
-- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`bccef65`](https://github.com/dstroy0/ProtoCore/commit/bccef653ff85aea8200a43f466173c3340ceaa25))
-
-## [1.0.7] - 2026-08-08
-
-<details>
-<summary><b>Show Changelog for version 1.0.7 - 2026-08-08</b></summary>
-
-### CI / Build
-
+- update CHANGELOG.md [skip ci] ([`8dd42d5`](https://github.com/dstroy0/ProtoCore/commit/8dd42d526d4430e2639499bb13f5f572a522de1a))
+- update CHANGELOG.md [skip ci] ([`2251a0a`](https://github.com/dstroy0/ProtoCore/commit/2251a0a5e5dba0f19d0d536db414feb0e7ccdb7f))
 - update CHANGELOG.md [skip ci] ([`61a0978`](https://github.com/dstroy0/ProtoCore/commit/61a09783a4537584a7edce46776a76b138d8d65b))
 
 ### Changes
