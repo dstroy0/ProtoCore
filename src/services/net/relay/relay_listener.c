@@ -186,10 +186,13 @@ static void relay_on_accept(uint8_t slot)
         Tcp.conn->close(slot); // bridge table full
         return;
     }
-    int cid = Tcp.client->open(bd->host, bd->port, PC_RELAY_CONNECT_MS); // blocking connect (LAN origin)
+    // open() takes a slot and returns; the origin is not up yet. The bridge arms anyway: the pump
+    // steps the connect through b_recv's is_closed, a send before it is up reads as backpressure and
+    // retries, and the slot's own PC_RELAY_CONNECT_MS is what ends an origin that never answers.
+    int cid = Tcp.client->open(bd->host, bd->port, PC_RELAY_CONNECT_MS);
     if (cid < 0)
     {
-        Tcp.conn->close(slot); // origin unreachable
+        Tcp.conn->close(slot); // no free client slot
         return;
     }
     RelayBridge *br = &s_ctx.bridges[idx];
