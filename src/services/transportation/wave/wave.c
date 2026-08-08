@@ -7,6 +7,7 @@
  */
 
 #include "services/transportation/wave/wave.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_WAVE
 
@@ -121,7 +122,7 @@ size_t pc_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, 
     out[i++] = (uint8_t)payload_len; // WSM length
     if (payload_len)
     {
-        memcpy(out + i, payload, payload_len);
+        mem.cpy(out + i, payload, payload_len);
         i += payload_len;
     }
     return i;
@@ -174,7 +175,7 @@ size_t pc_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_
     out[1] = content_type;
     if (payload_len)
     {
-        memcpy(out + 2, payload, payload_len);
+        mem.cpy(out + 2, payload, payload_len);
     }
     return n;
 }

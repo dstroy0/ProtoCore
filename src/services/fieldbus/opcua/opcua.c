@@ -14,6 +14,7 @@
  */
 
 #include "services/fieldbus/opcua/opcua.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_OPCUA
 
@@ -35,7 +36,7 @@ static void w_bytes(UaWriter *w, const void *src, size_t n)
         w->ok = PROTO_FALSE;
         return;
     }
-    memcpy(w->o + w->n, src, n); // NOSONAR - bound proven above; analyzer follows an infeasible path
+    mem.cpy(w->o + w->n, src, n); // NOSONAR - bound proven above; analyzer follows an infeasible path
     w->n += n;
 }
 
@@ -69,13 +70,13 @@ void pc_ua_w_i32(UaWriter *w, int32_t v)
 void pc_ua_w_f32(UaWriter *w, float v)
 {
     uint32_t u;
-    memcpy(&u, &v, 4);
+    mem.cpy(&u, &v, 4);
     pc_ua_w_u32(w, u);
 }
 void pc_ua_w_f64(UaWriter *w, double v)
 {
     uint64_t u;
-    memcpy(&u, &v, 8);
+    mem.cpy(&u, &v, 8);
     pc_ua_w_u64(w, u);
 }
 void pc_ua_w_bool(UaWriter *w, proto_bool v)
@@ -98,7 +99,7 @@ static proto_bool r_take(UaReader *r, void *dst, size_t n)
         r->err = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    memcpy(dst, r->p + r->off, n);
+    mem.cpy(dst, r->p + r->off, n);
     r->off += n;
     return PROTO_TRUE;
 }
@@ -143,14 +144,14 @@ float pc_ua_r_f32(UaReader *r)
 {
     uint32_t u = pc_ua_r_u32(r);
     float v;
-    memcpy(&v, &u, 4);
+    mem.cpy(&v, &u, 4);
     return v;
 }
 double pc_ua_r_f64(UaReader *r)
 {
     uint64_t u = pc_ua_r_u64(r);
     double v;
-    memcpy(&v, &u, 8);
+    mem.cpy(&v, &u, 8);
     return v;
 }
 proto_bool pc_ua_r_bool(UaReader *r)
@@ -181,7 +182,7 @@ proto_bool pc_ua_r_string(UaReader *r, char *out, size_t cap, int32_t *out_len)
         r->err = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    memcpy(out, r->p + r->off, (size_t)len);
+    mem.cpy(out, r->p + r->off, (size_t)len);
     out[len] = '\0';
     r->off += (size_t)len;
     return PROTO_TRUE;
@@ -326,7 +327,7 @@ static proto_bool r_request_header(UaReader *r, uint32_t *request_handle)
 static proto_bool r_msg_preamble(const uint8_t *msg, size_t len, UaReader *r, OpcUaMsg *m)
 {
     UaMsgHeader h;
-    if (!pc_opcua_parse_header(msg, len, &h) || memcmp(h.type, "MSG", 3) != 0)
+    if (!pc_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "MSG", 3) != 0)
     {
         return PROTO_FALSE;
     }
@@ -380,7 +381,7 @@ proto_bool pc_opcua_parse_header(const uint8_t *buf, size_t len, UaMsgHeader *h)
 proto_bool pc_opcua_parse_hello(const uint8_t *msg, size_t len, OpcUaHello *out)
 {
     UaMsgHeader h;
-    if (!pc_opcua_parse_header(msg, len, &h) || memcmp(h.type, "HEL", 3) != 0)
+    if (!pc_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "HEL", 3) != 0)
     {
         return PROTO_FALSE;
     }
@@ -454,7 +455,7 @@ size_t pc_opcua_build_error(uint32_t error_code, const char *reason, uint8_t *ou
 proto_bool pc_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenChannel *out)
 {
     UaMsgHeader h;
-    if (!pc_opcua_parse_header(msg, len, &h) || memcmp(h.type, "OPN", 3) != 0)
+    if (!pc_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "OPN", 3) != 0)
     {
         return PROTO_FALSE;
     }
@@ -622,7 +623,7 @@ static void w_response_header(UaWriter *w, int64_t now_ft, uint32_t request_hand
 proto_bool pc_opcua_parse_msg(const uint8_t *msg, size_t len, OpcUaMsg *out)
 {
     UaMsgHeader h;
-    if (!pc_opcua_parse_header(msg, len, &h) || memcmp(h.type, "MSG", 3) != 0)
+    if (!pc_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "MSG", 3) != 0)
     {
         return PROTO_FALSE;
     }
@@ -859,7 +860,7 @@ void pc_ua_w_datavalue(UaWriter *w, const OpcUaVariant *v, uint32_t status)
 
 proto_bool pc_ua_r_variant(UaReader *r, OpcUaVariant *out)
 {
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     uint8_t enc = pc_ua_r_u8(r);
     if (enc & 0x80) // array bit set: arrays are not supported by this scalar decoder
     {
@@ -916,7 +917,7 @@ proto_bool pc_ua_r_variant(UaReader *r, OpcUaVariant *out)
 
 proto_bool pc_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32_t *out_status)
 {
-    memset(out_value, 0, sizeof(*out_value));
+    mem.set(out_value, 0, sizeof(*out_value));
     if (out_status)
     {
         *out_status = OPCUA_STATUS_GOOD;
@@ -1308,7 +1309,7 @@ void pc_opcua_rx(uint8_t slot)
         ring_peek(c, 0, s_opcua.msg, h.size);
         ring_consume(c, h.size);
 
-        if (memcmp(h.type, "HEL", 3) == 0)
+        if (mem.cmp(h.type, "HEL", 3) == 0)
         {
             OpcUaHello hello;
             size_t n;
@@ -1323,7 +1324,7 @@ void pc_opcua_rx(uint8_t slot)
                 return;
             }
         }
-        else if (memcmp(h.type, "OPN", 3) == 0)
+        else if (mem.cmp(h.type, "OPN", 3) == 0)
         {
             OpcUaOpenChannel oc;
             if (!pc_opcua_parse_open(s_opcua.msg, h.size, &oc))
@@ -1351,7 +1352,7 @@ void pc_opcua_rx(uint8_t slot)
                 return;
             }
         }
-        else if (memcmp(h.type, "MSG", 3) == 0)
+        else if (mem.cmp(h.type, "MSG", 3) == 0)
         {
             OpcUaMsg m;
             if (!pc_opcua_parse_msg(s_opcua.msg, h.size, &m))
@@ -1389,7 +1390,7 @@ void pc_opcua_rx(uint8_t slot)
                 uint32_t sts[PC_OPCUA_READ_MAX];
                 for (uint32_t i = 0; i < rr.count; i++)
                 {
-                    memset(&vals[i], 0, sizeof(vals[i]));
+                    mem.set(&vals[i], 0, sizeof(vals[i]));
                     proto_bool ok = s_opcua.read_handler && s_opcua.read_handler(rr.items[i].ns, rr.items[i].id,
                                                                                  rr.items[i].attribute, &vals[i]);
                     sts[i] = ok ? OPCUA_STATUS_GOOD : OPCUA_STATUS_BAD_NODE_ID_UNKNOWN;
@@ -1438,7 +1439,7 @@ void pc_opcua_rx(uint8_t slot)
                 raw_send(slot, s_opcua.resp, n);
             }
         }
-        else if (memcmp(h.type, "CLO", 3) == 0)
+        else if (mem.cmp(h.type, "CLO", 3) == 0)
         {
             close_conn(slot);
             return;

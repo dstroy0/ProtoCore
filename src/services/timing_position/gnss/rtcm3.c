@@ -7,6 +7,7 @@
  */
 
 #include "services/timing_position/gnss/rtcm3.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_NTRIP_CASTER
 
@@ -153,7 +154,7 @@ size_t pc_rtcm3_frame_build(uint8_t *out, size_t cap, const uint8_t *payload, ui
     out[2] = (uint8_t)(payload_len & 0xFFu);
     if (payload_len && payload)
     {
-        memcpy(out + RTCM3_HDR_LEN, payload, payload_len);
+        mem.cpy(out + RTCM3_HDR_LEN, payload, payload_len);
     }
     uint32_t crc = pc_rtcm3_crc24q(out, (size_t)RTCM3_HDR_LEN + payload_len);
     out[RTCM3_HDR_LEN + payload_len] = (uint8_t)((crc >> 16) & 0xFFu);
@@ -170,7 +171,7 @@ static size_t build_arp(uint8_t *out, size_t cap, uint16_t msg, uint16_t station
                         proto_bool with_h, uint16_t h)
 {
     uint8_t payload[21];
-    memset(payload, 0, sizeof payload);
+    mem.set(payload, 0, sizeof payload);
     RtcmBitWriter w;
     pc_rtcm_bw_init(&w, payload, sizeof payload);
     pc_rtcm_bw_u(&w, msg, 12);                // DF002 message number

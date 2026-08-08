@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/redis_resp/redis_resp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_REDIS
 
@@ -67,7 +68,7 @@ size_t pc_resp_encode_command(char *buf, size_t cap, const char *const *args, co
         {
             return 0;
         }
-        memcpy(buf + pos, args[i], alen);
+        mem.cpy(buf + pos, args[i], alen);
         pos += alen;
         buf[pos++] = '\r';
         buf[pos++] = '\n';

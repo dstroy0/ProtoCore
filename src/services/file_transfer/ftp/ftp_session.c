@@ -7,6 +7,7 @@
  */
 
 #include "services/file_transfer/ftp/ftp_session.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_FTP_SESSION
@@ -82,7 +83,7 @@ static proto_bool ftp_await(int *code, size_t *rlen)
 {
     if (s_ftp.rx_consumed > 0)
     {
-        memmove(s_ftp.rx, s_ftp.rx + s_ftp.rx_consumed, s_ftp.rx_len - s_ftp.rx_consumed);
+        mem.move(s_ftp.rx, s_ftp.rx + s_ftp.rx_consumed, s_ftp.rx_len - s_ftp.rx_consumed);
         s_ftp.rx_len -= s_ftp.rx_consumed;
         s_ftp.rx_consumed = 0;
     }

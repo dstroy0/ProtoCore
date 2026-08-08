@@ -7,6 +7,7 @@
  */
 
 #include "ota_service.h"
+#include "mmgr/protomem.h"
 #include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_OTA && PC_HAS_VENDOR_OTA
@@ -55,7 +56,7 @@ static proto_bool ota_check_auth(HttpReq *req)
     }
     size_t ulen = (size_t)(colon - (const char *)decoded);
     const char *pass = colon + 1;
-    return (ulen == strnlen(s_ota.user, sizeof(s_ota.user))) && (memcmp(decoded, s_ota.user, ulen) == 0) &&
+    return (ulen == strnlen(s_ota.user, sizeof(s_ota.user))) && (mem.cmp(decoded, s_ota.user, ulen) == 0) &&
            (strcmp(pass, s_ota.pass) == 0);
 }
 

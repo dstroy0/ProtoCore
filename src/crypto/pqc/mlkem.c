@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "crypto/pqc/mlkem.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_PQC_KEX
 
@@ -181,7 +182,7 @@ static void cbd2(int16_t r[MK_N], const uint8_t buf[128])
 static void poly_getnoise(int16_t r[MK_N], const uint8_t seed[32], uint8_t nonce)
 {
     uint8_t extseed[33];
-    memcpy(extseed, seed, 32);
+    mem.cpy(extseed, seed, 32);
     extseed[32] = nonce;
     uint8_t buf[MK_ETA * MK_N / 4]; // 128
     shake256(buf, sizeof(buf), extseed, sizeof(extseed));
@@ -192,7 +193,7 @@ static void poly_getnoise(int16_t r[MK_N], const uint8_t seed[32], uint8_t nonce
 static void gen_matrix_entry(int16_t out[MK_N], const uint8_t rho[32], uint8_t i, uint8_t j)
 {
     uint8_t seed[34];
-    memcpy(seed, rho, 32);
+    mem.cpy(seed, rho, 32);
     seed[32] = i;
     seed[33] = j;
     KeccakCtx ctx;
@@ -341,11 +342,11 @@ proto_bool pc_mlkem768_encaps(const uint8_t ek[MLKEM768_EK_BYTES], const uint8_t
 
     // (K, r) = G(m || H(ek)); ss = K.
     uint8_t g_in[64];
-    memcpy(g_in, m, 32);
+    mem.cpy(g_in, m, 32);
     sha3_256(g_in + 32, ek, MLKEM768_EK_BYTES); // H(ek)
     uint8_t g_out[64];
     sha3_512(g_out, g_in, sizeof(g_in));
-    memcpy(ss, g_out, 32);
+    mem.cpy(ss, g_out, 32);
 
     k_pke_encrypt(ct, ek, m, g_out + 32);
     return PROTO_TRUE;
@@ -450,7 +451,7 @@ static void k_pke_keygen(uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK
 {
     // (rho, sigma) = G(d || k). The trailing k byte is the FIPS 203 domain separation on module rank.
     uint8_t g_in[33];
-    memcpy(g_in, d, 32);
+    mem.cpy(g_in, d, 32);
     g_in[32] = MK_K;
     uint8_t g_out[64];
     sha3_512(g_out, g_in, sizeof(g_in));
@@ -495,7 +496,7 @@ static void k_pke_keygen(uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK
         }
         poly_tobytes(ek + i * MK_POLYBYTES, t_row);
     }
-    memcpy(ek + MK_K * MK_POLYBYTES, rho, 32);
+    mem.cpy(ek + MK_K * MK_POLYBYTES, rho, 32);
 
     for (unsigned i = 0; i < MK_K; i++)
     {
@@ -536,9 +537,9 @@ void pc_mlkem768_keygen(const uint8_t d[MLKEM768_D_BYTES], const uint8_t z[MLKEM
 {
     // dk = dk_PKE || ek || H(ek) || z  (FIPS 203 Algorithm 16).
     k_pke_keygen(ek, dk, d);
-    memcpy(dk + MK_K * MK_POLYBYTES, ek, MLKEM768_EK_BYTES);
+    mem.cpy(dk + MK_K * MK_POLYBYTES, ek, MLKEM768_EK_BYTES);
     sha3_256(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES, ek, MLKEM768_EK_BYTES);
-    memcpy(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, z, 32);
+    mem.cpy(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, z, 32);
 }
 
 void pc_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_t ct[MLKEM768_CT_BYTES],
@@ -553,15 +554,15 @@ void pc_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_t ct[ML
     uint8_t mprime[32];
     k_pke_decrypt(mprime, dk_pke, ct);
     uint8_t g_in[64];
-    memcpy(g_in, mprime, 32);
-    memcpy(g_in + 32, h, 32);
+    mem.cpy(g_in, mprime, 32);
+    mem.cpy(g_in + 32, h, 32);
     uint8_t g_out[64];
     sha3_512(g_out, g_in, sizeof(g_in));
 
     // Implicit-reject key K_bar = J(z || ct) = SHAKE256(z || ct, 32).
     uint8_t jbuf[32 + MLKEM768_CT_BYTES];
-    memcpy(jbuf, z, 32);
-    memcpy(jbuf + 32, ct, MLKEM768_CT_BYTES);
+    mem.cpy(jbuf, z, 32);
+    mem.cpy(jbuf + 32, ct, MLKEM768_CT_BYTES);
     uint8_t kbar[32];
     shake256(kbar, sizeof(kbar), jbuf, sizeof(jbuf));
 

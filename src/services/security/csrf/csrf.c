@@ -11,6 +11,7 @@
  */
 
 #include "csrf.h"
+#include "mmgr/protomem.h"
 #include "mmgr/frame.h" // the one frame engine
 
 #if PC_ENABLE_CSRF
@@ -48,7 +49,7 @@ void pc_csrf_set_secret(const uint8_t *secret, size_t len)
         return;
     }
     s_csrf.secret_len = len > sizeof(s_csrf.secret) ? sizeof(s_csrf.secret) : len;
-    memcpy(s_csrf.secret, secret, s_csrf.secret_len);
+    mem.cpy(s_csrf.secret, secret, s_csrf.secret_len);
 }
 
 int pc_csrf_issue(char *out, size_t cap)
@@ -112,7 +113,7 @@ proto_bool pc_csrf_verify(const char *token)
 
 void pc_csrf_reset(void)
 {
-    memset(s_csrf.secret, 0, sizeof(s_csrf.secret));
+    mem.set(s_csrf.secret, 0, sizeof(s_csrf.secret));
     s_csrf.secret_len = 0;
     s_csrf.counter = 0;
 }

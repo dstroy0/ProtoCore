@@ -7,6 +7,7 @@
  */
 
 #include "services/web/edge_cache/edge_cache_proxy.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_EDGE_CACHE
@@ -344,7 +345,7 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
         return 0;
     }
     size_t n = remaining < cap ? remaining : cap;
-    memcpy(buf, c->entry->body + c->off, n);
+    mem.cpy(buf, c->entry->body + c->off, n);
     c->off += n;
     return n;
 }
@@ -459,7 +460,7 @@ static void serve_passthrough(uint8_t slot, EdgeFetch *f)
     {
         bl = PC_EDGE_BODY_MAX;
     }
-    memcpy(e->body, f->buf + f->body_off, bl);
+    mem.cpy(e->body, f->buf + f->body_off, bl);
     e->body_len = (uint16_t)bl;
 
     EdgeServeCursor *c = &s_ctx.serve[slot];
@@ -501,7 +502,7 @@ static void store_response(uint8_t slot, EdgeFetchSlot *fs, HttpReq *req, const 
     size_t vhl = strnlen(vary_hdr, sizeof(e->vary_names));
     if (vary_hdr[0] && vhl < sizeof(e->vary_names))
     {
-        memcpy(e->vary_names, vary_hdr, vhl + 1);
+        mem.cpy(e->vary_names, vary_hdr, vhl + 1);
     }
 
     size_t bl = f->body_len;
@@ -509,7 +510,7 @@ static void store_response(uint8_t slot, EdgeFetchSlot *fs, HttpReq *req, const 
     {
         bl = PC_EDGE_BODY_MAX;
     }
-    memcpy(e->body, f->buf + f->body_off, bl);
+    mem.cpy(e->body, f->buf + f->body_off, bl);
     e->body_len = (uint16_t)bl;
     s_ctx.store.stats.bytes_stored += bl;
 
@@ -687,10 +688,10 @@ static void mesh_snapshot_headers(const HttpReq *req, char *out, size_t cap)
         {
             break;
         }
-        memcpy(out + pos, k, kl);
+        mem.cpy(out + pos, k, kl);
         pos += kl;
         out[pos++] = '\x1e';
-        memcpy(out + pos, v, vl);
+        mem.cpy(out + pos, v, vl);
         pos += vl;
         out[pos++] = '\x1f';
     }
@@ -768,7 +769,7 @@ static proto_bool start_fetch(uint8_t slot, HttpReq *req, EdgeRouteMap *m, const
     fs->revalidate = (reval != NULL);
     fs->reval_entry = reval;
     fs->route = m;
-    memcpy(fs->canon, canon, strnlen(canon, sizeof(fs->canon) - 1) + 1);
+    mem.cpy(fs->canon, canon, strnlen(canon, sizeof(fs->canon) - 1) + 1);
     strncpy(fs->path, req->path, sizeof(fs->path) - 1);
     fs->path[sizeof(fs->path) - 1] = '\0';
     strncpy(fs->query, req->query, sizeof(fs->query) - 1);
@@ -1038,7 +1039,7 @@ static const char *mesh_hdr_lookup(void *ctx, const char *name)
             {
                 vl = sizeof(lc->valbuf) - 1;
             }
-            memcpy(lc->valbuf, rs + 1, vl);
+            mem.cpy(lc->valbuf, rs + 1, vl);
             lc->valbuf[vl] = '\0';
             return lc->valbuf;
         }
@@ -1065,7 +1066,7 @@ static void mesh_answer(MeshConn *mc, const uint8_t digest[32], const char *cano
     proto_bool hit = PROTO_FALSE;
     uint8_t verify[32];
     edge_key_digest(canon, strnlen(canon, PC_EDGE_KEY_MAX), verify);
-    if (memcmp(verify, digest, 32) == 0) // integrity: the canonical key must hash to the advertised digest
+    if (mem.cmp(verify, digest, 32) == 0) // integrity: the canonical key must hash to the advertised digest
     {
         MeshLookupCtx lc;
         lc.blob = s_ctx.mesh_hdrs;
@@ -1346,7 +1347,7 @@ proto_bool pc_edge_cache_add_peer(const char *host, uint16_t port)
     {
         if (!s_ctx.peers[i].used)
         {
-            memcpy(s_ctx.peers[i].host, host, hl + 1);
+            mem.cpy(s_ctx.peers[i].host, host, hl + 1);
             s_ctx.peers[i].port = port;
             s_ctx.peers[i].used = PROTO_TRUE;
             return PROTO_TRUE;

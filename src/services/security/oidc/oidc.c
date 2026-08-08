@@ -12,6 +12,7 @@
  */
 
 #include "services/security/oidc/oidc.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_OIDC
@@ -36,7 +37,7 @@ static const char *mem_find(const char *hs, const char *he, const char *needle)
     }
     for (const char *p = hs; p + nl <= he; p++)
     {
-        if (memcmp(p, needle, nl) == 0)
+        if (mem.cmp(p, needle, nl) == 0)
         {
             return p;
         }
@@ -219,7 +220,7 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
     size_t wl = strnlen(want, vl + 1);
     if (t == 's')
     {
-        return vl == wl && memcmp(v, want, wl) == 0;
+        return vl == wl && mem.cmp(v, want, wl) == 0;
     }
     if (t == 'a')
     {
@@ -237,7 +238,7 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
                 break;
             }
             q++;
-            if ((size_t)(r - q) == wl && memcmp(q, want, wl) == 0)
+            if ((size_t)(r - q) == wl && mem.cmp(q, want, wl) == 0)
             {
                 return PROTO_TRUE;
             }
@@ -293,8 +294,8 @@ static proto_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size
             return PROTO_FALSE;
         }
     }
-    memset(dst, 0, width);
-    memcpy(dst + (width - len), src, len);
+    mem.set(dst, 0, width);
+    mem.cpy(dst + (width - len), src, len);
     return PROTO_TRUE;
 }
 

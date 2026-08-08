@@ -11,6 +11,7 @@
  */
 
 #include "services/peripherals/hmmd/hmmd.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HMMD
 
@@ -33,7 +34,7 @@ proto_bool pc_hmmd_parse_report(const uint8_t *f, size_t len, HmmdReport *out)
     {
         return PROTO_FALSE;
     }
-    if (memcmp(f, HDR, 4) != 0)
+    if (mem.cmp(f, HDR, 4) != 0)
     {
         return PROTO_FALSE;
     }
@@ -41,14 +42,14 @@ proto_bool pc_hmmd_parse_report(const uint8_t *f, size_t len, HmmdReport *out)
     {
         return PROTO_FALSE; // the only report length this module emits
     }
-    if (memcmp(f + 6 + PC_HMMD_REPORT_LEN, FTR, 4) != 0)
+    if (mem.cmp(f + 6 + PC_HMMD_REPORT_LEN, FTR, 4) != 0)
     {
         return PROTO_FALSE;
     }
 
     const uint8_t *p = f + 6;
     HmmdReport r;
-    memset(&r, 0, sizeof(r));
+    mem.set(&r, 0, sizeof(r));
     r.detected = (p[0] == 0x01) ? 1u : 0u;
     r.distance_cm = rd16(p + 1);
     for (int i = 0; i < PC_HMMD_GATES; i++)
@@ -209,7 +210,7 @@ proto_bool pc_hmmd_parse_ack(const uint8_t *f, size_t len, HmmdAck *out)
     {
         return PROTO_FALSE;
     }
-    if (memcmp(f, CMD_HDR, 4) != 0)
+    if (mem.cmp(f, CMD_HDR, 4) != 0)
     {
         return PROTO_FALSE;
     }
@@ -218,7 +219,7 @@ proto_bool pc_hmmd_parse_ack(const uint8_t *f, size_t len, HmmdAck *out)
     {
         return PROTO_FALSE; // the declared length must account for exactly this frame
     }
-    if (memcmp(f + 6 + dl, CMD_FTR, 4) != 0)
+    if (mem.cmp(f + 6 + dl, CMD_FTR, 4) != 0)
     {
         return PROTO_FALSE;
     }

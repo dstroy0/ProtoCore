@@ -11,6 +11,7 @@
  */
 
 #include "http_parser.h"
+#include "mmgr/protomem.h"
 #include "shared_primitives/ip.h" // validate a recovered proxy client IP (v4/v6)
 
 HttpReq http_pool[CONN_POOL_SLOTS];
@@ -614,7 +615,7 @@ proto_bool http_get_cookie(const HttpReq *req, const char *name, char *out, size
             {
                 vlen = out_size - 1;
             }
-            memcpy(out, v, vlen);
+            mem.cpy(out, v, vlen);
             out[vlen] = '\0';
             return PROTO_TRUE;
         }
@@ -709,7 +710,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
         {
             return PROTO_FALSE;
         }
-        memcpy(tok, s, take);
+        mem.cpy(tok, s, take);
         tlen = take;
     }
     tok[tlen] = '\0';
@@ -870,7 +871,7 @@ proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t 
             {
                 vlen = out_size - 1;
             }
-            memcpy(out, body + vs, vlen);
+            mem.cpy(out, body + vs, vlen);
             out[vlen] = '\0';
             return PROTO_TRUE;
         }

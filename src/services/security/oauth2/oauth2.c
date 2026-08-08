@@ -7,6 +7,7 @@
  */
 
 #include "services/security/oauth2/oauth2.h"
+#include "mmgr/protomem.h"
 #include "shared_primitives/hex.h"
 
 #if PC_ENABLE_OAUTH2
@@ -190,7 +191,7 @@ static int post_and_parse(Oauth2Ctx *c, const char *token_url, int body_len, pc_
     size_t k = r.body_len < sizeof(c->resp) - 1 ? r.body_len : sizeof(c->resp) - 1;
     if (r.body && k)
     {
-        memcpy(c->resp, r.body, k);
+        mem.cpy(c->resp, r.body, k);
     }
     c->resp[k] = '\0';
     if (!pc_oauth2_parse_token_response(c->resp, out))

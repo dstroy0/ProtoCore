@@ -340,8 +340,8 @@ void test_full_handshake_and_stream()
     pc_tls13_ks_early(&TLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_server_keys);
-    pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_client_keys);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
 
     size_t hswire = 0;
     uint8_t hstype = 0;
@@ -355,8 +355,8 @@ void test_full_handshake_and_stream()
     pc_sha256_final(&t, ch_sf);
     pc_tls13_ks_master(&cks, ch_sf);
     QuicPacketKeys ap_server_keys, ap_client_keys;
-    pc_quic_keys_from_secret(cks.server_ap_traffic, &ap_server_keys);
-    pc_quic_keys_from_secret(cks.client_ap_traffic, &ap_client_keys);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_AP, &ap_server_keys);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_AP, &ap_client_keys);
     // Diagnostic: the client-derived keys must equal the server's.
     assert_ctx_match(qc.tls.hs_server.gcm, hs_server_keys.gcm);
     assert_ctx_match(qc.tls.ap_server.gcm, ap_server_keys.gcm);
@@ -369,7 +369,7 @@ void test_full_handshake_and_stream()
                             1, &init.client, ifr, ifl);
 
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, ch_sf, cfin + 4);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
     uint8_t hfr[64];
     size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
@@ -652,8 +652,8 @@ void test_connection_close_on_malformed_frame()
     pc_tls13_ks_early(&TLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_server_keys);
-    pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_client_keys);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
 
     // Client -> server: a Handshake packet whose only frame is a malformed CRYPTO (its declared length
     // dwarfs the packet), which the server cannot decode.
@@ -1181,8 +1181,8 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     pc_tls13_ks_early(&TLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_server_keys);
-    pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_client_keys);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
     size_t hswire = 0;
     uint8_t hstype = 0;
     size_t hpt = open_long(sdg + wire, sl - wire, &hs_server_keys, plain, &hswire, &hstype);
@@ -1190,8 +1190,8 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     pc_sha256_update(&t, hsflight, hsflen);
     pc_sha256_final(&t, ch_sf);
     pc_tls13_ks_master(&cks, ch_sf);
-    pc_quic_keys_from_secret(cks.client_ap_traffic, ap_client);
-    pc_quic_keys_from_secret(cks.server_ap_traffic, ap_server);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_AP, ap_client);
+    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_AP, ap_server);
 
     uint8_t ifr[64];
     size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
@@ -1199,7 +1199,7 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init->client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, ch_sf, cfin + 4);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
     uint8_t hfr[64];
     size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));

@@ -13,6 +13,7 @@
  */
 
 #include "network_drivers/tls/tls.h"
+#include "mmgr/protomem.h"
 #include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_TLS && PC_HAS_VENDOR_TLS
@@ -171,7 +172,7 @@ static void *pool_calloc(size_t n, size_t size)
                 s_pool.peak = s_pool.used;
             }
             void *payload = p + POOL_HDR;
-            memset(payload, 0, b->size);
+            mem.set(payload, 0, b->size);
             return payload;
         }
         p += POOL_HDR + b->size;
@@ -778,7 +779,7 @@ void pc_tls_client_set_pin(const uint8_t sha256[32])
         s_cli.pin_set = PROTO_FALSE;
         return;
     }
-    memcpy(s_cli.pin, sha256, 32);
+    mem.cpy(s_cli.pin, sha256, 32);
     s_cli.pin_set = PROTO_TRUE;
 }
 
@@ -859,144 +860,6 @@ static proto_bool client_pin_ok(mbedtls_ssl_context *ssl)
     return (hret == 0) && ct_eq32(hash, s_cli.pin);
 }
 
-#if PC_ENABLE_HTTP_CLIENT_TLS
-// Blocking client-side TLS exchange over caller-supplied BIO callbacks. Used by
-// the outbound HTTP client for https://. The transport (raw lwIP tcp_write + the
-// receive ring) lives in http_client.cpp; here we own only the mbedTLS client
-// session, served from the same static arena as the server side.
-//
-// Server authentication is OFF by default (the device has no trust store): the
-// transport is encrypted but the peer is unauthenticated unless a CA
-// (pc_tls_client_set_ca) and/or a cert pin (pc_tls_client_set_pin) is installed.
-int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8_t *out, size_t out_cap,
-                      size_t *out_len, pc_tls_bio_send_fn send_fn, pc_tls_bio_recv_fn recv_fn, uint32_t deadline_ms)
-{
-    if (out_len)
-    {
-        *out_len = 0;
-    }
-    if (!req || !out || out_cap == 0 || !send_fn || !recv_fn)
-    {
-        return -1;
-    }
-
-    client_arena_ensure();
-
-    mbedtls_ssl_context ssl;
-    mbedtls_ssl_config conf;
-    mbedtls_ssl_init(&ssl);
-    mbedtls_ssl_config_init(&conf);
-
-    int rc = -1;
-    int ret;
-    do
-    {
-        if (client_conf_apply(&conf) != 0)
-        {
-            break;
-        }
-        if (mbedtls_ssl_setup(&ssl, &conf) != 0)
-        {
-            break;
-        }
-        if (host)
-        {
-            mbedtls_ssl_set_hostname(&ssl, host); // SNI (ignored if unsupported)
-        }
-        mbedtls_ssl_set_bio(&ssl, NULL, send_fn, recv_fn, NULL);
-
-        // Handshake (BIO callbacks yield WANT_READ/WANT_WRITE while data is pending).
-        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
-        {
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-            {
-                break;
-            }
-            if ((int32_t)(deadline_ms - pc_millis()) <= 0)
-            {
-                ret = -1;
-                break;
-            }
-            pcdelay(5);
-        }
-        if (ret != 0)
-        {
-#ifdef PC_HTTP_CLIENT_DEBUG
-            printf("[tls] handshake ret=-0x%04x arena_peak=%u\n", (unsigned)(-ret), (unsigned)pc_tls_arena_peak());
-#endif
-            break;
-        }
-
-        // Certificate pinning (mismatch or no peer cert aborts).
-        if (!client_pin_ok(&ssl))
-        {
-#ifdef PC_HTTP_CLIENT_DEBUG
-            printf("[tls] cert pin mismatch\n");
-#endif
-            ret = -1;
-            break;
-        }
-
-        // Send the (plaintext) request; mbedTLS encrypts and pushes via send_fn.
-        size_t sent = 0;
-        while (sent < reqlen)
-        {
-            ret = mbedtls_ssl_write(&ssl, req + sent, reqlen - sent);
-            if (ret > 0)
-            {
-                sent += (size_t)ret;
-                continue;
-            }
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-            {
-                break;
-            }
-            if ((int32_t)(deadline_ms - pc_millis()) <= 0)
-            {
-                break;
-            }
-            pcdelay(5);
-        }
-        if (sent < reqlen)
-        {
-            break;
-        }
-
-        // Read the decrypted response into out until the peer closes / buffer fills.
-        size_t total = 0;
-        while (total < out_cap)
-        {
-            ret = mbedtls_ssl_read(&ssl, out + total, out_cap - total);
-            if (ret > 0)
-            {
-                total += (size_t)ret;
-                continue;
-            }
-            if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
-            {
-                if ((int32_t)(deadline_ms - pc_millis()) <= 0)
-                {
-                    break;
-                }
-                pcdelay(5);
-                continue;
-            }
-            break; // 0 / PEER_CLOSE_NOTIFY / fatal -> response complete
-        }
-        if (out_len)
-        {
-            *out_len = total;
-        }
-        rc = (total > 0) ? 0 : -1;
-    } while (0);
-
-    mbedtls_ssl_close_notify(&ssl);
-    mbedtls_ssl_free(&ssl);
-    mbedtls_ssl_config_free(&conf);
-    return rc;
-}
-#endif // PC_ENABLE_HTTP_CLIENT_TLS
-
 // --- Persistent client session (csess): one long-lived outbound TLS connection
 // (e.g. MQTTS). Handshake once, then read/write application data over the
 // caller's BIO until pc_tls_client_session_end(). Honors the CA/pin trust config above. ---
@@ -1075,18 +938,18 @@ proto_bool pc_tls_client_session_active()
     return s_csess.active;
 }
 
-int pc_tls_client_session_handshake()
+pc_tls_state pc_tls_client_session_handshake()
 {
     if (!s_csess.active)
     {
-        return -1;
+        return PC_TLS_FAILED;
     }
     int ret = mbedtls_ssl_handshake(&s_csess.ssl);
     if (ret == 0)
     {
         if (!client_pin_ok(&s_csess.ssl)) // verify the pin once established
         {
-            return -1;
+            return PC_TLS_FAILED;
         }
 #if PC_ENABLE_TLS_RESUMPTION
         // Capture the established session (incl. any new ticket) for next time.
@@ -1094,13 +957,13 @@ int pc_tls_client_session_handshake()
         mbedtls_ssl_session_init(&s_csess.saved);
         s_csess.saved_valid = (mbedtls_ssl_get_session(&s_csess.ssl, &s_csess.saved) == 0);
 #endif
-        return 1;
+        return PC_TLS_READY;
     }
     if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
     {
-        return 0;
+        return PC_TLS_BUSY;
     }
-    return -1;
+    return PC_TLS_FAILED;
 }
 
 int pc_tls_client_session_read(uint8_t *buf, size_t len)
@@ -1128,24 +991,17 @@ int pc_tls_client_session_write(const uint8_t *data, size_t len)
         return -1;
     }
     size_t sent = 0;
-    uint16_t guard = 0;
     while (sent < len)
     {
         int ret = mbedtls_ssl_write(&s_csess.ssl, data + sent, len - sent);
         if (ret > 0)
         {
             sent += (size_t)ret;
-            guard = 0;
             continue;
         }
         if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
         {
-            if (++guard > 64)
-            {
-                break; // send buffer stuck; report a short write
-            }
-            pcdelay(2);
-            continue;
+            break; // the record layer took nothing; report the short write
         }
         return -1;
     }

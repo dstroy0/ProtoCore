@@ -12,6 +12,7 @@
  */
 
 #include "server/webdav_handler.h"
+#include "mmgr/protomem.h"
 #include "crypto/rng/rng.h" // pc_rand_fill(): the lock token's unpredictable half
 #include "mmgr/membuild.h"
 #include "network_drivers/application/webdav/webdav.h"
@@ -188,7 +189,7 @@ static proto_bool dav_coded_url_token(const char *coded, char *out, size_t cap)
     {
         return PROTO_FALSE;
     }
-    memcpy(out, lt + 1, n);
+    mem.cpy(out, lt + 1, n);
     out[n] = 0;
     return PROTO_TRUE;
 }

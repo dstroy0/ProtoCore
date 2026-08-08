@@ -10,6 +10,7 @@
  */
 
 #include "crypto/hash/sha1.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 
 #if PC_HAS_HW_SHA
@@ -114,7 +115,7 @@ void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN]
     // Build the padded final block(s)
     uint8_t pad[128] = {};
     size_t tail = len - blocks * 64;
-    memcpy(pad, data + blocks * 64, tail);
+    mem.cpy(pad, data + blocks * 64, tail);
     pad[tail] = 0x80;
 
     // Bit-length goes in the last 8 bytes of the final block

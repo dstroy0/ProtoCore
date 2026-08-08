@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/dds/dds.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DDS
 
@@ -26,7 +27,7 @@ size_t pc_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint
     out[5] = RTPS_VERSION[1];
     out[6] = vendor_id[0];
     out[7] = vendor_id[1];
-    memcpy(out + 8, guid_prefix, RTPS_GUIDPREFIX_LEN);
+    mem.cpy(out + 8, guid_prefix, RTPS_GUIDPREFIX_LEN);
     return RTPS_HEADER_LEN;
 }
 
@@ -56,7 +57,7 @@ size_t pc_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16
     }
     if (body_len)
     {
-        memcpy(out + 4, body, body_len);
+        mem.cpy(out + 4, body, body_len);
     }
     return n;
 }

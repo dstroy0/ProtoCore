@@ -7,6 +7,7 @@
  */
 
 #include "services/net/proxy_protocol/proxy_protocol.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_PROXY_PROTOCOL
@@ -143,7 +144,7 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
     out->src_port = out->dst_port = 0;
     *consumed = crlf + 2;
     // "PROXY TCP4 <src> <dst> <sport> <dport>"; anything else (UNKNOWN/TCP6) yields no addr.
-    if (ntok == 6 && tlen[1] == 4 && memcmp(tok[1], "TCP4", 4) == 0)
+    if (ntok == 6 && tlen[1] == 4 && mem.cmp(tok[1], "TCP4", 4) == 0)
     {
         if (parse_ipv4(tok[2], tlen[2], &out->src_addr) && parse_ipv4(tok[3], tlen[3], &out->dst_addr) &&
             parse_u16(tok[4], tlen[4], &out->src_port) && parse_u16(tok[5], tlen[5], &out->dst_port))
@@ -162,7 +163,7 @@ proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *c
     }
 
     // v2: the 12-octet binary signature.
-    if (len >= PROXY_V2_SIG_LEN && memcmp(buf, kV2Sig, PROXY_V2_SIG_LEN) == 0)
+    if (len >= PROXY_V2_SIG_LEN && mem.cmp(buf, kV2Sig, PROXY_V2_SIG_LEN) == 0)
     {
         if (len < 16) // signature + ver_cmd + fam + 2-octet length
         {
@@ -197,7 +198,7 @@ proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *c
     }
 
     // v1: the "PROXY " text prefix.
-    if (len >= 6 && memcmp(buf, "PROXY ", 6) == 0)
+    if (len >= 6 && mem.cmp(buf, "PROXY ", 6) == 0)
     {
         return parse_v1(buf, len, out, consumed);
     }
@@ -251,7 +252,7 @@ size_t proxy_v2_build(uint8_t *buf, size_t cap, uint32_t src_addr, uint32_t dst_
     {
         return 0;
     }
-    memcpy(buf, kV2Sig, PROXY_V2_SIG_LEN);
+    mem.cpy(buf, kV2Sig, PROXY_V2_SIG_LEN);
     buf[12] = PROXY_V2_VER_CMD_PROXY;
     buf[13] = PROXY_V2_FAM_TCP4;
     buf[14] = 0x00; // address-block length (12), big-endian

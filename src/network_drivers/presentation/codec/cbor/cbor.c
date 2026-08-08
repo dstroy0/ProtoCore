@@ -7,6 +7,7 @@
  */
 
 #include "cbor.h"
+#include "mmgr/protomem.h"
 
 #if PC_NEED_CBOR
 
@@ -102,7 +103,7 @@ static void pc_cbor_null(pc_span *w)
 static void pc_cbor_float(pc_span *w, float f)
 {
     uint32_t bits;
-    memcpy(&bits, &f, sizeof(bits));
+    mem.cpy(&bits, &f, sizeof(bits));
     put(w, 0xfa); // major 7, single-precision
     pc_bw_put_be(w, bits, 4);
 }
@@ -305,7 +306,7 @@ static proto_bool pc_cbor_read_float(pc_cspan *r, float *out)
             return PROTO_FALSE;
         }
         uint32_t bits = (uint32_t)v;
-        memcpy(out, &bits, sizeof(*out));
+        mem.cpy(out, &bits, sizeof(*out));
         return PROTO_TRUE;
     }
     if (b == 0xfb) // double -> narrow to float
@@ -317,7 +318,7 @@ static proto_bool pc_cbor_read_float(pc_cspan *r, float *out)
             return PROTO_FALSE;
         }
         double d;
-        memcpy(&d, &bits, sizeof(d));
+        mem.cpy(&d, &bits, sizeof(d));
         *out = (float)d;
         return PROTO_TRUE;
     }

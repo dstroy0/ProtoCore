@@ -7,6 +7,7 @@
  */
 
 #include "services/web/edge_cache/edge_fetch.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_EDGE_CACHE
 
@@ -159,7 +160,7 @@ proto_bool edge_resp_complete(const uint8_t *buf, size_t len, proto_bool conn_cl
 void edge_fetch_begin(EdgeFetch *f, const EdgeFetchTransport *t, const char *host, uint16_t port, const void *request,
                       size_t req_len, uint32_t now_ms)
 {
-    memset(f, 0, sizeof(*f));
+    mem.set(f, 0, sizeof(*f));
     f->cid = -1;
     f->start_ms = now_ms;
     f->st = EDGE_FETCH_STATUS_PENDING;

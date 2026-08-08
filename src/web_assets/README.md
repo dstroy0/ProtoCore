@@ -2,21 +2,21 @@
 
 User-configurable strings the firmware serves (HTML pages, the Prometheus
 exposition, future CSS/JSON/XML) live here as editable source files instead of
-being buried in `.cpp`. A single generator turns them into C string literals in
+being buried in `.c`. A single generator turns them into C string literals in
 the application layer so they ship in flash with no filesystem or heap.
 
 ## Layout
 
-| Path                                         | What                                                                  |
-| -------------------------------------------- | --------------------------------------------------------------------- |
-| `input/`                                     | One source document per symbol, named by the C identifier it backs.   |
-| `themes/`                                    | Reusable CSS themes a document can pull in with a `#theme` directive. |
-| `wizard/build_assets.py`                     | The generator.                                                        |
-| `../network_drivers/application/web.{h,cpp}` | Generated output (committed; do not hand-edit).                       |
+| Path                                              | What                                                                  |
+| ------------------------------------------------- | --------------------------------------------------------------------- |
+| `input/`                                          | One source document per symbol, named by the C identifier it backs.   |
+| `themes/`                                         | Reusable CSS themes a document can pull in with a `#theme` directive. |
+| `wizard/build_assets.py`                          | The generator.                                                        |
+| `../network_drivers/application/web_assets.{h,c}` | Generated output (committed; do not hand-edit).                       |
 
 A file's **base name is the C symbol**: `PC_PROV_FORM.html` becomes
 `extern const char PC_PROV_FORM[];`. Every document is emitted into the single
-`application/web.{h,cpp}` translation unit - all generated assets are one
+`application/web_assets.{h,c}` translation unit - all generated assets are one
 machine-produced artifact, so they live in one clearly-named unit rather than per
 -content-type files (which would conflate source format with output module and
 collide with real modules, e.g. the JSON codec at `presentation/json/json.h`). The
@@ -27,10 +27,10 @@ collide with real modules, e.g. the JSON codec at `presentation/json/json.h`). T
 
 ```sh
 # edit a document under input/, then regenerate:
-python web_assets/wizard/build_assets.py            # (or: ... generate)
+python -m src.web_assets.wizard.build_assets            # (or: ... generate)
 
 # CI / pre-commit gate - fails if the committed output is stale:
-python web_assets/wizard/build_assets.py check
+python -m src.web_assets.wizard.build_assets check
 ```
 
 The generated files are committed (Arduino-IDE users do not run Python) and are

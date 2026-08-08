@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/powerlink/powerlink.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_POWERLINK
 
@@ -27,7 +28,7 @@ size_t pc_epl_build(uint8_t msg_type, uint8_t dest, uint8_t source, const uint8_
     out[2] = source;
     if (payload_len)
     {
-        memcpy(out + 3, payload, payload_len);
+        mem.cpy(out + 3, payload, payload_len);
     }
     return n;
 }

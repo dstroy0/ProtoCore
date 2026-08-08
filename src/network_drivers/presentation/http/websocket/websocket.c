@@ -16,6 +16,7 @@
  */
 
 #include "websocket.h"
+#include "mmgr/protomem.h"
 #include "network_drivers/transport/tcp.h"
 #include "shared_primitives/utf8.h"
 
@@ -385,7 +386,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
                 ws->parse_state = WS_ERROR;
                 return;
             }
-            memcpy(in, ws->buf, comp_len);
+            mem.cpy(in, ws->buf, comp_len);
             in[comp_len] = 0x00;
             in[comp_len + 1] = 0x00;
             in[comp_len + 2] = 0xff;
@@ -406,7 +407,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
                 ws->parse_state = WS_ERROR;
                 return;
             }
-            memcpy(ws->buf, out, dlen);
+            mem.cpy(ws->buf, out, dlen);
             ws->msg_len = dlen;
             ws->msg_compressed = PROTO_FALSE;
             pc_plaintext_release(pt_mark);

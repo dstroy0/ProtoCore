@@ -7,6 +7,7 @@
  */
 
 #include "services/instrumentation/scpi/scpi.h"
+#include "mmgr/protomem.h"
 #include "mmgr/frame.h" // the one frame engine
 
 #if PC_ENABLE_SCPI
@@ -101,7 +102,7 @@ size_t pc_scpi_build(char *buf, size_t cap, const char *header, const char *cons
     }
 
     size_t p = 0;
-    memcpy(buf, header, hlen);
+    mem.cpy(buf, header, hlen);
     p = hlen;
     for (size_t i = 0; i < argc; i++)
     {
@@ -116,7 +117,7 @@ size_t pc_scpi_build(char *buf, size_t cap, const char *header, const char *cons
             return 0;
         }
         buf[p++] = sep;
-        memcpy(buf + p, args[i], alen);
+        mem.cpy(buf + p, args[i], alen);
         p += alen;
     }
     if (p + 1 >= cap) // room for '\n' + NUL
@@ -436,7 +437,7 @@ void pc_scpi_status_init(ScpiStatus *s)
     {
         return;
     }
-    memset(s, 0, sizeof(*s));
+    mem.set(s, 0, sizeof(*s));
 }
 
 void pc_scpi_event(ScpiStatus *s, uint8_t esr_bits)

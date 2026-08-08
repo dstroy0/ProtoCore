@@ -7,6 +7,7 @@
  */
 
 #include "services/energy/c37118/c37118.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_C37118
 
@@ -40,7 +41,7 @@ size_t pc_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint8_t ver
     p += pc_wr32be(buf + p, fracsec);
     if (payload_len)
     {
-        memcpy(buf + p, payload, payload_len);
+        mem.cpy(buf + p, payload, payload_len);
         p += payload_len;
     }
     uint16_t crc = pc_c37118_crc(buf, p); // over everything before CHK

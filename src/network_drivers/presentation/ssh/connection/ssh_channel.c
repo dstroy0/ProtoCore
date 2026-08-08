@@ -12,6 +12,7 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
+#include "mmgr/protomem.h"
 
 SshChannel ssh_chan[MAX_SSH_CONNS][PC_SSH_MAX_CHANNELS];
 
@@ -95,7 +96,7 @@ void pc_ssh_channel_init(uint8_t i)
     {
         return;
     }
-    memset(ssh_chan[i], 0, sizeof(ssh_chan[i])); // reset every channel for this connection
+    mem.set(ssh_chan[i], 0, sizeof(ssh_chan[i])); // reset every channel for this connection
 }
 
 // ---------------------------------------------------------------------------
@@ -214,8 +215,8 @@ int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uin
     }
     proto_bool want_reply = payload[off++] != 0;
 
-    proto_bool is_fwd = (name_len == 13 && memcmp(name, "tcpip-forward", 13) == 0);
-    proto_bool is_cancel = (name_len == 20 && memcmp(name, "cancel-tcpip-forward", 20) == 0);
+    proto_bool is_fwd = (name_len == 13 && mem.cmp(name, "tcpip-forward", 13) == 0);
+    proto_bool is_cancel = (name_len == 20 && mem.cmp(name, "cancel-tcpip-forward", 20) == 0);
 
     if (is_fwd || is_cancel)
     {
@@ -326,19 +327,19 @@ int pc_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t con
     size_t off = 0;
     out[off++] = SSH_MSG_CHANNEL_OPEN;
     wr_u32(out + off, (uint32_t)tl);
-    memcpy(out + off + 4, type, tl);
+    mem.cpy(out + off + 4, type, tl);
     off += 4 + tl;
     wr_u32(out + off, (uint32_t)slot); // our sender channel id
     wr_u32(out + off + 4, SSH_CHAN_WINDOW);
     wr_u32(out + off + 8, SSH_CHAN_MAX_PACKET);
     off += 12;
     wr_u32(out + off, (uint32_t)ca);
-    memcpy(out + off + 4, conn_addr, ca);
+    mem.cpy(out + off + 4, conn_addr, ca);
     off += 4 + ca;
     wr_u32(out + off, conn_port);
     off += 4;
     wr_u32(out + off, (uint32_t)oa);
-    memcpy(out + off + 4, orig_addr, oa);
+    mem.cpy(out + off + 4, orig_addr, oa);
     off += 4 + oa;
     wr_u32(out + off, orig_port);
     off += 4;
@@ -424,8 +425,8 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
     uint32_t max_pkt = rd_u32(payload + off + 8);
     off += 12;
 
-    proto_bool is_session = (type_len == 7 && memcmp(type, "session", 7) == 0);
-    proto_bool is_dtcpip = (type_len == 12 && memcmp(type, "direct-tcpip", 12) == 0);
+    proto_bool is_session = (type_len == 7 && mem.cmp(type, "session", 7) == 0);
+    proto_bool is_dtcpip = (type_len == 12 && mem.cmp(type, "direct-tcpip", 12) == 0);
     if (!is_session && !is_dtcpip)
     {
         return build_open_failure(out, cap, sender, 3u, out_len); // unknown channel type
@@ -490,11 +491,11 @@ static void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8
 #endif
 #if PC_ENABLE_SSH_SFTP
     // subsystem "sftp": not in the base accept set, so accept it here and tag the channel for the SFTP binding.
-    if (rtype_len == 9 && memcmp(rtype, "subsystem", 9) == 0)
+    if (rtype_len == 9 && mem.cmp(rtype, "subsystem", 9) == 0)
     {
         const uint8_t *arg = NULL;
         uint32_t arg_len = 0;
-        if (rd_string(payload, len, off, &arg, &arg_len) && arg_len == 4 && memcmp(arg, "sftp", 4) == 0)
+        if (rd_string(payload, len, off, &arg, &arg_len) && arg_len == 4 && mem.cmp(arg, "sftp", 4) == 0)
         {
             *accept = PROTO_TRUE;
             c->type = SSH_CHAN_SFTP;
@@ -507,11 +508,11 @@ static void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8
 #endif
 #if PC_ENABLE_SSH_SCP
     // exec "scp …": already accepted (exec is in the base set); tag the channel + hand the command to the binding.
-    if (rtype_len == 4 && memcmp(rtype, "exec", 4) == 0)
+    if (rtype_len == 4 && mem.cmp(rtype, "exec", 4) == 0)
     {
         const uint8_t *arg = NULL;
         uint32_t arg_len = 0;
-        if (rd_string(payload, len, off, &arg, &arg_len) && arg_len >= 4 && memcmp(arg, "scp ", 4) == 0)
+        if (rd_string(payload, len, off, &arg, &arg_len) && arg_len >= 4 && mem.cmp(arg, "scp ", 4) == 0)
         {
             c->type = SSH_CHAN_SCP;
             if (s_chcb.pc_scp_open_cb)
@@ -559,8 +560,8 @@ int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len,
     }
 
     proto_bool accept =
-        (rtype_len == 5 && memcmp(rtype, "shell", 5) == 0) || (rtype_len == 4 && memcmp(rtype, "exec", 4) == 0) ||
-        (rtype_len == 7 && memcmp(rtype, "pty-req", 7) == 0) || (rtype_len == 3 && memcmp(rtype, "env", 3) == 0);
+        (rtype_len == 5 && mem.cmp(rtype, "shell", 5) == 0) || (rtype_len == 4 && mem.cmp(rtype, "exec", 4) == 0) ||
+        (rtype_len == 7 && mem.cmp(rtype, "pty-req", 7) == 0) || (rtype_len == 3 && mem.cmp(rtype, "env", 3) == 0);
 
 #if PC_ENABLE_SSH_SFTP || PC_ENABLE_SSH_SCP
     classify_file_transfer_request(i, c, rtype, rtype_len, payload, len, &off, &accept);

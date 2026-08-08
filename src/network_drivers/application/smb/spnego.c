@@ -8,6 +8,7 @@
  */
 
 #include "spnego.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SMB
 
@@ -107,17 +108,17 @@ size_t pc_spnego_wrap_negotiate(const uint8_t *ntlm, size_t pc_ntlm_len, uint8_t
 
     size_t p = 0;
     wr_tag_len(out, &p, 0x60, ictbody);
-    memcpy(out + p, SPNEGO_OID, sizeof(SPNEGO_OID));
+    mem.cpy(out + p, SPNEGO_OID, sizeof(SPNEGO_OID));
     p += sizeof(SPNEGO_OID);
     wr_tag_len(out, &p, 0xa0, seq);              // [0] negTokenInit
     wr_tag_len(out, &p, 0x30, mtypes + mt);      // SEQUENCE
     wr_tag_len(out, &p, 0xa0, seqof);            // [0] mechTypes
     wr_tag_len(out, &p, 0x30, sizeof(NTLM_OID)); // SEQUENCE OF
-    memcpy(out + p, NTLM_OID, sizeof(NTLM_OID));
+    mem.cpy(out + p, NTLM_OID, sizeof(NTLM_OID));
     p += sizeof(NTLM_OID);
     wr_tag_len(out, &p, 0xa2, octet); // [2] mechToken
     wr_tag_len(out, &p, 0x04, pc_ntlm_len);
-    memcpy(out + p, ntlm, pc_ntlm_len);
+    mem.cpy(out + p, ntlm, pc_ntlm_len);
     p += pc_ntlm_len;
     return p;
 }
@@ -142,7 +143,7 @@ size_t pc_spnego_wrap_authenticate(const uint8_t *ntlm, size_t pc_ntlm_len, uint
     wr_tag_len(out, &p, 0x30, rt);    // SEQUENCE
     wr_tag_len(out, &p, 0xa2, octet); // [2] responseToken
     wr_tag_len(out, &p, 0x04, pc_ntlm_len);
-    memcpy(out + p, ntlm, pc_ntlm_len);
+    mem.cpy(out + p, ntlm, pc_ntlm_len);
     p += pc_ntlm_len;
     return p;
 }

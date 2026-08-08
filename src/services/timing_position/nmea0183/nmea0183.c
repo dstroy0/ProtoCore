@@ -7,6 +7,7 @@
  */
 
 #include "services/timing_position/nmea0183/nmea0183.h"
+#include "mmgr/protomem.h"
 
 #if PC_NEED_NMEA0183
 
@@ -60,7 +61,7 @@ size_t pc_nmea0183_build(char *buf, size_t cap, const char *body)
     uint8_t cs = pc_nmea0183_checksum(body, blen);
     size_t p = 0;
     buf[p++] = '$';
-    memcpy(buf + p, body, blen);
+    mem.cpy(buf + p, body, blen);
     p += blen;
     buf[p++] = '*';
     buf[p++] = hex_digit((uint8_t)(cs >> 4));
@@ -130,8 +131,8 @@ proto_bool pc_nmea0183_parse(const char *s, size_t len, Nmea0183 *out)
     out->field_count = fc;
 
     // Derive talker / type from the address field (field 0).
-    memset(out->talker, 0, sizeof(out->talker));
-    memset(out->type, 0, sizeof(out->type));
+    mem.set(out->talker, 0, sizeof(out->talker));
+    mem.set(out->type, 0, sizeof(out->type));
     if (fc > 0)
     // point) guarantees star >= 1 (it is only ever set inside the search loop, which
     // starts at i = 1), so the split loop's `i <= star` bound guarantees an i == star
@@ -240,7 +241,7 @@ proto_bool pc_nmea0183_parse_gga(const Nmea0183 *m, pc_nmea_gga *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     nmea_time(m, 1, &out->hour, &out->minute, &out->second);
     float lat = 0.0f, lon = 0.0f;
     if (pc_nmea0183_field_float(m, 2, &lat) && m->field_len[3] >= 1)
@@ -272,7 +273,7 @@ proto_bool pc_nmea0183_parse_rmc(const Nmea0183 *m, pc_nmea_rmc *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     nmea_time(m, 1, &out->hour, &out->minute, &out->second);
     out->valid = (m->field_len[2] >= 1 && (m->fields[2][0] == 'A' || m->fields[2][0] == 'a'));
     float lat = 0.0f, lon = 0.0f;
@@ -296,7 +297,7 @@ proto_bool pc_nmea0183_parse_gsv(const Nmea0183 *m, pc_nmea_gsv *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     long v = 0;
     if (pc_nmea0183_field_int(m, 1, &v))
     {
@@ -350,7 +351,7 @@ proto_bool pc_nmea0183_parse_zda(const Nmea0183 *m, pc_nmea_zda *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     nmea_time(m, 1, &out->hour, &out->minute, &out->second);
     long v = 0;
     if (pc_nmea0183_field_int(m, 2, &v))
@@ -383,7 +384,7 @@ proto_bool pc_nmea0183_parse_vtg(const Nmea0183 *m, pc_nmea_vtg *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     pc_nmea0183_field_float(m, 1, &out->course_true_deg); // stays 0 if empty (out was zeroed)
     pc_nmea0183_field_float(m, 3, &out->course_mag_deg);
     pc_nmea0183_field_float(m, 5, &out->speed_knots);
@@ -402,7 +403,7 @@ proto_bool pc_nmea0183_parse_gsa(const Nmea0183 *m, pc_nmea_gsa *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     if (m->field_len[1] >= 1)
     {
         out->mode = m->fields[1][0];
@@ -434,7 +435,7 @@ proto_bool pc_nmea0183_parse_mwv(const Nmea0183 *m, pc_nmea_mwv *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     pc_nmea0183_field_float(m, 1, &out->wind_angle_deg); // stays 0 if empty (out was zeroed)
     if (m->field_len[2] >= 1)
     {
@@ -455,7 +456,7 @@ proto_bool pc_nmea0183_parse_dpt(const Nmea0183 *m, pc_nmea_dpt *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     pc_nmea0183_field_float(m, 1, &out->depth_m); // stays 0 if empty (out was zeroed)
     pc_nmea0183_field_float(m, 2, &out->offset_m);
     out->has_range = pc_nmea0183_field_float(m, 3, &out->range_m); // the range scale is optional
@@ -468,7 +469,7 @@ proto_bool pc_nmea0183_parse_hdg(const Nmea0183 *m, pc_nmea_hdg *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     pc_nmea0183_field_float(m, 1, &out->heading_deg);
     float dev = 0.0f;
     if (pc_nmea0183_field_float(m, 2, &dev)) // field 3 is the E/W direction (West -> negative)
@@ -489,7 +490,7 @@ proto_bool pc_nmea0183_parse_gll(const Nmea0183 *m, pc_nmea_gll *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     float lat = 0.0f, lon = 0.0f;
     if (pc_nmea0183_field_float(m, 1, &lat) && m->field_len[2] >= 1)
     {
@@ -515,7 +516,7 @@ proto_bool pc_nmea0183_parse_vhw(const Nmea0183 *m, pc_nmea_vhw *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     pc_nmea0183_field_float(m, 1, &out->heading_true_deg); // heading true; stays 0 if empty (out was zeroed)
     pc_nmea0183_field_float(m, 3, &out->heading_mag_deg);  // heading magnetic
     pc_nmea0183_field_float(m, 5, &out->speed_knots);      // speed through water, knots
@@ -529,7 +530,7 @@ proto_bool pc_nmea0183_parse_vlw(const Nmea0183 *m, pc_nmea_vlw *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     pc_nmea0183_field_float(m, 1, &out->total_water_nm); // total cumulative; stays 0 if empty (out was zeroed)
     pc_nmea0183_field_float(m, 3, &out->trip_water_nm);  // since the last reset
     return PROTO_TRUE;

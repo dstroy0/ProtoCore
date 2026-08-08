@@ -15,6 +15,7 @@
  */
 
 #include "server/signaling/trace_capture.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_TRACE_CAPTURE
 
@@ -69,7 +70,7 @@ proto_bool pc_tc_begin(const pc_tc_config *cfg)
         return PROTO_FALSE;
     }
 
-    memset(&s_tc, 0, sizeof(s_tc));
+    mem.set(&s_tc, 0, sizeof(s_tc));
     s_tc.sink = cfg->sink;
     s_tc.ctx = cfg->ctx;
     s_tc.pretrigger_samples = cfg->pretrigger_samples;

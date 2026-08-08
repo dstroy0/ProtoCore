@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DTLS
 
@@ -26,7 +27,7 @@ static const uint8_t DTLS_UH_EPOCH_MASK = 0x03;
 // (RFC 9147 §4.2.2 / RFC 8446 §5.3; the epoch is NOT mixed in). Same construction as QUIC.
 static void build_nonce(const uint8_t iv[12], uint64_t seq, uint8_t nonce[12])
 {
-    memcpy(nonce, iv, 12);
+    mem.cpy(nonce, iv, 12);
     for (int i = 0; i < 8; i++)
     {
         nonce[11 - i] ^= (uint8_t)(seq >> (8 * i));
@@ -104,7 +105,7 @@ static size_t pc_dtls_plaintext_build(uint8_t content_type, uint16_t epoch, uint
     out[12] = (uint8_t)frag_len;
     if (frag_len)
     {
-        memcpy(out + PC_DTLS_PLAINTEXT_HDR_LEN, fragment, frag_len);
+        mem.cpy(out + PC_DTLS_PLAINTEXT_HDR_LEN, fragment, frag_len);
     }
     return total;
 }
@@ -168,7 +169,7 @@ static size_t pc_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uin
     out[0] = flags;
     if (cid_len)
     {
-        memcpy(out + 1, cid, cid_len);
+        mem.cpy(out + 1, cid, cid_len);
     }
     size_t seq_off = 1 + cid_len;
     out[seq_off] = (uint8_t)(seq >> 8); // plaintext sequence number (this header form is the AEAD AAD)
@@ -177,7 +178,7 @@ static size_t pc_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uin
     out[seq_off + 3] = (uint8_t)enc_len;
 
     // Assemble the inner plaintext where it will be sealed (seal permits out == pt).
-    memcpy(out + hdr_len, plaintext, pt_len);
+    mem.cpy(out + hdr_len, plaintext, pt_len);
     out[hdr_len + pt_len] = content_type;
 
     uint8_t nonce[12];
@@ -226,7 +227,7 @@ static proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t ne
         // A connection-id record: a CID must have been negotiated for this direction, and it must be
         // ours (the CID is not length-prefixed on the wire - its length is known only from negotiation).
         if (expected_cid_len == 0 || off + expected_cid_len > rec_len ||
-            memcmp(rec + off, expected_cid, expected_cid_len) != 0)
+            mem.cmp(rec + off, expected_cid, expected_cid_len) != 0)
         {
             return PROTO_FALSE;
         }
@@ -269,7 +270,7 @@ static proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t ne
 
     // Copy the header so we can write the decrypted sequence number into the AEAD AAD form.
     uint8_t hdr[1 + PC_DTLS_CID_MAX + 4];
-    memcpy(hdr, rec, hdr_len);
+    mem.cpy(hdr, rec, hdr_len);
 
     // Decrypt the sequence number (RFC 9147 §4.2.3).
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here

@@ -11,6 +11,7 @@
  */
 
 #include "services/iot/statsd/statsd.h"
+#include "mmgr/protomem.h"
 #include "protocore_config.h"
 
 #if PC_ENABLE_STATSD
@@ -97,7 +98,7 @@ static proto_bool app(char *out, size_t cap, size_t *pos, const char *s, size_t 
     {
         return PROTO_FALSE;
     }
-    memcpy(out + *pos, s, n);
+    mem.cpy(out + *pos, s, n);
     *pos += n;
     return PROTO_TRUE;
 }

@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http2/h2_conn.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_HTTP2
@@ -172,7 +173,7 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
     {
         return PROTO_FALSE;
     }
-    memcpy(c->hblock, p, plen);
+    mem.cpy(c->hblock, p, plen);
     c->hblock_len = plen;
     c->hblock_stream = h->stream_id;
     c->hblock_end_stream = end_stream;
@@ -190,7 +191,7 @@ static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const u
     {
         return PROTO_FALSE;
     }
-    memcpy(c->hblock + c->hblock_len, payload, h->length);
+    mem.cpy(c->hblock + c->hblock_len, payload, h->length);
     c->hblock_len += h->length;
     if (h->flags & H2_FLAG_END_HEADERS)
     {
@@ -335,7 +336,7 @@ static proto_bool process_frame(H2Conn *c)
 
 void pc_h2_conn_init(H2Conn *c, const H2Callbacks *cb)
 {
-    memset(c, 0, sizeof(*c));
+    mem.set(c, 0, sizeof(*c));
     c->cb = *cb;
     c->phase = 0;
     pc_h2_settings_defaults(&c->peer);
@@ -378,7 +379,7 @@ proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
             {
                 take = len - off;
             }
-            memcpy(c->fbuf + c->fhave, data + off, take);
+            mem.cpy(c->fbuf + c->fhave, data + off, take);
             c->fhave += take;
             off += take;
             if (c->fhave < H2_FRAME_HEADER_LEN)
@@ -397,7 +398,7 @@ proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
         {
             take = len - off;
         }
-        memcpy(c->fbuf + c->fhave, data + off, take);
+        mem.cpy(c->fbuf + c->fhave, data + off, take);
         c->fhave += take;
         off += take;
         if (c->fhave < total)

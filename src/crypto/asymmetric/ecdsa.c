@@ -41,6 +41,7 @@
  */
 
 #include "crypto/asymmetric/ecdsa.h"
+#include "mmgr/protomem.h"
 #include "crypto/hash/sha256.h"
 
 #if PC_HAS_HW_ECC
@@ -747,14 +748,14 @@ static void pc_hmac_cat(uint8_t out[32], const uint8_t key[32], const uint8_t *v
 {
     uint8_t buf[97]; // 32 (V) + 1 (tag) + 32 (x) + 32 (e)
     size_t n = 0;
-    memcpy(buf + n, v, vlen);
+    mem.cpy(buf + n, v, vlen);
     n += vlen;
     if (tag >= 0)
     {
         buf[n++] = (uint8_t)tag;
-        memcpy(buf + n, x, 32);
+        mem.cpy(buf + n, x, 32);
         n += 32;
-        memcpy(buf + n, e, 32);
+        mem.cpy(buf + n, e, 32);
         n += 32;
     }
     pc_hmac_sha256(key, 32, buf, n, out);
@@ -824,8 +825,8 @@ static proto_bool ecdsa_sign_core(uint8_t sig[64], const uint8_t h1[32], const u
 
     uint8_t V[32];
     uint8_t K[32];
-    memset(V, 0x01, 32);
-    memset(K, 0x00, 32);
+    mem.set(V, 0x01, 32);
+    mem.set(K, 0x00, 32);
     pc_hmac_cat(K, K, V, 32, 0x00, x_oct, h_oct);
     pc_hmac_cat(V, K, V, 32, -1, NULL, NULL);
     pc_hmac_cat(K, K, V, 32, 0x01, x_oct, h_oct);
@@ -843,7 +844,7 @@ static proto_bool ecdsa_sign_core(uint8_t sig[64], const uint8_t h1[32], const u
             return PROTO_TRUE;
         }
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
-        memcpy(buf, V, 32);
+        mem.cpy(buf, V, 32);
         buf[32] = 0x00;
         pc_hmac_sha256(K, 32, buf, 33, K);
         pc_hmac_cat(V, K, V, 32, -1, NULL, NULL);

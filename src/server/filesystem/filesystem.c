@@ -10,6 +10,7 @@
  */
 
 #include "server/filesystem/filesystem.h"
+#include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str: the bounded-run walks
                            // strncmp (root-name match), memcpy
 
@@ -74,7 +75,7 @@ static size_t walk_push(char *path, size_t len, const char *child)
     {
         path[len++] = '/';
     }
-    memcpy(path + len, child, n);
+    mem.cpy(path + len, child, n);
     len += n;
     path[len] = '\0';
     return len;
@@ -277,7 +278,7 @@ proto_bool pc_fs_remove(int root, const char *dir, const char *name)
     {
         plen--;
     }
-    if (plen == rlen && memcmp(p, rp, plen) == 0)
+    if (plen == rlen && mem.cmp(p, rp, plen) == 0)
     {
         s_fs.status |= PC_FS_BAD_ROOT;
         return PROTO_FALSE;

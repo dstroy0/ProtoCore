@@ -23,7 +23,8 @@
 #define PROTOCORE_AES_BLOCK_H
 
 #include "crypto/cipher/aes_sbox.h" // PC_AES_SBOX
-#include "protocore_config.h"       // the entry point: PC_INLINE, and types.h for the widths
+#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: PC_INLINE, and types.h for the widths
 
 /** @brief GF(2^8) multiply-by-2 (xtime) for the AES MixColumns step. */
 PC_INLINE uint8_t pc_aes_xtime(uint8_t a)
@@ -158,7 +159,7 @@ PC_INLINE void pc_aes_encrypt_block(const uint32_t *rk, int nr, const uint8_t in
         s[i] ^= (uint8_t)(rk[nr * 4 + i / 4] >> (24 - (i % 4) * 8));
     }
 
-    memcpy(out, s, 16);
+    mem.cpy(out, s, 16);
 }
 
 #endif // PROTOCORE_AES_BLOCK_H

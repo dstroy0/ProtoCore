@@ -7,6 +7,7 @@
  */
 
 #include "services/net/snmp/snmp_crypto.h"
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
 #if PC_ENABLE_SNMP_V3
@@ -28,7 +29,7 @@ void pc_snmp_usm_localize_key(const char *password, const uint8_t *engine_id, si
     size_t pwlen = password ? strnlen(password, PC_SNMP_USM_PASS_MAX) : 0;
     if (pwlen == 0)
     {
-        memset(key_out, 0, SNMP_USM_KEY_LEN);
+        mem.set(key_out, 0, SNMP_USM_KEY_LEN);
         return;
     }
 
@@ -71,11 +72,11 @@ static const uint8_t kRcon[10] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 // Expand a 128-bit key into 11 round keys (44 words).
 static void aes128_key_schedule(const uint8_t key[16], uint8_t rk[176])
 {
-    memcpy(rk, key, 16);
+    mem.cpy(rk, key, 16);
     for (int i = 4; i < 44; i++)
     {
         uint8_t t[4];
-        memcpy(t, rk + (i - 1) * 4, 4);
+        mem.cpy(t, rk + (i - 1) * 4, 4);
         if (i % 4 == 0)
         {
             uint8_t tmp = t[0]; // RotWord
@@ -122,7 +123,7 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
                 t[r + 4 * c] = s[r + 4 * ((c + r) % 4)];
             }
         }
-        memcpy(s, t, 16);
+        mem.cpy(s, t, 16);
 
         // MixColumns (skip in the final round)
         if (round != 10)
@@ -147,7 +148,7 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
             s[i] ^= rk[round * 16 + i];
         }
     }
-    memcpy(out, s, 16);
+    mem.cpy(out, s, 16);
 }
 
 void pc_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8_t *in, uint8_t *out, size_t len,
@@ -156,7 +157,7 @@ void pc_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8
     uint8_t rk[176];
     aes128_key_schedule(key, rk);
     uint8_t fb[16];
-    memcpy(fb, iv, 16);
+    mem.cpy(fb, iv, 16);
     uint8_t ks[16];
 
     size_t off = 0;
@@ -189,7 +190,7 @@ void pc_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8
         }
         if (bl == 16)
         {
-            memcpy(fb, cipher, 16);
+            mem.cpy(fb, cipher, 16);
         }
         off += bl;
     }

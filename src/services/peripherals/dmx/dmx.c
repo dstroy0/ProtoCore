@@ -7,6 +7,7 @@
  */
 
 #include "services/peripherals/dmx/dmx.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DMX
 
@@ -24,7 +25,7 @@ size_t pc_dmx_build(uint8_t *buf, size_t cap, uint8_t start_code, const uint8_t 
     buf[0] = start_code;
     if (n)
     {
-        memcpy(buf + 1, channels, n);
+        mem.cpy(buf + 1, channels, n);
     }
     return total;
 }
@@ -98,7 +99,7 @@ size_t pc_rdm_build(uint8_t *buf, size_t cap, const RdmPacket *p, const uint8_t 
     buf[23] = pdl;
     if (pdl)
     {
-        memcpy(buf + 24, pdata, pdl);
+        mem.cpy(buf + 24, pdata, pdl);
     }
     uint16_t cs = pc_rdm_checksum(buf, ml); // checksum over SC..end of parameter data
     buf[ml] = (uint8_t)(cs >> 8);

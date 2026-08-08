@@ -8,6 +8,7 @@
  */
 
 #include "services/iot/mqtt/mqtt.h"
+#include "mmgr/protomem.h"
 #include "mmgr/rawmemcpy.h"     // proto_raw_read: a partial packet shifts to the front of rx
 #include "mmgr/secure.h"        // pc_secure_persist_span: this module's storage
 #include "server/clock/clock.h" // pc_millis: the link timer and the keep-alive read it
@@ -43,7 +44,7 @@ static size_t put_field(uint8_t *p, const uint8_t *data, size_t len)
     put_u16(p, (uint16_t)len);
     if (len)
     {
-        memcpy(p + 2, data, len);
+        mem.cpy(p + 2, data, len);
     }
     return 2 + len;
 }
@@ -122,11 +123,11 @@ static size_t compose(uint8_t *out, size_t cap, uint8_t byte0, const uint8_t *bo
         return 0;
     }
     out[0] = byte0;
-    memcpy(out + 1, rl, rln);
+    mem.cpy(out + 1, rl, rln);
     if (blen)
     // (build_connect/publish/subscribe/unsubscribe) always writes at least a 2-byte length-prefixed field
     {
-        memcpy(out + 1 + rln, body, blen);
+        mem.cpy(out + 1 + rln, body, blen);
     }
     return total;
 }
@@ -238,7 +239,7 @@ size_t pc_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const 
     }
     if (payload_len)
     {
-        memcpy(body + n, payload, payload_len);
+        mem.cpy(body + n, payload, payload_len);
     }
     n += payload_len;
 
@@ -375,7 +376,7 @@ proto_bool pc_mqtt_parse_publish(const uint8_t *buf, uint32_t remaining_len, uin
     {
         return PROTO_FALSE;
     }
-    memcpy(topic_out, buf + off, tlen);
+    mem.cpy(topic_out, buf + off, tlen);
     topic_out[tlen] = '\0';
     *topic_len = tlen;
     off += tlen;
@@ -902,8 +903,8 @@ proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, 
     }
 
     // Reset all session state.
-    memset(s_mqtt.inflight, 0, sizeof(s_mqtt.inflight));
-    memset(s_mqtt.rx_qos2, 0, sizeof(s_mqtt.rx_qos2));
+    mem.set(s_mqtt.inflight, 0, sizeof(s_mqtt.inflight));
+    mem.set(s_mqtt.rx_qos2, 0, sizeof(s_mqtt.rx_qos2));
     s_mqtt.rx_len = 0;
     s_mqtt.tx_len = s_mqtt.tx_off = 0;
     s_mqtt.tx_ready = PROTO_FALSE;

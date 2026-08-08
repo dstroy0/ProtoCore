@@ -24,6 +24,7 @@
  */
 
 #include "crypto/pqc/sntrup761.h"
+#include "mmgr/protomem.h"
 
 #include "crypto/rng/rng.h" // pc_rand_fill
 
@@ -410,7 +411,7 @@ static void Hash_prefix(uint8_t *out, int b, const uint8_t *in, size_t inlen)
     pc_sha512_update(&ctx, &bb, 1);
     pc_sha512_update(&ctx, in, inlen);
     pc_sha512_final(&ctx, h);
-    memcpy(out, h, PC_HASH_BYTES);
+    mem.cpy(out, h, PC_HASH_BYTES);
 }
 
 static void Small_encode(uint8_t *s, const small_t *f)
@@ -459,7 +460,7 @@ static void HashConfirm(uint8_t *h, const uint8_t *r_enc, const uint8_t *cache)
 {
     uint8_t x[PC_HASH_BYTES * 2];
     Hash_prefix(x, 3, r_enc, PC_SMALL_BYTES);
-    memcpy(x + PC_HASH_BYTES, cache, PC_HASH_BYTES);
+    mem.cpy(x + PC_HASH_BYTES, cache, PC_HASH_BYTES);
     Hash_prefix(h, 2, x, sizeof x);
 }
 
@@ -467,7 +468,7 @@ static void HashSession(uint8_t *k, int b, const uint8_t *r_enc, const uint8_t *
 {
     uint8_t x[PC_HASH_BYTES + PC_CT_BYTES];
     Hash_prefix(x, 3, r_enc, PC_SMALL_BYTES);
-    memcpy(x + PC_HASH_BYTES, c, PC_CT_BYTES);
+    mem.cpy(x + PC_HASH_BYTES, c, PC_CT_BYTES);
     Hash_prefix(k, b, x, sizeof x);
 }
 
@@ -833,7 +834,7 @@ void pc_sntrup761_keypair(uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRU
     Small_encode(sk + PC_SMALL_BYTES, ginv);
     // ...then the pk copy, a random rho for implicit reject, and the cached H(4||pk).
     uint8_t *tail = sk + 2 * PC_SMALL_BYTES; // SecretKeys_bytes = 2 * Small_bytes
-    memcpy(tail, pk, PC_PK_BYTES);
+    mem.cpy(tail, pk, PC_PK_BYTES);
     pc_rand_fill(tail + PC_PK_BYTES, PC_SMALL_BYTES);
     Hash_prefix(tail + PC_PK_BYTES + PC_SMALL_BYTES, 4, pk, PC_PK_BYTES);
 }

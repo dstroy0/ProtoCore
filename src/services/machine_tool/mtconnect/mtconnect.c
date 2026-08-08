@@ -7,6 +7,7 @@
  */
 
 #include "services/machine_tool/mtconnect/mtconnect.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_MTCONNECT
 
@@ -27,7 +28,7 @@ static void put(pc_mtc_streams *s, const char *text)
         s->ok = PROTO_FALSE;
         return;
     }
-    memcpy(s->buf + s->len, text, tl);
+    mem.cpy(s->buf + s->len, text, tl);
     s->len += tl;
 }
 

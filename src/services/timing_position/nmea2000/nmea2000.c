@@ -7,6 +7,7 @@
  */
 
 #include "services/timing_position/nmea2000/nmea2000.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_NMEA2000
 
@@ -39,21 +40,21 @@ proto_bool pc_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t fra
     out->extended = PROTO_TRUE;
     out->rtr = PROTO_FALSE;
     out->dlc = PC_CAN_MAX_DLC;                  // Fast Packet frames are full 8-octet frames
-    memset(out->data, 0xFF, sizeof(out->data)); // pad unused octets with 0xFF
+    mem.set(out->data, 0xFF, sizeof(out->data)); // pad unused octets with 0xFF
 
     out->data[0] = (uint8_t)((seq << N2K_FP_SEQ_SHIFT) | (frame_idx & N2K_FP_FRAME_MASK));
     if (frame_idx == 0)
     {
         out->data[1] = (uint8_t)total_len;
         uint8_t n = total_len < N2K_FP_F0_DATA ? (uint8_t)total_len : (uint8_t)N2K_FP_F0_DATA;
-        memcpy(out->data + 2, data, n);
+        mem.cpy(out->data + 2, data, n);
     }
     else
     {
         uint16_t off = (uint16_t)(N2K_FP_F0_DATA + (frame_idx - 1) * N2K_FP_FN_DATA);
         uint16_t remaining = (uint16_t)(total_len - off);
         uint8_t n = remaining < N2K_FP_FN_DATA ? (uint8_t)remaining : (uint8_t)N2K_FP_FN_DATA;
-        memcpy(out->data + 1, data + off, n);
+        mem.cpy(out->data + 1, data + off, n);
     }
     return PROTO_TRUE;
 }
@@ -62,7 +63,7 @@ void pc_n2k_fastpacket_reset(N2kFastPacketRx *rx)
 {
     if (rx)
     {
-        memset(rx, 0, sizeof(*rx));
+        mem.set(rx, 0, sizeof(*rx));
     }
 }
 
@@ -97,7 +98,7 @@ N2kFpResult pc_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f)
         rx->pgn = id.pgn;
         rx->total_len = total;
         uint8_t n = total < N2K_FP_F0_DATA ? (uint8_t)total : (uint8_t)N2K_FP_F0_DATA;
-        memcpy(rx->buf, f->data + 2, n);
+        mem.cpy(rx->buf, f->data + 2, n);
         rx->received = n;
         rx->next_frame = 1;
         if (rx->received >= total)
@@ -120,7 +121,7 @@ N2kFpResult pc_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f)
     }
     uint16_t remaining = (uint16_t)(rx->total_len - rx->received);
     uint8_t n = remaining < N2K_FP_FN_DATA ? (uint8_t)remaining : (uint8_t)N2K_FP_FN_DATA;
-    memcpy(rx->buf + rx->received, f->data + 1, n);
+    mem.cpy(rx->buf + rx->received, f->data + 1, n);
     rx->received = (uint16_t)(rx->received + n);
     rx->next_frame++;
     if (rx->received >= rx->total_len)

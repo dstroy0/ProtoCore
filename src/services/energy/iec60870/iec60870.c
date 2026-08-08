@@ -7,6 +7,7 @@
  */
 
 #include "services/energy/iec60870/iec60870.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_IEC60870
 
@@ -31,7 +32,7 @@ size_t pc_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, con
     buf[5] = (uint8_t)((nr >> 7) & 0xFFu);
     if (asdu_len)
     {
-        memcpy(buf + 6, asdu, asdu_len);
+        mem.cpy(buf + 6, asdu, asdu_len);
     }
     return total;
 }
@@ -209,7 +210,7 @@ size_t pc_iec_io_build_float(uint8_t *buf, size_t cap, uint32_t ioa, float value
     }
     pc_iec_put_ioa(buf, cap, ioa);
     uint32_t bits;
-    memcpy(&bits, &value, 4); // the IEEE-754 bit pattern, written little-endian (endian-safe)
+    mem.cpy(&bits, &value, 4); // the IEEE-754 bit pattern, written little-endian (endian-safe)
     buf[3] = (uint8_t)bits;
     buf[4] = (uint8_t)(bits >> 8);
     buf[5] = (uint8_t)(bits >> 16);
@@ -232,7 +233,7 @@ proto_bool pc_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, 
     {
         uint32_t bits =
             (uint32_t)buf[3] | ((uint32_t)buf[4] << 8) | ((uint32_t)buf[5] << 16) | ((uint32_t)buf[6] << 24);
-        memcpy(value, &bits, 4);
+        mem.cpy(value, &bits, 4);
     }
     if (qds)
     {
@@ -508,7 +509,7 @@ size_t pc_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control, uint8
     buf[5] = addr;
     if (asdu_len)
     {
-        memcpy(buf + 6, asdu, asdu_len);
+        mem.cpy(buf + 6, asdu, asdu_len);
     }
     buf[4 + L] = sum8(buf + 4, L); // checksum over control..end of ASDU
     buf[5 + L] = IEC_STOP;

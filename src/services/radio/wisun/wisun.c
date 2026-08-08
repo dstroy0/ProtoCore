@@ -7,6 +7,7 @@
  */
 
 #include "services/radio/wisun/wisun.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_WISUN
@@ -153,7 +154,7 @@ void pc_wisun_init(WisunFan *fan, const pc_ip *border_router, WisunNode *storage
     }
     else
     {
-        memset(&fan->border_router, 0, sizeof(fan->border_router));
+        mem.set(&fan->border_router, 0, sizeof(fan->border_router));
     }
     fan->nodes = storage;
     fan->cap = storage ? cap : 0;

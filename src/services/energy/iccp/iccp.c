@@ -7,6 +7,7 @@
  */
 
 #include "services/energy/iccp/iccp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_ICCP
 
@@ -22,7 +23,7 @@ static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out,
     out[1] = (uint8_t)val_len;
     if (val_len)
     {
-        memcpy(out + 2, val, val_len); // 1/4-byte field, int_content's >=1 result, or n built from those).
+        mem.cpy(out + 2, val, val_len); // 1/4-byte field, int_content's >=1 result, or n built from those).
     }
     return 2 + val_len;
 }

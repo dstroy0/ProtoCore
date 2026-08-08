@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/quic_tp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -14,7 +15,7 @@
 
 void pc_quic_tp_defaults(QuicTransportParams *tp)
 {
-    memset(tp, 0, sizeof(*tp));
+    mem.set(tp, 0, sizeof(*tp));
     tp->max_udp_payload_size = 65527;
     tp->ack_delay_exponent = 3;
     tp->max_ack_delay = 25;
@@ -44,7 +45,7 @@ static proto_bool put_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, co
         {
             return PROTO_FALSE;
         }
-        memcpy(out + *p, val, val_len);
+        mem.cpy(out + *p, val, val_len);
         *p += val_len;
     }
     return PROTO_TRUE;
@@ -116,7 +117,7 @@ static proto_bool copy_cid(const uint8_t *val, size_t len, uint8_t *dst, uint8_t
     {
         return PROTO_FALSE;
     }
-    memcpy(dst, val, len);
+    mem.cpy(dst, val, len);
     *dst_len = (uint8_t)len;
     *has = PROTO_TRUE;
     return PROTO_TRUE;

@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/quic_conn.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -69,7 +70,7 @@ static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool creat
     {
         return NULL; // pc_quic_conn_stream_send), so the lookup-only arm is never taken
     }
-    memset(free_slot, 0, sizeof(*free_slot));
+    mem.set(free_slot, 0, sizeof(*free_slot));
     free_slot->id = id;
     return free_slot;
 }
@@ -78,12 +79,12 @@ void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint
                        const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid, uint8_t our_scid_len,
                        const QuicConnCallbacks *cb)
 {
-    memset(qc, 0, sizeof(*qc));
-    memcpy(qc->odcid, odcid, odcid_len);
+    mem.set(qc, 0, sizeof(*qc));
+    mem.cpy(qc->odcid, odcid, odcid_len);
     qc->odcid_len = odcid_len;
-    memcpy(qc->dcid, peer_scid, peer_scid_len);
+    mem.cpy(qc->dcid, peer_scid, peer_scid_len);
     qc->dcid_len = peer_scid_len;
-    memcpy(qc->scid, our_scid, our_scid_len);
+    mem.cpy(qc->scid, our_scid, our_scid_len);
     qc->scid_len = our_scid_len;
     if (cb)
     {
@@ -105,10 +106,10 @@ void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint
     // The server's transport parameters carry the connection IDs the handshake must echo.
     QuicTlsConfig c = *cfg;
     c.params.has_original_dcid = PROTO_TRUE;
-    memcpy(c.params.original_dcid, odcid, odcid_len);
+    mem.cpy(c.params.original_dcid, odcid, odcid_len);
     c.params.original_dcid_len = odcid_len;
     c.params.has_initial_scid = PROTO_TRUE;
-    memcpy(c.params.initial_scid, our_scid, our_scid_len);
+    mem.cpy(c.params.initial_scid, our_scid, our_scid_len);
     c.params.initial_scid_len = our_scid_len;
     pc_quic_tls_server_init(&qc->tls, &c);
 }
@@ -147,14 +148,14 @@ static void handle_crypto(struct QuicConn *qc, int level, const QuicFrame *f)
     {
         nl = sizeof(s->crypto_rx) - s->crypto_rx_have; // clamp to the reassembly window
     }
-    memcpy(s->crypto_rx + s->crypto_rx_have, nd, nl);
+    mem.cpy(s->crypto_rx + s->crypto_rx_have, nd, nl);
     s->crypto_rx_have += nl;
     s->crypto_rx_off += nl;
 
     size_t used = pc_quic_tls_recv_crypto(&qc->tls, level, s->crypto_rx, s->crypto_rx_have);
     if (used)
     {
-        memmove(s->crypto_rx, s->crypto_rx + used, s->crypto_rx_have - used);
+        mem.move(s->crypto_rx, s->crypto_rx + used, s->crypto_rx_have - used);
         s->crypto_rx_have -= used;
     }
     // A fatal TLS error (bad Finished, unsupported handshake) becomes a QUIC CRYPTO_ERROR: report it
@@ -387,7 +388,7 @@ static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
     {
         return 0;
     }
-    memcpy(work, dg, pkt_len);
+    mem.cpy(work, dg, pkt_len);
     uint64_t pn = 0;
     size_t pt = pc_quic_packet_unprotect(work, pn_offset, (size_t)payload_length, qc->space[level].largest_rx, keys,
                                          is_long, plain, &pn);
@@ -646,7 +647,7 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     if ((size_t)pn_len + frame_len < 4)
     {
         size_t pad = 4 - pn_len - frame_len;
-        memset(frames + frame_len, 0, pad);
+        mem.set(frames + frame_len, 0, pad);
         frame_len += pad;
     }
 
@@ -686,7 +687,7 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
             return 0;
         }
         out[0] = (uint8_t)(0x40 | (pn_len - 1));
-        memcpy(out + 1, qc->dcid, qc->dcid_len);
+        mem.cpy(out + 1, qc->dcid, qc->dcid_len);
         p = 1 + qc->dcid_len;
     }
 
@@ -707,7 +708,7 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     }
     p += pn_len;
 
-    memcpy(out + p, frames, frame_len);
+    mem.cpy(out + p, frames, frame_len);
 
     size_t total = pc_quic_packet_protect(out, cap, pn_offset, pn_len, pn, frame_len, keys, is_long);
     if (!total)
@@ -886,7 +887,7 @@ size_t pc_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const u
     }
     size_t room = sizeof(st->tx) - st->tx_have;
     size_t take = len < room ? len : room;
-    memcpy(st->tx + st->tx_have, data, take);
+    mem.cpy(st->tx + st->tx_have, data, take);
     st->tx_have += take;
     if (fin && take == len)
     {

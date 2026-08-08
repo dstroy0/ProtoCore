@@ -7,6 +7,7 @@
  */
 
 #include "services/net/syslog/syslog.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SYSLOG
 
@@ -57,7 +58,7 @@ static inline proto_bool sl_append(char *out, size_t cap, size_t *pos, const cha
     {
         return PROTO_FALSE;
     }
-    memcpy(out + *pos, src, len);
+    mem.cpy(out + *pos, src, len);
     *pos += len;
     return PROTO_TRUE;
 }

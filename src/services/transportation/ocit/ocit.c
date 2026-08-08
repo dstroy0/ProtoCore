@@ -7,6 +7,7 @@
  */
 
 #include "services/transportation/ocit/ocit.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_OCIT
 
@@ -30,7 +31,7 @@ size_t pc_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, 
     out[5] = data_type;
     if (value_len)
     {
-        memcpy(out + 6, value, value_len);
+        mem.cpy(out + 6, value, value_len);
     }
     return n;
 }

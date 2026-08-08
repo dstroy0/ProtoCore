@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/telnet/telnet.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_TELNET
 
@@ -131,7 +132,7 @@ static void pc_telnet_accept(uint8_t slot)
         Tcp.conn->close(slot);
         return;
     }
-    memset(t, 0, sizeof(*t));
+    mem.set(t, 0, sizeof(*t));
     t->used = PROTO_TRUE;
     t->slot = slot;
     t->st = TN_NORMAL;

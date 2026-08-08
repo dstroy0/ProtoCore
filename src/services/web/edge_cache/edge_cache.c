@@ -7,6 +7,7 @@
  */
 
 #include "services/web/edge_cache/edge_cache.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_EDGE_CACHE
 
@@ -310,7 +311,7 @@ int64_t edge_parse_http_date(const char *s, size_t len)
     {
         return -1;
     }
-    memcpy(buf, s, len);
+    mem.cpy(buf, s, len);
     buf[len] = '\0';
 
     int mday = 0;
@@ -568,7 +569,7 @@ static proto_bool vary_is_star(const char *vary_header)
 
 void edge_store_init(EdgeCacheStore *s)
 {
-    memset(s, 0, sizeof(*s));
+    mem.set(s, 0, sizeof(*s));
     s->lru_head = PC_EDGE_LRU_NONE;
     s->lru_tail = PC_EDGE_LRU_NONE;
     for (uint16_t i = 0; i < PC_EDGE_CACHE_SLOTS; i++)
@@ -610,11 +611,11 @@ EdgeEntry *edge_store_alloc(EdgeCacheStore *s, const char *canon, const char *va
         s->stats.evictions++;
     }
     EdgeEntry *e = &s->entries[slot];
-    memset(e, 0, sizeof(*e));
+    mem.set(e, 0, sizeof(*e));
     e->lru.prev = PC_EDGE_LRU_NONE;
     e->lru.next = PC_EDGE_LRU_NONE;
     e->used = PROTO_TRUE;
-    memcpy(e->key, canon, klen);
+    mem.cpy(e->key, canon, klen);
     e->key[klen] = '\0';
     edge_key_digest(canon, klen, e->digest);
     size_t vl = vary_key ? strnlen(vary_key, sizeof(e->vary_vals)) : 0;
@@ -624,7 +625,7 @@ EdgeEntry *edge_store_alloc(EdgeCacheStore *s, const char *canon, const char *va
     }
     if (vary_key)
     {
-        memcpy(e->vary_vals, vary_key, vl);
+        mem.cpy(e->vary_vals, vary_key, vl);
     }
     e->vary_vals[vl] = '\0';
     e->date_epoch = -1;
@@ -878,7 +879,7 @@ void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t 
         size_t vlen = strnlen(v, sizeof(v));
         if (vlen < sizeof(e->etag))
         {
-            memcpy(e->etag, v, vlen + 1);
+            mem.cpy(e->etag, v, vlen + 1);
         }
     }
     int64_t last_mod = -1;
@@ -888,7 +889,7 @@ void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t 
         last_mod = edge_parse_http_date(v, vlen);
         if (vlen < sizeof(e->last_modified))
         {
-            memcpy(e->last_modified, v, vlen + 1);
+            mem.cpy(e->last_modified, v, vlen + 1);
         }
     }
     else if (e->last_modified[0])

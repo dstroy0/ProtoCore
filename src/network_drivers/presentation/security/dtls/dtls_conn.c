@@ -7,6 +7,8 @@
  */
 
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
+#include "crypto/ct_eq.h" // pc_ct_eq: the Finished compare
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DTLS
 
@@ -255,10 +257,10 @@ static void pc_dtls_negotiate_conn_id(DtlsConn *c, const Tls13ClientHello *ch)
     c->peer_cid_len = (uint8_t)ch->conn_id_len;
     if (ch->conn_id_len)
     {
-        memcpy(c->peer_cid, ch->conn_id, ch->conn_id_len);
+        mem.cpy(c->peer_cid, ch->conn_id, ch->conn_id_len);
     }
     c->local_cid_len = PC_DTLS_CONN_LOCAL_CID_LEN;
-    memcpy(c->local_cid, c->cfg.server_random, PC_DTLS_CONN_LOCAL_CID_LEN);
+    mem.cpy(c->local_cid, c->cfg.server_random, PC_DTLS_CONN_LOCAL_CID_LEN);
 }
 
 // Consume a ClientHello and emit the whole server flight (ServerHello + the epoch-2 encrypted
@@ -341,8 +343,8 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     snapshot(&c->transcript, hash);
     pc_tls13_ks_early(&DTLS13_KDF, &c->ks);
     pc_tls13_ks_handshake(&c->ks, ecdhe, hash, 32);
-    DtlsRecord.keys_derive(&c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.server_hs_traffic);
-    DtlsRecord.keys_derive(&c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.client_hs_traffic);
+    DtlsRecord.keys_derive(&c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_SERVER_HS);
+    DtlsRecord.keys_derive(&c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_CLIENT_HS);
     c->ep2_ready = PROTO_TRUE;
 
     // Raw Public Key negotiation (RFC 7250): if the client offered server_certificate_type = RawPublicKey,
@@ -398,7 +400,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // Server Finished over Transcript-Hash(..CertificateVerify).
     snapshot(&c->transcript, hash);
     uint8_t verify[PC_SHA256_DIGEST_LEN];
-    pc_tls13_finished_mac(&DTLS13_KDF, c->ks.server_hs_traffic, hash, verify);
+    pc_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_SERVER_HS, hash, verify);
     n = pc_tls13_build_finished(c->msgbuf, sizeof(c->msgbuf), verify);
     pc_sha256_update(&c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
@@ -410,8 +412,8 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // client's Finished.
     snapshot(&c->transcript, c->hs_finished_hash);
     pc_tls13_ks_master(&c->ks, c->hs_finished_hash);
-    DtlsRecord.keys_derive(&c->ep3_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.server_ap_traffic);
-    DtlsRecord.keys_derive(&c->ep3_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.client_ap_traffic);
+    DtlsRecord.keys_derive(&c->ep3_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.s + TLS13_KS_SERVER_AP);
+    DtlsRecord.keys_derive(&c->ep3_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.s + TLS13_KS_CLIENT_AP);
     c->ep3_ready = PROTO_TRUE;
 
     if (!flight_transmit(c, out, out_cap, out_len)) // protect the whole flight now that ep2 keys exist
@@ -432,14 +434,8 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
     {
         return fail(c, ALERT_DECODE_ERROR); // only routes a Finished here, so the type arm cannot be taken
     }
-    uint8_t expected[PC_SHA256_DIGEST_LEN];
-    pc_tls13_finished_mac(&DTLS13_KDF, c->ks.client_hs_traffic, c->hs_finished_hash, expected);
-    uint8_t diff = 0;
-    for (int i = 0; i < PC_SHA256_DIGEST_LEN; i++)
-    {
-        diff |= (uint8_t)(expected[i] ^ msg[4 + i]);
-    }
-    if (diff)
+    pc_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_CLIENT_HS, c->hs_finished_hash, c->ks.s + TLS13_KS_VERIFY);
+    if (!pc_ct_eq(c->ks.s + TLS13_KS_VERIFY, msg + 4, TLS13_SECRET_LEN))
     {
         return fail(c, ALERT_DECRYPT_ERROR);
     }
@@ -639,7 +635,7 @@ static void maybe_send_completion_ack(DtlsConn *c, uint8_t *out, size_t out_cap,
 
 static void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr, size_t peer_addr_len)
 {
-    memset(c, 0, sizeof(*c));
+    mem.zero(c, sizeof(*c));
     c->cfg = *cfg;
     c->state = DTLS_CONN_STATE_START;
     if (peer_addr && peer_addr_len)
@@ -648,7 +644,7 @@ static void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const ui
         {
             peer_addr_len = PC_DTLS_PEER_ADDR_MAX;
         }
-        memcpy(c->peer_addr, peer_addr, peer_addr_len);
+        mem.cpy(c->peer_addr, peer_addr, peer_addr_len);
         c->peer_addr_len = (uint8_t)peer_addr_len;
     }
     pc_sha256_init(&c->transcript);
@@ -750,7 +746,7 @@ static size_t pc_dtls_conn_local_cid(const DtlsConn *c, uint8_t *out)
     {
         return 0;
     }
-    memcpy(out, c->local_cid, c->local_cid_len);
+    mem.cpy(out, c->local_cid, c->local_cid_len);
     return c->local_cid_len;
 }
 

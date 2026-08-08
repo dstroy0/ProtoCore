@@ -26,6 +26,7 @@
  */
 
 #include "crypto/asymmetric/bignum.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
 
@@ -83,7 +84,7 @@ int bn_cmp_raw(const uint32_t *a, const uint32_t *b, int n)
 
 void bn_from_bytes(pc_bignum *out, const uint8_t *bytes, size_t len)
 {
-    memset(out->d, 0, sizeof(pc_bignum));
+    mem.set(out->d, 0, sizeof(pc_bignum));
     // bytes are big-endian; map to little-endian limbs.
     size_t blen = len < 256 ? len : 256;
     for (size_t i = 0; i < blen; i++)

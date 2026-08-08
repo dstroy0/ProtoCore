@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/nats/nats.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_NATS
 
@@ -37,7 +38,7 @@ static void put_str(Buf *b, const char *s)
         b->ok = PROTO_FALSE;
         return;
     }
-    memcpy(b->p + b->pos, s, n);
+    mem.cpy(b->p + b->pos, s, n);
     b->pos += n;
 }
 
@@ -54,7 +55,7 @@ static void put_bytes(Buf *b, const uint8_t *d, size_t n)
     }
     if (n)
     {
-        memcpy(b->p + b->pos, d, n);
+        mem.cpy(b->p + b->pos, d, n);
     }
     b->pos += n;
 }
@@ -265,7 +266,7 @@ static proto_bool verb_is(const char *buf, size_t line_len, const char *op)
     {
         return PROTO_FALSE;
     }
-    if (memcmp(buf, op, n) != 0)
+    if (mem.cmp(buf, op, n) != 0)
     {
         return PROTO_FALSE;
     }

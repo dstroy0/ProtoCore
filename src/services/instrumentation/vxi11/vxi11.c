@@ -7,6 +7,7 @@
  */
 
 #include "services/instrumentation/vxi11/vxi11.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_VXI11
 
@@ -49,7 +50,7 @@ static void xw_bytes(XdrW *w, const uint8_t *d, size_t n)
     w->off += 4;
     if (n)
     {
-        memcpy(w->p + w->off, d, n);
+        mem.cpy(w->p + w->off, d, n);
         w->off += n;
     }
     for (size_t i = 0; i < pad; i++)

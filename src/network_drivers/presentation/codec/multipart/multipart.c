@@ -7,6 +7,7 @@
  */
 
 #include "multipart.h"
+#include "mmgr/protomem.h"
 
 // Length-bounded, binary-safe forward search for needle[0..nlen) within hay[0..hlen).
 // Unlike strstr, it does not stop at a NUL, so a body containing NUL bytes scans correctly.
@@ -18,7 +19,7 @@ static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
     }
     for (size_t i = 0; i + nlen <= hlen; i++)
     {
-        if (memcmp(hay + i, needle, nlen) == 0)
+        if (mem.cmp(hay + i, needle, nlen) == 0)
         {
             return hay + i;
         }
@@ -94,7 +95,7 @@ static proto_bool pc_multipart_parse(HttpReq *req, MultipartBody *mp)
     char delim[MAX_BOUNDARY_LEN + 3];
     delim[0] = '-';
     delim[1] = '-';
-    memcpy(delim + 2, bval, blen + 1); // includes null
+    mem.cpy(delim + 2, bval, blen + 1); // includes null
     size_t dlen = blen + 2;
 
     char *body = (char *)req->body;
@@ -105,7 +106,7 @@ static proto_bool pc_multipart_parse(HttpReq *req, MultipartBody *mp)
     char ddelim[MAX_BOUNDARY_LEN + 5];
     ddelim[0] = '\r';
     ddelim[1] = '\n';
-    memcpy(ddelim + 2, delim, dlen); // "--boundary" (dlen bytes, no NUL)
+    mem.cpy(ddelim + 2, delim, dlen); // "--boundary" (dlen bytes, no NUL)
     size_t ddlen = dlen + 2;
 
     // Find the first delimiter ("--boundary"; a leading CRLF / preamble is optional here).

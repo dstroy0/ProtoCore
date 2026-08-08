@@ -11,6 +11,7 @@
  */
 
 #include "services/peripherals/mpr121/mpr121.h"
+#include "mmgr/protomem.h"
 #include "protocore_config.h"
 #include "server/clock/clock.h" // pcdelay
 
@@ -67,7 +68,7 @@ size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t touch_t
         return 0;
     }
     size_t i = sizeof(fixed);
-    memcpy(buf, fixed, sizeof(fixed));
+    mem.cpy(buf, fixed, sizeof(fixed));
     for (uint8_t e = 0; e < n; e++)
     {
         buf[i++] = (uint8_t)(0x41 + 2 * e); // touch threshold reg

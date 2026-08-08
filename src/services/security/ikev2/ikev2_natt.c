@@ -7,6 +7,7 @@
  */
 
 #include "services/security/ikev2/ikev2_natt.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_IKEV2
 
@@ -24,11 +25,11 @@ static size_t natd_input(uint8_t *buf, const uint8_t *init_spi, const uint8_t *r
         return 0;
     }
     size_t n = 0;
-    memcpy(buf + n, init_spi, PC_IKE_SPI_LEN);
+    mem.cpy(buf + n, init_spi, PC_IKE_SPI_LEN);
     n += PC_IKE_SPI_LEN;
-    memcpy(buf + n, resp_spi, PC_IKE_SPI_LEN);
+    mem.cpy(buf + n, resp_spi, PC_IKE_SPI_LEN);
     n += PC_IKE_SPI_LEN;
-    memcpy(buf + n, ip, ip_len);
+    mem.cpy(buf + n, ip, ip_len);
     n += ip_len;
     buf[n++] = (uint8_t)(port >> 8);
     buf[n++] = (uint8_t)port;
@@ -90,7 +91,7 @@ proto_bool pc_ike_natd_match(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8
     {
         return PROTO_FALSE;
     }
-    return memcmp(expect, hash, PC_IKE_NATD_HASH_LEN) == 0;
+    return mem.cmp(expect, hash, PC_IKE_NATD_HASH_LEN) == 0;
 }
 
 proto_bool pc_ike_natd_peer_behind_nat(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8_t resp_spi[PC_IKE_SPI_LEN],

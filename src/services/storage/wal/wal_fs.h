@@ -34,6 +34,7 @@
 #ifndef PROTOCORE_WAL_FS_H
 #define PROTOCORE_WAL_FS_H
 
+#include "mmgr/protomem.h"
 #include "protocore_config.h"
 #include "server/filesystem/mnt.h" // pc_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store.h"
@@ -95,7 +96,7 @@ PC_INLINE proto_bool pc_wal_fs_prealloc(const pc_mnt_backend *fs, const char *pa
         return PROTO_FALSE;
     }
     uint8_t z[256];
-    memset(z, 0, sizeof z);
+    mem.set(z, 0, sizeof z);
     uint64_t left = size;
     proto_bool ok = PROTO_TRUE;
     while (left)

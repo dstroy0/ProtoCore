@@ -7,6 +7,7 @@
  */
 
 #include "services/storage/wal/wal.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_WAL
 
@@ -91,7 +92,7 @@ size_t pc_wal_record_encode(uint8_t *out, size_t cap, uint64_t seq, const uint8_
     pc_wr32le(out + 16, crc);
     if (len)
     {
-        memcpy(out + WAL_RECORD_HEADER, payload, len);
+        mem.cpy(out + WAL_RECORD_HEADER, payload, len);
     }
     return need;
 }

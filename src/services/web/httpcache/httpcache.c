@@ -7,6 +7,7 @@
  */
 
 #include "httpcache.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP_CACHE
 
@@ -79,7 +80,7 @@ static size_t cc_tok(char *buf, size_t cap, size_t n, proto_bool *first, const c
         buf[n++] = ',';
         buf[n++] = ' ';
     }
-    memcpy(buf + n, tok, tlen);
+    mem.cpy(buf + n, tok, tlen);
     *first = PROTO_FALSE;
     return n + tlen;
 }

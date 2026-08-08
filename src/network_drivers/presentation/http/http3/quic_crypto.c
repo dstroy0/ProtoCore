@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -27,7 +28,7 @@ static const uint8_t RETRY_NONCE[12] = {0x46, 0x15, 0x99, 0xd3, 0x5d, 0x63, 0x2b
 // Build the AEAD nonce: the packet number, left-padded to the 12-byte IV width, XOR the IV.
 static void build_nonce(const uint8_t iv[12], uint64_t full_pn, uint8_t nonce[12])
 {
-    memcpy(nonce, iv, 12);
+    mem.cpy(nonce, iv, 12);
     for (int i = 0; i < 8; i++)
     {
         nonce[11 - i] ^= (uint8_t)(full_pn >> (8 * i));
@@ -166,12 +167,12 @@ void pc_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, const u
     aad[p++] = (uint8_t)odcid_len;
     if (odcid_len > QUIC_MAX_CID_LEN || 1 + odcid_len + retry_len > sizeof(aad))
     {
-        memset(tag, 0, 16);
+        mem.set(tag, 0, 16);
         return;
     }
-    memcpy(aad + p, odcid, odcid_len);
+    mem.cpy(aad + p, odcid, odcid_len);
     p += odcid_len;
-    memcpy(aad + p, retry, retry_len);
+    mem.cpy(aad + p, retry, retry_len);
     p += retry_len;
 
     // Empty plaintext: seal writes only the 16-byte tag.

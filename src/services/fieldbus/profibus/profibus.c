@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/profibus/profibus.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_PROFIBUS
 
@@ -60,7 +61,7 @@ size_t pc_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, 
     out[i++] = fc;
     if (data_len)
     {
-        memcpy(out + i, data, data_len);
+        mem.cpy(out + i, data, data_len);
         i += data_len;
     }
     // FCS over DA+SA+FC+data (out[4 .. 4+le-1]).
@@ -79,7 +80,7 @@ size_t pc_pb_build_sd3(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, 
     out[1] = da;
     out[2] = sa;
     out[3] = fc;
-    memcpy(out + 4, data, 8);
+    mem.cpy(out + 4, data, 8);
     out[12] = pc_pb_fcs(out + 1, 11); // FCS over DA+SA+FC+data(8)
     out[13] = PB_ED;
     return 14;

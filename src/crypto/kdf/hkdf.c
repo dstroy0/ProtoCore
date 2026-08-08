@@ -7,6 +7,7 @@
  */
 
 #include "crypto/kdf/hkdf.h"
+#include "mmgr/protomem.h"
 
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
 
@@ -46,7 +47,7 @@ static void hkdf_expand(const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info
         {
             take = PC_HKDF_HASH_LEN;
         }
-        memcpy(out + done, t, take);
+        mem.cpy(out + done, t, take);
         done += take;
     }
 }
@@ -70,14 +71,14 @@ void pc_hkdf_expand_label_ctx(const uint8_t secret[PC_HKDF_HASH_LEN], const char
     info[p++] = (uint8_t)(out_len >> 8);
     info[p++] = (uint8_t)(out_len & 0xff);
     info[p++] = (uint8_t)(prefix_len + label_len); // full label length, prefix included
-    memcpy(info + p, label_prefix, prefix_len);
+    mem.cpy(info + p, label_prefix, prefix_len);
     p += prefix_len;
-    memcpy(info + p, label, label_len);
+    mem.cpy(info + p, label, label_len);
     p += label_len;
     info[p++] = (uint8_t)context_len;
     if (context_len)
     {
-        memcpy(info + p, context, context_len);
+        mem.cpy(info + p, context, context_len);
         p += context_len;
     }
 

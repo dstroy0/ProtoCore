@@ -13,6 +13,7 @@
  */
 
 #include "services/security/audit_log/audit_log.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 #include "shared_primitives/hex.h"
 
@@ -118,7 +119,7 @@ static size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
         {
             return cap + 1;
         }
-        memcpy(out + pos, esc, n);
+        mem.cpy(out + pos, esc, n);
         pos += n;
     }
     return pos;
@@ -143,7 +144,7 @@ void pc_audit_reset(void)
     s_audit.head = 0;
     s_audit.count = 0;
     s_audit.seq = 0;
-    memset(s_audit.anchor, 0, sizeof(s_audit.anchor)); // genesis
+    mem.set(s_audit.anchor, 0, sizeof(s_audit.anchor)); // genesis
 }
 
 void pc_audit_set_sink(pc_audit_sink_fn sink)
@@ -157,11 +158,11 @@ uint32_t pc_audit_append(pc_audit_cat category, const char *msg)
     uint8_t prev[PC_AUDIT_HASH_LEN];
     if (s_audit.count == 0)
     {
-        memcpy(prev, s_audit.anchor, PC_AUDIT_HASH_LEN);
+        mem.cpy(prev, s_audit.anchor, PC_AUDIT_HASH_LEN);
     }
     else
     {
-        memcpy(prev, s_audit.ring[idx(&s_audit, (uint16_t)(s_audit.count - 1))].hash, PC_AUDIT_HASH_LEN);
+        mem.cpy(prev, s_audit.ring[idx(&s_audit, (uint16_t)(s_audit.count - 1))].hash, PC_AUDIT_HASH_LEN);
     }
 
     // Full ring: evict the oldest; its hash advances the chain anchor so the
@@ -169,7 +170,7 @@ uint32_t pc_audit_append(pc_audit_cat category, const char *msg)
     // the newest we just read as prev.)
     if (s_audit.count == PC_AUDIT_LOG_ENTRIES)
     {
-        memcpy(s_audit.anchor, s_audit.ring[s_audit.head].hash, PC_AUDIT_HASH_LEN);
+        mem.cpy(s_audit.anchor, s_audit.ring[s_audit.head].hash, PC_AUDIT_HASH_LEN);
         s_audit.head = (uint16_t)((s_audit.head + 1) % PC_AUDIT_LOG_ENTRIES);
         s_audit.count--;
     }
@@ -181,7 +182,7 @@ uint32_t pc_audit_append(pc_audit_cat category, const char *msg)
     if (msg)
     {
         size_t n = strnlen(msg, PC_AUDIT_MSG_LEN - 1);
-        memcpy(e->msg, msg, n);
+        mem.cpy(e->msg, msg, n);
         e->msg[n] = '\0';
     }
     else
@@ -215,13 +216,13 @@ const pc_audit_entry *pc_audit_at(uint16_t i)
 proto_bool pc_audit_verify(uint32_t *first_broken_seq)
 {
     uint8_t expected[PC_AUDIT_HASH_LEN];
-    memcpy(expected, s_audit.anchor, PC_AUDIT_HASH_LEN);
+    mem.cpy(expected, s_audit.anchor, PC_AUDIT_HASH_LEN);
     for (uint16_t i = 0; i < s_audit.count; i++)
     {
         const pc_audit_entry *e = &s_audit.ring[idx(&s_audit, i)];
         uint8_t h[PC_AUDIT_HASH_LEN];
         chain_hash(expected, e, h);
-        if (memcmp(h, e->hash, PC_AUDIT_HASH_LEN) != 0)
+        if (mem.cmp(h, e->hash, PC_AUDIT_HASH_LEN) != 0)
         {
             if (first_broken_seq)
             {
@@ -229,7 +230,7 @@ proto_bool pc_audit_verify(uint32_t *first_broken_seq)
             }
             return PROTO_FALSE;
         }
-        memcpy(expected, e->hash, PC_AUDIT_HASH_LEN);
+        mem.cpy(expected, e->hash, PC_AUDIT_HASH_LEN);
     }
     return PROTO_TRUE;
 }
@@ -291,7 +292,7 @@ int pc_audit_format(const pc_audit_entry *e, char *out, size_t cap)
     {
         return 0;
     }
-    memcpy(out + pos, mid, mid_len);
+    mem.cpy(out + pos, mid, mid_len);
     pos += mid_len;
     pos = hex_hash(out, pos, cap, e->hash);
     if (pos > cap)

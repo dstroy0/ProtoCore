@@ -35,6 +35,7 @@
 #ifndef PROTOCORE_SECURE_H
 #define PROTOCORE_SECURE_H
 
+#include "mmgr/protomem.h"
 #include "mmgr/span.h"
 #include "protocore_config.h"
 
@@ -54,8 +55,8 @@ PROTO_BEGIN_DECLS
 /**
  * @brief Securely zero @p len bytes at @p ptr with a volatile store the compiler cannot elide.
  *
- * The canonical wipe. Use this, never memset(), for any buffer that held key material: a plain
- * memset() whose result is never observed (the buffer dies at return) is a dead store and may be
+ * The canonical wipe. Use this, never mem.zero(), for any buffer that held key material: a plain
+ * store whose result is never observed (the buffer dies at return) is a dead store and may be
  * optimized away, leaving the bytes in memory. The volatile write forces it even when the memory is
  * never read again.
  *

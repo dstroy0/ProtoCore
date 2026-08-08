@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/cloudevents/cloudevents.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_CLOUDEVENTS
 
@@ -77,7 +78,7 @@ proto_bool pc_cloudevents_from_headers(const HttpReq *req, CloudEvent *out)
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     out->id = http_get_header(req, "ce-id");
     out->source = http_get_header(req, "ce-source");
     out->type = http_get_header(req, "ce-type");

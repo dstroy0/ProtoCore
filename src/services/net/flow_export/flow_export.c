@@ -7,6 +7,7 @@
  */
 
 #include "services/net/flow_export/flow_export.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_FLOW_EXPORT
 
@@ -103,7 +104,7 @@ static void w_bytes(FlowWriter *w, const uint8_t *p, size_t n)
         w->error = PROTO_TRUE;
         return;
     }
-    memcpy(w->buf + w->pos, p, n);
+    mem.cpy(w->buf + w->pos, p, n);
     w->pos += n;
 }
 
@@ -119,7 +120,7 @@ static void w_zero(FlowWriter *w, size_t n)
         w->error = PROTO_TRUE;
         return;
     }
-    memset(w->buf + w->pos, 0, n);
+    mem.set(w->buf + w->pos, 0, n);
     w->pos += n;
 }
 

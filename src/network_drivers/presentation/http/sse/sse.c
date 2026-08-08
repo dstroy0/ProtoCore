@@ -7,6 +7,7 @@
  */
 
 #include "sse.h"
+#include "mmgr/protomem.h"
 #include "network_drivers/transport/tcp.h"
 #include <stdio.h>
 
@@ -102,7 +103,7 @@ static inline proto_bool sse_append(char *buf, size_t n, size_t *pos, const char
     {
         return PROTO_FALSE;
     }
-    memcpy(buf + *pos, src, len);
+    mem.cpy(buf + *pos, src, len);
     *pos += len;
     return PROTO_TRUE;
 }

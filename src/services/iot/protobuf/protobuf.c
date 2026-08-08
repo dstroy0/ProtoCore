@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/protobuf/protobuf.h"
+#include "mmgr/protomem.h"
 
 #if PC_NEED_PROTOBUF
 
@@ -41,7 +42,7 @@ proto_bool pc_pb_write_varint(PbWriter *w, uint64_t v)
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    memcpy(w->buf + w->pos, tmp, n);
+    mem.cpy(w->buf + w->pos, tmp, n);
     w->pos += n;
     return PROTO_TRUE;
 }
@@ -104,14 +105,14 @@ proto_bool pc_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v)
 proto_bool pc_pb_float(PbWriter *w, uint32_t field, float v)
 {
     uint32_t bits;
-    memcpy(&bits, &v, 4);
+    mem.cpy(&bits, &v, 4);
     return pc_pb_fixed32(w, field, bits);
 }
 
 proto_bool pc_pb_double(PbWriter *w, uint32_t field, double v)
 {
     uint64_t bits;
-    memcpy(&bits, &v, 8);
+    mem.cpy(&bits, &v, 8);
     return pc_pb_fixed64(w, field, bits);
 }
 
@@ -134,7 +135,7 @@ proto_bool pc_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t 
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    memcpy(w->buf + w->pos, data, len);
+    mem.cpy(w->buf + w->pos, data, len);
     w->pos += len;
     return PROTO_TRUE;
 }
@@ -264,14 +265,14 @@ int32_t pc_pb_zigzag32(uint32_t v)
 float pc_pb_float_bits(uint32_t bits)
 {
     float f;
-    memcpy(&f, &bits, 4);
+    mem.cpy(&f, &bits, 4);
     return f;
 }
 
 double pc_pb_double_bits(uint64_t bits)
 {
     double d;
-    memcpy(&d, &bits, 8);
+    mem.cpy(&d, &bits, 8);
     return d;
 }
 

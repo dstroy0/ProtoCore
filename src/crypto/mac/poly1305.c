@@ -12,6 +12,7 @@
  */
 
 #include "crypto/mac/poly1305.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h" // the secure pool: nested-MAC working state, wiped on release
 
@@ -133,7 +134,7 @@ void pc_poly1305(uint8_t tag[PC_POLY1305_TAG_LEN], const uint8_t *msg, size_t le
     }
     if (len)
     {
-        memset(w->buf, 0, 16);
+        mem.set(w->buf, 0, 16);
         for (size_t i = 0; i < len; i++)
         {
             w->buf[i] = msg[i];

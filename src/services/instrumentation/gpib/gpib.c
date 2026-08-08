@@ -7,6 +7,7 @@
  */
 
 #include "services/instrumentation/gpib/gpib.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_GPIB
@@ -254,7 +255,7 @@ proto_bool pc_gpib_parse_version(const char *s, size_t len, const char **ver, si
     }
     for (size_t i = 0; i + klen <= len; i++)
     {
-        if (memcmp(s + i, key, klen) == 0)
+        if (mem.cmp(s + i, key, klen) == 0)
         {
             const char *v = s + i + klen;
             size_t vlen = len - i - klen;

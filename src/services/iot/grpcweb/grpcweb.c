@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/grpcweb/grpcweb.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_GRPC_WEB
 
@@ -28,7 +29,7 @@ size_t pc_grpcweb_frame(uint8_t *buf, size_t cap, uint8_t flags, const uint8_t *
     buf[4] = (uint8_t)(body_len);
     if (body_len)
     {
-        memcpy(buf + GRPCWEB_PREFIX_LEN, body, body_len);
+        mem.cpy(buf + GRPCWEB_PREFIX_LEN, body, body_len);
     }
     return total;
 }
@@ -46,7 +47,7 @@ static proto_bool put_str(uint8_t *buf, size_t cap, size_t *pos, const char *s)
     {
         return PROTO_FALSE;
     }
-    memcpy(buf + *pos, s, n);
+    mem.cpy(buf + *pos, s, n);
     *pos += n;
     return PROTO_TRUE;
 }
@@ -79,7 +80,7 @@ static proto_bool put_int(uint8_t *buf, size_t cap, size_t *pos, int v)
     {
         return PROTO_FALSE;
     }
-    memcpy(buf + *pos, tmp, n);
+    mem.cpy(buf + *pos, tmp, n);
     *pos += n;
     return PROTO_TRUE;
 }
@@ -144,7 +145,7 @@ proto_bool pc_grpcweb_trailer_status(const uint8_t *body, size_t len, int *statu
     for (size_t i = 0; i + klen <= len; i++)
     {
         // Match at the start of a line (i == 0 or preceded by '\n').
-        if ((i == 0 || body[i - 1] == '\n') && memcmp(body + i, key, klen) == 0)
+        if ((i == 0 || body[i - 1] == '\n') && mem.cmp(body + i, key, klen) == 0)
         {
             size_t j = i + klen;
             if (j >= len || body[j] < '0' || body[j] > '9')
@@ -183,7 +184,7 @@ proto_bool pc_grpcweb_trailer_message(const uint8_t *body, size_t len, const cha
     for (size_t i = 0; i + klen <= len; i++)
     {
         // Match at the start of a line (i == 0 or preceded by '\n').
-        if ((i == 0 || body[i - 1] == '\n') && memcmp(body + i, key, klen) == 0)
+        if ((i == 0 || body[i - 1] == '\n') && mem.cmp(body + i, key, klen) == 0)
         {
             size_t start = i + klen;
             size_t j = start;

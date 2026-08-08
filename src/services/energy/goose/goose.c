@@ -7,6 +7,7 @@
  */
 
 #include "services/energy/goose/goose.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_GOOSE
 
@@ -58,7 +59,7 @@ static proto_bool tlv(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const ui
     *n += write_len(out + *n, val_len);
     if (val_len)
     {
-        memcpy(out + *n, val, val_len);
+        mem.cpy(out + *n, val, val_len);
         *n += val_len;
     }
     return PROTO_TRUE;
@@ -180,7 +181,7 @@ size_t pc_goose_pdu(const pc_goose *g, uint8_t *out, size_t cap)
     size_t content_len = n - RESERVE;
     size_t hdr = 1 + len_octets(content_len);
     // Move the content down so the 0x61 tag + length sit immediately before it (no gap).
-    memmove(out + hdr, out + RESERVE, content_len);
+    mem.move(out + hdr, out + RESERVE, content_len);
     out[0] = 0x61;
     write_len(out + 1, content_len);
     return hdr + content_len;
@@ -194,8 +195,8 @@ size_t pc_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, co
         return 0;
     }
     // Ethernet II header (ethertype 0x88B8 = GOOSE).
-    memcpy(out, dst, 6);
-    memcpy(out + 6, src, 6);
+    mem.cpy(out, dst, 6);
+    mem.cpy(out + 6, src, 6);
     out[12] = 0x88;
     out[13] = 0xB8;
     // GOOSE header: APPID(2), length(2, filled below), reserved1(2), reserved2(2).
@@ -227,7 +228,7 @@ proto_bool pc_goose_parse_frame(const uint8_t *buf, size_t len, pc_goose_rx *out
     {
         return PROTO_FALSE;
     }
-    memset(out, 0, sizeof(*out));
+    mem.set(out, 0, sizeof(*out));
     out->appid = (uint16_t)((buf[14] << 8) | buf[15]);
 
     const uint8_t *end = buf + len;

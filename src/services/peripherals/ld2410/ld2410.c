@@ -13,6 +13,7 @@
  */
 
 #include "services/peripherals/ld2410/ld2410.h"
+#include "mmgr/protomem.h"
 #include "protocore_config.h"
 
 #if PC_ENABLE_LD2410
@@ -68,7 +69,7 @@ proto_bool pc_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Report *ou
     {
         return PROTO_FALSE;
     }
-    if (memcmp(f, HDR, 4) != 0)
+    if (mem.cmp(f, HDR, 4) != 0)
     {
         return PROTO_FALSE;
     }
@@ -77,14 +78,14 @@ proto_bool pc_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Report *ou
     {
         return PROTO_FALSE; // length field must frame the buffer exactly
     }
-    if (memcmp(f + 6 + dl, FTR, 4) != 0)
+    if (mem.cmp(f + 6 + dl, FTR, 4) != 0)
     {
         return PROTO_FALSE;
     }
 
     const uint8_t *p = f + 6;
     Ld2410Report r;
-    memset(&r, 0, sizeof(r));
+    mem.set(&r, 0, sizeof(r));
     if (p[0] == 0x02)
     {
         if (dl != LEN_BASIC)

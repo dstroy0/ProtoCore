@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_server.h"
+#include "mmgr/protomem.h"
 #include "mmgr/plaintext.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
@@ -60,7 +61,7 @@ static void emit_auth_failure_disconnect(uint8_t i, pc_span out)
     out.buf[o++] = (uint8_t)(dl >> 16);
     out.buf[o++] = (uint8_t)(dl >> 8);
     out.buf[o++] = (uint8_t)(dl);
-    memcpy(out.buf + o, desc, dl);
+    mem.cpy(out.buf + o, desc, dl);
     o += dl;
     out.buf[o++] = 0; // language tag: empty string (4-byte length 0)
     out.buf[o++] = 0;

@@ -14,6 +14,7 @@
  */
 
 #include "crypto/aead/aesccm.h"
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
 #if PC_ENABLE_SMB
@@ -91,7 +92,7 @@ proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t 
     pc_secure_release(mark);
     if (rc != 0)
     {
-        memset(out, 0, ct_len);
+        mem.set(out, 0, ct_len);
         return PROTO_FALSE;
     }
     return PROTO_TRUE;
@@ -141,9 +142,9 @@ static inline void ecb(const CcmWork *w, const uint8_t in[16], uint8_t out[16])
 static inline void ctr_block(uint8_t A[16], const uint8_t *nonce, size_t nonce_len, size_t i)
 {
     const size_t L = 15 - nonce_len;
-    memset(A, 0, 16);
+    mem.set(A, 0, 16);
     A[0] = (uint8_t)(L - 1);
-    memcpy(A + 1, nonce, nonce_len);
+    mem.cpy(A + 1, nonce, nonce_len);
     for (size_t j = 0; j < L; j++)
     {
         A[15 - j] = (uint8_t)((i >> (8 * j)) & 0xff);
@@ -155,12 +156,12 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
                     const uint8_t *pt, size_t pt_len)
 {
     const size_t L = 15 - nonce_len;
-    memset(w->X, 0, 16);
+    mem.set(w->X, 0, 16);
 
     // B0: flags = 64*Adata + 8*((M-2)/2) + (L-1); then nonce; then Q = pt_len big-endian in L bytes.
-    memset(w->blk, 0, 16);
+    mem.set(w->blk, 0, 16);
     w->blk[0] = (uint8_t)((aad_len > 0 ? 0x40 : 0x00) | (((PC_AESCCM_TAG_LEN - 2) / 2) << 3) | (L - 1));
-    memcpy(w->blk + 1, nonce, nonce_len);
+    mem.cpy(w->blk + 1, nonce, nonce_len);
     for (size_t j = 0; j < L; j++)
     {
         w->blk[15 - j] = (uint8_t)((pt_len >> (8 * j)) & 0xff);
@@ -175,7 +176,7 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
     // into 16-byte blocks and zero-padded.
     if (aad_len > 0)
     {
-        memset(w->blk, 0, 16);
+        mem.set(w->blk, 0, 16);
         w->blk[0] = (uint8_t)((aad_len >> 8) & 0xff);
         w->blk[1] = (uint8_t)(aad_len & 0xff);
         size_t fill = 2;
@@ -187,7 +188,7 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
             {
                 take = aad_len - off;
             }
-            memcpy(w->blk + fill, aad + off, take);
+            mem.cpy(w->blk + fill, aad + off, take);
             off += take;
             fill += take;
             for (int i = 0; i < 16; i++)
@@ -195,7 +196,7 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
                 w->X[i] ^= w->blk[i];
             }
             ecb(w, w->X, w->X);
-            memset(w->blk, 0, 16);
+            mem.set(w->blk, 0, 16);
             fill = 0;
         }
     }
@@ -204,13 +205,13 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
     size_t off = 0;
     while (off < pt_len)
     {
-        memset(w->blk, 0, 16);
+        mem.set(w->blk, 0, 16);
         size_t take = pt_len - off;
         if (take > 16)
         {
             take = 16;
         }
-        memcpy(w->blk, pt + off, take);
+        mem.cpy(w->blk, pt + off, take);
         for (int i = 0; i < 16; i++)
         {
             w->X[i] ^= w->blk[i];
@@ -305,7 +306,7 @@ proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t 
     pc_secure_release(mark);
     if (!ok)
     {
-        memset(out, 0, ct_len); // fail closed: no unauthenticated plaintext escapes
+        mem.set(out, 0, ct_len); // fail closed: no unauthenticated plaintext escapes
         return PROTO_FALSE;
     }
     return PROTO_TRUE;

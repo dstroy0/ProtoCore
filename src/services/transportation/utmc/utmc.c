@@ -7,6 +7,7 @@
  */
 
 #include "services/transportation/utmc/utmc.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_UTMC
@@ -65,7 +66,7 @@ size_t pc_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap)
     size_t kl = 4;
     for (size_t i = 0; i + kl < len; i++)
     {
-        if (memcmp(xml + i, key, kl) != 0)
+        if (mem.cmp(xml + i, key, kl) != 0)
         {
             continue;
         }

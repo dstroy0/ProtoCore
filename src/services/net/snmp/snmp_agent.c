@@ -7,6 +7,7 @@
  */
 
 #include "services/net/snmp/snmp_agent.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SNMP
 
@@ -166,7 +167,7 @@ static SnmpMibEntry *mib_alloc(SnmpAgentCtx *c, const uint32_t *oid, size_t n)
         return NULL;
     }
     SnmpMibEntry *e = &c->mib[c->mib_count++];
-    memset(e, 0, sizeof(*e));
+    mem.set(e, 0, sizeof(*e));
     for (size_t i = 0; i < n; i++)
     {
         e->oid[i] = oid[i];
@@ -316,7 +317,7 @@ static void enc_value(BerEnc *e, const SnmpValue *v)
 // into @p oidbuf). Advances the cursor past the value.
 static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
 {
-    memset(v, 0, sizeof(*v));
+    mem.set(v, 0, sizeof(*v));
     size_t save = d->pos;
     uint8_t tag;
     size_t len;
@@ -429,7 +430,7 @@ static proto_bool community_eq(const char *stored, const char *p, size_t len)
     // The two call sites pass s_agent.ro (always non-empty: pc_snmp_agent_init() falls back to the
     // static_assert'd non-empty default) and s_agent.rw (only reached when rw_set, which
     // pc_snmp_agent_set_rw_community() sets only for a non-empty string), so stored is never empty.
-    return stored[0] != '\0' && strnlen(stored, len + 1) == len && memcmp(stored, p, len) == 0;
+    return stored[0] != '\0' && strnlen(stored, len + 1) == len && mem.cmp(stored, p, len) == 0;
 }
 
 static size_t encode_pdu(long request_id, long err_status, long err_index, const OutVb *out, size_t nout, uint8_t *buf,

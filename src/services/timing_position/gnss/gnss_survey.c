@@ -7,6 +7,7 @@
  */
 
 #include "services/timing_position/gnss/gnss_survey.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_NTRIP_CASTER
 
@@ -74,7 +75,7 @@ int64_t pc_gnss_ecef_m_to_01mm(double metres)
 
 void pc_gnss_survey_reset(GnssSurvey *s)
 {
-    memset(s, 0, sizeof(*s));
+    mem.set(s, 0, sizeof(*s));
 }
 
 void pc_gnss_survey_add_ecef(GnssSurvey *s, const GnssEcef *e)

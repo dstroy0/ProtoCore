@@ -44,11 +44,11 @@ PROTO_BEGIN_DECLS
 #define TLS_HS_CERTIFICATE_VERIFY 15
 #define TLS_HS_FINISHED 20
 
-#define TLS_CIPHER_AES_128_GCM_SHA256 0x1301 ///< the one cipher suite we support
-#define TLS_GROUP_X25519 0x001d              ///< the classical key-exchange group we support
-#define TLS_GROUP_X25519MLKEM768 0x11ec      ///< PQ/T hybrid group (ML-KEM-768 + X25519), when PC_ENABLE_PQC_KEX
-#define TLS_SIG_ED25519 0x0807               ///< the one signature scheme we produce
-#define TLS_CERT_TYPE_X509 0                 ///< RFC 7250 CertificateType: X.509 (IANA "TLS Certificate Types" 0)
+#define PC_TLS_SUITE_AES_128_GCM_SHA256 0x1301 ///< the one cipher suite we support, as its IANA code point
+#define TLS_GROUP_X25519 0x001d                ///< the classical key-exchange group we support
+#define TLS_GROUP_X25519MLKEM768 0x11ec        ///< PQ/T hybrid group (ML-KEM-768 + X25519), when PC_ENABLE_PQC_KEX
+#define TLS_SIG_ED25519 0x0807                 ///< the one signature scheme we produce
+#define TLS_CERT_TYPE_X509 0                   ///< RFC 7250 CertificateType: X.509 (IANA "TLS Certificate Types" 0)
 #define TLS_CERT_TYPE_RAW_PUBLIC_KEY 2    ///< RFC 7250 CertificateType: RawPublicKey (IANA 2), when PC_ENABLE_TLS_RPK
 #define TLS_VERSION_1_3 0x0304            ///< supported_versions selected value (TLS 1.3)
 #define PC_TLS_VERSION_DTLS_1_3 0xFEFC    ///< supported_versions selected value (DTLS 1.3, RFC 9147)

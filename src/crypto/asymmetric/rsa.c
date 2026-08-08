@@ -10,6 +10,7 @@
  */
 
 #include "crypto/asymmetric/rsa.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/hash/sha256.h"
@@ -143,10 +144,10 @@ static void pkcs1v15_encode(const uint8_t *digest, size_t digest_len, const uint
     const size_t pad_len = PC_RSA_KEY_BYTES - 3 - total;
     em[0] = 0x00;
     em[1] = 0x01;
-    memset(em + 2, 0xFF, pad_len);
+    mem.set(em + 2, 0xFF, pad_len);
     em[2 + pad_len] = 0x00;
-    memcpy(em + 3 + pad_len, di, di_len);
-    memcpy(em + 3 + pad_len + di_len, digest, digest_len);
+    mem.cpy(em + 3 + pad_len, di, di_len);
+    mem.cpy(em + 3 + pad_len + di_len, digest, digest_len);
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +250,7 @@ static void bn_modexp_pub(const pc_bignum *base, uint32_t e, const pc_bignum *n,
     bn_reduce_full(prod, n->d, b.d);
 
     pc_bignum r;
-    memset(r.d, 0, sizeof(r.d));
+    mem.set(r.d, 0, sizeof(r.d));
     r.d[0] = 1; // r = 1
 
     int top = 31;
@@ -284,7 +285,7 @@ static void bn_modexp_full(const pc_bignum *base, const pc_bignum *exp, const pc
     bn_reduce_full(prod, n->d, b.d);
 
     pc_bignum r;
-    memset(r.d, 0, sizeof(r.d));
+    mem.set(r.d, 0, sizeof(r.d));
     r.d[0] = 1; // r = 1
 
     int top_limb = PC_BN_LIMBS - 1;

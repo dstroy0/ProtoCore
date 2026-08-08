@@ -13,6 +13,7 @@
  */
 
 #include "inflate.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_WS_DEFLATE
 
@@ -242,7 +243,7 @@ static InflateResult stored(State *s)
     {
         return INFLATE_ERR_OVERFLOW;
     }
-    memcpy(s->out + s->outcnt, s->in + s->incnt, (size_t)len);
+    mem.cpy(s->out + s->outcnt, s->in + s->incnt, (size_t)len);
     s->incnt += (size_t)len;
     s->outcnt += (size_t)len;
     return INFLATE_OK;

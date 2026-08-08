@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/snp/snp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SNP
 
@@ -35,7 +36,7 @@ size_t pc_snp_build(uint8_t control, const uint8_t *data, size_t data_len, uint8
     out[1] = (uint8_t)data_len;
     if (data_len)
     {
-        memcpy(out + 2, data, data_len);
+        mem.cpy(out + 2, data, data_len);
     }
     out[2 + data_len] = pc_snp_bcc(out, 2 + data_len); // BCC over control..last data
     return n;

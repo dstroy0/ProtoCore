@@ -221,11 +221,11 @@ void test_full_handshake_roundtrip()
     pc_tls13_ks_early(&TLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     pc_tls13_ks_master(&cks, ch_sf);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.handshake_secret, cks.handshake_secret, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.client_hs_traffic, cks.client_hs_traffic, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.server_hs_traffic, cks.server_hs_traffic, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.client_ap_traffic, cks.client_ap_traffic, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.server_ap_traffic, cks.server_ap_traffic, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_HANDSHAKE, cks.s + TLS13_KS_HANDSHAKE, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_CLIENT_HS, cks.s + TLS13_KS_CLIENT_HS, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_HS, cks.s + TLS13_KS_SERVER_HS, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_CLIENT_AP, cks.s + TLS13_KS_CLIENT_AP, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_AP, cks.s + TLS13_KS_SERVER_AP, 32);
 
     // The server Finished (tail of the handshake flight) must verify under the server hs secret.
     uint8_t ch_cv[32]; // H(CH..CertificateVerify) = everything but the trailing 36-byte Finished
@@ -235,12 +235,12 @@ void test_full_handshake_roundtrip()
     pc_sha256_update(&t, sh_flight, sh_flight_len - 36);
     pc_sha256_final(&t, ch_cv);
     uint8_t sfin_expected[32];
-    pc_tls13_finished_mac(&TLS13_KDF, cks.server_hs_traffic, ch_cv, sfin_expected);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(sfin_expected, sh_flight + sh_flight_len - 32, 32);
 
     // 3) Client builds its Finished and the server accepts it.
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, ch_sf, cfin + 4);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
     used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
     TEST_ASSERT_EQUAL_UINT(sizeof(cfin), used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, qt.state);
@@ -818,8 +818,8 @@ void test_hybrid_hrr_roundtrip()
     pc_tls13_ks_early(&TLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, 64);
     pc_tls13_ks_master(&cks, ch_sf);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.server_hs_traffic, cks.server_hs_traffic, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.client_hs_traffic, cks.client_hs_traffic, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_HS, cks.s + TLS13_KS_SERVER_HS, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_CLIENT_HS, cks.s + TLS13_KS_CLIENT_HS, 32);
 
     // Server Finished verifies over the HRR transcript through CertificateVerify.
     uint8_t ch_cv[32];
@@ -834,12 +834,12 @@ void test_hybrid_hrr_roundtrip()
         pc_sha256_final(&tt, ch_cv);
     }
     uint8_t sfin_expected[32];
-    pc_tls13_finished_mac(&TLS13_KDF, cks.server_hs_traffic, ch_cv, sfin_expected);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(sfin_expected, sh_flight + sh_flight_len - 32, 32);
 
     // The server accepts the client Finished -> DONE.
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, ch_sf, cfin + 4);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
     used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
     TEST_ASSERT_EQUAL_UINT(sizeof(cfin), used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, qt.state);
@@ -930,10 +930,10 @@ void test_hybrid_handshake_roundtrip()
     pc_tls13_ks_early(&TLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, 64); // 64-byte hybrid secret
     pc_tls13_ks_master(&cks, ch_sf);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.handshake_secret, cks.handshake_secret, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.client_hs_traffic, cks.client_hs_traffic, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.server_hs_traffic, cks.server_hs_traffic, 32);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.server_ap_traffic, cks.server_ap_traffic, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_HANDSHAKE, cks.s + TLS13_KS_HANDSHAKE, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_CLIENT_HS, cks.s + TLS13_KS_CLIENT_HS, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_HS, cks.s + TLS13_KS_SERVER_HS, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_AP, cks.s + TLS13_KS_SERVER_AP, 32);
 
     // Server Finished verifies, then the server accepts the client Finished.
     uint8_t ch_cv[32];
@@ -943,11 +943,11 @@ void test_hybrid_handshake_roundtrip()
     pc_sha256_update(&t, sh_flight, sh_flight_len - 36);
     pc_sha256_final(&t, ch_cv);
     uint8_t sfin_expected[32];
-    pc_tls13_finished_mac(&TLS13_KDF, cks.server_hs_traffic, ch_cv, sfin_expected);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(sfin_expected, sh_flight + sh_flight_len - 32, 32);
 
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, ch_sf, cfin + 4);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
     used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
     TEST_ASSERT_EQUAL_UINT(sizeof(cfin), used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, qt.state);

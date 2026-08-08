@@ -12,6 +12,7 @@
  */
 
 #include "services/iot/graphql/graphql.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_GRAPHQL
@@ -170,7 +171,7 @@ static const char *intern(const char *s, int len)
         return NULL;
     }
     char *dst = s_gql.strbuf + s_gql.str_len;
-    memcpy(dst, s, len);
+    mem.cpy(dst, s, len);
     dst[len] = '\0';
     s_gql.str_len += len + 1;
     return dst;
@@ -495,7 +496,7 @@ static void w_raw(Writer *w, const char *s, size_t len)
         w->ovf = PROTO_TRUE;
         return;
     }
-    memcpy(w->o + w->n, s, len);
+    mem.cpy(w->o + w->n, s, len);
     w->n += len;
 }
 static void w_str(Writer *w, const char *s)
@@ -605,7 +606,7 @@ static void emit_field(Writer *w, int idx, int path_len)
         w->ovf = PROTO_TRUE;
         return;
     }
-    memcpy(s_gql.path + plen, node->name, nl);
+    mem.cpy(s_gql.path + plen, node->name, nl);
     plen += nl;
     s_gql.path[plen] = '\0';
 

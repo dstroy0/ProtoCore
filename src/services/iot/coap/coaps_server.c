@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/coap/coaps_server.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DTLS && PC_ENABLE_COAP
 
@@ -178,7 +179,7 @@ static proto_bool ring_push(const uint8_t *dg, size_t len, const char *ip, uint1
         return PROTO_FALSE; // ring full: drop (DTLS recovers via retransmission)
     }
     CoapsIngest *e = &s_cpool.ring[head];
-    memcpy(e->data, dg, len);
+    mem.cpy(e->data, dg, len);
     e->len = (uint16_t)len;
     copy_str(e->ip, sizeof e->ip, ip);
     e->port = port;
@@ -226,7 +227,7 @@ static CoapsSlot *slot_by_cid(const uint8_t *cid, size_t avail)
             continue;
         }
         size_t sl = DtlsServer.local_cid(&s->conn, sc);
-        if (sl && sl <= avail && memcmp(cid, sc, sl) == 0)
+        if (sl && sl <= avail && mem.cmp(cid, sc, sl) == 0)
         {
             return s;
         }
@@ -241,7 +242,7 @@ static CoapsSlot *alloc_slot()
         if (!s_cpool.pool[i].used)
         {
             CoapsSlot *s = &s_cpool.pool[i];
-            memset(s, 0, sizeof *s);
+            mem.set(s, 0, sizeof *s);
             s->used = PROTO_TRUE;
             return s;
         }
@@ -361,8 +362,8 @@ proto_bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg)
     }
     s_coaps.cert_der = cfg->cert_der;
     s_coaps.cert_len = cfg->cert_len;
-    memcpy(s_coaps.ed25519_seed, cfg->ed25519_seed, sizeof s_coaps.ed25519_seed);
-    memcpy(s_coaps.cookie_key, cfg->cookie_key, sizeof s_coaps.cookie_key);
+    mem.cpy(s_coaps.ed25519_seed, cfg->ed25519_seed, sizeof s_coaps.ed25519_seed);
+    mem.cpy(s_coaps.cookie_key, cfg->cookie_key, sizeof s_coaps.cookie_key);
     s_coaps.rng = cfg->rng;
     s_coaps.port = port ? port : PC_COAPS_PORT;
     for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)

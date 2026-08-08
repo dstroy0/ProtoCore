@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/xmpp/xmpp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_XMPP
 
@@ -18,7 +19,7 @@ static proto_bool put(char *out, size_t cap, size_t *n, const char *s)
     {
         return PROTO_FALSE;
     }
-    memcpy(out + *n, s, sl);
+    mem.cpy(out + *n, s, sl);
     *n += sl;
     return PROTO_TRUE;
 }

@@ -7,6 +7,7 @@
  */
 
 #include "services/system/esp/esp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_IKEV2
 
@@ -26,8 +27,8 @@ static uint32_t get32be(const uint8_t *p)
 }
 static void esp_nonce(uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *salt, const uint8_t *iv)
 {
-    memcpy(nonce, salt, PC_ESP_SALT_LEN);
-    memcpy(nonce + PC_ESP_SALT_LEN, iv, PC_ESP_IV_LEN);
+    mem.cpy(nonce, salt, PC_ESP_SALT_LEN);
+    mem.cpy(nonce + PC_ESP_SALT_LEN, iv, PC_ESP_IV_LEN);
 }
 // Bytes the ESP header + IV occupy before the ciphertext (also the AAD length = SPI|Seq).
 #define PC_ESP_CT_OFF (PC_ESP_HDR_LEN + PC_ESP_IV_LEN)
@@ -53,12 +54,12 @@ size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_E
 
     put32be(out, spi);
     put32be(out + 4, seq);
-    memcpy(out + PC_ESP_HDR_LEN, iv, PC_ESP_IV_LEN);
+    mem.cpy(out + PC_ESP_HDR_LEN, iv, PC_ESP_IV_LEN);
 
     uint8_t *pt = out + PC_ESP_CT_OFF;
     if (payload_len)
     {
-        memcpy(pt, payload, payload_len);
+        mem.cpy(pt, payload, payload_len);
     }
     for (size_t i = 0; i < padn; i++)
     {

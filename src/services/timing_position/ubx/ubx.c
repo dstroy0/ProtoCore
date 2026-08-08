@@ -7,6 +7,7 @@
  */
 
 #include "services/timing_position/ubx/ubx.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_UBX
 
@@ -286,7 +287,7 @@ void pc_ubx_stream_init(pc_ubx_stream *st)
 {
     if (st)
     {
-        memset(st, 0, sizeof(*st)); // state = S_SYNC1
+        mem.set(st, 0, sizeof(*st)); // state = S_SYNC1
     }
 }
 

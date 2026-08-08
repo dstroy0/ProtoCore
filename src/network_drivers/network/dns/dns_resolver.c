@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/network/dns/dns_resolver.h"
+#include "mmgr/protomem.h"
 
 #if PC_NEED_DNS_RESOLVER
 
@@ -324,7 +325,7 @@ static pc_dns_state resolve(const char *host, uint32_t *out_ip)
     s_dr.done = PROTO_FALSE;
     s_dr.ok = PROTO_FALSE;
     DnsCall k;
-    memset(&k, 0, sizeof(k));
+    mem.set(&k, 0, sizeof(k));
     k.host = host;
     tcpip_api_call(do_dns, &k.base); // resolve in the lwIP thread
 

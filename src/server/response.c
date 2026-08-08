@@ -13,6 +13,7 @@
  */
 
 #include "mmgr/membuild.h" // pc_sb frame builder (replaces snprintf)
+#include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str.len: send_text measures the body it was handed
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/transport/tcp.h" // conn_pool, Tcp.conn->send, TcpConn/ConnState
@@ -189,7 +190,7 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
         return;
     }
     char name[33];
-    memcpy(name, at + 2, nlen);
+    mem.cpy(name, at + 2, nlen);
     name[nlen] = '\0';
     const char *val = resolver ? resolver(name) : NULL;
     if (!val)
@@ -431,7 +432,7 @@ void chunk_send_pump(uint8_t slot_id)
             size_t nd = pc_hex_u32((uint32_t)n, digits);
             size_t sn = nd + 2; // "<hex>\r\n"
             uint8_t *start = body - sn;
-            memcpy(start, digits, nd);
+            mem.cpy(start, digits, nd);
             start[nd] = '\r';
             start[nd + 1] = '\n';
             body[n] = '\r';
@@ -585,7 +586,7 @@ const char *mime_type(const char *path)
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_STATS
-// The stats body is an editable template asset (web_assets/input/PC_STATS_JSON.json)
+// The stats body is an editable template asset (src/web_assets/input/PC_STATS_JSON.json)
 // rendered through the {{name}} engine, like /metrics - values are substituted by
 // name, with no printf-format coupling. Snapshot into statics just before the
 // (twice-invoked, size + emit) resolver runs.
@@ -667,7 +668,7 @@ void stats(uint8_t slot_id)
 #endif // PC_ENABLE_STATS
 
 #if PC_ENABLE_METRICS
-// The Prometheus exposition is an editable template asset (web_assets/input/
+// The Prometheus exposition is an editable template asset (src/web_assets/input/
 // PC_METRICS_PROM.txt) rendered through the {{name}} engine, so values are
 // substituted by name (no printf format coupling). metrics() snapshots the live
 // values into these statics just before send_template(), which invokes the

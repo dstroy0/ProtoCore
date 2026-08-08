@@ -10,6 +10,7 @@
  */
 
 #include "services/storage/config_io/config_io.h"
+#include "mmgr/protomem.h"
 #include "mmgr/frame.h" // the one frame engine
 
 #if PC_ENABLE_CONFIG_IO
@@ -47,10 +48,10 @@ static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key,
     {
         return PROTO_FALSE;
     }
-    memcpy(out + *pos, key, kn);
+    mem.cpy(out + *pos, key, kn);
     *pos += kn;
     out[(*pos)++] = '=';
-    memcpy(out + *pos, val, vn);
+    mem.cpy(out + *pos, val, vn);
     *pos += vn;
     out[(*pos)++] = '\n';
     out[*pos] = '\0';
@@ -148,9 +149,9 @@ int pc_config_import(const char *ns, const pc_cfg_field *fields, size_t n, const
         {
             char key[PC_KEY_MAX];
             char val[PC_VAL_MAX];
-            memcpy(key, text + i, klen);
+            mem.cpy(key, text + i, klen);
             key[klen] = '\0';
-            memcpy(val, text + eq + 1, vlen);
+            mem.cpy(val, text + eq + 1, vlen);
             val[vlen] = '\0';
             if (config_apply_field(fields, n, key, val))
             {

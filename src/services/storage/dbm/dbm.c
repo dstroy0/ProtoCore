@@ -7,6 +7,7 @@
  */
 
 #include "services/storage/dbm/dbm.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_DBM
 
@@ -59,7 +60,7 @@ static int find_live(const struct pc_dbm *db, uint64_t hash, const char *key, ui
         {
             return -1; // empty -> the probe chain ends, key not present
         }
-        if (s->state == 1 && s->hash == hash && s->key_len == key_len && memcmp(s->key, key, key_len) == 0)
+        if (s->state == 1 && s->hash == hash && s->key_len == key_len && mem.cmp(s->key, key, key_len) == 0)
         {
             return (int)j;
         }
@@ -80,7 +81,7 @@ static int reserve(const struct pc_dbm *db, uint64_t hash, const char *key, uint
         const pc_dbm_slot *s = &db->slots[j];
         if (s->state == 1)
         {
-            if (s->hash == hash && s->key_len == key_len && memcmp(s->key, key, key_len) == 0)
+            if (s->hash == hash && s->key_len == key_len && mem.cmp(s->key, key, key_len) == 0)
             {
                 *is_new = PROTO_FALSE;
                 return (int)j;
@@ -149,7 +150,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
         s->state = 1;
         s->hash = h;
         s->key_len = klen;
-        memcpy(s->key, key, klen);
+        mem.cpy(s->key, key, klen);
         s->val_off = data_off + WAL_RECORD_HEADER + DBM_HDR + klen;
         s->val_len = vlen;
     }
@@ -166,7 +167,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
 
 proto_bool pc_dbm_open(struct pc_dbm *db, WalStore *wal)
 {
-    memset(db, 0, sizeof(*db));
+    mem.set(db, 0, sizeof(*db));
     db->wal = wal;
     ReplayCtx rc = {db, PROTO_FALSE};
     uint8_t scratch[WAL_RECORD_HEADER + DBM_HDR + PC_DBM_KEY_MAX + PC_DBM_VAL_MAX];
@@ -192,10 +193,10 @@ proto_bool pc_dbm_put(struct pc_dbm *db, const char *key, uint16_t key_len, cons
     rec[0] = 0;
     put_u16(rec + 1, key_len);
     put_u32(rec + 3, val_len);
-    memcpy(rec + DBM_HDR, key, key_len);
+    mem.cpy(rec + DBM_HDR, key, key_len);
     if (val_len)
     {
-        memcpy(rec + DBM_HDR + key_len, val, val_len);
+        mem.cpy(rec + DBM_HDR + key_len, val, val_len);
     }
     uint64_t old_head = pc_wal_store_used(db->wal);
     if (!pc_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len + val_len)))
@@ -211,7 +212,7 @@ proto_bool pc_dbm_put(struct pc_dbm *db, const char *key, uint16_t key_len, cons
     s->state = 1;
     s->hash = h;
     s->key_len = key_len;
-    memcpy(s->key, key, key_len);
+    mem.cpy(s->key, key, key_len);
     s->val_off = old_head + WAL_RECORD_HEADER + DBM_HDR + key_len;
     s->val_len = val_len;
     return PROTO_TRUE;
@@ -249,7 +250,7 @@ proto_bool pc_dbm_del(struct pc_dbm *db, const char *key, uint16_t key_len)
     rec[0] = 1;
     put_u16(rec + 1, key_len);
     put_u32(rec + 3, 0);
-    memcpy(rec + DBM_HDR, key, key_len);
+    mem.cpy(rec + DBM_HDR, key, key_len);
     if (!pc_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len)))
     {
         return PROTO_FALSE; // WAL full: key stays live
@@ -322,7 +323,7 @@ proto_bool pc_dbm_compact(struct pc_dbm *db, WalStore *dst)
         rec[0] = 0; // put
         put_u16(rec + 1, s->key_len);
         put_u32(rec + 3, s->val_len);
-        memcpy(rec + DBM_HDR, s->key, s->key_len);
+        mem.cpy(rec + DBM_HDR, s->key, s->key_len);
         // On any failure, return before rebinding so db keeps using its intact original log (no data loss).
         if (s->val_len && !pc_wal_store_pread(db->wal, s->val_off, rec + DBM_HDR + s->key_len, s->val_len))
         {

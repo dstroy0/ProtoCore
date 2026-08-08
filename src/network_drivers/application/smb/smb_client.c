@@ -8,6 +8,7 @@
  */
 
 #include "smb_client.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SMB
 
@@ -60,7 +61,7 @@ static size_t utf16le(const char *s, uint8_t *out, size_t cap)
 // Find the MsvAvTimestamp (AvId 7) FILETIME in a CHALLENGE target-info blob; copy 8 bytes, else 0-fill.
 static void find_av_timestamp(const uint8_t *ti, size_t ti_len, uint8_t out[8])
 {
-    memset(out, 0, 8);
+    mem.set(out, 0, 8);
     size_t p = 0;
     while (p + 4 <= ti_len)
     {
@@ -73,7 +74,7 @@ static void find_av_timestamp(const uint8_t *ti, size_t ti_len, uint8_t out[8])
         }
         if (id == 7 && len == 8 && p + 8 <= ti_len)
         {
-            memcpy(out, ti + p, 8);
+            mem.cpy(out, ti + p, 8);
             return;
         }
         p += len;
@@ -402,7 +403,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     // MIC = HMAC-MD5(session key, NEGOTIATE || CHALLENGE || AUTHENTICATE); write it into the zeroed field.
     uint8_t mic[PC_NTLMSSP_MIC_LEN];
     pc_ntlm_mic(skey, ntneg, ntneg_n, chal_tok, chal_len, s_smb.ntauth, ntauth_n, mic);
-    memcpy(s_smb.ntauth + PC_NTLMSSP_MIC_OFFSET, mic, PC_NTLMSSP_MIC_LEN);
+    mem.cpy(s_smb.ntauth + PC_NTLMSSP_MIC_OFFSET, mic, PC_NTLMSSP_MIC_LEN);
     size_t sp2_n = pc_spnego_wrap_authenticate(s_smb.ntauth, ntauth_n, s_smb.sp2, sizeof(s_smb.sp2));
     if (!sp2_n)
     {
@@ -434,7 +435,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     }
     else
     {
-        memcpy(sign_key, skey, sizeof(sign_key));
+        mem.cpy(sign_key, skey, sizeof(sign_key));
         if (want_signing)
         {
             pc_smb2_sign(skey, s_smb.tx + 4, mlen);
@@ -467,7 +468,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     }
     sign->active = want_signing && !guest_or_null;
     sign->algo = algo;
-    memcpy(sign->key, sign_key, sizeof(sign->key));
+    mem.cpy(sign->key, sign_key, sizeof(sign->key));
 
     // SMB 3.x transport encryption: derive the C2S/S2C cipher keys if the server negotiated a cipher (SMB 3.x,
     // non-guest), sized by the cipher (16 for -128, 32 for -256). A server that requires encryption globally
@@ -572,18 +573,18 @@ static SmbResult smb_create(const SmbConfig *cfg, SmbHandle *h, uint64_t session
     }
     h->session_id = session_id;
     h->tree_id = tree_id;
-    memcpy(h->file_id, cr.file_id, 16);
+    mem.cpy(h->file_id, cr.file_id, 16);
     h->file_size = cr.end_of_file;
     h->next_message_id = 5;
     h->signing_active = sign->active;
     h->signing_algo = sign->algo;
-    memcpy(h->signing_key, sign->key, sizeof(h->signing_key));
+    mem.cpy(h->signing_key, sign->key, sizeof(h->signing_key));
     // Carry the encryption state onto the handle so read/write/close keep encrypting with the same keys and a
     // continuing nonce (the counter must not restart, or a nonce would repeat under the same key).
     h->encrypt_active = crypt->active;
     h->enc_cipher = crypt->cipher;
-    memcpy(h->enc_c2s, crypt->c2s, sizeof(h->enc_c2s));
-    memcpy(h->enc_s2c, crypt->s2c, sizeof(h->enc_s2c));
+    mem.cpy(h->enc_c2s, crypt->c2s, sizeof(h->enc_c2s));
+    mem.cpy(h->enc_s2c, crypt->s2c, sizeof(h->enc_s2c));
     h->enc_nonce = crypt->nonce;
     return SMB_OK;
 }
@@ -664,10 +665,10 @@ SmbResult smb_close(SmbHandle *h, SmbSendFn send, SmbRecvFn recv, void *ctx)
         return SMB_ERR_OVERFLOW;
     }
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
-    memcpy(sign.key, h->signing_key, sizeof(sign.key));
+    mem.cpy(sign.key, h->signing_key, sizeof(sign.key));
     SmbCrypt crypt = {h->encrypt_active, h->encrypt_active, h->enc_cipher, {0}, {0}, h->session_id, h->enc_nonce};
-    memcpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
-    memcpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
+    mem.cpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
+    mem.cpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
     SmbResult rt = SMB_ERR_IO;
     int rl = smb_round_trip(send, recv, ctx, mlen, &sign, &crypt, &rt);
     h->enc_nonce = crypt.nonce; // persist the advanced nonce (must never repeat under the same key)
@@ -698,10 +699,10 @@ SmbResult smb_read(SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap, size
     }
     *out_len = 0;
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
-    memcpy(sign.key, h->signing_key, sizeof(sign.key));
+    mem.cpy(sign.key, h->signing_key, sizeof(sign.key));
     SmbCrypt crypt = {h->encrypt_active, h->encrypt_active, h->enc_cipher, {0}, {0}, h->session_id, h->enc_nonce};
-    memcpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
-    memcpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
+    mem.cpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
+    mem.cpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
     const size_t chunk_max = PC_SMB_BUF - 96; // room for the header + READ response body
     size_t total = 0;
     while (total < cap)
@@ -747,7 +748,7 @@ SmbResult smb_read(SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap, size
         {
             break;
         }
-        memcpy(out + total, r.data, r.data_len);
+        mem.cpy(out + total, r.data, r.data_len);
         total += r.data_len;
         if (r.data_len < want)
         {
@@ -767,10 +768,10 @@ SmbResult smb_write(SmbHandle *h, uint64_t offset, const uint8_t *data, size_t l
     }
     *written = 0;
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
-    memcpy(sign.key, h->signing_key, sizeof(sign.key));
+    mem.cpy(sign.key, h->signing_key, sizeof(sign.key));
     SmbCrypt crypt = {h->encrypt_active, h->encrypt_active, h->enc_cipher, {0}, {0}, h->session_id, h->enc_nonce};
-    memcpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
-    memcpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
+    mem.cpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
+    mem.cpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
     const size_t chunk_max = PC_SMB_BUF - 128; // room for the header + WRITE request body
     size_t total = 0;
     while (total < len)

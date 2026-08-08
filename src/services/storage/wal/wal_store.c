@@ -7,6 +7,7 @@
  */
 
 #include "services/storage/wal/wal_store.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_WAL
 
@@ -29,7 +30,7 @@ static proto_bool dev_write(const WalDev *d, uint64_t off, const uint8_t *buf, s
 static proto_bool write_super(WalStore *s, int ab, uint64_t gen, uint64_t head, uint64_t seq)
 {
     uint8_t sb[WAL_SUPER_SIZE];
-    memset(sb, 0, sizeof(sb));
+    mem.set(sb, 0, sizeof(sb));
     pc_wr32le(sb + 0, WAL_SUPER_MAGIC);
     pc_wr64le(sb + 4, gen);
     pc_wr64le(sb + 12, head);
@@ -128,7 +129,7 @@ proto_bool pc_wal_store_format(WalStore *s, const WalDev *dev)
     {
         return PROTO_FALSE;
     }
-    memset(s, 0, sizeof(*s));
+    mem.set(s, 0, sizeof(*s));
     s->dev = *dev;
     s->data_off = WAL_DATA_OFFSET;
     s->data_cap = dev->size - WAL_DATA_OFFSET;
@@ -139,7 +140,7 @@ proto_bool pc_wal_store_format(WalStore *s, const WalDev *dev)
     s->ab = 0;
     // Invalidate copy B, then commit copy A as the live generation-1 superblock.
     uint8_t zero[WAL_SUPER_SIZE];
-    memset(zero, 0, sizeof(zero));
+    mem.set(zero, 0, sizeof(zero));
     if (!dev_write(&s->dev, (uint64_t)1 * WAL_SUPER_SIZE, zero, sizeof(zero)))
     {
         return PROTO_FALSE;
@@ -157,7 +158,7 @@ proto_bool pc_wal_store_mount(WalStore *s, const WalDev *dev)
     {
         return PROTO_FALSE;
     }
-    memset(s, 0, sizeof(*s));
+    mem.set(s, 0, sizeof(*s));
     s->dev = *dev;
     s->data_off = WAL_DATA_OFFSET;
     s->data_cap = dev->size - WAL_DATA_OFFSET;

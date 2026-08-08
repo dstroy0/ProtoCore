@@ -7,6 +7,7 @@
  */
 
 #include "services/fieldbus/cip/cip.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_CIP
 
@@ -84,11 +85,11 @@ size_t pc_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uin
     size_t p = 0;
     buf[p++] = service;
     buf[p++] = (uint8_t)(epath_len / 2); // path size in words
-    memcpy(buf + p, epath, epath_len);
+    mem.cpy(buf + p, epath, epath_len);
     p += epath_len;
     if (data_len)
     {
-        memcpy(buf + p, data, data_len);
+        mem.cpy(buf + p, data, data_len);
         p += data_len;
     }
     return p;

@@ -7,6 +7,7 @@
  */
 
 #include "services/instrumentation/hislip/hislip.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HISLIP
 
@@ -57,7 +58,7 @@ static size_t build_with_payload(uint8_t *buf, size_t cap, HislipMsg type, uint8
     pc_hislip_build_header(buf, cap, type, control, parameter, payload_len);
     if (payload_len)
     {
-        memcpy(buf + PC_HISLIP_HEADER_LEN, payload, payload_len);
+        mem.cpy(buf + PC_HISLIP_HEADER_LEN, payload, payload_len);
     }
     return total;
 }

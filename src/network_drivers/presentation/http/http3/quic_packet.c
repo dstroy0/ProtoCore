@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http3/quic_packet.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -42,7 +43,7 @@ proto_bool pc_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHea
     {
         return PROTO_FALSE;
     }
-    memcpy(out->dcid, buf + pos, dcl);
+    mem.cpy(out->dcid, buf + pos, dcl);
     out->dcid_len = dcl;
     pos += dcl;
     uint8_t scl = buf[pos++];
@@ -50,7 +51,7 @@ proto_bool pc_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHea
     {
         return PROTO_FALSE;
     }
-    memcpy(out->scid, buf + pos, scl);
+    mem.cpy(out->scid, buf + pos, scl);
     out->scid_len = scl;
     pos += scl;
     out->hdr_len = pos;
@@ -74,10 +75,10 @@ size_t pc_quic_build_long_header(uint8_t *out, size_t cap, uint8_t type, uint32_
     wr_be32(out + 1, version);
     size_t pos = 5;
     out[pos++] = dcid_len;
-    memcpy(out + pos, dcid, dcid_len);
+    mem.cpy(out + pos, dcid, dcid_len);
     pos += dcid_len;
     out[pos++] = scid_len;
-    memcpy(out + pos, scid, scid_len);
+    mem.cpy(out + pos, scid, scid_len);
     pos += scid_len;
     return pos;
 }
@@ -92,7 +93,7 @@ proto_bool pc_quic_parse_short_header(const uint8_t *buf, size_t len, uint8_t dc
     out->spin = (uint8_t)((buf[0] & 0x20) ? 1 : 0);
     out->key_phase = (uint8_t)((buf[0] & 0x04) ? 1 : 0);
     out->pn_len = (uint8_t)((buf[0] & 0x03) + 1);
-    memcpy(out->dcid, buf + 1, dcid_len);
+    mem.cpy(out->dcid, buf + 1, dcid_len);
     out->dcid_len = dcid_len;
     out->hdr_len = (size_t)1 + dcid_len;
     return PROTO_TRUE;
@@ -115,10 +116,10 @@ size_t pc_quic_build_version_negotiation(uint8_t *out, size_t cap, const uint8_t
     wr_be32(out + 1, 0);  // Version = 0 marks a Version Negotiation packet
     size_t pos = 5;
     out[pos++] = dcid_len;
-    memcpy(out + pos, dcid, dcid_len);
+    mem.cpy(out + pos, dcid, dcid_len);
     pos += dcid_len;
     out[pos++] = scid_len;
-    memcpy(out + pos, scid, scid_len);
+    mem.cpy(out + pos, scid, scid_len);
     pos += scid_len;
     for (size_t i = 0; i < nversions; i++)
     {

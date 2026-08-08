@@ -11,6 +11,7 @@
  */
 
 #include "network_drivers/presentation/http/http2/hpack.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP2
 
@@ -191,7 +192,7 @@ static proto_bool resolve_name(const HpackDynTable *t, uint32_t idx, char *out, 
         {
             return PROTO_FALSE;
         }
-        memcpy(out, STATIC[idx][0], nl);
+        mem.cpy(out, STATIC[idx][0], nl);
         *out_len = nl;
         return PROTO_TRUE;
     }
@@ -220,8 +221,8 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
         {
             return PROTO_FALSE;
         }
-        memcpy(scratch, STATIC[idx][0], nl);
-        memcpy(scratch + nl, STATIC[idx][1], vl);
+        mem.cpy(scratch, STATIC[idx][0], nl);
+        mem.cpy(scratch + nl, STATIC[idx][1], vl);
     }
     else
     {
@@ -281,7 +282,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
 
 void pc_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes)
 {
-    memset(t, 0, sizeof(*t));
+    mem.set(t, 0, sizeof(*t));
     t->max_size = max_bytes ? max_bytes : (uint32_t)HPACK_BYTES;
     if (t->max_size > HPACK_BYTES)
     {
@@ -346,13 +347,13 @@ size_t pc_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
     int full_idx = 0;
     for (int i = 1; i <= 61; i++)
     {
-        if (strnlen(STATIC[i][0], name_len + 1) == name_len && memcmp(STATIC[i][0], name, name_len) == 0)
+        if (strnlen(STATIC[i][0], name_len + 1) == name_len && mem.cmp(STATIC[i][0], name, name_len) == 0)
         {
             if (!name_idx)
             {
                 name_idx = i;
             }
-            if (strnlen(STATIC[i][1], value_len + 1) == value_len && memcmp(STATIC[i][1], value, value_len) == 0)
+            if (strnlen(STATIC[i][1], value_len + 1) == value_len && mem.cmp(STATIC[i][1], value, value_len) == 0)
             {
                 full_idx = i;
                 break;

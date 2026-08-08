@@ -8,6 +8,7 @@
  */
 
 #include "services/timing_position/gnss/ntrip_caster_listener.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_NTRIP_CASTER
 
@@ -130,7 +131,7 @@ static proto_bool auth_ok(const NtripRequest *req, const char *expect)
     {
         return PROTO_FALSE;
     }
-    return memcmp(req->auth_b64, expect, el) == 0;
+    return mem.cmp(req->auth_b64, expect, el) == 0;
 }
 
 static void serve_sourcetable(CasterRover *r, NtripVersion version)
@@ -279,7 +280,7 @@ proto_bool pc_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *moun
     CasterMount *m = &s_ctx.mounts[idx];
     m->active = PROTO_TRUE;
     m->listener_id = listener_id;
-    memcpy(m->name, mount->mountpoint, nl + 1);
+    mem.cpy(m->name, mount->mountpoint, nl + 1);
     m->cfg = *mount;
     m->cfg.mountpoint = m->name; // point the copied cfg at our owned name
     m->auth_b64 = auth_b64;

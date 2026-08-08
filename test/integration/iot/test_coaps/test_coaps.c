@@ -236,7 +236,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     pc_tls13_ks_early(&DTLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys srv_read;
-    DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
+    DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);
 
     uint64_t exp_seq = 0;
     while (off < (size_t)fl)
@@ -260,11 +260,11 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     pc_sha256_final(&s2, h_sfin);
     pc_tls13_ks_master(&cks, h_sfin);
     uint8_t cfin_verify[32];
-    pc_tls13_finished_mac(&DTLS13_KDF, cks.client_hs_traffic, h_sfin, cfin_verify);
+    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
     uint8_t cfin[64];
     size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
     DtlsRecordKeys cli_write;
-    DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
+    DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
     uint8_t cfin_frag[80];
     size_t cff = DtlsHandshake.frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
                                           cfin_frag, sizeof(cfin_frag));
@@ -275,8 +275,8 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     TEST_ASSERT_TRUE(DtlsServer.process(conn, cfin_rec, cfr, out2, sizeof(out2)) > 0);
     TEST_ASSERT_TRUE(DtlsServer.established(conn));
 
-    DtlsRecord.keys_derive(cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
-    DtlsRecord.keys_derive(cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
+    DtlsRecord.keys_derive(cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.s + TLS13_KS_SERVER_AP);
+    DtlsRecord.keys_derive(cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.s + TLS13_KS_CLIENT_AP);
 }
 
 static void test_coap_over_dtls(void)

@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/amqp/amqp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_AMQP
 
@@ -19,7 +20,7 @@ size_t pc_amqp_protocol_header(uint8_t *buf, size_t cap)
     {
         return 0;
     }
-    memcpy(buf, hdr, sizeof(hdr));
+    mem.cpy(buf, hdr, sizeof(hdr));
     return sizeof(hdr);
 }
 
@@ -48,7 +49,7 @@ size_t pc_amqp_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint16_t chan
     size_t p = write_frame_header(buf, type, channel, (uint32_t)payload_len);
     if (payload_len)
     {
-        memcpy(buf + p, payload, payload_len);
+        mem.cpy(buf + p, payload, payload_len);
         p += payload_len;
     }
     buf[p++] = AMQP_FRAME_END;
@@ -74,7 +75,7 @@ size_t pc_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t
     p += pc_wr16be(buf + p, method_id);
     if (args_len)
     {
-        memcpy(buf + p, args, args_len);
+        mem.cpy(buf + p, args, args_len);
         p += args_len;
     }
     buf[p++] = AMQP_FRAME_END;
@@ -101,7 +102,7 @@ size_t pc_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, 
     p += pc_wr16be(buf + p, property_flags);
     if (properties_len)
     {
-        memcpy(buf + p, properties, properties_len);
+        mem.cpy(buf + p, properties, properties_len);
         p += properties_len;
     }
     buf[p++] = AMQP_FRAME_END;

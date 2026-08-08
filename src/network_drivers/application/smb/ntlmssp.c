@@ -7,6 +7,7 @@
  */
 
 #include "ntlmssp.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SMB
 
@@ -28,8 +29,8 @@ size_t pc_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags)
     {
         return 0;
     }
-    memset(buf, 0, 32);
-    memcpy(buf + 0, NTLMSSP_SIG, 8); // Signature
+    mem.set(buf, 0, 32);
+    mem.cpy(buf + 0, NTLMSSP_SIG, 8); // Signature
     pc_wr32le(buf + 8, 1);           // MessageType = NEGOTIATE
     pc_wr32le(buf + 12, flags);      // NegotiateFlags
     wr_field(buf + 16, 0, 32);       // DomainNameFields (empty; offset = end of header)
@@ -43,12 +44,12 @@ proto_bool pc_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChalle
     {
         return PROTO_FALSE;
     }
-    if (memcmp(msg, NTLMSSP_SIG, 8) != 0 || pc_rd32le(msg + 8) != 2)
+    if (mem.cmp(msg, NTLMSSP_SIG, 8) != 0 || pc_rd32le(msg + 8) != 2)
     {
         return PROTO_FALSE;
     }
     out->flags = pc_rd32le(msg + 20);
-    memcpy(out->server_challenge, msg + 24, 8);
+    mem.cpy(out->server_challenge, msg + 24, 8);
     uint16_t ti_len = pc_rd16le(msg + 40);
     uint32_t ti_off = pc_rd32le(msg + 44);
     if (ti_len == 0)
@@ -113,8 +114,8 @@ size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm
         return 0;
     }
 
-    memset(buf, 0, HDR);
-    memcpy(buf + 0, NTLMSSP_SIG, 8); // Signature
+    mem.set(buf, 0, HDR);
+    mem.cpy(buf + 0, NTLMSSP_SIG, 8); // Signature
     pc_wr32le(buf + 8, 3);           // MessageType = AUTHENTICATE
     if (with_mic)
     {
@@ -131,13 +132,13 @@ size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm
     size_t lm_off = off;
     if (lm_resp && lm_len)
     {
-        memcpy(buf + off, lm_resp, lm_len);
+        mem.cpy(buf + off, lm_resp, lm_len);
     }
     off += lm_len;
     size_t nt_off = off;
     if (nt_resp && nt_len)
     {
-        memcpy(buf + off, nt_resp, nt_len);
+        mem.cpy(buf + off, nt_resp, nt_len);
     }
     off += nt_len;
     size_t dom_off = off;

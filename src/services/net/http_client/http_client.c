@@ -8,6 +8,7 @@
  */
 
 #include "services/net/http_client/http_client.h"
+#include "mmgr/protomem.h"
 #include "mmgr/membuild.h"      // pc_sb frame builder
 #include "server/clock/clock.h" // pcdelay
 
@@ -65,7 +66,7 @@ proto_bool http_client_parse_url(const char *url, proto_bool *is_https, char *ho
     {
         return PROTO_FALSE;
     }
-    memcpy(host, h, hlen);
+    mem.cpy(host, h, hlen);
     host[hlen] = '\0';
 
     // optional :port
@@ -105,7 +106,7 @@ proto_bool http_client_parse_url(const char *url, proto_bool *is_https, char *ho
         {
             return PROTO_FALSE;
         }
-        memcpy(path, p, plen + 1);
+        mem.cpy(path, p, plen + 1);
     }
     return PROTO_TRUE;
 }
@@ -164,7 +165,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
         {
             return 0;
         }
-        memcpy(out + n, body, body_len);
+        mem.cpy(out + n, body, body_len);
         return (size_t)n + body_len;
     }
 
@@ -217,7 +218,7 @@ static const char *find_header(const uint8_t *buf, const uint8_t *end, const cha
 
 int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_t *body_len)
 {
-    if (!buf || len < 12 || memcmp(buf, "HTTP/1.", 7) != 0)
+    if (!buf || len < 12 || mem.cmp(buf, "HTTP/1.", 7) != 0)
     {
         return (int)HTTP_CLIENT_ERR_RESPONSE;
     }
@@ -309,7 +310,7 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
             {
                 csz = len - in; // truncated; take what we have
             }
-            memmove(buf + out, buf + in, csz);
+            mem.move(buf + out, buf + in, csz);
             out += csz;
             in += csz;
             // skip trailing CRLF after chunk data

@@ -25,6 +25,7 @@
  */
 
 #include "tcp_conn.h"
+#include "mmgr/protomem.h"
 #include "../diffserv.h" // pc_dscp_to_tos and the server-wide default this connection starts from
 #include "../net_addr.h" // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "../tcp.h"      // Tcp.listener->enqueue(): the owning listener posts the event, not this file
@@ -398,7 +399,7 @@ static inline pc_net_err pc_tcp_marshal(pc_tcp_op op, uint8_t slot, pc_pcb *pcb,
                                         proto_bool flush)
 {
     pc_tcp_call k;
-    memset(&k, 0, sizeof(k));
+    mem.set(&k, 0, sizeof(k));
     k.op = op;
     k.slot = slot;
     k.pcb = pcb;

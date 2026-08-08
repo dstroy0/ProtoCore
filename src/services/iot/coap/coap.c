@@ -7,6 +7,7 @@
  */
 
 #include "services/iot/coap/coap.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_COAP
 
@@ -110,7 +111,7 @@ static CoapCtx s_coap;
 void pc_coap_server_reset()
 {
     s_coap.res_count = 0;
-    memset(s_coap.res, 0, sizeof(s_coap.res));
+    mem.set(s_coap.res, 0, sizeof(s_coap.res));
 #if PC_ENABLE_COAP_BLOCK
     s_coap.b1_len = 0;
     s_coap.b1_szx = 0;
@@ -165,7 +166,7 @@ static proto_bool seg_append(char *buf, size_t cap, size_t *len, char sep, const
     {
         buf[(*len)++] = sep;
     }
-    memcpy(buf + *len, seg, seglen);
+    mem.cpy(buf + *len, seg, seglen);
     *len += seglen;
     buf[*len] = '\0';
     return PROTO_TRUE;
@@ -198,7 +199,7 @@ static size_t emit_header(uint8_t *out, size_t cap, CoapType type, uint8_t code,
     out[3] = (uint8_t)(mid & 0xFF);
     if (tkl)
     {
-        memcpy(out + 4, token, tkl);
+        mem.cpy(out + 4, token, tkl);
     }
     return (size_t)(4 + tkl);
 }
@@ -297,7 +298,7 @@ static size_t emit_options_payload(uint8_t *resp, size_t cap, size_t n, uint8_t 
             return n;
         }
         resp[n++] = COAP_PAYLOAD_MARKER;
-        memcpy(resp + n, payload, payload_len);
+        mem.cpy(resp + n, payload, payload_len);
         n += payload_len;
     }
     return n;
@@ -357,7 +358,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
     s_coap.last_tkl = tkl;
     if (tkl)
     {
-        memcpy(s_coap.last_token, token, tkl);
+        mem.cpy(s_coap.last_token, token, tkl);
     }
 #endif
 
@@ -558,7 +559,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
                 s_coap.pl[pl++] = ',';
             }
             s_coap.pl[pl++] = '<';
-            memcpy(s_coap.pl + pl, rpath, plen);
+            mem.cpy(s_coap.pl + pl, rpath, plen);
             pl += plen;
             s_coap.pl[pl++] = '>';
         }
@@ -612,7 +613,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
             }
             if (payload_len)
             {
-                memcpy(s_coap.b1 + s_coap.b1_len, payload, payload_len);
+                mem.cpy(s_coap.b1 + s_coap.b1_len, payload, payload_len);
             }
             s_coap.b1_len += payload_len;
 
@@ -787,13 +788,13 @@ void pc_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, co
     }
     CoapDedupEntry *e = &s_coap.dedup[victim];
     size_t iplen = strnlen(src_ip, sizeof(e->ip) - 1);
-    memcpy(e->ip, src_ip, iplen);
+    mem.cpy(e->ip, src_ip, iplen);
     e->ip[iplen] = 0;
     e->port = src_port;
     e->mid = mid;
     e->stamp_ms = now;
     e->len = (uint16_t)len;
-    memcpy(e->resp, resp, len);
+    mem.cpy(e->resp, resp, len);
     e->valid = PROTO_TRUE;
 }
 #endif // PC_COAP_DEDUP_ENTRIES > 0
@@ -855,7 +856,7 @@ static int find_resource_index(const CoapCtx *c, const char *path)
 
 static proto_bool same_token(const CoapObserver *o, const uint8_t *token, uint8_t tkl)
 {
-    return o->tkl == tkl && (tkl == 0 || memcmp(o->token, token, tkl) == 0);
+    return o->tkl == tkl && (tkl == 0 || mem.cmp(o->token, token, tkl) == 0);
 }
 
 // Find/refresh an observer; create one on first registration. Returns its slot or -1.
@@ -880,7 +881,7 @@ static int obs_register(const char *ip, uint16_t port, const uint8_t *token, uin
             s_coap.obs[i].tkl = tkl;
             if (tkl)
             {
-                memcpy(s_coap.obs[i].token, token, tkl);
+                mem.cpy(s_coap.obs[i].token, token, tkl);
             }
             s_coap.obs[i].res_idx = res_idx;
             s_coap.obs[i].seq = 1;

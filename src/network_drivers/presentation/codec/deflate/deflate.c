@@ -18,6 +18,7 @@
  */
 
 #include "deflate.h"
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_WS_DEFLATE
 
@@ -98,7 +99,7 @@ static void build_fixed(Tables *t)
 
     // Canonical code assignment (RFC 1951 sec 3.2.2) for the lit/length alphabet.
     uint16_t bl_count[16];
-    memset(bl_count, 0, sizeof(bl_count));
+    mem.set(bl_count, 0, sizeof(bl_count));
     for (sym = 0; sym < 288; sym++)
     {
         bl_count[t->ll_len[sym]]++;
