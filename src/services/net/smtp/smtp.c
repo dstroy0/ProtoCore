@@ -24,7 +24,7 @@
 #include "network_drivers/transport/tcp.h"
 #include <Arduino.h> // millis, delay
 #endif
-#if PROTOCORE_HOT && PC_ENABLE_SMTP_TLS
+#if PC_HAS_VENDOR_TLS && PC_ENABLE_SMTP_TLS
 #include "network_drivers/tls/tls.h"
 #include <mbedtls/ssl.h> // MBEDTLS_ERR_SSL_WANT_* for the BIO callbacks
 #endif

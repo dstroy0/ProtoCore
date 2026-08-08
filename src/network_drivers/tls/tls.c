@@ -5,7 +5,7 @@
  * @file tls.c
  * @brief Deterministic TLS engine implementation (mbedTLS + static pool).
  *
- * ESP32/Arduino only. All mbedTLS allocations are served from a fixed BSS arena
+ * The vendor arm, selected by PC_HAS_VENDOR_TLS. All mbedTLS allocations are served from a fixed BSS arena
  * (MBEDTLS_MEMORY_BUFFER_ALLOC_C) so no system heap is touched; the RNG is the
  * ESP32 hardware CSPRNG; the transport BIO reads ciphertext straight from the
  * connection's rx ring and writes via tcp_write. v2/v3 mbedTLS differences are
@@ -15,7 +15,7 @@
 #include "network_drivers/tls/tls.h"
 #include "server/clock/clock.h" // pcdelay
 
-#if PC_ENABLE_TLS && PROTOCORE_HOT
+#if PC_ENABLE_TLS && PC_HAS_VENDOR_TLS
 
 #include "lwip/tcp.h"
 #include "network_drivers/transport/tcp.h"
@@ -1166,4 +1166,4 @@ void pc_tls_client_session_end()
 
 #endif // PC_ENABLE_CLIENT_TLS
 
-#endif // PC_ENABLE_TLS && PROTOCORE_HOT
+#endif // PC_ENABLE_TLS && PC_HAS_VENDOR_TLS

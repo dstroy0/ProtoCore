@@ -23,7 +23,7 @@
 #include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
 #include <Arduino.h>
 #endif
-#if PROTOCORE_HOT && PC_ENABLE_MQTT_TLS
+#if PC_HAS_VENDOR_TLS && PC_ENABLE_MQTT_TLS
 #include "network_drivers/tls/tls.h" // persistent client TLS session (csess)
 #include <mbedtls/ssl.h>             // MBEDTLS_ERR_SSL_WANT_* for the BIO callbacks
 #endif

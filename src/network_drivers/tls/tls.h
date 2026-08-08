@@ -13,9 +13,10 @@
  * there is no socket layer and no extra task. The handshake is pumped from the
  * single `handle()` loop.
  *
- * ESP32/Arduino only - mbedTLS is not part of the native build. The header
- * compiles everywhere (the functions are no-op stubs unless PC_ENABLE_TLS and
- * ARDUINO are both set) so call sites need no extra guards.
+ * This is the vendor arm, selected by PC_HAS_VENDOR_TLS. Its complement inside
+ * PC_ENABLE_TLS is PC_TLS_SOFTWARE, the portable TLS 1.3 over the TCP record
+ * layer. The header compiles everywhere - without PC_ENABLE_TLS and a vendor
+ * stack the functions are no-op stubs, so call sites need no extra guards.
  *
  * Lifecycle per connection:
  * @code
@@ -36,7 +37,7 @@
 
 PROTO_BEGIN_DECLS
 
-#if PC_ENABLE_TLS && PROTOCORE_HOT
+#if PC_ENABLE_TLS && PC_HAS_VENDOR_TLS
 
 /**
  * @brief Initialize the global TLS engine: static pool, RNG, server cert/key.
@@ -366,7 +367,7 @@ static inline int pc_tls_client_run(const char *host, const uint8_t *req, size_t
 }
 #endif // PC_ENABLE_HTTP_CLIENT_TLS
 
-#endif // PC_ENABLE_TLS && PROTOCORE_HOT
+#endif // PC_ENABLE_TLS && PC_HAS_VENDOR_TLS
 
 PROTO_END_DECLS
 
