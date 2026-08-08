@@ -16,7 +16,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 
 // Public host key (BSS - no secret material).
-#if PROTOCORE_HOT
+#if PC_HAS_HW_BIGNUM
 #include "core_setup/hal/nvs.h" // the host key is read from non-volatile storage
 #include <mbedtls/md.h>
 #include <mbedtls/pk.h>
@@ -24,10 +24,10 @@
 #endif
 SshRsaPubKey ssh_host_pubkey;
 
-#if PROTOCORE_HOT
+#if PC_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
-// Arduino - cached mbedtls host-key signer (NVS-backed)
+// Accelerated - cached mbedtls host-key signer over the vendor's modexp (NVS-backed)
 // ---------------------------------------------------------------------------
 
 // RNG callback for mbedtls private-key operations (mbedtls v3 requires a real f_rng for RSA blinding).
@@ -178,10 +178,10 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
     return pc_rsa_sign_sw(_test_rsa_n, _test_rsa_d, msg, msg_len, hash, sig);
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
-// "ssh-rsa" public-key blob serialization (both platforms)
+// "ssh-rsa" public-key blob serialization (both backends)
 // ---------------------------------------------------------------------------
 
 // Write a 4-byte big-endian uint32 to p and advance p by 4.
