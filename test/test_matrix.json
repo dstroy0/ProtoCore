@@ -3968,8 +3968,9 @@
     "native_swar": {
       "desc": "Lane math (mmgr/swar.h): one 32-bit word as four byte lanes. has-zero across\nevery lane, the guard-bit range compares the base64 decoder classifies with, and the bounded\nNUL scan diffed against strnlen at every length, NUL position, and alignment.",
       "flags": [],
-      "src": [],
-      "tests": ["unit/mmgr/test_swar"]
+      "src": ["-<*>"],
+      "tests": ["unit/mmgr/test_swar"],
+      "test_build_src": "no"
     },
     "native_lfs_mock": {
       "desc": "The littlefs-backed pc_mnt_backend used by the host tests that need a real tree\n(test/mocks/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
