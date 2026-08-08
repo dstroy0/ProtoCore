@@ -9,7 +9,7 @@
 #include "ota_service.h"
 #include "server/clock/clock.h" // pcdelay
 
-#if PC_ENABLE_OTA && PROTOCORE_HOT
+#if PC_ENABLE_OTA && PC_HAS_VENDOR_OTA
 
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
@@ -152,4 +152,4 @@ void pc_ota_begin(const char *path, const char *user, const char *pass)
     (void)pass;
 }
 
-#endif // PC_ENABLE_OTA && PROTOCORE_HOT
+#endif // PC_ENABLE_OTA && PC_HAS_VENDOR_OTA

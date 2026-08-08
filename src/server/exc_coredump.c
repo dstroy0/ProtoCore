@@ -15,7 +15,7 @@
 
 #include "server/exc_decoder.h"
 
-#if PC_ENABLE_EXC_DECODER && PROTOCORE_HOT
+#if PC_ENABLE_EXC_DECODER && PC_HAS_VENDOR_COREDUMP
 
 #include <esp_core_dump.h>
 #include <esp_partition.h>
@@ -193,4 +193,4 @@ proto_bool pc_exc_coredump_erase(void)
     return esp_core_dump_image_erase() == ESP_OK;
 }
 
-#endif // PC_ENABLE_EXC_DECODER && PROTOCORE_HOT
+#endif // PC_ENABLE_EXC_DECODER && PC_HAS_VENDOR_COREDUMP

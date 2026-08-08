@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_BUS_CAPTURE
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_CAN
 #include "driver/twai.h"
 #endif
 size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
@@ -48,7 +48,7 @@ size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
 }
 
 // --- ESP32 TWAI (CAN) binding ------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_CAN
 
 // All bus-capture bind state, owned by one instance (internal linkage): the frame sink and
 // the running flag, grouped so it is one named owner, unreachable from any other TU.
@@ -169,6 +169,6 @@ void bus_capture_end(void)
     // host build: no TWAI controller, nothing to stop
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_CAN
 
 #endif // PC_ENABLE_BUS_CAPTURE
