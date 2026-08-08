@@ -35,7 +35,7 @@ body:
     id: version
     attributes:
       label: Library version
-      placeholder: "e.g. 1.0.5"
+      placeholder: "e.g. 1.0.6"
     validations:
       required: true
   - type: input
