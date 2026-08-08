@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-08 19:49:02
+**Generated:** 2026-08-08 21:21:37
 **Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 6076 passed, 3 failed - 1856s
+**Result:** ❌ 6142 passed, 3 failed - 1768s
 
 ---
 
@@ -3294,7 +3294,7 @@ _Unit tests for the CoAP server core (pc_coap_server_process). Each test encodes
 
 ---
 
-## test_coap - native_coap_observe - ✅ 63 passed
+## test_coap - native_coap_observe - ✅ 66 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -3305,67 +3305,70 @@ _Unit tests for the CoAP server core (pc_coap_server_process). Each test encodes
 | --: | :---------------------------------------------------- | :----: | :---------------------------------------------------------------------------------- |
 |   1 | `test_response_option_capacity_stop`                  |   ✅   | Response option capacity stop                                                       |
 |   2 | `test_coap_udp_handler_basic`                         |   ✅   | Coap udp handler basic                                                              |
-|   3 | `test_coap_observe_registry_full`                     |   ✅   | Coap observe registry full                                                          |
-|   4 | `test_coap_observe_zero_length_token`                 |   ✅   | Coap observe zero length token                                                      |
-|   5 | `test_coap_observe_targeted_removal`                  |   ✅   | Coap observe targeted removal                                                       |
-|   6 | `test_coap_observe_on_discovery_is_not_registered`    |   ✅   | Coap observe on discovery is not registered                                         |
-|   7 | `test_coap_udp_edge_datagrams`                        |   ✅   | Coap udp edge datagrams                                                             |
-|   8 | `test_non_confirmable_malformed_is_silent`            |   ✅   | A reserved token length (9..15) in a CON is malformed: Reset, with an empty token.  |
-|   9 | `test_response_code_as_request_is_method_not_allowed` |   ✅   | Response code as request is method not allowed                                      |
-|  10 | `test_block1_ignored_on_get`                          |   ✅   | Block1 ignored on get                                                               |
-|  11 | `test_block1_block_size_change_is_incomplete`         |   ✅   | Block1 block size change is incomplete                                              |
-|  12 | `test_block1_empty_intermediate_block`                |   ✅   | Block1 empty intermediate block                                                     |
-|  13 | `test_error_response_carries_no_observe_or_block2`    |   ✅   | Error response carries no observe or block2                                         |
-|  14 | `test_block2_offset_at_end_of_representation`         |   ✅   | Block2 offset at end of representation                                              |
-|  15 | `test_block2_on_empty_success_body`                   |   ✅   | Block2 on empty success body                                                        |
-|  16 | `test_add_resource_limits`                            |   ✅   | Add resource limits                                                                 |
-|  17 | `test_short_and_truncated_token`                      |   ✅   | Short and truncated token                                                           |
-|  18 | `test_malformed_options_bad_request`                  |   ✅   | Malformed options bad request                                                       |
-|  19 | `test_extended_delta_and_length_ignored`              |   ✅   | Extended delta and length ignored                                                   |
-|  20 | `test_oversized_path_and_query`                       |   ✅   | Oversized path and query                                                            |
-|  21 | `test_block_option_too_wide`                          |   ✅   | Block option too wide                                                               |
-|  22 | `test_block1_reserved_szx`                            |   ✅   | Block1 reserved szx                                                                 |
-|  23 | `test_block1_continue_no_space`                       |   ✅   | Block1 continue no space                                                            |
-|  24 | `test_response_payload_clamped`                       |   ✅   | Response payload clamped                                                            |
-|  25 | `test_response_buffer_too_small`                      |   ✅   | Response buffer too small                                                           |
-|  26 | `test_well_known_core_truncates`                      |   ✅   | Well known core truncates                                                           |
-|  27 | `test_observe_large_seq_encoding`                     |   ✅   | Observe large seq encoding                                                          |
-|  28 | `test_block2_explicit_paging`                         |   ✅   | Block2 explicit paging                                                              |
-|  29 | `test_block2_auto_when_large`                         |   ✅   | Block2 auto when large                                                              |
-|  30 | `test_block2_szx_clamped`                             |   ✅   | Block2 szx clamped                                                                  |
-|  31 | `test_block2_absent_for_small`                        |   ✅   | Block2 absent for small                                                             |
-|  32 | `test_block2_out_of_range`                            |   ✅   | Block2 out of range                                                                 |
-|  33 | `test_block2_reserved_szx`                            |   ✅   | Block2 reserved szx                                                                 |
-|  34 | `test_block1_upload_two_blocks`                       |   ✅   | Block1 upload two blocks                                                            |
-|  35 | `test_block1_out_of_order`                            |   ✅   | Block1 out of order                                                                 |
-|  36 | `test_block1_too_large`                               |   ✅   | Block1 too large                                                                    |
-|  37 | `test_observe_option_in_response`                     |   ✅   | Observe option in response                                                          |
-|  38 | `test_response_option_overflows_buffer`               |   ✅   | resp holds the 4-byte header + 2-byte token (=6) but not the Content-Format option. |
-|  39 | `test_no_observe_option_when_seq_negative`            |   ✅   | No observe option when seq negative                                                 |
-|  40 | `test_get_content`                                    |   ✅   | Get content                                                                         |
-|  41 | `test_not_found`                                      |   ✅   | Not found                                                                           |
-|  42 | `test_method_not_allowed`                             |   ✅   | Method not allowed                                                                  |
-|  43 | `test_non_request_type`                               |   ✅   | Non request type                                                                    |
-|  44 | `test_put_with_payload`                               |   ✅   | Put with payload                                                                    |
-|  45 | `test_multi_segment_path`                             |   ✅   | Multi segment path                                                                  |
-|  46 | `test_uri_query`                                      |   ✅   | Uri query                                                                           |
-|  47 | `test_empty_con_ping_rst`                             |   ✅   | Empty con ping rst                                                                  |
-|  48 | `test_bad_version_rst`                                |   ✅   | Bad version rst                                                                     |
-|  49 | `test_delete`                                         |   ✅   | Delete                                                                              |
-|  50 | `test_token_8_bytes`                                  |   ✅   | Token 8 bytes                                                                       |
-|  51 | `test_extended_option_length`                         |   ✅   | Extended option length                                                              |
-|  52 | `test_ack_ignored`                                    |   ✅   | Ack ignored                                                                         |
-|  53 | `test_root_path`                                      |   ✅   | Root path                                                                           |
-|  54 | `test_unknown_method_not_allowed`                     |   ✅   | Code 0.05 (FETCH) is a valid class-0 code we don't implement. RFC 7252 5.8:         |
-|  55 | `test_unknown_critical_option_bad_option`             |   ✅   | Hand-build: ver1/CON/TKL0, GET, MID, Uri-Path "temp", then Accept(17) - a           |
-|  56 | `test_well_known_core_discovery`                      |   ✅   | Well known core discovery                                                           |
-|  57 | `test_well_known_core_rejects_post`                   |   ✅   | Well known core rejects post                                                        |
-|  58 | `test_dedup_store_lookup_roundtrip`                   |   ✅   | Dedup store lookup roundtrip                                                        |
-|  59 | `test_dedup_full_address_keying`                      |   ✅   | Dedup full address keying                                                           |
-|  60 | `test_dedup_expiry`                                   |   ✅   | Dedup expiry                                                                        |
-|  61 | `test_dedup_too_large_not_cached`                     |   ✅   | Dedup too large not cached                                                          |
-|  62 | `test_dedup_eviction_and_update`                      |   ✅   | Dedup eviction and update                                                           |
-|  63 | `test_dedup_handler_replays_without_rerunning`        |   ✅   | Dedup handler replays without rerunning                                             |
+|   3 | `test_coap_observe_over_udp`                          |   ✅   | Coap observe over udp                                                               |
+|   4 | `test_coap_observe_registry_full`                     |   ✅   | Coap observe registry full                                                          |
+|   5 | `test_coap_observe_registry_key_fields`               |   ✅   | Coap observe registry key fields                                                    |
+|   6 | `test_coap_observe_zero_length_token`                 |   ✅   | Coap observe zero length token                                                      |
+|   7 | `test_coap_observe_targeted_removal`                  |   ✅   | Coap observe targeted removal                                                       |
+|   8 | `test_coap_notify_clamps_oversized_body`              |   ✅   | Coap notify clamps oversized body                                                   |
+|   9 | `test_coap_observe_on_discovery_is_not_registered`    |   ✅   | Coap observe on discovery is not registered                                         |
+|  10 | `test_coap_udp_edge_datagrams`                        |   ✅   | Coap udp edge datagrams                                                             |
+|  11 | `test_non_confirmable_malformed_is_silent`            |   ✅   | A reserved token length (9..15) in a CON is malformed: Reset, with an empty token.  |
+|  12 | `test_response_code_as_request_is_method_not_allowed` |   ✅   | Response code as request is method not allowed                                      |
+|  13 | `test_block1_ignored_on_get`                          |   ✅   | Block1 ignored on get                                                               |
+|  14 | `test_block1_block_size_change_is_incomplete`         |   ✅   | Block1 block size change is incomplete                                              |
+|  15 | `test_block1_empty_intermediate_block`                |   ✅   | Block1 empty intermediate block                                                     |
+|  16 | `test_error_response_carries_no_observe_or_block2`    |   ✅   | Error response carries no observe or block2                                         |
+|  17 | `test_block2_offset_at_end_of_representation`         |   ✅   | Block2 offset at end of representation                                              |
+|  18 | `test_block2_on_empty_success_body`                   |   ✅   | Block2 on empty success body                                                        |
+|  19 | `test_add_resource_limits`                            |   ✅   | Add resource limits                                                                 |
+|  20 | `test_short_and_truncated_token`                      |   ✅   | Short and truncated token                                                           |
+|  21 | `test_malformed_options_bad_request`                  |   ✅   | Malformed options bad request                                                       |
+|  22 | `test_extended_delta_and_length_ignored`              |   ✅   | Extended delta and length ignored                                                   |
+|  23 | `test_oversized_path_and_query`                       |   ✅   | Oversized path and query                                                            |
+|  24 | `test_block_option_too_wide`                          |   ✅   | Block option too wide                                                               |
+|  25 | `test_block1_reserved_szx`                            |   ✅   | Block1 reserved szx                                                                 |
+|  26 | `test_block1_continue_no_space`                       |   ✅   | Block1 continue no space                                                            |
+|  27 | `test_response_payload_clamped`                       |   ✅   | Response payload clamped                                                            |
+|  28 | `test_response_buffer_too_small`                      |   ✅   | Response buffer too small                                                           |
+|  29 | `test_well_known_core_truncates`                      |   ✅   | Well known core truncates                                                           |
+|  30 | `test_observe_large_seq_encoding`                     |   ✅   | Observe large seq encoding                                                          |
+|  31 | `test_block2_explicit_paging`                         |   ✅   | Block2 explicit paging                                                              |
+|  32 | `test_block2_auto_when_large`                         |   ✅   | Block2 auto when large                                                              |
+|  33 | `test_block2_szx_clamped`                             |   ✅   | Block2 szx clamped                                                                  |
+|  34 | `test_block2_absent_for_small`                        |   ✅   | Block2 absent for small                                                             |
+|  35 | `test_block2_out_of_range`                            |   ✅   | Block2 out of range                                                                 |
+|  36 | `test_block2_reserved_szx`                            |   ✅   | Block2 reserved szx                                                                 |
+|  37 | `test_block1_upload_two_blocks`                       |   ✅   | Block1 upload two blocks                                                            |
+|  38 | `test_block1_out_of_order`                            |   ✅   | Block1 out of order                                                                 |
+|  39 | `test_block1_too_large`                               |   ✅   | Block1 too large                                                                    |
+|  40 | `test_observe_option_in_response`                     |   ✅   | Observe option in response                                                          |
+|  41 | `test_response_option_overflows_buffer`               |   ✅   | resp holds the 4-byte header + 2-byte token (=6) but not the Content-Format option. |
+|  42 | `test_no_observe_option_when_seq_negative`            |   ✅   | No observe option when seq negative                                                 |
+|  43 | `test_get_content`                                    |   ✅   | Get content                                                                         |
+|  44 | `test_not_found`                                      |   ✅   | Not found                                                                           |
+|  45 | `test_method_not_allowed`                             |   ✅   | Method not allowed                                                                  |
+|  46 | `test_non_request_type`                               |   ✅   | Non request type                                                                    |
+|  47 | `test_put_with_payload`                               |   ✅   | Put with payload                                                                    |
+|  48 | `test_multi_segment_path`                             |   ✅   | Multi segment path                                                                  |
+|  49 | `test_uri_query`                                      |   ✅   | Uri query                                                                           |
+|  50 | `test_empty_con_ping_rst`                             |   ✅   | Empty con ping rst                                                                  |
+|  51 | `test_bad_version_rst`                                |   ✅   | Bad version rst                                                                     |
+|  52 | `test_delete`                                         |   ✅   | Delete                                                                              |
+|  53 | `test_token_8_bytes`                                  |   ✅   | Token 8 bytes                                                                       |
+|  54 | `test_extended_option_length`                         |   ✅   | Extended option length                                                              |
+|  55 | `test_ack_ignored`                                    |   ✅   | Ack ignored                                                                         |
+|  56 | `test_root_path`                                      |   ✅   | Root path                                                                           |
+|  57 | `test_unknown_method_not_allowed`                     |   ✅   | Code 0.05 (FETCH) is a valid class-0 code we don't implement. RFC 7252 5.8:         |
+|  58 | `test_unknown_critical_option_bad_option`             |   ✅   | Hand-build: ver1/CON/TKL0, GET, MID, Uri-Path "temp", then Accept(17) - a           |
+|  59 | `test_well_known_core_discovery`                      |   ✅   | Well known core discovery                                                           |
+|  60 | `test_well_known_core_rejects_post`                   |   ✅   | Well known core rejects post                                                        |
+|  61 | `test_dedup_store_lookup_roundtrip`                   |   ✅   | Dedup store lookup roundtrip                                                        |
+|  62 | `test_dedup_full_address_keying`                      |   ✅   | Dedup full address keying                                                           |
+|  63 | `test_dedup_expiry`                                   |   ✅   | Dedup expiry                                                                        |
+|  64 | `test_dedup_too_large_not_cached`                     |   ✅   | Dedup too large not cached                                                          |
+|  65 | `test_dedup_eviction_and_update`                      |   ✅   | Dedup eviction and update                                                           |
+|  66 | `test_dedup_handler_replays_without_rerunning`        |   ✅   | Dedup handler replays without rerunning                                             |
 
 </details>
 
@@ -4174,7 +4177,7 @@ _Host tests for the UDP transport's multicast receive path (Udp.listener->listen
 |  14 | `test_peer_addr_rejects_null_peer`                                          |   ✅   | Peer addr rejects null peer                                                    |
 |  15 | `test_peer_addr_copies_and_tolerates_null_outparams`                        |   ✅   | Peer addr copies and tolerates null outparams                                  |
 |  16 | `test_send_paths_are_captured`                                              |   ✅   | Send paths are captured                                                        |
-|  17 | `test_a_refused_send_still_queues_and_drains`                               |   ✅   | A refused send still queues and drains                                         |
+|  17 | `test_a_refused_send_reports_the_refusal`                                   |   ✅   | A refused send reports the refusal                                             |
 |  18 | `test_send_rejects_null_zero_and_oversized_payload`                         |   ✅   | Send rejects null zero and oversized payload                                   |
 |  19 | `test_inject_skips_a_listener_with_no_handler`                              |   ✅   | Inject skips a listener with no handler                                        |
 |  20 | `test_an_untagged_source_address_carries_no_address`                        |   ✅   | An untagged source address carries no address                                  |
@@ -4235,18 +4238,18 @@ _Phase 2 core-partitioning invariant (built with PC_WORKER_COUNT=2): a worker_
 
 _The UDP target path, run on the host. The env declares the capabilities the stack needs,_
 
-|   # | Test                                                                | Status | Description                                                  |
-| --: | :------------------------------------------------------------------ | :----: | :----------------------------------------------------------- |
-|   1 | `test_listener_delivers_in_order_with_boundaries`                   |   ✅   | Listener delivers in order with boundaries                   |
-|   2 | `test_listener_peer_carries_v6`                                     |   ✅   | Listener peer carries v6                                     |
-|   3 | `test_listener_send_ring_fills_and_drains`                          |   ✅   | Listener send ring fills and drains                          |
-|   4 | `test_client_refuses_a_malformed_address_without_touching_the_ring` |   ✅   | Client refuses a malformed address without touching the ring |
-|   5 | `test_client_send_ring_accounts_both_families`                      |   ✅   | Client send ring accounts both families                      |
-|   6 | `test_a_spent_pbuf_pool_drops_the_datagram`                         |   ✅   | A spent pbuf pool drops the datagram                         |
-|   7 | `test_every_send_returns_its_pbuf`                                  |   ✅   | Every send returns its pbuf                                  |
-|   8 | `test_capture_renders_a_v4_datagram`                                |   ✅   | Capture renders a v4 datagram                                |
-|   9 | `test_capture_renders_a_v6_datagram`                                |   ✅   | Capture renders a v6 datagram                                |
-|  10 | `test_capture_refuses_a_buffer_that_cannot_hold_it`                 |   ✅   | Capture refuses a buffer that cannot hold it                 |
+|   # | Test                                                      | Status | Description                                        |
+| --: | :-------------------------------------------------------- | :----: | :------------------------------------------------- |
+|   1 | `test_listener_delivers_in_order_with_boundaries`         |   ✅   | Listener delivers in order with boundaries         |
+|   2 | `test_listener_peer_carries_v6`                           |   ✅   | Listener peer carries v6                           |
+|   3 | `test_listener_sends_from_a_bound_port`                   |   ✅   | Listener sends from a bound port                   |
+|   4 | `test_client_refuses_a_malformed_address_without_sending` |   ✅   | Client refuses a malformed address without sending |
+|   5 | `test_client_sends_both_families`                         |   ✅   | Client sends both families                         |
+|   6 | `test_a_spent_pbuf_pool_drops_the_datagram`               |   ✅   | A spent pbuf pool drops the datagram               |
+|   7 | `test_every_send_returns_its_pbuf`                        |   ✅   | Every send returns its pbuf                        |
+|   8 | `test_capture_renders_a_v4_datagram`                      |   ✅   | Capture renders a v4 datagram                      |
+|   9 | `test_capture_renders_a_v6_datagram`                      |   ✅   | Capture renders a v6 datagram                      |
+|  10 | `test_capture_refuses_a_buffer_that_cannot_hold_it`       |   ✅   | Capture refuses a buffer that cannot hold it       |
 
 </details>
 
@@ -10057,7 +10060,7 @@ _CoAP over DTLS (coaps.h) end-to-end. An in-test DTLS 1.3 client completes the h
 
 ---
 
-## test_coaps_server - native_coaps_server - ✅ 13 passed
+## test_coaps_server - native_coaps_server - ✅ 12 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -10077,8 +10080,7 @@ _CoAP-over-DTLS server front-end (coaps_server.h): the per-peer DtlsConn pool + 
 |   9 | `test_fatal_handshake_frees_slot`    |   ✅   | Fatal handshake frees slot    |
 |  10 | `test_pool_full_rejects_new_peer`    |   ✅   | Pool full rejects new peer    |
 |  11 | `test_pto_ceiling_frees_slot`        |   ✅   | Pto ceiling frees slot        |
-|  12 | `test_unknown_cid_dropped`           |   ✅   | Unknown cid dropped           |
-|  13 | `test_server_send_without_sink`      |   ✅   | Server send without sink      |
+|  12 | `test_server_send_without_sink`      |   ✅   | Server send without sink      |
 
 </details>
 
@@ -10509,43 +10511,47 @@ _Layer 1 driven through a REAL backend: the env declares PC_PHYSICAL_HAS_BACKEND
 
 ---
 
-## test_protostr - native_protostr - ✅ 28 passed
+## test_protostr - native_protostr - ✅ 32 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_mmgr/protostr.h: the bounded-run walks. The oracle is a byte loop written here._
+_mmgr/protostr.h: the bounded-run walks. The oracle is libc's own string functions._
 
 |   # | Test                                                    | Status | Description                                      |
 | --: | :------------------------------------------------------ | :----: | :----------------------------------------------- |
 |   1 | `test_len_matches_the_oracle`                           |   ✅   | Len matches the oracle                           |
-|   2 | `test_len_stops_at_the_cap`                             |   ✅   | Len stops at the cap                             |
-|   3 | `test_diff_matches_the_oracle`                          |   ✅   | Diff matches the oracle                          |
-|   4 | `test_diff_reports_the_cap_when_equal`                  |   ✅   | Diff reports the cap when equal                  |
-|   5 | `test_diff_case_insensitive`                            |   ✅   | Diff case insensitive                            |
-|   6 | `test_eq_requires_the_whole_string`                     |   ✅   | Eq requires the whole string                     |
-|   7 | `test_eq_at_every_length`                               |   ✅   | Eq at every length                               |
-|   8 | `test_starts_reads_the_tie_as_a_match`                  |   ✅   | Starts reads the tie as a match                  |
-|   9 | `test_starts_at_every_prefix_length`                    |   ✅   | Starts at every prefix length                    |
-|  10 | `test_find_locates_the_first_occurrence`                |   ✅   | Find locates the first occurrence                |
-|  11 | `test_find_absent`                                      |   ✅   | Find absent                                      |
-|  12 | `test_find_empty_needle_matches_at_the_start`           |   ✅   | Find empty needle matches at the start           |
-|  13 | `test_find_stops_at_the_haystack_nul`                   |   ✅   | Find stops at the haystack nul                   |
-|  14 | `test_find_case_insensitive`                            |   ✅   | Find case insensitive                            |
-|  15 | `test_has_agrees_with_find`                             |   ✅   | Has agrees with find                             |
-|  16 | `test_find_agrees_with_a_naive_search_under_hard_input` |   ✅   | Find agrees with a naive search under hard input |
-|  17 | `test_find_locates_every_substring_of_itself`           |   ✅   | Find locates every substring of itself           |
-|  18 | `test_find_rejects_every_near_miss`                     |   ✅   | Find rejects every near miss                     |
-|  19 | `test_compares_under_hard_input`                        |   ✅   | Compares under hard input                        |
-|  20 | `test_starts_and_eq_part_at_the_pattern_end`            |   ✅   | Starts and eq part at the pattern end            |
-|  21 | `test_copy_terminates_and_reports`                      |   ✅   | Copy terminates and reports                      |
-|  22 | `test_copy_bounds_by_the_destination`                   |   ✅   | Copy bounds by the destination                   |
-|  23 | `test_copy_zero_capacity_writes_nothing`                |   ✅   | Copy zero capacity writes nothing                |
-|  24 | `test_copy_empty_source`                                |   ✅   | Copy empty source                                |
-|  25 | `test_ws_classifies_the_six`                            |   ✅   | Ws classifies the six                            |
-|  26 | `test_digit_classifies_the_ten`                         |   ✅   | Digit classifies the ten                         |
-|  27 | `test_step_byte_settles_or_continues`                   |   ✅   | Step byte settles or continues                   |
-|  28 | `test_each_member_is_the_walk_it_names`                 |   ✅   | Each member is the walk it names                 |
+|   2 | `test_len_matches_strnlen_at_every_cap`                 |   ✅   | Len matches strnlen at every cap                 |
+|   3 | `test_len_absent_returns_the_cap`                       |   ✅   | Len absent returns the cap                       |
+|   4 | `test_len_ignores_high_bytes`                           |   ✅   | Len ignores high bytes                           |
+|   5 | `test_len_unaligned`                                    |   ✅   | Len unaligned                                    |
+|   6 | `test_len_stops_at_the_cap`                             |   ✅   | Len stops at the cap                             |
+|   7 | `test_diff_matches_the_oracle`                          |   ✅   | Diff matches the oracle                          |
+|   8 | `test_diff_reports_the_cap_when_equal`                  |   ✅   | Diff reports the cap when equal                  |
+|   9 | `test_diff_case_insensitive`                            |   ✅   | Diff case insensitive                            |
+|  10 | `test_eq_requires_the_whole_string`                     |   ✅   | Eq requires the whole string                     |
+|  11 | `test_eq_at_every_length`                               |   ✅   | Eq at every length                               |
+|  12 | `test_starts_reads_the_tie_as_a_match`                  |   ✅   | Starts reads the tie as a match                  |
+|  13 | `test_starts_at_every_prefix_length`                    |   ✅   | Starts at every prefix length                    |
+|  14 | `test_find_locates_the_first_occurrence`                |   ✅   | Find locates the first occurrence                |
+|  15 | `test_find_absent`                                      |   ✅   | Find absent                                      |
+|  16 | `test_find_empty_needle_matches_at_the_start`           |   ✅   | Find empty needle matches at the start           |
+|  17 | `test_find_stops_at_the_haystack_nul`                   |   ✅   | Find stops at the haystack nul                   |
+|  18 | `test_find_case_insensitive`                            |   ✅   | Find case insensitive                            |
+|  19 | `test_has_agrees_with_find`                             |   ✅   | Has agrees with find                             |
+|  20 | `test_find_agrees_with_a_naive_search_under_hard_input` |   ✅   | Find agrees with a naive search under hard input |
+|  21 | `test_find_locates_every_substring_of_itself`           |   ✅   | Find locates every substring of itself           |
+|  22 | `test_find_rejects_every_near_miss`                     |   ✅   | Find rejects every near miss                     |
+|  23 | `test_compares_under_hard_input`                        |   ✅   | Compares under hard input                        |
+|  24 | `test_starts_and_eq_part_at_the_pattern_end`            |   ✅   | Starts and eq part at the pattern end            |
+|  25 | `test_copy_terminates_and_reports`                      |   ✅   | Copy terminates and reports                      |
+|  26 | `test_copy_bounds_by_the_destination`                   |   ✅   | Copy bounds by the destination                   |
+|  27 | `test_copy_zero_capacity_writes_nothing`                |   ✅   | Copy zero capacity writes nothing                |
+|  28 | `test_copy_empty_source`                                |   ✅   | Copy empty source                                |
+|  29 | `test_ws_classifies_the_six`                            |   ✅   | Ws classifies the six                            |
+|  30 | `test_digit_classifies_the_ten`                         |   ✅   | Digit classifies the ten                         |
+|  31 | `test_step_byte_settles_or_continues`                   |   ✅   | Step byte settles or continues                   |
+|  32 | `test_each_member_is_the_walk_it_names`                 |   ✅   | Each member is the walk it names                 |
 
 </details>
 
@@ -10927,22 +10933,18 @@ _Unit tests for mounted storage (server/filesystem/mnt) exercised the way every 
 
 ---
 
-## test_swar - native_swar - ✅ 7 passed
+## test_swar - native_swar - ✅ 3 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Unit tests for the lane math (mmgr/swar.h)._
 
-|   # | Test                               | Status | Description                 |
-| --: | :--------------------------------- | :----: | :-------------------------- |
-|   1 | `test_has_zero_finds_any_lane`     |   ✅   | Has zero finds any lane     |
-|   2 | `test_zero_lane_from_mask`         |   ✅   | Zero lane from mask         |
-|   3 | `test_scan_nul_matches_strnlen`    |   ✅   | Scan nul matches strnlen    |
-|   4 | `test_scan_nul_absent_returns_cap` |   ✅   | Scan nul absent returns cap |
-|   5 | `test_scan_nul_ignores_high_bytes` |   ✅   | Scan nul ignores high bytes |
-|   6 | `test_scan_nul_unaligned`          |   ✅   | Scan nul unaligned          |
-|   7 | `test_lane_compares`               |   ✅   | Every lane is >= '0'.       |
+|   # | Test                           | Status | Description             |
+| --: | :----------------------------- | :----: | :---------------------- |
+|   1 | `test_has_zero_finds_any_lane` |   ✅   | Has zero finds any lane |
+|   2 | `test_zero_lane_from_mask`     |   ✅   | Zero lane from mask     |
+|   3 | `test_lane_compares`           |   ✅   | Every lane is >= '0'.   |
 
 </details>
 
