@@ -96,7 +96,7 @@ void pc_coaps_server_stop();
 // ---------------------------------------------------------------------------
 // Host / test seam (no UDP on host builds)
 // ---------------------------------------------------------------------------
-#if !PROTOCORE_HOT
+#if !PC_HAS_NET_STACK
 /** @brief Sink invoked for every outbound datagram (host builds route sends here instead of UDP). */
 typedef void (*CoapsServerOutFn)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 

@@ -15,7 +15,7 @@
 #include "server/clock/clock.h"      // pc_millis() - idle-reap clock (the DTLS PTO uses it internally too)
 #include "services/iot/coap/coaps.h" // pc_coaps_process()
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/transport/udp.h"
 #endif
 
@@ -78,7 +78,7 @@ typedef struct
     void (*rng)(uint8_t *out, size_t len);
     uint16_t port;
     proto_bool running;
-#if !PROTOCORE_HOT
+#if !PC_HAS_NET_STACK
     CoapsServerOutFn out_sink;
     void *out_ctx;
 #endif
@@ -150,7 +150,7 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PC_C
 
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
     pc_ip dst = {PC_IP_NONE, {0}};
     if (Ip.parse(ip, &dst))
     {
@@ -273,7 +273,7 @@ static CoapsSlot *open_conn(const char *ip, uint16_t port)
     return s;
 }
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
     (void)ctx;
@@ -372,7 +372,7 @@ proto_bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg)
     s_coaps.ring_head = 0;
     s_coaps.ring_tail = 0;
     s_coaps.running = PROTO_TRUE;
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
     return Udp.listener->listen(s_coaps.port, udp_ingest_cb, NULL);
 #else
     return PROTO_TRUE; // host: fed through pc_coaps_server_ingest()
@@ -427,7 +427,7 @@ void pc_coaps_server_stop()
     s_coaps.ring_tail = 0;
 }
 
-#if !PROTOCORE_HOT
+#if !PC_HAS_NET_STACK
 void pc_coaps_server_set_out_sink_cb(CoapsServerOutFn fn, void *ctx)
 {
     s_coaps.out_sink = fn;

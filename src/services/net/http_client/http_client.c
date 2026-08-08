@@ -21,9 +21,8 @@
 // Pure helpers (host-testable)
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
-#include <Arduino.h>                       // millis()
 #endif
 #if PC_HAS_VENDOR_TLS && PC_ENABLE_HTTP_CLIENT_TLS
 #include "network_drivers/tls/tls.h"
@@ -347,7 +346,7 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
 // ---------------------------------------------------------------------------
 // Transport (ESP32 only): raw-lwIP TCP client + DNS, optional client mbedTLS.
 // ---------------------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 
 // Optional stage tracing: build with -DPC_HTTP_CLIENT_DEBUG to print where a
 // request stalls (DNS / connect / send / receive). Goes to the console UART.
@@ -572,6 +571,6 @@ void http_client_clear_verify()
 {
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_NET_STACK
 
 #endif // PC_ENABLE_HTTP_CLIENT

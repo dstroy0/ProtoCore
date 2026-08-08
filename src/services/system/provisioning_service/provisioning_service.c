@@ -18,7 +18,7 @@
 // Form-field parser (always compiled; the only non-trivial logic, unit-tested).
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_PROVISIONING && PROTOCORE_HOT
+#if PC_ENABLE_PROVISIONING && PC_HAS_VENDOR_NVS
 #include "core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
@@ -87,7 +87,7 @@ proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size
 // ESP32 captive portal (softAP + lwIP UDP DNS + form/save routes)
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_PROVISIONING && PROTOCORE_HOT
+#if PC_ENABLE_PROVISIONING && PC_HAS_VENDOR_NVS
 
 // All provisioning-service state, owned by one instance (internal linkage): the server handle
 // and the softAP IP the captive-portal DNS answers with. Grouped so it is one named owner,
@@ -247,4 +247,4 @@ void pc_provisioning_clear()
 {
 }
 
-#endif // PC_ENABLE_PROVISIONING && PROTOCORE_HOT
+#endif // PC_ENABLE_PROVISIONING && PC_HAS_VENDOR_NVS

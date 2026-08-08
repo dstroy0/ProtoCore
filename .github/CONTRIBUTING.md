@@ -29,11 +29,20 @@ specification. The notes below keep contributions aligned with that.
 ## Build and test
 
 The architecture is deliberately split so the logic compiles and runs on your
-host machine, separate from the hardware wrappers. The split is two macros that
-are exact complements: `PROTOCORE_HOT` is the target build, `PROTOCORE_HOST` is
-the test build. Neither is spelled `ARDUINO` - naming one vendor's toolchain put
-every non-Espressif target on the host path. Which vendor a target build speaks
-to is `core_setup/`' job, and no vendor header appears in the core.
+host machine, separate from the hardware wrappers. There are two paths and one
+question selects between them: **does this part have the capability**. A gate in
+the core reads a `PC_HAS_*` capability and takes the hardware path or the
+software one. Nothing in the core asks which build this is, and nothing is
+spelled `ARDUINO` - naming one vendor's toolchain put every non-Espressif target
+on the software path.
+
+A detected vendor answers for its own silicon in
+[core_setup/board_profiles/pc_platform.h](../core_setup/board_profiles/pc_platform.h);
+a build with no vendor answers 0 and turns a capability on with
+`-DPC_HAS_<X>=1`, which is how a test env drives a hardware path on a machine
+that has no hardware. Which vendor a build speaks to is `core_setup/`'s job, the
+backends a suite stands up live in `test/mocks/`, and no vendor header appears in
+the core.
 
 - **Native tests** (fast, no hardware): every feature has a `native_*` test
   environment. Run one with:

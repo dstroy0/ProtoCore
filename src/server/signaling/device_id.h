@@ -37,7 +37,7 @@ PROTO_BEGIN_DECLS
  */
 void pc_uuid_from_mac(const uint8_t mac[6], char out[PC_UUID_STR_LEN]);
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_MAC
 /**
  * @brief Format this device's UUID from its ESP32 factory (WiFi STA) MAC.
  * @param out  buffer of at least PC_UUID_STR_LEN bytes.

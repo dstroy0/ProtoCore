@@ -86,7 +86,7 @@ void pc_power_cfg_defaults(PowerCfg *cfg);
  */
 size_t pc_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t cap);
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_PM
 // --- device binding -----------------------------------------------------------------------
 
 /** @brief True if the last reset was a brownout (esp_reset_reason). Latched, so it stays true. */
@@ -109,7 +109,7 @@ uint16_t pc_power_cpu_mhz(void);
  * @return true if a release actually happened.
  */
 proto_bool pc_power_gate_bt(void);
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_PM
 
 #endif // PC_ENABLE_POWER_MGMT
 

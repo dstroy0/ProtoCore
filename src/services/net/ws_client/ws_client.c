@@ -21,9 +21,8 @@
 // Pure codec (host-testable)
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
-#include <Arduino.h>
 #endif
 #if PC_HAS_VENDOR_TLS && PC_ENABLE_WS_CLIENT_TLS
 #include "network_drivers/tls/tls.h"
@@ -271,7 +270,7 @@ proto_bool ws_client_parse_frame(const uint8_t *buf, size_t avail, uint8_t *opco
 // Transport (ESP32 only): persistent raw-lwIP client + RFC 6455 framing,
 // with wss:// over a persistent client TLS session (pc_tls csess).
 // ---------------------------------------------------------------------------
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 
 #ifdef PC_WS_CLIENT_DEBUG
 #define WSC_DBG(...) printf(__VA_ARGS__)
@@ -730,6 +729,6 @@ void ws_client_close()
 {
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_NET_STACK
 
 #endif // PC_ENABLE_WS_CLIENT

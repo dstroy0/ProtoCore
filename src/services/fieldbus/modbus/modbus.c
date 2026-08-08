@@ -18,7 +18,7 @@
 // All Modbus data-model state, owned by one instance (internal linkage): the coil / discrete
 // bitfields, the holding / input registers, and the write callback, grouped so it is one
 // named owner, unreachable from any other translation unit.
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
 #endif
@@ -502,7 +502,7 @@ size_t pc_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *re
 // TCP transport (ESP32-only; the core above is host-tested standalone)
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 
 // Bytes available in the slot's rx ring.
 // Thin adapters over the transport RX read API - the ring is owned by transport;
@@ -585,7 +585,7 @@ const ProtoHandler *pc_modbus_proto_handler(void)
     return &s_modbus_handler;
 }
 
-#else // !PROTOCORE_HOT
+#else // no stack
 
 // Host builds test the pure ADU codec; there is no TCP transport handler. The seam's header is not
 // reached here, so the return type is spelled by the tag the accessor's own declaration uses.
@@ -594,6 +594,6 @@ const struct ProtoHandler *pc_modbus_proto_handler(void)
     return NULL;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_NET_STACK
 
 #endif // PC_NEED_MODBUS

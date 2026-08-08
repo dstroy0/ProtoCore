@@ -63,7 +63,7 @@ uint32_t pc_millis(void);
  */
 PC_INLINE void pcdelay(uint32_t ms)
 {
-#if PROTOCORE_HOT
+#if PC_HAS_SCHEDULER
     if (ms == 0)
     {
         pc_platform_task_delay(0); // a bare cooperative yield

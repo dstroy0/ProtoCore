@@ -35,7 +35,7 @@ static const char *ps_name(pc_phy_ps mode)
     }
 }
 
-#if PROTOCORE_HOT
+#if PC_PHYSICAL_HAS_BACKEND
 
 static void power(void)
 {
@@ -78,7 +78,7 @@ static void busy_hold(void)
 static void busy_release(void)
 {
 }
-#endif // PROTOCORE_HOT
+#endif // PC_PHYSICAL_HAS_BACKEND
 
 // Designated, so a member's position in the struct does not decide what it binds to. The table is
 // split by a feature flag, where a positional list shifts every member below the arm at once.

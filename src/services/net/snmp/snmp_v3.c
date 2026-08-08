@@ -20,7 +20,7 @@
 #include "network_drivers/transport/udp.h"
 #include "services/net/snmp/snmp_notify.h"
 #endif
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "server/clock/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
 static uint32_t pc_snmp_v3_uptime_s()
 {

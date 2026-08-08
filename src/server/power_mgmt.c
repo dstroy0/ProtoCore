@@ -17,9 +17,7 @@
 // Pure decision
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
-#endif
-#if PROTOCORE_HOT && defined(CONFIG_BT_ENABLED)
+#if PC_HAS_VENDOR_BT && defined(CONFIG_BT_ENABLED)
 #include <esp_bt.h>
 #endif
 void pc_power_cfg_defaults(PowerCfg *cfg)
@@ -118,7 +116,7 @@ size_t pc_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t ca
 // Device binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_PM
 
 /** @brief Owned state: the latched boot reason and whether BT has already been released. */
 typedef struct
@@ -196,6 +194,6 @@ proto_bool pc_power_gate_bt(void)
 #endif
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_PM
 
 #endif // PC_ENABLE_POWER_MGMT

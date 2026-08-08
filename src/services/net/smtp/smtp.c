@@ -20,9 +20,8 @@
 #include <stdio.h> // snprintf
                    // strlen, memcmp
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 #include "network_drivers/transport/tcp.h"
-#include <Arduino.h> // millis, delay
 #endif
 #if PC_HAS_VENDOR_TLS && PC_ENABLE_SMTP_TLS
 #include "network_drivers/tls/tls.h"
@@ -491,7 +490,7 @@ SmtpResult smtp_run(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn se
 // Real-transport binding (Arduino): pc_client, plus a pc_tls csess for SMTPS.
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PC_HAS_NET_STACK
 
 /** @brief One SMTP connection: its pc_client id, its deadline, and its TLS state. */
 typedef struct
@@ -725,6 +724,6 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
     return SMTP_ERR_CONNECT;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_NET_STACK
 
 #endif // PC_ENABLE_SMTP

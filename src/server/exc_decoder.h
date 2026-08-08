@@ -67,7 +67,7 @@ proto_bool pc_exc_parse(const char *text, ExcInfo *out);
  */
 size_t pc_exc_json(const ExcInfo *info, char *out, size_t cap);
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_COREDUMP
 // --- Core-dump partition (ESP32) ---------------------------------------------------------
 //
 // A panic that reboots the device takes its console output with it. ESP-IDF also writes a core
@@ -143,7 +143,7 @@ proto_bool pc_exc_coredump_save(const pc_mnt_backend *file_sys, const char *path
  *        Call only after a successful save.
  */
 proto_bool pc_exc_coredump_erase(void);
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_COREDUMP
 
 #endif // PC_ENABLE_EXC_DECODER
 

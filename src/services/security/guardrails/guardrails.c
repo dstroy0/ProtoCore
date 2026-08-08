@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_HEAP_INFO
 #include "esp_heap_caps.h"
 #include "esp_system.h"
 #endif
@@ -74,7 +74,7 @@ int pc_health_json(const pc_health *h, char *out, size_t cap)
     return w;
 }
 
-#if PROTOCORE_HOT
+#if PC_HAS_VENDOR_HEAP_INFO
 
 // All guardrails sampler state, owned by one instance (internal linkage): the breach
 // callback, so it is one named owner, unreachable from any other translation unit.
@@ -132,6 +132,6 @@ uint8_t pc_guardrails_check(void)
     return PC_BREACH_NONE;
 }
 
-#endif // PROTOCORE_HOT
+#endif // PC_HAS_VENDOR_HEAP_INFO
 
 #endif // PC_ENABLE_GUARDRAILS
