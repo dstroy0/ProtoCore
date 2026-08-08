@@ -50,7 +50,7 @@ jobs:
       # arduino-esp32 is fetched from the ESP Component Registry on first build (minutes), and
       # lands in the example's own managed_components/. Keyed on the manifest, which is what
       # pins the dependency version.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: examples/esp-idf/${{ matrix.example }}/managed_components
           key: idf-${{ matrix.idf }}-${{ matrix.example }}-${{ hashFiles('idf_component.yml') }}
