@@ -88,23 +88,32 @@ proto_bool pc_mqtt_decode_remlen(const uint8_t *buf, size_t avail, uint32_t *val
 
 /**
  * @brief Build a CONNECT packet from @p opts.
- * @return total packet length written to @p out, or 0 if it would not fit @p cap.
+ *
+ * @p body (@p body_cap bytes) is where the variable header and payload are assembled before the
+ * fixed header's length is known and the whole thing is composed into @p out. The builders declare
+ * no storage of their own, so the caller borrows it: plaintext for `mqtt://`, secure for `mqtts://`,
+ * whose CONNECT carries credentials.
+ *
+ * @return total packet length written to @p out, or 0 if it would not fit @p cap or @p body_cap.
  */
-size_t pc_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *opts);
+size_t pc_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *opts, uint8_t *body, size_t body_cap);
 
 /**
  * @brief Build a PUBLISH packet (@p qos 0/1/2; @p packet_id used only when qos>0;
- *        set @p dup for a retransmission).
- * @return total packet length, or 0 if it would not fit @p cap.
+ *        set @p dup for a retransmission). @p body as in ::pc_mqtt_build_connect.
+ * @return total packet length, or 0 if it would not fit @p cap or @p body_cap.
  */
 size_t pc_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const uint8_t *payload, size_t payload_len,
-                             uint8_t qos, uint16_t packet_id, proto_bool retain, proto_bool dup);
+                             uint8_t qos, uint16_t packet_id, proto_bool retain, proto_bool dup, uint8_t *body,
+                             size_t body_cap);
 
-/** @brief Build a SUBSCRIBE packet for a single topic filter at @p qos. */
-size_t pc_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t qos);
+/** @brief Build a SUBSCRIBE packet for a single topic filter at @p qos. @p body as above. */
+size_t pc_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t qos,
+                               uint8_t *body, size_t body_cap);
 
-/** @brief Build an UNSUBSCRIBE packet for a single topic filter. */
-size_t pc_mqtt_build_unsubscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic);
+/** @brief Build an UNSUBSCRIBE packet for a single topic filter. @p body as above. */
+size_t pc_mqtt_build_unsubscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t *body,
+                                 size_t body_cap);
 
 /**
  * @brief Build a 4-byte acknowledgement packet (PUBACK / PUBREC / PUBREL / PUBCOMP)
@@ -172,11 +181,14 @@ typedef void (*MqttMessageCb)(const char *topic, const uint8_t *payload, size_t 
 void pc_mqtt_set_message_cb(MqttMessageCb cb);
 
 /**
- * @brief Connect to a broker and complete the MQTT handshake (blocking).
+ * @brief Start connecting to a broker. Returns immediately.
  *
- * Resolves @p host, opens TCP (TLS when @p use_tls and PC_ENABLE_MQTT_TLS),
- * sends CONNECT (from @p opts) and waits for an accepted CONNACK.
- * @return true on an accepted connection.
+ * Takes a transport slot for @p host, binds the TLS session when @p use_tls and PC_ENABLE_MQTT_TLS,
+ * and builds CONNECT from @p opts. Nothing waits here: pc_mqtt_loop() steps the link one stage per
+ * call - transport up, then handshake, then CONNACK - and gives it up if the whole thing takes
+ * longer than 8 s. Poll pc_mqtt_connected() to learn when the broker has accepted.
+ *
+ * @p opts is read only during this call. @return true if the connect was started.
  */
 proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, const MqttConnectOpts *opts);
 

@@ -8,7 +8,9 @@
  */
 
 #include "services/iot/mqtt/mqtt.h"
-#include "server/clock/clock.h" // pcdelay
+#include "mmgr/rawmemcpy.h"     // proto_raw_read: a partial packet shifts to the front of rx
+#include "mmgr/secure.h"        // pc_secure_persist_span: this module's storage
+#include "server/clock/clock.h" // pc_millis: the link timer and the keep-alive read it
 
 #if PC_ENABLE_MQTT
 
@@ -129,13 +131,12 @@ static size_t compose(uint8_t *out, size_t cap, uint8_t byte0, const uint8_t *bo
     return total;
 }
 
-size_t pc_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *opts)
+size_t pc_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *opts, uint8_t *body, size_t body_cap)
 {
     if (!out || !opts || !opts->client_id)
     {
         return 0;
     }
-    uint8_t body[PC_MQTT_BUF_SIZE];
     size_t n = 0;
     // Variable header: protocol name + level + flags + keep-alive.
     n += put_str(body + n, "MQTT");
@@ -182,7 +183,7 @@ size_t pc_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *op
     {
         need += 2 + strnlen(opts->pass, PC_MQTT_BUF_SIZE);
     }
-    if (n + need > sizeof(body))
+    if (n + need > body_cap)
     {
         return 0;
     }
@@ -206,7 +207,8 @@ size_t pc_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *op
 }
 
 size_t pc_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const uint8_t *payload, size_t payload_len,
-                             uint8_t qos, uint16_t packet_id, proto_bool retain, proto_bool dup)
+                             uint8_t qos, uint16_t packet_id, proto_bool retain, proto_bool dup, uint8_t *body,
+                             size_t body_cap)
 {
     if (!out || !topic || qos > 2)
     {
@@ -223,8 +225,7 @@ size_t pc_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const 
     }
     size_t tlen = strnlen(topic, PC_MQTT_BUF_SIZE);
     size_t blen = 2 + tlen + (qos > 0 ? 2 : 0) + payload_len;
-    uint8_t body[PC_MQTT_BUF_SIZE];
-    if (blen > sizeof(body))
+    if (blen > body_cap)
     {
         return 0;
     }
@@ -253,16 +254,16 @@ size_t pc_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const 
     return compose(out, cap, (uint8_t)(((uint8_t)MQTT_PUBLISH << 4) | f), body, n);
 }
 
-size_t pc_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t qos)
+size_t pc_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t qos,
+                               uint8_t *body, size_t body_cap)
 {
     if (!out || !topic || qos > 2)
     {
         return 0;
     }
     size_t tlen = strnlen(topic, PC_MQTT_BUF_SIZE);
-    uint8_t body[PC_MQTT_BUF_SIZE];
     size_t blen = 2 + 2 + tlen + 1;
-    if (blen > sizeof(body))
+    if (blen > body_cap)
     {
         return 0;
     }
@@ -275,16 +276,16 @@ size_t pc_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, con
                    n); // SUBSCRIBE flags = 0010
 }
 
-size_t pc_mqtt_build_unsubscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic)
+size_t pc_mqtt_build_unsubscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t *body,
+                                 size_t body_cap)
 {
     if (!out || !topic)
     {
         return 0;
     }
     size_t tlen = strnlen(topic, PC_MQTT_BUF_SIZE);
-    uint8_t body[PC_MQTT_BUF_SIZE];
     size_t blen = 2 + 2 + tlen;
-    if (blen > sizeof(body))
+    if (blen > body_cap)
     {
         return 0;
     }
@@ -450,34 +451,66 @@ proto_bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint
 #define MQ_DBG(...) ((void)0)
 #endif
 
-// Outbound QoS 1/2 in-flight (held for DUP retransmit until acknowledged).
+/** @brief Where an outbound QoS 1/2 exchange has got to. */
+typedef enum PROTO_ENUM_PACKED
+{
+    MQ_INFLIGHT_FREE = 0, ///< the slot holds no exchange
+    MQ_INFLIGHT_ACK,      ///< sent, awaiting PUBACK (QoS 1) or PUBREC (QoS 2)
+    MQ_INFLIGHT_COMP,     ///< PUBREC seen, awaiting PUBCOMP (QoS 2)
+} MqInflightState;
+
+// One outbound QoS 1/2 exchange. The packet stays in tx - a retransmit rewinds the worker to the
+// start of it - so this records what identifies and times the exchange, not the bytes.
 typedef struct
 {
-    uint16_t pid;
-    uint8_t state; // 0 free, 1 awaiting PUBACK(qos1)/PUBREC(qos2), 2 awaiting PUBCOMP(qos2)
+    uint16_t pid; // MQTT packet identifier: the wire field is two bytes
+    MqInflightState state;
     uint32_t sent_ms;
-    uint16_t len;
-    uint8_t pkt[PC_MQTT_INFLIGHT_BUF];
+    size_t len; // bounded by PC_MQTT_BUF_SIZE, which a build can raise past a 16-bit field
 } MqttInflight;
+
+/** @brief How far the link to the broker has come up. Anything but IDLE means a connect is in flight. */
+typedef enum PROTO_ENUM_PACKED
+{
+    MQ_LINK_IDLE = 0, ///< no connect in flight
+    MQ_LINK_TCP,      ///< the transport slot is coming up
+    MQ_LINK_TLS,      ///< the TLS handshake advances one flight per step
+    MQ_LINK_CONNACK,  ///< CONNECT is on the wire, its answer has not arrived
+} MqLinkState;
 
 // All MQTT connection state, owned by one instance (internal linkage): one broker at a time,
 // all static / no heap. Grouped so it is one named owner, unreachable from any other TU.
 typedef struct
 {
     MqttMessageCb cb;
-    int cid;                    // outbound connection id (pc_client pool)
-    volatile proto_bool closed; // peer closed / error (set when the pump sees it)
+    int cid;           // outbound connection id (pc_client pool)
+    proto_bool closed; // peer closed / error (set when the pump sees it)
 
-    // Inbound plaintext byte ring (consumer = process_rx). It is fed by a pump in
-    // process_rx: for plain TCP from Tcp.client->read, for MQTTS from the TLS session
-    // (pc_tls_client_session_read), whose BIO in turn reads ciphertext from pc_client.
-    uint8_t rx[PC_MQTT_BUF_SIZE];
-    volatile size_t rx_head;
-    volatile size_t rx_tail;
+    // The module's one timer and where the connect has got to. pc_mqtt_connect() sets these and
+    // returns; pc_mqtt_loop() steps the link and gives it up once the timer passes link_budget_ms.
+    MqLinkState link;
+    uint32_t timer;
+    uint32_t link_budget_ms;
 
-    uint8_t pkt[PC_MQTT_BUF_SIZE]; // contiguous scratch a packet is copied into to parse
-    uint8_t tx[PC_MQTT_BUF_SIZE];  // outgoing packet scratch
-    proto_bool use_tls;            // mqtts:// mode
+    // Receive reassembly: a packet may arrive across TCP segments.
+    uint8_t *rx;   ///< Receive buffer. Null until the first packet.
+    size_t rx_len; ///< Bytes currently in rx.
+
+    // One finished packet waiting for a worker to put it on the wire. The codec frames into tx and
+    // raises tx_ready; the worker sends from tx_off and lowers the flag when the last byte is out.
+    // The codec never reaches the wire itself.
+    //
+    // Both buffers are taken once from the pool's persistent end - the end no mark walks - and
+    // reused for every packet. Releasing per packet would wipe them each time, and the mark end
+    // cannot hold them anyway: mark/release is a bump discipline, so this module's release would
+    // reclaim another borrow. Secure for mqtts, whose bytes are session plaintext and whose reclaim
+    // wipes; plaintext for mqtt.
+    uint8_t *tx;         ///< The wire buffer. Null until the first packet.
+    size_t tx_len;       ///< Bytes of the framed packet.
+    size_t tx_off;       ///< Bytes already put on the wire.
+    proto_bool tx_ready; ///< A packet is framed and waiting for a worker.
+
+    proto_bool use_tls; // mqtts:// mode
 
     proto_bool mqtt_up;
     uint16_t keepalive_s;
@@ -503,26 +536,8 @@ static uint16_t next_pid()
     return p;
 }
 
-// --- ring helpers (single-producer/single-consumer) ---
-static inline size_t ring_avail()
-{
-    return (s_mqtt.rx_head + sizeof(s_mqtt.rx) - s_mqtt.rx_tail) % sizeof(s_mqtt.rx);
-}
-static inline uint8_t ring_peek(size_t i)
-{
-    return s_mqtt.rx[(s_mqtt.rx_tail + i) % sizeof(s_mqtt.rx)];
-}
-static void ring_copy(uint8_t *dst, size_t n)
-{
-    for (size_t i = 0; i < n; i++)
-    {
-        dst[i] = s_mqtt.rx[(s_mqtt.rx_tail + i) % sizeof(s_mqtt.rx)];
-    }
-}
-static inline void ring_advance(size_t n)
-{
-    s_mqtt.rx_tail = (s_mqtt.rx_tail + n) % sizeof(s_mqtt.rx);
-}
+// The packet lands at rx_off and stays there until it is whole, so there is no wrap to compute and
+// nothing to copy out of a ring: handle_packet reads it where the worker put it.
 
 // --- transport over the shared outbound client (pc_client) ---
 
@@ -532,35 +547,26 @@ static proto_bool mq_tx_plain(const uint8_t *data, size_t len)
     return Tcp.client->send(s_mqtt.cid, data, len);
 }
 
-// Drain plaintext wire bytes from the client into the s_mqtt.rx ring (plain TCP).
-// pc_client's own ring applies lossless backpressure to the peer when s_mqtt.rx is
-// full and we stop draining.
-static void mq_pump_plain()
+// Append what the transport has to the reassembly buffer. One read: the transport already knows how
+// much it holds, and the worker is calling across passes, so a loop here would only ask a socket
+// that has nothing. A full buffer stops draining, which is the backpressure the peer sees.
+static void mq_fill_plain(void)
 {
-    uint8_t tmp[256];
-    for (;;)
+    size_t room = PC_MQTT_BUF_SIZE - s_mqtt.rx_len;
+    if (room == 0)
     {
-        size_t freey = (sizeof(s_mqtt.rx) - 1) - ring_avail();
-        if (freey == 0)
-        {
-            break;
-        }
-        size_t want = freey < sizeof(tmp) ? freey : sizeof(tmp);
-        size_t n = Tcp.client->read(s_mqtt.cid, tmp, want);
-        if (n == 0)
-        {
-            if (Tcp.client->is_closed(s_mqtt.cid))
-            {
-                s_mqtt.closed = PROTO_TRUE;
-            }
-            break;
-        }
-        for (size_t i = 0; i < n; i++)
-        {
-            s_mqtt.rx[s_mqtt.rx_head] = tmp[i];
-            s_mqtt.rx_head = (s_mqtt.rx_head + 1) % sizeof(s_mqtt.rx);
-        }
+        return;
     }
+    size_t n = Tcp.client->read(s_mqtt.cid, s_mqtt.rx + s_mqtt.rx_len, room);
+    if (n == 0)
+    {
+        if (Tcp.client->is_closed(s_mqtt.cid))
+        {
+            s_mqtt.closed = PROTO_TRUE;
+        }
+        return;
+    }
+    s_mqtt.rx_len += n;
 }
 
 #if PC_ENABLE_MQTT_TLS
@@ -582,53 +588,94 @@ static int mq_tls_recv(void *ctx, unsigned char *buf, size_t len)
     }
     return (int)n;
 }
-// Drain decrypted plaintext from the TLS session into the s_mqtt.rx ring (main loop).
-static void mq_pump_tls()
+// Append what the session has decrypted to the reassembly buffer. Same shape as mq_fill_plain.
+static void mq_fill_tls(void)
 {
-    uint8_t tmp[256];
-    for (;;)
+    size_t room = PC_MQTT_BUF_SIZE - s_mqtt.rx_len;
+    if (room == 0)
     {
-        size_t freey = (sizeof(s_mqtt.rx) - 1) - ring_avail();
-        if (freey == 0)
-        {
-            break;
-        }
-        size_t want = freey < sizeof(tmp) ? freey : sizeof(tmp);
-        int n = pc_tls_client_session_read(tmp, want);
-        if (n <= 0)
-        {
-            if (n < 0)
-            {
-                s_mqtt.closed = PROTO_TRUE;
-            }
-            break;
-        }
-        for (int i = 0; i < n; i++)
-        {
-            s_mqtt.rx[s_mqtt.rx_head] = tmp[i];
-            s_mqtt.rx_head = (s_mqtt.rx_head + 1) % sizeof(s_mqtt.rx);
-        }
+        return;
     }
+    int n = pc_tls_client_session_read(s_mqtt.rx + s_mqtt.rx_len, room);
+    if (n <= 0)
+    {
+        if (n < 0)
+        {
+            s_mqtt.closed = PROTO_TRUE;
+        }
+        return;
+    }
+    s_mqtt.rx_len += (size_t)n;
 }
 #endif // PC_ENABLE_MQTT_TLS
 
-// Send a complete MQTT packet (plaintext or TLS-encrypted per the mode).
-static proto_bool mq_tx(const uint8_t *data, size_t len)
+// Take this module's storage on first use and hold it: one borrow from the secure pool's persistent
+// end - the end no mark walks - reused for every packet, because releasing per packet would wipe it
+// each time and mark/release is a bump discipline that would reclaim another module's borrow.
+//
+// One borrow, not two: each carries a block header rounded up to the arena alignment, and the two
+// buffers are one region split at a stated offset. rx is the payload the codec assembles into and
+// the receive reassembly; tx is the wire.
+static proto_bool mq_mem_bind(void)
 {
-    proto_bool ok;
+    if (s_mqtt.rx != NULL)
+    {
+        return PROTO_TRUE;
+    }
+    pc_span mem = pc_secure_persist_span(2u * PC_MQTT_BUF_SIZE);
+    if (!pc_span_ok(mem))
+    {
+        return PROTO_FALSE;
+    }
+    s_mqtt.rx = mem.buf;
+    s_mqtt.tx = mem.buf + PC_MQTT_BUF_SIZE;
+    return PROTO_TRUE;
+}
+
+// Raise the flag over the packet the codec just framed into tx. A packet offered while one is
+// still going out is refused rather than overwriting it. This layer never reaches the wire.
+static proto_bool mq_tx(size_t len)
+{
+    if (s_mqtt.tx_ready || len == 0)
+    {
+        return PROTO_FALSE;
+    }
+    s_mqtt.tx_len = len;
+    s_mqtt.tx_off = 0;
+    s_mqtt.tx_ready = PROTO_TRUE;
+    return PROTO_TRUE;
+}
+
+// Put the packet the codec left flagged on the wire. The worker owns this connection and the pool
+// the packet sits in, so it moves the bytes itself: what the transport takes now, the rest on a
+// later pass, and the flag drops once the last byte is out.
+static void mq_tx_drain(void)
+{
+    if (!s_mqtt.tx_ready)
+    {
+        return;
+    }
+    size_t n = s_mqtt.tx_len - s_mqtt.tx_off;
 #if PC_ENABLE_MQTT_TLS
     if (s_mqtt.use_tls)
     {
-        ok = pc_tls_client_session_write(data, len) == (int)len;
+        int w = pc_tls_client_session_write(s_mqtt.tx + s_mqtt.tx_off, n);
+        if (w > 0)
+        {
+            s_mqtt.tx_off += (size_t)w;
+        }
     }
     else
 #endif
-        ok = mq_tx_plain(data, len);
-    if (ok)
+        if (mq_tx_plain(s_mqtt.tx + s_mqtt.tx_off, n))
+    {
+        s_mqtt.tx_off += n;
+    }
+    if (s_mqtt.tx_off >= s_mqtt.tx_len)
     {
         s_mqtt.last_tx_ms = pc_millis();
+        s_mqtt.tx_ready = PROTO_FALSE;
     }
-    return ok;
 }
 
 static void mq_close()
@@ -645,13 +692,14 @@ static void mq_close()
     }
     s_mqtt.cid = -1;
     s_mqtt.mqtt_up = PROTO_FALSE;
+    s_mqtt.link = MQ_LINK_IDLE; // a link that was still coming up is given up with the socket
 }
 
 static int inflight_find(uint16_t pid)
 {
     for (int i = 0; i < PC_MQTT_MAX_INFLIGHT; i++)
     {
-        if (s_mqtt.inflight[i].state != 0 && s_mqtt.inflight[i].pid == pid)
+        if (s_mqtt.inflight[i].state != MQ_INFLIGHT_FREE && s_mqtt.inflight[i].pid == pid)
         {
             return i;
         }
@@ -725,8 +773,8 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
             }
             if (qos == 1)
             {
-                size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBACK, pid);
-                mq_tx(s_mqtt.tx, n);
+                size_t n = pc_mqtt_build_ack(s_mqtt.tx, PC_MQTT_BUF_SIZE, MQTT_PUBACK, pid);
+                mq_tx(n);
             }
         }
         else // QoS 2: dispatch once, dedup by id until PUBREL completes
@@ -739,8 +787,8 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
                 }
                 rxqos2_add(pid);
             }
-            size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBREC, pid);
-            mq_tx(s_mqtt.tx, n);
+            size_t n = pc_mqtt_build_ack(s_mqtt.tx, PC_MQTT_BUF_SIZE, MQTT_PUBREC, pid);
+            mq_tx(n);
         }
         break;
     }
@@ -750,7 +798,7 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
         int s = inflight_find(pc_mqtt_parse_ack(body, rl));
         if (s >= 0)
         {
-            s_mqtt.inflight[s].state = 0;
+            s_mqtt.inflight[s].state = MQ_INFLIGHT_FREE;
         }
         break;
     }
@@ -760,19 +808,19 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
         int s = inflight_find(pid);
         if (s >= 0)
         {
-            s_mqtt.inflight[s].state = 2;
+            s_mqtt.inflight[s].state = MQ_INFLIGHT_COMP;
             s_mqtt.inflight[s].sent_ms = pc_millis();
         }
-        size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBREL, pid);
-        mq_tx(s_mqtt.tx, n);
+        size_t n = pc_mqtt_build_ack(s_mqtt.tx, PC_MQTT_BUF_SIZE, MQTT_PUBREL, pid);
+        mq_tx(n);
         break;
     }
     case MQTT_PUBREL: // broker releasing an inbound QoS 2 message: reply PUBCOMP
     {
         uint16_t pid = pc_mqtt_parse_ack(body, rl);
         rxqos2_del(pid);
-        size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBCOMP, pid);
-        mq_tx(s_mqtt.tx, n);
+        size_t n = pc_mqtt_build_ack(s_mqtt.tx, PC_MQTT_BUF_SIZE, MQTT_PUBCOMP, pid);
+        mq_tx(n);
         break;
     }
     case MQTT_PINGRESP:
@@ -785,52 +833,48 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
     }
 }
 
-// Drain complete packets from the rx ring (copies each into s_mqtt.pkt to parse).
+// Fill from the transport, then dispatch every whole packet the buffer now holds. The loop is
+// bounded by the bytes already received and never waits: it ends on the first packet that is not
+// all here yet, and what is left of it shifts down to wait for the next fill. Each packet is
+// handled where it landed, so nothing is copied out to parse it.
 static void process_rx()
 {
 #if PC_ENABLE_MQTT_TLS
     if (s_mqtt.use_tls)
     {
-        mq_pump_tls(); // decrypt ciphertext into the plaintext ring first
+        mq_fill_tls();
     }
     else
 #endif
-        mq_pump_plain(); // drain plaintext wire bytes into the ring
+        mq_fill_plain();
+
+    size_t off = 0;
     for (;;)
     {
-        size_t avail = ring_avail();
-        if (avail < 2)
-        {
-            return;
-        }
-        // Peek the fixed header (byte0 + 1-4 remlen bytes) without advancing.
-        uint8_t hdr[5];
-        size_t hn = avail < 5 ? avail : 5;
-        for (size_t i = 0; i < hn; i++)
-        {
-            hdr[i] = ring_peek(i);
-        }
         uint8_t type;
         uint8_t flags;
         uint32_t rl;
         size_t hl;
-        if (!pc_mqtt_parse_fixed_header(hdr, hn, &type, &flags, &rl, &hl))
+        size_t have = s_mqtt.rx_len - off;
+        if (!pc_mqtt_parse_fixed_header(s_mqtt.rx + off, have, &type, &flags, &rl, &hl))
         {
-            return; // incomplete header
+            break; // header not all here yet
         }
         size_t total = hl + rl;
-        if (avail < total)
+        if (have < total)
         {
-            return; // packet not fully arrived yet
+            break; // body not all here yet
         }
-        if (total > sizeof(s_mqtt.pkt))
+        handle_packet(type, flags, s_mqtt.rx + off + hl, rl);
+        off += total;
+    }
+    if (off != 0)
+    {
+        s_mqtt.rx_len -= off;
+        if (s_mqtt.rx_len != 0)
         {
-            ring_advance(total); // oversized: drop it
-            continue;
+            proto_raw_read(s_mqtt.rx, s_mqtt.rx + off, s_mqtt.rx_len); // the partial waits at the front
         }
-        ring_copy(s_mqtt.pkt, total);
-        ring_advance(total);
-        handle_packet(type, flags, s_mqtt.pkt + hl, rl);
     }
 }
 
@@ -852,66 +896,122 @@ proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, 
     }
 #endif
 
+    if (!mq_mem_bind())
+    {
+        return PROTO_FALSE; // no storage: fail closed rather than build into nothing
+    }
+
     // Reset all session state.
     memset(s_mqtt.inflight, 0, sizeof(s_mqtt.inflight));
     memset(s_mqtt.rx_qos2, 0, sizeof(s_mqtt.rx_qos2));
-    s_mqtt.rx_head = s_mqtt.rx_tail = 0;
+    s_mqtt.rx_len = 0;
+    s_mqtt.tx_len = s_mqtt.tx_off = 0;
+    s_mqtt.tx_ready = PROTO_FALSE;
     s_mqtt.closed = s_mqtt.mqtt_up = s_mqtt.ping_pending = PROTO_FALSE;
     s_mqtt.connack_code = -1;
     s_mqtt.keepalive_s = opts->keepalive_s;
     s_mqtt.use_tls = use_tls;
 
-    uint32_t deadline = pc_millis() + 8000;
+    // Frame CONNECT now, while opts is still the caller's to read: the payload assembles in rx and
+    // the packet lands in tx, where it waits for the link. Nothing else touches either until then.
+    size_t n = pc_mqtt_build_connect(s_mqtt.tx, PC_MQTT_BUF_SIZE, opts, s_mqtt.rx, PC_MQTT_BUF_SIZE);
+    if (n == 0)
+    {
+        return PROTO_FALSE;
+    }
+    s_mqtt.tx_len = n;
 
-    // Open the TCP connection (DNS + connect) via the shared client transport.
-    s_mqtt.cid = Tcp.client->open(host, port, 8000);
+    s_mqtt.link_budget_ms = PC_MQTT_CONNECT_MS;
+    s_mqtt.cid = Tcp.client->open(host, port, s_mqtt.link_budget_ms);
     if (s_mqtt.cid < 0)
     {
         return PROTO_FALSE;
     }
 
 #if PC_ENABLE_MQTT_TLS
-    if (s_mqtt.use_tls)
+    // Bind the session here, while host is still in scope. Its BIO reads the transport's wire ring,
+    // so nothing moves until pc_mqtt_loop() starts stepping the handshake.
+    if (s_mqtt.use_tls && !pc_tls_client_session_begin(host, mq_tls_send, mq_tls_recv))
     {
-        if (!pc_tls_client_session_begin(host, mq_tls_send, mq_tls_recv))
+        mq_close();
+        return PROTO_FALSE;
+    }
+#endif
+
+    s_mqtt.link = MQ_LINK_TCP;
+    s_mqtt.timer = pc_millis();
+    return PROTO_TRUE; // started, not connected: poll pc_mqtt_loop() and read pc_mqtt_connected()
+}
+
+// Step the link one stage per call. Nothing here waits: the transport slot, the handshake and the
+// CONNACK each report where they are and the caller comes back on its own tick.
+static void mq_link_step(void)
+{
+    if (s_mqtt.closed || (pc_millis() - s_mqtt.timer) >= s_mqtt.link_budget_ms)
+    {
+        mq_close();
+        return;
+    }
+    switch (s_mqtt.link)
+    {
+    case MQ_LINK_TCP:
+        if (!Tcp.client->connected(s_mqtt.cid))
+        {
+            return;
+        }
+#if PC_ENABLE_MQTT_TLS
+        if (s_mqtt.use_tls)
+        {
+            s_mqtt.link = MQ_LINK_TLS;
+            return;
+        }
+#endif
+        s_mqtt.link = MQ_LINK_CONNACK;
+        if (!mq_tx(s_mqtt.tx_len)) // CONNECT is already framed in tx; this raises the flag over it
         {
             mq_close();
-            return PROTO_FALSE;
         }
-        int h;
-        while ((h = pc_tls_client_session_handshake()) == 0 && !s_mqtt.closed && (int32_t)(deadline - pc_millis()) > 0)
+        return;
+
+    case MQ_LINK_TLS:
+#if PC_ENABLE_MQTT_TLS
+    {
+        int h = pc_tls_client_session_handshake();
+        if (h == 0)
         {
-            pcdelay(5);
+            return; // another flight is owed; the next step carries it
         }
         if (h != 1)
         {
             MQ_DBG("[mqtt] TLS handshake failed (%d)\n", h);
             mq_close();
-            return PROTO_FALSE;
+            return;
+        }
+        s_mqtt.link = MQ_LINK_CONNACK;
+        if (!mq_tx(s_mqtt.tx_len)) // CONNECT is already framed in tx; this raises the flag over it
+        {
+            mq_close();
         }
     }
 #endif
+        return;
 
-    size_t n = pc_mqtt_build_connect(s_mqtt.tx, sizeof(s_mqtt.tx), opts);
-    if (n == 0 || !mq_tx(s_mqtt.tx, n))
-    {
-        mq_close();
-        return PROTO_FALSE;
-    }
-
-    // Wait for CONNACK.
-    while (!s_mqtt.mqtt_up && s_mqtt.connack_code < 0 && !s_mqtt.closed && (int32_t)(deadline - pc_millis()) > 0)
-    {
+    case MQ_LINK_CONNACK:
         process_rx();
-        pcdelay(5);
+        if (s_mqtt.mqtt_up)
+        {
+            s_mqtt.link = MQ_LINK_IDLE;
+            s_mqtt.last_tx_ms = pc_millis();
+        }
+        else if (s_mqtt.connack_code >= 0)
+        {
+            mq_close(); // the broker answered and refused
+        }
+        return;
+
+    case MQ_LINK_IDLE:
+        return;
     }
-    if (!s_mqtt.mqtt_up)
-    {
-        mq_close();
-        return PROTO_FALSE;
-    }
-    s_mqtt.last_tx_ms = pc_millis();
-    return PROTO_TRUE;
 }
 
 proto_bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint8_t qos, proto_bool retain)
@@ -922,16 +1022,18 @@ proto_bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len
     }
     if (qos == 0)
     {
-        size_t n = pc_mqtt_build_publish(s_mqtt.tx, sizeof(s_mqtt.tx), topic, payload, len, 0, 0, retain, PROTO_FALSE);
-        return n && mq_tx(s_mqtt.tx, n);
+        size_t n = pc_mqtt_build_publish(s_mqtt.tx, PC_MQTT_BUF_SIZE, topic, payload, len, 0, 0, retain, PROTO_FALSE,
+                                         s_mqtt.rx, PC_MQTT_BUF_SIZE);
+        return n && mq_tx(n);
     }
-    // QoS 1/2: take an in-flight slot, store the serialized packet for retransmit.
+    // QoS 1/2: take an in-flight slot. The packet itself stays in tx - a retransmit rewinds the
+    // worker to the start of it - so the slot records only what identifies and times the exchange.
     int slot = inflight_find(0);
     if (slot < 0)
     {
         for (int i = 0; i < PC_MQTT_MAX_INFLIGHT; i++)
         {
-            if (s_mqtt.inflight[i].state == 0)
+            if (s_mqtt.inflight[i].state == MQ_INFLIGHT_FREE)
             {
                 slot = i;
                 break;
@@ -943,17 +1045,17 @@ proto_bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len
         return PROTO_FALSE; // in-flight window full
     }
     uint16_t pid = next_pid();
-    size_t n = pc_mqtt_build_publish(s_mqtt.inflight[slot].pkt, sizeof(s_mqtt.inflight[slot].pkt), topic, payload, len,
-                                     qos, pid, retain, PROTO_FALSE);
+    size_t n = pc_mqtt_build_publish(s_mqtt.tx, PC_MQTT_BUF_SIZE, topic, payload, len, qos, pid, retain, PROTO_FALSE,
+                                     s_mqtt.rx, PC_MQTT_BUF_SIZE);
     if (n == 0)
     {
-        return PROTO_FALSE; // too large for an in-flight slot
+        return PROTO_FALSE;
     }
     s_mqtt.inflight[slot].pid = pid;
-    s_mqtt.inflight[slot].state = 1;
-    s_mqtt.inflight[slot].len = (uint16_t)n;
+    s_mqtt.inflight[slot].state = MQ_INFLIGHT_ACK;
+    s_mqtt.inflight[slot].len = n;
     s_mqtt.inflight[slot].sent_ms = pc_millis();
-    return mq_tx(s_mqtt.inflight[slot].pkt, n);
+    return mq_tx(n);
 }
 
 proto_bool pc_mqtt_subscribe(const char *topic, uint8_t qos)
@@ -962,8 +1064,8 @@ proto_bool pc_mqtt_subscribe(const char *topic, uint8_t qos)
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_mqtt_build_subscribe(s_mqtt.tx, sizeof(s_mqtt.tx), next_pid(), topic, qos);
-    return n && mq_tx(s_mqtt.tx, n);
+    size_t n = pc_mqtt_build_subscribe(s_mqtt.tx, PC_MQTT_BUF_SIZE, next_pid(), topic, qos, s_mqtt.rx, PC_MQTT_BUF_SIZE);
+    return n && mq_tx(n);
 }
 
 proto_bool pc_mqtt_unsubscribe(const char *topic)
@@ -972,16 +1074,25 @@ proto_bool pc_mqtt_unsubscribe(const char *topic)
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_mqtt_build_unsubscribe(s_mqtt.tx, sizeof(s_mqtt.tx), next_pid(), topic);
-    return n && mq_tx(s_mqtt.tx, n);
+    size_t n = pc_mqtt_build_unsubscribe(s_mqtt.tx, PC_MQTT_BUF_SIZE, next_pid(), topic, s_mqtt.rx, PC_MQTT_BUF_SIZE);
+    return n && mq_tx(n);
 }
 
 proto_bool pc_mqtt_loop()
 {
+    // A connect that is still coming up takes one step per call, and nothing below it runs until
+    // the broker has answered: this is the tick pc_mqtt_connect() hands the link to.
+    if (s_mqtt.link != MQ_LINK_IDLE)
+    {
+        mq_tx_drain(); // CONNECT is framed and flagged from the first step; carry it out
+        mq_link_step();
+        return s_mqtt.mqtt_up;
+    }
     if (!s_mqtt.mqtt_up)
     {
         return PROTO_FALSE;
     }
+    mq_tx_drain(); // whatever the codec flagged last pass goes out before more arrives
     process_rx();
     if (s_mqtt.closed)
     {
@@ -1002,8 +1113,8 @@ proto_bool pc_mqtt_loop()
         }
         if (!s_mqtt.ping_pending && (now - s_mqtt.last_tx_ms) >= ka)
         {
-            size_t n = pc_mqtt_build_pingreq(s_mqtt.tx, sizeof(s_mqtt.tx));
-            if (mq_tx(s_mqtt.tx, n))
+            size_t n = pc_mqtt_build_pingreq(s_mqtt.tx, PC_MQTT_BUF_SIZE);
+            if (mq_tx(n))
             {
                 s_mqtt.ping_pending = PROTO_TRUE;
                 s_mqtt.ping_sent_ms = now;
@@ -1011,10 +1122,11 @@ proto_bool pc_mqtt_loop()
         }
     }
 
-    // Retransmit unacked in-flight QoS 1/2 messages.
+    // Retransmit unacked in-flight QoS 1/2 messages. The PUBLISH is still in tx, so a resend marks
+    // DUP where it lies and rewinds the worker to the start of it.
     for (int i = 0; i < PC_MQTT_MAX_INFLIGHT; i++)
     {
-        if (s_mqtt.inflight[i].state == 0)
+        if (s_mqtt.inflight[i].state == MQ_INFLIGHT_FREE)
         {
             continue;
         }
@@ -1022,15 +1134,23 @@ proto_bool pc_mqtt_loop()
         {
             continue;
         }
-        if (s_mqtt.inflight[i].state == 1)
+        if (s_mqtt.inflight[i].state == MQ_INFLIGHT_ACK)
         {
-            s_mqtt.inflight[i].pkt[0] |= 0x08; // set DUP on the stored PUBLISH
-            mq_tx(s_mqtt.inflight[i].pkt, s_mqtt.inflight[i].len);
+            // The PUBLISH is still where the codec framed it: mark DUP in place and reset the
+            // worker to the start of it. One packet is in flight at a time, so tx is that packet.
+            s_mqtt.tx[0] |= 0x08;
+            if (!mq_tx(s_mqtt.inflight[i].len))
+            {
+                continue; // still going out; the next pass retries
+            }
         }
-        else // state 2: re-send PUBREL
+        else
         {
-            size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBREL, s_mqtt.inflight[i].pid);
-            mq_tx(s_mqtt.tx, n);
+            size_t n = pc_mqtt_build_ack(s_mqtt.tx, PC_MQTT_BUF_SIZE, MQTT_PUBREL, s_mqtt.inflight[i].pid);
+            if (n == 0 || !mq_tx(n))
+            {
+                continue;
+            }
         }
         s_mqtt.inflight[i].sent_ms = now;
     }
@@ -1046,8 +1166,8 @@ void pc_mqtt_disconnect()
 {
     if (s_mqtt.cid >= 0 && s_mqtt.mqtt_up)
     {
-        size_t n = pc_mqtt_build_disconnect(s_mqtt.tx, sizeof(s_mqtt.tx));
-        mq_tx(s_mqtt.tx, n);
+        size_t n = pc_mqtt_build_disconnect(s_mqtt.tx, PC_MQTT_BUF_SIZE);
+        mq_tx(n);
     }
     mq_close();
 }

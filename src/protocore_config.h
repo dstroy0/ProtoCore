@@ -5487,12 +5487,24 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief MQTT packet buffer size in bytes (bounds one outgoing/incoming packet).
  *
- * Two buffers of this size live in BSS (one tx, one rx). Must hold the largest
- * CONNECT/PUBLISH the client sends and the largest incoming PUBLISH it accepts
+ * The client borrows twice this from the secure pool's persistent end and splits it: one half is
+ * the payload the codec assembles into and the receive reassembly, the other is the wire. Must hold
+ * the largest CONNECT/PUBLISH the client sends and the largest incoming PUBLISH it accepts
  * (topic + payload + a few header bytes); larger incoming packets are dropped.
  */
 #ifndef PC_MQTT_BUF_SIZE
 #define PC_MQTT_BUF_SIZE 1024
+#endif
+
+/**
+ * @brief What the whole MQTT connect is given, in milliseconds.
+ *
+ * Covers the transport coming up, the TLS handshake for mqtts, and the CONNACK: pc_mqtt_connect()
+ * returns immediately and pc_mqtt_loop() gives the link up once this passes. One budget rather than
+ * one per stage, because a broker slow in any of them is slow to the caller either way.
+ */
+#ifndef PC_MQTT_CONNECT_MS
+#define PC_MQTT_CONNECT_MS 8000
 #endif
 
 /** @brief Default MQTT keep-alive interval in seconds (PINGREQ cadence / CONNECT field). */
@@ -5511,19 +5523,15 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Outbound QoS 1/2 in-flight slots (unacknowledged messages held for DUP retransmit).
+ * @brief Outbound QoS 1/2 in-flight slots (unacknowledged exchanges awaiting their acknowledgement).
  *
- * Each slot stores its serialized packet (up to PC_MQTT_INFLIGHT_BUF bytes) until
- * the broker acknowledges it; a publish is refused when all slots are busy. The pool
- * costs PC_MQTT_MAX_INFLIGHT * (PC_MQTT_INFLIGHT_BUF + a few bytes) of BSS.
+ * A slot records the packet identifier, how far the exchange has got and when it was last sent - not
+ * the packet, which stays in the client's wire buffer where a retransmit marks DUP and rewinds the
+ * worker to the start of it. A publish is refused when all slots are busy. Each slot costs a
+ * handful of bytes.
  */
 #ifndef PC_MQTT_MAX_INFLIGHT
 #define PC_MQTT_MAX_INFLIGHT 4
-#endif
-
-/** @brief Stored-packet size per in-flight QoS 1/2 slot (caps a retransmittable PUBLISH). */
-#ifndef PC_MQTT_INFLIGHT_BUF
-#define PC_MQTT_INFLIGHT_BUF 256
 #endif
 
 /** @brief Retransmit timeout (ms) for an unacknowledged in-flight QoS 1/2 message. */
