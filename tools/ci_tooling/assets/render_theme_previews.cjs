@@ -1,18 +1,18 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Render every theme in web_assets/themes/{,generated/} onto one small sample page and screenshot it to a
+// Render every theme in src/web_assets/themes/{,generated/} onto one small sample page and screenshot it to a
 // PNG in docs/theme_preview/. The docs gallery (docs/THEMES.md, written by gen_themes.py gallery) embeds
 // these so a browsing user - kid or pro - can see every theme at a glance before picking one. Needs
 // puppeteer-core + a Chromium; run on a host that has both (CHROME overrides the browser path).
 //
-//   node ci_tooling/assets/render_theme_previews.cjs
+//   node tools/ci_tooling/assets/render_theme_previews.cjs
 const puppeteer = require(process.env.PUPPETEER || "/usr/local/lib/node_modules/puppeteer-core");
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = path.join(__dirname, "../..");
-const DIRS = [path.join(ROOT, "web_assets/themes"), path.join(ROOT, "web_assets/themes/generated")];
+const ROOT = path.join(__dirname, "../../..");
+const DIRS = [path.join(ROOT, "src/web_assets/themes"), path.join(ROOT, "src/web_assets/themes/generated")];
 const OUT = path.join(ROOT, "docs/theme_preview");
 
 // A compact showcase touching the elements the template themes: heading, link, cards, buttons, an input,

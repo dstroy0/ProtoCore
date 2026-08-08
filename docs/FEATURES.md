@@ -1334,7 +1334,7 @@ Telnet server support (RFC 854 / IAC option negotiation).
 
 `PC_ENABLE_THEMES`
 
-Embed the theme stylesheet library as runtime-selectable blobs (default off). Off by default: build-time theme injection (`<!--#theme NAME-->`) costs nothing extra, but embedding the whole library for runtime switching links every theme's CSS into flash (~1 KB each). When set, application/binary_asset_blobs.{h,cpp} exposes `pc_theme_css(name)` + the registry `PC_THEME_BLOBS`, so a route (e.g. `/themes/<name>.css`) or a picker can switch themes live. Regenerate with `web_assets/wizard/gen_theme_blobs.py` after adding a theme.
+Embed the theme stylesheet library as runtime-selectable blobs (default off). Off by default: build-time theme injection (`<!--#theme NAME-->`) costs nothing extra, but embedding the whole library for runtime switching links every theme's CSS into flash (~1 KB each). When set, application/binary_asset_blobs.{h,c} exposes `pc_theme_css(name)` + the registry `PC_THEME_BLOBS`, so a route (e.g. `/themes/<name>.css`) or a picker can switch themes live. Regenerate with `src/web_assets/wizard/gen_theme_blobs.py` after adding a theme.
 
 ## Thread
 

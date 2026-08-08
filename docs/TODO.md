@@ -648,7 +648,7 @@ and HW-verified on an ESP32 DevKit. Per-feature footprints are in the README.
       data model + MBAP/PDU codec, FC 1/2/3/4/5/6/15/16, via a `PROTO_MODBUS`
       handler. Host-tested (`native_modbus`); example `ModbusTcp`.
 - [x] **TLS session resumption** (see the TLS item) and the **web-asset generator**
-      (`web_assets/input` -> `web.{h,cpp}` via `build_assets.py`; `/metrics` and
+      (`src/web_assets/input` -> `web_assets.{h,c}` via `build_assets.py`; `/metrics` and
       `/stats` are editable `{{name}}` templates).
 
 Open follow-ups discovered during the above:

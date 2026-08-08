@@ -753,6 +753,25 @@ src/
 │   ├── time_compat.h
 │   ├── types.h
 │   └── utf8.h
+├── web_assets/
+│   ├── favicons/  (288 generated files)
+│   ├── input/
+│   │   ├── PC_DASHBOARD_PAGE.html
+│   │   ├── PC_METRICS_PROM.txt
+│   │   ├── PC_PROV_FORM.html
+│   │   ├── PC_PROV_SAVED_HTML.html
+│   │   ├── PC_SERVICE_WORKER.js
+│   │   ├── PC_STATS_JSON.json
+│   │   └── PC_TERMINAL_PAGE.html
+│   ├── themes/  (112 generated files)
+│   ├── wizard/
+│   │   ├── __init__.py
+│   │   ├── build_assets.py
+│   │   ├── gen_favicons.py
+│   │   ├── gen_theme_blobs.py
+│   │   └── gen_themes.py
+│   ├── __init__.py
+│   └── README.md
 ├── protocore.c
 ├── protocore.h
 └── protocore_config.h
@@ -1749,18 +1768,18 @@ drifts; run any of them locally from the repo root.
 
 The suite's own generator lives with the tests: [`test/gen_test_readme.py`](../test/gen_test_readme.py) refreshes the env matrix + per-test directory in [`test/README.md`](../test/README.md).
 
-**Web-asset build** (`web_assets/wizard/`)
+**Web-asset build** (`src/web_assets/wizard/`)
 
-| Script               | Purpose                                                                                   |
-| -------------------- | ----------------------------------------------------------------------------------------- |
-| `build_assets.py`    | compile the editable web sources (`web_assets/input/*`) into embedded C++ application assets |
-| `gen_themes.py`      | build the theme CSS library + gallery from the palette sources                            |
-| `gen_theme_blobs.py` | pack the runtime-selectable theme CSS into C++ blobs                                      |
-| `gen_favicons.py`    | build the favicon library + gallery                                                       |
+| Script               | Purpose                                                                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| `build_assets.py`    | compile the editable web sources (`src/web_assets/input/*`) into embedded C application assets |
+| `gen_themes.py`      | build the theme CSS library + gallery from the palette sources                                |
+| `gen_theme_blobs.py` | pack the runtime-selectable theme CSS into C blobs                                            |
+| `gen_favicons.py`    | build the favicon library + gallery                                                           |
 
 ```bash
 python -m tools.ci_tooling.generate.gen_readme_sections   # refresh this file's generated sections
-python web_assets/wizard/build_assets.py          # rebuild the embedded web assets
+python -m src.web_assets.wizard.build_assets              # rebuild the embedded web assets
 ```
 
 </details>

@@ -8,6 +8,292 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Six TUs write through an unchecked pool borrow, so exhaustion is a NULL write or a garbage key
+
+- **Status:** OPEN, found 2026-08-08 in the `src/` resource audit. Cross-cutting: every site below is
+  filed in its own area report, the class is filed in none.
+- **Symptom:** the pools fail closed and these callers fail open.
+    - `crypto/mac/hmac_sha256.c:72` returns without setting `ctx->okey`, which is then used.
+    - `crypto/rng/rng.c:74` dereferences an unchecked `pc_secure_persist_span()`.
+    - `network_drivers/application/smb/smb2.c:917,929,987,998` pass `pc_secure_span(...).buf` with no
+      `pc_span_ok()`.
+    - `network_drivers/presentation/http/http3/quic_crypto.c:46,50,180` write through `pc_secure_alloc`
+      with no NULL test.
+    - `services/security/ikev2/ikev2.c:1434,1458` the same, and `sk_message_build:1697` discards the
+      seal result on top.
+    - `services/system/esp/esp.c:78,113` the same.
+
+    The AEAD backends close the trap: `core_setup/hal/portable/portable_aes128gcm.c:209-213` writes
+    through `storage` unconditionally, so a NULL arrives as a store rather than as a check.
+
+- **Root cause:** `mmgr/secure.h:99-105` states the contract - "Returns NULL if the request does not
+  fit - callers MUST handle null and fail closed" - and `pc_secure_span()` yields an empty span so an
+  omitted `pc_span_ok()` writes nothing rather than dereferencing null. Both are advisory. Nothing in
+  the signature forces the check, so six independent TUs skipped it the same way.
+- **Worst consequence:** `hmac_sha256.c:72` leaves `ctx->okey` indeterminate and proceeds. Under
+  deterministic ECDSA nonce generation that is a nonce-reuse path, and nonce reuse recovers the
+  private key. The rest are NULL writes and a reset.
+- **Nothing can catch it:** no test drives an arena to exhaustion, so every one of these paths is
+  unreachable in the native suite by construction.
+- **Fix:** not written. The durable form is to make the check unskippable rather than to add six
+  checks - a borrow that cannot be handed to a keyed init without passing `pc_span_ok()` first.
+- **Filed sites:** `git_project/audit/resource/crypto.md`,
+  `network_drivers_application.md`, `network_drivers_http.md`, `services_security_storage.md`,
+  `services_net_system.md`.
+
+## `PC_PLAINTEXT_ARENA_SIZE` is a chosen number, not a sum, so concurrent borrows are never proved
+
+- **Status:** OPEN, found 2026-08-08 in the `src/` resource audit. Cross-cutting: the derivation gap
+  and the failure it causes are filed in two different area reports and connected in neither.
+- **Symptom:** `protocore_config.h:6477` sets `PC_PLAINTEXT_ARENA_SIZE` to 8192. The plaintext work
+  terms sum to **15,011 B**. Each module header asserts only that its own term fits the arena alone,
+  so no two concurrent borrows are ever proved to coexist. The live consequence: SSH's real nested
+  draw is **8,760 B** with `PC_ENABLE_SSH_ZLIB=1`, against the 8,192 B arena, so publickey auth fails
+  closed on every compressed session.
+- **Root cause:** the secure side derives `PC_SECURE_ARENA_SIZE` from its `PC_WORK_*` terms, so a new
+  draw that is not budgeted fails the build. The plaintext side has no equivalent derivation, so a
+  new draw that is not budgeted fails at run time instead, on the path that happened to be second.
+  `PC_PLAINTEXT_WORK_SSH_TRANSPORT` is defined and referenced nowhere, which is the same gap showing
+  from the other direction.
+- **Nothing can catch it:** an assert that a term fits alone passes for every term individually at
+  any arena size down to the largest single term.
+- **Fix:** not written. Derive the plaintext arena from its terms the way the secure one is derived,
+  which turns both of the above into build failures.
+- **Filed halves:** `git_project/audit/resource/mmgr_shared_primitives.md` (the missing derivation,
+  and the 15,011 B sum), `network_drivers_ssh_security_codec.md` (the 8,760 B draw and the orphan).
+
+## `Content-Length` folds with no overflow guard, so a 33-digit value frames as 0
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http1-core.md` #1).
+- **Symptom:** `http_parser.c:381` is `cl = cl * 10 + (size_t)(*q - '0')` inside the digit loop, with a
+  digit-class check and a duplicate-disagreement check around it and no bound on the accumulator.
+  `Content-Length: 18446744073709551616` folds to **0** on both 32- and 64-bit `size_t`;
+  `Content-Length: 4294967301` folds to **5** on 32-bit, which is the ESP32 target. The parser reaches
+  `PARSE_COMPLETE`/`PARSE_BODY` and the residual octets are reparsed as a pipelined request.
+- **Root cause:** the comment three lines above cites RFC 7230 §3.3.2 `Content-Length = 1*DIGIT` and the
+  loop enforces exactly that - the grammar, not the range. RFC 9110 sec 8.6 states the other half in the
+  same paragraph: a recipient "MUST anticipate potentially large decimal numerals and prevent parsing
+  errors due to integer conversion overflows". RFC 9112 sec 6.3 item 5 makes an invalid `Content-Length`
+  a 400 and a connection close. This is a live request-smuggling vector.
+- **Nothing can catch it:** `test_pentest.c:217` feeds the 20-digit value and then asserts only
+  `assert_http_bounded()` (`:105-112`: buffer indices in range, `parse_state` a valid enum), which cannot
+  distinguish 400 from silent acceptance.
+- **Fix:** not written. Refuse when `cl > (SIZE_MAX - 9) / 10` before the multiply and return
+  `PARSE_BAD_REQUEST`, and give the test an assertion on the status rather than on boundedness.
+
+## Telnet sends 22 bytes from a 19-character literal on every accept
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #15).
+- **Symptom:** `telnet.c:142` is `raw_send(slot, "PC Telnet ready\r\n> ", 22);`. The literal is 19
+  characters, 20 bytes with its NUL. Two bytes past the end of the string constant are read and pushed
+  onto the wire on every connection.
+- **Root cause:** a hand-counted length on a literal. Nothing recomputes it, and `raw_send` takes the
+  count as given.
+- **Nothing can catch it:** `test_telnet.c:60-69` compares only the first 6 bytes of the greeting.
+- **Fix:** not written. `sizeof(lit) - 1` at the call site, and widen the test's compare to the whole
+  greeting so the length is pinned.
+
+## The SSH userauth service name is parsed and never compared
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #3).
+- **Symptom:** `ssh_auth.c:279` reads the `service` field of `SSH_MSG_USERAUTH_REQUEST` into
+  `req->service`, and that member appears nowhere else in the file. A request naming service `"bogus"`
+  authenticates exactly as one naming `"ssh-connection"`.
+- **Root cause:** RFC 4252 sec 5 makes the service name part of what is authenticated - "if the service
+  does not exist, authentication MUST NOT be accepted" - and it is also inside the signed blob, so the
+  signature covers a value the server never checks. Parsing a field into a struct is not validating it.
+- **Nothing can catch it:** every test hardcodes `"ssh-connection"`.
+- **Fix:** not written. Compare against the one service this server offers and fail the request
+  otherwise, with a negative test for a foreign service name.
+
+## HPACK prefix-integer decode wraps at `m == 28`
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #8).
+- **Symptom:** `hpack_prim.c:137` bounds the continuation with `m > 28`, so `m == 28` is admitted and
+  `(b & 0x7f) << 28` shifts up to 127 into a `uint32_t`. Confirmed by compiling the function verbatim:
+  input `{0x1f,0x80,0x80,0x80,0x80,0x7f}` returns TRUE with `consumed = 6` and `value = 4026531871`
+  (`0xf000001f`); the encoded value is 34091302943.
+- **Root cause:** the comment reads "bound the continuation to a 32-bit result" and the bound is one
+  step too loose - at `m == 28` only the low 4 bits of the septet still fit. RFC 7541 sec 5.1 requires
+  that an integer exceeding implementation limits "in value or octet length" be a decoding error.
+- **Nothing can catch it:** `test_hpack.c:439-440` pins only the `m > 28` rejection.
+- **Fix:** not written. Reject when `m == 28 && (b & 0x7f) > 0x0f`, or accumulate into `uint64_t` and
+  range-check once. Add the boundary pair as a test.
+
+## `pc_base64url_decode` stops at `=` and reports the partial decode as success
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/websocket-and-codecs.md` #2).
+- **Symptom:** `base64.c:330-333` breaks out of the loop on `'='` and returns the bytes accumulated so
+  far as the decoded length. `pc_base64url_decode("Zm9v=", 5, ...)` returns 3. Everything after the
+  first `=` is discarded without a diagnostic, so on the JWT/JWS path `<segment>=<anything>` decodes
+  identically to `<segment>`.
+- **Root cause:** the branch is commented "optional padding ends the input (public length information)",
+  which is the base64 rule, not the base64url one. RFC 4648 sec 3.2/sec 5 and RFC 7515 sec 2 give
+  base64url no padding at all, and sec 3.3 requires rejecting any character outside the alphabet. The
+  surrounding decoder is carefully branchless for constant time; this one early `break` is the hole in
+  it, and it is also the only place the function can return a short count as success.
+- **Nothing can catch it:** `test_base64.c:141-147` asserts the 3 and pins the behavior as correct.
+- **Fix:** not written. Fold `'='` into the `bad` accumulator like every other non-alphabet byte and
+  drop the early break; correct the test to assert rejection.
+
+## SSE field values are copied verbatim, so a newline in application data injects an event
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/websocket-and-codecs.md` #3).
+- **Symptom:** `sse.c:110-142` `pc_sse_format` memcpy's `data`, `event` and `id` into the record with no
+  escaping. A value containing `\n\n` terminates the record early and the remainder is parsed by the
+  client as new fields; a single `\n` silently truncates the field.
+- **Root cause:** the WHATWG event-stream format is line-oriented - CR, LF or CRLF separate lines and a
+  blank line dispatches the event - so the field separator is in-band and application data has to be
+  escaped or refused. The formatter treats the values as opaque bytes.
+- **Nothing can catch it:** `test_sse.c:326-357` pins exact bytes only for newline-free values.
+- **Fix:** not written. Refuse a value containing CR or LF, or re-emit each embedded newline as a fresh
+  `data:` continuation line, which is what the format is for.
+
+## An MQTT redelivery resends whatever the codec framed last
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/coap-mqtt.md` #3).
+- **Symptom:** `mqtt.c:1141` sets `s_mqtt.tx[0] |= 0x08` and calls `mq_tx(s_mqtt.inflight[i].len)`. `tx`
+  is one shared framing buffer that every later `pc_mqtt_build_ack` / `pingreq` / `subscribe` / second
+  `PUBLISH` overwrites (`:776, :790, :814, :822, :1067, :1077, :1116`), so a retransmit sends the
+  current contents of that buffer, with bit 3 set, for the _old_ PUBLISH's length. A PINGREQ `0xC0`
+  goes out as `0xC8`.
+- **Root cause:** the comment at `:1139-1140` states the invariant it relies on - "One packet is in
+  flight at a time, so tx is that packet" - and `PC_MQTT_MAX_INFLIGHT` is 4, so the invariant is false.
+  The retransmit needs the packet, and what it has is a buffer.
+- **Nothing can catch it:** `native_mqtt` is a host build with `PC_HAS_NET_STACK` 0, so the whole
+  transport - QoS 1/2 flows, dedup, keepalive, `MqLinkState` - is compiled by no test env.
+- **Fix:** not written. The inflight record owns its bytes, or the DUP re-frame rebuilds the PUBLISH
+  from the retained topic/payload. Wants a host env that compiles the transport first, or the fix is
+  unverifiable in the same way the bug was.
+
+## JWT claim validation fails open when there is no wall clock
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http-cache-and-auth.md` #1).
+- **Symptom:** `jwt.c:146-148` returns `PROTO_TRUE` from `pc_jwt_time_valid` whenever `now_epoch <= 0`,
+  so on a device that has not yet synced time every `exp` and `nbf` is accepted. A token that expired in
+  1970 validates.
+- **Root cause:** the comment reads "no wall clock -> time claims cannot be evaluated (the signature is
+  the gate)", which chooses availability over the RFC 7519 sec 4.1.4 MUST NOT. An unevaluatable claim is
+  not a satisfied claim.
+- **Nothing can catch it:** `test_jwt.c:286-287` asserts the fail-open as correct behavior for both
+  `pc_jwt_time_valid` and `pc_jwt_verify_hs256_at`.
+- **Fix:** not written. Fail closed when a token carries `exp`/`nbf` and no clock is available, or make
+  the caller pass an explicit "time claims not required" flag so the decision is at the call site.
+
+## The Digest response tag is compared with a plain byte compare
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http-cache-and-auth.md`, non-RFC note).
+- **Symptom:** `auth.c:519` is `if (!str.eq(expected, response, sizeof(expected), PROTO_TRUE))` on the
+  computed versus client-supplied Digest response - an early-exit byte compare on an authentication tag,
+  which is a timing oracle. `check_basic` at `auth.c:396-397` does use `pc_ct_eq`, so the two auth paths
+  in one file disagree.
+- **Root cause:** `protostr.h:113` states the rule in the library's own words - "A secret comparison uses
+  `pc_ct_eq`" - and `str.eq` is the general-purpose comparison that stops at the first difference.
+- **Fix:** not written. `pc_ct_eq` over the full 64-hex-character width, matching the Basic path.
+
+## `serve_file_internal()` accepts a backend and never uses it
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/mocks` for harness holes (`git_project/audit/mock-mnt-and-support-fixtures.md` #3).
+- **Symptom:** `file_serving.c:227` takes `const pc_mnt_backend *file_sys` and the body never reads it -
+  `file_sys` occurs in the file only at `:227` (the parameter), `:525`/`:527` (passed through from
+  `serve_file`) and `:530`/`:560` (recorded by `serve_static`). Line 230 goes straight to
+  `pc_fs_open(file_root(), ...)`, the globally mounted store. An application following the documented
+  `serve_static("/ram/", pc_mnt_ram(), "/")` idiom serves from whatever is mounted, not from the backend
+  it named.
+- **Root cause:** the multipoint mount table records the per-prefix backend (`mnt.c:47-57`) and
+  `file_serving.c:637`/`:642` and `webdav_handler.c:433` read it back and pass it down, so the plumbing
+  is complete up to the last function, which drops it. There is not even a `(void)file_sys;`, and the
+  build is `-std=gnu11` without `-Wextra`, so the unused parameter is silent.
+- **Nothing can catch it:** `test_file_serving.c:24` declares `static const pc_mnt_backend *g_fs;` and
+  never assigns it, so all 18 `serve_static()` calls pass NULL. The `setUp` comment at `:69-70` records
+  the symptom ("resolves through the accessor, not through the backend handed to `serve_file()`")
+  without treating it as a defect.
+- **Fix:** not written. Resolve through `file_sys` when it is non-NULL and fall back to the accessor
+  otherwise, and give the test a second backend so the two are distinguishable.
+
+## The plaintext SSH receive path accepts sub-minimum padding
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-transport-kex.md` #7).
+- **Symptom:** `ssh_packet.c:747` checks only `pad_len_byte >= pkt_len`. All four encrypted receive
+  paths check `< 4` (`:438`, `:514`, `:592`, `:700`); the pre-NEWKEYS path does not, so a packet
+  declaring 0 to 3 bytes of padding is accepted there.
+- **Root cause:** RFC 4253 sec 6 - "There MUST be at least four bytes of padding" - is enforced in the
+  four places that were written together and missed in the fifth. `docs/SSH.md:73` claims the rule holds.
+- **Nothing can catch it:** `test_ssh_server.c:582` covers only the over-large case (`6 >= 6`).
+- **Fix:** not written. Add the `< 4` arm, and pin all five paths with the same boundary pair.
+
+## The AES-GCM vector corpus ships forty valid vectors and zero negatives
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/vectors` (`git_project/audit/crypto-primitives-and-vectors.md` #1).
+- **Symptom:** `test/vectors/wycheproof_aes_128_gcm.json` holds 40 vectors, all `result:"valid"`. The
+  runner executes all 40, so nothing is truncated downstream - the corpus itself contains no tampered
+  tag, no flipped AAD byte, no truncated ciphertext. An AEAD is tested only on success.
+- **Root cause:** `tools/crypto/curate_crypto_vectors.py:63-73` files a test under `flagged` when
+  `result=="invalid"` **or** `t.get("flags")` is non-empty, then takes `flagged[:CAP_FLAGGED]` with the
+  cap at 40 (`:37`). Every valid AES-GCM vector carries `Pseudorandom`/`Ktv`/`SpecialCase` (35/3/2 = 40
+  exactly), so the cap fills with valid-but-flagged entries before the first `invalid` one is reached.
+  The HMAC corpora survive the same code only by accident of ordering.
+- **Fix:** not written. Select `invalid` first and fill the remainder with flagged-valid, or cap the two
+  classes separately. Re-curating changes the committed corpus, so it wants its own commit.
+
+## `pc_ct_eq` has no test of any kind
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for crypto coverage (`git_project/audit/crypto-primitives-and-vectors.md` #3).
+- **Symptom:** `src/crypto/ct_eq.h:33` is the library's single comparator for, in its own doc comment
+  (`:8-10`), "every MAC, tag, digest and signature check". Grep across `test/` returns no reference to
+  the symbol - not a functional equality test, let alone a timing one.
+- **Root cause:** it is a leaf primitive that every caller exercises indirectly, so no suite claimed it.
+  An indirect exercise proves the callers agree with it, not that it is correct.
+- **Fix:** not written. A functional suite (equal, differing at first byte, differing at last byte,
+  zero length) is cheap; the timing claim wants the off-host CCOUNT harness `test_base64.c:6-7` already
+  uses.
+
+## DSCP is written as a whole byte, clobbering the ECN bits
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/fieldbus-and-files-naming.md` #1).
+- **Symptom:** every DSCP application writes the entire IPv4 TOS / IPv6 Traffic-Class octet -
+  `tcp_conn.c:385`, `tcp_listener.c:506`, `tcp_client.c:175`, `udp/udp_client.c:48`,
+  `udp/udp_listener.c:176` - so bits 6-7 are zeroed to Not-ECT on every connection that sets a DSCP.
+- **Root cause:** RFC 2474 defines the high 6 bits and RFC 3168 sec 5 gives the low 2 to ECN as a
+  separate field with a separate owner. The setter treats the octet as one value.
+- **Nothing can catch it:** `test_diffserv.c:57-68` always starts from `pcb.tos = 0`, and `:35` pins
+  `pc_dscp_to_tos(63) == 0xFC` with the comment "ECN still 0" - so no test ever presents a pcb already
+  carrying ECT(0), ECT(1) or CE.
+- **Fix:** not written. Read-modify-write the octet, preserving the low two bits, at all five sites; add
+  a test that seeds a non-zero ECN and asserts it survives.
+
+## The DNS name decoder follows forward compression pointers
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/fieldbus-and-files-naming.md` #7, #14).
+- **Symptom:** `dns_wire.c:53` accepts any pointer offset within the message, including one greater than
+  the current position, so forward and mutually-referential chains are followed - bounded only by the
+  8-hop `PC_DNS_PTR_HOPS` counter. Separately, `dns_wire.c:82` bounds the assembled name only by the
+  caller's `out_cap`, so with a large buffer a chain of 63-octet labels yields a name past the RFC 1035
+  sec 2.3.4 limit of 255 octets.
+- **Root cause:** RFC 1035 sec 4.1.4 defines a pointer as referring to "a prior occurrence of the same
+  name". The hop counter makes the loop terminate, which is the DoS half; the direction rule and the
+  total-length rule are the correctness half and neither is enforced.
+- **Nothing can catch it:** `test_dns_wire.c:102-107` covers the self-pointer `{0xC0,0x00}` only - not a
+  forward pointer, not a pointer past `len`, not an over-long assembled name.
+- **Fix:** not written. Refuse an offset `>= cur`, and cap the assembled length at 255 independently of
+  `out_cap`.
+
+## The Modbus master never reads the MBAP transaction id or length
+
+- **Status:** OPEN, found 2026-08-08 auditing `test/` for standards conformance (`git_project/audit/fieldbus-and-files-naming.md` #2, #8).
+- **Symptom:** none of the four response parsers - `modbus_master.c:46`, `:127`, `:323`, `:443` -
+  accepts a transaction id or reads `adu[0..1]`, so a response cannot be matched to its request and a
+  stale or injected response is accepted for whatever is outstanding. The same four check only `len < 9`
+  and the protocol id, never `adu[4..5]` (Length) against the delivered byte count.
+- **Root cause:** the Modbus Messaging Guide V1.0b sec 4.4.1.3 makes both checks mandatory - "If the
+  Transaction Identifier doesn't refer to any MODBUS pending transaction, the response must be
+  discarded" - and the parser API has no parameter through which the caller could supply the expected
+  id. The MUST cannot be satisfied without a signature change.
+- **Nothing can catch it:** no test feeds a mismatched transaction id, and the fixtures themselves carry
+  inconsistent Length fields (`test_modbus_master.c:136`, `:376`) with no assertion on them.
+- **Fix:** not written. Thread the outstanding transaction id into the parsers and discard on mismatch;
+  validate Length against the frame. Correct the two fixtures in the same commit.
+
 ## The bounded-run walks existed twice, on two owners
 
 - **Status:** FIXED (2026-08-08), found auditing ARCHITECTURE.md against the tree.
