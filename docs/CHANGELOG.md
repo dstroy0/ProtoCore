@@ -21,6 +21,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`4200687`](https://github.com/dstroy0/ProtoCore/commit/4200687663b641b820da583ca3a62df2b7063a82))
 - update test report + coverage [skip ci] ([`08496d1`](https://github.com/dstroy0/ProtoCore/commit/08496d1c31dc1761d1c2abab314dc070cdf3e71e))
 - update CHANGELOG.md [skip ci] ([`06b9e5b`](https://github.com/dstroy0/ProtoCore/commit/06b9e5ba4d87e8d35d63b3d0eacff473c14f1dde))
 - update CHANGELOG.md [skip ci] ([`3c7e9bb`](https://github.com/dstroy0/ProtoCore/commit/3c7e9bb27ce2baf5176782881d899908c99bab93))
@@ -54,6 +55,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`dcdbffe`](https://github.com/dstroy0/ProtoCore/commit/dcdbffe4f679969fa353301fe2864dbd50d20df4))
+- rf work ([`b79fe2b`](https://github.com/dstroy0/ProtoCore/commit/b79fe2b29c7a5473efa0a5a2def5bdfa3791db09))
 - rf work ([`9f5751c`](https://github.com/dstroy0/ProtoCore/commit/9f5751ced024187455a697726ca27fd157b7359d))
 - Bump version: 1.0.15 → 1.0.16 ([`dcb836c`](https://github.com/dstroy0/ProtoCore/commit/dcb836c02b57b98fb12b532fa3bd4d0cfb149894))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`f64aaf3`](https://github.com/dstroy0/ProtoCore/commit/f64aaf30284428e7e732b890c07dc0d6d5bcec46))
