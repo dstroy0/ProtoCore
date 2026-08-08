@@ -45,14 +45,10 @@ concurrency:
 
 jobs:
   test-analyze:
-    name: Run affected suite (report + coverage) and scan
+    name: Run affected suite (report + coverage)
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      # With no SONAR_TOKEN the scan steps are skipped (the report + coverage still run); a quick green
-      # job until the secret is configured. SonarCloud C/C++ needs this CI scan (auto-analysis can't).
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -138,19 +134,6 @@ jobs:
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "envs=$ENVS" >> "$GITHUB_OUTPUT"
 
-      # The SonarCloud C/C++ analysis needs a compile database (native platform, all envs merged). Skip
-      # it when nothing testable changed. On an affected run, only the changed envs' compile commands
-      # are regenerated and overlaid onto the committed baseline test/compile_commands.json (the rest
-      # kept), exactly like the coverage/report baselines; a full run rebuilds the whole database.
-      - name: Generate merged compile_commands.json
-        if: ${{ env.SONAR_TOKEN != '' && steps.sel.outputs.mode != 'none' }}
-        run: |
-          if [ "${{ steps.sel.outputs.mode }}" = "affected" ]; then
-            bash tools/ci_tooling/sonar/gen_compiledb.sh ${{ steps.sel.outputs.envs }}
-          else
-            bash tools/ci_tooling/sonar/gen_compiledb.sh
-          fi
-
       # Failing TESTS must not fail this job - the report exists to document them. A failure to
       # PRODUCE coverage (exit 3) is different: committing then would publish a coverage report the
       # run could not measure. So tolerate every code but 3.
@@ -187,15 +170,6 @@ jobs:
       - name: Format TEST_REPORT.md with Prettier
         if: ${{ steps.sel.outputs.mode != 'none' }}
         run: npx prettier@3.9.6 --write test/TEST_REPORT.md
-
-      # Scan the freshly-merged coverage.xml BEFORE the commit step: the commit does a rebase, and a
-      # concurrent-run conflict on the regenerated coverage.xml would otherwise leave git conflict
-      # markers in the file Sonar parses (the parse then fails). Scanning first keeps Sonar on a clean file.
-      - name: SonarQube Scan
-        if: ${{ env.SONAR_TOKEN != '' && steps.sel.outputs.mode != 'none' }}
-        uses: SonarSource/sonarqube-scan-action@v8
-        env:
-          SONAR_HOST_URL: https://sonarcloud.io
 
       # Keep test/dep_graph.json (the compiler include graph select_envs.py maps changes through)
       # current: a full run regenerates it whole; an affected run recomputes just the envs that ran
@@ -242,7 +216,7 @@ jobs:
             git config user.signingkey ~/.ssh/ci_signing_key
             git config commit.gpgsign true
           fi
-          git add test/TEST_REPORT.md test/coverage.xml test/dep_graph.json test/compile_commands.json
+          git add test/TEST_REPORT.md test/coverage.xml test/dep_graph.json
           if ! git diff --cached --quiet; then
             git commit -m "ci: update test report + coverage [skip ci]"
             # Rebase-and-retry: other auto-committing workflows advance main during this multi-minute run.
