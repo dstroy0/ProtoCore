@@ -8,13 +8,14 @@ toolchain does not cover them - and reports the parity.
 
 Symbol tables only: this reads names, not code.
 
-Usage:  python reverse_engineering/esp32_mac/blob_parity.py <repo-root>
+Usage:  python -m test.reverse_engineering.esp32_mac.blob_parity
 """
 
 import os
 import re
 import subprocess
-import sys
+
+from tools import findroot
 
 PK = os.path.expanduser("~/.platformio/packages")
 
@@ -120,7 +121,6 @@ def scan(objdump, path):
 
 
 def main():
-    repo = os.path.abspath(sys.argv[1])
     per_chip = {}  # chip -> set of every defined symbol
     per_undef = {}  # chip -> set of names the blobs import
     per_chip_lib = {}  # (chip, lib) -> (funcs, objs, undef, size) or None
@@ -262,7 +262,7 @@ def main():
             doc += missing
             doc += ["```", ""]
 
-    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_PARITY.md")
+    dest = findroot.at("test", "reverse_engineering", "esp32_mac", "RADIO_BLOB_PARITY.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\ncommon {len(common)} / union {len(union)} -> {dest}")
@@ -276,4 +276,5 @@ def common_missing(per_chip, chips, chip):
     return set.intersection(*others) - per_chip[chip]
 
 
-main()
+if __name__ == "__main__":
+    main()
