@@ -150,8 +150,12 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // we accept for pubkey userauth (server-sig-algs) so a modern client will
         // sign an RSA key - it otherwise reports "no mutual signature algorithm".
         // First encrypted message, before the client's SERVICE_REQUEST.
-        if (s->ext_info_c && ssh_extinfo_build(reply.buf, &n, reply.cap) == 0)
+        // RFC 8308 sec 2.4 gives a server two places to send it, and the first NEWKEYS is the one used
+        // here. A re-key re-reads ext-info-c from the new KEXINIT, so without this the message would go
+        // out again on every re-key.
+        if (s->ext_info_c && !s->ext_info_sent && ssh_extinfo_build(reply.buf, &n, reply.cap) == 0)
         {
+            s->ext_info_sent = PROTO_TRUE;
             emit(i, reply.buf, n); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
         }
         pc_plaintext_release(mark);

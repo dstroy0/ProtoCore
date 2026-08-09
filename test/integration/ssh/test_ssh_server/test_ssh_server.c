@@ -957,8 +957,16 @@ void test_ssh_kexinit_midsession_rekey()
     n += put_mpint(pkt + n, e_be, 256);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, pkt[0], pkt, n));
     uint8_t nk = SSH_MSG_NEWKEYS;
+    emt_reset();
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, nk, &nk, 1));
     TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, s->phase);
+
+    // RFC 8308 sec 2.4: EXT_INFO belongs to the first NEWKEYS. The re-key KEXINIT carried ext-info-c
+    // again, so nothing must be re-advertised here.
+    for (int j = 0; j < emt_n; j++)
+    {
+        TEST_ASSERT_NOT_EQUAL(SSH_MSG_EXT_INFO, emt_type[j]);
+    }
 }
 
 // ---------------------------------------------------------------------------
