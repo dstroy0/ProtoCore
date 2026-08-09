@@ -19,6 +19,7 @@
   "network_drivers/presentation/http/http.c -> services/security/csrf/csrf.h",
   "network_drivers/presentation/http/http.c -> services/security/forwarded_trust/forwarded_trust.h",
   "network_drivers/presentation/security/dtls/dtls_conn.c -> server/clock/clock.h",
+  "network_drivers/presentation/ssh/auth/ssh_auth.c -> server/clock/clock.h",
   "network_drivers/presentation/ssh/connection/ssh_client.c -> server/clock/clock.h",
   "network_drivers/presentation/ssh/connection/ssh_conn.c -> server/clock/clock.h",
   "network_drivers/presentation/ssh/transport/ssh_transport.c -> server/clock/clock.h",

@@ -13,7 +13,9 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #include "network_drivers/tls/ssh_rsa.h"
+#include "server/clock/clock.h" // pc_millis(): the password-change cooldown clock
 #include "test/fixtures/ssh_test_host_key/ssh_test_keys.h"
+#include <Arduino.h> // set_millis(): time travel past the change cooldown
 #include <stdint.h>
 #include <string.h>
 
@@ -151,9 +153,9 @@ void test_parse_rejects_foreign_service()
     TEST_ASSERT_NOT_EQUAL(0, pc_ssh_auth_parse_request(pkt, n, &req));
 }
 
-// RFC 4252 sec 8: this server performs no password changes, so a change request (TRUE flag, old ||
-// new) is refused rather than authenticated on the old password.
-void test_parse_rejects_password_change()
+// RFC 4252 sec 8: a change request (TRUE flag) carries old || new; the parser reads both and the
+// handler routes them to the change callback.
+void test_parse_reads_password_change()
 {
     uint8_t pkt[128];
     size_t n = 0;
@@ -166,7 +168,10 @@ void test_parse_rejects_password_change()
     n += put_string(pkt + n, "newpw");
 
     SshAuthReq req;
-    TEST_ASSERT_NOT_EQUAL(0, pc_ssh_auth_parse_request(pkt, n, &req));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_parse_request(pkt, n, &req));
+    TEST_ASSERT_TRUE(req.is_pw_change);
+    TEST_ASSERT_EQUAL_STRING("oldpw", req.password);
+    TEST_ASSERT_EQUAL_STRING("newpw", req.new_password);
 }
 
 // ---- orchestration --------------------------------------------------------
@@ -181,6 +186,122 @@ static size_t build_pw_request(uint8_t *pkt, const char *u, const char *p)
     pkt[n++] = 0;
     n += put_string(pkt + n, p);
     return n;
+}
+
+// RFC 4252 sec 8 change request: TRUE flag, old || new.
+static size_t build_pw_change_request(uint8_t *pkt, const char *u, const char *oldp, const char *newp)
+{
+    size_t n = 0;
+    pkt[n++] = SSH_MSG_USERAUTH_REQUEST;
+    n += put_string(pkt + n, u);
+    n += put_string(pkt + n, "ssh-connection");
+    n += put_string(pkt + n, "password");
+    pkt[n++] = 1;
+    n += put_string(pkt + n, oldp);
+    n += put_string(pkt + n, newp);
+    return n;
+}
+
+// The application's start callback: records what it was handed and returns at once, the way a real
+// one queues its own encrypted store instead of writing flash on the SSH worker.
+static int g_change_calls = 0;
+static uint8_t g_change_slot = 0xFF;
+static char g_change_user[64];
+static char g_change_old[64];
+static char g_change_new[64];
+
+static void change_start(uint8_t slot, const char *user, const char *old_password, const char *new_password)
+{
+    g_change_calls++;
+    g_change_slot = slot;
+    strncpy(g_change_user, user, sizeof(g_change_user) - 1);
+    strncpy(g_change_old, old_password, sizeof(g_change_old) - 1);
+    strncpy(g_change_new, new_password, sizeof(g_change_new) - 1);
+}
+
+// Clear the cooldown between cases: it is server-wide and deliberately survives a connection reset,
+// so a test that wants a fresh change has to move the clock past it.
+static void pw_change_cooldown_clear()
+{
+    set_millis(pc_millis() + PC_SSH_PW_CHANGE_COOLDOWN_MS);
+}
+
+// The change defers: the request itself produces no reply, and the reply the poll drains follows
+// only once the application reports.
+void test_pw_change_defers_then_reports()
+{
+    pc_ssh_auth_reset(0);
+    pc_ssh_auth_set_password_change_cb(change_start);
+    pw_change_cooldown_clear();
+    g_change_calls = 0;
+
+    uint8_t pkt[128];
+    size_t n = build_pw_change_request(pkt, "alice", "oldpw", "newpw");
+    uint8_t out[64];
+    size_t olen = 0xFF;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, olen); // deferred: nothing to send yet
+    TEST_ASSERT_EQUAL_INT(1, g_change_calls);
+    TEST_ASSERT_EQUAL(0, g_change_slot);
+    TEST_ASSERT_EQUAL_STRING("alice", g_change_user);
+    TEST_ASSERT_EQUAL_STRING("oldpw", g_change_old);
+    TEST_ASSERT_EQUAL_STRING("newpw", g_change_new);
+
+    // Nothing to drain until the application reports.
+    TEST_ASSERT_EQUAL(PC_SSH_PW_CHANGE_NONE, pc_ssh_auth_pw_change_take(0));
+
+    pc_ssh_auth_pw_change_report(0, PROTO_TRUE);
+    TEST_ASSERT_EQUAL(PC_SSH_PW_CHANGE_OK, pc_ssh_auth_pw_change_take(0));
+    TEST_ASSERT_TRUE(ssh_sess[0].authed);
+    TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, ssh_sess[0].phase);
+    // Taken once: a second drain has nothing.
+    TEST_ASSERT_EQUAL(PC_SSH_PW_CHANGE_NONE, pc_ssh_auth_pw_change_take(0));
+}
+
+// A second change inside the cooldown is refused outright, and the callback never runs again.
+void test_pw_change_cooldown_refuses_second()
+{
+    pc_ssh_auth_reset(0);
+    pc_ssh_auth_set_password_change_cb(change_start);
+    pw_change_cooldown_clear();
+
+    uint8_t pkt[128];
+    size_t n = build_pw_change_request(pkt, "alice", "oldpw", "newpw");
+    uint8_t out[64];
+    size_t olen = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    pc_ssh_auth_pw_change_report(0, PROTO_TRUE);
+    TEST_ASSERT_EQUAL(PC_SSH_PW_CHANGE_OK, pc_ssh_auth_pw_change_take(0));
+
+    // Still inside the window, and a reconnect does not clear it.
+    pc_ssh_auth_reset(0);
+    g_change_calls = 0;
+    olen = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
+    TEST_ASSERT_EQUAL_INT(0, g_change_calls);
+
+    // Past the window it runs again.
+    pw_change_cooldown_clear();
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(1, g_change_calls);
+}
+
+// No callback installed: the change is refused rather than authenticating on the old password.
+void test_pw_change_no_cb_fails()
+{
+    pc_ssh_auth_reset(0);
+    ssh_sess[0].authed = PROTO_FALSE;
+    pc_ssh_auth_set_password_change_cb(NULL);
+    pw_change_cooldown_clear();
+
+    uint8_t pkt[128];
+    size_t n = build_pw_change_request(pkt, "alice", "oldpw", "newpw");
+    uint8_t out[64];
+    size_t olen = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
+    TEST_ASSERT_FALSE(ssh_sess[0].authed);
 }
 
 void test_handle_request_success()
@@ -1217,7 +1338,10 @@ int main()
     RUN_TEST(test_parse_password_request);
     RUN_TEST(test_parse_none_request);
     RUN_TEST(test_parse_rejects_foreign_service);
-    RUN_TEST(test_parse_rejects_password_change);
+    RUN_TEST(test_parse_reads_password_change);
+    RUN_TEST(test_pw_change_defers_then_reports);
+    RUN_TEST(test_pw_change_cooldown_refuses_second);
+    RUN_TEST(test_pw_change_no_cb_fails);
     RUN_TEST(test_handle_request_success);
     RUN_TEST(test_handle_request_wrong_password_fails);
     RUN_TEST(test_handle_none_request_fails_without_auth);

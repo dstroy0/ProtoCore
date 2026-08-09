@@ -6002,6 +6002,12 @@ from halves and is slower than the width it decomposes into"
 #define SSH_MAX_AUTH_ATTEMPTS 6
 #endif
 
+// Minimum spacing between password-change attempts (RFC 4252 sec 8). A change runs the caller's
+// storage write, so a request inside this window is answered as a failure (busy) rather than run.
+#ifndef PC_SSH_PW_CHANGE_COOLDOWN_MS
+#define PC_SSH_PW_CHANGE_COOLDOWN_MS 60000u
+#endif
+
 /**
  * @brief Where the SSH RSA host private key is stored: the NVS namespace and the item in it.
  *

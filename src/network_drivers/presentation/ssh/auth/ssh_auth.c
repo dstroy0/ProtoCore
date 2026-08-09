@@ -18,6 +18,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"    // SSH_MSG_* constants
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[], SshPhase
 #include "network_drivers/tls/ssh_rsa.h"                              // pc_rsa_verify(), PC_RSA_KEY_BYTES
+#include "server/clock/clock.h" // pc_millis(): the password-change cooldown clock
 
 // ---------------------------------------------------------------------------
 // Application password callback
@@ -28,6 +29,11 @@
 typedef struct
 {
     SshPasswordCb pw_cb;
+    SshPasswordChangeCb pw_change_cb;
+    // When the last change started, server-wide: a reconnect does not clear it, so the cooldown
+    // bounds changes per box rather than per connection.
+    uint32_t pw_change_last_ms;
+    SshPwChange pw_change[MAX_SSH_CONNS]; ///< Per-slot flight state; OK/FAIL is what a poll drains.
     SshPubkeyCb pk_cb;
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
     // Per-slot keyboard-interactive exchange state: armed by a "keyboard-interactive" USERAUTH_REQUEST
@@ -48,17 +54,21 @@ void pc_ssh_auth_reset(uint8_t i)
     {
         return;
     }
+    s_auth.pw_change[i] = PC_SSH_PW_CHANGE_NONE; // the cooldown stamp survives: it is server-wide
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
     s_auth.ki[i].pending = PROTO_FALSE;
     pc_secure_wipe(s_auth.ki[i].user, sizeof(s_auth.ki[i].user));
-#else
-    (void)i;
 #endif
 }
 
 void pc_ssh_auth_set_password_cb(SshPasswordCb cb)
 {
     s_auth.pw_cb = cb;
+}
+
+void pc_ssh_auth_set_password_change_cb(SshPasswordChangeCb cb)
+{
+    s_auth.pw_change_cb = cb;
 }
 
 void pc_ssh_auth_set_pubkey_cb(SshPubkeyCb cb)
@@ -314,15 +324,14 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
         {
             return -1;
         }
-        // RFC 4252 sec 8: a TRUE change flag means old || new. This server does not perform password
-        // changes, so a change request is refused rather than authenticated on the old password with
-        // no change performed.
-        if (payload[off] != 0)
+        req->is_pw_change = payload[off] != 0; // RFC 4252 sec 8: TRUE means old || new
+        off++;
+        if (!read_string(payload, len, &off, req->password, sizeof(req->password)))
         {
             return -1;
         }
-        off++;
-        if (!read_string(payload, len, &off, req->password, sizeof(req->password)))
+        // A change request carries the new password too; the handler routes it to the change callback.
+        if (req->is_pw_change && !read_string(payload, len, &off, req->new_password, sizeof(req->new_password)))
         {
             return -1;
         }
@@ -636,13 +645,41 @@ int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, ui
     // ---- password method (RFC 4252 §8) ----
     // Password auth can be compiled out for publickey-only hardening.
 #if PC_SSH_ALLOW_PASSWORD
-    proto_bool ok = req.is_password && s_auth.pw_cb && s_auth.pw_cb(req.user, req.password);
+    // Password change (RFC 4252 sec 8): hand it to the start callback, which returns at once, and
+    // leave the reply for the poll that drains the reported outcome. A change still in flight, or one
+    // inside the cooldown, is refused now. The unsigned difference wraps with the millis clock.
+    if (req.is_password && req.is_pw_change)
+    {
+        uint32_t now = pc_millis();
+        uint32_t elapsed = now - s_auth.pw_change_last_ms;
+        if (s_auth.pw_change[i] == PC_SSH_PW_CHANGE_NONE && elapsed >= PC_SSH_PW_CHANGE_COOLDOWN_MS &&
+            s_auth.pw_change_cb != NULL)
+        {
+            s_auth.pw_change_last_ms = now;
+            s_auth.pw_change[i] = PC_SSH_PW_CHANGE_BUSY;
+            s_auth.pw_change_cb(i, req.user, req.password, req.new_password);
+            pc_secure_wipe(req.password, sizeof(req.password));
+            pc_secure_wipe(req.new_password, sizeof(req.new_password));
+            *out_len = 0; // the reply follows once the application reports
+            return 0;
+        }
+        pc_secure_wipe(req.password, sizeof(req.password));
+        pc_secure_wipe(req.new_password, sizeof(req.new_password));
+        return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
+    }
+
+    proto_bool ok = PROTO_FALSE;
+    if (req.is_password)
+    {
+        ok = s_auth.pw_cb != NULL && s_auth.pw_cb(req.user, req.password);
+    }
 #else
     proto_bool ok = PROTO_FALSE;
 #endif
 
-    // Wipe the password from the stack regardless of the outcome.
+    // Wipe both passwords from the stack regardless of the outcome.
     pc_secure_wipe(req.password, sizeof(req.password));
+    pc_secure_wipe(req.new_password, sizeof(req.new_password));
 
     if (ok)
     {
@@ -651,6 +688,39 @@ int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, ui
         return pc_ssh_auth_build_success(out, out_len, cap);
     }
     return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
+}
+
+void pc_ssh_auth_pw_change_report(uint8_t slot, proto_bool ok)
+{
+    if (slot >= MAX_SSH_CONNS || s_auth.pw_change[slot] != PC_SSH_PW_CHANGE_BUSY)
+    {
+        return;
+    }
+    if (ok)
+    {
+        s_auth.pw_change[slot] = PC_SSH_PW_CHANGE_OK;
+    }
+    else
+    {
+        s_auth.pw_change[slot] = PC_SSH_PW_CHANGE_FAIL;
+    }
+}
+
+SshPwChange pc_ssh_auth_pw_change_take(uint8_t i)
+{
+    if (i >= MAX_SSH_CONNS || s_auth.pw_change[i] == PC_SSH_PW_CHANGE_NONE ||
+        s_auth.pw_change[i] == PC_SSH_PW_CHANGE_BUSY)
+    {
+        return PC_SSH_PW_CHANGE_NONE;
+    }
+    SshPwChange r = s_auth.pw_change[i];
+    s_auth.pw_change[i] = PC_SSH_PW_CHANGE_NONE;
+    if (r == PC_SSH_PW_CHANGE_OK)
+    {
+        ssh_sess[i].authed = PROTO_TRUE;
+        ssh_sess[i].phase = SSH_PHASE_OPEN;
+    }
+    return r;
 }
 
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
