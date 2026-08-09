@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- mem.cpy stores a whole word, so the accumulator lost its length ([`87ab003`](https://github.com/dstroy0/ProtoCore/commit/87ab003b8c62b9d4c3130717978123c28587e715))
 - the key schedule leaked a persistent borrow per handshake ([`7aa25f1`](https://github.com/dstroy0/ProtoCore/commit/7aa25f1f35bc3e007b99389217d88d1f97d5e64e))
 - the key schedule leaked a persistent borrow per handshake ([`a8421f3`](https://github.com/dstroy0/ProtoCore/commit/a8421f3dfcbbb89d0c65b3b9d17b59bc85fd4ca0))
 - available() and read() step the open, so a polling caller advances its connect ([`deea2e7`](https://github.com/dstroy0/ProtoCore/commit/deea2e7fad2648557d3ed6fed2fd64a12f765b80))
@@ -23,6 +24,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`0ee64ef`](https://github.com/dstroy0/ProtoCore/commit/0ee64eff28b7476959cfc1452666960a0c1e8929))
 - update CHANGELOG.md [skip ci] ([`22f4982`](https://github.com/dstroy0/ProtoCore/commit/22f498281aa2fda923aa2588d9737805e73fe2e9))
 - update CHANGELOG.md [skip ci] ([`4200687`](https://github.com/dstroy0/ProtoCore/commit/4200687663b641b820da583ca3a62df2b7063a82))
 - update test report + coverage [skip ci] ([`08496d1`](https://github.com/dstroy0/ProtoCore/commit/08496d1c31dc1761d1c2abab314dc070cdf3e71e))
@@ -83,6 +85,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9f2f075`](https://github.com/dstroy0/ProtoCore/commit/9f2f0757f06a69136b35bf7b40c9d6b6872600de))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6460cf6`](https://github.com/dstroy0/ProtoCore/commit/6460cf6fdfc8b9dadaa2dafdab558e3dfa0572bc))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4be7e49`](https://github.com/dstroy0/ProtoCore/commit/4be7e49cdcbcbe87db836f55f5487e8981061ef3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cb7845d`](https://github.com/dstroy0/ProtoCore/commit/cb7845d706007dc622a78ed0f66ffc7cc5e92339))
