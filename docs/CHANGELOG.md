@@ -6,6 +6,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the scalar and the nonce do not outlive the signature ([`447c799`](https://github.com/dstroy0/ProtoCore/commit/447c799494b8e78a2759a00c35e6dd054285bd35))
+- the by-value transcript parameter aliased the caller's bytes ([`841841c`](https://github.com/dstroy0/ProtoCore/commit/841841c52fcdf25610c6aba19ff9e3aee21fbc18))
+- a live context cannot share the one-shot work buffer ([`66c2a02`](https://github.com/dstroy0/ProtoCore/commit/66c2a024a450cf6ca892ee91bea1c0b82ac4b8a1))
 - the seed borrow is checked before it is written through ([`5a31c45`](https://github.com/dstroy0/ProtoCore/commit/5a31c45ccc6ee32903e665c238dc879b62749e63))
 - the hash context is a view, so a struct copy aliases it ([`2f68757`](https://github.com/dstroy0/ProtoCore/commit/2f6875793e157deeaf8c60d287a8934cbbe33cb9))
 - the key schedule needs PC_TLS13_KS_BORROW, not PC_TLS13_KS_CAP ([`9b04dff`](https://github.com/dstroy0/ProtoCore/commit/9b04dffa4f04be0256d28adab0760db2a86ac01b))
@@ -111,6 +114,12 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+<<<<<<< Updated upstream
+=======
+- close F1/F2's overflow claim, the worker-stack floors are enforced ([`2d78464`](https://github.com/dstroy0/ProtoCore/commit/2d78464e80ad024580ea2a6c8960f5d4663fff21))
+- log the context-aliasing class and its three forms ([`c46e7d1`](https://github.com/dstroy0/ProtoCore/commit/c46e7d11f32ab197eadd12d6626333b85a79be32))
+- log F11's remaining half, where the buffer and the clamp move together ([`d87fe15`](https://github.com/dstroy0/ProtoCore/commit/d87fe15eb33e628f6b03aeed8da1e51df385313b))
+>>>>>>> Stashed changes
 - log F19, where crypto_opt.h prohibits what its own bench numbers reward ([`77a11be`](https://github.com/dstroy0/ProtoCore/commit/77a11be4592758156d29fb64d57459ff86e24e0e))
 - the context is a view, and a struct copy aliases it ([`ae20425`](https://github.com/dstroy0/ProtoCore/commit/ae204258e3561e56bd63ee9508bdc74a482d13d7))
 - log the null crypto_work class and the stale coaps AEAD test ([`1ab644b`](https://github.com/dstroy0/ProtoCore/commit/1ab644bc6ec064147dd9a9fdaefe2b49ba11f327))
