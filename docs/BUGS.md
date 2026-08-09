@@ -392,19 +392,20 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ## Telnet sends 22 bytes from a 19-character literal on every accept
 
-- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #15).
+- **Status:** FIXED 2026-08-09. Found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #15).
 - **Symptom:** `telnet.c:142` is `raw_send(slot, "PC Telnet ready\r\n> ", 22);`. The literal is 19
   characters, 20 bytes with its NUL. Two bytes past the end of the string constant are read and pushed
   onto the wire on every connection.
 - **Root cause:** a hand-counted length on a literal. Nothing recomputes it, and `raw_send` takes the
   count as given.
 - **Nothing can catch it:** `test_telnet.c:60-69` compares only the first 6 bytes of the greeting.
-- **Fix:** not written. `sizeof(lit) - 1` at the call site, and widen the test's compare to the whole
-  greeting so the length is pinned.
+- **Fix:** the call site was already `raw_send(slot, greet, sizeof(greet) - 1)` (19 bytes); the accept
+  test now pins the whole 25-byte output (negotiation + greeting) so a hand-counted over-read cannot
+  regress. Verified: `native_telnet`.
 
 ## The SSH userauth service name is parsed and never compared
 
-- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #3).
+- **Status:** FIXED 2026-08-09 (`ssh_auth.c` `pc_ssh_auth_parse_request`). Found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #3).
 - **Symptom:** `ssh_auth.c:279` reads the `service` field of `SSH_MSG_USERAUTH_REQUEST` into
   `req->service`, and that member appears nowhere else in the file. A request naming service `"bogus"`
   authenticates exactly as one naming `"ssh-connection"`.
@@ -412,8 +413,9 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   does not exist, authentication MUST NOT be accepted" - and it is also inside the signed blob, so the
   signature covers a value the server never checks. Parsing a field into a struct is not validating it.
 - **Nothing can catch it:** every test hardcodes `"ssh-connection"`.
-- **Fix:** not written. Compare against the one service this server offers and fail the request
-  otherwise, with a negative test for a foreign service name.
+- **Fix:** the parser rejects any service but `ssh-connection` (`str.eq`, the bounded compare), so a
+  foreign name fails the request (RFC 4252 sec 5). Negative test `test_parse_rejects_foreign_service`.
+  Verified: `native_ssh`, 265/265.
 
 ## HPACK prefix-integer decode wraps at `m == 28`
 
