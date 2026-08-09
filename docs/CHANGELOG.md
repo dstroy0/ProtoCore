@@ -46,6 +46,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`63c2e6e`](https://github.com/dstroy0/ProtoCore/commit/63c2e6eb0587b6de63d0bdcd90afca71ba0c17f7))
 - update CHANGELOG.md [skip ci] ([`2b2f80f`](https://github.com/dstroy0/ProtoCore/commit/2b2f80fca85ef3e179ad6596dbfdf82caa69c01e))
 - update CHANGELOG.md [skip ci] ([`9815002`](https://github.com/dstroy0/ProtoCore/commit/98150029e777d50a4b152141524381d768a2aabd))
 - update CHANGELOG.md [skip ci] ([`ddb385e`](https://github.com/dstroy0/ProtoCore/commit/ddb385ebc0f53d46659d109acec74e7fb6ba4424))
@@ -168,6 +169,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the frame engine takes a tagged value array, not an ellipsis ([`6d4f7d7`](https://github.com/dstroy0/ProtoCore/commit/6d4f7d737fe77933ad8f7a65c41be30ec3c2d067))
 - the six unprefixed exports take the pc_ prefix ([`ae289c7`](https://github.com/dstroy0/ProtoCore/commit/ae289c790b18ba0682ccf2661af9617ec1aee1a8))
 - a hash owns nothing, it works out of its caller's bytes ([`408298d`](https://github.com/dstroy0/ProtoCore/commit/408298d2769cc535c572ed871e2aefd46bb01bd7))
 - the SNTP client is the client on every target ([`0c8fa67`](https://github.com/dstroy0/ProtoCore/commit/0c8fa67dbda021566627859b3b22ebb69dd97407))
@@ -179,6 +181,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the frame callers pass a tagged value array ([`a1e8e7b`](https://github.com/dstroy0/ProtoCore/commit/a1e8e7b8360ae6d8ace296c9fdeb2a4133066235))
 - three envs link the secure pool now that ed25519 wipes ([`a8ed1e3`](https://github.com/dstroy0/ProtoCore/commit/a8ed1e36335498043ce6973a477317256fc5079d))
 - audit_log links arena.c and smb links chacha20.c ([`468b08b`](https://github.com/dstroy0/ProtoCore/commit/468b08b935112d47184a7b801b52e009c3c9efe1))
 - the crypto entry points take their working bytes from the caller ([`f7bc5d0`](https://github.com/dstroy0/ProtoCore/commit/f7bc5d0dcbe75407c47cfb637d230ef006c5afcd))
