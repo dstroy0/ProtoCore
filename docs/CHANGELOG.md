@@ -63,10 +63,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
-<<<<<<< Updated upstream
-=======
+- update CHANGELOG.md [skip ci] ([`ce0679a`](https://github.com/dstroy0/ProtoCore/commit/ce0679a0946d2e389f99111e75dcb581346f1293))
+- update CHANGELOG.md [skip ci] ([`fd12093`](https://github.com/dstroy0/ProtoCore/commit/fd12093b4d183fd326616dde6b996d6262e3a370))
 - update CHANGELOG.md [skip ci] ([`4d57ff2`](https://github.com/dstroy0/ProtoCore/commit/4d57ff2ba85428a90583d17e7f4aea43bc86773f))
->>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`72e261b`](https://github.com/dstroy0/ProtoCore/commit/72e261ba37e0a9fcda757783a133f4ce22dffab7))
 - update CHANGELOG.md [skip ci] ([`0771e68`](https://github.com/dstroy0/ProtoCore/commit/0771e68a52ae0b80f89fc07cf5533d98d523943a))
 - update CHANGELOG.md [skip ci] ([`0e8281d`](https://github.com/dstroy0/ProtoCore/commit/0e8281d602ff42110fc3d470078df4bd140d079e))
@@ -249,6 +248,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- a losing KEX guess is dropped and the real KEXDH_INIT still lands ([`1f3ae20`](https://github.com/dstroy0/ProtoCore/commit/1f3ae20aaebd0accbddcd7d9fc6f5bd104d69108))
 - the re-key fixture states that the first KEX already sent EXT_INFO ([`87dc1bc`](https://github.com/dstroy0/ProtoCore/commit/87dc1bc48cf80c7dddf4ace4214b030f2b12210a))
 - the comp suite builds the KDF inputs struct too ([`e6fc118`](https://github.com/dstroy0/ProtoCore/commit/e6fc1186f6ab18f567b60011aba2b42c5cc5a7b6))
 - build the KDF inputs struct at the call sites ([`0a09951`](https://github.com/dstroy0/ProtoCore/commit/0a09951cce0a1844069ce36f1eec6cdd78470e7c))
