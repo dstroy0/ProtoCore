@@ -1788,7 +1788,8 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
-        "+<mmgr/secure.c>"
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>"
       ],
       "tests": ["unit/security/test_audit_log"]
     },
@@ -2147,7 +2148,8 @@
         "+<network_drivers/session/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
-        "+<crypto/rng/rng.c>"
+        "+<crypto/rng/rng.c>",
+        "+<crypto/cipher/chacha20.c>"
       ],
       "tests": [
         "unit/smb/test_smb2",
