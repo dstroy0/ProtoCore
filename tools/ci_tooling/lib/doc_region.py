@@ -31,27 +31,14 @@ import os
 import re
 import sys
 
-# A directory is the repo root when it holds these. Both, because src/ alone also
-# matches a checkout of some other library vendored inside this one.
-ROOT_MARKERS = ("library.json", "src")
+from tools import findroot
 
 
 def repo_root(start=None):
-    """Walk up from `start` (default: this file) until the root markers appear.
-
-    Never counts dirname levels: a script that moves between directories keeps
-    resolving the same root, which is the whole point.
-    """
-    d = os.path.dirname(os.path.abspath(start or __file__))
-    while True:
-        if all(os.path.exists(os.path.join(d, m)) for m in ROOT_MARKERS):
-            return d
-        parent = os.path.dirname(d)
-        if parent == d:
-            raise SystemExit(
-                f"doc_region: no repo root above {start or __file__} " f"(looking for {' + '.join(ROOT_MARKERS)})"
-            )
-        d = parent
+    """The repo root. Delegates to tools.findroot so there is one implementation; `start` is
+    accepted for the old signature and ignored, since every repo file resolves to the same root."""
+    del start
+    return findroot.root()
 
 
 def tool_id(script_path):

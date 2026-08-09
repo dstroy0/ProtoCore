@@ -26,9 +26,12 @@ import re
 import sys
 from pathlib import Path
 
+from tools import findroot
 from tools.ci_tooling.lib import baseline as bl
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+# `.parent.parent.parent` counted to tools/, so SRC was tools/src - nonexistent, and the guard
+# scanned nothing and passed vacuously. findroot walks to the real root regardless of depth.
+ROOT = Path(findroot.root())
 SRC = ROOT / "src"
 
 # The linkage half of the rule is ratcheted, not absolute: it was never enforced, so the tree
@@ -119,9 +122,12 @@ def is_definition_line(line: str):
 
 
 def is_ctx_type(type_str: str) -> bool:
-    """True if the declared type is an owned-context type (`*_ctx` / `*Ctx`)."""
-    last_type = type_str.replace("static", "").strip().split()
-    return bool(last_type) and last_type[-1].rstrip("*&").endswith(("_ctx", "Ctx"))
+    """True if the declared type is an owned-context type (`*_ctx` / `*Ctx`), including a pointer
+    to one: a context whose storage is an mmgr borrow is the module's one owner held as
+    `static <Name>Ctx *`, so the pointer tokens are stripped before the last type token is read."""
+    toks = [t.rstrip("*&") for t in type_str.replace("static", "").split()]
+    toks = [t for t in toks if t]  # a bare `*` / `&` token is punctuation, not the type
+    return bool(toks) and toks[-1].endswith(("_ctx", "Ctx"))
 
 
 def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
