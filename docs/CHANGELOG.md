@@ -196,6 +196,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- close the KEX-guess finding ([`6a5f9d2`](https://github.com/dstroy0/ProtoCore/commit/6a5f9d2f4a8c5d9909196bcb8e2bf4645638ad31))
 - close the four ssh-transport-kex findings that are fixed ([`fc00a07`](https://github.com/dstroy0/ProtoCore/commit/fc00a076c272fe82c7dbe6bf37fed4527a9306b2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aadd3e7`](https://github.com/dstroy0/ProtoCore/commit/aadd3e762c0a76874265b9f1dc96906af0c0a964))
 - close the four ssh/telnet audit findings and the two unflagged SSH envs ([`b891c89`](https://github.com/dstroy0/ProtoCore/commit/b891c8970de67811dc4a7c1f346bbd748f9fdcaf))
@@ -233,6 +234,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- delete ssh_kexdh_build_reply, dead since build_kex_reply took over ([`1a2fd6d`](https://github.com/dstroy0/ProtoCore/commit/1a2fd6d47ba1d8e0883052b9178148c3ce9e4b67))
 - the KEX derivation inputs travel by reference, not twelve arguments ([`ff45f66`](https://github.com/dstroy0/ProtoCore/commit/ff45f66cc178ffcd490e2f1ed1d1b192c5d039d5))
 - single findroot for the repo root, replacing hand-rolled walks ([`4ed12a4`](https://github.com/dstroy0/ProtoCore/commit/4ed12a49f3416d63f84b09752d6c3a776835954c))
 - frame becomes protoframe, reached through a FrameNs like mem and str ([`8498ec4`](https://github.com/dstroy0/ProtoCore/commit/8498ec42841908a98ec5ff2f2df0bf23295d28cc))
