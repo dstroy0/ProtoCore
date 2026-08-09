@@ -163,6 +163,7 @@ void test_ecdsa_publickey_auth_succeeds_when_password_disabled(void)
 
     // A real client only has a signature to make once the first KEX has produced a session id.
     ssh_sess[0].session_id_len = 32;
+    ssh_sess[0].have_session_id = PROTO_TRUE;
     for (int k = 0; k < 32; k++)
     {
         ssh_sess[0].session_id[k] = (uint8_t)(k * 7 + 1);
