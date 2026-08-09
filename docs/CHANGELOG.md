@@ -61,6 +61,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`0e8281d`](https://github.com/dstroy0/ProtoCore/commit/0e8281d602ff42110fc3d470078df4bd140d079e))
 - update CHANGELOG.md [skip ci] ([`1913bc6`](https://github.com/dstroy0/ProtoCore/commit/1913bc6f980029689f8c330a2625647a3a5e200d))
 - update CHANGELOG.md [skip ci] ([`4333660`](https://github.com/dstroy0/ProtoCore/commit/4333660cfbafa6366cda67764ca4ede198f9c47b))
 - update CHANGELOG.md [skip ci] ([`ca86258`](https://github.com/dstroy0/ProtoCore/commit/ca86258767e12664071ad19ebf41629410ebbbe8))
@@ -239,6 +240,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- build the KDF inputs struct at the call sites ([`0a09951`](https://github.com/dstroy0/ProtoCore/commit/0a09951cce0a1844069ce36f1eec6cdd78470e7c))
 - cover the three RFC 4252/4254 MUSTs the audit found uncovered ([`2a1190d`](https://github.com/dstroy0/ProtoCore/commit/2a1190d074355a3e68d8d0f64e8ffc3cf8b03204))
 - the hardening ECDSA case models a completed KEX, so it sets have_session_id ([`d2751a3`](https://github.com/dstroy0/ProtoCore/commit/d2751a3b4bc6481d84bee2ef77e8ca3059c2c47b))
 - update the suites that pinned the four fixed behaviours ([`fbf033e`](https://github.com/dstroy0/ProtoCore/commit/fbf033e4bfccb0d43642af04d5f796d2c0021a8a))
