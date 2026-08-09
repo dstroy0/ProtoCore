@@ -11,6 +11,9 @@
 #include "mmgr/protostr.h"
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
+// Longest member name pc_json_find_member will scan for.
+#define JSON_KEY_MAX 256
+
 // ---------------------------------------------------------------------------
 // pc_json_writer
 // ---------------------------------------------------------------------------
@@ -373,8 +376,7 @@ static const char *json_find_value(const char *json, const char *key)
     }
     p++; // into the object
 
-#define PC_key_max 256 // member names the server looks up are short; bound the needle defensively
-    size_t keylen = strnlen(key, PC_key_max);
+    size_t keylen = strnlen(key, JSON_KEY_MAX);
     while (PROTO_TRUE)
     {
         p = skip_ws(p);

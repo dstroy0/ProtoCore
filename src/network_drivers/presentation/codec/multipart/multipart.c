@@ -9,6 +9,9 @@
 #include "multipart.h"
 #include "mmgr/protomem.h"
 
+// Longest parameter key the header scan will match ("name=", "filename=").
+#define MULTIPART_KEY_MAX 32
+
 // Length-bounded, binary-safe forward search for needle[0..nlen) within hay[0..hlen).
 // Unlike strstr, it does not stop at a NUL, so a body containing NUL bytes scans correctly.
 static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
@@ -37,8 +40,7 @@ static char *extract_quoted_param(char *src, const char *key)
     {
         return NULL;
     }
-#define PC_key_max 32 // param keys are short literals ("name=", "filename=")
-    p += strnlen(key, PC_key_max);
+    p += strnlen(key, MULTIPART_KEY_MAX);
     if (*p != '"')
     {
         return NULL;
