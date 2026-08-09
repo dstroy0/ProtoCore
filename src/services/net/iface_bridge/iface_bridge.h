@@ -54,7 +54,7 @@ typedef enum PROTO_ENUM_PACKED
 } BridgeMode;
 
 /// The transport a rule listens on (matches the value stored on the wire; kept generic to avoid a hard
-/// dependency on ConnProto here in the pure core).
+/// dependency on ProtoConn here in the pure core).
 typedef enum PROTO_ENUM_PACKED
 {
     BRIDGE_PROTO_TCP = 0,

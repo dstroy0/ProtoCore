@@ -6868,7 +6868,7 @@ typedef enum PROTO_ENUM_PACKED
     PROTO_NTRIP_CASTER = 9, ///< NTRIP caster (PC_ENABLE_NTRIP_CASTER): serves RTCM3 corrections to rovers.
     PROTO_MESH = 10, ///< Edge-cache sibling link (PC_ENABLE_EDGE_MESH): answers a peer's content-addressed query.
     PROTO_UDP = 11,  ///< A bound datagram port. The slot carries the peer per entry, not per slot.
-} ConnProto;
+} ProtoConn;
 
 /**
  * @brief What an interface is, and the filter that selects one.
@@ -6892,7 +6892,7 @@ typedef enum PROTO_ENUM_PACKED
 // Both of these are struct members (TcpConn::proto, TcpConn::iface, Listener::proto, and a route's
 // interface gate), so their width is per-slot BSS rather than a detail of the type. Pinned here
 // because the pool sizes in this file are what the footprint is computed from.
-static_assert(sizeof(ConnProto) == 1, "ConnProto must stay one byte: it is a per-slot struct member");
+static_assert(sizeof(ProtoConn) == 1, "ProtoConn must stay one byte: it is a per-slot struct member");
 static_assert(sizeof(pc_if_kind) == 1, "pc_if_kind must stay one byte: it is a per-slot struct member");
 
 // ---------------------------------------------------------------------------
@@ -7379,12 +7379,12 @@ static_assert(sizeof(pc_if_kind) == 1, "pc_if_kind must stay one byte: it is a p
 // them breaks conformance - so they stay in their feature file next to the code they bind.
 
 // -- Core: protocol dispatch + shared outbound transport (always built) --
-/** @brief Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. */
+/** @brief Size of the protocol-handler dispatch table; must exceed the largest ProtoConn id. */
 #ifndef PROTO_MAX_HANDLERS
 #define PROTO_MAX_HANDLERS 12
 #endif
-// proto_register / proto_get index this table by ConnProto id, so it must be wide enough for every id.
-static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must exceed the largest ConnProto id");
+// proto_register / proto_get index this table by ProtoConn id, so it must be wide enough for every id.
+static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must exceed the largest ProtoConn id");
 /** @brief Reverse-SSH tunnel: max concurrent forwarded-tcpip channels bridged at once. A relay that
  * forwards to a web UI opens one channel per inbound TCP connection, so this bounds concurrency. */
 #if PC_ENABLE_SSH_CLIENT

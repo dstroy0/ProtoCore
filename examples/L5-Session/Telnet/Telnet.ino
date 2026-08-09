@@ -5,7 +5,7 @@
  * @file Telnet.ino
  * @brief Line-oriented Telnet console (RFC 854) on port 23 (PC_ENABLE_TELNET).
  *
- * Opens a Telnet listener via listen(23, ConnProto::PROTO_TELNET). The server
+ * Opens a Telnet listener via listen(23, ProtoConn::PROTO_TELNET). The server
  * negotiates echo + character mode, edits the line for you (backspace works),
  * and delivers each completed line to the command callback; respond with
  * Telnet.print/println/printf.

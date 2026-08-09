@@ -93,7 +93,7 @@ typedef struct TcpConn
 
     uint8_t listener_id; ///< Index into listener_pool[]; set at accept time.
     uint8_t owner;       ///< Worker that owns this slot (round-robin at accept). Always 0 at N=1.
-    ConnProto proto;     ///< Application protocol for this connection.
+    ProtoConn proto;     ///< Application protocol for this connection.
     uint8_t
         proto_slot;   ///< Per-protocol session/pool index (0xFF = none): the SSH session, an MQTT/Modbus session, etc.
     pc_if_kind iface; ///< Interface this connection arrived on; set at accept time.

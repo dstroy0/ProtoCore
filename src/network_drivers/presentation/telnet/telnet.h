@@ -6,7 +6,7 @@
  * @brief Layer 6/7 - minimal RFC 854 Telnet server (PC_ENABLE_TELNET).
  *
  * A zero-heap line-oriented Telnet console dispatched from the session layer's
- * ConnProto::PROTO_TELNET arms (the same way SSH is dispatched to ssh_conn). On connect it
+ * ProtoConn::PROTO_TELNET arms (the same way SSH is dispatched to ssh_conn). On connect it
  * negotiates server-side echo + suppress-go-ahead (so the client runs in
  * character mode and the server draws the line), accumulates a line, echoes
  * keystrokes (with backspace handling), and hands each completed line to a
@@ -17,7 +17,7 @@
  *
  * Usage:
  * @code
- *   server.listen(23, ConnProto::PROTO_TELNET);     // open the Telnet port
+ *   server.listen(23, ProtoConn::PROTO_TELNET);     // open the Telnet port
  *   pc_telnet_on_command(my_cmd_handler);   // void(const char *line, uint8_t id)
  * @endcode
  */
@@ -41,7 +41,7 @@ struct ProtoHandler;
  * @brief The console an application drives, and the three arms the session layer turns.
  *
  * The first five are the application's; the three after them are called for a
- * ConnProto::PROTO_TELNET slot and are not an application's business.
+ * ProtoConn::PROTO_TELNET slot and are not an application's business.
  *
  * @var TelnetNs::on_command     register the per-line command handler
  * @var TelnetNs::print          text to every connected client, no trailing newline added

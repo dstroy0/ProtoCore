@@ -99,7 +99,7 @@ typedef struct
     RequestLogCb log_cb; ///< Per-request access-log hook; may be null.
 
     uint16_t listen_ports[MAX_LISTENERS];   ///< Ports registered via listen() / begin_http().
-    ConnProto listen_protos[MAX_LISTENERS]; ///< Protocol for each registered listener.
+    ProtoConn listen_protos[MAX_LISTENERS]; ///< Protocol for each registered listener.
     proto_bool listen_tls[MAX_LISTENERS];   ///< True for TLS listeners (listen_tls()).
     uint8_t listener_count;                 ///< Registered listeners.
 
@@ -157,7 +157,7 @@ void note_response(uint8_t slot_id, int code, int body_len)
     }
 }
 
-int32_t listen(uint16_t port, ConnProto proto)
+int32_t listen(uint16_t port, ProtoConn proto)
 {
     if (s_inst.listener_count >= MAX_LISTENERS)
     {

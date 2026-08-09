@@ -35,7 +35,7 @@
   "enum-name|src/protocore.h|enum type HttpMethod is not pc_snake_case",
   "enum-name|src/protocore.h|enum type MwResult is not pc_snake_case",
   "enum-name|src/protocore.h|enum type RouteType is not pc_snake_case",
-  "enum-name|src/protocore_config.h|enum type ConnProto is not pc_snake_case",
+  "enum-name|src/protocore_config.h|enum type ProtoConn is not pc_snake_case",
   "enum-name|src/server/signaling/hw_health.h|enum type HwCapVerdict is not pc_snake_case",
   "enum-name|src/server/signaling/hw_health.h|enum type HwGpioVerdict is not pc_snake_case",
   "enum-name|src/server/signaling/hw_health.h|enum type HwRailVerdict is not pc_snake_case",

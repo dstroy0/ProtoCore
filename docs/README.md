@@ -1589,7 +1589,7 @@ guards at compile time.
 | `PC_ZIGBEE_MAX_DATA` | `128` | Max ASH payload bytes (an EZSP frame; the ASH data field caps near 128). |
 | `PC_ZWAVE_MAX_DATA` | `64` | Reject a Z-Wave frame whose declared length exceeds this data cap (sanity). |
 | `PROTO_INDEX_BITS` | `32` | Bits in every offset, length and capacity the library declares (pc_idx). |
-| `PROTO_MAX_HANDLERS` | `12` | Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. |
+| `PROTO_MAX_HANDLERS` | `12` | Size of the protocol-handler dispatch table; must exceed the largest ProtoConn id. |
 | `QUERY_KEY_LEN` | `24` | Maximum query-parameter key length. |
 | `QUERY_VAL_LEN` | `48` | Maximum query-parameter value length. |
 | `RESP_HDR_BUF_SIZE` | `768` | Stack buffer for HTTP response header lines in send() / send_empty() / send_unauth() / serve_file(). |

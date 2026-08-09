@@ -766,7 +766,7 @@ void setup()
     pc_ssh_auth_set_password_cb(ssh_password_auth);
     pc_ssh_channel_set_data_cb(ssh_on_data);
 
-    server.listen(22, ConnProto::PROTO_SSH);
+    server.listen(22, ProtoConn::PROTO_SSH);
     int32_t rc = server.begin();
     Serial.printf("SSH BEGIN=%ld  (port 22, admin/s3cret)\n", (long)rc);
 #ifdef PC_SSH_BENCH

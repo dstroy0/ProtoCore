@@ -535,7 +535,7 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
 
 static pc_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool create);
 
-static int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, proto_bool tls)
+static int32_t listener_add(uint8_t idx, uint16_t port, ProtoConn proto, proto_bool tls)
 {
     if (idx >= MAX_LISTENERS)
     {
@@ -693,7 +693,7 @@ static proto_bool set_dscp(uint16_t port, uint8_t dscp)
 }
 #endif // PC_ENABLE_DIFFSERV
 
-static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ConnProto proto)
+static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ProtoConn proto)
 {
     if (idx >= MAX_LISTENERS)
     {

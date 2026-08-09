@@ -16,7 +16,7 @@
  *     client `HEL`, negotiate buffer sizes, emit an `ACK`.
  *
  * The codec + framing + handshake are pure and host-tested; pc_opcua_rx() is the
- * ConnProto::PROTO_OPCUA TCP data handler (ESP32) - `listen(4840, ConnProto::PROTO_OPCUA)` and a client
+ * ProtoConn::PROTO_OPCUA TCP data handler (ESP32) - `listen(4840, ProtoConn::PROTO_OPCUA)` and a client
  * gets through the handshake. Session and the Read service are later increments.
  * SecurityPolicy is None (no encryption) for now.
  *
@@ -381,7 +381,7 @@ size_t pc_opcua_build_read_response(const OpcUaReadRequest *req, const OpcUaVari
  */
 typedef proto_bool (*OpcUaReadHandler)(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
 
-/** @brief Register the Read resolver the ConnProto::PROTO_OPCUA server calls for each ReadRequest node. */
+/** @brief Register the Read resolver the ProtoConn::PROTO_OPCUA server calls for each ReadRequest node. */
 void pc_opcua_set_read_handler(OpcUaReadHandler fn);
 
 // ---------------------------------------------------------------------------
@@ -452,7 +452,7 @@ proto_bool pc_opcua_parse_browse(const uint8_t *msg, size_t len, OpcUaBrowseRequ
  */
 typedef int32_t (*OpcUaBrowseHandler)(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max);
 
-/** @brief Register the Browse resolver the ConnProto::PROTO_OPCUA server calls for each browsed node. */
+/** @brief Register the Browse resolver the ProtoConn::PROTO_OPCUA server calls for each browsed node. */
 void pc_opcua_set_browse_handler(OpcUaBrowseHandler fn);
 
 /**
@@ -493,7 +493,7 @@ size_t pc_opcua_build_get_endpoints_response(const OpcUaMsg *req, const OpcUaSer
 size_t pc_opcua_build_service_fault(const OpcUaMsg *req, uint32_t service_result, uint32_t seq, int64_t now_ft,
                                     uint8_t *out, size_t cap);
 
-/** @brief Set the endpoint URL the ConnProto::PROTO_OPCUA server advertises (GetEndpoints / CreateSession). */
+/** @brief Set the endpoint URL the ProtoConn::PROTO_OPCUA server advertises (GetEndpoints / CreateSession). */
 void pc_opcua_set_endpoint_url(const char *url);
 
 // ---------------------------------------------------------------------------
@@ -544,18 +544,18 @@ size_t pc_opcua_build_write_response(const OpcUaWriteRequest *req, const uint32_
  */
 typedef uint32_t (*OpcUaWriteHandler)(uint16_t ns, uint32_t id, uint32_t attribute, const OpcUaVariant *value);
 
-/** @brief Register the Write resolver the ConnProto::PROTO_OPCUA server calls for each WriteRequest node. */
+/** @brief Register the Write resolver the ProtoConn::PROTO_OPCUA server calls for each WriteRequest node. */
 void pc_opcua_set_write_handler(OpcUaWriteHandler fn);
 
 // ---------------------------------------------------------------------------
-// ESP32 TCP server (ConnProto::PROTO_OPCUA data handler)
+// ESP32 TCP server (ProtoConn::PROTO_OPCUA data handler)
 // ---------------------------------------------------------------------------
 
 /**
- * @brief ConnProto::PROTO_OPCUA data handler: handshake, SecureChannel, Session, Read.
+ * @brief ProtoConn::PROTO_OPCUA data handler: handshake, SecureChannel, Session, Read.
  *
  * Dispatched by the session layer for connections accepted on an OPC UA listener
- * (`listen(4840, ConnProto::PROTO_OPCUA)`). Drains framed messages from the slot's rx ring:
+ * (`listen(4840, ProtoConn::PROTO_OPCUA)`). Drains framed messages from the slot's rx ring:
  * `HEL` -> negotiated `ACK`, `OPN` -> OpenSecureChannelResponse (SecurityPolicy
  * None), `MSG` GetEndpoints/CreateSession/ActivateSession/Read/Write/Browse/
  * CloseSession -> their responses (Read/Write/Browse call the registered resolvers;

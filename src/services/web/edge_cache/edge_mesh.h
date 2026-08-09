@@ -7,7 +7,7 @@
  *        (PC_ENABLE_EDGE_MESH).
  *
  * Lets a fleet of edge nodes share one warm cache. On a full local miss a node queries its sibling peers
- * (over a plaintext ConnProto::PROTO_MESH TCP link) with a content-addressed request and pulls a fresh copy
+ * (over a plaintext ProtoConn::PROTO_MESH TCP link) with a content-addressed request and pulls a fresh copy
  * from whichever peer has it, instead of re-fetching the origin. Pull (read-through) only: no push, no
  * invalidation. The transfer carries the object plus its freshness/age, so a sibling-fresh object serves for
  * its remaining lifetime with zero origin contact (RFC 9111 age propagation).

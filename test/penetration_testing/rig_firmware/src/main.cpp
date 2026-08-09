@@ -2468,7 +2468,7 @@ void setup()
     opcua_set_write_handler(opcua_write);
     opcua_set_browse_handler(opcua_browse);
     opcua_set_endpoint_url("opc.tcp://192.168.1.29:4840");
-    server.listen(4840, ConnProto::PROTO_OPCUA);
+    server.listen(4840, ProtoConn::PROTO_OPCUA);
     Serial.println("OPCUA=tcp/4840");
 
     // Modbus TCP slave (Modbus Application Protocol) on TCP/502 - a small holding/input register model.
@@ -2504,7 +2504,7 @@ void setup()
         Serial.printf("SUNSPEC=modbus/502 base=%d regs=%u\n", SUNSPEC_BASE, (unsigned)(n / 2));
     }
 #endif
-    server.listen(502, ConnProto::PROTO_MODBUS);
+    server.listen(502, ProtoConn::PROTO_MODBUS);
     Serial.println("MODBUS=tcp/502");
 
     // NTP/SNTP server (RFC 5905 server mode) on UDP/123. Feed pc_time_now() a deterministic synthetic

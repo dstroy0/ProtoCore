@@ -34,7 +34,7 @@ Wiring is the edge-cache setup plus three calls:
 ```cpp
 pc_edge_cache_map("/cdn/", "http://192.168.1.60:8000"); // prefix -> origin
 pc_edge_cache_enable(server);                            // install the cache
-server.listen(MESH_PORT, ConnProto::PROTO_MESH);         // open the sibling port
+server.listen(MESH_PORT, ProtoConn::PROTO_MESH);         // open the sibling port
 pc_edge_cache_mesh_serve();                              // answer peers from the local cache
 pc_edge_cache_add_peer("192.168.1.51", MESH_PORT);      // a sibling to ask on a miss
 ```
@@ -155,7 +155,7 @@ On a full local miss the cache does not go straight to the origin: it builds a
 content-addressed mesh request (the object's SHA-256 key + a snapshot of the request
 headers for `Vary` matching) and, as a **pre-origin phase of the same async fetch
 slot**, queries each peer in turn over a `pc_client` connection to its
-`ConnProto::PROTO_MESH` port. The peer's handler looks the key up in its **local**
+`ProtoConn::PROTO_MESH` port. The peer's handler looks the key up in its **local**
 store only, and if it finds a fresh variant it serializes the entry - the response
 metadata + body (the same codec the SD/L2 tier uses) plus a small trailer carrying
 the object's freshness and current age - and streams it back. The puller rehydrates

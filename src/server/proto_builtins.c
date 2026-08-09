@@ -28,7 +28,7 @@
 #endif
 
 // Registers @p h for @p proto when the module supplied one; modbus / opcua return NULL on host builds.
-static inline void register_if(ConnProto proto, const ProtoHandler *h)
+static inline void register_if(ProtoConn proto, const ProtoHandler *h)
 {
     if (h != NULL)
     {

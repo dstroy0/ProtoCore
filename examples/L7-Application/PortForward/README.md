@@ -20,7 +20,7 @@ board; it is really talking to the origin behind it.
 Wiring is two calls:
 
 ```cpp
-int32_t li = server.listen(8080, ConnProto::PROTO_RELAY);   // open the front port
+int32_t li = server.listen(8080, ProtoConn::PROTO_RELAY);   // open the front port
 pc_relay_publish((uint8_t)li, "192.168.1.60", 80); // bind it to the origin
 ```
 

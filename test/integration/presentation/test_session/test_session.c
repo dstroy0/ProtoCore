@@ -282,17 +282,17 @@ void test_multiple_events_drained_in_one_tick()
 // DISPATCH TABLE EDGE CASES - Session.proto->add() / Session.proto->get() / dispatch_event()
 // ====================================================================
 
-// An out-of-range ConnProto must not write past proto_handlers[] (proto_register)
+// An out-of-range ProtoConn must not write past proto_handlers[] (proto_register)
 // and must resolve to NULL rather than an out-of-bounds read (proto_get).
 void test_proto_register_out_of_range_is_nop()
 {
-    Session.proto->add((ConnProto)250, NULL);
+    Session.proto->add((ProtoConn)250, NULL);
     TEST_PASS();
 }
 
 void test_proto_get_out_of_range_returns_null()
 {
-    TEST_ASSERT_NULL(Session.proto->get((ConnProto)250));
+    TEST_ASSERT_NULL(Session.proto->get((ProtoConn)250));
 }
 
 // An event for a slot carrying PROTO_NONE (or any unregistered protocol)

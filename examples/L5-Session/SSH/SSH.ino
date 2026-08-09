@@ -6,7 +6,7 @@
  * @brief SSH server example: host key from NVS, auth callbacks, channel echo.
  *
  * Demonstrates the SSH server stack (RFC 4253/4252/4254):
- *   - Enabling SSH (PC_ENABLE_SSH) and listening on ConnProto::PROTO_SSH
+ *   - Enabling SSH (PC_ENABLE_SSH) and listening on ProtoConn::PROTO_SSH
  *   - Loading the RSA-2048 host key from NVS (see docs/SSH.md "Host key
  *     provisioning" - you must store a DER key under namespace "ssh_host_key",
  *     key "priv_der" once per device before this runs)
@@ -144,7 +144,7 @@ void setup()
 
 void loop()
 {
-    // Drives accept/rx for every listener, including the ConnProto::PROTO_SSH handshake,
+    // Drives accept/rx for every listener, including the ProtoConn::PROTO_SSH handshake,
     // user-auth, and channel data pumping.
     handle();
 }

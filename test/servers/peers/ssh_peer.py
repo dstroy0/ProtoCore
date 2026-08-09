@@ -3,7 +3,7 @@
 """SSH interop: complete a full SSH-2 session against the device's server with the reference
 implementation, OpenSSH, and prove the modern suite negotiates and data flows encrypted.
 
-Role: the *device is the server* (ConnProto::PROTO_SSH on :22). This peer drives the genuine OpenSSH
+Role: the *device is the server* (ProtoConn::PROTO_SSH on :22). This peer drives the genuine OpenSSH
 client (the authoritative SSH-2 stack) forced onto the device's preferred modern suite -
 curve25519-sha256 KEX, ssh-ed25519 host key, chacha20-poly1305@openssh.com record layer - then RFC
 4252 password auth and an RFC 4254 shell channel. It proves the device's binary-packet emit path

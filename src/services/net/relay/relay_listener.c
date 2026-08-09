@@ -3,7 +3,7 @@
 
 /**
  * @file relay_listener.c
- * @brief Server-side TCP relay / DNAT listener (see relay_listener.h). Bridges a ConnProto::PROTO_RELAY
+ * @brief Server-side TCP relay / DNAT listener (see relay_listener.h). Bridges a ProtoConn::PROTO_RELAY
  *        connection to an origin pc_client connection via the pure relay engine.
  */
 

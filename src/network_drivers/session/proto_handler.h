@@ -8,7 +8,7 @@
  * Every application protocol (HTTP, Telnet, SSH, and optional services such as
  * MQTT or Modbus) registers one ProtoHandler. The session layer (server_tick)
  * routes each connection event - and the main loop (handle())
- * polls each active slot - through this table by ConnProto, so a new protocol
+ * polls each active slot - through this table by ProtoConn, so a new protocol
  * plugs in by registering a handler instead of editing the dispatchers.
  *
  * All callbacks are nullable, run on the main-loop task, and take the affected
@@ -51,8 +51,8 @@ void proto_register_builtins(void);
 typedef struct
 {
     void (*register_builtins)(void);
-    void (*add)(ConnProto proto, const ProtoHandler *h);
-    const ProtoHandler *(*get)(ConnProto proto);
+    void (*add)(ProtoConn proto, const ProtoHandler *h);
+    const ProtoHandler *(*get)(ProtoConn proto);
 } ProtoRegistryNs;
 
 /** @brief The one symbol this module exports. ProtoHandler is the per-protocol record above. */

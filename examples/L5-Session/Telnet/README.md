@@ -17,7 +17,7 @@ write a tiny command interpreter, not a byte pump.
 `begin()` (which activates all listeners, here HTTP on 80 too):
 
 ```cpp
-server.listen(23, ConnProto::PROTO_TELNET); // open the Telnet port
+server.listen(23, ProtoConn::PROTO_TELNET); // open the Telnet port
 pc_telnet_on_command(on_command);   // register the line handler
 server.begin(80);                // also start HTTP; begin() activates every listener
 ```
@@ -105,7 +105,7 @@ void setup()
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.listen(23, ConnProto::PROTO_TELNET);         // open the Telnet port
+    server.listen(23, ProtoConn::PROTO_TELNET);         // open the Telnet port
     pc_telnet_on_command(on_command);
 
     server.begin(80);                        // also start HTTP (begin() activates all listeners)

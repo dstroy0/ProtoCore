@@ -3,7 +3,7 @@
 
 /**
  * @file pc_ntrip_caster_listener.h
- * @brief Server-side NTRIP caster listener (PC_ENABLE_NTRIP_CASTER): the ConnProto::PROTO_NTRIP_CASTER
+ * @brief Server-side NTRIP caster listener (PC_ENABLE_NTRIP_CASTER): the ProtoConn::PROTO_NTRIP_CASTER
  *        handler that answers rover requests and streams RTCM to subscribers.
  *
  * The pure codec (pc_ntrip_caster.h) parses requests and builds responses / the source table; this file owns
@@ -13,7 +13,7 @@
  * pushes RTCM as its survey/receiver produces it:
  *
  * @code
- *   int32_t li = server.listen(2101, ConnProto::PROTO_NTRIP_CASTER);   // 2101 = the IANA NTRIP port
+ *   int32_t li = server.listen(2101, ProtoConn::PROTO_NTRIP_CASTER);   // 2101 = the IANA NTRIP port
  *   NtripMount m = {};
  *   m.mountpoint = "BASE1";
  *   m.identifier = "Lab roof";
@@ -46,7 +46,7 @@
 /**
  * @brief Register a mountpoint the caster serves and install the handler (first call).
  *
- * @param listener_id  the id from `server.listen(port, ConnProto::PROTO_NTRIP_CASTER)`.
+ * @param listener_id  the id from `server.listen(port, ProtoConn::PROTO_NTRIP_CASTER)`.
  * @param mount        the source-table description; string fields are referenced (keep them alive).
  * @param auth_b64     optional base64 of "user:pass" a rover must present via HTTP Basic, or null for open
  *                     access. Referenced, not copied.
