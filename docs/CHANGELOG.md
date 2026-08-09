@@ -60,6 +60,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`eef2d16`](https://github.com/dstroy0/ProtoCore/commit/eef2d16b78208923ed4f9852f5ab3d30f9101b4a))
+- update CHANGELOG.md [skip ci] ([`a4c5352`](https://github.com/dstroy0/ProtoCore/commit/a4c53522c9cb5cfe8e9df3e4effccf6ced0da3b9))
 - update test report + coverage [skip ci] ([`506587e`](https://github.com/dstroy0/ProtoCore/commit/506587e6f1b6b043f908bc175130c35488a008e6))
 - update CHANGELOG.md [skip ci] ([`9b0034e`](https://github.com/dstroy0/ProtoCore/commit/9b0034e7206ecd8698693aa0a5ee79a59cec68c5))
 - update CHANGELOG.md [skip ci] ([`81f78c6`](https://github.com/dstroy0/ProtoCore/commit/81f78c637a12c6c05d2339637f4769ebcf2dbefc))
@@ -179,6 +181,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- close the four ssh/telnet audit findings and the two unflagged SSH envs ([`b891c89`](https://github.com/dstroy0/ProtoCore/commit/b891c8970de67811dc4a7c1f346bbd748f9fdcaf))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`35514d2`](https://github.com/dstroy0/ProtoCore/commit/35514d258f08d64421da21b03171c6549ca003d3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4acd507`](https://github.com/dstroy0/ProtoCore/commit/4acd507ce24a0b1efbd65c9bbefdc4b21dd6007c))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9edb342`](https://github.com/dstroy0/ProtoCore/commit/9edb34237eb711565746efc08c6028894ff4ccfe))
 - close #4 - telnet subnegotiation injection, host-verified ([`5920335`](https://github.com/dstroy0/ProtoCore/commit/5920335b32df35ce44e876652510d9ee28e3c377))
