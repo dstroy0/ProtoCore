@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- native_ssh_pqc builds the SSH transport, so it has to define PC_ENABLE_SSH ([`c7f4cc6`](https://github.com/dstroy0/ProtoCore/commit/c7f4cc66ccbfe933669f3c0e8d69e6506391b7a0))
 - native_ssh_hardened builds the SSH stack, so it has to define PC_ENABLE_SSH ([`ef6f509`](https://github.com/dstroy0/ProtoCore/commit/ef6f509e28d7dbde7fbf6fae894bb9b1181d5565))
 - four audit findings - session-id binding, request fields, CR NUL, channel guards ([`ac76ab6`](https://github.com/dstroy0/ProtoCore/commit/ac76ab603573e03c22f81bf4258241f811600c7e))
 - refuse a password-change request instead of authing on the old password ([`5091c67`](https://github.com/dstroy0/ProtoCore/commit/5091c6778898d2e25dac2a31bc525b10886d1c91))
@@ -59,6 +60,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`506587e`](https://github.com/dstroy0/ProtoCore/commit/506587e6f1b6b043f908bc175130c35488a008e6))
+- update CHANGELOG.md [skip ci] ([`9b0034e`](https://github.com/dstroy0/ProtoCore/commit/9b0034e7206ecd8698693aa0a5ee79a59cec68c5))
+- update CHANGELOG.md [skip ci] ([`81f78c6`](https://github.com/dstroy0/ProtoCore/commit/81f78c637a12c6c05d2339637f4769ebcf2dbefc))
 - update CHANGELOG.md [skip ci] ([`3588ef6`](https://github.com/dstroy0/ProtoCore/commit/3588ef66c4f429fac22edc5c32d66690da7b876f))
 - update CHANGELOG.md [skip ci] ([`1164e8f`](https://github.com/dstroy0/ProtoCore/commit/1164e8f46510006f741e7ac11d67ba1b4aa8c1e7))
 - update test report + coverage [skip ci] ([`9b42fa7`](https://github.com/dstroy0/ProtoCore/commit/9b42fa71b9c24e2dac41f6306c412cfa1d3d7a1b))
@@ -175,6 +179,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4acd507`](https://github.com/dstroy0/ProtoCore/commit/4acd507ce24a0b1efbd65c9bbefdc4b21dd6007c))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9edb342`](https://github.com/dstroy0/ProtoCore/commit/9edb34237eb711565746efc08c6028894ff4ccfe))
 - close #4 - telnet subnegotiation injection, host-verified ([`5920335`](https://github.com/dstroy0/ProtoCore/commit/5920335b32df35ce44e876652510d9ee28e3c377))
 - close #3 (userauth service name) and #15 (telnet greeting), both host-verified ([`f89c6c3`](https://github.com/dstroy0/ProtoCore/commit/f89c6c302907041dc0e7ab3bece81f502d3c4e7f))
@@ -221,10 +226,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
-<<<<<<< Updated upstream
-=======
 - the hardening ECDSA case models a completed KEX, so it sets have_session_id ([`d2751a3`](https://github.com/dstroy0/ProtoCore/commit/d2751a3b4bc6481d84bee2ef77e8ca3059c2c47b))
->>>>>>> Stashed changes
 - update the suites that pinned the four fixed behaviours ([`fbf033e`](https://github.com/dstroy0/ProtoCore/commit/fbf033e4bfccb0d43642af04d5f796d2c0021a8a))
 - migrate performance_benching to ESP-IDF CMake layout ([`cf89b00`](https://github.com/dstroy0/ProtoCore/commit/cf89b00a7bcc4d17b333ee83ef890c3638a01798))
 - statsd host bench scaffold + shared bench_project/host_bench ([`945dafb`](https://github.com/dstroy0/ProtoCore/commit/945dafbedf55a621f4f5f8464566386ae4986e27))
