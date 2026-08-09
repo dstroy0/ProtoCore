@@ -31,6 +31,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`f0d1ce1`](https://github.com/dstroy0/ProtoCore/commit/f0d1ce1611a6d0598e35a47d3fbe23f2bf78899c))
 - update CHANGELOG.md [skip ci] ([`039880c`](https://github.com/dstroy0/ProtoCore/commit/039880ca74f678159b70c7c01e4b80c64f828694))
 - update CHANGELOG.md [skip ci] ([`b8dcd79`](https://github.com/dstroy0/ProtoCore/commit/b8dcd791de7ee7f965bdd1eb02bf44083e7378e6))
 - update CHANGELOG.md [skip ci] ([`dc87eb4`](https://github.com/dstroy0/ProtoCore/commit/dc87eb4b4f789baf860f87c930fd8bf31c10818c))
@@ -107,6 +108,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- the context is a view, and a struct copy aliases it ([`ae20425`](https://github.com/dstroy0/ProtoCore/commit/ae204258e3561e56bd63ee9508bdc74a482d13d7))
 - log the null crypto_work class and the stale coaps AEAD test ([`1ab644b`](https://github.com/dstroy0/ProtoCore/commit/1ab644bc6ec064147dd9a9fdaefe2b49ba11f327))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e6d2e8c`](https://github.com/dstroy0/ProtoCore/commit/e6d2e8c25f0f1ded85499f82069c481b950ab014))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9f2f075`](https://github.com/dstroy0/ProtoCore/commit/9f2f0757f06a69136b35bf7b40c9d6b6872600de))
