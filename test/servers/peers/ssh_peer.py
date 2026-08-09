@@ -141,8 +141,10 @@ def run(args) -> bool:
                               kex=_KEX, hostkey=_HOSTKEY, cipher=c)  # fmt: skip
         for m in offer["mac"].split(","):
             if m:  # MACs only apply to the non-AEAD cipher
-                _matrix_check(pr, ssh, sshpass, args, f"mac {m}", None, kex=_KEX, hostkey=_HOSTKEY,
-                              cipher="aes256-ctr", mac=m)  # fmt: skip
+                # Read the MAC back like the loops above, or the entry passes on echo+auth alone.
+                # "compression:" is in the needle: hmac-sha2-256 prefixes hmac-sha2-256-etm@openssh.com.
+                _matrix_check(pr, ssh, sshpass, args, f"mac {m}", f"MAC: {m} compression:", kex=_KEX,
+                              hostkey=_HOSTKEY, cipher="aes256-ctr", mac=m)  # fmt: skip
 
     return pr.summary()
 
