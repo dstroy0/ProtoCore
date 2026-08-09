@@ -8,6 +8,27 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Audit F3 "a framing failure permanently wedges the channel" - OVERSTATED, the idle sweep reclaims it
+
+- **Status:** CLOSED 2026-08-09 as not the defect it was filed as. The leak is real; the consequence
+  is not. Filed so the severity is not acted on twice.
+- **The leak, confirmed:** `pc_ssh_conn_open_forwarded` (`ssh_conn.c:271`) releases the secure mark
+  and returns -1 when `ssh_pkt_send` fails, while the channel `pc_ssh_channel_open_forwarded`
+  allocated at `:263` stays `pending`. `chan_alloc` skips any slot with `open || pending`, so with
+  the default `PC_SSH_MAX_CHANNELS == 1` no further channel opens on that connection.
+- **The claim that does not hold:** F3 calls it "unrecoverable short of a reconnect", which reads as
+  a permanent wedge. The reconnect is automatic and bounded. `tcp_conn.c:443` arms the connection
+  pool's idle sweep at `CONN_TIMEOUT_MS` (5000 ms, `protocore_config.h:220`); `ssh_conn.c:133` binds
+  `.on_close = pc_ssh_conn_close`, so the sweep frees the SSH slot; and `pc_ssh_conn_accept` calls
+  `pc_ssh_channel_init` (`:357`), which clears the slot's channels for the next tenant. A wedged
+  channel therefore costs at most one idle timeout.
+- **What it actually is:** up to 5 s during which an `ssh -R` accept on that connection returns -1
+  and `rfwd_on_accept` closes the inbound socket. Worth tidying, not worth an API.
+- **Not fixed, deliberately:** releasing the slot on that path needs a counterpart to `chan_alloc`
+  that does not exist - the two handlers that clear `pending` both parse a peer message, and here
+  the CHANNEL_OPEN never reached the wire. Adding a public release for a 5 s self-healing window is
+  not worth the surface.
+
 ## The SSH plaintext draw is undeclared, and with zlib on the nest is over the arena
 
 - **Status:** OPEN, from the `network_drivers/presentation` resource audit (F8). The orphan term and
