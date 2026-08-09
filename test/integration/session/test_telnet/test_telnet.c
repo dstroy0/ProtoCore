@@ -62,10 +62,13 @@ void test_accept_negotiates_echo_and_sga()
 {
     Telnet.accept(0);
     const uint8_t *out = (const uint8_t *)tcp_captured();
-    TEST_ASSERT_TRUE(tcp_captured_len() >= 6);
-    // IAC WILL ECHO, IAC WILL SUPPRESS-GO-AHEAD
-    const uint8_t expect[6] = {IAC, WILL, OPT_ECHO, IAC, WILL, OPT_SGA};
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 6);
+    // IAC WILL ECHO, IAC WILL SUPPRESS-GO-AHEAD, then the greeting. Pinning the total length keeps a
+    // hand-counted send from reading past the greeting literal.
+    const uint8_t neg[6] = {IAC, WILL, OPT_ECHO, IAC, WILL, OPT_SGA};
+    const char greet[] = "PC Telnet ready\r\n> ";
+    TEST_ASSERT_EQUAL_UINT(sizeof(neg) + sizeof(greet) - 1, tcp_captured_len());
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(neg, out, sizeof(neg));
+    TEST_ASSERT_EQUAL_MEMORY(greet, out + sizeof(neg), sizeof(greet) - 1);
     TEST_ASSERT_EQUAL_UINT8(1, Telnet.client_count());
 }
 
