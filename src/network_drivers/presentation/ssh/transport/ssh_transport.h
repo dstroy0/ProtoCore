@@ -306,25 +306,6 @@ int ssh_kex_exchange_hash(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, c
 int ssh_kexdh_parse_init(const uint8_t *payload, size_t len, uint8_t e_be[256]);
 
 /**
- * @brief Build SSH_MSG_KEXDH_REPLY (RFC 4253 §8, RFC 8332 §3).
- *
- * Payload: byte(31) || string(K_S) || mpint(f) || string(signature), where the
- * signature blob is string("rsa-sha2-256") || string(@p sig).
- *
- * @param[in]  ks       Server host-key blob K_S.
- * @param[in]  ks_len   Length of @p ks.
- * @param[in]  f_be     Server DH public value f (256-byte big-endian).
- * @param[in]  sig      Raw RSA signature over the exchange hash H.
- * @param[in]  sig_len  Length of @p sig (256 for RSA-2048).
- * @param[out] out      Output payload buffer.
- * @param[out] out_len  Bytes written.
- * @param[in]  cap      Capacity of @p out.
- * @return 0 on success, -1 on overflow.
- */
-int ssh_kexdh_build_reply(const uint8_t *ks, size_t ks_len, const uint8_t *f_be, const uint8_t *sig, size_t sig_len,
-                          uint8_t *out, size_t *out_len, size_t cap);
-
-/**
  * @brief Handle KEXDH/ECDH_INIT (msg 30) end-to-end and produce the reply payload.
  *
  * Branches on the negotiated KEX method (ssh_sess[i].kex_alg): computes the shared
