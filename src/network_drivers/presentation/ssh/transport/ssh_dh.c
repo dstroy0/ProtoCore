@@ -103,6 +103,15 @@ static inline void hash_K(SshKexHash *h, const uint8_t K_be[256], proto_bool k_i
     }
 }
 
+// The caller's region, split by offset the way the slot's own borrow is: the exchange hash works out
+// of the front, the K1 || K2 chain accumulates behind it. A caller hands in PC_SSH_KDF_BORROW bytes.
+#define SSH_KDF_OFF_HASH 0u
+#define SSH_KDF_OFF_ACC (SSH_KDF_OFF_HASH + PC_SHA512_BORROW)
+
+// The library's own caller is the connection: every KDF here runs out of slot i's crypto_work.
+static_assert(PC_CRYPTO_BORROW_MAX >= PC_SSH_KDF_BORROW,
+              "a slot's crypto_work must cover the RFC 4253 sec 7.2 KDF: raise PC_CRYPTO_BORROW_MAX");
+
 // RFC 4253 §7.2 key derivation extended to any length, over the KEX method's hash (SHA-256 or
 // SHA-512 via SshKexHash / @p is512):
 //   K1 = HASH(K || H || X || session_id)   (X = label byte); Ki+1 = HASH(K || H || K1..Ki)
@@ -119,7 +128,7 @@ void ssh_kdf_derive(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, co
     {
         out_len = SSH_KDF_MAX; // bounded: every negotiated algorithm needs <= 64 B today
     }
-    uint8_t acc[SSH_KDF_MAX]; // K1 || K2 || ... accumulated for the chain hash
+    uint8_t *acc = work + SSH_KDF_OFF_ACC; // K1 || K2 || ... accumulated for the chain hash
     size_t have = 0;
 
     SshKexHash h;
@@ -147,7 +156,7 @@ void ssh_kdf_derive(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, co
         have += blk;
     }
     mem.cpy(out, acc, out_len);
-    pc_secure_wipe(acc, sizeof(acc)); // the cipher key, the IV and both MAC keys pass through here
+    pc_secure_wipe(acc, SSH_KDF_MAX); // the cipher key, the IV and both MAC keys pass through here
 }
 
 // The KEX values every direction's derivation shares, passed by pointer: this is the deepest call
@@ -271,6 +280,6 @@ void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_S
 {
     // First-KEX convenience: session id equals H; aes256-ctr + hmac-sha2-256 (pre-negotiation defaults),
     // SHA-256 exchange hash (h_len / sid_len / is512 default).
-    ssh_dh_derive_keys_sid(i, K_be, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
-                           PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_dh_derive_keys_sid(i, K_be, H, H, SSH_CIPHER_AES256CTR, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256,
+                           SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 }

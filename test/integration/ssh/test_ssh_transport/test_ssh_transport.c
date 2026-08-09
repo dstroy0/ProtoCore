@@ -1190,17 +1190,17 @@ void test_derive_keys_session_id_affects_output()
         sid[j] = (uint8_t)(0xF0 - j); // distinct from H
     }
 
-    ssh_dh_derive_keys_sid(0, K, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_dh_derive_keys_sid(0, K, H, H, SSH_CIPHER_AES256CTR, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                            PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     uint8_t a[32];
     memcpy(a, ssh_keys[0].mac_key_c2s, 32);
 
-    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256CTR, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                            PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(a, ssh_keys[0].mac_key_c2s, 32));
 
     // Deterministic: same inputs reproduce the same key.
-    ssh_dh_derive_keys_sid(0, K, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_dh_derive_keys_sid(0, K, H, H, SSH_CIPHER_AES256CTR, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                            PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_EQUAL_MEMORY(a, ssh_keys[0].mac_key_c2s, 32);
 }
@@ -1442,7 +1442,7 @@ void test_kdf_edge_paths_and_slot_guards()
 
     // Slot-index guards on the DH generate + the SID key derivation are no-ops / -1.
     TEST_ASSERT_EQUAL_INT(-1, ssh_dh_generate(MAX_SSH_CONNS));
-    ssh_dh_derive_keys_sid(MAX_SSH_CONNS, K0, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
+    ssh_dh_derive_keys_sid(MAX_SSH_CONNS, K0, H, H, SSH_CIPHER_AES256CTR, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
                            PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE); // must not crash
 
     // The chacha20-poly1305 branch derives two 512-bit keys and installs no separate MAC key.
