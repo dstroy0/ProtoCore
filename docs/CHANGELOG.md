@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the seed borrow is checked before it is written through ([`5a31c45`](https://github.com/dstroy0/ProtoCore/commit/5a31c45ccc6ee32903e665c238dc879b62749e63))
 - the hash context is a view, so a struct copy aliases it ([`2f68757`](https://github.com/dstroy0/ProtoCore/commit/2f6875793e157deeaf8c60d287a8934cbbe33cb9))
 - the key schedule needs PC_TLS13_KS_BORROW, not PC_TLS13_KS_CAP ([`9b04dff`](https://github.com/dstroy0/ProtoCore/commit/9b04dffa4f04be0256d28adab0760db2a86ac01b))
 - the slot's crypto bytes are bound before anything derives out of them ([`145c3b9`](https://github.com/dstroy0/ProtoCore/commit/145c3b925464ac5bbcd9d9f36415a6070aa11274))
@@ -31,6 +32,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`94d2743`](https://github.com/dstroy0/ProtoCore/commit/94d2743a6bb897e2c0ed5019a8b388144c4a0120))
 - update CHANGELOG.md [skip ci] ([`f0d1ce1`](https://github.com/dstroy0/ProtoCore/commit/f0d1ce1611a6d0598e35a47d3fbe23f2bf78899c))
 - update CHANGELOG.md [skip ci] ([`039880c`](https://github.com/dstroy0/ProtoCore/commit/039880ca74f678159b70c7c01e4b80c64f828694))
 - update CHANGELOG.md [skip ci] ([`b8dcd79`](https://github.com/dstroy0/ProtoCore/commit/b8dcd791de7ee7f965bdd1eb02bf44083e7378e6))
@@ -119,6 +121,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the six unprefixed exports take the pc_ prefix ([`ae289c7`](https://github.com/dstroy0/ProtoCore/commit/ae289c790b18ba0682ccf2661af9617ec1aee1a8))
 - a hash owns nothing, it works out of its caller's bytes ([`408298d`](https://github.com/dstroy0/ProtoCore/commit/408298d2769cc535c572ed871e2aefd46bb01bd7))
 - the SNTP client is the client on every target ([`0c8fa67`](https://github.com/dstroy0/ProtoCore/commit/0c8fa67dbda021566627859b3b22ebb69dd97407))
 - the mem Ns replaces every mem* call, and the TLS 1.3 key schedule borrows from the secure pool ([`fa4589c`](https://github.com/dstroy0/ProtoCore/commit/fa4589c7159324ea8bb1955663dd025d8afc6546))
