@@ -377,9 +377,13 @@ static int cand_match(const uint8_t *tok, uint32_t tlen, const AlgCand *cands, i
 // the rule is fixed to the client's order. Iterate the client's comma-separated list in order; for each
 // name take the first available server candidate that matches. (Steering to our preferred algorithm is
 // done by the order WE advertise in KEXINIT, which a client that has no strong preference will follow.)
-static proto_bool negotiate_alg(const uint8_t *client_list, uint32_t nlen, const AlgCand *cands, int n, int *out)
+// Returns the position of the winning entry in the client's list, or -1 when nothing matched. The
+// position is what RFC 4253 sec 7.1 calls the guess: a client guesses with its first-listed algorithm,
+// so a win at 0 means it guessed right.
+static int negotiate_alg(const uint8_t *client_list, uint32_t nlen, const AlgCand *cands, int n, int *out)
 {
     uint32_t start = 0;
+    int idx = 0;
     for (uint32_t i = 0; i <= nlen; i++)
     {
         if (i == nlen || client_list[i] == ',')
@@ -388,12 +392,13 @@ static proto_bool negotiate_alg(const uint8_t *client_list, uint32_t nlen, const
             if (c >= 0)
             {
                 *out = cands[c].tag;
-                return PROTO_TRUE;
+                return idx;
             }
             start = i + 1;
+            idx++;
         }
     }
-    return PROTO_FALSE;
+    return -1;
 }
 
 // ---------------------------------------------------------------------------
@@ -542,7 +547,7 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
 
 // Negotiate the key-exchange method from the client's kex_algorithms name-list, in our preference order
 // (PQC hybrid first when enabled; RSA group first when prefer_rsa). false = no mutual method.
-static proto_bool negotiate_kex(const uint8_t *list, uint32_t nlen, SshKexAlg *out)
+static int negotiate_kex(const uint8_t *list, uint32_t nlen, SshKexAlg *out)
 {
     AlgCand kc[6];
     int nk = 0;
@@ -567,17 +572,18 @@ static proto_bool negotiate_kex(const uint8_t *list, uint32_t nlen, SshKexAlg *o
         kc[nk++] = (AlgCand){KEX_DH, SSH_KEX_DH_GROUP14, PROTO_TRUE};
     }
     int tag = 0;
-    if (!negotiate_alg(list, nlen, kc, nk, &tag))
+    int idx = negotiate_alg(list, nlen, kc, nk, &tag);
+    if (idx < 0)
     {
-        return PROTO_FALSE;
+        return -1;
     }
     *out = tag;
-    return PROTO_TRUE;
+    return idx;
 }
 
 // Negotiate the host-key algorithm, restricted to keys we actually hold. rsa-sha2-512/256 share the one
 // RSA key (RFC 8332), ecdsa-sha2-nistp256 is a distinct P-256 key. false = no mutual algorithm.
-static proto_bool negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostkeyAlg *out)
+static int negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostkeyAlg *out)
 {
     const proto_bool rsa = hostkey_rsa_available();
     const proto_bool ed = pc_ssh_hostkey_ed25519_available();
@@ -598,12 +604,13 @@ static proto_bool negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostk
         hc[3] = (AlgCand){HOSTKEY_RSA_SHA256, SSH_HOSTKEY_RSA_SHA256, rsa};
     }
     int tag = 0;
-    if (!negotiate_alg(list, nlen, hc, 4, &tag))
+    int idx = negotiate_alg(list, nlen, hc, 4, &tag);
+    if (idx < 0)
     {
-        return PROTO_FALSE;
+        return -1;
     }
     *out = tag;
-    return PROTO_TRUE;
+    return idx;
 }
 
 int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
@@ -639,7 +646,8 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     }
     // RFC 8308: if the client offers ext-info-c we will send SSH_MSG_EXT_INFO.
     s->ext_info_c = namelist_contains(list, nlen, EXT_INFO_C);
-    if (!negotiate_kex(list, nlen, &s->kex_alg))
+    const int kex_idx = negotiate_kex(list, nlen, &s->kex_alg);
+    if (kex_idx < 0)
     {
         return -1; // no mutual KEX
     }
@@ -648,7 +656,8 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (!negotiate_hostkey(list, nlen, &s->hostkey_alg))
+    const int hostkey_idx = negotiate_hostkey(list, nlen, &s->hostkey_alg);
+    if (hostkey_idx < 0)
     {
         return -1; // no mutual host-key algorithm
     }
@@ -663,7 +672,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     }
     int c2s = 0;
     int s2c = 0;
-    if (!negotiate_alg(list, nlen, cc, 3, &c2s))
+    if (negotiate_alg(list, nlen, cc, 3, &c2s) < 0)
     {
         return -1;
     }
@@ -671,7 +680,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (!negotiate_alg(list, nlen, cc, 3, &s2c))
+    if (negotiate_alg(list, nlen, cc, 3, &s2c) < 0)
     {
         return -1;
     }
@@ -692,7 +701,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (need_mac_c2s && !negotiate_alg(list, nlen, mc, 4, &m_c2s))
+    if (need_mac_c2s && negotiate_alg(list, nlen, mc, 4, &m_c2s) < 0)
     {
         return -1;
     }
@@ -700,7 +709,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (need_mac_s2c && !negotiate_alg(list, nlen, mc, 4, &m_s2c))
+    if (need_mac_s2c && negotiate_alg(list, nlen, mc, 4, &m_s2c) < 0)
     {
         return -1;
     }
@@ -714,12 +723,12 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
                                   {"zlib", SSH_COMP_ZLIB, PROTO_TRUE},
                                   {"none", SSH_COMP_NONE, PROTO_TRUE}};
         int comp = 0;
-        if (!pc_rd_str(payload, len, &off, &list, &nlen) || !negotiate_alg(list, nlen, compc, 3, &comp))
+        if (!pc_rd_str(payload, len, &off, &list, &nlen) || negotiate_alg(list, nlen, compc, 3, &comp) < 0)
         {
             return -1;
         }
         ssh_comp_set_c2s(i, comp);
-        if (!pc_rd_str(payload, len, &off, &list, &nlen) || !negotiate_alg(list, nlen, compc, 3, &comp))
+        if (!pc_rd_str(payload, len, &off, &list, &nlen) || negotiate_alg(list, nlen, compc, 3, &comp) < 0)
         {
             return -1;
         }
@@ -736,6 +745,21 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
         return -1;
     }
 #endif
+
+    // Two language name-lists (RFC 4253 sec 7.1, ignored), then the guess flag and the reserved uint32.
+    if (!pc_rd_str(payload, len, &off, &list, &nlen) || !pc_rd_str(payload, len, &off, &list, &nlen))
+    {
+        return -1;
+    }
+    if (off + 1 + 4 > len)
+    {
+        return -1;
+    }
+    // "If the other party's guess was wrong, and this field was TRUE, the next packet MUST be silently
+    // ignored." A client guesses with its first-listed kex and host-key algorithm, so the guess held
+    // only when negotiation settled on both of those.
+    const proto_bool guessed = payload[off] != 0;
+    s->drop_guessed_kex_pkt = guessed && (kex_idx != 0 || hostkey_idx != 0);
 
     s->phase = SSH_PHASE_DH_INIT;
     return 0;

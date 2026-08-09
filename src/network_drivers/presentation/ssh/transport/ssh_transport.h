@@ -138,6 +138,8 @@ typedef struct
     uint8_t session_id_len;                  ///< session_id length (the first KEX's exchange-hash length).
     proto_bool have_session_id;              ///< True once the first KEX completes.
 
+    ///< The client guessed a KEX that lost negotiation (RFC 4253 sec 7.1): drop its guessed packet.
+    proto_bool drop_guessed_kex_pkt;
     proto_bool ext_info_c;    ///< Client advertised ext-info-c (RFC 8308): send EXT_INFO.
     proto_bool ext_info_sent; ///< EXT_INFO already went out; RFC 8308 sec 2.4 allows it once.
     proto_bool authed;        ///< True after successful user authentication.
