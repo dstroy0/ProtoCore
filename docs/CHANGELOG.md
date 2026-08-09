@@ -29,6 +29,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`f57b0dd`](https://github.com/dstroy0/ProtoCore/commit/f57b0dd51612d7a900ce7b5f563b7c454ab904fb))
 - update CHANGELOG.md [skip ci] ([`83c1305`](https://github.com/dstroy0/ProtoCore/commit/83c1305460c29bc21cb08dabe351bc02dee9f76e))
 - update CHANGELOG.md [skip ci] ([`8aca6ce`](https://github.com/dstroy0/ProtoCore/commit/8aca6ce5b4f7e52749b5734b3f84cc63944eb0f0))
 - update CHANGELOG.md [skip ci] ([`fc2faad`](https://github.com/dstroy0/ProtoCore/commit/fc2faadb8ea1640b419600b2c4d9c7206d025625))
@@ -119,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the crypto entry points take their working bytes from the caller ([`f7bc5d0`](https://github.com/dstroy0/ProtoCore/commit/f7bc5d0dcbe75407c47cfb637d230ef006c5afcd))
 - the envs that use the mem accessor link protomem.c ([`0459341`](https://github.com/dstroy0/ProtoCore/commit/0459341bc704982857d7be6d88d006bc9c3bfe9d))
 - the tail merges, so nothing past the span may move ([`fac7b0c`](https://github.com/dstroy0/ProtoCore/commit/fac7b0c131f3ea6e4023281201652e08c0d0c113))
 
