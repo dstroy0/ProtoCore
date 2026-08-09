@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-09 01:09:58
+**Generated:** 2026-08-09 04:51:57
 **Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 1921 passed, 220 failed - 1723s
+**Result:** ✅ 1996 passed - 0s
 
 ---
 
@@ -3689,6 +3689,99 @@ _Unit tests for the lane math (mmgr/swar.h)._
 |   1 | `test_has_zero_finds_any_lane` |   ✅   | Has zero finds any lane |
 |   2 | `test_zero_lane_from_mask`     |   ✅   | Zero lane from mask     |
 |   3 | `test_lane_compares`           |   ✅   | Every lane is >= '0'.   |
+
+</details>
+
+---
+
+## test_dtls_tls13 - native_dtls_tls13 - ✅ 14 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_TLS 1.3 messages the DTLS 1.3 handshake adds to pc_tls13_msg (RFC 8446 §4.1.4 / §4.4.1): the_
+
+|   # | Test                                    | Status | Description                                                                                         |
+| --: | :-------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
+|   1 | `test_parse_server_cert_type_malformed` |   ✅   | Empty extension body: there is not even a list-length byte.                                         |
+|   2 | `test_quic_encrypted_extensions_rpk`    |   ✅   | Quic encrypted extensions rpk                                                                       |
+|   3 | `test_parse_every_extension_arm`        |   ✅   | Parse every extension arm                                                                           |
+|   4 | `test_hrr_magic_symbol`                 |   ✅   | The builder and the RFC constant agree.                                                             |
+|   5 | `test_hrr_build_kat`                    |   ✅   | Hrr build kat                                                                                       |
+|   6 | `test_hrr_echoes_session_id`            |   ✅   | Hrr echoes session id                                                                               |
+|   7 | `test_message_hash`                     |   ✅   | Message hash                                                                                        |
+|   8 | `test_empty_encrypted_extensions`       |   ✅   | Empty encrypted extensions                                                                          |
+|   9 | `test_client_hello_cookie_parse`        |   ✅   | Assemble a minimal but well-formed ClientHello with exactly one extension (cookie).                 |
+|  10 | `test_ed25519_spki`                     |   ✅   | Ed25519 spki                                                                                        |
+|  11 | `test_build_certificate_rpk`            |   ✅   | Derive a real public key from a seed, so the test spans seed -> pubkey -> SPKI -> Certificate.      |
+|  12 | `test_ee_rpk_extension`                 |   ✅   | The empty (DTLS-profile) EncryptedExtensions with RPK selected carries server_certificate_type.     |
+|  13 | `test_parse_server_cert_type_rpk`       |   ✅   | server_certificate_type list [X509(0), RawPublicKey(2)]: the client accepts a RawPublicKey from us. |
+|  14 | `test_parse_server_cert_type_x509_only` |   ✅   | A list with only X509(0): no RPK offer.                                                             |
+
+</details>
+
+---
+
+## test_ssh_ed25519 - native_ssh_ed25519 - ✅ 19 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Known-answer tests for the modern SSH crypto suite (curve25519-sha256 KEX +_
+
+|   # | Test                                               | Status | Description                                 |
+| --: | :------------------------------------------------- | :----: | :------------------------------------------ |
+|   1 | `test_sha512_empty`                                |   ✅   | Sha512 empty                                |
+|   2 | `test_sha512_abc`                                  |   ✅   | Sha512 abc                                  |
+|   3 | `test_sha512_one_block_boundary`                   |   ✅   | Sha512 one block boundary                   |
+|   4 | `test_sha512_two_block_boundary`                   |   ✅   | Sha512 two block boundary                   |
+|   5 | `test_sha512_million_a_streaming`                  |   ✅   | Sha512 million a streaming                  |
+|   6 | `test_sha512_streaming_matches_oneshot`            |   ✅   | Sha512 streaming matches oneshot            |
+|   7 | `test_x25519_rfc7748_vector1`                      |   ✅   | X25519 rfc7748 vector1                      |
+|   8 | `test_x25519_rfc7748_vector2`                      |   ✅   | X25519 rfc7748 vector2                      |
+|   9 | `test_x25519_iterated_1`                           |   ✅   | X25519 iterated 1                           |
+|  10 | `test_x25519_iterated_1000`                        |   ✅   | X25519 iterated 1000                        |
+|  11 | `test_x25519_dh_agreement`                         |   ✅   | X25519 dh agreement                         |
+|  12 | `test_ed25519_vector_empty_msg`                    |   ✅   | Ed25519 vector empty msg                    |
+|  13 | `test_ed25519_vector_rfc8032_test2`                |   ✅   | Ed25519 vector rfc8032 test2                |
+|  14 | `test_ed25519_vector_zero_seed`                    |   ✅   | Ed25519 vector zero seed                    |
+|  15 | `test_ed25519_verify_rejects_tampering`            |   ✅   | Ed25519 verify rejects tampering            |
+|  16 | `test_ed25519_verify_rejects_noncanonical_s`       |   ✅   | Ed25519 verify rejects noncanonical s       |
+|  17 | `test_ed25519_verify_rejects_invalid_pubkey_point` |   ✅   | Ed25519 verify rejects invalid pubkey point |
+|  18 | `test_ed25519_roundtrip_long`                      |   ✅   | Ed25519 roundtrip long                      |
+|  19 | `test_gf_mul_s16_model_matches_scalar`             |   ✅   | Gf mul s16 model matches scalar             |
+
+</details>
+
+---
+
+## test_tls13_msg - native_tls13_msg - ✅ 18 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Unit tests for the TLS 1.3 handshake messages (network_drivers/presentation/http/http3/pc_tls13_msg;_
+
+|   # | Test                                           | Status | Description                                                                                     |
+| --: | :--------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------- |
+|   1 | `test_tls13_extension_and_truncation_coverage` |   ✅   | Body ends right after cipher_suites -> r_u8(compression_methods length) truncates.              |
+|   2 | `test_tls13_dtls_client_hello_shape`           |   ✅   | supported_versions offering DTLS 1.3 (0xFEFC).                                                  |
+|   3 | `test_tls13_client_hello_field_truncations`    |   ✅   | No bytes at all: even the handshake type cannot be read.                                        |
+|   4 | `test_tls13_extension_body_guards`             |   ✅   | supported_groups: declared list length (255) exceeds the extension body.                        |
+|   5 | `test_tls13_builders_dtls_codepoints`          |   ✅   | Tls13 builders dtls codepoints                                                                  |
+|   6 | `test_tls13_builder_overflow_guards`           |   ✅   | cookie_len + 2 must fit a uint16: refused before anything is written.                           |
+|   7 | `test_tls13_cert_verify_client_context`        |   ✅   | Tls13 cert verify client context                                                                |
+|   8 | `test_tls13_malformed_extensions`              |   ✅   | Tls13 malformed extensions                                                                      |
+|   9 | `test_tls13_parse_guards`                      |   ✅   | Tls13 parse guards                                                                              |
+|  10 | `test_tls13_builder_cap_guards`                |   ✅   | Tls13 builder cap guards                                                                        |
+|  11 | `test_parse_client_hello`                      |   ✅   | Parse client hello                                                                              |
+|  12 | `test_build_server_hello`                      |   ✅   | Build server hello                                                                              |
+|  13 | `test_tls13_build_server_hello_conn_id`        |   ✅   | Tls13 build server hello conn id                                                                |
+|  14 | `test_build_certificate`                       |   ✅   | Reconstruct the DER cert from the expected message: strip the 11-byte prefix and 2-byte suffix. |
+|  15 | `test_build_finished`                          |   ✅   | Build finished                                                                                  |
+|  16 | `test_encrypted_extensions`                    |   ✅   | Encrypted extensions                                                                            |
+|  17 | `test_cert_verify_content`                     |   ✅   | Cert verify content                                                                             |
+|  18 | `test_cert_verify_sign_roundtrip`              |   ✅   | Cert verify sign roundtrip                                                                      |
 
 </details>
 
