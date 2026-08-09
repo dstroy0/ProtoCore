@@ -155,10 +155,6 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
         return -1;
     }
     SshPacketState *s = &ssh_pkt[i];
-    if (s->tx_ready)
-    {
-        return -1; // one packet in flight per slot: the worker has not drained the last one
-    }
 
     // The wire lives in the secure pool because the payload it carries is the session's own
     // plaintext until the cipher runs over it.
@@ -166,14 +162,27 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
+
+    // A packet already framed and not yet drained: append this one after it. The slot holds two
+    // (SSH_WIRE_CAP), so a server pair framed back-to-back leaves on the same drain rather than the
+    // second being dropped. The fill point is tx_len; ssh_pkt_send frames from there and bumps the
+    // send sequence, so the two packets carry consecutive seq numbers.
+    size_t off = 0;
+    if (s->tx_ready)
+    {
+        off = s->tx_len;
+    }
     size_t wlen = 0;
-    if (ssh_pkt_send(i, payload, len, s->tx_wire, &wlen, SSH_WIRE_CAP) != 0)
+    if (ssh_pkt_send(i, payload, len, s->tx_wire + off, &wlen, SSH_WIRE_CAP - off) != 0)
     {
         return -1;
     }
-    s->tx_len = wlen;
-    s->tx_off = 0;
-    s->tx_ready = PROTO_TRUE;
+    s->tx_len = off + wlen;
+    if (!s->tx_ready)
+    {
+        s->tx_off = 0;
+        s->tx_ready = PROTO_TRUE;
+    }
     return 0;
 }
 
