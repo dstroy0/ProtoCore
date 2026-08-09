@@ -37,13 +37,8 @@ void tearDown(void)
 }
 
 // n rounded up to the word the span's last byte falls in.
-static size_t lane_end(size_t n)
-{
-    return (n + (size_t)PROTO_RAW_WORD - 1u) & ~((size_t)PROTO_RAW_WORD - 1u);
-}
-
-// The bytes the span asked for match, the lanes to the end of that word are zero, and nothing past
-// that word moved.
+// The bytes the span asked for match, and not one byte past it moved. The partial word at the end is
+// merged, not overwritten, so a destination may be an offset into something that owns those lanes.
 static void assert_span_and_padding(const uint8_t *want, size_t n)
 {
     char msg[80];
@@ -55,19 +50,11 @@ static void assert_span_and_padding(const uint8_t *want, size_t n)
             TEST_FAIL_MESSAGE(msg);
         }
     }
-    for (size_t i = n; i < lane_end(n); i++)
-    {
-        if (s_dst[i] != 0u)
-        {
-            (void)snprintf(msg, sizeof(msg), "pad byte %u not zeroed (n=%u)", (unsigned)i, (unsigned)n);
-            TEST_FAIL_MESSAGE(msg);
-        }
-    }
-    for (size_t i = lane_end(n); i < sizeof(s_dst); i++)
+    for (size_t i = n; i < sizeof(s_dst); i++)
     {
         if (s_dst[i] != POISON)
         {
-            (void)snprintf(msg, sizeof(msg), "wrote past the lane at %u (n=%u)", (unsigned)i, (unsigned)n);
+            (void)snprintf(msg, sizeof(msg), "wrote past the span at %u (n=%u)", (unsigned)i, (unsigned)n);
             TEST_FAIL_MESSAGE(msg);
         }
     }
