@@ -20,7 +20,7 @@
  *                                   {PC_FK_LIT, 0, 1, "\n"}, PC_END};
  *   void on_cmd(const char *line, uint8_t client) {
  *     char out[64];
- *     pc_frame_build(out, sizeof(out), SAID, line);
+ *     pc_frame_build(out, sizeof(out), SAID, (const pc_fval[]){PC_VSTR(line)}, 1);
  *     pc_web_terminal_print(out);
  *   }
  *   void setup() {

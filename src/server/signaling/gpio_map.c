@@ -38,6 +38,9 @@ const char *pc_gpio_dir_name(pc_gpio_dir dir)
 
 // The document is three frames: the object that opens the array, one object per pin, and the
 // close. The separating comma is the pin frame's first field so a pin is one append either way.
+// The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
+static const char *const PC_JSON_SEP[2] = {"", ","};
+
 static const pc_field GPIO_OPEN[] = {{PC_FK_LIT, 0, 9, "{\"pins\":["}, PC_END};
 static const pc_field GPIO_PIN[] = {
     PC_STR,                           // "," from the second pin on
@@ -65,20 +68,23 @@ int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t
     {
         return 0;
     }
-    if (pc_frame_append(out, cap, GPIO_OPEN) == 0)
+    if (pc_frame_append(out, cap, GPIO_OPEN, NULL, 0) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         const pc_gpio_pin *p = &pins[i];
-        if (pc_frame_append(out, cap, GPIO_PIN, i ? "," : "", (uint32_t)p->pin, p->label ? p->label : "",
-                            pc_gpio_dir_name(p->dir), p->level ? 1u : 0u) == 0)
+        if (pc_frame_append(out, cap, GPIO_PIN,
+                            (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VU32((uint32_t)p->pin),
+                                              PC_VJSON(p->label), PC_VJSON(pc_gpio_dir_name(p->dir)),
+                                              PC_VU32((uint32_t)(!!p->level))},
+                            5) == 0)
         {
             return 0;
         }
     }
-    return (int32_t)pc_frame_append(out, cap, GPIO_CLOSE);
+    return (int32_t)pc_frame_append(out, cap, GPIO_CLOSE, NULL, 0);
 }
 
 // Read the decimal integer that follows "name=" in a form-encoded body. Returns
@@ -183,9 +189,12 @@ void pc_gpio_read(pc_gpio_pin *pins, uint8_t count)
     }
 }
 
+// level indexes this; !!level is 0 or 1, so the selection is a load rather than a branch.
+static const uint8_t PC_GPIO_LEVEL[2] = {PC_GPIO_LOW, PC_GPIO_HIGH};
+
 void pc_gpio_write(uint8_t pin, uint8_t level)
 {
-    pc_platform_gpio_write((uint8_t)(pin), level ? PC_GPIO_HIGH : PC_GPIO_LOW);
+    pc_platform_gpio_write((uint8_t)(pin), PC_GPIO_LEVEL[!!level]);
 }
 
 #else // no pin seam

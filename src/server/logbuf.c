@@ -66,7 +66,8 @@ void pc_log(uint8_t level, const char *msg)
         s_log.head = (uint16_t)((s_log.head + 1) % PC_LOG_LINES);
     }
     // A NULL msg renders empty and an over-long line empties the slot, both from the frame contract.
-    pc_frame_build(s_log.lines[slot], PC_LOG_LINE_LEN, LOG_LINE, level_letter(level), msg);
+    pc_frame_build(s_log.lines[slot], PC_LOG_LINE_LEN, LOG_LINE,
+                   (const pc_fval[]){PC_VCH(level_letter(level)), PC_VSTR(msg)}, 2);
     s_log.level[slot] = level;
 
     if (s_log.trap && level >= s_log.trap_threshold)

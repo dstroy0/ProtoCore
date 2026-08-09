@@ -60,7 +60,7 @@ struct ProtoHandler;
  * @code
  *   static const pc_field HEAP[] = {{PC_FK_LIT, 0, 11, "free heap: "}, PC_U32,
  *                                   {PC_FK_LIT, 0, 8, " bytes\r\n"}, PC_END};
- *   Telnet.frame(HEAP, ESP.getFreeHeap());
+ *   Telnet.frame(HEAP, (const pc_fval[]){PC_VU32(ESP.getFreeHeap())}, 1);
  * @endcode
  */
 typedef struct
@@ -68,7 +68,7 @@ typedef struct
     void (*on_command)(TelnetCommandCb cb);
     void (*print)(const char *s);
     void (*println)(const char *s);
-    void (*frame)(const pc_field *spec, ...);
+    void (*frame)(const pc_field *spec, const pc_fval *v, size_t nv);
     uint8_t (*client_count)(void);
 
     void (*accept)(uint8_t slot);

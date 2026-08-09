@@ -118,7 +118,7 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
         return;
     }
     char msg[48];
-    pc_frame_build(msg, sizeof(msg), UPLOAD_OK, (uint32_t)s_upl.written);
+    pc_frame_build(msg, sizeof(msg), UPLOAD_OK, (const pc_fval[]){PC_VU32((uint32_t)s_upl.written)}, 1);
     send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, msg);
 }
 

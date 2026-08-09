@@ -31,7 +31,7 @@ void pc_log_set_sink(pc_log_sink_fn cb)
     s_log.sink = cb;
 }
 
-void pc_log_frame(uint8_t level, const pc_field *spec, ...)
+void pc_log_frame(uint8_t level, const pc_field *spec, const pc_fval *v, size_t nv)
 {
     if (!spec)
     {
@@ -43,10 +43,7 @@ void pc_log_frame(uint8_t level, const pc_field *spec, ...)
     // states its literals' lengths and bounds its string fields, so whether a message fits is
     // settled when the frame is declared. Nothing here decides it from the data.
     char line[PC_LOG_LINE_LEN];
-    va_list ap;
-    va_start(ap, spec);
-    (void)pc_frame_vbuild(line, sizeof(line), spec, ap);
-    va_end(ap);
+    (void)pc_frame_build(line, sizeof(line), spec, v, nv);
 
 #if PC_ENABLE_LOGBUF
     pc_log(level, line);
