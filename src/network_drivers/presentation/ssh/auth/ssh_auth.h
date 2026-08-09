@@ -71,6 +71,14 @@ typedef proto_bool (*SshPasswordCb)(const char *user, const char *password);
 void pc_ssh_auth_set_password_cb(SshPasswordCb cb);
 
 /**
+ * @brief Drop slot @p i's half-finished authentication state and wipe its username.
+ *
+ * A keyboard-interactive exchange is armed by the USERAUTH_REQUEST and consumed by the matching
+ * INFO_RESPONSE. A connection that leaves between the two ends here.
+ */
+void pc_ssh_auth_reset(uint8_t i);
+
+/**
  * @brief Application callback that decides whether a public key is authorized
  *        for @p user. @p blob is the "ssh-rsa" public-key blob.
  * @return true if the key may authenticate this user.

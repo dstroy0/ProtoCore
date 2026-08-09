@@ -41,6 +41,20 @@ typedef struct
 } SshAuthCtx;
 static SshAuthCtx s_auth;
 
+void pc_ssh_auth_reset(uint8_t i)
+{
+    if (i >= MAX_SSH_CONNS)
+    {
+        return;
+    }
+#if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
+    s_auth.ki[i].pending = PROTO_FALSE;
+    pc_secure_wipe(s_auth.ki[i].user, sizeof(s_auth.ki[i].user));
+#else
+    (void)i;
+#endif
+}
+
 void pc_ssh_auth_set_password_cb(SshPasswordCb cb)
 {
     s_auth.pw_cb = cb;
