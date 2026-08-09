@@ -72,9 +72,15 @@ typedef enum PROTO_ENUM_PACKED
 typedef struct
 {
     QuicTlsConfig cfg;
-    pc_sha256_ctx transcript;          ///< running Transcript-Hash over the handshake messages
-    Tls13KeySchedule ks;               ///< TLS 1.3 key schedule, over @ref ks_store
-    uint8_t ks_store[PC_TLS13_KS_CAP]; ///< the schedule's terms; lives and dies with this connection
+    pc_sha256_ctx transcript;             ///< running Transcript-Hash over the handshake messages
+    Tls13KeySchedule ks;                  ///< TLS 1.3 key schedule, over @ref ks_store
+    uint8_t ks_store[PC_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
+    // The transcript hash and the one-off hashes taken beside it work out of these. Live and die with
+    // this connection, so no hash on the handshake path touches a pool.
+    uint8_t hash_work[PC_SHA256_BORROW];
+    uint8_t hash_work2[PC_SHA256_BORROW];
+    uint8_t sign_work[PC_SHA512_BORROW];    ///< the CertificateVerify signature's SHA-512
+    uint8_t keys_work[PC_QUIC_KEYS_BORROW]; ///< the packet-key expansion at each encryption level
 
     QtlsState state;
     uint8_t alert; ///< TLS alert code (RFC 8446 sec 6) when state == QTLS_FAILED

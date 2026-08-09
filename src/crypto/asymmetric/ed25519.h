@@ -32,20 +32,20 @@ PROTO_BEGIN_DECLS
 #define PC_ED25519_SIG_LEN 64
 
 /** @brief Derive the 32-byte public key A from a 32-byte @p seed. */
-void pc_ed25519_pubkey(uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t seed[PC_ED25519_SEED_LEN]);
+void pc_ed25519_pubkey(uint8_t *work, uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t seed[PC_ED25519_SEED_LEN]);
 
 /**
  * @brief Deterministically sign @p mlen bytes of @p msg with @p seed (RFC 8032 §5.1.6).
  * @param sig  Output R || S, PC_ED25519_SIG_LEN bytes.
  */
-void pc_ed25519_sign(uint8_t sig[PC_ED25519_SIG_LEN], const uint8_t *msg, size_t mlen,
+void pc_ed25519_sign(uint8_t *work, uint8_t sig[PC_ED25519_SIG_LEN], const uint8_t *msg, size_t mlen,
                      const uint8_t seed[PC_ED25519_SEED_LEN]);
 
 /**
  * @brief Verify an Ed25519 signature (RFC 8032 §5.1.7).
  * @return true if @p sig is a valid signature of @p msg under public key @p pub.
  */
-proto_bool pc_ed25519_verify(const uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t *msg, size_t mlen,
+proto_bool pc_ed25519_verify(uint8_t *work, const uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t *msg, size_t mlen,
                              const uint8_t sig[PC_ED25519_SIG_LEN]);
 
 PROTO_END_DECLS

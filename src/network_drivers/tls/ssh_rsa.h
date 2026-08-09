@@ -96,7 +96,7 @@ int pc_ssh_rsa_load_pubkey(void);
  * @brief Sign @p msg with the RSA host key (PKCS#1 v1.5, rsa-sha2-256/512).
  * @return 0 on success, -1 on failure. @p sig receives PC_RSA_SIG_BYTES big-endian.
  */
-int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES]);
+int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES]);
 
 /**
  * @brief Encode ssh_host_pubkey as the RFC 4253 §6.6 "ssh-rsa" public-key blob.

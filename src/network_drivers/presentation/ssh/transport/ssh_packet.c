@@ -7,21 +7,20 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
-#include "mmgr/protomem.h"
 #include "crypto/aead/aesgcm.h"
 #include "crypto/aead/chachapoly.h"
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512.h"
+#include "mmgr/protomem.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #if PC_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #include "network_drivers/presentation/ssh/transport/ssh_zlib.h" // ssh_deflate_bound
 #endif
+#include "crypto/rng/rng.h" // pc_rand_fill: the padding bytes
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
-
-#include <Arduino.h> // pc_platform_rand_fill()
 
 // ---------------------------------------------------------------------------
 // BSS allocation
@@ -60,17 +59,44 @@ static size_t compute_padding(size_t payload_len)
     return padding;
 }
 
-// Compute the MAC over 4-byte seq_no || buf using the HMAC named by mac_mode. For E&M the buf is
-// the plaintext packet; for ETM it is the length field || ciphertext. Writes ssh_mac_len() bytes.
-static void compute_mac_mode(uint8_t mac_mode, const uint8_t *mac_key, uint32_t seq_no, const uint8_t *buf,
-                             size_t buf_len, uint8_t *mac_out)
+// The slot's persistent storage, split by offset: the wire buffer the codec frames into, the bytes
+// the packet MAC works out of, and the ones the key exchange does. One borrow from the secure pool's
+// persistent end on first use, kept for the slot's life, so nothing on the packet path touches the
+// pool.
+#define SSH_SLOT_OFF_WIRE 0u
+#define SSH_SLOT_OFF_MAC (SSH_SLOT_OFF_WIRE + SSH_WIRE_CAP)
+#define SSH_SLOT_OFF_KEX (SSH_SLOT_OFF_MAC + PC_HMAC_SHA256_BORROW)
+#define SSH_SLOT_BORROW (SSH_SLOT_OFF_KEX + PC_CRYPTO_BORROW_MAX)
+
+proto_bool ssh_pkt_slot_storage(SshPacketState *s)
+{
+    if (s->tx_wire != NULL)
+    {
+        return PROTO_TRUE;
+    }
+    pc_span b = pc_secure_persist_span(SSH_SLOT_BORROW);
+    if (!pc_span_ok(b))
+    {
+        return PROTO_FALSE;
+    }
+    s->tx_wire = b.buf + SSH_SLOT_OFF_WIRE;
+    s->mac_work = b.buf + SSH_SLOT_OFF_MAC;
+    s->crypto_work = b.buf + SSH_SLOT_OFF_KEX;
+    return PROTO_TRUE;
+}
+
+// Compute the MAC over 4-byte seq_no || buf using the HMAC named by mac_mode, working out of the
+// slot's own bytes. For E&M the buf is the plaintext packet; for ETM it is the length field ||
+// ciphertext. Writes ssh_mac_len() bytes.
+static void compute_mac_mode(uint8_t mac_mode, uint8_t *work, const uint8_t *mac_key, uint32_t seq_no,
+                             const uint8_t *buf, size_t buf_len, uint8_t *mac_out)
 {
     uint8_t seq_be[4];
     write_u32_be(seq_be, seq_no);
     if (mac_mode == SSH_MAC_HMAC_SHA512 || mac_mode == SSH_MAC_HMAC_SHA512_ETM)
     {
         pc_hmac_sha512_ctx ctx;
-        pc_hmac_sha512_init(&ctx, mac_key, 64);
+        pc_hmac_sha512_init(&ctx, work, mac_key, 64);
         pc_hmac_sha512_update(&ctx, seq_be, 4);
         pc_hmac_sha512_update(&ctx, buf, buf_len);
         pc_hmac_sha512_final(&ctx, mac_out);
@@ -78,7 +104,7 @@ static void compute_mac_mode(uint8_t mac_mode, const uint8_t *mac_key, uint32_t 
     else
     {
         pc_hmac_sha256_ctx ctx;
-        pc_hmac_sha256_init(&ctx, mac_key, 32);
+        pc_hmac_sha256_init(&ctx, work, mac_key, 32);
         pc_hmac_sha256_update(&ctx, seq_be, 4);
         pc_hmac_sha256_update(&ctx, buf, buf_len);
         pc_hmac_sha256_final(&ctx, mac_out);
@@ -99,8 +125,12 @@ void ssh_pkt_init(uint8_t i)
     // The wire buffer is a persistent borrow bound to the slot, not to the connection on it: it is
     // never released, so it carries across to the next connection this slot serves.
     uint8_t *wire = s->tx_wire;
+    uint8_t *macw = s->mac_work;
+    uint8_t *kexw = s->crypto_work;
     mem.set(s, 0, sizeof(*s)); // is_client defaults false = server role
     s->tx_wire = wire;
+    s->mac_work = macw;
+    s->crypto_work = kexw;
     s->kex_active = PROTO_TRUE;
     s->enc_out = PROTO_FALSE;
     s->enc_in = PROTO_FALSE;
@@ -131,16 +161,10 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
     }
 
     // The wire lives in the secure pool because the payload it carries is the session's own
-    // plaintext until the cipher runs over it. Taken from the persistent end on first use and kept:
-    // the next packet frames over the same bytes, so nothing is wiped between packets.
-    if (s->tx_wire == NULL)
+    // plaintext until the cipher runs over it.
+    if (!ssh_pkt_slot_storage(s))
     {
-        pc_span w = pc_secure_persist_span(SSH_WIRE_CAP);
-        if (!pc_span_ok(w))
-        {
-            return -1;
-        }
-        s->tx_wire = w.buf;
+        return -1;
     }
     size_t wlen = 0;
     if (ssh_pkt_send(i, payload, len, s->tx_wire, &wlen, SSH_WIRE_CAP) != 0)
@@ -225,6 +249,12 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
         return -1;
     }
 
+    if (!ssh_pkt_slot_storage(s))
+    {
+        pc_plaintext_release(comp_scope);
+        return -1;
+    }
+
 #if PC_ENABLE_SSH_ZLIB
     // Compression (RFC 4253 §6.2) transforms the payload BEFORE padding/encryption, once the s2c
     // stream is active. The compressor is stateful (context takeover), so this call must be followed
@@ -301,10 +331,10 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     }
 
     // Assemble the plaintext packet into out[].
-    write_u32_be(out, (uint32_t)pkt_len);                  // packet_length
-    out[4] = (uint8_t)pad_len;                             // padding_length
-    mem.cpy(out + 5, payload, payload_len);                 // payload
-    pc_platform_rand_fill(out + 5 + payload_len, pad_len); // random padding
+    write_u32_be(out, (uint32_t)pkt_len);         // packet_length
+    out[4] = (uint8_t)pad_len;                    // padding_length
+    mem.cpy(out + 5, payload, payload_len);       // payload
+    pc_rand_fill(out + 5 + payload_len, pad_len); // random padding
 
     const proto_bool cli = s->is_client; // send direction: client uses c2s, server uses s2c
     if (chacha)
@@ -325,13 +355,14 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     {
         // Encrypt-then-MAC: length stays in clear; encrypt the payload, then MAC over (length||ct).
         pc_aes256ctr_crypt(km_send_aes_key(km, cli), km_send_aes_iv(km, cli), out + 4, out + 4, pkt_len);
-        compute_mac_mode(km->mac_mode, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len, out + 4 + pkt_len);
+        compute_mac_mode(km->mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len,
+                         out + 4 + pkt_len);
     }
     else if (s->enc_out)
     {
         // Encrypt-and-MAC: MAC over plaintext (seq || unencrypted packet), then AES-256-CTR.
         uint8_t mac[64];
-        compute_mac_mode(km->mac_mode, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len, mac);
+        compute_mac_mode(km->mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len, mac);
         pc_aes256ctr_crypt(km_send_aes_key(km, cli), km_send_aes_iv(km, cli), out, out, 4 + pkt_len);
         mem.cpy(out + 4 + pkt_len, mac, tag_len);
         pc_secure_wipe(mac, sizeof(mac));
@@ -557,7 +588,8 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     }
 
     uint8_t expected_mac[64];
-    compute_mac_mode(km->mac_mode, km_recv_mac(km, s->is_client), s->seq_no_recv, s->rx_buf, 4 + pkt_len, expected_mac);
+    compute_mac_mode(km->mac_mode, s->mac_work, km_recv_mac(km, s->is_client), s->seq_no_recv, s->rx_buf, 4 + pkt_len,
+                     expected_mac);
     if (!pc_ct_eq(expected_mac, s->rx_buf + 4 + pkt_len, mac_tag))
     {
         pc_secure_wipe(expected_mac, sizeof(expected_mac));
@@ -671,7 +703,8 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // Verify MAC over seq_no || plaintext(scratch[0..enc_len)).
     const uint8_t *rx_mac = s->rx_buf + enc_len; // MAC is sent in clear
     uint8_t expected_mac[64];
-    compute_mac_mode(km->mac_mode, km_recv_mac(km, s->is_client), s->seq_no_recv, scratch, enc_len, expected_mac);
+    compute_mac_mode(km->mac_mode, s->mac_work, km_recv_mac(km, s->is_client), s->seq_no_recv, scratch, enc_len,
+                     expected_mac);
 
     if (!pc_ct_eq(expected_mac, rx_mac, mac_tag))
     {
@@ -769,6 +802,11 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
     }
     SshPacketState *s = &ssh_pkt[i];
     SshKeyMat *km = &ssh_keys[i];
+
+    if (!ssh_pkt_slot_storage(s))
+    {
+        return -1;
+    }
 
     // Consume the input incrementally: append as much as fits the (single-packet) receive buffer, extract
     // every complete packet to drain it, then append more. So one TCP read carrying several pipelined packets

@@ -13,6 +13,7 @@
 #include "crypto/asymmetric/rsa.h"
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
+#include "crypto/rng/rng.h" // pc_rand_fill: the mbedtls RNG callback
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
@@ -36,7 +37,7 @@ SshRsaPubKey ssh_host_pubkey;
 static int ssh_mbedtls_rng(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    pc_platform_rand_fill(buf, len);
+    pc_rand_fill(buf, len);
     return 0;
 }
 
@@ -113,7 +114,7 @@ int pc_ssh_rsa_load_pubkey(void)
     return 0;
 }
 
-int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
+int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
 {
     // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did.
     if (!s_rsa.ready && pc_ssh_rsa_load_pubkey() != 0)
@@ -129,11 +130,11 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
     uint8_t digest[PC_SHA512_DIGEST_LEN];
     if (sha512)
     {
-        pc_sha512(msg, msg_len, digest);
+        pc_sha512(work, msg, msg_len, digest);
     }
     else
     {
-        pc_sha256(msg, msg_len, digest);
+        pc_sha256(work, msg, msg_len, digest);
     }
 
     // Serialize: mbedtls mutates the context's blinding state on each private op.
@@ -328,14 +329,14 @@ int pc_ssh_rsa_load_pubkey(void)
     return 0;
 }
 
-int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
+int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
 {
     // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did.
     if (!s_rsa.ready && pc_ssh_rsa_load_pubkey() != 0)
     {
         return -1;
     }
-    return pc_rsa_sign_sw(ssh_host_pubkey.n, s_rsa.d.buf, msg, msg_len, hash, sig);
+    return pc_rsa_sign_sw(ssh_host_pubkey.n, s_rsa.d.buf, work, msg, msg_len, hash, sig);
 }
 
 #endif // PC_HAS_HW_BIGNUM

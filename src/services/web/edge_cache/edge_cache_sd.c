@@ -93,7 +93,7 @@ size_t edge_sd_serialize(const EdgeEntry *e, uint8_t *out, size_t cap)
     return pos;
 }
 
-proto_bool edge_sd_deserialize(const uint8_t *buf, size_t len, EdgeEntry *e)
+proto_bool edge_sd_deserialize(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e)
 {
     if (!buf || !e || len < 3 || buf[0] != PC_EDGE_SD_VERSION)
     {
@@ -124,7 +124,7 @@ proto_bool edge_sd_deserialize(const uint8_t *buf, size_t len, EdgeEntry *e)
     }
     mem.cpy(e->body, buf + pos, bl);
     e->body_len = bl;
-    edge_key_digest(e->key, strnlen(e->key, sizeof(e->key)), e->digest); // re-derive the digest from the key
+    edge_key_digest(work, e->key, strnlen(e->key, sizeof(e->key)), e->digest); // re-derive the digest from the key
     return PROTO_TRUE;
 }
 
@@ -257,7 +257,8 @@ proto_bool edge_sd_put(struct pc_dbm *db, const EdgeEntry *e, uint8_t *scratch, 
     return pc_dbm_put(db, (const char *)e->digest, 32, scratch, (uint32_t)n);
 }
 
-proto_bool edge_sd_get(struct pc_dbm *db, const uint8_t digest[32], EdgeEntry *e, uint8_t *scratch, size_t scratch_cap)
+proto_bool edge_sd_get(uint8_t *work, struct pc_dbm *db, const uint8_t digest[32], EdgeEntry *e, uint8_t *scratch,
+                       size_t scratch_cap)
 {
     if (!db || !digest || !e || !scratch)
     {
@@ -268,7 +269,7 @@ proto_bool edge_sd_get(struct pc_dbm *db, const uint8_t digest[32], EdgeEntry *e
     {
         return PROTO_FALSE;
     }
-    return edge_sd_deserialize(scratch, (size_t)n, e);
+    return edge_sd_deserialize(work, scratch, (size_t)n, e);
 }
 
 proto_bool edge_sd_del(struct pc_dbm *db, const uint8_t digest[32])

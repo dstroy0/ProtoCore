@@ -714,9 +714,9 @@ size_t pc_ike_frag_reasm_assemble(const IkeFragReasm *r, uint8_t *out, size_t ou
 
 // ── anti-DoS COOKIE (RFC 7296 §2.6) ───────────────────────────────────────────────────────────
 
-size_t pc_ike_cookie_compute(uint8_t version, const uint8_t *secret, size_t secret_len, const uint8_t *ni,
-                             size_t ni_len, const uint8_t *ipi, size_t ipi_len, const uint8_t spii[PC_IKE_SPI_LEN],
-                             uint8_t *out, size_t out_cap)
+size_t pc_ike_cookie_compute(uint8_t *work, uint8_t version, const uint8_t *secret, size_t secret_len,
+                             const uint8_t *ni, size_t ni_len, const uint8_t *ipi, size_t ipi_len,
+                             const uint8_t spii[PC_IKE_SPI_LEN], uint8_t *out, size_t out_cap)
 {
     if (!out || out_cap < PC_IKE_COOKIE_LEN || !spii)
     {
@@ -728,7 +728,7 @@ size_t pc_ike_cookie_compute(uint8_t version, const uint8_t *secret, size_t secr
     }
     // Cookie = version | SHA-256( Ni | IPi | SPIi | secret ).
     pc_sha256_ctx ctx;
-    pc_sha256_init(&ctx);
+    pc_sha256_init(&ctx, work);
     if (ni_len)
     {
         pc_sha256_update(&ctx, ni, ni_len);
@@ -747,8 +747,8 @@ size_t pc_ike_cookie_compute(uint8_t version, const uint8_t *secret, size_t secr
     return PC_IKE_COOKIE_LEN;
 }
 
-proto_bool pc_ike_cookie_verify(const uint8_t *cookie, size_t cookie_len, const uint8_t *secret, size_t secret_len,
-                                const uint8_t *ni, size_t ni_len, const uint8_t *ipi, size_t ipi_len,
+proto_bool pc_ike_cookie_verify(uint8_t *work, const uint8_t *cookie, size_t cookie_len, const uint8_t *secret,
+                                size_t secret_len, const uint8_t *ni, size_t ni_len, const uint8_t *ipi, size_t ipi_len,
                                 const uint8_t spii[PC_IKE_SPI_LEN])
 {
     if (!cookie || cookie_len != PC_IKE_COOKIE_LEN)
@@ -756,8 +756,8 @@ proto_bool pc_ike_cookie_verify(const uint8_t *cookie, size_t cookie_len, const 
         return PROTO_FALSE;
     }
     uint8_t expect[PC_IKE_COOKIE_LEN];
-    if (pc_ike_cookie_compute(cookie[0], secret, secret_len, ni, ni_len, ipi, ipi_len, spii, expect, sizeof(expect)) !=
-        PC_IKE_COOKIE_LEN)
+    if (pc_ike_cookie_compute(work, cookie[0], secret, secret_len, ni, ni_len, ipi, ipi_len, spii, expect,
+                              sizeof(expect)) != PC_IKE_COOKIE_LEN)
     {
         return PROTO_FALSE;
     }
@@ -1251,8 +1251,8 @@ proto_bool pc_ike_cp_attr_next(IkeCfgAttrIter *it, IkeCfgAttr *out)
 
 // ── tier 2: SKEYSEED / SK_* key derivation (RFC 7296 §2.13-2.14) ───────────────────────────────
 
-proto_bool pc_ike_prf_plus(const uint8_t *key, size_t key_len, const uint8_t *seed, size_t seed_len, uint8_t *out,
-                           size_t out_len)
+proto_bool pc_ike_prf_plus(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *seed, size_t seed_len,
+                           uint8_t *out, size_t out_len)
 {
     if (!key || !seed || !out || out_len == 0)
     {
@@ -1272,7 +1272,7 @@ proto_bool pc_ike_prf_plus(const uint8_t *key, size_t key_len, const uint8_t *se
     {
         counter++; // 0x01 for T1, 0x02 for T2, ... (bounded by the out_len guard above)
         pc_hmac_sha256_ctx ctx;
-        pc_hmac_sha256_init(&ctx, key, key_len);
+        pc_hmac_sha256_init(&ctx, work, key, key_len);
         if (t_len)
         {
             pc_hmac_sha256_update(&ctx, t, t_len); // Ti-1
@@ -1311,8 +1311,8 @@ static size_t build_ni_nr_spi(uint8_t *s, const uint8_t *ni, size_t ni_len, cons
 
 // Given SKEYSEED and S = Ni|Nr|SPIi|SPIr, run prf+ and split it into the seven SK_* keys (shared by the
 // initial and the rekey schedules - only how SKEYSEED is computed differs).
-static proto_bool sk_split_from_skeyseed(const uint8_t skeyseed[PC_IKE_PRF_LEN], const uint8_t *s, size_t s_len,
-                                         const IkeKeyLengths *lens, IkeKeyMaterial *out)
+static proto_bool sk_split_from_skeyseed(uint8_t *work, const uint8_t skeyseed[PC_IKE_PRF_LEN], const uint8_t *s,
+                                         size_t s_len, const IkeKeyLengths *lens, IkeKeyMaterial *out)
 {
     // sk_a MAY be 0 (an AEAD cipher carries its own integrity, so there is no separate SK_ai/SK_ar);
     // the others must be present.
@@ -1323,7 +1323,7 @@ static proto_bool sk_split_from_skeyseed(const uint8_t skeyseed[PC_IKE_PRF_LEN],
     }
     size_t total = lens->sk_d + 2 * lens->sk_a + 2 * lens->sk_e + 2 * lens->sk_p;
     uint8_t ks[7 * PC_IKE_SK_MAX];
-    if (!pc_ike_prf_plus(skeyseed, PC_IKE_PRF_LEN, s, s_len, ks, total))
+    if (!pc_ike_prf_plus(work, skeyseed, PC_IKE_PRF_LEN, s, s_len, ks, total))
     {
         return PROTO_FALSE;
     }
@@ -1349,7 +1349,7 @@ static proto_bool sk_split_from_skeyseed(const uint8_t skeyseed[PC_IKE_PRF_LEN],
     return PROTO_TRUE;
 }
 
-proto_bool pc_ike_derive_keys(const uint8_t *dh_secret, size_t dh_len, const uint8_t *ni, size_t ni_len,
+proto_bool pc_ike_derive_keys(uint8_t *work, const uint8_t *dh_secret, size_t dh_len, const uint8_t *ni, size_t ni_len,
                               const uint8_t *nr, size_t nr_len, const uint8_t *spi_i, const uint8_t *spi_r,
                               const IkeKeyLengths *lens, IkeKeyMaterial *out)
 {
@@ -1366,14 +1366,14 @@ proto_bool pc_ike_derive_keys(const uint8_t *dh_secret, size_t dh_len, const uin
     }
     // SKEYSEED = prf(Ni | Nr, g^ir). HMAC pre-hashes a key longer than the 64-byte block (RFC 2104).
     uint8_t skeyseed[PC_IKE_PRF_LEN];
-    pc_hmac_sha256(s, ni_len + nr_len, dh_secret, dh_len, skeyseed);
-    return sk_split_from_skeyseed(skeyseed, s, s_len, lens, out);
+    pc_hmac_sha256(work, s, ni_len + nr_len, dh_secret, dh_len, skeyseed);
+    return sk_split_from_skeyseed(work, skeyseed, s, s_len, lens, out);
 }
 
-proto_bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len, const uint8_t *dh_secret,
-                                    size_t dh_len, const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len,
-                                    const uint8_t *spi_i, const uint8_t *spi_r, const IkeKeyLengths *lens,
-                                    IkeKeyMaterial *out)
+proto_bool pc_ike_rekey_derive_keys(uint8_t *work, const uint8_t *sk_d_old, size_t sk_d_old_len,
+                                    const uint8_t *dh_secret, size_t dh_len, const uint8_t *ni, size_t ni_len,
+                                    const uint8_t *nr, size_t nr_len, const uint8_t *spi_i, const uint8_t *spi_r,
+                                    const IkeKeyLengths *lens, IkeKeyMaterial *out)
 {
     if (!sk_d_old || !dh_secret || !ni || !nr || !spi_i || !spi_r || !lens || !out)
     {
@@ -1394,7 +1394,7 @@ proto_bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len
     mem.cpy(seed + sl, nr, nr_len);
     sl += nr_len;
     uint8_t skeyseed[PC_IKE_PRF_LEN];
-    pc_hmac_sha256(sk_d_old, sk_d_old_len, seed, sl, skeyseed);
+    pc_hmac_sha256(work, sk_d_old, sk_d_old_len, seed, sl, skeyseed);
 
     // Then the identical prf+(SKEYSEED, Ni | Nr | SPIi | SPIr) split with the NEW SPIs.
     uint8_t s[2 * PC_IKE_NONCE_MAX + 2 * PC_IKE_SPI_LEN];
@@ -1403,7 +1403,7 @@ proto_bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len
     {
         return PROTO_FALSE;
     }
-    return sk_split_from_skeyseed(skeyseed, s, s_len, lens, out);
+    return sk_split_from_skeyseed(work, skeyseed, s, s_len, lens, out);
 }
 
 // ── tier 2: SK-payload AEAD (AES-256-GCM-16, RFC 5282) ─────────────────────────────────────────
@@ -1505,7 +1505,7 @@ size_t pc_ike_dh_compute(uint16_t group, const uint8_t *our_priv, size_t priv_le
 
 // ── tier 2: IKE_AUTH pre-shared-key authentication (RFC 7296 §2.15) ─────────────────────────────
 
-proto_bool pc_ike_auth_psk(const uint8_t *psk, size_t psk_len, const uint8_t *real_msg, size_t real_len,
+proto_bool pc_ike_auth_psk(uint8_t *work, const uint8_t *psk, size_t psk_len, const uint8_t *real_msg, size_t real_len,
                            const uint8_t *peer_nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
                            const uint8_t *id_body, size_t id_body_len, uint8_t out[PC_IKE_AUTH_LEN])
 {
@@ -1516,16 +1516,16 @@ proto_bool pc_ike_auth_psk(const uint8_t *psk, size_t psk_len, const uint8_t *re
 
     // MACedID = prf(SK_p, RestOfIDPayload).
     uint8_t macid[PC_IKE_AUTH_LEN];
-    pc_hmac_sha256(sk_p, sk_p_len, id_body, id_body_len, macid);
+    pc_hmac_sha256(work, sk_p, sk_p_len, id_body, id_body_len, macid);
 
     // keypad = prf(PSK, "Key Pad for IKEv2") - the inner PRF that turns the shared key into a fixed key.
     uint8_t keypad[PC_IKE_AUTH_LEN];
     static const char pad[] = PC_IKE_PSK_PAD; // 17 octets, no NUL sent
-    pc_hmac_sha256(psk, psk_len, (const uint8_t *)pad, sizeof(pad) - 1, keypad);
+    pc_hmac_sha256(work, psk, psk_len, (const uint8_t *)pad, sizeof(pad) - 1, keypad);
 
     // AUTH = prf(keypad, RealMessage | Nonce | MACedID). Streamed so RealMessage is never re-buffered.
     pc_hmac_sha256_ctx ctx;
-    pc_hmac_sha256_init(&ctx, keypad, sizeof(keypad));
+    pc_hmac_sha256_init(&ctx, work, keypad, sizeof(keypad));
     pc_hmac_sha256_update(&ctx, real_msg, real_len);
     pc_hmac_sha256_update(&ctx, peer_nonce, nonce_len);
     pc_hmac_sha256_update(&ctx, macid, sizeof(macid));
@@ -1777,9 +1777,9 @@ proto_bool pc_ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t key[PC_I
 
 // ── tier 2: IKE_AUTH ECDSA-P256 (certificate) authentication (RFC 7296 §2.15, RFC 7427) ─────────
 
-size_t pc_ike_signed_octets(uint8_t *scratch, size_t cap, const uint8_t *real, size_t real_len, const uint8_t *nonce,
-                            size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body,
-                            size_t id_body_len)
+size_t pc_ike_signed_octets(uint8_t *work, uint8_t *scratch, size_t cap, const uint8_t *real, size_t real_len,
+                            const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
+                            const uint8_t *id_body, size_t id_body_len)
 {
     if (!scratch || !real || !nonce || !sk_p || !id_body)
     {
@@ -1792,11 +1792,11 @@ size_t pc_ike_signed_octets(uint8_t *scratch, size_t cap, const uint8_t *real, s
     }
     mem.cpy(scratch, real, real_len);
     mem.cpy(scratch + real_len, nonce, nonce_len);
-    pc_hmac_sha256(sk_p, sk_p_len, id_body, id_body_len, scratch + real_len + nonce_len); // MACedID
+    pc_hmac_sha256(work, sk_p, sk_p_len, id_body, id_body_len, scratch + real_len + nonce_len); // MACedID
     return total;
 }
 
-proto_bool pc_ike_auth_sign_ecdsa_p256(uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN],
+proto_bool pc_ike_auth_sign_ecdsa_p256(uint8_t *work, uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN],
                                        const uint8_t priv[PC_IKE_ECDSA_P256_PRIV_LEN], uint8_t *scratch,
                                        size_t scratch_cap, const uint8_t *real, size_t real_len, const uint8_t *nonce,
                                        size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body,
@@ -1806,16 +1806,16 @@ proto_bool pc_ike_auth_sign_ecdsa_p256(uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN],
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_ike_signed_octets(scratch, scratch_cap, real, real_len, nonce, nonce_len, sk_p, sk_p_len, id_body,
-                                    id_body_len);
+    size_t n = pc_ike_signed_octets(work, scratch, scratch_cap, real, real_len, nonce, nonce_len, sk_p, sk_p_len,
+                                    id_body, id_body_len);
     if (n == 0)
     {
         return PROTO_FALSE;
     }
-    return pc_ecdsa_p256_sign(sig, scratch, n, priv); // hashes the octets with SHA-256 internally
+    return pc_ecdsa_p256_sign(sig, work, scratch, n, priv); // hashes the octets with SHA-256 internally
 }
 
-proto_bool pc_ike_auth_verify_ecdsa_p256(const uint8_t pub[PC_IKE_ECDSA_P256_PUB_LEN],
+proto_bool pc_ike_auth_verify_ecdsa_p256(uint8_t *work, const uint8_t pub[PC_IKE_ECDSA_P256_PUB_LEN],
                                          const uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN], uint8_t *scratch,
                                          size_t scratch_cap, const uint8_t *real, size_t real_len, const uint8_t *nonce,
                                          size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body,
@@ -1825,13 +1825,13 @@ proto_bool pc_ike_auth_verify_ecdsa_p256(const uint8_t pub[PC_IKE_ECDSA_P256_PUB
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_ike_signed_octets(scratch, scratch_cap, real, real_len, nonce, nonce_len, sk_p, sk_p_len, id_body,
-                                    id_body_len);
+    size_t n = pc_ike_signed_octets(work, scratch, scratch_cap, real, real_len, nonce, nonce_len, sk_p, sk_p_len,
+                                    id_body, id_body_len);
     if (n == 0)
     {
         return PROTO_FALSE;
     }
-    return pc_ecdsa_p256_verify(pub, scratch, n, sig);
+    return pc_ecdsa_p256_verify(pub, work, scratch, n, sig);
 }
 
 // ── tier 2: IKE SA context + key material from a completed IKE_SA_INIT ──────────────────────────
@@ -1904,7 +1904,8 @@ proto_bool pc_ike_sa_keys_from_init(IkeSa *sa, const uint8_t *our_dh_priv, size_
         return PROTO_FALSE;
     }
     // SKEYSEED + SK_* are order-independent in the SPIs/nonces, so both peers derive identical keys.
-    return pc_ike_derive_keys(shared, sh, ni, ni_len, nr, nr_len, sa->init_spi, sa->resp_spi, &lens, &sa->keys);
+    return pc_ike_derive_keys(sa->work, shared, sh, ni, ni_len, nr, nr_len, sa->init_spi, sa->resp_spi, &lens,
+                              &sa->keys);
 }
 
 // ── tier 2: initiator IKE_SA_INIT handshake driver ─────────────────────────────────────────────
@@ -2019,7 +2020,7 @@ size_t pc_ike_initiator_build_auth_psk(IkeHandshake *hs, IkeIdType idi_type, con
     const uint8_t *idi_body = inner + PC_IKE_PAYLOAD_HDR_LEN;
     size_t idi_body_len = idn - PC_IKE_PAYLOAD_HDR_LEN;
     uint8_t auth[PC_IKE_AUTH_LEN];
-    if (!pc_ike_auth_psk(psk, psk_len, hs->init_msg, hs->init_msg_len, hs->peer_nonce, hs->peer_nonce_len,
+    if (!pc_ike_auth_psk(hs->sa.work, psk, psk_len, hs->init_msg, hs->init_msg_len, hs->peer_nonce, hs->peer_nonce_len,
                          hs->sa.keys.sk_pi, hs->sa.keys.sk_p_len, idi_body, idi_body_len, auth))
     {
         return 0;
@@ -2099,7 +2100,7 @@ proto_bool pc_ike_initiator_on_auth_psk(IkeHandshake *hs, const uint8_t *resp, s
 
     // Recompute the responder's AUTH = prf(prf(PSK,pad), RealMessage2 | Ni | prf(SK_pr, IDr')).
     uint8_t expect[PC_IKE_AUTH_LEN];
-    if (!pc_ike_auth_psk(psk, psk_len, hs->resp_msg, hs->resp_msg_len, hs->our_nonce, hs->our_nonce_len,
+    if (!pc_ike_auth_psk(hs->sa.work, psk, psk_len, hs->resp_msg, hs->resp_msg_len, hs->our_nonce, hs->our_nonce_len,
                          hs->sa.keys.sk_pr, hs->sa.keys.sk_p_len, idr_body, idr_body_len, expect))
     {
         hs->state = IKE_ST_FAILED;
@@ -2266,7 +2267,7 @@ size_t pc_ike_responder_on_auth_psk(IkeHandshake *hs, const uint8_t *req, size_t
 
     // Verify the initiator's AUTH over RealMessage1 | Nr(our_nonce) | prf(SK_pi, IDi').
     uint8_t expect[PC_IKE_AUTH_LEN];
-    if (!pc_ike_auth_psk(psk, psk_len, hs->init_msg, hs->init_msg_len, hs->our_nonce, hs->our_nonce_len,
+    if (!pc_ike_auth_psk(hs->sa.work, psk, psk_len, hs->init_msg, hs->init_msg_len, hs->our_nonce, hs->our_nonce_len,
                          hs->sa.keys.sk_pi, hs->sa.keys.sk_p_len, idi_body, idi_body_len, expect) ||
         !ike_ct_eq32(expect, authdata))
     {
@@ -2283,7 +2284,7 @@ size_t pc_ike_responder_on_auth_psk(IkeHandshake *hs, const uint8_t *req, size_t
         return 0;
     }
     uint8_t rauth[PC_IKE_AUTH_LEN];
-    if (!pc_ike_auth_psk(psk, psk_len, hs->resp_msg, hs->resp_msg_len, hs->peer_nonce, hs->peer_nonce_len,
+    if (!pc_ike_auth_psk(hs->sa.work, psk, psk_len, hs->resp_msg, hs->resp_msg_len, hs->peer_nonce, hs->peer_nonce_len,
                          hs->sa.keys.sk_pr, hs->sa.keys.sk_p_len, rinner + PC_IKE_PAYLOAD_HDR_LEN,
                          ridn - PC_IKE_PAYLOAD_HDR_LEN, rauth))
     {
@@ -2345,9 +2346,9 @@ size_t pc_ike_create_child_sa_build(const IkeSa *sa, proto_bool is_response, uin
                          out_cap);
 }
 
-proto_bool pc_ike_child_keymat(const uint8_t *sk_d, size_t sk_d_len, const uint8_t *dh_secret, size_t dh_len,
-                               const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len, uint8_t *out,
-                               size_t out_len)
+proto_bool pc_ike_child_keymat(uint8_t *work, const uint8_t *sk_d, size_t sk_d_len, const uint8_t *dh_secret,
+                               size_t dh_len, const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len,
+                               uint8_t *out, size_t out_len)
 {
     if (!sk_d || !ni || !nr || !out || out_len == 0)
     {
@@ -2370,7 +2371,7 @@ proto_bool pc_ike_child_keymat(const uint8_t *sk_d, size_t sk_d_len, const uint8
     o += ni_len;
     mem.cpy(seed + o, nr, nr_len);
     o += nr_len;
-    return pc_ike_prf_plus(sk_d, sk_d_len, seed, o, out, out_len);
+    return pc_ike_prf_plus(work, sk_d, sk_d_len, seed, o, out, out_len);
 }
 
 proto_bool pc_ike_informational_open(const IkeSa *sa, uint8_t *msg, size_t len, IkePayloadType *first_inner_type,
@@ -2387,23 +2388,23 @@ proto_bool pc_ike_informational_open(const IkeSa *sa, uint8_t *msg, size_t len, 
 
 // ── tier 2: IKE_AUTH RSA-2048 (certificate) verify (RFC 7296 §2.15, RFC 7427) ───────────────────
 
-proto_bool pc_ike_auth_verify_rsa_sha256(const uint8_t *n_be, const uint8_t *e_be4, const uint8_t *sig, size_t sig_len,
-                                         uint8_t *scratch, size_t scratch_cap, const uint8_t *real, size_t real_len,
-                                         const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
-                                         const uint8_t *id_body, size_t id_body_len)
+proto_bool pc_ike_auth_verify_rsa_sha256(uint8_t *work, const uint8_t *n_be, const uint8_t *e_be4, const uint8_t *sig,
+                                         size_t sig_len, uint8_t *scratch, size_t scratch_cap, const uint8_t *real,
+                                         size_t real_len, const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p,
+                                         size_t sk_p_len, const uint8_t *id_body, size_t id_body_len)
 {
     if (!n_be || !e_be4 || !sig)
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_ike_signed_octets(scratch, scratch_cap, real, real_len, nonce, nonce_len, sk_p, sk_p_len, id_body,
-                                    id_body_len);
+    size_t n = pc_ike_signed_octets(work, scratch, scratch_cap, real, real_len, nonce, nonce_len, sk_p, sk_p_len,
+                                    id_body, id_body_len);
     if (n == 0)
     {
         return PROTO_FALSE;
     }
     // The device signs with its own ECDSA key; this verifies a PEER whose CERT is RSA-2048 (SHA-256).
-    return pc_rsa_verify(n_be, e_be4, scratch, n, sig, sig_len, PC_RSA_HASH_SHA256) == 0;
+    return pc_rsa_verify(n_be, e_be4, work, scratch, n, sig, sig_len, PC_RSA_HASH_SHA256) == 0;
 }
 
 #endif // PC_ENABLE_IKEV2

@@ -473,9 +473,9 @@ size_t pc_ike_frag_reasm_assemble(const IkeFragReasm *r, uint8_t *out, size_t ou
  * @p version tags which secret was used so a rotated secret can still verify in-flight cookies.
  * @return @ref PC_IKE_COOKIE_LEN on success, or 0 on a null argument / @p out_cap too small.
  */
-size_t pc_ike_cookie_compute(uint8_t version, const uint8_t *secret, size_t secret_len, const uint8_t *ni,
-                             size_t ni_len, const uint8_t *ipi, size_t ipi_len, const uint8_t spii[PC_IKE_SPI_LEN],
-                             uint8_t *out, size_t out_cap);
+size_t pc_ike_cookie_compute(uint8_t *work, uint8_t version, const uint8_t *secret, size_t secret_len,
+                             const uint8_t *ni, size_t ni_len, const uint8_t *ipi, size_t ipi_len,
+                             const uint8_t spii[PC_IKE_SPI_LEN], uint8_t *out, size_t out_cap);
 
 /**
  * @brief Verify a received cookie against a recomputation (RFC 7296 §2.6), in constant time.
@@ -483,8 +483,8 @@ size_t pc_ike_cookie_compute(uint8_t version, const uint8_t *secret, size_t secr
  * The version tag is taken from @p cookie itself, so the caller supplies the @p secret matching that
  * version. @return true iff @p cookie is exactly @ref PC_IKE_COOKIE_LEN bytes and matches.
  */
-proto_bool pc_ike_cookie_verify(const uint8_t *cookie, size_t cookie_len, const uint8_t *secret, size_t secret_len,
-                                const uint8_t *ni, size_t ni_len, const uint8_t *ipi, size_t ipi_len,
+proto_bool pc_ike_cookie_verify(uint8_t *work, const uint8_t *cookie, size_t cookie_len, const uint8_t *secret,
+                                size_t secret_len, const uint8_t *ni, size_t ni_len, const uint8_t *ipi, size_t ipi_len,
                                 const uint8_t spii[PC_IKE_SPI_LEN]);
 
 /** @brief Build a COOKIE Notify payload carrying @p cookie (RFC 7296 §2.6). */
@@ -599,8 +599,8 @@ typedef struct
  *        T0 is empty.
  * @return false on a null argument or if @p out_len would need more than 255 blocks (the §2.13 cap).
  */
-proto_bool pc_ike_prf_plus(const uint8_t *key, size_t key_len, const uint8_t *seed, size_t seed_len, uint8_t *out,
-                           size_t out_len);
+proto_bool pc_ike_prf_plus(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *seed, size_t seed_len,
+                           uint8_t *out, size_t out_len);
 
 /**
  * @brief Derive SKEYSEED and the seven SK_* keys (RFC 7296 §2.14) for an initial IKE SA:
@@ -611,7 +611,7 @@ proto_bool pc_ike_prf_plus(const uint8_t *key, size_t key_len, const uint8_t *se
  * @param lens           per-key lengths (each 1..PC_IKE_SK_MAX; each nonce 1..PC_IKE_NONCE_MAX).
  * @return false on a null argument or an out-of-range length.
  */
-proto_bool pc_ike_derive_keys(const uint8_t *dh_secret, size_t dh_len, const uint8_t *ni, size_t ni_len,
+proto_bool pc_ike_derive_keys(uint8_t *work, const uint8_t *dh_secret, size_t dh_len, const uint8_t *ni, size_t ni_len,
                               const uint8_t *nr, size_t nr_len, const uint8_t *spi_i, const uint8_t *spi_r,
                               const IkeKeyLengths *lens, IkeKeyMaterial *out);
 
@@ -703,7 +703,7 @@ size_t pc_ike_dh_compute(uint16_t group, const uint8_t *our_priv, size_t priv_le
  * @param id_body / id_body_len  the signing side's ID payload body (RestOfIDPayload).
  * @return false on a null argument; true on success (@p out filled).
  */
-proto_bool pc_ike_auth_psk(const uint8_t *psk, size_t psk_len, const uint8_t *real_msg, size_t real_len,
+proto_bool pc_ike_auth_psk(uint8_t *work, const uint8_t *psk, size_t psk_len, const uint8_t *real_msg, size_t real_len,
                            const uint8_t *peer_nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
                            const uint8_t *id_body, size_t id_body_len, uint8_t out[PC_IKE_AUTH_LEN]);
 
@@ -806,15 +806,15 @@ proto_bool pc_ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t key[PC_I
  *        @p scratch (needs @p real_len + @p nonce_len + 32 bytes).
  * @return the octet length written, or 0 on overflow / a null argument.
  */
-size_t pc_ike_signed_octets(uint8_t *scratch, size_t cap, const uint8_t *real, size_t real_len, const uint8_t *nonce,
-                            size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body,
-                            size_t id_body_len);
+size_t pc_ike_signed_octets(uint8_t *work, uint8_t *scratch, size_t cap, const uint8_t *real, size_t real_len,
+                            const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
+                            const uint8_t *id_body, size_t id_body_len);
 
 /**
  * @brief Produce an ECDSA-P256 (SHA-256) AUTH signature over the signed octets. @p scratch holds the
  *        assembled octets (see pc_ike_signed_octets). @return true on success (@p sig filled).
  */
-proto_bool pc_ike_auth_sign_ecdsa_p256(uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN],
+proto_bool pc_ike_auth_sign_ecdsa_p256(uint8_t *work, uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN],
                                        const uint8_t priv[PC_IKE_ECDSA_P256_PRIV_LEN], uint8_t *scratch,
                                        size_t scratch_cap, const uint8_t *real, size_t real_len, const uint8_t *nonce,
                                        size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body,
@@ -824,7 +824,7 @@ proto_bool pc_ike_auth_sign_ecdsa_p256(uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN],
  * @brief Verify a peer's ECDSA-P256 (SHA-256) AUTH signature over the signed octets against its public
  *        point @p pub. @return true iff the signature is valid (a forged AUTH / wrong key returns false).
  */
-proto_bool pc_ike_auth_verify_ecdsa_p256(const uint8_t pub[PC_IKE_ECDSA_P256_PUB_LEN],
+proto_bool pc_ike_auth_verify_ecdsa_p256(uint8_t *work, const uint8_t pub[PC_IKE_ECDSA_P256_PUB_LEN],
                                          const uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN], uint8_t *scratch,
                                          size_t scratch_cap, const uint8_t *real, size_t real_len, const uint8_t *nonce,
                                          size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body,
@@ -855,6 +855,9 @@ typedef struct
     proto_bool is_initiator; ///< our role in this SA
     IkeSuite suite;          ///< the negotiated cipher suite
     IkeKeyMaterial keys;     ///< the derived SK_d / ai / ar / ei / er / pi / pr (filled by keys_from_init)
+    // The bytes this SA's crypto works out of: the cookie hash, the prf+ chain, the AUTH MAC and the
+    // signature. They run in sequence, so one region sized for the largest serves them all.
+    uint8_t work[PC_IKE_BORROW];
 } IkeSa;
 
 /**
@@ -884,10 +887,10 @@ proto_bool pc_ike_sa_keys_from_init(IkeSa *sa, const uint8_t *our_dh_priv, size_
  * @param sk_d_old  the current IKE SA's SK_d. @param dh_secret the new g^ir (X25519). @param spi_i / spi_r
  *        the new SA's SPIs. @return false on a null arg or an out-of-range length.
  */
-proto_bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len, const uint8_t *dh_secret,
-                                    size_t dh_len, const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len,
-                                    const uint8_t *spi_i, const uint8_t *spi_r, const IkeKeyLengths *lens,
-                                    IkeKeyMaterial *out);
+proto_bool pc_ike_rekey_derive_keys(uint8_t *work, const uint8_t *sk_d_old, size_t sk_d_old_len,
+                                    const uint8_t *dh_secret, size_t dh_len, const uint8_t *ni, size_t ni_len,
+                                    const uint8_t *nr, size_t nr_len, const uint8_t *spi_i, const uint8_t *spi_r,
+                                    const IkeKeyLengths *lens, IkeKeyMaterial *out);
 
 // ── tier 2: initiator IKE_SA_INIT handshake driver (RFC 7296 §1.2) ─────────────────────────────
 //
@@ -1047,9 +1050,9 @@ size_t pc_ike_create_child_sa_build(const IkeSa *sa, proto_bool is_response, uin
  *        key length needed.
  * @return false on a null arg, an out-of-range length, or more than 255 prf+ blocks.
  */
-proto_bool pc_ike_child_keymat(const uint8_t *sk_d, size_t sk_d_len, const uint8_t *dh_secret, size_t dh_len,
-                               const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len, uint8_t *out,
-                               size_t out_len);
+proto_bool pc_ike_child_keymat(uint8_t *work, const uint8_t *sk_d, size_t sk_d_len, const uint8_t *dh_secret,
+                               size_t dh_len, const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len,
+                               uint8_t *out, size_t out_len);
 
 /**
  * @brief Verify a peer's RSA-2048 (PKCS#1 v1.5, SHA-256) AUTH signature over the signed octets against
@@ -1059,10 +1062,10 @@ proto_bool pc_ike_child_keymat(const uint8_t *sk_d, size_t sk_d_len, const uint8
  * case of authenticating a PEER whose certificate is RSA. @p scratch holds the assembled signed octets.
  * @return true iff the signature is valid.
  */
-proto_bool pc_ike_auth_verify_rsa_sha256(const uint8_t *n_be, const uint8_t *e_be4, const uint8_t *sig, size_t sig_len,
-                                         uint8_t *scratch, size_t scratch_cap, const uint8_t *real, size_t real_len,
-                                         const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
-                                         const uint8_t *id_body, size_t id_body_len);
+proto_bool pc_ike_auth_verify_rsa_sha256(uint8_t *work, const uint8_t *n_be, const uint8_t *e_be4, const uint8_t *sig,
+                                         size_t sig_len, uint8_t *scratch, size_t scratch_cap, const uint8_t *real,
+                                         size_t real_len, const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p,
+                                         size_t sk_p_len, const uint8_t *id_body, size_t id_body_len);
 
 #endif // PC_ENABLE_IKEV2
 

@@ -7,10 +7,11 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
-#include "mmgr/protomem.h"
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/rng/rng.h" // pc_rand_fill: crypto owns the generator, this layer only draws
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
+#include "network_drivers/presentation/ssh/transport/ssh_packet.h" // ssh_pkt[]: the slot's KEX bytes
 #include "network_drivers/tls/ssh_kexhash.h"
 
 // ---------------------------------------------------------------------------
@@ -108,8 +109,9 @@ static inline void hash_K(SshKexHash *h, const uint8_t K_be[256], proto_bool k_i
 //   key = K1 || K2 || ...   For the first KEX session_id == H; on a re-key it is the first KEX's H.
 // @p h_len / @p sid_len are the exchange-hash / session-id lengths. When K is a hybrid string it is
 // @p k_str_len octets (the KEX hash length). @p out_len up to SSH_KDF_MAX.
-void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label, uint8_t *out,
-                    size_t out_len, proto_bool k_is_string, size_t h_len, size_t sid_len, proto_bool is512)
+void ssh_kdf_derive(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label,
+                    uint8_t *out, size_t out_len, proto_bool k_is_string, size_t h_len, size_t sid_len,
+                    proto_bool is512)
 {
     const size_t blk = ssh_kexhash_len(is512); // 32 or 64
     const size_t k_str_len = ssh_kexhash_len(is512);
@@ -121,7 +123,7 @@ void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *se
     size_t have = 0;
 
     SshKexHash h;
-    ssh_kexhash_init(&h, is512);
+    ssh_kexhash_init(&h, work, is512);
     hash_K(&h, K_be, k_is_string, k_str_len);
     ssh_kexhash_update(&h, H, h_len);
     uint8_t lbl = (uint8_t)label;
@@ -137,7 +139,7 @@ void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *se
     // always true.
     while (have < out_len && have + blk <= SSH_KDF_MAX)
     {
-        ssh_kexhash_init(&h, is512);
+        ssh_kexhash_init(&h, work, is512);
         hash_K(&h, K_be, k_is_string, k_str_len);
         ssh_kexhash_update(&h, H, h_len);
         ssh_kexhash_update(&h, acc, have); // all prior blocks
@@ -148,11 +150,11 @@ void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *se
 }
 
 // One 32-byte derived value (the only size any negotiated cipher key/IV needs today).
-static void derive_key(const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label,
+static void derive_key(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label,
                        uint8_t out[PC_SHA256_DIGEST_LEN], proto_bool k_is_string, size_t h_len, size_t sid_len,
                        proto_bool is512)
 {
-    ssh_kdf_derive(K_be, H, session_id, label, out, PC_SHA256_DIGEST_LEN, k_is_string, h_len, sid_len, is512);
+    ssh_kdf_derive(work, K_be, H, session_id, label, out, PC_SHA256_DIGEST_LEN, k_is_string, h_len, sid_len, is512);
 }
 
 void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
@@ -163,6 +165,13 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
     {
         return;
     }
+    // The exchange hash and this KDF work out of the slot's own bytes, the same borrow the wire and
+    // the packet MAC come from.
+    if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
+    {
+        return;
+    }
+    uint8_t *work = ssh_pkt[i].crypto_work;
     SshKeyMat *km = &ssh_keys[i];
     // Rekey lands here with live contexts still in the slot. Release them before cipher_mode is
     // overwritten, after which the outgoing mode is no longer knowable.
@@ -179,10 +188,10 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
         // chacha20-poly1305@openssh.com: a 512-bit key per direction (labels 'C'/'D'), no IV and
         // no separate MAC key (the AEAD authenticates). The 64 bytes come from the RFC 4253 §7.2
         // extension chain (K1 || K2).
-        ssh_kdf_derive(K_be, H, session_id, 'C', km->chacha_key_c2s, PC_CHACHAPOLY_KEY_LEN, k_is_string, h_len, sid_len,
-                       is512);
-        ssh_kdf_derive(K_be, H, session_id, 'D', km->chacha_key_s2c, PC_CHACHAPOLY_KEY_LEN, k_is_string, h_len, sid_len,
-                       is512);
+        ssh_kdf_derive(work, K_be, H, session_id, 'C', km->chacha_key_c2s, PC_CHACHAPOLY_KEY_LEN, k_is_string, h_len,
+                       sid_len, is512);
+        ssh_kdf_derive(work, K_be, H, session_id, 'D', km->chacha_key_s2c, PC_CHACHAPOLY_KEY_LEN, k_is_string, h_len,
+                       sid_len, is512);
         km->active = PROTO_TRUE;
         return;
     }
@@ -195,10 +204,11 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
         uint8_t iv_s2c[PC_SHA256_DIGEST_LEN];
         uint8_t key_c2s[32];
         uint8_t key_s2c[32];
-        derive_key(K_be, H, session_id, 'A', iv_c2s, k_is_string, h_len, sid_len, is512);  // IV  C→S (first 12 used)
-        derive_key(K_be, H, session_id, 'B', iv_s2c, k_is_string, h_len, sid_len, is512);  // IV  S→C
-        derive_key(K_be, H, session_id, 'C', key_c2s, k_is_string, h_len, sid_len, is512); // key C→S
-        derive_key(K_be, H, session_id, 'D', key_s2c, k_is_string, h_len, sid_len, is512); // key S→C
+        derive_key(work, K_be, H, session_id, 'A', iv_c2s, k_is_string, h_len, sid_len,
+                   is512); // IV  C→S (first 12 used)
+        derive_key(work, K_be, H, session_id, 'B', iv_s2c, k_is_string, h_len, sid_len, is512);  // IV  S→C
+        derive_key(work, K_be, H, session_id, 'C', key_c2s, k_is_string, h_len, sid_len, is512); // key C→S
+        derive_key(work, K_be, H, session_id, 'D', key_s2c, k_is_string, h_len, sid_len, is512); // key S→C
         // Build the keyed contexts now and keep the nonce (GCM nonce = low 12 bytes of the 16-byte IV
         // field). The raw keys are wiped below and never stored: the context holds the schedule, so unlike
         // CTR mode this slot ends up with no raw GCM key in it at all.
@@ -221,13 +231,15 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
     uint8_t key_c2s[32];
     uint8_t key_s2c[32];
 
-    derive_key(K_be, H, session_id, 'A', iv_c2s, k_is_string, h_len, sid_len, is512);  // IV  C→S (first 16 used)
-    derive_key(K_be, H, session_id, 'B', iv_s2c, k_is_string, h_len, sid_len, is512);  // IV  S→C
-    derive_key(K_be, H, session_id, 'C', key_c2s, k_is_string, h_len, sid_len, is512); // cipher key C→S
-    derive_key(K_be, H, session_id, 'D', key_s2c, k_is_string, h_len, sid_len, is512); // cipher key S→C
-    uint8_t mlen = ssh_mac_len(mac_alg);                                               // 32 (SHA-256) or 64 (SHA-512)
-    ssh_kdf_derive(K_be, H, session_id, 'E', km->mac_key_c2s, mlen, k_is_string, h_len, sid_len, is512); // MAC C→S
-    ssh_kdf_derive(K_be, H, session_id, 'F', km->mac_key_s2c, mlen, k_is_string, h_len, sid_len, is512); // MAC S→C
+    derive_key(work, K_be, H, session_id, 'A', iv_c2s, k_is_string, h_len, sid_len, is512);  // IV  C→S (first 16 used)
+    derive_key(work, K_be, H, session_id, 'B', iv_s2c, k_is_string, h_len, sid_len, is512);  // IV  S→C
+    derive_key(work, K_be, H, session_id, 'C', key_c2s, k_is_string, h_len, sid_len, is512); // cipher key C→S
+    derive_key(work, K_be, H, session_id, 'D', key_s2c, k_is_string, h_len, sid_len, is512); // cipher key S→C
+    uint8_t mlen = ssh_mac_len(mac_alg); // 32 (SHA-256) or 64 (SHA-512)
+    ssh_kdf_derive(work, K_be, H, session_id, 'E', km->mac_key_c2s, mlen, k_is_string, h_len, sid_len,
+                   is512); // MAC C→S
+    ssh_kdf_derive(work, K_be, H, session_id, 'F', km->mac_key_s2c, mlen, k_is_string, h_len, sid_len,
+                   is512); // MAC S→C
 
     // Store only the raw key + the initial counter (first 16 bytes of the derived IV); the key schedule is
     // rebuilt per packet in the shared crypto scratch, so no expanded key ever lands in the keymat pool.

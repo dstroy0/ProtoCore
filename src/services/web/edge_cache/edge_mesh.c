@@ -203,7 +203,7 @@ size_t edge_mesh_serialize_entry(const EdgeEntry *e, long current_age, uint8_t *
     return PC_EDGE_MESH_TRAILER + n;
 }
 
-proto_bool edge_mesh_deserialize_entry(const uint8_t *buf, size_t len, EdgeEntry *e, uint32_t now_ms)
+proto_bool edge_mesh_deserialize_entry(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e, uint32_t now_ms)
 {
     if (!buf || !e || len < PC_EDGE_MESH_TRAILER)
     {
@@ -214,7 +214,7 @@ proto_bool edge_mesh_deserialize_entry(const uint8_t *buf, size_t len, EdgeEntry
     uint32_t lifetime = get_u32(buf + 16);
     uint32_t age_hdr = get_u32(buf + 20);
     uint32_t current_age = get_u32(buf + 24);
-    if (!edge_sd_deserialize(buf + PC_EDGE_MESH_TRAILER, len - PC_EDGE_MESH_TRAILER, e))
+    if (!edge_sd_deserialize(work, buf + PC_EDGE_MESH_TRAILER, len - PC_EDGE_MESH_TRAILER, e))
     {
         return PROTO_FALSE;
     }

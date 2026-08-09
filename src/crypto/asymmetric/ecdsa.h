@@ -61,6 +61,9 @@ PROTO_BEGIN_DECLS
 /** @brief Raw ECDSA signature length: r || s (32 + 32, big-endian). */
 #define PC_ECDSA_P256_SIG_LEN 64
 
+// PC_ECDSA_BORROW - the working bytes sign and verify take from their caller - is stated in
+// protocore_config.h, which sums it into the secure arena.
+
 /**
  * @brief Derive the uncompressed public point Q = d*G from a P-256 private scalar.
  *
@@ -77,25 +80,27 @@ proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_
  * (RFC 6979); Arduino builds sign with the hardware RNG. Both produce a valid signature.
  *
  * @param[out] sig   64-byte raw signature r || s (big-endian, 32 + 32).
+ * @param[in]  work  PC_ECDSA_BORROW bytes of caller storage.
  * @param[in]  msg   Message to sign (typically the KEX exchange hash H).
  * @param[in]  mlen  Length of @p msg.
  * @param[in]  priv  32-byte big-endian private scalar d.
  * @return true on success, false on invalid key or internal failure.
  */
-proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], const uint8_t *msg, size_t mlen,
+proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work, const uint8_t *msg, size_t mlen,
                               const uint8_t priv[PC_ECDSA_P256_PRIV_LEN]);
 
 /**
  * @brief Verify a P-256 ECDSA signature (SHA-256) against an uncompressed public point.
  *
  * @param[in] pub   65-byte uncompressed point 0x04 || X || Y (rejected if not on-curve).
+ * @param[in] work  PC_ECDSA_BORROW bytes of caller storage.
  * @param[in] msg   Signed message.
  * @param[in] mlen  Length of @p msg.
  * @param[in] sig   64-byte raw signature r || s (big-endian, 32 + 32).
  * @return true if the signature is valid, false otherwise.
  */
-proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t *msg, size_t mlen,
-                                const uint8_t sig[PC_ECDSA_P256_SIG_LEN]);
+proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_t *work, const uint8_t *msg,
+                                size_t mlen, const uint8_t sig[PC_ECDSA_P256_SIG_LEN]);
 
 /**
  * @brief P-256 ECDH: the shared-secret X coordinate of d * Q_peer (RFC 5656 §4 / RFC 5903).

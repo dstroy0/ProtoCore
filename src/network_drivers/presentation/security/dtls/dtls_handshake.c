@@ -265,9 +265,9 @@ static proto_bool pc_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordN
 // HelloRetryRequest cookie (RFC 9147 §5.1)
 // ---------------------------------------------------------------------------
 
-static size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timestamp, const uint8_t *payload,
-                                  size_t payload_len, const uint8_t *client_addr, size_t addr_len, uint8_t *out,
-                                  size_t out_cap)
+static size_t pc_dtls_cookie_make(uint8_t *work, const uint8_t pc_hmac_key[32], uint64_t timestamp,
+                                  const uint8_t *payload, size_t payload_len, const uint8_t *client_addr,
+                                  size_t addr_len, uint8_t *out, size_t out_cap)
 {
     if (payload_len > 0xFFFF)
     {
@@ -290,7 +290,7 @@ static size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timest
     // MAC covers version || timestamp || client_addr || payload_len || payload: the address is
     // authenticated (so a cookie cannot be replayed from another peer) without being stored.
     pc_hmac_sha256_ctx h;
-    pc_hmac_sha256_init(&h, pc_hmac_key, 32);
+    pc_hmac_sha256_init(&h, work, pc_hmac_key, 32);
     pc_hmac_sha256_update(&h, out, 9);
     pc_hmac_sha256_update(&h, client_addr, addr_len);
     pc_hmac_sha256_update(&h, out + 9, 2 + payload_len);
@@ -298,7 +298,7 @@ static size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timest
     return total;
 }
 
-static proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
+static proto_bool pc_dtls_cookie_verify(uint8_t *work, const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
                                         const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie,
                                         size_t cookie_len, uint8_t *payload_out, size_t payload_cap,
                                         size_t *payload_len_out)
@@ -319,7 +319,7 @@ static proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t 
     }
     uint8_t mac[PC_HMAC_SHA256_LEN];
     pc_hmac_sha256_ctx h;
-    pc_hmac_sha256_init(&h, pc_hmac_key, 32);
+    pc_hmac_sha256_init(&h, work, pc_hmac_key, 32);
     pc_hmac_sha256_update(&h, cookie, 9);
     pc_hmac_sha256_update(&h, client_addr, addr_len);
     pc_hmac_sha256_update(&h, cookie + 9, 2 + payload_len);

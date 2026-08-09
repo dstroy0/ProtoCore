@@ -44,7 +44,7 @@ PROTO_BEGIN_DECLS
  * @param engine_id_len  length of @p engine_id.
  * @param key_out        receives SNMP_USM_KEY_LEN localized key bytes.
  */
-void pc_snmp_usm_localize_key(const char *password, const uint8_t *engine_id, size_t engine_id_len,
+void pc_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id, size_t engine_id_len,
                               uint8_t key_out[SNMP_USM_KEY_LEN]);
 
 /**

@@ -22,17 +22,19 @@
 static_assert(PC_WORK_TLS_CONN >= (size_t)MAX_TLS_CONNS * PC_TLS_CONN_BORROW,
               "PC_WORK_TLS_CONN must cover one TX + RX + terms + state borrow per TLS connection: raise it in "
               "protocore_config.h");
-static_assert(sizeof(pc_sha256_ctx) + sizeof(Tls13ClientHello) + PC_TLS13_KS_CAP <= PC_TLS_CONN_STATE_CAP,
-              "PC_TLS_CONN_STATE_CAP must cover the transcript snapshot, the parsed ClientHello and the key "
-              "schedule: raise it in protocore_config.h");
+static_assert(PC_SHA256_BORROW + sizeof(Tls13ClientHello) + PC_TLS13_KS_BORROW + PC_SHA512_BORROW <=
+                  PC_TLS_CONN_STATE_CAP,
+              "PC_TLS_CONN_STATE_CAP must cover the transcript's working bytes, the parsed ClientHello, the "
+              "key schedule and the Ed25519 signature's SHA-512: raise it in protocore_config.h");
 
 // Offsets into the one borrow.
 #define TLS_OFF_TX 0
 #define TLS_OFF_RX ((size_t)PC_TLS_CONN_MSG_CAP)
 #define TLS_OFF_TERMS (TLS_OFF_RX + PC_TLS_CONN_REC_CAP)
-#define TLS_OFF_PEEK (TLS_OFF_TERMS + PC_TLS_CONN_TERMS_CAP)
-#define TLS_OFF_HELLO (TLS_OFF_PEEK + sizeof(pc_sha256_ctx))
+#define TLS_OFF_HASH (TLS_OFF_TERMS + PC_TLS_CONN_TERMS_CAP)
+#define TLS_OFF_HELLO (TLS_OFF_HASH + PC_SHA256_BORROW)
 #define TLS_OFF_KS (TLS_OFF_HELLO + sizeof(Tls13ClientHello))
+#define TLS_OFF_SIGN (TLS_OFF_KS + PC_TLS13_KS_BORROW)
 
 // The profile in tls_conn.h: the portable arm authenticates by RFC 7250 raw public key, so the
 // Certificate message it builds is the RPK one.
@@ -69,11 +71,11 @@ static void transcript_add(TlsConn *c, const uint8_t *msg, size_t len)
     pc_sha256_update(&c->transcript, msg, len);
 }
 
-// The Transcript-Hash so far into terms[off], leaving the running context to keep taking messages.
+// The Transcript-Hash so far into terms[off]. Finalizing compresses the padded blocks into a copy of
+// the state, so the running context is untouched and keeps taking messages.
 static void transcript_peek(TlsConn *c, size_t off)
 {
-    *c->peek = c->transcript;
-    pc_sha256_final(c->peek, c->terms + off);
+    pc_sha256_final(&c->transcript, c->terms + off);
 }
 
 // The body length a handshake message header declares.
@@ -148,7 +150,8 @@ static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
 
     // CertificateVerify signs the transcript through the Certificate message.
     transcript_peek(c, TLS_TERM_HASH);
-    n = pc_tls13_build_cert_verify(c->tx, PC_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_HASH, c->cfg->ed25519_seed);
+    n = pc_tls13_build_cert_verify(c->sign_work, c->tx, PC_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_HASH,
+                                   c->cfg->ed25519_seed);
     w = emit_encrypted(c, n, out + off, out_cap - off);
     if (w == 0)
     {
@@ -227,12 +230,13 @@ static proto_bool conn_init(TlsConn *c, TlsRole role, const TlsConnConfig *cfg)
     c->tx = b.buf + TLS_OFF_TX;
     c->rx = b.buf + TLS_OFF_RX;
     c->terms = b.buf + TLS_OFF_TERMS;
-    c->peek = (pc_sha256_ctx *)(b.buf + TLS_OFF_PEEK);
+    c->hash_work = b.buf + TLS_OFF_HASH;
+    c->sign_work = b.buf + TLS_OFF_SIGN;
     c->hello = (Tls13ClientHello *)(b.buf + TLS_OFF_HELLO);
     c->cfg = cfg;
     c->role = role;
     c->state = TLS_CONN_START;
-    pc_sha256_init(&c->transcript);
+    pc_sha256_init(&c->transcript, c->hash_work);
     return pc_tls13_ks_early(&TLS13_KDF, &c->ks, b.buf + TLS_OFF_KS);
 }
 

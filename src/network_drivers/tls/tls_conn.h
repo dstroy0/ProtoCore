@@ -111,7 +111,8 @@ typedef struct
     uint8_t *tx;             ///< PC_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
     uint8_t *rx;             ///< PC_TLS_CONN_REC_CAP: the record the worker filled
     uint8_t *terms;          ///< PC_TLS_CONN_TERMS_CAP: the five 32-byte terms, at TLS_TERM_* offsets
-    pc_sha256_ctx *peek;     ///< the transcript snapshotted, so finalizing does not disturb the running one
+    uint8_t *hash_work;      ///< PC_SHA256_BORROW: the bytes @ref transcript works out of
+    uint8_t *sign_work;      ///< PC_SHA512_BORROW: the bytes the CertificateVerify signature works out of
     Tls13ClientHello *hello; ///< the peer's parsed ClientHello
 } TlsConn;
 

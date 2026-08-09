@@ -324,7 +324,7 @@ void pc_smb_preauth_init(SmbPreauth *p);
  *        Call once per NEGOTIATE / SESSION_SETUP message (request and response), in wire order, passing
  *        the SMB2 message (header + body) without the Direct-TCP transport prefix.
  */
-void pc_smb_preauth_update(SmbPreauth *p, const uint8_t *msg, size_t len);
+void pc_smb_preauth_update(uint8_t *work, SmbPreauth *p, const uint8_t *msg, size_t len);
 
 /** @brief Parsed SESSION_SETUP response (MS-SMB2 §2.2.6). */
 typedef struct
@@ -496,7 +496,7 @@ typedef enum PROTO_ENUM_PACKED
  * @param msg      the full message (header + body), modified in place; must be at least a 64-byte header.
  * @param msg_len  total message length. A message shorter than the header is left untouched.
  */
-void pc_smb2_sign(const uint8_t key[16], uint8_t *msg, size_t msg_len);
+void pc_smb2_sign(uint8_t *work, const uint8_t key[16], uint8_t *msg, size_t msg_len);
 
 /**
  * @brief Verify an SMB2 message's signature (MS-SMB2 §3.1.5.1). Recomputes the HMAC-SHA256 over @p msg
@@ -504,7 +504,7 @@ void pc_smb2_sign(const uint8_t key[16], uint8_t *msg, size_t msg_len);
  *        Signature. @p msg is restored unchanged before returning.
  * @return true iff the signature matches; false on a mismatch or a message shorter than the header.
  */
-proto_bool pc_smb2_verify(const uint8_t key[16], uint8_t *msg, size_t msg_len);
+proto_bool pc_smb2_verify(uint8_t *work, const uint8_t key[16], uint8_t *msg, size_t msg_len);
 
 // ---------------------------------------------------------------------------
 // SMB 3.x signing (MS-SMB2 §3.1.4.1 / §3.1.5.1) - AES-128-CMAC (dialects 3.0 / 3.0.2 / 3.1.1)
@@ -516,7 +516,7 @@ proto_bool pc_smb2_verify(const uint8_t key[16], uint8_t *msg, size_t msg_len);
  *        the 16-byte SMB 3.x signing @p key - but the MAC is AES-CMAC, whose full 16-octet tag is the
  *        Signature. @p msg shorter than a 64-byte header is left untouched.
  */
-void pc_smb2_sign_cmac(const uint8_t key[16], uint8_t *msg, size_t msg_len);
+void pc_smb2_sign_cmac(uint8_t *work, const uint8_t key[16], uint8_t *msg, size_t msg_len);
 
 /**
  * @brief Verify an AES-128-CMAC-signed SMB2 message (MS-SMB2 §3.1.5.1, SMB 3.x). Recomputes the CMAC
@@ -524,7 +524,7 @@ void pc_smb2_sign_cmac(const uint8_t key[16], uint8_t *msg, size_t msg_len);
  *        restored unchanged.
  * @return true iff the signature matches; false on a mismatch or a message shorter than the header.
  */
-proto_bool pc_smb2_verify_cmac(const uint8_t key[16], uint8_t *msg, size_t msg_len);
+proto_bool pc_smb2_verify_cmac(uint8_t *work, const uint8_t key[16], uint8_t *msg, size_t msg_len);
 
 /**
  * @brief Derive the 16-byte SMB 3.x signing key from the NTLM session key via the SP800-108 counter-mode

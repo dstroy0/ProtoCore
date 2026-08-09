@@ -12,13 +12,14 @@
  */
 
 #include "services/security/oidc/oidc.h"
-#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_OIDC
 
 #include "crypto/asymmetric/rsa.h"
 #include "mmgr/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
+#include "mmgr/secure.h"    // the signature digest's working set, wiped on release
 #include "network_drivers/presentation/codec/base64/base64.h" // shared Base64.url_decode
 
 #include <stdio.h>
@@ -463,9 +464,20 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     }
 
     // Verify over the signing input "header.payload" (pc_rsa_verify hashes it). RS256 = SHA-256.
+    // One borrow for that digest, returned either way before the claims are read.
     size_t signing_len = (size_t)(seg[1] + seglen[1] - token);
-    if (pc_rsa_verify(key->n, key->e, (const uint8_t *)token, signing_len, sig, PC_OIDC_RSA_BYTES,
-                      PC_RSA_HASH_SHA256) != 0)
+    size_t vmark = pc_secure_mark();
+    pc_span vws = pc_secure_span(PC_SHA256_BORROW, _Alignof(uint32_t));
+    if (!pc_span_ok(vws))
+    {
+        pc_secure_release(vmark);
+        pc_plaintext_release(scope);
+        return PC_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
+    }
+    int vrc = pc_rsa_verify(key->n, key->e, vws.buf, (const uint8_t *)token, signing_len, sig, PC_OIDC_RSA_BYTES,
+                            PC_RSA_HASH_SHA256);
+    pc_secure_release(vmark);
+    if (vrc != 0)
     {
         pc_plaintext_release(scope);
         return PC_OIDC_ERR_SIGNATURE;

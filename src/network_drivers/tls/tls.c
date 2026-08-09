@@ -18,9 +18,9 @@
 
 #if PC_ENABLE_TLS && PC_HAS_VENDOR_TLS
 
+#include "crypto/rng/rng.h" // pc_rand_fill: the mbedtls RNG callback
 #include "lwip/tcp.h"
 #include "network_drivers/transport/tcp.h"
-#include <Arduino.h> // millis() for the blocking client loop
 
 #include <mbedtls/error.h>
 #include <mbedtls/pk.h>
@@ -272,7 +272,7 @@ static TlsConn *find(uint8_t slot)
 static int tls_rng(void *ctx, unsigned char *out, size_t len)
 {
     (void)ctx;
-    pc_platform_rand_fill(out, len); // ESP32 hardware CSPRNG
+    pc_rand_fill(out, len); // ESP32 hardware CSPRNG
     return 0;
 }
 

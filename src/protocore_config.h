@@ -6528,6 +6528,73 @@ from halves and is slower than the width it decomposes into"
  *
  * Values are what the ESP32 toolchain reported for the real structs, rounded up.
  */
+
+// A SHA-256 context works out of bytes its caller hands it: the block as it arrives, the padded last
+// one, and the state copy finalizing compresses into so the running hash survives it. The schedule is
+// a register window, not storage. The accelerator holds its own state and takes none. Proved against
+// the real layout by a static_assert in sha256.c.
+#ifndef PC_SHA256_BORROW
+#if PC_HAS_HW_SHA
+#define PC_SHA256_BORROW 0
+#else
+#define PC_SHA256_BORROW 160
+#endif
+#endif
+
+// One IKE SA's crypto: the cookie hash, the prf+ chain, the AUTH MAC and the ECDSA / RSA signature,
+// which run in sequence. The signature is the largest.
+#ifndef PC_IKE_BORROW
+#define PC_IKE_BORROW PC_CRYPTO_BORROW_MAX
+#endif
+
+// The largest working set any single crypto operation takes. An owner that runs several in sequence
+// out of one region sizes it by this rather than restating the comparison.
+#ifndef PC_CRYPTO_BORROW_MAX
+#define PC_CRYPTO_BORROW_MAX PC_HMAC_SHA512_BORROW
+#endif
+
+// QUIC packet keys: the HKDF's bytes, then the packet key and header-protection key it expands into
+// before each becomes a keyed context.
+#ifndef PC_QUIC_KEYS_BORROW
+#define PC_QUIC_KEYS_BORROW (PC_HKDF_BORROW + 32)
+#endif
+
+// ECDSA hashes the message with SHA-256, then the software path draws its nonce from an RFC 6979
+// HMAC-DRBG. The two run in sequence; the sum is the bound either way.
+#ifndef PC_ECDSA_BORROW
+#define PC_ECDSA_BORROW (PC_SHA256_BORROW + PC_HMAC_SHA256_BORROW)
+#endif
+
+// HKDF drives one HMAC-SHA256 and holds the T(i) block and the HkdfLabel it builds.
+#ifndef PC_HKDF_BORROW
+#define PC_HKDF_BORROW (PC_HMAC_SHA256_BORROW + 32 + 514)
+#endif
+
+// A SHA-512 context works out of the same three regions as SHA-256, at its own widths: the 128-byte
+// block as it arrives, the padded last one, and the 64-byte state copy finalizing compresses into.
+// The schedule is a register window, not storage.
+#ifndef PC_SHA512_BORROW
+#if PC_HAS_HW_SHA
+#define PC_SHA512_BORROW 0
+#else
+#define PC_SHA512_BORROW 320
+#endif
+#endif
+
+// An HMAC-SHA512 context works out of two SHA-512 borrows - the inner hash it keeps across updates and
+// the outer one final runs - plus the two key blocks and the inner digest between them. Proved against
+// the real split by a static_assert in hmac_sha512.c.
+#ifndef PC_HMAC_SHA512_BORROW
+#define PC_HMAC_SHA512_BORROW (2 * PC_SHA512_BORROW + 768)
+#endif
+
+// An HMAC-SHA256 context works out of two SHA-256 borrows - the inner hash it keeps across updates and
+// the outer one final runs - plus the key blocks and digest between them. Proved against the real
+// split by a static_assert in hmac_sha256.c.
+#ifndef PC_HMAC_SHA256_BORROW
+#define PC_HMAC_SHA256_BORROW (2 * PC_SHA256_BORROW + 384)
+#endif
+
 #ifndef PC_WORK_BIGNUM_HW
 #define PC_WORK_BIGNUM_HW 1024
 #endif
@@ -6598,14 +6665,15 @@ from halves and is slower than the width it decomposes into"
 #ifndef PC_WORK_AES256CTR
 #define PC_WORK_AES256CTR 384
 #endif
-#ifndef PC_WORK_HMAC_SHA256
-#define PC_WORK_HMAC_SHA256 288 // 272 on the SSH example, 276 with DTLS+PQC (flags change the SHA ctx); headroom to 288
-#endif
 #ifndef PC_WORK_POLY1305
 #define PC_WORK_POLY1305 80
 #endif
 #ifndef PC_WORK_MD
 #define PC_WORK_MD 96
+#endif
+// KdfWork - one counter block and one digest - then the PRF's own bytes.
+#ifndef PC_WORK_KDF
+#define PC_WORK_KDF (128 + PC_HMAC_SHA256_BORROW)
 #endif
 
 // SSH frames every outbound packet in the secure pool: the payload it carries is the session's own
@@ -6621,8 +6689,12 @@ from halves and is slower than the width it decomposes into"
 // stated here in units of it and proved against the real SSH_WIRE_CAP by a static_assert in
 // ssh_conn.c. Two per slot covers the framing overhead the wire adds over a full payload,
 // compression's expansion bound included.
+// Each slot's borrow is its wire buffer and the bytes its packet MAC works out of, taken together and
+// split by offset in ssh_packet.c.
 #ifndef PC_WORK_SSH_CONN
-#define PC_WORK_SSH_CONN (((size_t)MAX_SSH_CONNS + 2u) * 2u * (size_t)SSH_PKT_BUF_SIZE)
+#define PC_WORK_SSH_CONN                                                                                               \
+    ((((size_t)MAX_SSH_CONNS + 2u) * 2u * (size_t)SSH_PKT_BUF_SIZE) +                                                  \
+     ((size_t)MAX_SSH_CONNS * (size_t)PC_HMAC_SHA256_BORROW))
 #endif
 
 // The software TLS 1.3 handshake driver takes one borrow per connection from the secure pool's
@@ -6649,10 +6721,11 @@ from halves and is slower than the width it decomposes into"
 #ifndef PC_TLS_CONN_TERMS_CAP
 #define PC_TLS_CONN_TERMS_CAP ((size_t)PC_TLS_CONN_TERMS * PC_TLS13_SECRET_LEN)
 #endif
-// The transcript snapshot and the parsed ClientHello, which the driver reaches by pointer. Stated in
-// bytes here and proved against their real sizeof by a static_assert in tls_conn.c.
+// The transcript's working bytes, the parsed ClientHello and the key schedule, which the driver
+// reaches by pointer. Stated in bytes here and proved against their real sizes by a static_assert in
+// tls_conn.c: 160 + 120 + 1634 = 1914 today.
 #ifndef PC_TLS_CONN_STATE_CAP
-#define PC_TLS_CONN_STATE_CAP 384
+#define PC_TLS_CONN_STATE_CAP 2304
 #endif
 // The terms of one TLS 1.3 key schedule: early, handshake and master secrets; the four traffic
 // secrets; the empty hash, the derived salt, the finished key, the zero IKM, and the Finished
@@ -6660,6 +6733,11 @@ from halves and is slower than the width it decomposes into"
 // here and spent there: PC_TLS13_KS_CAP.
 #ifndef PC_TLS13_KS_TERMS
 #define PC_TLS13_KS_TERMS 12
+#endif
+// The schedule's terms, then the bytes its HKDF works out of. One borrow, split by offset in
+// tls13_kdf.h, taken by whichever connection runs the handshake.
+#ifndef PC_TLS13_KS_BORROW
+#define PC_TLS13_KS_BORROW ((size_t)PC_TLS13_KS_TERMS * PC_TLS13_SECRET_LEN + PC_HKDF_BORROW)
 #endif
 #ifndef PC_WORK_TLS_CONN
 #define PC_WORK_TLS_CONN                                                                                               \
@@ -6715,14 +6793,12 @@ from halves and is slower than the width it decomposes into"
 // Feature-gated terms: a build pays only for the code it compiled.
 #if PC_ENABLE_SSH || PC_ENABLE_SSH_CLIENT || PC_ENABLE_TLS || PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
 #define PC_SECURE_WORK_AEAD (PC_WORK_AESGCM + PC_WORK_CHACHAPOLY + PC_WORK_CHACHA20 + PC_WORK_POLY1305)
-#define PC_SECURE_WORK_MAC PC_WORK_HMAC_SHA256
 #else
 #define PC_SECURE_WORK_AEAD 0
-#define PC_SECURE_WORK_MAC 0
 #endif
 
 #if PC_ENABLE_SMB
-#define PC_SECURE_WORK_SMB (PC_WORK_AESCCM + PC_WORK_AES128GCM + PC_WORK_MD)
+#define PC_SECURE_WORK_SMB (PC_WORK_AESCCM + PC_WORK_AES128GCM + PC_WORK_MD + PC_WORK_KDF)
 #else
 #define PC_SECURE_WORK_SMB 0
 #endif
@@ -6748,9 +6824,9 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 #define PC_SECURE_ARENA_SIZE                                                                                           \
-    (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_MAC + PC_SECURE_WORK_SMB +                           \
-     PC_SECURE_WORK_SSHCIPHER + PC_SECURE_WORK_SSHCONN + PC_SECURE_WORK_TLSCONN + PC_WORK_ROUTE_TABLE +                \
-     PC_SECURE_WORK_AUTH + PC_WORK_RNG + 256) // + 256: alignment round-up across the individual borrows
+    (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_SMB + PC_SECURE_WORK_SSHCIPHER +                     \
+     PC_SECURE_WORK_SSHCONN + PC_SECURE_WORK_TLSCONN + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +       \
+     256) // + 256: alignment round-up across the individual borrows
 #endif
 
 // ---------------------------------------------------------------------------

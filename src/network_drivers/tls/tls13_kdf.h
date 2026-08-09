@@ -77,11 +77,12 @@ extern const Tls13Kdf DTLS13_KDF;
 #define TLS13_KS_ZEROS (10 * TLS13_SECRET_LEN)       ///< 0^Hash.length, never written: the borrow arrives zeroed
 #define TLS13_KS_VERIFY (11 * TLS13_SECRET_LEN)      ///< the Finished verify_data this end built or expects
 #define PC_TLS13_KS_CAP ((size_t)PC_TLS13_KS_TERMS * TLS13_SECRET_LEN)
+#define TLS13_KS_WORK PC_TLS13_KS_CAP ///< past the terms: the bytes this schedule's HKDF works out of
 
 typedef struct
 {
     const Tls13Kdf *kdf; ///< variant (label prefix) bound by pc_tls13_ks_early()
-    uint8_t *s;          ///< PC_TLS13_KS_CAP secure bytes, one term per TLS13_KS_* offset
+    uint8_t *s;          ///< PC_TLS13_KS_BORROW secure bytes: the terms, then the HKDF's own
 } Tls13KeySchedule;
 
 /**
@@ -90,20 +91,22 @@ typedef struct
  * The record-key derivations (key/iv/sn) call this so the label prefix follows the negotiated
  * protocol without the record layer knowing the prefix string.
  */
-void pc_tls13_kdf_expand_label(const Tls13Kdf *kdf, const uint8_t secret[TLS13_SECRET_LEN], const char *label,
-                               uint8_t *out, size_t out_len);
+void pc_tls13_kdf_expand_label(const Tls13Kdf *kdf, uint8_t *work, const uint8_t secret[TLS13_SECRET_LEN],
+                               const char *label, uint8_t *out, size_t out_len);
 
 /**
  * @brief Derive-Secret (RFC 8446 sec 7.1): HKDF-Expand-Label(secret, label, transcript_hash, 32).
  *
  * @param kdf              KDF variant (label prefix).
+ * @param work             PC_HKDF_BORROW bytes of caller storage.
  * @param secret           A 32-byte PRK / traffic secret.
  * @param label            Short label without the prefix, e.g. "c hs traffic", "derived".
  * @param transcript_hash  Transcript-Hash of the relevant messages (32 bytes; H("") for "derived").
  * @param out              32-byte derived secret.
  */
-void pc_tls13_derive_secret(const Tls13Kdf *kdf, const uint8_t secret[TLS13_SECRET_LEN], const char *label,
-                            const uint8_t transcript_hash[TLS13_SECRET_LEN], uint8_t out[TLS13_SECRET_LEN]);
+void pc_tls13_derive_secret(const Tls13Kdf *kdf, uint8_t *work, const uint8_t secret[TLS13_SECRET_LEN],
+                            const char *label, const uint8_t transcript_hash[TLS13_SECRET_LEN],
+                            uint8_t out[TLS13_SECRET_LEN]);
 
 /**
  * @brief Step 1: bind the @p kdf variant and @p s, then compute early_secret = HKDF-Extract(0, 0^32).

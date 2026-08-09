@@ -402,12 +402,12 @@ static void Short_random(small_t *out)
 }
 
 // out = SHA512(b || in)[0:32].
-static void Hash_prefix(uint8_t *out, int b, const uint8_t *in, size_t inlen)
+static void Hash_prefix(uint8_t *work, uint8_t *out, int b, const uint8_t *in, size_t inlen)
 {
     pc_sha512_ctx ctx;
     uint8_t h[PC_SHA512_DIGEST_LEN];
     uint8_t bb = (uint8_t)b;
-    pc_sha512_init(&ctx);
+    pc_sha512_init(&ctx, work);
     pc_sha512_update(&ctx, &bb, 1);
     pc_sha512_update(&ctx, in, inlen);
     pc_sha512_final(&ctx, h);
@@ -456,25 +456,25 @@ static void Rounded_encode(uint8_t *s, const Fq *r, uint16_t *scr)
     sntrup761_encode(s, Rr, M, PC_SNTRUP_P, scr);
 }
 
-static void HashConfirm(uint8_t *h, const uint8_t *r_enc, const uint8_t *cache)
+static void HashConfirm(uint8_t *work, uint8_t *h, const uint8_t *r_enc, const uint8_t *cache)
 {
     uint8_t x[PC_HASH_BYTES * 2];
-    Hash_prefix(x, 3, r_enc, PC_SMALL_BYTES);
+    Hash_prefix(work, x, 3, r_enc, PC_SMALL_BYTES);
     mem.cpy(x + PC_HASH_BYTES, cache, PC_HASH_BYTES);
-    Hash_prefix(h, 2, x, sizeof x);
+    Hash_prefix(work, h, 2, x, sizeof x);
 }
 
-static void HashSession(uint8_t *k, int b, const uint8_t *r_enc, const uint8_t *c)
+static void HashSession(uint8_t *work, uint8_t *k, int b, const uint8_t *r_enc, const uint8_t *c)
 {
     uint8_t x[PC_HASH_BYTES + PC_CT_BYTES];
-    Hash_prefix(x, 3, r_enc, PC_SMALL_BYTES);
+    Hash_prefix(work, x, 3, r_enc, PC_SMALL_BYTES);
     mem.cpy(x + PC_HASH_BYTES, c, PC_CT_BYTES);
-    Hash_prefix(k, b, x, sizeof x);
+    Hash_prefix(work, k, b, x, sizeof x);
 }
 
 // Encapsulation reused for the Decapsulation FO re-encrypt check.
-static void Hide(uint8_t *c, uint8_t *r_enc, const small_t *r, const uint8_t *pk, const uint8_t *cache, uint16_t *scr,
-                 uint32_t *scr32)
+static void Hide(uint8_t *work, uint8_t *c, uint8_t *r_enc, const small_t *r, const uint8_t *pk, const uint8_t *cache,
+                 uint16_t *scr, uint32_t *scr32)
 {
     Small_encode(r_enc, r);
     Fq h[PC_SNTRUP_P], cp[PC_SNTRUP_P];
@@ -482,7 +482,7 @@ static void Hide(uint8_t *c, uint8_t *r_enc, const small_t *r, const uint8_t *pk
     Rq_mult_small(cp, h, r); // c = Round(h * r)
     Round(cp, cp);
     Rounded_encode(c, cp, scr);
-    HashConfirm(c + PC_CT_BYTES - PC_CONFIRM_BYTES, r_enc, cache);
+    HashConfirm(work, c + PC_CT_BYTES - PC_CONFIRM_BYTES, r_enc, cache);
 }
 
 // ===========================================================================
@@ -806,7 +806,7 @@ static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
     return ((((uint16_t)(differentbits - 1)) >> 8) & 1) - 1;
 }
 
-void pc_sntrup761_enc(const uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t ct[PC_SNTRUP761_CT_BYTES],
+void pc_sntrup761_enc(uint8_t *work, const uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t ct[PC_SNTRUP761_CT_BYTES],
                       uint8_t ss[PC_SNTRUP761_SS_BYTES])
 {
     uint16_t scr16[PC_SCR16];
@@ -815,13 +815,13 @@ void pc_sntrup761_enc(const uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t ct[PC_SNT
     uint8_t r_enc[PC_SMALL_BYTES];
     uint8_t cache[PC_HASH_BYTES];
 
-    Hash_prefix(cache, 4, pk, PC_PK_BYTES);
+    Hash_prefix(work, cache, 4, pk, PC_PK_BYTES);
     Short_random(r);
-    Hide(ct, r_enc, r, pk, cache, scr16, scr32);
-    HashSession(ss, 1, r_enc, ct);
+    Hide(work, ct, r_enc, r, pk, cache, scr16, scr32);
+    HashSession(work, ss, 1, r_enc, ct);
 }
 
-void pc_sntrup761_keypair(uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRUP761_SK_BYTES])
+void pc_sntrup761_keypair(uint8_t *work, uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRUP761_SK_BYTES])
 {
     uint16_t scr16[PC_SCR16];
     Fq h[PC_SNTRUP_P];
@@ -836,10 +836,10 @@ void pc_sntrup761_keypair(uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRU
     uint8_t *tail = sk + 2 * PC_SMALL_BYTES; // SecretKeys_bytes = 2 * Small_bytes
     mem.cpy(tail, pk, PC_PK_BYTES);
     pc_rand_fill(tail + PC_PK_BYTES, PC_SMALL_BYTES);
-    Hash_prefix(tail + PC_PK_BYTES + PC_SMALL_BYTES, 4, pk, PC_PK_BYTES);
+    Hash_prefix(work, tail + PC_PK_BYTES + PC_SMALL_BYTES, 4, pk, PC_PK_BYTES);
 }
 
-void pc_sntrup761_dec(const uint8_t sk[PC_SNTRUP761_SK_BYTES], const uint8_t ct[PC_SNTRUP761_CT_BYTES],
+void pc_sntrup761_dec(uint8_t *work, const uint8_t sk[PC_SNTRUP761_SK_BYTES], const uint8_t ct[PC_SNTRUP761_CT_BYTES],
                       uint8_t ss[PC_SNTRUP761_SS_BYTES])
 {
     uint16_t scr16[PC_SCR16];
@@ -858,13 +858,13 @@ void pc_sntrup761_dec(const uint8_t sk[PC_SNTRUP761_SK_BYTES], const uint8_t ct[
     Small_decode(ginv, sk + PC_SMALL_BYTES);
     Rounded_decode(cp, ct, scr16, scr32);
     Decrypt(r, cp, f, ginv);
-    Hide(cnew, r_enc, r, pk, cache, scr16, scr32); // re-encrypt: FO check
+    Hide(work, cnew, r_enc, r, pk, cache, scr16, scr32); // re-encrypt: FO check
     int mask = Ciphertexts_diff_mask(ct, cnew);
     for (int i = 0; i < PC_SMALL_BYTES; ++i)
     {
         r_enc[i] = (uint8_t)(r_enc[i] ^ (mask & (r_enc[i] ^ rho[i]))); // implicit reject -> rho
     }
-    HashSession(ss, 1 + mask, r_enc, ct);
+    HashSession(work, ss, 1 + mask, r_enc, ct);
 }
 
 #endif // PC_ENABLE_SSH_SNTRUP761

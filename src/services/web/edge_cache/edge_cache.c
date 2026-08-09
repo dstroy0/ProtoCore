@@ -410,9 +410,9 @@ size_t edge_key_canon(const char *method, const char *host, const char *path, co
     return pos;
 }
 
-void edge_key_digest(const char *canon, size_t len, uint8_t digest[32])
+void edge_key_digest(uint8_t *work, const char *canon, size_t len, uint8_t digest[32])
 {
-    pc_sha256((const uint8_t *)canon, len, digest);
+    pc_sha256(work, (const uint8_t *)canon, len, digest);
 }
 
 // Parse one Vary field-name token at *pp (advancing past it) and, when non-empty, emit its
@@ -617,7 +617,7 @@ EdgeEntry *edge_store_alloc(EdgeCacheStore *s, const char *canon, const char *va
     e->used = PROTO_TRUE;
     mem.cpy(e->key, canon, klen);
     e->key[klen] = '\0';
-    edge_key_digest(canon, klen, e->digest);
+    edge_key_digest(s->digest_work, canon, klen, e->digest);
     size_t vl = vary_key ? strnlen(vary_key, sizeof(e->vary_vals)) : 0;
     if (vl >= sizeof(e->vary_vals))
     {

@@ -7,12 +7,13 @@
  */
 
 #include "services/security/jwt/jwt.h"
-#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_JWT
 
 #include "crypto/mac/hmac_sha256.h"
+#include "mmgr/secure.h" // the token MAC's working set, wiped on release
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include <stdio.h>
 
@@ -116,7 +117,16 @@ proto_bool pc_jwt_verify_hs256(const char *token, size_t token_len, const uint8_
     }
 
     uint8_t mac[PC_HMAC_SHA256_LEN];
-    pc_hmac_sha256(secret, secret_len, (const uint8_t *)token, signing_len, mac);
+    // One borrow for this token's MAC, returned before the compare.
+    size_t mark = pc_secure_mark();
+    pc_span ws = pc_secure_span(PC_HMAC_SHA256_BORROW, _Alignof(uint32_t));
+    if (!pc_span_ok(ws))
+    {
+        pc_secure_release(mark);
+        return PROTO_FALSE;
+    }
+    pc_hmac_sha256(ws.buf, secret, secret_len, (const uint8_t *)token, signing_len, mac);
+    pc_secure_release(mark);
 
     char computed[48];
     // PC_HMAC_SHA256_LEN is a fixed 32 bytes, and unpadded base64url of 32 bytes is always

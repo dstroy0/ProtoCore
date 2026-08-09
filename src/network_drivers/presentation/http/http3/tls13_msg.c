@@ -209,7 +209,7 @@ static void parse_key_share(const uint8_t *body, size_t blen, Tls13ClientHello *
 #if PC_ENABLE_PQC_KEX
         else if (group == TLS_GROUP_X25519MLKEM768 && klen == MLKEM768_EK_BYTES + 32)
         {
-            out->client_mlkem_ek = body + i;                              // ML-KEM-768 ek (first)
+            out->client_mlkem_ek = body + i;                               // ML-KEM-768 ek (first)
             mem.cpy(out->client_x25519, body + i + MLKEM768_EK_BYTES, 32); // X25519 (second)
             out->has_hybrid_share = PROTO_TRUE;
         }
@@ -701,7 +701,8 @@ size_t pc_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t tran
     return total;
 }
 
-size_t pc_tls13_build_cert_verify(uint8_t *out, size_t cap, const uint8_t transcript_hash[32], const uint8_t seed[32])
+size_t pc_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
+                                  const uint8_t seed[32])
 {
     uint8_t content[64 + 33 + 1 + 32];
     size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), transcript_hash, PROTO_TRUE);
@@ -710,7 +711,7 @@ size_t pc_tls13_build_cert_verify(uint8_t *out, size_t cap, const uint8_t transc
         return 0;
     }
     uint8_t sig[PC_ED25519_SIG_LEN];
-    pc_ed25519_sign(sig, content, clen, seed);
+    pc_ed25519_sign(work, sig, content, clen, seed);
 
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_CERTIFICATE_VERIFY);

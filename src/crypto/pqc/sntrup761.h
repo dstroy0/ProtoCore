@@ -40,7 +40,7 @@ PROTO_BEGIN_DECLS
  * @brief sntrup761 key generation (initiator). Produces a public/secret keypair; the caller sends
  *        @p pk and holds @p sk until the peer's ciphertext arrives (then pc_sntrup761_dec).
  */
-void pc_sntrup761_keypair(uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRUP761_SK_BYTES]);
+void pc_sntrup761_keypair(uint8_t *work, uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRUP761_SK_BYTES]);
 
 /**
  * @brief sntrup761 Encapsulation (responder). Draws a fresh short polynomial via pc_rand_fill(),
@@ -49,7 +49,7 @@ void pc_sntrup761_keypair(uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRU
  * @param ct  out: the ciphertext (PC_SNTRUP761_CT_BYTES).
  * @param ss  out: the shared secret (PC_SNTRUP761_SS_BYTES).
  */
-void pc_sntrup761_enc(const uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t ct[PC_SNTRUP761_CT_BYTES],
+void pc_sntrup761_enc(uint8_t *work, const uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t ct[PC_SNTRUP761_CT_BYTES],
                       uint8_t ss[PC_SNTRUP761_SS_BYTES]);
 
 /**
@@ -57,7 +57,7 @@ void pc_sntrup761_enc(const uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t ct[PC_SNT
  *        using the secret key from pc_sntrup761_keypair. Implicit-rejection (FO): on a bad
  *        ciphertext it returns a deterministic pseudo-random secret rather than failing.
  */
-void pc_sntrup761_dec(const uint8_t sk[PC_SNTRUP761_SK_BYTES], const uint8_t ct[PC_SNTRUP761_CT_BYTES],
+void pc_sntrup761_dec(uint8_t *work, const uint8_t sk[PC_SNTRUP761_SK_BYTES], const uint8_t ct[PC_SNTRUP761_CT_BYTES],
                       uint8_t ss[PC_SNTRUP761_SS_BYTES]);
 
 #endif // PC_ENABLE_SSH_SNTRUP761

@@ -13,21 +13,31 @@
 
 #include "crypto/mac/hmac_sha256.h"
 
-void pc_hkdf_extract(const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
+// The caller's working bytes, split: the HMAC's own, the T(i) block, then the HkdfLabel.
+#define HKDF_OFF_HMAC 0u
+#define HKDF_OFF_T (HKDF_OFF_HMAC + PC_HMAC_SHA256_BORROW)
+#define HKDF_OFF_INFO (HKDF_OFF_T + PC_HKDF_HASH_LEN)
+// uint16 length, the label's own length byte and its 255 bytes, then the context's.
+#define HKDF_INFO_CAP (2 + 1 + 255 + 1 + 255)
+static_assert(HKDF_OFF_INFO + HKDF_INFO_CAP <= PC_HKDF_BORROW,
+              "PC_HKDF_BORROW is short of the split - raise it in protocore_config.h, which every "
+              "consumer sizes its own borrow from");
+
+void pc_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
                      uint8_t prk[PC_HKDF_HASH_LEN])
 {
     // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). pc_hmac_sha256 pre-hashes keys > 64 bytes and
     // zero-pads shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
-    pc_hmac_sha256(salt, salt_len, ikm, ikm_len, prk);
+    pc_hmac_sha256(work + HKDF_OFF_HMAC, salt, salt_len, ikm, ikm_len, prk);
 }
 
 // RFC 5869 sec 2.3 HKDF-Expand for the QUIC case: the info block is small and fixed and the
 // requested length never exceeds one hash block, but the general N-block loop is written out so a
 // future >32-byte caller stays correct. T(i) = HMAC(PRK, T(i-1) || info || i), i counts from 1.
-static void hkdf_expand(const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info, size_t info_len, uint8_t *out,
-                        size_t out_len)
+static void hkdf_expand(uint8_t *work, const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
+                        uint8_t *out, size_t out_len)
 {
-    uint8_t t[PC_HKDF_HASH_LEN];
+    uint8_t *t = work + HKDF_OFF_T;
     size_t t_len = 0; // 0 for T(0) (empty), PC_HKDF_HASH_LEN afterwards
     size_t done = 0;
     uint8_t counter = 0;
@@ -35,7 +45,7 @@ static void hkdf_expand(const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info
     {
         counter++;
         pc_hmac_sha256_ctx ctx;
-        pc_hmac_sha256_init(&ctx, prk, PC_HKDF_HASH_LEN);
+        pc_hmac_sha256_init(&ctx, work + HKDF_OFF_HMAC, prk, PC_HKDF_HASH_LEN);
         pc_hmac_sha256_update(&ctx, t, t_len);
         pc_hmac_sha256_update(&ctx, info, info_len);
         pc_hmac_sha256_update(&ctx, &counter, 1);
@@ -52,21 +62,22 @@ static void hkdf_expand(const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info
     }
 }
 
-void pc_hkdf_expand_label_ctx(const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, const uint8_t *context,
-                              size_t context_len, uint8_t *out, size_t out_len, const char *label_prefix)
+void pc_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label,
+                              const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
+                              const char *label_prefix)
 {
     // HkdfLabel (RFC 8446 sec 7.1): uint16 length | opaque label<..> = label_prefix + label | opaque context.
     // The prefix is "tls13 " for TLS/QUIC (RFC 8446) or "dtls13" for DTLS 1.3 (RFC 9147 sec 5.9); the
     // caller supplies whichever applies, so this primitive stays protocol-agnostic. Label length maxes
     // out well under 255 (longest is "tls13 client in" = 15); the context is a Transcript-Hash (<= 32)
-    // for Derive-Secret and empty for packet-protection keys. A fixed 2 + 1 + 255 + 1 + 255 scratch
-    // buffer covers every caller.
+    // for Derive-Secret and empty for packet-protection keys. The caller's HKDF_INFO_CAP region covers
+    // every caller.
     // Bound the scans: the combined label is opaque<7..255> (RFC 8446 sec 7.1), so cap prefix+label at
     // 255 - this both fits the reserved region below and keeps the single length byte from wrapping,
     // even if a caller ever passed a non-NUL-terminated string.
     size_t prefix_len = strnlen(label_prefix, 255);
     size_t label_len = strnlen(label, 255 - prefix_len);
-    uint8_t info[2 + 1 + 255 + 1 + 255];
+    uint8_t *info = work + HKDF_OFF_INFO;
     size_t p = 0;
     info[p++] = (uint8_t)(out_len >> 8);
     info[p++] = (uint8_t)(out_len & 0xff);
@@ -82,13 +93,13 @@ void pc_hkdf_expand_label_ctx(const uint8_t secret[PC_HKDF_HASH_LEN], const char
         p += context_len;
     }
 
-    hkdf_expand(secret, info, p, out, out_len);
+    hkdf_expand(work, secret, info, p, out, out_len);
 }
 
-void pc_hkdf_expand_label(const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, uint8_t *out, size_t out_len,
-                          const char *label_prefix)
+void pc_hkdf_expand_label(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, uint8_t *out,
+                          size_t out_len, const char *label_prefix)
 {
-    pc_hkdf_expand_label_ctx(secret, label, NULL, 0, out, out_len, label_prefix);
+    pc_hkdf_expand_label_ctx(work, secret, label, NULL, 0, out, out_len, label_prefix);
 }
 
 #endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE

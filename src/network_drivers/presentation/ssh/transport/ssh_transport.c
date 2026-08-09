@@ -7,7 +7,6 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
-#include "mmgr/protomem.h"
 #include "crypto/asymmetric/bignum.h"     // bn_*, pc_bignum
 #include "crypto/asymmetric/curve25519.h" // pc_x25519 (curve25519-sha256 KEX)
 #include "crypto/asymmetric/ecdsa.h"      // pc_ecdsa_p256_* (ecdsa-sha2-nistp256 host key)
@@ -16,6 +15,7 @@
 #include "crypto/rng/rng.h" // pc_rand_fill
 #include "mmgr/bytes.h"     // pc_rd_str() - a name-list is an RFC 4251 sec 5 string
 #include "mmgr/membuild.h"  // pc_sb frame builder
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h" // pc_rand_fill(), ssh_dh[], ssh_dh_generate/derive_keys
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_KEXINIT, ssh_pkt[]
@@ -114,7 +114,7 @@ proto_bool ssh_kex_prefer_rsa(void)
 void pc_ssh_hostkey_ed25519_set(const uint8_t seed[32])
 {
     mem.cpy(s_sshtr.ed_seed, seed, 32);
-    pc_ed25519_pubkey(s_sshtr.ed_pub, s_sshtr.ed_seed);
+    pc_ed25519_pubkey(ssh_pkt[0].crypto_work, s_sshtr.ed_pub, s_sshtr.ed_seed);
     s_sshtr.ed_have = PROTO_TRUE;
 }
 proto_bool pc_ssh_hostkey_ed25519_available(void)
@@ -826,11 +826,15 @@ static int compute_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint
         return -1;
     }
     SshSession *s = &ssh_sess[i];
+    if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
+    {
+        return -1;
+    }
 
     static const char *const v_s = SSH_SERVER_VERSION;
 
     SshKexHash h;
-    ssh_kexhash_init(&h, is512);
+    ssh_kexhash_init(&h, ssh_pkt[i].crypto_work, is512);
     hash_string(&h, (const uint8_t *)s->v_c, s->v_c_len);                  // V_C
     hash_string(&h, (const uint8_t *)v_s, sizeof(SSH_SERVER_VERSION) - 1); // V_S
     hash_string(&h, s->i_c, s->i_c_len);                                   // I_C
@@ -1004,7 +1008,7 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
         {
             return -1;
         }
-        pc_ed25519_sign(sig, H, h_len, s_sshtr.ed_seed);
+        pc_ed25519_sign(ssh_pkt[i].crypto_work, sig, H, h_len, s_sshtr.ed_seed);
         *sig_len = 64;
         *sig_name = HOSTKEY_ED; // "ssh-ed25519"
         return 0;
@@ -1012,7 +1016,11 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ECDSA_NISTP256)
     {
         uint8_t raw[PC_ECDSA_P256_SIG_LEN]; // r || s (32 + 32)
-        if (!pc_ecdsa_p256_sign(raw, H, h_len, s_sshtr.ecdsa_priv))
+        if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
+        {
+            return -1;
+        }
+        if (!pc_ecdsa_p256_sign(raw, ssh_pkt[i].crypto_work, H, h_len, s_sshtr.ecdsa_priv))
         {
             return -1;
         }
@@ -1032,7 +1040,11 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
     // algorithm only chooses the signature hash (RFC 8332).
     const proto_bool sha512 = (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_RSA_SHA512);
     const pc_rsa_hash rh = sha512 ? PC_RSA_HASH_SHA512 : PC_RSA_HASH_SHA256;
-    if (sig_cap < PC_RSA_SIG_BYTES || ssh_rsa_sign(H, h_len, rh, sig) != 0)
+    if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
+    {
+        return -1;
+    }
+    if (sig_cap < PC_RSA_SIG_BYTES || ssh_rsa_sign(ssh_pkt[i].crypto_work, H, h_len, rh, sig) != 0)
     {
         return -1;
     }
@@ -1160,8 +1172,14 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     }
     mem.cpy(s_reply + MLKEM768_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
 
+    if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
+    {
+        pc_secure_wipe(k_pq, sizeof(k_pq));
+        pc_secure_wipe(k_cl, sizeof(k_cl));
+        return -1;
+    }
     pc_sha256_ctx hc;
-    pc_sha256_init(&hc);
+    pc_sha256_init(&hc, ssh_pkt[i].crypto_work);
     pc_sha256_update(&hc, k_pq, sizeof(k_pq)); // K = SHA256(K_PQ || K_CL) (RFC 9370 concat combiner)
     pc_sha256_update(&hc, k_cl, sizeof(k_cl));
     pc_sha256_final(&hc, k_out);
@@ -1176,7 +1194,7 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
 // Q_C(32)), sntrup761-Encaps to the peer's key and X25519 against Q_C, then combine K = SHA512(K_PQ ||
 // K_CL) (64 bytes). Writes S_REPLY = ciphertext(1039) || Q_S(32) and the 64-byte shared secret. Returns
 // 0, or -1 on a malformed C_INIT or a low-order X25519 point.
-static int hybrid_sntrup761_x25519(uint8_t i, const uint8_t *payload, size_t len,
+static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payload, size_t len,
                                    uint8_t s_reply[PC_SNTRUP761_CT_BYTES + 32], uint8_t k_out[64])
 {
     if (len < 1 + 4 || payload[0] != SSH_MSG_KEXDH_INIT)
@@ -1193,7 +1211,7 @@ static int hybrid_sntrup761_x25519(uint8_t i, const uint8_t *payload, size_t len
     const uint8_t *qc = payload + 5 + PC_SNTRUP761_PK_BYTES; // C_PK1: client X25519 public
 
     uint8_t k_pq[PC_SNTRUP761_SS_BYTES];
-    pc_sntrup761_enc(pk, s_reply, k_pq); // ciphertext -> s_reply[0..1038], shared -> k_pq
+    pc_sntrup761_enc(work, pk, s_reply, k_pq); // ciphertext -> s_reply[0..1038], shared -> k_pq
 
     uint8_t k_cl[32];
     pc_x25519(k_cl, ssh_sess[i].ecdh_sk, qc);
@@ -1211,7 +1229,7 @@ static int hybrid_sntrup761_x25519(uint8_t i, const uint8_t *payload, size_t len
     mem.cpy(s_reply + PC_SNTRUP761_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
 
     pc_sha512_ctx hc;
-    pc_sha512_init(&hc);
+    pc_sha512_init(&hc, ssh_pkt[i].crypto_work);
     pc_sha512_update(&hc, k_pq, sizeof(k_pq)); // K = SHA512(K_PQ || K_CL) (RFC 9370 concat combiner)
     pc_sha512_update(&hc, k_cl, sizeof(k_cl));
     pc_sha512_final(&hc, k_out);
@@ -1302,7 +1320,8 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
     else if (s->kex_alg == SSH_KEX_SNTRUP761_X25519)
     {
         // sntrup761x25519-sha512: K = SHA512(K_PQ || K_CL) (64 bytes); C_INIT / S_REPLY and K are strings.
-        if (hybrid_sntrup761_x25519(i, payload, len, s_reply, k_be + (256 - 64)) != 0)
+        if (!ssh_pkt_slot_storage(&ssh_pkt[i]) ||
+            hybrid_sntrup761_x25519(ssh_pkt[i].crypto_work, i, payload, len, s_reply, k_be + (256 - 64)) != 0)
         {
             return -1;
         }

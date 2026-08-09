@@ -84,7 +84,7 @@ size_t edge_key_canon(const char *method, const char *host, const char *path, co
                       proto_bool include_query, char *out, size_t out_cap);
 
 /** @brief SHA-256 of the canonical key -> @p digest[32] (doubles as the L2 dbm key). */
-void edge_key_digest(const char *canon, size_t len, uint8_t digest[32]);
+void edge_key_digest(uint8_t *work, const char *canon, size_t len, uint8_t digest[32]);
 
 /** @brief Request-header lookup used to build the Vary secondary key; return nullptr when absent. */
 typedef const char *(*EdgeHdrLookup)(void *ctx, const char *name);
@@ -172,6 +172,8 @@ typedef struct
     EdgeCacheStats stats;
     EdgeEvictFn on_evict; ///< nullptr = no L2 write-back; else called with each evicted victim
     void *evict_ctx;      ///< opaque context passed to on_evict
+    // The bytes the key digest works out of. Live with the store, so hashing a key costs no borrow.
+    uint8_t digest_work[PC_SHA256_BORROW];
 } EdgeCacheStore;
 
 /** @brief Reset a store to empty. */

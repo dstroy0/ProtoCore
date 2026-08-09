@@ -79,6 +79,8 @@ typedef struct
     uint8_t v3_c[SNMP_MSG_BUF_SIZE]; // outgoing scopedPDU
     uint8_t v3_d[SNMP_MSG_BUF_SIZE]; // privacy ciphertext
     uint8_t v3_sec[256];             // msgSecurityParameters scratch
+    // The USM key localization and the per-message auth MAC work out of these; they run in sequence.
+    uint8_t mac_work[PC_HMAC_SHA256_BORROW];
 } SnmpV3Ctx;
 
 // Only the three fields with a non-zero start are named; static storage zeroes the rest, which is
@@ -125,11 +127,11 @@ void pc_snmp_v3_set_user(const char *user, const char *auth_pass, const char *pr
     s_v3.priv_set = priv_pass && priv_pass[0];
     if (s_v3.auth_set)
     {
-        pc_snmp_usm_localize_key(auth_pass, s_v3.engine_id, s_v3.engine_id_len, s_v3.auth_key);
+        pc_snmp_usm_localize_key(s_v3.mac_work, auth_pass, s_v3.engine_id, s_v3.engine_id_len, s_v3.auth_key);
     }
     if (s_v3.priv_set)
     {
-        pc_snmp_usm_localize_key(priv_pass, s_v3.engine_id, s_v3.engine_id_len, s_v3.priv_key);
+        pc_snmp_usm_localize_key(s_v3.mac_work, priv_pass, s_v3.engine_id, s_v3.engine_id_len, s_v3.priv_key);
     }
 }
 
@@ -314,7 +316,7 @@ static size_t build_message(long msg_id, proto_bool auth, proto_bool priv, const
     if (auth)
     {
         uint8_t mac[PC_HMAC_SHA256_LEN];
-        pc_hmac_sha256(s_v3.auth_key, SNMP_USM_KEY_LEN, resp, total, mac);
+        pc_hmac_sha256(s_v3.mac_work, s_v3.auth_key, SNMP_USM_KEY_LEN, resp, total, mac);
         mem.cpy(resp + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
     return total;
@@ -508,7 +510,7 @@ size_t pc_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, siz
     mem.cpy(s_v3.v3_a, req, req_len);
     mem.set(s_v3.v3_a + aparm_off, 0, SNMP_V3_AUTH_PARAM_LEN);
     uint8_t mac[PC_HMAC_SHA256_LEN];
-    pc_hmac_sha256(s_v3.auth_key, SNMP_USM_KEY_LEN, s_v3.v3_a, req_len, mac);
+    pc_hmac_sha256(s_v3.mac_work, s_v3.auth_key, SNMP_USM_KEY_LEN, s_v3.v3_a, req_len, mac);
     if (!ct_eq(mac, aparm, SNMP_V3_AUTH_PARAM_LEN))
     {
         s_v3.stat_wrong_digest++;

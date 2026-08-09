@@ -564,8 +564,18 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         return PROTO_FALSE;
     }
 #endif
+    // One borrow for this request's auth decision: the digest hashes and the challenge's nonce work
+    // out of it, and it goes back before the handler runs. The pool resolves the slot from the calling
+    // worker, so two workers never share these bytes.
+    size_t auth_mark = pc_secure_mark();
+    pc_span auth_ws = pc_secure_span(PC_SHA256_BORROW, _Alignof(uint32_t));
+    if (!pc_span_ok(auth_ws))
+    {
+        pc_secure_release(auth_mark);
+        return PROTO_FALSE; // pool exhausted: fail closed
+    }
     proto_bool stale = PROTO_FALSE;
-    proto_bool ok = Auth.check(slot_id, req, r->auth_id, &stale);
+    proto_bool ok = Auth.check(auth_ws.buf, slot_id, req, r->auth_id, &stale);
 #if PC_ENABLE_AUTH_LOCKOUT
     // A stale-nonce retry carries valid credentials, so it is not a failed
     // attempt: don't count it toward the lockout (nor reset the counter).
@@ -580,9 +590,11 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 #endif
     if (!ok)
     {
-        Auth.challenge(slot_id, r->auth_id, stale);
+        Auth.challenge(auth_ws.buf, slot_id, r->auth_id, stale);
+        pc_secure_release(auth_mark);
         return PROTO_FALSE;
     }
+    pc_secure_release(auth_mark);
     return PROTO_TRUE;
 }
 #endif // PC_ENABLE_AUTH

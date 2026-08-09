@@ -34,13 +34,14 @@ PROTO_BEGIN_DECLS
 /**
  * @brief HKDF-Extract (RFC 5869 sec 2.2): PRK = HMAC-SHA256(salt, ikm).
  *
+ * @param work      PC_HKDF_BORROW bytes of caller storage.
  * @param salt      Optional salt (may be NULL only when @p salt_len is 0).
  * @param salt_len  Salt length in bytes.
  * @param ikm       Input keying material.
  * @param ikm_len   Input keying material length.
  * @param prk       Output pseudo-random key, must be PC_HKDF_HASH_LEN bytes.
  */
-void pc_hkdf_extract(const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
+void pc_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
                      uint8_t prk[PC_HKDF_HASH_LEN]);
 
 /** @brief The RFC 8446 sec 7.1 HKDF-Expand-Label prefix used by TLS 1.3 and QUIC. DTLS 1.3 overrides
@@ -62,8 +63,8 @@ void pc_hkdf_extract(const uint8_t *salt, size_t salt_len, const uint8_t *ikm, s
  * @param out_len       Number of output bytes requested.
  * @param label_prefix  HkdfLabel prefix: PC_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
  */
-void pc_hkdf_expand_label(const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, uint8_t *out, size_t out_len,
-                          const char *label_prefix);
+void pc_hkdf_expand_label(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, uint8_t *out,
+                          size_t out_len, const char *label_prefix);
 
 /**
  * @brief HKDF-Expand-Label with an explicit context (RFC 8446 sec 7.1, the general form).
@@ -80,8 +81,9 @@ void pc_hkdf_expand_label(const uint8_t secret[PC_HKDF_HASH_LEN], const char *la
  * @param out_len      Number of output bytes requested.
  * @param label_prefix HkdfLabel prefix: PC_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
  */
-void pc_hkdf_expand_label_ctx(const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, const uint8_t *context,
-                              size_t context_len, uint8_t *out, size_t out_len, const char *label_prefix);
+void pc_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label,
+                              const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
+                              const char *label_prefix);
 
 #endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE
 

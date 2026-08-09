@@ -51,11 +51,11 @@ static void fail(QuicTls *qt, uint8_t alert)
     qt->alert = alert;
 }
 
-// Snapshot the running Transcript-Hash without disturbing it (pc_sha256_ctx is copyable state).
-static void snapshot_hash(const pc_sha256_ctx *ctx, uint8_t out[32])
+// The running Transcript-Hash so far. Finalizing compresses the padded blocks into a copy of the
+// state, so the context comes out untouched and keeps taking messages.
+static void snapshot_hash(pc_sha256_ctx *ctx, uint8_t out[32])
 {
-    pc_sha256_ctx tmp = *ctx;
-    pc_sha256_final(&tmp, out);
+    pc_sha256_final(ctx, out);
 }
 
 // Append a handshake message to both the outbound flight buffer and the transcript.
@@ -84,11 +84,11 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     uint8_t ch1_hash[32];
     {
         pc_sha256_ctx t;
-        pc_sha256_init(&t);
+        pc_sha256_init(&t, qt->hash_work2);
         pc_sha256_update(&t, msg, msg_len);
         pc_sha256_final(&t, ch1_hash);
     }
-    pc_sha256_init(&qt->transcript);
+    pc_sha256_init(&qt->transcript, qt->hash_work);
     uint8_t mh[40];
     size_t mhn = pc_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
     if (!mhn)
@@ -224,8 +224,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     snapshot_hash(&qt->transcript, hash);
     pc_tls13_ks_early(&TLS13_KDF, &qt->ks, qt->ks_store);
     pc_tls13_ks_handshake(&qt->ks, ecdhe, hash, ecdhe_len);
-    pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_CLIENT_HS, &qt->hs_client);
-    pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_SERVER_HS, &qt->hs_server);
+    pc_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_CLIENT_HS, &qt->hs_client);
+    pc_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_SERVER_HS, &qt->hs_server);
     qt->hs_keys_ready = PROTO_TRUE;
 
     // Handshake-level flight: EncryptedExtensions, Certificate, CertificateVerify, Finished.
@@ -251,8 +251,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
     // CertificateVerify signs Transcript-Hash(ClientHello..Certificate).
     snapshot_hash(&qt->transcript, hash);
-    n = pc_tls13_build_cert_verify(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len, hash,
-                                   qt->cfg.ed25519_seed);
+    n = pc_tls13_build_cert_verify(qt->sign_work, qt->flight_hs + qt->flight_hs_len,
+                                   sizeof(qt->flight_hs) - qt->flight_hs_len, hash, qt->cfg.ed25519_seed);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -272,8 +272,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // client Finished against.
     snapshot_hash(&qt->transcript, qt->hs_finished_hash);
     pc_tls13_ks_master(&qt->ks, qt->hs_finished_hash);
-    pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_CLIENT_AP, &qt->ap_client);
-    pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_SERVER_AP, &qt->ap_server);
+    pc_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_CLIENT_AP, &qt->ap_client);
+    pc_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_SERVER_AP, &qt->ap_server);
     qt->ap_keys_ready = PROTO_TRUE;
 
     qt->state = QTLS_WAIT_FINISHED;
@@ -317,7 +317,7 @@ void pc_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg)
 {
     mem.zero(qt, sizeof(*qt));
     qt->cfg = *cfg;
-    pc_sha256_init(&qt->transcript);
+    pc_sha256_init(&qt->transcript, qt->hash_work);
     qt->state = QTLS_START;
 }
 
