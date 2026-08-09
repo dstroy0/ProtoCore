@@ -403,6 +403,19 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   test now pins the whole 25-byte output (negotiation + greeting) so a hand-counted over-read cannot
   regress. Verified: `native_telnet`.
 
+## Telnet ends a subnegotiation on a bare 240, injecting the parameter bytes into the command line
+
+- **Status:** FIXED 2026-08-09 (`telnet.c` `TN_SB`). Found 2026-08-08 auditing `test/` for RFC
+  conformance (`git_project/audit/ssh-auth-connection-telnet.md` #4).
+- **Symptom:** `TN_SB` closed on a bare `T_SE` (240), but RFC 855 terminates a subnegotiation only on
+  `IAC SE` (255 240). A data byte 240 inside the parameters ended the subnegotiation early, and the
+  bytes after it fell through to the NVT command line - an injection.
+- **Nothing can catch it:** the only subneg test fed a bare 240 as the terminator and asserted the
+  trailing bytes became the line, enshrining the bug.
+- **Fix:** a `TN_SB_IAC` state, so a subnegotiation ends only on `IAC SE` and a bare 240 is data. The
+  test now uses `IAC SE`, and a negative test proves a bare 240 mid-parameters does not inject.
+  Verified: `native_telnet`, 23/23.
+
 ## The SSH userauth service name is parsed and never compared
 
 - **Status:** FIXED 2026-08-09 (`ssh_auth.c` `pc_ssh_auth_parse_request`). Found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #3).
