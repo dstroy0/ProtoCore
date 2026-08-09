@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- four audit findings - session-id binding, request fields, CR NUL, channel guards ([`ac76ab6`](https://github.com/dstroy0/ProtoCore/commit/ac76ab603573e03c22f81bf4258241f811600c7e))
 - refuse a password-change request instead of authing on the old password ([`5091c67`](https://github.com/dstroy0/ProtoCore/commit/5091c6778898d2e25dac2a31bc525b10886d1c91))
 - end a subnegotiation only on IAC SE, not a bare 240 ([`9c2dd30`](https://github.com/dstroy0/ProtoCore/commit/9c2dd30fe16804e38d92c7e819d94d8ab6d2538d))
 - validate the userauth service name; pin the telnet greeting length ([`4792b06`](https://github.com/dstroy0/ProtoCore/commit/4792b06ba4dc41634275948c5287726f71304010))
@@ -57,6 +58,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`1164e8f`](https://github.com/dstroy0/ProtoCore/commit/1164e8f46510006f741e7ac11d67ba1b4aa8c1e7))
 - update test report + coverage [skip ci] ([`9b42fa7`](https://github.com/dstroy0/ProtoCore/commit/9b42fa71b9c24e2dac41f6306c412cfa1d3d7a1b))
 - update CHANGELOG.md [skip ci] ([`644849b`](https://github.com/dstroy0/ProtoCore/commit/644849bbb0e94faa51225a6e76178af6591a8d71))
 - update CHANGELOG.md [skip ci] ([`11f08f2`](https://github.com/dstroy0/ProtoCore/commit/11f08f23c79e538321cf99933413b197b42c0a09))
@@ -171,6 +173,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9edb342`](https://github.com/dstroy0/ProtoCore/commit/9edb34237eb711565746efc08c6028894ff4ccfe))
 - close #4 - telnet subnegotiation injection, host-verified ([`5920335`](https://github.com/dstroy0/ProtoCore/commit/5920335b32df35ce44e876652510d9ee28e3c377))
 - close #3 (userauth service name) and #15 (telnet greeting), both host-verified ([`f89c6c3`](https://github.com/dstroy0/ProtoCore/commit/f89c6c302907041dc0e7ab3bece81f502d3c4e7f))
 - close F1 - the dropped SSH NEWKEYS pair, fixed and host-verified ([`a5f6c02`](https://github.com/dstroy0/ProtoCore/commit/a5f6c02e3934e8b8b9c8d7605087a769565e73d0))
