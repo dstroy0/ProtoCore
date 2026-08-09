@@ -50,11 +50,14 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Reach:** `pc_ssh_conn_send` is the port-forward data path (`ssh_forward.c:211`, `:521`), which is
   exactly where sustained load fills a send buffer. `ssh_scp.c:88,93` and `ssh_sftp.c:170` discard
   the return entirely, so those two do not even learn.
-- **Why it is not fixed here:** the durable shape is the one the codec/worker split already uses for
-  the emit side - frame into the slot's wire, raise `tx_ready`, let `ssh_tx_drain` put out what the
-  window takes and keep `tx_off` for the rest. Routing this path through that machinery is the same
-  design question as F1 (where a per-slot persistent borrow can safely be taken), and F1 is open.
-  The two should be settled together rather than separately.
+- **Resolved shape (maintainer, 2026-08-09):** retrying is the wrong answer. A refused queue means
+  the peer is gone, and a peer that is gone sends nothing further, so there is no session left to
+  keep in step with - the desync is only a problem for a session that continues. The connection is
+  torn down instead of preserving cipher state for a peer that will never read it. That leaves the
+  fix as propagating the failure to a teardown, not as a retry queue, and unties this finding from
+  F1's borrow-placement question.
+- **Still to write:** the teardown itself. `pc_ssh_conn_send` now returns -1; `ssh_scp.c:88,93` and
+  `ssh_sftp.c:170` still discard that, so they neither learn nor close.
 
 ## The server's SSH_MSG_NEWKEYS is framed into an occupied slot and dropped, and the test cannot see it
 
