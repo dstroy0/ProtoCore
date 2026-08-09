@@ -60,6 +60,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`ca86258`](https://github.com/dstroy0/ProtoCore/commit/ca86258767e12664071ad19ebf41629410ebbbe8))
 - update CHANGELOG.md [skip ci] ([`aeda130`](https://github.com/dstroy0/ProtoCore/commit/aeda13037e4ea73aaecf84f4c09e7c333baaf511))
 - update test report + coverage [skip ci] ([`eef2d16`](https://github.com/dstroy0/ProtoCore/commit/eef2d16b78208923ed4f9852f5ab3d30f9101b4a))
 - update CHANGELOG.md [skip ci] ([`a4c5352`](https://github.com/dstroy0/ProtoCore/commit/a4c53522c9cb5cfe8e9df3e4effccf6ced0da3b9))
@@ -154,6 +155,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- per-direction cipher/MAC, derived into the connection that owns the memory ([`cdd1463`](https://github.com/dstroy0/ProtoCore/commit/cdd14633c9eb040eb6fd6c2d567f319061a01a40))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`809e9c2`](https://github.com/dstroy0/ProtoCore/commit/809e9c2f971758db8454c867e1a55aba54ac1d15))
 - back out the flight sizing until the persistent-borrow contention is solved ([`a054a8d`](https://github.com/dstroy0/ProtoCore/commit/a054a8d431ec9a450427d6c2c326e1ccfd627b6d))
 - sha512 and md go back, they were not the file in hand ([`38620e6`](https://github.com/dstroy0/ProtoCore/commit/38620e60960ef2a8ebed1a71870a3022ed7a7834))
