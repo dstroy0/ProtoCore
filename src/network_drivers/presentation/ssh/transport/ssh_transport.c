@@ -1427,9 +1427,15 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
         pc_secure_wipe(k_be, sizeof(k_be));
         return -1;
     }
-    ssh_dh_derive_keys_sid(i, k_be, H, s->session_id, s->cipher_alg_c2s, s->cipher_alg_s2c, s->mac_alg_c2s,
-                           s->mac_alg_s2c, k_is_string, h_len, s->session_id_len,
-                           is512);
+    const SshKdfInputs kdf_in = {.work = ssh_pkt[i].crypto_work,
+                                 .K_be = k_be,
+                                 .H = H,
+                                 .session_id = s->session_id,
+                                 .h_len = h_len,
+                                 .sid_len = s->session_id_len,
+                                 .k_is_string = k_is_string,
+                                 .is512 = is512};
+    ssh_dh_derive_keys_sid(i, &kdf_in);
     pc_secure_wipe(k_be, sizeof(k_be));
 
     s->phase = SSH_PHASE_NEWKEYS;

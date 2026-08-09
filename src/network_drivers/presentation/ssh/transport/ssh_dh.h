@@ -95,46 +95,49 @@ int ssh_dh_generate(uint8_t i);
  */
 void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_SHA256_DIGEST_LEN]);
 
-/**
- * @brief Derive session keys with an explicit session id (RFC 4253 §7.2).
- *
- * Same as ssh_dh_derive_keys() but uses @p session_id for the session-id
- * component of every key, which on a re-key must remain the exchange hash H
- * from the *first* KEX (while @p H is the current re-key exchange hash).
- *
- * @param i           Slot index.
- * @param K_be        Shared secret K, big-endian, 256 bytes.
- * @param H           Current exchange hash, 32 bytes.
- * @param session_id  Session id (H of the first KEX), 32 bytes.
- * @param cipher_alg_c2s SSH_CIPHER_* for the client-to-server direction.
- * @param cipher_alg_s2c SSH_CIPHER_* for the server-to-client direction.
- * @param mac_alg_c2s SSH_MAC_* for the client-to-server direction (aes256-ctr only).
- * @param mac_alg_s2c SSH_MAC_* for the server-to-client direction (aes256-ctr only).
- * @param k_is_string Encode K as a plain SSH string (hybrid KEX) instead of an mpint (classical).
- * @param h_len       Length of @p H.
- * @param sid_len     Length of @p session_id.
- * @param is512       Hash with SHA-512 instead of SHA-256.
- */
-void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
-                            uint8_t cipher_alg_c2s, uint8_t cipher_alg_s2c, uint8_t mac_alg_c2s, uint8_t mac_alg_s2c,
-                            proto_bool k_is_string, size_t h_len, size_t sid_len, proto_bool is512);
-
 /** @brief Max bytes ssh_kdf_derive() can produce (4 SHA-256 blocks). */
 #define SSH_KDF_MAX (4 * PC_SHA256_DIGEST_LEN)
+
+/**
+ * @brief One key exchange's derivation inputs, passed by reference.
+ *
+ * Every value here is fixed for the whole of a KEX and read by each of the six derivations, so it
+ * travels as one pointer: an argument list this wide spills past the register window and pays for it
+ * on every call, at the deepest call depth in the library.
+ */
+typedef struct
+{
+    uint8_t *work;             ///< PC_SSH_KDF_BORROW bytes: the hash context, then the K1 || K2 chain.
+    const uint8_t *K_be;       ///< Shared secret K, big-endian, 256 bytes.
+    const uint8_t *H;          ///< Current exchange hash.
+    const uint8_t *session_id; ///< H of the first KEX; equals H until the first re-key.
+    size_t h_len;              ///< Length of H.
+    size_t sid_len;            ///< Length of session_id.
+    proto_bool k_is_string;    ///< Encode K as a plain SSH string (hybrid KEX), not an mpint.
+    proto_bool is512;          ///< Hash with SHA-512 instead of SHA-256.
+} SshKdfInputs;
+
+/**
+ * @brief Derive and install session keys for slot @p i (RFC 4253 §7.2).
+ *
+ * The connection owns everything this touches: the working bytes are slot @p i's crypto_work, the
+ * derived material lands in its keymat, and the per-direction cipher and MAC come from its session.
+ * @p in carries the KEX values, whose session id must stay the *first* KEX's exchange hash across a
+ * re-key (while its H is the current one).
+ */
+void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in);
 
 /**
  * @brief RFC 4253 §7.2 key derivation for any length up to @ref SSH_KDF_MAX.
  *
  * Produces K1 || K2 || ... where K1 = HASH(K || H || @p label || session_id)
  * and each Ki+1 = HASH(K || H || K1..Ki), filling @p out (@p out_len bytes). K is
- * encoded as an mpint (classical KEX) or, when @p k_is_string, a plain 32-byte SSH
+ * encoded as an mpint (classical KEX) or, when in->k_is_string, a plain 32-byte SSH
  * string (the mlkem768x25519-sha256 hybrid). Every algorithm negotiated today needs
  * <= 32 B (one block); the chain exists for spec-completeness / future ciphers needing
  * longer key material. @p out_len is clamped to SSH_KDF_MAX.
  */
-void ssh_kdf_derive(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label,
-                    uint8_t *out, size_t out_len, proto_bool k_is_string, size_t h_len, size_t sid_len,
-                    proto_bool is512);
+void ssh_kdf_derive(const SshKdfInputs *in, char label, uint8_t *out, size_t out_len);
 
 PROTO_END_DECLS
 

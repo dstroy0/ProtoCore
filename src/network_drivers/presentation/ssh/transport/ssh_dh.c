@@ -11,7 +11,8 @@
 #include "crypto/rng/rng.h" // pc_rand_fill: crypto owns the generator, this layer only draws
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
-#include "network_drivers/presentation/ssh/transport/ssh_packet.h" // ssh_pkt[]: the slot's KEX bytes
+#include "network_drivers/presentation/ssh/transport/ssh_packet.h"    // ssh_pkt[]: the slot's KEX bytes
+#include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[]: what it negotiated
 #include "network_drivers/tls/ssh_kexhash.h"
 
 // ---------------------------------------------------------------------------
@@ -118,26 +119,24 @@ static_assert(PC_CRYPTO_BORROW_MAX >= PC_SSH_KDF_BORROW,
 //   key = K1 || K2 || ...   For the first KEX session_id == H; on a re-key it is the first KEX's H.
 // @p h_len / @p sid_len are the exchange-hash / session-id lengths. When K is a hybrid string it is
 // @p k_str_len octets (the KEX hash length). @p out_len up to SSH_KDF_MAX.
-void ssh_kdf_derive(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label,
-                    uint8_t *out, size_t out_len, proto_bool k_is_string, size_t h_len, size_t sid_len,
-                    proto_bool is512)
+void ssh_kdf_derive(const SshKdfInputs *in, char label, uint8_t *out, size_t out_len)
 {
-    const size_t blk = ssh_kexhash_len(is512); // 32 or 64
-    const size_t k_str_len = ssh_kexhash_len(is512);
+    const size_t blk = ssh_kexhash_len(in->is512); // 32 or 64
+    const size_t k_str_len = ssh_kexhash_len(in->is512);
     if (out_len > SSH_KDF_MAX)
     {
         out_len = SSH_KDF_MAX; // bounded: every negotiated algorithm needs <= 64 B today
     }
-    uint8_t *acc = work + SSH_KDF_OFF_ACC; // K1 || K2 || ... accumulated for the chain hash
+    uint8_t *acc = in->work + SSH_KDF_OFF_ACC; // K1 || K2 || ... accumulated for the chain hash
     size_t have = 0;
 
     SshKexHash h;
-    ssh_kexhash_init(&h, work, is512);
-    hash_K(&h, K_be, k_is_string, k_str_len);
-    ssh_kexhash_update(&h, H, h_len);
+    ssh_kexhash_init(&h, in->work, in->is512);
+    hash_K(&h, in->K_be, in->k_is_string, k_str_len);
+    ssh_kexhash_update(&h, in->H, in->h_len);
     uint8_t lbl = (uint8_t)label;
     ssh_kexhash_update(&h, &lbl, 1);
-    ssh_kexhash_update(&h, session_id, sid_len);
+    ssh_kexhash_update(&h, in->session_id, in->sid_len);
     ssh_kexhash_final(&h, acc); // acc[0..blk-1] = K1
     have = blk;
 
@@ -148,36 +147,15 @@ void ssh_kdf_derive(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, co
     // always true.
     while (have < out_len && have + blk <= SSH_KDF_MAX)
     {
-        ssh_kexhash_init(&h, work, is512);
-        hash_K(&h, K_be, k_is_string, k_str_len);
-        ssh_kexhash_update(&h, H, h_len);
+        ssh_kexhash_init(&h, in->work, in->is512);
+        hash_K(&h, in->K_be, in->k_is_string, k_str_len);
+        ssh_kexhash_update(&h, in->H, in->h_len);
         ssh_kexhash_update(&h, acc, have); // all prior blocks
         ssh_kexhash_final(&h, acc + have);
         have += blk;
     }
     mem.cpy(out, acc, out_len);
     pc_secure_wipe(acc, SSH_KDF_MAX); // the cipher key, the IV and both MAC keys pass through here
-}
-
-// The KEX values every direction's derivation shares, passed by pointer: this is the deepest call
-// chain in the library, and these would otherwise ride the stack frame by frame.
-typedef struct
-{
-    const uint8_t *K_be;
-    const uint8_t *H;
-    const uint8_t *session_id;
-    size_t h_len;
-    size_t sid_len;
-    proto_bool k_is_string;
-    proto_bool is512;
-} SshKdfInputs;
-
-// One derived value, straight into its destination. Slot @p i owns the working bytes: the KDF runs
-// out of that connection's crypto_work, the region ssh_packet.h reserves for the sec 7.2 KDF.
-static void kdf_into(uint8_t i, const SshKdfInputs *in, char label, uint8_t *out, size_t out_len)
-{
-    ssh_kdf_derive(ssh_pkt[i].crypto_work, in->K_be, in->H, in->session_id, label, out, out_len, in->k_is_string,
-                   in->h_len, in->sid_len, in->is512);
 }
 
 // Install one direction's key material into the connection's own keymat. RFC 4253 sec 7.2 fixes the
@@ -210,18 +188,18 @@ static void install_direction(uint8_t i, const SshKdfInputs *in, proto_bool c2s,
     if (cipher_alg == SSH_CIPHER_CHACHA20POLY1305)
     {
         // A 512-bit key (K_main || K_header) from the sec 7.2 extension chain; no IV, no MAC key.
-        kdf_into(i, in, key_label, chacha_key, PC_CHACHAPOLY_KEY_LEN);
+        ssh_kdf_derive(in,key_label, chacha_key, PC_CHACHAPOLY_KEY_LEN);
         return;
     }
 
     // The IV field takes the leading bytes of the derived stream, which is what the KDF copies.
-    kdf_into(i, in, iv_label, aes_iv, PC_AES256CTR_CTR_LEN);
+    ssh_kdf_derive(in,iv_label, aes_iv, PC_AES256CTR_CTR_LEN);
 
     if (cipher_alg == SSH_CIPHER_AES256GCM)
     {
         // RFC 5647: this mode keeps only the schedule, so the key lands in aes_key - which GCM does not
         // otherwise use - becomes the keyed context, and is wiped. The nonce is the low 12 IV bytes.
-        kdf_into(i, in, key_label, aes_key, PC_AES256CTR_KEY_LEN);
+        ssh_kdf_derive(in,key_label, aes_key, PC_AES256CTR_KEY_LEN);
         pc_aesgcm_key_init(gcm_ctx, aes_key);
         pc_secure_wipe(aes_key, PC_AES256CTR_KEY_LEN);
         return;
@@ -229,13 +207,11 @@ static void install_direction(uint8_t i, const SshKdfInputs *in, proto_bool c2s,
 
     // aes256-ctr keeps the raw key and the running counter; the schedule is rebuilt per packet in the
     // shared crypto scratch. It is the only cipher that also needs a separate MAC key.
-    kdf_into(i, in, key_label, aes_key, PC_AES256CTR_KEY_LEN);
-    kdf_into(i, in, mac_label, mac_key, ssh_mac_len(mac_alg));
+    ssh_kdf_derive(in,key_label, aes_key, PC_AES256CTR_KEY_LEN);
+    ssh_kdf_derive(in,mac_label, mac_key, ssh_mac_len(mac_alg));
 }
 
-void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
-                            uint8_t cipher_alg_c2s, uint8_t cipher_alg_s2c, uint8_t mac_alg_c2s, uint8_t mac_alg_s2c,
-                            proto_bool k_is_string, size_t h_len, size_t sid_len, proto_bool is512)
+void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -248,6 +224,7 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
         return;
     }
     SshKeyMat *km = &ssh_keys[i];
+    const SshSession *s = &ssh_sess[i]; // the connection holds what its two directions negotiated
     // Rekey lands here with live contexts still in the slot. Release each before its mode is
     // overwritten, after which the outgoing mode is no longer knowable.
     if (km->active && km->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
@@ -258,20 +235,13 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
     {
         pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(km->gcm_ctx_s2c));
     }
-    km->cipher_mode_c2s = cipher_alg_c2s;
-    km->cipher_mode_s2c = cipher_alg_s2c;
-    km->mac_mode_c2s = mac_alg_c2s;
-    km->mac_mode_s2c = mac_alg_s2c;
+    km->cipher_mode_c2s = s->cipher_alg_c2s;
+    km->cipher_mode_s2c = s->cipher_alg_s2c;
+    km->mac_mode_c2s = s->mac_alg_c2s;
+    km->mac_mode_s2c = s->mac_alg_s2c;
 
-    const SshKdfInputs in = {.K_be = K_be,
-                             .H = H,
-                             .session_id = session_id,
-                             .h_len = h_len,
-                             .sid_len = sid_len,
-                             .k_is_string = k_is_string,
-                             .is512 = is512};
-    install_direction(i, &in, PROTO_TRUE, cipher_alg_c2s, mac_alg_c2s);
-    install_direction(i, &in, PROTO_FALSE, cipher_alg_s2c, mac_alg_s2c);
+    install_direction(i, in, PROTO_TRUE, s->cipher_alg_c2s, s->mac_alg_c2s);
+    install_direction(i, in, PROTO_FALSE, s->cipher_alg_s2c, s->mac_alg_s2c);
     km->active = PROTO_TRUE;
 }
 
@@ -280,6 +250,17 @@ void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_S
 {
     // First-KEX convenience: session id equals H; aes256-ctr + hmac-sha2-256 (pre-negotiation defaults),
     // SHA-256 exchange hash (h_len / sid_len / is512 default).
-    ssh_dh_derive_keys_sid(i, K_be, H, H, SSH_CIPHER_AES256CTR, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256,
-                           SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    if (i >= MAX_SSH_CONNS || !ssh_pkt_slot_storage(&ssh_pkt[i]))
+    {
+        return;
+    }
+    const SshKdfInputs in = {.work = ssh_pkt[i].crypto_work,
+                             .K_be = K_be,
+                             .H = H,
+                             .session_id = H,
+                             .h_len = PC_SHA256_DIGEST_LEN,
+                             .sid_len = PC_SHA256_DIGEST_LEN,
+                             .k_is_string = PROTO_FALSE,
+                             .is512 = PROTO_FALSE};
+    ssh_dh_derive_keys_sid(i, &in);
 }
