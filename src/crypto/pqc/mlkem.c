@@ -185,7 +185,7 @@ static void poly_getnoise(int16_t r[MK_N], const uint8_t seed[32], uint8_t nonce
     mem.cpy(extseed, seed, 32);
     extseed[32] = nonce;
     uint8_t buf[MK_ETA * MK_N / 4]; // 128
-    shake256(buf, sizeof(buf), extseed, sizeof(extseed));
+    pc_shake256(buf, sizeof(buf), extseed, sizeof(extseed));
     cbd2(r, buf);
 }
 
@@ -343,9 +343,9 @@ proto_bool pc_mlkem768_encaps(const uint8_t ek[MLKEM768_EK_BYTES], const uint8_t
     // (K, r) = G(m || H(ek)); ss = K.
     uint8_t g_in[64];
     mem.cpy(g_in, m, 32);
-    sha3_256(g_in + 32, ek, MLKEM768_EK_BYTES); // H(ek)
+    pc_sha3_256(g_in + 32, ek, MLKEM768_EK_BYTES); // H(ek)
     uint8_t g_out[64];
-    sha3_512(g_out, g_in, sizeof(g_in));
+    pc_sha3_512(g_out, g_in, sizeof(g_in));
     mem.cpy(ss, g_out, 32);
 
     k_pke_encrypt(ct, ek, m, g_out + 32);
@@ -454,7 +454,7 @@ static void k_pke_keygen(uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK
     mem.cpy(g_in, d, 32);
     g_in[32] = MK_K;
     uint8_t g_out[64];
-    sha3_512(g_out, g_in, sizeof(g_in));
+    pc_sha3_512(g_out, g_in, sizeof(g_in));
     const uint8_t *rho = g_out;
     const uint8_t *sigma = g_out + 32;
 
@@ -538,7 +538,7 @@ void pc_mlkem768_keygen(const uint8_t d[MLKEM768_D_BYTES], const uint8_t z[MLKEM
     // dk = dk_PKE || ek || H(ek) || z  (FIPS 203 Algorithm 16).
     k_pke_keygen(ek, dk, d);
     mem.cpy(dk + MK_K * MK_POLYBYTES, ek, MLKEM768_EK_BYTES);
-    sha3_256(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES, ek, MLKEM768_EK_BYTES);
+    pc_sha3_256(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES, ek, MLKEM768_EK_BYTES);
     mem.cpy(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, z, 32);
 }
 
@@ -557,14 +557,14 @@ void pc_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_t ct[ML
     mem.cpy(g_in, mprime, 32);
     mem.cpy(g_in + 32, h, 32);
     uint8_t g_out[64];
-    sha3_512(g_out, g_in, sizeof(g_in));
+    pc_sha3_512(g_out, g_in, sizeof(g_in));
 
     // Implicit-reject key K_bar = J(z || ct) = SHAKE256(z || ct, 32).
     uint8_t jbuf[32 + MLKEM768_CT_BYTES];
     mem.cpy(jbuf, z, 32);
     mem.cpy(jbuf + 32, ct, MLKEM768_CT_BYTES);
     uint8_t kbar[32];
-    shake256(kbar, sizeof(kbar), jbuf, sizeof(jbuf));
+    pc_shake256(kbar, sizeof(kbar), jbuf, sizeof(jbuf));
 
     // Re-encrypt under the embedded ek with the derived coins r'; select in constant time.
     uint8_t ctprime[MLKEM768_CT_BYTES];

@@ -201,7 +201,7 @@ static inline void pc_mlkem768_decaps_ref(const uint8_t dk[2400], const uint8_t 
     memcpy(gin, m2, 32);
     memcpy(gin + 32, h, 32);
     uint8_t gout[64];
-    sha3_512(gout, gin, sizeof(gin)); // (K, r) = G(m' || H(ek)); shared secret = K
+    pc_sha3_512(gout, gin, sizeof(gin)); // (K, r) = G(m' || H(ek)); shared secret = K
     memcpy(ss, gout, 32);
 }
 

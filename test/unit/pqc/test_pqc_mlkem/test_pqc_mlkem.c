@@ -207,7 +207,7 @@ void test_mlkem768_implicit_reject_equals_j_of_z_and_ct()
     memcpy(jbuf, kat_dk + (MLKEM768_DK_BYTES - 32), 32); // z
     memcpy(jbuf + 32, bad, sizeof(bad));
     uint8_t want[32];
-    shake256(want, sizeof(want), jbuf, sizeof(jbuf));
+    pc_shake256(want, sizeof(want), jbuf, sizeof(jbuf));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ss, MLKEM768_SS_BYTES);
 }
 

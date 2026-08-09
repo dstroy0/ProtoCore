@@ -133,28 +133,28 @@ void pc_keccak_squeeze(KeccakCtx *c, uint8_t *out, size_t outlen)
     }
 }
 
-void sha3_256(uint8_t out[32], const uint8_t *in, size_t inlen)
+void pc_sha3_256(uint8_t out[32], const uint8_t *in, size_t inlen)
 {
     KeccakCtx c;
     pc_keccak_absorb(&c, KECCAK_RATE_SHA3_256, in, inlen, 0x06);
     pc_keccak_squeeze(&c, out, 32);
 }
 
-void sha3_512(uint8_t out[64], const uint8_t *in, size_t inlen)
+void pc_sha3_512(uint8_t out[64], const uint8_t *in, size_t inlen)
 {
     KeccakCtx c;
     pc_keccak_absorb(&c, KECCAK_RATE_SHA3_512, in, inlen, 0x06);
     pc_keccak_squeeze(&c, out, 64);
 }
 
-void shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
+void pc_shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
 {
     KeccakCtx c;
     pc_keccak_absorb(&c, KECCAK_RATE_SHAKE128, in, inlen, 0x1F);
     pc_keccak_squeeze(&c, out, outlen);
 }
 
-void shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
+void pc_shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
 {
     KeccakCtx c;
     pc_keccak_absorb(&c, KECCAK_RATE_SHAKE256, in, inlen, 0x1F);

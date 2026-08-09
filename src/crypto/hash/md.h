@@ -46,13 +46,13 @@ void pc_md5_init(struct MdCtx *c);
 void pc_md5_update(struct MdCtx *c, const uint8_t *data, size_t len);
 void pc_md5_final(struct MdCtx *c, uint8_t out[16]);
 /** @brief One-shot MD5. */
-void md5(const uint8_t *data, size_t len, uint8_t out[16]);
+void pc_md5(const uint8_t *data, size_t len, uint8_t out[16]);
 
 void pc_md4_init(struct MdCtx *c);
 void pc_md4_update(struct MdCtx *c, const uint8_t *data, size_t len);
 void pc_md4_final(struct MdCtx *c, uint8_t out[16]);
 /** @brief One-shot MD4 (the NT-hash primitive). */
-void md4(const uint8_t *data, size_t len, uint8_t out[16]);
+void pc_md4(const uint8_t *data, size_t len, uint8_t out[16]);
 
 /** @brief HMAC-MD5 (RFC 2104): the NTLMv2 MAC primitive. */
 void pc_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16]);
