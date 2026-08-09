@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
+#include "network_drivers/presentation/ssh/auth/ssh_auth.h" // pc_ssh_auth_reset on teardown
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_forward.h"
 #include "network_drivers/presentation/ssh/connection/ssh_server.h"
@@ -436,6 +437,7 @@ void pc_ssh_conn_close(uint8_t conn_slot)
         // Zero all key material and session state for this slot.
         ssh_keymat_wipe(j);
         ssh_dh_wipe(j);
+        pc_ssh_auth_reset(j);
         pc_secure_wipe(&ssh_sess[j], sizeof(SshSession));
         s_sshc.conn_for_ssh[j] = 0xFF;
     }
