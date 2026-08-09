@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the key schedule needs PC_TLS13_KS_BORROW, not PC_TLS13_KS_CAP ([`9b04dff`](https://github.com/dstroy0/ProtoCore/commit/9b04dffa4f04be0256d28adab0760db2a86ac01b))
 - the slot's crypto bytes are bound before anything derives out of them ([`145c3b9`](https://github.com/dstroy0/ProtoCore/commit/145c3b925464ac5bbcd9d9f36415a6070aa11274))
 - the two record layers expand their traffic keys out of the caller's bytes ([`747e4df`](https://github.com/dstroy0/ProtoCore/commit/747e4df7c663507c4b1bb07304e70f994fcd043c))
 - the accumulator fill is the raw mover, not the aligned-span one ([`cedb0cb`](https://github.com/dstroy0/ProtoCore/commit/cedb0cbf1f3559e572b8684962d9a95dd21d7263))
@@ -29,6 +30,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`dc87eb4`](https://github.com/dstroy0/ProtoCore/commit/dc87eb4b4f789baf860f87c930fd8bf31c10818c))
 - update CHANGELOG.md [skip ci] ([`07893b0`](https://github.com/dstroy0/ProtoCore/commit/07893b0b6eb9e4c667dd71115f35574e43bd1573))
 - update CHANGELOG.md [skip ci] ([`f57b0dd`](https://github.com/dstroy0/ProtoCore/commit/f57b0dd51612d7a900ce7b5f563b7c454ab904fb))
 - update CHANGELOG.md [skip ci] ([`83c1305`](https://github.com/dstroy0/ProtoCore/commit/83c1305460c29bc21cb08dabe351bc02dee9f76e))
