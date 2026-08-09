@@ -163,11 +163,14 @@ static void attrs_from_stat(const pc_mnt_stat *st, SftpAttrs *a)
     a->mtime = st->mtime;
 }
 
+// A refused send is a peer that is gone, and a gone peer sends nothing back: end the session
+// rather than writing further responses into a channel nobody reads.
 static void send_resp(SftpSession *s, size_t n)
 {
-    if (n > 0)
+    if (n > 0 && pc_ssh_conn_send(s->slot, s->channel, s_sftp.out, n) < 0)
     {
-        pc_ssh_conn_send(s->slot, s->channel, s_sftp.out, n);
+        pc_ssh_conn_close_channel(s->slot, s->channel);
+        s->active = PROTO_FALSE;
     }
 }
 static void send_status(SftpSession *s, uint32_t id, uint32_t code, const char *msg)

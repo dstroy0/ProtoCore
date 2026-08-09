@@ -83,14 +83,24 @@ static const char SCP_ERR_CREATE[] = "\x02"
 static const char SCP_ERR_WRITE[] = "\x02"
                                     "write error\n";
 
+static void pc_scp_end(ScpConn *c); // called above its definition; static hides the header's
+
+// A refused send is a peer that is gone, and a gone peer sends nothing back: end the transfer
+// rather than writing further records into a channel nobody reads.
 static void ack(ScpConn *c, uint8_t byte)
 {
-    pc_ssh_conn_send(c->slot, c->channel, &byte, 1);
+    if (pc_ssh_conn_send(c->slot, c->channel, &byte, 1) < 0)
+    {
+        pc_scp_end(c);
+    }
 }
 /** @brief Send one complete error record. @p len is `sizeof(record) - 1`, resolved at compile time. */
 static void err_ack(ScpConn *c, const char *rec, size_t len)
 {
-    pc_ssh_conn_send(c->slot, c->channel, (const uint8_t *)(rec), len);
+    if (pc_ssh_conn_send(c->slot, c->channel, (const uint8_t *)(rec), len) < 0)
+    {
+        pc_scp_end(c);
+    }
 }
 static void close_file(ScpConn *c)
 {
