@@ -18,7 +18,6 @@
 #ifndef PROTOCORE_SHA256_H
 #define PROTOCORE_SHA256_H
 
-#include "mmgr/rawmemcpy.h"   // PROTO_RAW_WORD: the lane a whole-word store into the accumulator ends in
 #include "protocore_config.h" // the entry point: types.h for the widths, PC_HAS_HW_SHA for the context below
 
 /** @brief SHA-256 digest length in bytes. */
@@ -43,10 +42,10 @@ typedef struct
 #else
 typedef struct
 {
-    uint32_t s[8];                                     ///< Running hash words (H0..H7).
-    uint64_t n;                                        ///< Total bytes processed so far.
-    uint8_t buf[PC_SHA256_BLOCK_LEN + PROTO_RAW_WORD]; ///< Partial block, plus the lane the span store ends in.
-    uint32_t buflen;                                   ///< Bytes valid in buf[].
+    uint32_t s[8];                    ///< Running hash words (H0..H7).
+    uint64_t n;                       ///< Total bytes processed so far.
+    uint8_t buf[PC_SHA256_BLOCK_LEN]; ///< Partial block accumulator.
+    uint32_t buflen;                  ///< Bytes valid in buf[].
 } pc_sha256_ctx;
 #endif
 

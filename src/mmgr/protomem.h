@@ -28,13 +28,11 @@ PROTO_BEGIN_DECLS
  * @var MemNs::cpy
  * Copy @c n bytes from @c src to @c dst, which must not overlap. A source that is not co-aligned with
  * the destination is funnelled: two shifts and an OR assemble the wanted word from the two aligned
- * words holding it. A partial word at either end is one masked store, so the lanes past the span go
- * to zero rather than costing a byte walk.
+ * words holding it.
  *
- * That store is a whole word, so it reaches the end of the lane the span stops in - up to
- * PROTO_RAW_WORD-1 bytes past @c n. A borrow is aligned and padded to exactly that boundary, so
- * those lanes are the allocation's own tail and the store stays a dumb word rather than a byte walk.
- * @c dst is a whole borrow, not an offset into one.
+ * A partial word at the end is one merged store rather than a byte walk: the lane mask takes the
+ * span's bytes from the source and the destination's own word supplies the rest, so the store is a
+ * whole word and nothing past @c n changes. @c dst is any span, whole borrow or offset into one.
  *
  * @var MemNs::move
  * Copy @c n bytes from @c src to @c dst, correct when the two overlap. Every direction but one reads
