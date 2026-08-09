@@ -113,6 +113,11 @@ proto_bool ssh_kex_prefer_rsa(void)
 
 void pc_ssh_hostkey_ed25519_set(const uint8_t seed[32])
 {
+    // The public key derives through SHA-512, out of slot 0's bytes.
+    if (!ssh_pkt_slot_storage(&ssh_pkt[0]))
+    {
+        return;
+    }
     mem.cpy(s_sshtr.ed_seed, seed, 32);
     pc_ed25519_pubkey(ssh_pkt[0].crypto_work, s_sshtr.ed_pub, s_sshtr.ed_seed);
     s_sshtr.ed_have = PROTO_TRUE;
@@ -1004,7 +1009,7 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
 {
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ED25519)
     {
-        if (sig_cap < 64)
+        if (sig_cap < 64 || !ssh_pkt_slot_storage(&ssh_pkt[i]))
         {
             return -1;
         }
@@ -1229,7 +1234,7 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
     mem.cpy(s_reply + PC_SNTRUP761_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
 
     pc_sha512_ctx hc;
-    pc_sha512_init(&hc, ssh_pkt[i].crypto_work);
+    pc_sha512_init(&hc, work);
     pc_sha512_update(&hc, k_pq, sizeof(k_pq)); // K = SHA512(K_PQ || K_CL) (RFC 9370 concat combiner)
     pc_sha512_update(&hc, k_cl, sizeof(k_cl));
     pc_sha512_final(&hc, k_out);
