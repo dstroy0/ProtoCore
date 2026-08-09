@@ -14,6 +14,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 void setUp()
 {
 }
@@ -68,7 +70,7 @@ static void test_ecdsa_sign_deterministic_sample(void)
     uint8_t priv[32];
     hexdec(PRIV, priv);
     uint8_t sig[64];
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, (const uint8_t *)"sample", 6, priv));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, tw, (const uint8_t *)"sample", 6, priv));
     uint8_t r[32], s[32];
     hexdec(SAMPLE_R, r);
     hexdec(SAMPLE_S, s);
@@ -81,7 +83,7 @@ static void test_ecdsa_sign_deterministic_test(void)
     uint8_t priv[32];
     hexdec(PRIV, priv);
     uint8_t sig[64];
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, (const uint8_t *)"test", 4, priv));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, tw, (const uint8_t *)"test", 4, priv));
     uint8_t r[32], s[32];
     hexdec(TEST_R, r);
     hexdec(TEST_S, s);
@@ -99,11 +101,11 @@ static void test_ecdsa_verify_valid(void)
     uint8_t sig[64];
     hexdec(SAMPLE_R, sig);
     hexdec(SAMPLE_S, sig + 32);
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, sig));
 
     hexdec(TEST_R, sig);
     hexdec(TEST_S, sig + 32);
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"test", 4, sig));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"test", 4, sig));
 }
 
 static void test_ecdsa_verify_rejects_tamper(void)
@@ -121,17 +123,17 @@ static void test_ecdsa_verify_rejects_tamper(void)
     uint8_t sig_test[64];
     hexdec(TEST_R, sig_test);
     hexdec(TEST_S, sig_test + 32);
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, sig_test));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, sig_test));
 
     // Tampered signature (flip one bit of s).
     sig[63] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, sig));
 
     // Tampered public key (flip one bit of X -> off curve / wrong key).
     hexdec(SAMPLE_R, sig);
     hexdec(SAMPLE_S, sig + 32);
     pub[1] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, sig));
 }
 
 // A fresh key round-trips (exercises sign -> verify with a non-vector key).
@@ -144,9 +146,9 @@ static void test_ecdsa_roundtrip_other_key(void)
     TEST_ASSERT_TRUE(pc_ecdsa_p256_pubkey(pub, priv));
     const uint8_t msg[] = "deterministic ecdsa round trip";
     uint8_t sig[64];
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, msg, sizeof(msg) - 1, priv));
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub, msg, sizeof(msg) - 1, sig));
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"other message", 13, sig));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, tw, msg, sizeof(msg) - 1, priv));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub, tw, msg, sizeof(msg) - 1, sig));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"other message", 13, sig));
 }
 
 // Stress the scalar multiplication across many distinct secret scalars: pubkey -> sign -> verify must
@@ -182,10 +184,10 @@ static void test_ecdsa_random_roundtrip_stress(void)
             msg[i] = next_byte(&st);
         }
         uint8_t sig[64];
-        TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, msg, sizeof(msg), priv));
-        TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub, msg, sizeof(msg), sig));
+        TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, tw, msg, sizeof(msg), priv));
+        TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub, tw, msg, sizeof(msg), sig));
         sig[iter % 64] ^= (uint8_t)(1u << (iter % 8)); // flip one bit somewhere in r||s
-        TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, msg, sizeof(msg), sig));
+        TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, msg, sizeof(msg), sig));
     }
 }
 
@@ -206,9 +208,9 @@ static void test_ecdsa_sign_rejects_bad_scalar(void)
     uint8_t priv[32];
     uint8_t sig[64];
     memset(priv, 0, 32);
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_sign(sig, (const uint8_t *)"x", 1, priv)); // d = 0
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_sign(sig, tw, (const uint8_t *)"x", 1, priv)); // d = 0
     memset(priv, 0xFF, 32);
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_sign(sig, (const uint8_t *)"x", 1, priv)); // d = 2^256-1 > n
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_sign(sig, tw, (const uint8_t *)"x", 1, priv)); // d = 2^256-1 > n
 }
 
 // verify() rejects a public key with a compressed-point (or any non-0x04) prefix.
@@ -223,7 +225,7 @@ static void test_ecdsa_verify_rejects_bad_prefix(void)
     uint8_t sig[64];
     hexdec(SAMPLE_R, sig);
     hexdec(SAMPLE_S, sig + 32);
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, sig));
 }
 
 // on_curve() must reject a coordinate that is out of the field range [0, p), a distinct failure mode
@@ -242,11 +244,11 @@ static void test_ecdsa_verify_rejects_out_of_range_coord(void)
     uint8_t bad_pub[65];
     memcpy(bad_pub, pub, 65);
     memset(bad_pub + 1, 0xFF, 32); // X = 2^256-1 >= p
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(bad_pub, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(bad_pub, tw, (const uint8_t *)"sample", 6, sig));
 
     memcpy(bad_pub, pub, 65);
     memset(bad_pub + 33, 0xFF, 32); // Y = 2^256-1 >= p
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(bad_pub, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(bad_pub, tw, (const uint8_t *)"sample", 6, sig));
 }
 
 // verify() rejects a signature whose r or s is 0 or >= the group order n, before ever touching the
@@ -270,19 +272,19 @@ static void test_ecdsa_verify_rejects_out_of_range_sig(void)
     uint8_t bad[64];
     memcpy(bad, base, 64);
     memset(bad, 0, 32); // r = 0
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, bad));
 
     memcpy(bad, base, 64);
     memcpy(bad, n_bytes, 32); // r = n (>= n)
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, bad));
 
     memcpy(bad, base, 64);
     memset(bad + 32, 0, 32); // s = 0
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, bad));
 
     memcpy(bad, base, 64);
     memcpy(bad + 32, n_bytes, 32); // s = n (>= n)
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"sample", 6, bad));
 }
 
 // verify() must reject a signature crafted so R = u1*G + u2*Q is the point at infinity: with r = s = 1,
@@ -301,7 +303,7 @@ static void test_ecdsa_verify_rejects_forged_infinity(void)
     memset(sig, 0, 64);
     sig[31] = 0x01; // r = 1
     sig[63] = 0x01; // s = 1
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, (const uint8_t *)"forge", 5, sig));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub, tw, (const uint8_t *)"forge", 5, sig));
 }
 
 // ---- ECDH (ecdh-sha2-nistp256) --------------------------------------------

@@ -20,6 +20,8 @@
 #include "rx_feed.h"
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -334,7 +336,7 @@ static const char *kDPass = "s3cret";
 static void sha256_hex_str(const char *s, char out[65])
 {
     uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256((const uint8_t *)s, strlen(s), d);
+    pc_sha256(tw,(const uint8_t *)s, strlen(s), d);
     static const char *hx = "0123456789abcdef";
     for (int i = 0; i < PC_SHA256_DIGEST_LEN; i++)
     {

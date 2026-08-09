@@ -313,7 +313,7 @@
       "tests": ["unit/fieldbus/test_iolink"]
     },
     "native_stack_l46": {
-      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 \u00a75.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
+      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 §5.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0"],
       "src": [
         "+<shared_primitives/ip.c>",
@@ -1787,7 +1787,8 @@
         "+<crypto/hash/sha256.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<mmgr/secure.c>"
       ],
       "tests": ["unit/security/test_audit_log"]
     },
@@ -2145,7 +2146,8 @@
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<crypto/rng/rng.c>"
       ],
       "tests": [
         "unit/smb/test_smb2",

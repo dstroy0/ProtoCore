@@ -20,6 +20,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // Provisions the host key so a test can mint RS256 tokens with arbitrary claims and exercise the
 // post-signature-verify guards. Defined below, used before it.
 static void setup_rt_key(pc_oidc_key *key);
@@ -91,7 +93,7 @@ static void make_jwt(const char *payload_json, char *tok, size_t tok_cap)
     b64url_enc((const uint8_t *)payload_json, strlen(payload_json), seg1);
     int sl = snprintf(signing, sizeof(signing), "%s.%s", seg0, seg1);
     uint8_t sig[256];
-    ssh_rsa_sign((const uint8_t *)signing, (size_t)sl, PC_RSA_HASH_SHA256, sig); // RS256 = SHA-256
+    ssh_rsa_sign(tw,(const uint8_t *)signing, (size_t)sl, PC_RSA_HASH_SHA256, sig); // RS256 = SHA-256
     b64url_enc(sig, 256, seg2);
     snprintf(tok, tok_cap, "%s.%s.%s", seg0, seg1, seg2);
 }
@@ -212,7 +214,7 @@ void test_oidc_signed_claim_guards()
         b64url_enc((const uint8_t *)HDR, strlen(HDR), seg0);
         int sl = snprintf(signing, sizeof(signing), "%s.A", seg0); // payload segment "A" decodes to 0 bytes
         uint8_t sig[256];
-        ssh_rsa_sign((const uint8_t *)signing, (size_t)sl, PC_RSA_HASH_SHA256, sig); // RS256 = SHA-256
+        ssh_rsa_sign(tw,(const uint8_t *)signing, (size_t)sl, PC_RSA_HASH_SHA256, sig); // RS256 = SHA-256
         b64url_enc(sig, 256, seg2);
         snprintf(tok, sizeof(tok), "%s.A.%s", seg0, seg2);
         TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
@@ -840,9 +842,9 @@ void test_rsa_sign_verify_sha512(void)
 
     static const char msg[] = "sha512 coverage message";
     uint8_t sig[PC_RSA_SIG_BYTES];
-    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign((const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA512, sig));
+    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign(tw,(const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA512, sig));
 
-    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(PC_SSH_BASELINE_KEY_N, PC_SSH_BASELINE_KEY_E, (const uint8_t *)msg,
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(PC_SSH_BASELINE_KEY_N, PC_SSH_BASELINE_KEY_E, tw, (const uint8_t *)msg,
                                            strlen(msg), sig, PC_RSA_SIG_BYTES, PC_RSA_HASH_SHA512));
 }
 
@@ -859,7 +861,7 @@ void test_rsa_sign_zero_exponent(void)
 
     static const char msg[] = "zero exponent";
     uint8_t sig[PC_RSA_SIG_BYTES];
-    TEST_ASSERT_EQUAL_INT(0, pc_rsa_sign_sw(n_be, d_be, (const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA256, sig));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_sign_sw(n_be, d_be, tw, (const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA256, sig));
 
     // s = em^0 mod n == 1, encoded big-endian as 255 zero bytes followed by 0x01.
     for (size_t i = 0; i < PC_RSA_SIG_BYTES - 1; i++)
@@ -890,7 +892,7 @@ void test_rsa_sign_tiny_modulus_reduction_equal_limbs(void)
 
     static const char msg[] = "tiny modulus";
     uint8_t sig[PC_RSA_SIG_BYTES];
-    TEST_ASSERT_EQUAL_INT(0, pc_rsa_sign_sw(n_be, d_be, (const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA256, sig));
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_sign_sw(n_be, d_be, tw, (const uint8_t *)msg, strlen(msg), PC_RSA_HASH_SHA256, sig));
 
     // Every result is < n == 5, so the high 255 bytes are all zero.
     for (size_t i = 0; i < PC_RSA_SIG_BYTES - 1; i++)
@@ -912,13 +914,13 @@ void test_rsa_verify_length_and_range_guards(void)
     static const char msg[] = "guard check";
 
     uint8_t short_sig[10] = {0};
-    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), short_sig, sizeof(short_sig),
+    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n_be, e_be, tw, (const uint8_t *)msg, strlen(msg), short_sig, sizeof(short_sig),
                                             PC_RSA_HASH_SHA256));
 
     uint8_t big_sig[PC_RSA_KEY_BYTES];
     memset(big_sig, 0xFF, sizeof(big_sig));
     TEST_ASSERT_EQUAL_INT(
-        -1, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), big_sig, sizeof(big_sig), PC_RSA_HASH_SHA256));
+        -1, pc_rsa_verify(n_be, e_be, tw, (const uint8_t *)msg, strlen(msg), big_sig, sizeof(big_sig), PC_RSA_HASH_SHA256));
 }
 
 // bn_modexp_pub's public-exponent bit scan starts unconditionally at bit 31 with no
@@ -940,7 +942,7 @@ void test_rsa_verify_zero_public_exponent(void)
     // s^0 mod n == 1, which never matches the expected PKCS#1 block, so verify still
     // fails - but only after bn_modexp_pub's e == 0 short-circuit runs without looping.
     TEST_ASSERT_EQUAL_INT(
-        -1, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), sig, PC_RSA_SIG_BYTES, PC_RSA_HASH_SHA256));
+        -1, pc_rsa_verify(n_be, e_be, tw, (const uint8_t *)msg, strlen(msg), sig, PC_RSA_SIG_BYTES, PC_RSA_HASH_SHA256));
 }
 
 // ssh_rsa_encode_pubkey: the not-yet-loaded guard, the too-small-buffer guard, and the

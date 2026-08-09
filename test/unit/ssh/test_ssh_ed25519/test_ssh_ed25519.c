@@ -14,6 +14,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 void setUp()
 {
 }
@@ -49,7 +51,7 @@ static void fromhex(const char *h, uint8_t *out, size_t n)
 static void sha512_check(const void *msg, size_t len, const char *expect)
 {
     uint8_t d[PC_SHA512_DIGEST_LEN];
-    pc_sha512((const uint8_t *)msg, len, d);
+    pc_sha512(tw,(const uint8_t *)msg, len, d);
     char hex[2 * PC_SHA512_DIGEST_LEN + 1];
     tohex(d, sizeof(d), hex);
     TEST_ASSERT_EQUAL_STRING(expect, hex);
@@ -92,7 +94,7 @@ void test_sha512_two_block_boundary()
 void test_sha512_million_a_streaming()
 {
     pc_sha512_ctx c;
-    pc_sha512_init(&c);
+    pc_sha512_init(&c, tw);
     uint8_t a[1000];
     memset(a, 'a', sizeof(a));
     for (int i = 0; i < 1000; i++)
@@ -113,10 +115,10 @@ void test_sha512_streaming_matches_oneshot()
 {
     const char *msg = "The quick brown fox jumps over the lazy dog";
     uint8_t one[PC_SHA512_DIGEST_LEN];
-    pc_sha512((const uint8_t *)msg, strlen(msg), one);
+    pc_sha512(tw,(const uint8_t *)msg, strlen(msg), one);
 
     pc_sha512_ctx c;
-    pc_sha512_init(&c);
+    pc_sha512_init(&c, tw);
     for (const char *p = msg; *p; p++)
     {
         pc_sha512_update(&c, (const uint8_t *)p, 1);
@@ -211,14 +213,14 @@ static void ed_check(const char *seedh, const char *msgh, const char *pubh, cons
     }
 
     uint8_t gotpub[32];
-    pc_ed25519_pubkey(gotpub, seed);
+    pc_ed25519_pubkey(tw,gotpub, seed);
     TEST_ASSERT_EQUAL_MEMORY(pub, gotpub, 32);
 
     uint8_t gotsig[64];
-    pc_ed25519_sign(gotsig, msg, mlen, seed);
+    pc_ed25519_sign(tw,gotsig, msg, mlen, seed);
     TEST_ASSERT_EQUAL_MEMORY(expsig, gotsig, 64);
 
-    TEST_ASSERT_TRUE(pc_ed25519_verify(pub, msg, mlen, expsig));
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,pub, msg, mlen, expsig));
 }
 
 void test_ed25519_vector_empty_msg()
@@ -250,23 +252,23 @@ void test_ed25519_verify_rejects_tampering()
 {
     uint8_t seed[32], pub[32], sig[64], msg[3] = {'a', 'b', 'c'};
     fromhex("4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb", seed, 32);
-    pc_ed25519_pubkey(pub, seed);
-    pc_ed25519_sign(sig, msg, 3, seed);
-    TEST_ASSERT_TRUE(pc_ed25519_verify(pub, msg, 3, sig));
+    pc_ed25519_pubkey(tw,pub, seed);
+    pc_ed25519_sign(tw,sig, msg, 3, seed);
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,pub, msg, 3, sig));
 
     for (int i = 0; i < 64; i += 21) // flip a bit in R and in S
     {
         uint8_t bad[64];
         memcpy(bad, sig, 64);
         bad[i] ^= 0x01;
-        TEST_ASSERT_FALSE(pc_ed25519_verify(pub, msg, 3, bad));
+        TEST_ASSERT_FALSE(pc_ed25519_verify(tw,pub, msg, 3, bad));
     }
     uint8_t badmsg[3] = {'a', 'b', 'd'};
-    TEST_ASSERT_FALSE(pc_ed25519_verify(pub, badmsg, 3, sig));
+    TEST_ASSERT_FALSE(pc_ed25519_verify(tw,pub, badmsg, 3, sig));
     uint8_t badpub[32];
     memcpy(badpub, pub, 32);
     badpub[0] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_ed25519_verify(badpub, msg, 3, sig));
+    TEST_ASSERT_FALSE(pc_ed25519_verify(tw,badpub, msg, 3, sig));
 }
 
 // Verification must reject a non-canonical scalar S >= L (RFC 8032 §5.1.7): S and S+L both satisfy the
@@ -276,15 +278,15 @@ void test_ed25519_verify_rejects_noncanonical_s()
 {
     uint8_t seed[32], pub[32], sig[64], msg[3] = {'a', 'b', 'c'};
     fromhex("4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb", seed, 32);
-    pc_ed25519_pubkey(pub, seed);
-    pc_ed25519_sign(sig, msg, 3, seed);
-    TEST_ASSERT_TRUE(pc_ed25519_verify(pub, msg, 3, sig)); // sanity: the honest signature verifies
+    pc_ed25519_pubkey(tw,pub, seed);
+    pc_ed25519_sign(tw,sig, msg, 3, seed);
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,pub, msg, 3, sig)); // sanity: the honest signature verifies
 
     // S = 0xFF..FF is far above the group order L (~2^252): non-canonical -> reject.
     uint8_t bad[64];
     memcpy(bad, sig, 64);
     memset(bad + 32, 0xFF, 32);
-    TEST_ASSERT_FALSE(pc_ed25519_verify(pub, msg, 3, bad));
+    TEST_ASSERT_FALSE(pc_ed25519_verify(tw,pub, msg, 3, bad));
 
     // S == L (the group order, little-endian) is also out of range (canonical requires S < L).
     static const uint8_t L_le[32] = {0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7,
@@ -292,7 +294,7 @@ void test_ed25519_verify_rejects_noncanonical_s()
                                      0,    0,    0,    0,    0,    0,    0,    0,    0,    0x10};
     memcpy(bad, sig, 64);
     memcpy(bad + 32, L_le, 32);
-    TEST_ASSERT_FALSE(pc_ed25519_verify(pub, msg, 3, bad));
+    TEST_ASSERT_FALSE(pc_ed25519_verify(tw,pub, msg, 3, bad));
 }
 
 // Verification must reject a public key that does not decode to a valid curve point (RFC 8032 §5.1.7:
@@ -305,7 +307,7 @@ void test_ed25519_verify_rejects_invalid_pubkey_point()
     uint8_t seed[32], sig[64];
     fromhex("4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb", seed, 32);
     uint8_t realmsg[3] = {'a', 'b', 'c'};
-    pc_ed25519_sign(sig, realmsg, 3, seed); // canonical S -> verify() reaches point decode
+    pc_ed25519_sign(tw,sig, realmsg, 3, seed); // canonical S -> verify() reaches point decode
 
     uint8_t wrongmsg[3] = {'x', 'y', 'z'}; // different message: even a valid-point key cannot verify
     for (int i = 0; i < 64; i++)
@@ -314,7 +316,7 @@ void test_ed25519_verify_rejects_invalid_pubkey_point()
         memset(cand, 0, 32);
         cand[0] = (uint8_t)i;
         cand[16] = (uint8_t)(i * 7 + 1); // spread bits so successive candidate y are unrelated
-        TEST_ASSERT_FALSE(pc_ed25519_verify(cand, wrongmsg, 3, sig));
+        TEST_ASSERT_FALSE(pc_ed25519_verify(tw,cand, wrongmsg, 3, sig));
     }
 }
 
@@ -331,9 +333,9 @@ void test_ed25519_roundtrip_long()
     {
         msg[i] = (uint8_t)(i ^ 0x5a);
     }
-    pc_ed25519_pubkey(pub, seed);
-    pc_ed25519_sign(sig, msg, sizeof(msg), seed);
-    TEST_ASSERT_TRUE(pc_ed25519_verify(pub, msg, sizeof(msg), sig));
+    pc_ed25519_pubkey(tw,pub, seed);
+    pc_ed25519_sign(tw,sig, msg, sizeof(msg), seed);
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,pub, msg, sizeof(msg), sig));
 }
 
 // ---------------------------------------------------------------------------

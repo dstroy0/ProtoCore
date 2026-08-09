@@ -12,6 +12,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 void setUp()
 {
 }
@@ -145,9 +147,9 @@ static void test_key_digest_deterministic_and_distinct()
     const char *a = "GET\nexample.com\n/a";
     const char *b = "GET\nexample.com\n/b";
     uint8_t d1[32], d2[32], d3[32];
-    edge_key_digest(a, strlen(a), d1);
-    edge_key_digest(a, strlen(a), d2);
-    edge_key_digest(b, strlen(b), d3);
+    edge_key_digest(tw,a, strlen(a), d1);
+    edge_key_digest(tw,a, strlen(a), d2);
+    edge_key_digest(tw,b, strlen(b), d3);
     TEST_ASSERT_EQUAL_MEMORY(d1, d2, 32);      // deterministic
     TEST_ASSERT_TRUE(memcmp(d1, d3, 32) != 0); // distinct inputs -> distinct digests
 }

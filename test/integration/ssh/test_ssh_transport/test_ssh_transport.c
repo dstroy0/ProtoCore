@@ -23,6 +23,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
 // context (ESP's mbedtls does) does not leak one per vector.
@@ -479,7 +481,7 @@ void test_exchange_hash_matches_independent_assembly()
     o += put_mpint(pre + o, k_be, 256);
 
     uint8_t expected[PC_SHA256_DIGEST_LEN];
-    pc_sha256(pre, o, expected);
+    pc_sha256(tw,pre, o, expected);
 
     TEST_ASSERT_EQUAL_MEMORY(expected, got, PC_SHA256_DIGEST_LEN);
 }
@@ -788,7 +790,7 @@ void test_kexdh_handle_curve25519_ed25519_end_to_end()
         TEST_ASSERT_TRUE(rd_string(ks, ks_len, &ko, &hostpub, &hp_len));
         TEST_ASSERT_EQUAL_UINT32(32, hp_len);
         uint8_t expect_pub[32];
-        pc_ed25519_pubkey(expect_pub, seed);
+        pc_ed25519_pubkey(tw,expect_pub, seed);
         TEST_ASSERT_EQUAL_MEMORY(expect_pub, hostpub, 32);
 
         // sigblob = string("ssh-ed25519") || string(sig64).
@@ -814,11 +816,11 @@ void test_kexdh_handle_curve25519_ed25519_end_to_end()
         o += put_string(pre + o, qs, 32); // Q_S (string)
         o += put_mpint(pre + o, K, 32);   // K (mpint)
         uint8_t H[PC_SHA256_DIGEST_LEN];
-        pc_sha256(pre, o, H);
+        pc_sha256(tw,pre, o, H);
         TEST_ASSERT_EQUAL_MEMORY(H, s->session_id, PC_SHA256_DIGEST_LEN); // server captured this H
 
         // The signature verifies against the host key over the reconstructed H.
-        TEST_ASSERT_TRUE(pc_ed25519_verify(hostpub, H, PC_SHA256_DIGEST_LEN, sig));
+        TEST_ASSERT_TRUE(pc_ed25519_verify(tw,hostpub, H, PC_SHA256_DIGEST_LEN, sig));
     }
 }
 
@@ -904,7 +906,7 @@ void test_kexdh_handle_ecdh_nistp256_end_to_end()
     TEST_ASSERT_TRUE(rd_string(ks, ks_len, &ko, &hostpub, &hp_len));
     TEST_ASSERT_EQUAL_UINT32(32, hp_len);
     uint8_t expect_pub[32];
-    pc_ed25519_pubkey(expect_pub, seed);
+    pc_ed25519_pubkey(tw,expect_pub, seed);
     TEST_ASSERT_EQUAL_MEMORY(expect_pub, hostpub, 32);
 
     // sigblob = string("ssh-ed25519") || string(sig64).
@@ -930,11 +932,11 @@ void test_kexdh_handle_ecdh_nistp256_end_to_end()
     o += put_string(pre + o, qs, 65); // Q_S (string)
     o += put_mpint(pre + o, K, 32);   // K (mpint)
     uint8_t H[PC_SHA256_DIGEST_LEN];
-    pc_sha256(pre, o, H);
+    pc_sha256(tw,pre, o, H);
     TEST_ASSERT_EQUAL_MEMORY(H, s->session_id, PC_SHA256_DIGEST_LEN); // server captured this same H
 
     // The host signature verifies against the reconstructed H.
-    TEST_ASSERT_TRUE(pc_ed25519_verify(hostpub, H, PC_SHA256_DIGEST_LEN, sig));
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,hostpub, H, PC_SHA256_DIGEST_LEN, sig));
 }
 
 // An off-curve client point is rejected (RFC 5656 §4 point validation).
@@ -1037,7 +1039,7 @@ void test_kexdh_handle_rsa_sha512_signature()
 
     // The signature must verify over H (= session_id) under rsa-sha2-512, against the fixture's own
     // copy of the modulus rather than the one the library parsed.
-    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(PC_SSH_BASELINE_KEY_N, PC_SSH_BASELINE_KEY_E, s->session_id,
+    TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(PC_SSH_BASELINE_KEY_N, PC_SSH_BASELINE_KEY_E, tw, s->session_id,
                                            PC_SHA256_DIGEST_LEN, sig, 256, PC_RSA_HASH_SHA512));
 }
 
@@ -1162,9 +1164,9 @@ void test_kexdh_handle_ecdsa_end_to_end()
     o += put_string(pre + o, qs, 32);
     o += put_mpint(pre + o, K, 32);
     uint8_t H[PC_SHA256_DIGEST_LEN];
-    pc_sha256(pre, o, H);
+    pc_sha256(tw,pre, o, H);
     TEST_ASSERT_EQUAL_MEMORY(H, s->session_id, PC_SHA256_DIGEST_LEN);
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(ec_pub, H, PC_SHA256_DIGEST_LEN, raw));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(ec_pub, tw, H, PC_SHA256_DIGEST_LEN, raw));
 }
 
 // ---- rekey (RFC 4253 §9) --------------------------------------------------
@@ -1405,7 +1407,7 @@ void test_kdf_edge_paths_and_slot_guards()
     // out_len beyond SSH_KDF_MAX exercises the clamp. (K == 0 cannot happen for a real DH secret.)
     uint8_t K0[256] = {0};
     uint8_t big[SSH_KDF_MAX];
-    ssh_kdf_derive(K0, H, H, 'A', big, sizeof(big) + 64, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K0, H, H, 'A', big, sizeof(big) + 64, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
                    PROTO_FALSE); // clamps to SSH_KDF_MAX; K == 0 -> empty mpint
 
     // Slot-index guards on the DH generate + the SID key derivation are no-ops / -1.
@@ -1494,13 +1496,13 @@ void test_dh_derive_keys_gcm_installs()
     uint8_t iv_s[PC_SHA256_DIGEST_LEN];
     uint8_t key_c[PC_SHA256_DIGEST_LEN];
     uint8_t key_s[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, sid, 'A', iv_c, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, sid, 'A', iv_c, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
                    PROTO_FALSE);
-    ssh_kdf_derive(K, H, sid, 'B', iv_s, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, sid, 'B', iv_s, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
                    PROTO_FALSE);
-    ssh_kdf_derive(K, H, sid, 'C', key_c, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, sid, 'C', key_c, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
                    PROTO_FALSE);
-    ssh_kdf_derive(K, H, sid, 'D', key_s, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, sid, 'D', key_s, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
                    PROTO_FALSE);
 
     uint8_t pt[16];
@@ -1529,7 +1531,7 @@ void test_dh_derive_keys_gcm_installs()
 }
 
 // Hybrid KEX (mlkem768x25519-sha256): K is hashed as a plain 32-byte SSH string (the last 32 octets of
-// the K buffer), NOT as a canonical mpint. ssh_kdf_derive(..., k_is_string=true) must match an
+// the K buffer), NOT as a canonical mpint. ssh_kdf_derive(tw,..., k_is_string=true) must match an
 // independent string-encoded computation, and must differ from the mpint encoding of the same buffer.
 void test_kdf_string_k_hybrid()
 {
@@ -1547,13 +1549,13 @@ void test_kdf_string_k_hybrid()
     }
 
     uint8_t got[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, sid, 'C', got, PC_SHA256_DIGEST_LEN, PROTO_TRUE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, sid, 'C', got, PC_SHA256_DIGEST_LEN, PROTO_TRUE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
                    PROTO_FALSE); // K encoded as a 32-byte string
 
     // Independent: K1 = SHA256( string(K[224:256]) || H || 'C' || sid ), string = 4-byte len(32) || bytes.
     uint8_t len_be[4] = {0, 0, 0, 32};
     pc_sha256_ctx c;
-    pc_sha256_init(&c);
+    pc_sha256_init(&c, tw);
     pc_sha256_update(&c, len_be, 4);
     pc_sha256_update(&c, K + (256 - 32), 32);
     pc_sha256_update(&c, H, PC_SHA256_DIGEST_LEN);
@@ -1566,7 +1568,7 @@ void test_kdf_string_k_hybrid()
 
     // The mpint encoding of the same buffer yields a different key (string != mpint encoding).
     uint8_t as_mpint[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, sid, 'C', as_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, sid, 'C', as_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                    PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(got, as_mpint, PC_SHA256_DIGEST_LEN));
 }

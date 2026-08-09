@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // The CSPRNG seam (forward-declared in sntrup761.cpp): a deterministic test source so the round-trip
 // is reproducible. sntrup761 interop does not depend on how r/keys are drawn, only that they are valid.
 static uint32_t s_rng = 0xA5A5F00Du;
@@ -56,7 +58,7 @@ void tearDown()
 void test_sntrup761_decaps_kat()
 {
     uint8_t ss[PC_SNTRUP761_SS_BYTES];
-    pc_sntrup761_dec(KAT_SK, KAT_CT, ss);
+    pc_sntrup761_dec(tw,KAT_SK, KAT_CT, ss);
     TEST_ASSERT_EQUAL_MEMORY(KAT_SS, ss, PC_SNTRUP761_SS_BYTES);
 }
 
@@ -67,9 +69,9 @@ void test_sntrup761_roundtrip()
     {
         uint8_t pk[PC_SNTRUP761_PK_BYTES], sk[PC_SNTRUP761_SK_BYTES];
         uint8_t ct[PC_SNTRUP761_CT_BYTES], ss1[PC_SNTRUP761_SS_BYTES], ss2[PC_SNTRUP761_SS_BYTES];
-        pc_sntrup761_keypair(pk, sk);
-        pc_sntrup761_enc(pk, ct, ss1);
-        pc_sntrup761_dec(sk, ct, ss2);
+        pc_sntrup761_keypair(tw,pk, sk);
+        pc_sntrup761_enc(tw,pk, ct, ss1);
+        pc_sntrup761_dec(tw,sk, ct, ss2);
         TEST_ASSERT_EQUAL_MEMORY(ss1, ss2, PC_SNTRUP761_SS_BYTES);
     }
 }
@@ -79,10 +81,10 @@ void test_sntrup761_implicit_reject()
 {
     uint8_t pk[PC_SNTRUP761_PK_BYTES], sk[PC_SNTRUP761_SK_BYTES];
     uint8_t ct[PC_SNTRUP761_CT_BYTES], good[PC_SNTRUP761_SS_BYTES], bad[PC_SNTRUP761_SS_BYTES];
-    pc_sntrup761_keypair(pk, sk);
-    pc_sntrup761_enc(pk, ct, good);
+    pc_sntrup761_keypair(tw,pk, sk);
+    pc_sntrup761_enc(tw,pk, ct, good);
     ct[0] = (uint8_t)(ct[0] ^ 0xff); // corrupt the ciphertext
-    pc_sntrup761_dec(sk, ct, bad);
+    pc_sntrup761_dec(tw,sk, ct, bad);
     TEST_ASSERT_TRUE(memcmp(good, bad, PC_SNTRUP761_SS_BYTES) != 0);
 }
 
@@ -95,10 +97,10 @@ void test_sntrup761_keygen_retries_on_noninvertible_g()
     s_force_zero_calls = 761; // p = 761 (see sntrup761.h): forces every g coefficient to 0
     uint8_t pk[PC_SNTRUP761_PK_BYTES], sk[PC_SNTRUP761_SK_BYTES];
     uint8_t ct[PC_SNTRUP761_CT_BYTES], ss1[PC_SNTRUP761_SS_BYTES], ss2[PC_SNTRUP761_SS_BYTES];
-    pc_sntrup761_keypair(pk, sk);
+    pc_sntrup761_keypair(tw,pk, sk);
     TEST_ASSERT_EQUAL_INT(0, s_force_zero_calls); // the forced draw was actually consumed
-    pc_sntrup761_enc(pk, ct, ss1);
-    pc_sntrup761_dec(sk, ct, ss2);
+    pc_sntrup761_enc(tw,pk, ct, ss1);
+    pc_sntrup761_dec(tw,sk, ct, ss2);
     TEST_ASSERT_EQUAL_MEMORY(ss1, ss2, PC_SNTRUP761_SS_BYTES);
 }
 

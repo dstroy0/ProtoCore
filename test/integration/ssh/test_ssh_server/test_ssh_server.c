@@ -523,6 +523,8 @@ void test_inbound_ext_info_ignored()
 #include "crypto/cipher/aes256ctr.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
 // context (ESP's mbedtls does) does not leak one per vector.
@@ -1195,7 +1197,7 @@ static size_t ctr_etm_packet(uint8_t *wire, uint32_t pkt_len, const uint8_t *pla
     pc_aes256ctr_crypt(key, ctr, plain, wire + 4, pkt_len);
     const uint8_t seq_be[4] = {0, 0, 0, 0};
     pc_hmac_sha256_ctx h;
-    pc_hmac_sha256_init(&h, mac_key, sizeof(mac_key));
+    pc_hmac_sha256_init(&h, tw, mac_key, sizeof(mac_key));
     pc_hmac_sha256_update(&h, seq_be, 4);
     pc_hmac_sha256_update(&h, wire, 4 + pkt_len);
     pc_hmac_sha256_final(&h, wire + 4 + pkt_len);
@@ -1292,7 +1294,7 @@ void test_ssh_pkt_ctr_emac_and_plain_frame_errors()
         memset(mac_key, PKT_MAC_BYTE, sizeof(mac_key));
         const uint8_t seq_be[4] = {0, 0, 0, 0};
         pc_hmac_sha256_ctx h;
-        pc_hmac_sha256_init(&h, mac_key, sizeof(mac_key));
+        pc_hmac_sha256_init(&h, tw, mac_key, sizeof(mac_key));
         pc_hmac_sha256_update(&h, seq_be, 4);
         pc_hmac_sha256_update(&h, plain, sizeof(plain));
         pc_hmac_sha256_final(&h, wire + sizeof(plain));

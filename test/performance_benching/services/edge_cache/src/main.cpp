@@ -20,6 +20,8 @@
 
 #include <strings.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // Response head fixture (verbatim from test/test_edge_cache/test_edge_cache.cpp's RESP_HEAD).
 static const char *RESP_HEAD = "HTTP/1.1 200 OK\r\n"
                                "ETag: \"abc123\"\r\n"
@@ -85,7 +87,7 @@ static void edge_cache_bench_task(void *)
         DBENCH_OP("edge_parse_http_date (IMF)", 100000, sink64 += edge_parse_http_date(IMF_DATE, strlen(IMF_DATE)));
         DBENCH_OP("edge_key_canon", 100000,
                   sinksz = edge_key_canon("GET", "Example.COM", "/a/b", "x=1", true, key_out, sizeof(key_out)));
-        DBENCH_BULK("edge_key_digest (SHA-256)", 2000, key_len, edge_key_digest(key_out, key_len, digest));
+        DBENCH_BULK("edge_key_digest (tw,SHA-256)", 2000, key_len, edge_key_digest(tw, key_out, key_len, digest));
         DBENCH_OP("edge_vary_serialize", 50000,
                   sinkb = edge_vary_serialize("Accept-Encoding, Accept-Language", vary_lookup, nullptr, vary_out,
                                               sizeof(vary_out)));

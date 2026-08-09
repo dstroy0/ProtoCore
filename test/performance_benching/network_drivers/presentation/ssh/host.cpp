@@ -29,6 +29,8 @@
 #include <cstdio>
 #include <cstring>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 using clk = std::chrono::steady_clock;
 
 template <typename F> static double bench_ns(uint64_t iters, F fn)
@@ -107,7 +109,7 @@ int main()
     memset(hash, 0x44, sizeof(hash));
     {
         double ns = bench_ns(2000, [&] {
-            pc_ed25519_sign(sig, hash, sizeof(hash), seed);
+            pc_ed25519_sign(tw, sig, hash, sizeof(hash), seed);
             sink += sig[0];
         });
         row("ssh", "ed25519_sign (host key)", ns, 0);

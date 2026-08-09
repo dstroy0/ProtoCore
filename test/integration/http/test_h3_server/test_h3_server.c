@@ -32,6 +32,8 @@
 #include "pc_net_host.h"
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 #define H3_PORT 443
 
 void setUp()
@@ -356,7 +358,7 @@ void test_h3_request_served_by_route()
     TEST_ASSERT_EQUAL_INT32(PC_OK, proto_begin(NULL)); // binds the HTTP/3 UDP port
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     // Client Initial(ClientHello) padded to the 1200-byte minimum.
     QuicTransportParams ctp;
@@ -397,7 +399,7 @@ void test_h3_request_served_by_route()
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx t;
     uint8_t chsh[32], chsf[32];
-    pc_sha256_init(&t);
+    pc_sha256_init(&t, tw);
     pc_sha256_update(&t, ch, chl);
     pc_sha256_update(&t, sh, shl);
     {
@@ -409,8 +411,8 @@ void test_h3_request_served_by_route()
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_408);
     pc_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_s);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_HS, &hs_c);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_HS, &hs_s);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_HS, &hs_c);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
@@ -418,8 +420,8 @@ void test_h3_request_served_by_route()
     pc_sha256_update(&t, hsf, hsfl);
     pc_sha256_final(&t, chsf);
     pc_tls13_ks_master(&cks, chsf);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_AP, &ap_s);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_AP, &ap_c);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_AP, &ap_s);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
     // Client Initial(ACK) + Handshake(ACK + Finished) -> server completes the handshake.
     uint8_t ifr[64];

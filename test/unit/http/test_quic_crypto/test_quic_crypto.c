@@ -21,6 +21,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // The keyed api needs a context, not a key. One scratch context, rebuilt per call and released first so
 // a backend that attaches vendor resources to a context does not leak one per vector.
 static uint8_t g_gcm_ws[PC_WORK_AES128GCM] __attribute__((aligned(8)));
@@ -158,7 +160,7 @@ void test_initial_secrets_appendix_a1()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(dcid, 8, &s);
+    pc_quic_derive_initial_secrets(tw,dcid, 8, &s);
 
     uint8_t ck[16], civ[12], chp[16], sk[16], siv[12], shp[16];
     hx("1f369613dd76d5467730efcbe3b1a22d", ck, 16);
@@ -184,7 +186,7 @@ void test_server_initial_a3()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(dcid, 8, &s);
+    pc_quic_derive_initial_secrets(tw,dcid, 8, &s);
 
     // Unprotected header (20 bytes: pn_offset 18, 2-byte pn = 1) then the 99-byte payload.
     uint8_t pkt[256];
@@ -233,7 +235,7 @@ void test_client_initial_a2()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(dcid, 8, &s);
+    pc_quic_derive_initial_secrets(tw,dcid, 8, &s);
 
     // Unprotected header (22 bytes: pn_offset 18, 4-byte pn = 2), then a 1162-byte payload made of
     // the CRYPTO frame (245 bytes) zero-padded with PADDING frames, per A.2.
@@ -374,7 +376,7 @@ void test_unprotect_rejects_tampered()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(dcid, 8, &s);
+    pc_quic_derive_initial_secrets(tw,dcid, 8, &s);
 
     uint8_t pkt[256];
     size_t elen = hx("cf000000010008f067a5502a4262b5004075c0d95a482cd0991cd25b0aac406a"
@@ -405,7 +407,7 @@ void test_short_header_roundtrip_null_out_pn()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(dcid, 8, &s);
+    pc_quic_derive_initial_secrets(tw,dcid, 8, &s);
 
     const size_t pn_offset = 9;
     const uint8_t pn_len = 2;
@@ -484,7 +486,7 @@ static void expand_label_ref(const uint8_t secret[32], const char *label, uint8_
     {
         counter++;
         pc_hmac_sha256_ctx c;
-        pc_hmac_sha256_init(&c, secret, 32);
+        pc_hmac_sha256_init(&c, tw, secret, 32);
         pc_hmac_sha256_update(&c, t, t_len);
         pc_hmac_sha256_update(&c, info, p);
         pc_hmac_sha256_update(&c, &counter, 1);
@@ -511,7 +513,7 @@ void test_hkdf_expand_label_multiblock()
     }
 
     uint8_t got[48], exp[48];
-    pc_hkdf_expand_label(secret, "test label", got, sizeof got, PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(tw,secret, "test label", got, sizeof got, PC_HKDF_LABEL_PREFIX);
     expand_label_ref(secret, "test label", exp, sizeof exp);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, got, sizeof got);
 }

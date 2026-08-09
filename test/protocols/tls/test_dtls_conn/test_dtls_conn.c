@@ -24,6 +24,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // Two keyed AEAD contexts agree iff they seal the same input identically.
 static void assert_ctx_match(uint8_t *a, uint8_t *b)
 {
@@ -427,7 +429,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
             size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, PROTO_TRUE);
             TEST_ASSERT_TRUE(clen > 0);
             const uint8_t *sig = msg + 4 + 2 + 2; // algorithm(2) + signature length(2)
-            TEST_ASSERT_TRUE(pc_ed25519_verify(cert_pub, content, clen, sig));
+            TEST_ASSERT_TRUE(pc_ed25519_verify(tw,cert_pub, content, clen, sig));
         }
         if (msg[0] == 20) // server Finished: verify over H(..CertificateVerify)
         {
@@ -549,7 +551,7 @@ static void test_full_handshake(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -561,7 +563,7 @@ static void test_full_handshake(void)
     size_t ch_len = build_client_hello(ch, client_pub);
 
     pc_sha256_ctx tr; // client transcript
-    pc_sha256_init(&tr);
+    pc_sha256_init(&tr, tw);
     pc_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
@@ -587,7 +589,7 @@ static void test_full_handshake_rpk(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -599,7 +601,7 @@ static void test_full_handshake_rpk(void)
                                           /*offer_rpk=*/PROTO_TRUE, TLS_GROUP_X25519, TLS_SIG_ED25519);
 
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr);
+    pc_sha256_init(&tr, tw);
     pc_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
@@ -624,7 +626,7 @@ static void test_cid_handshake(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -637,7 +639,7 @@ static void test_cid_handshake(void)
     size_t ch_len = build_client_hello_ex(ch, client_pub, /*with_keyshare=*/PROTO_TRUE, NULL, 0, client_cid,
                                           sizeof(client_cid), PROTO_FALSE, TLS_GROUP_X25519, TLS_SIG_ED25519);
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr);
+    pc_sha256_init(&tr, tw);
     pc_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
@@ -672,7 +674,7 @@ static void test_hrr_group_renegotiation(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -711,12 +713,12 @@ static void test_hrr_group_renegotiation(void)
     // --- client transcript for the HRR path: message_hash(Hash(CH1)) || HRR || CH2 (RFC 8446 §4.4.1) ---
     uint8_t ch1_hash[32];
     pc_sha256_ctx h1;
-    pc_sha256_init(&h1);
+    pc_sha256_init(&h1, tw);
     pc_sha256_update(&h1, ch1, ch1_len);
     pc_sha256_final(&h1, ch1_hash);
 
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr);
+    pc_sha256_init(&tr, tw);
     uint8_t mh[36];
     size_t mhl = pc_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
     TEST_ASSERT_TRUE(mhl > 0);
@@ -749,7 +751,7 @@ static void test_hrr_retry_without_cookie_rejected(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -788,7 +790,7 @@ static void test_reject_no_tls13(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -823,7 +825,7 @@ static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, pc_sha256_
     DtlsServer.init(conn, cfg, NULL, 0);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
-    pc_sha256_init(tr);
+    pc_sha256_init(tr, tw);
     pc_sha256_update(tr, ch, ch_len);
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
@@ -839,7 +841,7 @@ static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, pc_sha256_
 static void test_pto_retransmit_and_recovery(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -869,7 +871,7 @@ static void test_pto_retransmit_and_recovery(void)
 static void test_pto_backoff_and_giveup(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -898,7 +900,7 @@ static void test_pto_ack_cancels_retransmit(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -919,7 +921,7 @@ static void test_pto_ack_cancels_retransmit(void)
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
     pc_sha256_ctx t;
-    pc_sha256_init(&t);
+    pc_sha256_init(&t, tw);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, sh, sh_len);
     uint8_t h[32];
@@ -992,7 +994,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr);
+    pc_sha256_init(&tr, tw);
     pc_sha256_update(&tr, ch, ch_len);
 
     uint8_t rec[320];
@@ -1135,7 +1137,7 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
 static void test_ciphertext_truncated_header_stops_walk(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[64];
@@ -1162,7 +1164,7 @@ static void test_ciphertext_truncated_header_stops_walk(void)
 static void test_ciphertext_before_keys_is_fatal(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[64];
@@ -1188,7 +1190,7 @@ static void test_plaintext_non_handshake_record_ignored(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1215,7 +1217,7 @@ static void test_plaintext_non_handshake_record_ignored(void)
 static void test_truncated_handshake_fragment_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1237,7 +1239,7 @@ static void test_fragment_for_other_msg_seq_ignored(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1262,7 +1264,7 @@ static void test_fragment_for_other_msg_seq_ignored(void)
 static void test_oversize_handshake_message_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1285,7 +1287,7 @@ static void test_oversize_handshake_message_rejected(void)
 static void test_unexpected_message_in_start_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1312,7 +1314,7 @@ static void test_client_hello_missing_algorithms_rejected(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
@@ -1348,7 +1350,7 @@ static void test_oversize_certificate_is_internal_error(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     static uint8_t big_cert[PC_DTLS_CONN_MSG_CAP + 200];
     memset(big_cert, 0xAB, sizeof(big_cert));
 
@@ -1376,7 +1378,7 @@ static void test_flight_out_cap_too_small_is_internal_error(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
@@ -1408,7 +1410,7 @@ static void test_flight_out_cap_too_small_is_internal_error(void)
 static void test_retransmit_out_cap_too_small(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1428,7 +1430,7 @@ static void test_timer_idle_when_done_or_failed(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[256];
@@ -1465,7 +1467,7 @@ static void test_timer_idle_when_done_or_failed(void)
 static void test_client_finished_error_paths(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[256];
@@ -1515,7 +1517,7 @@ static void test_client_finished_error_paths(void)
 static void test_ack_malformed_and_partial_keep_timer(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1544,7 +1546,7 @@ static void test_ack_malformed_and_partial_keep_timer(void)
 static void test_ack_replay_and_late_ack_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1582,7 +1584,7 @@ static void test_ack_replay_and_late_ack_ignored(void)
 static void test_completion_ack_deferred_when_out_full(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1609,7 +1611,7 @@ static void test_completion_ack_deferred_when_out_full(void)
 static void test_app_records_before_and_after_established(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     const uint8_t payload[5] = {'h', 'e', 'l', 'l', 'o'};
@@ -1682,7 +1684,7 @@ static void test_conn_id_edge_cases(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
@@ -1732,7 +1734,7 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1801,7 +1803,7 @@ static void test_hrr_retry_without_keyshare_rejected(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1829,7 +1831,7 @@ static void test_hrr_retry_with_corrupt_cookie_rejected(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1872,7 +1874,7 @@ static void test_hrr_retry_with_corrupt_cookie_rejected(void)
 static void test_non_finished_message_after_done_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1899,7 +1901,7 @@ static void test_non_finished_message_after_done_rejected(void)
 static void test_epoch2_other_content_type_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1929,7 +1931,7 @@ static void test_epoch2_other_content_type_ignored(void)
 static void test_timer_stopped_by_done_state(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1952,7 +1954,7 @@ static void test_timer_stopped_by_done_state(void)
 static void test_established_requires_app_keys(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsConn conn;
@@ -1979,7 +1981,7 @@ static void test_local_cid_requires_nonempty_id(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
 
