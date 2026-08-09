@@ -8,6 +8,33 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Five crypto TUs carry PC_CRYPTO_HOT against crypto_opt.h's own prohibition, and its own bench numbers
+
+- **Status:** OPEN, found 2026-08-08 in the `src/` resource audit (`crypto.md` F19). Needs a decision,
+  not a patch: the two halves of `crypto_opt.h` disagree and only the maintainer can pick.
+- **Symptom:** `crypto_opt.h:40-46` caveat 1 says to apply `PC_CRYPTO_HOT` ONLY to code that is
+  constant-time by structure, and "Do NOT put it on scalar-multiplication / bignum / point-arithmetic
+  code that relies on branchless mask-selects". All five TUs that carry it are those categories:
+    - `crypto/asymmetric/bignum.c:32` and `rsa.c:25` - bignum.
+    - `crypto/asymmetric/curve25519.c:31` - a Montgomery ladder resting on `pc_gf_cswap:305`.
+    - `crypto/asymmetric/ed25519.c:32` - point arithmetic resting on `ed_cswap:457`.
+    - `crypto/asymmetric/ecdsa.c:74,76` - point arithmetic resting on `pt_table_select:666`, and it
+      takes the stronger `PC_CRYPTO_HOT_PEEL` on the S3.
+- **Why this is not a straight removal:** the caveat argues those paths are accelerator-dominated so
+  the `-O` level "buys them almost nothing - all risk, no reward". The same header's measured
+  per-die defaults (`:69-74`) contradict that for two of them: on the P4, x25519 is 6.8% and ed25519
+  4.5% faster at `-O3`, and `:54` records that the S3's Ed25519 sign is 1.2% SLOWER at `-O3`. So
+  these TUs were benched, and the pragma on at least curve25519/ed25519 buys a measured win.
+- **The exposure, stated honestly:** `#pragma GCC optimize` applies to the whole TU, and the
+  documented risk is if-conversion running backwards on a mask-select, turning
+  `dst->X[i] |= table[e].X[i] & mask;` into a branch on a secret index. Nobody has disassembled to
+  show it happens here. `SRC_LAW.md`'s "Guarantees are proven at the binary" requires exactly that
+  chain for a constant-time claim, and the chain does not exist for these five either way.
+- **What would settle it:** disassemble the five mask-select sites at the level each TU actually
+  builds at and check no branch depends on a secret. That decides it on evidence instead of on which
+  half of the header is believed. Until then the choice is the maintainer's: keep the measured speed,
+  or drop the pragma on the three point/bignum TUs and take the loss.
+
 ## Six SSH sites read a slot's crypto bytes before the slot was bound, so the first host-key set faulted
 
 - **Status:** FIXED 2026-08-09 in `145c3b925`, found by the native suite (`native_ssh_pqc`).
