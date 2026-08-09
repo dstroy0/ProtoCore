@@ -138,10 +138,11 @@ typedef struct
     uint8_t session_id_len;                  ///< session_id length (the first KEX's exchange-hash length).
     proto_bool have_session_id;              ///< True once the first KEX completes.
 
-    proto_bool ext_info_c; ///< Client advertised ext-info-c (RFC 8308): send EXT_INFO.
-    proto_bool authed;     ///< True after successful user authentication.
-    uint8_t auth_failures; ///< Failed USERAUTH_REQUESTs (brute-force limit, RFC 4252 §4).
-    uint32_t last_kex_ms;  ///< pc_millis() when the last KEX completed (server-initiated re-key timer).
+    proto_bool ext_info_c;    ///< Client advertised ext-info-c (RFC 8308): send EXT_INFO.
+    proto_bool ext_info_sent; ///< EXT_INFO already went out; RFC 8308 sec 2.4 allows it once.
+    proto_bool authed;        ///< True after successful user authentication.
+    uint8_t auth_failures;    ///< Failed USERAUTH_REQUESTs (brute-force limit, RFC 4252 §4).
+    uint32_t last_kex_ms;     ///< pc_millis() when the last KEX completed (server-initiated re-key timer).
 } SshSession;
 
 /** @brief Static pool of SSH session state (BSS), one per SSH slot. */
