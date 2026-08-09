@@ -8,6 +8,44 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The server's SSH_MSG_NEWKEYS is framed into an occupied slot and dropped, and the test cannot see it
+
+- **Status:** OPEN, confirmed 2026-08-09 by reading the whole path. Found in the
+  `network_drivers/presentation` resource audit (F1). **Not reproduced on hardware yet** - that is the
+  next step, and the audit says the same.
+- **Symptom (by construction, not observed):** the server answers `SSH_MSG_KEXDH_INIT` with two
+  packets and only the first reaches the wire.
+- **The path, every hop read:**
+    1. `ssh_server.c:138` `emit(i, reply.buf, n)` - KEXDH_REPLY.
+    2. `ssh_server.c:141` `emit(i, &newkeys, 1)` - NEWKEYS, immediately after, nothing between.
+    3. `emit()` (`ssh_server.c:34`) is `static inline void` and calls `s_srv.emit_cb`, discarding
+       any result.
+    4. `emit_cb` is bound to `ssh_emit` at `ssh_conn.c:124`.
+    5. `ssh_emit` (`ssh_conn.c:78`) calls `ssh_pkt_emit`, and on 0 calls `Workers.wake`.
+    6. `ssh_pkt_emit` (`ssh_packet.c:157-160`) opens with
+       `if (s->tx_ready) { return -1; } // one packet in flight per slot`.
+       The first emit sets `tx_ready` (`:176`). The second therefore returns -1 and the payload is never
+       framed. `emit()` returns `void`, so nothing upstream learns of it, and `ssh_newkeys_sent(i)` on the
+       very next line turns `enc_out` on regardless.
+- **Nothing drains in between.** `Workers.wake` -> `pc_worker_wake` (`worker.c`) is
+  `pc_platform_task_notify` - it signals a task, it does not run one. The only drain is
+  `ssh_tx_drain`, called at `ssh_conn.c:419`, _after_ `ssh_pkt_recv` at `:414` has returned, and at
+  `:316` on a later poll.
+- **Consequence:** the peer never sees NEWKEYS, so it never switches its inbound cipher, while the
+  server encrypts from the next packet on. Every subsequent server packet arrives encrypted into a
+  plaintext parser. The handshake stalls and the client is dropped on the idle timeout. The same
+  double-emit shape sends `CHANNEL_EOF` + `CHANNEL_CLOSE` at `ssh_server.c:356-360`, where the second
+  is likewise dropped and the peer keeps a half-open channel.
+- **Why the suite is green:** `test_ssh_server.c:186-190` asserts exactly this - `emt_n == 2`,
+  `emt_type[0] == KEXDH_REPLY`, `emt_type[1] == NEWKEYS` - and passes. It installs its own callback
+  through `pc_ssh_server_set_emit_cb`, so it proves `pc_ssh_server_dispatch` _calls_ emit twice and
+  never exercises `ssh_emit` or `ssh_pkt_emit`. The one-packet-per-slot rule is on the other side of
+  the seam the test replaces. No native env covers the real emit path.
+- **Fix:** not written, because the shape is a design call. SSH permits several binary packets
+  back-to-back in the stream, so framing both into `tx_wire` in sequence is legal and is probably what
+  the slot was meant to do; the alternatives are draining between the two emits, or giving `emit()` a
+  return and a queue. Picking one is the maintainer's.
+
 ## native_coaps_server: eight CID-routing tests fail, and they failed before the crypto cascade
 
 - **Status:** OPEN, found 2026-08-09 while verifying the crypto-ownership cascade. **Pre-existing** -
