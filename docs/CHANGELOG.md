@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the remaining ssh_dh_derive_keys_sid call sites take both directions ([`2220fc8`](https://github.com/dstroy0/ProtoCore/commit/2220fc83171fb3be6ea3ccd7e013e68e29734b2c))
 - native_ssh_pqc builds the SSH transport, so it has to define PC_ENABLE_SSH ([`c7f4cc6`](https://github.com/dstroy0/ProtoCore/commit/c7f4cc66ccbfe933669f3c0e8d69e6506391b7a0))
 - native_ssh_hardened builds the SSH stack, so it has to define PC_ENABLE_SSH ([`ef6f509`](https://github.com/dstroy0/ProtoCore/commit/ef6f509e28d7dbde7fbf6fae894bb9b1181d5565))
 - four audit findings - session-id binding, request fields, CR NUL, channel guards ([`ac76ab6`](https://github.com/dstroy0/ProtoCore/commit/ac76ab603573e03c22f81bf4258241f811600c7e))
@@ -60,6 +61,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`4333660`](https://github.com/dstroy0/ProtoCore/commit/4333660cfbafa6366cda67764ca4ede198f9c47b))
 - update CHANGELOG.md [skip ci] ([`ca86258`](https://github.com/dstroy0/ProtoCore/commit/ca86258767e12664071ad19ebf41629410ebbbe8))
 - update CHANGELOG.md [skip ci] ([`aeda130`](https://github.com/dstroy0/ProtoCore/commit/aeda13037e4ea73aaecf84f4c09e7c333baaf511))
 - update test report + coverage [skip ci] ([`eef2d16`](https://github.com/dstroy0/ProtoCore/commit/eef2d16b78208923ed4f9852f5ab3d30f9101b4a))
@@ -155,6 +157,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- KDF chain accumulates at an offset in the caller's region, not the stack ([`12e317a`](https://github.com/dstroy0/ProtoCore/commit/12e317abd50b543706a2bb8d3774297395327f99))
 - per-direction cipher/MAC, derived into the connection that owns the memory ([`cdd1463`](https://github.com/dstroy0/ProtoCore/commit/cdd14633c9eb040eb6fd6c2d567f319061a01a40))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`809e9c2`](https://github.com/dstroy0/ProtoCore/commit/809e9c2f971758db8454c867e1a55aba54ac1d15))
 - back out the flight sizing until the persistent-borrow contention is solved ([`a054a8d`](https://github.com/dstroy0/ProtoCore/commit/a054a8d431ec9a450427d6c2c326e1ccfd627b6d))
