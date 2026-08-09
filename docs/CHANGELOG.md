@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the accumulator fill is the raw mover, not the aligned-span one ([`cedb0cb`](https://github.com/dstroy0/ProtoCore/commit/cedb0cbf1f3559e572b8684962d9a95dd21d7263))
 - the partial word merged instead of overwriting past the span ([`a054a54`](https://github.com/dstroy0/ProtoCore/commit/a054a548f4b4cf8dd5f47441f486b201095f13bf))
 - the pad and the state copy are spans, not byte walks ([`d437c80`](https://github.com/dstroy0/ProtoCore/commit/d437c80e57da5f44a7a500090a2c40c3736360d7))
 - mem.cpy stores a whole word, so the accumulator lost its length ([`87ab003`](https://github.com/dstroy0/ProtoCore/commit/87ab003b8c62b9d4c3130717978123c28587e715))
@@ -26,6 +27,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`bc7588a`](https://github.com/dstroy0/ProtoCore/commit/bc7588ac1157568c31dfef4b309af20b492ecd9b))
 - update CHANGELOG.md [skip ci] ([`f66a12d`](https://github.com/dstroy0/ProtoCore/commit/f66a12dd583a7a75a99ed72305d647460af60315))
 - update CHANGELOG.md [skip ci] ([`b646639`](https://github.com/dstroy0/ProtoCore/commit/b646639aaed862115ddb741eef8b33a8a99c7521))
 - update CHANGELOG.md [skip ci] ([`cbde341`](https://github.com/dstroy0/ProtoCore/commit/cbde341d7e55c38dbad667ccf22d1c2ccbcf236c))
