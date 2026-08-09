@@ -157,6 +157,66 @@ static size_t build_client_kexinit(uint8_t *out, proto_bool ext_info_c)
     return o;
 }
 
+// RFC 4253 sec 7.1: a client may send its guessed KEXDH_INIT ahead of our reply. If the guess lost
+// negotiation the packet belongs to an algorithm nobody agreed on and MUST be silently ignored - not
+// parsed as the real one. The guess rides on the first-listed algorithm, so listing an unsupported
+// kex first makes it wrong while the second entry still negotiates.
+void test_wrong_kex_guess_is_dropped()
+{
+    SshSession *s = &ssh_sess[0];
+    strcpy(s->v_c, "SSH-2.0-TestClient");
+    s->v_c_len = (uint16_t)strlen(s->v_c);
+    s->phase = SSH_PHASE_KEXINIT;
+
+    uint8_t pkt[2048];
+    size_t o = 0;
+    pkt[o++] = SSH_MSG_KEXINIT;
+    for (int j = 0; j < 16; j++)
+    {
+        pkt[o++] = (uint8_t)j;
+    }
+    // First entry is one we do not implement, so negotiation settles on the second: guess wrong.
+    o += put_namelist(pkt + o, "kex-we-do-not-have@example.com,diffie-hellman-group14-sha256");
+    o += put_namelist(pkt + o, "rsa-sha2-256");
+    o += put_namelist(pkt + o, "aes256-ctr");
+    o += put_namelist(pkt + o, "aes256-ctr");
+    o += put_namelist(pkt + o, "hmac-sha2-256");
+    o += put_namelist(pkt + o, "hmac-sha2-256");
+    o += put_namelist(pkt + o, "none");
+    o += put_namelist(pkt + o, "none");
+    o += put_namelist(pkt + o, "");
+    o += put_namelist(pkt + o, "");
+    pkt[o++] = 1; // first_kex_packet_follows = TRUE
+    for (int j = 0; j < 4; j++)
+    {
+        pkt[o++] = 0; // reserved
+    }
+
+    emt_reset();
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, pkt[0], pkt, o));
+    TEST_ASSERT_EQUAL(SSH_PHASE_DH_INIT, s->phase);
+    TEST_ASSERT_TRUE(s->drop_guessed_kex_pkt);
+
+    // The guessed KEXDH_INIT is consumed silently: no reply, no phase change, connection kept.
+    uint8_t e_be[256];
+    memset(e_be, 0, sizeof(e_be));
+    e_be[255] = 0x02;
+    uint8_t dh[512];
+    size_t n = 0;
+    dh[n++] = SSH_MSG_KEXDH_INIT;
+    n += put_mpint(dh + n, e_be, 256);
+    emt_reset();
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, dh[0], dh, n));
+    TEST_ASSERT_EQUAL_INT(0, emt_n);
+    TEST_ASSERT_EQUAL(SSH_PHASE_DH_INIT, s->phase);
+    TEST_ASSERT_FALSE(s->drop_guessed_kex_pkt); // consumed once
+
+    // The real KEXDH_INIT that follows is handled normally.
+    emt_reset();
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, dh[0], dh, n));
+    TEST_ASSERT_TRUE(emt_n > 0);
+}
+
 // ---- the full handshake ---------------------------------------------------
 
 void test_full_handshake_to_channel_data()
@@ -1357,6 +1417,7 @@ int main()
     RUN_TEST(test_ssh_pkt_ctr_etm_frame_errors);
     RUN_TEST(test_ssh_pkt_ctr_emac_and_plain_frame_errors);
     RUN_TEST(test_full_handshake_to_channel_data);
+    RUN_TEST(test_wrong_kex_guess_is_dropped);
     RUN_TEST(test_extinfo_build_advertises_server_sig_algs);
     RUN_TEST(test_extinfo_not_sent_without_ext_info_c);
     RUN_TEST(test_inbound_ext_info_ignored);
