@@ -2064,7 +2064,7 @@
       "tests": ["unit/application/test_ntp_server"]
     },
     "native_ntp_service": {
-      "desc": "The portable SNTP client (network_drivers/application/ntp_service, RFC 4330) on the build\nwhere PC_HAS_VENDOR_SNTP is 0: the mode-3 request it puts on the wire, the mode-4 reply it accepts,\nand the ones it refuses - a wrong mode, a kiss-o'-death stratum, an origin that does not echo the\nrequest's transmit stamp, and a pre-2021 clock. Plus the epoch advancing off the monotonic tick\nbetween syncs.",
+      "desc": "The SNTP client (network_drivers/application/ntp_service, RFC 4330), which is the client on\nevery target: the mode-3 request it puts on the wire, the mode-4 reply it accepts, and the ones it\nrefuses - a wrong mode, a kiss-o'-death stratum, an origin that does not echo the request's transmit\nstamp, and a pre-2021 clock. Plus the epoch advancing off the monotonic tick between syncs.",
       "flags": ["-DPC_ENABLE_NTP=1"],
       "src": [
         "+<network_drivers/application/ntp_service/ntp_service.c>",

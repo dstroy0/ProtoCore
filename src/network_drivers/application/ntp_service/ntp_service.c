@@ -5,8 +5,8 @@
  * @file ntp_service.c
  * @brief SNTP wall-clock time sync implementation (PC_ENABLE_NTP).
  *
- * Two backends behind one API, picked by PC_HAS_VENDOR_SNTP: the SDK's client where there is one,
- * and otherwise the portable client below, which asks over the UDP listener and keeps the answer.
+ * One client, ours: it asks a server over the UDP listener, checks the reply answers the request it
+ * sent, and keeps the epoch in its own state.
  */
 
 #include "ntp_service.h"
@@ -15,44 +15,16 @@
 
 #if PC_ENABLE_NTP
 
-#if PC_HAS_VENDOR_SNTP
-#include <Arduino.h> // configTzTime: the SDK's client, which disciplines the system clock
-#else
 #include "mmgr/endian.h"                         // pc_rd32be / pc_wr32be: the timestamp fields
 #include "mmgr/secure.h"                         // pc_secure_persist_span: this module's storage
 #include "network_drivers/application/ntp/ntp.h" // the packet this role asks with
 #include "network_drivers/transport/udp.h"       // Udp.listener: the client port and the ask
 #include "server/clock/clock.h"                  // pc_millis: how the epoch advances between syncs
 #include "shared_primitives/ip.h"                // Ip.parse: a server given as a literal address
-#endif
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
 // a cold-booted RTC sits near the Unix epoch.
 static const time_t PC_NTP_PLAUSIBLE_EPOCH = 1609459200;
-
-#if PC_HAS_VENDOR_SNTP
-
-proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2)
-{
-    // configTzTime applies the POSIX TZ and starts the SNTP client (async). NULL means the
-    // documented default, so a caller with no opinion does not restate the string.
-    configTzTime(tz != NULL ? tz : "UTC0", server1 != NULL ? server1 : PC_NTP_SERVER1,
-                 server2 != NULL ? server2 : PC_NTP_SERVER2);
-    return PROTO_TRUE;
-}
-
-proto_bool pc_ntp_synced(void)
-{
-    return time(NULL) > PC_NTP_PLAUSIBLE_EPOCH;
-}
-
-time_t pc_ntp_epoch(void)
-{
-    time_t now = time(NULL);
-    return (now > PC_NTP_PLAUSIBLE_EPOCH) ? now : 0;
-}
-
-#else // the portable client
 
 // All SNTP client state, owned by one instance (internal linkage): the epoch the last reply
 // carried, the millisecond it arrived so the clock can advance between syncs, the cookie that
@@ -175,8 +147,6 @@ void pc_ntp_set_test_epoch(time_t epoch)
     s_ntp_svc.epoch = epoch;
     s_ntp_svc.sync_ms = pc_millis();
 }
-
-#endif // PC_HAS_VENDOR_SNTP
 
 size_t pc_ntp_http_date(char *out, size_t out_cap)
 {
