@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- a 2-byte over-read on the wire, two dead stdio includes, three unchecked spans ([`4e71254`](https://github.com/dstroy0/ProtoCore/commit/4e712544648f1f29ed4ea2db2e28f4626c82366f))
 - the scalar and the nonce do not outlive the signature ([`447c799`](https://github.com/dstroy0/ProtoCore/commit/447c799494b8e78a2759a00c35e6dd054285bd35))
 - the by-value transcript parameter aliased the caller's bytes ([`841841c`](https://github.com/dstroy0/ProtoCore/commit/841841c52fcdf25610c6aba19ff9e3aee21fbc18))
 - a live context cannot share the one-shot work buffer ([`66c2a02`](https://github.com/dstroy0/ProtoCore/commit/66c2a024a450cf6ca892ee91bea1c0b82ac4b8a1))
