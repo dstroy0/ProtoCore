@@ -950,7 +950,9 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         const uint8_t *pub = r_string(&rk, &pn);
         uint32_t rl;
         const uint8_t *raw = r_string(&rs, &rl);
-        return rk.ok && rs.ok && pn == 32 && rl == 64 && pc_ed25519_verify(cli_crypto_work(), pub, H, h_len, raw);
+        uint8_t *vwork = cli_crypto_work();
+        return vwork != NULL && rk.ok && rs.ok && pn == 32 && rl == 64 &&
+               pc_ed25519_verify(vwork, pub, H, h_len, raw);
     }
     case CLI_HOSTKEY_ECDSA_P256: {
         uint32_t cn;
@@ -1102,8 +1104,13 @@ static proto_bool send_service_request(void)
 static proto_bool send_userauth_publickey(void)
 {
     const char *user = s_cli.cfg.user;
+    uint8_t *work = cli_crypto_work();
+    if (work == NULL)
+    {
+        return PROTO_FALSE;
+    }
     uint8_t pub[32];
-    pc_ed25519_pubkey(cli_crypto_work(), pub, s_cli.cfg.auth_seed);
+    pc_ed25519_pubkey(work, pub, s_cli.cfg.auth_seed);
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
     uint8_t pkblob[4 + 11 + 4 + 32];
@@ -1134,7 +1141,7 @@ static proto_bool send_userauth_publickey(void)
     }
 
     uint8_t sig[64];
-    pc_ed25519_sign(cli_crypto_work(), sig, signed_data, sd.off, s_cli.cfg.auth_seed);
+    pc_ed25519_sign(work, sig, signed_data, sd.off, s_cli.cfg.auth_seed);
 
     // Signature blob: string("ssh-ed25519") || string(sig64).
     uint8_t sigblob[4 + 11 + 4 + 64];
@@ -1731,7 +1738,13 @@ proto_bool pc_ssh_tunnel_up(void)
 // Key derivation for provisioning: the seed's public half, without a tunnel.
 void pc_ssh_tunnel_pubkey(const uint8_t seed[32], uint8_t pub[32])
 {
-    pc_ed25519_pubkey(cli_crypto_work(), pub, seed);
+    uint8_t *work = cli_crypto_work();
+    if (work == NULL)
+    {
+        mem.zero(pub, 32);
+        return;
+    }
+    pc_ed25519_pubkey(work, pub, seed);
 }
 
 #endif // PC_ENABLE_SSH_CLIENT
