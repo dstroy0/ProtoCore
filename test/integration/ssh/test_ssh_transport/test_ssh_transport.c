@@ -1174,6 +1174,25 @@ void test_rekey_needed_threshold()
     TEST_ASSERT_TRUE(ssh_rekey_needed(0));
 }
 
+// The threshold is a packet count derived from a byte bound, so checking it against itself proves
+// nothing. Check it against the two bounds it exists to satisfy: RFC 4253 sec 9's gigabyte per key
+// and RFC 4344 sec 3.2's 2^32 cipher blocks, both measured with the largest packet this build can
+// put on the wire. A change to SSH_PKT_BUF_SIZE that outran the derivation fails here.
+void test_rekey_threshold_meets_the_rfc_bounds()
+{
+    const uint64_t sent = (uint64_t)SSH_REKEY_PACKET_THRESHOLD * (uint64_t)SSH_PKT_WIRE_MAX;
+    TEST_ASSERT_TRUE(sent <= (1ull << 30));         // one gigabyte (RFC 4253 sec 9)
+    TEST_ASSERT_TRUE(sent / 16ull <= (1ull << 32)); // 2^32 AES blocks (RFC 4344 sec 3.2)
+    // A re-key must come first, or the sequence number wraps and the CTR keystream repeats.
+    TEST_ASSERT_TRUE(SSH_REKEY_PACKET_THRESHOLD < SSH_SEQ_CLOSE_THRESHOLD);
+    // Both the buffer and the count stay powers of two, so the threshold is a shift and never a
+    // divide. A buffer that stopped being one would silently put a divide on this path.
+    const uint32_t pkt = (uint32_t)SSH_PKT_BUF_SIZE;
+    const uint32_t thr = (uint32_t)SSH_REKEY_PACKET_THRESHOLD;
+    TEST_ASSERT_TRUE(pkt != 0 && (pkt & (pkt - 1u)) == 0);
+    TEST_ASSERT_TRUE(thr != 0 && (thr & (thr - 1u)) == 0);
+}
+
 void test_rekey_due_volume_and_time()
 {
     const uint32_t PKT = 1000000, TIME = 3600000;
@@ -1945,6 +1964,7 @@ int main()
     RUN_TEST(test_kexdh_handle_ecdsa_end_to_end);
     RUN_TEST(test_derive_keys_session_id_affects_output);
     RUN_TEST(test_rekey_needed_threshold);
+    RUN_TEST(test_rekey_threshold_meets_the_rfc_bounds);
     RUN_TEST(test_rekey_due_volume_and_time);
     RUN_TEST(test_begin_rekey_preserves_session_and_auth);
     RUN_TEST(test_kdf_edge_paths_and_slot_guards);
