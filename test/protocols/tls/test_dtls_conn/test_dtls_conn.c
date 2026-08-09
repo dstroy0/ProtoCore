@@ -389,8 +389,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
     pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     Tls13KeySchedule cks;
     uint8_t h[32];
-    pc_sha256_ctx tmp = tr;
-    pc_sha256_final(&tmp, h);
+    pc_sha256_final(&tr, h);
     static uint8_t ks_store_392[PC_TLS13_KS_BORROW];
     pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_392);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
@@ -423,8 +422,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
         {
             TEST_ASSERT_TRUE(have_cert);
             uint8_t h_ch_cert[32];
-            pc_sha256_ctx sc = tr;
-            pc_sha256_final(&sc, h_ch_cert);
+            pc_sha256_final(&tr, h_ch_cert);
             uint8_t content[160]; // 64*0x20 + 33-byte context + 0x00 + 32-byte hash = 130
             size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, PROTO_TRUE);
             TEST_ASSERT_TRUE(clen > 0);
@@ -434,8 +432,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
         if (msg[0] == 20) // server Finished: verify over H(..CertificateVerify)
         {
             uint8_t hcv[32];
-            pc_sha256_ctx s = tr;
-            pc_sha256_final(&s, hcv);
+            pc_sha256_final(&tr, hcv);
             uint8_t expect[32];
             pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, hcv, expect);
             TEST_ASSERT_EQUAL_MEMORY(expect, msg + 4, 32);
@@ -471,8 +468,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
 
     // --- client Finished over Transcript-Hash(..server Finished) ---
     uint8_t h_sfin[32];
-    pc_sha256_ctx s2 = tr;
-    pc_sha256_final(&s2, h_sfin);
+    pc_sha256_final(&tr, h_sfin);
     pc_tls13_ks_master(&cks, h_sfin);
 
     uint8_t cfin_verify[32];
@@ -1032,8 +1028,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     uint8_t ecdhe[32];
     pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     uint8_t h[32];
-    pc_sha256_ctx tmp = tr;
-    pc_sha256_final(&tmp, h);
+    pc_sha256_final(&tr, h);
     static uint8_t ks_store_1033[PC_TLS13_KS_BORROW];
     pc_tls13_ks_early(&DTLS13_KDF, &st->cks, ks_store_1033);
     pc_tls13_ks_handshake(&st->cks, ecdhe, h, 32);
@@ -1066,8 +1061,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     }
 
     uint8_t h_sfin[32];
-    pc_sha256_ctx s = tr;
-    pc_sha256_final(&s, h_sfin);
+    pc_sha256_final(&tr, h_sfin);
     pc_tls13_ks_master(&st->cks, h_sfin);
     DtlsRecord.keys_derive(&st->cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, st->cks.s + TLS13_KS_CLIENT_AP);
     DtlsRecord.keys_derive(&st->cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, st->cks.s + TLS13_KS_SERVER_AP);

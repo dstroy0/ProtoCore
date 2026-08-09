@@ -335,8 +335,7 @@ void test_full_handshake_and_stream()
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, sh, sh_len);
     {
-        pc_sha256_ctx tmp = t;
-        pc_sha256_final(&tmp, ch_sh);
+        pc_sha256_final(&t, ch_sh);
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_340[PC_TLS13_KS_BORROW];
@@ -1178,8 +1177,7 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, sh, sh_len);
     {
-        pc_sha256_ctx tmp = t;
-        pc_sha256_final(&tmp, ch_sh);
+        pc_sha256_final(&t, ch_sh);
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_1181[PC_TLS13_KS_BORROW];

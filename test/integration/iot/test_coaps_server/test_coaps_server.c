@@ -369,8 +369,7 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     Tls13KeySchedule cks;
     uint8_t hh[32];
-    pc_sha256_ctx tmp = tr;
-    pc_sha256_final(&tmp, hh);
+    pc_sha256_final(&tr, hh);
     static uint8_t ks_store_372[PC_TLS13_KS_BORROW];
     pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_372);
     pc_tls13_ks_handshake(&cks, ecdhe, hh, 32);
@@ -395,8 +394,7 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     }
 
     uint8_t h_sfin[32];
-    pc_sha256_ctx s2 = tr;
-    pc_sha256_final(&s2, h_sfin);
+    pc_sha256_final(&tr, h_sfin);
     pc_tls13_ks_master(&cks, h_sfin);
     uint8_t cfin_verify[32];
     pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
