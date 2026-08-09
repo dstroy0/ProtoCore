@@ -27,10 +27,10 @@ import os
 import re
 import sys
 
-from tools.ci_tooling.lib import doc_region as dr
+from tools import findroot
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = dr.repo_root(__file__)
+REPO_ROOT = findroot.root()
 
 INPUT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "input"))
 THEMES_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes"))
@@ -411,7 +411,7 @@ def generate(write=True):
             with open(path, "r", encoding="utf-8", newline="") as f:
                 existing = f.read()
         if existing != content:
-            stale.append(os.path.relpath(path))
+            stale.append(findroot.rel(path))
             if write:
                 with open(path, "w", encoding="utf-8", newline="\n") as f:
                     f.write(content)
@@ -461,7 +461,7 @@ def cmd_migrate(args):
         out = os.path.join(INPUT_DIR, name + "." + args.ext)
         with open(out, "wb") as f:
             f.write(data)
-        print(f"wrote {os.path.relpath(out)} ({len(data)} bytes)")
+        print(f"wrote {findroot.rel(out)} ({len(data)} bytes)")
     return 0
 
 

@@ -23,10 +23,10 @@ professionals a boardroom-safe default.
 import os
 import sys
 
-from tools.ci_tooling.lib import doc_region as dr
+from tools import findroot
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = dr.repo_root(__file__)
+REPO_ROOT = findroot.root()
 
 OUT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes", "generated"))
 
@@ -468,7 +468,7 @@ def cmd_gallery():
             lines += [f"## {cat.title()}", "", CAT_BLURB.get(cat, ""), "", _grid(sorted(by_cat[cat])), ""]
     with open(GALLERY, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines).rstrip("\n") + "\n")
-    print(f"wrote {os.path.relpath(GALLERY)} ({len(P) + len(HAND_THEMES)} themes)")
+    print(f"wrote {findroot.rel(GALLERY)} ({len(P) + len(HAND_THEMES)} themes)")
     return 0
 
 
@@ -521,7 +521,7 @@ def main():
             return 1
         print(f"{len(P)} themes in sync")
         return 0
-    print(f"generated {len(P)} themes -> {os.path.relpath(OUT_DIR)}" + (f" ({len(stale)} changed)" if stale else ""))
+    print(f"generated {len(P)} themes -> {findroot.rel(OUT_DIR)}" + (f" ({len(stale)} changed)" if stale else ""))
     return 0
 
 
