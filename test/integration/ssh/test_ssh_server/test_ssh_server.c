@@ -927,6 +927,7 @@ void test_ssh_kexinit_midsession_rekey()
     SshSession *s = &ssh_sess[0];
     s->authed = PROTO_TRUE;
     s->have_session_id = PROTO_TRUE;
+    s->ext_info_sent = PROTO_TRUE; // the first KEX already advertised (RFC 8308 sec 2.4)
     s->session_id_len = 32;
     for (int j = 0; j < 32; j++)
     {
