@@ -63,6 +63,9 @@ const char *pc_partition_kind(uint8_t type, uint8_t subtype)
     }
 }
 
+// The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
+static const char *const PC_JSON_SEP[2] = {"", ","};
+
 static const pc_field PART_OPEN[] = {{PC_FK_LIT, 0, 15, "{\"partitions\":["}, PC_END};
 static const pc_field PART_ENTRY[] = {
     PC_STR,                              // "," from the second entry on
@@ -96,21 +99,25 @@ int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *o
     {
         return 0;
     }
-    if (pc_frame_append(out, cap, PART_OPEN) == 0)
+    if (pc_frame_append(out, cap, PART_OPEN, NULL, 0) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         const pc_partition_info *p = &parts[i];
-        if (pc_frame_append(out, cap, PART_ENTRY, i ? "," : "", p->label, pc_partition_kind(p->type, p->subtype),
-                            (uint32_t)p->type, (uint32_t)p->subtype, (uint32_t)p->address, (uint32_t)p->size,
-                            p->running ? "true" : "false") == 0)
+        if (pc_frame_append(out, cap, PART_ENTRY,
+                            (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(p->label),
+                                              PC_VJSON(pc_partition_kind(p->type, p->subtype)),
+                                              PC_VU32((uint32_t)p->type), PC_VU32((uint32_t)p->subtype),
+                                              PC_VU32((uint32_t)p->address), PC_VU32((uint32_t)p->size),
+                                              PC_VSTR(p->running ? "true" : "false")},
+                            8) == 0)
         {
             return 0;
         }
     }
-    return (int32_t)pc_frame_append(out, cap, PART_CLOSE);
+    return (int32_t)pc_frame_append(out, cap, PART_CLOSE, NULL, 0);
 }
 
 #if PC_HAS_VENDOR_OTA

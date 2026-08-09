@@ -657,6 +657,10 @@ proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
 // The build-info document. Every value is a compile-time constant, so nothing is discovered at
 // runtime: each flag selects one of two literals and each sizing constant renders as a decimal.
 // A frame spec like every other here, so the conversions come from the shared engine.
+
+// A flag indexes this; !!flag is 0 or 1, so the selection is a load rather than a branch.
+static const char *const PC_DIAG_BOOL[2] = {"false", "true"};
+
 static const pc_field DIAG_DOC[] = {
     {PC_FK_LIT, 0, 31, "{\"lib\":\"ProtoCore\",\"features\":{"},
     {PC_FK_LIT, 0, 12, "\"websocket\":"},
@@ -773,26 +777,57 @@ void diag(uint8_t slot_id)
     const size_t mark = pc_plaintext_mark();
     char *doc = (char *)pc_plaintext_alloc(PC_PLAINTEXT_WORK_DIAG, 1);
     if (doc == NULL ||
-        pc_frame_build(
-            doc, PC_PLAINTEXT_WORK_DIAG, DIAG_DOC, PC_ENABLE_WEBSOCKET ? "true" : "false",
-            PC_ENABLE_SSE ? "true" : "false", PC_ENABLE_MULTIPART ? "true" : "false",
-            PC_ENABLE_FILE_SERVING ? "true" : "false", PC_ENABLE_AUTH ? "true" : "false",
-            PC_ENABLE_WEBDAV ? "true" : "false", PC_ENABLE_COAP ? "true" : "false", PC_ENABLE_SNMP ? "true" : "false",
-            PC_ENABLE_OPCUA ? "true" : "false", PC_ENABLE_UMATI ? "true" : "false", PC_ENABLE_MODBUS ? "true" : "false",
-            PC_ENABLE_MQTT ? "true" : "false", PC_ENABLE_MTCONNECT ? "true" : "false",
-            PC_ENABLE_REDIS ? "true" : "false", PC_ENABLE_FTP ? "true" : "false", PC_ENABLE_SMTP ? "true" : "false",
-            PC_ENABLE_SMB ? "true" : "false", PC_ENABLE_SYSLOG ? "true" : "false",
-            PC_ENABLE_NTP_SERVER ? "true" : "false", PC_ENABLE_DNS_SERVER ? "true" : "false",
-            PC_ENABLE_NATS ? "true" : "false", PC_ENABLE_STOMP ? "true" : "false", PC_ENABLE_STATSD ? "true" : "false",
-            PC_ENABLE_JWT ? "true" : "false", PC_ENABLE_TLS ? "true" : "false", PC_ENABLE_HTTP2 ? "true" : "false",
-            PC_ENABLE_HTTP3 ? "true" : "false", PC_ENABLE_SSH ? "true" : "false",
-            PC_ENABLE_WS_DEFLATE ? "true" : "false", PC_ENABLE_RANGE ? "true" : "false",
-            PC_ENABLE_CSRF ? "true" : "false", PC_ENABLE_ACCEPT_THROTTLE ? "true" : "false",
-            PC_ENABLE_PER_IP_THROTTLE ? "true" : "false", PC_ENABLE_AUTH_LOCKOUT ? "true" : "false",
-            (uint32_t)MAX_CONNS, (uint32_t)RX_BUF_SIZE, (uint32_t)BODY_BUF_SIZE, (uint32_t)MAX_ROUTES,
-            (uint32_t)MAX_HEADERS, (uint32_t)MAX_PATH_LEN, (uint32_t)MAX_KEY_LEN, (uint32_t)MAX_VAL_LEN,
-            (uint32_t)MAX_QUERY_LEN, (uint32_t)MAX_QUERY_PARAMS, (uint32_t)CONN_TIMEOUT_MS, (uint32_t)RESP_HDR_BUF_SIZE,
-            (uint32_t)WS_HDR_BUF_SIZE, (uint32_t)CORS_HDR_BUF_SIZE, (uint32_t)EVT_QUEUE_DEPTH) == 0)
+        pc_frame_build(doc, PC_PLAINTEXT_WORK_DIAG, DIAG_DOC,
+                       (const pc_fval[]){PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_WEBSOCKET]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SSE]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MULTIPART]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_FILE_SERVING]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_AUTH]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_WEBDAV]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_COAP]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SNMP]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_OPCUA]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_UMATI]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MODBUS]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MQTT]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MTCONNECT]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_REDIS]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_FTP]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SMTP]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SMB]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SYSLOG]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_NTP_SERVER]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_DNS_SERVER]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_NATS]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_STOMP]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_STATSD]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_JWT]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_TLS]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_HTTP2]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_HTTP3]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SSH]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_WS_DEFLATE]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_RANGE]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_CSRF]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_ACCEPT_THROTTLE]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_PER_IP_THROTTLE]),
+                                         PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_AUTH_LOCKOUT]),
+                                         PC_VU32((uint32_t)MAX_CONNS),
+                                         PC_VU32((uint32_t)RX_BUF_SIZE),
+                                         PC_VU32((uint32_t)BODY_BUF_SIZE),
+                                         PC_VU32((uint32_t)MAX_ROUTES),
+                                         PC_VU32((uint32_t)MAX_HEADERS),
+                                         PC_VU32((uint32_t)MAX_PATH_LEN),
+                                         PC_VU32((uint32_t)MAX_KEY_LEN),
+                                         PC_VU32((uint32_t)MAX_VAL_LEN),
+                                         PC_VU32((uint32_t)MAX_QUERY_LEN),
+                                         PC_VU32((uint32_t)MAX_QUERY_PARAMS),
+                                         PC_VU32((uint32_t)CONN_TIMEOUT_MS),
+                                         PC_VU32((uint32_t)RESP_HDR_BUF_SIZE),
+                                         PC_VU32((uint32_t)WS_HDR_BUF_SIZE),
+                                         PC_VU32((uint32_t)CORS_HDR_BUF_SIZE),
+                                         PC_VU32((uint32_t)EVT_QUEUE_DEPTH)},
+                       49) == 0)
     {
         pc_plaintext_release(mark);
         send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, ""); // fail closed: no partial document reaches the wire

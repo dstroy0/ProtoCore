@@ -19,11 +19,10 @@
  *   - A NULL `PC_FK_STR` argument renders as empty, never as a crash or "(null)".
  *
  *
- * **Arguments** are passed variadically in spec order, one per field that declares one (PC_FK_LIT
- * and PC_FK_END take none). They are read at their default-promoted types, so a `uint8_t` passed
- * to PC_FK_U32 arrives as `unsigned` and a `float` passed to PC_FK_G arrives as `double`, which is
- * what the engine expects. The compiler cannot check that arity: a mismatched spec is caught by
- * its test, not by the build.
+ * **Arguments** are one ::pc_fval per field that declares one (PC_FK_LIT and PC_FK_END declare
+ * none), in spec order, passed as an array with its count. Each value carries the ::pc_fk it was
+ * written as, so the engine compares it against the spec's and refuses a frame whose values do not
+ * match - the arity and the type are both checked at the call instead of trusting the caller.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -33,7 +32,6 @@
 #define PROTOCORE_FRAME_H
 
 #include "mmgr/membuild.h"
-#include <stdarg.h>
 
 /**
  * @brief Field kinds. The value is an opcode, so the enum is the name for a byte, not a type gate.
@@ -96,13 +94,118 @@ typedef struct
 #define PC_END {PC_FK_END, 0, 0, NULL}
 
 /**
- * @brief Build @p spec into @p out (capacity @p cap), taking one variadic argument per valued field.
- * @return bytes written, or 0 if the frame did not fit (in which case @p out is set empty).
+ * @brief One argument to a frame: the ::pc_fk it was written as, and the value under that tag.
+ *
+ * The tag is the discriminant the engine dispatches on, and it is compared against the spec's own
+ * kind before the value is read, so a caller that passes a string where the spec wants a number is
+ * refused rather than reinterpreted.
  */
-size_t pc_frame_build(char *out, size_t cap, const pc_field *spec, ...);
+typedef struct
+{
+    uint8_t kind; ///< a pc_fk; must equal the spec field's kind
+    union {
+        const char *s; ///< PC_FK_STR, PC_FK_JSON, PC_FK_XML
+        uint32_t u32;  ///< PC_FK_U32, PC_FK_DEC
+        uint64_t u64;  ///< PC_FK_U64, PC_FK_HEX, PC_FK_OCT
+        int64_t i64;   ///< PC_FK_I64
+        double d;      ///< PC_FK_G, PC_FK_FIX
+        char c;        ///< PC_FK_CH
+    } as;
+} pc_fval;
 
-/** @brief va_list form, for a caller that already has one. */
-size_t pc_frame_vbuild(char *out, size_t cap, const pc_field *spec, va_list ap);
+// Value constructors, one per valued kind. Written as a compound literal at the call, so the
+// argument list stays a list and no named array appears at function scope.
+#define PC_VSTR(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_STR,                                                                                                     \
+        {                                                                                                              \
+            .s = (x)                                                                                                   \
+        }                                                                                                              \
+    }
+#define PC_VU32(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_U32,                                                                                                     \
+        {                                                                                                              \
+            .u32 = (x)                                                                                                 \
+        }                                                                                                              \
+    }
+#define PC_VU64(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_U64,                                                                                                     \
+        {                                                                                                              \
+            .u64 = (x)                                                                                                 \
+        }                                                                                                              \
+    }
+#define PC_VI64(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_I64,                                                                                                     \
+        {                                                                                                              \
+            .i64 = (x)                                                                                                 \
+        }                                                                                                              \
+    }
+#define PC_VDEC(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_DEC,                                                                                                     \
+        {                                                                                                              \
+            .u32 = (x)                                                                                                 \
+        }                                                                                                              \
+    }
+#define PC_VHEX(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_HEX,                                                                                                     \
+        {                                                                                                              \
+            .u64 = (x)                                                                                                 \
+        }                                                                                                              \
+    }
+#define PC_VOCT(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_OCT,                                                                                                     \
+        {                                                                                                              \
+            .u64 = (x)                                                                                                 \
+        }                                                                                                              \
+    }
+#define PC_VG(x)                                                                                                       \
+    {                                                                                                                  \
+        PC_FK_G,                                                                                                       \
+        {                                                                                                              \
+            .d = (x)                                                                                                   \
+        }                                                                                                              \
+    }
+#define PC_VFIX(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_FIX,                                                                                                     \
+        {                                                                                                              \
+            .d = (x)                                                                                                   \
+        }                                                                                                              \
+    }
+#define PC_VCH(x)                                                                                                      \
+    {                                                                                                                  \
+        PC_FK_CH,                                                                                                      \
+        {                                                                                                              \
+            .c = (x)                                                                                                   \
+        }                                                                                                              \
+    }
+#define PC_VJSON(x)                                                                                                    \
+    {                                                                                                                  \
+        PC_FK_JSON,                                                                                                    \
+        {                                                                                                              \
+            .s = (x)                                                                                                   \
+        }                                                                                                              \
+    }
+#define PC_VXML(x)                                                                                                     \
+    {                                                                                                                  \
+        PC_FK_XML,                                                                                                     \
+        {                                                                                                              \
+            .s = (x)                                                                                                   \
+        }                                                                                                              \
+    }
+
+/**
+ * @brief Build @p spec into @p out (capacity @p cap) from @p nv values in spec order.
+ * @return bytes written, or 0 if the frame did not fit or the values did not match the spec (in
+ *         which case @p out is set empty).
+ */
+size_t pc_frame_build(char *out, size_t cap, const pc_field *spec, const pc_fval *v, size_t nv);
 
 /**
  * @brief Append @p spec to the NUL-terminated contents already in @p out.
@@ -113,6 +216,6 @@ size_t pc_frame_vbuild(char *out, size_t cap, const pc_field *spec, va_list ap);
  *
  * @return the new total length, or 0 if the frame did not fit (previous contents preserved).
  */
-size_t pc_frame_append(char *out, size_t cap, const pc_field *spec, ...);
+size_t pc_frame_append(char *out, size_t cap, const pc_field *spec, const pc_fval *v, size_t nv);
 
 #endif // PROTOCORE_FRAME_H

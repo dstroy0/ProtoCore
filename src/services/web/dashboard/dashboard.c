@@ -86,6 +86,9 @@ proto_bool pc_dashboard_set(const char *key, float value)
 // The layout is an array of widget objects; the values document is one flat object of key/number
 // pairs. Both open, repeat one frame per widget, and close, with the separating comma carried as
 // the repeated frame's first field.
+// The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
+static const char *const PC_JSON_SEP[2] = {"", ","};
+
 static const pc_field DASH_ARRAY_OPEN[] = {{PC_FK_LIT, 0, 1, "["}, PC_END};
 static const pc_field DASH_ARRAY_CLOSE[] = {{PC_FK_LIT, 0, 1, "]"}, PC_END};
 static const pc_field DASH_WIDGET[] = {
@@ -127,20 +130,23 @@ int32_t pc_dashboard_layout_json(char *out, uint32_t cap)
     {
         return 0;
     }
-    if (pc_frame_append(out, cap, DASH_ARRAY_OPEN) == 0)
+    if (pc_frame_append(out, cap, DASH_ARRAY_OPEN, NULL, 0) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
         const pc_widget *w = &s_dash.widgets[i];
-        if (pc_frame_append(out, cap, DASH_WIDGET, i ? "," : "", widget_type_name(w->type), w->label ? w->label : "",
-                            w->key ? w->key : "", (double)w->min, (double)w->max, w->unit ? w->unit : "") == 0)
+        if (pc_frame_append(out, cap, DASH_WIDGET,
+                            (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(widget_type_name(w->type)),
+                                              PC_VJSON(w->label), PC_VJSON(w->key), PC_VG((double)w->min),
+                                              PC_VG((double)w->max), PC_VJSON(w->unit)},
+                            7) == 0)
         {
             return 0;
         }
     }
-    return (int32_t)pc_frame_append(out, cap, DASH_ARRAY_CLOSE);
+    return (int32_t)pc_frame_append(out, cap, DASH_ARRAY_CLOSE, NULL, 0);
 }
 
 int32_t pc_dashboard_values_json(char *out, uint32_t cap)
@@ -154,19 +160,21 @@ int32_t pc_dashboard_values_json(char *out, uint32_t cap)
     {
         return 0;
     }
-    if (pc_frame_append(out, cap, DASH_OBJECT_OPEN) == 0)
+    if (pc_frame_append(out, cap, DASH_OBJECT_OPEN, NULL, 0) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
-        if (pc_frame_append(out, cap, DASH_VALUE, i ? "," : "", s_dash.widgets[i].key ? s_dash.widgets[i].key : "",
-                            (double)s_dash.values[i]) == 0)
+        if (pc_frame_append(out, cap, DASH_VALUE,
+                            (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(s_dash.widgets[i].key),
+                                              PC_VG((double)s_dash.values[i])},
+                            3) == 0)
         {
             return 0;
         }
     }
-    return (int32_t)pc_frame_append(out, cap, DASH_OBJECT_CLOSE);
+    return (int32_t)pc_frame_append(out, cap, DASH_OBJECT_CLOSE, NULL, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -185,7 +193,7 @@ static const char *control_value_ptr(const char *s, const char *key)
 {
     char pat[8];
     // A key too long for the buffer leaves pat empty, and strstr then finds nothing - fail closed.
-    pc_frame_build(pat, sizeof(pat), QUOTED_KEY, key);
+    pc_frame_build(pat, sizeof(pat), QUOTED_KEY, (const pc_fval[]){PC_VSTR(key)}, 1);
     const char *p = strstr(s, pat);
     if (!p)
     {

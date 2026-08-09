@@ -104,7 +104,7 @@ PC_INLINE size_t pc_fs_join(const char *root, const char *dir, const char *name,
     {
         dir++; // the root carries the separator; a second one would be "//"
     }
-    return pc_frame_build(out, cap, FILESYSTEM_JOIN, root, dir, name);
+    return pc_frame_build(out, cap, FILESYSTEM_JOIN, (const pc_fval[]){PC_VSTR(root), PC_VSTR(dir), PC_VSTR(name)}, 3);
 }
 
 /**

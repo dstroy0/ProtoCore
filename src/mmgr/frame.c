@@ -21,63 +21,82 @@
 // inherit buys nothing here and costs the appenders their inlining.
 PC_OPTIMIZE_O2
 
-size_t pc_frame_vbuild(char *out, size_t cap, const pc_field *spec, va_list ap)
+// A null string field renders empty, so no caller has to coalesce one before passing it.
+static const char *str_or_empty(const char *s)
+{
+    if (s == NULL)
+    {
+        return "";
+    }
+    return s;
+}
+
+size_t pc_frame_build(char *out, size_t cap, const pc_field *spec, const pc_fval *v, size_t nv)
 {
     if (!out || cap == 0 || !spec)
     {
         return 0;
     }
     pc_sb b = {out, cap, 0, PROTO_TRUE};
+    size_t k = 0; // next value; a valued field consumes one
     for (const pc_field *f = spec; f->kind != PC_FK_END; f++)
     {
-        switch (f->kind)
+        if (f->kind == PC_FK_LIT)
         {
-        case PC_FK_LIT:
 #if PC_FRAME_SCAN_LITERALS
             pc_sb_put(&b, f->lit);
 #else
             // the spec carries the length; scanning for the NUL would rediscover it every call
             pc_sb_put_n(&b, f->lit, f->len);
 #endif
-            break;
-        case PC_FK_STR: {
-            const char *s = va_arg(ap, const char *);
-            pc_sb_put(&b, s ? s : "");
-            break;
+            continue;
         }
+        // A valued field needs a value, and it needs the one the spec declared. Either failure is
+        // the caller and the spec disagreeing, which cannot produce the frame that was asked for.
+        if (k >= nv || !v || v[k].kind != f->kind)
+        {
+            out[0] = '\0';
+            return 0;
+        }
+        const pc_fval *a = &v[k];
+        k++;
+        switch (f->kind)
+        {
+        case PC_FK_STR:
+            pc_sb_put(&b, str_or_empty(a->as.s));
+            break;
         case PC_FK_U32:
-            pc_sb_u32(&b, va_arg(ap, uint32_t));
+            pc_sb_u32(&b, a->as.u32);
             break;
         case PC_FK_U64:
-            pc_sb_u64(&b, va_arg(ap, uint64_t));
+            pc_sb_u64(&b, a->as.u64);
             break;
         case PC_FK_I64:
-            pc_sb_i64(&b, va_arg(ap, int64_t));
+            pc_sb_i64(&b, a->as.i64);
             break;
         case PC_FK_DEC:
-            pc_sb_u32w(&b, va_arg(ap, uint32_t), f->width);
+            pc_sb_u32w(&b, a->as.u32, f->width);
             break;
         case PC_FK_HEX:
-            pc_sb_hex(&b, va_arg(ap, uint64_t), f->width ? f->width : 1);
+            pc_sb_hex(&b, a->as.u64, f->width ? f->width : 1);
             break;
         case PC_FK_OCT:
-            pc_sb_uint(&b, va_arg(ap, uint64_t), 8, f->width ? f->width : 1);
+            pc_sb_uint(&b, a->as.u64, 8, f->width ? f->width : 1);
             break;
         case PC_FK_G:
-            pc_sb_g(&b, va_arg(ap, double), f->width ? f->width : 6);
+            pc_sb_g(&b, a->as.d, f->width ? f->width : 6);
             break;
         case PC_FK_FIX:
-            pc_sb_fixed(&b, va_arg(ap, double), f->width);
+            pc_sb_fixed(&b, a->as.d, f->width);
             break;
         case PC_FK_CH:
-            // char promotes to int through the ellipsis, so it must be read back as int.
-            pc_sb_ch(&b, (char)va_arg(ap, int));
+            pc_sb_ch(&b, a->as.c);
             break;
         case PC_FK_JSON:
-            pc_sb_json(&b, va_arg(ap, const char *));
+            pc_sb_json(&b, str_or_empty(a->as.s));
             break;
         case PC_FK_XML:
-            pc_sb_xml(&b, va_arg(ap, const char *));
+            pc_sb_xml(&b, str_or_empty(a->as.s));
             break;
         default:
             // An unknown opcode means the spec and this engine disagree; refuse rather than
@@ -85,6 +104,11 @@ size_t pc_frame_vbuild(char *out, size_t cap, const pc_field *spec, va_list ap)
             out[0] = '\0';
             return 0;
         }
+    }
+    if (k != nv)
+    {
+        out[0] = '\0'; // more values than the spec declares fields
+        return 0;
     }
     size_t n = pc_sb_finish(&b);
     if (n == 0)
@@ -96,16 +120,7 @@ size_t pc_frame_vbuild(char *out, size_t cap, const pc_field *spec, va_list ap)
     return n;
 }
 
-size_t pc_frame_build(char *out, size_t cap, const pc_field *spec, ...)
-{
-    va_list ap;
-    va_start(ap, spec);
-    size_t n = pc_frame_vbuild(out, cap, spec, ap);
-    va_end(ap);
-    return n;
-}
-
-size_t pc_frame_append(char *out, size_t cap, const pc_field *spec, ...)
+size_t pc_frame_append(char *out, size_t cap, const pc_field *spec, const pc_fval *v, size_t nv)
 {
     if (!out || cap == 0 || !spec)
     {
@@ -116,10 +131,7 @@ size_t pc_frame_append(char *out, size_t cap, const pc_field *spec, ...)
     {
         return 0;
     }
-    va_list ap;
-    va_start(ap, spec);
-    size_t n = pc_frame_vbuild(out + used, cap - used, spec, ap);
-    va_end(ap);
+    size_t n = pc_frame_build(out + used, cap - used, spec, v, nv);
     if (n == 0)
     {
         out[used] = '\0'; // rewind: the frame is added whole or not at all

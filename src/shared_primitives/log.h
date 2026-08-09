@@ -41,13 +41,13 @@ typedef void (*pc_log_sink_fn)(uint8_t level, const char *line);
  * It exists to mark a discarded statement's arguments as used, so a variable read only by a log
  * does not warn its way into being deleted.
  */
-int pc_log_discard_args(const pc_field *spec, ...);
+int pc_log_discard_args(const pc_field *spec, const pc_fval *v, size_t nv);
 
 /** @brief The discarded form: marks arguments used, emits nothing. */
-#define PC_LOG_DISCARD(...)                                                                                            \
+#define PC_LOG_DISCARD(spec, v, nv)                                                                                    \
     do                                                                                                                 \
     {                                                                                                                  \
-        (void)sizeof(pc_log_discard_args(__VA_ARGS__));                                                                \
+        (void)sizeof(pc_log_discard_args((spec), (v), (nv)));                                                          \
     } while (0)
 
 #if PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
@@ -59,7 +59,7 @@ int pc_log_discard_args(const pc_field *spec, ...);
  * nothing here parses anything at runtime, and a build whose logs declare no float field links no
  * float formatter.
  */
-void pc_log_frame(uint8_t level, const pc_field *spec, ...);
+void pc_log_frame(uint8_t level, const pc_field *spec, const pc_fval *v, size_t nv);
 
 /** @brief Install (or clear, with NULL) the sink emitted lines are handed to. */
 void pc_log_set_sink(pc_log_sink_fn cb);
@@ -75,27 +75,27 @@ static inline void pc_log_set_sink(pc_log_sink_fn cb)
 #endif // PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
 
 #if PC_LOG_LEVEL <= PC_LOG_LEVEL_DEBUG
-#define PC_LOGD(...) pc_log_frame(PC_LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define PC_LOGD(spec, v, nv) pc_log_frame(PC_LOG_LEVEL_DEBUG, (spec), (v), (nv))
 #else
-#define PC_LOGD(...) PC_LOG_DISCARD(__VA_ARGS__)
+#define PC_LOGD(spec, v, nv) PC_LOG_DISCARD((spec), (v), (nv))
 #endif
 
 #if PC_LOG_LEVEL <= PC_LOG_LEVEL_INFO
-#define PC_LOGI(...) pc_log_frame(PC_LOG_LEVEL_INFO, __VA_ARGS__)
+#define PC_LOGI(spec, v, nv) pc_log_frame(PC_LOG_LEVEL_INFO, (spec), (v), (nv))
 #else
-#define PC_LOGI(...) PC_LOG_DISCARD(__VA_ARGS__)
+#define PC_LOGI(spec, v, nv) PC_LOG_DISCARD((spec), (v), (nv))
 #endif
 
 #if PC_LOG_LEVEL <= PC_LOG_LEVEL_WARN
-#define PC_LOGW(...) pc_log_frame(PC_LOG_LEVEL_WARN, __VA_ARGS__)
+#define PC_LOGW(spec, v, nv) pc_log_frame(PC_LOG_LEVEL_WARN, (spec), (v), (nv))
 #else
-#define PC_LOGW(...) PC_LOG_DISCARD(__VA_ARGS__)
+#define PC_LOGW(spec, v, nv) PC_LOG_DISCARD((spec), (v), (nv))
 #endif
 
 #if PC_LOG_LEVEL <= PC_LOG_LEVEL_ERROR
-#define PC_LOGE(...) pc_log_frame(PC_LOG_LEVEL_ERROR, __VA_ARGS__)
+#define PC_LOGE(spec, v, nv) pc_log_frame(PC_LOG_LEVEL_ERROR, (spec), (v), (nv))
 #else
-#define PC_LOGE(...) PC_LOG_DISCARD(__VA_ARGS__)
+#define PC_LOGE(spec, v, nv) PC_LOG_DISCARD((spec), (v), (nv))
 #endif
 
 PROTO_END_DECLS

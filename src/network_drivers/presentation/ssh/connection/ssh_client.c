@@ -1611,7 +1611,7 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
 
     // Send our identification string, then our KEXINIT.
     char banner[64];
-    size_t n = pc_frame_build(banner, sizeof(banner), CLI_BANNER, CLIENT_BANNER);
+    size_t n = pc_frame_build(banner, sizeof(banner), CLI_BANNER, (const pc_fval[]){PC_VSTR(CLIENT_BANNER)}, 1);
     if (n == 0 || !Tcp.client->send(s_cli.cid, (const uint8_t *)banner, n))
     {
         cli_fail("banner send failed");

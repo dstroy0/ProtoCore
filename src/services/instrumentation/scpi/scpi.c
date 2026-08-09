@@ -137,7 +137,7 @@ size_t pc_scpi_fmt_real(char *buf, size_t cap, double v)
     }
     // %g renders NR2 (fixed) or NR3 (scientific) and trims trailing zeros - exactly the SCPI forms.
     // The frame's own contract is this function's contract: bytes written, or 0 with buf emptied.
-    return pc_frame_build(buf, cap, SCPI_REAL, v);
+    return pc_frame_build(buf, cap, SCPI_REAL, (const pc_fval[]){PC_VG(v)}, 1);
 }
 
 // ── response parsers ───────────────────────────────────────────────────────────────────────────

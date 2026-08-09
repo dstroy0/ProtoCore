@@ -304,13 +304,10 @@ static void pc_telnet_println(const char *s)
     broadcast("\r\n", 2);
 }
 
-static void pc_telnet_frame(const pc_field *spec, ...)
+static void pc_telnet_frame(const pc_field *spec, const pc_fval *v, size_t nv)
 {
     char buf[TELNET_BUF_SIZE];
-    va_list ap;
-    va_start(ap, spec);
-    size_t n = pc_frame_vbuild(buf, sizeof(buf), spec, ap);
-    va_end(ap);
+    size_t n = pc_frame_build(buf, sizeof(buf), spec, v, nv);
     if (n > 0)
     {
         broadcast(buf, n);
