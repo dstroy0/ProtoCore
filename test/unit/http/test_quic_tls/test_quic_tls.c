@@ -213,8 +213,7 @@ void test_full_handshake_roundtrip()
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, si, si_len);
     { // snapshot H(CH..SH)
-        pc_sha256_ctx tmp = t;
-        pc_sha256_final(&tmp, ch_sh);
+        pc_sha256_final(&t, ch_sh);
     }
     pc_sha256_update(&t, sh_flight, sh_flight_len);
     pc_sha256_final(&t, ch_sf); // H(CH..server Finished)
@@ -811,8 +810,7 @@ void test_hybrid_hrr_roundtrip()
     pc_sha256_update(&t, ch2, ch2_len);
     pc_sha256_update(&t, sh, sh_len);
     {
-        pc_sha256_ctx tmp = t;
-        pc_sha256_final(&tmp, ch_sh); // H(..ServerHello)
+        pc_sha256_final(&t, ch_sh); // H(..ServerHello)
     }
     pc_sha256_update(&t, sh_flight, sh_flight_len);
     pc_sha256_final(&t, ch_sf); // H(..server Finished)
@@ -924,8 +922,7 @@ void test_hybrid_handshake_roundtrip()
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, si, si_len);
     {
-        pc_sha256_ctx tmp = t;
-        pc_sha256_final(&tmp, ch_sh);
+        pc_sha256_final(&t, ch_sh);
     }
     pc_sha256_update(&t, sh_flight, sh_flight_len);
     pc_sha256_final(&t, ch_sf);

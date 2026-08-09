@@ -403,8 +403,7 @@ void test_h3_request_served_by_route()
     pc_sha256_update(&t, ch, chl);
     pc_sha256_update(&t, sh, shl);
     {
-        pc_sha256_ctx tmp = t;
-        pc_sha256_final(&tmp, chsh);
+        pc_sha256_final(&t, chsh);
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_408[PC_TLS13_KS_BORROW];
