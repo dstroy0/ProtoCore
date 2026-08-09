@@ -64,7 +64,7 @@ static size_t compute_padding(size_t payload_len)
 // persistent end on first use, kept for the slot's life, so nothing on the packet path touches the
 // pool.
 #define SSH_SLOT_OFF_WIRE 0u
-#define SSH_SLOT_OFF_MAC (SSH_SLOT_OFF_WIRE + SSH_WIRE_CAP)
+#define SSH_SLOT_OFF_MAC (SSH_SLOT_OFF_WIRE + SSH_TX_WIRE_CAP)
 #define SSH_SLOT_OFF_KEX (SSH_SLOT_OFF_MAC + PC_HMAC_SHA256_BORROW)
 #define SSH_SLOT_BORROW (SSH_SLOT_OFF_KEX + PC_CRYPTO_BORROW_MAX)
 
@@ -145,7 +145,7 @@ void ssh_pkt_set_client(uint8_t i)
 }
 
 // ---------------------------------------------------------------------------
-// Emit: frame one packet into the secure pool and raise the flag a worker drains
+// Emit: frame a packet into the secure pool and raise the flag a worker drains
 // ---------------------------------------------------------------------------
 
 int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
@@ -155,10 +155,6 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
         return -1;
     }
     SshPacketState *s = &ssh_pkt[i];
-    if (s->tx_ready)
-    {
-        return -1; // one packet in flight per slot: the worker has not drained the last one
-    }
 
     // The wire lives in the secure pool because the payload it carries is the session's own
     // plaintext until the cipher runs over it.
@@ -166,14 +162,29 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    size_t wlen = 0;
-    if (ssh_pkt_send(i, payload, len, s->tx_wire, &wlen, SSH_WIRE_CAP) != 0)
+
+    // The transport is a byte stream, so a packet appends after the ones already framed. The
+    // undrained span is [tx_off, tx_len) and the next packet starts at tx_len.
+    size_t base = 0;
+    if (s->tx_ready)
+    {
+        base = s->tx_len;
+    }
+    if (base >= SSH_TX_WIRE_CAP)
     {
         return -1;
     }
-    s->tx_len = wlen;
-    s->tx_off = 0;
-    s->tx_ready = PROTO_TRUE;
+    size_t wlen = 0;
+    if (ssh_pkt_send(i, payload, len, s->tx_wire + base, &wlen, SSH_TX_WIRE_CAP - base) != 0)
+    {
+        return -1;
+    }
+    s->tx_len = base + wlen;
+    if (!s->tx_ready)
+    {
+        s->tx_off = 0;
+        s->tx_ready = PROTO_TRUE;
+    }
     return 0;
 }
 
