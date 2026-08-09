@@ -740,7 +740,7 @@
       ],
       "src": [
         "+<network_drivers/application/sftp/sftp.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
         "+<mmgr/protostr.c>",
@@ -759,7 +759,7 @@
         "+<network_drivers/application/scp/scp.c>",
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -811,7 +811,7 @@
         "+<services/web/web_terminal/web_terminal.c>",
         "+<network_drivers/application/ntp_service/ntp_service.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
         "+<network_drivers/network/network.c>",
@@ -975,7 +975,7 @@
         "+<services/web/web_terminal/web_terminal.c>",
         "+<network_drivers/application/webdav/webdav.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
@@ -1059,7 +1059,7 @@
         "+<network_drivers/session/worker.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/presentation/telnet/telnet.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -1419,7 +1419,7 @@
       "flags": ["-DPC_ENABLE_SCPI=1", "-DUNITY_INCLUDE_DOUBLE"],
       "src": [
         "+<services/instrumentation/scpi/scpi.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -2046,7 +2046,7 @@
         "+<server/middleware.c>",
         "+<server/webdav_handler.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
         "+<mmgr/protomem.c>",
@@ -2103,7 +2103,7 @@
         "+<server/middleware.c>",
         "+<server/webdav_handler.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>",
@@ -2498,7 +2498,7 @@
         "+<server/webdav_handler.c>",
         "+<network_drivers/application/upload_service/upload_service.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
         "+<mmgr/protomem.c>",
@@ -2757,7 +2757,7 @@
       "desc": "Stateless HMAC-signed CSRF token (services/security/csrf): issue/verify with a fixed\nsecret unit-tests on the host (PC_ENABLE_CSRF set). Pulls in the SSH\nHMAC-SHA256 + SHA-256 core.",
       "flags": ["-DPC_ENABLE_CSRF=1"],
       "src": [
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<services/security/csrf/csrf.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<crypto/hash/sha256.c>",
@@ -2782,7 +2782,7 @@
       "flags": ["-DPC_ENABLE_DASHBOARD=1", "-DPC_ENABLE_SSE=1"],
       "src": [
         "+<services/web/dashboard/dashboard.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -2838,7 +2838,7 @@
       "flags": ["-DPC_ENABLE_PARTITION_MONITOR=1"],
       "src": [
         "+<services/storage/partition_monitor/partition_monitor.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -2867,7 +2867,7 @@
       "flags": ["-DPC_ENABLE_GPIO_MAP=1"],
       "src": [
         "+<server/signaling/gpio_map.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -3342,7 +3342,7 @@
       "flags": ["-DPC_ENABLE_LOGBUF=1"],
       "src": [
         "+<server/logbuf.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -3375,7 +3375,7 @@
       "src": [
         "+<server/logbuf.c>",
         "+<shared_primitives/log.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -3388,7 +3388,7 @@
         "+<services/storage/config_store/config_store.c>",
         "+<services/storage/config_io/config_io.c>",
         "+<core_setup/hal/host/host_nvs.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -3605,7 +3605,7 @@
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4166,11 +4166,11 @@
       "tests": ["unit/ssh/test_ssh_ecdsa"]
     },
     "native_frame": {
-      "desc": "The declarative frame builder (mmgr/frame.h + frame.c): the single engine that\nturns a static pc_field spec into wire bytes, so the ~160 formatting sites in this library carry\na table rather than a hand-written append sequence. Covers every field kind and width, the\nfail-closed contract at the exact byte boundary (a frame that does not fit reports 0 AND leaves a\nvalid empty string, which is what a length comparison against snprintf's would-be length silently\ngot wrong), the append rewind that keeps a header line whole-or-absent, NULL string handling, and\na differential check of the numeric and float conversions against the libc printf whose output\nthese frames replace byte for byte.",
+      "desc": "The declarative frame builder (mmgr/protoframe.h + protoframe.c): the single engine that\nturns a static pc_field spec into wire bytes, so the ~160 formatting sites in this library carry\na table rather than a hand-written append sequence. Covers every field kind and width, the\nfail-closed contract at the exact byte boundary (a frame that does not fit reports 0 AND leaves a\nvalid empty string, which is what a length comparison against snprintf's would-be length silently\ngot wrong), the append rewind that keeps a header line whole-or-absent, NULL string handling, and\na differential check of the numeric and float conversions against the libc printf whose output\nthese frames replace byte for byte.",
       "flags": [],
       "src": [
         "-<*>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4289,7 +4289,7 @@
       "src": [
         "+<server/filesystem/mnt.c>",
         "+<server/filesystem/filesystem.c>",
-        "+<mmgr/frame.c>",
+        "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],

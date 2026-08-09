@@ -7,7 +7,7 @@
  */
 
 #include "upload_service.h"
-#include "mmgr/frame.h" // the one frame engine
+#include "mmgr/protoframe.h" // the one frame engine
 
 #if PC_ENABLE_UPLOAD
 
@@ -118,7 +118,7 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
         return;
     }
     char msg[48];
-    pc_frame_build(msg, sizeof(msg), UPLOAD_OK, (const pc_fval[]){PC_VU32((uint32_t)s_upl.written)}, 1);
+    frame.build(msg, sizeof(msg), UPLOAD_OK, (const pc_fval[]){PC_VU32((uint32_t)s_upl.written)}, 1);
     send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, msg);
 }
 

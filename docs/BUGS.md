@@ -1509,9 +1509,9 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 
 - **Status:** FIXED (2026-08-05), found on the same run.
 - **Symptom:** `native_scp` and `native_ssh_sftp` fail at link with `undefined reference to
-'proto_scan_nul'`, preceded by an implicit-declaration warning at `src/mmgr/frame.c:113`.
+'proto_scan_nul'`, preceded by an implicit-declaration warning at `src/mmgr/protoframe.c:113`.
 - **Root cause:** `pc_frame_append` calls `proto_scan_nul`, which is a `static inline` in
-  `shared_primitives/runops.h`, and `frame.c` includes only `mmgr/frame.h` and
+  `shared_primitives/runops.h`, and `protoframe.c` includes only `mmgr/protoframe.h` and
   `shared_primitives/speed_opt.h`. Under C99 rules the implicit declaration makes it an external
   call to a name no TU defines, so it survives compilation and dies at link. Every other env that
   builds `frame.c` also builds a TU that pulls `runops.h` in ahead of it, which is why only the two

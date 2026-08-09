@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file frame.h
+ * @file protoframe.h
  * @brief Declarative frame builder: a frame is a static table of typed fields, built by one engine.
  *
  * A frame's shape is data, not code: a `static const pc_field[]` in rodata, walked by one engine.
@@ -28,8 +28,8 @@
  * @date    2026
  */
 
-#ifndef PROTOCORE_FRAME_H
-#define PROTOCORE_FRAME_H
+#ifndef PROTOCORE_PROTOFRAME_H
+#define PROTOCORE_PROTOFRAME_H
 
 #include "mmgr/membuild.h"
 
@@ -64,7 +64,7 @@ typedef enum
  * ci_tooling/check/check_frame_specs.py. The length is fixed when the spec is written, so the
  * engine reads it rather than scanning each literal for its NUL on every call.
  */
-typedef struct
+typedef struct pc_field
 {
     uint8_t kind;    ///< a pc_fk
     uint8_t width;   ///< min digits (DEC/HEX/OCT), significant digits (G), decimals (FIX)
@@ -100,7 +100,7 @@ typedef struct
  * kind before the value is read, so a caller that passes a string where the spec wants a number is
  * refused rather than reinterpreted.
  */
-typedef struct
+typedef struct pc_fval
 {
     uint8_t kind; ///< a pc_fk; must equal the spec field's kind
     union {
@@ -218,4 +218,28 @@ size_t pc_frame_build(char *out, size_t cap, const pc_field *spec, const pc_fval
  */
 size_t pc_frame_append(char *out, size_t cap, const pc_field *spec, const pc_fval *v, size_t nv);
 
-#endif // PROTOCORE_FRAME_H
+/**
+ * @brief The two builds a caller reaches.
+ *
+ * @var FrameNs::build   write a frame into an empty buffer
+ * @var FrameNs::append  add a frame to what the buffer already holds
+ */
+typedef struct
+{
+    size_t (*build)(char *out, size_t cap, const pc_field *spec, const pc_fval *v, size_t nv);
+    size_t (*append)(char *out, size_t cap, const pc_field *spec, const pc_fval *v, size_t nv);
+} FrameNs;
+
+/**
+ * @brief The names, aliased.
+ *
+ * `static const` and initialized here, not declared `extern` against a definition in the .c: a
+ * translation unit that can see this initializer knows which function each member holds, so a member
+ * read folds away and the call to the build in protoframe.c is direct, leaving the table referenced
+ * by nothing for the linker to drop.
+ *
+ * `unused` because a header this wide is included by files that take none of it.
+ */
+static const FrameNs frame __attribute__((unused)) = {pc_frame_build, pc_frame_append};
+
+#endif // PROTOCORE_PROTOFRAME_H

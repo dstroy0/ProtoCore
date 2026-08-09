@@ -156,7 +156,7 @@ int pc_fs_begin(const char *name)
     FsRoot *r = &s_fs.root[s_fs.count];
 
     // One byte of the capacity is held back for the separator below, so appending cannot overrun.
-    size_t n = pc_frame_build(r->path, PC_FILESYSTEM_PATH_MAX - 1, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(want)}, 1);
+    size_t n = frame.build(r->path, PC_FILESYSTEM_PATH_MAX - 1, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(want)}, 1);
     if (n == 0) // a root that does not fit - refused, not truncated into another directory
     {
         return -1;
@@ -166,7 +166,7 @@ int pc_fs_begin(const char *name)
         r->path[n] = '/';      // the separator the join relies on, added once here rather than
         r->path[n + 1] = '\0'; // tested on every resolve
     }
-    if (pc_frame_build(r->name, PC_FS_ROOT_NAME_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(want)}, 1) == 0)
+    if (frame.build(r->name, PC_FS_ROOT_NAME_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(want)}, 1) == 0)
     {
         return -1; // a name too long to record is a name that could not be matched again
     }
@@ -301,7 +301,7 @@ proto_bool pc_fs_remove(int root, const char *dir, const char *name)
     // child, finishing a level truncates back. Each pass re-opens the current level and takes its
     // first surviving entry, so the cursor is never carried across a removal that would invalidate
     // it - whatever the previous pass removed is already gone when the next open happens.
-    size_t len = pc_frame_build(s_fs.walk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(p)}, 1);
+    size_t len = frame.build(s_fs.walk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(p)}, 1);
     if (len == 0)
     {
         return PROTO_FALSE;
@@ -429,9 +429,9 @@ proto_bool pc_fs_copy(int root, const char *from_dir, const char *from_name, con
         return copy_one(b, sp, dp);
     }
 
-    size_t slen = pc_frame_build(s_fs.walk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(sp)}, 1);
+    size_t slen = frame.build(s_fs.walk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(sp)}, 1);
     size_t dlen =
-        pc_frame_build(s_fs.dwalk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(dp)}, 1);
+        frame.build(s_fs.dwalk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(dp)}, 1);
     if (slen == 0 || dlen == 0)
     {
         return PROTO_FALSE;

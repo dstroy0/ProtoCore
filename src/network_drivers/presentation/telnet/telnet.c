@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/presentation/telnet/telnet.h"
+#include "mmgr/protoframe.h" // frame.build: a console line is a spec, not a format string
 #include "mmgr/protomem.h"
 
 #if PC_ENABLE_TELNET
@@ -304,10 +305,10 @@ static void pc_telnet_println(const char *s)
     broadcast("\r\n", 2);
 }
 
-static void pc_telnet_frame(const pc_field *spec, const pc_fval *v, size_t nv)
+static void pc_telnet_frame(const struct pc_field *spec, const struct pc_fval *v, size_t nv)
 {
     char buf[TELNET_BUF_SIZE];
-    size_t n = pc_frame_build(buf, sizeof(buf), spec, v, nv);
+    size_t n = frame.build(buf, sizeof(buf), spec, v, nv);
     if (n > 0)
     {
         broadcast(buf, n);

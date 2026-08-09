@@ -11,7 +11,7 @@
  */
 
 #include "csrf.h"
-#include "mmgr/frame.h" // the one frame engine
+#include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
 
 #if PC_ENABLE_CSRF
@@ -82,7 +82,7 @@ int pc_csrf_issue(char *out, size_t cap)
     pc_secure_release(mark);
 
     // The frame's contract is this function's contract: the length written, or 0 and out emptied.
-    return pc_frame_build(out, cap, CSRF_TOKEN, (const pc_fval[]){PC_VSTR(nhex), PC_VSTR(shex)}, 2);
+    return frame.build(out, cap, CSRF_TOKEN, (const pc_fval[]){PC_VSTR(nhex), PC_VSTR(shex)}, 2);
 }
 
 proto_bool pc_csrf_verify(const char *token)

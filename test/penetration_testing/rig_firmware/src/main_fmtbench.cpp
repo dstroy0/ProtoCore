@@ -21,8 +21,8 @@
 // Both moved under mmgr/ when the memory-management layer was separated out, and strbuf became
 // membuild. This bench is built from the tree, so it follows the tree.
 #include "device_bench.h" // DBENCH_CYCLES
-#include "mmgr/frame.h"
 #include "mmgr/membuild.h"
+#include "mmgr/protoframe.h"
 
 static double g_mhz = 240.0;
 
@@ -79,9 +79,9 @@ static void resp_sb()
 
 static void resp_frame()
 {
-    g_sink += (uint32_t)pc_frame_build(
-        buf, sizeof(buf), FRAME_RESP,
-        (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("text/plain"), PC_VU32(21u)}, 4);
+    g_sink +=
+        (uint32_t)frame.build(buf, sizeof(buf), FRAME_RESP,
+                              (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("text/plain"), PC_VU32(21u)}, 4);
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ static void json_snprintf()
 
 static void json_frame()
 {
-    g_sink += (uint32_t)pc_frame_build(
+    g_sink += (uint32_t)frame.build(
         buf, sizeof(buf), FRAME_JSON,
         (const pc_fval[]){PC_VU32(240u), PC_VU32(198000u), PC_VU32(123456u), PC_VU32(4200u), PC_VI64(-7)}, 5);
 }
@@ -170,7 +170,7 @@ static const pc_field FRAME_LIT[] = {{PC_FK_LIT, 0, 38, "HTTP/1.1 200 OK\r\nConn
 
 static void lit_frame()
 {
-    g_sink += (uint32_t)pc_frame_build(buf, sizeof(buf), FRAME_LIT, NULL, 0);
+    g_sink += (uint32_t)frame.build(buf, sizeof(buf), FRAME_LIT, NULL, 0);
 }
 
 // Correctness gate: a bench that measures the wrong output is worthless, so every pair is proven

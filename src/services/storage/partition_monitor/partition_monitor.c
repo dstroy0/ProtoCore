@@ -14,7 +14,7 @@
 
 #if PC_ENABLE_PARTITION_MONITOR
 
-#include "mmgr/frame.h"
+#include "mmgr/protoframe.h"
 
 // esp_partition type/subtype constants (mirrors esp_partition_type_t/subtype_t so
 // the classifier stays pure and host-testable without the IDF headers).
@@ -99,14 +99,14 @@ int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *o
     {
         return 0;
     }
-    if (pc_frame_append(out, cap, PART_OPEN, NULL, 0) == 0)
+    if (frame.append(out, cap, PART_OPEN, NULL, 0) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         const pc_partition_info *p = &parts[i];
-        if (pc_frame_append(out, cap, PART_ENTRY,
+        if (frame.append(out, cap, PART_ENTRY,
                             (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(p->label),
                                               PC_VJSON(pc_partition_kind(p->type, p->subtype)),
                                               PC_VU32((uint32_t)p->type), PC_VU32((uint32_t)p->subtype),
@@ -117,7 +117,7 @@ int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *o
             return 0;
         }
     }
-    return (int32_t)pc_frame_append(out, cap, PART_CLOSE, NULL, 0);
+    return (int32_t)frame.append(out, cap, PART_CLOSE, NULL, 0);
 }
 
 #if PC_HAS_VENDOR_OTA

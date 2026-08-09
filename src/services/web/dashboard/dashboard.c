@@ -15,7 +15,7 @@
 
 #if PC_ENABLE_DASHBOARD
 
-#include "mmgr/frame.h"
+#include "mmgr/protoframe.h"
 #include "mmgr/protostr.h"
 
 // A message key as it appears in the JSON: quoted, so it cannot match a widget key containing it.
@@ -130,14 +130,14 @@ int32_t pc_dashboard_layout_json(char *out, uint32_t cap)
     {
         return 0;
     }
-    if (pc_frame_append(out, cap, DASH_ARRAY_OPEN, NULL, 0) == 0)
+    if (frame.append(out, cap, DASH_ARRAY_OPEN, NULL, 0) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
         const pc_widget *w = &s_dash.widgets[i];
-        if (pc_frame_append(out, cap, DASH_WIDGET,
+        if (frame.append(out, cap, DASH_WIDGET,
                             (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(widget_type_name(w->type)),
                                               PC_VJSON(w->label), PC_VJSON(w->key), PC_VG((double)w->min),
                                               PC_VG((double)w->max), PC_VJSON(w->unit)},
@@ -146,7 +146,7 @@ int32_t pc_dashboard_layout_json(char *out, uint32_t cap)
             return 0;
         }
     }
-    return (int32_t)pc_frame_append(out, cap, DASH_ARRAY_CLOSE, NULL, 0);
+    return (int32_t)frame.append(out, cap, DASH_ARRAY_CLOSE, NULL, 0);
 }
 
 int32_t pc_dashboard_values_json(char *out, uint32_t cap)
@@ -160,13 +160,13 @@ int32_t pc_dashboard_values_json(char *out, uint32_t cap)
     {
         return 0;
     }
-    if (pc_frame_append(out, cap, DASH_OBJECT_OPEN, NULL, 0) == 0)
+    if (frame.append(out, cap, DASH_OBJECT_OPEN, NULL, 0) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
-        if (pc_frame_append(out, cap, DASH_VALUE,
+        if (frame.append(out, cap, DASH_VALUE,
                             (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(s_dash.widgets[i].key),
                                               PC_VG((double)s_dash.values[i])},
                             3) == 0)
@@ -174,7 +174,7 @@ int32_t pc_dashboard_values_json(char *out, uint32_t cap)
             return 0;
         }
     }
-    return (int32_t)pc_frame_append(out, cap, DASH_OBJECT_CLOSE, NULL, 0);
+    return (int32_t)frame.append(out, cap, DASH_OBJECT_CLOSE, NULL, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -193,7 +193,7 @@ static const char *control_value_ptr(const char *s, const char *key)
 {
     char pat[8];
     // A key too long for the buffer leaves pat empty, and strstr then finds nothing - fail closed.
-    pc_frame_build(pat, sizeof(pat), QUOTED_KEY, (const pc_fval[]){PC_VSTR(key)}, 1);
+    frame.build(pat, sizeof(pat), QUOTED_KEY, (const pc_fval[]){PC_VSTR(key)}, 1);
     const char *p = strstr(s, pat);
     if (!p)
     {
