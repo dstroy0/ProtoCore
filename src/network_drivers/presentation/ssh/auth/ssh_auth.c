@@ -13,6 +13,7 @@
 #include "mmgr/endian.h"               // pc_wr32be() - the one source of truth for wire integers
 #include "mmgr/plaintext.h"            // pc_plaintext_span() for the verify buffers
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str.eq() - the bounded string compare the wire fields use
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"    // SSH_MSG_* constants
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[], SshPhase
@@ -255,7 +256,7 @@ int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8
     {
         return -1;
     }
-    if (strcmp(svc, "ssh-userauth") != 0)
+    if (!str.eq(svc, "ssh-userauth", sizeof(svc), PROTO_FALSE))
     {
         return -1;
     }
@@ -295,12 +296,18 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
     {
         return -1;
     }
+    // RFC 4252 sec 5: the service to start after auth must be one the server offers, and it sits
+    // inside the signed blob, so a service the server never checks is one the signature does not bind.
+    if (!str.eq(req->service, "ssh-connection", sizeof(req->service), PROTO_FALSE))
+    {
+        return -1;
+    }
     if (!read_string(payload, len, &off, req->method, sizeof(req->method)))
     {
         return -1;
     }
 
-    if (strcmp(req->method, "password") == 0)
+    if (str.eq(req->method, "password", sizeof(req->method), PROTO_FALSE))
     {
         // boolean (FALSE = not a password change) || string password
         if (off >= len)
@@ -314,7 +321,7 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
         }
         req->is_password = PROTO_TRUE;
     }
-    else if (strcmp(req->method, "publickey") == 0)
+    else if (str.eq(req->method, "publickey", sizeof(req->method), PROTO_FALSE))
     {
         // boolean has_signature || string algo || string pubkey-blob [|| string signature]
         if (off >= len)
@@ -359,7 +366,7 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
         req->is_pubkey = PROTO_TRUE;
     }
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
-    else if (strcmp(req->method, "keyboard-interactive") == 0)
+    else if (str.eq(req->method, "keyboard-interactive", sizeof(req->method), PROTO_FALSE))
     {
         // RFC 4256 §3.1: string(language tag, deprecated) || string(submethods). Both are ignored -
         // this server always drives a single "Password:" prompt.
@@ -546,8 +553,11 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
 
     // For RSA the signature hash is chosen by the client's algorithm name (RFC 8332),
     // not the key blob: rsa-sha2-512 -> SHA-512, otherwise SHA-256.
-    const pc_rsa_hash rh =
-        (strcmp(req->pk_algo, SSH_RSA_SIG_ALG_SHA512) == 0) ? PC_RSA_HASH_SHA512 : PC_RSA_HASH_SHA256;
+    pc_rsa_hash rh = PC_RSA_HASH_SHA256;
+    if (str.eq(req->pk_algo, SSH_RSA_SIG_ALG_SHA512, sizeof(req->pk_algo), PROTO_FALSE))
+    {
+        rh = PC_RSA_HASH_SHA512;
+    }
     proto_bool sig_ok;
     if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
     {

@@ -135,6 +135,22 @@ void test_parse_none_request()
     TEST_ASSERT_EQUAL_STRING("bob", req.user);
 }
 
+// RFC 4252 sec 5: a request naming a service the server does not offer must not authenticate.
+void test_parse_rejects_foreign_service()
+{
+    uint8_t pkt[128];
+    size_t n = 0;
+    pkt[n++] = SSH_MSG_USERAUTH_REQUEST;
+    n += put_string(pkt + n, "alice");
+    n += put_string(pkt + n, "bogus-service"); // not "ssh-connection"
+    n += put_string(pkt + n, "password");
+    pkt[n++] = 0;
+    n += put_string(pkt + n, "s3cret");
+
+    SshAuthReq req;
+    TEST_ASSERT_NOT_EQUAL(0, pc_ssh_auth_parse_request(pkt, n, &req));
+}
+
 // ---- orchestration --------------------------------------------------------
 
 static size_t build_pw_request(uint8_t *pkt, const char *u, const char *p)
@@ -1182,6 +1198,7 @@ int main()
     RUN_TEST(test_service_request_rejects_unknown);
     RUN_TEST(test_parse_password_request);
     RUN_TEST(test_parse_none_request);
+    RUN_TEST(test_parse_rejects_foreign_service);
     RUN_TEST(test_handle_request_success);
     RUN_TEST(test_handle_request_wrong_password_fails);
     RUN_TEST(test_handle_none_request_fails_without_auth);
