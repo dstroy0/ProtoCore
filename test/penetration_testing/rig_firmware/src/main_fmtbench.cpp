@@ -79,7 +79,9 @@ static void resp_sb()
 
 static void resp_frame()
 {
-    g_sink += (uint32_t)pc_frame_build(buf, sizeof(buf), FRAME_RESP, (uint32_t)200, "OK", "text/plain", (uint32_t)21);
+    g_sink += (uint32_t)pc_frame_build(
+        buf, sizeof(buf), FRAME_RESP,
+        (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("text/plain"), PC_VU32(21u)}, 4);
 }
 
 // ---------------------------------------------------------------------------
@@ -99,8 +101,9 @@ static void json_snprintf()
 
 static void json_frame()
 {
-    g_sink += (uint32_t)pc_frame_build(buf, sizeof(buf), FRAME_JSON, (uint32_t)240, (uint32_t)198000, (uint32_t)123456,
-                                       (uint32_t)4200, (int64_t)-7);
+    g_sink += (uint32_t)pc_frame_build(
+        buf, sizeof(buf), FRAME_JSON,
+        (const pc_fval[]){PC_VU32(240u), PC_VU32(198000u), PC_VU32(123456u), PC_VU32(4200u), PC_VI64(-7)}, 5);
 }
 
 // ---------------------------------------------------------------------------
@@ -167,7 +170,7 @@ static const pc_field FRAME_LIT[] = {{PC_FK_LIT, 0, 38, "HTTP/1.1 200 OK\r\nConn
 
 static void lit_frame()
 {
-    g_sink += (uint32_t)pc_frame_build(buf, sizeof(buf), FRAME_LIT);
+    g_sink += (uint32_t)pc_frame_build(buf, sizeof(buf), FRAME_LIT, NULL, 0);
 }
 
 // Correctness gate: a bench that measures the wrong output is worthless, so every pair is proven

@@ -71,7 +71,7 @@ void tearDown()
 
 void test_debug_is_below_the_floor_and_emits_nothing()
 {
-    PC_LOGD(F_DEBUG, (int64_t)counting_arg());
+    PC_LOGD(F_DEBUG, ((const pc_fval[]){PC_VI64(counting_arg())}), 1);
     TEST_ASSERT_EQUAL_INT(0, s_sink_calls);
     TEST_ASSERT_EQUAL_UINT16(0, pc_log_count());
 }
@@ -80,22 +80,22 @@ void test_discarded_call_does_not_evaluate_its_arguments()
 {
     // The whole point of a preprocessor filter rather than a runtime `if`: a discarded log must not
     // pay for building its own arguments either.
-    PC_LOGD(F_EXPENSIVE, (int64_t)counting_arg());
+    PC_LOGD(F_EXPENSIVE, ((const pc_fval[]){PC_VI64(counting_arg())}), 1);
     TEST_ASSERT_EQUAL_INT(0, s_eval_count);
 }
 
 void test_info_and_above_emit()
 {
-    PC_LOGI(F_HELLO, (int64_t)7);
+    PC_LOGI(F_HELLO, ((const pc_fval[]){PC_VI64(7)}), 1);
     TEST_ASSERT_EQUAL_INT(1, s_sink_calls);
     TEST_ASSERT_EQUAL_UINT8(PC_LOG_LEVEL_INFO, s_last_level);
     TEST_ASSERT_EQUAL_STRING("hello 7", s_last_line);
 
-    PC_LOGW(F_WARN, "here");
+    PC_LOGW(F_WARN, ((const pc_fval[]){PC_VSTR("here")}), 1);
     TEST_ASSERT_EQUAL_UINT8(PC_LOG_LEVEL_WARN, s_last_level);
     TEST_ASSERT_EQUAL_STRING("warn here", s_last_line);
 
-    PC_LOGE(F_ERR, (uint32_t)3);
+    PC_LOGE(F_ERR, ((const pc_fval[]){PC_VU32(3u)}), 1);
     TEST_ASSERT_EQUAL_UINT8(PC_LOG_LEVEL_ERROR, s_last_level);
     TEST_ASSERT_EQUAL_STRING("err 3", s_last_line);
 
@@ -104,7 +104,7 @@ void test_info_and_above_emit()
 
 void test_enabled_call_does_evaluate_its_arguments()
 {
-    PC_LOGI(F_VALUE, (int64_t)counting_arg());
+    PC_LOGI(F_VALUE, ((const pc_fval[]){PC_VI64(counting_arg())}), 1);
     TEST_ASSERT_EQUAL_INT(1, s_eval_count);
     TEST_ASSERT_EQUAL_STRING("value 42", s_last_line);
 }
@@ -113,7 +113,7 @@ void test_enabled_call_does_evaluate_its_arguments()
 
 void test_emitted_line_also_reaches_the_logbuf_ring()
 {
-    PC_LOGW(F_RING);
+    PC_LOGW(F_RING, NULL, 0);
     TEST_ASSERT_EQUAL_UINT16(1, pc_log_count());
     TEST_ASSERT_EQUAL_STRING("W to the ring", pc_log_at(0));
 }
@@ -122,9 +122,9 @@ void test_levels_match_the_logbuf_letters()
 {
     // The PC_LOG_LEVEL_* preprocessor values and pc_log_level's constexprs are two spellings of one
     // scale; if they ever drift, the stored letter is what goes wrong, so assert on that.
-    PC_LOGI(F_I);
-    PC_LOGW(F_W);
-    PC_LOGE(F_E);
+    PC_LOGI(F_I, NULL, 0);
+    PC_LOGW(F_W, NULL, 0);
+    PC_LOGE(F_E, NULL, 0);
     TEST_ASSERT_EQUAL_STRING("I i", pc_log_at(0));
     TEST_ASSERT_EQUAL_STRING("W w", pc_log_at(1));
     TEST_ASSERT_EQUAL_STRING("E e", pc_log_at(2));
@@ -137,7 +137,7 @@ void test_levels_match_the_logbuf_letters()
 void test_no_sink_is_not_a_crash()
 {
     pc_log_set_sink(NULL);
-    PC_LOGE(F_STILL);
+    PC_LOGE(F_STILL, NULL, 0);
     TEST_ASSERT_EQUAL_INT(0, s_sink_calls);
     TEST_ASSERT_EQUAL_UINT16(1, pc_log_count());
 }
@@ -151,7 +151,7 @@ void test_line_that_does_not_fit_is_refused()
     char big[PC_LOG_LINE_LEN * 3];
     memset(big, 'x', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
-    PC_LOGE(F_STR, big);
+    PC_LOGE(F_STR, ((const pc_fval[]){PC_VSTR(big)}), 1);
     TEST_ASSERT_EQUAL_INT(1, s_sink_calls);
     TEST_ASSERT_EQUAL_STRING("", s_last_line);
 }
@@ -159,14 +159,14 @@ void test_line_that_does_not_fit_is_refused()
 void test_null_spec_is_ignored()
 {
     const pc_field *spec = NULL;
-    pc_log_frame(PC_LOG_LEVEL_ERROR, spec);
+    pc_log_frame(PC_LOG_LEVEL_ERROR, spec, NULL, 0);
     TEST_ASSERT_EQUAL_INT(0, s_sink_calls);
     TEST_ASSERT_EQUAL_UINT16(0, pc_log_count());
 }
 
 void test_empty_message_is_still_a_line()
 {
-    PC_LOGI(F_STR, "");
+    PC_LOGI(F_STR, ((const pc_fval[]){PC_VSTR("")}), 1);
     TEST_ASSERT_EQUAL_INT(1, s_sink_calls);
     TEST_ASSERT_EQUAL_STRING("", s_last_line);
     TEST_ASSERT_EQUAL_STRING("I ", pc_log_at(0));

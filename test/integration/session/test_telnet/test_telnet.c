@@ -223,7 +223,7 @@ void test_output_escaping_and_printf()
 
     tcp_capture_reset();
     static const pc_field NEQ[] = {{PC_FK_LIT, 0, 2, "n="}, PC_U32, PC_END};
-    Telnet.frame(NEQ, (uint32_t)7);
+    Telnet.frame(NEQ, (const pc_fval[]){PC_VU32(7u)}, 1);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "n=7"));
 }
 
@@ -332,7 +332,7 @@ void test_print_println_null_and_printf_empty()
 
     tcp_capture_reset();
     static const pc_field EMPTY[] = {PC_END};
-    Telnet.frame(EMPTY);
+    Telnet.frame(EMPTY, NULL, 0);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 }
 
