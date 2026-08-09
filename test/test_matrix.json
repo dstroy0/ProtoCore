@@ -172,7 +172,9 @@
         "+<crypto/hash/sha512.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>"
       ],
       "tests": ["unit/ssh/test_ssh_ed25519"]
     },
@@ -3739,7 +3741,9 @@
         "+<crypto/hash/sha512.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>"
       ],
       "tests": ["unit/tls/test_dtls_tls13"]
     },
@@ -3871,7 +3875,9 @@
         "+<crypto/hash/sha512.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>"
       ],
       "tests": ["unit/tls/test_tls13_msg"]
     },
