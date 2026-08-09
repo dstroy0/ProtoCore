@@ -63,8 +63,8 @@ static void rng_reseed(uint8_t *st, int w)
     s_rng.drawn[w] = 0;
 }
 
-// This worker's seed, bound and drawn on first use. The static_assert above sizes the pool for it,
-// so the borrow is there: no test, no branch, no failure path to write or to execute.
+// This worker's seed, bound and drawn on first use. NULL when the arena cannot cover the borrow:
+// the static_assert above sizes the term, not the arena the persistent end competes for.
 static uint8_t *rng_state(int w)
 {
     if (s_rng.state[w] != NULL)
@@ -72,6 +72,10 @@ static uint8_t *rng_state(int w)
         return s_rng.state[w];
     }
     pc_span s = secure.persist_span(RNG_STATE_LEN);
+    if (!pc_span_ok(s))
+    {
+        return NULL;
+    }
     s_rng.state[w] = s.buf;
     rng_reseed(s.buf, w);
     return s.buf;
@@ -85,6 +89,10 @@ void pc_rand_fill(uint8_t *out, size_t len)
     }
     int w = rng_slot();
     uint8_t *st = rng_state(w);
+    if (st == NULL)
+    {
+        return;
+    }
     if (s_rng.drawn[w] >= PC_RAND_RESEED_BYTES || len >= PC_RAND_RESEED_BYTES - s_rng.drawn[w])
     {
         rng_reseed(st, w);
