@@ -1479,7 +1479,7 @@ guards at compile time.
 | `PC_PER_IP_THROTTLE_SLOTS` | `16` | Number of source IPv4 addresses tracked by the per-IP throttle (BSS bucket table). |
 | `PC_PER_IP_THROTTLE_WINDOW_MS` | `10000` | Per-IP throttle window length in milliseconds (see PC_ENABLE_PER_IP_THROTTLE). |
 | `PC_PHY_MAX_IFACES` | `4` | Interfaces layer 1 can carry: wifi station and softAP, ethernet, a bridged bus, a radio. |
-| `PC_PLAINTEXT_ARENA_SIZE` | `8192` | Size in bytes of the shared per-dispatch scratch arena. |
+| `PC_PLAINTEXT_ARENA_SIZE` | `10240` |  |
 | `PC_PN532_MAX_DATA` | `254` | Reject a PN532 normal frame whose declared length exceeds this (framing sanity). |
 | `PC_POWER_BUSY_PCT` | `40` | Load percentage at/above which the ceiling clock is used. |
 | `PC_POWER_MHZ_MAX` | `240` | CPU clock (MHz) when there is work to do. |
