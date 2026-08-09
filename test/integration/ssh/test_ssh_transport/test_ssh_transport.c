@@ -1494,7 +1494,7 @@ void test_dh_derive_keys_gcm_installs()
     uint8_t H[PC_SHA256_DIGEST_LEN];
     uint8_t sid[PC_SHA256_DIGEST_LEN];
     memset(K, 0, sizeof(K));
-    K[0] = 0x11; // nonzero shared secret, MSB set -> mpint pad path
+    K[0] = 0x91; // nonzero, and bit 7 set so mpint(K) takes the 0x00 sign-pad path (0x11 does not)
     K[255] = 0x22;
     for (int j = 0; j < PC_SHA256_DIGEST_LEN; j++)
     {
