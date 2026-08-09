@@ -6654,19 +6654,12 @@ from halves and is slower than the width it decomposes into"
 #ifndef PC_TLS_CONN_STATE_CAP
 #define PC_TLS_CONN_STATE_CAP 384
 #endif
-// One TLS 1.3 key schedule per handshake in flight, from the persistent end for the life of the
-// connection. Stated in schedules; the per-schedule extent is PC_TLS13_KS_CAP, proved by a
-// static_assert in tls13_kdf.c.
-#ifndef PC_TLS13_KS_SLOTS
-#define PC_TLS13_KS_SLOTS MAX_CONNS
-#endif
-// early, handshake and master secrets; the four traffic secrets; the empty hash, the derived salt,
-// the finished key, the zero IKM, and the Finished verify_data.
+// The terms of one TLS 1.3 key schedule: early, handshake and master secrets; the four traffic
+// secrets; the empty hash, the derived salt, the finished key, the zero IKM, and the Finished
+// verify_data. The connection that runs the schedule owns the storage, so the extent is stated
+// here and spent there: PC_TLS13_KS_CAP.
 #ifndef PC_TLS13_KS_TERMS
 #define PC_TLS13_KS_TERMS 12
-#endif
-#ifndef PC_WORK_TLS13_KDF
-#define PC_WORK_TLS13_KDF ((size_t)PC_TLS13_KS_SLOTS * PC_TLS13_KS_TERMS * PC_TLS13_SECRET_LEN)
 #endif
 #ifndef PC_WORK_TLS_CONN
 #define PC_WORK_TLS_CONN                                                                                               \
@@ -6754,17 +6747,10 @@ from halves and is slower than the width it decomposes into"
 #define PC_SECURE_WORK_TLSCONN 0
 #endif
 
-#if PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE
-#define PC_SECURE_WORK_TLS13KDF PC_WORK_TLS13_KDF
-#else
-#define PC_SECURE_WORK_TLS13KDF 0
-#endif
-
 #define PC_SECURE_ARENA_SIZE                                                                                           \
     (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_MAC + PC_SECURE_WORK_SMB +                           \
-     PC_SECURE_WORK_SSHCIPHER + PC_SECURE_WORK_SSHCONN + PC_SECURE_WORK_TLSCONN + PC_SECURE_WORK_TLS13KDF +            \
-     PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +                                                         \
-     256) // + 256: alignment round-up across the individual borrows
+     PC_SECURE_WORK_SSHCIPHER + PC_SECURE_WORK_SSHCONN + PC_SECURE_WORK_TLSCONN + PC_WORK_ROUTE_TABLE +                \
+     PC_SECURE_WORK_AUTH + PC_WORK_RNG + 256) // + 256: alignment round-up across the individual borrows
 #endif
 
 // ---------------------------------------------------------------------------

@@ -22,9 +22,9 @@
 static_assert(PC_WORK_TLS_CONN >= (size_t)MAX_TLS_CONNS * PC_TLS_CONN_BORROW,
               "PC_WORK_TLS_CONN must cover one TX + RX + terms + state borrow per TLS connection: raise it in "
               "protocore_config.h");
-static_assert(sizeof(pc_sha256_ctx) + sizeof(Tls13ClientHello) <= PC_TLS_CONN_STATE_CAP,
-              "PC_TLS_CONN_STATE_CAP must cover the transcript snapshot and the parsed ClientHello: raise it in "
-              "protocore_config.h");
+static_assert(sizeof(pc_sha256_ctx) + sizeof(Tls13ClientHello) + PC_TLS13_KS_CAP <= PC_TLS_CONN_STATE_CAP,
+              "PC_TLS_CONN_STATE_CAP must cover the transcript snapshot, the parsed ClientHello and the key "
+              "schedule: raise it in protocore_config.h");
 
 // Offsets into the one borrow.
 #define TLS_OFF_TX 0
@@ -32,11 +32,11 @@ static_assert(sizeof(pc_sha256_ctx) + sizeof(Tls13ClientHello) <= PC_TLS_CONN_ST
 #define TLS_OFF_TERMS (TLS_OFF_RX + PC_TLS_CONN_REC_CAP)
 #define TLS_OFF_PEEK (TLS_OFF_TERMS + PC_TLS_CONN_TERMS_CAP)
 #define TLS_OFF_HELLO (TLS_OFF_PEEK + sizeof(pc_sha256_ctx))
+#define TLS_OFF_KS (TLS_OFF_HELLO + sizeof(Tls13ClientHello))
 
 // The profile in tls_conn.h: the portable arm authenticates by RFC 7250 raw public key, so the
 // Certificate message it builds is the RPK one.
-static_assert(PC_ENABLE_TLS_RPK,
-              "PC_TLS_SOFTWARE authenticates by RFC 7250 raw public key: set PC_ENABLE_TLS_RPK");
+static_assert(PC_ENABLE_TLS_RPK, "PC_TLS_SOFTWARE authenticates by RFC 7250 raw public key: set PC_ENABLE_TLS_RPK");
 
 // RFC 8446 sec 6.2 alerts this driver raises.
 #define TLS_ALERT_HANDSHAKE_FAILURE 40
@@ -49,11 +49,11 @@ static_assert(PC_ENABLE_TLS_RPK,
 #define TLS_HS_HDR_LEN 4
 
 // Offsets into TlsConn::terms. Each term is one TLS13_SECRET_LEN value.
-#define TLS_TERM_SHARE 0                        // this end's X25519 public key_share
-#define TLS_TERM_SECRET TLS13_SECRET_LEN        // the X25519 shared secret
-#define TLS_TERM_HASH (2 * TLS13_SECRET_LEN)    // the transcript hash the step in hand needs
-#define TLS_TERM_MAC (3 * TLS13_SECRET_LEN)     // the Finished MAC built, or the one expected
-#define TLS_TERM_HS_FIN (4 * TLS13_SECRET_LEN)  // Transcript-Hash(CH..server Finished)
+#define TLS_TERM_SHARE 0                       // this end's X25519 public key_share
+#define TLS_TERM_SECRET TLS13_SECRET_LEN       // the X25519 shared secret
+#define TLS_TERM_HASH (2 * TLS13_SECRET_LEN)   // the transcript hash the step in hand needs
+#define TLS_TERM_MAC (3 * TLS13_SECRET_LEN)    // the Finished MAC built, or the one expected
+#define TLS_TERM_HS_FIN (4 * TLS13_SECRET_LEN) // Transcript-Hash(CH..server Finished)
 
 // Fail the connection with an alert and report it as a driver error.
 static int fail(TlsConn *c, uint8_t alert)
@@ -198,8 +198,7 @@ static int server_on_client_hello(TlsConn *c, const uint8_t *msg, size_t len, ui
 // The client Finished closes the handshake: its MAC covers the transcript through server Finished.
 static int server_on_finished(TlsConn *c, const uint8_t *msg, size_t len)
 {
-    if (msg[0] != TLS_HS_FINISHED || hs_body_len(msg) != TLS13_SECRET_LEN ||
-        len != TLS_HS_HDR_LEN + TLS13_SECRET_LEN)
+    if (msg[0] != TLS_HS_FINISHED || hs_body_len(msg) != TLS13_SECRET_LEN || len != TLS_HS_HDR_LEN + TLS13_SECRET_LEN)
     {
         return fail(c, TLS_ALERT_DECODE_ERROR);
     }
@@ -234,8 +233,7 @@ static proto_bool conn_init(TlsConn *c, TlsRole role, const TlsConnConfig *cfg)
     c->role = role;
     c->state = TLS_CONN_START;
     pc_sha256_init(&c->transcript);
-    pc_tls13_ks_early(&TLS13_KDF, &c->ks);
-    return PROTO_TRUE;
+    return pc_tls13_ks_early(&TLS13_KDF, &c->ks, b.buf + TLS_OFF_KS);
 }
 
 // The client half needs the mirror of pc_tls13_msg - a ClientHello builder and a ServerHello

@@ -369,7 +369,8 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     uint8_t hh[32];
     pc_sha256_ctx tmp = tr;
     pc_sha256_final(&tmp, hh);
-    pc_tls13_ks_early(&DTLS13_KDF, &cks);
+    static uint8_t ks_store_372[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_372);
     pc_tls13_ks_handshake(&cks, ecdhe, hh, 32);
     DtlsRecordKeys srv_read;
     DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);

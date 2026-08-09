@@ -222,7 +222,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // Handshake keys from Transcript-Hash(ClientHello..ServerHello).
     uint8_t hash[32];
     snapshot_hash(&qt->transcript, hash);
-    pc_tls13_ks_early(&TLS13_KDF, &qt->ks);
+    pc_tls13_ks_early(&TLS13_KDF, &qt->ks, qt->ks_store);
     pc_tls13_ks_handshake(&qt->ks, ecdhe, hash, ecdhe_len);
     pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_CLIENT_HS, &qt->hs_client);
     pc_quic_keys_from_secret(qt->ks.s + TLS13_KS_SERVER_HS, &qt->hs_server);
@@ -287,8 +287,7 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
         fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
     }
-    pc_tls13_finished_mac(&qt->ks, qt->ks.s + TLS13_KS_CLIENT_HS, qt->hs_finished_hash,
-                          qt->ks.s + TLS13_KS_VERIFY);
+    pc_tls13_finished_mac(&qt->ks, qt->ks.s + TLS13_KS_CLIENT_HS, qt->hs_finished_hash, qt->ks.s + TLS13_KS_VERIFY);
     if (!pc_ct_eq(qt->ks.s + TLS13_KS_VERIFY, msg + 4, TLS13_SECRET_LEN))
     {
         fail(qt, TLS_ALERT_DECRYPT_ERROR);

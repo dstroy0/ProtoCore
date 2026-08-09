@@ -115,7 +115,8 @@ typedef struct
     uint8_t alert; ///< RFC 8446 §6 alert code when @c state is FAILED (0 otherwise)
 
     pc_sha256_ctx transcript;                       ///< running Transcript-Hash over the TLS handshake messages
-    Tls13KeySchedule ks;                            ///< TLS 1.3 key schedule
+    Tls13KeySchedule ks;                            ///< TLS 1.3 key schedule, over @ref ks_store
+    uint8_t ks_store[PC_TLS13_KS_CAP];              ///< the schedule's terms; lives and dies with this connection
     DtlsRecordKeys ep2_srv;                         ///< epoch 2 server write keys (handshake traffic)
     DtlsRecordKeys ep2_cli;                         ///< epoch 2 client read keys
     DtlsRecordKeys ep3_srv;                         ///< epoch 3 server write keys (application traffic)

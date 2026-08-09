@@ -405,7 +405,8 @@ void test_h3_request_served_by_route()
         pc_sha256_final(&tmp, chsh);
     }
     Tls13KeySchedule cks;
-    pc_tls13_ks_early(&TLS13_KDF, &cks);
+    static uint8_t ks_store_408[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_408);
     pc_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_s);

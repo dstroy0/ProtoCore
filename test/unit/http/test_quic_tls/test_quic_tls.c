@@ -218,7 +218,8 @@ void test_full_handshake_roundtrip()
     pc_sha256_final(&t, ch_sf); // H(CH..server Finished)
 
     Tls13KeySchedule cks;
-    pc_tls13_ks_early(&TLS13_KDF, &cks);
+    static uint8_t ks_store_221[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_221);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     pc_tls13_ks_master(&cks, ch_sf);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_HANDSHAKE, cks.s + TLS13_KS_HANDSHAKE, 32);
@@ -815,7 +816,8 @@ void test_hybrid_hrr_roundtrip()
     pc_sha256_final(&t, ch_sf); // H(..server Finished)
 
     Tls13KeySchedule cks;
-    pc_tls13_ks_early(&TLS13_KDF, &cks);
+    static uint8_t ks_store_818[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_818);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, 64);
     pc_tls13_ks_master(&cks, ch_sf);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_HS, cks.s + TLS13_KS_SERVER_HS, 32);
@@ -927,7 +929,8 @@ void test_hybrid_handshake_roundtrip()
     pc_sha256_final(&t, ch_sf);
 
     Tls13KeySchedule cks;
-    pc_tls13_ks_early(&TLS13_KDF, &cks);
+    static uint8_t ks_store_930[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_930);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, 64); // 64-byte hybrid secret
     pc_tls13_ks_master(&cks, ch_sf);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_HANDSHAKE, cks.s + TLS13_KS_HANDSHAKE, 32);
