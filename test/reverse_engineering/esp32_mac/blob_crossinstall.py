@@ -12,13 +12,14 @@ both directions alongside the size difference that shows they are genuinely sepa
 
 Symbol tables only: this reads names, not code.
 
-Usage:  python reverse_engineering/esp32_mac/blob_crossinstall.py <repo-root>
+Usage:  python -m test.reverse_engineering.esp32_mac.blob_crossinstall
 """
 
 import os
 import re
 import subprocess
-import sys
+
+from tools import findroot
 
 PK = os.path.expanduser("~/.platformio/packages")
 ARDUINO = os.path.join(PK, "framework-arduinoespressif32", "tools", "sdk")
@@ -87,7 +88,6 @@ def scan(objdump, path):
 
 
 def main():
-    repo = os.path.abspath(sys.argv[1])
     targets = sorted(d for d in os.listdir(ARDUINO) if os.path.isdir(os.path.join(ARDUINO, d)))
 
     ver = "unknown"
@@ -188,10 +188,11 @@ def main():
             if only_i:
                 doc += [f"{len(only_i)} only in the IDF build.", "", "```"] + only_i + ["```", ""]
 
-    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_CROSSINSTALL.md")
+    dest = findroot.at("test", "reverse_engineering", "esp32_mac", "RADIO_BLOB_CROSSINSTALL.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{identical}/{rows} pairs identical -> {dest}")
 
 
-main()
+if __name__ == "__main__":
+    main()
