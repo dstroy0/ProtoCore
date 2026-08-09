@@ -8,6 +8,27 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## A refused SSH send leaves the sequence number and the cipher ahead of the peer, and the session dies
+
+- **Status:** OPEN for the desync. The reporting half is FIXED in `cd435b1b6`; this entry is the part
+  that fix does not reach. Found in the `network_drivers/presentation` resource audit (F2).
+- **What is fixed:** `pc_ssh_conn_send` discarded the `Tcp.conn->send` return and returned `len`
+  regardless, so a short send window read to the caller as a complete write. It now returns -1.
+- **What is not:** by the time that send runs, `ssh_pkt_send` has already done `s->seq_no_send++`
+  (`ssh_packet.c:372`) and advanced the AEAD invocation counter (`:352`). A refused queue therefore
+  leaves this end's send side one packet ahead of the peer's receive side, and **every subsequent
+  packet fails the peer's MAC**. Returning -1 tells the caller the write failed; it does not undo
+  the cipher step, and nothing retries the framed bytes. The session is unrecoverable from that
+  point whether or not the caller notices.
+- **Reach:** `pc_ssh_conn_send` is the port-forward data path (`ssh_forward.c:211`, `:521`), which is
+  exactly where sustained load fills a send buffer. `ssh_scp.c:88,93` and `ssh_sftp.c:170` discard
+  the return entirely, so those two do not even learn.
+- **Why it is not fixed here:** the durable shape is the one the codec/worker split already uses for
+  the emit side - frame into the slot's wire, raise `tx_ready`, let `ssh_tx_drain` put out what the
+  window takes and keep `tx_off` for the rest. Routing this path through that machinery is the same
+  design question as F1 (where a per-slot persistent borrow can safely be taken), and F1 is open.
+  The two should be settled together rather than separately.
+
 ## The server's SSH_MSG_NEWKEYS is framed into an occupied slot and dropped, and the test cannot see it
 
 - **Status:** OPEN, confirmed 2026-08-09 by reading the whole path. Found in the
