@@ -186,15 +186,27 @@ void test_iac_escaped_literal()
     TEST_ASSERT_EQUAL_UINT8(0, (uint8_t)g_last_cmd[2]);
 }
 
-// A subnegotiation (IAC SB ... SE) is consumed; following data resumes normally.
+// A subnegotiation (IAC SB ... IAC SE) is consumed; following data resumes normally.
 void test_subnegotiation_consumed()
 {
     Telnet.accept(0);
     tcp_capture_reset();
-    const uint8_t seq[] = {IAC, 250 /*SB*/, 24, 'a', 'b', 240 /*SE*/, 'h', 'i', '\n'};
+    const uint8_t seq[] = {IAC, 250 /*SB*/, 24, 'a', 'b', IAC, 240 /*SE*/, 'h', 'i', '\n'};
     push_bytes(0, seq, sizeof(seq));
     Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("hi", g_last_cmd);
+}
+
+// A bare 240 inside the parameters is data, not a terminator (RFC 855 ends only on IAC SE), so the
+// bytes after it must stay inside the subnegotiation and never reach the command line.
+void test_subnegotiation_bare_se_does_not_inject()
+{
+    Telnet.accept(0);
+    tcp_capture_reset();
+    const uint8_t seq[] = {IAC, 250 /*SB*/, 24, 'a', 240 /*bare, data*/, 'X', IAC, 240 /*SE*/, 'h', 'i', '\n'};
+    push_bytes(0, seq, sizeof(seq));
+    Telnet.rx(0);
+    TEST_ASSERT_EQUAL_STRING("hi", g_last_cmd); // 'X' after the bare 240 did not inject
 }
 
 // Past MAX_TELNET_CONNS the extra connection is dropped, not admitted.
@@ -366,6 +378,7 @@ int main()
     RUN_TEST(test_cr_and_control_ignored);
     RUN_TEST(test_iac_escaped_literal);
     RUN_TEST(test_subnegotiation_consumed);
+    RUN_TEST(test_subnegotiation_bare_se_does_not_inject);
     RUN_TEST(test_accept_no_capacity);
     RUN_TEST(test_output_escaping_and_printf);
     RUN_TEST(test_inactive_conn_sends_nothing);
