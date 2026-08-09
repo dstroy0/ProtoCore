@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- a wrong KEX guess is dropped, not taken as the real KEXDH_INIT (RFC 4253 sec 7.1) ([`3453650`](https://github.com/dstroy0/ProtoCore/commit/345365020e36834a5ad631dd66c6dd783ca3ef6e))
 - EXT_INFO belongs to the first NEWKEYS, not every re-key (RFC 8308 sec 2.4) ([`93c23bd`](https://github.com/dstroy0/ProtoCore/commit/93c23bddfba72621a9fb41e08e9b81c7674daf0f))
 - the remaining ssh_dh_derive_keys_sid call sites take both directions ([`2220fc8`](https://github.com/dstroy0/ProtoCore/commit/2220fc83171fb3be6ea3ccd7e013e68e29734b2c))
 - native_ssh_pqc builds the SSH transport, so it has to define PC_ENABLE_SSH ([`c7f4cc6`](https://github.com/dstroy0/ProtoCore/commit/c7f4cc66ccbfe933669f3c0e8d69e6506391b7a0))
@@ -62,6 +63,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- update CHANGELOG.md [skip ci] ([`4d57ff2`](https://github.com/dstroy0/ProtoCore/commit/4d57ff2ba85428a90583d17e7f4aea43bc86773f))
+>>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`72e261b`](https://github.com/dstroy0/ProtoCore/commit/72e261ba37e0a9fcda757783a133f4ce22dffab7))
 - update CHANGELOG.md [skip ci] ([`0771e68`](https://github.com/dstroy0/ProtoCore/commit/0771e68a52ae0b80f89fc07cf5533d98d523943a))
 - update CHANGELOG.md [skip ci] ([`0e8281d`](https://github.com/dstroy0/ProtoCore/commit/0e8281d602ff42110fc3d470078df4bd140d079e))
@@ -192,6 +197,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- close the four ssh-transport-kex findings that are fixed ([`fc00a07`](https://github.com/dstroy0/ProtoCore/commit/fc00a076c272fe82c7dbe6bf37fed4527a9306b2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aadd3e7`](https://github.com/dstroy0/ProtoCore/commit/aadd3e762c0a76874265b9f1dc96906af0c0a964))
 - close the four ssh/telnet audit findings and the two unflagged SSH envs ([`b891c89`](https://github.com/dstroy0/ProtoCore/commit/b891c8970de67811dc4a7c1f346bbd748f9fdcaf))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`35514d2`](https://github.com/dstroy0/ProtoCore/commit/35514d258f08d64421da21b03171c6549ca003d3))
