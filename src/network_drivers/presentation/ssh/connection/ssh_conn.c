@@ -315,6 +315,30 @@ void pc_ssh_conn_poll(uint8_t conn_slot)
         }
     }
 
+    // A password change (RFC 4252 sec 8) the application has finished: send the reply its
+    // USERAUTH_REQUEST deferred. pc_ssh_auth_pw_change_take marks the session open on an OK.
+    SshPwChange pw = pc_ssh_auth_pw_change_take(j);
+    if (pw != PC_SSH_PW_CHANGE_NONE)
+    {
+        size_t pw_mark = pc_plaintext_mark();
+        pc_span reply = pc_plaintext_span(SSH_PKT_BUF_SIZE, 4);
+        size_t n = 0;
+        int built = -1;
+        if (pc_span_ok(reply) && pw == PC_SSH_PW_CHANGE_OK)
+        {
+            built = pc_ssh_auth_build_success(reply.buf, &n, reply.cap);
+        }
+        else if (pc_span_ok(reply))
+        {
+            built = pc_ssh_auth_build_failure(reply.buf, &n, reply.cap, PROTO_FALSE);
+        }
+        if (built == 0)
+        {
+            ssh_emit(j, reply.buf, n);
+        }
+        pc_plaintext_release(pw_mark);
+    }
+
 #if PC_SSH_PORT_FORWARD
     pc_ssh_forward_pump(j);
 #endif

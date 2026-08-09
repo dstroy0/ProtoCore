@@ -42,12 +42,14 @@ PROTO_BEGIN_DECLS
 /** @brief Parsed SSH_MSG_USERAUTH_REQUEST. */
 typedef struct
 {
-    char user[SSH_AUTH_USER_MAX];     ///< User name, null-terminated.
-    char service[32];                 ///< Requested service ("ssh-connection").
-    char method[24];                  ///< Method name ("none", "password", "publickey", "keyboard-interactive").
-    char password[SSH_AUTH_PASS_MAX]; ///< Password (method == "password").
-    proto_bool is_password;           ///< True if a password method-request was parsed.
-    proto_bool is_kbdint;             ///< True if a keyboard-interactive method-request was parsed (RFC 4256).
+    char user[SSH_AUTH_USER_MAX];         ///< User name, null-terminated.
+    char service[32];                     ///< Requested service ("ssh-connection").
+    char method[24];                      ///< Method name ("none", "password", "publickey", "keyboard-interactive").
+    char password[SSH_AUTH_PASS_MAX];     ///< Password (method == "password"); the old one on a change.
+    char new_password[SSH_AUTH_PASS_MAX]; ///< New password when is_pw_change (RFC 4252 sec 8).
+    proto_bool is_password;               ///< True if a password method-request was parsed.
+    proto_bool is_pw_change;              ///< True if the request set the change-password flag.
+    proto_bool is_kbdint;                 ///< True if a keyboard-interactive method-request was parsed (RFC 4256).
 
     // publickey method (RFC 4252 §7)
     proto_bool is_pubkey;         ///< True if a publickey method-request was parsed.
@@ -69,6 +71,45 @@ typedef proto_bool (*SshPasswordCb)(const char *user, const char *password);
 
 /** @brief Install the password-verification callback (nullptr → all fail). */
 void pc_ssh_auth_set_password_cb(SshPasswordCb cb);
+
+/**
+ * @brief Application callback that STARTS a password change (RFC 4252 sec 8) for slot @p slot.
+ *
+ * The application owns the store and its encryption, and a store can be slow (flash). This callback
+ * must not block: it copies what it needs, kicks off its own work, and returns. When the change has
+ * finished (or failed to verify @p old_password) the application reports the outcome with
+ * pc_ssh_auth_pw_change_report(); the reply to the client is deferred until then, so the SSH worker
+ * is never held on the store. @p old_password / @p new_password are wiped once this returns.
+ */
+typedef void (*SshPasswordChangeCb)(uint8_t slot, const char *user, const char *old_password, const char *new_password);
+
+/** @brief A slot's password-change state: idle, handed to the application, or finished either way. */
+typedef enum
+{
+    PC_SSH_PW_CHANGE_NONE,
+    PC_SSH_PW_CHANGE_BUSY,
+    PC_SSH_PW_CHANGE_OK,
+    PC_SSH_PW_CHANGE_FAIL,
+} SshPwChange;
+
+/** @brief Install the password-change start callback (nullptr → change requests are refused busy). */
+void pc_ssh_auth_set_password_change_cb(SshPasswordChangeCb cb);
+
+/**
+ * @brief Report the outcome of the change the start callback began for slot @p slot.
+ *
+ * @p ok true when the old password verified and the new one was stored. Moves the slot to OK or
+ * FAIL, which the next poll drains into the deferred reply. A no-op when no change is in flight
+ * (a stale report after the connection left).
+ */
+void pc_ssh_auth_pw_change_report(uint8_t slot, proto_bool ok);
+
+/**
+ * @brief Take slot @p i's finished change outcome, clearing it back to NONE.
+ *
+ * @return OK or FAIL once the application has reported, NONE while idle or still in flight.
+ */
+SshPwChange pc_ssh_auth_pw_change_take(uint8_t i);
 
 /**
  * @brief Drop slot @p i's half-finished authentication state and wipe its username.
