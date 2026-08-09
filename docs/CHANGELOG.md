@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- EXT_INFO belongs to the first NEWKEYS, not every re-key (RFC 8308 sec 2.4) ([`93c23bd`](https://github.com/dstroy0/ProtoCore/commit/93c23bddfba72621a9fb41e08e9b81c7674daf0f))
 - the remaining ssh_dh_derive_keys_sid call sites take both directions ([`2220fc8`](https://github.com/dstroy0/ProtoCore/commit/2220fc83171fb3be6ea3ccd7e013e68e29734b2c))
 - native_ssh_pqc builds the SSH transport, so it has to define PC_ENABLE_SSH ([`c7f4cc6`](https://github.com/dstroy0/ProtoCore/commit/c7f4cc66ccbfe933669f3c0e8d69e6506391b7a0))
 - native_ssh_hardened builds the SSH stack, so it has to define PC_ENABLE_SSH ([`ef6f509`](https://github.com/dstroy0/ProtoCore/commit/ef6f509e28d7dbde7fbf6fae894bb9b1181d5565))
