@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- validate the userauth service name; pin the telnet greeting length ([`4792b06`](https://github.com/dstroy0/ProtoCore/commit/4792b06ba4dc41634275948c5287726f71304010))
 - frame a back-to-back packet pair into the slot instead of dropping the second ([`a445c4a`](https://github.com/dstroy0/ProtoCore/commit/a445c4a29a6fd9671f506e7070fb0cca0ad63ecb))
 - three more blob tools onto findroot; fix sibling import for -m; guard crossinstall ([`c8460dc`](https://github.com/dstroy0/ProtoCore/commit/c8460dce22232439a8f6d761480d07fc8043f9fa))
 - blob_parity onto findroot, and guard its module-level main() ([`48c01fb`](https://github.com/dstroy0/ProtoCore/commit/48c01fb672b72ff8b179fb7695caa94bd06385b5))
@@ -54,6 +55,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`d295bea`](https://github.com/dstroy0/ProtoCore/commit/d295bea77460b46fdb3668d1ea54822240b6da03))
 - update CHANGELOG.md [skip ci] ([`b6dacde`](https://github.com/dstroy0/ProtoCore/commit/b6dacde03be26fbc778fa9b385f05d10874f357a))
 - update test report + coverage [skip ci] ([`51cf048`](https://github.com/dstroy0/ProtoCore/commit/51cf04825a8a2d0fddea3ecc3b32c4cf4f005f81))
 - update CHANGELOG.md [skip ci] ([`8a1008a`](https://github.com/dstroy0/ProtoCore/commit/8a1008a8bced49917fdb9f64241847a22af4a1bd))
@@ -162,6 +164,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- close #3 (userauth service name) and #15 (telnet greeting), both host-verified ([`f89c6c3`](https://github.com/dstroy0/ProtoCore/commit/f89c6c302907041dc0e7ab3bece81f502d3c4e7f))
 - close F1 - the dropped SSH NEWKEYS pair, fixed and host-verified ([`a5f6c02`](https://github.com/dstroy0/ProtoCore/commit/a5f6c02e3934e8b8b9c8d7605087a769565e73d0))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`7b3ac1c`](https://github.com/dstroy0/ProtoCore/commit/7b3ac1c01c60a1db74f3ed70b87eb31e50d9012e))
 - close F3, the idle sweep reclaims the leaked channel in 5 s ([`90c3f4e`](https://github.com/dstroy0/ProtoCore/commit/90c3f4e3494339e330bd83b2564385a42b45d793))
