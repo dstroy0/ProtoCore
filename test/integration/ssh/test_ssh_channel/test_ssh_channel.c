@@ -1074,16 +1074,36 @@ void test_chan_request_accept_set()
     uint32_t id = open_session(21, 32768);
     uint8_t out[64];
     size_t ol = 0;
-    const char *accepted[2] = {"pty-req", "env"};
-    for (int k = 0; k < 2; k++)
+    // A well-formed pty-req (RFC 4254 sec 6.2): TERM, four dimensions, encoded terminal modes.
     {
-        uint8_t rq[64];
+        uint8_t rq[96];
         size_t n = 0;
         rq[n++] = SSH_MSG_CHANNEL_REQUEST;
         wr_u32(rq + n, id);
         n += 4;
-        n += put_string(rq + n, accepted[k]);
+        n += put_string(rq + n, "pty-req");
         rq[n++] = 1; // want_reply
+        n += put_string(rq + n, "xterm");
+        wr_u32(rq + n, 80);
+        wr_u32(rq + n + 4, 24);
+        wr_u32(rq + n + 8, 640);
+        wr_u32(rq + n + 12, 480);
+        n += 16;
+        n += put_string(rq + n, ""); // empty terminal modes
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
+    }
+    // A well-formed env (sec 6.4): name and value.
+    {
+        uint8_t rq[96];
+        size_t n = 0;
+        rq[n++] = SSH_MSG_CHANNEL_REQUEST;
+        wr_u32(rq + n, id);
+        n += 4;
+        n += put_string(rq + n, "env");
+        rq[n++] = 1; // want_reply
+        n += put_string(rq + n, "LANG");
+        n += put_string(rq + n, "C");
         TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     }
@@ -1099,6 +1119,69 @@ void test_chan_request_accept_set()
         rq[n++] = 1;
         TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
+    }
+}
+
+// RFC 4254 sec 6.2 / 6.4 / 6.5: a request truncated before its mandatory fields is not the request it
+// names. shell is the exception - it carries no request-specific data, so the bare form is complete.
+void test_chan_request_truncated_fields_refused()
+{
+    uint32_t id = open_session(22, 32768);
+    uint8_t out[64];
+    size_t ol = 0;
+    const char *needs_fields[3] = {"pty-req", "exec", "env"};
+    for (int k = 0; k < 3; k++)
+    {
+        uint8_t rq[64];
+        size_t n = 0;
+        rq[n++] = SSH_MSG_CHANNEL_REQUEST;
+        wr_u32(rq + n, id);
+        n += 4;
+        n += put_string(rq + n, needs_fields[k]);
+        rq[n++] = 1; // want_reply, and nothing at all after it
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
+    }
+
+    // A pty-req carrying TERM but stopping before the four dimensions is refused as well.
+    {
+        uint8_t rq[64];
+        size_t n = 0;
+        rq[n++] = SSH_MSG_CHANNEL_REQUEST;
+        wr_u32(rq + n, id);
+        n += 4;
+        n += put_string(rq + n, "pty-req");
+        rq[n++] = 1;
+        n += put_string(rq + n, "xterm");
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
+    }
+
+    // An env carrying only its name, with no value, is refused.
+    {
+        uint8_t rq[64];
+        size_t n = 0;
+        rq[n++] = SSH_MSG_CHANNEL_REQUEST;
+        wr_u32(rq + n, id);
+        n += 4;
+        n += put_string(rq + n, "env");
+        rq[n++] = 1;
+        n += put_string(rq + n, "LANG");
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
+    }
+
+    // shell carries no fields, so the bare request is still accepted.
+    {
+        uint8_t rq[64];
+        size_t n = 0;
+        rq[n++] = SSH_MSG_CHANNEL_REQUEST;
+        wr_u32(rq + n, id);
+        n += 4;
+        n += put_string(rq + n, "shell");
+        rq[n++] = 1;
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     }
 }
 
@@ -1487,6 +1570,7 @@ int main()
     RUN_TEST(test_chan_empty_and_mistyped_payloads);
     RUN_TEST(test_chan_same_length_names_do_not_match);
     RUN_TEST(test_chan_request_accept_set);
+    RUN_TEST(test_chan_request_truncated_fields_refused);
     RUN_TEST(test_chan_missing_trailing_port);
     RUN_TEST(test_chan_rforward_refused_paths);
     RUN_TEST(test_chan_forwarded_open_guards_and_silent_failure);

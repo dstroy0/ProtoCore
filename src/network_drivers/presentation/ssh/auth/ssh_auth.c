@@ -546,7 +546,14 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     }
 
     // Verify the signature over string(session_id) || signed_prefix. The session_id is the first KEX's
-    // exchange hash: 32 bytes (SHA-256 methods) or 64 (sntrup761x25519-sha512).
+    // exchange hash: 32 bytes (SHA-256 methods) or 64 (sntrup761x25519-sha512). Without a completed KEX
+    // there is no session id, and signing over an empty one binds the signature to no session at all
+    // (RFC 4252 sec 7), so the signature is refused rather than verified against that.
+    if (!ssh_sess[i].have_session_id)
+    {
+        pc_plaintext_release(mark);
+        return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
+    }
     const size_t sid_len = ssh_sess[i].session_id_len;
     pc_span signed_data = pc_plaintext_span(SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN, 4);
     if (!pc_span_ok(signed_data))

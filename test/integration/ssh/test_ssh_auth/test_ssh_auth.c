@@ -488,6 +488,29 @@ void test_pubkey_valid_signature_succeeds()
     TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, ssh_sess[0].phase);
 }
 
+// RFC 4252 sec 7: the signature is taken over string(session_id) || the request. With no KEX
+// completed there is no session id, so the same otherwise-valid signature must not authenticate.
+void test_pubkey_without_session_id_fails()
+{
+    pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
+    set_session_id_0_to_31();
+    ssh_sess[0].have_session_id = PROTO_FALSE; // no KEX has bound one
+    ssh_sess[0].session_id_len = 0;
+    ssh_sess[0].authed = PROTO_FALSE;
+
+    uint8_t blob[512], sig[256];
+    size_t blob_len = hexdec(PK_BLOB_HEX, blob);
+    size_t sig_len = hexdec(PK_SIG_HEX, sig);
+
+    uint8_t pkt[1024];
+    size_t n = build_pubkey_req(pkt, blob, blob_len, sig, sig_len, PROTO_TRUE);
+    uint8_t out[64];
+    size_t olen = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
+    TEST_ASSERT_FALSE(ssh_sess[0].authed);
+}
+
 // Encode an SSH mpint from a big-endian value (strip leading zeros, prepend 0x00 if the
 // high bit is set). Returns bytes written.
 static size_t put_mpint(uint8_t *p, const uint8_t *v, size_t vlen)
@@ -1347,6 +1370,7 @@ int main()
     RUN_TEST(test_handle_none_request_fails_without_auth);
     RUN_TEST(test_handle_request_no_callback_fails);
     RUN_TEST(test_pubkey_probe_returns_pk_ok);
+    RUN_TEST(test_pubkey_without_session_id_fails);
     RUN_TEST(test_pubkey_valid_signature_succeeds);
     RUN_TEST(test_pubkey_rsa_sha512_signature_succeeds);
     RUN_TEST(test_pubkey_ecdsa_signature_succeeds);
