@@ -49,15 +49,15 @@ void on_command(const char *line, uint8_t conn_id)
     }
     else if (strcmp(line, "heap") == 0)
     {
-        Telnet.frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        Telnet.frame(REPLY_HEAP, (const pc_fval[]){PC_VU32((uint32_t)ESP.getFreeHeap())}, 1);
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        Telnet.frame(REPLY_UPTIME, (uint32_t)millis());
+        Telnet.frame(REPLY_UPTIME, (const pc_fval[]){PC_VU32((uint32_t)millis())}, 1);
     }
     else if (line[0])
     {
-        Telnet.frame(REPLY_ECHO, line);
+        Telnet.frame(REPLY_ECHO, (const pc_fval[]){PC_VSTR(line)}, 1);
     }
 }
 
