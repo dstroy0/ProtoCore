@@ -61,6 +61,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`1913bc6`](https://github.com/dstroy0/ProtoCore/commit/1913bc6f980029689f8c330a2625647a3a5e200d))
 - update CHANGELOG.md [skip ci] ([`4333660`](https://github.com/dstroy0/ProtoCore/commit/4333660cfbafa6366cda67764ca4ede198f9c47b))
 - update CHANGELOG.md [skip ci] ([`ca86258`](https://github.com/dstroy0/ProtoCore/commit/ca86258767e12664071ad19ebf41629410ebbbe8))
 - update CHANGELOG.md [skip ci] ([`aeda130`](https://github.com/dstroy0/ProtoCore/commit/aeda13037e4ea73aaecf84f4c09e7c333baaf511))
@@ -187,6 +188,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aadd3e7`](https://github.com/dstroy0/ProtoCore/commit/aadd3e762c0a76874265b9f1dc96906af0c0a964))
 - close the four ssh/telnet audit findings and the two unflagged SSH envs ([`b891c89`](https://github.com/dstroy0/ProtoCore/commit/b891c8970de67811dc4a7c1f346bbd748f9fdcaf))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`35514d2`](https://github.com/dstroy0/ProtoCore/commit/35514d258f08d64421da21b03171c6549ca003d3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4acd507`](https://github.com/dstroy0/ProtoCore/commit/4acd507ce24a0b1efbd65c9bbefdc4b21dd6007c))
@@ -222,6 +224,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the KEX derivation inputs travel by reference, not twelve arguments ([`ff45f66`](https://github.com/dstroy0/ProtoCore/commit/ff45f66cc178ffcd490e2f1ed1d1b192c5d039d5))
 - single findroot for the repo root, replacing hand-rolled walks ([`4ed12a4`](https://github.com/dstroy0/ProtoCore/commit/4ed12a49f3416d63f84b09752d6c3a776835954c))
 - frame becomes protoframe, reached through a FrameNs like mem and str ([`8498ec4`](https://github.com/dstroy0/ProtoCore/commit/8498ec42841908a98ec5ff2f2df0bf23295d28cc))
 - the frame engine takes a tagged value array, not an ellipsis ([`6d4f7d7`](https://github.com/dstroy0/ProtoCore/commit/6d4f7d737fe77933ad8f7a65c41be30ec3c2d067))
