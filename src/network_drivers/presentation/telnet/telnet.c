@@ -33,7 +33,8 @@ typedef enum PROTO_ENUM_PACKED
     TN_NORMAL,
     TN_IAC,
     TN_OPT,
-    TN_SB
+    TN_SB,
+    TN_SB_IAC
 } TelnetState;
 
 typedef struct
@@ -205,8 +206,8 @@ static void pc_telnet_rx(uint8_t slot)
     while (pc_conn_read_byte(slot, &b))
     {
         switch (t->st)
-        // (TN_NORMAL/TN_IAC/TN_OPT/TN_SB) has a case below; the compiler's defensive "no case matched"
-        // branch can't be reached from any host input
+        // (TN_NORMAL/TN_IAC/TN_OPT/TN_SB/TN_SB_IAC) has a case below; the compiler's defensive "no case
+        // matched" branch can't be reached from any host input
         {
         case TN_NORMAL:
             if (b == T_IAC)
@@ -259,9 +260,19 @@ static void pc_telnet_rx(uint8_t slot)
             break;
         }
         case TN_SB:
+            if (b == T_IAC)
+            {
+                t->st = TN_SB_IAC; // only IAC SE ends a subnegotiation (RFC 855); a bare 240 is data
+            }
+            break;
+        case TN_SB_IAC:
             if (b == T_SE)
             {
-                t->st = TN_NORMAL; // end of subnegotiation (contents ignored)
+                t->st = TN_NORMAL; // IAC SE closes the subnegotiation; its contents are ignored
+            }
+            else
+            {
+                t->st = TN_SB; // IAC IAC (doubled) or a stray IAC - stay in the subnegotiation
             }
             break;
         }
