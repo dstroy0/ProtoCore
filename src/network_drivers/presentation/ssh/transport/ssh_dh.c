@@ -225,6 +225,10 @@ void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in)
     }
     SshKeyMat *km = &ssh_keys[i];
     const SshSession *s = &ssh_sess[i]; // the connection holds what its two directions negotiated
+    // The working bytes come from the slot, not the caller: they exist only once the borrow above has
+    // been taken, so a caller could not name them.
+    SshKdfInputs kin = *in;
+    kin.work = ssh_pkt[i].crypto_work;
     // Rekey lands here with live contexts still in the slot. Release each before its mode is
     // overwritten, after which the outgoing mode is no longer knowable.
     if (km->active && km->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
@@ -240,8 +244,8 @@ void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in)
     km->mac_mode_c2s = s->mac_alg_c2s;
     km->mac_mode_s2c = s->mac_alg_s2c;
 
-    install_direction(i, in, PROTO_TRUE, s->cipher_alg_c2s, s->mac_alg_c2s);
-    install_direction(i, in, PROTO_FALSE, s->cipher_alg_s2c, s->mac_alg_s2c);
+    install_direction(i, &kin, PROTO_TRUE, s->cipher_alg_c2s, s->mac_alg_c2s);
+    install_direction(i, &kin, PROTO_FALSE, s->cipher_alg_s2c, s->mac_alg_s2c);
     km->active = PROTO_TRUE;
 }
 
