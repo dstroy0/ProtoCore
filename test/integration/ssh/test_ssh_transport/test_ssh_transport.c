@@ -1164,6 +1164,60 @@ void test_derive_keys_session_id_affects_output()
     TEST_ASSERT_EQUAL_MEMORY(a, ssh_keys[0].mac_key_c2s, 32);
 }
 
+// RFC 4253 sec 7.2 binds each of the six derived values to its own label and direction: 'A'/'B' the
+// IVs, 'C'/'D' the cipher keys, 'E'/'F' the MAC keys, client-to-server first. Every round-trip test
+// installs identical material both ways, so swapping a pair would still decrypt and still pass. Each
+// label is checked against its own independently derived value here, so a swap cannot survive.
+void test_derive_binds_every_label_to_its_direction()
+{
+    uint8_t K[256];
+    uint8_t H[PC_SHA256_DIGEST_LEN];
+    uint8_t sid[PC_SHA256_DIGEST_LEN];
+    memset(K, 0, sizeof(K));
+    K[0] = 0x91; // bit 7 set: the mpint sign-pad path
+    K[255] = 0x37;
+    for (int j = 0; j < PC_SHA256_DIGEST_LEN; j++)
+    {
+        H[j] = (uint8_t)(0x11 + j);
+        sid[j] = (uint8_t)(0x55 + j);
+    }
+
+    ssh_keymat_wipe(0);
+    ssh_sess[0].cipher_alg_c2s = SSH_CIPHER_AES256CTR;
+    ssh_sess[0].cipher_alg_s2c = SSH_CIPHER_AES256CTR;
+    ssh_sess[0].mac_alg_c2s = SSH_MAC_HMAC_SHA256;
+    ssh_sess[0].mac_alg_s2c = SSH_MAC_HMAC_SHA256;
+    const SshKdfInputs kin = {.work = tw,
+                              .K_be = K,
+                              .H = H,
+                              .session_id = sid,
+                              .h_len = PC_SHA256_DIGEST_LEN,
+                              .sid_len = PC_SHA256_DIGEST_LEN,
+                              .k_is_string = PROTO_FALSE,
+                              .is512 = PROTO_FALSE};
+    ssh_dh_derive_keys_sid(0, &kin);
+    TEST_ASSERT_TRUE(ssh_keys[0].active);
+
+    uint8_t want[PC_SHA256_DIGEST_LEN];
+    ssh_kdf_derive(&kin, 'A', want, PC_AES256CTR_CTR_LEN);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].aes_iv_c2s, PC_AES256CTR_CTR_LEN);
+    ssh_kdf_derive(&kin, 'B', want, PC_AES256CTR_CTR_LEN);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].aes_iv_s2c, PC_AES256CTR_CTR_LEN);
+    ssh_kdf_derive(&kin, 'C', want, PC_AES256CTR_KEY_LEN);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].aes_key_c2s, PC_AES256CTR_KEY_LEN);
+    ssh_kdf_derive(&kin, 'D', want, PC_AES256CTR_KEY_LEN);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].aes_key_s2c, PC_AES256CTR_KEY_LEN);
+    ssh_kdf_derive(&kin, 'E', want, 32);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].mac_key_c2s, 32);
+    ssh_kdf_derive(&kin, 'F', want, 32);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].mac_key_s2c, 32);
+
+    // And the six are actually distinct, so an all-same-material bug could not satisfy the above.
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0].aes_iv_c2s, ssh_keys[0].aes_iv_s2c, PC_AES256CTR_CTR_LEN));
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0].aes_key_c2s, ssh_keys[0].aes_key_s2c, PC_AES256CTR_KEY_LEN));
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0].mac_key_c2s, ssh_keys[0].mac_key_s2c, 32));
+}
+
 // RFC 3526 sec 3 publishes the 2048-bit MODP prime and generator 2. In the library it is 64 raw
 // limbs, and every DH test round-trips against that same constant, so one mistyped interior limb is
 // invisible to all of them and yet no real peer could ever agree with us. Transcribed from the RFC
@@ -1990,6 +2044,7 @@ int main()
     RUN_TEST(test_kexdh_handle_rsa_sha512_signature);
     RUN_TEST(test_kexdh_handle_ecdsa_end_to_end);
     RUN_TEST(test_derive_keys_session_id_affects_output);
+    RUN_TEST(test_derive_binds_every_label_to_its_direction);
     RUN_TEST(test_group14_matches_rfc3526);
     RUN_TEST(test_rekey_needed_threshold);
     RUN_TEST(test_rekey_threshold_meets_the_rfc_bounds);
