@@ -11,8 +11,8 @@
  */
 
 #include "crypto/hash/sha256.h"
-#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
+#include "mmgr/protomem.h"
 
 #if PC_HAS_HW_SHA
 #include <mbedtls/sha256.h> // hardware SHA accelerator
@@ -163,9 +163,10 @@ void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
     ctx->n += len;
     while (len > 0)
     {
-        uint32_t space = 64 - ctx->buflen;
+        uint32_t space = PC_SHA256_BLOCK_LEN - ctx->buflen;
         uint32_t take = (uint32_t)len < space ? (uint32_t)len : space;
-        mem.cpy(ctx->buf + ctx->buflen, data, take);
+        uint8_t *fill = ctx->buf + ctx->buflen;
+        mem.cpy(fill, data, take);
         ctx->buflen += take;
         data += take;
         len -= take;
