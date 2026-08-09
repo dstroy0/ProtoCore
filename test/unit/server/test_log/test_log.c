@@ -10,7 +10,8 @@
 // reaches neither the sink nor the ring, with the argument-evaluation probe below proving the
 // arguments were never even evaluated.
 
-#include "mmgr/ring.h" // shared SPSC byte-ring primitive, exercised at the bottom
+#include "mmgr/protoframe.h" // the log frames below need the complete type
+#include "mmgr/ring.h"       // shared SPSC byte-ring primitive, exercised at the bottom
 #include "server/logbuf.h"
 #include "shared_primitives/log.h"
 #include <stdio.h>
