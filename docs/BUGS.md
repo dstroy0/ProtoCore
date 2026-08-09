@@ -8,6 +8,28 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## native_coaps_server: eight CID-routing tests fail, and they failed before the crypto cascade
+
+- **Status:** OPEN, found 2026-08-09 while verifying the crypto-ownership cascade. **Pre-existing** -
+  reproduced identically at `0c8fa67db`, the commit before the cascade, in a clean worktree with
+  only the `mmgr` link deps added. Same eight tests, same counts. Nothing in the cascade touches it.
+- **Symptom:** 8 of 20 fail, every one on connection-ID routing or address migration:
+    - `:458` `test_server_single_peer` - `pc_coaps_server_ingest` refuses the first application
+      record, though the handshake completed and `pc_coaps_server_active_conns()` is 1.
+    - `:478` `test_two_peers_routing`, `:551` `test_cid_address_migration`,
+      `:766` `test_unknown_cid_dropped`, `:800` `test_slot_lookup_same_port_different_ip`,
+      `:832` `test_slot_by_cid_skips_and_bounds`, `:862` `test_cid_no_migration_when_address_unchanged`,
+      `:883` `test_cid_migration_same_port_different_ip`.
+      The slot-lifecycle tests around them all pass (`test_ingest_ring_full`, `test_pool_full_rejects_new_peer`,
+      `test_fatal_handshake_frees_slot`, `test_pto_ceiling_frees_slot`), so the pool works and the
+      lookup path is what does not.
+- **Not a crash.** pio reports `SIGFPE`, which is Unity's exit code - it exits with the failure count,
+  and 8 renders as signal 8. Under gdb the program runs to completion with no fault and no stack.
+  The same artifact renders 5 failures as `SIGTRAP` and 1 as `SIGHUP` elsewhere in the suite.
+- **Root cause:** not investigated. `PC_COAPS_MAX_CONNS` (2) and `PC_COAPS_INGEST_RING` (6) are sane
+  in `coaps_server.h:42,45`, so the ring arithmetic at `coaps_server.c:176,198` is not at fault.
+- **Fix:** not written.
+
 ## Audit F1/F2 "the PQC stack overflows an ESP32 worker by 3-5x" - NOT A BUG, the floors are enforced
 
 - **Status:** CLOSED 2026-08-09 as not-a-bug, on the severity claim. Filed so the claim is not acted
