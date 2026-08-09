@@ -26,6 +26,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`f66a12d`](https://github.com/dstroy0/ProtoCore/commit/f66a12dd583a7a75a99ed72305d647460af60315))
 - update CHANGELOG.md [skip ci] ([`b646639`](https://github.com/dstroy0/ProtoCore/commit/b646639aaed862115ddb741eef8b33a8a99c7521))
 - update CHANGELOG.md [skip ci] ([`cbde341`](https://github.com/dstroy0/ProtoCore/commit/cbde341d7e55c38dbad667ccf22d1c2ccbcf236c))
 - update CHANGELOG.md [skip ci] ([`0ee64ef`](https://github.com/dstroy0/ProtoCore/commit/0ee64eff28b7476959cfc1452666960a0c1e8929))
@@ -102,6 +103,10 @@ All notable changes to ProtoCore are documented here.
 - non-blocking DNS and TCP client open, and the UDP send rings are gone ([`0dbb22d`](https://github.com/dstroy0/ProtoCore/commit/0dbb22d5637a446905f9f02260cbcbce6e782223))
 - one wire format, read from RFC 5905 rather than copied per role ([`8e34117`](https://github.com/dstroy0/ProtoCore/commit/8e341172d1d7c4788bdc3255128517ece85df924))
 - two paths, selected by capability - PROTOCORE_HOT is gone ([`ada42af`](https://github.com/dstroy0/ProtoCore/commit/ada42af36d3aad11625483176455eb180dcfa83e))
+
+### Testing
+
+- the tail merges, so nothing past the span may move ([`fac7b0c`](https://github.com/dstroy0/ProtoCore/commit/fac7b0c131f3ea6e4023281201652e08c0d0c113))
 
 ## [1.0.7] - 2026-08-08
 
