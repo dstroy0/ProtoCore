@@ -147,6 +147,7 @@ void ssh_kdf_derive(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, co
         have += blk;
     }
     mem.cpy(out, acc, out_len);
+    pc_secure_wipe(acc, sizeof(acc)); // the cipher key, the IV and both MAC keys pass through here
 }
 
 // One 32-byte derived value (the only size any negotiated cipher key/IV needs today).

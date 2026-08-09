@@ -9,6 +9,7 @@
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
 #include "crypto/ct_eq.h" // pc_ct_eq: the Finished compare
 #include "mmgr/protomem.h"
+#include "mmgr/secure.h" // pc_secure_wipe
 
 #if PC_ENABLE_DTLS
 
@@ -344,6 +345,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     snapshot(&c->transcript, hash);
     pc_tls13_ks_early(&DTLS13_KDF, &c->ks, c->ks_store);
     pc_tls13_ks_handshake(&c->ks, ecdhe, hash, 32);
+    pc_secure_wipe(ecdhe, sizeof(ecdhe)); // every epoch-2 and epoch-3 key derives from these 32 bytes
     DtlsRecord.keys_derive(&c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(&c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_CLIENT_HS);
     c->ep2_ready = PROTO_TRUE;
