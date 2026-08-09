@@ -289,7 +289,7 @@ void test_http3_get_end_to_end()
         pc_sha256_final(&tmp, chsh);
     }
     Tls13KeySchedule cks;
-    static uint8_t ks_store_290[PC_TLS13_KS_CAP];
+    static uint8_t ks_store_290[PC_TLS13_KS_BORROW];
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_290);
     pc_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
