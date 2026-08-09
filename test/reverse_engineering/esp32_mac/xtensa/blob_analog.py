@@ -20,14 +20,15 @@ table dereference to the slot number, and emits one line per call.
 A slot is reported by its byte offset. The table is filled at runtime from ROM addresses, so no
 header names the slots; the offset plus the argument count is what identifies each one.
 
-Usage:  python reverse_engineering/esp32_mac/xtensa/blob_analog.py <repo-root>
+Usage:  python -m test.reverse_engineering.esp32_mac.xtensa.blob_analog
 """
 
 import os
 import re
 import shutil
 import subprocess
-import sys
+
+from tools import findroot
 
 TC = os.path.expanduser("~/.platformio/packages/toolchain-xtensa-esp32/bin")
 OBJDUMP = os.path.join(TC, "xtensa-esp32-elf-objdump.exe")
@@ -177,7 +178,6 @@ def walk_section(lines):
 
 
 def main():
-    repo = os.path.abspath(sys.argv[1])
     work = os.path.join(os.environ.get("TEMP", "/tmp"), "pc_blob_analog")
     doc = [
         "# Radio blob analog RF sequences",
@@ -284,10 +284,11 @@ def main():
         doc.append(f"| `0x{b & 0xFF:02X}` | {n} |")
     doc.append("")
 
-    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "xtensa", "RADIO_BLOB_ANALOG.md")
+    dest = findroot.at("test", "reverse_engineering", "esp32_mac", "xtensa", "RADIO_BLOB_ANALOG.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{total} calls, {len(slots)} distinct slots, {len(blocks)} analog blocks -> {dest}")
 
 
-main()
+if __name__ == "__main__":
+    main()

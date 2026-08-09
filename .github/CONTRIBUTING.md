@@ -100,9 +100,8 @@ these; a PR missing them will be sent back.
     - a native test in `test/test_<name>/` **and** its entry in
       [test/test_matrix.json](../test/test_matrix.json) (then regenerate
       `platformio.ini` as above - do not hand-edit the generated region);
-    - a **micro-benchmark** in `performance_benching/services/<name>/` (which mirrors `src/`): an
-      on-device CCOUNT sketch (`platformio.ini` + `src/main.cpp`) and/or a host
-      bench (`host.cpp`);
+    - a **micro-benchmark** in `test/performance_benching/services/<name>/` (which mirrors `src/`):
+      an on-device CCOUNT bench (`main/main.c`) and/or a host bench (`host.c`);
     - a runnable **example** under `examples/<Layer-or-Drivers>/<Name>/` (a
       `.ino` plus its `README.md`, and a `build_opt.h` when it needs flags);
     - an entry in [docs/FEATURES.md](../docs/FEATURES.md) - **the source of truth
@@ -112,7 +111,7 @@ these; a PR missing them will be sent back.
   `src/network_drivers/<layer>/`, `src/server/`, or `src/shared_primitives/` -
   lives in the appropriate layer directory and ships a **bench** in the mirrored
   `performance_benching/` path (`performance_benching/network_drivers/<layer>/<name>/`, `performance_benching/server/<name>/`, or
-  `performance_benching/core/<name>/`, same sketch+`host.cpp` shape as a service), a **native
+  `performance_benching/core/<name>/`, same `main/main.c` + `host.c` shape as a service), a **native
   test** (+ matrix entry), and an **example**, plus a
   [docs/FEATURES.md](../docs/FEATURES.md) entry **if it is user-facing** (a
   `PC_ENABLE_*` flag or an observable behavior); purely internal plumbing may
@@ -120,9 +119,10 @@ these; a PR missing them will be sent back.
 
 `performance_benching/` mirrors `src/` exactly: `performance_benching/services/<name>/`,
 `performance_benching/network_drivers/<layer>/<name>/`, `performance_benching/server/<name>/`, `performance_benching/core/<name>/`,
-each a uniform dir with an on-device CCOUNT sketch (`platformio.ini` + `src/main.cpp`
-using `#include "device_bench.h"`) and an optional `host.cpp`. See
-[performance_benching/README.md](../performance_benching/README.md).
+each a uniform dir with an on-device CCOUNT bench (`main/main.c`, a `dbench_run()` using
+`#include "device_bench.h"`) and an optional `host.c`. Both are C11 - the benches build with the
+ESP-IDF and host toolchains, not Arduino. See
+[test/performance_benching/README.md](../test/performance_benching/README.md).
 
 - **An example only** (no new library code) requires just its `README.md`, in
   the style below.
@@ -153,7 +153,9 @@ these READMEs, so the per-example README is where the real documentation lives.
 
 - **`src/` is C11. No C++. Hard stop.** `.c` and `.h` are the only extensions there, and a file
   compiles as C11 or it does not ship. Not "C-style C++", not "C plus a couple of conveniences."
-  `examples/` are Arduino sketches and `test/` has no style rules at all - this is about `src/`.
+  `examples/` are Arduino sketches, so they are C++. `test/performance_benching/` is C11 too - its
+  benches build with the ESP-IDF and host toolchains, so `constexpr`, `namespace`, templates,
+  lambdas, `nullptr` and `Type::VALUE` have no place there. The rest of `test/` has no style rules.
 
     The reason is the target list. It includes c2000, where control-law code is written and reviewed
     as C, so a library that needs a C++ compiler cannot be used where it is most needed. It is also

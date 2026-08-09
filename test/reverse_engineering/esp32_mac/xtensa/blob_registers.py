@@ -19,7 +19,7 @@ through `auipc` / `jalr` rather than a table. Pointed at one of those this would
 report it as "touches no registers", which is a false negative rather than a result, so it
 refuses instead. A RISC-V port is a separate extraction, not a flag.
 
-Usage:  python reverse_engineering/esp32_mac/xtensa/blob_registers.py <repo-root> [--only <substring>]
+Usage:  python -m test.reverse_engineering.esp32_mac.xtensa.blob_registers [--only <substring>]
 """
 
 import os
@@ -27,6 +27,8 @@ import re
 import shutil
 import subprocess
 import sys
+
+from tools import findroot
 
 TC = os.path.expanduser("~/.platformio/packages/toolchain-xtensa-esp32/bin")
 OBJDUMP = os.path.join(TC, "xtensa-esp32-elf-objdump.exe")
@@ -189,7 +191,6 @@ def walk_section(lines):
 
 
 def main():
-    repo = os.path.abspath(sys.argv[1])
     only = None
     if "--only" in sys.argv:
         only = sys.argv[sys.argv.index("--only") + 1]
@@ -250,10 +251,11 @@ def main():
         doc.append(f"0x{addr:08X}  {n}")
     doc += ["```", ""]
 
-    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "xtensa", "RADIO_BLOB_REGISTERS.md")
+    dest = findroot.at("test", "reverse_engineering", "esp32_mac", "xtensa", "RADIO_BLOB_REGISTERS.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{len(grand)} distinct registers -> {dest}")
 
 
-main()
+if __name__ == "__main__":
+    main()

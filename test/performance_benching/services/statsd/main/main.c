@@ -6,36 +6,27 @@
 // per-metric hot op before the UDP send. Pure; no socket.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
-//   idf.py -C test/performance_benching/services/statsd -p COM7 flash monitor
+//   idf.py -C test/performance_benching/statsd -t upload --upload-port COM7
 #include "device_bench.h"
 #include "services/iot/statsd/statsd.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
+#include <stdint.h>
 
-static void statsd_bench_task(void *arg)
+void dbench_run(void)
 {
-    (void)arg;
     for (;;)
     {
-        printf("DB ==== statsd device microbench start (CCOUNT @ %u MHz) ====\n", (unsigned)dbench_cpu_mhz());
+        DBENCH_BANNER("statsd");
         volatile size_t sink = 0;
         static char out[256];
         DBENCH_OP("pc_statsd_format (counter+tags)", 200000,
                   sink += pc_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f,
                                            "env:prod,host:pc-rig"));
         (void)sink;
-        printf("DB ==== DONE ====\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        DBENCH_DONE();
     }
 }
 
-void app_main(void);
-void app_main(void)
-{
-    vTaskDelay(2500 / portTICK_PERIOD_MS);
-    printf("\nDB boot: statsd device microbench\n");
-    xTaskCreatePinnedToCore(statsd_bench_task, "dbench", 16384, NULL, 24, NULL, 1);
-}
+DBENCH_MAIN("statsd")
