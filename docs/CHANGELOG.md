@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the slot's persistent wire binds at accept, not mid-dispatch ([`bc52f7a`](https://github.com/dstroy0/ProtoCore/commit/bc52f7ab8bb29b775a76ee033cf90a727899209c))
 - PC_WORK_SSH_CONN carries the flight, and the crypto work it already borrowed ([`68645ad`](https://github.com/dstroy0/ProtoCore/commit/68645ade9b86aa9609a31efdad362e90a01e1777))
 - the slot holds a flight, so the second packet of a dispatch is not dropped ([`9a5499f`](https://github.com/dstroy0/ProtoCore/commit/9a5499f6c0853c13b8b88d9e1ffe51a5db65c3af))
 - a 2-byte over-read on the wire, two dead stdio includes, three unchecked spans ([`4e71254`](https://github.com/dstroy0/ProtoCore/commit/4e712544648f1f29ed4ea2db2e28f4626c82366f))
@@ -38,6 +39,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3cc51a9`](https://github.com/dstroy0/ProtoCore/commit/3cc51a91207535933ed88d7d600ae0889e1ffdb7))
 - update CHANGELOG.md [skip ci] ([`f3a406c`](https://github.com/dstroy0/ProtoCore/commit/f3a406c9f071f9d0fe37cee35075514a9268d991))
 - update CHANGELOG.md [skip ci] ([`18927f8`](https://github.com/dstroy0/ProtoCore/commit/18927f8b2c2f6db52244944d65e9867c99edb962))
 - update test report + coverage [skip ci] ([`dc8c9af`](https://github.com/dstroy0/ProtoCore/commit/dc8c9af2f6ee5b1afad9abb08aa7fa7baac5fe1d))
@@ -125,6 +127,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`5c6649b`](https://github.com/dstroy0/ProtoCore/commit/5c6649b01ae46bfd3a5e3b653aae4810be32d637))
 - the server's NEWKEYS is dropped by the one-packet-per-slot rule ([`6c0d0ad`](https://github.com/dstroy0/ProtoCore/commit/6c0d0ad5c6c8820711f3aac032d042a1a7db6af6))
 - log native_coaps_server's CID failures as pre-existing, and the Unity exit-code artifact ([`71ebdce`](https://github.com/dstroy0/ProtoCore/commit/71ebdce42c167e6e332a06c5c8963bcb2dbc8ffc))
 - close F1/F2's overflow claim, the worker-stack floors are enforced ([`2d78464`](https://github.com/dstroy0/ProtoCore/commit/2d78464e80ad024580ea2a6c8960f5d4663fff21))
