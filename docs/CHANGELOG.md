@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the slot's crypto bytes are bound before anything derives out of them ([`145c3b9`](https://github.com/dstroy0/ProtoCore/commit/145c3b925464ac5bbcd9d9f36415a6070aa11274))
 - the two record layers expand their traffic keys out of the caller's bytes ([`747e4df`](https://github.com/dstroy0/ProtoCore/commit/747e4df7c663507c4b1bb07304e70f994fcd043c))
 - the accumulator fill is the raw mover, not the aligned-span one ([`cedb0cb`](https://github.com/dstroy0/ProtoCore/commit/cedb0cbf1f3559e572b8684962d9a95dd21d7263))
 - the partial word merged instead of overwriting past the span ([`a054a54`](https://github.com/dstroy0/ProtoCore/commit/a054a548f4b4cf8dd5f47441f486b201095f13bf))
@@ -28,6 +29,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`83c1305`](https://github.com/dstroy0/ProtoCore/commit/83c1305460c29bc21cb08dabe351bc02dee9f76e))
 - update CHANGELOG.md [skip ci] ([`8aca6ce`](https://github.com/dstroy0/ProtoCore/commit/8aca6ce5b4f7e52749b5734b3f84cc63944eb0f0))
 - update CHANGELOG.md [skip ci] ([`fc2faad`](https://github.com/dstroy0/ProtoCore/commit/fc2faadb8ea1640b419600b2c4d9c7206d025625))
 - update test report + coverage [skip ci] ([`27c6f6d`](https://github.com/dstroy0/ProtoCore/commit/27c6f6d0a885bd88303bd172833e14aeec392c87))
