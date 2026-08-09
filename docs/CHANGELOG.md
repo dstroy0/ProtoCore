@@ -6,6 +6,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the plaintext arena covers the SSH receive nest with compression on ([`c52778f`](https://github.com/dstroy0/ProtoCore/commit/c52778f58d81ae94598ff59aa640b4724d84834f))
+- the two PC_key_max macros get distinct names at file scope ([`ce3b887`](https://github.com/dstroy0/ProtoCore/commit/ce3b8873b9d5f05f2765ce78078cffeb978073d0))
 - the compression buffers are wiped when the slot is reset ([`78852ff`](https://github.com/dstroy0/ProtoCore/commit/78852ff889ecb505d896b4015eeb8606139b74cc))
 - pc_ssh_conn_send reports a refused queue instead of claiming the bytes went ([`cd435b1`](https://github.com/dstroy0/ProtoCore/commit/cd435b1b660b08b9527573a1d160b5c4844c71ff))
 - a half-finished keyboard-interactive exchange dies with its connection ([`ad9cbc4`](https://github.com/dstroy0/ProtoCore/commit/ad9cbc4374918a73ab70d29cc8baa654b9f56f70))
