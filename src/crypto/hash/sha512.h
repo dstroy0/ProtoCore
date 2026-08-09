@@ -48,6 +48,8 @@ typedef struct
     uint64_t *fs;   ///< Caller storage: the state copy the padded blocks compress into.
     uint32_t rxlen; ///< Bytes valid in rx.
 } pc_sha512_ctx;
+// The three pointers above are the caller's, so a struct copy aliases the original's storage and
+// finalizing the copy writes through it. final() leaves the context running, so read it in place.
 #endif
 
 PROTO_BEGIN_DECLS
