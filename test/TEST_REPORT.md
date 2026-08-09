@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-09 22:24:20
+**Generated:** 2026-08-09 22:27:15
 **Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 6181 passed - 0s
+**Result:** ✅ 6186 passed - 0s
 
 ---
 
@@ -2214,7 +2214,7 @@ _SSH keyboard-interactive authentication tests (RFC 4256): the server sends one 
 
 ---
 
-## test_ssh_pqc - native_ssh_pqc - ✅ 5 passed
+## test_ssh_pqc - native_ssh_pqc - ✅ 10 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -2224,10 +2224,15 @@ _End-to-end test of the mlkem768x25519-sha256 SSH hybrid key exchange (draft-iet
 |   # | Test                                             | Status | Description                               |
 | --: | :----------------------------------------------- | :----: | :---------------------------------------- |
 |   1 | `test_decaps_ref_matches_kat`                    |   ✅   | Decaps ref matches kat                    |
-|   2 | `test_kex_generate_per_method`                   |   ✅   | Kex generate per method                   |
-|   3 | `test_kexinit_advertises_both_hybrids_first`     |   ✅   | Kexinit advertises both hybrids first     |
-|   4 | `test_hybrid_init_malformed_rejected`            |   ✅   | Hybrid init malformed rejected            |
-|   5 | `test_hybrid_rejects_low_order_point_and_bad_ek` |   ✅   | Hybrid rejects low order point and bad ek |
+|   2 | `test_hybrid_negotiated`                         |   ✅   | Hybrid negotiated                         |
+|   3 | `test_hybrid_absent_falls_back`                  |   ✅   | Hybrid absent falls back                  |
+|   4 | `test_hybrid_kex_end_to_end`                     |   ✅   | Hybrid kex end to end                     |
+|   5 | `test_kex_generate_per_method`                   |   ✅   | Kex generate per method                   |
+|   6 | `test_kexinit_advertises_both_hybrids_first`     |   ✅   | Kexinit advertises both hybrids first     |
+|   7 | `test_sntrup761_hybrid_kex_end_to_end`           |   ✅   | Sntrup761 hybrid kex end to end           |
+|   8 | `test_classical_dh_kex_in_pqc_build`             |   ✅   | Classical dh kex in pqc build             |
+|   9 | `test_hybrid_init_malformed_rejected`            |   ✅   | Hybrid init malformed rejected            |
+|  10 | `test_hybrid_rejects_low_order_point_and_bad_ek` |   ✅   | Hybrid rejects low order point and bad ek |
 
 </details>
 
