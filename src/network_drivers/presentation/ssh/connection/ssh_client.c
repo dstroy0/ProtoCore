@@ -435,7 +435,7 @@ static const pc_field LOG_TUNNEL_UP[] = {
 
 static void cli_fail(const char *why)
 {
-    PC_LOGW(LOG_TUNNEL_FAIL, why);
+    PC_LOGW(LOG_TUNNEL_FAIL, ((const pc_fval[]){PC_VSTR(why)}), 1);
     s_cli.phase = CLI_PHASE_FAILED;
     s_cli.state = PC_TUN_FAILED;
     for (int i = 0; i < PC_SSH_CLIENT_MAX_CHANNELS; i++)
@@ -656,7 +656,9 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     s_cli.hostkey = (CliHostkey)hi; // HOSTKEY_NAMES order == CliHostkey order
     static const uint8_t cipher_of[] = {SSH_CIPHER_CHACHA20POLY1305, SSH_CIPHER_AES256GCM, SSH_CIPHER_AES256CTR};
     s_cli.cipher = cipher_of[ci];
-    PC_LOGI(LOG_TUNNEL_NEGOTIATED, KEX_NAMES[ki], HOSTKEY_NAMES[hi], CIPHER_NAMES[ci]);
+    PC_LOGI(LOG_TUNNEL_NEGOTIATED,
+            ((const pc_fval[]){PC_VSTR(KEX_NAMES[ki]), PC_VSTR(HOSTKEY_NAMES[hi]), PC_VSTR(CIPHER_NAMES[ci])}),
+            3);
 
     s_cli.mac = SSH_MAC_HMAC_SHA256;
     if (s_cli.cipher == SSH_CIPHER_AES256CTR)
@@ -1236,7 +1238,8 @@ static void handle_channel_open(const uint8_t *p, size_t len)
 
     // Open the local bridge connection (to the device's own service).
     int lc = Tcp.client->open("127.0.0.1", s_cli.cfg.local_port, 3000);
-    PC_LOGD(LOG_TUNNEL_FWD_OPEN, (uint32_t)s_cli.cfg.local_port, (int64_t)lc);
+    PC_LOGD(LOG_TUNNEL_FWD_OPEN,
+            ((const pc_fval[]){PC_VU32((uint32_t)s_cli.cfg.local_port), PC_VI64((int64_t)lc)}), 2);
     if (lc < 0)
     {
         uint8_t out[64];
@@ -1496,7 +1499,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         {
             s_cli.phase = CLI_PHASE_OPEN;
             s_cli.state = PC_TUN_UP;
-            PC_LOGI(LOG_TUNNEL_UP, (uint32_t)s_cli.cfg.bind_port);
+            PC_LOGI(LOG_TUNNEL_UP, ((const pc_fval[]){PC_VU32((uint32_t)s_cli.cfg.bind_port)}), 1);
         }
         else if (type == SSH_MSG_REQUEST_FAILURE)
         {
