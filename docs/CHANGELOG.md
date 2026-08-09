@@ -6,6 +6,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the key schedule leaked a persistent borrow per handshake ([`7aa25f1`](https://github.com/dstroy0/ProtoCore/commit/7aa25f1f35bc3e007b99389217d88d1f97d5e64e))
+- the key schedule leaked a persistent borrow per handshake ([`a8421f3`](https://github.com/dstroy0/ProtoCore/commit/a8421f3dfcbbb89d0c65b3b9d17b59bc85fd4ca0))
 - available() and read() step the open, so a polling caller advances its connect ([`deea2e7`](https://github.com/dstroy0/ProtoCore/commit/deea2e7fad2648557d3ed6fed2fd64a12f765b80))
 - four vendor components become capabilities, named for what they include ([`2d5346a`](https://github.com/dstroy0/ProtoCore/commit/2d5346a157a1a8c97db0d487635d26d6e4cd31b6))
 - external-RAM placement selects on PC_HAS_PSRAM ([`c5632da`](https://github.com/dstroy0/ProtoCore/commit/c5632dad43946360c29cc10aeda5c4f585f532c2))
@@ -21,6 +23,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`22f4982`](https://github.com/dstroy0/ProtoCore/commit/22f498281aa2fda923aa2588d9737805e73fe2e9))
 - update CHANGELOG.md [skip ci] ([`4200687`](https://github.com/dstroy0/ProtoCore/commit/4200687663b641b820da583ca3a62df2b7063a82))
 - update test report + coverage [skip ci] ([`08496d1`](https://github.com/dstroy0/ProtoCore/commit/08496d1c31dc1761d1c2abab314dc070cdf3e71e))
 - update CHANGELOG.md [skip ci] ([`06b9e5b`](https://github.com/dstroy0/ProtoCore/commit/06b9e5ba4d87e8d35d63b3d0eacff473c14f1dde))
@@ -80,6 +83,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6460cf6`](https://github.com/dstroy0/ProtoCore/commit/6460cf6fdfc8b9dadaa2dafdab558e3dfa0572bc))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4be7e49`](https://github.com/dstroy0/ProtoCore/commit/4be7e49cdcbcbe87db836f55f5487e8981061ef3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cb7845d`](https://github.com/dstroy0/ProtoCore/commit/cb7845d706007dc622a78ed0f66ffc7cc5e92339))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`bccef65`](https://github.com/dstroy0/ProtoCore/commit/bccef653ff85aea8200a43f466173c3340ceaa25))
