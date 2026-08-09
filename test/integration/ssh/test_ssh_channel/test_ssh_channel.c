@@ -466,8 +466,13 @@ void test_inbound_close_routes_to_channel()
     uint8_t out[16];
     size_t olen = 0;
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_close(0, pkt, 5, out, &olen, sizeof(out)));
+    // RFC 4254 sec 5.3: the peer's CLOSE MUST be answered with a CLOSE of our own, so both halves are
+    // framed - EOF then CLOSE, each carrying the peer's channel number.
+    TEST_ASSERT_EQUAL_size_t(10, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_EOF, out[0]);
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1));
+    TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_CLOSE, out[5]);
+    TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 6));
     TEST_ASSERT_FALSE(ssh_chan[0][id].open);
 }
 

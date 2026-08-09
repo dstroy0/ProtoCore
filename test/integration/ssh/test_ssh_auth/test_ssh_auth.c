@@ -511,6 +511,47 @@ void test_pubkey_without_session_id_fails()
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
 }
 
+// RFC 4252 sec 7 / RFC 4251 sec 9.3.3: the session id leads the signed blob so a signature captured in
+// one session cannot be replayed into another. The same otherwise-valid request fails under a different
+// session id.
+void test_pubkey_signature_not_replayable_across_sessions()
+{
+    pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
+    set_session_id_0_to_31();
+    ssh_sess[0].session_id[0] ^= 0xFF; // a different session's exchange hash
+    ssh_sess[0].authed = PROTO_FALSE;
+
+    uint8_t blob[512], sig[256];
+    size_t blob_len = hexdec(PK_BLOB_HEX, blob);
+    size_t sig_len = hexdec(PK_SIG_HEX, sig);
+
+    uint8_t pkt[1024];
+    size_t n = build_pubkey_req(pkt, blob, blob_len, sig, sig_len, PROTO_TRUE);
+    uint8_t out[64];
+    size_t olen = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
+    TEST_ASSERT_FALSE(ssh_sess[0].authed);
+}
+
+// RFC 4252 sec 5.2: the "none" method MUST NOT be listed as one the server supports.
+void test_failure_does_not_advertise_none()
+{
+    uint8_t out[64];
+    size_t olen = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), PROTO_FALSE));
+    proto_bool advertised = PROTO_FALSE;
+    for (size_t k = 0; k + 4 <= olen; k++)
+    {
+        if (memcmp(out + k, "none", 4) == 0)
+        {
+            advertised = PROTO_TRUE;
+            break;
+        }
+    }
+    TEST_ASSERT_FALSE(advertised);
+}
+
 // Encode an SSH mpint from a big-endian value (strip leading zeros, prepend 0x00 if the
 // high bit is set). Returns bytes written.
 static size_t put_mpint(uint8_t *p, const uint8_t *v, size_t vlen)
@@ -1371,6 +1412,8 @@ int main()
     RUN_TEST(test_handle_request_no_callback_fails);
     RUN_TEST(test_pubkey_probe_returns_pk_ok);
     RUN_TEST(test_pubkey_without_session_id_fails);
+    RUN_TEST(test_pubkey_signature_not_replayable_across_sessions);
+    RUN_TEST(test_failure_does_not_advertise_none);
     RUN_TEST(test_pubkey_valid_signature_succeeds);
     RUN_TEST(test_pubkey_rsa_sha512_signature_succeeds);
     RUN_TEST(test_pubkey_ecdsa_signature_succeeds);
