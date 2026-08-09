@@ -1083,6 +1083,41 @@ static void pkt_roundtrip(uint8_t cipher_mode, uint8_t mac_mode, proto_bool clie
     TEST_ASSERT_EQUAL_INT(1, g_pkt_calls);
 }
 
+// RFC 5647 sec 7.1: the invocation counter is incremented after every packet. Every other GCM test
+// frames one packet per key install, which cannot observe that - the counter could be deleted and
+// they would all still pass, because a receiver reusing nonce zero decrypts a sender reusing nonce
+// zero perfectly. What catches it is two packets under one install: the same plaintext must not seal
+// to the same bytes.
+void test_ssh_pkt_gcm_nonce_advances_per_packet()
+{
+    static uint8_t w1[SSH_WIRE_CAP];
+    static uint8_t w2[SSH_WIRE_CAP];
+    uint8_t payload[16];
+    memset(payload, 0x5E, sizeof(payload));
+    payload[0] = SSH_MSG_IGNORE;
+
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
+    uint8_t iv_before[PC_AES256CTR_CTR_LEN];
+    memcpy(iv_before, ssh_keys[0].aes_iv_s2c, sizeof(iv_before));
+
+    size_t n1 = 0;
+    size_t n2 = 0;
+    TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, payload, sizeof(payload), w1, &n1, sizeof(w1)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, payload, sizeof(payload), w2, &n2, sizeof(w2)));
+
+    TEST_ASSERT_EQUAL_size_t(n1, n2);
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(iv_before, ssh_keys[0].aes_iv_s2c, sizeof(iv_before)));
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(w1, w2, n1)); // nonce reuse would make these identical
+
+    // And the receive counter advances in step, so both open in order.
+    ssh_pkt[0].seq_no_recv = 0;
+    ssh_pkt[0].rx_len = 0;
+    g_pkt_calls = 0;
+    TEST_ASSERT_EQUAL_INT(0, ssh_pkt_recv(0, w1, n1, pkt_rec_handler));
+    TEST_ASSERT_EQUAL_INT(0, ssh_pkt_recv(0, w2, n2, pkt_rec_handler));
+    TEST_ASSERT_EQUAL_INT(2, g_pkt_calls);
+}
+
 // ssh_pkt_set_client flips the slot onto the client key mapping and ignores an out-of-range slot;
 // a payload whose framed size is already a multiple of 16 takes the zero-remainder padding path
 // (which then still has to grow to the RFC 4253 §6 four-byte minimum).
@@ -1411,6 +1446,7 @@ int main()
     RUN_TEST(test_ssh_pkt_encrypted_roundtrip_and_mac_fail);
     RUN_TEST(test_ssh_pkt_client_role_and_zero_remainder_padding);
     RUN_TEST(test_ssh_pkt_client_role_all_cipher_modes);
+    RUN_TEST(test_ssh_pkt_gcm_nonce_advances_per_packet);
     RUN_TEST(test_ssh_pkt_aesgcm_minimum_padding);
     RUN_TEST(test_ssh_pkt_chachapoly_frame_errors);
     RUN_TEST(test_ssh_pkt_aesgcm_frame_errors);
