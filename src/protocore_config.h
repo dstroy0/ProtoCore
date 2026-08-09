@@ -7546,12 +7546,15 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
 /**
  * @brief Re-key when either packet sequence number reaches this value.
  *
- * RFC 4253 §9 recommends re-keying after ~1 GB or one hour. A packet-count proxy is used
- * here; the default is well below SSH_SEQ_CLOSE_THRESHOLD so a re-key always happens before
- * the sequence number can wrap.
+ * Two bounds govern one key, and the tighter one binds. RFC 4253 sec 9 gives a gigabyte of
+ * transmitted data; RFC 4344 sec 3.2 gives 2^32 blocks, which for a 16-byte block is 64 GiB. The
+ * gigabyte is reached first, so the count is that divided by the largest packet this build can put
+ * on the wire: the payload buffer, the compressor's worst-case expansion of it, and framing plus the
+ * largest MAC tag. Also far below SSH_SEQ_CLOSE_THRESHOLD, so a re-key always precedes a sequence
+ * wrap. A packet count is what the check has, so the byte bound is expressed as one here.
  */
 #ifndef SSH_REKEY_PACKET_THRESHOLD
-#define SSH_REKEY_PACKET_THRESHOLD 0x40000000u
+#define SSH_REKEY_PACKET_THRESHOLD ((uint32_t)(0x40000000u / (SSH_PKT_BUF_SIZE + (SSH_PKT_BUF_SIZE >> 3) + 128u)))
 #endif
 /**
  * @brief Elapsed-time re-key trigger in milliseconds (RFC 4253 §9: "after each hour"). Default 1 hour.
