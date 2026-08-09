@@ -78,6 +78,9 @@ static const uint32_t K256[64] = {
     0x748f82eeu, 0x78a5636fu, 0x84c87814u, 0x8cc70208u, 0x90befffau, 0xa4506cebu, 0xbef9a3f7u, 0xc67178f2u,
 };
 
+// Where the 64-bit message length sits in the final block (FIPS 180-4 §5.1.1).
+#define SHA256_LEN_OFF (PC_SHA256_BLOCK_LEN - 8u)
+
 static const uint32_t H0[8] = {
     0x6a09e667u, 0xbb67ae85u, 0x3c6ef372u, 0xa54ff53au, 0x510e527fu, 0x9b05688cu, 0x1f83d9abu, 0x5be0cd19u,
 };
@@ -149,13 +152,10 @@ static void sha256_block(uint32_t h[8], const uint8_t blk[64])
 
 void pc_sha256_init(pc_sha256_ctx *ctx)
 {
-    for (int i = 0; i < 8; i++)
-    {
-        ctx->s[i] = H0[i];
-    }
+    mem.cpy(ctx->s, H0, sizeof(H0));
     ctx->n = 0;
     ctx->buflen = 0;
-    mem.set(ctx->buf, 0, sizeof(ctx->buf));
+    mem.zero(ctx->buf, sizeof(ctx->buf));
 }
 
 void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
@@ -163,14 +163,17 @@ void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
     ctx->n += len;
     while (len > 0)
     {
-        uint32_t space = PC_SHA256_BLOCK_LEN - ctx->buflen;
-        uint32_t take = (uint32_t)len < space ? (uint32_t)len : space;
+        uint32_t take = PC_SHA256_BLOCK_LEN - ctx->buflen;
+        if (len < take)
+        {
+            take = (uint32_t)len;
+        }
         uint8_t *fill = ctx->buf + ctx->buflen;
         mem.cpy(fill, data, take);
         ctx->buflen += take;
         data += take;
         len -= take;
-        if (ctx->buflen == 64)
+        if (ctx->buflen == PC_SHA256_BLOCK_LEN)
         {
             sha256_block(ctx->s, ctx->buf);
             ctx->buflen = 0;
@@ -184,22 +187,18 @@ void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
 
     ctx->buf[ctx->buflen++] = 0x80;
 
-    if (ctx->buflen > 56)
+    // The bit length occupies the block's last 8 bytes, so a mark past that offset takes its own block.
+    if (ctx->buflen > SHA256_LEN_OFF)
     {
-        while (ctx->buflen < 64)
-        {
-            ctx->buf[ctx->buflen++] = 0x00;
-        }
+        uint8_t *pad = ctx->buf + ctx->buflen;
+        mem.zero(pad, PC_SHA256_BLOCK_LEN - ctx->buflen);
         sha256_block(ctx->s, ctx->buf);
         ctx->buflen = 0;
     }
 
-    while (ctx->buflen < 56)
-    {
-        ctx->buf[ctx->buflen++] = 0x00;
-    }
-
-    pc_wr64be(ctx->buf + 56, bitlen);
+    uint8_t *pad = ctx->buf + ctx->buflen;
+    mem.zero(pad, SHA256_LEN_OFF - ctx->buflen);
+    pc_wr64be(ctx->buf + SHA256_LEN_OFF, bitlen);
     sha256_block(ctx->s, ctx->buf);
 
     for (int i = 0; i < 8; i++)
