@@ -572,7 +572,8 @@ void test_dh_derive_keys_default_wrapper_and_slot_guard(void)
     ssh_keymat_wipe(0);
 
     // Out-of-range slot: must not crash and must not touch any real slot's state.
-    ssh_dh_derive_keys_sid(MAX_SSH_CONNS, K, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
+    ssh_dh_derive_keys_sid(MAX_SSH_CONNS, K, H, H, SSH_CIPHER_AES256CTR, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256,
+                           SSH_MAC_HMAC_SHA256, PROTO_FALSE,
                            PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 }
 
@@ -593,14 +594,16 @@ void test_dh_derive_keys_chachapoly_and_gcm_branches(void)
     }
 
     ssh_keymat_wipe(0);
-    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
+    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_CHACHA20POLY1305, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256,
+                           SSH_MAC_HMAC_SHA256, PROTO_FALSE,
                            PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode_c2s);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode_s2c);
 
     ssh_keymat_wipe(0);
-    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256,
+                           SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                            PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode_c2s);

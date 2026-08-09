@@ -1448,7 +1448,8 @@ void test_kdf_edge_paths_and_slot_guards()
     // The chacha20-poly1305 branch derives two 512-bit keys and installs no separate MAC key.
     uint8_t K[256] = {0};
     K[0] = 0x42; // nonzero shared secret
-    ssh_dh_derive_keys_sid(0, K, H, H, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
+    ssh_dh_derive_keys_sid(0, K, H, H, SSH_CIPHER_CHACHA20POLY1305, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256,
+                           SSH_MAC_HMAC_SHA256, PROTO_FALSE,
                            PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode_c2s);
@@ -1517,7 +1518,8 @@ void test_dh_derive_keys_gcm_installs()
         sid[j] = (uint8_t)(0x90 + j);
     }
 
-    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256,
+                           SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                            PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode_c2s);
