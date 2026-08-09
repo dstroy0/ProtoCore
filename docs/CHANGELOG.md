@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- PC_WORK_SSH_CONN carries the flight, and the crypto work it already borrowed ([`68645ad`](https://github.com/dstroy0/ProtoCore/commit/68645ade9b86aa9609a31efdad362e90a01e1777))
 - the slot holds a flight, so the second packet of a dispatch is not dropped ([`9a5499f`](https://github.com/dstroy0/ProtoCore/commit/9a5499f6c0853c13b8b88d9e1ffe51a5db65c3af))
 - a 2-byte over-read on the wire, two dead stdio includes, three unchecked spans ([`4e71254`](https://github.com/dstroy0/ProtoCore/commit/4e712544648f1f29ed4ea2db2e28f4626c82366f))
 - the scalar and the nonce do not outlive the signature ([`447c799`](https://github.com/dstroy0/ProtoCore/commit/447c799494b8e78a2759a00c35e6dd054285bd35))
@@ -37,6 +38,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`f3a406c`](https://github.com/dstroy0/ProtoCore/commit/f3a406c9f071f9d0fe37cee35075514a9268d991))
 - update CHANGELOG.md [skip ci] ([`18927f8`](https://github.com/dstroy0/ProtoCore/commit/18927f8b2c2f6db52244944d65e9867c99edb962))
 - update test report + coverage [skip ci] ([`dc8c9af`](https://github.com/dstroy0/ProtoCore/commit/dc8c9af2f6ee5b1afad9abb08aa7fa7baac5fe1d))
 - update CHANGELOG.md [skip ci] ([`8dc4f02`](https://github.com/dstroy0/ProtoCore/commit/8dc4f02bd740b8965c7512a7ab07abf5293adeb5))
