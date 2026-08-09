@@ -1532,13 +1532,18 @@ void test_scp_exec_match_and_missing_cb()
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 
-    const char *not_scp[3] = {"ls", "scpX -t /x", NULL};
-    for (int k = 0; k < 3; k++)
+    const char *not_scp[2] = {"ls", "scpX -t /x"};
+    for (int k = 0; k < 2; k++)
     {
-        n = make_chan_request(rq, id, "exec", not_scp[k], not_scp[k] == NULL);
+        n = make_chan_request(rq, id, "exec", not_scp[k], PROTO_FALSE);
         TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]); // exec is accepted, just not tagged SCP
     }
+    // An exec that declares a command length with none of its bytes present is not the request it
+    // names (RFC 4254 sec 6.5), so it is refused rather than accepted untagged.
+    n = make_chan_request(rq, id, "exec", NULL, PROTO_TRUE);
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, pc_scp_open_count);
 
     // Data on the untagged channel is still ordinary session data.

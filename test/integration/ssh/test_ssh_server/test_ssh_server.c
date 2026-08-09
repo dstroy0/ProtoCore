@@ -763,12 +763,19 @@ void test_ssh_global_request_reply()
     TEST_ASSERT_EQUAL_INT(1, emt_n); // a REQUEST_SUCCESS or REQUEST_FAILURE was emitted
 }
 
-// WINDOW_ADJUST and CHANNEL_EOF are accepted (no reply, returns 0).
+// WINDOW_ADJUST and CHANNEL_EOF are accepted once authenticated (no reply, returns 0), and refused
+// before authentication like every other channel message (RFC 4254 sec 5).
 void test_ssh_window_adjust_and_eof()
 {
     uint8_t w[9] = {SSH_MSG_CHANNEL_WINDOW_ADJUST, 0, 0, 0, 0, 0, 0, 0, 10};
-    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, w[0], w, sizeof(w)));
     uint8_t e[5] = {SSH_MSG_CHANNEL_EOF, 0, 0, 0, 0};
+
+    ssh_sess[0].authed = PROTO_FALSE;
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, w[0], w, sizeof(w)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, e[0], e, sizeof(e)));
+
+    ssh_sess[0].authed = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, w[0], w, sizeof(w)));
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, e[0], e, sizeof(e)));
 }
 
