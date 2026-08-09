@@ -585,7 +585,11 @@
     },
     "native_ssh_pqc": {
       "desc": "mlkem768x25519-sha256 SSH hybrid KEX (draft-ietf-sshm-mlkem-hybrid-kex) end to end: the\nfull SSH transport built with PC_ENABLE_PQC_KEX=1 plus the ML-KEM-768 / SHA-3 core. Verifies the\nhybrid is negotiated, then runs a real server-side key exchange and checks it as a conforming client\nwould - ML-KEM Decaps (an independent reference) + X25519, K = SHA256(K_PQ || K_CL), the string-K\nexchange hash and KDF, and the ed25519 signature over H.",
-      "flags": ["-DPC_SSH_MAX_CHANNELS=3", "-DPC_ENABLE_PQC_KEX=1"],
+      "flags": [
+        "-DPC_ENABLE_SSH=1",
+        "-DPC_SSH_MAX_CHANNELS=3",
+        "-DPC_ENABLE_PQC_KEX=1"
+      ],
       "src": [
         "+<crypto/hash/sha256.c>",
         "+<crypto/mac/hmac_sha256.c>",
