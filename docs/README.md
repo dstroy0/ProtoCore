@@ -1613,7 +1613,6 @@ guards at compile time.
 | `SSH_PKT_BUF_SIZE` | `2048` | Packet assembly buffer per SSH connection (bytes). |
 | `SSH_REKEY_PACKET_THRESHOLD` | `0x40000000u` | Re-key when either packet sequence number reaches this value. |
 | `SSH_REKEY_TIME_MS` | `3600000u` | Elapsed-time re-key trigger in milliseconds (RFC 4253 §9: "after each hour"). |
-| `SSH_TX_FLIGHT_PACKETS` | `2u` |  |
 | `TELNET_BUF_SIZE` | `256` | Stack buffer for one Telnet I/O chunk. |
 | `TERM_TX_BUF_SIZE` | `256` | Stack scratch for pc_web_terminal_println() line building. |
 | `WS_FRAME_SIZE` | `512` | Maximum WebSocket frame payload in bytes. |
