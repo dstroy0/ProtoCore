@@ -6,7 +6,7 @@
  * @brief Share a warm edge cache across a fleet (PC_ENABLE_EDGE_MESH).
  *
  * Two (or more) edge nodes form a sibling cache: on a cold local miss a node asks its configured peers
- * over a plaintext ConnProto::PROTO_MESH link before hitting the origin, and pulls a fresh copy from
+ * over a plaintext ProtoConn::PROTO_MESH link before hitting the origin, and pulls a fresh copy from
  * whichever peer already has it - so the origin is fetched once per fleet, not once per node. The pull
  * carries the object's freshness/age, so a sibling-fresh object is served for its remaining lifetime with
  * zero origin contact. A serving node answers only from its LOCAL cache (one hop - it never re-queries its

@@ -631,18 +631,18 @@ void ws_dispatch_close(const WsConn *ws);
  * need multiple ports (e.g., HTTP on 80 and Telnet on 23).
  *
  * @code
- * server.listen(80, ConnProto::PROTO_HTTP);
- * server.listen(23, ConnProto::PROTO_TELNET);
+ * server.listen(80, ProtoConn::PROTO_HTTP);
+ * server.listen(23, ProtoConn::PROTO_TELNET);
  * server.begin();
  * @endcode
  *
  * @param port  TCP port to open.
- * @param proto Application protocol; defaults to ConnProto::PROTO_HTTP.
+ * @param proto Application protocol; defaults to ProtoConn::PROTO_HTTP.
  * @return the listener id (a non-negative index) on success - pass it to
  *         pc_relay_publish() / pc_ssh_forward_begin(); PC_ERR_LISTENER_FULL if the pool is
  * full.
  */
-int32_t listen(uint16_t port, ConnProto proto);
+int32_t listen(uint16_t port, ProtoConn proto);
 
 /**
  * @brief Initialize all connection slots and open all registered listeners.

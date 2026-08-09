@@ -49,7 +49,7 @@ variables show up in a client's address-space tree.
 pc_opcua_set_read_handler(pc_opcua_read);
 pc_opcua_set_write_handler(pc_opcua_write);
 pc_opcua_set_browse_handler(pc_opcua_browse);
-server.listen(4840, ConnProto::PROTO_OPCUA); // before begin() - it activates the listeners
+server.listen(4840, ProtoConn::PROTO_OPCUA); // before begin() - it activates the listeners
 server.begin(80);
 ```
 
@@ -167,7 +167,7 @@ void setup()
     pc_opcua_set_read_handler(pc_opcua_read);     // serve Reads for ns=1;i=1..3,10
     pc_opcua_set_write_handler(pc_opcua_write);   // accept Writes to ns=1;i=10 (the setpoint)
     pc_opcua_set_browse_handler(pc_opcua_browse); // list those under the Objects folder
-    server.listen(4840, ConnProto::PROTO_OPCUA);       // OPC UA Binary endpoint - before begin() (it activates listeners)
+    server.listen(4840, ProtoConn::PROTO_OPCUA);       // OPC UA Binary endpoint - before begin() (it activates listeners)
     server.begin(80);
     Serial.println("OPC UA endpoint: opc.tcp://<ip>:4840 (handshake + SecureChannel + Session + Read/Write + Browse)");
 }

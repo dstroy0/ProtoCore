@@ -14,7 +14,7 @@
  *         uint16 write_len (big-endian) || uint16 read_len (big-endian) || write_bytes[write_len]
  *     and gets back the read_len bytes clocked off the bus. This is what master-initiated buses need.
  *
- * Wiring mirrors the relay: `listen(port, ConnProto::PROTO_BRIDGE)` opens the port, then
+ * Wiring mirrors the relay: `listen(port, ProtoConn::PROTO_BRIDGE)` opens the port, then
  * `pc_iface_bridge_publish()` binds it to a target and brings the bus up. The server poll loop does the rest.
  *
  * Edit the lines marked "CHANGE ME", flash, open Serial @ 115200, then from another machine:

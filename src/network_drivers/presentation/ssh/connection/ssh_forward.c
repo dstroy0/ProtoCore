@@ -351,7 +351,7 @@ static void on_forward_confirm(uint8_t ssh_slot, uint32_t channel, proto_bool ok
 }
 
 // ---------------------------------------------------------------------------
-// ConnProto::PROTO_SSH_RFWD handler: an inbound connection on a forwarded port.
+// ProtoConn::PROTO_SSH_RFWD handler: an inbound connection on a forwarded port.
 // ---------------------------------------------------------------------------
 
 static void rfwd_on_accept(uint8_t conn_slot)

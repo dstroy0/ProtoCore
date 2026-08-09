@@ -3,7 +3,7 @@
 //
 // On-device CCOUNT microbenchmark for the OPC UA Binary server codec (services/fieldbus/opcua): the pure,
 // heap-free, stdlib-free UACP framing + built-in-type codec + service builders that OPC UA Part 6
-// defines. Benched here are the six hottest pure paths a ConnProto::PROTO_OPCUA connection drives:
+// defines. Benched here are the six hottest pure paths a ProtoConn::PROTO_OPCUA connection drives:
 //   - pc_opcua_parse_hello   : parse a client `HEL` (UACP header + the five negotiated sizes),
 //   - pc_opcua_build_ack     : negotiate buffer sizes down to PC_OPCUA_BUF and emit the `ACK`,
 //   - pc_opcua_parse_open    : parse an `OPN` OpenSecureChannelRequest (SecurityPolicy None),

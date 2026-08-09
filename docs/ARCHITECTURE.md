@@ -191,7 +191,7 @@ _other_ axis: how each application protocol attaches to that plumbing. The rule 
 the same - one uniform seam - and it is mostly, but not fully, met.
 
 **The seam - `ProtoHandler` (`session/proto_handler.h`).** A connection-oriented (TCP)
-protocol is a vtable of four nullable callbacks keyed by `ConnProto`:
+protocol is a vtable of four nullable callbacks keyed by `ProtoConn`:
 
 ```c
 struct ProtoHandler { on_accept; on_data; on_close; on_poll; }; // all take a slot index

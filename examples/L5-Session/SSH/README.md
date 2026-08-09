@@ -15,7 +15,7 @@ then `begin()` (no port argument needed when you have explicitly added
 listeners):
 
 ```cpp
-server.listen(22, ConnProto::PROTO_SSH);
+server.listen(22, ProtoConn::PROTO_SSH);
 int32_t result = server.begin();
 pc_ssh_conn_setup();   // one-time wiring of the SSH dispatcher's outbound path (after begin)
 ```
@@ -198,7 +198,7 @@ void setup()
     pc_ssh_channel_set_data_cb(ssh_on_data);
 
     // Listen for SSH on port 22 (and, optionally, HTTP on 80 alongside it).
-    server.listen(22, ConnProto::PROTO_SSH);
+    server.listen(22, ProtoConn::PROTO_SSH);
     int32_t result = server.begin();
     if (result < 0)
     {

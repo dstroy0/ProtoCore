@@ -54,7 +54,7 @@ PROTO_BEGIN_DECLS
 typedef struct
 {
     uint16_t port;                        ///< TCP port this listener binds.
-    ConnProto proto;                      ///< Application protocol for all connections accepted here.
+    ProtoConn proto;                      ///< Application protocol for all connections accepted here.
     pc_pcb *listen_pcb;                   ///< lwIP listen PCB; NULL when inactive.
     pc_platform_queue_ctrl _queue_struct; ///< Static queue descriptor.
     uint8_t _queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]; ///< Queue backing store.
@@ -116,8 +116,8 @@ typedef struct
     void (*stop)(uint8_t idx);
     void (*stop_all)(void);
     void (*stop_dynamic)(uint8_t idx);
-    int32_t (*add)(uint8_t idx, uint16_t port, ConnProto proto, proto_bool tls);
-    int32_t (*add_dynamic)(uint8_t idx, uint16_t port, ConnProto proto);
+    int32_t (*add)(uint8_t idx, uint16_t port, ProtoConn proto, proto_bool tls);
+    int32_t (*add_dynamic)(uint8_t idx, uint16_t port, ProtoConn proto);
     proto_bool (*enqueue)(uint8_t listener_id, const TcpEvt *evt);
 #if PC_ENABLE_DIFFSERV
     proto_bool (*set_dscp)(uint16_t port, uint8_t dscp);

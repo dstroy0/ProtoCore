@@ -71,7 +71,7 @@ void pc_edge_cache_bind_sd(struct pc_dbm *dbm);
  * @brief Add a sibling peer to query on a full local miss before hitting the origin (mesh sibling cache).
  *
  * On a cold miss the cache asks each configured peer (in order, first hit wins) over a plaintext
- * ConnProto::PROTO_MESH link and, if a peer holds a fresh copy, pulls and serves it (age propagated) without
+ * ProtoConn::PROTO_MESH link and, if a peer holds a fresh copy, pulls and serves it (age propagated) without
  * hitting the origin. @p host is a sibling's address, @p port the port it serves PROTO_MESH on. @return false
  * if the peer table is full or @p host is empty / too long. Pull-only: no push, no invalidation.
  */
@@ -80,7 +80,7 @@ proto_bool pc_edge_cache_add_peer(const char *host, uint16_t port);
 /**
  * @brief Serve sibling queries: register the PROTO_MESH handler so this node answers a peer's content-addressed
  *        request from its LOCAL cache (one hop - never re-queries this node's own origin or peers). Open the
- *        port first with `listen(port, ConnProto::PROTO_MESH)`. Call once.
+ *        port first with `listen(port, ProtoConn::PROTO_MESH)`. Call once.
  */
 void pc_edge_cache_mesh_serve(void);
 #endif

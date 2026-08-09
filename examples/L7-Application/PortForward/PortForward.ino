@@ -10,7 +10,7 @@
  * is DNAT / reverse port forwarding - e.g. expose a machine on a locked-down segment through the
  * device that bridges the two networks.
  *
- * Wiring is two calls: `listen(FRONT_PORT, ConnProto::PROTO_RELAY)` opens the front port, and
+ * Wiring is two calls: `listen(FRONT_PORT, ProtoConn::PROTO_RELAY)` opens the front port, and
  * `pc_relay_publish()` binds it to the origin. The server's own poll loop pumps the bytes.
  *
  * Edit the lines marked "CHANGE ME" below, flash, and open Serial @ 115200. Then, from another

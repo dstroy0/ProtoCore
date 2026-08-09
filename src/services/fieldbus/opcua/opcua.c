@@ -8,7 +8,7 @@
  * Pure little-endian codec, handshake, OpenSecureChannel, CreateSession/
  * ActivateSession, GetEndpoints, Read/Write (Variant/DataValue), Browse
  * (ReferenceDescription), CloseSession and a ServiceFault fallback; the ESP32 section
- * pumps the ConnProto::PROTO_OPCUA rx ring and answers HEL with ACK, OPN with an
+ * pumps the ProtoConn::PROTO_OPCUA rx ring and answers HEL with ACK, OPN with an
  * OpenSecureChannelResponse, the MSG service calls, and closes on CLO (SecurityPolicy
  * None). No heap, no stdlib.
  */
@@ -1244,7 +1244,7 @@ void pc_opcua_set_browse_handler(OpcUaBrowseHandler fn)
 }
 
 // ---------------------------------------------------------------------------
-// ESP32 TCP server (ConnProto::PROTO_OPCUA)
+// ESP32 TCP server (ProtoConn::PROTO_OPCUA)
 // ---------------------------------------------------------------------------
 #if PC_HAS_NET_STACK
 

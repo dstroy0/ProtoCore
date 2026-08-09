@@ -18,7 +18,7 @@ pc_modbus_set_holding_reg(0, 0x1234);  // client-writable registers
 pc_modbus_set_input_reg(0, 0);         // application-published (read-only to client)
 pc_modbus_on_write(on_write);
 
-server.listen(502, ConnProto::PROTO_MODBUS);   // bind a Modbus listener
+server.listen(502, ProtoConn::PROTO_MODBUS);   // bind a Modbus listener
 server.begin();
 ```
 
@@ -91,7 +91,7 @@ void setup()
     pc_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
     pc_modbus_on_write(on_write);
 
-    server.listen(502, ConnProto::PROTO_MODBUS); // Modbus listener on its own port
+    server.listen(502, ProtoConn::PROTO_MODBUS); // Modbus listener on its own port
     server.begin();
     Serial.println("Modbus TCP slave on :502");
 }

@@ -2258,7 +2258,7 @@ SSH_KEXINIT_S_MAX` guard (which had been marked "never exceeds"). The production
 
 ---
 
-## Protocol dispatch: PROTO_BRIDGE (and any ConnProto id >= 8) silently never registered
+## Protocol dispatch: PROTO_BRIDGE (and any ProtoConn id >= 8) silently never registered
 
 - **Status:** FIXED (2026-07-14). Found while adding `PROTO_NTRIP_CASTER = 9`.
 - **Symptom:** the interface-bridge listener (`PROTO_BRIDGE = 8`, shipped v6.8.0) would accept connections but
@@ -2267,8 +2267,8 @@ SSH_KEXINIT_S_MAX` guard (which had been marked "never exceeds"). The production
   connection.
 - **Root cause:** `PC_PROTO_MAX` (the dispatch-table size) was `8`, and both `proto_register()` and
   `proto_get()` bound-check with `(unsigned)proto < PC_PROTO_MAX`. `PROTO_BRIDGE = 8` fails `8 < 8`, so the
-  handler was neither stored nor fetched. Adding a ConnProto id at/above the table size silently disabled it.
-- **Fix:** raised `PC_PROTO_MAX` to `10` and added a `static_assert((unsigned)ConnProto::PROTO_NTRIP_CASTER
+  handler was neither stored nor fetched. Adding a ProtoConn id at/above the table size silently disabled it.
+- **Fix:** raised `PC_PROTO_MAX` to `10` and added a `static_assert((unsigned)ProtoConn::PROTO_NTRIP_CASTER
 < PC_PROTO_MAX, ...)` next to the enum's config so any future proto that outgrows the table is a compile
   error, not a silent no-op.
 - **Lesson:** a fixed-size table indexed by an enum needs a static_assert pinning the size to the enum's max; an
@@ -2625,7 +2625,7 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
   every endpoint, forever, without rebooting (so no watchdog catches it). A remotely-triggerable permanent DoS.
 - **Root cause (JTAG-confirmed):** `sse_free()` had **zero callers** - dead code. WebSocket teardown is wired
   (`ws_free()` in `protocore.cpp` handle loop), but SSE had no equivalent, so a closed / idle-reaped / aborted
-  SSE stream never released its `sse_pool` entry. An SSE upgrade also leaves the slot as `ConnProto::PROTO_HTTP`
+  SSE stream never released its `sse_pool` entry. An SSE upgrade also leaves the slot as `ProtoConn::PROTO_HTTP`
   (SSE is a long-lived HTTP response, not a protocol switch), so the leaked binding persists on the HTTP slot.
   The kill step is in `http_poll_slot()`: `if (sse_find(i)) return;` skips HTTP dispatch for a slot it believes
   is a live SSE stream. Once `sse_pool` is full of leaked entries (slot_id 0,1), any **new** HTTP connection

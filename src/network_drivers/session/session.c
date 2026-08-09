@@ -37,7 +37,7 @@ typedef struct
 } SessionCtx;
 static SessionCtx s_session;
 
-static void proto_register(ConnProto proto, const ProtoHandler *h)
+static void proto_register(ProtoConn proto, const ProtoHandler *h)
 {
     if ((unsigned)proto < PROTO_MAX_HANDLERS)
     {
@@ -45,7 +45,7 @@ static void proto_register(ConnProto proto, const ProtoHandler *h)
     }
 }
 
-static const ProtoHandler *proto_get(ConnProto proto)
+static const ProtoHandler *proto_get(ProtoConn proto)
 {
     // Install the built-ins on first lookup so dispatch works before begin() (the native test
     // harness drives server_tick() directly). The list itself lives in proto_builtins.c -

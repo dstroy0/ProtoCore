@@ -13,7 +13,7 @@
  * completes the handshake, opens a secure channel, activates a session, browses the
  * Objects folder, and reads node values, all via registered resolvers.
  *
- *   listen(4840, ConnProto::PROTO_OPCUA)  -> HEL/ACK, OPN, CreateSession, ActivateSession, Read, Browse, Close
+ *   listen(4840, ProtoConn::PROTO_OPCUA)  -> HEL/ACK, OPN, CreateSession, ActivateSession, Read, Browse, Close
  *
  * The HTTP server on :80 runs alongside, sharing the same connection pool and
  * event loop - OPC UA is just another protocol on its own port.

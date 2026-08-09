@@ -7,15 +7,15 @@
  *        wires an accepted connection to a UART / SPI / I2C endpoint, plus the bus I/O.
  *
  * The pure core (iface_bridge.h) owns the rule table and the transaction frame codec; this file owns the
- * side that reaches the seam: a ConnProto::PROTO_BRIDGE connection handler and the uart.h / spi.h / i2c.h
+ * side that reaches the seam: a ProtoConn::PROTO_BRIDGE connection handler and the uart.h / spi.h / i2c.h
  * transfers. Layered exactly like services/net/relay - the app opens the listener, then publishes a target:
  *
  * @code
- *   int32_t li = server.listen(2323, ConnProto::PROTO_BRIDGE);          // front port 2323
+ *   int32_t li = server.listen(2323, ProtoConn::PROTO_BRIDGE);          // front port 2323
  *   BridgeTarget uart = {BRIDGE_BUS_UART, BRIDGE_MODE_STREAM, 1, 0, 115200, 0, 0};
  *   pc_iface_bridge_publish((uint8_t)li, 2323, BRIDGE_PROTO_TCP, &uart);     // -> UART1 raw passthrough
  *
- *   int32_t ls = server.listen(2324, ConnProto::PROTO_BRIDGE);
+ *   int32_t ls = server.listen(2324, ProtoConn::PROTO_BRIDGE);
  *   BridgeTarget spi = {BRIDGE_BUS_SPI, BRIDGE_MODE_TRANSACTION, 0, 5, 1000000, 0, 0}; // 5 = CS gpio
  *   pc_iface_bridge_publish((uint8_t)ls, 2324, BRIDGE_PROTO_TCP, &spi);      // -> SPI write-then-read frames
  * @endcode
@@ -42,7 +42,7 @@
  * Registers the rule in the pure table (pc_iface_bridge_map), records the listener_id -> rule binding used to
  * dispatch accepted connections, and brings up the bus (UART open / SPI CS pin / I2C).
  *
- * @param listener_id  the id returned by `server.listen(port, ConnProto::PROTO_BRIDGE)`.
+ * @param listener_id  the id returned by `server.listen(port, ProtoConn::PROTO_BRIDGE)`.
  * @param port         the same listen port (the dispatch key into the rule table).
  * @param proto        TCP or UDP (matches how the listener was opened).
  * @param target       the UART / SPI / I2C endpoint (copied into the rule).

@@ -276,7 +276,7 @@ void setup()
     pc_opcua_set_write_handler(srv_write);
     pc_opcua_set_browse_handler(srv_browse);
     server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "OPC UA client demo"); });
-    server.listen(4840, ConnProto::PROTO_OPCUA); // server endpoint, before begin()
+    server.listen(4840, ProtoConn::PROTO_OPCUA); // server endpoint, before begin()
     server.begin(80);
 }
 

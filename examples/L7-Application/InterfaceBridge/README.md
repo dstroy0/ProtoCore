@@ -44,7 +44,7 @@ per rule:
     chip-select (SPI CS gpio) plus clock/mode come from the rule, so the frame
     stays generic across devices.
 
-Wiring is two calls per endpoint: `server.listen(port, ConnProto::PROTO_BRIDGE)`
+Wiring is two calls per endpoint: `server.listen(port, ProtoConn::PROTO_BRIDGE)`
 opens the port, and `pc_iface_bridge_publish()` binds it to a `BridgeTarget` and
 brings the bus up. The server's own poll loop pumps everything.
 
