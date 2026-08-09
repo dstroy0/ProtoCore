@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the hash context is a view, so a struct copy aliases it ([`2f68757`](https://github.com/dstroy0/ProtoCore/commit/2f6875793e157deeaf8c60d287a8934cbbe33cb9))
 - the key schedule needs PC_TLS13_KS_BORROW, not PC_TLS13_KS_CAP ([`9b04dff`](https://github.com/dstroy0/ProtoCore/commit/9b04dffa4f04be0256d28adab0760db2a86ac01b))
 - the slot's crypto bytes are bound before anything derives out of them ([`145c3b9`](https://github.com/dstroy0/ProtoCore/commit/145c3b925464ac5bbcd9d9f36415a6070aa11274))
 - the two record layers expand their traffic keys out of the caller's bytes ([`747e4df`](https://github.com/dstroy0/ProtoCore/commit/747e4df7c663507c4b1bb07304e70f994fcd043c))
@@ -30,6 +31,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`039880c`](https://github.com/dstroy0/ProtoCore/commit/039880ca74f678159b70c7c01e4b80c64f828694))
 - update CHANGELOG.md [skip ci] ([`b8dcd79`](https://github.com/dstroy0/ProtoCore/commit/b8dcd791de7ee7f965bdd1eb02bf44083e7378e6))
 - update CHANGELOG.md [skip ci] ([`dc87eb4`](https://github.com/dstroy0/ProtoCore/commit/dc87eb4b4f789baf860f87c930fd8bf31c10818c))
 - update CHANGELOG.md [skip ci] ([`07893b0`](https://github.com/dstroy0/ProtoCore/commit/07893b0b6eb9e4c667dd71115f35574e43bd1573))
