@@ -631,7 +631,7 @@
     },
     "native_ssh_hardened": {
       "desc": "SSH built with password auth disabled (publickey-only hardening)",
-      "flags": ["-DPC_SSH_ALLOW_PASSWORD=0"],
+      "flags": ["-DPC_ENABLE_SSH=1", "-DPC_SSH_ALLOW_PASSWORD=0"],
       "src": [
         "+<crypto/hash/sha256.c>",
         "+<crypto/mac/hmac_sha256.c>",
