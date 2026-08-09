@@ -6473,8 +6473,12 @@ from halves and is slower than the width it decomposes into"
  * the sum across features. Tune from the pc_plaintext_high_water() reading on a real
  * workload; an over-budget borrow fails closed (pc_plaintext_alloc returns NULL).
  */
+// The deepest nest is the SSH receive path with compression on: ssh_recv_ctr_emac holds
+// SSH_PKT_BUF_SIZE + 64 across ssh_dispatch_payload, which holds SSH_PKT_BUF_SIZE across
+// pc_ssh_server_dispatch, which holds a SSH_PKT_BUF_SIZE reply across the switch, under which
+// pc_ssh_auth_handle_pubkey holds 2,552 - 8,760 bytes live together.
 #ifndef PC_PLAINTEXT_ARENA_SIZE
-#define PC_PLAINTEXT_ARENA_SIZE 8192
+#define PC_PLAINTEXT_ARENA_SIZE 10240
 #endif
 
 /**
