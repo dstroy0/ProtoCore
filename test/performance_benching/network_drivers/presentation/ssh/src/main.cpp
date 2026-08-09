@@ -10,6 +10,8 @@
 #include "device_bench.h"
 #include <Arduino.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 static void ssh_bench_task(void *)
 {
     static uint8_t buf[1024];
@@ -21,8 +23,8 @@ static void ssh_bench_task(void *)
         Serial.printf("DB ==== ssh device microbench start (CCOUNT @ %u MHz) ====\n", (unsigned)getCpuFrequencyMhz());
         volatile uint32_t sink = 0;
         uint8_t digest[PC_SHA256_DIGEST_LEN];
-        DBENCH_BULK("pc_sha256 (1 KiB)", 2000, 1024, {
-            pc_sha256(buf, 1024, digest);
+        DBENCH_BULK("pc_sha256 (tw,1 KiB)", 2000, 1024, {
+            pc_sha256(tw, buf, 1024, digest);
             sink += digest[0];
         });
         DBENCH_BULK("pc_chacha20 (1 KiB)", 1000, 1024, {

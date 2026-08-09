@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
 // context (ESP's mbedtls does) does not leak one per vector.
@@ -404,8 +406,8 @@ void test_preauth_hash_chain()
     {
         m2[i] = (uint8_t)(0x80 + i);
     }
-    pc_smb_preauth_update(&p, m1, sizeof(m1)); // fold in a stand-in NEGOTIATE, then a SESSION_SETUP
-    pc_smb_preauth_update(&p, m2, sizeof(m2));
+    pc_smb_preauth_update(tw,&p, m1, sizeof(m1)); // fold in a stand-in NEGOTIATE, then a SESSION_SETUP
+    pc_smb_preauth_update(tw,&p, m2, sizeof(m2));
     const uint8_t expected_preauth[64] = {0x0a, 0xa8, 0x6d, 0xd5, 0xf7, 0x6b, 0x17, 0xb2, 0x92, 0xb7, 0xc5, 0xbe, 0xfe,
                                           0x58, 0xde, 0xfa, 0xad, 0xfc, 0xad, 0x9b, 0x66, 0x2b, 0x32, 0x54, 0xc2, 0x08,
                                           0x54, 0x4c, 0xe1, 0xad, 0x96, 0x93, 0xf7, 0xd6, 0x9f, 0xbc, 0x7c, 0x73, 0x17,
@@ -1111,7 +1113,7 @@ void test_smb2_signing()
         key[i] = (uint8_t)(i + 1); // 01..10
     }
 
-    pc_smb2_sign(key, msg, sizeof(msg));
+    pc_smb2_sign(tw,key, msg, sizeof(msg));
     TEST_ASSERT_EQUAL_HEX8(0x08, msg[16]); // SMB2_FLAGS_SIGNED now set
 
     // The Signature matches the reference HMAC-SHA256(key, message)[:16] (Python hashlib/hmac).
@@ -1122,19 +1124,19 @@ void test_smb2_signing()
     // Verify accepts the freshly-signed message and restores it unchanged.
     uint8_t before[72];
     memcpy(before, msg, sizeof(msg));
-    TEST_ASSERT_TRUE(pc_smb2_verify(key, msg, sizeof(msg)));
+    TEST_ASSERT_TRUE(pc_smb2_verify(tw,key, msg, sizeof(msg)));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(before, msg, sizeof(msg));
 
     // A tampered body byte, a wrong key, and a too-short message all fail closed.
     msg[70] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_smb2_verify(key, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(pc_smb2_verify(tw,key, msg, sizeof(msg)));
     msg[70] ^= 0x01;
     uint8_t wrong[16];
     memcpy(wrong, key, 16);
     wrong[0] ^= 0xFF;
-    TEST_ASSERT_FALSE(pc_smb2_verify(wrong, msg, sizeof(msg)));
-    TEST_ASSERT_FALSE(pc_smb2_verify(key, msg, 63));
-    pc_smb2_sign(key, msg, 63); // too short: a no-op, must not corrupt memory
+    TEST_ASSERT_FALSE(pc_smb2_verify(tw,wrong, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(pc_smb2_verify(tw,key, msg, 63));
+    pc_smb2_sign(tw,key, msg, 63); // too short: a no-op, must not corrupt memory
 }
 
 // SMB 3.x AES-128-CMAC signing (MS-SMB2 §3.1.4.1): same framing as HMAC signing, but the Signature is
@@ -1168,7 +1170,7 @@ void test_smb2_signing_cmac()
         key[i] = (uint8_t)(i + 1); // 01..10
     }
 
-    pc_smb2_sign_cmac(key, msg, sizeof(msg));
+    pc_smb2_sign_cmac(tw,key, msg, sizeof(msg));
     TEST_ASSERT_EQUAL_HEX8(0x08, msg[16]); // SMB2_FLAGS_SIGNED set
 
     // The Signature matches the reference AES-CMAC(key, message) (impacket crypto.AES_CMAC).
@@ -1179,22 +1181,22 @@ void test_smb2_signing_cmac()
     // Verify accepts the freshly-signed message and restores it unchanged.
     uint8_t before[72];
     memcpy(before, msg, sizeof(msg));
-    TEST_ASSERT_TRUE(pc_smb2_verify_cmac(key, msg, sizeof(msg)));
+    TEST_ASSERT_TRUE(pc_smb2_verify_cmac(tw,key, msg, sizeof(msg)));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(before, msg, sizeof(msg));
 
     // A CMAC signature must not verify under the HMAC verifier (the two MACs are distinct).
-    TEST_ASSERT_FALSE(pc_smb2_verify(key, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(pc_smb2_verify(tw,key, msg, sizeof(msg)));
 
     // A tampered body byte, a wrong key, and a too-short message all fail closed.
     msg[70] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(key, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(tw,key, msg, sizeof(msg)));
     msg[70] ^= 0x01;
     uint8_t wrong[16];
     memcpy(wrong, key, 16);
     wrong[0] ^= 0xFF;
-    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(wrong, msg, sizeof(msg)));
-    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(key, msg, 63));
-    pc_smb2_sign_cmac(key, msg, 63); // too short: a no-op
+    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(tw,wrong, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(tw,key, msg, 63));
+    pc_smb2_sign_cmac(tw,key, msg, 63); // too short: a no-op
 }
 
 // ---- SMB 3.x transport encryption (TRANSFORM_HEADER + AES-128/256-GCM and AES-128/256-CCM) --------------

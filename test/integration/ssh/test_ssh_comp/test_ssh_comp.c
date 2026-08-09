@@ -26,6 +26,8 @@
 #include "test/fixtures/ssh_test_host_key/ssh_test_keys.h"
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 static uint8_t g_stream[64 * 1024]; // every packet's compressed payload, concatenated
 static size_t g_stream_len;
 static uint8_t g_orig[64 * 1024]; // every original payload, concatenated
@@ -613,7 +615,7 @@ static void expected_kdf_k1(const uint8_t K[256], const uint8_t H[PC_SHA256_DIGE
         off++;
     }
     pc_sha256_ctx c;
-    pc_sha256_init(&c);
+    pc_sha256_init(&c, tw);
     if (off == 256)
     {
         uint8_t len_be[4] = {0, 0, 0, 0};
@@ -654,7 +656,7 @@ void test_kdf_mpint_k_edge_encodings(void)
     uint8_t K_zero[256];
     memset(K_zero, 0, sizeof(K_zero));
     uint8_t out_zero[PC_SHA256_DIGEST_LEN], expected_zero[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K_zero, H, H, 'A', out_zero, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K_zero, H, H, 'A', out_zero, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                    PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_zero, H, 'A', H, PC_SHA256_DIGEST_LEN, expected_zero);
     TEST_ASSERT_EQUAL_MEMORY(expected_zero, out_zero, PC_SHA256_DIGEST_LEN);
@@ -666,7 +668,7 @@ void test_kdf_mpint_k_edge_encodings(void)
         K_lead_zero[j] = (uint8_t)(j & 0x7F); // K_lead_zero[2] != 0 and its MSB is clear -> no pad
     }
     uint8_t out_lz[PC_SHA256_DIGEST_LEN], expected_lz[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K_lead_zero, H, H, 'B', out_lz, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K_lead_zero, H, H, 'B', out_lz, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                    PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_lead_zero, H, 'B', H, PC_SHA256_DIGEST_LEN, expected_lz);
     TEST_ASSERT_EQUAL_MEMORY(expected_lz, out_lz, PC_SHA256_DIGEST_LEN);
@@ -675,7 +677,7 @@ void test_kdf_mpint_k_edge_encodings(void)
     memset(K_msb, 0, sizeof(K_msb));
     K_msb[0] = 0x91; // MSB set on the very first byte -> pad byte required
     uint8_t out_msb[PC_SHA256_DIGEST_LEN], expected_msb[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K_msb, H, H, 'C', out_msb, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K_msb, H, H, 'C', out_msb, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                    PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_msb, H, 'C', H, PC_SHA256_DIGEST_LEN, expected_msb);
     TEST_ASSERT_EQUAL_MEMORY(expected_msb, out_msb, PC_SHA256_DIGEST_LEN);
@@ -697,12 +699,12 @@ void test_kdf_string_k_hybrid_branch(void)
     }
 
     uint8_t got_string[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, H, 'C', got_string, PC_SHA256_DIGEST_LEN, PROTO_TRUE, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, H, 'C', got_string, PC_SHA256_DIGEST_LEN, PROTO_TRUE, PC_SHA256_DIGEST_LEN,
                    PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 
     uint8_t len_be[4] = {0, 0, 0, 32};
     pc_sha256_ctx c;
-    pc_sha256_init(&c);
+    pc_sha256_init(&c, tw);
     pc_sha256_update(&c, len_be, 4);
     pc_sha256_update(&c, K + (256 - 32), 32);
     pc_sha256_update(&c, H, PC_SHA256_DIGEST_LEN);
@@ -714,7 +716,7 @@ void test_kdf_string_k_hybrid_branch(void)
     TEST_ASSERT_EQUAL_MEMORY(expected, got_string, PC_SHA256_DIGEST_LEN);
 
     uint8_t got_mpint[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, H, 'C', got_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, H, 'C', got_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                    PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(got_string, got_mpint, PC_SHA256_DIGEST_LEN));
 }
@@ -736,11 +738,11 @@ void test_kdf_out_len_clamp_matches_exact_max(void)
     }
 
     uint8_t clamped[SSH_KDF_MAX];
-    ssh_kdf_derive(K, H, H, 'X', clamped, SSH_KDF_MAX + 64, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, H, 'X', clamped, SSH_KDF_MAX + 64, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
                    PROTO_FALSE); // over SSH_KDF_MAX -> clamps
 
     uint8_t exact[SSH_KDF_MAX];
-    ssh_kdf_derive(K, H, H, 'X', exact, SSH_KDF_MAX, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+    ssh_kdf_derive(tw,K, H, H, 'X', exact, SSH_KDF_MAX, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
                    PROTO_FALSE); // already at the max -> no clamp needed
     TEST_ASSERT_EQUAL_MEMORY(exact, clamped, SSH_KDF_MAX);
 
@@ -752,7 +754,7 @@ void test_kdf_out_len_clamp_matches_exact_max(void)
     // K2 = HASH(mpint(K) || H || K1) - the chain extension step carries no label/session_id.
     uint8_t len_be[4] = {0, 0, 1, 0};
     pc_sha256_ctx c;
-    pc_sha256_init(&c);
+    pc_sha256_init(&c, tw);
     pc_sha256_update(&c, len_be, 4);
     pc_sha256_update(&c, K, 256);
     pc_sha256_update(&c, H, PC_SHA256_DIGEST_LEN);

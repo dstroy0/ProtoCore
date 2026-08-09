@@ -13,6 +13,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 void setUp()
 {
 }
@@ -183,7 +185,7 @@ static void test_build_certificate_rpk(void)
         seed[i] = (uint8_t)(i * 7 + 1);
     }
     uint8_t pub[32];
-    pc_ed25519_pubkey(pub, seed);
+    pc_ed25519_pubkey(tw,pub, seed);
 
     uint8_t out[80];
     size_t n = pc_tls13_build_certificate_rpk(out, sizeof(out), pub);

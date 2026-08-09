@@ -21,6 +21,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // Two keyed AEAD contexts agree iff they seal the same input identically. The raw key is no longer
 // stored, so this is how a derived-key equality check is expressed now.
 static void assert_ctx_match(uint8_t *a, uint8_t *b)
@@ -287,7 +289,7 @@ void test_full_handshake_and_stream()
 
     // Client Initial keys from the same DCID the server used.
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     // --- Client -> server: Initial(CRYPTO ClientHello), padded ---
     QuicTransportParams ctp;
@@ -329,7 +331,7 @@ void test_full_handshake_and_stream()
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t);
+    pc_sha256_init(&t, tw);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, sh, sh_len);
     {
@@ -341,8 +343,8 @@ void test_full_handshake_and_stream()
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_340);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
 
     size_t hswire = 0;
     uint8_t hstype = 0;
@@ -356,8 +358,8 @@ void test_full_handshake_and_stream()
     pc_sha256_final(&t, ch_sf);
     pc_tls13_ks_master(&cks, ch_sf);
     QuicPacketKeys ap_server_keys, ap_client_keys;
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_AP, &ap_server_keys);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_AP, &ap_client_keys);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_AP, &ap_server_keys);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_AP, &ap_client_keys);
     // Diagnostic: the client-derived keys must equal the server's.
     assert_ctx_match(qc.tls.hs_server.gcm, hs_server_keys.gcm);
     assert_ctx_match(qc.tls.ap_server.gcm, ap_server_keys.gcm);
@@ -521,7 +523,7 @@ void test_pto_retransmits_flight()
                       sizeof(SERVER_SCID), &cb);
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     // Client Initial(ClientHello), padded for the amplification budget.
     QuicTransportParams ctp;
@@ -582,7 +584,7 @@ static void feed_client_initial(struct QuicConn *qc, QuicConnCallbacks *cb, Quic
     make_cfg(&cfg);
     pc_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
                       sizeof(SERVER_SCID), cb);
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), init);
     QuicTransportParams ctp;
     pc_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[128];
@@ -645,7 +647,7 @@ void test_connection_close_on_malformed_frame()
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx tctx;
     uint8_t ch_sh[32];
-    pc_sha256_init(&tctx);
+    pc_sha256_init(&tctx, tw);
     pc_sha256_update(&tctx, ch, ch_len);
     pc_sha256_update(&tctx, sh, sh_len);
     pc_sha256_final(&tctx, ch_sh);
@@ -654,8 +656,8 @@ void test_connection_close_on_malformed_frame()
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_652);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
 
     // Client -> server: a Handshake packet whose only frame is a malformed CRYPTO (its declared length
     // dwarfs the packet), which the server cannot decode.
@@ -718,7 +720,7 @@ void test_quic_recv_connection_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[32];
     size_t fl = pc_quic_build_connection_close(fr, sizeof(fr), QUIC_ERR_NO_ERROR, 0, NULL, 0);
@@ -739,7 +741,7 @@ void test_quic_recv_ping_and_max_data()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[16];
     size_t fl = pc_quic_build_ping(fr, sizeof(fr));
@@ -760,7 +762,7 @@ void test_quic_recv_bad_version()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -777,7 +779,7 @@ void test_quic_recv_unsupported_long_type()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_0RTT, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -793,7 +795,7 @@ void test_quic_recv_short_before_app_keys()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof(dg), SERVER_SCID, sizeof(SERVER_SCID), 0, &init.client, fr, 1);
@@ -819,7 +821,7 @@ void test_quic_recv_unprotect_failure()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -862,7 +864,7 @@ void test_quic_crypto_out_of_order_and_dup()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t data[4] = {0x01, 0x00, 0x00, 0xFF}; // partial ClientHello header: TLS buffers, no failure
     uint8_t fr[32], dg[256];
 
@@ -892,7 +894,7 @@ void test_quic_timeout_when_closed()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[32];
     size_t fl = pc_quic_build_connection_close(fr, sizeof(fr), QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
@@ -964,7 +966,7 @@ void test_quic_recv_handshake_done_frame()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t hd[32];
     size_t hdl = pc_quic_build_handshake_done(hd, sizeof hd);
     memset(hd + hdl, 0, 20); // PADDING so the packet is long enough for header-protection sampling
@@ -981,7 +983,7 @@ void test_quic_conn_stream_frames()
 {
     fill();
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t dg[1500];
 
     // (a) Out-of-order STREAM (offset beyond the rx window) is held, not delivered.
@@ -1035,7 +1037,7 @@ void test_quic_conn_crypto_window_clamp()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t dg[1500];
     uint8_t chunk[1200];
     chunk[0] = 0x01; // ClientHello with a huge declared length so TLS buffers it without failing
@@ -1062,7 +1064,7 @@ void test_quic_conn_crypto_error_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t bad_ch[6] = {0x01, 0x00, 0x00, 0x02, 0x03, 0x03}; // ClientHello, body too short
     uint8_t fr[32];
     size_t fl = pc_quic_build_crypto(fr, sizeof fr, 0, bad_ch, sizeof bad_ch);
@@ -1083,7 +1085,7 @@ void test_quic_conn_no_keys_build()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[32] = {QUIC_FT_PING}; // ack-eliciting (+ trailing PADDING for a full-length packet)
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, sizeof fr);
@@ -1138,7 +1140,7 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     QuicTlsConfig cfg;
     make_cfg(&cfg);
     pc_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, peer_scid_len, SERVER_SCID, sizeof(SERVER_SCID), cb);
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), init);
 
     QuicTransportParams ctp;
     pc_quic_tp_defaults(&ctp);
@@ -1172,7 +1174,7 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t);
+    pc_sha256_init(&t, tw);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, sh, sh_len);
     {
@@ -1184,8 +1186,8 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_1181);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
     size_t hswire = 0;
     uint8_t hstype = 0;
     size_t hpt = open_long(sdg + wire, sl - wire, &hs_server_keys, plain, &hswire, &hstype);
@@ -1193,8 +1195,8 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     pc_sha256_update(&t, hsflight, hsflen);
     pc_sha256_final(&t, ch_sf);
     pc_tls13_ks_master(&cks, ch_sf);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_AP, ap_client);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_AP, ap_server);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_AP, ap_client);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_AP, ap_server);
 
     uint8_t ifr[64];
     size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
@@ -1278,7 +1280,7 @@ void test_quic_conn_null_callbacks()
     TEST_ASSERT_NULL(qc.cb.on_handshake_done);
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     // A STREAM frame with data, and a pure-FIN one, at the Initial level: both take the callback
     // paths, both find a null hook, and neither disturbs the connection.
@@ -1310,7 +1312,7 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t d[4] = {0xA1, 0xA2, 0xA3, 0xA4};
     uint8_t fr[64], dg[256];
     uint64_t pn = 0;
@@ -1354,7 +1356,7 @@ void test_quic_conn_frame_dispatch_variants()
 {
     fill();
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t dg[512];
 
     // (a) An ACK_ECN, then a stale ACK: the first advances largest_acked, the second does not.
@@ -1412,7 +1414,7 @@ void test_quic_recv_zero_version()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -1430,7 +1432,7 @@ void test_quic_recv_older_packet_number()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[24] = {QUIC_FT_PING}; // PING + PADDING (long enough to header-protect)
     uint8_t dg[256];
 
@@ -1529,7 +1531,7 @@ void test_quic_conn_close_after_peer_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[32];
     size_t fl = pc_quic_build_connection_close(fr, sizeof fr, QUIC_ERR_NO_ERROR, 0, NULL, 0);
@@ -1665,7 +1667,7 @@ void test_quic_conn_crypto_flight_fragmented()
     pc_quic_conn_init(&qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
                       sizeof(SERVER_SCID), &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     QuicTransportParams ctp;
     pc_quic_tp_defaults(&ctp);
@@ -1993,7 +1995,7 @@ void test_quic_conn_close_level_without_keys()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&qc, &cb); // no ClientHello yet: only the Initial keys exist
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     // A padded Initial PING gives the connection an amplification budget without starting the TLS
     // handshake, so the Handshake and 1-RTT keys are still absent.

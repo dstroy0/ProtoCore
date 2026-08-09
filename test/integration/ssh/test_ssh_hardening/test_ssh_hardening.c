@@ -14,6 +14,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 #if PC_SSH_ALLOW_PASSWORD != 0
 #error "test_ssh_hardening must be built with PC_SSH_ALLOW_PASSWORD=0"
 #endif
@@ -134,10 +136,10 @@ void test_ecdsa_direct_sign_verify_ecdh_roundtrip(void)
 
     const uint8_t msg[] = "ecdsa still works with password auth compiled out";
     uint8_t sig[64];
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, msg, sizeof(msg) - 1, priv_a));
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub_a, msg, sizeof(msg) - 1, sig));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, tw, msg, sizeof(msg) - 1, priv_a));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(pub_a, tw, msg, sizeof(msg) - 1, sig));
     sig[0] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub_a, msg, sizeof(msg) - 1, sig));
+    TEST_ASSERT_FALSE(pc_ecdsa_p256_verify(pub_a, tw, msg, sizeof(msg) - 1, sig));
 
     uint8_t priv_b[32];
     memset(priv_b, 0, 32);
@@ -199,7 +201,7 @@ void test_ecdsa_publickey_auth_succeeds_when_password_disabled(void)
     sd += po;
 
     uint8_t sig[PC_ECDSA_P256_SIG_LEN];
-    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, signed_data, sd, priv));
+    TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, tw, signed_data, sd, priv));
 
     // Signature field: string(sigblob), sigblob = string(sig-algo) || string(mpint(r)||mpint(s)).
     uint8_t rawsig[4 + 32 + 4 + 32];

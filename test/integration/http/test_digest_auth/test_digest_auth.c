@@ -16,6 +16,8 @@
 #include "rx_feed.h"
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // A test-controllable monotonic clock (ms) so the stale-nonce path can be exercised
 // deterministically: tests advance g_fake_ms and the library reads it via pc_millis().
 static uint32_t g_fake_ms = 0;
@@ -40,7 +42,7 @@ static void h_secure(uint8_t slot, HttpReq *req)
 static void sha256_hex(const char *s, char out[65])
 {
     uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256((const uint8_t *)s, strlen(s), d);
+    pc_sha256(tw,(const uint8_t *)s, strlen(s), d);
     static const char *hx = "0123456789abcdef";
     for (int i = 0; i < PC_SHA256_DIGEST_LEN; i++)
     {

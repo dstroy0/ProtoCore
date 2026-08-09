@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 void setUp()
 {
 }
@@ -135,8 +137,8 @@ void test_server_hs_write_keys()
     uint8_t s_hs[32];
     hx(S_HS, s_hs, 32);
     uint8_t key[16], iv[12], exp_key[16], exp_iv[12];
-    pc_hkdf_expand_label(s_hs, "key", key, sizeof(key), PC_HKDF_LABEL_PREFIX);
-    pc_hkdf_expand_label(s_hs, "iv", iv, sizeof(iv), PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(tw,s_hs, "key", key, sizeof(key), PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(tw,s_hs, "iv", iv, sizeof(iv), PC_HKDF_LABEL_PREFIX);
     hx("3fce516009c21727d0f2e4e86ee403bc", exp_key, 16);
     hx("5d313eb2671276ee13000b30", exp_iv, 12);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_key, key, 16);
@@ -189,7 +191,7 @@ void test_server_finished()
 
     uint8_t buf[512];
     pc_sha256_ctx sha;
-    pc_sha256_init(&sha);
+    pc_sha256_init(&sha, tw);
     size_t n;
     n = hx(CH, buf, sizeof(buf));
     pc_sha256_update(&sha, buf, n);
@@ -227,12 +229,12 @@ void test_kdf_expand_label_wrapper()
     hx(S_HS, s_hs, 32);
 
     uint8_t key[16], exp_key[16];
-    pc_tls13_kdf_expand_label(&TLS13_KDF, s_hs, "key", key, sizeof(key));
+    pc_tls13_kdf_expand_label(&TLS13_KDF, tw, s_hs, "key", key, sizeof(key));
     hx("3fce516009c21727d0f2e4e86ee403bc", exp_key, 16);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_key, key, 16);
 
     uint8_t via_quic[16];
-    pc_hkdf_expand_label(s_hs, "key", via_quic, sizeof(via_quic), PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(tw,s_hs, "key", via_quic, sizeof(via_quic), PC_HKDF_LABEL_PREFIX);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(via_quic, key, 16);
 }
 

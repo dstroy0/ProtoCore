@@ -25,6 +25,8 @@
 #include "soc/soc.h"
 #include "soc/system_reg.h"
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // Balance radix-2^16 limbs into signed-16-bit (value-preserving mod p), so the product is a pure
 // s16xs16 convolution (the validated C model, test_gf_mul_s16_model_matches_scalar).
 static void balance_s16(int16_t o[16], const pc_gf a)
@@ -513,11 +515,11 @@ static void ssh_bench_task(void *)
     uint8_t seed[32], sig[64], h[32];
     memset(seed, 0x33, 32);
     memset(h, 0x44, 32);
-    pc_ed25519_sign(sig, h, 32, seed); // warm
+    pc_ed25519_sign(tw, sig, h, 32, seed); // warm
     uint32_t e0 = ESP.getCycleCount();
     for (int i = 0; i < 4; i++)
     {
-        pc_ed25519_sign(sig, h, 32, seed);
+        pc_ed25519_sign(tw, sig, h, 32, seed);
     }
     uint32_t ec = (ESP.getCycleCount() - e0) / 4;
     sink += sig[0];

@@ -21,6 +21,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 // The send reaches the wire in the call that makes it, which is where the host pcb driver records
 // it. The last datagram it recorded is what this side sent.
 static const uint8_t *udp_cap(void)
@@ -60,7 +62,7 @@ void test_localize_key_sha256_vector()
                                 0x79, 0x69, 0xaf, 0xe3, 0x90, 0x37, 0x34, 0x07, 0xd6, 0x52, 0x9a,
                                 0x98, 0x08, 0x41, 0x8a, 0xef, 0x8e, 0xb0, 0xbf, 0x45, 0x86};
     uint8_t key[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("maplesyrup", engine, sizeof(engine), key);
+    pc_snmp_usm_localize_key(tw,"maplesyrup", engine, sizeof(engine), key);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, key, 32);
 }
 
@@ -73,11 +75,11 @@ void test_localize_key_empty_password()
     uint8_t key[SNMP_USM_KEY_LEN];
 
     memset(key, 0xAA, sizeof(key));
-    pc_snmp_usm_localize_key("", engine, sizeof(engine), key); // empty password
+    pc_snmp_usm_localize_key(tw,"", engine, sizeof(engine), key); // empty password
     TEST_ASSERT_EQUAL_HEX8_ARRAY(zero, key, SNMP_USM_KEY_LEN);
 
     memset(key, 0xBB, sizeof(key));
-    pc_snmp_usm_localize_key(NULL, engine, sizeof(engine), key); // null password
+    pc_snmp_usm_localize_key(tw,NULL, engine, sizeof(engine), key); // null password
     TEST_ASSERT_EQUAL_HEX8_ARRAY(zero, key, SNMP_USM_KEY_LEN);
 }
 
@@ -239,7 +241,7 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     if (auth)
     {
         uint8_t mac[PC_HMAC_SHA256_LEN];
-        pc_hmac_sha256(authkey, SNMP_USM_KEY_LEN, out, e.len, mac);
+        pc_hmac_sha256(tw,authkey, SNMP_USM_KEY_LEN, out, e.len, mac);
         memcpy(out + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
     return e.ok ? e.len : 0;
@@ -439,7 +441,7 @@ void test_authnopriv_get()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
@@ -462,8 +464,8 @@ void test_authpriv_get()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN], privkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", disc.engine_id, disc.engine_id_len, authkey);
-    pc_snmp_usm_localize_key("privpass12", disc.engine_id, disc.engine_id_len, privkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"privpass12", disc.engine_id, disc.engine_id_len, privkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_TRUE, disc.engine_id, disc.engine_id_len, disc.boots,
@@ -484,7 +486,7 @@ void test_wrong_auth_password_reports_wrong_digest()
     V3View disc;
     discover(&disc);
     uint8_t badkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("wrongpass99", disc.engine_id, disc.engine_id_len, badkey);
+    pc_snmp_usm_localize_key(tw,"wrongpass99", disc.engine_id, disc.engine_id_len, badkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
@@ -504,7 +506,7 @@ void test_unknown_user_reports()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
@@ -523,7 +525,7 @@ void test_not_in_time_window_reports()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     // Send a far-future engineTime to fall outside the +/-150s window.
     uint8_t req[300], resp[512];
@@ -655,7 +657,7 @@ void test_v3_discovery_variants()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t wrong_eid[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x11, 0x22, 0x33};
     uint8_t privkey[SNMP_USM_KEY_LEN] = {0};
 
@@ -675,7 +677,7 @@ void test_v3_priv_not_configured()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
     pc_snmp_v3_set_user("myuser", "authpass12", ""); // auth only
     uint8_t privkey[SNMP_USM_KEY_LEN] = {0};
 
@@ -765,7 +767,7 @@ static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, proto_bool auth, con
     if (digest)
     {
         uint8_t mac[PC_HMAC_SHA256_LEN];
-        pc_hmac_sha256(authkey, SNMP_USM_KEY_LEN, out, e.len, mac);
+        pc_hmac_sha256(tw,authkey, SNMP_USM_KEY_LEN, out, e.len, mac);
         memcpy(out + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
     return e.len;
@@ -860,7 +862,7 @@ void test_v3_scoped_parse_rejections(void)
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
 
     const uint8_t not_seq[] = {0x04, 0x01, 0x00};                                // scopedPDU not a SEQUENCE
@@ -914,7 +916,7 @@ void test_v3_auth_edge_rejections(void)
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
 
     // authParams length != 24 -> usmStatsWrongDigests Report (short-circuits before HMAC).
@@ -996,7 +998,7 @@ void test_v3_response_scopedpdu_overflow()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[2048];
     proto_bool saw_overflow = PROTO_FALSE, saw_ok = PROTO_FALSE;
@@ -1161,7 +1163,7 @@ void test_v3_scoped_truncated_headers()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
 
     const uint8_t no_len[] = {0x30};                     // SEQUENCE tag, no length octet
@@ -1208,7 +1210,7 @@ void test_v3_unknown_user_variants()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
     V3View r;
 
@@ -1243,7 +1245,7 @@ void test_v3_oversized_message_is_wrong_digest()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
 
     static uint8_t scoped[SNMP_MSG_BUF_SIZE + 64];
     memset(scoped, 0x00, sizeof(scoped));
@@ -1269,7 +1271,7 @@ void test_v3_boots_mismatch_not_in_time()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
 
     uint8_t req[320], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, v.engine_id, v.engine_id_len, v.boots + 7, v.time,
@@ -1291,7 +1293,7 @@ void test_v3_privacy_parameter_edges()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", v.engine_id, v.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
 
     const uint8_t any[] = {0x04, 0x02, 0x00, 0x00};
@@ -1340,7 +1342,7 @@ void test_v3_init_length_guards_and_null_user()
     // for any name is answered with usmStatsUnknownUserNames.
     pc_snmp_v3_set_user(NULL, NULL, NULL);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    pc_snmp_usm_localize_key("authpass12", after.engine_id, after.engine_id_len, authkey);
+    pc_snmp_usm_localize_key(tw,"authpass12", after.engine_id, after.engine_id_len, authkey);
     uint8_t req[320], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, after.engine_id, after.engine_id_len, after.boots,
                           after.time, "myuser", authkey, NULL, 600, 5, OID_SYSDESCR, 9);

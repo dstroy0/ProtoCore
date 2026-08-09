@@ -54,6 +54,8 @@
 #endif
 #include "crypto/crypto_opt.h" // build the bench's inline ops at the crypto opt level under test
 #include "device_bench.h"      // DBENCH_CYCLES
+
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 PC_CRYPTO_HOT
 
 // CCOUNT ticks at the CPU clock, which differs per die (S3 240 MHz, P4 360 MHz), so the cycle->time
@@ -110,15 +112,15 @@ static void crypto_bench_task(void *)
         // ================= HASHES (BULK, HW SHA on S3) =================
         {
             uint8_t d256[32], d512[64];
-            BENCH_BULK("pc_sha256", 2000, BULK, pc_sha256(buf, BULK, d256));
-            BENCH_BULK("pc_sha512", 2000, BULK, pc_sha512(buf, BULK, d512));
+            BENCH_BULK("pc_sha256", 2000, BULK, pc_sha256(tw, buf, BULK, d256));
+            BENCH_BULK("pc_sha512", 2000, BULK, pc_sha512(tw, buf, BULK, d512));
         }
 
         // ================= MACs (BULK) =================
         {
             uint8_t k32[32] = {0}, k64[64] = {0}, mac[64], pkey[32] = {0}, tag[16];
-            BENCH_BULK("pc_hmac_sha256", 2000, BULK, pc_hmac_sha256(k32, 32, buf, BULK, mac));
-            BENCH_BULK("pc_hmac_sha512", 2000, BULK, pc_hmac_sha512(k64, 64, buf, BULK, mac));
+            BENCH_BULK("pc_hmac_sha256", 2000, BULK, pc_hmac_sha256(tw, k32, 32, buf, BULK, mac));
+            BENCH_BULK("pc_hmac_sha512", 2000, BULK, pc_hmac_sha512(tw, k64, 64, buf, BULK, mac));
             BENCH_BULK("pc_poly1305", 2000, BULK, pc_poly1305(tag, buf, BULK, pkey));
         }
 
@@ -213,11 +215,12 @@ static void crypto_bench_task(void *)
 #if PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
         {
             uint8_t salt[20] = {0}, ikm[32] = {0}, prk[32], okm[32], secret[32] = {0};
-            pc_hkdf_extract(salt, 20, ikm, 32, prk);
-            BENCH_OP("quic_hkdf_extract", 2000, pc_hkdf_extract(salt, 20, ikm, 32, prk));
+            pc_hkdf_extract(tw, salt, 20, ikm, 32, prk);
+            BENCH_OP("quic_hkdf_extract", 2000, pc_hkdf_extract(tw, salt, 20, ikm, 32, prk));
             BENCH_OP("quic_hkdf_expand_label(16)", 2000,
-                     pc_hkdf_expand_label(prk, "quic key", okm, 16, PC_HKDF_LABEL_PREFIX));
-            BENCH_OP("tls13_kdf_expand_label(16)", 2000, pc_tls13_kdf_expand_label(&TLS13_KDF, secret, "key", okm, 16));
+                     pc_hkdf_expand_label(tw, prk, "quic key", okm, 16, PC_HKDF_LABEL_PREFIX));
+            BENCH_OP("tls13_kdf_expand_label(16)", 2000,
+                     pc_tls13_kdf_expand_label(&TLS13_KDF, tw, secret, "key", okm, 16));
         }
 #endif
 
@@ -278,12 +281,12 @@ static void crypto_bench_task(void *)
                 0x08, 0x5a, 0xc1, 0xe4, 0x3e, 0x15, 0x99, 0x6e, 0x45, 0x8f, 0x36, 0x13, 0xd0, 0xf1, 0x1d, 0x8c,
                 0x38, 0x7b, 0x2e, 0xae, 0xb4, 0x30, 0x2a, 0xee, 0xb0, 0x0d, 0x29, 0x16, 0x12, 0xbb, 0x0c, 0x00};
             uint8_t kp[32], ks[64];
-            pc_ed25519_pubkey(kp, K_SEED);
-            pc_ed25519_sign(ks, K_MSG, 1, K_SEED);
+            pc_ed25519_pubkey(tw, kp, K_SEED);
+            pc_ed25519_sign(tw, ks, K_MSG, 1, K_SEED);
             bool pok = memcmp(kp, K_PUB, 32) == 0;
             bool sok = memcmp(ks, K_SIG, 64) == 0;
-            bool vok = pc_ed25519_verify(K_PUB, K_MSG, 1, K_SIG); // comb drives the S*B half of verify
-            bool selfver = pc_ed25519_verify(kp, K_MSG, 1, ks);   // the comb-signed sig verifies too
+            bool vok = pc_ed25519_verify(tw, K_PUB, K_MSG, 1, K_SIG); // comb drives the S*B half of verify
+            bool selfver = pc_ed25519_verify(tw, kp, K_MSG, 1, ks);   // the comb-signed sig verifies too
             Serial.printf("CB ed25519 KAT: pubkey=%d sign=%d verify=%d selfver=%d %s\n", (int)pok, (int)sok, (int)vok,
                           (int)selfver, (pok && sok && vok && selfver) ? "PASS" : "*** FAIL ***");
         }
@@ -291,11 +294,11 @@ static void crypto_bench_task(void *)
             uint8_t seed[32], pub[32], msg[32], sig[64];
             memset(seed, 0x33, 32);
             memset(msg, 0x44, 32);
-            pc_ed25519_pubkey(pub, seed);
-            pc_ed25519_sign(sig, msg, 32, seed);
+            pc_ed25519_pubkey(tw, pub, seed);
+            pc_ed25519_sign(tw, sig, msg, 32, seed);
             volatile bool ok = false;
-            BENCH_OP("pc_ed25519_sign", 8, pc_ed25519_sign(sig, msg, 32, seed));
-            BENCH_OP("pc_ed25519_verify", 8, ok = pc_ed25519_verify(pub, msg, 32, sig));
+            BENCH_OP("pc_ed25519_sign", 8, pc_ed25519_sign(tw, sig, msg, 32, seed));
+            BENCH_OP("pc_ed25519_verify", 8, ok = pc_ed25519_verify(tw, pub, msg, 32, sig));
             (void)ok;
         }
         {
@@ -323,14 +326,14 @@ static void crypto_bench_task(void *)
                                                     0xCE, 0x03, 0x81, 0x24, 0x64, 0xD0, 0x4B, 0x94, 0x42, 0xDE};
             uint8_t katsig[64], katpub[65], katshared[32];
             bool haspub = pc_ecdsa_p256_pubkey(katpub, KAT_PRIV);
-            bool ks = pc_ecdsa_p256_sign(katsig, (const uint8_t *)"sample", 6, KAT_PRIV);
+            bool ks = pc_ecdsa_p256_sign(katsig, tw, (const uint8_t *)"sample", 6, KAT_PRIV);
             // The mbedtls signing path (a non-S3 die without PC_ECDSA_MPI_HW, e.g. the P4) uses a random k, so
             // it emits a VALID signature that intentionally will not match the RFC 6979 deterministic vector.
             // Gate PASS on validity (verify the sig we just made); report the deterministic byte-match separately
             // (it holds only on the RFC-6979 MODMULT path - the S3).
-            bool ksok = ks && haspub && pc_ecdsa_p256_verify(katpub, (const uint8_t *)"sample", 6, katsig);
+            bool ksok = ks && haspub && pc_ecdsa_p256_verify(katpub, tw, (const uint8_t *)"sample", 6, katsig);
             bool det = ks && memcmp(katsig, KAT_SIG, 64) == 0;
-            bool kpok = haspub && pc_ecdsa_p256_verify(katpub, (const uint8_t *)"sample", 6, KAT_SIG);
+            bool kpok = haspub && pc_ecdsa_p256_verify(katpub, tw, (const uint8_t *)"sample", 6, KAT_SIG);
             bool keok =
                 pc_ecdsa_p256_ecdh(katshared, ECDH_R_PUB, ECDH_I_PRIV) && memcmp(katshared, ECDH_SHARED, 32) == 0;
             Serial.printf("CB ecdsa_p256 KAT: sign_valid=%d rfc6979_exact=%d verify=%d ecdh=%d %s\n", (int)ksok,
@@ -340,23 +343,23 @@ static void crypto_bench_task(void *)
             uint8_t priv[32] = {0}, pub[65], msg[32] = {0}, sig[64], shared[32];
             priv[31] = 0x42;
             pc_ecdsa_p256_pubkey(pub, priv);
-            pc_ecdsa_p256_sign(sig, msg, 32, priv);
+            pc_ecdsa_p256_sign(sig, tw, msg, 32, priv);
             volatile bool ok = false;
-            BENCH_OP("pc_ecdsa_p256_sign", 8, pc_ecdsa_p256_sign(sig, msg, 32, priv));
-            BENCH_OP("pc_ecdsa_p256_verify", 8, ok = pc_ecdsa_p256_verify(pub, msg, 32, sig));
+            BENCH_OP("pc_ecdsa_p256_sign", 8, pc_ecdsa_p256_sign(sig, tw, msg, 32, priv));
+            BENCH_OP("pc_ecdsa_p256_verify", 8, ok = pc_ecdsa_p256_verify(pub, tw, msg, 32, sig));
             BENCH_OP("pc_ecdsa_p256_ecdh (KEX)", 8, pc_ecdsa_p256_ecdh(shared, pub, priv));
             (void)ok;
         }
         if (rsa_loaded)
         {
             uint8_t msg[32] = {0}, sig[256];
-            int sr = ssh_rsa_sign(msg, 32, PC_RSA_HASH_SHA256, sig);
+            int sr = ssh_rsa_sign(tw, msg, 32, PC_RSA_HASH_SHA256, sig);
             if (sr == 0)
             {
-                BENCH_OP("ssh_rsa_2048_sign (SHA256)", 4, ssh_rsa_sign(msg, 32, PC_RSA_HASH_SHA256, sig));
+                BENCH_OP("ssh_rsa_2048_sign (SHA256)", 4, ssh_rsa_sign(tw, msg, 32, PC_RSA_HASH_SHA256, sig));
                 volatile int vr = 0;
                 BENCH_OP("ssh_rsa_2048_verify (SHA256)", 8,
-                         vr = pc_rsa_verify(ssh_host_pubkey.n, ssh_host_pubkey.e_bytes, msg, 32, sig, 256,
+                         vr = pc_rsa_verify(ssh_host_pubkey.n, ssh_host_pubkey.e_bytes, tw, msg, 32, sig, 256,
                                             PC_RSA_HASH_SHA256));
                 (void)vr;
             }

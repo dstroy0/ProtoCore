@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 void setUp()
 {
 }
@@ -35,7 +37,7 @@ static void fill_entry(EdgeEntry *e, const char *canon, const char *etag, const 
 {
     memset(e, 0, sizeof(*e));
     strncpy(e->key, canon, sizeof(e->key) - 1);
-    edge_key_digest(e->key, strlen(e->key), e->digest);
+    edge_key_digest(tw,e->key, strlen(e->key), e->digest);
     e->status = 200;
     strncpy(e->content_type, "text/plain", sizeof(e->content_type) - 1);
     strncpy(e->etag, etag, sizeof(e->etag) - 1);
@@ -145,7 +147,7 @@ static void test_entry_frame_roundtrip()
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
     uint32_t now2 = 50000;
-    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(frame, n, &out, now2));
+    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(tw,frame, n, &out, now2));
     // content
     TEST_ASSERT_EQUAL_STRING(in.key, out.key);
     TEST_ASSERT_EQUAL_INT(in.status, out.status);
@@ -187,7 +189,7 @@ static void test_age_propagation()
     EdgeEntry recv;
     memset(&recv, 0, sizeof(recv));
     uint32_t recv_now = 999000; // the receiver's clock is unrelated to the peer's
-    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(frame, n, &recv, recv_now));
+    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(tw,frame, n, &recv, recv_now));
 
     // the receiver's age at receipt equals the transferred age, and grows with local hold
     TEST_ASSERT_EQUAL_INT(17, edge_current_age(recv.initial_age, recv.insert_ms, recv_now));
@@ -343,7 +345,7 @@ static void test_requester_hit()
 
     EdgeEntry got;
     memset(&got, 0, sizeof(got));
-    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(mf.buf + mf.entry_off, mf.entry_len, &got, 2000));
+    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(tw,mf.buf + mf.entry_off, mf.entry_len, &got, 2000));
     TEST_ASSERT_EQUAL_MEMORY(frame, mf.buf + mf.entry_off, fn);
     TEST_ASSERT_EQUAL_UINT(7, got.body_len);
     TEST_ASSERT_EQUAL_MEMORY("payload", got.body, 7);
@@ -524,7 +526,7 @@ static void test_serialize_entry_guards_and_clamps()
     size_t n = edge_mesh_serialize_entry(&e, -5, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     memset(&got, 0, sizeof(got));
-    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(out, n, &got, 1234));
+    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(tw,out, n, &got, 1234));
     TEST_ASSERT_EQUAL_INT(0, got.initial_age);
 
     // So are a negative lifetime and a negative stored Age header.
@@ -533,7 +535,7 @@ static void test_serialize_entry_guards_and_clamps()
     n = edge_mesh_serialize_entry(&e, 0, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     memset(&got, 0, sizeof(got));
-    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(out, n, &got, 1234));
+    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(tw,out, n, &got, 1234));
     TEST_ASSERT_EQUAL_INT(0, got.lifetime_s);
     TEST_ASSERT_EQUAL_INT(0, got.age_hdr);
 }
@@ -550,15 +552,15 @@ static void test_deserialize_entry_guards()
 
     EdgeEntry got;
     memset(&got, 0, sizeof(got));
-    TEST_ASSERT_FALSE(edge_mesh_deserialize_entry(NULL, n, &got, 0));
-    TEST_ASSERT_FALSE(edge_mesh_deserialize_entry(frame, n, NULL, 0));
-    TEST_ASSERT_FALSE(edge_mesh_deserialize_entry(frame, PC_EDGE_MESH_TRAILER - 1, &got, 0));
+    TEST_ASSERT_FALSE(edge_mesh_deserialize_entry(tw,NULL, n, &got, 0));
+    TEST_ASSERT_FALSE(edge_mesh_deserialize_entry(tw,frame, n, NULL, 0));
+    TEST_ASSERT_FALSE(edge_mesh_deserialize_entry(tw,frame, PC_EDGE_MESH_TRAILER - 1, &got, 0));
     // A good trailer in front of a corrupt content body fails the whole frame.
     uint8_t save = frame[PC_EDGE_MESH_TRAILER];
     frame[PC_EDGE_MESH_TRAILER] = 0x7F; // not the entry-serialization version
-    TEST_ASSERT_FALSE(edge_mesh_deserialize_entry(frame, n, &got, 0));
+    TEST_ASSERT_FALSE(edge_mesh_deserialize_entry(tw,frame, n, &got, 0));
     frame[PC_EDGE_MESH_TRAILER] = save;
-    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(frame, n, &got, 0));
+    TEST_ASSERT_TRUE(edge_mesh_deserialize_entry(tw,frame, n, &got, 0));
 }
 
 // --- response frame guards -----------------------------------------------------------------------

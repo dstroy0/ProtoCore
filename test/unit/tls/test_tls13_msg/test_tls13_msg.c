@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 void setUp()
 {
 }
@@ -190,7 +192,7 @@ void test_cert_verify_sign_roundtrip()
 {
     uint8_t seed[32], pub[32];
     memset(seed, 0x42, 32);
-    pc_ed25519_pubkey(pub, seed);
+    pc_ed25519_pubkey(tw,pub, seed);
     uint8_t thash[32];
     for (int i = 0; i < 32; i++)
     {
@@ -198,7 +200,7 @@ void test_cert_verify_sign_roundtrip()
     }
 
     uint8_t out[128];
-    size_t n = pc_tls13_build_cert_verify(out, sizeof(out), thash, seed);
+    size_t n = pc_tls13_build_cert_verify(tw,out, sizeof(out), thash, seed);
     // Header: 0f, len = 2 + 2 + 64 = 68; algorithm ed25519; sig length 64.
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_CERTIFICATE_VERIFY, out[0]);
     TEST_ASSERT_EQUAL_UINT(68, (out[1] << 16) | (out[2] << 8) | out[3]);
@@ -209,11 +211,11 @@ void test_cert_verify_sign_roundtrip()
     // Rebuild the signed content and verify the signature.
     uint8_t content[160];
     size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), thash, PROTO_TRUE);
-    TEST_ASSERT_TRUE(pc_ed25519_verify(pub, content, clen, out + 8));
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,pub, content, clen, out + 8));
     // A different transcript hash must not verify against the same signature.
     thash[0] ^= 0x01;
     clen = pc_tls13_cert_verify_content(content, sizeof(content), thash, PROTO_TRUE);
-    TEST_ASSERT_FALSE(pc_ed25519_verify(pub, content, clen, out + 8));
+    TEST_ASSERT_FALSE(pc_ed25519_verify(tw,pub, content, clen, out + 8));
 }
 
 // Assemble a minimal TLS 1.3 ClientHello wrapping the given extensions block.
@@ -669,9 +671,9 @@ void test_tls13_builder_overflow_guards()
     uint8_t thash2[32], seed[32];
     memset(thash2, 0x33, sizeof(thash2));
     memset(seed, 0x44, sizeof(seed));
-    need = pc_tls13_build_cert_verify(out, sizeof(out), thash2, seed);
+    need = pc_tls13_build_cert_verify(tw,out, sizeof(out), thash2, seed);
     TEST_ASSERT_TRUE(need > 0);
-    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_cert_verify(out, need - 1, thash2, seed));
+    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_cert_verify(tw,out, need - 1, thash2, seed));
 
     // Finished is exactly 36 bytes; 35 is not enough.
     uint8_t verify[32];

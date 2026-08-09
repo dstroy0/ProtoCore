@@ -24,6 +24,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+
 void setUp()
 {
 }
@@ -245,7 +247,7 @@ void test_http3_get_end_to_end()
     pc_h3_conn_init(&h3, &qc, app_request, NULL); // installs the QUIC callbacks
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     // Client Initial(ClientHello).
     QuicTransportParams ctp;
@@ -279,7 +281,7 @@ void test_http3_get_end_to_end()
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx t;
     uint8_t chsh[32], chsf[32];
-    pc_sha256_init(&t);
+    pc_sha256_init(&t, tw);
     pc_sha256_update(&t, ch, chl);
     pc_sha256_update(&t, sh, shl);
     {
@@ -291,8 +293,8 @@ void test_http3_get_end_to_end()
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_290);
     pc_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_s);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_HS, &hs_c);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_HS, &hs_s);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_HS, &hs_c);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(sdg + wire, sl - wire, &hs_s, plain, &hw, &hty);
@@ -300,8 +302,8 @@ void test_http3_get_end_to_end()
     pc_sha256_update(&t, hsf, hsfl);
     pc_sha256_final(&t, chsf);
     pc_tls13_ks_master(&cks, chsf);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_AP, &ap_s);
-    pc_quic_keys_from_secret(cks.s + TLS13_KS_CLIENT_AP, &ap_c);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_AP, &ap_s);
+    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
     // Client Initial(ACK) + Handshake(ACK + Finished) -> server completes + opens h3 streams.
     uint8_t ifr[64];
