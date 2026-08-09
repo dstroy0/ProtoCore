@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-09 14:55:19
+**Generated:** 2026-08-09 19:14:07
 **Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 6145 passed, 2 failed - 1881s
+**Result:** ❌ 6145 passed, 2 failed - 1753s
 
 ---
 
@@ -10464,7 +10464,7 @@ _Unit tests for the declarative frame builder (mmgr/protoframe.h)._
 | --: | :-------------------------------------- | :----: | :---------------------------------------------------------------------------------- |
 |   1 | `test_frame_matches_printf`             |   ✅   | Frame matches printf                                                                |
 |   2 | `test_frame_every_kind`                 |   ✅   | Frame every kind                                                                    |
-|   3 | `test_frame_widths`                     |   ✅   | Frame widths                                                                        |
+|   3 | `test_frame_widths`                     |   ✅   | width 0 means "no padding", not "zero digits"                                       |
 |   4 | `test_frame_null_string_is_empty`       |   ✅   | Frame null string is empty                                                          |
 |   5 | `test_frame_literal_only`               |   ✅   | Frame literal only                                                                  |
 |   6 | `test_frame_empty_spec`                 |   ✅   | an empty frame writes nothing and reports 0, and must still leave a valid C string  |
