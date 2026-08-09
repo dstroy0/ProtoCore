@@ -10,8 +10,8 @@
  */
 
 #include "crypto/hash/sha512.h"
-#include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
+#include "crypto/crypto_opt.h"
 
 #if PC_HAS_HW_SHA
 #include <mbedtls/sha512.h> // hardware SHA accelerator
@@ -65,9 +65,6 @@ void pc_sha512(const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_
 // ---------------------------------------------------------------------------
 // SW path: software SHA-512 (FIPS 180-4).
 // ---------------------------------------------------------------------------
-
-// Where the 128-bit message length sits in the final block (FIPS 180-4 §5.1.2).
-#define SHA512_LEN_OFF (PC_SHA512_BLOCK_LEN - 16u)
 
 static const uint64_t K512[80] = {
     0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL, 0xe9b5dba58189dbbcULL, 0x3956c25bf348b538ULL,
@@ -166,22 +163,15 @@ void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
     ctx->n += len;
     while (len > 0)
     {
-        uint32_t take = PC_SHA512_BLOCK_LEN - ctx->buflen;
-        if (len < take)
-        {
-            take = (uint32_t)len;
-        }
-        // buf + buflen carries no alignment, so this is the raw mover, not the aligned-span one.
-        uint8_t *fill = ctx->buf + ctx->buflen;
-        proto_raw_read(fill, data, take);
+        uint32_t space = 128 - ctx->buflen;
+        uint32_t take = (uint32_t)len < space ? (uint32_t)len : space;
+        mem.cpy(ctx->buf + ctx->buflen, data, take);
         ctx->buflen += take;
         data += take;
         len -= take;
-        if (ctx->buflen == PC_SHA512_BLOCK_LEN)
+        if (ctx->buflen == 128)
         {
             sha512_block(ctx->s, ctx->buf);
-            // Everything past buflen stays zero, so the final block needs no pad written at an offset.
-            mem.zero(ctx->buf, sizeof(ctx->buf));
             ctx->buflen = 0;
         }
     }
@@ -196,16 +186,22 @@ void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN])
 
     ctx->buf[ctx->buflen++] = 0x80;
 
-    // The 128-bit length occupies the block's last 16 bytes, so a mark past that offset takes its own block.
-    if (ctx->buflen > SHA512_LEN_OFF)
+    if (ctx->buflen > 112)
     {
+        while (ctx->buflen < 128)
+        {
+            ctx->buf[ctx->buflen++] = 0x00;
+        }
         sha512_block(ctx->s, ctx->buf);
-        mem.zero(ctx->buf, sizeof(ctx->buf));
         ctx->buflen = 0;
     }
+    while (ctx->buflen < 112)
+    {
+        ctx->buf[ctx->buflen++] = 0x00;
+    }
 
-    pc_wr64be(ctx->buf + SHA512_LEN_OFF, len_hi);
-    pc_wr64be(ctx->buf + SHA512_LEN_OFF + 8u, len_lo);
+    pc_wr64be(ctx->buf + 112, len_hi);
+    pc_wr64be(ctx->buf + 120, len_lo);
     sha512_block(ctx->s, ctx->buf);
 
     for (int i = 0; i < 8; i++)
