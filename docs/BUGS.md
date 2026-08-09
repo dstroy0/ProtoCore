@@ -8,6 +8,36 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The hash context became a view, so every copy of one silently aliased its source
+
+- **Status:** FIXED 2026-08-09 across `2f6875793`, `66c2a024a` and the dtls_conn helper commit.
+  Found by the native suite; the shape was proved with a worktree at the pre-cascade commit.
+- **Symptom:** the DTLS and QUIC suites disagreed with the server on the Finished MAC
+  (`test_dtls_conn.c:441`, five tests), `native_coaps_server` took a SIGBUS, and the h3 / quic
+  servers failed to complete a handshake.
+- **Root cause:** the ownership cascade turned `pc_sha256_ctx` / `pc_sha512_ctx` into views - `rx`,
+  `tx` and `fs` point into the caller's working bytes. Anything that duplicated or shared those
+  bytes therefore aliased a live hash instead of snapshotting it. It surfaced three ways, and the
+  first two look nothing alike:
+    1. **Struct assignment.** `pc_sha256_ctx b = a;` was a snapshot when the context owned its
+       storage. 19 sites finalized the copy and destroyed the running transcript.
+    2. **By-value parameter.** `complete_handshake_from_flight(DtlsConn *, pc_sha256_ctx tr, ...)`
+       is the same copy in argument form, which a search for `ctx X = Y;` does not find.
+    3. **One shared work buffer.** The test conversion gave each TU a single `tw[4096]` and passed
+       it to every entry point. A context keeps working out of the bytes it was initialized with,
+       so a one-shot taking the same buffer overwrote it mid-life: the `pc_ed25519_verify` between
+       CertificateVerify and Finished clobbered the transcript.
+- **Why the library was never exposed:** `src/` holds every context in its owner and passes it by
+  pointer. A sweep for all three forms across `src/` returns nothing. The hazard was real but only
+  the tests tripped it.
+- **Fix:** the copies are gone - `final()` compresses into a state copy and leaves the context
+  running, so the snapshot they existed for is unnecessary. 23 test contexts take their own storage,
+  and the one by-value helper rebinds onto its own span. Both context headers now state that the
+  three pointers are the caller's and a struct copy aliases them.
+- **Nothing caught it:** the aliasing is invisible to the compiler - the copy is well-formed C - and
+  undefined behaviour made it luck-dependent, so `native_quic_tls` and `native_coaps` passed on the
+  same bug that made `native_tls13_kdf` derive a wrong master secret.
+
 ## The HkdfLabel scratch reserves 514 bytes for a 51-byte worst case, and the clamp is why
 
 - **Status:** OPEN, found 2026-08-08 in the `src/` resource audit (`crypto.md` F11). The ban-19 half
