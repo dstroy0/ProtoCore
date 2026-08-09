@@ -341,11 +341,23 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         return 0;
 
     case SSH_MSG_CHANNEL_WINDOW_ADJUST:
+        // RFC 4254 sec 5: the connection protocol runs on top of userauth, so every channel message
+        // is refused before authentication, these two included.
+        if (!s->authed)
+        {
+            pc_plaintext_release(mark);
+            return -1;
+        }
         pc_ssh_channel_handle_window_adjust(i, payload, len);
         pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_EOF:
+        if (!s->authed)
+        {
+            pc_plaintext_release(mark);
+            return -1;
+        }
         pc_plaintext_release(mark);
         return 0;
 

@@ -173,6 +173,19 @@ void test_cr_and_control_ignored()
     TEST_ASSERT_EQUAL_STRING("ab", g_last_cmd);
 }
 
+// RFC 854: CR NUL is a carriage return alone, and it ends the line exactly as CR LF does. The NUL
+// must be consumed by the pair rather than dropped as a control byte, which would strand the line.
+void test_cr_nul_dispatches_line()
+{
+    Telnet.accept(0);
+    tcp_capture_reset();
+    g_last_cmd[0] = '\0';
+    const uint8_t seq[] = {'h', 'i', '\r', 0x00};
+    push_bytes(0, seq, sizeof(seq));
+    Telnet.rx(0);
+    TEST_ASSERT_EQUAL_STRING("hi", g_last_cmd);
+}
+
 // IAC IAC in the data stream is an escaped literal 0xFF added to the line.
 void test_iac_escaped_literal()
 {
@@ -376,6 +389,7 @@ int main()
     RUN_TEST(test_print_broadcast);
     RUN_TEST(test_unknown_slot_is_noop);
     RUN_TEST(test_cr_and_control_ignored);
+    RUN_TEST(test_cr_nul_dispatches_line);
     RUN_TEST(test_iac_escaped_literal);
     RUN_TEST(test_subnegotiation_consumed);
     RUN_TEST(test_subnegotiation_bare_se_does_not_inject);

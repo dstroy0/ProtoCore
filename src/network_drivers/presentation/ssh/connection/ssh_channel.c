@@ -525,6 +525,38 @@ static void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8
 }
 #endif
 
+// Read @p n consecutive strings from @p off: true when every one of them is present and whole.
+static proto_bool req_strings_present(const uint8_t *p, size_t len, size_t off, uint8_t n)
+{
+    const uint8_t *s = NULL;
+    uint32_t slen = 0;
+    for (uint8_t k = 0; k < n; k++)
+    {
+        if (!rd_string(p, len, &off, &s, &slen))
+        {
+            return PROTO_FALSE;
+        }
+    }
+    return PROTO_TRUE;
+}
+
+// RFC 4254 sec 6.2: string TERM, four uint32 dimensions, string encoded terminal modes.
+static proto_bool pty_req_fields_present(const uint8_t *p, size_t len, size_t off)
+{
+    const uint8_t *s = NULL;
+    uint32_t slen = 0;
+    if (!rd_string(p, len, &off, &s, &slen))
+    {
+        return PROTO_FALSE;
+    }
+    if (off + 16 > len)
+    {
+        return PROTO_FALSE;
+    }
+    off += 16;
+    return rd_string(p, len, &off, &s, &slen);
+}
+
 int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
                                   size_t cap)
 {
@@ -559,9 +591,27 @@ int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len,
         return -1;
     }
 
-    proto_bool accept =
-        (rtype_len == 5 && mem.cmp(rtype, "shell", 5) == 0) || (rtype_len == 4 && mem.cmp(rtype, "exec", 4) == 0) ||
-        (rtype_len == 7 && mem.cmp(rtype, "pty-req", 7) == 0) || (rtype_len == 3 && mem.cmp(rtype, "env", 3) == 0);
+    // RFC 4254: each request type carries its own mandatory fields after want_reply, and a request
+    // truncated before them is not the request it names. The offset is read from a copy so the
+    // file-transfer classifier below still sees the request-specific argument where it expects it.
+    size_t fields = off;
+    proto_bool accept = PROTO_FALSE;
+    if (rtype_len == 5 && mem.cmp(rtype, "shell", 5) == 0)
+    {
+        accept = PROTO_TRUE; // sec 6.5: no request-specific data follows
+    }
+    else if (rtype_len == 4 && mem.cmp(rtype, "exec", 4) == 0)
+    {
+        accept = req_strings_present(payload, len, fields, 1); // sec 6.5: string command
+    }
+    else if (rtype_len == 3 && mem.cmp(rtype, "env", 3) == 0)
+    {
+        accept = req_strings_present(payload, len, fields, 2); // sec 6.4: string name, string value
+    }
+    else if (rtype_len == 7 && mem.cmp(rtype, "pty-req", 7) == 0)
+    {
+        accept = pty_req_fields_present(payload, len, fields); // sec 6.2
+    }
 
 #if PC_ENABLE_SSH_SFTP || PC_ENABLE_SSH_SCP
     classify_file_transfer_request(i, c, rtype, rtype_len, payload, len, &off, &accept);

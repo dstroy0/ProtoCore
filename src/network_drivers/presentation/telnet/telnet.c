@@ -41,9 +41,10 @@ typedef struct
 {
     uint8_t slot;
     proto_bool used;
-    TelnetState st; // IAC parser state
-    uint8_t cmd;    // pending WILL/WONT/DO/DONT
-    uint16_t len;   // bytes in line[]
+    TelnetState st;    // IAC parser state
+    uint8_t cmd;       // pending WILL/WONT/DO/DONT
+    proto_bool saw_cr; // last data byte was CR: the next one completes CR LF or CR NUL
+    uint16_t len;      // bytes in line[]
     char line[TELNET_BUF_SIZE];
 } TelnetConn;
 
@@ -155,23 +156,42 @@ static void pc_telnet_close(uint8_t slot)
     }
 }
 
+// Terminate the line, echo the newline, hand it to the application, and prompt again.
+static void dispatch_line(uint8_t slot, TelnetConn *t)
+{
+    t->line[t->len] = '\0';
+    raw_send(slot, "\r\n", 2);
+    if (s_telnet.cmd_cb != NULL)
+    {
+        s_telnet.cmd_cb(t->line, (uint8_t)(t - s_telnet.tn));
+    }
+    t->len = 0;
+    raw_send(slot, "> ", 2);
+}
+
 // Process one decoded data byte (not part of an IAC sequence).
 static void handle_data(uint8_t slot, TelnetConn *t, uint8_t b)
 {
+    // RFC 854: a CR is followed by LF for a new line or by NUL for a carriage return alone. Both end
+    // the line, and the byte that completes the pair is consumed here rather than falling through to
+    // the control-byte arm below, which would drop the NUL and leave the line undispatched.
+    if (t->saw_cr)
+    {
+        t->saw_cr = PROTO_FALSE;
+        if (b == '\n' || b == 0)
+        {
+            dispatch_line(slot, t);
+            return;
+        }
+    }
     if (b == '\r')
     {
-        return; // wait for the LF of CRLF
+        t->saw_cr = PROTO_TRUE;
+        return;
     }
-    if (b == '\n')
+    if (b == '\n') // a bare LF ends the line too
     {
-        t->line[t->len] = '\0';
-        raw_send(slot, "\r\n", 2);
-        if (s_telnet.cmd_cb)
-        {
-            s_telnet.cmd_cb(t->line, (uint8_t)(t - s_telnet.tn));
-        }
-        t->len = 0;
-        raw_send(slot, "> ", 2);
+        dispatch_line(slot, t);
         return;
     }
     if (b == 0x08 || b == 0x7F) // backspace / delete
