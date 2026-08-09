@@ -69,11 +69,12 @@ static void pc_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, u
     // succeeds. The borrow also wipes on release, on every exit path.
     size_t mark = pc_secure_mark();
     uint8_t *k = pc_secure_span(PC_AES128GCM_KEY_LEN, 8).buf;
-    pc_tls13_kdf_expand_label(&DTLS13_KDF, secret, "key", k, PC_AES128GCM_KEY_LEN);
+    uint8_t *ws = pc_secure_span(PC_HKDF_BORROW, _Alignof(uint32_t)).buf;
+    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws, secret, "key", k, PC_AES128GCM_KEY_LEN);
     pc_aes128gcm_key_init(out->gcm, k);
-    pc_tls13_kdf_expand_label(&DTLS13_KDF, secret, "iv", out->iv, sizeof(out->iv));
+    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws, secret, "iv", out->iv, sizeof(out->iv));
     uint8_t *snk = pc_secure_span(PC_AES128GCM_KEY_LEN, 8).buf;
-    pc_tls13_kdf_expand_label(&DTLS13_KDF, secret, "sn", snk, PC_AES128GCM_KEY_LEN);
+    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws, secret, "sn", snk, PC_AES128GCM_KEY_LEN);
     pc_aes128_init((struct pc_aes128 *)(out->sn_key), snk);
     pc_secure_release(mark);
 }

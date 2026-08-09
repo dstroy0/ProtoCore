@@ -47,14 +47,15 @@ static void pc_tls_record_keys_derive(TlsRecordKeys *out, TlsCipher cipher, cons
     // schedule is what the AEAD needs afterwards, so no raw key stays resident.
     const size_t mark = pc_secure_mark();
     pc_span k = pc_secure_span(PC_AES128GCM_KEY_LEN, 8);
-    if (!pc_span_ok(k))
+    pc_span ws = pc_secure_span(PC_HKDF_BORROW, _Alignof(uint32_t));
+    if (!pc_span_ok(k) || !pc_span_ok(ws))
     {
         pc_secure_release(mark);
         mem.zero(out->iv, sizeof(out->iv));
         return; // no key material: every protect/unprotect below fails closed on the unkeyed context
     }
-    pc_tls13_kdf_expand_label(&TLS13_KDF, secret, "key", k.buf, PC_AES128GCM_KEY_LEN);
-    pc_tls13_kdf_expand_label(&TLS13_KDF, secret, "iv", out->iv, sizeof(out->iv));
+    pc_tls13_kdf_expand_label(&TLS13_KDF, ws.buf, secret, "key", k.buf, PC_AES128GCM_KEY_LEN);
+    pc_tls13_kdf_expand_label(&TLS13_KDF, ws.buf, secret, "iv", out->iv, sizeof(out->iv));
     // The vendor may refuse the key; without a keyed context every record operation must refuse too.
     out->ready = (pc_aes128gcm_key_init(out->gcm, k.buf) != NULL);
     pc_secure_release(mark);

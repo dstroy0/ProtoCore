@@ -8,6 +8,40 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The mbedtls-backed asymmetric and CCM paths may call the heap at run time
+
+- **Status:** OPEN, found 2026-08-08 in the `src/` resource audit (`crypto.md` F12). **DEFERRED** by
+  the maintainer 2026-08-08: not to be chased until someone confirms it against a linked binary.
+- **Symptom:** unconfirmed. On the accelerated builds, one X25519 key exchange, one ECDSA sign, one
+  RSA verify and every AES-CCM record may each take and release heap, which would break the
+  "no heap after `begin()`" guarantee on the configuration the library actually ships.
+    - `crypto/asymmetric/curve25519.c:270-285` - `pc_gf_inv` declares four `mbedtls_mpi` and calls
+      `mbedtls_mpi_read_binary` / `mbedtls_mpi_exp_mod` / `mbedtls_mpi_write_binary`.
+    - `crypto/asymmetric/ecdsa.c:95-118,128-151,160-183,189-212` - the four mbedtls entry points,
+      through `mbedtls_ecp_group_load` and `mbedtls_ecp_mul`.
+    - `crypto/asymmetric/rsa.c:63-106`.
+    - `crypto/aead/aesccm.c:51-52,81-82` - `mbedtls_ccm_setkey` reaches `mbedtls_cipher_setup`.
+
+    The other three mbedtls uses in that tree (`aes256ctr.c:59`, `aes_cmac.c:35`, and the SHA
+    backends) take plain context structs and do not allocate.
+
+- **Root cause:** if it holds, `mbedtls_mpi_grow` under `read_binary` is `mbedtls_calloc`,
+  `exp_mod` allocates its own sliding-window table, and `cipher_setup`'s `ctx_alloc_func()` is
+  `mbedtls_calloc`. Whether any of that is reachable depends on the platform's
+  `MBEDTLS_PLATFORM_MEMORY` / `MBEDTLS_PLATFORM_STD_CALLOC` configuration, which this repo does not
+  own.
+- **Why it is deferred rather than fixed:** the finding is indirect, inferred through a vendor
+  library rather than observed. `SRC_LAW.md` requires a guarantee about emitted code to be proven at
+  the binary, and that proof does not exist either way here. Confirming it needs the linked `.text`
+  checked for a reachable allocator call on a real ESP32 build; the audit that raised it says the
+  same about itself. Acting on an unconfirmed vendor-behavior claim would mean rewriting four
+  working crypto paths on a guess.
+- **What would settle it:** build for `esp32dev`, disassemble the linked image, and check whether
+  `mbedtls_calloc` is reachable from `pc_gf_inv`, the four `ecdsa.c` entry points, `rsa.c`'s verify,
+  and `mbedtls_ccm_setkey`. Either it is reachable, and this becomes a real SRC_LAW rule-1 violation
+  with a known blast radius, or it is not, and the entry is closed as NOT A BUG.
+- **Filed site:** `git_project/audit/resource/crypto.md` F12.
+
 ## Six TUs write through an unchecked pool borrow, so exhaustion is a NULL write or a garbage key
 
 - **Status:** OPEN, found 2026-08-08 in the `src/` resource audit. Cross-cutting: every site below is
