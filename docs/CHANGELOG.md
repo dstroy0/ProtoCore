@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- a half-finished keyboard-interactive exchange dies with its connection ([`ad9cbc4`](https://github.com/dstroy0/ProtoCore/commit/ad9cbc4374918a73ab70d29cc8baa654b9f56f70))
 - the derived session keys and the DTLS shared secret are wiped ([`291da41`](https://github.com/dstroy0/ProtoCore/commit/291da417166385172acd17dcd21f7aced2424e97))
 - the slot's persistent wire binds at accept, not mid-dispatch ([`bc52f7a`](https://github.com/dstroy0/ProtoCore/commit/bc52f7ab8bb29b775a76ee033cf90a727899209c))
 - PC_WORK_SSH_CONN carries the flight, and the crypto work it already borrowed ([`68645ad`](https://github.com/dstroy0/ProtoCore/commit/68645ade9b86aa9609a31efdad362e90a01e1777))
@@ -40,6 +41,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`8382dd7`](https://github.com/dstroy0/ProtoCore/commit/8382dd7e530cadee3eb65a305841f3ff8732348c))
 - update CHANGELOG.md [skip ci] ([`061472c`](https://github.com/dstroy0/ProtoCore/commit/061472c67d8fd22546702a66ec39b1788f60fc1c))
 - update CHANGELOG.md [skip ci] ([`902308c`](https://github.com/dstroy0/ProtoCore/commit/902308c72e9c46a2efe9ba51370f8b24d7f46b31))
 - update CHANGELOG.md [skip ci] ([`3cc51a9`](https://github.com/dstroy0/ProtoCore/commit/3cc51a91207535933ed88d7d600ae0889e1ffdb7))
