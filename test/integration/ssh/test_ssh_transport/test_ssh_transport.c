@@ -1164,6 +1164,33 @@ void test_derive_keys_session_id_affects_output()
     TEST_ASSERT_EQUAL_MEMORY(a, ssh_keys[0].mac_key_c2s, 32);
 }
 
+// RFC 3526 sec 3 publishes the 2048-bit MODP prime and generator 2. In the library it is 64 raw
+// limbs, and every DH test round-trips against that same constant, so one mistyped interior limb is
+// invisible to all of them and yet no real peer could ever agree with us. Transcribed from the RFC
+// most significant group first; the limbs are little-endian, so limb 63 - j holds group j.
+void test_group14_matches_rfc3526()
+{
+    static const uint32_t RFC3526_P_BE[PC_BN_LIMBS] = {
+        0xFFFFFFFFu, 0xFFFFFFFFu, 0xC90FDAA2u, 0x2168C234u, 0xC4C6628Bu, 0x80DC1CD1u, 0x29024E08u, 0x8A67CC74u,
+        0x020BBEA6u, 0x3B139B22u, 0x514A0879u, 0x8E3404DDu, 0xEF9519B3u, 0xCD3A431Bu, 0x302B0A6Du, 0xF25F1437u,
+        0x4FE1356Du, 0x6D51C245u, 0xE485B576u, 0x625E7EC6u, 0xF44C42E9u, 0xA637ED6Bu, 0x0BFF5CB6u, 0xF406B7EDu,
+        0xEE386BFBu, 0x5A899FA5u, 0xAE9F2411u, 0x7C4B1FE6u, 0x49286651u, 0xECE45B3Du, 0xC2007CB8u, 0xA163BF05u,
+        0x98DA4836u, 0x1C55D39Au, 0x69163FA8u, 0xFD24CF5Fu, 0x83655D23u, 0xDCA3AD96u, 0x1C62F356u, 0x208552BBu,
+        0x9ED52907u, 0x7096966Du, 0x670C354Eu, 0x4ABC9804u, 0xF1746C08u, 0xCA18217Cu, 0x32905E46u, 0x2E36CE3Bu,
+        0xE39E772Cu, 0x180E8603u, 0x9B2783A2u, 0xEC07A28Fu, 0xB5C55DF0u, 0x6F4C52C9u, 0xDE2BCBF6u, 0x95581718u,
+        0x3995497Cu, 0xEA956AE5u, 0x15D22618u, 0x98FA0510u, 0x15728E5Au, 0x8AACAA68u, 0xFFFFFFFFu, 0xFFFFFFFFu,
+    };
+    for (int j = 0; j < PC_BN_LIMBS; j++)
+    {
+        TEST_ASSERT_EQUAL_HEX32(RFC3526_P_BE[j], group14_p.d[PC_BN_LIMBS - 1 - j]);
+    }
+    TEST_ASSERT_EQUAL_HEX32(2u, group14_g.d[0]);
+    for (int j = 1; j < PC_BN_LIMBS; j++)
+    {
+        TEST_ASSERT_EQUAL_HEX32(0u, group14_g.d[j]);
+    }
+}
+
 void test_rekey_needed_threshold()
 {
     ssh_transport_init(0);
@@ -1963,6 +1990,7 @@ int main()
     RUN_TEST(test_kexdh_handle_rsa_sha512_signature);
     RUN_TEST(test_kexdh_handle_ecdsa_end_to_end);
     RUN_TEST(test_derive_keys_session_id_affects_output);
+    RUN_TEST(test_group14_matches_rfc3526);
     RUN_TEST(test_rekey_needed_threshold);
     RUN_TEST(test_rekey_threshold_meets_the_rfc_bounds);
     RUN_TEST(test_rekey_due_volume_and_time);
