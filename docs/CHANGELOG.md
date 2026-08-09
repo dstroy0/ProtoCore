@@ -57,6 +57,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`9b42fa7`](https://github.com/dstroy0/ProtoCore/commit/9b42fa71b9c24e2dac41f6306c412cfa1d3d7a1b))
+- update CHANGELOG.md [skip ci] ([`644849b`](https://github.com/dstroy0/ProtoCore/commit/644849bbb0e94faa51225a6e76178af6591a8d71))
 - update CHANGELOG.md [skip ci] ([`11f08f2`](https://github.com/dstroy0/ProtoCore/commit/11f08f23c79e538321cf99933413b197b42c0a09))
 - update CHANGELOG.md [skip ci] ([`7a05490`](https://github.com/dstroy0/ProtoCore/commit/7a05490265a6011430e5bdaa2ed56683e0dbd425))
 - update CHANGELOG.md [skip ci] ([`d295bea`](https://github.com/dstroy0/ProtoCore/commit/d295bea77460b46fdb3668d1ea54822240b6da03))
@@ -193,6 +195,10 @@ All notable changes to ProtoCore are documented here.
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4be7e49`](https://github.com/dstroy0/ProtoCore/commit/4be7e49cdcbcbe87db836f55f5487e8981061ef3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cb7845d`](https://github.com/dstroy0/ProtoCore/commit/cb7845d706007dc622a78ed0f66ffc7cc5e92339))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`bccef65`](https://github.com/dstroy0/ProtoCore/commit/bccef653ff85aea8200a43f466173c3340ceaa25))
+
+### Features
+
+- password change (RFC 4252 sec 8) runs off the tick, not the worker ([`428b7c8`](https://github.com/dstroy0/ProtoCore/commit/428b7c8fba4d41c29cd7558424b949326ac04104))
 
 ### Refactor
 
