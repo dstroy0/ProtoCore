@@ -27,6 +27,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`fc2faad`](https://github.com/dstroy0/ProtoCore/commit/fc2faadb8ea1640b419600b2c4d9c7206d025625))
 - update test report + coverage [skip ci] ([`27c6f6d`](https://github.com/dstroy0/ProtoCore/commit/27c6f6d0a885bd88303bd172833e14aeec392c87))
 - update CHANGELOG.md [skip ci] ([`0a7368b`](https://github.com/dstroy0/ProtoCore/commit/0a7368b9051f1f5f8ecbb3270cb196e907770b13))
 - update CHANGELOG.md [skip ci] ([`bc7588a`](https://github.com/dstroy0/ProtoCore/commit/bc7588ac1157568c31dfef4b309af20b492ecd9b))
@@ -95,6 +96,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e6d2e8c`](https://github.com/dstroy0/ProtoCore/commit/e6d2e8c25f0f1ded85499f82069c481b950ab014))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9f2f075`](https://github.com/dstroy0/ProtoCore/commit/9f2f0757f06a69136b35bf7b40c9d6b6872600de))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6460cf6`](https://github.com/dstroy0/ProtoCore/commit/6460cf6fdfc8b9dadaa2dafdab558e3dfa0572bc))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4be7e49`](https://github.com/dstroy0/ProtoCore/commit/4be7e49cdcbcbe87db836f55f5487e8981061ef3))
@@ -113,6 +115,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the envs that use the mem accessor link protomem.c ([`0459341`](https://github.com/dstroy0/ProtoCore/commit/0459341bc704982857d7be6d88d006bc9c3bfe9d))
 - the tail merges, so nothing past the span may move ([`fac7b0c`](https://github.com/dstroy0/ProtoCore/commit/fac7b0c131f3ea6e4023281201652e08c0d0c113))
 
 ## [1.0.7] - 2026-08-08
