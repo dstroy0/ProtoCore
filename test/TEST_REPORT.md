@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-09 21:50:09
+**Generated:** 2026-08-09 22:24:20
 **Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 6136 passed, 2 failed - 1909s
+**Result:** ✅ 6181 passed - 0s
 
 ---
 
@@ -2233,18 +2233,19 @@ _End-to-end test of the mlkem768x25519-sha256 SSH hybrid key exchange (draft-iet
 
 ---
 
-## test_ssh_hardening - native_ssh_hardened - ✅ 3 passed
+## test_ssh_hardening - native_ssh_hardened - ✅ 4 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Built with PC_SSH_ALLOW_PASSWORD=0: verifies password authentication is_
 
-|   # | Test                                               | Status | Description                                                            |
-| --: | :------------------------------------------------- | :----: | :--------------------------------------------------------------------- |
-|   1 | `test_password_refused_even_with_correct_callback` |   ✅   | Even a callback that accepts everything must not authenticate, because |
-|   2 | `test_failure_advertises_publickey_only`           |   ✅   | Failure advertises publickey only                                      |
-|   3 | `test_ecdsa_direct_sign_verify_ecdh_roundtrip`     |   ✅   | Ecdsa direct sign verify ecdh roundtrip                                |
+|   # | Test                                                        | Status | Description                                                            |
+| --: | :---------------------------------------------------------- | :----: | :--------------------------------------------------------------------- |
+|   1 | `test_password_refused_even_with_correct_callback`          |   ✅   | Even a callback that accepts everything must not authenticate, because |
+|   2 | `test_failure_advertises_publickey_only`                    |   ✅   | Failure advertises publickey only                                      |
+|   3 | `test_ecdsa_direct_sign_verify_ecdh_roundtrip`              |   ✅   | Ecdsa direct sign verify ecdh roundtrip                                |
+|   4 | `test_ecdsa_publickey_auth_succeeds_when_password_disabled` |   ✅   | Ecdsa publickey auth succeeds when password disabled                   |
 
 </details>
 
