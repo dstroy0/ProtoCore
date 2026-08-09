@@ -8,6 +8,33 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Audit F1/F2 "the PQC stack overflows an ESP32 worker by 3-5x" - NOT A BUG, the floors are enforced
+
+- **Status:** CLOSED 2026-08-09 as not-a-bug, on the severity claim. Filed so the claim is not acted
+  on twice.
+- **The claim:** `crypto.md` F1 and F2 measure sntrup761 decapsulation at ~23 KB of frame and
+  ML-KEM-768 decapsulation at ~9 KB, then rate both category C on the grounds that "a FreeRTOS worker
+  task on an ESP32 is typically stacked at 4-8 KB, so the SSH KEX path overflows by 3-5x".
+- **Why it does not hold:** the 4-8 KB is a generic FreeRTOS default, not this library's. The worker
+  stack is sized per feature combination in `protocore_config.h:306-332`, and the numbers there are
+  the same ones the audit measured:
+    - sntrup761 + reverse-SSH client: 40960
+    - sntrup761, server only: 32768
+    - ML-KEM only (sntrup761 explicitly off): 16384
+    - SSH without PQC: 12288; no SSH: 8192
+      The block's own comment states "the reverse-SSH CLIENT runs KeyGen+Decaps whose FO re-encrypt
+      peaks ~32 KB, the SERVER runs Encaps only (~22 KB)".
+- **And it is enforced, not merely defaulted:** four `#error` guards fail the build when the stack is
+  set by hand below the floor - `:7053` (RSA/OIDC), `:7062` (curve25519/ed25519), `:7074` (ML-KEM),
+  `:7093` (sntrup761, naming 32768 server / 40960 client). A build that starves the KEX does not
+  link, it stops at the preprocessor with the number it needs.
+- **What survives from F1/F2:** two smaller points, neither category C. The scratch is
+  function-scope, so it rides the SRCBANNED #19 ratchet like the other 984 sites. And the frames are
+  abandoned unwiped - `f`/`ginv` (the sntrup761 private key), `r`, and ML-KEM's `shat`/`mprime` -
+  which is the same exposure as F7 and belongs with it, not with a stack-overflow finding.
+- **Lesson for the next audit read:** the figures were right and the consequence was wrong. The
+  audit did not read `PC_WORKER_TASK_STACK`.
+
 ## The hash context became a view, so every copy of one silently aliased its source
 
 - **Status:** FIXED 2026-08-09 across `2f6875793`, `66c2a024a` and the dtls_conn helper commit.
