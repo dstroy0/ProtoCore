@@ -10,7 +10,7 @@
 //
 // Build/flash:  pio run -d performance_benching/device/web_terminal -t upload --upload-port COM7
 #include "device_bench.h"
-#include "mmgr/frame.h"
+#include "mmgr/protoframe.h"
 #include "services/web/web_terminal/web_terminal.h"
 #include <Arduino.h>
 
@@ -26,8 +26,8 @@ static void web_terminal_bench_task(void *)
         volatile uint32_t sink = 0;
         char line[64];
         DBENCH_OP("web terminal line (frame build)", 200000, {
-            sink += (uint32_t)pc_frame_build(line, sizeof(line), BENCH_LINE,
-                                             (const pc_fval[]){PC_VU32(214u), PC_VU32(48u), PC_VU32(131072u)}, 3);
+            sink += (uint32_t)frame.build(line, sizeof(line), BENCH_LINE,
+                                          (const pc_fval[]){PC_VU32(214u), PC_VU32(48u), PC_VU32(131072u)}, 3);
         });
         DBENCH_OP("pc_web_terminal_client_count", 200000, sink += pc_web_terminal_client_count());
         (void)sink;

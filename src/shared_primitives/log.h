@@ -27,10 +27,14 @@
 #ifndef PROTOCORE_LOG_H
 #define PROTOCORE_LOG_H
 
-#include "mmgr/frame.h"
 #include "protocore_config.h"
 
 PROTO_BEGIN_DECLS
+
+// Only ever pointed at from here, so the tags are enough and the engine's header stays out of
+// every translation unit that includes this one.
+struct pc_field;
+struct pc_fval;
 
 /** @brief Receives an emitted line, already formatted. @p level is a PC_LOG_LEVEL_* value. */
 typedef void (*pc_log_sink_fn)(uint8_t level, const char *line);
@@ -41,7 +45,7 @@ typedef void (*pc_log_sink_fn)(uint8_t level, const char *line);
  * It exists to mark a discarded statement's arguments as used, so a variable read only by a log
  * does not warn its way into being deleted.
  */
-int pc_log_discard_args(const pc_field *spec, const pc_fval *v, size_t nv);
+int pc_log_discard_args(const struct pc_field *spec, const struct pc_fval *v, size_t nv);
 
 /** @brief The discarded form: marks arguments used, emits nothing. */
 #define PC_LOG_DISCARD(spec, v, nv)                                                                                    \
@@ -59,7 +63,7 @@ int pc_log_discard_args(const pc_field *spec, const pc_fval *v, size_t nv);
  * nothing here parses anything at runtime, and a build whose logs declare no float field links no
  * float formatter.
  */
-void pc_log_frame(uint8_t level, const pc_field *spec, const pc_fval *v, size_t nv);
+void pc_log_frame(uint8_t level, const struct pc_field *spec, const struct pc_fval *v, size_t nv);
 
 /** @brief Install (or clear, with NULL) the sink emitted lines are handed to. */
 void pc_log_set_sink(pc_log_sink_fn cb);

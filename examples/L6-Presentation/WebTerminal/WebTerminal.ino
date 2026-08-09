@@ -61,15 +61,15 @@ void on_command(const char *line, uint8_t client_id)
     char out[96];
     if (strcmp(line, "heap") == 0)
     {
-        pc_frame_build(out, sizeof(out), REPLY_HEAP, (const pc_fval[]){PC_VU32((uint32_t)ESP.getFreeHeap())}, 1);
+        frame.build(out, sizeof(out), REPLY_HEAP, (const pc_fval[]){PC_VU32((uint32_t)ESP.getFreeHeap())}, 1);
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        pc_frame_build(out, sizeof(out), REPLY_UPTIME, (const pc_fval[]){PC_VU32((uint32_t)millis())}, 1);
+        frame.build(out, sizeof(out), REPLY_UPTIME, (const pc_fval[]){PC_VU32((uint32_t)millis())}, 1);
     }
     else
     {
-        pc_frame_build(out, sizeof(out), REPLY_ECHO, (const pc_fval[]){PC_VSTR(line)}, 1);
+        frame.build(out, sizeof(out), REPLY_ECHO, (const pc_fval[]){PC_VSTR(line)}, 1);
     }
     pc_web_terminal_print(out);
 }
@@ -114,7 +114,7 @@ void loop()
         if (pc_web_terminal_client_count() > 0)
         {
             char out[96];
-            pc_frame_build(out, sizeof(out), HEARTBEAT,
+            frame.build(out, sizeof(out), HEARTBEAT,
                            (const pc_fval[]){PC_VU32((uint32_t)millis()), PC_VU32((uint32_t)ESP.getFreeHeap())}, 2);
             pc_web_terminal_print(out);
         }

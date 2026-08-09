@@ -10458,7 +10458,7 @@ _NIST P-256 native software-path tests (ecdsa-sha2-nistp256 signatures + ecdh-sh
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the declarative frame builder (mmgr/frame.h)._
+_Unit tests for the declarative frame builder (mmgr/protoframe.h)._
 
 |   # | Test                                    | Status | Description                                                                         |
 | --: | :-------------------------------------- | :----: | :---------------------------------------------------------------------------------- |

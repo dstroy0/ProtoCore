@@ -6857,7 +6857,7 @@
 "native_wisun",
 "native_ws_client"
 ],
-"src/mmgr/frame.c": [
+"src/mmgr/protoframe.c": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -6896,7 +6896,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/mmgr/frame.h": [
+"src/mmgr/protoframe.h": [
 "native_application",
 "native_auth",
 "native_chunked",

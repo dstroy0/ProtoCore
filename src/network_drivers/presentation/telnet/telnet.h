@@ -25,10 +25,14 @@
 #ifndef PROTOCORE_TELNET_H
 #define PROTOCORE_TELNET_H
 
-#include "mmgr/frame.h"
 #include "protocore_config.h"
 
 PROTO_BEGIN_DECLS
+
+// Only ever pointed at from here, so the tags are enough and the engine's header stays out of
+// every translation unit that includes this one.
+struct pc_field;
+struct pc_fval;
 
 #if PC_ENABLE_TELNET
 
@@ -68,7 +72,7 @@ typedef struct
     void (*on_command)(TelnetCommandCb cb);
     void (*print)(const char *s);
     void (*println)(const char *s);
-    void (*frame)(const pc_field *spec, const pc_fval *v, size_t nv);
+    void (*frame)(const struct pc_field *spec, const struct pc_fval *v, size_t nv);
     uint8_t (*client_count)(void);
 
     void (*accept)(uint8_t slot);

@@ -35,7 +35,7 @@
 
 #include "protocore.h"
 #include "crypto/rng/rng.h" // pc_rand_fill(): the CSRF secret's seed
-#include "mmgr/frame.h"     // the diag document is a frame spec, not a concatenation
+#include "mmgr/protoframe.h"     // the diag document is a frame spec, not a concatenation
 #include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/plaintext.h" // the diag document is borrowed, not a stack array
 #include "mmgr/protostr.h"  // str: the bounded-run walks
@@ -777,7 +777,7 @@ void diag(uint8_t slot_id)
     const size_t mark = pc_plaintext_mark();
     char *doc = (char *)pc_plaintext_alloc(PC_PLAINTEXT_WORK_DIAG, 1);
     if (doc == NULL ||
-        pc_frame_build(doc, PC_PLAINTEXT_WORK_DIAG, DIAG_DOC,
+        frame.build(doc, PC_PLAINTEXT_WORK_DIAG, DIAG_DOC,
                        (const pc_fval[]){PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_WEBSOCKET]),
                                          PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SSE]),
                                          PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MULTIPART]),

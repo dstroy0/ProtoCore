@@ -17,7 +17,7 @@
 
 #if PC_ENABLE_GPIO_MAP
 
-#include "mmgr/frame.h"
+#include "mmgr/protoframe.h"
 
 const char *pc_gpio_dir_name(pc_gpio_dir dir)
 {
@@ -68,14 +68,14 @@ int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t
     {
         return 0;
     }
-    if (pc_frame_append(out, cap, GPIO_OPEN, NULL, 0) == 0)
+    if (frame.append(out, cap, GPIO_OPEN, NULL, 0) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         const pc_gpio_pin *p = &pins[i];
-        if (pc_frame_append(out, cap, GPIO_PIN,
+        if (frame.append(out, cap, GPIO_PIN,
                             (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VU32((uint32_t)p->pin),
                                               PC_VJSON(p->label), PC_VJSON(pc_gpio_dir_name(p->dir)),
                                               PC_VU32((uint32_t)(!!p->level))},
@@ -84,7 +84,7 @@ int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t
             return 0;
         }
     }
-    return (int32_t)pc_frame_append(out, cap, GPIO_CLOSE, NULL, 0);
+    return (int32_t)frame.append(out, cap, GPIO_CLOSE, NULL, 0);
 }
 
 // Read the decimal integer that follows "name=" in a form-encoded body. Returns

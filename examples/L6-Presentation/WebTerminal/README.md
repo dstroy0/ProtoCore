@@ -27,9 +27,9 @@ terminals:
 void on_command(const char *line, uint8_t client_id) {
     char out[96];
     if (strcmp(line, "heap") == 0)
-        pc_frame_build(out, sizeof(out), REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        frame.build(out, sizeof(out), REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else
-        pc_frame_build(out, sizeof(out), REPLY_ECHO, line);
+        frame.build(out, sizeof(out), REPLY_ECHO, line);
     pc_web_terminal_print(out);
 }
 ```
@@ -40,7 +40,7 @@ void on_command(const char *line, uint8_t client_id) {
 ```cpp
 if (pc_web_terminal_client_count() > 0) {
     char out[96];
-    pc_frame_build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
+    frame.build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
     pc_web_terminal_print(out);
 }
 ```
@@ -88,11 +88,11 @@ void on_command(const char *line, uint8_t client_id)
 
     char out[96];
     if (strcmp(line, "heap") == 0)
-        pc_frame_build(out, sizeof(out), REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        frame.build(out, sizeof(out), REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else if (strcmp(line, "uptime") == 0)
-        pc_frame_build(out, sizeof(out), REPLY_UPTIME, (uint32_t)millis());
+        frame.build(out, sizeof(out), REPLY_UPTIME, (uint32_t)millis());
     else
-        pc_frame_build(out, sizeof(out), REPLY_ECHO, line);
+        frame.build(out, sizeof(out), REPLY_ECHO, line);
     pc_web_terminal_print(out);
 }
 
@@ -137,7 +137,7 @@ void loop()
         if (pc_web_terminal_client_count() > 0)
         {
             char out[96];
-            pc_frame_build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
+            frame.build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
             pc_web_terminal_print(out);
         }
     }

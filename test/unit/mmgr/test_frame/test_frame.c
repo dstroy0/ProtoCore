@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the declarative frame builder (mmgr/frame.h).
+// Unit tests for the declarative frame builder (mmgr/protoframe.h).
 //
 // This engine is the single place the library turns values into wire bytes, so the ~160 call
 // sites that declare a frame spec carry no formatting logic of their own. That is only a good
@@ -9,7 +9,7 @@
 // every width, the fail-closed contract at the exact byte boundary, the append rewind, and a
 // differential check against the libc printf whose output these frames replace byte for byte.
 
-#include "mmgr/frame.h"
+#include "mmgr/protoframe.h"
 #include <stdio.h> // snprintf: the libc reference the frames are diffed against
 #include <string.h>
 
@@ -38,7 +38,7 @@ void test_frame_matches_printf()
 {
     char out[256];
     char want[256];
-    size_t n = pc_frame_build(out, sizeof(out), RESP,
+    size_t n = frame.build(out, sizeof(out), RESP,
                               (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("text/plain"),
                                                 PC_VU32(21u)},
                               4);
@@ -71,7 +71,7 @@ void test_frame_every_kind()
                                    {PC_FK_OCT, 4, 0, NULL},
                                    PC_END};
     char out[160];
-    pc_frame_build(out, sizeof(out), ALL,
+    frame.build(out, sizeof(out), ALL,
                    (const pc_fval[]){PC_VHEX(0xbeefu), PC_VDEC(7u), PC_VI64(-5), PC_VU64(12u),
                                      PC_VG(3.14159265), PC_VFIX(2.5), PC_VCH('x'), PC_VJSON("a\"b"),
                                      PC_VXML("a<b"), PC_VOCT(8u)},
@@ -85,7 +85,7 @@ void test_frame_widths()
         {PC_FK_HEX, 0, 0, NULL}, {PC_FK_LIT, 0, 1, ","}, {PC_FK_HEX, 4, 0, NULL}, {PC_FK_LIT, 0, 1, ","},
         {PC_FK_DEC, 5, 0, NULL}, {PC_FK_LIT, 0, 1, ","}, {PC_FK_OCT, 0, 0, NULL}, PC_END};
     char out[64];
-    pc_frame_build(out, sizeof(out), W,
+    frame.build(out, sizeof(out), W,
                    (const pc_fval[]){PC_VHEX(0xabu), PC_VHEX(0xabu), PC_VDEC(42u), PC_VOCT(64u)}, 4);
     // width 0 means "no padding", not "zero digits"
     TEST_ASSERT_EQUAL_STRING("ab,00ab,00042,100", out);
@@ -95,7 +95,7 @@ void test_frame_null_string_is_empty()
 {
     static const pc_field S[] = {{PC_FK_LIT, 0, 1, "["}, PC_STR, {PC_FK_LIT, 0, 1, "]"}, PC_END};
     char out[32];
-    pc_frame_build(out, sizeof(out), S, (const pc_fval[]){PC_VSTR(NULL)}, 1);
+    frame.build(out, sizeof(out), S, (const pc_fval[]){PC_VSTR(NULL)}, 1);
     TEST_ASSERT_EQUAL_STRING("[]", out);
 }
 
@@ -103,7 +103,7 @@ void test_frame_literal_only()
 {
     static const pc_field L[] = {{PC_FK_LIT, 0, 12, "no args here"}, PC_END};
     char out[32];
-    TEST_ASSERT_EQUAL_size_t(12, pc_frame_build(out, sizeof(out), L, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(12, frame.build(out, sizeof(out), L, NULL, 0));
     TEST_ASSERT_EQUAL_STRING("no args here", out);
 }
 
@@ -113,7 +113,7 @@ void test_frame_empty_spec()
     char out[8];
     out[0] = 'x';
     // an empty frame writes nothing and reports 0, and must still leave a valid C string
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, sizeof(out), E, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), E, NULL, 0));
     TEST_ASSERT_EQUAL_STRING("", out);
 }
 
@@ -125,7 +125,7 @@ void test_frame_overflow_fails_closed()
     char tiny[8];
     memset(tiny, 'Z', sizeof(tiny));
     TEST_ASSERT_EQUAL_size_t(0,
-                             pc_frame_build(tiny, sizeof(tiny), RESP,
+                             frame.build(tiny, sizeof(tiny), RESP,
                                             (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"),
                                                               PC_VSTR("text/plain"), PC_VU32(21u)},
                                             4));
@@ -136,26 +136,26 @@ void test_frame_exact_fit_boundary()
 {
     static const pc_field F[] = {{PC_FK_LIT, 0, 4, "abcd"}, PC_END};
     char five[5];
-    TEST_ASSERT_EQUAL_size_t(4, pc_frame_build(five, sizeof(five), F, NULL, 0)); // 4 bytes + NUL fits exactly
+    TEST_ASSERT_EQUAL_size_t(4, frame.build(five, sizeof(five), F, NULL, 0)); // 4 bytes + NUL fits exactly
     TEST_ASSERT_EQUAL_STRING("abcd", five);
 
     char four[4];
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(four, sizeof(four), F, NULL, 0)); // one byte short
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(four, sizeof(four), F, NULL, 0)); // one byte short
     TEST_ASSERT_EQUAL_STRING("", four);
 }
 
 void test_frame_guards()
 {
     char out[8];
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(NULL, 8, RESP,
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(NULL, 8, RESP,
                                             (const pc_fval[]){PC_VU32(1u), PC_VSTR(""), PC_VSTR(""),
                                                               PC_VU32(0u)},
                                             4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, 0, RESP,
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(out, 0, RESP,
                                             (const pc_fval[]){PC_VU32(1u), PC_VSTR(""), PC_VSTR(""),
                                                               PC_VU32(0u)},
                                             4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, sizeof(out), NULL, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), NULL, NULL, 0));
 }
 
 // A zero-capacity buffer owns no bytes, so not even the NUL may be written. Every appender already
@@ -164,14 +164,14 @@ void test_frame_guards()
 void test_frame_zero_cap_writes_nothing()
 {
     char sentinel[2] = {0x7F, 0x7F};
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(sentinel, 0, RESP,
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(sentinel, 0, RESP,
                                             (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("t"),
                                                               PC_VU32(0u)},
                                             4));
     TEST_ASSERT_EQUAL_CHAR(0x7F, sentinel[0]);
 
     static const pc_field L[] = {{PC_FK_LIT, 0, 1, "x"}, PC_END};
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(sentinel, 0, L, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(sentinel, 0, L, NULL, 0));
     TEST_ASSERT_EQUAL_CHAR(0x7F, sentinel[0]);
 }
 
@@ -181,8 +181,8 @@ void test_frame_append_accumulates()
 {
     char acc[64];
     acc[0] = '\0';
-    TEST_ASSERT_EQUAL_size_t(8, pc_frame_append(acc, sizeof(acc), HDR, (const pc_fval[]){PC_VSTR("X-A"), PC_VSTR("1")}, 2));
-    TEST_ASSERT_EQUAL_size_t(16, pc_frame_append(acc, sizeof(acc), HDR, (const pc_fval[]){PC_VSTR("X-B"), PC_VSTR("2")}, 2));
+    TEST_ASSERT_EQUAL_size_t(8, frame.append(acc, sizeof(acc), HDR, (const pc_fval[]){PC_VSTR("X-A"), PC_VSTR("1")}, 2));
+    TEST_ASSERT_EQUAL_size_t(16, frame.append(acc, sizeof(acc), HDR, (const pc_fval[]){PC_VSTR("X-B"), PC_VSTR("2")}, 2));
     TEST_ASSERT_EQUAL_STRING("X-A: 1\r\nX-B: 2\r\n", acc);
 }
 
@@ -192,8 +192,8 @@ void test_frame_append_rewinds_whole_frame()
     // half-written header line is a protocol violation, not a truncation.
     char small[12];
     small[0] = '\0';
-    pc_frame_append(small, sizeof(small), HDR, (const pc_fval[]){PC_VSTR("X-A"), PC_VSTR("1")}, 2);
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_append(small, sizeof(small), HDR,
+    frame.append(small, sizeof(small), HDR, (const pc_fval[]){PC_VSTR("X-A"), PC_VSTR("1")}, 2);
+    TEST_ASSERT_EQUAL_size_t(0, frame.append(small, sizeof(small), HDR,
                                               (const pc_fval[]){PC_VSTR("X-VeryLong"), PC_VSTR("2")}, 2));
     TEST_ASSERT_EQUAL_STRING("X-A: 1\r\n", small);
 }
@@ -203,7 +203,7 @@ void test_frame_append_to_full_buffer()
     char full[8];
     memset(full, 'a', sizeof(full) - 1);
     full[sizeof(full) - 1] = '\0';
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_append(full, sizeof(full), HDR, (const pc_fval[]){PC_VSTR("X"), PC_VSTR("1")}, 2));
+    TEST_ASSERT_EQUAL_size_t(0, frame.append(full, sizeof(full), HDR, (const pc_fval[]){PC_VSTR("X"), PC_VSTR("1")}, 2));
     TEST_ASSERT_EQUAL_STRING("aaaaaaa", full); // untouched
 }
 
@@ -217,18 +217,18 @@ void test_frame_float_matches_printf()
     char want[64];
     for (unsigned i = 0; i < sizeof(vals) / sizeof(vals[0]); i++)
     {
-        pc_frame_build(out, sizeof(out), G, (const pc_fval[]){PC_VG(vals[i])}, 1);
+        frame.build(out, sizeof(out), G, (const pc_fval[]){PC_VG(vals[i])}, 1);
         snprintf(want, sizeof(want), "%.6g", vals[i]);
         TEST_ASSERT_EQUAL_STRING(want, out);
 
-        pc_frame_build(out, sizeof(out), G10, (const pc_fval[]){PC_VG(vals[i])}, 1);
+        frame.build(out, sizeof(out), G10, (const pc_fval[]){PC_VG(vals[i])}, 1);
         snprintf(want, sizeof(want), "%.10g", vals[i]);
         TEST_ASSERT_EQUAL_STRING(want, out);
 
         // PC_FIX is byte-identical to printf only within the 64-bit range it documents.
         if (vals[i] < 18446744073709551616.0)
         {
-            pc_frame_build(out, sizeof(out), F2, (const pc_fval[]){PC_VFIX(vals[i])}, 1);
+            frame.build(out, sizeof(out), F2, (const pc_fval[]){PC_VFIX(vals[i])}, 1);
             snprintf(want, sizeof(want), "%.2f", vals[i]);
             TEST_ASSERT_EQUAL_STRING(want, out);
         }
@@ -242,9 +242,9 @@ void test_frame_fixed_huge_falls_back()
 {
     static const pc_field F2[] = {{PC_FK_FIX, 2, 0, NULL}, PC_END};
     char out[64];
-    pc_frame_build(out, sizeof(out), F2, (const pc_fval[]){PC_VFIX(1e20)}, 1);
+    frame.build(out, sizeof(out), F2, (const pc_fval[]){PC_VFIX(1e20)}, 1);
     TEST_ASSERT_EQUAL_STRING("1e+20", out);
-    pc_frame_build(out, sizeof(out), F2, (const pc_fval[]){PC_VFIX(1e300)}, 1);
+    frame.build(out, sizeof(out), F2, (const pc_fval[]){PC_VFIX(1e300)}, 1);
     TEST_ASSERT_EQUAL_STRING("1e+300", out);
 }
 
@@ -253,7 +253,7 @@ void test_frame_unknown_opcode_refuses()
     // A spec built against a newer engine must not silently emit a frame missing a field.
     static const pc_field BAD[] = {{PC_FK_LIT, 0, 1, "a"}, {200, 0, 0, NULL}, PC_END};
     char out[32];
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, sizeof(out), BAD, (const pc_fval[]){{200, {.u32 = 0}}}, 1));
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), BAD, (const pc_fval[]){{200, {.u32 = 0}}}, 1));
     TEST_ASSERT_EQUAL_STRING("", out);
 }
 
@@ -264,7 +264,7 @@ void test_frame_value_kind_must_match_spec()
     static const pc_field N[] = {PC_U32, PC_END};
     char out[32];
     out[0] = 'x';
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, sizeof(out), N, (const pc_fval[]){PC_VSTR("7")}, 1));
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), N, (const pc_fval[]){PC_VSTR("7")}, 1));
     TEST_ASSERT_EQUAL_STRING("", out);
 }
 
@@ -275,15 +275,15 @@ void test_frame_arity_must_match_spec()
     static const pc_field TWO[] = {PC_U32, {PC_FK_LIT, 0, 1, "-"}, PC_U32, PC_END};
     char out[32];
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, sizeof(out), TWO, (const pc_fval[]){PC_VU32(1u)}, 1));
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), TWO, (const pc_fval[]){PC_VU32(1u)}, 1));
     TEST_ASSERT_EQUAL_STRING("", out);
 
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_frame_build(out, sizeof(out), TWO,
+        0, frame.build(out, sizeof(out), TWO,
                           (const pc_fval[]){PC_VU32(1u), PC_VU32(2u), PC_VU32(3u)}, 3));
     TEST_ASSERT_EQUAL_STRING("", out);
 
-    TEST_ASSERT_EQUAL_size_t(3, pc_frame_build(out, sizeof(out), TWO,
+    TEST_ASSERT_EQUAL_size_t(3, frame.build(out, sizeof(out), TWO,
                                                (const pc_fval[]){PC_VU32(1u), PC_VU32(2u)}, 2));
     TEST_ASSERT_EQUAL_STRING("1-2", out);
 }

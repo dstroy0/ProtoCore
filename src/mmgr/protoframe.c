@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file frame.c
+ * @file protoframe.c
  * @brief The one frame engine. Walks a pc_field spec, pulls one argument per valued field.
  *
  * Every conversion is a pc_sb appender, so what lives here is the dispatch loop and the
  * fail-closed contract, never formatting logic.
  */
 
-#include "mmgr/frame.h"
+#include "mmgr/protoframe.h"
 #include "mmgr/protostr.h" // str: the bounded-run walks
 #include "shared_primitives/speed_opt.h"
 

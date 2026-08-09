@@ -11,6 +11,8 @@
 
 #include "shared_primitives/log.h"
 
+#include "mmgr/protoframe.h" // frame.build: the line is a spec, not a format string
+
 #if PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
 
 #include <stdarg.h>
@@ -31,7 +33,7 @@ void pc_log_set_sink(pc_log_sink_fn cb)
     s_log.sink = cb;
 }
 
-void pc_log_frame(uint8_t level, const pc_field *spec, const pc_fval *v, size_t nv)
+void pc_log_frame(uint8_t level, const struct pc_field *spec, const struct pc_fval *v, size_t nv)
 {
     if (!spec)
     {
@@ -43,7 +45,7 @@ void pc_log_frame(uint8_t level, const pc_field *spec, const pc_fval *v, size_t 
     // states its literals' lengths and bounds its string fields, so whether a message fits is
     // settled when the frame is declared. Nothing here decides it from the data.
     char line[PC_LOG_LINE_LEN];
-    (void)pc_frame_build(line, sizeof(line), spec, v, nv);
+    (void)frame.build(line, sizeof(line), spec, v, nv);
 
 #if PC_ENABLE_LOGBUF
     pc_log(level, line);
