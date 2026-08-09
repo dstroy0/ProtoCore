@@ -179,9 +179,14 @@ int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, si
         pc_secure_release(mark);
         return -1;
     }
-    Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
+    // ssh_pkt_send has already advanced the sequence number and the cipher for this packet.
+    const proto_bool queued = Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
     Tcp.conn->flush(conn->id);
     pc_secure_release(mark);
+    if (!queued)
+    {
+        return -1;
+    }
     return (int)len;
 }
 
