@@ -62,7 +62,7 @@ typedef struct
  * HKDF-Expand-Label ("client in" / "server in") of that, and key/iv/hp are expanded from the
  * traffic secret. @p dcid is the Destination Connection ID from the client's first Initial packet.
  */
-void pc_quic_derive_initial_secrets(const uint8_t *dcid, size_t dcid_len, QuicInitialSecrets *out);
+void pc_quic_derive_initial_secrets(uint8_t *work, const uint8_t *dcid, size_t dcid_len, QuicInitialSecrets *out);
 
 /**
  * @brief Expand one traffic secret into a {key, iv, hp} triple (RFC 9001 sec 5.1 labels).
@@ -71,7 +71,7 @@ void pc_quic_derive_initial_secrets(const uint8_t *dcid, size_t dcid_len, QuicIn
  * Initial derivation uses this internally; the Handshake and 1-RTT levels call it directly on the
  * TLS-derived handshake / application traffic secrets so every level shares one code path.
  */
-void pc_quic_keys_from_secret(const uint8_t secret[PC_HKDF_HASH_LEN], QuicPacketKeys *out);
+void pc_quic_keys_from_secret(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], QuicPacketKeys *out);
 
 /**
  * @brief Protect one QUIC packet in place: AEAD-seal the payload, then apply header protection.

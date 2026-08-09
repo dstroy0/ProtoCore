@@ -27,8 +27,9 @@ PC_CRYPTO_HOT
 // HW path: streaming + one-shot via mbedtls.
 // ---------------------------------------------------------------------------
 
-void pc_sha256_init(pc_sha256_ctx *ctx)
+void pc_sha256_init(pc_sha256_ctx *ctx, uint8_t *work)
 {
+    (void)work; // the accelerator carries its own
     mbedtls_sha256_init(&ctx->mbed);
 #if MBEDTLS_VERSION_MAJOR >= 3
     mbedtls_sha256_starts(&ctx->mbed, 0 /* 0 = SHA-256 */);
@@ -81,6 +82,15 @@ static const uint32_t K256[64] = {
 // Where the 64-bit message length sits in the final block (FIPS 180-4 §5.1.1).
 #define SHA256_LEN_OFF (PC_SHA256_BLOCK_LEN - 8u)
 
+// The caller's working bytes, split: the block as it arrives, the padded last one, and the state copy
+// the padded blocks compress into so finalizing leaves the running hash alone.
+#define SHA256_OFF_RX 0u
+#define SHA256_OFF_TX (SHA256_OFF_RX + PC_SHA256_BLOCK_LEN)
+#define SHA256_OFF_STATE (SHA256_OFF_TX + PC_SHA256_BLOCK_LEN)
+static_assert(SHA256_OFF_STATE + sizeof(uint32_t) * 8 <= PC_SHA256_BORROW,
+              "PC_SHA256_BORROW is short of the schedule and the two blocks - raise it in protocore_config.h, "
+              "which derives PC_SECURE_ARENA_SIZE from it");
+
 static const uint32_t H0[8] = {
     0x6a09e667u, 0xbb67ae85u, 0x3c6ef372u, 0xa54ff53au, 0x510e527fu, 0x9b05688cu, 0x1f83d9abu, 0x5be0cd19u,
 };
@@ -90,72 +100,195 @@ static inline uint32_t rotr32(uint32_t x, uint32_t n)
     return (x >> n) | (x << (32 - n));
 }
 
-// Compress one 64-byte block into the running hash state h[0..7] (FIPS 180-4 §6.2.2). The caller
-// handles padding and length so this sees full blocks only.
-static void sha256_block(uint32_t h[8], const uint8_t blk[64])
+// The six FIPS 180-4 §4.1.2 functions the rounds are built from.
+static inline uint32_t sha256_ch(uint32_t x, uint32_t y, uint32_t z)
 {
-    // Message schedule W[0..63]. The first 16 words are the block read as big-endian; the rest are
-    // extended with the sigma-0/sigma-1 recurrence.
-    uint32_t W[64];
-    for (int i = 0; i < 16; i++)
-    {
-        W[i] = pc_rd32be(blk + i * 4);
-    }
-    for (int i = 16; i < 64; i++)
-    {
-        uint32_t s0 = rotr32(W[i - 15], 7U) ^ rotr32(W[i - 15], 18U) ^ (W[i - 15] >> 3U); // σ0
-        uint32_t s1 = rotr32(W[i - 2], 17U) ^ rotr32(W[i - 2], 19U) ^ (W[i - 2] >> 10U);  // σ1
-        W[i] = W[i - 16] + s0 + W[i - 7] + s1;
-    }
-
-    // Working variables seeded from the current hash state.
-    uint32_t a = h[0];
-    uint32_t b = h[1];
-    uint32_t c = h[2];
-    uint32_t d = h[3];
-    uint32_t e = h[4];
-    uint32_t f = h[5];
-    uint32_t g = h[6];
-    uint32_t hh = h[7];
-
-    // 64 compression rounds. Each mixes in one schedule word W[i] and round constant K256[i] using the
-    // Ch/Maj choice/majority functions and the Sigma-0/Sigma-1 rotations.
-    for (int i = 0; i < 64; i++)
-    {
-        uint32_t S1 = rotr32(e, 6U) ^ rotr32(e, 11U) ^ rotr32(e, 25U); // Σ1
-        uint32_t ch = (e & f) ^ (~e & g);                              // Ch(e,f,g)
-        uint32_t tmp1 = hh + S1 + ch + K256[i] + W[i];                 // T1
-        uint32_t S0 = rotr32(a, 2U) ^ rotr32(a, 13U) ^ rotr32(a, 22U); // Σ0
-        uint32_t maj = (a & b) ^ (a & c) ^ (b & c);                    // Maj(a,b,c)
-        uint32_t tmp2 = S0 + maj;                                      // T2
-        // Rotate the eight working variables; only e and a take new values.
-        hh = g;
-        g = f;
-        f = e;
-        e = d + tmp1;
-        d = c;
-        c = b;
-        b = a;
-        a = tmp1 + tmp2;
-    }
-
-    // Feed-forward: add the compressed working variables back into the state.
-    h[0] += a;
-    h[1] += b;
-    h[2] += c;
-    h[3] += d;
-    h[4] += e;
-    h[5] += f;
-    h[6] += g;
-    h[7] += hh;
+    return (x & y) ^ (~x & z);
+}
+static inline uint32_t sha256_maj(uint32_t x, uint32_t y, uint32_t z)
+{
+    return (x & y) ^ (x & z) ^ (y & z);
+}
+static inline uint32_t sha256_bsig0(uint32_t x)
+{
+    return rotr32(x, 2U) ^ rotr32(x, 13U) ^ rotr32(x, 22U);
+}
+static inline uint32_t sha256_bsig1(uint32_t x)
+{
+    return rotr32(x, 6U) ^ rotr32(x, 11U) ^ rotr32(x, 25U);
+}
+static inline uint32_t sha256_ssig0(uint32_t x)
+{
+    return rotr32(x, 7U) ^ rotr32(x, 18U) ^ (x >> 3U);
+}
+static inline uint32_t sha256_ssig1(uint32_t x)
+{
+    return rotr32(x, 17U) ^ rotr32(x, 19U) ^ (x >> 10U);
 }
 
-void pc_sha256_init(pc_sha256_ctx *ctx)
+// Compress one 64-byte block into the running hash state h[0..7] (FIPS 180-4 §6.2.2). The caller
+// handles padding and length so this sees full blocks only.
+//
+// The eight state words and the sixteen-word schedule are shift registers: a round carries the state
+// along one place and consumes one schedule word. The state's period is eight and the schedule's is
+// sixteen, and sixteen is a whole number of eights, so the compression repeats every sixteen rounds -
+// written once and run four times with k stepping. Naming the register a round lands on IS the shift,
+// so no word is ever moved and the schedule stays sixteen words rather than sixty-four.
+static void sha256_block(uint32_t h[8], const uint8_t blk[PC_SHA256_BLOCK_LEN])
+{
+    uint32_t m0 = pc_rd32be(blk);
+    uint32_t m1 = pc_rd32be(blk + 4);
+    uint32_t m2 = pc_rd32be(blk + 8);
+    uint32_t m3 = pc_rd32be(blk + 12);
+    uint32_t m4 = pc_rd32be(blk + 16);
+    uint32_t m5 = pc_rd32be(blk + 20);
+    uint32_t m6 = pc_rd32be(blk + 24);
+    uint32_t m7 = pc_rd32be(blk + 28);
+    uint32_t m8 = pc_rd32be(blk + 32);
+    uint32_t m9 = pc_rd32be(blk + 36);
+    uint32_t m10 = pc_rd32be(blk + 40);
+    uint32_t m11 = pc_rd32be(blk + 44);
+    uint32_t m12 = pc_rd32be(blk + 48);
+    uint32_t m13 = pc_rd32be(blk + 52);
+    uint32_t m14 = pc_rd32be(blk + 56);
+    uint32_t m15 = pc_rd32be(blk + 60);
+
+    uint32_t v0 = h[0];
+    uint32_t v1 = h[1];
+    uint32_t v2 = h[2];
+    uint32_t v3 = h[3];
+    uint32_t v4 = h[4];
+    uint32_t v5 = h[5];
+    uint32_t v6 = h[6];
+    uint32_t v7 = h[7];
+
+    // Four groups of sixteen. Each round writes exactly two state words: the one holding h becomes the
+    // next a, the one holding d becomes the next e. The trailing expansion of the fourth group is
+    // unread.
+    const uint32_t *k = K256;
+    for (int g = 0; g < 4; g++)
+    {
+        uint32_t t1_00 = v7 + sha256_bsig1(v4) + sha256_ch(v4, v5, v6) + k[0] + m0;
+        uint32_t t2_00 = sha256_bsig0(v0) + sha256_maj(v0, v1, v2);
+        v3 += t1_00;
+        v7 = t1_00 + t2_00;
+
+        uint32_t t1_01 = v6 + sha256_bsig1(v3) + sha256_ch(v3, v4, v5) + k[1] + m1;
+        uint32_t t2_01 = sha256_bsig0(v7) + sha256_maj(v7, v0, v1);
+        v2 += t1_01;
+        v6 = t1_01 + t2_01;
+
+        uint32_t t1_02 = v5 + sha256_bsig1(v2) + sha256_ch(v2, v3, v4) + k[2] + m2;
+        uint32_t t2_02 = sha256_bsig0(v6) + sha256_maj(v6, v7, v0);
+        v1 += t1_02;
+        v5 = t1_02 + t2_02;
+
+        uint32_t t1_03 = v4 + sha256_bsig1(v1) + sha256_ch(v1, v2, v3) + k[3] + m3;
+        uint32_t t2_03 = sha256_bsig0(v5) + sha256_maj(v5, v6, v7);
+        v0 += t1_03;
+        v4 = t1_03 + t2_03;
+
+        uint32_t t1_04 = v3 + sha256_bsig1(v0) + sha256_ch(v0, v1, v2) + k[4] + m4;
+        uint32_t t2_04 = sha256_bsig0(v4) + sha256_maj(v4, v5, v6);
+        v7 += t1_04;
+        v3 = t1_04 + t2_04;
+
+        uint32_t t1_05 = v2 + sha256_bsig1(v7) + sha256_ch(v7, v0, v1) + k[5] + m5;
+        uint32_t t2_05 = sha256_bsig0(v3) + sha256_maj(v3, v4, v5);
+        v6 += t1_05;
+        v2 = t1_05 + t2_05;
+
+        uint32_t t1_06 = v1 + sha256_bsig1(v6) + sha256_ch(v6, v7, v0) + k[6] + m6;
+        uint32_t t2_06 = sha256_bsig0(v2) + sha256_maj(v2, v3, v4);
+        v5 += t1_06;
+        v1 = t1_06 + t2_06;
+
+        uint32_t t1_07 = v0 + sha256_bsig1(v5) + sha256_ch(v5, v6, v7) + k[7] + m7;
+        uint32_t t2_07 = sha256_bsig0(v1) + sha256_maj(v1, v2, v3);
+        v4 += t1_07;
+        v0 = t1_07 + t2_07;
+
+        uint32_t t1_08 = v7 + sha256_bsig1(v4) + sha256_ch(v4, v5, v6) + k[8] + m8;
+        uint32_t t2_08 = sha256_bsig0(v0) + sha256_maj(v0, v1, v2);
+        v3 += t1_08;
+        v7 = t1_08 + t2_08;
+
+        uint32_t t1_09 = v6 + sha256_bsig1(v3) + sha256_ch(v3, v4, v5) + k[9] + m9;
+        uint32_t t2_09 = sha256_bsig0(v7) + sha256_maj(v7, v0, v1);
+        v2 += t1_09;
+        v6 = t1_09 + t2_09;
+
+        uint32_t t1_10 = v5 + sha256_bsig1(v2) + sha256_ch(v2, v3, v4) + k[10] + m10;
+        uint32_t t2_10 = sha256_bsig0(v6) + sha256_maj(v6, v7, v0);
+        v1 += t1_10;
+        v5 = t1_10 + t2_10;
+
+        uint32_t t1_11 = v4 + sha256_bsig1(v1) + sha256_ch(v1, v2, v3) + k[11] + m11;
+        uint32_t t2_11 = sha256_bsig0(v5) + sha256_maj(v5, v6, v7);
+        v0 += t1_11;
+        v4 = t1_11 + t2_11;
+
+        uint32_t t1_12 = v3 + sha256_bsig1(v0) + sha256_ch(v0, v1, v2) + k[12] + m12;
+        uint32_t t2_12 = sha256_bsig0(v4) + sha256_maj(v4, v5, v6);
+        v7 += t1_12;
+        v3 = t1_12 + t2_12;
+
+        uint32_t t1_13 = v2 + sha256_bsig1(v7) + sha256_ch(v7, v0, v1) + k[13] + m13;
+        uint32_t t2_13 = sha256_bsig0(v3) + sha256_maj(v3, v4, v5);
+        v6 += t1_13;
+        v2 = t1_13 + t2_13;
+
+        uint32_t t1_14 = v1 + sha256_bsig1(v6) + sha256_ch(v6, v7, v0) + k[14] + m14;
+        uint32_t t2_14 = sha256_bsig0(v2) + sha256_maj(v2, v3, v4);
+        v5 += t1_14;
+        v1 = t1_14 + t2_14;
+
+        uint32_t t1_15 = v0 + sha256_bsig1(v5) + sha256_ch(v5, v6, v7) + k[15] + m15;
+        uint32_t t2_15 = sha256_bsig0(v1) + sha256_maj(v1, v2, v3);
+        v4 += t1_15;
+        v0 = t1_15 + t2_15;
+
+        k += 16;
+
+        // W[i] = W[i-16] + sigma0(W[i-15]) + W[i-7] + sigma1(W[i-2]), in place: the slot being written
+        // still holds W[i-16], and the three it reads are the window's other places.
+        m0 += sha256_ssig0(m1) + m9 + sha256_ssig1(m14);
+        m1 += sha256_ssig0(m2) + m10 + sha256_ssig1(m15);
+        m2 += sha256_ssig0(m3) + m11 + sha256_ssig1(m0);
+        m3 += sha256_ssig0(m4) + m12 + sha256_ssig1(m1);
+        m4 += sha256_ssig0(m5) + m13 + sha256_ssig1(m2);
+        m5 += sha256_ssig0(m6) + m14 + sha256_ssig1(m3);
+        m6 += sha256_ssig0(m7) + m15 + sha256_ssig1(m4);
+        m7 += sha256_ssig0(m8) + m0 + sha256_ssig1(m5);
+        m8 += sha256_ssig0(m9) + m1 + sha256_ssig1(m6);
+        m9 += sha256_ssig0(m10) + m2 + sha256_ssig1(m7);
+        m10 += sha256_ssig0(m11) + m3 + sha256_ssig1(m8);
+        m11 += sha256_ssig0(m12) + m4 + sha256_ssig1(m9);
+        m12 += sha256_ssig0(m13) + m5 + sha256_ssig1(m10);
+        m13 += sha256_ssig0(m14) + m6 + sha256_ssig1(m11);
+        m14 += sha256_ssig0(m15) + m7 + sha256_ssig1(m12);
+        m15 += sha256_ssig0(m0) + m8 + sha256_ssig1(m13);
+    }
+
+    // Feed-forward: sixty-four rounds is eight whole state periods, so v0..v7 are a..h again.
+    h[0] += v0;
+    h[1] += v1;
+    h[2] += v2;
+    h[3] += v3;
+    h[4] += v4;
+    h[5] += v5;
+    h[6] += v6;
+    h[7] += v7;
+}
+
+void pc_sha256_init(pc_sha256_ctx *ctx, uint8_t *work)
 {
     mem.cpy(ctx->s, H0, sizeof(H0));
     ctx->n = 0;
-    ctx->buflen = 0;
-    mem.zero(ctx->buf, sizeof(ctx->buf));
+    ctx->rx = work + SHA256_OFF_RX;
+    ctx->tx = work + SHA256_OFF_TX;
+    ctx->fs = (uint32_t *)(work + SHA256_OFF_STATE);
+    ctx->rxlen = 0;
 }
 
 void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
@@ -163,54 +296,63 @@ void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
     ctx->n += len;
     while (len > 0)
     {
-        uint32_t take = PC_SHA256_BLOCK_LEN - ctx->buflen;
+        uint32_t take = PC_SHA256_BLOCK_LEN - ctx->rxlen;
         if (len < take)
         {
             take = (uint32_t)len;
         }
-        // buf + buflen carries no alignment, so this is the raw mover, not the aligned-span one.
-        uint8_t *fill = ctx->buf + ctx->buflen;
+        // rx + rxlen carries no alignment, so this is the raw mover, not the aligned-span one.
+        uint8_t *fill = ctx->rx + ctx->rxlen;
         proto_raw_read(fill, data, take);
-        ctx->buflen += take;
+        ctx->rxlen += take;
         data += take;
         len -= take;
-        if (ctx->buflen == PC_SHA256_BLOCK_LEN)
+        if (ctx->rxlen == PC_SHA256_BLOCK_LEN)
         {
-            sha256_block(ctx->s, ctx->buf);
-            // Everything past buflen stays zero, so the final block needs no pad written at an offset.
-            mem.zero(ctx->buf, sizeof(ctx->buf));
-            ctx->buflen = 0;
+            sha256_block(ctx->s, ctx->rx);
+            ctx->rxlen = 0;
         }
     }
 }
 
 void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
 {
-    uint64_t bitlen = ctx->n * 8;
+    uint64_t bitlen = ctx->n << 3;
 
-    ctx->buf[ctx->buflen++] = 0x80;
+    // The padded blocks compress into a copy of the state, so s, rx, rxlen and n all come out of this
+    // untouched and the hash can keep taking data afterwards.
+    mem.cpy(ctx->fs, ctx->s, sizeof(ctx->s));
 
-    // The bit length occupies the block's last 8 bytes, so a mark past that offset takes its own block.
-    if (ctx->buflen > SHA256_LEN_OFF)
+    // The last block is composed in tx, whole: what rx holds, the mark, zeros, and the length. rx is
+    // read and never written back, so nothing it still carries from an earlier block reaches the wire.
+    mem.zero(ctx->tx, PC_SHA256_BLOCK_LEN);
+    mem.cpy(ctx->tx, ctx->rx, ctx->rxlen);
+    ctx->tx[ctx->rxlen] = 0x80;
+
+    // The bit length occupies the block's last 8 bytes, so a mark at or past that offset takes its own.
+    if (ctx->rxlen >= SHA256_LEN_OFF)
     {
-        sha256_block(ctx->s, ctx->buf);
-        mem.zero(ctx->buf, sizeof(ctx->buf));
-        ctx->buflen = 0;
+        sha256_block(ctx->fs, ctx->tx);
+        mem.zero(ctx->tx, PC_SHA256_BLOCK_LEN);
     }
 
-    pc_wr64be(ctx->buf + SHA256_LEN_OFF, bitlen);
-    sha256_block(ctx->s, ctx->buf);
+    pc_wr64be(ctx->tx + SHA256_LEN_OFF, bitlen);
+    sha256_block(ctx->fs, ctx->tx);
 
-    for (int i = 0; i < 8; i++)
-    {
-        pc_wr32be(digest + i * 4, ctx->s[i]);
-    }
+    pc_wr32be(digest, ctx->fs[0]);
+    pc_wr32be(digest + 4, ctx->fs[1]);
+    pc_wr32be(digest + 8, ctx->fs[2]);
+    pc_wr32be(digest + 12, ctx->fs[3]);
+    pc_wr32be(digest + 16, ctx->fs[4]);
+    pc_wr32be(digest + 20, ctx->fs[5]);
+    pc_wr32be(digest + 24, ctx->fs[6]);
+    pc_wr32be(digest + 28, ctx->fs[7]);
 }
 
-void pc_sha256(const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_LEN])
+void pc_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_LEN])
 {
-    pc_sha256_ctx ctx;
-    pc_sha256_init(&ctx);
+    pc_sha256_ctx ctx = {0};
+    pc_sha256_init(&ctx, work);
     pc_sha256_update(&ctx, data, len);
     pc_sha256_final(&ctx, digest);
 }

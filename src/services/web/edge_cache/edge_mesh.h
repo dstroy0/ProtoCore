@@ -92,7 +92,7 @@ size_t edge_mesh_serialize_entry(const EdgeEntry *e, long current_age, uint8_t *
  * owns @p e's `used`/LRU linkage (typically an ::edge_store_alloc slot) and must re-check freshness + that the
  * restored key matches the request (guards a wrong / colliding object). @return false on a short/corrupt frame.
  */
-proto_bool edge_mesh_deserialize_entry(const uint8_t *buf, size_t len, EdgeEntry *e, uint32_t now_ms);
+proto_bool edge_mesh_deserialize_entry(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e, uint32_t now_ms);
 
 /** @brief Build a response (@p hit -> carry @p entry / @p entry_len; else a MISS). @return length or 0. */
 size_t edge_mesh_build_response(proto_bool hit, const uint8_t *entry, size_t entry_len, uint8_t *out, size_t cap);

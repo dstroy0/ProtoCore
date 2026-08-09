@@ -8,13 +8,14 @@
  */
 
 #include "services/net/ws_client/ws_client.h"
+#include "mmgr/membuild.h" // pc_sb frame builder
 #include "mmgr/protomem.h"
-#include "mmgr/membuild.h"      // pc_sb frame builder
 #include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_WS_CLIENT
 
 #include "crypto/hash/sha1.h"
+#include "crypto/rng/rng.h" // pc_rand_fill: the frame mask and the handshake key
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include <stdio.h>
 
@@ -428,7 +429,7 @@ static proto_bool ws_send_frame(WsClientOpcode opcode, const uint8_t *payload, s
         return PROTO_FALSE;
     }
     uint8_t mask[4];
-    pc_platform_rand_fill(mask, 4);
+    pc_rand_fill(mask, 4);
     size_t n = ws_client_build_frame(s_wsc.tx, sizeof(s_wsc.tx), opcode, payload, len, mask);
     return n && ws_tx(s_wsc.tx, n);
 }
@@ -603,7 +604,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
 
     // Generate a random 16-byte key, base64 it, send the opening handshake.
     uint8_t keyraw[16];
-    pc_platform_rand_fill(keyraw, sizeof(keyraw));
+    pc_rand_fill(keyraw, sizeof(keyraw));
     char key_b64[25];
     Base64.encode(keyraw, sizeof(keyraw), key_b64);
     char expect[32];

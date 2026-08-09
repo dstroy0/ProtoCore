@@ -11,8 +11,8 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_client.h"
-#include "mmgr/protomem.h"
 #include "mmgr/frame.h" // the one frame engine
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
 #if PC_ENABLE_SSH_CLIENT
@@ -51,6 +51,19 @@
 // ---------------------------------------------------------------------------
 
 static const char CLIENT_BANNER[] = "SSH-2.0-PC_client_1.0";
+
+#define SSH_CLI_SLOT 0 // the SSH packet/key pool slot the client borrows (MAX_SSH_CONNS >= 1)
+
+// The client is one connection on one slot, so its handshake crypto works out of that slot's bytes -
+// the same borrow the wire and the packet MAC come from. Null when the pool cannot cover the slot.
+static uint8_t *cli_crypto_work(void)
+{
+    if (!ssh_pkt_slot_storage(&ssh_pkt[SSH_CLI_SLOT]))
+    {
+        return NULL;
+    }
+    return ssh_pkt[SSH_CLI_SLOT].crypto_work;
+}
 
 // Algorithm names, in the client's preference order per category (first = most preferred). The
 // client offers every algorithm and negotiates whatever the relay supports. It reuses the transport
@@ -120,8 +133,6 @@ typedef enum PROTO_ENUM_PACKED
     CLI_HOSTKEY_RSA_SHA512,
     CLI_HOSTKEY_RSA_SHA256
 } CliHostkey;
-
-#define SSH_CLI_SLOT 0 // the SSH packet/key pool slot the client borrows (MAX_SSH_CONNS >= 1)
 
 // ---------------------------------------------------------------------------
 // Wire helpers (SSH data types, RFC 4251 §5)
@@ -586,13 +597,18 @@ static proto_bool build_kex_public(void)
         // sntrup761 keypair (sk kept for Decaps; pk is embedded in sk) + an X25519 ephemeral. C_INIT
         // (pk || Q_C) is assembled at send time from sk; Q_C lives in qc[0..31]. pk is only needed
         // transiently here (sk embeds a copy), so it borrows the scratch arena.
+        uint8_t *work = cli_crypto_work();
+        if (work == NULL)
+        {
+            return PROTO_FALSE;
+        }
         size_t mark = pc_plaintext_mark();
         uint8_t *pk = (uint8_t *)pc_plaintext_alloc(PC_SNTRUP761_PK_BYTES, 1);
         if (!pk)
         {
             return PROTO_FALSE;
         }
-        pc_sntrup761_keypair(pk, s_cli.hyb.sntrup_sk);
+        pc_sntrup761_keypair(work, pk, s_cli.hyb.sntrup_sk);
         pc_plaintext_release(mark); // pk persists inside sntrup_sk at PC_SNTRUP761_SK_PK_OFFSET
         pc_rand_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
@@ -795,11 +811,16 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
         {
             return PROTO_FALSE;
         }
+        uint8_t *work = cli_crypto_work();
+        if (work == NULL)
+        {
+            return PROTO_FALSE;
+        }
         uint8_t k_pq[32], k_cl[32];
         pc_mlkem768_decaps(s_cli.hyb.mlkem_dk, srv_pub, k_pq);
         pc_x25519(k_cl, s_cli.kex_priv, srv_pub + MLKEM768_CT_BYTES);
         pc_sha256_ctx c;
-        pc_sha256_init(&c);
+        pc_sha256_init(&c, work);
         pc_sha256_update(&c, k_pq, 32);
         pc_sha256_update(&c, k_cl, 32);
         pc_sha256_final(&c, k_be + (256 - 32));
@@ -816,11 +837,16 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
         {
             return PROTO_FALSE;
         }
+        uint8_t *work = cli_crypto_work();
+        if (work == NULL)
+        {
+            return PROTO_FALSE;
+        }
         uint8_t k_pq[PC_SNTRUP761_SS_BYTES], k_cl[32];
-        pc_sntrup761_dec(s_cli.hyb.sntrup_sk, srv_pub, k_pq);
+        pc_sntrup761_dec(work, s_cli.hyb.sntrup_sk, srv_pub, k_pq);
         pc_x25519(k_cl, s_cli.kex_priv, srv_pub + PC_SNTRUP761_CT_BYTES);
         pc_sha512_ctx c;
-        pc_sha512_init(&c);
+        pc_sha512_init(&c, work);
         pc_sha512_update(&c, k_pq, sizeof(k_pq));
         pc_sha512_update(&c, k_cl, 32);
         pc_sha512_final(&c, k_be + (256 - 64));
@@ -838,9 +864,14 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
 static size_t compute_h(const uint8_t *ks, uint32_t ks_len, const uint8_t *srv_pub, uint32_t srv_pub_len,
                         const uint8_t *k_be, uint8_t H[SSH_KEXHASH_MAX_LEN])
 {
+    uint8_t *work = cli_crypto_work();
+    if (work == NULL)
+    {
+        return 0;
+    }
     const proto_bool is512 = cli_kex_is_sha512(s_cli.kex);
     SshKexHash c;
-    ssh_kexhash_init(&c, is512);
+    ssh_kexhash_init(&c, work, is512);
     hash_string(&c, (const uint8_t *)CLIENT_BANNER, strnlen(CLIENT_BANNER, sizeof(CLIENT_BANNER))); // V_C
     hash_string(&c, (const uint8_t *)s_cli.v_s, s_cli.v_s_len);                                     // V_S
     hash_string(&c, s_cli.i_c, s_cli.i_c_len);                                                      // I_C
@@ -919,7 +950,7 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         const uint8_t *pub = r_string(&rk, &pn);
         uint32_t rl;
         const uint8_t *raw = r_string(&rs, &rl);
-        return rk.ok && rs.ok && pn == 32 && rl == 64 && pc_ed25519_verify(pub, H, h_len, raw);
+        return rk.ok && rs.ok && pn == 32 && rl == 64 && pc_ed25519_verify(cli_crypto_work(), pub, H, h_len, raw);
     }
     case CLI_HOSTKEY_ECDSA_P256: {
         uint32_t cn;
@@ -942,7 +973,8 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         {
             return PROTO_FALSE;
         }
-        return pc_ecdsa_p256_verify(q, H, h_len, raw);
+        uint8_t *work = cli_crypto_work();
+        return work != NULL && pc_ecdsa_p256_verify(q, work, H, h_len, raw);
     }
     case CLI_HOSTKEY_RSA_SHA256:
     case CLI_HOSTKEY_RSA_SHA512: {
@@ -960,7 +992,8 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
             return PROTO_FALSE;
         }
         pc_rsa_hash h = (s_cli.hostkey == CLI_HOSTKEY_RSA_SHA512) ? PC_RSA_HASH_SHA512 : PC_RSA_HASH_SHA256;
-        return pc_rsa_verify(n256, e4, H, h_len, raw, rawlen, h) == 0;
+        uint8_t *work = cli_crypto_work();
+        return work != NULL && pc_rsa_verify(n256, e4, work, H, h_len, raw, rawlen, h) == 0;
     }
     }
     return PROTO_FALSE;
@@ -985,9 +1018,14 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     }
 
     // Pin the relay by the SHA-256 fingerprint of its host-key blob (type-agnostic, like known_hosts).
+    uint8_t *fwork = cli_crypto_work();
+    if (fwork == NULL)
+    {
+        return PROTO_FALSE;
+    }
     uint8_t fp[32];
     pc_sha256_ctx fc;
-    pc_sha256_init(&fc);
+    pc_sha256_init(&fc, fwork);
     pc_sha256_update(&fc, ks, ks_len);
     pc_sha256_final(&fc, fp);
     if (mem.cmp(fp, s_cli.cfg.host_pin, 32) != 0)
@@ -1065,7 +1103,7 @@ static proto_bool send_userauth_publickey(void)
 {
     const char *user = s_cli.cfg.user;
     uint8_t pub[32];
-    pc_ed25519_pubkey(pub, s_cli.cfg.auth_seed);
+    pc_ed25519_pubkey(cli_crypto_work(), pub, s_cli.cfg.auth_seed);
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
     uint8_t pkblob[4 + 11 + 4 + 32];
@@ -1096,7 +1134,7 @@ static proto_bool send_userauth_publickey(void)
     }
 
     uint8_t sig[64];
-    pc_ed25519_sign(sig, signed_data, sd.off, s_cli.cfg.auth_seed);
+    pc_ed25519_sign(cli_crypto_work(), sig, signed_data, sd.off, s_cli.cfg.auth_seed);
 
     // Signature blob: string("ssh-ed25519") || string(sig64).
     uint8_t sigblob[4 + 11 + 4 + 64];
@@ -1693,7 +1731,7 @@ proto_bool pc_ssh_tunnel_up(void)
 // Key derivation for provisioning: the seed's public half, without a tunnel.
 void pc_ssh_tunnel_pubkey(const uint8_t seed[32], uint8_t pub[32])
 {
-    pc_ed25519_pubkey(pub, seed);
+    pc_ed25519_pubkey(cli_crypto_work(), pub, seed);
 }
 
 #endif // PC_ENABLE_SSH_CLIENT

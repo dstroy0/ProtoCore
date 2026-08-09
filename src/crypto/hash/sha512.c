@@ -10,8 +10,8 @@
  */
 
 #include "crypto/hash/sha512.h"
-#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
+#include "mmgr/protomem.h"
 
 #if PC_HAS_HW_SHA
 #include <mbedtls/sha512.h> // hardware SHA accelerator
@@ -26,8 +26,9 @@ PC_CRYPTO_HOT
 // HW path: streaming + one-shot via mbedtls.
 // ---------------------------------------------------------------------------
 
-void pc_sha512_init(pc_sha512_ctx *ctx)
+void pc_sha512_init(pc_sha512_ctx *ctx, uint8_t *work)
 {
+    (void)work; // the accelerator carries its own
     mbedtls_sha512_init(&ctx->mbed);
 #if MBEDTLS_VERSION_MAJOR >= 3
     mbedtls_sha512_starts(&ctx->mbed, 0 /* 0 = SHA-512 */);
@@ -55,8 +56,9 @@ void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN])
     mbedtls_sha512_free(&ctx->mbed);
 }
 
-void pc_sha512(const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN])
+void pc_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN])
 {
+    (void)work; // the accelerator carries its own
     (void)mbedtls_sha512(data, len, digest, 0 /* 0 = SHA-512, 1 = SHA-384 */);
 }
 
@@ -90,72 +92,213 @@ static const uint64_t H0[8] = {
     0x510e527fade682d1ULL, 0x9b05688c2b3e6c1fULL, 0x1f83d9abfb41bd6bULL, 0x5be0cd19137e2179ULL,
 };
 
+// Where the 128-bit message length sits in the final block (FIPS 180-4 §5.1.2).
+#define SHA512_LEN_OFF (PC_SHA512_BLOCK_LEN - 16u)
+
+// The caller's working bytes, split: the block as it arrives, the padded last one, and the state copy
+// the padded blocks compress into so finalizing leaves the running hash alone.
+#define SHA512_OFF_RX 0u
+#define SHA512_OFF_TX (SHA512_OFF_RX + PC_SHA512_BLOCK_LEN)
+#define SHA512_OFF_STATE (SHA512_OFF_TX + PC_SHA512_BLOCK_LEN)
+static_assert(SHA512_OFF_STATE + sizeof(uint64_t) * 8 <= PC_SHA512_BORROW,
+              "PC_SHA512_BORROW is short of the two blocks and the state copy - raise it in "
+              "protocore_config.h");
+
 static inline uint64_t rotr64(uint64_t x, unsigned n)
 {
     return (x >> n) | (x << (64 - n));
 }
 
-// Compress one 128-byte block into the running state h[0..7] (FIPS 180-4 §6.4.2).
-static void sha512_block(uint64_t h[8], const uint8_t blk[128])
+// The six FIPS 180-4 §4.1.3 functions the rounds are built from.
+static inline uint64_t sha512_ch(uint64_t x, uint64_t y, uint64_t z)
 {
-    uint64_t W[80];
-    for (int i = 0; i < 16; i++)
-    {
-        W[i] = pc_rd64be(blk + i * 8);
-    }
-    for (int i = 16; i < 80; i++)
-    {
-        uint64_t s0 = rotr64(W[i - 15], 1) ^ rotr64(W[i - 15], 8) ^ (W[i - 15] >> 7); // σ0
-        uint64_t s1 = rotr64(W[i - 2], 19) ^ rotr64(W[i - 2], 61) ^ (W[i - 2] >> 6);  // σ1
-        W[i] = W[i - 16] + s0 + W[i - 7] + s1;
-    }
-
-    uint64_t a = h[0];
-    uint64_t b = h[1];
-    uint64_t c = h[2];
-    uint64_t d = h[3];
-    uint64_t e = h[4];
-    uint64_t f = h[5];
-    uint64_t g = h[6];
-    uint64_t hh = h[7];
-
-    for (int i = 0; i < 80; i++)
-    {
-        uint64_t S1 = rotr64(e, 14) ^ rotr64(e, 18) ^ rotr64(e, 41); // Σ1
-        uint64_t ch = (e & f) ^ (~e & g);                            // Ch(e,f,g)
-        uint64_t t1 = hh + S1 + ch + K512[i] + W[i];                 // T1
-        uint64_t S0 = rotr64(a, 28) ^ rotr64(a, 34) ^ rotr64(a, 39); // Σ0
-        uint64_t maj = (a & b) ^ (a & c) ^ (b & c);                  // Maj(a,b,c)
-        uint64_t t2 = S0 + maj;                                      // T2
-        hh = g;
-        g = f;
-        f = e;
-        e = d + t1;
-        d = c;
-        c = b;
-        b = a;
-        a = t1 + t2;
-    }
-
-    h[0] += a;
-    h[1] += b;
-    h[2] += c;
-    h[3] += d;
-    h[4] += e;
-    h[5] += f;
-    h[6] += g;
-    h[7] += hh;
+    return (x & y) ^ (~x & z);
+}
+static inline uint64_t sha512_maj(uint64_t x, uint64_t y, uint64_t z)
+{
+    return (x & y) ^ (x & z) ^ (y & z);
+}
+static inline uint64_t sha512_bsig0(uint64_t x)
+{
+    return rotr64(x, 28) ^ rotr64(x, 34) ^ rotr64(x, 39);
+}
+static inline uint64_t sha512_bsig1(uint64_t x)
+{
+    return rotr64(x, 14) ^ rotr64(x, 18) ^ rotr64(x, 41);
+}
+static inline uint64_t sha512_ssig0(uint64_t x)
+{
+    return rotr64(x, 1) ^ rotr64(x, 8) ^ (x >> 7);
+}
+static inline uint64_t sha512_ssig1(uint64_t x)
+{
+    return rotr64(x, 19) ^ rotr64(x, 61) ^ (x >> 6);
 }
 
-void pc_sha512_init(pc_sha512_ctx *ctx)
+// Compress one 128-byte block into the running state h[0..7] (FIPS 180-4 §6.4.2).
+//
+// The same shape as SHA-256 at twice the width: the state's period is eight and the schedule's is
+// sixteen, and eighty rounds is five whole sixteens, so the compression is written once and run five
+// times with k stepping. Naming the register a round lands on IS the shift, so no word is ever moved
+// and the schedule stays sixteen words rather than eighty.
+static void sha512_block(uint64_t h[8], const uint8_t blk[PC_SHA512_BLOCK_LEN])
+{
+    uint64_t m0 = pc_rd64be(blk);
+    uint64_t m1 = pc_rd64be(blk + 8);
+    uint64_t m2 = pc_rd64be(blk + 16);
+    uint64_t m3 = pc_rd64be(blk + 24);
+    uint64_t m4 = pc_rd64be(blk + 32);
+    uint64_t m5 = pc_rd64be(blk + 40);
+    uint64_t m6 = pc_rd64be(blk + 48);
+    uint64_t m7 = pc_rd64be(blk + 56);
+    uint64_t m8 = pc_rd64be(blk + 64);
+    uint64_t m9 = pc_rd64be(blk + 72);
+    uint64_t m10 = pc_rd64be(blk + 80);
+    uint64_t m11 = pc_rd64be(blk + 88);
+    uint64_t m12 = pc_rd64be(blk + 96);
+    uint64_t m13 = pc_rd64be(blk + 104);
+    uint64_t m14 = pc_rd64be(blk + 112);
+    uint64_t m15 = pc_rd64be(blk + 120);
+
+    uint64_t v0 = h[0];
+    uint64_t v1 = h[1];
+    uint64_t v2 = h[2];
+    uint64_t v3 = h[3];
+    uint64_t v4 = h[4];
+    uint64_t v5 = h[5];
+    uint64_t v6 = h[6];
+    uint64_t v7 = h[7];
+
+    // Five groups of sixteen. Each round writes exactly two state words: the one holding h becomes the
+    // next a, the one holding d becomes the next e. The trailing expansion of the fifth group is
+    // unread.
+    const uint64_t *k = K512;
+    for (int g = 0; g < 5; g++)
+    {
+        uint64_t t1_00 = v7 + sha512_bsig1(v4) + sha512_ch(v4, v5, v6) + k[0] + m0;
+        uint64_t t2_00 = sha512_bsig0(v0) + sha512_maj(v0, v1, v2);
+        v3 += t1_00;
+        v7 = t1_00 + t2_00;
+
+        uint64_t t1_01 = v6 + sha512_bsig1(v3) + sha512_ch(v3, v4, v5) + k[1] + m1;
+        uint64_t t2_01 = sha512_bsig0(v7) + sha512_maj(v7, v0, v1);
+        v2 += t1_01;
+        v6 = t1_01 + t2_01;
+
+        uint64_t t1_02 = v5 + sha512_bsig1(v2) + sha512_ch(v2, v3, v4) + k[2] + m2;
+        uint64_t t2_02 = sha512_bsig0(v6) + sha512_maj(v6, v7, v0);
+        v1 += t1_02;
+        v5 = t1_02 + t2_02;
+
+        uint64_t t1_03 = v4 + sha512_bsig1(v1) + sha512_ch(v1, v2, v3) + k[3] + m3;
+        uint64_t t2_03 = sha512_bsig0(v5) + sha512_maj(v5, v6, v7);
+        v0 += t1_03;
+        v4 = t1_03 + t2_03;
+
+        uint64_t t1_04 = v3 + sha512_bsig1(v0) + sha512_ch(v0, v1, v2) + k[4] + m4;
+        uint64_t t2_04 = sha512_bsig0(v4) + sha512_maj(v4, v5, v6);
+        v7 += t1_04;
+        v3 = t1_04 + t2_04;
+
+        uint64_t t1_05 = v2 + sha512_bsig1(v7) + sha512_ch(v7, v0, v1) + k[5] + m5;
+        uint64_t t2_05 = sha512_bsig0(v3) + sha512_maj(v3, v4, v5);
+        v6 += t1_05;
+        v2 = t1_05 + t2_05;
+
+        uint64_t t1_06 = v1 + sha512_bsig1(v6) + sha512_ch(v6, v7, v0) + k[6] + m6;
+        uint64_t t2_06 = sha512_bsig0(v2) + sha512_maj(v2, v3, v4);
+        v5 += t1_06;
+        v1 = t1_06 + t2_06;
+
+        uint64_t t1_07 = v0 + sha512_bsig1(v5) + sha512_ch(v5, v6, v7) + k[7] + m7;
+        uint64_t t2_07 = sha512_bsig0(v1) + sha512_maj(v1, v2, v3);
+        v4 += t1_07;
+        v0 = t1_07 + t2_07;
+
+        uint64_t t1_08 = v7 + sha512_bsig1(v4) + sha512_ch(v4, v5, v6) + k[8] + m8;
+        uint64_t t2_08 = sha512_bsig0(v0) + sha512_maj(v0, v1, v2);
+        v3 += t1_08;
+        v7 = t1_08 + t2_08;
+
+        uint64_t t1_09 = v6 + sha512_bsig1(v3) + sha512_ch(v3, v4, v5) + k[9] + m9;
+        uint64_t t2_09 = sha512_bsig0(v7) + sha512_maj(v7, v0, v1);
+        v2 += t1_09;
+        v6 = t1_09 + t2_09;
+
+        uint64_t t1_10 = v5 + sha512_bsig1(v2) + sha512_ch(v2, v3, v4) + k[10] + m10;
+        uint64_t t2_10 = sha512_bsig0(v6) + sha512_maj(v6, v7, v0);
+        v1 += t1_10;
+        v5 = t1_10 + t2_10;
+
+        uint64_t t1_11 = v4 + sha512_bsig1(v1) + sha512_ch(v1, v2, v3) + k[11] + m11;
+        uint64_t t2_11 = sha512_bsig0(v5) + sha512_maj(v5, v6, v7);
+        v0 += t1_11;
+        v4 = t1_11 + t2_11;
+
+        uint64_t t1_12 = v3 + sha512_bsig1(v0) + sha512_ch(v0, v1, v2) + k[12] + m12;
+        uint64_t t2_12 = sha512_bsig0(v4) + sha512_maj(v4, v5, v6);
+        v7 += t1_12;
+        v3 = t1_12 + t2_12;
+
+        uint64_t t1_13 = v2 + sha512_bsig1(v7) + sha512_ch(v7, v0, v1) + k[13] + m13;
+        uint64_t t2_13 = sha512_bsig0(v3) + sha512_maj(v3, v4, v5);
+        v6 += t1_13;
+        v2 = t1_13 + t2_13;
+
+        uint64_t t1_14 = v1 + sha512_bsig1(v6) + sha512_ch(v6, v7, v0) + k[14] + m14;
+        uint64_t t2_14 = sha512_bsig0(v2) + sha512_maj(v2, v3, v4);
+        v5 += t1_14;
+        v1 = t1_14 + t2_14;
+
+        uint64_t t1_15 = v0 + sha512_bsig1(v5) + sha512_ch(v5, v6, v7) + k[15] + m15;
+        uint64_t t2_15 = sha512_bsig0(v1) + sha512_maj(v1, v2, v3);
+        v4 += t1_15;
+        v0 = t1_15 + t2_15;
+
+        k += 16;
+
+        // W[i] = W[i-16] + sigma0(W[i-15]) + W[i-7] + sigma1(W[i-2]), in place: the slot being written
+        // still holds W[i-16], and the three it reads are the window's other places.
+        m0 += sha512_ssig0(m1) + m9 + sha512_ssig1(m14);
+        m1 += sha512_ssig0(m2) + m10 + sha512_ssig1(m15);
+        m2 += sha512_ssig0(m3) + m11 + sha512_ssig1(m0);
+        m3 += sha512_ssig0(m4) + m12 + sha512_ssig1(m1);
+        m4 += sha512_ssig0(m5) + m13 + sha512_ssig1(m2);
+        m5 += sha512_ssig0(m6) + m14 + sha512_ssig1(m3);
+        m6 += sha512_ssig0(m7) + m15 + sha512_ssig1(m4);
+        m7 += sha512_ssig0(m8) + m0 + sha512_ssig1(m5);
+        m8 += sha512_ssig0(m9) + m1 + sha512_ssig1(m6);
+        m9 += sha512_ssig0(m10) + m2 + sha512_ssig1(m7);
+        m10 += sha512_ssig0(m11) + m3 + sha512_ssig1(m8);
+        m11 += sha512_ssig0(m12) + m4 + sha512_ssig1(m9);
+        m12 += sha512_ssig0(m13) + m5 + sha512_ssig1(m10);
+        m13 += sha512_ssig0(m14) + m6 + sha512_ssig1(m11);
+        m14 += sha512_ssig0(m15) + m7 + sha512_ssig1(m12);
+        m15 += sha512_ssig0(m0) + m8 + sha512_ssig1(m13);
+    }
+
+    // Feed-forward: eighty rounds is ten whole state periods, so v0..v7 are a..h again.
+    h[0] += v0;
+    h[1] += v1;
+    h[2] += v2;
+    h[3] += v3;
+    h[4] += v4;
+    h[5] += v5;
+    h[6] += v6;
+    h[7] += v7;
+}
+
+void pc_sha512_init(pc_sha512_ctx *ctx, uint8_t *work)
 {
     for (int i = 0; i < 8; i++)
     {
         ctx->s[i] = H0[i];
     }
     ctx->n = 0;
-    ctx->buflen = 0;
-    mem.set(ctx->buf, 0, sizeof(ctx->buf));
+    ctx->rx = work + SHA512_OFF_RX;
+    ctx->tx = work + SHA512_OFF_TX;
+    ctx->fs = (uint64_t *)(work + SHA512_OFF_STATE);
+    ctx->rxlen = 0;
 }
 
 void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
@@ -163,16 +306,21 @@ void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
     ctx->n += len;
     while (len > 0)
     {
-        uint32_t space = 128 - ctx->buflen;
-        uint32_t take = (uint32_t)len < space ? (uint32_t)len : space;
-        mem.cpy(ctx->buf + ctx->buflen, data, take);
-        ctx->buflen += take;
+        uint32_t take = PC_SHA512_BLOCK_LEN - ctx->rxlen;
+        if (len < take)
+        {
+            take = (uint32_t)len;
+        }
+        // rx + rxlen carries no alignment, so this is the raw mover, not the aligned-span one.
+        uint8_t *fill = ctx->rx + ctx->rxlen;
+        proto_raw_read(fill, data, take);
+        ctx->rxlen += take;
         data += take;
         len -= take;
-        if (ctx->buflen == 128)
+        if (ctx->rxlen == PC_SHA512_BLOCK_LEN)
         {
-            sha512_block(ctx->s, ctx->buf);
-            ctx->buflen = 0;
+            sha512_block(ctx->s, ctx->rx);
+            ctx->rxlen = 0;
         }
     }
 }
@@ -184,36 +332,42 @@ void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN])
     uint64_t len_hi = ctx->n >> 61;
     uint64_t len_lo = ctx->n << 3;
 
-    ctx->buf[ctx->buflen++] = 0x80;
+    // The padded blocks compress into a copy of the state, so s, rx, rxlen and n all come out of this
+    // untouched and the hash can keep taking data afterwards.
+    mem.cpy(ctx->fs, ctx->s, sizeof(ctx->s));
 
-    if (ctx->buflen > 112)
+    // The last block is composed in tx, whole: what rx holds, the mark, zeros, and the length. rx is
+    // read and never written back, so nothing it still carries from an earlier block reaches the wire.
+    mem.zero(ctx->tx, PC_SHA512_BLOCK_LEN);
+    mem.cpy(ctx->tx, ctx->rx, ctx->rxlen);
+    ctx->tx[ctx->rxlen] = 0x80;
+
+    // The 128-bit length occupies the block's last 16 bytes, so a mark at or past that offset takes
+    // its own block.
+    if (ctx->rxlen >= SHA512_LEN_OFF)
     {
-        while (ctx->buflen < 128)
-        {
-            ctx->buf[ctx->buflen++] = 0x00;
-        }
-        sha512_block(ctx->s, ctx->buf);
-        ctx->buflen = 0;
-    }
-    while (ctx->buflen < 112)
-    {
-        ctx->buf[ctx->buflen++] = 0x00;
+        sha512_block(ctx->fs, ctx->tx);
+        mem.zero(ctx->tx, PC_SHA512_BLOCK_LEN);
     }
 
-    pc_wr64be(ctx->buf + 112, len_hi);
-    pc_wr64be(ctx->buf + 120, len_lo);
-    sha512_block(ctx->s, ctx->buf);
+    pc_wr64be(ctx->tx + SHA512_LEN_OFF, len_hi);
+    pc_wr64be(ctx->tx + SHA512_LEN_OFF + 8, len_lo);
+    sha512_block(ctx->fs, ctx->tx);
 
-    for (int i = 0; i < 8; i++)
-    {
-        pc_wr64be(digest + i * 8, ctx->s[i]);
-    }
+    pc_wr64be(digest, ctx->fs[0]);
+    pc_wr64be(digest + 8, ctx->fs[1]);
+    pc_wr64be(digest + 16, ctx->fs[2]);
+    pc_wr64be(digest + 24, ctx->fs[3]);
+    pc_wr64be(digest + 32, ctx->fs[4]);
+    pc_wr64be(digest + 40, ctx->fs[5]);
+    pc_wr64be(digest + 48, ctx->fs[6]);
+    pc_wr64be(digest + 56, ctx->fs[7]);
 }
 
-void pc_sha512(const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN])
+void pc_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN])
 {
-    pc_sha512_ctx ctx;
-    pc_sha512_init(&ctx);
+    pc_sha512_ctx ctx = {0};
+    pc_sha512_init(&ctx, work);
     pc_sha512_update(&ctx, data, len);
     pc_sha512_final(&ctx, digest);
 }

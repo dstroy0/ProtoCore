@@ -85,11 +85,11 @@ struct HttpReq;
 typedef struct
 {
     uint8_t (*add)(const char *realm, const char *user, const char *pass, proto_bool digest);
-    proto_bool (*check)(uint8_t slot_id, struct HttpReq *req, uint8_t id, proto_bool *stale);
-    void (*challenge)(uint8_t slot_id, uint8_t id, proto_bool stale);
-    void (*rekey)(void);
-    void (*mint_nonce)(char *out, size_t cap);
-    proto_bool (*verify_nonce)(const char *nonce, proto_bool *expired);
+    proto_bool (*check)(uint8_t *work, uint8_t slot_id, struct HttpReq *req, uint8_t id, proto_bool *stale);
+    void (*challenge)(uint8_t *work, uint8_t slot_id, uint8_t id, proto_bool stale);
+    void (*rekey)(uint8_t *work);
+    void (*mint_nonce)(uint8_t *work, char *out, size_t cap);
+    proto_bool (*verify_nonce)(uint8_t *work, const char *nonce, proto_bool *expired);
     void (*reset)(void);
 } AuthNs;
 

@@ -207,7 +207,16 @@ int32_t proto_begin(const WebServerConfig *cfg)
     }
     Tcp.conn->init(cfg);
 #if PC_ENABLE_AUTH
-    Auth.rekey(); // fresh server keying secret per begin()
+    {
+        // Fresh server keying secret per begin(): one borrow for the hash behind it, returned here.
+        size_t mark = pc_secure_mark();
+        pc_span ws = pc_secure_span(PC_SHA256_BORROW, _Alignof(uint32_t));
+        if (pc_span_ok(ws))
+        {
+            Auth.rekey(ws.buf);
+        }
+        pc_secure_release(mark);
+    }
 #endif
 #if PC_ENABLE_CSRF
     {

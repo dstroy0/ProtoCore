@@ -27,22 +27,30 @@ PROTO_BEGIN_DECLS
 /** @brief HMAC-SHA2-512 output length in bytes. */
 #define PC_HMAC_SHA512_LEN 64
 
-/** @brief Streaming HMAC-SHA2-512 context (stores the opad key block + inner hash state). */
+/**
+ * @brief Streaming HMAC-SHA2-512 context.
+ *
+ * The context owns nothing and touches no pool. The caller hands it ::PC_HMAC_SHA512_BORROW working
+ * bytes, alive until the MAC comes back, and the context splits them by offset.
+ */
 typedef struct
 {
-    uint8_t okey[PC_SHA512_BLOCK_LEN]; ///< (key XOR opad), applied in the final step
-    pc_sha512_ctx inner;               ///< inner hash: H((key XOR ipad) || message)
+    pc_sha512_ctx inner; ///< inner hash: H((key XOR ipad) || message)
+    uint8_t *work;       ///< Caller storage: the outer key block and the transient set
 } pc_hmac_sha512_ctx;
 
-/** @brief Begin an HMAC-SHA2-512 over @p key (keys > 128 bytes are pre-hashed per RFC 2104). */
-void pc_hmac_sha512_init(pc_hmac_sha512_ctx *ctx, const uint8_t *key, size_t key_len);
+/**
+ * @brief Begin an HMAC-SHA2-512 over @p key (keys > 128 bytes are pre-hashed per RFC 2104).
+ * @param work  PC_HMAC_SHA512_BORROW bytes of caller storage, alive until final() returns.
+ */
+void pc_hmac_sha512_init(pc_hmac_sha512_ctx *ctx, uint8_t *work, const uint8_t *key, size_t key_len);
 /** @brief Feed @p len message bytes. */
 void pc_hmac_sha512_update(pc_hmac_sha512_ctx *ctx, const uint8_t *data, size_t len);
 /** @brief Finish, writing the 64-byte MAC. */
 void pc_hmac_sha512_final(pc_hmac_sha512_ctx *ctx, uint8_t mac[PC_HMAC_SHA512_LEN]);
 
-/** @brief One-shot HMAC-SHA2-512 over a single buffer. */
-void pc_hmac_sha512(const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
+/** @brief One-shot HMAC-SHA2-512 over a single buffer, out of @p work. */
+void pc_hmac_sha512(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
                     uint8_t mac[PC_HMAC_SHA512_LEN]);
 
 PROTO_END_DECLS

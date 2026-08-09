@@ -7,8 +7,8 @@
  */
 
 #include "services/web/edge_cache/edge_cache_proxy.h"
-#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_EDGE_CACHE
 
@@ -726,7 +726,8 @@ static proto_bool mesh_store_and_serve(uint8_t slot, EdgeFetchSlot *fs, uint32_t
     {
         return PROTO_FALSE;
     }
-    if (!edge_mesh_deserialize_entry(fs->mf.buf + fs->mf.entry_off, fs->mf.entry_len, e, now) ||
+    if (!edge_mesh_deserialize_entry(s_ctx.store.digest_work, fs->mf.buf + fs->mf.entry_off, fs->mf.entry_len, e,
+                                     now) ||
         strcmp(e->key, fs->canon) != 0 || !edge_entry_fresh(e, now))
     {
         edge_store_free_entry(&s_ctx.store, e);
@@ -780,7 +781,7 @@ static proto_bool start_fetch(uint8_t slot, HttpReq *req, EdgeRouteMap *m, const
     if (!reval && mesh_peer_count() > 0)
     {
         uint8_t digest[32];
-        edge_key_digest(canon, strnlen(canon, PC_EDGE_KEY_MAX), digest);
+        edge_key_digest(s_ctx.store.digest_work, canon, strnlen(canon, PC_EDGE_KEY_MAX), digest);
         mesh_snapshot_headers(req, s_ctx.mesh_hdrs, sizeof(s_ctx.mesh_hdrs));
         fs->mreq_len = edge_mesh_build_request(digest, canon, s_ctx.mesh_hdrs, fs->mreq, sizeof(fs->mreq));
         fs->peer_idx = 0;
@@ -811,13 +812,14 @@ static proto_bool start_fetch(uint8_t slot, HttpReq *req, EdgeRouteMap *m, const
 static EdgeEntry *try_promote_l2(const char *canon, uint32_t now)
 {
     uint8_t digest[32];
-    edge_key_digest(canon, strnlen(canon, PC_EDGE_KEY_MAX), digest);
+    edge_key_digest(s_ctx.store.digest_work, canon, strnlen(canon, PC_EDGE_KEY_MAX), digest);
     EdgeEntry *e = edge_store_alloc(&s_ctx.store, canon, ""); // may evict + write-back an L1 victim first
     if (!e)
     {
         return NULL;
     }
-    if (!edge_sd_get(s_ctx.l2, digest, e, s_ctx.sd_buf, sizeof(s_ctx.sd_buf)) || strcmp(e->key, canon) != 0)
+    if (!edge_sd_get(s_ctx.store.digest_work, s_ctx.l2, digest, e, s_ctx.sd_buf, sizeof(s_ctx.sd_buf)) ||
+        strcmp(e->key, canon) != 0)
     {
         edge_store_free_entry(&s_ctx.store, e); // L2 miss or digest collision -> not promoted
         return NULL;
@@ -1065,7 +1067,7 @@ static void mesh_answer(MeshConn *mc, const uint8_t digest[32], const char *cano
 {
     proto_bool hit = PROTO_FALSE;
     uint8_t verify[32];
-    edge_key_digest(canon, strnlen(canon, PC_EDGE_KEY_MAX), verify);
+    edge_key_digest(s_ctx.store.digest_work, canon, strnlen(canon, PC_EDGE_KEY_MAX), verify);
     if (mem.cmp(verify, digest, 32) == 0) // integrity: the canonical key must hash to the advertised digest
     {
         MeshLookupCtx lc;
@@ -1399,7 +1401,7 @@ proto_bool pc_edge_cache_purge(const char *canonical_key)
     if (s_ctx.l2)
     {
         uint8_t digest[32];
-        edge_key_digest(canonical_key, strnlen(canonical_key, PC_EDGE_KEY_MAX), digest);
+        edge_key_digest(s_ctx.store.digest_work, canonical_key, strnlen(canonical_key, PC_EDGE_KEY_MAX), digest);
         if (edge_sd_del(s_ctx.l2, digest))
         {
             purged = PROTO_TRUE;

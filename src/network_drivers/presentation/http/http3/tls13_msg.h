@@ -162,7 +162,8 @@ size_t pc_tls13_build_certificate_rpk(uint8_t *out, size_t cap, const uint8_t ed
  * @param seed             32-byte Ed25519 private seed.
  * @return bytes written, or 0 on overflow.
  */
-size_t pc_tls13_build_cert_verify(uint8_t *out, size_t cap, const uint8_t transcript_hash[32], const uint8_t seed[32]);
+size_t pc_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
+                                  const uint8_t seed[32]);
 
 /**
  * @brief Build a Finished message (RFC 8446 sec 4.4.4) carrying @p verify_data (from

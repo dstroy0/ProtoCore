@@ -12,6 +12,7 @@
 
 #if PC_ENABLE_SMB
 
+#include "crypto/rng/rng.h" // pc_rand_fill: the client GUID, salt and challenge
 #include "ntlm.h"
 #include "ntlmssp.h"
 #include "smb2.h"
@@ -140,6 +141,7 @@ typedef struct
     uint8_t sp2[PC_SMB_BUF / 2];
     uint8_t utf16[PC_SMB_BUF / 2];
     uint8_t ti[PC_SMB_BUF / 2]; ///< the CHALLENGE target-info with the MsvAvFlags MIC bit set (NTLMv2 input)
+    uint8_t crypto_work[PC_CRYPTO_BORROW_MAX]; ///< the bytes this connection's crypto calls work out of
 } SmbClientCtx;
 static SmbClientCtx s_smb;
 
@@ -176,17 +178,17 @@ static void smb_apply_sign(const SmbSign *s, uint8_t *msg, size_t len)
 {
     if (s->algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        pc_smb2_sign_cmac(s->key, msg, len);
+        pc_smb2_sign_cmac(s_smb.crypto_work, s->key, msg, len);
     }
     else
     {
-        pc_smb2_sign(s->key, msg, len);
+        pc_smb2_sign(s_smb.crypto_work, s->key, msg, len);
     }
 }
 static proto_bool smb_check_sign(const SmbSign *s, uint8_t *msg, size_t len)
 {
-    return s->algo == SMB2_SIGN_ALGO_AES_CMAC ? pc_smb2_verify_cmac(s->key, msg, len)
-                                              : pc_smb2_verify(s->key, msg, len);
+    return s->algo == SMB2_SIGN_ALGO_AES_CMAC ? pc_smb2_verify_cmac(s_smb.crypto_work, s->key, msg, len)
+                                              : pc_smb2_verify(s_smb.crypto_work, s->key, msg, len);
 }
 
 // Send the framed message currently in s_smb.tx (mlen bytes at tx+4) and receive the reply into s_smb.rx.
@@ -270,8 +272,8 @@ static SmbResult smb_negotiate(SmbSendFn send, SmbRecvFn recv, void *ctx, uint16
 {
     uint8_t guid[16];
     uint8_t salt[32];
-    pc_platform_rand_fill(guid, 16);
-    pc_platform_rand_fill(salt, sizeof(salt));
+    pc_rand_fill(guid, 16);
+    pc_rand_fill(salt, sizeof(salt));
     size_t mlen = pc_smb2_build_negotiate_311(s_smb.tx + 4, sizeof(s_smb.tx) - 4, guid, SMB2_NEGOTIATE_SIGNING_ENABLED,
                                               salt, sizeof(salt), offer_ciphers, offer_count);
     if (!mlen)
@@ -283,7 +285,7 @@ static SmbResult smb_negotiate(SmbSendFn send, SmbRecvFn recv, void *ctx, uint16
     // never signed). The chain is only consumed when the server chooses 3.1.1, but folding is harmless
     // otherwise.
     pc_smb_preauth_init(preauth);
-    pc_smb_preauth_update(preauth, s_smb.tx + 4, mlen);
+    pc_smb_preauth_update(s_smb.crypto_work, preauth, s_smb.tx + 4, mlen);
 
     SmbResult rt = SMB_ERR_IO;
     // NEGOTIATE precedes authentication, so there is no session key yet: never signed.
@@ -292,7 +294,7 @@ static SmbResult smb_negotiate(SmbSendFn send, SmbRecvFn recv, void *ctx, uint16
     {
         return rt;
     }
-    pc_smb_preauth_update(preauth, s_smb.rx, (size_t)rl); // fold the NEGOTIATE response
+    pc_smb_preauth_update(s_smb.crypto_work, preauth, s_smb.rx, (size_t)rl); // fold the NEGOTIATE response
     Smb2NegotiateResp neg;
     if (!pc_smb2_parse_negotiate_response(s_smb.rx, (size_t)rl, &neg))
     {
@@ -336,7 +338,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     {
         return SMB_ERR_OVERFLOW;
     }
-    pc_smb_preauth_update(preauth, s_smb.tx + 4, mlen); // fold SESSION_SETUP request 1 (unsigned)
+    pc_smb_preauth_update(s_smb.crypto_work, preauth, s_smb.tx + 4, mlen); // fold SESSION_SETUP request 1 (unsigned)
     SmbResult rt = SMB_ERR_IO;
     // Round 1 precedes the session key, so it is never signed.
     int rl = smb_round_trip(send, recv, ctx, mlen, NULL, NULL, &rt);
@@ -344,7 +346,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     {
         return rt;
     }
-    pc_smb_preauth_update(preauth, s_smb.rx, (size_t)rl); // fold SESSION_SETUP response 1
+    pc_smb_preauth_update(s_smb.crypto_work, preauth, s_smb.rx, (size_t)rl); // fold SESSION_SETUP response 1
     Smb2Header h1;
     if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &h1) || h1.status != SMB2_STATUS_MORE_PROCESSING_REQUIRED)
     {
@@ -379,7 +381,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     uint8_t cli_chal[8];
     uint8_t ts[8];
     uint8_t skey[16];
-    pc_platform_rand_fill(cli_chal, 8);
+    pc_rand_fill(cli_chal, 8);
     find_av_timestamp(ch.target_info, ch.target_info_len, ts);
     // Set the MsvAvFlags "MIC provided" bit in the target-info the NTLMv2 response is computed over, so a
     // server that enforces the MIC accepts it and verifies the digest attached below.
@@ -418,7 +420,8 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     {
         return SMB_ERR_OVERFLOW;
     }
-    pc_smb_preauth_update(preauth, s_smb.tx + 4, mlen); // fold request 2 -> the key-derivation hash is now final
+    pc_smb_preauth_update(s_smb.crypto_work, preauth, s_smb.tx + 4,
+                          mlen); // fold request 2 -> the key-derivation hash is now final
 
     // Select the session signer from the negotiated dialect: SMB 3.x (>= 3.0) signs with AES-CMAC over the
     // SP800-108-derived key (3.1.1 mixes in the preauth hash); SMB 2.x signs with HMAC-SHA256 over the
@@ -438,7 +441,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
         mem.cpy(sign_key, skey, sizeof(sign_key));
         if (want_signing)
         {
-            pc_smb2_sign(skey, s_smb.tx + 4, mlen);
+            pc_smb2_sign(s_smb.crypto_work, skey, s_smb.tx + 4, mlen);
         }
     }
 

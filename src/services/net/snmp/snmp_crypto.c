@@ -23,7 +23,7 @@
 // defensively (well above any real passphrase) so a non-terminated password cannot over-read.
 #define PC_SNMP_USM_PASS_MAX 256
 
-void pc_snmp_usm_localize_key(const char *password, const uint8_t *engine_id, size_t engine_id_len,
+void pc_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id, size_t engine_id_len,
                               uint8_t key_out[SNMP_USM_KEY_LEN])
 {
     size_t pwlen = password ? strnlen(password, PC_SNMP_USM_PASS_MAX) : 0;
@@ -35,7 +35,7 @@ void pc_snmp_usm_localize_key(const char *password, const uint8_t *engine_id, si
 
     // Ku = SHA-256( password repeated to exactly 1 048 576 bytes ).
     pc_sha256_ctx ctx;
-    pc_sha256_init(&ctx);
+    pc_sha256_init(&ctx, work);
     uint8_t block[64];
     size_t pw_index = 0;
     uint32_t count = 0;
@@ -53,7 +53,7 @@ void pc_snmp_usm_localize_key(const char *password, const uint8_t *engine_id, si
     pc_sha256_final(&ctx, ku);
 
     // Kul = SHA-256( Ku || engineID || Ku ).
-    pc_sha256_init(&ctx);
+    pc_sha256_init(&ctx, work);
     pc_sha256_update(&ctx, ku, SNMP_USM_KEY_LEN);
     pc_sha256_update(&ctx, engine_id, engine_id_len);
     pc_sha256_update(&ctx, ku, SNMP_USM_KEY_LEN);

@@ -63,7 +63,7 @@ size_t edge_sd_serialize(const EdgeEntry *e, uint8_t *out, size_t cap);
  * @return false on a short/corrupt/oversized buffer or a version mismatch (fails closed, no partial write
  *         of the body).
  */
-proto_bool edge_sd_deserialize(const uint8_t *buf, size_t len, EdgeEntry *e);
+proto_bool edge_sd_deserialize(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e);
 
 #if PC_ENABLE_DBM
 
@@ -78,7 +78,8 @@ proto_bool edge_sd_put(struct pc_dbm *db, const EdgeEntry *e, uint8_t *scratch, 
  * @brief Promote the entry stored under @p digest from L2 into @p e (via @p scratch).
  * @return true on a hit that deserialized cleanly; false on an L2 miss or a corrupt value.
  */
-proto_bool edge_sd_get(struct pc_dbm *db, const uint8_t digest[32], EdgeEntry *e, uint8_t *scratch, size_t scratch_cap);
+proto_bool edge_sd_get(uint8_t *work, struct pc_dbm *db, const uint8_t digest[32], EdgeEntry *e, uint8_t *scratch,
+                       size_t scratch_cap);
 
 /** @brief Drop the L2 entry stored under @p digest. @return true if one existed. */
 proto_bool edge_sd_del(struct pc_dbm *db, const uint8_t digest[32]);

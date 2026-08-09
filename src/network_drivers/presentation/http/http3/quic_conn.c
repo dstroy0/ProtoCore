@@ -91,7 +91,7 @@ void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint
         qc->cb = *cb;
     }
 
-    pc_quic_derive_initial_secrets(odcid, odcid_len, &qc->initial);
+    pc_quic_derive_initial_secrets(qc->tls.keys_work, odcid, odcid_len, &qc->initial);
 
     for (int i = 0; i < 3; i++)
     {

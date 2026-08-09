@@ -114,9 +114,15 @@ typedef struct
     DtlsConnState state;
     uint8_t alert; ///< RFC 8446 §6 alert code when @c state is FAILED (0 otherwise)
 
-    pc_sha256_ctx transcript;                       ///< running Transcript-Hash over the TLS handshake messages
-    Tls13KeySchedule ks;                            ///< TLS 1.3 key schedule, over @ref ks_store
-    uint8_t ks_store[PC_TLS13_KS_CAP];              ///< the schedule's terms; lives and dies with this connection
+    pc_sha256_ctx transcript;             ///< running Transcript-Hash over the TLS handshake messages
+    Tls13KeySchedule ks;                  ///< TLS 1.3 key schedule, over @ref ks_store
+    uint8_t ks_store[PC_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
+    // The transcript hash and the one-off hashes taken beside it work out of these. Live and die with
+    // this connection, so no hash on the handshake path touches a pool.
+    uint8_t hash_work[PC_SHA256_BORROW];
+    uint8_t hash_work2[PC_SHA256_BORROW];
+    uint8_t sign_work[PC_SHA512_BORROW];            ///< the CertificateVerify signature's SHA-512
+    uint8_t mac_work[PC_HMAC_SHA256_BORROW];        ///< the stateless HelloRetryRequest cookie's MAC
     DtlsRecordKeys ep2_srv;                         ///< epoch 2 server write keys (handshake traffic)
     DtlsRecordKeys ep2_cli;                         ///< epoch 2 client read keys
     DtlsRecordKeys ep3_srv;                         ///< epoch 3 server write keys (application traffic)

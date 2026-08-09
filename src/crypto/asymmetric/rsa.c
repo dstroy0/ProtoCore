@@ -10,11 +10,11 @@
  */
 
 #include "crypto/asymmetric/rsa.h"
-#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
 #if PC_HAS_HW_BIGNUM
@@ -53,8 +53,8 @@ const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN] = {
 // HW path - mbedtls verify
 // ---------------------------------------------------------------------------
 
-int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], const uint8_t *msg, size_t msg_len,
-                  const uint8_t *sig, size_t sig_len, pc_rsa_hash hash)
+int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
+                  size_t msg_len, const uint8_t *sig, size_t sig_len, pc_rsa_hash hash)
 {
     if (sig_len != PC_RSA_KEY_BYTES)
     {
@@ -89,11 +89,11 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
     {
         if (sha512)
         {
-            pc_sha512(msg, msg_len, digest);
+            pc_sha512(work, msg, msg_len, digest);
         }
         else
         {
-            pc_sha256(msg, msg_len, digest);
+            pc_sha256(work, msg, msg_len, digest);
         }
 #if MBEDTLS_VERSION_MAJOR >= 3
         rc = mbedtls_rsa_pkcs1_verify(&rsa, md, dlen, digest, sig);
@@ -116,19 +116,19 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
 
 // Hash msg with the selected algorithm and return the matching DigestInfo.
 //   digest must be >= PC_SHA512_DIGEST_LEN bytes.
-static void rsa_digest(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t digest[PC_SHA512_DIGEST_LEN],
-                       size_t *digest_len, const uint8_t **di, size_t *di_len)
+static void rsa_digest(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash hash,
+                       uint8_t digest[PC_SHA512_DIGEST_LEN], size_t *digest_len, const uint8_t **di, size_t *di_len)
 {
     if (hash == PC_RSA_HASH_SHA512)
     {
-        pc_sha512(msg, msg_len, digest);
+        pc_sha512(work, msg, msg_len, digest);
         *digest_len = PC_SHA512_DIGEST_LEN;
         *di = pc_pkcs1_sha512_digestinfo;
         *di_len = PC_PKCS1_SHA512_DIGESTINFO_LEN;
     }
     else
     {
-        pc_sha256(msg, msg_len, digest);
+        pc_sha256(work, msg, msg_len, digest);
         *digest_len = PC_SHA256_DIGEST_LEN;
         *di = pc_pkcs1_sha256_digestinfo;
         *di_len = PC_PKCS1_DIGESTINFO_LEN;
@@ -323,15 +323,15 @@ static void bn_modexp_full(const pc_bignum *base, const pc_bignum *exp, const pc
     *out = r;
 }
 
-int pc_rsa_sign_sw(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t d_be[PC_RSA_KEY_BYTES], const uint8_t *msg,
-                   size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
+int pc_rsa_sign_sw(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t d_be[PC_RSA_KEY_BYTES], uint8_t *work,
+                   const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
 {
     // 1. SHA-256/512 digest of the message + matching DigestInfo.
     uint8_t digest[PC_SHA512_DIGEST_LEN];
     size_t digest_len = 0;
     const uint8_t *di = NULL;
     size_t di_len = 0;
-    rsa_digest(msg, msg_len, hash, digest, &digest_len, &di, &di_len);
+    rsa_digest(work, msg, msg_len, hash, digest, &digest_len, &di, &di_len);
 
     // 2. PKCS#1 v1.5 encode: 0x00 0x01 0xFF... 0x00 DigestInfo digest
     uint8_t em[PC_RSA_KEY_BYTES];
@@ -359,8 +359,8 @@ int pc_rsa_sign_sw(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t d_be[PC_R
     return 0;
 }
 
-int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], const uint8_t *msg, size_t msg_len,
-                  const uint8_t *sig, size_t sig_len, pc_rsa_hash hash)
+int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
+                  size_t msg_len, const uint8_t *sig, size_t sig_len, pc_rsa_hash hash)
 {
     if (sig_len != PC_RSA_KEY_BYTES)
     {
@@ -388,7 +388,7 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
     size_t digest_len = 0;
     const uint8_t *di = NULL;
     size_t di_len = 0;
-    rsa_digest(msg, msg_len, hash, digest, &digest_len, &di, &di_len);
+    rsa_digest(work, msg, msg_len, hash, digest, &digest_len, &di, &di_len);
     uint8_t expected[PC_RSA_KEY_BYTES];
     pkcs1v15_encode(digest, digest_len, di, di_len, expected);
 

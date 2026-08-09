@@ -31,16 +31,20 @@ typedef struct
     pc_sha512_ctx c512;
 } SshKexHash;
 
-static inline void ssh_kexhash_init(SshKexHash *h, proto_bool is512)
+/**
+ * @brief Bind the digest to @p work and start it.
+ * @param work PC_SHA256_BORROW bytes of caller storage; the SHA-512 arm carries its own.
+ */
+static inline void ssh_kexhash_init(SshKexHash *h, uint8_t *work, proto_bool is512)
 {
     h->is512 = is512;
     if (is512)
     {
-        pc_sha512_init(&h->c512);
+        pc_sha512_init(&h->c512, work);
     }
     else
     {
-        pc_sha256_init(&h->c256);
+        pc_sha256_init(&h->c256, work);
     }
 }
 

@@ -30,10 +30,10 @@
 
 #if PC_ENABLE_AUTH
 // One-shot SHA-256 of @p data, written as 64 lowercase hex chars + NUL.
-static void sha256_hex(const uint8_t *data, size_t len, char out[65])
+static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[65])
 {
     uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256(data, len, d);
+    pc_sha256(work, data, len, d);
     pc_hex_encode(d, PC_SHA256_DIGEST_LEN, out, PROTO_FALSE);
 }
 
@@ -179,7 +179,7 @@ static uint8_t add(const char *realm, const char *user, const char *pass, proto_
     return a->count++;
 }
 
-static void rekey(void)
+static void rekey(uint8_t *work)
 {
     AuthCtx *a = bind_auth();
     if (a == NULL)
@@ -204,7 +204,7 @@ static void rekey(void)
     proto_raw_put_u32(seed + 16, c);
     proto_raw_put_u32(seed + 20, t);
     uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256(seed, sizeof(seed), d);
+    pc_sha256(work, seed, sizeof(seed), d);
     proto_raw_read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
 }
 
@@ -213,18 +213,18 @@ static void rekey(void)
 // per-nonce state - it recomputes the MAC to authenticate a returned nonce and
 // reads the embedded issue time to age it - so the scheme is safe under the
 // shared-nothing worker model (the secret is set once at begin(), read-only after).
-static uint32_t digest_nonce_mac(const uint8_t *secret, uint32_t issue, char *mac_hex)
+static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t issue, char *mac_hex)
 {
     uint8_t material[20];
     proto_raw_read(material, secret, 16);
     proto_raw_put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
     uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256(material, sizeof(material), d);
+    pc_sha256(work, material, sizeof(material), d);
     pc_hex_encode(d, 16, mac_hex, PROTO_FALSE); // 16 bytes -> 32 hex chars + NUL
     return issue;
 }
 
-static void mint_nonce(char *out, size_t cap)
+static void mint_nonce(uint8_t *work, char *out, size_t cap)
 {
     if (bind_auth() == NULL)
     {
@@ -235,7 +235,7 @@ static void mint_nonce(char *out, size_t cap)
     char issue_hex[9];
     pc_hex_encode((const uint8_t *)&issue, 4, issue_hex, PROTO_FALSE); // 4 bytes -> 8 hex chars
     char mac_hex[33];
-    digest_nonce_mac(s_auth->digest_secret, issue, mac_hex);
+    digest_nonce_mac(work, s_auth->digest_secret, issue, mac_hex);
     pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
     pc_sb_put(&sb_out, issue_hex);
     pc_sb_put(&sb_out, ".");
@@ -246,7 +246,7 @@ static void mint_nonce(char *out, size_t cap)
     }
 }
 
-static proto_bool verify_nonce(const char *nonce, proto_bool *expired)
+static proto_bool verify_nonce(uint8_t *work, const char *nonce, proto_bool *expired)
 {
     *expired = PROTO_FALSE;
     if (bind_auth() == NULL)
@@ -264,7 +264,7 @@ static proto_bool verify_nonce(const char *nonce, proto_bool *expired)
         return PROTO_FALSE;
     }
     char mac_hex[33];
-    digest_nonce_mac(s_auth->digest_secret, issue, mac_hex);
+    digest_nonce_mac(work, s_auth->digest_secret, issue, mac_hex);
     // Constant-time compare of the 32 MAC hex chars: a forged nonce never reveals
     // how many leading characters matched.
     const char *got = nonce + 9;
@@ -282,7 +282,7 @@ static proto_bool verify_nonce(const char *nonce, proto_bool *expired)
     return PROTO_TRUE;
 }
 
-static void challenge(uint8_t slot_id, uint8_t id, proto_bool stale)
+static void challenge(uint8_t *work, uint8_t slot_id, uint8_t id, proto_bool stale)
 {
     const AuthCred *c = cred_at(id);
     if (c == NULL)
@@ -304,7 +304,7 @@ static void challenge(uint8_t slot_id, uint8_t id, proto_bool stale)
     if (c->digest)
     {
         char nonce[48];
-        mint_nonce(nonce, sizeof(nonce)); // a fresh, timestamped nonce per challenge
+        mint_nonce(work, nonce, sizeof(nonce)); // a fresh, timestamped nonce per challenge
         pc_sb sb_challenge = {challenge, sizeof(challenge), 0, PROTO_TRUE};
         pc_sb_put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
         pc_sb_put(&sb_challenge, c->realm);
@@ -401,7 +401,7 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
 // Validate an Authorization: Digest header (RFC 7616, SHA-256, qop=auth).
 // HA1 = SHA256(user:realm:pass), HA2 = SHA256(method:uri),
 // response = SHA256(HA1:nonce:nc:cnonce:qop:HA2).
-static proto_bool check_digest(uint8_t slot_id, HttpReq *req, const AuthCred *c, proto_bool *stale)
+static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, const AuthCred *c, proto_bool *stale)
 {
     (void)slot_id;
     // Use the full-length Authorization capture (the scratch header value is
@@ -440,7 +440,7 @@ static proto_bool check_digest(uint8_t slot_id, HttpReq *req, const AuthCred *c,
     // nonce is still authentic - we finish the credential check below and let the
     // caller reissue with stale=true rather than rejecting outright (RFC 7616 3.3).
     proto_bool nonce_expired = PROTO_FALSE;
-    if (!verify_nonce(nonce, &nonce_expired))
+    if (!verify_nonce(work, nonce, &nonce_expired))
     {
         return PROTO_FALSE;
     }
@@ -490,7 +490,7 @@ static proto_bool check_digest(uint8_t slot_id, HttpReq *req, const AuthCred *c,
     pc_sb_put(&sb_tmp, ":");
     pc_sb_put(&sb_tmp, c->pass);
     int n = (int)pc_sb_finish(&sb_tmp);
-    sha256_hex((const uint8_t *)tmp, (size_t)n, ha1);
+    sha256_hex(work, (const uint8_t *)tmp, (size_t)n, ha1);
 
     char tmp2[sizeof(uri) + 16];
     pc_sb sb_tmp2 = {tmp2, sizeof(tmp2), 0, PROTO_TRUE};
@@ -498,7 +498,7 @@ static proto_bool check_digest(uint8_t slot_id, HttpReq *req, const AuthCred *c,
     pc_sb_put(&sb_tmp2, ":");
     pc_sb_put(&sb_tmp2, uri);
     n = (int)pc_sb_finish(&sb_tmp2);
-    sha256_hex((const uint8_t *)tmp2, (size_t)n, ha2);
+    sha256_hex(work, (const uint8_t *)tmp2, (size_t)n, ha2);
 
     char tmp3[65 + 48 + 16 + 64 + 8 + 65 + 8];
     pc_sb sb_tmp3 = {tmp3, sizeof(tmp3), 0, PROTO_TRUE};
@@ -514,7 +514,7 @@ static proto_bool check_digest(uint8_t slot_id, HttpReq *req, const AuthCred *c,
     pc_sb_put(&sb_tmp3, ":");
     pc_sb_put(&sb_tmp3, ha2);
     n = (int)pc_sb_finish(&sb_tmp3);
-    sha256_hex((const uint8_t *)tmp3, (size_t)n, expected);
+    sha256_hex(work, (const uint8_t *)tmp3, (size_t)n, expected);
 
     if (!str.eq(expected, response, sizeof(expected), PROTO_TRUE))
     {
@@ -532,7 +532,7 @@ static proto_bool check_digest(uint8_t slot_id, HttpReq *req, const AuthCred *c,
 
 // The scheme belongs to the credential, so the caller states which credential set applies and
 // nothing above this file has to know whether that set is Basic or Digest.
-static proto_bool check(uint8_t slot_id, HttpReq *req, uint8_t id, proto_bool *stale)
+static proto_bool check(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t id, proto_bool *stale)
 {
     const AuthCred *c = cred_at(id);
     if (c == NULL)
@@ -541,7 +541,7 @@ static proto_bool check(uint8_t slot_id, HttpReq *req, uint8_t id, proto_bool *s
     }
     if (c->digest)
     {
-        return check_digest(slot_id, req, c, stale);
+        return check_digest(work, slot_id, req, c, stale);
     }
     return check_basic(slot_id, req, c);
 }

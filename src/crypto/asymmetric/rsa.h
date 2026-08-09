@@ -59,6 +59,7 @@ extern const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN];
  *
  * @param n_be     Modulus n, 256 bytes big-endian.
  * @param e_be4    Public exponent e, 4 bytes big-endian (typically 65537).
+ * @param work     PC_SHA256_BORROW bytes of caller storage, for the message digest.
  * @param msg      Message that was signed (this hashes it; do not pre-hash).
  * @param msg_len  Message length.
  * @param sig      Signature, big-endian.
@@ -66,8 +67,8 @@ extern const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN];
  * @param hash     Digest algorithm (SHA-256 / SHA-512).
  * @return 0 if the signature is valid, -1 otherwise.
  */
-int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], const uint8_t *msg, size_t msg_len,
-                  const uint8_t *sig, size_t sig_len, pc_rsa_hash hash);
+int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
+                  size_t msg_len, const uint8_t *sig, size_t sig_len, pc_rsa_hash hash);
 
 #if !PC_HAS_HW_BIGNUM
 /**
@@ -78,14 +79,15 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
  *
  * @param n_be     Modulus n, 256 bytes big-endian.
  * @param d_be     Private exponent d, 256 bytes big-endian (SENSITIVE; caller wipes).
+ * @param work     PC_SHA256_BORROW bytes of caller storage, for the message digest.
  * @param msg      Message to sign (this hashes it).
  * @param msg_len  Message length.
  * @param hash     Digest algorithm (SHA-256 / SHA-512).
  * @param sig      Output signature, PC_RSA_SIG_BYTES big-endian.
  * @return 0 on success.
  */
-int pc_rsa_sign_sw(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t d_be[PC_RSA_KEY_BYTES], const uint8_t *msg,
-                   size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES]);
+int pc_rsa_sign_sw(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t d_be[PC_RSA_KEY_BYTES], uint8_t *work,
+                   const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES]);
 #endif
 
 PROTO_END_DECLS

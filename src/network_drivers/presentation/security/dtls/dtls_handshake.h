@@ -130,9 +130,10 @@ typedef struct
     int (*reasm_add)(DtlsHsReasm *r, const DtlsHsHeader *frag);
     size_t (*ack_build)(const DtlsRecordNumber *nums, size_t count, uint8_t *out, size_t out_cap);
     proto_bool (*ack_parse)(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap, size_t *out_count);
-    size_t (*cookie_make)(const uint8_t pc_hmac_key[32], uint64_t timestamp, const uint8_t *payload, size_t payload_len,
-                          const uint8_t *client_addr, size_t addr_len, uint8_t *out, size_t out_cap);
-    proto_bool (*cookie_verify)(const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
+    size_t (*cookie_make)(uint8_t *work, const uint8_t pc_hmac_key[32], uint64_t timestamp, const uint8_t *payload,
+                          size_t payload_len, const uint8_t *client_addr, size_t addr_len, uint8_t *out,
+                          size_t out_cap);
+    proto_bool (*cookie_verify)(uint8_t *work, const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
                                 const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie, size_t cookie_len,
                                 uint8_t *payload_out, size_t payload_cap, size_t *payload_len_out);
 } DtlsHandshakeNs;

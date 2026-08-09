@@ -7,12 +7,12 @@
  */
 
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
-#include "mmgr/protomem.h"
 #include "crypto/asymmetric/ecdsa.h"   // pc_ecdsa_p256_verify() (ecdsa-sha2-nistp256)
 #include "crypto/asymmetric/ed25519.h" // pc_ed25519_verify() (ssh-ed25519 client keys)
 #include "mmgr/bytes.h"                // pc_rd_str() - the RFC 4251 sec 5 string reader
 #include "mmgr/endian.h"               // pc_wr32be() - the one source of truth for wire integers
 #include "mmgr/plaintext.h"            // pc_plaintext_span() for the verify buffers
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"    // SSH_MSG_* constants
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[], SshPhase
@@ -460,13 +460,13 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
 {
     // Key type is taken from the blob (the algo name only steers the RSA signature hash).
     proto_bool is_ed = req->pk_blob_len >= 4 + 11 && mem.cmp(req->pk_blob,
-                                                            "\x00\x00\x00\x0b"
-                                                            "ssh-ed25519",
-                                                            4 + 11) == 0;
+                                                             "\x00\x00\x00\x0b"
+                                                             "ssh-ed25519",
+                                                             4 + 11) == 0;
     proto_bool is_ecdsa = req->pk_blob_len >= 4 + 19 && mem.cmp(req->pk_blob,
-                                                               "\x00\x00\x00\x13"
-                                                               "ecdsa-sha2-nistp256",
-                                                               4 + 19) == 0;
+                                                                "\x00\x00\x00\x13"
+                                                                "ecdsa-sha2-nistp256",
+                                                                4 + 19) == 0;
     // Borrowed for this dispatch rather than carried on the worker stack. This function sits on the
     // deepest call chain in the library (dispatch -> auth -> ed25519 verify -> ed_add), so the key
     // material and the signed-data staging buffer are what drive the worker stack requirement.
@@ -535,19 +535,26 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     const pc_rsa_hash rh =
         (strcmp(req->pk_algo, SSH_RSA_SIG_ALG_SHA512) == 0) ? PC_RSA_HASH_SHA512 : PC_RSA_HASH_SHA256;
     proto_bool sig_ok;
+    if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
+    {
+        pc_plaintext_release(mark);
+        return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE); // arena exhausted: fail closed
+    }
+    uint8_t *work = ssh_pkt[i].crypto_work;
     if (is_ed)
     {
-        sig_ok = req->signature_len == 64 && pc_ed25519_verify(ed_pub.buf, signed_data.buf, sd, req->signature);
+        sig_ok = req->signature_len == 64 && pc_ed25519_verify(work, ed_pub.buf, signed_data.buf, sd, req->signature);
     }
     else if (is_ecdsa)
     {
         pc_span ec_sig = pc_plaintext_span(PC_ECDSA_P256_SIG_LEN, 4);
         sig_ok = pc_span_ok(ec_sig) && parse_ecdsa_sig(req->signature, req->signature_len, ec_sig.buf) &&
-                 pc_ecdsa_p256_verify(ec_pub.buf, signed_data.buf, sd, ec_sig.buf);
+                 pc_ecdsa_p256_verify(ec_pub.buf, work, signed_data.buf, sd, ec_sig.buf);
     }
     else
     {
-        sig_ok = pc_rsa_verify(n_be.buf, e_be.buf, signed_data.buf, sd, req->signature, req->signature_len, rh) == 0;
+        sig_ok =
+            pc_rsa_verify(n_be.buf, e_be.buf, work, signed_data.buf, sd, req->signature, req->signature_len, rh) == 0;
     }
     if (sig_ok)
     {

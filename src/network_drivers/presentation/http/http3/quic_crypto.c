@@ -35,37 +35,33 @@ static void build_nonce(const uint8_t iv[12], uint64_t full_pn, uint8_t nonce[12
     }
 }
 
-void pc_quic_keys_from_secret(const uint8_t secret[PC_HKDF_HASH_LEN], QuicPacketKeys *out)
+void pc_quic_keys_from_secret(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], QuicPacketKeys *out)
 {
     // RFC 9001 sec 5.1: every encryption level's packet keys are these three Expand-Labels of the
     // level's traffic secret (the Initial secrets below, or the TLS handshake / application secrets).
     // The key becomes a context here and the raw bytes are wiped: nothing downstream needs them.
-    // The pool cannot come up short here: PC_SECURE_ARENA_SIZE is the SUM of every PC_WORK_*, a
-    // strict upper bound rather than a deepest-nest estimate, so a borrow inside that budget always
-    // succeeds. The borrow also wipes on release, on every exit path.
-    size_t mark = pc_secure_mark();
-    uint8_t *k = pc_secure_alloc(PC_AES128GCM_KEY_LEN, 8);
-    pc_hkdf_expand_label(secret, "quic key", k, PC_AES128GCM_KEY_LEN, PC_HKDF_LABEL_PREFIX);
+    uint8_t *k = work + PC_HKDF_BORROW;
+    uint8_t *hpk = k + PC_AES128GCM_KEY_LEN;
+    pc_hkdf_expand_label(work, secret, "quic key", k, PC_AES128GCM_KEY_LEN, PC_HKDF_LABEL_PREFIX);
     (void)pc_aes128gcm_key_init(out->gcm, k);
-    pc_hkdf_expand_label(secret, "quic iv", out->iv, sizeof(out->iv), PC_HKDF_LABEL_PREFIX);
-    uint8_t *hpk = pc_secure_alloc(PC_AES128GCM_KEY_LEN, 8);
-    pc_hkdf_expand_label(secret, "quic hp", hpk, PC_AES128GCM_KEY_LEN, PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(work, secret, "quic iv", out->iv, sizeof(out->iv), PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(work, secret, "quic hp", hpk, PC_AES128GCM_KEY_LEN, PC_HKDF_LABEL_PREFIX);
     pc_aes128_init((struct pc_aes128 *)(out->hp), hpk);
-    pc_secure_release(mark);
+    pc_secure_wipe(k, 2 * PC_AES128GCM_KEY_LEN);
 }
 
-void pc_quic_derive_initial_secrets(const uint8_t *dcid, size_t dcid_len, QuicInitialSecrets *out)
+void pc_quic_derive_initial_secrets(uint8_t *work, const uint8_t *dcid, size_t dcid_len, QuicInitialSecrets *out)
 {
     uint8_t initial_secret[PC_HKDF_HASH_LEN];
-    pc_hkdf_extract(INITIAL_SALT, sizeof(INITIAL_SALT), dcid, dcid_len, initial_secret);
+    pc_hkdf_extract(work, INITIAL_SALT, sizeof(INITIAL_SALT), dcid, dcid_len, initial_secret);
 
     uint8_t client_secret[PC_HKDF_HASH_LEN];
     uint8_t server_secret[PC_HKDF_HASH_LEN];
-    pc_hkdf_expand_label(initial_secret, "client in", client_secret, sizeof(client_secret), PC_HKDF_LABEL_PREFIX);
-    pc_hkdf_expand_label(initial_secret, "server in", server_secret, sizeof(server_secret), PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(work, initial_secret, "client in", client_secret, sizeof(client_secret), PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(work, initial_secret, "server in", server_secret, sizeof(server_secret), PC_HKDF_LABEL_PREFIX);
 
-    pc_quic_keys_from_secret(client_secret, &out->client);
-    pc_quic_keys_from_secret(server_secret, &out->server);
+    pc_quic_keys_from_secret(work, client_secret, &out->client);
+    pc_quic_keys_from_secret(work, server_secret, &out->server);
 }
 
 size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_t pn_len, uint64_t full_pn,

@@ -78,11 +78,12 @@ static int fail(DtlsConn *c, uint8_t alert)
     return -1;
 }
 
-// Finalize a copy of the running transcript without disturbing it (RFC 8446 intermediate hashes).
-static void snapshot(const pc_sha256_ctx *ctx, uint8_t out[PC_SHA256_DIGEST_LEN])
+// The running transcript's hash so far (RFC 8446 intermediate hashes). Finalizing compresses the
+// padded blocks into a copy of the state, so the context comes out untouched and keeps taking
+// messages.
+static void snapshot(pc_sha256_ctx *ctx, uint8_t out[PC_SHA256_DIGEST_LEN])
 {
-    pc_sha256_ctx copy = *ctx;
-    pc_sha256_final(&copy, out);
+    pc_sha256_final(ctx, out);
 }
 
 // Begin a new outbound flight (RFC 9147 §5.8): drop whatever was buffered for the previous one.
@@ -190,11 +191,11 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
 {
     uint8_t ch1_hash[PC_SHA256_DIGEST_LEN];
     pc_sha256_ctx h;
-    pc_sha256_init(&h);
+    pc_sha256_init(&h, c->hash_work2);
     pc_sha256_update(&h, ch1, ch1_len);
     pc_sha256_final(&h, ch1_hash);
 
-    pc_sha256_init(&c->transcript); // restart: message_hash(Hash(CH1)) replaces ClientHello1
+    pc_sha256_init(&c->transcript, c->hash_work); // restart: message_hash(Hash(CH1)) replaces ClientHello1
     size_t n = pc_tls13_build_message_hash(c->msgbuf, sizeof(c->msgbuf), ch1_hash);
     if (!n)
     {
@@ -205,8 +206,8 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     // Stateless cookie with an empty payload: this connection keeps its own transcript across the
     // retry, so the cookie only has to prove return-routability and bind the client address.
     uint8_t cookie[PC_DTLS_COOKIE_MAX];
-    size_t clen = DtlsHandshake.cookie_make(c->cfg.cookie_key, pc_millis(), NULL, 0, c->peer_addr, c->peer_addr_len,
-                                            cookie, sizeof(cookie));
+    size_t clen = DtlsHandshake.cookie_make(c->mac_work, c->cfg.cookie_key, pc_millis(), NULL, 0, c->peer_addr,
+                                            c->peer_addr_len, cookie, sizeof(cookie));
     if (!clen)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -239,9 +240,9 @@ static proto_bool pc_dtls_hrr_cookie_ok(const DtlsConn *c, const Tls13ClientHell
     }
     uint8_t payload[1];
     size_t plen = 0;
-    return ch->cookie &&
-           DtlsHandshake.cookie_verify(c->cfg.cookie_key, pc_millis(), DTLS_HRR_COOKIE_MAX_AGE_MS, c->peer_addr,
-                                       c->peer_addr_len, ch->cookie, ch->cookie_len, payload, sizeof(payload), &plen);
+    return ch->cookie && DtlsHandshake.cookie_verify(c->mac_work, c->cfg.cookie_key, pc_millis(),
+                                                     DTLS_HRR_COOKIE_MAX_AGE_MS, c->peer_addr, c->peer_addr_len,
+                                                     ch->cookie, ch->cookie_len, payload, sizeof(payload), &plen);
 }
 
 // Connection-id negotiation (RFC 9146 / RFC 9147 §9): if the client offered a CID we can hold, store it
@@ -368,7 +369,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     if (rpk)
     {
         uint8_t ed_pub[PC_ED25519_PUBKEY_LEN];
-        pc_ed25519_pubkey(ed_pub, c->cfg.ed25519_seed);
+        pc_ed25519_pubkey(c->sign_work, ed_pub, c->cfg.ed25519_seed);
         n = pc_tls13_build_certificate_rpk(c->msgbuf, sizeof(c->msgbuf), ed_pub);
     }
     else
@@ -386,7 +387,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 
     // CertificateVerify signs Transcript-Hash(..Certificate).
     snapshot(&c->transcript, hash);
-    n = pc_tls13_build_cert_verify(c->msgbuf, sizeof(c->msgbuf), hash, c->cfg.ed25519_seed);
+    n = pc_tls13_build_cert_verify(c->sign_work, c->msgbuf, sizeof(c->msgbuf), hash, c->cfg.ed25519_seed);
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -647,7 +648,7 @@ static void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const ui
         mem.cpy(c->peer_addr, peer_addr, peer_addr_len);
         c->peer_addr_len = (uint8_t)peer_addr_len;
     }
-    pc_sha256_init(&c->transcript);
+    pc_sha256_init(&c->transcript, c->hash_work);
     DtlsRecord.replay_init(&c->replay_ep2);
     DtlsRecord.replay_init(&c->replay_ep3);
     c->next_recv_msg_seq = 0;

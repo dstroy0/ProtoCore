@@ -41,8 +41,9 @@
  */
 
 #include "crypto/asymmetric/ecdsa.h"
-#include "mmgr/protomem.h"
 #include "crypto/hash/sha256.h"
+#include "crypto/rng/rng.h" // pc_rand_fill: the mbedtls RNG callback
+#include "mmgr/protomem.h"
 
 #if PC_HAS_HW_ECC
 #include "sdkconfig.h" // CONFIG_IDF_TARGET_ESP32S3 - selects the MODMULT field layer
@@ -87,7 +88,7 @@ PC_CRYPTO_HOT
 static int ecdsa_rng(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    pc_platform_rand_fill(buf, len);
+    pc_rand_fill(buf, len);
     return 0;
 }
 
@@ -120,11 +121,11 @@ proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], const uint8_t *msg, size_t mlen,
+proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work, const uint8_t *msg, size_t mlen,
                               const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
 {
     uint8_t h[PC_SHA256_DIGEST_LEN];
-    pc_sha256(msg, mlen, h);
+    pc_sha256(work + ECDSA_OFF_HASH, msg, mlen, h);
 
     mbedtls_ecp_group grp;
     mbedtls_mpi d;
@@ -152,11 +153,11 @@ proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], const uint8_t 
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t *msg, size_t mlen,
-                                const uint8_t sig[PC_ECDSA_P256_SIG_LEN])
+proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_t *work, const uint8_t *msg,
+                                size_t mlen, const uint8_t sig[PC_ECDSA_P256_SIG_LEN])
 {
     uint8_t h[PC_SHA256_DIGEST_LEN];
-    pc_sha256(msg, mlen, h);
+    pc_sha256(work + ECDSA_OFF_HASH, msg, mlen, h);
 
     mbedtls_ecp_group grp;
     mbedtls_ecp_point Q;
@@ -742,9 +743,18 @@ static proto_bool on_curve(const uint32_t x[8], const uint32_t y[8])
 
 // ---- RFC 6979 deterministic nonce (HMAC-SHA256 DRBG, hlen = qlen = 256) ----
 
-// out = HMAC-SHA256(key, V || (tag>=0 ? tag||x||e : nothing)).
-static void pc_hmac_cat(uint8_t out[32], const uint8_t key[32], const uint8_t *v, size_t vlen, const int tag,
-                        const uint8_t *x, const uint8_t *e)
+// The caller's working bytes, split: the message hash, then the DRBG's MAC. The hash is finished
+// before the DRBG starts, so the two never overlap in use.
+#define ECDSA_OFF_HASH 0u
+#define ECDSA_OFF_HMAC (ECDSA_OFF_HASH + PC_SHA256_BORROW)
+static_assert(ECDSA_OFF_HMAC + PC_HMAC_SHA256_BORROW <= PC_ECDSA_BORROW,
+              "PC_ECDSA_BORROW is short of the split - raise it in protocore_config.h, which every "
+              "consumer sizes its own borrow from");
+
+// out = HMAC-SHA256(key, V || (tag>=0 ? tag||x||e : nothing)), the MAC working out of the caller's
+// bytes at ECDSA_OFF_HMAC.
+static void pc_hmac_cat(uint8_t *work, uint8_t out[32], const uint8_t key[32], const uint8_t *v, size_t vlen,
+                        const int tag, const uint8_t *x, const uint8_t *e)
 {
     uint8_t buf[97]; // 32 (V) + 1 (tag) + 32 (x) + 32 (e)
     size_t n = 0;
@@ -758,7 +768,7 @@ static void pc_hmac_cat(uint8_t out[32], const uint8_t key[32], const uint8_t *v
         mem.cpy(buf + n, e, 32);
         n += 32;
     }
-    pc_hmac_sha256(key, 32, buf, n, out);
+    pc_hmac_sha256(work + ECDSA_OFF_HMAC, key, 32, buf, n, out);
 }
 
 // One RFC 6979 candidate k: if it yields a valid r and s, write the 64-byte signature and return true.
@@ -811,7 +821,7 @@ static proto_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const
 }
 
 // ECDSA core: sign hash h1 (32) with scalar d, deterministic k per RFC 6979. Requires ecdsa_hw_on().
-static proto_bool ecdsa_sign_core(uint8_t sig[64], const uint8_t h1[32], const uint32_t d[8])
+static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t h1[32], const uint32_t d[8])
 {
     uint32_t e[8];
     uint32_t etmp[8];
@@ -827,16 +837,16 @@ static proto_bool ecdsa_sign_core(uint8_t sig[64], const uint8_t h1[32], const u
     uint8_t K[32];
     mem.set(V, 0x01, 32);
     mem.set(K, 0x00, 32);
-    pc_hmac_cat(K, K, V, 32, 0x00, x_oct, h_oct);
-    pc_hmac_cat(V, K, V, 32, -1, NULL, NULL);
-    pc_hmac_cat(K, K, V, 32, 0x01, x_oct, h_oct);
-    pc_hmac_cat(V, K, V, 32, -1, NULL, NULL);
+    pc_hmac_cat(work, K, K, V, 32, 0x00, x_oct, h_oct);
+    pc_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
+    pc_hmac_cat(work, K, K, V, 32, 0x01, x_oct, h_oct);
+    pc_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
 
     for (int guard = 0; guard < 64; guard++)
     // practice (see its comment), so the first candidate
     // always succeeds and the loop never reaches guard==64
     {
-        pc_hmac_cat(V, K, V, 32, -1, NULL, NULL); // T = HMAC_K(V), one block
+        pc_hmac_cat(work, V, K, V, 32, -1, NULL, NULL); // T = HMAC_K(V), one block
         uint32_t k[8];
         load_be(k, V); // bits2int(T)
         if (ecdsa_try_sign(k, d, e, sig))
@@ -846,8 +856,8 @@ static proto_bool ecdsa_sign_core(uint8_t sig[64], const uint8_t h1[32], const u
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
         mem.cpy(buf, V, 32);
         buf[32] = 0x00;
-        pc_hmac_sha256(K, 32, buf, 33, K);
-        pc_hmac_cat(V, K, V, 32, -1, NULL, NULL);
+        pc_hmac_sha256(work + ECDSA_OFF_HMAC, K, 32, buf, 33, K);
+        pc_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
     }
     return PROTO_FALSE;
 }
@@ -880,7 +890,7 @@ proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], const uint8_t *msg, size_t mlen,
+proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work, const uint8_t *msg, size_t mlen,
                               const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
 {
     uint32_t d[8];
@@ -890,16 +900,16 @@ proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], const uint8_t 
         return PROTO_FALSE;
     }
     uint8_t h1[PC_SHA256_DIGEST_LEN];
-    pc_sha256(msg, mlen, h1);
+    pc_sha256(work + ECDSA_OFF_HASH, msg, mlen, h1);
 
     ecdsa_hw_on();
-    proto_bool ok = ecdsa_sign_core(sig, h1, d);
+    proto_bool ok = ecdsa_sign_core(work, sig, h1, d);
     ecdsa_hw_off();
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t *msg, size_t mlen,
-                                const uint8_t sig[PC_ECDSA_P256_SIG_LEN])
+proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_t *work, const uint8_t *msg,
+                                size_t mlen, const uint8_t sig[PC_ECDSA_P256_SIG_LEN])
 {
     if (pub[0] != 0x04)
     {
@@ -920,7 +930,7 @@ proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], const 
     }
 
     uint8_t h1[PC_SHA256_DIGEST_LEN];
-    pc_sha256(msg, mlen, h1);
+    pc_sha256(work + ECDSA_OFF_HASH, msg, mlen, h1);
     uint32_t e[8];
     uint32_t etmp[8];
     load_be(etmp, h1);

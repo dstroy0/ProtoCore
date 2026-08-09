@@ -163,6 +163,13 @@ typedef struct
     size_t tx_len;       ///< Bytes of the framed packet.
     size_t tx_off;       ///< Bytes already put on the wire.
     proto_bool tx_ready; ///< A packet is framed and waiting for a worker.
+
+    // The packet MAC and the key exchange work out of these, and they come from the same one borrow as
+    // tx_wire. Held for the slot's life so neither costs a borrow or a wipe on the packet path.
+    uint8_t *mac_work; ///< PC_HMAC_SHA256_BORROW bytes. Null until the first packet.
+    // PC_CRYPTO_BORROW_MAX bytes for the handshake's crypto: the exchange hash, the RFC 4253 sec 7.2 KDF,
+    // the host-key signature and the userauth one. Those run in sequence, never at once, so they share.
+    uint8_t *crypto_work;
 } SshPacketState;
 
 /** @brief Static packet state pool (BSS). One entry per SSH slot. */
@@ -211,6 +218,14 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
  * @param i  SSH slot index.
  */
 void ssh_pkt_init(uint8_t i);
+
+/**
+ * @brief Take the slot's one persistent borrow if it has none yet, and split it.
+ *
+ * Sets @ref SshPacketState::tx_wire, @ref SshPacketState::mac_work and @ref SshPacketState::crypto_work.
+ * Idempotent, and false only when the pool cannot cover the slot.
+ */
+proto_bool ssh_pkt_slot_storage(SshPacketState *s);
 
 /**
  * @brief Mark slot @p i as the SSH client role (call once, right after ssh_pkt_init).

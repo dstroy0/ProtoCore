@@ -25,7 +25,13 @@
 /** @brief SHA-512 block size in bytes. */
 #define PC_SHA512_BLOCK_LEN 128
 
-/** @brief Streaming SHA-512 context. */
+/**
+ * @brief Streaming SHA-512 context.
+ *
+ * The context owns nothing. The caller hands it ::PC_SHA512_BORROW working bytes, aligned for
+ * @c uint64_t and alive until the digest comes back, and the context splits them into the regions
+ * below at fixed offsets.
+ */
 #if PC_HAS_HW_SHA
 #include <mbedtls/sha512.h>
 typedef struct
@@ -35,30 +41,38 @@ typedef struct
 #else
 typedef struct
 {
-    uint64_t s[8];    ///< Running hash words (H0..H7).
-    uint64_t n;       ///< Total bytes processed so far.
-    uint8_t buf[128]; ///< Partial block accumulator.
-    uint32_t buflen;  ///< Bytes valid in buf[].
+    uint64_t s[8];  ///< Running hash words (H0..H7).
+    uint64_t n;     ///< Total bytes processed so far.
+    uint8_t *rx;    ///< Caller storage: bytes as they arrive, compressed when a block fills.
+    uint8_t *tx;    ///< Caller storage: the padded last block, composed whole so no rx byte carries in.
+    uint64_t *fs;   ///< Caller storage: the state copy the padded blocks compress into.
+    uint32_t rxlen; ///< Bytes valid in rx.
 } pc_sha512_ctx;
 #endif
 
 PROTO_BEGIN_DECLS
 
-/** @brief Initialize a streaming SHA-512 context (@p ctx must not be NULL). */
-void pc_sha512_init(pc_sha512_ctx *ctx);
+/**
+ * @brief Start a digest in @p ctx, working out of the caller's @p work.
+ * @param work  PC_SHA512_BORROW bytes, aligned for uint64_t, alive until final() returns.
+ */
+void pc_sha512_init(pc_sha512_ctx *ctx, uint8_t *work);
 
 /** @brief Feed @p len bytes of @p data into the running hash. */
 void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len);
 
 /**
- * @brief Finalize the hash and write the 64-byte digest. The context is undefined afterwards; call
- *        init() again before reuse.
+ * @brief Pad, compress the last block, and write the 64-byte digest.
+ *
+ * The context survives: the padded blocks compress into a copy of the state, so the running hash is
+ * exactly where it was and can keep taking data.
+ *
  * @param digest  Output buffer, PC_SHA512_DIGEST_LEN bytes.
  */
 void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN]);
 
-/** @brief One-shot SHA-512: hash @p len bytes of @p data into @p digest (64 bytes). */
-void pc_sha512(const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN]);
+/** @brief One call: hash @p len bytes of @p data out of @p work into @p digest (64 bytes). */
+void pc_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN]);
 
 PROTO_END_DECLS
 

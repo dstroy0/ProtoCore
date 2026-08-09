@@ -13,13 +13,14 @@
  */
 
 #include "services/security/audit_log/audit_log.h"
-#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protomem.h"
 #include "shared_primitives/hex.h"
 
 #if PC_ENABLE_AUDIT_LOG
 
 #include "crypto/hash/sha256.h"
+#include "mmgr/secure.h" // the chain hash's working set, wiped on release
 #include "server/clock/clock.h"
 
 // All audit-log state, owned by one instance (internal linkage): the record ring, its
@@ -51,10 +52,11 @@ static void put_le32(uint8_t out[4], uint32_t v)
 
 // hash = SHA-256(prev_hash || seq_le || ts_le || category || msg_len || msg).
 // msg_len is length-prefixed so two records can never serialize ambiguously.
-static void chain_hash(const uint8_t prev[PC_AUDIT_HASH_LEN], const pc_audit_entry *e, uint8_t out[PC_AUDIT_HASH_LEN])
+static void chain_hash(uint8_t *work, const uint8_t prev[PC_AUDIT_HASH_LEN], const pc_audit_entry *e,
+                       uint8_t out[PC_AUDIT_HASH_LEN])
 {
     pc_sha256_ctx c;
-    pc_sha256_init(&c);
+    pc_sha256_init(&c, work);
     pc_sha256_update(&c, prev, PC_AUDIT_HASH_LEN);
     uint8_t le[4];
     put_le32(le, e->seq);
@@ -189,7 +191,16 @@ uint32_t pc_audit_append(pc_audit_cat category, const char *msg)
     {
         e->msg[0] = '\0';
     }
-    chain_hash(prev, e, e->hash);
+    {
+        // One borrow for this entry's chain hash, returned before the sink runs.
+        size_t mark = pc_secure_mark();
+        pc_span ws = pc_secure_span(PC_SHA256_BORROW, _Alignof(uint32_t));
+        if (pc_span_ok(ws))
+        {
+            chain_hash(ws.buf, prev, e, e->hash);
+        }
+        pc_secure_release(mark);
+    }
     s_audit.count++;
 
     if (s_audit.sink)
@@ -215,23 +226,33 @@ const pc_audit_entry *pc_audit_at(uint16_t i)
 
 proto_bool pc_audit_verify(uint32_t *first_broken_seq)
 {
+    // One borrow for the whole walk: the chain hash re-runs per entry out of the same bytes.
+    size_t mark = pc_secure_mark();
+    pc_span ws = pc_secure_span(PC_SHA256_BORROW, _Alignof(uint32_t));
+    if (!pc_span_ok(ws))
+    {
+        pc_secure_release(mark);
+        return PROTO_FALSE;
+    }
     uint8_t expected[PC_AUDIT_HASH_LEN];
     mem.cpy(expected, s_audit.anchor, PC_AUDIT_HASH_LEN);
     for (uint16_t i = 0; i < s_audit.count; i++)
     {
         const pc_audit_entry *e = &s_audit.ring[idx(&s_audit, i)];
         uint8_t h[PC_AUDIT_HASH_LEN];
-        chain_hash(expected, e, h);
+        chain_hash(ws.buf, expected, e, h);
         if (mem.cmp(h, e->hash, PC_AUDIT_HASH_LEN) != 0)
         {
             if (first_broken_seq)
             {
                 *first_broken_seq = e->seq;
             }
+            pc_secure_release(mark);
             return PROTO_FALSE;
         }
         mem.cpy(expected, e->hash, PC_AUDIT_HASH_LEN);
     }
+    pc_secure_release(mark);
     return PROTO_TRUE;
 }
 

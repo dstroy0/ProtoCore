@@ -581,23 +581,23 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
 
 // --- Public API -------------------------------------------------------------
 
-void pc_ed25519_pubkey(uint8_t pub[32], const uint8_t seed[32])
+void pc_ed25519_pubkey(uint8_t *work, uint8_t pub[32], const uint8_t seed[32])
 {
     uint8_t d[64];
-    pc_sha512(seed, 32, d);
+    pc_sha512(work, seed, 32, d);
     d[0] &= 248;
     d[31] &= 127;
     d[31] |= 64; // clamp -> secret scalar a = d[0..31]
     ed_scalarbase_bytes(pub, d);
 }
 
-void pc_ed25519_sign(uint8_t sig[64], const uint8_t *msg, size_t mlen, const uint8_t seed[32])
+void pc_ed25519_sign(uint8_t *work, uint8_t sig[64], const uint8_t *msg, size_t mlen, const uint8_t seed[32])
 {
     uint8_t d[64];
     uint8_t pub[32];
     uint8_t r[64];
     uint8_t h[64];
-    pc_sha512(seed, 32, d);
+    pc_sha512(work, seed, 32, d);
     d[0] &= 248;
     d[31] &= 127;
     d[31] |= 64; // a = d[0..31]; prefix = d[32..63]
@@ -607,7 +607,7 @@ void pc_ed25519_sign(uint8_t sig[64], const uint8_t *msg, size_t mlen, const uin
 
     // r = SHA-512(prefix || M) mod L
     pc_sha512_ctx c;
-    pc_sha512_init(&c);
+    pc_sha512_init(&c, work);
     pc_sha512_update(&c, d + 32, 32);
     pc_sha512_update(&c, msg, mlen);
     pc_sha512_final(&c, r);
@@ -617,7 +617,7 @@ void pc_ed25519_sign(uint8_t sig[64], const uint8_t *msg, size_t mlen, const uin
     ed_scalarbase_bytes(sig, r); // sig[0..31] = R
 
     // h = SHA-512(R || A || M) mod L
-    pc_sha512_init(&c);
+    pc_sha512_init(&c, work);
     pc_sha512_update(&c, sig, 32);
     pc_sha512_update(&c, pub, 32);
     pc_sha512_update(&c, msg, mlen);
@@ -644,7 +644,8 @@ void pc_ed25519_sign(uint8_t sig[64], const uint8_t *msg, size_t mlen, const uin
     ed_modL(sig + 32, x); // sig[32..63] = S
 }
 
-proto_bool pc_ed25519_verify(const uint8_t pub[32], const uint8_t *msg, size_t mlen, const uint8_t sig[64])
+proto_bool pc_ed25519_verify(uint8_t *work, const uint8_t pub[32], const uint8_t *msg, size_t mlen,
+                             const uint8_t sig[64])
 {
     if (!ed_scalar_canonical(sig + 32))
     {
@@ -654,7 +655,7 @@ proto_bool pc_ed25519_verify(const uint8_t pub[32], const uint8_t *msg, size_t m
     // h = SHA-512(R || A || M) mod L
     uint8_t h[64];
     pc_sha512_ctx c;
-    pc_sha512_init(&c);
+    pc_sha512_init(&c, work);
     pc_sha512_update(&c, sig, 32); // R
     pc_sha512_update(&c, pub, 32); // A
     pc_sha512_update(&c, msg, mlen);
