@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the compression buffers are wiped when the slot is reset ([`78852ff`](https://github.com/dstroy0/ProtoCore/commit/78852ff889ecb505d896b4015eeb8606139b74cc))
 - pc_ssh_conn_send reports a refused queue instead of claiming the bytes went ([`cd435b1`](https://github.com/dstroy0/ProtoCore/commit/cd435b1b660b08b9527573a1d160b5c4844c71ff))
 - a half-finished keyboard-interactive exchange dies with its connection ([`ad9cbc4`](https://github.com/dstroy0/ProtoCore/commit/ad9cbc4374918a73ab70d29cc8baa654b9f56f70))
 - the derived session keys and the DTLS shared secret are wiped ([`291da41`](https://github.com/dstroy0/ProtoCore/commit/291da417166385172acd17dcd21f7aced2424e97))
