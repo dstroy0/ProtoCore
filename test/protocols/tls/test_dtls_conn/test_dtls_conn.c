@@ -359,10 +359,21 @@ static proto_bool ee_has_rpk(const uint8_t *msg, size_t mlen)
 // The fixed 12-byte DER prefix of an Ed25519 SubjectPublicKeyInfo (RFC 8410 §4).
 static const uint8_t SPKI_PREFIX[12] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
 
-static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uint16_t cfin_msg_seq,
+static uint8_t tw_cfl[4096]; // the private transcript this helper runs on
+
+static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, uint16_t cfin_msg_seq,
                                            const uint8_t *flight, size_t fl, const uint8_t *client_cid,
                                            size_t client_cid_len, proto_bool expect_rpk)
 {
+    // The context holds pointers into the caller's bytes, so the by-value parameter aliases them.
+    // pc_sha256_init lays rx, tx and the state copy out contiguously from the work pointer, so
+    // copying that span and rebinding gives this helper a transcript the caller cannot see.
+    pc_sha256_ctx tr = tr_in;
+    memcpy(tw_cfl, tr_in.rx, PC_SHA256_BORROW);
+    tr.rx = tw_cfl;
+    tr.tx = tw_cfl + PC_SHA256_BLOCK_LEN;
+    tr.fs = (uint32_t *)(tw_cfl + 2 * PC_SHA256_BLOCK_LEN);
+
     size_t off = 0;
     // record 0: ServerHello (DTLSPlaintext, epoch 0)
     DtlsPlaintext pt;
