@@ -204,11 +204,11 @@ src/
 │   ├── dma.h
 │   ├── endian.h
 │   ├── float_bits.h
-│   ├── frame.c
-│   ├── frame.h
 │   ├── membuild.h
 │   ├── plaintext.c
 │   ├── plaintext.h
+│   ├── protoframe.c
+│   ├── protoframe.h
 │   ├── protomem.c
 │   ├── protomem.h
 │   ├── protostr.c
