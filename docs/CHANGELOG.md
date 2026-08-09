@@ -42,6 +42,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`8f3e933`](https://github.com/dstroy0/ProtoCore/commit/8f3e9331a2d3615c95c0e994420210551766dc9f))
 - update CHANGELOG.md [skip ci] ([`6c4c488`](https://github.com/dstroy0/ProtoCore/commit/6c4c488cf2c2a736cac0c8829193790c46973f7c))
 - update CHANGELOG.md [skip ci] ([`8382dd7`](https://github.com/dstroy0/ProtoCore/commit/8382dd7e530cadee3eb65a305841f3ff8732348c))
 - update CHANGELOG.md [skip ci] ([`061472c`](https://github.com/dstroy0/ProtoCore/commit/061472c67d8fd22546702a66ec39b1788f60fc1c))
@@ -135,6 +136,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- log the SSH send desync that reporting the failure does not cure ([`25ec38b`](https://github.com/dstroy0/ProtoCore/commit/25ec38be6ef55c4dc9ea690cd2f31262976b9d96))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6adbed5`](https://github.com/dstroy0/ProtoCore/commit/6adbed5cfcec6139fed0edc426f3b56854e81edf))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`5c6649b`](https://github.com/dstroy0/ProtoCore/commit/5c6649b01ae46bfd3a5e3b653aae4810be32d637))
 - the server's NEWKEYS is dropped by the one-packet-per-slot rule ([`6c0d0ad`](https://github.com/dstroy0/ProtoCore/commit/6c0d0ad5c6c8820711f3aac032d042a1a7db6af6))
