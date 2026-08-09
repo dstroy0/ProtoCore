@@ -1698,26 +1698,24 @@ static void test_cyclonessh_kex_repro(void)
     strcpy(s->v_c, vc);
     s->v_c_len = (uint16_t)strlen(vc);
 
-    int rc_parse = ssh_kexinit_parse(0, CYCLONE_KEXINIT, sizeof(CYCLONE_KEXINIT));
-    printf("[repro] parse rc=%d kex_alg=%d hostkey_alg=%d cipher c2s=%d s2c=%d\n", rc_parse, (int)s->kex_alg,
-           (int)s->hostkey_alg, (int)s->cipher_alg_c2s, (int)s->cipher_alg_s2c);
-    TEST_ASSERT_EQUAL_INT(0, rc_parse);
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, CYCLONE_KEXINIT, sizeof(CYCLONE_KEXINIT)));
+    // The bug this pins is the server negotiating by ITS order. Returning 0 does not exclude that:
+    // with prefer_rsa set it would land on group14, whose parser reads the client's 32-byte Q_C as a
+    // valid mpint e and also returns 0. Only the chosen algorithms tell the two apart - the client
+    // listed curve25519 and ssh-ed25519 first, so those are what client preference must select.
+    TEST_ASSERT_EQUAL(SSH_KEX_CURVE25519, s->kex_alg);
+    TEST_ASSERT_EQUAL(SSH_HOSTKEY_ED25519, s->hostkey_alg);
 
     uint8_t isbuf[PC_SSH_KEXINIT_S_MAX];
     size_t isn = 0;
-    int rc_build = ssh_kexinit_build(0, isbuf, &isn, sizeof(isbuf));
-    printf("[repro] build rc=%d isn=%zu\n", rc_build, isn);
-    TEST_ASSERT_EQUAL_INT(0, rc_build);
-
-    int rc_gen = ssh_kex_generate(0);
-    printf("[repro] gen rc=%d\n", rc_gen);
-    TEST_ASSERT_EQUAL_INT(0, rc_gen);
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_build(0, isbuf, &isn, sizeof(isbuf)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_kex_generate(0));
 
     uint8_t reply[1024];
     size_t rlen = 0;
-    int rc_handle = ssh_kexdh_handle(0, CYCLONE_ECDH_INIT, sizeof(CYCLONE_ECDH_INIT), reply, &rlen, sizeof(reply));
-    printf("[repro] handle rc=%d rlen=%zu\n", rc_handle, rlen);
-    TEST_ASSERT_EQUAL_INT(0, rc_handle);
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexdh_handle(0, CYCLONE_ECDH_INIT, sizeof(CYCLONE_ECDH_INIT), reply, &rlen, sizeof(reply)));
+    TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, reply[0]);
+    TEST_ASSERT_TRUE(rlen > 0);
 }
 
 // pc_ssh_hostkey_ecdsa_set derives the public point from the scalar and installs nothing when the
@@ -1764,6 +1762,44 @@ void test_kexinit_parse_negotiates_each_direction()
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA256, ssh_sess[0].mac_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA512, ssh_sess[0].mac_alg_s2c);
+}
+
+// RFC 4253 sec 7.1: the chosen algorithm is the first on the CLIENT's list the server also supports,
+// for every negotiated field. Only the cipher had a test whose client order disagreed with the
+// server's own, so kex, host key and MAC could each have been resolving by server preference
+// undetected. Each list here is ordered so the two rules give different answers.
+void test_kexinit_parse_honors_client_preference_everywhere()
+{
+    uint8_t buf[512];
+    const char *P = "none";
+
+    // The server prefers RSA/DH when prefer_rsa is set, so a client leading with curve25519 and
+    // ssh-ed25519 must still get those.
+    ssh_transport_init(0);
+    ssh_kex_set_prefer_rsa(PROTO_TRUE);
+    pc_ssh_hostkey_ed25519_set(BASELINE_ED25519_SEEDS[0]);
+    const char *client_first[8] = {"curve25519-sha256,diffie-hellman-group14-sha256",
+                                   "ssh-ed25519,rsa-sha2-256",
+                                   "aes256-ctr",
+                                   "aes256-ctr",
+                                   "hmac-sha2-256-etm@openssh.com,hmac-sha2-256",
+                                   "hmac-sha2-256-etm@openssh.com,hmac-sha2-256",
+                                   P,
+                                   P};
+    size_t n = build_kexinit8(buf, client_first);
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
+    TEST_ASSERT_EQUAL(SSH_KEX_CURVE25519, ssh_sess[0].kex_alg);
+    TEST_ASSERT_EQUAL(SSH_HOSTKEY_ED25519, ssh_sess[0].hostkey_alg);
+
+    // The server lists the ETM MACs first, so a client leading with the plain one must get that.
+    ssh_transport_init(0);
+    const char *plain_mac_first[8] = {
+        "diffie-hellman-group14-sha256", "rsa-sha2-256", "aes256-ctr", "aes256-ctr",
+        "hmac-sha2-256,hmac-sha2-256-etm@openssh.com", "hmac-sha2-256,hmac-sha2-256-etm@openssh.com", P, P};
+    n = build_kexinit8(buf, plain_mac_first);
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
+    TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA256, ssh_sess[0].mac_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA256, ssh_sess[0].mac_alg_s2c);
 }
 
 // Both AEAD ciphers carry their own integrity tag, so with chacha20-poly1305 negotiated the MAC
@@ -2056,6 +2092,7 @@ int main()
     RUN_TEST(test_dh_derive_keys_gcm_installs);
     RUN_TEST(test_kdf_string_k_hybrid);
     RUN_TEST(test_kexinit_parse_negotiates_each_direction);
+    RUN_TEST(test_kexinit_parse_honors_client_preference_everywhere);
     RUN_TEST(test_kexinit_parse_aead_ignores_mac_lists);
     RUN_TEST(test_kexinit_parse_same_length_names_do_not_match);
     RUN_TEST(test_extinfo_build_modern_first_order);
