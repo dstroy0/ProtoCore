@@ -60,6 +60,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`aeda130`](https://github.com/dstroy0/ProtoCore/commit/aeda13037e4ea73aaecf84f4c09e7c333baaf511))
 - update test report + coverage [skip ci] ([`eef2d16`](https://github.com/dstroy0/ProtoCore/commit/eef2d16b78208923ed4f9852f5ab3d30f9101b4a))
 - update CHANGELOG.md [skip ci] ([`a4c5352`](https://github.com/dstroy0/ProtoCore/commit/a4c53522c9cb5cfe8e9df3e4effccf6ced0da3b9))
 - update test report + coverage [skip ci] ([`506587e`](https://github.com/dstroy0/ProtoCore/commit/506587e6f1b6b043f908bc175130c35488a008e6))
@@ -230,6 +231,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- cover the three RFC 4252/4254 MUSTs the audit found uncovered ([`2a1190d`](https://github.com/dstroy0/ProtoCore/commit/2a1190d074355a3e68d8d0f64e8ffc3cf8b03204))
 - the hardening ECDSA case models a completed KEX, so it sets have_session_id ([`d2751a3`](https://github.com/dstroy0/ProtoCore/commit/d2751a3b4bc6481d84bee2ef77e8ca3059c2c47b))
 - update the suites that pinned the four fixed behaviours ([`fbf033e`](https://github.com/dstroy0/ProtoCore/commit/fbf033e4bfccb0d43642af04d5f796d2c0021a8a))
 - migrate performance_benching to ESP-IDF CMake layout ([`cf89b00`](https://github.com/dstroy0/ProtoCore/commit/cf89b00a7bcc4d17b333ee83ef890c3638a01798))
