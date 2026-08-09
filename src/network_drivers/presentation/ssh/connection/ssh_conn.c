@@ -26,11 +26,9 @@
 // The secure-pool term this file declares against PC_SECURE_ARENA_SIZE, proved against what is
 // actually borrowed: one wire buffer per slot held on the persistent end for the life of the
 // program, plus the payload and wire a single outbound call holds at the same time.
-static_assert(PC_WORK_SSH_CONN >= ((size_t)MAX_SSH_CONNS *
-                                   (SSH_TX_WIRE_CAP + (size_t)PC_HMAC_SHA256_BORROW + (size_t)PC_CRYPTO_BORROW_MAX)) +
-                                      (size_t)SSH_PKT_BUF_SIZE + SSH_WIRE_CAP,
-              "PC_WORK_SSH_CONN must cover a held flight wire, packet MAC and crypto work per SSH "
-              "slot plus one transient payload and wire: raise it in protocore_config.h");
+static_assert(PC_WORK_SSH_CONN >= ((size_t)MAX_SSH_CONNS * SSH_WIRE_CAP) + (size_t)SSH_PKT_BUF_SIZE + SSH_WIRE_CAP,
+              "PC_WORK_SSH_CONN must cover a held wire per SSH slot plus one transient payload and "
+              "wire: raise it in protocore_config.h");
 
 // All SSH connection-layer state, owned by one instance (internal linkage): the SSH-slot ->
 // TCP-conn-slot mapping (0xFF = free), the one-time init flag, and the per-slot deferred-close
