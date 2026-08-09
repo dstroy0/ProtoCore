@@ -520,6 +520,26 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   its own mode, so a mixed session cannot leak one. The test now asserts both directions negotiate
   independently. Verified: `native_ssh` + 16 more envs, 594 cases.
 
+## A wrong KEX guess was parsed as the real KEXDH_INIT
+
+- **Status:** FIXED 2026-08-09 (`ssh_transport.c` `ssh_kexinit_parse`, `ssh_server.c` KEXDH_INIT arm).
+  Found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-transport-kex.md` #5).
+- **Symptom:** the KEXINIT parser returned after the two compression name-lists and never read the two
+  language lists, the `first_kex_packet_follows` boolean, or the reserved uint32. A client that guesses
+  sends its KEXDH_INIT ahead of our reply; when the guess lost negotiation that packet carries an
+  algorithm nobody agreed on, and RFC 4253 sec 7.1 says it MUST be silently ignored. It was parsed as
+  the genuine one instead.
+- **Root cause:** the fields after compression were simply never consumed, so the flag that says "a
+  speculative packet is coming" was invisible to the server.
+- **Nothing can catch it:** every test builder hard-codes the flag to 0, so no test ever sent a guess.
+  OpenSSH and CycloneSSH do not guess either, which is why the interop suite never saw it.
+- **Fix:** the parser reads the remaining fields and records `drop_guessed_kex_pkt` when the flag is
+  set and negotiation did not settle on the client's first-listed kex _and_ host key -
+  `negotiate_alg` now reports the winning entry's position, so "the guess held" is position 0 in both.
+  The dispatcher consumes one KEXDH_INIT silently when the flag is up. Every `negotiate_*` caller moved
+  from `!f(...)` to `f(...) < 0`, since position 0 is a success. Test
+  `test_wrong_kex_guess_is_dropped`. Verified: `native_ssh` + 4 more envs, 342 cases.
+
 ## EXT_INFO was re-advertised on every re-key
 
 - **Status:** FIXED 2026-08-09 (`ssh_server.c` NEWKEYS arm). Found 2026-08-08 auditing `test/` for RFC
