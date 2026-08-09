@@ -35,6 +35,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`ff01b53`](https://github.com/dstroy0/ProtoCore/commit/ff01b53fb0ef08c7a52cb53a7664cf4880374a4c))
+- update CHANGELOG.md [skip ci] ([`cea17c1`](https://github.com/dstroy0/ProtoCore/commit/cea17c154a762b15bf4e38916924e6b333b183c2))
 - update CHANGELOG.md [skip ci] ([`4304a55`](https://github.com/dstroy0/ProtoCore/commit/4304a5577ac835f6c72eb9911f4662c1bead9a7e))
 - update CHANGELOG.md [skip ci] ([`94d2743`](https://github.com/dstroy0/ProtoCore/commit/94d2743a6bb897e2c0ed5019a8b388144c4a0120))
 - update CHANGELOG.md [skip ci] ([`f0d1ce1`](https://github.com/dstroy0/ProtoCore/commit/f0d1ce1611a6d0598e35a47d3fbe23f2bf78899c))
@@ -114,12 +116,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
-<<<<<<< Updated upstream
-=======
+- log native_coaps_server's CID failures as pre-existing, and the Unity exit-code artifact ([`71ebdce`](https://github.com/dstroy0/ProtoCore/commit/71ebdce42c167e6e332a06c5c8963bcb2dbc8ffc))
 - close F1/F2's overflow claim, the worker-stack floors are enforced ([`2d78464`](https://github.com/dstroy0/ProtoCore/commit/2d78464e80ad024580ea2a6c8960f5d4663fff21))
 - log the context-aliasing class and its three forms ([`c46e7d1`](https://github.com/dstroy0/ProtoCore/commit/c46e7d11f32ab197eadd12d6626333b85a79be32))
 - log F11's remaining half, where the buffer and the clamp move together ([`d87fe15`](https://github.com/dstroy0/ProtoCore/commit/d87fe15eb33e628f6b03aeed8da1e51df385313b))
->>>>>>> Stashed changes
 - log F19, where crypto_opt.h prohibits what its own bench numbers reward ([`77a11be`](https://github.com/dstroy0/ProtoCore/commit/77a11be4592758156d29fb64d57459ff86e24e0e))
 - the context is a view, and a struct copy aliases it ([`ae20425`](https://github.com/dstroy0/ProtoCore/commit/ae204258e3561e56bd63ee9508bdc74a482d13d7))
 - log the null crypto_work class and the stale coaps AEAD test ([`1ab644b`](https://github.com/dstroy0/ProtoCore/commit/1ab644bc6ec064147dd9a9fdaefe2b49ba11f327))
