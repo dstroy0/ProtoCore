@@ -168,14 +168,17 @@ void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
         {
             take = (uint32_t)len;
         }
+        // buf + buflen carries no alignment, so this is the raw mover, not the aligned-span one.
         uint8_t *fill = ctx->buf + ctx->buflen;
-        mem.cpy(fill, data, take);
+        proto_raw_read(fill, data, take);
         ctx->buflen += take;
         data += take;
         len -= take;
         if (ctx->buflen == PC_SHA256_BLOCK_LEN)
         {
             sha256_block(ctx->s, ctx->buf);
+            // Everything past buflen stays zero, so the final block needs no pad written at an offset.
+            mem.zero(ctx->buf, sizeof(ctx->buf));
             ctx->buflen = 0;
         }
     }
@@ -190,14 +193,11 @@ void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
     // The bit length occupies the block's last 8 bytes, so a mark past that offset takes its own block.
     if (ctx->buflen > SHA256_LEN_OFF)
     {
-        uint8_t *pad = ctx->buf + ctx->buflen;
-        mem.zero(pad, PC_SHA256_BLOCK_LEN - ctx->buflen);
         sha256_block(ctx->s, ctx->buf);
+        mem.zero(ctx->buf, sizeof(ctx->buf));
         ctx->buflen = 0;
     }
 
-    uint8_t *pad = ctx->buf + ctx->buflen;
-    mem.zero(pad, SHA256_LEN_OFF - ctx->buflen);
     pc_wr64be(ctx->buf + SHA256_LEN_OFF, bitlen);
     sha256_block(ctx->s, ctx->buf);
 
