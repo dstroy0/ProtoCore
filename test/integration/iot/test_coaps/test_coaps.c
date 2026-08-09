@@ -235,7 +235,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     uint8_t h[32];
     pc_sha256_ctx tmp = tr;
     pc_sha256_final(&tmp, h);
-    static uint8_t ks_store_236[PC_TLS13_KS_CAP];
+    static uint8_t ks_store_236[PC_TLS13_KS_BORROW];
     pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_236);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys srv_read;

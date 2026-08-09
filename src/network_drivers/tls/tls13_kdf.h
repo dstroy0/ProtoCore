@@ -111,7 +111,7 @@ void pc_tls13_derive_secret(const Tls13Kdf *kdf, uint8_t *work, const uint8_t se
 /**
  * @brief Step 1: bind the @p kdf variant and @p s, then compute early_secret = HKDF-Extract(0, 0^32).
  *
- * @p s is PC_TLS13_KS_CAP bytes the CONNECTION owns and holds for exactly as long as it lives, so
+ * @p s is PC_TLS13_KS_BORROW bytes the CONNECTION owns and holds for exactly as long as it lives, so
  * the schedule dies with it. It must arrive zeroed: TLS13_KS_ZEROS is the extract's IKM and nothing
  * ever writes it. Returns false on a null @p s, which leaves every later step a no-op.
  */

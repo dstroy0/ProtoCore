@@ -339,7 +339,7 @@ void test_full_handshake_and_stream()
         pc_sha256_final(&tmp, ch_sh);
     }
     Tls13KeySchedule cks;
-    static uint8_t ks_store_340[PC_TLS13_KS_CAP];
+    static uint8_t ks_store_340[PC_TLS13_KS_BORROW];
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_340);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
@@ -652,7 +652,7 @@ void test_connection_close_on_malformed_frame()
     pc_sha256_update(&tctx, sh, sh_len);
     pc_sha256_final(&tctx, ch_sh);
     Tls13KeySchedule cks;
-    static uint8_t ks_store_652[PC_TLS13_KS_CAP];
+    static uint8_t ks_store_652[PC_TLS13_KS_BORROW];
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_652);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
@@ -1182,7 +1182,7 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
         pc_sha256_final(&tmp, ch_sh);
     }
     Tls13KeySchedule cks;
-    static uint8_t ks_store_1181[PC_TLS13_KS_CAP];
+    static uint8_t ks_store_1181[PC_TLS13_KS_BORROW];
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_1181);
     pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
