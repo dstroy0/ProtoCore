@@ -27,6 +27,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`27c6f6d`](https://github.com/dstroy0/ProtoCore/commit/27c6f6d0a885bd88303bd172833e14aeec392c87))
+- update CHANGELOG.md [skip ci] ([`0a7368b`](https://github.com/dstroy0/ProtoCore/commit/0a7368b9051f1f5f8ecbb3270cb196e907770b13))
 - update CHANGELOG.md [skip ci] ([`bc7588a`](https://github.com/dstroy0/ProtoCore/commit/bc7588ac1157568c31dfef4b309af20b492ecd9b))
 - update CHANGELOG.md [skip ci] ([`f66a12d`](https://github.com/dstroy0/ProtoCore/commit/f66a12dd583a7a75a99ed72305d647460af60315))
 - update CHANGELOG.md [skip ci] ([`b646639`](https://github.com/dstroy0/ProtoCore/commit/b646639aaed862115ddb741eef8b33a8a99c7521))
@@ -67,6 +69,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- sha512 and md go back, they were not the file in hand ([`38620e6`](https://github.com/dstroy0/ProtoCore/commit/38620e60960ef2a8ebed1a71870a3022ed7a7834))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`dcdbffe`](https://github.com/dstroy0/ProtoCore/commit/dcdbffe4f679969fa353301fe2864dbd50d20df4))
 - rf work ([`b79fe2b`](https://github.com/dstroy0/ProtoCore/commit/b79fe2b29c7a5473efa0a5a2def5bdfa3791db09))
 - rf work ([`9f5751c`](https://github.com/dstroy0/ProtoCore/commit/9f5751ced024187455a697726ca27fd157b7359d))
@@ -100,6 +103,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- a hash owns nothing, it works out of its caller's bytes ([`408298d`](https://github.com/dstroy0/ProtoCore/commit/408298d2769cc535c572ed871e2aefd46bb01bd7))
+- the SNTP client is the client on every target ([`0c8fa67`](https://github.com/dstroy0/ProtoCore/commit/0c8fa67dbda021566627859b3b22ebb69dd97407))
 - the mem Ns replaces every mem* call, and the TLS 1.3 key schedule borrows from the secure pool ([`fa4589c`](https://github.com/dstroy0/ProtoCore/commit/fa4589c7159324ea8bb1955663dd025d8afc6546))
 - the codec frames and flags, the worker moves the bytes ([`2db6b6b`](https://github.com/dstroy0/ProtoCore/commit/2db6b6b539d6464c290f0c0d4f2916276f10bd9d))
 - non-blocking DNS and TCP client open, and the UDP send rings are gone ([`0dbb22d`](https://github.com/dstroy0/ProtoCore/commit/0dbb22d5637a446905f9f02260cbcbce6e782223))
