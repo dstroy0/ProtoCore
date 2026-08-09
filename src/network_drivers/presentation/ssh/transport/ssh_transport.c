@@ -937,28 +937,6 @@ int ssh_kexdh_parse_init(const uint8_t *payload, size_t len, uint8_t e_be[256])
     return 0;
 }
 
-int ssh_kexdh_build_reply(const uint8_t *ks, size_t ks_len, const uint8_t *f_be, const uint8_t *sig, size_t sig_len,
-                          uint8_t *out, size_t *out_len, size_t cap)
-{
-    Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_KEXDH_REPLY);
-    w_string(&w, ks, ks_len); // K_S
-    w_mpint(&w, f_be, 256);   // f
-
-    // signature = string( string("rsa-sha2-256") || string(sig) )
-    uint32_t inner = 4 + 12 + 4 + (uint32_t)sig_len;
-    w_u32(&w, inner);
-    w_string(&w, (const uint8_t *)"rsa-sha2-256", 12);
-    w_string(&w, sig, sig_len);
-
-    if (!w.ok)
-    {
-        return -1;
-    }
-    *out_len = w.len;
-    return 0;
-}
-
 // Parse SSH_MSG_KEX_ECDH_INIT (msg 30, shares the number with KEXDH_INIT):
 // byte(30) || string(Q_C). Q_C must be exactly 32 bytes for X25519 (RFC 8731).
 static int parse_ecdh_init(const uint8_t *payload, size_t len, uint8_t qc[32])

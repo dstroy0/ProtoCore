@@ -567,54 +567,6 @@ void test_kexdh_parse_init_rejects_oversized_e()
     TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_parse_init(pkt, 5 + 300, got));
 }
 
-void test_kexdh_build_reply_structure()
-{
-    uint8_t ks[12];
-    for (int j = 0; j < 12; j++)
-    {
-        ks[j] = (uint8_t)(0x30 + j);
-    }
-    uint8_t f_be[256];
-    memset(f_be, 0, sizeof(f_be));
-    f_be[255] = 0x09;
-    uint8_t sig[256];
-    for (int j = 0; j < 256; j++)
-    {
-        sig[j] = (uint8_t)j;
-    }
-
-    uint8_t out[1024];
-    size_t n = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_kexdh_build_reply(ks, sizeof(ks), f_be, sig, sizeof(sig), out, &n, sizeof(out)));
-
-    TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, out[0]);
-    uint32_t kslen = ((uint32_t)out[1] << 24) | ((uint32_t)out[2] << 16) | ((uint32_t)out[3] << 8) | out[4];
-    TEST_ASSERT_EQUAL_UINT32(12, kslen);
-    TEST_ASSERT_EQUAL_MEMORY(ks, out + 5, 12);
-
-    proto_bool alg = PROTO_FALSE;
-    for (size_t k = 0; k + 12 <= n; k++)
-    {
-        if (memcmp(out + k, "rsa-sha2-256", 12) == 0)
-        {
-            alg = PROTO_TRUE;
-            break;
-        }
-    }
-    TEST_ASSERT_TRUE(alg);
-
-    proto_bool found_sig = PROTO_FALSE;
-    for (size_t k = 0; k + 256 <= n; k++)
-    {
-        if (memcmp(out + k, sig, 256) == 0)
-        {
-            found_sig = PROTO_TRUE;
-            break;
-        }
-    }
-    TEST_ASSERT_TRUE(found_sig);
-}
-
 // ---- KEXDH orchestration (compute K, sign H, reply, derive keys) ----------
 
 // Provision the host key the way a board is: write the PKCS#8 DER to NVS, then load it.
@@ -1327,8 +1279,6 @@ void test_banner_and_build_caps()
     ssh_transport_init(0);
     TEST_ASSERT_EQUAL_INT(-1, ssh_kexinit_build(0, small, &l, 4)); // writer overflow
     TEST_ASSERT_EQUAL_INT(-1, ssh_extinfo_build(small, &l, 4));    // writer overflow
-    uint8_t ks[8] = {0}, f[256] = {0}, sig[8] = {0};
-    TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_build_reply(ks, sizeof(ks), f, sig, sizeof(sig), small, &l, 4));
     TEST_ASSERT_EQUAL_INT(-1, ssh_transport_begin_rekey(0, small, &l, 4)); // inner kexinit_build overflow
 }
 
@@ -1985,7 +1935,6 @@ int main()
     RUN_TEST(test_kexdh_parse_init_extracts_small_e);
     RUN_TEST(test_kexdh_parse_init_rejects_wrong_type);
     RUN_TEST(test_kexdh_parse_init_rejects_oversized_e);
-    RUN_TEST(test_kexdh_build_reply_structure);
     RUN_TEST(test_kexdh_handle_produces_reply_and_installs_keys);
     RUN_TEST(test_kexdh_handle_rejects_invalid_e);
     RUN_TEST(test_kexdh_handle_curve25519_ed25519_end_to_end);
