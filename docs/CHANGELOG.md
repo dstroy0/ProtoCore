@@ -43,6 +43,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`a04b614`](https://github.com/dstroy0/ProtoCore/commit/a04b6143f71b4fdc5f098cc3a7d301ff32e07af2))
+- update CHANGELOG.md [skip ci] ([`f333638`](https://github.com/dstroy0/ProtoCore/commit/f3336380feee803324ea62f62c532d5ebdb4c306))
 - update CHANGELOG.md [skip ci] ([`8f3e933`](https://github.com/dstroy0/ProtoCore/commit/8f3e9331a2d3615c95c0e994420210551766dc9f))
 - update CHANGELOG.md [skip ci] ([`6c4c488`](https://github.com/dstroy0/ProtoCore/commit/6c4c488cf2c2a736cac0c8829193790c46973f7c))
 - update CHANGELOG.md [skip ci] ([`8382dd7`](https://github.com/dstroy0/ProtoCore/commit/8382dd7e530cadee3eb65a305841f3ff8732348c))
@@ -137,6 +139,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- log the undeclared SSH plaintext draw and the env gap that hides it ([`78b04a8`](https://github.com/dstroy0/ProtoCore/commit/78b04a8a0fda00aa507b111756137e6bc092d941))
 - log the SSH send desync that reporting the failure does not cure ([`25ec38b`](https://github.com/dstroy0/ProtoCore/commit/25ec38be6ef55c4dc9ea690cd2f31262976b9d96))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6adbed5`](https://github.com/dstroy0/ProtoCore/commit/6adbed5cfcec6139fed0edc426f3b56854e81edf))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`5c6649b`](https://github.com/dstroy0/ProtoCore/commit/5c6649b01ae46bfd3a5e3b653aae4810be32d637))
