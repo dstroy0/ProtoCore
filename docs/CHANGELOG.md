@@ -36,6 +36,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`dc8c9af`](https://github.com/dstroy0/ProtoCore/commit/dc8c9af2f6ee5b1afad9abb08aa7fa7baac5fe1d))
+- update CHANGELOG.md [skip ci] ([`8dc4f02`](https://github.com/dstroy0/ProtoCore/commit/8dc4f02bd740b8965c7512a7ab07abf5293adeb5))
+- update CHANGELOG.md [skip ci] ([`d6fcaa8`](https://github.com/dstroy0/ProtoCore/commit/d6fcaa88377f5b9589bf8e83604689f9a06aecba))
 - update CHANGELOG.md [skip ci] ([`cc8ebf7`](https://github.com/dstroy0/ProtoCore/commit/cc8ebf750f33f3a7c0ccd5c8fa963426230898c0))
 - update CHANGELOG.md [skip ci] ([`ff01b53`](https://github.com/dstroy0/ProtoCore/commit/ff01b53fb0ef08c7a52cb53a7664cf4880374a4c))
 - update CHANGELOG.md [skip ci] ([`cea17c1`](https://github.com/dstroy0/ProtoCore/commit/cea17c154a762b15bf4e38916924e6b333b183c2))
@@ -118,6 +121,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- the server's NEWKEYS is dropped by the one-packet-per-slot rule ([`6c0d0ad`](https://github.com/dstroy0/ProtoCore/commit/6c0d0ad5c6c8820711f3aac032d042a1a7db6af6))
 - log native_coaps_server's CID failures as pre-existing, and the Unity exit-code artifact ([`71ebdce`](https://github.com/dstroy0/ProtoCore/commit/71ebdce42c167e6e332a06c5c8963bcb2dbc8ffc))
 - close F1/F2's overflow claim, the worker-stack floors are enforced ([`2d78464`](https://github.com/dstroy0/ProtoCore/commit/2d78464e80ad024580ea2a6c8960f5d4663fff21))
 - log the context-aliasing class and its three forms ([`c46e7d1`](https://github.com/dstroy0/ProtoCore/commit/c46e7d11f32ab197eadd12d6626333b85a79be32))
