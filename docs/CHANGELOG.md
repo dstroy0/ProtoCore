@@ -39,6 +39,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`902308c`](https://github.com/dstroy0/ProtoCore/commit/902308c72e9c46a2efe9ba51370f8b24d7f46b31))
 - update CHANGELOG.md [skip ci] ([`3cc51a9`](https://github.com/dstroy0/ProtoCore/commit/3cc51a91207535933ed88d7d600ae0889e1ffdb7))
 - update CHANGELOG.md [skip ci] ([`f3a406c`](https://github.com/dstroy0/ProtoCore/commit/f3a406c9f071f9d0fe37cee35075514a9268d991))
 - update CHANGELOG.md [skip ci] ([`18927f8`](https://github.com/dstroy0/ProtoCore/commit/18927f8b2c2f6db52244944d65e9867c99edb962))
@@ -101,6 +102,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- back out the flight sizing until the persistent-borrow contention is solved ([`a054a8d`](https://github.com/dstroy0/ProtoCore/commit/a054a8d431ec9a450427d6c2c326e1ccfd627b6d))
 - sha512 and md go back, they were not the file in hand ([`38620e6`](https://github.com/dstroy0/ProtoCore/commit/38620e60960ef2a8ebed1a71870a3022ed7a7834))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`dcdbffe`](https://github.com/dstroy0/ProtoCore/commit/dcdbffe4f679969fa353301fe2864dbd50d20df4))
 - rf work ([`b79fe2b`](https://github.com/dstroy0/ProtoCore/commit/b79fe2b29c7a5473efa0a5a2def5bdfa3791db09))
