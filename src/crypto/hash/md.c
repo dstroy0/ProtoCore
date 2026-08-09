@@ -7,9 +7,9 @@
  */
 
 #include "crypto/hash/md.h"
+#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/endian.h"
-#include "mmgr/protomem.h"
 #include "mmgr/secure.h" // the secure pool: digest state, wiped on release
 
 PC_CRYPTO_HOT
@@ -214,16 +214,13 @@ static void md_absorb(struct MdCtx *c, const uint8_t *data, size_t len, md_compr
         {
             take = (uint32_t)len;
         }
-        // buf + buf_len carries no alignment, so this is the raw mover, not the aligned-span one.
-        uint8_t *fill = c->buf + c->buf_len;
-        proto_raw_read(fill, data, take);
+        mem.cpy(c->buf + c->buf_len, data, take);
         c->buf_len += take;
         data += take;
         len -= take;
         if (c->buf_len == 64)
         {
             compress(c->state, c->buf);
-            mem.zero(c->buf, sizeof(c->buf));
             c->buf_len = 0;
         }
     }
