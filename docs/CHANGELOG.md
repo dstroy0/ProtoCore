@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the token frame passes its two strings as values ([`229d76d`](https://github.com/dstroy0/ProtoCore/commit/229d76d7a508df49efb076194ddbbb7fe154fce7))
 - a refused send ends the transfer instead of writing on ([`8a607f0`](https://github.com/dstroy0/ProtoCore/commit/8a607f04782118db8d167e6558e90415f39aa08c))
 - the plaintext arena covers the SSH receive nest with compression on ([`c52778f`](https://github.com/dstroy0/ProtoCore/commit/c52778f58d81ae94598ff59aa640b4724d84834f))
 - the two PC_key_max macros get distinct names at file scope ([`ce3b887`](https://github.com/dstroy0/ProtoCore/commit/ce3b8873b9d5f05f2765ce78078cffeb978073d0))
@@ -46,6 +47,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`ac41b71`](https://github.com/dstroy0/ProtoCore/commit/ac41b715ecdaf7942845ae889108d87c18bed22d))
 - update CHANGELOG.md [skip ci] ([`63c2e6e`](https://github.com/dstroy0/ProtoCore/commit/63c2e6eb0587b6de63d0bdcd90afca71ba0c17f7))
 - update CHANGELOG.md [skip ci] ([`2b2f80f`](https://github.com/dstroy0/ProtoCore/commit/2b2f80fca85ef3e179ad6596dbfdf82caa69c01e))
 - update CHANGELOG.md [skip ci] ([`9815002`](https://github.com/dstroy0/ProtoCore/commit/98150029e777d50a4b152141524381d768a2aabd))
