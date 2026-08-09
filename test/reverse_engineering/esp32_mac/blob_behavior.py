@@ -18,7 +18,7 @@ Each differing function is put in one bucket, checked in this order:
 
 Reads the instruction streams `blob_diff.py` extracts, so the two agree by construction.
 
-Usage:  python reverse_engineering/esp32_mac/blob_behavior.py <repo-root> [--lib libphy.a] [--chip esp32]
+Usage:  python -m test.reverse_engineering.esp32_mac.blob_behavior [--lib libphy.a] [--chip esp32]
 """
 
 import os
@@ -26,8 +26,9 @@ import re
 import sys
 from collections import Counter
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from blob_diff import LIBS, arduino_blob, functions, idf_blob, tools_for  # noqa: E402
+from tools import findroot
+
+from .blob_diff import LIBS, arduino_blob, functions, idf_blob, tools_for
 
 ARDUINO = os.path.expanduser("~/.platformio/packages/framework-arduinoespressif32/tools/sdk")
 
@@ -96,7 +97,6 @@ def classify(a, i):
 
 
 def main():
-    repo = os.path.abspath(sys.argv[1])
     only_lib = sys.argv[sys.argv.index("--lib") + 1] if "--lib" in sys.argv else None
     only_chip = sys.argv[sys.argv.index("--chip") + 1] if "--chip" in sys.argv else None
 
@@ -180,7 +180,7 @@ def main():
             doc.append(f"{kind:11s} {f}")
         doc += ["```", ""]
 
-    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_BEHAVIOR.md")
+    dest = findroot.at("test", "reverse_engineering", "esp32_mac", "RADIO_BLOB_BEHAVIOR.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{tot} differing: " + ", ".join(f"{k} {totals[k]}" for k in ORDER) + f" -> {dest}")

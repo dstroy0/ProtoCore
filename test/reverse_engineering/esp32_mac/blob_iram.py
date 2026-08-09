@@ -15,17 +15,17 @@ brings WiFi up, and the tables they dispatch through are shared per-core state.
 
 Reads section placement from the symbol table; no code is disassembled.
 
-Usage:  python reverse_engineering/esp32_mac/blob_iram.py <repo-root>
+Usage:  python -m test.reverse_engineering.esp32_mac.blob_iram
 """
 
 import os
 import re
 import shutil
 import subprocess
-import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from blob_diff import tools_for  # noqa: E402
+from tools import findroot
+
+from .blob_diff import tools_for
 
 PK = os.path.expanduser("~/.platformio/packages")
 IDF = os.path.join(PK, "framework-espidf", "components")
@@ -68,7 +68,6 @@ def placement(objdump, ar, archive, work):
 
 
 def main():
-    repo = os.path.abspath(sys.argv[1])
     targets = sorted(d for d in os.listdir(PHY_DIR) if os.path.isdir(os.path.join(PHY_DIR, d)))
     work = os.path.join(os.environ.get("TEMP", "/tmp"), "pc_blob_iram")
 
@@ -140,7 +139,7 @@ def main():
             doc += iram
             doc += ["```", ""]
 
-    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_IRAM.md")
+    dest = findroot.at("test", "reverse_engineering", "esp32_mac", "RADIO_BLOB_IRAM.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{len(common)} IRAM-resident on every WiFi die -> {dest}")
