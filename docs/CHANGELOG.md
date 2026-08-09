@@ -58,6 +58,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3588ef6`](https://github.com/dstroy0/ProtoCore/commit/3588ef66c4f429fac22edc5c32d66690da7b876f))
 - update CHANGELOG.md [skip ci] ([`1164e8f`](https://github.com/dstroy0/ProtoCore/commit/1164e8f46510006f741e7ac11d67ba1b4aa8c1e7))
 - update test report + coverage [skip ci] ([`9b42fa7`](https://github.com/dstroy0/ProtoCore/commit/9b42fa71b9c24e2dac41f6306c412cfa1d3d7a1b))
 - update CHANGELOG.md [skip ci] ([`644849b`](https://github.com/dstroy0/ProtoCore/commit/644849bbb0e94faa51225a6e76178af6591a8d71))
@@ -219,6 +220,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- update the suites that pinned the four fixed behaviours ([`fbf033e`](https://github.com/dstroy0/ProtoCore/commit/fbf033e4bfccb0d43642af04d5f796d2c0021a8a))
 - migrate performance_benching to ESP-IDF CMake layout ([`cf89b00`](https://github.com/dstroy0/ProtoCore/commit/cf89b00a7bcc4d17b333ee83ef890c3638a01798))
 - statsd host bench scaffold + shared bench_project/host_bench ([`945dafb`](https://github.com/dstroy0/ProtoCore/commit/945dafbedf55a621f4f5f8464566386ae4986e27))
 - the frame callers pass a tagged value array ([`a1e8e7b`](https://github.com/dstroy0/ProtoCore/commit/a1e8e7b8360ae6d8ace296c9fdeb2a4133066235))
