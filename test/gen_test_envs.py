@@ -35,10 +35,11 @@ import json
 import os
 import sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
-INI = os.path.join(ROOT, "platformio.ini")
-TABLE = os.path.join(HERE, "test_matrix.json")
+from tools import findroot
+
+HERE = findroot.at("test")
+INI = findroot.at("platformio.ini")
+TABLE = findroot.at("test", "test_matrix.json")
 
 BEGIN = "; >>> GENERATED TEST ENVS - do not edit below; edit test/test_matrix.json and run test/gen_test_envs.py >>>"
 END = "; <<< END GENERATED TEST ENVS <<<"

@@ -17,7 +17,7 @@ Three verdicts per function, in decreasing strength:
 Addresses are masked rather than compared because the whole point is that placement moves.
 Relocation targets are NOT masked: which symbol a call reaches is functional.
 
-Usage:  python reverse_engineering/esp32_mac/blob_diff.py <repo-root> [--lib libphy.a] [--chip esp32] [--full]
+Usage:  python -m test.reverse_engineering.esp32_mac.blob_diff [--lib libphy.a] [--chip esp32] [--full]
 """
 
 import os
@@ -25,6 +25,8 @@ import re
 import shutil
 import subprocess
 import sys
+
+from tools import findroot
 
 PK = os.path.expanduser("~/.platformio/packages")
 ARDUINO = os.path.join(PK, "framework-arduinoespressif32", "tools", "sdk")
@@ -161,7 +163,6 @@ def functions(objdump, ar, archive, work):
 
 
 def main():
-    repo = os.path.abspath(sys.argv[1])
     only_lib = sys.argv[sys.argv.index("--lib") + 1] if "--lib" in sys.argv else None
     only_chip = sys.argv[sys.argv.index("--chip") + 1] if "--chip" in sys.argv else None
     full = "--full" in sys.argv
@@ -258,7 +259,7 @@ def main():
             doc.append(f"... {len(diff) - 60} more, rerun with --full")
         doc += ["```", ""]
 
-    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_CODEDIFF.md")
+    dest = findroot.at("test", "reverse_engineering", "esp32_mac", "RADIO_BLOB_CODEDIFF.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\nshared {tot_sh}: identical {tot_sb}, equivalent {tot_eq}, different {tot_df} -> {dest}")
