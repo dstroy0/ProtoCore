@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- native_ssh_hardened builds the SSH stack, so it has to define PC_ENABLE_SSH ([`ef6f509`](https://github.com/dstroy0/ProtoCore/commit/ef6f509e28d7dbde7fbf6fae894bb9b1181d5565))
 - four audit findings - session-id binding, request fields, CR NUL, channel guards ([`ac76ab6`](https://github.com/dstroy0/ProtoCore/commit/ac76ab603573e03c22f81bf4258241f811600c7e))
 - refuse a password-change request instead of authing on the old password ([`5091c67`](https://github.com/dstroy0/ProtoCore/commit/5091c6778898d2e25dac2a31bc525b10886d1c91))
 - end a subnegotiation only on IAC SE, not a bare 240 ([`9c2dd30`](https://github.com/dstroy0/ProtoCore/commit/9c2dd30fe16804e38d92c7e819d94d8ab6d2538d))
@@ -220,6 +221,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+<<<<<<< Updated upstream
+=======
+- the hardening ECDSA case models a completed KEX, so it sets have_session_id ([`d2751a3`](https://github.com/dstroy0/ProtoCore/commit/d2751a3b4bc6481d84bee2ef77e8ca3059c2c47b))
+>>>>>>> Stashed changes
 - update the suites that pinned the four fixed behaviours ([`fbf033e`](https://github.com/dstroy0/ProtoCore/commit/fbf033e4bfccb0d43642af04d5f796d2c0021a8a))
 - migrate performance_benching to ESP-IDF CMake layout ([`cf89b00`](https://github.com/dstroy0/ProtoCore/commit/cf89b00a7bcc4d17b333ee83ef890c3638a01798))
 - statsd host bench scaffold + shared bench_project/host_bench ([`945dafb`](https://github.com/dstroy0/ProtoCore/commit/945dafbedf55a621f4f5f8464566386ae4986e27))
