@@ -233,7 +233,8 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     uint8_t h[32];
     pc_sha256_ctx tmp = tr;
     pc_sha256_final(&tmp, h);
-    pc_tls13_ks_early(&DTLS13_KDF, &cks);
+    static uint8_t ks_store_236[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_236);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys srv_read;
     DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);

@@ -13,18 +13,10 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/kdf/hkdf.h"
 #include "crypto/mac/hmac_sha256.h"
-#include "mmgr/secure.h"
-
-// The secure-pool term this file declares against PC_SECURE_ARENA_SIZE: one schedule's terms per
-// handshake in flight, from the persistent end for the life of the connection.
-static_assert(PC_WORK_TLS13_KDF >= (size_t)PC_TLS13_KS_SLOTS * PC_TLS13_KS_CAP,
-              "PC_WORK_TLS13_KDF must cover PC_TLS13_KS_SLOTS schedules of PC_TLS13_KS_CAP: raise it in "
-              "protocore_config.h");
 
 // RFC 8446 sec 7.1 ("tls13 ") and RFC 9147 sec 5.9 ("dtls13") HKDF-Expand-Label prefixes.
 const Tls13Kdf TLS13_KDF = {"tls13 "};
 const Tls13Kdf DTLS13_KDF = {"dtls13"};
-
 
 void pc_tls13_kdf_expand_label(const Tls13Kdf *kdf, const uint8_t secret[TLS13_SECRET_LEN], const char *label,
                                uint8_t *out, size_t out_len)
@@ -40,16 +32,14 @@ void pc_tls13_derive_secret(const Tls13Kdf *kdf, const uint8_t secret[TLS13_SECR
                              kdf->label_prefix);
 }
 
-proto_bool pc_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks)
+proto_bool pc_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks, uint8_t *s)
 {
     ks->kdf = kdf;
-    pc_span b = secure.persist_span(PC_TLS13_KS_CAP);
-    if (!pc_span_ok(b))
+    ks->s = s;
+    if (s == NULL)
     {
-        ks->s = NULL;
         return PROTO_FALSE;
     }
-    ks->s = b.buf;
     // No PSK: Early Secret = HKDF-Extract(salt=0, IKM=0^Hash.length). HMAC zero-pads a short/absent
     // key, so an empty salt and a 32-zero-byte IKM reproduce the RFC 8448 early secret exactly.
     pc_hkdf_extract(NULL, 0, ks->s + TLS13_KS_ZEROS, TLS13_SECRET_LEN, ks->s + TLS13_KS_EARLY);
@@ -69,10 +59,8 @@ void pc_tls13_ks_handshake(Tls13KeySchedule *ks, const uint8_t *ecdhe, const uin
                            ks->s + TLS13_KS_DERIVED);
     pc_hkdf_extract(ks->s + TLS13_KS_DERIVED, TLS13_SECRET_LEN, ecdhe, ecdhe_len, ks->s + TLS13_KS_HANDSHAKE);
 
-    pc_tls13_derive_secret(ks->kdf, ks->s + TLS13_KS_HANDSHAKE, "c hs traffic", ch_sh_hash,
-                           ks->s + TLS13_KS_CLIENT_HS);
-    pc_tls13_derive_secret(ks->kdf, ks->s + TLS13_KS_HANDSHAKE, "s hs traffic", ch_sh_hash,
-                           ks->s + TLS13_KS_SERVER_HS);
+    pc_tls13_derive_secret(ks->kdf, ks->s + TLS13_KS_HANDSHAKE, "c hs traffic", ch_sh_hash, ks->s + TLS13_KS_CLIENT_HS);
+    pc_tls13_derive_secret(ks->kdf, ks->s + TLS13_KS_HANDSHAKE, "s hs traffic", ch_sh_hash, ks->s + TLS13_KS_SERVER_HS);
 }
 
 void pc_tls13_ks_master(Tls13KeySchedule *ks, const uint8_t ch_sfin_hash[TLS13_SECRET_LEN])

@@ -461,7 +461,8 @@ void test_quic_server_http3_get()
         pc_sha256_final(&tmp, chsh);
     }
     Tls13KeySchedule cks;
-    pc_tls13_ks_early(&TLS13_KDF, &cks);
+    static uint8_t ks_store_464[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_464);
     pc_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_s);
@@ -897,7 +898,8 @@ void test_quic_server_on_request_null()
         pc_sha256_final(&tmp, chsh);
     }
     Tls13KeySchedule cks;
-    pc_tls13_ks_early(&TLS13_KDF, &cks);
+    static uint8_t ks_store_900[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_900);
     pc_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
     QuicPacketKeys hs_s, hs_c, ap_c;
     pc_quic_keys_from_secret(cks.s + TLS13_KS_SERVER_HS, &hs_s);

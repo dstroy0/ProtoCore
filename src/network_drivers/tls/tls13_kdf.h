@@ -105,8 +105,14 @@ void pc_tls13_kdf_expand_label(const Tls13Kdf *kdf, const uint8_t secret[TLS13_S
 void pc_tls13_derive_secret(const Tls13Kdf *kdf, const uint8_t secret[TLS13_SECRET_LEN], const char *label,
                             const uint8_t transcript_hash[TLS13_SECRET_LEN], uint8_t out[TLS13_SECRET_LEN]);
 
-/** @brief Step 1: bind the @p kdf variant and compute early_secret = HKDF-Extract(0, 0^32) (no-PSK). */
-proto_bool pc_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks);
+/**
+ * @brief Step 1: bind the @p kdf variant and @p s, then compute early_secret = HKDF-Extract(0, 0^32).
+ *
+ * @p s is PC_TLS13_KS_CAP bytes the CONNECTION owns and holds for exactly as long as it lives, so
+ * the schedule dies with it. It must arrive zeroed: TLS13_KS_ZEROS is the extract's IKM and nothing
+ * ever writes it. Returns false on a null @p s, which leaves every later step a no-op.
+ */
+proto_bool pc_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks, uint8_t *s);
 
 /**
  * @brief Step 2: handshake_secret and the client/server handshake traffic secrets.

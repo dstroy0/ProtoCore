@@ -83,7 +83,8 @@ void test_early_secret()
     uint8_t exp[32];
     hx(EARLY, exp, 32);
     Tls13KeySchedule ks;
-    pc_tls13_ks_early(&TLS13_KDF, &ks);
+    static uint8_t ks_store_86[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &ks, ks_store_86);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_EARLY, 32);
 }
 
@@ -93,7 +94,8 @@ void test_handshake_secrets()
     hx(ECDHE, ecdhe, 32);
     hx(CH_SH_HASH, ch_sh, 32);
     Tls13KeySchedule ks;
-    pc_tls13_ks_early(&TLS13_KDF, &ks);
+    static uint8_t ks_store_96[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &ks, ks_store_96);
     pc_tls13_ks_handshake(&ks, ecdhe, ch_sh, 32);
 
     uint8_t exp[32];
@@ -112,7 +114,8 @@ void test_master_secrets()
     hx(CH_SH_HASH, ch_sh, 32);
     hx(CH_SFIN_HASH, ch_sfin, 32);
     Tls13KeySchedule ks;
-    pc_tls13_ks_early(&TLS13_KDF, &ks);
+    static uint8_t ks_store_115[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &ks, ks_store_115);
     pc_tls13_ks_handshake(&ks, ecdhe, ch_sh, 32);
     pc_tls13_ks_master(&ks, ch_sfin);
 
@@ -205,7 +208,8 @@ void test_server_finished()
     hx(S_HS, s_hs, 32);
     uint8_t verify[32], exp[32];
     Tls13KeySchedule fks;
-    pc_tls13_ks_early(&TLS13_KDF, &fks);
+    static uint8_t ks_store_208[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&TLS13_KDF, &fks, ks_store_208);
     pc_tls13_finished_mac(&fks, s_hs, thash, verify);
     hx("9b9b141d906337fbd2cbdce71df4deda4ab42c309572cb7fffee5454b78f0718", exp, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, verify, 32);

@@ -341,7 +341,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // Handshake-traffic keys from Transcript-Hash(..ServerHello).
     uint8_t hash[PC_SHA256_DIGEST_LEN];
     snapshot(&c->transcript, hash);
-    pc_tls13_ks_early(&DTLS13_KDF, &c->ks);
+    pc_tls13_ks_early(&DTLS13_KDF, &c->ks, c->ks_store);
     pc_tls13_ks_handshake(&c->ks, ecdhe, hash, 32);
     DtlsRecord.keys_derive(&c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(&c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_CLIENT_HS);

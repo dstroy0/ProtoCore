@@ -389,7 +389,8 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
     uint8_t h[32];
     pc_sha256_ctx tmp = tr;
     pc_sha256_final(&tmp, h);
-    pc_tls13_ks_early(&DTLS13_KDF, &cks);
+    static uint8_t ks_store_392[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_392);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
 
     DtlsRecordKeys srv_read; // client reads the server's epoch-2 records
@@ -926,7 +927,8 @@ static void test_pto_ack_cancels_retransmit(void)
     uint8_t ecdhe[32];
     pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     Tls13KeySchedule cks;
-    pc_tls13_ks_early(&DTLS13_KDF, &cks);
+    static uint8_t ks_store_929[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_929);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
@@ -1030,7 +1032,8 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     uint8_t h[32];
     pc_sha256_ctx tmp = tr;
     pc_sha256_final(&tmp, h);
-    pc_tls13_ks_early(&DTLS13_KDF, &st->cks);
+    static uint8_t ks_store_1033[PC_TLS13_KS_CAP];
+    pc_tls13_ks_early(&DTLS13_KDF, &st->cks, ks_store_1033);
     pc_tls13_ks_handshake(&st->cks, ecdhe, h, 32);
     DtlsRecord.keys_derive(&st->srv_hs_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, st->cks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(&st->cli_hs_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, st->cks.s + TLS13_KS_CLIENT_HS);
