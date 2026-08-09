@@ -416,8 +416,10 @@ void test_dispatch_guard_and_error_arms()
 
     // Every post-auth connection message is rejected while unauthenticated.
     s->authed = PROTO_FALSE;
-    const uint8_t authed_arms[] = {SSH_MSG_GLOBAL_REQUEST,       SSH_MSG_CHANNEL_OPEN,    SSH_MSG_CHANNEL_OPEN_CONFIRM,
-                                   SSH_MSG_CHANNEL_OPEN_FAILURE, SSH_MSG_CHANNEL_REQUEST, SSH_MSG_CHANNEL_DATA};
+    const uint8_t authed_arms[] = {SSH_MSG_GLOBAL_REQUEST,        SSH_MSG_CHANNEL_OPEN,
+                                   SSH_MSG_CHANNEL_OPEN_CONFIRM,  SSH_MSG_CHANNEL_OPEN_FAILURE,
+                                   SSH_MSG_CHANNEL_REQUEST,       SSH_MSG_CHANNEL_DATA,
+                                   SSH_MSG_CHANNEL_WINDOW_ADJUST, SSH_MSG_CHANNEL_EOF};
     for (size_t j = 0; j < sizeof(authed_arms) / sizeof(authed_arms[0]); j++)
     {
         uint8_t p[8] = {authed_arms[j], 0, 0, 0, 0, 0, 0, 0};
