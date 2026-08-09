@@ -82,8 +82,8 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ## The server's SSH_MSG_NEWKEYS is framed into an occupied slot and dropped, and the test cannot see it
 
-- **Status:** OPEN, confirmed 2026-08-09 by reading the whole path. Found in the
-  `network_drivers/presentation` resource audit (F1). **Not reproduced on hardware yet** - that is the
+- **Status:** FIXED 2026-08-09 (`ssh_packet.c` `ssh_pkt_emit`). Confirmed by reading the whole path,
+  found in the `network_drivers/presentation` resource audit (F1). **Not reproduced on hardware yet** - that is the
   next step, and the audit says the same.
 - **Symptom (by construction, not observed):** the server answers `SSH_MSG_KEXDH_INIT` with two
   packets and only the first reaches the wire.
@@ -113,10 +113,13 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   through `pc_ssh_server_set_emit_cb`, so it proves `pc_ssh_server_dispatch` _calls_ emit twice and
   never exercises `ssh_emit` or `ssh_pkt_emit`. The one-packet-per-slot rule is on the other side of
   the seam the test replaces. No native env covers the real emit path.
-- **Fix:** not written, because the shape is a design call. SSH permits several binary packets
-  back-to-back in the stream, so framing both into `tx_wire` in sequence is legal and is probably what
-  the slot was meant to do; the alternatives are draining between the two emits, or giving `emit()` a
-  return and a queue. Picking one is the maintainer's.
+- **Fix:** the wire holds two packets (`SSH_WIRE_CAP = 2 * SSH_PKT_WIRE_MAX`), and `ssh_pkt_emit`
+  appends the second at `tx_len` instead of returning -1 when `tx_ready`. SSH streams binary packets
+  back-to-back (RFC 4253 sec 6), so KEXDH_REPLY + NEWKEYS and CHANNEL_EOF + CHANNEL_CLOSE frame into
+  `tx_wire` in sequence and leave on one drain; `ssh_pkt_send` bumps `seq_no_send` per call so the pair
+  carries consecutive sequence numbers, and the `enc_out` flip after NEWKEYS keeps both under one state.
+  The `ssh_conn.c` static_assert proves the doubled wire fits (needs 10644, budget 12992).
+  Verified: `native_ssh` + `native_ssh_conn`, 268/268.
 
 ## native_coaps_server: eight CID-routing tests fail, and they failed before the crypto cascade
 
