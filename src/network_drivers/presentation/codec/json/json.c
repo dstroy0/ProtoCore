@@ -10,7 +10,6 @@
 #include "mmgr/membuild.h" // pc_sb frame builder
 #include "mmgr/protostr.h"
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
-#include <stdio.h>
 
 // ---------------------------------------------------------------------------
 // pc_json_writer

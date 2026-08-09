@@ -140,7 +140,8 @@ static void pc_telnet_accept(uint8_t slot)
     // Server-side echo + character-at-a-time (suppress go-ahead).
     static const uint8_t neg[] = {T_IAC, T_WILL, OPT_ECHO, T_IAC, T_WILL, OPT_SGA};
     raw_send(slot, neg, sizeof(neg));
-    raw_send(slot, "PC Telnet ready\r\n> ", 22);
+    static const char greet[] = "PC Telnet ready\r\n> ";
+    raw_send(slot, greet, sizeof(greet) - 1);
 }
 
 static void pc_telnet_close(uint8_t slot)
