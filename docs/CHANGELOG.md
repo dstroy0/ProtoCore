@@ -46,6 +46,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2b2f80f`](https://github.com/dstroy0/ProtoCore/commit/2b2f80fca85ef3e179ad6596dbfdf82caa69c01e))
 - update CHANGELOG.md [skip ci] ([`9815002`](https://github.com/dstroy0/ProtoCore/commit/98150029e777d50a4b152141524381d768a2aabd))
 - update CHANGELOG.md [skip ci] ([`ddb385e`](https://github.com/dstroy0/ProtoCore/commit/ddb385ebc0f53d46659d109acec74e7fb6ba4424))
 - update CHANGELOG.md [skip ci] ([`a04b614`](https://github.com/dstroy0/ProtoCore/commit/a04b6143f71b4fdc5f098cc3a7d301ff32e07af2))
@@ -144,6 +145,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- close F3, the idle sweep reclaims the leaked channel in 5 s ([`90c3f4e`](https://github.com/dstroy0/ProtoCore/commit/90c3f4e3494339e330bd83b2564385a42b45d793))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`8b8fa56`](https://github.com/dstroy0/ProtoCore/commit/8b8fa56481a5b48952a43393c93719a83386bc19))
 - log the undeclared SSH plaintext draw and the env gap that hides it ([`78b04a8`](https://github.com/dstroy0/ProtoCore/commit/78b04a8a0fda00aa507b111756137e6bc092d941))
 - log the SSH send desync that reporting the failure does not cure ([`25ec38b`](https://github.com/dstroy0/ProtoCore/commit/25ec38be6ef55c4dc9ea690cd2f31262976b9d96))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6adbed5`](https://github.com/dstroy0/ProtoCore/commit/6adbed5cfcec6139fed0edc426f3b56854e81edf))
