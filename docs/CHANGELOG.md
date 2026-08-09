@@ -6,6 +6,12 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- three more blob tools onto findroot; fix sibling import for -m; guard crossinstall ([`c8460dc`](https://github.com/dstroy0/ProtoCore/commit/c8460dce22232439a8f6d761480d07fc8043f9fa))
+- blob_parity onto findroot, and guard its module-level main() ([`48c01fb`](https://github.com/dstroy0/ProtoCore/commit/48c01fb672b72ff8b179fb7695caa94bd06385b5))
+- base-less relpath printed CWD-relative paths; use findroot.rel ([`fa5ad66`](https://github.com/dstroy0/ProtoCore/commit/fa5ad66ee0eee4fab585a139df3919834e160abd))
+- revive the owner-context guard, and single-source its root via findroot ([`6a806ef`](https://github.com/dstroy0/ProtoCore/commit/6a806ef91b790a2bc88a2af90ada463c001bf4e8))
+- three files took protoframe.h through log.h or telnet.h ([`ede98b6`](https://github.com/dstroy0/ProtoCore/commit/ede98b6e53b403ad3b01001edddb4283229e9b2d))
+- twelve PC_LOGx sites still passed their values variadically ([`d4ec123`](https://github.com/dstroy0/ProtoCore/commit/d4ec12322022580b076f2348dcc223c327682aa8))
 - the token frame passes its two strings as values ([`229d76d`](https://github.com/dstroy0/ProtoCore/commit/229d76d7a508df49efb076194ddbbb7fe154fce7))
 - a refused send ends the transfer instead of writing on ([`8a607f0`](https://github.com/dstroy0/ProtoCore/commit/8a607f04782118db8d167e6558e90415f39aa08c))
 - the plaintext arena covers the SSH receive nest with compression on ([`c52778f`](https://github.com/dstroy0/ProtoCore/commit/c52778f58d81ae94598ff59aa640b4724d84834f))
@@ -47,6 +53,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- layering guard (text-only include-graph check) + tool inventories ([`51c3283`](https://github.com/dstroy0/ProtoCore/commit/51c3283c2c4196b56342527443f96b640fe658a4))
+- update test report + coverage [skip ci] ([`d096c4f`](https://github.com/dstroy0/ProtoCore/commit/d096c4f9a2771966da2a0d59a341468e700945dc))
+- update CHANGELOG.md [skip ci] ([`5183a0a`](https://github.com/dstroy0/ProtoCore/commit/5183a0adea8d9e5b5b42f723a76acc4e27ec3b9d))
 - update CHANGELOG.md [skip ci] ([`ac41b71`](https://github.com/dstroy0/ProtoCore/commit/ac41b715ecdaf7942845ae889108d87c18bed22d))
 - update CHANGELOG.md [skip ci] ([`63c2e6e`](https://github.com/dstroy0/ProtoCore/commit/63c2e6eb0587b6de63d0bdcd90afca71ba0c17f7))
 - update CHANGELOG.md [skip ci] ([`2b2f80f`](https://github.com/dstroy0/ProtoCore/commit/2b2f80fca85ef3e179ad6596dbfdf82caa69c01e))
@@ -171,6 +180,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- single findroot for the repo root, replacing hand-rolled walks ([`4ed12a4`](https://github.com/dstroy0/ProtoCore/commit/4ed12a49f3416d63f84b09752d6c3a776835954c))
+- frame becomes protoframe, reached through a FrameNs like mem and str ([`8498ec4`](https://github.com/dstroy0/ProtoCore/commit/8498ec42841908a98ec5ff2f2df0bf23295d28cc))
 - the frame engine takes a tagged value array, not an ellipsis ([`6d4f7d7`](https://github.com/dstroy0/ProtoCore/commit/6d4f7d737fe77933ad8f7a65c41be30ec3c2d067))
 - the six unprefixed exports take the pc_ prefix ([`ae289c7`](https://github.com/dstroy0/ProtoCore/commit/ae289c790b18ba0682ccf2661af9617ec1aee1a8))
 - a hash owns nothing, it works out of its caller's bytes ([`408298d`](https://github.com/dstroy0/ProtoCore/commit/408298d2769cc535c572ed871e2aefd46bb01bd7))
