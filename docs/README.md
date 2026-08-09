@@ -1532,6 +1532,7 @@ guards at compile time.
 | `PC_SSH_FWD_MAX` | `2` | Maximum concurrent forwarded TCP connections (must be <= PC_CLIENT_CONNS). |
 | `PC_SSH_MAX_CHANNELS` | `1` | Maximum concurrent SSH channels per connection (RFC 4254 multiplexing). |
 | `PC_SSH_PORT_FORWARD` | `0` | SSH TCP port forwarding (`direct-tcpip`, i.e. |
+| `PC_SSH_PW_CHANGE_COOLDOWN_MS` | `60000u` |  |
 | `PC_SSH_RFWD_BRIDGE_MAX` | `2` | Maximum concurrent bridged connections across all remote forwards. |
 | `PC_SSH_RFWD_MAX` | `1` | Maximum concurrent remote-forward listeners (`ssh -R` / `tcpip-forward`). |
 | `PC_SSH_ZLIB_ACK_DRAM` | `0` | Acknowledge placing the SSH compressor in internal DRAM (no PSRAM). |
