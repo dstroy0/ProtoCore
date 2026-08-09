@@ -57,8 +57,8 @@ the core.
     src filter, and test dirs - per-feature isolation is the point) and regenerate:
 
     ```sh
-    python3 test/gen_test_envs.py            # rewrite the env blocks in platformio.ini
-    python3 test/gen_test_envs.py --check    # CI: fail if the ini is out of date
+    python3 -m test.gen_test_envs            # rewrite the env blocks in platformio.ini
+    python3 -m test.gen_test_envs --check    # CI: fail if the ini is out of date
     ```
 
     Do not hand-edit the generated region of `platformio.ini`. The full suite

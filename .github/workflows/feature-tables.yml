@@ -104,7 +104,7 @@ jobs:
       # Refresh test/README.md's generated sections (the env matrix scraped from test_matrix.json and
       # the per-test directory scraped from the test_*.cpp files) so they never drift from the suite.
       - name: Regenerate test/README.md from the suite
-        run: python test/gen_test_readme.py
+        run: python -m test.gen_test_readme
 
       - name: Format with Prettier
         run: npx prettier@3.9.6 --write README.md docs/README.md docs/EXAMPLES.md docs/THEMES.md docs/FAVICONS.md

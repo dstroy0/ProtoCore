@@ -9,16 +9,20 @@
 # --if-absent, so a full run's one fresh key (test/run_tests.sh generates it up front) is the key
 # every env in that run compiles against.
 #
-# PlatformIO exec()s this with no __file__, and injects the SCons construction environment, which
-# carries the project root.
+# PlatformIO exec()s this with no __file__, so the import path is seeded from the SCons
+# construction environment's project root before tools.findroot answers for the rest.
 
 import subprocess
 import sys
 
 Import("env")  # noqa: F821 - injected by SCons
 
+sys.path.insert(0, env["PROJECT_DIR"])  # noqa: F821
+
+from tools import findroot  # noqa: E402 - the path above is what makes this importable
+
 subprocess.run(
     [sys.executable, "-m", "tools.crypto.gen_ssh_test_keys", "--if-absent"],
-    cwd=env["PROJECT_DIR"],  # noqa: F821
+    cwd=findroot.root(),
     check=True,
 )

@@ -24,10 +24,11 @@ import os
 import re
 import sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
-README = os.path.join(HERE, "README.md")
-MATRIX = os.path.join(HERE, "test_matrix.json")
+from tools import findroot
+
+HERE = findroot.at("test")
+README = findroot.at("test", "README.md")
+MATRIX = findroot.at("test", "test_matrix.json")
 
 ENV_BEGIN = "<!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->"
 ENV_END = "<!-- END GENERATED test-environments -->"
