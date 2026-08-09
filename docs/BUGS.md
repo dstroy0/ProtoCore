@@ -8,6 +8,42 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Six SSH sites read a slot's crypto bytes before the slot was bound, so the first host-key set faulted
+
+- **Status:** FIXED 2026-08-09 in `145c3b925`, found by the native suite (`native_ssh_pqc`).
+- **Symptom:** `pc_ssh_hostkey_ed25519_set()` segfaulted. gdb put it in `pc_sha512_update` with the
+  key pointer at address 0, three frames under `pc_ed25519_pubkey`.
+- **Root cause:** the crypto-ownership cascade moved every hash and signature onto caller-supplied
+  working bytes, and the SSH sites take theirs from `ssh_pkt[i].crypto_work`. That member is null
+  until `ssh_pkt_slot_storage()` binds it, and `cli_crypto_work()` returns null when the pool cannot
+  cover the slot. Six sites read it without either:
+    - `transport/ssh_transport.c:117` - `pc_ssh_hostkey_ed25519_set`, the one that faulted.
+    - `transport/ssh_transport.c:1011` - the Ed25519 arm of `sign_hash`; the ECDSA and RSA arms
+      beside it were already guarded.
+    - `connection/ssh_client.c` x4 - `cli_crypto_work()` passed straight in as an argument, so the
+      null check inside it bought the caller nothing.
+- **Worst consequence:** a null write and a null read inside key derivation, on the first host-key
+  set of a server that has one configured. Not reachable from the wire; reachable from `begin()`.
+- **Fix:** each site binds the slot first or fails closed. `hybrid_sntrup761_x25519` also reached
+  back into the slot for its SHA-512 instead of using the `work` it was handed; it uses the
+  parameter now.
+- **Nothing caught it:** no host env compiled the SSH transport with a bound pool before this run.
+
+## test_coaps asserted a length guard that had moved out of the AEAD, and smashed the stack proving it
+
+- **Status:** FIXED 2026-08-09 in `f7bc5d0dc`, found by the native suite (`native_coaps`).
+- **Symptom:** `test_quic_aead_open_rejects_short_ciphertext` segfaulted.
+- **Root cause:** the test passed `uint8_t key[16]` where `pc_aes128gcm_open()` takes
+  `struct pc_aes128gcm_key *`, and passed a null tag. Its comment claimed neither was dereferenced
+  because open() rejects a short ciphertext first. That guard was moved out to the callers -
+  `quic_crypto.c:139` records the move - so the portable backend now casts the key and calls
+  `set_j0()` on its first line, writing past a 16-byte stack array.
+- **Fix:** the test is deleted rather than repaired: with the current contract it cannot be written
+  at all, since a null tag faults in `pc_ct_eq` even with a valid key context. The guard is covered
+  where it now lives, by `test_gcm_open_rejects_short` in `test_quic_crypto`. Every caller of
+  `pc_aes128gcm_open` was checked for the length guard first: `quic_crypto.c`, `dtls_record.c` and
+  `tls_record.c` all hold it, and `smb2.c` reads its tag from a separate 16-byte copy.
+
 ## The mbedtls-backed asymmetric and CCM paths may call the heap at run time
 
 - **Status:** OPEN, found 2026-08-08 in the `src/` resource audit (`crypto.md` F12). **DEFERRED** by
