@@ -134,6 +134,11 @@ void ssh_pkt_init(uint8_t i)
     s->kex_active = PROTO_TRUE;
     s->enc_out = PROTO_FALSE;
     s->enc_in = PROTO_FALSE;
+
+    // Bind here, at accept, while the free middle is whole. The persistent end grows toward the
+    // scratch end, so a borrow taken further down a dispatch competes with that dispatch's own
+    // live scratch.
+    (void)ssh_pkt_slot_storage(s);
 }
 
 void ssh_pkt_set_client(uint8_t i)
