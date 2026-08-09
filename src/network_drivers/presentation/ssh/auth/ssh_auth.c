@@ -309,12 +309,19 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
 
     if (str.eq(req->method, "password", sizeof(req->method), PROTO_FALSE))
     {
-        // boolean (FALSE = not a password change) || string password
+        // boolean (FALSE = not a password change) || string password [|| string new-password]
         if (off >= len)
         {
             return -1;
         }
-        off++; // skip the change-password boolean
+        // RFC 4252 sec 8: a TRUE change flag means old || new. This server does not perform password
+        // changes, so a change request is refused rather than authenticated on the old password with
+        // no change performed.
+        if (payload[off] != 0)
+        {
+            return -1;
+        }
+        off++;
         if (!read_string(payload, len, &off, req->password, sizeof(req->password)))
         {
             return -1;
