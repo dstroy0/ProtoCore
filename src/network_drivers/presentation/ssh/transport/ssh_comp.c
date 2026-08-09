@@ -10,6 +10,7 @@
 
 #if PC_ENABLE_SSH_ZLIB
 
+#include "mmgr/secure.h" // pc_secure_wipe
 #include "network_drivers/presentation/ssh/transport/ssh_inflate.h"
 #include "network_drivers/presentation/ssh/transport/ssh_zlib.h"
 
@@ -85,6 +86,9 @@ void ssh_comp_reset(uint8_t i)
     c->s2c_active = PROTO_FALSE;
     c->c2s_alg = SSH_COMP_NONE;
     c->c2s_active = PROTO_FALSE;
+    // The deflate work buffer and the inflate window hold the session's decompressed plaintext.
+    pc_secure_wipe(c->work, sizeof(c->work));
+    pc_secure_wipe(c->inf_window, sizeof(c->inf_window));
 }
 
 void ssh_comp_set_s2c(uint8_t i, SshCompAlg alg)
