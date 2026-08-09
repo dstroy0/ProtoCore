@@ -1555,7 +1555,7 @@ guards at compile time.
 | `PC_TLS_ARENA_IN_PSRAM` | `0` | Place the TLS arena in external PSRAM instead of internal DRAM (ESP32). |
 | `PC_TLS_CONN_MSG_CAP` | `1024` |  |
 | `PC_TLS_CONN_REC_CAP` | `1024` |  |
-| `PC_TLS_CONN_STATE_CAP` | `384` |  |
+| `PC_TLS_CONN_STATE_CAP` | `2304` |  |
 | `PC_TLS_CONN_TERMS` | `5` |  |
 | `PC_TLS_MAX_FRAG_LEN` | `0` | Cap TLS records via the Maximum Fragment Length extension (RFC 6066). |
 | `PC_TLS_TICKET_LIFETIME_S` | `86400` | Session-ticket lifetime / key-rotation period in seconds (see PC_ENABLE_TLS_RESUMPTION). |
@@ -1577,7 +1577,7 @@ guards at compile time.
 | `PC_WORKER_TASK_PRIORITY` | `5` | FreeRTOS priority for each server worker task (ESP32). |
 | `PC_WORK_AES256CTR` | `384` |  |
 | `PC_WORK_AESCCM` | `448` |  |
-| `PC_WORK_BIGNUM_HW` | `1024` | Worst-case bytes each module borrows from the secure pool in a single call. |
+| `PC_WORK_BIGNUM_HW` | `1024` |  |
 | `PC_WORK_BIGNUM_SW` | `1408` |  |
 | `PC_WORK_CHACHA20` | `192` |  |
 | `PC_WORK_CHACHAPOLY` | `64` |  |
