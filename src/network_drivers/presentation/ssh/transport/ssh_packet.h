@@ -192,7 +192,11 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
 #endif
 #define SSH_MAX_PAD 32 // worst-case padding across block-8 / block-16 modes (min-4 rule)
 #define SSH_MAX_MAC 64 // largest MAC tag (hmac-sha2-512); chacha's Poly1305 tag is 16
-#define SSH_WIRE_CAP ((size_t)(4 + 1 + SSH_MAX_EFFECTIVE_PAYLOAD + SSH_MAX_PAD + SSH_MAX_MAC))
+#define SSH_PKT_WIRE_MAX ((size_t)(4 + 1 + SSH_MAX_EFFECTIVE_PAYLOAD + SSH_MAX_PAD + SSH_MAX_MAC))
+// Two framed packets: the server frames a pair back-to-back into one slot before the worker drains
+// (KEXDH_REPLY then NEWKEYS at the kex boundary, CHANNEL_EOF then CHANNEL_CLOSE at teardown), which
+// SSH carries as consecutive binary packets (RFC 4253 sec 6).
+#define SSH_WIRE_CAP ((size_t)(2 * SSH_PKT_WIRE_MAX))
 
 // Scratch the transport layer (RFC 4253) borrows to frame one packet, and nothing more - the wire
 // buffer and the payload being framed belong to whoever called in, because this layer is the framer,
