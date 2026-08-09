@@ -25,7 +25,8 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_tr[4096]; // tr works out of its own bytes // test-side working bytes for the crypto entry points
 
 // ---- fixed test key material (deterministic; matches test_coaps / test_dtls_conn) ----
 static const uint8_t SERVER_ED_SEED[32] = {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
@@ -324,7 +325,7 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, client_cid, client_cid_len);
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw);
+    pc_sha256_init(&tr, tw_tr);
     pc_sha256_update(&tr, ch, ch_len);
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),

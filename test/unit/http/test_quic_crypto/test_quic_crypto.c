@@ -21,7 +21,8 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_c[4096]; // c works out of its own bytes // test-side working bytes for the crypto entry points
 
 // The keyed api needs a context, not a key. One scratch context, rebuilt per call and released first so
 // a backend that attaches vendor resources to a context does not leak one per vector.
@@ -486,7 +487,7 @@ static void expand_label_ref(const uint8_t secret[32], const char *label, uint8_
     {
         counter++;
         pc_hmac_sha256_ctx c;
-        pc_hmac_sha256_init(&c, tw, secret, 32);
+        pc_hmac_sha256_init(&c, tw_c, secret, 32);
         pc_hmac_sha256_update(&c, t, t_len);
         pc_hmac_sha256_update(&c, info, p);
         pc_hmac_sha256_update(&c, &counter, 1);

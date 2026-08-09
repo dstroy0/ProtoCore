@@ -26,7 +26,8 @@
 #include "test/fixtures/ssh_test_host_key/ssh_test_keys.h"
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_c[4096]; // c works out of its own bytes // test-side working bytes for the crypto entry points
 
 static uint8_t g_stream[64 * 1024]; // every packet's compressed payload, concatenated
 static size_t g_stream_len;
@@ -615,7 +616,7 @@ static void expected_kdf_k1(const uint8_t K[256], const uint8_t H[PC_SHA256_DIGE
         off++;
     }
     pc_sha256_ctx c;
-    pc_sha256_init(&c, tw);
+    pc_sha256_init(&c, tw_c);
     if (off == 256)
     {
         uint8_t len_be[4] = {0, 0, 0, 0};
@@ -704,7 +705,7 @@ void test_kdf_string_k_hybrid_branch(void)
 
     uint8_t len_be[4] = {0, 0, 0, 32};
     pc_sha256_ctx c;
-    pc_sha256_init(&c, tw);
+    pc_sha256_init(&c, tw_c);
     pc_sha256_update(&c, len_be, 4);
     pc_sha256_update(&c, K + (256 - 32), 32);
     pc_sha256_update(&c, H, PC_SHA256_DIGEST_LEN);
@@ -754,7 +755,7 @@ void test_kdf_out_len_clamp_matches_exact_max(void)
     // K2 = HASH(mpint(K) || H || K1) - the chain extension step carries no label/session_id.
     uint8_t len_be[4] = {0, 0, 1, 0};
     pc_sha256_ctx c;
-    pc_sha256_init(&c, tw);
+    pc_sha256_init(&c, tw_c);
     pc_sha256_update(&c, len_be, 4);
     pc_sha256_update(&c, K, 256);
     pc_sha256_update(&c, H, PC_SHA256_DIGEST_LEN);

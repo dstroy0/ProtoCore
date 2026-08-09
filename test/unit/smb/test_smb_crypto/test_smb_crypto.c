@@ -17,7 +17,8 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_sc[4096]; // sc works out of its own bytes // test-side working bytes for the crypto entry points
 
 void setUp()
 {
@@ -286,7 +287,7 @@ void test_sha512_vectors()
     // streaming (odd chunk splits) must equal the one-shot
     pc_sha512_ctx sc;
     uint8_t strm[64];
-    pc_sha512_init(&sc, tw);
+    pc_sha512_init(&sc, tw_sc);
     pc_sha512_update(&sc, (const uint8_t *)two, 5);
     pc_sha512_update(&sc, (const uint8_t *)two + 5, 100);
     pc_sha512_update(&sc, (const uint8_t *)two + 105, 7);
@@ -309,7 +310,7 @@ void test_sha512_vectors()
                             0x4f, 0x1e, 0x0b, 0xcf, 0xaf, 0xe6, 0x76, 0x84, 0x9d, 0x63, 0xcc, 0xbb, 0x38,
                             0x40, 0x69, 0x2b, 0xa6, 0xec, 0x03, 0x79, 0xb7, 0xde, 0x3c, 0xe0, 0x2a, 0x30,
                             0x76, 0x8f, 0x50, 0xc1, 0x14, 0xd8, 0x00, 0x0c, 0x04, 0x11, 0x73, 0x65};
-    pc_sha512_init(&sc, tw);
+    pc_sha512_init(&sc, tw_sc);
     pc_sha512_update(&sc, A, 64);
     pc_sha512_update(&sc, B, 72);
     pc_sha512_final(&sc, strm);

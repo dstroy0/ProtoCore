@@ -24,7 +24,10 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_h1[4096]; // h1 works out of its own bytes
+static uint8_t tw_t[4096]; // t works out of its own bytes
+static uint8_t tw_tr[4096]; // tr works out of its own bytes // test-side working bytes for the crypto entry points
 
 // Two keyed AEAD contexts agree iff they seal the same input identically.
 static void assert_ctx_match(uint8_t *a, uint8_t *b)
@@ -559,7 +562,7 @@ static void test_full_handshake(void)
     size_t ch_len = build_client_hello(ch, client_pub);
 
     pc_sha256_ctx tr; // client transcript
-    pc_sha256_init(&tr, tw);
+    pc_sha256_init(&tr, tw_tr);
     pc_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
@@ -597,7 +600,7 @@ static void test_full_handshake_rpk(void)
                                           /*offer_rpk=*/PROTO_TRUE, TLS_GROUP_X25519, TLS_SIG_ED25519);
 
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw);
+    pc_sha256_init(&tr, tw_tr);
     pc_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
@@ -635,7 +638,7 @@ static void test_cid_handshake(void)
     size_t ch_len = build_client_hello_ex(ch, client_pub, /*with_keyshare=*/PROTO_TRUE, NULL, 0, client_cid,
                                           sizeof(client_cid), PROTO_FALSE, TLS_GROUP_X25519, TLS_SIG_ED25519);
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw);
+    pc_sha256_init(&tr, tw_tr);
     pc_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
@@ -709,12 +712,12 @@ static void test_hrr_group_renegotiation(void)
     // --- client transcript for the HRR path: message_hash(Hash(CH1)) || HRR || CH2 (RFC 8446 §4.4.1) ---
     uint8_t ch1_hash[32];
     pc_sha256_ctx h1;
-    pc_sha256_init(&h1, tw);
+    pc_sha256_init(&h1, tw_h1);
     pc_sha256_update(&h1, ch1, ch1_len);
     pc_sha256_final(&h1, ch1_hash);
 
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw);
+    pc_sha256_init(&tr, tw_tr);
     uint8_t mh[36];
     size_t mhl = pc_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
     TEST_ASSERT_TRUE(mhl > 0);
@@ -917,7 +920,7 @@ static void test_pto_ack_cancels_retransmit(void)
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
     pc_sha256_ctx t;
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, sh, sh_len);
     uint8_t h[32];
@@ -990,7 +993,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
     pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw);
+    pc_sha256_init(&tr, tw_tr);
     pc_sha256_update(&tr, ch, ch_len);
 
     uint8_t rec[320];

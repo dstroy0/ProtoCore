@@ -24,7 +24,8 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_t[4096]; // t works out of its own bytes // test-side working bytes for the crypto entry points
 
 void setUp()
 {
@@ -281,7 +282,7 @@ void test_http3_get_end_to_end()
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx t;
     uint8_t chsh[32], chsf[32];
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, ch, chl);
     pc_sha256_update(&t, sh, shl);
     {

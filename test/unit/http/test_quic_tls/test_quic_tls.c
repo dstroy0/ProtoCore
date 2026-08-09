@@ -21,7 +21,10 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_h[4096]; // h works out of its own bytes
+static uint8_t tw_t[4096]; // t works out of its own bytes
+static uint8_t tw_tt[4096]; // tt works out of its own bytes // test-side working bytes for the crypto entry points
 
 void setUp()
 {
@@ -209,7 +212,7 @@ void test_full_handshake_roundtrip()
 
     pc_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, si, si_len);
     { // snapshot H(CH..SH)
@@ -231,7 +234,7 @@ void test_full_handshake_roundtrip()
 
     // The server Finished (tail of the handshake flight) must verify under the server hs secret.
     uint8_t ch_cv[32]; // H(CH..CertificateVerify) = everything but the trailing 36-byte Finished
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, si, si_len);
     pc_sha256_update(&t, sh_flight, sh_flight_len - 36);
@@ -796,7 +799,7 @@ void test_hybrid_hrr_roundtrip()
     uint8_t ch1_hash[32];
     {
         pc_sha256_ctx h;
-        pc_sha256_init(&h, tw);
+        pc_sha256_init(&h, tw_h);
         pc_sha256_update(&h, ch1, ch1_len);
         pc_sha256_final(&h, ch1_hash);
     }
@@ -804,7 +807,7 @@ void test_hybrid_hrr_roundtrip()
     size_t mhn = pc_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
     pc_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, mh, mhn);
     pc_sha256_update(&t, hrr_saved, hrr_len);
     pc_sha256_update(&t, ch2, ch2_len);
@@ -827,7 +830,7 @@ void test_hybrid_hrr_roundtrip()
     uint8_t ch_cv[32];
     {
         pc_sha256_ctx tt;
-        pc_sha256_init(&tt, tw);
+        pc_sha256_init(&tt, tw_tt);
         pc_sha256_update(&tt, mh, mhn);
         pc_sha256_update(&tt, hrr_saved, hrr_len);
         pc_sha256_update(&tt, ch2, ch2_len);
@@ -918,7 +921,7 @@ void test_hybrid_handshake_roundtrip()
 
     pc_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, si, si_len);
     {
@@ -939,7 +942,7 @@ void test_hybrid_handshake_roundtrip()
 
     // Server Finished verifies, then the server accepts the client Finished.
     uint8_t ch_cv[32];
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, si, si_len);
     pc_sha256_update(&t, sh_flight, sh_flight_len - 36);
