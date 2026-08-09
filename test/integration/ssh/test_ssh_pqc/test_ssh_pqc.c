@@ -188,7 +188,8 @@ void test_hybrid_kex_end_to_end()
     SshSession *s = &ssh_sess[0];
     s->kex_alg = SSH_KEX_MLKEM768_X25519;
     s->hostkey_alg = SSH_HOSTKEY_ED25519;
-    s->cipher_alg = SSH_CIPHER_CHACHA20POLY1305;
+    s->cipher_alg_c2s = SSH_CIPHER_CHACHA20POLY1305;
+    s->cipher_alg_s2c = SSH_CIPHER_CHACHA20POLY1305;
 
     const char *vc = "SSH-2.0-HybridClient";
     strcpy(s->v_c, vc);
@@ -308,7 +309,8 @@ static void prepare_session(SshKexAlg alg)
     pc_ssh_hostkey_ed25519_set(PQC_ED_SEED);
     ssh_sess[0].kex_alg = alg;
     ssh_sess[0].hostkey_alg = SSH_HOSTKEY_ED25519;
-    ssh_sess[0].cipher_alg = SSH_CIPHER_CHACHA20POLY1305;
+    ssh_sess[0].cipher_alg_c2s = SSH_CIPHER_CHACHA20POLY1305;
+    ssh_sess[0].cipher_alg_s2c = SSH_CIPHER_CHACHA20POLY1305;
     ssh_sess[0].v_c_len = 0;
     ssh_sess[0].i_c_len = 0;
     ssh_sess[0].i_s_len = 0;

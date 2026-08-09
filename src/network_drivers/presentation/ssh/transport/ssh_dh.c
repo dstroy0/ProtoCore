@@ -150,17 +150,83 @@ void ssh_kdf_derive(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, co
     pc_secure_wipe(acc, sizeof(acc)); // the cipher key, the IV and both MAC keys pass through here
 }
 
-// One 32-byte derived value (the only size any negotiated cipher key/IV needs today).
-static void derive_key(uint8_t *work, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label,
-                       uint8_t out[PC_SHA256_DIGEST_LEN], proto_bool k_is_string, size_t h_len, size_t sid_len,
-                       proto_bool is512)
+// The KEX values every direction's derivation shares, passed by pointer: this is the deepest call
+// chain in the library, and these would otherwise ride the stack frame by frame.
+typedef struct
 {
-    ssh_kdf_derive(work, K_be, H, session_id, label, out, PC_SHA256_DIGEST_LEN, k_is_string, h_len, sid_len, is512);
+    const uint8_t *K_be;
+    const uint8_t *H;
+    const uint8_t *session_id;
+    size_t h_len;
+    size_t sid_len;
+    proto_bool k_is_string;
+    proto_bool is512;
+} SshKdfInputs;
+
+// One derived value, straight into its destination. Slot @p i owns the working bytes: the KDF runs
+// out of that connection's crypto_work, the region ssh_packet.h reserves for the sec 7.2 KDF.
+static void kdf_into(uint8_t i, const SshKdfInputs *in, char label, uint8_t *out, size_t out_len)
+{
+    ssh_kdf_derive(ssh_pkt[i].crypto_work, in->K_be, in->H, in->session_id, label, out, out_len, in->k_is_string,
+                   in->h_len, in->sid_len, in->is512);
+}
+
+// Install one direction's key material into the connection's own keymat. RFC 4253 sec 7.2 fixes the
+// labels by direction - client to server takes 'A' (IV), 'C' (key) and 'E' (MAC), server to client
+// takes 'B', 'D' and 'F' - and that direction's negotiated cipher decides which of them it needs.
+// Every value is derived into the slot that owns it, so none of it is staged anywhere else.
+static void install_direction(uint8_t i, const SshKdfInputs *in, proto_bool c2s, uint8_t cipher_alg, uint8_t mac_alg)
+{
+    SshKeyMat *km = &ssh_keys[i];
+    char iv_label = 'B';
+    char key_label = 'D';
+    char mac_label = 'F';
+    uint8_t *chacha_key = km->chacha_key_s2c;
+    uint8_t *gcm_ctx = km->gcm_ctx_s2c;
+    uint8_t *aes_key = km->aes_key_s2c;
+    uint8_t *aes_iv = km->aes_iv_s2c;
+    uint8_t *mac_key = km->mac_key_s2c;
+    if (c2s)
+    {
+        iv_label = 'A';
+        key_label = 'C';
+        mac_label = 'E';
+        chacha_key = km->chacha_key_c2s;
+        gcm_ctx = km->gcm_ctx_c2s;
+        aes_key = km->aes_key_c2s;
+        aes_iv = km->aes_iv_c2s;
+        mac_key = km->mac_key_c2s;
+    }
+
+    if (cipher_alg == SSH_CIPHER_CHACHA20POLY1305)
+    {
+        // A 512-bit key (K_main || K_header) from the sec 7.2 extension chain; no IV, no MAC key.
+        kdf_into(i, in, key_label, chacha_key, PC_CHACHAPOLY_KEY_LEN);
+        return;
+    }
+
+    // The IV field takes the leading bytes of the derived stream, which is what the KDF copies.
+    kdf_into(i, in, iv_label, aes_iv, PC_AES256CTR_CTR_LEN);
+
+    if (cipher_alg == SSH_CIPHER_AES256GCM)
+    {
+        // RFC 5647: this mode keeps only the schedule, so the key lands in aes_key - which GCM does not
+        // otherwise use - becomes the keyed context, and is wiped. The nonce is the low 12 IV bytes.
+        kdf_into(i, in, key_label, aes_key, PC_AES256CTR_KEY_LEN);
+        pc_aesgcm_key_init(gcm_ctx, aes_key);
+        pc_secure_wipe(aes_key, PC_AES256CTR_KEY_LEN);
+        return;
+    }
+
+    // aes256-ctr keeps the raw key and the running counter; the schedule is rebuilt per packet in the
+    // shared crypto scratch. It is the only cipher that also needs a separate MAC key.
+    kdf_into(i, in, key_label, aes_key, PC_AES256CTR_KEY_LEN);
+    kdf_into(i, in, mac_label, mac_key, ssh_mac_len(mac_alg));
 }
 
 void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
-                            uint8_t cipher_alg, uint8_t mac_alg, proto_bool k_is_string, size_t h_len, size_t sid_len,
-                            proto_bool is512)
+                            uint8_t cipher_alg_c2s, uint8_t cipher_alg_s2c, uint8_t mac_alg_c2s, uint8_t mac_alg_s2c,
+                            proto_bool k_is_string, size_t h_len, size_t sid_len, proto_bool is512)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -172,91 +238,34 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
     {
         return;
     }
-    uint8_t *work = ssh_pkt[i].crypto_work;
     SshKeyMat *km = &ssh_keys[i];
-    // Rekey lands here with live contexts still in the slot. Release them before cipher_mode is
+    // Rekey lands here with live contexts still in the slot. Release each before its mode is
     // overwritten, after which the outgoing mode is no longer knowable.
-    if (km->active && km->cipher_mode == SSH_CIPHER_AES256GCM)
+    if (km->active && km->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
     {
         pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(km->gcm_ctx_c2s));
+    }
+    if (km->active && km->cipher_mode_s2c == SSH_CIPHER_AES256GCM)
+    {
         pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(km->gcm_ctx_s2c));
     }
-    km->cipher_mode = cipher_alg;
-    km->mac_mode = mac_alg;
+    km->cipher_mode_c2s = cipher_alg_c2s;
+    km->cipher_mode_s2c = cipher_alg_s2c;
+    km->mac_mode_c2s = mac_alg_c2s;
+    km->mac_mode_s2c = mac_alg_s2c;
 
-    if (cipher_alg == SSH_CIPHER_CHACHA20POLY1305)
-    {
-        // chacha20-poly1305@openssh.com: a 512-bit key per direction (labels 'C'/'D'), no IV and
-        // no separate MAC key (the AEAD authenticates). The 64 bytes come from the RFC 4253 §7.2
-        // extension chain (K1 || K2).
-        ssh_kdf_derive(work, K_be, H, session_id, 'C', km->chacha_key_c2s, PC_CHACHAPOLY_KEY_LEN, k_is_string, h_len,
-                       sid_len, is512);
-        ssh_kdf_derive(work, K_be, H, session_id, 'D', km->chacha_key_s2c, PC_CHACHAPOLY_KEY_LEN, k_is_string, h_len,
-                       sid_len, is512);
-        km->active = PROTO_TRUE;
-        return;
-    }
-
-    if (cipher_alg == SSH_CIPHER_AES256GCM)
-    {
-        // aes256-gcm@openssh.com (RFC 5647): a 256-bit key (labels 'C'/'D') and a 96-bit initial IV
-        // (the first 12 bytes of the 'A'/'B' IV material) per direction; no separate MAC key (AEAD).
-        uint8_t iv_c2s[PC_SHA256_DIGEST_LEN];
-        uint8_t iv_s2c[PC_SHA256_DIGEST_LEN];
-        uint8_t key_c2s[32];
-        uint8_t key_s2c[32];
-        derive_key(work, K_be, H, session_id, 'A', iv_c2s, k_is_string, h_len, sid_len,
-                   is512); // IV  C→S (first 12 used)
-        derive_key(work, K_be, H, session_id, 'B', iv_s2c, k_is_string, h_len, sid_len, is512);  // IV  S→C
-        derive_key(work, K_be, H, session_id, 'C', key_c2s, k_is_string, h_len, sid_len, is512); // key C→S
-        derive_key(work, K_be, H, session_id, 'D', key_s2c, k_is_string, h_len, sid_len, is512); // key S→C
-        // Build the keyed contexts now and keep the nonce (GCM nonce = low 12 bytes of the 16-byte IV
-        // field). The raw keys are wiped below and never stored: the context holds the schedule, so unlike
-        // CTR mode this slot ends up with no raw GCM key in it at all.
-        pc_aesgcm_key_init(km->gcm_ctx_c2s, key_c2s);
-        pc_aesgcm_key_init(km->gcm_ctx_s2c, key_s2c);
-        mem.cpy(km->aes_iv_c2s, iv_c2s, sizeof(km->aes_iv_c2s));
-        mem.cpy(km->aes_iv_s2c, iv_s2c, sizeof(km->aes_iv_s2c));
-        pc_secure_wipe(key_c2s, sizeof(key_c2s));
-        pc_secure_wipe(key_s2c, sizeof(key_s2c));
-        pc_secure_wipe(iv_c2s, sizeof(iv_c2s));
-        pc_secure_wipe(iv_s2c, sizeof(iv_s2c));
-        km->active = PROTO_TRUE;
-        return;
-    }
-
-    // aes256-ctr + HMAC-SHA2-256: RFC 4253 §7.2 derives six values, each keyed by a label 'A'..'F'.
-    // The AES contexts need both key and IV at init time, so derive all six values first.
-    uint8_t iv_c2s[PC_SHA256_DIGEST_LEN];
-    uint8_t iv_s2c[PC_SHA256_DIGEST_LEN];
-    uint8_t key_c2s[32];
-    uint8_t key_s2c[32];
-
-    derive_key(work, K_be, H, session_id, 'A', iv_c2s, k_is_string, h_len, sid_len, is512);  // IV  C→S (first 16 used)
-    derive_key(work, K_be, H, session_id, 'B', iv_s2c, k_is_string, h_len, sid_len, is512);  // IV  S→C
-    derive_key(work, K_be, H, session_id, 'C', key_c2s, k_is_string, h_len, sid_len, is512); // cipher key C→S
-    derive_key(work, K_be, H, session_id, 'D', key_s2c, k_is_string, h_len, sid_len, is512); // cipher key S→C
-    uint8_t mlen = ssh_mac_len(mac_alg); // 32 (SHA-256) or 64 (SHA-512)
-    ssh_kdf_derive(work, K_be, H, session_id, 'E', km->mac_key_c2s, mlen, k_is_string, h_len, sid_len,
-                   is512); // MAC C→S
-    ssh_kdf_derive(work, K_be, H, session_id, 'F', km->mac_key_s2c, mlen, k_is_string, h_len, sid_len,
-                   is512); // MAC S→C
-
-    // Store only the raw key + the initial counter (first 16 bytes of the derived IV); the key schedule is
-    // rebuilt per packet in the shared crypto scratch, so no expanded key ever lands in the keymat pool.
-    mem.cpy(km->aes_key_c2s, key_c2s, sizeof(km->aes_key_c2s));
-    mem.cpy(km->aes_key_s2c, key_s2c, sizeof(km->aes_key_s2c));
-    mem.cpy(km->aes_iv_c2s, iv_c2s, sizeof(km->aes_iv_c2s));
-    mem.cpy(km->aes_iv_s2c, iv_s2c, sizeof(km->aes_iv_s2c));
-
-    // Wipe stack temporaries (key material).
-    pc_secure_wipe(key_c2s, sizeof(key_c2s));
-    pc_secure_wipe(key_s2c, sizeof(key_s2c));
-    pc_secure_wipe(iv_c2s, sizeof(iv_c2s));
-    pc_secure_wipe(iv_s2c, sizeof(iv_s2c));
-
+    const SshKdfInputs in = {.K_be = K_be,
+                             .H = H,
+                             .session_id = session_id,
+                             .h_len = h_len,
+                             .sid_len = sid_len,
+                             .k_is_string = k_is_string,
+                             .is512 = is512};
+    install_direction(i, &in, PROTO_TRUE, cipher_alg_c2s, mac_alg_c2s);
+    install_direction(i, &in, PROTO_FALSE, cipher_alg_s2c, mac_alg_s2c);
     km->active = PROTO_TRUE;
 }
+
 
 void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_SHA256_DIGEST_LEN])
 {

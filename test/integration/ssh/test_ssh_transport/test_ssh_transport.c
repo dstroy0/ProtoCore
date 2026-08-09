@@ -289,7 +289,8 @@ void test_kexinit_parse_selects_chacha20poly1305()
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256",
                                     "chacha20-poly1305@openssh.com", "hmac-sha2-256", "none");
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
-    TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_s2c);
 }
 
 // aes256-gcm@openssh.com is a supported AEAD cipher: a client offering only it is accepted and the
@@ -301,13 +302,15 @@ void test_kexinit_parse_selects_aes256gcm()
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256", "aes256-gcm@openssh.com",
                                     "hmac-sha2-256", "none");
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
-    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg_s2c);
 
     // Client preference (RFC 4253 §7.1): the client's first offered cipher we support wins - gcm before ctr.
     n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256", "aes256-gcm@openssh.com,aes256-ctr",
                              "hmac-sha2-256", "none");
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
-    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg_s2c);
 }
 
 // RFC 4253 §7.1: negotiation follows the CLIENT's preference order, not ours. A client that lists
@@ -320,7 +323,8 @@ void test_kexinit_parse_honors_client_cipher_preference()
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256",
                                     "aes256-ctr,chacha20-poly1305@openssh.com", "hmac-sha2-256", "none");
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
-    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_s2c);
 }
 
 // rsa-sha2-512 and rsa-sha2-256 are both backed by the one "ssh-rsa" host key (RFC 8332). The
@@ -384,8 +388,10 @@ void test_kexinit_parse_selects_etm_mac()
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "ssh-ed25519,rsa-sha2-256", "aes256-ctr",
                                     "hmac-sha2-512-etm@openssh.com,hmac-sha2-256", "none");
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
-    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg);
-    TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA512_ETM, ssh_sess[0].mac_alg);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_s2c);
+    TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA512_ETM, ssh_sess[0].mac_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA512_ETM, ssh_sess[0].mac_alg_s2c);
 }
 
 void test_kexinit_parse_rejects_truncated()
@@ -1319,6 +1325,29 @@ void test_banner_and_build_caps()
     TEST_ASSERT_EQUAL_INT(-1, ssh_transport_begin_rekey(0, small, &l, 4)); // inner kexinit_build overflow
 }
 
+// RFC 4253 sec 4.2 bounds the identification string at 255 bytes on the wire with CR and LF counted,
+// so 253 bytes of content are legal and 254 are one too many.
+void test_recv_banner_rfc_length_bound()
+{
+    size_t consumed = 0;
+    static uint8_t line[SSH_VERSION_MAX + 8];
+
+    memcpy(line, "SSH-2.0-", 8);
+    memset(line + 8, 'x', SSH_VERSION_CONTENT_MAX - 8);
+    line[SSH_VERSION_CONTENT_MAX] = '\r';
+    line[SSH_VERSION_CONTENT_MAX + 1] = '\n';
+    ssh_transport_init(0);
+    TEST_ASSERT_EQUAL_INT(1, ssh_transport_recv_banner(0, line, SSH_VERSION_CONTENT_MAX + 2, &consumed));
+    TEST_ASSERT_EQUAL_UINT(SSH_VERSION_CONTENT_MAX, ssh_sess[0].v_c_len);
+
+    // One more byte of content puts the line at 256 on the wire.
+    memset(line + 8, 'x', (SSH_VERSION_CONTENT_MAX + 1) - 8);
+    line[SSH_VERSION_CONTENT_MAX + 1] = '\r';
+    line[SSH_VERSION_CONTENT_MAX + 2] = '\n';
+    ssh_transport_init(0);
+    TEST_ASSERT_EQUAL_INT(-1, ssh_transport_recv_banner(0, line, SSH_VERSION_CONTENT_MAX + 3, &consumed));
+}
+
 // KEXINIT parsing rejects an unusable name-list at every negotiated field, an
 // over-long payload, and truncated / over-claimed name-list fields.
 void test_kexinit_parse_field_and_trunc()
@@ -1422,7 +1451,8 @@ void test_kdf_edge_paths_and_slot_guards()
     ssh_dh_derive_keys_sid(0, K, H, H, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
                            PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
-    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode);
+    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode_c2s);
+    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode_s2c);
 }
 
 // KEXINIT truncated after each name-list boundary is rejected at the corresponding read.
@@ -1490,7 +1520,8 @@ void test_dh_derive_keys_gcm_installs()
     ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                            PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
-    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode);
+    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode_c2s);
+    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode_s2c);
 
     // Independently derive the C->S key ('C') + IV ('A') and the S->C key ('D') + IV ('B').
     uint8_t iv_c[PC_SHA256_DIGEST_LEN];
@@ -1590,8 +1621,8 @@ static void test_cyclonessh_kex_repro(void)
     s->v_c_len = (uint16_t)strlen(vc);
 
     int rc_parse = ssh_kexinit_parse(0, CYCLONE_KEXINIT, sizeof(CYCLONE_KEXINIT));
-    printf("[repro] parse rc=%d kex_alg=%d hostkey_alg=%d cipher=%d\n", rc_parse, (int)s->kex_alg, (int)s->hostkey_alg,
-           (int)s->cipher_alg);
+    printf("[repro] parse rc=%d kex_alg=%d hostkey_alg=%d cipher c2s=%d s2c=%d\n", rc_parse, (int)s->kex_alg,
+           (int)s->hostkey_alg, (int)s->cipher_alg_c2s, (int)s->cipher_alg_s2c);
     TEST_ASSERT_EQUAL_INT(0, rc_parse);
 
     uint8_t isbuf[PC_SSH_KEXINIT_S_MAX];
@@ -1629,10 +1660,9 @@ void test_hostkey_ecdsa_set_rejects_invalid_scalar()
     TEST_ASSERT_EQUAL(before, pc_ssh_hostkey_ecdsa_available());
 }
 
-// RFC 4253 §7.1 negotiates each direction independently, but this server runs one cipher and one MAC
-// for both: a client whose two directions land on different algorithms is rejected rather than keyed
-// asymmetrically. Both lists here negotiate cleanly on their own - only the mismatch fails.
-void test_kexinit_parse_rejects_direction_mismatch()
+// RFC 4253 sec 7.1 negotiates the two cipher lists and the two MAC lists independently, so a client
+// offering different algorithms per direction is keyed asymmetrically rather than rejected.
+void test_kexinit_parse_negotiates_each_direction()
 {
     ssh_transport_init(0);
     uint8_t buf[512];
@@ -1640,16 +1670,22 @@ void test_kexinit_parse_rejects_direction_mismatch()
     const char *H = "rsa-sha2-256";
     const char *P = "none";
 
+    // aes256-ctr inbound, chacha20-poly1305 outbound: the c2s direction keeps its MAC, and the AEAD
+    // direction ignores its MAC list entirely.
     const char *cipher_split[8] = {
         K, H, "aes256-ctr", "chacha20-poly1305@openssh.com", "hmac-sha2-256", "hmac-sha2-256", P, P};
     size_t n = build_kexinit8(buf, cipher_split);
-    TEST_ASSERT_EQUAL_INT(-1, ssh_kexinit_parse(0, buf, n));
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_s2c);
 
-    // Same cipher both ways (aes256-ctr, so a separate MAC IS negotiated) but a different MAC per
-    // direction.
+    // Same cipher both ways (aes256-ctr, so a MAC IS negotiated) with a different MAC per direction.
+    ssh_transport_init(0);
     const char *mac_split[8] = {K, H, "aes256-ctr", "aes256-ctr", "hmac-sha2-256", "hmac-sha2-512", P, P};
     n = build_kexinit8(buf, mac_split);
-    TEST_ASSERT_EQUAL_INT(-1, ssh_kexinit_parse(0, buf, n));
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
+    TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA256, ssh_sess[0].mac_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA512, ssh_sess[0].mac_alg_s2c);
 }
 
 // Both AEAD ciphers carry their own integrity tag, so with chacha20-poly1305 negotiated the MAC
@@ -1669,7 +1705,8 @@ void test_kexinit_parse_aead_ignores_mac_lists()
                            "none"};
     size_t n = build_kexinit8(buf, rows);
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
-    TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_s2c);
 }
 
 // Name-list matching (RFC 4253 §7.1) compares whole elements: a name that is exactly as long as one
@@ -1687,7 +1724,8 @@ void test_kexinit_parse_same_length_names_do_not_match()
     const char *rows[8] = {K, H, "aes256-abc,aes256-ctr", "aes256-abc,aes256-ctr", M, M, "zlib,none", "zlib,none"};
     size_t n = build_kexinit8(buf, rows);
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
-    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_c2s);
+    TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_s2c);
 
     // A c2s compression list holding only the impostor offers no "none": rejected.
     const char *nocomp[8] = {K, H, "aes256-ctr", "aes256-ctr", M, M, "zlib", "none"};
@@ -1890,6 +1928,7 @@ int main()
     RUN_TEST(test_kexdh_handle_ecdsa_hostkey_absent_fails);
     RUN_TEST(test_transport_index_guards);
     RUN_TEST(test_banner_and_build_caps);
+    RUN_TEST(test_recv_banner_rfc_length_bound);
     RUN_TEST(test_kexinit_parse_field_and_trunc);
     RUN_TEST(test_kexdh_parse_and_handle_errors);
     RUN_TEST(test_server_banner_format);
@@ -1936,7 +1975,7 @@ int main()
     RUN_TEST(test_ssh_transport_more_guards);
     RUN_TEST(test_dh_derive_keys_gcm_installs);
     RUN_TEST(test_kdf_string_k_hybrid);
-    RUN_TEST(test_kexinit_parse_rejects_direction_mismatch);
+    RUN_TEST(test_kexinit_parse_negotiates_each_direction);
     RUN_TEST(test_kexinit_parse_aead_ignores_mac_lists);
     RUN_TEST(test_kexinit_parse_same_length_names_do_not_match);
     RUN_TEST(test_extinfo_build_modern_first_order);

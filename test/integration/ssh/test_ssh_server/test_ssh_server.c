@@ -985,8 +985,10 @@ static void pkt_loopback_keys(uint8_t cipher_mode, uint8_t mac_mode, proto_bool 
     ssh_pkt[0].enc_out = PROTO_TRUE;
     ssh_pkt[0].enc_in = PROTO_TRUE;
     memset(&ssh_keys[0], 0, sizeof(ssh_keys[0]));
-    ssh_keys[0].cipher_mode = cipher_mode;
-    ssh_keys[0].mac_mode = mac_mode;
+    ssh_keys[0].cipher_mode_c2s = cipher_mode;
+    ssh_keys[0].cipher_mode_s2c = cipher_mode;
+    ssh_keys[0].mac_mode_c2s = mac_mode;
+    ssh_keys[0].mac_mode_s2c = mac_mode;
     memcpy(ssh_keys[0].chacha_key_c2s, key, PC_CHACHAPOLY_KEY_LEN);
     memcpy(ssh_keys[0].chacha_key_s2c, key, PC_CHACHAPOLY_KEY_LEN);
     // aes256-gcm reuses aes_key_*/aes_iv_* installed by the aes256-ctr memcpy below (mode-exclusive).

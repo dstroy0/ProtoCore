@@ -454,7 +454,7 @@ int ssh_transport_recv_banner(uint8_t i, const uint8_t *data, size_t len, size_t
             // identification string; only the line starting with "SSH-" counts.
             if (n >= 4 && mem.cmp(s->banner_buf, "SSH-", 4) == 0)
             {
-                if (n >= SSH_VERSION_MAX)
+                if (n > SSH_VERSION_CONTENT_MAX)
                 {
                     return -1;
                 }
@@ -671,25 +671,28 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (!negotiate_alg(list, nlen, cc, 3, &s2c) || s2c != c2s) // require the same cipher both directions
+    if (!negotiate_alg(list, nlen, cc, 3, &s2c))
     {
         return -1;
     }
-    s->cipher_alg = c2s;
+    s->cipher_alg_c2s = (uint8_t)c2s;
+    s->cipher_alg_s2c = (uint8_t)s2c;
     // mac c2s / s2c: negotiated only for aes256-ctr (both AEAD ciphers carry their own MAC). Prefer
     // the encrypt-then-MAC variants (OpenSSH's default), require the same MAC both directions.
     const AlgCand mc[4] = {{"hmac-sha2-256-etm@openssh.com", SSH_MAC_HMAC_SHA256_ETM, PROTO_TRUE},
                            {"hmac-sha2-512-etm@openssh.com", SSH_MAC_HMAC_SHA512_ETM, PROTO_TRUE},
                            {ALG_MAC, SSH_MAC_HMAC_SHA256, PROTO_TRUE},
                            {"hmac-sha2-512", SSH_MAC_HMAC_SHA512, PROTO_TRUE}};
-    proto_bool need_mac = (s->cipher_alg == SSH_CIPHER_AES256CTR);
+    // A MAC is negotiated only for the direction that runs aes256-ctr; both AEAD ciphers carry their own.
+    proto_bool need_mac_c2s = (s->cipher_alg_c2s == SSH_CIPHER_AES256CTR);
+    proto_bool need_mac_s2c = (s->cipher_alg_s2c == SSH_CIPHER_AES256CTR);
     int m_c2s = SSH_MAC_HMAC_SHA256;
     int m_s2c = SSH_MAC_HMAC_SHA256;
     if (!pc_rd_str(payload, len, &off, &list, &nlen))
     {
         return -1;
     }
-    if (need_mac && !negotiate_alg(list, nlen, mc, 4, &m_c2s))
+    if (need_mac_c2s && !negotiate_alg(list, nlen, mc, 4, &m_c2s))
     {
         return -1;
     }
@@ -697,11 +700,12 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (need_mac && (!negotiate_alg(list, nlen, mc, 4, &m_s2c) || m_s2c != m_c2s))
+    if (need_mac_s2c && !negotiate_alg(list, nlen, mc, 4, &m_s2c))
     {
         return -1;
     }
-    s->mac_alg = m_c2s;
+    s->mac_alg_c2s = (uint8_t)m_c2s;
+    s->mac_alg_s2c = (uint8_t)m_s2c;
     // compression c2s + s2c: negotiate zlib@openssh.com > zlib > none per direction. c2s: the client
     // compresses, we inflate (ssh_inflate); s2c: we compress, the client inflates (ssh_zlib).
 #if PC_ENABLE_SSH_ZLIB
@@ -1423,7 +1427,8 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
         pc_secure_wipe(k_be, sizeof(k_be));
         return -1;
     }
-    ssh_dh_derive_keys_sid(i, k_be, H, s->session_id, s->cipher_alg, s->mac_alg, k_is_string, h_len, s->session_id_len,
+    ssh_dh_derive_keys_sid(i, k_be, H, s->session_id, s->cipher_alg_c2s, s->cipher_alg_s2c, s->mac_alg_c2s,
+                           s->mac_alg_s2c, k_is_string, h_len, s->session_id_len,
                            is512);
     pc_secure_wipe(k_be, sizeof(k_be));
 
