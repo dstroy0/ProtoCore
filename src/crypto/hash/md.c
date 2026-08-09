@@ -265,14 +265,14 @@ void pc_md4_final(struct MdCtx *c, uint8_t out[16])
     md_finish(c, out, pc_md4_compress);
 }
 
-void md5(const uint8_t *data, size_t len, uint8_t out[16])
+void pc_md5(const uint8_t *data, size_t len, uint8_t out[16])
 {
     struct MdCtx c;
     pc_md5_init(&c);
     pc_md5_update(&c, data, len);
     pc_md5_final(&c, out);
 }
-void md4(const uint8_t *data, size_t len, uint8_t out[16])
+void pc_md4(const uint8_t *data, size_t len, uint8_t out[16])
 {
     struct MdCtx c;
     pc_md4_init(&c);
@@ -288,7 +288,7 @@ void pc_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t 
     mem.set(k, 0, sizeof(k));
     if (key_len > 64)
     {
-        md5(key, key_len, k); // keys longer than the block are hashed down (leaves 16 bytes, rest zero)
+        pc_md5(key, key_len, k); // keys longer than the block are hashed down (leaves 16 bytes, rest zero)
     }
     else
     {

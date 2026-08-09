@@ -48,16 +48,16 @@ void pc_keccak_absorb(KeccakCtx *c, uint32_t rate, const uint8_t *in, size_t inl
 void pc_keccak_squeeze(KeccakCtx *c, uint8_t *out, size_t outlen);
 
 /// SHA3-256 one-shot: 32-octet digest of @p in.
-void sha3_256(uint8_t out[32], const uint8_t *in, size_t inlen);
+void pc_sha3_256(uint8_t out[32], const uint8_t *in, size_t inlen);
 
 /// SHA3-512 one-shot: 64-octet digest of @p in.
-void sha3_512(uint8_t out[64], const uint8_t *in, size_t inlen);
+void pc_sha3_512(uint8_t out[64], const uint8_t *in, size_t inlen);
 
 /// SHAKE128 one-shot: @p outlen octets from @p in.
-void shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
+void pc_shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
 
 /// SHAKE256 one-shot: @p outlen octets from @p in.
-void shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
+void pc_shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
 
 /// Begin an incremental SHAKE128 XOF over @p in; pull output with pc_keccak_squeeze(@p c, ...).
 void pc_shake128_absorb(KeccakCtx *c, const uint8_t *in, size_t inlen);

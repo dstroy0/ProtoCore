@@ -41,7 +41,7 @@ static void check_md5(const char *msg, const char *expect)
 {
     uint8_t d[16];
     char hex[33];
-    md5((const uint8_t *)msg, strlen(msg), d);
+    pc_md5((const uint8_t *)msg, strlen(msg), d);
     to_hex(d, hex);
     TEST_ASSERT_EQUAL_STRING(expect, hex);
 }
@@ -49,7 +49,7 @@ static void check_md4(const char *msg, const char *expect)
 {
     uint8_t d[16];
     char hex[33];
-    md4((const uint8_t *)msg, strlen(msg), d);
+    pc_md4((const uint8_t *)msg, strlen(msg), d);
     to_hex(d, hex);
     TEST_ASSERT_EQUAL_STRING(expect, hex);
 }
@@ -158,7 +158,7 @@ void test_streaming_equals_oneshot()
     const char *s = "The quick brown fox jumps over the lazy dog";
     size_t n = strlen(s);
     uint8_t one[16], strm[16];
-    md5((const uint8_t *)s, n, one);
+    pc_md5((const uint8_t *)s, n, one);
     size_t mark = pc_secure_mark();
     struct MdCtx *c = pc_md_wants(); // the owner of the opaque type supplies the storage
     TEST_ASSERT_NOT_NULL(c);
@@ -183,7 +183,7 @@ void test_nt_hash()
     }
     uint8_t nt[16];
     char hex[33];
-    md4(utf16, sizeof(utf16), nt);
+    pc_md4(utf16, sizeof(utf16), nt);
     to_hex(nt, hex);
     TEST_ASSERT_EQUAL_STRING("8846f7eaee8fb117ad06bdd830b7586c", hex); // the well-known NT hash of "password"
 }
