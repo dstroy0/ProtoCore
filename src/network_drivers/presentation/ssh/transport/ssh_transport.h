@@ -48,6 +48,9 @@ PROTO_BEGIN_DECLS
 /** @brief Max stored length of an SSH identification string (RFC 4253 §4.2: 255). */
 #define SSH_VERSION_MAX 256
 
+/** @brief Longest identification string RFC 4253 sec 4.2 admits: 255 on the wire, CR and LF counted. */
+#define SSH_VERSION_CONTENT_MAX 253
+
 /** @brief Max stored size of our own KEXINIT (I_S). Sized for the full advertised suite: the
  *  kex list (mlkem + dh + ecdh-nistp256 + curve25519 x2 + ext-info-s), all three host-key types,
  *  the cipher (chacha + 2x aes) and MAC (2x etm + 2x plain) lists, and zlib s2c compression
@@ -111,10 +114,14 @@ typedef struct
 
     SshKexAlg kex_alg;         ///< negotiated in KEXINIT.
     SshHostkeyAlg hostkey_alg; ///< negotiated in KEXINIT.
-    uint8_t cipher_alg;        ///< SSH_CIPHER_* negotiated in KEXINIT (0 = aes256-ctr).
-    uint8_t mac_alg;           ///< SSH_MAC_* negotiated in KEXINIT (aes cipher only; 0 = hmac-sha2-256).
-    uint8_t ecdh_sk[32];       ///< Server X25519 ephemeral private (curve25519 KEX only; wiped after).
-    uint8_t ecdh_pk[32];       ///< Server X25519 ephemeral public (curve25519 KEX only).
+    // RFC 4253 sec 7.1 negotiates each direction's cipher and MAC from its own name-list, so the two
+    // directions may differ and are kept apart from KEXINIT through to key install.
+    uint8_t cipher_alg_c2s; ///< SSH_CIPHER_* client-to-server.
+    uint8_t cipher_alg_s2c; ///< SSH_CIPHER_* server-to-client.
+    uint8_t mac_alg_c2s;    ///< SSH_MAC_* client-to-server (aes cipher only; 0 = hmac-sha2-256).
+    uint8_t mac_alg_s2c;    ///< SSH_MAC_* server-to-client (aes cipher only; 0 = hmac-sha2-256).
+    uint8_t ecdh_sk[32];    ///< Server X25519 ephemeral private (curve25519 KEX only; wiped after).
+    uint8_t ecdh_pk[32];    ///< Server X25519 ephemeral public (curve25519 KEX only).
 
     char v_c[SSH_VERSION_MAX]; ///< Client identification string (no CR LF).
     uint16_t v_c_len;          ///< Length of v_c.

@@ -104,7 +104,7 @@
 
 // These two are anonymous enums: the constants are what the code names, and the negotiated value
 // travels as a uint8_t through ssh_dh_derive_keys_sid, ssh_mac_is_etm, ssh_mac_len, and the
-// cipher_alg / mac_mode session fields.
+// per-direction cipher_mode_* / mac_mode_* session fields.
 
 /** @brief Negotiated bulk cipher for a session. */
 enum
@@ -176,9 +176,12 @@ typedef struct
 
     uint8_t mac_key_c2s[64]; ///< HMAC key, client-to-server (aes mode); 32 bytes for SHA-256, 64 for SHA-512.
     uint8_t mac_key_s2c[64]; ///< HMAC key, server-to-client (aes mode).
-    uint8_t mac_mode;        ///< SSH_MAC_* selected for the aes256-ctr cipher (0 = hmac-sha2-256 E&M).
-
-    uint8_t cipher_mode; ///< SSH_CIPHER_* selected for this session (0 = aes256-ctr).
+    // RFC 4253 sec 7.1 negotiates the cipher and the MAC per direction, so each is stored per direction
+    // and a session may run different ones each way (0 = aes256-ctr / hmac-sha2-256 E&M).
+    uint8_t mac_mode_c2s;    ///< SSH_MAC_* client-to-server (aes256-ctr only).
+    uint8_t mac_mode_s2c;    ///< SSH_MAC_* server-to-client (aes256-ctr only).
+    uint8_t cipher_mode_c2s; ///< SSH_CIPHER_* client-to-server.
+    uint8_t cipher_mode_s2c; ///< SSH_CIPHER_* server-to-client.
     // chacha20-poly1305@openssh.com: 512-bit key per direction (K_main || K_header); no IV, no MAC key.
     uint8_t chacha_key_c2s[PC_CHACHAPOLY_KEY_LEN]; ///< client-to-server, used only in chacha mode.
     uint8_t chacha_key_s2c[PC_CHACHAPOLY_KEY_LEN]; ///< server-to-client, used only in chacha mode.
@@ -250,9 +253,13 @@ static inline void ssh_keymat_wipe(uint8_t i)
     {
         // A keyed GCM context owns a vendor allocation (mbedtls_gcm_setkey sets up a cipher context), so
         // zeroing the bytes would leak it once per closed connection. Release first, then wipe.
-        if (ssh_keys[i].active && ssh_keys[i].cipher_mode == SSH_CIPHER_AES256GCM)
+        // Each direction owns its context, and only the direction that negotiated GCM stood one up.
+        if (ssh_keys[i].active && ssh_keys[i].cipher_mode_c2s == SSH_CIPHER_AES256GCM)
         {
             pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_c2s));
+        }
+        if (ssh_keys[i].active && ssh_keys[i].cipher_mode_s2c == SSH_CIPHER_AES256GCM)
+        {
             pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_s2c));
         }
         pc_secure_wipe(&ssh_keys[i], sizeof(SshKeyMat));

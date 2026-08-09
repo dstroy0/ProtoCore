@@ -1009,7 +1009,8 @@ static void test_pkt_chacha20poly1305_roundtrip(void)
     // (server encrypts with the s2c key) round-trips through ssh_pkt_recv() (decrypts with c2s).
     ssh_keymat_wipe(0);
     SshKeyMat *km = &ssh_keys[0];
-    km->cipher_mode = SSH_CIPHER_CHACHA20POLY1305;
+    km->cipher_mode_c2s = SSH_CIPHER_CHACHA20POLY1305;
+    km->cipher_mode_s2c = SSH_CIPHER_CHACHA20POLY1305;
     for (int i = 0; i < PC_CHACHAPOLY_KEY_LEN; i++)
     {
         km->chacha_key_c2s[i] = (uint8_t)(i * 3 + 1);
@@ -1053,7 +1054,8 @@ static void test_pkt_aes256gcm_roundtrip(void)
     // (server seals with the s2c context) round-trips through ssh_pkt_recv (opens with c2s).
     ssh_keymat_wipe(0);
     SshKeyMat *km = &ssh_keys[0];
-    km->cipher_mode = SSH_CIPHER_AES256GCM;
+    km->cipher_mode_c2s = SSH_CIPHER_AES256GCM;
+    km->cipher_mode_s2c = SSH_CIPHER_AES256GCM;
     uint8_t key[32], iv[12];
     for (int i = 0; i < 32; i++)
     {
@@ -1114,8 +1116,10 @@ static void etm_roundtrip_helper(uint8_t mac_mode)
 {
     ssh_keymat_wipe(0);
     SshKeyMat *km = &ssh_keys[0];
-    km->cipher_mode = SSH_CIPHER_AES256CTR;
-    km->mac_mode = mac_mode;
+    km->cipher_mode_c2s = SSH_CIPHER_AES256CTR;
+    km->cipher_mode_s2c = SSH_CIPHER_AES256CTR;
+    km->mac_mode_c2s = mac_mode;
+    km->mac_mode_s2c = mac_mode;
     uint8_t key[32], iv[16];
     for (int i = 0; i < 32; i++)
     {
@@ -1372,7 +1376,8 @@ static void test_pkt_chacha_padding_and_incomplete(void)
 {
     ssh_keymat_wipe(0);
     SshKeyMat *km = &ssh_keys[0];
-    km->cipher_mode = SSH_CIPHER_CHACHA20POLY1305;
+    km->cipher_mode_c2s = SSH_CIPHER_CHACHA20POLY1305;
+    km->cipher_mode_s2c = SSH_CIPHER_CHACHA20POLY1305;
     for (int i = 0; i < PC_CHACHAPOLY_KEY_LEN; i++)
     {
         km->chacha_key_c2s[i] = km->chacha_key_s2c[i] = (uint8_t)(i * 3 + 1);
@@ -1405,8 +1410,10 @@ static void test_pkt_etm_padding_and_incomplete(void)
 {
     ssh_keymat_wipe(0);
     SshKeyMat *km = &ssh_keys[0];
-    km->cipher_mode = SSH_CIPHER_AES256CTR;
-    km->mac_mode = SSH_MAC_HMAC_SHA256_ETM;
+    km->cipher_mode_c2s = SSH_CIPHER_AES256CTR;
+    km->cipher_mode_s2c = SSH_CIPHER_AES256CTR;
+    km->mac_mode_c2s = SSH_MAC_HMAC_SHA256_ETM;
+    km->mac_mode_s2c = SSH_MAC_HMAC_SHA256_ETM;
     uint8_t key[32], iv[16];
     for (int i = 0; i < 32; i++)
     {
@@ -1482,7 +1489,8 @@ static size_t forge_chacha(SshKeyMat *km, uint32_t seq, uint32_t pkt_len, uint8_
 static void chacha_recv_setup(SshKeyMat *km)
 {
     ssh_keymat_wipe(0);
-    km->cipher_mode = SSH_CIPHER_CHACHA20POLY1305;
+    km->cipher_mode_c2s = SSH_CIPHER_CHACHA20POLY1305;
+    km->cipher_mode_s2c = SSH_CIPHER_CHACHA20POLY1305;
     for (int i = 0; i < PC_CHACHAPOLY_KEY_LEN; i++)
     {
         km->chacha_key_c2s[i] = km->chacha_key_s2c[i] = (uint8_t)(i * 3 + 1);
@@ -1521,8 +1529,10 @@ static void test_pkt_etm_bad_length(void)
 {
     ssh_keymat_wipe(0);
     SshKeyMat *km = &ssh_keys[0];
-    km->cipher_mode = SSH_CIPHER_AES256CTR;
-    km->mac_mode = SSH_MAC_HMAC_SHA256_ETM;
+    km->cipher_mode_c2s = SSH_CIPHER_AES256CTR;
+    km->cipher_mode_s2c = SSH_CIPHER_AES256CTR;
+    km->mac_mode_c2s = SSH_MAC_HMAC_SHA256_ETM;
+    km->mac_mode_s2c = SSH_MAC_HMAC_SHA256_ETM;
     uint8_t key[32] = {0}, iv[16] = {0};
     memcpy(km->aes_key_c2s, key, PC_AES256CTR_KEY_LEN);
     memcpy(km->aes_iv_c2s, iv, PC_AES256CTR_CTR_LEN);
@@ -1537,8 +1547,10 @@ static void test_pkt_etm_bad_length(void)
 static void etm_recv_setup(SshKeyMat *km, uint8_t *key, uint8_t *iv)
 {
     ssh_keymat_wipe(0);
-    km->cipher_mode = SSH_CIPHER_AES256CTR;
-    km->mac_mode = SSH_MAC_HMAC_SHA256_ETM;
+    km->cipher_mode_c2s = SSH_CIPHER_AES256CTR;
+    km->cipher_mode_s2c = SSH_CIPHER_AES256CTR;
+    km->mac_mode_c2s = SSH_MAC_HMAC_SHA256_ETM;
+    km->mac_mode_s2c = SSH_MAC_HMAC_SHA256_ETM;
     for (int i = 0; i < 32; i++)
     {
         key[i] = (uint8_t)(i + 1);

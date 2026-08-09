@@ -235,6 +235,40 @@ static inline const uint8_t *km_recv_mac(const SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->mac_key_s2c : km->mac_key_c2s;
 }
+// The cipher and the MAC are negotiated per direction (RFC 4253 sec 7.1), so the mode travels with the
+// key set: what we send under, and what we expect to receive under.
+static inline uint8_t km_send_cipher(const SshKeyMat *km, proto_bool cli)
+{
+    if (cli)
+    {
+        return km->cipher_mode_c2s;
+    }
+    return km->cipher_mode_s2c;
+}
+static inline uint8_t km_recv_cipher(const SshKeyMat *km, proto_bool cli)
+{
+    if (cli)
+    {
+        return km->cipher_mode_s2c;
+    }
+    return km->cipher_mode_c2s;
+}
+static inline uint8_t km_send_mac_mode(const SshKeyMat *km, proto_bool cli)
+{
+    if (cli)
+    {
+        return km->mac_mode_c2s;
+    }
+    return km->mac_mode_s2c;
+}
+static inline uint8_t km_recv_mac_mode(const SshKeyMat *km, proto_bool cli)
+{
+    if (cli)
+    {
+        return km->mac_mode_s2c;
+    }
+    return km->mac_mode_c2s;
+}
 
 // ---------------------------------------------------------------------------
 // Send
@@ -290,9 +324,12 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     //   aes GCM   : block 16, base = padding_length + payload   (RFC 5647 sec 7.3)
     //   aes ETM   : block 16, base = padding_length + payload
     //   aes E&M / plaintext : block 16, base = length + padding_length + payload  (compute_padding)
-    proto_bool chacha = s->enc_out && km->cipher_mode == SSH_CIPHER_CHACHA20POLY1305;
-    proto_bool gcm = s->enc_out && km->cipher_mode == SSH_CIPHER_AES256GCM;
-    proto_bool etm = s->enc_out && km->cipher_mode == SSH_CIPHER_AES256CTR && ssh_mac_is_etm(km->mac_mode);
+    const proto_bool cli = s->is_client; // send direction: client uses c2s, server uses s2c
+    const uint8_t send_cipher = km_send_cipher(km, cli);
+    const uint8_t send_mac_mode = km_send_mac_mode(km, cli);
+    proto_bool chacha = s->enc_out && send_cipher == SSH_CIPHER_CHACHA20POLY1305;
+    proto_bool gcm = s->enc_out && send_cipher == SSH_CIPHER_AES256GCM;
+    proto_bool etm = s->enc_out && send_cipher == SSH_CIPHER_AES256CTR && ssh_mac_is_etm(send_mac_mode);
     size_t pad_len;
     size_t tag_len;
     if (chacha)
@@ -323,12 +360,12 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
         {
             pad_len += 16;
         }
-        tag_len = ssh_mac_len(km->mac_mode);
+        tag_len = ssh_mac_len(send_mac_mode);
     }
     else
     {
         pad_len = compute_padding(payload_len);
-        tag_len = s->enc_out ? ssh_mac_len(km->mac_mode) : 0;
+        tag_len = s->enc_out ? ssh_mac_len(send_mac_mode) : 0;
     }
     size_t pkt_len = 1 + payload_len + pad_len; // padding_length + payload + padding
     size_t wire_len = 4 + pkt_len + tag_len;
@@ -345,7 +382,6 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     mem.cpy(out + 5, payload, payload_len);       // payload
     pc_rand_fill(out + 5 + payload_len, pad_len); // random padding
 
-    const proto_bool cli = s->is_client; // send direction: client uses c2s, server uses s2c
     if (chacha)
     {
         // Encrypt length (header key) + payload (main key) and append the Poly1305 tag.
@@ -364,14 +400,14 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     {
         // Encrypt-then-MAC: length stays in clear; encrypt the payload, then MAC over (length||ct).
         pc_aes256ctr_crypt(km_send_aes_key(km, cli), km_send_aes_iv(km, cli), out + 4, out + 4, pkt_len);
-        compute_mac_mode(km->mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len,
+        compute_mac_mode(send_mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len,
                          out + 4 + pkt_len);
     }
     else if (s->enc_out)
     {
         // Encrypt-and-MAC: MAC over plaintext (seq || unencrypted packet), then AES-256-CTR.
         uint8_t mac[64];
-        compute_mac_mode(km->mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len, mac);
+        compute_mac_mode(send_mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len, mac);
         pc_aes256ctr_crypt(km_send_aes_key(km, cli), km_send_aes_iv(km, cli), out, out, 4 + pkt_len);
         mem.cpy(out + 4 + pkt_len, mac, tag_len);
         pc_secure_wipe(mac, sizeof(mac));
@@ -580,7 +616,8 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     // aes256-ctr + encrypt-then-MAC: the 4-byte packet_length is sent in the clear, and the
     // MAC is verified over (length || ciphertext) BEFORE anything is decrypted.
     uint32_t pkt_len = read_u32_be(s->rx_buf);
-    size_t mac_tag = ssh_mac_len(km->mac_mode);
+    const uint8_t recv_mac_mode = km_recv_mac_mode(km, s->is_client);
+    size_t mac_tag = ssh_mac_len(recv_mac_mode);
     // The encrypted portion (pkt_len) must be a positive whole number of AES blocks.
     if (pkt_len < 1 || pkt_len > SSH_PKT_BUF_SIZE - 4 || (pkt_len % 16) != 0)
     {
@@ -597,7 +634,7 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     }
 
     uint8_t expected_mac[64];
-    compute_mac_mode(km->mac_mode, s->mac_work, km_recv_mac(km, s->is_client), s->seq_no_recv, s->rx_buf, 4 + pkt_len,
+    compute_mac_mode(recv_mac_mode, s->mac_work, km_recv_mac(km, s->is_client), s->seq_no_recv, s->rx_buf, 4 + pkt_len,
                      expected_mac);
     if (!pc_ct_eq(expected_mac, s->rx_buf + 4 + pkt_len, mac_tag))
     {
@@ -681,7 +718,8 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
         return -1;
     }
 
-    size_t mac_tag = ssh_mac_len(km->mac_mode);
+    const uint8_t recv_mac_mode = km_recv_mac_mode(km, s->is_client);
+    size_t mac_tag = ssh_mac_len(recv_mac_mode);
     size_t wire_need = enc_len + mac_tag;
     if (s->rx_len < wire_need)
     {
@@ -712,7 +750,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // Verify MAC over seq_no || plaintext(scratch[0..enc_len)).
     const uint8_t *rx_mac = s->rx_buf + enc_len; // MAC is sent in clear
     uint8_t expected_mac[64];
-    compute_mac_mode(km->mac_mode, s->mac_work, km_recv_mac(km, s->is_client), s->seq_no_recv, scratch, enc_len,
+    compute_mac_mode(recv_mac_mode, s->mac_work, km_recv_mac(km, s->is_client), s->seq_no_recv, scratch, enc_len,
                      expected_mac);
 
     if (!pc_ct_eq(expected_mac, rx_mac, mac_tag))
@@ -787,7 +825,8 @@ static int ssh_recv_plain(uint8_t i, SshPacketState *s, const SshKeyMat *km, ssh
     s->seq_no_recv++;
 
     uint8_t pad_len_byte = s->rx_buf[4];
-    if (pad_len_byte >= pkt_len)
+    // RFC 4253 sec 6: at least four bytes of padding, the same bound the four encrypted paths hold.
+    if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
         return -1;
     }
@@ -842,15 +881,16 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
         while (s->rx_len >= 4)
         {
             int r = 0;
-            if (s->enc_in && km->cipher_mode == SSH_CIPHER_CHACHA20POLY1305)
+            const uint8_t recv_cipher = km_recv_cipher(km, s->is_client);
+            if (s->enc_in && recv_cipher == SSH_CIPHER_CHACHA20POLY1305)
             {
                 r = ssh_recv_chachapoly(i, s, km, handler);
             }
-            else if (s->enc_in && km->cipher_mode == SSH_CIPHER_AES256GCM)
+            else if (s->enc_in && recv_cipher == SSH_CIPHER_AES256GCM)
             {
                 r = ssh_recv_aesgcm(i, s, km, handler);
             }
-            else if (s->enc_in && ssh_mac_is_etm(km->mac_mode))
+            else if (s->enc_in && ssh_mac_is_etm(km_recv_mac_mode(km, s->is_client)))
             {
                 r = ssh_recv_ctr_etm(i, s, km, handler);
             }

@@ -106,14 +106,18 @@ void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_S
  * @param K_be        Shared secret K, big-endian, 256 bytes.
  * @param H           Current exchange hash, 32 bytes.
  * @param session_id  Session id (H of the first KEX), 32 bytes.
+ * @param cipher_alg_c2s SSH_CIPHER_* for the client-to-server direction.
+ * @param cipher_alg_s2c SSH_CIPHER_* for the server-to-client direction.
+ * @param mac_alg_c2s SSH_MAC_* for the client-to-server direction (aes256-ctr only).
+ * @param mac_alg_s2c SSH_MAC_* for the server-to-client direction (aes256-ctr only).
  * @param k_is_string Encode K as a plain SSH string (hybrid KEX) instead of an mpint (classical).
  * @param h_len       Length of @p H.
  * @param sid_len     Length of @p session_id.
  * @param is512       Hash with SHA-512 instead of SHA-256.
  */
 void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
-                            uint8_t cipher_alg, uint8_t mac_alg, proto_bool k_is_string, size_t h_len, size_t sid_len,
-                            proto_bool is512);
+                            uint8_t cipher_alg_c2s, uint8_t cipher_alg_s2c, uint8_t mac_alg_c2s, uint8_t mac_alg_s2c,
+                            proto_bool k_is_string, size_t h_len, size_t sid_len, proto_bool is512);
 
 /** @brief Max bytes ssh_kdf_derive() can produce (4 SHA-256 blocks). */
 #define SSH_KDF_MAX (4 * PC_SHA256_DIGEST_LEN)
