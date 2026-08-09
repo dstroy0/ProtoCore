@@ -26,6 +26,7 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/hash/sha512.h"
+#include "mmgr/secure.h" // pc_secure_wipe
 #ifdef PC_FE25519_MPI_HW
 #include "crypto/asymmetric/ed25519_comb_table.h" // fixed-base comb ED_COMB[i][j] = (j+1)*256^i*B; drives the MODMULT sign
 #endif
@@ -642,6 +643,13 @@ void pc_ed25519_sign(uint8_t *work, uint8_t sig[64], const uint8_t *msg, size_t 
         }
     }
     ed_modL(sig + 32, x); // sig[32..63] = S
+
+    // d[0..31] the secret scalar, d[32..63] the nonce prefix, r the nonce, h the challenge, x the S
+    // accumulator.
+    pc_secure_wipe(d, sizeof(d));
+    pc_secure_wipe(r, sizeof(r));
+    pc_secure_wipe(h, sizeof(h));
+    pc_secure_wipe(x, sizeof(x));
 }
 
 proto_bool pc_ed25519_verify(uint8_t *work, const uint8_t pub[32], const uint8_t *msg, size_t mlen,
