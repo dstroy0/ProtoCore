@@ -151,7 +151,7 @@ typedef struct
     uint8_t rx_buf[SSH_PKT_BUF_SIZE]; ///< Raw receive buffer (from transport).
     size_t rx_len;                    ///< Bytes currently in rx_buf.
 
-    // One finished packet waiting for a worker to put it on the wire. The codec frames into
+    // The framed packets waiting for a worker to put them on the wire. The codec appends into
     // tx_wire and raises tx_ready; the worker sends from tx_off and lowers the flag when the last
     // byte is out. The codec never reaches the wire itself.
     //
@@ -159,10 +159,10 @@ typedef struct
     // reused for every packet on this slot. Releasing per packet would wipe the whole wire buffer
     // each time, and the mark end cannot hold it anyway: mark/release is a bump discipline, so one
     // slot's release would reclaim another slot's borrow.
-    uint8_t *tx_wire;    ///< The wire buffer for this slot. Null until the first packet.
-    size_t tx_len;       ///< Bytes of the framed packet.
+    uint8_t *tx_wire;    ///< SSH_TX_WIRE_CAP bytes for this slot. Null until the first packet.
+    size_t tx_len;       ///< Bytes of the framed flight.
     size_t tx_off;       ///< Bytes already put on the wire.
-    proto_bool tx_ready; ///< A packet is framed and waiting for a worker.
+    proto_bool tx_ready; ///< At least one packet is framed and waiting for a worker.
 
     // The packet MAC and the key exchange work out of these, and they come from the same one borrow as
     // tx_wire. Held for the slot's life so neither costs a borrow or a wipe on the packet path.
@@ -193,6 +193,14 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
 #define SSH_MAX_PAD 32 // worst-case padding across block-8 / block-16 modes (min-4 rule)
 #define SSH_MAX_MAC 64 // largest MAC tag (hmac-sha2-512); chacha's Poly1305 tag is 16
 #define SSH_WIRE_CAP ((size_t)(4 + 1 + SSH_MAX_EFFECTIVE_PAYLOAD + SSH_MAX_PAD + SSH_MAX_MAC))
+
+// The transport is a byte stream, so one dispatch may answer with several packets and the slot holds
+// them back to back until a worker drains them. The flight is the deepest such answer: KEXDH_REPLY
+// then NEWKEYS, and CHANNEL_EOF then CHANNEL_CLOSE.
+#ifndef SSH_TX_FLIGHT_PACKETS
+#define SSH_TX_FLIGHT_PACKETS 2u
+#endif
+#define SSH_TX_WIRE_CAP ((size_t)SSH_TX_FLIGHT_PACKETS * SSH_WIRE_CAP)
 
 // Scratch the transport layer (RFC 4253) borrows to frame one packet, and nothing more - the wire
 // buffer and the payload being framed belong to whoever called in, because this layer is the framer,
