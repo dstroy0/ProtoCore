@@ -64,18 +64,22 @@ static void pc_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, u
     // AEAD_AES_128_GCM: 16-byte key, 12-byte IV, 16-byte sequence-number key. The DTLS 1.3 variant
     // carries the "dtls13" HKDF-Expand-Label prefix (RFC 9147 §4.2.3 / §5.9).
     // The key becomes a keyed context here and the raw bytes are wiped; nothing downstream wants them.
-    // The pool cannot come up short here: PC_SECURE_ARENA_SIZE is the SUM of every PC_WORK_*, a
-    // strict upper bound rather than a deepest-nest estimate, so a borrow inside that budget always
-    // succeeds. The borrow also wipes on release, on every exit path.
+    // The borrow wipes on release, on every exit path.
     size_t mark = pc_secure_mark();
-    uint8_t *k = pc_secure_span(PC_AES128GCM_KEY_LEN, 8).buf;
-    uint8_t *ws = pc_secure_span(PC_HKDF_BORROW, _Alignof(uint32_t)).buf;
-    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws, secret, "key", k, PC_AES128GCM_KEY_LEN);
-    pc_aes128gcm_key_init(out->gcm, k);
-    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws, secret, "iv", out->iv, sizeof(out->iv));
-    uint8_t *snk = pc_secure_span(PC_AES128GCM_KEY_LEN, 8).buf;
-    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws, secret, "sn", snk, PC_AES128GCM_KEY_LEN);
-    pc_aes128_init((struct pc_aes128 *)(out->sn_key), snk);
+    pc_span k = pc_secure_span(PC_AES128GCM_KEY_LEN, 8);
+    pc_span ws = pc_secure_span(PC_HKDF_BORROW, _Alignof(uint32_t));
+    pc_span snk = pc_secure_span(PC_AES128GCM_KEY_LEN, 8);
+    if (!pc_span_ok(k) || !pc_span_ok(ws) || !pc_span_ok(snk))
+    {
+        pc_secure_release(mark);
+        mem.zero(out->iv, sizeof(out->iv));
+        return; // unkeyed: every protect/unprotect over these keys refuses
+    }
+    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws.buf, secret, "key", k.buf, PC_AES128GCM_KEY_LEN);
+    pc_aes128gcm_key_init(out->gcm, k.buf);
+    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws.buf, secret, "iv", out->iv, sizeof(out->iv));
+    pc_tls13_kdf_expand_label(&DTLS13_KDF, ws.buf, secret, "sn", snk.buf, PC_AES128GCM_KEY_LEN);
+    pc_aes128_init((struct pc_aes128 *)(out->sn_key), snk.buf);
     pc_secure_release(mark);
 }
 
