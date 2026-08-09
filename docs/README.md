@@ -1612,7 +1612,6 @@ guards at compile time.
 | `SSH_MAX_PASSWORD_LEN` | `64` | Maximum SSH password length including null terminator. |
 | `SSH_MAX_USERNAME_LEN` | `32` | Maximum SSH username length including null terminator. |
 | `SSH_PKT_BUF_SIZE` | `2048` | Packet assembly buffer per SSH connection (bytes). |
-| `SSH_REKEY_PACKET_THRESHOLD` | `0x40000000u` | Re-key when either packet sequence number reaches this value. |
 | `SSH_REKEY_TIME_MS` | `3600000u` | Elapsed-time re-key trigger in milliseconds (RFC 4253 §9: "after each hour"). |
 | `TELNET_BUF_SIZE` | `256` | Stack buffer for one Telnet I/O chunk. |
 | `TERM_TX_BUF_SIZE` | `256` | Stack scratch for pc_web_terminal_println() line building. |
