@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the pad and the state copy are spans, not byte walks ([`d437c80`](https://github.com/dstroy0/ProtoCore/commit/d437c80e57da5f44a7a500090a2c40c3736360d7))
 - mem.cpy stores a whole word, so the accumulator lost its length ([`87ab003`](https://github.com/dstroy0/ProtoCore/commit/87ab003b8c62b9d4c3130717978123c28587e715))
 - the key schedule leaked a persistent borrow per handshake ([`7aa25f1`](https://github.com/dstroy0/ProtoCore/commit/7aa25f1f35bc3e007b99389217d88d1f97d5e64e))
 - the key schedule leaked a persistent borrow per handshake ([`a8421f3`](https://github.com/dstroy0/ProtoCore/commit/a8421f3dfcbbb89d0c65b3b9d17b59bc85fd4ca0))
@@ -24,6 +25,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`cbde341`](https://github.com/dstroy0/ProtoCore/commit/cbde341d7e55c38dbad667ccf22d1c2ccbcf236c))
 - update CHANGELOG.md [skip ci] ([`0ee64ef`](https://github.com/dstroy0/ProtoCore/commit/0ee64eff28b7476959cfc1452666960a0c1e8929))
 - update CHANGELOG.md [skip ci] ([`22f4982`](https://github.com/dstroy0/ProtoCore/commit/22f498281aa2fda923aa2588d9737805e73fe2e9))
 - update CHANGELOG.md [skip ci] ([`4200687`](https://github.com/dstroy0/ProtoCore/commit/4200687663b641b820da583ca3a62df2b7063a82))
