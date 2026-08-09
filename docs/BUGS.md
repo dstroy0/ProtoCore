@@ -8,6 +8,26 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The HkdfLabel scratch reserves 514 bytes for a 51-byte worst case, and the clamp is why
+
+- **Status:** OPEN, found 2026-08-08 in the `src/` resource audit (`crypto.md` F11). The ban-19 half
+  is closed - the buffer moved out of function scope into the caller's borrow - and this is the
+  remainder. Needs a contract decision, not a patch.
+- **Symptom:** `crypto/kdf/hkdf.c:21` sets `HKDF_INFO_CAP` to `(2 + 1 + 255 + 1 + 255)` = 514, and
+  every consumer's `PC_HKDF_BORROW` carries it. The file's own comment at `:71-73` bounds what this
+  tree actually produces: the longest label is `tls13 client in` (15) and the context is a
+  Transcript-Hash (<= 32) or empty, so 2 + 1 + 15 + 1 + 32 = **51 bytes** of the 514 are ever used.
+- **Why it is not just a smaller number:** the 514 is not arbitrary, it matches the clamp.
+  `:78-79` reads `strnlen(label_prefix, 255)` and `strnlen(label, 255 - prefix_len)`, so a caller
+  that passed a long label would legitimately fill the buffer. Shrinking the buffer without
+  shrinking the clamp turns an over-reservation into an overflow. The two move together or not at
+  all.
+- **The decision:** `TUNING.md:100` says a pool size is the TU's precomputed worst case, not a
+  chosen number - which argues for sizing to this tree's real callers and clamping to match. Against
+  that, `pc_hkdf_expand_label_ctx` is written as a protocol-general RFC 8446 sec 7.1 primitive whose
+  label is `opaque<7..255>`, and narrowing the clamp narrows what it accepts. Roughly 460 bytes per
+  consumer borrow ride on the answer.
+
 ## Five crypto TUs carry PC_CRYPTO_HOT against crypto_opt.h's own prohibition, and its own bench numbers
 
 - **Status:** OPEN, found 2026-08-08 in the `src/` resource audit (`crypto.md` F19). Needs a decision,
