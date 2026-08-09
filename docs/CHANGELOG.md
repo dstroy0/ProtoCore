@@ -53,6 +53,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7600064`](https://github.com/dstroy0/ProtoCore/commit/76000643b670e123d186405eb49c8ec939ac0988))
 - layering guard (text-only include-graph check) + tool inventories ([`51c3283`](https://github.com/dstroy0/ProtoCore/commit/51c3283c2c4196b56342527443f96b640fe658a4))
 - update test report + coverage [skip ci] ([`d096c4f`](https://github.com/dstroy0/ProtoCore/commit/d096c4f9a2771966da2a0d59a341468e700945dc))
 - update CHANGELOG.md [skip ci] ([`5183a0a`](https://github.com/dstroy0/ProtoCore/commit/5183a0adea8d9e5b5b42f723a76acc4e27ec3b9d))
@@ -157,6 +158,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`7b3ac1c`](https://github.com/dstroy0/ProtoCore/commit/7b3ac1c01c60a1db74f3ed70b87eb31e50d9012e))
 - close F3, the idle sweep reclaims the leaked channel in 5 s ([`90c3f4e`](https://github.com/dstroy0/ProtoCore/commit/90c3f4e3494339e330bd83b2564385a42b45d793))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`8b8fa56`](https://github.com/dstroy0/ProtoCore/commit/8b8fa56481a5b48952a43393c93719a83386bc19))
 - log the undeclared SSH plaintext draw and the env gap that hides it ([`78b04a8`](https://github.com/dstroy0/ProtoCore/commit/78b04a8a0fda00aa507b111756137e6bc092d941))
@@ -194,6 +196,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- statsd host bench scaffold + shared bench_project/host_bench ([`945dafb`](https://github.com/dstroy0/ProtoCore/commit/945dafbedf55a621f4f5f8464566386ae4986e27))
 - the frame callers pass a tagged value array ([`a1e8e7b`](https://github.com/dstroy0/ProtoCore/commit/a1e8e7b8360ae6d8ace296c9fdeb2a4133066235))
 - three envs link the secure pool now that ed25519 wipes ([`a8ed1e3`](https://github.com/dstroy0/ProtoCore/commit/a8ed1e36335498043ce6973a477317256fc5079d))
 - audit_log links arena.c and smb links chacha20.c ([`468b08b`](https://github.com/dstroy0/ProtoCore/commit/468b08b935112d47184a7b801b52e009c3c9efe1))
