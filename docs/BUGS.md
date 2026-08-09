@@ -430,6 +430,76 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   foreign name fails the request (RFC 4252 sec 5). Negative test `test_parse_rejects_foreign_service`.
   Verified: `native_ssh`, 265/265.
 
+## A publickey signature is verified against a session id that no key exchange produced
+
+- **Status:** FIXED 2026-08-09 (`ssh_auth.c` `pc_ssh_auth_handle_pubkey`). Found 2026-08-08 auditing
+  `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #2).
+- **Symptom:** the signed blob is `string(session_id) || request` (RFC 4252 sec 7), but the length was
+  taken from `ssh_sess[i].session_id_len` without consulting `have_session_id`. Before any KEX both are
+  zero, so the blob degenerated to `uint32(0) || prefix`: a signature bound to no session at all, which
+  is exactly the binding the field exists to provide.
+- **Nothing can catch it:** every publickey test called one `set_session_id_0_to_31()` helper, so no
+  test ever drove the handler with no session id bound.
+- **Fix:** the signature path refuses when `have_session_id` is false. Negative test
+  `test_pubkey_without_session_id_fails`. Reachability was already limited by the phase guard in
+  `ssh_server.c`, so this closes the auth layer rather than a live hole.
+  Verified: `native_ssh` + 14 more envs, 573/573.
+
+## `pty-req`, `exec` and `env` are accepted on the request name alone
+
+- **Status:** FIXED 2026-08-09 (`ssh_channel.c` `pc_ssh_channel_handle_request`). Found 2026-08-08
+  auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #8, #9).
+- **Symptom:** acceptance was one boolean over four `mem.cmp` name matches, so a CHANNEL_REQUEST
+  truncated immediately after `want_reply` was answered `CHANNEL_SUCCESS`. A `pty-req` carrying no
+  TERM, no dimensions and no mode blob, and an `exec` carrying no command, both succeeded.
+- **Nothing can catch it:** the accept-set test sent exactly that truncated form and asserted SUCCESS,
+  and the SCP test passed a declared-but-absent command through the same path.
+- **Fix:** each type is checked for the fields RFC 4254 sec 6.2 / 6.4 / 6.5 defines for it, read from a
+  copy of the offset so the file-transfer classifier still finds the exec argument. `shell` is
+  unchanged, carrying no request-specific data. New negative
+  `test_chan_request_truncated_fields_refused`; the two tests that pinned the old behaviour now assert
+  the RFC's. Verified: `native_ssh` + 14 more envs, 573/573.
+
+## NVT `CR NUL` discards the carriage return and strands the line
+
+- **Status:** FIXED 2026-08-09 (`telnet.c` `handle_data`). Found 2026-08-08 auditing `test/` for RFC
+  conformance (`git_project/audit/ssh-auth-connection-telnet.md` #12).
+- **Symptom:** RFC 854 gives `CR NUL` as a carriage return alone, and clients send it for Enter. `CR`
+  returned early awaiting `LF`, then the `NUL` was swallowed by the `b < 0x20` control-byte arm, so
+  neither byte did anything: the line was never dispatched and the user's Enter did nothing.
+- **Nothing can catch it:** the only CR test used `{'a','\r',0x01,'b','\n'}`, which never pairs CR with
+  NUL.
+- **Fix:** a `saw_cr` flag pairs the CR with whichever byte completes it, and `CR LF` and `CR NUL` both
+  end the line through one `dispatch_line`. Test `test_cr_nul_dispatches_line`.
+  Verified: `native_telnet`, 24/24.
+
+## `CHANNEL_WINDOW_ADJUST` and `CHANNEL_EOF` skip the pre-auth guard the other six arms have
+
+- **Status:** FIXED 2026-08-09 (`ssh_server.c` `pc_ssh_server_dispatch`). Found 2026-08-08 auditing
+  `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #13).
+- **Symptom:** six channel arms open with `if (!s->authed) return -1;` and these two did not, so both
+  were dispatched on an unauthenticated session. Not exploitable: `chan_by_id` finds no open channel
+  before authentication, so both handlers were no-ops. Fixed as an asymmetry, not a live hole.
+- **Nothing can catch it:** the `authed_arms[]` list the three suites iterate omitted exactly these two
+  message types, so the gap was enshrined rather than caught.
+- **Fix:** both arms carry the guard, and the `authed_arms[]` list in all three suites now names all
+  eight. Verified: `native_ssh` + 14 more envs, 573/573.
+
+## Two SSH test envs build the SSH stack without defining `PC_ENABLE_SSH`
+
+- **Status:** FIXED 2026-08-09 (`test/test_matrix.json`, `native_ssh_hardened` and `native_ssh_pqc`).
+  Found 2026-08-09 while running the suites for the four fixes above.
+- **Symptom:** both envs list the SSH sources in `src` but their `flags` never define
+  `PC_ENABLE_SSH=1`, so the derived arena terms for SSH were absent and the pool borrows on the
+  publickey and KEX paths failed. Every borrow-taking test in them failed closed:
+  `test_ecdsa_publickey_auth_succeeds_when_password_disabled` returned USERAUTH_FAILURE, and all five
+  `native_ssh_pqc` KEX tests returned -1 out of `ssh_kexinit_parse`.
+- **Nothing can catch it:** the tests that do not take a borrow still pass, so each env looked healthy
+  as long as nobody added one that does. `native_ssh_pqc` now runs 10 cases where it reported 5.
+- **Fix:** both envs declare `PC_ENABLE_SSH=1`, then `platformio.ini` regenerated with
+  `test/gen_test_envs.py`. A sweep of the matrix found no third env in this state.
+  Verified: `native_ssh_hardened` 4/4, `native_ssh_pqc` 10/10.
+
 ## HPACK prefix-integer decode wraps at `m == 28`
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #8).
