@@ -194,12 +194,8 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
 #define SSH_MAX_MAC 64 // largest MAC tag (hmac-sha2-512); chacha's Poly1305 tag is 16
 #define SSH_WIRE_CAP ((size_t)(4 + 1 + SSH_MAX_EFFECTIVE_PAYLOAD + SSH_MAX_PAD + SSH_MAX_MAC))
 
-// The transport is a byte stream, so one dispatch may answer with several packets and the slot holds
-// them back to back until a worker drains them. The flight is the deepest such answer: KEXDH_REPLY
-// then NEWKEYS, and CHANNEL_EOF then CHANNEL_CLOSE.
-#ifndef SSH_TX_FLIGHT_PACKETS
-#define SSH_TX_FLIGHT_PACKETS 2u
-#endif
+// SSH_TX_FLIGHT_PACKETS is set in protocore_config.h, which sizes the borrow this comes out of.
+// The deepest flight is KEXDH_REPLY then NEWKEYS, and CHANNEL_EOF then CHANNEL_CLOSE.
 #define SSH_TX_WIRE_CAP ((size_t)SSH_TX_FLIGHT_PACKETS * SSH_WIRE_CAP)
 
 // Scratch the transport layer (RFC 4253) borrows to frame one packet, and nothing more - the wire

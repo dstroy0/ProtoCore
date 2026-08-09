@@ -6691,10 +6691,18 @@ from halves and is slower than the width it decomposes into"
 // compression's expansion bound included.
 // Each slot's borrow is its wire buffer and the bytes its packet MAC works out of, taken together and
 // split by offset in ssh_packet.c.
+
+// The transport is a byte stream, so one dispatch may answer with several packets and the slot's
+// wire holds them back to back until a worker drains it. ssh_packet.h derives SSH_TX_WIRE_CAP from
+// this; it is here because the term below has to carry it.
+#ifndef SSH_TX_FLIGHT_PACKETS
+#define SSH_TX_FLIGHT_PACKETS 2u
+#endif
+
 #ifndef PC_WORK_SSH_CONN
 #define PC_WORK_SSH_CONN                                                                                               \
-    ((((size_t)MAX_SSH_CONNS + 2u) * 2u * (size_t)SSH_PKT_BUF_SIZE) +                                                  \
-     ((size_t)MAX_SSH_CONNS * (size_t)PC_HMAC_SHA256_BORROW))
+    ((((size_t)MAX_SSH_CONNS * (size_t)SSH_TX_FLIGHT_PACKETS + 2u) * 2u * (size_t)SSH_PKT_BUF_SIZE) +                  \
+     ((size_t)MAX_SSH_CONNS * ((size_t)PC_HMAC_SHA256_BORROW + (size_t)PC_CRYPTO_BORROW_MAX)))
 #endif
 
 // The software TLS 1.3 handshake driver takes one borrow per connection from the secure pool's
