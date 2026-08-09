@@ -17,10 +17,10 @@ packs a ready-to-drop-in tarball, plus a preview PNG for the gallery.
 import os
 import sys
 
-from tools.ci_tooling.lib import doc_region as dr
+from tools import findroot
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = dr.repo_root(__file__)
+REPO_ROOT = findroot.root()
 
 OUT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "favicons"))
 
@@ -120,7 +120,7 @@ def cmd_gallery():
         lines.append("")
     with open(GALLERY, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines).rstrip("\n") + "\n")
-    print(f"wrote {os.path.relpath(GALLERY)}")
+    print(f"wrote {findroot.rel(GALLERY)}")
     return 0
 
 
@@ -150,7 +150,7 @@ def main():
             return 1
         print(f"{total} favicons in sync")
         return 0
-    print(f"generated {total} favicons ({len(MOTIFS)} motifs x {len(PAIRS)} palettes) -> {os.path.relpath(OUT_DIR)}")
+    print(f"generated {total} favicons ({len(MOTIFS)} motifs x {len(PAIRS)} palettes) -> {findroot.rel(OUT_DIR)}")
     return 0
 
 

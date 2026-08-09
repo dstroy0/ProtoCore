@@ -20,11 +20,11 @@ import os
 import re
 import sys
 
-from tools.ci_tooling.lib import doc_region as dr
+from tools import findroot
 from src.web_assets.wizard import gen_themes
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = dr.repo_root(__file__)
+REPO_ROOT = findroot.root()
 
 THEMES_DIRS = [
     os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes")),
@@ -195,7 +195,7 @@ def generate(write=True):
     for path, content in files.items():
         old = open(path, encoding="utf-8", newline="").read() if os.path.isfile(path) else None
         if old != content:
-            stale.append(os.path.relpath(path))
+            stale.append(findroot.rel(path))
             if write:
                 with open(path, "w", encoding="utf-8", newline="\n") as f:
                     f.write(content)
