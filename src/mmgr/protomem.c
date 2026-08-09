@@ -6,10 +6,9 @@
  * @brief The byte-span operations - see protomem.h.
  *
  * Every access is one register-width load or store. A span that does not end on a boundary is not
- * walked a byte at a time: the partial word is masked and stored whole, and the lanes past the span
- * go to zero, which is allocation padding because the arena rounds every size up to PC_ARENA_ALIGN.
- * A source that is not co-aligned with the destination is funnelled, the way the raw mover above it
- * does it.
+ * walked a byte at a time: the partial word is merged and stored whole, the lane mask choosing the
+ * span's bytes from the source and the destination's own word for the lanes past it. A source that
+ * is not co-aligned with the destination is funnelled, the way the raw mover above it does it.
  *
  * The one symbol this file exports is @ref mem.
  */
@@ -83,7 +82,8 @@ void pc_mem_cpy(void *dst, const void *src, size_t n)
     }
     if (i < n)
     {
-        proto_mv_put(d + i, (proto_mv_word)(src_word(s + i, n - i) & span_lanes(0u, n - i)));
+        const proto_mv_word keep = span_lanes(0u, n - i);
+        proto_mv_put(d + i, (proto_mv_word)((src_word(s + i, n - i) & keep) | (proto_mv_load(d + i) & ~keep)));
     }
 }
 
@@ -107,7 +107,8 @@ void pc_mem_move(void *dst, const void *src, size_t n)
     size_t i = n & ~(size_t)PC_MEM_MASK;
     if (i < n)
     {
-        proto_mv_put(d + i, (proto_mv_word)(src_word(s + i, n - i) & span_lanes(0u, n - i)));
+        const proto_mv_word keep = span_lanes(0u, n - i);
+        proto_mv_put(d + i, (proto_mv_word)((src_word(s + i, n - i) & keep) | (proto_mv_load(d + i) & ~keep)));
     }
     while (i >= PROTO_RAW_WORD)
     {
@@ -215,7 +216,8 @@ void pc_mem_set(void *dst, unsigned char v, size_t n)
     }
     if (i < n)
     {
-        proto_mv_put(d + i, (proto_mv_word)(w & span_lanes(0u, n - i)));
+        const proto_mv_word keep = span_lanes(0u, n - i);
+        proto_mv_put(d + i, (proto_mv_word)((w & keep) | (proto_mv_load(d + i) & ~keep)));
     }
 }
 
