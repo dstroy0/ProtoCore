@@ -36,6 +36,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`cc8ebf7`](https://github.com/dstroy0/ProtoCore/commit/cc8ebf750f33f3a7c0ccd5c8fa963426230898c0))
 - update CHANGELOG.md [skip ci] ([`ff01b53`](https://github.com/dstroy0/ProtoCore/commit/ff01b53fb0ef08c7a52cb53a7664cf4880374a4c))
 - update CHANGELOG.md [skip ci] ([`cea17c1`](https://github.com/dstroy0/ProtoCore/commit/cea17c154a762b15bf4e38916924e6b333b183c2))
 - update CHANGELOG.md [skip ci] ([`4304a55`](https://github.com/dstroy0/ProtoCore/commit/4304a5577ac835f6c72eb9911f4662c1bead9a7e))
@@ -144,6 +145,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- three envs link the secure pool now that ed25519 wipes ([`a8ed1e3`](https://github.com/dstroy0/ProtoCore/commit/a8ed1e36335498043ce6973a477317256fc5079d))
 - audit_log links arena.c and smb links chacha20.c ([`468b08b`](https://github.com/dstroy0/ProtoCore/commit/468b08b935112d47184a7b801b52e009c3c9efe1))
 - the crypto entry points take their working bytes from the caller ([`f7bc5d0`](https://github.com/dstroy0/ProtoCore/commit/f7bc5d0dcbe75407c47cfb637d230ef006c5afcd))
 - the envs that use the mem accessor link protomem.c ([`0459341`](https://github.com/dstroy0/ProtoCore/commit/0459341bc704982857d7be6d88d006bc9c3bfe9d))
