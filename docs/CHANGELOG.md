@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- refuse a password-change request instead of authing on the old password ([`5091c67`](https://github.com/dstroy0/ProtoCore/commit/5091c6778898d2e25dac2a31bc525b10886d1c91))
 - end a subnegotiation only on IAC SE, not a bare 240 ([`9c2dd30`](https://github.com/dstroy0/ProtoCore/commit/9c2dd30fe16804e38d92c7e819d94d8ab6d2538d))
 - validate the userauth service name; pin the telnet greeting length ([`4792b06`](https://github.com/dstroy0/ProtoCore/commit/4792b06ba4dc41634275948c5287726f71304010))
 - frame a back-to-back packet pair into the slot instead of dropping the second ([`a445c4a`](https://github.com/dstroy0/ProtoCore/commit/a445c4a29a6fd9671f506e7070fb0cca0ad63ecb))
@@ -56,6 +57,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`11f08f2`](https://github.com/dstroy0/ProtoCore/commit/11f08f23c79e538321cf99933413b197b42c0a09))
 - update CHANGELOG.md [skip ci] ([`7a05490`](https://github.com/dstroy0/ProtoCore/commit/7a05490265a6011430e5bdaa2ed56683e0dbd425))
 - update CHANGELOG.md [skip ci] ([`d295bea`](https://github.com/dstroy0/ProtoCore/commit/d295bea77460b46fdb3668d1ea54822240b6da03))
 - update CHANGELOG.md [skip ci] ([`b6dacde`](https://github.com/dstroy0/ProtoCore/commit/b6dacde03be26fbc778fa9b385f05d10874f357a))
