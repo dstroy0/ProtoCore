@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-09 19:14:07
+**Generated:** 2026-08-09 21:50:09
 **Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 6145 passed, 2 failed - 1753s
+**Result:** ❌ 6136 passed, 2 failed - 1909s
 
 ---
 
@@ -1958,7 +1958,7 @@ _SSH transport handshake tests (RFC 4253): identification-string exchange and_
 
 ---
 
-## test_ssh_auth - native_ssh - ✅ 29 passed
+## test_ssh_auth - native_ssh - ✅ 31 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -1984,18 +1984,20 @@ _SSH user-authentication tests (RFC 4252): service request/accept, request_
 |  15 | `test_service_request_rejects_unknown`            |   ✅   | Service request rejects unknown                   |
 |  16 | `test_parse_password_request`                     |   ✅   | Parse password request                            |
 |  17 | `test_parse_none_request`                         |   ✅   | Parse none request                                |
-|  18 | `test_handle_request_success`                     |   ✅   | Handle request success                            |
-|  19 | `test_handle_request_wrong_password_fails`        |   ✅   | Handle request wrong password fails               |
-|  20 | `test_handle_none_request_fails_without_auth`     |   ✅   | Handle none request fails without auth            |
-|  21 | `test_handle_request_no_callback_fails`           |   ✅   | No callback installed → all credentials rejected. |
-|  22 | `test_pubkey_probe_returns_pk_ok`                 |   ✅   | Pubkey probe returns pk ok                        |
-|  23 | `test_pubkey_valid_signature_succeeds`            |   ✅   | Pubkey valid signature succeeds                   |
-|  24 | `test_pubkey_rsa_sha512_signature_succeeds`       |   ✅   | Pubkey rsa sha512 signature succeeds              |
-|  25 | `test_pubkey_ecdsa_signature_succeeds`            |   ✅   | Pubkey ecdsa signature succeeds                   |
-|  26 | `test_pubkey_ed25519_valid_signature_succeeds`    |   ✅   | Pubkey ed25519 valid signature succeeds           |
-|  27 | `test_pubkey_tampered_signature_fails`            |   ✅   | Pubkey tampered signature fails                   |
-|  28 | `test_pubkey_unauthorized_key_fails`              |   ✅   | Pubkey unauthorized key fails                     |
-|  29 | `test_aesgcm_gctr_counter_byte_carry`             |   ✅   | Aesgcm gctr counter byte carry                    |
+|  18 | `test_parse_rejects_foreign_service`              |   ✅   | Parse rejects foreign service                     |
+|  19 | `test_parse_rejects_password_change`              |   ✅   | Parse rejects password change                     |
+|  20 | `test_handle_request_success`                     |   ✅   | Handle request success                            |
+|  21 | `test_handle_request_wrong_password_fails`        |   ✅   | Handle request wrong password fails               |
+|  22 | `test_handle_none_request_fails_without_auth`     |   ✅   | Handle none request fails without auth            |
+|  23 | `test_handle_request_no_callback_fails`           |   ✅   | No callback installed → all credentials rejected. |
+|  24 | `test_pubkey_probe_returns_pk_ok`                 |   ✅   | Pubkey probe returns pk ok                        |
+|  25 | `test_pubkey_valid_signature_succeeds`            |   ✅   | Pubkey valid signature succeeds                   |
+|  26 | `test_pubkey_rsa_sha512_signature_succeeds`       |   ✅   | Pubkey rsa sha512 signature succeeds              |
+|  27 | `test_pubkey_ecdsa_signature_succeeds`            |   ✅   | Pubkey ecdsa signature succeeds                   |
+|  28 | `test_pubkey_ed25519_valid_signature_succeeds`    |   ✅   | Pubkey ed25519 valid signature succeeds           |
+|  29 | `test_pubkey_tampered_signature_fails`            |   ✅   | Pubkey tampered signature fails                   |
+|  30 | `test_pubkey_unauthorized_key_fails`              |   ✅   | Pubkey unauthorized key fails                     |
+|  31 | `test_aesgcm_gctr_counter_byte_carry`             |   ✅   | Aesgcm gctr counter byte carry                    |
 
 </details>
 
@@ -2140,7 +2142,7 @@ _SSH crypto layer test suite._
 
 ---
 
-## test_ssh_auth - native_ssh_kbdint - ✅ 29 passed
+## test_ssh_auth - native_ssh_kbdint - ✅ 31 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -2166,18 +2168,20 @@ _SSH user-authentication tests (RFC 4252): service request/accept, request_
 |  15 | `test_service_request_rejects_unknown`            |   ✅   | Service request rejects unknown                   |
 |  16 | `test_parse_password_request`                     |   ✅   | Parse password request                            |
 |  17 | `test_parse_none_request`                         |   ✅   | Parse none request                                |
-|  18 | `test_handle_request_success`                     |   ✅   | Handle request success                            |
-|  19 | `test_handle_request_wrong_password_fails`        |   ✅   | Handle request wrong password fails               |
-|  20 | `test_handle_none_request_fails_without_auth`     |   ✅   | Handle none request fails without auth            |
-|  21 | `test_handle_request_no_callback_fails`           |   ✅   | No callback installed → all credentials rejected. |
-|  22 | `test_pubkey_probe_returns_pk_ok`                 |   ✅   | Pubkey probe returns pk ok                        |
-|  23 | `test_pubkey_valid_signature_succeeds`            |   ✅   | Pubkey valid signature succeeds                   |
-|  24 | `test_pubkey_rsa_sha512_signature_succeeds`       |   ✅   | Pubkey rsa sha512 signature succeeds              |
-|  25 | `test_pubkey_ecdsa_signature_succeeds`            |   ✅   | Pubkey ecdsa signature succeeds                   |
-|  26 | `test_pubkey_ed25519_valid_signature_succeeds`    |   ✅   | Pubkey ed25519 valid signature succeeds           |
-|  27 | `test_pubkey_tampered_signature_fails`            |   ✅   | Pubkey tampered signature fails                   |
-|  28 | `test_pubkey_unauthorized_key_fails`              |   ✅   | Pubkey unauthorized key fails                     |
-|  29 | `test_aesgcm_gctr_counter_byte_carry`             |   ✅   | Aesgcm gctr counter byte carry                    |
+|  18 | `test_parse_rejects_foreign_service`              |   ✅   | Parse rejects foreign service                     |
+|  19 | `test_parse_rejects_password_change`              |   ✅   | Parse rejects password change                     |
+|  20 | `test_handle_request_success`                     |   ✅   | Handle request success                            |
+|  21 | `test_handle_request_wrong_password_fails`        |   ✅   | Handle request wrong password fails               |
+|  22 | `test_handle_none_request_fails_without_auth`     |   ✅   | Handle none request fails without auth            |
+|  23 | `test_handle_request_no_callback_fails`           |   ✅   | No callback installed → all credentials rejected. |
+|  24 | `test_pubkey_probe_returns_pk_ok`                 |   ✅   | Pubkey probe returns pk ok                        |
+|  25 | `test_pubkey_valid_signature_succeeds`            |   ✅   | Pubkey valid signature succeeds                   |
+|  26 | `test_pubkey_rsa_sha512_signature_succeeds`       |   ✅   | Pubkey rsa sha512 signature succeeds              |
+|  27 | `test_pubkey_ecdsa_signature_succeeds`            |   ✅   | Pubkey ecdsa signature succeeds                   |
+|  28 | `test_pubkey_ed25519_valid_signature_succeeds`    |   ✅   | Pubkey ed25519 valid signature succeeds           |
+|  29 | `test_pubkey_tampered_signature_fails`            |   ✅   | Pubkey tampered signature fails                   |
+|  30 | `test_pubkey_unauthorized_key_fails`              |   ✅   | Pubkey unauthorized key fails                     |
+|  31 | `test_aesgcm_gctr_counter_byte_carry`             |   ✅   | Aesgcm gctr counter byte carry                    |
 
 </details>
 
@@ -2210,7 +2214,7 @@ _SSH keyboard-interactive authentication tests (RFC 4256): the server sends one 
 
 ---
 
-## test_ssh_pqc - native_ssh_pqc - ✅ 10 passed
+## test_ssh_pqc - native_ssh_pqc - ✅ 5 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -2220,33 +2224,27 @@ _End-to-end test of the mlkem768x25519-sha256 SSH hybrid key exchange (draft-iet
 |   # | Test                                             | Status | Description                               |
 | --: | :----------------------------------------------- | :----: | :---------------------------------------- |
 |   1 | `test_decaps_ref_matches_kat`                    |   ✅   | Decaps ref matches kat                    |
-|   2 | `test_hybrid_negotiated`                         |   ✅   | Hybrid negotiated                         |
-|   3 | `test_hybrid_absent_falls_back`                  |   ✅   | Hybrid absent falls back                  |
-|   4 | `test_hybrid_kex_end_to_end`                     |   ✅   | Hybrid kex end to end                     |
-|   5 | `test_kex_generate_per_method`                   |   ✅   | Kex generate per method                   |
-|   6 | `test_kexinit_advertises_both_hybrids_first`     |   ✅   | Kexinit advertises both hybrids first     |
-|   7 | `test_sntrup761_hybrid_kex_end_to_end`           |   ✅   | Sntrup761 hybrid kex end to end           |
-|   8 | `test_classical_dh_kex_in_pqc_build`             |   ✅   | Classical dh kex in pqc build             |
-|   9 | `test_hybrid_init_malformed_rejected`            |   ✅   | Hybrid init malformed rejected            |
-|  10 | `test_hybrid_rejects_low_order_point_and_bad_ek` |   ✅   | Hybrid rejects low order point and bad ek |
+|   2 | `test_kex_generate_per_method`                   |   ✅   | Kex generate per method                   |
+|   3 | `test_kexinit_advertises_both_hybrids_first`     |   ✅   | Kexinit advertises both hybrids first     |
+|   4 | `test_hybrid_init_malformed_rejected`            |   ✅   | Hybrid init malformed rejected            |
+|   5 | `test_hybrid_rejects_low_order_point_and_bad_ek` |   ✅   | Hybrid rejects low order point and bad ek |
 
 </details>
 
 ---
 
-## test_ssh_hardening - native_ssh_hardened - ✅ 4 passed
+## test_ssh_hardening - native_ssh_hardened - ✅ 3 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Built with PC_SSH_ALLOW_PASSWORD=0: verifies password authentication is_
 
-|   # | Test                                                        | Status | Description                                                            |
-| --: | :---------------------------------------------------------- | :----: | :--------------------------------------------------------------------- |
-|   1 | `test_password_refused_even_with_correct_callback`          |   ✅   | Even a callback that accepts everything must not authenticate, because |
-|   2 | `test_failure_advertises_publickey_only`                    |   ✅   | Failure advertises publickey only                                      |
-|   3 | `test_ecdsa_direct_sign_verify_ecdh_roundtrip`              |   ✅   | Ecdsa direct sign verify ecdh roundtrip                                |
-|   4 | `test_ecdsa_publickey_auth_succeeds_when_password_disabled` |   ✅   | Ecdsa publickey auth succeeds when password disabled                   |
+|   # | Test                                               | Status | Description                                                            |
+| --: | :------------------------------------------------- | :----: | :--------------------------------------------------------------------- |
+|   1 | `test_password_refused_even_with_correct_callback` |   ✅   | Even a callback that accepts everything must not authenticate, because |
+|   2 | `test_failure_advertises_publickey_only`           |   ✅   | Failure advertises publickey only                                      |
+|   3 | `test_ecdsa_direct_sign_verify_ecdh_roundtrip`     |   ✅   | Ecdsa direct sign verify ecdh roundtrip                                |
 
 </details>
 
@@ -3186,37 +3184,38 @@ _Unit tests for the SNMPv3 USM layer. The test acts as a full SNMP manager:_
 
 ---
 
-## test_telnet - native_telnet - ✅ 22 passed
+## test_telnet - native_telnet - ✅ 23 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Telnet server test: drives a PROTO_TELNET connection through the real_
 
-|   # | Test                                       | Status | Description                         |
-| --: | :----------------------------------------- | :----: | :---------------------------------- |
-|   1 | `test_accept_negotiates_echo_and_sga`      |   ✅   | Accept negotiates echo and sga      |
-|   2 | `test_line_echoed_and_dispatched`          |   ✅   | Line echoed and dispatched          |
-|   3 | `test_backspace_first_line`                |   ✅   | Backspace first line                |
-|   4 | `test_iac_will_gets_dont`                  |   ✅   | Iac will gets dont                  |
-|   5 | `test_iac_do_unsupported_gets_wont`        |   ✅   | Iac do unsupported gets wont        |
-|   6 | `test_iac_do_echo_is_silent`               |   ✅   | Iac do echo is silent               |
-|   7 | `test_iac_stripped_from_data`              |   ✅   | Iac stripped from data              |
-|   8 | `test_print_broadcast`                     |   ✅   | Print broadcast                     |
-|   9 | `test_unknown_slot_is_noop`                |   ✅   | Unknown slot is noop                |
-|  10 | `test_cr_and_control_ignored`              |   ✅   | Cr and control ignored              |
-|  11 | `test_iac_escaped_literal`                 |   ✅   | Iac escaped literal                 |
-|  12 | `test_subnegotiation_consumed`             |   ✅   | Subnegotiation consumed             |
-|  13 | `test_accept_no_capacity`                  |   ✅   | Accept no capacity                  |
-|  14 | `test_output_escaping_and_printf`          |   ✅   | Output escaping and printf          |
-|  15 | `test_inactive_conn_sends_nothing`         |   ✅   | Inactive conn sends nothing         |
-|  16 | `test_iac_wont_and_dont_are_silent`        |   ✅   | Iac wont and dont are silent        |
-|  17 | `test_iac_do_sga_is_silent`                |   ✅   | Iac do sga is silent                |
-|  18 | `test_line_no_cmd_cb_is_noop`              |   ✅   | Line no cmd cb is noop              |
-|  19 | `test_backspace_del_and_empty_noop`        |   ✅   | Backspace del and empty noop        |
-|  20 | `test_line_buffer_overflow_truncates`      |   ✅   | Line buffer overflow truncates      |
-|  21 | `test_print_println_null_and_printf_empty` |   ✅   | Print println null and printf empty |
-|  22 | `test_proto_handler_accessor`              |   ✅   | Proto handler accessor              |
+|   # | Test                                          | Status | Description                                                                                    |
+| --: | :-------------------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
+|   1 | `test_accept_negotiates_echo_and_sga`         |   ✅   | IAC WILL ECHO, IAC WILL SUPPRESS-GO-AHEAD, then the greeting. Pinning the total length keeps a |
+|   2 | `test_line_echoed_and_dispatched`             |   ✅   | Line echoed and dispatched                                                                     |
+|   3 | `test_backspace_first_line`                   |   ✅   | Backspace first line                                                                           |
+|   4 | `test_iac_will_gets_dont`                     |   ✅   | Iac will gets dont                                                                             |
+|   5 | `test_iac_do_unsupported_gets_wont`           |   ✅   | Iac do unsupported gets wont                                                                   |
+|   6 | `test_iac_do_echo_is_silent`                  |   ✅   | Iac do echo is silent                                                                          |
+|   7 | `test_iac_stripped_from_data`                 |   ✅   | Iac stripped from data                                                                         |
+|   8 | `test_print_broadcast`                        |   ✅   | Print broadcast                                                                                |
+|   9 | `test_unknown_slot_is_noop`                   |   ✅   | Unknown slot is noop                                                                           |
+|  10 | `test_cr_and_control_ignored`                 |   ✅   | Cr and control ignored                                                                         |
+|  11 | `test_iac_escaped_literal`                    |   ✅   | Iac escaped literal                                                                            |
+|  12 | `test_subnegotiation_consumed`                |   ✅   | Subnegotiation consumed                                                                        |
+|  13 | `test_subnegotiation_bare_se_does_not_inject` |   ✅   | Subnegotiation bare se does not inject                                                         |
+|  14 | `test_accept_no_capacity`                     |   ✅   | Accept no capacity                                                                             |
+|  15 | `test_output_escaping_and_printf`             |   ✅   | Output escaping and printf                                                                     |
+|  16 | `test_inactive_conn_sends_nothing`            |   ✅   | Inactive conn sends nothing                                                                    |
+|  17 | `test_iac_wont_and_dont_are_silent`           |   ✅   | Iac wont and dont are silent                                                                   |
+|  18 | `test_iac_do_sga_is_silent`                   |   ✅   | Iac do sga is silent                                                                           |
+|  19 | `test_line_no_cmd_cb_is_noop`                 |   ✅   | Line no cmd cb is noop                                                                         |
+|  20 | `test_backspace_del_and_empty_noop`           |   ✅   | Backspace del and empty noop                                                                   |
+|  21 | `test_line_buffer_overflow_truncates`         |   ✅   | Line buffer overflow truncates                                                                 |
+|  22 | `test_print_println_null_and_printf_empty`    |   ✅   | Print println null and printf empty                                                            |
+|  23 | `test_proto_handler_accessor`                 |   ✅   | Proto handler accessor                                                                         |
 
 </details>
 
