@@ -14,7 +14,8 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_c[4096]; // c works out of its own bytes // test-side working bytes for the crypto entry points
 
 void setUp()
 {
@@ -94,7 +95,7 @@ void test_sha512_two_block_boundary()
 void test_sha512_million_a_streaming()
 {
     pc_sha512_ctx c;
-    pc_sha512_init(&c, tw);
+    pc_sha512_init(&c, tw_c);
     uint8_t a[1000];
     memset(a, 'a', sizeof(a));
     for (int i = 0; i < 1000; i++)
@@ -118,7 +119,7 @@ void test_sha512_streaming_matches_oneshot()
     pc_sha512(tw,(const uint8_t *)msg, strlen(msg), one);
 
     pc_sha512_ctx c;
-    pc_sha512_init(&c, tw);
+    pc_sha512_init(&c, tw_c);
     for (const char *p = msg; *p; p++)
     {
         pc_sha512_update(&c, (const uint8_t *)p, 1);

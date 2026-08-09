@@ -32,7 +32,10 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_c[4096]; // c works out of its own bytes
+static uint8_t tw_ctx[4096]; // ctx works out of its own bytes
+static uint8_t tw_hctx[4096]; // hctx works out of its own bytes // test-side working bytes for the crypto entry points
 
 // ============================================================================
 // Helpers
@@ -103,7 +106,7 @@ static void test_sha256_streaming(void)
 {
     // Same as test_sha256_abc but using the streaming API.
     pc_sha256_ctx ctx;
-    pc_sha256_init(&ctx, tw);
+    pc_sha256_init(&ctx, tw_ctx);
     pc_sha256_update(&ctx, (const uint8_t *)"a", 1);
     pc_sha256_update(&ctx, (const uint8_t *)"bc", 2);
     uint8_t got[32];
@@ -168,7 +171,7 @@ static void test_hmac_sha256_streaming(void)
     uint8_t key[20];
     memset(key, 0x0b, 20);
     pc_hmac_sha256_ctx ctx;
-    pc_hmac_sha256_init(&ctx, tw, key, 20);
+    pc_hmac_sha256_init(&ctx, tw_ctx, key, 20);
     pc_hmac_sha256_update(&ctx, (const uint8_t *)"Hi ", 3);
     pc_hmac_sha256_update(&ctx, (const uint8_t *)"There", 5);
     uint8_t got[32];
@@ -212,7 +215,7 @@ static void test_hmac_sha512_streaming(void)
     uint8_t key[20];
     memset(key, 0x0b, 20);
     pc_hmac_sha512_ctx ctx;
-    pc_hmac_sha512_init(&ctx, tw, key, 20);
+    pc_hmac_sha512_init(&ctx, tw_ctx, key, 20);
     pc_hmac_sha512_update(&ctx, (const uint8_t *)"Hi ", 3);
     pc_hmac_sha512_update(&ctx, (const uint8_t *)"There", 5);
     uint8_t got[64];
@@ -969,7 +972,7 @@ static size_t build_client_packet(const uint8_t *payload, size_t payload_len, ui
     // MAC over seq_no || plaintext, then encrypt the plaintext body in place.
     uint8_t seq_be[4] = {(uint8_t)(seq >> 24), (uint8_t)(seq >> 16), (uint8_t)(seq >> 8), (uint8_t)seq};
     pc_hmac_sha256_ctx hctx;
-    pc_hmac_sha256_init(&hctx, tw, km->mac_key_c2s, 32);
+    pc_hmac_sha256_init(&hctx, tw_hctx, km->mac_key_c2s, 32);
     pc_hmac_sha256_update(&hctx, seq_be, 4);
     pc_hmac_sha256_update(&hctx, out, enc_len);
     pc_hmac_sha256_final(&hctx, out + enc_len);
@@ -1282,7 +1285,7 @@ static void test_ssh_kdf_canonical_mpint_k(void)
     uint32_t mlen = (uint32_t)(256 - off) + (pad ? 1u : 0u);
     uint8_t len_be[4] = {(uint8_t)(mlen >> 24), (uint8_t)(mlen >> 16), (uint8_t)(mlen >> 8), (uint8_t)mlen};
     pc_sha256_ctx c;
-    pc_sha256_init(&c, tw);
+    pc_sha256_init(&c, tw_c);
     pc_sha256_update(&c, len_be, 4);
     if (pad)
     {
@@ -1344,7 +1347,7 @@ static void test_ssh_kdf_extension_chain(void)
     // K1 = HASH(mpint(K) || H || 'C' || sid) - same as a single-block derive.
     uint8_t k1[PC_SHA256_DIGEST_LEN];
     pc_sha256_ctx c;
-    pc_sha256_init(&c, tw);
+    pc_sha256_init(&c, tw_c);
     kdf_hash_mpint(&c, K_be);
     pc_sha256_update(&c, H, PC_SHA256_DIGEST_LEN);
     uint8_t lbl = 'C';
@@ -1355,7 +1358,7 @@ static void test_ssh_kdf_extension_chain(void)
 
     // K2 = HASH(mpint(K) || H || K1).
     uint8_t k2[PC_SHA256_DIGEST_LEN];
-    pc_sha256_init(&c, tw);
+    pc_sha256_init(&c, tw_c);
     kdf_hash_mpint(&c, K_be);
     pc_sha256_update(&c, H, PC_SHA256_DIGEST_LEN);
     pc_sha256_update(&c, k1, PC_SHA256_DIGEST_LEN);
@@ -1575,7 +1578,7 @@ static size_t forge_etm(SshKeyMat *km, const uint8_t *key, const uint8_t *iv, ui
     memcpy(out + 4, body, pkt_len);
     uint8_t seq_be[4] = {(uint8_t)(seq >> 24), (uint8_t)(seq >> 16), (uint8_t)(seq >> 8), (uint8_t)seq};
     pc_hmac_sha256_ctx hctx;
-    pc_hmac_sha256_init(&hctx, tw, km->mac_key_c2s, 32);
+    pc_hmac_sha256_init(&hctx, tw_hctx, km->mac_key_c2s, 32);
     pc_hmac_sha256_update(&hctx, seq_be, 4);
     pc_hmac_sha256_update(&hctx, out, 4 + pkt_len);
     pc_hmac_sha256_final(&hctx, out + 4 + pkt_len);
@@ -1649,7 +1652,7 @@ static size_t forge_eam(SshKeyMat *km, uint32_t seq, uint32_t pkt_len, uint8_t p
     }
     uint8_t seq_be[4] = {(uint8_t)(seq >> 24), (uint8_t)(seq >> 16), (uint8_t)(seq >> 8), (uint8_t)seq};
     pc_hmac_sha256_ctx hctx;
-    pc_hmac_sha256_init(&hctx, tw, km->mac_key_c2s, 32);
+    pc_hmac_sha256_init(&hctx, tw_hctx, km->mac_key_c2s, 32);
     pc_hmac_sha256_update(&hctx, seq_be, 4);
     pc_hmac_sha256_update(&hctx, out, enc_len);
     pc_hmac_sha256_final(&hctx, out + enc_len);

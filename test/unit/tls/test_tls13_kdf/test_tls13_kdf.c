@@ -17,7 +17,8 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_sha[4096]; // sha works out of its own bytes // test-side working bytes for the crypto entry points
 
 void setUp()
 {
@@ -191,7 +192,7 @@ void test_server_finished()
 
     uint8_t buf[512];
     pc_sha256_ctx sha;
-    pc_sha256_init(&sha, tw);
+    pc_sha256_init(&sha, tw_sha);
     size_t n;
     n = hx(CH, buf, sizeof(buf));
     pc_sha256_update(&sha, buf, n);

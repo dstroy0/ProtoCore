@@ -21,7 +21,9 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_t[4096]; // t works out of its own bytes
+static uint8_t tw_tctx[4096]; // tctx works out of its own bytes // test-side working bytes for the crypto entry points
 
 // Two keyed AEAD contexts agree iff they seal the same input identically. The raw key is no longer
 // stored, so this is how a derived-key equality check is expressed now.
@@ -331,7 +333,7 @@ void test_full_handshake_and_stream()
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, sh, sh_len);
     {
@@ -646,7 +648,7 @@ void test_connection_close_on_malformed_frame()
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx tctx;
     uint8_t ch_sh[32];
-    pc_sha256_init(&tctx, tw);
+    pc_sha256_init(&tctx, tw_tctx);
     pc_sha256_update(&tctx, ch, ch_len);
     pc_sha256_update(&tctx, sh, sh_len);
     pc_sha256_final(&tctx, ch_sh);
@@ -1173,7 +1175,7 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
     pc_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw);
+    pc_sha256_init(&t, tw_t);
     pc_sha256_update(&t, ch, ch_len);
     pc_sha256_update(&t, sh, sh_len);
     {

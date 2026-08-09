@@ -23,7 +23,8 @@
 
 #include <unity.h>
 
-static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
+static uint8_t tw[4096];
+static uint8_t tw_c[4096]; // c works out of its own bytes // test-side working bytes for the crypto entry points
 
 // The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
@@ -1555,7 +1556,7 @@ void test_kdf_string_k_hybrid()
     // Independent: K1 = SHA256( string(K[224:256]) || H || 'C' || sid ), string = 4-byte len(32) || bytes.
     uint8_t len_be[4] = {0, 0, 0, 32};
     pc_sha256_ctx c;
-    pc_sha256_init(&c, tw);
+    pc_sha256_init(&c, tw_c);
     pc_sha256_update(&c, len_be, 4);
     pc_sha256_update(&c, K + (256 - 32), 32);
     pc_sha256_update(&c, H, PC_SHA256_DIGEST_LEN);
