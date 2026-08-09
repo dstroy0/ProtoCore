@@ -43,7 +43,6 @@ it names, the commands it invokes, and whether it holds a write primitive. `W` =
 | build an on-device bench                    | `penetration_testing/rig_firmware/{s3,p4}/build_*.sh`                |
 | verify HAL register maps against the dies   | `penetration_testing/rig_firmware/hal_verify/verify_regmaps.sh`      |
 | time a TLS or SSH handshake against the rig | `performance_benching/{tls,ssh}/*.py`                                |
-| compare against other libraries             | `performance_benching/library_comparison/measure.sh`                 |
 | do side-channel analysis                    | `reverse_engineering/{dpa_cpa,spa,template_attack,timing}_engine.py` |
 | analyse the ESP32 MAC blob                  | `reverse_engineering/esp32_mac/blob_*.py`                            |
 

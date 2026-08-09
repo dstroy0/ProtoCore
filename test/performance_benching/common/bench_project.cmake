@@ -1,13 +1,11 @@
 # Shared ESP-IDF project setup for every on-device CCOUNT microbenchmark under
 # performance_benching/. Each feature's own CMakeLists.txt sets its PC_ENABLE_* switches with
-# add_compile_definitions(), includes this file, then calls project(). Replaces the common.ini that
-# the PlatformIO envs extended.
-#
-# Board/core match performance_benching/library_comparison/protocore: esp32-s3-devkitc-1.
+# add_compile_definitions(), includes this file, then calls project().
 
-# The repo root is four levels up (<feature>/ -> <layer>/ -> performance_benching/ -> test/ -> root)
-# and is itself an IDF component. Derived, so the checkout folder name does not matter.
-get_filename_component(PC_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
+# CMAKE_CURRENT_LIST_DIR is this file's own directory, performance_benching/common, whatever depth
+# the including bench sits at, so the repo root is three levels up (common/ -> performance_benching/
+# -> test/ -> root). It is itself an IDF component. Derived, so the checkout folder name is free.
+get_filename_component(PC_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
 get_filename_component(PC_NAME "${PC_ROOT}" NAME)
 
 set(EXTRA_COMPONENT_DIRS "${PC_ROOT}")

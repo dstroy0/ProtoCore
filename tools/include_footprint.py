@@ -20,10 +20,10 @@ through the file's own project headers (one project-include graph, cycle-safe).
 
 Pure stdlib, no external deps. Run from anywhere:
 
-    python tools/include_footprint.py              # aggregate + IWYU issues
-    python tools/include_footprint.py --per-file   # full per-file breakdown
-    python tools/include_footprint.py --issues     # only files with IWYU gaps
-    python tools/include_footprint.py --json        # machine-readable dump
+    python -m tools.include_footprint              # aggregate + IWYU issues
+    python -m tools.include_footprint --per-file   # full per-file breakdown
+    python -m tools.include_footprint --issues     # only files with IWYU gaps
+    python -m tools.include_footprint --json        # machine-readable dump
 
 Exit code is 1 when --issues (or --check) finds any missing include, else 0.
 """
@@ -33,6 +33,8 @@ import json
 import re
 import sys
 from pathlib import Path
+
+from tools import findroot
 
 # Portable headers and the specific symbols this library uses from each. A
 # symbol may be provided by several headers (size_t lives in stddef.h but also
@@ -236,7 +238,7 @@ def main(argv=None):
     ap.add_argument("--json", action="store_true", help="machine-readable dump")
     args = ap.parse_args(argv)
 
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = Path(findroot.root())
     src_root = Path(args.src).resolve() if args.src else (repo_root / "src")
     if not src_root.is_dir():
         print(f"src root not found: {src_root}", file=sys.stderr)
