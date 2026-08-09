@@ -130,6 +130,14 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
+        // RFC 4253 sec 7.1: the client sent this ahead of the reply on a guess that lost negotiation,
+        // so it belongs to an algorithm nobody agreed on. Drop it and wait for the real one.
+        if (s->drop_guessed_kex_pkt)
+        {
+            s->drop_guessed_kex_pkt = PROTO_FALSE;
+            pc_plaintext_release(mark);
+            return 0;
+        }
         if (ssh_kexdh_handle(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
