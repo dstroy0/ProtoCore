@@ -1,19 +1,29 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Shared on-device CCOUNT microbench macros for performance_benching/device/<service>/main.cpp. Ported from
-// penetration_testing/rig_firmware/src/main_cryptobench.cpp's BENCH_OP/BENCH_BULK onto pc_cycles() /
-// pc_cycles_to_ns() (server/clock/clock.h) - the library's own documented wrapper around the Xtensa
-// cycle counter (CCOUNT, JTAG-observable), rather than calling ESP.getCycleCount() directly. Every
-// performance_benching/device/<service>/main.cpp includes this and prints one "DB ..." line per benched operation
-// over USB-CDC serial; a capture opened at any time still catches a full run because each sketch
-// loops the timing block (same pattern as main_cryptobench.cpp).
+// Shared on-device CCOUNT microbench macros for performance_benching/<layer>/<feature>/main/main.c.
+// Built on pc_cycles() / pc_cycles_to_ns() (server/clock/clock.h), the library's wrapper around the
+// Xtensa cycle counter (CCOUNT, JTAG-observable). Every bench includes this and prints one "DB "
+// line per benched operation over USB-Serial/JTAG; each bench loops its timing block.
 
 #ifndef PROTOCORE_PERF_DEVICE_BENCH_H
 #define PROTOCORE_PERF_DEVICE_BENCH_H
 
 #include "server/clock/clock.h"
-#include <Arduino.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "soc/rtc.h"
+#include <stdint.h>
+#include <stdio.h>
+
+/// Current CPU clock in MHz, read from the RTC clock config.
+static inline uint32_t dbench_cpu_mhz(void)
+{
+    rtc_cpu_freq_config_t conf;
+    rtc_clk_cpu_freq_get_config(&conf);
+    return conf.freq_mhz;
+}
 
 /// Warm once, run N iterations, leave the mean cycle count in `out_cy` (a double lvalue).
 /// The measurement; every reporting macro is a printf around it.
@@ -36,9 +46,9 @@
     {                                                                                                                  \
         double _cy = 0.0;                                                                                              \
         DBENCH_CYCLES(N, expr, _cy);                                                                                   \
-        uint32_t _mhz = getCpuFrequencyMhz();                                                                          \
-        Serial.printf("DB %-30s cyc=%-11.0f us=%-9.2f ns=%.0f\n", label, _cy, _cy / (double)_mhz,                      \
-                      (_cy * 1000.0) / (double)_mhz);                                                                  \
+        uint32_t _mhz = dbench_cpu_mhz();                                                                              \
+        printf("DB %-30s cyc=%-11.0f us=%-9.2f ns=%.0f\n", label, _cy, _cy / (double)_mhz,                             \
+               (_cy * 1000.0) / (double)_mhz);                                                                         \
         vTaskDelay(1);                                                                                                 \
     } while (0)
 
@@ -48,11 +58,10 @@
     {                                                                                                                  \
         double _cy = 0.0;                                                                                              \
         DBENCH_CYCLES(N, expr, _cy);                                                                                   \
-        uint32_t _mhz = getCpuFrequencyMhz();                                                                          \
+        uint32_t _mhz = dbench_cpu_mhz();                                                                              \
         double _nspb = ((_cy * 1000.0) / (double)_mhz) / (double)(bytes);                                              \
         double _mbs = (_nspb > 0.0) ? (1000.0 / _nspb) : 0.0;                                                          \
-        Serial.printf("DB %-30s cyc=%-11.0f ns/B=%-8.2f MB/s=%-8.1f (%uB)\n", label, _cy, _nspb, _mbs,                 \
-                      (unsigned)(bytes));                                                                              \
+        printf("DB %-30s cyc=%-11.0f ns/B=%-8.2f MB/s=%-8.1f (%uB)\n", label, _cy, _nspb, _mbs, (unsigned)(bytes));    \
         vTaskDelay(1);                                                                                                 \
     } while (0)
 

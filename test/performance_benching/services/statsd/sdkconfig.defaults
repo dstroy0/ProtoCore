@@ -1,0 +1,5 @@
+# Bench config: size-optimized build, 1 kHz tick for vTaskDelay(1) between reported ops, and the
+# DB lines out over the S3's native USB-Serial/JTAG port.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
