@@ -6580,6 +6580,12 @@ from halves and is slower than the width it decomposes into"
 #define PC_HKDF_BORROW (PC_HMAC_SHA256_BORROW + 32 + 514)
 #endif
 
+// The RFC 4253 sec 7.2 KDF runs one exchange-hash context and accumulates the K1 || K2 chain behind
+// it. SHA-512 is the wider of the two KEX hashes, and the chain is bounded by SSH_KDF_MAX (128).
+#ifndef PC_SSH_KDF_BORROW
+#define PC_SSH_KDF_BORROW (PC_SHA512_BORROW + 128)
+#endif
+
 // A SHA-512 context works out of the same three regions as SHA-256, at its own widths: the 128-byte
 // block as it arrives, the padded last one, and the 64-byte state copy finalizing compresses into.
 // The schedule is a register window, not storage.
