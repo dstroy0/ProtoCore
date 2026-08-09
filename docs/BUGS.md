@@ -8,6 +8,33 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The SSH plaintext draw is undeclared, and with zlib on the nest is over the arena
+
+- **Status:** OPEN, from the `network_drivers/presentation` resource audit (F8). The orphan term and
+  the missing assert are **verified**; the 8,760 B peak is the audit's arithmetic and is **not**
+  confirmed by a run, because nothing can run it (below).
+- **Verified here:** `PC_PLAINTEXT_WORK_SSH_TRANSPORT` is defined twice in `ssh_packet.h:204,206`
+  (zlib and non-zlib arms) and referenced nowhere else in `src/`. Nothing asserts it against
+  `PC_PLAINTEXT_ARENA_SIZE`, which is 8192 (`protocore_config.h:6477`). Every other
+  `PC_PLAINTEXT_WORK_*` in the tree carries that assert in its owning `.c`.
+- **The audit's arithmetic**, from the nest it read: `ssh_recv_ctr_emac` holds
+  `SSH_PKT_BUF_SIZE + 64` = 2,112 across `ssh_dispatch_payload`, which holds `SSH_PKT_BUF_SIZE` =
+  2,048 (zlib only) across `pc_ssh_server_dispatch`, which holds a 2,048 reply span across the whole
+  switch, under which `pc_ssh_auth_handle_pubkey` holds 368 + 2,120 + 64 = 2,552.
+    - `PC_ENABLE_SSH_ZLIB=0`: 2112 + 2048 + 2552 = **6,712** of 8,192. Fits.
+    - `PC_ENABLE_SSH_ZLIB=1`: + 2,048 = **8,760**. Over by 568, and `pc_ssh_auth_handle_pubkey`
+      fails closed to USERAUTH_FAILURE - correct behaviour, silently denying every valid key.
+- **Why it is not confirmed, and cannot be as the matrix stands:** no env builds SSH auth with
+  compression. `native_ssh` carries the auth suites but its src list has no `ssh_comp.c`, so
+  `-DPC_ENABLE_SSH_ZLIB=1` on it fails to link (`ssh_comp_s2c_active`, `ssh_comp_on_auth_success`
+  and four more undefined). `native_ssh_comp` and `native_ssh_zlib` build the compressor but run no
+  auth. The combination that would fail is the one combination nothing covers.
+- **The decision, not written:** either raise `PC_PLAINTEXT_ARENA_SIZE` past the real nest, or add
+  the `static_assert` the orphan term implies and let a zlib build fail at compile time instead of
+  at run time. The assert is the one that makes the budget checkable, and it will not pass today -
+  which is the point. Both are sizing calls, and an env that builds auth against the compressor is
+  wanted either way.
+
 ## A refused SSH send leaves the sequence number and the cipher ahead of the peer, and the session dies
 
 - **Status:** OPEN for the desync. The reporting half is FIXED in `cd435b1b6`; this entry is the part
