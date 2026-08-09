@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- derive the re-key packet count from the 1 GB bound (RFC 4253 sec 9) ([`cb02d8e`](https://github.com/dstroy0/ProtoCore/commit/cb02d8e140558f25a3d303fd591865a01228a1fa))
 - a wrong KEX guess is dropped, not taken as the real KEXDH_INIT (RFC 4253 sec 7.1) ([`3453650`](https://github.com/dstroy0/ProtoCore/commit/345365020e36834a5ad631dd66c6dd783ca3ef6e))
 - EXT_INFO belongs to the first NEWKEYS, not every re-key (RFC 8308 sec 2.4) ([`93c23bd`](https://github.com/dstroy0/ProtoCore/commit/93c23bddfba72621a9fb41e08e9b81c7674daf0f))
 - the remaining ssh_dh_derive_keys_sid call sites take both directions ([`2220fc8`](https://github.com/dstroy0/ProtoCore/commit/2220fc83171fb3be6ea3ccd7e013e68e29734b2c))
@@ -63,6 +64,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b45d24a`](https://github.com/dstroy0/ProtoCore/commit/b45d24a20335274a11e08d425992b0a3606cc06a))
+- update CHANGELOG.md [skip ci] ([`2e0fd31`](https://github.com/dstroy0/ProtoCore/commit/2e0fd3146bbc4ea0ccfe08c89a20baad69d54c67))
 - update CHANGELOG.md [skip ci] ([`ce0679a`](https://github.com/dstroy0/ProtoCore/commit/ce0679a0946d2e389f99111e75dcb581346f1293))
 - update CHANGELOG.md [skip ci] ([`fd12093`](https://github.com/dstroy0/ProtoCore/commit/fd12093b4d183fd326616dde6b996d6262e3a370))
 - update CHANGELOG.md [skip ci] ([`4d57ff2`](https://github.com/dstroy0/ProtoCore/commit/4d57ff2ba85428a90583d17e7f4aea43bc86773f))
