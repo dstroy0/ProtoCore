@@ -500,6 +500,52 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test/gen_test_envs.py`. A sweep of the matrix found no third env in this state.
   Verified: `native_ssh_hardened` 4/4, `native_ssh_pqc` 10/10.
 
+## The cipher and MAC were forced equal both ways, so a conforming client could not key
+
+- **Status:** FIXED 2026-08-09 (`ssh_transport.c` `ssh_kexinit_parse`, `ssh_keymat.h`, `ssh_dh.c`,
+  `ssh_packet.c`). Found 2026-08-08 auditing `test/` for RFC conformance
+  (`git_project/audit/ssh-transport-kex.md` #6).
+- **Symptom:** `ssh_transport.c:674` rejected the KEXINIT when `s2c != c2s`, and `:700` when
+  `m_s2c != m_c2s`. RFC 4253 sec 7.1 negotiates the two cipher lists and the two MAC lists
+  independently, so a client whose directions carried different preferences was refused outright even
+  though each list negotiated cleanly on its own.
+- **Root cause:** the session and the keymat each held one `cipher_alg` / `mac_alg`, so the two
+  directions had nowhere to differ. Everything else was already per-direction: `aes_key_c2s/_s2c`,
+  `chacha_key_*`, `gcm_ctx_*`, and both 64-byte `mac_key_*` buffers.
+- **Nothing can catch it:** `test_kexinit_parse_rejects_direction_mismatch` asserted the `-1`, pinning
+  the behaviour the RFC contradicts.
+- **Fix:** the mode is stored per direction (`cipher_mode_c2s/_s2c`, `mac_mode_c2s/_s2c`) and read
+  through `km_send_cipher` / `km_recv_cipher` / `km_send_mac_mode` / `km_recv_mac_mode`, mirroring the
+  existing `km_send_mac` / `km_recv_mac` key selectors. `ssh_keymat_wipe` releases each GCM context on
+  its own mode, so a mixed session cannot leak one. The test now asserts both directions negotiate
+  independently. Verified: `native_ssh` + 16 more envs, 594 cases.
+
+## EXT_INFO was re-advertised on every re-key
+
+- **Status:** FIXED 2026-08-09 (`ssh_server.c` NEWKEYS arm). Found 2026-08-08 auditing `test/` for RFC
+  conformance (`git_project/audit/ssh-transport-kex.md` #12).
+- **Symptom:** the NEWKEYS arm emitted EXT_INFO whenever `ext_info_c` was set, and
+  `ssh_kexinit_parse` re-reads that flag from every KEXINIT including a re-key's, so the message went
+  out again on each one. RFC 8308 sec 2.4 gives a server exactly two places to send it: after its
+  first NEWKEYS, or immediately preceding USERAUTH_SUCCESS.
+- **Nothing can catch it:** `test_ssh_kexinit_midsession_rekey` drives a full re-key with an
+  ext-info-c-bearing KEXINIT and never checked what the second NEWKEYS emitted.
+- **Fix:** `ext_info_sent` on the session gates it to the first NEWKEYS. The re-key test now asserts no
+  EXT_INFO follows. Verified: `native_ssh`, `ssh_comp`, `ssh_kbdint`, `ssh_pqc`, 337 cases.
+
+## The identification-string bound was off by two against RFC 4253 sec 4.2
+
+- **Status:** FIXED 2026-08-09 (`ssh_transport.c` `ssh_transport_recv_banner`). Found 2026-08-08
+  auditing `test/` for RFC conformance (`git_project/audit/ssh-transport-kex.md` #15).
+- **Symptom:** the banner was rejected only at `n >= SSH_VERSION_MAX` (256) measured on the content
+  with CR stripped, so 255 content bytes plus CR LF - 257 on the wire - was accepted. RFC 4253 sec 4.2
+  bounds the string at 255 _including_ the Carriage Return and Line Feed, so the content limit is 253.
+- **Nothing can catch it:** `test_banner_and_build_caps` pinned only the 256-byte rejection, leaving
+  the RFC's actual bound untested in both directions.
+- **Fix:** `SSH_VERSION_CONTENT_MAX` (253) is the bound the SSH- line is checked against.
+  `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
+  Verified: `native_ssh` + 16 more envs.
+
 ## HPACK prefix-integer decode wraps at `m == 28`
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #8).
@@ -607,14 +653,16 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ## The plaintext SSH receive path accepts sub-minimum padding
 
-- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-transport-kex.md` #7).
+- **Status:** FIXED 2026-08-09 (`ssh_packet.c` `ssh_recv_plain`). Found 2026-08-08 auditing `test/` for
+  RFC conformance (`git_project/audit/ssh-transport-kex.md` #7).
 - **Symptom:** `ssh_packet.c:747` checks only `pad_len_byte >= pkt_len`. All four encrypted receive
   paths check `< 4` (`:438`, `:514`, `:592`, `:700`); the pre-NEWKEYS path does not, so a packet
   declaring 0 to 3 bytes of padding is accepted there.
 - **Root cause:** RFC 4253 sec 6 - "There MUST be at least four bytes of padding" - is enforced in the
   four places that were written together and missed in the fifth. `docs/SSH.md:73` claims the rule holds.
 - **Nothing can catch it:** `test_ssh_server.c:582` covers only the over-large case (`6 >= 6`).
-- **Fix:** not written. Add the `< 4` arm, and pin all five paths with the same boundary pair.
+- **Fix:** the plaintext path carries the same `< 4` arm as the other four.
+  Verified: `native_ssh` + 16 more envs.
 
 ## The AES-GCM vector corpus ships forty valid vectors and zero negatives
 
