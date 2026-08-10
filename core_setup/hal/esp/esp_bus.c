@@ -66,6 +66,8 @@ typedef struct
     int scl;
     uint32_t hz;
     uint8_t link[I2C_LINK_RECOMMENDED_SIZE(PC_I2C_LINK_CMDS)];
+    pc_platform_mutex lock;            ///< held from command-link create to delete
+    pc_platform_mutex_ctrl lock_store; ///< the mutex's own storage; creating it allocates nothing
 } EspI2cBus;
 
 typedef struct
@@ -297,6 +299,7 @@ int pc_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
     {
         return 0;
     }
+    b->lock = pc_platform_mutex_create(&b->lock_store);
     b->up = PROTO_TRUE;
     b->sda = sda;
     b->scl = scl;
@@ -345,9 +348,11 @@ int pc_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32
     {
         return 0;
     }
+    pc_platform_mutex_take(b->lock, portMAX_DELAY);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create_static(b->link, sizeof(b->link));
     if (cmd == NULL)
     {
+        pc_platform_mutex_give(b->lock);
         return 0;
     }
     esp_err_t e = i2c_master_start(cmd);
@@ -368,6 +373,7 @@ int pc_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32
         e = i2c_master_cmd_begin(i2c_port_id(bus), cmd, pdMS_TO_TICKS(ms));
     }
     i2c_cmd_link_delete_static(cmd);
+    pc_platform_mutex_give(b->lock);
     return e == ESP_OK ? 1 : 0;
 }
 
@@ -382,9 +388,11 @@ int pc_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len,
     {
         return 0;
     }
+    pc_platform_mutex_take(b->lock, portMAX_DELAY);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create_static(b->link, sizeof(b->link));
     if (cmd == NULL)
     {
+        pc_platform_mutex_give(b->lock);
         return 0;
     }
     esp_err_t e = i2c_master_start(cmd);
@@ -415,6 +423,7 @@ int pc_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len,
         e = i2c_master_cmd_begin(i2c_port_id(bus), cmd, pdMS_TO_TICKS(ms));
     }
     i2c_cmd_link_delete_static(cmd);
+    pc_platform_mutex_give(b->lock);
     return e == ESP_OK ? 1 : 0;
 }
 
@@ -432,9 +441,11 @@ int pc_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uin
     }
     // One transaction with a repeated start between the write and the read, which is what a
     // register read is: address the register, then turn the bus around without releasing it.
+    pc_platform_mutex_take(b->lock, portMAX_DELAY);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create_static(b->link, sizeof(b->link));
     if (cmd == NULL)
     {
+        pc_platform_mutex_give(b->lock);
         return 0;
     }
     esp_err_t e = i2c_master_start(cmd);
@@ -467,6 +478,7 @@ int pc_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uin
         e = i2c_master_cmd_begin(i2c_port_id(bus), cmd, pdMS_TO_TICKS(ms));
     }
     i2c_cmd_link_delete_static(cmd);
+    pc_platform_mutex_give(b->lock);
     return e == ESP_OK ? 1 : 0;
 }
 
@@ -481,9 +493,11 @@ int pc_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
     {
         return 0;
     }
+    pc_platform_mutex_take(b->lock, portMAX_DELAY);
     i2c_cmd_handle_t cmd = i2c_cmd_link_create_static(b->link, sizeof(b->link));
     if (cmd == NULL)
     {
+        pc_platform_mutex_give(b->lock);
         return 0;
     }
     esp_err_t e = i2c_master_start(cmd);
@@ -500,6 +514,7 @@ int pc_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
         e = i2c_master_cmd_begin(i2c_port_id(bus), cmd, pdMS_TO_TICKS(ms));
     }
     i2c_cmd_link_delete_static(cmd);
+    pc_platform_mutex_give(b->lock);
     return e == ESP_OK ? 1 : 0;
 }
 

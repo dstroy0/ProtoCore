@@ -263,9 +263,9 @@ static const pc_mnt_backend s_fs_backend = {fs_open,  fs_read,   fs_write,   fs_
                                             fs_size,  fs_exists, fs_remove,  fs_rename,  fs_mkdir,
                                             fs_rmdir, fs_stat,   fs_opendir, fs_readdir, fs_sync};
 
-const pc_mnt_backend *pc_mnt_fs(fs::FS *filesystem)
+const pc_mnt_backend *pc_mnt_fs(void *filesystem)
 {
-    s_mnt_fs.fs = filesystem;
+    s_mnt_fs.fs = static_cast<fs::FS *>(filesystem);
     for (int h = 0; h < PC_MNT_MAX_OPEN; h++)
     {
         s_mnt_fs.used[h] = PROTO_FALSE;
