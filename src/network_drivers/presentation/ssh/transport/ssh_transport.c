@@ -747,7 +747,12 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
 #endif
 
     // Two language name-lists (RFC 4253 sec 7.1, ignored), then the guess flag and the reserved uint32.
-    if (!pc_rd_str(payload, len, &off, &list, &nlen) || !pc_rd_str(payload, len, &off, &list, &nlen))
+    // Each read advances off, so these are the first list and then the second.
+    if (!pc_rd_str(payload, len, &off, &list, &nlen))
+    {
+        return -1;
+    }
+    if (!pc_rd_str(payload, len, &off, &list, &nlen))
     {
         return -1;
     }

@@ -281,10 +281,19 @@ static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
     }
     if (off < end && der[off] == SSH_RSA_DER_SEQUENCE)
     {
-        if (!der_step(der, end, &off, &skip, &skip_len) || // AlgorithmIdentifier
-            !der_enter(der, end, &off, &end) ||            // privateKey
-            !der_enter(der, end, &off, &end) ||            // the RSAPrivateKey inside it
-            !der_step(der, end, &off, &skip, &skip_len))   // its version
+        if (!der_step(der, end, &off, &skip, &skip_len)) // AlgorithmIdentifier
+        {
+            return PROTO_FALSE;
+        }
+        if (!der_enter(der, end, &off, &end)) // privateKey
+        {
+            return PROTO_FALSE;
+        }
+        if (!der_enter(der, end, &off, &end)) // the RSAPrivateKey inside it
+        {
+            return PROTO_FALSE;
+        }
+        if (!der_step(der, end, &off, &skip, &skip_len)) // its version
         {
             return PROTO_FALSE;
         }

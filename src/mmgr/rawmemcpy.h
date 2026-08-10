@@ -281,7 +281,7 @@ static inline void proto_raw_read(void *dst, const void *p, size_t sz)
             i += PROTO_RAW_WORD;
         }
     }
-    else
+    else if (sz - i >= PROTO_RAW_WORD)
     {
         // Not co-aligned, and the answer is NOT to fall back to bytes. Read the source at its own
         // boundary and funnel each adjacent PAIR of aligned words into the word the destination
@@ -292,6 +292,10 @@ static inline void proto_raw_read(void *dst, const void *p, size_t sz)
         //
         // Address order decides which way each shift goes: on a little-endian load the lowest byte
         // sits in the low bits, so the earlier word shifts DOWN; big-endian is the mirror.
+        //
+        // The priming load reads a whole word, so it is spent only once there is a whole word of
+        // work: with fewer bytes left than that the loop below never runs, and the load would reach
+        // past a source that short for a value nothing reads. The tail takes those bytes instead.
         const unsigned char *sa = (u + i) - off;
         const unsigned lo = (unsigned)(off * 8u);
         const unsigned hi = (unsigned)(PROTO_MV_BITS - (off * 8u));
