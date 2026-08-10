@@ -10,6 +10,7 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - illegal_parameter for a bad cookie, abort a non-empty legacy_cookie, and RFC 7250 outcome 2 ([`50d3c3b`](https://github.com/dstroy0/ProtoCore/commit/50d3c3b809cee1312fe2c599b57850f75e291da7))
 >>>>>>> Stashed changes
@@ -18,6 +19,11 @@ All notable changes to ProtoCore are documented here.
 - illegal_parameter for a bad cookie, abort a non-empty legacy_cookie, and RFC 7250 outcome 2 ([`50d3c3b`](https://github.com/dstroy0/ProtoCore/commit/50d3c3b809cee1312fe2c599b57850f75e291da7))
 >>>>>>> Stashed changes
 =======
+- a retransmitted fragment that changes a byte aborts reassembly ([`b423bdc`](https://github.com/dstroy0/ProtoCore/commit/b423bdcc6bdbf77875eda09d9aea0b7abbf33701))
+- illegal_parameter for a bad cookie, abort a non-empty legacy_cookie, and RFC 7250 outcome 2 ([`50d3c3b`](https://github.com/dstroy0/ProtoCore/commit/50d3c3b809cee1312fe2c599b57850f75e291da7))
+>>>>>>> Stashed changes
+=======
+- legacy_record_version is ignored, per RFC 9147 sec 4 ([`03c5fa3`](https://github.com/dstroy0/ProtoCore/commit/03c5fa3dd347780f58448a77c292b36831595147))
 - a retransmitted fragment that changes a byte aborts reassembly ([`b423bdc`](https://github.com/dstroy0/ProtoCore/commit/b423bdcc6bdbf77875eda09d9aea0b7abbf33701))
 - illegal_parameter for a bad cookie, abort a non-empty legacy_cookie, and RFC 7250 outcome 2 ([`50d3c3b`](https://github.com/dstroy0/ProtoCore/commit/50d3c3b809cee1312fe2c599b57850f75e291da7))
 >>>>>>> Stashed changes
@@ -108,10 +114,16 @@ All notable changes to ProtoCore are documented here.
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - update CHANGELOG.md [skip ci] ([`a8db3dc`](https://github.com/dstroy0/ProtoCore/commit/a8db3dc04ccf55c0a09c468a90240fcae613d015))
 >>>>>>> Stashed changes
 =======
+- update CHANGELOG.md [skip ci] ([`dc081c5`](https://github.com/dstroy0/ProtoCore/commit/dc081c56b8e9f1c5d6d8320fe5490540fe361002))
+- update CHANGELOG.md [skip ci] ([`a8db3dc`](https://github.com/dstroy0/ProtoCore/commit/a8db3dc04ccf55c0a09c468a90240fcae613d015))
+>>>>>>> Stashed changes
+=======
+- update CHANGELOG.md [skip ci] ([`bda421e`](https://github.com/dstroy0/ProtoCore/commit/bda421e55b86624936fdbcdb96c9a5681448f514))
 - update CHANGELOG.md [skip ci] ([`dc081c5`](https://github.com/dstroy0/ProtoCore/commit/dc081c56b8e9f1c5d6d8320fe5490540fe361002))
 - update CHANGELOG.md [skip ci] ([`a8db3dc`](https://github.com/dstroy0/ProtoCore/commit/a8db3dc04ccf55c0a09c468a90240fcae613d015))
 >>>>>>> Stashed changes
@@ -294,6 +306,7 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - log the tls_conn borrow leak and the unbuildable portable arm ([`f60a13d`](https://github.com/dstroy0/ProtoCore/commit/f60a13d9ad847bd66d28ce7ce6f751faec7e5048))
 >>>>>>> Stashed changes
@@ -302,6 +315,11 @@ All notable changes to ProtoCore are documented here.
 - log the tls_conn borrow leak and the unbuildable portable arm ([`f60a13d`](https://github.com/dstroy0/ProtoCore/commit/f60a13d9ad847bd66d28ce7ce6f751faec7e5048))
 >>>>>>> Stashed changes
 =======
+- log the DTLS cookie alert, legacy_cookie and RFC 7250 outcome 2 ([`cea07f6`](https://github.com/dstroy0/ProtoCore/commit/cea07f6de3257727cd076b0f6a2a64a025eaf9f4))
+- log the tls_conn borrow leak and the unbuildable portable arm ([`f60a13d`](https://github.com/dstroy0/ProtoCore/commit/f60a13d9ad847bd66d28ce7ce6f751faec7e5048))
+>>>>>>> Stashed changes
+=======
+- log the DTLS fragment-conflict overwrite ([`7b26945`](https://github.com/dstroy0/ProtoCore/commit/7b26945e3759beda8cd96096e74622a380311127))
 - log the DTLS cookie alert, legacy_cookie and RFC 7250 outcome 2 ([`cea07f6`](https://github.com/dstroy0/ProtoCore/commit/cea07f6de3257727cd076b0f6a2a64a025eaf9f4))
 - log the tls_conn borrow leak and the unbuildable portable arm ([`f60a13d`](https://github.com/dstroy0/ProtoCore/commit/f60a13d9ad847bd66d28ce7ce6f751faec7e5048))
 >>>>>>> Stashed changes
@@ -395,6 +413,7 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - anchor the handshake secrets on the RFC 8448 sec 5 trace ([`a72d6b4`](https://github.com/dstroy0/ProtoCore/commit/a72d6b4412c20de19702b23957d299b4396c1154))
 - one slot, re-initialised per case ([`caf6c9e`](https://github.com/dstroy0/ProtoCore/commit/caf6c9ea4eacd682dd5dd060888b44b50d70edcd))
@@ -405,10 +424,16 @@ All notable changes to ProtoCore are documented here.
 - one slot, re-initialised per case ([`caf6c9e`](https://github.com/dstroy0/ProtoCore/commit/caf6c9ea4eacd682dd5dd060888b44b50d70edcd))
 >>>>>>> Stashed changes
 =======
+=======
+- drop the test for a version branch that no longer exists ([`4a440db`](https://github.com/dstroy0/ProtoCore/commit/4a440db785f1765032e35b8b79dd69dc9e9d4abd))
+- the PTO ladder is spelled out, not recomputed ([`c0c3efc`](https://github.com/dstroy0/ProtoCore/commit/c0c3efc499da3c10a4926dad7c0c28283ee6f358))
+- the replay-window edge and the RFC 8410 published SPKI ([`19089e9`](https://github.com/dstroy0/ProtoCore/commit/19089e94c6a2b36aa51c05bdc231c7d24bc96b3d))
+>>>>>>> Stashed changes
 - a conflicting overlapping fragment is rejected ([`a144c0a`](https://github.com/dstroy0/ProtoCore/commit/a144c0ac66f8c8e4fdec37ef009a6b35459eeaaf))
 - a non-empty DTLS legacy_cookie aborts the parse ([`89310eb`](https://github.com/dstroy0/ProtoCore/commit/89310eb5022eeb8e61abf85adb5058128b613802))
 - anchor the handshake secrets on the RFC 8448 sec 5 trace ([`a72d6b4`](https://github.com/dstroy0/ProtoCore/commit/a72d6b4412c20de19702b23957d299b4396c1154))
 - one slot, re-initialised per case ([`caf6c9e`](https://github.com/dstroy0/ProtoCore/commit/caf6c9ea4eacd682dd5dd060888b44b50d70edcd))
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
 =======
 - the PTO ladder is spelled out, not recomputed ([`c0c3efc`](https://github.com/dstroy0/ProtoCore/commit/c0c3efc499da3c10a4926dad7c0c28283ee6f358))
@@ -417,6 +442,8 @@ All notable changes to ProtoCore are documented here.
 - a non-empty DTLS legacy_cookie aborts the parse ([`89310eb`](https://github.com/dstroy0/ProtoCore/commit/89310eb5022eeb8e61abf85adb5058128b613802))
 - anchor the handshake secrets on the RFC 8448 sec 5 trace ([`a72d6b4`](https://github.com/dstroy0/ProtoCore/commit/a72d6b4412c20de19702b23957d299b4396c1154))
 - one slot, re-initialised per case ([`caf6c9e`](https://github.com/dstroy0/ProtoCore/commit/caf6c9ea4eacd682dd5dd060888b44b50d70edcd))
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 - the connection is a pool slot, zeroed before first use ([`c16259a`](https://github.com/dstroy0/ProtoCore/commit/c16259a65df59925311024ff89bab1a830391c69))
 - drive the server half with a hand-built ClientHello ([`909ee46`](https://github.com/dstroy0/ProtoCore/commit/909ee46f8c097c69f79455e1ace53c9adacb523d))
