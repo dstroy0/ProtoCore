@@ -22,7 +22,7 @@
 #include "mmgr/secure.h"
 #include "protocore_config.h" // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)
+#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE)
 #if PC_HAS_HW_AESGCM
 
 #include <mbedtls/aes.h>
@@ -34,6 +34,7 @@ PC_CRYPTO_HOT
 typedef struct pc_aes128
 {
     mbedtls_aes_context mbed; ///< mbedtls context (HW-accelerated), key schedule loaded.
+    proto_bool keyed;         ///< the key schedule loaded; false leaves encrypt_block writing zeros.
 } pc_aes128;
 
 static_assert(sizeof(pc_aes128) <= PC_WORK_AES128, "pc_aes128 outgrew PC_WORK_AES128 - raise it in protocore_config.h");
@@ -47,12 +48,17 @@ struct pc_aes128 *pc_aes128_wants(void)
 void pc_aes128_init(struct pc_aes128 *ctx, const uint8_t key[16])
 {
     mbedtls_aes_init(&ctx->mbed);
-    mbedtls_aes_setkey_enc(&ctx->mbed, key, 128);
+    // A refused key leaves the context unkeyed, which the block below turns into zeroed output
+    // rather than a keystream from whatever the context last held.
+    ctx->keyed = mbedtls_aes_setkey_enc(&ctx->mbed, key, 128) == 0;
 }
 
 void pc_aes128_encrypt_block(struct pc_aes128 *ctx, const uint8_t in[16], uint8_t out[16])
 {
-    mbedtls_aes_crypt_ecb(&ctx->mbed, MBEDTLS_AES_ENCRYPT, in, out);
+    if (!ctx->keyed || mbedtls_aes_crypt_ecb(&ctx->mbed, MBEDTLS_AES_ENCRYPT, in, out) != 0)
+    {
+        memset(out, 0, 16); // no channel to report on: a zero block fails every tag check
+    }
 }
 
 void pc_aes128_wipe(struct pc_aes128 *ctx)
@@ -107,4 +113,4 @@ proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_
 }
 
 #endif // PC_HAS_HW_AESGCM
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE
