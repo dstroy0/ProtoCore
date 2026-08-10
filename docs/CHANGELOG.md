@@ -70,6 +70,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`85a5baa`](https://github.com/dstroy0/ProtoCore/commit/85a5baaf30856606f400ded52965506b2230ce68))
 - update CHANGELOG.md [skip ci] ([`243a67a`](https://github.com/dstroy0/ProtoCore/commit/243a67aa1238d049026147116c2348a4a1330279))
 - update CHANGELOG.md [skip ci] ([`e66be49`](https://github.com/dstroy0/ProtoCore/commit/e66be49708952388278f0872a1da4e5a05a64be2))
 - update CHANGELOG.md [skip ci] ([`0d43b4f`](https://github.com/dstroy0/ProtoCore/commit/0d43b4f4de14622528150f0fc976ff8e0ce28fee))
@@ -217,6 +218,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- close the h2 idle-stream DATA and WINDOW_UPDATE findings ([`c82be77`](https://github.com/dstroy0/ProtoCore/commit/c82be77a13a93b79d9573122ef2eed05510b437a))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`12f1553`](https://github.com/dstroy0/ProtoCore/commit/12f155312a76b1afb138a820539b97e8c27700d1))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b10f486`](https://github.com/dstroy0/ProtoCore/commit/b10f486dfb3f48a9da689281ed740787fe8c7e48))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a867e73`](https://github.com/dstroy0/ProtoCore/commit/a867e73a9e71da103ad33dec9980524e089a0da2))
