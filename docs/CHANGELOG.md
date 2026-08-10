@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the vendor arm hashed at an offset only the software arm defined ([`5b26f3a`](https://github.com/dstroy0/ProtoCore/commit/5b26f3a4b5bb997fbc4e9840efc456047323fa75))
 - the misaligned priming load ran with less than a word of work left ([`022e8ed`](https://github.com/dstroy0/ProtoCore/commit/022e8edd96793a99d334dea02b9015df3306e32f))
 - claiming a slot orphaned both engines' borrows ([`c722cbf`](https://github.com/dstroy0/ProtoCore/commit/c722cbfa93b8118b8abc016d5e408bed5d118109))
 - the init wipe ran through the pointer from before the split ([`6aac99b`](https://github.com/dstroy0/ProtoCore/commit/6aac99b774099c8af1fbedaa3a55c814370d57c6))
@@ -95,6 +96,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
+>>>>>>> Stashed changes
 - the .pio ignore never matched, so vendored littlefs kept reporting ([`c4368d3`](https://github.com/dstroy0/ProtoCore/commit/c4368d3862d2c8a99c1c85093aa503695ee251d4))
 - update CHANGELOG.md [skip ci] ([`a2f994f`](https://github.com/dstroy0/ProtoCore/commit/a2f994f818cab261501bf036b444ede0f28ad8fa))
 - update CHANGELOG.md [skip ci] ([`ab67473`](https://github.com/dstroy0/ProtoCore/commit/ab674734caf80f35155c0ab331fd28d10dac3714))
