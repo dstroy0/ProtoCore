@@ -566,6 +566,48 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## An invalid DTLS cookie drew the wrong alert
+
+- **Status:** FIXED 2026-08-09 (`dtls_conn.c`). Found 2026-08-08 auditing `test/` for RFC
+  conformance (`git_project/audit/dtls13-rpk.md` #1).
+- **Symptom:** RFC 9147 sec 5.1: "If a server receives a ClientHello with an invalid cookie, it MUST
+  terminate the handshake with an illegal_parameter alert. This allows the client to restart the
+  connection from scratch without a cookie." The server sent `handshake_failure` (40), which tells
+  the client the parameters could not be agreed - so a client that would have retried without a
+  cookie gives up instead.
+- **Nothing can catch it:** both cookie-rejection tests asserted 40.
+- **Fix:** `illegal_parameter` (47) on the cookie path only; the paths that genuinely cannot agree
+  parameters still send 40. Verified: 214/214 across thirteen DTLS/TLS envs.
+
+## A non-empty DTLS legacy_cookie was read past
+
+- **Status:** FIXED 2026-08-09 (`tls13_msg.c`). Found 2026-08-08 auditing `test/` for RFC
+  conformance (`git_project/audit/dtls13-rpk.md` #2).
+- **Symptom:** RFC 9147 sec 5.3: "A DTLS 1.3-only client MUST set the legacy_cookie field to zero
+  length. If a DTLS 1.3 ClientHello is received with any other value in this field, the server MUST
+  abort the handshake with an illegal_parameter alert." The parser read the field and discarded it.
+  In DTLS 1.3 the real cookie rides the extension, so a non-empty legacy field is a client that is
+  not speaking 1.3.
+- **Nothing can catch it:** `test_tls13_dtls_client_hello_shape` asserted the opposite - "a
+  non-empty legacy_cookie is skipped just the same" - and every test ClientHello writes 0x00.
+- **Fix:** a non-zero length fails the parse, which the caller turns into the alert.
+
+## No common certificate type fell back to X.509 instead of failing
+
+- **Status:** FIXED 2026-08-09 (`tls13_msg.c`, `dtls_conn.c`). Found 2026-08-08 auditing `test/` for
+  RFC conformance (`git_project/audit/dtls13-rpk.md` #5).
+- **Symptom:** RFC 7250 sec 4.2 outcome 2: a server that supports the extension but has no
+  certificate type in common with the client "terminates the session with a fatal alert of type
+  unsupported_certificate". The server answered X.509 regardless - including for a RawPublicKey-only
+  offer, and always when `PC_ENABLE_TLS_RPK` is 0, because the whole extension case sat inside that
+  guard and was not even parsed.
+- **Root cause:** the parser recorded only whether RawPublicKey was offered, which cannot express
+  "the client named types and none of them is one we can send".
+- **Fix:** the extension is parsed whatever the build can answer with - outcome 2 turns on what the
+  client named, not on what we support - and the ClientHello now carries `has_server_cert_type` and
+  `offers_x509_server_cert` beside the existing RPK flag. A client that sent the extension and named
+  neither a type we can produce gets `unsupported_certificate` (43).
+
 ## Every TLS connection init drew a fresh persistent borrow it never gave back
 
 - **Status:** FIXED 2026-08-09 (`tls_conn.c` `tls_conn_slot_storage`). Found 2026-08-09 building the
