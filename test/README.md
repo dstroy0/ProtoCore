@@ -178,7 +178,11 @@ The native test matrix has **329 environments**, one per feature, generated from
 | `native_guardrails` | `PC_ENABLE_GUARDRAILS=1` | `unit/security/test_guardrails` | Heap/stack guardrails (services/security/guardrails): threshold evaluator + JSON, host-tested. |
 | `native_h2conn` | `PC_ENABLE_HTTP2=1` | `protocols/http/test_h2_conn` | HTTP/2 connection engine (network_drivers/presentation/http/http2/h2_conn, RFC 9113): initial SETTINGS on init, preface + client SETTINGS -> SETTINGS ACK, decoding a real HPACK-encoded request into th... |
 | `native_h2frame` | `PC_ENABLE_HTTP2=1` | `unit/http/test_h2_frame` | HTTP/2 binary framing (network_drivers/presentation/http/http2/h2_frame, RFC 9113): the 9-byte frame header parse/write (24-bit length, reserved-bit masking), SETTINGS build + parse with validation, a... |
+<<<<<<< Updated upstream
 | `native_h2server` | `PC_ENABLE_HTTP2=1`, `PC_ENABLE_TLS=1` | `protocols/http/test_h2_server` | HTTP/2 -> request-pipeline bridge (network_drivers/presentation/http/http2/h2_server): the RFC 9113 sec 8.2 / 8.3 validation a request header block must survive before the route dispatcher sees it - t... |
+=======
+| `native_h2server` | `PC_ENABLE_HTTP2=1`, `PC_ENABLE_TLS=1`, `PC_HAS_VENDOR_TLS=1` | `protocols/http/test_h2_server` | HTTP/2 -> request-pipeline bridge (network_drivers/presentation/http/http2/h2_server): the RFC 9113 sec 8.2 / 8.3 validation a request header block must survive before the route dispatcher sees it - t... |
+>>>>>>> Stashed changes
 | `native_h3_conn` | `PC_ENABLE_HTTP3=1` | `protocols/http/test_h3_conn` | HTTP/3 application engine (network_drivers/presentation/http/http3/h3_conn, RFC 9114): drives h3_conn through the quic_conn callback seam - a QPACK-encoded request on a request stream dispatches the r... |
 | `native_h3_e2e` | `PC_ENABLE_HTTP3=1` | `integration/http/test_h3_e2e` | End-to-end HTTP/3 capstone (network_drivers/presentation/http/http3): a QUIC client in the test completes the TLS 1.3 handshake against a quic_conn + h3_conn server, sends a real HTTP/3 GET (QPACK HEA... |
 | `native_h3_server` | `PC_ENABLE_HTTP3=1` | `integration/http/test_h3_server` | HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with PC_ENABLE_HTTP3=1): a QUIC client completes the handshake and sends an HTTP/3 GET, quic_server routes it to the reserved d... |
