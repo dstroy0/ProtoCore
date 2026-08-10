@@ -70,6 +70,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`243a67a`](https://github.com/dstroy0/ProtoCore/commit/243a67aa1238d049026147116c2348a4a1330279))
 - update CHANGELOG.md [skip ci] ([`e66be49`](https://github.com/dstroy0/ProtoCore/commit/e66be49708952388278f0872a1da4e5a05a64be2))
 - update CHANGELOG.md [skip ci] ([`0d43b4f`](https://github.com/dstroy0/ProtoCore/commit/0d43b4f4de14622528150f0fc976ff8e0ce28fee))
 - update CHANGELOG.md [skip ci] ([`113da3d`](https://github.com/dstroy0/ProtoCore/commit/113da3d89b5be1d83a851e9e592938ed9396b63b))
@@ -216,6 +217,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`12f1553`](https://github.com/dstroy0/ProtoCore/commit/12f155312a76b1afb138a820539b97e8c27700d1))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b10f486`](https://github.com/dstroy0/ProtoCore/commit/b10f486dfb3f48a9da689281ed740787fe8c7e48))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a867e73`](https://github.com/dstroy0/ProtoCore/commit/a867e73a9e71da103ad33dec9980524e089a0da2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`289b418`](https://github.com/dstroy0/ProtoCore/commit/289b418f6b1dea07b64f401f63ff2abc5af51d31))
@@ -281,6 +283,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- pin the zero and overflow WINDOW_UPDATE rejections ([`4bdf81b`](https://github.com/dstroy0/ProtoCore/commit/4bdf81b3a4e3149da041f1d77c0db8a9f6f065cb))
 - DATA on an idle stream is refused, and after END_STREAM resets that stream ([`ce4041f`](https://github.com/dstroy0/ProtoCore/commit/ce4041f046e61ba1bc5811b1ecb1b23c101d00d6))
 - native_h2conn links the arena under the plaintext allocator ([`ca6d01d`](https://github.com/dstroy0/ProtoCore/commit/ca6d01df6b76c0ceeaad5ad1c944ec26026f6aa1))
 - native_h2conn compiles the plaintext arena it now borrows from ([`6147de1`](https://github.com/dstroy0/ProtoCore/commit/6147de1aa95d6622dbc60f9e99d168eae796c6ae))
