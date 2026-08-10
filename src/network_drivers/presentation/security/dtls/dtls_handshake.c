@@ -193,6 +193,27 @@ static int pc_dtls_hs_reasm_add(DtlsHsReasm *r, const DtlsHsHeader *frag)
     {
         return 0; // empty fragment of a non-empty message contributes nothing
     }
+    // sec 5.5: "Senders MUST NOT change handshake message bytes upon retransmission. Receivers MAY
+    // check that retransmitted bytes are identical and SHOULD abort the handshake with an
+    // illegal_parameter alert if the value of a byte changes." Every byte this fragment shares with
+    // one already held is compared before the copy overwrites it.
+    for (uint8_t i = 0; i < r->range_count; i++)
+    {
+        uint32_t ov_lo = r->range_lo[i];
+        if (lo > ov_lo)
+        {
+            ov_lo = lo;
+        }
+        uint32_t ov_hi = r->range_hi[i];
+        if (hi < ov_hi)
+        {
+            ov_hi = hi;
+        }
+        if (ov_lo < ov_hi && mem.cmp(r->buf + ov_lo, frag->fragment + (ov_lo - lo), ov_hi - ov_lo) != 0)
+        {
+            return -1;
+        }
+    }
     mem.cpy(r->buf + lo, frag->fragment, frag->frag_length);
     if (reasm_merge(r, lo, hi) < 0)
     {
