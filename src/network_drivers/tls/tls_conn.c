@@ -220,25 +220,63 @@ static int server_on_finished(TlsConn *c, const uint8_t *msg, size_t len)
 // The Ns
 // ---------------------------------------------------------------------------
 
-static proto_bool conn_init(TlsConn *c, TlsRole role, const TlsConnConfig *cfg)
+// Which connection holds which borrow, owned by one instance (internal linkage). The persistent
+// end is never given back, and init runs again every time a slot's connection is replaced, so the
+// borrow is taken once per connection and reused. One named owner, unreachable cross-TU.
+typedef struct
 {
-    pc_secure_wipe(c, sizeof(*c));
+    const TlsConn *owner[MAX_TLS_CONNS];
+    uint8_t *region[MAX_TLS_CONNS];
+    uint8_t count;
+} TlsConnPoolCtx;
+static TlsConnPoolCtx s_tls_conn;
+
+// The bytes @p c runs out of: the ones it already holds, or the next borrow. NULL when every slot
+// is spoken for.
+static uint8_t *slot_region(const TlsConn *c)
+{
+    for (uint8_t i = 0; i < s_tls_conn.count; i++)
+    {
+        if (s_tls_conn.owner[i] == c)
+        {
+            return s_tls_conn.region[i];
+        }
+    }
+    if (s_tls_conn.count >= MAX_TLS_CONNS)
+    {
+        return NULL;
+    }
     pc_span b = secure.persist_span(PC_TLS_CONN_BORROW);
     if (!pc_span_ok(b))
     {
+        return NULL;
+    }
+    s_tls_conn.owner[s_tls_conn.count] = c;
+    s_tls_conn.region[s_tls_conn.count] = b.buf;
+    s_tls_conn.count++;
+    return b.buf;
+}
+
+static proto_bool conn_init(TlsConn *c, TlsRole role, const TlsConnConfig *cfg)
+{
+    uint8_t *base = slot_region(c);
+    if (base == NULL)
+    {
         return PROTO_FALSE;
     }
-    c->tx = b.buf + TLS_OFF_TX;
-    c->rx = b.buf + TLS_OFF_RX;
-    c->terms = b.buf + TLS_OFF_TERMS;
-    c->hash_work = b.buf + TLS_OFF_HASH;
-    c->sign_work = b.buf + TLS_OFF_SIGN;
-    c->hello = (Tls13ClientHello *)(b.buf + TLS_OFF_HELLO);
+    pc_secure_wipe(c, sizeof(*c));
+    pc_secure_wipe(base, PC_TLS_CONN_BORROW); // the previous tenant's key material does not carry over
+    c->tx = base + TLS_OFF_TX;
+    c->rx = base + TLS_OFF_RX;
+    c->terms = base + TLS_OFF_TERMS;
+    c->hash_work = base + TLS_OFF_HASH;
+    c->sign_work = base + TLS_OFF_SIGN;
+    c->hello = (Tls13ClientHello *)(base + TLS_OFF_HELLO);
     c->cfg = cfg;
     c->role = role;
     c->state = TLS_CONN_START;
     pc_sha256_init(&c->transcript, c->hash_work);
-    return pc_tls13_ks_early(&TLS13_KDF, &c->ks, b.buf + TLS_OFF_KS);
+    return pc_tls13_ks_early(&TLS13_KDF, &c->ks, base + TLS_OFF_KS);
 }
 
 // The client half needs the mirror of pc_tls13_msg - a ClientHello builder and a ServerHello
