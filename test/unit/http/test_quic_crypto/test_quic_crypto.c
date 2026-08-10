@@ -500,9 +500,14 @@ void test_retry_tag_rejects_oversize()
 }
 
 // --- pc_hkdf HKDF-Expand-Label multi-block output -----------------------------------------
-// An independent recomputation of RFC 5869 HKDF-Expand over the RFC 8446 sec 7.1 HkdfLabel, using the
-// KAT-verified HMAC-SHA256 primitive. Used to check the > 32-byte (multi-hash-block) path of the
-// library's expander, which QUIC itself never exercises (all its outputs are <= 32).
+// A recomputation of RFC 5869 HKDF-Expand over the RFC 8446 sec 7.1 HkdfLabel, using the
+// KAT-verified HMAC-SHA256 primitive. It checks the > 32-byte path of the library's expander, which
+// QUIC itself never exercises (all its outputs are <= 32).
+//
+// This mirrors the loop it checks, so a shared convention error would agree with itself. What it is
+// not carrying alone: the T(i) chain is pinned externally by RFC 5869 A.2 in test_crypto_kat, whose
+// L=82 spans three blocks. What this adds on top is that the HkdfLabel wrapper feeds that chain the
+// info block the RFC 8446 structure defines.
 static void expand_label_ref(const uint8_t secret[32], const char *label, uint8_t *out, size_t out_len)
 {
     uint8_t info[64];
