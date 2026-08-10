@@ -1419,6 +1419,8 @@ guards at compile time.
 | `PC_H2_POOL_IN_PSRAM` | `0` | Place the HTTP/2 connection-engine pool in external PSRAM (ESP32). |
 | `PC_H3_CRYPTO_BUF` | `2048` | Maximum bytes of one QUIC/TLS handshake CRYPTO flight (RFC 9001). |
 | `PC_H3_MAX_STREAMS` | `8` | Maximum concurrent request streams per HTTP/3 connection. |
+| `PC_H3_QPACK_BLOCK` | `256` |  |
+| `PC_H3_QPACK_SCRATCH` | `512` |  |
 | `PC_HMMD_BAUD` | `115200` | HMMD UART baud rate (the module's factory default is 115200). |
 | `PC_HMMD_UART` | `2` | UART unit the HMMD is wired to. |
 | `PC_HOTSWAP_FAIL_THRESHOLD` | `3` | Consecutive I/O failures that declare a removable volume gone. |
@@ -1493,6 +1495,7 @@ guards at compile time.
 | `PC_PQ_INTERNAL_PRIORITY` | `8` | Base FreeRTOS priority for the internal preempting lanes (DMA / forwarding / device access). |
 | `PC_PQ_ITEM_SIZE` | `32` | Bytes per preempting-queue item (the posted item must fit). |
 | `PC_PQ_STACK` | `4096` | Stack (bytes) for each preempting-queue processing task (ESP32). |
+| `PC_QUIC_MAX_CONNS` | `2` | Simultaneous HTTP/3 connections. |
 | `PC_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
 | `PC_RADIO_WIFI_PS` | `0` | WiFi modem-sleep mode: 0 = none (max perf), 1 = min modem, 2 = max modem. |
 | `PC_RELAY_BUF` | `2048` | Per-direction relay buffer size (bytes) for services/net/relay. |
