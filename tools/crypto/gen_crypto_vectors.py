@@ -53,7 +53,12 @@ SPECS = [
         "KatEd25519Sign",
         [("seed", "hex"), ("pub", "hex"), ("msg", "hex"), ("sig", "hex")],
     ),
-    ("rfc5869_hkdf_sha256.json", "KAT_HKDF_EXTRACT", "KatHkdf", [("salt", "hex"), ("ikm", "hex"), ("prk", "hex")]),
+    (
+        "rfc5869_hkdf_sha256.json",
+        "KAT_HKDF",
+        "KatHkdf",
+        [("salt", "hex"), ("ikm", "hex"), ("prk", "hex"), ("info", "hex"), ("l", "int"), ("okm", "hex")],
+    ),
     (
         "rfc8439_chacha20.json",
         "KAT_CHACHA20",

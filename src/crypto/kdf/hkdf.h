@@ -44,6 +44,23 @@ PROTO_BEGIN_DECLS
 void pc_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
                      uint8_t prk[PC_HKDF_HASH_LEN]);
 
+/**
+ * @brief HKDF-Expand (RFC 5869 sec 2.3): OKM = T(1) | T(2) | ..., T(i) = HMAC(PRK, T(i-1) | info | i).
+ *
+ * The bare primitive, taking @p info verbatim rather than the RFC 8446 HkdfLabel structure that
+ * pc_hkdf_expand_label() builds around it. TLS and QUIC use the labelled form; this one is what the
+ * RFC's own Appendix A test vectors address, since they expand an arbitrary info string.
+ *
+ * @param prk       Pseudo-random key from pc_hkdf_extract(), PC_HKDF_HASH_LEN bytes.
+ * @param info      Optional context (may be NULL only when @p info_len is 0).
+ * @param info_len  Context length in bytes.
+ * @param out       Output keying material.
+ * @param out_len   Bytes requested; sec 2.3 caps this at 255*PC_HKDF_HASH_LEN, past which the block
+ *                  counter has no encoding and @p out is zeroed instead.
+ */
+void pc_hkdf_expand(uint8_t *work, const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
+                    uint8_t *out, size_t out_len);
+
 /** @brief The RFC 8446 sec 7.1 HKDF-Expand-Label prefix used by TLS 1.3 and QUIC. DTLS 1.3 overrides
  *  it with "dtls13" (RFC 9147 sec 5.9); callers that need it pass it explicitly. */
 #define PC_HKDF_LABEL_PREFIX "tls13 "
