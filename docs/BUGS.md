@@ -352,6 +352,12 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ## `PC_PLAINTEXT_ARENA_SIZE` is a chosen number, not a sum, so concurrent borrows are never proved
 
+- **Status:** PARTIALLY FIXED 2026-08-09. The arena is now a sum:
+  `PC_PLAINTEXT_SCRATCH + PC_PLAINTEXT_WORK_H2CONN + PC_PLAINTEXT_WORK_H3CONN + 256`, and the twelve
+  board profiles pin `PC_PLAINTEXT_SCRATCH` instead of the total, so a per-connection term always
+  adds on top of whatever a die tuned. What remains open is the transient half: the scratch figure is
+  still a per-die guess rather than the max over the declared `PC_PLAINTEXT_WORK_*` transient terms,
+  so the 8,760 B compressed-SSH draw against an 8,192 B c2/s2 scratch is still unproved.
 - **Status:** OPEN, found 2026-08-08 in the `src/` resource audit. Cross-cutting: the derivation gap
   and the failure it causes are filed in two different area reports and connected in neither.
 - **Symptom:** `protocore_config.h:6477` sets `PC_PLAINTEXT_ARENA_SIZE` to 8192. The plaintext work
@@ -370,6 +376,26 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   which turns both of the above into build failures.
 - **Filed halves:** `git_project/audit/resource/mmgr_shared_primitives.md` (the missing derivation,
   and the 15,011 B sum), `network_drivers_ssh_security_codec.md` (the 8,760 B draw and the orphan).
+
+## The plaintext pool has no PSRAM seam, so the converted HTTP buffers landed in DRAM twice
+
+- **Status:** OPEN, found 2026-08-09 converting `h2_conn` and `h3_conn` onto the connection-owns-the-
+  memory law.
+- **Symptom:** `h2_conn` and `h3_conn` used to hold their frame, header-block, scratch and per-stream
+  buffers inline, inside `s_h2` (`PC_H2_POOL_ATTR`) and `s_qpool` (`PC_QUIC_POOL_ATTR`) - both of
+  which a board can move to PSRAM. As pool borrows those bytes now live in
+  `PlainPoolStorageCtx.mem`, which has no placement attribute, so on an S3 they are 346,816 B of
+  internal DRAM where they were previously PSRAM-movable.
+- **Second multiplier:** the storage is `[PC_REG_POOL_SLOTS][PC_PLAINTEXT_ARENA_SIZE]`, and
+  `PC_REG_POOL_SLOTS` is `PC_WORKER_COUNT + 1`. A per-connection persistent borrow is therefore
+  budgeted once per worker slot plus once for the ghost, which never serves a connection. On the
+  default single-worker build that is 2x: 693,632 B on an S3 against ~400 KB of usable DRAM.
+- **Not a new class:** `PC_WORK_SSH_CONN` and `PC_WORK_TLS_CONN` are budgeted the same way in
+  `s_secure_storage`, which also has no placement attribute. The conversion made the existing
+  accounting expensive enough to see, it did not introduce it.
+- **Fix:** not written, and it is two decisions, not one. Whether pool storage gets the placement
+  attribute the module pools already have, and whether a per-connection term is budgeted per worker
+  slot at all when a connection is served by exactly one worker. Both are the owner's call.
 
 ## `Content-Length` folds with no overflow guard, so a 33-digit value frames as 0
 
