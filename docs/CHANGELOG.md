@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- a prefix integer that overflows 32 bits is a decoding error (RFC 7541 sec 5.1) ([`ca9bf33`](https://github.com/dstroy0/ProtoCore/commit/ca9bf33a79b8207117112edd725ab96ab9712928))
 - the re-key count is a power of two, bounded by RFC 4253 sec 9 and RFC 4344 sec 3.2 ([`b18fb31`](https://github.com/dstroy0/ProtoCore/commit/b18fb31e7c5e23c302111bffc7a5ccdbbe0d69de))
 - derive the re-key packet count from the 1 GB bound (RFC 4253 sec 9) ([`cb02d8e`](https://github.com/dstroy0/ProtoCore/commit/cb02d8e140558f25a3d303fd591865a01228a1fa))
 - a wrong KEX guess is dropped, not taken as the real KEXDH_INIT (RFC 4253 sec 7.1) ([`3453650`](https://github.com/dstroy0/ProtoCore/commit/345365020e36834a5ad631dd66c6dd783ca3ef6e))
@@ -202,6 +203,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+<<<<<<< Updated upstream
+=======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
+>>>>>>> Stashed changes
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`371e62a`](https://github.com/dstroy0/ProtoCore/commit/371e62a2c1dba63ae4ea0bb643471b93ea55dfd0))
 - close the KEX-guess finding ([`6a5f9d2`](https://github.com/dstroy0/ProtoCore/commit/6a5f9d2f4a8c5d9909196bcb8e2bf4645638ad31))
 - close the four ssh-transport-kex findings that are fixed ([`fc00a07`](https://github.com/dstroy0/ProtoCore/commit/fc00a076c272fe82c7dbe6bf37fed4527a9306b2))
@@ -257,6 +262,14 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+<<<<<<< Updated upstream
+=======
+- the interop matrix reads the negotiated MAC back out of the trace ([`48f200f`](https://github.com/dstroy0/ProtoCore/commit/48f200f8dbb2f5b49a7201a20eda68522dd14dab))
+- pin client-preference for kex, host key and MAC, and make the cyclone repro fail-able ([`b083e08`](https://github.com/dstroy0/ProtoCore/commit/b083e08868c2cd99e3021d49fa6b29a80bdb4f82))
+- each RFC 4253 sec 7.2 label is pinned to its own direction and field ([`5875798`](https://github.com/dstroy0/ProtoCore/commit/58757980f568297aaa152ecec2d8bd64ee380ba0))
+- pin the group-14 prime and generator against RFC 3526 sec 3 ([`170db64`](https://github.com/dstroy0/ProtoCore/commit/170db64308ec178ebabb7e7cbb7a965680687fe8))
+- the GCM derive fixture takes the mpint sign-pad path its comment claimed ([`6a7334b`](https://github.com/dstroy0/ProtoCore/commit/6a7334b0d75c052bb440c26e419d066e52455999))
+>>>>>>> Stashed changes
 - two GCM packets on one key install prove the RFC 5647 counter advances ([`315cad3`](https://github.com/dstroy0/ProtoCore/commit/315cad3496257876e39a9da677536a9d36ebbdcf))
 - a losing KEX guess is dropped and the real KEXDH_INIT still lands ([`1f3ae20`](https://github.com/dstroy0/ProtoCore/commit/1f3ae20aaebd0accbddcd7d9fc6f5bd104d69108))
 - the re-key fixture states that the first KEX already sent EXT_INFO ([`87dc1bc`](https://github.com/dstroy0/ProtoCore/commit/87dc1bc48cf80c7dddf4ace4214b030f2b12210a))
