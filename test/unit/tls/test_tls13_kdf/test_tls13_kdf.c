@@ -14,6 +14,7 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/kdf/hkdf.h"
 #include "network_drivers/tls/tls13_kdf.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -239,6 +240,80 @@ void test_kdf_expand_label_wrapper()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(via_quic, key, 16);
 }
 
+// RFC 9147 sec 5.9: DTLS 1.3 runs the RFC 8446 sec 7.1 key schedule with the HkdfLabel prefix
+// "dtls13" in place of "tls13 ". Only the record-key labels ("key"/"iv"/"sn") were pinned, so a
+// wrong Derive-Secret label would have been applied identically by both sides of every DTLS test
+// and agreed with itself.
+//
+// This builds the HkdfLabel by hand from the two RFC texts and expands it with pc_hkdf_expand,
+// which RFC 5869 Appendix A pins externally (test_crypto_kat). Nothing here is taken from the
+// module under test but the answer being checked.
+static void dtls_label_ref(const uint8_t secret[32], const char *label, const uint8_t *context, size_t context_len,
+                           uint8_t *out, size_t out_len)
+{
+    uint8_t info[128];
+    size_t p = 0;
+    info[p++] = (uint8_t)(out_len >> 8);
+    info[p++] = (uint8_t)(out_len & 0xff);
+    const char *prefix = "dtls13"; // RFC 9147 sec 5.9, no trailing space
+    size_t plen = strlen(prefix);
+    size_t llen = strlen(label);
+    info[p++] = (uint8_t)(plen + llen);
+    memcpy(info + p, prefix, plen);
+    p += plen;
+    memcpy(info + p, label, llen);
+    p += llen;
+    info[p++] = (uint8_t)context_len;
+    if (context_len)
+    {
+        memcpy(info + p, context, context_len);
+        p += context_len;
+    }
+    pc_hkdf_expand(tw, secret, info, p, out, out_len);
+}
+
+void test_dtls13_kdf_labels_against_the_rfc_structure()
+{
+    uint8_t secret[32];
+    for (size_t i = 0; i < sizeof secret; i++)
+    {
+        secret[i] = (uint8_t)i;
+    }
+
+    // The Derive-Secret labels the DTLS handshake actually drives, none of which had an anchor.
+    static const char *const labels[] = {"c hs traffic", "s hs traffic", "c ap traffic", "s ap traffic", "derived"};
+    uint8_t hash[32];
+    for (size_t i = 0; i < sizeof hash; i++)
+    {
+        hash[i] = (uint8_t)(0xA0 + i);
+    }
+    for (size_t i = 0; i < sizeof labels / sizeof labels[0]; i++)
+    {
+        uint8_t want[32], got[32];
+        dtls_label_ref(secret, labels[i], hash, sizeof hash, want, sizeof want);
+        pc_tls13_derive_secret(&DTLS13_KDF, tw, secret, labels[i], hash, got);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, sizeof want);
+    }
+
+    // And the record-key labels, with the empty context Expand-Label uses.
+    static const char *const keys[] = {"key", "iv", "sn"};
+    static const size_t key_lens[] = {16, 12, 16};
+    for (size_t i = 0; i < sizeof keys / sizeof keys[0]; i++)
+    {
+        uint8_t want[16], got[16];
+        dtls_label_ref(secret, keys[i], NULL, 0, want, key_lens[i]);
+        pc_tls13_kdf_expand_label(&DTLS13_KDF, tw, secret, keys[i], got, key_lens[i]);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, key_lens[i]);
+    }
+
+    // The prefix is the whole difference between the two schedules, so the same label under the
+    // TLS variant must not land on the same bytes.
+    uint8_t dtls_out[32], tls_out[32];
+    pc_tls13_derive_secret(&DTLS13_KDF, tw, secret, "c hs traffic", hash, dtls_out);
+    pc_tls13_derive_secret(&TLS13_KDF, tw, secret, "c hs traffic", hash, tls_out);
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(dtls_out, tls_out, sizeof dtls_out));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -248,5 +323,6 @@ int main(void)
     RUN_TEST(test_server_hs_write_keys);
     RUN_TEST(test_server_finished);
     RUN_TEST(test_kdf_expand_label_wrapper);
+    RUN_TEST(test_dtls13_kdf_labels_against_the_rfc_structure);
     return UNITY_END();
 }
