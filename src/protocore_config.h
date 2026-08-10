@@ -6793,8 +6793,16 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_MD 96
 #endif
 // KdfWork - one counter block and one digest - then the PRF's own bytes.
+// KdfWork is K(i), the counter and the PRF context, and the borrow is that struct plus the PRF's own
+// bytes. On the accelerated arm the context wraps an mbedtls hash state instead of a pointer into
+// the borrow, which is several times the size, so the struct term has two values. kdf.c proves the
+// one a build picked against the real sizeof.
 #ifndef PC_WORK_KDF
+#if PC_HAS_HW_SHA
+#define PC_WORK_KDF (384 + PC_HMAC_SHA256_BORROW)
+#else
 #define PC_WORK_KDF (128 + PC_HMAC_SHA256_BORROW)
+#endif
 #endif
 
 // SSH frames every outbound packet in the secure pool: the payload it carries is the session's own

@@ -57,8 +57,9 @@ void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
     mbedtls_sha256_free(&ctx->mbed);
 }
 
-void pc_sha256(const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_LEN])
+void pc_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_LEN])
 {
+    (void)work; // the accelerator carries its own
     (void)mbedtls_sha256(data, len, digest, 0 /* 0 = SHA-256, 1 = SHA-224 */);
 }
 
