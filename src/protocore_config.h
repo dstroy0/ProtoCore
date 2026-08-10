@@ -5985,6 +5985,18 @@ from halves and is slower than the width it decomposes into"
 #ifndef PC_H3_QPACK_BLOCK
 #define PC_H3_QPACK_BLOCK 256
 #endif
+// What the QUIC transport under HTTP/3 holds per connection: the bytes owed to each stream, and the
+// in-order CRYPTO window per packet-number space. Both are powers of two, so a stream and a space
+// reach their own bytes with a shift.
+#ifndef PC_QUIC_STREAM_TX
+#define PC_QUIC_STREAM_TX 2048 ///< per-stream outbound buffer (drained into STREAM frames)
+#endif
+#ifndef PC_QUIC_CRYPTO_RX
+#define PC_QUIC_CRYPTO_RX 2048 ///< per-level inbound CRYPTO reassembly window (ClientHello, Finished)
+#endif
+#ifndef PC_QUIC_MAX_STREAMS
+#define PC_QUIC_MAX_STREAMS PC_H3_MAX_STREAMS ///< tracked streams (request + control/QPACK)
+#endif
 
 /**
  * @brief HTTP Range requests / 206 Partial Content (requires PC_ENABLE_FILE_SERVING or
@@ -6563,8 +6575,15 @@ from halves and is slower than the width it decomposes into"
 #define PC_PLAINTEXT_WORK_H2CONN 0
 #endif
 
+// The QUIC transport under it takes its own borrow from the same end: the bytes it owes each stream
+// and the CRYPTO window per packet-number space. Proved by a static_assert in quic_conn.c.
+#ifndef PC_WORK_QUIC_CONN
+#define PC_WORK_QUIC_CONN                                                                                              \
+    ((size_t)PC_QUIC_MAX_CONNS * (((size_t)PC_QUIC_MAX_STREAMS * PC_QUIC_STREAM_TX) + 3u * (size_t)PC_QUIC_CRYPTO_RX))
+#endif
+
 #if PC_ENABLE_HTTP3
-#define PC_PLAINTEXT_WORK_H3CONN PC_WORK_H3_CONN
+#define PC_PLAINTEXT_WORK_H3CONN (PC_WORK_H3_CONN + PC_WORK_QUIC_CONN)
 #else
 #define PC_PLAINTEXT_WORK_H3CONN 0
 #endif
