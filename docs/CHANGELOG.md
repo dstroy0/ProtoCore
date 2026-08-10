@@ -106,6 +106,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- the three build workflows never rebuilt on a core_setup change ([`05aacdf`](https://github.com/dstroy0/ProtoCore/commit/05aacdf5a9bf2386c275fc6f9943d03944fe9fba))
+- update CHANGELOG.md [skip ci] ([`e1d1e04`](https://github.com/dstroy0/ProtoCore/commit/e1d1e04baf31bcf6715f322c44a4a2bae28c2601))
 - update CHANGELOG.md [skip ci] ([`1267130`](https://github.com/dstroy0/ProtoCore/commit/126713080df7f67e4d671a7ec6165f689d7cdd4b))
 - update CHANGELOG.md [skip ci] ([`020d105`](https://github.com/dstroy0/ProtoCore/commit/020d105c1291c49e19ce547e5e5082f544af742a))
 - update CHANGELOG.md [skip ci] ([`5408a4f`](https://github.com/dstroy0/ProtoCore/commit/5408a4f50355a0fbe19bda6fe634ad8d3ed87152))
