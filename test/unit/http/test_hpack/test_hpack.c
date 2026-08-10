@@ -145,6 +145,264 @@ void test_decode_c31_and_index()
     TEST_ASSERT_EQUAL_STRING("www.example.com", c2.f[0].value);
 }
 
+// ---------------------------------------------------------------------------
+// RFC 7541 Appendix C worked examples, byte for byte.
+//
+// Every octet array below is the appendix's "Hex dump of encoded data" verbatim, so nothing here
+// runs through the encoder: a symmetric codec fault has nowhere to hide. The table checkpoints
+// (size and entry count) after each block are the appendix's own "Dynamic Table (after decoding)".
+// ---------------------------------------------------------------------------
+
+static void vec_decode(HpackDynTable *t, const uint8_t *blk, size_t n, Collected *c)
+{
+    char scratch[512];
+    memset(c, 0, sizeof *c);
+    TEST_ASSERT_TRUE(pc_hpack_decode(t, blk, n, scratch, sizeof scratch, collect, c));
+}
+
+static void vec_field(const Collected *c, size_t i, const char *name, const char *value)
+{
+    TEST_ASSERT_TRUE(i < c->n);
+    TEST_ASSERT_EQUAL_STRING(name, c->f[i].name);
+    TEST_ASSERT_EQUAL_STRING(value, c->f[i].value);
+}
+
+// The four values the C.5 / C.6 response sequences carry, spelled once.
+#define C5_DATE21 "Mon, 21 Oct 2013 20:13:21 GMT"
+#define C5_DATE22 "Mon, 21 Oct 2013 20:13:22 GMT"
+#define C5_LOCATION "https://www.example.com"
+#define C5_COOKIE "foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1"
+
+// C.2.1-C.2.4: the four representation forms, each decoded on a fresh table so the appendix's
+// "Dynamic Table (after decoding)" is exactly what the table must hold.
+void test_c2_representation_vectors()
+{
+    HpackDynTable t;
+    Collected c;
+
+    // C.2.1 literal with incremental indexing, literal name: the only one that indexes.
+    const uint8_t c21[26] = {0x40, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x6b, 0x65, 0x79, 0x0d,
+                             0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72};
+    pc_hpack_dyn_init(&t, 4096);
+    vec_decode(&t, c21, sizeof c21, &c);
+    TEST_ASSERT_EQUAL_INT(1, (int)c.n);
+    vec_field(&c, 0, "custom-key", "custom-header");
+    TEST_ASSERT_EQUAL_UINT32(55, t.used);
+    TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
+
+    // C.2.2 literal without indexing, indexed name (idx 4 = :path).
+    const uint8_t c22[14] = {0x04, 0x0c, 0x2f, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2f, 0x70, 0x61, 0x74, 0x68};
+    pc_hpack_dyn_init(&t, 4096);
+    vec_decode(&t, c22, sizeof c22, &c);
+    TEST_ASSERT_EQUAL_INT(1, (int)c.n);
+    vec_field(&c, 0, ":path", "/sample/path");
+    TEST_ASSERT_EQUAL_UINT32(0, t.used);
+    TEST_ASSERT_EQUAL_INT(0, (int)t.ecount);
+
+    // C.2.3 literal never indexed (the 0001 pattern). Sec 6.2.3: it must not reach the table.
+    const uint8_t c23[17] = {0x10, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72,
+                             0x64, 0x06, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74};
+    pc_hpack_dyn_init(&t, 4096);
+    vec_decode(&t, c23, sizeof c23, &c);
+    TEST_ASSERT_EQUAL_INT(1, (int)c.n);
+    vec_field(&c, 0, "password", "secret");
+    TEST_ASSERT_EQUAL_UINT32(0, t.used);
+    TEST_ASSERT_EQUAL_INT(0, (int)t.ecount);
+
+    // The 0000 (without indexing) form of the same field: same header out, table still untouched.
+    // Decoding is byte-compatible between the two patterns; what must hold for both is that
+    // neither indexes.
+    uint8_t c23_without[17];
+    memcpy(c23_without, c23, sizeof c23);
+    c23_without[0] = 0x00;
+    pc_hpack_dyn_init(&t, 4096);
+    vec_decode(&t, c23_without, sizeof c23_without, &c);
+    TEST_ASSERT_EQUAL_INT(1, (int)c.n);
+    vec_field(&c, 0, "password", "secret");
+    TEST_ASSERT_EQUAL_UINT32(0, t.used);
+    TEST_ASSERT_EQUAL_INT(0, (int)t.ecount);
+
+    // C.2.4 indexed header field, static index 2.
+    const uint8_t c24[1] = {0x82};
+    pc_hpack_dyn_init(&t, 4096);
+    vec_decode(&t, c24, sizeof c24, &c);
+    TEST_ASSERT_EQUAL_INT(1, (int)c.n);
+    vec_field(&c, 0, ":method", "GET");
+    TEST_ASSERT_EQUAL_UINT32(0, t.used);
+    TEST_ASSERT_EQUAL_INT(0, (int)t.ecount);
+}
+
+// C.3.1-C.3.3: three requests on one connection, no Huffman. The second and third resolve
+// dynamic indices 62 and 63, so they only decode if the first two left the table exactly right.
+void test_c3_request_sequence()
+{
+    const uint8_t c31[20] = {0x82, 0x86, 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65,
+                             0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d};
+    const uint8_t c32[14] = {0x82, 0x86, 0x84, 0xbe, 0x58, 0x08, 0x6e, 0x6f, 0x2d, 0x63, 0x61, 0x63, 0x68, 0x65};
+    const uint8_t c33[29] = {0x82, 0x87, 0x85, 0xbf, 0x40, 0x0a, 0x63, 0x75, 0x73, 0x74,
+                             0x6f, 0x6d, 0x2d, 0x6b, 0x65, 0x79, 0x0c, 0x63, 0x75, 0x73,
+                             0x74, 0x6f, 0x6d, 0x2d, 0x76, 0x61, 0x6c, 0x75, 0x65};
+    HpackDynTable t;
+    Collected c;
+    pc_hpack_dyn_init(&t, 4096);
+
+    vec_decode(&t, c31, sizeof c31, &c);
+    TEST_ASSERT_EQUAL_INT(4, (int)c.n);
+    vec_field(&c, 0, ":method", "GET");
+    vec_field(&c, 1, ":scheme", "http");
+    vec_field(&c, 2, ":path", "/");
+    vec_field(&c, 3, ":authority", "www.example.com");
+    TEST_ASSERT_EQUAL_UINT32(57, t.used);
+    TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
+
+    vec_decode(&t, c32, sizeof c32, &c);
+    TEST_ASSERT_EQUAL_INT(5, (int)c.n);
+    vec_field(&c, 3, ":authority", "www.example.com"); // 0xbe, out of the dynamic table
+    vec_field(&c, 4, "cache-control", "no-cache");
+    TEST_ASSERT_EQUAL_UINT32(110, t.used);
+    TEST_ASSERT_EQUAL_INT(2, (int)t.ecount);
+
+    vec_decode(&t, c33, sizeof c33, &c);
+    TEST_ASSERT_EQUAL_INT(5, (int)c.n);
+    vec_field(&c, 0, ":method", "GET");
+    vec_field(&c, 1, ":scheme", "https");
+    vec_field(&c, 2, ":path", "/index.html");
+    vec_field(&c, 3, ":authority", "www.example.com"); // 0xbf, now index 63
+    vec_field(&c, 4, "custom-key", "custom-value");
+    TEST_ASSERT_EQUAL_UINT32(164, t.used);
+    TEST_ASSERT_EQUAL_INT(3, (int)t.ecount);
+}
+
+// C.4.1-C.4.3: the same three requests with Huffman-coded literals.
+void test_c4_request_sequence_huffman()
+{
+    const uint8_t c41[17] = {0x82, 0x86, 0x84, 0x41, 0x8c, 0xf1, 0xe3, 0xc2, 0xe5,
+                             0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff};
+    const uint8_t c42[12] = {0x82, 0x86, 0x84, 0xbe, 0x58, 0x86, 0xa8, 0xeb, 0x10, 0x64, 0x9c, 0xbf};
+    const uint8_t c43[24] = {0x82, 0x87, 0x85, 0xbf, 0x40, 0x88, 0x25, 0xa8, 0x49, 0xe9, 0x5b, 0xa9,
+                             0x7d, 0x7f, 0x89, 0x25, 0xa8, 0x49, 0xe9, 0x5b, 0xb8, 0xe8, 0xb4, 0xbf};
+    HpackDynTable t;
+    Collected c;
+    pc_hpack_dyn_init(&t, 4096);
+
+    vec_decode(&t, c41, sizeof c41, &c);
+    TEST_ASSERT_EQUAL_INT(4, (int)c.n);
+    vec_field(&c, 3, ":authority", "www.example.com");
+    TEST_ASSERT_EQUAL_UINT32(57, t.used);
+    TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
+
+    vec_decode(&t, c42, sizeof c42, &c);
+    TEST_ASSERT_EQUAL_INT(5, (int)c.n);
+    vec_field(&c, 4, "cache-control", "no-cache");
+    TEST_ASSERT_EQUAL_UINT32(110, t.used);
+    TEST_ASSERT_EQUAL_INT(2, (int)t.ecount);
+
+    vec_decode(&t, c43, sizeof c43, &c);
+    TEST_ASSERT_EQUAL_INT(5, (int)c.n);
+    vec_field(&c, 2, ":path", "/index.html");
+    vec_field(&c, 4, "custom-key", "custom-value");
+    TEST_ASSERT_EQUAL_UINT32(164, t.used);
+    TEST_ASSERT_EQUAL_INT(3, (int)t.ecount);
+}
+
+// C.5.1-C.5.3: three responses with the table capped at 256, which is what forces eviction.
+// C.5.2 evicts one entry; C.5.3 evicts three inside a single block.
+void test_c5_response_sequence_evicts()
+{
+    const uint8_t c51[70] = {0x48, 0x03, 0x33, 0x30, 0x32, 0x58, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
+                             0x61, 0x1d, 0x4d, 0x6f, 0x6e, 0x2c, 0x20, 0x32, 0x31, 0x20, 0x4f, 0x63, 0x74, 0x20,
+                             0x32, 0x30, 0x31, 0x33, 0x20, 0x32, 0x30, 0x3a, 0x31, 0x33, 0x3a, 0x32, 0x31, 0x20,
+                             0x47, 0x4d, 0x54, 0x6e, 0x17, 0x68, 0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x77,
+                             0x77, 0x77, 0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d};
+    const uint8_t c52[8] = {0x48, 0x03, 0x33, 0x30, 0x37, 0xc1, 0xc0, 0xbf};
+    const uint8_t c53[98] = {
+        0x88, 0xc1, 0x61, 0x1d, 0x4d, 0x6f, 0x6e, 0x2c, 0x20, 0x32, 0x31, 0x20, 0x4f, 0x63, 0x74, 0x20, 0x32,
+        0x30, 0x31, 0x33, 0x20, 0x32, 0x30, 0x3a, 0x31, 0x33, 0x3a, 0x32, 0x32, 0x20, 0x47, 0x4d, 0x54, 0xc0,
+        0x5a, 0x04, 0x67, 0x7a, 0x69, 0x70, 0x77, 0x38, 0x66, 0x6f, 0x6f, 0x3d, 0x41, 0x53, 0x44, 0x4a, 0x4b,
+        0x48, 0x51, 0x4b, 0x42, 0x5a, 0x58, 0x4f, 0x51, 0x57, 0x45, 0x4f, 0x50, 0x49, 0x55, 0x41, 0x58, 0x51,
+        0x57, 0x45, 0x4f, 0x49, 0x55, 0x3b, 0x20, 0x6d, 0x61, 0x78, 0x2d, 0x61, 0x67, 0x65, 0x3d, 0x33, 0x36,
+        0x30, 0x30, 0x3b, 0x20, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x3d, 0x31};
+    HpackDynTable t;
+    Collected c;
+    pc_hpack_dyn_init(&t, 256);
+
+    vec_decode(&t, c51, sizeof c51, &c);
+    TEST_ASSERT_EQUAL_INT(4, (int)c.n);
+    vec_field(&c, 0, ":status", "302");
+    vec_field(&c, 1, "cache-control", "private");
+    vec_field(&c, 2, "date", C5_DATE21);
+    vec_field(&c, 3, "location", C5_LOCATION);
+    TEST_ASSERT_EQUAL_UINT32(222, t.used);
+    TEST_ASSERT_EQUAL_INT(4, (int)t.ecount);
+
+    // ":status: 302" is evicted to make room for ":status: 307"; the other three come back by index.
+    vec_decode(&t, c52, sizeof c52, &c);
+    TEST_ASSERT_EQUAL_INT(4, (int)c.n);
+    vec_field(&c, 0, ":status", "307");
+    vec_field(&c, 1, "cache-control", "private");
+    vec_field(&c, 2, "date", C5_DATE21);
+    vec_field(&c, 3, "location", C5_LOCATION);
+    TEST_ASSERT_EQUAL_UINT32(222, t.used);
+    TEST_ASSERT_EQUAL_INT(4, (int)t.ecount);
+
+    // Three evictions inside this one block: cache-control, then the 20:13:21 date, then
+    // location and ":status: 307" for the 98-byte set-cookie.
+    vec_decode(&t, c53, sizeof c53, &c);
+    TEST_ASSERT_EQUAL_INT(6, (int)c.n);
+    vec_field(&c, 0, ":status", "200");
+    vec_field(&c, 1, "cache-control", "private");
+    vec_field(&c, 2, "date", C5_DATE22);
+    vec_field(&c, 3, "location", C5_LOCATION);
+    vec_field(&c, 4, "content-encoding", "gzip");
+    vec_field(&c, 5, "set-cookie", C5_COOKIE);
+    TEST_ASSERT_EQUAL_UINT32(215, t.used);
+    TEST_ASSERT_EQUAL_INT(3, (int)t.ecount);
+}
+
+// C.6.1-C.6.3: the same three responses Huffman-coded. Eviction runs on the decoded lengths, so
+// the table checkpoints are identical to C.5 even though every block is shorter on the wire.
+void test_c6_response_sequence_huffman_evicts()
+{
+    const uint8_t c61[54] = {0x48, 0x82, 0x64, 0x02, 0x58, 0x85, 0xae, 0xc3, 0x77, 0x1a, 0x4b, 0x61, 0x96, 0xd0,
+                             0x7a, 0xbe, 0x94, 0x10, 0x54, 0xd4, 0x44, 0xa8, 0x20, 0x05, 0x95, 0x04, 0x0b, 0x81,
+                             0x66, 0xe0, 0x82, 0xa6, 0x2d, 0x1b, 0xff, 0x6e, 0x91, 0x9d, 0x29, 0xad, 0x17, 0x18,
+                             0x63, 0xc7, 0x8f, 0x0b, 0x97, 0xc8, 0xe9, 0xae, 0x82, 0xae, 0x43, 0xd3};
+    const uint8_t c62[8] = {0x48, 0x83, 0x64, 0x0e, 0xff, 0xc1, 0xc0, 0xbf};
+    const uint8_t c63[79] = {0x88, 0xc1, 0x61, 0x96, 0xd0, 0x7a, 0xbe, 0x94, 0x10, 0x54, 0xd4, 0x44, 0xa8, 0x20,
+                             0x05, 0x95, 0x04, 0x0b, 0x81, 0x66, 0xe0, 0x84, 0xa6, 0x2d, 0x1b, 0xff, 0xc0, 0x5a,
+                             0x83, 0x9b, 0xd9, 0xab, 0x77, 0xad, 0x94, 0xe7, 0x82, 0x1d, 0xd7, 0xf2, 0xe6, 0xc7,
+                             0xb3, 0x35, 0xdf, 0xdf, 0xcd, 0x5b, 0x39, 0x60, 0xd5, 0xaf, 0x27, 0x08, 0x7f, 0x36,
+                             0x72, 0xc1, 0xab, 0x27, 0x0f, 0xb5, 0x29, 0x1f, 0x95, 0x87, 0x31, 0x60, 0x65, 0xc0,
+                             0x03, 0xed, 0x4e, 0xe5, 0xb1, 0x06, 0x3d, 0x50, 0x07};
+    HpackDynTable t;
+    Collected c;
+    pc_hpack_dyn_init(&t, 256);
+
+    vec_decode(&t, c61, sizeof c61, &c);
+    TEST_ASSERT_EQUAL_INT(4, (int)c.n);
+    vec_field(&c, 0, ":status", "302");
+    vec_field(&c, 2, "date", C5_DATE21);
+    vec_field(&c, 3, "location", C5_LOCATION);
+    TEST_ASSERT_EQUAL_UINT32(222, t.used);
+    TEST_ASSERT_EQUAL_INT(4, (int)t.ecount);
+
+    vec_decode(&t, c62, sizeof c62, &c);
+    TEST_ASSERT_EQUAL_INT(4, (int)c.n);
+    vec_field(&c, 0, ":status", "307");
+    vec_field(&c, 3, "location", C5_LOCATION);
+    TEST_ASSERT_EQUAL_UINT32(222, t.used);
+    TEST_ASSERT_EQUAL_INT(4, (int)t.ecount);
+
+    vec_decode(&t, c63, sizeof c63, &c);
+    TEST_ASSERT_EQUAL_INT(6, (int)c.n);
+    vec_field(&c, 0, ":status", "200");
+    vec_field(&c, 2, "date", C5_DATE22);
+    vec_field(&c, 4, "content-encoding", "gzip");
+    vec_field(&c, 5, "set-cookie", C5_COOKIE);
+    TEST_ASSERT_EQUAL_UINT32(215, t.used);
+    TEST_ASSERT_EQUAL_INT(3, (int)t.ecount);
+}
+
 void test_dynamic_eviction()
 {
     HpackDynTable t;
@@ -496,6 +754,11 @@ int main()
     RUN_TEST(test_int_decode_rejects_overflowing_prefix_int);
     RUN_TEST(test_huffman);
     RUN_TEST(test_decode_c31_and_index);
+    RUN_TEST(test_c2_representation_vectors);
+    RUN_TEST(test_c3_request_sequence);
+    RUN_TEST(test_c4_request_sequence_huffman);
+    RUN_TEST(test_c5_response_sequence_evicts);
+    RUN_TEST(test_c6_response_sequence_huffman_evicts);
     RUN_TEST(test_dynamic_eviction);
     RUN_TEST(test_encode_static);
     RUN_TEST(test_encode_decode_roundtrip);
