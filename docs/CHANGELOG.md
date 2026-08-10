@@ -81,6 +81,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b072f63`](https://github.com/dstroy0/ProtoCore/commit/b072f6340976b3cc42bba1e781e5fa7531fa18d0))
 - update CHANGELOG.md [skip ci] ([`29ee43c`](https://github.com/dstroy0/ProtoCore/commit/29ee43c004bbb35351b83d02552e900470ee25a1))
 - update CHANGELOG.md [skip ci] ([`eae57ff`](https://github.com/dstroy0/ProtoCore/commit/eae57ff90c0e634e6a1dbd0bb527cb14e08f741d))
 - update CHANGELOG.md [skip ci] ([`38bfb1e`](https://github.com/dstroy0/ProtoCore/commit/38bfb1eddf4e566a3860a55a83f6a81a679641b9))
@@ -327,6 +328,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+<<<<<<< Updated upstream
+=======
+- the multi-block expand mirror names its external anchor ([`392fa3b`](https://github.com/dstroy0/ProtoCore/commit/392fa3be6a4383540b5b78db99eb1e7146da7f68))
+>>>>>>> Stashed changes
 - pin HKDF-Expand against the RFC 5869 Appendix A vectors ([`c9211ed`](https://github.com/dstroy0/ProtoCore/commit/c9211ed8d6623f0c3560624198c63c08694c392c))
 - pin the HP mask widths and all four reserved settings ids ([`f93df35`](https://github.com/dstroy0/ProtoCore/commit/f93df35aefde3851e45ffdea0c5df0c8e84f2387))
 - quic_frame.h for the transport error constants ([`953174a`](https://github.com/dstroy0/ProtoCore/commit/953174a54454d2b739efd3d3895f0b1f102fca02))
