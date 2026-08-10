@@ -76,18 +76,18 @@ static QuicStream *find_stream(struct QuicConn *qc, uint64_t id)
     return NULL;
 }
 
-// Find an HTTP/3 stream (with its classified role) by id.
 // The slot a connection lives in. Its plaintext borrow is bound to the slot, not to the call, so
 // every case here re-inits the one object the way the server re-uses a pool slot.
 static H3Conn g_h3;
 
+// Find an HTTP/3 stream (with its classified role) by id.
 static H3Stream *find_h3(H3Conn *h3, uint64_t id)
 {
     for (size_t i = 0; i < PC_H3_MAX_STREAMS; i++)
     {
         if (h3->streams[i].role != H3_ROLE_FREE && h3->streams[i].id == id)
         {
-            return &g_h3->streams[i];
+            return &h3->streams[i];
         }
     }
     return NULL;
