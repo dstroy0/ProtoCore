@@ -566,6 +566,39 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## One forged UDP datagram ended a live DTLS association
+
+- **Status:** FIXED 2026-08-09 (`dtls_conn.c` `process_ciphertext_record`), superseding the OPEN
+  entry this replaces. Found 2026-08-08 auditing `test/` for RFC conformance
+  (`git_project/audit/dtls13-rpk.md` #3).
+- **Symptom:** RFC 9147 sec 4.5.2: "invalid records SHOULD be silently discarded, thus preserving
+  the association... Implementations which choose to generate an alert instead MUST generate fatal
+  alerts... any implementation which does this will be extremely susceptible to DoS attacks because
+  UDP forgery is so easy. Thus, generating fatal alerts is NOT RECOMMENDED." A record failing its
+  AEAD called `fail(c, ALERT_DECRYPT_ERROR)` and killed the connection, so anyone able to send a
+  packet to the port could end an established session with 48 bytes of noise.
+- **Also fixed:** a ciphertext record arriving for an epoch whose keys do not exist yet took the
+  same fatal path, which is the same attack against a handshake in progress.
+- **Nothing can catch it:** the sibling `open_app` path had a tampered-record test; the connection
+  path had none, and two tests asserted the fatal behaviour outright.
+- **Fix:** both cases advance past the record and keep walking the datagram, the way the replay
+  branch beside them already did. Verified: 230/230 across thirteen DTLS/TLS envs.
+
+## A DTLS receiver rejected a legal legacy_record_version
+
+- **Status:** FIXED 2026-08-09 (`dtls_record.c` `pc_dtls_plaintext_parse`), superseding the OPEN
+  entry this replaces. Found 2026-08-08 auditing `test/` for RFC conformance
+  (`git_project/audit/dtls13-rpk.md` #4).
+- **Symptom:** RFC 9147 sec 4: legacy_record_version "MUST be set to {254, 253} for all records
+  other than the initial ClientHello... where it may also be {254, 255} for compatibility purposes.
+  It MUST be ignored for all purposes." The parser rejected anything but 0xFEFD, so a client sending
+  the compatibility value on its first ClientHello - which the RFC explicitly permits - was turned
+  away before the handshake began.
+- **Nothing can catch it:** two tests asserted the rejection, one of which existed only to cover the
+  second half of the `||` that performed it.
+- **Fix:** the field is read past. The test now asserts both {254,255} and an arbitrary value parse;
+  the test written to cover the removed branch is gone with it.
+
 ## A retransmitted DTLS fragment could rewrite bytes already reassembled
 
 - **Status:** FIXED 2026-08-09 (`dtls_handshake.c` `reasm_add`). Found 2026-08-08 auditing `test/`
