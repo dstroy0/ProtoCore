@@ -203,9 +203,17 @@ static void test_dtls_plaintext_roundtrip(void)
     TEST_ASSERT_EQUAL_size_t(sizeof(frag), pt.frag_len);
     TEST_ASSERT_EQUAL_MEMORY(frag, pt.fragment, sizeof(frag));
 
-    // A wrong legacy_version is rejected.
+    // RFC 9147 sec 4: legacy_record_version "MUST be ignored for all purposes" - {254,255} is
+    // explicitly allowed on an initial ClientHello, and a receiver that reads the field turns that
+    // legal record away. This used to assert the rejection.
+    rec[1] = 0xFE;
+    rec[2] = 0xFF; // DTLS 1.0 codepoint, the compatibility value sec 4 names
+    TEST_ASSERT_EQUAL_size_t(n, DtlsRecord.plaintext_parse(rec, n, &pt));
+    TEST_ASSERT_EQUAL_MEMORY(frag, pt.fragment, sizeof(frag));
+
     rec[1] = 0x03;
-    TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.plaintext_parse(rec, n, &pt));
+    rec[2] = 0x03; // and any other value is ignored just the same
+    TEST_ASSERT_EQUAL_size_t(n, DtlsRecord.plaintext_parse(rec, n, &pt));
 }
 
 // The anti-replay sliding window accepts new records, rejects replays, and ages out old ones.
