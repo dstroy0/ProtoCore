@@ -74,6 +74,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`cde3ddc`](https://github.com/dstroy0/ProtoCore/commit/cde3ddcf93dd69b919affe9ab7fa37ba3d011e3b))
 - update CHANGELOG.md [skip ci] ([`9baf729`](https://github.com/dstroy0/ProtoCore/commit/9baf729d6dc65336e0ef025a2901024b67f15e6c))
 - update CHANGELOG.md [skip ci] ([`6140e56`](https://github.com/dstroy0/ProtoCore/commit/6140e563ee88af109293bc5589bda18d4b9aa231))
 - update CHANGELOG.md [skip ci] ([`1d26295`](https://github.com/dstroy0/ProtoCore/commit/1d26295b9007d15115f5a07e6354407c3d5af74e))
@@ -229,6 +230,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`37bffbc`](https://github.com/dstroy0/ProtoCore/commit/37bffbcdd804e4703ddbeda59b63e4e323fbbc4c))
 - log the coaps_server double-address test defect ([`beebc0d`](https://github.com/dstroy0/ProtoCore/commit/beebc0d56b705d454320bc33a87f9061e0f4ec14))
 - log the HTTP/2 header-validation gap and the trailers conflation ([`9fe1021`](https://github.com/dstroy0/ProtoCore/commit/9fe1021e500a04a229d9651361bc125baebcf9ef))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0b84890`](https://github.com/dstroy0/ProtoCore/commit/0b848906fa31a831593f3bcc4ed0fcc6817a9806))
@@ -303,6 +305,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- enumerate the Appendix A static table and the Appendix B Huffman code ([`d3fe3ef`](https://github.com/dstroy0/ProtoCore/commit/d3fe3efe9f55772c47d071051a5e7aa9a37c543c))
 - the idle-stream, frame-size and CONTINUATION-flood rules ([`8db9f95`](https://github.com/dstroy0/ProtoCore/commit/8db9f9551f7349b457362c3bda472f5e85d5f0fb))
 - pin the SETTINGS accept-side bounds and an RFC-supplied request block ([`f39219b`](https://github.com/dstroy0/ProtoCore/commit/f39219b4b79d6f46363c0c85f9d22e09eacd0e1c))
 - pin the RFC 7541 Appendix C vectors byte for byte ([`810a31d`](https://github.com/dstroy0/ProtoCore/commit/810a31d45e8d99ff433db3fbb9e633cec9105420))
