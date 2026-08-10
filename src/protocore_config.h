@@ -6506,14 +6506,21 @@ from halves and is slower than the width it decomposes into"
 // SSH_PKT_BUF_SIZE + 64 across ssh_dispatch_payload, which holds SSH_PKT_BUF_SIZE across
 // pc_ssh_server_dispatch, which holds a SSH_PKT_BUF_SIZE reply across the switch, under which
 // pc_ssh_auth_handle_pubkey holds 2,552 - 8,760 bytes live together.
+// The transient end: what a request, a response body and a codec work out of while a call runs.
 #ifndef PC_PLAINTEXT_SCRATCH
 #define PC_PLAINTEXT_SCRATCH 10240
 #endif
 
-// Per-connection terms each module declares in its own header and asserts in its own TU. The arena
-// is their sum, so a module that needs bytes makes the pool grow rather than failing against it.
+// One borrow per HTTP/2 connection from the plaintext pool's PERSISTENT end, split by offset into
+// the frame payload buffer, the header block, the HPACK emit scratch and the 9-octet frame header,
+// which gets 16 of its own so the three power-of-two regions keep their alignment. Proved against
+// the real PC_H2_CONN_BORROW by a static_assert in h2_conn.c.
+#ifndef PC_WORK_H2_CONN
+#define PC_WORK_H2_CONN ((size_t)MAX_CONNS * ((size_t)PC_H2_MAX_FRAME + 2u * (size_t)PC_H2_HDR_BLOCK + 16u))
+#endif
+
 #if PC_ENABLE_HTTP2
-#define PC_PLAINTEXT_WORK_H2CONN PC_PLAINTEXT_WORK_H2_CONN
+#define PC_PLAINTEXT_WORK_H2CONN PC_WORK_H2_CONN
 #else
 #define PC_PLAINTEXT_WORK_H2CONN 0
 #endif
