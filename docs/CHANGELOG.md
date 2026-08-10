@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- h3_fail is defined above its first use ([`49067b0`](https://github.com/dstroy0/ProtoCore/commit/49067b08f2974233d4333c06ba7b3bb0bc330092))
 - Fixed Bit, Reserved Bits and the 2^60 max_streams bound (RFC 9000) ([`a4f886f`](https://github.com/dstroy0/ProtoCore/commit/a4f886fde73528ba2bd91a5586fe5c94e0d55f3a))
 - a content-length that disagrees with the DATA makes the request malformed ([`43d1127`](https://github.com/dstroy0/ProtoCore/commit/43d1127b2e5f3b483085942120ea9c64f98f42f5))
 - per-type frame length and stream-id guards, and a CONTINUATION cap ([`ed39a65`](https://github.com/dstroy0/ProtoCore/commit/ed39a652dab728a93997d4d4e5638b532f8fb469))
@@ -76,6 +77,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- update CHANGELOG.md [skip ci] ([`1f7483c`](https://github.com/dstroy0/ProtoCore/commit/1f7483c996b6d9da8c9756151e68a935ac992ccf))
+>>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`0274a9a`](https://github.com/dstroy0/ProtoCore/commit/0274a9a4c04ece0f2089c7729dca2558edf199c1))
 - update CHANGELOG.md [skip ci] ([`9a2de00`](https://github.com/dstroy0/ProtoCore/commit/9a2de00c19a106e32634709515bdbb6193046230))
 - update CHANGELOG.md [skip ci] ([`a73ead7`](https://github.com/dstroy0/ProtoCore/commit/a73ead7075d515074a045b3fcb35ff03e9054849))
@@ -289,6 +294,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Features
 
+- application CONNECTION_CLOSE (0x1d), and the RFC 9114 H3 state rules ([`c290112`](https://github.com/dstroy0/ProtoCore/commit/c290112748e5ac32c15abd0d249058d8ec5c1f4c))
 - RFC 9113 sec 8.2/8.3 request header validation, with a suite ([`800c41d`](https://github.com/dstroy0/ProtoCore/commit/800c41df604381c947e4a15ce93933c710d6259c))
 - password change (RFC 4252 sec 8) runs off the tick, not the worker ([`428b7c8`](https://github.com/dstroy0/ProtoCore/commit/428b7c8fba4d41c29cd7558424b949326ac04104))
 
