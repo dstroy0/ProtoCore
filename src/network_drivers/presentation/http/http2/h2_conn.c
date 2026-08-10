@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/http/http2/h2_conn.h"
 #include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
-#include "mmgr/secure.h"   // the outbound frame is private session data, borrowed and wiped
+#include "mmgr/plaintext.h" // HTTP is plaintext; its frames borrow from that arena
 
 #if PC_ENABLE_HTTP2
 
@@ -237,21 +237,21 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
     {
         return PROTO_FALSE;
     }
-    // The outbound frame is private session data that lives only for this call, so it is borrowed
-    // from the secure pool and released before every return; release wipes it.
-    const size_t mark = pc_secure_mark();
-    pc_span f = pc_secure_span(H2_FRAME_HEADER_LEN + 4, 4);
+    // The outbound frame lives only for this call, so it is borrowed from the arena HTTP works out
+    // of and released before every return.
+    const size_t mark = pc_plaintext_mark();
+    pc_span f = pc_plaintext_span(H2_FRAME_HEADER_LEN + 4, 4);
     if (!pc_span_ok(f))
     {
-        pc_secure_release(mark);
-        return PROTO_FALSE; // pool exhausted: fail closed
+        pc_plaintext_release(mark);
+        return PROTO_FALSE; // arena exhausted: fail closed
     }
 
     if (s->state != H2_ST_OPEN)
     {
         size_t rn = pc_h2_build_rst_stream(f.buf, f.cap, h->stream_id, H2_STREAM_CLOSED);
         wr(c, f.buf, rn);
-        pc_secure_release(mark);
+        pc_plaintext_release(mark);
         return PROTO_TRUE; // the stream dies, the connection lives
     }
 
@@ -272,7 +272,7 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
         n = pc_h2_build_window_update(f.buf, f.cap, h->stream_id, h->length);
         wr(c, f.buf, n);
     }
-    pc_secure_release(mark);
+    pc_plaintext_release(mark);
     return PROTO_TRUE;
 }
 
