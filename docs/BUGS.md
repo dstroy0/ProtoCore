@@ -397,6 +397,31 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   attribute the module pools already have, and whether a per-connection term is budgeted per worker
   slot at all when a connection is served by exactly one worker. Both are the owner's call.
 
+## The naming law documents `PROTO_`, the checker enforces `PC_`, and 1490 macros carry neither
+
+- **Status:** OPEN, found 2026-08-10 unbreaking the Markdown Formatting Check job.
+- **Symptom:** `docs/SYMBOLS.md` still teaches the pre-rename spelling throughout - its table says
+  macros are `PROTO_UPPER_SNAKE`, its examples are `PROTO_ENABLE_SSH`, `PROTO_SHA256_DIGEST_LEN`,
+  `PROTO_IP_V4`, and section 2 budgets the 31-character cap as "`PROTO_` spends six of the 31".
+  `check_symbols.py` reports "lacks the PC_ prefix". The document and the gate that enforces it do
+  not agree on what the prefix is.
+- **Root cause:** the 2026-07-30 rename moved the code to `PC_` and updated the checker, and
+  `docs/SYMBOLS.md` was not carried with it. The stale document is the one `CLAUDE.local.md` sends
+  every naming decision to, so the wrong prefix is what a reader is told to use.
+- **Scale:** the ratchet holds 1684 accepted violations: 1490 macro-prefix, 151 enum-name, 49
+  macro-length. Three distinct classes hide in that number and they do not have the same answer -
+  leftovers of the old prefix (`PROTO_RAW`, `PROTO_ALIGN`, `PROTO_DBL_*`), wire constants named
+  after their RFC (`SSH_MSG_*`, `H3_*`, `TLS13_KS_*`), and sizing macros that predate the law
+  (`MAX_CONNS`, `SSH_PKT_BUF_SIZE`). Section 2 of SYMBOLS.md says even a wire constant takes the
+  prefix and shows `PROTO_SSH_MSG_CH_WIN_ADJ` doing it, so the second class is not an exemption
+  anyone wrote down - it is 1490 sites nobody has swept.
+- **What was done:** nothing but a ratchet refresh. 28 violations that landed after the last refresh
+  were recorded rather than fixed, because fixing 28 of 1490 in the same classes would leave the
+  tree less consistent than it is now, not more.
+- **Fix:** not written, and it is a decision before it is a sweep. Either SYMBOLS.md is corrected to
+  `PC_` and the 1490 are swept behind it, or the wire-constant class earns a written exemption and
+  the ratchet shrinks to the sites that actually have to move.
+
 ## `Content-Length` folds with no overflow guard, so a 33-digit value frames as 0
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http1-core.md` #1).
