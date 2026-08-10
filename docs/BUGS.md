@@ -424,6 +424,15 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ## PC_INLINE forces always_inline through an Ns table, so the library cannot build at -Og
 
+- **Status:** FIXED 2026-08-10. The 93 `swar.<member>(` call sites in `protomem.c`, `protostr.c`,
+  `protostr.h`, `base64.c` and `rawmemcpy.h` name their leaf directly - `pc_swar_load(p)` rather
+  than `swar.load(p)` - which is what the folded form compiled to anyway. The table stays, and so
+  does `always_inline`. Measured, not assumed: the pre-change `protostr.c` produces 72
+  "inlining failed" errors at `-Og` and the post-change one compiles clean. At `-O2` the emitted
+  text is NOT byte-identical - same symbol set, nothing added or removed, three functions shift
+  (`eq` -16 bytes, `starts` -24, `find_ci` +16) for 32 bytes less text overall, because the
+  inliner costs a direct call slightly differently from a folded pointer. Nothing was pessimised,
+  but the SWAR TUs are benched, so a rig re-measure is the honest confirmation.
 - **Status:** OPEN, found 2026-08-10 working the ESP-IDF Build job back to green. That job has been
   red continuously since well before this session; two blockers ahead of this one are fixed
   (`pc_sha256`'s accelerated arm had dropped its `work` parameter, and `PC_WORK_KDF` did not
