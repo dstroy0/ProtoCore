@@ -51,6 +51,16 @@ typedef struct
     uint32_t data_seen;            ///< DATA payload octets received on this stream
 } H2Stream;
 
+/**
+ * @brief This module's draw on the plaintext pool, declared here and asserted in h2_conn.c.
+ *
+ * One borrow per connection from the pool's persistent end, split by offset into the frame
+ * reassembly buffer, the header-block buffer and the HPACK emit scratch. HTTP is what the plaintext
+ * pool is for, and the connection is what owns the bytes.
+ */
+#define PC_H2_CONN_BORROW ((size_t)H2_FRAME_HEADER_LEN + PC_H2_MAX_FRAME + PC_H2_HDR_BLOCK + PC_H2_HDR_BLOCK)
+#define PC_PLAINTEXT_WORK_H2_CONN ((size_t)MAX_CONNS * PC_H2_CONN_BORROW)
+
 /** @brief Application callbacks the engine drives (all optional except write). */
 typedef struct
 {
@@ -76,12 +86,12 @@ typedef struct
     H2Callbacks cb;
 
     // Inbound frame reassembly.
-    uint8_t fbuf[H2_FRAME_HEADER_LEN + PC_H2_MAX_FRAME];
-    size_t fhave; ///< bytes buffered for the current frame
-    size_t pre;   ///< preface bytes matched so far
+    uint8_t *fbuf; ///< H2_FRAME_HEADER_LEN + PC_H2_MAX_FRAME bytes of the connection's borrow
+    size_t fhave;  ///< bytes buffered for the current frame
+    size_t pre;    ///< preface bytes matched so far
 
     // Header-block reassembly (HEADERS + CONTINUATION); empty when a frame carries END_HEADERS.
-    uint8_t hblock[PC_H2_HDR_BLOCK];
+    uint8_t *hblock; ///< PC_H2_HDR_BLOCK bytes of the connection's borrow
     size_t hblock_len;
     uint32_t hblock_stream;
     proto_bool hblock_end_stream;
@@ -89,8 +99,8 @@ typedef struct
     uint8_t hblock_frames;      ///< CONTINUATION frames this block has spanned
     proto_bool in_header_block; ///< between a non-END_HEADERS HEADERS and its END_HEADERS CONTINUATION
 
-    HpackDynTable hdec;             ///< HPACK decoder (peer's encoder state)
-    char hscratch[PC_H2_HDR_BLOCK]; ///< HPACK per-header emit scratch
+    HpackDynTable hdec; ///< HPACK decoder (peer's encoder state)
+    char *hscratch;     ///< PC_H2_HDR_BLOCK bytes of the connection's borrow: HPACK per-header emit scratch
 
     H2Settings peer;          ///< the peer's settings (affect how we send)
     int32_t conn_send_window; ///< our connection-level DATA flow window
