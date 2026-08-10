@@ -11,6 +11,7 @@
 // leaves the connection awaiting the client Finished, and that a ClientHello outside the profile
 // fails with an alert instead of negotiating something else.
 
+#include "baseline_keys.h"
 #include "crypto/asymmetric/ed25519.h"
 #include "mmgr/secure.h"
 #include "network_drivers/tls/tls_conn.h"
@@ -20,9 +21,7 @@
 
 static uint8_t tw[8192]; // test-side working bytes for the crypto entry points
 
-static const uint8_t SERVER_SEED[32] = {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
-                                        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
-                                        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
+#define SERVER_SEED BASELINE_ED25519_SEEDS[0]
 static const uint8_t SERVER_EPH[32] = {0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
                                        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
                                        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22};
@@ -173,7 +172,7 @@ void test_init_takes_its_borrow()
 {
     TlsConnConfig cfg = server_cfg();
     TlsConn c;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_SERVER, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
     TEST_ASSERT_NOT_NULL(c.tx);
     TEST_ASSERT_NOT_NULL(c.rx);
     TEST_ASSERT_NOT_NULL(c.terms);
@@ -191,7 +190,7 @@ void test_client_hello_draws_the_server_flight()
 {
     TlsConnConfig cfg = server_cfg();
     TlsConn c;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_SERVER, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
     static uint8_t rec[600];
     size_t rec_len = build_client_hello(rec, sizeof rec, CH_COMPLETE);
@@ -225,7 +224,7 @@ void test_client_hello_outside_the_profile_is_refused()
         pc_secure_reset();
         TlsConnConfig cfg = server_cfg();
         TlsConn c;
-        TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_SERVER, &cfg));
+        TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
         static uint8_t rec[600];
         size_t rec_len = build_client_hello(rec, sizeof rec, flaws[i]);
@@ -246,7 +245,7 @@ void test_malformed_record_is_a_decode_error()
 {
     TlsConnConfig cfg = server_cfg();
     TlsConn c;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_SERVER, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
     static uint8_t out[256];
     const uint8_t truncated[4] = {PC_TLS_CT_HANDSHAKE, 0x03, 0x03, 0x00}; // short of the 5-byte header
@@ -263,7 +262,7 @@ void test_client_role_is_not_implemented()
 {
     TlsConnConfig cfg = server_cfg();
     TlsConn c;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_CLIENT, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_CLIENT, &cfg));
 
     static uint8_t out[256];
     TEST_ASSERT_EQUAL_UINT(0, TlsConnection.start(&c, out, sizeof out));
@@ -271,7 +270,7 @@ void test_client_role_is_not_implemented()
     TEST_ASSERT_NOT_EQUAL(0, TlsConnection.alert(&c));
 
     // process turns the role away on its own guard, not on the failed state start left behind.
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_CLIENT, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_CLIENT, &cfg));
     TEST_ASSERT_TRUE(TlsConnection.process(&c, 0, out, sizeof out) < 0);
 }
 
