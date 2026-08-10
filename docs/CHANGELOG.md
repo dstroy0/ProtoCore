@@ -7,6 +7,10 @@ All notable changes to ProtoCore are documented here.
 ### Bug Fixes
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+- claiming a slot orphaned both engines' borrows ([`c722cbf`](https://github.com/dstroy0/ProtoCore/commit/c722cbfa93b8118b8abc016d5e408bed5d118109))
+>>>>>>> Stashed changes
 =======
 - claiming a slot orphaned both engines' borrows ([`c722cbf`](https://github.com/dstroy0/ProtoCore/commit/c722cbfa93b8118b8abc016d5e408bed5d118109))
 >>>>>>> Stashed changes
@@ -97,6 +101,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- update CHANGELOG.md [skip ci] ([`4cad067`](https://github.com/dstroy0/ProtoCore/commit/4cad067672a854007940ed11048fc6c11ffda0fb))
+>>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`e24dbdc`](https://github.com/dstroy0/ProtoCore/commit/e24dbdcfb8e84314a11adbb7238dc7188324a8a7))
 - update CHANGELOG.md [skip ci] ([`3f743b0`](https://github.com/dstroy0/ProtoCore/commit/3f743b0b96894e91ea01c43e239f441a4154d01a))
 - update CHANGELOG.md [skip ci] ([`aec0fe0`](https://github.com/dstroy0/ProtoCore/commit/aec0fe05c248db49c25156df4b4ad3ffc4d31779))
@@ -264,6 +272,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- clang-format the tree ([`a0cf205`](https://github.com/dstroy0/ProtoCore/commit/a0cf2054eca7b72e11bd7e9b7c72a40381725357))
 - Reapply "refactor(http2): the connection borrows its buffers and asserts its term" ([`f401107`](https://github.com/dstroy0/ProtoCore/commit/f401107ff6c723fc038fa45d68d12c13edb41b41))
 - Revert "refactor(http2): the connection borrows its buffers and asserts its term" ([`272c11b`](https://github.com/dstroy0/ProtoCore/commit/272c11be6d3641bc53cf3d2f241ef41767eacc47))
 - KDF chain accumulates at an offset in the caller's region, not the stack ([`12e317a`](https://github.com/dstroy0/ProtoCore/commit/12e317abd50b543706a2bb8d3774297395327f99))
@@ -297,7 +306,12 @@ All notable changes to ProtoCore are documented here.
 ### Documentation
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c690b49`](https://github.com/dstroy0/ProtoCore/commit/c690b49b824981438e2bdc660554201d4eb8f9d4))
+>>>>>>> Stashed changes
+=======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d4eb24a`](https://github.com/dstroy0/ProtoCore/commit/d4eb24ae608f32158c8ce61cbbdcbe9c3851eabe))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c690b49`](https://github.com/dstroy0/ProtoCore/commit/c690b49b824981438e2bdc660554201d4eb8f9d4))
 >>>>>>> Stashed changes
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cc04af7`](https://github.com/dstroy0/ProtoCore/commit/cc04af77adae18e301212e1e90ca17a81492a5d4))
