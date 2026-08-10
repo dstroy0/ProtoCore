@@ -850,23 +850,94 @@ void test_h2_continuation_without_headers(void)
     TEST_ASSERT_FALSE(feed_frame(&c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, x, 4));
 }
 
-// Frames naming a stream that is not in the table are tolerated: RST_STREAM and
-// WINDOW_UPDATE for an unknown id are no-ops, and stream 0 never matches a slot.
-void test_h2_unknown_stream_frames(void)
+// RFC 9113 sec 5.1: a stream id past the highest one opened is idle, and every frame but HEADERS
+// and PRIORITY on an idle stream is a connection error. sec 6.4 adds that RST_STREAM never names
+// stream 0. This suite used to assert all three were tolerated.
+void test_h2_idle_stream_frames_are_connection_errors(void)
+{
+    const uint8_t err[4] = {0, 0, 0, 8};
+    const uint8_t inc[4] = {0, 0, 0, 100};
+
+    TEST_ASSERT_FALSE(fresh_feed(H2_RST_STREAM, 0, 0, err, 4)); // stream 0 (sec 6.4)
+    TEST_ASSERT_FALSE(fresh_feed(H2_RST_STREAM, 0, 7, err, 4)); // never opened (sec 5.1)
+    TEST_ASSERT_FALSE(fresh_feed(H2_WINDOW_UPDATE, 0, 9, inc, 4));
+}
+
+// A stream that was opened and has since been freed is not idle: sec 6.9 lets a WINDOW_UPDATE
+// arrive late there, and it is ignored rather than killing the connection.
+void test_h2_window_update_on_a_closed_stream_is_ignored(void)
 {
     static Cap cap;
     H2Conn c;
     establish(&c, &cap);
+    open_stream(&c, 1);
     const uint8_t err[4] = {0, 0, 0, 8};
-    // RST_STREAM on stream 0: find_stream must not match an empty (id == 0) slot.
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_RST_STREAM, 0, 0, err, 4));
-    // RST_STREAM for a stream that was never opened.
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_RST_STREAM, 0, 7, err, 4));
-    // WINDOW_UPDATE for a stream that was never opened: ignored, connection window untouched.
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_RST_STREAM, 0, 1, err, 4)); // frees the slot
+
     int32_t before = c.conn_send_window;
     const uint8_t inc[4] = {0, 0, 0, 100};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 9, inc, 4));
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 1, inc, 4));
     TEST_ASSERT_EQUAL_INT32(before, c.conn_send_window);
+}
+
+// Per-type frame-size and stream-id rules: sec 6.4 (RST_STREAM is 4 octets), sec 6.3 (PRIORITY is
+// 5, and never stream 0), sec 6.8 (GOAWAY is at least 8, on stream 0), sec 6.5 and 6.7 (SETTINGS
+// and PING belong to the connection).
+void test_h2_frame_size_and_stream_id_rules(void)
+{
+    static Cap cap;
+    H2Conn c;
+    const uint8_t pad[16] = {0};
+
+    // RST_STREAM: right stream, wrong length.
+    establish(&c, &cap);
+    open_stream(&c, 1);
+    TEST_ASSERT_FALSE(feed_frame(&c, H2_RST_STREAM, 0, 1, pad, 3));
+
+    // PRIORITY on stream 0 is a connection error; a wrong length on a real stream is a stream
+    // error, so the connection survives and answers RST_STREAM.
+    TEST_ASSERT_FALSE(fresh_feed(H2_PRIORITY, 0, 0, pad, 5));
+    establish(&c, &cap);
+    open_stream(&c, 1);
+    cap.out_len = 0;
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_PRIORITY, 0, 1, pad, 4));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_PRIORITY, 0, 1, pad, 5)); // the legal length still passes
+
+    TEST_ASSERT_FALSE(fresh_feed(H2_GOAWAY, 0, 0, pad, 7)); // shorter than the two 32-bit fields
+    TEST_ASSERT_FALSE(fresh_feed(H2_GOAWAY, 0, 1, pad, 8)); // GOAWAY names the connection
+    TEST_ASSERT_TRUE(fresh_feed(H2_GOAWAY, 0, 0, pad, 8));
+
+    TEST_ASSERT_FALSE(fresh_feed(H2_SETTINGS, 0, 1, pad, 0));
+    TEST_ASSERT_FALSE(fresh_feed(H2_PING, 0, 1, pad, 8));
+}
+
+// sec 6.10: PC_H2_HDR_BLOCK bounds the bytes a header block may carry, but an empty CONTINUATION
+// adds none, so without a frame-count bound the block never has to end.
+void test_h2_continuation_flood_is_bounded(void)
+{
+    static Cap cap;
+    H2Conn c;
+    establish(&c, &cap);
+
+    // HEADERS without END_HEADERS opens the block; empty CONTINUATIONs then carry it forever.
+    uint8_t block[128];
+    size_t blen = build_request(block, sizeof block);
+    uint8_t hf[160];
+    size_t hn = pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_FALSE);
+    hf[4] &= (uint8_t)~H2_FLAG_END_HEADERS; // clear END_HEADERS in the built frame
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, hn));
+
+    proto_bool refused = PROTO_FALSE;
+    for (int i = 0; i < PC_H2_MAX_CONTINUATION + 4; i++)
+    {
+        if (!feed_frame(&c, H2_CONTINUATION, 0, 1, NULL, 0))
+        {
+            refused = PROTO_TRUE;
+            break;
+        }
+    }
+    TEST_ASSERT_TRUE(refused);
 }
 
 // DATA with an empty payload is delivered but replenishes no flow-control window. DATA naming a
@@ -1034,7 +1105,10 @@ int main(void)
     RUN_TEST(test_h2_null_callbacks);
     RUN_TEST(test_h2_headers_stream_zero);
     RUN_TEST(test_h2_continuation_without_headers);
-    RUN_TEST(test_h2_unknown_stream_frames);
+    RUN_TEST(test_h2_idle_stream_frames_are_connection_errors);
+    RUN_TEST(test_h2_window_update_on_a_closed_stream_is_ignored);
+    RUN_TEST(test_h2_frame_size_and_stream_id_rules);
+    RUN_TEST(test_h2_continuation_flood_is_bounded);
     RUN_TEST(test_h2_data_empty_and_unknown_stream);
     RUN_TEST(test_h2_data_after_end_stream_resets_the_stream);
     RUN_TEST(test_h2_window_update_zero_and_overflow);

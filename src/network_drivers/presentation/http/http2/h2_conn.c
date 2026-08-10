@@ -428,9 +428,10 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
     case H2_DATA:
         return handle_data(c, &h, payload, f);
     case H2_RST_STREAM: {
-        // sec 6.4: RST_STREAM names a stream and is exactly four octets. Either fault is a
-        // connection error - PROTOCOL_ERROR for stream 0, FRAME_SIZE_ERROR for the length.
-        if (h.stream_id == 0 || h.length != 4)
+        // sec 6.4: RST_STREAM names a stream and is exactly four octets. sec 5.1 adds that a
+        // stream id past the highest one opened is idle, where only HEADERS and PRIORITY belong.
+        // Each is a connection error.
+        if (h.stream_id == 0 || h.stream_id > c->last_peer_stream || h.length != 4)
         {
             return PROTO_FALSE;
         }
