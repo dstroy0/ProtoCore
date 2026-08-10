@@ -1223,6 +1223,18 @@
 ".pio/libdeps/native_h2frame/littlefs/src/lfs_util.c": [
 "native_h2frame"
 ],
+".pio/libdeps/native_h2server/littlefs/include/lfs.h": [
+"native_h2server"
+],
+".pio/libdeps/native_h2server/littlefs/include/lfs_util.h": [
+"native_h2server"
+],
+".pio/libdeps/native_h2server/littlefs/src/lfs.c": [
+"native_h2server"
+],
+".pio/libdeps/native_h2server/littlefs/src/lfs_util.c": [
+"native_h2server"
+],
 ".pio/libdeps/native_h3_conn/littlefs/include/lfs.h": [
 "native_h3_conn"
 ],
@@ -3503,6 +3515,18 @@
 ".pio/libdeps/native_tls13_msg/littlefs/src/lfs_util.c": [
 "native_tls13_msg"
 ],
+".pio/libdeps/native_tls_conn/littlefs/include/lfs.h": [
+"native_tls_conn"
+],
+".pio/libdeps/native_tls_conn/littlefs/include/lfs_util.h": [
+"native_tls_conn"
+],
+".pio/libdeps/native_tls_conn/littlefs/src/lfs.c": [
+"native_tls_conn"
+],
+".pio/libdeps/native_tls_conn/littlefs/src/lfs_util.c": [
+"native_tls_conn"
+],
 ".pio/libdeps/native_tls_policy/littlefs/include/lfs.h": [
 "native_tls_policy"
 ],
@@ -4002,6 +4026,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -4192,6 +4217,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -4329,6 +4355,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -4519,6 +4546,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -4656,6 +4684,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -4846,6 +4875,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -4983,6 +5013,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -5173,6 +5204,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -5228,7 +5260,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "core_setup/hal/host/host_nvs.c": [
 "native_config_io",
@@ -5270,6 +5303,7 @@
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_smb",
+"native_tls_conn",
 "native_tls_record"
 ],
 "core_setup/hal/portable/portable_aesgcm.c": [
@@ -5359,6 +5393,7 @@
 "native_ssh_pqc",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_upload",
@@ -5383,6 +5418,7 @@
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_smb",
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/crypto/aead/aesccm.c": [
@@ -5483,7 +5519,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/crypto/asymmetric/curve25519.h": [
 "native_coaps",
@@ -5506,7 +5543,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/crypto/asymmetric/ecdsa.c": [
 "native_ikev2",
@@ -5548,7 +5586,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/crypto/asymmetric/ed25519.h": [
 "native_coaps",
@@ -5570,7 +5609,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/crypto/asymmetric/fe25519.h": [
 "native_coaps",
@@ -5593,7 +5633,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/crypto/asymmetric/rsa.c": [
 "native_ikev2",
@@ -5683,6 +5724,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/crypto/cipher/aes_sbox.h": [
@@ -5712,6 +5754,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/crypto/cipher/chacha20.c": [
@@ -5807,6 +5850,7 @@
 "native_template",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_record",
 "native_totp",
 "native_transport",
@@ -5870,6 +5914,7 @@
 "native_ssh_pqc",
 "native_template",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_record",
 "native_upload",
 "native_web_terminal",
@@ -6019,6 +6064,7 @@
 "native_ssh_pqc",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_upload",
 "native_web_terminal",
@@ -6078,6 +6124,7 @@
 "native_ssh_pqc",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_upload",
 "native_web_terminal",
@@ -6118,7 +6165,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/crypto/hash/sha512.h": [
 "native_coaps",
@@ -6145,7 +6193,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/crypto/kdf/hkdf.c": [
 "native_coaps",
@@ -6162,6 +6211,7 @@
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/crypto/kdf/hkdf.h": [
@@ -6179,6 +6229,7 @@
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/crypto/kdf/kdf.c": [
@@ -6223,6 +6274,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/crypto/mac/hmac_sha256.c": [
@@ -6254,6 +6306,7 @@
 "native_ssh_kbdint",
 "native_ssh_pqc",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/crypto/mac/hmac_sha256.h": [
@@ -6305,6 +6358,7 @@
 "native_ssh_pqc",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_upload",
 "native_web_terminal",
@@ -6441,6 +6495,8 @@
 "native_esp",
 "native_file_serving",
 "native_form_params",
+"native_h2conn",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -6493,6 +6549,7 @@
 "native_template",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_upload",
@@ -6530,6 +6587,8 @@
 "native_esp",
 "native_file_serving",
 "native_form_params",
+"native_h2conn",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -6582,6 +6641,7 @@
 "native_template",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_upload",
@@ -6763,6 +6823,7 @@
 "native_template",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_record",
 "native_totp",
 "native_transport",
@@ -6806,6 +6867,7 @@
 "native_graphql",
 "native_guardrails",
 "native_h2conn",
+"native_h2server",
 "native_h3_server",
 "native_haas_mdc",
 "native_hotswap",
@@ -6886,6 +6948,7 @@
 "native_graphql",
 "native_guardrails",
 "native_h2conn",
+"native_h2server",
 "native_h3_server",
 "native_haas_mdc",
 "native_hotswap",
@@ -6958,6 +7021,8 @@
 "native_esp",
 "native_file_serving",
 "native_form_params",
+"native_h2conn",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -7001,6 +7066,7 @@
 "native_ssh_pqc",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_upload",
@@ -7030,6 +7096,8 @@
 "native_esp",
 "native_file_serving",
 "native_form_params",
+"native_h2conn",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -7073,6 +7141,7 @@
 "native_ssh_pqc",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_upload",
@@ -7262,6 +7331,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -7452,6 +7522,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -7589,6 +7660,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -7779,6 +7851,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -7849,6 +7922,7 @@
 "native_graphql",
 "native_guardrails",
 "native_h2conn",
+"native_h2server",
 "native_h3_server",
 "native_haas_mdc",
 "native_hotswap",
@@ -7950,6 +8024,7 @@
 "native_graphql",
 "native_guardrails",
 "native_h2conn",
+"native_h2server",
 "native_h3_server",
 "native_haas_mdc",
 "native_hotswap",
@@ -8118,6 +8193,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -8308,6 +8384,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -8369,6 +8446,7 @@
 "native_esp",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -8423,6 +8501,7 @@
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_udp",
@@ -8502,6 +8581,7 @@
 "native_template",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_record",
 "native_upload",
 "native_web_terminal",
@@ -8574,6 +8654,7 @@
 "native_template",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_record",
 "native_upload",
 "native_web_terminal",
@@ -8609,6 +8690,8 @@
 "native_esp",
 "native_file_serving",
 "native_form_params",
+"native_h2conn",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -8668,6 +8751,7 @@
 "native_template",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_udp",
@@ -8783,6 +8867,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -8973,6 +9058,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -10247,6 +10333,7 @@
 ],
 "src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c": [
 "native_h2conn",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -10257,6 +10344,7 @@
 ],
 "src/network_drivers/presentation/codec/hpack_prim/hpack_prim.h": [
 "native_h2conn",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -10527,26 +10615,38 @@
 "native_webdav_handler"
 ],
 "src/network_drivers/presentation/http/http2/h2_conn.c": [
-"native_h2conn"
+"native_h2conn",
+"native_h2server"
 ],
 "src/network_drivers/presentation/http/http2/h2_conn.h": [
-"native_h2conn"
+"native_h2conn",
+"native_h2server"
 ],
 "src/network_drivers/presentation/http/http2/h2_frame.c": [
 "native_h2conn",
-"native_h2frame"
+"native_h2frame",
+"native_h2server"
 ],
 "src/network_drivers/presentation/http/http2/h2_frame.h": [
 "native_h2conn",
-"native_h2frame"
+"native_h2frame",
+"native_h2server"
+],
+"src/network_drivers/presentation/http/http2/h2_server.c": [
+"native_h2server"
+],
+"src/network_drivers/presentation/http/http2/h2_server.h": [
+"native_h2server"
 ],
 "src/network_drivers/presentation/http/http2/hpack.c": [
 "native_h2conn",
+"native_h2server",
 "native_hpack",
 "native_pentest"
 ],
 "src/network_drivers/presentation/http/http2/hpack.h": [
 "native_h2conn",
+"native_h2server",
 "native_hpack",
 "native_pentest"
 ],
@@ -10755,7 +10855,8 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/network_drivers/presentation/http/http3/tls13_msg.h": [
 "native_coaps",
@@ -10769,7 +10870,8 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
-"native_tls13_msg"
+"native_tls13_msg",
+"native_tls_conn"
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.c": [
 "native_accept_gate",
@@ -10786,6 +10888,7 @@
 "native_dispatch",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_server",
 "native_http_parser",
 "native_iface",
@@ -10826,6 +10929,7 @@
 "native_dispatch",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_server",
 "native_http_parser",
 "native_iface",
@@ -11539,6 +11643,7 @@
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_upload",
@@ -11622,6 +11727,7 @@
 "native_telnet",
 "native_template",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record",
 "native_transport",
 "native_upload",
@@ -11675,6 +11781,7 @@
 "native_dispatch",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_server",
 "native_http_parser",
 "native_iface",
@@ -11716,6 +11823,7 @@
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/network_drivers/tls/tls13_kdf.h": [
@@ -11731,12 +11839,21 @@
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_tls13_kdf",
+"native_tls_conn",
 "native_tls_record"
 ],
+"src/network_drivers/tls/tls_conn.c": [
+"native_tls_conn"
+],
+"src/network_drivers/tls/tls_conn.h": [
+"native_tls_conn"
+],
 "src/network_drivers/tls/tls_record.c": [
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/network_drivers/tls/tls_record.h": [
+"native_tls_conn",
 "native_tls_record"
 ],
 "src/network_drivers/transport/diffserv.c": [
@@ -11982,6 +12099,7 @@
 "native_dispatch",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_server",
 "native_http_parser",
 "native_iface",
@@ -12069,6 +12187,7 @@
 "native_dispatch",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_server",
 "native_http_parser",
 "native_iface",
@@ -12156,6 +12275,7 @@
 "native_dispatch",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_server",
 "native_http_parser",
 "native_iface",
@@ -12243,6 +12363,7 @@
 "native_dispatch",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_server",
 "native_http_parser",
 "native_iface",
@@ -12287,6 +12408,7 @@
 "native_dispatch",
 "native_file_serving",
 "native_form_params",
+"native_h2server",
 "native_h3_server",
 "native_http_parser",
 "native_iface",
@@ -12720,6 +12842,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -12910,6 +13033,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -13020,6 +13144,7 @@
 "native_tcp",
 "native_telnet",
 "native_template",
+"native_tls_conn",
 "native_trace_capture",
 "native_transport",
 "native_upload",
@@ -13109,6 +13234,7 @@
 "native_tcp",
 "native_telnet",
 "native_template",
+"native_tls_conn",
 "native_trace_capture",
 "native_transport",
 "native_upload",
@@ -19839,6 +19965,7 @@
 "native_graphql",
 "native_guardrails",
 "native_h2conn",
+"native_h2server",
 "native_h3_server",
 "native_haas_mdc",
 "native_happy_eyeballs",
@@ -19971,6 +20098,7 @@
 "native_file_serving",
 "native_form_params",
 "native_forwarded_trust",
+"native_h2server",
 "native_h3_server",
 "native_happy_eyeballs",
 "native_http_parser",
@@ -20042,6 +20170,7 @@
 "native_form_params",
 "native_forward",
 "native_forwarded_trust",
+"native_h2server",
 "native_h3_server",
 "native_happy_eyeballs",
 "native_http_parser",
@@ -20358,6 +20487,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -20548,6 +20678,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -20722,6 +20853,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -20912,6 +21044,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",
@@ -21049,6 +21182,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h2frame",
+"native_h2server",
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
@@ -21239,6 +21373,7 @@
 "native_time_source",
 "native_tls13_kdf",
 "native_tls13_msg",
+"native_tls_conn",
 "native_tls_policy",
 "native_tls_record",
 "native_totp",

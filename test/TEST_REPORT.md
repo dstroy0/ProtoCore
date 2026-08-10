@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-09 22:27:15
-**Command:** `pio test` over 324 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 6186 passed - 0s
+**Generated:** 2026-08-10 08:27:12
+**Command:** `pio test` over 326 auto-discovered native envs (excludes native_pentest, native_codeql)
+**Result:** ❌ 6251 passed, 2 failed - 1935s
 
 ---
 
@@ -658,25 +658,27 @@ _Tests the SSH client-to-server resumable INFLATE (ssh_inflate) against golden v
 
 ---
 
-## test_crypto_kat - native_crypto_kat - ✅ 10 passed
+## test_crypto_kat - native_crypto_kat - ✅ 12 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Data-driven external known-answer tests (KAT) for the library's crypto_
 
-|   # | Test                       | Status | Description         |
-| --: | :------------------------- | :----: | :------------------ |
-|   1 | `test_hmac_sha256`         |   ✅   | Hmac sha256         |
-|   2 | `test_hmac_sha512`         |   ✅   | Hmac sha512         |
-|   3 | `test_aes128gcm`           |   ✅   | Aes128gcm           |
-|   4 | `test_aes128gcm_ctr_carry` |   ✅   | Aes128gcm ctr carry |
-|   5 | `test_x25519`              |   ✅   | X25519              |
-|   6 | `test_ed25519_verify`      |   ✅   | Ed25519 verify      |
-|   7 | `test_ed25519_sign`        |   ✅   | Ed25519 sign        |
-|   8 | `test_hkdf_extract`        |   ✅   | Hkdf extract        |
-|   9 | `test_chacha20_block`      |   ✅   | Chacha20 block      |
-|  10 | `test_poly1305`            |   ✅   | Poly1305            |
+|   # | Test                            | Status | Description              |
+| --: | :------------------------------ | :----: | :----------------------- |
+|   1 | `test_hmac_sha256`              |   ✅   | Hmac sha256              |
+|   2 | `test_hmac_sha512`              |   ✅   | Hmac sha512              |
+|   3 | `test_aes128gcm`                |   ✅   | Aes128gcm                |
+|   4 | `test_aes128gcm_ctr_carry`      |   ✅   | Aes128gcm ctr carry      |
+|   5 | `test_x25519`                   |   ✅   | X25519                   |
+|   6 | `test_ed25519_verify`           |   ✅   | Ed25519 verify           |
+|   7 | `test_ed25519_sign`             |   ✅   | Ed25519 sign             |
+|   8 | `test_hkdf_extract`             |   ✅   | Hkdf extract             |
+|   9 | `test_hkdf_expand`              |   ✅   | Hkdf expand              |
+|  10 | `test_hkdf_expand_length_bound` |   ✅   | Hkdf expand length bound |
+|  11 | `test_chacha20_block`           |   ✅   | Chacha20 block           |
+|  12 | `test_poly1305`                 |   ✅   | Poly1305                 |
 
 </details>
 
@@ -1828,7 +1830,7 @@ _Unit tests for pc_prov_form_field(): the x-www-form-urlencoded field_
 
 ---
 
-## test_ssh_server - native_ssh - ✅ 39 passed
+## test_ssh_server - native_ssh - ✅ 41 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -1853,35 +1855,37 @@ _End-to-end SSH server dispatcher test: drives a full handshake_
 |  14 | `test_ssh_pkt_encrypted_roundtrip_and_mac_fail`       |   ✅   | Ssh pkt encrypted roundtrip and mac fail                                  |
 |  15 | `test_ssh_pkt_client_role_and_zero_remainder_padding` |   ✅   | Ssh pkt client role and zero remainder padding                            |
 |  16 | `test_ssh_pkt_client_role_all_cipher_modes`           |   ✅   | Ssh pkt client role all cipher modes                                      |
-|  17 | `test_ssh_pkt_aesgcm_minimum_padding`                 |   ✅   | Ssh pkt aesgcm minimum padding                                            |
-|  18 | `test_ssh_pkt_chachapoly_frame_errors`                |   ✅   | Ssh pkt chachapoly frame errors                                           |
-|  19 | `test_ssh_pkt_aesgcm_frame_errors`                    |   ✅   | Ssh pkt aesgcm frame errors                                               |
-|  20 | `test_ssh_pkt_ctr_etm_frame_errors`                   |   ✅   | Ssh pkt ctr etm frame errors                                              |
-|  21 | `test_ssh_pkt_ctr_emac_and_plain_frame_errors`        |   ✅   | Ssh pkt ctr emac and plain frame errors                                   |
-|  22 | `test_full_handshake_to_channel_data`                 |   ✅   | Banner exchange already done out-of-band; seed V_C and enter KEXINIT.     |
-|  23 | `test_extinfo_build_advertises_server_sig_algs`       |   ✅   | Extinfo build advertises server sig algs                                  |
-|  24 | `test_extinfo_not_sent_without_ext_info_c`            |   ✅   | Extinfo not sent without ext info c                                       |
-|  25 | `test_inbound_ext_info_ignored`                       |   ✅   | Inbound ext info ignored                                                  |
-|  26 | `test_large_client_kexinit_accepted`                  |   ✅   | Large client kexinit accepted                                             |
-|  27 | `test_channel_open_before_auth_rejected`              |   ✅   | Channel open before auth rejected                                         |
-|  28 | `test_service_request_before_newkeys_rejected`        |   ✅   | Service request before newkeys rejected                                   |
-|  29 | `test_disconnect_closes`                              |   ✅   | Disconnect closes                                                         |
-|  30 | `test_ignore_is_noop`                                 |   ✅   | Ignore is noop                                                            |
-|  31 | `test_auth_bruteforce_disconnect`                     |   ✅   | The first SSH_MAX_AUTH_ATTEMPTS-1 failures keep the connection open.      |
-|  32 | `test_auth_success_after_failures`                    |   ✅   | Auth success after failures                                               |
-|  33 | `test_unimplemented_reply_for_unknown_message`        |   ✅   | Unimplemented reply for unknown message                                   |
-|  34 | `test_inbound_close_emits_eof_then_close_separately`  |   ✅   | Open a channel so the close path has something to close (peer id 21).     |
-|  35 | `test_ssh_global_request_silent_without_want_reply`   |   ✅   | Ssh global request silent without want reply                              |
-|  36 | `test_ssh_channel_request_silent_without_want_reply`  |   ✅   | Ssh channel request silent without want reply                             |
-|  37 | `test_ssh_channel_close_unhandled_emits_nothing`      |   ✅   | No channel has been opened in this test, so recipient 0 does not resolve. |
-|  38 | `test_ssh_kexinit_midsession_rekey`                   |   ✅   | Ssh kexinit midsession rekey                                              |
-|  39 | `test_ssh_dispatch_without_emit_cb`                   |   ✅   | Ssh dispatch without emit cb                                              |
+|  17 | `test_ssh_pkt_gcm_nonce_advances_per_packet`          |   ✅   | Ssh pkt gcm nonce advances per packet                                     |
+|  18 | `test_ssh_pkt_aesgcm_minimum_padding`                 |   ✅   | Ssh pkt aesgcm minimum padding                                            |
+|  19 | `test_ssh_pkt_chachapoly_frame_errors`                |   ✅   | Ssh pkt chachapoly frame errors                                           |
+|  20 | `test_ssh_pkt_aesgcm_frame_errors`                    |   ✅   | Ssh pkt aesgcm frame errors                                               |
+|  21 | `test_ssh_pkt_ctr_etm_frame_errors`                   |   ✅   | Ssh pkt ctr etm frame errors                                              |
+|  22 | `test_ssh_pkt_ctr_emac_and_plain_frame_errors`        |   ✅   | Ssh pkt ctr emac and plain frame errors                                   |
+|  23 | `test_full_handshake_to_channel_data`                 |   ✅   | Banner exchange already done out-of-band; seed V_C and enter KEXINIT.     |
+|  24 | `test_wrong_kex_guess_is_dropped`                     |   ✅   | Wrong kex guess is dropped                                                |
+|  25 | `test_extinfo_build_advertises_server_sig_algs`       |   ✅   | Extinfo build advertises server sig algs                                  |
+|  26 | `test_extinfo_not_sent_without_ext_info_c`            |   ✅   | Extinfo not sent without ext info c                                       |
+|  27 | `test_inbound_ext_info_ignored`                       |   ✅   | Inbound ext info ignored                                                  |
+|  28 | `test_large_client_kexinit_accepted`                  |   ✅   | Large client kexinit accepted                                             |
+|  29 | `test_channel_open_before_auth_rejected`              |   ✅   | Channel open before auth rejected                                         |
+|  30 | `test_service_request_before_newkeys_rejected`        |   ✅   | Service request before newkeys rejected                                   |
+|  31 | `test_disconnect_closes`                              |   ✅   | Disconnect closes                                                         |
+|  32 | `test_ignore_is_noop`                                 |   ✅   | Ignore is noop                                                            |
+|  33 | `test_auth_bruteforce_disconnect`                     |   ✅   | The first SSH_MAX_AUTH_ATTEMPTS-1 failures keep the connection open.      |
+|  34 | `test_auth_success_after_failures`                    |   ✅   | Auth success after failures                                               |
+|  35 | `test_unimplemented_reply_for_unknown_message`        |   ✅   | Unimplemented reply for unknown message                                   |
+|  36 | `test_inbound_close_emits_eof_then_close_separately`  |   ✅   | Open a channel so the close path has something to close (peer id 21).     |
+|  37 | `test_ssh_global_request_silent_without_want_reply`   |   ✅   | Ssh global request silent without want reply                              |
+|  38 | `test_ssh_channel_request_silent_without_want_reply`  |   ✅   | Ssh channel request silent without want reply                             |
+|  39 | `test_ssh_channel_close_unhandled_emits_nothing`      |   ✅   | No channel has been opened in this test, so recipient 0 does not resolve. |
+|  40 | `test_ssh_kexinit_midsession_rekey`                   |   ✅   | Ssh kexinit midsession rekey                                              |
+|  41 | `test_ssh_dispatch_without_emit_cb`                   |   ✅   | Ssh dispatch without emit cb                                              |
 
 </details>
 
 ---
 
-## test_ssh_transport - native_ssh - ✅ 63 passed
+## test_ssh_transport - native_ssh - ✅ 67 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -1894,35 +1898,35 @@ _SSH transport handshake tests (RFC 4253): identification-string exchange and_
 |   2 | `test_kexdh_handle_ecdsa_hostkey_absent_fails`                    |   ✅   | Kexdh handle ecdsa hostkey absent fails                                                   |
 |   3 | `test_transport_index_guards`                                     |   ✅   | Transport index guards                                                                    |
 |   4 | `test_banner_and_build_caps`                                      |   ✅   | Banner and build caps                                                                     |
-|   5 | `test_kexinit_parse_field_and_trunc`                              |   ✅   | Kexinit parse field and trunc                                                             |
-|   6 | `test_kexdh_parse_and_handle_errors`                              |   ✅   | Kexdh parse and handle errors                                                             |
-|   7 | `test_server_banner_format`                                       |   ✅   | Server banner format                                                                      |
-|   8 | `test_recv_banner_complete`                                       |   ✅   | Recv banner complete                                                                      |
-|   9 | `test_recv_banner_bare_lf`                                        |   ✅   | Recv banner bare lf                                                                       |
-|  10 | `test_recv_banner_split_across_reads`                             |   ✅   | Recv banner split across reads                                                            |
-|  11 | `test_recv_banner_skips_preamble_lines`                           |   ✅   | RFC 4253 §4.2 allows lines before the SSH identification string.                          |
-|  12 | `test_kexinit_build_starts_with_msg_and_stores_is`                |   ✅   | Kexinit build starts with msg and stores is                                               |
-|  13 | `test_kexinit_parse_accepts_supported`                            |   ✅   | Kexinit parse accepts supported                                                           |
-|  14 | `test_kexinit_parse_accepts_when_ours_listed_among_others`        |   ✅   | Kexinit parse accepts when ours listed among others                                       |
-|  15 | `test_kexinit_parse_rejects_missing_kex`                          |   ✅   | Only a KEX method we do not implement (nistp521) -> no mutual KEX -> reject. (nistp256 IS |
-|  16 | `test_kexinit_parse_rejects_hostkey_we_lack`                      |   ✅   | Kexinit parse rejects hostkey we lack                                                     |
-|  17 | `test_kexinit_parse_steers_to_curve_ed25519`                      |   ✅   | Kexinit parse steers to curve ed25519                                                     |
-|  18 | `test_kexinit_parse_rejects_missing_cipher`                       |   ✅   | Only ciphers we do not implement -> no mutual cipher -> reject.                           |
-|  19 | `test_kexinit_parse_selects_chacha20poly1305`                     |   ✅   | Kexinit parse selects chacha20poly1305                                                    |
-|  20 | `test_kexinit_parse_selects_aes256gcm`                            |   ✅   | Kexinit parse selects aes256gcm                                                           |
-|  21 | `test_kexinit_parse_honors_client_cipher_preference`              |   ✅   | Kexinit parse honors client cipher preference                                             |
-|  22 | `test_kexinit_parse_selects_rsa_sha512`                           |   ✅   | Both offered -> rsa-sha2-512 wins (server preference).                                    |
-|  23 | `test_kexinit_parse_selects_ecdsa`                                |   ✅   | Kexinit parse selects ecdsa                                                               |
-|  24 | `test_kexinit_parse_selects_ecdh_nistp256`                        |   ✅   | Kexinit parse selects ecdh nistp256                                                       |
-|  25 | `test_kexinit_parse_selects_etm_mac`                              |   ✅   | Kexinit parse selects etm mac                                                             |
-|  26 | `test_kexinit_parse_rejects_truncated`                            |   ✅   | Kexinit parse rejects truncated                                                           |
-|  27 | `test_exchange_hash_matches_independent_assembly`                 |   ✅   | Populate the session fields the hash reads.                                               |
-|  28 | `test_exchange_hash_changes_with_input`                           |   ✅   | Exchange hash changes with input                                                          |
-|  29 | `test_kexdh_parse_init_extracts_e_with_padding`                   |   ✅   | Kexdh parse init extracts e with padding                                                  |
-|  30 | `test_kexdh_parse_init_extracts_small_e`                          |   ✅   | Kexdh parse init extracts small e                                                         |
-|  31 | `test_kexdh_parse_init_rejects_wrong_type`                        |   ✅   | Kexdh parse init rejects wrong type                                                       |
-|  32 | `test_kexdh_parse_init_rejects_oversized_e`                       |   ✅   | mpint with 300 magnitude bytes → exceeds 2048 bits.                                       |
-|  33 | `test_kexdh_build_reply_structure`                                |   ✅   | Kexdh build reply structure                                                               |
+|   5 | `test_recv_banner_rfc_length_bound`                               |   ✅   | Recv banner rfc length bound                                                              |
+|   6 | `test_kexinit_parse_field_and_trunc`                              |   ✅   | Kexinit parse field and trunc                                                             |
+|   7 | `test_kexdh_parse_and_handle_errors`                              |   ✅   | Kexdh parse and handle errors                                                             |
+|   8 | `test_server_banner_format`                                       |   ✅   | Server banner format                                                                      |
+|   9 | `test_recv_banner_complete`                                       |   ✅   | Recv banner complete                                                                      |
+|  10 | `test_recv_banner_bare_lf`                                        |   ✅   | Recv banner bare lf                                                                       |
+|  11 | `test_recv_banner_split_across_reads`                             |   ✅   | Recv banner split across reads                                                            |
+|  12 | `test_recv_banner_skips_preamble_lines`                           |   ✅   | RFC 4253 §4.2 allows lines before the SSH identification string.                          |
+|  13 | `test_kexinit_build_starts_with_msg_and_stores_is`                |   ✅   | Kexinit build starts with msg and stores is                                               |
+|  14 | `test_kexinit_parse_accepts_supported`                            |   ✅   | Kexinit parse accepts supported                                                           |
+|  15 | `test_kexinit_parse_accepts_when_ours_listed_among_others`        |   ✅   | Kexinit parse accepts when ours listed among others                                       |
+|  16 | `test_kexinit_parse_rejects_missing_kex`                          |   ✅   | Only a KEX method we do not implement (nistp521) -> no mutual KEX -> reject. (nistp256 IS |
+|  17 | `test_kexinit_parse_rejects_hostkey_we_lack`                      |   ✅   | Kexinit parse rejects hostkey we lack                                                     |
+|  18 | `test_kexinit_parse_steers_to_curve_ed25519`                      |   ✅   | Kexinit parse steers to curve ed25519                                                     |
+|  19 | `test_kexinit_parse_rejects_missing_cipher`                       |   ✅   | Only ciphers we do not implement -> no mutual cipher -> reject.                           |
+|  20 | `test_kexinit_parse_selects_chacha20poly1305`                     |   ✅   | Kexinit parse selects chacha20poly1305                                                    |
+|  21 | `test_kexinit_parse_selects_aes256gcm`                            |   ✅   | Kexinit parse selects aes256gcm                                                           |
+|  22 | `test_kexinit_parse_honors_client_cipher_preference`              |   ✅   | Kexinit parse honors client cipher preference                                             |
+|  23 | `test_kexinit_parse_selects_rsa_sha512`                           |   ✅   | Both offered -> rsa-sha2-512 wins (server preference).                                    |
+|  24 | `test_kexinit_parse_selects_ecdsa`                                |   ✅   | Kexinit parse selects ecdsa                                                               |
+|  25 | `test_kexinit_parse_selects_ecdh_nistp256`                        |   ✅   | Kexinit parse selects ecdh nistp256                                                       |
+|  26 | `test_kexinit_parse_selects_etm_mac`                              |   ✅   | Kexinit parse selects etm mac                                                             |
+|  27 | `test_kexinit_parse_rejects_truncated`                            |   ✅   | Kexinit parse rejects truncated                                                           |
+|  28 | `test_exchange_hash_matches_independent_assembly`                 |   ✅   | Populate the session fields the hash reads.                                               |
+|  29 | `test_exchange_hash_changes_with_input`                           |   ✅   | Exchange hash changes with input                                                          |
+|  30 | `test_kexdh_parse_init_extracts_e_with_padding`                   |   ✅   | Kexdh parse init extracts e with padding                                                  |
+|  31 | `test_kexdh_parse_init_extracts_small_e`                          |   ✅   | Kexdh parse init extracts small e                                                         |
+|  32 | `test_kexdh_parse_init_rejects_wrong_type`                        |   ✅   | Kexdh parse init rejects wrong type                                                       |
+|  33 | `test_kexdh_parse_init_rejects_oversized_e`                       |   ✅   | mpint with 300 magnitude bytes → exceeds 2048 bits.                                       |
 |  34 | `test_kexdh_handle_produces_reply_and_installs_keys`              |   ✅   | Kexdh handle produces reply and installs keys                                             |
 |  35 | `test_kexdh_handle_rejects_invalid_e`                             |   ✅   | Kexdh handle rejects invalid e                                                            |
 |  36 | `test_kexdh_handle_curve25519_ed25519_end_to_end`                 |   ✅   | Fixed baseline host keys for deterministic regression, plus one fresh throwaway           |
@@ -1932,78 +1936,88 @@ _SSH transport handshake tests (RFC 4253): identification-string exchange and_
 |  40 | `test_kexdh_handle_rsa_sha512_signature`                          |   ✅   | Kexdh handle rsa sha512 signature                                                         |
 |  41 | `test_kexdh_handle_ecdsa_end_to_end`                              |   ✅   | Kexdh handle ecdsa end to end                                                             |
 |  42 | `test_derive_keys_session_id_affects_output`                      |   ✅   | Derive keys session id affects output                                                     |
-|  43 | `test_rekey_needed_threshold`                                     |   ✅   | Rekey needed threshold                                                                    |
-|  44 | `test_rekey_due_volume_and_time`                                  |   ✅   | Neither budget spent.                                                                     |
-|  45 | `test_begin_rekey_preserves_session_and_auth`                     |   ✅   | Begin rekey preserves session and auth                                                    |
-|  46 | `test_kdf_edge_paths_and_slot_guards`                             |   ✅   | Kdf edge paths and slot guards                                                            |
-|  47 | `test_kexinit_parse_truncation_points`                            |   ✅   | One cut per name-list read, in field order: kex / host-key / cipher-c2s / cipher-s2c /    |
-|  48 | `test_ssh_transport_more_guards`                                  |   ✅   | Ssh transport more guards                                                                 |
-|  49 | `test_dh_derive_keys_gcm_installs`                                |   ✅   | Dh derive keys gcm installs                                                               |
-|  50 | `test_kdf_string_k_hybrid`                                        |   ✅   | Kdf string k hybrid                                                                       |
-|  51 | `test_kexinit_parse_rejects_direction_mismatch`                   |   ✅   | Kexinit parse rejects direction mismatch                                                  |
-|  52 | `test_kexinit_parse_aead_ignores_mac_lists`                       |   ✅   | Kexinit parse aead ignores mac lists                                                      |
-|  53 | `test_kexinit_parse_same_length_names_do_not_match`               |   ✅   | Kexinit parse same length names do not match                                              |
-|  54 | `test_extinfo_build_modern_first_order`                           |   ✅   | Extinfo build modern first order                                                          |
-|  55 | `test_kexdh_handle_curve25519_rejects_malformed_init`             |   ✅   | Kexdh handle curve25519 rejects malformed init                                            |
-|  56 | `test_kexdh_handle_ecdh_p256_rejects_malformed_init`              |   ✅   | Kexdh handle ecdh p256 rejects malformed init                                             |
-|  57 | `test_recv_banner_empty_and_short_preamble_lines`                 |   ✅   | Recv banner empty and short preamble lines                                                |
-|  58 | `test_kexinit_parse_rejects_short_and_mistyped`                   |   ✅   | Kexinit parse rejects short and mistyped                                                  |
-|  59 | `test_kexdh_parse_init_accepts_all_zero_mpint`                    |   ✅   | Kexdh parse init accepts all zero mpint                                                   |
-|  60 | `test_kexdh_handle_ecdh_p256_rejects_bad_ephemeral`               |   ✅   | Kexdh handle ecdh p256 rejects bad ephemeral                                              |
-|  61 | `test_rekey_needed_on_receive_sequence_alone`                     |   ✅   | Rekey needed on receive sequence alone                                                    |
-|  62 | `test_kexinit_hostkey_list_carries_all_four_when_all_keys_loaded` |   ✅   | Kexinit hostkey list carries all four when all keys loaded                                |
-|  63 | `test_cyclonessh_kex_repro`                                       |   ✅   | Cyclonessh kex repro                                                                      |
+|  43 | `test_derive_binds_every_label_to_its_direction`                  |   ✅   | Derive binds every label to its direction                                                 |
+|  44 | `test_group14_matches_rfc3526`                                    |   ✅   | Group14 matches rfc3526                                                                   |
+|  45 | `test_rekey_needed_threshold`                                     |   ✅   | Rekey needed threshold                                                                    |
+|  46 | `test_rekey_threshold_meets_the_rfc_bounds`                       |   ✅   | Rekey threshold meets the rfc bounds                                                      |
+|  47 | `test_rekey_due_volume_and_time`                                  |   ✅   | Neither budget spent.                                                                     |
+|  48 | `test_begin_rekey_preserves_session_and_auth`                     |   ✅   | Begin rekey preserves session and auth                                                    |
+|  49 | `test_kdf_edge_paths_and_slot_guards`                             |   ✅   | Kdf edge paths and slot guards                                                            |
+|  50 | `test_kexinit_parse_truncation_points`                            |   ✅   | One cut per name-list read, in field order: kex / host-key / cipher-c2s / cipher-s2c /    |
+|  51 | `test_ssh_transport_more_guards`                                  |   ✅   | Ssh transport more guards                                                                 |
+|  52 | `test_dh_derive_keys_gcm_installs`                                |   ✅   | Dh derive keys gcm installs                                                               |
+|  53 | `test_kdf_string_k_hybrid`                                        |   ✅   | Kdf string k hybrid                                                                       |
+|  54 | `test_kexinit_parse_negotiates_each_direction`                    |   ✅   | Kexinit parse negotiates each direction                                                   |
+|  55 | `test_kexinit_parse_honors_client_preference_everywhere`          |   ✅   | The server prefers RSA/DH when prefer_rsa is set, so a client leading with curve25519 and |
+|  56 | `test_kexinit_parse_aead_ignores_mac_lists`                       |   ✅   | Kexinit parse aead ignores mac lists                                                      |
+|  57 | `test_kexinit_parse_same_length_names_do_not_match`               |   ✅   | Kexinit parse same length names do not match                                              |
+|  58 | `test_extinfo_build_modern_first_order`                           |   ✅   | Extinfo build modern first order                                                          |
+|  59 | `test_kexdh_handle_curve25519_rejects_malformed_init`             |   ✅   | Kexdh handle curve25519 rejects malformed init                                            |
+|  60 | `test_kexdh_handle_ecdh_p256_rejects_malformed_init`              |   ✅   | Kexdh handle ecdh p256 rejects malformed init                                             |
+|  61 | `test_recv_banner_empty_and_short_preamble_lines`                 |   ✅   | Recv banner empty and short preamble lines                                                |
+|  62 | `test_kexinit_parse_rejects_short_and_mistyped`                   |   ✅   | Kexinit parse rejects short and mistyped                                                  |
+|  63 | `test_kexdh_parse_init_accepts_all_zero_mpint`                    |   ✅   | Kexdh parse init accepts all zero mpint                                                   |
+|  64 | `test_kexdh_handle_ecdh_p256_rejects_bad_ephemeral`               |   ✅   | Kexdh handle ecdh p256 rejects bad ephemeral                                              |
+|  65 | `test_rekey_needed_on_receive_sequence_alone`                     |   ✅   | Rekey needed on receive sequence alone                                                    |
+|  66 | `test_kexinit_hostkey_list_carries_all_four_when_all_keys_loaded` |   ✅   | Kexinit hostkey list carries all four when all keys loaded                                |
+|  67 | `test_cyclonessh_kex_repro`                                       |   ✅   | Cyclonessh kex repro                                                                      |
 
 </details>
 
 ---
 
-## test_ssh_auth - native_ssh - ✅ 31 passed
+## test_ssh_auth - native_ssh - ✅ 37 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _SSH user-authentication tests (RFC 4252): service request/accept, request_
 
-|   # | Test                                              | Status | Description                                       |
-| --: | :------------------------------------------------ | :----: | :------------------------------------------------ |
-|   1 | `test_service_request_errors`                     |   ✅   | Service request errors                            |
-|   2 | `test_build_response_guards`                      |   ✅   | Build response guards                             |
-|   3 | `test_parse_request_truncations`                  |   ✅   | Parse request truncations                         |
-|   4 | `test_pubkey_blob_parse_failures`                 |   ✅   | Pubkey blob parse failures                        |
-|   5 | `test_pubkey_oversized_signed_prefix`             |   ✅   | Pubkey oversized signed prefix                    |
-|   6 | `test_handle_request_index_and_parse_guards`      |   ✅   | Handle request index and parse guards             |
-|   7 | `test_pubkey_without_verifier_fails`              |   ✅   | Pubkey without verifier fails                     |
-|   8 | `test_pubkey_rsa_blob_type_length_and_zero_mpint` |   ✅   | Pubkey rsa blob type length and zero mpint        |
-|   9 | `test_pubkey_ed25519_blob_and_siglen_rejections`  |   ✅   | Pubkey ed25519 blob and siglen rejections         |
-|  10 | `test_pubkey_ecdsa_blob_rejections`               |   ✅   | Pubkey ecdsa blob rejections                      |
-|  11 | `test_pubkey_ecdsa_signature_rejections`          |   ✅   | Pubkey ecdsa signature rejections                 |
-|  12 | `test_pubkey_verifier_rejects_key`                |   ✅   | Pubkey verifier rejects key                       |
-|  13 | `test_build_failure_partial_success_flag`         |   ✅   | Build failure partial success flag                |
-|  14 | `test_service_request_accept`                     |   ✅   | Service request accept                            |
-|  15 | `test_service_request_rejects_unknown`            |   ✅   | Service request rejects unknown                   |
-|  16 | `test_parse_password_request`                     |   ✅   | Parse password request                            |
-|  17 | `test_parse_none_request`                         |   ✅   | Parse none request                                |
-|  18 | `test_parse_rejects_foreign_service`              |   ✅   | Parse rejects foreign service                     |
-|  19 | `test_parse_rejects_password_change`              |   ✅   | Parse rejects password change                     |
-|  20 | `test_handle_request_success`                     |   ✅   | Handle request success                            |
-|  21 | `test_handle_request_wrong_password_fails`        |   ✅   | Handle request wrong password fails               |
-|  22 | `test_handle_none_request_fails_without_auth`     |   ✅   | Handle none request fails without auth            |
-|  23 | `test_handle_request_no_callback_fails`           |   ✅   | No callback installed → all credentials rejected. |
-|  24 | `test_pubkey_probe_returns_pk_ok`                 |   ✅   | Pubkey probe returns pk ok                        |
-|  25 | `test_pubkey_valid_signature_succeeds`            |   ✅   | Pubkey valid signature succeeds                   |
-|  26 | `test_pubkey_rsa_sha512_signature_succeeds`       |   ✅   | Pubkey rsa sha512 signature succeeds              |
-|  27 | `test_pubkey_ecdsa_signature_succeeds`            |   ✅   | Pubkey ecdsa signature succeeds                   |
-|  28 | `test_pubkey_ed25519_valid_signature_succeeds`    |   ✅   | Pubkey ed25519 valid signature succeeds           |
-|  29 | `test_pubkey_tampered_signature_fails`            |   ✅   | Pubkey tampered signature fails                   |
-|  30 | `test_pubkey_unauthorized_key_fails`              |   ✅   | Pubkey unauthorized key fails                     |
-|  31 | `test_aesgcm_gctr_counter_byte_carry`             |   ✅   | Aesgcm gctr counter byte carry                    |
+|   # | Test                                                   | Status | Description                                       |
+| --: | :----------------------------------------------------- | :----: | :------------------------------------------------ |
+|   1 | `test_service_request_errors`                          |   ✅   | Service request errors                            |
+|   2 | `test_build_response_guards`                           |   ✅   | Build response guards                             |
+|   3 | `test_parse_request_truncations`                       |   ✅   | Parse request truncations                         |
+|   4 | `test_pubkey_blob_parse_failures`                      |   ✅   | Pubkey blob parse failures                        |
+|   5 | `test_pubkey_oversized_signed_prefix`                  |   ✅   | Pubkey oversized signed prefix                    |
+|   6 | `test_handle_request_index_and_parse_guards`           |   ✅   | Handle request index and parse guards             |
+|   7 | `test_pubkey_without_verifier_fails`                   |   ✅   | Pubkey without verifier fails                     |
+|   8 | `test_pubkey_rsa_blob_type_length_and_zero_mpint`      |   ✅   | Pubkey rsa blob type length and zero mpint        |
+|   9 | `test_pubkey_ed25519_blob_and_siglen_rejections`       |   ✅   | Pubkey ed25519 blob and siglen rejections         |
+|  10 | `test_pubkey_ecdsa_blob_rejections`                    |   ✅   | Pubkey ecdsa blob rejections                      |
+|  11 | `test_pubkey_ecdsa_signature_rejections`               |   ✅   | Pubkey ecdsa signature rejections                 |
+|  12 | `test_pubkey_verifier_rejects_key`                     |   ✅   | Pubkey verifier rejects key                       |
+|  13 | `test_build_failure_partial_success_flag`              |   ✅   | Build failure partial success flag                |
+|  14 | `test_service_request_accept`                          |   ✅   | Service request accept                            |
+|  15 | `test_service_request_rejects_unknown`                 |   ✅   | Service request rejects unknown                   |
+|  16 | `test_parse_password_request`                          |   ✅   | Parse password request                            |
+|  17 | `test_parse_none_request`                              |   ✅   | Parse none request                                |
+|  18 | `test_parse_rejects_foreign_service`                   |   ✅   | Parse rejects foreign service                     |
+|  19 | `test_parse_reads_password_change`                     |   ✅   | Parse reads password change                       |
+|  20 | `test_pw_change_defers_then_reports`                   |   ✅   | Pw change defers then reports                     |
+|  21 | `test_pw_change_cooldown_refuses_second`               |   ✅   | Pw change cooldown refuses second                 |
+|  22 | `test_pw_change_no_cb_fails`                           |   ✅   | Pw change no cb fails                             |
+|  23 | `test_handle_request_success`                          |   ✅   | Handle request success                            |
+|  24 | `test_handle_request_wrong_password_fails`             |   ✅   | Handle request wrong password fails               |
+|  25 | `test_handle_none_request_fails_without_auth`          |   ✅   | Handle none request fails without auth            |
+|  26 | `test_handle_request_no_callback_fails`                |   ✅   | No callback installed → all credentials rejected. |
+|  27 | `test_pubkey_probe_returns_pk_ok`                      |   ✅   | Pubkey probe returns pk ok                        |
+|  28 | `test_pubkey_without_session_id_fails`                 |   ✅   | Pubkey without session id fails                   |
+|  29 | `test_pubkey_signature_not_replayable_across_sessions` |   ✅   | Pubkey signature not replayable across sessions   |
+|  30 | `test_failure_does_not_advertise_none`                 |   ✅   | Failure does not advertise none                   |
+|  31 | `test_pubkey_valid_signature_succeeds`                 |   ✅   | Pubkey valid signature succeeds                   |
+|  32 | `test_pubkey_rsa_sha512_signature_succeeds`            |   ✅   | Pubkey rsa sha512 signature succeeds              |
+|  33 | `test_pubkey_ecdsa_signature_succeeds`                 |   ✅   | Pubkey ecdsa signature succeeds                   |
+|  34 | `test_pubkey_ed25519_valid_signature_succeeds`         |   ✅   | Pubkey ed25519 valid signature succeeds           |
+|  35 | `test_pubkey_tampered_signature_fails`                 |   ✅   | Pubkey tampered signature fails                   |
+|  36 | `test_pubkey_unauthorized_key_fails`                   |   ✅   | Pubkey unauthorized key fails                     |
+|  37 | `test_aesgcm_gctr_counter_byte_carry`                  |   ✅   | Aesgcm gctr counter byte carry                    |
 
 </details>
 
 ---
 
-## test_ssh_channel - native_ssh - ✅ 50 passed
+## test_ssh_channel - native_ssh - ✅ 51 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -2019,49 +2033,50 @@ _SSH connection-protocol (channel) tests - RFC 4254, including multiplexing_
 |   5 | `test_chan_global_request_reply_caps`                |   ✅   | Unknown request name, want_reply, no room for the 1-byte reply (246).                          |
 |   6 | `test_chan_empty_and_mistyped_payloads`              |   ✅   | Chan empty and mistyped payloads                                                               |
 |   7 | `test_chan_same_length_names_do_not_match`           |   ✅   | "tcpip-forwarX" is 13 chars like "tcpip-forward"; "cancel-tcpip-forwarX" is 20 like the cancel |
-|   8 | `test_chan_request_accept_set`                       |   ✅   | Chan request accept set                                                                        |
-|   9 | `test_chan_missing_trailing_port`                    |   ✅   | Chan missing trailing port                                                                     |
-|  10 | `test_chan_rforward_refused_paths`                   |   ✅   | Chan rforward refused paths                                                                    |
-|  11 | `test_chan_forwarded_open_guards_and_silent_failure` |   ✅   | Chan forwarded open guards and silent failure                                                  |
-|  12 | `test_chan_data_without_sinks_and_empty_payload`     |   ✅   | Session channel with no data callback.                                                         |
-|  13 | `test_chan_outbound_limits_and_window_saturation`    |   ✅   | Chan outbound limits and window saturation                                                     |
-|  14 | `test_open_session_confirms`                         |   ✅   | Open session confirms                                                                          |
-|  15 | `test_open_unknown_type_fails`                       |   ✅   | Open unknown type fails                                                                        |
-|  16 | `test_direct_tcpip_no_cb_prohibited`                 |   ✅   | Forwarding is opt-in: with no open callback installed it is refused.                           |
-|  17 | `test_direct_tcpip_accept_confirms`                  |   ✅   | Direct tcpip accept confirms                                                                   |
-|  18 | `test_direct_tcpip_refused_connect_failed`           |   ✅   | Direct tcpip refused connect failed                                                            |
-|  19 | `test_forward_data_routes_to_forward_cb`             |   ✅   | Forward data routes to forward cb                                                              |
-|  20 | `test_shell_request_success_with_reply`              |   ✅   | Shell request success with reply                                                               |
-|  21 | `test_unknown_request_failure`                       |   ✅   | Unknown request failure                                                                        |
-|  22 | `test_request_no_reply_produces_nothing`             |   ✅   | Request no reply produces nothing                                                              |
-|  23 | `test_inbound_data_invokes_callback`                 |   ✅   | Inbound data invokes callback                                                                  |
-|  24 | `test_inbound_data_window_replenish`                 |   ✅   | Inbound data window replenish                                                                  |
-|  25 | `test_inbound_data_exceeding_window_rejected`        |   ✅   | Inbound data exceeding window rejected                                                         |
-|  26 | `test_outbound_data_frames_and_decrements_window`    |   ✅   | Outbound data frames and decrements window                                                     |
-|  27 | `test_outbound_data_exceeding_peer_window_rejected`  |   ✅   | Outbound data exceeding peer window rejected                                                   |
-|  28 | `test_window_adjust_grows_peer_window`               |   ✅   | Window adjust grows peer window                                                                |
-|  29 | `test_build_close_emits_eof_and_close`               |   ✅   | Build close emits eof and close                                                                |
-|  30 | `test_inbound_close_routes_to_channel`               |   ✅   | Inbound close routes to channel                                                                |
-|  31 | `test_multiplex_two_channels_route_independently`    |   ✅   | Multiplex two channels route independently                                                     |
-|  32 | `test_pool_full_open_fails`                          |   ✅   | Pool full open fails                                                                           |
-|  33 | `test_data_to_unknown_channel_rejected`              |   ✅   | Data to unknown channel rejected                                                               |
-|  34 | `test_rforward_no_cb_refused`                        |   ✅   | Rforward no cb refused                                                                         |
-|  35 | `test_rforward_accept_specific_port`                 |   ✅   | Rforward accept specific port                                                                  |
-|  36 | `test_rforward_port0_echoes_allocated`               |   ✅   | Rforward port0 echoes allocated                                                                |
-|  37 | `test_rforward_no_reply_silent`                      |   ✅   | Rforward no reply silent                                                                       |
-|  38 | `test_rforward_cancel`                               |   ✅   | Rforward cancel                                                                                |
-|  39 | `test_global_unknown_request`                        |   ✅   | Global unknown request                                                                         |
-|  40 | `test_global_malformed`                              |   ✅   | Global malformed                                                                               |
-|  41 | `test_forwarded_open_builds_channel`                 |   ✅   | Forwarded open builds channel                                                                  |
-|  42 | `test_forwarded_confirm_opens_channel`               |   ✅   | Forwarded confirm opens channel                                                                |
-|  43 | `test_forwarded_failure_frees_channel`               |   ✅   | Forwarded failure frees channel                                                                |
-|  44 | `test_forwarded_confirm_unknown_rejected`            |   ✅   | Forwarded confirm unknown rejected                                                             |
-|  45 | `test_forwarded_inbound_data_routes_to_forward_cb`   |   ✅   | Forwarded inbound data routes to forward cb                                                    |
-|  46 | `test_sftp_subsystem_routes`                         |   ✅   | Sftp subsystem routes                                                                          |
-|  47 | `test_unknown_subsystem_refused`                     |   ✅   | Unknown subsystem refused                                                                      |
-|  48 | `test_sftp_subsystem_match_and_missing_cb`           |   ✅   | Sftp subsystem match and missing cb                                                            |
-|  49 | `test_scp_exec_routes`                               |   ✅   | Scp exec routes                                                                                |
-|  50 | `test_scp_exec_match_and_missing_cb`                 |   ✅   | Scp exec match and missing cb                                                                  |
+|   8 | `test_chan_request_accept_set`                       |   ✅   | A well-formed pty-req (RFC 4254 sec 6.2): TERM, four dimensions, encoded terminal modes.       |
+|   9 | `test_chan_request_truncated_fields_refused`         |   ✅   | Chan request truncated fields refused                                                          |
+|  10 | `test_chan_missing_trailing_port`                    |   ✅   | Chan missing trailing port                                                                     |
+|  11 | `test_chan_rforward_refused_paths`                   |   ✅   | Chan rforward refused paths                                                                    |
+|  12 | `test_chan_forwarded_open_guards_and_silent_failure` |   ✅   | Chan forwarded open guards and silent failure                                                  |
+|  13 | `test_chan_data_without_sinks_and_empty_payload`     |   ✅   | Session channel with no data callback.                                                         |
+|  14 | `test_chan_outbound_limits_and_window_saturation`    |   ✅   | Chan outbound limits and window saturation                                                     |
+|  15 | `test_open_session_confirms`                         |   ✅   | Open session confirms                                                                          |
+|  16 | `test_open_unknown_type_fails`                       |   ✅   | Open unknown type fails                                                                        |
+|  17 | `test_direct_tcpip_no_cb_prohibited`                 |   ✅   | Forwarding is opt-in: with no open callback installed it is refused.                           |
+|  18 | `test_direct_tcpip_accept_confirms`                  |   ✅   | Direct tcpip accept confirms                                                                   |
+|  19 | `test_direct_tcpip_refused_connect_failed`           |   ✅   | Direct tcpip refused connect failed                                                            |
+|  20 | `test_forward_data_routes_to_forward_cb`             |   ✅   | Forward data routes to forward cb                                                              |
+|  21 | `test_shell_request_success_with_reply`              |   ✅   | Shell request success with reply                                                               |
+|  22 | `test_unknown_request_failure`                       |   ✅   | Unknown request failure                                                                        |
+|  23 | `test_request_no_reply_produces_nothing`             |   ✅   | Request no reply produces nothing                                                              |
+|  24 | `test_inbound_data_invokes_callback`                 |   ✅   | Inbound data invokes callback                                                                  |
+|  25 | `test_inbound_data_window_replenish`                 |   ✅   | Inbound data window replenish                                                                  |
+|  26 | `test_inbound_data_exceeding_window_rejected`        |   ✅   | Inbound data exceeding window rejected                                                         |
+|  27 | `test_outbound_data_frames_and_decrements_window`    |   ✅   | Outbound data frames and decrements window                                                     |
+|  28 | `test_outbound_data_exceeding_peer_window_rejected`  |   ✅   | Outbound data exceeding peer window rejected                                                   |
+|  29 | `test_window_adjust_grows_peer_window`               |   ✅   | Window adjust grows peer window                                                                |
+|  30 | `test_build_close_emits_eof_and_close`               |   ✅   | Build close emits eof and close                                                                |
+|  31 | `test_inbound_close_routes_to_channel`               |   ✅   | Inbound close routes to channel                                                                |
+|  32 | `test_multiplex_two_channels_route_independently`    |   ✅   | Multiplex two channels route independently                                                     |
+|  33 | `test_pool_full_open_fails`                          |   ✅   | Pool full open fails                                                                           |
+|  34 | `test_data_to_unknown_channel_rejected`              |   ✅   | Data to unknown channel rejected                                                               |
+|  35 | `test_rforward_no_cb_refused`                        |   ✅   | Rforward no cb refused                                                                         |
+|  36 | `test_rforward_accept_specific_port`                 |   ✅   | Rforward accept specific port                                                                  |
+|  37 | `test_rforward_port0_echoes_allocated`               |   ✅   | Rforward port0 echoes allocated                                                                |
+|  38 | `test_rforward_no_reply_silent`                      |   ✅   | Rforward no reply silent                                                                       |
+|  39 | `test_rforward_cancel`                               |   ✅   | Rforward cancel                                                                                |
+|  40 | `test_global_unknown_request`                        |   ✅   | Global unknown request                                                                         |
+|  41 | `test_global_malformed`                              |   ✅   | Global malformed                                                                               |
+|  42 | `test_forwarded_open_builds_channel`                 |   ✅   | Forwarded open builds channel                                                                  |
+|  43 | `test_forwarded_confirm_opens_channel`               |   ✅   | Forwarded confirm opens channel                                                                |
+|  44 | `test_forwarded_failure_frees_channel`               |   ✅   | Forwarded failure frees channel                                                                |
+|  45 | `test_forwarded_confirm_unknown_rejected`            |   ✅   | Forwarded confirm unknown rejected                                                             |
+|  46 | `test_forwarded_inbound_data_routes_to_forward_cb`   |   ✅   | Forwarded inbound data routes to forward cb                                                    |
+|  47 | `test_sftp_subsystem_routes`                         |   ✅   | Sftp subsystem routes                                                                          |
+|  48 | `test_unknown_subsystem_refused`                     |   ✅   | Unknown subsystem refused                                                                      |
+|  49 | `test_sftp_subsystem_match_and_missing_cb`           |   ✅   | Sftp subsystem match and missing cb                                                            |
+|  50 | `test_scp_exec_routes`                               |   ✅   | Scp exec routes                                                                                |
+|  51 | `test_scp_exec_match_and_missing_cb`                 |   ✅   | Scp exec match and missing cb                                                                  |
 
 </details>
 
@@ -2142,46 +2157,52 @@ _SSH crypto layer test suite._
 
 ---
 
-## test_ssh_auth - native_ssh_kbdint - ✅ 31 passed
+## test_ssh_auth - native_ssh_kbdint - ✅ 37 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _SSH user-authentication tests (RFC 4252): service request/accept, request_
 
-|   # | Test                                              | Status | Description                                       |
-| --: | :------------------------------------------------ | :----: | :------------------------------------------------ |
-|   1 | `test_service_request_errors`                     |   ✅   | Service request errors                            |
-|   2 | `test_build_response_guards`                      |   ✅   | Build response guards                             |
-|   3 | `test_parse_request_truncations`                  |   ✅   | Parse request truncations                         |
-|   4 | `test_pubkey_blob_parse_failures`                 |   ✅   | Pubkey blob parse failures                        |
-|   5 | `test_pubkey_oversized_signed_prefix`             |   ✅   | Pubkey oversized signed prefix                    |
-|   6 | `test_handle_request_index_and_parse_guards`      |   ✅   | Handle request index and parse guards             |
-|   7 | `test_pubkey_without_verifier_fails`              |   ✅   | Pubkey without verifier fails                     |
-|   8 | `test_pubkey_rsa_blob_type_length_and_zero_mpint` |   ✅   | Pubkey rsa blob type length and zero mpint        |
-|   9 | `test_pubkey_ed25519_blob_and_siglen_rejections`  |   ✅   | Pubkey ed25519 blob and siglen rejections         |
-|  10 | `test_pubkey_ecdsa_blob_rejections`               |   ✅   | Pubkey ecdsa blob rejections                      |
-|  11 | `test_pubkey_ecdsa_signature_rejections`          |   ✅   | Pubkey ecdsa signature rejections                 |
-|  12 | `test_pubkey_verifier_rejects_key`                |   ✅   | Pubkey verifier rejects key                       |
-|  13 | `test_build_failure_partial_success_flag`         |   ✅   | Build failure partial success flag                |
-|  14 | `test_service_request_accept`                     |   ✅   | Service request accept                            |
-|  15 | `test_service_request_rejects_unknown`            |   ✅   | Service request rejects unknown                   |
-|  16 | `test_parse_password_request`                     |   ✅   | Parse password request                            |
-|  17 | `test_parse_none_request`                         |   ✅   | Parse none request                                |
-|  18 | `test_parse_rejects_foreign_service`              |   ✅   | Parse rejects foreign service                     |
-|  19 | `test_parse_rejects_password_change`              |   ✅   | Parse rejects password change                     |
-|  20 | `test_handle_request_success`                     |   ✅   | Handle request success                            |
-|  21 | `test_handle_request_wrong_password_fails`        |   ✅   | Handle request wrong password fails               |
-|  22 | `test_handle_none_request_fails_without_auth`     |   ✅   | Handle none request fails without auth            |
-|  23 | `test_handle_request_no_callback_fails`           |   ✅   | No callback installed → all credentials rejected. |
-|  24 | `test_pubkey_probe_returns_pk_ok`                 |   ✅   | Pubkey probe returns pk ok                        |
-|  25 | `test_pubkey_valid_signature_succeeds`            |   ✅   | Pubkey valid signature succeeds                   |
-|  26 | `test_pubkey_rsa_sha512_signature_succeeds`       |   ✅   | Pubkey rsa sha512 signature succeeds              |
-|  27 | `test_pubkey_ecdsa_signature_succeeds`            |   ✅   | Pubkey ecdsa signature succeeds                   |
-|  28 | `test_pubkey_ed25519_valid_signature_succeeds`    |   ✅   | Pubkey ed25519 valid signature succeeds           |
-|  29 | `test_pubkey_tampered_signature_fails`            |   ✅   | Pubkey tampered signature fails                   |
-|  30 | `test_pubkey_unauthorized_key_fails`              |   ✅   | Pubkey unauthorized key fails                     |
-|  31 | `test_aesgcm_gctr_counter_byte_carry`             |   ✅   | Aesgcm gctr counter byte carry                    |
+|   # | Test                                                   | Status | Description                                       |
+| --: | :----------------------------------------------------- | :----: | :------------------------------------------------ |
+|   1 | `test_service_request_errors`                          |   ✅   | Service request errors                            |
+|   2 | `test_build_response_guards`                           |   ✅   | Build response guards                             |
+|   3 | `test_parse_request_truncations`                       |   ✅   | Parse request truncations                         |
+|   4 | `test_pubkey_blob_parse_failures`                      |   ✅   | Pubkey blob parse failures                        |
+|   5 | `test_pubkey_oversized_signed_prefix`                  |   ✅   | Pubkey oversized signed prefix                    |
+|   6 | `test_handle_request_index_and_parse_guards`           |   ✅   | Handle request index and parse guards             |
+|   7 | `test_pubkey_without_verifier_fails`                   |   ✅   | Pubkey without verifier fails                     |
+|   8 | `test_pubkey_rsa_blob_type_length_and_zero_mpint`      |   ✅   | Pubkey rsa blob type length and zero mpint        |
+|   9 | `test_pubkey_ed25519_blob_and_siglen_rejections`       |   ✅   | Pubkey ed25519 blob and siglen rejections         |
+|  10 | `test_pubkey_ecdsa_blob_rejections`                    |   ✅   | Pubkey ecdsa blob rejections                      |
+|  11 | `test_pubkey_ecdsa_signature_rejections`               |   ✅   | Pubkey ecdsa signature rejections                 |
+|  12 | `test_pubkey_verifier_rejects_key`                     |   ✅   | Pubkey verifier rejects key                       |
+|  13 | `test_build_failure_partial_success_flag`              |   ✅   | Build failure partial success flag                |
+|  14 | `test_service_request_accept`                          |   ✅   | Service request accept                            |
+|  15 | `test_service_request_rejects_unknown`                 |   ✅   | Service request rejects unknown                   |
+|  16 | `test_parse_password_request`                          |   ✅   | Parse password request                            |
+|  17 | `test_parse_none_request`                              |   ✅   | Parse none request                                |
+|  18 | `test_parse_rejects_foreign_service`                   |   ✅   | Parse rejects foreign service                     |
+|  19 | `test_parse_reads_password_change`                     |   ✅   | Parse reads password change                       |
+|  20 | `test_pw_change_defers_then_reports`                   |   ✅   | Pw change defers then reports                     |
+|  21 | `test_pw_change_cooldown_refuses_second`               |   ✅   | Pw change cooldown refuses second                 |
+|  22 | `test_pw_change_no_cb_fails`                           |   ✅   | Pw change no cb fails                             |
+|  23 | `test_handle_request_success`                          |   ✅   | Handle request success                            |
+|  24 | `test_handle_request_wrong_password_fails`             |   ✅   | Handle request wrong password fails               |
+|  25 | `test_handle_none_request_fails_without_auth`          |   ✅   | Handle none request fails without auth            |
+|  26 | `test_handle_request_no_callback_fails`                |   ✅   | No callback installed → all credentials rejected. |
+|  27 | `test_pubkey_probe_returns_pk_ok`                      |   ✅   | Pubkey probe returns pk ok                        |
+|  28 | `test_pubkey_without_session_id_fails`                 |   ✅   | Pubkey without session id fails                   |
+|  29 | `test_pubkey_signature_not_replayable_across_sessions` |   ✅   | Pubkey signature not replayable across sessions   |
+|  30 | `test_failure_does_not_advertise_none`                 |   ✅   | Failure does not advertise none                   |
+|  31 | `test_pubkey_valid_signature_succeeds`                 |   ✅   | Pubkey valid signature succeeds                   |
+|  32 | `test_pubkey_rsa_sha512_signature_succeeds`            |   ✅   | Pubkey rsa sha512 signature succeeds              |
+|  33 | `test_pubkey_ecdsa_signature_succeeds`                 |   ✅   | Pubkey ecdsa signature succeeds                   |
+|  34 | `test_pubkey_ed25519_valid_signature_succeeds`         |   ✅   | Pubkey ed25519 valid signature succeeds           |
+|  35 | `test_pubkey_tampered_signature_fails`                 |   ✅   | Pubkey tampered signature fails                   |
+|  36 | `test_pubkey_unauthorized_key_fails`                   |   ✅   | Pubkey unauthorized key fails                     |
+|  37 | `test_aesgcm_gctr_counter_byte_carry`                  |   ✅   | Aesgcm gctr counter byte carry                    |
 
 </details>
 
@@ -3190,7 +3211,7 @@ _Unit tests for the SNMPv3 USM layer. The test acts as a full SNMP manager:_
 
 ---
 
-## test_telnet - native_telnet - ✅ 23 passed
+## test_telnet - native_telnet - ✅ 24 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -3209,19 +3230,20 @@ _Telnet server test: drives a PROTO_TELNET connection through the real_
 |   8 | `test_print_broadcast`                        |   ✅   | Print broadcast                                                                                |
 |   9 | `test_unknown_slot_is_noop`                   |   ✅   | Unknown slot is noop                                                                           |
 |  10 | `test_cr_and_control_ignored`                 |   ✅   | Cr and control ignored                                                                         |
-|  11 | `test_iac_escaped_literal`                    |   ✅   | Iac escaped literal                                                                            |
-|  12 | `test_subnegotiation_consumed`                |   ✅   | Subnegotiation consumed                                                                        |
-|  13 | `test_subnegotiation_bare_se_does_not_inject` |   ✅   | Subnegotiation bare se does not inject                                                         |
-|  14 | `test_accept_no_capacity`                     |   ✅   | Accept no capacity                                                                             |
-|  15 | `test_output_escaping_and_printf`             |   ✅   | Output escaping and printf                                                                     |
-|  16 | `test_inactive_conn_sends_nothing`            |   ✅   | Inactive conn sends nothing                                                                    |
-|  17 | `test_iac_wont_and_dont_are_silent`           |   ✅   | Iac wont and dont are silent                                                                   |
-|  18 | `test_iac_do_sga_is_silent`                   |   ✅   | Iac do sga is silent                                                                           |
-|  19 | `test_line_no_cmd_cb_is_noop`                 |   ✅   | Line no cmd cb is noop                                                                         |
-|  20 | `test_backspace_del_and_empty_noop`           |   ✅   | Backspace del and empty noop                                                                   |
-|  21 | `test_line_buffer_overflow_truncates`         |   ✅   | Line buffer overflow truncates                                                                 |
-|  22 | `test_print_println_null_and_printf_empty`    |   ✅   | Print println null and printf empty                                                            |
-|  23 | `test_proto_handler_accessor`                 |   ✅   | Proto handler accessor                                                                         |
+|  11 | `test_cr_nul_dispatches_line`                 |   ✅   | Cr nul dispatches line                                                                         |
+|  12 | `test_iac_escaped_literal`                    |   ✅   | Iac escaped literal                                                                            |
+|  13 | `test_subnegotiation_consumed`                |   ✅   | Subnegotiation consumed                                                                        |
+|  14 | `test_subnegotiation_bare_se_does_not_inject` |   ✅   | Subnegotiation bare se does not inject                                                         |
+|  15 | `test_accept_no_capacity`                     |   ✅   | Accept no capacity                                                                             |
+|  16 | `test_output_escaping_and_printf`             |   ✅   | Output escaping and printf                                                                     |
+|  17 | `test_inactive_conn_sends_nothing`            |   ✅   | Inactive conn sends nothing                                                                    |
+|  18 | `test_iac_wont_and_dont_are_silent`           |   ✅   | Iac wont and dont are silent                                                                   |
+|  19 | `test_iac_do_sga_is_silent`                   |   ✅   | Iac do sga is silent                                                                           |
+|  20 | `test_line_no_cmd_cb_is_noop`                 |   ✅   | Line no cmd cb is noop                                                                         |
+|  21 | `test_backspace_del_and_empty_noop`           |   ✅   | Backspace del and empty noop                                                                   |
+|  22 | `test_line_buffer_overflow_truncates`         |   ✅   | Line buffer overflow truncates                                                                 |
+|  23 | `test_print_println_null_and_printf_empty`    |   ✅   | Print println null and printf empty                                                            |
+|  24 | `test_proto_handler_accessor`                 |   ✅   | Proto handler accessor                                                                         |
 
 </details>
 
@@ -7069,34 +7091,42 @@ _Unit tests for the INA219 current/power codec (services/peripherals/ina219): de
 
 ---
 
-## test_hpack - native_hpack - ✅ 19 passed
+## test_hpack - native_hpack - ✅ 27 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the HPACK codec (network_drivers/presentation/http/http2/hpack) against the RFC 7541_
+_Unit tests for the HPACK codec (network_drivers/presentation/http/http2/hpack) against RFC 7541._
 
-|   # | Test                                      | Status | Description                                                         |
-| --: | :---------------------------------------- | :----: | :------------------------------------------------------------------ |
-|   1 | `test_hpack_dyn_init_default_size`        |   ✅   | Hpack dyn init default size                                         |
-|   2 | `test_hpack_indexed_field_truncated_int`  |   ✅   | Hpack indexed field truncated int                                   |
-|   3 | `test_hpack_encode_repeated_static_name`  |   ✅   | Hpack encode repeated static name                                   |
-|   4 | `test_hpack_prim_edge_guards`             |   ✅   | Hpack prim edge guards                                              |
-|   5 | `test_hpack_more_errors`                  |   ✅   | Hpack more errors                                                   |
-|   6 | `test_dyn_size_update`                    |   ✅   | Dyn size update                                                     |
-|   7 | `test_oversize_entry_clears`              |   ✅   | Oversize entry clears                                               |
-|   8 | `test_dynamic_name_and_index`             |   ✅   | Dynamic name and index                                              |
-|   9 | `test_hpack_decode_errors`                |   ✅   | Hpack decode errors                                                 |
-|  10 | `test_hpack_buffer_bounds`                |   ✅   | Hpack buffer bounds                                                 |
-|  11 | `test_hpack_resolve_dynamic_name_too_big` |   ✅   | Hpack resolve dynamic name too big                                  |
-|  12 | `test_hpack_encode_paths`                 |   ✅   | pc_hpack_dyn_init clamps a too-large max to the table storage.      |
-|  13 | `test_int_coding`                         |   ✅   | C.1.1: 10, prefix 5 -> 0x0a                                         |
-|  14 | `test_huffman`                            |   ✅   | Huffman                                                             |
-|  15 | `test_decode_c31_and_index`               |   ✅   | RFC 7541 C.3.1: GET / with :authority www.example.com (no Huffman). |
-|  16 | `test_dynamic_eviction`                   |   ✅   | Dynamic eviction                                                    |
-|  17 | `test_encode_static`                      |   ✅   | Encode static                                                       |
-|  18 | `test_encode_decode_roundtrip`            |   ✅   | Encode decode roundtrip                                             |
-|  19 | `test_reject_malformed`                   |   ✅   | Reject malformed                                                    |
+|   # | Test                                             | Status | Description                                                                       |
+| --: | :----------------------------------------------- | :----: | :-------------------------------------------------------------------------------- |
+|   1 | `test_hpack_dyn_init_default_size`               |   ✅   | Hpack dyn init default size                                                       |
+|   2 | `test_hpack_indexed_field_truncated_int`         |   ✅   | Hpack indexed field truncated int                                                 |
+|   3 | `test_hpack_encode_repeated_static_name`         |   ✅   | Hpack encode repeated static name                                                 |
+|   4 | `test_hpack_prim_edge_guards`                    |   ✅   | Hpack prim edge guards                                                            |
+|   5 | `test_hpack_more_errors`                         |   ✅   | Hpack more errors                                                                 |
+|   6 | `test_dyn_size_update`                           |   ✅   | Dyn size update                                                                   |
+|   7 | `test_oversize_entry_clears`                     |   ✅   | Oversize entry clears                                                             |
+|   8 | `test_dynamic_name_and_index`                    |   ✅   | Dynamic name and index                                                            |
+|   9 | `test_hpack_decode_errors`                       |   ✅   | Hpack decode errors                                                               |
+|  10 | `test_hpack_buffer_bounds`                       |   ✅   | Hpack buffer bounds                                                               |
+|  11 | `test_hpack_resolve_dynamic_name_too_big`        |   ✅   | Hpack resolve dynamic name too big                                                |
+|  12 | `test_hpack_encode_paths`                        |   ✅   | pc_hpack_dyn_init clamps a too-large max to the table storage.                    |
+|  13 | `test_int_coding`                                |   ✅   | C.1.1: 10, prefix 5 -> 0x0a                                                       |
+|  14 | `test_int_decode_rejects_overflowing_prefix_int` |   ✅   | 0x7f << 28 does not fit 32 bits.                                                  |
+|  15 | `test_huffman`                                   |   ✅   | Huffman                                                                           |
+|  16 | `test_decode_c31_and_index`                      |   ✅   | RFC 7541 C.3.1: GET / with :authority www.example.com (no Huffman).               |
+|  17 | `test_c2_representation_vectors`                 |   ✅   | C.2.1 literal with incremental indexing, literal name: the only one that indexes. |
+|  18 | `test_c3_request_sequence`                       |   ✅   | C3 request sequence                                                               |
+|  19 | `test_c4_request_sequence_huffman`               |   ✅   | C4 request sequence huffman                                                       |
+|  20 | `test_c5_response_sequence_evicts`               |   ✅   | C5 response sequence evicts                                                       |
+|  21 | `test_c6_response_sequence_huffman_evicts`       |   ✅   | C6 response sequence huffman evicts                                               |
+|  22 | `test_static_table_matches_appendix_a`           |   ✅   | Static table matches appendix a                                                   |
+|  23 | `test_huffman_table_matches_appendix_b`          |   ✅   | Huffman table matches appendix b                                                  |
+|  24 | `test_dynamic_eviction`                          |   ✅   | Dynamic eviction                                                                  |
+|  25 | `test_encode_static`                             |   ✅   | Encode static                                                                     |
+|  26 | `test_encode_decode_roundtrip`                   |   ✅   | Encode decode roundtrip                                                           |
+|  27 | `test_reject_malformed`                          |   ✅   | Reject malformed                                                                  |
 
 </details>
 
@@ -7123,45 +7153,85 @@ _Unit tests for the HTTP/2 frame layer (network_drivers/presentation/http/http2/
 
 ---
 
-## test_h2_conn - native_h2conn - ✅ 30 passed
+## test_h2_conn - native_h2conn - ✅ 41 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Unit tests for the HTTP/2 connection engine (network_drivers/presentation/http/http2/pc_h2_conn,_
 
-|   # | Test                                      | Status | Description                        |
-| --: | :---------------------------------------- | :----: | :--------------------------------- |
-|   1 | `test_init_and_request`                   |   ✅   | Init and request                   |
-|   2 | `test_respond_roundtrip`                  |   ✅   | Respond roundtrip                  |
-|   3 | `test_ping_and_split_recv`                |   ✅   | Ping and split recv                |
-|   4 | `test_bad_preface`                        |   ✅   | Bad preface                        |
-|   5 | `test_h2_headers_padded_priority`         |   ✅   | H2 headers padded priority         |
-|   6 | `test_h2_headers_pad_overflow`            |   ✅   | H2 headers pad overflow            |
-|   7 | `test_h2_stream_id_must_increase`         |   ✅   | H2 stream id must increase         |
-|   8 | `test_h2_headers_bad_stream_id`           |   ✅   | H2 headers bad stream id           |
-|   9 | `test_h2_stream_table_full_rst`           |   ✅   | H2 stream table full rst           |
-|  10 | `test_h2_continuation`                    |   ✅   | H2 continuation                    |
-|  11 | `test_h2_continuation_guards`             |   ✅   | H2 continuation guards             |
-|  12 | `test_h2_data`                            |   ✅   | H2 data                            |
-|  13 | `test_h2_window_update`                   |   ✅   | H2 window update                   |
-|  14 | `test_h2_rst_priority_push`               |   ✅   | H2 rst priority push               |
-|  15 | `test_h2_goaway_then_ignore`              |   ✅   | H2 goaway then ignore              |
-|  16 | `test_h2_settings_ack_and_bad`            |   ✅   | H2 settings ack and bad            |
-|  17 | `test_h2_ping_bad`                        |   ✅   | H2 ping bad                        |
-|  18 | `test_h2_frame_too_big`                   |   ✅   | H2 frame too big                   |
-|  19 | `test_h2_respond_paths_and_goaway`        |   ✅   | H2 respond paths and goaway        |
-|  20 | `test_h2_more_guards`                     |   ✅   | H2 more guards                     |
-|  21 | `test_h2_continuation_more`               |   ✅   | H2 continuation more               |
-|  22 | `test_h2_respond_content_type_too_big`    |   ✅   | H2 respond content type too big    |
-|  23 | `test_h2_null_callbacks`                  |   ✅   | H2 null callbacks                  |
-|  24 | `test_h2_headers_stream_zero`             |   ✅   | H2 headers stream zero             |
-|  25 | `test_h2_continuation_without_headers`    |   ✅   | H2 continuation without headers    |
-|  26 | `test_h2_unknown_stream_frames`           |   ✅   | H2 unknown stream frames           |
-|  27 | `test_h2_data_empty_and_unknown_stream`   |   ✅   | H2 data empty and unknown stream   |
-|  28 | `test_h2_continuation_after_stream_freed` |   ✅   | H2 continuation after stream freed |
-|  29 | `test_h2_respond_default_chunk_size`      |   ✅   | H2 respond default chunk size      |
-|  30 | `test_h2_respond_content_length_no_room`  |   ✅   | H2 respond content length no room  |
+|   # | Test                                                    | Status | Description                                      |
+| --: | :------------------------------------------------------ | :----: | :----------------------------------------------- |
+|   1 | `test_init_and_request`                                 |   ✅   | Init and request                                 |
+|   2 | `test_respond_roundtrip`                                |   ✅   | Respond roundtrip                                |
+|   3 | `test_ping_and_split_recv`                              |   ✅   | Ping and split recv                              |
+|   4 | `test_bad_preface`                                      |   ✅   | Bad preface                                      |
+|   5 | `test_h2_headers_padded_priority`                       |   ✅   | H2 headers padded priority                       |
+|   6 | `test_h2_headers_pad_overflow`                          |   ✅   | H2 headers pad overflow                          |
+|   7 | `test_h2_stream_id_must_increase`                       |   ✅   | H2 stream id must increase                       |
+|   8 | `test_h2_headers_rfc7541_c31_block`                     |   ✅   | H2 headers rfc7541 c31 block                     |
+|   9 | `test_h2_trailers_on_open_stream`                       |   ✅   | H2 trailers on open stream                       |
+|  10 | `test_h2_trailers_without_end_stream_reset_the_stream`  |   ✅   | H2 trailers without end stream reset the stream  |
+|  11 | `test_h2_trailers_reject_pseudo_headers`                |   ✅   | H2 trailers reject pseudo headers                |
+|  12 | `test_h2_headers_on_ended_stream_is_a_connection_error` |   ✅   | H2 headers on ended stream is a connection error |
+|  13 | `test_h2_headers_bad_stream_id`                         |   ✅   | H2 headers bad stream id                         |
+|  14 | `test_h2_stream_table_full_rst`                         |   ✅   | H2 stream table full rst                         |
+|  15 | `test_h2_continuation`                                  |   ✅   | H2 continuation                                  |
+|  16 | `test_h2_continuation_guards`                           |   ✅   | H2 continuation guards                           |
+|  17 | `test_h2_data`                                          |   ✅   | H2 data                                          |
+|  18 | `test_h2_window_update`                                 |   ✅   | H2 window update                                 |
+|  19 | `test_h2_rst_priority_push`                             |   ✅   | H2 rst priority push                             |
+|  20 | `test_h2_goaway_then_ignore`                            |   ✅   | H2 goaway then ignore                            |
+|  21 | `test_h2_settings_ack_and_bad`                          |   ✅   | H2 settings ack and bad                          |
+|  22 | `test_h2_ping_bad`                                      |   ✅   | H2 ping bad                                      |
+|  23 | `test_h2_frame_too_big`                                 |   ✅   | H2 frame too big                                 |
+|  24 | `test_h2_respond_paths_and_goaway`                      |   ✅   | H2 respond paths and goaway                      |
+|  25 | `test_h2_more_guards`                                   |   ✅   | H2 more guards                                   |
+|  26 | `test_h2_continuation_more`                             |   ✅   | H2 continuation more                             |
+|  27 | `test_h2_respond_content_type_too_big`                  |   ✅   | H2 respond content type too big                  |
+|  28 | `test_h2_null_callbacks`                                |   ✅   | H2 null callbacks                                |
+|  29 | `test_h2_headers_stream_zero`                           |   ✅   | H2 headers stream zero                           |
+|  30 | `test_h2_continuation_without_headers`                  |   ✅   | H2 continuation without headers                  |
+|  31 | `test_h2_idle_stream_frames_are_connection_errors`      |   ✅   | H2 idle stream frames are connection errors      |
+|  32 | `test_h2_window_update_on_a_closed_stream_is_ignored`   |   ✅   | H2 window update on a closed stream is ignored   |
+|  33 | `test_h2_frame_size_and_stream_id_rules`                |   ✅   | RST_STREAM: right stream, wrong length.          |
+|  34 | `test_h2_content_length_must_match_the_data`            |   ✅   | Exactly the declared length: delivered.          |
+|  35 | `test_h2_continuation_flood_is_bounded`                 |   ✅   | H2 continuation flood is bounded                 |
+|  36 | `test_h2_data_empty_and_unknown_stream`                 |   ✅   | H2 data empty and unknown stream                 |
+|  37 | `test_h2_data_after_end_stream_resets_the_stream`       |   ✅   | H2 data after end stream resets the stream       |
+|  38 | `test_h2_window_update_zero_and_overflow`               |   ✅   | H2 window update zero and overflow               |
+|  39 | `test_h2_continuation_after_stream_freed`               |   ✅   | H2 continuation after stream freed               |
+|  40 | `test_h2_respond_default_chunk_size`                    |   ✅   | H2 respond default chunk size                    |
+|  41 | `test_h2_respond_content_length_no_room`                |   ✅   | H2 respond content length no room                |
+
+</details>
+
+---
+
+## test_h2_server - native_h2server - ✅ 15 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Unit tests for the HTTP/2 -> request-pipeline bridge_
+
+|   # | Test                                         | Status | Description                           |
+| --: | :------------------------------------------- | :----: | :------------------------------------ |
+|   1 | `test_h2s_minimal_request_is_accepted`       |   ✅   | H2s minimal request is accepted       |
+|   2 | `test_h2s_path_query_split`                  |   ✅   | H2s path query split                  |
+|   3 | `test_h2s_missing_method_is_malformed`       |   ✅   | H2s missing method is malformed       |
+|   4 | `test_h2s_missing_scheme_is_malformed`       |   ✅   | H2s missing scheme is malformed       |
+|   5 | `test_h2s_missing_path_is_malformed`         |   ✅   | H2s missing path is malformed         |
+|   6 | `test_h2s_empty_path_is_malformed`           |   ✅   | H2s empty path is malformed           |
+|   7 | `test_h2s_duplicate_pseudo_is_malformed`     |   ✅   | H2s duplicate pseudo is malformed     |
+|   8 | `test_h2s_pseudo_after_regular_is_malformed` |   ✅   | H2s pseudo after regular is malformed |
+|   9 | `test_h2s_unknown_pseudo_is_malformed`       |   ✅   | H2s unknown pseudo is malformed       |
+|  10 | `test_h2s_uppercase_name_is_malformed`       |   ✅   | H2s uppercase name is malformed       |
+|  11 | `test_h2s_bad_name_bytes_are_malformed`      |   ✅   | H2s bad name bytes are malformed      |
+|  12 | `test_h2s_padded_value_is_malformed`         |   ✅   | H2s padded value is malformed         |
+|  13 | `test_h2s_connection_specific_is_malformed`  |   ✅   | H2s connection specific is malformed  |
+|  14 | `test_h2s_te_trailers_only`                  |   ✅   | H2s te trailers only                  |
+|  15 | `test_h2s_mask_clears_between_blocks`        |   ✅   | H2s mask clears between blocks        |
 
 </details>
 
@@ -7737,7 +7807,7 @@ _Unit tests for the typed NVS config store (services/storage/config_store), exer
 |   5 | `test_u32_round_trip`                         |   ✅   | U32 round trip                         |
 |   6 | `test_u32_default_when_missing`               |   ✅   | U32 default when missing               |
 |   7 | `test_blob_round_trip`                        |   ✅   | Blob round trip                        |
-|   8 | `test_blob_bounded_by_capacity`               |   ✅   | Blob bounded by capacity               |
+|   8 | `test_blob_too_large_is_refused`              |   ✅   | Blob too large is refused              |
 |   9 | `test_blob_missing_returns_zero`              |   ✅   | Blob missing returns zero              |
 |  10 | `test_erase_removes_key`                      |   ✅   | Erase removes key                      |
 |  11 | `test_clear_wipes_namespace`                  |   ✅   | Clear wipes namespace                  |
@@ -9789,7 +9859,7 @@ _Unit tests for the QPACK codec (network_drivers/presentation/http/http3/qpack, 
 
 ---
 
-## test_quic_packet - native_quic_packet - ✅ 9 passed
+## test_quic_packet - native_quic_packet - ✅ 10 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -9805,8 +9875,9 @@ _Unit tests for the QUIC packet header + packet-number codec (network_drivers/pr
 |   5 | `test_pn_decode`             |   ✅   | RFC 9000 A.3: largest 0xa82f30ea, 16-bit truncated 0x9b32 -> 0xa82f9b32.                  |
 |   6 | `test_pn_decode_wraparound`  |   ✅   | largest_pn=199 -> expected=200, pn_nbits=8 (window 256, half-window 128). Naive candidate |
 |   7 | `test_reject`                |   ✅   | Destination Connection ID length 21 (> 20) must be dropped.                               |
-|   8 | `test_build_guards`          |   ✅   | Build guards                                                                              |
-|   9 | `test_short_header_guards`   |   ✅   | Short header guards                                                                       |
+|   8 | `test_fixed_bit`             |   ✅   | Header form set, Fixed Bit clear, version 1: discarded.                                   |
+|   9 | `test_build_guards`          |   ✅   | Build guards                                                                              |
+|  10 | `test_short_header_guards`   |   ✅   | Short header guards                                                                       |
 
 </details>
 
@@ -9840,7 +9911,7 @@ _Unit tests for the QUIC frame codec (network_drivers/presentation/http/http3/pc
 
 ---
 
-## test_quic_crypto - native_quic_crypto - ✅ 14 passed
+## test_quic_crypto - native_quic_crypto - ✅ 15 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -9860,115 +9931,121 @@ _Unit tests for QUIC Initial packet crypto (network_drivers/presentation/http/ht
 |   9 | `test_protect_rejects_small_cap`          |   ✅   | Protect rejects small cap                                                                      |
 |  10 | `test_unprotect_rejects_short`            |   ✅   | Unprotect rejects short                                                                        |
 |  11 | `test_unprotect_rejects_tampered`         |   ✅   | Unprotect rejects tampered                                                                     |
-|  12 | `test_short_header_roundtrip_null_out_pn` |   ✅   | Short header roundtrip null out pn                                                             |
-|  13 | `test_retry_tag_rejects_oversize`         |   ✅   | Retry tag rejects oversize                                                                     |
-|  14 | `test_hkdf_expand_label_multiblock`       |   ✅   | Hkdf expand label multiblock                                                                   |
+|  12 | `test_header_protection_mask_width`       |   ✅   | Header protection mask width                                                                   |
+|  13 | `test_short_header_roundtrip_null_out_pn` |   ✅   | Short header roundtrip null out pn                                                             |
+|  14 | `test_retry_tag_rejects_oversize`         |   ✅   | Retry tag rejects oversize                                                                     |
+|  15 | `test_hkdf_expand_label_multiblock`       |   ✅   | Hkdf expand label multiblock                                                                   |
 
 </details>
 
 ---
 
-## test_tls_record - native_tls_record - ✅ 17 passed
+## test_tls_record - native_tls_record - ✅ 20 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _TLS 1.3 stream record layer (RFC 8446 sec 5). Properties and wire structure; the AEAD itself is_
 
-|   # | Test                                           | Status | Description                             |
-| --: | :--------------------------------------------- | :----: | :-------------------------------------- |
-|   1 | `test_keys_derive_kat`                         |   ✅   | Keys derive kat                         |
-|   2 | `test_protect_kat`                             |   ✅   | Protect kat                             |
-|   3 | `test_unprotect_kat`                           |   ✅   | Unprotect kat                           |
-|   4 | `test_plaintext_round_trips`                   |   ✅   | Plaintext round trips                   |
-|   5 | `test_plaintext_parse_refuses_truncated`       |   ✅   | Plaintext parse refuses truncated       |
-|   6 | `test_plaintext_parse_ignores_legacy_version`  |   ✅   | Plaintext parse ignores legacy version  |
-|   7 | `test_plaintext_build_refuses_overflow`        |   ✅   | Plaintext build refuses overflow        |
-|   8 | `test_protect_round_trips_and_hides_the_type`  |   ✅   | Protect round trips and hides the type  |
-|   9 | `test_sequence_advances_and_records_differ`    |   ✅   | Sequence advances and records differ    |
-|  10 | `test_out_of_order_record_fails`               |   ✅   | Out of order record fails               |
-|  11 | `test_tampered_record_is_refused`              |   ✅   | Tampered record is refused              |
-|  12 | `test_short_and_malformed_records_are_refused` |   ✅   | Short and malformed records are refused |
-|  13 | `test_unkeyed_context_fails_closed`            |   ✅   | Unkeyed context fails closed            |
-|  14 | `test_protect_refuses_overflow`                |   ✅   | Protect refuses overflow                |
-|  15 | `test_empty_plaintext_carries_only_the_type`   |   ✅   | Empty plaintext carries only the type   |
-|  16 | `test_content_with_trailing_zeros_round_trips` |   ✅   | Content with trailing zeros round trips |
-|  17 | `test_keys_wipe_disables_the_context`          |   ✅   | Keys wipe disables the context          |
+|   # | Test                                                 | Status | Description                                   |
+| --: | :--------------------------------------------------- | :----: | :-------------------------------------------- |
+|   1 | `test_keys_derive_kat`                               |   ✅   | Keys derive kat                               |
+|   2 | `test_protect_kat`                                   |   ✅   | Protect kat                                   |
+|   3 | `test_unprotect_kat`                                 |   ✅   | Unprotect kat                                 |
+|   4 | `test_plaintext_round_trips`                         |   ✅   | Plaintext round trips                         |
+|   5 | `test_plaintext_parse_refuses_truncated`             |   ✅   | Plaintext parse refuses truncated             |
+|   6 | `test_plaintext_parse_ignores_legacy_version`        |   ✅   | Plaintext parse ignores legacy version        |
+|   7 | `test_plaintext_build_refuses_overflow`              |   ✅   | Plaintext build refuses overflow              |
+|   8 | `test_protect_round_trips_and_hides_the_type`        |   ✅   | Protect round trips and hides the type        |
+|   9 | `test_sequence_advances_and_records_differ`          |   ✅   | Sequence advances and records differ          |
+|  10 | `test_out_of_order_record_fails`                     |   ✅   | Out of order record fails                     |
+|  11 | `test_tampered_record_is_refused`                    |   ✅   | Tampered record is refused                    |
+|  12 | `test_short_and_malformed_records_are_refused`       |   ✅   | Short and malformed records are refused       |
+|  13 | `test_unkeyed_context_fails_closed`                  |   ✅   | Unkeyed context fails closed                  |
+|  14 | `test_protect_refuses_overflow`                      |   ✅   | Protect refuses overflow                      |
+|  15 | `test_empty_handshake_and_alert_records_are_refused` |   ✅   | Empty handshake and alert records are refused |
+|  16 | `test_zero_length_alert_on_receipt_is_refused`       |   ✅   | Zero length alert on receipt is refused       |
+|  17 | `test_all_zero_inner_plaintext_is_refused`           |   ✅   | All zero inner plaintext is refused           |
+|  18 | `test_record_overflow_is_refused`                    |   ✅   | Record overflow is refused                    |
+|  19 | `test_content_with_trailing_zeros_round_trips`       |   ✅   | Content with trailing zeros round trips       |
+|  20 | `test_keys_wipe_disables_the_context`                |   ✅   | Keys wipe disables the context                |
 
 </details>
 
 ---
 
-## test_dtls_record - native_dtls - ✅ 20 passed
+## test_dtls_record - native_dtls - ✅ 21 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _DTLS 1.3 record layer tests (RFC 9147 §4). The record + key derivation is pinned byte-for-byte_
 
-|   # | Test                                               | Status | Description                                                                                         |
-| --: | :------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
-|   1 | `test_dtls_record_keys_derive_kat`                 |   ✅   | The raw key is no longer stored - it becomes a keyed context - so prove it a step removed: a        |
-|   2 | `test_dtls_ciphertext_protect_kat`                 |   ✅   | Dtls ciphertext protect kat                                                                         |
-|   3 | `test_dtls_ciphertext_unprotect_kat`               |   ✅   | Dtls ciphertext unprotect kat                                                                       |
-|   4 | `test_dtls_ciphertext_roundtrip`                   |   ✅   | Dtls ciphertext roundtrip                                                                           |
-|   5 | `test_dtls_seq_reconstruction`                     |   ✅   | Full sequence numbers whose low 16 bits are all that travel on the wire; unprotect with the         |
-|   6 | `test_dtls_ciphertext_unprotect_rejects`           |   ✅   | Flip one ciphertext byte -> AEAD tag fails.                                                         |
-|   7 | `test_dtls_cid_roundtrip`                          |   ✅   | Dtls cid roundtrip                                                                                  |
-|   8 | `test_dtls_cid_rejects`                            |   ✅   | Dtls cid rejects                                                                                    |
-|   9 | `test_dtls_plaintext_roundtrip`                    |   ✅   | Dtls plaintext roundtrip                                                                            |
-|  10 | `test_dtls_replay_window`                          |   ✅   | Dtls replay window                                                                                  |
-|  11 | `test_dtls_seq_rollover_both_directions`           |   ✅   | Forward wrap: sender used 0x10000 (low 16 bits 0x0000); receiver expected 0xF000 (previous window). |
-|  12 | `test_dtls_plaintext_bounds`                       |   ✅   | total > out_cap.                                                                                    |
-|  13 | `test_dtls_protect_bounds`                         |   ✅   | Dtls protect bounds                                                                                 |
-|  14 | `test_dtls_unprotect_bounds`                       |   ✅   | Dtls unprotect bounds                                                                               |
-|  15 | `test_dtls_unprotect_all_zero_inner`               |   ✅   | content_type 0 with an all-zero payload -> the sealed inner plaintext is all zeros.                 |
-|  16 | `test_dtls_replay_mark_below_window`               |   ✅   | Dtls replay mark below window                                                                       |
-|  17 | `test_dtls_plaintext_parse_wrong_version_low_byte` |   ✅   | Dtls plaintext parse wrong version low byte                                                         |
-|  18 | `test_dtls_cid_record_too_short_for_expected_cid`  |   ✅   | Dtls cid record too short for expected cid                                                          |
-|  19 | `test_dtls_unprotect_seq8_variant`                 |   ✅   | byte0: fixed(001)                                                                                   | L=1 | epoch=0, S=0 -> 8-bit sequence number. 1 (hdr) + 1 (seq8) + 2 (length) + |
-|  20 | `test_dtls_seq_reconstruction_overflow_guard`      |   ✅   | seq's low 16 bits are 0 and its high bits are all 1s so that "candidate + win" wraps to 0.          |
+|   # | Test                                              | Status | Description                                                                                         |
+| --: | :------------------------------------------------ | :----: | :-------------------------------------------------------------------------------------------------- |
+|   1 | `test_dtls_record_keys_derive_kat`                |   ✅   | The raw key is no longer stored - it becomes a keyed context - so prove it a step removed: a        |
+|   2 | `test_dtls_ciphertext_protect_kat`                |   ✅   | Dtls ciphertext protect kat                                                                         |
+|   3 | `test_dtls_ciphertext_unprotect_kat`              |   ✅   | Dtls ciphertext unprotect kat                                                                       |
+|   4 | `test_dtls_ciphertext_roundtrip`                  |   ✅   | Dtls ciphertext roundtrip                                                                           |
+|   5 | `test_dtls_seq_reconstruction`                    |   ✅   | Full sequence numbers whose low 16 bits are all that travel on the wire; unprotect with the         |
+|   6 | `test_dtls_ciphertext_unprotect_rejects`          |   ✅   | Flip one ciphertext byte -> AEAD tag fails.                                                         |
+|   7 | `test_dtls_cid_roundtrip`                         |   ✅   | Dtls cid roundtrip                                                                                  |
+|   8 | `test_dtls_cid_rejects`                           |   ✅   | Dtls cid rejects                                                                                    |
+|   9 | `test_dtls_plaintext_roundtrip`                   |   ✅   | Dtls plaintext roundtrip                                                                            |
+|  10 | `test_dtls_seq8_and_no_length_variants`           |   ✅   | S=0: the sequence number travels in one byte and still reconstructs to the full value.              |
+|  11 | `test_dtls_replay_window`                         |   ✅   | Dtls replay window                                                                                  |
+|  12 | `test_dtls_replay_window_edge`                    |   ✅   | Dtls replay window edge                                                                             |
+|  13 | `test_dtls_seq_rollover_both_directions`          |   ✅   | Forward wrap: sender used 0x10000 (low 16 bits 0x0000); receiver expected 0xF000 (previous window). |
+|  14 | `test_dtls_plaintext_bounds`                      |   ✅   | total > out_cap.                                                                                    |
+|  15 | `test_dtls_protect_bounds`                        |   ✅   | Dtls protect bounds                                                                                 |
+|  16 | `test_dtls_unprotect_bounds`                      |   ✅   | Dtls unprotect bounds                                                                               |
+|  17 | `test_dtls_unprotect_all_zero_inner`              |   ✅   | content_type 0 with an all-zero payload -> the sealed inner plaintext is all zeros.                 |
+|  18 | `test_dtls_replay_mark_below_window`              |   ✅   | Dtls replay mark below window                                                                       |
+|  19 | `test_dtls_cid_record_too_short_for_expected_cid` |   ✅   | Dtls cid record too short for expected cid                                                          |
+|  20 | `test_dtls_unprotect_seq8_variant`                |   ✅   | byte0: fixed(001)                                                                                   | L=1 | epoch=0, S=0 -> 8-bit sequence number. 1 (hdr) + 1 (seq8) + 2 (length) + |
+|  21 | `test_dtls_seq_reconstruction_overflow_guard`     |   ✅   | seq's low 16 bits are 0 and its high bits are all 1s so that "candidate + win" wraps to 0.          |
 
 </details>
 
 ---
 
-## test_dtls_handshake - native_dtls_hs - ✅ 21 passed
+## test_dtls_handshake - native_dtls_hs - ✅ 22 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _DTLS 1.3 handshake framing + reliability tests (RFC 9147 §5, §7): the 12-byte handshake header,_
 
-|   # | Test                                    | Status | Description                                                                             |
-| --: | :-------------------------------------- | :----: | :-------------------------------------------------------------------------------------- |
-|   1 | `test_hs_header_roundtrip`              |   ✅   | Hs header roundtrip                                                                     |
-|   2 | `test_hs_frag_build_rejects`            |   ✅   | full_len / frag_offset / frag_length each above the 24-bit wire field.                  |
-|   3 | `test_hs_reasm_header_guards`           |   ✅   | Hs reasm header guards                                                                  |
-|   4 | `test_ack_build_rejects`                |   ✅   | 4096 * 16 = 65536 does not fit the uint16 list-length prefix (the list is never read).  |
-|   5 | `test_cookie_make_rejects`              |   ✅   | payload_len above the 16-bit payload-length field (the payload is never read).          |
-|   6 | `test_cookie_empty_payload_roundtrip`   |   ✅   | Cookie empty payload roundtrip                                                          |
-|   7 | `test_cookie_verify_structural_rejects` |   ✅   | Version byte other than 1.                                                              |
-|   8 | `test_hs_header_parse_rejects`          |   ✅   | Shorter than the 12-byte header.                                                        |
-|   9 | `test_hs_reasm_single_fragment`         |   ✅   | Hs reasm single fragment                                                                |
-|  10 | `test_hs_reasm_in_order`                |   ✅   | Hs reasm in order                                                                       |
-|  11 | `test_hs_reasm_out_of_order`            |   ✅   | Hs reasm out of order                                                                   |
-|  12 | `test_hs_reasm_overlap_and_duplicate`   |   ✅   | Hs reasm overlap and duplicate                                                          |
-|  13 | `test_hs_reasm_wrong_msg_seq_ignored`   |   ✅   | Hs reasm wrong msg seq ignored                                                          |
-|  14 | `test_hs_reasm_empty_body`              |   ✅   | A zero-length body (e.g. a bodiless message) is complete as soon as the header arrives. |
-|  15 | `test_hs_reasm_rejects`                 |   ✅   | Hs reasm rejects                                                                        |
-|  16 | `test_ack_roundtrip`                    |   ✅   | Ack roundtrip                                                                           |
-|  17 | `test_ack_parse_rejects`                |   ✅   | Ack parse rejects                                                                       |
-|  18 | `test_cookie_kat`                       |   ✅   | Cookie kat                                                                              |
-|  19 | `test_cookie_verify_accept_and_payload` |   ✅   | max_age = 0 disables the freshness check, isolating the MAC + payload recovery.         |
-|  20 | `test_cookie_verify_rejects`            |   ✅   | A different client address fails the MAC (the address is authenticated, not stored).    |
-|  21 | `test_cookie_freshness`                 |   ✅   | Cookie freshness                                                                        |
+|   # | Test                                       | Status | Description                                                                             |
+| --: | :----------------------------------------- | :----: | :-------------------------------------------------------------------------------------- |
+|   1 | `test_hs_header_roundtrip`                 |   ✅   | Hs header roundtrip                                                                     |
+|   2 | `test_hs_frag_build_rejects`               |   ✅   | full_len / frag_offset / frag_length each above the 24-bit wire field.                  |
+|   3 | `test_hs_reasm_header_guards`              |   ✅   | Hs reasm header guards                                                                  |
+|   4 | `test_ack_build_rejects`                   |   ✅   | 4096 * 16 = 65536 does not fit the uint16 list-length prefix (the list is never read).  |
+|   5 | `test_cookie_make_rejects`                 |   ✅   | payload_len above the 16-bit payload-length field (the payload is never read).          |
+|   6 | `test_cookie_empty_payload_roundtrip`      |   ✅   | Cookie empty payload roundtrip                                                          |
+|   7 | `test_cookie_verify_structural_rejects`    |   ✅   | Version byte other than 1.                                                              |
+|   8 | `test_hs_header_parse_rejects`             |   ✅   | Shorter than the 12-byte header.                                                        |
+|   9 | `test_hs_reasm_single_fragment`            |   ✅   | Hs reasm single fragment                                                                |
+|  10 | `test_hs_reasm_in_order`                   |   ✅   | Hs reasm in order                                                                       |
+|  11 | `test_hs_reasm_out_of_order`               |   ✅   | Hs reasm out of order                                                                   |
+|  12 | `test_hs_reasm_overlap_and_duplicate`      |   ✅   | Hs reasm overlap and duplicate                                                          |
+|  13 | `test_hs_reasm_conflicting_overlap_aborts` |   ✅   | Hs reasm conflicting overlap aborts                                                     |
+|  14 | `test_hs_reasm_wrong_msg_seq_ignored`      |   ✅   | Hs reasm wrong msg seq ignored                                                          |
+|  15 | `test_hs_reasm_empty_body`                 |   ✅   | A zero-length body (e.g. a bodiless message) is complete as soon as the header arrives. |
+|  16 | `test_hs_reasm_rejects`                    |   ✅   | Hs reasm rejects                                                                        |
+|  17 | `test_ack_roundtrip`                       |   ✅   | Ack roundtrip                                                                           |
+|  18 | `test_ack_parse_rejects`                   |   ✅   | Ack parse rejects                                                                       |
+|  19 | `test_cookie_kat`                          |   ✅   | Cookie kat                                                                              |
+|  20 | `test_cookie_verify_accept_and_payload`    |   ✅   | max_age = 0 disables the freshness check, isolating the MAC + payload recovery.         |
+|  21 | `test_cookie_verify_rejects`               |   ✅   | A different client address fails the MAC (the address is authenticated, not stored).    |
+|  22 | `test_cookie_freshness`                    |   ✅   | Cookie freshness                                                                        |
 
 </details>
 
 ---
 
-## test_dtls_tls13 - native_dtls_tls13 - ✅ 14 passed
+## test_dtls_tls13 - native_dtls_tls13 - ✅ 15 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -9987,59 +10064,82 @@ _TLS 1.3 messages the DTLS 1.3 handshake adds to pc_tls13_msg (RFC 8446 §4.1.4 
 |   8 | `test_empty_encrypted_extensions`       |   ✅   | Empty encrypted extensions                                                                          |
 |   9 | `test_client_hello_cookie_parse`        |   ✅   | Assemble a minimal but well-formed ClientHello with exactly one extension (cookie).                 |
 |  10 | `test_ed25519_spki`                     |   ✅   | Ed25519 spki                                                                                        |
-|  11 | `test_build_certificate_rpk`            |   ✅   | Derive a real public key from a seed, so the test spans seed -> pubkey -> SPKI -> Certificate.      |
-|  12 | `test_ee_rpk_extension`                 |   ✅   | The empty (DTLS-profile) EncryptedExtensions with RPK selected carries server_certificate_type.     |
-|  13 | `test_parse_server_cert_type_rpk`       |   ✅   | server_certificate_type list [X509(0), RawPublicKey(2)]: the client accepts a RawPublicKey from us. |
-|  14 | `test_parse_server_cert_type_x509_only` |   ✅   | A list with only X509(0): no RPK offer.                                                             |
+|  11 | `test_ed25519_spki_rfc8410_vector`      |   ✅   | The 32-byte public key carried by the RFC's example, and the whole SPKI it sits in.                 |
+|  12 | `test_build_certificate_rpk`            |   ✅   | Derive a real public key from a seed, so the test spans seed -> pubkey -> SPKI -> Certificate.      |
+|  13 | `test_ee_rpk_extension`                 |   ✅   | The empty (DTLS-profile) EncryptedExtensions with RPK selected carries server_certificate_type.     |
+|  14 | `test_parse_server_cert_type_rpk`       |   ✅   | server_certificate_type list [X509(0), RawPublicKey(2)]: the client accepts a RawPublicKey from us. |
+|  15 | `test_parse_server_cert_type_x509_only` |   ✅   | A list with only X509(0): no RPK offer.                                                             |
 
 </details>
 
 ---
 
-## test_dtls_conn - native_dtls_conn - ✅ 35 passed
+## test_dtls_conn - native_dtls_conn - ✅ 38 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _DTLS 1.3 server handshake (RFC 9147 §5-6). A self-consistent proof: the test plays a minimal DTLS_
 
-|   # | Test                                              | Status | Description                                |
-| --: | :------------------------------------------------ | :----: | :----------------------------------------- |
-|   1 | `test_full_handshake`                             |   ✅   | Full handshake                             |
-|   2 | `test_timer_stopped_by_done_state`                |   ✅   | Timer stopped by done state                |
-|   3 | `test_established_requires_app_keys`              |   ✅   | Established requires app keys              |
-|   4 | `test_local_cid_requires_nonempty_id`             |   ✅   | Local cid requires nonempty id             |
-|   5 | `test_non_finished_message_after_done_rejected`   |   ✅   | Non finished message after done rejected   |
-|   6 | `test_epoch2_other_content_type_ignored`          |   ✅   | Epoch2 other content type ignored          |
-|   7 | `test_full_handshake_rpk`                         |   ✅   | Full handshake rpk                         |
-|   8 | `test_cid_handshake`                              |   ✅   | Cid handshake                              |
-|   9 | `test_hrr_group_renegotiation`                    |   ✅   | Hrr group renegotiation                    |
-|  10 | `test_hrr_retry_without_cookie_rejected`          |   ✅   | Hrr retry without cookie rejected          |
-|  11 | `test_pto_retransmit_and_recovery`                |   ✅   | Pto retransmit and recovery                |
-|  12 | `test_pto_backoff_and_giveup`                     |   ✅   | Pto backoff and giveup                     |
-|  13 | `test_pto_ack_cancels_retransmit`                 |   ✅   | Pto ack cancels retransmit                 |
-|  14 | `test_reject_no_tls13`                            |   ✅   | Reject no tls13                            |
-|  15 | `test_ciphertext_truncated_header_stops_walk`     |   ✅   | Ciphertext truncated header stops walk     |
-|  16 | `test_ciphertext_before_keys_is_fatal`            |   ✅   | Ciphertext before keys is fatal            |
-|  17 | `test_plaintext_non_handshake_record_ignored`     |   ✅   | Plaintext non handshake record ignored     |
-|  18 | `test_truncated_handshake_fragment_ignored`       |   ✅   | Truncated handshake fragment ignored       |
-|  19 | `test_fragment_for_other_msg_seq_ignored`         |   ✅   | Fragment for other msg seq ignored         |
-|  20 | `test_oversize_handshake_message_rejected`        |   ✅   | Oversize handshake message rejected        |
-|  21 | `test_unexpected_message_in_start_rejected`       |   ✅   | Unexpected message in start rejected       |
-|  22 | `test_client_hello_missing_algorithms_rejected`   |   ✅   | Client hello missing algorithms rejected   |
-|  23 | `test_oversize_certificate_is_internal_error`     |   ✅   | Oversize certificate is internal error     |
-|  24 | `test_flight_out_cap_too_small_is_internal_error` |   ✅   | Flight out cap too small is internal error |
-|  25 | `test_retransmit_out_cap_too_small`               |   ✅   | Retransmit out cap too small               |
-|  26 | `test_timer_idle_when_done_or_failed`             |   ✅   | Timer idle when done or failed             |
-|  27 | `test_client_finished_error_paths`                |   ✅   | Client finished error paths                |
-|  28 | `test_ack_malformed_and_partial_keep_timer`       |   ✅   | Ack malformed and partial keep timer       |
-|  29 | `test_ack_replay_and_late_ack_ignored`            |   ✅   | Ack replay and late ack ignored            |
-|  30 | `test_completion_ack_deferred_when_out_full`      |   ✅   | Completion ack deferred when out full      |
-|  31 | `test_app_records_before_and_after_established`   |   ✅   | App records before and after established   |
-|  32 | `test_conn_id_edge_cases`                         |   ✅   | Conn id edge cases                         |
-|  33 | `test_peer_addr_zero_length_and_clamped`          |   ✅   | Peer addr zero length and clamped          |
-|  34 | `test_hrr_retry_without_keyshare_rejected`        |   ✅   | Hrr retry without keyshare rejected        |
-|  35 | `test_hrr_retry_with_corrupt_cookie_rejected`     |   ✅   | Hrr retry with corrupt cookie rejected     |
+|   # | Test                                              | Status | Description                                                                                  |
+| --: | :------------------------------------------------ | :----: | :------------------------------------------------------------------------------------------- |
+|   1 | `test_full_handshake`                             |   ✅   | Full handshake                                                                               |
+|   2 | `test_timer_stopped_by_done_state`                |   ✅   | Timer stopped by done state                                                                  |
+|   3 | `test_established_requires_app_keys`              |   ✅   | Established requires app keys                                                                |
+|   4 | `test_local_cid_requires_nonempty_id`             |   ✅   | Local cid requires nonempty id                                                               |
+|   5 | `test_non_finished_message_after_done_rejected`   |   ✅   | Non finished message after done rejected                                                     |
+|   6 | `test_epoch2_other_content_type_ignored`          |   ✅   | Epoch2 other content type ignored                                                            |
+|   7 | `test_full_handshake_rpk`                         |   ✅   | Full handshake rpk                                                                           |
+|   8 | `test_cid_handshake`                              |   ✅   | Cid handshake                                                                                |
+|   9 | `test_hrr_group_renegotiation`                    |   ✅   | Hrr group renegotiation                                                                      |
+|  10 | `test_hrr_retry_without_cookie_rejected`          |   ✅   | Hrr retry without cookie rejected                                                            |
+|  11 | `test_pto_retransmit_and_recovery`                |   ✅   | Pto retransmit and recovery                                                                  |
+|  12 | `test_pto_backoff_and_giveup`                     |   ✅   | Pto backoff and giveup                                                                       |
+|  13 | `test_pto_ack_cancels_retransmit`                 |   ✅   | Pto ack cancels retransmit                                                                   |
+|  14 | `test_reject_no_tls13`                            |   ✅   | Reject no tls13                                                                              |
+|  15 | `test_ciphertext_truncated_header_stops_walk`     |   ✅   | Ciphertext truncated header stops walk                                                       |
+|  16 | `test_ciphertext_before_keys_is_discarded`        |   ✅   | Ciphertext before keys is discarded                                                          |
+|  17 | `test_plaintext_non_handshake_record_ignored`     |   ✅   | Plaintext non handshake record ignored                                                       |
+|  18 | `test_truncated_handshake_fragment_ignored`       |   ✅   | Truncated handshake fragment ignored                                                         |
+|  19 | `test_fragment_for_other_msg_seq_ignored`         |   ✅   | Fragment for other msg seq ignored                                                           |
+|  20 | `test_oversize_handshake_message_rejected`        |   ✅   | Oversize handshake message rejected                                                          |
+|  21 | `test_unexpected_message_in_start_rejected`       |   ✅   | Unexpected message in start rejected                                                         |
+|  22 | `test_client_hello_missing_algorithms_rejected`   |   ✅   | Client hello missing algorithms rejected                                                     |
+|  23 | `test_oversize_certificate_is_internal_error`     |   ✅   | Oversize certificate is internal error                                                       |
+|  24 | `test_flight_out_cap_too_small_is_internal_error` |   ✅   | Flight out cap too small is internal error                                                   |
+|  25 | `test_retransmit_out_cap_too_small`               |   ✅   | Retransmit out cap too small                                                                 |
+|  26 | `test_timer_idle_when_done_or_failed`             |   ✅   | Timer idle when done or failed                                                               |
+|  27 | `test_client_finished_error_paths`                |   ✅   | Client finished error paths                                                                  |
+|  28 | `test_ack_malformed_and_partial_keep_timer`       |   ✅   | Ack malformed and partial keep timer                                                         |
+|  29 | `test_ack_replay_and_late_ack_ignored`            |   ✅   | Ack replay and late ack ignored                                                              |
+|  30 | `test_completion_ack_deferred_when_out_full`      |   ✅   | Completion ack deferred when out full                                                        |
+|  31 | `test_forged_record_does_not_end_the_association` |   ✅   | Forged record does not end the association                                                   |
+|  32 | `test_app_records_before_and_after_established`   |   ✅   | App records before and after established                                                     |
+|  33 | `test_conn_id_edge_cases`                         |   ✅   | Conn id edge cases                                                                           |
+|  34 | `test_flight_fragments_to_the_pmtu`               |   ✅   | Flight fragments to the pmtu                                                                 |
+|  35 | `test_cookie_is_worthless_to_another_peer`        |   ✅   | Cookie is worthless to another peer                                                          |
+|  36 | `test_peer_addr_zero_length_and_clamped`          |   ✅   | With no address there is nothing to bind to, so this shows the cookie survives a round trip, |
+|  37 | `test_hrr_retry_without_keyshare_rejected`        |   ✅   | Hrr retry without keyshare rejected                                                          |
+|  38 | `test_hrr_retry_with_corrupt_cookie_rejected`     |   ✅   | Hrr retry with corrupt cookie rejected                                                       |
+
+</details>
+
+---
+
+## test_tls_conn - native_tls_conn - ✅ 5 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_TLS 1.3 handshake driver over the stream record layer (network_drivers/tls/tls_conn, RFC 8446_
+
+|   # | Test                                               | Status | Description                                 |
+| --: | :------------------------------------------------- | :----: | :------------------------------------------ |
+|   1 | `test_init_takes_its_borrow`                       |   ✅   | Init takes its borrow                       |
+|   2 | `test_client_hello_draws_the_server_flight`        |   ✅   | Client hello draws the server flight        |
+|   3 | `test_client_hello_outside_the_profile_is_refused` |   ✅   | Client hello outside the profile is refused |
+|   4 | `test_malformed_record_is_a_decode_error`          |   ✅   | Malformed record is a decode error          |
+|   5 | `test_client_role_is_not_implemented`              |   ✅   | Client role is not implemented              |
 
 </details>
 
@@ -10066,47 +10166,57 @@ _CoAP over DTLS (coaps.h) end-to-end. An in-test DTLS 1.3 client completes the h
 
 ---
 
-## test_coaps_server - native_coaps_server - ✅ 12 passed
+## test_coaps_server - native_coaps_server - ✅ 20 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _CoAP-over-DTLS server front-end (coaps_server.h): the per-peer DtlsConn pool + ingest/poll seam._
 
-|   # | Test                                 | Status | Description                   |
-| --: | :----------------------------------- | :----: | :---------------------------- |
-|   1 | `test_idle_reap`                     |   ✅   | Idle reap                     |
-|   2 | `test_pto_retransmit_driven_by_poll` |   ✅   | Pto retransmit driven by poll |
-|   3 | `test_begin_rejects_invalid_cfg`     |   ✅   | Begin rejects invalid cfg     |
-|   4 | `test_poll_when_stopped`             |   ✅   | Poll when stopped             |
-|   5 | `test_ingest_rejects_bad_len`        |   ✅   | Ingest rejects bad len        |
-|   6 | `test_ingest_ring_full`              |   ✅   | Ingest ring full              |
-|   7 | `test_ingest_addr_copy_edges`        |   ✅   | Ingest addr copy edges        |
-|   8 | `test_malformed_peer_addr`           |   ✅   | Malformed peer addr           |
-|   9 | `test_fatal_handshake_frees_slot`    |   ✅   | Fatal handshake frees slot    |
-|  10 | `test_pool_full_rejects_new_peer`    |   ✅   | Pool full rejects new peer    |
-|  11 | `test_pto_ceiling_frees_slot`        |   ✅   | Pto ceiling frees slot        |
-|  12 | `test_server_send_without_sink`      |   ✅   | Server send without sink      |
+|   # | Test                                           | Status | Description                                                                   |
+| --: | :--------------------------------------------- | :----: | :---------------------------------------------------------------------------- |
+|   1 | `test_server_single_peer`                      |   ✅   | Server single peer                                                            |
+|   2 | `test_two_peers_routing`                       |   ✅   | Two peers routing                                                             |
+|   3 | `test_idle_reap`                               |   ✅   | Idle reap                                                                     |
+|   4 | `test_pto_retransmit_driven_by_poll`           |   ✅   | Pto retransmit driven by poll                                                 |
+|   5 | `test_cid_address_migration`                   |   ✅   | Cid address migration                                                         |
+|   6 | `test_begin_rejects_invalid_cfg`               |   ✅   | Begin rejects invalid cfg                                                     |
+|   7 | `test_poll_when_stopped`                       |   ✅   | Poll when stopped                                                             |
+|   8 | `test_ingest_rejects_bad_len`                  |   ✅   | Ingest rejects bad len                                                        |
+|   9 | `test_ingest_ring_full`                        |   ✅   | Ingest ring full                                                              |
+|  10 | `test_ingest_addr_copy_edges`                  |   ✅   | Ingest addr copy edges                                                        |
+|  11 | `test_malformed_peer_addr`                     |   ✅   | Malformed peer addr                                                           |
+|  12 | `test_fatal_handshake_frees_slot`              |   ✅   | Fatal handshake frees slot                                                    |
+|  13 | `test_pool_full_rejects_new_peer`              |   ✅   | Pool full rejects new peer                                                    |
+|  14 | `test_pto_ceiling_frees_slot`                  |   ✅   | Pto ceiling frees slot                                                        |
+|  15 | `test_unknown_cid_dropped`                     |   ✅   | Unknown cid dropped                                                           |
+|  16 | `test_server_send_without_sink`                |   ✅   | Server send without sink                                                      |
+|  17 | `test_slot_lookup_same_port_different_ip`      |   ✅   | Slot lookup same port different ip                                            |
+|  18 | `test_slot_by_cid_skips_and_bounds`            |   ✅   | A plain connection (no CID offered) occupies a slot whose local_cid_len is 0. |
+|  19 | `test_cid_no_migration_when_address_unchanged` |   ✅   | Cid no migration when address unchanged                                       |
+|  20 | `test_cid_migration_same_port_different_ip`    |   ✅   | Cid migration same port different ip                                          |
 
 </details>
 
 ---
 
-## test_tls13_kdf - native_tls13_kdf - ✅ 6 passed
+## test_tls13_kdf - native_tls13_kdf - ✅ 8 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Unit tests for the TLS 1.3 key schedule (network_drivers/tls/tls13_kdf; RFC 8446_
 
-|   # | Test                            | Status | Description               |
-| --: | :------------------------------ | :----: | :------------------------ |
-|   1 | `test_early_secret`             |   ✅   | Early secret              |
-|   2 | `test_handshake_secrets`        |   ✅   | Handshake secrets         |
-|   3 | `test_master_secrets`           |   ✅   | Master secrets            |
-|   4 | `test_server_hs_write_keys`     |   ✅   | Server hs write keys      |
-|   5 | `test_server_finished`          |   ✅   | ClientHello (196 octets). |
-|   6 | `test_kdf_expand_label_wrapper` |   ✅   | Kdf expand label wrapper  |
+|   # | Test                                               | Status | Description                                 |
+| --: | :------------------------------------------------- | :----: | :------------------------------------------ |
+|   1 | `test_early_secret`                                |   ✅   | Early secret                                |
+|   2 | `test_handshake_secrets`                           |   ✅   | Handshake secrets                           |
+|   3 | `test_handshake_secrets_rfc8448_section5`          |   ✅   | Handshake secrets rfc8448 section5          |
+|   4 | `test_master_secrets`                              |   ✅   | Master secrets                              |
+|   5 | `test_server_hs_write_keys`                        |   ✅   | Server hs write keys                        |
+|   6 | `test_server_finished`                             |   ✅   | ClientHello (196 octets).                   |
+|   7 | `test_kdf_expand_label_wrapper`                    |   ✅   | Kdf expand label wrapper                    |
+|   8 | `test_dtls13_kdf_labels_against_the_rfc_structure` |   ✅   | Dtls13 kdf labels against the rfc structure |
 
 </details>
 
@@ -10139,7 +10249,7 @@ _Unit tests for the QUIC transport-parameters codec (network_drivers/presentatio
 
 ---
 
-## test_tls13_msg - native_tls13_msg - ✅ 18 passed
+## test_tls13_msg - native_tls13_msg - ✅ 20 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -10159,13 +10269,15 @@ _Unit tests for the TLS 1.3 handshake messages (network_drivers/presentation/htt
 |   9 | `test_tls13_parse_guards`                      |   ✅   | Tls13 parse guards                                                                              |
 |  10 | `test_tls13_builder_cap_guards`                |   ✅   | Tls13 builder cap guards                                                                        |
 |  11 | `test_parse_client_hello`                      |   ✅   | Parse client hello                                                                              |
-|  12 | `test_build_server_hello`                      |   ✅   | Build server hello                                                                              |
-|  13 | `test_tls13_build_server_hello_conn_id`        |   ✅   | Tls13 build server hello conn id                                                                |
-|  14 | `test_build_certificate`                       |   ✅   | Reconstruct the DER cert from the expected message: strip the 11-byte prefix and 2-byte suffix. |
-|  15 | `test_build_finished`                          |   ✅   | Build finished                                                                                  |
-|  16 | `test_encrypted_extensions`                    |   ✅   | Encrypted extensions                                                                            |
-|  17 | `test_cert_verify_content`                     |   ✅   | Cert verify content                                                                             |
-|  18 | `test_cert_verify_sign_roundtrip`              |   ✅   | Cert verify sign roundtrip                                                                      |
+|  12 | `test_client_hello_suite_and_compression`      |   ✅   | Walk to the two fields: handshake header (4) + legacy_version (2) + random (32), then the       |
+|  13 | `test_server_hello_echoes_session_id`          |   ✅   | Server hello echoes session id                                                                  |
+|  14 | `test_build_server_hello`                      |   ✅   | Build server hello                                                                              |
+|  15 | `test_tls13_build_server_hello_conn_id`        |   ✅   | Tls13 build server hello conn id                                                                |
+|  16 | `test_build_certificate`                       |   ✅   | Reconstruct the DER cert from the expected message: strip the 11-byte prefix and 2-byte suffix. |
+|  17 | `test_build_finished`                          |   ✅   | Build finished                                                                                  |
+|  18 | `test_encrypted_extensions`                    |   ✅   | Encrypted extensions                                                                            |
+|  19 | `test_cert_verify_content`                     |   ✅   | Cert verify content                                                                             |
+|  20 | `test_cert_verify_sign_roundtrip`              |   ✅   | Cert verify sign roundtrip                                                                      |
 
 </details>
 
@@ -10299,33 +10411,38 @@ _Unit tests for the QUIC v1 server connection engine (network_drivers/presentati
 
 ---
 
-## test_h3_conn - native_h3_conn - ✅ 18 passed
+## test_h3_conn - native_h3_conn - ✅ 23 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Unit tests for the HTTP/3 application engine (network_drivers/presentation/http/http3/pc_h3_conn; RFC_
 
-|   # | Test                                           | Status | Description                             |
-| --: | :--------------------------------------------- | :----: | :-------------------------------------- |
-|   1 | `test_request_dispatch_and_response`           |   ✅   | Request dispatch and response           |
-|   2 | `test_h3_pseudo_header_name_variants`          |   ✅   | H3 pseudo header name variants          |
-|   3 | `test_h3_request_unknown_frame_and_empty_data` |   ✅   | H3 request unknown frame and empty data |
-|   4 | `test_h3_no_request_callback`                  |   ✅   | H3 no request callback                  |
-|   5 | `test_h3_stream_buffer_overflow_clamped`       |   ✅   | H3 stream buffer overflow clamped       |
-|   6 | `test_h3_control_stream_frame_guards`          |   ✅   | H3 control stream frame guards          |
-|   7 | `test_h3_uni_stream_empty_and_repeat_delivery` |   ✅   | H3 uni stream empty and repeat delivery |
-|   8 | `test_h3_respond_no_content_type_empty_body`   |   ✅   | H3 respond no content type empty body   |
-|   9 | `test_post_with_body`                          |   ✅   | Post with body                          |
-|  10 | `test_control_stream_settings_sent`            |   ✅   | Control stream settings sent            |
-|  11 | `test_client_control_stream_settings`          |   ✅   | Client control stream settings          |
-|  12 | `test_client_uni_stream_types`                 |   ✅   | Client uni stream types                 |
-|  13 | `test_handshake_done_idempotent`               |   ✅   | Handshake done idempotent               |
-|  14 | `test_malformed_request_frame`                 |   ✅   | Malformed request frame                 |
-|  15 | `test_respond_body_too_large`                  |   ✅   | Respond body too large                  |
-|  16 | `test_stream_pool_full`                        |   ✅   | Stream pool full                        |
-|  17 | `test_uni_stream_partial_type`                 |   ✅   | Uni stream partial type                 |
-|  18 | `test_overlong_field_truncated`                |   ✅   | Overlong field truncated                |
+|   # | Test                                                    | Status | Description                                      |
+| --: | :------------------------------------------------------ | :----: | :----------------------------------------------- |
+|   1 | `test_request_dispatch_and_response`                    |   ✅   | Request dispatch and response                    |
+|   2 | `test_h3_pseudo_header_name_variants`                   |   ✅   | H3 pseudo header name variants                   |
+|   3 | `test_h3_request_unknown_frame_and_empty_data`          |   ✅   | H3 request unknown frame and empty data          |
+|   4 | `test_h3_control_only_frames_on_a_request_stream`       |   ✅   | H3 control only frames on a request stream       |
+|   5 | `test_h3_error_before_app_keys_falls_back_to_transport` |   ✅   | H3 error before app keys falls back to transport |
+|   6 | `test_h3_data_before_headers`                           |   ✅   | H3 data before headers                           |
+|   7 | `test_h3_second_control_stream`                         |   ✅   | H3 second control stream                         |
+|   8 | `test_h3_second_settings_frame`                         |   ✅   | H3 second settings frame                         |
+|   9 | `test_h3_no_request_callback`                           |   ✅   | H3 no request callback                           |
+|  10 | `test_h3_stream_buffer_overflow_clamped`                |   ✅   | H3 stream buffer overflow clamped                |
+|  11 | `test_h3_control_stream_frame_guards`                   |   ✅   | H3 control stream frame guards                   |
+|  12 | `test_h3_uni_stream_empty_and_repeat_delivery`          |   ✅   | H3 uni stream empty and repeat delivery          |
+|  13 | `test_h3_respond_no_content_type_empty_body`            |   ✅   | H3 respond no content type empty body            |
+|  14 | `test_post_with_body`                                   |   ✅   | Post with body                                   |
+|  15 | `test_control_stream_settings_sent`                     |   ✅   | Control stream settings sent                     |
+|  16 | `test_client_control_stream_settings`                   |   ✅   | Client control stream settings                   |
+|  17 | `test_client_uni_stream_types`                          |   ✅   | Client uni stream types                          |
+|  18 | `test_handshake_done_idempotent`                        |   ✅   | Handshake done idempotent                        |
+|  19 | `test_malformed_request_frame`                          |   ✅   | Malformed request frame                          |
+|  20 | `test_respond_body_too_large`                           |   ✅   | Respond body too large                           |
+|  21 | `test_stream_pool_full`                                 |   ✅   | Stream pool full                                 |
+|  22 | `test_uni_stream_partial_type`                          |   ✅   | Uni stream partial type                          |
+|  23 | `test_overlong_field_truncated`                         |   ✅   | Overlong field truncated                         |
 
 </details>
 
