@@ -566,6 +566,40 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## HTTP/2 DATA on a stream nobody opened was delivered to the application
+
+- **Status:** FIXED 2026-08-09 (`h2_conn.c` `handle_data`). Found 2026-08-08 auditing `test/` for RFC
+  conformance (`git_project/audit/http2-hpack.md` #2).
+- **Symptom:** `handle_data` called `c->cb.on_data(...)` and only then looked the stream up, and it
+  never read `H2Stream.state` at all. A DATA frame naming a stream no HEADERS had ever opened had its
+  payload handed to the application as a legitimate request body. RFC 9113 sec 5.1 makes any frame
+  other than HEADERS or PRIORITY on an idle stream a connection error of type PROTOCOL_ERROR; sec 6.1
+  makes DATA on a stream that is not open a stream error of type STREAM_CLOSED.
+- **Root cause:** the lookup existed only to update `state` on END_STREAM, so it was placed after the
+  delivery it should have gated. The audit names this the request-smuggling surface.
+- **Nothing can catch it:** `test_h2_data_empty_and_unknown_stream` fed DATA on never-opened stream 5
+  and asserted both that the call succeeded and that the body reached the app.
+- **Fix:** the stream is resolved before the callback. No stream at all is a connection error; a
+  stream past OPEN is answered RST_STREAM(STREAM_CLOSED) and the connection survives. The test now
+  asserts the payload does not arrive, and `test_h2_data_after_end_stream_resets_the_stream` covers
+  the sec 6.1 half. Verified: `native_h2conn`, 32/32.
+
+## An HTTP/2 WINDOW_UPDATE of zero was accepted, and the window add could overflow
+
+- **Status:** FIXED 2026-08-09 (`h2_conn.c` `dispatch_frame`). Found 2026-08-08 auditing `test/` for
+  RFC conformance (`git_project/audit/http2-hpack.md` #6, #7).
+- **Symptom:** the increment was added with no checks. RFC 9113 sec 6.9 makes a zero increment an
+  error, and sec 6.9.1 caps a flow-control window at 2^31-1 with anything beyond it a
+  FLOW_CONTROL_ERROR. `c->conn_send_window += (int32_t)inc` with `inc` up to 2^31-1 is signed
+  overflow, which is undefined behaviour, not a large window.
+- **Nothing can catch it:** the only WINDOW_UPDATE test sent +100 on each of the connection and a
+  stream, so neither the zero nor the boundary was ever driven.
+- **Fix:** both are rejected, and the RFC's split is honoured - a connection error on the connection
+  window, RST_STREAM on a stream's (PROTOCOL_ERROR for zero, FLOW_CONTROL_ERROR for the cap). The cap
+  is tested by subtracting from the ceiling rather than adding to the window, so the check itself
+  cannot overflow. Test `test_h2_window_update_zero_and_overflow`.
+  Verified: `native_h2conn`, 32/32.
+
 ## An oversize HPACK dynamic-table size update was clamped instead of refused
 
 - **Status:** FIXED 2026-08-09 (`hpack.c` `pc_hpack_decode`, the 0x20 arm). Found 2026-08-08 auditing
