@@ -381,8 +381,9 @@ static void test_coaps_wrong_epoch_record(void)
     uint8_t rec[24];
     memset(rec, 0, sizeof(rec));
     rec[0] = 0x22; // (0x22 & 0xE0) == 0x20 (ciphertext), (0x22 & 0x03) == 2 (epoch 2, not 3)
+    // RFC 9147 sec 4.5.2: an invalid record is discarded and the association survives it.
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_INT(-1, pc_coaps_process(&conn, rec, sizeof(rec), out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&conn, rec, sizeof(rec), out, sizeof(out)));
 }
 
 // Before establishment pc_coaps_process forwards the datagram straight to the DTLS handshake state
