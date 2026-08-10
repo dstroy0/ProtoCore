@@ -344,6 +344,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the connection borrows its buffers and asserts its term ([`8c71bb5`](https://github.com/dstroy0/ProtoCore/commit/8c71bb5690964267dd068d32635e2de953271acf))
 - flight_add fragments in the file's own idiom ([`b11b3a1`](https://github.com/dstroy0/ProtoCore/commit/b11b3a12c58f182413c7aa5554a59154a897fa1f))
 - the dispatcher owns the one control-frame borrow, sized once at compile time ([`b21dc18`](https://github.com/dstroy0/ProtoCore/commit/b21dc1877e3ee2a0a77859341151b818bf8fea68))
 - delete ssh_kexdh_build_reply, dead since build_kex_reply took over ([`1a2fd6d`](https://github.com/dstroy0/ProtoCore/commit/1a2fd6d47ba1d8e0883052b9178148c3ce9e4b67))
@@ -362,6 +363,12 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+<<<<<<< Updated upstream
+=======
+- decode legal S=0 and L=0 records ([`e13b02b`](https://github.com/dstroy0/ProtoCore/commit/e13b02bdc94c7577ada3f03be2080b5f8e9d05ad))
+- a path small enough that this flight actually splits ([`5e8cd7d`](https://github.com/dstroy0/ProtoCore/commit/5e8cd7d117a7382b5fda6e45a39f0a9260a7f924))
+- the flight fragments to the connection's PMTU ([`75c756f`](https://github.com/dstroy0/ProtoCore/commit/75c756f868e36a6c8926d6e7b32cc27eba6ad49f))
+>>>>>>> Stashed changes
 - zero the server config before filling it ([`55b7b3f`](https://github.com/dstroy0/ProtoCore/commit/55b7b3f16d6a2d7ac86f50299fda389104370666))
 - drive the second peer to its own HRR before spending the cookie ([`a444a71`](https://github.com/dstroy0/ProtoCore/commit/a444a7190e54f11c1e44269a298fe3c36c504f4d))
 - a cookie minted for one peer is refused at another ([`7bc4769`](https://github.com/dstroy0/ProtoCore/commit/7bc47696766b750804ca7186a21d69a69954850b))
