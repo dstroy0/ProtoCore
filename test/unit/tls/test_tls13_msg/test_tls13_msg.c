@@ -157,6 +157,41 @@ void test_client_hello_suite_and_compression()
     TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
 }
 
+// RFC 8446 sec 4.1.3: legacy_session_id_echo is "the contents of the client's legacy_session_id
+// field", and an Appendix D.4 compatibility-mode client always sends 32 bytes. Every ClientHello in
+// this tree carries a zero-length session id, and the builder was only ever called with NULL/0, so
+// the echo path itself was never run - only the HelloRetryRequest echo was covered.
+void test_server_hello_echoes_session_id()
+{
+    uint8_t sid[32];
+    for (size_t i = 0; i < sizeof sid; i++)
+    {
+        sid[i] = (uint8_t)(0x40 + i);
+    }
+    uint8_t random[32], pub[32];
+    hx("a6af06a4121860dc5e6e60249cd34c95930c8ac5cb1434dac155772ed3e26928", random, 32);
+    hx("c9828876112095fe66762bdbf7c672e156d6cc253b833df1dd69b1b04e751f0f", pub, 32);
+
+    uint8_t out[160];
+    size_t n = pc_tls13_build_server_hello(out, sizeof(out), random, sid, sizeof(sid), pub, 32, TLS_GROUP_X25519,
+                                           /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, 0);
+    TEST_ASSERT_TRUE(n > 0);
+
+    // handshake header (4) + legacy_version (2) + random (32) puts the echo length at 38.
+    TEST_ASSERT_EQUAL_UINT8(sizeof(sid), out[38]);
+    TEST_ASSERT_EQUAL_MEMORY(sid, out + 39, sizeof(sid));
+
+    // The 32 echoed bytes push everything after them along, so the cipher suite still follows.
+    const size_t after_sid = 39 + sizeof(sid);
+    TEST_ASSERT_EQUAL_UINT8(0x13, out[after_sid]);
+    TEST_ASSERT_EQUAL_UINT8(0x01, out[after_sid + 1]);
+    TEST_ASSERT_EQUAL_UINT8(0x00, out[after_sid + 2]); // legacy_compression_method
+
+    // The declared body length covers the whole message.
+    const size_t body = ((size_t)out[1] << 16) | ((size_t)out[2] << 8) | out[3];
+    TEST_ASSERT_EQUAL_UINT(n, body + 4);
+}
+
 void test_build_server_hello()
 {
     uint8_t exp[128];
@@ -777,6 +812,7 @@ int main(void)
     RUN_TEST(test_tls13_builder_cap_guards);
     RUN_TEST(test_parse_client_hello);
     RUN_TEST(test_client_hello_suite_and_compression);
+    RUN_TEST(test_server_hello_echoes_session_id);
     RUN_TEST(test_build_server_hello);
     RUN_TEST(test_tls13_build_server_hello_conn_id);
     RUN_TEST(test_build_certificate);
