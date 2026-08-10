@@ -6,6 +6,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+<<<<<<< Updated upstream
+=======
+- a liboqs disagreement read as liboqs being absent; scope the agent rules to tools/ ([`b8a07dc`](https://github.com/dstroy0/ProtoCore/commit/b8a07dcfb33b830ea3cd2f36d3e0454bb02cd3a9))
+>>>>>>> Stashed changes
 - the vendor arm hashed at an offset only the software arm defined ([`5b26f3a`](https://github.com/dstroy0/ProtoCore/commit/5b26f3a4b5bb997fbc4e9840efc456047323fa75))
 - the misaligned priming load ran with less than a word of work left ([`022e8ed`](https://github.com/dstroy0/ProtoCore/commit/022e8edd96793a99d334dea02b9015df3306e32f))
 - claiming a slot orphaned both engines' borrows ([`c722cbf`](https://github.com/dstroy0/ProtoCore/commit/c722cbfa93b8118b8abc016d5e408bed5d118109))
@@ -97,7 +101,12 @@ All notable changes to ProtoCore are documented here.
 ### CI / Build
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+- refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
+>>>>>>> Stashed changes
+=======
+- update CHANGELOG.md [skip ci] ([`c030722`](https://github.com/dstroy0/ProtoCore/commit/c030722765b0816f9191737ed4fda5d5a55b0892))
 - refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
 >>>>>>> Stashed changes
 - the .pio ignore never matched, so vendored littlefs kept reporting ([`c4368d3`](https://github.com/dstroy0/ProtoCore/commit/c4368d3862d2c8a99c1c85093aa503695ee251d4))
@@ -389,6 +398,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the connection borrows its handshake bytes; the secure arena sums the term ([`881f0bd`](https://github.com/dstroy0/ProtoCore/commit/881f0bd6a102a88fb1250b0055c72db2a8bdce18))
 - the connection borrows its stream and CRYPTO bytes; the dead rx buffer goes ([`da5c60d`](https://github.com/dstroy0/ProtoCore/commit/da5c60d30379d2eb3f149e182463340aa3f31f5d))
 - the connection borrows its stream bytes; the caps move to the config ([`9b7b41b`](https://github.com/dstroy0/ProtoCore/commit/9b7b41bd628fc88478f08c5fdd2c5709318fe10a))
 - the connection borrows its buffers; the arena sums the terms ([`57871e8`](https://github.com/dstroy0/ProtoCore/commit/57871e8afe8917b117e0f34a4e3713b4ae53ebd2))
