@@ -195,6 +195,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
+    memset(&cfg, 0, sizeof(cfg));
     cfg.cert_der = server_ed_pub;
     cfg.cert_len = 32;
     cfg.ed25519_seed = SERVER_ED_SEED;
@@ -397,6 +398,7 @@ static void test_coaps_forwards_handshake(void)
     pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
+    memset(&cfg, 0, sizeof(cfg));
     cfg.cert_der = server_ed_pub;
     cfg.cert_len = 32;
     cfg.ed25519_seed = SERVER_ED_SEED;

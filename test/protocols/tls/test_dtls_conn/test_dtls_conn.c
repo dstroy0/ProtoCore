@@ -547,6 +547,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
 
 static void server_cfg(DtlsServerConfig *cfg, const uint8_t server_ed_pub[32])
 {
+    memset(cfg, 0, sizeof(*cfg));
     cfg->cert_der = server_ed_pub; // the "certificate" is the raw Ed25519 public key for this test
     cfg->cert_len = 32;
     cfg->ed25519_seed = SERVER_ED_SEED;
