@@ -83,6 +83,20 @@ static void send_control(H2Conn *c, size_t (*build)(uint8_t *, size_t))
     }
 }
 
+// Reset one stream (RFC 9113 sec 5.4.2: a stream error kills the stream, not the connection). The
+// frame is built in a borrow from the arena HTTP works out of and released here.
+static void send_rst(H2Conn *c, uint32_t stream_id, uint32_t err)
+{
+    const size_t mark = pc_plaintext_mark();
+    pc_span f = pc_plaintext_span(H2_FRAME_HEADER_LEN + 4, 4);
+    if (pc_span_ok(f))
+    {
+        size_t n = pc_h2_build_rst_stream(f.buf, f.cap, stream_id, err);
+        wr(c, f.buf, n);
+    }
+    pc_plaintext_release(mark);
+}
+
 // HPACK emit context: routes each decoded header to the app callback with the stream id.
 typedef struct
 {
@@ -237,21 +251,9 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
     {
         return PROTO_FALSE;
     }
-    // The outbound frame lives only for this call, so it is borrowed from the arena HTTP works out
-    // of and released before every return.
-    const size_t mark = pc_plaintext_mark();
-    pc_span f = pc_plaintext_span(H2_FRAME_HEADER_LEN + 4, 4);
-    if (!pc_span_ok(f))
-    {
-        pc_plaintext_release(mark);
-        return PROTO_FALSE; // arena exhausted: fail closed
-    }
-
     if (s->state != H2_ST_OPEN)
     {
-        size_t rn = pc_h2_build_rst_stream(f.buf, f.cap, h->stream_id, H2_STREAM_CLOSED);
-        wr(c, f.buf, rn);
-        pc_plaintext_release(mark);
+        send_rst(c, h->stream_id, H2_STREAM_CLOSED);
         return PROTO_TRUE; // the stream dies, the connection lives
     }
 
@@ -264,15 +266,23 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
     {
         s->state = H2_ST_HALF_CLOSED;
     }
-    // Replenish flow-control windows for the bytes we consumed (whole frame length).
+    // Replenish flow-control windows for the bytes we consumed (whole frame length). Both frames are
+    // built in one borrow from the arena HTTP works out of, released here.
     if (h->length > 0)
     {
+        const size_t mark = pc_plaintext_mark();
+        pc_span f = pc_plaintext_span(H2_FRAME_HEADER_LEN + 4, 4);
+        if (!pc_span_ok(f))
+        {
+            pc_plaintext_release(mark);
+            return PROTO_FALSE; // arena exhausted: fail closed
+        }
         size_t n = pc_h2_build_window_update(f.buf, f.cap, 0, h->length);
         wr(c, f.buf, n);
         n = pc_h2_build_window_update(f.buf, f.cap, h->stream_id, h->length);
         wr(c, f.buf, n);
+        pc_plaintext_release(mark);
     }
-    pc_plaintext_release(mark);
     return PROTO_TRUE;
 }
 
@@ -322,8 +332,16 @@ static proto_bool process_frame(H2Conn *c)
             return PROTO_FALSE;
         }
         uint32_t inc = rd32(payload) & 0x7FFFFFFF;
+        // RFC 9113 sec 6.9: a zero increment is an error, and sec 6.9.1 caps a window at 2^31-1 - a
+        // WINDOW_UPDATE that would carry it past that is a FLOW_CONTROL_ERROR. Both are connection
+        // errors on the connection window and stream errors on a stream's. The cap is tested by
+        // subtracting from the ceiling rather than adding to the window, so it cannot itself overflow.
         if (h.stream_id == 0)
         {
+            if (inc == 0 || c->conn_send_window > (int32_t)(0x7FFFFFFFu - inc))
+            {
+                return PROTO_FALSE;
+            }
             c->conn_send_window += (int32_t)inc;
         }
         else
@@ -331,6 +349,16 @@ static proto_bool process_frame(H2Conn *c)
             H2Stream *s = find_stream(c, h.stream_id);
             if (s)
             {
+                if (inc == 0 || s->send_window > (int32_t)(0x7FFFFFFFu - inc))
+                {
+                    uint32_t err = H2_FLOW_CONTROL_ERROR;
+                    if (inc == 0)
+                    {
+                        err = H2_PROTOCOL_ERROR;
+                    }
+                    send_rst(c, h.stream_id, err);
+                    return PROTO_TRUE; // the stream dies, the connection lives
+                }
                 s->send_window += (int32_t)inc;
             }
         }
