@@ -65,6 +65,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`22eb995`](https://github.com/dstroy0/ProtoCore/commit/22eb995add6e06ecb494ee3626bf158322a662eb))
 - update CHANGELOG.md [skip ci] ([`138dd71`](https://github.com/dstroy0/ProtoCore/commit/138dd715b795d9b263bf17bb2a8f1c0ba7151f4c))
 - update CHANGELOG.md [skip ci] ([`b45d24a`](https://github.com/dstroy0/ProtoCore/commit/b45d24a20335274a11e08d425992b0a3606cc06a))
 - update CHANGELOG.md [skip ci] ([`2e0fd31`](https://github.com/dstroy0/ProtoCore/commit/2e0fd3146bbc4ea0ccfe08c89a20baad69d54c67))
@@ -201,6 +202,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`371e62a`](https://github.com/dstroy0/ProtoCore/commit/371e62a2c1dba63ae4ea0bb643471b93ea55dfd0))
 - close the KEX-guess finding ([`6a5f9d2`](https://github.com/dstroy0/ProtoCore/commit/6a5f9d2f4a8c5d9909196bcb8e2bf4645638ad31))
 - close the four ssh-transport-kex findings that are fixed ([`fc00a07`](https://github.com/dstroy0/ProtoCore/commit/fc00a076c272fe82c7dbe6bf37fed4527a9306b2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aadd3e7`](https://github.com/dstroy0/ProtoCore/commit/aadd3e762c0a76874265b9f1dc96906af0c0a964))
@@ -255,6 +257,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- two GCM packets on one key install prove the RFC 5647 counter advances ([`315cad3`](https://github.com/dstroy0/ProtoCore/commit/315cad3496257876e39a9da677536a9d36ebbdcf))
 - a losing KEX guess is dropped and the real KEXDH_INIT still lands ([`1f3ae20`](https://github.com/dstroy0/ProtoCore/commit/1f3ae20aaebd0accbddcd7d9fc6f5bd104d69108))
 - the re-key fixture states that the first KEX already sent EXT_INFO ([`87dc1bc`](https://github.com/dstroy0/ProtoCore/commit/87dc1bc48cf80c7dddf4ace4214b030f2b12210a))
 - the comp suite builds the KDF inputs struct too ([`e6fc118`](https://github.com/dstroy0/ProtoCore/commit/e6fc1186f6ab18f567b60011aba2b42c5cc5a7b6))
