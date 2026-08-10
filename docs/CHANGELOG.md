@@ -6,15 +6,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-- a liboqs disagreement read as liboqs being absent; scope the agent rules to tools/ ([`b8a07dc`](https://github.com/dstroy0/ProtoCore/commit/b8a07dcfb33b830ea3cd2f36d3e0454bb02cd3a9))
->>>>>>> Stashed changes
-=======
 - sha256's accelerated arm dropped the work parameter; the KDF term ignored its context ([`81a70cb`](https://github.com/dstroy0/ProtoCore/commit/81a70cb0d4faa8d60412320e25c53887a872d218))
 - a liboqs disagreement read as liboqs being absent; scope the agent rules to tools/ ([`b8a07dc`](https://github.com/dstroy0/ProtoCore/commit/b8a07dcfb33b830ea3cd2f36d3e0454bb02cd3a9))
->>>>>>> Stashed changes
 - the vendor arm hashed at an offset only the software arm defined ([`5b26f3a`](https://github.com/dstroy0/ProtoCore/commit/5b26f3a4b5bb997fbc4e9840efc456047323fa75))
 - the misaligned priming load ran with less than a word of work left ([`022e8ed`](https://github.com/dstroy0/ProtoCore/commit/022e8edd96793a99d334dea02b9015df3306e32f))
 - claiming a slot orphaned both engines' borrows ([`c722cbf`](https://github.com/dstroy0/ProtoCore/commit/c722cbfa93b8118b8abc016d5e408bed5d118109))
@@ -105,21 +98,11 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-- refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
->>>>>>> Stashed changes
-=======
-- update CHANGELOG.md [skip ci] ([`c030722`](https://github.com/dstroy0/ProtoCore/commit/c030722765b0816f9191737ed4fda5d5a55b0892))
-- refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
->>>>>>> Stashed changes
-=======
+- update CHANGELOG.md [skip ci] ([`b44dd08`](https://github.com/dstroy0/ProtoCore/commit/b44dd0891ca684bcaff91c12c22fb4fc1a51d8a4))
+- update CHANGELOG.md [skip ci] ([`84d5137`](https://github.com/dstroy0/ProtoCore/commit/84d513794e327eb6c32640845f2d042e1e0ed4dc))
 - update CHANGELOG.md [skip ci] ([`b17ea59`](https://github.com/dstroy0/ProtoCore/commit/b17ea592cfecb2d55dc79303c7d5ce7098397d6d))
 - update CHANGELOG.md [skip ci] ([`c030722`](https://github.com/dstroy0/ProtoCore/commit/c030722765b0816f9191737ed4fda5d5a55b0892))
 - refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
->>>>>>> Stashed changes
 - the .pio ignore never matched, so vendored littlefs kept reporting ([`c4368d3`](https://github.com/dstroy0/ProtoCore/commit/c4368d3862d2c8a99c1c85093aa503695ee251d4))
 - update CHANGELOG.md [skip ci] ([`a2f994f`](https://github.com/dstroy0/ProtoCore/commit/a2f994f818cab261501bf036b444ede0f28ad8fa))
 - update CHANGELOG.md [skip ci] ([`ab67473`](https://github.com/dstroy0/ProtoCore/commit/ab674734caf80f35155c0ab331fd28d10dac3714))
@@ -326,6 +309,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- the SWAR leaves cannot be reached through their Ns table at -Og ([`72ae4dd`](https://github.com/dstroy0/ProtoCore/commit/72ae4ddcaf08db478ede87374cc9f8b75a91b283))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`44417cb`](https://github.com/dstroy0/ProtoCore/commit/44417cb83666bd04f5db4458cf1dfd39c7cfca15))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f79357d`](https://github.com/dstroy0/ProtoCore/commit/f79357d8c13332fdb4cb496669f5ef203ddcd6e3))
 - 81 citations went stale when core_setup, the harnesses and ci_tooling moved ([`7346901`](https://github.com/dstroy0/ProtoCore/commit/7346901bc44a08f8030de9c277756a7596352e15))
