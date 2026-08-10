@@ -48,6 +48,18 @@ runs:
           # --autostash: the generated files are unstaged at this point and a rebase refuses to
           # start on a dirty tree.
           git pull --rebase --autostash $REBASE_FLAGS origin main || { git rebase --abort 2>/dev/null || true; }
+          # The rebase abort above does not cover the autostash POP, which runs after a rebase that
+          # succeeded and leaves its own conflict in the working tree - labelled "Updated upstream" /
+          # "Stashed changes" rather than the rebase's own labels. Its markers would be committed by
+          # the add below. Every file this action is given is regenerated wholesale earlier in the
+          # run, so an unmerged one is dropped and the next run regenerates it against a settled main.
+          for f in $BOT_FILES; do
+            if git ls-files -u -- "$f" | grep -q .; then
+              echo "::warning title=bot-commit::$f came out of the autostash pop unmerged; dropping it"
+              git checkout HEAD -- "$f"
+            fi
+          done
+          git stash drop 2>/dev/null || true
           # Unquoted: the input carries several paths and each is its own pathspec.
           git add $BOT_FILES
           if git diff --cached --quiet; then

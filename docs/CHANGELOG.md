@@ -6,11 +6,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
-<<<<<<< Updated upstream
-=======
 - modmul guarded its operand count nowhere; stale .cpp references ([`e527f96`](https://github.com/dstroy0/ProtoCore/commit/e527f9655e20078cd9637a52d3fe68f716256b0c))
 - the RSA memory-init wait was inverted; four more the vendor arm never proved ([`2043db6`](https://github.com/dstroy0/ProtoCore/commit/2043db670b7c8f7d50c910eda3060885528c4543))
->>>>>>> Stashed changes
 - sha256's accelerated arm dropped the work parameter; the KDF term ignored its context ([`81a70cb`](https://github.com/dstroy0/ProtoCore/commit/81a70cb0d4faa8d60412320e25c53887a872d218))
 - a liboqs disagreement read as liboqs being absent; scope the agent rules to tools/ ([`b8a07dc`](https://github.com/dstroy0/ProtoCore/commit/b8a07dcfb33b830ea3cd2f36d3e0454bb02cd3a9))
 - the vendor arm hashed at an offset only the software arm defined ([`5b26f3a`](https://github.com/dstroy0/ProtoCore/commit/5b26f3a4b5bb997fbc4e9840efc456047323fa75))
@@ -103,10 +100,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
-<<<<<<< Updated upstream
-=======
 - the ban checker never walked core_setup, so 65 sites went unenforced ([`279ffb8`](https://github.com/dstroy0/ProtoCore/commit/279ffb8e4ea7eccd76031beac58ed285a9effffd))
->>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`b44dd08`](https://github.com/dstroy0/ProtoCore/commit/b44dd0891ca684bcaff91c12c22fb4fc1a51d8a4))
 - update CHANGELOG.md [skip ci] ([`84d5137`](https://github.com/dstroy0/ProtoCore/commit/84d513794e327eb6c32640845f2d042e1e0ed4dc))
 - update CHANGELOG.md [skip ci] ([`b17ea59`](https://github.com/dstroy0/ProtoCore/commit/b17ea592cfecb2d55dc79303c7d5ce7098397d6d))
