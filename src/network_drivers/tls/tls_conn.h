@@ -113,6 +113,7 @@ typedef struct
     uint8_t *terms;          ///< PC_TLS_CONN_TERMS_CAP: the five 32-byte terms, at TLS_TERM_* offsets
     uint8_t *hash_work;      ///< PC_SHA256_BORROW: the bytes @ref transcript works out of
     uint8_t *sign_work;      ///< PC_SHA512_BORROW: the bytes the CertificateVerify signature works out of
+    uint8_t *ks_work;        ///< PC_TLS13_KS_BORROW: the bytes the key schedule works out of
     Tls13ClientHello *hello; ///< the peer's parsed ClientHello
 } TlsConn;
 

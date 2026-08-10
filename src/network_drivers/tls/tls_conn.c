@@ -239,6 +239,7 @@ proto_bool tls_conn_slot_storage(TlsConn *c)
     c->terms = b.buf + TLS_OFF_TERMS;
     c->hash_work = b.buf + TLS_OFF_HASH;
     c->sign_work = b.buf + TLS_OFF_SIGN;
+    c->ks_work = b.buf + TLS_OFF_KS;
     c->hello = (Tls13ClientHello *)(b.buf + TLS_OFF_HELLO);
     return PROTO_TRUE;
 }
@@ -264,7 +265,7 @@ static proto_bool conn_init(TlsConn *c, TlsRole role, const TlsConnConfig *cfg)
     c->role = role;
     c->state = TLS_CONN_START;
     pc_sha256_init(&c->transcript, c->hash_work);
-    return pc_tls13_ks_early(&TLS13_KDF, &c->ks, base + TLS_OFF_KS);
+    return pc_tls13_ks_early(&TLS13_KDF, &c->ks, c->ks_work);
 }
 
 // The client half needs the mirror of pc_tls13_msg - a ClientHello builder and a ServerHello
