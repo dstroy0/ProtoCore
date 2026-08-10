@@ -775,8 +775,9 @@ void test_h2_unknown_stream_frames(void)
     TEST_ASSERT_EQUAL_INT32(before, c.conn_send_window);
 }
 
-// DATA with an empty payload is delivered but replenishes no flow-control window, and
-// DATA naming a stream that is not open is still passed to the app.
+// DATA with an empty payload is delivered but replenishes no flow-control window. DATA naming a
+// stream no HEADERS ever opened is a connection error (RFC 9113 sec 5.1) and its payload MUST NOT
+// reach the application - that delivery is the request-smuggling surface.
 void test_h2_data_empty_and_unknown_stream(void)
 {
     static Cap cap;
@@ -788,11 +789,32 @@ void test_h2_data_empty_and_unknown_stream(void)
     TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, cap.out_len, H2_WINDOW_UPDATE, NULL)); // nothing consumed
     TEST_ASSERT_EQUAL_STRING("", cap.body);
 
-    // DATA with END_STREAM on an id with no stream slot: delivered, no state to update.
+    // Stream 5 was never opened: the connection dies and the bytes are never handed up.
     const uint8_t d[2] = {'o', 'k'};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 5, d, 2));
-    TEST_ASSERT_EQUAL_STRING("ok", cap.body);
-    TEST_ASSERT_TRUE(cap.data_end);
+    TEST_ASSERT_FALSE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 5, d, 2));
+    TEST_ASSERT_EQUAL_STRING("", cap.body);
+    TEST_ASSERT_FALSE(cap.data_end);
+}
+
+// RFC 9113 sec 6.1: DATA on a stream that is no longer open is a stream error of type STREAM_CLOSED -
+// the connection survives, that stream is reset, and the late bytes are not delivered.
+void test_h2_data_after_end_stream_resets_the_stream(void)
+{
+    static Cap cap;
+    H2Conn c;
+    establish(&c, &cap);
+    open_stream(&c, 1);
+
+    const uint8_t first[2] = {'h', 'i'};
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, first, 2));
+    TEST_ASSERT_EQUAL_STRING("hi", cap.body);
+
+    cap.out_len = 0;
+    cap.body[0] = '\0';
+    const uint8_t late[3] = {'b', 'a', 'd'};
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, 0, 1, late, 3)); // connection lives
+    TEST_ASSERT_EQUAL_STRING("", cap.body);                   // the bytes never reach the app
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 }
 
 // respond() frees the stream slot, so a header block still being reassembled when the
@@ -880,6 +902,7 @@ int main(void)
     RUN_TEST(test_h2_continuation_without_headers);
     RUN_TEST(test_h2_unknown_stream_frames);
     RUN_TEST(test_h2_data_empty_and_unknown_stream);
+    RUN_TEST(test_h2_data_after_end_stream_resets_the_stream);
     RUN_TEST(test_h2_continuation_after_stream_freed);
     RUN_TEST(test_h2_respond_default_chunk_size);
     RUN_TEST(test_h2_respond_content_length_no_room);
