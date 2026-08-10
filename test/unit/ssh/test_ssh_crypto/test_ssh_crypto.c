@@ -70,6 +70,44 @@ static void bytes_to_hex(char *out, const uint8_t *in, size_t n)
 // SHA-256 tests (NIST FIPS 180-4, §B.1-B.3)
 // ============================================================================
 
+// FIPS 180-4 sec 5.1.1 pads to a 64-byte block with a 0x80 mark and an 8-byte length, so a message
+// fits its last block only while len%64 <= 55. 55 is the maximal single-block case, 63 and 64
+// bracket the block itself, and each forces a different padding branch. Digests are from an
+// independent SHA-256 (Python hashlib) over the same deterministic bytes the test builds.
+static void sha256_bound_case(size_t n, const char *want_hex)
+{
+    uint8_t msg[64];
+    for (size_t i = 0; i < n; i++)
+    {
+        msg[i] = (uint8_t)((i * 7u + 3u) & 0xFFu);
+    }
+    uint8_t got[32];
+    pc_sha256(tw, msg, n, got);
+    uint8_t expected[32];
+    hex_to_bytes(expected, want_hex, 32);
+    char m[40];
+    snprintf(m, sizeof(m), "SHA-256 over %u bytes", (unsigned)n);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(expected, got, 32, m);
+}
+
+// 55 bytes: the mark and the 8-byte length exactly fill the block, with no second one.
+static void test_sha256_len55_fills_one_block(void)
+{
+    sha256_bound_case(55, "e7313d333c272e639f790978283f9eb392e843d0f29b7016828bb1daa4aac70b");
+}
+
+// 63 bytes: the mark fits, the length does not, so padding spills into a second block.
+static void test_sha256_len63_spills_the_length(void)
+{
+    sha256_bound_case(63, "81c80242132f230c3bd41b3e63bbcff16107339549214a99614ff26664625055");
+}
+
+// 64 bytes: a whole block of message, so the entire pad block is appended.
+static void test_sha256_len64_pads_a_whole_block(void)
+{
+    sha256_bound_case(64, "39e3d7b6b5d075d37d053ad89b24b41bef4f3c29760c84447cab3f3be1882241");
+}
+
 static void test_sha256_empty(void)
 {
     // SHA256("") = e3b0c44298fc1c149afb...
@@ -1830,6 +1868,9 @@ int main(void)
 
     // SHA-256
     RUN_TEST(test_sha256_empty);
+    RUN_TEST(test_sha256_len55_fills_one_block);
+    RUN_TEST(test_sha256_len63_spills_the_length);
+    RUN_TEST(test_sha256_len64_pads_a_whole_block);
     RUN_TEST(test_sha256_abc);
     RUN_TEST(test_sha256_448bit);
     RUN_TEST(test_sha256_streaming);
