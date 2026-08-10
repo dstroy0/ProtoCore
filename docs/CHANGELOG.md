@@ -113,6 +113,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`1d72122`](https://github.com/dstroy0/ProtoCore/commit/1d721224e499fe32fc248590051c11e09f024746))
 - update CHANGELOG.md [skip ci] ([`fbe8c40`](https://github.com/dstroy0/ProtoCore/commit/fbe8c4007932925ca333dbc2779023eb443b092c))
 - update CHANGELOG.md [skip ci] ([`41914f4`](https://github.com/dstroy0/ProtoCore/commit/41914f4bc75c4d9261d3eb7bf67df494c4fc0f1d))
 - update CHANGELOG.md [skip ci] ([`7241153`](https://github.com/dstroy0/ProtoCore/commit/7241153e8d14797d64f886e67b9598af4739c37d))
@@ -479,6 +480,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- a low-order key share must be refused, not keyed off ([`d159378`](https://github.com/dstroy0/ProtoCore/commit/d1593783f42b5095f1dc8a3a8b334be95d6e0edb))
 - the DigestInfo was checked against the constant that built it ([`25a51a7`](https://github.com/dstroy0/ProtoCore/commit/25a51a7ba8811efbe4ccfe762f92dfc412ac41d5))
 - the continuity check compared the one-shot to the path it routes through ([`a3ca678`](https://github.com/dstroy0/ProtoCore/commit/a3ca678eeeff5f63a7412b0d085bbd65202734c8))
 - the block loop and the rate-1 pad merge were unreached at every rate ([`eaf91bf`](https://github.com/dstroy0/ProtoCore/commit/eaf91bf6bb8cd18e7b84c71ed235bd55881d6ed0))
