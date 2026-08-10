@@ -2120,9 +2120,54 @@ static void test_local_cid_requires_nonempty_id(void)
     TEST_ASSERT_EQUAL_UINT8(0xEE, cid_out[0]); // the caller's buffer was left untouched
 }
 
+// RFC 8446 sec 7.4.2: "Implementations MUST check whether the computed Diffie-Hellman shared secret
+// is the all-zero value and abort if so". X25519 returns all zeros for a low-order key share, so a
+// peer offering one would otherwise drive both sides onto a secret it already knows. Both published
+// low-order points are refused with illegal_parameter.
+static void low_order_share_is_refused(const uint8_t client_pub[32], const char *what)
+{
+    uint8_t server_ed_pub[32];
+    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+
+    DtlsServerConfig cfg;
+    server_cfg(&cfg, server_ed_pub);
+    DtlsServer.init(&g_dtls, &cfg, NULL, 0);
+
+    uint8_t ch[256];
+    size_t ch_len = build_client_hello(ch, client_pub);
+
+    uint8_t ch_frag[300];
+    size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
+                                            ch_frag, sizeof(ch_frag));
+    uint8_t ch_rec[320];
+    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+
+    uint8_t out[2048];
+    int rc = DtlsServer.process(&g_dtls, ch_rec, ch_rl, out, sizeof(out));
+    TEST_ASSERT_EQUAL_INT_MESSAGE(-1, rc, what);
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(47, DtlsServer.alert(&g_dtls), what); // illegal_parameter
+}
+
+void test_low_order_keyshare_all_zero_is_refused(void)
+{
+    uint8_t pub[32];
+    memset(pub, 0, sizeof(pub));
+    low_order_share_is_refused(pub, "all-zero key share");
+}
+
+void test_low_order_keyshare_one_is_refused(void)
+{
+    uint8_t pub[32];
+    memset(pub, 0, sizeof(pub));
+    pub[0] = 0x01;
+    low_order_share_is_refused(pub, "key share u=1");
+}
+
 int main(void)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_low_order_keyshare_all_zero_is_refused);
+    RUN_TEST(test_low_order_keyshare_one_is_refused);
     RUN_TEST(test_full_handshake);
     RUN_TEST(test_timer_stopped_by_done_state);
     RUN_TEST(test_established_requires_app_keys);
