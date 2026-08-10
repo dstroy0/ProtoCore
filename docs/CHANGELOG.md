@@ -112,6 +112,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`14783ab`](https://github.com/dstroy0/ProtoCore/commit/14783ab055a78211d18273f67540bf5ed45ee975))
 - update CHANGELOG.md [skip ci] ([`312be6f`](https://github.com/dstroy0/ProtoCore/commit/312be6f3d9ec7e929505dd9f5a6133dab6dd7f33))
 - update test report + coverage [skip ci] ([`9cc54c6`](https://github.com/dstroy0/ProtoCore/commit/9cc54c6abdb59b8d6f9e849711fa58a7b64fb809))
 - update CHANGELOG.md [skip ci] ([`6e093f8`](https://github.com/dstroy0/ProtoCore/commit/6e093f80e86b7d94adbc7f73b9ef47fd8406b87d))
@@ -467,6 +468,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the ed25519 runner asserted vector metadata; RFC 8032 TEST 1024 was absent ([`f60ab02`](https://github.com/dstroy0/ProtoCore/commit/f60ab02ba24e5c66a6aa2be2a6d7092b87c1db69))
 - pc_ct_eq had no test; every tag and MAC check goes through it ([`e465c91`](https://github.com/dstroy0/ProtoCore/commit/e465c9123e59f4ec03dd90bdb7eaab031440dfa2))
 - the blob test pinned the host double's truncation, not the contract ([`ffe68b0`](https://github.com/dstroy0/ProtoCore/commit/ffe68b0183bef5e9b66b83fd98a74bae563923fa))
 - host_nvs reaches str now, so its two envs compile protostr ([`3c5dd8e`](https://github.com/dstroy0/ProtoCore/commit/3c5dd8e380c00c1a188b6b3ba667b241f5d17bd0))
