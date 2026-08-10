@@ -175,6 +175,60 @@ void test_shake_empty()
 
 // The incremental XOF (pc_shake128_absorb + repeated pc_keccak_squeeze) must produce the same stream as one
 // shot, including across the 168-octet block boundary that ML-KEM's rejection sampler crosses.
+// The continuity check below compares the one-shot against the incremental path, but sha3.c routes
+// the one-shot through that same squeeze - so it proves the split does not corrupt state, and not
+// that the stream is right. Only the first 32 bytes were ever pinned externally. These pin the
+// whole 200-byte stream, past the 168- and 136-octet rate boundaries, against an independent
+// FIPS 202 (Python hashlib).
+void test_shake128_stream_matches_published()
+{
+    uint8_t got[200];
+    uint8_t want[200];
+    pc_shake128(got, sizeof(got), (const uint8_t *)"abc", 3);
+    hx("5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8"
+       "44c50af32acd3f2cdd066568706f509bc1bdde58295dae3f891a9a0fca578378"
+       "9a41f8611214ce612394df286a62d1a2252aa94db9c538956c717dc2bed4f232"
+       "a0294c857c730aa16067ac1062f1201fb0d377cfb9cde4c63599b27f3462bba4"
+       "a0ed296c801f9ff7f57302bb3076ee145f97a32ae68e76ab66c48d51675bd49a"
+       "cc29082f5647584e6aa01b3f5af057805f973ff8ecb8b226ac32ada6f01c1fcd"
+       "4818cb006aa5b4cd",
+       want, sizeof(want));
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, sizeof(want));
+}
+
+void test_shake256_stream_matches_published()
+{
+    uint8_t got[200];
+    uint8_t want[200];
+    pc_shake256(got, sizeof(got), (const uint8_t *)"abc", 3);
+    hx("483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739"
+       "d5a15bef186a5386c75744c0527e1faa9f8726e462a12a4feb06bd8801e751e4"
+       "1385141204f329979fd3047a13c5657724ada64d2470157b3cdc288620944d78"
+       "dbcddbd912993f0913f164fb2ce95131a2d09a3e6d51cbfc622720d7a75c6334"
+       "e8a2d7ec71a7cc29cf0ea610eeff1a588290a53000faa79932becec0bd3cd0b3"
+       "3a7e5d397fed1ada9442b99903f4dcfd8559ed3950faf40fe6f3b5d710ed3b67"
+       "7513771af6bfe119",
+       want, sizeof(want));
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, sizeof(want));
+}
+
+// SHAKE256's incremental path was never exercised: only SHAKE128 has an absorb wrapper, so a
+// caller reaches SHAKE256 incrementally through the generic primitive, which is what this drives.
+void test_shake256_stream_continuity()
+{
+    const uint8_t msg[3] = {'a', 'b', 'c'};
+
+    uint8_t oneshot[200];
+    pc_shake256(oneshot, sizeof(oneshot), msg, sizeof(msg));
+
+    KeccakCtx ctx;
+    pc_keccak_absorb(&ctx, KECCAK_RATE_SHAKE256, msg, sizeof(msg), 0x1F);
+    uint8_t split[200];
+    pc_keccak_squeeze(&ctx, split, 100);       // inside the first 136-octet block
+    pc_keccak_squeeze(&ctx, split + 100, 100); // continues past the boundary
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(oneshot, split, sizeof(oneshot));
+}
+
 void test_shake_stream_continuity()
 {
     const uint8_t msg[3] = {'a', 'b', 'c'};
@@ -199,6 +253,9 @@ int main()
     RUN_TEST(test_shake128_rate_boundaries);
     RUN_TEST(test_sha3_512);
     RUN_TEST(test_shake_empty);
+    RUN_TEST(test_shake128_stream_matches_published);
+    RUN_TEST(test_shake256_stream_matches_published);
+    RUN_TEST(test_shake256_stream_continuity);
     RUN_TEST(test_shake_stream_continuity);
     return UNITY_END();
 }
