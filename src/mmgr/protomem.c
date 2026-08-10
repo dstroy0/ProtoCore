@@ -135,11 +135,11 @@ int pc_mem_cmp(const void *a, const void *b, size_t n)
 
     while (i + PC_SWAR_BYTES <= n)
     {
-        pc_swar_word d = pc_swar_load(x + i) ^ pc_swar_load(y + i);
+        pc_swar_word d = swar.load(x + i) ^ swar.load(y + i);
         if (d != 0)
         {
             // The guard bit stands on every lane that differs, and the lowest one is where they part.
-            i += pc_swar_zero_lane(PC_SWAR_HIGH & ~pc_swar_has_zero(d));
+            i += swar.zero_lane(PC_SWAR_HIGH & ~swar.has_zero(d));
             return (int)(unsigned char)x[i] - (int)(unsigned char)y[i];
         }
         i += PC_SWAR_BYTES;
@@ -180,10 +180,10 @@ const void *pc_mem_chr(const void *p, size_t n, uint8_t c)
     }
     while (i + PC_SWAR_BYTES <= n)
     {
-        pc_swar_word m = pc_swar_eq_sel(pc_swar_load_al(s + i), c, PROTO_FALSE);
+        pc_swar_word m = swar.eq(swar.load_al(s + i), c, PROTO_FALSE);
         if (m != 0)
         {
-            return s + i + pc_swar_zero_lane(m);
+            return s + i + swar.zero_lane(m);
         }
         i += PC_SWAR_BYTES;
     }
