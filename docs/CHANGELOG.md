@@ -112,6 +112,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- kat_data.inc is generated and committed with nothing checking it matches ([`861e8e3`](https://github.com/dstroy0/ProtoCore/commit/861e8e3381616ff023206ca314a09f58b682e7a2))
+- update CHANGELOG.md [skip ci] ([`559dbb3`](https://github.com/dstroy0/ProtoCore/commit/559dbb38d3db0a543a4ecf239bd93a27570c274a))
 - update CHANGELOG.md [skip ci] ([`4c3c169`](https://github.com/dstroy0/ProtoCore/commit/4c3c16976a4206831eb2e88ef213030729329d3e))
 - update CHANGELOG.md [skip ci] ([`3b8e14d`](https://github.com/dstroy0/ProtoCore/commit/3b8e14df74ca6de0d64324b75472deabcd525971))
 - update CHANGELOG.md [skip ci] ([`14783ab`](https://github.com/dstroy0/ProtoCore/commit/14783ab055a78211d18273f67540bf5ed45ee975))
