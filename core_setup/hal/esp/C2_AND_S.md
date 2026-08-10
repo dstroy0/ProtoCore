@@ -63,14 +63,20 @@ CPU copy loops for all block transactions.
 
 ---
 
-| Offset                                                                           | Register Name  | R/W | Field/Bit Configuration [Details]                              |
-| -------------------------------------------------------------------------------- | -------------- | --- | -------------------------------------------------------------- |
-| 0x000                                                                            | RSA_M_K_REG    | R/W | [31:0] Montgomery Constant M' (M' = -1/M mod 2^32)             |
-| 0x004                                                                            | RSA_LENGTH_REG | R/W | [5:0]: Array size bound register: ((Bit_Width / 32) - 1)       |
-| 0x008                                                                            | RSA_V_CMD_REG  | R/W | [1:0]: 0x0=ModExp, 0x1=ModMult, 0x2=Large-Int Mult             |
-| 0x00C                                                                            | RSA_READY_REG  | R   | Bit 0: 1=Pipeline ready / Engine idle, 0=Computing             |
-| 0x100                                                                            | RSA_MEM_X_BASE | R/W | Multiplicand Block Memory Array X (512 bytes / 4096-bit limit) |
-| 0x300                                                                            | RSA_MEM_Y_BASE | R/W | Exponent / Multiplier Block Memory Array Y (512 bytes)         |
-| 0xC00                                                                            | RSA_MEM_M_BASE | R/W | Modulus Block Memory Array M (512 bytes)                       |
-| 0xE00                                                                            | RSA_MEM_Z_BASE | R/W | Result / Intermediate Output Block Memory Array Z (512 bytes)  |
-| ================================================================================ |
+| Offset | Register Name           | R/W | Field/Bit Configuration [Details]                                    |
+| ------ | ----------------------- | --- | -------------------------------------------------------------------- |
+| 0x000  | RSA_MEM_M_BLOCK_BASE    | R/W | Modulus M (512 bytes / 4096-bit limit)                               |
+| 0x200  | RSA_MEM_Z_BLOCK_BASE    | R/W | Result Z, also RSA_MEM_RB_BLOCK_BASE (512 bytes)                     |
+| 0x400  | RSA_MEM_Y_BLOCK_BASE    | R/W | Operand Y: exponent for MODEXP, multiplier for MULT (512 bytes)      |
+| 0x600  | RSA_MEM_X_BLOCK_BASE    | R/W | Operand X: base / multiplicand (512 bytes)                           |
+| 0x800  | RSA_M_DASH_REG          | R/W | Montgomery m' = -M^-1 mod 2^32                                       |
+| 0x804  | RSA_MODEXP_MODE_REG     | R/W | Operand length in words, minus 1, for MODEXP                         |
+| 0x808  | RSA_MODEXP_START_REG    | W   | Write 1: start Montgomery modular exponentiation                     |
+| 0x80C  | RSA_MULT_MODE_REG       | R/W | Operand length selector for MULT                                     |
+| 0x810  | RSA_MULT_START_REG      | W   | Write 1: start plain large-integer multiplication                    |
+| 0x814  | RSA_CLEAR_INTERRUPT_REG | R/W | Write 1 clears the completion flag; reads it as RSA_QUERY_INTERRUPT  |
+| 0x818  | RSA_QUERY_CLEAN_REG     | R   | [0]: 0 = memory init NOT complete, 1 = complete. Spin while it is 0. |
+
+> Verified against the vendor header `soc/esp32/include/soc/hwcrypto_reg.h`. This die's control
+> registers are NOT at the same offsets as the S3/C6 generation, which is why
+> `core_setup/hal/esp/esp_crypto_hal.h` refuses it with an `#error` rather than reusing its map.
