@@ -2420,6 +2420,7 @@
         "+<network_drivers/presentation/http/http2/h2_frame.c>",
         "+<network_drivers/presentation/codec/hpack_prim/hpack_prim.c>",
         "+<network_drivers/presentation/http/http2/hpack.c>",
+        "+<mmgr/plaintext.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
