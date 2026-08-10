@@ -267,6 +267,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the dispatcher owns the one control-frame borrow, sized once at compile time ([`b21dc18`](https://github.com/dstroy0/ProtoCore/commit/b21dc1877e3ee2a0a77859341151b818bf8fea68))
 - delete ssh_kexdh_build_reply, dead since build_kex_reply took over ([`1a2fd6d`](https://github.com/dstroy0/ProtoCore/commit/1a2fd6d47ba1d8e0883052b9178148c3ce9e4b67))
 - the KEX derivation inputs travel by reference, not twelve arguments ([`ff45f66`](https://github.com/dstroy0/ProtoCore/commit/ff45f66cc178ffcd490e2f1ed1d1b192c5d039d5))
 - single findroot for the repo root, replacing hand-rolled walks ([`4ed12a4`](https://github.com/dstroy0/ProtoCore/commit/4ed12a49f3416d63f84b09752d6c3a776835954c))
