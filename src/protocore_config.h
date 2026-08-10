@@ -5827,6 +5827,17 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief CONTINUATION frames one header block may span (RFC 9113 sec 6.10).
+ *
+ * PC_H2_HDR_BLOCK bounds the bytes a block may carry, but an empty CONTINUATION adds no bytes, so
+ * a peer can send them without end and never reach that bound. This bounds the frame count as
+ * well, which is what makes the block terminate.
+ */
+#ifndef PC_H2_MAX_CONTINUATION
+#define PC_H2_MAX_CONTINUATION 8
+#endif
+
+/**
  * @brief Place the HTTP/2 connection-engine pool in external PSRAM (ESP32).
  *
  * Each HTTP/2 connection needs a ~28 KB engine, so the pool (MAX_CONNS of them) does not fit the

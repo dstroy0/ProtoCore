@@ -245,6 +245,7 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
     c->hblock_stream = h->stream_id;
     c->hblock_end_stream = end_stream;
     c->hblock_trailers = trailers;
+    c->hblock_frames = 0;
     c->in_header_block = PROTO_TRUE;
     return PROTO_TRUE;
 }
@@ -254,6 +255,11 @@ static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const u
     if (!c->in_header_block || h->stream_id != c->hblock_stream)
     {
         return PROTO_FALSE;
+    }
+    c->hblock_frames++;
+    if (c->hblock_frames > PC_H2_MAX_CONTINUATION)
+    {
+        return PROTO_FALSE; // sec 6.10: an empty CONTINUATION adds no bytes, so cap the count too
     }
     if (c->hblock_len + h->length > sizeof c->hblock)
     {
@@ -338,6 +344,10 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
     switch (h.type)
     {
     case H2_SETTINGS:
+        if (h.stream_id != 0)
+        {
+            return PROTO_FALSE; // sec 6.5: SETTINGS belongs to the connection, stream 0
+        }
         if (h.flags & H2_FLAG_ACK)
         {
             return h.length == 0; // ACK of our settings
@@ -349,6 +359,10 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
         send_control(c, pc_h2_build_settings_ack);
         return PROTO_TRUE;
     case H2_PING:
+        if (h.stream_id != 0)
+        {
+            return PROTO_FALSE; // sec 6.7: PING belongs to the connection, stream 0
+        }
         if (h.flags & H2_FLAG_ACK)
         {
             return PROTO_TRUE;
@@ -382,6 +396,13 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
         }
         else
         {
+            // sec 5.1: a stream id past the highest one opened is idle, and WINDOW_UPDATE there is
+            // a connection error. At or below it the stream has been opened and since closed,
+            // where sec 6.9 allows the frame to arrive late and be ignored.
+            if (h.stream_id > c->last_peer_stream)
+            {
+                return PROTO_FALSE;
+            }
             H2Stream *s = find_stream(c, h.stream_id);
             if (s)
             {
@@ -407,6 +428,12 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
     case H2_DATA:
         return handle_data(c, &h, payload, f);
     case H2_RST_STREAM: {
+        // sec 6.4: RST_STREAM names a stream and is exactly four octets. Either fault is a
+        // connection error - PROTOCOL_ERROR for stream 0, FRAME_SIZE_ERROR for the length.
+        if (h.stream_id == 0 || h.length != 4)
+        {
+            return PROTO_FALSE;
+        }
         H2Stream *s = find_stream(c, h.stream_id);
         if (s)
         {
@@ -415,8 +442,22 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
         return PROTO_TRUE;
     }
     case H2_PRIORITY:
-        return PROTO_TRUE; // accepted, ignored
+        if (h.stream_id == 0)
+        {
+            return PROTO_FALSE; // sec 6.3: PRIORITY on stream 0 is a connection error
+        }
+        if (h.length != 5)
+        {
+            // sec 6.3: a wrong length is a stream error, so the connection survives it.
+            send_rst(c, f, h.stream_id, H2_FRAME_SIZE_ERROR);
+            return PROTO_TRUE;
+        }
+        return PROTO_TRUE; // priority info accepted and ignored
     case H2_GOAWAY:
+        if (h.stream_id != 0 || h.length < 8)
+        {
+            return PROTO_FALSE; // sec 6.8: stream 0, and at least the two 32-bit fields
+        }
         c->phase = 2;
         return PROTO_TRUE;
     case H2_PUSH_PROMISE:
