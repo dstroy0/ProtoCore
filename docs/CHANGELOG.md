@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the software server was the fourth site accepting an all-zero secret ([`4bc3977`](https://github.com/dstroy0/ProtoCore/commit/4bc397719b2286d565d272f7fc675c36a632e175))
 - RFC 8446 7.4.2 requires aborting on an all-zero X25519 shared secret ([`83be793`](https://github.com/dstroy0/ProtoCore/commit/83be793661d1e8b9d987f7844e72e408fc558f6f))
 - the curator's cap filled with flagged-valid entries, shipping no rejection cases ([`f02b770`](https://github.com/dstroy0/ProtoCore/commit/f02b770eccb2dacebfaa1e5380e41e7799437db8))
 - protocore_config.h is the entry point, not types.h ([`df81505`](https://github.com/dstroy0/ProtoCore/commit/df8150515fb0d74c5947e0266b5152d3774f1beb))
@@ -362,6 +363,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- the all-zero X25519 shared secret was accepted by all three TLS 1.3 sites ([`bc865d9`](https://github.com/dstroy0/ProtoCore/commit/bc865d91734cd6ebf8e1b52d315b647ffb8c4e1b))
 - an Arduino install cannot reach core_setup, which is outside the library src root ([`f98d476`](https://github.com/dstroy0/ProtoCore/commit/f98d476a6217937f630e99ec03ba447c2760d4bb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`1d8bfe0`](https://github.com/dstroy0/ProtoCore/commit/1d8bfe05ee957d0cd1de4c82f055d0fc697198a4))
 - tcp_evt.h already drew this boundary; protocore.h crosses it ([`0e54830`](https://github.com/dstroy0/ProtoCore/commit/0e54830e09a53f9bdf93654f331b6c891b26ae68))
