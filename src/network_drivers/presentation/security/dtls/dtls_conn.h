@@ -44,13 +44,6 @@
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
 #include "network_drivers/tls/tls13_kdf.h"
 
-/** @brief Largest inbound handshake message body reassembled (ClientHello / client Finished). */
-#define PC_DTLS_CONN_REASM_CAP 1024
-
-/** @brief Largest single outbound handshake message (Certificate-dominated; one record per message
- *         in this phase, so the certificate plus framing must fit one record). */
-#define PC_DTLS_CONN_MSG_CAP 1024
-
 /** @brief Largest serialized peer address the HelloRetryRequest cookie binds (IPv6 16 + port 2). */
 #define PC_DTLS_PEER_ADDR_MAX 18
 
@@ -67,10 +60,6 @@
  *         id, a 16-bit sequence and a length, plus the AEAD tag (§4). The plaintext form is smaller,
  *         so this bounds both. */
 #define PC_DTLS_REC_OVERHEAD_MAX (1 + PC_DTLS_CID_MAX + 2 + 2 + PC_DTLS_TAG_LEN)
-
-/** @brief Buffer for the current flight's DTLS handshake fragments, so it can be retransmitted with
- *         fresh record sequence numbers. Sized for the Certificate-dominated server flight. */
-#define PC_DTLS_FLIGHT_CAP (PC_DTLS_CONN_MSG_CAP + 512)
 
 /** @brief Retransmission timer (RFC 9147 §5.8.1): initial PTO, its cap, and the retransmission ceiling
  *         after which the handshake is abandoned. Times are in the units of @ref pc_millis (ms). */
@@ -121,15 +110,14 @@ typedef struct
     DtlsConnState state;
     uint8_t alert; ///< RFC 8446 §6 alert code when @c state is FAILED (0 otherwise)
 
-    pc_sha256_ctx transcript;             ///< running Transcript-Hash over the TLS handshake messages
-    Tls13KeySchedule ks;                  ///< TLS 1.3 key schedule, over @ref ks_store
-    uint8_t ks_store[PC_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
-    // The transcript hash and the one-off hashes taken beside it work out of these. Live and die with
-    // this connection, so no hash on the handshake path touches a pool.
-    uint8_t hash_work[PC_SHA256_BORROW];
-    uint8_t hash_work2[PC_SHA256_BORROW];
-    uint8_t sign_work[PC_SHA512_BORROW];            ///< the CertificateVerify signature's SHA-512
-    uint8_t mac_work[PC_HMAC_SHA256_BORROW];        ///< the stateless HelloRetryRequest cookie's MAC
+    pc_sha256_ctx transcript; ///< running Transcript-Hash over the TLS handshake messages
+    Tls13KeySchedule ks;      ///< TLS 1.3 key schedule, over @ref ks_store
+    uint8_t *ks_store;        ///< PC_TLS13_KS_BORROW bytes: the schedule's terms and its HKDF's bytes
+    // The transcript hash and the one-off hashes taken beside it work out of these.
+    uint8_t *hash_work;                             ///< PC_SHA256_BORROW bytes of the connection's borrow
+    uint8_t *hash_work2;                            ///< PC_SHA256_BORROW bytes of the connection's borrow
+    uint8_t *sign_work;                             ///< PC_SHA512_BORROW bytes: the CertificateVerify SHA-512
+    uint8_t *mac_work;                              ///< PC_HMAC_SHA256_BORROW bytes: the HRR cookie's MAC
     DtlsRecordKeys ep2_srv;                         ///< epoch 2 server write keys (handshake traffic)
     DtlsRecordKeys ep2_cli;                         ///< epoch 2 client read keys
     DtlsRecordKeys ep3_srv;                         ///< epoch 3 server write keys (application traffic)
@@ -171,11 +159,23 @@ typedef struct
     uint32_t pto_ms;           ///< current retransmission timeout (doubles each retransmit)
     uint32_t flight_sent_ms;   ///< pc_millis() when the flight was last (re)transmitted
 
-    DtlsHsReasm reasm;                             ///< inbound handshake reassembler
-    uint8_t reasm_buf[4 + PC_DTLS_CONN_REASM_CAP]; ///< TLS message = 4-byte header [0..3] + body [4..]
-    uint8_t msgbuf[PC_DTLS_CONN_MSG_CAP];          ///< scratch for one outbound TLS message
-    uint8_t flight_buf[PC_DTLS_FLIGHT_CAP]; ///< the current flight's DTLS handshake fragments, for retransmission
+    DtlsHsReasm reasm;   ///< inbound handshake reassembler
+    uint8_t *reasm_buf;  ///< TLS message = 4-byte header [0..3] + body [4..], the body 16-byte aligned
+    uint8_t *msgbuf;     ///< PC_DTLS_CONN_MSG_CAP bytes: one outbound TLS message
+    uint8_t *flight_buf; ///< PC_DTLS_FLIGHT_CAP bytes: the flight's fragments, for retransmission
 } DtlsConn;
+
+/**
+ * @brief This module's draw on the secure pool, declared here and asserted in dtls_conn.c.
+ *
+ * One borrow per connection from the pool's persistent end, split by offset into the key schedule,
+ * the two hashes, the signature, the cookie MAC, the message being reassembled, the message being
+ * built and the flight held for retransmission. Key material, so it comes from the secure pool.
+ */
+#define PC_DTLS_CONN_BORROW                                                                                            \
+    ((size_t)PC_TLS13_KS_BORROW + 2u * (size_t)PC_SHA256_BORROW + (size_t)PC_SHA512_BORROW +                           \
+     (size_t)PC_HMAC_SHA256_BORROW + (size_t)PC_DTLS_REASM_LEAD + (size_t)PC_DTLS_CONN_REASM_CAP +                     \
+     (size_t)PC_DTLS_CONN_MSG_CAP + (size_t)PC_DTLS_FLIGHT_CAP)
 
 /**
  * @brief The server side of a DTLS connection. DtlsConn is the caller's struct; this drives it.
