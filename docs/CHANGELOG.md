@@ -75,6 +75,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9a2de00`](https://github.com/dstroy0/ProtoCore/commit/9a2de00c19a106e32634709515bdbb6193046230))
+- update CHANGELOG.md [skip ci] ([`a73ead7`](https://github.com/dstroy0/ProtoCore/commit/a73ead7075d515074a045b3fcb35ff03e9054849))
 - update CHANGELOG.md [skip ci] ([`cde3ddc`](https://github.com/dstroy0/ProtoCore/commit/cde3ddcf93dd69b919affe9ab7fa37ba3d011e3b))
 - update CHANGELOG.md [skip ci] ([`9baf729`](https://github.com/dstroy0/ProtoCore/commit/9baf729d6dc65336e0ef025a2901024b67f15e6c))
 - update CHANGELOG.md [skip ci] ([`6140e56`](https://github.com/dstroy0/ProtoCore/commit/6140e563ee88af109293bc5589bda18d4b9aa231))
@@ -231,6 +233,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- log the frame-rule, CONTINUATION and content-length fixes ([`48ac146`](https://github.com/dstroy0/ProtoCore/commit/48ac1465e4a9917005c138322804b9e5f0dcfebb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`37bffbc`](https://github.com/dstroy0/ProtoCore/commit/37bffbcdd804e4703ddbeda59b63e4e323fbbc4c))
 - log the coaps_server double-address test defect ([`beebc0d`](https://github.com/dstroy0/ProtoCore/commit/beebc0d56b705d454320bc33a87f9061e0f4ec14))
 - log the HTTP/2 header-validation gap and the trailers conflation ([`9fe1021`](https://github.com/dstroy0/ProtoCore/commit/9fe1021e500a04a229d9651361bc125baebcf9ef))
