@@ -90,6 +90,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2de6874`](https://github.com/dstroy0/ProtoCore/commit/2de6874d5d2bd5508f35cbebe9a1d6f260a3a54e))
 - update CHANGELOG.md [skip ci] ([`7a6b444`](https://github.com/dstroy0/ProtoCore/commit/7a6b444c608ec94e722e8eb90a59793116dd7007))
 - update CHANGELOG.md [skip ci] ([`06d3060`](https://github.com/dstroy0/ProtoCore/commit/06d306022e5167a410ee145a72e8527c49d42c77))
 - update CHANGELOG.md [skip ci] ([`c5c2d1f`](https://github.com/dstroy0/ProtoCore/commit/c5c2d1f169bdcfa98745d562597b78633611b9a9))
@@ -361,6 +362,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- zero the server config before filling it ([`55b7b3f`](https://github.com/dstroy0/ProtoCore/commit/55b7b3f16d6a2d7ac86f50299fda389104370666))
 - drive the second peer to its own HRR before spending the cookie ([`a444a71`](https://github.com/dstroy0/ProtoCore/commit/a444a7190e54f11c1e44269a298fe3c36c504f4d))
 - a cookie minted for one peer is refused at another ([`7bc4769`](https://github.com/dstroy0/ProtoCore/commit/7bc47696766b750804ca7186a21d69a69954850b))
 - a record for an unkeyed epoch is discarded, not fatal ([`de7416f`](https://github.com/dstroy0/ProtoCore/commit/de7416fd161574b428d08b3cf3a37efad816e46b))
