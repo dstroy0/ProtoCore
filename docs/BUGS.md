@@ -566,6 +566,23 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## Eight CoAPS server tests were failing on a double-address argument
+
+- **Status:** FIXED 2026-08-09 (`test_coaps_server.c` `client_get_temp`, `assert_coap_205`). Found
+  2026-08-09 sweeping the envs that build the shared HTTP sources.
+- **Symptom:** `native_coaps_server` ERRORED, 8 of 21 cases red, every one on
+  `TEST_ASSERT_TRUE(pc_coaps_server_ingest(...))` returning FALSE.
+- **Root cause:** not the ingest. `client_get_temp(DtlsRecordKeys *w, ...)` called
+  `DtlsRecord.protect(&w, ...)` - the address of its own pointer parameter, a `DtlsRecordKeys **`,
+  where `protect` takes `DtlsRecordKeys *`. The sealer read a stack slot holding a pointer as key
+  material, produced nothing, and returned 0. `ring_push` refuses a zero-length datagram, so the
+  failure surfaced one call later at the ingest. `assert_coap_205` had the same defect on
+  `unprotect`. The two sibling call sites at `:387` and `:410` are correct - they take the address
+  of real `DtlsRecordKeys` values, which is what made the wrong pair look idiomatic.
+- **Nothing can catch it:** the incompatible pointer type is a warning, not an error, and the suite
+  is not built with warnings as errors.
+- **Fix:** pass the pointer through. Verified: `native_coaps_server` 21/21, `native_coaps` 6/6.
+
 ## The HTTP/2 bridge ran no RFC 9113 sec 8.2 / 8.3 header validation at all
 
 - **Status:** FIXED 2026-08-09 (`h2_server.c` `cb_header` / `cb_headers_end`). Found 2026-08-08
