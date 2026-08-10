@@ -4,7 +4,7 @@
 **running** ProtoCore device the way a hostile client would,
 and asserts the guarantees that keep a deterministic, zero-heap device safe. It is
 the on-device companion to the host-side parser fuzzer (`env:native_pentest`, see
-[docs/PENTEST.md](../docs/PENTEST.md)).
+[docs/PENTEST.md](../../docs/PENTEST.md)).
 
 > ## ⚖️ Authorized use only
 >
@@ -276,7 +276,7 @@ are all available to it.
 
 ## See also
 
-- [docs/PENTEST.md](../docs/PENTEST.md) - the full pentesting guide, including the
+- [docs/PENTEST.md](../../docs/PENTEST.md) - the full pentesting guide, including the
   host-side parser fuzzer (`env:native_pentest`) and sanitizer runs.
-- [test/test_pentest/test_pentest.c](../test/test_pentest/test_pentest.c) - the
+- [test/test_pentest/test_pentest.c](../unit/fieldbus/test_pentest/test_pentest.c) - the
   off-device fuzz harness this tool complements.

@@ -119,5 +119,5 @@ xtensa-esp32s3-elf-gdb .pio/build/rig_s3/firmware.elf \
 ## Bugs
 
 Every bug this rig surfaces (attack findings, perf anomalies, crashes) is logged in
-[`docs/BUGS.md`](../../docs/BUGS.md) with: the library commit, the pinned build, the exact
+[`docs/BUGS.md`](../../../docs/BUGS.md) with: the library commit, the pinned build, the exact
 attack/bench command, and the observed vs expected behavior - so it is reproducible.

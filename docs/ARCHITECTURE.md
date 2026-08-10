@@ -492,14 +492,14 @@ designed once, correctly, up front.
 silicon-specific:**
 
 ```
-src/core_setup/board_profiles/
+core_setup/board_profiles/
   board_profile.h            # common: derives (vendor, die, sizes) from build macros
   derived_sizing.h           # common (vendor-agnostic)
   esp/ { s3_defaults.h, p4_defaults.h, c6_defaults.h, ... }   # move existing here
   stm/ { stm32h7_defaults.h, ... }
   rp/  { rp2350_defaults.h, ... }
   ti/  { ... }
-src/core_setup/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
+core_setup/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
   esp/ { esp_crypto_hal.h/.cpp }   # move existing here (RSA/MPI direct-register, 7 dies)
   stm/ { stm_crypto_hal.* }        # STM32 PKA / CRYP / HASH, direct-register
   rp/  { ... }                     # RP2350 SHA-256 block etc, else the crypto/ software path
@@ -515,7 +515,7 @@ src/network_drivers/physical/
   ti/  { ... }
 ```
 
-**Selector (the one new common seam):** a single `src/core_setup/board_profiles/pc_platform.h`
+**Selector (the one new common seam):** a single `core_setup/board_profiles/pc_platform.h`
 maps the toolchain's target macro onto two axes and nothing else pulls vendor
 detail directly:
 

@@ -25,9 +25,9 @@ while (!Physical.ip6->ready()) delay(250); // waits for a global (routable) v6 a
 
 - **`pc_ip_parse()`** - RFC 4291 text (dotted-quad; v6 with `::` zero-compression and the
   embedded-v4 `::ffff:a.b.c.d` tail).
-- **`pc_ip_format()`** - the RFC 5952 canonical form (lower-case, no leading zeros, longest
+- **`Ip.format()`** - the RFC 5952 canonical form (lower-case, no leading zeros, longest
   zero run compressed, v4-mapped shown dotted).
-- **`pc_ip_classify()`** - loopback / link-local / private-ULA / multicast / global.
+- **`Ip.classify()`** - loopback / link-local / private-ULA / multicast / global.
 
 It is pure and host-tested (`pio test -e native_ip`), so the address handling is verified
 off-device; the netif bring-up is ESP32-only.

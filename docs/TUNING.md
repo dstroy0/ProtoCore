@@ -178,8 +178,8 @@ not exposed as knobs.
 
 The sizing defaults above are not one flat set. They used to be, tuned to fit the
 smallest classic-ESP32 DRAM ceiling, so a board with far more RAM or flash silently
-inherited the same cramped numbers. Instead, [`src/core_setup/board_profiles/`](../src/core_setup/board_profiles/)
-layers defaults along three independent axes, selected in [`board_profile.h`](../src/core_setup/board_profiles/board_profile.h)
+inherited the same cramped numbers. Instead, [`core_setup/board_profiles/`](../core_setup/board_profiles/)
+layers defaults along three independent axes, selected in [`board_profile.h`](../core_setup/board_profiles/board_profile.h)
 (included first thing in `protocore_config.h`):
 
 - **chip** - one file per ESP-IDF die: `classic_defaults.h` (ESP32), `s2` / `s3` / `c2` /

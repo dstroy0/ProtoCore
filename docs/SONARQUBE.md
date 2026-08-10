@@ -27,9 +27,9 @@ observe. The C/C++ analyzer needs a **compilation database**
 
 No single build enables all ~111 `PC_ENABLE_*` features, so a feature-gated
 source file is only compiled in the env whose flag turns it on. To give Sonar a
-command for **every** file, [`tools/ci_tooling/sonar/gen_compiledb.sh`](../ci_tooling/sonar/gen_compiledb.sh)
+command for **every** file, [`tools/ci_tooling/sonar/gen_compiledb.sh`](../tools/ci_tooling/sonar/gen_compiledb.sh)
 runs `pio run -t compiledb` for each native env, and
-[`tools/ci_tooling/sonar/merge_compiledb.py`](../ci_tooling/sonar/merge_compiledb.py) merges the
+[`tools/ci_tooling/sonar/merge_compiledb.py`](../tools/ci_tooling/sonar/merge_compiledb.py) merges the
 per-env fragments into one `compile_commands.json` (first env to compile a file
 wins). The CI workflow runs this so the database's absolute `directory` matches
 the runner's checkout; `compile_commands.json` itself is git-ignored.
@@ -48,7 +48,7 @@ bash tools/ci_tooling/sonar/gen_compiledb.sh   # writes ./compile_commands.json
 ## Test coverage (%)
 
 SonarCloud does not run the tests; it only displays coverage from a report you
-import, so without one it shows **0%**. [`tools/ci_tooling/coverage/gen_coverage.sh`](../ci_tooling/coverage/gen_coverage.sh)
+import, so without one it shows **0%**. [`tools/ci_tooling/coverage/gen_coverage.sh`](../tools/ci_tooling/coverage/gen_coverage.sh)
 builds + runs the native Unity test envs with gcov instrumentation
 (`-fprofile-arcs -ftest-coverage -lgcov`, into a dedicated `.pio_cov` build dir).
 
@@ -113,7 +113,7 @@ inside an `&&`) was fixed.
 
 The free/public SonarCloud plan cannot assign a custom quality profile to the
 project, so the design-conflict rules cannot simply be disabled - each open issue
-is marked individually instead. [`tools/ci_tooling/sonar/accept_style_conflicts.py`](../ci_tooling/sonar/accept_style_conflicts.py)
+is marked individually instead. [`tools/ci_tooling/sonar/accept_style_conflicts.py`](../tools/ci_tooling/sonar/accept_style_conflicts.py)
 automates that: it transitions the design-conflict style rules to **Accepted**
 (won't fix) and a few provable non-issues (e.g. `strncpy` that is always followed
 by an explicit NUL terminator, protocol field-annotation comments) to **False

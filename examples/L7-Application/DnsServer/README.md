@@ -77,8 +77,8 @@ pio ci examples/L7-Application/DnsServer \
 ## How it works (for the curious)
 
 `pc_dns_server_add(name, a, b, c, d)` stores a `name -> IPv4` record in a small fixed table.
-`pc_dns_server_begin()` binds UDP/53 through the library's transport UDP service; each query is
-handed to the pure `pc_dns_server_build_response()`, which parses the question, looks the name up
+`DnsServer.begin()` binds UDP/53 through the library's transport UDP service; each query is
+handed to the pure `DnsServer.build_response()`, which parses the question, looks the name up
 (case-insensitively), and - for an A/IN query that hits - appends one answer record (using DNS
 name compression: a 2-byte pointer back to the question). Misses return NXDOMAIN. Everything
 is fixed-buffer and heap-free, and the wire format is unit-tested on a PC (see

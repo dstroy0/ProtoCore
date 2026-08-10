@@ -1826,7 +1826,7 @@ own reason; they do not overlap by accident.
 | Document                     | Contents                                                                  |
 | ---------------------------- | ------------------------------------------------------------------------- |
 | [SRC_LAW.md](SRC_LAW.md)     | The **why**: determinism and allocation law, derived from MISRA / AUTOSAR  |
-| [tools/ci_tooling/README.md](../ci_tooling/README.md) | The **tooling** law: how generators and checkers must be written, and why. |
+| [tools/ci_tooling/README.md](../tools/ci_tooling/README.md) | The **tooling** law: how generators and checkers must be written, and why. |
 | [SRCBANNED.md](SRCBANNED.md) | The **what**: constructs banned in `src/`, enforced by a checker           |
 | [SYMBOLS.md](SYMBOLS.md)     | The **naming** law: prefixes, macros, enums, include guards                |
 
