@@ -572,10 +572,14 @@ static DtlsRecStep process_ciphertext_record(DtlsConn *c, const uint8_t *dgram, 
     {
         return DTLS_REC_STEP_STOP; // malformed header; stop walking the datagram
     }
+    // sec 4.5.2: "invalid records SHOULD be silently discarded, thus preserving the association";
+    // an implementation that answers with a fatal alert instead is "extremely susceptible to DoS
+    // attacks because UDP forgery is so easy". A record for an epoch whose keys do not exist yet is
+    // one such record: it is skipped, not answered.
     if (!c->ep2_ready)
     {
-        fail(c, ALERT_UNEXPECTED_MESSAGE);
-        return DTLS_REC_STEP_FATAL;
+        *off += rlen;
+        return DTLS_REC_STEP_NEXT;
     }
     uint8_t inner[PC_DTLS_CONN_REASM_CAP + PC_DTLS_TAG_LEN];
     DtlsCiphertext info;
@@ -583,8 +587,10 @@ static DtlsRecStep process_ciphertext_record(DtlsConn *c, const uint8_t *dgram, 
     if (!DtlsRecord.unprotect(&c->ep2_cli, next, dgram + *off, rlen, inner, sizeof(inner), &info,
                               c->cid_negotiated ? c->local_cid : NULL, c->cid_negotiated ? c->local_cid_len : 0))
     {
-        fail(c, ALERT_DECRYPT_ERROR);
-        return DTLS_REC_STEP_FATAL;
+        // The same sec 4.5.2 rule: a record that fails its AEAD is discarded and the association
+        // survives. One forged datagram must not end a live connection.
+        *off += rlen;
+        return DTLS_REC_STEP_NEXT;
     }
     *off += rlen;
     if (!DtlsRecord.replay_check(&c->replay_ep2, info.seq))
