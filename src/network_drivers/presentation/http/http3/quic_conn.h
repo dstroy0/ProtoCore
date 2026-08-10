@@ -134,9 +134,10 @@ typedef struct QuicConn
     uint8_t pto_count;        ///< consecutive PTO expirations (exponential backoff exponent)
     uint32_t pto_deadline_ms; ///< when the PTO fires (caller's monotonic ms; valid when pto_armed)
 
-    proto_bool close_queued;   ///< a transport CONNECTION_CLOSE is owed to the peer (fatal error hit)
+    proto_bool close_queued;   ///< a CONNECTION_CLOSE is owed to the peer (fatal error hit)
+    proto_bool close_is_app;   ///< send the application variant (0x1d); its error code is the app's
     proto_bool close_sent;     ///< the CONNECTION_CLOSE has been put on the wire
-    uint64_t close_error;      ///< transport error code to report (RFC 9000 sec 20.1)
+    uint64_t close_error;      ///< error code to report (RFC 9000 sec 20.1, or the app's own space)
     uint64_t close_frame_type; ///< frame type that triggered it (0 when not frame-specific)
     uint8_t close_level;       ///< encryption level to send the close at (the peer holds those keys)
 } QuicConn;
@@ -195,6 +196,14 @@ size_t pc_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const u
  * handshake / frame error (CRYPTO_ERROR / FRAME_ENCODING_ERROR).
  */
 void pc_quic_conn_close(struct QuicConn *qc, uint64_t error_code);
+
+/**
+ * @brief Initiate an immediate close reporting an application-protocol error: a CONNECTION_CLOSE
+ * of type 0x1d (RFC 9000 sec 19.19), whose @p error_code comes from the application's own space -
+ * HTTP/3's codes (RFC 9114 sec 8.1) rather than the transport's. Before 1-RTT keys exist the frame
+ * is not permitted, and a transport close carrying APPLICATION_ERROR goes instead.
+ */
+void pc_quic_conn_close_app(struct QuicConn *qc, uint64_t error_code);
 
 /** @brief True once the TLS handshake has completed (client Finished verified). */
 proto_bool pc_quic_conn_established(const struct QuicConn *qc);

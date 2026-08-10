@@ -32,6 +32,31 @@ PROTO_BEGIN_DECLS
 #define H3_GOAWAY 0x07
 #define H3_MAX_PUSH_ID 0x0d
 
+/**
+ * @brief HTTP/3 error codes (RFC 9114 sec 8.1).
+ *
+ * These travel in a CONNECTION_CLOSE of type 0x1d, whose error code comes from the application
+ * protocol's space. Sent in the transport variant (0x1c) they would be read against RFC 9000
+ * sec 20.1 instead, where 0x0100-0x01ff is CRYPTO_ERROR plus a TLS alert.
+ */
+#define H3_NO_ERROR 0x0100
+#define H3_GENERAL_PROTOCOL_ERROR 0x0101
+#define H3_INTERNAL_ERROR 0x0102
+#define H3_STREAM_CREATION_ERROR 0x0103
+#define H3_CLOSED_CRITICAL_STREAM 0x0104
+#define H3_FRAME_UNEXPECTED 0x0105
+#define H3_FRAME_ERROR 0x0106
+#define H3_EXCESSIVE_LOAD 0x0107
+#define H3_ID_ERROR 0x0108
+#define H3_SETTINGS_ERROR 0x0109
+#define H3_MISSING_SETTINGS 0x010a
+#define H3_REQUEST_REJECTED 0x010b
+#define H3_REQUEST_CANCELLED 0x010c
+#define H3_REQUEST_INCOMPLETE 0x010d
+#define H3_MESSAGE_ERROR 0x010e
+#define H3_CONNECT_ERROR 0x010f
+#define H3_VERSION_FALLBACK 0x0110
+
 /** @brief SETTINGS parameter identifiers (RFC 9114 sec 7.2.4.1 + RFC 9204). */
 #define H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY 0x01
 #define H3_SETTINGS_MAX_FIELD_SECTION_SIZE 0x06

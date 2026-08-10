@@ -117,13 +117,14 @@ void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint
 // --- Frame handling --------------------------------------------------------------------------
 // Queue a transport CONNECTION_CLOSE for a fatal error at @p level; the first error wins (RFC 9000 sec
 // 10.2.3). Sending at the level the error was seen on guarantees the peer holds keys to read it.
-static void queue_close(struct QuicConn *qc, uint64_t error_code, uint64_t frame_type, int level)
+static void queue_close(struct QuicConn *qc, uint64_t error_code, uint64_t frame_type, int level, proto_bool app)
 {
     if (qc->close_queued || qc->closed)
     {
         return;
     }
     qc->close_queued = PROTO_TRUE;
+    qc->close_is_app = app;
     qc->close_error = error_code;
     qc->close_frame_type = frame_type;
     qc->close_level = (uint8_t)level;
@@ -162,7 +163,7 @@ static void handle_crypto(struct QuicConn *qc, int level, const QuicFrame *f)
     // to the client with the TLS alert in the low byte (RFC 9001 sec 4.8) instead of stalling.
     if (qc->tls.state == QTLS_FAILED)
     {
-        queue_close(qc, QUIC_ERR_CRYPTO_BASE + qc->tls.alert, QUIC_FT_CRYPTO, level);
+        queue_close(qc, QUIC_ERR_CRYPTO_BASE + qc->tls.alert, QUIC_FT_CRYPTO, level, PROTO_FALSE);
         return;
     }
     // Completing the handshake opens 1-RTT and lets us send HANDSHAKE_DONE. We keep the Handshake
@@ -239,7 +240,7 @@ static proto_bool process_frames(struct QuicConn *qc, int level, const uint8_t *
         if (!n)
         {
             // Undecodable frame: a transport FRAME_ENCODING_ERROR (RFC 9000 sec 20.1). Report it.
-            queue_close(qc, QUIC_ERR_FRAME_ENCODING, 0, level);
+            queue_close(qc, QUIC_ERR_FRAME_ENCODING, 0, level, PROTO_FALSE);
             return PROTO_FALSE;
         }
         off += n;
@@ -569,7 +570,8 @@ static size_t build_frames(struct QuicConn *qc, int level, uint8_t *buf, size_t 
     // this for a single level when a close is queued, so it is emitted exactly once.
     if (qc->close_queued && !qc->close_sent)
     {
-        return pc_quic_build_connection_close(buf, cap, qc->close_error, qc->close_frame_type, NULL, 0);
+        return pc_quic_build_connection_close(buf, cap, qc->close_is_app, qc->close_error, qc->close_frame_type,
+                                             NULL, 0);
     }
 
     p += build_ack_frame(s, buf + p, cap - p); // ACK first, if we owe one
@@ -914,7 +916,21 @@ void pc_quic_conn_close(struct QuicConn *qc, uint64_t error_code)
 {
     // Application-initiated close: send at the highest level we still hold keys for.
     int level = pc_quic_highest_sealed_level(qc);
-    queue_close(qc, error_code, 0, level);
+    queue_close(qc, error_code, 0, level, PROTO_FALSE);
+}
+
+void pc_quic_conn_close_app(struct QuicConn *qc, uint64_t error_code)
+{
+    // RFC 9000 sec 19.19 / 10.2.3: the application variant travels only in 1-RTT packets. Before
+    // those keys exist the same intent goes as a transport close carrying APPLICATION_ERROR, whose
+    // error code is the transport's, so @p error_code is dropped rather than reinterpreted.
+    int level = pc_quic_highest_sealed_level(qc);
+    if (level != QUIC_ENC_APP)
+    {
+        queue_close(qc, QUIC_ERR_APPLICATION, 0, level, PROTO_FALSE);
+        return;
+    }
+    queue_close(qc, error_code, 0, level, PROTO_TRUE);
 }
 
 proto_bool pc_quic_conn_established(const struct QuicConn *qc)
