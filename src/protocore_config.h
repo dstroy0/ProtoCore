@@ -7299,8 +7299,11 @@ static_assert(sizeof(pc_if_kind) == 1, "pc_if_kind must stay one byte: it is a p
 #error "ProtoCore: PC_ENABLE_COAP_OBSERVE needs PC_ENABLE_COAP"
 #endif
 
-#if PC_ENABLE_TLS_RPK && !(PC_ENABLE_DTLS || PC_ENABLE_HTTP3)
-#error "ProtoCore: PC_ENABLE_TLS_RPK requires PC_ENABLE_DTLS or PC_ENABLE_HTTP3"
+// The portable TLS arm authenticates by raw public key and asserts on PC_ENABLE_TLS_RPK, so it is
+// the third thing that carries the extension, alongside DTLS and HTTP/3.
+#if PC_ENABLE_TLS_RPK && !(PC_ENABLE_DTLS || PC_ENABLE_HTTP3 || PC_TLS_SOFTWARE)
+#error                                                                                                                 \
+    "ProtoCore: PC_ENABLE_TLS_RPK requires PC_ENABLE_DTLS, PC_ENABLE_HTTP3 or the portable TLS arm (PC_ENABLE_TLS without a vendor stack)"
 #endif
 
 #if PC_ENABLE_COAP_BLOCK
