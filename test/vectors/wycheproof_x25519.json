@@ -1,7 +1,7 @@
 {
   "source": "https://github.com/C2SP/wycheproof",
-  "commit": "d0db6205a1570feb1e5918a735f7e57f6ad7b3f6",
-  "file": "testvectors_v1/x25519_test.json",
+  "commit": "b61843a9a5115bb758134b6a1f5d5e502d445342",
+  "file": "testvectors_v1\\x25519_test.json",
   "vectors": [
     {
       "tcId": 1,

@@ -1,7 +1,7 @@
 {
   "source": "https://github.com/C2SP/wycheproof",
-  "commit": "d0db6205a1570feb1e5918a735f7e57f6ad7b3f6",
-  "file": "testvectors_v1/ed25519_test.json",
+  "commit": "b61843a9a5115bb758134b6a1f5d5e502d445342",
+  "file": "testvectors_v1\\ed25519_test.json",
   "vectors": [
     {
       "tcId": 1,
@@ -551,15 +551,6 @@
       "public": "7d4d0e7f6153a69b6242b522abbee685fda4420f8834b108c3bdae369ef549fa",
       "msg": "313233343030",
       "sig": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff463a1908382e7eb7693acef9884f7cf931a215e0791876be22c631a59881fd0e"
-    },
-    {
-      "tcId": 62,
-      "comment": "all bits flipped in R",
-      "result": "invalid",
-      "flags": ["InvalidEncoding"],
-      "public": "7d4d0e7f6153a69b6242b522abbee685fda4420f8834b108c3bdae369ef549fa",
-      "msg": "313233343030",
-      "sig": "9a83eb6dbfd54a31fc1d3c580fc7b2fae4630ca8f0edf803873e433673d7e3d40e94254586cb6188c5386c3febed477cb9a6cb29e3979adc4cb27cf5278fb70a"
     },
     {
       "tcId": 63,
