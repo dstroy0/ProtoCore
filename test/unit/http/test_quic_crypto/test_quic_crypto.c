@@ -396,13 +396,53 @@ void test_unprotect_rejects_tampered()
     TEST_ASSERT_TRUE(got == (size_t)-1);
 }
 
+// RFC 9001 sec 5.4.1 fixes the first-byte header-protection mask at 0x1f for a short header and
+// 0x0f for a long one: protection may change the low 5 (or 4) bits and no others. A round trip
+// cannot see that - the same constant is applied on both sides, so a wrong width cancels out and
+// the plaintext still comes back. This compares the first byte before and after protection, which
+// depends on the constant once, and pins each width against the bits it must leave alone.
+void test_header_protection_mask_width()
+{
+    uint8_t dcid[8];
+    hx("8394c8f03e515708", dcid, 8);
+    QuicInitialSecrets s;
+    pc_quic_derive_initial_secrets(tw, dcid, 8, &s);
+
+    const size_t pn_offset = 9;
+    const uint8_t pn_len = 2;
+    const uint8_t payload[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+
+    // Short header: the spin bit, key phase and reserved bits (0xe0) must survive untouched.
+    uint8_t pkt[64];
+    memset(pkt, 0, sizeof pkt);
+    pkt[0] = 0x7D; // every bit outside the 0x1f mask set, plus pn_len-1 = 1
+    memcpy(pkt + 1, dcid, 8);
+    pkt[pn_offset + 1] = 0x07;
+    memcpy(pkt + pn_offset + pn_len, payload, sizeof payload);
+    uint8_t before = pkt[0];
+    TEST_ASSERT_TRUE(pc_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, 7, sizeof payload, &s.client,
+                                            PROTO_FALSE) > 0);
+    TEST_ASSERT_EQUAL_HEX8(0, (uint8_t)((before ^ pkt[0]) & (uint8_t)~0x1f));
+
+    // Long header: the mask is one bit narrower, so 0xf0 must survive.
+    memset(pkt, 0, sizeof pkt);
+    pkt[0] = 0xFD; // long form, every bit outside the 0x0f mask set
+    memcpy(pkt + 1, dcid, 8);
+    pkt[pn_offset + 1] = 0x07;
+    memcpy(pkt + pn_offset + pn_len, payload, sizeof payload);
+    before = pkt[0];
+    TEST_ASSERT_TRUE(pc_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, 7, sizeof payload, &s.client,
+                                            PROTO_TRUE) > 0);
+    TEST_ASSERT_EQUAL_HEX8(0, (uint8_t)((before ^ pkt[0]) & (uint8_t)~0x0f));
+}
+
 // --- short-header (is_long=false) protect/unprotect + null out_pn -------------------------------
-// The RFC 9001 A.2/A.3 vectors above only exercise long-header packets (is_long=true), so the
-// `is_long ? 0x0f : 0x1f` first-byte header-protection mask never takes its false branch in either
-// pc_quic_packet_protect or pc_quic_packet_unprotect. There is no published short-header (1-RTT)
-// KAT in this file, so this is a self-consistent round trip: protect() then unprotect() must recover
-// the exact plaintext. It also passes a null out_pn to unprotect(), covering the optional-output
-// branch (`if (out_pn)`) that every other test always supplies.
+// A self-consistent round trip for the short-header arm: protect() then unprotect() must recover
+// the exact plaintext. The mask width it depends on is pinned independently above, so the two
+// together cover what a round trip alone cannot. RFC 9001 Appendix A.5 is a published short-header
+// KAT, but for ChaCha20-Poly1305, which this stack does not implement (AES-128-GCM only).
+// It also passes a null out_pn to unprotect(), covering the optional-output branch (`if (out_pn)`)
+// that every other test always supplies.
 void test_short_header_roundtrip_null_out_pn()
 {
     uint8_t dcid[8];
@@ -533,6 +573,7 @@ int main()
     RUN_TEST(test_protect_rejects_small_cap);
     RUN_TEST(test_unprotect_rejects_short);
     RUN_TEST(test_unprotect_rejects_tampered);
+    RUN_TEST(test_header_protection_mask_width);
     RUN_TEST(test_short_header_roundtrip_null_out_pn);
     RUN_TEST(test_retry_tag_rejects_oversize);
     RUN_TEST(test_hkdf_expand_label_multiblock);

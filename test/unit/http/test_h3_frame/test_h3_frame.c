@@ -80,11 +80,17 @@ void test_reserved()
     TEST_ASSERT_FALSE(pc_h3_frame_type_reserved(H3_HEADERS));
     TEST_ASSERT_FALSE(pc_h3_frame_type_reserved(H3_SETTINGS));
 
-    // A SETTINGS payload using a reserved HTTP/2 settings id (0x02) must be rejected.
+    // RFC 9114 sec 7.2.4.1 reserves the settings identifiers 0x02, 0x03, 0x04 and 0x05, and
+    // "MUST be treated as a connection error of type H3_SETTINGS_ERROR" covers all four. This
+    // used to assert only 0x02, so a gap at any of the other three would have gone unseen.
     H3Settings s;
-    pc_h3_settings_defaults(&s);
-    const uint8_t bad[2] = {0x02, 0x00};
-    TEST_ASSERT_FALSE(pc_h3_parse_settings(bad, 2, &s));
+    static const uint8_t reserved_ids[4] = {0x02, 0x03, 0x04, 0x05};
+    for (size_t i = 0; i < sizeof reserved_ids / sizeof reserved_ids[0]; i++)
+    {
+        pc_h3_settings_defaults(&s);
+        const uint8_t bad[2] = {reserved_ids[i], 0x00};
+        TEST_ASSERT_FALSE(pc_h3_parse_settings(bad, 2, &s));
+    }
 }
 
 // HEADERS frame wraps a QPACK field section verbatim.
