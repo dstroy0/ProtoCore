@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the Ns table made every leaf an indirect always_inline call at -Og ([`7f0b3b0`](https://github.com/dstroy0/ProtoCore/commit/7f0b3b0d64d91956ef5c6cb82365934af8ff268e))
 - the i2c command link was shared per bus; pc_mnt_fs published a C++ type ([`5153630`](https://github.com/dstroy0/ProtoCore/commit/515363041cb3b2dd963627715141dbe823e30f14))
 - the nvs seam serialises; seven fs entry points and one spi transfer were unbounded ([`7a6630b`](https://github.com/dstroy0/ProtoCore/commit/7a6630b4b0d89f26ba3ab000aeb3f8f71ef5e60e))
 - put_blob and put_str judged their bounds after committing, or not at all ([`1f32484`](https://github.com/dstroy0/ProtoCore/commit/1f324849ee4662fdb2fcd18f052861b105c622c9))
@@ -106,6 +107,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9eb6799`](https://github.com/dstroy0/ProtoCore/commit/9eb6799542b0c73d50f2fa400b81116c31196443))
 - the three build workflows never rebuilt on a core_setup change ([`05aacdf`](https://github.com/dstroy0/ProtoCore/commit/05aacdf5a9bf2386c275fc6f9943d03944fe9fba))
 - update CHANGELOG.md [skip ci] ([`e1d1e04`](https://github.com/dstroy0/ProtoCore/commit/e1d1e04baf31bcf6715f322c44a4a2bae28c2601))
 - update CHANGELOG.md [skip ci] ([`1267130`](https://github.com/dstroy0/ProtoCore/commit/126713080df7f67e4d671a7ec6165f689d7cdd4b))
