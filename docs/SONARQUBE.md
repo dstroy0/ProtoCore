@@ -77,7 +77,7 @@ it.
 The merged database covers every source file the host (native) toolchain compiles
 (115 of the library's `.cpp` files as of this writing). The handful it does not
 cover are ESP32/platform-only and never built natively: the TLS engine
-(`tls.cpp`), the lwIP datalink/network shims, the ESP-IDF mDNS/OTA services,
+(`tls.c`), the lwIP datalink/network shims, the ESP-IDF mDNS/OTA services,
 the TCP client, and the dashboard/gpio/partition route registrars. To analyze
 those too, add an ESP32 `compiledb` (cross-toolchain) fragment to the merge; it
 needs the `espressif32` toolchain in the CI job.

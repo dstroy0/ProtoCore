@@ -25,7 +25,7 @@ Two figures per operation:
 
 - **Host ns/op** - a deterministic relative baseline measured on a fast core (Raspberry Pi 5, `-O2`).
   It is _not_ the device cost; it exists to compare features against each other and to catch
-  regressions cheaply. Harness: the per-bench `host.cpp` convention documented in
+  regressions cheaply. Harness: the per-bench `host.c` convention documented in
   [`performance_benching/`](../test/performance_benching/README.md) (`std::chrono`, time N iterations,
   report ns/op + MB/s).
 - **ESP32-S3 us/op @ 240 MHz** - the real-world cost, measured on device with the CCOUNT cycle counter
@@ -247,7 +247,7 @@ device costs of hot pure primitives on the auth and ETag/Digest paths - no netwo
 
 `pc_sse_format()` builds one `event:`/`id:`/`data:` record (WHATWG event-stream format) into a buffer; it is
 the pure, transport-free hot op behind every `pc_sse_send()` / `pc_sse_broadcast()`. Host figures from
-[`performance_benching/bench_sse.cpp`](../test/performance_benching/network_drivers/presentation/sse/); the device figure is the rig `/bench` CCOUNT op (N=20000 warm).
+[`test/performance_benching/network_drivers/presentation/sse/host.c`](../test/performance_benching/network_drivers/presentation/sse/); the device figure is the rig `/bench` CCOUNT op (N=20000 warm).
 
 | Operation                         | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
 | --------------------------------- | ---------: | --------: | --------------: | -------------: |
@@ -260,13 +260,13 @@ the pure, transport-free hot op behind every `pc_sse_send()` / `pc_sse_broadcast
   Xtensa `vsnprintf` path is expensive, and the framer avoids it entirely. Output is byte-identical
   (`test_sse_format` asserts the exact WHATWG event-stream bytes). Invisible at SSE's per-event cadence, but a
   real win for a high-rate broadcast fan-out (many subscribers). Host figures from
-  [`performance_benching/bench_sse.cpp`](../test/performance_benching/network_drivers/presentation/sse/); the S3 figure is the same-input A/B on the rig.
+  [`test/performance_benching/network_drivers/presentation/sse/host.c`](../test/performance_benching/network_drivers/presentation/sse/); the S3 figure is the same-input A/B on the rig.
 
 ### WebDAV 207 Multi-Status builder (PC_ENABLE_WEBDAV)
 
 `pc_webdav_ms_entry()` builds one `<response>` element (RFC 4918 Multi-Status) for a resource; it runs
 once per directory child on every PROPFIND, and internally XML-escapes the href. Pure (no filesystem),
-so it benches standalone. Host figures from [`performance_benching/bench_webdav.cpp`](../test/performance_benching/network_drivers/application/webdav/); the
+so it benches standalone. Host figures from [`test/performance_benching/network_drivers/application/webdav/host.c`](../test/performance_benching/network_drivers/application/webdav/); the
 device figure is the rig `/bench` CCOUNT op (N=20000 warm).
 
 | Operation                                | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -288,7 +288,7 @@ device figure is the rig `/bench` CCOUNT op (N=20000 warm).
 
 `pc_coap_server_process()` is the whole CoAP request→response path (RFC 7252): parse the 4-byte header +
 options, reconstruct the Uri-Path, dispatch against the resource table, and encode the piggybacked
-reply. Pure (no sockets, no heap). Host figures from [`performance_benching/bench_coap.cpp`](../test/performance_benching/services/coap/);
+reply. Pure (no sockets, no heap). Host figures from [`test/performance_benching/services/coap/host.c`](../test/performance_benching/services/coap/);
 the device figure is the rig `/bench` CCOUNT op (N=20000 warm), including the handler that renders the
 `/info` JSON.
 
@@ -307,7 +307,7 @@ the device figure is the rig `/bench` CCOUNT op (N=20000 warm), including the ha
 
 `pc_snmp_agent_process()` is the whole SNMP v1/v2c path (RFC 1157/3416): BER-decode the message + PDU,
 walk the MIB against the varbind OIDs, BER-encode the reply. Pure (no sockets, no heap). Host figures
-from [`performance_benching/bench_snmp.cpp`](../test/performance_benching/services/snmp/); the device figure is the rig `/bench` CCOUNT op.
+from [`test/performance_benching/services/snmp/host.c`](../test/performance_benching/services/snmp/); the device figure is the rig `/bench` CCOUNT op.
 
 | Operation                              | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
 | -------------------------------------- | ---------: | --------: | --------------: | -------------: |
@@ -329,7 +329,7 @@ from [`performance_benching/bench_snmp.cpp`](../test/performance_benching/servic
 The OPC UA server's hot ops (IEC 62541 / OPC UA Part 6): the UACP Hello/Acknowledge handshake
 (`pc_opcua_parse_hello` + `pc_opcua_build_ack`, run once per connection) and the per-node DataValue Variant
 encode (`pc_ua_w_datavalue`, the Read-service hot op). All pure little-endian codecs. Host figures from
-[`performance_benching/bench_opcua.cpp`](../test/performance_benching/services/opcua/); the device figure is the rig `/bench` CCOUNT op
+[`test/performance_benching/services/opcua/host.c`](../test/performance_benching/services/opcua/); the device figure is the rig `/bench` CCOUNT op
 (parse HELLO + build ACK together).
 
 | Operation                           | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -352,7 +352,7 @@ encode (`pc_ua_w_datavalue`, the Read-service hot op). All pure little-endian co
 
 `pc_modbus_process_adu()` is the whole Modbus TCP slave path (Modbus Application Protocol): parse the MBAP
 header, dispatch the function code against the coil/register data model, build the response ADU. Pure
-(no sockets, no heap). Host figures from [`performance_benching/bench_modbus.cpp`](../test/performance_benching/services/modbus/); the device
+(no sockets, no heap). Host figures from [`test/performance_benching/services/modbus/host.c`](../test/performance_benching/services/modbus/); the device
 figure is the rig `/bench` CCOUNT op (Read Holding Registers x8).
 
 | Operation                               | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -369,7 +369,7 @@ figure is the rig `/bench` CCOUNT op (Read Holding Registers x8).
 
 The compress/decompress hot ops on every WebSocket data frame when permessage-deflate is negotiated:
 `deflate_raw()` (TX) and `inflate_raw()` (RX). Both are pure (a caller scratch, no heap). Host figures
-from [`performance_benching/bench_deflate.cpp`](../test/performance_benching/network_drivers/presentation/deflate/); the device figure is the rig `/bench` CCOUNT
+from [`test/performance_benching/network_drivers/presentation/deflate/host.c`](../test/performance_benching/network_drivers/presentation/deflate/); the device figure is the rig `/bench` CCOUNT
 op (inflate of a ~70 B JSON message).
 
 | Operation                    | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -391,7 +391,7 @@ op (inflate of a ~70 B JSON message).
 The SSH-2 server's hot cryptographic ops: the curve25519 KEX (an X25519 scalar multiplication for the
 ephemeral key and again for the shared secret), the ssh-ed25519 host-key signature over the exchange
 hash (a fixed-base scalar multiplication), and the chacha20-poly1305@openssh.com record layer (the
-per-packet steady-state op). Host figures from [`performance_benching/bench_ssh.cpp`](../test/performance_benching/network_drivers/presentation/ssh/); the device
+per-packet steady-state op). Host figures from [`test/performance_benching/network_drivers/presentation/ssh/host.c`](../test/performance_benching/network_drivers/presentation/ssh/); the device
 figures are an on-device CCOUNT microbench (`ESP.getCycleCount()` @ 240 MHz, N warm iterations, run on
 a high-priority core-1 task in the `rig_s3_ssh` firmware; the two X25519 measurements agree to 0.03%).
 
@@ -607,7 +607,7 @@ ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates 
     calling `mbedtls_gcm` took 1 KiB from 616,567 to 91,215 cyc. The capability macro describes one mode of
     one peripheral; it does not mean the vendor has no fast path, and the vendor's own implementation knows
     what its silicon can do. Host-testability is preserved a different way: the software AEAD still exists
-    as `core_setup/hal/portable/portable_aesgcm.cpp` and is what native builds compile, so the KATs still
+    as `core_setup/hal/portable/portable_aesgcm.c` and is what native builds compile, so the KATs still
     run off-target - it just is not what a chip with an accelerator uses.
 
     _Mistake 2 - we rebuilt the cipher context per record._ The remaining 91,215 vs 81,086 gap was not the
@@ -704,7 +704,7 @@ ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates 
   saturate too). The real lever is that the whole library ships at the arduino framework's `-Os`; ChaCha runs
   **108,919 -> 46,434 cyc (2.35x, 2.3 -> 5.3 MB/s)** and Poly1305 **31,452 -> 24,904 cyc (1.26x)** at `-O2`,
   so `chacha20-poly1305` seal goes **154,194 -> 77,433 cyc (1.99x, 1.6 -> 3.2 MB/s)**. A per-translation-unit
-  `#pragma GCC optimize("O2")` on `chacha20.cpp` / `poly1305.cpp` forces `-O2` for just those hot
+  `#pragma GCC optimize("O2")` on `src/crypto/cipher/chacha20.c` / `poly1305.c` forces `-O2` for just those hot
   functions (byte-exact, RFC 8439 KATs unchanged) so the cipher is fast on any consumer's size-optimized
   build. AES-256-CTR (22.5 MB/s, HW) is still faster where an AEAD is not required.
 
@@ -712,7 +712,7 @@ ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates 
 
 The device is an MQTT client; these are its pure packet build/parse hot ops - `pc_mqtt_build_connect` /
 `pc_mqtt_build_publish` (TX) and `pc_mqtt_parse_publish` (the inbound-message decode). Host figures from
-[`performance_benching/bench_mqtt.cpp`](../test/performance_benching/services/mqtt/); the device figure is the rig `/bench` CCOUNT op
+[`test/performance_benching/services/mqtt/host.c`](../test/performance_benching/services/mqtt/); the device figure is the rig `/bench` CCOUNT op
 (`pc_mqtt_build_publish`, QoS 1 to a telemetry topic).
 
 | Operation                       | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -729,7 +729,7 @@ The device is an MQTT client; these are its pure packet build/parse hot ops - `p
 
 The Redis wire codec a device uses to talk to a Redis server: `pc_resp_encode_command` (build an outbound
 command) and `pc_resp_parse` (decode one value of a server reply - the untrusted-input cursor). Both pure.
-Host figures from [`performance_benching/bench_redis.cpp`](../test/performance_benching/services/redis_resp/); the device figure is the rig
+Host figures from [`test/performance_benching/services/redis_resp/host.c`](../test/performance_benching/services/redis_resp/); the device figure is the rig
 `/bench` CCOUNT op (`pc_resp_parse` of an array header).
 
 | Operation                                | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -748,7 +748,7 @@ The FTP control-channel codec a device uses to push/pull files (RFC 959 + RFC 24
 (emit a `VERB<SP>ARG` line), `pc_ftp_parse_reply` (scan a single- or multi-line 3-digit reply over a fixed
 buffer - the untrusted-input hot op), and `pc_ftp_parse_pasv` (decode the `227 (h1,h2,h3,h4,p1,p2)` data
 address). All pure (the two sockets are the application's). Host figures from
-[`performance_benching/bench_ftp.cpp`](../test/performance_benching/services/ftp/); the device figure is the rig `/bench` CCOUNT op
+[`test/performance_benching/services/ftp/host.c`](../test/performance_benching/services/ftp/); the device figure is the rig `/bench` CCOUNT op
 (`pc_ftp_parse_reply` of a 3-line FEAT block).
 
 | Operation                              | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -771,7 +771,7 @@ exchange - read the greeting, `EHLO`, optional `AUTH LOGIN`, `MAIL FROM` / `RCPT
 message (CRLF-normalize + RFC 5321 sec 4.5.2 dot-stuffing) and stream it, then `QUIT`. It is pure (a
 send/recv seam), so the whole dialogue is benched end to end over a **scripted in-memory transport** (canned
 server replies, sink send) - the reply parser (`reply_complete`, over a fixed 512 B buffer) plus the message
-builder together, one alert email's worth of work. Host from [`performance_benching/bench_smtp.cpp`](../test/performance_benching/services/smtp/);
+builder together, one alert email's worth of work. Host from [`test/performance_benching/services/smtp/host.c`](../test/performance_benching/services/smtp/);
 device from the rig `/bench` `smtp_run` op.
 
 | Operation                          | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 us/op |
@@ -790,7 +790,7 @@ device from the rig `/bench` `smtp_run` op.
 
 The RFC 5424 syslog client formats one `<PRI>1 - HOSTNAME APP-NAME - - - MSG` line per log call and ships
 it as a UDP datagram (`Udp.client->sendto`). `pc_syslog_format` is the pure per-line hot op (no socket, no heap).
-Host from [`performance_benching/bench_syslog.cpp`](../test/performance_benching/services/syslog/); device from the rig `/bench` `pc_syslog_format`
+Host from [`test/performance_benching/services/syslog/host.c`](../test/performance_benching/services/syslog/); device from the rig `/bench` `pc_syslog_format`
 op.
 
 | Operation                     | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -812,7 +812,7 @@ op.
 The device answers NTP requests on UDP/123 from its own clock (RFC 5905 server mode).
 `pc_ntp_server_build_response` is the per-query hot op: it validates the 48-octet request, echoes the client's
 version + transmit stamp into the origin field, and stamps the reference/receive/transmit timestamps. Pure
-(no clock, no socket). Host from [`performance_benching/bench_ntp.cpp`](../test/performance_benching/services/ntp_server/); device from the rig `/bench`
+(no clock, no socket). Host from [`test/performance_benching/services/ntp_server/host.c`](../test/performance_benching/services/ntp_server/); device from the rig `/bench`
 op.
 
 | Operation                           | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -831,7 +831,7 @@ op.
 
 Network Time Security wraps NTP with a TLS-1.3 key-establishment exchange (NTS-KE on :4460) and per-packet
 authenticated extension fields. These are the pure framing hot ops - no TLS, no AEAD, no socket - from
-[`performance_benching/bench_nts.cpp`](../test/performance_benching/services/nts/): the client builds a KE request and parses the server's record
+[`test/performance_benching/services/nts/host.c`](../test/performance_benching/services/nts/): the client builds a KE request and parses the server's record
 stream once per key establishment, and stamps a Unique-Identifier + Cookie EF on every protected NTP
 request. The AES-SIV-CMAC-256 AEAD + the TLS-exporter key derivation sit on top and are not part of these ops.
 
@@ -853,7 +853,7 @@ request. The AES-SIV-CMAC-256 AEAD + the TLS-exporter key derivation sit on top 
 An authoritative DNS server on UDP/53 answers A/IN queries from a fixed table (NXDOMAIN otherwise).
 `pc_dns_server_build_response` is the per-query hot op: it parses the first question, resolves the name via a
 callback, and appends one compressed A answer (or NXDOMAIN / NOTIMP). Pure (no clock, no socket). Host from
-[`performance_benching/bench_dns.cpp`](../test/performance_benching/services/dns_server/); device from the rig `/bench` op.
+[`test/performance_benching/services/dns_server/host.c`](../test/performance_benching/services/dns_server/); device from the rig `/bench` op.
 
 | Operation                              | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
 | -------------------------------------- | ---------: | --------: | --------------: | -------------: |
@@ -873,7 +873,7 @@ callback, and appends one compressed A answer (or NXDOMAIN / NOTIMP). Pure (no c
 
 The text pub/sub codec a device uses to talk to a NATS server: `pc_nats_build_pub` (publish) and `pc_nats_parse`
 (decode one inbound server frame - INFO/MSG/PING/+OK/-ERR, the untrusted-input hot op). Both pure. Host from
-[`performance_benching/bench_nats.cpp`](../test/performance_benching/services/nats/); device from the rig `/bench` `pc_nats_parse` op.
+[`test/performance_benching/services/nats/host.c`](../test/performance_benching/services/nats/); device from the rig `/bench` `pc_nats_parse` op.
 
 | Operation             | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
 | --------------------- | ---------: | --------: | --------------: | -------------: |
@@ -892,7 +892,7 @@ The text pub/sub codec a device uses to talk to a NATS server: `pc_nats_build_pu
 
 The STOMP 1.2 frame codec a device uses to talk to a message broker: `pc_stomp_build_frame` (emit a
 SEND/SUBSCRIBE) and `pc_stomp_parse_frame` (decode one inbound frame - command + headers + content-length body,
-the untrusted-input hot op). Both pure. Host from [`performance_benching/bench_stomp.cpp`](../test/performance_benching/services/stomp/); device
+the untrusted-input hot op). Both pure. Host from [`test/performance_benching/services/stomp/host.c`](../test/performance_benching/services/stomp/); device
 from the rig `/bench` `pc_stomp_parse_frame` op.
 
 | Operation              | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -912,7 +912,7 @@ from the rig `/bench` `pc_stomp_parse_frame` op.
 
 The StatsD line client the device uses to push metrics: `pc_statsd_format` builds one `name:value|type[|@rate]
 [|#tags]` line and the emit helpers `Udp.client->sendto` it (fire-and-forget UDP). `pc_statsd_format` is the pure
-per-metric hot op. Host from [`performance_benching/bench_statsd.cpp`](../test/performance_benching/services/statsd/); device from the rig
+per-metric hot op. Host from [`test/performance_benching/services/statsd/host.c`](../test/performance_benching/services/statsd/); device from the rig
 `/bench` `pc_statsd_format` op.
 
 | Operation                           | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
@@ -930,7 +930,7 @@ per-metric hot op. Host from [`performance_benching/bench_statsd.cpp`](../test/p
 The per-request bearer-token check the device runs to authenticate a caller: `pc_jwt_verify_hs256` splits the
 compact JWT, enforces `alg == HS256` (rejecting `alg=none` / RS256 / HS384 before any HMAC), HMAC-SHA256s the
 signing input, base64url-encodes the MAC, and constant-time compares it. Host from
-[`performance_benching/bench_jwt.cpp`](../test/performance_benching/services/jwt/); device from the rig `/bench` op.
+[`test/performance_benching/services/jwt/host.c`](../test/performance_benching/services/jwt/); device from the rig `/bench` op.
 
 | Operation             | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 us/op |
 | --------------------- | ---------: | --------: | --------------: | -------------: |
@@ -1157,8 +1157,7 @@ Neither is visible to a correctness gate; both were measured.
 ## 3. Request-path benchmarks
 
 The CPU cost of a request's hot path: the standalone HTTP/1.1 request parser and the zero-heap JSON
-writer / reader (`performance_benching/bench_reqpath.cpp` on the host, the same ops in an on-device firmware for the
-ESP32-S3 column). Host = Raspberry Pi 5 (Cortex-A76, `-O2`), a relative baseline; ESP32-S3 = the real
+writer / reader (on the host, the same ops in an on-device firmware for the ESP32-S3 column). Host = Raspberry Pi 5 (Cortex-A76, `-O2`), a relative baseline; ESP32-S3 = the real
 device at 240 MHz, timed over in-RAM buffers so this is pure compute, not socket I/O. Byte counts: the GET
 request is ~220 bytes over 6 headers, the POST is ~150 bytes with a 50-byte JSON body, the encoded doc is
 96 bytes, the decoded body is 50 bytes.
@@ -1234,8 +1233,8 @@ end-to-end handshake bench needs the PSRAM TLS build).
 
 The CPU cost of the hot ops in the data-store stack (WAL / dbm / document store / SQLite reader / Redis
 RESP), measured over a **RAM-backed device** so this is pure compute, not I/O. Host = Raspberry Pi 5
-(Cortex-A76, `-O2`), a relative baseline; ESP32-S3 = the real device at 240 MHz (`performance_benching/bench_datastore.cpp`
-on the host, the same benches in an on-device firmware for the ESP32-S3 column).
+(Cortex-A76, `-O2`), a relative baseline; ESP32-S3 = the real device at 240 MHz (the same benches run
+on the host and in an on-device firmware for the ESP32-S3 column).
 
 Two device-motivated optimizations this benchmark drove are already applied (a table-driven CRC-32 and a
 hand-rolled RESP length prefix - see the discussion below); numbers below are post-optimization.
@@ -1285,7 +1284,7 @@ bugs the host mock-seam tests could not (a stubbed client transport, an `smb_ope
 
 The SCADA / utility-outstation link layer: a CRC-16/DNP (poly 0x3D65, reflected) over the header block and
 every 16-octet data block, a zero-heap frame builder, and a CRC-validating de-blocking parser. Pure (no
-socket). Host from [`performance_benching/bench_dnp3.cpp`](../test/performance_benching/services/dnp3/).
+socket). Host from [`test/performance_benching/services/dnp3/host.c`](../test/performance_benching/services/dnp3/).
 
 | Operation                     | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
 | ----------------------------- | ---------: | --------: | --------------: | -------------: |
@@ -1305,7 +1304,7 @@ socket). Host from [`performance_benching/bench_dnp3.cpp`](../test/performance_b
 
 The building-automation network layer over UDP/47808: the BVLC envelope (Annex J - type/function/length) and
 the NPDU (Clause 6 - version/NPCI-control + optional DNET/DLEN/DADR + SNET/SLEN/SADR + hop count), build +
-validate/slice. Pure (no socket). Host from [`performance_benching/bench_bacnet.cpp`](../test/performance_benching/services/bacnet/).
+validate/slice. Pure (no socket). Host from [`test/performance_benching/services/bacnet/host.c`](../test/performance_benching/services/bacnet/).
 
 | Operation       | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
 | --------------- | ---------: | --------: | --------------: | -------------: |
@@ -1324,7 +1323,7 @@ validate/slice. Pure (no socket). Host from [`performance_benching/bench_bacnet.
 
 The Siemens S7 application layer (over ISO-on-TCP / RFC 1006, TCP/102): the client Setup-Communication +
 Read-Var (S7-ANY pointer) request builders and the response-header parser (protocol id 0x32 / ROSCTR /
-param + data lengths). Pure (no socket). Host from [`performance_benching/bench_s7comm.cpp`](../test/performance_benching/services/s7comm/).
+param + data lengths). Pure (no socket). Host from [`test/performance_benching/services/s7comm/host.c`](../test/performance_benching/services/s7comm/).
 
 | Operation                | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
 | ------------------------ | ---------: | --------: | --------------: | -------------: |
@@ -1342,7 +1341,7 @@ param + data lengths). Pure (no socket). Host from [`performance_benching/bench_
 
 The utility telecontrol protocol over TCP: the -104 APCI (`68 LEN` + 4 control octets, I/S/U formats) and
 the ASDU header (type id / SQ / count / cause-of-transmission / common address). Pure (no socket). Host
-from [`performance_benching/bench_iec60870.cpp`](../test/performance_benching/services/iec60870/).
+from [`test/performance_benching/services/iec60870/host.c`](../test/performance_benching/services/iec60870/).
 
 | Operation           | Host ns/op | Host MB/s | Device (S3) cyc | Device us/op |
 | ------------------- | ---------: | --------: | --------------: | -----------: |
@@ -1366,7 +1365,7 @@ from [`performance_benching/bench_iec60870.cpp`](../test/performance_benching/se
 The client/server core of IEC 61850 (MMS / ISO 9506 over ISO-on-TCP/102): the confirmed-request Read builder
 (a nested BER encoding of the ACSI ObjectName for a Data Object reference), the confirmed-response Read-data
 builder, and the confirmed-PDU header parser. Pure (no socket, no TPKT/COTP). Host from
-[`performance_benching/bench_mms.cpp`](../test/performance_benching/services/mms/).
+[`test/performance_benching/services/mms/host.c`](../test/performance_benching/services/mms/).
 
 | Operation               | Host ns/op | Host MB/s |
 | ----------------------- | ---------: | --------: |
@@ -1388,7 +1387,7 @@ listOfVariable > objectName` BER structure around the ObjectName VisibleString (
 GOOSE (Generic Object Oriented Substation Event) is the fast raw-L2 multicast IEC 61850 uses for protection
 trips: an Ethernet frame (ethertype 0x88B8) + an 8-octet GOOSE header + the BER `IECGoosePdu` (11 control
 fields - gocbRef / stNum / sqNum / allData / ...). Pure (no socket). Host from
-[`performance_benching/bench_goose.cpp`](../test/performance_benching/services/goose/).
+[`test/performance_benching/services/goose/host.c`](../test/performance_benching/services/goose/).
 
 | Operation             | Host ns/op | Host MB/s |
 | --------------------- | ---------: | --------: |
@@ -1408,7 +1407,7 @@ fields - gocbRef / stNum / sqNum / allData / ...). Pure (no socket). Host from
 EtherNet/IP (CIP encapsulation over TCP/44818): the 24-octet encapsulation header (command / length /
 session-handle / status / sender-context / options) + command data, plus the RegisterSession handshake and
 SendRRData (which carries the CIP message). Pure (no socket). Host from
-[`performance_benching/bench_enip.cpp`](../test/performance_benching/services/enip/).
+[`test/performance_benching/services/enip/host.c`](../test/performance_benching/services/enip/).
 
 | Operation                  | Host ns/op | Host MB/s |
 | -------------------------- | ---------: | --------: |
@@ -1428,7 +1427,7 @@ SendRRData (which carries the CIP message). Pure (no socket). Host from
 PROFINET DCP (Discovery and Configuration Protocol, the raw-L2 device-discovery/naming layer): the 10-octet
 DCP header (frameID / service / xid / dataLength), the header parser, and the block walker over
 `[option][suboption][blockLength][value]` TLVs. Pure (no socket). Host from
-[`performance_benching/bench_profinet.cpp`](../test/performance_benching/services/profinet/).
+[`test/performance_benching/services/profinet/host.c`](../test/performance_benching/services/profinet/).
 
 | Operation          | Host ns/op | Host MB/s |
 | ------------------ | ---------: | --------: |

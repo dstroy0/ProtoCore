@@ -212,9 +212,9 @@ Grouped by the area each belongs to.
       footprint tooling (`tools/ci_tooling/generate/example_footprints.py`) to emit a "cost of enabling service X alone" delta
       against the minimal build and land it as a table in `docs/FOOTPRINTS.md`.
 
-#### Split protocore.cpp into single-purpose files
+#### Split protocore.c into single-purpose files
 
-- [ ] **Break protocore.cpp into a `src/server/` of single-purpose files** (L) - carve the monolith into
+- [ ] **Break protocore.c into a `src/server/` of single-purpose files** (L) - carve the monolith into
       cohesive translation units (e.g. `server/lifecycle` for listen/begin/restart, `server/routing` for
       route matching + dispatch, `server/response` for the send/send_template/send_chunked builders,
       `network_drivers/application/file_serving/file_serving`, `network_drivers/application/webdav/webdav`, `server/auth`, and the `server/http2` / `server/http3` seams),

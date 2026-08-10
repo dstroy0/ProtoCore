@@ -383,7 +383,7 @@ layer built first, then the store codecs on top. Substrate before stores.
       on-device **ESP32-S3 us/op @ 240 MHz** and throughput (the number that actually matters). Living
       table: feature, operation, host ns/op, ESP32 us/op, notes. **Done so far:** the storage
       characterization (section 1), the base64 / mtconnect codecs (section 2), the **request path** (section
-      3: HTTP request parse for GET + POST, JSON encode + decode - `performance_benching/bench_reqpath.cpp` + an on-device
+      3: HTTP request parse for GET + POST, JSON encode + decode, on the host and in an on-device
       firmware; finding: the parse -> build-JSON round trip is ~135 us of CPU, far under the network cost, so
       no optimization was warranted), the full **data-store stack** (section 4), and the **chunked
       send-pump framing** (section 3: `performance_benching/server/send_pump`, host + ESP32-S3) - which surfaced a real
@@ -783,7 +783,7 @@ Open follow-ups discovered during the above:
       Tenants migrated: `ssh_pkt_recv` (its ~2 KB stack buffer removed), `ssh_conn`,
       the OIDC verifier's ~2.6 KB decode buffers, and - the planned final tenant - the
       **permessage-deflate window** (both the outbound `deflate_raw` and inbound
-      `inflate_raw` scratch in `websocket.cpp` are `pc_plaintext_alloc`'d, fail-closed on
+      `inflate_raw` scratch in `websocket.c` are `pc_plaintext_alloc`'d, fail-closed on
       exhaustion). Host tests green and esp32dev links.
 
 </details>
@@ -803,7 +803,7 @@ shipped work:
 <summary><b>Expand Build / toolchain items</b></summary>
 
 - [x] **`esp32dev` build failed on the official platform (mbedtls v2).** _(done)_
-      `ssh_rsa.cpp`'s ARDUINO path now compiles on **both** mbedtls v2 (official
+      `ssh_rsa.c`'s ARDUINO path now compiles on **both** mbedtls v2 (official
       `espressif32`, Arduino core 2.0.x) and v3 (core 3.x) via
       `MBEDTLS_VERSION_MAJOR` guards around `mbedtls_rsa_init`, `mbedtls_pk_sign`
       (with an `esp_fill_random`-backed `f_rng`), and `mbedtls_rsa_pkcs1_verify`.
@@ -835,7 +835,7 @@ shipped work:
 
 - [x] **No authentication attempt limiting (brute-force).** _(done)_
       SSH now bounds failed `USERAUTH_REQUEST`s per connection: the dispatcher
-      (`ssh_server.cpp`) counts [`SSH_MSG_USERAUTH_FAILURE`](@ref SSH_MSG_USERAUTH_FAILURE) responses in
+      (`ssh_server.c`) counts [`SSH_MSG_USERAUTH_FAILURE`](@ref SSH_MSG_USERAUTH_FAILURE) responses in
       `SshSession.auth_failures` and, after [`SSH_MAX_AUTH_ATTEMPTS`](@ref SSH_MAX_AUTH_ATTEMPTS)
       (`protocore_config.h`, default 6), emits [`SSH_MSG_DISCONNECT`](@ref SSH_MSG_DISCONNECT)
       (reason 14) and closes (RFC 4252 §4). The publickey probe (PK_OK) and a
@@ -847,10 +847,10 @@ shipped work:
       (per-IP) throttling is the connection-flood item below.
 
 - [x] **Software crypto paths are not constant-time.** _(done - asserted out of
-      firmware)_ The native Montgomery cluster (`ssh_bignum.cpp`: `bn_init`,
+      firmware)_ The native Montgomery cluster (`src/crypto/asymmetric/bignum.c`: `bn_init`,
       `bn_monpro`, `bn_shl1`, `bn_sub_inplace`, `g14_R1/R2`) is now under
       `#ifndef ARDUINO`, so it is not compiled into firmware at all; the software
-      AES (`ssh_aes256ctr.cpp`) and native RSA modexp (`ssh_rsa.cpp`,
+      AES (`src/crypto/cipher/aes256ctr.c`) and native RSA modexp (`ssh_rsa.c`,
       `bn_reduce_full`/`bn_modexp_*`) already live in the `#else` of an
       `#ifdef ARDUINO`. On ESP32 only the HW/mbedTLS paths compile and run.
       Hardening the software paths to constant-time was deliberately skipped
@@ -858,7 +858,7 @@ shipped work:
       Documented in `SECURITY.md` (⚠️ timing row).
 
 - [x] **No connection-flood / rate limiting.** _(done - opt-in global throttle)_
-      `listener.cpp` now has a fixed-window accept-rate gate
+      The TCP listener now has a fixed-window accept-rate gate
       ([`Tcp.listener->accept_allowed()`](@ref Tcp.listener->accept_allowed)): when [`PC_ENABLE_ACCEPT_THROTTLE`](@ref PC_ENABLE_ACCEPT_THROTTLE) is set,
       the accept callback drops connections beyond
       [`PC_ACCEPT_THROTTLE_MAX`](@ref PC_ACCEPT_THROTTLE_MAX) per [`PC_ACCEPT_THROTTLE_WINDOW_MS`](@ref PC_ACCEPT_THROTTLE_WINDOW_MS)
@@ -885,9 +885,9 @@ shipped work:
 
 - [x] **[`pc_base64_decode()`](@ref pc_base64_decode) has no output-capacity guard (Basic-auth ingestion).**
       _(done)_ `pc_base64_decode()` now takes a `dst_cap` parameter
-      (`base64.cpp`/`.h`, both platforms) and bounds every write; an over-capacity
+      (`base64.c`/`.h`, both platforms) and bounds every write; an over-capacity
       decode returns 0 instead of overrunning. `check_basic_auth()`
-      (`protocore.cpp`) passes `sizeof(decoded) - 1`, leaving
+      (`protocore.c`) passes `sizeof(decoded) - 1`, leaving
       room for the null terminator regardless of how [`MAX_VAL_LEN`](@ref MAX_VAL_LEN)/[`MAX_AUTH_LEN`](@ref MAX_AUTH_LEN)
       are set. Tested by `test_base64_decode_respects_capacity`; all callers
       (WS handshake tests) updated to the new signature.
@@ -903,7 +903,7 @@ shipped work:
       each detach the pcb, free the per-connection TLS context, reset the slot, and
       then FIN/RST - on a captured pcb pointer, so a late lwIP callback finds a freed
       slot. Every hand-rolled teardown now passes only the slot: the WS/SSE close +
-      upgrade-fail sites in `protocore.cpp`, `session.cpp`
+      upgrade-fail sites in `protocore.c`, `session.c`
       `tls_abort`, and the SSH (x2) / telnet / modbus / opcua drop paths. This also
       fixed a latent pcb leak (the WS/SSE upgrade-alloc-fail paths detached but never
       aborted). Host-tested (`test_observability`: local-close frees the slot,
@@ -920,7 +920,7 @@ shipped work:
       race concurrent workers. HW-soaked on COM3: a real RS256 verify returns OK with
       `pc_plaintext_high_water == 2624` (exactly the four buffers, now in BSS) and the verify
       compiles + runs under ARDUINO (mbedTLS RSA). `native_oidc` links
-      `session/scratch.cpp` + `worker.cpp`; 13/13 OIDC tests still pass.
+      `worker.c`; 13/13 OIDC tests still pass.
       _Follow-up:_ the HW soak showed the verify still consumes ~7 KB of **stack** during
       the call - that residual is the **mbedTLS RSA-2048 modexp** itself, not the decode
       buffers. A worker task that runs OIDC verification must be sized for it (or the
@@ -949,7 +949,7 @@ shipped work:
 <summary><b>Expand SSH protocol completeness (medium) items</b></summary>
 
 - [x] **[`SSH_MSG_UNIMPLEMENTED`](@ref SSH_MSG_UNIMPLEMENTED) not sent for unknown messages.** _(done)_ The
-      dispatcher's default case (`ssh_server.cpp`) now emits
+      dispatcher's default case (`ssh_server.c`) now emits
       `SSH_MSG_UNIMPLEMENTED` with the rejected packet's sequence number
       (`ssh_pkt[i].seq_no_recv - 1`, since `ssh_pkt_recv` has already advanced the
       counter) per RFC 4253 §11.4 - no handler-signature change needed. Tested by
@@ -957,7 +957,7 @@ shipped work:
 
 - [x] **SSH channel multiplexing + port-forwarding.** _(channels, direct-tcpip `ssh -L`,
       and forwarded-tcpip `ssh -R` done + HW-verified; X11 a merit-justified non-goal)_
-      `ssh_channel.cpp` is a per-connection channel table (`PC_SSH_MAX_CHANNELS`,
+      `ssh_channel.c` is a per-connection channel table (`PC_SSH_MAX_CHANNELS`,
       default 1 = the original single channel): up to N concurrent channels per
       connection, each with its own id / window / peer state, every inbound
       `CHANNEL_*` routed to its channel by the recipient id, and the data callback /
@@ -1061,7 +1061,7 @@ shipped work:
       now backed by `mbedtls_sha256_context` on Arduino
       (`mbedtls_sha256_starts/update/finish`, v2/v3-guarded), so the HW SHA engine
       accelerates per-packet HMAC **and** KEX hashing. The software FIPS-180-4 path
-      is now compiled only on native (`#ifndef ARDUINO`). The `crypto/hmac_sha256.cpp`
+      is now compiled only on native (`#ifndef ARDUINO`). The `src/crypto/mac/hmac_sha256.c`
       HW-acceleration comment is now accurate. Native software KATs still pass;
       `examples/SSHCryptoSelfTest` validates the HW path on-device.
 
@@ -1238,7 +1238,7 @@ by how often a deployed device needs it.
       _Follow-up (done):_ string unescaping now decodes `\uXXXX` to UTF-8 (1-4
       bytes) and joins UTF-16 surrogate pairs into astral code points; an unpaired
       surrogate becomes U+FFFD and malformed/short hex becomes `?`, with a clean
-      truncation when a code point's UTF-8 sequence would not fit (`json.cpp`).
+      truncation when a code point's UTF-8 sequence would not fit (`json.c`).
 
 - [x] **Web "serial" terminal ([`PC_ENABLE_WEB_TERMINAL`](@ref PC_ENABLE_WEB_TERMINAL)).**
       _(done)_ A WebSerial-style browser terminal over the existing WebSocket
@@ -1432,7 +1432,7 @@ Operator / sysadmin:
 - [x] **Native `pc_base64_decode()` accepts `=` outside the trailing pad.** _(done)_
       `b64_val()` no longer treats `=` as a value; the decoder validates padding
       positionally - full 4-char quads only, `=` permitted only as 1-2 trailing
-      chars of the final quad (`base64.cpp`). Misplaced padding and non-multiple-
+      chars of the final quad (`base64.c`). Misplaced padding and non-multiple-
       of-4 input now return 0. Tested by `test_base64_decode_rejects_misplaced_padding`.
 
 - [x] **`test/test_application/` is orphaned** _(done)_ - wired into the
