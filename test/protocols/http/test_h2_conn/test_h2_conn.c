@@ -68,6 +68,7 @@ typedef struct
     uint32_t headers_end[SID_MAX];
     size_t headers_end_n;
     proto_bool last_end_stream;
+    proto_bool hend_malformed; // set to make cap_hend report the request malformed
     char body[BODY_MAX];
     size_t body_len;
     proto_bool data_end;
@@ -87,7 +88,7 @@ static void cap_hdr(void *app, uint32_t sid, const char *n, size_t nl, const cha
     (void)sid;
     field_add(&((Cap *)app)->req_headers, n, nl, v, vl);
 }
-static void cap_hend(void *app, uint32_t sid, proto_bool es)
+static proto_bool cap_hend(void *app, uint32_t sid, proto_bool es)
 {
     Cap *c = (Cap *)app;
     if (c->headers_end_n < SID_MAX)
@@ -95,6 +96,7 @@ static void cap_hend(void *app, uint32_t sid, proto_bool es)
         c->headers_end[c->headers_end_n++] = sid;
     }
     c->last_end_stream = es;
+    return !c->hend_malformed;
 }
 static void cap_data(void *app, uint32_t sid, const uint8_t *d, size_t n, proto_bool es)
 {

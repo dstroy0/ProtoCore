@@ -54,8 +54,11 @@ typedef struct
     void (*write)(void *io, const uint8_t *data, size_t len);
     /** @brief One decoded request header on @p stream_id (pseudo-headers included). */
     void (*on_header)(void *app, uint32_t stream_id, const char *name, size_t nlen, const char *val, size_t vlen);
-    /** @brief The request header block for @p stream_id is complete. @p end_stream: no body. */
-    void (*on_headers_end)(void *app, uint32_t stream_id, proto_bool end_stream);
+    /**
+     * @brief The request header block for @p stream_id is complete. @p end_stream: no body.
+     * @return false if the request is malformed; the engine resets the stream (RFC 9113 sec 8.1.1).
+     */
+    proto_bool (*on_headers_end)(void *app, uint32_t stream_id, proto_bool end_stream);
     /** @brief Request body bytes on @p stream_id (@p end_stream marks the last). */
     void (*on_data)(void *app, uint32_t stream_id, const uint8_t *data, size_t len, proto_bool end_stream);
     void *io;  ///< opaque, passed to write()
