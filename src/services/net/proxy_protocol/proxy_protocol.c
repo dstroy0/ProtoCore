@@ -7,8 +7,8 @@
  */
 
 #include "services/net/proxy_protocol/proxy_protocol.h"
-#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_PROXY_PROTOCOL
 

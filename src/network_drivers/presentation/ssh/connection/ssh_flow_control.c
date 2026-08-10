@@ -7,8 +7,8 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h"
+#include "mmgr/endian.h" // pc_wr32be - the one source of truth for wire integers
 #include "mmgr/protomem.h"
-#include "mmgr/endian.h"      // pc_wr32be - the one source of truth for wire integers
 #include "protocore_config.h" // SSH_CHAN_MAX_PACKET
 
 void pc_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_window, uint32_t peer_max_pkt)

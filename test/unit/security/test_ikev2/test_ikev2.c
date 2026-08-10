@@ -1025,18 +1025,18 @@ void test_prf_plus_kat()
         0xc9, 0xe5, 0x18, 0xd3, 0x6f, 0xa9, 0x77, 0x38, 0xc0, 0xce, 0x9a, 0x84, 0x00, 0xe2, 0x51, 0x82, 0x5e, 0xaa,
         0x87, 0xf7, 0x11, 0x28, 0x89, 0x49, 0x4d, 0x4e, 0x56, 0xbb, 0x6d, 0x24, 0x7b, 0x35, 0xfe, 0xd5};
     uint8_t out[70];
-    TEST_ASSERT_TRUE(pc_ike_prf_plus(tw,key, sizeof(key), seed, sizeof(seed), out, sizeof(out)));
+    TEST_ASSERT_TRUE(pc_ike_prf_plus(tw, key, sizeof(key), seed, sizeof(seed), out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expect, out, sizeof(out)); // spans 3 HMAC blocks (32+32+6), last one truncated
 }
 
 void test_prf_plus_guards()
 {
     uint8_t out[8];
-    TEST_ASSERT_FALSE(pc_ike_prf_plus(tw,NULL, 1, out, 1, out, 1)); // null key
-    TEST_ASSERT_FALSE(pc_ike_prf_plus(tw,out, 1, out, 1, out, 0));  // zero out_len
+    TEST_ASSERT_FALSE(pc_ike_prf_plus(tw, NULL, 1, out, 1, out, 1)); // null key
+    TEST_ASSERT_FALSE(pc_ike_prf_plus(tw, out, 1, out, 1, out, 0));  // zero out_len
     // out_len over 255 blocks fails closed (the 1-byte prf+ counter caps the chain).
     static uint8_t huge[255 * 32 + 1];
-    TEST_ASSERT_FALSE(pc_ike_prf_plus(tw,out, 1, out, 1, huge, sizeof(huge)));
+    TEST_ASSERT_FALSE(pc_ike_prf_plus(tw, out, 1, out, 1, huge, sizeof(huge)));
 }
 
 // Compare a full derivation against the reference, then confirm the ei/er halves differ (prf+ never
@@ -1076,7 +1076,7 @@ void test_derive_keys_kat_16b_nonces()
     IkeKeyLengths lens = {32, 32, 32, 32};
     IkeKeyMaterial km;
     memset(&km, 0, sizeof(km));
-    TEST_ASSERT_TRUE(pc_ike_derive_keys(tw,dh, sizeof(dh), ni, sizeof(ni), nr, sizeof(nr), spii, spir, &lens, &km));
+    TEST_ASSERT_TRUE(pc_ike_derive_keys(tw, dh, sizeof(dh), ni, sizeof(ni), nr, sizeof(nr), spii, spir, &lens, &km));
     TEST_ASSERT_EQUAL_size_t(32, km.sk_d_len);
     TEST_ASSERT_EQUAL_size_t(32, km.sk_a_len);
     TEST_ASSERT_EQUAL_size_t(32, km.sk_e_len);
@@ -1119,7 +1119,7 @@ void test_derive_keys_kat_prehash_key()
     IkeKeyLengths lens = {32, 32, 36, 32};
     IkeKeyMaterial km;
     memset(&km, 0, sizeof(km));
-    TEST_ASSERT_TRUE(pc_ike_derive_keys(tw,dh, sizeof(dh), ni, sizeof(ni), nr, sizeof(nr), spii, spir, &lens, &km));
+    TEST_ASSERT_TRUE(pc_ike_derive_keys(tw, dh, sizeof(dh), ni, sizeof(ni), nr, sizeof(nr), spii, spir, &lens, &km));
     TEST_ASSERT_EQUAL_size_t(36, km.sk_e_len);
     TEST_ASSERT_EQUAL_MEMORY(sk_d, km.sk_d, 32);
     TEST_ASSERT_EQUAL_MEMORY(sk_ei, km.sk_ei, 36);
@@ -1132,12 +1132,12 @@ void test_derive_keys_guards()
     static const uint8_t spi[8] = {0};
     IkeKeyLengths lens = {32, 32, 32, 32};
     IkeKeyMaterial km;
-    TEST_ASSERT_FALSE(pc_ike_derive_keys(tw,NULL, 32, buf, 16, buf, 16, spi, spi, &lens, &km)); // null dh
-    TEST_ASSERT_FALSE(pc_ike_derive_keys(tw,buf, 32, buf, 0, buf, 16, spi, spi, &lens, &km));   // zero ni
+    TEST_ASSERT_FALSE(pc_ike_derive_keys(tw, NULL, 32, buf, 16, buf, 16, spi, spi, &lens, &km)); // null dh
+    TEST_ASSERT_FALSE(pc_ike_derive_keys(tw, buf, 32, buf, 0, buf, 16, spi, spi, &lens, &km));   // zero ni
     IkeKeyLengths toobig = {PC_IKE_SK_MAX + 1, 32, 32, 32};
-    TEST_ASSERT_FALSE(pc_ike_derive_keys(tw,buf, 32, buf, 16, buf, 16, spi, spi, &toobig, &km)); // sk_d too big
+    TEST_ASSERT_FALSE(pc_ike_derive_keys(tw, buf, 32, buf, 16, buf, 16, spi, spi, &toobig, &km)); // sk_d too big
     IkeKeyLengths zero = {0, 32, 32, 32};
-    TEST_ASSERT_FALSE(pc_ike_derive_keys(tw,buf, 32, buf, 16, buf, 16, spi, spi, &zero, &km)); // zero length
+    TEST_ASSERT_FALSE(pc_ike_derive_keys(tw, buf, 32, buf, 16, buf, 16, spi, spi, &zero, &km)); // zero length
 }
 
 // ── tier 2: SK-payload AEAD (AES-256-GCM-16, RFC 5282) ─────────────────────────────────────────
@@ -1303,7 +1303,7 @@ void test_auth_psk_kat()
                                        0xf5, 0xf9, 0xbe, 0x2c, 0xc2, 0x5d, 0x56, 0x79, 0x27, 0xa4, 0x9a,
                                        0x46, 0x5a, 0x91, 0x27, 0xfc, 0xd1, 0x60, 0x04, 0xfd, 0xe1};
     uint8_t out[PC_IKE_AUTH_LEN];
-    TEST_ASSERT_TRUE(pc_ike_auth_psk(tw,psk, sizeof(psk), real, sizeof(real), pnonce, sizeof(pnonce), skp, sizeof(skp),
+    TEST_ASSERT_TRUE(pc_ike_auth_psk(tw, psk, sizeof(psk), real, sizeof(real), pnonce, sizeof(pnonce), skp, sizeof(skp),
                                      idbody, sizeof(idbody), out));
     TEST_ASSERT_EQUAL_MEMORY(expect, out, PC_IKE_AUTH_LEN);
 
@@ -1312,7 +1312,7 @@ void test_auth_psk_kat()
     uint8_t out2[PC_IKE_AUTH_LEN];
     static const uint8_t wrong_psk[16] = {0x6d, 0x79, 0x2d, 0x70, 0x72, 0x65, 0x73, 0x68,
                                           0x61, 0x72, 0x65, 0x64, 0x2d, 0x6b, 0x65, 0x78}; // last byte differs
-    TEST_ASSERT_TRUE(pc_ike_auth_psk(tw,wrong_psk, sizeof(wrong_psk), real, sizeof(real), pnonce, sizeof(pnonce), skp,
+    TEST_ASSERT_TRUE(pc_ike_auth_psk(tw, wrong_psk, sizeof(wrong_psk), real, sizeof(real), pnonce, sizeof(pnonce), skp,
                                      sizeof(skp), idbody, sizeof(idbody), out2));
     TEST_ASSERT_NOT_EQUAL(0, memcmp(expect, out2, PC_IKE_AUTH_LEN));
 }
@@ -1321,9 +1321,9 @@ void test_auth_psk_guards()
 {
     uint8_t out[PC_IKE_AUTH_LEN];
     static const uint8_t b[8] = {0};
-    TEST_ASSERT_FALSE(pc_ike_auth_psk(tw,NULL, 1, b, 8, b, 8, b, 8, b, 8, out)); // null psk
-    TEST_ASSERT_FALSE(pc_ike_auth_psk(tw,b, 8, b, 8, b, 8, b, 8, b, 8, NULL));   // null out
-    TEST_ASSERT_FALSE(pc_ike_auth_psk(tw,b, 8, NULL, 8, b, 8, b, 8, b, 8, out)); // null real_msg
+    TEST_ASSERT_FALSE(pc_ike_auth_psk(tw, NULL, 1, b, 8, b, 8, b, 8, b, 8, out)); // null psk
+    TEST_ASSERT_FALSE(pc_ike_auth_psk(tw, b, 8, b, 8, b, 8, b, 8, b, 8, NULL));   // null out
+    TEST_ASSERT_FALSE(pc_ike_auth_psk(tw, b, 8, NULL, 8, b, 8, b, 8, b, 8, out)); // null real_msg
 }
 
 // ── tier 2: IKE_SA_INIT message assembly (RFC 7296 §1.2) ───────────────────────────────────────
@@ -1529,13 +1529,13 @@ void test_signed_octets_kat()
         0xce, 0xaf, 0xbc, 0x30, 0x14, 0xc2, 0x12, 0xbc, 0x1d, 0xe0, 0xce, 0xb7, 0xc6, 0xeb, 0x4f, 0xbf, 0xe4,
         0xc2, 0x57, 0xe4, 0x29, 0xae, 0x38, 0x36, 0x86, 0x33, 0x13, 0x66, 0xef, 0xbd};
     uint8_t scratch[128];
-    size_t n = pc_ike_signed_octets(tw,scratch, sizeof(scratch), so_real, sizeof(so_real), so_nonce, sizeof(so_nonce),
+    size_t n = pc_ike_signed_octets(tw, scratch, sizeof(scratch), so_real, sizeof(so_real), so_nonce, sizeof(so_nonce),
                                     so_skp, sizeof(so_skp), so_id, sizeof(so_id));
     TEST_ASSERT_EQUAL_size_t(98, n);
     TEST_ASSERT_EQUAL_MEMORY(so_expect, scratch, 98);
     // A scratch too small to hold RealMessage | Nonce | 32 fails closed.
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_signed_octets(tw,scratch, 50, so_real, sizeof(so_real), so_nonce, sizeof(so_nonce),
-                                                     so_skp, sizeof(so_skp), so_id, sizeof(so_id)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_signed_octets(tw, scratch, 50, so_real, sizeof(so_real), so_nonce,
+                                                     sizeof(so_nonce), so_skp, sizeof(so_skp), so_id, sizeof(so_id)));
 }
 
 void test_auth_ecdsa_sign_verify()
@@ -1552,17 +1552,17 @@ void test_auth_ecdsa_sign_verify()
     const uint8_t skp[32] = {7}, id[6] = {0x02, 0, 0, 0, 'g', 'w'};
     uint8_t scratch[128], sig[PC_IKE_ECDSA_P256_SIG_LEN];
 
-    TEST_ASSERT_TRUE(pc_ike_auth_sign_ecdsa_p256(tw,sig, priv, scratch, sizeof(scratch), real, sizeof(real), nonce,
+    TEST_ASSERT_TRUE(pc_ike_auth_sign_ecdsa_p256(tw, sig, priv, scratch, sizeof(scratch), real, sizeof(real), nonce,
                                                  sizeof(nonce), skp, sizeof(skp), id, sizeof(id)));
     // The peer verifies the same octets against the matching public key.
-    TEST_ASSERT_TRUE(pc_ike_auth_verify_ecdsa_p256(tw,pub, sig, scratch, sizeof(scratch), real, sizeof(real), nonce,
+    TEST_ASSERT_TRUE(pc_ike_auth_verify_ecdsa_p256(tw, pub, sig, scratch, sizeof(scratch), real, sizeof(real), nonce,
                                                    sizeof(nonce), skp, sizeof(skp), id, sizeof(id)));
     // A tampered nonce -> different signed octets -> verify fails.
     uint8_t bad_nonce[16];
     memcpy(bad_nonce, nonce, 16);
     bad_nonce[0] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_ike_auth_verify_ecdsa_p256(tw,pub, sig, scratch, sizeof(scratch), real, sizeof(real), bad_nonce,
-                                                    sizeof(bad_nonce), skp, sizeof(skp), id, sizeof(id)));
+    TEST_ASSERT_FALSE(pc_ike_auth_verify_ecdsa_p256(tw, pub, sig, scratch, sizeof(scratch), real, sizeof(real),
+                                                    bad_nonce, sizeof(bad_nonce), skp, sizeof(skp), id, sizeof(id)));
     // A different key pair -> verify fails (impersonation rejected).
     uint8_t priv2[32], pub2[PC_IKE_ECDSA_P256_PUB_LEN];
     for (int i = 0; i < 32; i++)
@@ -1570,11 +1570,11 @@ void test_auth_ecdsa_sign_verify()
         priv2[i] = (uint8_t)(i + 2);
     }
     TEST_ASSERT_TRUE(pc_ecdsa_p256_pubkey(pub2, priv2));
-    TEST_ASSERT_FALSE(pc_ike_auth_verify_ecdsa_p256(tw,pub2, sig, scratch, sizeof(scratch), real, sizeof(real), nonce,
+    TEST_ASSERT_FALSE(pc_ike_auth_verify_ecdsa_p256(tw, pub2, sig, scratch, sizeof(scratch), real, sizeof(real), nonce,
                                                     sizeof(nonce), skp, sizeof(skp), id, sizeof(id)));
     // Scratch too small -> both fail closed.
-    TEST_ASSERT_FALSE(pc_ike_auth_sign_ecdsa_p256(tw,sig, priv, scratch, 8, real, sizeof(real), nonce, sizeof(nonce), skp,
-                                                  sizeof(skp), id, sizeof(id)));
+    TEST_ASSERT_FALSE(pc_ike_auth_sign_ecdsa_p256(tw, sig, priv, scratch, 8, real, sizeof(real), nonce, sizeof(nonce),
+                                                  skp, sizeof(skp), id, sizeof(id)));
 }
 
 // ── tier 2: IKE SA context + key material from a completed IKE_SA_INIT ──────────────────────────
@@ -1806,8 +1806,8 @@ void test_initiator_ike_auth_send()
 
     // Recompute the expected AUTH independently over the same octets and confirm it matches.
     uint8_t expect[32];
-    TEST_ASSERT_TRUE(pc_ike_auth_psk(tw,psk, sizeof(psk), req, reqn, resp_nonce, 16, hs.sa.keys.sk_pi, hs.sa.keys.sk_p_len,
-                                     pl_idi.body, pl_idi.body_len, expect));
+    TEST_ASSERT_TRUE(pc_ike_auth_psk(tw, psk, sizeof(psk), req, reqn, resp_nonce, 16, hs.sa.keys.sk_pi,
+                                     hs.sa.keys.sk_p_len, pl_idi.body, pl_idi.body_len, expect));
     TEST_ASSERT_EQUAL_MEMORY(expect, authdata, 32);
 
     // Calling build_auth again is a wrong-state no-op (already AUTH_SENT).
@@ -1852,7 +1852,7 @@ static size_t build_responder_auth(const IkeKeyMaterial *keys, const uint8_t *rm
     uint8_t rinner[256];
     size_t ridn = pc_ike_id_build(rinner, sizeof(rinner), IKE_PL_AUTH, IKE_ID_FQDN, idr, sizeof(idr));
     uint8_t rauth[32];
-    pc_ike_auth_psk(tw,psk, psk_len, rm2, rm2_len, g_our_nonce, 16, keys->sk_pr, keys->sk_p_len,
+    pc_ike_auth_psk(tw, psk, psk_len, rm2, rm2_len, g_our_nonce, 16, keys->sk_pr, keys->sk_p_len,
                     rinner + PC_IKE_PAYLOAD_HDR_LEN, ridn - PC_IKE_PAYLOAD_HDR_LEN, rauth);
     size_t ran =
         pc_ike_auth_build(rinner + ridn, sizeof(rinner) - ridn, IKE_PL_NONE, IKE_AUTH_PSK, rauth, sizeof(rauth));
@@ -2100,14 +2100,14 @@ void test_child_keymat_kat()
         0xb3, 0x74, 0xc6, 0x62, 0xa9, 0x45, 0x65, 0x38, 0x20, 0x6a, 0xb7, 0x1f, 0x55, 0x2f, 0xdb, 0x99, 0x31, 0x27};
     uint8_t out[72];
     // No PFS: KEYMAT = prf+(SK_d, Ni | Nr).
-    TEST_ASSERT_TRUE(pc_ike_child_keymat(tw,ck_skd, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 72));
+    TEST_ASSERT_TRUE(pc_ike_child_keymat(tw, ck_skd, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 72));
     TEST_ASSERT_EQUAL_MEMORY(ck_keymat, out, 72);
     // PFS: KEYMAT = prf+(SK_d, g^ir | Ni | Nr).
-    TEST_ASSERT_TRUE(pc_ike_child_keymat(tw,ck_skd, 32, ck_dh, 32, ck_ni, 16, ck_nr, 16, out, 72));
+    TEST_ASSERT_TRUE(pc_ike_child_keymat(tw, ck_skd, 32, ck_dh, 32, ck_ni, 16, ck_nr, 16, out, 72));
     TEST_ASSERT_EQUAL_MEMORY(ck_keymat_pfs, out, 72);
     // Guards.
-    TEST_ASSERT_FALSE(pc_ike_child_keymat(tw,NULL, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 72));
-    TEST_ASSERT_FALSE(pc_ike_child_keymat(tw,ck_skd, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 0));
+    TEST_ASSERT_FALSE(pc_ike_child_keymat(tw, NULL, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 72));
+    TEST_ASSERT_FALSE(pc_ike_child_keymat(tw, ck_skd, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 0));
 }
 
 void test_create_child_sa_msg()
@@ -2186,23 +2186,23 @@ void test_auth_verify_rsa()
         0x36, 0xeb, 0x18, 0x73};
     uint8_t scratch[128];
     // A valid RSA-SHA256 signature over the signed octets verifies.
-    TEST_ASSERT_TRUE(pc_ike_auth_verify_rsa_sha256(tw,rsa_n, rsa_e, rsa_sig, 256, scratch, sizeof(scratch), rsa_real, 40,
-                                                   rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
+    TEST_ASSERT_TRUE(pc_ike_auth_verify_rsa_sha256(tw, rsa_n, rsa_e, rsa_sig, 256, scratch, sizeof(scratch), rsa_real,
+                                                   40, rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
     // A tampered nonce (different signed octets) fails.
     uint8_t bad_nonce[16];
     memcpy(bad_nonce, rsa_nonce, 16);
     bad_nonce[0] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(tw,rsa_n, rsa_e, rsa_sig, 256, scratch, sizeof(scratch), rsa_real, 40,
-                                                    bad_nonce, 16, rsa_skp, 32, rsa_id, 8));
+    TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(tw, rsa_n, rsa_e, rsa_sig, 256, scratch, sizeof(scratch), rsa_real,
+                                                    40, bad_nonce, 16, rsa_skp, 32, rsa_id, 8));
     // A tampered signature fails.
     uint8_t bad_sig[256];
     memcpy(bad_sig, rsa_sig, 256);
     bad_sig[100] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(tw,rsa_n, rsa_e, bad_sig, 256, scratch, sizeof(scratch), rsa_real, 40,
-                                                    rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
+    TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(tw, rsa_n, rsa_e, bad_sig, 256, scratch, sizeof(scratch), rsa_real,
+                                                    40, rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
     // Null-argument guard.
-    TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(tw,NULL, rsa_e, rsa_sig, 256, scratch, sizeof(scratch), rsa_real, 40,
-                                                    rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
+    TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(tw, NULL, rsa_e, rsa_sig, 256, scratch, sizeof(scratch), rsa_real,
+                                                    40, rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
 }
 
 // ── IKE SA rekey key schedule (RFC 7296 §2.18): SKEYSEED = prf(SK_d_old, g^ir | Ni | Nr) ────────
@@ -2233,7 +2233,7 @@ void test_rekey_derive_keys()
     IkeKeyMaterial km;
     memset(&km, 0, sizeof(km));
     TEST_ASSERT_TRUE(
-        pc_ike_rekey_derive_keys(tw,rk_skd, 32, rk_dh, 32, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
+        pc_ike_rekey_derive_keys(tw, rk_skd, 32, rk_dh, 32, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
     TEST_ASSERT_EQUAL_MEMORY(rk_sk_d, km.sk_d, 32);
     TEST_ASSERT_EQUAL_MEMORY(rk_sk_ei, km.sk_ei, 36);
     TEST_ASSERT_EQUAL_MEMORY(rk_sk_pr, km.sk_pr, 32);
@@ -2241,14 +2241,14 @@ void test_rekey_derive_keys()
     // The rekey schedule is DISTINCT from the initial one: the same nonces/SPIs/g^ir through the initial
     // derive_keys (SKEYSEED = prf(Ni|Nr, g^ir)) give different keys.
     IkeKeyMaterial km_init;
-    TEST_ASSERT_TRUE(pc_ike_derive_keys(tw,rk_dh, 32, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km_init));
+    TEST_ASSERT_TRUE(pc_ike_derive_keys(tw, rk_dh, 32, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km_init));
     TEST_ASSERT_NOT_EQUAL(0, memcmp(km.sk_d, km_init.sk_d, 32));
 
     // Guards: null SK_d and a missing g^ir (a rekey always has a fresh D-H) fail closed.
     TEST_ASSERT_FALSE(
-        pc_ike_rekey_derive_keys(tw,NULL, 32, rk_dh, 32, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
+        pc_ike_rekey_derive_keys(tw, NULL, 32, rk_dh, 32, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
     TEST_ASSERT_FALSE(
-        pc_ike_rekey_derive_keys(tw,rk_skd, 32, rk_dh, 0, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
+        pc_ike_rekey_derive_keys(tw, rk_skd, 32, rk_dh, 0, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
 }
 
 // ── Configuration payload (RFC 7296 §3.15) ──────────────────────────────────────────────────────
@@ -2424,43 +2424,43 @@ static const uint8_t ck_golden[33] = {0x01, 0xd0, 0x8e, 0x77, 0x8e, 0xe6, 0xc6, 
 void test_cookie_compute_kat()
 {
     uint8_t out[33];
-    size_t n = pc_ike_cookie_compute(tw,0x01, ck_secret, sizeof(ck_secret), ck_ni, sizeof(ck_ni), ck_ipi, sizeof(ck_ipi),
-                                     ck_spii, out, sizeof(out));
+    size_t n = pc_ike_cookie_compute(tw, 0x01, ck_secret, sizeof(ck_secret), ck_ni, sizeof(ck_ni), ck_ipi,
+                                     sizeof(ck_ipi), ck_spii, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(PC_IKE_COOKIE_LEN, n);
     TEST_ASSERT_EQUAL_MEMORY(ck_golden, out, 33);
 
     // A too-small buffer fails closed.
     uint8_t small[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_cookie_compute(tw,0x01, ck_secret, sizeof(ck_secret), ck_ni, sizeof(ck_ni), ck_ipi,
-                                                      sizeof(ck_ipi), ck_spii, small, sizeof(small)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_cookie_compute(tw, 0x01, ck_secret, sizeof(ck_secret), ck_ni, sizeof(ck_ni),
+                                                      ck_ipi, sizeof(ck_ipi), ck_spii, small, sizeof(small)));
 }
 
 void test_cookie_verify()
 {
     // The genuine cookie verifies; the version tag is read from the cookie itself.
-    TEST_ASSERT_TRUE(pc_ike_cookie_verify(tw,ck_golden, sizeof(ck_golden), ck_secret, sizeof(ck_secret), ck_ni,
+    TEST_ASSERT_TRUE(pc_ike_cookie_verify(tw, ck_golden, sizeof(ck_golden), ck_secret, sizeof(ck_secret), ck_ni,
                                           sizeof(ck_ni), ck_ipi, sizeof(ck_ipi), ck_spii));
 
     // Any changed input (secret, nonce, source IP, or SPI) fails verification - a spoofed initiator
     // cannot forge a cookie for a different address.
     const uint8_t other_secret[8] = {0, 0, 0, 0, 0, 0, 0, 1};
-    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw,ck_golden, sizeof(ck_golden), other_secret, sizeof(other_secret), ck_ni,
+    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw, ck_golden, sizeof(ck_golden), other_secret, sizeof(other_secret), ck_ni,
                                            sizeof(ck_ni), ck_ipi, sizeof(ck_ipi), ck_spii));
     const uint8_t other_ip[4] = {198, 51, 100, 9};
-    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw,ck_golden, sizeof(ck_golden), ck_secret, sizeof(ck_secret), ck_ni,
+    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw, ck_golden, sizeof(ck_golden), ck_secret, sizeof(ck_secret), ck_ni,
                                            sizeof(ck_ni), other_ip, sizeof(other_ip), ck_spii));
     const uint8_t other_spi[8] = {9, 9, 9, 9, 9, 9, 9, 9};
-    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw,ck_golden, sizeof(ck_golden), ck_secret, sizeof(ck_secret), ck_ni,
+    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw, ck_golden, sizeof(ck_golden), ck_secret, sizeof(ck_secret), ck_ni,
                                            sizeof(ck_ni), ck_ipi, sizeof(ck_ipi), other_spi));
 
     // A tampered cookie byte and a wrong length are rejected.
     uint8_t bad[33];
     memcpy(bad, ck_golden, 33);
     bad[10] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw,bad, sizeof(bad), ck_secret, sizeof(ck_secret), ck_ni, sizeof(ck_ni), ck_ipi,
-                                           sizeof(ck_ipi), ck_spii));
-    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw,ck_golden, 32, ck_secret, sizeof(ck_secret), ck_ni, sizeof(ck_ni), ck_ipi,
-                                           sizeof(ck_ipi), ck_spii));
+    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw, bad, sizeof(bad), ck_secret, sizeof(ck_secret), ck_ni, sizeof(ck_ni),
+                                           ck_ipi, sizeof(ck_ipi), ck_spii));
+    TEST_ASSERT_FALSE(pc_ike_cookie_verify(tw, ck_golden, 32, ck_secret, sizeof(ck_secret), ck_ni, sizeof(ck_ni),
+                                           ck_ipi, sizeof(ck_ipi), ck_spii));
 }
 
 void test_cookie_notify_build()

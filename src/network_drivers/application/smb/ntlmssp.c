@@ -31,10 +31,10 @@ size_t pc_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags)
     }
     mem.set(buf, 0, 32);
     mem.cpy(buf + 0, NTLMSSP_SIG, 8); // Signature
-    pc_wr32le(buf + 8, 1);           // MessageType = NEGOTIATE
-    pc_wr32le(buf + 12, flags);      // NegotiateFlags
-    wr_field(buf + 16, 0, 32);       // DomainNameFields (empty; offset = end of header)
-    wr_field(buf + 24, 0, 32);       // WorkstationFields (empty)
+    pc_wr32le(buf + 8, 1);            // MessageType = NEGOTIATE
+    pc_wr32le(buf + 12, flags);       // NegotiateFlags
+    wr_field(buf + 16, 0, 32);        // DomainNameFields (empty; offset = end of header)
+    wr_field(buf + 24, 0, 32);        // WorkstationFields (empty)
     return 32;
 }
 
@@ -116,7 +116,7 @@ size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm
 
     mem.set(buf, 0, HDR);
     mem.cpy(buf + 0, NTLMSSP_SIG, 8); // Signature
-    pc_wr32le(buf + 8, 3);           // MessageType = AUTHENTICATE
+    pc_wr32le(buf + 8, 3);            // MessageType = AUTHENTICATE
     if (with_mic)
     {
         // Version (offset 64): a plausible Windows build; servers do not validate the value. MIC (offset

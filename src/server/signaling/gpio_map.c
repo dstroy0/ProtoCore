@@ -76,10 +76,9 @@ int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t
     {
         const pc_gpio_pin *p = &pins[i];
         if (frame.append(out, cap, GPIO_PIN,
-                            (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VU32((uint32_t)p->pin),
-                                              PC_VJSON(p->label), PC_VJSON(pc_gpio_dir_name(p->dir)),
-                                              PC_VU32((uint32_t)(!!p->level))},
-                            5) == 0)
+                         (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VU32((uint32_t)p->pin), PC_VJSON(p->label),
+                                           PC_VJSON(pc_gpio_dir_name(p->dir)), PC_VU32((uint32_t)(!!p->level))},
+                         5) == 0)
         {
             return 0;
         }

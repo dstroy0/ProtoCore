@@ -616,7 +616,7 @@ static void run_pubkey_rsa_sha512(const uint8_t *der, unsigned int der_len, cons
     memcpy(sd + sn, P, pn);
     sn += pn;
     uint8_t sig[256];
-    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign(tw,sd, sn, PC_RSA_HASH_SHA512, sig));
+    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign(tw, sd, sn, PC_RSA_HASH_SHA512, sig));
 
     // Full request = P || string( string("rsa-sha2-512") || string(sig) ).
     uint8_t pkt[1024];
@@ -806,7 +806,7 @@ void test_pubkey_ed25519_valid_signature_succeeds()
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
     uint8_t pub[32];
-    pc_ed25519_pubkey(tw,pub, seed);
+    pc_ed25519_pubkey(tw, pub, seed);
 
     // Build the signed prefix, prepend string(session_id), sign the whole thing.
     uint8_t pkt[512];
@@ -821,7 +821,7 @@ void test_pubkey_ed25519_valid_signature_succeeds()
     memcpy(signed_data + sd, pkt, prefix_len);
     sd += prefix_len;
     uint8_t sig[64];
-    pc_ed25519_sign(tw,sig, signed_data, sd, seed);
+    pc_ed25519_sign(tw, sig, signed_data, sd, seed);
 
     size_t n = build_pubkey_req_ed(pkt, pub, sig, PROTO_TRUE, NULL);
     uint8_t out[64];

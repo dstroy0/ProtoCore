@@ -7,8 +7,8 @@
  */
 
 #include "network_drivers/presentation/http/http3/h3_conn.h"
-#include "mmgr/protomem.h"
 #include "mmgr/plaintext.h" // HTTP is plaintext; its streams borrow from that arena
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 

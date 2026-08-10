@@ -114,8 +114,8 @@ size_t pc_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge
     // Build temp in place at out+16, so the result is NTProofStr(16) || temp contiguously.
     uint8_t *temp = out + 16;
     size_t k = 0;
-    temp[k++] = 0x01;       // Responserversion
-    temp[k++] = 0x01;       // HiResponserversion
+    temp[k++] = 0x01;        // Responserversion
+    temp[k++] = 0x01;        // HiResponserversion
     mem.set(temp + k, 0, 6); // Z(6)
     k += 6;
     mem.cpy(temp + k, timestamp, 8);

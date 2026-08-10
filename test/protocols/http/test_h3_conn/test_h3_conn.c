@@ -337,7 +337,7 @@ void test_uni_stream_partial_type()
     uint8_t b0 = 0x40; // first byte of a 2-byte varint - incomplete on its own
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, &b0, 1, PROTO_FALSE);
     TEST_ASSERT_FALSE(find_h3(&g_h3, 2)->type_read); // needs more bytes; not yet classified
-    uint8_t b1 = 0x00;                             // completes the varint 0x4000 -> value 0 -> control stream
+    uint8_t b1 = 0x00;                               // completes the varint 0x4000 -> value 0 -> control stream
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, &b1, 1, PROTO_FALSE);
     TEST_ASSERT_TRUE(find_h3(&g_h3, 2)->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, find_h3(&g_h3, 2)->role);

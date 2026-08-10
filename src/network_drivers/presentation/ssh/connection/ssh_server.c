@@ -7,8 +7,8 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_server.h"
-#include "mmgr/protomem.h"
 #include "mmgr/plaintext.h"
+#include "mmgr/protomem.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"

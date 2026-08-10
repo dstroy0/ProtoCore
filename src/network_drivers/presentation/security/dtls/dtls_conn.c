@@ -137,8 +137,9 @@ static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg
         {
             take = per_frag;
         }
-        const size_t flen = DtlsHandshake.frag_build(msg_type, msg_seq, body_len, off, tls_msg + 4 + off, take,
-                                                     c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
+        const size_t flen =
+            DtlsHandshake.frag_build(msg_type, msg_seq, body_len, off, tls_msg + 4 + off, take,
+                                     c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
         if (!flen)
         {
             return PROTO_FALSE;

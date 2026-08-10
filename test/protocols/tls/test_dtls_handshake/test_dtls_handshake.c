@@ -318,7 +318,7 @@ static const uint8_t COOKIE_WIRE[77] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66
 static void test_cookie_kat(void)
 {
     uint8_t out[PC_DTLS_COOKIE_MAX];
-    size_t n = DtlsHandshake.cookie_make(tw,COOKIE_KEY, COOKIE_TS, COOKIE_PAYLOAD, sizeof(COOKIE_PAYLOAD), COOKIE_ADDR,
+    size_t n = DtlsHandshake.cookie_make(tw, COOKIE_KEY, COOKIE_TS, COOKIE_PAYLOAD, sizeof(COOKIE_PAYLOAD), COOKIE_ADDR,
                                          sizeof(COOKIE_ADDR), out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(sizeof(COOKIE_WIRE), n);
     TEST_ASSERT_EQUAL_MEMORY(COOKIE_WIRE, out, sizeof(COOKIE_WIRE));
@@ -329,7 +329,7 @@ static void test_cookie_verify_accept_and_payload(void)
     uint8_t payload[64];
     size_t plen = 0;
     // max_age = 0 disables the freshness check, isolating the MAC + payload recovery.
-    TEST_ASSERT_TRUE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), COOKIE_WIRE,
+    TEST_ASSERT_TRUE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), COOKIE_WIRE,
                                                  sizeof(COOKIE_WIRE), payload, sizeof(payload), &plen));
     TEST_ASSERT_EQUAL_size_t(sizeof(COOKIE_PAYLOAD), plen);
     TEST_ASSERT_EQUAL_MEMORY(COOKIE_PAYLOAD, payload, plen);
@@ -342,40 +342,40 @@ static void test_cookie_verify_rejects(void)
 
     // A different client address fails the MAC (the address is authenticated, not stored).
     uint8_t other_addr[4] = {0xC0, 0xA8, 0x01, 0x33};
-    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 0, 0, other_addr, sizeof(other_addr), COOKIE_WIRE,
+    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 0, 0, other_addr, sizeof(other_addr), COOKIE_WIRE,
                                                   sizeof(COOKIE_WIRE), payload, sizeof(payload), &plen));
 
     // A tampered payload byte fails the MAC.
     uint8_t bad[77];
     memcpy(bad, COOKIE_WIRE, sizeof(bad));
     bad[20] ^= 0x01;
-    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), bad, sizeof(bad),
-                                                  payload, sizeof(payload), &plen));
+    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), bad,
+                                                  sizeof(bad), payload, sizeof(payload), &plen));
 
     // A truncated cookie is rejected.
-    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), COOKIE_WIRE, 20,
-                                                  payload, sizeof(payload), &plen));
+    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), COOKIE_WIRE,
+                                                  20, payload, sizeof(payload), &plen));
 }
 
 static void test_cookie_freshness(void)
 {
     uint8_t cookie[PC_DTLS_COOKIE_MAX];
     const uint8_t payload[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    size_t n = DtlsHandshake.cookie_make(tw,COOKIE_KEY, 1000, payload, sizeof(payload), COOKIE_ADDR, sizeof(COOKIE_ADDR),
-                                         cookie, sizeof(cookie));
+    size_t n = DtlsHandshake.cookie_make(tw, COOKIE_KEY, 1000, payload, sizeof(payload), COOKIE_ADDR,
+                                         sizeof(COOKIE_ADDR), cookie, sizeof(cookie));
     TEST_ASSERT_TRUE(n > 0);
 
     uint8_t out[16];
     size_t plen = 0;
     // Within max_age -> accepted.
-    TEST_ASSERT_TRUE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 1005, 10, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, n, out,
-                                                 sizeof(out), &plen));
+    TEST_ASSERT_TRUE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 1005, 10, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, n,
+                                                 out, sizeof(out), &plen));
     // Older than max_age -> stale.
-    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 2000, 10, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, n,
+    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 2000, 10, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, n,
                                                   out, sizeof(out), &plen));
     // Timestamp in the future relative to now -> rejected.
-    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 999, 10, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, n, out,
-                                                  sizeof(out), &plen));
+    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 999, 10, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, n,
+                                                  out, sizeof(out), &plen));
 }
 
 // DtlsHandshake.frag_build's range guards: each uint24 field overflowing, a fragment that falls
@@ -450,15 +450,15 @@ static void test_cookie_make_rejects(void)
     const uint8_t payload[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
     // payload_len above the 16-bit payload-length field (the payload is never read).
-    TEST_ASSERT_EQUAL_size_t(
-        0, DtlsHandshake.cookie_make(tw,COOKIE_KEY, 1, NULL, 0x10000, COOKIE_ADDR, sizeof(COOKIE_ADDR), out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.cookie_make(tw, COOKIE_KEY, 1, NULL, 0x10000, COOKIE_ADDR,
+                                                          sizeof(COOKIE_ADDR), out, sizeof(out)));
     // total = 11 + payload + 32 = 51 > out_cap.
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.cookie_make(tw,COOKIE_KEY, 1, payload, sizeof(payload), COOKIE_ADDR,
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.cookie_make(tw, COOKIE_KEY, 1, payload, sizeof(payload), COOKIE_ADDR,
                                                           sizeof(COOKIE_ADDR), out, 20));
     // Room in the caller's buffer, but the cookie would exceed PC_DTLS_COOKIE_MAX.
     uint8_t big[128];
     memset(big, 0x5A, sizeof(big));
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.cookie_make(tw,COOKIE_KEY, 1, big, sizeof(big), COOKIE_ADDR,
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.cookie_make(tw, COOKIE_KEY, 1, big, sizeof(big), COOKIE_ADDR,
                                                           sizeof(COOKIE_ADDR), out, sizeof(out)));
 }
 
@@ -467,14 +467,14 @@ static void test_cookie_make_rejects(void)
 static void test_cookie_empty_payload_roundtrip(void)
 {
     uint8_t cookie[PC_DTLS_COOKIE_MAX];
-    size_t n =
-        DtlsHandshake.cookie_make(tw,COOKIE_KEY, 4242, NULL, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, sizeof(cookie));
+    size_t n = DtlsHandshake.cookie_make(tw, COOKIE_KEY, 4242, NULL, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie,
+                                         sizeof(cookie));
     TEST_ASSERT_EQUAL_size_t(1 + 8 + 2 + PC_HMAC_SHA256_LEN, n);
 
     uint8_t payload[4];
     memset(payload, 0xEE, sizeof(payload));
     size_t plen = 123;
-    TEST_ASSERT_TRUE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 4242, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, n,
+    TEST_ASSERT_TRUE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 4242, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, n,
                                                  payload, sizeof(payload), &plen));
     TEST_ASSERT_EQUAL_size_t(0, plen);
     TEST_ASSERT_EQUAL_UINT8(0xEE, payload[0]); // nothing was written
@@ -491,18 +491,18 @@ static void test_cookie_verify_structural_rejects(void)
     // Version byte other than 1.
     memcpy(bad, COOKIE_WIRE, sizeof(bad));
     bad[0] = 2;
-    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), bad, sizeof(bad),
-                                                  payload, sizeof(payload), &plen));
+    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), bad,
+                                                  sizeof(bad), payload, sizeof(payload), &plen));
 
     // Declared payload length no longer matches the cookie's actual length.
     memcpy(bad, COOKIE_WIRE, sizeof(bad));
     bad[10] = 0x21; // 33 instead of 34
-    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), bad, sizeof(bad),
-                                                  payload, sizeof(payload), &plen));
+    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), bad,
+                                                  sizeof(bad), payload, sizeof(payload), &plen));
 
     // The 34-byte payload does not fit the caller's buffer: refused before the MAC is even checked.
     uint8_t small[16];
-    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw,COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), COOKIE_WIRE,
+    TEST_ASSERT_FALSE(DtlsHandshake.cookie_verify(tw, COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), COOKIE_WIRE,
                                                   sizeof(COOKIE_WIRE), small, sizeof(small), &plen));
 }
 

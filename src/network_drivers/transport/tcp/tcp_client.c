@@ -34,8 +34,8 @@ typedef struct
     // same reason the ring indices below are: volatile orders nothing and publishes nothing.
     _Atomic proto_bool in_use;
     _Atomic proto_bool connected;
-    _Atomic proto_bool closed;  // peer FIN or error
-    const char *host;           // the caller's name, read each pump until it resolves
+    _Atomic proto_bool closed; // peer FIN or error
+    const char *host;          // the caller's name, read each pump until it resolves
     uint16_t port;
     uint32_t timer;      // millis the open started at
     uint32_t timeout_ms; // what the whole open, resolve included, is given

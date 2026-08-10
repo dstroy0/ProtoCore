@@ -33,8 +33,8 @@
 #include <unity.h>
 
 static uint8_t tw[4096];
-static uint8_t tw_c[4096]; // c works out of its own bytes
-static uint8_t tw_ctx[4096]; // ctx works out of its own bytes
+static uint8_t tw_c[4096];    // c works out of its own bytes
+static uint8_t tw_ctx[4096];  // ctx works out of its own bytes
 static uint8_t tw_hctx[4096]; // hctx works out of its own bytes // test-side working bytes for the crypto entry points
 
 // ============================================================================
@@ -74,7 +74,7 @@ static void test_sha256_empty(void)
 {
     // SHA256("") = e3b0c44298fc1c149afb...
     uint8_t got[32];
-    pc_sha256(tw,NULL, 0, got);
+    pc_sha256(tw, NULL, 0, got);
     uint8_t expected[32];
     hex_to_bytes(expected, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", 32);
     TEST_ASSERT_EQUAL_MEMORY(expected, got, 32);
@@ -85,7 +85,7 @@ static void test_sha256_abc(void)
     // SHA256("abc") = ba7816bf8f01cfea414140de5dae2ec73b00361bbef0469...
     uint8_t got[32];
     const uint8_t *msg = (const uint8_t *)"abc";
-    pc_sha256(tw,msg, 3, got);
+    pc_sha256(tw, msg, 3, got);
     uint8_t expected[32];
     hex_to_bytes(expected, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", 32);
     TEST_ASSERT_EQUAL_MEMORY(expected, got, 32);
@@ -96,7 +96,7 @@ static void test_sha256_448bit(void)
     // SHA256("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
     const uint8_t *msg = (const uint8_t *)"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
     uint8_t got[32];
-    pc_sha256(tw,msg, 56, got);
+    pc_sha256(tw, msg, 56, got);
     uint8_t expected[32];
     hex_to_bytes(expected, "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", 32);
     TEST_ASSERT_EQUAL_MEMORY(expected, got, 32);
@@ -129,7 +129,7 @@ static void test_hmac_sha256_tc1(void)
     uint8_t key[20];
     memset(key, 0x0b, 20);
     uint8_t got[32];
-    pc_hmac_sha256(tw,key, 20, (const uint8_t *)"Hi There", 8, got);
+    pc_hmac_sha256(tw, key, 20, (const uint8_t *)"Hi There", 8, got);
     uint8_t expected[32];
     hex_to_bytes(expected, "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7", 32);
     TEST_ASSERT_EQUAL_MEMORY(expected, got, 32);
@@ -142,7 +142,7 @@ static void test_hmac_sha256_tc2(void)
     // Data = "what do ya want for nothing?"
     // HMAC = 5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843
     uint8_t got[32];
-    pc_hmac_sha256(tw,(const uint8_t *)"Jefe", 4, (const uint8_t *)"what do ya want for nothing?", 28, got);
+    pc_hmac_sha256(tw, (const uint8_t *)"Jefe", 4, (const uint8_t *)"what do ya want for nothing?", 28, got);
     uint8_t expected[32];
     hex_to_bytes(expected, "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843", 32);
     TEST_ASSERT_EQUAL_MEMORY(expected, got, 32);
@@ -159,7 +159,7 @@ static void test_hmac_sha256_tc3(void)
     uint8_t data[50];
     memset(data, 0xdd, 50);
     uint8_t got[32];
-    pc_hmac_sha256(tw,key, 20, data, 50, got);
+    pc_hmac_sha256(tw, key, 20, data, 50, got);
     uint8_t expected[32];
     hex_to_bytes(expected, "773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe", 32);
     TEST_ASSERT_EQUAL_MEMORY(expected, got, 32);
@@ -187,7 +187,7 @@ static void test_hmac_sha512_tc1(void)
     uint8_t key[20];
     memset(key, 0x0b, 20);
     uint8_t got[64];
-    pc_hmac_sha512(tw,key, 20, (const uint8_t *)"Hi There", 8, got);
+    pc_hmac_sha512(tw, key, 20, (const uint8_t *)"Hi There", 8, got);
     uint8_t expected[64];
     hex_to_bytes(expected,
                  "87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cded"
@@ -200,7 +200,7 @@ static void test_hmac_sha512_tc2(void)
 {
     // RFC 4231 Test Case 2: Key = "Jefe", Data = "what do ya want for nothing?".
     uint8_t got[64];
-    pc_hmac_sha512(tw,(const uint8_t *)"Jefe", 4, (const uint8_t *)"what do ya want for nothing?", 28, got);
+    pc_hmac_sha512(tw, (const uint8_t *)"Jefe", 4, (const uint8_t *)"what do ya want for nothing?", 28, got);
     uint8_t expected[64];
     hex_to_bytes(expected,
                  "164b7a7bfcf819e2e395fbe73b56e0a387bd64222e831fd610270cd7ea2505549"
@@ -237,7 +237,7 @@ static void test_hmac_sha256_tc6_large_key(void)
     memset(key, 0xaa, sizeof(key));
     const char *data = "Test Using Larger Than Block-Size Key - Hash Key First";
     uint8_t got[32];
-    pc_hmac_sha256(tw,key, sizeof(key), (const uint8_t *)data, strlen(data), got);
+    pc_hmac_sha256(tw, key, sizeof(key), (const uint8_t *)data, strlen(data), got);
     uint8_t expected[32];
     hex_to_bytes(expected, "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54", 32);
     TEST_ASSERT_EQUAL_MEMORY(expected, got, 32);
@@ -251,7 +251,7 @@ static void test_hmac_sha512_tc6_large_key(void)
     memset(key, 0xaa, sizeof(key));
     const char *data = "Test Using Larger Than Block-Size Key - Hash Key First";
     uint8_t got[64];
-    pc_hmac_sha512(tw,key, sizeof(key), (const uint8_t *)data, strlen(data), got);
+    pc_hmac_sha512(tw, key, sizeof(key), (const uint8_t *)data, strlen(data), got);
     uint8_t expected[64];
     hex_to_bytes(expected,
                  "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f352"
@@ -606,14 +606,14 @@ static void run_rsa_sign_verify_roundtrip(const uint8_t *der, unsigned int der_l
 
     const uint8_t msg[] = "round-trip with a real private exponent";
     uint8_t sig[256];
-    int rc = ssh_rsa_sign(tw,msg, sizeof(msg) - 1, SSH_MAC_HMAC_SHA256, sig);
+    int rc = ssh_rsa_sign(tw, msg, sizeof(msg) - 1, SSH_MAC_HMAC_SHA256, sig);
     TEST_ASSERT_EQUAL_INT(0, rc);
 
     // The signature must NOT equal the padded message (d != 1 exercised).
     uint8_t em[256];
     {
         uint8_t digest[PC_SHA256_DIGEST_LEN];
-        pc_sha256(tw,msg, sizeof(msg) - 1, digest);
+        pc_sha256(tw, msg, sizeof(msg) - 1, digest);
         // Rebuild the expected EM to confirm the modexp actually transformed it.
         em[0] = 0x00;
         em[1] = 0x01;
@@ -630,7 +630,8 @@ static void run_rsa_sign_verify_roundtrip(const uint8_t *der, unsigned int der_l
     TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(nbytes, e, tw, msg, sizeof(msg) - 1, sig, 256, SSH_MAC_HMAC_SHA256));
 
     // A tampered message must fail verification of the same signature.
-    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(nbytes, e, tw, (const uint8_t *)"different", 9, sig, 256, SSH_MAC_HMAC_SHA256));
+    TEST_ASSERT_EQUAL_INT(-1,
+                          pc_rsa_verify(nbytes, e, tw, (const uint8_t *)"different", 9, sig, 256, SSH_MAC_HMAC_SHA256));
 }
 
 // Twice: the committed baseline key, then the key generated for this run. A round trip that turned
@@ -660,7 +661,7 @@ static void test_rsa_load_pkcs1_and_pkcs8_agree(void)
 
     static const char msg[] = "either shape signs the same";
     uint8_t sig[256];
-    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign(tw,(const uint8_t *)msg, sizeof(msg) - 1, SSH_MAC_HMAC_SHA256, sig));
+    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign(tw, (const uint8_t *)msg, sizeof(msg) - 1, SSH_MAC_HMAC_SHA256, sig));
     TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(PC_SSH_BASELINE_KEY_N, PC_SSH_BASELINE_KEY_E, tw, (const uint8_t *)msg,
                                            sizeof(msg) - 1, sig, 256, SSH_MAC_HMAC_SHA256));
 
@@ -714,7 +715,7 @@ static void test_rsa_verify_and_encode_guards(void)
     memset(sig, 0, sizeof(sig));
     TEST_ASSERT_EQUAL_INT(
         -1, pc_rsa_verify(n, e, tw, (const uint8_t *)"m", 1, sig, 255, SSH_MAC_HMAC_SHA256)); // sig length mismatch
-    memset(sig, 0xFF, sizeof(sig));                                                       // all-ones >= any modulus
+    memset(sig, 0xFF, sizeof(sig));                                                           // all-ones >= any modulus
     TEST_ASSERT_EQUAL_INT(
         -1, pc_rsa_verify(n, e, tw, (const uint8_t *)"m", 1, sig, 256, SSH_MAC_HMAC_SHA256)); // sig not reduced mod n
 
@@ -842,7 +843,8 @@ static void test_rsa_sha512_kat_sign_verify(void)
     TEST_ASSERT_EQUAL_INT(0, pc_rsa_verify(n, e, tw, (const uint8_t *)RSA512_MSG, mlen, ref, 256, SSH_MAC_HMAC_SHA512));
 
     // Hash-algorithm binding: a SHA-512 signature must NOT verify as SHA-256.
-    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n, e, tw, (const uint8_t *)RSA512_MSG, mlen, sig, 256, SSH_MAC_HMAC_SHA256));
+    TEST_ASSERT_EQUAL_INT(-1,
+                          pc_rsa_verify(n, e, tw, (const uint8_t *)RSA512_MSG, mlen, sig, 256, SSH_MAC_HMAC_SHA256));
 
     // A different message (same length) must fail SHA-512 verification.
     TEST_ASSERT_EQUAL_INT(

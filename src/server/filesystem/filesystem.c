@@ -430,8 +430,7 @@ proto_bool pc_fs_copy(int root, const char *from_dir, const char *from_name, con
     }
 
     size_t slen = frame.build(s_fs.walk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(sp)}, 1);
-    size_t dlen =
-        frame.build(s_fs.dwalk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(dp)}, 1);
+    size_t dlen = frame.build(s_fs.dwalk, PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const pc_fval[]){PC_VSTR(dp)}, 1);
     if (slen == 0 || dlen == 0)
     {
         return PROTO_FALSE;

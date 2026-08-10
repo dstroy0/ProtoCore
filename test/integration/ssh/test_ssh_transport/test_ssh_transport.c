@@ -488,7 +488,7 @@ void test_exchange_hash_matches_independent_assembly()
     o += put_mpint(pre + o, k_be, 256);
 
     uint8_t expected[PC_SHA256_DIGEST_LEN];
-    pc_sha256(tw,pre, o, expected);
+    pc_sha256(tw, pre, o, expected);
 
     TEST_ASSERT_EQUAL_MEMORY(expected, got, PC_SHA256_DIGEST_LEN);
 }
@@ -749,7 +749,7 @@ void test_kexdh_handle_curve25519_ed25519_end_to_end()
         TEST_ASSERT_TRUE(rd_string(ks, ks_len, &ko, &hostpub, &hp_len));
         TEST_ASSERT_EQUAL_UINT32(32, hp_len);
         uint8_t expect_pub[32];
-        pc_ed25519_pubkey(tw,expect_pub, seed);
+        pc_ed25519_pubkey(tw, expect_pub, seed);
         TEST_ASSERT_EQUAL_MEMORY(expect_pub, hostpub, 32);
 
         // sigblob = string("ssh-ed25519") || string(sig64).
@@ -775,11 +775,11 @@ void test_kexdh_handle_curve25519_ed25519_end_to_end()
         o += put_string(pre + o, qs, 32); // Q_S (string)
         o += put_mpint(pre + o, K, 32);   // K (mpint)
         uint8_t H[PC_SHA256_DIGEST_LEN];
-        pc_sha256(tw,pre, o, H);
+        pc_sha256(tw, pre, o, H);
         TEST_ASSERT_EQUAL_MEMORY(H, s->session_id, PC_SHA256_DIGEST_LEN); // server captured this H
 
         // The signature verifies against the host key over the reconstructed H.
-        TEST_ASSERT_TRUE(pc_ed25519_verify(tw,hostpub, H, PC_SHA256_DIGEST_LEN, sig));
+        TEST_ASSERT_TRUE(pc_ed25519_verify(tw, hostpub, H, PC_SHA256_DIGEST_LEN, sig));
     }
 }
 
@@ -865,7 +865,7 @@ void test_kexdh_handle_ecdh_nistp256_end_to_end()
     TEST_ASSERT_TRUE(rd_string(ks, ks_len, &ko, &hostpub, &hp_len));
     TEST_ASSERT_EQUAL_UINT32(32, hp_len);
     uint8_t expect_pub[32];
-    pc_ed25519_pubkey(tw,expect_pub, seed);
+    pc_ed25519_pubkey(tw, expect_pub, seed);
     TEST_ASSERT_EQUAL_MEMORY(expect_pub, hostpub, 32);
 
     // sigblob = string("ssh-ed25519") || string(sig64).
@@ -891,11 +891,11 @@ void test_kexdh_handle_ecdh_nistp256_end_to_end()
     o += put_string(pre + o, qs, 65); // Q_S (string)
     o += put_mpint(pre + o, K, 32);   // K (mpint)
     uint8_t H[PC_SHA256_DIGEST_LEN];
-    pc_sha256(tw,pre, o, H);
+    pc_sha256(tw, pre, o, H);
     TEST_ASSERT_EQUAL_MEMORY(H, s->session_id, PC_SHA256_DIGEST_LEN); // server captured this same H
 
     // The host signature verifies against the reconstructed H.
-    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,hostpub, H, PC_SHA256_DIGEST_LEN, sig));
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw, hostpub, H, PC_SHA256_DIGEST_LEN, sig));
 }
 
 // An off-curve client point is rejected (RFC 5656 §4 point validation).
@@ -1123,7 +1123,7 @@ void test_kexdh_handle_ecdsa_end_to_end()
     o += put_string(pre + o, qs, 32);
     o += put_mpint(pre + o, K, 32);
     uint8_t H[PC_SHA256_DIGEST_LEN];
-    pc_sha256(tw,pre, o, H);
+    pc_sha256(tw, pre, o, H);
     TEST_ASSERT_EQUAL_MEMORY(H, s->session_id, PC_SHA256_DIGEST_LEN);
     TEST_ASSERT_TRUE(pc_ecdsa_p256_verify(ec_pub, tw, H, PC_SHA256_DIGEST_LEN, raw));
 }
@@ -1377,8 +1377,8 @@ void test_banner_and_build_caps()
     TEST_ASSERT_EQUAL_INT(-1, ssh_transport_recv_banner(0, long_line, sizeof(long_line), &consumed));
 
     ssh_transport_init(0);
-    TEST_ASSERT_EQUAL_INT(-1, ssh_kexinit_build(0, small, &l, 4)); // writer overflow
-    TEST_ASSERT_EQUAL_INT(-1, ssh_extinfo_build(small, &l, 4));    // writer overflow
+    TEST_ASSERT_EQUAL_INT(-1, ssh_kexinit_build(0, small, &l, 4));         // writer overflow
+    TEST_ASSERT_EQUAL_INT(-1, ssh_extinfo_build(small, &l, 4));            // writer overflow
     TEST_ASSERT_EQUAL_INT(-1, ssh_transport_begin_rekey(0, small, &l, 4)); // inner kexinit_build overflow
 }
 
@@ -1713,7 +1713,8 @@ static void test_cyclonessh_kex_repro(void)
 
     uint8_t reply[1024];
     size_t rlen = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_kexdh_handle(0, CYCLONE_ECDH_INIT, sizeof(CYCLONE_ECDH_INIT), reply, &rlen, sizeof(reply)));
+    TEST_ASSERT_EQUAL_INT(
+        0, ssh_kexdh_handle(0, CYCLONE_ECDH_INIT, sizeof(CYCLONE_ECDH_INIT), reply, &rlen, sizeof(reply)));
     TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, reply[0]);
     TEST_ASSERT_TRUE(rlen > 0);
 }
@@ -1793,9 +1794,14 @@ void test_kexinit_parse_honors_client_preference_everywhere()
 
     // The server lists the ETM MACs first, so a client leading with the plain one must get that.
     ssh_transport_init(0);
-    const char *plain_mac_first[8] = {
-        "diffie-hellman-group14-sha256", "rsa-sha2-256", "aes256-ctr", "aes256-ctr",
-        "hmac-sha2-256,hmac-sha2-256-etm@openssh.com", "hmac-sha2-256,hmac-sha2-256-etm@openssh.com", P, P};
+    const char *plain_mac_first[8] = {"diffie-hellman-group14-sha256",
+                                      "rsa-sha2-256",
+                                      "aes256-ctr",
+                                      "aes256-ctr",
+                                      "hmac-sha2-256,hmac-sha2-256-etm@openssh.com",
+                                      "hmac-sha2-256,hmac-sha2-256-etm@openssh.com",
+                                      P,
+                                      P};
     n = build_kexinit8(buf, plain_mac_first);
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA256, ssh_sess[0].mac_alg_c2s);

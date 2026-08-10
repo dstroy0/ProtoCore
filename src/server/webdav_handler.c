@@ -12,9 +12,9 @@
  */
 
 #include "server/webdav_handler.h"
-#include "mmgr/protomem.h"
 #include "crypto/rng/rng.h" // pc_rand_fill(): the lock token's unpredictable half
 #include "mmgr/membuild.h"
+#include "mmgr/protomem.h"
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"

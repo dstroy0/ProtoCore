@@ -140,11 +140,7 @@ static void feed_request(const Hdr *fields, size_t n)
 }
 
 // A well-formed minimum: the three sec 8.3.1 pseudo-headers.
-#define BASE3                                                                                                          \
-    {":method", "GET"}, {":scheme", "https"},                                                                          \
-    {                                                                                                                  \
-        ":path", "/"                                                                                                   \
-    }
+#define BASE3 {":method", "GET"}, {":scheme", "https"}, {":path", "/"}
 
 // Asserts the block was rejected: nothing dispatched, the HttpReq left clean, one RST_STREAM out.
 static void assert_malformed(void)

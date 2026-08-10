@@ -109,7 +109,7 @@ static void fill_entry(EdgeEntry *e, const char *canon, const char *etag, const 
 {
     memset(e, 0, sizeof(*e));
     strncpy(e->key, canon, sizeof(e->key) - 1);
-    edge_key_digest(tw,e->key, strlen(e->key), e->digest);
+    edge_key_digest(tw, e->key, strlen(e->key), e->digest);
     e->status = 200;
     strncpy(e->content_type, "text/plain", sizeof(e->content_type) - 1);
     strncpy(e->etag, etag, sizeof(e->etag) - 1);
@@ -133,7 +133,7 @@ void test_serialize_roundtrip_all_fields(void)
     char canon[PC_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/cdn/img.png?w=64");
     strncpy(in.key, canon, sizeof(in.key) - 1);
-    edge_key_digest(tw,in.key, strlen(in.key), in.digest);
+    edge_key_digest(tw, in.key, strlen(in.key), in.digest);
     in.status = 200;
     strncpy(in.content_type, "image/png", sizeof(in.content_type) - 1);
     strncpy(in.etag, "\"v1-abc\"", sizeof(in.etag) - 1);
@@ -154,7 +154,7 @@ void test_serialize_roundtrip_all_fields(void)
 
     EdgeEntry out;
     memset(&out, 0xEE, sizeof(out)); // poison, ensure deserialize writes what it should
-    TEST_ASSERT_TRUE(edge_sd_deserialize(tw,g_scratch, n, &out));
+    TEST_ASSERT_TRUE(edge_sd_deserialize(tw, g_scratch, n, &out));
 
     TEST_ASSERT_EQUAL_STRING(in.key, out.key);
     TEST_ASSERT_EQUAL_INT(in.status, out.status);
@@ -184,7 +184,7 @@ void test_serialize_max_body(void)
     size_t n = edge_sd_serialize(&in, g_scratch, sizeof(g_scratch));
     TEST_ASSERT_TRUE(n > 0);
     EdgeEntry out;
-    TEST_ASSERT_TRUE(edge_sd_deserialize(tw,g_scratch, n, &out));
+    TEST_ASSERT_TRUE(edge_sd_deserialize(tw, g_scratch, n, &out));
     TEST_ASSERT_EQUAL_UINT16(PC_EDGE_BODY_MAX, out.body_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(body, out.body, PC_EDGE_BODY_MAX);
 }
@@ -213,10 +213,10 @@ void test_deserialize_corrupt_fails_closed(void)
     EdgeEntry out;
     uint8_t bad = g_scratch[0];
     g_scratch[0] = 0x42; // wrong version
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw,g_scratch, n, &out));
+    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, n, &out));
     g_scratch[0] = bad;
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw,g_scratch, 2, &out));     // truncated header
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw,g_scratch, n - 3, &out)); // truncated body
+    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, 2, &out));     // truncated header
+    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, n - 3, &out)); // truncated body
 }
 
 // --- put / get over dbm --------------------------------------------------------------------------
@@ -231,7 +231,7 @@ void test_put_get_roundtrip(void)
 
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_TRUE(edge_sd_get(tw,&g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_TRUE(edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
     TEST_ASSERT_EQUAL_STRING(canon, out.key);
     TEST_ASSERT_EQUAL_STRING("\"a1\"", out.etag);
     TEST_ASSERT_EQUAL_UINT16(9, out.body_len);
@@ -242,7 +242,7 @@ void test_put_get_roundtrip(void)
     char c2[PC_EDGE_KEY_MAX];
     mkcanon(c2, sizeof(c2), "/cdn/never");
     fill_entry(&in2, c2, "\"n\"", (const uint8_t *)"x", 1);
-    TEST_ASSERT_FALSE(edge_sd_get(tw,&g_db, in2.digest, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in2.digest, &out, g_scratch, sizeof(g_scratch)));
 }
 
 void test_no_validator_not_spilled(void)
@@ -256,7 +256,7 @@ void test_no_validator_not_spilled(void)
     TEST_ASSERT_FALSE(edge_sd_put(&g_db, &in, g_scratch, sizeof(g_scratch))); // nothing to revalidate -> skip
 
     EdgeEntry out;
-    TEST_ASSERT_FALSE(edge_sd_get(tw,&g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
 }
 
 void test_oversize_body_stays_l1_only(void)
@@ -313,7 +313,7 @@ void test_spill_on_evict_and_promote(void)
     char first_canon[PC_EDGE_KEY_MAX];
     mkcanon(first_canon, sizeof(first_canon), "/cdn/e0");
     uint8_t first_digest[32];
-    edge_key_digest(tw,first_canon, strlen(first_canon), first_digest);
+    edge_key_digest(tw, first_canon, strlen(first_canon), first_digest);
 
     for (int i = 0; i < PC_EDGE_CACHE_SLOTS; i++)
     {
@@ -329,15 +329,15 @@ void test_spill_on_evict_and_promote(void)
 
     // The evicted entry is now promotable from L2; a still-resident one is not there.
     EdgeEntry out;
-    TEST_ASSERT_TRUE(edge_sd_get(tw,&g_db, first_digest, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_TRUE(edge_sd_get(tw, &g_db, first_digest, &out, g_scratch, sizeof(g_scratch)));
     TEST_ASSERT_EQUAL_STRING(first_canon, out.key);
     TEST_ASSERT_EQUAL_STRING("\"e0\"", out.etag);
 
     char last_canon[PC_EDGE_KEY_MAX];
     mkcanon(last_canon, sizeof(last_canon), "/cdn/eN");
     uint8_t last_digest[32];
-    edge_key_digest(tw,last_canon, strlen(last_canon), last_digest);
-    TEST_ASSERT_FALSE(edge_sd_get(tw,&g_db, last_digest, &out, g_scratch, sizeof(g_scratch)));
+    edge_key_digest(tw, last_canon, strlen(last_canon), last_digest);
+    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, last_digest, &out, g_scratch, sizeof(g_scratch)));
 }
 
 void test_transient_entry_not_spilled(void)
@@ -374,7 +374,7 @@ void test_survives_reboot(void)
 
     TEST_ASSERT_TRUE(reboot());
     EdgeEntry out;
-    TEST_ASSERT_TRUE(edge_sd_get(tw,&g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_TRUE(edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
     TEST_ASSERT_EQUAL_STRING(canon, out.key);
     TEST_ASSERT_EQUAL_STRING("\"p9\"", out.etag);
     TEST_ASSERT_EQUAL_STRING("Wed, 01 Jan 2025 00:00:00 GMT", out.last_modified);
@@ -393,7 +393,7 @@ void test_del(void)
     TEST_ASSERT_TRUE(edge_sd_put(&g_db, &in, g_scratch, sizeof(g_scratch)));
     TEST_ASSERT_TRUE(edge_sd_del(&g_db, in.digest));
     EdgeEntry out;
-    TEST_ASSERT_FALSE(edge_sd_get(tw,&g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
     TEST_ASSERT_FALSE(edge_sd_del(&g_db, in.digest)); // already gone
 }
 
@@ -523,14 +523,14 @@ void test_deserialize_null_guards_and_every_truncation(void)
 
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw,NULL, n, &out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw,g_scratch, n, NULL));
+    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, NULL, n, &out));
+    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, n, NULL));
     // Every truncation short of the whole record fails closed at whichever length prefix runs out.
     for (size_t l = 0; l < n; l++)
     {
-        TEST_ASSERT_FALSE(edge_sd_deserialize(tw,g_scratch, l, &out));
+        TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, l, &out));
     }
-    TEST_ASSERT_TRUE(edge_sd_deserialize(tw,g_scratch, n, &out));
+    TEST_ASSERT_TRUE(edge_sd_deserialize(tw, g_scratch, n, &out));
     TEST_ASSERT_EQUAL_STRING(canon, out.key);
 }
 
@@ -547,7 +547,7 @@ void test_deserialize_rejects_field_longer_than_its_slot(void)
     buf[4] = (uint8_t)(PC_EDGE_KEY_MAX >> 8);
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw,buf, sizeof(buf), &out));
+    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, buf, sizeof(buf), &out));
 }
 
 void test_deserialize_rejects_oversize_body_length(void)
@@ -563,7 +563,7 @@ void test_deserialize_rejects_oversize_body_length(void)
     g_scratch[n - 2] = 0xFF; // 65535 claimed, past PC_EDGE_BODY_MAX
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw,g_scratch, n, &out));
+    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, n, &out));
 }
 
 // --- dbm-backed API guards -----------------------------------------------------------------------
@@ -582,10 +582,10 @@ void test_dbm_api_null_guards(void)
     TEST_ASSERT_FALSE(edge_sd_put(&g_db, &in, NULL, sizeof(g_scratch)));
     TEST_ASSERT_FALSE(edge_sd_put(&g_db, &in, g_scratch, 8)); // does not serialize into the scratch
 
-    TEST_ASSERT_FALSE(edge_sd_get(tw,NULL, in.digest, &out, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_get(tw,&g_db, NULL, &out, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_get(tw,&g_db, in.digest, NULL, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_get(tw,&g_db, in.digest, &out, NULL, sizeof(g_scratch)));
+    TEST_ASSERT_FALSE(edge_sd_get(tw, NULL, in.digest, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, NULL, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in.digest, NULL, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in.digest, &out, NULL, sizeof(g_scratch)));
 
     TEST_ASSERT_FALSE(edge_sd_del(NULL, in.digest));
     TEST_ASSERT_FALSE(edge_sd_del(&g_db, NULL));
@@ -629,7 +629,7 @@ void test_purge_prefix_skips_key_without_a_path(void)
     EdgeEntry odd;
     memset(&odd, 0, sizeof(odd));
     strncpy(odd.key, "malformed-key", sizeof(odd.key) - 1);
-    edge_key_digest(tw,odd.key, strlen(odd.key), odd.digest);
+    edge_key_digest(tw, odd.key, strlen(odd.key), odd.digest);
     odd.status = 200;
     strncpy(odd.etag, "\"o\"", sizeof(odd.etag) - 1);
     memcpy(odd.body, "x", 1);
@@ -640,7 +640,7 @@ void test_purge_prefix_skips_key_without_a_path(void)
     TEST_ASSERT_EQUAL_UINT32(0, edge_sd_purge_prefix(&g_db, "malformed", g_scratch, sizeof(g_scratch)));
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_TRUE(edge_sd_get(tw,&g_db, odd.digest, &out, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_TRUE(edge_sd_get(tw, &g_db, odd.digest, &out, g_scratch, sizeof(g_scratch)));
     TEST_ASSERT_TRUE(has_path("/cdn/keepme"));
     // It is still an edge value, so a purge-all does reach it.
     TEST_ASSERT_EQUAL_UINT32(2, edge_sd_purge_all(&g_db));

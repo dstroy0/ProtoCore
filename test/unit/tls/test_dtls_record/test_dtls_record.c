@@ -287,8 +287,8 @@ static void test_dtls_seq8_and_no_length_variants(void)
 
     // S=0: the sequence number travels in one byte and still reconstructs to the full value.
     uint8_t rec[64];
-    size_t n = build_ciphertext(&k, 7, PC_DTLS_CT_APPLICATION_DATA, PROTO_FALSE, PROTO_TRUE, pt, sizeof(pt), rec,
-                                sizeof(rec));
+    size_t n =
+        build_ciphertext(&k, 7, PC_DTLS_CT_APPLICATION_DATA, PROTO_FALSE, PROTO_TRUE, pt, sizeof(pt), rec, sizeof(rec));
     TEST_ASSERT_TRUE(n > 0);
     uint8_t out[64];
     DtlsCiphertext info;

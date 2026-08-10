@@ -328,7 +328,7 @@ void test_send_rejects_null_zero_and_oversized_payload()
     static uint8_t big[3000] = {0}; // past the largest datagram a bound port takes
     TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, big, sizeof(big)));
     TEST_ASSERT_FALSE(Udp.listener->reply(NULL, (const uint8_t *)"x", 1)); // no peer token
-    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count());                 // none of the above landed anything
+    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count());                  // none of the above landed anything
 }
 
 // A listener bound with a null handler (a legal Udp.listener->listen() call) must not be invoked -

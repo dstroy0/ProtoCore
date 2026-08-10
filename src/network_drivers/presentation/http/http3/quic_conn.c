@@ -7,8 +7,8 @@
  */
 
 #include "network_drivers/presentation/http/http3/quic_conn.h"
-#include "mmgr/protomem.h"
 #include "mmgr/plaintext.h" // the streams carry HTTP/3; their bytes borrow from that arena
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP3
 
@@ -624,8 +624,8 @@ static size_t build_frames(struct QuicConn *qc, int level, uint8_t *buf, size_t 
     // this for a single level when a close is queued, so it is emitted exactly once.
     if (qc->close_queued && !qc->close_sent)
     {
-        return pc_quic_build_connection_close(buf, cap, qc->close_is_app, qc->close_error, qc->close_frame_type,
-                                             NULL, 0);
+        return pc_quic_build_connection_close(buf, cap, qc->close_is_app, qc->close_error, qc->close_frame_type, NULL,
+                                              0);
     }
 
     p += build_ack_frame(s, buf + p, cap - p); // ACK first, if we owe one

@@ -7,8 +7,8 @@
  */
 
 #include "network_drivers/application/scp/scp.h"
-#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SSH_SCP
 

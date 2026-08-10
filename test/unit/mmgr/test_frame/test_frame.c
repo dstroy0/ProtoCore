@@ -39,9 +39,7 @@ void test_frame_matches_printf()
     char out[256];
     char want[256];
     size_t n = frame.build(out, sizeof(out), RESP,
-                              (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("text/plain"),
-                                                PC_VU32(21u)},
-                              4);
+                           (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("text/plain"), PC_VU32(21u)}, 4);
     snprintf(want, sizeof(want), "HTTP/1.1 %u %s\r\nContent-Type: %s\r\nContent-Length: %u\r\n", 200u, "OK",
              "text/plain", 21u);
     TEST_ASSERT_EQUAL_STRING(want, out);
@@ -72,10 +70,9 @@ void test_frame_every_kind()
                                    PC_END};
     char out[160];
     frame.build(out, sizeof(out), ALL,
-                   (const pc_fval[]){PC_VHEX(0xbeefu), PC_VDEC(7u), PC_VI64(-5), PC_VU64(12u),
-                                     PC_VG(3.14159265), PC_VFIX(2.5), PC_VCH('x'), PC_VJSON("a\"b"),
-                                     PC_VXML("a<b"), PC_VOCT(8u)},
-                   10);
+                (const pc_fval[]){PC_VHEX(0xbeefu), PC_VDEC(7u), PC_VI64(-5), PC_VU64(12u), PC_VG(3.14159265),
+                                  PC_VFIX(2.5), PC_VCH('x'), PC_VJSON("a\"b"), PC_VXML("a<b"), PC_VOCT(8u)},
+                10);
     TEST_ASSERT_EQUAL_STRING("0000beef|007|-5|12|3.14159|2.50|x|\"a\\\"b\"|a&lt;b|0010", out);
 }
 
@@ -85,8 +82,7 @@ void test_frame_widths()
         {PC_FK_HEX, 0, 0, NULL}, {PC_FK_LIT, 0, 1, ","}, {PC_FK_HEX, 4, 0, NULL}, {PC_FK_LIT, 0, 1, ","},
         {PC_FK_DEC, 5, 0, NULL}, {PC_FK_LIT, 0, 1, ","}, {PC_FK_OCT, 0, 0, NULL}, PC_END};
     char out[64];
-    frame.build(out, sizeof(out), W,
-                   (const pc_fval[]){PC_VHEX(0xabu), PC_VHEX(0xabu), PC_VDEC(42u), PC_VOCT(64u)}, 4);
+    frame.build(out, sizeof(out), W, (const pc_fval[]){PC_VHEX(0xabu), PC_VHEX(0xabu), PC_VDEC(42u), PC_VOCT(64u)}, 4);
     // width 0 means "no padding", not "zero digits"
     TEST_ASSERT_EQUAL_STRING("ab,00ab,00042,100", out);
 }
@@ -124,11 +120,9 @@ void test_frame_overflow_fails_closed()
 {
     char tiny[8];
     memset(tiny, 'Z', sizeof(tiny));
-    TEST_ASSERT_EQUAL_size_t(0,
-                             frame.build(tiny, sizeof(tiny), RESP,
-                                            (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"),
-                                                              PC_VSTR("text/plain"), PC_VU32(21u)},
-                                            4));
+    TEST_ASSERT_EQUAL_size_t(
+        0, frame.build(tiny, sizeof(tiny), RESP,
+                       (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("text/plain"), PC_VU32(21u)}, 4));
     TEST_ASSERT_EQUAL_STRING("", tiny);
 }
 
@@ -147,14 +141,10 @@ void test_frame_exact_fit_boundary()
 void test_frame_guards()
 {
     char out[8];
-    TEST_ASSERT_EQUAL_size_t(0, frame.build(NULL, 8, RESP,
-                                            (const pc_fval[]){PC_VU32(1u), PC_VSTR(""), PC_VSTR(""),
-                                                              PC_VU32(0u)},
-                                            4));
-    TEST_ASSERT_EQUAL_size_t(0, frame.build(out, 0, RESP,
-                                            (const pc_fval[]){PC_VU32(1u), PC_VSTR(""), PC_VSTR(""),
-                                                              PC_VU32(0u)},
-                                            4));
+    TEST_ASSERT_EQUAL_size_t(
+        0, frame.build(NULL, 8, RESP, (const pc_fval[]){PC_VU32(1u), PC_VSTR(""), PC_VSTR(""), PC_VU32(0u)}, 4));
+    TEST_ASSERT_EQUAL_size_t(
+        0, frame.build(out, 0, RESP, (const pc_fval[]){PC_VU32(1u), PC_VSTR(""), PC_VSTR(""), PC_VU32(0u)}, 4));
     TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), NULL, NULL, 0));
 }
 
@@ -164,10 +154,9 @@ void test_frame_guards()
 void test_frame_zero_cap_writes_nothing()
 {
     char sentinel[2] = {0x7F, 0x7F};
-    TEST_ASSERT_EQUAL_size_t(0, frame.build(sentinel, 0, RESP,
-                                            (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("t"),
-                                                              PC_VU32(0u)},
-                                            4));
+    TEST_ASSERT_EQUAL_size_t(
+        0,
+        frame.build(sentinel, 0, RESP, (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("t"), PC_VU32(0u)}, 4));
     TEST_ASSERT_EQUAL_CHAR(0x7F, sentinel[0]);
 
     static const pc_field L[] = {{PC_FK_LIT, 0, 1, "x"}, PC_END};
@@ -181,8 +170,10 @@ void test_frame_append_accumulates()
 {
     char acc[64];
     acc[0] = '\0';
-    TEST_ASSERT_EQUAL_size_t(8, frame.append(acc, sizeof(acc), HDR, (const pc_fval[]){PC_VSTR("X-A"), PC_VSTR("1")}, 2));
-    TEST_ASSERT_EQUAL_size_t(16, frame.append(acc, sizeof(acc), HDR, (const pc_fval[]){PC_VSTR("X-B"), PC_VSTR("2")}, 2));
+    TEST_ASSERT_EQUAL_size_t(8,
+                             frame.append(acc, sizeof(acc), HDR, (const pc_fval[]){PC_VSTR("X-A"), PC_VSTR("1")}, 2));
+    TEST_ASSERT_EQUAL_size_t(16,
+                             frame.append(acc, sizeof(acc), HDR, (const pc_fval[]){PC_VSTR("X-B"), PC_VSTR("2")}, 2));
     TEST_ASSERT_EQUAL_STRING("X-A: 1\r\nX-B: 2\r\n", acc);
 }
 
@@ -193,8 +184,8 @@ void test_frame_append_rewinds_whole_frame()
     char small[12];
     small[0] = '\0';
     frame.append(small, sizeof(small), HDR, (const pc_fval[]){PC_VSTR("X-A"), PC_VSTR("1")}, 2);
-    TEST_ASSERT_EQUAL_size_t(0, frame.append(small, sizeof(small), HDR,
-                                              (const pc_fval[]){PC_VSTR("X-VeryLong"), PC_VSTR("2")}, 2));
+    TEST_ASSERT_EQUAL_size_t(
+        0, frame.append(small, sizeof(small), HDR, (const pc_fval[]){PC_VSTR("X-VeryLong"), PC_VSTR("2")}, 2));
     TEST_ASSERT_EQUAL_STRING("X-A: 1\r\n", small);
 }
 
@@ -203,7 +194,8 @@ void test_frame_append_to_full_buffer()
     char full[8];
     memset(full, 'a', sizeof(full) - 1);
     full[sizeof(full) - 1] = '\0';
-    TEST_ASSERT_EQUAL_size_t(0, frame.append(full, sizeof(full), HDR, (const pc_fval[]){PC_VSTR("X"), PC_VSTR("1")}, 2));
+    TEST_ASSERT_EQUAL_size_t(0,
+                             frame.append(full, sizeof(full), HDR, (const pc_fval[]){PC_VSTR("X"), PC_VSTR("1")}, 2));
     TEST_ASSERT_EQUAL_STRING("aaaaaaa", full); // untouched
 }
 
@@ -279,12 +271,10 @@ void test_frame_arity_must_match_spec()
     TEST_ASSERT_EQUAL_STRING("", out);
 
     TEST_ASSERT_EQUAL_size_t(
-        0, frame.build(out, sizeof(out), TWO,
-                          (const pc_fval[]){PC_VU32(1u), PC_VU32(2u), PC_VU32(3u)}, 3));
+        0, frame.build(out, sizeof(out), TWO, (const pc_fval[]){PC_VU32(1u), PC_VU32(2u), PC_VU32(3u)}, 3));
     TEST_ASSERT_EQUAL_STRING("", out);
 
-    TEST_ASSERT_EQUAL_size_t(3, frame.build(out, sizeof(out), TWO,
-                                               (const pc_fval[]){PC_VU32(1u), PC_VU32(2u)}, 2));
+    TEST_ASSERT_EQUAL_size_t(3, frame.build(out, sizeof(out), TWO, (const pc_fval[]){PC_VU32(1u), PC_VU32(2u)}, 2));
     TEST_ASSERT_EQUAL_STRING("1-2", out);
 }
 

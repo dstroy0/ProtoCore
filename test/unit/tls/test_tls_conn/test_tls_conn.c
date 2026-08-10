@@ -225,7 +225,7 @@ void test_client_hello_outside_the_profile_is_refused()
     {
         pc_secure_reset();
         TlsConnConfig cfg = server_cfg();
-            TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
+        TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
         static uint8_t rec[600];
         size_t rec_len = build_client_hello(rec, sizeof rec, flaws[i]);

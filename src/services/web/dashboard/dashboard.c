@@ -138,10 +138,10 @@ int32_t pc_dashboard_layout_json(char *out, uint32_t cap)
     {
         const pc_widget *w = &s_dash.widgets[i];
         if (frame.append(out, cap, DASH_WIDGET,
-                            (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(widget_type_name(w->type)),
-                                              PC_VJSON(w->label), PC_VJSON(w->key), PC_VG((double)w->min),
-                                              PC_VG((double)w->max), PC_VJSON(w->unit)},
-                            7) == 0)
+                         (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(widget_type_name(w->type)),
+                                           PC_VJSON(w->label), PC_VJSON(w->key), PC_VG((double)w->min),
+                                           PC_VG((double)w->max), PC_VJSON(w->unit)},
+                         7) == 0)
         {
             return 0;
         }
@@ -167,9 +167,9 @@ int32_t pc_dashboard_values_json(char *out, uint32_t cap)
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
         if (frame.append(out, cap, DASH_VALUE,
-                            (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(s_dash.widgets[i].key),
-                                              PC_VG((double)s_dash.values[i])},
-                            3) == 0)
+                         (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(s_dash.widgets[i].key),
+                                           PC_VG((double)s_dash.values[i])},
+                         3) == 0)
         {
             return 0;
         }

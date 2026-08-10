@@ -88,7 +88,7 @@ void test_alg_not_hs256_rejected()
     char signing[160];
     int sl = snprintf(signing, sizeof(signing), "%s.%s", hdr, payload);
     uint8_t mac[PC_HMAC_SHA256_LEN];
-    pc_hmac_sha256(tw,sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
+    pc_hmac_sha256(tw, sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
     char sig[48];
     Base64.url_encode(mac, sizeof(mac), sig);
 
@@ -102,7 +102,7 @@ void test_alg_not_hs256_rejected()
     char ok_hdr[64];
     Base64.url_encode((const uint8_t *)ok_hdr_json, strlen(ok_hdr_json), ok_hdr);
     sl = snprintf(signing, sizeof(signing), "%s.%s", ok_hdr, payload);
-    pc_hmac_sha256(tw,sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
+    pc_hmac_sha256(tw, sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
     Base64.url_encode(mac, sizeof(mac), sig);
     snprintf(token, sizeof(token), "%s.%s.%s", ok_hdr, payload, sig);
     TEST_ASSERT_TRUE(pc_jwt_verify_hs256(token, strlen(token), sec(), seclen()));
@@ -274,7 +274,7 @@ static void mk_signed(char *out, size_t cap, const char *pl_json)
     Base64.url_encode((const uint8_t *)hdr_json, strlen(hdr_json), h);
     Base64.url_encode((const uint8_t *)pl_json, strlen(pl_json), p);
     int sl = snprintf(signing, sizeof(signing), "%s.%s", h, p);
-    pc_hmac_sha256(tw,sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
+    pc_hmac_sha256(tw, sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
     Base64.url_encode(mac, sizeof(mac), sig);
     snprintf(out, cap, "%s.%s", signing, sig);
 }
@@ -349,7 +349,7 @@ static void mk_signed_hdr(char *out, size_t cap, const char *hdr_json, const cha
     Base64.url_encode((const uint8_t *)hdr_json, strlen(hdr_json), h);
     Base64.url_encode((const uint8_t *)pl_json, strlen(pl_json), p);
     int sl = snprintf(signing, sizeof(signing), "%s.%s", h, p);
-    pc_hmac_sha256(tw,sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
+    pc_hmac_sha256(tw, sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
     Base64.url_encode(mac, sizeof(mac), sig);
     snprintf(out, cap, "%s.%s", signing, sig);
 }

@@ -7,8 +7,8 @@
  */
 
 #include "services/instrumentation/scpi/scpi.h"
-#include "mmgr/protomem.h"
 #include "mmgr/protoframe.h" // the one frame engine
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_SCPI
 

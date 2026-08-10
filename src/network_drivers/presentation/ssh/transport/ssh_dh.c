@@ -188,18 +188,18 @@ static void install_direction(uint8_t i, const SshKdfInputs *in, proto_bool c2s,
     if (cipher_alg == SSH_CIPHER_CHACHA20POLY1305)
     {
         // A 512-bit key (K_main || K_header) from the sec 7.2 extension chain; no IV, no MAC key.
-        ssh_kdf_derive(in,key_label, chacha_key, PC_CHACHAPOLY_KEY_LEN);
+        ssh_kdf_derive(in, key_label, chacha_key, PC_CHACHAPOLY_KEY_LEN);
         return;
     }
 
     // The IV field takes the leading bytes of the derived stream, which is what the KDF copies.
-    ssh_kdf_derive(in,iv_label, aes_iv, PC_AES256CTR_CTR_LEN);
+    ssh_kdf_derive(in, iv_label, aes_iv, PC_AES256CTR_CTR_LEN);
 
     if (cipher_alg == SSH_CIPHER_AES256GCM)
     {
         // RFC 5647: this mode keeps only the schedule, so the key lands in aes_key - which GCM does not
         // otherwise use - becomes the keyed context, and is wiped. The nonce is the low 12 IV bytes.
-        ssh_kdf_derive(in,key_label, aes_key, PC_AES256CTR_KEY_LEN);
+        ssh_kdf_derive(in, key_label, aes_key, PC_AES256CTR_KEY_LEN);
         pc_aesgcm_key_init(gcm_ctx, aes_key);
         pc_secure_wipe(aes_key, PC_AES256CTR_KEY_LEN);
         return;
@@ -207,8 +207,8 @@ static void install_direction(uint8_t i, const SshKdfInputs *in, proto_bool c2s,
 
     // aes256-ctr keeps the raw key and the running counter; the schedule is rebuilt per packet in the
     // shared crypto scratch. It is the only cipher that also needs a separate MAC key.
-    ssh_kdf_derive(in,key_label, aes_key, PC_AES256CTR_KEY_LEN);
-    ssh_kdf_derive(in,mac_label, mac_key, ssh_mac_len(mac_alg));
+    ssh_kdf_derive(in, key_label, aes_key, PC_AES256CTR_KEY_LEN);
+    ssh_kdf_derive(in, mac_label, mac_key, ssh_mac_len(mac_alg));
 }
 
 void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in)
@@ -248,7 +248,6 @@ void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in)
     install_direction(i, &kin, PROTO_FALSE, s->cipher_alg_s2c, s->mac_alg_s2c);
     km->active = PROTO_TRUE;
 }
-
 
 void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_SHA256_DIGEST_LEN])
 {

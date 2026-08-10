@@ -299,7 +299,7 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], con
 static size_t make_client_initial(uint8_t *dg, size_t cap)
 {
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     QuicTransportParams ctp;
     pc_quic_tp_defaults(&ctp);
     ctp.initial_max_data = 524288;
@@ -419,7 +419,7 @@ void test_quic_server_http3_get()
     TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     // Client Initial(ClientHello), padded to the 1200-byte minimum.
     QuicTransportParams ctp;
@@ -467,8 +467,8 @@ void test_quic_server_http3_get()
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_464);
     pc_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
-    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_HS, &hs_s);
-    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_HS, &hs_c);
+    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
+    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
@@ -476,8 +476,8 @@ void test_quic_server_http3_get()
     pc_sha256_update(&t, hsf, hsfl);
     pc_sha256_final(&t, chsf);
     pc_tls13_ks_master(&cks, chsf);
-    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_AP, &ap_s);
-    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_AP, &ap_c);
+    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
+    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
     // Client Initial(ACK) + Handshake(ACK + Finished) -> server completes the handshake.
     uint8_t ifr[64];
@@ -561,7 +561,7 @@ static void bulk_rng(uint8_t *out, size_t len)
 static size_t make_min_initial(uint8_t *dg, size_t cap, const uint8_t *dcid, uint8_t dcl)
 {
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw,dcid, dcl, &init);
+    pc_quic_derive_initial_secrets(tw, dcid, dcl, &init);
     uint8_t frames[64];
     size_t fl = pc_quic_build_ack(frames, sizeof(frames), 0, 0, 0);
     return build_long(dg, cap, QUIC_LP_INITIAL, dcid, dcl, CLIENT_SCID, sizeof(CLIENT_SCID), 0, &init.client, frames,
@@ -824,7 +824,7 @@ void test_quic_server_close_reaped_before_idle()
     TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t frames0[64];
     size_t fl0 = pc_quic_build_ack(frames0, sizeof(frames0), 0, 0, 0);
@@ -858,7 +858,7 @@ void test_quic_server_on_request_null()
     TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, NULL, NULL)); // no request callback
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
+    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     QuicTransportParams ctp;
     pc_quic_tp_defaults(&ctp);
@@ -903,8 +903,8 @@ void test_quic_server_on_request_null()
     pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_900);
     pc_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
     QuicPacketKeys hs_s, hs_c, ap_c;
-    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_SERVER_HS, &hs_s);
-    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_HS, &hs_c);
+    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
+    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
@@ -912,7 +912,7 @@ void test_quic_server_on_request_null()
     pc_sha256_update(&t, hsf, hsfl);
     pc_sha256_final(&t, chsf);
     pc_tls13_ks_master(&cks, chsf);
-    pc_quic_keys_from_secret(tw,cks.s + TLS13_KS_CLIENT_AP, &ap_c);
+    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
     uint8_t ifr[64];
     size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
