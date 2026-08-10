@@ -889,14 +889,16 @@ static void test_pto_backoff_and_giveup(void)
     uint8_t flight[2048], rflight[2048];
     TEST_ASSERT_TRUE(drive_server_flight(&conn, &cfg, &tr, flight, sizeof(flight)) > 0);
 
-    uint32_t expect = PC_DTLS_PTO_INITIAL_MS;
-    TEST_ASSERT_EQUAL_INT((int)expect, DtlsServer.timeout_ms(&conn));
+    // RFC 9147 sec 5.8.2 fixes the shape: 1 s initial, doubling, capped at 60 s. Spelled out rather
+    // than recomputed with the implementation's own expression, which agreed with itself whatever
+    // the rule or the macros became.
+    static const int PTO_MS[PC_DTLS_MAX_RETRANSMITS] = {2000, 4000, 8000, 16000, 32000, 60000, 60000, 60000};
+    TEST_ASSERT_EQUAL_INT(1000, DtlsServer.timeout_ms(&conn));
     for (int i = 0; i < PC_DTLS_MAX_RETRANSMITS; i++)
     {
         g_ms += PC_DTLS_PTO_MAX_MS + 1000; // well past any PTO
         TEST_ASSERT_TRUE(DtlsServer.on_timeout(&conn, rflight, sizeof(rflight)) > 0);
-        expect = expect >= PC_DTLS_PTO_MAX_MS / 2 ? PC_DTLS_PTO_MAX_MS : expect * 2;
-        TEST_ASSERT_EQUAL_INT((int)expect, DtlsServer.timeout_ms(&conn)); // doubled, capped at the max
+        TEST_ASSERT_EQUAL_INT(PTO_MS[i], DtlsServer.timeout_ms(&conn));
     }
     g_ms += PC_DTLS_PTO_MAX_MS + 1000;
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.on_timeout(&conn, rflight, sizeof(rflight)));          // ceiling: give up
