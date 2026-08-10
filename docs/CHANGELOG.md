@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- a HEADERS on an open stream is a trailer section, not a stream-id error ([`e2f370a`](https://github.com/dstroy0/ProtoCore/commit/e2f370a1e622e35cba3824a46e7446314925233e))
 - h2_server suite passed pc_h2_write_header its arguments out of order ([`a635744`](https://github.com/dstroy0/ProtoCore/commit/a63574447e0ad65a4f969159f2a41d086aa11011))
 - reject a zero or overflowing WINDOW_UPDATE (RFC 9113 sec 6.9, 6.9.1) ([`b439489`](https://github.com/dstroy0/ProtoCore/commit/b4394891df2095b10e97bc9402fada3edc711ae3))
 - the outbound frame borrows from the plaintext arena HTTP works out of ([`ce0a1e0`](https://github.com/dstroy0/ProtoCore/commit/ce0a1e0f0e37eaa39783f537d9ba922fed30f7fd))
@@ -71,15 +72,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-- update CHANGELOG.md [skip ci] ([`76e79de`](https://github.com/dstroy0/ProtoCore/commit/76e79de7bb9de5602f4bb63fab477ff5a6d66a98))
->>>>>>> Stashed changes
-=======
+- update CHANGELOG.md [skip ci] ([`ee0e3b7`](https://github.com/dstroy0/ProtoCore/commit/ee0e3b785526807e782edf426986853bacf1cdfb))
+- update CHANGELOG.md [skip ci] ([`8697278`](https://github.com/dstroy0/ProtoCore/commit/8697278d762d8bbf0a375f2c3ab5d1c904d0c588))
 - update CHANGELOG.md [skip ci] ([`a17dfea`](https://github.com/dstroy0/ProtoCore/commit/a17dfea7c82ea0dd24dd77c9b02bef2968243936))
 - update CHANGELOG.md [skip ci] ([`76e79de`](https://github.com/dstroy0/ProtoCore/commit/76e79de7bb9de5602f4bb63fab477ff5a6d66a98))
->>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`85a5baa`](https://github.com/dstroy0/ProtoCore/commit/85a5baaf30856606f400ded52965506b2230ce68))
 - update CHANGELOG.md [skip ci] ([`243a67a`](https://github.com/dstroy0/ProtoCore/commit/243a67aa1238d049026147116c2348a4a1330279))
 - update CHANGELOG.md [skip ci] ([`e66be49`](https://github.com/dstroy0/ProtoCore/commit/e66be49708952388278f0872a1da4e5a05a64be2))
@@ -228,6 +224,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`1d1e182`](https://github.com/dstroy0/ProtoCore/commit/1d1e1824efb0433ed7006a12b4fa97cfc8be18df))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ae9621c`](https://github.com/dstroy0/ProtoCore/commit/ae9621c8c79d509bb7931a3c35e98fcb1fc803d0))
 - close the h2 idle-stream DATA and WINDOW_UPDATE findings ([`c82be77`](https://github.com/dstroy0/ProtoCore/commit/c82be77a13a93b79d9573122ef2eed05510b437a))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`12f1553`](https://github.com/dstroy0/ProtoCore/commit/12f155312a76b1afb138a820539b97e8c27700d1))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b10f486`](https://github.com/dstroy0/ProtoCore/commit/b10f486dfb3f48a9da689281ed740787fe8c7e48))
