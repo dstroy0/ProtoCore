@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the re-init split ran from a base it had already zeroed away ([`648b45b`](https://github.com/dstroy0/ProtoCore/commit/648b45b51d5eeaf8e86f994712c488c2da9ae975))
 - an invalid record is discarded, the association survives ([`aa16fa3`](https://github.com/dstroy0/ProtoCore/commit/aa16fa32d7d6497be9ba078f81c1ef33db2cb80b))
 - legacy_record_version is ignored, per RFC 9147 sec 4 ([`03c5fa3`](https://github.com/dstroy0/ProtoCore/commit/03c5fa3dd347780f58448a77c292b36831595147))
 - a retransmitted fragment that changes a byte aborts reassembly ([`b423bdc`](https://github.com/dstroy0/ProtoCore/commit/b423bdcc6bdbf77875eda09d9aea0b7abbf33701))
@@ -90,6 +91,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e980248`](https://github.com/dstroy0/ProtoCore/commit/e980248cc6bf5ff4fd2f70e2a196425f9172876c))
 - update CHANGELOG.md [skip ci] ([`f2a3d99`](https://github.com/dstroy0/ProtoCore/commit/f2a3d99146da324e2cf6bcb1256b7d4e0f419810))
 - update CHANGELOG.md [skip ci] ([`ddf384a`](https://github.com/dstroy0/ProtoCore/commit/ddf384aa6df8dcd25cce91660dcff61e67a774fc))
 - update CHANGELOG.md [skip ci] ([`b34b44e`](https://github.com/dstroy0/ProtoCore/commit/b34b44e4323460eba6094e867135957c0659e9e2))
@@ -280,6 +282,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d3a0207`](https://github.com/dstroy0/ProtoCore/commit/d3a0207de3b00abcec1bb86288c7cfe0a8859c77))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e70bbb3`](https://github.com/dstroy0/ProtoCore/commit/e70bbb3e7ec4aed4e26ff6feab5198b85dc40362))
 - log the forged-datagram teardown and the legacy_record_version rejection ([`3cea4c4`](https://github.com/dstroy0/ProtoCore/commit/3cea4c4c5dad8698036485c600d9b5699d38f742))
 - log the DTLS fragment-conflict overwrite ([`7b26945`](https://github.com/dstroy0/ProtoCore/commit/7b26945e3759beda8cd96096e74622a380311127))
