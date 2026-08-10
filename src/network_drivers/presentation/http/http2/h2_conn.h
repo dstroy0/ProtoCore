@@ -82,6 +82,7 @@ typedef struct
     uint32_t hblock_stream;
     proto_bool hblock_end_stream;
     proto_bool hblock_trailers; ///< the block is a sec 8.1 trailer section, not the request
+    uint8_t hblock_frames;      ///< CONTINUATION frames this block has spanned
     proto_bool in_header_block; ///< between a non-END_HEADERS HEADERS and its END_HEADERS CONTINUATION
 
     HpackDynTable hdec;             ///< HPACK decoder (peer's encoder state)
