@@ -133,7 +133,7 @@ static proto_bool spi_device_for(EspSpiHost *h, uint8_t host, uint32_t hz, uint8
     }
     if (h->dev != NULL)
     {
-        spi_bus_remove_device(h->dev);
+        (void)spi_bus_remove_device(h->dev);
         h->dev = NULL;
     }
     spi_device_interface_config_t d = {0};
@@ -166,7 +166,9 @@ int pc_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mo
         return 0;
     }
     EspSpiHost *h = &s_bus.spi[host];
-    if (!h->up || len == 0 || !spi_device_for(h, host, hz, bit_order, mode, PROTO_FALSE))
+    // max_transfer_sz is what the bus was initialised with; a longer transfer is past what the DMA
+    // descriptor was sized for.
+    if (!h->up || len == 0 || len > PC_SPI_MAX_TXN || !spi_device_for(h, host, hz, bit_order, mode, PROTO_FALSE))
     {
         return 0;
     }
@@ -518,7 +520,7 @@ int pc_platform_i2c_recover(uint8_t bus, int sda, int scl)
     uint32_t hz = b->up ? b->hz : 100000u;
     if (b->up)
     {
-        i2c_driver_delete(i2c_port_id(bus));
+        (void)i2c_driver_delete(i2c_port_id(bus));
         b->up = PROTO_FALSE;
     }
     // Drive SCL and let SDA float: a device holding the line low is the only thing pulling it down,
