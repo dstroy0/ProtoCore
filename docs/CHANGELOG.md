@@ -91,6 +91,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`a97581a`](https://github.com/dstroy0/ProtoCore/commit/a97581ab85a312972e1350855f74c1c7be9de28c))
 - update CHANGELOG.md [skip ci] ([`9690d65`](https://github.com/dstroy0/ProtoCore/commit/9690d6524cbcf61deba143eabe3a4a123cbad666))
 - update CHANGELOG.md [skip ci] ([`e980248`](https://github.com/dstroy0/ProtoCore/commit/e980248cc6bf5ff4fd2f70e2a196425f9172876c))
 - update CHANGELOG.md [skip ci] ([`f2a3d99`](https://github.com/dstroy0/ProtoCore/commit/f2a3d99146da324e2cf6bcb1256b7d4e0f419810))
@@ -377,6 +378,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the cases share one connection object, the way the server re-uses a slot ([`6f9a72c`](https://github.com/dstroy0/ProtoCore/commit/6f9a72c6029f117c6718605377f0c275f82edf90))
 - the cases share one connection object, the way a server re-uses a slot ([`140c9ed`](https://github.com/dstroy0/ProtoCore/commit/140c9ed3f1872ec8724b4230776c923b6a0889ad))
 - decode legal S=0 and L=0 records ([`e13b02b`](https://github.com/dstroy0/ProtoCore/commit/e13b02bdc94c7577ada3f03be2080b5f8e9d05ad))
 - a path small enough that this flight actually splits ([`5e8cd7d`](https://github.com/dstroy0/ProtoCore/commit/5e8cd7d117a7382b5fda6e45a39f0a9260a7f924))
