@@ -566,6 +566,47 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## The HTTP/2 bridge ran no RFC 9113 sec 8.2 / 8.3 header validation at all
+
+- **Status:** FIXED 2026-08-09 (`h2_server.c` `cb_header` / `cb_headers_end`). Found 2026-08-08
+  auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #3, #4, #5).
+- **Symptom:** any header block the HPACK decoder could parse was mapped into the slot's `HttpReq`
+  and marked `PARSE_COMPLETE`. A request with no `:method`, two `:path` fields, a pseudo-header
+  after a regular one, an undefined pseudo-header, an uppercase field name, a colon inside a
+  non-pseudo name, a value wrapped in whitespace, or a `Connection` / `Transfer-Encoding` /
+  `Upgrade` field all reached the route dispatcher. The audit names this the request-smuggling
+  surface: a front end and this server would disagree about where one request ends.
+- **Root cause:** the callback was written as a field-extraction chain (`:method` -> `:path` ->
+  `:authority` -> other), never as a validator. Nothing in the module held per-block state, so no
+  duplicate or ordering rule could have been expressed even if one had been wanted.
+- **Nothing can catch it:** no test env compiled `h2_server.c`. The module had zero coverage.
+- **Fix:** one bit per pseudo-header in the module's owned context, plus a "regular field seen" bit
+  and a "condemned" bit. A duplicate and an out-of-order pseudo-header are one AND against the mask;
+  the sec 8.3.1 mandatory set is one XOR at the end of the block. Field-name bytes go through a
+  256-bit table indexed with `>> 5` and `& 31`. `on_headers_end` now returns the verdict, and the
+  engine - which owns the frame borrow - answers RST_STREAM(PROTOCOL_ERROR) from the dispatcher's
+  span. `native_h2server` is the env that was missing; a mutation run with the verdict disabled put
+  13 of its 15 cases red, so the suite observes the validation and not the transport.
+  Verified: `native_h2server` 15/15, `native_h2conn` 36/36.
+
+## HTTP/2 trailers were a connection error
+
+- **Status:** FIXED 2026-08-09 (`h2_conn.c` `handle_headers`, `decode_block`). Found 2026-08-08
+  auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #14).
+- **Symptom:** `handle_headers` rejected every HEADERS whose stream id did not exceed
+  `last_peer_stream`, so a trailer section - which RFC 9113 sec 8.1 permits as a second HEADERS on
+  an open stream - killed the connection.
+- **Root cause:** sec 5.1.1's monotonicity rule governs a _newly established_ stream. The check
+  conflated that with any repeat of an id, and `test_h2_stream_id_must_increase` pinned the
+  conflation without separating the two cases.
+- **Fix:** an id at or below `last_peer_stream` is now looked up. No stream, or one past OPEN, is
+  still the sec 5.1.1 connection error; a stream still OPEN makes the block a trailer section. A
+  trailer that does not carry END_STREAM, or that contains a pseudo-header (sec 8.1), draws
+  RST_STREAM(PROTOCOL_ERROR). Trailers are decoded so the HPACK dynamic table stays in step with
+  the peer's encoder, but never delivered: the request they trail has already been dispatched, and
+  delivering them would have re-run `cb_headers_end` and dispatched it twice.
+  Verified: `native_h2conn` 36/36.
+
 ## HTTP/2 DATA on a stream nobody opened was delivered to the application
 
 - **Status:** FIXED 2026-08-09 (`h2_conn.c` `handle_data`). Found 2026-08-08 auditing `test/` for RFC
