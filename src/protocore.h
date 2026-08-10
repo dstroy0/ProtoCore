@@ -89,9 +89,9 @@ PROTO_BEGIN_DECLS
 #if PC_ENABLE_SSH
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
-#include "network_drivers/presentation/ssh/connection/ssh_client.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #include "network_drivers/presentation/ssh/connection/ssh_forward.h"
+#include "network_drivers/presentation/ssh/ssh_client.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #include "network_drivers/tls/ssh_rsa.h"
 #endif

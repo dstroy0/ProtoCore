@@ -30,7 +30,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/presentation/ssh/connection/ssh_client.h"
+#include "network_drivers/presentation/ssh/ssh_client.h"
 #include "shared_primitives/mime.h"
 
 // ---- Provisioning: replace these for your network + relay ----

@@ -10,7 +10,7 @@
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h" // pc_ssh_auth_reset on teardown
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_forward.h"
-#include "network_drivers/presentation/ssh/connection/ssh_server.h"
+#include "network_drivers/presentation/ssh/ssh_server.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
@@ -24,21 +24,80 @@
 #include "network_drivers/transport/tcp.h"
 #include "server/clock/clock.h" // pc_millis() for the server-initiated re-key timer
 
+// The connection's span, laid out constants | kmt | control packet | data packet. Each region is a
+// named offset from the base, and every byte a connection uses sits in one of them.
+//
+// constants: the values that persist across messages to compute the exchange hash H, and the
+// session id the first KEX fixes (RFC 4253 sec 7.2).
+#define SSH_OFF_V_C 0u
+#define SSH_OFF_BANNER (SSH_OFF_V_C + SSH_VERSION_MAX)
+#define SSH_OFF_I_C (SSH_OFF_BANNER + SSH_VERSION_MAX)
+#define SSH_OFF_I_S (SSH_OFF_I_C + SSH_KEXINIT_MAX)
+#define SSH_OFF_SESSION_ID (SSH_OFF_I_S + PC_SSH_KEXINIT_S_MAX)
+#define SSH_OFF_ECDH_SK (SSH_OFF_SESSION_ID + SSH_KEXHASH_MAX_LEN)
+#define SSH_OFF_ECDH_PK (SSH_OFF_ECDH_SK + 32u)
+#define SSH_REGION_CONSTANTS (SSH_OFF_ECDH_PK + 32u)
+
+// kmt: one key epoch's six RFC 4253 sec 7.2 keys in every cipher mode the negotiation can pick,
+// then the DH ephemeral. The GCM contexts are 8-aligned, so the epoch starts and ends 8-aligned.
+#define SSH_OFF_GCM_C2S 0u
+#define SSH_OFF_GCM_S2C (SSH_OFF_GCM_C2S + PC_WORK_AESGCM)
+#define SSH_OFF_CHACHA_C2S (SSH_OFF_GCM_S2C + PC_WORK_AESGCM)
+#define SSH_OFF_CHACHA_S2C (SSH_OFF_CHACHA_C2S + PC_CHACHAPOLY_KEY_LEN)
+#define SSH_OFF_MAC_C2S (SSH_OFF_CHACHA_S2C + PC_CHACHAPOLY_KEY_LEN)
+#define SSH_OFF_MAC_S2C (SSH_OFF_MAC_C2S + 64u)
+#define SSH_OFF_AES_KEY_C2S (SSH_OFF_MAC_S2C + 64u)
+#define SSH_OFF_AES_KEY_S2C (SSH_OFF_AES_KEY_C2S + PC_AES256CTR_KEY_LEN)
+#define SSH_OFF_AES_IV_C2S (SSH_OFF_AES_KEY_S2C + PC_AES256CTR_KEY_LEN)
+#define SSH_OFF_AES_IV_S2C (SSH_OFF_AES_IV_C2S + PC_AES256CTR_CTR_LEN)
+#define SSH_EPOCH_STRIDE (SSH_OFF_AES_IV_S2C + PC_AES256CTR_CTR_LEN)
+
+// One epoch is resident. The second is reserved for the re-key window and released once both
+// directions have switched (RFC 4253 sec 7.3), so it costs the wipe and not the footprint - a
+// SSH_EPOCH_STRIDE borrow, not a region. The DH ephemeral follows the resident epoch.
+#define SSH_OFF_EPOCH_0 0u
+#define SSH_OFF_DH_Y (SSH_OFF_EPOCH_0 + SSH_EPOCH_STRIDE)
+#define SSH_OFF_DH_F (SSH_OFF_DH_Y + sizeof(pc_bignum))
+#define SSH_OFF_DH_K (SSH_OFF_DH_F + sizeof(pc_bignum))
+#define SSH_REGION_KMT (SSH_OFF_DH_K + sizeof(pc_bignum))
+
+// control packet: the wire buffer the codec frames into, the bytes the packet MAC works out of, and
+// the ones the key exchange does. Knowable size - two framed packets is the worst case (RFC 4253
+// sec 6), which SSH_WIRE_CAP already states.
+#define SSH_OFF_WIRE 0u
+#define SSH_OFF_MAC_WORK (SSH_OFF_WIRE + SSH_WIRE_CAP)
+#define SSH_OFF_CRYPTO_WORK (SSH_OFF_MAC_WORK + PC_HMAC_SHA256_BORROW)
+#define SSH_REGION_CONTROL (SSH_OFF_CRYPTO_WORK + PC_CRYPTO_BORROW_MAX)
+
+// data packet: the bytes drained off the transport ring, then the reassembly they feed.
+#define SSH_OFF_RX_READ 0u
+#define SSH_OFF_RX_ASM (SSH_OFF_RX_READ + RX_BUF_SIZE)
+#define SSH_REGION_DATA (SSH_OFF_RX_ASM + (size_t)SSH_PKT_BUF_SIZE)
+
+// The whole span, in layout order.
+#define SSH_OFF_CONSTANTS 0u
+#define SSH_OFF_KMT (SSH_OFF_CONSTANTS + SSH_REGION_CONSTANTS)
+#define SSH_OFF_CONTROL (SSH_OFF_KMT + SSH_REGION_KMT)
+#define SSH_OFF_DATA (SSH_OFF_CONTROL + SSH_REGION_CONTROL)
+#define SSH_SLOT_BORROW (SSH_OFF_DATA + SSH_REGION_DATA)
+
 // The secure-pool term this file declares against PC_SECURE_ARENA_SIZE, proved against what is
-// actually borrowed: one wire buffer per slot held on the persistent end for the life of the
+// actually borrowed: one whole span per slot held on the persistent end for the life of the
 // program, plus the payload and wire a single outbound call holds at the same time.
-static_assert(PC_WORK_SSH_CONN >= ((size_t)MAX_SSH_CONNS * SSH_WIRE_CAP) + (size_t)SSH_PKT_BUF_SIZE + SSH_WIRE_CAP,
-              "PC_WORK_SSH_CONN must cover a held wire per SSH slot plus one transient payload and "
-              "wire: raise it in protocore_config.h");
+static_assert(PC_WORK_SSH_CONN >= ((size_t)MAX_SSH_CONNS * SSH_SLOT_BORROW) + (size_t)SSH_PKT_BUF_SIZE + SSH_WIRE_CAP,
+              "PC_WORK_SSH_CONN must cover one connection span per SSH slot plus one transient payload "
+              "and wire: raise it in protocore_config.h");
 
 // All SSH connection-layer state, owned by one instance (internal linkage): the SSH-slot ->
-// TCP-conn-slot mapping (0xFF = free), the one-time init flag, and the per-slot deferred-close
-// flags. Grouped so it is one named owner, unreachable from any other translation unit.
+// TCP-conn-slot mapping (0xFF = free), the one-time init flag, the per-slot deferred-close
+// flags, and each slot's four regions. Grouped so it is one named owner, unreachable from any
+// other translation unit.
 typedef struct
 {
     uint8_t conn_for_ssh[MAX_SSH_CONNS];
     proto_bool init_done;
     volatile proto_bool close[MAX_SSH_CONNS];
+    SshConnNs region[MAX_SSH_CONNS];
 } SshConnCtx;
 static SshConnCtx s_sshc;
 
@@ -53,6 +112,70 @@ static void ensure_init()
         s_sshc.conn_for_ssh[j] = 0xFF;
     }
     s_sshc.init_done = PROTO_TRUE;
+}
+
+// Point one key epoch's six RFC 4253 sec 7.2 keys at @p base, the kmt bytes reserved for it. Both
+// epochs are laid out the same way, so a re-key binds the second with the same call.
+static void bind_epoch(SshKeyMat *km, uint8_t *base)
+{
+    km->gcm_ctx_c2s = base + SSH_OFF_GCM_C2S;
+    km->gcm_ctx_s2c = base + SSH_OFF_GCM_S2C;
+    km->chacha_key_c2s = base + SSH_OFF_CHACHA_C2S;
+    km->chacha_key_s2c = base + SSH_OFF_CHACHA_S2C;
+    km->mac_key_c2s = base + SSH_OFF_MAC_C2S;
+    km->mac_key_s2c = base + SSH_OFF_MAC_S2C;
+    km->aes_key_c2s = base + SSH_OFF_AES_KEY_C2S;
+    km->aes_key_s2c = base + SSH_OFF_AES_KEY_S2C;
+    km->aes_iv_c2s = base + SSH_OFF_AES_IV_C2S;
+    km->aes_iv_s2c = base + SSH_OFF_AES_IV_S2C;
+}
+
+// Take slot @p j's one borrow if it has none yet, then point every one of the slot's members at its
+// own offset in it. From the secure pool's persistent end - the end no mark walks - so it is held
+// for the slot's life and no release reclaims one slot's bytes out from under another. The borrow
+// happens once; the binding happens on every call, because a connection's teardown zeroes the
+// members. False only when the pool cannot cover the slot.
+static proto_bool slot_storage(uint8_t j)
+{
+    if (s_sshc.region[j].constants == NULL)
+    {
+        pc_span b = pc_secure_persist_span(SSH_SLOT_BORROW);
+        if (!pc_span_ok(b))
+        {
+            return PROTO_FALSE;
+        }
+        s_sshc.region[j].constants = b.buf + SSH_OFF_CONSTANTS;
+        s_sshc.region[j].kmt = b.buf + SSH_OFF_KMT;
+        s_sshc.region[j].control = b.buf + SSH_OFF_CONTROL;
+        s_sshc.region[j].data = b.buf + SSH_OFF_DATA;
+    }
+
+    // constants: the handshake values that outlive the message that carried them.
+    SshSession *s = &ssh_sess[j];
+    uint8_t *k = s_sshc.region[j].constants;
+    s->v_c = (char *)(k + SSH_OFF_V_C);
+    s->banner_buf = k + SSH_OFF_BANNER;
+    s->i_c = k + SSH_OFF_I_C;
+    s->i_s = k + SSH_OFF_I_S;
+    s->session_id = k + SSH_OFF_SESSION_ID;
+    s->ecdh_sk = k + SSH_OFF_ECDH_SK;
+    s->ecdh_pk = k + SSH_OFF_ECDH_PK;
+
+    // kmt: the live epoch, then the DH ephemeral. The second epoch sits one stride along and is
+    // bound when a re-key claims it.
+    bind_epoch(&ssh_keys[j], s_sshc.region[j].kmt + SSH_OFF_EPOCH_0);
+    SshDhState *dh = &ssh_dh[j];
+    dh->y = (pc_bignum *)(s_sshc.region[j].kmt + SSH_OFF_DH_Y);
+    dh->f = (pc_bignum *)(s_sshc.region[j].kmt + SSH_OFF_DH_F);
+    dh->K = (pc_bignum *)(s_sshc.region[j].kmt + SSH_OFF_DH_K);
+
+    // control packet and data packet.
+    SshPacketState *p = &ssh_pkt[j];
+    p->tx_wire = s_sshc.region[j].control + SSH_OFF_WIRE;
+    p->mac_work = s_sshc.region[j].control + SSH_OFF_MAC_WORK;
+    p->crypto_work = s_sshc.region[j].control + SSH_OFF_CRYPTO_WORK;
+    p->rx_buf = s_sshc.region[j].data + SSH_OFF_RX_ASM;
+    return PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -301,13 +424,13 @@ void pc_ssh_conn_poll(uint8_t conn_slot)
     if (s->phase == SSH_PHASE_OPEN && !ssh_pkt[j].kex_active)
     {
         uint32_t elapsed = pc_millis() - s->last_kex_ms;
-        if (ssh_rekey_due(ssh_pkt[j].seq_no_send, ssh_pkt[j].seq_no_recv, elapsed, SSH_REKEY_PACKET_THRESHOLD,
+        if (SshTransport.rekey_due(ssh_pkt[j].seq_no_send, ssh_pkt[j].seq_no_recv, elapsed, SSH_REKEY_PACKET_THRESHOLD,
                           SSH_REKEY_TIME_MS))
         {
             size_t mark = pc_secure_mark();
             uint8_t *buf = (uint8_t *)pc_secure_alloc(SSH_PKT_BUF_SIZE, 16);
             size_t n = 0;
-            if (buf && ssh_transport_begin_rekey(j, buf, &n, SSH_PKT_BUF_SIZE) == 0)
+            if (buf && SshTransport.begin_rekey(j, buf, &n, SSH_PKT_BUF_SIZE) == 0)
             {
                 ssh_emit(j, buf, n);
             }
@@ -372,12 +495,23 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
         return;
     }
 
+    // The slot's bytes come before its state: every region below is reached through this borrow, so
+    // a pool that cannot cover the slot fails the connection rather than handing out null regions.
+    if (!slot_storage(j))
+    {
+        Tcp.conn->close(conn->id);
+        return;
+    }
+
     s_sshc.conn_for_ssh[j] = conn_slot;
     conn->proto_slot = j;
     s_sshc.close[j] = PROTO_FALSE;
 
     ssh_transport_init(j);
     ssh_pkt_init(j);
+    // Role is a property of what was acquired: this slot was claimed by an inbound accept, so it is
+    // the server end. It selects which direction's keys each cipher and MAC site reads.
+    ssh_pkt[j].is_client = PROTO_FALSE;
     pc_ssh_channel_init(j);
 #if PC_ENABLE_SSH_ZLIB
     ssh_comp_reset(j); // clear compression state for the new connection (not run on a re-key)
@@ -390,7 +524,7 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
     size_t mark = pc_plaintext_mark();
     uint8_t *banner = (uint8_t *)pc_plaintext_alloc(banner_cap, 16);
     size_t blen = 0;
-    if (banner && ssh_transport_server_banner(banner, &blen, banner_cap) == 0 && pc_conn_active(conn->id))
+    if (banner && SshTransport.send_banner(banner, &blen, banner_cap) == 0 && pc_conn_active(conn->id))
     {
         Tcp.conn->send(conn->id, banner, (proto_u16)blen);
         Tcp.conn->flush(conn->id);
@@ -413,9 +547,9 @@ void pc_ssh_conn_rx(uint8_t conn_slot)
         return;
     }
 
-    // Drain the ring into a linear scratch buffer via the transport read API.
-    static uint8_t buf[RX_BUF_SIZE];
-    size_t n = pc_conn_read(conn_slot, buf, sizeof(buf));
+    // Drain the ring into this slot's own read scratch via the transport read API.
+    uint8_t *buf = s_sshc.region[j].data + SSH_OFF_RX_READ;
+    size_t n = pc_conn_read(conn_slot, buf, RX_BUF_SIZE);
     if (n == 0)
     {
         return;
@@ -425,7 +559,7 @@ void pc_ssh_conn_rx(uint8_t conn_slot)
     if (ssh_sess[j].phase == SSH_PHASE_BANNER)
     {
         size_t consumed = 0;
-        int rc = ssh_transport_recv_banner(j, buf, n, &consumed);
+        int rc = SshTransport.recv_banner(j, buf, n, &consumed);
         if (rc < 0)
         {
             close_conn(conn_slot);
@@ -463,10 +597,13 @@ void pc_ssh_conn_close(uint8_t conn_slot)
 #if PC_SSH_PORT_FORWARD
         pc_ssh_forward_reset(j); // close any forwarded TCP sockets this connection owned
 #endif
-        // Zero all key material and session state for this slot.
+        // Zero all key material and session state for this slot. The span holds every byte the
+        // connection used, so wiping it covers all four regions in one pass; the region pointers
+        // stay, because the borrow is the slot's for the life of the program and asking the
+        // persistent end for a second one would never give the first back.
         ssh_keymat_wipe(j);
-        ssh_dh_wipe(j);
         pc_ssh_auth_reset(j);
+        pc_secure_wipe(s_sshc.region[j].constants, SSH_SLOT_BORROW);
         pc_secure_wipe(&ssh_sess[j], sizeof(SshSession));
         s_sshc.conn_for_ssh[j] = 0xFF;
     }

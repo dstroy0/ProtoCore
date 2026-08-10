@@ -120,23 +120,25 @@ typedef struct
     uint8_t cipher_alg_s2c; ///< SSH_CIPHER_* server-to-client.
     uint8_t mac_alg_c2s;    ///< SSH_MAC_* client-to-server (aes cipher only; 0 = hmac-sha2-256).
     uint8_t mac_alg_s2c;    ///< SSH_MAC_* server-to-client (aes cipher only; 0 = hmac-sha2-256).
-    uint8_t ecdh_sk[32];    ///< Server X25519 ephemeral private (curve25519 KEX only; wiped after).
-    uint8_t ecdh_pk[32];    ///< Server X25519 ephemeral public (curve25519 KEX only).
+    // Every buffer below is the constants region of the connection's span, at its own named offset.
+    // Null until the connection claims the slot and splits its borrow.
+    uint8_t *ecdh_sk; ///< 32B: Server X25519 ephemeral private (curve25519 KEX only; wiped after).
+    uint8_t *ecdh_pk; ///< 32B: Server X25519 ephemeral public (curve25519 KEX only).
 
-    char v_c[SSH_VERSION_MAX]; ///< Client identification string (no CR LF).
-    uint16_t v_c_len;          ///< Length of v_c.
+    char *v_c;        ///< SSH_VERSION_MAX: Client identification string (no CR LF).
+    uint16_t v_c_len; ///< Length of v_c.
 
-    uint8_t banner_buf[SSH_VERSION_MAX]; ///< Accumulator for the inbound banner.
-    uint16_t banner_len;                 ///< Bytes buffered in banner_buf.
+    uint8_t *banner_buf; ///< SSH_VERSION_MAX: Accumulator for the inbound banner.
+    uint16_t banner_len; ///< Bytes buffered in banner_buf.
 
-    uint8_t i_c[SSH_KEXINIT_MAX];      ///< Client KEXINIT payload (for H).
-    uint16_t i_c_len;                  ///< Length of i_c.
-    uint8_t i_s[PC_SSH_KEXINIT_S_MAX]; ///< Server KEXINIT payload (for H).
-    uint16_t i_s_len;                  ///< Length of i_s.
+    uint8_t *i_c;     ///< SSH_KEXINIT_MAX: Client KEXINIT payload (for H).
+    uint16_t i_c_len; ///< Length of i_c.
+    uint8_t *i_s;     ///< PC_SSH_KEXINIT_S_MAX: Server KEXINIT payload (for H).
+    uint16_t i_s_len; ///< Length of i_s.
 
-    uint8_t session_id[SSH_KEXHASH_MAX_LEN]; ///< H from the first KEX (RFC 4253 §7.2); 32 or 64 bytes.
-    uint8_t session_id_len;                  ///< session_id length (the first KEX's exchange-hash length).
-    proto_bool have_session_id;              ///< True once the first KEX completes.
+    uint8_t *session_id;        ///< SSH_KEXHASH_MAX_LEN: H from the first KEX (RFC 4253 §7.2); 32 or 64 bytes.
+    uint8_t session_id_len;     ///< session_id length (the first KEX's exchange-hash length).
+    proto_bool have_session_id; ///< True once the first KEX completes.
 
     ///< The client guessed a KEX that lost negotiation (RFC 4253 sec 7.1): drop its guessed packet.
     proto_bool drop_guessed_kex_pkt;
@@ -204,6 +206,21 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap);
  *         the payload is malformed.
  */
 int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len);
+
+/**
+ * @brief True if @p want is a complete element of the comma-separated name-list
+ *        [@p list, @p list + @p len) (RFC 4253 §7.1 - no spaces).
+ */
+proto_bool namelist_contains(const uint8_t *list, uint32_t len, const char *want);
+
+/** @brief Hash an SSH string (uint32 length + bytes) into the running exchange hash. */
+void hash_string(SshKexHash *h, const uint8_t *data, size_t len);
+
+/**
+ * @brief Hash an SSH mpint from a fixed-width big-endian integer: leading zero bytes stripped,
+ *        a 0x00 prepended when the top bit is set.
+ */
+void hash_mpint(SshKexHash *h, const uint8_t *be, size_t len);
 
 /**
  * @brief Steer KEX / host-key negotiation toward RSA + DH-group14 (default) or toward
@@ -398,6 +415,53 @@ proto_bool ssh_rekey_due(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_
  * @return 0 on success, -1 on error.
  */
 int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, size_t cap);
+
+/**
+ * @brief The RFC 4253 transport state machine, as the operations both roles consume.
+ *
+ * One member per rule the RFC states, so a section number resolves to exactly one implementation.
+ * Role selects which half of a mirrored pair a caller sends - it does not select a second machine.
+ *
+ * @var SshTransportNs::recv_banner    sec 4.2 receive the peer identification string
+ * @var SshTransportNs::send_banner    sec 4.2 send ours
+ * @var SshTransportNs::kexinit_build  sec 7.1 build our KEXINIT, keeping a copy for H
+ * @var SshTransportNs::kexinit_parse  sec 7.1 parse the peer's and negotiate every list
+ * @var SshTransportNs::kex_generate   sec 8 generate this exchange's ephemeral
+ * @var SshTransportNs::exchange_hash  sec 8 the exchange hash H over the negotiated method's terms
+ * @var SshTransportNs::kexdh          sec 8 the KEXDH half this role sends
+ * @var SshTransportNs::newkeys_sent   sec 7.3 our outbound switches when we send NEWKEYS
+ * @var SshTransportNs::newkeys_recvd  sec 7.3 our inbound switches when the peer's arrives
+ * @var SshTransportNs::rekey_due      sec 9 the volume and time budget since the last exchange
+ * @var SshTransportNs::begin_rekey    sec 9 start a re-exchange, when not already doing one
+ *
+ * Not members: sec 7.2 key derivation is ssh_dh_derive_keys_sid(), already shared by both roles;
+ * sec 10's service request belongs to the auth layer.
+ */
+typedef struct
+{
+    int (*recv_banner)(uint8_t i, const uint8_t *data, size_t len, size_t *consumed);
+    int (*send_banner)(uint8_t *out, size_t *out_len, size_t cap);
+    int (*kexinit_build)(uint8_t i, uint8_t *payload, size_t *len, size_t cap);
+    int (*kexinit_parse)(uint8_t i, const uint8_t *payload, size_t len);
+    int (*kex_generate)(uint8_t i);
+    int (*exchange_hash)(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, const uint8_t *k_be, const uint8_t *ks,
+                         size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN]);
+    int (*kexdh)(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len, size_t cap);
+    void (*newkeys_sent)(uint8_t i);
+    void (*newkeys_recvd)(uint8_t i);
+    proto_bool (*rekey_due)(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_ms, uint32_t pkt_threshold,
+                            uint32_t time_threshold_ms);
+    int (*begin_rekey)(uint8_t i, uint8_t *out, size_t *out_len, size_t cap);
+} SshTransportNs;
+
+/** @brief The names, aliased. Initialized here so a member read folds in the reading unit. */
+static const SshTransportNs SshTransport
+    __attribute__((unused)) = {ssh_transport_recv_banner, ssh_transport_server_banner,
+                               ssh_kexinit_build,         ssh_kexinit_parse,
+                               ssh_kex_generate,          ssh_kex_exchange_hash,
+                               ssh_kexdh_handle,          ssh_newkeys_sent,
+                               ssh_newkeys_complete,      ssh_rekey_due,
+                               ssh_transport_begin_rekey};
 
 PROTO_END_DECLS
 

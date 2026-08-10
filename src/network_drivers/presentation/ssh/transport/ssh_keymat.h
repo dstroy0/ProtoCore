@@ -169,13 +169,15 @@ typedef struct
     //
     // aes256-gcm@openssh.com shares aes_iv_* (the modes are mutually exclusive) but NOT aes_key_* - see the
     // keyed contexts below.
-    uint8_t aes_key_c2s[PC_AES256CTR_KEY_LEN]; ///< AES key C→S (server decrypts inbound).
-    uint8_t aes_key_s2c[PC_AES256CTR_KEY_LEN]; ///< AES key S→C (server encrypts outbound).
-    uint8_t aes_iv_c2s[PC_AES256CTR_CTR_LEN];  ///< AES IV C→S (CTR counter / GCM nonce); advances per packet.
-    uint8_t aes_iv_s2c[PC_AES256CTR_CTR_LEN];  ///< AES IV S→C (CTR counter / GCM nonce); advances per packet.
+    // Every key buffer below is one epoch of the kmt region of the connection's span, at its own
+    // named offset. Null until the connection claims the slot and splits its borrow.
+    uint8_t *aes_key_c2s; ///< PC_AES256CTR_KEY_LEN: AES key C→S (server decrypts inbound).
+    uint8_t *aes_key_s2c; ///< PC_AES256CTR_KEY_LEN: AES key S→C (server encrypts outbound).
+    uint8_t *aes_iv_c2s;  ///< PC_AES256CTR_CTR_LEN: AES IV C→S (CTR counter / GCM nonce); advances per packet.
+    uint8_t *aes_iv_s2c;  ///< PC_AES256CTR_CTR_LEN: AES IV S→C (CTR counter / GCM nonce); advances per packet.
 
-    uint8_t mac_key_c2s[64]; ///< HMAC key, client-to-server (aes mode); 32 bytes for SHA-256, 64 for SHA-512.
-    uint8_t mac_key_s2c[64]; ///< HMAC key, server-to-client (aes mode).
+    uint8_t *mac_key_c2s; ///< 64B: HMAC key, client-to-server (aes mode); 32 bytes for SHA-256, 64 for SHA-512.
+    uint8_t *mac_key_s2c; ///< 64B: HMAC key, server-to-client (aes mode).
     // RFC 4253 sec 7.1 negotiates the cipher and the MAC per direction, so each is stored per direction
     // and a session may run different ones each way (0 = aes256-ctr / hmac-sha2-256 E&M).
     uint8_t mac_mode_c2s;    ///< SSH_MAC_* client-to-server (aes256-ctr only).
@@ -183,8 +185,8 @@ typedef struct
     uint8_t cipher_mode_c2s; ///< SSH_CIPHER_* client-to-server.
     uint8_t cipher_mode_s2c; ///< SSH_CIPHER_* server-to-client.
     // chacha20-poly1305@openssh.com: 512-bit key per direction (K_main || K_header); no IV, no MAC key.
-    uint8_t chacha_key_c2s[PC_CHACHAPOLY_KEY_LEN]; ///< client-to-server, used only in chacha mode.
-    uint8_t chacha_key_s2c[PC_CHACHAPOLY_KEY_LEN]; ///< server-to-client, used only in chacha mode.
+    uint8_t *chacha_key_c2s; ///< PC_CHACHAPOLY_KEY_LEN: client-to-server, used only in chacha mode.
+    uint8_t *chacha_key_s2c; ///< PC_CHACHAPOLY_KEY_LEN: server-to-client, used only in chacha mode.
 
     // aes256-gcm@openssh.com (RFC 5647) reuses aes_iv_* above (mode-exclusive with CTR): the low 12 bytes
     // are the nonce, advanced per packet by pc_aesgcm_iv_increment. No separate MAC key.
@@ -194,8 +196,9 @@ typedef struct
     // less than CTR mode keeps. The context stays for the life of the key because standing one up costs
     // ~9,200 cycles on an ESP32-S3, a fixed price per packet that dominates small interactive traffic
     // (see aesgcm.h). Wiped on rekey and by ssh_keymat_wipe() on close.
-    _Alignas(8) uint8_t gcm_ctx_c2s[PC_WORK_AESGCM]; ///< keyed GCM context C→S (server opens inbound).
-    _Alignas(8) uint8_t gcm_ctx_s2c[PC_WORK_AESGCM]; ///< keyed GCM context S→C (server seals outbound).
+    // These two open the kmt epoch, so the region's 8-alignment is the epoch's own start.
+    uint8_t *gcm_ctx_c2s; ///< PC_WORK_AESGCM: keyed GCM context C→S (server opens inbound).
+    uint8_t *gcm_ctx_s2c; ///< PC_WORK_AESGCM: keyed GCM context S→C (server seals outbound).
 
     proto_bool active; ///< True once keys are installed after successful KEX.
 } SshKeyMat;
@@ -225,18 +228,14 @@ extern SshKeyMat ssh_keys[MAX_SSH_CONNS];
  *         zeroed in ssh_dh_wipe().
  *   K  - computed in ssh_dh_finish() as e^y mod p; used for key derivation;
  *         zeroed in ssh_dh_wipe() AFTER keys are installed.
- *   H  - the exchange hash; becomes the session_id for the connection's
- *         lifetime (RFC 4253 §7.2); stored in H[], NOT zeroed (it is a
- *         commitment to the handshake, and is not secret).
  */
+// All three sit in the kmt region of the connection's span, each at its own named offset, after the
+// two key epochs. Null until the connection claims the slot and splits its borrow.
 typedef struct
 {
-    pc_bignum y; ///< Server ephemeral private DH scalar (SENSITIVE - wiped after KEX).
-    pc_bignum f; ///< Server DH public value = g^y mod p (sent to client).
-    pc_bignum K; ///< Shared DH secret = e^y mod p (SENSITIVE - wiped after key derivation).
-
-    uint8_t H[32];       ///< SHA-256 exchange hash; doubles as session_id after first KEX.
-    proto_bool kex_done; ///< True once NEWKEYS has been sent and received.
+    pc_bignum *y; ///< Server ephemeral private DH scalar (SENSITIVE - wiped after KEX).
+    pc_bignum *f; ///< Server DH public value = g^y mod p (sent to client).
+    pc_bignum *K; ///< Shared DH secret = e^y mod p (SENSITIVE - wiped after key derivation).
 } SshDhState;
 
 /** @brief Pool of ephemeral DH state, one entry per MAX_SSH_CONNS. */
@@ -246,10 +245,15 @@ extern SshDhState ssh_dh[MAX_SSH_CONNS];
 // Wipe helpers
 // ---------------------------------------------------------------------------
 
-/** @brief Zero all key material for slot @p i on disconnect or KEX failure. */
+/**
+ * @brief Zero all key material for slot @p i on disconnect or KEX failure.
+ *
+ * Each buffer is wiped through its pointer at its own declared length: the bytes are the
+ * connection's, and zeroing the struct would clear the bindings and leave the keys in the span.
+ */
 static inline void ssh_keymat_wipe(uint8_t i)
 {
-    if (i < MAX_SSH_CONNS)
+    if (i < MAX_SSH_CONNS && ssh_keys[i].gcm_ctx_c2s != NULL)
     {
         // A keyed GCM context owns a vendor allocation (mbedtls_gcm_setkey sets up a cipher context), so
         // zeroing the bytes would leak it once per closed connection. Release first, then wipe.
@@ -262,16 +266,37 @@ static inline void ssh_keymat_wipe(uint8_t i)
         {
             pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_s2c));
         }
-        pc_secure_wipe(&ssh_keys[i], sizeof(SshKeyMat));
+        pc_secure_wipe(ssh_keys[i].gcm_ctx_c2s, PC_WORK_AESGCM);
+        pc_secure_wipe(ssh_keys[i].gcm_ctx_s2c, PC_WORK_AESGCM);
+        pc_secure_wipe(ssh_keys[i].chacha_key_c2s, PC_CHACHAPOLY_KEY_LEN);
+        pc_secure_wipe(ssh_keys[i].chacha_key_s2c, PC_CHACHAPOLY_KEY_LEN);
+        pc_secure_wipe(ssh_keys[i].mac_key_c2s, 64);
+        pc_secure_wipe(ssh_keys[i].mac_key_s2c, 64);
+        pc_secure_wipe(ssh_keys[i].aes_key_c2s, PC_AES256CTR_KEY_LEN);
+        pc_secure_wipe(ssh_keys[i].aes_key_s2c, PC_AES256CTR_KEY_LEN);
+        pc_secure_wipe(ssh_keys[i].aes_iv_c2s, PC_AES256CTR_CTR_LEN);
+        pc_secure_wipe(ssh_keys[i].aes_iv_s2c, PC_AES256CTR_CTR_LEN);
+        ssh_keys[i].mac_mode_c2s = 0;
+        ssh_keys[i].mac_mode_s2c = 0;
+        ssh_keys[i].cipher_mode_c2s = 0;
+        ssh_keys[i].cipher_mode_s2c = 0;
+        ssh_keys[i].active = PROTO_FALSE;
     }
 }
 
-/** @brief Zero the ephemeral DH state for slot @p i after keys are derived. */
+/**
+ * @brief Zero the ephemeral DH state for slot @p i after keys are derived.
+ *
+ * The three scalars live in the connection's kmt region, so the wipe follows the pointers to the
+ * bytes. Zeroing the struct itself would only clear the pointers and leave y, f and K in the span.
+ */
 static inline void ssh_dh_wipe(uint8_t i)
 {
-    if (i < MAX_SSH_CONNS)
+    if (i < MAX_SSH_CONNS && ssh_dh[i].y != NULL)
     {
-        pc_secure_wipe(&ssh_dh[i], sizeof(SshDhState));
+        pc_secure_wipe(ssh_dh[i].y, sizeof(pc_bignum));
+        pc_secure_wipe(ssh_dh[i].f, sizeof(pc_bignum));
+        pc_secure_wipe(ssh_dh[i].K, sizeof(pc_bignum));
     }
 }
 

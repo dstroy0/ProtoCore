@@ -213,6 +213,17 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
                                size_t cap);
 
 /**
+ * @brief Handle SSH_MSG_CHANNEL_EXTENDED_DATA (RFC 4254 §5.2): bounds-check, update
+ *        the window, and discard the payload. The data_type_code selects a stream
+ *        this end does not surface, so the bytes are accounted for and dropped. If
+ *        the local window is exhausted a CHANNEL_WINDOW_ADJUST is written to @p out
+ *        (*@p out_len > 0).
+ * @return 0 on success, -1 if malformed or channel not open.
+ */
+int pc_ssh_channel_handle_extended_data(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                        size_t cap);
+
+/**
  * @brief Build an SSH_MSG_CHANNEL_DATA message carrying @p data to the client on
  *        channel @p channel (a local channel id from a prior open).
  * @return 0 on success, -1 if the channel is closed/unknown, the peer window is

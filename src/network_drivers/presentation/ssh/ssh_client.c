@@ -10,7 +10,7 @@
  * RFC 4253 §7.2 KDF. Only the client-side handshake, auth, and forward logic lives here.
  */
 
-#include "network_drivers/presentation/ssh/connection/ssh_client.h"
+#include "network_drivers/presentation/ssh/ssh_client.h"
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
@@ -28,6 +28,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"            // ssh_dh_derive_keys_sid
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
+#include "network_drivers/presentation/ssh/transport/ssh_transport.h" // SshTransport, the RFC 4253 member set
 #include "network_drivers/tls/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
 #include "network_drivers/tls/ssh_rsa.h"     // rsa-sha2-256/512 host-key verify
 #include "shared_primitives/log.h"
@@ -92,47 +93,17 @@ static const char *const CIPHER_NAMES[] = {"chacha20-poly1305@openssh.com", "aes
 static const char *const MAC_NAMES[] = {"hmac-sha2-256-etm@openssh.com", "hmac-sha2-256",
                                         "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512"};
 
-/** @brief Negotiated key-exchange method. */
-typedef enum PROTO_ENUM_PACKED
-{
-    CLI_KEX_CURVE25519,
-    CLI_KEX_ECDH_P256,
-    CLI_KEX_DH_GROUP14,
-#if PC_ENABLE_PQC_KEX
-    CLI_KEX_MLKEM768_X25519, ///< mlkem768x25519-sha256 PQ/T hybrid (PC_ENABLE_PQC_KEX).
-#endif
-#if PC_ENABLE_SSH_SNTRUP761
-    CLI_KEX_SNTRUP761_X25519, ///< sntrup761x25519-sha512@openssh.com PQ/T hybrid (PC_ENABLE_SSH_SNTRUP761).
-#endif
-} CliKex;
-// Index-aligned with KEX_NAMES above (two curve25519 spellings map to the same method).
-static const CliKex KEX_OF[] = {
-#if PC_ENABLE_PQC_KEX
-    CLI_KEX_MLKEM768_X25519,
-#endif
-#if PC_ENABLE_SSH_SNTRUP761
-    CLI_KEX_SNTRUP761_X25519,
-#endif
-    CLI_KEX_CURVE25519,       CLI_KEX_CURVE25519, CLI_KEX_ECDH_P256, CLI_KEX_DH_GROUP14};
 // The exchange hash + RFC 4253 sec 7.2 KDF run over SHA-512 for the -sha512 methods
 // (sntrup761x25519-sha512), SHA-256 for every other method (RFC 4253 sec 8).
-static inline proto_bool cli_kex_is_sha512(CliKex k)
+static inline proto_bool cli_kex_is_sha512(SshKexAlg k)
 {
 #if PC_ENABLE_SSH_SNTRUP761
-    return k == CLI_KEX_SNTRUP761_X25519;
+    return k == SSH_KEX_SNTRUP761_X25519;
 #else
     (void)k;
     return PROTO_FALSE;
 #endif
 }
-/** @brief Negotiated host-key / signature algorithm. */
-typedef enum PROTO_ENUM_PACKED
-{
-    CLI_HOSTKEY_ED25519,
-    CLI_HOSTKEY_ECDSA_P256,
-    CLI_HOSTKEY_RSA_SHA512,
-    CLI_HOSTKEY_RSA_SHA256
-} CliHostkey;
 
 // ---------------------------------------------------------------------------
 // Wire helpers (SSH data types, RFC 4251 §5)
@@ -232,73 +203,9 @@ static const uint8_t *r_string(Rd *r, uint32_t *n)
     return p;
 }
 
-// Does a comma-separated SSH name-list contain @p want as a whole entry?
-static proto_bool namelist_has(const uint8_t *list, uint32_t len, const char *want)
-{
-    size_t wl = strnlen(want, (size_t)len + 1); // a whole-entry match cannot exceed the list
-    uint32_t start = 0;
-    for (uint32_t i = 0; i <= len; i++)
-    {
-        if (i == len || list[i] == ',')
-        {
-            if (i - start == wl && mem.cmp(list + start, want, wl) == 0)
-            {
-                return PROTO_TRUE;
-            }
-            start = i + 1;
-        }
-    }
-    return PROTO_FALSE;
-}
-
-// Hash an SSH string (u32 length + bytes) into the running exchange hash (SHA-256 or SHA-512).
-static void hash_string(SshKexHash *c, const uint8_t *d, size_t n)
-{
-    uint8_t l[4] = {(uint8_t)(n >> 24), (uint8_t)(n >> 16), (uint8_t)(n >> 8), (uint8_t)n};
-    ssh_kexhash_update(c, l, 4);
-    ssh_kexhash_update(c, d, n);
-}
-// Hash an SSH mpint (two's-complement, minimal, leading 0x00 when the high bit is set).
-static void hash_mpint(SshKexHash *c, const uint8_t *be, size_t n)
-{
-    size_t i = 0;
-    while (i < n && be[i] == 0)
-    {
-        i++; // strip leading zeros
-    }
-    size_t mlen = n - i;
-    proto_bool pad = (mlen > 0 && (be[i] & 0x80) != 0);
-    uint8_t l4[4] = {0, 0, 0, (uint8_t)(mlen + (pad ? 1 : 0))};
-    l4[2] = (uint8_t)((mlen + (pad ? 1 : 0)) >> 8);
-    ssh_kexhash_update(c, l4, 4);
-    if (pad)
-    {
-        uint8_t z = 0;
-        ssh_kexhash_update(c, &z, 1);
-    }
-    if (mlen)
-    {
-        ssh_kexhash_update(c, be + i, mlen);
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Client session state
 // ---------------------------------------------------------------------------
-
-typedef enum PROTO_ENUM_PACKED
-{
-    CLI_PHASE_IDLE,
-    CLI_PHASE_BANNER,   ///< reading the server identification string.
-    CLI_PHASE_KEXINIT,  ///< sent our CLI_PHASE_KEXINIT; awaiting the server's.
-    CLI_PHASE_KEXREPLY, ///< sent KEXDH_INIT; awaiting KEXDH_REPLY.
-    CLI_PHASE_NEWKEYS,  ///< sent our CLI_PHASE_NEWKEYS; awaiting the server's.
-    CLI_PHASE_SERVICE,  ///< sent SERVICE_REQUEST; awaiting SERVICE_ACCEPT.
-    CLI_PHASE_AUTH,     ///< sent USERAUTH_REQUEST; awaiting SUCCESS/FAILURE.
-    CLI_PHASE_FORWARD,  ///< sent tcpip-forward; awaiting REQUEST_SUCCESS.
-    CLI_PHASE_OPEN,     ///< tunnel up; servicing forwarded-tcpip channels.
-    CLI_PHASE_FAILED
-} CliPhase;
 
 // How many forwarded-tcpip connections the tunnel bridges at once (PC_SSH_CLIENT_MAX_CHANNELS,
 // defaulted per variant in protocore_config.h / the board profile): a relay forwarding to a web UI opens
@@ -311,8 +218,7 @@ typedef struct
     proto_bool used;
     uint32_t local_id;  ///< our channel id.
     uint32_t remote_id; ///< the relay's channel id.
-    uint32_t send_win;  ///< bytes we may still send to the relay (their window to us).
-    uint32_t recv_win;  ///< bytes the relay may still send us before we WINDOW_ADJUST.
+    SshFlow flow;       ///< the RFC 4254 sec 5.2 window pair.
     int local_cid;      ///< pc_client id of the bridged local TCP connection, or -1.
     proto_bool eof_sent;
     proto_bool relay_eof; ///< the relay half-closed (peer done sending); tear down once the response drains.
@@ -321,14 +227,13 @@ typedef struct
 typedef struct
 {
     pc_ssh_tunnel_cfg cfg;
-    CliPhase phase;
     pc_ssh_tunnel_state state;
 
     int cid; ///< relay TCP connection (pc_client), or -1.
     uint32_t deadline_ms;
 
-    CliKex kex;         ///< negotiated key exchange.
-    CliHostkey hostkey; ///< negotiated host-key / signature type.
+    SshKexAlg kex;         ///< negotiated key exchange.
+    SshHostkeyAlg hostkey; ///< negotiated host-key / signature type.
     uint8_t cipher;     ///< negotiated SSH_CIPHER_*.
     uint8_t mac;        ///< negotiated SSH_MAC_* (used only when cipher == aes256-ctr).
 
@@ -436,7 +341,6 @@ static const pc_field LOG_TUNNEL_UP[] = {
 static void cli_fail(const char *why)
 {
     PC_LOGW(LOG_TUNNEL_FAIL, ((const pc_fval[]){PC_VSTR(why)}), 1);
-    s_cli.phase = CLI_PHASE_FAILED;
     s_cli.state = PC_TUN_FAILED;
     for (int i = 0; i < PC_SSH_CLIENT_MAX_CHANNELS; i++)
     {
@@ -477,20 +381,6 @@ static void w_namelist(Wr *w, const char *const *names, size_t n)
         }
     }
     w_string(w, tmp, o);
-}
-
-// RFC 4253 §7.1: the negotiated algorithm is the first on the CLIENT's list that the server also
-// offers. Returns the client-preference index, or -1 if there is no overlap.
-static int negotiate(const uint8_t *slist, uint32_t slen, const char *const *prefs, size_t nprefs)
-{
-    for (size_t i = 0; i < nprefs; i++)
-    {
-        if (namelist_has(slist, slen, prefs[i]))
-        {
-            return (int)i;
-        }
-    }
-    return -1;
 }
 
 // Copy an mpint's value (the string content) right-aligned, big-endian, into out[width]; strips a
@@ -544,12 +434,12 @@ static proto_bool build_kex_public(void)
 {
     switch (s_cli.kex)
     {
-    case CLI_KEX_CURVE25519:
+    case SSH_KEX_CURVE25519:
         pc_rand_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
         s_cli.qc_len = 32;
         return PROTO_TRUE;
-    case CLI_KEX_ECDH_P256:
+    case SSH_KEX_ECDH_NISTP256:
         // Draw a valid P-256 scalar (pubkey derivation rejects 0 / >= group order).
         for (int tries = 0; tries < 8; tries++)
         {
@@ -561,7 +451,7 @@ static proto_bool build_kex_public(void)
             }
         }
         return PROTO_FALSE;
-    case CLI_KEX_DH_GROUP14: {
+    case SSH_KEX_DH_GROUP14: {
         // e = g^x mod p, g = 2 (RFC 3526 group 14). x is a 256-bit exponent.
         pc_rand_fill(s_cli.kex_priv, 32);
         pc_bignum g, x, e;
@@ -576,7 +466,7 @@ static proto_bool build_kex_public(void)
         return PROTO_TRUE;
     }
 #if PC_ENABLE_PQC_KEX
-    case CLI_KEX_MLKEM768_X25519: {
+    case SSH_KEX_MLKEM768_X25519: {
         // ML-KEM-768 keypair (dk kept for Decaps; ek is embedded in dk) + an X25519 ephemeral. C_INIT
         // (ek || Q_C) is assembled at send time; Q_C lives in qc[0..31].
         uint8_t d[32], z[32], ek[MLKEM768_EK_BYTES];
@@ -593,7 +483,7 @@ static proto_bool build_kex_public(void)
     }
 #endif
 #if PC_ENABLE_SSH_SNTRUP761
-    case CLI_KEX_SNTRUP761_X25519: {
+    case SSH_KEX_SNTRUP761_X25519: {
         // sntrup761 keypair (sk kept for Decaps; pk is embedded in sk) + an X25519 ephemeral. C_INIT
         // (pk || Q_C) is assembled at send time from sk; Q_C lives in qc[0..31]. pk is only needed
         // transiently here (sk embeds a copy), so it borrows the scratch arena.
@@ -630,47 +520,16 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     mem.cpy(s_cli.i_s, p, len);
     s_cli.i_s_len = (uint16_t)len;
 
-    Rd r = {p, len, 0, PROTO_TRUE};
-    r_u8(&r);    // msg type
-    r.off += 16; // cookie
-    uint32_t kn, hn, cn, mn;
-    const uint8_t *kex = r_string(&r, &kn);
-    const uint8_t *hk = r_string(&r, &hn);
-    const uint8_t *ec = r_string(&r, &cn); // enc c2s
-    r_string(&r, &cn);                     // enc s2c (same set advertised)
-    const uint8_t *mc = r_string(&r, &mn); // mac c2s
-    if (!r.ok)
+    // RFC 4253 sec 7.1 parse + negotiate, the one implementation both roles consume.
+    if (SshTransport.kexinit_parse(SSH_CLI_SLOT, p, len) != 0)
     {
         return PROTO_FALSE;
     }
-
-    int ki = negotiate(kex, kn, KEX_NAMES, sizeof(KEX_NAMES) / sizeof(KEX_NAMES[0]));
-    int hi = negotiate(hk, hn, HOSTKEY_NAMES, sizeof(HOSTKEY_NAMES) / sizeof(HOSTKEY_NAMES[0]));
-    int ci = negotiate(ec, cn, CIPHER_NAMES, sizeof(CIPHER_NAMES) / sizeof(CIPHER_NAMES[0]));
-    if (ki < 0 || hi < 0 || ci < 0)
-    {
-        return PROTO_FALSE;
-    }
-
-    s_cli.kex = KEX_OF[ki];
-    s_cli.hostkey = (CliHostkey)hi; // HOSTKEY_NAMES order == CliHostkey order
-    static const uint8_t cipher_of[] = {SSH_CIPHER_CHACHA20POLY1305, SSH_CIPHER_AES256GCM, SSH_CIPHER_AES256CTR};
-    s_cli.cipher = cipher_of[ci];
-    PC_LOGI(LOG_TUNNEL_NEGOTIATED,
-            ((const pc_fval[]){PC_VSTR(KEX_NAMES[ki]), PC_VSTR(HOSTKEY_NAMES[hi]), PC_VSTR(CIPHER_NAMES[ci])}), 3);
-
-    s_cli.mac = SSH_MAC_HMAC_SHA256;
-    if (s_cli.cipher == SSH_CIPHER_AES256CTR)
-    {
-        int mi = negotiate(mc, mn, MAC_NAMES, sizeof(MAC_NAMES) / sizeof(MAC_NAMES[0]));
-        if (mi < 0)
-        {
-            return PROTO_FALSE;
-        }
-        static const uint8_t mac_of[] = {SSH_MAC_HMAC_SHA256_ETM, SSH_MAC_HMAC_SHA256, SSH_MAC_HMAC_SHA512_ETM,
-                                         SSH_MAC_HMAC_SHA512};
-        s_cli.mac = mac_of[mi];
-    }
+    const SshSession *ns = &ssh_sess[SSH_CLI_SLOT];
+    s_cli.kex = ns->kex_alg;
+    s_cli.hostkey = ns->hostkey_alg;
+    s_cli.cipher = ns->cipher_alg_s2c;
+    s_cli.mac = ns->mac_alg_s2c;
 
     if (!build_kex_public())
     {
@@ -678,7 +537,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     }
 
 #if PC_ENABLE_PQC_KEX
-    if (s_cli.kex == CLI_KEX_MLKEM768_X25519)
+    if (s_cli.kex == SSH_KEX_MLKEM768_X25519)
     {
         // KEX_HYBRID_INIT (msg 30): string(C_INIT) where C_INIT = ek || Q_C (1216 B). Too large for
         // the stack packet buffer, so build it in the client's scratch arena.
@@ -702,7 +561,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     }
 #endif
 #if PC_ENABLE_SSH_SNTRUP761
-    if (s_cli.kex == CLI_KEX_SNTRUP761_X25519)
+    if (s_cli.kex == SSH_KEX_SNTRUP761_X25519)
     {
         // KEX_HYBRID_INIT (msg 30): string(C_INIT) where C_INIT = sntrup761_pk || Q_C (1190 B). pk is
         // reconstructed from sk (it is embedded there); too large for the stack packet buffer, so the
@@ -731,7 +590,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     uint8_t out[1 + 4 + 260];
     Wr w = {out, sizeof(out), 0, PROTO_TRUE};
     w_u8(&w, SSH_MSG_KEXDH_INIT);
-    if (s_cli.kex == CLI_KEX_DH_GROUP14)
+    if (s_cli.kex == SSH_KEX_DH_GROUP14)
     {
         // mpint(e): minimal, with a sign byte if the top bit is set.
         uint32_t i = 0;
@@ -765,18 +624,29 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
     mem.set(k_be, 0, 256);
     switch (s_cli.kex)
     {
-    case CLI_KEX_CURVE25519: {
+    case SSH_KEX_CURVE25519: {
         if (srv_pub_len != 32)
         {
             return PROTO_FALSE;
         }
         uint8_t k32[32];
         pc_x25519(k32, s_cli.kex_priv, srv_pub);
+        // Reject a low-order server point (all-zero shared secret) - RFC 7748 §6.1.
+        uint8_t zacc = 0;
+        for (int b = 0; b < 32; b++)
+        {
+            zacc |= k32[b];
+        }
+        if (zacc == 0)
+        {
+            pc_secure_wipe(k32, 32);
+            return PROTO_FALSE;
+        }
         mem.cpy(k_be + (256 - 32), k32, 32);
         pc_secure_wipe(k32, 32);
         return PROTO_TRUE;
     }
-    case CLI_KEX_ECDH_P256: {
+    case SSH_KEX_ECDH_NISTP256: {
         if (srv_pub_len != PC_ECDSA_P256_PUB_LEN)
         {
             return PROTO_FALSE;
@@ -790,7 +660,7 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
         pc_secure_wipe(k32, 32);
         return PROTO_TRUE;
     }
-    case CLI_KEX_DH_GROUP14: {
+    case SSH_KEX_DH_GROUP14: {
         pc_bignum f, x, K;
         bn_from_bytes(&f, srv_pub, srv_pub_len);
         if (bn_dh_validate(&f) != 0) // 0 = valid (1 < f < p-1)
@@ -805,7 +675,7 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
         return PROTO_TRUE;
     }
 #if PC_ENABLE_PQC_KEX
-    case CLI_KEX_MLKEM768_X25519: {
+    case SSH_KEX_MLKEM768_X25519: {
         // S_REPLY = ciphertext(1088) || Q_S(32). Decaps recovers K_PQ; X25519 gives K_CL. The hybrid's
         // combined secret K = SHA256(K_PQ || K_CL) is a fixed 32-byte string (right-aligned in k_be).
         if (srv_pub_len != MLKEM768_CT_BYTES + 32)
@@ -820,6 +690,18 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
         uint8_t k_pq[32], k_cl[32];
         pc_mlkem768_decaps(s_cli.hyb.mlkem_dk, srv_pub, k_pq);
         pc_x25519(k_cl, s_cli.kex_priv, srv_pub + MLKEM768_CT_BYTES);
+        // Reject a low-order server point (all-zero shared secret) - RFC 7748 §6.1.
+        uint8_t zacc = 0;
+        for (int b = 0; b < 32; b++)
+        {
+            zacc |= k_cl[b];
+        }
+        if (zacc == 0)
+        {
+            pc_secure_wipe(k_pq, sizeof(k_pq));
+            pc_secure_wipe(k_cl, sizeof(k_cl));
+            return PROTO_FALSE;
+        }
         pc_sha256_ctx c;
         pc_sha256_init(&c, work);
         pc_sha256_update(&c, k_pq, 32);
@@ -831,7 +713,7 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
     }
 #endif
 #if PC_ENABLE_SSH_SNTRUP761
-    case CLI_KEX_SNTRUP761_X25519: {
+    case SSH_KEX_SNTRUP761_X25519: {
         // S_REPLY = ciphertext(1039) || Q_S(32). Decaps recovers K_PQ; X25519 gives K_CL. The combined
         // secret K = SHA512(K_PQ || K_CL) is a fixed 64-byte string (right-aligned in k_be).
         if (srv_pub_len != PC_SNTRUP761_CT_BYTES + 32)
@@ -846,6 +728,18 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
         uint8_t k_pq[PC_SNTRUP761_SS_BYTES], k_cl[32];
         pc_sntrup761_dec(work, s_cli.hyb.sntrup_sk, srv_pub, k_pq);
         pc_x25519(k_cl, s_cli.kex_priv, srv_pub + PC_SNTRUP761_CT_BYTES);
+        // Reject a low-order server point (all-zero shared secret) - RFC 7748 §6.1.
+        uint8_t zacc = 0;
+        for (int b = 0; b < 32; b++)
+        {
+            zacc |= k_cl[b];
+        }
+        if (zacc == 0)
+        {
+            pc_secure_wipe(k_pq, sizeof(k_pq));
+            pc_secure_wipe(k_cl, sizeof(k_cl));
+            return PROTO_FALSE;
+        }
         pc_sha512_ctx c;
         pc_sha512_init(&c, work);
         pc_sha512_update(&c, k_pq, sizeof(k_pq));
@@ -883,7 +777,7 @@ static size_t compute_h(const uint8_t *ks, uint32_t ks_len, const uint8_t *srv_p
     const uint8_t *cpk = NULL; // the hybrid public embedded in the C_INIT string (ek / sntrup761 pk)
     size_t cpk_len = 0, k_slen = 0;
 #if PC_ENABLE_PQC_KEX
-    if (s_cli.kex == CLI_KEX_MLKEM768_X25519)
+    if (s_cli.kex == SSH_KEX_MLKEM768_X25519)
     {
         hybrid = PROTO_TRUE;
         cpk = s_cli.hyb.mlkem_dk + 1152; // ek follows the 1152-byte dk_pke
@@ -892,7 +786,7 @@ static size_t compute_h(const uint8_t *ks, uint32_t ks_len, const uint8_t *srv_p
     }
 #endif
 #if PC_ENABLE_SSH_SNTRUP761
-    if (s_cli.kex == CLI_KEX_SNTRUP761_X25519)
+    if (s_cli.kex == SSH_KEX_SNTRUP761_X25519)
     {
         hybrid = PROTO_TRUE;
         cpk = s_cli.hyb.sntrup_sk + PC_SNTRUP761_SK_PK_OFFSET;
@@ -914,7 +808,7 @@ static size_t compute_h(const uint8_t *ks, uint32_t ks_len, const uint8_t *srv_p
     }
     else
 #endif
-        if (s_cli.kex == CLI_KEX_DH_GROUP14)
+        if (s_cli.kex == SSH_KEX_DH_GROUP14)
     {
         hash_mpint(&c, s_cli.qc, s_cli.qc_len); // e
         hash_mpint(&c, srv_pub, srv_pub_len);   // f
@@ -946,7 +840,7 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
 
     switch (s_cli.hostkey)
     {
-    case CLI_HOSTKEY_ED25519: {
+    case SSH_HOSTKEY_ED25519: {
         uint32_t pn;
         const uint8_t *pub = r_string(&rk, &pn);
         uint32_t rl;
@@ -954,7 +848,7 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         uint8_t *vwork = cli_crypto_work();
         return vwork != NULL && rk.ok && rs.ok && pn == 32 && rl == 64 && pc_ed25519_verify(vwork, pub, H, h_len, raw);
     }
-    case CLI_HOSTKEY_ECDSA_P256: {
+    case SSH_HOSTKEY_ECDSA_NISTP256: {
         uint32_t cn;
         r_string(&rk, &cn); // "nistp256"
         uint32_t qn;
@@ -978,8 +872,8 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         uint8_t *work = cli_crypto_work();
         return work != NULL && pc_ecdsa_p256_verify(q, work, H, h_len, raw);
     }
-    case CLI_HOSTKEY_RSA_SHA256:
-    case CLI_HOSTKEY_RSA_SHA512: {
+    case SSH_HOSTKEY_RSA_SHA256:
+    case SSH_HOSTKEY_RSA_SHA512: {
         // K_S = string("ssh-rsa") || mpint(e) || mpint(n).
         uint32_t elen, nlen;
         const uint8_t *e = r_string(&rk, &elen);
@@ -993,7 +887,7 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         {
             return PROTO_FALSE;
         }
-        pc_rsa_hash h = (s_cli.hostkey == CLI_HOSTKEY_RSA_SHA512) ? PC_RSA_HASH_SHA512 : PC_RSA_HASH_SHA256;
+        pc_rsa_hash h = (s_cli.hostkey == SSH_HOSTKEY_RSA_SHA512) ? PC_RSA_HASH_SHA512 : PC_RSA_HASH_SHA256;
         uint8_t *work = cli_crypto_work();
         return work != NULL && pc_rsa_verify(n256, e4, work, H, h_len, raw, rawlen, h) == 0;
     }
@@ -1066,13 +960,20 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     const proto_bool is512 = cli_kex_is_sha512(s_cli.kex);
     proto_bool k_is_string = PROTO_FALSE;
 #if PC_ENABLE_PQC_KEX
-    k_is_string = k_is_string || (s_cli.kex == CLI_KEX_MLKEM768_X25519);
+    k_is_string = k_is_string || (s_cli.kex == SSH_KEX_MLKEM768_X25519);
 #endif
 #if PC_ENABLE_SSH_SNTRUP761
-    k_is_string = k_is_string || (s_cli.kex == CLI_KEX_SNTRUP761_X25519);
+    k_is_string = k_is_string || (s_cli.kex == SSH_KEX_SNTRUP761_X25519);
 #endif
-    ssh_dh_derive_keys_sid(SSH_CLI_SLOT, k_be, H, s_cli.session_id, s_cli.cipher, s_cli.mac, k_is_string, h_len,
-                           s_cli.session_id_len, is512);
+    const SshKdfInputs kdf_in = {.work = cli_crypto_work(),
+                                 .K_be = k_be,
+                                 .H = H,
+                                 .session_id = s_cli.session_id,
+                                 .h_len = h_len,
+                                 .sid_len = s_cli.session_id_len,
+                                 .k_is_string = k_is_string,
+                                 .is512 = is512};
+    ssh_dh_derive_keys_sid(SSH_CLI_SLOT, &kdf_in);
     pc_secure_wipe(k_be, sizeof(k_be));
     pc_secure_wipe(s_cli.kex_priv, sizeof(s_cli.kex_priv));
 #if PC_ENABLE_PQC_KEX || PC_ENABLE_SSH_SNTRUP761
@@ -1198,20 +1099,15 @@ static void handle_channel_open(const uint8_t *p, size_t len)
     const uint8_t *type = r_string(&r, &tn);
     uint32_t their_id = r_u32(&r);
     uint32_t their_win = r_u32(&r);
-    r_u32(&r); // their max packet
+    uint32_t their_maxpkt = r_u32(&r);
     if (!r.ok || tn != 15 || mem.cmp(type, "forwarded-tcpip", 15) != 0)
     {
         // Refuse anything else.
-        uint8_t out[64];
-        Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-        w_u8(&w, SSH_MSG_CHANNEL_OPEN_FAILURE);
-        w_u32(&w, their_id);
-        w_u32(&w, 1); // administratively prohibited
-        w_cstr(&w, "only forwarded-tcpip");
-        w_cstr(&w, "");
-        if (w.ok)
+        uint8_t out[17];
+        size_t n = 0;
+        if (pc_ssh_sig_build_open_failure(out, sizeof(out), their_id, 1, &n) == 0)
         {
-            cli_send(out, w.off);
+            cli_send(out, n);
         }
         return;
     }
@@ -1220,16 +1116,11 @@ static void handle_channel_open(const uint8_t *p, size_t len)
     CliChannel *ch = chan_alloc();
     if (!ch)
     {
-        uint8_t out[48];
-        Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-        w_u8(&w, SSH_MSG_CHANNEL_OPEN_FAILURE);
-        w_u32(&w, their_id);
-        w_u32(&w, 4); // resource shortage
-        w_cstr(&w, "busy");
-        w_cstr(&w, "");
-        if (w.ok)
+        uint8_t out[17];
+        size_t n = 0;
+        if (pc_ssh_sig_build_open_failure(out, sizeof(out), their_id, 4, &n) == 0)
         {
-            cli_send(out, w.off);
+            cli_send(out, n);
         }
         return;
     }
@@ -1239,16 +1130,11 @@ static void handle_channel_open(const uint8_t *p, size_t len)
     PC_LOGD(LOG_TUNNEL_FWD_OPEN, ((const pc_fval[]){PC_VU32((uint32_t)s_cli.cfg.local_port), PC_VI64((int64_t)lc)}), 2);
     if (lc < 0)
     {
-        uint8_t out[64];
-        Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-        w_u8(&w, SSH_MSG_CHANNEL_OPEN_FAILURE);
-        w_u32(&w, their_id);
-        w_u32(&w, 2); // connect failed
-        w_cstr(&w, "local connect failed");
-        w_cstr(&w, "");
-        if (w.ok)
+        uint8_t out[17];
+        size_t n = 0;
+        if (pc_ssh_sig_build_open_failure(out, sizeof(out), their_id, 2, &n) == 0)
         {
-            cli_send(out, w.off);
+            cli_send(out, n);
         }
         return;
     }
@@ -1256,22 +1142,16 @@ static void handle_channel_open(const uint8_t *p, size_t len)
     ch->used = PROTO_TRUE;
     ch->remote_id = their_id;
     ch->local_id = s_cli.next_chan_id++;
-    ch->send_win = their_win;
-    ch->recv_win = SSH_CLI_WINDOW;
+    pc_ssh_flow_init(&ch->flow, SSH_CLI_WINDOW, their_win, their_maxpkt);
     ch->local_cid = lc;
     ch->eof_sent = PROTO_FALSE;
     ch->relay_eof = PROTO_FALSE; // fully self-init this slot; do not lean on channel_close having zeroed it
 
-    uint8_t out[64];
-    Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_CHANNEL_OPEN_CONFIRM);
-    w_u32(&w, their_id);
-    w_u32(&w, ch->local_id);
-    w_u32(&w, SSH_CLI_WINDOW);
-    w_u32(&w, SSH_CLI_MAXPKT);
-    if (w.ok)
+    uint8_t out[17];
+    size_t n = 0;
+    if (pc_ssh_sig_build_open_confirm(&ch->flow, their_id, ch->local_id, out, sizeof(out), &n) == 0)
     {
-        cli_send(out, w.off);
+        cli_send(out, n);
     }
 }
 
@@ -1281,13 +1161,11 @@ static void channel_close(CliChannel *ch)
     {
         return;
     }
-    uint8_t out[8];
-    Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_CHANNEL_CLOSE);
-    w_u32(&w, ch->remote_id);
-    if (w.ok)
+    uint8_t out[10];
+    size_t n = 0;
+    if (pc_ssh_sig_build_close(ch->remote_id, out, sizeof(out), &n) == 0)
     {
-        cli_send(out, w.off);
+        cli_send(out, n);
     }
     if (ch->local_cid >= 0)
     {
@@ -1316,25 +1194,19 @@ static void handle_channel_data(const uint8_t *p, size_t len)
     }
 
     // Refill the relay's window as we consume, so it can keep sending.
-    if (ch->recv_win >= dn)
+    if (!pc_ssh_flow_recv_take(&ch->flow, dn))
     {
-        ch->recv_win -= dn;
+        channel_close(ch);
+        return;
     }
-    else
+    uint32_t add = 0;
+    if (pc_ssh_flow_replenish_due(&ch->flow, &add))
     {
-        ch->recv_win = 0;
-    }
-    if (ch->recv_win < SSH_CLI_WINDOW / 2)
-    {
-        uint32_t add = SSH_CLI_WINDOW - ch->recv_win;
-        uint8_t out[16];
-        Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-        w_u8(&w, SSH_MSG_CHANNEL_WINDOW_ADJUST);
-        w_u32(&w, ch->remote_id);
-        w_u32(&w, add);
-        if (w.ok && cli_send(out, w.off))
+        uint8_t out[9];
+        size_t n = 0;
+        if (pc_ssh_sig_build_window_adjust(ch->remote_id, add, out, sizeof(out), &n) == 0 && cli_send(out, n))
         {
-            ch->recv_win += add;
+            pc_ssh_flow_local_credit(&ch->flow, add);
         }
     }
 }
@@ -1348,36 +1220,28 @@ static void pump_channel(CliChannel *ch)
         return;
     }
     uint8_t buf[1024];
-    while (ch->send_win > 0)
+    for (int burst = 0; burst < 4; burst++)
     {
-        size_t want = sizeof(buf);
-        if (want > ch->send_win)
+        uint32_t want = pc_ssh_flow_send_cap(&ch->flow, (uint32_t)sizeof(buf));
+        if (want == 0)
         {
-            want = ch->send_win;
-        }
-        if (want > SSH_CLI_MAXPKT)
-        {
-            want = SSH_CLI_MAXPKT;
+            break;
         }
         size_t got = Tcp.client->read(ch->local_cid, buf, want);
         if (got == 0)
         {
             break;
         }
-        uint8_t hdr[16];
-        Wr w = {hdr, sizeof(hdr), 0, PROTO_TRUE};
-        w_u8(&w, SSH_MSG_CHANNEL_DATA);
-        w_u32(&w, ch->remote_id);
-        w_u32(&w, (uint32_t)got);
-        // Assemble header + data into the wire staging buffer via one payload.
         uint8_t payload[9 + sizeof(buf)];
-        mem.cpy(payload, hdr, w.off);
-        mem.cpy(payload + w.off, buf, got);
-        if (!cli_send(payload, w.off + got))
+        size_t n = 0;
+        if (pc_ssh_sig_build_data(&ch->flow, ch->remote_id, buf, got, payload, sizeof(payload), &n) != 0)
         {
             break;
         }
-        ch->send_win -= (uint32_t)got;
+        if (!cli_send(payload, n))
+        {
+            break;
+        }
     }
     // Tear the channel down once its reply has drained and either side is done: the local service
     // closed, or the relay half-closed (relay_eof - the forwarded peer finished, e.g. an HTTP client
@@ -1386,14 +1250,6 @@ static void pump_channel(CliChannel *ch)
     proto_bool local_done = Tcp.client->is_closed(ch->local_cid) && Tcp.client->available(ch->local_cid) == 0;
     if ((local_done || ch->relay_eof) && !ch->eof_sent)
     {
-        uint8_t out[8];
-        Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-        w_u8(&w, SSH_MSG_CHANNEL_EOF);
-        w_u32(&w, ch->remote_id);
-        if (w.ok)
-        {
-            cli_send(out, w.off);
-        }
         ch->eof_sent = PROTO_TRUE;
         channel_close(ch);
     }
@@ -1418,14 +1274,25 @@ static void pump_local_to_relay(void)
 static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, size_t len)
 {
     (void)slot;
-    switch (s_cli.phase)
+    // RFC 4253 sec 11: legal in every phase. DISCONNECT terminates immediately (11.1); IGNORE (11.2),
+    // DEBUG (11.3) and UNIMPLEMENTED (11.4) are consumed and never answered.
+    if (type == SSH_MSG_DISCONNECT)
     {
-    case CLI_PHASE_KEXINIT:
+        cli_fail("relay sent DISCONNECT");
+        return;
+    }
+    if (type == SSH_MSG_IGNORE || type == SSH_MSG_DEBUG || type == SSH_MSG_UNIMPLEMENTED)
+    {
+        return;
+    }
+    switch (ssh_sess[SSH_CLI_SLOT].phase)
+    {
+    case SSH_PHASE_KEXINIT:
         if (type == SSH_MSG_KEXINIT)
         {
             if (handle_server_kexinit(payload, len))
             {
-                s_cli.phase = CLI_PHASE_KEXREPLY;
+                ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_DH_INIT;
             }
             else
             {
@@ -1433,40 +1300,35 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             }
         }
         break;
-    case CLI_PHASE_KEXREPLY:
+    case SSH_PHASE_DH_INIT:
         if (type == SSH_MSG_KEXDH_REPLY)
         {
             if (handle_kexdh_reply(payload, len))
             {
-                s_cli.phase = CLI_PHASE_NEWKEYS;
+                ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_NEWKEYS;
             }
-            else if (s_cli.phase != CLI_PHASE_FAILED)
+            else if (s_cli.state != PC_TUN_FAILED)
             {
                 cli_fail("KEXDH_REPLY invalid");
             }
         }
         break;
-    case CLI_PHASE_NEWKEYS:
+    case SSH_PHASE_NEWKEYS:
         if (type == SSH_MSG_NEWKEYS)
         {
-            ssh_pkt[SSH_CLI_SLOT].enc_in = PROTO_TRUE;
-            ssh_pkt[SSH_CLI_SLOT].kex_active = PROTO_FALSE;
-            if (send_service_request())
-            {
-                s_cli.phase = CLI_PHASE_SERVICE;
-            }
-            else
+            SshTransport.newkeys_recvd(SSH_CLI_SLOT); // -> SSH_PHASE_SERVICE
+            if (!send_service_request())
             {
                 cli_fail("service request send failed");
             }
         }
         break;
-    case CLI_PHASE_SERVICE:
+    case SSH_PHASE_SERVICE:
         if (type == SSH_MSG_SERVICE_ACCEPT)
         {
             if (send_userauth_publickey())
             {
-                s_cli.phase = CLI_PHASE_AUTH;
+                ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_AUTH;
             }
             else
             {
@@ -1474,12 +1336,12 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             }
         }
         break;
-    case CLI_PHASE_AUTH:
+    case SSH_PHASE_AUTH:
         if (type == SSH_MSG_USERAUTH_SUCCESS)
         {
             if (send_tcpip_forward())
             {
-                s_cli.phase = CLI_PHASE_FORWARD;
+                ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_OPEN;
             }
             else
             {
@@ -1491,19 +1353,22 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             cli_fail("authentication rejected by the relay");
         }
         break;
-    case CLI_PHASE_FORWARD:
-        if (type == SSH_MSG_REQUEST_SUCCESS)
+    case SSH_PHASE_OPEN:
+        // The forward is asked for and not yet confirmed until REQUEST_SUCCESS, which is the state
+        // the tunnel reports; the phase is already OPEN (RFC 4254 sec 7.1 is a channel-layer request).
+        if (s_cli.state != PC_TUN_UP)
         {
-            s_cli.phase = CLI_PHASE_OPEN;
-            s_cli.state = PC_TUN_UP;
-            PC_LOGI(LOG_TUNNEL_UP, ((const pc_fval[]){PC_VU32((uint32_t)s_cli.cfg.bind_port)}), 1);
+            if (type == SSH_MSG_REQUEST_SUCCESS)
+            {
+                s_cli.state = PC_TUN_UP;
+                PC_LOGI(LOG_TUNNEL_UP, ((const pc_fval[]){PC_VU32((uint32_t)s_cli.cfg.bind_port)}), 1);
+            }
+            else if (type == SSH_MSG_REQUEST_FAILURE)
+            {
+                cli_fail("relay refused the remote forward");
+            }
+            break;
         }
-        else if (type == SSH_MSG_REQUEST_FAILURE)
-        {
-            cli_fail("relay refused the remote forward");
-        }
-        break;
-    case CLI_PHASE_OPEN:
         switch (type)
         {
         case SSH_MSG_CHANNEL_OPEN:
@@ -1520,7 +1385,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             CliChannel *ch = chan_by_local(rid);
             if (r.ok && ch)
             {
-                ch->send_win += add;
+                pc_ssh_flow_peer_add(&ch->flow, add);
             }
             break;
         }
@@ -1605,6 +1470,7 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
         return PROTO_FALSE;
     }
 
+    ssh_transport_init(SSH_CLI_SLOT); // -> SSH_PHASE_BANNER
     ssh_pkt_init(SSH_CLI_SLOT);
     ssh_pkt_set_client(SSH_CLI_SLOT);
     ssh_keymat_wipe(SSH_CLI_SLOT);
@@ -1617,7 +1483,6 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
         cli_fail("banner send failed");
         return PROTO_FALSE;
     }
-    s_cli.phase = CLI_PHASE_BANNER;
     s_cli.state = PC_TUN_CONNECTING;
     s_cli.deadline_ms = pc_millis() + 15000;
     return PROTO_TRUE;
@@ -1647,7 +1512,7 @@ static void drain_banner(const uint8_t *data, size_t len, size_t *consumed)
                 mem.cpy(s_cli.v_s, s_cli.banner, l);
                 s_cli.v_s_len = l;
                 *consumed = i + 1;
-                s_cli.phase = CLI_PHASE_KEXINIT;
+                ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_KEXINIT;
                 if (!build_kexinit())
                 {
                     cli_fail("KEXINIT send failed");
@@ -1662,7 +1527,7 @@ static void drain_banner(const uint8_t *data, size_t len, size_t *consumed)
 
 void pc_ssh_tunnel_poll(void)
 {
-    if (s_cli.cid < 0 || s_cli.phase == CLI_PHASE_IDLE || s_cli.phase == CLI_PHASE_FAILED)
+    if (s_cli.cid < 0 || s_cli.state == PC_TUN_IDLE || s_cli.state == PC_TUN_FAILED)
     {
         return;
     }
@@ -1683,13 +1548,13 @@ void pc_ssh_tunnel_poll(void)
     if (got)
     {
         size_t off = 0;
-        if (s_cli.phase == CLI_PHASE_BANNER)
+        if (ssh_sess[SSH_CLI_SLOT].phase == SSH_PHASE_BANNER)
         {
             size_t consumed = 0;
             drain_banner(buf, got, &consumed);
             off = consumed;
         }
-        if (off < got && s_cli.phase != CLI_PHASE_FAILED)
+        if (off < got && s_cli.state != PC_TUN_FAILED)
         {
             if (ssh_pkt_recv(SSH_CLI_SLOT, buf + off, got - off, cli_msg_handler) != 0)
             {
@@ -1698,7 +1563,7 @@ void pc_ssh_tunnel_poll(void)
         }
     }
 
-    if (s_cli.phase == CLI_PHASE_OPEN)
+    if (s_cli.state == PC_TUN_UP)
     {
         pump_local_to_relay();
     }
@@ -1721,7 +1586,6 @@ void pc_ssh_tunnel_end(void)
     pc_secure_wipe(s_cli.kex_priv, sizeof(s_cli.kex_priv));
     mem.set(&s_cli, 0, sizeof(s_cli));
     s_cli.cid = -1;
-    s_cli.phase = CLI_PHASE_IDLE;
     s_cli.state = PC_TUN_IDLE;
 }
 

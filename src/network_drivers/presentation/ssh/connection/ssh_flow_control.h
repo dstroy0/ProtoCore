@@ -126,6 +126,7 @@ uint32_t pc_ssh_flow_peer_window(const SshFlow *f);
 #define SSH_MSG_CHANNEL_OPEN_FAILURE 92
 #define SSH_MSG_CHANNEL_WINDOW_ADJUST 93
 #define SSH_MSG_CHANNEL_DATA 94
+#define SSH_MSG_CHANNEL_EXTENDED_DATA 95 // RFC 4254 §5.2, data_type_code + string
 #define SSH_MSG_CHANNEL_EOF 96
 #define SSH_MSG_CHANNEL_CLOSE 97
 #define SSH_MSG_CHANNEL_REQUEST 98

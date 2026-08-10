@@ -17,6 +17,25 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
+#include "network_drivers/presentation/ssh/transport/ssh_packet.h"
+#include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+
+/**
+ * @brief One connection's four regions, as pointers into the one span it owns.
+ *
+ * The span is laid out constants | kmt | control packet | data packet and split at named offsets.
+ * The second key epoch is reserved out of @c kmt for the re-key window and released once both
+ * directions have switched (RFC 4253 sec 7.3).
+ */
+typedef struct
+{
+    uint8_t *constants;
+    uint8_t *kmt;
+    uint8_t *control;
+    uint8_t *data;
+} SshConnNs;
+
 /**
  * @brief One-time setup: install the dispatcher's binary-packet emit callback.
  *
