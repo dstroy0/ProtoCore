@@ -140,7 +140,20 @@ static proto_bool pc_hpack_decode_int(const uint8_t *in, size_t len, uint8_t pre
             return PROTO_FALSE;
         }
         b = in[i++];
-        v += (uint32_t)(b & 0x7f) << m;
+        // RFC 7541 sec 5.1: an integer encoding past the implementation's limit is a decoding error.
+        // At m == 28 only the low four bits survive the shift, and the running sum has to hold the
+        // result, so both are checked here rather than letting the shift or the add wrap.
+        uint32_t add = (uint32_t)(b & 0x7f);
+        if (m == 28 && add > 0x0Fu)
+        {
+            return PROTO_FALSE;
+        }
+        add <<= m;
+        if (add > 0xFFFFFFFFu - v)
+        {
+            return PROTO_FALSE;
+        }
+        v += add;
         m += 7;
     } while (b & 0x80);
     *consumed = i;
