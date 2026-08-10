@@ -14,7 +14,7 @@
 #ifndef PROTOCORE_SSH_CONN_H
 #define PROTOCORE_SSH_CONN_H
 
-#include "shared_primitives/types.h" // PROTO_BEGIN_DECLS, before anything below uses it
+#include "protocore_config.h" // the entry point: types.h for PROTO_BEGIN_DECLS, before anything uses it
 #include <stddef.h>
 #include <stdint.h>
 
