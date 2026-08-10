@@ -1840,8 +1840,65 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
 // The bound peer address is optional and is clamped: a non-NULL address of length 0 binds nothing,
 // and an over-long address keeps only its first PC_DTLS_PEER_ADDR_MAX bytes. Either way the cookie the
 // server mints verifies against what it kept, so the retry is accepted.
+// RFC 9147 sec 5.1 binds the cookie to the client's address, so "a cookie minted for one peer is
+// worthless to another". Nothing drove that at the connection level: the round trip above mints and
+// spends a cookie on one connection, which passes whether or not the address is in the MAC.
+static void test_cookie_is_worthless_to_another_peer(void)
+{
+    static const uint8_t OTHER_ADDR[] = {10, 0, 0, 9, 0x30, 0x39};
+
+    uint8_t client_pub[32];
+    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    uint8_t server_ed_pub[32];
+    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    DtlsServerConfig cfg;
+    server_cfg(&cfg, server_ed_pub);
+
+    // Mint a cookie for the first peer.
+    DtlsConn a;
+    DtlsServer.init(&a, &cfg, TEST_PEER_ADDR, sizeof(TEST_PEER_ADDR));
+    uint8_t ch1[256];
+    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/PROTO_FALSE, NULL, 0, NULL, 0,
+                                           PROTO_FALSE, TLS_GROUP_X25519, TLS_SIG_ED25519);
+    uint8_t rec[420];
+    size_t r1 = plain_hs_record(rec, sizeof(rec), ch1, ch1_len, 0, 0);
+    TEST_ASSERT_TRUE(r1 > 0);
+    uint8_t hrr_flight[512];
+    int hf = DtlsServer.process(&a, rec, r1, hrr_flight, sizeof(hrr_flight));
+    TEST_ASSERT_TRUE(hf > 0);
+
+    DtlsPlaintext pt;
+    TEST_ASSERT_TRUE(DtlsRecord.plaintext_parse(hrr_flight, (size_t)hf, &pt) > 0);
+    uint8_t hrr[512];
+    size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
+    TEST_ASSERT_TRUE(hrr_len > 0);
+    uint8_t cookie[PC_DTLS_COOKIE_MAX];
+    size_t cookie_len = 0;
+    TEST_ASSERT_TRUE(hrr_cookie(hrr, hrr_len, cookie, &cookie_len));
+
+    // Spend it at a connection bound to a different address.
+    uint8_t ch2[320];
+    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/PROTO_TRUE, cookie, cookie_len, NULL, 0,
+                                           PROTO_FALSE, TLS_GROUP_X25519, TLS_SIG_ED25519);
+    size_t r2 = plain_hs_record(rec, sizeof(rec), ch2, ch2_len, 1, 1);
+    TEST_ASSERT_TRUE(r2 > 0);
+
+    DtlsConn b;
+    DtlsServer.init(&b, &cfg, OTHER_ADDR, sizeof(OTHER_ADDR));
+    uint8_t flight[2048];
+    TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&b, rec, r2, flight, sizeof(flight)));
+    TEST_ASSERT_EQUAL_UINT8(47, DtlsServer.alert(&b)); // illegal_parameter (sec 5.1)
+
+    // The same cookie still works at the peer it was minted for.
+    DtlsConn c;
+    DtlsServer.init(&c, &cfg, TEST_PEER_ADDR, sizeof(TEST_PEER_ADDR));
+    TEST_ASSERT_TRUE(DtlsServer.process(&c, rec, r2, flight, sizeof(flight)) > 0);
+}
+
 static void test_peer_addr_zero_length_and_clamped(void)
 {
+    // With no address there is nothing to bind to, so this shows the cookie survives a round trip,
+    // not that it is bound. The binding itself is the test above.
     TEST_ASSERT_TRUE(hrr_roundtrip_accepted(TEST_PEER_ADDR, 0));
     uint8_t big_addr[PC_DTLS_PEER_ADDR_MAX + 14];
     for (size_t i = 0; i < sizeof(big_addr); i++)
@@ -2099,6 +2156,7 @@ int main(void)
     RUN_TEST(test_forged_record_does_not_end_the_association);
     RUN_TEST(test_app_records_before_and_after_established);
     RUN_TEST(test_conn_id_edge_cases);
+    RUN_TEST(test_cookie_is_worthless_to_another_peer);
     RUN_TEST(test_peer_addr_zero_length_and_clamped);
     RUN_TEST(test_hrr_retry_without_keyshare_rejected);
     RUN_TEST(test_hrr_retry_with_corrupt_cookie_rejected);
