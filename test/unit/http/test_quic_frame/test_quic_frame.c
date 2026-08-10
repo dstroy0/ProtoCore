@@ -192,8 +192,10 @@ void test_parse_errors()
     const uint8_t appclose_trunc[2] = {0x1d, 0x00}; // error code ok, no reason length
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_frame_parse(appclose_trunc, 2, &f));
 
-    const uint8_t unhandled[1] = {0x18}; // NEW_CONNECTION_ID - not handled by this minimal server
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_frame_parse(unhandled, 1, &f));
+    // NEW_CONNECTION_ID (0x18) truncated to its type byte alone: the parser rejects it because the
+    // frame is incomplete, not because the type is unrecognized.
+    const uint8_t new_cid_trunc[1] = {0x18};
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_frame_parse(new_cid_trunc, 1, &f));
 }
 
 // Remaining per-field truncations (STREAM Length varint, transport CONNECTION_CLOSE
