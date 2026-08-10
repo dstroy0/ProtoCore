@@ -114,6 +114,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2e91ee5`](https://github.com/dstroy0/ProtoCore/commit/2e91ee52de40cc94c2a8fb2b9bacc13a5cfb63d7))
 - update CHANGELOG.md [skip ci] ([`7f253db`](https://github.com/dstroy0/ProtoCore/commit/7f253db93be347faf4ed6ed2a75ec97e0c021b06))
 - update CHANGELOG.md [skip ci] ([`12d0191`](https://github.com/dstroy0/ProtoCore/commit/12d0191d785b8e7ea973528f63a26b58099466c2))
 - update CHANGELOG.md [skip ci] ([`1d72122`](https://github.com/dstroy0/ProtoCore/commit/1d721224e499fe32fc248590051c11e09f024746))
@@ -332,6 +333,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Revert "fix(swar): the Ns table made every leaf an indirect always_inline call at -Og" ([`41fc9a1`](https://github.com/dstroy0/ProtoCore/commit/41fc9a1655835ab8ada6aae70b0d282aaa65353e))
 - Revert "fix(nvs): the two backends gave different wrong answers for a blob and a string" ([`ea49e97`](https://github.com/dstroy0/ProtoCore/commit/ea49e97545cee8dc48bb14fea94ddd682f93b9e4))
 - Revert "test(config): the blob test pinned the host double's truncation, not the contract" ([`2173298`](https://github.com/dstroy0/ProtoCore/commit/2173298dda6b0bea7735df67f8b2de926ae6cf8f))
 - Revert "fix(nvs): put_blob and put_str judged their bounds after committing, or not at all" ([`1a13687`](https://github.com/dstroy0/ProtoCore/commit/1a13687d425dbcb43196903aa32de29f1d1e0ffb))
