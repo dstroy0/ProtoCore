@@ -103,6 +103,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`76067b4`](https://github.com/dstroy0/ProtoCore/commit/76067b4ee113cddafb0fd214292b4f14d68271e7))
 - update test report + coverage [skip ci] ([`95eb36f`](https://github.com/dstroy0/ProtoCore/commit/95eb36fa650ec2061c3e8c6f5a8c13571792280f))
 - update CHANGELOG.md [skip ci] ([`00d45c1`](https://github.com/dstroy0/ProtoCore/commit/00d45c142db99296211e48449a5da8ddf3de550e))
 - update CHANGELOG.md [skip ci] ([`64cdf7d`](https://github.com/dstroy0/ProtoCore/commit/64cdf7dd75033dad42625df47bcb35aac1fe342d))
@@ -435,6 +436,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the blob test pinned the host double's truncation, not the contract ([`ffe68b0`](https://github.com/dstroy0/ProtoCore/commit/ffe68b0183bef5e9b66b83fd98a74bae563923fa))
 - host_nvs reaches str now, so its two envs compile protostr ([`3c5dd8e`](https://github.com/dstroy0/ProtoCore/commit/3c5dd8e380c00c1a188b6b3ba667b241f5d17bd0))
 - the cases share the connection slot ([`7ec6716`](https://github.com/dstroy0/ProtoCore/commit/7ec6716ecf1bbe3b15a4d328878b97f255630948))
 - the cases share two connection slots, the way the CoAPs server re-uses one ([`3d9e027`](https://github.com/dstroy0/ProtoCore/commit/3d9e027060987e0c7f21a3a20f4d5bf15fd6a861))
