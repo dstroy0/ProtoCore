@@ -120,6 +120,12 @@ static size_t pc_tls_record_protect(TlsRecordKeys *keys, uint8_t content_type, c
     {
         return 0;
     }
+    // RFC 8446 sec 5.4: a Handshake or Alert record never carries a zero-length
+    // TLSInnerPlaintext.content. Application data may, and is how a sender pads the stream.
+    if (pt_len == 0 && (content_type == PC_TLS_CT_HANDSHAKE || content_type == PC_TLS_CT_ALERT))
+    {
+        return 0;
+    }
     // TLSInnerPlaintext is content || content_type; the AEAD adds the tag. No padding is added.
     const size_t inner_len = pt_len + 1;
     const size_t body_len = inner_len + PC_TLS_TAG_LEN;
@@ -187,6 +193,13 @@ static proto_bool pc_tls_record_unprotect(TlsRecordKeys *keys, const uint8_t *re
     }
     out_info->content_type = out[n - 1];
     out_info->pt_len = n - 1;
+    // sec 5.4: the same rule on receipt - a zero-length Handshake or Alert record is fatal, and the
+    // sequence number does not advance for a record the connection is about to terminate on.
+    if (out_info->pt_len == 0 &&
+        (out_info->content_type == PC_TLS_CT_HANDSHAKE || out_info->content_type == PC_TLS_CT_ALERT))
+    {
+        return PROTO_FALSE;
+    }
     keys->seq++;
     return PROTO_TRUE;
 }
