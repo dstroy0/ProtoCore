@@ -74,16 +74,26 @@ proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size
 
 size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
 {
-    if (!out || cap == 0 || !name_ok(key) || !nvs_open(ns, PROTO_TRUE))
+    if (!out || cap == 0)
     {
         return 0;
     }
-    // getString writes the terminator and returns the character count without it; an absent key
-    // would give the Arduino String overload, which allocates, so the key is checked first.
+    out[0] = '\0'; // nvs.h promises a terminated buffer on every path, including the ones that fail
+    if (!name_ok(key) || !nvs_open(ns, PROTO_TRUE))
+    {
+        return 0;
+    }
+    // getString returns nvs_get_str's length, which COUNTS the terminator, and returns 0 without
+    // writing when the value does not fit. An absent key would give the Arduino String overload,
+    // which allocates, so the key is checked first.
     size_t n = s_nvs.prefs.isKey(key) ? s_nvs.prefs.getString(key, out, cap) : 0;
     s_nvs.prefs.end();
-    out[n < cap ? n : cap - 1] = '\0';
-    return n;
+    if (n == 0)
+    {
+        return 0;
+    }
+    out[n - 1 < cap ? n - 1 : cap - 1] = '\0';
+    return n - 1; // the contract is the character count, terminator excluded
 }
 
 proto_bool pc_nvs_put_str(const char *ns, const char *key, const char *val)

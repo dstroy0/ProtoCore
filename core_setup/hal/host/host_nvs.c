@@ -115,9 +115,12 @@ size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
     {
         return 0;
     }
-    size_t n = e->len < cap ? e->len : cap;
-    mem.cpy(out, e->val, n);
-    return n;
+    if (e->len > cap)
+    {
+        return 0; // the ESP backend refuses rather than truncating; a short read must not read whole
+    }
+    mem.cpy(out, e->val, e->len);
+    return e->len;
 }
 
 proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len)
