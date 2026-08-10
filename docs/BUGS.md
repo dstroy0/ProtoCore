@@ -462,6 +462,37 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Not a fix:** setting `CONFIG_COMPILER_OPTIMIZATION_PERF` in the example. That turns the job
   green and leaves every consumer's debug build broken.
 
+## protocore.h wraps its 268 includes in `extern "C"`, so a C++ standard header lands inside one
+
+- **Status:** OPEN, found 2026-08-10 working the ESP-IDF Build job back to green. It is the third
+  layer of that job's failure; the two ahead of it are fixed (the SWAR leaves could not be reached
+  through their Ns table at `-Og`, and `compute_exchange_hash` declared a 64-byte `out` its SHA-256
+  caller does not have), and this is what stands behind them.
+- **Symptom:** `xtensa-esp-elf-g++` on `examples/esp-idf/Industrial_ESPIDF/main/main.cpp`:
+  `new:195:3: error: template with C linkage`, then `conflicting declaration of C function
+'void std::launder(const void*)'`, and more of the same through `<new>`.
+- **The chain, exactly:** `main.cpp:26` includes `protocore.h`, which opens `PROTO_BEGIN_DECLS` at
+  `:48` and only closes it at `:1414`. Inside that span, `:62` includes
+  `network_drivers/transport/tcp.h` -> `tcp/tcp_conn.h:43` -> `mmgr/ring.h:23` -> `<stdatomic.h>`,
+  which on a C++ compiler is the C++ header and pulls `<atomic>` -> `bits/atomic_base.h` ->
+  `<new>`. `<new>` declares templates, and a template cannot have C linkage.
+- **Root cause:** `protocore.h:45-47` states the assumption - "the declarations below carry C linkage
+  from here rather than from each header. System and vendor headers state their own". That holds for
+  C headers and not for C++ ones: `<new>`, `<atomic>` and `<type_traits>` are not wrapped in
+  `extern "C"` and cannot be. The block wraps INCLUDES where it should wrap DECLARATIONS.
+- **Why it did not show before:** the two errors ahead of it aborted their translation units first.
+  Nothing about this is new; it surfaced when they were fixed.
+- **What the fix costs, measured:** of the 268 headers `protocore.h` includes, **233 already carry
+  their own `PROTO_BEGIN_DECLS`** and need nothing. Of the 35 that do not, **24 declare linkable
+  `pc_*` functions** - `cia402.h`, `j1939.h`, `nmea2000.h` (19 each), `span.h` (12),
+  `edge_cache_proxy.h` (11), `dbm.h`, `docstore.h`, `web_terminal.h` (10 each), and 16 more. Moving
+  the wrap below the include block without touching them would silently drop those 24 headers'
+  symbols to C++ linkage.
+- **Fix:** not written. The shape it takes: the 24 headers get their own
+  `PROTO_BEGIN_DECLS`/`PROTO_END_DECLS`, which is what the other 233 already do and what makes a
+  header includable on its own; then `protocore.h`'s wrap moves below its includes, covering only
+  what `protocore.h` itself declares. The remaining 11 are inline- or macro-only and need nothing.
+
 ## `Content-Length` folds with no overflow guard, so a 33-digit value frames as 0
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http1-core.md` #1).
