@@ -37,6 +37,14 @@ void pc_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const 
 static void hkdf_expand(uint8_t *work, const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
                         uint8_t *out, size_t out_len)
 {
+    // RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is a single octet. Past
+    // that the counter wraps and T(256) repeats T(1), so the output would silently reuse earlier
+    // key material. There is no defined answer, so give none.
+    if (out_len > (size_t)255 * PC_HKDF_HASH_LEN)
+    {
+        mem.set(out, 0, out_len);
+        return;
+    }
     uint8_t *t = work + HKDF_OFF_T;
     size_t t_len = 0; // 0 for T(0) (empty), PC_HKDF_HASH_LEN afterwards
     size_t done = 0;

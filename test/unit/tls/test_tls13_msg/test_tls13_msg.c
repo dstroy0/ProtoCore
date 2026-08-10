@@ -113,6 +113,50 @@ void test_parse_client_hello()
     TEST_ASSERT_NULL(ch.pc_quic_tp);
 }
 
+// RFC 8446 sec 4.1.3: the ServerHello names "the single cipher suite selected by the server from
+// the list in ClientHello.cipher_suites"; sec 4.1.2: legacy_compression_methods "MUST contain
+// exactly one byte, set to zero". Both fields were read and discarded, so a ClientHello offering
+// no suite we implement, or asking for compression, was answered as if it had.
+void test_client_hello_suite_and_compression()
+{
+    uint8_t msg[256];
+    size_t n = hx(CH, msg, sizeof(msg));
+
+    // Walk to the two fields: handshake header (4) + legacy_version (2) + random (32), then the
+    // session id, then cipher_suites, then legacy_compression_methods.
+    const size_t sid_len_off = 4 + 2 + 32;
+    const size_t cs_len_off = sid_len_off + 1 + msg[sid_len_off];
+    const size_t cs_off = cs_len_off + 2;
+    const size_t cs_len = ((size_t)msg[cs_len_off] << 8) | msg[cs_len_off + 1];
+    const size_t comp_len_off = cs_off + cs_len;
+
+    Tls13ClientHello ch;
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_TRUE(ch.offers_aes128gcm_sha256);
+    TEST_ASSERT_EQUAL_UINT8(1, msg[comp_len_off]);     // the trace is already conformant here
+    TEST_ASSERT_EQUAL_UINT8(0, msg[comp_len_off + 1]); // and the one byte is zero
+
+    // Replace every offered suite with TLS_AES_256_GCM_SHA384, which this stack does not implement.
+    // The message stays well formed; there is simply nothing to answer with.
+    for (size_t i = 0; i + 1 < cs_len; i += 2)
+    {
+        msg[cs_off + i] = 0x13;
+        msg[cs_off + i + 1] = 0x02;
+    }
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_FALSE(ch.offers_aes128gcm_sha256);
+
+    // A non-null compression method aborts the parse outright.
+    n = hx(CH, msg, sizeof(msg));
+    msg[comp_len_off + 1] = 0x01;
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
+
+    // So does a compression list that is not exactly one byte long.
+    n = hx(CH, msg, sizeof(msg));
+    msg[comp_len_off] = 0x00;
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
+}
+
 void test_build_server_hello()
 {
     uint8_t exp[128];
@@ -732,6 +776,7 @@ int main(void)
     RUN_TEST(test_tls13_parse_guards);
     RUN_TEST(test_tls13_builder_cap_guards);
     RUN_TEST(test_parse_client_hello);
+    RUN_TEST(test_client_hello_suite_and_compression);
     RUN_TEST(test_build_server_hello);
     RUN_TEST(test_tls13_build_server_hello_conn_id);
     RUN_TEST(test_build_certificate);
