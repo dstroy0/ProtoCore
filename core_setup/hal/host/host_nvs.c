@@ -12,6 +12,8 @@
  */
 
 #include "core_setup/hal/nvs.h"
+#include "mmgr/protomem.h" // mem.cpy
+#include "mmgr/protostr.h" // str.len / str.eq / str.copy
 
 #if !PC_VENDOR_ESP
 
@@ -36,7 +38,7 @@ static HostNvsCtx s_nvs;
 // than truncated into a different name.
 static proto_bool name_ok(const char *name)
 {
-    return name && name[0] && strnlen(name, PC_CONFIG_KEY_MAX) < PC_CONFIG_KEY_MAX;
+    return name && name[0] && str.len(name, PC_CONFIG_KEY_MAX) < PC_CONFIG_KEY_MAX;
 }
 
 // Returns a mutable entry (callers write through it), so it takes the owner by non-const pointer.
@@ -44,7 +46,8 @@ static HostNvsEntry *find(HostNvsCtx *c, const char *ns, const char *key)
 {
     for (int i = 0; i < PC_CONFIG_MAX_ENTRIES; i++)
     {
-        if (c->tbl[i].used && strcmp(c->tbl[i].ns, ns) == 0 && strcmp(c->tbl[i].key, key) == 0)
+        if (c->tbl[i].used && str.eq(c->tbl[i].ns, ns, PC_CONFIG_KEY_MAX, PROTO_FALSE) &&
+            str.eq(c->tbl[i].key, key, PC_CONFIG_KEY_MAX, PROTO_FALSE))
         {
             return &c->tbl[i];
         }
@@ -64,9 +67,9 @@ static HostNvsEntry *find_or_alloc(HostNvsCtx *c, const char *ns, const char *ke
         if (!c->tbl[i].used)
         {
             c->tbl[i].used = PROTO_TRUE;
-            strncpy(c->tbl[i].ns, ns, PC_CONFIG_KEY_MAX - 1);
+            str.copy(c->tbl[i].ns, ns, PC_CONFIG_KEY_MAX);
             c->tbl[i].ns[PC_CONFIG_KEY_MAX - 1] = '\0';
-            strncpy(c->tbl[i].key, key, PC_CONFIG_KEY_MAX - 1);
+            str.copy(c->tbl[i].key, key, PC_CONFIG_KEY_MAX);
             c->tbl[i].key[PC_CONFIG_KEY_MAX - 1] = '\0';
             c->tbl[i].len = 0;
             return &c->tbl[i];
@@ -86,7 +89,7 @@ static proto_bool store(const char *ns, const char *key, const void *data, size_
     {
         return PROTO_FALSE;
     }
-    memcpy(e->val, data, len);
+    mem.cpy(e->val, data, len);
     e->len = len;
     return PROTO_TRUE;
 }
@@ -113,7 +116,7 @@ size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
         return 0;
     }
     size_t n = e->len < cap ? e->len : cap;
-    memcpy(out, e->val, n);
+    mem.cpy(out, e->val, n);
     return n;
 }
 
@@ -140,12 +143,12 @@ size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
     }
     // The terminator is stored with the value, so the run is measured rather than assumed: a blob
     // written through put_blob and read back as a string stops at the first zero byte.
-    size_t n = strnlen((const char *)e->val, e->len);
+    size_t n = str.len((const char *)e->val, e->len);
     if (n > cap - 1)
     {
         n = cap - 1;
     }
-    memcpy(out, e->val, n);
+    mem.cpy(out, e->val, n);
     out[n] = '\0';
     return n;
 }
@@ -156,7 +159,7 @@ proto_bool pc_nvs_put_str(const char *ns, const char *key, const char *val)
     {
         return PROTO_FALSE;
     }
-    return store(ns, key, val, strnlen(val, PC_CONFIG_VAL_MAX - 1) + 1); // the terminator is stored
+    return store(ns, key, val, str.len(val, PC_CONFIG_VAL_MAX - 1) + 1); // the terminator is stored
 }
 
 // The object, not a byte layout: this table never leaves the process, so the two halves below only
@@ -170,7 +173,7 @@ uint32_t pc_nvs_get_u32(const char *ns, const char *key, uint32_t def)
         return def;
     }
     uint32_t v = 0;
-    memcpy(&v, e->val, sizeof(v));
+    mem.cpy(&v, e->val, sizeof(v));
     return v;
 }
 
@@ -199,7 +202,7 @@ proto_bool pc_nvs_clear(const char *ns)
     }
     for (int i = 0; i < PC_CONFIG_MAX_ENTRIES; i++)
     {
-        if (s_nvs.tbl[i].used && strcmp(s_nvs.tbl[i].ns, ns) == 0)
+        if (s_nvs.tbl[i].used && str.eq(s_nvs.tbl[i].ns, ns, PC_CONFIG_KEY_MAX, PROTO_FALSE))
         {
             s_nvs.tbl[i].used = PROTO_FALSE;
             s_nvs.tbl[i].len = 0;
