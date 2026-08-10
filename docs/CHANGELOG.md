@@ -70,6 +70,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- update CHANGELOG.md [skip ci] ([`76e79de`](https://github.com/dstroy0/ProtoCore/commit/76e79de7bb9de5602f4bb63fab477ff5a6d66a98))
+>>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`85a5baa`](https://github.com/dstroy0/ProtoCore/commit/85a5baaf30856606f400ded52965506b2230ce68))
 - update CHANGELOG.md [skip ci] ([`243a67a`](https://github.com/dstroy0/ProtoCore/commit/243a67aa1238d049026147116c2348a4a1330279))
 - update CHANGELOG.md [skip ci] ([`e66be49`](https://github.com/dstroy0/ProtoCore/commit/e66be49708952388278f0872a1da4e5a05a64be2))
@@ -265,6 +269,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Features
 
+- RFC 9113 sec 8.2/8.3 request header validation, with a suite ([`800c41d`](https://github.com/dstroy0/ProtoCore/commit/800c41df604381c947e4a15ce93933c710d6259c))
 - password change (RFC 4252 sec 8) runs off the tick, not the worker ([`428b7c8`](https://github.com/dstroy0/ProtoCore/commit/428b7c8fba4d41c29cd7558424b949326ac04104))
 
 ### Refactor
