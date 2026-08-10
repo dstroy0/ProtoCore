@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the misaligned priming load ran with less than a word of work left ([`022e8ed`](https://github.com/dstroy0/ProtoCore/commit/022e8edd96793a99d334dea02b9015df3306e32f))
 - claiming a slot orphaned both engines' borrows ([`c722cbf`](https://github.com/dstroy0/ProtoCore/commit/c722cbfa93b8118b8abc016d5e408bed5d118109))
 - the init wipe ran through the pointer from before the split ([`6aac99b`](https://github.com/dstroy0/ProtoCore/commit/6aac99b774099c8af1fbedaa3a55c814370d57c6))
 - a re-used stream slot served the previous request's pseudo-headers ([`690d135`](https://github.com/dstroy0/ProtoCore/commit/690d13565315147c53502e1bc3a101dee0a93d73))
@@ -94,6 +95,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`ab67473`](https://github.com/dstroy0/ProtoCore/commit/ab674734caf80f35155c0ab331fd28d10dac3714))
 - update CHANGELOG.md [skip ci] ([`88c3cff`](https://github.com/dstroy0/ProtoCore/commit/88c3cff9e03ddc7590103ce435477f4380055d16))
 - update CHANGELOG.md [skip ci] ([`4a7b548`](https://github.com/dstroy0/ProtoCore/commit/4a7b548a62f40fe201786dca538dbebd94515f60))
 - update CHANGELOG.md [skip ci] ([`4cad067`](https://github.com/dstroy0/ProtoCore/commit/4cad067672a854007940ed11048fc6c11ffda0fb))
@@ -297,6 +299,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f79357d`](https://github.com/dstroy0/ProtoCore/commit/f79357d8c13332fdb4cb496669f5ef203ddcd6e3))
 - 81 citations went stale when core_setup, the harnesses and ci_tooling moved ([`7346901`](https://github.com/dstroy0/ProtoCore/commit/7346901bc44a08f8030de9c277756a7596352e15))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f131e5d`](https://github.com/dstroy0/ProtoCore/commit/f131e5d956e38549f49fe08585a259fa4b963355))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ad2d73b`](https://github.com/dstroy0/ProtoCore/commit/ad2d73b8402429a38ade5880aa12311ac4a8316b))
