@@ -1385,6 +1385,7 @@ guards at compile time.
 | `PC_DNS_SERVER_MAX_RECORDS` | `8` | Max A records in the DNS server's fixed table. |
 | `PC_DNS_SERVER_TTL` | `60` | TTL (seconds) the DNS server puts on its answers. |
 | `PC_DNS_TIMEOUT_MS` | `5000` |  |
+| `PC_DTLS_PMTU_DEFAULT` | `1232` | Largest datagram a DTLS handshake flight will put on the wire, before a connection overrides it (RFC 9147 sec 4.3). |
 | `PC_EDGE_CENC_MAX` | `32` | Stored Content-Encoding to replay (e.g. |
 | `PC_EDGE_CTYPE_MAX` | `64` | Stored Content-Type to replay. |
 | `PC_EDGE_ETAG_MAX` | `64` | Stored validator (ETag, quotes included). |
