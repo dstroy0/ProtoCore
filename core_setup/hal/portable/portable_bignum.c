@@ -231,7 +231,7 @@ void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *e
 
     // Convert back from Montgomery form: out = result * R^-1 mod p
     //   = MonPro(result, 1)
-    pc_bignum one;
+    pc_bignum one = {0};
     memset(one.d, 0, sizeof(pc_bignum));
     one.d[0] = 1u;
     bn_monpro(out, result, &one, w->t);

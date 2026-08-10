@@ -164,7 +164,7 @@
 #define PC_RSA_MEM_X (PC_RSA_BASE + 0x600u)  // operand X block
 #define PC_RSA_MPRIME (PC_RSA_BASE + 0x800u) // Montgomery m' (mod 2^32)
 #define PC_RSA_MODE (PC_RSA_BASE + 0x804u)   // operand length in words, minus 1
-#define PC_RSA_CLEAN (PC_RSA_BASE + 0x808u)  // memory-init: reads non-zero while initializing, 0 when ready
+#define PC_RSA_CLEAN (PC_RSA_BASE + 0x808u)  // memory-init: reads 0 while initializing, 1 when complete
 #define PC_RSA_START (PC_RSA_BASE + 0x810u)  // write 1 to start the modular multiply
 #define PC_RSA_DONE (PC_RSA_BASE + 0x818u)   // reads 1 once the op is complete (interrupt/idle bit)
 #define PC_RSA_INTCLR (PC_RSA_BASE + 0x81Cu) // write 1 to clear the completion flag
