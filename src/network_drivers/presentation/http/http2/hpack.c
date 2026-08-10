@@ -327,6 +327,14 @@ proto_bool pc_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, c
                 return PROTO_FALSE;
             }
             pos += c;
+            // RFC 7541 sec 6.3: a size update above the limit the enclosing protocol set is a
+            // decoding error, and RFC 9113 sec 4.3 makes a decoding error a connection error. We
+            // advertise no SETTINGS_HEADER_TABLE_SIZE, so the limit is the RFC 9113 sec 6.5.2 default
+            // that HPACK_BYTES holds. Clamping would take a peer's illegal update as if it were legal.
+            if (nm > HPACK_BYTES)
+            {
+                return PROTO_FALSE;
+            }
             dyn_set_max(t, nm);
         }
         else
