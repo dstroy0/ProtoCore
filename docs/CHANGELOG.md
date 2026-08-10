@@ -107,6 +107,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`df9bc02`](https://github.com/dstroy0/ProtoCore/commit/df9bc02043cfe63fb36008a12b71ece7f2b4b8a0))
 - update CHANGELOG.md [skip ci] ([`9eb6799`](https://github.com/dstroy0/ProtoCore/commit/9eb6799542b0c73d50f2fa400b81116c31196443))
 - the three build workflows never rebuilt on a core_setup change ([`05aacdf`](https://github.com/dstroy0/ProtoCore/commit/05aacdf5a9bf2386c275fc6f9943d03944fe9fba))
 - update CHANGELOG.md [skip ci] ([`e1d1e04`](https://github.com/dstroy0/ProtoCore/commit/e1d1e04baf31bcf6715f322c44a4a2bae28c2601))
@@ -334,6 +335,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- the -Og inlining break is measured and closed ([`a05cd27`](https://github.com/dstroy0/ProtoCore/commit/a05cd275181d82986fdb2f7a1b1401dffe5a8f28))
 - the classic-die RSA tables were invented too ([`5cc946d`](https://github.com/dstroy0/ProtoCore/commit/5cc946d2d1369c55ca8f8440300fb1453c1cf654))
 - the RSA tables contradicted the silicon they document ([`835df5c`](https://github.com/dstroy0/ProtoCore/commit/835df5ce8993e66350f4f8af87794a0d10577256))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`372326b`](https://github.com/dstroy0/ProtoCore/commit/372326b523799d12984e58de6bb27156ed7a960b))
