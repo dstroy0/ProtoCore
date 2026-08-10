@@ -912,6 +912,67 @@ void test_h2_frame_size_and_stream_id_rules(void)
     TEST_ASSERT_FALSE(fresh_feed(H2_PING, 0, 1, pad, 8));
 }
 
+// Opens stream @p id with a request declaring content-length @p cl, leaving the stream OPEN.
+static void open_stream_with_content_length(H2Conn *c, uint32_t id, const char *cl)
+{
+    uint8_t block[192];
+    size_t bo = build_request(block, sizeof block);
+    bo += pc_hpack_encode_header(block + bo, sizeof block - bo, "content-length", 14, cl, strlen(cl));
+    uint8_t hf[224];
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(c, hf, pc_h2_build_headers(hf, sizeof hf, id, block, bo, PROTO_FALSE)));
+}
+
+// RFC 9113 sec 8.1.1: a content-length that disagrees with the DATA that arrives makes the request
+// malformed. Two accounts of one body's length is the primitive every smuggling attack is built on,
+// so none of the disagreeing bodies may reach the application.
+void test_h2_content_length_must_match_the_data(void)
+{
+    static Cap cap;
+    H2Conn c;
+
+    // Exactly the declared length: delivered.
+    establish(&c, &cap);
+    open_stream_with_content_length(&c, 1, "5");
+    cap.out_len = 0;
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+    TEST_ASSERT_EQUAL_STRING("hello", cap.body);
+
+    // Short of it: the stream is reset at END_STREAM and the body never lands.
+    establish(&c, &cap);
+    open_stream_with_content_length(&c, 1, "10");
+    cap.out_len = 0;
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);
+
+    // Past it: settled on the frame that goes over, without waiting for END_STREAM.
+    establish(&c, &cap);
+    open_stream_with_content_length(&c, 1, "2");
+    cap.out_len = 0;
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, 0, 1, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);
+
+    // A request that ends with its headers declared a body it never sent.
+    establish(&c, &cap);
+    cap.out_len = 0;
+    uint8_t block[192];
+    size_t bo = build_request(block, sizeof block);
+    bo += pc_hpack_encode_header(block + bo, sizeof block - bo, "content-length", 14, "4", 1);
+    uint8_t hf[224];
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE)));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+
+    // A content-length that is not a plain decimal number is malformed on its own.
+    establish(&c, &cap);
+    open_stream_with_content_length(&c, 1, "5, 5");
+    cap.out_len = 0;
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);
+}
+
 // sec 6.10: PC_H2_HDR_BLOCK bounds the bytes a header block may carry, but an empty CONTINUATION
 // adds none, so without a frame-count bound the block never has to end.
 void test_h2_continuation_flood_is_bounded(void)
@@ -1108,6 +1169,7 @@ int main(void)
     RUN_TEST(test_h2_idle_stream_frames_are_connection_errors);
     RUN_TEST(test_h2_window_update_on_a_closed_stream_is_ignored);
     RUN_TEST(test_h2_frame_size_and_stream_id_rules);
+    RUN_TEST(test_h2_content_length_must_match_the_data);
     RUN_TEST(test_h2_continuation_flood_is_bounded);
     RUN_TEST(test_h2_data_empty_and_unknown_stream);
     RUN_TEST(test_h2_data_after_end_stream_resets_the_stream);

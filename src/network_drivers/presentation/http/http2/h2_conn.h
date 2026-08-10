@@ -42,9 +42,13 @@ typedef enum PROTO_ENUM_PACKED
 
 typedef struct
 {
-    uint32_t id;         ///< stream identifier (0 = free slot)
-    H2StreamState state; ///< lifecycle state
-    int32_t send_window; ///< our remaining DATA flow window for this stream
+    uint32_t id;                   ///< stream identifier (0 = free slot)
+    H2StreamState state;           ///< lifecycle state
+    int32_t send_window;           ///< our remaining DATA flow window for this stream
+    proto_bool has_content_length; ///< the request declared a content-length
+    proto_bool content_length_bad; ///< that declaration was not a plain decimal number
+    uint32_t content_length;       ///< the declared value
+    uint32_t data_seen;            ///< DATA payload octets received on this stream
 } H2Stream;
 
 /** @brief Application callbacks the engine drives (all optional except write). */

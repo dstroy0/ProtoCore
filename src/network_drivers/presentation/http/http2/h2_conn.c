@@ -46,6 +46,7 @@ static H2Stream *alloc_stream(H2Conn *c, uint32_t id)
     {
         if (c->streams[i].id == 0)
         {
+            mem.set(&c->streams[i], 0, sizeof c->streams[i]);
             c->streams[i].id = id;
             c->streams[i].state = H2_ST_OPEN;
             c->streams[i].send_window = (int32_t)c->peer.initial_window_size;
@@ -95,6 +96,34 @@ static void send_rst(H2Conn *c, pc_span f, uint32_t stream_id, uint32_t err)
     wr(c, f.buf, n);
 }
 
+// RFC 9113 sec 8.1.1: a declared content-length must equal the sum of the DATA payloads, and must
+// have been a number to begin with. A body past the declared length settles the moment it goes
+// over; a short one settles when the stream ends. Either way the request is malformed, which is a
+// stream error. @return false when the stream has been reset.
+static proto_bool content_length_holds(H2Conn *c, H2Stream *s, pc_span f, proto_bool end_stream)
+{
+    if (!s->has_content_length)
+    {
+        return PROTO_TRUE;
+    }
+    proto_bool malformed = s->content_length_bad;
+    if (s->data_seen > s->content_length)
+    {
+        malformed = PROTO_TRUE;
+    }
+    if (end_stream && s->data_seen != s->content_length)
+    {
+        malformed = PROTO_TRUE;
+    }
+    if (!malformed)
+    {
+        return PROTO_TRUE;
+    }
+    send_rst(c, f, s->id, H2_PROTOCOL_ERROR);
+    s->id = 0; // free the slot
+    return PROTO_FALSE;
+}
+
 // One header block being decoded: the connection, the stream it arrived on, the dispatcher's borrow
 // that any resulting control frame is staged in, whether the block ends the stream, whether it is a
 // sec 8.1 trailer section rather than the request, and whether a pseudo-header appeared in one.
@@ -110,6 +139,41 @@ typedef struct
 
 // A trailer section is decoded but never delivered: the HPACK dynamic table has to track every
 // block on the connection, while the request it trails has already been dispatched.
+// Records a request's declared content-length on its stream. sec 8.1.1 measures it against the
+// DATA that follows, so the value is kept here and settled when the stream ends. A value that is
+// not a plain decimal number, or does not fit 32 bits, is itself malformed.
+static void note_content_length(H2Conn *c, uint32_t stream_id, const char *val, size_t vl)
+{
+    H2Stream *s = find_stream(c, stream_id);
+    if (!s)
+    {
+        return;
+    }
+    if (s->has_content_length)
+    {
+        s->content_length_bad = PROTO_TRUE; // sec 8.1.1: at most one content-length
+        return;
+    }
+    s->has_content_length = PROTO_TRUE;
+    if (vl == 0)
+    {
+        s->content_length_bad = PROTO_TRUE;
+        return;
+    }
+    uint32_t n = 0;
+    for (size_t i = 0; i < vl; i++)
+    {
+        const uint8_t d = (uint8_t)(val[i] - '0');
+        if (d > 9u || n > (0xFFFFFFFFu - d) / 10u)
+        {
+            s->content_length_bad = PROTO_TRUE;
+            return;
+        }
+        n = n * 10u + d;
+    }
+    s->content_length = n;
+}
+
 static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char *val, size_t vl)
 {
     H2Block *b = (H2Block *)ctx;
@@ -120,6 +184,10 @@ static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char
             b->pseudo_in_trailer = PROTO_TRUE; // sec 8.1: no pseudo-header may appear in a trailer
         }
         return PROTO_TRUE;
+    }
+    if (nl == 14 && mem.cmp(name, "content-length", 14) == 0)
+    {
+        note_content_length(b->c, b->stream_id, val, vl);
     }
     if (b->c->cb.on_header)
     {
@@ -158,6 +226,9 @@ static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
         if (b->end_stream)
         {
             s->state = H2_ST_HALF_CLOSED;
+            // A request that ends with its headers carries no body, so a declared content-length
+            // has to be zero (sec 8.1.1).
+            content_length_holds(c, s, b->f, PROTO_TRUE);
         }
         else
         {
@@ -318,6 +389,13 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
     }
 
     proto_bool end_stream = (h->flags & H2_FLAG_END_STREAM) != 0;
+    // The body is measured against the declared content-length before any of it is delivered: a
+    // request whose two accounts of its own length disagree is what a smuggling attempt looks like.
+    s->data_seen += (uint32_t)plen;
+    if (!content_length_holds(c, s, f, end_stream))
+    {
+        return PROTO_TRUE;
+    }
     if (c->cb.on_data)
     {
         c->cb.on_data(c->cb.app, h->stream_id, p, plen, end_stream);
