@@ -96,18 +96,31 @@ static void send_rst(H2Conn *c, pc_span f, uint32_t stream_id, uint32_t err)
 }
 
 // One header block being decoded: the connection, the stream it arrived on, the dispatcher's borrow
-// that any resulting control frame is staged in, and whether the block ends the stream.
+// that any resulting control frame is staged in, whether the block ends the stream, whether it is a
+// sec 8.1 trailer section rather than the request, and whether a pseudo-header appeared in one.
 typedef struct
 {
     H2Conn *c;
     uint32_t stream_id;
     pc_span f;
     proto_bool end_stream;
+    proto_bool trailers;
+    proto_bool pseudo_in_trailer;
 } H2Block;
 
+// A trailer section is decoded but never delivered: the HPACK dynamic table has to track every
+// block on the connection, while the request it trails has already been dispatched.
 static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char *val, size_t vl)
 {
     H2Block *b = (H2Block *)ctx;
+    if (b->trailers)
+    {
+        if (nl > 0 && name[0] == ':')
+        {
+            b->pseudo_in_trailer = PROTO_TRUE; // sec 8.1: no pseudo-header may appear in a trailer
+        }
+        return PROTO_TRUE;
+    }
     if (b->c->cb.on_header)
     {
         b->c->cb.on_header(b->c->cb.app, b->stream_id, name, nl, val, vl);
@@ -123,8 +136,8 @@ static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
     {
         return PROTO_FALSE; // COMPRESSION_ERROR
     }
-    proto_bool well_formed = PROTO_TRUE;
-    if (c->cb.on_headers_end)
+    proto_bool well_formed = !b->pseudo_in_trailer;
+    if (!b->trailers && c->cb.on_headers_end)
     {
         well_formed = c->cb.on_headers_end(c->cb.app, b->stream_id, b->end_stream);
     }
@@ -189,20 +202,37 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
     plen -= pad; // strip trailing padding
 
     proto_bool end_stream = (h->flags & H2_FLAG_END_STREAM) != 0;
+    proto_bool trailers = PROTO_FALSE;
     if (h->stream_id <= c->last_peer_stream)
     {
-        return PROTO_FALSE; // stream ids must increase
+        // sec 5.1.1 governs a new stream; sec 8.1 lets a second HEADERS trail an open one.
+        H2Stream *open = find_stream(c, h->stream_id);
+        if (!open || open->state != H2_ST_OPEN)
+        {
+            return PROTO_FALSE; // a new stream id must exceed every one already seen
+        }
+        if (!end_stream)
+        {
+            // sec 8.1: a trailer section is the last thing the peer sends on the stream.
+            send_rst(c, f, h->stream_id, H2_PROTOCOL_ERROR);
+            open->id = 0;
+            return PROTO_TRUE;
+        }
+        trailers = PROTO_TRUE;
     }
-    c->last_peer_stream = h->stream_id;
-    if (!alloc_stream(c, h->stream_id))
+    else
     {
-        send_control(c, build_rst_refuse);
-        return PROTO_TRUE; // refuse quietly is fine; keep the connection
+        c->last_peer_stream = h->stream_id;
+        if (!alloc_stream(c, h->stream_id))
+        {
+            send_control(c, build_rst_refuse);
+            return PROTO_TRUE; // refuse quietly is fine; keep the connection
+        }
     }
 
     if (h->flags & H2_FLAG_END_HEADERS)
     {
-        H2Block b = {c, h->stream_id, f, end_stream};
+        H2Block b = {c, h->stream_id, f, end_stream, trailers, PROTO_FALSE};
         return decode_block(&b, p, plen);
     }
     // Spans CONTINUATION frames: buffer the fragment.
@@ -214,6 +244,7 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
     c->hblock_len = plen;
     c->hblock_stream = h->stream_id;
     c->hblock_end_stream = end_stream;
+    c->hblock_trailers = trailers;
     c->in_header_block = PROTO_TRUE;
     return PROTO_TRUE;
 }
@@ -233,7 +264,7 @@ static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const u
     if (h->flags & H2_FLAG_END_HEADERS)
     {
         c->in_header_block = PROTO_FALSE;
-        H2Block b = {c, c->hblock_stream, f, c->hblock_end_stream};
+        H2Block b = {c, c->hblock_stream, f, c->hblock_end_stream, c->hblock_trailers, PROTO_FALSE};
         return decode_block(&b, c->hblock, c->hblock_len);
     }
     return PROTO_TRUE;
