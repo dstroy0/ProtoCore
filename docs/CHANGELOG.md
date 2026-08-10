@@ -74,6 +74,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9baf729`](https://github.com/dstroy0/ProtoCore/commit/9baf729d6dc65336e0ef025a2901024b67f15e6c))
+- update CHANGELOG.md [skip ci] ([`6140e56`](https://github.com/dstroy0/ProtoCore/commit/6140e563ee88af109293bc5589bda18d4b9aa231))
 - update CHANGELOG.md [skip ci] ([`1d26295`](https://github.com/dstroy0/ProtoCore/commit/1d26295b9007d15115f5a07e6354407c3d5af74e))
 - update CHANGELOG.md [skip ci] ([`ee0e3b7`](https://github.com/dstroy0/ProtoCore/commit/ee0e3b785526807e782edf426986853bacf1cdfb))
 - update CHANGELOG.md [skip ci] ([`8697278`](https://github.com/dstroy0/ProtoCore/commit/8697278d762d8bbf0a375f2c3ab5d1c904d0c588))
@@ -227,10 +229,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
-<<<<<<< Updated upstream
-=======
 - log the coaps_server double-address test defect ([`beebc0d`](https://github.com/dstroy0/ProtoCore/commit/beebc0d56b705d454320bc33a87f9061e0f4ec14))
->>>>>>> Stashed changes
 - log the HTTP/2 header-validation gap and the trailers conflation ([`9fe1021`](https://github.com/dstroy0/ProtoCore/commit/9fe1021e500a04a229d9651361bc125baebcf9ef))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0b84890`](https://github.com/dstroy0/ProtoCore/commit/0b848906fa31a831593f3bcc4ed0fcc6817a9806))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`1d1e182`](https://github.com/dstroy0/ProtoCore/commit/1d1e1824efb0433ed7006a12b4fa97cfc8be18df))
@@ -304,6 +303,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the idle-stream, frame-size and CONTINUATION-flood rules ([`8db9f95`](https://github.com/dstroy0/ProtoCore/commit/8db9f9551f7349b457362c3bda472f5e85d5f0fb))
 - pin the SETTINGS accept-side bounds and an RFC-supplied request block ([`f39219b`](https://github.com/dstroy0/ProtoCore/commit/f39219b4b79d6f46363c0c85f9d22e09eacd0e1c))
 - pin the RFC 7541 Appendix C vectors byte for byte ([`810a31d`](https://github.com/dstroy0/ProtoCore/commit/810a31d45e8d99ff433db3fbb9e633cec9105420))
 - drop the h2_server wire probe now the seam is stated ([`df6d2c5`](https://github.com/dstroy0/ProtoCore/commit/df6d2c563623eb724d2d9c7b804799f3029611dc))
