@@ -1850,7 +1850,7 @@ static void test_flight_fragments_to_the_pmtu(void)
     pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
-    cfg.pmtu = 256;
+    cfg.pmtu = 96; // a body budget of 55 bytes: the ServerHello and CertificateVerify both split
 
     DtlsConn conn;
     pc_sha256_ctx tr;
