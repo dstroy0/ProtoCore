@@ -34,6 +34,8 @@
 
 #include "shared_primitives/ip.h" // pc_ip (carry the full bind address, never a flattened one)
 
+PROTO_BEGIN_DECLS
+
 // PC_BRIDGE_MAX_RULES is defined in protocore_config.h (the config owner).
 
 #define PC_BRIDGE_TXN_HDR 4 ///< transaction frame header: write_len(2) + read_len(2), big-endian
@@ -124,6 +126,8 @@ size_t pc_iface_bridge_txn_parse(const uint8_t *buf, size_t len, uint16_t *write
  */
 size_t pc_iface_bridge_txn_build(uint8_t *out, size_t cap, const uint8_t *write_data, uint16_t write_len,
                                  uint16_t read_len);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_IFACE_BRIDGE
 

@@ -24,6 +24,8 @@
 
 #include "services/web/edge_cache/edge_cache.h" // EdgeCacheStats
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Enable the edge cache on @p server: register the cache middleware + the async-fetch poll hook,
  *        bind the origin transport to pc_client, and clear the L1 store. Call once.
@@ -96,6 +98,8 @@ uint32_t pc_edge_cache_purge_prefix(const char *path_prefix);
 
 /** @brief Snapshot the cache counters. */
 void pc_edge_cache_stats(EdgeCacheStats *out);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_EDGE_CACHE
 

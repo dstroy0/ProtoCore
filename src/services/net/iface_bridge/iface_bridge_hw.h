@@ -36,6 +36,8 @@
 
 #include "services/net/iface_bridge/iface_bridge.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Bind a PROTO_BRIDGE listener to a hardware target and install the handler (first call).
  *
@@ -52,6 +54,8 @@ proto_bool pc_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgePro
 
 /** @brief Clear all listener bindings and rules (start from empty). */
 void pc_iface_bridge_listener_reset(void);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_IFACE_BRIDGE
 

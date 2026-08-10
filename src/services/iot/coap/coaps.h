@@ -26,6 +26,8 @@
 
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Process one inbound DTLS datagram for a CoAP-over-DTLS connection @p c.
  *
@@ -39,6 +41,8 @@
  *         (then @p c is FAILED and @ref DtlsServer.alert gives the reason).
  */
 int pc_coaps_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_DTLS && PC_ENABLE_COAP
 #endif // PROTOCORE_COAPS_H

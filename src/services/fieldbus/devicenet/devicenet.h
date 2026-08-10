@@ -39,6 +39,8 @@
 
 #include "shared_primitives/can.h"
 
+PROTO_BEGIN_DECLS
+
 // Message-group identifier bases / field widths.
 #define DEVICENET_G1_BASE 0x000u ///< Message Group 1 (0x000-0x3FF)
 #define DEVICENET_G2_BASE 0x400u ///< Message Group 2 (0x400-0x5FF)
@@ -151,6 +153,8 @@ void pc_devicenet_frag_reset(DeviceNetFragRx *rx);
  * fragmentation octet (when DEVICENET_HDR_FRAG is set) is the second octet.
  */
 DeviceNetFragResult pc_devicenet_frag_feed(DeviceNetFragRx *rx, const uint8_t *body, uint8_t body_len);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_DEVICENET
 #endif // PROTOCORE_DEVICENET_H

@@ -53,6 +53,8 @@
 
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
 
+PROTO_BEGIN_DECLS
+
 /** @brief The EUROMAP 77 companion-spec namespace URI (OPC 40077). */
 #define EUROMAP77_NS_URI "http://www.euromap.org/euromap77/"
 /** @brief The EUROMAP 83 shared type/enum library namespace URI (OPC 40083). */
@@ -178,6 +180,8 @@ int32_t pc_em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t m
  *        (`pc_opcua_set_read_handler` + `pc_opcua_set_browse_handler`). Call before `server.begin()`.
  */
 void pc_em77_install(const EmImm *imm);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_EUROMAP77
 #endif // PROTOCORE_EUROMAP77_H

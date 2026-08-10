@@ -17,6 +17,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief One-time setup: install the dispatcher's binary-packet emit callback.
  *
@@ -98,5 +100,7 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
  *        forwarding is compiled out.
  */
 void pc_ssh_conn_poll(uint8_t conn_slot);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_CONN_H

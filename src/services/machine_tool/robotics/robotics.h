@@ -52,6 +52,8 @@
 
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
 
+PROTO_BEGIN_DECLS
+
 /** @brief The OPC UA for Robotics companion-spec namespace URI (OPC 40010-1). */
 #define ROBOTICS_NS_URI "http://opcfoundation.org/UA/Robotics/"
 
@@ -179,6 +181,8 @@ int32_t pc_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32
  *        (`pc_opcua_set_read_handler` + `pc_opcua_set_browse_handler`). Call before `server.begin()`.
  */
 void pc_robotics_install(const RoboticsMotionDeviceSystem *mds);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_ROBOTICS
 #endif // PROTOCORE_ROBOTICS_H

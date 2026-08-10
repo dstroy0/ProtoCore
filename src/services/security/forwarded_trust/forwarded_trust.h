@@ -27,6 +27,8 @@
 
 #include "shared_primitives/ip.h"
 
+PROTO_BEGIN_DECLS
+
 /** @brief Empty the trusted-upstream table (trust no forwarded header). */
 void pc_forwarded_trust_reset(void);
 
@@ -59,6 +61,8 @@ proto_bool pc_forwarded_trust_contains(const pc_ip *peer);
  * @return true if the forwarded client was honored; false if the real TCP peer was kept.
  */
 proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, pc_ip *out);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_FORWARDED_TRUST
 #endif // PROTOCORE_FORWARDED_TRUST_H
