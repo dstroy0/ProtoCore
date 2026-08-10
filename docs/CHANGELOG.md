@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- a re-used stream slot served the previous request's pseudo-headers ([`690d135`](https://github.com/dstroy0/ProtoCore/commit/690d13565315147c53502e1bc3a101dee0a93d73))
 - the re-init split ran from a base it had already zeroed away ([`648b45b`](https://github.com/dstroy0/ProtoCore/commit/648b45b51d5eeaf8e86f994712c488c2da9ae975))
 - an invalid record is discarded, the association survives ([`aa16fa3`](https://github.com/dstroy0/ProtoCore/commit/aa16fa32d7d6497be9ba078f81c1ef33db2cb80b))
 - legacy_record_version is ignored, per RFC 9147 sec 4 ([`03c5fa3`](https://github.com/dstroy0/ProtoCore/commit/03c5fa3dd347780f58448a77c292b36831595147))
@@ -91,6 +92,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- update CHANGELOG.md [skip ci] ([`25601a1`](https://github.com/dstroy0/ProtoCore/commit/25601a150545d1915a66580fa1ffbcc96bafe23c))
+>>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`a97581a`](https://github.com/dstroy0/ProtoCore/commit/a97581ab85a312972e1350855f74c1c7be9de28c))
 - update CHANGELOG.md [skip ci] ([`9690d65`](https://github.com/dstroy0/ProtoCore/commit/9690d6524cbcf61deba143eabe3a4a123cbad666))
 - update CHANGELOG.md [skip ci] ([`e980248`](https://github.com/dstroy0/ProtoCore/commit/e980248cc6bf5ff4fd2f70e2a196425f9172876c))
@@ -284,6 +289,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6bb4689`](https://github.com/dstroy0/ProtoCore/commit/6bb4689d0a48e0c2b75869c86847587c8a02ea91))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`81998f4`](https://github.com/dstroy0/ProtoCore/commit/81998f425e8612cc632e970daa91c55d004e0854))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d3a0207`](https://github.com/dstroy0/ProtoCore/commit/d3a0207de3b00abcec1bb86288c7cfe0a8859c77))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e70bbb3`](https://github.com/dstroy0/ProtoCore/commit/e70bbb3e7ec4aed4e26ff6feab5198b85dc40362))
@@ -378,6 +384,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+<<<<<<< Updated upstream
+=======
+- the shared object rewrite caught a pointer deref in the finder ([`be58831`](https://github.com/dstroy0/ProtoCore/commit/be58831ef4a5cbbaa0966b08ca49f47f18bed04e))
+>>>>>>> Stashed changes
 - the cases share one connection object, the way the server re-uses a slot ([`6f9a72c`](https://github.com/dstroy0/ProtoCore/commit/6f9a72c6029f117c6718605377f0c275f82edf90))
 - the cases share one connection object, the way a server re-uses a slot ([`140c9ed`](https://github.com/dstroy0/ProtoCore/commit/140c9ed3f1872ec8724b4230776c923b6a0889ad))
 - decode legal S=0 and L=0 records ([`e13b02b`](https://github.com/dstroy0/ProtoCore/commit/e13b02bdc94c7577ada3f03be2080b5f8e9d05ad))
