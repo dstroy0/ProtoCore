@@ -112,6 +112,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`41914f4`](https://github.com/dstroy0/ProtoCore/commit/41914f4bc75c4d9261d3eb7bf67df494c4fc0f1d))
 - update CHANGELOG.md [skip ci] ([`7241153`](https://github.com/dstroy0/ProtoCore/commit/7241153e8d14797d64f886e67b9598af4739c37d))
 - update CHANGELOG.md [skip ci] ([`ab6e460`](https://github.com/dstroy0/ProtoCore/commit/ab6e4602559b92bf01405352faf7f5b3a7016d82))
 - update CHANGELOG.md [skip ci] ([`cfaa623`](https://github.com/dstroy0/ProtoCore/commit/cfaa62307ce9c5b98cad64f0d43f980be11c9732))
@@ -476,6 +477,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the DigestInfo was checked against the constant that built it ([`25a51a7`](https://github.com/dstroy0/ProtoCore/commit/25a51a7ba8811efbe4ccfe762f92dfc412ac41d5))
 - the continuity check compared the one-shot to the path it routes through ([`a3ca678`](https://github.com/dstroy0/ProtoCore/commit/a3ca678eeeff5f63a7412b0d085bbd65202734c8))
 - the block loop and the rate-1 pad merge were unreached at every rate ([`eaf91bf`](https://github.com/dstroy0/ProtoCore/commit/eaf91bf6bb8cd18e7b84c71ed235bd55881d6ed0))
 - use the file's own hex helper ([`94ffc38`](https://github.com/dstroy0/ProtoCore/commit/94ffc383f4ebbd6e77f231ec728ecab60d8fa23e))
