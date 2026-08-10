@@ -116,6 +116,10 @@ static void cap_data(void *app, uint32_t sid, const uint8_t *d, size_t n, proto_
     c->data_end = es;
 }
 
+// The slot a connection lives in. Its plaintext borrow is bound to the slot, not to the call, so
+// every case here re-inits the one object the way a server re-uses a pool slot.
+static H2Conn g_conn;
+
 static H2Callbacks mk_cb(Cap *c)
 {
     H2Callbacks cb;
@@ -193,8 +197,7 @@ void test_init_and_request(void)
     static Cap cap;
     memset(&cap, 0, sizeof cap);
     H2Callbacks cb = mk_cb(&cap);
-    H2Conn c;
-    pc_h2_conn_init(&c, &cb); // must emit our SETTINGS
+    pc_h2_conn_init(&g_conn, &cb); // must emit our SETTINGS
     int acks = 0;
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_SETTINGS, &acks));
     TEST_ASSERT_EQUAL_INT(0, acks); // our SETTINGS is not an ACK
@@ -207,7 +210,7 @@ void test_init_and_request(void)
     in_add(hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE));
 
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, g_in, g_in_len));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, g_in, g_in_len));
 
     // The request headers were decoded and delivered.
     TEST_ASSERT_EQUAL_INT(4, (int)cap.req_headers.n);
@@ -238,17 +241,16 @@ void test_respond_roundtrip(void)
     static Cap cap;
     memset(&cap, 0, sizeof cap);
     H2Callbacks cb = mk_cb(&cap);
-    H2Conn c;
-    pc_h2_conn_init(&c, &cb);
+    pc_h2_conn_init(&g_conn, &cb);
     in_preface();
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
     in_add(hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE));
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, g_in, g_in_len));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, g_in, g_in_len));
 
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(pc_h2_conn_respond(&c, 1, 200, "text/plain", "hi", 2));
+    TEST_ASSERT_TRUE(pc_h2_conn_respond(&g_conn, 1, 200, "text/plain", "hi", 2));
     // Output holds a HEADERS frame + a DATA frame on stream 1.
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_HEADERS, NULL));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_DATA, NULL));
@@ -299,8 +301,7 @@ void test_ping_and_split_recv(void)
     static Cap cap;
     memset(&cap, 0, sizeof cap);
     H2Callbacks cb = mk_cb(&cap);
-    H2Conn c;
-    pc_h2_conn_init(&c, &cb);
+    pc_h2_conn_init(&g_conn, &cb);
     // Preface, then a PING frame, fed one byte at a time (exercises reassembly).
     in_reset();
     in_add(H2_PREFACE, H2_PREFACE_LEN);
@@ -313,7 +314,7 @@ void test_ping_and_split_recv(void)
     cap.out_len = 0;
     for (size_t k = 0; k < g_in_len; k++)
     {
-        TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, &g_in[k], 1));
+        TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, &g_in[k], 1));
     }
     // A PING ACK echoing the opaque data was sent.
     int acks = 0;
@@ -341,10 +342,9 @@ void test_bad_preface(void)
     static Cap cap;
     memset(&cap, 0, sizeof cap);
     H2Callbacks cb = mk_cb(&cap);
-    H2Conn c;
-    pc_h2_conn_init(&c, &cb);
+    pc_h2_conn_init(&g_conn, &cb);
     const uint8_t junk[] = {'G', 'E', 'T', ' ', '/', ' ', 'H'};
-    TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, junk, sizeof junk));
+    TEST_ASSERT_FALSE(pc_h2_conn_recv(&g_conn, junk, sizeof junk));
 }
 
 // ---- frame-handler helpers -------------------------------------------------
@@ -391,8 +391,7 @@ static uint8_t g_pl[IN_MAX];
 void test_h2_headers_padded_priority(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     size_t n = 0;
@@ -408,7 +407,7 @@ void test_h2_headers_padded_priority(void)
         g_pl[n++] = 0; // trailing padding
     }
     uint8_t flags = H2_FLAG_PADDED | H2_FLAG_PRIORITY | H2_FLAG_END_HEADERS | H2_FLAG_END_STREAM;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_HEADERS, flags, 1, g_pl, n));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_HEADERS, flags, 1, g_pl, n));
     TEST_ASSERT_EQUAL_INT(4, (int)cap.req_headers.n);
     TEST_ASSERT_TRUE(cap.last_end_stream);
 }
@@ -417,23 +416,21 @@ void test_h2_headers_padded_priority(void)
 void test_h2_headers_pad_overflow(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t pl[4] = {200, 1, 2, 3}; // pad=200, only 3 bytes left
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, pl, sizeof pl));
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, pl, sizeof pl));
 }
 
 // Stream ids must strictly increase; a HEADERS on a lower id is rejected.
 void test_h2_stream_id_must_increase(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 3, block, blen, PROTO_TRUE)));
-    TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 3, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
 }
 
 // Every other request test here synthesizes its block with pc_hpack_encode_header and then asserts
@@ -442,13 +439,12 @@ void test_h2_stream_id_must_increase(void)
 void test_h2_headers_rfc7541_c31_block(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
 
     const uint8_t c31[20] = {0x82, 0x86, 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65,
                              0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d};
     uint8_t hf[64];
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, c31, sizeof c31, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 1, c31, sizeof c31, PROTO_TRUE)));
 
     TEST_ASSERT_EQUAL_INT(4, (int)cap.req_headers.n);
     TEST_ASSERT_EQUAL_STRING(":method", cap.req_headers.f[0].name);
@@ -459,7 +455,7 @@ void test_h2_headers_rfc7541_c31_block(void)
     TEST_ASSERT_EQUAL_STRING("/", cap.req_headers.f[2].value);
     TEST_ASSERT_EQUAL_STRING(":authority", cap.req_headers.f[3].name);
     TEST_ASSERT_EQUAL_STRING("www.example.com", cap.req_headers.f[3].value);
-    TEST_ASSERT_EQUAL_UINT32(57, c.hdec.used); // the RFC's table checkpoint after C.3.1
+    TEST_ASSERT_EQUAL_UINT32(57, g_conn.hdec.used); // the RFC's table checkpoint after C.3.1
 }
 
 // RFC 9113 sec 8.1: a second HEADERS on a stream that is still open is a trailer section, not a
@@ -468,16 +464,15 @@ void test_h2_headers_rfc7541_c31_block(void)
 void test_h2_trailers_on_open_stream(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1); // no END_STREAM: stream 1 stays OPEN
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1); // no END_STREAM: stream 1 stays OPEN
     size_t headers_after_request = cap.req_headers.n;
     size_t ends_after_request = cap.headers_end_n;
 
     uint8_t block[128];
     size_t blen = pc_hpack_encode_header(block, sizeof block, "x-checksum", 10, "abcd", 4);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
 
     TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
     TEST_ASSERT_EQUAL_UINT32((uint32_t)headers_after_request, (uint32_t)cap.req_headers.n);
@@ -488,14 +483,13 @@ void test_h2_trailers_on_open_stream(void)
 void test_h2_trailers_without_end_stream_reset_the_stream(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
 
     uint8_t block[128];
     size_t blen = pc_hpack_encode_header(block, sizeof block, "x-checksum", 10, "abcd", 4);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_FALSE)));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_FALSE)));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 }
 
@@ -503,14 +497,13 @@ void test_h2_trailers_without_end_stream_reset_the_stream(void)
 void test_h2_trailers_reject_pseudo_headers(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
 
     uint8_t block[128];
     size_t blen = pc_hpack_encode_header(block, sizeof block, ":method", 7, "POST", 4);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 }
 
@@ -519,25 +512,23 @@ void test_h2_trailers_reject_pseudo_headers(void)
 void test_h2_headers_on_ended_stream_is_a_connection_error(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
-    TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
 }
 
 // A stream 0 / even id on HEADERS is rejected (requests are odd, client-initiated).
 void test_h2_headers_bad_stream_id(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 2, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 2, block, blen, PROTO_TRUE)));
 }
 
 // Once MAX_STREAMS are open, a new stream is refused with RST_STREAM but the
@@ -545,20 +536,19 @@ void test_h2_headers_bad_stream_id(void)
 void test_h2_stream_table_full_rst(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     for (int i = 0; i < PC_H2_MAX_STREAMS; i++)
     {
         uint8_t hf[160];
         size_t hn = pc_h2_build_headers(hf, sizeof hf, (uint32_t)(1 + 2 * i), block, blen, PROTO_FALSE);
-        TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, hn));
+        TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, hn));
     }
     cap.out_len = 0;
     uint8_t hf[160];
     size_t hn = pc_h2_build_headers(hf, sizeof hf, (uint32_t)(1 + 2 * PC_H2_MAX_STREAMS), block, blen, PROTO_FALSE);
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, hn)); // kept alive
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, hn)); // kept alive
     TEST_ASSERT_TRUE(count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL) >= 1);
 }
 
@@ -566,13 +556,12 @@ void test_h2_stream_table_full_rst(void)
 void test_h2_continuation(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     size_t half = blen / 2;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_HEADERS, 0, 1, block, half)); // buffered, no END_HEADERS
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_HEADERS, 0, 1, block, half)); // buffered, no END_HEADERS
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half));
     TEST_ASSERT_EQUAL_INT(4, (int)cap.req_headers.n);
 }
 
@@ -584,19 +573,17 @@ void test_h2_continuation_guards(void)
     size_t blen = build_request(block, sizeof block);
     {
         static Cap cap;
-        H2Conn c;
-        establish(&c, &cap);
-        TEST_ASSERT_TRUE(feed_frame(&c, H2_HEADERS, 0, 1, block, blen / 2));
+        establish(&g_conn, &cap);
+        TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_HEADERS, 0, 1, block, blen / 2));
         uint8_t x[4] = {0};
-        TEST_ASSERT_FALSE(feed_frame(&c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 3, x, 4)); // wrong stream
+        TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 3, x, 4)); // wrong stream
     }
     {
         static Cap cap;
-        H2Conn c;
-        establish(&c, &cap);
-        TEST_ASSERT_TRUE(feed_frame(&c, H2_HEADERS, 0, 1, block, blen / 2));
+        establish(&g_conn, &cap);
+        TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_HEADERS, 0, 1, block, blen / 2));
         uint8_t d[1] = {0};
-        TEST_ASSERT_FALSE(feed_frame(&c, H2_DATA, 0, 1, d, 1)); // non-CONTINUATION mid-block
+        TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_DATA, 0, 1, d, 1)); // non-CONTINUATION mid-block
     }
 }
 
@@ -605,22 +592,21 @@ void test_h2_continuation_guards(void)
 void test_h2_data(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
     cap.out_len = 0;
     const uint8_t body[5] = {'h', 'e', 'l', 'l', 'o'};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, body, 5));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, body, 5));
     TEST_ASSERT_EQUAL_STRING("hello", cap.body);
     TEST_ASSERT_TRUE(cap.data_end);
     TEST_ASSERT_EQUAL_INT(2, count_frames(cap.out, cap.out_len, H2_WINDOW_UPDATE, NULL)); // conn + stream
 
     // Padded DATA: [pad=2][body][2 pad].
-    open_stream(&c, 3);
+    open_stream(&g_conn, 3);
     const uint8_t padded[5] = {2, 'x', 'y', 0, 0};
     cap.body_len = 0;
     cap.body[0] = 0;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_PADDED, 3, padded, sizeof padded));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, H2_FLAG_PADDED, 3, padded, sizeof padded));
     TEST_ASSERT_EQUAL_STRING("xy", cap.body);
 
     // DATA on stream 0 and pad-overflow are rejected.
@@ -638,14 +624,13 @@ void test_h2_data(void)
 void test_h2_window_update(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
     const uint8_t inc[4] = {0, 0, 0, 100};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 0, inc, 4)); // connection window
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 1, inc, 4)); // stream window
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 0, inc, 4)); // connection window
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 1, inc, 4)); // stream window
     const uint8_t bad[3] = {0, 0, 1};
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 0, bad, 3));
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 0, bad, 3));
 }
 
 // RST_STREAM frees the slot; PRIORITY is accepted-and-ignored; PUSH_PROMISE to a
@@ -654,20 +639,18 @@ void test_h2_rst_priority_push(void)
 {
     {
         static Cap cap;
-        H2Conn c;
-        establish(&c, &cap);
-        open_stream(&c, 1);
+        establish(&g_conn, &cap);
+        open_stream(&g_conn, 1);
         const uint8_t err[4] = {0, 0, 0, 8};
-        TEST_ASSERT_TRUE(feed_frame(&c, H2_RST_STREAM, 0, 1, err, 4));
+        TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_RST_STREAM, 0, 1, err, 4));
         const uint8_t prio[5] = {0, 0, 0, 0, 0};
-        TEST_ASSERT_TRUE(feed_frame(&c, H2_PRIORITY, 0, 3, prio, 5));
+        TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_PRIORITY, 0, 3, prio, 5));
     }
     {
         static Cap cap;
-        H2Conn c;
-        establish(&c, &cap);
+        establish(&g_conn, &cap);
         const uint8_t pp[4] = {0, 0, 0, 0};
-        TEST_ASSERT_FALSE(feed_frame(&c, H2_PUSH_PROMISE, H2_FLAG_END_HEADERS, 1, pp, 4));
+        TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_PUSH_PROMISE, H2_FLAG_END_HEADERS, 1, pp, 4));
     }
 }
 
@@ -675,35 +658,32 @@ void test_h2_rst_priority_push(void)
 void test_h2_goaway_then_ignore(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     const uint8_t ga[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_GOAWAY, 0, 0, ga, 8)); // phase -> closing
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_GOAWAY, 0, 0, ga, 8)); // phase -> closing
     const uint8_t junk[9] = {0};
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, junk, sizeof junk)); // ignored while closing
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, junk, sizeof junk)); // ignored while closing
 }
 
 // SETTINGS ACK is accepted; a length that is not a multiple of 6 is malformed.
 void test_h2_settings_ack_and_bad(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_SETTINGS, H2_FLAG_ACK, 0, NULL, 0));
+    establish(&g_conn, &cap);
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_SETTINGS, H2_FLAG_ACK, 0, NULL, 0));
     const uint8_t bad[3] = {0, 0, 0};
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_SETTINGS, 0, 0, bad, 3));
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_SETTINGS, 0, 0, bad, 3));
 }
 
 // PING ACK is a no-op; a PING whose length is not 8 is a frame-size error.
 void test_h2_ping_bad(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     const uint8_t p8[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_PING, H2_FLAG_ACK, 0, p8, 8));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_PING, H2_FLAG_ACK, 0, p8, 8));
     const uint8_t p4[4] = {0, 0, 0, 0};
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_PING, 0, 0, p4, 4));
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_PING, 0, 0, p4, 4));
 }
 
 // A frame whose declared length exceeds MAX_FRAME is a frame-size error, caught
@@ -711,11 +691,10 @@ void test_h2_ping_bad(void)
 void test_h2_frame_too_big(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t hh[9];
     pc_h2_write_header(hh, sizeof hh, PC_H2_MAX_FRAME + 1, H2_DATA, 0, 1);
-    TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, hh, 9));
+    TEST_ASSERT_FALSE(pc_h2_conn_recv(&g_conn, hh, 9));
 }
 
 // respond() to an unknown stream fails; pc_h2_conn_goaway emits a GOAWAY; a body
@@ -723,18 +702,17 @@ void test_h2_frame_too_big(void)
 void test_h2_respond_paths_and_goaway(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    TEST_ASSERT_FALSE(pc_h2_conn_respond(&c, 99, 200, "text/plain", "x", 1)); // no such stream
+    establish(&g_conn, &cap);
+    TEST_ASSERT_FALSE(pc_h2_conn_respond(&g_conn, 99, 200, "text/plain", "x", 1)); // no such stream
 
-    open_stream(&c, 1);
-    c.peer.max_frame_size = 4; // force multi-chunk DATA
+    open_stream(&g_conn, 1);
+    g_conn.peer.max_frame_size = 4; // force multi-chunk DATA
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(pc_h2_conn_respond(&c, 1, 200, NULL, "0123456789", 10));
+    TEST_ASSERT_TRUE(pc_h2_conn_respond(&g_conn, 1, 200, NULL, "0123456789", 10));
     TEST_ASSERT_TRUE(count_frames(cap.out, cap.out_len, H2_DATA, NULL) >= 3); // 10 bytes / 4 -> >=3 frames
 
     cap.out_len = 0;
-    pc_h2_conn_goaway(&c, 0);
+    pc_h2_conn_goaway(&g_conn, 0);
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_GOAWAY, NULL));
 }
 
@@ -744,9 +722,8 @@ void test_h2_respond_paths_and_goaway(void)
 static proto_bool fresh_feed(uint8_t type, uint8_t flags, uint32_t sid, const uint8_t *pl, size_t pn)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    return feed_frame(&c, type, flags, sid, pl, pn);
+    establish(&g_conn, &cap);
+    return feed_frame(&g_conn, type, flags, sid, pl, pn);
 }
 
 // The remaining per-frame guards: empty PADDED frames, a short PRIORITY prefix,
@@ -777,24 +754,22 @@ void test_h2_continuation_more(void)
     size_t blen = build_request(block, sizeof block);
     {
         static Cap cap;
-        H2Conn c;
-        establish(&c, &cap);
+        establish(&g_conn, &cap);
         size_t t = blen / 3;
-        TEST_ASSERT_TRUE(feed_frame(&c, H2_HEADERS, 0, 1, block, t));          // fragment 1
-        TEST_ASSERT_TRUE(feed_frame(&c, H2_CONTINUATION, 0, 1, block + t, t)); // more to come
-        TEST_ASSERT_TRUE(feed_frame(&c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + 2 * t, blen - 2 * t));
+        TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_HEADERS, 0, 1, block, t));          // fragment 1
+        TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_CONTINUATION, 0, 1, block + t, t)); // more to come
+        TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + 2 * t, blen - 2 * t));
         TEST_ASSERT_EQUAL_INT(4, (int)cap.req_headers.n);
     }
     {
         static Cap cap;
-        H2Conn c;
-        establish(&c, &cap);
+        establish(&g_conn, &cap);
         static uint8_t frag[PC_H2_HDR_BLOCK - 8];
         memset(frag, 0, sizeof frag);
-        TEST_ASSERT_TRUE(feed_frame(&c, H2_HEADERS, 0, 1, frag, sizeof frag)); // buffered (< hblock)
+        TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_HEADERS, 0, 1, frag, sizeof frag)); // buffered (< hblock)
         uint8_t more[64];
         memset(more, 0, sizeof more);
-        TEST_ASSERT_FALSE(feed_frame(&c, H2_CONTINUATION, 0, 1, more, sizeof more)); // overflow
+        TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_CONTINUATION, 0, 1, more, sizeof more)); // overflow
     }
 }
 
@@ -802,13 +777,12 @@ void test_h2_continuation_more(void)
 void test_h2_respond_content_type_too_big(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
     char big_ct[1001];
     memset(big_ct, 'a', 1000);
     big_ct[1000] = 0;
-    TEST_ASSERT_FALSE(pc_h2_conn_respond(&c, 1, 200, big_ct, "x", 1));
+    TEST_ASSERT_FALSE(pc_h2_conn_respond(&g_conn, 1, 200, big_ct, "x", 1));
 }
 
 // Every callback is optional: with an all-null H2Callbacks the engine still runs the
@@ -817,42 +791,39 @@ void test_h2_null_callbacks(void)
 {
     H2Callbacks cb;
     memset(&cb, 0, sizeof cb); // no write, no on_header, no on_headers_end, no on_data
-    H2Conn c;
-    pc_h2_conn_init(&c, &cb); // send_our_settings has nowhere to write; must not crash
+    pc_h2_conn_init(&g_conn, &cb); // send_our_settings has nowhere to write; must not crash
 
     in_preface();
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
     in_add(hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_FALSE));
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, g_in, g_in_len));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, g_in, g_in_len));
     // The stream was still opened even though no header callback observed it.
-    TEST_ASSERT_EQUAL_UINT32(1, c.last_peer_stream);
+    TEST_ASSERT_EQUAL_UINT32(1, g_conn.last_peer_stream);
 
     const uint8_t body[3] = {'a', 'b', 'c'};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, body, 3));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, body, 3));
 }
 
 // HEADERS on stream 0 is a connection error (requests use odd, client-initiated ids).
 void test_h2_headers_stream_zero(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 0, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 0, block, blen, PROTO_TRUE)));
 }
 
 // A CONTINUATION arriving with no header block in progress is a protocol error.
 void test_h2_continuation_without_headers(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t x[4] = {0};
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, x, 4));
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, x, 4));
 }
 
 // RFC 9113 sec 5.1: a stream id past the highest one opened is idle, and every frame but HEADERS
@@ -873,16 +844,15 @@ void test_h2_idle_stream_frames_are_connection_errors(void)
 void test_h2_window_update_on_a_closed_stream_is_ignored(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
     const uint8_t err[4] = {0, 0, 0, 8};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_RST_STREAM, 0, 1, err, 4)); // frees the slot
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_RST_STREAM, 0, 1, err, 4)); // frees the slot
 
-    int32_t before = c.conn_send_window;
+    int32_t before = g_conn.conn_send_window;
     const uint8_t inc[4] = {0, 0, 0, 100};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 1, inc, 4));
-    TEST_ASSERT_EQUAL_INT32(before, c.conn_send_window);
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 1, inc, 4));
+    TEST_ASSERT_EQUAL_INT32(before, g_conn.conn_send_window);
 }
 
 // Per-type frame-size and stream-id rules: sec 6.4 (RST_STREAM is 4 octets), sec 6.3 (PRIORITY is
@@ -891,23 +861,22 @@ void test_h2_window_update_on_a_closed_stream_is_ignored(void)
 void test_h2_frame_size_and_stream_id_rules(void)
 {
     static Cap cap;
-    H2Conn c;
     const uint8_t pad[16] = {0};
 
     // RST_STREAM: right stream, wrong length.
-    establish(&c, &cap);
-    open_stream(&c, 1);
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_RST_STREAM, 0, 1, pad, 3));
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_RST_STREAM, 0, 1, pad, 3));
 
     // PRIORITY on stream 0 is a connection error; a wrong length on a real stream is a stream
     // error, so the connection survives and answers RST_STREAM.
     TEST_ASSERT_FALSE(fresh_feed(H2_PRIORITY, 0, 0, pad, 5));
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_PRIORITY, 0, 1, pad, 4));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_PRIORITY, 0, 1, pad, 4));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_PRIORITY, 0, 1, pad, 5)); // the legal length still passes
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_PRIORITY, 0, 1, pad, 5)); // the legal length still passes
 
     TEST_ASSERT_FALSE(fresh_feed(H2_GOAWAY, 0, 0, pad, 7)); // shorter than the two 32-bit fields
     TEST_ASSERT_FALSE(fresh_feed(H2_GOAWAY, 0, 1, pad, 8)); // GOAWAY names the connection
@@ -933,47 +902,46 @@ static void open_stream_with_content_length(H2Conn *c, uint32_t id, const char *
 void test_h2_content_length_must_match_the_data(void)
 {
     static Cap cap;
-    H2Conn c;
 
     // Exactly the declared length: delivered.
-    establish(&c, &cap);
-    open_stream_with_content_length(&c, 1, "5");
+    establish(&g_conn, &cap);
+    open_stream_with_content_length(&g_conn, 1, "5");
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
     TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
     TEST_ASSERT_EQUAL_STRING("hello", cap.body);
 
     // Short of it: the stream is reset at END_STREAM and the body never lands.
-    establish(&c, &cap);
-    open_stream_with_content_length(&c, 1, "10");
+    establish(&g_conn, &cap);
+    open_stream_with_content_length(&g_conn, 1, "10");
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);
 
     // Past it: settled on the frame that goes over, without waiting for END_STREAM.
-    establish(&c, &cap);
-    open_stream_with_content_length(&c, 1, "2");
+    establish(&g_conn, &cap);
+    open_stream_with_content_length(&g_conn, 1, "2");
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, 0, 1, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, 0, 1, (const uint8_t *)"hello", 5));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);
 
     // A request that ends with its headers declared a body it never sent.
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     cap.out_len = 0;
     uint8_t block[192];
     size_t bo = build_request(block, sizeof block);
     bo += pc_hpack_encode_header(block + bo, sizeof block - bo, "content-length", 14, "4", 1);
     uint8_t hf[224];
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE)));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 
     // A content-length that is not a plain decimal number is malformed on its own.
-    establish(&c, &cap);
-    open_stream_with_content_length(&c, 1, "5, 5");
+    establish(&g_conn, &cap);
+    open_stream_with_content_length(&g_conn, 1, "5, 5");
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);
 }
@@ -983,8 +951,7 @@ void test_h2_content_length_must_match_the_data(void)
 void test_h2_continuation_flood_is_bounded(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
 
     // HEADERS without END_HEADERS opens the block; empty CONTINUATIONs then carry it forever.
     uint8_t block[128];
@@ -992,12 +959,12 @@ void test_h2_continuation_flood_is_bounded(void)
     uint8_t hf[160];
     size_t hn = pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_FALSE);
     hf[4] &= (uint8_t)~H2_FLAG_END_HEADERS; // clear END_HEADERS in the built frame
-    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, hn));
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&g_conn, hf, hn));
 
     proto_bool refused = PROTO_FALSE;
     for (int i = 0; i < PC_H2_MAX_CONTINUATION + 4; i++)
     {
-        if (!feed_frame(&c, H2_CONTINUATION, 0, 1, NULL, 0))
+        if (!feed_frame(&g_conn, H2_CONTINUATION, 0, 1, NULL, 0))
         {
             refused = PROTO_TRUE;
             break;
@@ -1012,17 +979,16 @@ void test_h2_continuation_flood_is_bounded(void)
 void test_h2_data_empty_and_unknown_stream(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
     cap.out_len = 0;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, 0, 1, NULL, 0));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, 0, 1, NULL, 0));
     TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, cap.out_len, H2_WINDOW_UPDATE, NULL)); // nothing consumed
     TEST_ASSERT_EQUAL_STRING("", cap.body);
 
     // Stream 5 was never opened: the connection dies and the bytes are never handed up.
     const uint8_t d[2] = {'o', 'k'};
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 5, d, 2));
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 5, d, 2));
     TEST_ASSERT_EQUAL_STRING("", cap.body);
     TEST_ASSERT_FALSE(cap.data_end);
 }
@@ -1034,32 +1000,31 @@ void test_h2_data_empty_and_unknown_stream(void)
 void test_h2_window_update_zero_and_overflow(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
 
     // Zero increment on a stream: that stream is reset, the connection survives.
     cap.out_len = 0;
     const uint8_t zero[4] = {0, 0, 0, 0};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 1, zero, 4));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 1, zero, 4));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 
     // Zero increment on the connection window: connection error.
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 0, zero, 4));
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 0, zero, 4));
 
     // An increment that would take a stream's window past 2^31-1: that stream is reset.
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
     cap.out_len = 0;
     const uint8_t big[4] = {0x7F, 0xFF, 0xFF, 0xFF};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 1, big, 4));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 1, big, 4));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 
     // The same on the connection window is a connection error, and the window never moved.
-    establish(&c, &cap);
-    const int32_t before = c.conn_send_window;
-    TEST_ASSERT_FALSE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 0, big, 4));
-    TEST_ASSERT_EQUAL_INT32(before, c.conn_send_window);
+    establish(&g_conn, &cap);
+    const int32_t before = g_conn.conn_send_window;
+    TEST_ASSERT_FALSE(feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 0, big, 4));
+    TEST_ASSERT_EQUAL_INT32(before, g_conn.conn_send_window);
 }
 
 // RFC 9113 sec 6.1: DATA on a stream that is no longer open is a stream error of type STREAM_CLOSED -
@@ -1067,18 +1032,17 @@ void test_h2_window_update_zero_and_overflow(void)
 void test_h2_data_after_end_stream_resets_the_stream(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
 
     const uint8_t first[2] = {'h', 'i'};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, H2_FLAG_END_STREAM, 1, first, 2));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, first, 2));
     TEST_ASSERT_EQUAL_STRING("hi", cap.body);
 
     cap.out_len = 0;
     cap.body[0] = '\0';
     const uint8_t late[3] = {'b', 'a', 'd'};
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_DATA, 0, 1, late, 3)); // connection lives
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, 0, 1, late, 3)); // connection lives
     TEST_ASSERT_EQUAL_STRING("", cap.body);                   // the bytes never reach the app
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 }
@@ -1088,14 +1052,13 @@ void test_h2_data_after_end_stream_resets_the_stream(void)
 void test_h2_continuation_after_stream_freed(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
+    establish(&g_conn, &cap);
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     size_t half = blen / 2;
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_HEADERS, 0, 1, block, half)); // no END_HEADERS
-    TEST_ASSERT_TRUE(pc_h2_conn_respond(&c, 1, 200, NULL, "x", 1));  // frees the slot
-    TEST_ASSERT_TRUE(feed_frame(&c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half));
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_HEADERS, 0, 1, block, half)); // no END_HEADERS
+    TEST_ASSERT_TRUE(pc_h2_conn_respond(&g_conn, 1, 200, NULL, "x", 1));  // frees the slot
+    TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half));
     TEST_ASSERT_EQUAL_INT(4, (int)cap.req_headers.n); // headers still decoded and delivered
 }
 
@@ -1104,14 +1067,13 @@ void test_h2_continuation_after_stream_freed(void)
 void test_h2_respond_default_chunk_size(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
-    c.peer.max_frame_size = 0; // unset -> default 16384
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
+    g_conn.peer.max_frame_size = 0; // unset -> default 16384
     cap.out_len = 0;
     static char body[1000];
     memset(body, 'z', sizeof body);
-    TEST_ASSERT_TRUE(pc_h2_conn_respond(&c, 1, 200, NULL, body, sizeof body));
+    TEST_ASSERT_TRUE(pc_h2_conn_respond(&g_conn, 1, 200, NULL, body, sizeof body));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_DATA, NULL));
 }
 
@@ -1121,9 +1083,8 @@ void test_h2_respond_default_chunk_size(void)
 void test_h2_respond_content_length_no_room(void)
 {
     static Cap cap;
-    H2Conn c;
-    establish(&c, &cap);
-    open_stream(&c, 1);
+    establish(&g_conn, &cap);
+    open_stream(&g_conn, 1);
     cap.out_len = 0;
     // '&' has an 8-bit Huffman code, so the value is stored literally and its encoded size is
     // predictable: 2 (indexed name) + 2 (length prefix) + 250 = 254 of the 255 bytes left after
@@ -1131,10 +1092,10 @@ void test_h2_respond_content_length_no_room(void)
     char ct[251];
     memset(ct, '&', 250);
     ct[250] = 0;
-    TEST_ASSERT_FALSE(pc_h2_conn_respond(&c, 1, 200, ct, "hi", 2));
+    TEST_ASSERT_FALSE(pc_h2_conn_respond(&g_conn, 1, 200, ct, "hi", 2));
     TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, cap.out_len, H2_HEADERS, NULL)); // nothing emitted
     // A short content-type on the same connection still works, so the stream itself is fine.
-    TEST_ASSERT_TRUE(pc_h2_conn_respond(&c, 1, 200, "text/plain", "hi", 2));
+    TEST_ASSERT_TRUE(pc_h2_conn_respond(&g_conn, 1, 200, "text/plain", "hi", 2));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_HEADERS, NULL));
 }
 
