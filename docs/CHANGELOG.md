@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- RFC 8446 7.4.2 requires aborting on an all-zero X25519 shared secret ([`83be793`](https://github.com/dstroy0/ProtoCore/commit/83be793661d1e8b9d987f7844e72e408fc558f6f))
 - the curator's cap filled with flagged-valid entries, shipping no rejection cases ([`f02b770`](https://github.com/dstroy0/ProtoCore/commit/f02b770eccb2dacebfaa1e5380e41e7799437db8))
 - protocore_config.h is the entry point, not types.h ([`df81505`](https://github.com/dstroy0/ProtoCore/commit/df8150515fb0d74c5947e0266b5152d3774f1beb))
 - three headers used the macro without the header that defines it ([`444edf0`](https://github.com/dstroy0/ProtoCore/commit/444edf04a0f0d02be014efe0bfe5213ee3b0a231))
@@ -112,6 +113,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`fbe8c40`](https://github.com/dstroy0/ProtoCore/commit/fbe8c4007932925ca333dbc2779023eb443b092c))
 - update CHANGELOG.md [skip ci] ([`41914f4`](https://github.com/dstroy0/ProtoCore/commit/41914f4bc75c4d9261d3eb7bf67df494c4fc0f1d))
 - update CHANGELOG.md [skip ci] ([`7241153`](https://github.com/dstroy0/ProtoCore/commit/7241153e8d14797d64f886e67b9598af4739c37d))
 - update CHANGELOG.md [skip ci] ([`ab6e460`](https://github.com/dstroy0/ProtoCore/commit/ab6e4602559b92bf01405352faf7f5b3a7016d82))
