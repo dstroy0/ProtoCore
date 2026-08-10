@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- Fixed Bit, Reserved Bits and the 2^60 max_streams bound (RFC 9000) ([`a4f886f`](https://github.com/dstroy0/ProtoCore/commit/a4f886fde73528ba2bd91a5586fe5c94e0d55f3a))
 - a content-length that disagrees with the DATA makes the request malformed ([`43d1127`](https://github.com/dstroy0/ProtoCore/commit/43d1127b2e5f3b483085942120ea9c64f98f42f5))
 - per-type frame length and stream-id guards, and a CONTINUATION cap ([`ed39a65`](https://github.com/dstroy0/ProtoCore/commit/ed39a652dab728a93997d4d4e5638b532f8fb469))
 - coaps_server passed the address of a keys pointer, not the keys ([`73501c4`](https://github.com/dstroy0/ProtoCore/commit/73501c4edd35606af214195dbdd20b5d10daf805))
