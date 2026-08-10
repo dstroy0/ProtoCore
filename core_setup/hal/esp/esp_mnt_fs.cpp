@@ -142,7 +142,7 @@ static proto_bool fs_seek(int h, uint64_t off)
 
 static long fs_size(const char *path)
 {
-    if (s_mnt_fs.fs == NULL)
+    if (s_mnt_fs.fs == NULL || path == NULL)
     {
         return -1;
     }
@@ -158,32 +158,32 @@ static long fs_size(const char *path)
 
 static proto_bool fs_exists(const char *path)
 {
-    return s_mnt_fs.fs != NULL && s_mnt_fs.fs->exists(path);
+    return s_mnt_fs.fs != NULL && path != NULL && s_mnt_fs.fs->exists(path);
 }
 
 static proto_bool fs_remove(const char *path)
 {
-    return s_mnt_fs.fs != NULL && s_mnt_fs.fs->remove(path);
+    return s_mnt_fs.fs != NULL && path != NULL && s_mnt_fs.fs->remove(path);
 }
 
 static proto_bool fs_rename(const char *from, const char *to)
 {
-    return s_mnt_fs.fs != NULL && s_mnt_fs.fs->rename(from, to);
+    return s_mnt_fs.fs != NULL && from != NULL && to != NULL && s_mnt_fs.fs->rename(from, to);
 }
 
 static proto_bool fs_mkdir(const char *path)
 {
-    return s_mnt_fs.fs != NULL && s_mnt_fs.fs->mkdir(path);
+    return s_mnt_fs.fs != NULL && path != NULL && s_mnt_fs.fs->mkdir(path);
 }
 
 static proto_bool fs_rmdir(const char *path)
 {
-    return s_mnt_fs.fs != NULL && s_mnt_fs.fs->rmdir(path);
+    return s_mnt_fs.fs != NULL && path != NULL && s_mnt_fs.fs->rmdir(path);
 }
 
 static proto_bool fs_stat(const char *path, pc_mnt_stat *out)
 {
-    if (s_mnt_fs.fs == NULL || out == NULL)
+    if (s_mnt_fs.fs == NULL || path == NULL || out == NULL)
     {
         return PROTO_FALSE;
     }
