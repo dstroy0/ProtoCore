@@ -26,20 +26,18 @@
 
 #include "server/filesystem/mnt.h"
 
-PROTO_BEGIN_DECLS
+namespace fs
+{
+class FS;
+}
 
 /**
  * @brief Bind @p filesystem and return the backend to hand to pc_mnt_mount().
  *
- * @param filesystem an already-mounted Arduino filesystem (call its own begin() first), passed as
- *        the address of an fs::FS or of anything derived from it - LittleFS, SD, SPIFFS. It is
- *        taken as void * so this header publishes no C++ type and no namespace, and the symbol
- *        keeps C linkage.
+ * @param filesystem an already-mounted Arduino filesystem (call its own begin() first).
  * @return the backend vtable; it stays valid for the life of the program.
  */
-const pc_mnt_backend *pc_mnt_fs(void *filesystem);
-
-PROTO_END_DECLS
+const pc_mnt_backend *pc_mnt_fs(fs::FS *filesystem);
 
 #endif // PC_ENABLE_MNT && ARDUINO
 #endif // PROTOCORE_ESP_MNT_FS_H

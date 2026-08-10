@@ -6793,16 +6793,8 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_MD 96
 #endif
 // KdfWork - one counter block and one digest - then the PRF's own bytes.
-// KdfWork is K(i), the counter and the PRF context, and the borrow is that struct plus the PRF's own
-// bytes. On the accelerated arm the context wraps an mbedtls hash state instead of a pointer into
-// the borrow, which is several times the size, so the struct term has two values. kdf.c proves the
-// one a build picked against the real sizeof.
 #ifndef PC_WORK_KDF
-#if PC_HAS_HW_SHA
-#define PC_WORK_KDF (384 + PC_HMAC_SHA256_BORROW)
-#else
 #define PC_WORK_KDF (128 + PC_HMAC_SHA256_BORROW)
-#endif
 #endif
 
 // SSH frames every outbound packet in the secure pool: the payload it carries is the session's own
@@ -6872,38 +6864,6 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_TLS_CONN                                                                                               \
     ((size_t)MAX_TLS_CONNS * ((size_t)PC_TLS_CONN_MSG_CAP + (size_t)PC_TLS_CONN_REC_CAP +                              \
                               (size_t)PC_TLS_CONN_TERMS_CAP + (size_t)PC_TLS_CONN_STATE_CAP))
-#endif
-
-// What one DTLS 1.3 server handshake holds, stated here because the arena is sized off what the
-// build declares. The reassembly buffer is the odd one: a TLS message is its 4-byte header followed
-// by its body, and the transcript hashes the two together, so they cannot be split into separate
-// regions the way HTTP/2 splits its frame header. Instead the region carries 16 bytes of lead-in and
-// the header sits at its last 4, which leaves the BODY on a 16-byte boundary and the region a whole
-// number of them.
-#ifndef PC_DTLS_CONN_REASM_CAP
-#define PC_DTLS_CONN_REASM_CAP 1024 ///< largest inbound handshake body (ClientHello / client Finished)
-#endif
-#ifndef PC_DTLS_CONN_MSG_CAP
-#define PC_DTLS_CONN_MSG_CAP 1024 ///< largest single outbound handshake message (Certificate-dominated)
-#endif
-#ifndef PC_DTLS_FLIGHT_CAP
-#define PC_DTLS_FLIGHT_CAP (PC_DTLS_CONN_MSG_CAP + 512) ///< the flight held for retransmission
-#endif
-#ifndef PC_DTLS_REASM_LEAD
-#define PC_DTLS_REASM_LEAD 16u ///< lead-in whose last 4 bytes are the TLS message header
-#endif
-#ifndef PC_COAPS_MAX_CONNS
-#define PC_COAPS_MAX_CONNS 2 ///< simultaneous CoAPs (DTLS) connections; each slot is one DtlsConn engine
-#endif
-// The connection's own bytes: the key schedule, the transcript hash and the one-off hash beside it,
-// the CertificateVerify signature, the cookie MAC, the message being reassembled, the message being
-// built, and the flight held for retransmission. Proved against the real split in dtls_conn.c.
-#ifndef PC_WORK_DTLS_CONN
-#define PC_WORK_DTLS_CONN                                                                                              \
-    ((size_t)PC_COAPS_MAX_CONNS *                                                                                      \
-     ((size_t)PC_TLS13_KS_BORROW + 2u * (size_t)PC_SHA256_BORROW + (size_t)PC_SHA512_BORROW +                          \
-      (size_t)PC_HMAC_SHA256_BORROW + (size_t)PC_DTLS_REASM_LEAD + (size_t)PC_DTLS_CONN_REASM_CAP +                    \
-      (size_t)PC_DTLS_CONN_MSG_CAP + (size_t)PC_DTLS_FLIGHT_CAP))
 #endif
 
 // The two tables a module holds for the life of the program rather than for the life of a call.
@@ -6984,16 +6944,10 @@ from halves and is slower than the width it decomposes into"
 #define PC_SECURE_WORK_TLSCONN 0
 #endif
 
-#if PC_ENABLE_DTLS
-#define PC_SECURE_WORK_DTLSCONN PC_WORK_DTLS_CONN
-#else
-#define PC_SECURE_WORK_DTLSCONN 0
-#endif
-
 #define PC_SECURE_ARENA_SIZE                                                                                           \
     (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_SMB + PC_SECURE_WORK_SSHCIPHER +                     \
-     PC_SECURE_WORK_SSHCONN + PC_SECURE_WORK_TLSCONN + PC_SECURE_WORK_DTLSCONN + PC_WORK_ROUTE_TABLE +                 \
-     PC_SECURE_WORK_AUTH + PC_WORK_RNG + 256) // + 256: alignment round-up across the individual borrows
+     PC_SECURE_WORK_SSHCONN + PC_SECURE_WORK_TLSCONN + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +       \
+     256) // + 256: alignment round-up across the individual borrows
 #endif
 
 // ---------------------------------------------------------------------------

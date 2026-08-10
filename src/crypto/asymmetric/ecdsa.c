@@ -78,14 +78,6 @@ PC_CRYPTO_HOT_PEEL
 PC_CRYPTO_HOT
 #endif
 
-// The caller's working bytes, split: the message hash, then the DRBG's MAC. The hash is finished
-// before the DRBG starts, so the two never overlap in use.
-#define ECDSA_OFF_HASH 0u
-#define ECDSA_OFF_HMAC (ECDSA_OFF_HASH + PC_SHA256_BORROW)
-static_assert(ECDSA_OFF_HMAC + PC_HMAC_SHA256_BORROW <= PC_ECDSA_BORROW,
-              "PC_ECDSA_BORROW is short of the split - raise it in protocore_config.h, which every "
-              "consumer sizes its own borrow from");
-
 // ---------------------------------------------------------------------------
 // HW path without MPI modmult - mbedTLS
 // ---------------------------------------------------------------------------
@@ -750,6 +742,14 @@ static proto_bool on_curve(const uint32_t x[8], const uint32_t y[8])
 }
 
 // ---- RFC 6979 deterministic nonce (HMAC-SHA256 DRBG, hlen = qlen = 256) ----
+
+// The caller's working bytes, split: the message hash, then the DRBG's MAC. The hash is finished
+// before the DRBG starts, so the two never overlap in use.
+#define ECDSA_OFF_HASH 0u
+#define ECDSA_OFF_HMAC (ECDSA_OFF_HASH + PC_SHA256_BORROW)
+static_assert(ECDSA_OFF_HMAC + PC_HMAC_SHA256_BORROW <= PC_ECDSA_BORROW,
+              "PC_ECDSA_BORROW is short of the split - raise it in protocore_config.h, which every "
+              "consumer sizes its own borrow from");
 
 // out = HMAC-SHA256(key, V || (tag>=0 ? tag||x||e : nothing)), the MAC working out of the caller's
 // bytes at ECDSA_OFF_HMAC.

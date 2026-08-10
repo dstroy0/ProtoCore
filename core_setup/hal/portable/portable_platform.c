@@ -19,7 +19,7 @@
 
 uintptr_t pc_platform_context_id(void)
 {
-    return 1U; // any nonzero constant: the tripwire treats 0 as "no owner recorded yet"
+    return 1; // any nonzero constant: the tripwire treats 0 as "no owner recorded yet"
 }
 
 #endif // PROTOCORE_HOST

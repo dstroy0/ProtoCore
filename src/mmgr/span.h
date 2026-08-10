@@ -26,8 +26,6 @@
 
 #include "protocore_config.h" // the entry point: PC_INLINE, and types.h for proto_bool / size_t
 
-PROTO_BEGIN_DECLS
-
 /**
  * @brief A writable byte region: the storage, the capacity that belongs to it, and what has been
  *        produced into it.
@@ -174,7 +172,5 @@ PC_INLINE pc_cspan pc_span_read(pc_span s, size_t len)
     }
     return pc_cspan_from(s.buf, (len < s.cap) ? len : s.cap);
 }
-
-PROTO_END_DECLS
 
 #endif // PROTOCORE_SPAN_H

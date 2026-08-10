@@ -28,8 +28,6 @@
 
 #include "services/fieldbus/canopen/canopen.h"
 
-PROTO_BEGIN_DECLS
-
 // --- object dictionary indices (sub-index 0 unless noted); the comment gives the CANopen type ---
 #define CIA402_OD_ERROR_CODE 0x603Fu         ///< u16   last error code
 #define CIA402_OD_CONTROLWORD 0x6040u        ///< u16   command word (drives the state machine)
@@ -186,8 +184,6 @@ size_t pc_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlword, in
 /// Unpack a TPDO payload = Statusword (u16 LE) + Actual (i32 LE) into @p statusword / @p actual
 /// (a typical CSP/PP TPDO map). Returns false if len < 6.
 proto_bool pc_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual);
-
-PROTO_END_DECLS
 
 #endif // PC_ENABLE_CIA402
 

@@ -36,8 +36,6 @@
 
 #include "services/security/ikev2/ikev2.h"
 
-PROTO_BEGIN_DECLS
-
 /** @brief NAT_DETECTION_SOURCE_IP notify message type (RFC 7296 §3.10.1). */
 #define PC_IKE_N_NAT_DETECTION_SOURCE_IP 16388
 /** @brief NAT_DETECTION_DESTINATION_IP notify message type (RFC 7296 §3.10.1). */
@@ -119,8 +117,6 @@ proto_bool pc_natt_is_keepalive(const uint8_t *p, size_t len);
  * IKE message; the caller strips @ref PC_NATT_NON_ESP_MARKER_LEN octets before parsing it as IKE.
  */
 proto_bool pc_natt_is_ike(const uint8_t *p, size_t len);
-
-PROTO_END_DECLS
 
 #endif // PC_ENABLE_IKEV2
 #endif // PROTOCORE_IKEV2_NATT_H

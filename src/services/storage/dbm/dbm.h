@@ -33,8 +33,6 @@
 
 #include "services/storage/wal/wal_store.h"
 
-PROTO_BEGIN_DECLS
-
 /** @brief One in-RAM index slot. `state`: 0 empty, 1 live, 2 deleted (tombstone, still probed through). */
 typedef struct
 {
@@ -115,8 +113,6 @@ uint64_t pc_dbm_live_bytes(const struct pc_dbm *db);
  * @return true when every live key was copied, the destination checkpointed, and the index rebuilt.
  */
 proto_bool pc_dbm_compact(struct pc_dbm *db, WalStore *dst);
-
-PROTO_END_DECLS
 
 #endif // PC_ENABLE_DBM
 #endif // PROTOCORE_DBM_H

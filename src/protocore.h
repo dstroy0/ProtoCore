@@ -42,6 +42,11 @@
 
 #include "protocore_config.h" // the entry point: types.h for PROTO_BEGIN_DECLS, before anything uses it
 
+// The whole library is C and every sketch that includes this header is compiled as C++, so the
+// declarations below carry C linkage from here rather than from each header. System and vendor
+// headers state their own; an extern "C" already inside one nests harmlessly.
+PROTO_BEGIN_DECLS
+
 // Ordered by layer, so a header only needs what is above it. A gate is the feature's own
 // PC_ENABLE_, never a parent's: PC_ENABLE_<A>_NEEDS_<B> already makes a child unsettable alone.
 #include "shared_primitives/log.h"
@@ -341,12 +346,6 @@
 #include "services/web/httpcache/httpcache.h"
 #include "services/web/spa_router/spa_router.h"
 #include "services/web/web_terminal/web_terminal.h"
-
-// Every header above carries its own C linkage, which is what makes each includable on its own. The
-// block below covers only what this file declares. It does NOT wrap the includes: a C++ standard
-// header reached through one of them - <atomic> through mmgr/ring.h, and <new> through that -
-// declares templates, and a template cannot have C linkage.
-PROTO_BEGIN_DECLS
 
 /**
  * @brief A storage backend (server/filesystem/mnt.h), named here only as a pointer.

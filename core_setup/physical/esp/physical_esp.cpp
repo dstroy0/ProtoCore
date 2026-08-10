@@ -131,7 +131,7 @@ proto_bool net_global_ipv6(pc_ip *out)
 
 proto_bool pc_ipv6_ready(void)
 {
-    pc_ip tmp = {0};
+    pc_ip tmp;
     return net_global_ipv6(&tmp);
 }
 #else
@@ -205,7 +205,7 @@ size_t pc_net_ssid(char *out, size_t cap)
     {
         return 0;
     }
-    wifi_ap_record_t info = {0}; // heap-free SSID readout (WiFi.SSID() would allocate an Arduino String)
+    wifi_ap_record_t info; // heap-free SSID readout (WiFi.SSID() would allocate an Arduino String)
     if (esp_wifi_sta_get_ap_info(&info) != ESP_OK)
     {
         out[0] = '\0';
@@ -293,18 +293,8 @@ pc_phy_ps pc_phy_ps_get(void)
 
 proto_bool pc_phy_tx_power_set(int8_t dbm)
 {
-    // The vendor API takes quarter-dBm over 2..21 dBm; that unit and that range are vendor detail, so
-    // the clamp and the conversion both happen here. Unclamped, dbm >= 32 wraps the multiply.
-    int8_t clamped = dbm;
-    if (clamped < 2)
-    {
-        clamped = 2;
-    }
-    else if (clamped > 21)
-    {
-        clamped = 21;
-    }
-    return esp_wifi_set_max_tx_power((int8_t)(clamped * 4)) == ESP_OK;
+    // The vendor API takes quarter-dBm; that unit is vendor detail, so it converts here.
+    return esp_wifi_set_max_tx_power((int8_t)(dbm * 4)) == ESP_OK;
 }
 
 proto_bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb)
@@ -314,23 +304,9 @@ proto_bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb)
         return PROTO_FALSE;
     }
     s_phy_monitor.sink = cb;
-    if (esp_wifi_set_promiscuous(PROTO_TRUE) != ESP_OK)
-    {
-        s_phy_monitor.sink = NULL;
-        return PROTO_FALSE;
-    }
-    if (esp_wifi_set_promiscuous_rx_cb(&phy_monitor_trampoline) != ESP_OK)
-    {
-        esp_wifi_set_promiscuous(PROTO_FALSE);
-        s_phy_monitor.sink = NULL;
-        return PROTO_FALSE;
-    }
-    if (esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE) != ESP_OK)
-    {
-        esp_wifi_set_promiscuous(PROTO_FALSE);
-        s_phy_monitor.sink = NULL;
-        return PROTO_FALSE;
-    }
+    esp_wifi_set_promiscuous(PROTO_TRUE);
+    esp_wifi_set_promiscuous_rx_cb(&phy_monitor_trampoline);
+    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
     return PROTO_TRUE;
 }
 

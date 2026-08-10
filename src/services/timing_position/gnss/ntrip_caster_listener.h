@@ -43,8 +43,6 @@
 
 #include "services/timing_position/gnss/ntrip_caster.h"
 
-PROTO_BEGIN_DECLS
-
 /**
  * @brief Register a mountpoint the caster serves and install the handler (first call).
  *
@@ -67,8 +65,6 @@ int pc_ntrip_caster_subscriber_count(const char *mountpoint);
 
 /** @brief Clear all mounts and drop all rover state (start from empty). */
 void pc_ntrip_caster_reset(void);
-
-PROTO_END_DECLS
 
 #endif // PC_ENABLE_NTRIP_CASTER
 

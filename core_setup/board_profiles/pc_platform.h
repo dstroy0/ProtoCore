@@ -431,10 +431,8 @@
 // here instead of naming an RTOS. Used by the pools' debug owner tripwire to catch a borrow crossing
 // tasks; it is only ever compared for equality, never interpreted.
 //
-// Returns any nonzero constant where there is no such concept (host builds): a single context, so
-// every comparison trivially agrees. It must not be 0 - the pools read 0 as "no owner recorded yet"
-// (mmgr/plaintext.c, mmgr/secure.c), so a backend returning it never latches an owner and the
-// tripwire is disabled rather than quiet.
+// Returns 0 where there is no such concept (host builds): a single context, so every comparison
+// trivially agrees and the tripwire is a no-op rather than a false alarm.
 uintptr_t pc_platform_context_id(void);
 
 // ---------------------------------------------------------------------------

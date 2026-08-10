@@ -39,8 +39,6 @@
 #include "server/filesystem/mnt.h" // pc_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store.h"
 
-PROTO_BEGIN_DECLS
-
 #if PC_ENABLE_WAL
 
 /** @brief What the adapter needs to reach one open file: the store and the handle it returned. */
@@ -161,6 +159,4 @@ PC_INLINE void pc_wal_fs_close(pc_wal_fs_ctx *c)
 }
 
 #endif // PC_ENABLE_WAL
-PROTO_END_DECLS
-
 #endif // PROTOCORE_WAL_FS_H
