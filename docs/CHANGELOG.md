@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the exchange hash declared a 64-byte out its SHA-256 caller does not have ([`92e8ce2`](https://github.com/dstroy0/ProtoCore/commit/92e8ce2cd69fdf4e70ac37cd4cde04b29ef7eb77))
 - the Ns table made every leaf an indirect always_inline call at -Og ([`7f0b3b0`](https://github.com/dstroy0/ProtoCore/commit/7f0b3b0d64d91956ef5c6cb82365934af8ff268e))
 - the i2c command link was shared per bus; pc_mnt_fs published a C++ type ([`5153630`](https://github.com/dstroy0/ProtoCore/commit/515363041cb3b2dd963627715141dbe823e30f14))
 - the nvs seam serialises; seven fs entry points and one spi transfer were unbounded ([`7a6630b`](https://github.com/dstroy0/ProtoCore/commit/7a6630b4b0d89f26ba3ab000aeb3f8f71ef5e60e))
