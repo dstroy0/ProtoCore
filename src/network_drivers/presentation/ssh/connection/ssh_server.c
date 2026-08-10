@@ -402,5 +402,4 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         return 0;
     }
     }
-    pc_plaintext_release(mark);
 }
