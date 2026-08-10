@@ -121,10 +121,9 @@ static size_t pc_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len, DtlsPl
     {
         return 0;
     }
-    if (rec[1] != (uint8_t)(PC_DTLS_LEGACY_VERSION >> 8) || rec[2] != (uint8_t)PC_DTLS_LEGACY_VERSION)
-    {
-        return 0; // wrong legacy_version
-    }
+    // sec 4: legacy_record_version is {254,253} on every record but an initial ClientHello, where
+    // {254,255} is also allowed for compatibility, and it "MUST be ignored for all purposes". A
+    // receiver that reads it turns a legal ClientHello away.
     out->content_type = rec[0];
     out->epoch = (uint16_t)(((uint16_t)rec[3] << 8) | rec[4]);
     out->seq = ((uint64_t)rec[5] << 40) | ((uint64_t)rec[6] << 32) | ((uint64_t)rec[7] << 24) |
