@@ -30,9 +30,9 @@ static void wr(H2Conn *c, const uint8_t *data, size_t len)
 
 // The plaintext-pool term this file declares: one borrow per HTTP/2 connection, taken from the
 // persistent end on first use and held for the connection's life.
-static_assert(PC_PLAINTEXT_WORK_H2_CONN <= PC_PLAINTEXT_ARENA_SIZE,
-              "PC_PLAINTEXT_ARENA_SIZE must cover one frame + header-block + HPACK-scratch borrow per HTTP/2 "
-              "connection: raise it in protocore_config.h");
+static_assert(PC_PLAINTEXT_WORK_H2_CONN >= (size_t)MAX_CONNS * PC_H2_CONN_BORROW,
+              "PC_PLAINTEXT_WORK_H2_CONN must cover one frame + header-block + HPACK-scratch borrow per "
+              "HTTP/2 connection; the plaintext arena is the sum of these terms and grows with it");
 
 // Offsets into the one borrow.
 #define H2_OFF_FBUF 0u

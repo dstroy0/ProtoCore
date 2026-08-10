@@ -6506,8 +6506,20 @@ from halves and is slower than the width it decomposes into"
 // SSH_PKT_BUF_SIZE + 64 across ssh_dispatch_payload, which holds SSH_PKT_BUF_SIZE across
 // pc_ssh_server_dispatch, which holds a SSH_PKT_BUF_SIZE reply across the switch, under which
 // pc_ssh_auth_handle_pubkey holds 2,552 - 8,760 bytes live together.
+#ifndef PC_PLAINTEXT_SCRATCH
+#define PC_PLAINTEXT_SCRATCH 10240
+#endif
+
+// Per-connection terms each module declares in its own header and asserts in its own TU. The arena
+// is their sum, so a module that needs bytes makes the pool grow rather than failing against it.
+#if PC_ENABLE_HTTP2
+#define PC_PLAINTEXT_WORK_H2CONN PC_PLAINTEXT_WORK_H2_CONN
+#else
+#define PC_PLAINTEXT_WORK_H2CONN 0
+#endif
+
 #ifndef PC_PLAINTEXT_ARENA_SIZE
-#define PC_PLAINTEXT_ARENA_SIZE 10240
+#define PC_PLAINTEXT_ARENA_SIZE (PC_PLAINTEXT_SCRATCH + PC_PLAINTEXT_WORK_H2CONN + 256)
 #endif
 
 /**
