@@ -1171,7 +1171,11 @@ static void test_ciphertext_truncated_header_stops_walk(void)
 // A ciphertext record arriving before any epoch-2 keys exist (no ClientHello yet) is fatal:
 // unexpected_message. Covers both header shapes the walker measures - explicit length, and a record
 // that runs to the end of the datagram with an 8-bit sequence number.
-static void test_ciphertext_before_keys_is_fatal(void)
+// RFC 9147 sec 4.5.2: a record whose epoch has no keys yet is an invalid record, so it is discarded
+// and the association is preserved. Answering it with a fatal alert would let one forged datagram
+// end a handshake in progress, which over UDP costs an attacker nothing. This used to assert -1 and
+// alert 10.
+static void test_ciphertext_before_keys_is_discarded(void)
 {
     uint8_t server_ed_pub[32];
     pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
@@ -1182,15 +1186,15 @@ static void test_ciphertext_before_keys_is_fatal(void)
     DtlsConn a;
     DtlsServer.init(&a, &cfg, NULL, 0);
     const uint8_t with_len[7] = {0x2C, 0x00, 0x01, 0x00, 0x02, 0xAA, 0xBB};
-    TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&a, with_len, sizeof(with_len), out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT8(10, DtlsServer.alert(&a)); // unexpected_message
+    TEST_ASSERT_EQUAL_INT(0, DtlsServer.process(&a, with_len, sizeof(with_len), out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&a)); // discarded, no alert
 
     // 0x20 = 001, C=0, S=0 (8-bit sequence number), L=0: the record runs to the end of the datagram.
     DtlsConn b;
     DtlsServer.init(&b, &cfg, NULL, 0);
     const uint8_t no_len[4] = {0x20, 0x01, 0xAA, 0xBB};
-    TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&b, no_len, sizeof(no_len), out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT8(10, DtlsServer.alert(&b));
+    TEST_ASSERT_EQUAL_INT(0, DtlsServer.process(&b, no_len, sizeof(no_len), out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&b));
 }
 
 // A well-formed epoch-0 record that is not a handshake record is walked past and ignored: the state
@@ -2077,7 +2081,7 @@ int main(void)
     RUN_TEST(test_pto_ack_cancels_retransmit);
     RUN_TEST(test_reject_no_tls13);
     RUN_TEST(test_ciphertext_truncated_header_stops_walk);
-    RUN_TEST(test_ciphertext_before_keys_is_fatal);
+    RUN_TEST(test_ciphertext_before_keys_is_discarded);
     RUN_TEST(test_plaintext_non_handshake_record_ignored);
     RUN_TEST(test_truncated_handshake_fragment_ignored);
     RUN_TEST(test_fragment_for_other_msg_seq_ignored);
