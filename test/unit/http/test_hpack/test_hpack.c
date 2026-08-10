@@ -225,7 +225,9 @@ void test_reject_malformed()
     TEST_ASSERT_FALSE(pc_hpack_decode(&t, trunc, sizeof trunc, scratch, sizeof scratch, collect, &c));
 }
 
-// 6.3 dynamic table size update: a huge value clamps to our storage; a zero evicts all.
+// RFC 7541 sec 6.3: a size update at or below the protocol's limit is applied, and one above it is a
+// decoding error (RFC 9113 sec 4.3 then makes it a connection error). We advertise no
+// SETTINGS_HEADER_TABLE_SIZE, so the limit is the RFC 9113 sec 6.5.2 default of 4096. A zero evicts.
 void test_dyn_size_update()
 {
     HpackDynTable t;
@@ -235,11 +237,19 @@ void test_dyn_size_update()
     const uint8_t ins[] = {0x40, 0x02, 'a', 'a', 0x02, 'b', 'b'}; // insert (aa: bb), size 36
     TEST_ASSERT_TRUE(pc_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
     TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
-    uint8_t up[8]; // size update to 100000 -> clamped to the table storage (no eviction here)
-    size_t un = HpackPrim.encode_int(up, sizeof up, 5, 0x20, 100000);
+
+    uint8_t up[8];
     Collected c2 = {0};
+    size_t un = HpackPrim.encode_int(up, sizeof up, 5, 0x20, 100000); // over the limit -> refused
+    TEST_ASSERT_FALSE(pc_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
+
+    un = HpackPrim.encode_int(up, sizeof up, 5, 0x20, 4097); // one over -> refused
+    TEST_ASSERT_FALSE(pc_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
+
+    un = HpackPrim.encode_int(up, sizeof up, 5, 0x20, 4096); // exactly the limit -> applied
     TEST_ASSERT_TRUE(pc_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
     TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
+
     const uint8_t z[] = {0x20}; // size update to 0 -> evicts everything
     Collected c3 = {0};
     TEST_ASSERT_TRUE(pc_hpack_decode(&t, z, 1, scratch, sizeof scratch, collect, &c3));
