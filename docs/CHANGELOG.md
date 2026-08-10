@@ -114,6 +114,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7f253db`](https://github.com/dstroy0/ProtoCore/commit/7f253db93be347faf4ed6ed2a75ec97e0c021b06))
+- update CHANGELOG.md [skip ci] ([`12d0191`](https://github.com/dstroy0/ProtoCore/commit/12d0191d785b8e7ea973528f63a26b58099466c2))
 - update CHANGELOG.md [skip ci] ([`1d72122`](https://github.com/dstroy0/ProtoCore/commit/1d721224e499fe32fc248590051c11e09f024746))
 - update CHANGELOG.md [skip ci] ([`fbe8c40`](https://github.com/dstroy0/ProtoCore/commit/fbe8c4007932925ca333dbc2779023eb443b092c))
 - update CHANGELOG.md [skip ci] ([`41914f4`](https://github.com/dstroy0/ProtoCore/commit/41914f4bc75c4d9261d3eb7bf67df494c4fc0f1d))
@@ -330,6 +332,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Revert "fix(nvs): the two backends gave different wrong answers for a blob and a string" ([`ea49e97`](https://github.com/dstroy0/ProtoCore/commit/ea49e97545cee8dc48bb14fea94ddd682f93b9e4))
+- Revert "test(config): the blob test pinned the host double's truncation, not the contract" ([`2173298`](https://github.com/dstroy0/ProtoCore/commit/2173298dda6b0bea7735df67f8b2de926ae6cf8f))
+- Revert "fix(nvs): put_blob and put_str judged their bounds after committing, or not at all" ([`1a13687`](https://github.com/dstroy0/ProtoCore/commit/1a13687d425dbcb43196903aa32de29f1d1e0ffb))
 - clang-format the tree ([`a0cf205`](https://github.com/dstroy0/ProtoCore/commit/a0cf2054eca7b72e11bd7e9b7c72a40381725357))
 - Reapply "refactor(http2): the connection borrows its buffers and asserts its term" ([`f401107`](https://github.com/dstroy0/ProtoCore/commit/f401107ff6c723fc038fa45d68d12c13edb41b41))
 - Revert "refactor(http2): the connection borrows its buffers and asserts its term" ([`272c11b`](https://github.com/dstroy0/ProtoCore/commit/272c11be6d3641bc53cf3d2f241ef41767eacc47))
