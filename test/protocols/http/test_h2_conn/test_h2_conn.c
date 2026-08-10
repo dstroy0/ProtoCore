@@ -431,6 +431,72 @@ void test_h2_stream_id_must_increase(void)
     TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
 }
 
+// RFC 9113 sec 8.1: a second HEADERS on a stream that is still open is a trailer section, not a
+// sec 5.1.1 monotonicity violation. It is decoded (the HPACK table tracks every block) but never
+// delivered: the request it trails has already been dispatched.
+void test_h2_trailers_on_open_stream(void)
+{
+    static Cap cap;
+    H2Conn c;
+    establish(&c, &cap);
+    open_stream(&c, 1); // no END_STREAM: stream 1 stays OPEN
+    size_t headers_after_request = cap.req_headers.n;
+    size_t ends_after_request = cap.headers_end_n;
+
+    uint8_t block[128];
+    size_t blen = pc_hpack_encode_header(block, sizeof block, "x-checksum", 10, "abcd", 4);
+    uint8_t hf[160];
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+
+    TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)headers_after_request, (uint32_t)cap.req_headers.n);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)ends_after_request, (uint32_t)cap.headers_end_n);
+}
+
+// sec 8.1: the trailer section is the last thing the peer sends, so it carries END_STREAM.
+void test_h2_trailers_without_end_stream_reset_the_stream(void)
+{
+    static Cap cap;
+    H2Conn c;
+    establish(&c, &cap);
+    open_stream(&c, 1);
+
+    uint8_t block[128];
+    size_t blen = pc_hpack_encode_header(block, sizeof block, "x-checksum", 10, "abcd", 4);
+    uint8_t hf[160];
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_FALSE)));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+}
+
+// sec 8.1: no pseudo-header may appear in a trailer section.
+void test_h2_trailers_reject_pseudo_headers(void)
+{
+    static Cap cap;
+    H2Conn c;
+    establish(&c, &cap);
+    open_stream(&c, 1);
+
+    uint8_t block[128];
+    size_t blen = pc_hpack_encode_header(block, sizeof block, ":method", 7, "POST", 4);
+    uint8_t hf[160];
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+}
+
+// sec 5.1.1 still bites where it should: the stream already ended, so this is a new stream on an
+// id that does not exceed every one seen.
+void test_h2_headers_on_ended_stream_is_a_connection_error(void)
+{
+    static Cap cap;
+    H2Conn c;
+    establish(&c, &cap);
+    uint8_t block[128];
+    size_t blen = build_request(block, sizeof block);
+    uint8_t hf[160];
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+}
+
 // A stream 0 / even id on HEADERS is rejected (requests are odd, client-initiated).
 void test_h2_headers_bad_stream_id(void)
 {
@@ -919,6 +985,10 @@ int main(void)
     RUN_TEST(test_h2_headers_padded_priority);
     RUN_TEST(test_h2_headers_pad_overflow);
     RUN_TEST(test_h2_stream_id_must_increase);
+    RUN_TEST(test_h2_trailers_on_open_stream);
+    RUN_TEST(test_h2_trailers_without_end_stream_reset_the_stream);
+    RUN_TEST(test_h2_trailers_reject_pseudo_headers);
+    RUN_TEST(test_h2_headers_on_ended_stream_is_a_connection_error);
     RUN_TEST(test_h2_headers_bad_stream_id);
     RUN_TEST(test_h2_stream_table_full_rst);
     RUN_TEST(test_h2_continuation);
