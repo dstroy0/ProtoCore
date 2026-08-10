@@ -80,6 +80,17 @@ static proto_bool req_emit(void *ctx, const char *name, size_t nlen, const char 
     return PROTO_TRUE; // ignore regular headers for now (routing is by method + path)
 }
 
+// Close the connection with an RFC 9114 sec 8.1 error code. HTTP/3 errors are the application's,
+// so they travel in a CONNECTION_CLOSE of type 0x1d; in the transport variant the same number
+// would name a completely different condition.
+static void h3_fail(H3Conn *h3, uint64_t error_code)
+{
+    if (h3->qc)
+    {
+        pc_quic_conn_close_app(h3->qc, error_code);
+    }
+}
+
 // Parse the accumulated request stream: decode HEADERS, coalesce DATA into a body, and dispatch.
 static void dispatch_request(H3Conn *h3, H3Stream *st)
 {
@@ -156,17 +167,6 @@ static void append(H3Stream *st, const uint8_t *data, size_t len)
     }
     mem.cpy(st->buf + st->buf_len, data, len);
     st->buf_len += len;
-}
-
-// Close the connection with an RFC 9114 sec 8.1 error code. HTTP/3 errors are the application's,
-// so they travel in a CONNECTION_CLOSE of type 0x1d; in the transport variant the same number
-// would name a completely different condition.
-static void h3_fail(H3Conn *h3, uint64_t error_code)
-{
-    if (h3->qc)
-    {
-        pc_quic_conn_close_app(h3->qc, error_code);
-    }
 }
 
 // Read the leading stream-type varint of a uni stream and set st->role; consumes it from the buffer.
