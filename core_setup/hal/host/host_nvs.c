@@ -80,9 +80,9 @@ static HostNvsEntry *find_or_alloc(HostNvsCtx *c, const char *ns, const char *ke
 
 static proto_bool store(const char *ns, const char *key, const void *data, size_t len)
 {
-    if (!name_ok(ns) || !name_ok(key) || len == 0 || len > PC_CONFIG_VAL_MAX)
+    if (!name_ok(ns) || !name_ok(key) || len > PC_CONFIG_VAL_MAX)
     {
-        return PROTO_FALSE; // the ESP backend cannot create a zero-length entry, so neither does this
+        return PROTO_FALSE;
     }
     HostNvsEntry *e = find_or_alloc(&s_nvs, ns, key);
     if (!e)
@@ -162,13 +162,7 @@ proto_bool pc_nvs_put_str(const char *ns, const char *key, const char *val)
     {
         return PROTO_FALSE;
     }
-    // Measured one past the cap so an over-long value is refused rather than silently truncated.
-    size_t len = str.len(val, PC_CONFIG_VAL_MAX);
-    if (len >= PC_CONFIG_VAL_MAX)
-    {
-        return PROTO_FALSE;
-    }
-    return store(ns, key, val, len + 1); // the terminator is stored
+    return store(ns, key, val, str.len(val, PC_CONFIG_VAL_MAX - 1) + 1); // the terminator is stored
 }
 
 // The object, not a byte layout: this table never leaves the process, so the two halves below only

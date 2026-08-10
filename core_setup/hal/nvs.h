@@ -33,21 +33,11 @@ proto_bool pc_nvs_has(const char *ns, const char *key);
 
 /**
  * @brief Copy the bytes stored at @p ns / @p key into @p out.
- *
- * A value larger than @p cap is REFUSED, not truncated: a caller that reads a credential must not
- * take a short read for a whole one. @p out is left untouched in that case.
- *
- * @return the byte count written, or 0 if the key is absent, does not fit, @p out is null, or
- *         @p cap is 0.
+ * @return the byte count written, or 0 if the key is absent, @p out is null, or @p cap is 0.
  */
 size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap);
 
-/**
- * @brief Store @p len bytes at @p ns / @p key, replacing any current value.
- *
- * @p len must be 1..PC_CONFIG_VAL_MAX. Zero is refused - the ESP backend's putBytes cannot create
- * such a key, so no backend offers one. Nothing is written on a refusal.
- */
+/** @brief Store @p len bytes at @p ns / @p key, replacing any current value. */
 proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len);
 
 /**
@@ -55,19 +45,11 @@ proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size
  *
  * No default: a caller that wants one applies it on a 0 return, so this seam decides nothing.
  *
- * @p out is terminated on every path, including the ones that return 0. A value that does not fit
- * @p cap is refused like a blob.
- *
  * @return the character count written excluding the terminator, or 0 if the key is absent.
  */
 size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap);
 
-/**
- * @brief Store the null-terminated @p val at @p ns / @p key.
- *
- * Longer than PC_CONFIG_VAL_MAX is refused before anything is written, rather than truncated or
- * committed-then-reported-false.
- */
+/** @brief Store the null-terminated @p val at @p ns / @p key. */
 proto_bool pc_nvs_put_str(const char *ns, const char *key, const char *val);
 
 /** @brief Read the 32-bit value at @p ns / @p key, or @p def when the key is absent. */
