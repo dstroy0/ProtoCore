@@ -1883,16 +1883,23 @@ static void test_cookie_is_worthless_to_another_peer(void)
     size_t r2 = plain_hs_record(rec, sizeof(rec), ch2, ch2_len, 1, 1);
     TEST_ASSERT_TRUE(r2 > 0);
 
+    // The second peer has to reach the same point in its own handshake, or its reassembler drops a
+    // message_seq 1 fragment before the cookie is ever looked at.
+    uint8_t rec1[420];
+    size_t r1b = plain_hs_record(rec1, sizeof(rec1), ch1, ch1_len, 0, 0);
+    TEST_ASSERT_TRUE(r1b > 0);
     DtlsConn b;
     DtlsServer.init(&b, &cfg, OTHER_ADDR, sizeof(OTHER_ADDR));
     uint8_t flight[2048];
+    TEST_ASSERT_TRUE(DtlsServer.process(&b, rec1, r1b, flight, sizeof(flight)) > 0);
+
+    // Now spend the first peer's cookie here: it authenticates an address this connection does not
+    // have, so it does not authenticate this one.
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&b, rec, r2, flight, sizeof(flight)));
     TEST_ASSERT_EQUAL_UINT8(47, DtlsServer.alert(&b)); // illegal_parameter (sec 5.1)
 
     // The same cookie still works at the peer it was minted for.
-    DtlsConn c;
-    DtlsServer.init(&c, &cfg, TEST_PEER_ADDR, sizeof(TEST_PEER_ADDR));
-    TEST_ASSERT_TRUE(DtlsServer.process(&c, rec, r2, flight, sizeof(flight)) > 0);
+    TEST_ASSERT_TRUE(DtlsServer.process(&a, rec, r2, flight, sizeof(flight)) > 0);
 }
 
 static void test_peer_addr_zero_length_and_clamped(void)
