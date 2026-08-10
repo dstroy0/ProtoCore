@@ -148,6 +148,21 @@ void test_reject_bad_values()
     // a numeric parameter (initial_max_sd_bidi_remote) with a zero-length value -> no varint to read.
     static const uint8_t h[] = {0x06, 0x00};
     TEST_ASSERT_FALSE(pc_quic_tp_parse(h, sizeof(h), &tp));
+
+    // RFC 9000 sec 4.6: a max_streams over 2^60 would put a stream id outside the 62-bit space.
+    // 2^60 itself is the largest legal value, so both sides of the bound are pinned. The 8-byte
+    // varint prefix is 0xc0, so the value occupies the low 62 bits.
+    static const uint8_t bidi_max[] = {0x08, 0x08, 0xd0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    TEST_ASSERT_TRUE(pc_quic_tp_parse(bidi_max, sizeof(bidi_max), &tp));
+    TEST_ASSERT_EQUAL_UINT64(1ull << 60, tp.initial_max_streams_bidi);
+    static const uint8_t bidi_over[] = {0x08, 0x08, 0xd0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+    TEST_ASSERT_FALSE(pc_quic_tp_parse(bidi_over, sizeof(bidi_over), &tp));
+
+    static const uint8_t uni_max[] = {0x09, 0x08, 0xd0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    TEST_ASSERT_TRUE(pc_quic_tp_parse(uni_max, sizeof(uni_max), &tp));
+    TEST_ASSERT_EQUAL_UINT64(1ull << 60, tp.initial_max_streams_uni);
+    static const uint8_t uni_over[] = {0x09, 0x08, 0xd0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+    TEST_ASSERT_FALSE(pc_quic_tp_parse(uni_over, sizeof(uni_over), &tp));
 }
 
 void test_quic_tp_more_paths()

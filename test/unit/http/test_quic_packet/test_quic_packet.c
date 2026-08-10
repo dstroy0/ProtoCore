@@ -153,6 +153,33 @@ void test_reject()
     TEST_ASSERT_FALSE(pc_quic_parse_long_header(not_long_form, sizeof not_long_form, &h));
 }
 
+// RFC 9000 sec 17.2 / 17.3.1: the Fixed Bit (0x40) is set in every packet of this version, and one
+// without it "MUST be discarded". The single exception is a Version Negotiation packet, which is
+// the only packet carrying version 0 and is exempt because it belongs to no version.
+void test_fixed_bit()
+{
+    QuicLongHeader h;
+    // Header form set, Fixed Bit clear, version 1: discarded.
+    const uint8_t no_fixed[7] = {0x80, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00};
+    TEST_ASSERT_FALSE(pc_quic_parse_long_header(no_fixed, sizeof no_fixed, &h));
+
+    // The same packet with the Fixed Bit set parses.
+    const uint8_t fixed[7] = {0xC0, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00};
+    TEST_ASSERT_TRUE(pc_quic_parse_long_header(fixed, sizeof fixed, &h));
+
+    // Version 0 is a Version Negotiation packet: exempt, so it parses with the bit clear.
+    const uint8_t vn[7] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    TEST_ASSERT_TRUE(pc_quic_parse_long_header(vn, sizeof vn, &h));
+    TEST_ASSERT_EQUAL_UINT32(0, h.version);
+
+    // A short header is never a Version Negotiation packet, so the rule holds with no exception.
+    QuicShortHeader s;
+    const uint8_t s_no_fixed[8] = {0x00, 1, 2, 3, 4, 5, 6, 7};
+    TEST_ASSERT_FALSE(pc_quic_parse_short_header(s_no_fixed, sizeof s_no_fixed, 4, &s));
+    const uint8_t s_fixed[8] = {0x40, 1, 2, 3, 4, 5, 6, 7};
+    TEST_ASSERT_TRUE(pc_quic_parse_short_header(s_fixed, sizeof s_fixed, 4, &s));
+}
+
 // Builder guards: bad packet-number length, oversize connection IDs, and buffer overflow.
 void test_build_guards()
 {
@@ -212,6 +239,7 @@ int main()
     RUN_TEST(test_pn_decode);
     RUN_TEST(test_pn_decode_wraparound);
     RUN_TEST(test_reject);
+    RUN_TEST(test_fixed_bit);
     RUN_TEST(test_build_guards);
     RUN_TEST(test_short_header_guards);
     return UNITY_END();
