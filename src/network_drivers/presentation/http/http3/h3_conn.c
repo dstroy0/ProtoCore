@@ -87,6 +87,11 @@ static H3Stream *pc_h3_stream_get(H3Conn *h3, uint64_t id, proto_bool create)
     free_slot->method = method;
     free_slot->path = path;
     free_slot->authority = authority;
+    // The bytes are the connection's and outlive the stream that last held them. A claimed slot
+    // starts empty, or this request reads the previous one's method, path and authority.
+    mem.set(method, 0, PC_H3_METHOD_LEN);
+    mem.set(path, 0, PC_H3_PATH_LEN);
+    mem.set(authority, 0, PC_H3_AUTHORITY_LEN);
     free_slot->id = id;
     return free_slot;
 }
@@ -387,6 +392,9 @@ void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, vo
     {
         return; // no bytes to run out of; the connection answers nothing
     }
+    // The borrow carries the previous connection's requests; the pointers to it stay, or the next
+    // init would ask the persistent end for a second borrow it never gives back.
+    mem.set(h3->streams[0].buf, 0, PC_H3_CONN_BORROW);
     h3->qc = qc;
     h3->on_request = on_request;
     h3->app = app;
