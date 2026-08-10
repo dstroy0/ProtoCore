@@ -171,7 +171,7 @@ static size_t build_client_hello(uint8_t *rec, size_t cap, ChFlaw flaw)
 void test_init_takes_its_borrow()
 {
     TlsConnConfig cfg = server_cfg();
-    TlsConn c;
+    static TlsConn c; // a pool slot: zeroed before first use, like every real connection
     TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
     TEST_ASSERT_NOT_NULL(c.tx);
     TEST_ASSERT_NOT_NULL(c.rx);
@@ -189,7 +189,7 @@ void test_init_takes_its_borrow()
 void test_client_hello_draws_the_server_flight()
 {
     TlsConnConfig cfg = server_cfg();
-    TlsConn c;
+    static TlsConn c; // a pool slot: zeroed before first use, like every real connection
     TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
     static uint8_t rec[600];
@@ -223,7 +223,7 @@ void test_client_hello_outside_the_profile_is_refused()
     {
         pc_secure_reset();
         TlsConnConfig cfg = server_cfg();
-        TlsConn c;
+        static TlsConn c; // a pool slot: zeroed before first use, like every real connection
         TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
         static uint8_t rec[600];
@@ -244,7 +244,7 @@ void test_client_hello_outside_the_profile_is_refused()
 void test_malformed_record_is_a_decode_error()
 {
     TlsConnConfig cfg = server_cfg();
-    TlsConn c;
+    static TlsConn c; // a pool slot: zeroed before first use, like every real connection
     TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
     static uint8_t out[256];
@@ -261,7 +261,7 @@ void test_malformed_record_is_a_decode_error()
 void test_client_role_is_not_implemented()
 {
     TlsConnConfig cfg = server_cfg();
-    TlsConn c;
+    static TlsConn c; // a pool slot: zeroed before first use, like every real connection
     TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_CLIENT, &cfg));
 
     static uint8_t out[256];
