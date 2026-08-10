@@ -112,6 +112,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`ab6e460`](https://github.com/dstroy0/ProtoCore/commit/ab6e4602559b92bf01405352faf7f5b3a7016d82))
 - update CHANGELOG.md [skip ci] ([`cfaa623`](https://github.com/dstroy0/ProtoCore/commit/cfaa62307ce9c5b98cad64f0d43f980be11c9732))
 - update CHANGELOG.md [skip ci] ([`1cd8b47`](https://github.com/dstroy0/ProtoCore/commit/1cd8b470eae21148cc792f725fdd254df2630f38))
 - kat_data.inc is generated and committed with nothing checking it matches ([`861e8e3`](https://github.com/dstroy0/ProtoCore/commit/861e8e3381616ff023206ca314a09f58b682e7a2))
@@ -474,6 +475,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the block loop and the rate-1 pad merge were unreached at every rate ([`eaf91bf`](https://github.com/dstroy0/ProtoCore/commit/eaf91bf6bb8cd18e7b84c71ed235bd55881d6ed0))
 - use the file's own hex helper ([`94ffc38`](https://github.com/dstroy0/ProtoCore/commit/94ffc383f4ebbd6e77f231ec728ecab60d8fa23e))
 - SHA-256 padding boundaries and the RFC 7748 masking MUST were unreached ([`4a95d36`](https://github.com/dstroy0/ProtoCore/commit/4a95d3662e39fb3053ba0c6f613d90986440a59c))
 - the aead runner sealed every vector, including the rejection ones ([`51e1d43`](https://github.com/dstroy0/ProtoCore/commit/51e1d43d63ae70cc6d59216e59838d0e1a4f0d43))
