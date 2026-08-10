@@ -422,6 +422,37 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `PC_` and the 1490 are swept behind it, or the wire-constant class earns a written exemption and
   the ratchet shrinks to the sites that actually have to move.
 
+## PC_INLINE forces always_inline through an Ns table, so the library cannot build at -Og
+
+- **Status:** OPEN, found 2026-08-10 working the ESP-IDF Build job back to green. That job has been
+  red continuously since well before this session; two blockers ahead of this one are fixed
+  (`pc_sha256`'s accelerated arm had dropped its `work` parameter, and `PC_WORK_KDF` did not
+  account for the mbedtls hash state its context wraps), and this is what stands behind them.
+- **Symptom:** `xtensa-esp32-elf-gcc -Og` on `src/mmgr/protomem.c` fails hard, six times over:
+  "inlining failed in call to 'always_inline' 'pc_swar_load': function not considered for
+  inlining", and the same for `pc_swar_has_zero`, `pc_swar_zero_lane`, `pc_swar_eq_sel`,
+  `pc_swar_xor_sel` and `pc_swar_load_al`. `-Og` is ESP-IDF's default
+  (`CONFIG_COMPILER_OPTIMIZATION_DEBUG`), and `examples/esp-idf/minimal/sdkconfig.defaults` does not
+  override it.
+- **Root cause:** `PC_INLINE` (`protocore_config.h:128`) is
+  `static inline __attribute__((always_inline))`, and the SWAR leaves are reached through the
+  `SwarNs` table - `swar.load(x + i)`, not `pc_swar_load(x + i)`. `swar.h` states the requirement
+  in its own comment: "swar.ge IS pc_swar_ge, so the member read folds away, the body inlines, and
+  the table is left". Folding a `static const` table of function pointers is an optimisation. At
+  `-Og` it does not happen, the call stays indirect, and an indirect call to an `always_inline`
+  function is an error rather than a missed optimisation.
+- **Reach:** every consumer, not just this example. Anyone who debugs their firmware at `-Og` cannot
+  compile the library at all. The native envs and the Arduino build only miss it because both run
+  optimised.
+- **Fix:** not written, and it is a design call, not a patch. Three shapes, none of them free:
+  drop `always_inline` from the SWAR leaves and let the optimiser decide (it inlines tiny leaves at
+  `-O2` regardless, but the benched TUs would need re-measuring); call `pc_swar_*` directly in the
+  hot movers and leave the Ns table as documentation (costs the uniform access the Ns pattern buys);
+  or make `PC_INLINE` degrade to plain `static inline` when the build cannot honour it, for which
+  GCC exposes no `-Og` macro - `__OPTIMIZE__` is defined at `-Og` too.
+- **Not a fix:** setting `CONFIG_COMPILER_OPTIMIZATION_PERF` in the example. That turns the job
+  green and leaves every consumer's debug build broken.
+
 ## `Content-Length` folds with no overflow guard, so a 33-digit value frames as 0
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http1-core.md` #1).
