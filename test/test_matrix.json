@@ -187,6 +187,11 @@
       ],
       "tests": ["unit/ssh/test_ssh_inflate"]
     },
+    "native_ct_eq": {
+      "desc": "pc_ct_eq (crypto/ct_eq.h): the one comparator every AEAD tag, MAC, digest and\nsignature check goes through. Equal buffers, a difference at every byte position, single-bit\ndifferences, zero length, and that it reads exactly n bytes and no more.",
+      "src": ["+<mmgr/protomem.c>"],
+      "tests": ["unit/crypto/test_ct_eq"]
+    },
     "native_crypto_kat": {
       "desc": "Data-driven external crypto known-answer tests: HMAC-SHA256/512, AEAD_AES_128_GCM,\nX25519, and Ed25519 verify from Project Wycheproof (including its adversarial edge cases),\nplus HKDF-SHA256 Extract (RFC 5869), the ChaCha20 block (RFC 8439 2.4.2), and Poly1305\n(RFC 8439 2.5.2). Vectors are vendored as auditable JSON (test/vectors) and compiled to a\ntable by tools/crypto/gen_crypto_vectors.py. Pure host tests.",
       "flags": ["-DPC_ENABLE_HTTP3=1"],
