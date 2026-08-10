@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the curator's cap filled with flagged-valid entries, shipping no rejection cases ([`f02b770`](https://github.com/dstroy0/ProtoCore/commit/f02b770eccb2dacebfaa1e5380e41e7799437db8))
 - protocore_config.h is the entry point, not types.h ([`df81505`](https://github.com/dstroy0/ProtoCore/commit/df8150515fb0d74c5947e0266b5152d3774f1beb))
 - three headers used the macro without the header that defines it ([`444edf0`](https://github.com/dstroy0/ProtoCore/commit/444edf04a0f0d02be014efe0bfe5213ee3b0a231))
 - every header carries its own extern C; protocore.h stops wrapping its includes ([`8ffc88e`](https://github.com/dstroy0/ProtoCore/commit/8ffc88e828b0a6c4c00000cdcce9d44cc0fb503a))
@@ -111,6 +112,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3e44f1a`](https://github.com/dstroy0/ProtoCore/commit/3e44f1ad6cc837fd24dc5df5f43606846651e6fa))
 - update CHANGELOG.md [skip ci] ([`7761aa5`](https://github.com/dstroy0/ProtoCore/commit/7761aa566f06dca9cbb8186b88a24aad2a809124))
 - update CHANGELOG.md [skip ci] ([`3ee7dae`](https://github.com/dstroy0/ProtoCore/commit/3ee7daee8396d55f8f8b735836866c02741af50c))
 - update CHANGELOG.md [skip ci] ([`3a8d454`](https://github.com/dstroy0/ProtoCore/commit/3a8d454f7ab3049ca3d89203e558dc1051371e62))
