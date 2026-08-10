@@ -8,6 +8,7 @@
 
 #include "network_drivers/presentation/http/http3/quic_conn.h"
 #include "mmgr/protomem.h"
+#include "mmgr/plaintext.h" // the streams carry HTTP/3; their bytes borrow from that arena
 
 #if PC_ENABLE_HTTP3
 
@@ -52,6 +53,42 @@ static QuicPacketKeys *seal_keys(struct QuicConn *qc, int level)
 }
 
 // Find a stream slot by id, or allocate one; NULL if the table is full.
+// The plaintext-pool term this file declares: one borrow per QUIC connection, taken from the
+// persistent end on first use and held for the connection's life.
+static_assert(PC_WORK_QUIC_CONN >= (size_t)PC_QUIC_MAX_CONNS * PC_QUIC_CONN_BORROW,
+              "PC_WORK_QUIC_CONN must cover one outbound buffer per stream plus one CRYPTO window per "
+              "packet-number space on every connection: raise it in protocore_config.h");
+
+// Offsets into the one borrow. Grouped by field, so each region's stride is a power of two.
+#define QUIC_OFF_TX 0u
+#define QUIC_OFF_CRYPTO (QUIC_OFF_TX + (size_t)PC_QUIC_MAX_STREAMS * PC_QUIC_STREAM_TX)
+
+// The connection's bytes, split by offset over its streams and packet-number spaces. Idempotent: a
+// connection initialised again keeps the borrow it already holds, because the persistent end is
+// never given back.
+static proto_bool quic_conn_slot_storage(struct QuicConn *qc)
+{
+    uint8_t *base = qc->streams[0].tx; // QUIC_OFF_TX is 0, so the borrow is recoverable from it
+    if (base == NULL)
+    {
+        pc_span b = pc_plaintext_persist_span(PC_QUIC_CONN_BORROW);
+        if (!pc_span_ok(b))
+        {
+            return PROTO_FALSE;
+        }
+        base = b.buf;
+    }
+    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    {
+        qc->streams[i].tx = base + QUIC_OFF_TX + i * PC_QUIC_STREAM_TX;
+    }
+    for (size_t i = 0; i < 3; i++)
+    {
+        qc->space[i].crypto_rx = base + QUIC_OFF_CRYPTO + i * PC_QUIC_CRYPTO_RX;
+    }
+    return PROTO_TRUE;
+}
+
 static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool create)
 {
     QuicStream *free_slot = NULL;
@@ -70,7 +107,11 @@ static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool creat
     {
         return NULL; // pc_quic_conn_stream_send), so the lookup-only arm is never taken
     }
+    // The bytes are the connection's and outlive the stream that last held them.
+    uint8_t *tx = free_slot->tx;
     mem.set(free_slot, 0, sizeof(*free_slot));
+    free_slot->tx = tx;
+    mem.set(tx, 0, PC_QUIC_STREAM_TX);
     free_slot->id = id;
     return free_slot;
 }
@@ -79,7 +120,16 @@ void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint
                        const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid, uint8_t our_scid_len,
                        const QuicConnCallbacks *cb)
 {
+    uint8_t *base = qc->streams[0].tx; // the borrow is the connection's, not the call's
     mem.set(qc, 0, sizeof(*qc));
+    qc->streams[0].tx = base;
+    if (!quic_conn_slot_storage(qc))
+    {
+        qc->closed = PROTO_TRUE; // no bytes to run out of; the connection answers nothing
+        return;
+    }
+    // The borrow carries the previous connection's stream and handshake bytes.
+    mem.set(base, 0, PC_QUIC_CONN_BORROW);
     mem.cpy(qc->odcid, odcid, odcid_len);
     qc->odcid_len = odcid_len;
     mem.cpy(qc->dcid, peer_scid, peer_scid_len);
@@ -145,9 +195,9 @@ static void handle_crypto(struct QuicConn *qc, int level, const QuicFrame *f)
     size_t skip = (size_t)(want - f->crypto.offset);
     const uint8_t *nd = f->crypto.data + skip;
     size_t nl = (size_t)(f->crypto.length - skip);
-    if (s->crypto_rx_have + nl > sizeof(s->crypto_rx))
+    if (s->crypto_rx_have + nl > PC_QUIC_CRYPTO_RX)
     {
-        nl = sizeof(s->crypto_rx) - s->crypto_rx_have; // clamp to the reassembly window
+        nl = PC_QUIC_CRYPTO_RX - s->crypto_rx_have; // clamp to the reassembly window
     }
     mem.cpy(s->crypto_rx + s->crypto_rx_have, nd, nl);
     s->crypto_rx_have += nl;
@@ -197,9 +247,9 @@ static void handle_stream(struct QuicConn *qc, const QuicFrame *f)
         size_t skip = (size_t)(want - f->stream.offset);
         const uint8_t *nd = f->stream.data + skip;
         size_t nl = (size_t)(f->stream.length - skip);
-        if (nl > sizeof(st->rx))
+        if (nl > PC_QUIC_STREAM_RX)
         {
-            nl = sizeof(st->rx);
+            nl = PC_QUIC_STREAM_RX;
         }
         // Deliver in place (we hand the callback the contiguous new bytes directly).
         st->rx_off += nl;
@@ -901,7 +951,7 @@ size_t pc_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const u
     {
         return 0;
     }
-    size_t room = sizeof(st->tx) - st->tx_have;
+    size_t room = PC_QUIC_STREAM_TX - st->tx_have;
     size_t take = len < room ? len : room;
     mem.cpy(st->tx + st->tx_have, data, take);
     st->tx_have += take;
