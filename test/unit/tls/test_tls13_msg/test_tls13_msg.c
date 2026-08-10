@@ -540,10 +540,11 @@ void test_tls13_dtls_client_hello_shape()
     TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_TRUE));
     TEST_ASSERT_TRUE(ch.offers_tls13); // matched against PC_TLS_VERSION_DTLS_1_3
 
-    // A non-empty legacy_cookie is skipped just the same.
+    // RFC 9147 sec 5.3: "A DTLS 1.3-only client MUST set the legacy_cookie field to zero length. If
+    // a DTLS 1.3 ClientHello is received with any other value in this field, the server MUST abort
+    // the handshake with an illegal_parameter alert." This used to assert the field was skipped.
     n = build_ch_dtls(msg, sv_dtls, sizeof(sv_dtls), 4, 4);
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_TRUE));
-    TEST_ASSERT_TRUE(ch.offers_tls13);
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_TRUE));
 
     // The same bytes read as TLS/QUIC (no legacy_cookie field) do NOT yield a DTLS 1.3 offer:
     // the field misaligns everything after it.
