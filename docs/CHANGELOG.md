@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- reject a zero or overflowing WINDOW_UPDATE (RFC 9113 sec 6.9, 6.9.1) ([`b439489`](https://github.com/dstroy0/ProtoCore/commit/b4394891df2095b10e97bc9402fada3edc711ae3))
 - the outbound frame borrows from the plaintext arena HTTP works out of ([`ce0a1e0`](https://github.com/dstroy0/ProtoCore/commit/ce0a1e0f0e37eaa39783f537d9ba922fed30f7fd))
 - DATA on an idle or closed stream is refused before the app sees it (RFC 9113 sec 5.1, 6.1) ([`0815504`](https://github.com/dstroy0/ProtoCore/commit/081550456121a0be6b6f403f65224d06902a0871))
 - an oversize dynamic-table size update is a decoding error, not a clamp ([`7ad71ec`](https://github.com/dstroy0/ProtoCore/commit/7ad71ecd09f64cdb92bca93630b5b6972b948c0a))
@@ -69,6 +70,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e66be49`](https://github.com/dstroy0/ProtoCore/commit/e66be49708952388278f0872a1da4e5a05a64be2))
+- update CHANGELOG.md [skip ci] ([`0d43b4f`](https://github.com/dstroy0/ProtoCore/commit/0d43b4f4de14622528150f0fc976ff8e0ce28fee))
 - update CHANGELOG.md [skip ci] ([`113da3d`](https://github.com/dstroy0/ProtoCore/commit/113da3d89b5be1d83a851e9e592938ed9396b63b))
 - update CHANGELOG.md [skip ci] ([`2e148d6`](https://github.com/dstroy0/ProtoCore/commit/2e148d637e66d6fa8f9c780e86a275508d770b5a))
 - update CHANGELOG.md [skip ci] ([`261d19f`](https://github.com/dstroy0/ProtoCore/commit/261d19f6ae47e743140e2e4fb952a56fd6a87dea))
@@ -213,10 +216,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
-<<<<<<< Updated upstream
-=======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b10f486`](https://github.com/dstroy0/ProtoCore/commit/b10f486dfb3f48a9da689281ed740787fe8c7e48))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a867e73`](https://github.com/dstroy0/ProtoCore/commit/a867e73a9e71da103ad33dec9980524e089a0da2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`289b418`](https://github.com/dstroy0/ProtoCore/commit/289b418f6b1dea07b64f401f63ff2abc5af51d31))
->>>>>>> Stashed changes
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cf16e2d`](https://github.com/dstroy0/ProtoCore/commit/cf16e2d0ddc42f24690ec83b5541421f0579515f))
 - close the HPACK size-update clamp ([`63327f7`](https://github.com/dstroy0/ProtoCore/commit/63327f78a94260eb08f340d92a0135fa135ee248))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c934425`](https://github.com/dstroy0/ProtoCore/commit/c93442507cdefbb53dea4ad8615718b877312ebb))
@@ -279,11 +281,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
-<<<<<<< Updated upstream
-=======
 - DATA on an idle stream is refused, and after END_STREAM resets that stream ([`ce4041f`](https://github.com/dstroy0/ProtoCore/commit/ce4041f046e61ba1bc5811b1ecb1b23c101d00d6))
 - native_h2conn links the arena under the plaintext allocator ([`ca6d01d`](https://github.com/dstroy0/ProtoCore/commit/ca6d01df6b76c0ceeaad5ad1c944ec26026f6aa1))
->>>>>>> Stashed changes
 - native_h2conn compiles the plaintext arena it now borrows from ([`6147de1`](https://github.com/dstroy0/ProtoCore/commit/6147de1aa95d6622dbc60f9e99d168eae796c6ae))
 - the interop matrix reads the negotiated MAC back out of the trace ([`48f200f`](https://github.com/dstroy0/ProtoCore/commit/48f200f8dbb2f5b49a7201a20eda68522dd14dab))
 - pin client-preference for kex, host key and MAC, and make the cyclone repro fail-able ([`b083e08`](https://github.com/dstroy0/ProtoCore/commit/b083e08868c2cd99e3021d49fa6b29a80bdb4f82))
