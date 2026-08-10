@@ -70,6 +70,33 @@ void test_int_coding()
     TEST_ASSERT_EQUAL_HEX8(0x2a, b[0]);
 }
 
+// RFC 7541 sec 5.1: "Integer encodings that exceed implementation limits - in value or octet length -
+// MUST be treated as decoding errors." The continuation is bounded at m > 28, which admits m == 28,
+// where only the low four bits survive a 32-bit shift. Anything wider silently wrapped: the encoding
+// of 34091302943 came back TRUE as 4026531871.
+void test_int_decode_rejects_overflowing_prefix_int()
+{
+    size_t c = 0;
+    uint32_t v = 0;
+
+    // 0x7f << 28 does not fit 32 bits.
+    const uint8_t over[6] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x7f};
+    TEST_ASSERT_FALSE(HpackPrim.decode_int(over, sizeof over, 5, &c, &v));
+
+    // 0x10 << 28 is the first that does not fit; 0x0f << 28 is the last that does.
+    const uint8_t just_over[6] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x10};
+    TEST_ASSERT_FALSE(HpackPrim.decode_int(just_over, sizeof just_over, 5, &c, &v));
+
+    const uint8_t largest[6] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x0f};
+    TEST_ASSERT_TRUE(HpackPrim.decode_int(largest, sizeof largest, 5, &c, &v));
+    TEST_ASSERT_EQUAL_UINT32(31u + (0x0fu << 28), v);
+    TEST_ASSERT_EQUAL_INT(6, (int)c);
+
+    // The octet-length bound still holds: a sixth continuation byte is past m == 28.
+    const uint8_t too_long[7] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00};
+    TEST_ASSERT_FALSE(HpackPrim.decode_int(too_long, sizeof too_long, 5, &c, &v));
+}
+
 void test_huffman()
 {
     const char *s = "www.example.com";
@@ -456,6 +483,7 @@ int main()
     RUN_TEST(test_hpack_resolve_dynamic_name_too_big);
     RUN_TEST(test_hpack_encode_paths);
     RUN_TEST(test_int_coding);
+    RUN_TEST(test_int_decode_rejects_overflowing_prefix_int);
     RUN_TEST(test_huffman);
     RUN_TEST(test_decode_c31_and_index);
     RUN_TEST(test_dynamic_eviction);
