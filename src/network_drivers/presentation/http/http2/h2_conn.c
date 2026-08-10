@@ -28,36 +28,6 @@ static void wr(H2Conn *c, const uint8_t *data, size_t len)
     }
 }
 
-// The plaintext-pool term this file declares: one borrow per HTTP/2 connection, taken from the
-// persistent end on first use and held for the connection's life.
-static_assert(PC_PLAINTEXT_WORK_H2_CONN <= PC_PLAINTEXT_ARENA_SIZE,
-              "PC_PLAINTEXT_ARENA_SIZE must cover one frame + header-block + HPACK-scratch borrow per HTTP/2 "
-              "connection: raise it in protocore_config.h");
-
-// Offsets into the one borrow.
-#define H2_OFF_FBUF 0u
-#define H2_OFF_HBLOCK (H2_OFF_FBUF + H2_FRAME_HEADER_LEN + PC_H2_MAX_FRAME)
-#define H2_OFF_HSCRATCH (H2_OFF_HBLOCK + PC_H2_HDR_BLOCK)
-
-// The connection's bytes, split by offset. Idempotent: a connection initialised again keeps the
-// borrow it already holds, because the persistent end is never given back.
-static proto_bool h2_conn_slot_storage(H2Conn *c)
-{
-    if (c->fbuf != NULL)
-    {
-        return PROTO_TRUE;
-    }
-    pc_span b = pc_plaintext_persist_span(PC_H2_CONN_BORROW);
-    if (!pc_span_ok(b))
-    {
-        return PROTO_FALSE;
-    }
-    c->fbuf = b.buf + H2_OFF_FBUF;
-    c->hblock = b.buf + H2_OFF_HBLOCK;
-    c->hscratch = (char *)(b.buf + H2_OFF_HSCRATCH);
-    return PROTO_TRUE;
-}
-
 static H2Stream *find_stream(H2Conn *c, uint32_t id)
 {
     for (int i = 0; i < PC_H2_MAX_STREAMS; i++)
@@ -230,7 +200,7 @@ static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char
 static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
 {
     H2Conn *c = b->c;
-    if (!pc_hpack_decode(&c->hdec, block, len, c->hscratch, PC_H2_HDR_BLOCK, emit_header, b))
+    if (!pc_hpack_decode(&c->hdec, block, len, c->hscratch, sizeof c->hscratch, emit_header, b))
     {
         return PROTO_FALSE; // COMPRESSION_ERROR
     }
@@ -337,7 +307,7 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
         return decode_block(&b, p, plen);
     }
     // Spans CONTINUATION frames: buffer the fragment.
-    if (plen > PC_H2_HDR_BLOCK)
+    if (plen > sizeof c->hblock)
     {
         return PROTO_FALSE;
     }
@@ -362,7 +332,7 @@ static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const u
     {
         return PROTO_FALSE; // sec 6.10: an empty CONTINUATION adds no bytes, so cap the count too
     }
-    if (c->hblock_len + h->length > PC_H2_HDR_BLOCK)
+    if (c->hblock_len + h->length > sizeof c->hblock)
     {
         return PROTO_FALSE;
     }
@@ -604,16 +574,7 @@ static proto_bool process_frame(H2Conn *c)
 
 void pc_h2_conn_init(H2Conn *c, const H2Callbacks *cb)
 {
-    // The borrow belongs to the connection, not to the call: it is taken across the zero below, or
-    // every init would draw a fresh one from an end that is never given back.
-    uint8_t *base = c->fbuf;
     mem.set(c, 0, sizeof(*c));
-    c->fbuf = base;
-    if (!h2_conn_slot_storage(c))
-    {
-        c->phase = 2; // no bytes to run out of; the connection is closed before it opens
-        return;
-    }
     c->cb = *cb;
     c->phase = 0;
     pc_h2_settings_defaults(&c->peer);
