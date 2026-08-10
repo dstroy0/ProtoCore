@@ -3803,7 +3803,7 @@
     },
     "native_tls_conn": {
       "desc": "TLS 1.3 handshake driver over the stream record layer (network_drivers/tls/tls_conn,\nRFC 8446 sec 4): the module drives both ends, so the test stands a client and a server up against\neach other and runs the full handshake - ClientHello, the server flight, both Finished messages -\nthen checks the two installed the same application-traffic keys by sealing on one end and opening\non the other. Around that: the profile refusals (a ClientHello without TLS 1.3, without X25519,\nwithout a key_share, without Ed25519, or offering no cipher suite this stack implements) and the\nalert each ends on. The message bytes are pinned against RFC 8448 in test_tls13_msg and the key\nschedule in test_tls13_kdf; what this adds is the state machine and the one secure-pool borrow it\nruns out of.",
-      "flags": ["-DPC_TLS_SOFTWARE=1", "-DPC_ENABLE_TLS_RPK=1"],
+      "flags": ["-DPC_ENABLE_TLS=1"],
       "src": [
         "+<network_drivers/tls/tls_conn.c>",
         "+<network_drivers/tls/tls_record.c>",
