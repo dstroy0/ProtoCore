@@ -92,6 +92,37 @@ void test_early_secret()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_EARLY, 32);
 }
 
+// RFC 8448 sec 5 is a second published run of the same schedule: a HelloRetryRequest exchange over
+// P-256 rather than sec 3's one-shot X25519. Its transcript hash is the one the sec 4.4.1
+// substitution produces - Hash(message_hash || 00 00 20 || Hash(ClientHello1)) carried through the
+// HelloRetryRequest, ClientHello2 and ServerHello - so pinning the secrets it yields anchors the
+// handshake half on a trace whose transcript was built the substituted way. sec 3 alone never
+// exercises that.
+static const char *S5_ECDHE = "c142ce13ca11b5c2233652e63ad3d97844f1621fbfb9de69d547dc8fedeabeb4";
+static const char *S5_TRANSCRIPT = "8aa8e828ec2f8a884fec95a3139de01c15a3daa7ff5bfc3f4bfcc21b438d7bf8";
+static const char *S5_HANDSHAKE = "ce022e5e6e81e50736d773f2d3adfce8220d049bf510f0dbfac927ef4243b148";
+static const char *S5_C_HS = "158aa7ab8855073582b41d674b4055cabcc534728f659314861b4e08e2011566";
+static const char *S5_S_HS = "3403e781e2af7b6508da28574f6e95a1abf162de83a97927c37672a4a0cef8a1";
+
+void test_handshake_secrets_rfc8448_section5()
+{
+    uint8_t ecdhe[32], transcript[32];
+    hx(S5_ECDHE, ecdhe, 32);
+    hx(S5_TRANSCRIPT, transcript, 32);
+    Tls13KeySchedule ks;
+    static uint8_t ks_store_s5[PC_TLS13_KS_BORROW];
+    pc_tls13_ks_early(&TLS13_KDF, &ks, ks_store_s5);
+    pc_tls13_ks_handshake(&ks, ecdhe, transcript, 32);
+
+    uint8_t exp[32];
+    hx(S5_HANDSHAKE, exp, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_HANDSHAKE, 32);
+    hx(S5_C_HS, exp, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_CLIENT_HS, 32);
+    hx(S5_S_HS, exp, 32);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_SERVER_HS, 32);
+}
+
 void test_handshake_secrets()
 {
     uint8_t ecdhe[32], ch_sh[32];
@@ -319,6 +350,7 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_early_secret);
     RUN_TEST(test_handshake_secrets);
+    RUN_TEST(test_handshake_secrets_rfc8448_section5);
     RUN_TEST(test_master_secrets);
     RUN_TEST(test_server_hs_write_keys);
     RUN_TEST(test_server_finished);

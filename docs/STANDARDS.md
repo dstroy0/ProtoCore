@@ -145,4 +145,4 @@ newer entry here.
 
 - [RFC 8446](https://www.rfc-editor.org/rfc/rfc8446) - TLS 1.3 - **via mbedTLS** (server + client); explicit version control is **roadmap**.
 - [RFC 5246](https://www.rfc-editor.org/rfc/rfc5246) - TLS 1.2 - **via mbedTLS**; explicit support is **roadmap**.
-- [RFC 5077](https://www.rfc-editor.org/rfc/rfc5077) - TLS session resumption (tickets) - **impl** (stateless ticket key-rotation and resumption context).
+- [RFC 5077](https://www.rfc-editor.org/rfc/rfc5077) - TLS session resumption (tickets) - **via mbedTLS** (stateless ticket key-rotation and resumption context). Gated on `PC_ENABLE_TLS_RESUMPTION`, which lives inside the vendor arm of `tls.c`; a host build has no vendor stack, so no test env exercises it.
