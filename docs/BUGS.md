@@ -462,6 +462,32 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Not a fix:** setting `CONFIG_COMPILER_OPTIMIZATION_PERF` in the example. That turns the job
   green and leaves every consumer's debug build broken.
 
+## No host env compiles a C++ translation unit, and C++ is how the library is consumed
+
+- **Status:** OPEN, found 2026-08-10 asking why the `extern "C"` include break above could sit in
+  `protocore.h` unnoticed.
+- **Symptom:** none, on host. That is the finding. Of the **330 environments in
+  `test/test_matrix.json`, zero compile any `.cpp`** - every one of them is C. Meanwhile every
+  consumer includes `protocore.h` from a `.ino` or a `.cpp`: the three examples under
+  `examples/esp-idf/`, every sketch under `examples/`, and `test/penetration_testing/rig_firmware/`.
+  The primary consumption path of the public header has no host coverage at all.
+- **What it hides:** anything that is only ill-formed in C++. The `extern "C"` include break above is
+  exactly that shape, and it reached main because nothing off-target ever compiled the header as C++.
+  It is the same blind spot as the accelerated crypto arms (no host env sets `PC_HAS_HW_SHA` /
+  `PC_HAS_HW_ECC`, which is how `pc_sha256` lost its `work` parameter and `PC_WORK_KDF` stopped
+  covering its own context) and as `-Og` (host builds at `-O2`, which is how the SWAR leaves could
+  not be reached through their Ns table). Three separate classes, one cause: the matrix compiles one
+  configuration of a library that ships several.
+- **Not free to add today:** a host C++ env would fail immediately, and not only on the `extern "C"`
+  break. `src/mmgr/ring.h:76` declares `pc_ring_available(const _Atomic size_t *head, ...)`, and
+  `_Atomic` is a C keyword - under host `g++` the header does not compile at all
+  (`error: '_Atomic' does not name a type`). It works on the ESP toolchain only because that
+  `<stdatomic.h>` shims `_Atomic` in C++ mode. So the header is C-only by construction while sitting
+  on the include path of every C++ consumer.
+- **Fix:** ordered, not parallel. Close the `extern "C"` break above first, then decide what
+  `ring.h` publishes to a C++ TU, and only then add the env - one environment compiling a single
+  `.cpp` that includes `protocore.h` would gate all three from then on.
+
 ## protocore.h wraps its 268 includes in `extern "C"`, so a C++ standard header lands inside one
 
 - **Status:** OPEN, found 2026-08-10 working the ESP-IDF Build job back to green. It is the third
