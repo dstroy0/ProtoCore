@@ -55,6 +55,14 @@ static void minimal_qc(struct QuicConn *qc)
     }
 }
 
+// A connection that has finished its handshake: HTTP/3 stream data only ever arrives in 1-RTT
+// packets, and RFC 9000 sec 10.2.3 permits the application CONNECTION_CLOSE only at that level.
+static void established_qc(struct QuicConn *qc)
+{
+    minimal_qc(qc);
+    qc->tls.ap_keys_ready = PROTO_TRUE;
+}
+
 static QuicStream *find_stream(struct QuicConn *qc, uint64_t id)
 {
     for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
@@ -431,7 +439,7 @@ void test_h3_control_only_frames_on_a_request_stream()
     {
         g_requests = 0;
         QuicConn qc;
-        minimal_qc(&qc);
+        established_qc(&qc);
         H3Conn h3;
         pc_h3_conn_init(&h3, &qc, on_request, NULL);
 
@@ -452,13 +460,32 @@ void test_h3_control_only_frames_on_a_request_stream()
     }
 }
 
+// RFC 9000 sec 10.2.3: the application CONNECTION_CLOSE (0x1d) may only be sent in 0-RTT or 1-RTT
+// packets. Before those keys exist the same intent goes as a transport close with
+// APPLICATION_ERROR, whose code is read against sec 20.1, so the HTTP/3 code is not carried.
+void test_h3_error_before_app_keys_falls_back_to_transport()
+{
+    QuicConn qc;
+    minimal_qc(&qc); // deliberately not established: no 1-RTT keys
+    H3Conn h3;
+    pc_h3_conn_init(&h3, &qc, on_request, NULL);
+
+    uint8_t req[128];
+    size_t rp = pc_h3_build_data(req, sizeof(req), (const uint8_t *)"body", 4);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+
+    TEST_ASSERT_TRUE(qc.close_queued);
+    TEST_ASSERT_FALSE(qc.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(QUIC_ERR_APPLICATION, qc.close_error);
+}
+
 // RFC 9114 sec 4.1: "a DATA frame before any HEADERS frame ... is considered invalid", and an
 // invalid sequence is a connection error of type H3_FRAME_UNEXPECTED.
 void test_h3_data_before_headers()
 {
     g_requests = 0;
     QuicConn qc;
-    minimal_qc(&qc);
+    established_qc(&qc);
     H3Conn h3;
     pc_h3_conn_init(&h3, &qc, on_request, NULL);
 
@@ -478,7 +505,7 @@ void test_h3_data_before_headers()
 void test_h3_second_control_stream()
 {
     QuicConn qc;
-    minimal_qc(&qc);
+    established_qc(&qc);
     H3Conn h3;
     pc_h3_conn_init(&h3, &qc, on_request, NULL);
 
@@ -504,7 +531,7 @@ void test_h3_second_control_stream()
 void test_h3_second_settings_frame()
 {
     QuicConn qc;
-    minimal_qc(&qc);
+    established_qc(&qc);
     H3Conn h3;
     pc_h3_conn_init(&h3, &qc, on_request, NULL);
 
@@ -601,7 +628,7 @@ void test_h3_control_stream_frame_guards()
     // MUST be treated as a connection error of type H3_MISSING_SETTINGS." This used to assert the
     // frame was consumed and ignored.
     QuicConn qc3;
-    minimal_qc(&qc3);
+    established_qc(&qc3);
     H3Conn h3c;
     pc_h3_conn_init(&h3c, &qc3, on_request, NULL);
     uint8_t s3[64];
@@ -702,6 +729,7 @@ int main(void)
     RUN_TEST(test_h3_pseudo_header_name_variants);
     RUN_TEST(test_h3_request_unknown_frame_and_empty_data);
     RUN_TEST(test_h3_control_only_frames_on_a_request_stream);
+    RUN_TEST(test_h3_error_before_app_keys_falls_back_to_transport);
     RUN_TEST(test_h3_data_before_headers);
     RUN_TEST(test_h3_second_control_stream);
     RUN_TEST(test_h3_second_settings_frame);
