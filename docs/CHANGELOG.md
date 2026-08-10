@@ -112,6 +112,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`9cc54c6`](https://github.com/dstroy0/ProtoCore/commit/9cc54c6abdb59b8d6f9e849711fa58a7b64fb809))
+- update CHANGELOG.md [skip ci] ([`6e093f8`](https://github.com/dstroy0/ProtoCore/commit/6e093f80e86b7d94adbc7f73b9ef47fd8406b87d))
 - update CHANGELOG.md [skip ci] ([`3e44f1a`](https://github.com/dstroy0/ProtoCore/commit/3e44f1ad6cc837fd24dc5df5f43606846651e6fa))
 - update CHANGELOG.md [skip ci] ([`7761aa5`](https://github.com/dstroy0/ProtoCore/commit/7761aa566f06dca9cbb8186b88a24aad2a809124))
 - update CHANGELOG.md [skip ci] ([`3ee7dae`](https://github.com/dstroy0/ProtoCore/commit/3ee7daee8396d55f8f8b735836866c02741af50c))
@@ -462,6 +464,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- pc_ct_eq had no test; every tag and MAC check goes through it ([`e465c91`](https://github.com/dstroy0/ProtoCore/commit/e465c9123e59f4ec03dd90bdb7eaab031440dfa2))
 - the blob test pinned the host double's truncation, not the contract ([`ffe68b0`](https://github.com/dstroy0/ProtoCore/commit/ffe68b0183bef5e9b66b83fd98a74bae563923fa))
 - host_nvs reaches str now, so its two envs compile protostr ([`3c5dd8e`](https://github.com/dstroy0/ProtoCore/commit/3c5dd8e380c00c1a188b6b3ba667b241f5d17bd0))
 - the cases share the connection slot ([`7ec6716`](https://github.com/dstroy0/ProtoCore/commit/7ec6716ecf1bbe3b15a4d328878b97f255630948))
