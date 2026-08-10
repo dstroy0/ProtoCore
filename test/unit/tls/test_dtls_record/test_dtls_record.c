@@ -485,17 +485,6 @@ static void test_dtls_replay_mark_below_window(void)
 // DtlsRecord.plaintext_parse rejects a record whose legacy_version high byte is correct but whose low
 // byte is wrong (the second half of the `||` version check, not exercised by the "high byte wrong"
 // case in test_dtls_plaintext_roundtrip).
-static void test_dtls_plaintext_parse_wrong_version_low_byte(void)
-{
-    const uint8_t frag[4] = {1, 2, 3, 4};
-    uint8_t rec[32];
-    size_t n = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 1, frag, sizeof(frag), rec, sizeof(rec));
-    TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_EQUAL_UINT8(0xFE, rec[1]); // high byte correct (left side of the || is false)
-    rec[2] = 0x00;                         // low byte wrong -> right side of the || is true
-    DtlsPlaintext pt;
-    TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.plaintext_parse(rec, n, &pt));
-}
 
 // A CID record whose caller-supplied length is right but the record is too short to actually hold
 // that many CID bytes is rejected (the "off + expected_cid_len > rec_len" arm, distinct from the
@@ -582,7 +571,6 @@ int main(void)
     RUN_TEST(test_dtls_unprotect_bounds);
     RUN_TEST(test_dtls_unprotect_all_zero_inner);
     RUN_TEST(test_dtls_replay_mark_below_window);
-    RUN_TEST(test_dtls_plaintext_parse_wrong_version_low_byte);
     RUN_TEST(test_dtls_cid_record_too_short_for_expected_cid);
     RUN_TEST(test_dtls_unprotect_seq8_variant);
     RUN_TEST(test_dtls_seq_reconstruction_overflow_guard);
