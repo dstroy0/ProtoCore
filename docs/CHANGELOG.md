@@ -77,10 +77,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
-<<<<<<< Updated upstream
-=======
+- update CHANGELOG.md [skip ci] ([`e7ead47`](https://github.com/dstroy0/ProtoCore/commit/e7ead47cc17cb988fed01f0d681360ca4228437e))
+- update CHANGELOG.md [skip ci] ([`869df4b`](https://github.com/dstroy0/ProtoCore/commit/869df4becdd2ea6a4736389f562b210b407b40d0))
 - update CHANGELOG.md [skip ci] ([`1f7483c`](https://github.com/dstroy0/ProtoCore/commit/1f7483c996b6d9da8c9756151e68a935ac992ccf))
->>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`0274a9a`](https://github.com/dstroy0/ProtoCore/commit/0274a9a4c04ece0f2089c7729dca2558edf199c1))
 - update CHANGELOG.md [skip ci] ([`9a2de00`](https://github.com/dstroy0/ProtoCore/commit/9a2de00c19a106e32634709515bdbb6193046230))
 - update CHANGELOG.md [skip ci] ([`a73ead7`](https://github.com/dstroy0/ProtoCore/commit/a73ead7075d515074a045b3fcb35ff03e9054849))
@@ -317,6 +316,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the sec 4.1 / 6.2.1 / 7.2.4 rules the suite used to assert against ([`244e7e5`](https://github.com/dstroy0/ProtoCore/commit/244e7e5871f19f52d7704036deedcdc16195d6bf))
 - pin the Fixed Bit rule and both sides of the 2^60 max_streams bound ([`1861b3b`](https://github.com/dstroy0/ProtoCore/commit/1861b3baecaf83a54b18f97e7f2ec6a6d5e2494d))
 - enumerate the Appendix A static table and the Appendix B Huffman code ([`d3fe3ef`](https://github.com/dstroy0/ProtoCore/commit/d3fe3efe9f55772c47d071051a5e7aa9a37c543c))
 - the idle-stream, frame-size and CONTINUATION-flood rules ([`8db9f95`](https://github.com/dstroy0/ProtoCore/commit/8db9f9551f7349b457362c3bda472f5e85d5f0fb))
