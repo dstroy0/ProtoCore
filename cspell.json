@@ -625,6 +625,7 @@
     "keylengths",
     "keymat",
     "keypair",
+    "keyshare",
     "keystream",
     "keystreams",
     "keywordflow",
