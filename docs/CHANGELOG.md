@@ -6,6 +6,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+<<<<<<< Updated upstream
+=======
+- claiming a slot orphaned both engines' borrows ([`c722cbf`](https://github.com/dstroy0/ProtoCore/commit/c722cbfa93b8118b8abc016d5e408bed5d118109))
+>>>>>>> Stashed changes
 - the init wipe ran through the pointer from before the split ([`6aac99b`](https://github.com/dstroy0/ProtoCore/commit/6aac99b774099c8af1fbedaa3a55c814370d57c6))
 - a re-used stream slot served the previous request's pseudo-headers ([`690d135`](https://github.com/dstroy0/ProtoCore/commit/690d13565315147c53502e1bc3a101dee0a93d73))
 - the re-init split ran from a base it had already zeroed away ([`648b45b`](https://github.com/dstroy0/ProtoCore/commit/648b45b51d5eeaf8e86f994712c488c2da9ae975))
@@ -93,6 +97,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e24dbdc`](https://github.com/dstroy0/ProtoCore/commit/e24dbdcfb8e84314a11adbb7238dc7188324a8a7))
 - update CHANGELOG.md [skip ci] ([`3f743b0`](https://github.com/dstroy0/ProtoCore/commit/3f743b0b96894e91ea01c43e239f441a4154d01a))
 - update CHANGELOG.md [skip ci] ([`aec0fe0`](https://github.com/dstroy0/ProtoCore/commit/aec0fe05c248db49c25156df4b4ad3ffc4d31779))
 - update CHANGELOG.md [skip ci] ([`7fb683a`](https://github.com/dstroy0/ProtoCore/commit/7fb683a853781a9a5dab2be9ee0d8ef1100df251))
@@ -291,6 +296,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+<<<<<<< Updated upstream
+=======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c690b49`](https://github.com/dstroy0/ProtoCore/commit/c690b49b824981438e2bdc660554201d4eb8f9d4))
+>>>>>>> Stashed changes
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cc04af7`](https://github.com/dstroy0/ProtoCore/commit/cc04af77adae18e301212e1e90ca17a81492a5d4))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`52b7504`](https://github.com/dstroy0/ProtoCore/commit/52b750499a69670948596653063c856a6a3dc64d))
 - the plaintext arena is a sum now; its placement and per-slot multiplier are not ([`34d1e0e`](https://github.com/dstroy0/ProtoCore/commit/34d1e0e6eca3eff196f63f9f551599030640c2c5))
