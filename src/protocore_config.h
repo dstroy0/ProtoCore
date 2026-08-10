@@ -5958,6 +5958,34 @@ from halves and is slower than the width it decomposes into"
 #define PC_H3_MAX_STREAMS 8
 #endif
 
+/** @brief Simultaneous HTTP/3 connections. Each is a QuicConn plus an H3Conn. */
+#ifndef PC_QUIC_MAX_CONNS
+#define PC_QUIC_MAX_CONNS 2
+#endif
+
+// What one HTTP/3 request stream holds: the frames it reassembles and the three pseudo-headers it
+// captures out of them. Every one is a power of two, so a stream reaches its own bytes with a shift.
+#ifndef PC_H3_STREAM_BUF
+#define PC_H3_STREAM_BUF 2048 ///< per-request-stream reassembly buffer (HEADERS + DATA)
+#endif
+#ifndef PC_H3_PATH_LEN
+#define PC_H3_PATH_LEN 256 ///< captured :path length cap
+#endif
+#ifndef PC_H3_AUTHORITY_LEN
+#define PC_H3_AUTHORITY_LEN 128 ///< captured :authority length cap
+#endif
+#ifndef PC_H3_METHOD_LEN
+#define PC_H3_METHOD_LEN 16 ///< captured :method length cap
+#endif
+// What QPACK decodes a field section through, and what a response field section is encoded into.
+// Both are taken from the plaintext pool's transient end while one call runs.
+#ifndef PC_H3_QPACK_SCRATCH
+#define PC_H3_QPACK_SCRATCH 512
+#endif
+#ifndef PC_H3_QPACK_BLOCK
+#define PC_H3_QPACK_BLOCK 256
+#endif
+
 /**
  * @brief HTTP Range requests / 206 Partial Content (requires PC_ENABLE_FILE_SERVING or
  *        PC_ENABLE_EDGE_CACHE).
@@ -6519,14 +6547,30 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_H2_CONN ((size_t)MAX_CONNS * ((size_t)PC_H2_MAX_FRAME + 2u * (size_t)PC_H2_HDR_BLOCK + 16u))
 #endif
 
+// One borrow per HTTP/3 connection from the same persistent end, grouped by field rather than by
+// stream: every reassembly buffer, then every :path, every :authority and every :method. Grouped,
+// each stride is a power of two and stream i reaches its bytes with a shift; strided by stream, the
+// stride would be their sum and the reach a multiply. Proved by a static_assert in h3_conn.c.
+#ifndef PC_WORK_H3_CONN
+#define PC_WORK_H3_CONN                                                                                                \
+    ((size_t)PC_QUIC_MAX_CONNS * (size_t)PC_H3_MAX_STREAMS *                                                           \
+     ((size_t)PC_H3_STREAM_BUF + PC_H3_PATH_LEN + PC_H3_AUTHORITY_LEN + PC_H3_METHOD_LEN))
+#endif
+
 #if PC_ENABLE_HTTP2
 #define PC_PLAINTEXT_WORK_H2CONN PC_WORK_H2_CONN
 #else
 #define PC_PLAINTEXT_WORK_H2CONN 0
 #endif
 
+#if PC_ENABLE_HTTP3
+#define PC_PLAINTEXT_WORK_H3CONN PC_WORK_H3_CONN
+#else
+#define PC_PLAINTEXT_WORK_H3CONN 0
+#endif
+
 #ifndef PC_PLAINTEXT_ARENA_SIZE
-#define PC_PLAINTEXT_ARENA_SIZE (PC_PLAINTEXT_SCRATCH + PC_PLAINTEXT_WORK_H2CONN + 256)
+#define PC_PLAINTEXT_ARENA_SIZE (PC_PLAINTEXT_SCRATCH + PC_PLAINTEXT_WORK_H2CONN + PC_PLAINTEXT_WORK_H3CONN + 256)
 #endif
 
 /**

@@ -8,6 +8,7 @@
 
 #include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "mmgr/protomem.h"
+#include "mmgr/plaintext.h" // HTTP is plaintext; its streams borrow from that arena
 
 #if PC_ENABLE_HTTP3
 
@@ -22,6 +23,42 @@
 static_assert(PC_H3_STREAM_BUF >= 256 + 16,
               "PC_H3_STREAM_BUF must hold a whole response HEADERS frame: the 256-byte QPACK field section "
               "pc_h3_conn_respond builds plus the H3 frame type and length varints");
+
+// The plaintext-pool term this file declares: one borrow per HTTP/3 connection, taken from the
+// persistent end on first use and held for the connection's life.
+static_assert(PC_WORK_H3_CONN >= (size_t)PC_QUIC_MAX_CONNS * PC_H3_CONN_BORROW,
+              "PC_WORK_H3_CONN must cover one reassembly + pseudo-header borrow per HTTP/3 stream on every "
+              "connection: raise it in protocore_config.h");
+
+// Offsets into the one borrow. Grouped by field, so each region's stride is a power of two.
+#define H3_OFF_BUF 0u
+#define H3_OFF_PATH (H3_OFF_BUF + (size_t)PC_H3_MAX_STREAMS * PC_H3_STREAM_BUF)
+#define H3_OFF_AUTHORITY (H3_OFF_PATH + (size_t)PC_H3_MAX_STREAMS * PC_H3_PATH_LEN)
+#define H3_OFF_METHOD (H3_OFF_AUTHORITY + (size_t)PC_H3_MAX_STREAMS * PC_H3_AUTHORITY_LEN)
+
+// The connection's bytes, split by offset over its streams. Idempotent: a connection initialised
+// again keeps the borrow it already holds, because the persistent end is never given back.
+static proto_bool h3_conn_slot_storage(H3Conn *h3)
+{
+    uint8_t *base = h3->streams[0].buf; // H3_OFF_BUF is 0, so the borrow is recoverable from it
+    if (base == NULL)
+    {
+        pc_span b = pc_plaintext_persist_span(PC_H3_CONN_BORROW);
+        if (!pc_span_ok(b))
+        {
+            return PROTO_FALSE;
+        }
+        base = b.buf;
+    }
+    for (size_t i = 0; i < PC_H3_MAX_STREAMS; i++)
+    {
+        h3->streams[i].buf = base + H3_OFF_BUF + i * PC_H3_STREAM_BUF;
+        h3->streams[i].path = (char *)(base + H3_OFF_PATH + i * PC_H3_PATH_LEN);
+        h3->streams[i].authority = (char *)(base + H3_OFF_AUTHORITY + i * PC_H3_AUTHORITY_LEN);
+        h3->streams[i].method = (char *)(base + H3_OFF_METHOD + i * PC_H3_METHOD_LEN);
+    }
+    return PROTO_TRUE;
+}
 
 static H3Stream *pc_h3_stream_get(H3Conn *h3, uint64_t id, proto_bool create)
 {
@@ -41,7 +78,15 @@ static H3Stream *pc_h3_stream_get(H3Conn *h3, uint64_t id, proto_bool create)
     {
         return NULL;
     }
+    uint8_t *buf = free_slot->buf;
+    char *method = free_slot->method;
+    char *path = free_slot->path;
+    char *authority = free_slot->authority;
     mem.set(free_slot, 0, sizeof(*free_slot));
+    free_slot->buf = buf;
+    free_slot->method = method;
+    free_slot->path = path;
+    free_slot->authority = authority;
     free_slot->id = id;
     return free_slot;
 }
@@ -67,15 +112,15 @@ static proto_bool req_emit(void *ctx, const char *name, size_t nlen, const char 
     H3Stream *st = ((ReqEmit *)ctx)->st;
     if (nlen == 7 && mem.cmp(name, ":method", 7) == 0)
     {
-        set_field(st->method, sizeof(st->method), value, vlen);
+        set_field(st->method, PC_H3_METHOD_LEN, value, vlen);
     }
     else if (nlen == 5 && mem.cmp(name, ":path", 5) == 0)
     {
-        set_field(st->path, sizeof(st->path), value, vlen);
+        set_field(st->path, PC_H3_PATH_LEN, value, vlen);
     }
     else if (nlen == 10 && mem.cmp(name, ":authority", 10) == 0)
     {
-        set_field(st->authority, sizeof(st->authority), value, vlen);
+        set_field(st->authority, PC_H3_AUTHORITY_LEN, value, vlen);
     }
     return PROTO_TRUE; // ignore regular headers for now (routing is by method + path)
 }
@@ -94,8 +139,19 @@ static void h3_fail(H3Conn *h3, uint64_t error_code)
 // Parse the accumulated request stream: decode HEADERS, coalesce DATA into a body, and dispatch.
 static void dispatch_request(H3Conn *h3, H3Stream *st)
 {
-    static uint8_t body[PC_H3_STREAM_BUF];
-    static char scratch[PC_H3_PATH_LEN + PC_H3_AUTHORITY_LEN + 64];
+    // The bytes this dispatch works out of: the coalesced body and what QPACK decodes through. They
+    // live for the call, so they come from the transient end and go back at every exit.
+    const size_t mark = pc_plaintext_mark();
+    pc_span bs = pc_plaintext_span(PC_H3_STREAM_BUF, 4);
+    pc_span sc = pc_plaintext_span(PC_H3_QPACK_SCRATCH, 4);
+    if (!pc_span_ok(bs) || !pc_span_ok(sc))
+    {
+        pc_plaintext_release(mark);
+        h3_fail(h3, H3_INTERNAL_ERROR);
+        return;
+    }
+    uint8_t *body = bs.buf;
+    char *scratch = (char *)sc.buf;
     size_t body_len = 0;
 
     size_t off = 0;
@@ -117,28 +173,30 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
         // previously skipped over as if the frame were an unknown type.
         if (fr.type == H3_SETTINGS || fr.type == H3_GOAWAY || fr.type == H3_MAX_PUSH_ID || fr.type == H3_CANCEL_PUSH)
         {
+            pc_plaintext_release(mark);
             h3_fail(h3, H3_FRAME_UNEXPECTED);
             return;
         }
         if (fr.type == H3_DATA && !st->have_headers)
         {
+            pc_plaintext_release(mark);
             h3_fail(h3, H3_FRAME_UNEXPECTED);
             return;
         }
         if (fr.type == H3_HEADERS)
         {
             ReqEmit e = {st};
-            pc_qpack_decode(fp, (size_t)fr.length, scratch, sizeof(scratch), req_emit, &e);
+            pc_qpack_decode(fp, (size_t)fr.length, scratch, PC_H3_QPACK_SCRATCH, req_emit, &e);
             st->have_headers = PROTO_TRUE;
         }
         else if (fr.type == H3_DATA)
         {
             // Copy only while there is room left in body. room is 0 once body is full (no underflow),
-            // and take is clamped to it, so body_len + take <= sizeof(body). Both arms of both guards
-            // are defensive: body and st->buf are the same PC_H3_STREAM_BUF size, and every DATA
-            // payload counted into body_len sits behind a frame header inside st->buf, so the running
-            // total is always strictly below sizeof(body) and take never exceeds room.
-            size_t room = (body_len < sizeof(body)) ? sizeof(body) - body_len : 0;
+            // and take is clamped to it, so body_len + take <= PC_H3_STREAM_BUF. Both arms of both
+            // guards are defensive: body and st->buf are the same PC_H3_STREAM_BUF size, and every
+            // DATA payload counted into body_len sits behind a frame header inside st->buf, so the
+            // running total is always strictly below it and take never exceeds room.
+            size_t room = (body_len < PC_H3_STREAM_BUF) ? PC_H3_STREAM_BUF - body_len : 0;
             size_t take = (size_t)fr.length;
             if (take > room)
             {
@@ -157,13 +215,14 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
     {
         h3->on_request(h3->app, h3, st->id, st->method, st->path, st->authority, body, body_len);
     }
+    pc_plaintext_release(mark);
 }
 
 static void append(H3Stream *st, const uint8_t *data, size_t len)
 {
-    if (len > sizeof(st->buf) - st->buf_len)
+    if (len > PC_H3_STREAM_BUF - st->buf_len)
     {
-        len = sizeof(st->buf) - st->buf_len;
+        len = PC_H3_STREAM_BUF - st->buf_len;
     }
     mem.cpy(st->buf + st->buf_len, data, len);
     st->buf_len += len;
@@ -321,7 +380,13 @@ static void on_handshake_done(void *app, struct QuicConn *qc)
 
 void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app)
 {
+    uint8_t *base = h3->streams[0].buf; // the borrow is the connection's, not the call's
     mem.set(h3, 0, sizeof(*h3));
+    h3->streams[0].buf = base;
+    if (!h3_conn_slot_storage(h3))
+    {
+        return; // no bytes to run out of; the connection answers nothing
+    }
     h3->qc = qc;
     h3->on_request = on_request;
     h3->app = app;
@@ -345,22 +410,34 @@ proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const 
         st->responded = PROTO_TRUE;
     }
 
+    // The bytes this response is built out of: the QPACK field section and the frames carrying it.
+    // Both live for the call.
+    const size_t mark = pc_plaintext_mark();
+    pc_span bl = pc_plaintext_span(PC_H3_QPACK_BLOCK, 4);
+    pc_span ob = pc_plaintext_span(PC_H3_STREAM_BUF, 4);
+    if (!pc_span_ok(bl) || !pc_span_ok(ob))
+    {
+        pc_plaintext_release(mark);
+        return PROTO_FALSE;
+    }
+    uint8_t *block = bl.buf;
+    uint8_t *out = ob.buf;
+
     // QPACK field section: prefix + :status + optional content-type + content-length.
-    uint8_t block[256];
-    size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
+    size_t bp = pc_qpack_encode_prefix(block, PC_H3_QPACK_BLOCK);
     char st3[4];
     st3[0] = (char)('0' + (status / 100) % 10);
     st3[1] = (char)('0' + (status / 10) % 10);
     st3[2] = (char)('0' + status % 10);
     st3[3] = '\0';
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":status", 7, st3, 3);
+    bp += pc_qpack_encode_header(block + bp, PC_H3_QPACK_BLOCK - bp, ":status", 7, st3, 3);
     if (content_type)
     {
         // Cap above the largest content-type that can fit this block even at QPACK-Huffman's best
-        // 5-bit/char (~sizeof block * 8/5), so an over-long value trips the encode's reject below
-        // instead of being truncated into a fittable length (see the matching pc_h2_conn note).
-        bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, "content-type", 12, content_type,
-                                     strnlen(content_type, sizeof(block) * 2));
+        // 5-bit/char (~PC_H3_QPACK_BLOCK * 8/5), so an over-long value trips the encode's reject
+        // below instead of being truncated into a fittable length (see the matching pc_h2_conn note).
+        bp += pc_qpack_encode_header(block + bp, PC_H3_QPACK_BLOCK - bp, "content-type", 12, content_type,
+                                     strnlen(content_type, (size_t)PC_H3_QPACK_BLOCK * 2));
     }
     char clen[16];
     size_t cl = 0;
@@ -379,26 +456,29 @@ proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const 
             clen[cl++] = tmp[--n];
         }
     }
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, "content-length", 14, clen, cl);
+    bp += pc_qpack_encode_header(block + bp, PC_H3_QPACK_BLOCK - bp, "content-length", 14, clen, cl);
 
     // HEADERS frame + DATA frame, sent on the request stream with FIN.
-    uint8_t out[PC_H3_STREAM_BUF];
-    size_t op = pc_h3_build_headers(out, sizeof(out), block, bp);
+    size_t op = pc_h3_build_headers(out, PC_H3_STREAM_BUF, block, bp);
     if (!op)
     {
+        pc_plaintext_release(mark);
         return PROTO_FALSE;
         // fits
     }
     if (body_len)
     {
-        size_t dn = pc_h3_build_data(out + op, sizeof(out) - op, body, body_len);
+        size_t dn = pc_h3_build_data(out + op, PC_H3_STREAM_BUF - op, body, body_len);
         if (!dn)
         {
+            pc_plaintext_release(mark);
             return PROTO_FALSE;
         }
         op += dn;
     }
-    return pc_quic_conn_stream_send(h3->qc, stream_id, out, op, PROTO_TRUE) == op;
+    const proto_bool sent = pc_quic_conn_stream_send(h3->qc, stream_id, out, op, PROTO_TRUE) == op;
+    pc_plaintext_release(mark);
+    return sent;
 }
 
 #endif // PC_ENABLE_HTTP3

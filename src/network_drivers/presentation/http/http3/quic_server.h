@@ -34,9 +34,6 @@
 #include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "network_drivers/presentation/http/http3/quic_conn.h"
 
-#ifndef PC_QUIC_MAX_CONNS
-#define PC_QUIC_MAX_CONNS 2 ///< simultaneous HTTP/3 connections (each is a QuicConn + H3Conn, PSRAM-class)
-#endif
 #ifndef PC_QUIC_INGEST_RING
 #define PC_QUIC_INGEST_RING 8 ///< datagrams buffered from the lwIP thread until pc_quic_server_poll() drains them
 #endif
