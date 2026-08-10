@@ -133,7 +133,7 @@ void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint
         return;
     }
     // The borrow carries the previous connection's stream and handshake bytes.
-    mem.set(base, 0, PC_QUIC_CONN_BORROW);
+    mem.set(qc->streams[0].tx, 0, PC_QUIC_CONN_BORROW);
     mem.cpy(qc->odcid, odcid, odcid_len);
     qc->odcid_len = odcid_len;
     mem.cpy(qc->dcid, peer_scid, peer_scid_len);
