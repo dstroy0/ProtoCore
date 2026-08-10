@@ -308,14 +308,11 @@ static void test_ed25519_verify(void)
         size_t mlen = hexdec(v->msg, msg), slen = hexdec(v->sig, sig);
         char m[48];
         snprintf(m, sizeof(m), "Ed25519 tcId=%d", v->tc);
-        if (slen != 64)
-        {
-            // A non-64-byte signature is malformed; the framing rejects it before
-            // the crypto ever runs. Such vectors are all "invalid".
-            TEST_ASSERT_FALSE_MESSAGE(v->valid, m);
-            continue;
-        }
-        proto_bool ok = pc_ed25519_verify(tw, pub, msg, mlen, sig);
+        // The length gate every caller applies before the crypto - ssh_auth.c:593 and
+        // ssh_client.c:955 both spell it `len == 64 && pc_ed25519_verify(...)` - is applied here
+        // too, so all 150 vectors reach one assertion. Testing slen against the vector's own
+        // `valid` field instead would assert the corpus JSON and never call the verifier.
+        proto_bool ok = (slen == PC_ED25519_SIG_LEN) && pc_ed25519_verify(tw, pub, msg, mlen, sig);
         TEST_ASSERT_EQUAL_MESSAGE(v->valid ? PROTO_TRUE : PROTO_FALSE, ok, m);
     }
 }
