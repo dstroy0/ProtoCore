@@ -327,6 +327,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- pin HKDF-Expand against the RFC 5869 Appendix A vectors ([`c9211ed`](https://github.com/dstroy0/ProtoCore/commit/c9211ed8d6623f0c3560624198c63c08694c392c))
 - pin the HP mask widths and all four reserved settings ids ([`f93df35`](https://github.com/dstroy0/ProtoCore/commit/f93df35aefde3851e45ffdea0c5df0c8e84f2387))
 - quic_frame.h for the transport error constants ([`953174a`](https://github.com/dstroy0/ProtoCore/commit/953174a54454d2b739efd3d3895f0b1f102fca02))
 - model a post-handshake connection, and pin the pre-1-RTT fallback ([`9b091c6`](https://github.com/dstroy0/ProtoCore/commit/9b091c6fccbab947e949bc5cb715f2eb62cb6bc0))
