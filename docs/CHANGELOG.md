@@ -91,6 +91,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9690d65`](https://github.com/dstroy0/ProtoCore/commit/9690d6524cbcf61deba143eabe3a4a123cbad666))
 - update CHANGELOG.md [skip ci] ([`e980248`](https://github.com/dstroy0/ProtoCore/commit/e980248cc6bf5ff4fd2f70e2a196425f9172876c))
 - update CHANGELOG.md [skip ci] ([`f2a3d99`](https://github.com/dstroy0/ProtoCore/commit/f2a3d99146da324e2cf6bcb1256b7d4e0f419810))
 - update CHANGELOG.md [skip ci] ([`ddf384a`](https://github.com/dstroy0/ProtoCore/commit/ddf384aa6df8dcd25cce91660dcff61e67a774fc))
@@ -282,6 +283,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`81998f4`](https://github.com/dstroy0/ProtoCore/commit/81998f425e8612cc632e970daa91c55d004e0854))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d3a0207`](https://github.com/dstroy0/ProtoCore/commit/d3a0207de3b00abcec1bb86288c7cfe0a8859c77))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e70bbb3`](https://github.com/dstroy0/ProtoCore/commit/e70bbb3e7ec4aed4e26ff6feab5198b85dc40362))
 - log the forged-datagram teardown and the legacy_record_version rejection ([`3cea4c4`](https://github.com/dstroy0/ProtoCore/commit/3cea4c4c5dad8698036485c600d9b5699d38f742))
@@ -374,6 +376,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the cases share one connection object, the way a server re-uses a slot ([`140c9ed`](https://github.com/dstroy0/ProtoCore/commit/140c9ed3f1872ec8724b4230776c923b6a0889ad))
 - decode legal S=0 and L=0 records ([`e13b02b`](https://github.com/dstroy0/ProtoCore/commit/e13b02bdc94c7577ada3f03be2080b5f8e9d05ad))
 - a path small enough that this flight actually splits ([`5e8cd7d`](https://github.com/dstroy0/ProtoCore/commit/5e8cd7d117a7382b5fda6e45a39f0a9260a7f924))
 - the flight fragments to the connection's PMTU ([`75c756f`](https://github.com/dstroy0/ProtoCore/commit/75c756f868e36a6c8926d6e7b32cc27eba6ad49f))
