@@ -568,7 +568,8 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ## HPACK prefix-integer decode wraps at `m == 28`
 
-- **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #8).
+- **Status:** FIXED 2026-08-09 (`hpack_prim.c` `pc_hpack_decode_int`). Found 2026-08-08 auditing
+  `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #8).
 - **Symptom:** `hpack_prim.c:137` bounds the continuation with `m > 28`, so `m == 28` is admitted and
   `(b & 0x7f) << 28` shifts up to 127 into a `uint32_t`. Confirmed by compiling the function verbatim:
   input `{0x1f,0x80,0x80,0x80,0x80,0x7f}` returns TRUE with `consumed = 6` and `value = 4026531871`
@@ -577,8 +578,12 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   step too loose - at `m == 28` only the low 4 bits of the septet still fit. RFC 7541 sec 5.1 requires
   that an integer exceeding implementation limits "in value or octet length" be a decoding error.
 - **Nothing can catch it:** `test_hpack.c:439-440` pins only the `m > 28` rejection.
-- **Fix:** not written. Reject when `m == 28 && (b & 0x7f) > 0x0f`, or accumulate into `uint64_t` and
-  range-check once. Add the boundary pair as a test.
+- **Fix:** the septet is rejected when `m == 28 && (b & 0x7f) > 0x0f`, and the running sum is checked
+  against `0xFFFFFFFF - v` before it is added, so neither the shift nor the add can wrap. Test
+  `test_int_decode_rejects_overflowing_prefix_int` pins the audit's own vector plus the boundary
+  either side (`0x0f` accepted, `0x10` refused) and the octet-length bound.
+  Verified: `native_hpack`, `native_h2conn`, `native_qpack` and four more, 96/96 - QPACK shares this
+  primitive, so the fix is on the HTTP/3 path too.
 
 ## `pc_base64url_decode` stops at `=` and reports the partial decode as success
 
