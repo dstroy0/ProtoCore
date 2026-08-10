@@ -355,6 +355,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the connection borrows its stream bytes; the caps move to the config ([`9b7b41b`](https://github.com/dstroy0/ProtoCore/commit/9b7b41bd628fc88478f08c5fdd2c5709318fe10a))
 - the connection borrows its buffers; the arena sums the terms ([`57871e8`](https://github.com/dstroy0/ProtoCore/commit/57871e8afe8917b117e0f34a4e3713b4ae53ebd2))
 - the connection borrows its buffers; the arena sums the terms ([`2504974`](https://github.com/dstroy0/ProtoCore/commit/2504974bfea94d2958e2e1f5d09508ec5b7fedd1))
 - the connection borrows its buffers and asserts its term ([`8c71bb5`](https://github.com/dstroy0/ProtoCore/commit/8c71bb5690964267dd068d32635e2de953271acf))
