@@ -59,12 +59,16 @@ def main():
     checked = "kyber-py round-trip"
     try:
         import oqs
-
-        with oqs.KeyEncapsulation("ML-KEM-768", secret_key=bytearray(dk)) as kem:
-            assert kem.decap_secret(ct) == K, "liboqs disagreement"
-        checked += " + liboqs decaps"
-    except Exception as e:  # noqa: BLE001 - liboqs is a nice-to-have cross-check
+    except (ImportError, OSError) as e:  # liboqs is a nice-to-have cross-check
         checked += f" (liboqs skipped: {e})"
+    else:
+        # The comparison sits OUTSIDE the try: AssertionError is an Exception, so catching one
+        # around it reported a real disagreement between the two implementations as liboqs merely
+        # being absent, and emitted the vector anyway.
+        with oqs.KeyEncapsulation("ML-KEM-768", secret_key=bytearray(dk)) as kem:
+            got = kem.decap_secret(ct)
+        assert got == K, "liboqs disagreement"
+        checked += " + liboqs decaps"
 
     assert len(ek) == 1184 and len(ct) == 1088 and len(K) == 32
 
