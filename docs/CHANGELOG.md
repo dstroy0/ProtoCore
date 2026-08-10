@@ -108,6 +108,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- two more checkers never walked core_setup, and one named a tree that moved ([`f4ff091`](https://github.com/dstroy0/ProtoCore/commit/f4ff091958328c3f7af134bd5b5c47b1af8d47f4))
+- update CHANGELOG.md [skip ci] ([`b6ba27b`](https://github.com/dstroy0/ProtoCore/commit/b6ba27b007741f0a33986956a2f6ca355aea21b9))
 - update CHANGELOG.md [skip ci] ([`df9bc02`](https://github.com/dstroy0/ProtoCore/commit/df9bc02043cfe63fb36008a12b71ece7f2b4b8a0))
 - update CHANGELOG.md [skip ci] ([`9eb6799`](https://github.com/dstroy0/ProtoCore/commit/9eb6799542b0c73d50f2fa400b81116c31196443))
 - the three build workflows never rebuilt on a core_setup change ([`05aacdf`](https://github.com/dstroy0/ProtoCore/commit/05aacdf5a9bf2386c275fc6f9943d03944fe9fba))
