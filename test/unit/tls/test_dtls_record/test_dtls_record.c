@@ -216,6 +216,104 @@ static void test_dtls_plaintext_roundtrip(void)
     TEST_ASSERT_EQUAL_size_t(n, DtlsRecord.plaintext_parse(rec, n, &pt));
 }
 
+// RFC 9147 sec 4 lets the S bit choose an 8-bit sequence number and the L bit omit the length on the
+// last record of a datagram. DtlsRecord.protect only ever emits S=1, L=1, so neither decoder branch
+// was reachable from our own encoder. This assembles the record from the raw AEAD instead: unified
+// header, AAD = that header carrying the plaintext sequence number, nonce = iv XOR the 64-bit
+// sequence right-aligned, then the sec 4.2.3 mask over the sequence bytes.
+static size_t build_ciphertext(DtlsRecordKeys *k, uint64_t seq, uint8_t ct, proto_bool seq16, proto_bool with_len,
+                               const uint8_t *pt, size_t pt_len, uint8_t *out, size_t cap)
+{
+    const size_t seq_len = seq16 ? 2 : 1;
+    const size_t hdr_len = 1 + seq_len + (with_len ? 2 : 0);
+    const size_t inner_len = pt_len + 1;
+    const size_t enc_len = inner_len + PC_DTLS_TAG_LEN;
+    if (hdr_len + enc_len > cap)
+    {
+        return 0;
+    }
+
+    uint8_t flags = (uint8_t)(0x20 | (k->epoch & 0x03)); // 001 fixed, then the low epoch bits
+    if (seq16)
+    {
+        flags |= 0x08; // S
+    }
+    if (with_len)
+    {
+        flags |= 0x04; // L
+    }
+    out[0] = flags;
+    if (seq16)
+    {
+        out[1] = (uint8_t)(seq >> 8);
+        out[2] = (uint8_t)seq;
+    }
+    else
+    {
+        out[1] = (uint8_t)seq;
+    }
+    if (with_len)
+    {
+        out[1 + seq_len] = (uint8_t)(enc_len >> 8);
+        out[2 + seq_len] = (uint8_t)enc_len;
+    }
+
+    memcpy(out + hdr_len, pt, pt_len);
+    out[hdr_len + pt_len] = ct;
+
+    uint8_t nonce[12];
+    memcpy(nonce, k->iv, sizeof(nonce));
+    for (unsigned i = 0; i < 8; i++)
+    {
+        nonce[11 - i] ^= (uint8_t)(seq >> (8 * i));
+    }
+    pc_aes128gcm_seal((struct pc_aes128gcm_key *)(k->gcm), nonce, out, hdr_len, out + hdr_len, inner_len, out + hdr_len,
+                      out + hdr_len + inner_len);
+
+    uint8_t mask[16];
+    pc_aes128_encrypt_block((struct pc_aes128 *)(k->sn_key), out + hdr_len, mask);
+    for (unsigned i = 0; i < seq_len; i++)
+    {
+        out[1 + i] ^= mask[i];
+    }
+    return hdr_len + enc_len;
+}
+
+static void test_dtls_seq8_and_no_length_variants(void)
+{
+    DtlsRecordKeys k;
+    DtlsRecord.keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
+    const uint8_t pt[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+
+    // S=0: the sequence number travels in one byte and still reconstructs to the full value.
+    uint8_t rec[64];
+    size_t n = build_ciphertext(&k, 7, PC_DTLS_CT_APPLICATION_DATA, PROTO_FALSE, PROTO_TRUE, pt, sizeof(pt), rec,
+                                sizeof(rec));
+    TEST_ASSERT_TRUE(n > 0);
+    uint8_t out[64];
+    DtlsCiphertext info;
+    TEST_ASSERT_TRUE(DtlsRecord.unprotect(&k, 7, rec, n, out, sizeof(out), &info, NULL, 0));
+    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_UINT64(7, info.seq);
+    TEST_ASSERT_EQUAL_size_t(sizeof(pt), info.pt_len);
+    TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
+
+    // L=0: no length field, so the record runs to the end of the datagram.
+    n = build_ciphertext(&k, 9, PC_DTLS_CT_APPLICATION_DATA, PROTO_TRUE, PROTO_FALSE, pt, sizeof(pt), rec, sizeof(rec));
+    TEST_ASSERT_TRUE(n > 0);
+    TEST_ASSERT_TRUE(DtlsRecord.unprotect(&k, 9, rec, n, out, sizeof(out), &info, NULL, 0));
+    TEST_ASSERT_EQUAL_UINT64(9, info.seq);
+    TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
+
+    // Both at once: an 8-bit sequence number on a length-omitted record.
+    n = build_ciphertext(&k, 11, PC_DTLS_CT_HANDSHAKE, PROTO_FALSE, PROTO_FALSE, pt, sizeof(pt), rec, sizeof(rec));
+    TEST_ASSERT_TRUE(n > 0);
+    TEST_ASSERT_TRUE(DtlsRecord.unprotect(&k, 11, rec, n, out, sizeof(out), &info, NULL, 0));
+    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_HANDSHAKE, info.content_type);
+    TEST_ASSERT_EQUAL_UINT64(11, info.seq);
+    TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
+}
+
 // The anti-replay sliding window accepts new records, rejects replays, and ages out old ones.
 static void test_dtls_replay_window(void)
 {
@@ -563,6 +661,7 @@ int main(void)
     RUN_TEST(test_dtls_cid_roundtrip);
     RUN_TEST(test_dtls_cid_rejects);
     RUN_TEST(test_dtls_plaintext_roundtrip);
+    RUN_TEST(test_dtls_seq8_and_no_length_variants);
     RUN_TEST(test_dtls_replay_window);
     RUN_TEST(test_dtls_replay_window_edge);
     RUN_TEST(test_dtls_seq_rollover_both_directions);
