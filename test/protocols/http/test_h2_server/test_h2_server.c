@@ -14,7 +14,6 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "network_drivers/transport/tcp/tcp_conn.h"
 
-#include <stdio.h>
 #include <string.h>
 #include <unity.h>
 
@@ -172,17 +171,6 @@ void tearDown(void)
 
 // ---------------------------------------------------------------------------
 
-void test_h2s_probe(void)
-{
-    const Hdr f[] = {BASE3};
-    feed_request(f, 3);
-    char msg[256];
-    snprintf(msg, sizeof msg, "in=%u out=%u settings=%d goaway=%d rst=%d hdrs=%d parse=%d", (unsigned)g_in_len,
-             (unsigned)g_out_len, out_count(H2_SETTINGS, NULL), out_count(H2_GOAWAY, NULL),
-             out_count(H2_RST_STREAM, NULL), out_count(H2_HEADERS, NULL), (int)http_pool[0].parse_state);
-    TEST_FAIL_MESSAGE(msg);
-}
-
 void test_h2s_minimal_request_is_accepted(void)
 {
     const Hdr f[] = {BASE3, {":authority", "example.com"}, {"accept", "*/*"}};
@@ -333,7 +321,6 @@ void test_h2s_mask_clears_between_blocks(void)
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_h2s_probe);
     RUN_TEST(test_h2s_minimal_request_is_accepted);
     RUN_TEST(test_h2s_path_query_split);
     RUN_TEST(test_h2s_missing_method_is_malformed);
