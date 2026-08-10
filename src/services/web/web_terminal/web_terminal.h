@@ -39,6 +39,8 @@
 
 #include <stdint.h>
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WEB_TERMINAL
 
 /**
@@ -95,5 +97,7 @@ static inline uint8_t pc_web_terminal_client_count(void)
 }
 
 #endif // PC_ENABLE_WEB_TERMINAL
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_WEB_TERMINAL_H

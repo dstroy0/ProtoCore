@@ -34,6 +34,8 @@
 
 #include "shared_primitives/pcap.h" // pc_pcap_* framing + PC_DLT_IEEE802_11
 
+PROTO_BEGIN_DECLS
+
 /** @brief 802.11 frame type (frame-control bits 2-3). */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -91,6 +93,8 @@ void pc_promisc_set_channel(uint8_t channel);
 
 /** @brief Stop promiscuous capture. */
 void pc_promisc_end(void);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_PROMISC
 

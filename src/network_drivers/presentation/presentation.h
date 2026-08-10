@@ -24,6 +24,8 @@
 #include "../transport/tcp_evt.h" // EvtType: the event a handler is dispatched on
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Slot-indexed wrappers called by the session and application layers
 // ---------------------------------------------------------------------------
@@ -115,5 +117,7 @@ const struct ProtoHandler *http_proto_handler(void);
  * exactly like every other protocol, so the L5/worker dispatch loop has no HTTP special case.
  */
 void http_proto_set_poll(void (*fn)(uint8_t slot));
+
+PROTO_END_DECLS
 
 #endif

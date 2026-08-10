@@ -33,6 +33,8 @@
 
 #include "shared_primitives/can.h"
 
+PROTO_BEGIN_DECLS
+
 // Well-known PGNs and addresses.
 #define J1939_PGN_TP_CM 0x00EC00u         ///< Transport Protocol - Connection Management (60416)
 #define J1939_PGN_TP_DT 0x00EB00u         ///< Transport Protocol - Data Transfer (60160)
@@ -309,6 +311,8 @@ typedef struct
  * @return true iff @p len is at least 2 octets (the two status octets); false otherwise.
  */
 proto_bool pc_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dtc *out_dtcs, size_t max);
+
+PROTO_END_DECLS
 
 #endif // PC_NEED_J1939
 #endif // PROTOCORE_J1939_H

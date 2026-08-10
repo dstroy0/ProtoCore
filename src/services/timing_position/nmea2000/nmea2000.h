@@ -31,6 +31,8 @@
 #include "services/fieldbus/j1939/j1939.h" // reuses the J1939 29-bit identifier codec
 #include "shared_primitives/can.h"
 
+PROTO_BEGIN_DECLS
+
 #define N2K_FP_SEQ_SHIFT 5      ///< control octet: sequence counter in bits 7..5
 #define N2K_FP_FRAME_MASK 0x1Fu ///< control octet: frame counter in bits 4..0
 #define N2K_FP_F0_DATA 6u       ///< data octets in the first frame (after control + length octets)
@@ -420,6 +422,8 @@ proto_bool pc_n2k_decode_water_depth(const uint8_t *payload, size_t len, N2kWate
  * @return true iff @p len is at least 8 octets; false otherwise.
  */
 proto_bool pc_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kVesselHeading *out);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_NMEA2000
 #endif // PROTOCORE_NMEA2000_H
