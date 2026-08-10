@@ -162,10 +162,11 @@ static proto_bool pc_quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_
         return value_varint(val, vlen, &tp->initial_max_sd_bidi_remote);
     case QUIC_TP_INITIAL_MAX_SD_UNI:
         return value_varint(val, vlen, &tp->initial_max_sd_uni);
+    // RFC 9000 sec 4.6: a count past 2^60 would place a stream id outside the 62-bit varint space.
     case QUIC_TP_INITIAL_MAX_STREAMS_BIDI:
-        return value_varint(val, vlen, &tp->initial_max_streams_bidi);
+        return value_varint(val, vlen, &tp->initial_max_streams_bidi) && tp->initial_max_streams_bidi <= (1ull << 60);
     case QUIC_TP_INITIAL_MAX_STREAMS_UNI:
-        return value_varint(val, vlen, &tp->initial_max_streams_uni);
+        return value_varint(val, vlen, &tp->initial_max_streams_uni) && tp->initial_max_streams_uni <= (1ull << 60);
     case QUIC_TP_ACK_DELAY_EXPONENT:
         return value_varint(val, vlen, &tp->ack_delay_exponent) && tp->ack_delay_exponent <= 20;
     case QUIC_TP_MAX_ACK_DELAY:

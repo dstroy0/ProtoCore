@@ -36,6 +36,13 @@ proto_bool pc_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHea
     }
     out->first = buf[0];
     out->version = rd_be32(buf + 1);
+    // RFC 9000 sec 17.2: every long-header packet carries the Fixed Bit except a Version
+    // Negotiation packet, which is the only one with version 0. Without it the packet is not valid
+    // in this version and is discarded.
+    if (out->version != 0 && !(buf[0] & 0x40))
+    {
+        return PROTO_FALSE;
+    }
     out->type = (uint8_t)((buf[0] & 0x30) >> 4);
     size_t pos = 5;
     uint8_t dcl = buf[pos++];
@@ -85,7 +92,9 @@ size_t pc_quic_build_long_header(uint8_t *out, size_t cap, uint8_t type, uint32_
 
 proto_bool pc_quic_parse_short_header(const uint8_t *buf, size_t len, uint8_t dcid_len, QuicShortHeader *out)
 {
-    if (dcid_len > QUIC_MAX_CID_LEN || len < (size_t)1 + dcid_len || (buf[0] & 0x80))
+    // RFC 9000 sec 17.3.1 states the same Fixed Bit requirement, and a short header is never a
+    // Version Negotiation packet, so it holds here without exception.
+    if (dcid_len > QUIC_MAX_CID_LEN || len < (size_t)1 + dcid_len || (buf[0] & 0x80) || !(buf[0] & 0x40))
     {
         return PROTO_FALSE;
     }

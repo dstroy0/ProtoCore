@@ -150,6 +150,9 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
         return (size_t)-1;
     }
 
+    // On success pkt[0] holds the unprotected first byte, which is where the caller reads the
+    // RFC 9000 sec 17.2 / 17.3.1 Reserved Bits: this is the only point at which both protections
+    // are off, and only the connection can answer a violation with a CONNECTION_CLOSE.
     return ct_len - PC_AES128GCM_TAG_LEN;
 }
 
