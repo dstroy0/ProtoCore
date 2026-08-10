@@ -79,6 +79,8 @@ static QuicStream *find_stream(struct QuicConn *qc, uint64_t id)
 // The slot a connection lives in. Its plaintext borrow is bound to the slot, not to the call, so
 // every case here re-inits the one object the way the server re-uses a pool slot.
 static H3Conn g_h3;
+// A second slot, for the cases that need two connections at once.
+static H3Conn g_h3b;
 
 // Find an HTTP/3 stream (with its classified role) by id.
 static H3Stream *find_h3(H3Conn *h3, uint64_t id)
@@ -600,21 +602,19 @@ void test_h3_control_stream_frame_guards()
     // A SETTINGS frame header announcing more payload than has arrived: held, not parsed.
     QuicConn qc2;
     minimal_qc(&qc2);
-    H3Conn h3b;
-    pc_h3_conn_init(&h3b, &qc2, on_request, NULL);
+    pc_h3_conn_init(&g_h3b, &qc2, on_request, NULL);
     uint8_t s2[64];
     size_t sp2 = pc_quic_varint_encode(s2, sizeof(s2), 0x00);
     sp2 += pc_h3_frame_write_header(s2 + sp2, sizeof(s2) - sp2, H3_SETTINGS, 40);
     qc2.cb.on_stream_data(qc2.cb.app, &qc2, 2, s2, sp2, PROTO_FALSE);
-    TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, h3b.peer_settings.max_field_section_size);
+    TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, g_h3b.peer_settings.max_field_section_size);
 
     // RFC 9114 sec 6.2.1: "If the first frame of the control stream is any other frame type, this
     // MUST be treated as a connection error of type H3_MISSING_SETTINGS." This used to assert the
     // frame was consumed and ignored.
     QuicConn qc3;
     established_qc(&qc3);
-    H3Conn h3c;
-    pc_h3_conn_init(&h3c, &qc3, on_request, NULL);
+    pc_h3_conn_init(&g_h3b, &qc3, on_request, NULL);
     uint8_t s3[64];
     size_t sp3 = pc_quic_varint_encode(s3, sizeof(s3), 0x00);
     sp3 += pc_h3_frame_write_header(s3 + sp3, sizeof(s3) - sp3, 0x07 /*GOAWAY*/, 1);
@@ -627,8 +627,7 @@ void test_h3_control_stream_frame_guards()
     // Once SETTINGS has arrived, a later GOAWAY on the control stream is accepted and ignored.
     QuicConn qc4;
     minimal_qc(&qc4);
-    H3Conn h3d;
-    pc_h3_conn_init(&h3d, &qc4, on_request, NULL);
+    pc_h3_conn_init(&g_h3b, &qc4, on_request, NULL);
     uint8_t s4[64];
     size_t sp4 = pc_quic_varint_encode(s4, sizeof(s4), 0x00);
     sp4 += pc_h3_build_settings(s4 + sp4, sizeof(s4) - sp4, NULL, NULL, 0);
@@ -636,7 +635,7 @@ void test_h3_control_stream_frame_guards()
     s4[sp4++] = 0x00;
     qc4.cb.on_stream_data(qc4.cb.app, &qc4, 2, s4, sp4, PROTO_FALSE);
     TEST_ASSERT_FALSE(qc4.close_queued);
-    H3Stream *sc = find_h3(&h3d, 2);
+    H3Stream *sc = find_h3(&g_h3b, 2);
     TEST_ASSERT_NOT_NULL(sc);
     TEST_ASSERT_EQUAL_UINT(0, sc->buf_len); // fully consumed
 }
