@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the nvs seam serialises; seven fs entry points and one spi transfer were unbounded ([`7a6630b`](https://github.com/dstroy0/ProtoCore/commit/7a6630b4b0d89f26ba3ab000aeb3f8f71ef5e60e))
 - put_blob and put_str judged their bounds after committing, or not at all ([`1f32484`](https://github.com/dstroy0/ProtoCore/commit/1f324849ee4662fdb2fcd18f052861b105c622c9))
 - the two backends gave different wrong answers for a blob and a string ([`280fbc6`](https://github.com/dstroy0/ProtoCore/commit/280fbc6498bc8709a9d8d68f8fc99875ff8d5b9a))
 - the fs backend had no sync, so the WAL could not bind the only persistent store ([`5fe8ce5`](https://github.com/dstroy0/ProtoCore/commit/5fe8ce57d1993419e0118e40c9d23d2318b61988))
@@ -104,6 +105,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`020d105`](https://github.com/dstroy0/ProtoCore/commit/020d105c1291c49e19ce547e5e5082f544af742a))
 - update CHANGELOG.md [skip ci] ([`5408a4f`](https://github.com/dstroy0/ProtoCore/commit/5408a4f50355a0fbe19bda6fe634ad8d3ed87152))
 - update CHANGELOG.md [skip ci] ([`76067b4`](https://github.com/dstroy0/ProtoCore/commit/76067b4ee113cddafb0fd214292b4f14d68271e7))
 - update test report + coverage [skip ci] ([`95eb36f`](https://github.com/dstroy0/ProtoCore/commit/95eb36fa650ec2061c3e8c6f5a8c13571792280f))
