@@ -59,8 +59,9 @@
  *         change. 4 bytes is ample per-connection entropy; must be <= @ref PC_DTLS_CID_MAX. */
 #define PC_DTLS_CONN_LOCAL_CID_LEN 4
 
-/** @brief Most handshake messages in one outbound flight (ServerHello + EE + Cert + CV + Finished). */
-#define PC_DTLS_FLIGHT_MSGS 6
+/** @brief Most handshake fragments in one outbound flight. A message longer than the connection's
+ *         PMTU becomes several, so this is a fragment count, not a message count (§4.3, §5.5). */
+#define PC_DTLS_FLIGHT_MSGS 16
 
 /** @brief Buffer for the current flight's DTLS handshake fragments, so it can be retransmitted with
  *         fresh record sequence numbers. Sized for the Certificate-dominated server flight. */
@@ -105,6 +106,7 @@ typedef struct
     const uint8_t *ephemeral_priv; ///< 32-byte X25519 server ephemeral private key (fresh per handshake)
     const uint8_t *server_random;  ///< 32-byte ServerHello random (fresh per handshake)
     const uint8_t *cookie_key;     ///< 32-byte server-wide secret keying the HelloRetryRequest cookie MAC (§5.1)
+    uint16_t pmtu;                 ///< largest datagram this path takes; 0 uses PC_DTLS_PMTU_DEFAULT (§4.3)
 } DtlsServerConfig;
 
 /** @brief One DTLS 1.3 server handshake. Owns all per-connection state; no heap. */
@@ -160,6 +162,7 @@ typedef struct
     uint16_t flight_len;                              ///< bytes used in @ref flight_buf
     proto_bool awaiting_reply; ///< a flight is outstanding and a peer reply is expected (timer runs)
     uint8_t retransmits;       ///< times the current flight has been retransmitted
+    uint16_t pmtu;             ///< largest datagram this connection puts on the wire (sec 4.3)
     uint32_t pto_ms;           ///< current retransmission timeout (doubles each retransmit)
     uint32_t flight_sent_ms;   ///< pc_millis() when the flight was last (re)transmitted
 

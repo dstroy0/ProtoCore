@@ -119,18 +119,42 @@ static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg
     uint8_t msg_type = tls_msg[0];
     uint32_t body_len = (uint32_t)(tls_len - 4);
     uint16_t msg_seq = c->tx_msg_seq++;
-    size_t flen = DtlsHandshake.frag_build(msg_type, msg_seq, body_len, 0, tls_msg + 4, body_len,
-                                           c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
-    if (!flen)
+
+    // sec 4.3: a handshake message longer than the path's datagram is split, each fragment carrying
+    // its own 12-byte header and travelling in its own record. The budget is what the largest record
+    // form leaves: the unified header with a connection id, plus the AEAD tag.
+    const size_t rec_overhead = 1 + PC_DTLS_CID_MAX + 2 + 2 + PC_DTLS_TAG_LEN;
+    size_t per_frag = c->pmtu - rec_overhead - PC_DTLS_HS_HDR_LEN;
+
+    uint32_t off = 0;
+    for (;;)
     {
-        return PROTO_FALSE;
+        uint32_t take = body_len - off;
+        if (take > per_frag)
+        {
+            take = (uint32_t)per_frag;
+        }
+        if (c->flight_count >= PC_DTLS_FLIGHT_MSGS)
+        {
+            return PROTO_FALSE;
+        }
+        size_t flen = DtlsHandshake.frag_build(msg_type, msg_seq, body_len, off, tls_msg + 4 + off, take,
+                                               c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
+        if (!flen)
+        {
+            return PROTO_FALSE;
+        }
+        c->flight_msgs[c->flight_count].off = c->flight_len;
+        c->flight_msgs[c->flight_count].len = (uint16_t)flen;
+        c->flight_msgs[c->flight_count].epoch = (uint8_t)epoch;
+        c->flight_count++;
+        c->flight_len = (uint16_t)(c->flight_len + flen);
+        off += take;
+        if (off >= body_len)
+        {
+            return PROTO_TRUE; // a zero-length body emits the one header-only fragment and stops
+        }
     }
-    c->flight_msgs[c->flight_count].off = c->flight_len;
-    c->flight_msgs[c->flight_count].len = (uint16_t)flen;
-    c->flight_msgs[c->flight_count].epoch = (uint8_t)epoch;
-    c->flight_count++;
-    c->flight_len = (uint16_t)(c->flight_len + flen);
-    return PROTO_TRUE;
 }
 
 // Protect the buffered flight into @p out with FRESH record sequence numbers (RFC 9147 §5.8: a
@@ -660,6 +684,13 @@ static void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const ui
     mem.zero(c, sizeof(*c));
     c->cfg = *cfg;
     c->state = DTLS_CONN_STATE_START;
+    // sec 4.3: the path's datagram size bounds every fragment this connection emits. A caller that
+    // knows its own path states it; one that does not gets the size no path may fall below.
+    c->pmtu = cfg->pmtu;
+    if (c->pmtu == 0)
+    {
+        c->pmtu = PC_DTLS_PMTU_DEFAULT;
+    }
     if (peer_addr && peer_addr_len)
     {
         if (peer_addr_len > PC_DTLS_PEER_ADDR_MAX)
