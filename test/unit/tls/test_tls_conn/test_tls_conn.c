@@ -173,7 +173,7 @@ void test_init_takes_its_borrow()
 {
     TlsConnConfig cfg = server_cfg();
     TlsConn c;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_SERVER, &cfg));
     TEST_ASSERT_NOT_NULL(c.tx);
     TEST_ASSERT_NOT_NULL(c.rx);
     TEST_ASSERT_NOT_NULL(c.terms);
@@ -191,7 +191,7 @@ void test_client_hello_draws_the_server_flight()
 {
     TlsConnConfig cfg = server_cfg();
     TlsConn c;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_SERVER, &cfg));
 
     static uint8_t rec[600];
     size_t rec_len = build_client_hello(rec, sizeof rec, CH_COMPLETE);
@@ -225,7 +225,7 @@ void test_client_hello_outside_the_profile_is_refused()
         pc_secure_reset();
         TlsConnConfig cfg = server_cfg();
         TlsConn c;
-        TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
+        TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_SERVER, &cfg));
 
         static uint8_t rec[600];
         size_t rec_len = build_client_hello(rec, sizeof rec, flaws[i]);
@@ -246,7 +246,7 @@ void test_malformed_record_is_a_decode_error()
 {
     TlsConnConfig cfg = server_cfg();
     TlsConn c;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_SERVER, &cfg));
 
     static uint8_t out[256];
     const uint8_t truncated[4] = {PC_TLS_CT_HANDSHAKE, 0x03, 0x03, 0x00}; // short of the 5-byte header
@@ -263,17 +263,16 @@ void test_client_role_is_not_implemented()
 {
     TlsConnConfig cfg = server_cfg();
     TlsConn c;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_CLIENT, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_CLIENT, &cfg));
 
     static uint8_t out[256];
     TEST_ASSERT_EQUAL_UINT(0, TlsConnection.start(&c, out, sizeof out));
     TEST_ASSERT_EQUAL_INT(TLS_CONN_FAILED, c.state);
     TEST_ASSERT_NOT_EQUAL(0, TlsConnection.alert(&c));
 
-    // A server that has not failed still turns a client-role record away.
-    TlsConn c2;
-    TEST_ASSERT_TRUE(TlsConnection.init(&c2, TLS_ROLE_CLIENT, &cfg));
-    TEST_ASSERT_TRUE(TlsConnection.process(&c2, 0, out, sizeof out) < 0);
+    // process turns the role away on its own guard, not on the failed state start left behind.
+    TEST_ASSERT_TRUE(TlsConnection.init(&c, 0, TLS_ROLE_CLIENT, &cfg));
+    TEST_ASSERT_TRUE(TlsConnection.process(&c, 0, out, sizeof out) < 0);
 }
 
 int main()
