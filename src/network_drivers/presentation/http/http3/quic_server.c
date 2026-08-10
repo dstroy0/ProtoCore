@@ -173,7 +173,14 @@ static QuicSlot *alloc_slot()
         if (!s_qpool.pool[i].used)
         {
             QuicSlot *s = &s_qpool.pool[i];
+            // Both engines' borrows are bound to the slot, not to the connection on it: they are
+            // carried across the zero, or every claim would draw a fresh one from an end that is
+            // never given back. Each init wipes the bytes it just re-reached.
+            uint8_t *qc_bytes = s->qc.streams[0].tx;
+            uint8_t *h3_bytes = s->h3.streams[0].buf;
             mem.set(s, 0, sizeof *s);
+            s->qc.streams[0].tx = qc_bytes;
+            s->h3.streams[0].buf = h3_bytes;
             s->used = PROTO_TRUE;
             s->id = s_quic.next_id++;
             if (s_quic.next_id == 0)
