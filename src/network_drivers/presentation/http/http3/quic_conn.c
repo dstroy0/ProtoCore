@@ -397,6 +397,20 @@ static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
         return is_long ? pkt_len : 0; // drop this packet, keep parsing later coalesced ones
     }
 
+    // RFC 9000 sec 17.2 / 17.3.1: the Reserved Bits are zero. work[0] is the unprotected first
+    // byte, and the packet is authenticated by here, so a non-zero value is the peer's doing and
+    // not a bit flipped in flight. Long headers reserve 0x0c, short headers 0x18.
+    uint8_t reserved_mask = 0x18;
+    if (is_long)
+    {
+        reserved_mask = 0x0c;
+    }
+    if (work[0] & reserved_mask)
+    {
+        pc_quic_conn_close(qc, QUIC_ERR_PROTOCOL_VIOLATION);
+        return 0;
+    }
+
     if (!qc->space[level].have_rx || pn > qc->space[level].largest_rx)
     {
         qc->space[level].largest_rx = pn;
