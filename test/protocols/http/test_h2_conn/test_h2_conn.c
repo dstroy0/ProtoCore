@@ -5,6 +5,11 @@
 // RFC 9113): initial SETTINGS on init, the preface + client SETTINGS -> SETTINGS ACK, decoding a
 // real HPACK-encoded request into the header callbacks, PING -> PING ACK, split-across-reads
 // frame reassembly, and pc_h2_conn_respond serializing a HEADERS + DATA response we can decode back.
+//
+// Plus the rules that decide whether a frame is allowed to reach the application at all: the
+// per-type length and stream-id bounds (sec 6.3-6.9), the idle-stream state rule (sec 5.1),
+// trailer sections against new-stream establishment (sec 8.1 vs sec 5.1.1), content-length
+// against the DATA that arrives (sec 8.1.1), and the CONTINUATION frame-count bound (sec 6.10).
 
 #include "network_drivers/presentation/http/http2/h2_conn.h"
 #include "network_drivers/presentation/http/http2/h2_frame.h"
