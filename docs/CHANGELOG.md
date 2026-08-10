@@ -72,6 +72,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`1d26295`](https://github.com/dstroy0/ProtoCore/commit/1d26295b9007d15115f5a07e6354407c3d5af74e))
 - update CHANGELOG.md [skip ci] ([`ee0e3b7`](https://github.com/dstroy0/ProtoCore/commit/ee0e3b785526807e782edf426986853bacf1cdfb))
 - update CHANGELOG.md [skip ci] ([`8697278`](https://github.com/dstroy0/ProtoCore/commit/8697278d762d8bbf0a375f2c3ab5d1c904d0c588))
 - update CHANGELOG.md [skip ci] ([`a17dfea`](https://github.com/dstroy0/ProtoCore/commit/a17dfea7c82ea0dd24dd77c9b02bef2968243936))
@@ -224,6 +225,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- log the HTTP/2 header-validation gap and the trailers conflation ([`9fe1021`](https://github.com/dstroy0/ProtoCore/commit/9fe1021e500a04a229d9651361bc125baebcf9ef))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0b84890`](https://github.com/dstroy0/ProtoCore/commit/0b848906fa31a831593f3bcc4ed0fcc6817a9806))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`1d1e182`](https://github.com/dstroy0/ProtoCore/commit/1d1e1824efb0433ed7006a12b4fa97cfc8be18df))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ae9621c`](https://github.com/dstroy0/ProtoCore/commit/ae9621c8c79d509bb7931a3c35e98fcb1fc803d0))
 - close the h2 idle-stream DATA and WINDOW_UPDATE findings ([`c82be77`](https://github.com/dstroy0/ProtoCore/commit/c82be77a13a93b79d9573122ef2eed05510b437a))
