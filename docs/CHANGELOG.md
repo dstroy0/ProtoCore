@@ -68,7 +68,12 @@ All notable changes to ProtoCore are documented here.
 ### CI / Build
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+- update CHANGELOG.md [skip ci] ([`0ca5aa3`](https://github.com/dstroy0/ProtoCore/commit/0ca5aa31c7dcc7d6f733a332050aaf205c2ad4d6))
+>>>>>>> Stashed changes
+=======
+- update CHANGELOG.md [skip ci] ([`91ee224`](https://github.com/dstroy0/ProtoCore/commit/91ee224db5ce71c31b243adf168ea34f71094464))
 - update CHANGELOG.md [skip ci] ([`0ca5aa3`](https://github.com/dstroy0/ProtoCore/commit/0ca5aa31c7dcc7d6f733a332050aaf205c2ad4d6))
 >>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`b964d9e`](https://github.com/dstroy0/ProtoCore/commit/b964d9e4ff42d4c190b97107a7d8df10970d7fd4))
@@ -212,6 +217,7 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
 >>>>>>> Stashed changes
@@ -221,6 +227,14 @@ All notable changes to ProtoCore are documented here.
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
 >>>>>>> Stashed changes
 =======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`dfd250d`](https://github.com/dstroy0/ProtoCore/commit/dfd250d8f13fe2ee2486c2cfda02764c5053f479))
+- close the HPACK prefix-integer overflow ([`4eaeb4e`](https://github.com/dstroy0/ProtoCore/commit/4eaeb4e741423de906cd02498ec0da8796cfc9a2))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d7819ac`](https://github.com/dstroy0/ProtoCore/commit/d7819ac42f95fd4327be7fc3a754c59b69fe6fd3))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
+>>>>>>> Stashed changes
+=======
+- close the HPACK size-update clamp ([`63327f7`](https://github.com/dstroy0/ProtoCore/commit/63327f78a94260eb08f340d92a0135fa135ee248))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c934425`](https://github.com/dstroy0/ProtoCore/commit/c93442507cdefbb53dea4ad8615718b877312ebb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`dfd250d`](https://github.com/dstroy0/ProtoCore/commit/dfd250d8f13fe2ee2486c2cfda02764c5053f479))
 - close the HPACK prefix-integer overflow ([`4eaeb4e`](https://github.com/dstroy0/ProtoCore/commit/4eaeb4e741423de906cd02498ec0da8796cfc9a2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d7819ac`](https://github.com/dstroy0/ProtoCore/commit/d7819ac42f95fd4327be7fc3a754c59b69fe6fd3))
@@ -284,7 +298,10 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -296,6 +313,9 @@ All notable changes to ProtoCore are documented here.
 - the GCM derive fixture takes the mpint sign-pad path its comment claimed ([`6a7334b`](https://github.com/dstroy0/ProtoCore/commit/6a7334b0d75c052bb440c26e419d066e52455999))
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
