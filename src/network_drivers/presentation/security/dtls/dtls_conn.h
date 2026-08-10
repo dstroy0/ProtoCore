@@ -63,6 +63,11 @@
  *         PMTU becomes several, so this is a fragment count, not a message count (§4.3, §5.5). */
 #define PC_DTLS_FLIGHT_MSGS 16
 
+/** @brief Most a record adds around a handshake fragment: the unified header carrying a connection
+ *         id, a 16-bit sequence and a length, plus the AEAD tag (§4). The plaintext form is smaller,
+ *         so this bounds both. */
+#define PC_DTLS_REC_OVERHEAD_MAX (1 + PC_DTLS_CID_MAX + 2 + 2 + PC_DTLS_TAG_LEN)
+
 /** @brief Buffer for the current flight's DTLS handshake fragments, so it can be retransmitted with
  *         fresh record sequence numbers. Sized for the Certificate-dominated server flight. */
 #define PC_DTLS_FLIGHT_CAP (PC_DTLS_CONN_MSG_CAP + 512)

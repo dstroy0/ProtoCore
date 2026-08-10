@@ -103,43 +103,42 @@ static void flight_reset(DtlsConn *c)
 // so a retransmission can use fresh record sequence numbers.
 static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg, size_t tls_len)
 {
-    // The three guards below are defensive and unreachable from any input the server accepts, which is
-    // why they (and every `if (!flight_add(...))` at the call sites) carry coverage exclusions:
-    //  - tls_len < 4: every caller passes a builder's output, and a TLS handshake message is never
-    //    shorter than its own 4-byte header;
-    //  - flight_count >= PC_DTLS_FLIGHT_MSGS: a flight is at most 5 messages (ServerHello, EncryptedExtensions,
-    //    Certificate, CertificateVerify, Finished) against PC_DTLS_FLIGHT_MSGS = 6, and a HelloRetryRequest
-    //    flight is a single message after flight_reset;
-    //  - !flen: only Certificate can approach PC_DTLS_CONN_MSG_CAP, and PC_DTLS_FLIGHT_CAP is defined as
-    //    PC_DTLS_CONN_MSG_CAP + 512 - more than the ~300 bytes the other four fragments occupy.
-    if (tls_len < 4 || c->flight_count >= PC_DTLS_FLIGHT_MSGS)
+    // tls_len < 4 is defensive and unreachable from any input the server accepts - every caller
+    // passes a builder's output, and a TLS handshake message is never shorter than its own 4-byte
+    // header - which is why it and every `if (!flight_add(...))` at the call sites carry coverage
+    // exclusions.
+    if (tls_len < 4)
     {
         return PROTO_FALSE;
     }
-    uint8_t msg_type = tls_msg[0];
-    uint32_t body_len = (uint32_t)(tls_len - 4);
-    uint16_t msg_seq = c->tx_msg_seq++;
-
-    // sec 4.3: a handshake message longer than the path's datagram is split, each fragment carrying
-    // its own 12-byte header and travelling in its own record. The budget is what the largest record
-    // form leaves: the unified header with a connection id, plus the AEAD tag.
-    const size_t rec_overhead = 1 + PC_DTLS_CID_MAX + 2 + 2 + PC_DTLS_TAG_LEN;
-    size_t per_frag = c->pmtu - rec_overhead - PC_DTLS_HS_HDR_LEN;
-
-    uint32_t off = 0;
-    for (;;)
+    // sec 4.3: what one fragment may carry is the path's datagram less the record around it and the
+    // fragment's own header. A path too small to carry any body cannot carry a handshake.
+    if (c->pmtu <= PC_DTLS_REC_OVERHEAD_MAX + PC_DTLS_HS_HDR_LEN)
     {
-        uint32_t take = body_len - off;
-        if (take > per_frag)
-        {
-            take = (uint32_t)per_frag;
-        }
+        return PROTO_FALSE;
+    }
+    const uint32_t per_frag = (uint32_t)(c->pmtu - PC_DTLS_REC_OVERHEAD_MAX - PC_DTLS_HS_HDR_LEN);
+
+    const uint8_t msg_type = tls_msg[0];
+    const uint32_t body_len = (uint32_t)(tls_len - 4);
+    const uint16_t msg_seq = c->tx_msg_seq++;
+
+    // A message longer than per_frag becomes several fragments, each its own entry and its own
+    // record. An empty body still emits one, which is why the offset is tested after the append.
+    uint32_t off = 0;
+    do
+    {
         if (c->flight_count >= PC_DTLS_FLIGHT_MSGS)
         {
             return PROTO_FALSE;
         }
-        size_t flen = DtlsHandshake.frag_build(msg_type, msg_seq, body_len, off, tls_msg + 4 + off, take,
-                                               c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
+        uint32_t take = body_len - off;
+        if (take > per_frag)
+        {
+            take = per_frag;
+        }
+        const size_t flen = DtlsHandshake.frag_build(msg_type, msg_seq, body_len, off, tls_msg + 4 + off, take,
+                                                     c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
         if (!flen)
         {
             return PROTO_FALSE;
@@ -150,11 +149,8 @@ static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg
         c->flight_count++;
         c->flight_len = (uint16_t)(c->flight_len + flen);
         off += take;
-        if (off >= body_len)
-        {
-            return PROTO_TRUE; // a zero-length body emits the one header-only fragment and stops
-        }
-    }
+    } while (off < body_len);
+    return PROTO_TRUE;
 }
 
 // Protect the buffered flight into @p out with FRESH record sequence numbers (RFC 9147 §5.8: a
