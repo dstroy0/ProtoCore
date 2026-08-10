@@ -158,6 +158,30 @@ static void test_hs_reasm_overlap_and_duplicate(void)
     TEST_ASSERT_EQUAL_MEMORY(body, buf, sizeof(body));
 }
 
+// RFC 9147 sec 5.5: "Senders MUST NOT change handshake message bytes upon retransmission. Receivers
+// MAY check that retransmitted bytes are identical and SHOULD abort the handshake with an
+// illegal_parameter alert if the value of a byte changes." Every overlap above carries identical
+// bytes, so the copy that silently overwrote them looked correct.
+static void test_hs_reasm_conflicting_overlap_aborts(void)
+{
+    uint8_t body[100];
+    fill(body, sizeof(body));
+    uint8_t other[100];
+    fill(other, sizeof(other));
+    other[40] ^= 0xFF; // one byte inside the overlap disagrees
+
+    uint8_t buf[100];
+    DtlsHsReasm r;
+    DtlsHandshake.reasm_init(&r, 1, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 0, body, 60));
+    TEST_ASSERT_EQUAL_INT(-1, feed(&r, 1, 1, 100, 30, other, 40)); // [30,70) disagrees at 40
+
+    // A fragment that overlaps only where the bytes still agree is accepted.
+    DtlsHandshake.reasm_init(&r, 1, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 0, body, 60));
+    TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 41, other, 19)); // [41,60), clear of the changed byte
+}
+
 static void test_hs_reasm_wrong_msg_seq_ignored(void)
 {
     uint8_t body[40];
@@ -497,6 +521,7 @@ int main(void)
     RUN_TEST(test_hs_reasm_in_order);
     RUN_TEST(test_hs_reasm_out_of_order);
     RUN_TEST(test_hs_reasm_overlap_and_duplicate);
+    RUN_TEST(test_hs_reasm_conflicting_overlap_aborts);
     RUN_TEST(test_hs_reasm_wrong_msg_seq_ignored);
     RUN_TEST(test_hs_reasm_empty_body);
     RUN_TEST(test_hs_reasm_rejects);
