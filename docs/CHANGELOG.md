@@ -90,6 +90,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`f2a3d99`](https://github.com/dstroy0/ProtoCore/commit/f2a3d99146da324e2cf6bcb1256b7d4e0f419810))
 - update CHANGELOG.md [skip ci] ([`ddf384a`](https://github.com/dstroy0/ProtoCore/commit/ddf384aa6df8dcd25cce91660dcff61e67a774fc))
 - update CHANGELOG.md [skip ci] ([`b34b44e`](https://github.com/dstroy0/ProtoCore/commit/b34b44e4323460eba6094e867135957c0659e9e2))
 - update CHANGELOG.md [skip ci] ([`a841ab2`](https://github.com/dstroy0/ProtoCore/commit/a841ab20a007fd81dbad16bfd9beecac66cdb1a1))
@@ -349,6 +350,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the connection borrows its buffers; the arena sums the terms ([`57871e8`](https://github.com/dstroy0/ProtoCore/commit/57871e8afe8917b117e0f34a4e3713b4ae53ebd2))
 - the connection borrows its buffers; the arena sums the terms ([`2504974`](https://github.com/dstroy0/ProtoCore/commit/2504974bfea94d2958e2e1f5d09508ec5b7fedd1))
 - the connection borrows its buffers and asserts its term ([`8c71bb5`](https://github.com/dstroy0/ProtoCore/commit/8c71bb5690964267dd068d32635e2de953271acf))
 - flight_add fragments in the file's own idiom ([`b11b3a1`](https://github.com/dstroy0/ProtoCore/commit/b11b3a12c58f182413c7aa5554a59154a897fa1f))
