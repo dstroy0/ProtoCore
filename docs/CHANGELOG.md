@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- a conflicted autostash pop committed its markers into the changelog ([`2e47cb0`](https://github.com/dstroy0/ProtoCore/commit/2e47cb02fb11fbf1810df33493d6994f44d362a8))
 - modmul guarded its operand count nowhere; stale .cpp references ([`e527f96`](https://github.com/dstroy0/ProtoCore/commit/e527f9655e20078cd9637a52d3fe68f716256b0c))
 - the RSA memory-init wait was inverted; four more the vendor arm never proved ([`2043db6`](https://github.com/dstroy0/ProtoCore/commit/2043db670b7c8f7d50c910eda3060885528c4543))
 - sha256's accelerated arm dropped the work parameter; the KDF term ignored its context ([`81a70cb`](https://github.com/dstroy0/ProtoCore/commit/81a70cb0d4faa8d60412320e25c53887a872d218))
@@ -100,6 +101,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`f59c685`](https://github.com/dstroy0/ProtoCore/commit/f59c6855f0d336663f9fafcdefc6651f9aae0f38))
+- update CHANGELOG.md [skip ci] ([`5271a3b`](https://github.com/dstroy0/ProtoCore/commit/5271a3b5cc94d225ffac4a39a30252352e21b91e))
 - the ban checker never walked core_setup, so 65 sites went unenforced ([`279ffb8`](https://github.com/dstroy0/ProtoCore/commit/279ffb8e4ea7eccd76031beac58ed285a9effffd))
 - update CHANGELOG.md [skip ci] ([`b44dd08`](https://github.com/dstroy0/ProtoCore/commit/b44dd0891ca684bcaff91c12c22fb4fc1a51d8a4))
 - update CHANGELOG.md [skip ci] ([`84d5137`](https://github.com/dstroy0/ProtoCore/commit/84d513794e327eb6c32640845f2d042e1e0ed4dc))
@@ -312,6 +315,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`372326b`](https://github.com/dstroy0/ProtoCore/commit/372326b523799d12984e58de6bb27156ed7a960b))
 - the SWAR leaves cannot be reached through their Ns table at -Og ([`72ae4dd`](https://github.com/dstroy0/ProtoCore/commit/72ae4ddcaf08db478ede87374cc9f8b75a91b283))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`44417cb`](https://github.com/dstroy0/ProtoCore/commit/44417cb83666bd04f5db4458cf1dfd39c7cfca15))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f79357d`](https://github.com/dstroy0/ProtoCore/commit/f79357d8c13332fdb4cb496669f5ef203ddcd6e3))
