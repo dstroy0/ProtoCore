@@ -24,6 +24,8 @@ static proto_bool pc_dtls_conn_established(const DtlsConn *c);
 // TLS alert codes used here (RFC 8446 §6).
 static const uint8_t ALERT_UNEXPECTED_MESSAGE = 10;
 static const uint8_t ALERT_HANDSHAKE_FAILURE = 40;
+static const uint8_t ALERT_UNSUPPORTED_CERTIFICATE = 43;
+static const uint8_t ALERT_ILLEGAL_PARAMETER = 47;
 static const uint8_t ALERT_DECODE_ERROR = 50;
 static const uint8_t ALERT_DECRYPT_ERROR = 51;
 static const uint8_t ALERT_PROTOCOL_VERSION = 70;
@@ -311,7 +313,10 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // authenticating its address before we spend the handshake's asymmetric crypto (§5.1).
     if (!pc_dtls_hrr_cookie_ok(c, &ch))
     {
-        return fail(c, ALERT_HANDSHAKE_FAILURE);
+        // RFC 9147 sec 5.1: "If a server receives a ClientHello with an invalid cookie, it MUST
+        // terminate the handshake with an illegal_parameter alert", which tells the client to
+        // restart without one rather than that the parameters could not be agreed.
+        return fail(c, ALERT_ILLEGAL_PARAMETER);
     }
 
     pc_dtls_negotiate_conn_id(c, &ch);
@@ -358,6 +363,13 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 #if PC_ENABLE_TLS_RPK
     rpk = ch.offers_rpk_server_cert;
 #endif
+    // RFC 7250 sec 4.2 outcome 2: a client that sent the extension named the only types it will
+    // take. X.509 is what we answer with when it is among them; RawPublicKey only when this build
+    // has it. Neither in common terminates the handshake rather than sending a type it refuses.
+    if (ch.has_server_cert_type && !ch.offers_x509_server_cert && !rpk)
+    {
+        return fail(c, ALERT_UNSUPPORTED_CERTIFICATE);
+    }
 
     // EncryptedExtensions.
     n = pc_tls13_build_encrypted_extensions_empty(c->msgbuf, sizeof(c->msgbuf), rpk);

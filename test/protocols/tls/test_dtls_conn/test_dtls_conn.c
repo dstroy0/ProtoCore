@@ -791,7 +791,7 @@ static void test_hrr_retry_without_cookie_rejected(void)
     size_t r2l = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 1, f2, f2l, r2, sizeof(r2));
     uint8_t out[2048];
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&conn, r2, r2l, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT8(40, DtlsServer.alert(&conn)); // handshake_failure
+    TEST_ASSERT_EQUAL_UINT8(47, DtlsServer.alert(&conn)); // illegal_parameter (RFC 9147 sec 5.1)
 }
 
 // A ClientHello that does not offer TLS 1.3 is rejected with a protocol_version alert.
@@ -1873,7 +1873,7 @@ static void test_hrr_retry_with_corrupt_cookie_rejected(void)
     TEST_ASSERT_TRUE(r2 > 0);
     uint8_t out[2048];
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&conn, rec, r2, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT8(40, DtlsServer.alert(&conn)); // handshake_failure
+    TEST_ASSERT_EQUAL_UINT8(47, DtlsServer.alert(&conn)); // illegal_parameter (RFC 9147 sec 5.1)
 }
 
 // Once the handshake is DONE the only handshake message the server still accepts is a retransmitted

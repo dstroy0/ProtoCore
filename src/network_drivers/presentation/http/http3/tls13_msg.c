@@ -316,10 +316,10 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
     case TLS_EXT_ALPN:
         parse_alpn(body, blen, out);
         break;
-#if PC_ENABLE_TLS_RPK
     case TLS_EXT_SERVER_CERTIFICATE_TYPE: {
         // server_certificate_type (RFC 7250 sec 4.2): a 1-byte list length then 1-byte CertificateType
-        // values. RawPublicKey(2) in the list means the client accepts a bare SubjectPublicKeyInfo from us.
+        // values. The list is read whatever this build can answer with, because sec 4.2 outcome 2
+        // turns on which types the client named, not on which of them we support.
         if (blen < 1)
         {
             return;
@@ -329,16 +329,22 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         {
             return;
         }
+        out->has_server_cert_type = PROTO_TRUE;
         for (size_t i = 0; i < ll; i++)
         {
+            if (body[1 + i] == TLS_CERT_TYPE_X509)
+            {
+                out->offers_x509_server_cert = PROTO_TRUE;
+            }
+#if PC_ENABLE_TLS_RPK
             if (body[1 + i] == TLS_CERT_TYPE_RAW_PUBLIC_KEY)
             {
                 out->offers_rpk_server_cert = PROTO_TRUE;
             }
+#endif
         }
         break;
     }
-#endif
     case TLS_EXT_QUIC_TRANSPORT_PARAMS:
         out->pc_quic_tp = body;
         out->pc_quic_tp_len = blen;
@@ -426,6 +432,13 @@ proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13Clie
         uint8_t cookie_len = 0;
         const uint8_t *cookie = NULL;
         if (!r_u8(&r, &cookie_len) || !r_take(&r, cookie_len, &cookie))
+        {
+            return PROTO_FALSE;
+        }
+        // sec 5.3: "A DTLS 1.3-only client MUST set the legacy_cookie field to zero length. If a
+        // DTLS 1.3 ClientHello is received with any other value in this field, the server MUST
+        // abort the handshake with an illegal_parameter alert." The cookie rides the extension.
+        if (cookie_len != 0)
         {
             return PROTO_FALSE;
         }

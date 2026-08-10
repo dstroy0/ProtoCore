@@ -71,6 +71,8 @@ typedef struct
     proto_bool offers_aes128gcm_sha256; ///< cipher_suites contains the one suite this stack answers
     proto_bool offers_x25519;           ///< supported_groups contains x25519
     proto_bool offers_ed25519;          ///< signature_algorithms contains ed25519
+    proto_bool has_server_cert_type;    ///< a server_certificate_type extension (RFC 7250) was present
+    proto_bool offers_x509_server_cert; ///< that extension's list contained X509(0)
 #if PC_ENABLE_TLS_RPK
     proto_bool offers_rpk_server_cert; ///< server_certificate_type (RFC 7250) offered RawPublicKey(2)
 #endif
