@@ -6,10 +6,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
-<<<<<<< Updated upstream
-=======
+- a request past 255*HashLen has no defined answer (RFC 5869 sec 2.3) ([`e49c4e8`](https://github.com/dstroy0/ProtoCore/commit/e49c4e8d30fc03b815d511aaffba90d999df2add))
 - the suite check uses the IANA code point constant ([`40801ed`](https://github.com/dstroy0/ProtoCore/commit/40801ed4b887b95789ba1b18e300942bbc4d728a))
->>>>>>> Stashed changes
 - the offered cipher suite and legacy_compression_methods are checked ([`0ef116e`](https://github.com/dstroy0/ProtoCore/commit/0ef116eac1d839a37987270b2398dfe0a72a912f))
 - a zero-length Handshake or Alert record is neither sent nor accepted ([`2d3e3a7`](https://github.com/dstroy0/ProtoCore/commit/2d3e3a75816c4aa15769c014e784747d0e92f089))
 - h3_fail is defined above its first use ([`49067b0`](https://github.com/dstroy0/ProtoCore/commit/49067b08f2974233d4333c06ba7b3bb0bc330092))
@@ -83,6 +81,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`eae57ff`](https://github.com/dstroy0/ProtoCore/commit/eae57ff90c0e634e6a1dbd0bb527cb14e08f741d))
+- update CHANGELOG.md [skip ci] ([`38bfb1e`](https://github.com/dstroy0/ProtoCore/commit/38bfb1eddf4e566a3860a55a83f6a81a679641b9))
 - update CHANGELOG.md [skip ci] ([`fcbe23b`](https://github.com/dstroy0/ProtoCore/commit/fcbe23b31b57c35e231ed71104dec08e26bc0fa6))
 - update CHANGELOG.md [skip ci] ([`0ed1fea`](https://github.com/dstroy0/ProtoCore/commit/0ed1fead3fab616fe4ba8fa2ebff05eb43c59279))
 - update CHANGELOG.md [skip ci] ([`e7ead47`](https://github.com/dstroy0/ProtoCore/commit/e7ead47cc17cb988fed01f0d681360ca4228437e))
