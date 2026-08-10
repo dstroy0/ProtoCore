@@ -81,6 +81,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`29ee43c`](https://github.com/dstroy0/ProtoCore/commit/29ee43c004bbb35351b83d02552e900470ee25a1))
 - update CHANGELOG.md [skip ci] ([`eae57ff`](https://github.com/dstroy0/ProtoCore/commit/eae57ff90c0e634e6a1dbd0bb527cb14e08f741d))
 - update CHANGELOG.md [skip ci] ([`38bfb1e`](https://github.com/dstroy0/ProtoCore/commit/38bfb1eddf4e566a3860a55a83f6a81a679641b9))
 - update CHANGELOG.md [skip ci] ([`fcbe23b`](https://github.com/dstroy0/ProtoCore/commit/fcbe23b31b57c35e231ed71104dec08e26bc0fa6))
@@ -247,6 +248,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- log the TLS record, ClientHello and HKDF bound fixes ([`61a17d0`](https://github.com/dstroy0/ProtoCore/commit/61a17d07e3f91b75a2916cbb5cff1993b10c5e54))
 - log the HTTP/3 state-machine and QUIC header-bit fixes ([`7958ae2`](https://github.com/dstroy0/ProtoCore/commit/7958ae22a844fee1f96e0a0507871c9f5f95ae94))
 - log the frame-rule, CONTINUATION and content-length fixes ([`48ac146`](https://github.com/dstroy0/ProtoCore/commit/48ac1465e4a9917005c138322804b9e5f0dcfebb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`37bffbc`](https://github.com/dstroy0/ProtoCore/commit/37bffbcdd804e4703ddbeda59b63e4e323fbbc4c))
