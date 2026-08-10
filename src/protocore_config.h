@@ -5838,6 +5838,18 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief Largest datagram a DTLS handshake flight will put on the wire, before a connection
+ * overrides it (RFC 9147 sec 4.3).
+ *
+ * A handshake message longer than this is split across fragments that each fit one datagram. The
+ * default is the IPv6 minimum MTU less the worst-case IPv6 and UDP headers, which no path is
+ * allowed to be smaller than; a connection that knows its own path sets DtlsServerConfig::pmtu.
+ */
+#ifndef PC_DTLS_PMTU_DEFAULT
+#define PC_DTLS_PMTU_DEFAULT 1232
+#endif
+
+/**
  * @brief Place the HTTP/2 connection-engine pool in external PSRAM (ESP32).
  *
  * Each HTTP/2 connection needs a ~28 KB engine, so the pool (MAX_CONNS of them) does not fit the
