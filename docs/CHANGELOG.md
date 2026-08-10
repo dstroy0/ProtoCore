@@ -6,6 +6,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- per-type frame length and stream-id guards, and a CONTINUATION cap ([`ed39a65`](https://github.com/dstroy0/ProtoCore/commit/ed39a652dab728a93997d4d4e5638b532f8fb469))
+- coaps_server passed the address of a keys pointer, not the keys ([`73501c4`](https://github.com/dstroy0/ProtoCore/commit/73501c4edd35606af214195dbdd20b5d10daf805))
 - a HEADERS on an open stream is a trailer section, not a stream-id error ([`e2f370a`](https://github.com/dstroy0/ProtoCore/commit/e2f370a1e622e35cba3824a46e7446314925233e))
 - h2_server suite passed pc_h2_write_header its arguments out of order ([`a635744`](https://github.com/dstroy0/ProtoCore/commit/a63574447e0ad65a4f969159f2a41d086aa11011))
 - reject a zero or overflowing WINDOW_UPDATE (RFC 9113 sec 6.9, 6.9.1) ([`b439489`](https://github.com/dstroy0/ProtoCore/commit/b4394891df2095b10e97bc9402fada3edc711ae3))
@@ -225,6 +227,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+<<<<<<< Updated upstream
+=======
+- log the coaps_server double-address test defect ([`beebc0d`](https://github.com/dstroy0/ProtoCore/commit/beebc0d56b705d454320bc33a87f9061e0f4ec14))
+>>>>>>> Stashed changes
 - log the HTTP/2 header-validation gap and the trailers conflation ([`9fe1021`](https://github.com/dstroy0/ProtoCore/commit/9fe1021e500a04a229d9651361bc125baebcf9ef))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0b84890`](https://github.com/dstroy0/ProtoCore/commit/0b848906fa31a831593f3bcc4ed0fcc6817a9806))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`1d1e182`](https://github.com/dstroy0/ProtoCore/commit/1d1e1824efb0433ed7006a12b4fa97cfc8be18df))
@@ -298,6 +304,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- pin the SETTINGS accept-side bounds and an RFC-supplied request block ([`f39219b`](https://github.com/dstroy0/ProtoCore/commit/f39219b4b79d6f46363c0c85f9d22e09eacd0e1c))
+- pin the RFC 7541 Appendix C vectors byte for byte ([`810a31d`](https://github.com/dstroy0/ProtoCore/commit/810a31d45e8d99ff433db3fbb9e633cec9105420))
 - drop the h2_server wire probe now the seam is stated ([`df6d2c5`](https://github.com/dstroy0/ProtoCore/commit/df6d2c563623eb724d2d9c7b804799f3029611dc))
 - native_h2server states PC_HAS_VENDOR_TLS so the suite owns the TLS seam ([`963db3b`](https://github.com/dstroy0/ProtoCore/commit/963db3bc1398cbffedd690bbbbf3df833fe9a2b3))
 - probe the h2_server wire to find why no frame reaches the callbacks ([`7a2c404`](https://github.com/dstroy0/ProtoCore/commit/7a2c40477d13fbd2ca319b6ea03b23b7240b3979))
