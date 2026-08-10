@@ -63,9 +63,9 @@ size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
 
 proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len)
 {
-    if (!in || !name_ok(key) || !nvs_open(ns, PROTO_FALSE))
+    if (!in || len == 0 || len > PC_CONFIG_VAL_MAX || !name_ok(key) || !nvs_open(ns, PROTO_FALSE))
     {
-        return PROTO_FALSE;
+        return PROTO_FALSE; // putBytes bails on len 0 and reports 0, which would read as success
     }
     proto_bool ok = s_nvs.prefs.putBytes(key, in, len) == len;
     s_nvs.prefs.end();
@@ -98,11 +98,21 @@ size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
 
 proto_bool pc_nvs_put_str(const char *ns, const char *key, const char *val)
 {
-    if (!val || !name_ok(key) || !nvs_open(ns, PROTO_FALSE))
+    if (!val || !name_ok(key))
     {
         return PROTO_FALSE;
     }
-    size_t len = strnlen(val, PC_CONFIG_VAL_MAX);
+    // putString writes uncapped and returns the true length, so an over-long value would COMMIT and
+    // then be reported as a failure. Measure one past the cap and refuse before opening.
+    size_t len = strnlen(val, PC_CONFIG_VAL_MAX + 1);
+    if (len > PC_CONFIG_VAL_MAX)
+    {
+        return PROTO_FALSE;
+    }
+    if (!nvs_open(ns, PROTO_FALSE))
+    {
+        return PROTO_FALSE;
+    }
     proto_bool ok = s_nvs.prefs.putString(key, val) == len;
     s_nvs.prefs.end();
     return ok;
