@@ -43,9 +43,16 @@ static void on_request(void *, H3Conn *, uint64_t sid, const char *method, const
     g_requests++;
 }
 
+// Two transports, matching the two connection slots. The engine's borrow is bound to the object,
+// so it is carried across the reset the way pc_quic_conn_init carries it.
+static QuicConn g_qc;
+static QuicConn g_qc2;
+
 static void minimal_qc(struct QuicConn *qc)
 {
+    uint8_t *tx = qc->streams[0].tx;
     memset(qc, 0, sizeof(*qc));
+    qc->streams[0].tx = tx;
     for (int i = 0; i < 3; i++)
     {
         qc->space[i].largest_acked = -1;
@@ -115,10 +122,9 @@ static proto_bool pc_resp_emit(void *, const char *name, size_t nlen, const char
 void test_request_dispatch_and_response()
 {
     g_requests = 0;
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
-    TEST_ASSERT_NOT_NULL(qc.cb.on_stream_data);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
+    TEST_ASSERT_NOT_NULL(g_qc.cb.on_stream_data);
 
     // Build a GET request: HEADERS(:method GET, :path /index.html, :authority example.org).
     uint8_t block[128];
@@ -130,7 +136,7 @@ void test_request_dispatch_and_response()
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
 
     // Deliver it on request stream 0 with FIN through the QUIC callback seam.
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("GET", g_method);
     TEST_ASSERT_EQUAL_STRING("/index.html", g_path);
@@ -139,7 +145,7 @@ void test_request_dispatch_and_response()
 
     // Respond and decode what was queued onto the QUIC stream.
     TEST_ASSERT_TRUE(pc_h3_conn_respond(&g_h3, 0, 200, "text/plain", (const uint8_t *)"hello", 5));
-    QuicStream *st = find_stream(&qc, 0);
+    QuicStream *st = find_stream(&g_qc, 0);
     TEST_ASSERT_NOT_NULL(st);
     // Walk the response frames: HEADERS then DATA.
     size_t off = 0;
@@ -173,9 +179,8 @@ void test_request_dispatch_and_response()
 void test_post_with_body()
 {
     g_requests = 0;
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t block[128];
     size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
@@ -185,7 +190,7 @@ void test_post_with_body()
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
     rp += pc_h3_build_data(req + rp, sizeof(req) - rp, (const uint8_t *)"name=x", 6);
 
-    qc.cb.on_stream_data(qc.cb.app, &qc, 4, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 4, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("POST", g_method);
     TEST_ASSERT_EQUAL_STRING("/submit", g_path);
@@ -195,13 +200,12 @@ void test_post_with_body()
 
 void test_control_stream_settings_sent()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     // Simulate handshake completion: the control + QPACK streams should be opened.
-    qc.cb.on_handshake_done(qc.cb.app, &qc);
-    QuicStream *ctrl = find_stream(&qc, 3);
+    g_qc.cb.on_handshake_done(g_qc.cb.app, &g_qc);
+    QuicStream *ctrl = find_stream(&g_qc, 3);
     TEST_ASSERT_NOT_NULL(ctrl);
     // Stream type 0x00, then a SETTINGS frame.
     uint64_t type = 0;
@@ -212,24 +216,23 @@ void test_control_stream_settings_sent()
     TEST_ASSERT_TRUE(pc_h3_frame_parse(ctrl->tx + c, ctrl->tx_have - c, &fr));
     TEST_ASSERT_EQUAL_UINT64(H3_SETTINGS, fr.type);
     // QPACK encoder (7) and decoder (11) streams exist with their type bytes.
-    TEST_ASSERT_NOT_NULL(find_stream(&qc, 7));
-    TEST_ASSERT_NOT_NULL(find_stream(&qc, 11));
+    TEST_ASSERT_NOT_NULL(find_stream(&g_qc, 7));
+    TEST_ASSERT_NOT_NULL(find_stream(&g_qc, 11));
 }
 
 // The client's control stream (a uni stream, type 0x00) carries SETTINGS; the server classifies the
 // stream by its type varint and parses the SETTINGS into peer_settings.
 void test_client_control_stream_settings()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t s[64];
     size_t sp = pc_quic_varint_encode(s, sizeof(s), 0x00); // control stream type
     const uint64_t ids[] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     const uint64_t vals[] = {12345};
     sp += pc_h3_build_settings(s + sp, sizeof(s) - sp, ids, vals, 1);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, PROTO_FALSE); // client-initiated uni stream (id 2)
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE); // client-initiated uni stream (id 2)
 
     H3Stream *st = find_h3(&g_h3, 2);
     TEST_ASSERT_NOT_NULL(st);
@@ -241,17 +244,16 @@ void test_client_control_stream_settings()
 // and then drained (static-table only, nothing to process).
 void test_client_uni_stream_types()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t t;
     size_t n = pc_quic_varint_encode(&t, 1, 0x02);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 6, &t, n, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 6, &t, n, PROTO_FALSE);
     n = pc_quic_varint_encode(&t, 1, 0x03);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 10, &t, n, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 10, &t, n, PROTO_FALSE);
     n = pc_quic_varint_encode(&t, 1, 0x1f); // an unknown stream type
-    qc.cb.on_stream_data(qc.cb.app, &qc, 14, &t, n, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 14, &t, n, PROTO_FALSE);
 
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_QPACK_ENC, find_h3(&g_h3, 6)->role);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_QPACK_DEC, find_h3(&g_h3, 10)->role);
@@ -261,15 +263,14 @@ void test_client_uni_stream_types()
 // on_handshake_done opens the control + QPACK streams exactly once; a repeat call is a no-op.
 void test_handshake_done_idempotent()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
-    qc.cb.on_handshake_done(qc.cb.app, &qc);
-    QuicStream *ctrl = find_stream(&qc, 3);
+    g_qc.cb.on_handshake_done(g_qc.cb.app, &g_qc);
+    QuicStream *ctrl = find_stream(&g_qc, 3);
     TEST_ASSERT_NOT_NULL(ctrl);
     size_t first = ctrl->tx_have;
-    qc.cb.on_handshake_done(qc.cb.app, &qc); // control_opened -> no-op
+    g_qc.cb.on_handshake_done(g_qc.cb.app, &g_qc); // control_opened -> no-op
     TEST_ASSERT_EQUAL_UINT(first, ctrl->tx_have);
 }
 
@@ -277,28 +278,26 @@ void test_handshake_done_idempotent()
 void test_malformed_request_frame()
 {
     g_requests = 0;
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     // A HEADERS frame that declares length 9999 but has no payload -> incomplete -> not dispatched.
     uint8_t hdr[8];
     size_t hp = pc_h3_frame_write_header(hdr, sizeof(hdr), H3_HEADERS, 9999);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, hdr, hp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, hdr, hp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 
     // A truncated frame-header varint -> parse fails -> not dispatched.
     uint8_t junk[1] = {0xC0}; // first byte of an 8-byte varint, nothing after it
-    qc.cb.on_stream_data(qc.cb.app, &qc, 4, junk, sizeof(junk), PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 4, junk, sizeof(junk), PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 }
 
 // A response body too large to frame into the output buffer fails cleanly.
 void test_respond_body_too_large()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
     static uint8_t big[PC_H3_STREAM_BUF + 200];
     memset(big, 'x', sizeof(big));
     TEST_ASSERT_FALSE(pc_h3_conn_respond(&g_h3, 0, 200, "text/plain", big, sizeof(big)));
@@ -308,14 +307,13 @@ void test_respond_body_too_large()
 void test_stream_pool_full()
 {
     g_requests = 0;
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t b = 0x00;
     for (uint64_t i = 0; i < PC_H3_MAX_STREAMS; i++)
     {
-        qc.cb.on_stream_data(qc.cb.app, &qc, i * 4, &b, 1, PROTO_FALSE); // partial request streams, no FIN
+        g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, i * 4, &b, 1, PROTO_FALSE); // partial request streams, no FIN
     }
 
     // One more distinct request stream cannot allocate a slot -> silently ignored.
@@ -325,7 +323,7 @@ void test_stream_pool_full()
     bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/x", 2);
     uint8_t req[128];
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
-    qc.cb.on_stream_data(qc.cb.app, &qc, (uint64_t)PC_H3_MAX_STREAMS * 4, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, (uint64_t)PC_H3_MAX_STREAMS * 4, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 }
 
@@ -333,15 +331,14 @@ void test_stream_pool_full()
 // rest arrives, then the stream is classified.
 void test_uni_stream_partial_type()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t b0 = 0x40; // first byte of a 2-byte varint - incomplete on its own
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &b0, 1, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, &b0, 1, PROTO_FALSE);
     TEST_ASSERT_FALSE(find_h3(&g_h3, 2)->type_read); // needs more bytes; not yet classified
     uint8_t b1 = 0x00;                             // completes the varint 0x4000 -> value 0 -> control stream
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &b1, 1, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, &b1, 1, PROTO_FALSE);
     TEST_ASSERT_TRUE(find_h3(&g_h3, 2)->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, find_h3(&g_h3, 2)->role);
 }
@@ -350,9 +347,8 @@ void test_uni_stream_partial_type()
 void test_overlong_field_truncated()
 {
     g_requests = 0;
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t block[128];
     size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
@@ -361,7 +357,7 @@ void test_overlong_field_truncated()
     bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/", 1);
     uint8_t req[256];
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_UINT(PC_H3_METHOD_LEN - 1, strlen(g_method)); // truncated to fit
@@ -373,9 +369,8 @@ void test_overlong_field_truncated()
 void test_h3_pseudo_header_name_variants()
 {
     g_requests = 0;
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t block[256];
     size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
@@ -389,7 +384,7 @@ void test_h3_pseudo_header_name_variants()
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
 
     strcpy(g_auth, "unset");
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("GET", g_method); // ":scheme" did not overwrite :method
     TEST_ASSERT_EQUAL_STRING("/ok", g_path);   // "hello" did not overwrite :path
@@ -401,9 +396,8 @@ void test_h3_pseudo_header_name_variants()
 void test_h3_request_unknown_frame_and_empty_data()
 {
     g_requests = 0;
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t block[128];
     size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
@@ -415,7 +409,7 @@ void test_h3_request_unknown_frame_and_empty_data()
     rp += pc_h3_build_data(req + rp, sizeof(req) - rp, NULL, 0); // empty DATA
     rp += pc_h3_build_data(req + rp, sizeof(req) - rp, (const uint8_t *)"body", 4);
 
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("POST", g_method);
     TEST_ASSERT_EQUAL_UINT(4, g_body_len);
@@ -432,9 +426,8 @@ void test_h3_control_only_frames_on_a_request_stream()
     for (size_t i = 0; i < sizeof(only_control) / sizeof(only_control[0]); i++)
     {
         g_requests = 0;
-        QuicConn qc;
-        established_qc(&qc);
-        pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+        established_qc(&g_qc);
+        pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
         uint8_t block[128];
         size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
@@ -445,11 +438,11 @@ void test_h3_control_only_frames_on_a_request_stream()
         size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
         rp += pc_h3_frame_write_header(req + rp, sizeof(req) - rp, only_control[i], 0);
 
-        qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+        g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
         TEST_ASSERT_EQUAL_INT(0, g_requests); // never dispatched
-        TEST_ASSERT_TRUE(qc.close_queued);
-        TEST_ASSERT_TRUE(qc.close_is_app); // an HTTP/3 code needs the 0x1d variant
-        TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, qc.close_error);
+        TEST_ASSERT_TRUE(g_qc.close_queued);
+        TEST_ASSERT_TRUE(g_qc.close_is_app); // an HTTP/3 code needs the 0x1d variant
+        TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, g_qc.close_error);
     }
 }
 
@@ -458,17 +451,16 @@ void test_h3_control_only_frames_on_a_request_stream()
 // APPLICATION_ERROR, whose code is read against sec 20.1, so the HTTP/3 code is not carried.
 void test_h3_error_before_app_keys_falls_back_to_transport()
 {
-    QuicConn qc;
-    minimal_qc(&qc); // deliberately not established: no 1-RTT keys
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc); // deliberately not established: no 1-RTT keys
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t req[128];
     size_t rp = pc_h3_build_data(req, sizeof(req), (const uint8_t *)"body", 4);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
 
-    TEST_ASSERT_TRUE(qc.close_queued);
-    TEST_ASSERT_FALSE(qc.close_is_app);
-    TEST_ASSERT_EQUAL_UINT64(QUIC_ERR_APPLICATION, qc.close_error);
+    TEST_ASSERT_TRUE(g_qc.close_queued);
+    TEST_ASSERT_FALSE(g_qc.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(QUIC_ERR_APPLICATION, g_qc.close_error);
 }
 
 // RFC 9114 sec 4.1: "a DATA frame before any HEADERS frame ... is considered invalid", and an
@@ -476,18 +468,17 @@ void test_h3_error_before_app_keys_falls_back_to_transport()
 void test_h3_data_before_headers()
 {
     g_requests = 0;
-    QuicConn qc;
-    established_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    established_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t req[128];
     size_t rp = pc_h3_build_data(req, sizeof(req), (const uint8_t *)"body", 4);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_EQUAL_INT(0, g_requests);
-    TEST_ASSERT_TRUE(qc.close_queued);
-    TEST_ASSERT_TRUE(qc.close_is_app);
-    TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, qc.close_error);
+    TEST_ASSERT_TRUE(g_qc.close_queued);
+    TEST_ASSERT_TRUE(g_qc.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, g_qc.close_error);
 }
 
 // RFC 9114 sec 6.2.1: "Only one control stream per peer is permitted; receipt of a second stream
@@ -495,24 +486,23 @@ void test_h3_data_before_headers()
 // H3_STREAM_CREATION_ERROR."
 void test_h3_second_control_stream()
 {
-    QuicConn qc;
-    established_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    established_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     // The first control stream, carrying its mandatory SETTINGS.
     uint8_t s1[64];
     size_t p1 = pc_quic_varint_encode(s1, sizeof(s1), 0x00);
     p1 += pc_h3_build_settings(s1 + p1, sizeof(s1) - p1, NULL, NULL, 0);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s1, p1, PROTO_FALSE);
-    TEST_ASSERT_FALSE(qc.close_queued);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s1, p1, PROTO_FALSE);
+    TEST_ASSERT_FALSE(g_qc.close_queued);
 
     // A second uni stream also typed 0x00.
     uint8_t s2[64];
     size_t p2 = pc_quic_varint_encode(s2, sizeof(s2), 0x00);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 6, s2, p2, PROTO_FALSE);
-    TEST_ASSERT_TRUE(qc.close_queued);
-    TEST_ASSERT_TRUE(qc.close_is_app);
-    TEST_ASSERT_EQUAL_UINT64(H3_STREAM_CREATION_ERROR, qc.close_error);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 6, s2, p2, PROTO_FALSE);
+    TEST_ASSERT_TRUE(g_qc.close_queued);
+    TEST_ASSERT_TRUE(g_qc.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(H3_STREAM_CREATION_ERROR, g_qc.close_error);
 }
 
 // RFC 9114 sec 7.2.4: "If an endpoint receives a second SETTINGS frame on the control stream, the
@@ -520,22 +510,21 @@ void test_h3_second_control_stream()
 // re-default and re-parse on every SETTINGS, letting a peer reconfigure the connection at will.
 void test_h3_second_settings_frame()
 {
-    QuicConn qc;
-    established_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    established_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     uint8_t s[128];
     size_t p = pc_quic_varint_encode(s, sizeof(s), 0x00);
     p += pc_h3_build_settings(s + p, sizeof(s) - p, NULL, NULL, 0);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, p, PROTO_FALSE);
-    TEST_ASSERT_FALSE(qc.close_queued);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, p, PROTO_FALSE);
+    TEST_ASSERT_FALSE(g_qc.close_queued);
 
     uint8_t s2[128];
     size_t p2 = pc_h3_build_settings(s2, sizeof(s2), NULL, NULL, 0);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s2, p2, PROTO_FALSE);
-    TEST_ASSERT_TRUE(qc.close_queued);
-    TEST_ASSERT_TRUE(qc.close_is_app);
-    TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, qc.close_error);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s2, p2, PROTO_FALSE);
+    TEST_ASSERT_TRUE(g_qc.close_queued);
+    TEST_ASSERT_TRUE(g_qc.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, g_qc.close_error);
 }
 
 // With no application callback registered the request is still parsed and marked complete; it is
@@ -543,9 +532,8 @@ void test_h3_second_settings_frame()
 void test_h3_no_request_callback()
 {
     g_requests = 0;
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, NULL, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, NULL, NULL);
 
     uint8_t block[128];
     size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
@@ -554,7 +542,7 @@ void test_h3_no_request_callback()
     uint8_t req[256];
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
 
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests); // no callback -> nothing dispatched
     H3Stream *st = find_h3(&g_h3, 0);
     TEST_ASSERT_NOT_NULL(st);
@@ -566,13 +554,12 @@ void test_h3_no_request_callback()
 // exactly its capacity and the excess is dropped.
 void test_h3_stream_buffer_overflow_clamped()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     static uint8_t big[PC_H3_STREAM_BUF + 64];
     memset(big, 0x00, sizeof(big)); // PADDING-like filler; no complete frame is formed
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, big, sizeof(big), PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, big, sizeof(big), PROTO_FALSE);
 
     H3Stream *st = find_h3(&g_h3, 0);
     TEST_ASSERT_NOT_NULL(st);
@@ -583,9 +570,8 @@ void test_h3_stream_buffer_overflow_clamped()
 // arrived, and a frame that is not SETTINGS - none of which disturb peer_settings.
 void test_h3_control_stream_frame_guards()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
     H3Settings defaults;
     pc_h3_settings_defaults(&defaults);
 
@@ -593,48 +579,45 @@ void test_h3_control_stream_frame_guards()
     uint8_t s[64];
     size_t sp = pc_quic_varint_encode(s, sizeof(s), 0x00);
     s[sp++] = 0xC0;
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE);
     H3Stream *st = find_h3(&g_h3, 2);
     TEST_ASSERT_NOT_NULL(st);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, st->role);
     TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, g_h3.peer_settings.max_field_section_size);
 
     // A SETTINGS frame header announcing more payload than has arrived: held, not parsed.
-    QuicConn qc2;
-    minimal_qc(&qc2);
-    pc_h3_conn_init(&g_h3b, &qc2, on_request, NULL);
+    minimal_qc(&g_qc2);
+    pc_h3_conn_init(&g_h3b, &g_qc2, on_request, NULL);
     uint8_t s2[64];
     size_t sp2 = pc_quic_varint_encode(s2, sizeof(s2), 0x00);
     sp2 += pc_h3_frame_write_header(s2 + sp2, sizeof(s2) - sp2, H3_SETTINGS, 40);
-    qc2.cb.on_stream_data(qc2.cb.app, &qc2, 2, s2, sp2, PROTO_FALSE);
+    g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s2, sp2, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, g_h3b.peer_settings.max_field_section_size);
 
     // RFC 9114 sec 6.2.1: "If the first frame of the control stream is any other frame type, this
     // MUST be treated as a connection error of type H3_MISSING_SETTINGS." This used to assert the
     // frame was consumed and ignored.
-    QuicConn qc3;
-    established_qc(&qc3);
-    pc_h3_conn_init(&g_h3b, &qc3, on_request, NULL);
+    established_qc(&g_qc2);
+    pc_h3_conn_init(&g_h3b, &g_qc2, on_request, NULL);
     uint8_t s3[64];
     size_t sp3 = pc_quic_varint_encode(s3, sizeof(s3), 0x00);
     sp3 += pc_h3_frame_write_header(s3 + sp3, sizeof(s3) - sp3, 0x07 /*GOAWAY*/, 1);
     s3[sp3++] = 0x00;
-    qc3.cb.on_stream_data(qc3.cb.app, &qc3, 2, s3, sp3, PROTO_FALSE);
-    TEST_ASSERT_TRUE(qc3.close_queued);
-    TEST_ASSERT_TRUE(qc3.close_is_app);
-    TEST_ASSERT_EQUAL_UINT64(H3_MISSING_SETTINGS, qc3.close_error);
+    g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s3, sp3, PROTO_FALSE);
+    TEST_ASSERT_TRUE(g_qc2.close_queued);
+    TEST_ASSERT_TRUE(g_qc2.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(H3_MISSING_SETTINGS, g_qc2.close_error);
 
     // Once SETTINGS has arrived, a later GOAWAY on the control stream is accepted and ignored.
-    QuicConn qc4;
-    minimal_qc(&qc4);
-    pc_h3_conn_init(&g_h3b, &qc4, on_request, NULL);
+    minimal_qc(&g_qc2);
+    pc_h3_conn_init(&g_h3b, &g_qc2, on_request, NULL);
     uint8_t s4[64];
     size_t sp4 = pc_quic_varint_encode(s4, sizeof(s4), 0x00);
     sp4 += pc_h3_build_settings(s4 + sp4, sizeof(s4) - sp4, NULL, NULL, 0);
     sp4 += pc_h3_frame_write_header(s4 + sp4, sizeof(s4) - sp4, 0x07 /*GOAWAY*/, 1);
     s4[sp4++] = 0x00;
-    qc4.cb.on_stream_data(qc4.cb.app, &qc4, 2, s4, sp4, PROTO_FALSE);
-    TEST_ASSERT_FALSE(qc4.close_queued);
+    g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s4, sp4, PROTO_FALSE);
+    TEST_ASSERT_FALSE(g_qc2.close_queued);
     H3Stream *sc = find_h3(&g_h3b, 2);
     TEST_ASSERT_NOT_NULL(sc);
     TEST_ASSERT_EQUAL_UINT(0, sc->buf_len); // fully consumed
@@ -644,13 +627,12 @@ void test_h3_control_stream_frame_guards()
 // is no type varint to read yet), and once classified a later delivery does not re-classify.
 void test_h3_uni_stream_empty_and_repeat_delivery()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     // Zero-length delivery on a fresh uni stream: nothing buffered, nothing classified.
     uint8_t none = 0;
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &none, 0, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, &none, 0, PROTO_FALSE);
     H3Stream *st = find_h3(&g_h3, 2);
     TEST_ASSERT_NOT_NULL(st);
     TEST_ASSERT_FALSE(st->type_read);
@@ -659,7 +641,7 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     // The type varint arrives and classifies it as the control stream.
     uint8_t t[16];
     size_t tn = pc_quic_varint_encode(t, sizeof(t), 0x00);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, t, tn, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, t, tn, PROTO_FALSE);
     TEST_ASSERT_TRUE(st->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, st->role);
 
@@ -669,7 +651,7 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     const uint64_t ids[] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     const uint64_t vals[] = {4321};
     size_t sp = pc_h3_build_settings(s, sizeof(s), ids, vals, 1);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(4321, g_h3.peer_settings.max_field_section_size);
 }
 
@@ -677,12 +659,11 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
 // content-length 0, and no DATA frame is emitted.
 void test_h3_respond_no_content_type_empty_body()
 {
-    QuicConn qc;
-    minimal_qc(&qc);
-    pc_h3_conn_init(&g_h3, &qc, on_request, NULL);
+    minimal_qc(&g_qc);
+    pc_h3_conn_init(&g_h3, &g_qc, on_request, NULL);
 
     TEST_ASSERT_TRUE(pc_h3_conn_respond(&g_h3, 0, 204, NULL, NULL, 0));
-    QuicStream *st = find_stream(&qc, 0);
+    QuicStream *st = find_stream(&g_qc, 0);
     TEST_ASSERT_NOT_NULL(st);
 
     size_t off = 0;

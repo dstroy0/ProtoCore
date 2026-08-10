@@ -91,6 +91,10 @@ static proto_bool quic_conn_slot_storage(struct QuicConn *qc)
 
 static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool create)
 {
+    if (!quic_conn_slot_storage(qc))
+    {
+        return NULL; // the connection has no bytes; it holds no streams either
+    }
     QuicStream *free_slot = NULL;
     for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
     {
