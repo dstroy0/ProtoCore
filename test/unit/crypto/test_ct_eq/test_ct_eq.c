@@ -109,6 +109,31 @@ void test_cancelling_differences_do_not_cancel(void)
     TEST_ASSERT_FALSE(pc_ct_eq(c, d, sizeof(c)));
 }
 
+// pc_ct_is_zero is what the TLS 1.3 handshakes key their RFC 8446 sec 7.4.2 abort on: a low-order
+// peer key share drives X25519 to an all-zero shared secret, and accepting it would derive traffic
+// keys from a value the peer chose.
+void test_ct_is_zero(void)
+{
+    uint8_t buf[32];
+    memset(buf, 0, sizeof(buf));
+    TEST_ASSERT_TRUE_MESSAGE(pc_ct_is_zero(buf, sizeof(buf)), "an all-zero buffer is zero");
+
+    // A single set bit anywhere must be seen, wherever it sits.
+    for (size_t pos = 0; pos < sizeof(buf); pos++)
+    {
+        memset(buf, 0, sizeof(buf));
+        buf[pos] = 0x01;
+        TEST_ASSERT_FALSE_MESSAGE(pc_ct_is_zero(buf, sizeof(buf)), "one set byte is not zero");
+    }
+
+    // Zero length is vacuously zero, and the test reads exactly n.
+    memset(buf, 0, sizeof(buf));
+    buf[8] = 0xFF;
+    TEST_ASSERT_TRUE_MESSAGE(pc_ct_is_zero(buf, 8), "bytes past n must not be read");
+    TEST_ASSERT_FALSE_MESSAGE(pc_ct_is_zero(buf, 9), "the byte at n-1 must decide it");
+    TEST_ASSERT_TRUE(pc_ct_is_zero(buf, 0));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -119,5 +144,6 @@ int main(void)
     RUN_TEST(test_single_bit_difference_is_caught);
     RUN_TEST(test_difference_past_n_is_not_read);
     RUN_TEST(test_cancelling_differences_do_not_cancel);
+    RUN_TEST(test_ct_is_zero);
     return UNITY_END();
 }
