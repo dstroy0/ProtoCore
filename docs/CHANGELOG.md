@@ -6,6 +6,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+<<<<<<< Updated upstream
+=======
+- the suite check uses the IANA code point constant ([`40801ed`](https://github.com/dstroy0/ProtoCore/commit/40801ed4b887b95789ba1b18e300942bbc4d728a))
+>>>>>>> Stashed changes
 - the offered cipher suite and legacy_compression_methods are checked ([`0ef116e`](https://github.com/dstroy0/ProtoCore/commit/0ef116eac1d839a37987270b2398dfe0a72a912f))
 - a zero-length Handshake or Alert record is neither sent nor accepted ([`2d3e3a7`](https://github.com/dstroy0/ProtoCore/commit/2d3e3a75816c4aa15769c014e784747d0e92f089))
 - h3_fail is defined above its first use ([`49067b0`](https://github.com/dstroy0/ProtoCore/commit/49067b08f2974233d4333c06ba7b3bb0bc330092))
