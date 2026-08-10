@@ -566,6 +566,22 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## A retransmitted DTLS fragment could rewrite bytes already reassembled
+
+- **Status:** FIXED 2026-08-09 (`dtls_handshake.c` `reasm_add`). Found 2026-08-08 auditing `test/`
+  for RFC conformance (`git_project/audit/dtls13-rpk.md` #10).
+- **Symptom:** RFC 9147 sec 5.5: "Senders MUST NOT change handshake message bytes upon
+  retransmission. Receivers MAY check that retransmitted bytes are identical and SHOULD abort the
+  handshake with an illegal_parameter alert if the value of a byte changes." Reassembly copied every
+  fragment over whatever was already there, so a peer could deliver one ClientHello, then rewrite
+  part of it with a second fragment covering the same range - the transcript hash would cover bytes
+  the first flight never contained.
+- **Nothing can catch it:** `test_hs_reasm_overlap_and_duplicate` exercises three overlapping
+  fragments, all carrying identical bytes, so the silent overwrite looked correct.
+- **Fix:** the fragment's overlap with each range already held is compared before the copy; a
+  disagreement fails the reassembly. Ranges were already tracked, so the check costs one compare per
+  overlapping interval. Verified: `native_dtls_hs` 22/22, 202/202 across eleven DTLS envs.
+
 ## An invalid DTLS cookie drew the wrong alert
 
 - **Status:** FIXED 2026-08-09 (`dtls_conn.c`). Found 2026-08-08 auditing `test/` for RFC
