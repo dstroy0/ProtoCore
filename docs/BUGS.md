@@ -478,15 +478,27 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   covering its own context) and as `-Og` (host builds at `-O2`, which is how the SWAR leaves could
   not be reached through their Ns table). Three separate classes, one cause: the matrix compiles one
   configuration of a library that ships several.
-- **Not free to add today:** a host C++ env would fail immediately, and not only on the `extern "C"`
-  break. `src/mmgr/ring.h:76` declares `pc_ring_available(const _Atomic size_t *head, ...)`, and
-  `_Atomic` is a C keyword - under host `g++` the header does not compile at all
-  (`error: '_Atomic' does not name a type`). It works on the ESP toolchain only because that
-  `<stdatomic.h>` shims `_Atomic` in C++ mode. So the header is C-only by construction while sitting
-  on the include path of every C++ consumer.
-- **Fix:** ordered, not parallel. Close the `extern "C"` break above first, then decide what
-  `ring.h` publishes to a C++ TU, and only then add the env - one environment compiling a single
-  `.cpp` that includes `protocore.h` would gate all three from then on.
+- **Not free to add today, and the reason is a rule the codebase already wrote down.**
+  `tcp_evt.h:11` states it: "the ring cursors in them are `_Atomic`, which is C11 and not C++ - so
+  a header that reaches the sketches cannot be the one that declares them." `tcp_evt.h` exists to be
+  the C++-safe half, split from `tcp.h` for exactly this. But `protocore.h:57` includes
+  `network_drivers/transport/tcp.h`, which at `:28` includes `tcp/tcp_conn.h`, which declares
+  `_Atomic ConnState state` at `:80` and `_Atomic size_t rx_head` at `:88`. `protocore.h` IS the
+  header that reaches the sketches, so the include at `:57` breaks the rule the split was made to
+  keep.
+- **Measured, after the `extern "C"` fix landed:** ESP-IDF no longer reports a single
+  template-with-C-linkage error; it now stops at `ring.h:76 '_Atomic' does not name a type`, the
+  same error host `g++` gives. Both toolchains agree - an earlier note here guessed that ESP's
+  `<stdatomic.h>` shimmed `_Atomic` in C++ mode, and the build shows it does not.
+- **Scope, if it were a spelling problem:** it is not, but for the record only 4 headers name
+  `_Atomic` at all (`ring.h`, `tcp/tcp_conn.h`, `tcp_evt.h` in prose, `udp/udp_datagram.h`), 36 uses
+  between them. A `PROTO_ATOMIC(T)` macro mapping to `std::atomic<T>` under C++ would compile - and
+  would contradict the boundary above, which is why it is not the fix.
+- **Fix:** decide what `protocore.h` publishes. A sketch needs the `Tcp` API surface and
+  `tcp_evt.h`; whether it needs `tcp_conn.h`'s slot internals is the question, and the answer sets
+  whether `tcp.h` stops re-exporting them, or `protocore.h` stops including `tcp.h`. Only then does
+  the env go in - one environment compiling a single `.cpp` that includes `protocore.h` gates all
+  three classes from then on.
 
 ## protocore.h wraps its 268 includes in `extern "C"`, so a C++ standard header lands inside one
 
