@@ -112,6 +112,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7241153`](https://github.com/dstroy0/ProtoCore/commit/7241153e8d14797d64f886e67b9598af4739c37d))
 - update CHANGELOG.md [skip ci] ([`ab6e460`](https://github.com/dstroy0/ProtoCore/commit/ab6e4602559b92bf01405352faf7f5b3a7016d82))
 - update CHANGELOG.md [skip ci] ([`cfaa623`](https://github.com/dstroy0/ProtoCore/commit/cfaa62307ce9c5b98cad64f0d43f980be11c9732))
 - update CHANGELOG.md [skip ci] ([`1cd8b47`](https://github.com/dstroy0/ProtoCore/commit/1cd8b470eae21148cc792f725fdd254df2630f38))
@@ -475,6 +476,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the continuity check compared the one-shot to the path it routes through ([`a3ca678`](https://github.com/dstroy0/ProtoCore/commit/a3ca678eeeff5f63a7412b0d085bbd65202734c8))
 - the block loop and the rate-1 pad merge were unreached at every rate ([`eaf91bf`](https://github.com/dstroy0/ProtoCore/commit/eaf91bf6bb8cd18e7b84c71ed235bd55881d6ed0))
 - use the file's own hex helper ([`94ffc38`](https://github.com/dstroy0/ProtoCore/commit/94ffc383f4ebbd6e77f231ec728ecab60d8fa23e))
 - SHA-256 padding boundaries and the RFC 7748 masking MUST were unreached ([`4a95d36`](https://github.com/dstroy0/ProtoCore/commit/4a95d3662e39fb3053ba0c6f613d90986440a59c))
