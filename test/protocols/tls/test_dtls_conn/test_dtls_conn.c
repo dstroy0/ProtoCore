@@ -1618,6 +1618,47 @@ static void test_completion_ack_deferred_when_out_full(void)
 // The epoch-3 application record paths: nothing is available before the handshake completes, and once
 // it has, a record that fails to open, one that is not application data, and a replay are all refused
 // while genuine application data round-trips both ways.
+// RFC 9147 sec 4.5.2: "invalid records SHOULD be silently discarded, thus preserving the
+// association", and an implementation that answers with a fatal alert is "extremely susceptible to
+// DoS attacks because UDP forgery is so easy". The sibling open_app path had a tampered-record
+// test; the connection path, where one forged datagram used to end the handshake, had none.
+static void test_forged_record_does_not_end_the_association(void)
+{
+    uint8_t server_ed_pub[32];
+    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    DtlsServerConfig cfg;
+    server_cfg(&cfg, server_ed_pub);
+
+    DtlsConn conn;
+    ClientSession st;
+    TEST_ASSERT_TRUE(run_to_finished(&conn, &cfg, &st));
+    uint8_t out[512];
+    TEST_ASSERT_TRUE(feed_client_finished(&conn, &st, 0, out, sizeof(out)) > 0);
+    TEST_ASSERT_TRUE(DtlsServer.established(&conn));
+
+    // A well-shaped epoch-3 record over bytes that are not a valid sealing.
+    uint8_t junk[48];
+    memset(junk, 0xA5, sizeof(junk));
+    junk[0] = 0x2F;
+    junk[3] = 0x00;
+    junk[4] = 0x2B; // declared body length 43 = 27 inner bytes + the 16-byte tag
+    TEST_ASSERT_EQUAL_INT(0, DtlsServer.process(&conn, junk, sizeof(junk), out, sizeof(out)));
+    TEST_ASSERT_TRUE(DtlsServer.established(&conn)); // the association survives it
+    TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&conn));
+
+    // And genuine application data still opens afterwards.
+    const uint8_t payload[5] = {'h', 'e', 'l', 'l', 'o'};
+    uint8_t apprec[64];
+    size_t pl = DtlsRecord.protect(&st.cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload), apprec,
+                                   sizeof(apprec), NULL, 0);
+    TEST_ASSERT_TRUE(pl > 0);
+    uint8_t plain[64];
+    size_t plen = 0;
+    TEST_ASSERT_TRUE(DtlsServer.open_app(&conn, apprec, pl, plain, sizeof(plain), &plen));
+    TEST_ASSERT_EQUAL_UINT32(sizeof(payload), (uint32_t)plen);
+    TEST_ASSERT_EQUAL_MEMORY(payload, plain, sizeof(payload));
+}
+
 static void test_app_records_before_and_after_established(void)
 {
     uint8_t server_ed_pub[32];
@@ -2051,6 +2092,7 @@ int main(void)
     RUN_TEST(test_ack_malformed_and_partial_keep_timer);
     RUN_TEST(test_ack_replay_and_late_ack_ignored);
     RUN_TEST(test_completion_ack_deferred_when_out_full);
+    RUN_TEST(test_forged_record_does_not_end_the_association);
     RUN_TEST(test_app_records_before_and_after_established);
     RUN_TEST(test_conn_id_edge_cases);
     RUN_TEST(test_peer_addr_zero_length_and_clamped);
