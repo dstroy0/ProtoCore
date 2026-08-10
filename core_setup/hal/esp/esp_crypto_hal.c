@@ -31,11 +31,10 @@
 // peripherals). One named owner, unreachable cross-TU.
 typedef struct
 {
-    SemaphoreHandle_t lock;       // PC recursive mutex; held across a whole scalar-mult run
-    StaticSemaphore_t lock_store; // the mutex's own storage, so creating it allocates nothing
-    portMUX_TYPE hw_mux;          // guards creation and the shared clock/reset RMW + memory-init
+    SemaphoreHandle_t lock; // PC recursive mutex; held across a whole scalar-mult run
+    portMUX_TYPE hw_mux;    // guards lazy mutex creation and the shared clock/reset RMW + memory-init
 } HalRsaCtx;
-static HalRsaCtx s_rsa = {NULL, {{0}}, portMUX_INITIALIZER_UNLOCKED};
+static HalRsaCtx s_rsa = {NULL, portMUX_INITIALIZER_UNLOCKED};
 
 // Is the accelerator already clocked (and, where applicable, powered)? Reads clock-domain registers only,
 // which are always accessible even when the RSA block itself is unclocked.
@@ -86,7 +85,7 @@ static void rsa_bring_up(void)
     // Bounded: this runs with interrupts off, so a clean bit that never clears would leave only the
     // watchdog. On expiry the block is left as it is and the modmul that follows zeroes its result.
     uint32_t spins = 0u;
-    while (PC_HW_REG(PC_RSA_CLEAN) == 0u) // wait until the accelerator's memory init completes
+    while (PC_HW_REG(PC_RSA_CLEAN) != 0u) // wait until the accelerator's memory init completes
     {
         spins++;
         if (spins >= PC_RSA_SPIN_MAX)
@@ -100,17 +99,14 @@ void pc_rsa_hw_acquire(void)
 {
     if (s_rsa.lock == NULL)
     {
-        // Created over the context's own storage: the handle comes back from a struct that is
-        // already there, so nothing reaches the heap with interrupts off and the spinlock held, and
-        // there is no failure that would leave the handle NULL and exclusivity gone.
         portENTER_CRITICAL(&s_rsa.hw_mux);
         if (s_rsa.lock == NULL)
         {
-            s_rsa.lock = xSemaphoreCreateRecursiveMutexStatic(&s_rsa.lock_store);
+            s_rsa.lock = xSemaphoreCreateRecursiveMutex();
         }
         portEXIT_CRITICAL(&s_rsa.hw_mux);
     }
-    (void)xSemaphoreTakeRecursive(s_rsa.lock, portMAX_DELAY);
+    xSemaphoreTakeRecursive(s_rsa.lock, portMAX_DELAY);
 
     if (!rsa_is_up())
     {

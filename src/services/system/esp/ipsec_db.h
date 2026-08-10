@@ -35,8 +35,6 @@
 #include "services/security/ikev2/ikev2.h"
 #include "services/system/esp/esp.h"
 
-PROTO_BEGIN_DECLS
-
 /** @brief Longest selector address (IPv6). IPv4 uses the low 4 bytes. */
 #define PC_IPSEC_ADDR_MAX 16
 /** @brief Maximum policies in one SPD. */
@@ -180,8 +178,6 @@ proto_bool pc_ipsec_sad_remove(IpsecSad *sad, uint32_t spi);
  *         must be rekeyed before any further packets, since a repeated sequence number breaks GCM.
  */
 proto_bool pc_ipsec_sad_next_seq(IpsecSaEntry *sa, uint32_t *seq_out);
-
-PROTO_END_DECLS
 
 #endif // PC_ENABLE_IKEV2
 #endif // PROTOCORE_IPSEC_DB_H

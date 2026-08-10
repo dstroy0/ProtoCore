@@ -74,49 +74,6 @@ static size_t ciphertext_record_len(const uint8_t *rec, size_t avail, size_t cid
     return avail; // no length -> record runs to the end of the datagram
 }
 
-// The secure-pool term this file declares: one borrow per DTLS connection, taken from the
-// persistent end on first use and held for the connection's life.
-static_assert(PC_WORK_DTLS_CONN >= (size_t)PC_COAPS_MAX_CONNS * PC_DTLS_CONN_BORROW,
-              "PC_WORK_DTLS_CONN must cover one handshake's schedule, hashes, signature, cookie MAC, "
-              "reassembly, message and flight per connection: raise it in protocore_config.h");
-
-// Offsets into the one borrow. The reassembly region leads with PC_DTLS_REASM_LEAD bytes whose last
-// four carry the TLS message header, so reasm_buf + 4 - the body every other region is measured
-// against - lands on a 16-byte boundary.
-#define DTLS_OFF_KS 0u
-#define DTLS_OFF_HASH (DTLS_OFF_KS + PC_TLS13_KS_BORROW)
-#define DTLS_OFF_HASH2 (DTLS_OFF_HASH + PC_SHA256_BORROW)
-#define DTLS_OFF_SIGN (DTLS_OFF_HASH2 + PC_SHA256_BORROW)
-#define DTLS_OFF_MAC (DTLS_OFF_SIGN + PC_SHA512_BORROW)
-#define DTLS_OFF_REASM (DTLS_OFF_MAC + PC_HMAC_SHA256_BORROW)
-#define DTLS_OFF_MSG (DTLS_OFF_REASM + PC_DTLS_REASM_LEAD + PC_DTLS_CONN_REASM_CAP)
-#define DTLS_OFF_FLIGHT (DTLS_OFF_MSG + PC_DTLS_CONN_MSG_CAP)
-
-// The connection's bytes, split by offset. Idempotent: a connection initialised again keeps the
-// borrow it already holds, because the persistent end is never given back.
-static proto_bool dtls_conn_slot_storage(DtlsConn *c)
-{
-    uint8_t *base = c->ks_store; // DTLS_OFF_KS is 0, so the borrow is recoverable from it
-    if (base == NULL)
-    {
-        pc_span b = pc_secure_persist_span(PC_DTLS_CONN_BORROW);
-        if (!pc_span_ok(b))
-        {
-            return PROTO_FALSE;
-        }
-        base = b.buf;
-    }
-    c->ks_store = base + DTLS_OFF_KS;
-    c->hash_work = base + DTLS_OFF_HASH;
-    c->hash_work2 = base + DTLS_OFF_HASH2;
-    c->sign_work = base + DTLS_OFF_SIGN;
-    c->mac_work = base + DTLS_OFF_MAC;
-    c->reasm_buf = base + DTLS_OFF_REASM + PC_DTLS_REASM_LEAD - 4u;
-    c->msgbuf = base + DTLS_OFF_MSG;
-    c->flight_buf = base + DTLS_OFF_FLIGHT;
-    return PROTO_TRUE;
-}
-
 static int fail(DtlsConn *c, uint8_t alert)
 {
     c->state = DTLS_CONN_STATE_FAILED;
@@ -180,8 +137,9 @@ static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg
         {
             take = per_frag;
         }
-        const size_t flen = DtlsHandshake.frag_build(msg_type, msg_seq, body_len, off, tls_msg + 4 + off, take,
-                                                     c->flight_buf + c->flight_len, PC_DTLS_FLIGHT_CAP - c->flight_len);
+        const size_t flen =
+            DtlsHandshake.frag_build(msg_type, msg_seq, body_len, off, tls_msg + 4 + off, take,
+                                     c->flight_buf + c->flight_len, sizeof(c->flight_buf) - c->flight_len);
         if (!flen)
         {
             return PROTO_FALSE;
@@ -262,7 +220,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     pc_sha256_final(&h, ch1_hash);
 
     pc_sha256_init(&c->transcript, c->hash_work); // restart: message_hash(Hash(CH1)) replaces ClientHello1
-    size_t n = pc_tls13_build_message_hash(c->msgbuf, PC_DTLS_CONN_MSG_CAP, ch1_hash);
+    size_t n = pc_tls13_build_message_hash(c->msgbuf, sizeof(c->msgbuf), ch1_hash);
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -279,7 +237,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
         return fail(c, ALERT_INTERNAL_ERROR);
     }
 
-    n = pc_tls13_build_hello_retry_request(c->msgbuf, PC_DTLS_CONN_MSG_CAP, ch->session_id, ch->session_id_len,
+    n = pc_tls13_build_hello_retry_request(c->msgbuf, sizeof(c->msgbuf), ch->session_id, ch->session_id_len,
                                            TLS_GROUP_X25519, cookie, clen, /*dtls=*/PROTO_TRUE);
     if (!n)
     {
@@ -390,21 +348,13 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     pc_x25519(ecdhe, c->cfg.ephemeral_priv, ch.client_x25519);
     pc_x25519_base(server_share, c->cfg.ephemeral_priv);
 
-    // RFC 8446 sec 7.4.2: the shared secret is all-zero exactly when the peer's key share is a
-    // low-order point, so accepting it keys the connection off a value the peer already knows.
-    if (pc_ct_is_zero(ecdhe, sizeof(ecdhe)))
-    {
-        pc_secure_wipe(ecdhe, sizeof(ecdhe));
-        return fail(c, ALERT_ILLEGAL_PARAMETER);
-    }
-
     pc_sha256_update(&c->transcript, msg, msg_len); // transcript: ClientHello (CH2 when an HRR preceded it)
 
     flight_reset(c); // this ClientHello starts a fresh server flight (ServerHello..Finished)
 
     // ServerHello (epoch 0, plaintext).
     size_t n =
-        pc_tls13_build_server_hello(c->msgbuf, PC_DTLS_CONN_MSG_CAP, c->cfg.server_random, ch.session_id,
+        pc_tls13_build_server_hello(c->msgbuf, sizeof(c->msgbuf), c->cfg.server_random, ch.session_id,
                                     ch.session_id_len, server_share, 32, TLS_GROUP_X25519, /*dtls=*/PROTO_TRUE,
                                     c->cid_negotiated ? c->local_cid : NULL, c->cid_negotiated ? c->local_cid_len : 0);
     if (!n)
@@ -443,7 +393,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     }
 
     // EncryptedExtensions.
-    n = pc_tls13_build_encrypted_extensions_empty(c->msgbuf, PC_DTLS_CONN_MSG_CAP, rpk);
+    n = pc_tls13_build_encrypted_extensions_empty(c->msgbuf, sizeof(c->msgbuf), rpk);
     pc_sha256_update(&c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
     {
@@ -456,11 +406,11 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     {
         uint8_t ed_pub[PC_ED25519_PUBKEY_LEN];
         pc_ed25519_pubkey(c->sign_work, ed_pub, c->cfg.ed25519_seed);
-        n = pc_tls13_build_certificate_rpk(c->msgbuf, PC_DTLS_CONN_MSG_CAP, ed_pub);
+        n = pc_tls13_build_certificate_rpk(c->msgbuf, sizeof(c->msgbuf), ed_pub);
     }
     else
 #endif
-        n = pc_tls13_build_certificate(c->msgbuf, PC_DTLS_CONN_MSG_CAP, c->cfg.cert_der, c->cfg.cert_len);
+        n = pc_tls13_build_certificate(c->msgbuf, sizeof(c->msgbuf), c->cfg.cert_der, c->cfg.cert_len);
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -473,7 +423,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 
     // CertificateVerify signs Transcript-Hash(..Certificate).
     snapshot(&c->transcript, hash);
-    n = pc_tls13_build_cert_verify(c->sign_work, c->msgbuf, PC_DTLS_CONN_MSG_CAP, hash, c->cfg.ed25519_seed);
+    n = pc_tls13_build_cert_verify(c->sign_work, c->msgbuf, sizeof(c->msgbuf), hash, c->cfg.ed25519_seed);
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -488,7 +438,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     snapshot(&c->transcript, hash);
     uint8_t verify[PC_SHA256_DIGEST_LEN];
     pc_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_SERVER_HS, hash, verify);
-    n = pc_tls13_build_finished(c->msgbuf, PC_DTLS_CONN_MSG_CAP, verify);
+    n = pc_tls13_build_finished(c->msgbuf, sizeof(c->msgbuf), verify);
     pc_sha256_update(&c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
     {
@@ -728,18 +678,7 @@ static void maybe_send_completion_ack(DtlsConn *c, uint8_t *out, size_t out_cap,
 
 static void pc_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr, size_t peer_addr_len)
 {
-    uint8_t *base = c->ks_store; // the borrow is the connection's, not the call's
     mem.zero(c, sizeof(*c));
-    c->ks_store = base;
-    if (!dtls_conn_slot_storage(c))
-    {
-        c->state = DTLS_CONN_STATE_FAILED;
-        c->alert = ALERT_INTERNAL_ERROR;
-        return;
-    }
-    // The borrow carries the previous handshake's key material; the pointers to it stay, or the next
-    // init would ask the persistent end for a second borrow it never gives back.
-    pc_secure_wipe(c->ks_store, PC_DTLS_CONN_BORROW);
     c->cfg = *cfg;
     c->state = DTLS_CONN_STATE_START;
     // sec 4.3: the path's datagram size bounds every fragment this connection emits. A caller that

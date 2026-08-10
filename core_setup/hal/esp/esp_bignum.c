@@ -58,36 +58,28 @@ void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *e
     bn_to_bytes(exp_be, exp);
     bn_to_bytes(p_be, &group14_p);
 
-    mbedtls_mpi B = {0};
-    mbedtls_mpi E = {0};
-    mbedtls_mpi P = {0};
-    mbedtls_mpi R = {0};
+    mbedtls_mpi B;
+    mbedtls_mpi E;
+    mbedtls_mpi P;
+    mbedtls_mpi R;
     mbedtls_mpi_init(&B);
     mbedtls_mpi_init(&E);
     mbedtls_mpi_init(&P);
     mbedtls_mpi_init(&R);
 
-    // Every step is run and its code accumulated; a failure anywhere leaves res_be holding whatever
-    // the last write left, which is not a shared secret.
-    int rc = mbedtls_mpi_read_binary(&B, base_be, 256);
-    rc |= mbedtls_mpi_read_binary(&E, exp_be, 256);
-    rc |= mbedtls_mpi_read_binary(&P, p_be, 256);
-    rc |= mbedtls_mpi_exp_mod(&R, &B, &E, &P, NULL);
-    rc |= mbedtls_mpi_write_binary(&R, res_be, 256);
+    mbedtls_mpi_read_binary(&B, base_be, 256);
+    mbedtls_mpi_read_binary(&E, exp_be, 256);
+    mbedtls_mpi_read_binary(&P, p_be, 256);
+
+    mbedtls_mpi_exp_mod(&R, &B, &E, &P, NULL);
+    mbedtls_mpi_write_binary(&R, res_be, 256);
 
     mbedtls_mpi_free(&B);
     mbedtls_mpi_free(&E);
     mbedtls_mpi_free(&P);
     mbedtls_mpi_free(&R);
 
-    if (rc != 0)
-    {
-        memset(out, 0, sizeof(*out)); // a zero result fails every downstream check
-    }
-    else
-    {
-        bn_from_bytes(out, res_be, 256);
-    }
+    bn_from_bytes(out, res_be, 256);
     pc_secure_release(mark);
 }
 

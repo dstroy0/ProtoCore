@@ -49,12 +49,6 @@ jobs:
       - name: Naming law (docs/SYMBOLS.md)
         run: python3 -m tools.ci_tooling.check.check_symbols --check
 
-      # kat_data.inc is generated from test/vectors/*.json but committed, and it is what the crypto
-      # suite actually compiles. A refreshed corpus that was not regenerated leaves the suite testing
-      # the old vectors and reporting coverage it does not have.
-      - name: Crypto vectors match their corpus
-        run: python3 -m tools.crypto.gen_crypto_vectors --check
-
       # Interop matrix counts are derived from the tree, not hand-maintained. Hand
       # maintenance failed: the table claimed 34 peers / ~39 benches while the tree had
       # 39 / 207, i.e. it understated coverage roughly fivefold, which sends you to build

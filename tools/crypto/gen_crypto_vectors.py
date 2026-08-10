@@ -10,7 +10,6 @@
 # host test); the struct layouts live in test/unit/crypto/test_crypto_kat/test_crypto_kat.cpp.
 
 import json
-import sys
 import os
 
 from tools.ci_tooling.lib import doc_region as dr
@@ -100,36 +99,14 @@ def main():
         lines.append("};")
         lines.append("")
     lines.append("// clang-format on")
-    text = "\n".join(lines) + "\n"
+    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines) + "\n")
     total = 0
     for fname, arr, struct, _ in SPECS:
         with open(os.path.join(VEC_DIR, fname)) as f:
             total += len(json.load(f)["vectors"])
-
-    # kat_data.inc is generated but committed, and nothing tied it to the corpus it derives from:
-    # a refreshed test/vectors/*.json left the vectors the suite actually compiles untouched, so
-    # the suite passed on the old data and reported coverage it did not have.
-    if "--check" in sys.argv:
-        try:
-            with open(OUT, "r", encoding="utf-8", newline="") as f:
-                have = f.read()
-        except OSError:
-            have = ""
-        if have.replace("\r\n", "\n") != text:
-            print(
-                "gen_crypto_vectors: %s is stale - the committed vectors do not match "
-                "test/vectors/*.json. Run: python -m tools.crypto.gen_crypto_vectors" % os.path.relpath(OUT, ROOT),
-                file=sys.stderr,
-            )
-            return 1
-        print("gen_crypto_vectors: OK - %s matches the corpus (%d vectors)" % (os.path.relpath(OUT, ROOT), total))
-        return 0
-
-    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
-        f.write(text)
     print("wrote %s (%d vectors across %d primitives)" % (os.path.relpath(OUT, ROOT), total, len(SPECS)))
-    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

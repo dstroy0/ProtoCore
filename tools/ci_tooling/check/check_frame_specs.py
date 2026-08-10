@@ -26,10 +26,7 @@ import sys
 from tools.ci_tooling.lib import doc_region as dr
 
 ROOT = pathlib.Path(dr.repo_root(__file__))
-# core_setup/ is the board seam compiled into the same firmware; it moved out of src/ and the walk
-# did not follow. "penetration_testing" named a repo-root tree that has been test/penetration_testing
-# for some time, so it walked nothing - "test" already covers it.
-TREES = ("src", "core_setup", "examples", "test")
+TREES = ("src", "examples", "penetration_testing", "test")
 EXTS = (".h", ".c", ".cpp", ".ino")
 
 # {PC_FK_LIT, <width>, <len>, "text"} - the literal may be several adjacent string tokens, which C

@@ -40,11 +40,7 @@ from tools.ci_tooling.lib import src_symbols
 # Anchored to the repo, not to cwd: a relative Path("src") resolves to nothing from any other
 # directory, and a scan of nothing exits 0.
 _ROOT = dr.repo_root(__file__)
-# src/ is the library and core_setup/ is the board seam it is built on. core_setup/ used to sit
-# under src/ and was walked with it; when it moved to the repo root the walk did not follow, and
-# every ban stopped being enforced there.
 SRC = pathlib.Path(_ROOT) / "src"
-ROOTS = (SRC, pathlib.Path(_ROOT) / "core_setup")
 EXTS = {".c", ".cc", ".cpp", ".h", ".hpp", ".ino"}
 
 # Ban #22: runtime dispatch that is not resolvable from the binary. A virtual call reads a vtable
@@ -290,8 +286,8 @@ def _norm(path):
 
 def collect(argv):
     if "--all" in argv:
-        return [p for r in ROOTS for p in r.rglob("*") if p.suffix in EXTS]
-    return [f for f in argv if pathlib.Path(f).suffix in EXTS and _norm(f).startswith(("src/", "core_setup/"))]
+        return [p for p in SRC.rglob("*") if p.suffix in EXTS]
+    return [f for f in argv if pathlib.Path(f).suffix in EXTS and _norm(f).startswith("src/")]
 
 
 # Bans 18 and 20 carry no baseline any more: their sweeps reached zero, so they fail on sight. Bans

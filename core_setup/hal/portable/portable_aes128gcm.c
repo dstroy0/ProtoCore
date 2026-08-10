@@ -144,6 +144,38 @@ static void gctr(Aes128GcmWork *w, const uint8_t *in, size_t len, uint8_t *out)
     }
 }
 
+// Compute H, the GHASH table, J0, GHASH(aad || cipher) and the 16-byte tag for a 96-bit-nonce GCM
+// operation. @p cipher is the ciphertext to authenticate (== output for seal, == input for open). Uses
+// w->h/ghk/j0/acc/lb/ej0; writes @p tag_out.
+static void gcm_core(Aes128GcmWork *w, const uint8_t nonce[12], const uint8_t *aad, size_t aad_len,
+                     const uint8_t *cipher, size_t cipher_len, uint8_t tag_out[16])
+{
+    memset(w->h, 0, 16);
+    pc_aes128_encrypt_block(&w->aes, w->h, w->h); // H = E(K, 0^128)
+    ghash_key_init(&w->ghk, w->h);
+
+    // 96-bit nonce: J0 = nonce || 0^31 || 1.
+    memcpy(w->j0, nonce, 12);
+    w->j0[12] = 0;
+    w->j0[13] = 0;
+    w->j0[14] = 0;
+    w->j0[15] = 1;
+
+    memset(w->acc, 0, 16);
+    ghash_update(&w->ghk, w->acc, aad, aad_len);
+    ghash_update(&w->ghk, w->acc, cipher, cipher_len);
+    put_be64(w->lb, (uint64_t)aad_len * 8);
+    put_be64(w->lb + 8, (uint64_t)cipher_len * 8);
+    xor16(w->acc, w->lb);
+    ghash_mul(&w->ghk, w->acc);
+
+    pc_aes128_encrypt_block(&w->aes, w->j0, w->ej0);
+    for (int i = 0; i < 16; i++)
+    {
+        tag_out[i] = w->acc[i] ^ w->ej0[i];
+    }
+}
+
 // 96-bit nonce: J0 = nonce || 0^31 || 1. Per record.
 static inline void set_j0(Aes128GcmWork *w, const uint8_t nonce[12])
 {

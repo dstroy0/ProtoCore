@@ -31,8 +31,6 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
-PROTO_BEGIN_DECLS
-
 /**
  * @brief A CloudEvents v1.0 event. The three required context attributes are
  *        @ref id, @ref source and @ref type (`specversion` is always "1.0").
@@ -73,8 +71,6 @@ size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce);
  * @return true if the three required attributes (id, source, type) are present.
  */
 proto_bool pc_cloudevents_from_headers(const HttpReq *req, CloudEvent *out);
-
-PROTO_END_DECLS
 
 #endif // PC_ENABLE_CLOUDEVENTS
 

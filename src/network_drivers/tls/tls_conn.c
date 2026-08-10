@@ -107,13 +107,6 @@ static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
     pc_x25519_base(c->terms + TLS_TERM_SHARE, c->cfg->ephemeral_priv);
     pc_x25519(c->terms + TLS_TERM_SECRET, c->cfg->ephemeral_priv, c->hello->client_x25519);
 
-    // RFC 8446 sec 7.4.2: an all-zero shared secret means the peer offered a low-order key share,
-    // so every traffic key would come from a value it already knows.
-    if (pc_ct_is_zero(c->terms + TLS_TERM_SECRET, TLS13_SECRET_LEN))
-    {
-        return fail(c, TLS_ALERT_ILLEGAL_PARAMETER);
-    }
-
     size_t off = 0;
 
     // ServerHello travels as TLSPlaintext: the keys it establishes do not protect it.

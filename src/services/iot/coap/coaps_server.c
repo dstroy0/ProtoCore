@@ -242,12 +242,7 @@ static CoapsSlot *alloc_slot()
         if (!s_cpool.pool[i].used)
         {
             CoapsSlot *s = &s_cpool.pool[i];
-            // The engine's borrow is bound to the slot, not to the connection on it: it is carried
-            // across the zero, or every claim would draw a fresh one from an end that is never given
-            // back. DtlsServer.init wipes the bytes it re-reaches.
-            uint8_t *conn_bytes = s->conn.ks_store;
             mem.set(s, 0, sizeof *s);
-            s->conn.ks_store = conn_bytes;
             s->used = PROTO_TRUE;
             return s;
         }

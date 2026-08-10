@@ -7,7 +7,7 @@
  *
  * A hardware-abstraction layer, deliberately outside `crypto/` (very distinct, register-level code): the
  * library's big-field crypto (the GF(2^255-19) layer in @ref fe25519.h for X25519 / Ed25519 and the NIST P-256
- * field/scalar layer in @ref ecdsa.c) drives ONE primitive on the RSA accelerator - a single-shot 256-bit
+ * field/scalar layer in @ref ecdsa.cpp) drives ONE primitive on the RSA accelerator - a single-shot 256-bit
  * modular multiply `Z = X*Y mod M`.
  *
  * ═══════════════════════════════════════════════════════════════════════════
@@ -30,7 +30,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * EXCLUSIVITY
  * ═══════════════════════════════════════════════════════════════════════════
- * The accelerator is shared state. This HAL owns a single PC recursive mutex (see esp_crypto_hal.c) taken
+ * The accelerator is shared state. This HAL owns a single PC recursive mutex (see esp_crypto_hal.cpp) taken
  * by @ref pc_rsa_hw_acquire and dropped by @ref pc_rsa_hw_release; a scalar-mult holds it across its whole
  * run of multiplies.
  */
@@ -164,7 +164,7 @@
 #define PC_RSA_MEM_X (PC_RSA_BASE + 0x600u)  // operand X block
 #define PC_RSA_MPRIME (PC_RSA_BASE + 0x800u) // Montgomery m' (mod 2^32)
 #define PC_RSA_MODE (PC_RSA_BASE + 0x804u)   // operand length in words, minus 1
-#define PC_RSA_CLEAN (PC_RSA_BASE + 0x808u)  // memory-init: reads 0 while initializing, 1 when complete
+#define PC_RSA_CLEAN (PC_RSA_BASE + 0x808u)  // memory-init: reads non-zero while initializing, 0 when ready
 #define PC_RSA_START (PC_RSA_BASE + 0x810u)  // write 1 to start the modular multiply
 #define PC_RSA_DONE (PC_RSA_BASE + 0x818u)   // reads 1 once the op is complete (interrupt/idle bit)
 #define PC_RSA_INTCLR (PC_RSA_BASE + 0x81Cu) // write 1 to clear the completion flag
@@ -177,7 +177,7 @@
 
 /**
  * @brief Acquire the RSA accelerator for a run of modular multiplies (PC lock + direct-register bring-up).
- * @note  Bracket every batch of @ref pc_rsa_modmul with acquire/release. Implemented in esp_crypto_hal.c
+ * @note  Bracket every batch of @ref pc_rsa_modmul with acquire/release. Implemented in esp_crypto_hal.cpp
  *        (the exclusivity mutex must be one global instance, so it cannot live in this header). Poll-only.
  */
 PROTO_BEGIN_DECLS
@@ -203,10 +203,6 @@ static inline void pc_rsa_modmul(uint32_t *z, const uint32_t *x, const uint32_t 
     volatile uint32_t *X = (volatile uint32_t *)(uintptr_t)PC_RSA_MEM_X;
     volatile uint32_t *Y = (volatile uint32_t *)(uintptr_t)PC_RSA_MEM_Y;
     volatile uint32_t *Z = (volatile uint32_t *)(uintptr_t)PC_RSA_MEM_Z;
-    if (words == 0u)
-    {
-        return; // mode is words - 1, which would wrap to a full-width operand length
-    }
     PC_HW_REG(PC_RSA_MODE) = words - 1u; // mode = words - 1
     PC_HW_REG(PC_RSA_MPRIME) = mprime;
     for (unsigned i = 0; i < words; i++)

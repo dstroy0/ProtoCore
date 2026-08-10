@@ -25,8 +25,6 @@
 
 #include "services/storage/dbm/dbm.h"
 
-PROTO_BEGIN_DECLS
-
 /** @brief A document store bound to a mounted ::pc_dbm. */
 typedef struct
 {
@@ -78,8 +76,6 @@ uint32_t pc_docstore_find_int(pc_doc_store *ds, const char *field, long value, p
 
 /** @brief Find documents whose top-level boolean field @p field equals @p value. @return the match count. */
 uint32_t pc_docstore_find_bool(pc_doc_store *ds, const char *field, proto_bool value, pc_doc_match_cb cb, void *ctx);
-
-PROTO_END_DECLS
 
 #endif // PC_ENABLE_DOCSTORE
 #endif // PROTOCORE_DOCSTORE_H
