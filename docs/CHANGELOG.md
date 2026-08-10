@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the fs backend had no sync, so the WAL could not bind the only persistent store ([`5fe8ce5`](https://github.com/dstroy0/ProtoCore/commit/5fe8ce57d1993419e0118e40c9d23d2318b61988))
 - a conflicted autostash pop committed its markers into the changelog ([`2e47cb0`](https://github.com/dstroy0/ProtoCore/commit/2e47cb02fb11fbf1810df33493d6994f44d362a8))
 - modmul guarded its operand count nowhere; stale .cpp references ([`e527f96`](https://github.com/dstroy0/ProtoCore/commit/e527f9655e20078cd9637a52d3fe68f716256b0c))
 - the RSA memory-init wait was inverted; four more the vendor arm never proved ([`2043db6`](https://github.com/dstroy0/ProtoCore/commit/2043db670b7c8f7d50c910eda3060885528c4543))
@@ -101,6 +102,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`c1469ec`](https://github.com/dstroy0/ProtoCore/commit/c1469ece454ebf3ce9a07861fbd638334fe12685))
 - update CHANGELOG.md [skip ci] ([`e641fd6`](https://github.com/dstroy0/ProtoCore/commit/e641fd62c00251c8b04300b1f0b5cd003a9db10e))
 - update CHANGELOG.md [skip ci] ([`fac7287`](https://github.com/dstroy0/ProtoCore/commit/fac728774caf11deff18ff259f5bd227f0bc1121))
 - update CHANGELOG.md [skip ci] ([`f59c685`](https://github.com/dstroy0/ProtoCore/commit/f59c6855f0d336663f9fafcdefc6651f9aae0f38))
