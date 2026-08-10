@@ -54,12 +54,13 @@ typedef struct
 /**
  * @brief This module's draw on the plaintext pool, declared here and asserted in h2_conn.c.
  *
- * One borrow per connection from the pool's persistent end, split by offset into the frame
- * reassembly buffer, the header-block buffer and the HPACK emit scratch. HTTP is what the plaintext
- * pool is for, and the connection is what owns the bytes.
+ * One borrow per connection from the pool's persistent end, split by offset into the frame payload
+ * buffer, the header-block buffer, the HPACK emit scratch and the 9-octet frame header. Every region
+ * is a power of two, so every offset after it is a multiple of one and the payload starts at the
+ * span's own alignment. HTTP is what the plaintext pool is for, and the connection owns the bytes.
  */
-#define PC_H2_CONN_BORROW ((size_t)H2_FRAME_HEADER_LEN + PC_H2_MAX_FRAME + PC_H2_HDR_BLOCK + PC_H2_HDR_BLOCK)
-#define PC_PLAINTEXT_WORK_H2_CONN ((size_t)MAX_CONNS * PC_H2_CONN_BORROW)
+#define PC_H2_FRAME_HDR_CAP 16u
+#define PC_H2_CONN_BORROW ((size_t)PC_H2_MAX_FRAME + PC_H2_HDR_BLOCK + PC_H2_HDR_BLOCK + PC_H2_FRAME_HDR_CAP)
 
 /** @brief Application callbacks the engine drives (all optional except write). */
 typedef struct
@@ -86,8 +87,9 @@ typedef struct
     H2Callbacks cb;
 
     // Inbound frame reassembly.
-    uint8_t *fbuf; ///< H2_FRAME_HEADER_LEN + PC_H2_MAX_FRAME bytes of the connection's borrow
-    size_t fhave;  ///< bytes buffered for the current frame
+    uint8_t *fhdr; ///< PC_H2_FRAME_HDR_CAP bytes of the connection's borrow: the 9-octet frame header
+    uint8_t *fbuf; ///< PC_H2_MAX_FRAME bytes of the connection's borrow: the payload after it
+    size_t fhave;  ///< bytes buffered for the current frame, header included
     size_t pre;    ///< preface bytes matched so far
 
     // Header-block reassembly (HEADERS + CONTINUATION); empty when a frame carries END_HEADERS.

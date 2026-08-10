@@ -30,14 +30,15 @@ static void wr(H2Conn *c, const uint8_t *data, size_t len)
 
 // The plaintext-pool term this file declares: one borrow per HTTP/2 connection, taken from the
 // persistent end on first use and held for the connection's life.
-static_assert(PC_PLAINTEXT_WORK_H2_CONN >= (size_t)MAX_CONNS * PC_H2_CONN_BORROW,
-              "PC_PLAINTEXT_WORK_H2_CONN must cover one frame + header-block + HPACK-scratch borrow per "
-              "HTTP/2 connection; the plaintext arena is the sum of these terms and grows with it");
+static_assert(PC_WORK_H2_CONN >= (size_t)MAX_CONNS * PC_H2_CONN_BORROW,
+              "PC_WORK_H2_CONN must cover one frame + header-block + HPACK-scratch borrow per HTTP/2 "
+              "connection: raise it in protocore_config.h");
 
-// Offsets into the one borrow.
+// Offsets into the one borrow. Each region is a power of two, so each offset is a multiple of one.
 #define H2_OFF_FBUF 0u
-#define H2_OFF_HBLOCK (H2_OFF_FBUF + H2_FRAME_HEADER_LEN + PC_H2_MAX_FRAME)
+#define H2_OFF_HBLOCK (H2_OFF_FBUF + PC_H2_MAX_FRAME)
 #define H2_OFF_HSCRATCH (H2_OFF_HBLOCK + PC_H2_HDR_BLOCK)
+#define H2_OFF_FHDR (H2_OFF_HSCRATCH + PC_H2_HDR_BLOCK)
 
 // The connection's bytes, split by offset. Idempotent: a connection initialised again keeps the
 // borrow it already holds, because the persistent end is never given back.
@@ -55,6 +56,7 @@ static proto_bool h2_conn_slot_storage(H2Conn *c)
     c->fbuf = b.buf + H2_OFF_FBUF;
     c->hblock = b.buf + H2_OFF_HBLOCK;
     c->hscratch = (char *)(b.buf + H2_OFF_HSCRATCH);
+    c->fhdr = b.buf + H2_OFF_FHDR;
     return PROTO_TRUE;
 }
 
@@ -579,8 +581,8 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
 static proto_bool process_frame(H2Conn *c)
 {
     H2FrameHeader h;
-    pc_h2_parse_header(c->fbuf, H2_FRAME_HEADER_LEN, &h);
-    const uint8_t *payload = c->fbuf + H2_FRAME_HEADER_LEN;
+    pc_h2_parse_header(c->fhdr, H2_FRAME_HEADER_LEN, &h);
+    const uint8_t *payload = c->fbuf;
 
     // A header block must be continued only by CONTINUATION on the same stream (sec 6.10).
     if (c->in_header_block && h.type != H2_CONTINUATION)
@@ -656,7 +658,7 @@ proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
             {
                 take = len - off;
             }
-            mem.cpy(c->fbuf + c->fhave, data + off, take);
+            mem.cpy(c->fhdr + c->fhave, data + off, take);
             c->fhave += take;
             off += take;
             if (c->fhave < H2_FRAME_HEADER_LEN)
@@ -664,7 +666,7 @@ proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
                 return PROTO_TRUE;
             }
         }
-        uint32_t plen = ((uint32_t)c->fbuf[0] << 16) | ((uint32_t)c->fbuf[1] << 8) | c->fbuf[2];
+        uint32_t plen = ((uint32_t)c->fhdr[0] << 16) | ((uint32_t)c->fhdr[1] << 8) | c->fhdr[2];
         if (plen > PC_H2_MAX_FRAME)
         {
             return PROTO_FALSE; // FRAME_SIZE_ERROR
@@ -675,7 +677,7 @@ proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
         {
             take = len - off;
         }
-        mem.cpy(c->fbuf + c->fhave, data + off, take);
+        mem.cpy(c->fbuf + (c->fhave - H2_FRAME_HEADER_LEN), data + off, take);
         c->fhave += take;
         off += take;
         if (c->fhave < total)
