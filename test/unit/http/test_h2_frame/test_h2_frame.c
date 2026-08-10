@@ -161,11 +161,33 @@ void test_settings_all_ids_and_build_guards()
     TEST_ASSERT_EQUAL_UINT32(65535, s.initial_window_size);
     TEST_ASSERT_EQUAL_UINT32(16384, s.max_frame_size);
     TEST_ASSERT_EQUAL_UINT32(8192, s.max_header_list_size);
-    // Upper-bound validation guards.
+    // RFC 9113 sec 6.5.2 gives closed ranges, so both ends of each are pinned: the largest legal
+    // value must be accepted and carried through, and the first illegal one refused. Asserting only
+    // the refusal would leave an off-by-one in either comparison passing.
+    const uint8_t iws_max[6] = {0x00, 0x04, 0x7F, 0xFF, 0xFF, 0xFF}; // INITIAL_WINDOW_SIZE = 2^31-1
+    TEST_ASSERT_TRUE(pc_h2_parse_settings(iws_max, 6, &s));
+    TEST_ASSERT_EQUAL_UINT32(0x7FFFFFFFu, s.initial_window_size);
     const uint8_t bad_iws[6] = {0x00, 0x04, 0x80, 0x00, 0x00, 0x00}; // INITIAL_WINDOW_SIZE = 2^31
     TEST_ASSERT_FALSE(pc_h2_parse_settings(bad_iws, 6, &s));
+
+    const uint8_t mfs_max[6] = {0x00, 0x05, 0x00, 0xFF, 0xFF, 0xFF}; // MAX_FRAME_SIZE = 2^24-1
+    TEST_ASSERT_TRUE(pc_h2_parse_settings(mfs_max, 6, &s));
+    TEST_ASSERT_EQUAL_UINT32(16777215u, s.max_frame_size);
     const uint8_t bad_mfs_hi[6] = {0x00, 0x05, 0x01, 0x00, 0x00, 0x00}; // MAX_FRAME_SIZE = 2^24
     TEST_ASSERT_FALSE(pc_h2_parse_settings(bad_mfs_hi, 6, &s));
+
+    const uint8_t mfs_min[6] = {0x00, 0x05, 0x00, 0x00, 0x40, 0x00}; // MAX_FRAME_SIZE = 2^14
+    TEST_ASSERT_TRUE(pc_h2_parse_settings(mfs_min, 6, &s));
+    TEST_ASSERT_EQUAL_UINT32(16384u, s.max_frame_size);
+    const uint8_t bad_mfs_lo[6] = {0x00, 0x05, 0x00, 0x00, 0x3F, 0xFF}; // MAX_FRAME_SIZE = 2^14-1
+    TEST_ASSERT_FALSE(pc_h2_parse_settings(bad_mfs_lo, 6, &s));
+
+    // ENABLE_PUSH is 0 or 1; a server sends 0 and must accept the client saying so.
+    const uint8_t push_off[6] = {0x00, 0x02, 0x00, 0x00, 0x00, 0x00};
+    TEST_ASSERT_TRUE(pc_h2_parse_settings(push_off, 6, &s));
+    TEST_ASSERT_EQUAL_UINT32(0, s.enable_push);
+    const uint8_t bad_push[6] = {0x00, 0x02, 0x00, 0x00, 0x00, 0x02};
+    TEST_ASSERT_FALSE(pc_h2_parse_settings(bad_push, 6, &s));
     // A too-short frame header is rejected.
     H2FrameHeader h;
     uint8_t tiny[4] = {0};

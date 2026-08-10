@@ -431,6 +431,32 @@ void test_h2_stream_id_must_increase(void)
     TEST_ASSERT_FALSE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
 }
 
+// Every other request test here synthesizes its block with pc_hpack_encode_header and then asserts
+// what pc_hpack_decode returns, so a symmetric codec fault would pass. This one carries the RFC 7541
+// C.3.1 octets verbatim: the block is the RFC's, not ours.
+void test_h2_headers_rfc7541_c31_block(void)
+{
+    static Cap cap;
+    H2Conn c;
+    establish(&c, &cap);
+
+    const uint8_t c31[20] = {0x82, 0x86, 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65,
+                             0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d};
+    uint8_t hf[64];
+    TEST_ASSERT_TRUE(pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, c31, sizeof c31, PROTO_TRUE)));
+
+    TEST_ASSERT_EQUAL_INT(4, (int)cap.req_headers.n);
+    TEST_ASSERT_EQUAL_STRING(":method", cap.req_headers.f[0].name);
+    TEST_ASSERT_EQUAL_STRING("GET", cap.req_headers.f[0].value);
+    TEST_ASSERT_EQUAL_STRING(":scheme", cap.req_headers.f[1].name);
+    TEST_ASSERT_EQUAL_STRING("http", cap.req_headers.f[1].value);
+    TEST_ASSERT_EQUAL_STRING(":path", cap.req_headers.f[2].name);
+    TEST_ASSERT_EQUAL_STRING("/", cap.req_headers.f[2].value);
+    TEST_ASSERT_EQUAL_STRING(":authority", cap.req_headers.f[3].name);
+    TEST_ASSERT_EQUAL_STRING("www.example.com", cap.req_headers.f[3].value);
+    TEST_ASSERT_EQUAL_UINT32(57, c.hdec.used); // the RFC's table checkpoint after C.3.1
+}
+
 // RFC 9113 sec 8.1: a second HEADERS on a stream that is still open is a trailer section, not a
 // sec 5.1.1 monotonicity violation. It is decoded (the HPACK table tracks every block) but never
 // delivered: the request it trails has already been dispatched.
@@ -985,6 +1011,7 @@ int main(void)
     RUN_TEST(test_h2_headers_padded_priority);
     RUN_TEST(test_h2_headers_pad_overflow);
     RUN_TEST(test_h2_stream_id_must_increase);
+    RUN_TEST(test_h2_headers_rfc7541_c31_block);
     RUN_TEST(test_h2_trailers_on_open_stream);
     RUN_TEST(test_h2_trailers_without_end_stream_reset_the_stream);
     RUN_TEST(test_h2_trailers_reject_pseudo_headers);
