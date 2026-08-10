@@ -559,6 +559,28 @@ file or directory`.
   header includable on its own; then `protocore.h`'s wrap moves below its includes, covering only
   what `protocore.h` itself declares. The remaining 11 are inline- or macro-only and need nothing.
 
+## The TLS 1.3 handshakes accepted an all-zero X25519 shared secret, which RFC 8446 forbids
+
+- **Status:** FIXED 2026-08-10, found pulling on the crypto audit's finding 8 (the X25519 KAT runner
+  has no notion of an expected outcome) into what the callers actually do with the result.
+- **Symptom, measured:** with the check removed, feeding `dtls_conn` a ClientHello whose
+  key_share is the all-zero point makes `DtlsServer.process` return **390** - a complete server
+  flight, ServerHello through Finished - rather than an error. Both sides then derive every traffic
+  key from a shared secret the peer chose and already knows. The u=1 point does the same.
+- **Root cause:** `pc_x25519` returns `void`, so the all-zero result is the only signal there is,
+  and none of the three call sites read it: `dtls_conn.c:390`, and `quic_tls.c` at both the plain
+  X25519 and the X25519MLKEM768 hybrid arm.
+- **The spec is a MUST, not a MAY.** RFC 7748 sec 6.1 leaves the check optional, which is what the
+  audit cited, but RFC 8446 sec 7.4.2 does not: "Implementations MUST check whether the computed
+  Diffie-Hellman shared secret is the all-zero value and abort if so." DTLS 1.3 and QUIC both carry
+  TLS 1.3 key exchange, so the MUST applies to all three sites.
+- **Fix:** `pc_ct_is_zero` beside `pc_ct_eq` - one constant-time implementation, since the answer
+  must not reveal where the first non-zero byte sits - and all three sites abort with
+  illegal_parameter. The hybrid arm checks its X25519 half; a sound ML-KEM half does not excuse it.
+- **Covered:** `test_low_order_keyshare_all_zero_is_refused` and `..._one_is_refused` drive the
+  two published low-order points through the real DTLS handshake and require -1 plus alert 47.
+  Disabling the guard fails both.
+
 ## `Content-Length` folds with no overflow guard, so a 33-digit value frames as 0
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http1-core.md` #1).
