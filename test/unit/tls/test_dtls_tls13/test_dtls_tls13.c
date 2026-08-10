@@ -176,6 +176,26 @@ static void test_ed25519_spki(void)
     TEST_ASSERT_EQUAL_size_t(0, pc_tls13_ed25519_spki(small, sizeof(small), pub));
 }
 
+// RFC 8410 sec 4 publishes a complete Ed25519 SubjectPublicKeyInfo, base64 "MCowBQYDK2VwAyEAGb9E...".
+// The prefix check above uses a key this test chose, so the published 44 bytes were pinned nowhere;
+// this builds that exact SPKI from that exact key and compares the whole structure.
+static void test_ed25519_spki_rfc8410_vector(void)
+{
+    // The 32-byte public key carried by the RFC's example, and the whole SPKI it sits in.
+    static const uint8_t RFC8410_PUB[32] = {0x19, 0xbf, 0x44, 0x09, 0x69, 0x84, 0xcd, 0xfe, 0x85, 0x41, 0xba,
+                                            0xc1, 0x67, 0xdc, 0x3b, 0x96, 0xc8, 0x50, 0x86, 0xaa, 0x30, 0xb6,
+                                            0xb6, 0xcb, 0x0c, 0x5c, 0x38, 0xad, 0x70, 0x31, 0x66, 0xe1};
+    static const uint8_t RFC8410_SPKI[44] = {
+        0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00, 0x19, 0xbf, 0x44,
+        0x09, 0x69, 0x84, 0xcd, 0xfe, 0x85, 0x41, 0xba, 0xc1, 0x67, 0xdc, 0x3b, 0x96, 0xc8, 0x50,
+        0x86, 0xaa, 0x30, 0xb6, 0xb6, 0xcb, 0x0c, 0x5c, 0x38, 0xad, 0x70, 0x31, 0x66, 0xe1};
+
+    uint8_t spki[PC_TLS13_ED25519_SPKI_LEN];
+    size_t n = pc_tls13_ed25519_spki(spki, sizeof(spki), RFC8410_PUB);
+    TEST_ASSERT_EQUAL_size_t(sizeof(RFC8410_SPKI), n);
+    TEST_ASSERT_EQUAL_MEMORY(RFC8410_SPKI, spki, sizeof(RFC8410_SPKI));
+}
+
 static void test_build_certificate_rpk(void)
 {
     // Derive a real public key from a seed, so the test spans seed -> pubkey -> SPKI -> Certificate.
@@ -372,6 +392,7 @@ int main(void)
     RUN_TEST(test_empty_encrypted_extensions);
     RUN_TEST(test_client_hello_cookie_parse);
     RUN_TEST(test_ed25519_spki);
+    RUN_TEST(test_ed25519_spki_rfc8410_vector);
     RUN_TEST(test_build_certificate_rpk);
     RUN_TEST(test_ee_rpk_extension);
     RUN_TEST(test_parse_server_cert_type_rpk);
