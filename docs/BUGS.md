@@ -566,6 +566,57 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## HTTP/3 error codes had no correct frame to travel in
+
+- **Status:** FIXED 2026-08-09 (`quic_frame.c` `pc_quic_build_connection_close`, `quic_conn.c`
+  `pc_quic_conn_close_app`). Found 2026-08-09 implementing the HTTP/3 state-machine rules from
+  `git_project/audit/quic-http3-qpack.md`.
+- **Symptom:** the close path could only build a transport CONNECTION_CLOSE (0x1c). RFC 9114 sec 8
+  carries HTTP/3 errors in the application variant (0x1d), whose code comes from the application's
+  space. Sent as 0x1c, `H3_FRAME_UNEXPECTED` (0x0105) lands in the transport space of RFC 9000
+  sec 20.1, where 0x0100-0x01ff is CRYPTO_ERROR plus a TLS alert - so the peer would read a frame
+  sequencing error as "crypto failure, TLS alert 5". The frame parser already accepted both types;
+  only the builder and the queue were transport-only.
+- **Fix:** the builder takes the variant and omits the Frame Type field for 0x1d, which sec 19.19
+  says that variant does not carry. `queue_close` records which was chosen. `pc_quic_conn_close_app`
+  is the entry point for an application error; per sec 10.2.3 the 0x1d frame is only legal in
+  0-RTT/1-RTT, so before those keys exist it falls back to a transport close with APPLICATION_ERROR,
+  and there is a test for that arm. Verified: `native_quic_frame`, `native_quic_conn`,
+  `native_h3_conn` and three more, 105/105.
+
+## The HTTP/3 engine enforced none of its stream or frame-sequence rules
+
+- **Status:** FIXED 2026-08-09 (`h3_conn.c`). Found 2026-08-08 auditing `test/` for RFC conformance
+  (`git_project/audit/quic-http3-qpack.md` #1, #2, #3, #8, #9).
+- **Symptom:** five RFC 9114 MUSTs, none implemented. SETTINGS on a request stream was skipped as
+  if it were an unknown frame type (sec 7.2.4). A control stream whose first frame was not SETTINGS
+  was consumed and ignored (sec 6.2.1). A second SETTINGS re-defaulted and re-parsed, so a peer
+  could reconfigure the connection at any time (sec 7.2.4). Every uni stream typed 0x00 became a
+  control stream, with no check that one already existed (sec 6.2.1). A DATA frame arriving before
+  any HEADERS was accumulated into the body (sec 4.1).
+- **Nothing can catch it:** two of the tests asserted the permissive behaviour outright - one
+  called a SETTINGS frame on a request stream "legal on the wire but meaningless here" and asserted
+  the request dispatched anyway; the other asserted a first-frame GOAWAY was "consumed and ignored".
+- **Fix:** each rule is now a connection error carrying its sec 8.1 code, sent through the 0x1d
+  close above. The request-stream check covers the other control-stream-only frames (GOAWAY,
+  MAX_PUSH_ID, CANCEL_PUSH) at the same time. Verified: `native_h3_conn` and five more, 105/105.
+
+## QUIC accepted packets with a clear Fixed Bit, non-zero Reserved Bits, or an oversize max_streams
+
+- **Status:** FIXED 2026-08-09 (`quic_packet.c`, `quic_conn.c`, `quic_tp.c`). Found 2026-08-08
+  auditing `test/` for RFC conformance (`git_project/audit/quic-http3-qpack.md` #4, #5, #6, #7).
+- **Symptom:** `pc_quic_parse_long_header` tested only the header-form bit and
+  `pc_quic_parse_short_header` only its absence, so a packet with the Fixed Bit (0x40) clear parsed
+  normally where RFC 9000 sec 17.2 / 17.3.1 says it "MUST be discarded". The Reserved Bits were
+  never read, though sec 17.2 makes a non-zero value a PROTOCOL_VIOLATION. `initial_max_streams_bidi`
+  and `_uni` took any 62-bit varint, where sec 4.6 caps them at 2^60.
+- **Fix:** the long-header test exempts version 0, which is the Version Negotiation packet the RFC
+  excludes; a short header is never one, so it holds there without exception. The Reserved Bits are
+  read in `quic_conn` after the AEAD open rather than inside `pc_quic_packet_unprotect`: the header
+  is authenticated by then, so a bit flipped in flight cannot close a connection, and the connection
+  is also the only layer that can send the error. Verified: `native_quic_packet`, `native_quic_tp`
+  and six more.
+
 ## The HTTP/2 engine accepted frames RFC 9113 requires it to reject
 
 - **Status:** FIXED 2026-08-09 (`h2_conn.c` `dispatch_frame`, `handle_continuation`). Found

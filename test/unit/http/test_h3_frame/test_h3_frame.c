@@ -79,6 +79,12 @@ void test_reserved()
     TEST_ASSERT_FALSE(pc_h3_frame_type_reserved(H3_DATA));
     TEST_ASSERT_FALSE(pc_h3_frame_type_reserved(H3_HEADERS));
     TEST_ASSERT_FALSE(pc_h3_frame_type_reserved(H3_SETTINGS));
+    // RFC 9114 sec 7.2.8 reserves 0x1f * N + 0x21 for grease. Those are to be ignored, which is a
+    // different thing from the sec 11.2.1 reserved HTTP/2 types that must be errored.
+    for (uint64_t n = 0; n < 4; n++)
+    {
+        TEST_ASSERT_FALSE(pc_h3_frame_type_reserved(0x1f * n + 0x21));
+    }
 
     // RFC 9114 sec 7.2.4.1 reserves the settings identifiers 0x02, 0x03, 0x04 and 0x05, and
     // "MUST be treated as a connection error of type H3_SETTINGS_ERROR" covers all four. This
