@@ -76,6 +76,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`0274a9a`](https://github.com/dstroy0/ProtoCore/commit/0274a9a4c04ece0f2089c7729dca2558edf199c1))
 - update CHANGELOG.md [skip ci] ([`9a2de00`](https://github.com/dstroy0/ProtoCore/commit/9a2de00c19a106e32634709515bdbb6193046230))
 - update CHANGELOG.md [skip ci] ([`a73ead7`](https://github.com/dstroy0/ProtoCore/commit/a73ead7075d515074a045b3fcb35ff03e9054849))
 - update CHANGELOG.md [skip ci] ([`cde3ddc`](https://github.com/dstroy0/ProtoCore/commit/cde3ddcf93dd69b919affe9ab7fa37ba3d011e3b))
@@ -310,6 +311,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- pin the Fixed Bit rule and both sides of the 2^60 max_streams bound ([`1861b3b`](https://github.com/dstroy0/ProtoCore/commit/1861b3baecaf83a54b18f97e7f2ec6a6d5e2494d))
 - enumerate the Appendix A static table and the Appendix B Huffman code ([`d3fe3ef`](https://github.com/dstroy0/ProtoCore/commit/d3fe3efe9f55772c47d071051a5e7aa9a37c543c))
 - the idle-stream, frame-size and CONTINUATION-flood rules ([`8db9f95`](https://github.com/dstroy0/ProtoCore/commit/8db9f9551f7349b457362c3bda472f5e85d5f0fb))
 - pin the SETTINGS accept-side bounds and an RFC-supplied request block ([`f39219b`](https://github.com/dstroy0/ProtoCore/commit/f39219b4b79d6f46363c0c85f9d22e09eacd0e1c))
