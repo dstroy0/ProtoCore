@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- an oversize dynamic-table size update is a decoding error, not a clamp ([`7ad71ec`](https://github.com/dstroy0/ProtoCore/commit/7ad71ecd09f64cdb92bca93630b5b6972b948c0a))
 - a prefix integer that overflows 32 bits is a decoding error (RFC 7541 sec 5.1) ([`ca9bf33`](https://github.com/dstroy0/ProtoCore/commit/ca9bf33a79b8207117112edd725ab96ab9712928))
 - the re-key count is a power of two, bounded by RFC 4253 sec 9 and RFC 4344 sec 3.2 ([`b18fb31`](https://github.com/dstroy0/ProtoCore/commit/b18fb31e7c5e23c302111bffc7a5ccdbbe0d69de))
 - derive the re-key packet count from the 1 GB bound (RFC 4253 sec 9) ([`cb02d8e`](https://github.com/dstroy0/ProtoCore/commit/cb02d8e140558f25a3d303fd591865a01228a1fa))
@@ -66,6 +67,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- update CHANGELOG.md [skip ci] ([`0ca5aa3`](https://github.com/dstroy0/ProtoCore/commit/0ca5aa31c7dcc7d6f733a332050aaf205c2ad4d6))
+>>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`b964d9e`](https://github.com/dstroy0/ProtoCore/commit/b964d9e4ff42d4c190b97107a7d8df10970d7fd4))
 - update CHANGELOG.md [skip ci] ([`22eb995`](https://github.com/dstroy0/ProtoCore/commit/22eb995add6e06ecb494ee3626bf158322a662eb))
 - update CHANGELOG.md [skip ci] ([`138dd71`](https://github.com/dstroy0/ProtoCore/commit/138dd715b795d9b263bf17bb2a8f1c0ba7151f4c))
@@ -206,10 +211,17 @@ All notable changes to ProtoCore are documented here.
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
 >>>>>>> Stashed changes
 =======
+- close the HPACK prefix-integer overflow ([`4eaeb4e`](https://github.com/dstroy0/ProtoCore/commit/4eaeb4e741423de906cd02498ec0da8796cfc9a2))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d7819ac`](https://github.com/dstroy0/ProtoCore/commit/d7819ac42f95fd4327be7fc3a754c59b69fe6fd3))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
+>>>>>>> Stashed changes
+=======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`dfd250d`](https://github.com/dstroy0/ProtoCore/commit/dfd250d8f13fe2ee2486c2cfda02764c5053f479))
 - close the HPACK prefix-integer overflow ([`4eaeb4e`](https://github.com/dstroy0/ProtoCore/commit/4eaeb4e741423de906cd02498ec0da8796cfc9a2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d7819ac`](https://github.com/dstroy0/ProtoCore/commit/d7819ac42f95fd4327be7fc3a754c59b69fe6fd3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
@@ -271,7 +283,10 @@ All notable changes to ProtoCore are documented here.
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 - the interop matrix reads the negotiated MAC back out of the trace ([`48f200f`](https://github.com/dstroy0/ProtoCore/commit/48f200f8dbb2f5b49a7201a20eda68522dd14dab))
@@ -280,6 +295,9 @@ All notable changes to ProtoCore are documented here.
 - pin the group-14 prime and generator against RFC 3526 sec 3 ([`170db64`](https://github.com/dstroy0/ProtoCore/commit/170db64308ec178ebabb7e7cbb7a965680687fe8))
 - the GCM derive fixture takes the mpint sign-pad path its comment claimed ([`6a7334b`](https://github.com/dstroy0/ProtoCore/commit/6a7334b0d75c052bb440c26e419d066e52455999))
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
