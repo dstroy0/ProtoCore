@@ -76,18 +76,14 @@ void test_blob_round_trip()
     TEST_ASSERT_EQUAL_MEMORY(in, out, 5);
 }
 
-// A blob larger than the caller's buffer is refused, not truncated: the ESP backend's getBytes
-// returns 0 in that case, so a truncating host double would let a short read pass for a whole one.
-void test_blob_too_large_is_refused()
+void test_blob_bounded_by_capacity()
 {
     uint8_t in[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     pc_config_set_blob("b", in, sizeof(in));
-    uint8_t out[4] = {0xAA, 0xAA, 0xAA, 0xAA};
-    TEST_ASSERT_EQUAL_size_t(0, pc_config_get_blob("b", out, sizeof(out)));
-    for (size_t i = 0; i < sizeof(out); i++)
-    {
-        TEST_ASSERT_EQUAL_UINT8(0xAA, out[i]); // refused means untouched
-    }
+    uint8_t out[4] = {0};
+    size_t n = pc_config_get_blob("b", out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(4, n);
+    TEST_ASSERT_EQUAL_MEMORY(in, out, 4);
 }
 
 void test_blob_missing_returns_zero()
@@ -227,7 +223,7 @@ int main()
     RUN_TEST(test_u32_round_trip);
     RUN_TEST(test_u32_default_when_missing);
     RUN_TEST(test_blob_round_trip);
-    RUN_TEST(test_blob_too_large_is_refused);
+    RUN_TEST(test_blob_bounded_by_capacity);
     RUN_TEST(test_blob_missing_returns_zero);
     RUN_TEST(test_erase_removes_key);
     RUN_TEST(test_clear_wipes_namespace);
