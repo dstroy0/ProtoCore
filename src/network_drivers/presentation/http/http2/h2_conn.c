@@ -83,18 +83,16 @@ static void send_control(H2Conn *c, size_t (*build)(uint8_t *, size_t))
     }
 }
 
+// One size covers every control frame a received frame can provoke, fixed at compile time: a PING
+// ACK carries the 8-byte opaque payload, RST_STREAM and WINDOW_UPDATE carry 4, a SETTINGS ACK none.
+#define H2_CTL_FRAME_MAX (H2_FRAME_HEADER_LEN + 8)
+
 // Reset one stream (RFC 9113 sec 5.4.2: a stream error kills the stream, not the connection). The
-// frame is built in a borrow from the arena HTTP works out of and released here.
-static void send_rst(H2Conn *c, uint32_t stream_id, uint32_t err)
+// frame is built in the dispatcher's borrow, which is where every outbound control frame is staged.
+static void send_rst(H2Conn *c, pc_span f, uint32_t stream_id, uint32_t err)
 {
-    const size_t mark = pc_plaintext_mark();
-    pc_span f = pc_plaintext_span(H2_FRAME_HEADER_LEN + 4, 4);
-    if (pc_span_ok(f))
-    {
-        size_t n = pc_h2_build_rst_stream(f.buf, f.cap, stream_id, err);
-        wr(c, f.buf, n);
-    }
-    pc_plaintext_release(mark);
+    size_t n = pc_h2_build_rst_stream(f.buf, f.cap, stream_id, err);
+    wr(c, f.buf, n);
 }
 
 // HPACK emit context: routes each decoded header to the app callback with the stream id.
@@ -216,7 +214,7 @@ static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const u
     return PROTO_TRUE;
 }
 
-static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload)
+static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, pc_span f)
 {
     if (h->stream_id == 0)
     {
@@ -253,7 +251,7 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
     }
     if (s->state != H2_ST_OPEN)
     {
-        send_rst(c, h->stream_id, H2_STREAM_CLOSED);
+        send_rst(c, f, h->stream_id, H2_STREAM_CLOSED);
         return PROTO_TRUE; // the stream dies, the connection lives
     }
 
@@ -266,38 +264,21 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
     {
         s->state = H2_ST_HALF_CLOSED;
     }
-    // Replenish flow-control windows for the bytes we consumed (whole frame length). Both frames are
-    // built in one borrow from the arena HTTP works out of, released here.
+    // Replenish flow-control windows for the bytes we consumed (whole frame length).
     if (h->length > 0)
     {
-        const size_t mark = pc_plaintext_mark();
-        pc_span f = pc_plaintext_span(H2_FRAME_HEADER_LEN + 4, 4);
-        if (!pc_span_ok(f))
-        {
-            pc_plaintext_release(mark);
-            return PROTO_FALSE; // arena exhausted: fail closed
-        }
         size_t n = pc_h2_build_window_update(f.buf, f.cap, 0, h->length);
         wr(c, f.buf, n);
         n = pc_h2_build_window_update(f.buf, f.cap, h->stream_id, h->length);
         wr(c, f.buf, n);
-        pc_plaintext_release(mark);
     }
     return PROTO_TRUE;
 }
 
-static proto_bool process_frame(H2Conn *c)
+// Route one parsed frame. Every outbound control frame it produces is staged in @p f, the one borrow
+// the dispatcher below takes for this frame.
+static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payload, pc_span f)
 {
-    H2FrameHeader h;
-    pc_h2_parse_header(c->fbuf, H2_FRAME_HEADER_LEN, &h);
-    const uint8_t *payload = c->fbuf + H2_FRAME_HEADER_LEN;
-
-    // A header block must be continued only by CONTINUATION on the same stream (sec 6.10).
-    if (c->in_header_block && h.type != H2_CONTINUATION)
-    {
-        return PROTO_FALSE;
-    }
-
     switch (h.type)
     {
     case H2_SETTINGS:
@@ -321,9 +302,8 @@ static proto_bool process_frame(H2Conn *c)
             return PROTO_FALSE;
         }
         {
-            uint8_t pg[H2_FRAME_HEADER_LEN + 8];
-            size_t n = pc_h2_build_ping_ack(pg, sizeof pg, payload);
-            wr(c, pg, n);
+            size_t n = pc_h2_build_ping_ack(f.buf, f.cap, payload);
+            wr(c, f.buf, n);
         }
         return PROTO_TRUE;
     case H2_WINDOW_UPDATE: {
@@ -356,7 +336,7 @@ static proto_bool process_frame(H2Conn *c)
                     {
                         err = H2_PROTOCOL_ERROR;
                     }
-                    send_rst(c, h.stream_id, err);
+                    send_rst(c, f, h.stream_id, err);
                     return PROTO_TRUE; // the stream dies, the connection lives
                 }
                 s->send_window += (int32_t)inc;
@@ -369,7 +349,7 @@ static proto_bool process_frame(H2Conn *c)
     case H2_CONTINUATION:
         return handle_continuation(c, &h, payload);
     case H2_DATA:
-        return handle_data(c, &h, payload);
+        return handle_data(c, &h, payload, f);
     case H2_RST_STREAM: {
         H2Stream *s = find_stream(c, h.stream_id);
         if (s)
@@ -388,6 +368,32 @@ static proto_bool process_frame(H2Conn *c)
     default:
         return PROTO_TRUE; // unknown frame types are ignored (sec 4.1)
     }
+}
+
+static proto_bool process_frame(H2Conn *c)
+{
+    H2FrameHeader h;
+    pc_h2_parse_header(c->fbuf, H2_FRAME_HEADER_LEN, &h);
+    const uint8_t *payload = c->fbuf + H2_FRAME_HEADER_LEN;
+
+    // A header block must be continued only by CONTINUATION on the same stream (sec 6.10).
+    if (c->in_header_block && h.type != H2_CONTINUATION)
+    {
+        return PROTO_FALSE;
+    }
+
+    // The one borrow for whatever this frame provokes us to send. It belongs here, at the frame's
+    // owner, so no handler below stages a frame of its own.
+    const size_t mark = pc_plaintext_mark();
+    pc_span f = pc_plaintext_span(H2_CTL_FRAME_MAX, 4);
+    if (!pc_span_ok(f))
+    {
+        pc_plaintext_release(mark);
+        return PROTO_FALSE; // arena exhausted: fail closed
+    }
+    const proto_bool ok = dispatch_frame(c, h, payload, f);
+    pc_plaintext_release(mark);
+    return ok;
 }
 
 void pc_h2_conn_init(H2Conn *c, const H2Callbacks *cb)
