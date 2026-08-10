@@ -220,46 +220,38 @@ static int server_on_finished(TlsConn *c, const uint8_t *msg, size_t len)
 // The Ns
 // ---------------------------------------------------------------------------
 
-// Which connection holds which borrow, owned by one instance (internal linkage). The persistent
-// end is never given back, and init runs again every time a slot's connection is replaced, so the
-// borrow is taken once per connection and reused. One named owner, unreachable cross-TU.
+// The whole pool's bytes, owned by one instance (internal linkage): one borrow from the persistent
+// end covering every slot, taken on first use and never given back. One named owner, unreachable
+// cross-TU.
 typedef struct
 {
-    const TlsConn *owner[MAX_TLS_CONNS];
-    uint8_t *region[MAX_TLS_CONNS];
-    uint8_t count;
+    uint8_t *base;
 } TlsConnPoolCtx;
 static TlsConnPoolCtx s_tls_conn;
 
-// The bytes @p c runs out of: the ones it already holds, or the next borrow. NULL when every slot
-// is spoken for.
-static uint8_t *slot_region(const TlsConn *c)
+// Slot @p slot's own region. The pool is one borrow and every slot's bytes sit at its own offset
+// into it, so init runs again on a replaced connection without asking for more.
+static uint8_t *slot_region(uint8_t slot)
 {
-    for (uint8_t i = 0; i < s_tls_conn.count; i++)
+    if (slot >= MAX_TLS_CONNS)
     {
-        if (s_tls_conn.owner[i] == c)
+        return NULL;
+    }
+    if (s_tls_conn.base == NULL)
+    {
+        pc_span b = secure.persist_span((size_t)MAX_TLS_CONNS * PC_TLS_CONN_BORROW);
+        if (!pc_span_ok(b))
         {
-            return s_tls_conn.region[i];
+            return NULL;
         }
+        s_tls_conn.base = b.buf;
     }
-    if (s_tls_conn.count >= MAX_TLS_CONNS)
-    {
-        return NULL;
-    }
-    pc_span b = secure.persist_span(PC_TLS_CONN_BORROW);
-    if (!pc_span_ok(b))
-    {
-        return NULL;
-    }
-    s_tls_conn.owner[s_tls_conn.count] = c;
-    s_tls_conn.region[s_tls_conn.count] = b.buf;
-    s_tls_conn.count++;
-    return b.buf;
+    return s_tls_conn.base + (size_t)slot * PC_TLS_CONN_BORROW;
 }
 
-static proto_bool conn_init(TlsConn *c, TlsRole role, const TlsConnConfig *cfg)
+static proto_bool conn_init(TlsConn *c, uint8_t slot, TlsRole role, const TlsConnConfig *cfg)
 {
-    uint8_t *base = slot_region(c);
+    uint8_t *base = slot_region(slot);
     if (base == NULL)
     {
         return PROTO_FALSE;
