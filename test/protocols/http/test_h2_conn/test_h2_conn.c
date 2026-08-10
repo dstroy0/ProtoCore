@@ -796,6 +796,41 @@ void test_h2_data_empty_and_unknown_stream(void)
     TEST_ASSERT_FALSE(cap.data_end);
 }
 
+// RFC 9113 sec 6.9: a WINDOW_UPDATE carrying an increment of 0 is an error - a connection error on
+// the connection window, a stream error on a stream's. Sec 6.9.1: a flow-control window may not
+// exceed 2^31-1, and an increment that would carry it past that is FLOW_CONTROL_ERROR. Unchecked,
+// that add was signed overflow.
+void test_h2_window_update_zero_and_overflow(void)
+{
+    static Cap cap;
+    H2Conn c;
+    establish(&c, &cap);
+    open_stream(&c, 1);
+
+    // Zero increment on a stream: that stream is reset, the connection survives.
+    cap.out_len = 0;
+    const uint8_t zero[4] = {0, 0, 0, 0};
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 1, zero, 4));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+
+    // Zero increment on the connection window: connection error.
+    TEST_ASSERT_FALSE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 0, zero, 4));
+
+    // An increment that would take a stream's window past 2^31-1: that stream is reset.
+    establish(&c, &cap);
+    open_stream(&c, 1);
+    cap.out_len = 0;
+    const uint8_t big[4] = {0x7F, 0xFF, 0xFF, 0xFF};
+    TEST_ASSERT_TRUE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 1, big, 4));
+    TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
+
+    // The same on the connection window is a connection error, and the window never moved.
+    establish(&c, &cap);
+    const int32_t before = c.conn_send_window;
+    TEST_ASSERT_FALSE(feed_frame(&c, H2_WINDOW_UPDATE, 0, 0, big, 4));
+    TEST_ASSERT_EQUAL_INT32(before, c.conn_send_window);
+}
+
 // RFC 9113 sec 6.1: DATA on a stream that is no longer open is a stream error of type STREAM_CLOSED -
 // the connection survives, that stream is reset, and the late bytes are not delivered.
 void test_h2_data_after_end_stream_resets_the_stream(void)
@@ -903,6 +938,7 @@ int main(void)
     RUN_TEST(test_h2_unknown_stream_frames);
     RUN_TEST(test_h2_data_empty_and_unknown_stream);
     RUN_TEST(test_h2_data_after_end_stream_resets_the_stream);
+    RUN_TEST(test_h2_window_update_zero_and_overflow);
     RUN_TEST(test_h2_continuation_after_stream_freed);
     RUN_TEST(test_h2_respond_default_chunk_size);
     RUN_TEST(test_h2_respond_content_length_no_room);
