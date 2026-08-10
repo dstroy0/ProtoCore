@@ -49,7 +49,7 @@ every C library's token space.
 the most collided identifiers in embedded C, and the preprocessor has no scope to protect ours from a
 vendor SDK's. Every capacity bound carries `PROTO_MAX_`, with no exception.
 
-**One exemption: `src/core_setup/`.** That is where vendor SDKs are spoken to, and their headers
+**One exemption: `core_setup/`.** That is where vendor SDKs are spoken to, and their headers
 are full of names this law does not govern. A vendor symbol appears verbatim inside `core_setup/`
 and nowhere else, and everything `core_setup/` _exports_ still obeys the table above. The
 exemption covers what a driver must consume, never what it publishes.

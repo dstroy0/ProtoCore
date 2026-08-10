@@ -85,7 +85,7 @@ Committed and scoped, not started.
 - [ ] **Migrate the remaining 6 generators onto `doc_region`** (S, dedupe) - `feature_budget`,
       `gen_api_flow`, `gen_examples`, `gen_feature_tables`, `gen_flag_deps`, and
       `gen_readme_sections` still hand-roll the marked-region read/replace/`--check` logic that
-      [`tools/ci_tooling/lib/doc_region.py`](../ci_tooling/lib/doc_region.py) now owns. They use the
+      [`tools/ci_tooling/lib/doc_region.py`](../tools/ci_tooling/lib/doc_region.py) now owns. They use the
       correct `prettier-ignore` mechanism, so they are duplicated rather than wrong; the gate is
       that every `--check` stays green and prettier stays clean.
 
@@ -583,7 +583,7 @@ Each item has a working piece in the tree and an explicit _Remaining_ note.
 
 ### Per-variant default sizing (don't kneecap larger boards)
 
-- [~] **Per-variant default profiles** (M) - **framework shipped** (`src/core_setup/board_profiles/`): `board_profile.h`
+- [~] **Per-variant default profiles** (M) - **framework shipped** (`core_setup/board_profiles/`): `board_profile.h`
   selects, along three independent axes, per-variant default files, each guarded by `#ifndef` so a `-D` /
   `build_opt.h` override always wins. Axes: **chip** (`classic_defaults.h` / `s3_defaults.h` /
   `c6_defaults.h` / `p4_defaults.h`, auto-selected from `CONFIG_IDF_TARGET_*`, holding HW-specific switches +

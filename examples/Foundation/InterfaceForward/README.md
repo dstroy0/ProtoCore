@@ -67,8 +67,10 @@ pc_forward_acl_add(IF_A, 0, allowed_hdr, hdr_mask, 2, pc_fwd_action::PC_FWD_ALLO
 This sketch drops every 5th frame (a `0xFF` marker) at the ACL; watch `acl_denied`
 climb in the serial stats while `forwarded` counts the rest.
 
-Storage is static (zero heap): `PC_FWD_MAX_IFACES` interfaces,
-`PC_FWD_MAX_RULES` rules, `PC_FWD_MAX_ACL` ACL entries.
+Storage is static (zero heap): `PC_FWD_MAX_RULES` rules, `PC_FWD_MAX_ACL` ACL
+entries and `PC_FWD_MAX_ROUTES` routes. The interfaces are not sized here - an
+interface is a physical thing, so L1 owns the registry and the forwarding plane
+reads it.
 
 Here interface A is a DMA channel fed by the simulator (no wire needed) and interface
 B's egress just counts the bytes; a real build sends B out Wi-Fi / Ethernet / a bus or

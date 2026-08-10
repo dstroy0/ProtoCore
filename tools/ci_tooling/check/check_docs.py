@@ -63,6 +63,9 @@ def main() -> int:
             "src/*.h",
             "src/*.c",
             "src/*.cpp",
+            "core_setup/*.h",
+            "core_setup/*.c",
+            "core_setup/*.cpp",
             "test/*.h",
             "test/*.c",
             "test/*.cpp",
@@ -97,7 +100,9 @@ def main() -> int:
         "docs/SYMBOLS.md",  # illustrative
     }
 
-    known_envs = set(re.findall(r"^\[env:(native[A-Za-z0-9_]*)\]", read("platformio.ini"), re.M))
+    # Both the envs and the shared base sections they extend: a doc naming the stack a suite is
+    # built on is naming a [native_stack_*] section, which is not spelled [env:...].
+    known_envs = set(re.findall(r"^\[(?:env:)?(native[A-Za-z0-9_]*)\]", read("platformio.ini"), re.M))
 
     bad = []
     for f in mds:

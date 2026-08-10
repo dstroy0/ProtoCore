@@ -743,7 +743,7 @@ Open follow-ups discovered during the above:
       `pc_ip` address core (`shared_primitives/ip.h`) parses / formats / classifies both
       families (`native_ip`; RFC 4291 + 5952). Example IPv6; both cores compiled. **Phase 2
       (done):** the transport carries the peer as a protocol-agnostic family-tagged `pc_ip`
-      (`Tcp.conn->remote_addr()` / `pc_lwip_to_ip()`), and every IP-keyed abuse-prevention feature
+      (`Tcp.conn->remote_addr()` / `NetAddr.to_ip()`), and every IP-keyed abuse-prevention feature
       stores and matches the FULL address - the per-IP throttle + auth lockout by
       [`pc_ip_equal`](@ref pc_ip_equal), the IP allowlist by
       [`pc_ip_prefix_match`](@ref pc_ip_prefix_match) (v4 /0-32 + v6 /0-128 CIDR via

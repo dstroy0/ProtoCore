@@ -105,7 +105,7 @@ input unchanged, so the generator "succeeds" while shipping the stale text. Use
 
 Exit non-zero with the offending file and line on stdout/stderr. Write nothing.
 
-Scope must match the documented rule. [`docs/SRCBANNED.md`](../docs/SRCBANNED.md)
+Scope must match the documented rule. [`docs/SRCBANNED.md`](../../docs/SRCBANNED.md)
 rule 6 says "Applies to `examples/` too" and even prints the command, but
 `check_src_banned.py` scanned only `src/` - so 86 example READMEs drifted onto the
 banned API while every sketch stayed clean. **If a rule names its scope in prose, the
@@ -113,11 +113,11 @@ checker reads that whole scope, or the prose is wrong.**
 
 Do not silence an alarm to make a checker pass. If output is a false positive, prove
 it and add a justified in-source suppression; if it is real, fix it or log it in
-[`docs/BUGS.md`](../docs/BUGS.md).
+[`docs/BUGS.md`](../../docs/BUGS.md).
 
 ### Gating a rule the tree does not satisfy yet
 
-`check_symbols.py` enforces [`docs/SYMBOLS.md`](../docs/SYMBOLS.md), which the tree
+`check_symbols.py` enforces [`docs/SYMBOLS.md`](../../docs/SYMBOLS.md), which the tree
 does not fully comply with: the prefix sweep is still open, so a bare run reports
 ~1300 violations. A checker in that position has two bad options - stay out of CI until
 the sweep lands (so nothing stops the count growing), or fail the build immediately

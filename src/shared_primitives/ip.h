@@ -58,7 +58,7 @@ typedef struct
     uint8_t bytes[16];   ///< network order; v4 uses the first 4
 } pc_ip;
 
-/** @brief Longest text an ::pc_ip_format can produce, including the NUL (RFC 5952 v4-mapped). */
+/** @brief Longest text an ::IpNs::format can produce, including the NUL (RFC 5952 v4-mapped). */
 #define PC_IP_STR_MAX 46
 
 /**
