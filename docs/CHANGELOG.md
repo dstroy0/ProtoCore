@@ -92,15 +92,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-- update CHANGELOG.md [skip ci] ([`25601a1`](https://github.com/dstroy0/ProtoCore/commit/25601a150545d1915a66580fa1ffbcc96bafe23c))
->>>>>>> Stashed changes
-=======
+- update CHANGELOG.md [skip ci] ([`aec0fe0`](https://github.com/dstroy0/ProtoCore/commit/aec0fe05c248db49c25156df4b4ad3ffc4d31779))
+- update CHANGELOG.md [skip ci] ([`7fb683a`](https://github.com/dstroy0/ProtoCore/commit/7fb683a853781a9a5dab2be9ee0d8ef1100df251))
 - update CHANGELOG.md [skip ci] ([`36e3417`](https://github.com/dstroy0/ProtoCore/commit/36e34179bb5dfb2383d6efc8a8e2317b75ba7588))
 - update CHANGELOG.md [skip ci] ([`25601a1`](https://github.com/dstroy0/ProtoCore/commit/25601a150545d1915a66580fa1ffbcc96bafe23c))
->>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`a97581a`](https://github.com/dstroy0/ProtoCore/commit/a97581ab85a312972e1350855f74c1c7be9de28c))
 - update CHANGELOG.md [skip ci] ([`9690d65`](https://github.com/dstroy0/ProtoCore/commit/9690d6524cbcf61deba143eabe3a4a123cbad666))
 - update CHANGELOG.md [skip ci] ([`e980248`](https://github.com/dstroy0/ProtoCore/commit/e980248cc6bf5ff4fd2f70e2a196425f9172876c))
@@ -294,11 +289,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
-<<<<<<< Updated upstream
-=======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`52b7504`](https://github.com/dstroy0/ProtoCore/commit/52b750499a69670948596653063c856a6a3dc64d))
 - the plaintext arena is a sum now; its placement and per-slot multiplier are not ([`34d1e0e`](https://github.com/dstroy0/ProtoCore/commit/34d1e0e6eca3eff196f63f9f551599030640c2c5))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6210b75`](https://github.com/dstroy0/ProtoCore/commit/6210b755909b47b9ce5282cff582b6f1a8e6012d))
->>>>>>> Stashed changes
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6bb4689`](https://github.com/dstroy0/ProtoCore/commit/6bb4689d0a48e0c2b75869c86847587c8a02ea91))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`81998f4`](https://github.com/dstroy0/ProtoCore/commit/81998f425e8612cc632e970daa91c55d004e0854))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d3a0207`](https://github.com/dstroy0/ProtoCore/commit/d3a0207de3b00abcec1bb86288c7cfe0a8859c77))
@@ -395,15 +388,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-- the shared object rewrite caught a pointer deref in the finder ([`be58831`](https://github.com/dstroy0/ProtoCore/commit/be58831ef4a5cbbaa0966b08ca49f47f18bed04e))
->>>>>>> Stashed changes
-=======
+- the suite shares its two transports; the engine takes bytes where a stream is claimed ([`a6ed68f`](https://github.com/dstroy0/ProtoCore/commit/a6ed68fef804a3a7b62eb14ec7f92f90ab773827))
 - the two-connection cases get a second slot ([`01d857a`](https://github.com/dstroy0/ProtoCore/commit/01d857a4b319dec6e1c6d8aaa1e8c85de776c34d))
 - the shared object rewrite caught a pointer deref in the finder ([`be58831`](https://github.com/dstroy0/ProtoCore/commit/be58831ef4a5cbbaa0966b08ca49f47f18bed04e))
->>>>>>> Stashed changes
 - the cases share one connection object, the way the server re-uses a slot ([`6f9a72c`](https://github.com/dstroy0/ProtoCore/commit/6f9a72c6029f117c6718605377f0c275f82edf90))
 - the cases share one connection object, the way a server re-uses a slot ([`140c9ed`](https://github.com/dstroy0/ProtoCore/commit/140c9ed3f1872ec8724b4230776c923b6a0889ad))
 - decode legal S=0 and L=0 records ([`e13b02b`](https://github.com/dstroy0/ProtoCore/commit/e13b02bdc94c7577ada3f03be2080b5f8e9d05ad))
