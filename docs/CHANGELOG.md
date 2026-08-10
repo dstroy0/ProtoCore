@@ -102,6 +102,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`64cdf7d`](https://github.com/dstroy0/ProtoCore/commit/64cdf7dd75033dad42625df47bcb35aac1fe342d))
 - update CHANGELOG.md [skip ci] ([`c1469ec`](https://github.com/dstroy0/ProtoCore/commit/c1469ece454ebf3ce9a07861fbd638334fe12685))
 - update CHANGELOG.md [skip ci] ([`e641fd6`](https://github.com/dstroy0/ProtoCore/commit/e641fd62c00251c8b04300b1f0b5cd003a9db10e))
 - update CHANGELOG.md [skip ci] ([`fac7287`](https://github.com/dstroy0/ProtoCore/commit/fac728774caf11deff18ff259f5bd227f0bc1121))
@@ -431,6 +432,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- host_nvs reaches str now, so its two envs compile protostr ([`3c5dd8e`](https://github.com/dstroy0/ProtoCore/commit/3c5dd8e380c00c1a188b6b3ba667b241f5d17bd0))
 - the cases share the connection slot ([`7ec6716`](https://github.com/dstroy0/ProtoCore/commit/7ec6716ecf1bbe3b15a4d328878b97f255630948))
 - the cases share two connection slots, the way the CoAPs server re-uses one ([`3d9e027`](https://github.com/dstroy0/ProtoCore/commit/3d9e027060987e0c7f21a3a20f4d5bf15fd6a861))
 - the suite shares its two connection slots ([`ef97ae8`](https://github.com/dstroy0/ProtoCore/commit/ef97ae8eaf9e7d977fc40c921ae30e1ec2293020))
