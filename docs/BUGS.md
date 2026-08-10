@@ -566,6 +566,23 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## An oversize HPACK dynamic-table size update was clamped instead of refused
+
+- **Status:** FIXED 2026-08-09 (`hpack.c` `pc_hpack_decode`, the 0x20 arm). Found 2026-08-08 auditing
+  `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #1).
+- **Symptom:** a size update naming any value was accepted; `dyn_set_max` silently lowered it to the
+  table's storage. RFC 7541 sec 6.3 says a value above the limit the enclosing protocol determined
+  MUST be a decoding error, and RFC 9113 sec 4.3 makes a decoding error in a field block a connection
+  error of type COMPRESSION_ERROR. So a peer's illegal update was taken as a legal one.
+- **Root cause:** the clamp reads as defensive, and it does keep the table inside its storage, but it
+  is answering a different question than the RFC asks. The limit here is 4096: `h2_conn.c` advertises
+  no SETTINGS_HEADER_TABLE_SIZE, so the RFC 9113 sec 6.5.2 default applies and it equals
+  `PC_HPACK_TABLE_BYTES`.
+- **Nothing can catch it:** `test_dyn_size_update` encoded an update to 100000 and asserted the decode
+  returned TRUE, pinning the clamp as correct.
+- **Fix:** the decode refuses `nm > HPACK_BYTES` before applying it. The test now pins the boundary -
+  4096 applied, 4097 and 100000 refused. Verified: `native_hpack` + 6 more, 96/96.
+
 ## HPACK prefix-integer decode wraps at `m == 28`
 
 - **Status:** FIXED 2026-08-09 (`hpack_prim.c` `pc_hpack_decode_int`). Found 2026-08-08 auditing
