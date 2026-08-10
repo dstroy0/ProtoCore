@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the i2c command link was shared per bus; pc_mnt_fs published a C++ type ([`5153630`](https://github.com/dstroy0/ProtoCore/commit/515363041cb3b2dd963627715141dbe823e30f14))
 - the nvs seam serialises; seven fs entry points and one spi transfer were unbounded ([`7a6630b`](https://github.com/dstroy0/ProtoCore/commit/7a6630b4b0d89f26ba3ab000aeb3f8f71ef5e60e))
 - put_blob and put_str judged their bounds after committing, or not at all ([`1f32484`](https://github.com/dstroy0/ProtoCore/commit/1f324849ee4662fdb2fcd18f052861b105c622c9))
 - the two backends gave different wrong answers for a blob and a string ([`280fbc6`](https://github.com/dstroy0/ProtoCore/commit/280fbc6498bc8709a9d8d68f8fc99875ff8d5b9a))
@@ -105,6 +106,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`1267130`](https://github.com/dstroy0/ProtoCore/commit/126713080df7f67e4d671a7ec6165f689d7cdd4b))
 - update CHANGELOG.md [skip ci] ([`020d105`](https://github.com/dstroy0/ProtoCore/commit/020d105c1291c49e19ce547e5e5082f544af742a))
 - update CHANGELOG.md [skip ci] ([`5408a4f`](https://github.com/dstroy0/ProtoCore/commit/5408a4f50355a0fbe19bda6fe634ad8d3ed87152))
 - update CHANGELOG.md [skip ci] ([`76067b4`](https://github.com/dstroy0/ProtoCore/commit/76067b4ee113cddafb0fd214292b4f14d68271e7))
