@@ -55,6 +55,84 @@ static void hx(const char *s, uint8_t *out, size_t n)
     }
 }
 
+// FIPS 202 absorbs whole rate-sized blocks: SHA3-256 takes 136 bytes at a time, SHA3-512 72,
+// SHAKE128 168. Absorbing only "" and "abc" left the block loop unentered, and left the case where
+// the domain-separation byte and the 0x80 pad land on the SAME state byte - inlen % rate == rate-1,
+// where they must merge to 0x86 for SHA-3 and 0x9F for SHAKE - unreached at every rate. The digests
+// come from an independent FIPS 202 (Python hashlib) over the same deterministic bytes.
+static void fill_msg(uint8_t *m, size_t n)
+{
+    for (size_t i = 0; i < n; i++)
+    {
+        m[i] = (uint8_t)((i * 7u + 3u) & 0xFFu);
+    }
+}
+
+static void sha3_256_case(size_t n, const char *want_hex, const char *msg_label)
+{
+    uint8_t msg[256];
+    uint8_t got[32];
+    uint8_t want[32];
+    fill_msg(msg, n);
+    pc_sha3_256(got, msg, n);
+    hx(want_hex, want, 32);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, got, 32, msg_label);
+}
+
+static void sha3_512_case(size_t n, const char *want_hex, const char *msg_label)
+{
+    uint8_t msg[256];
+    uint8_t got[64];
+    uint8_t want[64];
+    fill_msg(msg, n);
+    pc_sha3_512(got, msg, n);
+    hx(want_hex, want, 64);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, got, 64, msg_label);
+}
+
+// 135 = rate-1: the domain byte and the pad byte merge. 136 = one whole block. 200 spans two.
+void test_sha3_256_rate_boundaries()
+{
+    sha3_256_case(135, "d9dcf1f98e49a79b0643a9e68fef48079ff8777c5e7e7f93469ded65f192ac71", "SHA3-256 135 (rate-1)");
+    sha3_256_case(136, "743bd32e775ac7387a57d4d574c89ddef5ebcb08bb5cc6b88c55a27b5035cc45", "SHA3-256 136 (one block)");
+    sha3_256_case(200, "9da37ea2fb33acd563a014f50d6f7cc225f25577a81d900452b72b5de98f239d", "SHA3-256 200 (two blocks)");
+}
+
+// The same three positions at SHA3-512's narrower 72-byte rate.
+void test_sha3_512_rate_boundaries()
+{
+    sha3_512_case(71,
+                  "a02d5795bffd44cb0ac3cc3401ae89056b8017242eaf7e802033e974672ce794"
+                  "5811760c3b0d9578bc51bf90c364636ac87cda9b4f3e45620ea9c030421e9d86",
+                  "SHA3-512 71 (rate-1)");
+    sha3_512_case(72,
+                  "2ec0da5ff440c192d33033c4257eb39dcbd27edd7e41b5ac8db9daf13db501a2"
+                  "ef938151aaddd82f600335654f77512cbcc926ec5abb05b79282ec716d685618",
+                  "SHA3-512 72 (one block)");
+    sha3_512_case(150,
+                  "56024a03e8a88cf3265249a0533d7fda1c6e7d47ecb5cde2ffcc6bb92f65ab86"
+                  "c946ff93059e226f8af724fd1b1c754c26c34a08d800d328c986a7e48737aee2",
+                  "SHA3-512 150 (three blocks)");
+}
+
+// SHAKE128's 168-byte rate, where the merged byte is 0x9F rather than 0x86.
+void test_shake128_rate_boundaries()
+{
+    uint8_t msg[200];
+    uint8_t got[32];
+    uint8_t want[32];
+
+    fill_msg(msg, 167);
+    pc_shake128(got, sizeof(got), msg, 167);
+    hx("bb961bb015521037905f9baf69ce60dd3ba73f6ead09a559c8d8a85e10753bca", want, 32);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, got, 32, "SHAKE128 167 (rate-1)");
+
+    fill_msg(msg, 168);
+    pc_shake128(got, sizeof(got), msg, 168);
+    hx("d4f73f3b6c4b72d05f45ed1f80b5774409f9cf336fc202bffa42ac38a6d3fbee", want, 32);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, got, 32, "SHAKE128 168 (one block)");
+}
+
 void test_sha3_256()
 {
     uint8_t got[32], want[32];
@@ -116,6 +194,9 @@ int main()
 {
     UNITY_BEGIN();
     RUN_TEST(test_sha3_256);
+    RUN_TEST(test_sha3_256_rate_boundaries);
+    RUN_TEST(test_sha3_512_rate_boundaries);
+    RUN_TEST(test_shake128_rate_boundaries);
     RUN_TEST(test_sha3_512);
     RUN_TEST(test_shake_empty);
     RUN_TEST(test_shake_stream_continuity);
