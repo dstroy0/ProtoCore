@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the init wipe ran through the pointer from before the split ([`6aac99b`](https://github.com/dstroy0/ProtoCore/commit/6aac99b774099c8af1fbedaa3a55c814370d57c6))
 - a re-used stream slot served the previous request's pseudo-headers ([`690d135`](https://github.com/dstroy0/ProtoCore/commit/690d13565315147c53502e1bc3a101dee0a93d73))
 - the re-init split ran from a base it had already zeroed away ([`648b45b`](https://github.com/dstroy0/ProtoCore/commit/648b45b51d5eeaf8e86f994712c488c2da9ae975))
 - an invalid record is discarded, the association survives ([`aa16fa3`](https://github.com/dstroy0/ProtoCore/commit/aa16fa32d7d6497be9ba078f81c1ef33db2cb80b))
@@ -290,6 +291,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cc04af7`](https://github.com/dstroy0/ProtoCore/commit/cc04af77adae18e301212e1e90ca17a81492a5d4))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`52b7504`](https://github.com/dstroy0/ProtoCore/commit/52b750499a69670948596653063c856a6a3dc64d))
 - the plaintext arena is a sum now; its placement and per-slot multiplier are not ([`34d1e0e`](https://github.com/dstroy0/ProtoCore/commit/34d1e0e6eca3eff196f63f9f551599030640c2c5))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6210b75`](https://github.com/dstroy0/ProtoCore/commit/6210b755909b47b9ce5282cff582b6f1a8e6012d))
