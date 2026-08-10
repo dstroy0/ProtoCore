@@ -215,6 +215,16 @@ static void test_aes128gcm(void)
         char m[48];
         snprintf(m, sizeof(m), "AES128GCM tcId=%d", v->tc);
 
+        if (!v->valid)
+        {
+            // A rejection vector carries the ct/tag pair a peer might actually send - a flipped
+            // tag bit, a truncated tag, a modified aad. Open must refuse it. Sealing the plaintext
+            // would produce the CORRECT tag, which is not what this vector is about.
+            TEST_ASSERT_FALSE_MESSAGE(
+                pc_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, clen ? ct : NULL, clen, tag, opened), m);
+            continue;
+        }
+
         // seal: out == ciphertext || tag (ciphertext is empty when plaintext is)
         pc_aes128gcm_seal(gcm128(key), iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed, sealed + plen);
         if (clen)
