@@ -150,6 +150,28 @@ void test_x25519_rfc7748_vector1()
                  "c3da55379de9c6908e94ea4df28d084f32eccf03491c71f754b4075577a28552");
 }
 
+// RFC 7748 sec 5: "implementations of X25519 MUST mask the most significant bit in the final byte"
+// of the u-coordinate. Every published vector is already canonical, so the masking branch was never
+// reached: the same key with bit 255 set must give the same shared secret as with it clear, and a
+// u-coordinate at p-1 with that bit set must not be read as a different point.
+void test_x25519_ignores_the_high_bit_of_u(void)
+{
+    uint8_t scalar[32];
+    hex_to_bytes(scalar, "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4", 32);
+
+    uint8_t u_clear[32];
+    hex_to_bytes(u_clear, "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c", 32);
+    uint8_t u_set[32];
+    memcpy(u_set, u_clear, sizeof(u_set));
+    u_set[31] |= 0x80u; // the bit RFC 7748 sec 5 says to ignore
+
+    uint8_t from_clear[32];
+    uint8_t from_set[32];
+    pc_x25519(from_clear, scalar, u_clear);
+    pc_x25519(from_set, scalar, u_set);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(from_clear, from_set, 32, "bit 255 of u must not change the result");
+}
+
 void test_x25519_rfc7748_vector2()
 {
     x25519_check("4b66e9d4d1b4673c5ad22691957d6af5c11b6421e0ea01d42ca4169e7918ba0d",
@@ -434,6 +456,7 @@ int main()
     RUN_TEST(test_sha512_streaming_matches_oneshot);
     RUN_TEST(test_x25519_rfc7748_vector1);
     RUN_TEST(test_x25519_rfc7748_vector2);
+    RUN_TEST(test_x25519_ignores_the_high_bit_of_u);
     RUN_TEST(test_x25519_iterated_1);
     RUN_TEST(test_x25519_iterated_1000);
     RUN_TEST(test_x25519_dh_agreement);
