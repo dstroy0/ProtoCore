@@ -112,6 +112,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`312be6f`](https://github.com/dstroy0/ProtoCore/commit/312be6f3d9ec7e929505dd9f5a6133dab6dd7f33))
 - update test report + coverage [skip ci] ([`9cc54c6`](https://github.com/dstroy0/ProtoCore/commit/9cc54c6abdb59b8d6f9e849711fa58a7b64fb809))
 - update CHANGELOG.md [skip ci] ([`6e093f8`](https://github.com/dstroy0/ProtoCore/commit/6e093f80e86b7d94adbc7f73b9ef47fd8406b87d))
 - update CHANGELOG.md [skip ci] ([`3e44f1a`](https://github.com/dstroy0/ProtoCore/commit/3e44f1ad6cc837fd24dc5df5f43606846651e6fa))
@@ -348,6 +349,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- an Arduino install cannot reach core_setup, which is outside the library src root ([`f98d476`](https://github.com/dstroy0/ProtoCore/commit/f98d476a6217937f630e99ec03ba447c2760d4bb))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`1d8bfe0`](https://github.com/dstroy0/ProtoCore/commit/1d8bfe05ee957d0cd1de4c82f055d0fc697198a4))
 - tcp_evt.h already drew this boundary; protocore.h crosses it ([`0e54830`](https://github.com/dstroy0/ProtoCore/commit/0e54830e09a53f9bdf93654f331b6c891b26ae68))
 - 330 host envs, none of them C++, and C++ is the consumption path ([`d9cd11e`](https://github.com/dstroy0/ProtoCore/commit/d9cd11e9a35b5f3d9bf5dd428ba6985cb2bd6446))
 - protocore.h wraps includes, not declarations, in extern C ([`e376fca`](https://github.com/dstroy0/ProtoCore/commit/e376fca40f49352053f84a12d3d17b808325b797))
