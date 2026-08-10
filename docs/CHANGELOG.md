@@ -92,6 +92,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3f743b0`](https://github.com/dstroy0/ProtoCore/commit/3f743b0b96894e91ea01c43e239f441a4154d01a))
 - update CHANGELOG.md [skip ci] ([`aec0fe0`](https://github.com/dstroy0/ProtoCore/commit/aec0fe05c248db49c25156df4b4ad3ffc4d31779))
 - update CHANGELOG.md [skip ci] ([`7fb683a`](https://github.com/dstroy0/ProtoCore/commit/7fb683a853781a9a5dab2be9ee0d8ef1100df251))
 - update CHANGELOG.md [skip ci] ([`36e3417`](https://github.com/dstroy0/ProtoCore/commit/36e34179bb5dfb2383d6efc8a8e2317b75ba7588))
@@ -388,6 +389,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the suite shares its two connection slots ([`ef97ae8`](https://github.com/dstroy0/ProtoCore/commit/ef97ae8eaf9e7d977fc40c921ae30e1ec2293020))
 - the suite shares its two transports; the engine takes bytes where a stream is claimed ([`a6ed68f`](https://github.com/dstroy0/ProtoCore/commit/a6ed68fef804a3a7b62eb14ec7f92f90ab773827))
 - the two-connection cases get a second slot ([`01d857a`](https://github.com/dstroy0/ProtoCore/commit/01d857a4b319dec6e1c6d8aaa1e8c85de776c34d))
 - the shared object rewrite caught a pointer deref in the finder ([`be58831`](https://github.com/dstroy0/ProtoCore/commit/be58831ef4a5cbbaa0966b08ca49f47f18bed04e))
