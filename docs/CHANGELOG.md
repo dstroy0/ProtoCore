@@ -7,7 +7,12 @@ All notable changes to ProtoCore are documented here.
 ### Bug Fixes
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+- a liboqs disagreement read as liboqs being absent; scope the agent rules to tools/ ([`b8a07dc`](https://github.com/dstroy0/ProtoCore/commit/b8a07dcfb33b830ea3cd2f36d3e0454bb02cd3a9))
+>>>>>>> Stashed changes
+=======
+- sha256's accelerated arm dropped the work parameter; the KDF term ignored its context ([`81a70cb`](https://github.com/dstroy0/ProtoCore/commit/81a70cb0d4faa8d60412320e25c53887a872d218))
 - a liboqs disagreement read as liboqs being absent; scope the agent rules to tools/ ([`b8a07dc`](https://github.com/dstroy0/ProtoCore/commit/b8a07dcfb33b830ea3cd2f36d3e0454bb02cd3a9))
 >>>>>>> Stashed changes
 - the vendor arm hashed at an offset only the software arm defined ([`5b26f3a`](https://github.com/dstroy0/ProtoCore/commit/5b26f3a4b5bb997fbc4e9840efc456047323fa75))
@@ -102,10 +107,16 @@ All notable changes to ProtoCore are documented here.
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
 >>>>>>> Stashed changes
 =======
+- update CHANGELOG.md [skip ci] ([`c030722`](https://github.com/dstroy0/ProtoCore/commit/c030722765b0816f9191737ed4fda5d5a55b0892))
+- refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
+>>>>>>> Stashed changes
+=======
+- update CHANGELOG.md [skip ci] ([`b17ea59`](https://github.com/dstroy0/ProtoCore/commit/b17ea592cfecb2d55dc79303c7d5ce7098397d6d))
 - update CHANGELOG.md [skip ci] ([`c030722`](https://github.com/dstroy0/ProtoCore/commit/c030722765b0816f9191737ed4fda5d5a55b0892))
 - refresh the naming ratchet; the law it gates still documents the old prefix ([`c11c075`](https://github.com/dstroy0/ProtoCore/commit/c11c07560ff00e5c60b4e8ec00ca4e584d7bbb61))
 >>>>>>> Stashed changes
@@ -315,6 +326,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`44417cb`](https://github.com/dstroy0/ProtoCore/commit/44417cb83666bd04f5db4458cf1dfd39c7cfca15))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f79357d`](https://github.com/dstroy0/ProtoCore/commit/f79357d8c13332fdb4cb496669f5ef203ddcd6e3))
 - 81 citations went stale when core_setup, the harnesses and ci_tooling moved ([`7346901`](https://github.com/dstroy0/ProtoCore/commit/7346901bc44a08f8030de9c277756a7596352e15))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f131e5d`](https://github.com/dstroy0/ProtoCore/commit/f131e5d956e38549f49fe08585a259fa4b963355))
@@ -422,6 +434,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the cases share the connection slot ([`7ec6716`](https://github.com/dstroy0/ProtoCore/commit/7ec6716ecf1bbe3b15a4d328878b97f255630948))
+- the cases share two connection slots, the way the CoAPs server re-uses one ([`3d9e027`](https://github.com/dstroy0/ProtoCore/commit/3d9e027060987e0c7f21a3a20f4d5bf15fd6a861))
 - the suite shares its two connection slots ([`ef97ae8`](https://github.com/dstroy0/ProtoCore/commit/ef97ae8eaf9e7d977fc40c921ae30e1ec2293020))
 - the suite shares its two transports; the engine takes bytes where a stream is claimed ([`a6ed68f`](https://github.com/dstroy0/ProtoCore/commit/a6ed68fef804a3a7b62eb14ec7f92f90ab773827))
 - the two-connection cases get a second slot ([`01d857a`](https://github.com/dstroy0/ProtoCore/commit/01d857a4b319dec6e1c6d8aaa1e8c85de776c34d))
