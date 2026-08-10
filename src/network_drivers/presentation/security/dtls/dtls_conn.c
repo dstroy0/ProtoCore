@@ -281,7 +281,8 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     {
         return fail(c, ALERT_PROTOCOL_VERSION);
     }
-    if (!ch.offers_ed25519 || !ch.offers_x25519)
+    // sec 4.1.3: the suite named in the ServerHello is one the client offered.
+    if (!ch.offers_ed25519 || !ch.offers_x25519 || !ch.offers_aes128gcm_sha256)
     {
         return fail(c, ALERT_HANDSHAKE_FAILURE);
     }

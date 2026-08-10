@@ -437,10 +437,19 @@ proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13Clie
     {
         return PROTO_FALSE;
     }
+    // RFC 8446 sec 4.1.3: the server selects its suite "from the list in ClientHello.cipher_suites",
+    // so what the client offered has to reach the caller rather than being read past.
+    out->offers_aes128gcm_sha256 = list16_contains(cs, cs_len, cs_len, TLS_CIPHER_AES_128_GCM_SHA256);
 
     uint8_t comp_len = 0;
     const uint8_t *comp = NULL;
     if (!r_u8(&r, &comp_len) || !r_take(&r, comp_len, &comp))
+    {
+        return PROTO_FALSE;
+    }
+    // sec 4.1.2: legacy_compression_methods "MUST contain exactly one byte, set to zero", and a
+    // TLS 1.3 server aborts on anything else.
+    if (comp_len != 1 || comp[0] != 0)
     {
         return PROTO_FALSE;
     }
