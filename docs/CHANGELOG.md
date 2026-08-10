@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- h2_server suite passed pc_h2_write_header its arguments out of order ([`a635744`](https://github.com/dstroy0/ProtoCore/commit/a63574447e0ad65a4f969159f2a41d086aa11011))
 - reject a zero or overflowing WINDOW_UPDATE (RFC 9113 sec 6.9, 6.9.1) ([`b439489`](https://github.com/dstroy0/ProtoCore/commit/b4394891df2095b10e97bc9402fada3edc711ae3))
 - the outbound frame borrows from the plaintext arena HTTP works out of ([`ce0a1e0`](https://github.com/dstroy0/ProtoCore/commit/ce0a1e0f0e37eaa39783f537d9ba922fed30f7fd))
 - DATA on an idle or closed stream is refused before the app sees it (RFC 9113 sec 5.1, 6.1) ([`0815504`](https://github.com/dstroy0/ProtoCore/commit/081550456121a0be6b6f403f65224d06902a0871))
@@ -71,7 +72,12 @@ All notable changes to ProtoCore are documented here.
 ### CI / Build
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+- update CHANGELOG.md [skip ci] ([`76e79de`](https://github.com/dstroy0/ProtoCore/commit/76e79de7bb9de5602f4bb63fab477ff5a6d66a98))
+>>>>>>> Stashed changes
+=======
+- update CHANGELOG.md [skip ci] ([`a17dfea`](https://github.com/dstroy0/ProtoCore/commit/a17dfea7c82ea0dd24dd77c9b02bef2968243936))
 - update CHANGELOG.md [skip ci] ([`76e79de`](https://github.com/dstroy0/ProtoCore/commit/76e79de7bb9de5602f4bb63fab477ff5a6d66a98))
 >>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`85a5baa`](https://github.com/dstroy0/ProtoCore/commit/85a5baaf30856606f400ded52965506b2230ce68))
@@ -291,6 +297,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- drop the h2_server wire probe now the seam is stated ([`df6d2c5`](https://github.com/dstroy0/ProtoCore/commit/df6d2c563623eb724d2d9c7b804799f3029611dc))
+- native_h2server states PC_HAS_VENDOR_TLS so the suite owns the TLS seam ([`963db3b`](https://github.com/dstroy0/ProtoCore/commit/963db3bc1398cbffedd690bbbbf3df833fe9a2b3))
+- probe the h2_server wire to find why no frame reaches the callbacks ([`7a2c404`](https://github.com/dstroy0/ProtoCore/commit/7a2c40477d13fbd2ca319b6ea03b23b7240b3979))
 - pin the zero and overflow WINDOW_UPDATE rejections ([`4bdf81b`](https://github.com/dstroy0/ProtoCore/commit/4bdf81b3a4e3149da041f1d77c0db8a9f6f065cb))
 - DATA on an idle stream is refused, and after END_STREAM resets that stream ([`ce4041f`](https://github.com/dstroy0/ProtoCore/commit/ce4041f046e61ba1bc5811b1ecb1b23c101d00d6))
 - native_h2conn links the arena under the plaintext allocator ([`ca6d01d`](https://github.com/dstroy0/ProtoCore/commit/ca6d01df6b76c0ceeaad5ad1c944ec26026f6aa1))
