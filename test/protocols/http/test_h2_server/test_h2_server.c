@@ -133,10 +133,8 @@ static void feed_request(const Hdr *fields, size_t n)
     in_add(H2_PREFACE, H2_PREFACE_LEN);
     in_add(sf, pc_h2_build_settings(sf, sizeof sf, NULL, NULL, 0));
 
-    uint8_t fh[H2_FRAME_HEADER_LEN];
-    pc_h2_write_header(fh, sizeof fh, H2_HEADERS, H2_FLAG_END_HEADERS | H2_FLAG_END_STREAM, 1, bo);
-    in_add(fh, sizeof fh);
-    in_add(block, bo);
+    uint8_t hf[H2_FRAME_HEADER_LEN + sizeof block];
+    in_add(hf, pc_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE));
 
     pc_h2_server_data(0);
 }
