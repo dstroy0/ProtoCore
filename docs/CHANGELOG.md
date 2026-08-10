@@ -111,6 +111,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7761aa5`](https://github.com/dstroy0/ProtoCore/commit/7761aa566f06dca9cbb8186b88a24aad2a809124))
 - update CHANGELOG.md [skip ci] ([`3ee7dae`](https://github.com/dstroy0/ProtoCore/commit/3ee7daee8396d55f8f8b735836866c02741af50c))
 - update CHANGELOG.md [skip ci] ([`3a8d454`](https://github.com/dstroy0/ProtoCore/commit/3a8d454f7ab3049ca3d89203e558dc1051371e62))
 - two more checkers never walked core_setup, and one named a tree that moved ([`f4ff091`](https://github.com/dstroy0/ProtoCore/commit/f4ff091958328c3f7af134bd5b5c47b1af8d47f4))
@@ -343,6 +344,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- tcp_evt.h already drew this boundary; protocore.h crosses it ([`0e54830`](https://github.com/dstroy0/ProtoCore/commit/0e54830e09a53f9bdf93654f331b6c891b26ae68))
 - 330 host envs, none of them C++, and C++ is the consumption path ([`d9cd11e`](https://github.com/dstroy0/ProtoCore/commit/d9cd11e9a35b5f3d9bf5dd428ba6985cb2bd6446))
 - protocore.h wraps includes, not declarations, in extern C ([`e376fca`](https://github.com/dstroy0/ProtoCore/commit/e376fca40f49352053f84a12d3d17b808325b797))
 - the -Og inlining break is measured and closed ([`a05cd27`](https://github.com/dstroy0/ProtoCore/commit/a05cd275181d82986fdb2f7a1b1401dffe5a8f28))
