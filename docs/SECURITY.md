@@ -36,7 +36,7 @@ with caveats, ❌ = a real weakness to be aware of.
 | Area                        | Caveat                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Transport encryption (HTTP) | Opt-in **HTTPS** ([`PC_ENABLE_TLS`](@ref PC_ENABLE_TLS)) via mbedTLS on a static memory pool - TLS 1.2+/`ECDHE-ECDSA-AES256-GCM-SHA384`, zero-heap (§6). Default off (plain HTTP). Optional **mutual TLS** ([`PC_ENABLE_MTLS`](@ref PC_ENABLE_MTLS)) adds client-certificate authentication (handshake requires a cert chaining to a configured CA), and `wss://` + TLS-SSE run encrypted over the same TLS record layer. Optional **session resumption** ([`PC_ENABLE_TLS_RESUMPTION`](@ref PC_ENABLE_TLS_RESUMPTION)) via RFC 5077 tickets gives returning clients an abbreviated handshake. Caveat: one connection at a time (`MAX_TLS_CONNS`=1). On a trusted LAN plain HTTP is fine; the SSH layer is also an encrypted channel. |
-| SSH timing side-channels    | The native software bignum/AES/RSA paths are **not constant-time**, but they are **compile-excluded from firmware**: the software Montgomery cluster is under `#ifndef ARDUINO` (`crypto/bignum.cpp`) and the software AES / native RSA modexp live in the `#else` of an `#ifdef ARDUINO` (`crypto/aes256ctr.cpp`, `crypto/rsa.cpp`). On ESP32 only the hardware/mbedTLS paths are compiled and run; the software paths exist solely for host testing. |
+| SSH timing side-channels    | The native software bignum/AES/RSA paths are **not constant-time**, but they are **compile-excluded from firmware**: the software Montgomery cluster is under `#ifndef ARDUINO` (`crypto/asymmetric/bignum.c`) and the software AES / native RSA modexp live in the `#else` of an `#ifdef ARDUINO` (`crypto/cipher/aes256ctr.c`, `crypto/asymmetric/rsa.c`). On ESP32 only the hardware/mbedTLS paths are compiled and run; the software paths exist solely for host testing. |
 | `Date` response header      | Not emitted (the device usually has no wall clock). RFC 7231 §7.1.1.2 permits this for clock-less servers.                                                                                                                                                                                                                                                                                                                                    |
 | Single SSH channel          | One `session` channel per connection; no port-forwarding/X11. Smaller attack surface, but a functional limit.                                                                                                                                                                                                                                                                                                                                 |
 | Diagnostic endpoint         | [`PC_ENABLE_DIAG`](@ref PC_ENABLE_DIAG) leaks build configuration; default-off and must stay off in production.                                                                                                                                                                                                                                                                                                                         |
@@ -154,8 +154,8 @@ The remaining sections document each property in depth.
 
 ## 2. Memory Safety - HTTP / Core Stack {#memory-safety}
 
-**Files:** [src/network_drivers/transport/tcp.cpp](@ref tcp.cpp),
-[src/network_drivers/presentation/presentation.cpp](@ref presentation.cpp),
+**Files:** [src/network_drivers/transport/tcp.c](@ref tcp.c),
+[src/network_drivers/presentation/presentation.c](@ref presentation.c),
 [src/protocore_config.h](@ref protocore_config.h)
 
 ### Static Allocation {#core-static}
@@ -203,7 +203,7 @@ has buffered data that was never written.
 
 ## 3. Input Validation - RFC 7230 Parser {#input-validation}
 
-**Files:** [src/network_drivers/presentation/http/http_parser/http_parser.cpp](@ref http_parser.cpp),
+**Files:** [src/network_drivers/presentation/http/http_parser/http_parser.c](@ref http_parser.c),
 [src/network_drivers/presentation/http/http_parser/http_parser.h](@ref http_parser.h)
 
 ### Character-Class Validation {#parser-validation}
@@ -250,7 +250,7 @@ the server side.
 
 ## 4. WebSocket Security {#websocket-security}
 
-**Files:** [src/network_drivers/presentation/http/websocket/websocket.cpp](@ref websocket.cpp),
+**Files:** [src/network_drivers/presentation/http/websocket/websocket.c](@ref websocket.c),
 [src/network_drivers/presentation/http/websocket/websocket.h](@ref websocket.h)
 
 ### Handshake Verification {#ws-handshake}
@@ -287,7 +287,7 @@ in the WebSocket route handler and reject origins that are not in an allowlist.
 
 ## 5. Authentication (HTTP Basic Auth) {#auth-security}
 
-**Files:** [src/network_drivers/presentation/presentation.cpp](@ref presentation.cpp),
+**Files:** [src/network_drivers/presentation/presentation.c](@ref presentation.c),
 [src/protocore_config.h](@ref protocore_config.h)
 
 ### Implementation {#auth-implementation}
@@ -391,14 +391,14 @@ records) is ~41.5 KB; the default arena is 48 KB.
 **Files:**
 
 - [src/network_drivers/presentation/ssh/transport/ssh_keymat.h](@ref ssh_keymat.h) - security model, types, wipe helpers
-- [src/crypto/asymmetric/bignum.h](@ref bignum.h) / [.cpp](@ref bignum.cpp) - 2048-bit Montgomery arithmetic (shared library primitive)
-- [src/crypto/hash/sha256.h](@ref sha256.h) / [.cpp](@ref sha256.cpp) - SHA-256 (shared library primitive)
-- [src/crypto/mac/hmac_sha256.h](@ref hmac_sha256.h) / [.cpp](@ref hmac_sha256.cpp) - HMAC-SHA2-256 (shared library primitive)
-- [src/crypto/cipher/aes256ctr.h](@ref aes256ctr.h) / [.cpp](@ref aes256ctr.cpp) - AES-256-CTR (shared library primitive)
-- [src/network_drivers/presentation/ssh/transport/ssh_dh.h](@ref ssh_dh.h) / [.cpp](@ref ssh_dh.cpp) - DH-group14-SHA256 KEX
-- [src/crypto/asymmetric/rsa.h](@ref rsa.h) / [.cpp](@ref rsa.cpp) - RSA-2048 PKCS#1 v1.5 verify + software sign (shared primitive)
-- [src/network_drivers/tls/ssh_rsa.h](@ref ssh_rsa.h) / [.cpp](@ref ssh_rsa.cpp) - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)
-- [src/network_drivers/presentation/ssh/transport/ssh_packet.h](@ref ssh_packet.h) / [.cpp](@ref ssh_packet.cpp) - binary packet protocol
+- [src/crypto/asymmetric/bignum.h](@ref bignum.h) / [.c](@ref bignum.c) - 2048-bit Montgomery arithmetic (shared library primitive)
+- [src/crypto/hash/sha256.h](@ref sha256.h) / [.c](@ref sha256.c) - SHA-256 (shared library primitive)
+- [src/crypto/mac/hmac_sha256.h](@ref hmac_sha256.h) / [.c](@ref hmac_sha256.c) - HMAC-SHA2-256 (shared library primitive)
+- [src/crypto/cipher/aes256ctr.h](@ref aes256ctr.h) / [.c](@ref aes256ctr.c) - AES-256-CTR (shared library primitive)
+- [src/network_drivers/presentation/ssh/transport/ssh_dh.h](@ref ssh_dh.h) / [.c](@ref ssh_dh.c) - DH-group14-SHA256 KEX
+- [src/crypto/asymmetric/rsa.h](@ref rsa.h) / [.c](@ref rsa.c) - RSA-2048 PKCS#1 v1.5 verify + software sign (shared primitive)
+- [src/network_drivers/tls/ssh_rsa.h](@ref ssh_rsa.h) / [.c](@ref ssh_rsa.c) - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)
+- [src/network_drivers/presentation/ssh/transport/ssh_packet.h](@ref ssh_packet.h) / [.c](@ref ssh_packet.c) - binary packet protocol
 
 ---
 
@@ -497,7 +497,7 @@ counter never repeats within a connection because:
   MixColumns polynomial (FIPS 197). NOT constant-time; test-only.
 
 The platform is selected by `#ifdef ARDUINO` in
-[aes256ctr.cpp](@ref aes256ctr.cpp).
+[aes256ctr.c](@ref aes256ctr.c).
 No guessed buffer sizes are used: the Arduino path embeds `mbedtls_aes_context`
 directly (by `#include <mbedtls/aes.h>`), so the compiler enforces the exact
 size. The "opaque buffer of guessed size" anti-pattern is explicitly rejected.
@@ -531,7 +531,7 @@ right-padded with zeros.
 
 The MAC is verified **before** the payload bytes are forwarded to any protocol
 handler. The verification uses a constant-time 32-byte comparison (`ct_memcmp`
-in [ssh_packet.cpp](@ref ssh_packet.cpp))
+in [ssh_packet.c](@ref ssh_packet.c))
 that accumulates XOR differences without early-exit branching. This prevents
 timing-oracle attacks where an attacker measures how many bytes of the MAC
 matched before a short-circuit return.
@@ -741,7 +741,7 @@ symbol layout eliminates that risk.
 <summary><b>Expand 7.8 Sequence Number Overflow Guard Details</b></summary>
 
 **Source:** [ssh_packet.h](@ref ssh_packet.h),
-[ssh_packet.cpp](@ref ssh_packet.cpp)
+[ssh_packet.c](@ref ssh_packet.c)
 
 SSH sequence numbers are 32-bit unsigned integers (RFC 4253 §6.4). They wrap
 at 2^32. Two problems arise at wrap:
@@ -804,13 +804,13 @@ removed.
 
 | What is wiped                                 | When                                                             | File             |
 | --------------------------------------------- | ---------------------------------------------------------------- | ---------------- |
-| `crypto_work[1536]`                           | After every [`bn_expmod_group14()`](@ref bn_expmod_group14) call | `crypto/bignum.cpp` |
-| `SshDhState.y`, `.K`                          | After key derivation in [`ssh_dh_finish()`](@ref ssh_dh_finish)  | `ssh_dh.cpp`     |
-| RSA sign bignum temporaries (n/d/m/s)         | Before [`pc_rsa_sign_sw()`](@ref pc_rsa_sign_sw) returns       | `crypto/rsa.cpp` |
+| `crypto_work[1536]`                           | After every [`bn_expmod_group14()`](@ref bn_expmod_group14) call | `crypto/asymmetric/bignum.c` |
+| `SshDhState.y`, `.K`                          | After key derivation in [`ssh_dh_finish()`](@ref ssh_dh_finish)  | `ssh_dh.c`     |
+| RSA sign bignum temporaries (n/d/m/s)         | Before [`pc_rsa_sign_sw()`](@ref pc_rsa_sign_sw) returns       | `crypto/asymmetric/rsa.c` |
 | [`SshKeyMat`](@ref SshKeyMat)                 | On connection close / error                                      | `ssh_keymat.h`   |
 | [`SshDhState`](@ref SshDhState) (full struct) | On connection close / error                                      | `ssh_keymat.h`   |
-| DER private key stack copy                    | After `mbedtls_pk_parse_key()` in `pc_ssh_rsa_load_pubkey()`    | `ssh_rsa.cpp`    |
-| Key derivation stack temporaries              | After `ssh_dh_derive_keys()`                                     | `ssh_dh.cpp`     |
+| DER private key stack copy                    | After `mbedtls_pk_parse_key()` in `pc_ssh_rsa_load_pubkey()`    | `ssh_rsa.c`    |
+| Key derivation stack temporaries              | After `ssh_dh_derive_keys()`                                     | `ssh_dh.c`     |
 
 </details>
 
@@ -867,7 +867,7 @@ environment.
 
 ## 8. Diagnostic Endpoint {#diagnostic-endpoint}
 
-**File:** [protocore.cpp](@ref protocore.cpp)
+**File:** [protocore.c](@ref protocore.c)
 
 The optional `PC_ENABLE_DIAG` build flag enables a JSON endpoint at `/diag`
 that returns all active feature flags and configuration constants.

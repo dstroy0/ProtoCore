@@ -105,8 +105,8 @@ See docs/BUGS.md "RX flow-control deadlock".
 `rx_buffer` or advance `rx_tail`. They drain through the transport read API -
 `pc_conn_available` / `pc_conn_read_byte` / `pc_conn_read` / `pc_conn_peek` /
 `pc_conn_consume` (inline in tcp.h, single-consumer per slot). Migrated:
-`presentation.cpp` (HTTP), `websocket.cpp`, `telnet.cpp`, `ssh/ssh_conn.cpp`,
-`tls/tls.cpp`, and the conn_pool-ring services `modbus.cpp` / `opcua.cpp` (their
+`presentation.c` (HTTP), `websocket.c`, `telnet.c`, `src/network_drivers/presentation/ssh/connection/ssh_conn.c`,
+`src/network_drivers/tls/tls.c`, and the conn_pool-ring services `modbus.c` / `opcua.c` (their
 duplicated `ring_peek/consume/avail` are now thin adapters over the API). The read
 functions only consume; the window is reopened by the worker's single
 `Tcp.conn->ack_consumed()` per loop - so there is exactly one place that touches the
@@ -123,7 +123,7 @@ window as the caller drains; `PC_CLIENT_RX_BUF >= TCP_WND`), so client and serve
 share one flow-control model. TLS clients layer `pc_tls_client_session_*` on top, pointing
 the BIO at `Tcp.client->send` / `Tcp.client->read` (the ring carries ciphertext).
 
-The `s_rx` ring inside `mqtt.cpp` / `ws_client.cpp` is a separate **plaintext frame
+The `s_rx` ring inside `mqtt.c` / `ws_client.c` is a separate **plaintext frame
 buffer** (post-decrypt for TLS, the assembly buffer the protocol parser reads),
 owned solely by that module - the client mirror of the server's `http body[]` vs the
 `conn_pool` wire ring. Not cross-layer, correct as-is.
@@ -240,18 +240,18 @@ every public API method, every registered protocol, and every Layer-6 module on 
 
 ### Homogeneity work (status)
 
-1. **`session.cpp` (L5) is now protocol-agnostic - DONE.** The dispatcher owns only the
+1. **`session.c` (L5) is now protocol-agnostic - DONE.** The dispatcher owns only the
    mechanism (register / look up / route / drain) and names no protocol. Each protocol's
    handler lives in its own module and is exposed by a pure accessor
    (`http_proto_handler()` in presentation, `ssh_proto_handler()` in ssh_conn, ...) that
-   carries no dependency on the session layer. The single policy file `proto_builtins.cpp`
+   carries no dependency on the session layer. The single policy file `proto_builtins.c`
    maps each built-in to its accessor behind its feature flag; `proto_get()` calls
    `proto_register_builtins()` once, lazily, so the native harness still works before
-   `begin()`. Adding a protocol = write its module + one guarded line in `proto_builtins.cpp`
+   `begin()`. Adding a protocol = write its module + one guarded line in `proto_builtins.c`
     - never editing the dispatcher. (The SSH remote-forward listener still self-registers from
       its own opt-in `pc_ssh_forward_begin()`.)
 
-2. **The HTTP TLS/h2/ws data-pump moved out of L5 - DONE.** `presentation.cpp` (Layer 6,
+2. **The HTTP TLS/h2/ws data-pump moved out of L5 - DONE.** `presentation.c` (Layer 6,
    already the HTTP-connection glue) now owns the HTTP `ProtoHandler`: `http_evt_{accept,
 data,close}` plus `tls_data` (the TLS handshake pump + ALPN "h2" detection + WebSocket
    upgrade check before the HTTP/1.1 parser). L5 no longer includes TLS / http2 / websocket /
@@ -500,7 +500,7 @@ core_setup/board_profiles/
   rp/  { rp2350_defaults.h, ... }
   ti/  { ... }
 core_setup/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
-  esp/ { esp_crypto_hal.h/.cpp }   # move existing here (RSA/MPI direct-register, 7 dies)
+  esp/ { esp_crypto_hal.h/.c }   # move existing here (RSA/MPI direct-register, 7 dies)
   stm/ { stm_crypto_hal.* }        # STM32 PKA / CRYP / HASH, direct-register
   rp/  { ... }                     # RP2350 SHA-256 block etc, else the crypto/ software path
   ti/  { ... }
