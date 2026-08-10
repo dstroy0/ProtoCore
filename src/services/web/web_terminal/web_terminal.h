@@ -37,7 +37,7 @@
 #ifndef PROTOCORE_WEB_TERMINAL_H
 #define PROTOCORE_WEB_TERMINAL_H
 
-#include "shared_primitives/types.h" // PROTO_BEGIN_DECLS, before anything below uses it
+#include "protocore_config.h" // the entry point: types.h for PROTO_BEGIN_DECLS, before anything uses it
 #include <stdint.h>
 
 PROTO_BEGIN_DECLS

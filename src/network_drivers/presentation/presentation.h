@@ -23,7 +23,7 @@
 
 #include "../transport/tcp_evt.h" // EvtType: the event a handler is dispatched on
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
-#include "shared_primitives/types.h" // PROTO_BEGIN_DECLS, before anything below uses it
+#include "protocore_config.h" // the entry point: types.h for PROTO_BEGIN_DECLS, before anything uses it
 
 PROTO_BEGIN_DECLS
 
