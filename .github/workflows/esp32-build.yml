@@ -12,6 +12,7 @@ on:
     branches: [main, master]
     paths:
       - "src/**"
+      - "core_setup/**"
       - "examples/**"
       - "platformio.ini"
       - "tools/ci_tooling/generate/example_footprints.py"
@@ -20,6 +21,7 @@ on:
     branches: [main, master]
     paths:
       - "src/**"
+      - "core_setup/**"
       - "examples/**"
   workflow_dispatch:
   schedule:
