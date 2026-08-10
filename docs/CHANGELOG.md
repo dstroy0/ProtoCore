@@ -6,6 +6,11 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+<<<<<<< Updated upstream
+=======
+- the slot picks its region of the pool's one borrow ([`636c63f`](https://github.com/dstroy0/ProtoCore/commit/636c63f6bd4aad781942a185f4e87f54f8f7f825))
+- the borrow is taken once per connection, not once per init ([`fd8bb4a`](https://github.com/dstroy0/ProtoCore/commit/fd8bb4ab4ffbc1dcdd4af6504d34b6444ad55e27))
+>>>>>>> Stashed changes
 - the portable TLS arm is a third carrier of PC_ENABLE_TLS_RPK ([`02125b4`](https://github.com/dstroy0/ProtoCore/commit/02125b4f280c3fc47ad5e49e0dac4f577c2f2d07))
 - a request past 255*HashLen has no defined answer (RFC 5869 sec 2.3) ([`e49c4e8`](https://github.com/dstroy0/ProtoCore/commit/e49c4e8d30fc03b815d511aaffba90d999df2add))
 - the suite check uses the IANA code point constant ([`40801ed`](https://github.com/dstroy0/ProtoCore/commit/40801ed4b887b95789ba1b18e300942bbc4d728a))
@@ -83,7 +88,12 @@ All notable changes to ProtoCore are documented here.
 ### CI / Build
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+- update CHANGELOG.md [skip ci] ([`ad07f22`](https://github.com/dstroy0/ProtoCore/commit/ad07f221993f1d7ec1c39825e84191f5e294c7d4))
+>>>>>>> Stashed changes
+=======
+- update CHANGELOG.md [skip ci] ([`cf4d593`](https://github.com/dstroy0/ProtoCore/commit/cf4d5933bdf2f9c124c3e729b7755764dfd7a8b9))
 - update CHANGELOG.md [skip ci] ([`ad07f22`](https://github.com/dstroy0/ProtoCore/commit/ad07f221993f1d7ec1c39825e84191f5e294c7d4))
 >>>>>>> Stashed changes
 - update CHANGELOG.md [skip ci] ([`b072f63`](https://github.com/dstroy0/ProtoCore/commit/b072f6340976b3cc42bba1e781e5fa7531fa18d0))
@@ -254,6 +264,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+<<<<<<< Updated upstream
+=======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`daf3083`](https://github.com/dstroy0/ProtoCore/commit/daf3083dd5054b6d2a6a0d895453f01908c5dc59))
+>>>>>>> Stashed changes
 - log the HKDF-Expand vector gap ([`e94e498`](https://github.com/dstroy0/ProtoCore/commit/e94e49804eaa98e3efbbb8eb2d6104e2ab4bdbd8))
 - log the TLS record, ClientHello and HKDF bound fixes ([`61a17d0`](https://github.com/dstroy0/ProtoCore/commit/61a17d07e3f91b75a2916cbb5cff1993b10c5e54))
 - log the HTTP/3 state-machine and QUIC header-bit fixes ([`7958ae2`](https://github.com/dstroy0/ProtoCore/commit/7958ae22a844fee1f96e0a0507871c9f5f95ae94))
@@ -336,10 +350,19 @@ All notable changes to ProtoCore are documented here.
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - the multi-block expand mirror names its external anchor ([`392fa3b`](https://github.com/dstroy0/ProtoCore/commit/392fa3be6a4383540b5b78db99eb1e7146da7f68))
 >>>>>>> Stashed changes
 =======
+- PC_TLS_SOFTWARE derives from PC_ENABLE_TLS on host ([`8a24254`](https://github.com/dstroy0/ProtoCore/commit/8a24254e29389eec6c4be3eb440d0f1cd3dd32ce))
+- the per-file suite the driver never had ([`d51f5e2`](https://github.com/dstroy0/ProtoCore/commit/d51f5e2a755a0288e25bdc0130c112fec4e7d65c))
+- the ServerHello echoes a 32-byte legacy_session_id ([`7d25ff0`](https://github.com/dstroy0/ProtoCore/commit/7d25ff0d851f29178462c96e3b031c0a02d8a1e5))
+- anchor the dtls13 labels on the RFC structure ([`7f5a177`](https://github.com/dstroy0/ProtoCore/commit/7f5a17704f63409b06560baae1e407d9ee625cc8))
+- the multi-block expand mirror names its external anchor ([`392fa3b`](https://github.com/dstroy0/ProtoCore/commit/392fa3be6a4383540b5b78db99eb1e7146da7f68))
+>>>>>>> Stashed changes
+=======
+- drive the server half with a hand-built ClientHello ([`909ee46`](https://github.com/dstroy0/ProtoCore/commit/909ee46f8c097c69f79455e1ace53c9adacb523d))
 - PC_TLS_SOFTWARE derives from PC_ENABLE_TLS on host ([`8a24254`](https://github.com/dstroy0/ProtoCore/commit/8a24254e29389eec6c4be3eb440d0f1cd3dd32ce))
 - the per-file suite the driver never had ([`d51f5e2`](https://github.com/dstroy0/ProtoCore/commit/d51f5e2a755a0288e25bdc0130c112fec4e7d65c))
 - the ServerHello echoes a 32-byte legacy_session_id ([`7d25ff0`](https://github.com/dstroy0/ProtoCore/commit/7d25ff0d851f29178462c96e3b031c0a02d8a1e5))
