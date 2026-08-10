@@ -6,6 +6,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- protocore_config.h is the entry point, not types.h ([`df81505`](https://github.com/dstroy0/ProtoCore/commit/df8150515fb0d74c5947e0266b5152d3774f1beb))
+- three headers used the macro without the header that defines it ([`444edf0`](https://github.com/dstroy0/ProtoCore/commit/444edf04a0f0d02be014efe0bfe5213ee3b0a231))
+- every header carries its own extern C; protocore.h stops wrapping its includes ([`8ffc88e`](https://github.com/dstroy0/ProtoCore/commit/8ffc88e828b0a6c4c00000cdcce9d44cc0fb503a))
 - the exchange hash declared a 64-byte out its SHA-256 caller does not have ([`92e8ce2`](https://github.com/dstroy0/ProtoCore/commit/92e8ce2cd69fdf4e70ac37cd4cde04b29ef7eb77))
 - the Ns table made every leaf an indirect always_inline call at -Og ([`7f0b3b0`](https://github.com/dstroy0/ProtoCore/commit/7f0b3b0d64d91956ef5c6cb82365934af8ff268e))
 - the i2c command link was shared per bus; pc_mnt_fs published a C++ type ([`5153630`](https://github.com/dstroy0/ProtoCore/commit/515363041cb3b2dd963627715141dbe823e30f14))
@@ -108,6 +111,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3ee7dae`](https://github.com/dstroy0/ProtoCore/commit/3ee7daee8396d55f8f8b735836866c02741af50c))
+- update CHANGELOG.md [skip ci] ([`3a8d454`](https://github.com/dstroy0/ProtoCore/commit/3a8d454f7ab3049ca3d89203e558dc1051371e62))
 - two more checkers never walked core_setup, and one named a tree that moved ([`f4ff091`](https://github.com/dstroy0/ProtoCore/commit/f4ff091958328c3f7af134bd5b5c47b1af8d47f4))
 - update CHANGELOG.md [skip ci] ([`b6ba27b`](https://github.com/dstroy0/ProtoCore/commit/b6ba27b007741f0a33986956a2f6ca355aea21b9))
 - update CHANGELOG.md [skip ci] ([`df9bc02`](https://github.com/dstroy0/ProtoCore/commit/df9bc02043cfe63fb36008a12b71ece7f2b4b8a0))
@@ -338,6 +343,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- 330 host envs, none of them C++, and C++ is the consumption path ([`d9cd11e`](https://github.com/dstroy0/ProtoCore/commit/d9cd11e9a35b5f3d9bf5dd428ba6985cb2bd6446))
+- protocore.h wraps includes, not declarations, in extern C ([`e376fca`](https://github.com/dstroy0/ProtoCore/commit/e376fca40f49352053f84a12d3d17b808325b797))
 - the -Og inlining break is measured and closed ([`a05cd27`](https://github.com/dstroy0/ProtoCore/commit/a05cd275181d82986fdb2f7a1b1401dffe5a8f28))
 - the classic-die RSA tables were invented too ([`5cc946d`](https://github.com/dstroy0/ProtoCore/commit/5cc946d2d1369c55ca8f8440300fb1453c1cf654))
 - the RSA tables contradicted the silicon they document ([`835df5c`](https://github.com/dstroy0/ProtoCore/commit/835df5ce8993e66350f4f8af87794a0d10577256))
