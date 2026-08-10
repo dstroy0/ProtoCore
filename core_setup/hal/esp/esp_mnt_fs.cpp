@@ -65,7 +65,19 @@ static int fs_open(const char *path, int mode)
         return -1;
     }
     const pc_mnt_mode md = (pc_mnt_mode)(mode); // ABI int -> enum
-    const char *m = (md == PC_MNT_WRITE) ? FILE_WRITE : (md == PC_MNT_APPEND) ? FILE_APPEND : FILE_READ;
+    const char *m = FILE_READ;
+    if (md == PC_MNT_WRITE)
+    {
+        m = FILE_WRITE;
+    }
+    else if (md == PC_MNT_APPEND)
+    {
+        m = FILE_APPEND;
+    }
+    else if (md == PC_MNT_RDWR)
+    {
+        m = "r+"; // seek then write on one handle; mnt.h says a backend that cannot offer it answers -1
+    }
     int h = slot_alloc();
     if (h < 0)
     {
@@ -74,11 +86,13 @@ static int fs_open(const char *path, int mode)
     s_mnt_fs.file[h] = s_mnt_fs.fs->open(path, m);
     if (!s_mnt_fs.file[h])
     {
+        s_mnt_fs.file[h] = fs::File(); // release the impl the failed open left in the slot
         return -1;
     }
     if (s_mnt_fs.file[h].isDirectory())
     {
         s_mnt_fs.file[h].close(); // a directory is opened with opendir
+        s_mnt_fs.file[h] = fs::File();
         return -1;
     }
     s_mnt_fs.used[h] = PROTO_TRUE;
@@ -118,6 +132,10 @@ static proto_bool fs_seek(int h, uint64_t off)
     if (!slot_ok(h))
     {
         return PROTO_FALSE;
+    }
+    if (off > 0xFFFFFFFFu)
+    {
+        return PROTO_FALSE; // the backend seeks by uint32_t; a wider offset is out of its reach
     }
     return s_mnt_fs.file[h].seek((uint32_t)(off));
 }
@@ -209,27 +227,41 @@ static proto_bool fs_readdir(int h, pc_mnt_stat *out, char *name, size_t name_ca
     {
         return PROTO_FALSE;
     }
+    // PROTO_FALSE is end-of-directory, and the cursor has already moved, so a name the caller cannot
+    // hold is stepped over rather than reported: stopping here would hide every entry after it.
     fs::File c = s_mnt_fs.file[h].openNextFile();
-    if (!c)
+    while (c)
     {
-        return PROTO_FALSE; // end of directory
-    }
-    const char *base = base_name(c.name());
-    size_t bl = strnlen(base, name_cap);
-    if (bl >= name_cap)
-    {
+        const char *base = base_name(c.name());
+        size_t bl = strnlen(base, name_cap);
+        if (bl < name_cap)
+        {
+            memcpy(name, base, bl);
+            name[bl] = '\0';
+            fill_stat(c, out);
+            c.close();
+            return PROTO_TRUE;
+        }
         c.close();
-        return PROTO_FALSE; // the caller's buffer cannot hold this name
+        c = s_mnt_fs.file[h].openNextFile();
     }
-    memcpy(name, base, bl);
-    name[bl] = '\0';
-    fill_stat(c, out);
-    c.close();
+    return PROTO_FALSE; // end of directory
+}
+
+// The barrier mnt.h asks for: push this handle's bytes at the medium and say whether it held.
+static proto_bool fs_sync(int h)
+{
+    if (!slot_ok(h))
+    {
+        return PROTO_FALSE;
+    }
+    s_mnt_fs.file[h].flush();
     return PROTO_TRUE;
 }
 
-static const pc_mnt_backend s_fs_backend = {fs_open,   fs_read,   fs_write, fs_close, fs_seek, fs_size,    fs_exists,
-                                            fs_remove, fs_rename, fs_mkdir, fs_rmdir, fs_stat, fs_opendir, fs_readdir};
+static const pc_mnt_backend s_fs_backend = {fs_open,  fs_read,   fs_write,   fs_close,   fs_seek,
+                                            fs_size,  fs_exists, fs_remove,  fs_rename,  fs_mkdir,
+                                            fs_rmdir, fs_stat,   fs_opendir, fs_readdir, fs_sync};
 
 const pc_mnt_backend *pc_mnt_fs(fs::FS *filesystem)
 {
