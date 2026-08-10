@@ -34,8 +34,8 @@ void pc_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const 
 // RFC 5869 sec 2.3 HKDF-Expand for the QUIC case: the info block is small and fixed and the
 // requested length never exceeds one hash block, but the general N-block loop is written out so a
 // future >32-byte caller stays correct. T(i) = HMAC(PRK, T(i-1) || info || i), i counts from 1.
-static void hkdf_expand(uint8_t *work, const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
-                        uint8_t *out, size_t out_len)
+void pc_hkdf_expand(uint8_t *work, const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
+                    uint8_t *out, size_t out_len)
 {
     // RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is a single octet. Past
     // that the counter wraps and T(256) repeats T(1), so the output would silently reuse earlier
@@ -101,7 +101,7 @@ void pc_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_L
         p += context_len;
     }
 
-    hkdf_expand(work, secret, info, p, out, out_len);
+    pc_hkdf_expand(work, secret, info, p, out, out_len);
 }
 
 void pc_hkdf_expand_label(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, uint8_t *out,

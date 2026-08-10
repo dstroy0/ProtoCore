@@ -80,6 +80,9 @@ typedef struct
     const char *salt;
     const char *ikm;
     const char *prk;
+    const char *info;
+    uint32_t l;
+    const char *okm;
 } KatHkdf;
 typedef struct
 {
@@ -342,13 +345,18 @@ static void test_ed25519_sign(void)
 }
 
 // ====================================================================
-// HKDF-SHA256 Extract (RFC 5869 Appendix A): PRK = HMAC-SHA256(salt, IKM).
+// HKDF-SHA256 (RFC 5869 Appendix A). Extract: PRK = HMAC-SHA256(salt, IKM).
+// Expand: OKM = T(1) | T(2) | ..., T(i) = HMAC(PRK, T(i-1) | info | i).
+//
+// Both halves against the published answers. A.2 asks for 82 bytes, which is three SHA-256 blocks,
+// so it is the one vector that exercises the T(i) chain - the loop every TLS and QUIC traffic key
+// runs through, and which no published vector reached before.
 // ====================================================================
 static void test_hkdf_extract(void)
 {
-    for (size_t i = 0; i < ARRAY_LEN(KAT_HKDF_EXTRACT); i++)
+    for (size_t i = 0; i < ARRAY_LEN(KAT_HKDF); i++)
     {
-        const KatHkdf *v = &KAT_HKDF_EXTRACT[i];
+        const KatHkdf *v = &KAT_HKDF[i];
         uint8_t salt[MAXB], ikm[MAXB], want[32], got[32];
         size_t slen = hexdec(v->salt, salt), ilen = hexdec(v->ikm, ikm);
         hexdec(v->prk, want);
@@ -356,6 +364,43 @@ static void test_hkdf_extract(void)
         char m[48];
         snprintf(m, sizeof(m), "HKDF-Extract tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, m);
+    }
+}
+
+static void test_hkdf_expand(void)
+{
+    for (size_t i = 0; i < ARRAY_LEN(KAT_HKDF); i++)
+    {
+        const KatHkdf *v = &KAT_HKDF[i];
+        uint8_t prk[32], info[MAXB], want[MAXB], got[MAXB];
+        hexdec(v->prk, prk);
+        size_t ilen = hexdec(v->info, info);
+        size_t wlen = hexdec(v->okm, want);
+        TEST_ASSERT_EQUAL_UINT32(v->l, (uint32_t)wlen);
+        pc_hkdf_expand(tw, prk, ilen ? info : NULL, ilen, got, wlen);
+        char m[48];
+        snprintf(m, sizeof(m), "HKDF-Expand tcId=%d", v->tc);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, wlen, m);
+    }
+}
+
+// RFC 5869 sec 2.3 caps L at 255*HashLen; the block counter is one octet and has no encoding past
+// that, so the request produces no key material rather than blocks that repeat.
+static void test_hkdf_expand_length_bound(void)
+{
+    static uint8_t out[256 * 32];
+    uint8_t prk[32];
+    hexdec(KAT_HKDF[0].prk, prk);
+
+    memset(out, 0xAA, sizeof(out));
+    pc_hkdf_expand(tw, prk, NULL, 0, out, (size_t)255 * 32);
+    TEST_ASSERT_NOT_EQUAL(0xAA, out[0]); // the largest legal request is answered
+
+    memset(out, 0xAA, sizeof(out));
+    pc_hkdf_expand(tw, prk, NULL, 0, out, (size_t)255 * 32 + 1);
+    for (size_t i = 0; i < (size_t)255 * 32 + 1; i++)
+    {
+        TEST_ASSERT_EQUAL_HEX8(0x00, out[i]);
     }
 }
 
@@ -404,6 +449,8 @@ int main(void)
     RUN_TEST(test_ed25519_verify);
     RUN_TEST(test_ed25519_sign);
     RUN_TEST(test_hkdf_extract);
+    RUN_TEST(test_hkdf_expand);
+    RUN_TEST(test_hkdf_expand_length_bound);
     RUN_TEST(test_chacha20_block);
     RUN_TEST(test_poly1305);
     return UNITY_END();
