@@ -43,10 +43,10 @@ static inline size_t len(const char *s, size_t nul_cap)
     }
     while (i + PC_SWAR_BYTES <= nul_cap)
     {
-        pc_swar_word m = swar.has_zero(swar.load_al(s + i));
+        pc_swar_word m = pc_swar_has_zero(pc_swar_load_al(s + i));
         if (m != 0)
         {
-            return i + swar.zero_lane(m); // the mask states the lane; no rescan
+            return i + pc_swar_zero_lane(m); // the mask states the lane; no rescan
         }
         i += PC_SWAR_BYTES;
     }
@@ -97,12 +97,12 @@ static inline size_t diff_cs(const char *a, const char *b, size_t read_cap)
     size_t i = 0;
     while (i + PC_SWAR_BYTES <= read_cap)
     {
-        pc_swar_word d = swar.load(a + i) ^ swar.load(b + i);
+        pc_swar_word d = pc_swar_load(a + i) ^ pc_swar_load(b + i);
         if (d != 0)
         {
             // Guard bit set on every lane that differs, so the same lane reader that serves the NUL
             // scan states the position. `~has_zero` because has_zero marks the lanes that MATCH.
-            return i + swar.zero_lane(PC_SWAR_HIGH & ~swar.has_zero(d));
+            return i + pc_swar_zero_lane(PC_SWAR_HIGH & ~pc_swar_has_zero(d));
         }
         i += PC_SWAR_BYTES;
     }
@@ -118,17 +118,17 @@ static inline size_t diff_ci(const char *a, const char *b, size_t read_cap)
     size_t i = 0;
     while (i + PC_SWAR_BYTES <= read_cap)
     {
-        pc_swar_word d = swar.xor_(swar.load(a + i), swar.load(b + i), PROTO_TRUE);
+        pc_swar_word d = pc_swar_xor_sel(pc_swar_load(a + i), pc_swar_load(b + i), PROTO_TRUE);
         if (d != 0)
         {
-            return i + swar.zero_lane(PC_SWAR_HIGH & ~swar.has_zero(d));
+            return i + pc_swar_zero_lane(PC_SWAR_HIGH & ~pc_swar_has_zero(d));
         }
         i += PC_SWAR_BYTES;
     }
     // The tail runs the same lane math on a one-lane word, so the 0x20 rule is spelled once: the
     // empty lanes are 0x00 on both sides and cancel, leaving only the byte in lane 0 to answer.
     while (i < read_cap &&
-           swar.xor_((pc_swar_word)(unsigned char)a[i], (pc_swar_word)(unsigned char)b[i], PROTO_TRUE) == 0)
+           pc_swar_xor_sel((pc_swar_word)(unsigned char)a[i], (pc_swar_word)(unsigned char)b[i], PROTO_TRUE) == 0)
     {
         ++i;
     }
@@ -149,7 +149,7 @@ static inline size_t diff_ci(const char *a, const char *b, size_t read_cap)
 PC_INLINE int step_word_cs(pc_swar_word wa, pc_swar_word wb, int end_wins)
 {
     pc_swar_word x = wa ^ wb;
-    pc_swar_word z = swar.has_zero(wa);
+    pc_swar_word z = pc_swar_has_zero(wa);
     if ((x | z) == 0)
     {
         return PC_SWAR_GO;
@@ -157,12 +157,12 @@ PC_INLINE int step_word_cs(pc_swar_word wa, pc_swar_word wb, int end_wins)
     size_t dl = PC_SWAR_BYTES;
     if (x != 0)
     {
-        dl = swar.zero_lane(PC_SWAR_HIGH & ~swar.has_zero(x));
+        dl = pc_swar_zero_lane(PC_SWAR_HIGH & ~pc_swar_has_zero(x));
     }
     size_t el = PC_SWAR_BYTES;
     if (z != 0)
     {
-        el = swar.zero_lane(z);
+        el = pc_swar_zero_lane(z);
     }
     if (end_wins)
     {
@@ -182,8 +182,8 @@ PC_INLINE int step_word_cs(pc_swar_word wa, pc_swar_word wb, int end_wins)
 /** @brief ::step_word_cs over the case-folded syndrome. Same decision, a different comparison. */
 PC_INLINE int step_word_ci(pc_swar_word wa, pc_swar_word wb, int end_wins)
 {
-    pc_swar_word x = swar.xor_(wa, wb, PROTO_TRUE);
-    pc_swar_word z = swar.has_zero(wa);
+    pc_swar_word x = pc_swar_xor_sel(wa, wb, PROTO_TRUE);
+    pc_swar_word z = pc_swar_has_zero(wa);
     if ((x | z) == 0)
     {
         return PC_SWAR_GO;
@@ -191,12 +191,12 @@ PC_INLINE int step_word_ci(pc_swar_word wa, pc_swar_word wb, int end_wins)
     size_t dl = PC_SWAR_BYTES;
     if (x != 0)
     {
-        dl = swar.zero_lane(PC_SWAR_HIGH & ~swar.has_zero(x));
+        dl = pc_swar_zero_lane(PC_SWAR_HIGH & ~pc_swar_has_zero(x));
     }
     size_t el = PC_SWAR_BYTES;
     if (z != 0)
     {
-        el = swar.zero_lane(z);
+        el = pc_swar_zero_lane(z);
     }
     if (end_wins)
     {
@@ -238,7 +238,7 @@ PC_INLINE int step_byte_cs(unsigned char ca, unsigned char cb, int end_wins)
 /** @brief ::step_byte_cs over the case-folded syndrome. */
 PC_INLINE int step_byte_ci(unsigned char ca, unsigned char cb, int end_wins)
 {
-    pc_swar_word d = swar.xor_((pc_swar_word)ca, (pc_swar_word)cb, PROTO_TRUE);
+    pc_swar_word d = pc_swar_xor_sel((pc_swar_word)ca, (pc_swar_word)cb, PROTO_TRUE);
     if (ca == 0)
     {
         if (d == 0)
@@ -293,10 +293,10 @@ static inline proto_bool agree_cs(const char *a, const char *b, size_t read_cap,
     {
         if (((uintptr_t)(a + i) & (PC_SWAR_BYTES - 1u)) == 0u && i + PC_SWAR_BYTES <= read_cap)
         {
-            pc_swar_word wa = swar.load_al(a + i);
-            pc_swar_word wb = swar.load(b + i);
+            pc_swar_word wa = pc_swar_load_al(a + i);
+            pc_swar_word wb = pc_swar_load(b + i);
             pc_swar_word x = wa ^ wb;
-            pc_swar_word z = swar.has_zero(wa);
+            pc_swar_word z = pc_swar_has_zero(wa);
             if ((x | z) != 0)
             {
                 // Which mask fires FIRST. That is not a question about positions, so nothing here
@@ -308,7 +308,7 @@ static inline proto_bool agree_cs(const char *a, const char *b, size_t read_cap,
                 // for: v == 0 gives all ones, the largest value there is, which is exactly "fires
                 // after everything". So there is no case for "no terminator in this word", no case
                 // for "no difference", and no branch for either.
-                pc_swar_word xm = PC_SWAR_HIGH & ~swar.has_zero(x); // lanes that differ, guard bits
+                pc_swar_word xm = PC_SWAR_HIGH & ~pc_swar_has_zero(x); // lanes that differ, guard bits
                 pc_swar_word zl = (z - (pc_swar_word)1) & ~z;
                 pc_swar_word xl = (xm - (pc_swar_word)1) & ~xm;
 #if PC_HW_BIG_ENDIAN
@@ -354,13 +354,13 @@ static inline proto_bool agree_ci(const char *a, const char *b, size_t read_cap,
     {
         if (((uintptr_t)(a + i) & (PC_SWAR_BYTES - 1u)) == 0u && i + PC_SWAR_BYTES <= read_cap)
         {
-            pc_swar_word wa = swar.load_al(a + i);
-            pc_swar_word wb = swar.load(b + i);
-            pc_swar_word x = swar.xor_(wa, wb, PROTO_TRUE);
-            pc_swar_word z = swar.has_zero(wa);
+            pc_swar_word wa = pc_swar_load_al(a + i);
+            pc_swar_word wb = pc_swar_load(b + i);
+            pc_swar_word x = pc_swar_xor_sel(wa, wb, PROTO_TRUE);
+            pc_swar_word z = pc_swar_has_zero(wa);
             if ((x | z) != 0)
             {
-                pc_swar_word xm = PC_SWAR_HIGH & ~swar.has_zero(x);
+                pc_swar_word xm = PC_SWAR_HIGH & ~pc_swar_has_zero(x);
                 pc_swar_word zl = (z - (pc_swar_word)1) & ~z;
                 pc_swar_word xl = (xm - (pc_swar_word)1) & ~xm;
 #if PC_HW_BIG_ENDIAN
@@ -382,7 +382,7 @@ static inline proto_bool agree_ci(const char *a, const char *b, size_t read_cap,
         }
         unsigned char ca = (unsigned char)a[i];
         unsigned char cb = (unsigned char)b[i];
-        pc_swar_word d = swar.xor_((pc_swar_word)ca, (pc_swar_word)cb, PROTO_TRUE);
+        pc_swar_word d = pc_swar_xor_sel((pc_swar_word)ca, (pc_swar_word)cb, PROTO_TRUE);
         if (ca == 0)
         {
             return (d == 0) || (end_wins != 0);
@@ -471,13 +471,13 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
     // decides the length when the terminator lies inside the loaded window; at j == w the needle may
     // continue past it and the bound is read the long way.
     const pc_swar_word n_raw = (pc_swar_word)proto_raw_load(needle, w);
-    const pc_swar_word nz = swar.has_zero(n_raw);
+    const pc_swar_word nz = pc_swar_has_zero(n_raw);
     // With no terminator in the window, what is left is [w, needle_cap). A single byte there can only
     // be the terminator, so nlen is w. Anything longer is read the long way.
     size_t j0 = PC_SWAR_BYTES;
     if (nz != 0)
     {
-        j0 = swar.zero_lane(nz);
+        j0 = pc_swar_zero_lane(nz);
     }
     size_t nlen = j0;
     if (j0 >= w)
@@ -567,21 +567,21 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
     {
         while (i + PC_SWAR_BYTES <= read_cap)
         {
-            pc_swar_word w0 = swar.load_al(hay + i);
-            pc_swar_word z = swar.has_zero(w0);
-            pc_swar_word m = swar.eq(w0, c_first, PROTO_FALSE);
+            pc_swar_word w0 = pc_swar_load_al(hay + i);
+            pc_swar_word z = pc_swar_has_zero(w0);
+            pc_swar_word m = pc_swar_eq_sel(w0, c_first, PROTO_FALSE);
             if ((m | z) != 0)
             {
                 // Both cannot name one lane: a needle byte of 0 would have made nlen 0 above.
                 size_t km = PC_SWAR_BYTES;
                 if (m != 0)
                 {
-                    km = swar.zero_lane(m);
+                    km = pc_swar_zero_lane(m);
                 }
                 size_t kz = PC_SWAR_BYTES;
                 if (z != 0)
                 {
-                    kz = swar.zero_lane(z);
+                    kz = pc_swar_zero_lane(z);
                 }
                 if (km < kz)
                 {
@@ -606,9 +606,9 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
     // needle is longer than a pair.
     while (nlen >= 2u && nlen <= 3u && nlen <= PC_SWAR_BYTES && i + (2u * PC_SWAR_BYTES) <= read_cap)
     {
-        pc_swar_word w0 = swar.load_al(hay + i);
-        pc_swar_word w1 = swar.load_al(hay + i + PC_SWAR_BYTES);
-        pc_swar_word m = swar.eq(w0, c_first, PROTO_FALSE);
+        pc_swar_word w0 = pc_swar_load_al(hay + i);
+        pc_swar_word w1 = pc_swar_load_al(hay + i + PC_SWAR_BYTES);
+        pc_swar_word m = pc_swar_eq_sel(w0, c_first, PROTO_FALSE);
         for (size_t k = 1u; k < nlen; ++k)
         {
 #if PC_HW_BIG_ENDIAN
@@ -616,14 +616,14 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
 #else
             pc_swar_word fk = (pc_swar_word)((w0 >> (8u * k)) | (w1 << (PROTO_SWAR_BITS - 8u * k)));
 #endif
-            m &= swar.eq(fk, (uint8_t)needle[k], PROTO_FALSE);
+            m &= pc_swar_eq_sel(fk, (uint8_t)needle[k], PROTO_FALSE);
         }
-        pc_swar_word z = swar.has_zero(w0);
+        pc_swar_word z = pc_swar_has_zero(w0);
 #if PC_HW_BIG_ENDIAN
         size_t zend = PC_SWAR_BYTES;
         if (z != 0)
         {
-            zend = swar.zero_lane(z);
+            zend = pc_swar_zero_lane(z);
         }
         if (zend != PC_SWAR_BYTES)
         {
@@ -634,7 +634,7 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
 #endif
         if (m != 0)
         {
-            return hay + i + swar.zero_lane(m);
+            return hay + i + pc_swar_zero_lane(m);
         }
         if (z != 0)
         {
@@ -648,9 +648,9 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
     // verified against a funnel of the two loaded words instead of a fresh unaligned read.
     while ((nlen > 3u || nlen > PC_SWAR_BYTES) && nlen >= 2u && i + (2u * PC_SWAR_BYTES) <= read_cap)
     {
-        pc_swar_word w0 = swar.load_al(hay + i);
-        pc_swar_word w1 = swar.load_al(hay + i + PC_SWAR_BYTES);
-        pc_swar_word z = swar.has_zero(w0);
+        pc_swar_word w0 = pc_swar_load_al(hay + i);
+        pc_swar_word w1 = pc_swar_load_al(hay + i + PC_SWAR_BYTES);
+        pc_swar_word z = pc_swar_has_zero(w0);
         // eq against the anchor's own funnel sets lane j when hay[i+j+ka] is needle[ka], which is
         // the needle STARTING at j whatever ka is. So which byte anchors is free, and it decides how
         // many candidates the verify below runs on. The first byte of a pattern is where a delimiter
@@ -664,16 +664,16 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
             wa = (pc_swar_word)((w0 >> (8u * ka)) | (w1 << (PROTO_SWAR_BITS - 8u * ka)));
 #endif
         }
-        pc_swar_word m = swar.eq(wa, c_anchor, PROTO_FALSE);
+        pc_swar_word m = pc_swar_eq_sel(wa, c_anchor, PROTO_FALSE);
         size_t end = PC_SWAR_BYTES;
         if (z != 0)
         {
-            end = swar.zero_lane(z);
+            end = pc_swar_zero_lane(z);
         }
 
         while (m != 0)
         {
-            size_t k = swar.zero_lane(m);
+            size_t k = pc_swar_zero_lane(m);
             if (k >= end)
             {
                 break; // this candidate is at or past the terminator
@@ -719,9 +719,9 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
     // one load instead of by nlen byte compares each.
     if (nlen <= PC_SWAR_BYTES && i + PC_SWAR_BYTES <= read_cap)
     {
-        pc_swar_word w0 = swar.load_al(hay + i);
-        pc_swar_word z = swar.has_zero(w0);
-        pc_swar_word m = swar.eq(w0, c_first, PROTO_FALSE);
+        pc_swar_word w0 = pc_swar_load_al(hay + i);
+        pc_swar_word z = pc_swar_has_zero(w0);
+        pc_swar_word m = pc_swar_eq_sel(w0, c_first, PROTO_FALSE);
         for (size_t k = 1u; k < nlen; ++k)
         {
 #if PC_HW_BIG_ENDIAN
@@ -729,13 +729,13 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
 #else
             pc_swar_word fk = (pc_swar_word)(w0 >> (8u * k));
 #endif
-            m &= swar.eq(fk, (uint8_t)needle[k], PROTO_FALSE);
+            m &= pc_swar_eq_sel(fk, (uint8_t)needle[k], PROTO_FALSE);
         }
 #if PC_HW_BIG_ENDIAN
         size_t zend = PC_SWAR_BYTES;
         if (z != 0)
         {
-            zend = swar.zero_lane(z);
+            zend = pc_swar_zero_lane(z);
         }
         if (zend != PC_SWAR_BYTES)
         {
@@ -746,7 +746,7 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
 #endif
         if (m != 0)
         {
-            return hay + i + swar.zero_lane(m);
+            return hay + i + pc_swar_zero_lane(m);
         }
         if (z != 0)
         {
@@ -799,11 +799,11 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
     }
 
     const pc_swar_word n_raw = (pc_swar_word)proto_raw_load(needle, w);
-    const pc_swar_word nz = swar.has_zero(n_raw);
+    const pc_swar_word nz = pc_swar_has_zero(n_raw);
     size_t j0 = PC_SWAR_BYTES;
     if (nz != 0)
     {
-        j0 = swar.zero_lane(nz);
+        j0 = pc_swar_zero_lane(nz);
     }
     size_t nlen = j0;
     if (j0 >= w)
@@ -871,20 +871,20 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
     {
         while (i + PC_SWAR_BYTES <= read_cap)
         {
-            pc_swar_word w0 = swar.load_al(hay + i);
-            pc_swar_word z = swar.has_zero(w0);
-            pc_swar_word m = swar.eq(w0, c_first, PROTO_TRUE);
+            pc_swar_word w0 = pc_swar_load_al(hay + i);
+            pc_swar_word z = pc_swar_has_zero(w0);
+            pc_swar_word m = pc_swar_eq_sel(w0, c_first, PROTO_TRUE);
             if ((m | z) != 0)
             {
                 size_t km = PC_SWAR_BYTES;
                 if (m != 0)
                 {
-                    km = swar.zero_lane(m);
+                    km = pc_swar_zero_lane(m);
                 }
                 size_t kz = PC_SWAR_BYTES;
                 if (z != 0)
                 {
-                    kz = swar.zero_lane(z);
+                    kz = pc_swar_zero_lane(z);
                 }
                 if (km < kz)
                 {
@@ -898,9 +898,9 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
 
     while (nlen >= 2u && nlen <= 3u && nlen <= PC_SWAR_BYTES && i + (2u * PC_SWAR_BYTES) <= read_cap)
     {
-        pc_swar_word w0 = swar.load_al(hay + i);
-        pc_swar_word w1 = swar.load_al(hay + i + PC_SWAR_BYTES);
-        pc_swar_word m = swar.eq(w0, c_first, PROTO_TRUE);
+        pc_swar_word w0 = pc_swar_load_al(hay + i);
+        pc_swar_word w1 = pc_swar_load_al(hay + i + PC_SWAR_BYTES);
+        pc_swar_word m = pc_swar_eq_sel(w0, c_first, PROTO_TRUE);
         for (size_t k = 1u; k < nlen; ++k)
         {
 #if PC_HW_BIG_ENDIAN
@@ -908,14 +908,14 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
 #else
             pc_swar_word fk = (pc_swar_word)((w0 >> (8u * k)) | (w1 << (PROTO_SWAR_BITS - 8u * k)));
 #endif
-            m &= swar.eq(fk, (uint8_t)needle[k], PROTO_TRUE);
+            m &= pc_swar_eq_sel(fk, (uint8_t)needle[k], PROTO_TRUE);
         }
-        pc_swar_word z = swar.has_zero(w0);
+        pc_swar_word z = pc_swar_has_zero(w0);
 #if PC_HW_BIG_ENDIAN
         size_t zend = PC_SWAR_BYTES;
         if (z != 0)
         {
-            zend = swar.zero_lane(z);
+            zend = pc_swar_zero_lane(z);
         }
         if (zend != PC_SWAR_BYTES)
         {
@@ -926,7 +926,7 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
 #endif
         if (m != 0)
         {
-            return hay + i + swar.zero_lane(m);
+            return hay + i + pc_swar_zero_lane(m);
         }
         if (z != 0)
         {
@@ -937,9 +937,9 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
 
     while ((nlen > 3u || nlen > PC_SWAR_BYTES) && nlen >= 2u && i + (2u * PC_SWAR_BYTES) <= read_cap)
     {
-        pc_swar_word w0 = swar.load_al(hay + i);
-        pc_swar_word w1 = swar.load_al(hay + i + PC_SWAR_BYTES);
-        pc_swar_word z = swar.has_zero(w0);
+        pc_swar_word w0 = pc_swar_load_al(hay + i);
+        pc_swar_word w1 = pc_swar_load_al(hay + i + PC_SWAR_BYTES);
+        pc_swar_word z = pc_swar_has_zero(w0);
         pc_swar_word wa = w0;
         if (ka != 0u)
         {
@@ -949,16 +949,16 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
             wa = (pc_swar_word)((w0 >> (8u * ka)) | (w1 << (PROTO_SWAR_BITS - 8u * ka)));
 #endif
         }
-        pc_swar_word m = swar.eq(wa, c_anchor, PROTO_TRUE);
+        pc_swar_word m = pc_swar_eq_sel(wa, c_anchor, PROTO_TRUE);
         size_t end = PC_SWAR_BYTES;
         if (z != 0)
         {
-            end = swar.zero_lane(z);
+            end = pc_swar_zero_lane(z);
         }
 
         while (m != 0)
         {
-            size_t k = swar.zero_lane(m);
+            size_t k = pc_swar_zero_lane(m);
             if (k >= end)
             {
                 break;
@@ -972,7 +972,7 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
                 wk = (pc_swar_word)((w0 >> (8u * k)) | (w1 << (PROTO_SWAR_BITS - 8u * k)));
 #endif
             }
-            pc_swar_word syn = swar.xor_(wk, nw, PROTO_TRUE);
+            pc_swar_word syn = pc_swar_xor_sel(wk, nw, PROTO_TRUE);
             size_t rest = nlen - take;
             if ((syn & nm) == 0 && (take == nlen || (i + k + nlen <= read_cap &&
                                                      diff_ci(hay + i + k + take, needle + take, rest) == rest)))
@@ -995,9 +995,9 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
 
     if (nlen <= PC_SWAR_BYTES && i + PC_SWAR_BYTES <= read_cap)
     {
-        pc_swar_word w0 = swar.load_al(hay + i);
-        pc_swar_word z = swar.has_zero(w0);
-        pc_swar_word m = swar.eq(w0, c_first, PROTO_TRUE);
+        pc_swar_word w0 = pc_swar_load_al(hay + i);
+        pc_swar_word z = pc_swar_has_zero(w0);
+        pc_swar_word m = pc_swar_eq_sel(w0, c_first, PROTO_TRUE);
         for (size_t k = 1u; k < nlen; ++k)
         {
 #if PC_HW_BIG_ENDIAN
@@ -1005,13 +1005,13 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
 #else
             pc_swar_word fk = (pc_swar_word)(w0 >> (8u * k));
 #endif
-            m &= swar.eq(fk, (uint8_t)needle[k], PROTO_TRUE);
+            m &= pc_swar_eq_sel(fk, (uint8_t)needle[k], PROTO_TRUE);
         }
 #if PC_HW_BIG_ENDIAN
         size_t zend = PC_SWAR_BYTES;
         if (z != 0)
         {
-            zend = swar.zero_lane(z);
+            zend = pc_swar_zero_lane(z);
         }
         if (zend != PC_SWAR_BYTES)
         {
@@ -1022,7 +1022,7 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
 #endif
         if (m != 0)
         {
-            return hay + i + swar.zero_lane(m);
+            return hay + i + pc_swar_zero_lane(m);
         }
         if (z != 0)
         {
