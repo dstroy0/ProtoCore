@@ -462,6 +462,34 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Not a fix:** setting `CONFIG_COMPILER_OPTIMIZATION_PERF` in the example. That turns the job
   green and leaves every consumer's debug build broken.
 
+## core_setup/ sits outside src/, so an Arduino IDE install of the library cannot build
+
+- **Status:** OPEN, found 2026-08-10 from the Arduino Build job, which had been red and is the only
+  CI that builds the library the way a user installs it.
+- **Symptom:** every one of the driver examples fails identically:
+  `src/protocore_config.h:41:10: fatal error: core_setup/board_profiles/board_profile.h: No such
+file or directory`.
+- **Root cause, and it is packaging rather than CI.** `arduino-cli compile --library .` builds this
+  the way the IDE does, and the Arduino 1.5 library format exposes exactly one source root: `src/`.
+  Nothing outside it is placed on the include path, and nothing outside it is compiled. `library.json`
+  says the same for PlatformIO consumers - `"build": {"srcDir": "src"}`. So since `core_setup/`
+  moved to the repo root, its headers are unreachable from `src/protocore_config.h:41` and its
+  translation units - `esp_crypto_hal.c`, `esp_bus.c`, `esp_nvs.cpp`, `esp_mnt_fs.cpp`,
+  `physical_esp.cpp`, the portable backends - are not compiled or linked into a user's build at all.
+- **Why CI mostly missed it:** the workflow's own comment explains that the compile step deliberately
+  passes no `--build-property`, "byte-for-byte how the Arduino IDE builds it" - which is exactly
+  right, and exactly why this job is the one that sees it. The PlatformIO ESP32 job passes because
+  `pio ci` is invoked with its own `build_flags`, and the native envs pass because
+  `test/gen_test_envs.py:125` emits `-I .` for all 331 of them. Three build paths, one of which
+  reflects an install, and it is the one that was red.
+- **Not the fix:** adding `--build-property compiler.cpp.extra_flags=-I.` to the workflow. That makes
+  the job green while leaving every real Arduino install broken, and it contradicts the stated reason
+  the step takes no build properties.
+- **Fix:** a layout decision. Either `core_setup/` returns under `src/` (where the include path and
+  the compile set already reach it), or the library ships a source root that contains both and
+  `protocore_config.h:41` is rewritten to reach the board profile from there. The Arduino format
+  offers no second include directory, so a `library.properties` key cannot solve it.
+
 ## No host env compiles a C++ translation unit, and C++ is how the library is consumed
 
 - **Status:** OPEN, found 2026-08-10 asking why the `extern "C"` include break above could sit in
