@@ -234,17 +234,73 @@ void test_protect_refuses_overflow()
     TEST_ASSERT_EQUAL_INT((int)0, TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
 }
 
-void test_empty_plaintext_carries_only_the_type()
+// RFC 8446 sec 5.4: "Implementations MUST NOT send Handshake and Alert records that have a
+// zero-length TLSInnerPlaintext.content; if such a message is received, the receiving
+// implementation MUST terminate the connection with an 'unexpected_message' alert." This suite
+// used to seal a zero-length alert and assert it was accepted, pinning both halves of the
+// violation. Application data is exempt - an empty application_data record is how a sender pads.
+void test_empty_handshake_and_alert_records_are_refused()
 {
     uint8_t rec[64];
-    size_t n = TlsRecord.protect(&g_send, PC_TLS_CT_ALERT, NULL, 0, rec, sizeof(rec));
-    TEST_ASSERT_EQUAL_INT((int)(PC_TLS_PLAINTEXT_HDR_LEN + 1 + PC_TLS_TAG_LEN), n);
+    TEST_ASSERT_EQUAL_INT(0, (int)TlsRecord.protect(&g_send, PC_TLS_CT_ALERT, NULL, 0, rec, sizeof(rec)));
+    TEST_ASSERT_EQUAL_INT(0, (int)TlsRecord.protect(&g_send, PC_TLS_CT_HANDSHAKE, NULL, 0, rec, sizeof(rec)));
 
+    size_t n = TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, NULL, 0, rec, sizeof(rec));
+    TEST_ASSERT_EQUAL_INT((int)(PC_TLS_PLAINTEXT_HDR_LEN + 1 + PC_TLS_TAG_LEN), (int)n);
     uint8_t out[64];
     TlsCiphertext info;
     TEST_ASSERT_TRUE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_ALERT, info.content_type);
-    TEST_ASSERT_EQUAL_INT((int)0, info.pt_len);
+    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_INT(0, (int)info.pt_len);
+
+}
+
+// The receiving half of the same MUST. protect() does not police the content-type byte it appends,
+// so passing 0x00 as the type and the real type as the content builds any inner plaintext wanted:
+// here {0x15, 0x00}, which the padding strip reads back as a zero-length Alert.
+void test_zero_length_alert_on_receipt_is_refused()
+{
+    const uint8_t alert_type[1] = {PC_TLS_CT_ALERT};
+    uint8_t rec[64];
+    size_t n = TlsRecord.protect(&g_send, 0x00, alert_type, sizeof(alert_type), rec, sizeof(rec));
+    TEST_ASSERT_NOT_EQUAL(0, n);
+
+    uint8_t out[64];
+    TlsCiphertext info;
+    TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
+}
+
+// sec 5.4: "If a receiving implementation does not find a non-zero octet in the cleartext, it MUST
+// terminate the connection" - an all-zero inner plaintext names no content type at all.
+void test_all_zero_inner_plaintext_is_refused()
+{
+    const uint8_t zeros[3] = {0, 0, 0};
+    uint8_t rec[64];
+    size_t n = TlsRecord.protect(&g_send, 0x00, zeros, sizeof(zeros), rec, sizeof(rec));
+    TEST_ASSERT_NOT_EQUAL(0, n);
+
+    uint8_t out[64];
+    TlsCiphertext info;
+    TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
+}
+
+// sec 5.2: TLSCiphertext.length "MUST NOT exceed 2^14 + 256", and sec 5.4 bounds the encoded
+// TLSInnerPlaintext at 2^14 + 1. A record claiming more is refused before any AEAD work.
+void test_record_overflow_is_refused()
+{
+    static uint8_t rec[PC_TLS_PLAINTEXT_HDR_LEN + PC_TLS_MAX_PLAINTEXT + 2 + PC_TLS_TAG_LEN];
+    memset(rec, 0, sizeof rec);
+    const size_t inner_len = PC_TLS_MAX_PLAINTEXT + 2; // one past the sec 5.4 bound
+    const size_t body_len = inner_len + PC_TLS_TAG_LEN;
+    rec[0] = PC_TLS_CT_APPLICATION_DATA;
+    rec[1] = 0x03;
+    rec[2] = 0x03;
+    rec[3] = (uint8_t)(body_len >> 8);
+    rec[4] = (uint8_t)body_len;
+
+    static uint8_t out[PC_TLS_MAX_PLAINTEXT + 2];
+    TlsCiphertext info;
+    TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, PC_TLS_PLAINTEXT_HDR_LEN + body_len, out, sizeof(out), &info));
 }
 
 // The trailing content type sits after the content, so plaintext that itself ends in zero bytes
@@ -329,7 +385,10 @@ int main()
     RUN_TEST(test_short_and_malformed_records_are_refused);
     RUN_TEST(test_unkeyed_context_fails_closed);
     RUN_TEST(test_protect_refuses_overflow);
-    RUN_TEST(test_empty_plaintext_carries_only_the_type);
+    RUN_TEST(test_empty_handshake_and_alert_records_are_refused);
+    RUN_TEST(test_zero_length_alert_on_receipt_is_refused);
+    RUN_TEST(test_all_zero_inner_plaintext_is_refused);
+    RUN_TEST(test_record_overflow_is_refused);
     RUN_TEST(test_content_with_trailing_zeros_round_trips);
     RUN_TEST(test_keys_wipe_disables_the_context);
     return UNITY_END();
