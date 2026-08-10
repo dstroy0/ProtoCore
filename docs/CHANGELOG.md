@@ -66,6 +66,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b964d9e`](https://github.com/dstroy0/ProtoCore/commit/b964d9e4ff42d4c190b97107a7d8df10970d7fd4))
 - update CHANGELOG.md [skip ci] ([`22eb995`](https://github.com/dstroy0/ProtoCore/commit/22eb995add6e06ecb494ee3626bf158322a662eb))
 - update CHANGELOG.md [skip ci] ([`138dd71`](https://github.com/dstroy0/ProtoCore/commit/138dd715b795d9b263bf17bb2a8f1c0ba7151f4c))
 - update CHANGELOG.md [skip ci] ([`b45d24a`](https://github.com/dstroy0/ProtoCore/commit/b45d24a20335274a11e08d425992b0a3606cc06a))
@@ -204,7 +205,13 @@ All notable changes to ProtoCore are documented here.
 ### Documentation
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
+>>>>>>> Stashed changes
+=======
+- close the HPACK prefix-integer overflow ([`4eaeb4e`](https://github.com/dstroy0/ProtoCore/commit/4eaeb4e741423de906cd02498ec0da8796cfc9a2))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d7819ac`](https://github.com/dstroy0/ProtoCore/commit/d7819ac42f95fd4327be7fc3a754c59b69fe6fd3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
 >>>>>>> Stashed changes
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`371e62a`](https://github.com/dstroy0/ProtoCore/commit/371e62a2c1dba63ae4ea0bb643471b93ea55dfd0))
@@ -263,12 +270,18 @@ All notable changes to ProtoCore are documented here.
 ### Testing
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 - the interop matrix reads the negotiated MAC back out of the trace ([`48f200f`](https://github.com/dstroy0/ProtoCore/commit/48f200f8dbb2f5b49a7201a20eda68522dd14dab))
 - pin client-preference for kex, host key and MAC, and make the cyclone repro fail-able ([`b083e08`](https://github.com/dstroy0/ProtoCore/commit/b083e08868c2cd99e3021d49fa6b29a80bdb4f82))
 - each RFC 4253 sec 7.2 label is pinned to its own direction and field ([`5875798`](https://github.com/dstroy0/ProtoCore/commit/58757980f568297aaa152ecec2d8bd64ee380ba0))
 - pin the group-14 prime and generator against RFC 3526 sec 3 ([`170db64`](https://github.com/dstroy0/ProtoCore/commit/170db64308ec178ebabb7e7cbb7a965680687fe8))
 - the GCM derive fixture takes the mpint sign-pad path its comment claimed ([`6a7334b`](https://github.com/dstroy0/ProtoCore/commit/6a7334b0d75c052bb440c26e419d066e52455999))
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 - two GCM packets on one key install prove the RFC 5647 counter advances ([`315cad3`](https://github.com/dstroy0/ProtoCore/commit/315cad3496257876e39a9da677536a9d36ebbdcf))
 - a losing KEX guess is dropped and the real KEXDH_INIT still lands ([`1f3ae20`](https://github.com/dstroy0/ProtoCore/commit/1f3ae20aaebd0accbddcd7d9fc6f5bd104d69108))
