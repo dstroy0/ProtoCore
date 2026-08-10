@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the two backends gave different wrong answers for a blob and a string ([`280fbc6`](https://github.com/dstroy0/ProtoCore/commit/280fbc6498bc8709a9d8d68f8fc99875ff8d5b9a))
 - the fs backend had no sync, so the WAL could not bind the only persistent store ([`5fe8ce5`](https://github.com/dstroy0/ProtoCore/commit/5fe8ce57d1993419e0118e40c9d23d2318b61988))
 - a conflicted autostash pop committed its markers into the changelog ([`2e47cb0`](https://github.com/dstroy0/ProtoCore/commit/2e47cb02fb11fbf1810df33493d6994f44d362a8))
 - modmul guarded its operand count nowhere; stale .cpp references ([`e527f96`](https://github.com/dstroy0/ProtoCore/commit/e527f9655e20078cd9637a52d3fe68f716256b0c))
@@ -102,6 +103,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`95eb36f`](https://github.com/dstroy0/ProtoCore/commit/95eb36fa650ec2061c3e8c6f5a8c13571792280f))
+- update CHANGELOG.md [skip ci] ([`00d45c1`](https://github.com/dstroy0/ProtoCore/commit/00d45c142db99296211e48449a5da8ddf3de550e))
 - update CHANGELOG.md [skip ci] ([`64cdf7d`](https://github.com/dstroy0/ProtoCore/commit/64cdf7dd75033dad42625df47bcb35aac1fe342d))
 - update CHANGELOG.md [skip ci] ([`c1469ec`](https://github.com/dstroy0/ProtoCore/commit/c1469ece454ebf3ce9a07861fbd638334fe12685))
 - update CHANGELOG.md [skip ci] ([`e641fd6`](https://github.com/dstroy0/ProtoCore/commit/e641fd62c00251c8b04300b1f0b5cd003a9db10e))
