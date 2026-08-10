@@ -777,7 +777,7 @@ Built-in radio:
   and interleaves the address families (RFC 8305) so successive attempts alternate v6/v4, and
   `pc_he_attempt_due` gates the next attempt by the Connection Attempt Delay - fast IPv6, quick IPv4
   fallback. Pure, host-tested (`native_happy_eyeballs`). The reverse-SSH tunnel to a relay SHIPPED
-  (`PC_ENABLE_SSH_CLIENT`, `network_drivers/presentation/ssh/connection/ssh_client`): a full outbound
+  (`PC_ENABLE_SSH_CLIENT`, `network_drivers/presentation/ssh/ssh_client`): a full outbound
   SSH client - negotiates the whole modern suite (curve25519 / ecdh-p256 / dh-group14 / mlkem768x25519
   hybrid, ed25519 / ECDSA / RSA host keys pinned by SHA-256, chacha20-poly1305 / aes256-gcm / aes256-ctr)
   through a role-aware packet layer, authenticates by ed25519 publickey, holds a `tcpip-forward`, and

@@ -14,7 +14,7 @@
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"          // password verifier for the dispatch path
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // full-switch dispatch coverage
-#include "network_drivers/presentation/ssh/connection/ssh_server.h"  // dispatcher compression triggers
+#include "network_drivers/presentation/ssh/ssh_server.h"  // dispatcher compression triggers
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h" // DH keygen + RFC 4253 §7.2 key derivation
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
@@ -530,17 +530,15 @@ void test_aes256ctr_counter_full_wraparound(void)
 // No KEX ever runs in this env's own tests, so ssh_dh_generate()/the RFC 4253 §7.2 key derivation
 // chain are otherwise never called here. Exercised directly below.
 
-// Out-of-range slot is rejected; a valid slot generates y/f and leaves kex_done false (NEWKEYS has
-// not happened yet).
+// Out-of-range slot is rejected; a valid slot generates y/f.
 void test_dh_generate_slot_guard_and_state(void)
 {
     TEST_ASSERT_EQUAL_INT(-1, ssh_dh_generate(MAX_SSH_CONNS));
     TEST_ASSERT_EQUAL_INT(0, ssh_dh_generate(0));
-    TEST_ASSERT_FALSE(ssh_dh[0].kex_done);
     proto_bool f_nonzero = PROTO_FALSE;
     for (int j = 0; j < PC_BN_LIMBS; j++)
     {
-        if (ssh_dh[0].f.d[j] != 0)
+        if (ssh_dh[0].f->d[j] != 0)
         {
             f_nonzero = PROTO_TRUE;
         }

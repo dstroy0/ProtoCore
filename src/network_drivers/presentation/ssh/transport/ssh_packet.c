@@ -127,10 +127,12 @@ void ssh_pkt_init(uint8_t i)
     uint8_t *wire = s->tx_wire;
     uint8_t *macw = s->mac_work;
     uint8_t *kexw = s->crypto_work;
+    uint8_t *rx = s->rx_buf;
     mem.set(s, 0, sizeof(*s)); // is_client defaults false = server role
     s->tx_wire = wire;
     s->mac_work = macw;
     s->crypto_work = kexw;
+    s->rx_buf = rx;
     s->kex_active = PROTO_TRUE;
     s->enc_out = PROTO_FALSE;
     s->enc_in = PROTO_FALSE;

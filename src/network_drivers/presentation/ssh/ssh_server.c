@@ -6,7 +6,7 @@
  * @brief SSH message dispatcher implementation.
  */
 
-#include "network_drivers/presentation/ssh/connection/ssh_server.h"
+#include "network_drivers/presentation/ssh/ssh_server.h"
 #include "mmgr/plaintext.h"
 #include "mmgr/protomem.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
@@ -94,6 +94,8 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     switch (msg_type)
     {
     case SSH_MSG_IGNORE:
+    case SSH_MSG_DEBUG:         // RFC 4253 sec 11.3: display or discard; never answered
+    case SSH_MSG_UNIMPLEMENTED: // sec 11.4: answering it with another would loop
         pc_plaintext_release(mark);
         return 0;
 
@@ -104,18 +106,18 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_KEXINIT:
         // Initial KEX or an in-session re-key request. Negotiate, reply with our
         // own KEXINIT, generate a fresh ephemeral, and await KEXDH_INIT.
-        if (ssh_kexinit_parse(i, payload, len) != 0)
+        if (SshTransport.kexinit_parse(i, payload, len) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
         }
-        if (ssh_kexinit_build(i, reply.buf, &n, reply.cap) != 0)
+        if (SshTransport.kexinit_build(i, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n);
-        if (ssh_kex_generate(i) != 0)
+        if (SshTransport.kex_generate(i) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -138,7 +140,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return 0;
         }
-        if (ssh_kexdh_handle(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshTransport.kexdh(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -147,13 +149,13 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         {
             uint8_t newkeys = SSH_MSG_NEWKEYS;
             emit(i, &newkeys, 1); // server NEWKEYS (this one still goes out unencrypted)
-            ssh_newkeys_sent(i);  // ...but our outbound is encrypted from the next packet on
+            SshTransport.newkeys_sent(i); // ...but our outbound is encrypted from the next packet on
         }
         pc_plaintext_release(mark);
         return 0; // ssh_kexdh_handle advanced phase to NEWKEYS
 
     case SSH_MSG_NEWKEYS:
-        ssh_newkeys_complete(i); // activate encryption; → SERVICE or OPEN
+        SshTransport.newkeys_recvd(i); // activate encryption; → SERVICE or OPEN
         // RFC 8308: with encryption now active, advertise the signature algorithms
         // we accept for pubkey userauth (server-sig-algs) so a modern client will
         // sign an RSA key - it otherwise reports "no mutual signature algorithm".
@@ -194,6 +196,12 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         return 0;
 
     case SSH_MSG_USERAUTH_REQUEST:
+        // RFC 4252 sec 5.1: a request that arrives after SUCCESS is silently ignored, not an error.
+        if (s->phase == SSH_PHASE_OPEN)
+        {
+            pc_plaintext_release(mark);
+            return 0;
+        }
         if (s->phase != SSH_PHASE_AUTH)
         {
             pc_plaintext_release(mark);
@@ -344,6 +352,23 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             return -1;
         }
         if (pc_ssh_channel_handle_data(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        {
+            pc_plaintext_release(mark);
+            return -1;
+        }
+        emit(i, reply.buf, n); // WINDOW_ADJUST when the receive window is replenished
+        pc_plaintext_release(mark);
+        return 0;
+
+    case SSH_MSG_CHANNEL_EXTENDED_DATA:
+        // RFC 4254 sec 5.2: either side may send it, so it is accounted against the window rather
+        // than answered with UNIMPLEMENTED.
+        if (!s->authed)
+        {
+            pc_plaintext_release(mark);
+            return -1;
+        }
+        if (pc_ssh_channel_handle_extended_data(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;

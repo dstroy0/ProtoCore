@@ -717,6 +717,52 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
     return 0;
 }
 
+int pc_ssh_channel_handle_extended_data(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                        size_t cap)
+{
+    *out_len = 0;
+    if (i >= MAX_SSH_CONNS || len < 1 || payload[0] != SSH_MSG_CHANNEL_EXTENDED_DATA)
+    {
+        return -1;
+    }
+
+    size_t off = 1;
+    if (off + 8 > len)
+    {
+        return -1;
+    }
+    uint32_t recipient = rd_u32(payload + off);
+    off += 8; // recipient channel, then the data_type_code this end does not separate
+    const uint8_t *data;
+    uint32_t dlen;
+    if (!rd_string(payload, len, &off, &data, &dlen))
+    {
+        return -1;
+    }
+
+    SshChannel *c = chan_by_id(i, recipient);
+    if (!c)
+    {
+        return -1;
+    }
+    if (!pc_ssh_flow_recv_take(&c->flow, dlen))
+    {
+        return -1; // peer overran the advertised window (RFC 4254 §5.2)
+    }
+
+    // Replenish the window once it drops below half.
+    uint32_t add = 0;
+    if (cap >= 9 && pc_ssh_flow_replenish_due(&c->flow, &add))
+    {
+        out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
+        wr_u32(out + 1, c->peer_id);
+        wr_u32(out + 5, add);
+        *out_len = 9;
+        pc_ssh_flow_local_credit(&c->flow, add); // the caller emits *out_len unconditionally
+    }
+    return 0;
+}
+
 // ---------------------------------------------------------------------------
 // CHANNEL_DATA (outbound)
 // ---------------------------------------------------------------------------

@@ -325,9 +325,7 @@ static void w_mpint(Writer *w, const uint8_t *be, size_t len)
 // name-list membership test (RFC 4253 §7.1 - comma-separated, no spaces)
 // ---------------------------------------------------------------------------
 
-// Returns true if @p want appears as a complete element of the comma-separated
-// list [list, list+len).
-static proto_bool namelist_contains(const uint8_t *list, uint32_t len, const char *want)
+proto_bool namelist_contains(const uint8_t *list, uint32_t len, const char *want)
 {
     size_t wl = strnlen(want, (size_t)len + 1);
     uint32_t start = 0;
@@ -412,7 +410,22 @@ void ssh_transport_init(uint8_t i)
         return;
     }
     SshSession *s = &ssh_sess[i];
+    // The constants-region bindings are the slot's, so they are held across the zero.
+    char *vc = s->v_c;
+    uint8_t *bnr = s->banner_buf;
+    uint8_t *ic = s->i_c;
+    uint8_t *is = s->i_s;
+    uint8_t *sid = s->session_id;
+    uint8_t *esk = s->ecdh_sk;
+    uint8_t *epk = s->ecdh_pk;
     mem.set(s, 0, sizeof(*s));
+    s->v_c = vc;
+    s->banner_buf = bnr;
+    s->i_c = ic;
+    s->i_s = is;
+    s->session_id = sid;
+    s->ecdh_sk = esk;
+    s->ecdh_pk = epk;
     s->phase = SSH_PHASE_BANNER;
 }
 
@@ -626,6 +639,14 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
         return -1;
     }
 
+    // RFC 4253 sec 9: an exchange starts only when one is not already running. Between our KEXINIT
+    // and NEWKEYS one is, and before the identification strings none can, so a KEXINIT arriving in
+    // those phases is refused instead of discarding the state in flight.
+    if (s->phase == SSH_PHASE_BANNER || s->phase == SSH_PHASE_DH_INIT || s->phase == SSH_PHASE_NEWKEYS)
+    {
+        return -1;
+    }
+
     // Retain a copy as I_C for the exchange hash.
     if (len > SSH_KEXINIT_MAX)
     {
@@ -807,7 +828,7 @@ static void hash_u32(SshKexHash *h, uint32_t v)
 }
 
 // Hash an SSH string: uint32 length + raw bytes.
-static void hash_string(SshKexHash *h, const uint8_t *data, size_t len)
+void hash_string(SshKexHash *h, const uint8_t *data, size_t len)
 {
     hash_u32(h, (uint32_t)len);
     ssh_kexhash_update(h, data, len);
@@ -815,7 +836,7 @@ static void hash_string(SshKexHash *h, const uint8_t *data, size_t len)
 
 // Hash an SSH mpint from a fixed-width big-endian integer: strip leading zero
 // bytes, prepend a 0x00 if the top bit is set (to keep it positive).
-static void hash_mpint(SshKexHash *h, const uint8_t *be, size_t len)
+void hash_mpint(SshKexHash *h, const uint8_t *be, size_t len)
 {
     size_t off = 0;
     while (off < len && be[off] == 0)
@@ -1389,11 +1410,11 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
             return -1;
         }
         pc_bignum K;
-        bn_expmod_group14(&K, &e, &ssh_dh[i].y);
+        bn_expmod_group14(&K, &e, ssh_dh[i].y);
         bn_to_bytes(k_be, &K);
         pc_secure_wipe(&K, sizeof(K));
         mem.cpy(cpub, e_be, 256);
-        bn_to_bytes(spub, &ssh_dh[i].f);
+        bn_to_bytes(spub, ssh_dh[i].f);
     }
 
     // 2. Host-key blob K_S (per negotiated host-key algorithm).

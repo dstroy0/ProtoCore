@@ -101,6 +101,7 @@ PROTO_BEGIN_DECLS
 #define SSH_MSG_DISCONNECT 1
 #define SSH_MSG_IGNORE 2
 #define SSH_MSG_UNIMPLEMENTED 3
+#define SSH_MSG_DEBUG 4
 #define SSH_MSG_SERVICE_REQUEST 5
 #define SSH_MSG_SERVICE_ACCEPT 6
 #define SSH_MSG_EXT_INFO 7 // RFC 8308 extension negotiation
@@ -147,9 +148,10 @@ typedef struct
     // Default false = server (so existing server code is unchanged); ssh_pkt_set_client() flips it.
     proto_bool is_client;
 
-    // Receive reassembly: we may receive partial packets across TCP segments.
-    uint8_t rx_buf[SSH_PKT_BUF_SIZE]; ///< Raw receive buffer (from transport).
-    size_t rx_len;                    ///< Bytes currently in rx_buf.
+    // Receive reassembly: we may receive partial packets across TCP segments. rx_buf is the whole of
+    // the data packet region of the connection's span, at its own named offset.
+    uint8_t *rx_buf; ///< SSH_PKT_BUF_SIZE: raw receive buffer (from transport). Null until claimed.
+    size_t rx_len;   ///< Bytes currently in rx_buf.
 
     // One finished packet waiting for a worker to put it on the wire. The codec frames into
     // tx_wire and raises tx_ready; the worker sends from tx_off and lowers the flag when the last
