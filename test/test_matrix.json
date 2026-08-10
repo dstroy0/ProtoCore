@@ -1507,7 +1507,8 @@
         "+<network_drivers/session/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<core_setup/hal/host/host_nvs.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["unit/security/test_ikev2", "unit/security/test_ikev2_natt"],
       "extra_scripts": ["pre:test/ensure_test_keys.py"]
@@ -2743,7 +2744,8 @@
       "src": [
         "+<services/storage/config_store/config_store.c>",
         "+<core_setup/hal/host/host_nvs.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["unit/storage/test_config_store"]
     },
