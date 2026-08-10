@@ -566,6 +566,52 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## A zero-length TLS Handshake or Alert record was both sent and accepted
+
+- **Status:** FIXED 2026-08-09 (`tls_record.c` `pc_tls_record_protect` / `_unprotect`). Found
+  2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/tls13.md` #1).
+- **Symptom:** RFC 8446 sec 5.4: "Implementations MUST NOT send Handshake and Alert records that
+  have a zero-length TLSInnerPlaintext.content; if such a message is received, the receiving
+  implementation MUST terminate the connection with an 'unexpected_message' alert." Neither half
+  was implemented: `protect` would seal one and `unprotect` would hand it back as a valid record.
+- **Nothing can catch it:** `test_empty_plaintext_carries_only_the_type` sealed a zero-length alert
+  and asserted it was accepted, pinning both halves of the violation.
+- **Fix:** both directions refuse it, for Handshake and Alert only - application_data may be empty,
+  which is how a sender pads a stream, and there is a test holding that open. The receive-side test
+  builds the offending record through `protect` with a crafted content-type byte, since our own
+  `protect` now declines to build it directly. The sec 5.4 all-zero-inner and sec 5.2 record-overflow
+  guards were already correct but untested; both now have one. Verified: `native_tls_record` 20/20.
+
+## A TLS 1.3 ClientHello's cipher_suites and compression methods were read past
+
+- **Status:** FIXED 2026-08-09 (`tls13_msg.c`, `quic_tls.c`, `dtls_conn.c`, `tls_conn.c`). Found
+  2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/tls13.md` #2, #3).
+- **Symptom:** the parser read `cipher_suites` into a local and discarded it, and all three servers
+  answered `TLS_AES_128_GCM_SHA256` unconditionally - so a ClientHello that never offered that
+  suite got it in the ServerHello, against RFC 8446 sec 4.1.3. `legacy_compression_methods` was
+  likewise read and dropped, where sec 4.1.2 says it "MUST contain exactly one byte, set to zero"
+  and a TLS 1.3 server aborts on anything else.
+- **Fix:** the parser reports the offer as `offers_aes128gcm_sha256`, matching the `offers_tls13`
+  shape already in `Tls13ClientHello`, and all three servers refuse a ClientHello without it. The
+  compression rule is enforced in the parser, where a malformed field belongs.
+- **Note on the memory:** `Tls13ClientHello` lives inside the TLS connection's own borrow
+  (`tls_conn.c` `TLS_OFF_HELLO`), and `TLS_OFF_KS` is derived from `sizeof(Tls13ClientHello)`, so
+  growing the struct shifts the offsets after it. They follow correctly because they are computed
+  rather than written down, and the `PC_TLS_CONN_STATE_CAP` static_assert proves the slot still
+  covers them. Verified: 184/184 across all ten TLS/DTLS envs plus `native_crypto_kat`.
+
+## HKDF-Expand past 255 blocks silently reused earlier key material
+
+- **Status:** FIXED 2026-08-09 (`hkdf.c` `hkdf_expand`). Found 2026-08-08 auditing `test/` for RFC
+  conformance (`git_project/audit/tls13.md` #12).
+- **Symptom:** RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is one octet. The
+  counter was a `uint8_t` incremented without a bound, so a request for more than 8160 bytes wrapped
+  it and T(256) repeated T(1) - the output would silently reuse key material already emitted.
+- **Root cause:** the loop was written for the QUIC case, where the request never exceeds one hash
+  block; the general N-block form was correct but unbounded.
+- **Fix:** a request past the RFC's limit has no defined answer, so it produces none - the output is
+  zeroed rather than filled with repeating blocks. No in-tree caller comes close to the bound.
+
 ## HTTP/3 error codes had no correct frame to travel in
 
 - **Status:** FIXED 2026-08-09 (`quic_frame.c` `pc_quic_build_connection_close`, `quic_conn.c`
