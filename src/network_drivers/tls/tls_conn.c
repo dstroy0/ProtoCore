@@ -220,50 +220,46 @@ static int server_on_finished(TlsConn *c, const uint8_t *msg, size_t len)
 // The Ns
 // ---------------------------------------------------------------------------
 
-// The whole pool's bytes, owned by one instance (internal linkage): one borrow from the persistent
-// end covering every slot, taken on first use and never given back. One named owner, unreachable
-// cross-TU.
-typedef struct
+// The connection's persistent storage, split by offset. One borrow from the secure pool's
+// persistent end on first use, kept for the connection's life, so a connection that is initialised
+// again reuses the bytes it already holds.
+proto_bool tls_conn_slot_storage(TlsConn *c)
 {
-    uint8_t *base;
-} TlsConnPoolCtx;
-static TlsConnPoolCtx s_tls_conn;
-
-// Slot @p slot's own region. The pool is one borrow and every slot's bytes sit at its own offset
-// into it, so init runs again on a replaced connection without asking for more.
-static uint8_t *slot_region(uint8_t slot)
-{
-    if (slot >= MAX_TLS_CONNS)
+    if (c->tx != NULL)
     {
-        return NULL;
+        return PROTO_TRUE;
     }
-    if (s_tls_conn.base == NULL)
-    {
-        pc_span b = secure.persist_span((size_t)MAX_TLS_CONNS * PC_TLS_CONN_BORROW);
-        if (!pc_span_ok(b))
-        {
-            return NULL;
-        }
-        s_tls_conn.base = b.buf;
-    }
-    return s_tls_conn.base + (size_t)slot * PC_TLS_CONN_BORROW;
-}
-
-static proto_bool conn_init(TlsConn *c, uint8_t slot, TlsRole role, const TlsConnConfig *cfg)
-{
-    uint8_t *base = slot_region(slot);
-    if (base == NULL)
+    pc_span b = secure.persist_span(PC_TLS_CONN_BORROW);
+    if (!pc_span_ok(b))
     {
         return PROTO_FALSE;
     }
-    pc_secure_wipe(c, sizeof(*c));
-    pc_secure_wipe(base, PC_TLS_CONN_BORROW); // the previous tenant's key material does not carry over
-    c->tx = base + TLS_OFF_TX;
-    c->rx = base + TLS_OFF_RX;
-    c->terms = base + TLS_OFF_TERMS;
-    c->hash_work = base + TLS_OFF_HASH;
-    c->sign_work = base + TLS_OFF_SIGN;
-    c->hello = (Tls13ClientHello *)(base + TLS_OFF_HELLO);
+    c->tx = b.buf + TLS_OFF_TX;
+    c->rx = b.buf + TLS_OFF_RX;
+    c->terms = b.buf + TLS_OFF_TERMS;
+    c->hash_work = b.buf + TLS_OFF_HASH;
+    c->sign_work = b.buf + TLS_OFF_SIGN;
+    c->hello = (Tls13ClientHello *)(b.buf + TLS_OFF_HELLO);
+    return PROTO_TRUE;
+}
+
+static proto_bool conn_init(TlsConn *c, TlsRole role, const TlsConnConfig *cfg)
+{
+    if (!tls_conn_slot_storage(c))
+    {
+        return PROTO_FALSE;
+    }
+    // The bytes carry the previous tenant's key material; the pointers to them stay, or the next
+    // init would ask the persistent end for a second borrow it never gives back.
+    pc_secure_wipe(c->tx, PC_TLS_CONN_BORROW);
+    pc_secure_wipe(&c->ks, sizeof(c->ks));
+    pc_secure_wipe(&c->hs_tx, sizeof(c->hs_tx));
+    pc_secure_wipe(&c->hs_rx, sizeof(c->hs_rx));
+    pc_secure_wipe(&c->ap_tx, sizeof(c->ap_tx));
+    pc_secure_wipe(&c->ap_rx, sizeof(c->ap_rx));
+    c->hs_keys_ready = PROTO_FALSE;
+    c->ap_keys_ready = PROTO_FALSE;
+    c->alert = 0;
     c->cfg = cfg;
     c->role = role;
     c->state = TLS_CONN_START;

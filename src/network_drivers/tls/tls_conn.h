@@ -119,9 +119,9 @@ typedef struct
 /**
  * @brief One TLS 1.3 handshake over a stream. TlsConn is the caller's struct; this drives it.
  *
- * @var TlsConnNs::init         bind a connection to its slot, role and configuration. The slot
- *                              picks its region of the pool's one borrow, so a slot initialised
- *                              again reuses the bytes it already holds
+ * @var TlsConnNs::init         bind a connection to its role and configuration. The borrow is
+ *                              taken on first use and kept, so a connection initialised again
+ *                              reuses the bytes it already holds
  * @var TlsConnNs::start        client only: write the ClientHello; bytes written, or 0
  * @var TlsConnNs::process      the worker filled @ref TlsConn::rx with one record of @p rx_len bytes;
  *                              consume it, writing whatever it owes into @p out
@@ -132,7 +132,7 @@ typedef struct
  */
 typedef struct
 {
-    proto_bool (*init)(TlsConn *c, uint8_t slot, TlsRole role, const TlsConnConfig *cfg);
+    proto_bool (*init)(TlsConn *c, TlsRole role, const TlsConnConfig *cfg);
     size_t (*start)(TlsConn *c, uint8_t *out, size_t out_cap);
     int (*process)(TlsConn *c, size_t rx_len, uint8_t *out, size_t out_cap);
     proto_bool (*established)(const TlsConn *c);
