@@ -73,6 +73,7 @@ typedef struct
 #define QUIC_ERR_STREAM_LIMIT 0x04
 #define QUIC_ERR_FRAME_ENCODING 0x07     ///< a frame could not be decoded
 #define QUIC_ERR_PROTOCOL_VIOLATION 0x0a ///< a frame/packet violated the protocol
+#define QUIC_ERR_APPLICATION 0x0c        ///< the application abandoned the connection (sec 20.1)
 #define QUIC_ERR_CRYPTO_BASE 0x0100      ///< 0x0100 + the TLS alert code (RFC 9001 sec 4.8)
 
 /** @brief One parsed frame. Pointer fields alias the input buffer (not copied). */
@@ -136,9 +137,13 @@ size_t pc_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offs
                             proto_bool fin);
 /** @brief A MAX_DATA frame. */
 size_t pc_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max);
-/** @brief A transport CONNECTION_CLOSE (0x1c) with the triggering @p frame_type and a reason phrase. */
-size_t pc_quic_build_connection_close(uint8_t *out, size_t cap, uint64_t error_code, uint64_t frame_type,
-                                      const char *reason, size_t reason_len);
+/**
+ * @brief A CONNECTION_CLOSE with a reason phrase. @p app selects the application variant (0x1d),
+ * whose error code comes from the application protocol's space and which carries no @p frame_type;
+ * otherwise the transport variant (0x1c) reports @p frame_type as the frame that triggered it.
+ */
+size_t pc_quic_build_connection_close(uint8_t *out, size_t cap, proto_bool app, uint64_t error_code,
+                                      uint64_t frame_type, const char *reason, size_t reason_len);
 
 #endif // PC_ENABLE_HTTP3
 

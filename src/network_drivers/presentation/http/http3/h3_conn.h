@@ -87,8 +87,9 @@ typedef struct H3Conn
     H3RequestFn on_request;
     void *app;
     H3Settings peer_settings;
-    proto_bool control_opened; ///< our control + QPACK streams have been opened
-    uint64_t next_uni_id;      ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
+    proto_bool control_opened;     ///< our control + QPACK streams have been opened
+    proto_bool peer_settings_seen; ///< the peer's one SETTINGS frame has arrived (sec 6.2.1)
+    uint64_t next_uni_id;          ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
     H3Stream streams[PC_H3_MAX_STREAMS];
 } H3Conn;
 

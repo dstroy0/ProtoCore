@@ -724,7 +724,7 @@ void test_quic_recv_connection_close()
     pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[32];
-    size_t fl = pc_quic_build_connection_close(fr, sizeof(fr), QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = pc_quic_build_connection_close(fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
@@ -897,7 +897,7 @@ void test_quic_timeout_when_closed()
     QuicInitialSecrets init;
     pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
     uint8_t fr[32];
-    size_t fl = pc_quic_build_connection_close(fr, sizeof(fr), QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = pc_quic_build_connection_close(fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
@@ -1534,7 +1534,7 @@ void test_quic_conn_close_after_peer_close()
     pc_quic_derive_initial_secrets(tw,ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[32];
-    size_t fl = pc_quic_build_connection_close(fr, sizeof fr, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = pc_quic_build_connection_close(fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
@@ -1575,7 +1575,7 @@ void test_quic_conn_close_queued_then_peer_close()
 
     // The peer's CONNECTION_CLOSE arrives before we have sent ours: we are now draining too.
     uint8_t fr[32];
-    size_t fl = pc_quic_build_connection_close(fr, sizeof fr, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = pc_quic_build_connection_close(fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1,
                            &init.client, fr, fl);

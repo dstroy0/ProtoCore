@@ -101,6 +101,19 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
             break; // incomplete frame
         }
         const uint8_t *fp = st->buf + payload;
+        // sec 7.2.4: SETTINGS belongs to the control stream alone. sec 4.1: DATA before any
+        // HEADERS is an invalid frame sequence. Both are connection errors, and both were
+        // previously skipped over as if the frame were an unknown type.
+        if (fr.type == H3_SETTINGS || fr.type == H3_GOAWAY || fr.type == H3_MAX_PUSH_ID || fr.type == H3_CANCEL_PUSH)
+        {
+            h3_fail(h3, H3_FRAME_UNEXPECTED);
+            return;
+        }
+        if (fr.type == H3_DATA && !st->have_headers)
+        {
+            h3_fail(h3, H3_FRAME_UNEXPECTED);
+            return;
+        }
         if (fr.type == H3_HEADERS)
         {
             ReqEmit e = {st};
@@ -145,9 +158,20 @@ static void append(H3Stream *st, const uint8_t *data, size_t len)
     st->buf_len += len;
 }
 
+// Close the connection with an RFC 9114 sec 8.1 error code. HTTP/3 errors are the application's,
+// so they travel in a CONNECTION_CLOSE of type 0x1d; in the transport variant the same number
+// would name a completely different condition.
+static void h3_fail(H3Conn *h3, uint64_t error_code)
+{
+    if (h3->qc)
+    {
+        pc_quic_conn_close_app(h3->qc, error_code);
+    }
+}
+
 // Read the leading stream-type varint of a uni stream and set st->role; consumes it from the buffer.
 // Returns false if more bytes are needed (nothing consumed).
-static proto_bool pc_h3_classify_uni_stream(H3Stream *st)
+static proto_bool pc_h3_classify_uni_stream(H3Conn *h3, H3Stream *st)
 {
     uint64_t type = 0;
     size_t c = 0;
@@ -158,6 +182,15 @@ static proto_bool pc_h3_classify_uni_stream(H3Stream *st)
     st->type_read = PROTO_TRUE;
     if (type == 0x00)
     {
+        // sec 6.2.1: one control stream per peer. A second one claiming the role is fatal.
+        for (size_t i = 0; i < PC_H3_MAX_STREAMS; i++)
+        {
+            if (&h3->streams[i] != st && h3->streams[i].role == H3_ROLE_CONTROL)
+            {
+                h3_fail(h3, H3_STREAM_CREATION_ERROR);
+                return PROTO_FALSE;
+            }
+        }
         st->role = H3_ROLE_CONTROL;
     }
     else if (type == 0x02)
@@ -192,10 +225,27 @@ static void pc_h3_consume_control(H3Conn *h3, H3Stream *st)
         {
             break;
         }
+        // sec 6.2.1: SETTINGS is the first frame on the control stream, and sec 7.2.4 permits
+        // exactly one - a second would let the peer reconfigure the connection mid-flight.
+        if (fr.type != H3_SETTINGS && !h3->peer_settings_seen)
+        {
+            h3_fail(h3, H3_MISSING_SETTINGS);
+            return;
+        }
         if (fr.type == H3_SETTINGS)
         {
+            if (h3->peer_settings_seen)
+            {
+                h3_fail(h3, H3_FRAME_UNEXPECTED);
+                return;
+            }
+            h3->peer_settings_seen = PROTO_TRUE;
             pc_h3_settings_defaults(&h3->peer_settings);
-            pc_h3_parse_settings(st->buf + off + fr.header_len, (size_t)fr.length, &h3->peer_settings);
+            if (!pc_h3_parse_settings(st->buf + off + fr.header_len, (size_t)fr.length, &h3->peer_settings))
+            {
+                h3_fail(h3, H3_SETTINGS_ERROR);
+                return;
+            }
         }
         off += fr.header_len + (size_t)fr.length;
     }
@@ -221,9 +271,9 @@ static void on_stream_data(void *app, struct QuicConn *, uint64_t stream_id, con
     append(st, data, len);
 
     // A unidirectional stream begins with a stream-type varint; classify it once.
-    if (st->role != H3_ROLE_REQUEST && !st->type_read && st->buf_len >= 1 && !pc_h3_classify_uni_stream(st))
+    if (st->role != H3_ROLE_REQUEST && !st->type_read && st->buf_len >= 1 && !pc_h3_classify_uni_stream(h3, st))
     {
-        return; // need more bytes for the varint
+        return; // need more bytes for the varint, or the stream was refused
     }
 
     if (st->role == H3_ROLE_CONTROL)

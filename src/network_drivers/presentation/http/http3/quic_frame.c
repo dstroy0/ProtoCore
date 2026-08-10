@@ -335,12 +335,26 @@ size_t pc_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max)
     return pos;
 }
 
-size_t pc_quic_build_connection_close(uint8_t *out, size_t cap, uint64_t error_code, uint64_t frame_type,
-                                      const char *reason, size_t reason_len)
+size_t pc_quic_build_connection_close(uint8_t *out, size_t cap, proto_bool app, uint64_t error_code,
+                                      uint64_t frame_type, const char *reason, size_t reason_len)
 {
     size_t pos = 0;
-    if (!wr(out, cap, &pos, QUIC_FT_CONNECTION_CLOSE) || !wr(out, cap, &pos, error_code) ||
-        !wr(out, cap, &pos, frame_type) || !wr(out, cap, &pos, reason_len))
+    // RFC 9000 sec 19.19: the application variant (0x1d) carries error codes from the application
+    // protocol's own space and omits the Frame Type field entirely.
+    uint64_t type = QUIC_FT_CONNECTION_CLOSE;
+    if (app)
+    {
+        type = QUIC_FT_CONNECTION_CLOSE_APP;
+    }
+    if (!wr(out, cap, &pos, type) || !wr(out, cap, &pos, error_code))
+    {
+        return 0;
+    }
+    if (!app && !wr(out, cap, &pos, frame_type))
+    {
+        return 0;
+    }
+    if (!wr(out, cap, &pos, reason_len))
     {
         return 0;
     }

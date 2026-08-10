@@ -101,7 +101,7 @@ void test_max_data_and_close()
     TEST_ASSERT_EQUAL_INT((int)n, (int)pc_quic_frame_parse(b, n, &f));
     TEST_ASSERT_TRUE(f.type == QUIC_FT_MAX_DATA && f.max_data.max == 65536);
 
-    n = pc_quic_build_connection_close(b, sizeof b, 0x0a, QUIC_FT_STREAM, "bad", 3);
+    n = pc_quic_build_connection_close(b, sizeof b, PROTO_FALSE, 0x0a, QUIC_FT_STREAM, "bad", 3);
     TEST_ASSERT_EQUAL_INT((int)n, (int)pc_quic_frame_parse(b, n, &f));
     TEST_ASSERT_TRUE(f.type == QUIC_FT_CONNECTION_CLOSE && f.close.error_code == 0x0a);
     TEST_ASSERT_TRUE(f.close.frame_type == QUIC_FT_STREAM && f.close.reason_len == 3 && f.close.app == 0);
@@ -155,8 +155,8 @@ void test_builder_overflow()
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 1, 4, 100, d, 4, PROTO_TRUE));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 0, 0, 0, d, 4, PROTO_FALSE));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_max_data(b, 1, 1u << 30));
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(b, 1, 0x0a, 0, "x", 1));
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(b, 4, 0x0a, 0, "hello", 5)); // reason overflows
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(b, 1, PROTO_FALSE, 0x0a, 0, "x", 1));
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(b, 4, PROTO_FALSE, 0x0a, 0, "hello", 5)); // reason overflows
 }
 
 // Every parse guard: empty input, per-frame truncation, and an unhandled frame type.
@@ -412,11 +412,11 @@ void test_builder_capacity_sweep()
     }
 
     // CONNECTION_CLOSE with a multi-octet error code, frame type and reason.
-    need = pc_quic_build_connection_close(out, sizeof out, 1000, 2000, "reason", 6);
+    need = pc_quic_build_connection_close(out, sizeof out, PROTO_FALSE, 1000, 2000, "reason", 6);
     TEST_ASSERT_TRUE(need > 0);
     for (size_t cap = 0; cap < need; cap++)
     {
-        TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(out, cap, 1000, 2000, "reason", 6));
+        TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(out, cap, PROTO_FALSE, 1000, 2000, "reason", 6));
     }
 }
 
@@ -444,7 +444,7 @@ void test_builders_with_empty_bodies()
     TEST_ASSERT_EQUAL_UINT8(1, f.stream.fin);
 
     // CONNECTION_CLOSE with no reason phrase (what the engine emits).
-    n = pc_quic_build_connection_close(out, sizeof out, 0x0a, 0, NULL, 0);
+    n = pc_quic_build_connection_close(out, sizeof out, PROTO_FALSE, 0x0a, 0, NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_INT((int)n, (int)pc_quic_frame_parse(out, n, &f));
     TEST_ASSERT_EQUAL_UINT(QUIC_FT_CONNECTION_CLOSE, (unsigned)f.type);

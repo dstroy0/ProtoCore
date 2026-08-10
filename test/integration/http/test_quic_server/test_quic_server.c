@@ -835,7 +835,7 @@ void test_quic_server_close_reaped_before_idle()
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
 
     uint8_t cc_frames[64];
-    size_t cc_len = pc_quic_build_connection_close(cc_frames, sizeof(cc_frames), 0, 0, NULL, 0);
+    size_t cc_len = pc_quic_build_connection_close(cc_frames, sizeof(cc_frames), PROTO_FALSE, 0, 0, NULL, 0);
     uint8_t dg1[256];
     size_t dl1 = build_long(dg1, sizeof(dg1), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, cc_frames, cc_len);
