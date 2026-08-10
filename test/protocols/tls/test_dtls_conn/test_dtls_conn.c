@@ -1841,6 +1841,42 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
 // The bound peer address is optional and is clamped: a non-NULL address of length 0 binds nothing,
 // and an over-long address keeps only its first PC_DTLS_PEER_ADDR_MAX bytes. Either way the cookie the
 // server mints verifies against what it kept, so the retry is accepted.
+// RFC 9147 sec 4.3: a handshake message longer than the path's datagram is sent as several
+// fragments. flight_add used to emit one fragment covering the whole message whatever the path was,
+// so a server flight larger than the PMTU went out as one oversize datagram.
+static void test_flight_fragments_to_the_pmtu(void)
+{
+    uint8_t server_ed_pub[32];
+    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    DtlsServerConfig cfg;
+    server_cfg(&cfg, server_ed_pub);
+    cfg.pmtu = 256;
+
+    DtlsConn conn;
+    pc_sha256_ctx tr;
+    uint8_t flight[2048];
+    int fl = drive_server_flight(&conn, &cfg, &tr, flight, sizeof(flight));
+    TEST_ASSERT_TRUE(fl > 0);
+
+    // The flight is five messages; at this path size the Certificate alone needs several fragments.
+    TEST_ASSERT_TRUE(conn.flight_count > 5);
+
+    // Each buffered fragment still fits one datagram once its record is wrapped around it.
+    for (uint8_t i = 0; i < conn.flight_count; i++)
+    {
+        TEST_ASSERT_TRUE(conn.flight_msgs[i].len + PC_DTLS_REC_OVERHEAD_MAX <= cfg.pmtu);
+    }
+
+    // The default path takes the same flight in fewer, larger fragments.
+    DtlsServerConfig wide;
+    server_cfg(&wide, server_ed_pub);
+    DtlsConn conn2;
+    pc_sha256_ctx tr2;
+    uint8_t flight2[2048];
+    TEST_ASSERT_TRUE(drive_server_flight(&conn2, &wide, &tr2, flight2, sizeof(flight2)) > 0);
+    TEST_ASSERT_TRUE(conn2.flight_count < conn.flight_count);
+}
+
 // RFC 9147 sec 5.1 binds the cookie to the client's address, so "a cookie minted for one peer is
 // worthless to another". Nothing drove that at the connection level: the round trip above mints and
 // spends a cookie on one connection, which passes whether or not the address is in the MAC.
@@ -2164,6 +2200,7 @@ int main(void)
     RUN_TEST(test_forged_record_does_not_end_the_association);
     RUN_TEST(test_app_records_before_and_after_established);
     RUN_TEST(test_conn_id_edge_cases);
+    RUN_TEST(test_flight_fragments_to_the_pmtu);
     RUN_TEST(test_cookie_is_worthless_to_another_peer);
     RUN_TEST(test_peer_addr_zero_length_and_clamped);
     RUN_TEST(test_hrr_retry_without_keyshare_rejected);
