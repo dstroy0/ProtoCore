@@ -3,5 +3,8 @@ name: "ProtoCore CodeQL config"
 # Analyze only our own source. PlatformIO downloads third-party dependencies
 # (e.g. the Unity test framework) into .pio/libdeps; those are not our code, so
 # their findings are noise (they recurred as cpp/irregular-enum-init alerts).
+# .pio sits at the repo root, so the pattern has to be anchored there: a leading "**/" matches
+# path segments BEFORE .pio, of which there are none, and the littlefs alerts came through anyway.
 paths-ignore:
+  - ".pio/**"
   - "**/.pio/**"
