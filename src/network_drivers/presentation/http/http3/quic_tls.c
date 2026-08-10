@@ -190,6 +190,13 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
         uint8_t server_pub[32];
         pc_x25519(x_ss, qt->cfg.ephemeral_priv, ch.client_x25519);
         pc_x25519_base(server_pub, qt->cfg.ephemeral_priv);
+        // RFC 8446 sec 7.4.2 on the X25519 half: the ML-KEM half does not excuse it.
+        if (pc_ct_is_zero(x_ss, sizeof(x_ss)))
+        {
+            mem.zero(x_ss, sizeof(x_ss));
+            fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
+            return PROTO_FALSE;
+        }
         mem.cpy(server_share + MLKEM768_CT_BYTES, server_pub, 32);
         mem.cpy(ecdhe, ml_ss, 32);
         mem.cpy(ecdhe + 32, x_ss, 32);
@@ -204,6 +211,12 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     {
         pc_x25519(ecdhe, qt->cfg.ephemeral_priv, ch.client_x25519);
         pc_x25519_base(server_share, qt->cfg.ephemeral_priv);
+        // RFC 8446 sec 7.4.2: an all-zero shared secret means a low-order peer key share.
+        if (pc_ct_is_zero(ecdhe, 32))
+        {
+            fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
+            return PROTO_FALSE;
+        }
         ecdhe_len = 32;
         share_len = 32;
         group = TLS_GROUP_X25519;

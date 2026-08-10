@@ -390,6 +390,14 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     pc_x25519(ecdhe, c->cfg.ephemeral_priv, ch.client_x25519);
     pc_x25519_base(server_share, c->cfg.ephemeral_priv);
 
+    // RFC 8446 sec 7.4.2: the shared secret is all-zero exactly when the peer's key share is a
+    // low-order point, so accepting it keys the connection off a value the peer already knows.
+    if (pc_ct_is_zero(ecdhe, sizeof(ecdhe)))
+    {
+        pc_secure_wipe(ecdhe, sizeof(ecdhe));
+        return fail(c, ALERT_ILLEGAL_PARAMETER);
+    }
+
     pc_sha256_update(&c->transcript, msg, msg_len); // transcript: ClientHello (CH2 when an HRR preceded it)
 
     flight_reset(c); // this ClientHello starts a fresh server flight (ServerHello..Finished)

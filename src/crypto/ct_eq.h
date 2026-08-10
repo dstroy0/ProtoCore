@@ -43,4 +43,22 @@ static inline proto_bool pc_ct_eq(const void *a, const void *b, size_t n)
     return diff == 0;
 }
 
+/**
+ * @brief Constant-time test that the @p n bytes at @p p are all zero.
+ *
+ * X25519 yields an all-zero shared secret exactly when the peer's key share is a low-order point,
+ * and RFC 8446 sec 7.4.2 makes aborting on that a MUST. Every byte is read for the same reason
+ * pc_ct_eq reads every byte: the answer must not tell the peer where the first non-zero sits.
+ */
+static inline proto_bool pc_ct_is_zero(const void *p, size_t n)
+{
+    const uint8_t *b = (const uint8_t *)p;
+    uint8_t acc = 0;
+    for (size_t i = 0; i < n; i++)
+    {
+        acc |= b[i];
+    }
+    return acc == 0;
+}
+
 #endif // PROTOCORE_CT_EQ_H
