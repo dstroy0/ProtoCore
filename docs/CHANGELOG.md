@@ -6,6 +6,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+<<<<<<< Updated upstream
+=======
+- the outbound frame borrows from the plaintext arena HTTP works out of ([`ce0a1e0`](https://github.com/dstroy0/ProtoCore/commit/ce0a1e0f0e37eaa39783f537d9ba922fed30f7fd))
+>>>>>>> Stashed changes
 - DATA on an idle or closed stream is refused before the app sees it (RFC 9113 sec 5.1, 6.1) ([`0815504`](https://github.com/dstroy0/ProtoCore/commit/081550456121a0be6b6f403f65224d06902a0871))
 - an oversize dynamic-table size update is a decoding error, not a clamp ([`7ad71ec`](https://github.com/dstroy0/ProtoCore/commit/7ad71ecd09f64cdb92bca93630b5b6972b948c0a))
 - a prefix integer that overflows 32 bits is a decoding error (RFC 7541 sec 5.1) ([`ca9bf33`](https://github.com/dstroy0/ProtoCore/commit/ca9bf33a79b8207117112edd725ab96ab9712928))
@@ -71,6 +75,7 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - update CHANGELOG.md [skip ci] ([`0ca5aa3`](https://github.com/dstroy0/ProtoCore/commit/0ca5aa31c7dcc7d6f733a332050aaf205c2ad4d6))
 >>>>>>> Stashed changes
@@ -79,6 +84,12 @@ All notable changes to ProtoCore are documented here.
 - update CHANGELOG.md [skip ci] ([`0ca5aa3`](https://github.com/dstroy0/ProtoCore/commit/0ca5aa31c7dcc7d6f733a332050aaf205c2ad4d6))
 >>>>>>> Stashed changes
 =======
+- update CHANGELOG.md [skip ci] ([`2e628e9`](https://github.com/dstroy0/ProtoCore/commit/2e628e970b9504975da0937c99a646238b76de1a))
+- update CHANGELOG.md [skip ci] ([`91ee224`](https://github.com/dstroy0/ProtoCore/commit/91ee224db5ce71c31b243adf168ea34f71094464))
+- update CHANGELOG.md [skip ci] ([`0ca5aa3`](https://github.com/dstroy0/ProtoCore/commit/0ca5aa31c7dcc7d6f733a332050aaf205c2ad4d6))
+>>>>>>> Stashed changes
+=======
+- update CHANGELOG.md [skip ci] ([`261d19f`](https://github.com/dstroy0/ProtoCore/commit/261d19f6ae47e743140e2e4fb952a56fd6a87dea))
 - update CHANGELOG.md [skip ci] ([`2e628e9`](https://github.com/dstroy0/ProtoCore/commit/2e628e970b9504975da0937c99a646238b76de1a))
 - update CHANGELOG.md [skip ci] ([`91ee224`](https://github.com/dstroy0/ProtoCore/commit/91ee224db5ce71c31b243adf168ea34f71094464))
 - update CHANGELOG.md [skip ci] ([`0ca5aa3`](https://github.com/dstroy0/ProtoCore/commit/0ca5aa31c7dcc7d6f733a332050aaf205c2ad4d6))
@@ -226,6 +237,7 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
 >>>>>>> Stashed changes
@@ -246,12 +258,18 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 >>>>>>> Stashed changes
 =======
+=======
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cf16e2d`](https://github.com/dstroy0/ProtoCore/commit/cf16e2d0ddc42f24690ec83b5541421f0579515f))
+>>>>>>> Stashed changes
 - close the HPACK size-update clamp ([`63327f7`](https://github.com/dstroy0/ProtoCore/commit/63327f78a94260eb08f340d92a0135fa135ee248))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c934425`](https://github.com/dstroy0/ProtoCore/commit/c93442507cdefbb53dea4ad8615718b877312ebb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`dfd250d`](https://github.com/dstroy0/ProtoCore/commit/dfd250d8f13fe2ee2486c2cfda02764c5053f479))
 - close the HPACK prefix-integer overflow ([`4eaeb4e`](https://github.com/dstroy0/ProtoCore/commit/4eaeb4e741423de906cd02498ec0da8796cfc9a2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d7819ac`](https://github.com/dstroy0/ProtoCore/commit/d7819ac42f95fd4327be7fc3a754c59b69fe6fd3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e15b083`](https://github.com/dstroy0/ProtoCore/commit/e15b0835aaa06dfabe9bef5678b739cad36d7298))
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -315,7 +333,10 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -333,6 +354,9 @@ All notable changes to ProtoCore are documented here.
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
