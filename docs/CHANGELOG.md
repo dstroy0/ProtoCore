@@ -6,6 +6,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+<<<<<<< Updated upstream
+=======
+- illegal_parameter for a bad cookie, abort a non-empty legacy_cookie, and RFC 7250 outcome 2 ([`50d3c3b`](https://github.com/dstroy0/ProtoCore/commit/50d3c3b809cee1312fe2c599b57850f75e291da7))
+>>>>>>> Stashed changes
 - the key schedule reaches its own region by field, like the rest ([`6795e0e`](https://github.com/dstroy0/ProtoCore/commit/6795e0eab3457b01e4d44fe3cf2e6cbeceec001a))
 - reach the connection's own storage, like ssh_pkt_slot_storage ([`c15ab56`](https://github.com/dstroy0/ProtoCore/commit/c15ab56bd1951e70a1151ddd497af05f51ddc205))
 - the slot picks its region of the pool's one borrow ([`636c63f`](https://github.com/dstroy0/ProtoCore/commit/636c63f6bd4aad781942a185f4e87f54f8f7f825))
@@ -260,6 +264,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+<<<<<<< Updated upstream
+=======
+- log the tls_conn borrow leak and the unbuildable portable arm ([`f60a13d`](https://github.com/dstroy0/ProtoCore/commit/f60a13d9ad847bd66d28ce7ce6f751faec7e5048))
+>>>>>>> Stashed changes
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`daf3083`](https://github.com/dstroy0/ProtoCore/commit/daf3083dd5054b6d2a6a0d895453f01908c5dc59))
 - log the HKDF-Expand vector gap ([`e94e498`](https://github.com/dstroy0/ProtoCore/commit/e94e49804eaa98e3efbbb8eb2d6104e2ab4bdbd8))
 - log the TLS record, ClientHello and HKDF bound fixes ([`61a17d0`](https://github.com/dstroy0/ProtoCore/commit/61a17d07e3f91b75a2916cbb5cff1993b10c5e54))
@@ -341,6 +349,11 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+<<<<<<< Updated upstream
+=======
+- anchor the handshake secrets on the RFC 8448 sec 5 trace ([`a72d6b4`](https://github.com/dstroy0/ProtoCore/commit/a72d6b4412c20de19702b23957d299b4396c1154))
+- one slot, re-initialised per case ([`caf6c9e`](https://github.com/dstroy0/ProtoCore/commit/caf6c9ea4eacd682dd5dd060888b44b50d70edcd))
+>>>>>>> Stashed changes
 - the connection is a pool slot, zeroed before first use ([`c16259a`](https://github.com/dstroy0/ProtoCore/commit/c16259a65df59925311024ff89bab1a830391c69))
 - drive the server half with a hand-built ClientHello ([`909ee46`](https://github.com/dstroy0/ProtoCore/commit/909ee46f8c097c69f79455e1ace53c9adacb523d))
 - PC_TLS_SOFTWARE derives from PC_ENABLE_TLS on host ([`8a24254`](https://github.com/dstroy0/ProtoCore/commit/8a24254e29389eec6c4be3eb440d0f1cd3dd32ce))
