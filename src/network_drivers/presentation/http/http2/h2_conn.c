@@ -44,19 +44,20 @@ static_assert(PC_WORK_H2_CONN >= (size_t)MAX_CONNS * PC_H2_CONN_BORROW,
 // borrow it already holds, because the persistent end is never given back.
 static proto_bool h2_conn_slot_storage(H2Conn *c)
 {
-    if (c->fbuf != NULL)
+    uint8_t *base = c->fbuf; // H2_OFF_FBUF is 0, so the borrow is recoverable from the first field
+    if (base == NULL)
     {
-        return PROTO_TRUE;
+        pc_span b = pc_plaintext_persist_span(PC_H2_CONN_BORROW);
+        if (!pc_span_ok(b))
+        {
+            return PROTO_FALSE;
+        }
+        base = b.buf;
     }
-    pc_span b = pc_plaintext_persist_span(PC_H2_CONN_BORROW);
-    if (!pc_span_ok(b))
-    {
-        return PROTO_FALSE;
-    }
-    c->fbuf = b.buf + H2_OFF_FBUF;
-    c->hblock = b.buf + H2_OFF_HBLOCK;
-    c->hscratch = (char *)(b.buf + H2_OFF_HSCRATCH);
-    c->fhdr = b.buf + H2_OFF_FHDR;
+    c->fbuf = base + H2_OFF_FBUF;
+    c->hblock = base + H2_OFF_HBLOCK;
+    c->hscratch = (char *)(base + H2_OFF_HSCRATCH);
+    c->fhdr = base + H2_OFF_FHDR;
     return PROTO_TRUE;
 }
 
