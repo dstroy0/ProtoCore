@@ -90,6 +90,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`a841ab2`](https://github.com/dstroy0/ProtoCore/commit/a841ab20a007fd81dbad16bfd9beecac66cdb1a1))
 - update CHANGELOG.md [skip ci] ([`2de6874`](https://github.com/dstroy0/ProtoCore/commit/2de6874d5d2bd5508f35cbebe9a1d6f260a3a54e))
 - update CHANGELOG.md [skip ci] ([`7a6b444`](https://github.com/dstroy0/ProtoCore/commit/7a6b444c608ec94e722e8eb90a59793116dd7007))
 - update CHANGELOG.md [skip ci] ([`06d3060`](https://github.com/dstroy0/ProtoCore/commit/06d306022e5167a410ee145a72e8527c49d42c77))
@@ -244,6 +245,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Revert "refactor(http2): the connection borrows its buffers and asserts its term" ([`272c11b`](https://github.com/dstroy0/ProtoCore/commit/272c11be6d3641bc53cf3d2f241ef41767eacc47))
 - KDF chain accumulates at an offset in the caller's region, not the stack ([`12e317a`](https://github.com/dstroy0/ProtoCore/commit/12e317abd50b543706a2bb8d3774297395327f99))
 - per-direction cipher/MAC, derived into the connection that owns the memory ([`cdd1463`](https://github.com/dstroy0/ProtoCore/commit/cdd14633c9eb040eb6fd6c2d567f319061a01a40))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`809e9c2`](https://github.com/dstroy0/ProtoCore/commit/809e9c2f971758db8454c867e1a55aba54ac1d15))
@@ -364,6 +366,12 @@ All notable changes to ProtoCore are documented here.
 ### Testing
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+- decode legal S=0 and L=0 records ([`e13b02b`](https://github.com/dstroy0/ProtoCore/commit/e13b02bdc94c7577ada3f03be2080b5f8e9d05ad))
+- a path small enough that this flight actually splits ([`5e8cd7d`](https://github.com/dstroy0/ProtoCore/commit/5e8cd7d117a7382b5fda6e45a39f0a9260a7f924))
+- the flight fragments to the connection's PMTU ([`75c756f`](https://github.com/dstroy0/ProtoCore/commit/75c756f868e36a6c8926d6e7b32cc27eba6ad49f))
+>>>>>>> Stashed changes
 =======
 - decode legal S=0 and L=0 records ([`e13b02b`](https://github.com/dstroy0/ProtoCore/commit/e13b02bdc94c7577ada3f03be2080b5f8e9d05ad))
 - a path small enough that this flight actually splits ([`5e8cd7d`](https://github.com/dstroy0/ProtoCore/commit/5e8cd7d117a7382b5fda6e45a39f0a9260a7f924))
