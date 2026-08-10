@@ -112,6 +112,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`4c3c169`](https://github.com/dstroy0/ProtoCore/commit/4c3c16976a4206831eb2e88ef213030729329d3e))
 - update CHANGELOG.md [skip ci] ([`3b8e14d`](https://github.com/dstroy0/ProtoCore/commit/3b8e14df74ca6de0d64324b75472deabcd525971))
 - update CHANGELOG.md [skip ci] ([`14783ab`](https://github.com/dstroy0/ProtoCore/commit/14783ab055a78211d18273f67540bf5ed45ee975))
 - update CHANGELOG.md [skip ci] ([`312be6f`](https://github.com/dstroy0/ProtoCore/commit/312be6f3d9ec7e929505dd9f5a6133dab6dd7f33))
@@ -469,6 +470,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the aead runner sealed every vector, including the rejection ones ([`51e1d43`](https://github.com/dstroy0/ProtoCore/commit/51e1d43d63ae70cc6d59216e59838d0e1a4f0d43))
 - regenerate kat_data.inc, which the corpus changes had not reached ([`6092c2e`](https://github.com/dstroy0/ProtoCore/commit/6092c2e28a4e147d90458174a245fd15d14b08d5))
 - the ed25519 runner asserted vector metadata; RFC 8032 TEST 1024 was absent ([`f60ab02`](https://github.com/dstroy0/ProtoCore/commit/f60ab02ba24e5c66a6aa2be2a6d7092b87c1db69))
 - pc_ct_eq had no test; every tag and MAC check goes through it ([`e465c91`](https://github.com/dstroy0/ProtoCore/commit/e465c9123e59f4ec03dd90bdb7eaab031440dfa2))
