@@ -32,7 +32,11 @@ from tools.ci_tooling.lib import baseline as bl
 # `.parent.parent.parent` counted to tools/, so SRC was tools/src - nonexistent, and the guard
 # scanned nothing and passed vacuously. findroot walks to the real root regardless of depth.
 ROOT = Path(findroot.root())
+# src/ is the library and core_setup/ is the board seam compiled into the same firmware.
+# core_setup/ used to sit under src/ and was walked with it; when it moved to the repo root the
+# walk did not follow. Both are checked.
 SRC = ROOT / "src"
+ROOTS = (SRC, ROOT / "core_setup")
 
 # The linkage half of the rule is ratcheted, not absolute: it was never enforced, so the tree
 # carries contexts that are named right and linked wrong. Recorded so the count can only fall -
@@ -166,7 +170,7 @@ EXTERN_CTX_RE = re.compile(r"^\s*extern\s+(?P<type>[A-Za-z_]\w*)\s+(?P<name>[A-Z
 def scan_extern_ctx():
     """Headers must not publish a context type by `extern` - that is shared state, not an owner."""
     out = []
-    for hdr in sorted(SRC.rglob("*.h")):
+    for hdr in sorted(h for r in ROOTS for h in r.rglob("*.h")):
         for i, line in enumerate(hdr.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             m = EXTERN_CTX_RE.match(line)
             if not m or m.group("name") in SHARED_SUBSTRATE:
@@ -179,7 +183,7 @@ def scan_extern_ctx():
 def main(argv) -> int:
     loose = []  # not a context at all - absolute, fails on sight
     linkage = []  # a context, but external linkage - ratcheted
-    for cpp in sorted(p for p in SRC.rglob("*") if p.suffix in (".c", ".cpp")):
+    for cpp in sorted(p for r in ROOTS for p in r.rglob("*") if p.suffix in (".c", ".cpp")):
         anon_depth = -1  # brace depth at which an anonymous namespace opened, or -1
         depth = 0
         for i, line in enumerate(cpp.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
