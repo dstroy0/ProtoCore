@@ -853,9 +853,12 @@ static inline proto_bool kex_is_sha512(SshKexAlg a)
 // canonical minimal encoding.
 // @p out holds SSH_KEXHASH_MAX_LEN; the exchange-hash length (32 or 64) is written to @p out_len and
 // selected by @p is512 (the negotiated KEX's hash). Returns 0, or -1 on a bad slot.
+// @p out takes the digest @p is512 selects - PC_SHA256_DIGEST_LEN or PC_SHA512_DIGEST_LEN - so its
+// extent is not a constant and the parameter cannot carry one: declaring SSH_KEXHASH_MAX_LEN here
+// told the compiler every caller hands over 64 bytes, which the SHA-256 entry point does not.
 static int compute_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint8_t *cpub, size_t cpub_len,
                                  const uint8_t *spub, size_t spub_len, const uint8_t *k_be, size_t k_len,
-                                 const uint8_t *ks, size_t ks_len, uint8_t out[SSH_KEXHASH_MAX_LEN], size_t *out_len,
+                                 const uint8_t *ks, size_t ks_len, uint8_t *out, size_t *out_len,
                                  proto_bool k_is_string, proto_bool is512)
 {
     if (i >= MAX_SSH_CONNS)
