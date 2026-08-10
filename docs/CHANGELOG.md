@@ -95,6 +95,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- the .pio ignore never matched, so vendored littlefs kept reporting ([`c4368d3`](https://github.com/dstroy0/ProtoCore/commit/c4368d3862d2c8a99c1c85093aa503695ee251d4))
+- update CHANGELOG.md [skip ci] ([`a2f994f`](https://github.com/dstroy0/ProtoCore/commit/a2f994f818cab261501bf036b444ede0f28ad8fa))
 - update CHANGELOG.md [skip ci] ([`ab67473`](https://github.com/dstroy0/ProtoCore/commit/ab674734caf80f35155c0ab331fd28d10dac3714))
 - update CHANGELOG.md [skip ci] ([`88c3cff`](https://github.com/dstroy0/ProtoCore/commit/88c3cff9e03ddc7590103ce435477f4380055d16))
 - update CHANGELOG.md [skip ci] ([`4a7b548`](https://github.com/dstroy0/ProtoCore/commit/4a7b548a62f40fe201786dca538dbebd94515f60))
