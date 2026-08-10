@@ -108,6 +108,28 @@ static void test_sha256_len64_pads_a_whole_block(void)
     sha256_bound_case(64, "39e3d7b6b5d075d37d053ad89b24b41bef4f3c29760c84447cab3f3be1882241");
 }
 
+// RFC 8017 lists the DER encoding of DigestInfo for each hash, and these are those bytes. Every
+// other PKCS#1 assertion in this file compares a signature against pc_pkcs1_*_digestinfo - the same
+// constant pc_rsa_sign_sw built it from - so a wrong OID would agree with itself and pass. This is
+// the one place the encoding is checked against something outside the library.
+static void test_pkcs1_digestinfo_matches_rfc8017(void)
+{
+    // SHA-256: (0x)30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 || H
+    static const uint8_t sha256_want[19] = {0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+                                            0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20};
+    // SHA-512: (0x)30 51 30 0d 06 09 60 86 48 01 65 03 04 02 03 05 00 04 40 || H
+    static const uint8_t sha512_want[19] = {0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+                                            0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40};
+
+    TEST_ASSERT_EQUAL_UINT32(sizeof(sha256_want), (uint32_t)PC_PKCS1_DIGESTINFO_LEN);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(sha256_want, pc_pkcs1_sha256_digestinfo, sizeof(sha256_want),
+                                     "SHA-256 DigestInfo prefix");
+
+    TEST_ASSERT_EQUAL_UINT32(sizeof(sha512_want), (uint32_t)PC_PKCS1_SHA512_DIGESTINFO_LEN);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(sha512_want, pc_pkcs1_sha512_digestinfo, sizeof(sha512_want),
+                                     "SHA-512 DigestInfo prefix");
+}
+
 static void test_sha256_empty(void)
 {
     // SHA256("") = e3b0c44298fc1c149afb...
@@ -1867,6 +1889,7 @@ int main(void)
     RUN_TEST(test_ghash_table_matches_bitwise);
 
     // SHA-256
+    RUN_TEST(test_pkcs1_digestinfo_matches_rfc8017);
     RUN_TEST(test_sha256_empty);
     RUN_TEST(test_sha256_len55_fills_one_block);
     RUN_TEST(test_sha256_len63_spills_the_length);
