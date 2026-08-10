@@ -600,6 +600,27 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   rather than written down, and the `PC_TLS_CONN_STATE_CAP` static_assert proves the slot still
   covers them. Verified: 184/184 across all ten TLS/DTLS envs plus `native_crypto_kat`.
 
+## HKDF-Expand had no published-vector coverage at all
+
+- **Status:** FIXED 2026-08-09 (`hkdf.h` `pc_hkdf_expand`, `test_crypto_kat.c`, the RFC 5869 vector
+  file and its curator/generator). Found 2026-08-08 auditing `test/` for RFC conformance
+  (`git_project/audit/tls13.md` #5, #11).
+- **Symptom:** the vector file carried `salt`/`ikm`/`prk` and the suite called only
+  `pc_hkdf_extract`. Expand - the half that derives every TLS and QUIC traffic key - was checked
+  against nothing published. The only >32-byte check anywhere was `test_quic_crypto.c`'s
+  `expand_label_ref`, a line-by-line mirror of the same T(i) loop in the same file, so a shared
+  convention error (T(0) as 32 zeros rather than empty) agreed with itself and passed.
+- **Root cause of the gap:** only `pc_hkdf_expand_label` was public, and it wraps `info` in the
+  RFC 8446 HkdfLabel structure. RFC 5869 Appendix A expands an arbitrary `info`, so its vectors
+  could not reach the code through the exported surface at all.
+- **Fix:** `pc_hkdf_expand` is exported - the bare sec 2.3 primitive the file already implemented
+  internally, which is what the RFC's own vectors address. The vector file, its curator and the
+  generator field list now carry `info`, `L` and `OKM` for A.1-A.3, and both halves run. A.2 asks
+  for 82 bytes, three SHA-256 blocks, which is the only published multi-block case and the first
+  external check the T(i) chain has ever had. The mirror in `test_quic_crypto.c` stays, narrowed to
+  what it alone covers - that the HkdfLabel wrapper feeds the chain the right info block - and its
+  comment now names the external anchor. Verified: 201/201 across twelve crypto/TLS/DTLS envs.
+
 ## HKDF-Expand past 255 blocks silently reused earlier key material
 
 - **Status:** FIXED 2026-08-09 (`hkdf.c` `hkdf_expand`). Found 2026-08-08 auditing `test/` for RFC
