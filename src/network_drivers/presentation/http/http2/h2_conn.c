@@ -95,43 +95,66 @@ static void send_rst(H2Conn *c, pc_span f, uint32_t stream_id, uint32_t err)
     wr(c, f.buf, n);
 }
 
-// HPACK emit context: routes each decoded header to the app callback with the stream id.
+// One header block being decoded: the connection, the stream it arrived on, the dispatcher's borrow
+// that any resulting control frame is staged in, and whether the block ends the stream.
 typedef struct
 {
     H2Conn *c;
     uint32_t stream_id;
-} EmitCtx;
+    pc_span f;
+    proto_bool end_stream;
+} H2Block;
+
 static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char *val, size_t vl)
 {
-    EmitCtx *e = (EmitCtx *)ctx;
-    if (e->c->cb.on_header)
+    H2Block *b = (H2Block *)ctx;
+    if (b->c->cb.on_header)
     {
-        e->c->cb.on_header(e->c->cb.app, e->stream_id, name, nl, val, vl);
+        b->c->cb.on_header(b->c->cb.app, b->stream_id, name, nl, val, vl);
     }
     return PROTO_TRUE;
 }
 
 // Decode a complete request header block and deliver it to the application.
-static proto_bool decode_block(H2Conn *c, uint32_t stream_id, const uint8_t *block, size_t len, proto_bool end_stream)
+static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
 {
-    EmitCtx e = {c, stream_id};
-    if (!pc_hpack_decode(&c->hdec, block, len, c->hscratch, sizeof c->hscratch, emit_header, &e))
+    H2Conn *c = b->c;
+    if (!pc_hpack_decode(&c->hdec, block, len, c->hscratch, sizeof c->hscratch, emit_header, b))
     {
         return PROTO_FALSE; // COMPRESSION_ERROR
     }
+    proto_bool well_formed = PROTO_TRUE;
     if (c->cb.on_headers_end)
     {
-        c->cb.on_headers_end(c->cb.app, stream_id, end_stream);
+        well_formed = c->cb.on_headers_end(c->cb.app, b->stream_id, b->end_stream);
     }
-    H2Stream *s = find_stream(c, stream_id);
+    if (!well_formed)
+    {
+        // RFC 9113 sec 8.1.1: a malformed request kills the stream, not the connection.
+        send_rst(c, b->f, b->stream_id, H2_PROTOCOL_ERROR);
+        H2Stream *dead = find_stream(c, b->stream_id);
+        if (dead)
+        {
+            dead->id = 0; // free the slot
+        }
+        return PROTO_TRUE;
+    }
+    H2Stream *s = find_stream(c, b->stream_id);
     if (s)
     {
-        s->state = end_stream ? H2_ST_HALF_CLOSED : H2_ST_OPEN;
+        if (b->end_stream)
+        {
+            s->state = H2_ST_HALF_CLOSED;
+        }
+        else
+        {
+            s->state = H2_ST_OPEN;
+        }
     }
     return PROTO_TRUE;
 }
 
-static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload)
+static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, pc_span f)
 {
     if (h->stream_id == 0 || (h->stream_id & 1) == 0)
     {
@@ -179,7 +202,8 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
 
     if (h->flags & H2_FLAG_END_HEADERS)
     {
-        return decode_block(c, h->stream_id, p, plen, end_stream);
+        H2Block b = {c, h->stream_id, f, end_stream};
+        return decode_block(&b, p, plen);
     }
     // Spans CONTINUATION frames: buffer the fragment.
     if (plen > sizeof c->hblock)
@@ -194,7 +218,7 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
     return PROTO_TRUE;
 }
 
-static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload)
+static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, pc_span f)
 {
     if (!c->in_header_block || h->stream_id != c->hblock_stream)
     {
@@ -209,7 +233,8 @@ static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const u
     if (h->flags & H2_FLAG_END_HEADERS)
     {
         c->in_header_block = PROTO_FALSE;
-        return decode_block(c, c->hblock_stream, c->hblock, c->hblock_len, c->hblock_end_stream);
+        H2Block b = {c, c->hblock_stream, f, c->hblock_end_stream};
+        return decode_block(&b, c->hblock, c->hblock_len);
     }
     return PROTO_TRUE;
 }
@@ -345,9 +370,9 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
         return PROTO_TRUE;
     }
     case H2_HEADERS:
-        return handle_headers(c, &h, payload);
+        return handle_headers(c, &h, payload, f);
     case H2_CONTINUATION:
-        return handle_continuation(c, &h, payload);
+        return handle_continuation(c, &h, payload, f);
     case H2_DATA:
         return handle_data(c, &h, payload, f);
     case H2_RST_STREAM: {
