@@ -190,7 +190,8 @@ static int server_on_client_hello(TlsConn *c, const uint8_t *msg, size_t len, ui
     }
     // One profile: TLS 1.3, X25519 with the share up front, Ed25519. No HelloRetryRequest - the
     // stream side has no cookie to bind, so a client that omits the share is refused.
-    if (!c->hello->offers_tls13 || !c->hello->offers_x25519 || !c->hello->has_key_share || !c->hello->offers_ed25519)
+    if (!c->hello->offers_tls13 || !c->hello->offers_x25519 || !c->hello->has_key_share ||
+        !c->hello->offers_ed25519 || !c->hello->offers_aes128gcm_sha256)
     {
         return fail(c, TLS_ALERT_HANDSHAKE_FAILURE);
     }

@@ -67,9 +67,10 @@ typedef struct
     proto_bool has_hybrid_share;      ///< key_share carried an X25519MLKEM768 entry
     const uint8_t *client_mlkem_ek;   ///< the client's ML-KEM-768 encapsulation key (1184 B, aliases input)
 #endif
-    proto_bool offers_tls13;   ///< supported_versions contains 0x0304
-    proto_bool offers_x25519;  ///< supported_groups contains x25519
-    proto_bool offers_ed25519; ///< signature_algorithms contains ed25519
+    proto_bool offers_tls13;            ///< supported_versions contains 0x0304
+    proto_bool offers_aes128gcm_sha256; ///< cipher_suites contains the one suite this stack answers
+    proto_bool offers_x25519;           ///< supported_groups contains x25519
+    proto_bool offers_ed25519;          ///< signature_algorithms contains ed25519
 #if PC_ENABLE_TLS_RPK
     proto_bool offers_rpk_server_cert; ///< server_certificate_type (RFC 7250) offered RawPublicKey(2)
 #endif

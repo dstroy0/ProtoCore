@@ -124,6 +124,13 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
         fail(qt, TLS_ALERT_PROTOCOL_VERSION);
         return PROTO_FALSE;
     }
+    // RFC 8446 sec 4.1.3: the ServerHello names a suite the client offered. This stack answers with
+    // one suite, so a ClientHello that did not offer it cannot be answered at all.
+    if (!ch.offers_aes128gcm_sha256)
+    {
+        fail(qt, TLS_ALERT_HANDSHAKE_FAILURE);
+        return PROTO_FALSE;
+    }
     proto_bool use_hybrid = PROTO_FALSE;
 #if PC_ENABLE_PQC_KEX
     // Prefer the PQ/T hybrid whenever the client sent a usable X25519MLKEM768 key_share.
