@@ -2429,7 +2429,11 @@
     },
     "native_h2server": {
       "desc": "HTTP/2 -> request-pipeline bridge (network_drivers/presentation/http/http2/h2_server): the\nRFC 9113 sec 8.2 / 8.3 validation a request header block must survive before the route\ndispatcher sees it - the mandatory pseudo-header set, duplicates, pseudo-after-regular\nordering, undefined pseudo-headers, field-name and field-value byte rules, and the\nconnection-specific fields. A rejected block leaves the HttpReq clean and draws an RST_STREAM.\nThe test owns both ends of the wire through pc_tls_read / pc_tls_write.",
-      "flags": ["-DPC_ENABLE_HTTP2=1", "-DPC_ENABLE_TLS=1"],
+      "flags": [
+        "-DPC_ENABLE_HTTP2=1",
+        "-DPC_ENABLE_TLS=1",
+        "-DPC_HAS_VENDOR_TLS=1"
+      ],
       "src": [
         "+<network_drivers/presentation/http/http2/h2_server.c>",
         "+<network_drivers/presentation/http/http2/h2_conn.c>",
