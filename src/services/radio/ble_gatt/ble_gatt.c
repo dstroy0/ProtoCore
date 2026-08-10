@@ -7,8 +7,8 @@
  */
 
 #include "services/radio/ble_gatt/ble_gatt.h"
+#include "mmgr/membuild.h" // pc_sb frame builder
 #include "mmgr/protomem.h"
-#include "mmgr/membuild.h"         // pc_sb frame builder
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
 #if PC_ENABLE_BLE_GATT

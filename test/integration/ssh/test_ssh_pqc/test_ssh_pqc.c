@@ -132,7 +132,7 @@ static void kdf_ref_string(const uint8_t Kb[32], const uint8_t H[32], const uint
     buf[o++] = (uint8_t)label;
     memcpy(buf + o, sid, 32);
     o += 32;
-    pc_sha256(tw,buf, o, acc);
+    pc_sha256(tw, buf, o, acc);
     have = 32;
     while (have < outlen)
     {
@@ -141,7 +141,7 @@ static void kdf_ref_string(const uint8_t Kb[32], const uint8_t H[32], const uint
         o += 32;
         memcpy(buf + o, acc, have);
         o += have;
-        pc_sha256(tw,buf, o, acc + have);
+        pc_sha256(tw, buf, o, acc + have);
         have += 32;
     }
     memcpy(out, acc, outlen);
@@ -247,7 +247,7 @@ void test_hybrid_kex_end_to_end()
     memcpy(kin, k_pq, 32);
     memcpy(kin + 32, k_cl, 32);
     uint8_t K[32];
-    pc_sha256(tw,kin, sizeof(kin), K);
+    pc_sha256(tw, kin, sizeof(kin), K);
 
     // Recover the host public key from K_S = string("ssh-ed25519") || string(pub32).
     size_t ko = 0;
@@ -270,7 +270,7 @@ void test_hybrid_kex_end_to_end()
     o += put_string(pre + o, s_reply, sr_len);        // S_REPLY (string)
     o += put_string(pre + o, K, 32);                  // K (string, NOT mpint)
     uint8_t H[PC_SHA256_DIGEST_LEN];
-    pc_sha256(tw,pre, o, H);
+    pc_sha256(tw, pre, o, H);
     TEST_ASSERT_EQUAL_MEMORY(H, s->session_id, PC_SHA256_DIGEST_LEN);
 
     // sigblob = string("ssh-ed25519") || string(sig64); it verifies over the reconstructed H.
@@ -280,7 +280,7 @@ void test_hybrid_kex_end_to_end()
     TEST_ASSERT_TRUE(rd_string(sigblob, sb_len, &so, &st, &st_len));
     TEST_ASSERT_TRUE(rd_string(sigblob, sb_len, &so, &sig, &sl));
     TEST_ASSERT_EQUAL_UINT32(64, sl);
-    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,hostpub, H, PC_SHA256_DIGEST_LEN, sig));
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw, hostpub, H, PC_SHA256_DIGEST_LEN, sig));
 
     // The string-K KDF must yield the same c2s cipher key the server installed.
     uint8_t expect_c2s[PC_CHACHAPOLY_KEY_LEN];
@@ -383,7 +383,7 @@ void test_sntrup761_hybrid_kex_end_to_end()
 
     static uint8_t pk[PC_SNTRUP761_PK_BYTES];
     static uint8_t sk[PC_SNTRUP761_SK_BYTES];
-    pc_sntrup761_keypair(tw,pk, sk);
+    pc_sntrup761_keypair(tw, pk, sk);
     uint8_t client_sk[32];
     uint8_t qc[32];
     for (int j = 0; j < 32; j++)
@@ -417,14 +417,14 @@ void test_sntrup761_hybrid_kex_end_to_end()
     TEST_ASSERT_EQUAL_UINT32(PC_SNTRUP761_CT_BYTES + 32, sr_len); // ciphertext(1039) || Q_S(32)
 
     uint8_t k_pq[PC_SNTRUP761_SS_BYTES];
-    pc_sntrup761_dec(tw,sk, s_reply, k_pq);
+    pc_sntrup761_dec(tw, sk, s_reply, k_pq);
     uint8_t k_cl[32];
     pc_x25519(k_cl, client_sk, s_reply + PC_SNTRUP761_CT_BYTES);
     uint8_t kin[PC_SNTRUP761_SS_BYTES + 32];
     memcpy(kin, k_pq, PC_SNTRUP761_SS_BYTES);
     memcpy(kin + PC_SNTRUP761_SS_BYTES, k_cl, 32);
     uint8_t K[PC_SHA512_DIGEST_LEN];
-    pc_sha512(tw,kin, sizeof(kin), K);
+    pc_sha512(tw, kin, sizeof(kin), K);
 
     size_t ko = 0;
     const uint8_t *kt;
@@ -446,7 +446,7 @@ void test_sntrup761_hybrid_kex_end_to_end()
     o += put_string(pre + o, s_reply, sr_len);
     o += put_string(pre + o, K, PC_SHA512_DIGEST_LEN); // K is a string, not an mpint
     uint8_t H[PC_SHA512_DIGEST_LEN];
-    pc_sha512(tw,pre, o, H);
+    pc_sha512(tw, pre, o, H);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(H, s->session_id, PC_SHA512_DIGEST_LEN);
 
     size_t so = 0;
@@ -456,7 +456,7 @@ void test_sntrup761_hybrid_kex_end_to_end()
     TEST_ASSERT_TRUE(rd_string(sigblob, sb_len, &so, &st, &st_len));
     TEST_ASSERT_TRUE(rd_string(sigblob, sb_len, &so, &sig, &sl));
     TEST_ASSERT_EQUAL_UINT32(64, sl);
-    TEST_ASSERT_TRUE(pc_ed25519_verify(tw,hostpub, H, PC_SHA512_DIGEST_LEN, sig));
+    TEST_ASSERT_TRUE(pc_ed25519_verify(tw, hostpub, H, PC_SHA512_DIGEST_LEN, sig));
 }
 
 // A classical finite-field KEX still works in a PQC-enabled build: neither hybrid branch is taken
@@ -553,7 +553,7 @@ void test_hybrid_rejects_low_order_point_and_bad_ek()
     // sntrup761: a real public key, but Q_C is the all-zero point.
     static uint8_t pk[PC_SNTRUP761_PK_BYTES];
     static uint8_t sk[PC_SNTRUP761_SK_BYTES];
-    pc_sntrup761_keypair(tw,pk, sk);
+    pc_sntrup761_keypair(tw, pk, sk);
     prepare_session(SSH_KEX_SNTRUP761_X25519);
     memcpy(c_init, pk, PC_SNTRUP761_PK_BYTES);
     memset(c_init + PC_SNTRUP761_PK_BYTES, 0, 32);

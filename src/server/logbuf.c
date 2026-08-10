@@ -7,8 +7,8 @@
  */
 
 #include "server/logbuf.h"
-#include "mmgr/protomem.h"
 #include "mmgr/protoframe.h" // the one frame engine
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_LOGBUF
 
@@ -67,7 +67,7 @@ void pc_log(uint8_t level, const char *msg)
     }
     // A NULL msg renders empty and an over-long line empties the slot, both from the frame contract.
     frame.build(s_log.lines[slot], PC_LOG_LINE_LEN, LOG_LINE,
-                   (const pc_fval[]){PC_VCH(level_letter(level)), PC_VSTR(msg)}, 2);
+                (const pc_fval[]){PC_VCH(level_letter(level)), PC_VSTR(msg)}, 2);
     s_log.level[slot] = level;
 
     if (s_log.trap && level >= s_log.trap_threshold)

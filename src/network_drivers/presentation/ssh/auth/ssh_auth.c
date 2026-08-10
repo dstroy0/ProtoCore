@@ -18,7 +18,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"    // SSH_MSG_* constants
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[], SshPhase
 #include "network_drivers/tls/ssh_rsa.h"                              // pc_rsa_verify(), PC_RSA_KEY_BYTES
-#include "server/clock/clock.h" // pc_millis(): the password-change cooldown clock
+#include "server/clock/clock.h"                                       // pc_millis(): the password-change cooldown clock
 
 // ---------------------------------------------------------------------------
 // Application password callback

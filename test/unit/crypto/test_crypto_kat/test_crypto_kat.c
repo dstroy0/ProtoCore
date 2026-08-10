@@ -167,11 +167,11 @@ static void run_hmac(const KatMac *arr, size_t n, proto_bool is512)
         size_t klen = hexdec(v->key, key), mlen = hexdec(v->msg, msg), wlen = hexdec(v->tag, want);
         if (is512)
         {
-            pc_hmac_sha512(tw,key, klen, msg, mlen, got);
+            pc_hmac_sha512(tw, key, klen, msg, mlen, got);
         }
         else
         {
-            pc_hmac_sha256(tw,key, klen, msg, mlen, got);
+            pc_hmac_sha256(tw, key, klen, msg, mlen, got);
         }
         size_t cmp = (size_t)v->tag_bits / 8; // truncated-tag length the vector pins
         char m[64];
@@ -315,7 +315,7 @@ static void test_ed25519_verify(void)
             TEST_ASSERT_FALSE_MESSAGE(v->valid, m);
             continue;
         }
-        proto_bool ok = pc_ed25519_verify(tw,pub, msg, mlen, sig);
+        proto_bool ok = pc_ed25519_verify(tw, pub, msg, mlen, sig);
         TEST_ASSERT_EQUAL_MESSAGE(v->valid ? PROTO_TRUE : PROTO_FALSE, ok, m);
     }
 }
@@ -337,9 +337,9 @@ static void test_ed25519_sign(void)
         size_t mlen = hexdec(v->msg, msg);
         char m[48];
         snprintf(m, sizeof(m), "Ed25519-sign tcId=%d", v->tc);
-        pc_ed25519_pubkey(tw,got_pub, seed);
+        pc_ed25519_pubkey(tw, got_pub, seed);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_pub, got_pub, 32, m);
-        pc_ed25519_sign(tw,got_sig, msg, mlen, seed);
+        pc_ed25519_sign(tw, got_sig, msg, mlen, seed);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_sig, got_sig, 64, m);
     }
 }
@@ -360,7 +360,7 @@ static void test_hkdf_extract(void)
         uint8_t salt[MAXB], ikm[MAXB], want[32], got[32];
         size_t slen = hexdec(v->salt, salt), ilen = hexdec(v->ikm, ikm);
         hexdec(v->prk, want);
-        pc_hkdf_extract(tw,slen ? salt : NULL, slen, ikm, ilen, got);
+        pc_hkdf_extract(tw, slen ? salt : NULL, slen, ikm, ilen, got);
         char m[48];
         snprintf(m, sizeof(m), "HKDF-Extract tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, m);

@@ -657,8 +657,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     static const uint8_t cipher_of[] = {SSH_CIPHER_CHACHA20POLY1305, SSH_CIPHER_AES256GCM, SSH_CIPHER_AES256CTR};
     s_cli.cipher = cipher_of[ci];
     PC_LOGI(LOG_TUNNEL_NEGOTIATED,
-            ((const pc_fval[]){PC_VSTR(KEX_NAMES[ki]), PC_VSTR(HOSTKEY_NAMES[hi]), PC_VSTR(CIPHER_NAMES[ci])}),
-            3);
+            ((const pc_fval[]){PC_VSTR(KEX_NAMES[ki]), PC_VSTR(HOSTKEY_NAMES[hi]), PC_VSTR(CIPHER_NAMES[ci])}), 3);
 
     s_cli.mac = SSH_MAC_HMAC_SHA256;
     if (s_cli.cipher == SSH_CIPHER_AES256CTR)
@@ -953,8 +952,7 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         uint32_t rl;
         const uint8_t *raw = r_string(&rs, &rl);
         uint8_t *vwork = cli_crypto_work();
-        return vwork != NULL && rk.ok && rs.ok && pn == 32 && rl == 64 &&
-               pc_ed25519_verify(vwork, pub, H, h_len, raw);
+        return vwork != NULL && rk.ok && rs.ok && pn == 32 && rl == 64 && pc_ed25519_verify(vwork, pub, H, h_len, raw);
     }
     case CLI_HOSTKEY_ECDSA_P256: {
         uint32_t cn;
@@ -1238,8 +1236,7 @@ static void handle_channel_open(const uint8_t *p, size_t len)
 
     // Open the local bridge connection (to the device's own service).
     int lc = Tcp.client->open("127.0.0.1", s_cli.cfg.local_port, 3000);
-    PC_LOGD(LOG_TUNNEL_FWD_OPEN,
-            ((const pc_fval[]){PC_VU32((uint32_t)s_cli.cfg.local_port), PC_VI64((int64_t)lc)}), 2);
+    PC_LOGD(LOG_TUNNEL_FWD_OPEN, ((const pc_fval[]){PC_VU32((uint32_t)s_cli.cfg.local_port), PC_VI64((int64_t)lc)}), 2);
     if (lc < 0)
     {
         uint8_t out[64];

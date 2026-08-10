@@ -7,8 +7,8 @@
  */
 
 #include "network_drivers/application/sftp/sftp.h"
-#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protomem.h"
 
 #include "shared_primitives/time_compat.h" // pc_gmtime_r (portable reentrant UTC)
 

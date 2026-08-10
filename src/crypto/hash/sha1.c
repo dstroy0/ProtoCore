@@ -10,8 +10,8 @@
  */
 
 #include "crypto/hash/sha1.h"
-#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
+#include "mmgr/protomem.h"
 
 #if PC_HAS_HW_SHA
 #include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32

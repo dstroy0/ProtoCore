@@ -7,8 +7,8 @@
  */
 
 #include "services/file_transfer/ftp/ftp_session.h"
-#include "mmgr/protomem.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_FTP_SESSION
 
@@ -233,8 +233,7 @@ proto_bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t
     s_ftp.ctrl = Tcp.client->open(target->host, ctrl_port, PC_FTP_TIMEOUT_MS);
     if (s_ftp.ctrl < 0)
     {
-        PC_LOGW(LOG_CTRL_CONNECT_FAILED,
-                ((const pc_fval[]){PC_VSTR(target->host), PC_VU32((uint32_t)ctrl_port)}), 2);
+        PC_LOGW(LOG_CTRL_CONNECT_FAILED, ((const pc_fval[]){PC_VSTR(target->host), PC_VU32((uint32_t)ctrl_port)}), 2);
         return PROTO_FALSE;
     }
 

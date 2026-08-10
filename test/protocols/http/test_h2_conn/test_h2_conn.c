@@ -790,7 +790,7 @@ void test_h2_respond_content_type_too_big(void)
 void test_h2_null_callbacks(void)
 {
     H2Callbacks cb;
-    memset(&cb, 0, sizeof cb); // no write, no on_header, no on_headers_end, no on_data
+    memset(&cb, 0, sizeof cb);     // no write, no on_header, no on_headers_end, no on_data
     pc_h2_conn_init(&g_conn, &cb); // send_our_settings has nowhere to write; must not crash
 
     in_preface();
@@ -1043,7 +1043,7 @@ void test_h2_data_after_end_stream_resets_the_stream(void)
     cap.body[0] = '\0';
     const uint8_t late[3] = {'b', 'a', 'd'};
     TEST_ASSERT_TRUE(feed_frame(&g_conn, H2_DATA, 0, 1, late, 3)); // connection lives
-    TEST_ASSERT_EQUAL_STRING("", cap.body);                   // the bytes never reach the app
+    TEST_ASSERT_EQUAL_STRING("", cap.body);                        // the bytes never reach the app
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 }
 

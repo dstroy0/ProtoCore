@@ -39,7 +39,7 @@ proto_bool pc_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t fra
     out->id = id;
     out->extended = PROTO_TRUE;
     out->rtr = PROTO_FALSE;
-    out->dlc = PC_CAN_MAX_DLC;                  // Fast Packet frames are full 8-octet frames
+    out->dlc = PC_CAN_MAX_DLC;                   // Fast Packet frames are full 8-octet frames
     mem.set(out->data, 0xFF, sizeof(out->data)); // pad unused octets with 0xFF
 
     out->data[0] = (uint8_t)((seq << N2K_FP_SEQ_SHIFT) | (frame_idx & N2K_FP_FRAME_MASK));

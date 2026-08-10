@@ -39,7 +39,7 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
     pc_wr32be(out + 12, refid);
     pc_wr32be(out + 16, pc_ntp_secs); // reference timestamp (when our clock was last good = now)
     pc_wr32be(out + 20, pc_ntp_frac);
-    mem.cpy(out + 24, req + 40, 8);    // origin timestamp = the client's transmit timestamp
+    mem.cpy(out + 24, req + 40, 8);   // origin timestamp = the client's transmit timestamp
     pc_wr32be(out + 32, pc_ntp_secs); // receive timestamp
     pc_wr32be(out + 36, pc_ntp_frac);
     pc_wr32be(out + 40, pc_ntp_secs); // transmit timestamp

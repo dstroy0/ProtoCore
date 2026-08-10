@@ -189,7 +189,7 @@ proto_bool pc_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t s
         return PROTO_FALSE;
         // can't fail
     }
-    out->data[0] = seq;                      // sequence number, 1-based
+    out->data[0] = seq;                       // sequence number, 1-based
     mem.cpy(out->data + 1, chunk, chunk_len); // remaining octets stay 0xFF padding
     return PROTO_TRUE;
 }

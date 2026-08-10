@@ -218,17 +218,17 @@ static void mock_sign(const Mock *m, uint8_t *msg, size_t len)
 {
     if (m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        pc_smb2_sign_cmac(tw,m->sign_key, msg, len);
+        pc_smb2_sign_cmac(tw, m->sign_key, msg, len);
     }
     else
     {
-        pc_smb2_sign(tw,m->sign_key, msg, len);
+        pc_smb2_sign(tw, m->sign_key, msg, len);
     }
 }
 static proto_bool mock_verify(const Mock *m, uint8_t *msg, size_t len)
 {
-    return m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC ? pc_smb2_verify_cmac(tw,m->sign_key, msg, len)
-                                                   : pc_smb2_verify(tw,m->sign_key, msg, len);
+    return m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC ? pc_smb2_verify_cmac(tw, m->sign_key, msg, len)
+                                                   : pc_smb2_verify(tw, m->sign_key, msg, len);
 }
 
 // Build the SMB 3.1.1 NEGOTIATE response body (dialect 0x0311 + SIGNING_REQUIRED + a preauth-integrity
@@ -314,7 +314,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         }
         if (h.command == SMB2_NEGOTIATE || h.command == SMB2_SESSION_SETUP)
         {
-            pc_smb_preauth_update(tw,&m->preauth, msg, mlen);
+            pc_smb_preauth_update(tw, &m->preauth, msg, mlen);
         }
     }
 
@@ -536,7 +536,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     // NOT folded - the key is already derived by then - so ss_round == 1 is exactly the round-1 case.
     if (m->require_311 && (h.command == SMB2_NEGOTIATE || (h.command == SMB2_SESSION_SETUP && m->ss_round == 1)))
     {
-        pc_smb_preauth_update(tw,&m->preauth, resp, rlen);
+        pc_smb_preauth_update(tw, &m->preauth, resp, rlen);
     }
 
     if (m->signing && !req_enc)

@@ -10,8 +10,8 @@
  */
 
 #include "services/storage/config_io/config_io.h"
-#include "mmgr/protomem.h"
 #include "mmgr/protoframe.h" // the one frame engine
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_CONFIG_IO
 
@@ -78,7 +78,7 @@ int pc_config_export(const char *ns, const pc_cfg_field *fields, size_t n, char 
         {
             // Fails closed to an empty string on its own, so there is no failure arm to write here.
             frame.build(val, sizeof(val), CFG_U32,
-                           (const pc_fval[]){PC_VU32((uint32_t)pc_config_get_u32(fields[i].key, 0))}, 1);
+                        (const pc_fval[]){PC_VU32((uint32_t)pc_config_get_u32(fields[i].key, 0))}, 1);
         }
         else
         {

@@ -1065,7 +1065,8 @@ proto_bool pc_mqtt_subscribe(const char *topic, uint8_t qos)
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_mqtt_build_subscribe(s_mqtt.tx, PC_MQTT_BUF_SIZE, next_pid(), topic, qos, s_mqtt.rx, PC_MQTT_BUF_SIZE);
+    size_t n =
+        pc_mqtt_build_subscribe(s_mqtt.tx, PC_MQTT_BUF_SIZE, next_pid(), topic, qos, s_mqtt.rx, PC_MQTT_BUF_SIZE);
     return n && mq_tx(n);
 }
 

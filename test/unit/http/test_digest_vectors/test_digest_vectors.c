@@ -41,7 +41,7 @@ static const char *kResponse = "5d0e32a20ddf4a97877315a523756d9c150506a4c73cbb27
 static void sha256_hex(const char *s, char out[65])
 {
     uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256(tw,(const uint8_t *)s, strlen(s), d);
+    pc_sha256(tw, (const uint8_t *)s, strlen(s), d);
     static const char *hx = "0123456789abcdef";
     for (int i = 0; i < PC_SHA256_DIGEST_LEN; i++)
     {

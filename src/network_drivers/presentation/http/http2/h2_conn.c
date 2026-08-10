@@ -7,9 +7,9 @@
  */
 
 #include "network_drivers/presentation/http/http2/h2_conn.h"
-#include "mmgr/protomem.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/plaintext.h" // HTTP is plaintext; its frames borrow from that arena
+#include "mmgr/protomem.h"
 
 #if PC_ENABLE_HTTP2
 

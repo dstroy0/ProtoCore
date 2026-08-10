@@ -192,7 +192,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     memset(&cfg, 0, sizeof(cfg));
@@ -395,7 +395,7 @@ static void test_coaps_forwards_handshake(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw,server_ed_pub, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     memset(&cfg, 0, sizeof(cfg));

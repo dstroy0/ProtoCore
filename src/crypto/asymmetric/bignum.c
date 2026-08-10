@@ -26,8 +26,8 @@
  */
 
 #include "crypto/asymmetric/bignum.h"
-#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
+#include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
 PC_CRYPTO_HOT

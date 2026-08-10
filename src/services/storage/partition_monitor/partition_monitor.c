@@ -107,12 +107,11 @@ int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *o
     {
         const pc_partition_info *p = &parts[i];
         if (frame.append(out, cap, PART_ENTRY,
-                            (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(p->label),
-                                              PC_VJSON(pc_partition_kind(p->type, p->subtype)),
-                                              PC_VU32((uint32_t)p->type), PC_VU32((uint32_t)p->subtype),
-                                              PC_VU32((uint32_t)p->address), PC_VU32((uint32_t)p->size),
-                                              PC_VSTR(p->running ? "true" : "false")},
-                            8) == 0)
+                         (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(p->label),
+                                           PC_VJSON(pc_partition_kind(p->type, p->subtype)), PC_VU32((uint32_t)p->type),
+                                           PC_VU32((uint32_t)p->subtype), PC_VU32((uint32_t)p->address),
+                                           PC_VU32((uint32_t)p->size), PC_VSTR(p->running ? "true" : "false")},
+                         8) == 0)
         {
             return 0;
         }

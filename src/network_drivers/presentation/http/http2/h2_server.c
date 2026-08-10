@@ -121,10 +121,9 @@ static proto_bool value_ok(const char *v, size_t vl)
 // only with the value "trailers".
 static proto_bool connection_specific(const char *n, size_t nl)
 {
-    return (nl == 10 && mem.cmp(n, "connection", 10) == 0) ||
-           (nl == 16 && mem.cmp(n, "proxy-connection", 16) == 0) ||
-           (nl == 10 && mem.cmp(n, "keep-alive", 10) == 0) ||
-           (nl == 17 && mem.cmp(n, "transfer-encoding", 17) == 0) || (nl == 7 && mem.cmp(n, "upgrade", 7) == 0);
+    return (nl == 10 && mem.cmp(n, "connection", 10) == 0) || (nl == 16 && mem.cmp(n, "proxy-connection", 16) == 0) ||
+           (nl == 10 && mem.cmp(n, "keep-alive", 10) == 0) || (nl == 17 && mem.cmp(n, "transfer-encoding", 17) == 0) ||
+           (nl == 7 && mem.cmp(n, "upgrade", 7) == 0);
 }
 
 // The pseudo-header's bit, or 0 for a name that is not one this server knows (sec 8.3: an undefined

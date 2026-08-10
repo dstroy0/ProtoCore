@@ -13,8 +13,8 @@
  * panic stays pure in exc_decoder.c.
  */
 
-#include "server/exc_decoder.h"
 #include "mmgr/protomem.h"
+#include "server/exc_decoder.h"
 
 #if PC_ENABLE_EXC_DECODER && PC_HAS_VENDOR_COREDUMP
 

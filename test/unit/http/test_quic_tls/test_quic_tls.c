@@ -22,8 +22,8 @@
 #include <unity.h>
 
 static uint8_t tw[4096];
-static uint8_t tw_h[4096]; // h works out of its own bytes
-static uint8_t tw_t[4096]; // t works out of its own bytes
+static uint8_t tw_h[4096];  // h works out of its own bytes
+static uint8_t tw_t[4096];  // t works out of its own bytes
 static uint8_t tw_tt[4096]; // tt works out of its own bytes // test-side working bytes for the crypto entry points
 
 void setUp()
@@ -467,7 +467,7 @@ void test_quic_tls_cert_size_boundary_emit_fails()
         pc_tls13_build_encrypted_extensions(scratch, sizeof(scratch), tp_enc, tp_len, /*rpk_server_cert=*/PROTO_FALSE);
     size_t cert_overhead = pc_tls13_build_certificate(scratch, sizeof(scratch), CERT, 0); // fixed part only
     uint8_t z[32] = {0};
-    size_t cv = pc_tls13_build_cert_verify(tw,scratch, sizeof(scratch), z, cfg.ed25519_seed);
+    size_t cv = pc_tls13_build_cert_verify(tw, scratch, sizeof(scratch), z, cfg.ed25519_seed);
     size_t fin = pc_tls13_build_finished(scratch, sizeof(scratch), z);
     TEST_ASSERT_TRUE(ee > 0 && cert_overhead > 0 && cv > 4 && fin > 4);
 

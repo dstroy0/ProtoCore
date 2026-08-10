@@ -127,7 +127,7 @@ void setUp()
     g_rng_ctr = 0;
     out_reset();
 
-    pc_ed25519_pubkey(tw,g_server_cert, SERVER_ED_SEED);
+    pc_ed25519_pubkey(tw, g_server_cert, SERVER_ED_SEED);
     CoapsServerConfig cfg;
     memset(&cfg, 0, sizeof cfg);
     cfg.cert_der = g_server_cert;

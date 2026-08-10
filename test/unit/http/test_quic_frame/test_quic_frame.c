@@ -156,7 +156,8 @@ void test_builder_overflow()
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 0, 0, 0, d, 4, PROTO_FALSE));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_max_data(b, 1, 1u << 30));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(b, 1, PROTO_FALSE, 0x0a, 0, "x", 1));
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(b, 4, PROTO_FALSE, 0x0a, 0, "hello", 5)); // reason overflows
+    TEST_ASSERT_EQUAL_INT(
+        0, (int)pc_quic_build_connection_close(b, 4, PROTO_FALSE, 0x0a, 0, "hello", 5)); // reason overflows
 }
 
 // Every parse guard: empty input, per-frame truncation, and an unhandled frame type.

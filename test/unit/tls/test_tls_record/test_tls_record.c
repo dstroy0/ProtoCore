@@ -29,9 +29,8 @@ static const uint8_t KAT_SECRET[32] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
                                        0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
 static const uint8_t KAT_IV[12] = {0x2f, 0x41, 0xc8, 0x46, 0xa4, 0x31, 0xa1, 0x63, 0x81, 0x4b, 0xcd, 0x71};
 static const uint8_t KAT_WIRE[35] = {
-    0x17, 0x03, 0x03, 0x00, 0x1e, 0x09, 0xf7, 0xc0, 0x34, 0x70, 0xed, 0x10,
-    0x8b, 0x2e, 0xc9, 0xbd, 0xb0, 0x19, 0x5f, 0x08, 0x06, 0x5f, 0x86, 0x10,
-    0x1b, 0x8a, 0x17, 0x2c, 0xbd, 0xc9, 0x9b, 0xc7, 0x63, 0x3c, 0xff,
+    0x17, 0x03, 0x03, 0x00, 0x1e, 0x09, 0xf7, 0xc0, 0x34, 0x70, 0xed, 0x10, 0x8b, 0x2e, 0xc9, 0xbd, 0xb0, 0x19,
+    0x5f, 0x08, 0x06, 0x5f, 0x86, 0x10, 0x1b, 0x8a, 0x17, 0x2c, 0xbd, 0xc9, 0x9b, 0xc7, 0x63, 0x3c, 0xff,
 };
 static const char *KAT_PLAINTEXT = "hello tls 1.3";
 static const uint64_t KAT_SEQ = 5;
@@ -223,7 +222,8 @@ void test_unkeyed_context_fails_closed()
     uint8_t rec[64];
     uint8_t out[64];
     TlsCiphertext info;
-    TEST_ASSERT_EQUAL_INT((int)0, TlsRecord.protect(&cold, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
+    TEST_ASSERT_EQUAL_INT((int)0,
+                          TlsRecord.protect(&cold, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
     TEST_ASSERT_FALSE(TlsRecord.unprotect(&cold, rec, sizeof(rec), out, sizeof(out), &info));
 }
 
@@ -231,7 +231,8 @@ void test_protect_refuses_overflow()
 {
     const uint8_t pt[] = {1, 2, 3, 4};
     uint8_t rec[8]; // header + inner + tag does not fit
-    TEST_ASSERT_EQUAL_INT((int)0, TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
+    TEST_ASSERT_EQUAL_INT((int)0,
+                          TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
 }
 
 // RFC 8446 sec 5.4: "Implementations MUST NOT send Handshake and Alert records that have a
@@ -252,7 +253,6 @@ void test_empty_handshake_and_alert_records_are_refused()
     TEST_ASSERT_TRUE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
     TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_EQUAL_INT(0, (int)info.pt_len);
-
 }
 
 // The receiving half of the same MUST. protect() does not police the content-type byte it appends,
@@ -325,7 +325,8 @@ void test_keys_wipe_disables_the_context()
     TlsRecord.keys_wipe(&g_send);
     const uint8_t pt[] = {0x01};
     uint8_t rec[64];
-    TEST_ASSERT_EQUAL_INT((int)0, TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
+    TEST_ASSERT_EQUAL_INT((int)0,
+                          TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
 }
 
 // ---- KAT ------------------------------------------------------------------
