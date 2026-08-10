@@ -410,10 +410,6 @@ void test_h3_request_unknown_frame_and_empty_data()
 
     uint8_t req[512];
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
-    // A SETTINGS frame is legal on the wire but meaningless here: neither HEADERS nor DATA.
-    const uint64_t ids[] = {H3_SETTINGS_QPACK_BLOCKED_STREAMS};
-    const uint64_t vals[] = {0};
-    rp += pc_h3_build_settings(req + rp, sizeof(req) - rp, ids, vals, 1);
     rp += pc_h3_build_data(req + rp, sizeof(req) - rp, NULL, 0); // empty DATA
     rp += pc_h3_build_data(req + rp, sizeof(req) - rp, (const uint8_t *)"body", 4);
 
@@ -422,6 +418,108 @@ void test_h3_request_unknown_frame_and_empty_data()
     TEST_ASSERT_EQUAL_STRING("POST", g_method);
     TEST_ASSERT_EQUAL_UINT(4, g_body_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY("body", g_body, 4);
+}
+
+// RFC 9114 sec 7.2.4: "SETTINGS frames MUST NOT be sent on any stream other than the control
+// stream", and receipt elsewhere is a connection error of type H3_FRAME_UNEXPECTED. The same holds
+// for the other control-stream-only frames. This suite used to call a SETTINGS frame on a request
+// stream "legal on the wire but meaningless here" and assert the request dispatched anyway.
+void test_h3_control_only_frames_on_a_request_stream()
+{
+    static const uint64_t only_control[] = {H3_SETTINGS, H3_GOAWAY, H3_MAX_PUSH_ID, H3_CANCEL_PUSH};
+    for (size_t i = 0; i < sizeof(only_control) / sizeof(only_control[0]); i++)
+    {
+        g_requests = 0;
+        QuicConn qc;
+        minimal_qc(&qc);
+        H3Conn h3;
+        pc_h3_conn_init(&h3, &qc, on_request, NULL);
+
+        uint8_t block[128];
+        size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
+        bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
+        bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/", 1);
+
+        uint8_t req[512];
+        size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
+        rp += pc_h3_frame_write_header(req + rp, sizeof(req) - rp, only_control[i], 0);
+
+        qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+        TEST_ASSERT_EQUAL_INT(0, g_requests); // never dispatched
+        TEST_ASSERT_TRUE(qc.close_queued);
+        TEST_ASSERT_TRUE(qc.close_is_app); // an HTTP/3 code needs the 0x1d variant
+        TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, qc.close_error);
+    }
+}
+
+// RFC 9114 sec 4.1: "a DATA frame before any HEADERS frame ... is considered invalid", and an
+// invalid sequence is a connection error of type H3_FRAME_UNEXPECTED.
+void test_h3_data_before_headers()
+{
+    g_requests = 0;
+    QuicConn qc;
+    minimal_qc(&qc);
+    H3Conn h3;
+    pc_h3_conn_init(&h3, &qc, on_request, NULL);
+
+    uint8_t req[128];
+    size_t rp = pc_h3_build_data(req, sizeof(req), (const uint8_t *)"body", 4);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
+
+    TEST_ASSERT_EQUAL_INT(0, g_requests);
+    TEST_ASSERT_TRUE(qc.close_queued);
+    TEST_ASSERT_TRUE(qc.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, qc.close_error);
+}
+
+// RFC 9114 sec 6.2.1: "Only one control stream per peer is permitted; receipt of a second stream
+// claiming to be a control stream MUST be treated as a connection error of type
+// H3_STREAM_CREATION_ERROR."
+void test_h3_second_control_stream()
+{
+    QuicConn qc;
+    minimal_qc(&qc);
+    H3Conn h3;
+    pc_h3_conn_init(&h3, &qc, on_request, NULL);
+
+    // The first control stream, carrying its mandatory SETTINGS.
+    uint8_t s1[64];
+    size_t p1 = pc_quic_varint_encode(s1, sizeof(s1), 0x00);
+    p1 += pc_h3_build_settings(s1 + p1, sizeof(s1) - p1, NULL, NULL, 0);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s1, p1, PROTO_FALSE);
+    TEST_ASSERT_FALSE(qc.close_queued);
+
+    // A second uni stream also typed 0x00.
+    uint8_t s2[64];
+    size_t p2 = pc_quic_varint_encode(s2, sizeof(s2), 0x00);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 6, s2, p2, PROTO_FALSE);
+    TEST_ASSERT_TRUE(qc.close_queued);
+    TEST_ASSERT_TRUE(qc.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(H3_STREAM_CREATION_ERROR, qc.close_error);
+}
+
+// RFC 9114 sec 7.2.4: "If an endpoint receives a second SETTINGS frame on the control stream, the
+// endpoint MUST respond with a connection error of type H3_FRAME_UNEXPECTED." The impl used to
+// re-default and re-parse on every SETTINGS, letting a peer reconfigure the connection at will.
+void test_h3_second_settings_frame()
+{
+    QuicConn qc;
+    minimal_qc(&qc);
+    H3Conn h3;
+    pc_h3_conn_init(&h3, &qc, on_request, NULL);
+
+    uint8_t s[128];
+    size_t p = pc_quic_varint_encode(s, sizeof(s), 0x00);
+    p += pc_h3_build_settings(s + p, sizeof(s) - p, NULL, NULL, 0);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, p, PROTO_FALSE);
+    TEST_ASSERT_FALSE(qc.close_queued);
+
+    uint8_t s2[128];
+    size_t p2 = pc_h3_build_settings(s2, sizeof(s2), NULL, NULL, 0);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s2, p2, PROTO_FALSE);
+    TEST_ASSERT_TRUE(qc.close_queued);
+    TEST_ASSERT_TRUE(qc.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, qc.close_error);
 }
 
 // With no application callback registered the request is still parsed and marked complete; it is
@@ -499,7 +597,9 @@ void test_h3_control_stream_frame_guards()
     qc2.cb.on_stream_data(qc2.cb.app, &qc2, 2, s2, sp2, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, h3b.peer_settings.max_field_section_size);
 
-    // A complete control frame that is not SETTINGS is consumed and ignored.
+    // RFC 9114 sec 6.2.1: "If the first frame of the control stream is any other frame type, this
+    // MUST be treated as a connection error of type H3_MISSING_SETTINGS." This used to assert the
+    // frame was consumed and ignored.
     QuicConn qc3;
     minimal_qc(&qc3);
     H3Conn h3c;
@@ -509,10 +609,25 @@ void test_h3_control_stream_frame_guards()
     sp3 += pc_h3_frame_write_header(s3 + sp3, sizeof(s3) - sp3, 0x07 /*GOAWAY*/, 1);
     s3[sp3++] = 0x00;
     qc3.cb.on_stream_data(qc3.cb.app, &qc3, 2, s3, sp3, PROTO_FALSE);
-    H3Stream *sc = find_h3(&h3c, 2);
+    TEST_ASSERT_TRUE(qc3.close_queued);
+    TEST_ASSERT_TRUE(qc3.close_is_app);
+    TEST_ASSERT_EQUAL_UINT64(H3_MISSING_SETTINGS, qc3.close_error);
+
+    // Once SETTINGS has arrived, a later GOAWAY on the control stream is accepted and ignored.
+    QuicConn qc4;
+    minimal_qc(&qc4);
+    H3Conn h3d;
+    pc_h3_conn_init(&h3d, &qc4, on_request, NULL);
+    uint8_t s4[64];
+    size_t sp4 = pc_quic_varint_encode(s4, sizeof(s4), 0x00);
+    sp4 += pc_h3_build_settings(s4 + sp4, sizeof(s4) - sp4, NULL, NULL, 0);
+    sp4 += pc_h3_frame_write_header(s4 + sp4, sizeof(s4) - sp4, 0x07 /*GOAWAY*/, 1);
+    s4[sp4++] = 0x00;
+    qc4.cb.on_stream_data(qc4.cb.app, &qc4, 2, s4, sp4, PROTO_FALSE);
+    TEST_ASSERT_FALSE(qc4.close_queued);
+    H3Stream *sc = find_h3(&h3d, 2);
     TEST_ASSERT_NOT_NULL(sc);
     TEST_ASSERT_EQUAL_UINT(0, sc->buf_len); // fully consumed
-    TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, h3c.peer_settings.max_field_section_size);
 }
 
 // The uni-stream classification guard: a zero-length delivery leaves the stream unclassified (there
@@ -586,6 +701,10 @@ int main(void)
     RUN_TEST(test_request_dispatch_and_response);
     RUN_TEST(test_h3_pseudo_header_name_variants);
     RUN_TEST(test_h3_request_unknown_frame_and_empty_data);
+    RUN_TEST(test_h3_control_only_frames_on_a_request_stream);
+    RUN_TEST(test_h3_data_before_headers);
+    RUN_TEST(test_h3_second_control_stream);
+    RUN_TEST(test_h3_second_settings_frame);
     RUN_TEST(test_h3_no_request_callback);
     RUN_TEST(test_h3_stream_buffer_overflow_clamped);
     RUN_TEST(test_h3_control_stream_frame_guards);
