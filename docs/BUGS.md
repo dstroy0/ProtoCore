@@ -566,6 +566,37 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## The HTTP/2 engine accepted frames RFC 9113 requires it to reject
+
+- **Status:** FIXED 2026-08-09 (`h2_conn.c` `dispatch_frame`, `handle_continuation`). Found
+  2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md`, the
+  lower-severity remainder) and by an earlier spec audit of `h2_conn.c`.
+- **Symptom:** the dispatcher branched on frame type and went straight to the handler. It never
+  checked the per-type length or stream id, so all of the following were accepted: RST_STREAM on
+  stream 0 and at any length, PRIORITY at any length and on stream 0, GOAWAY shorter than its two
+  mandatory fields and on a non-zero stream, SETTINGS and PING on a non-zero stream, and
+  RST_STREAM or WINDOW_UPDATE naming a stream no HEADERS had ever opened.
+- **Root cause:** `pc_h2_parse_header` validates the framing, and each handler validated what it
+  needed to do its own job. Nothing owned the rules that are a property of the frame type itself.
+- **Nothing can catch it:** `test_h2_unknown_stream_frames` asserted three of these were tolerated,
+  so the suite pinned the violation.
+- **Fix:** each case now carries its sec 6.x length and stream-id test. The idle-stream rule
+  (sec 5.1) is expressed against `last_peer_stream`, which separates a stream that was never opened
+  from one opened and since closed - the latter may still receive a late WINDOW_UPDATE (sec 6.9)
+  and ignore it, and there is a test for each. A wrong PRIORITY length is a stream error, so the
+  connection survives it; the rest are connection errors.
+  Verified: `native_h2conn` 56/56.
+
+## An empty HTTP/2 CONTINUATION frame could be sent without end
+
+- **Status:** FIXED 2026-08-09 (`h2_conn.c` `handle_continuation`, `PC_H2_MAX_CONTINUATION`).
+- **Symptom:** a header block spanning CONTINUATION frames was bounded only by `PC_H2_HDR_BLOCK`,
+  the bytes it may accumulate. A CONTINUATION carrying no payload adds no bytes, so a peer could
+  send them without limit and the block would never have to end, at no memory cost to the attacker.
+- **Fix:** `PC_H2_MAX_CONTINUATION` bounds the frame count as well as the byte total. The two
+  bounds answer different questions and the byte one could never have answered this.
+  Verified: `native_h2conn` 56/56.
+
 ## Eight CoAPS server tests were failing on a double-address argument
 
 - **Status:** FIXED 2026-08-09 (`test_coaps_server.c` `client_get_temp`, `assert_coap_205`). Found
@@ -605,6 +636,23 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   span. `native_h2server` is the env that was missing; a mutation run with the verdict disabled put
   13 of its 15 cases red, so the suite observes the validation and not the transport.
   Verified: `native_h2server` 15/15, `native_h2conn` 36/36.
+
+## An HTTP/2 content-length was never measured against the body
+
+- **Status:** FIXED 2026-08-09 (`h2_conn.c` `content_length_holds`, `note_content_length`). Found
+  2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md`, remainder).
+- **Symptom:** a request could declare `content-length: 10`, send five octets, and have them
+  delivered as a complete body; or declare 2 and send 5; or declare a body and end the stream with
+  its headers. RFC 9113 sec 8.1.1 makes each of those malformed. Two disagreeing accounts of one
+  body's length is the primitive every request-smuggling attack is built from.
+- **Root cause:** `h2_server` parsed content-length into `HttpReq` for the application's benefit
+  and nothing compared it to anything. `h2_conn`, which owns both the stream state and the DATA
+  accounting, never saw the header as meaning anything.
+- **Fix:** the declaration is recorded on its stream as the block decodes, the DATA is counted, and
+  the two are settled before any payload reaches the application - the moment the body goes over
+  the declared length, or at END_STREAM if it comes up short. A value that is not a plain decimal
+  number, or appears twice, is malformed on its own. Each is a stream error, so the connection
+  survives. Verified: `native_h2conn` 56/56.
 
 ## HTTP/2 trailers were a connection error
 

@@ -1,10 +1,15 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the HPACK codec (network_drivers/presentation/http/http2/hpack) against the RFC 7541
-// worked examples: prefix-integer coding (Appendix C.1), the Huffman string code (C.4.1), the
-// first request decode with dynamic-table insertion (C.3.1), plus dynamic-table indexing +
-// FIFO eviction + size updates, and the server encoder (static indexing + literal round-trip).
+// Unit tests for the HPACK codec (network_drivers/presentation/http/http2/hpack) against RFC 7541.
+//
+// The Appendix C worked examples are carried byte for byte - the four representation forms (C.2),
+// both request sequences (C.3, C.4) and both response sequences (C.5, C.6, which run with the
+// table capped at 256 so eviction happens), each checked against the appendix's own dynamic-table
+// size and entry count after every block. Appendix A's 61 static-table entries and Appendix B's
+// 256 octet codes are enumerated in full. Those blocks never touch the encoder, so a symmetric
+// codec fault has nowhere to hide. Around them: prefix-integer coding (C.1) and its overflow
+// bound, dynamic-table size updates, and the server encoder.
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // prefix-int + Huffman primitives
 #include "network_drivers/presentation/http/http2/hpack.h"
