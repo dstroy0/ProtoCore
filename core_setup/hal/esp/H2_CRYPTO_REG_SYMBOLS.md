@@ -33,22 +33,33 @@ utilizing identical pipeline locking logic to the C6.
 
 ---
 
-2. RSA / MULTI-PRECISION INTEGER (MPI) CO-PROCESSOR (Base Address: 0x6003C000)
+2. RSA / MULTI-PRECISION INTEGER (MPI) CO-PROCESSOR (Base Address: 0x6008A000)
 
 ---
 
-| Offset | Register Name         | R/W | Field/Bit Configuration [Hardware Details]            |
-| ------ | --------------------- | --- | ----------------------------------------------------- |
-| 0x000  | RSA_SET_START_MODEXP  | W   | : Fire Montgomery Modular Exponentiation              |
-| 0x004  | RSA_SET_START_MODMULT | W   | : Fire Montgomery Modular Multiplication              |
-| 0x008  | RSA_SET_START_MULT    | W   | : Fire Large-Integer Normal Matrix Multiplication     |
-| 0x00C  | RSA_QUERY_BUSY_REG    | R   | : 1=RSA execution active, 0=Idle Complete             |
-| 0x010  | RSA_LENGTH_REG        | R/W | [5:0]: Word Count Array Bound: ((WordCount) - 1)      |
-| 0x014  | RSA_COMP_MODE_REG     | R/W | : 0=Standard mode, 1=Accelerated Montgomery Core      |
-| 0x800  | RSA_MEM_X_BASE        | R/W | Multiplicand Block Memory X (512 bytes)               |
-| 0xA00  | RSA_MEM_Y_BASE        | R/W | Exponent/Multiplier Block Memory Y (512 bytes)        |
-| 0xC00  | RSA_MEM_M_BASE        | R/W | Modulus Block Memory M (512 bytes)                    |
-| 0xE00  | RSA_MEM_Z_BASE        | R/W | Result Output/Intermediate Block Memory Z (512 bytes) |
+| Offset | Register Name           | R/W | Field/Bit Configuration [Details]                                    |
+| ------ | ----------------------- | --- | -------------------------------------------------------------------- |
+| 0x000  | RSA_MEM_M_BLOCK_BASE    | R/W | Modulus M (512 bytes / 4096-bit limit)                               |
+| 0x200  | RSA_MEM_Z_BLOCK_BASE    | R/W | Result Z, also the r' input block (512 bytes)                        |
+| 0x400  | RSA_MEM_Y_BLOCK_BASE    | R/W | Operand Y: exponent for MODEXP, multiplier for MODMULT (512 bytes)   |
+| 0x600  | RSA_MEM_X_BLOCK_BASE    | R/W | Operand X: base / multiplicand (512 bytes)                           |
+| 0x800  | RSA_M_DASH_REG          | R/W | Montgomery m' = -M^-1 mod 2^32                                       |
+| 0x804  | RSA_LENGTH_REG          | R/W | [5:0]: operand length in words, minus 1                              |
+| 0x808  | RSA_QUERY_CLEAN_REG     | R   | [0]: 0 = memory init NOT complete, 1 = complete. Spin while it is 0. |
+| 0x80C  | RSA_MODEXP_START_REG    | W   | Write 1: start Montgomery modular exponentiation                     |
+| 0x810  | RSA_MOD_MULT_START_REG  | W   | Write 1: start Montgomery modular multiplication                     |
+| 0x814  | RSA_MULT_START_REG      | W   | Write 1: start plain large-integer multiplication                    |
+| 0x818  | RSA_QUERY_INTERRUPT_REG | R   | [0]: 0 = Busy, 1 = Idle. Reset value is 0.                           |
+| 0x81C  | RSA_CLEAR_INTERRUPT_REG | W   | Write 1: clear the completion flag                                   |
+| 0x820  | RSA_CONSTANT_TIME_REG   | R/W | [0]: 0 = constant-time modexp (slower, no timing leak)               |
+| 0x824  | RSA_SEARCH_OPEN_REG     | R/W | [0]: enable the search-position acceleration                         |
+| 0x828  | RSA_SEARCH_POS_REG      | R/W | Search position for the accelerated modexp                           |
+| 0x82C  | RSA_INTERRUPT_REG       | R/W | [0]: completion-interrupt enable. ProtoCore polls, so this stays 0.  |
+
+> Verified against the vendor headers: `soc/esp32s3/include/soc/hwcrypto_reg.h` (S3/S2/classic
+> naming) and `soc/<die>/register/soc/rsa_reg.h` (C3/C5/C6/H2/P4 naming). The layout is the same on
+> every die in the list; only the symbol names differ between the two header generations.
+> `core_setup/hal/esp/esp_crypto_hal.h` encodes exactly this map.
 
 ---
 
