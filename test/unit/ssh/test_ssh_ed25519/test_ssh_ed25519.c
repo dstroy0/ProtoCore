@@ -157,10 +157,10 @@ void test_x25519_rfc7748_vector1()
 void test_x25519_ignores_the_high_bit_of_u(void)
 {
     uint8_t scalar[32];
-    hex_to_bytes(scalar, "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4", 32);
+    fromhex("a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4", scalar, 32);
 
     uint8_t u_clear[32];
-    hex_to_bytes(u_clear, "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c", 32);
+    fromhex("e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c", u_clear, 32);
     uint8_t u_set[32];
     memcpy(u_set, u_clear, sizeof(u_set));
     u_set[31] |= 0x80u; // the bit RFC 7748 sec 5 says to ignore
