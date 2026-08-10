@@ -32,9 +32,14 @@ from tools.ci_tooling.lib import doc_region as dr
 # Pinned Wycheproof revision for reproducible provenance. Refreshing the vectors
 # is a deliberate act: bump this, re-run, and review the JSON diff.
 WYCHEPROOF_REPO = "https://github.com/C2SP/wycheproof"
-WYCHEPROOF_REF = "master"
+# A commit, not a branch. The comment above has always said "pinned" while this named a moving
+# ref, so a refresh was never reproducible - and upstream has since renamed its default branch,
+# so cloning "master" failed outright and the refresh could not run at all.
+WYCHEPROOF_BRANCH = "main"  # upstream renamed this from master; cloning the old name failed outright
+WYCHEPROOF_REF = "b61843a9a5115bb758134b6a1f5d5e502d445342"
 
-CAP_FLAGGED = 40  # adversarial / edge-case vectors kept per primitive
+CAP_INVALID = 20  # rejection cases kept per primitive, taken before anything else
+CAP_FLAGGED = 40  # rejection + edge-case vectors kept per primitive, CAP_INVALID of them reserved
 CAP_PLAIN = 12  # plain happy-path vectors kept per primitive
 
 ROOT = dr.repo_root(__file__)
@@ -42,8 +47,17 @@ OUT_DIR = os.path.join(ROOT, "test", "vectors")
 
 
 def _clone_pinned():
+    # Shallow-clone the branch, then refuse to curate unless its head is the recorded commit. A
+    # refresh that silently picked up whatever upstream had moved to would not be reproducible, and
+    # the corpus is evidence.
     d = tempfile.mkdtemp(prefix="wycheproof_")
-    subprocess.run(["git", "clone", "--depth", "1", "--branch", WYCHEPROOF_REF, WYCHEPROOF_REPO, d], check=True)
+    subprocess.run(["git", "clone", "--depth", "1", "--branch", WYCHEPROOF_BRANCH, WYCHEPROOF_REPO, d], check=True)
+    head = _rev(d)
+    if head != WYCHEPROOF_REF:
+        raise SystemExit(
+            "wycheproof %s is at %s, not the recorded %s - review the upstream diff, then update "
+            "WYCHEPROOF_REF" % (WYCHEPROOF_BRANCH, head, WYCHEPROOF_REF)
+        )
     return d
 
 
@@ -61,16 +75,23 @@ def _find(checkout, name):
 
 
 def _select(tests):
-    """Keep the interesting edge cases first, then a few plain-valid ones."""
-    flagged, plain = [], []
+    """Keep the rejection cases first, then the flagged edge cases, then plain-valid ones.
+
+    A "result": "invalid" vector and a "valid" one carrying a flag are not interchangeable: the
+    first is the only kind that proves the code REFUSES something. Sharing one bucket let a corpus
+    whose valid vectors are all flagged - AES-GCM, where every one carries Pseudorandom, Ktv or
+    SpecialCase - fill the cap before a single rejection case was reached, and ship zero of them.
+    """
+    invalid, flagged, plain = [], [], []
     for t in tests:
-        if t["result"] == "invalid" or t.get("flags"):
-            flagged.append(t)
-        elif t["result"] == "valid":
+        if t["result"] == "invalid":
+            invalid.append(t)
+        elif t["result"] == "valid" and not t.get("flags"):
             plain.append(t)
-        else:  # "acceptable"
+        else:  # flagged-valid, or "acceptable"
             flagged.append(t)
-    return flagged[:CAP_FLAGGED] + plain[:CAP_PLAIN]
+    keep_invalid = invalid[:CAP_INVALID]
+    return keep_invalid + flagged[: CAP_FLAGGED - len(keep_invalid)] + plain[:CAP_PLAIN]
 
 
 def curate_wycheproof(checkout, filename, group_filter, field_map):
