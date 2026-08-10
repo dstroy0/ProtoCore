@@ -566,6 +566,36 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `test_recv_banner_rfc_length_bound` pins 253 accepted and 254 refused.
   Verified: `native_ssh` + 16 more envs.
 
+## Every TLS connection init drew a fresh persistent borrow it never gave back
+
+- **Status:** FIXED 2026-08-09 (`tls_conn.c` `tls_conn_slot_storage`). Found 2026-08-09 building the
+  per-file suite the driver did not have.
+- **Symptom:** `conn_init` called `pc_secure_wipe(c, sizeof(*c))` and then `secure.persist_span()`.
+  The wipe nulls the very pointers that record whether the connection already holds storage, so the
+  guard could never fire: a slot that closed and was re-accepted took another borrow from the
+  persistent end, which is never given back. `MAX_TLS_CONNS` inits exhaust the pool permanently.
+- **Root cause:** the borrow was treated as a property of the call rather than of the connection.
+  `ssh_pkt_slot_storage` had the answer already - a null check on the slot's own first pointer, one
+  span, split by named offsets into the slot's fields - and the shape was not copied.
+- **Nothing can catch it:** `tls_conn.c` compiled in no test env at all.
+- **Fix:** `tls_conn_slot_storage(TlsConn *c)` is `ssh_pkt_slot_storage` against `TlsConn`: returns
+  early when `c->tx` is set, otherwise takes the one borrow and splits it across `tx`, `rx`,
+  `terms`, `hash_work`, `sign_work`, `ks_work` and `hello`. `ks_work` is new - the key schedule
+  reached its region by arithmetic on the borrow base, so it now has a field like the rest. init
+  wipes the borrowed bytes and the session state, never the pointers. `native_tls_conn` is the env
+  that was missing; the suite holds its connection in static storage, the way a pool slot is, and
+  re-initialises the one slot per case, which is the path that was broken.
+  Verified: `native_tls_conn` 5/5, 209/209 across thirteen TLS/DTLS/crypto envs.
+
+## The portable TLS arm could not be built at all
+
+- **Status:** FIXED 2026-08-09 (`protocore_config.h`). Found 2026-08-09 standing up `native_tls_conn`.
+- **Symptom:** `tls_conn.c:41` asserts `PC_ENABLE_TLS_RPK` because the portable arm authenticates by
+  RFC 7250 raw public key, but the config guard accepted that flag only alongside `PC_ENABLE_DTLS`
+  or `PC_ENABLE_HTTP3`. The two conditions cannot both hold for a standalone software-TLS build, so
+  `PC_TLS_SOFTWARE` was unbuildable on its own - which is why it had no env.
+- **Fix:** the guard names the portable arm as the third carrier of the extension.
+
 ## A zero-length TLS Handshake or Alert record was both sent and accepted
 
 - **Status:** FIXED 2026-08-09 (`tls_record.c` `pc_tls_record_protect` / `_unprotect`). Found
