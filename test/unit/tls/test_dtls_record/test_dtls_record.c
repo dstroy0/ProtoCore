@@ -232,6 +232,23 @@ static void test_dtls_replay_window(void)
     TEST_ASSERT_TRUE(DtlsRecord.replay_check(&w, 201));  // ahead
 }
 
+// RFC 9147 sec 4.5.1: the window is 64 wide, so the record 63 back is the oldest one still inside
+// it and the one 64 back is outside. The probes above land at 0, 3 and 194 from the edge, which
+// leaves the boundary itself unasserted in both directions - an off-by-one either way passes.
+static void test_dtls_replay_window_edge(void)
+{
+    DtlsReplayWindow w;
+    DtlsRecord.replay_init(&w);
+    DtlsRecord.replay_mark(&w, 1000);
+
+    TEST_ASSERT_TRUE(DtlsRecord.replay_check(&w, 1000 - 63));  // the oldest seq still in the window
+    TEST_ASSERT_FALSE(DtlsRecord.replay_check(&w, 1000 - 64)); // one past its far edge
+
+    // The accepted edge is a real slot, not merely "not rejected": marking it makes it a replay.
+    DtlsRecord.replay_mark(&w, 1000 - 63);
+    TEST_ASSERT_FALSE(DtlsRecord.replay_check(&w, 1000 - 63));
+}
+
 // Connection ids (RFC 9146 / RFC 9147 §9): a record protected with a CID carries the C bit and the CID
 // immediately after the first byte, round-trips when the receiver expects that exact CID, and the CID is
 // covered by the AEAD AAD (so a mismatch fails to open).
@@ -550,6 +567,7 @@ int main(void)
     RUN_TEST(test_dtls_cid_rejects);
     RUN_TEST(test_dtls_plaintext_roundtrip);
     RUN_TEST(test_dtls_replay_window);
+    RUN_TEST(test_dtls_replay_window_edge);
     RUN_TEST(test_dtls_seq_rollover_both_directions);
     RUN_TEST(test_dtls_plaintext_bounds);
     RUN_TEST(test_dtls_protect_bounds);
