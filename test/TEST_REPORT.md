@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-11 03:43:32
-**Command:** `pio test` over 332 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 6060 passed, 7 failed - 1990s
+**Generated:** 2026-08-11 12:44:18
+**Command:** `pio test` over 335 auto-discovered native envs (excludes native_pentest, native_codeql)
+**Result:** ❌ 6186 passed, 5 failed - 1882s
 
 ---
 
@@ -1852,141 +1852,249 @@ _Unit tests for pc_prov_form_field(): the x-www-form-urlencoded field_
 
 ---
 
-## test_ssh_auth - native_ssh - ✅ 37 passed
+## test_ssh_server - native_ssh - ✅ 10 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Per-file coverage for ssh/ssh_server.c - the message dispatcher._
+
+|   # | Test                                                             | Status | Description                                               |
+| --: | :--------------------------------------------------------------- | :----: | :-------------------------------------------------------- |
+|   1 | `test_s10_service_request_before_the_key_exchange_is_refused`    |   ✅   | S10 service request before the key exchange is refused    |
+|   2 | `test_s10_service_request_after_the_key_exchange_is_accepted`    |   ✅   | S10 service request after the key exchange is accepted    |
+|   3 | `test_s11_1_disconnect_terminates_the_connection`                |   ✅   | reason code                                               |     | description |     | language, the sec 11.1 layout. |
+|   4 | `test_s11_2_ignore_is_understood_and_not_answered`               |   ✅   | S11 2 ignore is understood and not answered               |
+|   5 | `test_s11_3_debug_is_understood_and_not_answered`                |   ✅   | always_display                                            |     | message     |     | language tag.                  |
+|   6 | `test_s11_4_unrecognized_message_is_answered_with_unimplemented` |   ✅   | S11 4 unrecognized message is answered with unimplemented |
+|   7 | `test_s11_4_an_unrecognized_message_changes_nothing`             |   ✅   | S11 4 an unrecognized message changes nothing             |
+|   8 | `test_s11_4_unimplemented_is_not_answered_with_unimplemented`    |   ✅   | S11 4 unimplemented is not answered with unimplemented    |
+|   9 | `test_rfc4252_s5_1_userauth_after_success_is_silently_ignored`   |   ✅   | Rfc4252 s5 1 userauth after success is silently ignored   |
+|  10 | `test_rfc4252_s5_3_no_connection_message_is_served_before_auth`  |   ✅   | Rfc4252 s5 3 no connection message is served before auth  |
+
+</details>
+
+---
+
+## test_ssh_transport - native_ssh - ✅ 67 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_SSH transport handshake tests (RFC 4253): identification-string exchange and_
+
+|   # | Test                                                    | Status | Description                                                                               |
+| --: | :------------------------------------------------------ | :----: | :---------------------------------------------------------------------------------------- |
+|   1 | `test_rfc5656_ecdsa_hostkey_rejects_invalid_scalar`     |   ✅   | Rfc5656 ecdsa hostkey rejects invalid scalar                                              |
+|   2 | `test_rfc5656_ecdsa_hostkey_absent_fails`               |   ✅   | Rfc5656 ecdsa hostkey absent fails                                                        |
+|   3 | `test_transport_index_guards`                           |   ✅   | Transport index guards                                                                    |
+|   4 | `test_s4_2_banner_and_build_caps`                       |   ✅   | S4 2 banner and build caps                                                                |
+|   5 | `test_s4_2_banner_length_bound`                         |   ✅   | S4 2 banner length bound                                                                  |
+|   6 | `test_s7_1_kexinit_field_and_truncation`                |   ✅   | S7 1 kexinit field and truncation                                                         |
+|   7 | `test_s8_kexdh_parse_and_handle_errors`                 |   ✅   | S8 kexdh parse and handle errors                                                          |
+|   8 | `test_s4_2_server_banner_format`                        |   ✅   | S4 2 server banner format                                                                 |
+|   9 | `test_s4_2_banner_complete`                             |   ✅   | S4 2 banner complete                                                                      |
+|  10 | `test_s4_2_banner_bare_lf`                              |   ✅   | S4 2 banner bare lf                                                                       |
+|  11 | `test_s4_2_banner_split_across_reads`                   |   ✅   | S4 2 banner split across reads                                                            |
+|  12 | `test_s4_2_banner_skips_preamble_lines`                 |   ✅   | RFC 4253 §4.2 allows lines before the SSH identification string.                          |
+|  13 | `test_s7_1_kexinit_build_starts_with_msg_and_stores_is` |   ✅   | S7 1 kexinit build starts with msg and stores is                                          |
+|  14 | `test_s7_1_accepts_supported`                           |   ✅   | S7 1 accepts supported                                                                    |
+|  15 | `test_s7_1_accepts_when_ours_listed_among_others`       |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  16 | `test_s7_1_rejects_missing_kex`                         |   ✅   | Only a KEX method we do not implement (nistp521) -> no mutual KEX -> reject. (nistp256 IS |
+|  17 | `test_s7_1_rejects_hostkey_we_lack`                     |   ✅   | S7 1 rejects hostkey we lack                                                              |
+|  18 | `test_s7_1_steers_to_curve_ed25519`                     |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  19 | `test_s7_1_rejects_missing_cipher`                      |   ✅   | Only ciphers we do not implement -> no mutual cipher -> reject.                           |
+|  20 | `test_s7_1_selects_chacha20poly1305`                    |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  21 | `test_s7_1_selects_aes256gcm`                           |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  22 | `test_s7_1_honors_client_cipher_preference`             |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  23 | `test_s7_1_selects_rsa_sha512`                          |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  24 | `test_s7_1_selects_ecdsa`                               |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  25 | `test_s7_1_selects_ecdh_nistp256`                       |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  26 | `test_s7_1_selects_etm_mac`                             |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  27 | `test_s7_1_rejects_truncated`                           |   ✅   | S7 1 rejects truncated                                                                    |
+|  28 | `test_s8_exchange_hash_matches_independent_assembly`    |   ✅   | Populate the session fields the hash reads.                                               |
+|  29 | `test_s8_exchange_hash_changes_with_input`              |   ✅   | S8 exchange hash changes with input                                                       |
+|  30 | `test_s8_kexdh_init_extracts_e_with_padding`            |   ✅   | S8 kexdh init extracts e with padding                                                     |
+|  31 | `test_s8_kexdh_init_extracts_small_e`                   |   ✅   | S8 kexdh init extracts small e                                                            |
+|  32 | `test_s8_kexdh_init_rejects_wrong_type`                 |   ✅   | S8 kexdh init rejects wrong type                                                          |
+|  33 | `test_s8_kexdh_init_rejects_oversized_e`                |   ✅   | mpint with 300 magnitude bytes → exceeds 2048 bits.                                       |
+|  34 | `test_s8_kexdh_produces_reply_and_installs_keys`        |   ✅   | S8 kexdh produces reply and installs keys                                                 |
+|  35 | `test_s8_kexdh_rejects_invalid_e`                       |   ✅   | S8 kexdh rejects invalid e                                                                |
+|  36 | `test_rfc8731_curve25519_ed25519_end_to_end`            |   ✅   | Fixed baseline host keys for deterministic regression, plus one fresh throwaway           |
+|  37 | `test_rfc8731_curve25519_rejects_low_order`             |   ✅   | Rfc8731 curve25519 rejects low order                                                      |
+|  38 | `test_rfc5656_ecdh_nistp256_end_to_end`                 |   ✅   | Rfc5656 ecdh nistp256 end to end                                                          |
+|  39 | `test_rfc5656_ecdh_nistp256_rejects_bad_point`          |   ✅   | Rfc5656 ecdh nistp256 rejects bad point                                                   |
+|  40 | `test_rfc8332_rsa_sha512_signature`                     |   ✅   | Rfc8332 rsa sha512 signature                                                              |
+|  41 | `test_rfc5656_ecdsa_end_to_end`                         |   ✅   | Rfc5656 ecdsa end to end                                                                  |
+|  42 | `test_s7_2_session_id_affects_output`                   |   ✅   | S7 2 session id affects output                                                            |
+|  43 | `test_s7_2_binds_every_label_to_its_direction`          |   ✅   | S7 2 binds every label to its direction                                                   |
+|  44 | `test_rfc3526_group14_modulus`                          |   ✅   | Rfc3526 group14 modulus                                                                   |
+|  45 | `test_s9_rekey_needed_threshold`                        |   ✅   | S9 rekey needed threshold                                                                 |
+|  46 | `test_s9_rekey_threshold_meets_the_bounds`              |   ✅   | S9 rekey threshold meets the bounds                                                       |
+|  47 | `test_s9_rekey_due_volume_and_time`                     |   ✅   | Neither budget spent.                                                                     |
+|  48 | `test_s9_rekey_preserves_session_and_auth`              |   ✅   | S9 rekey preserves session and auth                                                       |
+|  49 | `test_s7_2_kdf_edge_paths`                              |   ✅   | S7 2 kdf edge paths                                                                       |
+|  50 | `test_s7_1_truncation_points`                           |   ✅   | One cut per name-list read, in field order: kex / host-key / cipher-c2s / cipher-s2c /    |
+|  51 | `test_ssh_transport_more_guards`                        |   ✅   | Ssh transport more guards                                                                 |
+|  52 | `test_s7_2_gcm_material_installs_both_directions`       |   ✅   | S7 2 gcm material installs both directions                                                |
+|  53 | `test_kdf_string_k_hybrid`                              |   ✅   | Kdf string k hybrid                                                                       |
+|  54 | `test_s7_1_negotiates_each_direction`                   |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  55 | `test_s7_1_honors_client_preference_everywhere`         |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  56 | `test_s7_1_aead_ignores_mac_lists`                      |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  57 | `test_s7_1_same_length_names_do_not_match`              |   ✅   | RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the     |
+|  58 | `test_rfc8308_extinfo_modern_first_order`               |   ✅   | Rfc8308 extinfo modern first order                                                        |
+|  59 | `test_rfc8731_curve25519_rejects_malformed_init`        |   ✅   | Rfc8731 curve25519 rejects malformed init                                                 |
+|  60 | `test_rfc5656_ecdh_p256_rejects_malformed_init`         |   ✅   | Rfc5656 ecdh p256 rejects malformed init                                                  |
+|  61 | `test_s4_2_banner_empty_and_short_preamble`             |   ✅   | S4 2 banner empty and short preamble                                                      |
+|  62 | `test_s7_1_rejects_short_and_mistyped`                  |   ✅   | S7 1 rejects short and mistyped                                                           |
+|  63 | `test_s8_kexdh_init_accepts_all_zero_mpint`             |   ✅   | S8 kexdh init accepts all zero mpint                                                      |
+|  64 | `test_rfc5656_ecdh_p256_rejects_bad_ephemeral`          |   ✅   | Rfc5656 ecdh p256 rejects bad ephemeral                                                   |
+|  65 | `test_s9_rekey_on_receive_sequence_alone`               |   ✅   | S9 rekey on receive sequence alone                                                        |
+|  66 | `test_s7_1_hostkey_list_carries_all_four`               |   ✅   | S7 1 hostkey list carries all four                                                        |
+|  67 | `test_s7_1_client_preference_cyclonessh_repro`          |   ✅   | S7 1 client preference cyclonessh repro                                                   |
+
+</details>
+
+---
+
+## test_ssh_auth - native_ssh - ✅ 36 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _SSH user-authentication tests (RFC 4252): service request/accept, request_
 
-|   # | Test                                                   | Status | Description                                       |
-| --: | :----------------------------------------------------- | :----: | :------------------------------------------------ |
-|   1 | `test_service_request_errors`                          |   ✅   | Service request errors                            |
-|   2 | `test_build_response_guards`                           |   ✅   | Build response guards                             |
-|   3 | `test_parse_request_truncations`                       |   ✅   | Parse request truncations                         |
-|   4 | `test_pubkey_blob_parse_failures`                      |   ✅   | Pubkey blob parse failures                        |
-|   5 | `test_pubkey_oversized_signed_prefix`                  |   ✅   | Pubkey oversized signed prefix                    |
-|   6 | `test_handle_request_index_and_parse_guards`           |   ✅   | Handle request index and parse guards             |
-|   7 | `test_pubkey_without_verifier_fails`                   |   ✅   | Pubkey without verifier fails                     |
-|   8 | `test_pubkey_rsa_blob_type_length_and_zero_mpint`      |   ✅   | Pubkey rsa blob type length and zero mpint        |
-|   9 | `test_pubkey_ed25519_blob_and_siglen_rejections`       |   ✅   | Pubkey ed25519 blob and siglen rejections         |
-|  10 | `test_pubkey_ecdsa_blob_rejections`                    |   ✅   | Pubkey ecdsa blob rejections                      |
-|  11 | `test_pubkey_ecdsa_signature_rejections`               |   ✅   | Pubkey ecdsa signature rejections                 |
-|  12 | `test_pubkey_verifier_rejects_key`                     |   ✅   | Pubkey verifier rejects key                       |
-|  13 | `test_build_failure_partial_success_flag`              |   ✅   | Build failure partial success flag                |
-|  14 | `test_service_request_accept`                          |   ✅   | Service request accept                            |
-|  15 | `test_service_request_rejects_unknown`                 |   ✅   | Service request rejects unknown                   |
-|  16 | `test_parse_password_request`                          |   ✅   | Parse password request                            |
-|  17 | `test_parse_none_request`                              |   ✅   | Parse none request                                |
-|  18 | `test_parse_rejects_foreign_service`                   |   ✅   | Parse rejects foreign service                     |
-|  19 | `test_parse_reads_password_change`                     |   ✅   | Parse reads password change                       |
-|  20 | `test_pw_change_defers_then_reports`                   |   ✅   | Pw change defers then reports                     |
-|  21 | `test_pw_change_cooldown_refuses_second`               |   ✅   | Pw change cooldown refuses second                 |
-|  22 | `test_pw_change_no_cb_fails`                           |   ✅   | Pw change no cb fails                             |
-|  23 | `test_handle_request_success`                          |   ✅   | Handle request success                            |
-|  24 | `test_handle_request_wrong_password_fails`             |   ✅   | Handle request wrong password fails               |
-|  25 | `test_handle_none_request_fails_without_auth`          |   ✅   | Handle none request fails without auth            |
-|  26 | `test_handle_request_no_callback_fails`                |   ✅   | No callback installed → all credentials rejected. |
-|  27 | `test_pubkey_probe_returns_pk_ok`                      |   ✅   | Pubkey probe returns pk ok                        |
-|  28 | `test_pubkey_without_session_id_fails`                 |   ✅   | Pubkey without session id fails                   |
-|  29 | `test_pubkey_signature_not_replayable_across_sessions` |   ✅   | Pubkey signature not replayable across sessions   |
-|  30 | `test_failure_does_not_advertise_none`                 |   ✅   | Failure does not advertise none                   |
-|  31 | `test_pubkey_valid_signature_succeeds`                 |   ✅   | Pubkey valid signature succeeds                   |
-|  32 | `test_pubkey_rsa_sha512_signature_succeeds`            |   ✅   | Pubkey rsa sha512 signature succeeds              |
-|  33 | `test_pubkey_ecdsa_signature_succeeds`                 |   ✅   | Pubkey ecdsa signature succeeds                   |
-|  34 | `test_pubkey_ed25519_valid_signature_succeeds`         |   ✅   | Pubkey ed25519 valid signature succeeds           |
-|  35 | `test_pubkey_tampered_signature_fails`                 |   ✅   | Pubkey tampered signature fails                   |
-|  36 | `test_pubkey_unauthorized_key_fails`                   |   ✅   | Pubkey unauthorized key fails                     |
-|  37 | `test_aesgcm_gctr_counter_byte_carry`                  |   ✅   | Aesgcm gctr counter byte carry                    |
+|   # | Test                                                | Status | Description                                       |
+| --: | :-------------------------------------------------- | :----: | :------------------------------------------------ |
+|   1 | `test_s4_service_request_wire_errors`               |   ✅   | S4 service request wire errors                    |
+|   2 | `test_s5_1_response_builder_output_caps`            |   ✅   | S5 1 response builder output caps                 |
+|   3 | `test_s5_request_truncated_at_every_field_rejected` |   ✅   | S5 request truncated at every field rejected      |
+|   4 | `test_s7_rsa_blob_parse_failures`                   |   ✅   | S7 rsa blob parse failures                        |
+|   5 | `test_s7_oversized_signed_prefix_rejected`          |   ✅   | S7 oversized signed prefix rejected               |
+|   6 | `test_handle_request_index_and_parse_guards`        |   ✅   | Handle request index and parse guards             |
+|   7 | `test_s7_no_verifier_authorizes_no_key`             |   ✅   | S7 no verifier authorizes no key                  |
+|   8 | `test_s7_rsa_blob_type_length_and_zero_mpint`       |   ✅   | S7 rsa blob type length and zero mpint            |
+|   9 | `test_s7_ed25519_blob_and_siglen_rejections`        |   ✅   | S7 ed25519 blob and siglen rejections             |
+|  10 | `test_s7_ecdsa_blob_rejections`                     |   ✅   | S7 ecdsa blob rejections                          |
+|  11 | `test_s7_ecdsa_signature_rejections`                |   ✅   | S7 ecdsa signature rejections                     |
+|  12 | `test_s7_verifier_rejects_the_offered_key`          |   ✅   | S7 verifier rejects the offered key               |
+|  13 | `test_s5_1_failure_carries_partial_success`         |   ✅   | S5 1 failure carries partial success              |
+|  14 | `test_s4_service_request_accepted`                  |   ✅   | S4 service request accepted                       |
+|  15 | `test_s4_service_request_rejects_unknown_service`   |   ✅   | S4 service request rejects unknown service        |
+|  16 | `test_s5_request_fields_are_parsed`                 |   ✅   | S5 request fields are parsed                      |
+|  17 | `test_s5_2_none_request_is_parsed`                  |   ✅   | S5 2 none request is parsed                       |
+|  18 | `test_s5_foreign_service_is_rejected`               |   ✅   | S5 foreign service is rejected                    |
+|  19 | `test_s8_change_request_carries_old_and_new`        |   ✅   | S8 change request carries old and new             |
+|  20 | `test_s8_change_defers_then_reports`                |   ✅   | S8 change defers then reports                     |
+|  21 | `test_s8_change_cooldown_refuses_second`            |   ✅   | S8 change cooldown refuses second                 |
+|  22 | `test_s8_change_without_a_callback_fails`           |   ✅   | S8 change without a callback fails                |
+|  23 | `test_s8_correct_password_succeeds`                 |   ✅   | S8 correct password succeeds                      |
+|  24 | `test_s8_wrong_password_fails`                      |   ✅   | S8 wrong password fails                           |
+|  25 | `test_s5_2_none_is_rejected`                        |   ✅   | S5 2 none is rejected                             |
+|  26 | `test_s8_no_password_callback_fails`                |   ✅   | No callback installed → all credentials rejected. |
+|  27 | `test_s7_probe_returns_pk_ok`                       |   ✅   | S7 probe returns pk ok                            |
+|  28 | `test_s7_signature_without_session_id_fails`        |   ✅   | S7 signature without session id fails             |
+|  29 | `test_s7_signature_not_replayable_across_sessions`  |   ✅   | S7 signature not replayable across sessions       |
+|  30 | `test_s5_2_none_is_not_advertised`                  |   ✅   | S5 2 none is not advertised                       |
+|  31 | `test_s7_valid_signature_succeeds`                  |   ✅   | S7 valid signature succeeds                       |
+|  32 | `test_s7_rsa_sha512_signature_succeeds`             |   ✅   | S7 rsa sha512 signature succeeds                  |
+|  33 | `test_s7_ecdsa_signature_succeeds`                  |   ✅   | S7 ecdsa signature succeeds                       |
+|  34 | `test_s7_ed25519_valid_signature_succeeds`          |   ✅   | S7 ed25519 valid signature succeeds               |
+|  35 | `test_s7_tampered_signature_fails`                  |   ✅   | S7 tampered signature fails                       |
+|  36 | `test_s7_unauthorized_key_fails`                    |   ✅   | S7 unauthorized key fails                         |
 
 </details>
 
 ---
 
-## test_ssh_channel - native_ssh - ✅ 51 passed
+## test_ssh_channel - native_ssh - ✅ 54 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _SSH connection-protocol (channel) tests - RFC 4254, including multiplexing_
 
-|   # | Test                                                 | Status | Description                                                                                    |
-| --: | :--------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
-|   1 | `test_chan_slot_and_msgtype_guards`                  |   ✅   | Chan slot and msgtype guards                                                                   |
-|   2 | `test_chan_malformed_payloads`                       |   ✅   | Chan malformed payloads                                                                        |
-|   3 | `test_chan_open_cap_guards`                          |   ✅   | Chan open cap guards                                                                           |
-|   4 | `test_chan_forward_and_channel_guards`               |   ✅   | While a slot is free: null address (262) and a too-small buffer (273).                         |
-|   5 | `test_chan_global_request_reply_caps`                |   ✅   | Unknown request name, want_reply, no room for the 1-byte reply (246).                          |
-|   6 | `test_chan_empty_and_mistyped_payloads`              |   ✅   | Chan empty and mistyped payloads                                                               |
-|   7 | `test_chan_same_length_names_do_not_match`           |   ✅   | "tcpip-forwarX" is 13 chars like "tcpip-forward"; "cancel-tcpip-forwarX" is 20 like the cancel |
-|   8 | `test_chan_request_accept_set`                       |   ✅   | A well-formed pty-req (RFC 4254 sec 6.2): TERM, four dimensions, encoded terminal modes.       |
-|   9 | `test_chan_request_truncated_fields_refused`         |   ✅   | Chan request truncated fields refused                                                          |
-|  10 | `test_chan_missing_trailing_port`                    |   ✅   | Chan missing trailing port                                                                     |
-|  11 | `test_chan_rforward_refused_paths`                   |   ✅   | Chan rforward refused paths                                                                    |
-|  12 | `test_chan_forwarded_open_guards_and_silent_failure` |   ✅   | Chan forwarded open guards and silent failure                                                  |
-|  13 | `test_chan_data_without_sinks_and_empty_payload`     |   ✅   | Session channel with no data callback.                                                         |
-|  14 | `test_chan_outbound_limits_and_window_saturation`    |   ✅   | Chan outbound limits and window saturation                                                     |
-|  15 | `test_open_session_confirms`                         |   ✅   | Open session confirms                                                                          |
-|  16 | `test_open_unknown_type_fails`                       |   ✅   | Open unknown type fails                                                                        |
-|  17 | `test_direct_tcpip_no_cb_prohibited`                 |   ✅   | Forwarding is opt-in: with no open callback installed it is refused.                           |
-|  18 | `test_direct_tcpip_accept_confirms`                  |   ✅   | Direct tcpip accept confirms                                                                   |
-|  19 | `test_direct_tcpip_refused_connect_failed`           |   ✅   | Direct tcpip refused connect failed                                                            |
-|  20 | `test_forward_data_routes_to_forward_cb`             |   ✅   | Forward data routes to forward cb                                                              |
-|  21 | `test_shell_request_success_with_reply`              |   ✅   | Shell request success with reply                                                               |
-|  22 | `test_unknown_request_failure`                       |   ✅   | Unknown request failure                                                                        |
-|  23 | `test_request_no_reply_produces_nothing`             |   ✅   | Request no reply produces nothing                                                              |
-|  24 | `test_inbound_data_invokes_callback`                 |   ✅   | Inbound data invokes callback                                                                  |
-|  25 | `test_inbound_data_window_replenish`                 |   ✅   | Inbound data window replenish                                                                  |
-|  26 | `test_inbound_data_exceeding_window_rejected`        |   ✅   | Inbound data exceeding window rejected                                                         |
-|  27 | `test_outbound_data_frames_and_decrements_window`    |   ✅   | Outbound data frames and decrements window                                                     |
-|  28 | `test_outbound_data_exceeding_peer_window_rejected`  |   ✅   | Outbound data exceeding peer window rejected                                                   |
-|  29 | `test_window_adjust_grows_peer_window`               |   ✅   | Window adjust grows peer window                                                                |
-|  30 | `test_build_close_emits_eof_and_close`               |   ✅   | Build close emits eof and close                                                                |
-|  31 | `test_inbound_close_routes_to_channel`               |   ✅   | Inbound close routes to channel                                                                |
-|  32 | `test_multiplex_two_channels_route_independently`    |   ✅   | Multiplex two channels route independently                                                     |
-|  33 | `test_pool_full_open_fails`                          |   ✅   | Pool full open fails                                                                           |
-|  34 | `test_data_to_unknown_channel_rejected`              |   ✅   | Data to unknown channel rejected                                                               |
-|  35 | `test_rforward_no_cb_refused`                        |   ✅   | Rforward no cb refused                                                                         |
-|  36 | `test_rforward_accept_specific_port`                 |   ✅   | Rforward accept specific port                                                                  |
-|  37 | `test_rforward_port0_echoes_allocated`               |   ✅   | Rforward port0 echoes allocated                                                                |
-|  38 | `test_rforward_no_reply_silent`                      |   ✅   | Rforward no reply silent                                                                       |
-|  39 | `test_rforward_cancel`                               |   ✅   | Rforward cancel                                                                                |
-|  40 | `test_global_unknown_request`                        |   ✅   | Global unknown request                                                                         |
-|  41 | `test_global_malformed`                              |   ✅   | Global malformed                                                                               |
-|  42 | `test_forwarded_open_builds_channel`                 |   ✅   | Forwarded open builds channel                                                                  |
-|  43 | `test_forwarded_confirm_opens_channel`               |   ✅   | Forwarded confirm opens channel                                                                |
-|  44 | `test_forwarded_failure_frees_channel`               |   ✅   | Forwarded failure frees channel                                                                |
-|  45 | `test_forwarded_confirm_unknown_rejected`            |   ✅   | Forwarded confirm unknown rejected                                                             |
-|  46 | `test_forwarded_inbound_data_routes_to_forward_cb`   |   ✅   | Forwarded inbound data routes to forward cb                                                    |
-|  47 | `test_sftp_subsystem_routes`                         |   ✅   | Sftp subsystem routes                                                                          |
-|  48 | `test_unknown_subsystem_refused`                     |   ✅   | Unknown subsystem refused                                                                      |
-|  49 | `test_sftp_subsystem_match_and_missing_cb`           |   ✅   | Sftp subsystem match and missing cb                                                            |
-|  50 | `test_scp_exec_routes`                               |   ✅   | Scp exec routes                                                                                |
-|  51 | `test_scp_exec_match_and_missing_cb`                 |   ✅   | Scp exec match and missing cb                                                                  |
+|   # | Test                                                             | Status | Description                                                                                    |
+| --: | :--------------------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
+|   1 | `test_chan_slot_and_msgtype_guards`                              |   ✅   | Chan slot and msgtype guards                                                                   |
+|   2 | `test_chan_malformed_payloads`                                   |   ✅   | Chan malformed payloads                                                                        |
+|   3 | `test_s5_1_open_reply_output_caps`                               |   ✅   | S5 1 open reply output caps                                                                    |
+|   4 | `test_s7_2_open_forwarded_and_per_channel_caps`                  |   ✅   | While a slot is free: null address (262) and a too-small buffer (273).                         |
+|   5 | `test_s4_reply_output_caps`                                      |   ✅   | Unknown request name, want_reply, no room for the 1-byte reply (246).                          |
+|   6 | `test_chan_empty_and_mistyped_payloads`                          |   ✅   | Chan empty and mistyped payloads                                                               |
+|   7 | `test_chan_same_length_names_do_not_match`                       |   ✅   | "tcpip-forwarX" is 13 chars like "tcpip-forward"; "cancel-tcpip-forwarX" is 20 like the cancel |
+|   8 | `test_s6_2_pty_req_and_env_accepted_element_wise`                |   ✅   | A well-formed pty-req (RFC 4254 sec 6.2): TERM, four dimensions, encoded terminal modes.       |
+|   9 | `test_s5_4_request_truncated_before_its_fields_refused`          |   ✅   | S5 4 request truncated before its fields refused                                               |
+|  10 | `test_s7_1_address_without_its_trailing_port_rejected`           |   ✅   | S7 1 address without its trailing port rejected                                                |
+|  11 | `test_s7_1_refused_forward_paths`                                |   ✅   | S7 1 refused forward paths                                                                     |
+|  12 | `test_s5_1_open_forwarded_guards_and_silent_failure`             |   ✅   | S5 1 open forwarded guards and silent failure                                                  |
+|  13 | `test_s5_2_data_without_sinks_and_empty_payload`                 |   ✅   | Session channel with no data callback.                                                         |
+|  14 | `test_s5_2_outbound_limits_and_window_saturation`                |   ✅   | S5 2 outbound limits and window saturation                                                     |
+|  15 | `test_s6_1_session_open_is_confirmed`                            |   ✅   | S6 1 session open is confirmed                                                                 |
+|  16 | `test_s5_1_unsupported_channel_type_is_reason_3`                 |   ✅   | S5 1 unsupported channel type is reason 3                                                      |
+|  17 | `test_s7_2_direct_tcpip_prohibited_with_no_owner`                |   ✅   | Forwarding is opt-in: with no open callback installed it is refused.                           |
+|  18 | `test_s7_2_direct_tcpip_accepted_carries_host_and_port`          |   ✅   | S7 2 direct tcpip accepted carries host and port                                               |
+|  19 | `test_s7_2_direct_tcpip_refusal_frees_the_channel`               |   ✅   | S7 2 direct tcpip refusal frees the channel                                                    |
+|  20 | `test_s7_2_direct_tcpip_data_routes_to_the_owner`                |   ✅   | S7 2 direct tcpip data routes to the owner                                                     |
+|  21 | `test_s6_5_shell_request_succeeds`                               |   ✅   | S6 5 shell request succeeds                                                                    |
+|  22 | `test_s5_4_unsupported_request_type_fails`                       |   ✅   | S5 4 unsupported request type fails                                                            |
+|  23 | `test_s5_4_no_reply_when_want_reply_is_clear`                    |   ✅   | S5 4 no reply when want reply is clear                                                         |
+|  24 | `test_s5_2_inbound_data_is_delivered`                            |   ✅   | S5 2 inbound data is delivered                                                                 |
+|  25 | `test_s5_2_window_adjust_is_emitted_when_spent`                  |   ✅   | S5 2 window adjust is emitted when spent                                                       |
+|  26 | `test_s5_2_data_past_the_window_rejected`                        |   ✅   | S5 2 data past the window rejected                                                             |
+|  27 | `test_s5_2_outbound_data_decrements_the_window`                  |   ✅   | S5 2 outbound data decrements the window                                                       |
+|  28 | `test_s5_2_data_past_the_peer_window_rejected`                   |   ✅   | S5 2 data past the peer window rejected                                                        |
+|  29 | `test_s5_2_window_adjust_grows_the_peer_window`                  |   ✅   | S5 2 window adjust grows the peer window                                                       |
+|  30 | `test_s5_3_close_emits_eof_then_close`                           |   ✅   | S5 3 close emits eof then close                                                                |
+|  31 | `test_s5_3_inbound_close_is_answered_with_close`                 |   ✅   | S5 3 inbound close is answered with close                                                      |
+|  32 | `test_s6_1_channels_route_independently`                         |   ✅   | S6 1 channels route independently                                                              |
+|  33 | `test_s6_6_extended_data_consumes_the_window_and_is_dropped`     |   ✅   | S6 6 extended data consumes the window and is dropped                                          |
+|  34 | `test_s6_6_an_unknown_data_type_code_still_consumes_the_window`  |   ✅   | S6 6 an unknown data type code still consumes the window                                       |
+|  35 | `test_s6_6_extended_data_past_the_window_and_malformed_rejected` |   ✅   | S6 6 extended data past the window and malformed rejected                                      |
+|  36 | `test_s5_1_pool_full_is_reason_4`                                |   ✅   | S5 1 pool full is reason 4                                                                     |
+|  37 | `test_s5_2_data_to_an_unknown_channel_rejected`                  |   ✅   | S5 2 data to an unknown channel rejected                                                       |
+|  38 | `test_s7_1_tcpip_forward_refused_with_no_owner`                  |   ✅   | S7 1 tcpip forward refused with no owner                                                       |
+|  39 | `test_s7_1_tcpip_forward_accepts_a_named_port`                   |   ✅   | S7 1 tcpip forward accepts a named port                                                        |
+|  40 | `test_s7_1_port_zero_echoes_the_allocated_port`                  |   ✅   | S7 1 port zero echoes the allocated port                                                       |
+|  41 | `test_s7_1_no_reply_when_want_reply_is_clear`                    |   ✅   | S7 1 no reply when want reply is clear                                                         |
+|  42 | `test_s7_1_cancel_tcpip_forward_routes_to_the_owner`             |   ✅   | S7 1 cancel tcpip forward routes to the owner                                                  |
+|  43 | `test_s4_unknown_request_name`                                   |   ✅   | S4 unknown request name                                                                        |
+|  44 | `test_s4_malformed_global_request`                               |   ✅   | S4 malformed global request                                                                    |
+|  45 | `test_s7_2_forwarded_tcpip_open_is_built_and_pending`            |   ✅   | S7 2 forwarded tcpip open is built and pending                                                 |
+|  46 | `test_s5_1_confirmation_opens_the_channel`                       |   ✅   | S5 1 confirmation opens the channel                                                            |
+|  47 | `test_s5_1_failure_frees_the_channel`                            |   ✅   | S5 1 failure frees the channel                                                                 |
+|  48 | `test_s5_1_confirm_for_no_pending_channel_rejected`              |   ✅   | S5 1 confirm for no pending channel rejected                                                   |
+|  49 | `test_s7_2_forwarded_tcpip_data_routes_to_the_owner`             |   ✅   | S7 2 forwarded tcpip data routes to the owner                                                  |
+|  50 | `test_s6_5_sftp_subsystem_routes`                                |   ✅   | S6 5 sftp subsystem routes                                                                     |
+|  51 | `test_s6_5_unknown_subsystem_refused`                            |   ✅   | S6 5 unknown subsystem refused                                                                 |
+|  52 | `test_s6_5_sftp_subsystem_match_and_missing_cb`                  |   ✅   | S6 5 sftp subsystem match and missing cb                                                       |
+|  53 | `test_s6_5_scp_exec_routes`                                      |   ✅   | S6 5 scp exec routes                                                                           |
+|  54 | `test_s6_5_scp_exec_match_and_missing_cb`                        |   ✅   | S6 5 scp exec match and missing cb                                                             |
 
 </details>
 
 ---
 
-## test_ssh_packet - native_ssh_packet - ✅ 10 passed
+## test_ssh_packet - native_ssh_packet - ✅ 11 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Per-file coverage for ssh/transport/ssh_packet.c - the RFC 4253 sec 6 binary packet protocol._
 
-|   # | Test                                                     | Status | Description                                       |
-| --: | :------------------------------------------------------- | :----: | :------------------------------------------------ |
-|   1 | `test_packet_length_excludes_itself_and_mac`             |   ✅   | Packet length excludes itself and mac             |
-|   2 | `test_padding_is_within_the_rfc_bounds`                  |   ✅   | Padding is within the rfc bounds                  |
-|   3 | `test_frame_is_a_multiple_of_the_block_size`             |   ✅   | Frame is a multiple of the block size             |
-|   4 | `test_minimum_packet_size`                               |   ✅   | Minimum packet size                               |
-|   5 | `test_round_trip_delivers_the_payload`                   |   ✅   | Round trip delivers the payload                   |
-|   6 | `test_sequence_number_starts_at_zero_and_counts_packets` |   ✅   | Sequence number starts at zero and counts packets |
-|   7 | `test_receive_refuses_padding_under_four`                |   ✅   | Receive refuses padding under four                |
-|   8 | `test_receive_refuses_padding_past_the_packet`           |   ✅   | Receive refuses padding past the packet           |
-|   9 | `test_two_packets_in_one_read`                           |   ✅   | Two packets in one read                           |
-|  10 | `test_partial_frame_waits_for_the_rest`                  |   ✅   | Partial frame waits for the rest                  |
+|   # | Test                                                    | Status | Description                                      |
+| --: | :------------------------------------------------------ | :----: | :----------------------------------------------- |
+|   1 | `test_s6_packet_length_excludes_itself_and_mac`         |   ✅   | S6 packet length excludes itself and mac         |
+|   2 | `test_s6_padding_is_within_the_rfc_bounds`              |   ✅   | S6 padding is within the rfc bounds              |
+|   3 | `test_s6_frame_is_a_multiple_of_the_block_size`         |   ✅   | S6 frame is a multiple of the block size         |
+|   4 | `test_s6_minimum_packet_size`                           |   ✅   | S6 minimum packet size                           |
+|   5 | `test_s6_round_trip_delivers_the_payload`               |   ✅   | S6 round trip delivers the payload               |
+|   6 | `test_s6_4_sequence_starts_at_zero_and_counts`          |   ✅   | S6 4 sequence starts at zero and counts          |
+|   7 | `test_s6_receive_refuses_padding_under_four`            |   ✅   | S6 receive refuses padding under four            |
+|   8 | `test_s6_receive_refuses_padding_past_the_packet`       |   ✅   | S6 receive refuses padding past the packet       |
+|   9 | `test_s6_two_packets_in_one_read`                       |   ✅   | S6 two packets in one read                       |
+|  10 | `test_s6_partial_frame_waits_for_the_rest`              |   ✅   | S6 partial frame waits for the rest              |
+|  11 | `test_s6_4_a_rekey_does_not_reset_the_sequence_numbers` |   ✅   | S6 4 a rekey does not reset the sequence numbers |
 
 </details>
 
@@ -2035,79 +2143,79 @@ _Per-file coverage for ssh/connection/ssh_flow_control.c - the RFC 4254 sec 5.2 
 
 ---
 
-## test_ssh_auth - native_ssh_kbdint - ✅ 37 passed
+## test_ssh_auth - native_ssh_kbdint - ✅ 36 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _SSH user-authentication tests (RFC 4252): service request/accept, request_
 
-|   # | Test                                                   | Status | Description                                       |
-| --: | :----------------------------------------------------- | :----: | :------------------------------------------------ |
-|   1 | `test_service_request_errors`                          |   ✅   | Service request errors                            |
-|   2 | `test_build_response_guards`                           |   ✅   | Build response guards                             |
-|   3 | `test_parse_request_truncations`                       |   ✅   | Parse request truncations                         |
-|   4 | `test_pubkey_blob_parse_failures`                      |   ✅   | Pubkey blob parse failures                        |
-|   5 | `test_pubkey_oversized_signed_prefix`                  |   ✅   | Pubkey oversized signed prefix                    |
-|   6 | `test_handle_request_index_and_parse_guards`           |   ✅   | Handle request index and parse guards             |
-|   7 | `test_pubkey_without_verifier_fails`                   |   ✅   | Pubkey without verifier fails                     |
-|   8 | `test_pubkey_rsa_blob_type_length_and_zero_mpint`      |   ✅   | Pubkey rsa blob type length and zero mpint        |
-|   9 | `test_pubkey_ed25519_blob_and_siglen_rejections`       |   ✅   | Pubkey ed25519 blob and siglen rejections         |
-|  10 | `test_pubkey_ecdsa_blob_rejections`                    |   ✅   | Pubkey ecdsa blob rejections                      |
-|  11 | `test_pubkey_ecdsa_signature_rejections`               |   ✅   | Pubkey ecdsa signature rejections                 |
-|  12 | `test_pubkey_verifier_rejects_key`                     |   ✅   | Pubkey verifier rejects key                       |
-|  13 | `test_build_failure_partial_success_flag`              |   ✅   | Build failure partial success flag                |
-|  14 | `test_service_request_accept`                          |   ✅   | Service request accept                            |
-|  15 | `test_service_request_rejects_unknown`                 |   ✅   | Service request rejects unknown                   |
-|  16 | `test_parse_password_request`                          |   ✅   | Parse password request                            |
-|  17 | `test_parse_none_request`                              |   ✅   | Parse none request                                |
-|  18 | `test_parse_rejects_foreign_service`                   |   ✅   | Parse rejects foreign service                     |
-|  19 | `test_parse_reads_password_change`                     |   ✅   | Parse reads password change                       |
-|  20 | `test_pw_change_defers_then_reports`                   |   ✅   | Pw change defers then reports                     |
-|  21 | `test_pw_change_cooldown_refuses_second`               |   ✅   | Pw change cooldown refuses second                 |
-|  22 | `test_pw_change_no_cb_fails`                           |   ✅   | Pw change no cb fails                             |
-|  23 | `test_handle_request_success`                          |   ✅   | Handle request success                            |
-|  24 | `test_handle_request_wrong_password_fails`             |   ✅   | Handle request wrong password fails               |
-|  25 | `test_handle_none_request_fails_without_auth`          |   ✅   | Handle none request fails without auth            |
-|  26 | `test_handle_request_no_callback_fails`                |   ✅   | No callback installed → all credentials rejected. |
-|  27 | `test_pubkey_probe_returns_pk_ok`                      |   ✅   | Pubkey probe returns pk ok                        |
-|  28 | `test_pubkey_without_session_id_fails`                 |   ✅   | Pubkey without session id fails                   |
-|  29 | `test_pubkey_signature_not_replayable_across_sessions` |   ✅   | Pubkey signature not replayable across sessions   |
-|  30 | `test_failure_does_not_advertise_none`                 |   ✅   | Failure does not advertise none                   |
-|  31 | `test_pubkey_valid_signature_succeeds`                 |   ✅   | Pubkey valid signature succeeds                   |
-|  32 | `test_pubkey_rsa_sha512_signature_succeeds`            |   ✅   | Pubkey rsa sha512 signature succeeds              |
-|  33 | `test_pubkey_ecdsa_signature_succeeds`                 |   ✅   | Pubkey ecdsa signature succeeds                   |
-|  34 | `test_pubkey_ed25519_valid_signature_succeeds`         |   ✅   | Pubkey ed25519 valid signature succeeds           |
-|  35 | `test_pubkey_tampered_signature_fails`                 |   ✅   | Pubkey tampered signature fails                   |
-|  36 | `test_pubkey_unauthorized_key_fails`                   |   ✅   | Pubkey unauthorized key fails                     |
-|  37 | `test_aesgcm_gctr_counter_byte_carry`                  |   ✅   | Aesgcm gctr counter byte carry                    |
+|   # | Test                                                | Status | Description                                       |
+| --: | :-------------------------------------------------- | :----: | :------------------------------------------------ |
+|   1 | `test_s4_service_request_wire_errors`               |   ✅   | S4 service request wire errors                    |
+|   2 | `test_s5_1_response_builder_output_caps`            |   ✅   | S5 1 response builder output caps                 |
+|   3 | `test_s5_request_truncated_at_every_field_rejected` |   ✅   | S5 request truncated at every field rejected      |
+|   4 | `test_s7_rsa_blob_parse_failures`                   |   ✅   | S7 rsa blob parse failures                        |
+|   5 | `test_s7_oversized_signed_prefix_rejected`          |   ✅   | S7 oversized signed prefix rejected               |
+|   6 | `test_handle_request_index_and_parse_guards`        |   ✅   | Handle request index and parse guards             |
+|   7 | `test_s7_no_verifier_authorizes_no_key`             |   ✅   | S7 no verifier authorizes no key                  |
+|   8 | `test_s7_rsa_blob_type_length_and_zero_mpint`       |   ✅   | S7 rsa blob type length and zero mpint            |
+|   9 | `test_s7_ed25519_blob_and_siglen_rejections`        |   ✅   | S7 ed25519 blob and siglen rejections             |
+|  10 | `test_s7_ecdsa_blob_rejections`                     |   ✅   | S7 ecdsa blob rejections                          |
+|  11 | `test_s7_ecdsa_signature_rejections`                |   ✅   | S7 ecdsa signature rejections                     |
+|  12 | `test_s7_verifier_rejects_the_offered_key`          |   ✅   | S7 verifier rejects the offered key               |
+|  13 | `test_s5_1_failure_carries_partial_success`         |   ✅   | S5 1 failure carries partial success              |
+|  14 | `test_s4_service_request_accepted`                  |   ✅   | S4 service request accepted                       |
+|  15 | `test_s4_service_request_rejects_unknown_service`   |   ✅   | S4 service request rejects unknown service        |
+|  16 | `test_s5_request_fields_are_parsed`                 |   ✅   | S5 request fields are parsed                      |
+|  17 | `test_s5_2_none_request_is_parsed`                  |   ✅   | S5 2 none request is parsed                       |
+|  18 | `test_s5_foreign_service_is_rejected`               |   ✅   | S5 foreign service is rejected                    |
+|  19 | `test_s8_change_request_carries_old_and_new`        |   ✅   | S8 change request carries old and new             |
+|  20 | `test_s8_change_defers_then_reports`                |   ✅   | S8 change defers then reports                     |
+|  21 | `test_s8_change_cooldown_refuses_second`            |   ✅   | S8 change cooldown refuses second                 |
+|  22 | `test_s8_change_without_a_callback_fails`           |   ✅   | S8 change without a callback fails                |
+|  23 | `test_s8_correct_password_succeeds`                 |   ✅   | S8 correct password succeeds                      |
+|  24 | `test_s8_wrong_password_fails`                      |   ✅   | S8 wrong password fails                           |
+|  25 | `test_s5_2_none_is_rejected`                        |   ✅   | S5 2 none is rejected                             |
+|  26 | `test_s8_no_password_callback_fails`                |   ✅   | No callback installed → all credentials rejected. |
+|  27 | `test_s7_probe_returns_pk_ok`                       |   ✅   | S7 probe returns pk ok                            |
+|  28 | `test_s7_signature_without_session_id_fails`        |   ✅   | S7 signature without session id fails             |
+|  29 | `test_s7_signature_not_replayable_across_sessions`  |   ✅   | S7 signature not replayable across sessions       |
+|  30 | `test_s5_2_none_is_not_advertised`                  |   ✅   | S5 2 none is not advertised                       |
+|  31 | `test_s7_valid_signature_succeeds`                  |   ✅   | S7 valid signature succeeds                       |
+|  32 | `test_s7_rsa_sha512_signature_succeeds`             |   ✅   | S7 rsa sha512 signature succeeds                  |
+|  33 | `test_s7_ecdsa_signature_succeeds`                  |   ✅   | S7 ecdsa signature succeeds                       |
+|  34 | `test_s7_ed25519_valid_signature_succeeds`          |   ✅   | S7 ed25519 valid signature succeeds               |
+|  35 | `test_s7_tampered_signature_fails`                  |   ✅   | S7 tampered signature fails                       |
+|  36 | `test_s7_unauthorized_key_fails`                    |   ✅   | S7 unauthorized key fails                         |
 
 </details>
 
 ---
 
-## test_ssh_kbdint - native_ssh_kbdint - ✅ 13 passed
+## test_ssh_kbdint - native_ssh_kbdint - ✅ 14 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _SSH keyboard-interactive authentication tests (RFC 4256): the server sends one INFO_REQUEST with a_
 
-|   # | Test                                           | Status | Description                             |
-| --: | :--------------------------------------------- | :----: | :-------------------------------------- |
-|   1 | `test_dispatch_all_switch_arms`                |   ✅   | Dispatch all switch arms                |
-|   2 | `test_dispatch_guard_and_error_arms`           |   ✅   | Dispatch guard and error arms           |
-|   3 | `test_kbdint_request_prompts`                  |   ✅   | Kbdint request prompts                  |
-|   4 | `test_kbdint_correct_password_succeeds`        |   ✅   | Kbdint correct password succeeds        |
-|   5 | `test_kbdint_wrong_password_fails`             |   ✅   | Kbdint wrong password fails             |
-|   6 | `test_kbdint_response_without_request_fails`   |   ✅   | Kbdint response without request fails   |
-|   7 | `test_kbdint_zero_responses_fails`             |   ✅   | Kbdint zero responses fails             |
-|   8 | `test_kbdint_response_replay_fails`            |   ✅   | Kbdint response replay fails            |
-|   9 | `test_methods_list_advertises_kbdint`          |   ✅   | Methods list advertises kbdint          |
-|  10 | `test_kbdint_request_without_verifier_or_room` |   ✅   | Kbdint request without verifier or room |
-|  11 | `test_kbdint_info_response_wire_guards`        |   ✅   | Kbdint info response wire guards        |
-|  12 | `test_kbdint_dispatch_guards_and_success`      |   ✅   | Kbdint dispatch guards and success      |
-|  13 | `test_kbdint_dispatch_failures_hit_the_limit`  |   ✅   | Kbdint dispatch failures hit the limit  |
+|   # | Test                                                        | Status | Description                                          |
+| --: | :---------------------------------------------------------- | :----: | :--------------------------------------------------- |
+|   1 | `test_dispatch_all_switch_arms`                             |   ✅   | Dispatch all switch arms                             |
+|   2 | `test_dispatch_guard_and_error_arms`                        |   ✅   | Dispatch guard and error arms                        |
+|   3 | `test_s5_a_new_request_does_not_abandon_the_armed_exchange` |   ✅   | S5 a new request does not abandon the armed exchange |
+|   4 | `test_kbdint_request_prompts`                               |   ✅   | Kbdint request prompts                               |
+|   5 | `test_kbdint_correct_password_succeeds`                     |   ✅   | Kbdint correct password succeeds                     |
+|   6 | `test_kbdint_wrong_password_fails`                          |   ✅   | Kbdint wrong password fails                          |
+|   7 | `test_kbdint_response_without_request_fails`                |   ✅   | Kbdint response without request fails                |
+|   8 | `test_kbdint_zero_responses_fails`                          |   ✅   | Kbdint zero responses fails                          |
+|   9 | `test_kbdint_response_replay_fails`                         |   ✅   | Kbdint response replay fails                         |
+|  10 | `test_methods_list_advertises_kbdint`                       |   ✅   | Methods list advertises kbdint                       |
+|  11 | `test_kbdint_request_without_verifier_or_room`              |   ✅   | Kbdint request without verifier or room              |
+|  12 | `test_kbdint_info_response_wire_guards`                     |   ✅   | Kbdint info response wire guards                     |
+|  13 | `test_kbdint_dispatch_guards_and_success`                   |   ✅   | Kbdint dispatch guards and success                   |
+|  14 | `test_kbdint_dispatch_failures_hit_the_limit`               |   ✅   | Kbdint dispatch failures hit the limit               |
 
 </details>
 
@@ -2136,36 +2244,124 @@ _Built with PC_SSH_ALLOW_PASSWORD=0: verifies password authentication is_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_SSH transport-glue test: drives a PROTO_SSH connection through the real_
+_Per-file coverage for ssh/connection/ssh_conn.c - the TCP transport to SSH protocol glue._
 
 |   # | Test                                                                  | Status | Description                                                    |
 | --: | :-------------------------------------------------------------------- | :----: | :------------------------------------------------------------- |
-|   1 | `test_conn_entrypoints_reject_unmapped_slot`                          |   ✅   | Conn entrypoints reject unmapped slot                          |
-|   2 | `test_conn_outbound_arena_exhausted`                                  |   ✅   | Conn outbound arena exhausted                                  |
-|   3 | `test_conn_outbound_arena_fits_payload_not_wire`                      |   ✅   | Conn outbound arena fits payload not wire                      |
-|   4 | `test_conn_emit_drops_reply_on_dead_socket`                           |   ✅   | Conn emit drops reply on dead socket                           |
-|   5 | `test_conn_poll_rx_foreign_slot_mapping`                              |   ✅   | Conn poll rx foreign slot mapping                              |
-|   6 | `test_conn_poll_rekey_preconditions`                                  |   ✅   | Conn poll rekey preconditions                                  |
-|   7 | `test_conn_accept_skips_banner_on_dead_socket`                        |   ✅   | Conn accept skips banner on dead socket                        |
-|   8 | `test_conn_rx_banner_then_packet_in_separate_reads`                   |   ✅   | Conn rx banner then packet in separate reads                   |
-|   9 | `test_conn_outbound_pkt_send_fails`                                   |   ✅   | Conn outbound pkt send fails                                   |
-|  10 | `test_poll_rekey_emit_fails`                                          |   ✅   | Poll rekey emit fails                                          |
-|  11 | `test_accept_sends_server_banner`                                     |   ✅   | Accept sends server banner                                     |
-|  12 | `test_banner_then_kexinit_advances_and_replies`                       |   ✅   | Banner then kexinit advances and replies                       |
-|  13 | `test_poll_triggers_server_rekey`                                     |   ✅   | Poll triggers server rekey                                     |
-|  14 | `test_proto_handler_accessor`                                         |   ✅   | Proto handler accessor                                         |
-|  15 | `test_proto_handler_wires_emit`                                       |   ✅   | Proto handler wires emit                                       |
-|  16 | `test_send_entrypoints_reject`                                        |   ✅   | Send entrypoints reject                                        |
-|  17 | `test_poll_rx_banner_guards`                                          |   ✅   | Poll rx banner guards                                          |
-|  18 | `test_conn_send_close_open_channel`                                   |   ✅   | Conn send close open channel                                   |
-|  19 | `test_send_channel_reject_paths`                                      |   ✅   | Send channel reject paths                                      |
-|  20 | `test_accept_no_ssh_capacity`                                         |   ✅   | Accept no ssh capacity                                         |
-|  21 | `test_poll_ignores_inactive_conn`                                     |   ✅   | Poll ignores inactive conn                                     |
-|  22 | `test_rx_disconnect_tears_down`                                       |   ✅   | Rx disconnect tears down                                       |
-|  23 | `test_rx_overlong_banner_closes`                                      |   ✅   | Rx overlong banner closes                                      |
-|  24 | `test_bn_expmod_group14_hits_correction_sliver_without_overflow_limb` |   ✅   | Bn expmod group14 hits correction sliver without overflow limb |
-|  25 | `test_dispatch_all_switch_arms`                                       |   ✅   | Dispatch all switch arms                                       |
-|  26 | `test_dispatch_guard_and_error_arms`                                  |   ✅   | Dispatch guard and error arms                                  |
+|   1 | `test_s4_2_accept_sends_the_identification_string`                    |   ✅   | S4 2 accept sends the identification string                    |
+|   2 | `test_s4_2_peer_identification_is_consumed`                           |   ✅   | S4 2 peer identification is consumed                           |
+|   3 | `test_s4_2_a_partial_identification_waits`                            |   ✅   | S4 2 a partial identification waits                            |
+|   4 | `test_s4_2_an_overlong_identification_closes`                         |   ✅   | S4 2 an overlong identification closes                         |
+|   5 | `test_s6_a_framed_packet_is_deframed_and_answered`                    |   ✅   | S6 a framed packet is deframed and answered                    |
+|   6 | `test_s6_identification_and_packet_in_one_read`                       |   ✅   | S6 identification and packet in one read                       |
+|   7 | `test_s9_poll_starts_a_rekey_once_the_budget_is_spent`                |   ✅   | S9 poll starts a rekey once the budget is spent                |
+|   8 | `test_s9_no_rekey_while_one_is_running`                               |   ✅   | S9 no rekey while one is running                               |
+|   9 | `test_s9_no_rekey_before_the_budget_is_spent`                         |   ✅   | S9 no rekey before the budget is spent                         |
+|  10 | `test_rfc4252_s8_a_completed_password_change_answers_success`         |   ✅   | Rfc4252 s8 a completed password change answers success         |
+|  11 | `test_rfc4252_s8_a_refused_password_change_answers_failure`           |   ✅   | Rfc4252 s8 a refused password change answers failure           |
+|  12 | `test_rfc4254_s5_2_send_frames_channel_data_to_the_peer_id`           |   ✅   | Rfc4254 s5 2 send frames channel data to the peer id           |
+|  13 | `test_rfc4254_s5_2_send_past_the_peer_window_is_refused`              |   ✅   | Rfc4254 s5 2 send past the peer window is refused              |
+|  14 | `test_rfc4254_s5_3_close_channel_sends_eof_then_close_as_two_packets` |   ✅   | Rfc4254 s5 3 close channel sends eof then close as two packets |
+|  15 | `test_rfc4254_s7_2_open_forwarded_emits_a_forwarded_tcpip_open`       |   ✅   | Rfc4254 s7 2 open forwarded emits a forwarded tcpip open       |
+|  16 | `test_s4_2_to_s7_3_handshake_end_to_end_through_the_byte_pump`        |   ✅   | sec 4.2: the identification strings, ours first.               |
+|  17 | `test_s8_a_kexdh_init_outside_the_group_fails_the_exchange`           |   ✅   | S8 a kexdh init outside the group fails the exchange           |
+|  18 | `test_slot_mapping_accept_without_capacity_drops_the_connection`      |   ✅   | Slot mapping accept without capacity drops the connection      |
+|  19 | `test_slot_mapping_a_foreign_mapping_is_ignored`                      |   ✅   | Slot mapping a foreign mapping is ignored                      |
+|  20 | `test_slot_mapping_outbound_refuses_an_unmapped_slot`                 |   ✅   | Slot mapping outbound refuses an unmapped slot                 |
+|  21 | `test_liveness_outbound_refuses_a_dead_socket`                        |   ✅   | Liveness outbound refuses a dead socket                        |
+|  22 | `test_liveness_poll_ignores_an_inactive_connection`                   |   ✅   | Liveness poll ignores an inactive connection                   |
+|  23 | `test_liveness_accept_skips_the_identification_on_a_dead_socket`      |   ✅   | Liveness accept skips the identification on a dead socket      |
+|  24 | `test_pool_outbound_fails_closed_when_the_secure_pool_is_spent`       |   ✅   | Pool outbound fails closed when the secure pool is spent       |
+|  25 | `test_teardown_close_releases_the_slot_for_the_next_connection`       |   ✅   | Teardown close releases the slot for the next connection       |
+|  26 | `test_handler_seam_returns_the_table_and_installs_emit`               |   ✅   | Handler seam returns the table and installs emit               |
+
+</details>
+
+---
+
+## test_ssh_forward - native_ssh_forward - ✅ 31 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Per-file coverage for ssh/connection/ssh_forward.c - the remote-forward owner (ssh -R)._
+
+|   # | Test                                                             | Status | Description                                               |
+| --: | :--------------------------------------------------------------- | :----: | :-------------------------------------------------------- |
+|   1 | `test_s4_remote_forward_is_refused_until_begin`                  |   ✅   | S4 remote forward is refused until begin                  |
+|   2 | `test_s7_1_tcpip_forward_binds_the_requested_port`               |   ✅   | S7 1 tcpip forward binds the requested port               |
+|   3 | `test_s4_no_reply_when_want_reply_is_clear`                      |   ✅   | S4 no reply when want reply is clear                      |
+|   4 | `test_s7_1_port_zero_is_refused_rather_than_allocated`           |   ✅   | S7 1 port zero is refused rather than allocated           |
+|   5 | `test_s7_1_duplicate_bind_is_refused`                            |   ✅   | S7 1 duplicate bind is refused                            |
+|   6 | `test_s7_1_a_bind_the_stack_refuses_leaves_no_binding`           |   ✅   | S7 1 a bind the stack refuses leaves no binding           |
+|   7 | `test_s7_1_each_special_case_bind_address_is_accepted`           |   ✅   | S7 1 each special case bind address is accepted           |
+|   8 | `test_s7_1_cancel_tcpip_forward_stops_the_listener`              |   ✅   | S7 1 cancel tcpip forward stops the listener              |
+|   9 | `test_s7_1_cancel_of_an_unbound_port_fails`                      |   ✅   | S7 1 cancel of an unbound port fails                      |
+|  10 | `test_s7_1_port_can_be_forwarded_again_after_a_cancel`           |   ✅   | S7 1 port can be forwarded again after a cancel           |
+|  11 | `test_s4_replies_are_in_request_order`                           |   ✅   | S4 replies are in request order                           |
+|  12 | `test_s4_unknown_request_name_never_binds`                       |   ✅   | S4 unknown request name never binds                       |
+|  13 | `test_s7_1_reset_stops_the_listener_the_connection_owned`        |   ✅   | S7 1 reset stops the listener the connection owned        |
+|  14 | `test_s7_1_policy_does_not_gate_a_remote_forward`                |   ✅   | S7 1 policy does not gate a remote forward                |
+|  15 | `test_s7_2_accept_opens_a_forwarded_tcpip_channel`               |   ✅   | S7 2 accept opens a forwarded tcpip channel               |
+|  16 | `test_s7_2_empty_bind_address_is_reported_as_wildcard`           |   ✅   | S7 2 empty bind address is reported as wildcard           |
+|  17 | `test_s7_2_accept_with_no_binding_opens_no_channel`              |   ✅   | S7 2 accept with no binding opens no channel              |
+|  18 | `test_s5_1_open_confirmation_starts_the_byte_bridge`             |   ✅   | S5 1 open confirmation starts the byte bridge             |
+|  19 | `test_s5_1_open_failure_drops_the_accepted_socket`               |   ✅   | S5 1 open failure drops the accepted socket               |
+|  20 | `test_s7_2_inbound_forwarded_tcpip_open_is_rejected`             |   ✅   | S7 2 inbound forwarded tcpip open is rejected             |
+|  21 | `test_s7_2_forwards_are_independent_of_sessions`                 |   ✅   | S7 2 forwards are independent of sessions                 |
+|  22 | `test_s5_3_socket_close_sends_eof_then_close`                    |   ✅   | S5 3 socket close sends eof then close                    |
+|  23 | `test_s5_1_direct_tcpip_is_prohibited_until_begin`               |   ✅   | S5 1 direct tcpip is prohibited until begin               |
+|  24 | `test_s7_2_direct_tcpip_connects_to_the_named_host_and_port`     |   ✅   | S7 2 direct tcpip connects to the named host and port     |
+|  25 | `test_s7_2_the_policy_sees_the_host_and_port_from_the_wire`      |   ✅   | S7 2 the policy sees the host and port from the wire      |
+|  26 | `test_s7_2_a_denied_target_is_not_dialed`                        |   ✅   | S7 2 a denied target is not dialed                        |
+|  27 | `test_s7_2_a_refused_connect_is_reported_after_the_confirmation` |   ✅   | S7 2 a refused connect is reported after the confirmation |
+|  28 | `test_s7_2_an_oversized_host_is_refused`                         |   ✅   | S7 2 an oversized host is refused                         |
+|  29 | `test_s7_2_an_empty_host_is_refused`                             |   ✅   | S7 2 an empty host is refused                             |
+|  30 | `test_s7_2_channel_data_reaches_the_forwarded_socket`            |   ✅   | S7 2 channel data reaches the forwarded socket            |
+|  31 | `test_s5_1_a_full_forward_table_is_refused`                      |   ✅   | S5 1 a full forward table is refused                      |
+
+</details>
+
+---
+
+## test_sftp_server - native_sftp_server - ✅ 6 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Per-file coverage for application/sftp/ssh_sftp.c - the SFTP v3 server subsystem._
+
+|   # | Test                                                        | Status | Description                                          |
+| --: | :---------------------------------------------------------- | :----: | :--------------------------------------------------- |
+|   1 | `test_s4_init_is_answered_with_version`                     |   ✅   | S4 init is answered with version                     |
+|   2 | `test_s4_an_older_client_is_not_answered_the_lower_version` |   ✅   | S4 an older client is not answered the lower version |
+|   3 | `test_s3_a_short_packet_produces_no_response`               |   ✅   | S3 a short packet produces no response               |
+|   4 | `test_s3_a_packet_split_across_messages_is_reassembled`     |   ✅   | S3 a packet split across messages is reassembled     |
+|   5 | `test_s3_two_packets_in_one_message_are_both_served`        |   ✅   | S3 two packets in one message are both served        |
+|   6 | `test_s6_5_a_plain_session_channel_serves_no_sftp`          |   ✅   | S6 5 a plain session channel serves no sftp          |
+
+</details>
+
+---
+
+## test_scp_server - native_scp_server - ✅ 9 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Per-file coverage for application/scp/ssh_scp.c - the rcp SINK state machine._
+
+|   # | Test                                                | Status | Description                                  |
+| --: | :-------------------------------------------------- | :----: | :------------------------------------------- |
+|   1 | `test_rcp_sink_command_acks_ready`                  |   ✅   | Rcp sink command acks ready                  |
+|   2 | `test_rcp_source_command_is_refused`                |   ✅   | Rcp source command is refused                |
+|   3 | `test_rcp_a_command_without_a_mode_is_refused`      |   ✅   | Rcp a command without a mode is refused      |
+|   4 | `test_rcp_a_whole_file_transfer_acks_at_each_stage` |   ✅   | Rcp a whole file transfer acks at each stage |
+|   5 | `test_rcp_a_split_control_line_is_acked_once`       |   ✅   | Rcp a split control line is acked once       |
+|   6 | `test_rcp_a_zero_length_file_skips_the_data_stage`  |   ✅   | Rcp a zero length file skips the data stage  |
+|   7 | `test_rcp_a_directory_record_is_refused`            |   ✅   | Rcp a directory record is refused            |
+|   8 | `test_rcp_a_malformed_control_line_is_refused`      |   ✅   | Rcp a malformed control line is refused      |
+|   9 | `test_rcp_a_plain_exec_channel_serves_no_records`   |   ✅   | Rcp a plain exec channel serves no records   |
 
 </details>
 
