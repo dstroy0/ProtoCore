@@ -73,7 +73,7 @@ static proto_bool check_uv(const char *u, const char *p)
 
 // ---- service request ------------------------------------------------------
 
-void test_service_request_accept()
+void test_s4_service_request_accepted()
 {
     uint8_t pkt[64];
     size_t n = 0;
@@ -89,7 +89,7 @@ void test_service_request_accept()
     TEST_ASSERT_EQUAL_MEMORY("ssh-userauth", out + 5, 12);
 }
 
-void test_service_request_rejects_unknown()
+void test_s4_service_request_rejects_unknown_service()
 {
     uint8_t pkt[64];
     size_t n = 0;
@@ -102,7 +102,7 @@ void test_service_request_rejects_unknown()
 
 // ---- request parsing ------------------------------------------------------
 
-void test_parse_password_request()
+void test_s5_request_fields_are_parsed()
 {
     uint8_t pkt[128];
     size_t n = 0;
@@ -122,7 +122,7 @@ void test_parse_password_request()
     TEST_ASSERT_EQUAL_STRING("s3cret", req.password);
 }
 
-void test_parse_none_request()
+void test_s5_2_none_request_is_parsed()
 {
     uint8_t pkt[128];
     size_t n = 0;
@@ -138,7 +138,7 @@ void test_parse_none_request()
 }
 
 // RFC 4252 sec 5: a request naming a service the server does not offer must not authenticate.
-void test_parse_rejects_foreign_service()
+void test_s5_foreign_service_is_rejected()
 {
     uint8_t pkt[128];
     size_t n = 0;
@@ -155,7 +155,7 @@ void test_parse_rejects_foreign_service()
 
 // RFC 4252 sec 8: a change request (TRUE flag) carries old || new; the parser reads both and the
 // handler routes them to the change callback.
-void test_parse_reads_password_change()
+void test_s8_change_request_carries_old_and_new()
 {
     uint8_t pkt[128];
     size_t n = 0;
@@ -228,7 +228,7 @@ static void pw_change_cooldown_clear()
 
 // The change defers: the request itself produces no reply, and the reply the poll drains follows
 // only once the application reports.
-void test_pw_change_defers_then_reports()
+void test_s8_change_defers_then_reports()
 {
     pc_ssh_auth_reset(0);
     pc_ssh_auth_set_password_change_cb(change_start);
@@ -259,7 +259,7 @@ void test_pw_change_defers_then_reports()
 }
 
 // A second change inside the cooldown is refused outright, and the callback never runs again.
-void test_pw_change_cooldown_refuses_second()
+void test_s8_change_cooldown_refuses_second()
 {
     pc_ssh_auth_reset(0);
     pc_ssh_auth_set_password_change_cb(change_start);
@@ -288,7 +288,7 @@ void test_pw_change_cooldown_refuses_second()
 }
 
 // No callback installed: the change is refused rather than authenticating on the old password.
-void test_pw_change_no_cb_fails()
+void test_s8_change_without_a_callback_fails()
 {
     pc_ssh_auth_reset(0);
     ssh_sess[0].authed = PROTO_FALSE;
@@ -304,7 +304,7 @@ void test_pw_change_no_cb_fails()
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
 }
 
-void test_handle_request_success()
+void test_s8_correct_password_succeeds()
 {
     pc_ssh_auth_set_password_cb(check_uv);
     uint8_t pkt[128];
@@ -318,7 +318,7 @@ void test_handle_request_success()
     TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, ssh_sess[0].phase);
 }
 
-void test_handle_request_wrong_password_fails()
+void test_s8_wrong_password_fails()
 {
     pc_ssh_auth_set_password_cb(check_uv);
     uint8_t pkt[128];
@@ -342,7 +342,7 @@ void test_handle_request_wrong_password_fails()
     TEST_ASSERT_TRUE(adv);
 }
 
-void test_handle_none_request_fails_without_auth()
+void test_s5_2_none_is_rejected()
 {
     pc_ssh_auth_set_password_cb(check_uv);
     uint8_t pkt[64];
@@ -359,7 +359,7 @@ void test_handle_none_request_fails_without_auth()
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
 }
 
-void test_handle_request_no_callback_fails()
+void test_s8_no_password_callback_fails()
 {
     // No callback installed → all credentials rejected.
     uint8_t pkt[128];
@@ -454,7 +454,7 @@ static void set_session_id_0_to_31()
     ssh_sess[0].have_session_id = PROTO_TRUE;
 }
 
-void test_pubkey_probe_returns_pk_ok()
+void test_s7_probe_returns_pk_ok()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -470,7 +470,7 @@ void test_pubkey_probe_returns_pk_ok()
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
 }
 
-void test_pubkey_valid_signature_succeeds()
+void test_s7_valid_signature_succeeds()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -490,7 +490,7 @@ void test_pubkey_valid_signature_succeeds()
 
 // RFC 4252 sec 7: the signature is taken over string(session_id) || the request. With no KEX
 // completed there is no session id, so the same otherwise-valid signature must not authenticate.
-void test_pubkey_without_session_id_fails()
+void test_s7_signature_without_session_id_fails()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -514,7 +514,7 @@ void test_pubkey_without_session_id_fails()
 // RFC 4252 sec 7 / RFC 4251 sec 9.3.3: the session id leads the signed blob so a signature captured in
 // one session cannot be replayed into another. The same otherwise-valid request fails under a different
 // session id.
-void test_pubkey_signature_not_replayable_across_sessions()
+void test_s7_signature_not_replayable_across_sessions()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -535,7 +535,7 @@ void test_pubkey_signature_not_replayable_across_sessions()
 }
 
 // RFC 4252 sec 5.2: the "none" method MUST NOT be listed as one the server supports.
-void test_failure_does_not_advertise_none()
+void test_s5_2_none_is_not_advertised()
 {
     uint8_t out[64];
     size_t olen = 0;
@@ -643,7 +643,7 @@ static void run_pubkey_rsa_sha512(const uint8_t *der, unsigned int der_len, cons
 //
 // Twice: the committed baseline key, then the key generated for this run. A pass that turned on one
 // particular modulus shows up as the second run failing.
-void test_pubkey_rsa_sha512_signature_succeeds()
+void test_s7_rsa_sha512_signature_succeeds()
 {
     run_pubkey_rsa_sha512(PC_SSH_BASELINE_KEY_DER, PC_SSH_BASELINE_KEY_DER_LEN, PC_SSH_BASELINE_KEY_N);
     run_pubkey_rsa_sha512(PC_SSH_THROWAWAY_KEY_DER, PC_SSH_THROWAWAY_KEY_DER_LEN, PC_SSH_THROWAWAY_KEY_N);
@@ -651,7 +651,7 @@ void test_pubkey_rsa_sha512_signature_succeeds()
 
 // Server-sig-algs advertises ecdsa-sha2-nistp256; prove the auth layer verifies a genuine
 // client P-256 signature (RFC 5656). The signature is forged at test time with a key we control.
-void test_pubkey_ecdsa_signature_succeeds()
+void test_s7_ecdsa_signature_succeeds()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -723,7 +723,7 @@ void test_pubkey_ecdsa_signature_succeeds()
     TEST_ASSERT_TRUE(ssh_sess[0].authed);
 }
 
-void test_pubkey_tampered_signature_fails()
+void test_s7_tampered_signature_fails()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -741,7 +741,7 @@ void test_pubkey_tampered_signature_fails()
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
 }
 
-void test_pubkey_unauthorized_key_fails()
+void test_s7_unauthorized_key_fails()
 {
     pc_ssh_auth_set_pubkey_cb(NULL); // no key authorized
     set_session_id_0_to_31();
@@ -800,7 +800,7 @@ static size_t build_pubkey_req_ed(uint8_t *pkt, const uint8_t *pub, const uint8_
 
 // A genuine ed25519 client signature (computed here over the RFC 4252 signed data)
 // authenticates; flipping any signature byte is rejected.
-void test_pubkey_ed25519_valid_signature_succeeds()
+void test_s7_ed25519_valid_signature_succeeds()
 {
     const uint8_t *seed = BASELINE_ED25519_SEEDS[0]; // deterministic baseline client key
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
@@ -843,7 +843,7 @@ void test_pubkey_ed25519_valid_signature_succeeds()
 
 // SERVICE_REQUEST parsing rejects a wrong/empty message, a truncated service string,
 // and an output buffer too small for SERVICE_ACCEPT.
-void test_service_request_errors()
+void test_s4_service_request_wire_errors()
 {
     uint8_t out[64], p[64];
     size_t olen = 0;
@@ -859,7 +859,7 @@ void test_service_request_errors()
 }
 
 // The response builders reject an output buffer too small for their fixed messages.
-void test_build_response_guards()
+void test_s5_1_response_builder_output_caps()
 {
     uint8_t out[8];
     size_t olen = 0;
@@ -878,7 +878,7 @@ void test_build_response_guards()
 
 // USERAUTH_REQUEST parsing rejects a truncation at every field, for both the password
 // and publickey methods (including the signature blob).
-void test_parse_request_truncations()
+void test_s5_request_truncated_at_every_field_rejected()
 {
     SshAuthReq req;
     uint8_t p[512];
@@ -972,7 +972,7 @@ void test_parse_request_truncations()
 
 // A malformed ssh-rsa public-key blob fails to load at each field, yielding a
 // USERAUTH_FAILURE rather than a crash.
-void test_pubkey_blob_parse_failures()
+void test_s7_rsa_blob_parse_failures()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -1040,7 +1040,7 @@ static proto_bool pk_cb_any(const char *u, const uint8_t *blob, size_t n)
 
 // A publickey request whose signed prefix exceeds SSH_PKT_BUF_SIZE is rejected before
 // the signature buffer is assembled (a DoS guard), yielding USERAUTH_FAILURE.
-void test_pubkey_oversized_signed_prefix()
+void test_s7_oversized_signed_prefix_rejected()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_any); // accept any key so the length guard is reached
     set_session_id_0_to_31();
@@ -1086,7 +1086,7 @@ static size_t build_pubkey_req_generic(uint8_t *pkt, const char *algo, const uin
 }
 
 // With no public-key verifier installed no key can be authorized, however well-formed it is.
-void test_pubkey_without_verifier_fails()
+void test_s7_no_verifier_authorizes_no_key()
 {
     pc_ssh_auth_set_pubkey_cb(NULL);
     set_session_id_0_to_31();
@@ -1104,7 +1104,7 @@ void test_pubkey_without_verifier_fails()
 // The ssh-rsa key type is matched element-wise (a name of a different LENGTH is rejected on the
 // length test alone), and an mpint that is all zero bytes strips to the empty value and still
 // parses - the decision then belongs to the application verifier, not the parser.
-void test_pubkey_rsa_blob_type_length_and_zero_mpint()
+void test_s7_rsa_blob_type_length_and_zero_mpint()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -1132,7 +1132,7 @@ void test_pubkey_rsa_blob_type_length_and_zero_mpint()
 
 // An ssh-ed25519 blob whose public-key string is truncated, or is not exactly 32 bytes, is
 // rejected; so is a signature of any length other than the 64 bytes Ed25519 produces.
-void test_pubkey_ed25519_blob_and_siglen_rejections()
+void test_s7_ed25519_blob_and_siglen_rejections()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -1171,7 +1171,7 @@ void test_pubkey_ed25519_blob_and_siglen_rejections()
 
 // An ecdsa-sha2-nistp256 blob is rejected at every field: a missing or wrong curve identifier, a
 // missing or wrongly sized point, and a point that is not in uncompressed (0x04) form.
-void test_pubkey_ecdsa_blob_rejections()
+void test_s7_ecdsa_blob_rejections()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -1236,7 +1236,7 @@ void test_pubkey_ecdsa_blob_rejections()
 // The ECDSA signature blob (mpint r || mpint s, RFC 5656 §3.1.2) is rejected when either half is
 // missing or wider than a P-256 coordinate, and a well-formed signature over the wrong data fails
 // verification rather than being accepted.
-void test_pubkey_ecdsa_signature_rejections()
+void test_s7_ecdsa_signature_rejections()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
@@ -1309,7 +1309,7 @@ static proto_bool pk_cb_reject(const char *u, const uint8_t *blob, size_t n)
 
 // A verifier that IS installed but refuses the offered key produces USERAUTH_FAILURE - a distinct
 // path from having no verifier at all, and it must not fall through to a signature check.
-void test_pubkey_verifier_rejects_key()
+void test_s7_verifier_rejects_the_offered_key()
 {
     pc_ssh_auth_set_pubkey_cb(pk_cb_reject);
     set_session_id_0_to_31();
@@ -1325,7 +1325,7 @@ void test_pubkey_verifier_rejects_key()
 }
 
 // USERAUTH_FAILURE carries the partial-success boolean the caller asks for (RFC 4252 §5.1).
-void test_build_failure_partial_success_flag()
+void test_s5_1_failure_carries_partial_success()
 {
     uint8_t out[64];
     size_t olen = 0;
@@ -1384,42 +1384,42 @@ void test_aesgcm_gctr_counter_byte_carry(void)
 int main()
 {
     UNITY_BEGIN();
-    RUN_TEST(test_service_request_errors);
-    RUN_TEST(test_build_response_guards);
-    RUN_TEST(test_parse_request_truncations);
-    RUN_TEST(test_pubkey_blob_parse_failures);
-    RUN_TEST(test_pubkey_oversized_signed_prefix);
+    RUN_TEST(test_s4_service_request_wire_errors);
+    RUN_TEST(test_s5_1_response_builder_output_caps);
+    RUN_TEST(test_s5_request_truncated_at_every_field_rejected);
+    RUN_TEST(test_s7_rsa_blob_parse_failures);
+    RUN_TEST(test_s7_oversized_signed_prefix_rejected);
     RUN_TEST(test_handle_request_index_and_parse_guards);
-    RUN_TEST(test_pubkey_without_verifier_fails);
-    RUN_TEST(test_pubkey_rsa_blob_type_length_and_zero_mpint);
-    RUN_TEST(test_pubkey_ed25519_blob_and_siglen_rejections);
-    RUN_TEST(test_pubkey_ecdsa_blob_rejections);
-    RUN_TEST(test_pubkey_ecdsa_signature_rejections);
-    RUN_TEST(test_pubkey_verifier_rejects_key);
-    RUN_TEST(test_build_failure_partial_success_flag);
-    RUN_TEST(test_service_request_accept);
-    RUN_TEST(test_service_request_rejects_unknown);
-    RUN_TEST(test_parse_password_request);
-    RUN_TEST(test_parse_none_request);
-    RUN_TEST(test_parse_rejects_foreign_service);
-    RUN_TEST(test_parse_reads_password_change);
-    RUN_TEST(test_pw_change_defers_then_reports);
-    RUN_TEST(test_pw_change_cooldown_refuses_second);
-    RUN_TEST(test_pw_change_no_cb_fails);
-    RUN_TEST(test_handle_request_success);
-    RUN_TEST(test_handle_request_wrong_password_fails);
-    RUN_TEST(test_handle_none_request_fails_without_auth);
-    RUN_TEST(test_handle_request_no_callback_fails);
-    RUN_TEST(test_pubkey_probe_returns_pk_ok);
-    RUN_TEST(test_pubkey_without_session_id_fails);
-    RUN_TEST(test_pubkey_signature_not_replayable_across_sessions);
-    RUN_TEST(test_failure_does_not_advertise_none);
-    RUN_TEST(test_pubkey_valid_signature_succeeds);
-    RUN_TEST(test_pubkey_rsa_sha512_signature_succeeds);
-    RUN_TEST(test_pubkey_ecdsa_signature_succeeds);
-    RUN_TEST(test_pubkey_ed25519_valid_signature_succeeds);
-    RUN_TEST(test_pubkey_tampered_signature_fails);
-    RUN_TEST(test_pubkey_unauthorized_key_fails);
+    RUN_TEST(test_s7_no_verifier_authorizes_no_key);
+    RUN_TEST(test_s7_rsa_blob_type_length_and_zero_mpint);
+    RUN_TEST(test_s7_ed25519_blob_and_siglen_rejections);
+    RUN_TEST(test_s7_ecdsa_blob_rejections);
+    RUN_TEST(test_s7_ecdsa_signature_rejections);
+    RUN_TEST(test_s7_verifier_rejects_the_offered_key);
+    RUN_TEST(test_s5_1_failure_carries_partial_success);
+    RUN_TEST(test_s4_service_request_accepted);
+    RUN_TEST(test_s4_service_request_rejects_unknown_service);
+    RUN_TEST(test_s5_request_fields_are_parsed);
+    RUN_TEST(test_s5_2_none_request_is_parsed);
+    RUN_TEST(test_s5_foreign_service_is_rejected);
+    RUN_TEST(test_s8_change_request_carries_old_and_new);
+    RUN_TEST(test_s8_change_defers_then_reports);
+    RUN_TEST(test_s8_change_cooldown_refuses_second);
+    RUN_TEST(test_s8_change_without_a_callback_fails);
+    RUN_TEST(test_s8_correct_password_succeeds);
+    RUN_TEST(test_s8_wrong_password_fails);
+    RUN_TEST(test_s5_2_none_is_rejected);
+    RUN_TEST(test_s8_no_password_callback_fails);
+    RUN_TEST(test_s7_probe_returns_pk_ok);
+    RUN_TEST(test_s7_signature_without_session_id_fails);
+    RUN_TEST(test_s7_signature_not_replayable_across_sessions);
+    RUN_TEST(test_s5_2_none_is_not_advertised);
+    RUN_TEST(test_s7_valid_signature_succeeds);
+    RUN_TEST(test_s7_rsa_sha512_signature_succeeds);
+    RUN_TEST(test_s7_ecdsa_signature_succeeds);
+    RUN_TEST(test_s7_ed25519_valid_signature_succeeds);
+    RUN_TEST(test_s7_tampered_signature_fails);
+    RUN_TEST(test_s7_unauthorized_key_fails);
     RUN_TEST(test_aesgcm_gctr_counter_byte_carry);
     return UNITY_END();
 }
