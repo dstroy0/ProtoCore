@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **337 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **338 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -326,6 +326,7 @@ The native test matrix has **337 environments**, one per feature, generated from
 | `native_sep2` | `PC_ENABLE_SEP2=1` | `unit/energy/test_sep2` | IEEE 2030.5 (SEP 2.0) resource codec (services/energy/sep2): the DeviceCapability, EndDevice, and DERControl XML documents (urn:ieee:std:2030.5:ns), XML-escaped. |
 | `native_sercos` | `PC_ENABLE_SERCOS=1` | `unit/fieldbus/test_sercos` | SERCOS III motion-bus codec (services/fieldbus/sercos): the MDT/AT telegram (type + phase + cycle + data) build + parse and the 16-bit IDN encode/decode (S/P + set + block). |
 | `native_session` | default | `integration/presentation/test_session` | test_session against the native_stack_l46 stack. |
+| `native_sftp_server` | `PC_ENABLE_SSH=1`, `PC_SSH_MAX_CHANNELS=3`, `PC_ENABLE_MNT=1`, `PC_ENABLE_SSH_SFTP=1` | `integration/ssh/test_sftp_server` | The SFTP v3 server subsystem (application/sftp/ssh_sftp.c) driven over a real SSH session channel: a subsystem "sftp" CHANNEL_REQUEST tags the channel, SSH_FXP_* requests arrive as CHANNEL_DATA, and r... |
 | `native_sht3x` | `PC_ENABLE_SHT3X=1` | `unit/peripherals/test_sht3x` | Sensirion SHT3x temperature/humidity codec (services/peripherals/sht3x): the CRC-8 against the datasheet check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity conversions at th... |
 | `native_sigfox` | `PC_ENABLE_SIGFOX=1` | `unit/radio/test_sigfox` | Sigfox modem AT-command codec (services/radio/sigfox), v5 radio plugin: the AT$SF uplink command (uppercase hex encoding of the payload), its bounds (12-byte cap, output cap), and the OK / ERROR / PEN... |
 | `native_signaling` | default | `unit/server/test_signaling` | Application-layer signaling (server/signaling): the state bucket. |
