@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- ssh_forward.c never compiled, add the missing session.h include ([`e904608`](https://github.com/dstroy0/ProtoCore/commit/e904608aa39dd0da4c4911efb6b71550636eefcc))
 - the software server was the fourth site accepting an all-zero secret ([`4bc3977`](https://github.com/dstroy0/ProtoCore/commit/4bc397719b2286d565d272f7fc675c36a632e175))
 - RFC 8446 7.4.2 requires aborting on an all-zero X25519 shared secret ([`83be793`](https://github.com/dstroy0/ProtoCore/commit/83be793661d1e8b9d987f7844e72e408fc558f6f))
 - the curator's cap filled with flagged-valid entries, shipping no rejection cases ([`f02b770`](https://github.com/dstroy0/ProtoCore/commit/f02b770eccb2dacebfaa1e5380e41e7799437db8))
@@ -114,6 +115,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`d53f1ef`](https://github.com/dstroy0/ProtoCore/commit/d53f1ef0c8649e1bda54ba9926bafb341c90cd21))
+- update CHANGELOG.md [skip ci] ([`8e4b024`](https://github.com/dstroy0/ProtoCore/commit/8e4b0247e078d35bc314edf2eb103b2ecb8cdcdb))
 - update CHANGELOG.md [skip ci] ([`fc9f5df`](https://github.com/dstroy0/ProtoCore/commit/fc9f5dfa8198d46f34359989ee9f77c60d522075))
 - update CHANGELOG.md [skip ci] ([`919ffa5`](https://github.com/dstroy0/ProtoCore/commit/919ffa56fa23a8e4202e11d004bad45ded701fd4))
 - update CHANGELOG.md [skip ci] ([`2e91ee5`](https://github.com/dstroy0/ProtoCore/commit/2e91ee52de40cc94c2a8fb2b9bacc13a5cfb63d7))
@@ -374,6 +377,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f21cf7c`](https://github.com/dstroy0/ProtoCore/commit/f21cf7cdb05c8cd6dad60b5c529775f6b3f1d090))
 - prune the pre-August bug log and fix stale .cpp references ([`07984a8`](https://github.com/dstroy0/ProtoCore/commit/07984a897b77a50339867553cbc532a9f9c4678f))
 - the all-zero X25519 shared secret was accepted by all three TLS 1.3 sites ([`bc865d9`](https://github.com/dstroy0/ProtoCore/commit/bc865d91734cd6ebf8e1b52d315b647ffb8c4e1b))
 - an Arduino install cannot reach core_setup, which is outside the library src root ([`f98d476`](https://github.com/dstroy0/ProtoCore/commit/f98d476a6217937f630e99ec03ba447c2760d4bb))
@@ -495,6 +499,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- per-file RFC 4254 sec 7 coverage for ssh_forward.c ([`2fbc768`](https://github.com/dstroy0/ProtoCore/commit/2fbc7685a98cbb7154e88170abf0aa9a969ae290))
 - drop the pc_ct_is_zero case ([`ca2bec9`](https://github.com/dstroy0/ProtoCore/commit/ca2bec99078c8557042a8a2d6533c0c133a111dd))
 - a low-order key share must be refused, not keyed off ([`d159378`](https://github.com/dstroy0/ProtoCore/commit/d1593783f42b5095f1dc8a3a8b334be95d6e0edb))
 - the DigestInfo was checked against the constant that built it ([`25a51a7`](https://github.com/dstroy0/ProtoCore/commit/25a51a7ba8811efbe4ccfe762f92dfc412ac41d5))
