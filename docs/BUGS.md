@@ -8,6 +8,41 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## pc_ssh_conn_accept hands an inbound connection the SSH slot the reverse tunnel is already using
+
+- **Status:** FIXED 2026-08-11. Found by reading `pc_ssh_conn_accept` against `ssh_client.c`'s
+  `begin()` while tracing who owns a slot.
+- **What happens:** `pc_ssh_conn_accept` (`ssh_conn.c:363`) allocates by scanning
+  `s_sshc.conn_for_ssh[]` from 0 for the first entry equal to `0xFF`, then calls
+  `ssh_transport_init(j)`, whose first act is `mem.set(s, 0, sizeof(*s))`. The client takes
+  `SSH_CLI_SLOT 0` in `begin()` and reaches its relay through `Tcp.client`, so nothing ever writes
+  `conn_for_ssh[0]` and the slot reads as free for the tunnel's whole life.
+- **Consequence:** in a build with both `PC_ENABLE_SSH` and `PC_ENABLE_SSH_CLIENT`, the first
+  inbound SSH connection takes slot 0 and zeroes the live tunnel's session: its keys, its phase,
+  its V_C / V_S / I_C / I_S. Twelve ESP board profiles carry `MAX_SSH_CONNS` under the comment
+  "SSH server + reverse-SSH client", so both roles in one image is a configuration the tree
+  expects.
+- **Not measured:** no binary with both roles and a live inbound accept was built or run. This is
+  read from the source. `native_ssh_client` sets both flags but stands up no listener, so nothing
+  in the matrix drives an accept against a claimed slot.
+- **Root cause:** the table records which connection owns a slot, and one of the two ways a slot
+  gets owned never wrote to it. There was no missing state - only a missing write.
+- **Fix:** `pc_ssh_conn_claim(ssh_slot, cid)` / `pc_ssh_conn_release(ssh_slot)` (`ssh_conn.h`).
+  `begin()` claims slot 0 with its `pc_client` cid once the dial succeeds and fails the tunnel
+  closed if the slot is already owned; `cli_teardown` and `pc_ssh_tunnel_end` release it. The
+  accept scan is unchanged - it already passes over any entry that is not `0xFF`.
+- **Why the cid and not a sentinel:** the entry is the index of the connection that owns the slot,
+  and inside SSH it cannot be anything but an SSH connection, so the client's cid is the direct
+  value and keeps the owner traceable. A sentinel would be worse: `0xFF` is the only value the four
+  unguarded readers (`ssh_emit:78`, `pc_ssh_conn_send:162`, `pc_ssh_conn_close_channel:209`,
+  `pc_ssh_conn_open_forwarded:255`) test before `&conn_pool[...]`, so a new one would read out of
+  bounds at all four until each grew a test for it.
+- **Still worth a look, not touched:** those four readers check only `!= 0xFF` before indexing
+  `conn_pool`, while `pc_ssh_conn_rx:301` and `pc_ssh_conn_close:424` check
+  `conn_for_ssh[j] != conn_slot` and are safe under any value. No caller reaches the four with the
+  client's slot today - the client sends through `cli_send` / `Tcp.client`, and those four are the
+  server-side channel API - so this is a hardening question rather than a reachable defect.
+
 ## I_C and I_S are sized by which peer sends them, so in the client role the peer's KEXINIT gets the 704-byte buffer
 
 - **Status:** FIXED 2026-08-11. Found by reading `ssh_kexinit_parse` against the span in

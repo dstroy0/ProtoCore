@@ -274,6 +274,7 @@ static void cli_fail(const char *why)
         Tcp.client->close(s_cli.cid);
     }
     s_cli.cid = -1;
+    pc_ssh_conn_release(SSH_CLI_SLOT);
     ssh_keymat_wipe(SSH_CLI_SLOT);
     pc_secure_wipe(s_cli.kex_priv, sizeof(s_cli.kex_priv));
 }
@@ -1391,6 +1392,14 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
         s_cli.state = PC_TUN_FAILED;
         return PROTO_FALSE;
     }
+    // The slot is ours for the life of the tunnel, so an inbound accept passes over it.
+    if (pc_ssh_conn_claim(SSH_CLI_SLOT, (uint8_t)s_cli.cid) != 0)
+    {
+        Tcp.client->close(s_cli.cid);
+        s_cli.cid = -1;
+        s_cli.state = PC_TUN_FAILED;
+        return PROTO_FALSE;
+    }
 
     ssh_transport_init(SSH_CLI_SLOT); // -> SSH_PHASE_BANNER
     ssh_pkt_init(SSH_CLI_SLOT);
@@ -1478,6 +1487,7 @@ void pc_ssh_tunnel_end(void)
     {
         Tcp.client->close(s_cli.cid);
     }
+    pc_ssh_conn_release(SSH_CLI_SLOT);
     ssh_keymat_wipe(SSH_CLI_SLOT);
     pc_secure_wipe(s_cli.kex_priv, sizeof(s_cli.kex_priv));
     mem.set(&s_cli, 0, sizeof(s_cli));

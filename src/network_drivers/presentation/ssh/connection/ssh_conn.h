@@ -107,6 +107,19 @@ const struct ProtoHandler *ssh_proto_handler(void);
 void pc_ssh_conn_accept(uint8_t conn_slot);
 
 /**
+ * @brief Record @p cid as the owner of @p ssh_slot, so pc_ssh_conn_accept passes over it.
+ *
+ * The table holds the index of the connection a slot belongs to. An inbound connection puts its
+ * conn_pool slot there; the outbound client puts its pc_client cid.
+ *
+ * @return 0, or -1 when the slot is out of range or already owned.
+ */
+int pc_ssh_conn_claim(uint8_t ssh_slot, uint8_t cid);
+
+/** @brief Mark @p ssh_slot unowned. */
+void pc_ssh_conn_release(uint8_t ssh_slot);
+
+/**
  * @brief Drain @p conn_slot's receive ring buffer through the SSH stack.
  *
  * Feeds the banner parser until the client identification string completes,
