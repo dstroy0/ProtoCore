@@ -116,6 +116,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`d804a0e`](https://github.com/dstroy0/ProtoCore/commit/d804a0e6ab650c3f5857ae037d9b842218a294c5))
+- update CHANGELOG.md [skip ci] ([`f13ccf5`](https://github.com/dstroy0/ProtoCore/commit/f13ccf5c697c9b3ff61bcbe7364917ba5981537b))
 - update CHANGELOG.md [skip ci] ([`2b90c5b`](https://github.com/dstroy0/ProtoCore/commit/2b90c5b2d983845f11a996008f89bbf6d5b0e33b))
 - update CHANGELOG.md [skip ci] ([`7c190b0`](https://github.com/dstroy0/ProtoCore/commit/7c190b0c9cab6937e80cc3711c08765ac83c5b84))
 - update CHANGELOG.md [skip ci] ([`92798b0`](https://github.com/dstroy0/ProtoCore/commit/92798b00c9164e7d9789d56db380d2340957f6f1))
@@ -511,11 +513,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
-<<<<<<< Updated upstream
-=======
+- rewrite test_ssh_server to the RFC, labelled by section ([`9b70ff3`](https://github.com/dstroy0/ProtoCore/commit/9b70ff32898760dbc8991d876b4b9f2050a1fbd3))
 - label test_ssh_transport by specification section ([`9bdc42a`](https://github.com/dstroy0/ProtoCore/commit/9bdc42a4c8b1a82ea8a3ad5176c1a63cd35437cf))
 - repair test_ssh_transport - it did not compile, and its fixtures skipped the protocol ([`f7bb381`](https://github.com/dstroy0/ProtoCore/commit/f7bb38174676414902294fdc3016d04d3b0356dd))
->>>>>>> Stashed changes
 - label test_ssh_packet by RFC 4253 section and pin the sequence-number invariant ([`b25ec2c`](https://github.com/dstroy0/ProtoCore/commit/b25ec2cc318145751a1b9bdad2eb6bb074085309))
 - per-file coverage for the SCP server, the last SSH file no env compiled ([`25d1e44`](https://github.com/dstroy0/ProtoCore/commit/25d1e4496554aec277dcbbbe98f231e23404d381))
 - per-file coverage for the SFTP v3 server subsystem ([`f014ab4`](https://github.com/dstroy0/ProtoCore/commit/f014ab4e6f9bdf6abbf8cd9aba7d1008fa21fbb4))
