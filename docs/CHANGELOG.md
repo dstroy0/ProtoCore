@@ -115,6 +115,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7652565`](https://github.com/dstroy0/ProtoCore/commit/7652565e51e607d0b5f9c8d1709c42b2e5a5c66f))
+- update CHANGELOG.md [skip ci] ([`39e487f`](https://github.com/dstroy0/ProtoCore/commit/39e487fae4ac22d80517e1489d6e61902b9c8d67))
 - update CHANGELOG.md [skip ci] ([`6fa5fe9`](https://github.com/dstroy0/ProtoCore/commit/6fa5fe936d682d48015151e776ee35df1b126990))
 - update test report + coverage [skip ci] ([`d53f1ef`](https://github.com/dstroy0/ProtoCore/commit/d53f1ef0c8649e1bda54ba9926bafb341c90cd21))
 - update CHANGELOG.md [skip ci] ([`8e4b024`](https://github.com/dstroy0/ProtoCore/commit/8e4b0247e078d35bc314edf2eb103b2ecb8cdcdb))
@@ -501,11 +503,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
-<<<<<<< Updated upstream
-=======
+- drop the duplicated AES-GCM counter test from the auth suite ([`70cfa2a`](https://github.com/dstroy0/ProtoCore/commit/70cfa2a63d767f2cfd2bb27acfe03382223250b2))
 - label test_ssh_auth by RFC 4252 section ([`38a340b`](https://github.com/dstroy0/ProtoCore/commit/38a340bfeb3a5920a1b99ac1598e3db7a2dd29db))
 - pin the RFC 4252 sec 5 abandon rule for keyboard-interactive ([`c9538d7`](https://github.com/dstroy0/ProtoCore/commit/c9538d721f93946f4f5d9fb702d3392dcd9e5bba))
->>>>>>> Stashed changes
 - label test_ssh_channel by RFC 4254 section and cover sec 6.6 ([`a951021`](https://github.com/dstroy0/ProtoCore/commit/a951021b83802d2a5923a6b2009390a7748cd1bc))
 - per-file RFC 4254 sec 7 coverage for ssh_forward.c ([`2fbc768`](https://github.com/dstroy0/ProtoCore/commit/2fbc7685a98cbb7154e88170abf0aa9a969ae290))
 - drop the pc_ct_is_zero case ([`ca2bec9`](https://github.com/dstroy0/ProtoCore/commit/ca2bec99078c8557042a8a2d6533c0c133a111dd))
