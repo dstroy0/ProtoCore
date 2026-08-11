@@ -71,6 +71,49 @@ static size_t build_info_response(uint8_t *pkt, uint32_t nr, const char *resp)
     return n;
 }
 
+// USERAUTH_REQUEST(50) || user || "ssh-connection" || "password" || FALSE || password.
+static size_t build_password_request(uint8_t *pkt, const char *user, const char *pw)
+{
+    size_t n = 0;
+    pkt[n++] = SSH_MSG_USERAUTH_REQUEST;
+    n += put_string(pkt + n, user);
+    n += put_string(pkt + n, "ssh-connection");
+    n += put_string(pkt + n, "password");
+    pkt[n++] = 0; // FALSE: not a password change
+    n += put_string(pkt + n, pw);
+    return n;
+}
+
+// RFC 4252 sec 5: "the client MAY at any time continue with a new SSH_MSG_USERAUTH_REQUEST message,
+// in which case the server MUST abandon the previous authentication attempt and continue with the
+// new one." An armed keyboard-interactive exchange is such an attempt, and nothing abandons it: the
+// armed slot is cleared only by its own INFO_RESPONSE or by a connection reset. The response for the
+// superseded exchange therefore still authenticates, as the user the ARMED request named rather than
+// the user the most recent request named. Pinned as it behaves; the deviation is in docs/BUGS.md.
+void test_s5_a_new_request_does_not_abandon_the_armed_exchange()
+{
+    pc_ssh_auth_set_password_cb(check_uv);
+    uint8_t pkt[256], out[256];
+    size_t n, ol = 0;
+
+    n = build_kbdint_request(pkt, "alice");
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT8(SSH_MSG_USERAUTH_INFO_REQUEST, out[0]);
+
+    // A new request naming a different user arrives before the response, and fails on its own merits.
+    n = build_password_request(pkt, "bob", "wrong");
+    ol = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT8(SSH_MSG_USERAUTH_FAILURE, out[0]);
+
+    // The superseded exchange's response still authenticates, and it authenticates alice.
+    n = build_info_response(pkt, 1, "s3cret");
+    ol = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_info_response(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT8(SSH_MSG_USERAUTH_SUCCESS, out[0]);
+    TEST_ASSERT_TRUE(ssh_sess[0].authed);
+}
+
 // A keyboard-interactive request produces exactly one non-echoed "Password: " prompt.
 void test_kbdint_request_prompts()
 {
@@ -648,6 +691,7 @@ int main()
     UNITY_BEGIN();
     RUN_TEST(test_dispatch_all_switch_arms);
     RUN_TEST(test_dispatch_guard_and_error_arms);
+    RUN_TEST(test_s5_a_new_request_does_not_abandon_the_armed_exchange);
     RUN_TEST(test_kbdint_request_prompts);
     RUN_TEST(test_kbdint_correct_password_succeeds);
     RUN_TEST(test_kbdint_wrong_password_fails);

@@ -8,6 +8,26 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## RFC 4252 sec 5: a new USERAUTH_REQUEST does not abandon an armed keyboard-interactive exchange
+
+- **Status:** OPEN. Measured, not inferred: `test_s5_a_new_request_does_not_abandon_the_armed_exchange`
+  in `test_ssh_kbdint` asserts the behavior as it is, and the RFC-correct assertion fails against it.
+- **Sec 5:** "the client MAY at any time continue with a new SSH_MSG_USERAUTH_REQUEST message, in
+  which case the server MUST abandon the previous authentication attempt and continue with the new
+  one." Sec 5 also requires the server to "flush any accumulated authentication states" when the
+  user name changes.
+- **What happens:** a `keyboard-interactive` request arms `s_auth.ki[i]` with `pending` and the user
+  it named (`ssh_auth.c:626`). That slot is cleared only by its own INFO_RESPONSE (`:727`) or by
+  `pc_ssh_auth_reset` (`:59`); no other USERAUTH_REQUEST touches it. A client can therefore arm the
+  exchange as user A, send a further request as user B, and then answer the original prompt - the
+  INFO_RESPONSE is still accepted and authenticates **A**, the user the superseded request named.
+- **Not an authentication bypass:** the response is still checked with `pw_cb(A, response)`, so the
+  correct password for A is required. The defect is that the session authenticates as a user other
+  than the one the most recent request named, so any layer that tracks the current user from the
+  last USERAUTH_REQUEST disagrees with who actually authenticated.
+- **Not fixed:** clearing the armed slot on any subsequent request is a behavior change at a site
+  this task did not name.
+
 ## RFC 4254 sec 6.10: an exec'd command's exit status is never returned
 
 - **Status:** OPEN. Found by labelling `test_ssh_channel.c` by RFC section: sec 6.10 had no test,
