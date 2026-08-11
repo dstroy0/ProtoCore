@@ -122,7 +122,7 @@ static size_t build_partial_kexinit(uint8_t *out, int nlists)
 
 // ---- banner ---------------------------------------------------------------
 
-void test_server_banner_format()
+void test_s4_2_server_banner_format()
 {
     uint8_t buf[64];
     size_t n = 0;
@@ -133,7 +133,7 @@ void test_server_banner_format()
     TEST_ASSERT_EQUAL('\n', buf[n - 1]);
 }
 
-void test_recv_banner_complete()
+void test_s4_2_banner_complete()
 {
     const char *banner = "SSH-2.0-OpenSSH_9.6\r\n";
     size_t consumed = 0;
@@ -144,7 +144,7 @@ void test_recv_banner_complete()
     TEST_ASSERT_EQUAL(SSH_PHASE_KEXINIT, ssh_sess[0].phase);
 }
 
-void test_recv_banner_bare_lf()
+void test_s4_2_banner_bare_lf()
 {
     const char *banner = "SSH-2.0-x\n"; // some clients omit CR
     size_t consumed = 0;
@@ -152,7 +152,7 @@ void test_recv_banner_bare_lf()
     TEST_ASSERT_EQUAL_STRING("SSH-2.0-x", ssh_sess[0].v_c);
 }
 
-void test_recv_banner_split_across_reads()
+void test_s4_2_banner_split_across_reads()
 {
     const char *p1 = "SSH-2.0-Cli";
     const char *p2 = "ent_1\r\n";
@@ -162,7 +162,7 @@ void test_recv_banner_split_across_reads()
     TEST_ASSERT_EQUAL_STRING("SSH-2.0-Client_1", ssh_sess[0].v_c);
 }
 
-void test_recv_banner_skips_preamble_lines()
+void test_s4_2_banner_skips_preamble_lines()
 {
     // RFC 4253 §4.2 allows lines before the SSH identification string.
     const char *data = "hello from server\r\nnotice: terms\r\nSSH-2.0-Real\r\n";
@@ -173,7 +173,7 @@ void test_recv_banner_skips_preamble_lines()
 
 // ---- KEXINIT --------------------------------------------------------------
 
-void test_kexinit_build_starts_with_msg_and_stores_is()
+void test_s7_1_kexinit_build_starts_with_msg_and_stores_is()
 {
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = 0;
@@ -187,7 +187,7 @@ void test_kexinit_build_starts_with_msg_and_stores_is()
 // KEXINIT's host-key name-list must carry all four algorithms. A too-small build buffer once truncated
 // the last entry (rsa-sha2-256 -> "rs"), so a client that forced rsa-sha2-256 got "no matching host
 // key type". The full list "ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256" is 57 bytes.
-void test_kexinit_hostkey_list_carries_all_four_when_all_keys_loaded()
+void test_s7_1_hostkey_list_carries_all_four()
 {
     static const uint8_t EC_SCALAR[32] = {0x42, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
                                           0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
@@ -218,7 +218,7 @@ void test_kexinit_hostkey_list_carries_all_four_when_all_keys_loaded()
     ssh_kex_set_prefer_rsa(PROTO_TRUE);               // restore the setUp default for later tests
 }
 
-void test_kexinit_parse_accepts_supported()
+void test_s7_1_accepts_supported()
 {
     ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t buf[SSH_KEXINIT_MAX];
@@ -230,7 +230,7 @@ void test_kexinit_parse_accepts_supported()
     TEST_ASSERT_EQUAL_size_t(n, ssh_sess[0].i_c_len);
 }
 
-void test_kexinit_parse_accepts_when_ours_listed_among_others()
+void test_s7_1_accepts_when_ours_listed_among_others()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -243,7 +243,7 @@ void test_kexinit_parse_accepts_when_ours_listed_among_others()
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
 }
 
-void test_kexinit_parse_rejects_missing_kex()
+void test_s7_1_rejects_missing_kex()
 {
     // Only a KEX method we do not implement (nistp521) -> no mutual KEX -> reject. (nistp256 IS
     // implemented now, so it can no longer stand in for an unsupported method here.)
@@ -254,7 +254,7 @@ void test_kexinit_parse_rejects_missing_kex()
 
 // Client offers only ssh-ed25519 host keys but we hold only an RSA key -> no mutual
 // host-key algorithm -> reject (host-key negotiation is gated on keys we actually hold).
-void test_kexinit_parse_rejects_hostkey_we_lack()
+void test_s7_1_rejects_hostkey_we_lack()
 {
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "ssh-ed25519", "aes256-ctr", "hmac-sha2-256",
@@ -264,7 +264,7 @@ void test_kexinit_parse_rejects_hostkey_we_lack()
 
 // With prefer-RSA off and an ed25519 host key installed, the server steers negotiation to
 // curve25519-sha256 + ssh-ed25519 when the client offers both suites.
-void test_kexinit_parse_steers_to_curve_ed25519()
+void test_s7_1_steers_to_curve_ed25519()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -281,7 +281,7 @@ void test_kexinit_parse_steers_to_curve_ed25519()
     ssh_kex_set_prefer_rsa(PROTO_TRUE); // restore default for later tests
 }
 
-void test_kexinit_parse_rejects_missing_cipher()
+void test_s7_1_rejects_missing_cipher()
 {
     // Only ciphers we do not implement -> no mutual cipher -> reject.
     uint8_t buf[SSH_KEXINIT_MAX];
@@ -292,7 +292,7 @@ void test_kexinit_parse_rejects_missing_cipher()
 
 // chacha20-poly1305@openssh.com is now a supported cipher: a client offering only it is accepted,
 // and the AEAD cipher is selected (no separate MAC required).
-void test_kexinit_parse_selects_chacha20poly1305()
+void test_s7_1_selects_chacha20poly1305()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -309,7 +309,7 @@ void test_kexinit_parse_selects_chacha20poly1305()
 // aes256-gcm@openssh.com is a supported AEAD cipher: a client offering only it is accepted and the
 // GCM cipher is selected (no separate MAC required). Per RFC 4253 §7.1 the CLIENT's order decides, so a
 // client that lists gcm first gets gcm.
-void test_kexinit_parse_selects_aes256gcm()
+void test_s7_1_selects_aes256gcm()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -335,7 +335,7 @@ void test_kexinit_parse_selects_aes256gcm()
 // aes256-ctr before chacha20-poly1305 gets aes256-ctr - even though our KEXINIT advertises chacha first.
 // (This is exactly the mismatch a server-preference bug caused with CycloneSSH: our top pick differed
 // from the client's, so the two sides disagreed on the algorithm.)
-void test_kexinit_parse_honors_client_cipher_preference()
+void test_s7_1_honors_client_cipher_preference()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -351,7 +351,7 @@ void test_kexinit_parse_honors_client_cipher_preference()
 
 // rsa-sha2-512 and rsa-sha2-256 are both backed by the one "ssh-rsa" host key (RFC 8332). The
 // server prefers rsa-sha2-512; each is selected when offered alone (both gated on the RSA key).
-void test_kexinit_parse_selects_rsa_sha512()
+void test_s7_1_selects_rsa_sha512()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -382,7 +382,7 @@ void test_kexinit_parse_selects_rsa_sha512()
 
 // ecdsa-sha2-nistp256 (RFC 5656) is a distinct P-256 host key: once installed it is negotiable,
 // and a client offering only it selects it.
-void test_kexinit_parse_selects_ecdsa()
+void test_s7_1_selects_ecdsa()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -403,7 +403,7 @@ void test_kexinit_parse_selects_ecdsa()
 
 // ecdh-sha2-nistp256 (RFC 5656 §4) is a negotiable P-256 key-exchange method: a client offering
 // only it selects it (independent of the host-key type).
-void test_kexinit_parse_selects_ecdh_nistp256()
+void test_s7_1_selects_ecdh_nistp256()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -418,7 +418,7 @@ void test_kexinit_parse_selects_ecdh_nistp256()
 
 // With aes256-ctr, the encrypt-then-MAC variants are preferred: a client offering an -etm MAC gets
 // it selected and its exact mode recorded.
-void test_kexinit_parse_selects_etm_mac()
+void test_s7_1_selects_etm_mac()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -434,7 +434,7 @@ void test_kexinit_parse_selects_etm_mac()
     TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA512_ETM, ssh_sess[0].mac_alg_s2c);
 }
 
-void test_kexinit_parse_rejects_truncated()
+void test_s7_1_rejects_truncated()
 {
     uint8_t buf[8] = {SSH_MSG_KEXINIT, 0, 0, 0};
     TEST_ASSERT_EQUAL_INT(-1, ssh_kexinit_parse(0, buf, sizeof(buf)));
@@ -480,7 +480,7 @@ static size_t put_mpint(uint8_t *p, const uint8_t *be, size_t len)
     return o + (len - off);
 }
 
-void test_exchange_hash_matches_independent_assembly()
+void test_s8_exchange_hash_matches_independent_assembly()
 {
     // Populate the session fields the hash reads.
     SshSession *s = &ssh_sess[0];
@@ -533,7 +533,7 @@ void test_exchange_hash_matches_independent_assembly()
     TEST_ASSERT_EQUAL_MEMORY(expected, got, PC_SHA256_DIGEST_LEN);
 }
 
-void test_exchange_hash_changes_with_input()
+void test_s8_exchange_hash_changes_with_input()
 {
     SshSession *s = &ssh_sess[0];
     strcpy(s->v_c, "SSH-2.0-A");
@@ -552,7 +552,7 @@ void test_exchange_hash_changes_with_input()
 
 // ---- KEXDH (RFC 4253 §8) --------------------------------------------------
 
-void test_kexdh_parse_init_extracts_e_with_padding()
+void test_s8_kexdh_init_extracts_e_with_padding()
 {
     uint8_t e_be[256];
     memset(e_be, 0, sizeof(e_be));
@@ -568,7 +568,7 @@ void test_kexdh_parse_init_extracts_e_with_padding()
     TEST_ASSERT_EQUAL_MEMORY(e_be, got, 256);
 }
 
-void test_kexdh_parse_init_extracts_small_e()
+void test_s8_kexdh_init_extracts_small_e()
 {
     uint8_t e_be[256];
     memset(e_be, 0, sizeof(e_be));
@@ -583,14 +583,14 @@ void test_kexdh_parse_init_extracts_small_e()
     TEST_ASSERT_EQUAL_MEMORY(e_be, got, 256);
 }
 
-void test_kexdh_parse_init_rejects_wrong_type()
+void test_s8_kexdh_init_rejects_wrong_type()
 {
     uint8_t pkt[8] = {99, 0, 0, 0, 1, 0x05};
     uint8_t got[256];
     TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_parse_init(pkt, sizeof(pkt), got));
 }
 
-void test_kexdh_parse_init_rejects_oversized_e()
+void test_s8_kexdh_init_rejects_oversized_e()
 {
     // mpint with 300 magnitude bytes → exceeds 2048 bits.
     uint8_t pkt[320];
@@ -617,7 +617,7 @@ static void setup_rsa_fixture()
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_rsa_load_pubkey());
 }
 
-void test_kexdh_handle_produces_reply_and_installs_keys()
+void test_s8_kexdh_produces_reply_and_installs_keys()
 {
     ssh_transport_init(0);
     setup_rsa_fixture();
@@ -671,7 +671,7 @@ void test_kexdh_handle_produces_reply_and_installs_keys()
     TEST_ASSERT_EQUAL(SSH_PHASE_SERVICE, ssh_sess[0].phase);
 }
 
-void test_kexdh_handle_rejects_invalid_e()
+void test_s8_kexdh_rejects_invalid_e()
 {
     ssh_transport_init(0);
     setup_rsa_fixture();
@@ -718,7 +718,7 @@ static proto_bool rd_string(const uint8_t *b, size_t len, size_t *off, const uin
 // conforming client would: recompute the shared secret, rebuild the exchange hash, and
 // verify the server's ed25519 signature over it. Nothing here is a shortcut - a wrong
 // byte anywhere (K_S encoding, Q ordering, string-vs-mpint, K alignment) fails the check.
-void test_kexdh_handle_curve25519_ed25519_end_to_end()
+void test_rfc8731_curve25519_ed25519_end_to_end()
 {
     // Fixed baseline host keys for deterministic regression, plus one fresh throwaway
     // for coverage - the full sign/verify path is where a key-specific bug would hide.
@@ -824,7 +824,7 @@ void test_kexdh_handle_curve25519_ed25519_end_to_end()
 }
 
 // A low-order client point (all-zero X25519 output) is rejected (RFC 7748 §6.1).
-void test_kexdh_handle_curve25519_rejects_low_order()
+void test_rfc8731_curve25519_rejects_low_order()
 {
     static const uint8_t zero_seed[32] = {0};
     ssh_transport_init(0);
@@ -846,7 +846,7 @@ void test_kexdh_handle_curve25519_rejects_low_order()
 // ecdh-sha2-nistp256 (RFC 5656 §4) key exchange end to end: a real P-256 client ephemeral, the
 // server's KEXDH_REPLY parsed, the shared secret recomputed by the client, the exchange hash
 // rebuilt (Q_C/Q_S as 65-byte strings, K as an mpint), and the host signature verified over it.
-void test_kexdh_handle_ecdh_nistp256_end_to_end()
+void test_rfc5656_ecdh_nistp256_end_to_end()
 {
     uint8_t seed[32];
     throwaway_ed25519_seed(seed);
@@ -939,7 +939,7 @@ void test_kexdh_handle_ecdh_nistp256_end_to_end()
 }
 
 // An off-curve client point is rejected (RFC 5656 §4 point validation).
-void test_kexdh_handle_ecdh_nistp256_rejects_bad_point()
+void test_rfc5656_ecdh_nistp256_rejects_bad_point()
 {
     uint8_t seed[32];
     throwaway_ed25519_seed(seed);
@@ -969,7 +969,7 @@ void test_kexdh_handle_ecdh_nistp256_rejects_bad_point()
 // signature blob must carry "rsa-sha2-512" (not -256) and be a genuine PKCS#1 v1.5 SHA-512 block
 // over the exchange hash H. With the fixture's d = 1 the signature s = EM^1 mod n = EM, so we can
 // rebuild the padded EM and byte-compare - proving the SHA-512 DigestInfo/padding reached the wire.
-void test_kexdh_handle_rsa_sha512_signature()
+void test_rfc8332_rsa_sha512_signature()
 {
     ssh_transport_init(0);
     setup_rsa_fixture();
@@ -1045,7 +1045,7 @@ void test_kexdh_handle_rsa_sha512_signature()
 // End-to-end curve25519 + ecdsa-sha2-nistp256 (RFC 5656): the reply K_S carries the P-256
 // public point, and the signature blob (string(name) || string(mpint r || mpint s)) verifies
 // against the host key over the reconstructed exchange hash H. Nothing here is a shortcut.
-void test_kexdh_handle_ecdsa_end_to_end()
+void test_rfc5656_ecdsa_end_to_end()
 {
     ssh_transport_init(0);
     uint8_t ec_priv[32];
@@ -1170,7 +1170,7 @@ void test_kexdh_handle_ecdsa_end_to_end()
 
 // ---- rekey (RFC 4253 §9) --------------------------------------------------
 
-void test_derive_keys_session_id_affects_output()
+void test_s7_2_session_id_affects_output()
 {
     uint8_t K[256];
     memset(K, 0, sizeof(K));
@@ -1208,7 +1208,7 @@ void test_derive_keys_session_id_affects_output()
 // IVs, 'C'/'D' the cipher keys, 'E'/'F' the MAC keys, client-to-server first. Every round-trip test
 // installs identical material both ways, so swapping a pair would still decrypt and still pass. Each
 // label is checked against its own independently derived value here, so a swap cannot survive.
-void test_derive_binds_every_label_to_its_direction()
+void test_s7_2_binds_every_label_to_its_direction()
 {
     uint8_t K[256];
     uint8_t H[PC_SHA256_DIGEST_LEN];
@@ -1262,7 +1262,7 @@ void test_derive_binds_every_label_to_its_direction()
 // limbs, and every DH test round-trips against that same constant, so one mistyped interior limb is
 // invisible to all of them and yet no real peer could ever agree with us. Transcribed from the RFC
 // most significant group first; the limbs are little-endian, so limb 63 - j holds group j.
-void test_group14_matches_rfc3526()
+void test_rfc3526_group14_modulus()
 {
     static const uint32_t RFC3526_P_BE[PC_BN_LIMBS] = {
         0xFFFFFFFFu, 0xFFFFFFFFu, 0xC90FDAA2u, 0x2168C234u, 0xC4C6628Bu, 0x80DC1CD1u, 0x29024E08u, 0x8A67CC74u,
@@ -1285,7 +1285,7 @@ void test_group14_matches_rfc3526()
     }
 }
 
-void test_rekey_needed_threshold()
+void test_s9_rekey_needed_threshold()
 {
     ssh_transport_init(0);
     ssh_pkt[0].seq_no_send = 0;
@@ -1299,7 +1299,7 @@ void test_rekey_needed_threshold()
 // nothing. Check it against the two bounds it exists to satisfy: RFC 4253 sec 9's gigabyte per key
 // and RFC 4344 sec 3.2's 2^32 cipher blocks, both measured with the largest packet this build can
 // put on the wire. A change to SSH_PKT_BUF_SIZE that outran the derivation fails here.
-void test_rekey_threshold_meets_the_rfc_bounds()
+void test_s9_rekey_threshold_meets_the_bounds()
 {
     const uint64_t sent = (uint64_t)SSH_REKEY_PACKET_THRESHOLD * (uint64_t)SSH_PKT_WIRE_MAX;
     TEST_ASSERT_TRUE(sent <= (1ull << 30));         // one gigabyte (RFC 4253 sec 9)
@@ -1314,7 +1314,7 @@ void test_rekey_threshold_meets_the_rfc_bounds()
     TEST_ASSERT_TRUE(thr != 0 && (thr & (thr - 1u)) == 0);
 }
 
-void test_rekey_due_volume_and_time()
+void test_s9_rekey_due_volume_and_time()
 {
     const uint32_t PKT = 1000000, TIME = 3600000;
     // Neither budget spent.
@@ -1330,7 +1330,7 @@ void test_rekey_due_volume_and_time()
     TEST_ASSERT_FALSE(ssh_rekey_due(1, 1, 0xFFFFFFFFu, PKT, 0));
 }
 
-void test_begin_rekey_preserves_session_and_auth()
+void test_s9_rekey_preserves_session_and_auth()
 {
     ssh_transport_init(0);
     setup_rsa_fixture();
@@ -1401,7 +1401,7 @@ void test_transport_index_guards()
 }
 
 // Banner and builder cap checks, and a banner line that exceeds the maximum.
-void test_banner_and_build_caps()
+void test_s4_2_banner_and_build_caps()
 {
     uint8_t small[4];
     size_t l = 0, consumed = 0;
@@ -1429,7 +1429,7 @@ void test_banner_and_build_caps()
 
 // RFC 4253 sec 4.2 bounds the identification string at 255 bytes on the wire with CR and LF counted,
 // so 253 bytes of content are legal and 254 are one too many.
-void test_recv_banner_rfc_length_bound()
+void test_s4_2_banner_length_bound()
 {
     size_t consumed = 0;
     static uint8_t line[SSH_VERSION_MAX + 8];
@@ -1452,7 +1452,7 @@ void test_recv_banner_rfc_length_bound()
 
 // KEXINIT parsing rejects an unusable name-list at every negotiated field, an
 // over-long payload, and truncated / over-claimed name-list fields.
-void test_kexinit_parse_field_and_trunc()
+void test_s7_1_kexinit_field_and_truncation()
 {
     ssh_transport_init(0);
     uint8_t buf[3000];
@@ -1492,7 +1492,7 @@ void test_kexinit_parse_field_and_trunc()
 
 // KEXDH parsing rejects a wrong type, an mpint that runs past the payload, and a
 // payload that fails to parse in the full handler.
-void test_kexdh_parse_and_handle_errors()
+void test_s8_kexdh_parse_and_handle_errors()
 {
     uint8_t e_be[256];
     uint8_t bad[8] = {99, 0, 0, 0, 1, 0, 0, 0};
@@ -1530,7 +1530,7 @@ void test_kexdh_parse_and_handle_errors()
     TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_handle(0, pkt, n, reply, &rlen, sizeof(reply)));
 }
 
-void test_kdf_edge_paths_and_slot_guards()
+void test_s7_2_kdf_edge_paths()
 {
     uint8_t H[PC_SHA256_DIGEST_LEN];
     memset(H, 0x11, sizeof(H));
@@ -1567,7 +1567,7 @@ void test_kdf_edge_paths_and_slot_guards()
 }
 
 // KEXINIT truncated after each name-list boundary is rejected at the corresponding read.
-void test_kexinit_parse_truncation_points()
+void test_s7_1_truncation_points()
 {
     uint8_t buf[256];
     // One cut per name-list read, in field order: kex / host-key / cipher-c2s / cipher-s2c /
@@ -1614,7 +1614,7 @@ void test_ssh_transport_more_guards()
 // bytes of label 'A'/'B'). Verified byte-exact: independently deriving the key + IV and sealing the
 // same block must produce the same ciphertext+tag as the installed context, proving the GCM branch
 // derived the right material into both directions.
-void test_dh_derive_keys_gcm_installs()
+void test_s7_2_gcm_material_installs_both_directions()
 {
     ssh_keymat_wipe(0);
     uint8_t K[256];
@@ -1735,7 +1735,7 @@ void test_kdf_string_k_hybrid()
 // RSA key is held), so the client's 32-byte curve25519 init failed to parse as the server's 65-byte
 // nistp256 init and ssh_kexdh_handle returned -1 (the P4 reset the connection here). With client
 // preference the server picks curve25519 + ssh-ed25519 to match the client, and the full KEX completes.
-static void test_cyclonessh_kex_repro(void)
+static void test_s7_1_client_preference_cyclonessh_repro(void)
 {
     ssh_transport_init(0);
     pc_ssh_hostkey_ed25519_set(BASELINE_ED25519_SEEDS[0]);
@@ -1769,7 +1769,7 @@ static void test_cyclonessh_kex_repro(void)
 // pc_ssh_hostkey_ecdsa_set derives the public point from the scalar and installs nothing when the
 // scalar is not a valid P-256 private key (d == 0 or d >= n): availability must be left untouched, so
 // a bad key never ends up advertised in the KEXINIT host-key name-list.
-void test_hostkey_ecdsa_set_rejects_invalid_scalar()
+void test_rfc5656_ecdsa_hostkey_rejects_invalid_scalar()
 {
     const proto_bool before = pc_ssh_hostkey_ecdsa_available();
 
@@ -1786,7 +1786,7 @@ void test_hostkey_ecdsa_set_rejects_invalid_scalar()
 
 // RFC 4253 sec 7.1 negotiates the two cipher lists and the two MAC lists independently, so a client
 // offering different algorithms per direction is keyed asymmetrically rather than rejected.
-void test_kexinit_parse_negotiates_each_direction()
+void test_s7_1_negotiates_each_direction()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -1821,7 +1821,7 @@ void test_kexinit_parse_negotiates_each_direction()
 // for every negotiated field. Only the cipher had a test whose client order disagreed with the
 // server's own, so kex, host key and MAC could each have been resolving by server preference
 // undetected. Each list here is ordered so the two rules give different answers.
-void test_kexinit_parse_honors_client_preference_everywhere()
+void test_s7_1_honors_client_preference_everywhere()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -1868,7 +1868,7 @@ void test_kexinit_parse_honors_client_preference_everywhere()
 // Both AEAD ciphers carry their own integrity tag, so with chacha20-poly1305 negotiated the MAC
 // name-lists are never negotiated: lists with nothing in common (even an empty one) must not fail
 // the key exchange.
-void test_kexinit_parse_aead_ignores_mac_lists()
+void test_s7_1_aead_ignores_mac_lists()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -1893,7 +1893,7 @@ void test_kexinit_parse_aead_ignores_mac_lists()
 // Name-list matching (RFC 4253 §7.1) compares whole elements: a name that is exactly as long as one
 // of ours but differs in content must not match. "aes256-abc" is the length of "aes256-ctr" and
 // "zlib" the length of "none", so a length-only comparison would mis-match both.
-void test_kexinit_parse_same_length_names_do_not_match()
+void test_s7_1_same_length_names_do_not_match()
 {
     // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
     // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
@@ -1920,7 +1920,7 @@ void test_kexinit_parse_same_length_names_do_not_match()
 
 // RFC 8308 server-sig-algs is ordered by the same preference that steers host-key negotiation: with
 // prefer-RSA off the modern algorithms come first.
-void test_extinfo_build_modern_first_order()
+void test_rfc8308_extinfo_modern_first_order()
 {
     uint8_t out[128];
     size_t n = 0;
@@ -1946,7 +1946,7 @@ void test_extinfo_build_modern_first_order()
 
 // curve25519-sha256 (RFC 8731): the ECDH_INIT parser checks the message number and that the declared
 // Q_C really is present, not just that it claims 32 octets.
-void test_kexdh_handle_curve25519_rejects_malformed_init()
+void test_rfc8731_curve25519_rejects_malformed_init()
 {
     ssh_transport_init(0);
     setup_rsa_fixture();
@@ -1965,7 +1965,7 @@ void test_kexdh_handle_curve25519_rejects_malformed_init()
 }
 
 // ecdh-sha2-nistp256 (RFC 5656 §4): the same three guards on the 65-byte uncompressed-point form.
-void test_kexdh_handle_ecdh_p256_rejects_malformed_init()
+void test_rfc5656_ecdh_p256_rejects_malformed_init()
 {
     ssh_transport_init(0);
     setup_rsa_fixture();
@@ -1993,7 +1993,7 @@ void test_kexdh_handle_ecdh_p256_rejects_malformed_init()
 // P-256 key (mis-provisioned, or the algorithm forced by hand) cannot sign the exchange hash, so
 // the key exchange fails closed instead of emitting a signature made with a zero scalar.
 // MUST run before any test installs a P-256 host key - the transport ctx is not per-session.
-void test_kexdh_handle_ecdsa_hostkey_absent_fails()
+void test_rfc5656_ecdsa_hostkey_absent_fails()
 {
     TEST_ASSERT_FALSE(pc_ssh_hostkey_ecdsa_available());
     ssh_transport_init(0);
@@ -2023,7 +2023,7 @@ void test_kexdh_handle_ecdsa_hostkey_absent_fails()
 
 // RFC 4253 §4.2 preamble handling copes with the degenerate lines too: a bare LF (an empty line,
 // so there is no trailing CR to strip) and a line shorter than the four bytes "SSH-" needs.
-void test_recv_banner_empty_and_short_preamble_lines()
+void test_s4_2_banner_empty_and_short_preamble()
 {
     ssh_transport_init(0);
     const char *data = "\nab\r\nSSH-2.0-Real\r\n";
@@ -2035,7 +2035,7 @@ void test_recv_banner_empty_and_short_preamble_lines()
 
 // KEXINIT parsing rejects a payload too short to hold the message byte and the 16-byte cookie, and
 // one of the right size that carries some other message number.
-void test_kexinit_parse_rejects_short_and_mistyped()
+void test_s7_1_rejects_short_and_mistyped()
 {
     ssh_transport_init(0);
     uint8_t buf[64];
@@ -2048,7 +2048,7 @@ void test_kexinit_parse_rejects_short_and_mistyped()
 
 // An mpint of nothing but zero bytes is the value zero: the leading-zero strip walks the whole
 // field and e comes out as an all-zero 2048-bit value (which bn_dh_validate then rejects).
-void test_kexdh_parse_init_accepts_all_zero_mpint()
+void test_s8_kexdh_init_accepts_all_zero_mpint()
 {
     uint8_t e_be[256];
     memset(e_be, 0xAA, sizeof(e_be));
@@ -2062,7 +2062,7 @@ void test_kexdh_parse_init_accepts_all_zero_mpint()
 
 // ecdh-sha2-nistp256: an ephemeral scalar that is not a valid P-256 private key (zero) cannot
 // produce a server public point, so the exchange fails before any shared secret is computed.
-void test_kexdh_handle_ecdh_p256_rejects_bad_ephemeral()
+void test_rfc5656_ecdh_p256_rejects_bad_ephemeral()
 {
     ssh_transport_init(0);
     setup_rsa_fixture();
@@ -2094,7 +2094,7 @@ void test_kexdh_handle_ecdh_p256_rejects_bad_ephemeral()
 
 // The re-key trigger watches BOTH sequence numbers: a receive-heavy session hits the threshold on
 // seq_no_recv alone (RFC 4253 §9).
-void test_rekey_needed_on_receive_sequence_alone()
+void test_s9_rekey_on_receive_sequence_alone()
 {
     ssh_pkt_init(0);
     ssh_pkt[0].seq_no_send = 0;
@@ -2108,77 +2108,77 @@ int main()
     UNITY_BEGIN();
     // First: pc_ssh_hostkey_ecdsa_set must be probed before any test installs a P-256 host key, so
     // the "an invalid scalar changes nothing" assertion is made against a clean transport ctx.
-    RUN_TEST(test_hostkey_ecdsa_set_rejects_invalid_scalar);
+    RUN_TEST(test_rfc5656_ecdsa_hostkey_rejects_invalid_scalar);
     // Also order-sensitive: must see the transport ctx with no P-256 key installed.
-    RUN_TEST(test_kexdh_handle_ecdsa_hostkey_absent_fails);
+    RUN_TEST(test_rfc5656_ecdsa_hostkey_absent_fails);
     RUN_TEST(test_transport_index_guards);
-    RUN_TEST(test_banner_and_build_caps);
-    RUN_TEST(test_recv_banner_rfc_length_bound);
-    RUN_TEST(test_kexinit_parse_field_and_trunc);
-    RUN_TEST(test_kexdh_parse_and_handle_errors);
-    RUN_TEST(test_server_banner_format);
-    RUN_TEST(test_recv_banner_complete);
-    RUN_TEST(test_recv_banner_bare_lf);
-    RUN_TEST(test_recv_banner_split_across_reads);
-    RUN_TEST(test_recv_banner_skips_preamble_lines);
-    RUN_TEST(test_kexinit_build_starts_with_msg_and_stores_is);
-    RUN_TEST(test_kexinit_parse_accepts_supported);
-    RUN_TEST(test_kexinit_parse_accepts_when_ours_listed_among_others);
-    RUN_TEST(test_kexinit_parse_rejects_missing_kex);
-    RUN_TEST(test_kexinit_parse_rejects_hostkey_we_lack);
-    RUN_TEST(test_kexinit_parse_steers_to_curve_ed25519);
-    RUN_TEST(test_kexinit_parse_rejects_missing_cipher);
-    RUN_TEST(test_kexinit_parse_selects_chacha20poly1305);
-    RUN_TEST(test_kexinit_parse_selects_aes256gcm);
-    RUN_TEST(test_kexinit_parse_honors_client_cipher_preference);
-    RUN_TEST(test_kexinit_parse_selects_rsa_sha512);
-    RUN_TEST(test_kexinit_parse_selects_ecdsa);
-    RUN_TEST(test_kexinit_parse_selects_ecdh_nistp256);
-    RUN_TEST(test_kexinit_parse_selects_etm_mac);
-    RUN_TEST(test_kexinit_parse_rejects_truncated);
-    RUN_TEST(test_exchange_hash_matches_independent_assembly);
-    RUN_TEST(test_exchange_hash_changes_with_input);
-    RUN_TEST(test_kexdh_parse_init_extracts_e_with_padding);
-    RUN_TEST(test_kexdh_parse_init_extracts_small_e);
-    RUN_TEST(test_kexdh_parse_init_rejects_wrong_type);
-    RUN_TEST(test_kexdh_parse_init_rejects_oversized_e);
-    RUN_TEST(test_kexdh_handle_produces_reply_and_installs_keys);
-    RUN_TEST(test_kexdh_handle_rejects_invalid_e);
-    RUN_TEST(test_kexdh_handle_curve25519_ed25519_end_to_end);
-    RUN_TEST(test_kexdh_handle_curve25519_rejects_low_order);
-    RUN_TEST(test_kexdh_handle_ecdh_nistp256_end_to_end);
-    RUN_TEST(test_kexdh_handle_ecdh_nistp256_rejects_bad_point);
-    RUN_TEST(test_kexdh_handle_rsa_sha512_signature);
-    RUN_TEST(test_kexdh_handle_ecdsa_end_to_end);
-    RUN_TEST(test_derive_keys_session_id_affects_output);
-    RUN_TEST(test_derive_binds_every_label_to_its_direction);
-    RUN_TEST(test_group14_matches_rfc3526);
-    RUN_TEST(test_rekey_needed_threshold);
-    RUN_TEST(test_rekey_threshold_meets_the_rfc_bounds);
-    RUN_TEST(test_rekey_due_volume_and_time);
-    RUN_TEST(test_begin_rekey_preserves_session_and_auth);
-    RUN_TEST(test_kdf_edge_paths_and_slot_guards);
-    RUN_TEST(test_kexinit_parse_truncation_points);
+    RUN_TEST(test_s4_2_banner_and_build_caps);
+    RUN_TEST(test_s4_2_banner_length_bound);
+    RUN_TEST(test_s7_1_kexinit_field_and_truncation);
+    RUN_TEST(test_s8_kexdh_parse_and_handle_errors);
+    RUN_TEST(test_s4_2_server_banner_format);
+    RUN_TEST(test_s4_2_banner_complete);
+    RUN_TEST(test_s4_2_banner_bare_lf);
+    RUN_TEST(test_s4_2_banner_split_across_reads);
+    RUN_TEST(test_s4_2_banner_skips_preamble_lines);
+    RUN_TEST(test_s7_1_kexinit_build_starts_with_msg_and_stores_is);
+    RUN_TEST(test_s7_1_accepts_supported);
+    RUN_TEST(test_s7_1_accepts_when_ours_listed_among_others);
+    RUN_TEST(test_s7_1_rejects_missing_kex);
+    RUN_TEST(test_s7_1_rejects_hostkey_we_lack);
+    RUN_TEST(test_s7_1_steers_to_curve_ed25519);
+    RUN_TEST(test_s7_1_rejects_missing_cipher);
+    RUN_TEST(test_s7_1_selects_chacha20poly1305);
+    RUN_TEST(test_s7_1_selects_aes256gcm);
+    RUN_TEST(test_s7_1_honors_client_cipher_preference);
+    RUN_TEST(test_s7_1_selects_rsa_sha512);
+    RUN_TEST(test_s7_1_selects_ecdsa);
+    RUN_TEST(test_s7_1_selects_ecdh_nistp256);
+    RUN_TEST(test_s7_1_selects_etm_mac);
+    RUN_TEST(test_s7_1_rejects_truncated);
+    RUN_TEST(test_s8_exchange_hash_matches_independent_assembly);
+    RUN_TEST(test_s8_exchange_hash_changes_with_input);
+    RUN_TEST(test_s8_kexdh_init_extracts_e_with_padding);
+    RUN_TEST(test_s8_kexdh_init_extracts_small_e);
+    RUN_TEST(test_s8_kexdh_init_rejects_wrong_type);
+    RUN_TEST(test_s8_kexdh_init_rejects_oversized_e);
+    RUN_TEST(test_s8_kexdh_produces_reply_and_installs_keys);
+    RUN_TEST(test_s8_kexdh_rejects_invalid_e);
+    RUN_TEST(test_rfc8731_curve25519_ed25519_end_to_end);
+    RUN_TEST(test_rfc8731_curve25519_rejects_low_order);
+    RUN_TEST(test_rfc5656_ecdh_nistp256_end_to_end);
+    RUN_TEST(test_rfc5656_ecdh_nistp256_rejects_bad_point);
+    RUN_TEST(test_rfc8332_rsa_sha512_signature);
+    RUN_TEST(test_rfc5656_ecdsa_end_to_end);
+    RUN_TEST(test_s7_2_session_id_affects_output);
+    RUN_TEST(test_s7_2_binds_every_label_to_its_direction);
+    RUN_TEST(test_rfc3526_group14_modulus);
+    RUN_TEST(test_s9_rekey_needed_threshold);
+    RUN_TEST(test_s9_rekey_threshold_meets_the_bounds);
+    RUN_TEST(test_s9_rekey_due_volume_and_time);
+    RUN_TEST(test_s9_rekey_preserves_session_and_auth);
+    RUN_TEST(test_s7_2_kdf_edge_paths);
+    RUN_TEST(test_s7_1_truncation_points);
     RUN_TEST(test_ssh_transport_more_guards);
-    RUN_TEST(test_dh_derive_keys_gcm_installs);
+    RUN_TEST(test_s7_2_gcm_material_installs_both_directions);
     RUN_TEST(test_kdf_string_k_hybrid);
-    RUN_TEST(test_kexinit_parse_negotiates_each_direction);
-    RUN_TEST(test_kexinit_parse_honors_client_preference_everywhere);
-    RUN_TEST(test_kexinit_parse_aead_ignores_mac_lists);
-    RUN_TEST(test_kexinit_parse_same_length_names_do_not_match);
-    RUN_TEST(test_extinfo_build_modern_first_order);
-    RUN_TEST(test_kexdh_handle_curve25519_rejects_malformed_init);
-    RUN_TEST(test_kexdh_handle_ecdh_p256_rejects_malformed_init);
-    RUN_TEST(test_recv_banner_empty_and_short_preamble_lines);
-    RUN_TEST(test_kexinit_parse_rejects_short_and_mistyped);
-    RUN_TEST(test_kexdh_parse_init_accepts_all_zero_mpint);
-    RUN_TEST(test_kexdh_handle_ecdh_p256_rejects_bad_ephemeral);
-    RUN_TEST(test_rekey_needed_on_receive_sequence_alone);
+    RUN_TEST(test_s7_1_negotiates_each_direction);
+    RUN_TEST(test_s7_1_honors_client_preference_everywhere);
+    RUN_TEST(test_s7_1_aead_ignores_mac_lists);
+    RUN_TEST(test_s7_1_same_length_names_do_not_match);
+    RUN_TEST(test_rfc8308_extinfo_modern_first_order);
+    RUN_TEST(test_rfc8731_curve25519_rejects_malformed_init);
+    RUN_TEST(test_rfc5656_ecdh_p256_rejects_malformed_init);
+    RUN_TEST(test_s4_2_banner_empty_and_short_preamble);
+    RUN_TEST(test_s7_1_rejects_short_and_mistyped);
+    RUN_TEST(test_s8_kexdh_init_accepts_all_zero_mpint);
+    RUN_TEST(test_rfc5656_ecdh_p256_rejects_bad_ephemeral);
+    RUN_TEST(test_s9_rekey_on_receive_sequence_alone);
     // Runs LAST on purpose: it provisions all three host-key types and the availability lives in the
     // (non-per-session) transport ctx that setUp does not clear, so leaving it set must not perturb the
     // order-sensitive earlier tests (e.g. rejects_hostkey_we_lack assumes only the RSA fixture is held).
-    RUN_TEST(test_kexinit_hostkey_list_carries_all_four_when_all_keys_loaded);
+    RUN_TEST(test_s7_1_hostkey_list_carries_all_four);
     // Also LAST (leaves an ed25519 host key set): the CycloneSSH client-preference regression.
-    RUN_TEST(test_cyclonessh_kex_repro);
+    RUN_TEST(test_s7_1_client_preference_cyclonessh_repro);
     return UNITY_END();
 }
