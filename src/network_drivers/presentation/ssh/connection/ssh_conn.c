@@ -360,6 +360,28 @@ void pc_ssh_conn_poll(uint8_t conn_slot)
 // Connection lifecycle
 // ---------------------------------------------------------------------------
 
+int pc_ssh_conn_claim(uint8_t ssh_slot, uint8_t cid)
+{
+    ensure_init();
+    if (ssh_slot >= MAX_SSH_CONNS || cid == 0xFF || s_sshc.conn_for_ssh[ssh_slot] != 0xFF)
+    {
+        return -1;
+    }
+    s_sshc.conn_for_ssh[ssh_slot] = cid;
+    s_sshc.close[ssh_slot] = PROTO_FALSE;
+    return 0;
+}
+
+void pc_ssh_conn_release(uint8_t ssh_slot)
+{
+    ensure_init();
+    if (ssh_slot >= MAX_SSH_CONNS)
+    {
+        return;
+    }
+    s_sshc.conn_for_ssh[ssh_slot] = 0xFF;
+}
+
 void pc_ssh_conn_accept(uint8_t conn_slot)
 {
     ensure_init();
