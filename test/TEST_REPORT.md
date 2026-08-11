@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-10 08:27:12
-**Command:** `pio test` over 326 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 6251 passed, 2 failed - 1935s
+**Generated:** 2026-08-11 03:43:32
+**Command:** `pio test` over 332 auto-discovered native envs (excludes native_pentest, native_codeql)
+**Result:** ❌ 6060 passed, 7 failed - 1990s
 
 ---
 
@@ -605,7 +605,7 @@ _Unit tests for the unified double-ended arena (network_drivers/session/pc_arena
 
 ---
 
-## test_ssh_ed25519 - native_ssh_ed25519 - ✅ 19 passed
+## test_ssh_ed25519 - native_ssh_ed25519 - ✅ 20 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -622,17 +622,18 @@ _Known-answer tests for the modern SSH crypto suite (curve25519-sha256 KEX +_
 |   6 | `test_sha512_streaming_matches_oneshot`            |   ✅   | Sha512 streaming matches oneshot            |
 |   7 | `test_x25519_rfc7748_vector1`                      |   ✅   | X25519 rfc7748 vector1                      |
 |   8 | `test_x25519_rfc7748_vector2`                      |   ✅   | X25519 rfc7748 vector2                      |
-|   9 | `test_x25519_iterated_1`                           |   ✅   | X25519 iterated 1                           |
-|  10 | `test_x25519_iterated_1000`                        |   ✅   | X25519 iterated 1000                        |
-|  11 | `test_x25519_dh_agreement`                         |   ✅   | X25519 dh agreement                         |
-|  12 | `test_ed25519_vector_empty_msg`                    |   ✅   | Ed25519 vector empty msg                    |
-|  13 | `test_ed25519_vector_rfc8032_test2`                |   ✅   | Ed25519 vector rfc8032 test2                |
-|  14 | `test_ed25519_vector_zero_seed`                    |   ✅   | Ed25519 vector zero seed                    |
-|  15 | `test_ed25519_verify_rejects_tampering`            |   ✅   | Ed25519 verify rejects tampering            |
-|  16 | `test_ed25519_verify_rejects_noncanonical_s`       |   ✅   | Ed25519 verify rejects noncanonical s       |
-|  17 | `test_ed25519_verify_rejects_invalid_pubkey_point` |   ✅   | Ed25519 verify rejects invalid pubkey point |
-|  18 | `test_ed25519_roundtrip_long`                      |   ✅   | Ed25519 roundtrip long                      |
-|  19 | `test_gf_mul_s16_model_matches_scalar`             |   ✅   | Gf mul s16 model matches scalar             |
+|   9 | `test_x25519_ignores_the_high_bit_of_u`            |   ✅   | X25519 ignores the high bit of u            |
+|  10 | `test_x25519_iterated_1`                           |   ✅   | X25519 iterated 1                           |
+|  11 | `test_x25519_iterated_1000`                        |   ✅   | X25519 iterated 1000                        |
+|  12 | `test_x25519_dh_agreement`                         |   ✅   | X25519 dh agreement                         |
+|  13 | `test_ed25519_vector_empty_msg`                    |   ✅   | Ed25519 vector empty msg                    |
+|  14 | `test_ed25519_vector_rfc8032_test2`                |   ✅   | Ed25519 vector rfc8032 test2                |
+|  15 | `test_ed25519_vector_zero_seed`                    |   ✅   | Ed25519 vector zero seed                    |
+|  16 | `test_ed25519_verify_rejects_tampering`            |   ✅   | Ed25519 verify rejects tampering            |
+|  17 | `test_ed25519_verify_rejects_noncanonical_s`       |   ✅   | Ed25519 verify rejects noncanonical s       |
+|  18 | `test_ed25519_verify_rejects_invalid_pubkey_point` |   ✅   | Ed25519 verify rejects invalid pubkey point |
+|  19 | `test_ed25519_roundtrip_long`                      |   ✅   | Ed25519 roundtrip long                      |
+|  20 | `test_gf_mul_s16_model_matches_scalar`             |   ✅   | Gf mul s16 model matches scalar             |
 
 </details>
 
@@ -653,6 +654,27 @@ _Tests the SSH client-to-server resumable INFLATE (ssh_inflate) against golden v
 |   4 | `test_rejects_bad_block_type`       |   ✅   | Rejects bad block type       |
 |   5 | `test_output_overflow_fails_closed` |   ✅   | Output overflow fails closed |
 |   6 | `test_header_split_across_calls`    |   ✅   | Header split across calls    |
+
+</details>
+
+---
+
+## test_ct_eq - native_ct_eq - ✅ 7 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_pc_ct_eq is the library's one comparator for every AEAD tag, MAC, digest and signature check, and_
+
+|   # | Test                                          | Status | Description                            |
+| --: | :-------------------------------------------- | :----: | :------------------------------------- |
+|   1 | `test_equal_buffers_match`                    |   ✅   | Equal buffers match                    |
+|   2 | `test_zero_length_is_equal`                   |   ✅   | Zero length is equal                   |
+|   3 | `test_aliased_pointer_is_equal`               |   ✅   | Aliased pointer is equal               |
+|   4 | `test_difference_at_every_position_is_caught` |   ✅   | Difference at every position is caught |
+|   5 | `test_single_bit_difference_is_caught`        |   ✅   | Single bit difference is caught        |
+|   6 | `test_difference_past_n_is_not_read`          |   ✅   | Difference past n is not read          |
+|   7 | `test_cancelling_differences_do_not_cancel`   |   ✅   | Cancelling differences do not cancel   |
 
 </details>
 
@@ -1830,142 +1852,6 @@ _Unit tests for pc_prov_form_field(): the x-www-form-urlencoded field_
 
 ---
 
-## test_ssh_server - native_ssh - ✅ 41 passed
-
-<details>
-<summary><b>Expand Suite Details</b></summary>
-
-_End-to-end SSH server dispatcher test: drives a full handshake_
-
-|   # | Test                                                  | Status | Description                                                               |
-| --: | :---------------------------------------------------- | :----: | :------------------------------------------------------------------------ |
-|   1 | `test_ssh_dispatch_bad_slot`                          |   ✅   | Ssh dispatch bad slot                                                     |
-|   2 | `test_ssh_kexinit_parse_fail`                         |   ✅   | Ssh kexinit parse fail                                                    |
-|   3 | `test_ssh_kexdh_guards`                               |   ✅   | Ssh kexdh guards                                                          |
-|   4 | `test_ssh_service_request_fail`                       |   ✅   | Ssh service request fail                                                  |
-|   5 | `test_ssh_userauth_guards`                            |   ✅   | Ssh userauth guards                                                       |
-|   6 | `test_ssh_postauth_authed_guard`                      |   ✅   | Ssh postauth authed guard                                                 |
-|   7 | `test_ssh_postauth_handler_fails`                     |   ✅   | Ssh postauth handler fails                                                |
-|   8 | `test_ssh_open_confirm_failure_authed`                |   ✅   | Ssh open confirm failure authed                                           |
-|   9 | `test_ssh_global_request_reply`                       |   ✅   | Ssh global request reply                                                  |
-|  10 | `test_ssh_window_adjust_and_eof`                      |   ✅   | Ssh window adjust and eof                                                 |
-|  11 | `test_ssh_pkt_index_and_cap_guards`                   |   ✅   | Ssh pkt index and cap guards                                              |
-|  12 | `test_ssh_pkt_recv_unencrypted_errors`                |   ✅   | Ssh pkt recv unencrypted errors                                           |
-|  13 | `test_ssh_pkt_seq_overflow_guards`                    |   ✅   | Ssh pkt seq overflow guards                                               |
-|  14 | `test_ssh_pkt_encrypted_roundtrip_and_mac_fail`       |   ✅   | Ssh pkt encrypted roundtrip and mac fail                                  |
-|  15 | `test_ssh_pkt_client_role_and_zero_remainder_padding` |   ✅   | Ssh pkt client role and zero remainder padding                            |
-|  16 | `test_ssh_pkt_client_role_all_cipher_modes`           |   ✅   | Ssh pkt client role all cipher modes                                      |
-|  17 | `test_ssh_pkt_gcm_nonce_advances_per_packet`          |   ✅   | Ssh pkt gcm nonce advances per packet                                     |
-|  18 | `test_ssh_pkt_aesgcm_minimum_padding`                 |   ✅   | Ssh pkt aesgcm minimum padding                                            |
-|  19 | `test_ssh_pkt_chachapoly_frame_errors`                |   ✅   | Ssh pkt chachapoly frame errors                                           |
-|  20 | `test_ssh_pkt_aesgcm_frame_errors`                    |   ✅   | Ssh pkt aesgcm frame errors                                               |
-|  21 | `test_ssh_pkt_ctr_etm_frame_errors`                   |   ✅   | Ssh pkt ctr etm frame errors                                              |
-|  22 | `test_ssh_pkt_ctr_emac_and_plain_frame_errors`        |   ✅   | Ssh pkt ctr emac and plain frame errors                                   |
-|  23 | `test_full_handshake_to_channel_data`                 |   ✅   | Banner exchange already done out-of-band; seed V_C and enter KEXINIT.     |
-|  24 | `test_wrong_kex_guess_is_dropped`                     |   ✅   | Wrong kex guess is dropped                                                |
-|  25 | `test_extinfo_build_advertises_server_sig_algs`       |   ✅   | Extinfo build advertises server sig algs                                  |
-|  26 | `test_extinfo_not_sent_without_ext_info_c`            |   ✅   | Extinfo not sent without ext info c                                       |
-|  27 | `test_inbound_ext_info_ignored`                       |   ✅   | Inbound ext info ignored                                                  |
-|  28 | `test_large_client_kexinit_accepted`                  |   ✅   | Large client kexinit accepted                                             |
-|  29 | `test_channel_open_before_auth_rejected`              |   ✅   | Channel open before auth rejected                                         |
-|  30 | `test_service_request_before_newkeys_rejected`        |   ✅   | Service request before newkeys rejected                                   |
-|  31 | `test_disconnect_closes`                              |   ✅   | Disconnect closes                                                         |
-|  32 | `test_ignore_is_noop`                                 |   ✅   | Ignore is noop                                                            |
-|  33 | `test_auth_bruteforce_disconnect`                     |   ✅   | The first SSH_MAX_AUTH_ATTEMPTS-1 failures keep the connection open.      |
-|  34 | `test_auth_success_after_failures`                    |   ✅   | Auth success after failures                                               |
-|  35 | `test_unimplemented_reply_for_unknown_message`        |   ✅   | Unimplemented reply for unknown message                                   |
-|  36 | `test_inbound_close_emits_eof_then_close_separately`  |   ✅   | Open a channel so the close path has something to close (peer id 21).     |
-|  37 | `test_ssh_global_request_silent_without_want_reply`   |   ✅   | Ssh global request silent without want reply                              |
-|  38 | `test_ssh_channel_request_silent_without_want_reply`  |   ✅   | Ssh channel request silent without want reply                             |
-|  39 | `test_ssh_channel_close_unhandled_emits_nothing`      |   ✅   | No channel has been opened in this test, so recipient 0 does not resolve. |
-|  40 | `test_ssh_kexinit_midsession_rekey`                   |   ✅   | Ssh kexinit midsession rekey                                              |
-|  41 | `test_ssh_dispatch_without_emit_cb`                   |   ✅   | Ssh dispatch without emit cb                                              |
-
-</details>
-
----
-
-## test_ssh_transport - native_ssh - ✅ 67 passed
-
-<details>
-<summary><b>Expand Suite Details</b></summary>
-
-_SSH transport handshake tests (RFC 4253): identification-string exchange and_
-
-|   # | Test                                                              | Status | Description                                                                               |
-| --: | :---------------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |
-|   1 | `test_hostkey_ecdsa_set_rejects_invalid_scalar`                   |   ✅   | Hostkey ecdsa set rejects invalid scalar                                                  |
-|   2 | `test_kexdh_handle_ecdsa_hostkey_absent_fails`                    |   ✅   | Kexdh handle ecdsa hostkey absent fails                                                   |
-|   3 | `test_transport_index_guards`                                     |   ✅   | Transport index guards                                                                    |
-|   4 | `test_banner_and_build_caps`                                      |   ✅   | Banner and build caps                                                                     |
-|   5 | `test_recv_banner_rfc_length_bound`                               |   ✅   | Recv banner rfc length bound                                                              |
-|   6 | `test_kexinit_parse_field_and_trunc`                              |   ✅   | Kexinit parse field and trunc                                                             |
-|   7 | `test_kexdh_parse_and_handle_errors`                              |   ✅   | Kexdh parse and handle errors                                                             |
-|   8 | `test_server_banner_format`                                       |   ✅   | Server banner format                                                                      |
-|   9 | `test_recv_banner_complete`                                       |   ✅   | Recv banner complete                                                                      |
-|  10 | `test_recv_banner_bare_lf`                                        |   ✅   | Recv banner bare lf                                                                       |
-|  11 | `test_recv_banner_split_across_reads`                             |   ✅   | Recv banner split across reads                                                            |
-|  12 | `test_recv_banner_skips_preamble_lines`                           |   ✅   | RFC 4253 §4.2 allows lines before the SSH identification string.                          |
-|  13 | `test_kexinit_build_starts_with_msg_and_stores_is`                |   ✅   | Kexinit build starts with msg and stores is                                               |
-|  14 | `test_kexinit_parse_accepts_supported`                            |   ✅   | Kexinit parse accepts supported                                                           |
-|  15 | `test_kexinit_parse_accepts_when_ours_listed_among_others`        |   ✅   | Kexinit parse accepts when ours listed among others                                       |
-|  16 | `test_kexinit_parse_rejects_missing_kex`                          |   ✅   | Only a KEX method we do not implement (nistp521) -> no mutual KEX -> reject. (nistp256 IS |
-|  17 | `test_kexinit_parse_rejects_hostkey_we_lack`                      |   ✅   | Kexinit parse rejects hostkey we lack                                                     |
-|  18 | `test_kexinit_parse_steers_to_curve_ed25519`                      |   ✅   | Kexinit parse steers to curve ed25519                                                     |
-|  19 | `test_kexinit_parse_rejects_missing_cipher`                       |   ✅   | Only ciphers we do not implement -> no mutual cipher -> reject.                           |
-|  20 | `test_kexinit_parse_selects_chacha20poly1305`                     |   ✅   | Kexinit parse selects chacha20poly1305                                                    |
-|  21 | `test_kexinit_parse_selects_aes256gcm`                            |   ✅   | Kexinit parse selects aes256gcm                                                           |
-|  22 | `test_kexinit_parse_honors_client_cipher_preference`              |   ✅   | Kexinit parse honors client cipher preference                                             |
-|  23 | `test_kexinit_parse_selects_rsa_sha512`                           |   ✅   | Both offered -> rsa-sha2-512 wins (server preference).                                    |
-|  24 | `test_kexinit_parse_selects_ecdsa`                                |   ✅   | Kexinit parse selects ecdsa                                                               |
-|  25 | `test_kexinit_parse_selects_ecdh_nistp256`                        |   ✅   | Kexinit parse selects ecdh nistp256                                                       |
-|  26 | `test_kexinit_parse_selects_etm_mac`                              |   ✅   | Kexinit parse selects etm mac                                                             |
-|  27 | `test_kexinit_parse_rejects_truncated`                            |   ✅   | Kexinit parse rejects truncated                                                           |
-|  28 | `test_exchange_hash_matches_independent_assembly`                 |   ✅   | Populate the session fields the hash reads.                                               |
-|  29 | `test_exchange_hash_changes_with_input`                           |   ✅   | Exchange hash changes with input                                                          |
-|  30 | `test_kexdh_parse_init_extracts_e_with_padding`                   |   ✅   | Kexdh parse init extracts e with padding                                                  |
-|  31 | `test_kexdh_parse_init_extracts_small_e`                          |   ✅   | Kexdh parse init extracts small e                                                         |
-|  32 | `test_kexdh_parse_init_rejects_wrong_type`                        |   ✅   | Kexdh parse init rejects wrong type                                                       |
-|  33 | `test_kexdh_parse_init_rejects_oversized_e`                       |   ✅   | mpint with 300 magnitude bytes → exceeds 2048 bits.                                       |
-|  34 | `test_kexdh_handle_produces_reply_and_installs_keys`              |   ✅   | Kexdh handle produces reply and installs keys                                             |
-|  35 | `test_kexdh_handle_rejects_invalid_e`                             |   ✅   | Kexdh handle rejects invalid e                                                            |
-|  36 | `test_kexdh_handle_curve25519_ed25519_end_to_end`                 |   ✅   | Fixed baseline host keys for deterministic regression, plus one fresh throwaway           |
-|  37 | `test_kexdh_handle_curve25519_rejects_low_order`                  |   ✅   | Kexdh handle curve25519 rejects low order                                                 |
-|  38 | `test_kexdh_handle_ecdh_nistp256_end_to_end`                      |   ✅   | Kexdh handle ecdh nistp256 end to end                                                     |
-|  39 | `test_kexdh_handle_ecdh_nistp256_rejects_bad_point`               |   ✅   | Kexdh handle ecdh nistp256 rejects bad point                                              |
-|  40 | `test_kexdh_handle_rsa_sha512_signature`                          |   ✅   | Kexdh handle rsa sha512 signature                                                         |
-|  41 | `test_kexdh_handle_ecdsa_end_to_end`                              |   ✅   | Kexdh handle ecdsa end to end                                                             |
-|  42 | `test_derive_keys_session_id_affects_output`                      |   ✅   | Derive keys session id affects output                                                     |
-|  43 | `test_derive_binds_every_label_to_its_direction`                  |   ✅   | Derive binds every label to its direction                                                 |
-|  44 | `test_group14_matches_rfc3526`                                    |   ✅   | Group14 matches rfc3526                                                                   |
-|  45 | `test_rekey_needed_threshold`                                     |   ✅   | Rekey needed threshold                                                                    |
-|  46 | `test_rekey_threshold_meets_the_rfc_bounds`                       |   ✅   | Rekey threshold meets the rfc bounds                                                      |
-|  47 | `test_rekey_due_volume_and_time`                                  |   ✅   | Neither budget spent.                                                                     |
-|  48 | `test_begin_rekey_preserves_session_and_auth`                     |   ✅   | Begin rekey preserves session and auth                                                    |
-|  49 | `test_kdf_edge_paths_and_slot_guards`                             |   ✅   | Kdf edge paths and slot guards                                                            |
-|  50 | `test_kexinit_parse_truncation_points`                            |   ✅   | One cut per name-list read, in field order: kex / host-key / cipher-c2s / cipher-s2c /    |
-|  51 | `test_ssh_transport_more_guards`                                  |   ✅   | Ssh transport more guards                                                                 |
-|  52 | `test_dh_derive_keys_gcm_installs`                                |   ✅   | Dh derive keys gcm installs                                                               |
-|  53 | `test_kdf_string_k_hybrid`                                        |   ✅   | Kdf string k hybrid                                                                       |
-|  54 | `test_kexinit_parse_negotiates_each_direction`                    |   ✅   | Kexinit parse negotiates each direction                                                   |
-|  55 | `test_kexinit_parse_honors_client_preference_everywhere`          |   ✅   | The server prefers RSA/DH when prefer_rsa is set, so a client leading with curve25519 and |
-|  56 | `test_kexinit_parse_aead_ignores_mac_lists`                       |   ✅   | Kexinit parse aead ignores mac lists                                                      |
-|  57 | `test_kexinit_parse_same_length_names_do_not_match`               |   ✅   | Kexinit parse same length names do not match                                              |
-|  58 | `test_extinfo_build_modern_first_order`                           |   ✅   | Extinfo build modern first order                                                          |
-|  59 | `test_kexdh_handle_curve25519_rejects_malformed_init`             |   ✅   | Kexdh handle curve25519 rejects malformed init                                            |
-|  60 | `test_kexdh_handle_ecdh_p256_rejects_malformed_init`              |   ✅   | Kexdh handle ecdh p256 rejects malformed init                                             |
-|  61 | `test_recv_banner_empty_and_short_preamble_lines`                 |   ✅   | Recv banner empty and short preamble lines                                                |
-|  62 | `test_kexinit_parse_rejects_short_and_mistyped`                   |   ✅   | Kexinit parse rejects short and mistyped                                                  |
-|  63 | `test_kexdh_parse_init_accepts_all_zero_mpint`                    |   ✅   | Kexdh parse init accepts all zero mpint                                                   |
-|  64 | `test_kexdh_handle_ecdh_p256_rejects_bad_ephemeral`               |   ✅   | Kexdh handle ecdh p256 rejects bad ephemeral                                              |
-|  65 | `test_rekey_needed_on_receive_sequence_alone`                     |   ✅   | Rekey needed on receive sequence alone                                                    |
-|  66 | `test_kexinit_hostkey_list_carries_all_four_when_all_keys_loaded` |   ✅   | Kexinit hostkey list carries all four when all keys loaded                                |
-|  67 | `test_cyclonessh_kex_repro`                                       |   ✅   | Cyclonessh kex repro                                                                      |
-
-</details>
-
----
-
 ## test_ssh_auth - native_ssh - ✅ 37 passed
 
 <details>
@@ -2082,76 +1968,68 @@ _SSH connection-protocol (channel) tests - RFC 4254, including multiplexing_
 
 ---
 
-## test_ssh_crypto - native_ssh - ✅ 61 passed
+## test_ssh_packet - native_ssh_packet - ✅ 10 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_SSH crypto layer test suite._
+_Per-file coverage for ssh/transport/ssh_packet.c - the RFC 4253 sec 6 binary packet protocol._
 
-|   # | Test                                         | Status | Description                                                                                         |
-| --: | :------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
-|   1 | `test_ghash_table_matches_bitwise`           |   ✅   | Ghash table matches bitwise                                                                         |
-|   2 | `test_sha256_empty`                          |   ✅   | SHA256("") = e3b0c44298fc1c149afb...                                                                |
-|   3 | `test_sha256_abc`                            |   ✅   | SHA256("abc") = ba7816bf8f01cfea414140de5dae2ec73b00361bbef0469...                                  |
-|   4 | `test_sha256_448bit`                         |   ✅   | SHA256("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")                                  |
-|   5 | `test_sha256_streaming`                      |   ✅   | Same as test_sha256_abc but using the streaming API.                                                |
-|   6 | `test_hmac_sha256_tc1`                       |   ✅   | RFC 4231 Test Case 1                                                                                |
-|   7 | `test_hmac_sha256_tc2`                       |   ✅   | RFC 4231 Test Case 2                                                                                |
-|   8 | `test_hmac_sha256_tc3`                       |   ✅   | RFC 4231 Test Case 3                                                                                |
-|   9 | `test_hmac_sha256_streaming`                 |   ✅   | Same as tc1 but via streaming API.                                                                  |
-|  10 | `test_hmac_sha256_tc6_large_key`             |   ✅   | Hmac sha256 tc6 large key                                                                           |
-|  11 | `test_hmac_sha512_tc1`                       |   ✅   | RFC 4231 Test Case 1: Key = 0x0b x20, Data = "Hi There".                                            |
-|  12 | `test_hmac_sha512_tc2`                       |   ✅   | RFC 4231 Test Case 2: Key = "Jefe", Data = "what do ya want for nothing?".                          |
-|  13 | `test_hmac_sha512_streaming`                 |   ✅   | Same as tc1 but via the streaming API (also exercises the 128-byte block boundary).                 |
-|  14 | `test_hmac_sha512_tc6_large_key`             |   ✅   | Hmac sha512 tc6 large key                                                                           |
-|  15 | `test_aes256ctr_encrypt`                     |   ✅   | NIST SP 800-38A, Section F.5.5                                                                      |
-|  16 | `test_aes256ctr_decrypt`                     |   ✅   | AES-256-CTR decrypt is identical to encrypt.                                                        |
-|  17 | `test_aes256ctr_multi_block`                 |   ✅   | NIST F.5.5 blocks 1-4 (64 bytes).                                                                   |
-|  18 | `test_aes256ctr_scratch_wiped`               |   ✅   | Security model: the ephemeral AES key schedule lives in the shared crypto scratch and MUST be wiped |
-|  19 | `test_bn_roundtrip`                          |   ✅   | Round-trip: bytes → pc_bignum → bytes.                                                              |
-|  20 | `test_bn_cmp_equal`                          |   ✅   | Bn cmp equal                                                                                        |
-|  21 | `test_bn_cmp_less`                           |   ✅   | Bn cmp less                                                                                         |
-|  22 | `test_bn_cmp_greater`                        |   ✅   | Bn cmp greater                                                                                      |
-|  23 | `test_bn_is_zero`                            |   ✅   | Bn is zero                                                                                          |
-|  24 | `test_bn_dh_validate_rejects_zero`           |   ✅   | Bn dh validate rejects zero                                                                         |
-|  25 | `test_bn_dh_validate_rejects_one`            |   ✅   | Bn dh validate rejects one                                                                          |
-|  26 | `test_bn_dh_validate_accepts_two`            |   ✅   | Bn dh validate accepts two                                                                          |
-|  27 | `test_expmod_exp1`                           |   ✅   | Expmod exp1                                                                                         |
-|  28 | `test_expmod_exp2`                           |   ✅   | Expmod exp2                                                                                         |
-|  29 | `test_expmod_exp3`                           |   ✅   | Expmod exp3                                                                                         |
-|  30 | `test_expmod_commutative`                    |   ✅   | Expmod commutative                                                                                  |
-|  31 | `test_rsa_pkcs1_pad_structure`               |   ✅   | The padding, not a host key: pc_rsa_sign_sw takes n and d directly, so the synthetic modulus        |
-|  32 | `test_rsa_sign_verify_roundtrip`             |   ✅   | Rsa sign verify roundtrip                                                                           |
-|  33 | `test_rsa_load_pkcs1_and_pkcs8_agree`        |   ✅   | Rsa load pkcs1 and pkcs8 agree                                                                      |
-|  34 | `test_rsa_load_rejects_malformed`            |   ✅   | Rsa load rejects malformed                                                                          |
-|  35 | `test_rsa_encode_pubkey`                     |   ✅   | Rsa encode pubkey                                                                                   |
-|  36 | `test_rsa_verify_and_encode_guards`          |   ✅   | Rsa verify and encode guards                                                                        |
-|  37 | `test_rsa_verify_valid_signature`            |   ✅   | Rsa verify valid signature                                                                          |
-|  38 | `test_rsa_verify_rejects_tampered_signature` |   ✅   | Rsa verify rejects tampered signature                                                               |
-|  39 | `test_rsa_verify_rejects_wrong_message`      |   ✅   | Rsa verify rejects wrong message                                                                    |
-|  40 | `test_rsa_sha512_kat_sign_verify`            |   ✅   | A known-answer vector: the signature has to byte-match a reference produced with this exact         |
-|  41 | `test_pkt_send_recv_unencrypted`             |   ✅   | Pkt send recv unencrypted                                                                           |
-|  42 | `test_pkt_padding_alignment`                 |   ✅   | Packet length + padding must be multiple of 16.                                                     |
-|  43 | `test_pkt_seq_increments`                    |   ✅   | Pkt seq increments                                                                                  |
-|  44 | `test_pkt_disconnect_zeroes_state`           |   ✅   | Pkt disconnect zeroes state                                                                         |
-|  45 | `test_pkt_encrypted_roundtrip`               |   ✅   | Pkt encrypted roundtrip                                                                             |
-|  46 | `test_pkt_chacha20poly1305_roundtrip`        |   ✅   | Install a chacha20-poly1305 session with the same key both directions, so ssh_pkt_send()            |
-|  47 | `test_pkt_aes256gcm_roundtrip`               |   ✅   | Install an aes256-gcm@openssh.com session with the same key/IV both directions, so ssh_pkt_send     |
-|  48 | `test_pkt_aes_etm_sha256_roundtrip`          |   ✅   | Pkt aes etm sha256 roundtrip                                                                        |
-|  49 | `test_pkt_aes_etm_sha512_roundtrip`          |   ✅   | Pkt aes etm sha512 roundtrip                                                                        |
-|  50 | `test_pkt_encrypted_fragmented`              |   ✅   | Pkt encrypted fragmented                                                                            |
-|  51 | `test_pkt_encrypted_two_packets`             |   ✅   | Pkt encrypted two packets                                                                           |
-|  52 | `test_pkt_chacha_padding_and_incomplete`     |   ✅   | Pkt chacha padding and incomplete                                                                   |
-|  53 | `test_pkt_etm_padding_and_incomplete`        |   ✅   | Pkt etm padding and incomplete                                                                      |
-|  54 | `test_pkt_chacha_forged_rejects`             |   ✅   | Pkt chacha forged rejects                                                                           |
-|  55 | `test_pkt_etm_bad_length`                    |   ✅   | Pkt etm bad length                                                                                  |
-|  56 | `test_pkt_etm_forged_rejects`                |   ✅   | Pkt etm forged rejects                                                                              |
-|  57 | `test_pkt_scratch_exhausted`                 |   ✅   | Pkt scratch exhausted                                                                               |
-|  58 | `test_pkt_eam_forged_rejects`                |   ✅   | Pkt eam forged rejects                                                                              |
-|  59 | `test_ssh_kdf_canonical_mpint_k`             |   ✅   | Ssh kdf canonical mpint k                                                                           |
-|  60 | `test_ssh_kdf_extension_chain`               |   ✅   | Ssh kdf extension chain                                                                             |
-|  61 | `test_keymat_wipe_out_of_range_is_noop`      |   ✅   | Keymat wipe out of range is noop                                                                    |
+|   # | Test                                                     | Status | Description                                       |
+| --: | :------------------------------------------------------- | :----: | :------------------------------------------------ |
+|   1 | `test_packet_length_excludes_itself_and_mac`             |   ✅   | Packet length excludes itself and mac             |
+|   2 | `test_padding_is_within_the_rfc_bounds`                  |   ✅   | Padding is within the rfc bounds                  |
+|   3 | `test_frame_is_a_multiple_of_the_block_size`             |   ✅   | Frame is a multiple of the block size             |
+|   4 | `test_minimum_packet_size`                               |   ✅   | Minimum packet size                               |
+|   5 | `test_round_trip_delivers_the_payload`                   |   ✅   | Round trip delivers the payload                   |
+|   6 | `test_sequence_number_starts_at_zero_and_counts_packets` |   ✅   | Sequence number starts at zero and counts packets |
+|   7 | `test_receive_refuses_padding_under_four`                |   ✅   | Receive refuses padding under four                |
+|   8 | `test_receive_refuses_padding_past_the_packet`           |   ✅   | Receive refuses padding past the packet           |
+|   9 | `test_two_packets_in_one_read`                           |   ✅   | Two packets in one read                           |
+|  10 | `test_partial_frame_waits_for_the_rest`                  |   ✅   | Partial frame waits for the rest                  |
+
+</details>
+
+---
+
+## test_ssh_epoch - native_ssh_epoch - ✅ 7 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Per-file coverage for the key-epoch transitions: ssh_keymat.h's epoch pair, ssh_dh.c's install,_
+
+|   # | Test                                                       | Status | Description                                         |
+| --: | :--------------------------------------------------------- | :----: | :-------------------------------------------------- |
+|   1 | `test_fresh_session_starts_unencrypted_on_epoch_zero`      |   ✅   | Fresh session starts unencrypted on epoch zero      |
+|   2 | `test_derive_installs_into_the_idle_epoch`                 |   ✅   | Derive installs into the idle epoch                 |
+|   3 | `test_directions_switch_independently`                     |   ✅   | Directions switch independently                     |
+|   4 | `test_second_newkeys_completes_and_releases_the_old_epoch` |   ✅   | Second newkeys completes and releases the old epoch |
+|   5 | `test_rekey_alternates_epochs`                             |   ✅   | Rekey alternates epochs                             |
+|   6 | `test_newkeys_outside_an_exchange_is_refused`              |   ✅   | Newkeys outside an exchange is refused              |
+|   7 | `test_wipe_clears_both_epochs`                             |   ✅   | Wipe clears both epochs                             |
+
+</details>
+
+---
+
+## test_ssh_flow - native_ssh_flow - ✅ 8 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Per-file coverage for ssh/connection/ssh_flow_control.c - the RFC 4254 sec 5.2 channel window._
+
+|   # | Test                                                      | Status | Description                                        |
+| --: | :-------------------------------------------------------- | :----: | :------------------------------------------------- |
+|   1 | `test_init_sets_both_windows`                             |   ✅   | Init sets both windows                             |
+|   2 | `test_send_cap_is_the_smaller_of_window_and_max_packet`   |   ✅   | Send cap is the smaller of window and max packet   |
+|   3 | `test_send_decrements_the_window_to_empty`                |   ✅   | Send decrements the window to empty                |
+|   4 | `test_window_adjust_increments`                           |   ✅   | Window adjust increments                           |
+|   5 | `test_window_never_exceeds_the_rfc_ceiling`               |   ✅   | Window never exceeds the rfc ceiling               |
+|   6 | `test_handles_the_maximum_window`                         |   ✅   | Handles the maximum window                         |
+|   7 | `test_receive_take_drains_the_local_window`               |   ✅   | Receive take drains the local window               |
+|   8 | `test_replenish_and_credit_restore_the_advertised_window` |   ✅   | Replenish and credit restore the advertised window |
 
 </details>
 
@@ -2235,30 +2113,6 @@ _SSH keyboard-interactive authentication tests (RFC 4256): the server sends one 
 
 ---
 
-## test_ssh_pqc - native_ssh_pqc - ✅ 10 passed
-
-<details>
-<summary><b>Expand Suite Details</b></summary>
-
-_End-to-end test of the mlkem768x25519-sha256 SSH hybrid key exchange (draft-ietf-sshm-mlkem-hybrid-_
-
-|   # | Test                                             | Status | Description                               |
-| --: | :----------------------------------------------- | :----: | :---------------------------------------- |
-|   1 | `test_decaps_ref_matches_kat`                    |   ✅   | Decaps ref matches kat                    |
-|   2 | `test_hybrid_negotiated`                         |   ✅   | Hybrid negotiated                         |
-|   3 | `test_hybrid_absent_falls_back`                  |   ✅   | Hybrid absent falls back                  |
-|   4 | `test_hybrid_kex_end_to_end`                     |   ✅   | Hybrid kex end to end                     |
-|   5 | `test_kex_generate_per_method`                   |   ✅   | Kex generate per method                   |
-|   6 | `test_kexinit_advertises_both_hybrids_first`     |   ✅   | Kexinit advertises both hybrids first     |
-|   7 | `test_sntrup761_hybrid_kex_end_to_end`           |   ✅   | Sntrup761 hybrid kex end to end           |
-|   8 | `test_classical_dh_kex_in_pqc_build`             |   ✅   | Classical dh kex in pqc build             |
-|   9 | `test_hybrid_init_malformed_rejected`            |   ✅   | Hybrid init malformed rejected            |
-|  10 | `test_hybrid_rejects_low_order_point_and_bad_ek` |   ✅   | Hybrid rejects low order point and bad ek |
-
-</details>
-
----
-
 ## test_ssh_hardening - native_ssh_hardened - ✅ 4 passed
 
 <details>
@@ -2312,6 +2166,24 @@ _SSH transport-glue test: drives a PROTO_SSH connection through the real_
 |  24 | `test_bn_expmod_group14_hits_correction_sliver_without_overflow_limb` |   ✅   | Bn expmod group14 hits correction sliver without overflow limb |
 |  25 | `test_dispatch_all_switch_arms`                                       |   ✅   | Dispatch all switch arms                                       |
 |  26 | `test_dispatch_guard_and_error_arms`                                  |   ✅   | Dispatch guard and error arms                                  |
+
+</details>
+
+---
+
+## test_ssh_client - native_ssh_client - ✅ 4 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Per-file coverage for the SSH client role (ssh_client.c). Before this env the file was in no_
+
+|   # | Test                                 | Status | Description                   |
+| --: | :----------------------------------- | :----: | :---------------------------- |
+|   1 | `test_tunnel_state_starts_idle`      |   ✅   | Tunnel state starts idle      |
+|   2 | `test_begin_rejects_incomplete_cfg`  |   ✅   | Begin rejects incomplete cfg  |
+|   3 | `test_tunnel_pubkey_matches_ed25519` |   ✅   | Tunnel pubkey matches ed25519 |
+|   4 | `test_end_is_idempotent`             |   ✅   | End is idempotent             |
 
 </details>
 
@@ -5232,19 +5104,25 @@ _Known-answer test for ML-KEM-768 (network_drivers/presentation/pqc/mlkem), the 
 
 ---
 
-## test_pqc_sha3 - native_pqc - ✅ 4 passed
+## test_pqc_sha3 - native_pqc - ✅ 10 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
 _Known-answer tests for the Keccak/SHA-3/SHAKE primitive (network_drivers/presentation/pqc/sha3),_
 
-|   # | Test                           | Status | Description             |
-| --: | :----------------------------- | :----: | :---------------------- |
-|   1 | `test_sha3_256`                |   ✅   | Sha3 256                |
-|   2 | `test_sha3_512`                |   ✅   | Sha3 512                |
-|   3 | `test_shake_empty`             |   ✅   | Shake empty             |
-|   4 | `test_shake_stream_continuity` |   ✅   | Shake stream continuity |
+|   # | Test                                     | Status | Description                       |
+| --: | :--------------------------------------- | :----: | :-------------------------------- |
+|   1 | `test_sha3_256`                          |   ✅   | Sha3 256                          |
+|   2 | `test_sha3_256_rate_boundaries`          |   ✅   | Sha3 256 rate boundaries          |
+|   3 | `test_sha3_512_rate_boundaries`          |   ✅   | Sha3 512 rate boundaries          |
+|   4 | `test_shake128_rate_boundaries`          |   ✅   | Shake128 rate boundaries          |
+|   5 | `test_sha3_512`                          |   ✅   | Sha3 512                          |
+|   6 | `test_shake_empty`                       |   ✅   | Shake empty                       |
+|   7 | `test_shake128_stream_matches_published` |   ✅   | Shake128 stream matches published |
+|   8 | `test_shake256_stream_matches_published` |   ✅   | Shake256 stream matches published |
+|   9 | `test_shake256_stream_continuity`        |   ✅   | Shake256 stream continuity        |
+|  10 | `test_shake_stream_continuity`           |   ✅   | Shake stream continuity           |
 
 </details>
 
@@ -7617,45 +7495,6 @@ _Unit tests for the SSH server-to-client streaming compressor_
 
 ---
 
-## test_ssh_comp - native_ssh_comp - ✅ 25 passed
-
-<details>
-<summary><b>Expand Suite Details</b></summary>
-
-_Integration test for SSH server-to-client compression WIRING (network_drivers/presentation/ssh):_
-
-|   # | Test                                                    | Status | Description                                                                                     |
-| --: | :------------------------------------------------------ | :----: | :---------------------------------------------------------------------------------------------- |
-|   1 | `test_dispatch_all_switch_arms`                         |   ✅   | Dispatch all switch arms                                                                        |
-|   2 | `test_dispatch_guard_and_error_arms`                    |   ✅   | Dispatch guard and error arms                                                                   |
-|   3 | `test_delayed_activation`                               |   ✅   | Delayed activation                                                                              |
-|   4 | `test_immediate_activation`                             |   ✅   | Immediate activation                                                                            |
-|   5 | `test_none_never_activates`                             |   ✅   | None never activates                                                                            |
-|   6 | `test_c2s_activation_and_decompress`                    |   ✅   | C2s activation and decompress                                                                   |
-|   7 | `test_c2s_delayed_activation`                           |   ✅   | C2s delayed activation                                                                          |
-|   8 | `test_packet_layer_stream_roundtrip`                    |   ✅   | Packet layer stream roundtrip                                                                   |
-|   9 | `test_packet_layer_window_slide`                        |   ✅   | Packet layer window slide                                                                       |
-|  10 | `test_packet_compress_scratch_exhausted`                |   ✅   | Packet compress scratch exhausted                                                               |
-|  11 | `test_comp_slot_guards`                                 |   ✅   | Comp slot guards                                                                                |
-|  12 | `test_comp_activation_idempotent`                       |   ✅   | zlib: NEWKEYS starts it; a second NEWKEYS is a no-op (s2c_active already true), and USERAUTH is |
-|  13 | `test_kexinit_negotiates_s2c_compression`               |   ✅   | Kexinit negotiates s2c compression                                                              |
-|  14 | `test_packet_send_uncompressed_before_activation`       |   ✅   | Packet send uncompressed before activation                                                      |
-|  15 | `test_newkeys_sent_starts_immediate_stream_only`        |   ✅   | Newkeys sent starts immediate stream only                                                       |
-|  16 | `test_packet_compress_rejects_oversized_payload`        |   ✅   | Packet compress rejects oversized payload                                                       |
-|  17 | `test_dispatch_auth_success_starts_delayed_compression` |   ✅   | Dispatch auth success starts delayed compression                                                |
-|  18 | `test_aes256ctr_nist_vector_roundtrip`                  |   ✅   | Aes256ctr nist vector roundtrip                                                                 |
-|  19 | `test_aes256ctr_counter_full_wraparound`                |   ✅   | Aes256ctr counter full wraparound                                                               |
-|  20 | `test_dh_generate_slot_guard_and_state`                 |   ✅   | Dh generate slot guard and state                                                                |
-|  21 | `test_dh_derive_keys_default_wrapper_and_slot_guard`    |   ✅   | Dh derive keys default wrapper and slot guard                                                   |
-|  22 | `test_dh_derive_keys_chachapoly_and_gcm_branches`       |   ✅   | Dh derive keys chachapoly and gcm branches                                                      |
-|  23 | `test_kdf_mpint_k_edge_encodings`                       |   ✅   | Kdf mpint k edge encodings                                                                      |
-|  24 | `test_kdf_string_k_hybrid_branch`                       |   ✅   | Kdf string k hybrid branch                                                                      |
-|  25 | `test_kdf_out_len_clamp_matches_exact_max`              |   ✅   | Kdf out len clamp matches exact max                                                             |
-
-</details>
-
----
-
 ## test_websocket - native_ws_deflate - ✅ 96 passed
 
 <details>
@@ -7807,7 +7646,7 @@ _Unit tests for the typed NVS config store (services/storage/config_store), exer
 |   5 | `test_u32_round_trip`                         |   ✅   | U32 round trip                         |
 |   6 | `test_u32_default_when_missing`               |   ✅   | U32 default when missing               |
 |   7 | `test_blob_round_trip`                        |   ✅   | Blob round trip                        |
-|   8 | `test_blob_too_large_is_refused`              |   ✅   | Blob too large is refused              |
+|   8 | `test_blob_bounded_by_capacity`               |   ✅   | Blob bounded by capacity               |
 |   9 | `test_blob_missing_returns_zero`              |   ✅   | Blob missing returns zero              |
 |  10 | `test_erase_removes_key`                      |   ✅   | Erase removes key                      |
 |  11 | `test_clear_wipes_namespace`                  |   ✅   | Clear wipes namespace                  |
@@ -10842,6 +10681,28 @@ _mmgr/bitio.h: the LSB-first bit writer. The oracle is a bit reader written here
 |   7 | `test_one_byte_past_cap_latches_overflow` |   ✅   | One byte past cap latches overflow |
 |   8 | `test_align_at_cap_latches_overflow`      |   ✅   | Align at cap latches overflow      |
 |   9 | `test_overflow_stays_latched`             |   ✅   | Overflow stays latched             |
+
+</details>
+
+---
+
+## test_rfc1951 - native_rfc1951 - ✅ 8 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+_Per-file coverage for codec/deflate/rfc1951.{h,c}: the one definition of the RFC 1951 sec 3.2.5_
+
+|   # | Test                                                | Status | Description                                  |
+| --: | :-------------------------------------------------- | :----: | :------------------------------------------- |
+|   1 | `test_length_table_matches_rfc`                     |   ✅   | Length table matches rfc                     |
+|   2 | `test_distance_table_matches_rfc`                   |   ✅   | Distance table matches rfc                   |
+|   3 | `test_length_spans_are_contiguous`                  |   ✅   | Length spans are contiguous                  |
+|   4 | `test_distance_spans_are_contiguous`                |   ✅   | Distance spans are contiguous                |
+|   5 | `test_namespace_is_one_instance`                    |   ✅   | Namespace is one instance                    |
+|   6 | `test_build_fixed_lengths_match_rfc`                |   ✅   | Build fixed lengths match rfc                |
+|   7 | `test_build_fixed_codes_are_the_rfc_codes_reversed` |   ✅   | Build fixed codes are the rfc codes reversed |
+|   8 | `test_reverse_bits_is_its_own_inverse`              |   ✅   | Reverse bits is its own inverse              |
 
 </details>
 
