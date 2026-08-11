@@ -587,6 +587,163 @@ static void test_s8_a_kexdh_init_outside_the_group_fails_the_exchange(void)
     TEST_ASSERT_EQUAL(PC_PROTO_SLOT_NONE, conn_pool[0].proto_slot);
 }
 
+// ---------------------------------------------------------------------------
+// This file's own contract - no RFC governs it, so each case is named for what it asserts
+//
+// ssh_conn.c owns the SSH-slot to TCP-slot mapping, the pool borrows every outbound call makes,
+// whether the socket is still worth writing to, and wiping the connection's span on close. None of
+// that is in a specification; all of it decides whether the sections above are reachable at all.
+// ---------------------------------------------------------------------------
+
+// One SSH session per TCP slot, and no more sessions than slots: with the pool spent, the next
+// connection is dropped rather than served without a session.
+static void test_slot_mapping_accept_without_capacity_drops_the_connection(void)
+{
+    pc_ssh_conn_accept(0);
+    TEST_ASSERT_NOT_EQUAL(PC_PROTO_SLOT_NONE, conn_pool[0].proto_slot);
+
+    for (int k = 1; k < MAX_CONNS && k <= MAX_SSH_CONNS; k++)
+    {
+        pc_ssh_conn_accept((uint8_t)k);
+        TEST_ASSERT_EQUAL(PC_PROTO_SLOT_NONE, conn_pool[k].proto_slot);
+    }
+}
+
+// A slot whose proto_slot names a session that belongs to a different TCP slot is a stale mapping
+// left by a reused slot. Neither the receive path nor the poll acts on it.
+static void test_slot_mapping_a_foreign_mapping_is_ignored(void)
+{
+    pc_ssh_conn_accept(0);
+    uint8_t j = conn_pool[0].proto_slot;
+
+    conn_pool[1].proto_slot = j; // conn 1 claims conn 0's session
+    tcp_capture_reset();
+    push_str(1, "SSH-2.0-Impostor\r\n");
+    pc_ssh_conn_rx(1);
+    pc_ssh_conn_poll(1);
+
+    TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
+    TEST_ASSERT_EQUAL(SSH_PHASE_BANNER, ssh_sess[j].phase); // conn 0's session untouched
+}
+
+// Every outbound entry point fails closed on a slot out of range and on one that maps to no TCP
+// connection, so a caller holding a stale session id cannot write to somebody else's socket.
+static void test_slot_mapping_outbound_refuses_an_unmapped_slot(void)
+{
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(MAX_SSH_CONNS, 0, (const uint8_t *)"x", 1));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_close_channel(MAX_SSH_CONNS, 0));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_open_forwarded(MAX_SSH_CONNS, "1.2.3.4", 80, "5.6.7.8", 90));
+
+    // In range, but never accepted: no TCP connection is mapped to it.
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(0, 0, (const uint8_t *)"x", 1));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_close_channel(0, 0));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_open_forwarded(0, "1.2.3.4", 80, "5.6.7.8", 90));
+}
+
+// The receive path checks the mapping but never liveness, so a socket that died between the inbound
+// read and the outbound reply arrives here mapped and dead. The reply is dropped rather than handed
+// to a transport that cannot take it.
+static void test_liveness_outbound_refuses_a_dead_socket(void)
+{
+    accept_and_identify();
+    open_channel(77, 32768);
+    uint8_t j = conn_pool[0].proto_slot;
+
+    conn_pool[0].state = CONN_FREE; // the socket died after the read
+    tcp_capture_reset();
+
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(j, 0, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_close_channel(j, 0));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_open_forwarded(j, "1.2.3.4", 80, "5.6.7.8", 90));
+    TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
+}
+
+// The poll walks every slot the session layer hands it, so it returns at the state guard rather
+// than working on a connection that is not active.
+static void test_liveness_poll_ignores_an_inactive_connection(void)
+{
+    accept_and_identify();
+    uint8_t j = conn_pool[0].proto_slot;
+    ssh_sess[j].phase = SSH_PHASE_OPEN;
+    ssh_pkt[j].seq_no_send = SSH_REKEY_PACKET_THRESHOLD; // a re-key would otherwise be due
+
+    conn_pool[0].state = CONN_FREE;
+    tcp_capture_reset();
+    pc_ssh_conn_poll(0);
+    TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
+}
+
+// The identification string is only written when the socket can take it: a slot with no pcb is set
+// up as a session either way, but nothing is put on the wire.
+static void test_liveness_accept_skips_the_identification_on_a_dead_socket(void)
+{
+    conn_pool[0].pcb = NULL;
+    tcp_capture_reset();
+    pc_ssh_conn_accept(0);
+    TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
+    TEST_ASSERT_NOT_EQUAL(PC_PROTO_SLOT_NONE, conn_pool[0].proto_slot); // the session still exists
+}
+
+// Every outbound call borrows a payload and a wire buffer from the secure pool at once. With the
+// pool spent the borrow fails, and the message is dropped rather than half-framed.
+static void test_pool_outbound_fails_closed_when_the_secure_pool_is_spent(void)
+{
+    accept_and_identify();
+    open_channel(77, 32768);
+    uint8_t j = conn_pool[0].proto_slot;
+
+    size_t mark = pc_secure_mark();
+    while (pc_secure_alloc(256, 16) != NULL)
+    {
+    }
+    tcp_capture_reset();
+
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(j, 0, (const uint8_t *)"hello", 5));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_close_channel(j, 0));
+    TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
+
+    pc_secure_release(mark);
+}
+
+// Closing frees the session slot and returns the TCP slot's mapping, so the next connection gets a
+// session rather than inheriting the last one's.
+static void test_teardown_close_releases_the_slot_for_the_next_connection(void)
+{
+    pc_ssh_conn_accept(0);
+    uint8_t j = conn_pool[0].proto_slot;
+    TEST_ASSERT_NOT_EQUAL(PC_PROTO_SLOT_NONE, j);
+
+    pc_ssh_conn_close(0);
+    TEST_ASSERT_EQUAL(PC_PROTO_SLOT_NONE, conn_pool[0].proto_slot);
+
+    // The freed slot is reusable, and the session it hands over starts at the beginning.
+    pc_ssh_conn_accept(0);
+    TEST_ASSERT_EQUAL(j, conn_pool[0].proto_slot);
+    TEST_ASSERT_EQUAL(SSH_PHASE_BANNER, ssh_sess[j].phase);
+    TEST_ASSERT_FALSE(ssh_sess[j].authed);
+}
+
+// The handler accessor is the one seam a consumer installs SSH through, so it wires the emit
+// callback as well as returning the table. Without that a server sends its identification string
+// and then silently drops every framed packet after it.
+static void test_handler_seam_returns_the_table_and_installs_emit(void)
+{
+    pc_ssh_server_set_emit_cb(NULL); // as if a consumer had cleared it
+    const struct ProtoHandler *h = ssh_proto_handler();
+    TEST_ASSERT_NOT_NULL(h);
+
+    // With the callback live again, a framed packet draws a framed reply.
+    accept_and_identify();
+    uint8_t payload[2048];
+    uint8_t wire[2048];
+    size_t plen = build_client_kexinit(payload);
+    size_t wlen = frame_packet(wire, payload, plen);
+    tcp_capture_reset();
+    push_bytes(0, wire, wlen);
+    pc_ssh_conn_rx(0);
+    TEST_ASSERT_EQUAL_UINT8(SSH_MSG_KEXINIT, captured_msg(0));
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -607,5 +764,14 @@ int main()
     RUN_TEST(test_rfc4254_s7_2_open_forwarded_emits_a_forwarded_tcpip_open);
     RUN_TEST(test_s4_2_to_s7_3_handshake_end_to_end_through_the_byte_pump);
     RUN_TEST(test_s8_a_kexdh_init_outside_the_group_fails_the_exchange);
+    RUN_TEST(test_slot_mapping_accept_without_capacity_drops_the_connection);
+    RUN_TEST(test_slot_mapping_a_foreign_mapping_is_ignored);
+    RUN_TEST(test_slot_mapping_outbound_refuses_an_unmapped_slot);
+    RUN_TEST(test_liveness_outbound_refuses_a_dead_socket);
+    RUN_TEST(test_liveness_poll_ignores_an_inactive_connection);
+    RUN_TEST(test_liveness_accept_skips_the_identification_on_a_dead_socket);
+    RUN_TEST(test_pool_outbound_fails_closed_when_the_secure_pool_is_spent);
+    RUN_TEST(test_teardown_close_releases_the_slot_for_the_next_connection);
+    RUN_TEST(test_handler_seam_returns_the_table_and_installs_emit);
     return UNITY_END();
 }
