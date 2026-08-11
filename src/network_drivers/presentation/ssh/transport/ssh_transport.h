@@ -321,6 +321,14 @@ int ssh_kex_generate(uint8_t i);
 int ssh_extinfo_build(uint8_t *out, size_t *len, size_t cap);
 
 /**
+ * @brief True when @p a hashes with SHA-512 rather than SHA-256.
+ *
+ * The exchange hash and the RFC 4253 sec 7.2 KDF run over the hash the negotiated method names:
+ * SHA-512 for sntrup761x25519-sha512, SHA-256 for every other method.
+ */
+proto_bool ssh_kex_is_sha512(SshKexAlg a);
+
+/**
  * @brief Compute the SSH exchange hash H (RFC 4253 §8), the same value both ends derive.
  *
  *   H = HASH( string(V_C) || string(V_S) || string(I_C) || string(I_S)
