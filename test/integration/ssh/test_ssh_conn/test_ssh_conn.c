@@ -498,9 +498,9 @@ void test_poll_triggers_server_rekey()
     ssh_sess[j].authed = PROTO_TRUE;
     ssh_sess[j].phase = SSH_PHASE_OPEN;
     ssh_sess[j].last_kex_ms = 0;
-    ssh_pkt[j].kex_active = PROTO_FALSE;
-    ssh_pkt[j].enc_out = PROTO_TRUE;
-    ssh_pkt[j].enc_in = PROTO_TRUE;
+    ssh_sess[j].kex_active = PROTO_FALSE;
+    ssh_sess[j].out.enc = PROTO_TRUE;
+    ssh_sess[j].in.enc = PROTO_TRUE;
     ssh_pkt[j].seq_no_send = SSH_REKEY_PACKET_THRESHOLD;
     tcp_capture_reset();
 
@@ -732,13 +732,13 @@ void test_poll_rekey_emit_fails()
     pc_ssh_conn_accept(0);
     uint8_t j = conn_pool[0].proto_slot;
     ssh_sess[j].phase = SSH_PHASE_OPEN;
-    ssh_pkt[j].kex_active = PROTO_FALSE;
+    ssh_sess[j].kex_active = PROTO_FALSE;
     ssh_sess[j].last_kex_ms = 0;
     ssh_pkt[j].seq_no_send = SSH_SEQ_CLOSE_THRESHOLD; // rekey due; ssh_emit's pkt_send then fails
     pc_ssh_conn_poll(0);
 
     ssh_sess[j].phase = SSH_PHASE_OPEN;
-    ssh_pkt[j].kex_active = PROTO_FALSE;
+    ssh_sess[j].kex_active = PROTO_FALSE;
     ssh_pkt[j].seq_no_send = SSH_REKEY_PACKET_THRESHOLD; // rekey due; ssh_emit's arena borrow then fails
     drain_arena();
     pc_ssh_conn_poll(0);
@@ -832,12 +832,12 @@ void test_conn_poll_rekey_preconditions()
     ssh_pkt[j].seq_no_send = 0;
     ssh_pkt[j].seq_no_recv = 0;
 
-    ssh_pkt[j].kex_active = PROTO_TRUE; // a key exchange is already in flight
+    ssh_sess[j].kex_active = PROTO_TRUE; // a key exchange is already in flight
     tcp_capture_reset();
     pc_ssh_conn_poll(0);
     TEST_ASSERT_EQUAL(0, tcp_captured_len());
 
-    ssh_pkt[j].kex_active = PROTO_FALSE; // open and idle, but nothing has been spent yet
+    ssh_sess[j].kex_active = PROTO_FALSE; // open and idle, but nothing has been spent yet
     pc_ssh_conn_poll(0);
     TEST_ASSERT_EQUAL(0, tcp_captured_len());
     TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, ssh_sess[j].phase);

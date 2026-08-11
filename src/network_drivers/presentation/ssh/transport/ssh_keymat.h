@@ -14,24 +14,23 @@
  * in the packet receive path (ssh_pool[].pkt_buf) should not be able to
  * reach AES session keys or HMAC keys in the same memory operation.
  *
- * DEFENSE 1 - Physical BSS separation
- * ─────────────────────────────────────
- * All three pools are SEPARATE static symbols:
+ * DEFENSE 1 - Layout order inside the connection's storage
+ * ──────────────────────────────────────────────────────────
+ * Every byte a connection uses is one span in ssh_conn.c, carved at the named offsets in
+ * ssh_conn.h and laid out:
  *
- *   ssh_pool[MAX_SSH_CONNS]   - packet assembly buffers, protocol state
- *   ssh_keys[MAX_SSH_CONNS]   - AES-256 key schedules + HMAC keys
- *   ssh_dh[MAX_SSH_CONNS]     - ephemeral DH scalar (y), server public (f), K
+ *   kmt        - the two key epochs (AES / chacha keys, IVs, HMAC keys, GCM contexts), then the
+ *                ephemeral DH scalar (y), server public (f) and K
+ *   constants  - v_c, the inbound banner, I_C, I_S, the session id, the ECDH ephemeral
+ *   control    - the wire buffer, the packet MAC's working bytes, the handshake crypto's
+ *   data       - the transport read scratch, then the packet reassembly buffer
  *
- * The linker places these as independent objects.  An overflow inside
- * pkt_buf must cross the entire ssh_pool[] symbol, then any objects the
- * linker placed between it and ssh_keys[], before reaching key material.
- * On ESP32 with the default linker script this is a different RAM region
- * than a linear overflow from pkt_buf would reach.
+ * The keys lead the span. The buffers a peer fills - the banner accumulator, I_C, the receive
+ * buffers - all sit at higher offsets, so a linear overrun out of one of them runs away from the
+ * key material, and an overrun out of the keys lands in the handshake constants.
  *
- * An attacker relying on a single linear write cannot bridge both gaps in
- * one step.  This is not mitigation-by-obscurity - it is the same "separate
- * key store" principle used by HSMs, but implemented in software via linker
- * symbol separation.
+ * ssh_keys[] and ssh_dh[] hold pointers into that span, not the bytes; both are their own BSS
+ * symbols, separate from ssh_pkt[].
  *
  * DEFENSE 2 - RSA host private key is NEVER stored in static memory
  * ──────────────────────────────────────────────────────────────────
@@ -77,7 +76,7 @@
  * ────────────────────────────────────────────
  * RFC 4253 §9.3.4 requires rekeying before the sequence number wraps.
  * If seq_c2s or seq_s2c reaches 0xFFFFFFFF the connection is closed.
- * (Rekeying is not yet implemented; close-on-wrap is the safe fallback.)
+ * A re-key fires far below that; the close is the backstop when one never lands.
  *
  * WHAT THIS DOES NOT PROTECT AGAINST
  * ────────────────────────────────────
@@ -204,12 +203,14 @@ typedef struct
 } SshKeyMat;
 
 /**
- * @brief Pool of session key material, one entry per MAX_SSH_CONNS.
+ * @brief Pool of session key material, two epochs per MAX_SSH_CONNS.
  *
- * Separate BSS symbol from ssh_pool[] - see security model.
+ * RFC 4253 sec 7.3 switches each direction on its own NEWKEYS, so a re-key derives into the epoch
+ * neither direction is reading and each direction moves to it when its NEWKEYS crosses.
+ * The SshDir the codec is handed selects which one that site reads.
  * Zeroed on connection close by ssh_keymat_wipe(slot).
  */
-extern SshKeyMat ssh_keys[MAX_SSH_CONNS];
+extern SshKeyMat ssh_keys[MAX_SSH_CONNS][2];
 
 // ---------------------------------------------------------------------------
 // DH ephemeral state  (one entry per SSH connection, zeroed after KEX)
@@ -253,34 +254,42 @@ extern SshDhState ssh_dh[MAX_SSH_CONNS];
  */
 static inline void ssh_keymat_wipe(uint8_t i)
 {
-    if (i < MAX_SSH_CONNS && ssh_keys[i].gcm_ctx_c2s != NULL)
+    if (i >= MAX_SSH_CONNS)
     {
-        // A keyed GCM context owns a vendor allocation (mbedtls_gcm_setkey sets up a cipher context), so
-        // zeroing the bytes would leak it once per closed connection. Release first, then wipe.
-        // Each direction owns its context, and only the direction that negotiated GCM stood one up.
-        if (ssh_keys[i].active && ssh_keys[i].cipher_mode_c2s == SSH_CIPHER_AES256GCM)
+        return;
+    }
+    for (uint8_t e = 0; e < 2u; e++)
+    {
+        SshKeyMat *km = &ssh_keys[i][e];
+        if (km->gcm_ctx_c2s != NULL)
         {
-            pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_c2s));
+            // A keyed GCM context owns a vendor allocation (mbedtls_gcm_setkey sets up a cipher context),
+            // so zeroing the bytes would leak it once per closed connection. Release first, then wipe.
+            // Each direction owns its context, and only the direction that negotiated GCM stood one up.
+            if (km->active && km->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
+            {
+                pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(km->gcm_ctx_c2s));
+            }
+            if (km->active && km->cipher_mode_s2c == SSH_CIPHER_AES256GCM)
+            {
+                pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(km->gcm_ctx_s2c));
+            }
+            pc_secure_wipe(km->gcm_ctx_c2s, PC_WORK_AESGCM);
+            pc_secure_wipe(km->gcm_ctx_s2c, PC_WORK_AESGCM);
+            pc_secure_wipe(km->chacha_key_c2s, PC_CHACHAPOLY_KEY_LEN);
+            pc_secure_wipe(km->chacha_key_s2c, PC_CHACHAPOLY_KEY_LEN);
+            pc_secure_wipe(km->mac_key_c2s, 64);
+            pc_secure_wipe(km->mac_key_s2c, 64);
+            pc_secure_wipe(km->aes_key_c2s, PC_AES256CTR_KEY_LEN);
+            pc_secure_wipe(km->aes_key_s2c, PC_AES256CTR_KEY_LEN);
+            pc_secure_wipe(km->aes_iv_c2s, PC_AES256CTR_CTR_LEN);
+            pc_secure_wipe(km->aes_iv_s2c, PC_AES256CTR_CTR_LEN);
+            km->mac_mode_c2s = 0;
+            km->mac_mode_s2c = 0;
+            km->cipher_mode_c2s = 0;
+            km->cipher_mode_s2c = 0;
+            km->active = PROTO_FALSE;
         }
-        if (ssh_keys[i].active && ssh_keys[i].cipher_mode_s2c == SSH_CIPHER_AES256GCM)
-        {
-            pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_s2c));
-        }
-        pc_secure_wipe(ssh_keys[i].gcm_ctx_c2s, PC_WORK_AESGCM);
-        pc_secure_wipe(ssh_keys[i].gcm_ctx_s2c, PC_WORK_AESGCM);
-        pc_secure_wipe(ssh_keys[i].chacha_key_c2s, PC_CHACHAPOLY_KEY_LEN);
-        pc_secure_wipe(ssh_keys[i].chacha_key_s2c, PC_CHACHAPOLY_KEY_LEN);
-        pc_secure_wipe(ssh_keys[i].mac_key_c2s, 64);
-        pc_secure_wipe(ssh_keys[i].mac_key_s2c, 64);
-        pc_secure_wipe(ssh_keys[i].aes_key_c2s, PC_AES256CTR_KEY_LEN);
-        pc_secure_wipe(ssh_keys[i].aes_key_s2c, PC_AES256CTR_KEY_LEN);
-        pc_secure_wipe(ssh_keys[i].aes_iv_c2s, PC_AES256CTR_CTR_LEN);
-        pc_secure_wipe(ssh_keys[i].aes_iv_s2c, PC_AES256CTR_CTR_LEN);
-        ssh_keys[i].mac_mode_c2s = 0;
-        ssh_keys[i].mac_mode_s2c = 0;
-        ssh_keys[i].cipher_mode_c2s = 0;
-        ssh_keys[i].cipher_mode_s2c = 0;
-        ssh_keys[i].active = PROTO_FALSE;
     }
 }
 

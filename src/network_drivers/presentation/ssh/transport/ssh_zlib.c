@@ -27,6 +27,7 @@
 #if PC_ENABLE_SSH_ZLIB
 
 #include "mmgr/bitio.h"
+#include "network_drivers/presentation/codec/deflate/rfc1951.h" // RFC1951: the sec 3.2.5 tables
 
 #define PC_MIN_MATCH 3   // shortest LZ77 back-reference
 #define PC_MAX_MATCH 258 // longest (RFC 1951 length code 285)
@@ -35,81 +36,6 @@
 #define PC_MAX_CHAIN 128             // bounded hash-chain walk per position
 #define PC_NONE 0xFFFF               // empty hash slot / chain terminator
 
-// Length code base values and extra bits (RFC 1951 sec 3.2.5), codes 257..285.
-static const short LEN_BASE[29] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
-                                   31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
-static const short LEN_EXTRA[29] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,
-                                    2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
-
-// Distance code base values and extra bits, codes 0..29.
-static const short DIST_BASE[30] = {1,    2,    3,    4,    5,    7,    9,    13,    17,    25,
-                                    33,   49,   65,   97,   129,  193,  257,  385,   513,   769,
-                                    1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
-static const short DIST_EXTRA[30] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
-                                     6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
-
-// Reverse the low @p len bits of @p code (Huffman codes go on the wire MSB-first).
-static uint16_t reverse_bits(uint16_t code, int len)
-{
-    uint16_t r = 0;
-    for (int k = 0; k < len; k++)
-    {
-        r = (uint16_t)((r << 1) | (code & 1));
-        code >>= 1;
-    }
-    return r;
-}
-
-// Build the fixed Huffman code/length tables (RFC 1951 sec 3.2.6), storing each code bit-reversed so
-// it can be emitted LSB-first. Identical assignment to inflate/deflate's fixed() so the two agree.
-static void build_fixed(SshDeflate *z)
-{
-    int sym = 0;
-    for (; sym < 144; sym++)
-    {
-        z->ll_len[sym] = 8;
-    }
-    for (; sym < 256; sym++)
-    {
-        z->ll_len[sym] = 9;
-    }
-    for (; sym < 280; sym++)
-    {
-        z->ll_len[sym] = 7;
-    }
-    for (; sym < 288; sym++)
-    {
-        z->ll_len[sym] = 8;
-    }
-    for (sym = 0; sym < 30; sym++)
-    {
-        z->d_len[sym] = 5;
-    }
-
-    uint16_t bl_count[16];
-    mem.set(bl_count, 0, sizeof(bl_count));
-    for (sym = 0; sym < 288; sym++)
-    {
-        bl_count[z->ll_len[sym]]++;
-    }
-    uint16_t next_code[16];
-    next_code[0] = 0;
-    uint16_t code = 0;
-    for (int b = 1; b <= 15; b++)
-    {
-        code = (uint16_t)((code + bl_count[b - 1]) << 1);
-        next_code[b] = code;
-    }
-    for (sym = 0; sym < 288; sym++)
-    {
-        int len = z->ll_len[sym];
-        z->ll_code[sym] = reverse_bits(next_code[len]++, len);
-    }
-    for (sym = 0; sym < 30; sym++)
-    {
-        z->d_code[sym] = reverse_bits((uint16_t)sym, 5);
-    }
-}
 
 // Emit one raw byte (only valid on a byte boundary: the zlib header and sync marker).
 static void put_byte(pc_bit_writer *w, uint8_t b)
@@ -128,36 +54,6 @@ static inline int hash3(const uint8_t *p)
     return (int)(((uint32_t)p[0] << 10 ^ (uint32_t)p[1] << 5 ^ (uint32_t)p[2]) & PC_HASH_MASK);
 }
 
-static void emit_literal(pc_bit_writer *w, const SshDeflate *z, uint8_t b)
-{
-    pc_bitw_put(w, z->ll_code[b], z->ll_len[b]);
-}
-
-static void emit_match(pc_bit_writer *w, const SshDeflate *z, int len, int dist)
-{
-    int li = 0;
-    while (li < 28 && len >= LEN_BASE[li + 1])
-    {
-        li++;
-    }
-    int lsym = 257 + li;
-    pc_bitw_put(w, z->ll_code[lsym], z->ll_len[lsym]);
-    if (LEN_EXTRA[li])
-    {
-        pc_bitw_put(w, (uint32_t)(len - LEN_BASE[li]), LEN_EXTRA[li]);
-    }
-
-    int di = 0;
-    while (di < 29 && dist >= DIST_BASE[di + 1])
-    {
-        di++; // zlib_chain_match caps dist to PC_WINDOW (8192) < DIST_BASE[26] (8193), so di never passes 25
-    }
-    pc_bitw_put(w, z->d_code[di], z->d_len[di]);
-    if (DIST_EXTRA[di])
-    {
-        pc_bitw_put(w, (uint32_t)(dist - DIST_BASE[di]), DIST_EXTRA[di]);
-    }
-}
 
 // Walk the hash chain from cand (newest-first) for the longest match of buf[i..] within PC_WINDOW.
 // Writes the best match length/distance found (both 0 if none).
@@ -204,7 +100,7 @@ void ssh_deflate_init(SshDeflate *z, uint8_t *work, uint16_t *head, uint16_t *pr
     z->d_len = d_len;
     z->hist = 0;
     z->header_sent = PROTO_FALSE;
-    build_fixed(z);
+    pc_rfc1951_build_fixed(z->ll_code, z->ll_len, z->d_code, z->d_len);
 }
 
 int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len)
@@ -278,12 +174,12 @@ int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_
         size_t advance;
         if (best_len >= PC_MIN_MATCH)
         {
-            emit_match(&w, z, best_len, best_dist);
+            pc_rfc1951_emit_match(&w, z->ll_code, z->ll_len, z->d_code, z->d_len, best_len, best_dist);
             advance = (size_t)best_len;
         }
         else
         {
-            emit_literal(&w, z, buf[i]);
+            pc_rfc1951_emit_literal(&w, z->ll_code, z->ll_len, buf[i]);
             advance = 1;
         }
 

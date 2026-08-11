@@ -12,6 +12,8 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
+#include "mmgr/bytes.h"  // pc_rd_u32 / pc_rd_str - the one length-prefixed reader
+#include "mmgr/endian.h" // pc_wr32be - the one wire-integer writer
 #include "mmgr/protomem.h"
 
 SshChannel ssh_chan[MAX_SSH_CONNS][PC_SSH_MAX_CHANNELS];
@@ -100,47 +102,10 @@ void pc_ssh_channel_init(uint8_t i)
 }
 
 // ---------------------------------------------------------------------------
-// Wire helpers
-// ---------------------------------------------------------------------------
-
-static uint32_t rd_u32(const uint8_t *p)
-{
-    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
-}
-
-static void wr_u32(uint8_t *p, uint32_t v)
-{
-    p[0] = (uint8_t)(v >> 24);
-    p[1] = (uint8_t)(v >> 16);
-    p[2] = (uint8_t)(v >> 8);
-    p[3] = (uint8_t)v;
-}
-
-// Read an SSH string: out points at the data, *slen its length. Advances *off.
-static proto_bool rd_string(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen)
-{
-    if (*off + 4 > len)
-    {
-        return PROTO_FALSE;
-    }
-    uint32_t n = rd_u32(p + *off);
-    *off += 4;
-    if (*off + n > len)
-    {
-        return PROTO_FALSE;
-    }
-    *out = p + *off;
-    *slen = n;
-    *off += n;
-    return PROTO_TRUE;
-}
-
-// ---------------------------------------------------------------------------
 // Channel table (owned here)
 // ---------------------------------------------------------------------------
 
-// The open channel @p id on connection @p i, or nullptr. local id == slot index.
-static SshChannel *chan_by_id(uint8_t i, uint32_t id)
+SshChannel *pc_ssh_chan_by_id(uint8_t i, uint32_t id)
 {
     if (i >= MAX_SSH_CONNS || id >= PC_SSH_MAX_CHANNELS || !ssh_chan[i][id].open)
     {
@@ -160,10 +125,12 @@ static SshChannel *chan_pending_by_id(uint8_t i, uint32_t id)
     return &ssh_chan[i][id];
 }
 
-// First free channel slot on connection @p i, or -1 if the pool is full. A pending
-// (opened-but-unconfirmed) channel is in use just like an open one.
-static int chan_alloc(uint8_t i)
+int pc_ssh_chan_alloc(uint8_t i)
 {
+    if (i >= MAX_SSH_CONNS)
+    {
+        return -1;
+    }
     for (int c = 0; c < PC_SSH_MAX_CHANNELS; c++)
     {
         if (!ssh_chan[i][c].open && !ssh_chan[i][c].pending)
@@ -205,7 +172,7 @@ int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uin
     size_t off = 1;
     const uint8_t *name;
     uint32_t name_len;
-    if (!rd_string(payload, len, &off, &name, &name_len))
+    if (!pc_rd_str(payload, len, &off, &name, &name_len))
     {
         return -1;
     }
@@ -223,11 +190,11 @@ int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uin
         // Request-specific data: bind address (string) followed by bind port (uint32).
         const uint8_t *addr;
         uint32_t addr_len;
-        if (!rd_string(payload, len, &off, &addr, &addr_len) || off + 4 > len)
+        if (!pc_rd_str(payload, len, &off, &addr, &addr_len) || off + 4 > len)
         {
             return -1;
         }
-        uint16_t bind_port = (uint16_t)rd_u32(payload + off);
+        uint16_t bind_port = (uint16_t)pc_rd32be(payload + off);
 
         // The owner allocates (or cancels) the real listener; -1 means "refused".
         int bound = -1;
@@ -265,7 +232,7 @@ int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uin
                     return -1;
                 }
                 out[0] = SSH_MSG_REQUEST_SUCCESS;
-                wr_u32(out + 1, (uint32_t)(uint16_t)bound);
+                pc_wr32be(out + 1, (uint32_t)(uint16_t)bound);
                 *out_len = 5;
             }
             else
@@ -308,7 +275,7 @@ int pc_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t con
     {
         return -1;
     }
-    int slot = chan_alloc(i);
+    int slot = pc_ssh_chan_alloc(i);
     if (slot < 0)
     {
         return -1; // channel pool full
@@ -326,22 +293,22 @@ int pc_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t con
 
     size_t off = 0;
     out[off++] = SSH_MSG_CHANNEL_OPEN;
-    wr_u32(out + off, (uint32_t)tl);
+    pc_wr32be(out + off, (uint32_t)tl);
     mem.cpy(out + off + 4, type, tl);
     off += 4 + tl;
-    wr_u32(out + off, (uint32_t)slot); // our sender channel id
-    wr_u32(out + off + 4, SSH_CHAN_WINDOW);
-    wr_u32(out + off + 8, SSH_CHAN_MAX_PACKET);
+    pc_wr32be(out + off, (uint32_t)slot); // our sender channel id
+    pc_wr32be(out + off + 4, SSH_CHAN_WINDOW);
+    pc_wr32be(out + off + 8, SSH_CHAN_MAX_PACKET);
     off += 12;
-    wr_u32(out + off, (uint32_t)ca);
+    pc_wr32be(out + off, (uint32_t)ca);
     mem.cpy(out + off + 4, conn_addr, ca);
     off += 4 + ca;
-    wr_u32(out + off, conn_port);
+    pc_wr32be(out + off, conn_port);
     off += 4;
-    wr_u32(out + off, (uint32_t)oa);
+    pc_wr32be(out + off, (uint32_t)oa);
     mem.cpy(out + off + 4, orig_addr, oa);
     off += 4 + oa;
-    wr_u32(out + off, orig_port);
+    pc_wr32be(out + off, orig_port);
     off += 4;
 
     SshChannel *c = &ssh_chan[i][slot];
@@ -363,14 +330,14 @@ int pc_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload, size_t
     {
         return -1;
     }
-    SshChannel *c = chan_pending_by_id(i, rd_u32(payload + 1));
+    SshChannel *c = chan_pending_by_id(i, pc_rd32be(payload + 1));
     if (!c)
     {
         return -1;
     }
-    c->peer_id = rd_u32(payload + 5);
-    pc_ssh_flow_peer_add(&c->flow, rd_u32(payload + 9));
-    c->flow.peer_max_pkt = rd_u32(payload + 13);
+    c->peer_id = pc_rd32be(payload + 5);
+    pc_ssh_flow_peer_add(&c->flow, pc_rd32be(payload + 9));
+    c->flow.peer_max_pkt = pc_rd32be(payload + 13);
     c->pending = PROTO_FALSE;
     c->open = PROTO_TRUE;
     if (s_chcb.forward_confirm_cb)
@@ -387,7 +354,7 @@ int pc_ssh_channel_handle_open_failure(uint8_t i, const uint8_t *payload, size_t
     {
         return -1;
     }
-    SshChannel *c = chan_pending_by_id(i, rd_u32(payload + 1));
+    SshChannel *c = chan_pending_by_id(i, pc_rd32be(payload + 1));
     if (!c)
     {
         return -1;
@@ -412,7 +379,7 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
     size_t off = 1;
     const uint8_t *type;
     uint32_t type_len;
-    if (!rd_string(payload, len, &off, &type, &type_len))
+    if (!pc_rd_str(payload, len, &off, &type, &type_len))
     {
         return -1;
     }
@@ -420,9 +387,9 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
     {
         return -1;
     }
-    uint32_t sender = rd_u32(payload + off);
-    uint32_t init_window = rd_u32(payload + off + 4);
-    uint32_t max_pkt = rd_u32(payload + off + 8);
+    uint32_t sender = pc_rd32be(payload + off);
+    uint32_t init_window = pc_rd32be(payload + off + 4);
+    uint32_t max_pkt = pc_rd32be(payload + off + 8);
     off += 12;
 
     proto_bool is_session = (type_len == 7 && mem.cmp(type, "session", 7) == 0);
@@ -442,14 +409,14 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
         {
             return build_open_failure(out, cap, sender, 1u, out_len); // forwarding off: prohibited
         }
-        if (!rd_string(payload, len, &off, &fhost, &fhost_len) || off + 4 > len)
+        if (!pc_rd_str(payload, len, &off, &fhost, &fhost_len) || off + 4 > len)
         {
             return -1;
         }
-        fport = (uint16_t)rd_u32(payload + off); // orig host/port follow but are advisory
+        fport = (uint16_t)pc_rd32be(payload + off); // orig host/port follow but are advisory
     }
 
-    int slot = chan_alloc(i);
+    int slot = pc_ssh_chan_alloc(i);
     if (slot < 0)
     {
         return build_open_failure(out, cap, sender, 4u, out_len); // pool full
@@ -495,7 +462,7 @@ static void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8
     {
         const uint8_t *arg = NULL;
         uint32_t arg_len = 0;
-        if (rd_string(payload, len, off, &arg, &arg_len) && arg_len == 4 && mem.cmp(arg, "sftp", 4) == 0)
+        if (pc_rd_str(payload, len, off, &arg, &arg_len) && arg_len == 4 && mem.cmp(arg, "sftp", 4) == 0)
         {
             *accept = PROTO_TRUE;
             c->type = SSH_CHAN_SFTP;
@@ -512,7 +479,7 @@ static void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8
     {
         const uint8_t *arg = NULL;
         uint32_t arg_len = 0;
-        if (rd_string(payload, len, off, &arg, &arg_len) && arg_len >= 4 && mem.cmp(arg, "scp ", 4) == 0)
+        if (pc_rd_str(payload, len, off, &arg, &arg_len) && arg_len >= 4 && mem.cmp(arg, "scp ", 4) == 0)
         {
             c->type = SSH_CHAN_SCP;
             if (s_chcb.pc_scp_open_cb)
@@ -532,7 +499,7 @@ static proto_bool req_strings_present(const uint8_t *p, size_t len, size_t off, 
     uint32_t slen = 0;
     for (uint8_t k = 0; k < n; k++)
     {
-        if (!rd_string(p, len, &off, &s, &slen))
+        if (!pc_rd_str(p, len, &off, &s, &slen))
         {
             return PROTO_FALSE;
         }
@@ -545,7 +512,7 @@ static proto_bool pty_req_fields_present(const uint8_t *p, size_t len, size_t of
 {
     const uint8_t *s = NULL;
     uint32_t slen = 0;
-    if (!rd_string(p, len, &off, &s, &slen))
+    if (!pc_rd_str(p, len, &off, &s, &slen))
     {
         return PROTO_FALSE;
     }
@@ -554,7 +521,7 @@ static proto_bool pty_req_fields_present(const uint8_t *p, size_t len, size_t of
         return PROTO_FALSE;
     }
     off += 16;
-    return rd_string(p, len, &off, &s, &slen);
+    return pc_rd_str(p, len, &off, &s, &slen);
 }
 
 int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
@@ -571,11 +538,11 @@ int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len,
     {
         return -1;
     }
-    uint32_t recipient = rd_u32(payload + off); // our channel id
+    uint32_t recipient = pc_rd32be(payload + off); // our channel id
     off += 4;
     const uint8_t *rtype;
     uint32_t rtype_len;
-    if (!rd_string(payload, len, &off, &rtype, &rtype_len))
+    if (!pc_rd_str(payload, len, &off, &rtype, &rtype_len))
     {
         return -1;
     }
@@ -585,7 +552,7 @@ int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len,
     }
     proto_bool want_reply = payload[off++] != 0;
 
-    SshChannel *c = chan_by_id(i, recipient);
+    SshChannel *c = pc_ssh_chan_by_id(i, recipient);
     if (!c)
     {
         return -1;
@@ -627,7 +594,7 @@ int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len,
         return -1;
     }
     out[0] = accept ? SSH_MSG_CHANNEL_SUCCESS : SSH_MSG_CHANNEL_FAILURE;
-    wr_u32(out + 1, c->peer_id);
+    pc_wr32be(out + 1, c->peer_id);
     *out_len = 5;
     return 0;
 }
@@ -649,16 +616,16 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
     {
         return -1;
     }
-    uint32_t recipient = rd_u32(payload + off);
+    uint32_t recipient = pc_rd32be(payload + off);
     off += 4;
     const uint8_t *data;
     uint32_t dlen;
-    if (!rd_string(payload, len, &off, &data, &dlen))
+    if (!pc_rd_str(payload, len, &off, &data, &dlen))
     {
         return -1;
     }
 
-    SshChannel *c = chan_by_id(i, recipient);
+    SshChannel *c = pc_ssh_chan_by_id(i, recipient);
     if (!c)
     {
         return -1;
@@ -709,8 +676,8 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
     if (cap >= 9 && pc_ssh_flow_replenish_due(&c->flow, &add))
     {
         out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
-        wr_u32(out + 1, c->peer_id);
-        wr_u32(out + 5, add);
+        pc_wr32be(out + 1, c->peer_id);
+        pc_wr32be(out + 5, add);
         *out_len = 9;
         pc_ssh_flow_local_credit(&c->flow, add); // the caller emits *out_len unconditionally
     }
@@ -731,16 +698,16 @@ int pc_ssh_channel_handle_extended_data(uint8_t i, const uint8_t *payload, size_
     {
         return -1;
     }
-    uint32_t recipient = rd_u32(payload + off);
+    uint32_t recipient = pc_rd32be(payload + off);
     off += 8; // recipient channel, then the data_type_code this end does not separate
     const uint8_t *data;
     uint32_t dlen;
-    if (!rd_string(payload, len, &off, &data, &dlen))
+    if (!pc_rd_str(payload, len, &off, &data, &dlen))
     {
         return -1;
     }
 
-    SshChannel *c = chan_by_id(i, recipient);
+    SshChannel *c = pc_ssh_chan_by_id(i, recipient);
     if (!c)
     {
         return -1;
@@ -755,8 +722,8 @@ int pc_ssh_channel_handle_extended_data(uint8_t i, const uint8_t *payload, size_
     if (cap >= 9 && pc_ssh_flow_replenish_due(&c->flow, &add))
     {
         out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
-        wr_u32(out + 1, c->peer_id);
-        wr_u32(out + 5, add);
+        pc_wr32be(out + 1, c->peer_id);
+        pc_wr32be(out + 5, add);
         *out_len = 9;
         pc_ssh_flow_local_credit(&c->flow, add); // the caller emits *out_len unconditionally
     }
@@ -770,7 +737,7 @@ int pc_ssh_channel_handle_extended_data(uint8_t i, const uint8_t *payload, size_
 int pc_ssh_channel_build_data(uint8_t i, uint32_t channel, const uint8_t *data, size_t len, uint8_t *out,
                               size_t *out_len, size_t cap)
 {
-    SshChannel *c = (i < MAX_SSH_CONNS) ? chan_by_id(i, channel) : NULL;
+    SshChannel *c = (i < MAX_SSH_CONNS) ? pc_ssh_chan_by_id(i, channel) : NULL;
     if (!c)
     {
         return -1;
@@ -788,12 +755,12 @@ int pc_ssh_channel_handle_window_adjust(uint8_t i, const uint8_t *payload, size_
     {
         return -1;
     }
-    SshChannel *c = chan_by_id(i, rd_u32(payload + 1));
+    SshChannel *c = pc_ssh_chan_by_id(i, pc_rd32be(payload + 1));
     if (!c)
     {
         return -1;
     }
-    pc_ssh_flow_peer_add(&c->flow, rd_u32(payload + 5));
+    pc_ssh_flow_peer_add(&c->flow, pc_rd32be(payload + 5));
     return 0;
 }
 
@@ -819,7 +786,7 @@ int pc_ssh_channel_build_close(uint8_t i, uint32_t channel, uint8_t *out, size_t
     {
         return -1;
     }
-    return build_close_chan(chan_by_id(i, channel), out, out_len, cap);
+    return build_close_chan(pc_ssh_chan_by_id(i, channel), out, out_len, cap);
 }
 
 int pc_ssh_channel_handle_close(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
@@ -830,5 +797,5 @@ int pc_ssh_channel_handle_close(uint8_t i, const uint8_t *payload, size_t len, u
     {
         return -1;
     }
-    return build_close_chan(chan_by_id(i, rd_u32(payload + 1)), out, out_len, cap);
+    return build_close_chan(pc_ssh_chan_by_id(i, pc_rd32be(payload + 1)), out, out_len, cap);
 }

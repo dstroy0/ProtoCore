@@ -3,7 +3,7 @@
 
 /**
  * @file ssh_comp.c
- * @brief SSH server-to-client compression owner - per-connection state + activation.
+ * @brief SSH compression owner, both directions - per-connection state + activation.
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"

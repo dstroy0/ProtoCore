@@ -360,14 +360,14 @@ void test_newkeys_sent_starts_immediate_stream_only()
     ssh_comp_reset(0);
     ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
     ssh_newkeys_sent(0);
-    TEST_ASSERT_TRUE(ssh_pkt[0].enc_out);
+    TEST_ASSERT_TRUE(ssh_sess[0].out.enc);
     TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 
     ssh_pkt_init(0);
     ssh_comp_reset(0);
     ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
     ssh_newkeys_sent(0);
-    TEST_ASSERT_TRUE(ssh_pkt[0].enc_out);
+    TEST_ASSERT_TRUE(ssh_sess[0].out.enc);
     TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
 
     ssh_newkeys_sent(MAX_SSH_CONNS); // out-of-range slot: no-op, no crash

@@ -36,6 +36,7 @@
 
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
+#include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SshDir - what the codec is handed
 #include "network_drivers/tls/ssh_kexhash.h"
 #include "protocore_config.h"
 
@@ -139,6 +140,13 @@ typedef struct
     uint8_t *session_id;        ///< SSH_KEXHASH_MAX_LEN: H from the first KEX (RFC 4253 §7.2); 32 or 64 bytes.
     uint8_t session_id_len;     ///< session_id length (the first KEX's exchange-hash length).
     proto_bool have_session_id; ///< True once the first KEX completes.
+
+    // RFC 4253 sec 6 is a layer under sec 7, so the codec is handed one of these per call rather
+    // than reading them. Each switches on its own SSH_MSG_NEWKEYS (sec 7.3).
+    SshDir out; ///< our outbound direction: encrypted once we sent NEWKEYS, and the epoch it reads.
+    SshDir in;  ///< our inbound direction: encrypted once the peer's arrived.
+
+    proto_bool kex_active; ///< an exchange is running, from KEXINIT to NEWKEYS (RFC 4253 sec 9).
 
     ///< The client guessed a KEX that lost negotiation (RFC 4253 sec 7.1): drop its guessed packet.
     proto_bool drop_guessed_kex_pkt;
@@ -329,8 +337,9 @@ int ssh_kexdh_parse_init(const uint8_t *payload, size_t len, uint8_t e_be[256]);
  * secret K = e^y mod p (DH-group14) or K = X25519(sk, Q_C) (curve25519), builds the
  * method-correct exchange hash H (e/f as mpints for DH, Q_C/Q_S as strings for curve),
  * signs H with the negotiated host key (rsa-sha2-512/256 or ssh-ed25519), assembles
- * SSH_MSG_KEXDH_REPLY, and derives the six session keys (installed into ssh_keys[i];
- * encryption is not activated until NEWKEYS - see ssh_newkeys_complete()). On the first
+ * SSH_MSG_KEXDH_REPLY, and derives the six session keys (installed into the epoch of ssh_keys[i]
+ * neither direction reads; each direction moves to it on its own NEWKEYS - see ssh_newkeys_sent()
+ * and ssh_newkeys_complete()). On the first
  * KEX the exchange hash is saved as the session id. K is wiped from the stack before
  * returning.
  *
@@ -366,9 +375,10 @@ extern SshKexBenchCtx pc_ssh_kex_bench;
 /**
  * @brief Activate the outbound direction after emitting our SSH_MSG_NEWKEYS.
  *
- * Call this right after sending the server's NEWKEYS: it turns on the outbound cipher/MAC (enc_out) and
- * starts the s2c compression stream. Per RFC 4253 sec 7.3 each direction activates independently, so the
- * outbound turns on when we send, not when the peer's NEWKEYS arrives.
+ * Call this right after sending the server's NEWKEYS: it moves SshSession::out to the epoch this
+ * exchange derived, marks it encrypted, and starts the s2c compression stream. Per RFC 4253 sec 7.3
+ * each direction activates independently, so the outbound turns on when we send, not when the peer's
+ * NEWKEYS arrives.
  */
 void ssh_newkeys_sent(uint8_t i);
 
@@ -376,10 +386,14 @@ void ssh_newkeys_sent(uint8_t i);
  * @brief Complete the NEWKEYS exchange: activate the inbound direction and advance phase.
  *
  * Called once the client's SSH_MSG_NEWKEYS has been received (the server having already sent its own,
- * via ssh_newkeys_sent()). Turns on the inbound cipher/MAC (enc_in), clears kex_active, and moves to
+ * via ssh_newkeys_sent()). Moves SshSession::in to the epoch this exchange derived and marks it
+ * encrypted, releases the epoch both directions have left, clears kex_active, and moves to
  * SSH_PHASE_SERVICE (or back to SSH_PHASE_OPEN on a re-key).
+ *
+ * @return 0 when the exchange completed, -1 when no exchange was running for this NEWKEYS to end
+ *         (RFC 4253 sec 7.3) - the caller drops the connection.
  */
-void ssh_newkeys_complete(uint8_t i);
+int ssh_newkeys_complete(uint8_t i);
 
 /**
  * @brief True if slot @p i has reached the re-key threshold (RFC 4253 §9).
@@ -448,20 +462,17 @@ typedef struct
                          size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN]);
     int (*kexdh)(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len, size_t cap);
     void (*newkeys_sent)(uint8_t i);
-    void (*newkeys_recvd)(uint8_t i);
+    int (*newkeys_recvd)(uint8_t i);
     proto_bool (*rekey_due)(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_ms, uint32_t pkt_threshold,
                             uint32_t time_threshold_ms);
     int (*begin_rekey)(uint8_t i, uint8_t *out, size_t *out_len, size_t cap);
 } SshTransportNs;
 
-/** @brief The names, aliased. Initialized here so a member read folds in the reading unit. */
-static const SshTransportNs SshTransport
-    __attribute__((unused)) = {ssh_transport_recv_banner, ssh_transport_server_banner,
-                               ssh_kexinit_build,         ssh_kexinit_parse,
-                               ssh_kex_generate,          ssh_kex_exchange_hash,
-                               ssh_kexdh_handle,          ssh_newkeys_sent,
-                               ssh_newkeys_complete,      ssh_rekey_due,
-                               ssh_transport_begin_rekey};
+/** @brief The one instance, defined in ssh_transport.c. */
+const SshTransportNs *pc_ssh_transport(void);
+
+/** @brief Reader shorthand: SSH_TRANSPORT->kexinit_parse(...). */
+#define SSH_TRANSPORT (pc_ssh_transport())
 
 PROTO_END_DECLS
 

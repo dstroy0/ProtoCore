@@ -104,24 +104,6 @@ static proto_bool read_string(const uint8_t *p, size_t len, size_t *off, char *o
     return PROTO_TRUE;
 }
 
-// Normalize an mpint (from a blob) into a fixed right-aligned big-endian buffer.
-static proto_bool mpint_to_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen)
-{
-    uint32_t off = 0;
-    while (off < mlen && m[off] == 0) // strip sign/leading-zero bytes
-    {
-        off++;
-    }
-    uint32_t vlen = mlen - off;
-    if (vlen > outlen)
-    {
-        return PROTO_FALSE;
-    }
-    mem.set(out, 0, outlen);
-    mem.cpy(out + (outlen - vlen), m + off, vlen);
-    return PROTO_TRUE;
-}
-
 // Parse an "ssh-rsa" public-key blob: string("ssh-rsa") mpint(e) mpint(n).
 static proto_bool parse_ssh_rsa_blob(const uint8_t *blob, uint32_t blen, uint8_t n_be[PC_RSA_KEY_BYTES],
                                      uint8_t e_be[4])
@@ -144,7 +126,7 @@ static proto_bool parse_ssh_rsa_blob(const uint8_t *blob, uint32_t blen, uint8_t
     {
         return PROTO_FALSE;
     }
-    if (!mpint_to_fixed(e_mp, e_len, e_be, 4))
+    if (!pc_mpint_to_fixed(e_mp, e_len, e_be, 4))
     {
         return PROTO_FALSE;
     }
@@ -155,7 +137,7 @@ static proto_bool parse_ssh_rsa_blob(const uint8_t *blob, uint32_t blen, uint8_t
     {
         return PROTO_FALSE;
     }
-    if (!mpint_to_fixed(n_mp, n_len, n_be, PC_RSA_KEY_BYTES))
+    if (!pc_mpint_to_fixed(n_mp, n_len, n_be, PC_RSA_KEY_BYTES))
     {
         return PROTO_FALSE;
     }
@@ -245,8 +227,8 @@ static proto_bool parse_ecdsa_sig(const uint8_t *sig, uint32_t slen, uint8_t out
     {
         return PROTO_FALSE;
     }
-    return mpint_to_fixed(r, r_len, out, PC_ECDSA_P256_COORD_LEN) &&
-           mpint_to_fixed(s, s_len, out + PC_ECDSA_P256_COORD_LEN, PC_ECDSA_P256_COORD_LEN);
+    return pc_mpint_to_fixed(r, r_len, out, PC_ECDSA_P256_COORD_LEN) &&
+           pc_mpint_to_fixed(s, s_len, out + PC_ECDSA_P256_COORD_LEN, PC_ECDSA_P256_COORD_LEN);
 }
 
 // ---------------------------------------------------------------------------

@@ -183,7 +183,8 @@
       "flags": ["-DPC_ENABLE_SSH=1", "-DPC_ENABLE_SSH_ZLIB=1"],
       "src": [
         "+<network_drivers/presentation/ssh/transport/ssh_inflate.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/codec/deflate/rfc1951.c>"
       ],
       "tests": ["unit/ssh/test_ssh_inflate"]
     },
@@ -531,7 +532,14 @@
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>"
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<shared_primitives/ip.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_conn.c>"
       ],
       "tests": [
         "unit/ssh/test_ssh_crypto",
@@ -541,6 +549,129 @@
         "integration/ssh/test_ssh_server"
       ],
       "extra_scripts": ["pre:test/ensure_test_keys.py"]
+    },
+
+    "native_ssh_packet": {
+      "desc": "The RFC 4253 sec 6 binary packet protocol (ssh/transport/ssh_packet.c): packet_length, the 4..255 padding and its block-size rule, the 16-byte minimum, the sec 6.4 sequence counter, and the SshDir the codec is handed. Expected values are transcribed from RFC 4253, so a failure means the framing drifted from the standard.",
+      "flags": [
+        "-DPC_SSH_MAX_CHANNELS=3",
+        "-DPC_ENABLE_SSH=1",
+        "-DPC_ENABLE_MNT=1",
+        "-DPC_ENABLE_SSH_SFTP=1",
+        "-DPC_ENABLE_SSH_SCP=1"
+      ],
+      "src": [
+        "+<crypto/hash/sha256.c>",
+        "+<crypto/mac/hmac_sha256.c>",
+        "+<crypto/mac/hmac_sha512.c>",
+        "+<crypto/cipher/chacha20.c>",
+        "+<crypto/rng/rng.c>",
+        "+<mmgr/protomem.c>",
+        "+<crypto/mac/poly1305.c>",
+        "+<crypto/aead/chachapoly.c>",
+        "+<crypto/cipher/aes256ctr.c>",
+        "+<crypto/aead/aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
+        "+<crypto/asymmetric/ecdsa.c>",
+        "+<crypto/asymmetric/bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
+        "+<crypto/asymmetric/rsa.c>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
+        "+<crypto/hash/sha512.c>",
+        "+<crypto/asymmetric/curve25519.c>",
+        "+<crypto/asymmetric/ed25519.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_transport.c>",
+        "+<network_drivers/presentation/ssh/auth/ssh_auth.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_channel.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.c>",
+        "+<network_drivers/presentation/ssh/ssh_server.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<mmgr/secure.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<shared_primitives/ip.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_conn.c>"
+      ],
+      "tests": ["integration/ssh/test_ssh_packet"]
+    },
+
+    "native_ssh_epoch": {
+      "desc": "The RFC 4253 sec 7.3 key-epoch transitions: a derivation lands in the epoch neither direction reads, each direction moves on its own SSH_MSG_NEWKEYS, and the epoch both have left is released. Sec 7.3 says NEWKEYS 'is sent with the old keys' while the new ones are used for receiving once it arrives, so both key sets exist at once - which is what a single epoch cannot represent.",
+      "flags": [
+        "-DPC_SSH_MAX_CHANNELS=3",
+        "-DPC_ENABLE_SSH=1",
+        "-DPC_ENABLE_MNT=1",
+        "-DPC_ENABLE_SSH_SFTP=1",
+        "-DPC_ENABLE_SSH_SCP=1"
+      ],
+      "src": [
+        "+<crypto/hash/sha256.c>",
+        "+<crypto/mac/hmac_sha256.c>",
+        "+<crypto/mac/hmac_sha512.c>",
+        "+<crypto/cipher/chacha20.c>",
+        "+<crypto/rng/rng.c>",
+        "+<mmgr/protomem.c>",
+        "+<crypto/mac/poly1305.c>",
+        "+<crypto/aead/chachapoly.c>",
+        "+<crypto/cipher/aes256ctr.c>",
+        "+<crypto/aead/aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
+        "+<crypto/asymmetric/ecdsa.c>",
+        "+<crypto/asymmetric/bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
+        "+<crypto/asymmetric/rsa.c>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
+        "+<crypto/hash/sha512.c>",
+        "+<crypto/asymmetric/curve25519.c>",
+        "+<crypto/asymmetric/ed25519.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_transport.c>",
+        "+<network_drivers/presentation/ssh/auth/ssh_auth.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_channel.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.c>",
+        "+<network_drivers/presentation/ssh/ssh_server.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<mmgr/secure.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<shared_primitives/ip.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_conn.c>"
+      ],
+      "tests": ["integration/ssh/test_ssh_epoch"]
+    },
+
+    "native_ssh_flow": {
+      "desc": "The RFC 4254 sec 5.2 channel window (ssh/connection/ssh_flow_control.c): the send cap is the smaller of the peer's window and its maximum packet size, a send decrements the window, an adjust increments it, and the window stops at 2^32-1 because sec 5.2 says it MUST NOT be increased above that. Expected values are transcribed from RFC 4254.",
+      "flags": ["-DPC_ENABLE_SSH=1"],
+      "src": [
+        "-<*>",
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.c>"
+      ],
+      "tests": ["integration/ssh/test_ssh_flow"]
     },
     "native_ssh_kbdint": {
       "desc": "SSH keyboard-interactive auth (RFC 4256) built with PC_ENABLE_SSH_KEYBOARD_INTERACTIVE=1: the server sends one non-echoed Password prompt (INFO_REQUEST) and verifies the INFO_RESPONSE via the password callback. Also re-runs test_ssh_auth to confirm the password/publickey methods are unaffected with keyboard-interactive advertised.",
@@ -580,7 +711,14 @@
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>"
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<shared_primitives/ip.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_conn.c>"
       ],
       "tests": [
         "integration/ssh/test_ssh_kbdint",
@@ -633,7 +771,14 @@
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>"
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<shared_primitives/ip.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_conn.c>"
       ],
       "tests": ["integration/ssh/test_ssh_pqc"],
       "extra_scripts": ["pre:test/ensure_test_keys.py"]
@@ -676,7 +821,14 @@
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>"
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<shared_primitives/ip.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_conn.c>"
       ],
       "tests": ["integration/ssh/test_ssh_hardening"],
       "extra_scripts": ["pre:test/ensure_test_keys.py"]
@@ -739,6 +891,78 @@
       ],
       "tests": ["integration/ssh/test_ssh_conn"],
       "extra_scripts": ["pre:test/ensure_test_keys.py"]
+    },
+
+    "native_ssh_client": {
+      "desc": "SSH client role (ssh_client.c) built per file: nothing else in the matrix compiles it. Covers the tunnel state API, the cfg guard, and the provisioning key derivation, which runs through the connection's compile-time storage.",
+      "flags": [
+        "-DPC_ENABLE_SSH=1",
+        "-DPC_ENABLE_SSH_CLIENT=1",
+        "-DPC_SSH_MAX_CHANNELS=4"
+      ],
+      "src": [
+        "+<shared_primitives/ip.c>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/presentation/presentation.c>",
+        "+<network_drivers/session/session.c>",
+        "+<server/proto_builtins.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<network_drivers/session/worker.c>",
+        "+<crypto/hash/sha1.c>",
+        "+<network_drivers/presentation/codec/base64/base64.c>",
+        "+<network_drivers/presentation/http/websocket/websocket.c>",
+        "+<network_drivers/presentation/http/sse/sse.c>",
+        "+<network_drivers/presentation/codec/multipart/multipart.c>",
+        "+<crypto/hash/sha256.c>",
+        "+<crypto/mac/hmac_sha256.c>",
+        "+<crypto/cipher/chacha20.c>",
+        "+<crypto/rng/rng.c>",
+        "+<mmgr/protomem.c>",
+        "+<crypto/mac/poly1305.c>",
+        "+<crypto/aead/chachapoly.c>",
+        "+<crypto/mac/hmac_sha512.c>",
+        "+<crypto/cipher/aes256ctr.c>",
+        "+<crypto/aead/aesgcm.c>",
+        "+<core_setup/hal/portable/portable_aesgcm.c>",
+        "+<crypto/asymmetric/ecdsa.c>",
+        "+<crypto/asymmetric/bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
+        "+<crypto/asymmetric/rsa.c>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
+        "+<crypto/hash/sha512.c>",
+        "+<crypto/asymmetric/curve25519.c>",
+        "+<crypto/asymmetric/ed25519.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_transport.c>",
+        "+<network_drivers/presentation/ssh/auth/ssh_auth.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_channel.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.c>",
+        "+<network_drivers/presentation/ssh/ssh_server.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_conn.c>",
+        "+<network_drivers/presentation/ssh/ssh_client.c>",
+        "+<mmgr/secure.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<mmgr/protoframe.c>",
+        "+<network_drivers/network/network.c>",
+        "+<network_drivers/network/dns/dns.c>",
+        "+<network_drivers/network/dns/dns_resolver.c>",
+        "+<network_drivers/network/dns/dns_wire.c>",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>"
+      ],
+      "tests": ["integration/ssh/test_ssh_client"]
     },
     "native_ssh_sftp": {
       "desc": "SFTP protocol v3 wire codec (network_drivers/application/sftp): the SSH_FXP_* request reader + response builders\n(VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (size / perms /\nmtime + the flag word, skipping unknown/extended fields), packet length-framing (need-more vs\nmalformed/too-big), and the ls -l longname formatter. Pure host tests (no fs / no SSH).",
@@ -2618,7 +2842,8 @@
       "flags": ["-DPC_ENABLE_WS_DEFLATE=1", "-DPC_ENABLE_WEBSOCKET=1"],
       "src": [
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/codec/deflate/rfc1951.c>"
       ],
       "tests": ["unit/codec/test_inflate"]
     },
@@ -2628,7 +2853,8 @@
       "src": [
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/codec/deflate/rfc1951.c>"
       ],
       "tests": ["unit/codec/test_deflate"]
     },
@@ -2643,7 +2869,8 @@
       "src": [
         "+<network_drivers/presentation/ssh/transport/ssh_zlib.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/codec/deflate/rfc1951.c>"
       ],
       "tests": ["unit/ssh/test_ssh_zlib"]
     },
@@ -2694,7 +2921,15 @@
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>"
+        "+<core_setup/hal/host/host_nvs.c>",
+        "+<shared_primitives/ip.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/presentation/ssh/connection/ssh_conn.c>",
+        "+<network_drivers/presentation/codec/deflate/rfc1951.c>"
       ],
       "tests": ["integration/ssh/test_ssh_comp"],
       "extra_scripts": ["pre:test/ensure_test_keys.py"]
@@ -2730,7 +2965,8 @@
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/codec/deflate/rfc1951.c>"
       ],
       "tests": ["integration/http/test_websocket"]
     },
@@ -3642,7 +3878,8 @@
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
-        "+<mmgr/protomem.c>"
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/codec/deflate/rfc1951.c>"
       ],
       "tests": ["integration/fieldbus/test_dispatch"],
       "extra_scripts": ["pre:test/ensure_test_keys.py"]
@@ -4296,6 +4533,17 @@
       "flags": [],
       "src": ["-<*>", "+<mmgr/protomem.c>"],
       "tests": ["unit/mmgr/test_bitio"]
+    },
+
+    "native_rfc1951": {
+      "desc": "The RFC 1951 sec 3.2.5 length and distance tables and the sec 3.2.6 fixed-Huffman construction over them, defined once in codec/deflate/rfc1951.c and read by both DEFLATE codecs and both SSH zlib codecs. Every expected value is transcribed from RFC 1951, so the tables are checked against the standard rather than against themselves.",
+      "flags": [],
+      "src": [
+        "-<*>",
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/presentation/codec/deflate/rfc1951.c>"
+      ],
+      "tests": ["unit/codec/test_rfc1951"]
     },
     "native_rawmemcpy": {
       "desc": "The raw load (mmgr/rawmemcpy.h): bytes at a pointer read as a wider type in the\nmachine's own order, and the ladder proto_raw_read steps down. Every scalar rung is diffed\nagainst a byte loop written in the test at every offset within a word, so the machine order is\nasserted from a runtime endianness probe rather than from a config macro. PROTO_RAW_WORD is\nchecked against PROTO_WORD_BITS, which the die states, and not against the build machine's\npointer width. The mover is run over the cross product of every destination offset, every source\noffset and lengths through two full words: the head loop aligns the destination, so the source\noffset is what selects the co-aligned branch or the funnel that joins two adjacent aligned source\nwords with a shift pair. Poison outside the moved span is checked on every case, so a rung that\nwrites past its width fails here rather than in the caller that borrowed the next bytes.",

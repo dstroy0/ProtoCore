@@ -14,6 +14,7 @@
 
 #include "network_drivers/presentation/ssh/transport/ssh_inflate.h"
 #include "mmgr/protomem.h"
+#include "network_drivers/presentation/codec/deflate/rfc1951.h" // RFC1951: the sec 3.2.5 tables
 
 #if PC_ENABLE_SSH_ZLIB
 
@@ -25,17 +26,6 @@
 #define PC_BLK_OK 0   // a whole block decoded
 #define PC_BLK_NEED 1 // ran out of input mid-block (roll back to the boundary, wait for more)
 #define PC_BLK_ERR 2  // malformed stream or output overflow
-
-// Length / distance base + extra-bit tables (RFC 1951 sec 3.2.5), codes 257..285 and 0..29.
-static const short LEN_BASE[29] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
-                                   31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
-static const short LEN_EXTRA[29] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,
-                                    2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
-static const short DIST_BASE[30] = {1,    2,    3,    4,    5,    7,    9,    13,    17,    25,
-                                    33,   49,   65,   97,   129,  193,  257,  385,   513,   769,
-                                    1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
-static const short DIST_EXTRA[30] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
-                                     6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
 
 // Huffman table scratch (stack-resident per call; the decoder rebuilds it per block since no block
 // state persists across packets).
@@ -215,7 +205,7 @@ static int do_codes(BitIn *b, OutCtx *o, const Huffman *lc, const Huffman *dc)
         {
             return PC_BLK_ERR;
         }
-        int len = LEN_BASE[sym] + getbits(b, LEN_EXTRA[sym]);
+        int len = RFC1951->len_base[sym] + getbits(b, RFC1951->len_extra[sym]);
         if (b->underflow)
         {
             return PC_BLK_NEED;
@@ -229,7 +219,7 @@ static int do_codes(BitIn *b, OutCtx *o, const Huffman *lc, const Huffman *dc)
         {
             return PC_BLK_ERR;
         }
-        size_t dist = (size_t)(DIST_BASE[dsym] + getbits(b, DIST_EXTRA[dsym]));
+        size_t dist = (size_t)(RFC1951->dist_base[dsym] + getbits(b, RFC1951->dist_extra[dsym]));
         if (b->underflow)
         {
             return PC_BLK_NEED;

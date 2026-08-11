@@ -24,8 +24,10 @@
 #ifndef PROTOCORE_BYTES_H
 #define PROTOCORE_BYTES_H
 
-#include "mmgr/endian.h" // pc_rd32be - the fixed-width serializers live there
-#include "mmgr/span.h"   // pc_span / pc_cspan - the region these verbs act on
+#include "mmgr/endian.h"   // pc_rd32be - the fixed-width serializers live there
+#include "mmgr/protomem.h" // mem.set / mem.cpy - the byte movers
+#include "mmgr/protostr.h" // str.len - the bounded run length
+#include "mmgr/span.h"     // pc_span / pc_cspan - the region these verbs act on
 
 // --- append into a pc_span ---
 
@@ -50,6 +52,20 @@ PC_INLINE void pc_bw_put_be(pc_span *w, uint64_t val, int32_t nbytes)
     {
         pc_bw_put(w, (uint8_t)(val >> s));
     }
+}
+
+/** @brief Append @p n raw bytes from @p src; on overflow set the flag but keep counting @p pos. */
+PC_INLINE void pc_bw_bytes(pc_span *w, const void *src, size_t n)
+{
+    if (w->buf != NULL && w->pos <= w->cap && w->cap - w->pos >= n)
+    {
+        mem.cpy(w->buf + w->pos, src, n);
+    }
+    else if (n > 0)
+    {
+        w->overflow = PROTO_TRUE;
+    }
+    w->pos += n; // keep counting so pc_span_len() reports the size the payload needs
 }
 
 // --- take out of a pc_cspan ---
@@ -126,6 +142,27 @@ PC_INLINE proto_bool pc_rd_str(const uint8_t *p, size_t len, size_t *off, const 
     *out = p + *off;
     *slen = n;
     *off += n;
+    return PROTO_TRUE;
+}
+
+/**
+ * @brief Strip an mpint's leading zero bytes and right-align the rest into @p out[@p outlen].
+ * @return false if the magnitude is wider than @p outlen.
+ */
+PC_INLINE proto_bool pc_mpint_to_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen)
+{
+    uint32_t off = 0;
+    while (off < mlen && m[off] == 0)
+    {
+        off++;
+    }
+    uint32_t vlen = mlen - off;
+    if (vlen > outlen)
+    {
+        return PROTO_FALSE;
+    }
+    mem.set(out, 0, outlen);
+    mem.cpy(out + (outlen - vlen), m + off, vlen);
     return PROTO_TRUE;
 }
 

@@ -13,5 +13,5 @@
 
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 
-SshKeyMat ssh_keys[MAX_SSH_CONNS];
+SshKeyMat ssh_keys[MAX_SSH_CONNS][2];
 SshDhState ssh_dh[MAX_SSH_CONNS];

@@ -11,7 +11,9 @@
  */
 
 #include "network_drivers/presentation/ssh/ssh_client.h"
+#include "mmgr/bytes.h"     // pc_mpint_to_fixed
 #include "mmgr/protoframe.h" // the one frame engine
+#include "mmgr/rawmemcpy.h"  // proto_raw_put_u32 - one unaligned store, not four
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
@@ -24,6 +26,7 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/rng/rng.h"                                               // pc_rand_fill
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"               // SSH_MSG_USERAUTH_*
+#include "network_drivers/presentation/ssh/connection/ssh_channel.h" // ssh_chan[], pc_ssh_chan_by_id/_alloc
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h" // SSH_MSG_CHANNEL_*, SSH_MSG_GLOBAL_REQUEST
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"            // ssh_dh_derive_keys_sid
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
@@ -109,55 +112,6 @@ static inline proto_bool cli_kex_is_sha512(SshKexAlg k)
 // Wire helpers (SSH data types, RFC 4251 §5)
 // ---------------------------------------------------------------------------
 
-typedef struct
-{
-    uint8_t *buf;
-    size_t cap;
-    size_t off;
-    proto_bool ok;
-} Wr;
-
-static void w_u8(Wr *w, uint8_t v)
-{
-    if (w->off + 1 > w->cap)
-    {
-        w->ok = PROTO_FALSE;
-        return;
-    }
-    w->buf[w->off++] = v;
-}
-static void w_u32(Wr *w, uint32_t v)
-{
-    if (w->off + 4 > w->cap)
-    {
-        w->ok = PROTO_FALSE;
-        return;
-    }
-    w->buf[w->off++] = (uint8_t)(v >> 24);
-    w->buf[w->off++] = (uint8_t)(v >> 16);
-    w->buf[w->off++] = (uint8_t)(v >> 8);
-    w->buf[w->off++] = (uint8_t)v;
-}
-static void w_bytes(Wr *w, const uint8_t *d, size_t n)
-{
-    if (w->off + n > w->cap)
-    {
-        w->ok = PROTO_FALSE;
-        return;
-    }
-    mem.cpy(w->buf + w->off, d, n);
-    w->off += n;
-}
-static void w_string(Wr *w, const void *d, size_t n)
-{
-    w_u32(w, (uint32_t)n);
-    w_bytes(w, (const uint8_t *)d, n);
-}
-static void w_cstr(Wr *w, const char *s)
-{
-    w_string(w, s, strnlen(s, w->cap)); // a field can never exceed the writer's own capacity
-}
-
 // Reader over a payload with bounds checking.
 typedef struct
 {
@@ -177,29 +131,24 @@ static uint8_t r_u8(Rd *r)
 }
 static uint32_t r_u32(Rd *r)
 {
-    if (r->off + 4 > r->len)
+    uint32_t v = 0;
+    if (!pc_rd_u32(r->buf, r->len, &r->off, &v))
     {
         r->ok = PROTO_FALSE;
         return 0;
     }
-    uint32_t v = ((uint32_t)r->buf[r->off] << 24) | ((uint32_t)r->buf[r->off + 1] << 16) |
-                 ((uint32_t)r->buf[r->off + 2] << 8) | (uint32_t)r->buf[r->off + 3];
-    r->off += 4;
     return v;
 }
 // Returns a pointer to an in-place string of length *n; advances past it. Fails closed on overflow.
 static const uint8_t *r_string(Rd *r, uint32_t *n)
 {
-    uint32_t l = r_u32(r);
-    if (!r->ok || r->off + l > r->len)
+    const uint8_t *p = NULL;
+    if (!pc_rd_str(r->buf, r->len, &r->off, &p, n))
     {
         r->ok = PROTO_FALSE;
         *n = 0;
         return NULL;
     }
-    const uint8_t *p = r->buf + r->off;
-    r->off += l;
-    *n = l;
     return p;
 }
 
@@ -212,14 +161,14 @@ static const uint8_t *r_string(Rd *r, uint32_t *n)
 // one channel per inbound TCP connection, so a pool (not a single slot) avoids rapid / concurrent
 // requests getting "administratively prohibited". Each slot costs a CliChannel + a pc_client conn.
 
-// One forwarded-tcpip channel bridged to a local TCP connection.
+// One forwarded-tcpip channel bridged to a local TCP connection. The channel itself - its ids and its
+// RFC 4254 sec 5.2 window pair - lives in the channel layer's table; this is the local socket glued
+// to it, the same split ssh_forward.c makes with SshRfwdBridge.
 typedef struct
 {
     proto_bool used;
-    uint32_t local_id;  ///< our channel id.
-    uint32_t remote_id; ///< the relay's channel id.
-    SshFlow flow;       ///< the RFC 4254 sec 5.2 window pair.
-    int local_cid;      ///< pc_client id of the bridged local TCP connection, or -1.
+    uint32_t channel; ///< the shared channel's local id (== its slot index).
+    int local_cid;    ///< pc_client id of the bridged local TCP connection, or -1.
     proto_bool eof_sent;
     proto_bool relay_eof; ///< the relay half-closed (peer done sending); tear down once the response drains.
 } CliChannel;
@@ -270,19 +219,18 @@ typedef struct
     proto_bool have_sid;
 
     CliChannel chan[PC_SSH_CLIENT_MAX_CHANNELS]; ///< the active forwarded channels.
-    uint32_t next_chan_id;                       ///< id to assign the next channel.
 
     uint8_t wire[SSH_WIRE_CAP]; ///< staging buffer for one outgoing (framed/encrypted) packet.
 } SshClientCtx;
 
 static SshClientCtx s_cli;
 
-// Find an active channel by the id we assigned it (inbound messages address our local_id), or nullptr.
-static CliChannel *chan_by_local(uint32_t local_id)
+// Find the bridge on the channel a message addresses (inbound messages carry our local id), or null.
+static CliChannel *bridge_by_channel(uint32_t local_id)
 {
     for (int i = 0; i < PC_SSH_CLIENT_MAX_CHANNELS; i++)
     {
-        if (s_cli.chan[i].used && s_cli.chan[i].local_id == local_id)
+        if (s_cli.chan[i].used && s_cli.chan[i].channel == local_id)
         {
             return &s_cli.chan[i];
         }
@@ -290,8 +238,8 @@ static CliChannel *chan_by_local(uint32_t local_id)
     return NULL;
 }
 
-// Claim a free channel slot, or nullptr if all are in use.
-static CliChannel *chan_alloc(void)
+// Claim a free bridge slot, or null if all are in use.
+static CliChannel *bridge_alloc(void)
 {
     for (int i = 0; i < PC_SSH_CLIENT_MAX_CHANNELS; i++)
     {
@@ -311,7 +259,7 @@ static CliChannel *chan_alloc(void)
 static proto_bool cli_send(const uint8_t *payload, size_t len)
 {
     size_t wlen = 0;
-    if (ssh_pkt_send(SSH_CLI_SLOT, payload, len, s_cli.wire, &wlen, sizeof(s_cli.wire)) != 0)
+    if (ssh_pkt_send(SSH_CLI_SLOT, payload, len, s_cli.wire, &wlen, sizeof(s_cli.wire), &ssh_sess[SSH_CLI_SLOT].out) != 0)
     {
         return PROTO_FALSE;
     }
@@ -362,14 +310,14 @@ static void cli_fail(const char *why)
 // Algorithm negotiation + KEXINIT (client)
 // ---------------------------------------------------------------------------
 
-// Write a comma-joined SSH name-list from @p names into the writer as one string.
-static void w_namelist(Wr *w, const char *const *names, size_t n)
+// Write a comma-joined SSH name-list from @p names into the span as one string.
+static void w_namelist(pc_span *w, const char *const *names, size_t n)
 {
     char tmp[256];
     size_t o = 0;
     for (size_t i = 0; i < n; i++)
     {
-        size_t l = strnlen(names[i], sizeof(tmp));
+        size_t l = str.len(names[i], sizeof(tmp));
         if (i && o + 1 <= sizeof(tmp))
         {
             tmp[o++] = ',';
@@ -380,52 +328,33 @@ static void w_namelist(Wr *w, const char *const *names, size_t n)
             o += l;
         }
     }
-    w_string(w, tmp, o);
-}
-
-// Copy an mpint's value (the string content) right-aligned, big-endian, into out[width]; strips a
-// leading 0x00 sign byte. Returns false if the magnitude does not fit @p width.
-static proto_bool mpint_to_fixed(const uint8_t *v, uint32_t vlen, uint8_t *out, size_t width)
-{
-    uint32_t i = 0;
-    while (i < vlen && v[i] == 0)
-    {
-        i++;
-    }
-    uint32_t mag = vlen - i;
-    if (mag > width)
-    {
-        return PROTO_FALSE;
-    }
-    mem.set(out, 0, width);
-    mem.cpy(out + (width - mag), v + i, mag);
-    return PROTO_TRUE;
+    pc_ssh_wr_str(w, tmp, o);
 }
 
 static proto_bool build_kexinit(void)
 {
-    Wr w = {s_cli.i_c, sizeof(s_cli.i_c), 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_KEXINIT);
+    pc_span w = pc_span_from(s_cli.i_c, sizeof(s_cli.i_c));
+    pc_bw_put(&w, SSH_MSG_KEXINIT);
     uint8_t cookie[16];
     pc_rand_fill(cookie, 16);
-    w_bytes(&w, cookie, 16);
+    pc_bw_bytes(&w, cookie, 16);
     w_namelist(&w, KEX_NAMES, sizeof(KEX_NAMES) / sizeof(KEX_NAMES[0]));             // kex
     w_namelist(&w, HOSTKEY_NAMES, sizeof(HOSTKEY_NAMES) / sizeof(HOSTKEY_NAMES[0])); // host key
     w_namelist(&w, CIPHER_NAMES, sizeof(CIPHER_NAMES) / sizeof(CIPHER_NAMES[0]));    // enc c2s
     w_namelist(&w, CIPHER_NAMES, sizeof(CIPHER_NAMES) / sizeof(CIPHER_NAMES[0]));    // enc s2c
     w_namelist(&w, MAC_NAMES, sizeof(MAC_NAMES) / sizeof(MAC_NAMES[0]));             // mac c2s
     w_namelist(&w, MAC_NAMES, sizeof(MAC_NAMES) / sizeof(MAC_NAMES[0]));             // mac s2c
-    w_cstr(&w, "none");                                                              // comp c2s
-    w_cstr(&w, "none");                                                              // comp s2c
-    w_cstr(&w, "");                                                                  // lang c2s
-    w_cstr(&w, "");                                                                  // lang s2c
-    w_u8(&w, 0);                                                                     // first_kex_packet_follows
-    w_u32(&w, 0);                                                                    // reserved
-    if (!w.ok)
+    pc_ssh_wr_cstr(&w, "none");                                                              // comp c2s
+    pc_ssh_wr_cstr(&w, "none");                                                              // comp s2c
+    pc_ssh_wr_cstr(&w, "");                                                                  // lang c2s
+    pc_ssh_wr_cstr(&w, "");                                                                  // lang s2c
+    pc_bw_put(&w, 0);                                                                     // first_kex_packet_follows
+    pc_bw_put_be(&w, 0, 4);                                                                    // reserved
+    if (!pc_span_ok(w))
     {
         return PROTO_FALSE;
     }
-    s_cli.i_c_len = (uint16_t)w.off;
+    s_cli.i_c_len = (uint16_t)w.pos;
     return cli_send(s_cli.i_c, s_cli.i_c_len);
 }
 
@@ -521,7 +450,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     s_cli.i_s_len = (uint16_t)len;
 
     // RFC 4253 sec 7.1 parse + negotiate, the one implementation both roles consume.
-    if (SshTransport.kexinit_parse(SSH_CLI_SLOT, p, len) != 0)
+    if (SSH_TRANSPORT->kexinit_parse(SSH_CLI_SLOT, p, len) != 0)
     {
         return PROTO_FALSE;
     }
@@ -550,12 +479,12 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         {
             return PROTO_FALSE;
         }
-        Wr w = {out, plen, 0, PROTO_TRUE};
-        w_u8(&w, SSH_MSG_KEXDH_INIT);
-        w_u32(&w, (uint32_t)clen);
-        w_bytes(&w, ek, MLKEM768_EK_BYTES);
-        w_bytes(&w, s_cli.qc, 32);
-        proto_bool ok = w.ok && cli_send(out, w.off);
+        pc_span w = pc_span_from(out, plen);
+        pc_bw_put(&w, SSH_MSG_KEXDH_INIT);
+        pc_bw_put_be(&w, (uint32_t)clen, 4);
+        pc_bw_bytes(&w, ek, MLKEM768_EK_BYTES);
+        pc_bw_bytes(&w, s_cli.qc, 32);
+        proto_bool ok = pc_span_ok(w) && cli_send(out, w.pos);
         pc_plaintext_release(mark);
         return ok;
     }
@@ -575,12 +504,12 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         {
             return PROTO_FALSE;
         }
-        Wr w = {out, plen, 0, PROTO_TRUE};
-        w_u8(&w, SSH_MSG_KEXDH_INIT);
-        w_u32(&w, (uint32_t)clen);
-        w_bytes(&w, pk, PC_SNTRUP761_PK_BYTES);
-        w_bytes(&w, s_cli.qc, 32);
-        proto_bool ok = w.ok && cli_send(out, w.off);
+        pc_span w = pc_span_from(out, plen);
+        pc_bw_put(&w, SSH_MSG_KEXDH_INIT);
+        pc_bw_put_be(&w, (uint32_t)clen, 4);
+        pc_bw_bytes(&w, pk, PC_SNTRUP761_PK_BYTES);
+        pc_bw_bytes(&w, s_cli.qc, 32);
+        proto_bool ok = pc_span_ok(w) && cli_send(out, w.pos);
         pc_plaintext_release(mark);
         return ok;
     }
@@ -588,8 +517,8 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
 
     // KEXDH_INIT (msg 30): string(Q_C) for curve/ecdh, mpint(e) for DH.
     uint8_t out[1 + 4 + 260];
-    Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_KEXDH_INIT);
+    pc_span w = pc_span_from(out, sizeof(out));
+    pc_bw_put(&w, SSH_MSG_KEXDH_INIT);
     if (s_cli.kex == SSH_KEX_DH_GROUP14)
     {
         // mpint(e): minimal, with a sign byte if the top bit is set.
@@ -600,18 +529,18 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         }
         size_t mag = s_cli.qc_len - i;
         proto_bool pad = (mag > 0 && (s_cli.qc[i] & 0x80) != 0);
-        w_u32(&w, (uint32_t)(mag + (pad ? 1 : 0)));
+        pc_bw_put_be(&w, (uint32_t)(mag + (pad ? 1 : 0)), 4);
         if (pad)
         {
-            w_u8(&w, 0);
+            pc_bw_put(&w, 0);
         }
-        w_bytes(&w, s_cli.qc + i, mag);
+        pc_bw_bytes(&w, s_cli.qc + i, mag);
     }
     else
     {
-        w_string(&w, s_cli.qc, s_cli.qc_len);
+        pc_ssh_wr_str(&w, s_cli.qc, s_cli.qc_len);
     }
-    return w.ok && cli_send(out, w.off);
+    return pc_span_ok(w) && cli_send(out, w.pos);
 }
 
 // ---------------------------------------------------------------------------
@@ -865,7 +794,7 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         const uint8_t *rr = r_string(&rb, &rlen);
         const uint8_t *ss = r_string(&rb, &slen);
         uint8_t raw[64];
-        if (!rb.ok || !mpint_to_fixed(rr, rlen, raw, 32) || !mpint_to_fixed(ss, slen, raw + 32, 32))
+        if (!rb.ok || !pc_mpint_to_fixed(rr, rlen, raw, 32) || !pc_mpint_to_fixed(ss, slen, raw + 32, 32))
         {
             return PROTO_FALSE;
         }
@@ -883,7 +812,7 @@ static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint
         (void)ktype;
         (void)stype;
         uint8_t e4[4], n256[256];
-        if (!rk.ok || !rs.ok || !mpint_to_fixed(e, elen, e4, 4) || !mpint_to_fixed(n, nlen, n256, 256))
+        if (!rk.ok || !rs.ok || !pc_mpint_to_fixed(e, elen, e4, 4) || !pc_mpint_to_fixed(n, nlen, n256, 256))
         {
             return PROTO_FALSE;
         }
@@ -985,7 +914,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     {
         return PROTO_FALSE;
     }
-    ssh_pkt[SSH_CLI_SLOT].enc_out = PROTO_TRUE;
+    SSH_TRANSPORT->newkeys_sent(SSH_CLI_SLOT); // outbound switches to the epoch this exchange derived
     return PROTO_TRUE;
 }
 
@@ -996,10 +925,10 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 static proto_bool send_service_request(void)
 {
     uint8_t out[1 + 4 + 12];
-    Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_SERVICE_REQUEST);
-    w_cstr(&w, "ssh-userauth");
-    return w.ok && cli_send(out, w.off);
+    pc_span w = pc_span_from(out, sizeof(out));
+    pc_bw_put(&w, SSH_MSG_SERVICE_REQUEST);
+    pc_ssh_wr_cstr(&w, "ssh-userauth");
+    return pc_span_ok(w) && cli_send(out, w.pos);
 }
 
 static proto_bool send_userauth_publickey(void)
@@ -1015,10 +944,10 @@ static proto_bool send_userauth_publickey(void)
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
     uint8_t pkblob[4 + 11 + 4 + 32];
-    Wr pw = {pkblob, sizeof(pkblob), 0, PROTO_TRUE};
-    w_cstr(&pw, NAME_ED25519);
-    w_string(&pw, pub, 32);
-    if (!pw.ok)
+    pc_span pw = pc_span_from(pkblob, sizeof(pkblob));
+    pc_ssh_wr_cstr(&pw, NAME_ED25519);
+    pc_ssh_wr_str(&pw, pub, 32);
+    if (!pc_span_ok(pw))
     {
         return PROTO_FALSE;
     }
@@ -1027,45 +956,45 @@ static proto_bool send_userauth_publickey(void)
     // the public-key blob, with the "signature present" flag set. session_id is 32 or 64 bytes (the
     // -sha512 KEX), so the buffer carries SSH_KEXHASH_MAX_LEN of headroom over the 32-byte base.
     uint8_t signed_data[256 + SSH_KEXHASH_MAX_LEN];
-    Wr sd = {signed_data, sizeof(signed_data), 0, PROTO_TRUE};
-    w_string(&sd, s_cli.session_id, s_cli.session_id_len);
-    w_u8(&sd, SSH_MSG_USERAUTH_REQUEST);
-    w_cstr(&sd, user);
-    w_cstr(&sd, "ssh-connection");
-    w_cstr(&sd, "publickey");
-    w_u8(&sd, 1); // signature present
-    w_cstr(&sd, NAME_ED25519);
-    w_string(&sd, pkblob, pw.off);
-    if (!sd.ok)
+    pc_span sd = pc_span_from(signed_data, sizeof(signed_data));
+    pc_ssh_wr_str(&sd, s_cli.session_id, s_cli.session_id_len);
+    pc_bw_put(&sd, SSH_MSG_USERAUTH_REQUEST);
+    pc_ssh_wr_cstr(&sd, user);
+    pc_ssh_wr_cstr(&sd, "ssh-connection");
+    pc_ssh_wr_cstr(&sd, "publickey");
+    pc_bw_put(&sd, 1); // signature present
+    pc_ssh_wr_cstr(&sd, NAME_ED25519);
+    pc_ssh_wr_str(&sd, pkblob, pw.pos);
+    if (!pc_span_ok(sd))
     {
         return PROTO_FALSE;
     }
 
     uint8_t sig[64];
-    pc_ed25519_sign(work, sig, signed_data, sd.off, s_cli.cfg.auth_seed);
+    pc_ed25519_sign(work, sig, signed_data, sd.pos, s_cli.cfg.auth_seed);
 
     // Signature blob: string("ssh-ed25519") || string(sig64).
     uint8_t sigblob[4 + 11 + 4 + 64];
-    Wr sg = {sigblob, sizeof(sigblob), 0, PROTO_TRUE};
-    w_cstr(&sg, NAME_ED25519);
-    w_string(&sg, sig, 64);
-    if (!sg.ok)
+    pc_span sg = pc_span_from(sigblob, sizeof(sigblob));
+    pc_ssh_wr_cstr(&sg, NAME_ED25519);
+    pc_ssh_wr_str(&sg, sig, 64);
+    if (!pc_span_ok(sg))
     {
         return PROTO_FALSE;
     }
 
     // The full USERAUTH_REQUEST is the signed prefix (minus the session_id) plus the signature.
     uint8_t out[300];
-    Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_USERAUTH_REQUEST);
-    w_cstr(&w, user);
-    w_cstr(&w, "ssh-connection");
-    w_cstr(&w, "publickey");
-    w_u8(&w, 1);
-    w_cstr(&w, NAME_ED25519);
-    w_string(&w, pkblob, pw.off);
-    w_string(&w, sigblob, sg.off);
-    return w.ok && cli_send(out, w.off);
+    pc_span w = pc_span_from(out, sizeof(out));
+    pc_bw_put(&w, SSH_MSG_USERAUTH_REQUEST);
+    pc_ssh_wr_cstr(&w, user);
+    pc_ssh_wr_cstr(&w, "ssh-connection");
+    pc_ssh_wr_cstr(&w, "publickey");
+    pc_bw_put(&w, 1);
+    pc_ssh_wr_cstr(&w, NAME_ED25519);
+    pc_ssh_wr_str(&w, pkblob, pw.pos);
+    pc_ssh_wr_str(&w, sigblob, sg.pos);
+    return pc_span_ok(w) && cli_send(out, w.pos);
 }
 
 // ---------------------------------------------------------------------------
@@ -1075,13 +1004,13 @@ static proto_bool send_userauth_publickey(void)
 static proto_bool send_tcpip_forward(void)
 {
     uint8_t out[128];
-    Wr w = {out, sizeof(out), 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_GLOBAL_REQUEST);
-    w_cstr(&w, "tcpip-forward");
-    w_u8(&w, 1); // want reply
-    w_cstr(&w, s_cli.cfg.bind_addr ? s_cli.cfg.bind_addr : "");
-    w_u32(&w, s_cli.cfg.bind_port);
-    return w.ok && cli_send(out, w.off);
+    pc_span w = pc_span_from(out, sizeof(out));
+    pc_bw_put(&w, SSH_MSG_GLOBAL_REQUEST);
+    pc_ssh_wr_cstr(&w, "tcpip-forward");
+    pc_bw_put(&w, 1); // want reply
+    pc_ssh_wr_cstr(&w, s_cli.cfg.bind_addr ? s_cli.cfg.bind_addr : "");
+    pc_bw_put_be(&w, s_cli.cfg.bind_port, 4);
+    return pc_span_ok(w) && cli_send(out, w.pos);
 }
 
 // ---------------------------------------------------------------------------
@@ -1112,9 +1041,15 @@ static void handle_channel_open(const uint8_t *p, size_t len)
         return;
     }
 
-    // Claim a channel slot; refuse if the pool is full.
-    CliChannel *ch = chan_alloc();
-    if (!ch)
+    // Claim a channel in the shared table plus the bridge that carries its local socket; refuse if
+    // either pool is full.
+    const int cid = pc_ssh_chan_alloc(SSH_CLI_SLOT);
+    CliChannel *ch = NULL;
+    if (cid >= 0)
+    {
+        ch = bridge_alloc();
+    }
+    if (ch == NULL)
     {
         uint8_t out[17];
         size_t n = 0;
@@ -1139,17 +1074,23 @@ static void handle_channel_open(const uint8_t *p, size_t len)
         return;
     }
 
+    SshChannel *c = &ssh_chan[SSH_CLI_SLOT][cid];
+    c->open = PROTO_TRUE;
+    c->pending = PROTO_FALSE;
+    c->type = SSH_CHAN_FORWARDED_TCPIP;
+    c->local_id = (uint32_t)cid;
+    c->peer_id = their_id;
+    pc_ssh_flow_init(&c->flow, SSH_CLI_WINDOW, their_win, their_maxpkt);
+
     ch->used = PROTO_TRUE;
-    ch->remote_id = their_id;
-    ch->local_id = s_cli.next_chan_id++;
-    pc_ssh_flow_init(&ch->flow, SSH_CLI_WINDOW, their_win, their_maxpkt);
+    ch->channel = c->local_id;
     ch->local_cid = lc;
     ch->eof_sent = PROTO_FALSE;
     ch->relay_eof = PROTO_FALSE; // fully self-init this slot; do not lean on channel_close having zeroed it
 
     uint8_t out[17];
     size_t n = 0;
-    if (pc_ssh_sig_build_open_confirm(&ch->flow, their_id, ch->local_id, out, sizeof(out), &n) == 0)
+    if (pc_ssh_sig_build_open_confirm(&c->flow, their_id, c->local_id, out, sizeof(out), &n) == 0)
     {
         cli_send(out, n);
     }
@@ -1161,11 +1102,16 @@ static void channel_close(CliChannel *ch)
     {
         return;
     }
-    uint8_t out[10];
-    size_t n = 0;
-    if (pc_ssh_sig_build_close(ch->remote_id, out, sizeof(out), &n) == 0)
+    SshChannel *c = pc_ssh_chan_by_id(SSH_CLI_SLOT, ch->channel);
+    if (c != NULL)
     {
-        cli_send(out, n);
+        uint8_t out[10];
+        size_t n = 0;
+        if (pc_ssh_sig_build_close(c->peer_id, out, sizeof(out), &n) == 0)
+        {
+            cli_send(out, n);
+        }
+        c->open = PROTO_FALSE;
     }
     if (ch->local_cid >= 0)
     {
@@ -1183,8 +1129,9 @@ static void handle_channel_data(const uint8_t *p, size_t len)
     uint32_t rid = r_u32(&r); // our channel id (recipient)
     uint32_t dn;
     const uint8_t *d = r_string(&r, &dn);
-    CliChannel *ch = chan_by_local(rid);
-    if (!r.ok || !ch)
+    CliChannel *ch = bridge_by_channel(rid);
+    SshChannel *c = pc_ssh_chan_by_id(SSH_CLI_SLOT, rid);
+    if (!r.ok || ch == NULL || c == NULL)
     {
         return;
     }
@@ -1194,19 +1141,19 @@ static void handle_channel_data(const uint8_t *p, size_t len)
     }
 
     // Refill the relay's window as we consume, so it can keep sending.
-    if (!pc_ssh_flow_recv_take(&ch->flow, dn))
+    if (!pc_ssh_flow_recv_take(&c->flow, dn))
     {
         channel_close(ch);
         return;
     }
     uint32_t add = 0;
-    if (pc_ssh_flow_replenish_due(&ch->flow, &add))
+    if (pc_ssh_flow_replenish_due(&c->flow, &add))
     {
         uint8_t out[9];
         size_t n = 0;
-        if (pc_ssh_sig_build_window_adjust(ch->remote_id, add, out, sizeof(out), &n) == 0 && cli_send(out, n))
+        if (pc_ssh_sig_build_window_adjust(c->peer_id, add, out, sizeof(out), &n) == 0 && cli_send(out, n))
         {
-            pc_ssh_flow_local_credit(&ch->flow, add);
+            pc_ssh_flow_local_credit(&c->flow, add);
         }
     }
 }
@@ -1219,10 +1166,15 @@ static void pump_channel(CliChannel *ch)
     {
         return;
     }
+    SshChannel *c = pc_ssh_chan_by_id(SSH_CLI_SLOT, ch->channel);
+    if (c == NULL)
+    {
+        return;
+    }
     uint8_t buf[1024];
     for (int burst = 0; burst < 4; burst++)
     {
-        uint32_t want = pc_ssh_flow_send_cap(&ch->flow, (uint32_t)sizeof(buf));
+        uint32_t want = pc_ssh_flow_send_cap(&c->flow, (uint32_t)sizeof(buf));
         if (want == 0)
         {
             break;
@@ -1234,7 +1186,7 @@ static void pump_channel(CliChannel *ch)
         }
         uint8_t payload[9 + sizeof(buf)];
         size_t n = 0;
-        if (pc_ssh_sig_build_data(&ch->flow, ch->remote_id, buf, got, payload, sizeof(payload), &n) != 0)
+        if (pc_ssh_sig_build_data(&c->flow, c->peer_id, buf, got, payload, sizeof(payload), &n) != 0)
         {
             break;
         }
@@ -1285,11 +1237,14 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
     {
         return;
     }
+    // Set by every arm that consumes the message; what is left is answered per RFC 4253 sec 11.4.
+    proto_bool handled = PROTO_FALSE;
     switch (ssh_sess[SSH_CLI_SLOT].phase)
     {
     case SSH_PHASE_KEXINIT:
         if (type == SSH_MSG_KEXINIT)
         {
+            handled = PROTO_TRUE;
             if (handle_server_kexinit(payload, len))
             {
                 ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_DH_INIT;
@@ -1303,6 +1258,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
     case SSH_PHASE_DH_INIT:
         if (type == SSH_MSG_KEXDH_REPLY)
         {
+            handled = PROTO_TRUE;
             if (handle_kexdh_reply(payload, len))
             {
                 ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_NEWKEYS;
@@ -1316,8 +1272,13 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
     case SSH_PHASE_NEWKEYS:
         if (type == SSH_MSG_NEWKEYS)
         {
-            SshTransport.newkeys_recvd(SSH_CLI_SLOT); // -> SSH_PHASE_SERVICE
-            if (!send_service_request())
+            handled = PROTO_TRUE;
+            // RFC 4253 sec 7.3: a NEWKEYS that ends no key exchange is a protocol error.
+            if (SSH_TRANSPORT->newkeys_recvd(SSH_CLI_SLOT) != 0) // -> SSH_PHASE_SERVICE
+            {
+                cli_fail("NEWKEYS outside a key exchange");
+            }
+            else if (!send_service_request())
             {
                 cli_fail("service request send failed");
             }
@@ -1326,6 +1287,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
     case SSH_PHASE_SERVICE:
         if (type == SSH_MSG_SERVICE_ACCEPT)
         {
+            handled = PROTO_TRUE;
             if (send_userauth_publickey())
             {
                 ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_AUTH;
@@ -1339,6 +1301,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
     case SSH_PHASE_AUTH:
         if (type == SSH_MSG_USERAUTH_SUCCESS)
         {
+            handled = PROTO_TRUE;
             if (send_tcpip_forward())
             {
                 ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_OPEN;
@@ -1350,6 +1313,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         }
         else if (type == SSH_MSG_USERAUTH_FAILURE)
         {
+            handled = PROTO_TRUE;
             cli_fail("authentication rejected by the relay");
         }
         break;
@@ -1360,11 +1324,13 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         {
             if (type == SSH_MSG_REQUEST_SUCCESS)
             {
+                handled = PROTO_TRUE;
                 s_cli.state = PC_TUN_UP;
                 PC_LOGI(LOG_TUNNEL_UP, ((const pc_fval[]){PC_VU32((uint32_t)s_cli.cfg.bind_port)}), 1);
             }
             else if (type == SSH_MSG_REQUEST_FAILURE)
             {
+                handled = PROTO_TRUE;
                 cli_fail("relay refused the remote forward");
             }
             break;
@@ -1372,24 +1338,28 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         switch (type)
         {
         case SSH_MSG_CHANNEL_OPEN:
+            handled = PROTO_TRUE;
             handle_channel_open(payload, len);
             break;
         case SSH_MSG_CHANNEL_DATA:
+            handled = PROTO_TRUE;
             handle_channel_data(payload, len);
             break;
         case SSH_MSG_CHANNEL_WINDOW_ADJUST: {
+            handled = PROTO_TRUE;
             Rd r = {payload, len, 0, PROTO_TRUE};
             r_u8(&r);
             uint32_t rid = r_u32(&r);
             uint32_t add = r_u32(&r);
-            CliChannel *ch = chan_by_local(rid);
-            if (r.ok && ch)
+            SshChannel *c = pc_ssh_chan_by_id(SSH_CLI_SLOT, rid);
+            if (r.ok && c != NULL)
             {
-                pc_ssh_flow_peer_add(&ch->flow, add);
+                pc_ssh_flow_peer_add(&c->flow, add);
             }
             break;
         }
         case SSH_MSG_CHANNEL_EOF: {
+            handled = PROTO_TRUE;
             // The relay's write side closed - the forwarded peer is done sending (for a request/
             // response bridge, the response has already been delivered). Mark it so the channel tears
             // down as soon as the local reply drains, instead of lingering until the relay's CLOSE and
@@ -1397,24 +1367,26 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             Rd r = {payload, len, 0, PROTO_TRUE};
             r_u8(&r);
             uint32_t rid = r_u32(&r);
-            CliChannel *ch = chan_by_local(rid);
-            if (r.ok && ch)
+            CliChannel *ch = bridge_by_channel(rid);
+            if (r.ok && ch != NULL)
             {
                 ch->relay_eof = PROTO_TRUE;
             }
             break;
         }
         case SSH_MSG_CHANNEL_CLOSE: {
+            handled = PROTO_TRUE;
             Rd r = {payload, len, 0, PROTO_TRUE};
             r_u8(&r);
             uint32_t rid = r_u32(&r);
             if (r.ok)
             {
-                channel_close(chan_by_local(rid));
+                channel_close(bridge_by_channel(rid));
             }
             break;
         }
         case SSH_MSG_GLOBAL_REQUEST: {
+            handled = PROTO_TRUE;
             // A want_reply keepalive gets a REQUEST_FAILURE (we support no global requests inbound).
             Rd r = {payload, len, 0, PROTO_TRUE};
             r_u8(&r);
@@ -1434,6 +1406,20 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         break;
     default:
         break;
+    }
+
+    // RFC 4253 sec 11.4: a message no arm took is answered with SSH_MSG_UNIMPLEMENTED carrying its
+    // sequence number. ssh_pkt_recv has already counted this packet, so it is seq_no_recv - 1.
+    if (!handled)
+    {
+        uint8_t out[5];
+        pc_span w = pc_span_from(out, sizeof(out));
+        pc_bw_put(&w, SSH_MSG_UNIMPLEMENTED);
+        pc_bw_put_be(&w, ssh_pkt[SSH_CLI_SLOT].seq_no_recv - 1u, 4);
+        if (pc_span_ok(w))
+        {
+            (void)cli_send(out, w.pos);
+        }
     }
 }
 
@@ -1455,7 +1441,7 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     {
         s_cli.chan[i].local_cid = -1;
     }
-    s_cli.next_chan_id = 1;
+    pc_ssh_channel_init(SSH_CLI_SLOT); // the channel table this slot's bridges hang off
 
     // Own a dedicated scratch arena, distinct from the server's worker(s): packet decryption borrows
     // from the shared scratch, and that arena is single-accessor-per-task. begin() and poll() run in
@@ -1556,7 +1542,7 @@ void pc_ssh_tunnel_poll(void)
         }
         if (off < got && s_cli.state != PC_TUN_FAILED)
         {
-            if (ssh_pkt_recv(SSH_CLI_SLOT, buf + off, got - off, cli_msg_handler) != 0)
+            if (ssh_pkt_recv(SSH_CLI_SLOT, buf + off, got - off, cli_msg_handler, &ssh_sess[SSH_CLI_SLOT].in) != 0)
             {
                 cli_fail("packet error (MAC / framing)");
             }

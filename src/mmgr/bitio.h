@@ -37,6 +37,10 @@ typedef struct
 /** @brief Append the low @p n bits of @p bits, LSB-first, spilling any completed bytes to the output. */
 PC_INLINE void pc_bitw_put(pc_bit_writer *w, uint32_t bits, int n)
 {
+    if (w->overflow)
+    {
+        return; // latched: nbits is no longer a shift distance this can use
+    }
     w->acc |= bits << w->nbits;
     w->nbits += n;
     while (w->nbits >= 8)
@@ -44,9 +48,12 @@ PC_INLINE void pc_bitw_put(pc_bit_writer *w, uint32_t bits, int n)
         if (w->cnt >= w->cap)
         {
             w->overflow = PROTO_TRUE;
+            w->nbits = 0;
+            w->acc = 0;
             return;
         }
-        w->out[w->cnt++] = (uint8_t)(w->acc & 0xFF);
+        w->out[w->cnt] = (uint8_t)(w->acc & 0xFF);
+        w->cnt++;
         w->acc >>= 8;
         w->nbits -= 8;
     }

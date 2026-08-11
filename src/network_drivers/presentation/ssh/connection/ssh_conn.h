@@ -22,19 +22,64 @@
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 
 /**
- * @brief One connection's four regions, as pointers into the one span it owns.
+ * @brief The connection's memory map: every byte it uses, at a named offset from its slot base.
  *
- * The span is laid out constants | kmt | control packet | data packet and split at named offsets.
- * The second key epoch is reserved out of @c kmt for the re-key window and released once both
- * directions have switched (RFC 4253 sec 7.3).
+ * Laid out kmt | constants | control packet | data packet, each offset the previous one plus that
+ * member's size. The storage is the connection's, in ssh_conn.c; a translation unit takes its
+ * pointer as @c ssh_conn_slot(i) + the offset and already knows the member's size.
  */
-typedef struct
-{
-    uint8_t *constants;
-    uint8_t *kmt;
-    uint8_t *control;
-    uint8_t *data;
-} SshConnNs;
+
+// One key epoch: the six RFC 4253 sec 7.2 keys in every cipher mode negotiation can pick, at
+// offsets from the epoch's own base. Both epochs are laid out this way.
+#define SSH_OFF_GCM_C2S 0u
+#define SSH_OFF_GCM_S2C (SSH_OFF_GCM_C2S + PC_WORK_AESGCM)
+#define SSH_OFF_CHACHA_C2S (SSH_OFF_GCM_S2C + PC_WORK_AESGCM)
+#define SSH_OFF_CHACHA_S2C (SSH_OFF_CHACHA_C2S + PC_CHACHAPOLY_KEY_LEN)
+#define SSH_OFF_MAC_C2S (SSH_OFF_CHACHA_S2C + PC_CHACHAPOLY_KEY_LEN)
+#define SSH_OFF_MAC_S2C (SSH_OFF_MAC_C2S + 64u)
+#define SSH_OFF_AES_KEY_C2S (SSH_OFF_MAC_S2C + 64u)
+#define SSH_OFF_AES_KEY_S2C (SSH_OFF_AES_KEY_C2S + PC_AES256CTR_KEY_LEN)
+#define SSH_OFF_AES_IV_C2S (SSH_OFF_AES_KEY_S2C + PC_AES256CTR_KEY_LEN)
+#define SSH_OFF_AES_IV_S2C (SSH_OFF_AES_IV_C2S + PC_AES256CTR_CTR_LEN)
+#define SSH_EPOCH_STRIDE (SSH_OFF_AES_IV_S2C + PC_AES256CTR_CTR_LEN)
+
+// kmt: two key epochs, then the DH ephemeral. The second epoch holds the keys a re-key derives
+// while the first still decrypts, until both directions have switched (RFC 4253 sec 7.3).
+#define SSH_OFF_EPOCH_0 0u
+#define SSH_OFF_EPOCH_1 (SSH_OFF_EPOCH_0 + SSH_EPOCH_STRIDE)
+#define SSH_OFF_DH_Y (SSH_OFF_EPOCH_1 + SSH_EPOCH_STRIDE)
+#define SSH_OFF_DH_F (SSH_OFF_DH_Y + sizeof(pc_bignum))
+#define SSH_OFF_DH_K (SSH_OFF_DH_F + sizeof(pc_bignum))
+
+// constants: the values that persist across messages to compute the exchange hash H, and the
+// session id the first KEX fixes (RFC 4253 sec 7.2).
+#define SSH_OFF_V_C (SSH_OFF_DH_K + sizeof(pc_bignum))
+#define SSH_OFF_BANNER (SSH_OFF_V_C + SSH_VERSION_MAX)
+#define SSH_OFF_I_C (SSH_OFF_BANNER + SSH_VERSION_MAX)
+#define SSH_OFF_I_S (SSH_OFF_I_C + SSH_KEXINIT_MAX)
+#define SSH_OFF_SESSION_ID (SSH_OFF_I_S + PC_SSH_KEXINIT_S_MAX)
+#define SSH_OFF_ECDH_SK (SSH_OFF_SESSION_ID + SSH_KEXHASH_MAX_LEN)
+#define SSH_OFF_ECDH_PK (SSH_OFF_ECDH_SK + 32u)
+
+// control packet: the wire buffer the codec frames into, the bytes the packet MAC works out of,
+// and the ones the key exchange does.
+#define SSH_OFF_WIRE (SSH_OFF_ECDH_PK + 32u)
+#define SSH_OFF_MAC_WORK (SSH_OFF_WIRE + SSH_WIRE_CAP)
+#define SSH_OFF_CRYPTO_WORK (SSH_OFF_MAC_WORK + PC_HMAC_SHA256_BORROW)
+
+// data packet: the bytes drained off the transport ring, then the reassembly they feed.
+#define SSH_OFF_RX_READ (SSH_OFF_CRYPTO_WORK + PC_CRYPTO_BORROW_MAX)
+#define SSH_OFF_RX_ASM (SSH_OFF_RX_READ + RX_BUF_SIZE)
+
+/** @brief One connection's whole span, and the stride between slots. */
+#define SSH_SLOT_BORROW (SSH_OFF_RX_ASM + (size_t)SSH_PKT_BUF_SIZE)
+
+/**
+ * @brief The base of slot @p i's storage, or null when @p i is out of range.
+ *
+ * Allocated at compile time and identical for every slot, so a caller adds the offset it needs.
+ */
+uint8_t *ssh_conn_slot(uint8_t i);
 
 /**
  * @brief One-time setup: install the dispatcher's binary-packet emit callback.
