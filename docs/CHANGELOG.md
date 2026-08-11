@@ -115,6 +115,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`91a5b98`](https://github.com/dstroy0/ProtoCore/commit/91a5b98a3ea70f2c9d3391998018a50d79bd44fd))
 - update CHANGELOG.md [skip ci] ([`7652565`](https://github.com/dstroy0/ProtoCore/commit/7652565e51e607d0b5f9c8d1709c42b2e5a5c66f))
 - update CHANGELOG.md [skip ci] ([`39e487f`](https://github.com/dstroy0/ProtoCore/commit/39e487fae4ac22d80517e1489d6e61902b9c8d67))
 - update CHANGELOG.md [skip ci] ([`6fa5fe9`](https://github.com/dstroy0/ProtoCore/commit/6fa5fe936d682d48015151e776ee35df1b126990))
@@ -380,6 +381,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- log the SFTP version-negotiation defect ([`5d7aab9`](https://github.com/dstroy0/ProtoCore/commit/5d7aab96602f15e32bf067f94f3996351c0a3f36))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`033401c`](https://github.com/dstroy0/ProtoCore/commit/033401c59d2436e00417540198fc80c2698024cd))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f21cf7c`](https://github.com/dstroy0/ProtoCore/commit/f21cf7cdb05c8cd6dad60b5c529775f6b3f1d090))
 - prune the pre-August bug log and fix stale .cpp references ([`07984a8`](https://github.com/dstroy0/ProtoCore/commit/07984a897b77a50339867553cbc532a9f9c4678f))
