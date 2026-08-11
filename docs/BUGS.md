@@ -8,6 +8,24 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## SFTP: SSH_FXP_VERSION ignores the client's version instead of answering the lower of the two
+
+- **Status:** OPEN. Found while standing up the first environment that compiles
+  `application/sftp/ssh_sftp.c` - nothing in the matrix built it, so nothing exercised the INIT path.
+- **Oracle:** draft-ietf-secsh-filexfer-02 sec 4, the authoritative text for SFTP v3: "When the file
+  transfer protocol starts, it first sends a SSH_FXP_INIT (including its version number) packet to
+  the server. The server responds with a SSH_FXP_VERSION packet, supplying the lowest of its own and
+  the client's version number."
+- **What happens:** `handle_packet` (`ssh_sftp.c:316`) matches `PC_SSH_FXP_INIT` and immediately
+  calls `pc_sftp_build_version`, which writes the fixed `PC_SFTP_VERSION` (3, `sftp.h:30`). The
+  `uint32 version` the client sent is never read off the reader. A client that offers version 1 or 2
+  is answered 3 - a version higher than it asked for.
+- **Consequence:** sec 10.1 records that v3 changed the status codes and added `longname` to the
+  NAME response, so a v2 client is answered in a dialect it cannot parse. Every current OpenSSH
+  client speaks v3, which is why this has not been visible in practice.
+- **Not fixed:** answering the minimum means reading the client version and carrying it, which is a
+  contract change to `pc_sftp_build_version` and the owner's call.
+
 ## RFC 4252 sec 5: a new USERAUTH_REQUEST does not abandon an armed keyboard-interactive exchange
 
 - **Status:** OPEN. Measured, not inferred: `test_s5_a_new_request_does_not_abandon_the_armed_exchange`
