@@ -929,9 +929,139 @@ void test_bn_expmod_group14_hits_correction_sliver_without_overflow_limb(void)
     TEST_ASSERT_EQUAL_INT(0, bn_cmp(&out, &base));
 }
 
+// ---------------------------------------------------------------------------
+// End to end, through the byte pump: the handshake in the order RFC 4253 gives it
+//
+// The per-file suites pin each translation unit's contract on its own. This one proves they
+// compose: raw bytes go into the connection's receive ring and every reply is read back off the
+// socket, so the path is tcp_conn -> ssh_conn -> ssh_packet -> ssh_transport -> ssh_server and back.
+// Nothing here calls a dispatcher or a codec directly.
+//
+// The order is the RFC's, not the implementation's:
+//
+//   sec 4.2  the identification strings are exchanged first: "SSH-protoversion-softwareversion
+//            SP comments CR LF"
+//   sec 7.1  "Key exchange begins by each side sending" SSH_MSG_KEXINIT
+//   sec 8    "First, the client sends" SSH_MSG_KEXDH_INIT | mpint e; "The server then responds
+//            with" SSH_MSG_KEXDH_REPLY | string K_S | mpint f | string signature of H
+//   sec 7.3  "Key exchange ends by each side sending an SSH_MSG_NEWKEYS message ... When this
+//            message is received, the new keys and algorithms MUST be used for receiving."
+//
+// It stops at NEWKEYS, which is where sec 7.3 starts requiring the client to encrypt. Two other
+// harnesses carry it from there: the dispatcher-level cases above, which begin after decryption,
+// and test/servers/cyclone_ssh, which drives the whole encrypted session with a real Oryx
+// CycloneSSH client. This case owns the plaintext half, which is the part the byte pump carries.
+static void test_s4_2_to_s7_3_handshake_end_to_end_through_the_byte_pump(void)
+{
+    // sec 4.2: the server sends its identification string on accept.
+    pc_ssh_conn_accept(0);
+    TEST_ASSERT_TRUE(tcp_captured_len() >= 10);
+    TEST_ASSERT_EQUAL_MEMORY("SSH-2.0-", tcp_captured(), 8);
+    const char *banner = tcp_captured();
+    size_t blen = tcp_captured_len();
+    TEST_ASSERT_EQUAL_UINT8('\r', banner[blen - 2]); // CR LF terminated
+    TEST_ASSERT_EQUAL_UINT8('\n', banner[blen - 1]);
+
+    // sec 4.2: the client sends its own, and it is consumed without a reply.
+    tcp_capture_reset();
+    push_str(0, "SSH-2.0-EndToEndClient\r\n");
+    pc_ssh_conn_rx(0);
+    TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
+    TEST_ASSERT_EQUAL(SSH_PHASE_KEXINIT, ssh_sess[0].phase);
+
+    // sec 7.1: each side sends KEXINIT. Ours comes back framed on the socket.
+    uint8_t payload[2048];
+    uint8_t wire[2048];
+    size_t plen = build_kexinit_payload(payload);
+    size_t wlen = frame_packet(wire, payload, plen);
+    tcp_capture_reset();
+    push_bytes(0, wire, wlen);
+    pc_ssh_conn_rx(0);
+    TEST_ASSERT_TRUE(tcp_captured_len() > 5);
+    TEST_ASSERT_EQUAL_UINT8(SSH_MSG_KEXINIT, (uint8_t)tcp_captured()[5]); // past length + padding_length
+    TEST_ASSERT_EQUAL(SSH_PHASE_DH_INIT, ssh_sess[0].phase);
+
+    // sec 8: "First, the client sends ... SSH_MSG_KEXDH_INIT | mpint e". e = 2 is in [1, p-1].
+    uint8_t e_be[256];
+    memset(e_be, 0, sizeof(e_be));
+    e_be[255] = 0x02;
+    plen = 0;
+    payload[plen++] = SSH_MSG_KEXDH_INIT;
+    plen += put_mpint(payload + plen, e_be, sizeof(e_be));
+    wlen = frame_packet(wire, payload, plen);
+    tcp_capture_reset();
+    push_bytes(0, wire, wlen);
+    pc_ssh_conn_rx(0);
+
+    // sec 8's reply, then sec 7.3's NEWKEYS, both on the wire in that order.
+    TEST_ASSERT_TRUE(tcp_captured_len() > 5);
+    TEST_ASSERT_EQUAL_UINT8(SSH_MSG_KEXDH_REPLY, (uint8_t)tcp_captured()[5]);
+    const uint8_t *w = (const uint8_t *)tcp_captured();
+    uint32_t first = ((uint32_t)w[0] << 24) | ((uint32_t)w[1] << 16) | ((uint32_t)w[2] << 8) | w[3];
+    size_t at = 4u + first; // the packet after the reply
+    TEST_ASSERT_TRUE(at + 5 < tcp_captured_len());
+    TEST_ASSERT_EQUAL_UINT8(SSH_MSG_NEWKEYS, w[at + 5]);
+
+    // sec 7.3: "When this message is received, the new keys and algorithms MUST be used for
+    // receiving." The client's NEWKEYS is what turns the inbound direction on.
+    TEST_ASSERT_FALSE(ssh_sess[0].in.enc);
+    uint8_t nk = SSH_MSG_NEWKEYS;
+    wlen = frame_packet(wire, &nk, 1);
+    tcp_capture_reset();
+    push_bytes(0, wire, wlen);
+    pc_ssh_conn_rx(0);
+    TEST_ASSERT_TRUE(ssh_sess[0].in.enc);
+    TEST_ASSERT_EQUAL(SSH_PHASE_SERVICE, ssh_sess[0].phase);
+}
+
+// sec 8: "Values of 'e' or 'f' that are not in the range [1, p-1] MUST NOT be sent or accepted by
+// either side.  If this condition is violated, the key exchange fails." Driven through the byte
+// pump, so the refusal is the one a real peer would meet.
+static void test_s8_a_kexdh_init_outside_the_group_fails_the_exchange(void)
+{
+    pc_ssh_conn_accept(0);
+    push_str(0, "SSH-2.0-EndToEndClient\r\n");
+    pc_ssh_conn_rx(0);
+
+    uint8_t payload[2048];
+    uint8_t wire[2048];
+    size_t plen = build_kexinit_payload(payload);
+    size_t wlen = frame_packet(wire, payload, plen);
+    push_bytes(0, wire, wlen);
+    pc_ssh_conn_rx(0);
+    TEST_ASSERT_EQUAL(SSH_PHASE_DH_INIT, ssh_sess[0].phase);
+
+    // e = 0 is below the range the RFC allows.
+    uint8_t e_be[256];
+    memset(e_be, 0, sizeof(e_be));
+    plen = 0;
+    payload[plen++] = SSH_MSG_KEXDH_INIT;
+    plen += put_mpint(payload + plen, e_be, sizeof(e_be));
+    wlen = frame_packet(wire, payload, plen);
+    tcp_capture_reset();
+    push_bytes(0, wire, wlen);
+    pc_ssh_conn_rx(0);
+
+    // "the key exchange fails": no KEXDH_REPLY reaches the wire, and the session does not move on
+    // to await NEWKEYS. Asserted over the whole capture rather than only when something was sent,
+    // so a server that answered the bad e cannot pass by having emitted nothing.
+    const uint8_t *out = (const uint8_t *)tcp_captured();
+    for (size_t k = 0; k + 5 < tcp_captured_len(); k++)
+    {
+        TEST_ASSERT_NOT_EQUAL_UINT8(SSH_MSG_KEXDH_REPLY, out[k]);
+    }
+    // The exchange is failed by dropping the connection, which returns the slot to the phase a
+    // fresh one starts in. Either way nothing was keyed off the out-of-range value.
+    TEST_ASSERT_EQUAL(SSH_PHASE_BANNER, ssh_sess[0].phase);
+    TEST_ASSERT_FALSE(ssh_sess[0].in.enc);
+    TEST_ASSERT_FALSE(ssh_sess[0].out.enc);
+}
+
 int main()
 {
     UNITY_BEGIN();
+    RUN_TEST(test_s4_2_to_s7_3_handshake_end_to_end_through_the_byte_pump);
+    RUN_TEST(test_s8_a_kexdh_init_outside_the_group_fails_the_exchange);
     RUN_TEST(test_conn_entrypoints_reject_unmapped_slot);
     RUN_TEST(test_conn_outbound_arena_exhausted);
     RUN_TEST(test_conn_outbound_arena_fits_payload_not_wire);
