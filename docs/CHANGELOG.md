@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- ssh_scp.c never compiled, name the mode enum as the header declares it ([`0991534`](https://github.com/dstroy0/ProtoCore/commit/0991534004ec60966f128a59e3323f829a63a839))
 - ssh_forward.c never compiled, add the missing session.h include ([`e904608`](https://github.com/dstroy0/ProtoCore/commit/e904608aa39dd0da4c4911efb6b71550636eefcc))
 - the software server was the fourth site accepting an all-zero secret ([`4bc3977`](https://github.com/dstroy0/ProtoCore/commit/4bc397719b2286d565d272f7fc675c36a632e175))
 - RFC 8446 7.4.2 requires aborting on an all-zero X25519 shared secret ([`83be793`](https://github.com/dstroy0/ProtoCore/commit/83be793661d1e8b9d987f7844e72e408fc558f6f))
@@ -115,6 +116,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7c190b0`](https://github.com/dstroy0/ProtoCore/commit/7c190b0c9cab6937e80cc3711c08765ac83c5b84))
 - update CHANGELOG.md [skip ci] ([`92798b0`](https://github.com/dstroy0/ProtoCore/commit/92798b00c9164e7d9789d56db380d2340957f6f1))
 - update CHANGELOG.md [skip ci] ([`91a5b98`](https://github.com/dstroy0/ProtoCore/commit/91a5b98a3ea70f2c9d3391998018a50d79bd44fd))
 - update CHANGELOG.md [skip ci] ([`7652565`](https://github.com/dstroy0/ProtoCore/commit/7652565e51e607d0b5f9c8d1709c42b2e5a5c66f))
@@ -382,6 +384,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`49e6c0a`](https://github.com/dstroy0/ProtoCore/commit/49e6c0a7215518c1743fef47a4fd19fa4274fe49))
 - log the SFTP version-negotiation defect ([`5d7aab9`](https://github.com/dstroy0/ProtoCore/commit/5d7aab96602f15e32bf067f94f3996351c0a3f36))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`033401c`](https://github.com/dstroy0/ProtoCore/commit/033401c59d2436e00417540198fc80c2698024cd))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f21cf7c`](https://github.com/dstroy0/ProtoCore/commit/f21cf7cdb05c8cd6dad60b5c529775f6b3f1d090))
@@ -506,6 +509,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- per-file coverage for the SCP server, the last SSH file no env compiled ([`25d1e44`](https://github.com/dstroy0/ProtoCore/commit/25d1e4496554aec277dcbbbe98f231e23404d381))
 - per-file coverage for the SFTP v3 server subsystem ([`f014ab4`](https://github.com/dstroy0/ProtoCore/commit/f014ab4e6f9bdf6abbf8cd9aba7d1008fa21fbb4))
 - drop the duplicated AES-GCM counter test from the auth suite ([`70cfa2a`](https://github.com/dstroy0/ProtoCore/commit/70cfa2a63d767f2cfd2bb27acfe03382223250b2))
 - label test_ssh_auth by RFC 4252 section ([`38a340b`](https://github.com/dstroy0/ProtoCore/commit/38a340bfeb3a5920a1b99ac1598e3db7a2dd29db))
