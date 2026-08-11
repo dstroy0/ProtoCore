@@ -134,7 +134,7 @@ static void pc_scp_on_open(uint8_t slot, uint32_t channel, const char *cmd, size
     // Parsed straight into the field that keeps it. Parsing into scratch and copying would move a
     // whole path twice and then rescan the copy for a length the parse already walked past.
     ScpMode mode = pc_scp_parse_cmd(cmd, cmd_len, c->dest, sizeof(c->dest));
-    if (mode == SINK)
+    if (mode == SCP_MODE_SINK)
     {
         // A '/' terminator is what makes the target a directory, and it is also the separator the
         // accessor's join relies on, so the flag and the string agree without either being rebuilt.
@@ -143,7 +143,7 @@ static void pc_scp_on_open(uint8_t slot, uint32_t channel, const char *cmd, size
         c->st = WAIT_CLINE;
         ack(c, PC_SCP_ACK_OK); // ready for the control line
     }
-    else if (mode == SOURCE)
+    else if (mode == SCP_MODE_SOURCE)
     {
         err_ack(c, SCP_ERR_NO_SOURCE, sizeof(SCP_ERR_NO_SOURCE) - 1);
         pc_scp_end(c);
