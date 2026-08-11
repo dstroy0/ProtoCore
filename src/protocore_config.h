@@ -7691,6 +7691,24 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
 #define SSH_KEXINIT_MAX 2048
 #endif
 
+/**
+ * @brief Max stored size of the exchange value the client sends (RFC 4253 sec 8 'e', RFC 8731 Q_C,
+ *        or a hybrid C_INIT), kept for the exchange hash.
+ *
+ * Worst case for the build: an ML-KEM-768 ek (1184) or sntrup761 pk (1158) followed by the 32-byte
+ * X25519 public, else the 256-byte dh-group14 'e'. ssh_transport.c static_asserts this against
+ * MLKEM768_EK_BYTES and PC_SNTRUP761_PK_BYTES, which only that translation unit can see.
+ */
+#ifndef PC_SSH_CPUB_MAX
+#if PC_ENABLE_PQC_KEX
+#define PC_SSH_CPUB_MAX 1216
+#elif PC_ENABLE_SSH_SNTRUP761
+#define PC_SSH_CPUB_MAX 1190
+#else
+#define PC_SSH_CPUB_MAX 256
+#endif
+#endif
+
 #if PC_ENABLE_AUDIT_LOG
 // -- Audit log (services/security/audit_log) --
 #ifndef PC_AUDIT_LOG_ENTRIES
