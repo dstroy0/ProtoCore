@@ -250,21 +250,3 @@ void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in)
     km->active = PROTO_TRUE;
 }
 
-void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_SHA256_DIGEST_LEN])
-{
-    // First-KEX convenience: session id equals H; aes256-ctr + hmac-sha2-256 (pre-negotiation defaults),
-    // SHA-256 exchange hash (h_len / sid_len / is512 default).
-    if (i >= MAX_SSH_CONNS || !ssh_pkt_slot_storage(&ssh_pkt[i]))
-    {
-        return;
-    }
-    const SshKdfInputs in = {.work = ssh_pkt[i].crypto_work,
-                             .K_be = K_be,
-                             .H = H,
-                             .session_id = H,
-                             .h_len = PC_SHA256_DIGEST_LEN,
-                             .sid_len = PC_SHA256_DIGEST_LEN,
-                             .k_is_string = PROTO_FALSE,
-                             .is512 = PROTO_FALSE};
-    ssh_dh_derive_keys_sid(i, &in);
-}

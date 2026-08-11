@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_transport.cpp
+ * @file ssh_transport.c
  * @brief SSH transport handshake - banner exchange and KEXINIT negotiation.
  */
 

@@ -211,7 +211,7 @@ static inline const uint8_t *km_recv_aes_key(const SshKeyMat *km, proto_bool cli
     return cli ? km->aes_key_s2c : km->aes_key_c2s;
 }
 // GCM keeps a keyed context per direction rather than a raw key: the schedule is built once at install
-// (ssh_dh.cpp) and reused per packet, because standing one up costs ~9,200 cycles regardless of packet
+// (ssh_dh.c) and reused per packet, because standing one up costs ~9,200 cycles regardless of packet
 // size and would otherwise dominate small interactive traffic.
 static inline struct pc_aesgcm_key *km_send_gcm(SshKeyMat *km, proto_bool cli)
 {
