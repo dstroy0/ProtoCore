@@ -75,26 +75,6 @@ PROTO_BEGIN_DECLS
  */
 int ssh_dh_generate(uint8_t i);
 
-/**
- * @brief Derive the six session keys from shared secret K and exchange hash H.
- *
- * Implements RFC 4253 §7.2 key derivation:
- *   IV_c2s  = SHA256(K || H || 'A' || session_id)  [first 16 bytes]
- *   IV_s2c  = SHA256(K || H || 'B' || session_id)  [first 16 bytes]
- *   key_c2s = SHA256(K || H || 'C' || session_id)  [32 bytes]
- *   key_s2c = SHA256(K || H || 'D' || session_id)  [32 bytes]
- *   mac_c2s = SHA256(K || H || 'E' || session_id)  [32 bytes]
- *   mac_s2c = SHA256(K || H || 'F' || session_id)  [32 bytes]
- *
- * Installs the derived keys into the epoch of ssh_keys[i] that neither direction is reading.
- * Does NOT zero K or H - the caller does that.
- *
- * @param i           Slot index.
- * @param K_be        Shared secret K, big-endian, 256 bytes.
- * @param H           Exchange hash, 32 bytes (also used as session_id).
- */
-void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_SHA256_DIGEST_LEN]);
-
 /** @brief Max bytes ssh_kdf_derive() can produce (4 SHA-256 blocks). */
 #define SSH_KDF_MAX (4 * PC_SHA256_DIGEST_LEN)
 

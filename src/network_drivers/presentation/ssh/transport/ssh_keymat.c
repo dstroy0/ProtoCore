@@ -6,7 +6,7 @@
  * @brief BSS definitions for SSH session key and DH state pools.
  *
  * Declared extern in ssh_keymat.h; defined here as separate linker symbols
- * so that a linear overflow from ssh_pkt[] (in ssh_packet.cpp) cannot reach
+ * so that a linear overflow from ssh_pkt[] (in ssh_packet.c) cannot reach
  * ssh_keys[] or ssh_dh[] in a single stride.  See ssh_keymat.h for the full
  * security rationale.
  */

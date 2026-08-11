@@ -18,7 +18,7 @@
  * (inflate) half lives in ssh_inflate.h: OpenSSH compresses its outbound with Z_PARTIAL_FLUSH, so that
  * side is a resumable, context-takeover inflate carrying bit state + the window across packets.
  *
- * All state and buffers are caller-supplied; the codec allocates nothing. See ssh_zlib.cpp for the
+ * All state and buffers are caller-supplied; the codec allocates nothing. See ssh_zlib.c for the
  * work-buffer / hash-table sizing helpers (SSH_ZLIB_* macros).
  *
  * @author  Douglas Quigg (dstroy0)
