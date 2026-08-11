@@ -406,8 +406,12 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     {
         // KEX_HYBRID_INIT (msg 30): string(C_INIT) where C_INIT = ek || Q_C (1216 B). Too large for
         // the stack packet buffer, so build it in the client's scratch arena.
+        SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
         const uint8_t *ek = s_cli.hyb.mlkem_dk + 1152; // ek follows the 1152-byte dk_pke in dk
         const size_t clen = MLKEM768_EK_BYTES + 32;
+        mem.cpy(hs->cpub, ek, MLKEM768_EK_BYTES);
+        mem.cpy(hs->cpub + MLKEM768_EK_BYTES, s_cli.qc, 32);
+        hs->cpub_len = (uint16_t)clen;
         const size_t plen = 1 + 4 + clen;
         size_t mark = pc_plaintext_mark();
         uint8_t *out = (uint8_t *)pc_plaintext_alloc(plen, 1);
@@ -418,8 +422,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         pc_span w = pc_span_from(out, plen);
         pc_bw_put(&w, SSH_MSG_KEXDH_INIT);
         pc_bw_put_be(&w, (uint32_t)clen, 4);
-        pc_bw_bytes(&w, ek, MLKEM768_EK_BYTES);
-        pc_bw_bytes(&w, s_cli.qc, 32);
+        pc_bw_bytes(&w, hs->cpub, clen);
         proto_bool ok = pc_span_ok(w) && cli_send(out, w.pos);
         pc_plaintext_release(mark);
         return ok;
@@ -431,8 +434,12 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         // KEX_HYBRID_INIT (msg 30): string(C_INIT) where C_INIT = sntrup761_pk || Q_C (1190 B). pk is
         // reconstructed from sk (it is embedded there); too large for the stack packet buffer, so the
         // packet is built in the client's scratch arena.
+        SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
         const uint8_t *pk = s_cli.hyb.sntrup_sk + PC_SNTRUP761_SK_PK_OFFSET;
         const size_t clen = PC_SNTRUP761_PK_BYTES + 32;
+        mem.cpy(hs->cpub, pk, PC_SNTRUP761_PK_BYTES);
+        mem.cpy(hs->cpub + PC_SNTRUP761_PK_BYTES, s_cli.qc, 32);
+        hs->cpub_len = (uint16_t)clen;
         const size_t plen = 1 + 4 + clen;
         size_t mark = pc_plaintext_mark();
         uint8_t *out = (uint8_t *)pc_plaintext_alloc(plen, 1);
@@ -443,15 +450,19 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         pc_span w = pc_span_from(out, plen);
         pc_bw_put(&w, SSH_MSG_KEXDH_INIT);
         pc_bw_put_be(&w, (uint32_t)clen, 4);
-        pc_bw_bytes(&w, pk, PC_SNTRUP761_PK_BYTES);
-        pc_bw_bytes(&w, s_cli.qc, 32);
+        pc_bw_bytes(&w, hs->cpub, clen);
         proto_bool ok = pc_span_ok(w) && cli_send(out, w.pos);
         pc_plaintext_release(mark);
         return ok;
     }
 #endif
 
-    // KEXDH_INIT (msg 30): string(Q_C) for curve/ecdh, mpint(e) for DH.
+    // KEXDH_INIT (msg 30): string(Q_C) for curve/ecdh, mpint(e) for DH. The exchange hash takes the
+    // value as it stands here, before either encoding is applied.
+    SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
+    mem.cpy(hs->cpub, s_cli.qc, s_cli.qc_len);
+    hs->cpub_len = (uint16_t)s_cli.qc_len;
+
     uint8_t out[1 + 4 + 260];
     pc_span w = pc_span_from(out, sizeof(out));
     pc_bw_put(&w, SSH_MSG_KEXDH_INIT);
@@ -619,76 +630,6 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
     return PROTO_FALSE;
 }
 
-// Compute the exchange hash H over the negotiated method's field encodings (RFC 4253 §8 / RFC 8731),
-// under the method's hash (SHA-256, or SHA-512 for sntrup761x25519-sha512). Returns the digest length.
-static size_t compute_h(const uint8_t *ks, uint32_t ks_len, const uint8_t *srv_pub, uint32_t srv_pub_len,
-                        const uint8_t *k_be, uint8_t H[SSH_KEXHASH_MAX_LEN])
-{
-    uint8_t *work = cli_crypto_work();
-    if (work == NULL)
-    {
-        return 0;
-    }
-    const proto_bool is512 = cli_kex_is_sha512(s_cli.kex);
-    SshKexHash c;
-    ssh_kexhash_init(&c, work, is512);
-    const SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
-    hash_string(&c, (const uint8_t *)hs->v_c, hs->v_c_len); // V_C
-    hash_string(&c, (const uint8_t *)hs->v_s, hs->v_s_len); // V_S
-    hash_string(&c, hs->i_c, hs->i_c_len);                  // I_C
-    hash_string(&c, hs->i_s, hs->i_s_len);                  // I_S
-    hash_string(&c, ks, ks_len);                            // K_S
-#if PC_ENABLE_PQC_KEX || PC_ENABLE_SSH_SNTRUP761
-    proto_bool hybrid = PROTO_FALSE;
-    const uint8_t *cpk = NULL; // the hybrid public embedded in the C_INIT string (ek / sntrup761 pk)
-    size_t cpk_len = 0, k_slen = 0;
-#if PC_ENABLE_PQC_KEX
-    if (s_cli.kex == SSH_KEX_MLKEM768_X25519)
-    {
-        hybrid = PROTO_TRUE;
-        cpk = s_cli.hyb.mlkem_dk + 1152; // ek follows the 1152-byte dk_pke
-        cpk_len = MLKEM768_EK_BYTES;
-        k_slen = 32; // K = SHA256(K_PQ || K_CL), 32-byte string
-    }
-#endif
-#if PC_ENABLE_SSH_SNTRUP761
-    if (s_cli.kex == SSH_KEX_SNTRUP761_X25519)
-    {
-        hybrid = PROTO_TRUE;
-        cpk = s_cli.hyb.sntrup_sk + PC_SNTRUP761_SK_PK_OFFSET;
-        cpk_len = PC_SNTRUP761_PK_BYTES;
-        k_slen = 64; // K = SHA512(K_PQ || K_CL), 64-byte string
-    }
-#endif
-    if (hybrid)
-    {
-        // C_INIT = cpk || Q_C hashed as one SSH string; S_REPLY (ct || Q_S) is srv_pub; K is a fixed
-        // 32/64-byte string, not an mpint (draft-ietf-sshm-mlkem-hybrid-kex / RFC 9370).
-        uint32_t clen = (uint32_t)(cpk_len + 32);
-        uint8_t lb[4] = {(uint8_t)(clen >> 24), (uint8_t)(clen >> 16), (uint8_t)(clen >> 8), (uint8_t)clen};
-        ssh_kexhash_update(&c, lb, 4);
-        ssh_kexhash_update(&c, cpk, cpk_len);
-        ssh_kexhash_update(&c, s_cli.qc, 32);
-        hash_string(&c, srv_pub, srv_pub_len);          // S_REPLY
-        hash_string(&c, k_be + (256 - k_slen), k_slen); // K (32/64-byte string)
-    }
-    else
-#endif
-        if (s_cli.kex == SSH_KEX_DH_GROUP14)
-    {
-        hash_mpint(&c, s_cli.qc, s_cli.qc_len); // e
-        hash_mpint(&c, srv_pub, srv_pub_len);   // f
-        hash_mpint(&c, k_be, 256);              // K
-    }
-    else
-    {
-        hash_string(&c, s_cli.qc, s_cli.qc_len); // Q_C
-        hash_string(&c, srv_pub, srv_pub_len);   // Q_S
-        hash_mpint(&c, k_be, 256);               // K
-    }
-    return ssh_kexhash_final(&c, H);
-}
-
 // Verify the relay's signature over H (h_len bytes) with the host key from K_S, per the host-key type.
 static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint8_t *sig, uint32_t sig_len,
                                   const uint8_t *H, size_t h_len)
@@ -802,8 +743,39 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
         return PROTO_FALSE;
     }
 
+    // RFC 4253 sec 8 H, the one implementation both roles consume. The exchange values are SSH
+    // strings for an ECDH or hybrid KEX and mpints for dh-group14; K is a string only for a hybrid,
+    // where it is a fixed 32/64-byte hash sitting at the tail of k_be.
+    const SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
+    proto_bool pub_is_string = s_cli.kex != SSH_KEX_DH_GROUP14;
+    proto_bool k_is_string = PROTO_FALSE;
+    const uint8_t *k_hash = k_be;
+    size_t k_hash_len = 256;
+#if PC_ENABLE_PQC_KEX
+    if (s_cli.kex == SSH_KEX_MLKEM768_X25519)
+    {
+        k_is_string = PROTO_TRUE;
+        k_hash_len = 32;
+        k_hash = k_be + (256 - k_hash_len);
+    }
+#endif
+#if PC_ENABLE_SSH_SNTRUP761
+    if (s_cli.kex == SSH_KEX_SNTRUP761_X25519)
+    {
+        k_is_string = PROTO_TRUE;
+        k_hash_len = 64;
+        k_hash = k_be + (256 - k_hash_len);
+    }
+#endif
     uint8_t H[SSH_KEXHASH_MAX_LEN];
-    const size_t h_len = compute_h(ks, ks_len, srv_pub, sp_len, k_be, H); // 32 or 64 by method
+    size_t h_len = 0;
+    if (SSH_TRANSPORT->exchange_hash(SSH_CLI_SLOT, pub_is_string, hs->cpub, hs->cpub_len, srv_pub, sp_len, k_hash,
+                                     k_hash_len, ks, ks_len, H, &h_len, k_is_string,
+                                     cli_kex_is_sha512(s_cli.kex)) != 0)
+    {
+        pc_secure_wipe(k_be, sizeof(k_be));
+        return PROTO_FALSE;
+    }
 
     if (!verify_host_sig(ks, ks_len, sig, sig_len, H, h_len))
     {
@@ -824,13 +796,6 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     // encode K as a fixed 32/64-byte string (k_is_string); the classical methods as an mpint. The
     // -sha512 method derives over SHA-512 (is512), so H and the session_id are 64 bytes.
     const proto_bool is512 = cli_kex_is_sha512(s_cli.kex);
-    proto_bool k_is_string = PROTO_FALSE;
-#if PC_ENABLE_PQC_KEX
-    k_is_string = k_is_string || (s_cli.kex == SSH_KEX_MLKEM768_X25519);
-#endif
-#if PC_ENABLE_SSH_SNTRUP761
-    k_is_string = k_is_string || (s_cli.kex == SSH_KEX_SNTRUP761_X25519);
-#endif
     const SshKdfInputs kdf_in = {.work = cli_crypto_work(),
                                  .K_be = k_be,
                                  .H = H,

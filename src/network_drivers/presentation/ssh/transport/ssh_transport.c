@@ -120,6 +120,17 @@ static const char EXT_INFO_C[] = "ext-info-c";
 static_assert(PC_SSH_KEXINIT_S_MAX >= SSH_KEXINIT_S_WORST,
               "PC_SSH_KEXINIT_S_MAX must cover every name this build advertises: raise it in ssh_transport.h");
 
+// PC_SSH_CPUB_MAX is sized in protocore_config.h, which cannot see the PQC key sizes. This is the
+// translation unit that includes both, so it is where the two spellings are checked against it.
+#if PC_ENABLE_PQC_KEX
+static_assert(PC_SSH_CPUB_MAX >= MLKEM768_EK_BYTES + 32u,
+              "PC_SSH_CPUB_MAX must cover an ML-KEM-768 C_INIT: raise it in protocore_config.h");
+#endif
+#if PC_ENABLE_SSH_SNTRUP761
+static_assert(PC_SSH_CPUB_MAX >= PC_SNTRUP761_PK_BYTES + 32u,
+              "PC_SSH_CPUB_MAX must cover an sntrup761 C_INIT: raise it in protocore_config.h");
+#endif
+
 // The two lists are joined in these before they reach the payload, so each holds its own worst case.
 #define SSH_KEXLIST_BUF 192
 #define SSH_HKLIST_BUF 64
@@ -422,6 +433,7 @@ void ssh_transport_init(uint8_t i)
     s->banner_buf = base + SSH_OFF_BANNER;
     s->i_c = base + SSH_OFF_I_C;
     s->i_s = base + SSH_OFF_I_S;
+    s->cpub = base + SSH_OFF_CPUB;
     s->session_id = base + SSH_OFF_SESSION_ID;
     s->ecdh_sk = base + SSH_OFF_ECDH_SK;
     s->ecdh_pk = base + SSH_OFF_ECDH_PK;
@@ -955,10 +967,10 @@ static inline proto_bool kex_is_sha512(SshKexAlg a)
 // canonical minimal encoding.
 // @p out holds SSH_KEXHASH_MAX_LEN; the exchange-hash length (32 or 64) is written to @p out_len and
 // selected by @p is512 (the negotiated KEX's hash). Returns 0, or -1 on a bad slot.
-static int compute_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint8_t *cpub, size_t cpub_len,
-                                 const uint8_t *spub, size_t spub_len, const uint8_t *k_be, size_t k_len,
-                                 const uint8_t *ks, size_t ks_len, uint8_t out[SSH_KEXHASH_MAX_LEN], size_t *out_len,
-                                 proto_bool k_is_string, proto_bool is512)
+int ssh_kex_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint8_t *cpub, size_t cpub_len,
+                          const uint8_t *spub, size_t spub_len, const uint8_t *k_be, size_t k_len, const uint8_t *ks,
+                          size_t ks_len, uint8_t out[SSH_KEXHASH_MAX_LEN], size_t *out_len, proto_bool k_is_string,
+                          proto_bool is512)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -997,14 +1009,6 @@ static int compute_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint
     }
     *out_len = ssh_kexhash_final(&h, out);
     return 0;
-}
-
-int ssh_kex_exchange_hash(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, const uint8_t *k_be, const uint8_t *ks,
-                          size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN])
-{
-    size_t out_len = 0; // dh-group14-sha256 is always SHA-256
-    return compute_exchange_hash(i, PROTO_FALSE, e_be, 256, f_be, 256, k_be, 256, ks, ks_len, out, &out_len,
-                                 PROTO_FALSE, PROTO_FALSE);
 }
 
 // ---------------------------------------------------------------------------
@@ -1509,7 +1513,7 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
     const proto_bool is512 = kex_is_sha512(s->kex_alg);
     uint8_t H[SSH_KEXHASH_MAX_LEN];
     size_t h_len = 0;
-    compute_exchange_hash(i, pub_is_string, cpub_p, cpub_len, spub_p, spub_len, k_hash, k_hash_len, ks, ks_len, H,
+    ssh_kex_exchange_hash(i, pub_is_string, cpub_p, cpub_len, spub_p, spub_len, k_hash, k_hash_len, ks, ks_len, H,
                           &h_len, k_is_string, is512);
     if (!s->have_session_id)
     {

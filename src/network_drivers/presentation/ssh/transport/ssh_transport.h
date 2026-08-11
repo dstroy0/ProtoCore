@@ -155,6 +155,9 @@ typedef struct
     uint8_t *i_s;     ///< PC_SSH_KEXINIT_S_MAX: Server KEXINIT payload (for H).
     uint16_t i_s_len; ///< Length of i_s.
 
+    uint8_t *cpub;     ///< PC_SSH_CPUB_MAX: exchange value the client sent - e, Q_C or C_INIT (for H).
+    uint16_t cpub_len; ///< Length of cpub.
+
     uint8_t *session_id;        ///< SSH_KEXHASH_MAX_LEN: H from the first KEX (RFC 4253 §7.2); 32 or 64 bytes.
     uint8_t session_id_len;     ///< session_id length (the first KEX's exchange-hash length).
     proto_bool have_session_id; ///< True once the first KEX completes.
@@ -318,26 +321,35 @@ int ssh_kex_generate(uint8_t i);
 int ssh_extinfo_build(uint8_t *out, size_t *len, size_t cap);
 
 /**
- * @brief Compute the SSH exchange hash H (RFC 4253 §8).
+ * @brief Compute the SSH exchange hash H (RFC 4253 §8), the same value both ends derive.
  *
- *   H = SHA256( string(V_C) || string(V_S) || string(I_C) || string(I_S)
- *               || string(K_S) || mpint(e) || mpint(f) || mpint(K) )
+ *   H = HASH( string(V_C) || string(V_S) || string(I_C) || string(I_S)
+ *             || string(K_S) || e || f || K )
  *
- * V_C/V_S/I_C/I_S are taken from ssh_sess[i]; the rest are supplied. The
- * 256-byte big-endian integers are re-encoded as SSH mpints (minimal length,
- * leading 0x00 when the high bit is set).
+ * V_C/V_S/I_C/I_S are taken from ssh_sess[i]; the rest are supplied. The exchange values are SSH
+ * strings for an ECDH KEX (Q_C, Q_S; RFC 8731) or a hybrid (C_INIT, S_REPLY) and mpints for a
+ * finite-field DH KEX (e, f); K is a string for a hybrid and an mpint otherwise.
  *
- * @param[in]  i      SSH slot.
- * @param[in]  e_be   Client DH public value e (256-byte big-endian).
- * @param[in]  f_be   Server DH public value f (256-byte big-endian).
- * @param[in]  k_be   Shared secret K (256-byte big-endian).
- * @param[in]  ks     Server host-key blob K_S.
- * @param[in]  ks_len Length of @p ks.
- * @param[out] out    32-byte exchange hash.
+ * @param[in]  i             SSH slot.
+ * @param[in]  pub_is_string Hash @p cpub / @p spub as SSH strings rather than mpints.
+ * @param[in]  cpub          Exchange value the client sent, big-endian (e / Q_C / C_INIT).
+ * @param[in]  cpub_len      Length of @p cpub.
+ * @param[in]  spub          Exchange value the server sent (f / Q_S / S_REPLY).
+ * @param[in]  spub_len      Length of @p spub.
+ * @param[in]  k_be          Shared secret K, big-endian.
+ * @param[in]  k_len         Length of @p k_be.
+ * @param[in]  ks            Server host-key blob K_S.
+ * @param[in]  ks_len        Length of @p ks.
+ * @param[out] out           SSH_KEXHASH_MAX_LEN bytes; the hash occupies the first @p out_len.
+ * @param[out] out_len       Exchange-hash length, 32 or 64.
+ * @param[in]  k_is_string   Hash K as an SSH string rather than an mpint.
+ * @param[in]  is512         The negotiated KEX hashes with SHA-512 rather than SHA-256.
  * @return 0 on success, -1 on bad slot.
  */
-int ssh_kex_exchange_hash(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, const uint8_t *k_be, const uint8_t *ks,
-                          size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN]);
+int ssh_kex_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint8_t *cpub, size_t cpub_len,
+                          const uint8_t *spub, size_t spub_len, const uint8_t *k_be, size_t k_len, const uint8_t *ks,
+                          size_t ks_len, uint8_t out[SSH_KEXHASH_MAX_LEN], size_t *out_len, proto_bool k_is_string,
+                          proto_bool is512);
 
 /**
  * @brief Parse SSH_MSG_KEXDH_INIT, extracting the client DH value e.
@@ -480,8 +492,9 @@ typedef struct
     int (*kexinit_build)(uint8_t i, uint8_t *payload, size_t *len, size_t cap);
     int (*kexinit_parse)(uint8_t i, const uint8_t *payload, size_t len);
     int (*kex_generate)(uint8_t i);
-    int (*exchange_hash)(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, const uint8_t *k_be, const uint8_t *ks,
-                         size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN]);
+    int (*exchange_hash)(uint8_t i, proto_bool pub_is_string, const uint8_t *cpub, size_t cpub_len, const uint8_t *spub,
+                         size_t spub_len, const uint8_t *k_be, size_t k_len, const uint8_t *ks, size_t ks_len,
+                         uint8_t out[SSH_KEXHASH_MAX_LEN], size_t *out_len, proto_bool k_is_string, proto_bool is512);
     int (*kexdh)(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len, size_t cap);
     void (*newkeys_sent)(uint8_t i);
     int (*newkeys_recvd)(uint8_t i);
