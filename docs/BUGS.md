@@ -8,6 +8,20 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## ssh_scp.c does not compile: the mode enum is named by its short form
+
+- **Status:** FIXED 2026-08-11, validated by `native_scp_server` building and running 9/9.
+- **What broke:** `pc_scp_on_open` compared the parsed mode against bare `SINK` and `SOURCE`
+  (`ssh_scp.c:137`, `:146`). The enum in `scp.h:36-38` spells them `SCP_MODE_SINK` and
+  `SCP_MODE_SOURCE`, and no alias for the short forms exists anywhere. Any build with
+  `PC_ENABLE_SSH_SCP=1` failed with `error: 'SINK' undeclared`.
+- **Why it was never caught:** the same gap that hid the `ssh_forward.c` defect - no environment in
+  `test_matrix.json` compiled the file. Both SSH file-transfer bindings were unbuilt, and one of the
+  two did not compile.
+- **Fix:** name the enum members as the header declares them.
+- **Reach:** compile-time only, and only when the feature is on. `PC_ENABLE_SSH_SCP` defaults to 0,
+  so no shipped default configuration was affected.
+
 ## SFTP: SSH_FXP_VERSION ignores the client's version instead of answering the lower of the two
 
 - **Status:** OPEN. Found while standing up the first environment that compiles
