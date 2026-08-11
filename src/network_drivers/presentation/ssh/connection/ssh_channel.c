@@ -673,12 +673,9 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
 
     // Replenish the window once it drops below half.
     uint32_t add = 0;
-    if (cap >= 9 && pc_ssh_flow_replenish_due(&c->flow, &add))
+    if (pc_ssh_flow_replenish_due(&c->flow, &add) &&
+        pc_ssh_sig_build_window_adjust(c->peer_id, add, out, cap, out_len) == 0)
     {
-        out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
-        pc_wr32be(out + 1, c->peer_id);
-        pc_wr32be(out + 5, add);
-        *out_len = 9;
         pc_ssh_flow_local_credit(&c->flow, add); // the caller emits *out_len unconditionally
     }
     return 0;
@@ -719,12 +716,9 @@ int pc_ssh_channel_handle_extended_data(uint8_t i, const uint8_t *payload, size_
 
     // Replenish the window once it drops below half.
     uint32_t add = 0;
-    if (cap >= 9 && pc_ssh_flow_replenish_due(&c->flow, &add))
+    if (pc_ssh_flow_replenish_due(&c->flow, &add) &&
+        pc_ssh_sig_build_window_adjust(c->peer_id, add, out, cap, out_len) == 0)
     {
-        out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
-        pc_wr32be(out + 1, c->peer_id);
-        pc_wr32be(out + 5, add);
-        *out_len = 9;
         pc_ssh_flow_local_credit(&c->flow, add); // the caller emits *out_len unconditionally
     }
     return 0;
