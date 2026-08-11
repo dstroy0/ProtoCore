@@ -78,18 +78,6 @@ static uint8_t *cli_crypto_work(void)
 // run in software on every variant.
 static const char NAME_ED25519[] = "ssh-ed25519";
 
-// The exchange hash + RFC 4253 sec 7.2 KDF run over SHA-512 for the -sha512 methods
-// (sntrup761x25519-sha512), SHA-256 for every other method (RFC 4253 sec 8).
-static inline proto_bool cli_kex_is_sha512(SshKexAlg k)
-{
-#if PC_ENABLE_SSH_SNTRUP761
-    return k == SSH_KEX_SNTRUP761_X25519;
-#else
-    (void)k;
-    return PROTO_FALSE;
-#endif
-}
-
 // ---------------------------------------------------------------------------
 // Wire helpers (SSH data types, RFC 4251 §5)
 // ---------------------------------------------------------------------------
@@ -771,7 +759,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     size_t h_len = 0;
     if (SSH_TRANSPORT->exchange_hash(SSH_CLI_SLOT, pub_is_string, hs->cpub, hs->cpub_len, srv_pub, sp_len, k_hash,
                                      k_hash_len, ks, ks_len, H, &h_len, k_is_string,
-                                     cli_kex_is_sha512(s_cli.kex)) != 0)
+                                     ssh_kex_is_sha512(s_cli.kex)) != 0)
     {
         pc_secure_wipe(k_be, sizeof(k_be));
         return PROTO_FALSE;
@@ -795,7 +783,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     // cipher/MAC; the packet layer's is_client flag selects the send/receive direction. The hybrids
     // encode K as a fixed 32/64-byte string (k_is_string); the classical methods as an mpint. The
     // -sha512 method derives over SHA-512 (is512), so H and the session_id are 64 bytes.
-    const proto_bool is512 = cli_kex_is_sha512(s_cli.kex);
+    const proto_bool is512 = ssh_kex_is_sha512(s_cli.kex);
     const SshKdfInputs kdf_in = {.work = cli_crypto_work(),
                                  .K_be = k_be,
                                  .H = H,

@@ -953,8 +953,7 @@ void hash_mpint(SshKexHash *h, const uint8_t *be, size_t len)
     ssh_kexhash_update(h, be + off, len - off);
 }
 
-// The exchange-hash algorithm for a KEX method: SHA-512 for sntrup761x25519-sha512, else SHA-256.
-static inline proto_bool kex_is_sha512(SshKexAlg a)
+proto_bool ssh_kex_is_sha512(SshKexAlg a)
 {
     return a == SSH_KEX_SNTRUP761_X25519;
 }
@@ -1510,7 +1509,7 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
     }
 
     // 3. Exchange hash H (SHA-256 or SHA-512 per the KEX method); capture the session id on first KEX.
-    const proto_bool is512 = kex_is_sha512(s->kex_alg);
+    const proto_bool is512 = ssh_kex_is_sha512(s->kex_alg);
     uint8_t H[SSH_KEXHASH_MAX_LEN];
     size_t h_len = 0;
     ssh_kex_exchange_hash(i, pub_is_string, cpub_p, cpub_len, spub_p, spub_len, k_hash, k_hash_len, ks, ks_len, H,
