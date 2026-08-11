@@ -224,6 +224,7 @@ void test_kexinit_parse_accepts_supported()
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256", "aes256-ctr", "hmac-sha2-256",
                                     "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_PHASE_DH_INIT, ssh_sess[0].phase);
     TEST_ASSERT_EQUAL_size_t(n, ssh_sess[0].i_c_len);
@@ -231,10 +232,14 @@ void test_kexinit_parse_accepts_supported()
 
 void test_kexinit_parse_accepts_when_ours_listed_among_others()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n =
         build_client_kexinit(buf, "curve25519-sha256,diffie-hellman-group14-sha256", "ssh-ed25519,rsa-sha2-256",
                              "chacha20-poly1305@openssh.com,aes256-ctr", "hmac-sha2-512,hmac-sha2-256", "none,zlib");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
 }
 
@@ -261,11 +266,15 @@ void test_kexinit_parse_rejects_hostkey_we_lack()
 // curve25519-sha256 + ssh-ed25519 when the client offers both suites.
 void test_kexinit_parse_steers_to_curve_ed25519()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     pc_ssh_hostkey_ed25519_set(BASELINE_ED25519_SEEDS[0]); // deterministic baseline host key
     ssh_kex_set_prefer_rsa(PROTO_FALSE);
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "curve25519-sha256,diffie-hellman-group14-sha256", "ssh-ed25519,rsa-sha2-256",
                                     "aes256-ctr", "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_KEX_CURVE25519, ssh_sess[0].kex_alg);
     TEST_ASSERT_EQUAL(SSH_HOSTKEY_ED25519, ssh_sess[0].hostkey_alg);
@@ -285,9 +294,13 @@ void test_kexinit_parse_rejects_missing_cipher()
 // and the AEAD cipher is selected (no separate MAC required).
 void test_kexinit_parse_selects_chacha20poly1305()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256",
                                     "chacha20-poly1305@openssh.com", "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_s2c);
@@ -298,9 +311,13 @@ void test_kexinit_parse_selects_chacha20poly1305()
 // client that lists gcm first gets gcm.
 void test_kexinit_parse_selects_aes256gcm()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256", "aes256-gcm@openssh.com",
                                     "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg_s2c);
@@ -308,6 +325,7 @@ void test_kexinit_parse_selects_aes256gcm()
     // Client preference (RFC 4253 §7.1): the client's first offered cipher we support wins - gcm before ctr.
     n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256", "aes256-gcm@openssh.com,aes256-ctr",
                              "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256GCM, ssh_sess[0].cipher_alg_s2c);
@@ -319,9 +337,13 @@ void test_kexinit_parse_selects_aes256gcm()
 // from the client's, so the two sides disagreed on the algorithm.)
 void test_kexinit_parse_honors_client_cipher_preference()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256",
                                     "aes256-ctr,chacha20-poly1305@openssh.com", "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_s2c);
@@ -331,23 +353,29 @@ void test_kexinit_parse_honors_client_cipher_preference()
 // server prefers rsa-sha2-512; each is selected when offered alone (both gated on the RSA key).
 void test_kexinit_parse_selects_rsa_sha512()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t buf[SSH_KEXINIT_MAX];
 
     // Both offered -> rsa-sha2-512 wins (server preference).
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-512,rsa-sha2-256", "aes256-ctr",
                                     "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_HOSTKEY_RSA_SHA512, ssh_sess[0].hostkey_alg);
 
     // Only rsa-sha2-256 offered -> SHA-256 selected.
     n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-256", "aes256-ctr", "hmac-sha2-256",
                              "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_HOSTKEY_RSA_SHA256, ssh_sess[0].hostkey_alg);
 
     // Only rsa-sha2-512 offered -> accepted (same key), SHA-512 selected.
     n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "rsa-sha2-512", "aes256-ctr", "hmac-sha2-256",
                              "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_HOSTKEY_RSA_SHA512, ssh_sess[0].hostkey_alg);
 }
@@ -356,6 +384,9 @@ void test_kexinit_parse_selects_rsa_sha512()
 // and a client offering only it selects it.
 void test_kexinit_parse_selects_ecdsa()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t ec_priv[32];
     memset(ec_priv, 0, 32);
     ec_priv[31] = 0x42;
@@ -365,6 +396,7 @@ void test_kexinit_parse_selects_ecdsa()
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "ecdsa-sha2-nistp256", "aes256-ctr",
                                     "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_HOSTKEY_ECDSA_NISTP256, ssh_sess[0].hostkey_alg);
 }
@@ -373,9 +405,13 @@ void test_kexinit_parse_selects_ecdsa()
 // only it selects it (independent of the host-key type).
 void test_kexinit_parse_selects_ecdh_nistp256()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     pc_ssh_hostkey_ed25519_set(BASELINE_ED25519_SEEDS[0]); // any host key so negotiation can complete
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "ecdh-sha2-nistp256", "ssh-ed25519", "aes256-ctr", "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_KEX_ECDH_NISTP256, ssh_sess[0].kex_alg);
 }
@@ -384,9 +420,13 @@ void test_kexinit_parse_selects_ecdh_nistp256()
 // it selected and its exact mode recorded.
 void test_kexinit_parse_selects_etm_mac()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "diffie-hellman-group14-sha256", "ssh-ed25519,rsa-sha2-256", "aes256-ctr",
                                     "hmac-sha2-512-etm@openssh.com,hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_s2c);
@@ -612,7 +652,7 @@ void test_kexdh_handle_produces_reply_and_installs_keys()
     TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, reply[0]);
     TEST_ASSERT_TRUE(ssh_sess[0].have_session_id);
     TEST_ASSERT_EQUAL(SSH_PHASE_NEWKEYS, ssh_sess[0].phase);
-    TEST_ASSERT_TRUE(ssh_keys[0].active);
+    TEST_ASSERT_TRUE(ssh_keys[0][1u - ssh_sess[0].out.epoch].active);
 
     proto_bool alg = PROTO_FALSE;
     for (size_t k = 0; k + 12 <= rlen; k++)
@@ -729,7 +769,7 @@ void test_kexdh_handle_curve25519_ed25519_end_to_end()
         TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, reply[0]);
         TEST_ASSERT_TRUE(s->have_session_id);
         TEST_ASSERT_EQUAL(SSH_PHASE_NEWKEYS, s->phase);
-        TEST_ASSERT_TRUE(ssh_keys[0].active);
+        TEST_ASSERT_TRUE(ssh_keys[0][1u - ssh_sess[0].out.epoch].active);
 
         // Parse reply: string(K_S) || string(Q_S) || string(sigblob).
         size_t off = 1;
@@ -845,7 +885,7 @@ void test_kexdh_handle_ecdh_nistp256_end_to_end()
     TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, reply[0]);
     TEST_ASSERT_TRUE(s->have_session_id);
     TEST_ASSERT_EQUAL(SSH_PHASE_NEWKEYS, s->phase);
-    TEST_ASSERT_TRUE(ssh_keys[0].active);
+    TEST_ASSERT_TRUE(ssh_keys[0][1u - ssh_sess[0].out.epoch].active);
 
     // Parse reply: string(K_S) || string(Q_S) || string(sigblob).
     size_t off = 1;
@@ -1152,16 +1192,16 @@ void test_derive_keys_session_id_affects_output()
                         .is512 = PROTO_FALSE};
     ssh_dh_derive_keys_sid(0, &kin);
     uint8_t a[32];
-    memcpy(a, ssh_keys[0].mac_key_c2s, 32);
+    memcpy(a, ssh_keys[0][1u - ssh_sess[0].out.epoch].mac_key_c2s, 32);
 
     kin.session_id = sid;
     ssh_dh_derive_keys_sid(0, &kin);
-    TEST_ASSERT_NOT_EQUAL(0, memcmp(a, ssh_keys[0].mac_key_c2s, 32));
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(a, ssh_keys[0][1u - ssh_sess[0].out.epoch].mac_key_c2s, 32));
 
     // Deterministic: same inputs reproduce the same key.
     kin.session_id = H;
     ssh_dh_derive_keys_sid(0, &kin);
-    TEST_ASSERT_EQUAL_MEMORY(a, ssh_keys[0].mac_key_c2s, 32);
+    TEST_ASSERT_EQUAL_MEMORY(a, ssh_keys[0][1u - ssh_sess[0].out.epoch].mac_key_c2s, 32);
 }
 
 // RFC 4253 sec 7.2 binds each of the six derived values to its own label and direction: 'A'/'B' the
@@ -1196,26 +1236,26 @@ void test_derive_binds_every_label_to_its_direction()
                               .k_is_string = PROTO_FALSE,
                               .is512 = PROTO_FALSE};
     ssh_dh_derive_keys_sid(0, &kin);
-    TEST_ASSERT_TRUE(ssh_keys[0].active);
+    TEST_ASSERT_TRUE(ssh_keys[0][1u - ssh_sess[0].out.epoch].active);
 
     uint8_t want[PC_SHA256_DIGEST_LEN];
     ssh_kdf_derive(&kin, 'A', want, PC_AES256CTR_CTR_LEN);
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].aes_iv_c2s, PC_AES256CTR_CTR_LEN);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_iv_c2s, PC_AES256CTR_CTR_LEN);
     ssh_kdf_derive(&kin, 'B', want, PC_AES256CTR_CTR_LEN);
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].aes_iv_s2c, PC_AES256CTR_CTR_LEN);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_iv_s2c, PC_AES256CTR_CTR_LEN);
     ssh_kdf_derive(&kin, 'C', want, PC_AES256CTR_KEY_LEN);
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].aes_key_c2s, PC_AES256CTR_KEY_LEN);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_key_c2s, PC_AES256CTR_KEY_LEN);
     ssh_kdf_derive(&kin, 'D', want, PC_AES256CTR_KEY_LEN);
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].aes_key_s2c, PC_AES256CTR_KEY_LEN);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_key_s2c, PC_AES256CTR_KEY_LEN);
     ssh_kdf_derive(&kin, 'E', want, 32);
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].mac_key_c2s, 32);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0][1u - ssh_sess[0].out.epoch].mac_key_c2s, 32);
     ssh_kdf_derive(&kin, 'F', want, 32);
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0].mac_key_s2c, 32);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ssh_keys[0][1u - ssh_sess[0].out.epoch].mac_key_s2c, 32);
 
     // And the six are actually distinct, so an all-same-material bug could not satisfy the above.
-    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0].aes_iv_c2s, ssh_keys[0].aes_iv_s2c, PC_AES256CTR_CTR_LEN));
-    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0].aes_key_c2s, ssh_keys[0].aes_key_s2c, PC_AES256CTR_KEY_LEN));
-    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0].mac_key_c2s, ssh_keys[0].mac_key_s2c, 32));
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_iv_c2s, ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_iv_s2c, PC_AES256CTR_CTR_LEN));
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_key_c2s, ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_key_s2c, PC_AES256CTR_KEY_LEN));
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(ssh_keys[0][1u - ssh_sess[0].out.epoch].mac_key_c2s, ssh_keys[0][1u - ssh_sess[0].out.epoch].mac_key_s2c, 32));
 }
 
 // RFC 3526 sec 3 publishes the 2048-bit MODP prime and generator 2. In the library it is 64 raw
@@ -1311,7 +1351,12 @@ void test_begin_rekey_preserves_session_and_auth()
     TEST_ASSERT_TRUE(ssh_sess[0].authed);
 
     // After the re-key completes, an authenticated connection resumes OPEN.
-    ssh_newkeys_complete(0);
+    //
+    // RFC 4253 sec 7.3: NEWKEYS ends a key exchange, so ssh_newkeys_complete refuses to end one in
+    // any other phase. The exchange this test opened is not driven to completion here, so the phase
+    // is placed where a driven one would leave it: awaiting the peer's NEWKEYS.
+    ssh_sess[0].phase = SSH_PHASE_NEWKEYS;
+    TEST_ASSERT_EQUAL_INT(0, ssh_newkeys_complete(0));
     TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, ssh_sess[0].phase);
 }
 
@@ -1516,9 +1561,9 @@ void test_kdf_edge_paths_and_slot_guards()
     ssh_sess[0].cipher_alg_s2c = SSH_CIPHER_CHACHA20POLY1305;
     kin.K_be = K;
     ssh_dh_derive_keys_sid(0, &kin);
-    TEST_ASSERT_TRUE(ssh_keys[0].active);
-    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode_c2s);
-    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode_s2c);
+    TEST_ASSERT_TRUE(ssh_keys[0][1u - ssh_sess[0].out.epoch].active);
+    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0][1u - ssh_sess[0].out.epoch].cipher_mode_c2s);
+    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0][1u - ssh_sess[0].out.epoch].cipher_mode_s2c);
 }
 
 // KEXINIT truncated after each name-list boundary is rejected at the corresponding read.
@@ -1553,6 +1598,7 @@ void test_ssh_transport_more_guards()
     // Negotiate curve25519 so ssh_kexdh_handle takes the ECDH branch, then feed a malformed ECDH_INIT.
     uint8_t buf[256];
     size_t n = build_client_kexinit(buf, "curve25519-sha256", "rsa-sha2-256", "aes256-ctr", "hmac-sha2-256", "none");
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL_INT(0, ssh_kex_generate(0));
     uint8_t reply[1024];
@@ -1594,9 +1640,9 @@ void test_dh_derive_keys_gcm_installs()
                               .k_is_string = PROTO_FALSE,
                               .is512 = PROTO_FALSE};
     ssh_dh_derive_keys_sid(0, &kin);
-    TEST_ASSERT_TRUE(ssh_keys[0].active);
-    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode_c2s);
-    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode_s2c);
+    TEST_ASSERT_TRUE(ssh_keys[0][1u - ssh_sess[0].out.epoch].active);
+    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0][1u - ssh_sess[0].out.epoch].cipher_mode_c2s);
+    TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0][1u - ssh_sess[0].out.epoch].cipher_mode_s2c);
 
     // Independently derive the C->S key ('C') + IV ('A') and the S->C key ('D') + IV ('B').
     uint8_t iv_c[PC_SHA256_DIGEST_LEN];
@@ -1621,12 +1667,12 @@ void test_dh_derive_keys_gcm_installs()
     // (there is no raw GCM key in the keymat - install builds the context and wipes the key). Identical
     // output proves the installed context is correct, not merely that two copies of a key matched.
     pc_aesgcm_seal(gcm_key(key_c), iv_c, aad, sizeof(aad), pt, sizeof(pt), seal_ref, seal_ref + sizeof(pt));
-    pc_aesgcm_seal((struct pc_aesgcm_key *)(ssh_keys[0].gcm_ctx_c2s), ssh_keys[0].aes_iv_c2s, aad, sizeof(aad), pt,
+    pc_aesgcm_seal((struct pc_aesgcm_key *)(ssh_keys[0][1u - ssh_sess[0].out.epoch].gcm_ctx_c2s), ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_iv_c2s, aad, sizeof(aad), pt,
                    sizeof(pt), seal_km, seal_km + sizeof(pt));
     TEST_ASSERT_EQUAL_MEMORY(seal_ref, seal_km, sizeof(seal_ref)); // C->S key + IV byte-correct
 
     pc_aesgcm_seal(gcm_key(key_s), iv_s, aad, sizeof(aad), pt, sizeof(pt), seal_ref, seal_ref + sizeof(pt));
-    pc_aesgcm_seal((struct pc_aesgcm_key *)(ssh_keys[0].gcm_ctx_s2c), ssh_keys[0].aes_iv_s2c, aad, sizeof(aad), pt,
+    pc_aesgcm_seal((struct pc_aesgcm_key *)(ssh_keys[0][1u - ssh_sess[0].out.epoch].gcm_ctx_s2c), ssh_keys[0][1u - ssh_sess[0].out.epoch].aes_iv_s2c, aad, sizeof(aad), pt,
                    sizeof(pt), seal_km, seal_km + sizeof(pt));
     TEST_ASSERT_EQUAL_MEMORY(seal_ref, seal_km, sizeof(seal_ref)); // S->C key + IV byte-correct
 
@@ -1698,6 +1744,7 @@ static void test_cyclonessh_kex_repro(void)
     strcpy(s->v_c, vc);
     s->v_c_len = (uint16_t)strlen(vc);
 
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, CYCLONE_KEXINIT, sizeof(CYCLONE_KEXINIT)));
     // The bug this pins is the server negotiating by ITS order. Returning 0 does not exclude that:
     // with prefer_rsa set it would land on group14, whose parser reads the client's 32-byte Q_C as a
@@ -1741,6 +1788,9 @@ void test_hostkey_ecdsa_set_rejects_invalid_scalar()
 // offering different algorithms per direction is keyed asymmetrically rather than rejected.
 void test_kexinit_parse_negotiates_each_direction()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     ssh_transport_init(0);
     uint8_t buf[512];
     const char *K = "diffie-hellman-group14-sha256";
@@ -1752,6 +1802,7 @@ void test_kexinit_parse_negotiates_each_direction()
     const char *cipher_split[8] = {
         K, H, "aes256-ctr", "chacha20-poly1305@openssh.com", "hmac-sha2-256", "hmac-sha2-256", P, P};
     size_t n = build_kexinit8(buf, cipher_split);
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_s2c);
@@ -1760,6 +1811,7 @@ void test_kexinit_parse_negotiates_each_direction()
     ssh_transport_init(0);
     const char *mac_split[8] = {K, H, "aes256-ctr", "aes256-ctr", "hmac-sha2-256", "hmac-sha2-512", P, P};
     n = build_kexinit8(buf, mac_split);
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA256, ssh_sess[0].mac_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA512, ssh_sess[0].mac_alg_s2c);
@@ -1771,6 +1823,9 @@ void test_kexinit_parse_negotiates_each_direction()
 // undetected. Each list here is ordered so the two rules give different answers.
 void test_kexinit_parse_honors_client_preference_everywhere()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     uint8_t buf[512];
     const char *P = "none";
 
@@ -1788,6 +1843,7 @@ void test_kexinit_parse_honors_client_preference_everywhere()
                                    P,
                                    P};
     size_t n = build_kexinit8(buf, client_first);
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_KEX_CURVE25519, ssh_sess[0].kex_alg);
     TEST_ASSERT_EQUAL(SSH_HOSTKEY_ED25519, ssh_sess[0].hostkey_alg);
@@ -1803,6 +1859,7 @@ void test_kexinit_parse_honors_client_preference_everywhere()
                                       P,
                                       P};
     n = build_kexinit8(buf, plain_mac_first);
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA256, ssh_sess[0].mac_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_MAC_HMAC_SHA256, ssh_sess[0].mac_alg_s2c);
@@ -1813,6 +1870,9 @@ void test_kexinit_parse_honors_client_preference_everywhere()
 // the key exchange.
 void test_kexinit_parse_aead_ignores_mac_lists()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     ssh_transport_init(0);
     uint8_t buf[512];
     const char *rows[8] = {"diffie-hellman-group14-sha256",
@@ -1824,6 +1884,7 @@ void test_kexinit_parse_aead_ignores_mac_lists()
                            "none",
                            "none"};
     size_t n = build_kexinit8(buf, rows);
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_CIPHER_CHACHA20POLY1305, ssh_sess[0].cipher_alg_s2c);
@@ -1834,6 +1895,9 @@ void test_kexinit_parse_aead_ignores_mac_lists()
 // "zlib" the length of "none", so a length-only comparison would mis-match both.
 void test_kexinit_parse_same_length_names_do_not_match()
 {
+    // RFC 4253 sec 4.2: the identification strings are exchanged before any KEXINIT, so the
+    // session is past BANNER by the time one arrives (ssh_transport.c:638 refuses it otherwise).
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     ssh_transport_init(0);
     uint8_t buf[512];
     const char *K = "diffie-hellman-group14-sha256";
@@ -1843,6 +1907,7 @@ void test_kexinit_parse_same_length_names_do_not_match()
     // The same-length impostor is skipped and negotiation lands on the real name behind it.
     const char *rows[8] = {K, H, "aes256-abc,aes256-ctr", "aes256-abc,aes256-ctr", M, M, "zlib,none", "zlib,none"};
     size_t n = build_kexinit8(buf, rows);
+    ssh_sess[0].phase = SSH_PHASE_KEXINIT;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_c2s);
     TEST_ASSERT_EQUAL(SSH_CIPHER_AES256CTR, ssh_sess[0].cipher_alg_s2c);
