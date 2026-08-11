@@ -8,6 +8,53 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## RFC 4253 sec 7.1: ssh_kexinit_parse negotiates as the server in both roles, so the client can never complete a key exchange
+
+- **Status:** FIXED 2026-08-11, validated by `native_ssh_client` running 11/11 and the other 16 SSH
+  environments running 242 cases with no change. Found by building `native_ssh_client` with
+  `-DPC_LOG_LEVEL=PC_LOG_LEVEL_WARN` (reverted after), which printed the client's own `cli_fail`
+  reason: `ssh-tunnel: KEXINIT negotiation failed`.
+- **Oracle:** RFC 4253 sec 7.1, `server_host_key_algorithms`: "The server lists the algorithms for
+  which it has host keys; the client lists the algorithms that it is willing to accept." And on
+  selection: "Iterate over client's kex algorithms, one at a time. Choose the first algorithm that
+  satisfies the following conditions: the server also supports the algorithm, ..."
+- **What happens:** `ssh_kexinit_parse` (`ssh_transport.c:622`) is reached by both roles through
+  `SSH_TRANSPORT->kexinit_parse`, and reads the incoming KEXINIT as if it were always the client's.
+  Two consequences, both role-blind:
+    1. `negotiate_hostkey` (`ssh_transport.c:592`) builds its candidate table from
+       `hostkey_rsa_available()` / `pc_ssh_hostkey_ed25519_available()` /
+       `pc_ssh_hostkey_ecdsa_available()`, and `cand_match` (`:330`) requires `cands[c].avail`. A
+       client holds no host key of its own - it pins the relay's - so every candidate is unavailable
+       and the call returns -1 for any name-list the relay could send.
+    2. `negotiate_alg` (`:351`) iterates the _incoming_ name-list. In the client role that is the
+       server's list, in the server's preference order, rather than the client's own.
+- **Measured:** `test_diag_hostkey_availability_gates_client_negotiation`. With no host key held,
+  the tunnel reaches `PC_TUN_FAILED` on the first poll after the relay's KEXINIT with 0 bytes
+  written. Calling `pc_ssh_hostkey_ed25519_set()` - provisioning the _device_ with a server host
+  key a client has no use for - is the only change, and the same handshake then reaches
+  `PC_TUN_CONNECTING` and writes 48 bytes whose first message byte is 30 (`SSH_MSG_KEXDH_INIT`).
+- **Consequence:** `PC_ENABLE_SSH_CLIENT` cannot complete a key exchange against any relay unless
+  the device happens to have been provisioned as an SSH server as well. The reverse tunnel is the
+  whole point of the feature, so the feature does not work in its own configuration.
+- **Why it was never caught:** no environment compiled `ssh_client.c` against a peer.
+  `native_ssh_client` covered the state API, the cfg guard and the key derivation; nothing drove a
+  KEXINIT into it. `test/servers/peers/ssh_peer.py` drives the device as a _server_, so the client
+  role has never met a KEXINIT from anything.
+- **The defect is the shape, not the gate.** RFC 4253 sec 7.1 states one rule per category, and it
+  takes two name-lists: iterate the client's, choose the first the server also supports (kex line
+  940, host key 981, encryption 989, MAC 1000, compression 1017). `negotiate_alg` takes one list
+  plus a local capability table. In the server role that substitution is exact - the incoming list
+  is the client's and the table is what the server supports. In the client role neither holds. The
+  `avail` gate is where it fails first and is what was measured; it is not the whole of it. A client
+  that got past it would still take the _server's_ first preference in every category, which no
+  line of sec 7.1 permits.
+- **Not fixed:** the client role has no negotiation of its own, and the server's parse is being
+  reused for it. Where the client's belongs is the owner's call.
+- **Also unverified:** `ssh_kexinit_parse:649` stores the incoming KEXINIT into `s->i_c`. In the
+  client role the incoming one is I_S. `ssh_client.c` keeps its own `s_cli.i_c` / `s_cli.i_s` and
+  does not call `compute_exchange_hash` (which is static and hardcodes `V_S`), so this looks inert
+  on the client path; I have not traced every reader of `ssh_sess[].i_c` to be sure.
+
 ## ssh_scp.c does not compile: the mode enum is named by its short form
 
 - **Status:** FIXED 2026-08-11, validated by `native_scp_server` building and running 9/9.

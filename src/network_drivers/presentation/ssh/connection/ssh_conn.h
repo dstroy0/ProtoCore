@@ -54,7 +54,8 @@
 // constants: the values that persist across messages to compute the exchange hash H, and the
 // session id the first KEX fixes (RFC 4253 sec 7.2).
 #define SSH_OFF_V_C (SSH_OFF_DH_K + sizeof(pc_bignum))
-#define SSH_OFF_BANNER (SSH_OFF_V_C + SSH_VERSION_MAX)
+#define SSH_OFF_V_S (SSH_OFF_V_C + SSH_VERSION_MAX)
+#define SSH_OFF_BANNER (SSH_OFF_V_S + SSH_VERSION_MAX)
 #define SSH_OFF_I_C (SSH_OFF_BANNER + SSH_VERSION_MAX)
 #define SSH_OFF_I_S (SSH_OFF_I_C + SSH_KEXINIT_MAX)
 #define SSH_OFF_SESSION_ID (SSH_OFF_I_S + PC_SSH_KEXINIT_S_MAX)

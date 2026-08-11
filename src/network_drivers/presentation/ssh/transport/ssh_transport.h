@@ -61,6 +61,9 @@ PROTO_BEGIN_DECLS
 /** @brief Server identification string (no CR LF; appended on the wire). */
 #define SSH_SERVER_VERSION "SSH-2.0-1.0"
 
+/** @brief Client identification string (no CR LF; appended on the wire). */
+#define SSH_CLIENT_VERSION "SSH-2.0-PC_client_1.0"
+
 // ---------------------------------------------------------------------------
 // Handshake phase
 // ---------------------------------------------------------------------------
@@ -128,6 +131,8 @@ typedef struct
 
     char *v_c;        ///< SSH_VERSION_MAX: Client identification string (no CR LF).
     uint16_t v_c_len; ///< Length of v_c.
+    char *v_s;        ///< SSH_VERSION_MAX: Server identification string (no CR LF).
+    uint16_t v_s_len; ///< Length of v_s.
 
     uint8_t *banner_buf; ///< SSH_VERSION_MAX: Accumulator for the inbound banner.
     uint16_t banner_len; ///< Bytes buffered in banner_buf.
@@ -170,21 +175,25 @@ extern SshSession ssh_sess[MAX_SSH_CONNS];
 void ssh_transport_init(uint8_t i);
 
 /**
- * @brief Write the server identification string ("SSH-2.0-…\r\n") to @p out.
+ * @brief Write our identification string ("SSH-2.0-…\r\n") to @p out and keep it for H.
  *
  * Sent verbatim (not inside a binary packet) at connection start, before any
- * KEXINIT. The CR LF is included on the wire but excluded from V_S used in H.
+ * KEXINIT. The CR LF is included on the wire but excluded from the copy kept.
+ * Slot @p i's role picks which string is ours and which field holds it: a
+ * client sends SSH_CLIENT_VERSION and keeps it as V_C, a server sends
+ * SSH_SERVER_VERSION and keeps it as V_S.
  *
- * @return 0 on success, -1 if @p cap is too small.
+ * @return 0 on success, -1 on a bad slot or if @p cap is too small.
  */
-int ssh_transport_server_banner(uint8_t *out, size_t *out_len, size_t cap);
+int ssh_transport_send_banner(uint8_t i, uint8_t *out, size_t *out_len, size_t cap);
 
 /**
- * @brief Feed raw bytes while awaiting the client identification string.
+ * @brief Feed raw bytes while awaiting the peer's identification string.
  *
  * Accumulates bytes until a CR LF (or bare LF) terminates a line beginning
  * with "SSH-". Earlier non-SSH lines (allowed by RFC 4253 §4.2) are skipped.
- * On completion the client version (without CR LF) is stored in v_c.
+ * On completion the peer's version (without CR LF) is stored in the field slot
+ * @p i's role does not send: a server stores V_C, a client stores V_S.
  *
  * @param[in]  i         SSH slot.
  * @param[in]  data      Inbound bytes.
@@ -454,7 +463,7 @@ int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, size_t c
 typedef struct
 {
     int (*recv_banner)(uint8_t i, const uint8_t *data, size_t len, size_t *consumed);
-    int (*send_banner)(uint8_t *out, size_t *out_len, size_t cap);
+    int (*send_banner)(uint8_t i, uint8_t *out, size_t *out_len, size_t cap);
     int (*kexinit_build)(uint8_t i, uint8_t *payload, size_t *len, size_t cap);
     int (*kexinit_parse)(uint8_t i, const uint8_t *payload, size_t len);
     int (*kex_generate)(uint8_t i);

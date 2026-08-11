@@ -11,10 +11,10 @@
  */
 
 #include "network_drivers/presentation/ssh/ssh_client.h"
-#include "mmgr/bytes.h"     // pc_mpint_to_fixed
+#include "mmgr/bytes.h"      // pc_mpint_to_fixed
 #include "mmgr/protoframe.h" // the one frame engine
-#include "mmgr/rawmemcpy.h"  // proto_raw_put_u32 - one unaligned store, not four
 #include "mmgr/protomem.h"
+#include "mmgr/rawmemcpy.h" // proto_raw_put_u32 - one unaligned store, not four
 #include "mmgr/secure.h"
 
 #if PC_ENABLE_SSH_CLIENT
@@ -26,14 +26,14 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/rng/rng.h"                                               // pc_rand_fill
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"               // SSH_MSG_USERAUTH_*
-#include "network_drivers/presentation/ssh/connection/ssh_channel.h" // ssh_chan[], pc_ssh_chan_by_id/_alloc
+#include "network_drivers/presentation/ssh/connection/ssh_channel.h"      // ssh_chan[], pc_ssh_chan_by_id/_alloc
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h" // SSH_MSG_CHANNEL_*, SSH_MSG_GLOBAL_REQUEST
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"            // ssh_dh_derive_keys_sid
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // SshTransport, the RFC 4253 member set
-#include "network_drivers/tls/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
-#include "network_drivers/tls/ssh_rsa.h"     // rsa-sha2-256/512 host-key verify
+#include "network_drivers/tls/ssh_kexhash.h"                          // SshKexHash (SHA-256/SHA-512 by method)
+#include "network_drivers/tls/ssh_rsa.h"                              // rsa-sha2-256/512 host-key verify
 #include "shared_primitives/log.h"
 
 #if PC_ENABLE_PQC_KEX
@@ -53,8 +53,6 @@
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-static const char CLIENT_BANNER[] = "SSH-2.0-PC_client_1.0";
 
 #define SSH_CLI_SLOT 0 // the SSH packet/key pool slot the client borrows (MAX_SSH_CONNS >= 1)
 
@@ -183,8 +181,8 @@ typedef struct
 
     SshKexAlg kex;         ///< negotiated key exchange.
     SshHostkeyAlg hostkey; ///< negotiated host-key / signature type.
-    uint8_t cipher;     ///< negotiated SSH_CIPHER_*.
-    uint8_t mac;        ///< negotiated SSH_MAC_* (used only when cipher == aes256-ctr).
+    uint8_t cipher;        ///< negotiated SSH_CIPHER_*.
+    uint8_t mac;           ///< negotiated SSH_MAC_* (used only when cipher == aes256-ctr).
 
     uint8_t kex_priv[32]; ///< our KEX private: X25519 scalar / P-256 d / DH exponent (wiped after K).
     uint8_t qc[256];      ///< our KEX public Q_C: 32 (curve/hybrid X25519) / 65 (ecdh) / 256 (DH e, big-endian).
@@ -203,11 +201,6 @@ typedef struct
 #endif
     } hyb;
 #endif
-
-    char v_s[256]; ///< server identification string (no CR LF).
-    uint16_t v_s_len;
-    uint8_t banner[256]; ///< inbound banner accumulator.
-    uint16_t banner_len;
 
     uint8_t i_c[768]; ///< our KEXINIT payload (for H) - the full advertised suite is ~520 bytes.
     uint16_t i_c_len;
@@ -259,7 +252,8 @@ static CliChannel *bridge_alloc(void)
 static proto_bool cli_send(const uint8_t *payload, size_t len)
 {
     size_t wlen = 0;
-    if (ssh_pkt_send(SSH_CLI_SLOT, payload, len, s_cli.wire, &wlen, sizeof(s_cli.wire), &ssh_sess[SSH_CLI_SLOT].out) != 0)
+    if (ssh_pkt_send(SSH_CLI_SLOT, payload, len, s_cli.wire, &wlen, sizeof(s_cli.wire), &ssh_sess[SSH_CLI_SLOT].out) !=
+        0)
     {
         return PROTO_FALSE;
     }
@@ -267,7 +261,6 @@ static proto_bool cli_send(const uint8_t *payload, size_t len)
 }
 
 // The identification line RFC 4253 4.2 puts on the wire first: the version string, then CR LF.
-static const pc_field CLI_BANNER[] = {PC_STR, {PC_FK_LIT, 0, 2, "\r\n"}, PC_END};
 
 // Log frames: each message's shape is fixed here, so nothing is parsed when one is emitted.
 static const pc_field LOG_TUNNEL_FAIL[] = {{PC_FK_LIT, 0, 12, "ssh-tunnel: "}, PC_STR, PC_END};
@@ -344,12 +337,12 @@ static proto_bool build_kexinit(void)
     w_namelist(&w, CIPHER_NAMES, sizeof(CIPHER_NAMES) / sizeof(CIPHER_NAMES[0]));    // enc s2c
     w_namelist(&w, MAC_NAMES, sizeof(MAC_NAMES) / sizeof(MAC_NAMES[0]));             // mac c2s
     w_namelist(&w, MAC_NAMES, sizeof(MAC_NAMES) / sizeof(MAC_NAMES[0]));             // mac s2c
-    pc_ssh_wr_cstr(&w, "none");                                                              // comp c2s
-    pc_ssh_wr_cstr(&w, "none");                                                              // comp s2c
-    pc_ssh_wr_cstr(&w, "");                                                                  // lang c2s
-    pc_ssh_wr_cstr(&w, "");                                                                  // lang s2c
-    pc_bw_put(&w, 0);                                                                     // first_kex_packet_follows
-    pc_bw_put_be(&w, 0, 4);                                                                    // reserved
+    pc_ssh_wr_cstr(&w, "none");                                                      // comp c2s
+    pc_ssh_wr_cstr(&w, "none");                                                      // comp s2c
+    pc_ssh_wr_cstr(&w, "");                                                          // lang c2s
+    pc_ssh_wr_cstr(&w, "");                                                          // lang s2c
+    pc_bw_put(&w, 0);                                                                // first_kex_packet_follows
+    pc_bw_put_be(&w, 0, 4);                                                          // reserved
     if (!pc_span_ok(w))
     {
         return PROTO_FALSE;
@@ -696,11 +689,12 @@ static size_t compute_h(const uint8_t *ks, uint32_t ks_len, const uint8_t *srv_p
     const proto_bool is512 = cli_kex_is_sha512(s_cli.kex);
     SshKexHash c;
     ssh_kexhash_init(&c, work, is512);
-    hash_string(&c, (const uint8_t *)CLIENT_BANNER, strnlen(CLIENT_BANNER, sizeof(CLIENT_BANNER))); // V_C
-    hash_string(&c, (const uint8_t *)s_cli.v_s, s_cli.v_s_len);                                     // V_S
-    hash_string(&c, s_cli.i_c, s_cli.i_c_len);                                                      // I_C
-    hash_string(&c, s_cli.i_s, s_cli.i_s_len);                                                      // I_S
-    hash_string(&c, ks, ks_len);                                                                    // K_S
+    const SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
+    hash_string(&c, (const uint8_t *)hs->v_c, hs->v_c_len); // V_C
+    hash_string(&c, (const uint8_t *)hs->v_s, hs->v_s_len); // V_S
+    hash_string(&c, s_cli.i_c, s_cli.i_c_len);              // I_C
+    hash_string(&c, s_cli.i_s, s_cli.i_s_len);              // I_S
+    hash_string(&c, ks, ks_len);                            // K_S
 #if PC_ENABLE_PQC_KEX || PC_ENABLE_SSH_SNTRUP761
     proto_bool hybrid = PROTO_FALSE;
     const uint8_t *cpk = NULL; // the hybrid public embedded in the C_INIT string (ek / sntrup761 pk)
@@ -1462,9 +1456,10 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     ssh_keymat_wipe(SSH_CLI_SLOT);
 
     // Send our identification string, then our KEXINIT.
-    char banner[64];
-    size_t n = frame.build(banner, sizeof(banner), CLI_BANNER, (const pc_fval[]){PC_VSTR(CLIENT_BANNER)}, 1);
-    if (n == 0 || !Tcp.client->send(s_cli.cid, (const uint8_t *)banner, n))
+    uint8_t banner[SSH_VERSION_MAX + 2];
+    size_t n = 0;
+    if (SSH_TRANSPORT->send_banner(SSH_CLI_SLOT, banner, &n, sizeof(banner)) != 0 ||
+        !Tcp.client->send(s_cli.cid, banner, n))
     {
         cli_fail("banner send failed");
         return PROTO_FALSE;
@@ -1472,43 +1467,6 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     s_cli.state = PC_TUN_CONNECTING;
     s_cli.deadline_ms = pc_millis() + 15000;
     return PROTO_TRUE;
-}
-
-// Accumulate the server identification line, then hand the rest to the packet layer.
-static void drain_banner(const uint8_t *data, size_t len, size_t *consumed)
-{
-    *consumed = 0;
-    for (size_t i = 0; i < len; i++)
-    {
-        uint8_t ch = data[i];
-        if (s_cli.banner_len < sizeof(s_cli.banner))
-        {
-            s_cli.banner[s_cli.banner_len++] = ch;
-        }
-        if (ch == '\n')
-        {
-            // A complete line. Only "SSH-..." is the identification; earlier lines are allowed banners.
-            uint16_t l = s_cli.banner_len;
-            while (l && (s_cli.banner[l - 1] == '\n' || s_cli.banner[l - 1] == '\r'))
-            {
-                l--;
-            }
-            if (l >= 4 && mem.cmp(s_cli.banner, "SSH-", 4) == 0)
-            {
-                mem.cpy(s_cli.v_s, s_cli.banner, l);
-                s_cli.v_s_len = l;
-                *consumed = i + 1;
-                ssh_sess[SSH_CLI_SLOT].phase = SSH_PHASE_KEXINIT;
-                if (!build_kexinit())
-                {
-                    cli_fail("KEXINIT send failed");
-                }
-                return;
-            }
-            s_cli.banner_len = 0; // skip a pre-banner line, keep reading
-        }
-    }
-    *consumed = len; // whole chunk consumed into the accumulator
 }
 
 void pc_ssh_tunnel_poll(void)
@@ -1537,8 +1495,18 @@ void pc_ssh_tunnel_poll(void)
         if (ssh_sess[SSH_CLI_SLOT].phase == SSH_PHASE_BANNER)
         {
             size_t consumed = 0;
-            drain_banner(buf, got, &consumed);
+            int rc = SSH_TRANSPORT->recv_banner(SSH_CLI_SLOT, buf, got, &consumed);
             off = consumed;
+            if (rc < 0)
+            {
+                cli_fail("relay identification string invalid");
+                return;
+            }
+            if (rc == 1 && !build_kexinit())
+            {
+                cli_fail("KEXINIT send failed");
+                return;
+            }
         }
         if (off < got && s_cli.state != PC_TUN_FAILED)
         {
