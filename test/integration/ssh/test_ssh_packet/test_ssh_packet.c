@@ -66,7 +66,7 @@ static uint32_t be32(const uint8_t *p)
 }
 
 // packet_length counts padding_length + payload + padding, and excludes itself and the mac.
-static void test_packet_length_excludes_itself_and_mac(void)
+static void test_s6_packet_length_excludes_itself_and_mac(void)
 {
     static const uint8_t msg[5] = {SSH_MSG_IGNORE, 1, 2, 3, 4};
     uint8_t wire[256];
@@ -80,7 +80,7 @@ static void test_packet_length_excludes_itself_and_mac(void)
 }
 
 // "There MUST be at least four bytes of padding" and "the maximum amount of padding is 255 bytes".
-static void test_padding_is_within_the_rfc_bounds(void)
+static void test_s6_padding_is_within_the_rfc_bounds(void)
 {
     uint8_t msg[200];
     uint8_t wire[512];
@@ -100,7 +100,7 @@ static void test_padding_is_within_the_rfc_bounds(void)
 
 // The concatenation is "a multiple of the cipher block size or 8, whichever is larger", enforced
 // even with no cipher negotiated.
-static void test_frame_is_a_multiple_of_the_block_size(void)
+static void test_s6_frame_is_a_multiple_of_the_block_size(void)
 {
     uint8_t msg[200];
     uint8_t wire[512];
@@ -117,7 +117,7 @@ static void test_frame_is_a_multiple_of_the_block_size(void)
 }
 
 // "The minimum size of a packet is 16 (or the cipher block size, whichever is larger) bytes."
-static void test_minimum_packet_size(void)
+static void test_s6_minimum_packet_size(void)
 {
     static const uint8_t one[1] = {SSH_MSG_IGNORE};
     uint8_t wire[256];
@@ -127,7 +127,7 @@ static void test_minimum_packet_size(void)
 }
 
 // A frame this layer produced is a frame it accepts, and the payload arrives byte for byte.
-static void test_round_trip_delivers_the_payload(void)
+static void test_s6_round_trip_delivers_the_payload(void)
 {
     static const uint8_t msg[9] = {SSH_MSG_IGNORE, 'p', 'a', 'y', 'l', 'o', 'a', 'd', '!'};
     uint8_t wire[256];
@@ -143,7 +143,7 @@ static void test_round_trip_delivers_the_payload(void)
 }
 
 // sec 6.4: "an implicit counter initialized to zero and incremented after each packet".
-static void test_sequence_number_starts_at_zero_and_counts_packets(void)
+static void test_s6_4_sequence_starts_at_zero_and_counts(void)
 {
     static const uint8_t msg[4] = {SSH_MSG_IGNORE, 1, 2, 3};
     uint8_t wire[256];
@@ -165,7 +165,7 @@ static void test_sequence_number_starts_at_zero_and_counts_packets(void)
 }
 
 // A peer's frame claiming fewer than four padding bytes violates sec 6 and is refused.
-static void test_receive_refuses_padding_under_four(void)
+static void test_s6_receive_refuses_padding_under_four(void)
 {
     static const uint8_t msg[9] = {SSH_MSG_IGNORE, 1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t wire[256];
@@ -179,7 +179,7 @@ static void test_receive_refuses_padding_under_four(void)
 }
 
 // padding_length must leave a payload: one at or past packet_length would underflow it.
-static void test_receive_refuses_padding_past_the_packet(void)
+static void test_s6_receive_refuses_padding_past_the_packet(void)
 {
     static const uint8_t msg[9] = {SSH_MSG_IGNORE, 1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t wire[256];
@@ -193,7 +193,7 @@ static void test_receive_refuses_padding_past_the_packet(void)
 }
 
 // Two frames in one read are two dispatches: the layer extracts every complete packet it holds.
-static void test_two_packets_in_one_read(void)
+static void test_s6_two_packets_in_one_read(void)
 {
     static const uint8_t a[3] = {SSH_MSG_IGNORE, 'a', 'a'};
     static const uint8_t b[3] = {SSH_MSG_DEBUG, 'b', 'b'};
@@ -211,7 +211,7 @@ static void test_two_packets_in_one_read(void)
 }
 
 // A frame split across reads is held until it is whole, then dispatched once.
-static void test_partial_frame_waits_for_the_rest(void)
+static void test_s6_partial_frame_waits_for_the_rest(void)
 {
     static const uint8_t msg[9] = {SSH_MSG_IGNORE, 1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t wire[256];
@@ -226,18 +226,50 @@ static void test_partial_frame_waits_for_the_rest(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(msg, g_seen, sizeof(msg));
 }
 
+// sec 6.4: the sequence number "is initialized to zero for the first packet, and is incremented
+// after every packet (regardless of whether encryption or MAC is in use). It is never reset, even
+// if keys/algorithms are renegotiated later."
+//
+// This is the invariant a prefix-truncation attack turns on (CVE-2023-48795, "Terrapin"): a peer
+// that restarts its count when NEWKEYS takes effect cannot tell that packets were deleted from the
+// handshake, because the MAC of every later packet still verifies against the shifted numbering.
+// A re-exchange moves each direction onto a new key epoch; the counters must walk straight past it.
+static void test_s6_4_a_rekey_does_not_reset_the_sequence_numbers(void)
+{
+    static const uint8_t msg[5] = {SSH_MSG_IGNORE, 1, 2, 3, 4};
+    uint8_t wire[256];
+    size_t wlen = 0;
+
+    for (int k = 0; k < 3; k++)
+    {
+        TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, msg, sizeof(msg), wire, &wlen, sizeof(wire), &PLAIN));
+    }
+    TEST_ASSERT_EQUAL_UINT32(3, ssh_pkt[0].seq_no_send);
+
+    // Both directions take new keys, which is what a sec 9 re-exchange ends with.
+    ssh_newkeys_sent(0);
+    (void)ssh_newkeys_complete(0);
+
+    TEST_ASSERT_EQUAL_UINT32(3, ssh_pkt[0].seq_no_send); // carried across, not restarted
+
+    // And it keeps counting from where it was rather than from zero.
+    TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, msg, sizeof(msg), wire, &wlen, sizeof(wire), &PLAIN));
+    TEST_ASSERT_EQUAL_UINT32(4, ssh_pkt[0].seq_no_send);
+}
+
 int main()
 {
     UNITY_BEGIN();
-    RUN_TEST(test_packet_length_excludes_itself_and_mac);
-    RUN_TEST(test_padding_is_within_the_rfc_bounds);
-    RUN_TEST(test_frame_is_a_multiple_of_the_block_size);
-    RUN_TEST(test_minimum_packet_size);
-    RUN_TEST(test_round_trip_delivers_the_payload);
-    RUN_TEST(test_sequence_number_starts_at_zero_and_counts_packets);
-    RUN_TEST(test_receive_refuses_padding_under_four);
-    RUN_TEST(test_receive_refuses_padding_past_the_packet);
-    RUN_TEST(test_two_packets_in_one_read);
-    RUN_TEST(test_partial_frame_waits_for_the_rest);
+    RUN_TEST(test_s6_packet_length_excludes_itself_and_mac);
+    RUN_TEST(test_s6_padding_is_within_the_rfc_bounds);
+    RUN_TEST(test_s6_frame_is_a_multiple_of_the_block_size);
+    RUN_TEST(test_s6_minimum_packet_size);
+    RUN_TEST(test_s6_round_trip_delivers_the_payload);
+    RUN_TEST(test_s6_4_sequence_starts_at_zero_and_counts);
+    RUN_TEST(test_s6_receive_refuses_padding_under_four);
+    RUN_TEST(test_s6_receive_refuses_padding_past_the_packet);
+    RUN_TEST(test_s6_two_packets_in_one_read);
+    RUN_TEST(test_s6_partial_frame_waits_for_the_rest);
+    RUN_TEST(test_s6_4_a_rekey_does_not_reset_the_sequence_numbers);
     return UNITY_END();
 }
