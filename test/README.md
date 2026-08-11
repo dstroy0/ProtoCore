@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **336 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **337 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -355,6 +355,7 @@ The native test matrix has **336 environments**, one per feature, generated from
 | `native_ssh_ed25519` | default | `unit/ssh/test_ssh_ed25519` | Modern SSH crypto KATs (curve25519-sha256 KEX + ssh-ed25519 host key / client auth): SHA-512 (FIPS 180-4), X25519 (RFC 7748), Ed25519 (RFC 8032). |
 | `native_ssh_epoch` | `PC_SSH_MAX_CHANNELS=3`, `PC_ENABLE_SSH=1`, `PC_ENABLE_MNT=1`, `PC_ENABLE_SSH_SFTP=1`, `PC_ENABLE_SSH_SCP=1` | `integration/ssh/test_ssh_epoch` | The RFC 4253 sec 7.3 key-epoch transitions: a derivation lands in the epoch neither direction reads, each direction moves on its own SSH_MSG_NEWKEYS, and the epoch both have left is released. |
 | `native_ssh_flow` | `PC_ENABLE_SSH=1` | `integration/ssh/test_ssh_flow` | The RFC 4254 sec 5.2 channel window (ssh/connection/ssh_flow_control.c): the send cap is the smaller of the peer's window and its maximum packet size, a send decrements the window, an adjust increment... |
+| `native_ssh_forward` | `PC_ENABLE_SSH=1`, `PC_SSH_PORT_FORWARD=1`, `PC_SSH_MAX_CHANNELS=3` | `integration/ssh/test_ssh_forward` | The RFC 4254 sec 7 remote-forward owner (ssh/connection/ssh_forward.c, ssh -R). |
 | `native_ssh_hardened` | `PC_ENABLE_SSH=1`, `PC_SSH_ALLOW_PASSWORD=0` | `integration/ssh/test_ssh_hardening` | SSH built with password auth disabled (publickey-only hardening) |
 | `native_ssh_inflate` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_ZLIB=1` | `unit/ssh/test_ssh_inflate` | SSH client-to-server resumable INFLATE (ssh_inflate): decompresses OpenSSH's per-packet Z_PARTIAL_FLUSH zlib stream across packets with a 32 KB context-takeover window. |
 | `native_ssh_kbdint` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_KEYBOARD_INTERACTIVE=1` | `integration/ssh/test_ssh_kbdint`, `integration/ssh/test_ssh_auth` | SSH keyboard-interactive auth (RFC 4256) built with PC_ENABLE_SSH_KEYBOARD_INTERACTIVE=1: the server sends one non-echoed Password prompt (INFO_REQUEST) and verifies the INFO_RESPONSE via the password... |
