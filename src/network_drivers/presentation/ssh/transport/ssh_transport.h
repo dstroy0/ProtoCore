@@ -58,6 +58,19 @@ PROTO_BEGIN_DECLS
  *  (worst case ~580 bytes; 704 leaves headroom for future algorithm additions). */
 #define PC_SSH_KEXINIT_S_MAX 704
 
+/** @brief Capacity of I_C and I_S. A buffer takes the peer bound in the role that receives into it,
+ *  our own bound in the role that writes it. */
+#if PC_ENABLE_SSH && PC_ENABLE_SSH_CLIENT
+#define PC_SSH_I_C_MAX SSH_KEXINIT_MAX
+#define PC_SSH_I_S_MAX SSH_KEXINIT_MAX
+#elif PC_ENABLE_SSH_CLIENT
+#define PC_SSH_I_C_MAX PC_SSH_KEXINIT_S_MAX
+#define PC_SSH_I_S_MAX SSH_KEXINIT_MAX
+#else
+#define PC_SSH_I_C_MAX SSH_KEXINIT_MAX
+#define PC_SSH_I_S_MAX PC_SSH_KEXINIT_S_MAX
+#endif
+
 /** @brief Server identification string (no CR LF; appended on the wire). */
 #define SSH_SERVER_VERSION "SSH-2.0-1.0"
 

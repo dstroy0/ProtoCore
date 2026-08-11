@@ -1362,6 +1362,7 @@
     "ssh_rsa_sign",
     "ssh_wipe",
     "SSHBENCH",
+    "sshc",
     "SshDhState",
     "SSHEMIT",
     "SshKeyMat",

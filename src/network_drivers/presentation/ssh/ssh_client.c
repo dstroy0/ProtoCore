@@ -27,6 +27,7 @@
 #include "crypto/rng/rng.h"                                               // pc_rand_fill
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"               // SSH_MSG_USERAUTH_*
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"      // ssh_chan[], pc_ssh_chan_by_id/_alloc
+#include "network_drivers/presentation/ssh/connection/ssh_conn.h"         // ssh_conn_slot, SSH_OFF_KEXINIT
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h" // SSH_MSG_CHANNEL_*, SSH_MSG_GLOBAL_REQUEST
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"            // ssh_dh_derive_keys_sid
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
@@ -76,23 +77,6 @@ static uint8_t *cli_crypto_work(void)
 // ML-KEM-768 have no hardware path on any ESP32 (the ECC unit does only NIST prime curves), so those
 // run in software on every variant.
 static const char NAME_ED25519[] = "ssh-ed25519";
-// KEX_NAMES and KEX_OF (defined after CliKex, below) are index-aligned: negotiate() returns an index
-// into KEX_NAMES, KEX_OF maps it to the CliKex. The PQ/T hybrid leads when built (PQC-preferred).
-static const char *const KEX_NAMES[] = {
-#if PC_ENABLE_PQC_KEX
-    "mlkem768x25519-sha256",
-#endif
-#if PC_ENABLE_SSH_SNTRUP761
-    "sntrup761x25519-sha512@openssh.com",
-#endif
-    "curve25519-sha256",
-    "curve25519-sha256@libssh.org",
-    "ecdh-sha2-nistp256",
-    "diffie-hellman-group14-sha256"};
-static const char *const HOSTKEY_NAMES[] = {"ssh-ed25519", "ecdsa-sha2-nistp256", "rsa-sha2-512", "rsa-sha2-256"};
-static const char *const CIPHER_NAMES[] = {"chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com", "aes256-ctr"};
-static const char *const MAC_NAMES[] = {"hmac-sha2-256-etm@openssh.com", "hmac-sha2-256",
-                                        "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512"};
 
 // The exchange hash + RFC 4253 sec 7.2 KDF run over SHA-512 for the -sha512 methods
 // (sntrup761x25519-sha512), SHA-256 for every other method (RFC 4253 sec 8).
@@ -202,11 +186,6 @@ typedef struct
     } hyb;
 #endif
 
-    uint8_t i_c[768]; ///< our KEXINIT payload (for H) - the full advertised suite is ~520 bytes.
-    uint16_t i_c_len;
-    uint8_t i_s[SSH_KEXINIT_MAX]; ///< server KEXINIT payload (for H); OpenSSH's is ~1.1 KB.
-    uint16_t i_s_len;
-
     uint8_t session_id[SSH_KEXHASH_MAX_LEN]; ///< 32 (SHA-256 methods) or 64 (sntrup761 SHA-512).
     uint8_t session_id_len;
     proto_bool have_sid;
@@ -303,52 +282,22 @@ static void cli_fail(const char *why)
 // Algorithm negotiation + KEXINIT (client)
 // ---------------------------------------------------------------------------
 
-// Write a comma-joined SSH name-list from @p names into the span as one string.
-static void w_namelist(pc_span *w, const char *const *names, size_t n)
-{
-    char tmp[256];
-    size_t o = 0;
-    for (size_t i = 0; i < n; i++)
-    {
-        size_t l = str.len(names[i], sizeof(tmp));
-        if (i && o + 1 <= sizeof(tmp))
-        {
-            tmp[o++] = ',';
-        }
-        if (o + l <= sizeof(tmp))
-        {
-            mem.cpy(tmp + o, names[i], l);
-            o += l;
-        }
-    }
-    pc_ssh_wr_str(w, tmp, o);
-}
-
+// RFC 4253 sec 7.1 build, the one implementation both roles consume. The payload is built in the
+// connection's own storage and kept as I_C by the transport.
 static proto_bool build_kexinit(void)
 {
-    pc_span w = pc_span_from(s_cli.i_c, sizeof(s_cli.i_c));
-    pc_bw_put(&w, SSH_MSG_KEXINIT);
-    uint8_t cookie[16];
-    pc_rand_fill(cookie, 16);
-    pc_bw_bytes(&w, cookie, 16);
-    w_namelist(&w, KEX_NAMES, sizeof(KEX_NAMES) / sizeof(KEX_NAMES[0]));             // kex
-    w_namelist(&w, HOSTKEY_NAMES, sizeof(HOSTKEY_NAMES) / sizeof(HOSTKEY_NAMES[0])); // host key
-    w_namelist(&w, CIPHER_NAMES, sizeof(CIPHER_NAMES) / sizeof(CIPHER_NAMES[0]));    // enc c2s
-    w_namelist(&w, CIPHER_NAMES, sizeof(CIPHER_NAMES) / sizeof(CIPHER_NAMES[0]));    // enc s2c
-    w_namelist(&w, MAC_NAMES, sizeof(MAC_NAMES) / sizeof(MAC_NAMES[0]));             // mac c2s
-    w_namelist(&w, MAC_NAMES, sizeof(MAC_NAMES) / sizeof(MAC_NAMES[0]));             // mac s2c
-    pc_ssh_wr_cstr(&w, "none");                                                      // comp c2s
-    pc_ssh_wr_cstr(&w, "none");                                                      // comp s2c
-    pc_ssh_wr_cstr(&w, "");                                                          // lang c2s
-    pc_ssh_wr_cstr(&w, "");                                                          // lang s2c
-    pc_bw_put(&w, 0);                                                                // first_kex_packet_follows
-    pc_bw_put_be(&w, 0, 4);                                                          // reserved
-    if (!pc_span_ok(w))
+    uint8_t *base = ssh_conn_slot(SSH_CLI_SLOT);
+    if (base == NULL)
     {
         return PROTO_FALSE;
     }
-    s_cli.i_c_len = (uint16_t)w.pos;
-    return cli_send(s_cli.i_c, s_cli.i_c_len);
+    uint8_t *out = base + SSH_OFF_KEXINIT;
+    size_t n = 0;
+    if (SSH_TRANSPORT->kexinit_build(SSH_CLI_SLOT, out, &n, PC_SSH_KEXINIT_S_MAX) != 0)
+    {
+        return PROTO_FALSE;
+    }
+    return cli_send(out, n);
 }
 
 // Generate our KEX ephemeral for the negotiated method and build Q_C / e into s_cli.qc.
@@ -435,13 +384,6 @@ static proto_bool build_kex_public(void)
 // Parse the server KEXINIT, negotiate every category, store I_S, and send KEXDH_INIT.
 static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
 {
-    if (len > sizeof(s_cli.i_s))
-    {
-        return PROTO_FALSE;
-    }
-    mem.cpy(s_cli.i_s, p, len);
-    s_cli.i_s_len = (uint16_t)len;
-
     // RFC 4253 sec 7.1 parse + negotiate, the one implementation both roles consume.
     if (SSH_TRANSPORT->kexinit_parse(SSH_CLI_SLOT, p, len) != 0)
     {
@@ -692,8 +634,8 @@ static size_t compute_h(const uint8_t *ks, uint32_t ks_len, const uint8_t *srv_p
     const SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
     hash_string(&c, (const uint8_t *)hs->v_c, hs->v_c_len); // V_C
     hash_string(&c, (const uint8_t *)hs->v_s, hs->v_s_len); // V_S
-    hash_string(&c, s_cli.i_c, s_cli.i_c_len);              // I_C
-    hash_string(&c, s_cli.i_s, s_cli.i_s_len);              // I_S
+    hash_string(&c, hs->i_c, hs->i_c_len);                  // I_C
+    hash_string(&c, hs->i_s, hs->i_s_len);                  // I_S
     hash_string(&c, ks, ks_len);                            // K_S
 #if PC_ENABLE_PQC_KEX || PC_ENABLE_SSH_SNTRUP761
     proto_bool hybrid = PROTO_FALSE;

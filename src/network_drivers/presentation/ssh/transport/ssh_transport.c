@@ -601,12 +601,12 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
     // Retain a copy for the exchange hash: ours is I_C as the client, I_S as the server.
     uint8_t *kept = s->i_s;
     uint16_t *kept_len = &s->i_s_len;
-    size_t kept_cap = PC_SSH_KEXINIT_S_MAX;
+    size_t kept_cap = PC_SSH_I_S_MAX;
     if (as_client)
     {
         kept = s->i_c;
         kept_len = &s->i_c_len;
-        kept_cap = SSH_KEXINIT_MAX;
+        kept_cap = PC_SSH_I_C_MAX;
     }
     if (w.pos > kept_cap)
     {
@@ -722,12 +722,12 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     // Retain a copy as I_C for the exchange hash.
     uint8_t *peer = s->i_c;
     uint16_t *peer_len = &s->i_c_len;
-    size_t peer_cap = SSH_KEXINIT_MAX;
+    size_t peer_cap = PC_SSH_I_C_MAX;
     if (as_client)
     {
         peer = s->i_s;
         peer_len = &s->i_s_len;
-        peer_cap = PC_SSH_KEXINIT_S_MAX;
+        peer_cap = PC_SSH_I_S_MAX;
     }
     if (len > peer_cap)
     {
