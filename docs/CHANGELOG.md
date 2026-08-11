@@ -116,6 +116,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2b90c5b`](https://github.com/dstroy0/ProtoCore/commit/2b90c5b2d983845f11a996008f89bbf6d5b0e33b))
 - update CHANGELOG.md [skip ci] ([`7c190b0`](https://github.com/dstroy0/ProtoCore/commit/7c190b0c9cab6937e80cc3711c08765ac83c5b84))
 - update CHANGELOG.md [skip ci] ([`92798b0`](https://github.com/dstroy0/ProtoCore/commit/92798b00c9164e7d9789d56db380d2340957f6f1))
 - update CHANGELOG.md [skip ci] ([`91a5b98`](https://github.com/dstroy0/ProtoCore/commit/91a5b98a3ea70f2c9d3391998018a50d79bd44fd))
@@ -384,6 +385,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f729fa7`](https://github.com/dstroy0/ProtoCore/commit/f729fa718a5bac891c57656d7c90ae59c107d61e))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`49e6c0a`](https://github.com/dstroy0/ProtoCore/commit/49e6c0a7215518c1743fef47a4fd19fa4274fe49))
 - log the SFTP version-negotiation defect ([`5d7aab9`](https://github.com/dstroy0/ProtoCore/commit/5d7aab96602f15e32bf067f94f3996351c0a3f36))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`033401c`](https://github.com/dstroy0/ProtoCore/commit/033401c59d2436e00417540198fc80c2698024cd))
@@ -509,6 +511,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- label test_ssh_packet by RFC 4253 section and pin the sequence-number invariant ([`b25ec2c`](https://github.com/dstroy0/ProtoCore/commit/b25ec2cc318145751a1b9bdad2eb6bb074085309))
 - per-file coverage for the SCP server, the last SSH file no env compiled ([`25d1e44`](https://github.com/dstroy0/ProtoCore/commit/25d1e4496554aec277dcbbbe98f231e23404d381))
 - per-file coverage for the SFTP v3 server subsystem ([`f014ab4`](https://github.com/dstroy0/ProtoCore/commit/f014ab4e6f9bdf6abbf8cd9aba7d1008fa21fbb4))
 - drop the duplicated AES-GCM counter test from the auth suite ([`70cfa2a`](https://github.com/dstroy0/ProtoCore/commit/70cfa2a63d767f2cfd2bb27acfe03382223250b2))
