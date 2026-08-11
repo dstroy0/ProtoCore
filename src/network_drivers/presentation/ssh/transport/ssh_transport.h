@@ -321,6 +321,24 @@ int ssh_kex_generate(uint8_t i);
 int ssh_extinfo_build(uint8_t *out, size_t *len, size_t cap);
 
 /**
+ * @brief Verify the peer's signature over the exchange hash with its host key (RFC 4253 §8 step 3).
+ *
+ * The host-key validator half of the key exchange: parses @p ks for the algorithm negotiated on slot
+ * @p i, unwraps the string(algorithm) || string(raw) signature of §6.6, and verifies it over @p h.
+ *
+ * @param i       SSH slot; supplies the negotiated host-key algorithm and the crypto scratch.
+ * @param ks      Host-key blob K_S as it arrived.
+ * @param ks_len  Length of @p ks.
+ * @param sig     Signature field as it arrived.
+ * @param sig_len Length of @p sig.
+ * @param h       Exchange hash the signature covers.
+ * @param h_len   Length of @p h, 32 or 64 by method.
+ * @return true when the signature verifies.
+ */
+proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const uint8_t *sig, size_t sig_len,
+                              const uint8_t *h, size_t h_len);
+
+/**
  * @brief True when @p a hashes with SHA-512 rather than SHA-256.
  *
  * The exchange hash and the RFC 4253 sec 7.2 KDF run over the hash the negotiated method names:

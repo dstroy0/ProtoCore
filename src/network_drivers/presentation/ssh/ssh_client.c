@@ -11,7 +11,7 @@
  */
 
 #include "network_drivers/presentation/ssh/ssh_client.h"
-#include "mmgr/bytes.h"      // pc_mpint_to_fixed
+#include "mmgr/bytes.h"      // pc_bw_* / pc_rd_str() - the byte verbs this file frames with
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
 #include "mmgr/rawmemcpy.h" // proto_raw_put_u32 - one unaligned store, not four
@@ -618,78 +618,6 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
     return PROTO_FALSE;
 }
 
-// Verify the relay's signature over H (h_len bytes) with the host key from K_S, per the host-key type.
-static proto_bool verify_host_sig(const uint8_t *ks, uint32_t ks_len, const uint8_t *sig, uint32_t sig_len,
-                                  const uint8_t *H, size_t h_len)
-{
-    Rd rk = {ks, ks_len, 0, PROTO_TRUE};
-    uint32_t tn;
-    const uint8_t *ktype = r_string(&rk, &tn);
-    Rd rs = {sig, sig_len, 0, PROTO_TRUE};
-    uint32_t sn;
-    const uint8_t *stype = r_string(&rs, &sn);
-    if (!rk.ok || !rs.ok)
-    {
-        return PROTO_FALSE;
-    }
-
-    switch (s_cli.hostkey)
-    {
-    case SSH_HOSTKEY_ED25519: {
-        uint32_t pn;
-        const uint8_t *pub = r_string(&rk, &pn);
-        uint32_t rl;
-        const uint8_t *raw = r_string(&rs, &rl);
-        uint8_t *vwork = cli_crypto_work();
-        return vwork != NULL && rk.ok && rs.ok && pn == 32 && rl == 64 && pc_ed25519_verify(vwork, pub, H, h_len, raw);
-    }
-    case SSH_HOSTKEY_ECDSA_NISTP256: {
-        uint32_t cn;
-        r_string(&rk, &cn); // "nistp256"
-        uint32_t qn;
-        const uint8_t *q = r_string(&rk, &qn);
-        // signature: string( mpint(r) || mpint(s) ) -> 64-byte raw r||s.
-        uint32_t bl;
-        const uint8_t *blob = r_string(&rs, &bl);
-        if (!rk.ok || !rs.ok || qn != PC_ECDSA_P256_PUB_LEN)
-        {
-            return PROTO_FALSE;
-        }
-        Rd rb = {blob, bl, 0, PROTO_TRUE};
-        uint32_t rlen, slen;
-        const uint8_t *rr = r_string(&rb, &rlen);
-        const uint8_t *ss = r_string(&rb, &slen);
-        uint8_t raw[64];
-        if (!rb.ok || !pc_mpint_to_fixed(rr, rlen, raw, 32) || !pc_mpint_to_fixed(ss, slen, raw + 32, 32))
-        {
-            return PROTO_FALSE;
-        }
-        uint8_t *work = cli_crypto_work();
-        return work != NULL && pc_ecdsa_p256_verify(q, work, H, h_len, raw);
-    }
-    case SSH_HOSTKEY_RSA_SHA256:
-    case SSH_HOSTKEY_RSA_SHA512: {
-        // K_S = string("ssh-rsa") || mpint(e) || mpint(n).
-        uint32_t elen, nlen;
-        const uint8_t *e = r_string(&rk, &elen);
-        const uint8_t *n = r_string(&rk, &nlen);
-        uint32_t rawlen;
-        const uint8_t *raw = r_string(&rs, &rawlen); // the RSA signature bytes
-        (void)ktype;
-        (void)stype;
-        uint8_t e4[4], n256[256];
-        if (!rk.ok || !rs.ok || !pc_mpint_to_fixed(e, elen, e4, 4) || !pc_mpint_to_fixed(n, nlen, n256, 256))
-        {
-            return PROTO_FALSE;
-        }
-        pc_rsa_hash h = (s_cli.hostkey == SSH_HOSTKEY_RSA_SHA512) ? PC_RSA_HASH_SHA512 : PC_RSA_HASH_SHA256;
-        uint8_t *work = cli_crypto_work();
-        return work != NULL && pc_rsa_verify(n256, e4, work, H, h_len, raw, rawlen, h) == 0;
-    }
-    }
-    return PROTO_FALSE;
-}
-
 static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 {
     Rd r = {p, len, 0, PROTO_TRUE};
@@ -765,7 +693,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
         return PROTO_FALSE;
     }
 
-    if (!verify_host_sig(ks, ks_len, sig, sig_len, H, h_len))
+    if (!ssh_hostkey_verify(SSH_CLI_SLOT, ks, ks_len, sig, sig_len, H, h_len))
     {
         pc_secure_wipe(k_be, sizeof(k_be));
         cli_fail("relay signature verification failed");
