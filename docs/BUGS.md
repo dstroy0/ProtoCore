@@ -8,6 +8,44 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## I_C and I_S are sized by which peer sends them, so in the client role the peer's KEXINIT gets the 704-byte buffer
+
+- **Status:** FIXED 2026-08-11. Found by reading `ssh_kexinit_parse` against the span in
+  `ssh_conn.h`; introduced by the sec 7.1 role fix in `85329fe0e`, below.
+- **Oracle:** the two sizing constants and what they say about themselves. `SSH_KEXINIT_MAX 2048`
+  (`protocore_config.h:7691`): "A modern OpenSSH client's KEXINIT (post-quantum KEX names + cert
+  host-key algs + EtM MACs + ext-info-c) runs well past 1 KB, so this must be large enough to hold
+  it - a smaller bound silently rejects real clients at key exchange." `PC_SSH_KEXINIT_S_MAX 704`
+  (`ssh_transport.h:59`): "Max stored size of our own KEXINIT (I_S)", with
+  `static_assert(PC_SSH_KEXINIT_S_MAX >= SSH_KEXINIT_S_WORST)` (`ssh_transport.c:120`) proving 704
+  covers every name this build advertises.
+- **What happens:** the span gives `SSH_OFF_I_C` 2048 bytes and `SSH_OFF_I_S` 704
+  (`ssh_conn.h:59-61`). That split is the server's: I_C is whatever a real client sends, I_S is our
+  own. The client role inverts it - I_C is ours and I_S is the relay's - but the offsets are
+  compile-time and do not move. `ssh_kexinit_parse` (`ssh_transport.c:726-735`) picks `peer_cap =
+PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So the client caps
+  the relay's KEXINIT at 704 bytes and refuses anything longer, while our own 704-byte list sits in
+  a 2048-byte buffer.
+- **Consequence:** `PC_ENABLE_SSH_CLIENT` fails key exchange against any relay whose KEXINIT
+  exceeds 704 bytes. By the two comments above that is what a current OpenSSH sends.
+- **Not measured:** I have not put a live OpenSSH KEXINIT on the wire and counted its bytes. The
+  1 KB figure is what the two sizing comments and the deleted `s_cli.i_s[SSH_KEXINIT_MAX]` field
+  ("server KEXINIT payload (for H); OpenSSH's is ~1.1 KB") assert, not something this session ran.
+- **Why the suite does not catch it:** `test/integration/ssh/test_ssh_client` builds its relay
+  KEXINIT from the names the test needs, which is well under 704.
+- **Fix:** `PC_SSH_I_C_MAX` / `PC_SSH_I_S_MAX` (`ssh_transport.h:61`) size each buffer from the roles
+  compiled in: the peer bound (`SSH_KEXINIT_MAX`) in the role that receives into it, our own bound
+  (`PC_SSH_KEXINIT_S_MAX`) in the role that writes it, and the peer bound for both when both roles
+  are built. `SSH_OFF_I_S` / `SSH_OFF_KEXINIT` and the `kept_cap` / `peer_cap` in
+  `ssh_kexinit_build` / `ssh_kexinit_parse` all read the two names, so the span and the bounds
+  checks cannot drift apart.
+- **Measured:** `nm -S` on `ssh_conn.o`. `native_ssh_client` (both roles) `s_sshc` 0x4f0d = 20237,
+  up 1344 from 18893 - one `SSH_KEXINIT_MAX` less one `PC_SSH_KEXINIT_S_MAX`, which is the I_S
+  buffer widening. `native_ssh_conn` (server only) 0x49cd = 18893: the server-only branch expands
+  to the same two constants the file carried before, so a server build is unchanged. 17 SSH
+  environments run 258 cases; `native_ssh`, `native_ssh_pqc` and `native_ssh_comp` still fail to
+  build on pre-existing test-file errors.
+
 ## RFC 4253 sec 7.1: ssh_kexinit_parse negotiates as the server in both roles, so the client can never complete a key exchange
 
 - **Status:** FIXED 2026-08-11, validated by `native_ssh_client` running 11/11 and the other 16 SSH
