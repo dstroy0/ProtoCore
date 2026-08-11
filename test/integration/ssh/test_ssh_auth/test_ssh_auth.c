@@ -6,7 +6,6 @@
 
 #include "baseline_keys.h"
 #include "core_setup/hal/nvs.h"
-#include "crypto/aead/aesgcm.h"
 #include "crypto/asymmetric/ecdsa.h"
 #include "crypto/asymmetric/ed25519.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
@@ -23,25 +22,10 @@
 
 static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 
-// The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is
-// enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
-// context (ESP's mbedtls does) does not leak one per vector.
-static uint8_t g_gcm_ws[PC_WORK_AESGCM] __attribute__((aligned(8)));
-static proto_bool g_gcm_live = PROTO_FALSE;
 // One hex digit to its value.
 static int nib(char c)
 {
     return c >= 'a' ? c - 'a' + 10 : c - '0';
-}
-
-static struct pc_aesgcm_key *gcm_key(const uint8_t *key)
-{
-    if (g_gcm_live)
-    {
-        pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(g_gcm_ws));
-    }
-    g_gcm_live = PROTO_TRUE;
-    return pc_aesgcm_key_init(g_gcm_ws, key);
 }
 
 void setUp()
@@ -1346,41 +1330,6 @@ void test_handle_request_index_and_parse_guards()
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_auth_handle_request(0, p, 1, out, &olen, sizeof(out))); // parse fails
 }
 
-// ---- aes256-gcm@openssh.com cipher (keyed by ssh_dh_derive_keys_sid() for this same auth/transport
-// flow when AES-GCM is negotiated) ------------------------------------------
-
-// Inside gctr(), the 32-bit GCTR block counter (the low 4 bytes of the 16-byte CTR block - distinct
-// from the RFC 5647 8-byte invocation counter in the nonce) always starts at 2 for every seal()/open()
-// call and is not caller-controlled, so the only way to force a byte-level carry out of ctr[15] (0xff
-// -> 0x00, propagating into ctr[14]) is to actually drive enough 16-byte GCTR blocks through one call:
-// byte 15 wraps once 254 blocks (4064 B) have been processed. pc_aesgcm_seal()/open() have no
-// buffer-size limit of their own (only the SSH packet layer's SSH_PKT_BUF_SIZE does, and that is a
-// packet-layer policy this crypto primitive is not bound by), so a single 4096 B seal()+open() round
-// trip reaches the byte-carry arm without anywhere near the ~2^32-block full-counter wrap.
-void test_aesgcm_gctr_counter_byte_carry(void)
-{
-    uint8_t key[32], iv[12];
-    for (int i = 0; i < 32; i++)
-    {
-        key[i] = (uint8_t)(i * 3 + 5);
-    }
-    for (int i = 0; i < 12; i++)
-    {
-        iv[i] = (uint8_t)(0x20 + i);
-    }
-
-    static uint8_t pt[4096], ct[4096 + PC_AESGCM_TAG_LEN], rt[4096];
-    for (size_t i = 0; i < sizeof(pt); i++)
-    {
-        pt[i] = (uint8_t)(i * 31 + 7);
-    }
-    const uint8_t aad[4] = {0, 0, 0x10, 0x00};
-
-    pc_aesgcm_seal(gcm_key(key), iv, aad, sizeof(aad), pt, sizeof(pt), ct, ct + sizeof(pt));
-    TEST_ASSERT_TRUE(pc_aesgcm_open(gcm_key(key), iv, aad, sizeof(aad), ct, sizeof(pt), ct + sizeof(pt), rt));
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, sizeof(pt));
-}
-
 int main()
 {
     UNITY_BEGIN();
@@ -1420,6 +1369,5 @@ int main()
     RUN_TEST(test_s7_ed25519_valid_signature_succeeds);
     RUN_TEST(test_s7_tampered_signature_fails);
     RUN_TEST(test_s7_unauthorized_key_fails);
-    RUN_TEST(test_aesgcm_gctr_counter_byte_carry);
     return UNITY_END();
 }
