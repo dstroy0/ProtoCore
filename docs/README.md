@@ -286,7 +286,11 @@ src/
 │   │   ├── codec/
 │   │   │   ├── base64/  (base64.h, base64.c)
 │   │   │   ├── cbor/  (cbor.h, cbor.c)
-│   │   │   ├── deflate/  (deflate.h, deflate.c)
+│   │   │   ├── deflate/
+│   │   │   │   ├── deflate.c
+│   │   │   │   ├── deflate.h
+│   │   │   │   ├── rfc1951.c
+│   │   │   │   └── rfc1951.h
 │   │   │   ├── hpack_prim/  (hpack_prim.h, hpack_prim.c)
 │   │   │   ├── inflate/  (inflate.h, inflate.c)
 │   │   │   ├── json/  (json.h, json.c)
@@ -350,31 +354,31 @@ src/
 │   │   │   ├── connection/
 │   │   │   │   ├── ssh_channel.c
 │   │   │   │   ├── ssh_channel.h
-│   │   │   │   ├── ssh_client.c
-│   │   │   │   ├── ssh_client.h
 │   │   │   │   ├── ssh_conn.c
 │   │   │   │   ├── ssh_conn.h
 │   │   │   │   ├── ssh_flow_control.c
 │   │   │   │   ├── ssh_flow_control.h
 │   │   │   │   ├── ssh_forward.c
-│   │   │   │   ├── ssh_forward.h
-│   │   │   │   ├── ssh_server.c
-│   │   │   │   └── ssh_server.h
-│   │   │   └── transport/
-│   │   │       ├── ssh_comp.c
-│   │   │       ├── ssh_comp.h
-│   │   │       ├── ssh_dh.c
-│   │   │       ├── ssh_dh.h
-│   │   │       ├── ssh_inflate.c
-│   │   │       ├── ssh_inflate.h
-│   │   │       ├── ssh_keymat.c
-│   │   │       ├── ssh_keymat.h
-│   │   │       ├── ssh_packet.c
-│   │   │       ├── ssh_packet.h
-│   │   │       ├── ssh_transport.c
-│   │   │       ├── ssh_transport.h
-│   │   │       ├── ssh_zlib.c
-│   │   │       └── ssh_zlib.h
+│   │   │   │   └── ssh_forward.h
+│   │   │   ├── transport/
+│   │   │   │   ├── ssh_comp.c
+│   │   │   │   ├── ssh_comp.h
+│   │   │   │   ├── ssh_dh.c
+│   │   │   │   ├── ssh_dh.h
+│   │   │   │   ├── ssh_inflate.c
+│   │   │   │   ├── ssh_inflate.h
+│   │   │   │   ├── ssh_keymat.c
+│   │   │   │   ├── ssh_keymat.h
+│   │   │   │   ├── ssh_packet.c
+│   │   │   │   ├── ssh_packet.h
+│   │   │   │   ├── ssh_transport.c
+│   │   │   │   ├── ssh_transport.h
+│   │   │   │   ├── ssh_zlib.c
+│   │   │   │   └── ssh_zlib.h
+│   │   │   ├── ssh_client.c
+│   │   │   ├── ssh_client.h
+│   │   │   ├── ssh_server.c
+│   │   │   └── ssh_server.h
 │   │   ├── telnet/  (telnet.h, telnet.c)
 │   │   ├── presentation.c
 │   │   └── presentation.h
