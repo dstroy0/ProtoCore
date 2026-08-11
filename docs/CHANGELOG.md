@@ -115,6 +115,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`92798b0`](https://github.com/dstroy0/ProtoCore/commit/92798b00c9164e7d9789d56db380d2340957f6f1))
 - update CHANGELOG.md [skip ci] ([`91a5b98`](https://github.com/dstroy0/ProtoCore/commit/91a5b98a3ea70f2c9d3391998018a50d79bd44fd))
 - update CHANGELOG.md [skip ci] ([`7652565`](https://github.com/dstroy0/ProtoCore/commit/7652565e51e607d0b5f9c8d1709c42b2e5a5c66f))
 - update CHANGELOG.md [skip ci] ([`39e487f`](https://github.com/dstroy0/ProtoCore/commit/39e487fae4ac22d80517e1489d6e61902b9c8d67))
@@ -505,6 +506,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- per-file coverage for the SFTP v3 server subsystem ([`f014ab4`](https://github.com/dstroy0/ProtoCore/commit/f014ab4e6f9bdf6abbf8cd9aba7d1008fa21fbb4))
 - drop the duplicated AES-GCM counter test from the auth suite ([`70cfa2a`](https://github.com/dstroy0/ProtoCore/commit/70cfa2a63d767f2cfd2bb27acfe03382223250b2))
 - label test_ssh_auth by RFC 4252 section ([`38a340b`](https://github.com/dstroy0/ProtoCore/commit/38a340bfeb3a5920a1b99ac1598e3db7a2dd29db))
 - pin the RFC 4252 sec 5 abandon rule for keyboard-interactive ([`c9538d7`](https://github.com/dstroy0/ProtoCore/commit/c9538d721f93946f4f5d9fb702d3392dcd9e5bba))
