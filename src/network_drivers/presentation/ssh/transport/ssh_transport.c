@@ -15,6 +15,7 @@
 #include "crypto/rng/rng.h" // pc_rand_fill
 #include "mmgr/bytes.h"     // pc_bw_* / pc_rd_str() - the byte verbs this file frames with
 #include "mmgr/membuild.h"  // pc_sb frame builder
+#include "mmgr/plaintext.h" // pc_plaintext_span - host-key staging off the worker stack
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h" // ssh_conn_slot() + the memory map
@@ -1008,6 +1009,180 @@ int ssh_kex_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint8_t *cp
     }
     *out_len = ssh_kexhash_final(&h, out);
     return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Host key validator (RFC 4253 §6.6 key and signature encodings)
+// ---------------------------------------------------------------------------
+
+// Parse an "ssh-rsa" public-key blob: string("ssh-rsa") mpint(e) mpint(n).
+static proto_bool parse_rsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t *n_be, uint8_t *e_be)
+{
+    size_t off = 0;
+    const uint8_t *type;
+    uint32_t type_len;
+    if (!pc_rd_str(blob, blen, &off, &type, &type_len))
+    {
+        return PROTO_FALSE;
+    }
+    if (type_len != 7 || mem.cmp(type, "ssh-rsa", 7) != 0)
+    {
+        return PROTO_FALSE;
+    }
+    const uint8_t *e_mp;
+    uint32_t e_len;
+    if (!pc_rd_str(blob, blen, &off, &e_mp, &e_len) || !pc_mpint_to_fixed(e_mp, e_len, e_be, 4))
+    {
+        return PROTO_FALSE;
+    }
+    const uint8_t *n_mp;
+    uint32_t n_len;
+    if (!pc_rd_str(blob, blen, &off, &n_mp, &n_len) || !pc_mpint_to_fixed(n_mp, n_len, n_be, PC_RSA_KEY_BYTES))
+    {
+        return PROTO_FALSE;
+    }
+    return PROTO_TRUE;
+}
+
+// Parse an "ssh-ed25519" public-key blob: string("ssh-ed25519") string(pub32). (RFC 8709 §4)
+static proto_bool parse_ed25519_pubkey(const uint8_t *blob, uint32_t blen, uint8_t *pub)
+{
+    size_t off = 0;
+    const uint8_t *type;
+    uint32_t type_len;
+    if (!pc_rd_str(blob, blen, &off, &type, &type_len))
+    {
+        return PROTO_FALSE;
+    }
+    if (type_len != 11 || mem.cmp(type, "ssh-ed25519", 11) != 0)
+    {
+        return PROTO_FALSE;
+    }
+    const uint8_t *pk;
+    uint32_t pk_len;
+    if (!pc_rd_str(blob, blen, &off, &pk, &pk_len) || pk_len != 32)
+    {
+        return PROTO_FALSE;
+    }
+    mem.cpy(pub, pk, 32);
+    return PROTO_TRUE;
+}
+
+// Parse an "ecdsa-sha2-nistp256" public-key blob (RFC 5656 §3.1):
+//   string("ecdsa-sha2-nistp256") string("nistp256") string(Q = 0x04||X||Y, 65 bytes).
+static proto_bool parse_ecdsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t *pub)
+{
+    size_t off = 0;
+    const uint8_t *type;
+    uint32_t type_len;
+    if (!pc_rd_str(blob, blen, &off, &type, &type_len))
+    {
+        return PROTO_FALSE;
+    }
+    if (type_len != 19 || mem.cmp(type, "ecdsa-sha2-nistp256", 19) != 0)
+    {
+        return PROTO_FALSE;
+    }
+    const uint8_t *curve;
+    uint32_t curve_len;
+    if (!pc_rd_str(blob, blen, &off, &curve, &curve_len))
+    {
+        return PROTO_FALSE;
+    }
+    if (curve_len != 8 || mem.cmp(curve, "nistp256", 8) != 0)
+    {
+        return PROTO_FALSE;
+    }
+    const uint8_t *q;
+    uint32_t q_len;
+    if (!pc_rd_str(blob, blen, &off, &q, &q_len))
+    {
+        return PROTO_FALSE;
+    }
+    if (q_len != PC_ECDSA_P256_PUB_LEN || q[0] != 0x04) // uncompressed point only
+    {
+        return PROTO_FALSE;
+    }
+    mem.cpy(pub, q, PC_ECDSA_P256_PUB_LEN);
+    return PROTO_TRUE;
+}
+
+// Parse an ECDSA signature blob (RFC 5656 §3.1.2): mpint(r) || mpint(s) -> raw r || s (32 + 32).
+static proto_bool parse_ecdsa_sig(const uint8_t *sig, uint32_t slen, uint8_t *out)
+{
+    size_t off = 0;
+    const uint8_t *r;
+    const uint8_t *s;
+    uint32_t r_len;
+    uint32_t s_len;
+    if (!pc_rd_str(sig, slen, &off, &r, &r_len) || !pc_rd_str(sig, slen, &off, &s, &s_len))
+    {
+        return PROTO_FALSE;
+    }
+    return pc_mpint_to_fixed(r, r_len, out, PC_ECDSA_P256_COORD_LEN) &&
+           pc_mpint_to_fixed(s, s_len, out + PC_ECDSA_P256_COORD_LEN, PC_ECDSA_P256_COORD_LEN);
+}
+
+proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const uint8_t *sig, size_t sig_len,
+                              const uint8_t *h, size_t h_len)
+{
+    if (i >= MAX_SSH_CONNS || !ssh_pkt_slot_storage(&ssh_pkt[i]))
+    {
+        return PROTO_FALSE;
+    }
+    // The signature is string(algorithm) || string(raw) (RFC 4253 §6.6); the raw bytes are what the
+    // algorithm verifies.
+    size_t soff = 0;
+    const uint8_t *stype;
+    uint32_t stype_len;
+    const uint8_t *raw;
+    uint32_t raw_len;
+    if (!pc_rd_str(sig, (uint32_t)sig_len, &soff, &stype, &stype_len) ||
+        !pc_rd_str(sig, (uint32_t)sig_len, &soff, &raw, &raw_len))
+    {
+        return PROTO_FALSE;
+    }
+
+    // The key material is staged in the arena rather than on the worker stack: this runs at the
+    // deepest point of the handshake, under the curve and bignum paths.
+    size_t mark = pc_plaintext_mark();
+    pc_span n_be = pc_plaintext_span(PC_RSA_KEY_BYTES, 4);
+    pc_span e_be = pc_plaintext_span(4, 4);
+    pc_span pub = pc_plaintext_span(PC_ECDSA_P256_PUB_LEN, 4);
+    pc_span ec_sig = pc_plaintext_span(PC_ECDSA_P256_SIG_LEN, 4);
+    if (!pc_span_ok(n_be) || !pc_span_ok(e_be) || !pc_span_ok(pub) || !pc_span_ok(ec_sig))
+    {
+        pc_plaintext_release(mark);
+        return PROTO_FALSE;
+    }
+
+    uint8_t *work = ssh_pkt[i].crypto_work;
+    proto_bool ok = PROTO_FALSE;
+    switch (ssh_sess[i].hostkey_alg)
+    {
+    case SSH_HOSTKEY_ED25519:
+        ok = parse_ed25519_pubkey(ks, (uint32_t)ks_len, pub.buf) && raw_len == 64 &&
+             pc_ed25519_verify(work, pub.buf, h, h_len, raw);
+        break;
+    case SSH_HOSTKEY_ECDSA_NISTP256:
+        ok = parse_ecdsa_pubkey(ks, (uint32_t)ks_len, pub.buf) && parse_ecdsa_sig(raw, raw_len, ec_sig.buf) &&
+             pc_ecdsa_p256_verify(pub.buf, work, h, h_len, ec_sig.buf);
+        break;
+    case SSH_HOSTKEY_RSA_SHA256:
+    case SSH_HOSTKEY_RSA_SHA512: {
+        // RFC 8332: the signature hash comes from the negotiated algorithm name, not the key blob.
+        pc_rsa_hash rh = PC_RSA_HASH_SHA256;
+        if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_RSA_SHA512)
+        {
+            rh = PC_RSA_HASH_SHA512;
+        }
+        ok = parse_rsa_pubkey(ks, (uint32_t)ks_len, n_be.buf, e_be.buf) &&
+             pc_rsa_verify(n_be.buf, e_be.buf, work, h, h_len, raw, raw_len, rh) == 0;
+        break;
+    }
+    }
+    pc_plaintext_release(mark);
+    return ok;
 }
 
 // ---------------------------------------------------------------------------
