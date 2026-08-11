@@ -116,6 +116,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`561041f`](https://github.com/dstroy0/ProtoCore/commit/561041fb8d3c9a37c76eb2cca3856623cd4b67ee))
 - update CHANGELOG.md [skip ci] ([`d804a0e`](https://github.com/dstroy0/ProtoCore/commit/d804a0e6ab650c3f5857ae037d9b842218a294c5))
 - update CHANGELOG.md [skip ci] ([`f13ccf5`](https://github.com/dstroy0/ProtoCore/commit/f13ccf5c697c9b3ff61bcbe7364917ba5981537b))
 - update CHANGELOG.md [skip ci] ([`2b90c5b`](https://github.com/dstroy0/ProtoCore/commit/2b90c5b2d983845f11a996008f89bbf6d5b0e33b))
@@ -513,6 +514,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- end-to-end handshake through the byte pump, to the RFC 4253 order ([`446a66a`](https://github.com/dstroy0/ProtoCore/commit/446a66aa8ac97ed72f70cc072feba9a39f169ac1))
 - rewrite test_ssh_server to the RFC, labelled by section ([`9b70ff3`](https://github.com/dstroy0/ProtoCore/commit/9b70ff32898760dbc8991d876b4b9f2050a1fbd3))
 - label test_ssh_transport by specification section ([`9bdc42a`](https://github.com/dstroy0/ProtoCore/commit/9bdc42a4c8b1a82ea8a3ad5176c1a63cd35437cf))
 - repair test_ssh_transport - it did not compile, and its fixtures skipped the protocol ([`f7bb381`](https://github.com/dstroy0/ProtoCore/commit/f7bb38174676414902294fdc3016d04d3b0356dd))
