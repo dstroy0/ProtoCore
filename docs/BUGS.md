@@ -8,6 +8,55 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## RFC 4254 sec 5.1 refusal codes: direct-tcpip reports the wrong one, and one is unreachable
+
+- **Status:** OPEN. Found writing the per-file suite for `ssh_forward.c`; both are pinned by
+  `test_s7_2_a_denied_target_is_not_dialed` and
+  `test_s7_2_a_refused_connect_is_reported_after_the_confirmation`, which assert what the code does
+  today, not what the RFC names.
+- **Every owner refusal reports code 2.** `SshForwardOpenCb` returns `int`, and
+  `ssh_channel.c:436` maps any `< 0` to `build_open_failure(..., 2u)`. So an administratively
+  denied target, a host longer than `PC_SSH_FWD_HOST_MAX`, and a full `PC_SSH_FWD_MAX` table all
+  report SSH_OPEN_CONNECT_FAILED. Sec 5.1 names 1 (ADMINISTRATIVELY_PROHIBITED) for the policy
+  denial and 4 (RESOURCE_SHORTAGE) for the full table. The callback cannot express which, so
+  distinguishing them is a contract change, not a local fix.
+- **Code 2 is unreachable for the case it names.** `on_forward_open` (`ssh_forward.c:238`) treats
+  `Tcp.client->open() < 0` as the connect failure, but `pc_client_open` (`tcp_client.c:308`) calls
+  `cc_pump` and then returns the slot id without consulting `c->closed` - the transport is
+  non-blocking and the connect has not settled yet. A refused target therefore yields
+  CHANNEL_OPEN_CONFIRMATION followed by EOF + CLOSE on the next `pc_ssh_forward_pump`, never
+  SSH_OPEN_CONNECT_FAILED. Not a protocol violation, but the client is told a channel opened to a
+  host nothing ever connected to.
+- **Stale comment:** `ssh_forward.c:238` says the open "blocks on DNS + connect". It does not.
+
+## RFC 4254 sec 7.1: no privileged-port check on a remote forward
+
+- **Status:** OPEN. Sec 7.1: "Implementations should only allow forwarding privileged ports if the
+  user has been authenticated as a privileged user."
+- **What is missing:** `on_rforward_open` (`ssh_forward.c:274`) checks port 0, a duplicate binding,
+  `PC_SSH_RFWD_MAX` capacity and `MAX_LISTENERS` capacity. There is no port-range check anywhere in
+  the file, so any authenticated user can bind 22, 80 or 443 on the device with `ssh -R`.
+- **Reach:** `PC_SSH_PORT_FORWARD` defaults to 0 and remote forwarding is inert until the
+  application calls `pc_ssh_forward_begin()`, so no default configuration is exposed. A deployment
+  that turns forwarding on gets the whole port range.
+- **Not fixed:** a privileged-port gate is a new policy surface and the owner's call.
+
+## ssh_forward.c does not compile: `Session` undeclared
+
+- **Status:** FIXED 2026-08-10, validated by `native_ssh_forward` building and running 14/14.
+- **What broke:** `pc_ssh_forward_begin` calls `Session.proto->add(PROTO_SSH_RFWD, &s_rfwd_handler)`
+  at `ssh_forward.c:466`. `Session` is declared in `network_drivers/session/session.h:46`, which the
+  file never included - it includes `session/proto_handler.h`, which declares `ProtoRegistryNs` but
+  not the `Session` instance. Any build with `PC_SSH_PORT_FORWARD=1` fails with
+  `error: 'Session' undeclared (first use in this function); did you mean 'SshSession'?`.
+- **Why it was never caught:** no environment in `test_matrix.json` compiled the file. The whole of
+  `ssh -L` and `ssh -R` was unbuilt, so the error sat in the tree rather than failing CI. Found by
+  adding `native_ssh_forward`, the first env that builds it.
+- **Fix:** the missing `#include "network_drivers/session/session.h"`. The direction is acyclic -
+  `session.h` reaches only into `session/` and `transport/`, never back into `presentation/`.
+- **Reach:** compile-time only, and only when the feature is on. `PC_SSH_PORT_FORWARD` defaults to 0
+  (`protocore_config.h:6365`), so no shipped default configuration was affected.
+
 ## Audit F3 "a framing failure permanently wedges the channel" - OVERSTATED, the idle sweep reclaims it
 
 - **Status:** CLOSED 2026-08-09 as not the defect it was filed as. The leak is real; the consequence
