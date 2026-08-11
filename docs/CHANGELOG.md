@@ -114,6 +114,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`fc9f5df`](https://github.com/dstroy0/ProtoCore/commit/fc9f5dfa8198d46f34359989ee9f77c60d522075))
 - update CHANGELOG.md [skip ci] ([`919ffa5`](https://github.com/dstroy0/ProtoCore/commit/919ffa56fa23a8e4202e11d004bad45ded701fd4))
 - update CHANGELOG.md [skip ci] ([`2e91ee5`](https://github.com/dstroy0/ProtoCore/commit/2e91ee52de40cc94c2a8fb2b9bacc13a5cfb63d7))
 - update CHANGELOG.md [skip ci] ([`7f253db`](https://github.com/dstroy0/ProtoCore/commit/7f253db93be347faf4ed6ed2a75ec97e0c021b06))
@@ -334,6 +335,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- ssh audit P0a/P0b/P1 in flight ([`ed6f704`](https://github.com/dstroy0/ProtoCore/commit/ed6f704c5a17ada81ed792392b242857f66d56de))
 - restore src/, core_setup/, tools/, ci and docs to c4368d386 ([`23a24a7`](https://github.com/dstroy0/ProtoCore/commit/23a24a7d0b9fe4b157d5a9ba601379e3b4d78d6d))
 - Revert "fix(swar): the Ns table made every leaf an indirect always_inline call at -Og" ([`41fc9a1`](https://github.com/dstroy0/ProtoCore/commit/41fc9a1655835ab8ada6aae70b0d282aaa65353e))
 - Revert "fix(nvs): the two backends gave different wrong answers for a blob and a string" ([`ea49e97`](https://github.com/dstroy0/ProtoCore/commit/ea49e97545cee8dc48bb14fea94ddd682f93b9e4))
@@ -468,6 +470,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- reconcile the SSH tree against the control-flow audit ([`63a3ea2`](https://github.com/dstroy0/ProtoCore/commit/63a3ea22f5f6e73b4b3e1069cb3bf3794384c8d9))
 - the connection borrows its handshake bytes; the secure arena sums the term ([`881f0bd`](https://github.com/dstroy0/ProtoCore/commit/881f0bd6a102a88fb1250b0055c72db2a8bdce18))
 - the connection borrows its stream and CRYPTO bytes; the dead rx buffer goes ([`da5c60d`](https://github.com/dstroy0/ProtoCore/commit/da5c60d30379d2eb3f149e182463340aa3f31f5d))
 - the connection borrows its stream bytes; the caps move to the config ([`9b7b41b`](https://github.com/dstroy0/ProtoCore/commit/9b7b41bd628fc88478f08c5fdd2c5709318fe10a))
