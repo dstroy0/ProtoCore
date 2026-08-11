@@ -86,7 +86,7 @@ int ssh_dh_generate(uint8_t i);
  *   mac_c2s = SHA256(K || H || 'E' || session_id)  [32 bytes]
  *   mac_s2c = SHA256(K || H || 'F' || session_id)  [32 bytes]
  *
- * Installs the derived keys into ssh_keys[i].
+ * Installs the derived keys into the epoch of ssh_keys[i] that neither direction is reading.
  * Does NOT zero K or H - the caller does that.
  *
  * @param i           Slot index.

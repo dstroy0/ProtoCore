@@ -13,10 +13,11 @@
 #include "crypto/asymmetric/ed25519.h"    // pc_ed25519 host-key sign
 #include "crypto/hash/sha256.h"
 #include "crypto/rng/rng.h" // pc_rand_fill
-#include "mmgr/bytes.h"     // pc_rd_str() - a name-list is an RFC 4251 sec 5 string
-#include "mmgr/membuild.h"  // pc_sb frame builder
+#include "mmgr/bytes.h"    // pc_bw_* / pc_rd_str() - the byte verbs this file frames with
+#include "mmgr/membuild.h" // pc_sb frame builder
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
+#include "network_drivers/presentation/ssh/connection/ssh_conn.h" // ssh_conn_slot() + the memory map
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h" // pc_rand_fill(), ssh_dh[], ssh_dh_generate/derive_keys
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_KEXINIT, ssh_pkt[]
 #include "network_drivers/tls/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
@@ -48,41 +49,82 @@ SshSession ssh_sess[MAX_SSH_CONNS];
 // that supports only one still connects.
 // ---------------------------------------------------------------------------
 
-static const char *const KEX_DH = "diffie-hellman-group14-sha256";
-static const char *const KEX_C25519 = "curve25519-sha256";
-static const char *const KEX_C25519_LIBSSH = "curve25519-sha256@libssh.org"; // identical wire protocol
-static const char *const KEX_ECDH_NISTP256 = "ecdh-sha2-nistp256";           // NIST P-256 ECDH (RFC 5656 §4)
+// Arrays, not pointers: sizeof() over these is what the KEXINIT worst case below sums.
+static const char KEX_DH[] = "diffie-hellman-group14-sha256";
+static const char KEX_C25519[] = "curve25519-sha256";
+static const char KEX_C25519_LIBSSH[] = "curve25519-sha256@libssh.org"; // identical wire protocol
+static const char KEX_ECDH_NISTP256[] = "ecdh-sha2-nistp256";           // NIST P-256 ECDH (RFC 5656 §4)
 #if PC_ENABLE_PQC_KEX
-static const char *const KEX_MLKEM768 = "mlkem768x25519-sha256"; // PQ/T hybrid (ML-KEM-768 + X25519)
+static const char KEX_MLKEM768[] = "mlkem768x25519-sha256"; // PQ/T hybrid (ML-KEM-768 + X25519)
 #endif
 #if PC_ENABLE_SSH_SNTRUP761
-static const char *const KEX_SNTRUP761 = "sntrup761x25519-sha512@openssh.com"; // PQ/T hybrid (NTRU Prime + X25519)
+static const char KEX_SNTRUP761[] = "sntrup761x25519-sha512@openssh.com"; // PQ/T hybrid (NTRU Prime + X25519)
 #endif
-static const char *const HOSTKEY_RSA_SHA256 = "rsa-sha2-256";
-static const char *const HOSTKEY_RSA_SHA512 = "rsa-sha2-512";
+static const char HOSTKEY_RSA_SHA256[] = "rsa-sha2-256";
+static const char HOSTKEY_RSA_SHA512[] = "rsa-sha2-512";
 static const char HOSTKEY_ED[] = "ssh-ed25519";
 static const char HOSTKEY_ECDSA[] = "ecdsa-sha2-nistp256";
-static const char *const ALG_CIPHER = "aes256-ctr";
-static const char *const ALG_CIPHER_GCM = "aes256-gcm@openssh.com";
+static const char ALG_CIPHER[] = "aes256-ctr";
+static const char ALG_CIPHER_GCM[] = "aes256-gcm@openssh.com";
 // Advertised cipher preference (OpenSSH's default order): chacha20-poly1305@openssh.com (AEAD)
 // first, aes256-gcm@openssh.com (AEAD, HW-accelerated) second, aes256-ctr (HW fallback) last.
-static const char *const ALG_CIPHER_LIST = "chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes256-ctr";
-static const char *const ALG_MAC = "hmac-sha2-256";
+static const char ALG_CIPHER_LIST[] = "chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes256-ctr";
+static const char ALG_MAC[] = "hmac-sha2-256";
 // Advertised MAC preference (aes256-ctr only; the chacha AEAD needs none): encrypt-then-MAC first
 // (OpenSSH's default), then plain encrypt-and-MAC.
-static const char *const ALG_MAC_LIST = "hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,"
-                                        "hmac-sha2-256,hmac-sha2-512";
-static const char *const ALG_COMP = "none";
+static const char ALG_MAC_LIST[] = "hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,"
+                                   "hmac-sha2-256,hmac-sha2-512";
+static const char ALG_COMP[] = "none";
 #if PC_ENABLE_SSH_ZLIB
 // Compression preference (both directions): zlib@openssh.com (delayed, OpenSSH's default) first, then
 // zlib (immediate), then none. s2c deflates (ssh_zlib); c2s inflates OpenSSH's Z_PARTIAL_FLUSH stream
 // (ssh_inflate). Advertised for c2s and s2c alike.
-static const char *const ALG_COMP_ZLIB = "zlib@openssh.com,zlib,none";
+static const char ALG_COMP_ZLIB[] = "zlib@openssh.com,zlib,none";
 #else
-static const char *const ALG_COMP_ZLIB = "none";
+static const char ALG_COMP_ZLIB[] = "none";
 #endif
 // RFC 8308 indicator a client sets in its kex_algorithms to request EXT_INFO.
-static const char *const EXT_INFO_C = "ext-info-c";
+static const char EXT_INFO_C[] = "ext-info-c";
+
+// ---------------------------------------------------------------------------
+// KEXINIT worst case (RFC 4253 sec 7.1), summed from the names above.
+// ---------------------------------------------------------------------------
+
+// One name in a comma-separated list: its text plus the separator that may precede it.
+#define SSH_ADV(name) (sizeof(name)) // sizeof includes the NUL, which pays for the comma
+
+// kex_algorithms: every method this build advertises, plus ",ext-info-s".
+#if PC_ENABLE_PQC_KEX
+#define SSH_ADV_MLKEM SSH_ADV(KEX_MLKEM768)
+#else
+#define SSH_ADV_MLKEM 0u
+#endif
+#if PC_ENABLE_SSH_SNTRUP761
+#define SSH_ADV_SNTRUP SSH_ADV(KEX_SNTRUP761)
+#else
+#define SSH_ADV_SNTRUP 0u
+#endif
+#define SSH_KEXLIST_MAX                                                                                                \
+    (SSH_ADV_MLKEM + SSH_ADV_SNTRUP + SSH_ADV(KEX_DH) + SSH_ADV(KEX_ECDH_NISTP256) + SSH_ADV(KEX_C25519) +             \
+     SSH_ADV(KEX_C25519_LIBSSH) + sizeof(",ext-info-s"))
+
+// server_host_key_algorithms: all four, which is what a build holding every key type advertises.
+#define SSH_HKLIST_MAX                                                                                                 \
+    (SSH_ADV(HOSTKEY_RSA_SHA512) + SSH_ADV(HOSTKEY_RSA_SHA256) + SSH_ADV(HOSTKEY_ECDSA) + SSH_ADV(HOSTKEY_ED))
+
+// The payload: msg + cookie + ten name-lists each with its uint32 + the guess flag + the reserved uint32.
+#define SSH_KEXINIT_S_WORST                                                                                            \
+    (1u + 16u + (4u + SSH_KEXLIST_MAX) + (4u + SSH_HKLIST_MAX) + (2u * (4u + sizeof(ALG_CIPHER_LIST))) +               \
+     (2u * (4u + sizeof(ALG_MAC_LIST))) + (2u * (4u + sizeof(ALG_COMP_ZLIB))) + (2u * 4u) + 1u + 4u)
+
+static_assert(PC_SSH_KEXINIT_S_MAX >= SSH_KEXINIT_S_WORST,
+              "PC_SSH_KEXINIT_S_MAX must cover every name this build advertises: raise it in ssh_transport.h");
+
+// The two lists are joined in these before they reach the payload, so each holds its own worst case.
+#define SSH_KEXLIST_BUF 192
+#define SSH_HKLIST_BUF 64
+static_assert(SSH_KEXLIST_BUF >= SSH_KEXLIST_MAX, "kexlist[] drops an advertised KEX name: raise SSH_KEXLIST_BUF");
+static_assert(SSH_HKLIST_BUF >= SSH_HKLIST_MAX, "hklist[] drops an advertised host-key name: raise SSH_HKLIST_BUF");
 
 // All SSH transport host-key/KEX state, owned by one instance (internal linkage): the runtime
 // KEX preference (true = prefer the hardware-accelerated RSA/DH suite) and the optional
@@ -250,78 +292,6 @@ static void build_hostkey_list(char *out, size_t cap)
 }
 
 // ---------------------------------------------------------------------------
-// Byte-writer helpers
-// ---------------------------------------------------------------------------
-
-typedef struct
-{
-    uint8_t *p;
-    size_t cap;
-    size_t len;
-    proto_bool ok;
-} Writer;
-
-static void w_bytes(Writer *w, const void *src, size_t n)
-{
-    if (!w->ok || w->len + n > w->cap)
-    {
-        w->ok = PROTO_FALSE;
-        return;
-    }
-    mem.cpy(w->p + w->len, src, n); // NOSONAR - bound proven above; analyzer follows an infeasible path
-    w->len += n;
-}
-
-static void w_u8(Writer *w, uint8_t v)
-{
-    w_bytes(w, &v, 1);
-}
-
-static void w_u32(Writer *w, uint32_t v)
-{
-    uint8_t b[4] = {(uint8_t)(v >> 24), (uint8_t)(v >> 16), (uint8_t)(v >> 8), (uint8_t)v};
-    w_bytes(w, b, 4);
-}
-
-// Write an SSH name-list: uint32 length + comma-separated names.
-static void w_namelist(Writer *w, const char *list)
-{
-    uint32_t n = (uint32_t)strnlen(list, w->cap);
-    w_u32(w, n);
-    w_bytes(w, list, n);
-}
-
-// Write an SSH string: uint32 length + raw bytes.
-static void w_string(Writer *w, const uint8_t *data, size_t n)
-{
-    w_u32(w, (uint32_t)n);
-    w_bytes(w, data, n);
-}
-
-// Write an SSH mpint from a fixed-width big-endian integer: strip leading zero
-// bytes, prepend 0x00 if the top bit is set.
-static void w_mpint(Writer *w, const uint8_t *be, size_t len)
-{
-    size_t off = 0;
-    while (off < len && be[off] == 0)
-    {
-        off++;
-    }
-    if (off == len)
-    {
-        w_u32(w, 0); // zero → empty string
-        return;
-    }
-    proto_bool pad = (be[off] & 0x80u) != 0;
-    w_u32(w, (uint32_t)(len - off) + (pad ? 1u : 0u));
-    if (pad)
-    {
-        w_u8(w, 0x00);
-    }
-    w_bytes(w, be + off, len - off);
-}
-
-// ---------------------------------------------------------------------------
 // name-list membership test (RFC 4253 §7.1 - comma-separated, no spaces)
 // ---------------------------------------------------------------------------
 
@@ -409,24 +379,47 @@ void ssh_transport_init(uint8_t i)
     {
         return;
     }
+    uint8_t *base = ssh_conn_slot(i);
+    if (base == NULL)
+    {
+        return;
+    }
+
+    // The session's buffers, at their offsets in the connection's storage.
     SshSession *s = &ssh_sess[i];
-    // The constants-region bindings are the slot's, so they are held across the zero.
-    char *vc = s->v_c;
-    uint8_t *bnr = s->banner_buf;
-    uint8_t *ic = s->i_c;
-    uint8_t *is = s->i_s;
-    uint8_t *sid = s->session_id;
-    uint8_t *esk = s->ecdh_sk;
-    uint8_t *epk = s->ecdh_pk;
     mem.set(s, 0, sizeof(*s));
-    s->v_c = vc;
-    s->banner_buf = bnr;
-    s->i_c = ic;
-    s->i_s = is;
-    s->session_id = sid;
-    s->ecdh_sk = esk;
-    s->ecdh_pk = epk;
+    s->v_c = (char *)(base + SSH_OFF_V_C);
+    s->banner_buf = base + SSH_OFF_BANNER;
+    s->i_c = base + SSH_OFF_I_C;
+    s->i_s = base + SSH_OFF_I_S;
+    s->session_id = base + SSH_OFF_SESSION_ID;
+    s->ecdh_sk = base + SSH_OFF_ECDH_SK;
+    s->ecdh_pk = base + SSH_OFF_ECDH_PK;
     s->phase = SSH_PHASE_BANNER;
+    s->kex_active = PROTO_TRUE; // the first exchange is running from the moment the slot opens
+
+    // Both key epochs, one stride apart; epoch_in / epoch_out select which one a site reads.
+    for (uint8_t e = 0; e < 2u; e++)
+    {
+        SshKeyMat *km = &ssh_keys[i][e];
+        uint8_t *k = base + SSH_OFF_EPOCH_0 + ((size_t)e * SSH_EPOCH_STRIDE);
+        km->gcm_ctx_c2s = k + SSH_OFF_GCM_C2S;
+        km->gcm_ctx_s2c = k + SSH_OFF_GCM_S2C;
+        km->chacha_key_c2s = k + SSH_OFF_CHACHA_C2S;
+        km->chacha_key_s2c = k + SSH_OFF_CHACHA_S2C;
+        km->mac_key_c2s = k + SSH_OFF_MAC_C2S;
+        km->mac_key_s2c = k + SSH_OFF_MAC_S2C;
+        km->aes_key_c2s = k + SSH_OFF_AES_KEY_C2S;
+        km->aes_key_s2c = k + SSH_OFF_AES_KEY_S2C;
+        km->aes_iv_c2s = k + SSH_OFF_AES_IV_C2S;
+        km->aes_iv_s2c = k + SSH_OFF_AES_IV_S2C;
+        km->active = PROTO_FALSE;
+    }
+
+    SshDhState *dh = &ssh_dh[i];
+    dh->y = (pc_bignum *)(base + SSH_OFF_DH_Y);
+    dh->f = (pc_bignum *)(base + SSH_OFF_DH_F);
+    dh->K = (pc_bignum *)(base + SSH_OFF_DH_K);
 }
 
 // ---------------------------------------------------------------------------
@@ -512,46 +505,46 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
     }
     SshSession *s = &ssh_sess[i];
 
-    Writer w = {payload, cap, 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_KEXINIT);
+    pc_span w = pc_span_from(payload, cap);
+    pc_bw_put(&w, SSH_MSG_KEXINIT);
 
     uint8_t cookie[16];
     pc_rand_fill(cookie, sizeof(cookie));
-    w_bytes(&w, cookie, sizeof(cookie));
+    pc_bw_bytes(&w, cookie, sizeof(cookie));
 
-    char kexlist[192];
+    char kexlist[SSH_KEXLIST_BUF];
     // All four host-key algs = "ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256" is 57
     // chars + NUL; a smaller buffer silently drops rsa-sha2-256 when all three key types are loaded.
-    char hklist[64];
+    char hklist[SSH_HKLIST_BUF];
     build_kex_list(kexlist, sizeof(kexlist));
     build_hostkey_list(hklist, sizeof(hklist));
-    w_namelist(&w, kexlist);         // kex_algorithms (preference-ordered, + ext-info-s)
-    w_namelist(&w, hklist);          // server_host_key_algorithms (only keys we hold)
-    w_namelist(&w, ALG_CIPHER_LIST); // encryption c2s (chacha20-poly1305 preferred, aes256-ctr fallback)
-    w_namelist(&w, ALG_CIPHER_LIST); // encryption s2c
-    w_namelist(&w, ALG_MAC_LIST);    // mac c2s (used only with aes256-ctr; ignored for the AEAD cipher)
-    w_namelist(&w, ALG_MAC_LIST);    // mac s2c
-    w_namelist(&w, ALG_COMP_ZLIB);   // compression c2s (zlib@openssh.com / zlib when built in, else none)
-    w_namelist(&w, ALG_COMP_ZLIB);   // compression s2c (zlib@openssh.com / zlib when built in, else none)
-    w_namelist(&w, "");              // languages c2s
-    w_namelist(&w, "");              // languages s2c
-    w_u8(&w, 0);                     // first_kex_packet_follows = false
-    w_u32(&w, 0);                    // reserved
+    pc_ssh_wr_cstr(&w, kexlist);         // kex_algorithms (preference-ordered, + ext-info-s)
+    pc_ssh_wr_cstr(&w, hklist);          // server_host_key_algorithms (only keys we hold)
+    pc_ssh_wr_cstr(&w, ALG_CIPHER_LIST); // encryption c2s (chacha20-poly1305 preferred, aes256-ctr fallback)
+    pc_ssh_wr_cstr(&w, ALG_CIPHER_LIST); // encryption s2c
+    pc_ssh_wr_cstr(&w, ALG_MAC_LIST);    // mac c2s (used only with aes256-ctr; ignored for the AEAD cipher)
+    pc_ssh_wr_cstr(&w, ALG_MAC_LIST);    // mac s2c
+    pc_ssh_wr_cstr(&w, ALG_COMP_ZLIB);   // compression c2s (zlib@openssh.com / zlib when built in, else none)
+    pc_ssh_wr_cstr(&w, ALG_COMP_ZLIB);   // compression s2c (zlib@openssh.com / zlib when built in, else none)
+    pc_ssh_wr_cstr(&w, "");              // languages c2s
+    pc_ssh_wr_cstr(&w, "");              // languages s2c
+    pc_bw_put(&w, 0);                     // first_kex_packet_follows = false
+    pc_bw_put_be(&w, 0, 4);                    // reserved
 
-    if (!w.ok)
+    if (!pc_span_ok(w))
     {
         return -1;
     }
 
     // Retain a copy as I_S for the exchange hash.
-    if (w.len > PC_SSH_KEXINIT_S_MAX)
+    if (w.pos > PC_SSH_KEXINIT_S_MAX)
     {
         return -1;
     }
-    mem.cpy(s->i_s, payload, w.len);
-    s->i_s_len = (uint16_t)w.len;
+    mem.cpy(s->i_s, payload, w.pos);
+    s->i_s_len = (uint16_t)w.pos;
 
-    *len = w.len;
+    *len = w.pos;
     return 0;
 }
 
@@ -646,6 +639,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
+    ssh_sess[i].kex_active = PROTO_TRUE; // an exchange is running from here to NEWKEYS
 
     // Retain a copy as I_C for the exchange hash.
     if (len > SSH_KEXINIT_MAX)
@@ -794,10 +788,10 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
 int ssh_extinfo_build(uint8_t *out, size_t *len, size_t cap)
 {
     // byte SSH_MSG_EXT_INFO || uint32 nr-extensions || (string name, string value)*
-    Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_EXT_INFO);
-    w_u32(&w, 1);                      // one extension
-    w_namelist(&w, "server-sig-algs"); // extension name
+    pc_span w = pc_span_from(out, cap);
+    pc_bw_put(&w, SSH_MSG_EXT_INFO);
+    pc_bw_put_be(&w, 1, 4);                      // one extension
+    pc_ssh_wr_cstr(&w, "server-sig-algs"); // extension name
     // Accepted client public-key signature algorithms for userauth. All are always
     // verifiable (independent of which host key we hold); ordered by our preference so a
     // modern client picks the steered-to type. A client uses this to choose a key to offer.
@@ -806,12 +800,12 @@ int ssh_extinfo_build(uint8_t *out, size_t *len, size_t cap)
     // ssh-ed25519 are also verifiable, so all four are advertised in preference order.
     const char *siglist = s_sshtr.prefer_rsa ? "rsa-sha2-512,rsa-sha2-256,ecdsa-sha2-nistp256,ssh-ed25519"
                                              : "ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256";
-    w_namelist(&w, siglist); // value: accepted client-sig algorithms
-    if (!w.ok)
+    pc_ssh_wr_cstr(&w, siglist); // value: accepted client-sig algorithms
+    if (!pc_span_ok(w))
     {
         return -1;
     }
-    *len = w.len;
+    *len = w.pos;
     return 0;
 }
 
@@ -1007,27 +1001,27 @@ static int encode_hostkey(uint8_t i, uint8_t *ks, size_t *ks_len, size_t cap)
 {
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ED25519)
     {
-        Writer w = {ks, cap, 0, PROTO_TRUE};
-        w_string(&w, (const uint8_t *)HOSTKEY_ED, sizeof(HOSTKEY_ED) - 1);
-        w_string(&w, s_sshtr.ed_pub, 32);
-        if (!w.ok)
+        pc_span w = pc_span_from(ks, cap);
+        pc_ssh_wr_str(&w, (const uint8_t *)HOSTKEY_ED, sizeof(HOSTKEY_ED) - 1);
+        pc_ssh_wr_str(&w, s_sshtr.ed_pub, 32);
+        if (!pc_span_ok(w))
         {
             return -1;
         }
-        *ks_len = w.len;
+        *ks_len = w.pos;
         return 0;
     }
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ECDSA_NISTP256)
     {
-        Writer w = {ks, cap, 0, PROTO_TRUE};
-        w_string(&w, (const uint8_t *)HOSTKEY_ECDSA, sizeof(HOSTKEY_ECDSA) - 1);
-        w_string(&w, (const uint8_t *)"nistp256", 8); // RFC 5656 curve identifier
-        w_string(&w, s_sshtr.ecdsa_pub, PC_ECDSA_P256_PUB_LEN);
-        if (!w.ok)
+        pc_span w = pc_span_from(ks, cap);
+        pc_ssh_wr_str(&w, (const uint8_t *)HOSTKEY_ECDSA, sizeof(HOSTKEY_ECDSA) - 1);
+        pc_ssh_wr_str(&w, (const uint8_t *)"nistp256", 8); // RFC 5656 curve identifier
+        pc_ssh_wr_str(&w, s_sshtr.ecdsa_pub, PC_ECDSA_P256_PUB_LEN);
+        if (!pc_span_ok(w))
         {
             return -1;
         }
-        *ks_len = w.len;
+        *ks_len = w.pos;
         return 0;
     }
     return ssh_rsa_encode_pubkey(ks, ks_len, cap);
@@ -1061,14 +1055,14 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
             return -1;
         }
         // ECDSA signature blob is mpint(r) || mpint(s) (RFC 5656 §3.1.2).
-        Writer w = {sig, sig_cap, 0, PROTO_TRUE};
-        w_mpint(&w, raw, PC_ECDSA_P256_COORD_LEN);
-        w_mpint(&w, raw + PC_ECDSA_P256_COORD_LEN, PC_ECDSA_P256_COORD_LEN);
-        if (!w.ok)
+        pc_span w = pc_span_from(sig, sig_cap);
+        pc_ssh_wr_mpint(&w, raw, PC_ECDSA_P256_COORD_LEN);
+        pc_ssh_wr_mpint(&w, raw + PC_ECDSA_P256_COORD_LEN, PC_ECDSA_P256_COORD_LEN);
+        if (!pc_span_ok(w))
         {
             return -1;
         }
-        *sig_len = w.len;
+        *sig_len = w.pos;
         *sig_name = HOSTKEY_ECDSA; // "ecdsa-sha2-nistp256"
         return 0;
     }
@@ -1095,26 +1089,26 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
                            const char *sig_name, const uint8_t *sig, size_t sig_len, uint8_t *out, size_t *out_len,
                            size_t cap)
 {
-    Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, SSH_MSG_KEXDH_REPLY);
-    w_string(&w, ks, ks_len); // K_S
+    pc_span w = pc_span_from(out, cap);
+    pc_bw_put(&w, SSH_MSG_KEXDH_REPLY);
+    pc_ssh_wr_str(&w, ks, ks_len); // K_S
     if (ssh_sess[i].kex_alg == SSH_KEX_DH_GROUP14)
     {
-        w_mpint(&w, spub, spub_len); // f (mpint)
+        pc_ssh_wr_mpint(&w, spub, spub_len); // f (mpint)
     }
     else
     {
-        w_string(&w, spub, spub_len); // Q_S (curve25519) or S_REPLY (hybrid), a raw string
+        pc_ssh_wr_str(&w, spub, spub_len); // Q_S (curve25519) or S_REPLY (hybrid), a raw string
     }
     uint32_t nl = (uint32_t)strnlen(sig_name, w.cap);
-    w_u32(&w, 4 + nl + 4 + (uint32_t)sig_len); // signature blob length
-    w_string(&w, (const uint8_t *)sig_name, nl);
-    w_string(&w, sig, sig_len);
-    if (!w.ok)
+    pc_bw_put_be(&w, 4 + nl + 4 + (uint32_t)sig_len, 4); // signature blob length
+    pc_ssh_wr_str(&w, (const uint8_t *)sig_name, nl);
+    pc_ssh_wr_str(&w, sig, sig_len);
+    if (!pc_span_ok(w))
     {
         return -1;
     }
-    *out_len = w.len;
+    *out_len = w.pos;
     return 0;
 }
 
@@ -1480,29 +1474,63 @@ void ssh_newkeys_sent(uint8_t i)
     {
         return;
     }
-    // We have emitted our SSH_MSG_NEWKEYS: our outbound direction is now encrypted (RFC 4253 sec 7.3).
-    ssh_pkt[i].enc_out = PROTO_TRUE;
+    // We have emitted our SSH_MSG_NEWKEYS: our outbound direction is now encrypted and reads the
+    // epoch this exchange derived (RFC 4253 sec 7.3).
+    ssh_sess[i].out.epoch = 1u - ssh_sess[i].out.epoch;
+    ssh_sess[i].out.enc = PROTO_TRUE;
 #if PC_ENABLE_SSH_ZLIB
     // "zlib" (non-delayed) starts its s2c (outbound) stream here; idempotent, so a re-key does not restart it.
     ssh_comp_on_newkeys(i);
 #endif
 }
 
-void ssh_newkeys_complete(uint8_t i)
+int ssh_newkeys_complete(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
-        return;
+        return -1;
     }
-    // We have received the peer's SSH_MSG_NEWKEYS: our inbound direction is now encrypted. Both directions
-    // are keyed once we get here (the server always sends its NEWKEYS first), so the KEX is complete.
-    ssh_pkt[i].enc_in = PROTO_TRUE;
-    ssh_pkt[i].kex_active = PROTO_FALSE;
+    // RFC 4253 sec 7.3: NEWKEYS ends a key exchange, so one arriving in any other phase ends nothing
+    // and the connection goes down.
+    if (ssh_sess[i].phase != SSH_PHASE_NEWKEYS)
+    {
+        return -1;
+    }
+    // We have received the peer's SSH_MSG_NEWKEYS: our inbound direction is now encrypted and reads
+    // the epoch this exchange derived (RFC 4253 sec 7.3). Both directions are keyed once we get here
+    // (the server always sends its NEWKEYS first), so the KEX is complete.
+    ssh_sess[i].in.epoch = 1u - ssh_sess[i].in.epoch;
+    ssh_sess[i].in.enc = PROTO_TRUE;
+    ssh_sess[i].kex_active = PROTO_FALSE;
+    // Both directions are on the new epoch, so the old one is released: its keyed GCM contexts go
+    // back and its whole stride in the connection's span is zeroed (RFC 4253 sec 7.3).
+    if (ssh_sess[i].in.epoch == ssh_sess[i].out.epoch)
+    {
+        SshKeyMat *old = &ssh_keys[i][1u - ssh_sess[i].in.epoch];
+        if (old->active && old->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
+        {
+            pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(old->gcm_ctx_c2s));
+        }
+        if (old->active && old->cipher_mode_s2c == SSH_CIPHER_AES256GCM)
+        {
+            pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(old->gcm_ctx_s2c));
+        }
+        if (old->gcm_ctx_c2s != NULL)
+        {
+            pc_secure_wipe(old->gcm_ctx_c2s, SSH_EPOCH_STRIDE); // the epoch opens the run it names
+        }
+        old->mac_mode_c2s = 0;
+        old->mac_mode_s2c = 0;
+        old->cipher_mode_c2s = 0;
+        old->cipher_mode_s2c = 0;
+        old->active = PROTO_FALSE;
+    }
     // On the first KEX advance to the service phase; on a re-key the connection
     // is already authenticated, so resume the open (channel) phase.
     ssh_sess[i].phase = ssh_sess[i].authed ? SSH_PHASE_OPEN : SSH_PHASE_SERVICE;
     // Reset the re-key timer: the volume/time budget is measured from this completed KEX.
     ssh_sess[i].last_kex_ms = pc_millis();
+    return 0;
 }
 
 proto_bool ssh_rekey_needed(uint8_t i)
@@ -1545,6 +1573,20 @@ int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, size_t c
     {
         return -1;
     }
+    ssh_sess[i].kex_active = PROTO_TRUE; // an exchange is running from here to NEWKEYS
     ssh_sess[i].phase = SSH_PHASE_KEXINIT;
     return 0;
+}
+
+// The RFC 4253 transitions, named. One instance, handed out by pointer.
+static const SshTransportNs instance = {ssh_transport_recv_banner, ssh_transport_server_banner,
+                                        ssh_kexinit_build,         ssh_kexinit_parse,
+                                        ssh_kex_generate,          ssh_kex_exchange_hash,
+                                        ssh_kexdh_handle,          ssh_newkeys_sent,
+                                        ssh_newkeys_complete,      ssh_rekey_due,
+                                        ssh_transport_begin_rekey};
+
+const SshTransportNs *pc_ssh_transport(void)
+{
+    return &instance;
 }

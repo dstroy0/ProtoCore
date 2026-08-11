@@ -181,6 +181,15 @@ int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uin
 /** @brief Reset channel state for slot @p i. */
 void pc_ssh_channel_init(uint8_t i);
 
+/** @brief The open channel @p id on connection @p i, or null. Local id == slot index. */
+SshChannel *pc_ssh_chan_by_id(uint8_t i, uint32_t id);
+
+/**
+ * @brief First free channel slot on connection @p i, or -1 if the pool is full. A pending
+ *        (opened-but-unconfirmed) channel is in use just like an open one.
+ */
+int pc_ssh_chan_alloc(uint8_t i);
+
 /**
  * @brief Handle SSH_MSG_CHANNEL_OPEN and emit CHANNEL_OPEN_CONFIRMATION.
  *

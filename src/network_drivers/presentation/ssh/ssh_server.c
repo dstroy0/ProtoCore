@@ -106,18 +106,18 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_KEXINIT:
         // Initial KEX or an in-session re-key request. Negotiate, reply with our
         // own KEXINIT, generate a fresh ephemeral, and await KEXDH_INIT.
-        if (SshTransport.kexinit_parse(i, payload, len) != 0)
+        if (SSH_TRANSPORT->kexinit_parse(i, payload, len) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
         }
-        if (SshTransport.kexinit_build(i, reply.buf, &n, reply.cap) != 0)
+        if (SSH_TRANSPORT->kexinit_build(i, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n);
-        if (SshTransport.kex_generate(i) != 0)
+        if (SSH_TRANSPORT->kex_generate(i) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -140,7 +140,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return 0;
         }
-        if (SshTransport.kexdh(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SSH_TRANSPORT->kexdh(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -149,13 +149,19 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         {
             uint8_t newkeys = SSH_MSG_NEWKEYS;
             emit(i, &newkeys, 1); // server NEWKEYS (this one still goes out unencrypted)
-            SshTransport.newkeys_sent(i); // ...but our outbound is encrypted from the next packet on
+            SSH_TRANSPORT->newkeys_sent(i); // ...but our outbound is encrypted from the next packet on
         }
         pc_plaintext_release(mark);
         return 0; // ssh_kexdh_handle advanced phase to NEWKEYS
 
     case SSH_MSG_NEWKEYS:
-        SshTransport.newkeys_recvd(i); // activate encryption; → SERVICE or OPEN
+        // RFC 4253 sec 7.3: a NEWKEYS that ends no key exchange is a protocol error, so the
+        // connection goes down rather than switching keys.
+        if (SSH_TRANSPORT->newkeys_recvd(i) != 0) // activate encryption; → SERVICE or OPEN
+        {
+            pc_plaintext_release(mark);
+            return -1;
+        }
         // RFC 8308: with encryption now active, advertise the signature algorithms
         // we accept for pubkey userauth (server-sig-algs) so a modern client will
         // sign an RSA key - it otherwise reports "no mutual signature algorithm".
@@ -403,6 +409,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // message must travel in its own binary packet (RFC 4253 6): a strict peer
         // runs packet_check_eom() after every message and rejects two in one. Emit
         // the two halves as separate packets.
+        if (!s->authed)
+        {
+            pc_plaintext_release(mark);
+            return -1;
+        }
         if (pc_ssh_channel_handle_close(i, payload, len, reply.buf, &n, reply.cap) == 0 && n == 10)
         {
             emit(i, reply.buf, 5);     // CHANNEL_EOF

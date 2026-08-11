@@ -3,16 +3,16 @@
 
 /**
  * @file ssh_comp.h
- * @brief SSH per-connection compression owner (server-to-client `zlib` / `zlib@openssh.com`).
+ * @brief SSH per-connection compression owner (`zlib` / `zlib@openssh.com`, both directions).
  *
  * One owner for the whole compression concern (per the "one owner per cross-layer concern" rule):
- * it holds the per-connection streaming compressor + its PSRAM-resident buffers, records the
- * negotiated s2c algorithm, and starts the stream at the right moment (immediately after NEWKEYS for
- * `zlib`, or after SSH_MSG_USERAUTH_SUCCESS for the delayed `zlib@openssh.com`). The transport packet
- * layer asks it, per outbound packet, whether to compress and hands it the payload; nothing else
- * touches compression state.
+ * it holds the per-connection streaming compressor and decompressor + their PSRAM-resident buffers,
+ * records the algorithm negotiated for each direction, and starts each stream at the right moment
+ * (immediately after NEWKEYS for `zlib`, or after SSH_MSG_USERAUTH_SUCCESS for the delayed
+ * `zlib@openssh.com`). The transport packet layer asks it, per outbound packet, whether to compress
+ * and per inbound packet whether to decompress; nothing else touches compression state.
  *
- * Only server-to-client is implemented (see ssh_zlib.h for why c2s stays `none`).
+ * s2c deflates (ssh_zlib.h); c2s resumes a context-takeover inflate across packets (ssh_inflate.h).
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -27,10 +27,10 @@ PROTO_BEGIN_DECLS
 
 #if PC_ENABLE_SSH_ZLIB
 
-/** @brief Negotiated server-to-client compression algorithm. */
+/** @brief Negotiated compression algorithm, held per direction. */
 typedef enum PROTO_ENUM_PACKED
 {
-    SSH_COMP_NONE = 0,        ///< no compression (also the c2s direction, always)
+    SSH_COMP_NONE = 0,        ///< no compression
     SSH_COMP_ZLIB = 1,        ///< "zlib" (RFC 4253) - starts right after NEWKEYS
     SSH_COMP_ZLIB_DELAYED = 2 ///< "zlib@openssh.com" - starts after SSH_MSG_USERAUTH_SUCCESS
 } SshCompAlg;

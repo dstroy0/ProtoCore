@@ -23,14 +23,15 @@ it names, the commands it invokes, and whether it holds a write primitive. `W` =
 | `support/`              | 3     | shared test helpers                                          |
 | `interop/`              | 4     | interop run artifacts                                        |
 
-`test_matrix.json` declares **328 envs**. `platformio.ini` is generated from it - never hand-edited.
+`test_matrix.json` declares **336 envs**. `platformio.ini` is generated from it - never hand-edited.
 
 ## I need to...
 
 | I need to                                   | Run                                                                  |
 | ------------------------------------------- | -------------------------------------------------------------------- |
 | know which envs a change affects            | `select_envs.py` (stdin, or `--changed-file`)                        |
-| add or edit an env                          | `test_matrix.json`, then `gen_test_envs.py`                          |
+| add an env                                  | `add_test_env.py`, then `gen_test_envs.py`                           |
+| edit an env                                 | `test_matrix.json`, then `gen_test_envs.py`                          |
 | regenerate `platformio.ini`                 | `gen_test_envs.py` (`--check` to assert no drift)                    |
 | regenerate the README's generated sections  | `gen_test_readme.py --check`                                         |
 | run everything and write the report         | `run_tests.sh` (POSIX) / `run_tests.ps1` (PowerShell)                |

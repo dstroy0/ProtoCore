@@ -161,9 +161,9 @@ void ssh_kdf_derive(const SshKdfInputs *in, char label, uint8_t *out, size_t out
 // labels by direction - client to server takes 'A' (IV), 'C' (key) and 'E' (MAC), server to client
 // takes 'B', 'D' and 'F' - and that direction's negotiated cipher decides which of them it needs.
 // Every value is derived into the slot that owns it, so none of it is staged anywhere else.
-static void install_direction(uint8_t i, const SshKdfInputs *in, proto_bool c2s, uint8_t cipher_alg, uint8_t mac_alg)
+static void install_direction(SshKeyMat *km, const SshKdfInputs *in, proto_bool c2s, uint8_t cipher_alg,
+                              uint8_t mac_alg)
 {
-    SshKeyMat *km = &ssh_keys[i];
     char iv_label = 'B';
     char key_label = 'D';
     char mac_label = 'F';
@@ -222,13 +222,15 @@ void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in)
     {
         return;
     }
-    SshKeyMat *km = &ssh_keys[i];
+    // RFC 4253 sec 7.3: install into the epoch neither direction is reading, so the live keys keep
+    // decrypting until each direction's NEWKEYS moves it across.
+    SshKeyMat *km = &ssh_keys[i][1u - ssh_sess[i].out.epoch];
     const SshSession *s = &ssh_sess[i]; // the connection holds what its two directions negotiated
     // The working bytes come from the slot, not the caller: they exist only once the borrow above has
     // been taken, so a caller could not name them.
     SshKdfInputs kin = *in;
     kin.work = ssh_pkt[i].crypto_work;
-    // Rekey lands here with live contexts still in the slot. Release each before its mode is
+    // An abandoned re-key leaves this epoch's contexts standing. Release each before its mode is
     // overwritten, after which the outgoing mode is no longer knowable.
     if (km->active && km->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
     {
@@ -243,8 +245,8 @@ void ssh_dh_derive_keys_sid(uint8_t i, const SshKdfInputs *in)
     km->mac_mode_c2s = s->mac_alg_c2s;
     km->mac_mode_s2c = s->mac_alg_s2c;
 
-    install_direction(i, &kin, PROTO_TRUE, s->cipher_alg_c2s, s->mac_alg_c2s);
-    install_direction(i, &kin, PROTO_FALSE, s->cipher_alg_s2c, s->mac_alg_s2c);
+    install_direction(km, &kin, PROTO_TRUE, s->cipher_alg_c2s, s->mac_alg_c2s);
+    install_direction(km, &kin, PROTO_FALSE, s->cipher_alg_s2c, s->mac_alg_s2c);
     km->active = PROTO_TRUE;
 }
 

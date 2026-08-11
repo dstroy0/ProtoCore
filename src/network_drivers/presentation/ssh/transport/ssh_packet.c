@@ -13,6 +13,7 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512.h"
 #include "mmgr/protomem.h"
+#include "network_drivers/presentation/ssh/connection/ssh_conn.h" // ssh_conn_slot() + the memory map
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #if PC_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
@@ -59,14 +60,11 @@ static size_t compute_padding(size_t payload_len)
     return padding;
 }
 
-// The slot's persistent storage, split by offset: the wire buffer the codec frames into, the bytes
-// the packet MAC works out of, and the ones the key exchange does. One borrow from the secure pool's
-// persistent end on first use, kept for the slot's life, so nothing on the packet path touches the
-// pool.
-#define SSH_SLOT_OFF_WIRE 0u
-#define SSH_SLOT_OFF_MAC (SSH_SLOT_OFF_WIRE + SSH_WIRE_CAP)
-#define SSH_SLOT_OFF_KEX (SSH_SLOT_OFF_MAC + PC_HMAC_SHA256_BORROW)
-#define SSH_SLOT_BORROW (SSH_SLOT_OFF_KEX + PC_CRYPTO_BORROW_MAX)
+// The slot index of @p s, which points into ssh_pkt[]: what the connection's memory map is keyed on.
+static inline uint8_t pkt_slot(const SshPacketState *s)
+{
+    return (uint8_t)(s - ssh_pkt);
+}
 
 proto_bool ssh_pkt_slot_storage(SshPacketState *s)
 {
@@ -74,14 +72,15 @@ proto_bool ssh_pkt_slot_storage(SshPacketState *s)
     {
         return PROTO_TRUE;
     }
-    pc_span b = pc_secure_persist_span(SSH_SLOT_BORROW);
-    if (!pc_span_ok(b))
+    uint8_t *base = ssh_conn_slot(pkt_slot(s));
+    if (base == NULL)
     {
         return PROTO_FALSE;
     }
-    s->tx_wire = b.buf + SSH_SLOT_OFF_WIRE;
-    s->mac_work = b.buf + SSH_SLOT_OFF_MAC;
-    s->crypto_work = b.buf + SSH_SLOT_OFF_KEX;
+    s->tx_wire = base + SSH_OFF_WIRE;
+    s->mac_work = base + SSH_OFF_MAC_WORK;
+    s->crypto_work = base + SSH_OFF_CRYPTO_WORK;
+    s->rx_buf = base + SSH_OFF_RX_ASM;
     return PROTO_TRUE;
 }
 
@@ -133,9 +132,6 @@ void ssh_pkt_init(uint8_t i)
     s->mac_work = macw;
     s->crypto_work = kexw;
     s->rx_buf = rx;
-    s->kex_active = PROTO_TRUE;
-    s->enc_out = PROTO_FALSE;
-    s->enc_in = PROTO_FALSE;
 }
 
 void ssh_pkt_set_client(uint8_t i)
@@ -150,7 +146,7 @@ void ssh_pkt_set_client(uint8_t i)
 // Emit: frame one packet into the secure pool and raise the flag a worker drains
 // ---------------------------------------------------------------------------
 
-int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
+int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len, const SshDir *dir)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -175,7 +171,7 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len)
         off = s->tx_len;
     }
     size_t wlen = 0;
-    if (ssh_pkt_send(i, payload, len, s->tx_wire + off, &wlen, SSH_WIRE_CAP - off) != 0)
+    if (ssh_pkt_send(i, payload, len, s->tx_wire + off, &wlen, SSH_WIRE_CAP - off, dir) != 0)
     {
         return -1;
     }
@@ -276,7 +272,8 @@ static inline uint8_t km_recv_mac_mode(const SshKeyMat *km, proto_bool cli)
 // Send
 // ---------------------------------------------------------------------------
 
-int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap)
+int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap,
+                 const SshDir *dir)
 {
     size_t comp_scope = pc_plaintext_mark();
     if (i >= MAX_SSH_CONNS)
@@ -285,7 +282,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
         return -1;
     }
     SshPacketState *s = &ssh_pkt[i];
-    SshKeyMat *km = &ssh_keys[i];
+    SshKeyMat *km = &ssh_keys[i][dir->epoch];
 
     // Sequence overflow guard.
     if (s->seq_no_send >= SSH_SEQ_CLOSE_THRESHOLD)
@@ -329,9 +326,9 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     const proto_bool cli = s->is_client; // send direction: client uses c2s, server uses s2c
     const uint8_t send_cipher = km_send_cipher(km, cli);
     const uint8_t send_mac_mode = km_send_mac_mode(km, cli);
-    proto_bool chacha = s->enc_out && send_cipher == SSH_CIPHER_CHACHA20POLY1305;
-    proto_bool gcm = s->enc_out && send_cipher == SSH_CIPHER_AES256GCM;
-    proto_bool etm = s->enc_out && send_cipher == SSH_CIPHER_AES256CTR && ssh_mac_is_etm(send_mac_mode);
+    proto_bool chacha = dir->enc && send_cipher == SSH_CIPHER_CHACHA20POLY1305;
+    proto_bool gcm = dir->enc && send_cipher == SSH_CIPHER_AES256GCM;
+    proto_bool etm = dir->enc && send_cipher == SSH_CIPHER_AES256CTR && ssh_mac_is_etm(send_mac_mode);
     size_t pad_len;
     size_t tag_len;
     if (chacha)
@@ -367,7 +364,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     else
     {
         pad_len = compute_padding(payload_len);
-        tag_len = s->enc_out ? ssh_mac_len(send_mac_mode) : 0;
+        tag_len = dir->enc ? ssh_mac_len(send_mac_mode) : 0;
     }
     size_t pkt_len = 1 + payload_len + pad_len; // padding_length + payload + padding
     size_t wire_len = 4 + pkt_len + tag_len;
@@ -405,7 +402,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
         compute_mac_mode(send_mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len,
                          out + 4 + pkt_len);
     }
-    else if (s->enc_out)
+    else if (dir->enc)
     {
         // Encrypt-and-MAC: MAC over plaintext (seq || unencrypted packet), then AES-256-CTR.
         uint8_t mac[64];
@@ -844,14 +841,14 @@ static int ssh_recv_plain(uint8_t i, SshPacketState *s, const SshKeyMat *km, ssh
     return 1;
 }
 
-int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t handler)
+int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t handler, const SshDir *dir)
 {
     if (i >= MAX_SSH_CONNS)
     {
         return -1;
     }
     SshPacketState *s = &ssh_pkt[i];
-    SshKeyMat *km = &ssh_keys[i];
+    SshKeyMat *km = &ssh_keys[i][dir->epoch];
 
     if (!ssh_pkt_slot_storage(s))
     {
@@ -884,19 +881,19 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
         {
             int r = 0;
             const uint8_t recv_cipher = km_recv_cipher(km, s->is_client);
-            if (s->enc_in && recv_cipher == SSH_CIPHER_CHACHA20POLY1305)
+            if (dir->enc && recv_cipher == SSH_CIPHER_CHACHA20POLY1305)
             {
                 r = ssh_recv_chachapoly(i, s, km, handler);
             }
-            else if (s->enc_in && recv_cipher == SSH_CIPHER_AES256GCM)
+            else if (dir->enc && recv_cipher == SSH_CIPHER_AES256GCM)
             {
                 r = ssh_recv_aesgcm(i, s, km, handler);
             }
-            else if (s->enc_in && ssh_mac_is_etm(km_recv_mac_mode(km, s->is_client)))
+            else if (dir->enc && ssh_mac_is_etm(km_recv_mac_mode(km, s->is_client)))
             {
                 r = ssh_recv_ctr_etm(i, s, km, handler);
             }
-            else if (s->enc_in)
+            else if (dir->enc)
             {
                 r = ssh_recv_ctr_emac(i, s, km, handler);
             }
@@ -923,7 +920,8 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
 // Disconnect
 // ---------------------------------------------------------------------------
 
-int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap)
+int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap,
+                       const SshDir *dir)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -950,7 +948,7 @@ int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *ou
     payload[11] = 0;
     payload[12] = 0; // empty language
 
-    int rc = ssh_pkt_send(i, payload, sizeof(payload), out, out_len, out_cap);
+    int rc = ssh_pkt_send(i, payload, sizeof(payload), out, out_len, out_cap, dir);
 
     // Zero packet state and key material regardless of send success.
     ssh_pkt_init(i);

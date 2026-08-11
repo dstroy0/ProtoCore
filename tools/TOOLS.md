@@ -15,7 +15,8 @@ A docstring is a claim; treat one that disagrees with this table as the thing th
 | I need to                                       | Run                                                        |
 | ----------------------------------------------- | ---------------------------------------------------------- |
 | know which envs my change affects               | `test/select_envs.py` (stdin or `--changed-file`)          |
-| add or change a test env                        | edit `test/test_matrix.json`, then `test/gen_test_envs.py` |
+| add a test env                                  | `test/add_test_env.py`, then `test/gen_test_envs.py`       |
+| change a test env                               | edit `test/test_matrix.json`, then `test/gen_test_envs.py` |
 | rebuild `platformio.ini`                        | `test/gen_test_envs.py` (never hand-edit the ini)          |
 | refresh the dependency graph after a rename     | `tools/ci_tooling/generate/gen_dep_graph.py`               |
 | run the whole native suite and write the report | `test/run_tests.sh` / `test/run_tests.ps1`                 |

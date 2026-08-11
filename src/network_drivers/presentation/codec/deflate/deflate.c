@@ -23,6 +23,7 @@
 #if PC_ENABLE_WS_DEFLATE
 
 #include "mmgr/bitio.h"
+#include "network_drivers/presentation/codec/deflate/rfc1951.h" // RFC1951: the sec 3.2.5 tables
 
 #define PC_MIN_MATCH 3   // shortest LZ77 back-reference
 #define PC_MAX_MATCH 258 // longest (RFC 1951 length code 285)
@@ -33,19 +34,6 @@
 #define PC_WIN_MASK (PC_WINDOW - 1)
 #define PC_MAX_CHAIN 64 // bounded hash-chain walk per position
 #define PC_NONE 0xFFFF  // empty hash slot / chain terminator
-
-// Length code base values and extra bits (RFC 1951 sec 3.2.5), codes 257..285.
-static const short LEN_BASE[29] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
-                                   31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
-static const short LEN_EXTRA[29] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,
-                                    2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
-
-// Distance code base values and extra bits, codes 0..29.
-static const short DIST_BASE[30] = {1,    2,    3,    4,    5,    7,    9,    13,    17,    25,
-                                    33,   49,   65,   97,   129,  193,  257,  385,   513,   769,
-                                    1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
-static const short DIST_EXTRA[30] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
-                                     6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
 
 // All working memory deflate_raw() needs, laid over the caller's scratch.
 typedef struct
@@ -59,112 +47,10 @@ typedef struct
 } Tables;
 static_assert(sizeof(Tables) <= DEFLATE_SCRATCH_SIZE, "bump DEFLATE_SCRATCH_SIZE");
 
-// Reverse the low @p len bits of @p code (Huffman codes go on the wire MSB-first).
-static uint16_t reverse_bits(uint16_t code, int len)
-{
-    uint16_t r = 0;
-    for (int k = 0; k < len; k++)
-    {
-        r = (uint16_t)((r << 1) | (code & 1));
-        code >>= 1;
-    }
-    return r;
-}
-
-// Build the fixed Huffman code/length tables (RFC 1951 sec 3.2.6) into @p t,
-// storing each code bit-reversed so it can be emitted LSB-first.
-static void build_fixed(Tables *t)
-{
-    int sym = 0;
-    for (; sym < 144; sym++)
-    {
-        t->ll_len[sym] = 8;
-    }
-    for (; sym < 256; sym++)
-    {
-        t->ll_len[sym] = 9;
-    }
-    for (; sym < 280; sym++)
-    {
-        t->ll_len[sym] = 7;
-    }
-    for (; sym < 288; sym++)
-    {
-        t->ll_len[sym] = 8;
-    }
-    for (sym = 0; sym < 30; sym++)
-    {
-        t->d_len[sym] = 5;
-    }
-
-    // Canonical code assignment (RFC 1951 sec 3.2.2) for the lit/length alphabet.
-    uint16_t bl_count[16];
-    mem.set(bl_count, 0, sizeof(bl_count));
-    for (sym = 0; sym < 288; sym++)
-    {
-        bl_count[t->ll_len[sym]]++;
-    }
-    uint16_t next_code[16];
-    next_code[0] = 0;
-    uint16_t code = 0;
-    for (int bits = 1; bits <= 15; bits++)
-    {
-        code = (uint16_t)((code + bl_count[bits - 1]) << 1);
-        next_code[bits] = code;
-    }
-    for (sym = 0; sym < 288; sym++)
-    {
-        int len = t->ll_len[sym];
-        t->ll_code[sym] = reverse_bits(next_code[len]++, len);
-    }
-
-    // Distance alphabet: 30 codes all of length 5 -> codes 0..29 in order.
-    for (sym = 0; sym < 30; sym++)
-    {
-        t->d_code[sym] = reverse_bits((uint16_t)sym, 5);
-    }
-}
-
 // 3-byte rolling hash into a PC_HASH_SIZE bucket.
 static inline int hash3(const uint8_t *p)
 {
     return (int)(((uint32_t)p[0] << 8 ^ (uint32_t)p[1] << 4 ^ (uint32_t)p[2]) & PC_HASH_MASK);
-}
-
-// Emit one literal byte via the fixed lit/length code.
-static void emit_literal(pc_bit_writer *w, const Tables *t, uint8_t b)
-{
-    pc_bitw_put(w, t->ll_code[b], t->ll_len[b]);
-}
-
-// Emit a (length, distance) back-reference via the fixed code tables.
-static void emit_match(pc_bit_writer *w, const Tables *t, int len, int dist)
-{
-    int li = 0;
-    while (li < 28 && len >= LEN_BASE[li + 1])
-    {
-        li++;
-    }
-    int lsym = 257 + li;
-    pc_bitw_put(w, t->ll_code[lsym], t->ll_len[lsym]);
-    if (LEN_EXTRA[li])
-    {
-        pc_bitw_put(w, (uint32_t)(len - LEN_BASE[li]), LEN_EXTRA[li]);
-    }
-
-    int di = 0;
-    // di == 29 (loop exit via the left operand) is unreachable: dist is always <=
-    // PC_WINDOW (512) here - the chain walk in deflate_raw() discards any candidate
-    // farther away - and DIST_BASE[18] is 513, so di never advances past 17.
-    while (di < 29 && dist >= DIST_BASE[di + 1])
-    {
-        di++;
-    }
-    pc_bitw_put(w, t->d_code[di], t->d_len[di]);
-    if (DIST_EXTRA[di])
-    {
-        pc_bitw_put(w, (uint32_t)(dist - DIST_BASE[di]), DIST_EXTRA[di]);
-    }
 }
 
 static DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
@@ -176,7 +62,7 @@ static DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *ds
     }
 
     Tables *t = (Tables *)scratch;
-    build_fixed(t);
+    pc_rfc1951_build_fixed(t->ll_code, t->ll_len, t->d_code, t->d_len);
     for (int i = 0; i < PC_HASH_SIZE; i++)
     {
         t->head[i] = PC_NONE;
@@ -241,12 +127,12 @@ static DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *ds
         size_t advance;
         if (best_len >= PC_MIN_MATCH)
         {
-            emit_match(&w, t, best_len, best_dist);
+            pc_rfc1951_emit_match(&w, t->ll_code, t->ll_len, t->d_code, t->d_len, best_len, best_dist);
             advance = (size_t)best_len;
         }
         else
         {
-            emit_literal(&w, t, src[i]);
+            pc_rfc1951_emit_literal(&w, t->ll_code, t->ll_len, src[i]);
             advance = 1;
         }
 

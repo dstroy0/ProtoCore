@@ -6798,24 +6798,19 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 // SSH frames every outbound packet in the secure pool: the payload it carries is the session's own
-// plaintext until the cipher runs over it. Two parts, and they do not nest:
+// plaintext until the cipher runs over it. One transient payload plus one wire, live together while
+// pc_ssh_conn_send or an open_forwarded builds a message and frames it.
 //
-//   - One wire buffer per SSH slot, taken from the pool's PERSISTENT end and never released, so a
-//     packet is framed over the previous one instead of wiping a whole buffer per packet. Every
-//     slot can hold one at once, so this scales with MAX_SSH_CONNS.
-//   - A transient payload plus wire, live together while pc_ssh_conn_send or an open_forwarded
-//     builds a message and frames it.
+// A connection's own bytes are not here. Every one of them - the two key epochs, the DH ephemeral,
+// the handshake constants, the wire, the packet MAC's and the handshake crypto's working bytes, and
+// the receive buffers - is a named offset in the connection's compile-time storage (ssh_conn.h).
 //
 // The wire bound is derived in ssh_packet.h from this same SSH_PKT_BUF_SIZE, so the figure is
 // stated here in units of it and proved against the real SSH_WIRE_CAP by a static_assert in
-// ssh_conn.c. Two per slot covers the framing overhead the wire adds over a full payload,
-// compression's expansion bound included.
-// Each slot's borrow is its wire buffer and the bytes its packet MAC works out of, taken together and
-// split by offset in ssh_packet.c.
+// ssh_conn.c. Three units cover the wire's framing overhead over a full payload, compression's
+// expansion bound included, and the fourth is the payload.
 #ifndef PC_WORK_SSH_CONN
-#define PC_WORK_SSH_CONN                                                                                               \
-    ((((size_t)MAX_SSH_CONNS + 2u) * 2u * (size_t)SSH_PKT_BUF_SIZE) +                                                  \
-     ((size_t)MAX_SSH_CONNS * (size_t)PC_HMAC_SHA256_BORROW))
+#define PC_WORK_SSH_CONN (4u * (size_t)SSH_PKT_BUF_SIZE)
 #endif
 
 // The software TLS 1.3 handshake driver takes one borrow per connection from the secure pool's

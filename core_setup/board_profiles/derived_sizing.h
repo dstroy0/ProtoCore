@@ -41,6 +41,15 @@
 #define RX_BUF_SIZE 2048
 #endif
 
+// The SSH client bridges one forwarded-tcpip channel per local TCP connection and pools
+// PC_SSH_CLIENT_MAX_CHANNELS of them, but the channels themselves come from the shared per-
+// connection table. The table has to hold as many as the client pools or the surplus bridges can
+// never be allocated a channel.
+#if PC_ENABLE_SSH_CLIENT && PC_SSH_MAX_CHANNELS < PC_SSH_CLIENT_MAX_CHANNELS
+#undef PC_SSH_MAX_CHANNELS
+#define PC_SSH_MAX_CHANNELS PC_SSH_CLIENT_MAX_CHANNELS
+#endif
+
 // A modern TLS ClientHello (TLS 1.3 key shares + cipher/sig-alg lists + the RFC 7685 padding real
 // clients send) is ~1.5 KB and arrives as one TCP segment. The recv callback refuses a whole segment
 // that will not fit the ring (ERR_MEM, lossless backpressure), so a ClientHello bigger than the ring

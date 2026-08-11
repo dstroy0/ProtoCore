@@ -627,7 +627,7 @@ void test_kexdh_handle_produces_reply_and_installs_keys()
 
     // Receiving the peer's NEWKEYS activates the inbound direction and advances to the service phase.
     ssh_newkeys_complete(0);
-    TEST_ASSERT_TRUE(ssh_pkt[0].enc_in);
+    TEST_ASSERT_TRUE(ssh_sess[0].in.enc);
     TEST_ASSERT_EQUAL(SSH_PHASE_SERVICE, ssh_sess[0].phase);
 }
 

@@ -250,15 +250,15 @@ void test_full_handshake_to_channel_data()
     TEST_ASSERT_EQUAL(SSH_MSG_NEWKEYS, emt_type[1]);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     // Sending our NEWKEYS activated the outbound direction; inbound waits for the client's NEWKEYS.
-    TEST_ASSERT_TRUE(ssh_pkt[0].enc_out);
-    TEST_ASSERT_FALSE(ssh_pkt[0].enc_in);
+    TEST_ASSERT_TRUE(ssh_sess[0].out.enc);
+    TEST_ASSERT_FALSE(ssh_sess[0].in.enc);
 
     // 3. Client NEWKEYS → encryption active, service phase. Because the client
     //    KEXINIT advertised ext-info-c, the server now sends EXT_INFO (RFC 8308).
     uint8_t nk = SSH_MSG_NEWKEYS;
     emt_reset();
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, nk, &nk, 1));
-    TEST_ASSERT_TRUE(ssh_pkt[0].enc_in && ssh_pkt[0].enc_out); // both directions now encrypted
+    TEST_ASSERT_TRUE(ssh_sess[0].in.enc && ssh_sess[0].out.enc); // both directions now encrypted
     TEST_ASSERT_EQUAL(SSH_PHASE_SERVICE, s->phase);
     TEST_ASSERT_EQUAL_INT(1, emt_n);
     TEST_ASSERT_EQUAL(SSH_MSG_EXT_INFO, emt_type[0]);
@@ -676,8 +676,8 @@ void test_ssh_pkt_encrypted_roundtrip_and_mac_fail()
     memset(iv, 0x22, sizeof(iv));
 
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = PROTO_TRUE;
-    ssh_pkt[0].enc_in = PROTO_TRUE;
+    ssh_sess[0].out.enc = PROTO_TRUE;
+    ssh_sess[0].in.enc = PROTO_TRUE;
     memcpy(ssh_keys[0].aes_key_s2c, key, PC_AES256CTR_KEY_LEN);
     memcpy(ssh_keys[0].aes_iv_s2c, iv, PC_AES256CTR_CTR_LEN);
     memcpy(ssh_keys[0].aes_key_c2s, key, PC_AES256CTR_KEY_LEN);
@@ -882,7 +882,7 @@ void test_ssh_dispatch_without_emit_cb()
     pkt[n++] = SSH_MSG_KEXDH_INIT;
     n += put_mpint(pkt + n, e_be, 256); // KEXDH_REPLY + NEWKEYS dropped
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, pkt[0], pkt, n));
-    TEST_ASSERT_TRUE(ssh_pkt[0].enc_out); // the keys were still installed
+    TEST_ASSERT_TRUE(ssh_sess[0].out.enc); // the keys were still installed
 
     uint8_t nk = SSH_MSG_NEWKEYS; // EXT_INFO dropped
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, nk, &nk, 1));
@@ -1051,8 +1051,8 @@ static void pkt_loopback_keys(uint8_t cipher_mode, uint8_t mac_mode, proto_bool 
     {
         ssh_pkt_set_client(0);
     }
-    ssh_pkt[0].enc_out = PROTO_TRUE;
-    ssh_pkt[0].enc_in = PROTO_TRUE;
+    ssh_sess[0].out.enc = PROTO_TRUE;
+    ssh_sess[0].in.enc = PROTO_TRUE;
     memset(&ssh_keys[0], 0, sizeof(ssh_keys[0]));
     ssh_keys[0].cipher_mode_c2s = cipher_mode;
     ssh_keys[0].cipher_mode_s2c = cipher_mode;

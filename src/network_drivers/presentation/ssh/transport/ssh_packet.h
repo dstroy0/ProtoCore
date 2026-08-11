@@ -49,8 +49,9 @@
  *  at wrap would be a catastrophic confidentiality failure.
  *
  *  Policy: close the connection if seq_no_send or seq_no_recv reaches
- *  SSH_SEQ_CLOSE_THRESHOLD.  A future rekey implementation would reset the
- *  counters instead.
+ *  SSH_SEQ_CLOSE_THRESHOLD.  Nothing resets the counters; the re-key trigger
+ *  (SSH_REKEY_PACKET_THRESHOLD) fires far below the threshold, so the close is
+ *  the backstop for a peer that never completes one.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * PADDING
@@ -71,10 +72,74 @@
 #define PROTOCORE_SSH_PACKET_H
 
 #include "crypto/mac/hmac_sha256.h"
+#include "mmgr/bytes.h" // pc_span + pc_bw_put / _put_be / _bytes - what these encodings append through
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "protocore_config.h"
 
 PROTO_BEGIN_DECLS
+
+/**
+ * @brief One direction's codec state, handed to the packet layer per call.
+ *
+ * RFC 4253 sec 6 sits under sec 7, so the codec is told which keys to use rather than reading the
+ * session that negotiated them. Each direction switches on its own SSH_MSG_NEWKEYS (sec 7.3).
+ */
+typedef struct
+{
+    proto_bool enc; ///< that direction's cipher/MAC is active
+    uint8_t epoch;  ///< key epoch it reads out of ssh_keys[slot][]
+} SshDir;
+
+// ---------------------------------------------------------------------------
+// SSH wire types (RFC 4251 sec 5, RFC 4253 sec 7.1)
+// ---------------------------------------------------------------------------
+
+/** @brief Append a string: uint32 length, then @p n bytes of @p data. */
+PC_INLINE void pc_ssh_wr_str(pc_span *w, const void *data, size_t n)
+{
+    pc_bw_put_be(w, (uint64_t)n, 4);
+    pc_bw_bytes(w, data, n);
+}
+
+/**
+ * @brief Append a NUL-terminated @p s as a string, its length taken up to the span's capacity.
+ *
+ * A comma-separated name-list (RFC 4253 sec 7.1) is one of these.
+ */
+PC_INLINE void pc_ssh_wr_cstr(pc_span *w, const char *s)
+{
+    pc_ssh_wr_str(w, s, str.len(s, w->cap));
+}
+
+/**
+ * @brief Append @p len big-endian bytes as an mpint: leading zero bytes stripped, a 0x00 prepended
+ *        when the top bit is set, and a zero value written as the empty string.
+ */
+PC_INLINE void pc_ssh_wr_mpint(pc_span *w, const uint8_t *be, size_t len)
+{
+    size_t off = 0;
+    while (off < len && be[off] == 0)
+    {
+        off++;
+    }
+    if (off == len)
+    {
+        pc_bw_put_be(w, 0, 4);
+        return;
+    }
+    proto_bool pad = (be[off] & 0x80u) != 0;
+    uint64_t mlen = (uint64_t)(len - off);
+    if (pad)
+    {
+        mlen++;
+    }
+    pc_bw_put_be(w, mlen, 4);
+    if (pad)
+    {
+        pc_bw_put(w, 0x00);
+    }
+    pc_bw_bytes(w, be + off, len - off);
+}
 
 // ---------------------------------------------------------------------------
 // Sequence number overflow threshold
@@ -84,8 +149,8 @@ PROTO_BEGIN_DECLS
  * @brief Close the connection when seq_no reaches this value.
  *
  * Set to 0xFFFFFFF0 (16 below the 32-bit wrap) as a conservative margin.
- * This prevents CTR keystream reuse that would occur at wrap.
- * A rekey implementation would reset this counter; until then, we close.
+ * This prevents CTR keystream reuse that would occur at wrap. The counter is
+ * never reset; a re-key at SSH_REKEY_PACKET_THRESHOLD keeps it far from here.
  */
 #define SSH_SEQ_CLOSE_THRESHOLD 0xFFFFFFF0u
 
@@ -132,15 +197,10 @@ PROTO_BEGIN_DECLS
  */
 typedef struct
 {
-    uint32_t seq_no_send;  ///< Outgoing sequence number (incremented per packet).
-    uint32_t seq_no_recv;  ///< Incoming sequence number (incremented per packet).
-    proto_bool kex_active; ///< True while KEX is in progress (no user data).
-    // Encryption activates per direction (RFC 4253 sec 7.3): our outbound turns on when we send our
-    // SSH_MSG_NEWKEYS, our inbound when we receive the peer's. The send path (pack) reads enc_out; the
-    // receive path (unpack) reads enc_in. A strict peer may activate its send direction before we
-    // activate ours, so the two are tracked independently rather than as one flag.
-    proto_bool enc_out; ///< True once we have sent our NEWKEYS (outbound cipher/MAC active).
-    proto_bool enc_in;  ///< True once we have received the peer's NEWKEYS (inbound cipher/MAC active).
+    // RFC 4253 sec 6.4: incremented per packet and never reset, not even across a re-exchange, so
+    // these stay with the codec rather than moving to the session with the protocol flags.
+    uint32_t seq_no_send; ///< Outgoing sequence number.
+    uint32_t seq_no_recv; ///< Incoming sequence number.
 
     // SSH keys are named by direction (client->server "c2s", server->client "s2c"), fixed by RFC 4253
     // §7.2 regardless of role. A server sends s2c / receives c2s; a client is the mirror. This flag
@@ -219,7 +279,8 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
 /**
  * @brief Initialize the packet state for SSH connection slot @p i.
  *
- * Zeroes seq numbers; sets encrypted=false, kex_active=true.
+ * Zeroes the sequence numbers and the transmit state, keeping the slot's storage pointers. The
+ * protocol flags are the session's (ssh_transport.h) and are reset by ssh_transport_init().
  *
  * @param i  SSH slot index.
  */
@@ -259,7 +320,7 @@ void ssh_pkt_set_client(uint8_t i);
  *
  * @return 0 on success, -1 on overflow or sequence-number exhaustion.
  */
-int ssh_pkt_send_at(uint8_t i, uint8_t *wire, size_t payload_len, size_t *out_len, size_t wire_cap);
+int ssh_pkt_send_at(uint8_t i, uint8_t *wire, size_t payload_len, size_t *out_len, size_t wire_cap, const SshDir *dir);
 
 /**
  * @brief Frame @p payload for slot @p i into the secure pool and raise the flag a worker drains.
@@ -271,7 +332,7 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *wire, size_t payload_len, size_t *out_le
  *
  * @return 0 on success, -1 if a packet is already pending, the pool is exhausted, or framing fails.
  */
-int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len);
+int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len, const SshDir *dir);
 
 /**
  * @brief Build and send one SSH binary packet.
@@ -293,7 +354,8 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len);
  * @param out_cap     Capacity of @p out.
  * @return 0 on success, -1 on overflow or sequence-number exhaustion.
  */
-int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap);
+int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap,
+                 const SshDir *dir);
 
 /**
  * @brief Callback invoked once per complete, verified inbound SSH message.
@@ -322,7 +384,7 @@ typedef void (*ssh_msg_handler_t)(uint8_t slot, uint8_t msg_type, const uint8_t 
  * @return 0 on success, -1 on MAC failure or sequence-number exhaustion
  *         (caller must close the TCP connection).
  */
-int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t handler);
+int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t handler, const SshDir *dir);
 
 /**
  * @brief Send SSH_MSG_DISCONNECT with reason @p reason_code.
@@ -336,7 +398,8 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
  * @param out_cap      Capacity of @p out.
  * @return 0 on success, -1 on error.
  */
-int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap);
+int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap,
+                       const SshDir *dir);
 
 PROTO_END_DECLS
 
