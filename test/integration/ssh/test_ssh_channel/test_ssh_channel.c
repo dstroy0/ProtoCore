@@ -209,7 +209,7 @@ static size_t make_direct_tcpip(uint8_t *pkt, uint32_t sender, const char *host,
 
 // ---- open -----------------------------------------------------------------
 
-void test_open_session_confirms()
+void test_s6_1_session_open_is_confirmed()
 {
     uint32_t id = open_session(42, 1000);
     TEST_ASSERT_TRUE(ssh_chan[0][id].open);
@@ -217,7 +217,7 @@ void test_open_session_confirms()
     TEST_ASSERT_EQUAL_UINT32(1000, ssh_chan[0][id].flow.peer_window);
 }
 
-void test_open_unknown_type_fails()
+void test_s5_1_unsupported_channel_type_is_reason_3()
 {
     uint8_t pkt[64];
     size_t n = 0;
@@ -238,7 +238,7 @@ void test_open_unknown_type_fails()
 
 // ---- direct-tcpip forward (port forwarding, ssh -L) -----------------------
 
-void test_direct_tcpip_no_cb_prohibited()
+void test_s7_2_direct_tcpip_prohibited_with_no_owner()
 {
     // Forwarding is opt-in: with no open callback installed it is refused.
     uint8_t pkt[96];
@@ -251,7 +251,7 @@ void test_direct_tcpip_no_cb_prohibited()
     TEST_ASSERT_FALSE(ssh_chan[0][0].open);
 }
 
-void test_direct_tcpip_accept_confirms()
+void test_s7_2_direct_tcpip_accepted_carries_host_and_port()
 {
     pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
     fwd_open_ret = 0; // owner accepts (connected)
@@ -270,7 +270,7 @@ void test_direct_tcpip_accept_confirms()
     TEST_ASSERT_EQUAL_UINT16(443, fwd_port);
 }
 
-void test_direct_tcpip_refused_connect_failed()
+void test_s7_2_direct_tcpip_refusal_frees_the_channel()
 {
     pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
     fwd_open_ret = -1; // owner could not connect
@@ -284,7 +284,7 @@ void test_direct_tcpip_refused_connect_failed()
     TEST_ASSERT_FALSE(ssh_chan[0][0].open);        // channel freed on refusal
 }
 
-void test_forward_data_routes_to_forward_cb()
+void test_s7_2_direct_tcpip_data_routes_to_the_owner()
 {
     pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
     pc_ssh_channel_set_forward_data_cb(fwd_data_cb);
@@ -308,7 +308,7 @@ void test_forward_data_routes_to_forward_cb()
 
 // ---- request --------------------------------------------------------------
 
-void test_shell_request_success_with_reply()
+void test_s6_5_shell_request_succeeds()
 {
     open_session(5, 1000);
     uint8_t pkt[64];
@@ -326,7 +326,7 @@ void test_shell_request_success_with_reply()
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1));
 }
 
-void test_unknown_request_failure()
+void test_s5_4_unsupported_request_type_fails()
 {
     open_session(5, 1000);
     uint8_t pkt[64];
@@ -343,7 +343,7 @@ void test_unknown_request_failure()
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 }
 
-void test_request_no_reply_produces_nothing()
+void test_s5_4_no_reply_when_want_reply_is_clear()
 {
     open_session(5, 1000);
     uint8_t pkt[64];
@@ -362,7 +362,7 @@ void test_request_no_reply_produces_nothing()
 
 // ---- data -----------------------------------------------------------------
 
-void test_inbound_data_invokes_callback()
+void test_s5_2_inbound_data_is_delivered()
 {
     uint32_t id = open_session(5, 1000);
     uint8_t pkt[64];
@@ -377,7 +377,7 @@ void test_inbound_data_invokes_callback()
     TEST_ASSERT_EQUAL_MEMORY("hello", last_data, 5);
 }
 
-void test_inbound_data_window_replenish()
+void test_s5_2_window_adjust_is_emitted_when_spent()
 {
     uint32_t id = open_session(5, 1000);
     uint8_t big[20000];
@@ -400,7 +400,7 @@ void test_inbound_data_window_replenish()
     TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW, ssh_chan[0][id].flow.local_window);
 }
 
-void test_inbound_data_exceeding_window_rejected()
+void test_s5_2_data_past_the_window_rejected()
 {
     uint32_t id = open_session(5, 1000);
     ssh_chan[0][id].flow.local_window = 4; // shrink artificially
@@ -411,7 +411,7 @@ void test_inbound_data_exceeding_window_rejected()
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_data(0, pkt, n, out, &olen, sizeof(out)));
 }
 
-void test_outbound_data_frames_and_decrements_window()
+void test_s5_2_outbound_data_decrements_the_window()
 {
     uint32_t id = open_session(5, 1000);
     uint8_t out[64];
@@ -424,7 +424,7 @@ void test_outbound_data_frames_and_decrements_window()
     TEST_ASSERT_EQUAL_UINT32(997, ssh_chan[0][id].flow.peer_window);
 }
 
-void test_outbound_data_exceeding_peer_window_rejected()
+void test_s5_2_data_past_the_peer_window_rejected()
 {
     uint32_t id = open_session(5, 2); // tiny peer window
     uint8_t out[64];
@@ -432,7 +432,7 @@ void test_outbound_data_exceeding_peer_window_rejected()
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_data(0, id, (const uint8_t *)"abc", 3, out, &olen, sizeof(out)));
 }
 
-void test_window_adjust_grows_peer_window()
+void test_s5_2_window_adjust_grows_the_peer_window()
 {
     uint32_t id = open_session(5, 100);
     uint8_t pkt[9];
@@ -443,7 +443,7 @@ void test_window_adjust_grows_peer_window()
     TEST_ASSERT_EQUAL_UINT32(600, ssh_chan[0][id].flow.peer_window);
 }
 
-void test_build_close_emits_eof_and_close()
+void test_s5_3_close_emits_eof_then_close()
 {
     uint32_t id = open_session(5, 1000);
     uint8_t out[16];
@@ -457,7 +457,7 @@ void test_build_close_emits_eof_and_close()
     TEST_ASSERT_FALSE(ssh_chan[0][id].open);
 }
 
-void test_inbound_close_routes_to_channel()
+void test_s5_3_inbound_close_is_answered_with_close()
 {
     uint32_t id = open_session(5, 1000);
     uint8_t pkt[8];
@@ -476,9 +476,85 @@ void test_inbound_close_routes_to_channel()
     TEST_ASSERT_FALSE(ssh_chan[0][id].open);
 }
 
+// ---- extended data (sec 5.2 / sec 6.6) ------------------------------------
+
+// sec 5.2:
+//   byte      SSH_MSG_CHANNEL_EXTENDED_DATA
+//   uint32    recipient channel
+//   uint32    data_type_code
+//   string    data
+// "Data sent with these messages consumes the same window as ordinary data", and sec 6.6 names
+// SSH_EXTENDED_DATA_STDERR (1) as the only defined code. This end surfaces no stderr stream, so the
+// bytes are charged to the window and dropped rather than delivered as session data.
+static size_t make_extended_data(uint8_t *pkt, uint32_t recipient, uint32_t type_code, const char *s)
+{
+    size_t n = 0;
+    pkt[n++] = SSH_MSG_CHANNEL_EXTENDED_DATA;
+    wr_u32(pkt + n, recipient);
+    n += 4;
+    wr_u32(pkt + n, type_code);
+    n += 4;
+    n += put_string(pkt + n, s);
+    return n;
+}
+
+void test_s6_6_extended_data_consumes_the_window_and_is_dropped()
+{
+    uint32_t id = open_session(17, 32768);
+    uint8_t pkt[64];
+    size_t n = make_extended_data(pkt, id, 1u, "stderr!"); // SSH_EXTENDED_DATA_STDERR
+    uint8_t out[32];
+    size_t ol = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_extended_data(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 7u, ssh_chan[0][id].flow.local_window);
+    TEST_ASSERT_EQUAL_INT(0, data_cb_count); // never surfaced as session data
+}
+
+// A code other than STDERR is charged to the window the same way: sec 5.2 makes the accounting a
+// property of the message, not of which stream the code selects.
+void test_s6_6_an_unknown_data_type_code_still_consumes_the_window()
+{
+    uint32_t id = open_session(18, 32768);
+    uint8_t pkt[64];
+    size_t n = make_extended_data(pkt, id, 0xFE000001u, "private"); // PRIVATE USE range
+    uint8_t out[32];
+    size_t ol = 0;
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_extended_data(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 7u, ssh_chan[0][id].flow.local_window);
+    TEST_ASSERT_EQUAL_INT(0, data_cb_count);
+}
+
+// Past the window is refused, exactly as ordinary data is, and a malformed or unknown-channel
+// message is rejected rather than charged.
+void test_s6_6_extended_data_past_the_window_and_malformed_rejected()
+{
+    uint32_t id = open_session(19, 32768);
+    uint8_t out[32];
+    size_t ol = 0;
+    uint8_t pkt[64];
+
+    ssh_chan[0][id].flow.local_window = 3;
+    size_t n = make_extended_data(pkt, id, 1u, "toolong");
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_extended_data(0, pkt, n, out, &ol, sizeof(out)));
+
+    n = make_extended_data(pkt, PC_SSH_MAX_CHANNELS + 5u, 1u, "x"); // no such channel
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_extended_data(0, pkt, n, out, &ol, sizeof(out)));
+
+    uint8_t trunc[12];
+    size_t t = 0;
+    trunc[t++] = SSH_MSG_CHANNEL_EXTENDED_DATA;
+    wr_u32(trunc + t, id);
+    t += 4;
+    wr_u32(trunc + t, 1u); // type code present, the data string is not
+    t += 4;
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_extended_data(0, trunc, t, out, &ol, sizeof(out)));
+
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_extended_data(MAX_SSH_CONNS, pkt, n, out, &ol, sizeof(out)));
+}
+
 // ---- multiplexing (PC_SSH_MAX_CHANNELS > 1) ----------------------------
 
-void test_multiplex_two_channels_route_independently()
+void test_s6_1_channels_route_independently()
 {
     uint32_t a = open_session(5, 1000); // peer 5
     uint32_t b = open_session(7, 1000); // peer 7
@@ -517,7 +593,7 @@ void test_multiplex_two_channels_route_independently()
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_data(0, a, (const uint8_t *)"z", 1, out, &olen, sizeof(out)));
 }
 
-void test_pool_full_open_fails()
+void test_s5_1_pool_full_is_reason_4()
 {
     for (int k = 0; k < PC_SSH_MAX_CHANNELS; k++)
     {
@@ -539,7 +615,7 @@ void test_pool_full_open_fails()
     TEST_ASSERT_EQUAL_UINT32(4u, rd_u32(out + 5)); // reason 4 = resource shortage
 }
 
-void test_data_to_unknown_channel_rejected()
+void test_s5_2_data_to_an_unknown_channel_rejected()
 {
     open_session(5, 1000); // local id 0
     uint8_t pkt[32];
@@ -576,7 +652,7 @@ static size_t make_global_other(uint8_t *pkt, const char *name, proto_bool want_
 }
 
 // With no remote-forward owner installed, tcpip-forward is refused (REQUEST_FAILURE).
-void test_rforward_no_cb_refused()
+void test_s7_1_tcpip_forward_refused_with_no_owner()
 {
     uint8_t pkt[64], out[16];
     size_t olen = 99;
@@ -588,7 +664,7 @@ void test_rforward_no_cb_refused()
 }
 
 // An accepted specific-port forward replies with a bare REQUEST_SUCCESS.
-void test_rforward_accept_specific_port()
+void test_s7_1_tcpip_forward_accepts_a_named_port()
 {
     pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
     rfwd_open_ret = 8080;
@@ -604,7 +680,7 @@ void test_rforward_accept_specific_port()
 }
 
 // A port-0 request that is accepted echoes the allocated port (RFC 4254 §7.1).
-void test_rforward_port0_echoes_allocated()
+void test_s7_1_port_zero_echoes_the_allocated_port()
 {
     pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
     rfwd_open_ret = 54321;
@@ -618,7 +694,7 @@ void test_rforward_port0_echoes_allocated()
 }
 
 // Accepted but want_reply = false -> the callback still runs, but no reply is emitted.
-void test_rforward_no_reply_silent()
+void test_s7_1_no_reply_when_want_reply_is_clear()
 {
     pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
     rfwd_open_ret = 8080;
@@ -631,7 +707,7 @@ void test_rforward_no_reply_silent()
 }
 
 // cancel-tcpip-forward routes to the cancel callback and replies REQUEST_SUCCESS.
-void test_rforward_cancel()
+void test_s7_1_cancel_tcpip_forward_routes_to_the_owner()
 {
     pc_ssh_channel_set_rforward_cancel_cb(rfwd_cancel_cb);
     rfwd_cancel_ret = 0;
@@ -647,7 +723,7 @@ void test_rforward_cancel()
 
 // An unrecognized global request answers REQUEST_FAILURE when want_reply is set
 // (RFC 4254 §4, never UNIMPLEMENTED), and is silent otherwise.
-void test_global_unknown_request()
+void test_s4_unknown_request_name()
 {
     uint8_t pkt[64], out[16];
     size_t olen = 99;
@@ -663,7 +739,7 @@ void test_global_unknown_request()
 }
 
 // A truncated GLOBAL_REQUEST (missing the request-name string) is rejected.
-void test_global_malformed()
+void test_s4_malformed_global_request()
 {
     uint8_t pkt[4], out[16];
     pkt[0] = SSH_MSG_GLOBAL_REQUEST;
@@ -686,7 +762,7 @@ static size_t make_open_confirm(uint8_t *pkt, uint32_t recipient, uint32_t sende
 
 // pc_ssh_channel_open_forwarded builds a valid forwarded-tcpip CHANNEL_OPEN and marks
 // the channel pending (a session open cannot reuse the pending slot).
-void test_forwarded_open_builds_channel()
+void test_s7_2_forwarded_tcpip_open_is_built_and_pending()
 {
     uint8_t out[128];
     size_t olen = 0;
@@ -703,7 +779,7 @@ void test_forwarded_open_builds_channel()
 }
 
 // A CONFIRMATION marks the channel open, records the peer window, and fires the cb.
-void test_forwarded_confirm_opens_channel()
+void test_s5_1_confirmation_opens_the_channel()
 {
     pc_ssh_channel_set_forward_confirm_cb(confirm_cb);
     uint8_t out[128];
@@ -728,7 +804,7 @@ void test_forwarded_confirm_opens_channel()
 }
 
 // A FAILURE frees the pending channel (its slot is reusable) and fires cb(ok=false).
-void test_forwarded_failure_frees_channel()
+void test_s5_1_failure_frees_the_channel()
 {
     pc_ssh_channel_set_forward_confirm_cb(confirm_cb);
     uint8_t out[128];
@@ -752,7 +828,7 @@ void test_forwarded_failure_frees_channel()
 }
 
 // A CONFIRMATION / FAILURE for a channel we did not open (no pending) is rejected.
-void test_forwarded_confirm_unknown_rejected()
+void test_s5_1_confirm_for_no_pending_channel_rejected()
 {
     uint8_t pkt[17];
     size_t n = make_open_confirm(pkt, 0, 5, 1000, 8192);
@@ -763,7 +839,7 @@ void test_forwarded_confirm_unknown_rejected()
 
 // Inbound data on a confirmed forwarded-tcpip channel routes to the forward owner,
 // not the session data callback (ssh -R return path).
-void test_forwarded_inbound_data_routes_to_forward_cb()
+void test_s7_2_forwarded_tcpip_data_routes_to_the_owner()
 {
     pc_ssh_channel_set_forward_data_cb(fwd_data_cb);
     uint8_t out[128];
@@ -888,7 +964,7 @@ void test_chan_malformed_payloads()
 }
 
 // build_open_failure / build_open_confirm reject an output buffer smaller than 17 bytes.
-void test_chan_open_cap_guards()
+void test_s5_1_open_reply_output_caps()
 {
     uint8_t out[64];
     size_t ol = 0, n = 0;
@@ -914,7 +990,7 @@ void test_chan_open_cap_guards()
 }
 
 // open_forwarded guards (null addr, tiny cap, pool full) + per-channel cap guards.
-void test_chan_forward_and_channel_guards()
+void test_s7_2_open_forwarded_and_per_channel_caps()
 {
     uint8_t out[64];
     size_t ol = 0, n = 0;
@@ -947,7 +1023,7 @@ void test_chan_forward_and_channel_guards()
 }
 
 // GLOBAL_REQUEST reply paths that cannot fit the (tiny) output buffer.
-void test_chan_global_request_reply_caps()
+void test_s4_reply_output_caps()
 {
     uint8_t out[64];
     size_t ol = 0, n = 0;
@@ -1074,7 +1150,7 @@ void test_chan_same_length_names_do_not_match()
 
 // The CHANNEL_REQUEST accept set is matched element-wise as well: pty-req and env are accepted,
 // while same-length impostors of shell / exec / pty-req / env are refused.
-void test_chan_request_accept_set()
+void test_s6_2_pty_req_and_env_accepted_element_wise()
 {
     uint32_t id = open_session(21, 32768);
     uint8_t out[64];
@@ -1129,7 +1205,7 @@ void test_chan_request_accept_set()
 
 // RFC 4254 sec 6.2 / 6.4 / 6.5: a request truncated before its mandatory fields is not the request it
 // names. shell is the exception - it carries no request-specific data, so the bare form is complete.
-void test_chan_request_truncated_fields_refused()
+void test_s5_4_request_truncated_before_its_fields_refused()
 {
     uint32_t id = open_session(22, 32768);
     uint8_t out[64];
@@ -1192,7 +1268,7 @@ void test_chan_request_truncated_fields_refused()
 
 // A tcpip-forward / direct-tcpip whose address string parses but leaves no room for the port that
 // must follow it is rejected (the length field is present, the value is not).
-void test_chan_missing_trailing_port()
+void test_s7_1_address_without_its_trailing_port_rejected()
 {
     uint8_t out[64];
     size_t ol = 0;
@@ -1220,7 +1296,7 @@ void test_chan_missing_trailing_port()
 
 // A refused remote forward with want_reply unset is silent, and cancel-tcpip-forward with no cancel
 // owner installed is refused the same way an unowned tcpip-forward is.
-void test_chan_rforward_refused_paths()
+void test_s7_1_refused_forward_paths()
 {
     uint8_t out[16];
     size_t ol = 99;
@@ -1240,7 +1316,7 @@ void test_chan_rforward_refused_paths()
 
 // open_forwarded rejects an out-of-range slot and a null originator address, and a CHANNEL_OPEN
 // FAILURE with no confirm owner installed still frees the pending slot.
-void test_chan_forwarded_open_guards_and_silent_failure()
+void test_s5_1_open_forwarded_guards_and_silent_failure()
 {
     uint8_t out[128];
     size_t ol = 0;
@@ -1262,7 +1338,7 @@ void test_chan_forwarded_open_guards_and_silent_failure()
 // Inbound data with no sink installed is still accounted against the window; an empty CHANNEL_DATA
 // string skips delivery entirely; and a window replenish that cannot fit the output buffer is
 // dropped rather than truncated (the window stays spent).
-void test_chan_data_without_sinks_and_empty_payload()
+void test_s5_2_data_without_sinks_and_empty_payload()
 {
     uint8_t out[64];
     size_t ol = 0;
@@ -1303,7 +1379,7 @@ void test_chan_data_without_sinks_and_empty_payload()
 // build_data rejects an out-of-range slot and a write larger than the peer's maximum packet size
 // (even when the peer window would allow it); build_close rejects a buffer under ten bytes; and a
 // WINDOW_ADJUST that would wrap the 32-bit peer window saturates instead.
-void test_chan_outbound_limits_and_window_saturation()
+void test_s5_2_outbound_limits_and_window_saturation()
 {
     uint8_t out[64];
     size_t ol = 0;
@@ -1373,7 +1449,7 @@ static void t_sftp_data(uint8_t slot, uint32_t ch, const uint8_t *d, size_t n)
 
 // A "subsystem" "sftp" request is accepted (unlike other subsystems), tags the channel, fires the sftp-open
 // callback, and thereafter routes channel data to the sftp cb - not the session data cb.
-void test_sftp_subsystem_routes()
+void test_s6_5_sftp_subsystem_routes()
 {
     pc_sftp_open_count = 0;
     pc_sftp_data_count = 0;
@@ -1406,7 +1482,7 @@ void test_sftp_subsystem_routes()
 }
 
 // An unknown subsystem is still refused.
-void test_unknown_subsystem_refused()
+void test_s6_5_unknown_subsystem_refused()
 {
     open_session(7, 32768);
     uint8_t rq[64];
@@ -1426,7 +1502,7 @@ void test_unknown_subsystem_refused()
 // The SFTP classifier matches "subsystem" and its "sftp" argument element-wise, and tolerates a
 // missing open callback: a same-length impostor request type, a same-length impostor argument and a
 // truncated argument are all refused, while "sftp" is accepted even with no binding installed.
-void test_sftp_subsystem_match_and_missing_cb()
+void test_s6_5_sftp_subsystem_match_and_missing_cb()
 {
     pc_ssh_channel_set_sftp_open_cb(NULL);
     pc_ssh_channel_set_sftp_data_cb(NULL);
@@ -1488,7 +1564,7 @@ static void t_scp_data(uint8_t slot, uint32_t ch, const uint8_t *d, size_t n)
 
 // An exec "scp …" is accepted (exec already is), tags the channel SCP, hands the command to the scp cb, and
 // routes channel data to the scp cb.
-void test_scp_exec_routes()
+void test_s6_5_scp_exec_routes()
 {
     pc_scp_open_count = 0;
     pc_scp_data_count = 0;
@@ -1520,7 +1596,7 @@ void test_scp_exec_routes()
 // impostor request type, a command shorter than the prefix, a same-length command that differs, and
 // a truncated command argument all leave the channel a plain session (exec itself stays accepted).
 // With no SCP binding installed the exec is still accepted and its data is dropped.
-void test_scp_exec_match_and_missing_cb()
+void test_s6_5_scp_exec_match_and_missing_cb()
 {
     pc_ssh_channel_set_scp_open_cb(NULL);
     pc_ssh_channel_set_scp_data_cb(NULL);
@@ -1574,58 +1650,61 @@ int main()
     UNITY_BEGIN();
     RUN_TEST(test_chan_slot_and_msgtype_guards);
     RUN_TEST(test_chan_malformed_payloads);
-    RUN_TEST(test_chan_open_cap_guards);
-    RUN_TEST(test_chan_forward_and_channel_guards);
-    RUN_TEST(test_chan_global_request_reply_caps);
+    RUN_TEST(test_s5_1_open_reply_output_caps);
+    RUN_TEST(test_s7_2_open_forwarded_and_per_channel_caps);
+    RUN_TEST(test_s4_reply_output_caps);
     RUN_TEST(test_chan_empty_and_mistyped_payloads);
     RUN_TEST(test_chan_same_length_names_do_not_match);
-    RUN_TEST(test_chan_request_accept_set);
-    RUN_TEST(test_chan_request_truncated_fields_refused);
-    RUN_TEST(test_chan_missing_trailing_port);
-    RUN_TEST(test_chan_rforward_refused_paths);
-    RUN_TEST(test_chan_forwarded_open_guards_and_silent_failure);
-    RUN_TEST(test_chan_data_without_sinks_and_empty_payload);
-    RUN_TEST(test_chan_outbound_limits_and_window_saturation);
-    RUN_TEST(test_open_session_confirms);
-    RUN_TEST(test_open_unknown_type_fails);
-    RUN_TEST(test_direct_tcpip_no_cb_prohibited);
-    RUN_TEST(test_direct_tcpip_accept_confirms);
-    RUN_TEST(test_direct_tcpip_refused_connect_failed);
-    RUN_TEST(test_forward_data_routes_to_forward_cb);
-    RUN_TEST(test_shell_request_success_with_reply);
-    RUN_TEST(test_unknown_request_failure);
-    RUN_TEST(test_request_no_reply_produces_nothing);
-    RUN_TEST(test_inbound_data_invokes_callback);
-    RUN_TEST(test_inbound_data_window_replenish);
-    RUN_TEST(test_inbound_data_exceeding_window_rejected);
-    RUN_TEST(test_outbound_data_frames_and_decrements_window);
-    RUN_TEST(test_outbound_data_exceeding_peer_window_rejected);
-    RUN_TEST(test_window_adjust_grows_peer_window);
-    RUN_TEST(test_build_close_emits_eof_and_close);
-    RUN_TEST(test_inbound_close_routes_to_channel);
-    RUN_TEST(test_multiplex_two_channels_route_independently);
-    RUN_TEST(test_pool_full_open_fails);
-    RUN_TEST(test_data_to_unknown_channel_rejected);
-    RUN_TEST(test_rforward_no_cb_refused);
-    RUN_TEST(test_rforward_accept_specific_port);
-    RUN_TEST(test_rforward_port0_echoes_allocated);
-    RUN_TEST(test_rforward_no_reply_silent);
-    RUN_TEST(test_rforward_cancel);
-    RUN_TEST(test_global_unknown_request);
-    RUN_TEST(test_global_malformed);
-    RUN_TEST(test_forwarded_open_builds_channel);
-    RUN_TEST(test_forwarded_confirm_opens_channel);
-    RUN_TEST(test_forwarded_failure_frees_channel);
-    RUN_TEST(test_forwarded_confirm_unknown_rejected);
-    RUN_TEST(test_forwarded_inbound_data_routes_to_forward_cb);
+    RUN_TEST(test_s6_2_pty_req_and_env_accepted_element_wise);
+    RUN_TEST(test_s5_4_request_truncated_before_its_fields_refused);
+    RUN_TEST(test_s7_1_address_without_its_trailing_port_rejected);
+    RUN_TEST(test_s7_1_refused_forward_paths);
+    RUN_TEST(test_s5_1_open_forwarded_guards_and_silent_failure);
+    RUN_TEST(test_s5_2_data_without_sinks_and_empty_payload);
+    RUN_TEST(test_s5_2_outbound_limits_and_window_saturation);
+    RUN_TEST(test_s6_1_session_open_is_confirmed);
+    RUN_TEST(test_s5_1_unsupported_channel_type_is_reason_3);
+    RUN_TEST(test_s7_2_direct_tcpip_prohibited_with_no_owner);
+    RUN_TEST(test_s7_2_direct_tcpip_accepted_carries_host_and_port);
+    RUN_TEST(test_s7_2_direct_tcpip_refusal_frees_the_channel);
+    RUN_TEST(test_s7_2_direct_tcpip_data_routes_to_the_owner);
+    RUN_TEST(test_s6_5_shell_request_succeeds);
+    RUN_TEST(test_s5_4_unsupported_request_type_fails);
+    RUN_TEST(test_s5_4_no_reply_when_want_reply_is_clear);
+    RUN_TEST(test_s5_2_inbound_data_is_delivered);
+    RUN_TEST(test_s5_2_window_adjust_is_emitted_when_spent);
+    RUN_TEST(test_s5_2_data_past_the_window_rejected);
+    RUN_TEST(test_s5_2_outbound_data_decrements_the_window);
+    RUN_TEST(test_s5_2_data_past_the_peer_window_rejected);
+    RUN_TEST(test_s5_2_window_adjust_grows_the_peer_window);
+    RUN_TEST(test_s5_3_close_emits_eof_then_close);
+    RUN_TEST(test_s5_3_inbound_close_is_answered_with_close);
+    RUN_TEST(test_s6_1_channels_route_independently);
+    RUN_TEST(test_s6_6_extended_data_consumes_the_window_and_is_dropped);
+    RUN_TEST(test_s6_6_an_unknown_data_type_code_still_consumes_the_window);
+    RUN_TEST(test_s6_6_extended_data_past_the_window_and_malformed_rejected);
+    RUN_TEST(test_s5_1_pool_full_is_reason_4);
+    RUN_TEST(test_s5_2_data_to_an_unknown_channel_rejected);
+    RUN_TEST(test_s7_1_tcpip_forward_refused_with_no_owner);
+    RUN_TEST(test_s7_1_tcpip_forward_accepts_a_named_port);
+    RUN_TEST(test_s7_1_port_zero_echoes_the_allocated_port);
+    RUN_TEST(test_s7_1_no_reply_when_want_reply_is_clear);
+    RUN_TEST(test_s7_1_cancel_tcpip_forward_routes_to_the_owner);
+    RUN_TEST(test_s4_unknown_request_name);
+    RUN_TEST(test_s4_malformed_global_request);
+    RUN_TEST(test_s7_2_forwarded_tcpip_open_is_built_and_pending);
+    RUN_TEST(test_s5_1_confirmation_opens_the_channel);
+    RUN_TEST(test_s5_1_failure_frees_the_channel);
+    RUN_TEST(test_s5_1_confirm_for_no_pending_channel_rejected);
+    RUN_TEST(test_s7_2_forwarded_tcpip_data_routes_to_the_owner);
 #if PC_ENABLE_SSH_SFTP
-    RUN_TEST(test_sftp_subsystem_routes);
-    RUN_TEST(test_unknown_subsystem_refused);
-    RUN_TEST(test_sftp_subsystem_match_and_missing_cb);
+    RUN_TEST(test_s6_5_sftp_subsystem_routes);
+    RUN_TEST(test_s6_5_unknown_subsystem_refused);
+    RUN_TEST(test_s6_5_sftp_subsystem_match_and_missing_cb);
 #endif
 #if PC_ENABLE_SSH_SCP
-    RUN_TEST(test_scp_exec_routes);
-    RUN_TEST(test_scp_exec_match_and_missing_cb);
+    RUN_TEST(test_s6_5_scp_exec_routes);
+    RUN_TEST(test_s6_5_scp_exec_match_and_missing_cb);
 #endif
     return UNITY_END();
 }

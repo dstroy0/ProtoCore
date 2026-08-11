@@ -8,6 +8,22 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## RFC 4254 sec 6.10: an exec'd command's exit status is never returned
+
+- **Status:** OPEN. Found by labelling `test_ssh_channel.c` by RFC section: sec 6.10 had no test,
+  and the reason is that nothing implements it.
+- **Sec 6.10:** "When the command running at the other end terminates, the following message can be
+  sent to return the exit status of the command. Returning the status is RECOMMENDED." The message
+  is a `CHANNEL_REQUEST` naming `"exit-status"` with `want_reply` FALSE and a `uint32 exit_status`,
+  and "The channel needs to be closed with SSH_MSG_CHANNEL_CLOSE after this message."
+- **What is missing:** `exit-status` and `exit-signal` appear nowhere in `src/`. A channel that ran
+  an `exec` is closed with EOF + CLOSE and no status, so a client sees a command that produced
+  output and then ended with no exit code. `ssh host cmd` reports success regardless of what the
+  command did, which matters most for the SCP path, where a failed transfer is indistinguishable
+  from a successful one at the exit code.
+- **Not fixed:** emitting it needs a way for the application to report the code when its exec
+  finishes, which is a new seam and the owner's call.
+
 ## RFC 4254 sec 5.1 refusal codes: direct-tcpip reports the wrong one, and one is unreachable
 
 - **Status:** OPEN. Found writing the per-file suite for `ssh_forward.c`; both are pinned by
