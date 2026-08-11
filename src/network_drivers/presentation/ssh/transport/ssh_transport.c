@@ -13,8 +13,8 @@
 #include "crypto/asymmetric/ed25519.h"    // pc_ed25519 host-key sign
 #include "crypto/hash/sha256.h"
 #include "crypto/rng/rng.h" // pc_rand_fill
-#include "mmgr/bytes.h"    // pc_bw_* / pc_rd_str() - the byte verbs this file frames with
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/bytes.h"     // pc_bw_* / pc_rd_str() - the byte verbs this file frames with
+#include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h" // ssh_conn_slot() + the memory map
@@ -187,10 +187,16 @@ static proto_bool hostkey_rsa_available(void)
 }
 
 // Build the KEX / host-key advertise lists in preference order (RFC 4253 §7.1 name-
-// lists), filtering host-key types to the keys we actually hold. server-sig-algs
-// (RFC 8308) uses the same host-key ordering. Written into a caller buffer.
-static void build_kex_list(char *out, size_t cap)
+// lists). A server lists the host-key types it holds, a client the ones it accepts.
+// The RFC 8308 marker is ext-info-c from a client, ext-info-s from a server.
+// server-sig-algs (RFC 8308) uses the same host-key ordering. Written into a caller buffer.
+static void build_kex_list(char *out, size_t cap, proto_bool as_client)
 {
+    const char *ext_info = ",ext-info-s";
+    if (as_client)
+    {
+        ext_info = ",ext-info-c";
+    }
     const char *c1 = KEX_C25519;
     const char *c2 = KEX_C25519_LIBSSH;
     const char *dh = KEX_DH;
@@ -222,7 +228,7 @@ static void build_kex_list(char *out, size_t cap)
         pc_sb_put(&sb157, c1);
         pc_sb_put(&sb157, ",");
         pc_sb_put(&sb157, c2);
-        pc_sb_put(&sb157, ",ext-info-s");
+        pc_sb_put(&sb157, ext_info);
         if (pc_sb_finish(&sb157) == 0)
         {
             sb157.p[0] = '\0';
@@ -238,20 +244,27 @@ static void build_kex_list(char *out, size_t cap)
         pc_sb_put(&sb159, ec);
         pc_sb_put(&sb159, ",");
         pc_sb_put(&sb159, dh);
-        pc_sb_put(&sb159, ",ext-info-s");
+        pc_sb_put(&sb159, ext_info);
         if (pc_sb_finish(&sb159) == 0)
         {
             sb159.p[0] = '\0';
         }
     }
 }
-static void build_hostkey_list(char *out, size_t cap)
+static void build_hostkey_list(char *out, size_t cap, proto_bool as_client)
 {
     // Both rsa-sha2-512 and rsa-sha2-256 are backed by the one "ssh-rsa" host key
-    // (RFC 8332): advertise 512 before 256 (OpenSSH's order). Filter to keys we hold.
-    const proto_bool rsa = hostkey_rsa_available();
-    const proto_bool ed = pc_ssh_hostkey_ed25519_available();
-    const proto_bool ec = pc_ssh_hostkey_ecdsa_available();
+    // (RFC 8332): advertise 512 before 256 (OpenSSH's order). A server lists the keys it holds,
+    // a client every algorithm verify_host_sig accepts.
+    proto_bool rsa = hostkey_rsa_available();
+    proto_bool ed = pc_ssh_hostkey_ed25519_available();
+    proto_bool ec = pc_ssh_hostkey_ecdsa_available();
+    if (as_client)
+    {
+        rsa = PROTO_TRUE;
+        ed = PROTO_TRUE;
+        ec = PROTO_TRUE;
+    }
     // A host key we can offer: the wire name and whether the key is on the device.
     typedef struct
     {
@@ -348,15 +361,31 @@ static int cand_match(const uint8_t *tok, uint32_t tlen, const AlgCand *cands, i
 // Returns the position of the winning entry in the client's list, or -1 when nothing matched. The
 // position is what RFC 4253 sec 7.1 calls the guess: a client guesses with its first-listed algorithm,
 // so a win at 0 means it guessed right.
-static int negotiate_alg(const uint8_t *client_list, uint32_t nlen, const AlgCand *cands, int n, int *out)
+static int negotiate_alg(const uint8_t *peer_list, uint32_t nlen, const AlgCand *cands, int n, int *out,
+                         proto_bool as_client)
 {
+    // As the client the list to iterate is ours, in the order we advertised it, and the peer's is
+    // the membership test. As the server the two swap.
+    if (as_client)
+    {
+        for (int c = 0; c < n; c++)
+        {
+            if (cands[c].avail && namelist_contains(peer_list, nlen, cands[c].name))
+            {
+                *out = cands[c].tag;
+                return c;
+            }
+        }
+        return -1;
+    }
+
     uint32_t start = 0;
     int idx = 0;
     for (uint32_t i = 0; i <= nlen; i++)
     {
-        if (i == nlen || client_list[i] == ',')
+        if (i == nlen || peer_list[i] == ',')
         {
-            int c = cand_match(client_list + start, i - start, cands, n);
+            int c = cand_match(peer_list + start, i - start, cands, n);
             if (c >= 0)
             {
                 *out = cands[c].tag;
@@ -389,6 +418,7 @@ void ssh_transport_init(uint8_t i)
     SshSession *s = &ssh_sess[i];
     mem.set(s, 0, sizeof(*s));
     s->v_c = (char *)(base + SSH_OFF_V_C);
+    s->v_s = (char *)(base + SSH_OFF_V_S);
     s->banner_buf = base + SSH_OFF_BANNER;
     s->i_c = base + SSH_OFF_I_C;
     s->i_s = base + SSH_OFF_I_S;
@@ -426,17 +456,39 @@ void ssh_transport_init(uint8_t i)
 // Identification string exchange (RFC 4253 §4.2)
 // ---------------------------------------------------------------------------
 
-int ssh_transport_server_banner(uint8_t *out, size_t *out_len, size_t cap)
+int ssh_transport_send_banner(uint8_t i, uint8_t *out, size_t *out_len, size_t cap)
 {
+    if (i >= MAX_SSH_CONNS)
+    {
+        return -1;
+    }
+    SshSession *s = &ssh_sess[i];
+
+    // Which string is ours, and which of the two H terms holds it.
+    const char *ours = SSH_SERVER_VERSION;
     size_t vlen = sizeof(SSH_SERVER_VERSION) - 1;
+    char *kept = s->v_s;
+    uint16_t *kept_len = &s->v_s_len;
+    if (ssh_pkt[i].is_client)
+    {
+        ours = SSH_CLIENT_VERSION;
+        vlen = sizeof(SSH_CLIENT_VERSION) - 1;
+        kept = s->v_c;
+        kept_len = &s->v_c_len;
+    }
+
     if (vlen + 2 > cap)
     {
         return -1;
     }
-    mem.cpy(out, SSH_SERVER_VERSION, vlen);
+    mem.cpy(out, ours, vlen);
     out[vlen] = '\r';
     out[vlen + 1] = '\n';
     *out_len = vlen + 2;
+
+    mem.cpy(kept, ours, vlen);
+    kept[vlen] = '\0';
+    *kept_len = (uint16_t)vlen;
     return 0;
 }
 
@@ -447,6 +499,15 @@ int ssh_transport_recv_banner(uint8_t i, const uint8_t *data, size_t len, size_t
         return -1;
     }
     SshSession *s = &ssh_sess[i];
+
+    // The peer's string is the H term this role does not send.
+    char *theirs = s->v_c;
+    uint16_t *theirs_len = &s->v_c_len;
+    if (ssh_pkt[i].is_client)
+    {
+        theirs = s->v_s;
+        theirs_len = &s->v_s_len;
+    }
 
     size_t k = 0;
     while (k < len)
@@ -469,9 +530,9 @@ int ssh_transport_recv_banner(uint8_t i, const uint8_t *data, size_t len, size_t
                 {
                     return -1;
                 }
-                mem.cpy(s->v_c, s->banner_buf, n);
-                s->v_c[n] = '\0';
-                s->v_c_len = n;
+                mem.cpy(theirs, s->banner_buf, n);
+                theirs[n] = '\0';
+                *theirs_len = n;
                 s->banner_len = 0;
                 s->phase = SSH_PHASE_KEXINIT;
                 *consumed = k;
@@ -504,6 +565,7 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
         return -1;
     }
     SshSession *s = &ssh_sess[i];
+    const proto_bool as_client = ssh_pkt[i].is_client;
 
     pc_span w = pc_span_from(payload, cap);
     pc_bw_put(&w, SSH_MSG_KEXINIT);
@@ -516,8 +578,8 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
     // All four host-key algs = "ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256" is 57
     // chars + NUL; a smaller buffer silently drops rsa-sha2-256 when all three key types are loaded.
     char hklist[SSH_HKLIST_BUF];
-    build_kex_list(kexlist, sizeof(kexlist));
-    build_hostkey_list(hklist, sizeof(hklist));
+    build_kex_list(kexlist, sizeof(kexlist), as_client);
+    build_hostkey_list(hklist, sizeof(hklist), as_client);
     pc_ssh_wr_cstr(&w, kexlist);         // kex_algorithms (preference-ordered, + ext-info-s)
     pc_ssh_wr_cstr(&w, hklist);          // server_host_key_algorithms (only keys we hold)
     pc_ssh_wr_cstr(&w, ALG_CIPHER_LIST); // encryption c2s (chacha20-poly1305 preferred, aes256-ctr fallback)
@@ -528,21 +590,30 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
     pc_ssh_wr_cstr(&w, ALG_COMP_ZLIB);   // compression s2c (zlib@openssh.com / zlib when built in, else none)
     pc_ssh_wr_cstr(&w, "");              // languages c2s
     pc_ssh_wr_cstr(&w, "");              // languages s2c
-    pc_bw_put(&w, 0);                     // first_kex_packet_follows = false
-    pc_bw_put_be(&w, 0, 4);                    // reserved
+    pc_bw_put(&w, 0);                    // first_kex_packet_follows = false
+    pc_bw_put_be(&w, 0, 4);              // reserved
 
     if (!pc_span_ok(w))
     {
         return -1;
     }
 
-    // Retain a copy as I_S for the exchange hash.
-    if (w.pos > PC_SSH_KEXINIT_S_MAX)
+    // Retain a copy for the exchange hash: ours is I_C as the client, I_S as the server.
+    uint8_t *kept = s->i_s;
+    uint16_t *kept_len = &s->i_s_len;
+    size_t kept_cap = PC_SSH_KEXINIT_S_MAX;
+    if (as_client)
+    {
+        kept = s->i_c;
+        kept_len = &s->i_c_len;
+        kept_cap = SSH_KEXINIT_MAX;
+    }
+    if (w.pos > kept_cap)
     {
         return -1;
     }
-    mem.cpy(s->i_s, payload, w.pos);
-    s->i_s_len = (uint16_t)w.pos;
+    mem.cpy(kept, payload, w.pos);
+    *kept_len = (uint16_t)w.pos;
 
     *len = w.pos;
     return 0;
@@ -553,7 +624,7 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
 
 // Negotiate the key-exchange method from the client's kex_algorithms name-list, in our preference order
 // (PQC hybrid first when enabled; RSA group first when prefer_rsa). false = no mutual method.
-static int negotiate_kex(const uint8_t *list, uint32_t nlen, SshKexAlg *out)
+static int negotiate_kex(const uint8_t *list, uint32_t nlen, SshKexAlg *out, proto_bool as_client)
 {
     AlgCand kc[6];
     int nk = 0;
@@ -578,7 +649,7 @@ static int negotiate_kex(const uint8_t *list, uint32_t nlen, SshKexAlg *out)
         kc[nk++] = (AlgCand){KEX_DH, SSH_KEX_DH_GROUP14, PROTO_TRUE};
     }
     int tag = 0;
-    int idx = negotiate_alg(list, nlen, kc, nk, &tag);
+    int idx = negotiate_alg(list, nlen, kc, nk, &tag, as_client);
     if (idx < 0)
     {
         return -1;
@@ -589,11 +660,17 @@ static int negotiate_kex(const uint8_t *list, uint32_t nlen, SshKexAlg *out)
 
 // Negotiate the host-key algorithm, restricted to keys we actually hold. rsa-sha2-512/256 share the one
 // RSA key (RFC 8332), ecdsa-sha2-nistp256 is a distinct P-256 key. false = no mutual algorithm.
-static int negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostkeyAlg *out)
+static int negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostkeyAlg *out, proto_bool as_client)
 {
-    const proto_bool rsa = hostkey_rsa_available();
-    const proto_bool ed = pc_ssh_hostkey_ed25519_available();
-    const proto_bool ec = pc_ssh_hostkey_ecdsa_available();
+    proto_bool rsa = hostkey_rsa_available();
+    proto_bool ed = pc_ssh_hostkey_ed25519_available();
+    proto_bool ec = pc_ssh_hostkey_ecdsa_available();
+    if (as_client)
+    {
+        rsa = PROTO_TRUE;
+        ed = PROTO_TRUE;
+        ec = PROTO_TRUE;
+    }
     AlgCand hc[4];
     if (s_sshtr.prefer_rsa)
     {
@@ -610,7 +687,7 @@ static int negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostkeyAlg *
         hc[3] = (AlgCand){HOSTKEY_RSA_SHA256, SSH_HOSTKEY_RSA_SHA256, rsa};
     }
     int tag = 0;
-    int idx = negotiate_alg(list, nlen, hc, 4, &tag);
+    int idx = negotiate_alg(list, nlen, hc, 4, &tag, as_client);
     if (idx < 0)
     {
         return -1;
@@ -640,14 +717,24 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
         return -1;
     }
     ssh_sess[i].kex_active = PROTO_TRUE; // an exchange is running from here to NEWKEYS
+    const proto_bool as_client = ssh_pkt[i].is_client;
 
     // Retain a copy as I_C for the exchange hash.
-    if (len > SSH_KEXINIT_MAX)
+    uint8_t *peer = s->i_c;
+    uint16_t *peer_len = &s->i_c_len;
+    size_t peer_cap = SSH_KEXINIT_MAX;
+    if (as_client)
+    {
+        peer = s->i_s;
+        peer_len = &s->i_s_len;
+        peer_cap = PC_SSH_KEXINIT_S_MAX;
+    }
+    if (len > peer_cap)
     {
         return -1;
     }
-    mem.cpy(s->i_c, payload, len);
-    s->i_c_len = (uint16_t)len;
+    mem.cpy(peer, payload, len);
+    *peer_len = (uint16_t)len;
 
     size_t off = 1 + 16; // skip msg type + 16-byte cookie
 
@@ -661,7 +748,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     }
     // RFC 8308: if the client offers ext-info-c we will send SSH_MSG_EXT_INFO.
     s->ext_info_c = namelist_contains(list, nlen, EXT_INFO_C);
-    const int kex_idx = negotiate_kex(list, nlen, &s->kex_alg);
+    const int kex_idx = negotiate_kex(list, nlen, &s->kex_alg, as_client);
     if (kex_idx < 0)
     {
         return -1; // no mutual KEX
@@ -671,7 +758,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    const int hostkey_idx = negotiate_hostkey(list, nlen, &s->hostkey_alg);
+    const int hostkey_idx = negotiate_hostkey(list, nlen, &s->hostkey_alg, as_client);
     if (hostkey_idx < 0)
     {
         return -1; // no mutual host-key algorithm
@@ -687,7 +774,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     }
     int c2s = 0;
     int s2c = 0;
-    if (negotiate_alg(list, nlen, cc, 3, &c2s) < 0)
+    if (negotiate_alg(list, nlen, cc, 3, &c2s, as_client) < 0)
     {
         return -1;
     }
@@ -695,7 +782,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (negotiate_alg(list, nlen, cc, 3, &s2c) < 0)
+    if (negotiate_alg(list, nlen, cc, 3, &s2c, as_client) < 0)
     {
         return -1;
     }
@@ -716,7 +803,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (need_mac_c2s && negotiate_alg(list, nlen, mc, 4, &m_c2s) < 0)
+    if (need_mac_c2s && negotiate_alg(list, nlen, mc, 4, &m_c2s, as_client) < 0)
     {
         return -1;
     }
@@ -724,7 +811,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (need_mac_s2c && negotiate_alg(list, nlen, mc, 4, &m_s2c) < 0)
+    if (need_mac_s2c && negotiate_alg(list, nlen, mc, 4, &m_s2c, as_client) < 0)
     {
         return -1;
     }
@@ -738,12 +825,12 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
                                   {"zlib", SSH_COMP_ZLIB, PROTO_TRUE},
                                   {"none", SSH_COMP_NONE, PROTO_TRUE}};
         int comp = 0;
-        if (!pc_rd_str(payload, len, &off, &list, &nlen) || negotiate_alg(list, nlen, compc, 3, &comp) < 0)
+        if (!pc_rd_str(payload, len, &off, &list, &nlen) || negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
             return -1;
         }
         ssh_comp_set_c2s(i, comp);
-        if (!pc_rd_str(payload, len, &off, &list, &nlen) || negotiate_alg(list, nlen, compc, 3, &comp) < 0)
+        if (!pc_rd_str(payload, len, &off, &list, &nlen) || negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
             return -1;
         }
@@ -790,7 +877,7 @@ int ssh_extinfo_build(uint8_t *out, size_t *len, size_t cap)
     // byte SSH_MSG_EXT_INFO || uint32 nr-extensions || (string name, string value)*
     pc_span w = pc_span_from(out, cap);
     pc_bw_put(&w, SSH_MSG_EXT_INFO);
-    pc_bw_put_be(&w, 1, 4);                      // one extension
+    pc_bw_put_be(&w, 1, 4);                // one extension
     pc_ssh_wr_cstr(&w, "server-sig-algs"); // extension name
     // Accepted client public-key signature algorithms for userauth. All are always
     // verifiable (independent of which host key we hold); ordered by our preference so a
@@ -883,15 +970,13 @@ static int compute_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint
         return -1;
     }
 
-    static const char *const v_s = SSH_SERVER_VERSION;
-
     SshKexHash h;
     ssh_kexhash_init(&h, ssh_pkt[i].crypto_work, is512);
-    hash_string(&h, (const uint8_t *)s->v_c, s->v_c_len);                  // V_C
-    hash_string(&h, (const uint8_t *)v_s, sizeof(SSH_SERVER_VERSION) - 1); // V_S
-    hash_string(&h, s->i_c, s->i_c_len);                                   // I_C
-    hash_string(&h, s->i_s, s->i_s_len);                                   // I_S
-    hash_string(&h, ks, ks_len);                                           // K_S
+    hash_string(&h, (const uint8_t *)s->v_c, s->v_c_len); // V_C
+    hash_string(&h, (const uint8_t *)s->v_s, s->v_s_len); // V_S
+    hash_string(&h, s->i_c, s->i_c_len);                  // I_C
+    hash_string(&h, s->i_s, s->i_s_len);                  // I_S
+    hash_string(&h, ks, ks_len);                          // K_S
     if (pub_is_string)
     {
         hash_string(&h, cpub, cpub_len); // Q_C
@@ -1579,12 +1664,10 @@ int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, size_t c
 }
 
 // The RFC 4253 transitions, named. One instance, handed out by pointer.
-static const SshTransportNs instance = {ssh_transport_recv_banner, ssh_transport_server_banner,
-                                        ssh_kexinit_build,         ssh_kexinit_parse,
-                                        ssh_kex_generate,          ssh_kex_exchange_hash,
-                                        ssh_kexdh_handle,          ssh_newkeys_sent,
-                                        ssh_newkeys_complete,      ssh_rekey_due,
-                                        ssh_transport_begin_rekey};
+static const SshTransportNs instance = {
+    ssh_transport_recv_banner, ssh_transport_send_banner, ssh_kexinit_build, ssh_kexinit_parse,    ssh_kex_generate,
+    ssh_kex_exchange_hash,     ssh_kexdh_handle,          ssh_newkeys_sent,  ssh_newkeys_complete, ssh_rekey_due,
+    ssh_transport_begin_rekey};
 
 const SshTransportNs *pc_ssh_transport(void)
 {

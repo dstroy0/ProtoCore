@@ -126,7 +126,7 @@ void test_s4_2_server_banner_format()
 {
     uint8_t buf[64];
     size_t n = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_transport_server_banner(buf, &n, sizeof(buf)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_transport_send_banner(0, buf, &n, sizeof(buf)));
     TEST_ASSERT_TRUE(n > 8);
     TEST_ASSERT_EQUAL_MEMORY("SSH-2.0-", buf, 8);
     TEST_ASSERT_EQUAL('\r', buf[n - 2]);
@@ -1405,7 +1405,7 @@ void test_s4_2_banner_and_build_caps()
 {
     uint8_t small[4];
     size_t l = 0, consumed = 0;
-    TEST_ASSERT_EQUAL_INT(-1, ssh_transport_server_banner(small, &l, 4)); // banner does not fit
+    TEST_ASSERT_EQUAL_INT(-1, ssh_transport_send_banner(0, small, &l, 4)); // banner does not fit
 
     // An "SSH-" line of exactly SSH_VERSION_MAX chars, then LF: too long.
     static uint8_t long_ssh[SSH_VERSION_MAX + 2];

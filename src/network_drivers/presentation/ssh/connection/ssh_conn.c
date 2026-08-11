@@ -311,8 +311,8 @@ void pc_ssh_conn_poll(uint8_t conn_slot)
     if (s->phase == SSH_PHASE_OPEN && !ssh_sess[j].kex_active)
     {
         uint32_t elapsed = pc_millis() - s->last_kex_ms;
-        if (SSH_TRANSPORT->rekey_due(ssh_pkt[j].seq_no_send, ssh_pkt[j].seq_no_recv, elapsed, SSH_REKEY_PACKET_THRESHOLD,
-                          SSH_REKEY_TIME_MS))
+        if (SSH_TRANSPORT->rekey_due(ssh_pkt[j].seq_no_send, ssh_pkt[j].seq_no_recv, elapsed,
+                                     SSH_REKEY_PACKET_THRESHOLD, SSH_REKEY_TIME_MS))
         {
             size_t mark = pc_secure_mark();
             uint8_t *buf = (uint8_t *)pc_secure_alloc(SSH_PKT_BUF_SIZE, 16);
@@ -403,7 +403,7 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
     size_t mark = pc_plaintext_mark();
     uint8_t *banner = (uint8_t *)pc_plaintext_alloc(banner_cap, 16);
     size_t blen = 0;
-    if (banner && SSH_TRANSPORT->send_banner(banner, &blen, banner_cap) == 0 && pc_conn_active(conn->id))
+    if (banner && SSH_TRANSPORT->send_banner(j, banner, &blen, banner_cap) == 0 && pc_conn_active(conn->id))
     {
         Tcp.conn->send(conn->id, banner, (proto_u16)blen);
         Tcp.conn->flush(conn->id);

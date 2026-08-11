@@ -113,6 +113,8 @@
     "bytematch",
     "byteranges",
     "calloc",
+    "cand",
+    "cands",
     "canopen",
     "captureless",
     "catppuccin",
