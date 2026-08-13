@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`1913244`](https://github.com/dstroy0/ProtoCore/commit/1913244d8a7b3c0c29bfbe8329a4a5f76e0cd9f5))
 - update test report + coverage [skip ci] ([`cac5a0c`](https://github.com/dstroy0/ProtoCore/commit/cac5a0c44faf13e1c0c3e4510041247db448ff7f))
 - update CHANGELOG.md [skip ci] ([`cc0a7a0`](https://github.com/dstroy0/ProtoCore/commit/cc0a7a01073325dd7573a42983e50fbe0bf50227))
 - update CHANGELOG.md [skip ci] ([`44754f3`](https://github.com/dstroy0/ProtoCore/commit/44754f3cc435e1cf48bc2488a6a105fc8877f169))
@@ -355,6 +356,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- (housekeeping): dir moves, pimpl sweep half done ([`7b2d34b`](https://github.com/dstroy0/ProtoCore/commit/7b2d34bed7e7a17c1ed8ebcd9f6bdc13a29d65d7))
+- (housekeeping): move dirs, renames, pimple as I work through ([`4ecbecf`](https://github.com/dstroy0/ProtoCore/commit/4ecbecf2ede3adccd1aff4eb5aef3fecf43fcfcc))
 - (docs): rename literals/funcs ([`7de0c7c`](https://github.com/dstroy0/ProtoCore/commit/7de0c7cc1ff6c4cfa35d891e12940638c507b3d4))
 - (docs): ssh suite first pass rfc correctness. ([`836b2ba`](https://github.com/dstroy0/ProtoCore/commit/836b2bae18f1d95a58734600d46298f5f6891272))
 - ssh audit P0a/P0b/P1 in flight ([`ed6f704`](https://github.com/dstroy0/ProtoCore/commit/ed6f704c5a17ada81ed792392b242857f66d56de))
@@ -396,6 +399,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`198daea`](https://github.com/dstroy0/ProtoCore/commit/198daeaccbdb64118294665ced8c8ebb9e9de37b))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f729fa7`](https://github.com/dstroy0/ProtoCore/commit/f729fa718a5bac891c57656d7c90ae59c107d61e))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`49e6c0a`](https://github.com/dstroy0/ProtoCore/commit/49e6c0a7215518c1743fef47a4fd19fa4274fe49))
 - log the SFTP version-negotiation defect ([`5d7aab9`](https://github.com/dstroy0/ProtoCore/commit/5d7aab96602f15e32bf067f94f3996351c0a3f36))
@@ -847,7 +851,7 @@ All notable changes to ProtoCore are documented here.
 - the HTTP route table leaves the network layer and takes an HTTP name ([`4bfcef0`](https://github.com/dstroy0/ProtoCore/commit/4bfcef0066df7106fe7ccf9ebb738fc82abe8cc7))
 - the HTTP/3 request bridge gets the TU its h2 twin has ([`619e880`](https://github.com/dstroy0/ProtoCore/commit/619e8804ab9196a57b199ea2c7de1c84652e0a82))
 - the HTTP poll pump moves to the HTTP root ([`be71cfe`](https://github.com/dstroy0/ProtoCore/commit/be71cfe27f52bfc04e91256bf421e6073c31672b))
-- the response senders move to server/io/response.c ([`32d062d`](https://github.com/dstroy0/ProtoCore/commit/32d062d190532be38a25eb5a652d9ea279d64b0a))
+- the response senders move to server/response.c ([`32d062d`](https://github.com/dstroy0/ProtoCore/commit/32d062d190532be38a25eb5a652d9ea279d64b0a))
 - the QUIC running flag goes back to the QUIC server ([`484ed74`](https://github.com/dstroy0/ProtoCore/commit/484ed74773cb2106dd2599a7cfa8a5cb417b5579))
 - the listener registry moves to the listener that owns the pool ([`e85c964`](https://github.com/dstroy0/ProtoCore/commit/e85c964c3a8fb3b45b9c44fe7f52f88cea208cfc))
 - auth and the no-match fallback move to the HTTP root ([`cee6e7e`](https://github.com/dstroy0/ProtoCore/commit/cee6e7ec19942c9efcc4a688fb66270a0ac5a722))
