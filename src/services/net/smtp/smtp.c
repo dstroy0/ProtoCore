@@ -273,7 +273,7 @@ static SmtpResult initiate_session(struct SmtpInternal *restrict ctx)
     Sb.put(&sb, "EHLO ");
     Sb.put(&sb, (client_name && client_name[0]) ? client_name : SMTP_DEFAULT_CLIENT_NAME);
     Sb.put(&sb, "\r\n");
-    Sb.finish(&sb);
+    (void)Sb.finish(&sb);
     if (!sb.ok)
     {
         return SMTP_ERR_OVERFLOW;
@@ -451,7 +451,7 @@ static SmtpResult mail_transaction(struct SmtpInternal *restrict ctx)
     Sb.put(&sb_mail, "MAIL FROM:<");
     Sb.put(&sb_mail, ctx->ns->envelope.reverse_path);
     Sb.put(&sb_mail, ">\r\n");
-    Sb.finish(&sb_mail);
+    (void)Sb.finish(&sb_mail);
     if (!sb_mail.ok)
     {
         return SMTP_ERR_OVERFLOW;
@@ -466,7 +466,7 @@ static SmtpResult mail_transaction(struct SmtpInternal *restrict ctx)
     Sb.put(&sb_rcpt, "RCPT TO:<");
     Sb.put(&sb_rcpt, ctx->ns->envelope.forward_path);
     Sb.put(&sb_rcpt, ">\r\n");
-    Sb.finish(&sb_rcpt);
+    (void)Sb.finish(&sb_rcpt);
     if (!sb_rcpt.ok)
     {
         return SMTP_ERR_OVERFLOW;
@@ -619,12 +619,14 @@ static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
         }
         TcpClient.cid = chan->cid;
         TcpClient.is_closed(TcpClient.internal);
-        proto_bool closed = TcpClient.ok;
-        TcpClient.cid = chan->cid;
-        TcpClient.available(TcpClient.internal);
-        if (closed && TcpClient.n == 0)
+        if (TcpClient.ok)
         {
-            return -1;
+            TcpClient.cid = chan->cid;
+            TcpClient.available(TcpClient.internal);
+            if (TcpClient.n == 0)
+            {
+                return -1; // closed, and nothing left buffered to drain
+            }
         }
         pcdelay(5);
     }

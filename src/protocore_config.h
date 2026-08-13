@@ -1314,7 +1314,7 @@ from halves and is slower than the width it decomposes into"
 // Optional integrations (these build fine on their own; the named feature is
 // simply inert or reduced until you also enable the other flag):
 //
-//   WEBHOOK   + HTTP_CLIENT : without it, protocore_webhook_post() returns -1
+//   WEBHOOK   + HTTP_CLIENT : without it, Webhook.post() leaves Webhook.i32 at -1
 //   OAUTH2    + HTTP_CLIENT : the token-endpoint POST helpers compile only with it
 //   DASHBOARD + WEBSOCKET   : adds live control widgets; the SSE value stream works alone
 //
@@ -1614,7 +1614,7 @@ from halves and is slower than the width it decomposes into"
  * strings, gateway discovery, sleeping-client keep-alive). Builds CONNECT / REGISTER /
  * PUBLISH / SUBSCRIBE / PINGREQ / DISCONNECT / SEARCHGW and parses CONNACK / REGACK /
  * PUBACK / SUBACK / PUBLISH / REGISTER, including the 1- and 3-octet Length forms. Pure
- * codec, host-tested; the datagram send (Udp.client->sendto) and topic registry are the app's.
+ * codec, host-tested; the datagram send (UdpClient.sendto) and topic registry are the app's.
  */
 #ifndef PROTOCORE_ENABLE_MQTT_SN
 #define PROTOCORE_ENABLE_MQTT_SN 0
@@ -1627,7 +1627,7 @@ from halves and is slower than the width it decomposes into"
  * (fixed 24-octet header + 48-octet records), NetFlow v9 (RFC 3954), and IPFIX (RFC 7011),
  * the latter two via a small cursor that emits a Template then matching Data records and
  * patches the message length (IPFIX) or record count (v9) on finish. Pure codec,
- * host-tested; the flow cache (5-tuple + counters) and the UDP send (Udp.client->sendto) are
+ * host-tested; the flow cache (5-tuple + counters) and the UDP send (UdpClient.sendto) are
  * the application's. Pairs with the telemetry / observability services.
  */
 #ifndef PROTOCORE_ENABLE_FLOW_EXPORT
@@ -1965,7 +1965,7 @@ from halves and is slower than the width it decomposes into"
  * Network Service (FINS/UDP): `protocore_fins_build_command` / `protocore_fins_build_memory_area_read` emit the
  * 10-octet routing header + command code + parameters, and `protocore_fins_parse_command` /
  * `protocore_fins_parse_response` read them back (the response end code MRES/SRES included). Talks to
- * an Omron PLC over the shipped UDP transport (Udp.client->sendto). Pure codec, host-tested.
+ * an Omron PLC over the shipped UDP transport (UdpClient.sendto). Pure codec, host-tested.
  */
 #ifndef PROTOCORE_ENABLE_FINS
 #define PROTOCORE_ENABLE_FINS 0
@@ -2497,7 +2497,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Outbound SNMP notifications - traps and informs (requires PROTOCORE_ENABLE_SNMP).
  *
- * Default off. When set, src/services/net/snmp/protocore_snmp_notify.h sends SNMPv2c (and, with
+ * Default off. When set, src/services/net/snmp/snmp_notify.h sends SNMPv2c (and, with
  * PROTOCORE_ENABLE_SNMP_V3, SNMPv3 USM) Trap / InformRequest PDUs to a manager over
  * UDP - so the agent can push alerts instead of only answering polls. Reuses the
  * BER codec and the transport-layer UDP service; the PDU builder is host-testable.
@@ -2525,7 +2525,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Maximum registered MIB objects (the agent's fixed OID table).
  *
  * Each entry holds its OID, a value descriptor, and optional get/set callbacks
- * (see src/services/net/snmp/protocore_snmp_agent.h). The table lives in BSS; entries are
+ * (see src/services/net/snmp/snmp_agent.h). The table lives in BSS; entries are
  * scanned linearly (small table) and need not be registered in OID order.
  */
 #ifndef SNMP_MAX_MIB_ENTRIES
@@ -2558,8 +2558,9 @@ from halves and is slower than the width it decomposes into"
 #define SNMP_COMMUNITY_MAX 32
 #endif
 
-/** @brief Default read-only community (overridable at runtime via protocore_snmp_agent_init). Deployments
- *  SHOULD change this from the RFC-1157 well-known "public" for anything but a closed network. */
+/** @brief Default read-only community (overridable at runtime via SnmpAgent.community.ro + SnmpAgent.init).
+ *  Deployments SHOULD change this from the RFC-1157 well-known "public" for anything but a closed
+ *  network. */
 #ifndef PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY
 #define PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY "public"
 #endif
@@ -3470,7 +3471,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off. When set, services/iot/udp_telemetry casts metric lines (InfluxDB line
  * protocol: `measurement field=val,field2=val2`) to a configured collector over
- * UDP via Udp.client->sendto - zero-heap, fire-and-forget (no ACK, no retry), ideal
+ * UDP via UdpClient.sendto - zero-heap, fire-and-forget (no ACK, no retry), ideal
  * for shipping device metrics to Telegraf/InfluxDB/a log sink. The line builder is
  * pure and host-tested; only the send touches the network.
  */
@@ -3491,7 +3492,7 @@ from halves and is slower than the width it decomposes into"
  * Graphite/StatsD, Telegraf, Datadog, InfluxDB, etc. Counters, gauges (absolute + delta),
  * timings, and sets, with optional sample-rate (`|@0.1`) and DogStatsD tags (`|#env:prod`).
  * This is the push counterpart to the pull-based Prometheus `/metrics`. The line formatter
- * is pure and host-tested; only the send (Udp.client->sendto) touches the network. Zero heap.
+ * is pure and host-tested; only the send (UdpClient.sendto) touches the network. Zero heap.
  */
 #ifndef PROTOCORE_ENABLE_STATSD
 #define PROTOCORE_ENABLE_STATSD 0
@@ -5010,7 +5011,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Opt-in outbound webhooks / IFTTT (PROTOCORE_ENABLE_WEBHOOK).
  *
  * Default off. Needs PROTOCORE_ENABLE_HTTP_CLIENT to actually send: the API always
- * compiles, but without the HTTP client protocore_webhook_post() returns -1.
+ * compiles, but without the HTTP client Webhook.post() leaves Webhook.i32 at -1.
  * services/net/webhook builds an IFTTT Maker URL and a value1/value2/value3 JSON
  * payload (pure, host-tested) and fires them - or any JSON to any URL - via the
  * outbound http_client (POST). Use it to
@@ -5350,7 +5351,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief Default syslog collector UDP port (RFC 5426 well-known 514; overridable at runtime
- *  via protocore_syslog_init and here for a non-standard collector). */
+ *  via Syslog.collector.port + Syslog.init and here for a non-standard collector). */
 #ifndef PROTOCORE_SYSLOG_DEFAULT_PORT
 #define PROTOCORE_SYSLOG_DEFAULT_PORT 514
 #endif
@@ -5419,10 +5420,11 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Outbound SMTP client (RFC 5321) for device email alerts (services/net/smtp).
  *
- * A blocking one-shot `smtp_send()`: EHLO, optional AUTH LOGIN, MAIL FROM / RCPT TO /
- * DATA over the shared client transport (`protocore_client`), with implicit TLS (SMTPS, e.g.
- * :465) when the message config sets `tls` and PROTOCORE_ENABLE_TLS is on. Zero heap; the
- * dialogue engine (`smtp_run`) takes a send/recv seam so it is host-tested without lwIP.
+ * A blocking one-shot `Smtp.send()`: EHLO, optional AUTH LOGIN, MAIL FROM / RCPT TO /
+ * DATA over the outbound client transport, with implicit TLS (RFC 8314 submissions, e.g.
+ * :465) when `Smtp.session.security` is SMTP_TLS and PROTOCORE_ENABLE_TLS is on. Zero heap; the
+ * dialogue engine (`Smtp.run`) takes the send/recv seam on `Smtp.transport`, so it runs on a
+ * host build with no network stack.
  * "SMS fallback" rides on top - most carriers accept an email-to-SMS gateway address.
  */
 #ifndef PROTOCORE_ENABLE_SMTP
@@ -5602,7 +5604,7 @@ from halves and is slower than the width it decomposes into"
 // build that does not enable a client must not reference the resolver symbols).
 // Every feature that drives the outbound client transport must pull it in: the direct callers
 // (http_client / mqtt / ws_client / relay / smtp / ssh port-forward) and the seam-based engines
-// whose shipped example binds the seam to protocore_client (smb / dnc). Miss one and its Tcp.client->open
+// whose shipped example binds the seam to protocore_client (smb / dnc). Miss one and its TcpClient.open
 // resolves to the !NEED stub that returns -1, so the feature silently never connects on device.
 #if PROTOCORE_ENABLE_HTTP_CLIENT || PROTOCORE_ENABLE_MQTT || PROTOCORE_ENABLE_WS_CLIENT || PROTOCORE_ENABLE_RELAY ||   \
     PROTOCORE_ENABLE_SMTP || PROTOCORE_SSH_PORT_FORWARD || PROTOCORE_ENABLE_SMB || PROTOCORE_ENABLE_DNC ||             \
@@ -7648,7 +7650,7 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
  * @brief Per-connection wire receive ring size (bytes).
  *
  * Holds plaintext (plain) or ciphertext (TLS). The transport ACKs on consume
- * (Tcp.client->read reopens the window), so for a large inbound transfer to never
+ * (TcpClient.read reopens the window), so for a large inbound transfer to never
  * stall the ring must hold a full TCP receive window: keep PROTOCORE_CLIENT_RX_BUF >=
  * TCP_WND (~5.7 KB). The 8192 default clears that and a multi-KB TLS handshake
  * flight; a ring below TCP_WND can deadlock a sustained download (the peer would be

@@ -23,11 +23,10 @@
 #include "server/web/edge_cache/edge_cache_sd.h" // L2 SD tier
 #endif
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (Range/206 support)
-#include "services/net/http_client/http_client.h"   // http_client_parse_url
+#include "services/net/http_client/http_client.h"   // HttpClient.parse_target_uri
 #include "shared/mime/mime.h"                 // PROTOCORE_MIME_TEXT_PLAIN
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
 #include "network_drivers/tls/tls.h" // protocore_tls_client_session_* (TLS upstream origin fetch)
-#include <mbedtls/ssl.h>             // MBEDTLS_ERR_SSL_WANT_READ / WANT_WRITE
 #endif
 #if PROTOCORE_ENABLE_EDGE_MESH
 #include "server/core/proto_handler.h" // ProtoHandler / Session.proto->add(PROTO_MESH serving)
@@ -199,7 +198,7 @@ static int edge_tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx;
     size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return Tcp.client->send(s_ctx.tls_cid, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
+    return Tcp.client->send(s_ctx.tls_cid, buf, cap) ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
 {
@@ -207,7 +206,7 @@ static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
     size_t n = Tcp.client->read(s_ctx.tls_cid, buf, len);
     if (n == 0)
     {
-        return Tcp.client->is_closed(s_ctx.tls_cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+        return Tcp.client->is_closed(s_ctx.tls_cid) ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }
@@ -1291,14 +1290,20 @@ proto_bool protocore_edge_cache_map(const char *path_prefix, const char *origin_
     {
         return PROTO_FALSE;
     }
-    proto_bool https = PROTO_FALSE;
     char host[PROTOCORE_EDGE_ORIGIN_URL_MAX];
-    uint16_t port = 80;
     char ignore_path[256];
-    if (!http_client_parse_url(origin_base_url, &https, host, sizeof(host), &port, ignore_path, sizeof(ignore_path)))
+    HttpClient.target.url = origin_base_url;
+    HttpClient.target.host = host;
+    HttpClient.target.host_cap = sizeof(host);
+    HttpClient.target.path = ignore_path;
+    HttpClient.target.path_cap = sizeof(ignore_path);
+    HttpClient.parse_target_uri(HttpClient.internal);
+    if (!HttpClient.ok)
     {
         return PROTO_FALSE;
     }
+    const proto_bool https = HttpClient.target.https;
+    const uint16_t port = HttpClient.target.port;
 #if !PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
     if (https)
     {

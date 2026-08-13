@@ -12,7 +12,7 @@
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "mmgr/rawmemcpy.h"                       // raw.read: the request into this fetch's buffer
-#include "services/net/http_client/http_client.h" // http_client_parse_response
+#include "services/net/http_client/http_client.h" // HttpClient.parse_response
 #include "server/web/edge_cache/edge_cache.h"   // edge_header_value
 
 // Offset just past the CRLFCRLF header terminator, or 0 if the header block is not complete.
@@ -226,9 +226,10 @@ EdgeFetchStatus edge_fetch_pump(EdgeFetch *f, const EdgeFetchTransport *t, uint3
     size_t hl = 0;
     if (edge_resp_complete(f->buf, f->got, closed, &hl))
     {
-        size_t bo = 0;
-        size_t bl = 0;
-        int status = http_client_parse_response(f->buf, f->got, &bo, &bl);
+        HttpClient.message.buf = f->buf;
+        HttpClient.message.len = f->got;
+        HttpClient.parse_response(HttpClient.internal);
+        int status = (int)HttpClient.status;
         if (status < 0)
         {
             f->st = EDGE_FETCH_STATUS_FAILED;
@@ -236,8 +237,8 @@ EdgeFetchStatus edge_fetch_pump(EdgeFetch *f, const EdgeFetchTransport *t, uint3
         }
         f->status = status;
         f->head_len = hl;
-        f->body_off = bo;
-        f->body_len = bl;
+        f->body_off = HttpClient.body_off;
+        f->body_len = HttpClient.body_len;
         f->st = EDGE_FETCH_STATUS_DONE;
         return f->st;
     }

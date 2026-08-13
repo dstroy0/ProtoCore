@@ -142,7 +142,7 @@ struct SmtpInternal;
  * @var SmtpNs::ok        a call's true/false outcome: the message was accepted
  * @var SmtpNs::result    the same outcome as a distinct ::SmtpResult code
  * @var SmtpNs::code      the reply code of the last reply read (RFC 5321 sec 4.2)
- * @var SmtpNs::run       walk the whole session over @ref transport
+ * @var SmtpNs::run       walk the whole session over the seam in @c transport
  * @var SmtpNs::send      open the outbound client transport, walk the session, close
  * @var SmtpNs::internal  the session's state and the calls that reach it
  */

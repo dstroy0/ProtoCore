@@ -16,8 +16,8 @@
 #include "crypto/cipher/aes_sbox.h"
 #include "crypto/hash/sha256.h"
 
-// RFC 3414 sec 11.2 requires a password of at least 8 characters and states no upper bound. The
-// scan stops here, so a password that carries no terminator cannot be read past.
+// The scan for the password's end stops here, so a password that carries no terminator cannot be
+// read past. The derivation repeats whatever it finds, so a shorter password is not rejected.
 #define PROTOCORE_SNMP_USM_PASS_MAX 256
 
 // The password-to-key input length: RFC 7860 sec 9.3 repeats the password to 1,048,576 octets.

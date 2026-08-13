@@ -15,7 +15,7 @@
  *
  * All NTCIP objects live under `1.3.6.1.4.1.1206.4.2` (nema.tsxx). This provides those OID arc arrays and
  * a helper to build a full object OID (root + instance index), so an app registers them on the SNMP
- * agent with protocore_snmp_agent_add_integer / _add_string / _add_dynamic. Pure OID data, zero heap, host-testable.
+ * agent with SnmpAgent.add_integer / .add_string / .add_dynamic. Pure OID data, zero heap, host-testable.
  */
 
 #ifndef PROTOCORE_NTCIP_H

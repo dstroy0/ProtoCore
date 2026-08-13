@@ -9,7 +9,7 @@
  * host-testable PACKET transform (encapsulate a payload into an ESP packet / verify + decapsulate one),
  * and the device-side network-layer integration (hooking lwIP's IP input/output + the SAD/SPD), which is
  * a separate, later track. This file is only the transform, gated with the IKEv2 feature (its Child-SA
- * keys - SK_ei / SK_er from protocore_ike_child_keymat - drive it) and reusing the library's AES-256-GCM.
+ * keys - SK_ei / SK_er from Ike.child_keymat - drive it) and reusing the library's AES-256-GCM.
  *
  * Wire layout (RFC 4303 §2, AES-GCM per RFC 4106):
  *   SPI(4) | Sequence Number(4) | IV(8, explicit) | { AES-GCM: Payload | Padding | Pad Length | Next

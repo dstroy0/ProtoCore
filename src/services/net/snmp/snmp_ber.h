@@ -10,7 +10,7 @@
  * Section 8." The encoding rules themselves are not an IETF RFC: they are ITU-T Recommendation
  * X.690 (ISO/IEC 8825-1), which RFC 3417 cites as [BER].
  *
- * RFC 3417 sec 8 states the two restrictions this codec is built to. Item (1): "When encoding the
+ * RFC 3417 sec 8 states the two limits this codec is built to. Item (1): "When encoding the
  * length field, only the definite form is used; use of the indefinite form encoding is
  * prohibited. Note that when using the definite-long form, it is permissible to use more than the
  * minimum number of length octets necessary to encode the length field." A constructed type
@@ -138,7 +138,7 @@ struct SnmpBerInternal;
  * @var SnmpBerNs::dec       the decoder cursor a read acts on
  * @var SnmpBerNs::buf       the caller buffer an init binds a cursor to
  * @var SnmpBerNs::tlv       the identifier octet and value a write carries
- * @var SnmpBerNs::read      where a read lands what it took
+ * @var SnmpBerNs::read_args  where a read lands what it took
  * @var SnmpBerNs::ok        a call's true/false outcome: the cursor still fits its buffer
  * @var SnmpBerNs::tag       the identifier octet a header read took
  * @var SnmpBerNs::vlen      the value length that header states, in octets
@@ -168,7 +168,7 @@ typedef struct
 
     SnmpBerBufArgs buf;  ///< the caller buffer an init binds
     SnmpBerTlvArgs tlv;  ///< what a write carries
-    SnmpBerReadArgs read; ///< where a read lands
+    SnmpBerReadArgs read_args; ///< where a read lands
 
     proto_bool ok;
     uint8_t tag;
