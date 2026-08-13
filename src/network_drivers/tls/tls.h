@@ -3,31 +3,15 @@
 
 /**
  * @file tls.h
- * @brief Deterministic TLS engine: mbedTLS over a static memory pool (PROTOCORE_ENABLE_TLS).
+ * @brief The TLS connection resource (RFC 8446), and the no-op surface a build without TLS sees.
  *
- * Wraps mbedTLS as a server-side TLS layer that keeps the library's zero-heap
- * guarantee: mbedTLS is pointed at a fixed BSS arena via
- * MBEDTLS_MEMORY_BUFFER_ALLOC_C (no system heap), per-connection ssl_context
- * lives in BSS, the RNG is the ESP32 hardware CSPRNG, and the transport BIO is
- * bridged directly to the existing lwIP `tcp_pcb` + per-connection rx ring - so
- * there is no socket layer and no extra task. The handshake is pumped from the
- * single `handle()` loop.
+ * This file owns the connection: ::TlsConn, its configuration and its handshake phase. The layers
+ * that act on it are beside it - handshake/ drives the handshake (RFC 8446 sec 4), record/ frames
+ * for it (sec 5), key_schedule/ derives its secrets (sec 7.1).
  *
- * This is the vendor arm, selected by PROTOCORE_HAS_VENDOR_TLS. Its complement inside
- * PROTOCORE_ENABLE_TLS is PROTOCORE_TLS_SOFTWARE, the portable TLS 1.3 over the TCP record
- * layer. The header compiles everywhere - without PROTOCORE_ENABLE_TLS and a vendor
- * stack the functions are no-op stubs, so call sites need no extra guards.
- *
- * Lifecycle per connection:
- * @code
- *   protocore_tls_conn_begin(slot);                 // at accept on the TLS port
- *   // each EvtType::EVT_DATA, until established:
- *   int h = protocore_tls_handshake(slot);          // 1 done, 0 pending, <0 fatal
- *   // once established, app data:
- *   int n = protocore_tls_read(slot, buf, sizeof buf);   // >0 plaintext, 0 again, <0 closed
- *   protocore_tls_write(slot, data, len);                // encrypts -> tcp_write
- *   protocore_tls_conn_end(slot);                    // close_notify + free slot ctx
- * @endcode
+ * The portable TLS 1.3 arm (PROTOCORE_TLS_SOFTWARE) is the implementation; a caller reaches it
+ * through ::TlsConnection. The slot-indexed protocore_tls_* calls below are no-ops, so a call site
+ * that predates the portable arm still compiles and needs no extra guards.
  */
 
 #ifndef PROTOCORE_TLS_H
@@ -37,6 +21,89 @@
 
 PROTOCORE_BEGIN_DECLS
 
+// ---------------------------------------------------------------------------
+// The connection resource (RFC 8446): what a handshake and a record layer act on
+// ---------------------------------------------------------------------------
+// This file owns the connection; handshake/ drives it and record/ frames for it.
+#if PROTOCORE_TLS_SOFTWARE
+
+#include "crypto/hash/sha256.h"
+#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "network_drivers/tls/key_schedule/key_schedule.h"
+#include "network_drivers/tls/record/record.h"
+
+/** @brief Handshake progress. A client and a server walk the same phases from opposite ends. */
+typedef enum PROTO_ENUM_PACKED
+{
+    TLS_CONN_START,         ///< server: awaiting ClientHello; client: nothing sent yet
+    TLS_CONN_WAIT_SH,       ///< client only: ClientHello sent, awaiting ServerHello
+    TLS_CONN_WAIT_FLIGHT,   ///< client only: awaiting the encrypted server flight
+    TLS_CONN_WAIT_FINISHED, ///< server only: flight sent, awaiting the client Finished
+    TLS_CONN_DONE,          ///< handshake complete; application keys installed
+    TLS_CONN_FAILED         ///< fatal (see @ref TlsConnNs::alert)
+} TlsConnState;
+
+/** @brief Which end of the handshake this connection drives. */
+typedef enum PROTO_ENUM_PACKED
+{
+    TLS_ROLE_SERVER = 0,
+    TLS_ROLE_CLIENT
+} TlsRole;
+
+/**
+ * @brief The long-lived credential plus this handshake's fresh randomness.
+ *
+ * @c ed25519_seed is this end's signing key and @c ed25519_pub the raw public key it presents
+ * (RFC 7250); a client that only verifies leaves both null. @c peer_pub is the raw public key the
+ * peer must present - this is the whole of peer authentication on the portable arm, so a client
+ * with no @c peer_pub is encrypt-only and unauthenticated. @c ephemeral_priv and @c random must be
+ * freshly generated per connection from a CSPRNG.
+ */
+typedef struct
+{
+    const uint8_t *ed25519_seed;   ///< 32-byte Ed25519 signing seed, or NULL when this end does not sign
+    const uint8_t *ed25519_pub;    ///< 32-byte raw public key this end presents (matches @c ed25519_seed)
+    const uint8_t *peer_pub;       ///< 32-byte raw public key the peer must present, or NULL to skip verification
+    const uint8_t *ephemeral_priv; ///< 32-byte X25519 ephemeral private key (fresh per handshake)
+    const uint8_t *random;         ///< 32-byte Hello random (fresh per handshake)
+    const char *hostname;          ///< client: the SNI to offer, or NULL
+} TlsConnConfig;
+
+/**
+ * @brief One TLS 1.3 handshake: the session state, and the three regions of one secure-pool borrow.
+ *
+ * The borrow is taken once by @ref TlsConnNs::init from the pool's persistent end and split by
+ * offset - TX at 0, RX at PROTOCORE_TLS_CONN_MSG_CAP, TERMS after it. No storage is declared here: a
+ * message is built in TX and handed to the record layer, a record is opened into RX, and the four
+ * 32-byte handshake terms sit in TERMS. No heap.
+ */
+typedef struct
+{
+    const TlsConnConfig *cfg; ///< the caller's, borrowed for the life of the connection
+    TlsConnState state;
+    TlsRole role;
+    uint8_t alert; ///< RFC 8446 sec 6 alert code when @c state is FAILED (0 otherwise)
+
+    protocore_sha256_ctx transcript; ///< running Transcript-Hash over the handshake messages
+    Tls13KeySchedule ks;             ///< TLS 1.3 key schedule
+    TlsRecordKeys hs_tx;             ///< handshake traffic keys, this end writing
+    TlsRecordKeys hs_rx;             ///< handshake traffic keys, this end reading
+    TlsRecordKeys ap_tx;             ///< application traffic keys, this end writing
+    TlsRecordKeys ap_rx;             ///< application traffic keys, this end reading
+    proto_bool hs_keys_ready;        ///< the handshake traffic keys are installed
+    proto_bool ap_keys_ready;        ///< the application traffic keys are installed
+
+    uint8_t *tx;        ///< PROTOCORE_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
+    uint8_t *rx;        ///< PROTOCORE_TLS_CONN_REC_CAP: the record the worker filled
+    uint8_t *terms;     ///< PROTOCORE_TLS_CONN_TERMS_CAP: the five 32-byte terms, at TLS_TERM_* offsets
+    uint8_t *hash_work; ///< PROTOCORE_SHA256_BORROW: the bytes @ref transcript works out of
+    uint8_t *sign_work; ///< PROTOCORE_SHA512_BORROW: the bytes the CertificateVerify signature works out of
+    uint8_t *ks_work;   ///< PROTOCORE_TLS13_KS_BORROW: the bytes the key schedule works out of
+    Tls13ClientHello *hello; ///< the peer's parsed ClientHello
+} TlsConn;
+
+#endif // PROTOCORE_TLS_SOFTWARE
+
 /** @brief Where a stepped TLS exchange stands. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -44,179 +111,6 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_TLS_BUSY,      ///< the peer's bytes are still in flight; ask again on the next tick
     PROTOCORE_TLS_FAILED,    ///< the session did not stand up, or it is closed / fatal
 } protocore_tls_state;
-
-#if PROTOCORE_ENABLE_TLS && PROTOCORE_HAS_VENDOR_TLS
-
-/**
- * @brief Initialize the global TLS engine: static pool, RNG, server cert/key.
- *
- * Call once before begin(). Parses the server certificate chain and private key
- * (PEM - NUL-terminated incl. the terminator in the length - or DER) and builds
- * the shared mbedTLS server config. All allocations come from the static arena.
- *
- * @param cert      Certificate (chain) buffer.
- * @param cert_len  Length incl. the trailing NUL for PEM.
- * @param key       Private key buffer.
- * @param key_len   Length incl. the trailing NUL for PEM.
- * @return true on success; false if the pool/cert/key setup failed.
- */
-proto_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
-
-/** @brief True once protocore_tls_global_init() has succeeded. */
-proto_bool protocore_tls_ready(void);
-
-/**
- * @brief The ALPN protocol negotiated for @p slot ("h2" or "http/1.1"), or nullptr if the client
- * offered no ALPN. Valid after the handshake completes. Used to select HTTP/2 vs HTTP/1.1.
- */
-const char *protocore_tls_alpn(uint8_t slot);
-
-/** @brief Begin a TLS session on connection @p slot (sets up ssl_context + BIO). */
-proto_bool protocore_tls_conn_begin(uint8_t slot);
-
-/**
- * @brief Advance the TLS handshake for @p slot.
- * @return 1 when established, 0 while still in progress (need more data),
- *         negative on a fatal error (caller should drop the connection).
- */
-int protocore_tls_handshake(uint8_t slot);
-
-#ifdef PROTOCORE_TLS_HS_BENCH
-// Handshake-bench context (see tls.cpp): the last completed handshake's device-CPU time (summed over the
-// pumped mbedtls_ssl_handshake calls, so network waits between pumps are excluded) and wall time. The rig
-// firmware watches count and prints both. Compiled out unless PROTOCORE_TLS_HS_BENCH is defined.
-typedef struct
-{
-    volatile long long last_cpu_us;
-    volatile long long last_wall_us;
-    volatile unsigned count;
-    volatile long long pumps[8]; // per-pump device CPU (us) for pumps > 2 ms - localizes the cost to a flight
-    volatile int n_pumps;
-} TlsHsBenchCtx;
-extern TlsHsBenchCtx protocore_tls_hs_bench;
-#endif
-
-/** @brief True once the handshake on @p slot has completed. */
-proto_bool protocore_tls_established(uint8_t slot);
-
-/**
- * @brief Read decrypted application data from @p slot.
- * @return >0 plaintext bytes, 0 if none are available yet, <0 on close/error.
- */
-int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len);
-
-/**
- * @brief Encrypt and send @p len bytes on @p slot (loops over partial writes).
- * @return bytes written, or <0 on error.
- */
-int protocore_tls_write(uint8_t slot, const void *data, size_t len);
-
-/** @brief Send close_notify and tear down the per-connection TLS context. */
-void protocore_tls_conn_end(uint8_t slot);
-
-/** @brief Tear down the TLS context without close_notify (abrupt disconnect/timeout). */
-void protocore_tls_conn_free(uint8_t slot);
-
-/** @brief Peak bytes ever used from the static arena (for sizing PROTOCORE_TLS_ARENA_SIZE). */
-size_t protocore_tls_arena_peak(void);
-
-/**
- * @brief TLS BIO send/recv callbacks (mbedTLS signatures) - the transport
- *        abstraction the engine reads/writes ciphertext through.
- *
- * Both sides conform to this: the server registers BIO functions that read the
- * connection's rx ring and write via the transport (Tcp.conn->raw_send), and the
- * outbound client passes its own pair to protocore_tls_client_run(). The engine itself
- * never touches lwIP directly.
- */
-typedef int (*protocore_tls_bio_send_fn)(void *ctx, const unsigned char *buf, size_t len);
-typedef int (*protocore_tls_bio_recv_fn)(void *ctx, unsigned char *buf, size_t len);
-
-#if PROTOCORE_ENABLE_MTLS
-/**
- * @brief Require a verified client certificate (mTLS): install the trust-anchor CA.
- *
- * Call after protocore_tls_global_init(). Parses @p ca (PEM - length incl. the trailing
- * NUL - or DER) as the CA chain and switches the server to
- * MBEDTLS_SSL_VERIFY_REQUIRED, so the handshake demands a client certificate that
- * chains to @p ca and aborts the connection otherwise.
- *
- * @return true on success; false if the engine is not initialized or the CA
- *         failed to parse.
- */
-proto_bool protocore_tls_set_client_ca(const uint8_t *ca, size_t ca_len);
-
-/**
- * @brief Copy the established peer's certificate subject DN into @p out.
- *
- * Valid once the handshake on @p slot has completed with a verified client cert.
- * @return the subject string length written (excl. NUL), or <0 if there is no
- *         verified peer certificate.
- */
-int protocore_tls_peer_subject(uint8_t slot, char *out, size_t out_len);
-#endif // PROTOCORE_ENABLE_MTLS
-
-#if PROTOCORE_ENABLE_CLIENT_TLS
-/**
- * @brief Install a CA trust anchor for outbound TLS (HTTPS/MQTTS) verification.
- *
- * Pass PEM (length incl. the trailing NUL) or DER; nullptr/0 clears it. With a CA
- * installed, the client handshake verifies the server's certificate chain and its
- * hostname (SNI) and aborts the connection on failure.
- */
-void protocore_tls_client_set_ca(const uint8_t *ca, size_t ca_len);
-
-/**
- * @brief Pin the outbound server's certificate by SHA-256 (32 bytes of the DER).
- *
- * After a successful handshake the peer certificate is hashed and constant-time
- * compared to @p sha256; a mismatch (or no peer cert) fails the connection. Pass
- * nullptr to clear. Can be combined with protocore_tls_client_set_ca().
- */
-void protocore_tls_client_set_pin(const uint8_t sha256[32]);
-
-/** @brief Clear any installed client CA and cert pin (back to encrypt-only). */
-void protocore_tls_client_clear_verify(void);
-
-// --- Persistent client TLS session (one outbound connection at a time) ---
-// For a long-lived encrypted client (MQTTS): handshake once, then read/write
-// application data over the caller's BIO until protocore_tls_client_session_end(). Honors the
-// CA/pin installed above. The BIO callbacks read ciphertext from the caller's
-// receive ring and write it to the socket.
-
-/** @brief Begin a client TLS session to @p host over the given BIO. @return false on setup failure. */
-proto_bool protocore_tls_client_session_begin(const char *host, protocore_tls_bio_send_fn send_fn,
-                                              protocore_tls_bio_recv_fn recv_fn);
-
-/** @brief True while a client TLS session is live (begun, not yet ended). The session is a singleton shared
- * across all client-TLS users, so a would-be caller checks this to avoid tearing down an active session. */
-proto_bool protocore_tls_client_session_active(void);
-
-/** @brief Advance the handshake. @return ::PROTOCORE_TLS_READY established (CA/pin checked), ::PROTOCORE_TLS_BUSY
- *  pending, ::PROTOCORE_TLS_FAILED fatal. */
-protocore_tls_state protocore_tls_client_session_handshake(void);
-
-/** @brief Read decrypted application data. @return >0 bytes, 0 none yet, <0 closed/error. */
-int protocore_tls_client_session_read(uint8_t *buf, size_t len);
-
-/** @brief Encrypt and send @p len bytes. @return bytes written, or <0 on error. */
-int protocore_tls_client_session_write(const uint8_t *data, size_t len);
-
-/** @brief Send close_notify and tear down the session. */
-void protocore_tls_client_session_end(void);
-
-/**
- * @brief Discard the saved TLS session so the next csess handshake is a full one.
- *
- * With PROTOCORE_ENABLE_TLS_RESUMPTION the client keeps the last session's ticket and
- * presents it on the next protocore_tls_client_session_begin() for an abbreviated handshake. Call
- * this to force a fresh full handshake (e.g. after a credential change). A no-op
- * when resumption is disabled.
- */
-void protocore_tls_client_session_forget_session(void);
-#endif // PROTOCORE_ENABLE_CLIENT_TLS
-
-#else // stubs (TLS disabled or native build)
 
 static inline proto_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key,
                                                    size_t key_len)
@@ -339,8 +233,6 @@ static inline void protocore_tls_client_session_forget_session(void)
 {
 }
 #endif // PROTOCORE_ENABLE_CLIENT_TLS
-
-#endif // PROTOCORE_ENABLE_TLS && PROTOCORE_HAS_VENDOR_TLS
 
 PROTOCORE_END_DECLS
 

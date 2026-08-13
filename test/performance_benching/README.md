@@ -10,7 +10,7 @@ test/performance_benching/
   services/<name>/        one dir per src/services/<name>
   network_drivers/<layer>/<name>/   mirrors src/network_drivers/<layer> (presentation, transport, ...)
   server/<name>/          mirrors src/server
-  core/<name>/            shared_primitives + foundational bits (crc, numparse, ...)
+  core/<name>/            shared + foundational bits (crc, numparse, ...)
 ```
 
 ## The two bench kinds (uniform in every feature dir)

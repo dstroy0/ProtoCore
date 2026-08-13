@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// TLS 1.3 handshake driver over the stream record layer (network_drivers/tls/tls_conn, RFC 8446
+// TLS 1.3 handshake driver over the stream record layer (network_drivers/tls/handshake, RFC 8446
 // sec 4). The driver is the server half only: conn_start refuses and conn_process rejects
 // TLS_ROLE_CLIENT, so the peer here is a hand-assembled ClientHello rather than another TlsConn.
 //
@@ -14,7 +14,7 @@
 #include "baseline_keys.h"
 #include "crypto/asymmetric/ed25519.h"
 #include "mmgr/secure.h"
-#include "network_drivers/tls/tls_conn.h"
+#include "network_drivers/tls/handshake/handshake.h"
 #include <string.h>
 
 #include <unity.h>

@@ -60,7 +60,7 @@ Manages the _conversation_ itself: who is talking, starting and ending exchanges
 deciding _when_ work happens. In this library that is the worker task that picks up
 incoming data and runs the right handler.
 
-Code: [`src/network_drivers/session/`](../../src/network_drivers/session/).
+Code: [`src/server/system/`](../../src/server/system/).
 
 ### Layer 4 - Transport
 

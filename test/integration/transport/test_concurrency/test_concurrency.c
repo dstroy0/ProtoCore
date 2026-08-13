@@ -9,7 +9,7 @@
 // race - the acquire/release discipline in protocore_atomic provides the happens-before
 // that lets the plain rx_buffer[] writes be read safely on the other core.
 
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <pthread.h>
 #include <sched.h>
 #include <unity.h>

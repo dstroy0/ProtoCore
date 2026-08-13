@@ -9,14 +9,15 @@
  */
 
 #include "network_drivers/presentation/http/http.h"
-#include "mmgr/membuild.h"  // pc_sb: the Allow list is appended, not formatted
+#include "mmgr/membuild.h"  // protocore_sb: the Allow list is appended, not formatted
 #include "mmgr/protostr.h"  // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h" // proto_raw_read: a captured segment moves into our own buffer
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
+#include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
 #include "protocore.h"                                          // http_pool, and the request and route widths
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
-#include "server/clock/clock.h" // pc_millis() stamps the attempt the lockout counts
+#include "server/clock/clock.h" // protocore_millis() stamps the attempt the lockout counts
 #include "services/security/auth_lockout/auth_lockout.h"
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
 #include "services/security/forwarded_trust/forwarded_trust.h"
@@ -26,37 +27,55 @@
 #include "services/security/csrf/csrf.h"
 #endif
 
-// The root's file-scope mutables: the handler a request runs when no route matched, and the
-// edge-cache fetch pump.
-typedef struct
+/**
+ * @brief The root's compile-time storage: the handlers registered against it.
+ *
+ * All BSS. The blank template lives in rodata, so a reset is a copy rather than a
+ * sizeof(HttpStorage) temporary.
+ */
+struct HttpStorage
 {
-    Handler not_found;
+    Handler not_found; ///< what a request runs when no route matched
 #if PROTOCORE_ENABLE_EDGE_CACHE
-    proto_bool (*edge_poll)(uint8_t slot);
+    proto_bool (*edge_poll)(uint8_t slot); ///< the edge-cache async-fetch pump
 #endif
-} HttpCtx;
-static HttpCtx s_http;
+};
 
-static void set_not_found(Handler cb)
+/**
+ * @brief The root's state and the calls that reach it - what HttpNs points at.
+ *
+ * @var HttpInternal::store  the registered handlers
+ * @var HttpInternal::ns     the handle a caller sets a call's members on
+ */
+struct HttpInternal
 {
-    s_http.not_found = cb;
+    struct HttpStorage *store;
+    HttpNs *ns;
+};
+
+static struct HttpStorage s_store;
+
+static struct HttpInternal s_http = {.store = &s_store, .ns = &Http};
+
+static void set_not_found(struct HttpInternal *restrict ctx)
+{
+    ctx->store->not_found = ctx->ns->cb;
 }
 
-// Every other owner pc_server_reset() calls exposes this; without it a handler registered here
-// outlives the reset and answers requests the route table no longer knows about. The blank template
-// lives in rodata, so this is a copy rather than a sizeof(HttpCtx) temporary.
-static void reset(void)
+// Every other owner protocore_server_reset() calls exposes this; without it a handler registered here
+// outlives the reset and answers requests the route table no longer knows about.
+static void reset(struct HttpInternal *restrict ctx)
 {
-    static const HttpCtx blank = {0};
-    s_http = blank;
+    static const struct HttpStorage blank = {0};
+    *ctx->store = blank;
 }
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
-// Edge-cache async-fetch pump seam (see pc_http_set_edge_poll / services/web/edge_cache/edge_cache_proxy):
-// a cache miss suspends the client request and drives the non-blocking origin fetch from this slot's poll.
-static void set_edge_poll(proto_bool (*fn)(uint8_t slot))
+// Edge-cache async-fetch pump seam (see services/web/edge_cache/edge_cache_proxy): a cache miss
+// suspends the client request and drives the non-blocking origin fetch from this slot's poll.
+static void set_edge_poll(struct HttpInternal *restrict ctx)
 {
-    s_http.edge_poll = fn;
+    ctx->store->edge_poll = ctx->ns->edge_poll;
 }
 #endif
 
@@ -69,72 +88,102 @@ static void set_edge_poll(proto_bool (*fn)(uint8_t slot))
  * @param code HTTP status integer.
  * @return Pointer to a string-literal reason phrase; never null.
  */
-const char *status_text(int code)
+static void status_text(struct HttpInternal *restrict ctx)
 {
+    const int code = ctx->ns->code;
     switch (code)
     {
     case 200:
-        return "OK";
+        ctx->ns->text = "OK";
+        return;
     case 201:
-        return "Created";
+        ctx->ns->text = "Created";
+        return;
     case 204:
-        return "No Content";
+        ctx->ns->text = "No Content";
+        return;
     case 206:
-        return "Partial Content";
+        ctx->ns->text = "Partial Content";
+        return;
 #if PROTOCORE_ENABLE_WEBDAV
     case 207:
-        return "Multi-Status";
+        ctx->ns->text = "Multi-Status";
+        return;
 #endif
     case 301:
-        return "Moved Permanently";
+        ctx->ns->text = "Moved Permanently";
+        return;
     case 302:
-        return "Found";
+        ctx->ns->text = "Found";
+        return;
     case 303:
-        return "See Other";
+        ctx->ns->text = "See Other";
+        return;
     case 304:
-        return "Not Modified";
+        ctx->ns->text = "Not Modified";
+        return;
     case 307:
-        return "Temporary Redirect";
+        ctx->ns->text = "Temporary Redirect";
+        return;
     case 308:
-        return "Permanent Redirect";
+        ctx->ns->text = "Permanent Redirect";
+        return;
     case 400:
-        return "Bad Request";
+        ctx->ns->text = "Bad Request";
+        return;
     case 401:
-        return "Unauthorized";
+        ctx->ns->text = "Unauthorized";
+        return;
     case 403:
-        return "Forbidden";
+        ctx->ns->text = "Forbidden";
+        return;
     case 404:
-        return "Not Found";
+        ctx->ns->text = "Not Found";
+        return;
     case 405:
-        return "Method Not Allowed";
+        ctx->ns->text = "Method Not Allowed";
+        return;
     case 408:
-        return "Request Timeout";
+        ctx->ns->text = "Request Timeout";
+        return;
     case 409:
-        return "Conflict";
+        ctx->ns->text = "Conflict";
+        return;
 #if PROTOCORE_ENABLE_WEBDAV
     case 412:
-        return "Precondition Failed";
+        ctx->ns->text = "Precondition Failed";
+        return;
     case 423:
-        return "Locked";
+        ctx->ns->text = "Locked";
+        return;
     case 502:
-        return "Bad Gateway";
+        ctx->ns->text = "Bad Gateway";
+        return;
 #endif
     case 413:
-        return "Payload Too Large";
+        ctx->ns->text = "Payload Too Large";
+        return;
     case 414:
-        return "URI Too Long";
+        ctx->ns->text = "URI Too Long";
+        return;
     case 416:
-        return "Range Not Satisfiable";
+        ctx->ns->text = "Range Not Satisfiable";
+        return;
     case 429:
-        return "Too Many Requests";
+        ctx->ns->text = "Too Many Requests";
+        return;
     case 500:
-        return "Internal Server Error";
+        ctx->ns->text = "Internal Server Error";
+        return;
     case 501:
-        return "Not Implemented";
+        ctx->ns->text = "Not Implemented";
+        return;
     case 503:
-        return "Service Unavailable";
+        ctx->ns->text = "Service Unavailable";
+        return;
     default:
-        return "Unknown";
+        ctx->ns->text = "Unknown";
+        return;
     }
 }
 
@@ -148,66 +197,84 @@ const char *status_text(int code)
  * @param m Null-terminated method string, e.g. "POST".
  * @return Matching HttpMethod enum value, or HTTP_METHOD_UNKNOWN.
  */
-HttpMethod parse_method(const char *m)
+static void parse_method(struct HttpInternal *restrict ctx)
 {
+    const char *m = ctx->ns->method_args.token;
     // Each compare is bounded by the token it is comparing against, not by the buffer @p m came
     // from: one more byte than the literal is already enough to decide, because a longer method
     // scans to the bound without finding its terminator and fails on length before any byte is
     // compared. That keeps this function honest about a caller it does not otherwise constrain.
     if (str.eq(m, "GET", sizeof("GET"), PROTO_FALSE))
     {
-        return HTTP_GET;
+        ctx->ns->method_of = HTTP_GET;
+        return;
     }
     if (str.eq(m, "POST", sizeof("POST"), PROTO_FALSE))
     {
-        return HTTP_POST;
+        ctx->ns->method_of = HTTP_POST;
+        return;
     }
     if (str.eq(m, "PUT", sizeof("PUT"), PROTO_FALSE))
     {
-        return HTTP_PUT;
+        ctx->ns->method_of = HTTP_PUT;
+        return;
     }
     if (str.eq(m, "DELETE", sizeof("DELETE"), PROTO_FALSE))
     {
-        return HTTP_DELETE;
+        ctx->ns->method_of = HTTP_DELETE;
+        return;
     }
     if (str.eq(m, "PATCH", sizeof("PATCH"), PROTO_FALSE))
     {
-        return HTTP_PATCH;
+        ctx->ns->method_of = HTTP_PATCH;
+        return;
     }
     if (str.eq(m, "HEAD", sizeof("HEAD"), PROTO_FALSE))
     {
-        return HTTP_HEAD;
+        ctx->ns->method_of = HTTP_HEAD;
+        return;
     }
     if (str.eq(m, "OPTIONS", sizeof("OPTIONS"), PROTO_FALSE))
     {
-        return HTTP_OPTIONS;
+        ctx->ns->method_of = HTTP_OPTIONS;
+        return;
     }
-    return HTTP_METHOD_UNKNOWN;
+    ctx->ns->method_of = HTTP_METHOD_UNKNOWN;
+        return;
 }
 
 /**
  * @brief Canonical method token for an HttpMethod (for the Allow header).
  */
-const char *method_name(HttpMethod m)
+static void method_name(struct HttpInternal *restrict ctx)
 {
+    const HttpMethod m = ctx->ns->method_args.method;
     switch (m)
     {
     case HTTP_GET:
-        return "GET";
+        ctx->ns->text = "GET";
+        return;
     case HTTP_POST:
-        return "POST";
+        ctx->ns->text = "POST";
+        return;
     case HTTP_PUT:
-        return "PUT";
+        ctx->ns->text = "PUT";
+        return;
     case HTTP_DELETE:
-        return "DELETE";
+        ctx->ns->text = "DELETE";
+        return;
     case HTTP_PATCH:
-        return "PATCH";
+        ctx->ns->text = "PATCH";
+        return;
     case HTTP_HEAD:
-        return "HEAD";
+        ctx->ns->text = "HEAD";
+        return;
     case HTTP_OPTIONS:
-        return "OPTIONS";
+        ctx->ns->text = "OPTIONS";
+        return;
     default:
-        return "";
+        ctx->ns->text = "";
+        return;
     }
 }
 
@@ -222,8 +289,11 @@ const char *method_name(HttpMethod m)
  * @param req_path    Incoming request path from the parsed HTTP request line.
  * @return True if the route matches the request path.
  */
-proto_bool path_matches(const char *route, proto_bool is_wildcard, const char *req_path)
+static void path_matches(struct HttpInternal *restrict ctx)
 {
+    const char *route = ctx->ns->route_args.route;
+    const proto_bool is_wildcard = ctx->ns->route_args.is_wildcard;
+    const char *req_path = ctx->ns->route_args.path;
     if (!is_wildcard)
     {
         return str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
@@ -269,8 +339,11 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
  *
  * @return True on a full match (params captured); false otherwise.
  */
-proto_bool match_path_params(const char *route, const char *path, HttpReq *req)
+static void match_path_params(struct HttpInternal *restrict ctx)
 {
+    const char *route = ctx->ns->route_args.route;
+    const char *path = ctx->ns->route_args.path;
+    HttpReq *req = ctx->ns->route_args.req;
     req->path_param_count = 0;
     const char *r = route;
     const char *p = path;
@@ -296,13 +369,15 @@ proto_bool match_path_params(const char *route, const char *path, HttpReq *req)
         {
             if (plen == 0)
             {
-                return PROTO_FALSE; // a `:name` segment must capture a non-empty value
+                ctx->ns->ok = PROTO_FALSE;
+        return; // a `:name` segment must capture a non-empty value
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
         else if (rlen != plen || str.diff(rseg, pseg, rlen, PROTO_FALSE) != rlen)
         {
-            return PROTO_FALSE; // literal segment mismatch
+            ctx->ns->ok = PROTO_FALSE;
+        return; // literal segment mismatch
         }
     }
 
@@ -313,14 +388,17 @@ proto_bool match_path_params(const char *route, const char *path, HttpReq *req)
 // True when the request on this slot used the HEAD method, whose response must
 // carry the same headers as GET but no message body (RFC 7231 §4.3.2). External
 // linkage (declared in protocore.h): the split handler TUs call it.
-proto_bool req_is_head(uint8_t slot_id)
+static void req_is_head(struct HttpInternal *restrict ctx)
 {
-    return str.eq(http_pool[slot_id].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
+    ctx->ns->ok = str.eq(http_pool[ctx->ns->slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
-void allow_append(char *buf, size_t cap, const char *m)
+static void allow_append(struct HttpInternal *restrict ctx)
 {
+    char *buf = ctx->ns->allow.buf;
+    const size_t cap = ctx->ns->allow.cap;
+    const char *m = ctx->ns->method_args.token;
     // method_name() hands back one of the seven method literals, so the longest of them is the
     // bound on @p m - the Allow buffer's capacity is the bound on `buf` and says nothing about it.
     //
@@ -334,19 +412,19 @@ void allow_append(char *buf, size_t cap, const char *m)
     }
     if (len == 0)
     {
-        pc_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
-        pc_sb_put(&sb_buf, m);
-        if (pc_sb_finish(&sb_buf) == 0)
+        protocore_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
+        protocore_sb_put(&sb_buf, m);
+        if (protocore_sb_finish(&sb_buf) == 0)
         {
             buf[0] = '\0';
         }
     }
     else
     {
-        pc_sb sb1300 = {buf + len, cap - len, 0, PROTO_TRUE};
-        pc_sb_put(&sb1300, ", ");
-        pc_sb_put(&sb1300, m);
-        if (pc_sb_finish(&sb1300) == 0)
+        protocore_sb sb1300 = {buf + len, cap - len, 0, PROTO_TRUE};
+        protocore_sb_put(&sb1300, ", ");
+        protocore_sb_put(&sb1300, m);
+        if (protocore_sb_finish(&sb1300) == 0)
         {
             sb1300.p[0] = '\0';
         }
@@ -360,7 +438,6 @@ void allow_append(char *buf, size_t cap, const char *m)
 // teardown; HEAD omits the body. One owner for the error-and-close path.
 static void send_error_close(uint8_t slot_id, const char *status, const char *extra_hdr, const char *body)
 {
-    TcpConn *conn = &conn_pool[slot_id];
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         http_reset(slot_id);
@@ -371,30 +448,41 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     char header[RESP_HDR_BUF_SIZE];
     // (send_method_not_allowed, send_too_many_requests) build a non-null header string. Kept so the
     // parameter stays optional for a future caller with nothing extra to add.
-    pc_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    pc_sb_put(&sb_header, "HTTP/1.1 ");
-    pc_sb_put(&sb_header, status);
-    pc_sb_put(&sb_header, "\r\n");
-    pc_sb_put(&sb_header, extra_hdr ? extra_hdr : "");
-    pc_sb_put(&sb_header, "Content-Type: ");
-    pc_sb_put(&sb_header, PROTOCORE_MIME_TEXT_PLAIN);
-    pc_sb_put(&sb_header, "\r\nContent-Length: ");
-    pc_sb_i64(&sb_header, (int64_t)(blen));
-    pc_sb_put(&sb_header, "\r\nConnection: close\r\n\r\n");
-    int hlen = (int)pc_sb_finish(&sb_header);
+    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_header, "HTTP/1.1 ");
+    protocore_sb_put(&sb_header, status);
+    protocore_sb_put(&sb_header, "\r\n");
+    protocore_sb_put(&sb_header, extra_hdr ? extra_hdr : "");
+    protocore_sb_put(&sb_header, "Content-Type: ");
+    protocore_sb_put(&sb_header, PROTOCORE_MIME_TEXT_PLAIN);
+    protocore_sb_put(&sb_header, "\r\nContent-Length: ");
+    protocore_sb_i64(&sb_header, (int64_t)(blen));
+    protocore_sb_put(&sb_header, "\r\nConnection: close\r\n\r\n");
+    int hlen = (int)protocore_sb_finish(&sb_header);
 
-    // The last write carries the flush: Tcp.conn->send_flush is write+tcp_output in one marshal, so
+    // The last write carries the flush: send_flush is write+output in one marshal, so
     // the response leaves in a single trip whether or not a body follows the header.
-    if (blen > 0 && !Http.req_is_head(slot_id))
+    Http.slot = slot_id;
+    Http.req_is_head(Http.internal);
+    if (blen > 0 && !Http.ok)
     {
-        Tcp.conn->send(slot_id, header, (proto_u16)hlen);
-        Tcp.conn->send_flush(slot_id, body, (proto_u16)blen);
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = header;
+        ConnPool.io.len = (proto_u16)hlen;
+        ConnPool.send(ConnPool.internal);
+        ConnPool.io.data = body;
+        ConnPool.io.len = (proto_u16)blen;
+        ConnPool.send_flush(ConnPool.internal);
     }
     else
     {
-        Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = header;
+        ConnPool.io.len = (proto_u16)hlen;
+        ConnPool.send_flush(ConnPool.internal);
     }
-    Tcp.conn->begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
+    ConnPool.slot = slot_id;
+    ConnPool.begin_close(ConnPool.internal); // dwell in CONN_CLOSING until the response drains
     http_reset(slot_id);
 }
 
@@ -402,11 +490,11 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
 static void send_method_not_allowed(uint8_t slot_id, const char *allow)
 {
     char extra[80];
-    pc_sb sb_extra = {extra, sizeof(extra), 0, PROTO_TRUE};
-    pc_sb_put(&sb_extra, "Allow: ");
-    pc_sb_put(&sb_extra, allow);
-    pc_sb_put(&sb_extra, "\r\n");
-    if (pc_sb_finish(&sb_extra) == 0)
+    protocore_sb sb_extra = {extra, sizeof(extra), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_extra, "Allow: ");
+    protocore_sb_put(&sb_extra, allow);
+    protocore_sb_put(&sb_extra, "\r\n");
+    if (protocore_sb_finish(&sb_extra) == 0)
     {
         extra[0] = '\0';
     }
@@ -417,11 +505,13 @@ static void send_method_not_allowed(uint8_t slot_id, const char *allow)
 // The peer's family-tagged source address for the connection in slot_id (unspecified on native /
 // no pcb). Used as the auth-lockout bucket key - the full IPv4 or IPv6 address, so a v6 peer is
 // never flattened onto a shared v4 bucket nor folded into a collideable hash.
-static pc_ip lockout_client_ip(uint8_t slot_id)
+static protocore_ip lockout_client_ip(uint8_t slot_id)
 {
-    pc_ip ip;
+    protocore_ip ip;
     ip.family = PROTOCORE_IP_NONE;
-    Tcp.conn->remote_addr(slot_id, &ip);
+    ConnPool.slot = slot_id;
+    ConnPool.out = &ip;
+    ConnPool.remote_addr(ConnPool.internal);
     return ip;
 }
 
@@ -430,11 +520,11 @@ static pc_ip lockout_client_ip(uint8_t slot_id)
 static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 {
     char extra[40];
-    pc_sb sb_extra2 = {extra, sizeof(extra), 0, PROTO_TRUE};
-    pc_sb_put(&sb_extra2, "Retry-After: ");
-    pc_sb_u32(&sb_extra2, (uint32_t)((unsigned long)retry_after_s));
-    pc_sb_put(&sb_extra2, "\r\n");
-    if (pc_sb_finish(&sb_extra2) == 0)
+    protocore_sb sb_extra2 = {extra, sizeof(extra), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_extra2, "Retry-After: ");
+    protocore_sb_u32(&sb_extra2, (uint32_t)((unsigned long)retry_after_s));
+    protocore_sb_put(&sb_extra2, "\r\n");
+    if (protocore_sb_finish(&sb_extra2) == 0)
     {
         extra[0] = '\0';
     }
@@ -449,15 +539,19 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
         return PROTO_FALSE;
     }
     proto_bool matched = r->is_regex   ? regex_match(r->path, req->path)
-                         : r->is_param ? Http.match_path_params(r->path, req->path, req)
-                                       : Http.path_matches(r->path, r->is_wildcard, req->path);
+                         : (Http.route = r->path, Http.path = req->path, Http.req = req,
+                            Http.is_wildcard = r->is_wildcard,
+                            r->is_param ? Http.match_path_params(Http.internal) : Http.path_matches(Http.internal),
+                            Http.ok);
     if (!matched)
     {
         return PROTO_FALSE;
     }
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
-    if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != pc_conn_iface(slot_id))
+    ConnPool.slot = slot_id;
+    ConnPool.iface(ConnPool.internal);
+    if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPool.if_kind)
     {
         return PROTO_FALSE;
     }
@@ -465,22 +559,22 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
 }
 
 #if PROTOCORE_ENABLE_CSRF
-static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
+static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 {
     // Built-in token endpoint: GET /csrf issues a signed token (also set as the
     // csrf cookie) for clients to echo in X-CSRF-Token on state-changing requests.
     if (method == HTTP_GET && str.eq(req->path, "/csrf", sizeof("/csrf"), PROTO_FALSE))
     {
         char tok[CSRF_TOKEN_BUF];
-        if (pc_csrf_issue(tok, sizeof(tok)) > 0)
+        if (protocore_csrf_issue(tok, sizeof(tok)) > 0)
         {
             set_cookie(slot_id, "csrf", tok, "Path=/; SameSite=Strict");
             char body[CSRF_TOKEN_BUF + 16];
-            pc_sb sb_body = {body, sizeof(body), 0, PROTO_TRUE};
-            pc_sb_put(&sb_body, "{\"token\":\"");
-            pc_sb_put(&sb_body, tok);
-            pc_sb_put(&sb_body, "\"}");
-            if (pc_sb_finish(&sb_body) == 0)
+            protocore_sb sb_body = {body, sizeof(body), 0, PROTO_TRUE};
+            protocore_sb_put(&sb_body, "{\"token\":\"");
+            protocore_sb_put(&sb_body, tok);
+            protocore_sb_put(&sb_body, "\"}");
+            if (protocore_sb_finish(&sb_body) == 0)
             {
                 body[0] = '\0';
             }
@@ -498,7 +592,7 @@ static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
     if (method == HTTP_POST || method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_DELETE)
     {
         const char *tok = http_get_header(req, "X-CSRF-Token");
-        if (!tok || !pc_csrf_verify(tok))
+        if (!tok || !protocore_csrf_verify(tok))
         {
             send_text(slot_id, 403, PROTOCORE_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
             return PROTO_TRUE;
@@ -516,7 +610,7 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
     // header that includes the "Upgrade" token.
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
                                str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) &&
-                               pc_http_conn_has_token(http_get_header(req, "Connection"), "upgrade");
+                               protocore_http_conn_has_token(http_get_header(req, "Connection"), "upgrade");
     if (!is_ws_upgrade)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "WebSocket upgrade required");
@@ -542,7 +636,7 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
 static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
-    pc_ip cip = lockout_client_ip(slot_id);
+    protocore_ip cip = lockout_client_ip(slot_id);
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
     // Behind a trusted reverse proxy, key the lockout on the original client (the proxy's Forwarded /
     // X-Forwarded-For), not the proxy's shared TCP address. Ignored for a direct/untrusted peer, so a
@@ -550,12 +644,12 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     {
         char fbuf[PROTOCORE_IP_STR_MAX];
         const char *fwd = http_forwarded_client(req, fbuf, sizeof(fbuf), NULL) ? fbuf : NULL;
-        pc_ip eff;
-        pc_forwarded_effective_ip(&cip, fwd, &eff);
+        protocore_ip eff;
+        protocore_forwarded_effective_ip(&cip, fwd, &eff);
         cip = eff;
     }
 #endif
-    uint32_t now = (uint32_t)pc_millis();
+    uint32_t now = (uint32_t)protocore_millis();
     uint32_t remain = auth_lockout_remaining_ms(&cip, now);
     if (remain > 0)
     {
@@ -567,11 +661,11 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // One borrow for this request's auth decision: the digest hashes and the challenge's nonce work
     // out of it, and it goes back before the handler runs. The pool resolves the slot from the calling
     // worker, so two workers never share these bytes.
-    size_t auth_mark = pc_secure_mark();
-    pc_span auth_ws = pc_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-    if (!pc_span_ok(auth_ws))
+    size_t auth_mark = protocore_secure_mark();
+    protocore_span auth_ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
+    if (!protocore_span_ok(auth_ws))
     {
-        pc_secure_release(auth_mark);
+        protocore_secure_release(auth_mark);
         return PROTO_FALSE; // pool exhausted: fail closed
     }
     proto_bool stale = PROTO_FALSE;
@@ -591,10 +685,10 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     if (!ok)
     {
         Auth.challenge(auth_ws.buf, slot_id, r->auth_id, stale);
-        pc_secure_release(auth_mark);
+        protocore_secure_release(auth_mark);
         return PROTO_FALSE;
     }
-    pc_secure_release(auth_mark);
+    protocore_secure_release(auth_mark);
     return PROTO_TRUE;
 }
 #endif // PROTOCORE_ENABLE_AUTH
@@ -613,7 +707,7 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
 #if PROTOCORE_ENABLE_SSE
     if (r->type == ROUTE_SSE)
     {
-        if (!pc_sse_do_upgrade(slot_id, req, pc_sse_route_connect(r->sse_id)))
+        if (!protocore_sse_do_upgrade(slot_id, req, protocore_sse_route_connect(r->sse_id)))
         {
             send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "Service Unavailable");
         }
@@ -628,8 +722,12 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
         if (method != HTTP_GET && method != HTTP_HEAD)
         {
             *path_matched = PROTO_TRUE;
-            Http.allow_append(allow_buf, allow_cap, "GET");
-            Http.allow_append(allow_buf, allow_cap, "HEAD");
+            Http.buf = allow_buf;
+            Http.cap = allow_cap;
+            Http.token = "GET";
+            Http.allow_append(Http.internal);
+            Http.token = "HEAD";
+            Http.allow_append(Http.internal);
             return PROTO_FALSE;
         }
         serve_static_request(slot_id, req, r);
@@ -644,11 +742,19 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
     {
         // Path matches but method differs - record it for a 405 + Allow.
         *path_matched = PROTO_TRUE;
-        Http.allow_append(allow_buf, allow_cap, Http.method_name(r->method));
+        Http.method = r->method;
+        Http.method_name(Http.internal);
+        Http.buf = allow_buf;
+        Http.cap = allow_cap;
+        Http.token = Http.text;
+        Http.allow_append(Http.internal);
         // A GET route also answers HEAD, so advertise it in Allow.
         if (r->method == HTTP_GET)
         {
-            Http.allow_append(allow_buf, allow_cap, "HEAD");
+            Http.buf = allow_buf;
+            Http.cap = allow_cap;
+            Http.token = "HEAD";
+            Http.allow_append(Http.internal);
         }
         return PROTO_FALSE;
     }
@@ -662,14 +768,17 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
     return PROTO_TRUE;
 }
 
-void match_and_execute(uint8_t slot_id)
+static void match_and_execute(struct HttpInternal *restrict ctx)
 {
+    const uint8_t slot_id = ctx->ns->slot;
     HttpReq *req = &http_pool[slot_id];
-    HttpMethod method = Http.parse_method(req->method);
+    Http.token = req->method;
+    Http.parse_method(Http.internal);
+    HttpMethod method = Http.method_of;
 
     // Start each request with no carried-over custom response headers or
     // captured path parameters.
-    pc_resp_extra_hdr(slot_id)[0] = '\0';
+    protocore_resp_extra_hdr(slot_id)[0] = '\0';
     req->path_param_count = 0;
 
     // Built-in rate limiter first (cheapest rejection under flood), then the
@@ -694,14 +803,14 @@ void match_and_execute(uint8_t slot_id)
 #endif
 
     // CORS preflight
-    if (method == HTTP_OPTIONS && pc_resp_cors_enabled())
+    if (method == HTTP_OPTIONS && protocore_resp_cors_enabled())
     {
         send_empty(slot_id, 204);
         return;
     }
 
 #if PROTOCORE_ENABLE_CSRF
-    if (pc_csrf_gate(slot_id, req, method))
+    if (protocore_csrf_gate(slot_id, req, method))
     {
         return;
     }
@@ -747,9 +856,9 @@ void match_and_execute(uint8_t slot_id)
         return;
     }
 
-    if (s_http.not_found != NULL)
+    if (ctx->store->not_found != NULL)
     {
-        s_http.not_found(slot_id, req);
+        ctx->store->not_found(slot_id, req);
     }
     else
     {
@@ -761,12 +870,13 @@ void match_and_execute(uint8_t slot_id)
 // HTTP through the same uniform seam as every other protocol, with no HTTP special case in the
 // loop. Runs the file/chunk send pumps, the WebSocket and SSE drains, the keep-alive re-parse, and
 // dispatches a completed request into the route table.
-static void poll_slot(uint8_t i)
+static void poll_slot(struct HttpInternal *restrict ctx)
 {
+    const uint8_t i = ctx->ns->slot;
 #if PROTOCORE_ENABLE_EDGE_CACHE
     // An edge-cache origin fetch in flight for this slot owns it: pump the fetch and skip the rest of the
     // HTTP pipeline until it completes (and hands off to send_chunked for the cached response).
-    if (s_http.edge_poll != NULL && s_http.edge_poll(i))
+    if (ctx->store->edge_poll != NULL && ctx->store->edge_poll(i))
     {
         return;
     }
@@ -774,14 +884,14 @@ static void poll_slot(uint8_t i)
 #if PROTOCORE_ENABLE_FILE_SERVING
     // A file response in flight owns the slot: page out the next window and
     // skip the rest of the pipeline until the whole body has been sent.
-    if (pc_file_holds_slot(i))
+    if (protocore_file_holds_slot(i))
     {
         file_send_pump(i);
         return;
     }
 #endif
     // Likewise a chunked response in flight: pull + frame the next window.
-    if (pc_resp_holds_slot(i))
+    if (protocore_resp_holds_slot(i))
     {
         chunk_send_pump(i);
         return;
@@ -793,14 +903,16 @@ static void poll_slot(uint8_t i)
     if (ws)
     {
 #if PROTOCORE_ENABLE_TLS
-        if (conn_pool[i].tls)
+        ConnPool.slot = i;
+        ConnPool.tls(ConnPool.internal);
+        if (ConnPool.ok)
         {
-            // wss://: the rx ring holds ciphertext, so decrypt records here and
+            // wss://: the bytes are ciphertext, so decrypt records here and
             // feed the frame parser, dispatching each completed frame as it
             // finishes (one TLS record may carry several WS frames).
             uint8_t tbuf[256];
             int n;
-            while ((n = pc_tls_read(i, tbuf, sizeof(tbuf))) > 0)
+            while ((n = protocore_tls_read(i, tbuf, sizeof(tbuf))) > 0)
             {
                 for (int k = 0; k < n; k++)
                 {
@@ -824,7 +936,8 @@ static void poll_slot(uint8_t i)
             {
                 ws_dispatch_close(ws);
                 ws_free(i);
-                Tcp.conn->abort_slot(i); // transport owns TLS-free + detach + reset + RST
+                ConnPool.slot = i;
+                ConnPool.abort_slot(ConnPool.internal); // transport owns TLS-free + detach + reset + RST
                 http_reset(i);
             }
             return;
@@ -846,7 +959,8 @@ static void poll_slot(uint8_t i)
             // handshake. begin_close moves the slot out of CONN_ACTIVE so the
             // post-close bytes are NOT re-parsed as a new HTTP request (the
             // close-frame the WS layer queued still flushes during the dwell).
-            Tcp.conn->begin_close(i);
+            ConnPool.slot = i;
+            ConnPool.begin_close(ConnPool.internal);
             http_reset(i);
         }
         return; // slot is owned by WS; skip HTTP dispatch
@@ -855,7 +969,7 @@ static void poll_slot(uint8_t i)
 
 #if PROTOCORE_ENABLE_SSE
     // SSE slot - connection stays open, nothing to parse from client
-    if (pc_sse_find(i))
+    if (protocore_sse_find(i))
     {
         return;
     }
@@ -866,13 +980,17 @@ static void poll_slot(uint8_t i)
     // (pipelined) request in its ring buffer with no new EVT_DATA to trigger a
     // parse. Drain it here each tick so it gets dispatched. TLS slots are
     // skipped - their ring holds ciphertext, decrypted in the session layer.
-    if (conn_pool[i].state == CONN_ACTIVE && http_pool[i].parse_state != PARSE_COMPLETE
+    ConnPool.slot = i;
+    ConnPool.active(ConnPool.internal);
+    proto_bool live = ConnPool.ok;
 #if PROTOCORE_ENABLE_TLS
-        && !conn_pool[i].tls
+    ConnPool.tls(ConnPool.internal);
+    live = live && !ConnPool.ok;
 #endif
-    )
+    if (live && http_pool[i].parse_state != PARSE_COMPLETE)
     {
-        http_parse(i);
+        HttpConn.slot = i;
+        HttpConn.parse(HttpConn.internal);
     }
 #endif
 
@@ -886,10 +1004,12 @@ static void poll_slot(uint8_t i)
     // enum) so it never reaps a legitimate slow body: a large streaming upload sits in PARSE_BODY for its whole
     // duration and is governed by the streaming handler + idle timer, not this deadline. WebSocket / SSE were
     // already returned above.
-    if (conn_pool[i].state == CONN_ACTIVE && conn_pool[i].req_start_ms != 0 && http_pool[i].parse_state < PARSE_BODY &&
-        (pc_millis() - conn_pool[i].req_start_ms) >= PROTOCORE_REQUEST_TIMEOUT_MS)
+    ConnPool.slot = i;
+    ConnPool.active(ConnPool.internal);
+    if (ConnPool.ok && http_req_start_ms[i] != 0 && http_pool[i].parse_state < PARSE_BODY &&
+        (protocore_millis() - http_req_start_ms[i]) >= PROTOCORE_REQUEST_TIMEOUT_MS)
     {
-        conn_pool[i].req_start_ms = 0;
+        http_req_start_ms[i] = 0;
         send_text(i, 408, PROTOCORE_MIME_TEXT_PLAIN, "Request Timeout"); // terminal error response -> connection closes
         return;
     }
@@ -898,7 +1018,7 @@ static void poll_slot(uint8_t i)
     // HTTP slot
     if (http_pool[i].parse_state == PARSE_COMPLETE)
     {
-        conn_pool[i].req_start_ms = 0; // request complete: disarm; the next keep-alive request re-arms on its 1st byte
+        http_req_start_ms[i] = 0; // request complete: disarm; the next keep-alive request re-arms on its 1st byte
         Http.match_and_execute(i);
         if (http_pool[i].parse_state == PARSE_COMPLETE)
         {
@@ -919,10 +1039,19 @@ static void poll_slot(uint8_t i)
     }
 }
 
-const HttpNs Http = {status_text,       parse_method, method_name,  path_matches,
-                     match_path_params, req_is_head,  allow_append, match_and_execute,
-                     set_not_found,     poll_slot,    reset,
+// Designated, so a member's position in the struct does not decide what it binds to.
+HttpNs Http = {.status_text = status_text,
+               .parse_method = parse_method,
+               .method_name = method_name,
+               .path_matches = path_matches,
+               .match_path_params = match_path_params,
+               .req_is_head = req_is_head,
+               .allow_append = allow_append,
+               .match_and_execute = match_and_execute,
+               .set_not_found = set_not_found,
+               .poll_slot = poll_slot,
+               .reset = reset,
 #if PROTOCORE_ENABLE_EDGE_CACHE
-                     set_edge_poll
+               .set_edge_poll = set_edge_poll,
 #endif
-};
+               .internal = &s_http};

@@ -9,9 +9,9 @@
 //   RACE SIM  - ordering hazards across tick boundaries
 
 #include "network_drivers/presentation/presentation.h"
-#include "network_drivers/session/proto_handler.h" // Session.proto->add()/Session.proto->get()/ProtoHandler (dispatch table edge cases)
-#include "network_drivers/session/session.h"
-#include "network_drivers/transport/tcp.h"
+#include "server/system/proto_handler.h" // Session.proto->add()/Session.proto->get()/ProtoHandler (dispatch table edge cases)
+#include "server/system/session.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <unity.h>
 
 // tcp.cpp + presentation.cpp + session.cpp compiled into native env.

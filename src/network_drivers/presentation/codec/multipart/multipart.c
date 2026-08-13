@@ -55,7 +55,7 @@ static char *extract_quoted_param(char *src, const char *key)
     return p;
 }
 
-static proto_bool pc_multipart_parse(HttpReq *req, MultipartBody *mp)
+static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
 {
     mp->part_count = 0;
 
@@ -204,7 +204,7 @@ static proto_bool pc_multipart_parse(HttpReq *req, MultipartBody *mp)
     return mp->part_count > 0;
 }
 
-static const char *pc_multipart_get_field(const MultipartBody *mp, const char *field)
+static const char *protocore_multipart_get_field(const MultipartBody *mp, const char *field)
 {
     for (int i = 0; i < mp->part_count; i++)
     {
@@ -216,4 +216,4 @@ static const char *pc_multipart_get_field(const MultipartBody *mp, const char *f
     return NULL;
 }
 
-const MultipartNs Multipart = {pc_multipart_parse, pc_multipart_get_field};
+const MultipartNs Multipart = {protocore_multipart_parse, protocore_multipart_get_field};

@@ -74,7 +74,7 @@ struct HttpReq;
  *
  * @var AuthNs::reset
  * Empty the credential table. An id names a row by index and a route holds that id, so the table
- * empties with the routes it is indexed from: pc_server_reset() calls both. A table that kept its
+ * empties with the routes it is indexed from: protocore_server_reset() calls both. A table that kept its
  * rows across a reset would reach @ref PROTOCORE_AUTH_NONE after MAX_ROUTES registrations and hand every
  * later route an id that guards nothing.
  *
@@ -82,19 +82,69 @@ struct HttpReq;
  * @ref AuthNs::rekey and read by nothing outside auth.c, so exposing a handle to it would widen the
  * surface without giving any caller something it can use.
  */
+/** @brief RFC 7616 sec 3.2.1 / RFC 7617: one credential row's realm and secret. */
 typedef struct
 {
-    uint8_t (*add)(const char *realm, const char *user, const char *pass, proto_bool digest);
-    proto_bool (*check)(uint8_t *work, uint8_t slot_id, struct HttpReq *req, uint8_t id, proto_bool *stale);
-    void (*challenge)(uint8_t *work, uint8_t slot_id, uint8_t id, proto_bool stale);
-    void (*rekey)(uint8_t *work);
-    void (*mint_nonce)(uint8_t *work, char *out, size_t cap);
-    proto_bool (*verify_nonce)(uint8_t *work, const char *nonce, proto_bool *expired);
-    void (*reset)(void);
+    const char *realm; ///< the realm a row is added under
+    const char *user;  ///< its username
+    const char *pass;  ///< its password
+    proto_bool digest; ///< the row is Digest rather than Basic
+} AuthCredArgs;
+
+/** @brief RFC 7616 sec 3.3: the nonce a challenge carries, and where a mint writes one. */
+typedef struct
+{
+    proto_bool stale;  ///< in: the challenge marks a transparent retry; out: the check found one
+    const char *nonce; ///< the nonce a verify judges
+    char *out;         ///< where a mint writes
+    size_t cap;        ///< how much room it has; at least 48
+} AuthNonceArgs;
+
+/** @brief The credential table's own state and the calls that reach it, described only in auth.c. */
+struct AuthInternal;
+
+/**
+ * A caller sets the members a call takes, invokes it through ::Auth, and reads the outcome off the
+ * same handle.
+ *
+ * @var AuthNs::work     the caller's scratch region a call borrows
+ * @var AuthNs::slot     the connection a challenge or a check acts on
+ * @var AuthNs::req      the parsed request a check reads its credential from
+ * @var AuthNs::id       the credential set a call names
+ * @var AuthNs::cred       one credential row: realm, user, pass, and whether it is Digest
+ * @var AuthNs::nonce_args the nonce a mint writes and a verify judges, and the stale flag
+ * @var AuthNs::ok       a call's true/false outcome
+ * @var AuthNs::expired  the MAC is authentic but the issue time falls outside the nonce lifetime
+ * @var AuthNs::u8       the id an add reports, or ::PROTOCORE_AUTH_NONE when the table is full
+ * @var AuthNs::internal the table's state and the calls that reach it
+ */
+typedef struct
+{
+    uint8_t *work;       ///< the caller's scratch region a call borrows
+    uint8_t slot;        ///< the connection a challenge or a check acts on
+    struct HttpReq *req; ///< the parsed request a check reads its credential from
+    uint8_t id;          ///< the credential set a call names
+
+    AuthCredArgs cred;        ///< one credential row
+    AuthNonceArgs nonce_args; ///< the nonce a mint writes and a verify judges
+
+    proto_bool ok;
+    proto_bool expired;
+    uint8_t u8;
+
+    void (*add)(struct AuthInternal *ctx);
+    void (*check)(struct AuthInternal *ctx);
+    void (*challenge)(struct AuthInternal *ctx);
+    void (*rekey)(struct AuthInternal *ctx);
+    void (*mint_nonce)(struct AuthInternal *ctx);
+    void (*verify_nonce)(struct AuthInternal *ctx);
+    void (*reset)(struct AuthInternal *ctx);
+
+    struct AuthInternal *internal;
 } AuthNs;
 
 /** @brief The one symbol this module exports. */
-extern const AuthNs Auth;
+extern AuthNs Auth;
 
 #endif // PROTOCORE_ENABLE_AUTH
 

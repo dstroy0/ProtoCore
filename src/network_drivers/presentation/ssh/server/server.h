@@ -16,7 +16,6 @@ PROTOCORE_BEGIN_DECLS
 struct ProtoHandler;
 
 /** @brief The SSH ProtoHandler the builtins list installs. */
-const struct ProtoHandler *ssh_protocore_handler(void);
 
 #if PROTOCORE_SSH_PORT_FORWARD
 /**
@@ -25,7 +24,6 @@ const struct ProtoHandler *ssh_protocore_handler(void);
  * Listening is this role's (sec 4.1); the sec 7.1 bindings that decide which listeners exist are
  * the connection protocol's. The builtins list installs this handler.
  */
-const struct ProtoHandler *ssh_protocore_rfwd_handler(void);
 
 /**
  * @brief Start listening on @p bind_port for a sec 7.1 remote forward.
@@ -37,11 +35,47 @@ const struct ProtoHandler *ssh_protocore_rfwd_handler(void);
  * @return An opaque handle for ssh_rfwd_listener_close() and protocore_ssh_forward_binding(),
  *         or -1 when there is no listener capacity or the port could not be bound.
  */
-int ssh_rfwd_listener_open(uint16_t bind_port);
 
 /** @brief Stop accepting on a handle from ssh_rfwd_listener_open(). Open bridges are unaffected. */
-void ssh_rfwd_listener_close(int handle);
 #endif
+
+/** @brief The listening role's own state and the calls that reach it, described only in server.c. */
+struct SshServerInternal;
+
+/**
+ * @brief The SSH server role (RFC 4253 sec 4.1): the side that accepts a connection.
+ *
+ * A caller sets the members a call takes, invokes it through ::SshServer, and reads the outcome off
+ * the same handle.
+ *
+ * @var SshServerNs::bind_port  the port a remote forward (RFC 4254 sec 7.1) binds
+ * @var SshServerNs::handle     the listener a close releases
+ * @var SshServerNs::i32        the listener an open reports, or < 0
+ * @var SshServerNs::handler    the ProtoHandler a lookup reports
+ * @var SshServerNs::rfwd_listener_open   bind a port for an accepted remote forward
+ * @var SshServerNs::rfwd_listener_close  release one
+ * @var SshServerNs::proto_handler        the dispatch seam an SSH slot is driven through
+ * @var SshServerNs::rfwd_proto_handler   the same for a forwarded slot
+ * @var SshServerNs::internal   the role's state and the calls that reach it
+ */
+typedef struct
+{
+    uint16_t bind_port;
+    int handle;
+
+    int i32;
+    const struct ProtoHandler *handler;
+
+    void (*rfwd_listener_open)(struct SshServerInternal *ctx);
+    void (*rfwd_listener_close)(struct SshServerInternal *ctx);
+    void (*proto_handler)(struct SshServerInternal *ctx);
+    void (*rfwd_proto_handler)(struct SshServerInternal *ctx);
+
+    struct SshServerInternal *internal;
+} SshServerNs;
+
+/** @brief The one symbol this module exports. */
+extern SshServerNs SshServer;
 
 PROTOCORE_END_DECLS
 

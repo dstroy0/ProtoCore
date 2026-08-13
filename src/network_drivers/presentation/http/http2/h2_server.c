@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h2_server.c
- * @brief HTTP/2 engine <-> request-pipeline bridge - implementation. See pc_h2_server.h.
+ * @file protocore_h2_server.c
+ * @brief HTTP/2 engine <-> request-pipeline bridge - implementation. See protocore_h2_server.h.
  */
 
 #include "network_drivers/presentation/http/http2/h2_server.h"
@@ -14,7 +14,7 @@
 #include "network_drivers/presentation/http/http2/h2_conn.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 
 // The per-slot engines are large (~28 KB each), so the pool does not fit internal DRAM alongside
 // TLS - it lives in PSRAM (PROTOCORE_H2_POOL_IN_PSRAM). Same mechanism/caveat as the TLS arena: it
@@ -52,14 +52,32 @@ enum
     H2_HDR_BAD = 1u << 6,     ///< the block is malformed (sec 8.2 / 8.3)
 };
 
-// HTTP/2 connection pool, owned by one instance (internal linkage): the per-slot H2 connection
-// state. One named owner, unreachable from any other translation unit.
-typedef struct
+/**
+ * @brief The engine's compile-time storage: one HTTP/2 connection per transport slot.
+ *
+ * One named owner, unreachable from any other translation unit.
+ */
+struct H2ServerStorage
 {
     H2Conn pool[MAX_CONNS];
     uint8_t hmask[MAX_CONNS]; ///< per-slot header-block bits, cleared when the block is judged
-} H2ServerCtx;
-static PROTOCORE_H2_POOL_ATTR H2ServerCtx s_h2;
+};
+
+/**
+ * @brief The engine's state and the calls that reach it - what H2ServerNs points at.
+ *
+ * @var H2ServerInternal::store  the per-slot connection state
+ * @var H2ServerInternal::ns     the handle a caller sets a call's members on
+ */
+struct H2ServerInternal
+{
+    struct H2ServerStorage *store;
+    H2ServerNs *ns;
+};
+
+static PROTOCORE_H2_POOL_ATTR struct H2ServerStorage s_store;
+
+static struct H2ServerInternal s_h2 = {.store = &s_store, .ns = &H2Server};
 
 // The bytes a field name may carry: an RFC 9110 token minus the uppercase letters RFC 9113 sec 8.2.1
 // forbids, so lowercase, digits and !#$%&'*+-.^_`|~ - one bit each over the 256 byte values. A byte
@@ -173,7 +191,7 @@ static void cb_write(void *io, const uint8_t *data, size_t len)
     size_t off = 0;
     while (off < len)
     {
-        int w = pc_tls_write(slot, data + off, len - off);
+        int w = protocore_tls_write(slot, data + off, len - off);
         if (w <= 0)
         {
             break; // error / would-block: best-effort for this path
@@ -186,7 +204,7 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
 {
     (void)stream_id;
     const uint8_t slot = (uint8_t)(uintptr_t)app;
-    uint8_t *mask = &s_h2.hmask[slot];
+    uint8_t *mask = &s_store.hmask[slot];
     HttpReq *r = &http_pool[slot];
 
     if ((*mask & H2_HDR_BAD) != 0)
@@ -278,8 +296,8 @@ static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
 {
     (void)end_stream;
     const uint8_t slot = (uint8_t)(uintptr_t)app;
-    const uint8_t mask = s_h2.hmask[slot];
-    s_h2.hmask[slot] = 0; // the block is judged here; the next one starts clean
+    const uint8_t mask = s_store.hmask[slot];
+    s_store.hmask[slot] = 0; // the block is judged here; the next one starts clean
 
     // sec 8.3.1: ":method", ":scheme" and ":path" are all required, so the XOR of what arrived
     // against the required set is zero exactly when none of the three is missing.
@@ -288,7 +306,7 @@ static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
         http_parser_reset(&http_pool[slot]); // never dispatch a malformed request
         return PROTO_FALSE;                  // the engine resets the stream
     }
-    conn_pool[slot].pc_h2_stream = sid;
+    http_h2_stream[slot] = sid;
     http_pool[slot].parse_state = PARSE_COMPLETE; // the worker's handle() loop dispatches it
     return PROTO_TRUE;
 }
@@ -306,8 +324,9 @@ static void cb_data(void *app, uint32_t stream_id, const uint8_t *data, size_t l
     r->body_bytes_read += len;
 }
 
-void pc_h2_server_open(uint8_t slot)
+static void open_conn(struct H2ServerInternal *restrict ctx)
 {
+    const uint8_t slot = ctx->ns->slot;
     H2Callbacks cb;
     mem.set(&cb, 0, sizeof cb);
     cb.write = cb_write;
@@ -316,37 +335,56 @@ void pc_h2_server_open(uint8_t slot)
     cb.on_data = cb_data;
     cb.io = (void *)(uintptr_t)slot;
     cb.app = (void *)(uintptr_t)slot;
-    s_h2.hmask[slot] = 0;
-    pc_h2_conn_init(&s_h2.pool[slot], &cb); // emits our SETTINGS through cb_write
+    s_store.hmask[slot] = 0;
+    protocore_h2_conn_init(&s_store.pool[slot], &cb); // emits our SETTINGS through cb_write
     http_parser_reset(&http_pool[slot]);
 }
 
-void pc_h2_server_data(uint8_t slot)
+static void data(struct H2ServerInternal *restrict ctx)
 {
+    const uint8_t slot = ctx->ns->slot;
     uint8_t buf[512];
     int n;
-    while ((n = pc_tls_read(slot, buf, sizeof buf)) > 0)
+    while ((n = protocore_tls_read(slot, buf, sizeof buf)) > 0)
     {
-        if (!pc_h2_conn_recv(&s_h2.pool[slot], buf, (size_t)n))
+        if (!protocore_h2_conn_recv(&s_store.pool[slot], buf, (size_t)n))
         {
-            pc_h2_conn_goaway(&s_h2.pool[slot], 1 /* PROTOCOL_ERROR */);
+            protocore_h2_conn_goaway(&s_store.pool[slot], 1 /* PROTOCOL_ERROR */);
             return;
         }
     }
 }
 
-proto_bool pc_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
+static void respond(struct H2ServerInternal *restrict ctx)
 {
-    proto_bool ok = pc_h2_conn_respond(&s_h2.pool[slot], conn_pool[slot].pc_h2_stream, code, content_type, body, len);
+    const uint8_t slot = ctx->ns->slot;
+    ctx->ns->ok = protocore_h2_conn_respond(&ctx->store->pool[slot], http_h2_stream[slot], ctx->ns->resp.code,
+                                            ctx->ns->resp.content_type, ctx->ns->resp.body, ctx->ns->resp.len);
     http_parser_reset(&http_pool[slot]); // ready for the next stream; keep the connection open
-    return ok;
 }
 
-void pc_h2_server_close(uint8_t slot)
+static void close_conn(struct H2ServerInternal *restrict ctx)
 {
-    conn_pool[slot].h2 = 0;
-    conn_pool[slot].pc_h2_checked = 0;
-    conn_pool[slot].pc_resp_sink = NULL;
+    const uint8_t slot = ctx->ns->slot;
+    http_h2[slot] = 0;
+    http_h2_checked[slot] = 0;
+    http_resp_sink[slot] = NULL;
 }
+
+// The presentation layer installs this at ALPN; its shape is the seam's, not this module's.
+proto_bool protocore_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
+{
+    H2Server.slot = slot;
+    H2Server.code = code;
+    H2Server.content_type = content_type;
+    H2Server.body = body;
+    H2Server.len = len;
+    respond(&s_h2);
+    return H2Server.ok;
+}
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+H2ServerNs H2Server = {
+    .open = open_conn, .data = data, .respond = respond, .close = close_conn, .internal = &s_h2};
 
 #endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS

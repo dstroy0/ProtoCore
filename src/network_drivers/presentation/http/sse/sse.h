@@ -29,7 +29,7 @@
 #ifndef PROTOCORE_SSE_H
 #define PROTOCORE_SSE_H
 
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -54,8 +54,33 @@ typedef struct
     char path[MAX_PATH_LEN];
 } SseConn;
 
-/** @brief Pool of SSE connection state, one per MAX_SSE_CONNS. */
+/** @brief Pool of SSE connection state, one per MAX_SSE_CONNS. Defined in sse.c. */
 extern SseConn protocore_sse_pool[MAX_SSE_CONNS];
+
+/** @brief One subscribe route: the path, and what an open on it runs. */
+typedef struct
+{
+    const char *path;             ///< the path a client subscribed to
+    SseConnectHandler on_connect; ///< the subscribe handler a route records
+} SseRouteArgs;
+
+/** @brief The fields of one text/event-stream record. */
+typedef struct
+{
+    const char *data;     ///< the event data; required
+    const char *event;    ///< the event name; optional
+    const char *event_id; ///< the event id; optional
+} SseEventArgs;
+
+/** @brief Where a formatted record lands. */
+typedef struct
+{
+    char *buf;  ///< where format writes
+    size_t cap; ///< how much room it has
+} SseOutArgs;
+
+/** @brief The stream pool's own state and the calls that reach it, described only in sse.c. */
+struct SseInternal;
 
 // ---------------------------------------------------------------------------
 // SSE pool API
@@ -74,79 +99,67 @@ typedef void (*SseConnectHandler)(uint8_t protocore_sse_id);
 #define PROTOCORE_SSE_NONE 0xFFu
 
 /**
- * @brief Record one route's subscribe handler and return the id naming it, or ::PROTOCORE_SSE_NONE when full.
+ * @brief The event streams this server holds open, and what one carries.
  *
- * The handler lives here, not in the route table: a route decides where a request goes, and what
- * runs once a client subscribes belongs to this module.
+ * A caller sets the members a call takes, invokes it through ::Sse, and reads the outcome off the
+ * same handle.
+ *
+ * @var SseNs::slot        the TCP slot a call acts on
+ * @var SseNs::id          the route id a lookup names
+ * @var SseNs::route       what one subscribe route records
+ * @var SseNs::stream      the stream a write goes to
+ * @var SseNs::event_args  the fields of one event record
+ * @var SseNs::out         where a format writes
+ * @var SseNs::ok          a call's true/false outcome
+ * @var SseNs::u8          the route id an add reports, or ::PROTOCORE_SSE_NONE when full
+ * @var SseNs::n           bytes format wrote, excluding the terminator
+ * @var SseNs::conn        the stream an alloc or a find reports, or NULL
+ * @var SseNs::handler     the subscribe handler a lookup reports, or NULL
+ * @var SseNs::route_add       record one route's subscribe handler
+ * @var SseNs::route_connect   the subscribe handler an id names
+ * @var SseNs::init            set every pool slot inactive; called once from begin()
+ * @var SseNs::alloc           take a stream and bind it to a TCP slot
+ * @var SseNs::find            the stream bound to a TCP slot
+ * @var SseNs::free            release the stream bound to a TCP slot
+ * @var SseNs::format          format one event record into out.buf, no transport
+ * @var SseNs::write           format one event record and send it to the stream
+ * @var SseNs::internal        the pool's state and the calls that reach it
+ *
+ * format emits `event: <event>\n` (if event), `id: <event_id>\n` (if event_id), then
+ * `data: <data>\n\n` per the WHATWG event-stream format. It touches no connection state, so it is
+ * unit-testable on its own; write wraps it with the send. A caller that needs immediate delivery
+ * flushes the connection itself afterwards.
  */
-uint8_t protocore_sse_route_add(SseConnectHandler on_connect);
+typedef struct
+{
+    uint8_t slot;    ///< the TCP slot a call acts on
+    uint8_t id;      ///< the route id a lookup names
+    SseConn *stream; ///< the stream a write goes to
 
-/// @brief The subscribe handler @p id names, or nullptr when @p id names nothing.
-SseConnectHandler protocore_sse_route_connect(uint8_t id);
+    SseRouteArgs route;      ///< what one subscribe route records
+    SseEventArgs event_args; ///< the fields of one event record
+    SseOutArgs out;          ///< where a format writes
 
-/**
- * @brief Initialize all SSE pool slots to inactive.
- *
- * Called once from begin().
- */
-void protocore_sse_init();
+    proto_bool ok;
+    uint8_t u8;
+    int n;
+    SseConn *conn;
+    SseConnectHandler handler;
 
-/**
- * @brief Allocate an SseConn and bind it to a TCP slot.
- *
- * @param slot_id  TCP slot that just received the SSE subscription request.
- * @param path     URL path the client subscribed to (stored for broadcast).
- * @return Pointer to the allocated SseConn, or nullptr if the pool is full.
- */
-SseConn *protocore_sse_alloc(uint8_t slot_id, const char *path);
+    void (*route_add)(struct SseInternal *ctx);
+    void (*route_connect)(struct SseInternal *ctx);
+    void (*init)(struct SseInternal *ctx);
+    void (*alloc)(struct SseInternal *ctx);
+    void (*find)(struct SseInternal *ctx);
+    void (*free)(struct SseInternal *ctx);
+    void (*format)(struct SseInternal *ctx);
+    void (*write)(struct SseInternal *ctx);
 
-/**
- * @brief Find the SseConn for a given TCP slot, or nullptr.
- *
- * @param slot_id  TCP connection slot index.
- */
-SseConn *protocore_sse_find(uint8_t slot_id);
+    struct SseInternal *internal;
+} SseNs;
 
-/**
- * @brief Free the SseConn associated with a TCP slot.
- *
- * @param slot_id  TCP connection slot index.
- */
-void protocore_sse_free(uint8_t slot_id);
-
-/**
- * @brief Format one SSE event record into a caller buffer (no transport).
- *
- * Emits `event: <event>\n` (if event), `id: <id>\n` (if id), then
- * `data: <data>\n\n` per the WHATWG event-stream format.  data must not be
- * nullptr.  Pure: no connection state, so it is unit-testable and benchable
- * on its own; protocore_sse_write() wraps it with the Tcp.conn->send() I/O.
- *
- * @param buf    Destination buffer.
- * @param n      Size of @p buf.
- * @param data   Event data (required).
- * @param event  Event name (optional).
- * @param id     Event ID (optional).
- * @return Bytes written (excluding the terminator), or 0 on empty/overflow.
- */
-int protocore_sse_format(char *buf, size_t n, const char *data, const char *event, const char *id);
-
-/**
- * @brief Write one SSE event record to a client.
- *
- * Formats and sends `event: ...\nid: ...\ndata: ...\n\n`.  Any optional
- * field may be nullptr to omit it.  data must not be nullptr.
- *
- * The caller must flush the connection afterwards (Tcp.conn->flush()) if
- * immediate delivery is needed.
- *
- * @param sse    SSE connection.
- * @param data   Event data (required).
- * @param event  Event name (optional).
- * @param id     Event ID (optional).
- * @return true on success, false if the TCP slot is not active.
- */
-proto_bool protocore_sse_write(SseConn *sse, const char *data, const char *event, const char *id);
+/** @brief The one symbol this module exports. */
+extern SseNs Sse;
 
 PROTOCORE_END_DECLS
 

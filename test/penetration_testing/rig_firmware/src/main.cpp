@@ -58,7 +58,7 @@
 #include "services/net/ws_client/ws_client.h"   // outbound WebSocket client codec - WAMP transport for the probe
 #include "services/security/jwt/jwt.h"          // JWT HS256 bearer-auth verify - device-as-server /jwt/verify
 #include "services/timing_position/time_source/time_source.h" // protocore_time_now registry - feeds the NTP server a wall clock
-#include "shared_primitives/hex.h"                            // protocore_hex_encode/decode (ETag / digest)
+#include "shared/hex/hex.h"                            // protocore_hex_encode/decode (ETag / digest)
 #include <Arduino.h>
 #include <LittleFS.h> // WebDAV share backing store (internal flash, no SD card)
 #include <WiFi.h>

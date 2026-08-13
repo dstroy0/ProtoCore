@@ -62,7 +62,7 @@
 #endif
 
 #include "network_drivers/application/ntp_service/ntp_service.h" // protocore_ntp_* - wall-clock sync (see wall_clock_us_now())
-#include "network_drivers/transport/tcp/tcp_client.h"            // protocore_client_*
+#include "network_drivers/transport/tcp/client/client.h"         // protocore_client_*
 #include "server/clock/clock.h" // protocore_millis(), pcdelay(), protocore_cycles_to_ns()
 #include <Arduino.h>
 #include <WiFi.h>
@@ -72,8 +72,8 @@
 #include "services/instrumentation/scpi/scpi.h"
 #else
 #include "mmgr/dma.h"
-#include "network_drivers/session/preempt_queue.h"
 #include "server/signaling/trace_capture.h"
+#include "server/system/preempt_queue.h"
 #include "services/peripherals/ad9238/ad9238.h"
 #include <SPI.h>
 #endif

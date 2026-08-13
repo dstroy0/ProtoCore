@@ -4,11 +4,11 @@
 // Unit tests for send_chunked(, NULL) / ChunkedResponse streaming responses.
 
 #include "protocore.h"
-#include "shared_primitives/hex.h" // protocore_hex_u32 (the chunk size-line writer)
+#include "shared/hex/hex.h" // protocore_hex_u32 (the chunk size-line writer)
 #include <stdio.h>
 #include <string.h>
 
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "rx_feed.h"
 #include <unity.h>
 

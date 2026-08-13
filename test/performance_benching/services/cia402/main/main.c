@@ -5,7 +5,7 @@
 // (services/fieldbus/cia402): the Statusword power-state decode (mask/value table), the Controlword
 // enable-sequence step, the CANopen SDO Controlword-write build, the SDO Statusword-read decode,
 // and the cyclic PDO command-pack / status-unpack - all pure value logic and codec calls over a
-// stack-resident CanFrame (see shared_primitives/can.h). Same shape as performance_benching/device/modbus: a pure
+// stack-resident CanFrame (see shared/can/can.h). Same shape as performance_benching/device/modbus: a pure
 // protocol/profile layer with no hardware involved, so every call here exercises the real
 // production code path - there is no CAN transceiver to stub, and none is touched.
 //

@@ -7,7 +7,7 @@
 // through the recv callback the client armed.
 
 #include "network_drivers/network/network.h" // network.dns->resolver: what the dial resolves through
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <string.h>
 #include <unity.h>
 

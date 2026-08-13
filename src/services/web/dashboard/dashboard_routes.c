@@ -18,7 +18,7 @@
 
 #include "network_drivers/application/web_assets.h" // PROTOCORE_DASHBOARD_PAGE
 #include "protocore.h"
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 #include <stdio.h>
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_pool for inbound control messages

@@ -26,7 +26,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/application/smb/smb2.h" // SMB2_FILE_GENERIC_READ / SMB2_FILE_OPEN
 #include "network_drivers/application/smb/smb_client.h" // smb_open / smb_read / smb_close
 

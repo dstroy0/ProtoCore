@@ -45,53 +45,79 @@ typedef struct
 } MntPointCtx;
 static MntPointCtx s_point;
 
-uint8_t protocore_mnt_point_add(const protocore_mnt_backend *backend, const char *root)
+/**
+ * @brief The mount table and the calls that reach it - what MntNs points at.
+ *
+ * @var MntInternal::ns  the handle a caller sets a call's members on
+ */
+struct MntInternal
 {
+    MntNs *ns;
+};
+
+static struct MntInternal s_mnt_ctx = {.ns = &Mnt};
+
+static void mnt_point_add(struct MntInternal *restrict ctx)
+{
+    const protocore_mnt_backend *backend = ctx->ns->args.backend;
+    const char *root = ctx->ns->args.root;
+
     if (s_point.count >= MAX_ROUTES)
     {
-        return PROTOCORE_MNT_NONE;
+        ctx->ns->u8 = PROTOCORE_MNT_NONE;
+        return;
     }
     MntPoint *m = &s_point.point[s_point.count];
     m->backend = backend;
     m->root = root;
-    return s_point.count++;
+    ctx->ns->u8 = s_point.count++;
 }
 
-const protocore_mnt_backend *protocore_mnt_point_backend(uint8_t id)
+static void mnt_point_of(struct MntInternal *restrict ctx)
 {
+    const uint8_t id = ctx->ns->args.id;
+
     if (id >= s_point.count)
     {
-        return NULL;
+        ctx->ns->backend = NULL;
+        return;
     }
-    return s_point.point[id].backend;
+    ctx->ns->backend = s_point.point[id].backend;
 }
 
-const char *protocore_mnt_point_root(uint8_t id)
+static void mnt_root_of(struct MntInternal *restrict ctx)
 {
+    const uint8_t id = ctx->ns->args.id;
+
     // Empty rather than null, because every caller wants the subtree as a path piece to compare or
     // append: handing back null would put the same null test at each of them.
     if (id >= s_point.count || s_point.point[id].root == NULL)
     {
-        return "";
+        ctx->ns->text = "";
+        return;
     }
-    return s_point.point[id].root;
+    ctx->ns->text = s_point.point[id].root;
 }
 
-void protocore_mnt_point_reset(void)
+static void mnt_reset(struct MntInternal *restrict ctx)
 {
+    (void)ctx;
+
     // The count is the table: a row above it is unreachable, and add() writes both fields before the
     // count reaches it, so there is nothing to clear here.
     s_point.count = 0;
 }
 
-void protocore_mnt_mount(const protocore_mnt_backend *backend)
+static void mnt_mount(struct MntInternal *restrict ctx)
 {
+    const protocore_mnt_backend *backend = ctx->ns->args.backend;
+
     s_hal.backend = backend;
 }
 
-const protocore_mnt_backend *protocore_mnt_active(void)
+static void mnt_active(struct MntInternal *restrict ctx)
 {
-    return s_hal.backend;
+    ctx->ns->backend = s_hal.backend;
 }
 
 // --- the RAM disk: the part with a footprint ------------------------------------------------------
@@ -481,13 +507,15 @@ static const protocore_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_w
                                                     ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
                                                     ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
 
-const protocore_mnt_backend *protocore_mnt_ram(void)
+static void mnt_ram(struct MntInternal *restrict ctx)
 {
-    return &s_ram_backend;
+    ctx->ns->backend = &s_ram_backend;
 }
 
-void protocore_mnt_ram_format(void)
+static void mnt_ram_format(struct MntInternal *restrict ctx)
 {
+    (void)ctx;
+
     s_mnt.used = 0; // the whole pool, one store rather than a loop
     for (int h = 0; h < PROTOCORE_MNT_MAX_OPEN; h++)
     {
@@ -496,3 +524,17 @@ void protocore_mnt_ram_format(void)
 }
 
 #endif // PROTOCORE_ENABLE_MNT
+
+// Designated, so a member's position in the struct does not decide what it binds to. The two RAM
+// calls exist only where the flag compiled the backend in.
+MntNs Mnt = {.point_add = mnt_point_add,
+             .point_of = mnt_point_of,
+             .root_of = mnt_root_of,
+             .reset = mnt_reset,
+             .mount = mnt_mount,
+             .active = mnt_active,
+#if PROTOCORE_ENABLE_MNT
+             .ram = mnt_ram,
+             .ram_format = mnt_ram_format,
+#endif
+             .internal = &s_mnt_ctx};

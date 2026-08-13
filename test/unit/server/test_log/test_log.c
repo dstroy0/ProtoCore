@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the abstract logging layer (shared_primitives/log.h). Built at
+// Unit tests for the abstract logging layer (shared/log/log.h). Built at
 // PROTOCORE_LOG_LEVEL_INFO with PROTOCORE_ENABLE_LOGBUF, so the interesting property is testable at runtime:
 // DEBUG sits below the floor and must be *absent* from the binary, while INFO and above emit.
 //
@@ -12,8 +12,8 @@
 
 #include "mmgr/protoframe.h" // the log frames below need the complete type
 #include "mmgr/ring.h"       // shared SPSC byte-ring primitive, exercised at the bottom
-#include "server/logbuf.h"
-#include "shared_primitives/log.h"
+#include "server/system/logbuf.h"
+#include "shared/log/log.h"
 #include <stdio.h>
 #include <string.h>
 

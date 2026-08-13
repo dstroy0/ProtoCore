@@ -10,9 +10,9 @@
 //   RACE SIM      - slot state hazards visible to handle()
 
 #include "lfs_mock.h"
-#include "network_drivers/session/proto_handler.h" // proto_register/proto_get: the slot-poll dispatch table
-#include "network_drivers/transport/tcp.h"         // Tcp.listener->stop_all() for proto_begin(NULL) test cleanup
-#include "network_drivers/transport/tcp.h"
+#include "server/system/proto_handler.h" // proto_register/proto_get: the slot-poll dispatch table
+#include "network_drivers/transport/tcp/tcp.h"         // Tcp.listener->stop_all() for proto_begin(NULL) test cleanup
+#include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h" // ws/sse upgrade entry points, protocore_resp_holds_slot
 #include "rx_feed.h"
 #include "server/filesystem/mnt.h" // protocore_mnt_mount - storage is reached through the seam, not the route field

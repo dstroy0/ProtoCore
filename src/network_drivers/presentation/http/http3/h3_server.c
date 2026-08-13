@@ -10,21 +10,38 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "core_setup/board_profiles/pc_platform.h"  // pc_platform_rand_u32: the device TRNG
-#include "mmgr/protostr.h"                          // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"                         // proto_raw_read: each field moves into the slot
-#include "network_drivers/presentation/http/http.h" // Http.match_and_execute
-#include "network_drivers/transport/tcp.h"          // TcpConn, conn_pool: the reserved dispatch slot
-#include "protocore.h"                              // http_pool, PROTOCORE_H3_DISPATCH_SLOT, http_reset
+#include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_rand_u32: the device TRNG
+#include "mmgr/protostr.h"                                // str: the bounded-run walks
+#include "mmgr/rawmemcpy.h"                               // proto_raw_read: each field moves into the slot
+#include "network_drivers/presentation/http/http.h"       // Http.match_and_execute
+#include "network_drivers/transport/tcp/protocol/protocol.h"  // ConnPool: the reserved dispatch slot
+#include "protocore.h"                                    // http_pool, PROTOCORE_H3_DISPATCH_SLOT, http_reset
+
+/**
+ * @brief The bridge's state and the calls that reach it - what H3ServerNs points at.
+ *
+ * The reserved dispatch slot and the per-slot HTTP state are the layers' own; this holds only the
+ * handle a call is served through.
+ *
+ * @var H3ServerInternal::ns  the handle a caller sets a call's members on
+ */
+struct H3ServerInternal
+{
+    H3ServerNs *ns;
+};
+
+static struct H3ServerInternal s_h3 = {.ns = &H3Server};
 
 // Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs:
 // four bytes per platform draw, the last draw truncated to what is left.
-void pc_h3_server_rng(uint8_t *out, size_t len)
+static void rng(struct H3ServerInternal *restrict ctx)
 {
+    uint8_t *out = ctx->ns->rng_args.out;
+    const size_t len = ctx->ns->rng_args.len;
     size_t i = 0;
     while (i < len)
     {
-        uint32_t r = pc_platform_rand_u32();
+        uint32_t r = protocore_platform_rand_u32();
         size_t n = 4;
         if (len - i < n)
         {
@@ -36,23 +53,27 @@ void pc_h3_server_rng(uint8_t *out, size_t len)
 }
 
 // Response sink for the HTTP/3 dispatch slot: route (code, content_type, body) onto the QUIC stream
-// the request arrived on (ids stashed on the slot by dispatch_h3_request). Installed as conn->pc_resp_sink
+// the request arrived on (ids stashed on the slot by dispatch_h3_request). Installed as conn->protocore_resp_sink
 // so send_text()/send_empty() stay protocol-agnostic.
-static proto_bool pc_h3_resp_sink(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
+static proto_bool protocore_h3_resp_sink(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
 {
-    TcpConn *c = &conn_pool[slot];
-    return pc_quic_server_respond(c->pc_h3_conn_id, c->pc_h3_stream, code, content_type, (const uint8_t *)body, len);
+    return protocore_quic_server_respond(http_h3_conn_id[slot], http_h3_stream[slot], code, content_type, (const uint8_t *)body, len);
 }
 
-void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const char *method, const char *path,
-                          const char *authority, const uint8_t *body, size_t body_len)
+static void request(struct H3ServerInternal *restrict ctx)
 {
-    (void)app; // the route table and the slot pools are global owners; nothing is carried here
+    const uint32_t conn_id = ctx->ns->stream.conn_id;
+    const uint64_t stream_id = ctx->ns->stream.stream_id;
+    const char *method = ctx->ns->req.method;
+    const char *path = ctx->ns->req.path;
+    const char *authority = ctx->ns->req.authority;
+    const uint8_t *body = ctx->ns->req.body;
+    const size_t body_len = ctx->ns->req.body_len;
     const uint8_t slot = PROTOCORE_H3_DISPATCH_SLOT;
     HttpReq *r = &http_pool[slot];
     http_reset(slot);
 
-    // Map the semantic request fields into the shared HttpReq (as pc_h2_server does per stream).
+    // Map the semantic request fields into the shared HttpReq (as protocore_h2_server does per stream).
     size_t mn = str.len(method, sizeof(r->method));
     if (mn >= sizeof(r->method))
     {
@@ -113,22 +134,48 @@ void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const
 
     // Mark the reserved slot as HTTP/3 and install the response sink so send_text() / send_empty() route the
     // response back onto this stream (no TCP pcb here - the sink owns the QUIC framing).
-    TcpConn *c = &conn_pool[slot];
-    c->h3 = 1;
-    c->pc_h3_conn_id = conn_id;
-    c->pc_h3_stream = stream_id;
-    c->pc_resp_sink = pc_h3_resp_sink;
-    c->iface = PROTOCORE_IF_WIFI_STA;
-    Tcp.conn->set_state(slot, CONN_ACTIVE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
-    c->pcb = NULL;
+    http_h3[slot] = 1;
+    http_h3_conn_id[slot] = conn_id;
+    http_h3_stream[slot] = stream_id;
+    http_resp_sink[slot] = protocore_h3_resp_sink;
+    ConnPool.slot = slot;
+    ConnPool.st = CONN_ACTIVE;
+    ConnPool.set_state(ConnPool.internal); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
 
-    Http.match_and_execute(slot); // -> handler -> send_text() -> pc_resp_sink -> pc_quic_server_respond()
+    Http.match_and_execute(slot); // -> handler -> send_text() -> protocore_resp_sink -> protocore_quic_server_respond()
 
     // Release the dispatch slot for the next request (a no-response handler simply leaves the stream open).
-    c->h3 = 0;
-    c->pc_resp_sink = NULL;
-    Tcp.conn->set_state(slot, CONN_FREE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
+    http_h3[slot] = 0;
+    http_resp_sink[slot] = NULL;
+    ConnPool.slot = slot;
+    ConnPool.st = CONN_FREE;
+    ConnPool.set_state(ConnPool.internal); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
     http_reset(slot);
 }
+
+// The QUIC server's seam dictates these two shapes, so they carry their arguments onto the handle.
+void protocore_h3_server_rng(uint8_t *out, size_t len)
+{
+    H3Server.out = out;
+    H3Server.len = len;
+    rng(&s_h3);
+}
+
+void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const char *method, const char *path,
+                                 const char *authority, const uint8_t *body, size_t body_len)
+{
+    (void)app; // the route table and the slot pools are global owners; nothing is carried here
+    H3Server.conn_id = conn_id;
+    H3Server.stream_id = stream_id;
+    H3Server.method = method;
+    H3Server.path = path;
+    H3Server.authority = authority;
+    H3Server.body = body;
+    H3Server.body_len = body_len;
+    request(&s_h3);
+}
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+H3ServerNs H3Server = {.request = request, .rng = rng, .internal = &s_h3};
 
 #endif // PROTOCORE_ENABLE_HTTP3

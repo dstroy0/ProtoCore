@@ -107,7 +107,7 @@ def affected_items(items, changed, base=None, head=None):
         elif f.startswith("src/services/") and f.count("/") >= 3:
             features.add(f.split("/")[2])  # e.g. src/network_drivers/application/smb/smb2.cpp -> "smb"
         elif f.startswith("src/"):
-            return items  # shared/core src (protocore, shared_primitives, a top-level services/*.h) -> FULL
+            return items  # shared/core src (protocore, shared, a top-level services/*.h) -> FULL
         elif f == "tools/ci_tooling/generate/example_footprints.py" or (
             f.startswith(".github/workflows/") and f.endswith("build.yml")
         ):

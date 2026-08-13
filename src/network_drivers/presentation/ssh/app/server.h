@@ -17,4 +17,50 @@
 
 #include "network_drivers/presentation/ssh/connection/connection.h"
 
+PROTOCORE_BEGIN_DECLS
+
+/** @brief RFC 4254 sec 5.4 CHANNEL_REQUEST: the type it names, and the body that follows. */
+typedef struct
+{
+    const uint8_t *rtype;   ///< the request type
+    uint32_t rtype_len;     ///< its length
+    const uint8_t *payload; ///< the request body
+    size_t len;             ///< how many bytes it has
+    size_t off;             ///< in/out: the request-specific argument, advanced past what was read
+} SshChanReqArgs;
+
+/** @brief The classifier's own state and the call that reaches it, described only in server.c. */
+struct SshAppServerInternal;
+
+/**
+ * @brief The file-transfer classifier: whether a channel request names SFTP or SCP.
+ *
+ * A caller sets the members the call takes, invokes it through ::SshAppServer, and reads the outcome
+ * off the same handle.
+ *
+ * @var SshAppServerNs::slot       the SSH slot the request arrived on
+ * @var SshAppServerNs::channel    the channel it names
+ * @var SshAppServerNs::req        what one channel request names and carries (RFC 4254 sec 5.4)
+ * @var SshAppServerNs::accept     in/out: set when an accepted SFTP subsystem flips acceptance
+ * @var SshAppServerNs::classify   tag the channel and fire the matching open handler
+ * @var SshAppServerNs::internal   the classifier's state and the call that reaches it
+ */
+typedef struct
+{
+    uint8_t slot;      ///< the SSH slot the request arrived on
+    uint32_t channel;  ///< the channel it names
+    proto_bool accept; ///< in/out: set when an accepted SFTP subsystem flips acceptance
+
+    SshChanReqArgs req; ///< what one channel request names and carries
+
+    void (*classify)(struct SshAppServerInternal *ctx);
+
+    struct SshAppServerInternal *internal;
+} SshAppServerNs;
+
+/** @brief The one symbol this module exports. */
+extern SshAppServerNs SshAppServer;
+
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_APP_SERVER_H

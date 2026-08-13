@@ -436,6 +436,119 @@
 uintptr_t protocore_platform_context_id(void);
 
 // ---------------------------------------------------------------------------
+// Device facts, power domains and stored images
+// ---------------------------------------------------------------------------
+//
+// The core cannot name a vendor, so it asks here. Each seam sits under the capability that answers
+// whether the part carries the thing at all: a build whose capability is 0 gets no declaration, so
+// reaching for it is a compile error rather than a link-time surprise, and the owning module keys
+// its own refusing arm off the same macro.
+//
+// Every one is implemented once per arm - core_setup/hal/<vendor> on silicon,
+// core_setup/hal/portable on the host - so a test drives the real module against the mock rather
+// than compiling the module out. Plain int and uint32_t only: this header carries <stdint.h> and
+// nothing else, and it is reached before the library's own types exist.
+
+#if PROTOCORE_HAS_VENDOR_MAC
+/** @brief The part's burned-in station address, six bytes. 0 when there was none to read. */
+int protocore_platform_mac_read(uint8_t mac[6]);
+#endif
+
+#if PROTOCORE_HAS_VENDOR_HEAP_INFO
+uint32_t protocore_platform_heap_free(void);      ///< bytes free in the allocator right now
+uint32_t protocore_platform_heap_min_free(void);  ///< its low-water mark since boot
+uint32_t protocore_platform_heap_size(void);      ///< its total size
+uint32_t protocore_platform_heap_max_alloc(void); ///< the largest single block it would hand out now
+#endif
+
+#if PROTOCORE_HAS_VENDOR_PM
+/** @brief The reset that started this boot was a brownout. Reads the cause; the caller latches it. */
+int protocore_platform_reset_was_brownout(void);
+
+/** @brief Die temperature in whole degrees C, or INT16_MIN where the part has no usable sensor. */
+int16_t protocore_platform_die_temp_c(void);
+
+/** @brief The CPU clock the part is running at, in MHz. */
+uint16_t protocore_platform_cpu_mhz(void);
+
+/** @brief Set the CPU clock to @p mhz. 0 when the part refused it. */
+int protocore_platform_set_cpu_mhz(uint32_t mhz);
+#endif
+
+#if PROTOCORE_HAS_VENDOR_BT
+/** @brief Disable the Bluetooth controller and hand its RAM back. 0 when nothing was released. */
+int protocore_platform_bt_release(void);
+#endif
+
+// The stored image's state, in the order a rollback walks it. These values are the library's own;
+// each arm maps its vendor's onto them, so a caller reads one set whatever it is running on.
+#define PROTOCORE_PLATFORM_IMG_NEW 0
+#define PROTOCORE_PLATFORM_IMG_PENDING_VERIFY 1
+#define PROTOCORE_PLATFORM_IMG_VALID 2
+#define PROTOCORE_PLATFORM_IMG_INVALID 3
+#define PROTOCORE_PLATFORM_IMG_ABORTED 4
+#define PROTOCORE_PLATFORM_IMG_UNDEFINED 0xFF
+
+#if PROTOCORE_HAS_VENDOR_OTA
+uint8_t protocore_platform_img_state(void); ///< the running image's state, PROTOCORE_PLATFORM_IMG_*
+void protocore_platform_img_commit(void);   ///< mark it valid and cancel the pending rollback
+void protocore_platform_img_rollback(void); ///< mark it invalid and reboot into the previous one
+#endif
+
+#if PROTOCORE_HAS_VENDOR_COREDUMP
+/** @brief Backtrace frames a crash summary carries. */
+#ifndef PROTOCORE_PLATFORM_CRASH_FRAMES
+#define PROTOCORE_PLATFORM_CRASH_FRAMES 32
+#endif
+/** @brief Longest faulting-task name a summary carries, terminator included. */
+#define PROTOCORE_PLATFORM_CRASH_TASK_MAX 32
+
+/**
+ * @brief One crash, in the library's own shape rather than a vendor's.
+ *
+ * @ref frame_count is 0 where the part stores a stack dump rather than a walkable backtrace: those
+ * need debug information that lives off the device, so the frames are absent, not invented.
+ */
+typedef struct
+{
+    uint32_t pc;                                        ///< the faulting program counter
+    uint32_t fault_addr;                                ///< the address the fault names
+    uint8_t has_fault_addr;                             ///< that address is meaningful
+    char task[PROTOCORE_PLATFORM_CRASH_TASK_MAX];       ///< the faulting task's name
+    uint32_t frame_pc[PROTOCORE_PLATFORM_CRASH_FRAMES]; ///< return addresses, as the part stored them
+    uint8_t frame_count;                                ///< frames present in @ref frame_pc
+} protocore_crash_summary;
+
+/** @brief Bytes of stored crash image, once it verifies. 0 when there is none or it is corrupt. */
+uint32_t protocore_platform_crashdump_size(void);
+/** @brief Read @p len bytes at @p offset within the crash image. 0 on a short or failed read. */
+int protocore_platform_crashdump_read(uint32_t offset, uint8_t *buf, uint32_t len);
+/** @brief Discard the stored crash image. */
+int protocore_platform_crashdump_erase(void);
+/** @brief The crash summary, where the stored image carries one. */
+int protocore_platform_crashdump_summary(protocore_crash_summary *out);
+#endif
+
+#if PROTOCORE_HAS_VENDOR_CAN
+/** @brief One received CAN frame, in the library's own shape rather than a vendor's. */
+typedef struct
+{
+    uint32_t id;     ///< the identifier: 11-bit, or 29-bit when @ref ext is set
+    uint8_t ext;     ///< the identifier is the 29-bit extended form
+    uint8_t rtr;     ///< remote transmission request, so the frame carries no data
+    uint8_t len;     ///< data bytes present, 0 to 8
+    uint8_t data[8]; ///< the payload
+} protocore_can_frame;
+
+/** @brief Open the controller on @p tx_pin / @p rx_pin at @p bitrate, listening to every id. */
+int protocore_platform_can_open(int tx_pin, int rx_pin, uint32_t bitrate);
+/** @brief Take one frame from the driver queue without blocking. 0 when the queue is empty. */
+int protocore_platform_can_recv(protocore_can_frame *out);
+/** @brief Stop the controller and release it. */
+void protocore_platform_can_close(void);
+#endif
+
+// ---------------------------------------------------------------------------
 // The target's scheduler and network stack, under our names
 // ---------------------------------------------------------------------------
 //
@@ -448,15 +561,15 @@ uintptr_t protocore_platform_context_id(void);
 
 #if PROTOCORE_VENDOR_ESP
 
-#include "driver/gpio.h"          // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
-#include "driver/uart.h"          // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
-#include "esp_cpu.h"              // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
-#include "esp_idf_version.h"      // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - names the IDF the driver headers came from
-#include "esp_random.h"           // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
-#include "esp_system.h"           // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
-#include "esp_timer.h"            // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
-#include "freertos/FreeRTOS.h"    // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor above resolved to ESP
-#include "freertos/queue.h"       // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "driver/gpio.h"     // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "driver/uart.h"     // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_cpu.h"         // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_idf_version.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - names the IDF the driver headers came from
+#include "esp_random.h"      // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_system.h"      // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_timer.h"       // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "freertos/FreeRTOS.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor above resolved to ESP
+#include "freertos/queue.h"    // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #include "freertos/semphr.h"      // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #include "freertos/task.h"        // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #include "lwip/igmp.h"            // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
@@ -553,7 +666,8 @@ PROTOCORE_INLINE int protocore_platform_uart_begin(uint8_t unit, uint32_t baud, 
     return 1;
 }
 #define protocore_platform_uart_write(unit, buf, len) uart_write_bytes((uart_port_t)(unit), (const char *)(buf), (len))
-#define protocore_platform_uart_read(unit, buf, len, ms) uart_read_bytes((uart_port_t)(unit), (buf), (len), pdMS_TO_TICKS(ms))
+#define protocore_platform_uart_read(unit, buf, len, ms)                                                               \
+    uart_read_bytes((uart_port_t)(unit), (buf), (len), pdMS_TO_TICKS(ms))
 PROTOCORE_INLINE uint32_t protocore_platform_uart_available(uint8_t unit)
 {
     size_t n = 0;
@@ -573,16 +687,16 @@ PROTOCORE_INLINE uint32_t protocore_platform_uart_available(uint8_t unit)
 // @p host selects the controller: 0 is the general-purpose one, 1 the second where the die has it.
 // @p quadwp and @p quadhd are the third and fourth data lines, -1 when the bus is single or dual.
 int protocore_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd);
-int protocore_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx, uint8_t *rx,
-                        uint32_t len);
+int protocore_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
+                               uint8_t *rx, uint32_t len);
 
 // A framed transfer: a @p cmd_bits command, an @p addr_bits address, @p dummy_bits idle clocks,
 // then the data phase at @p lanes bits per clock. The controller drives each phase, so the data
 // buffer holds data alone. A zero bit count omits that phase; @p tx or @p rx may be NULL for a
 // one-way data phase, and @p len 0 sends the phases with no data phase at all.
-int protocore_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, uint16_t cmd, uint8_t cmd_bits,
-                            uint32_t addr, uint8_t addr_bits, uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx,
-                            uint8_t *rx, uint32_t len);
+int protocore_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, uint16_t cmd,
+                                   uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits, uint8_t dummy_bits,
+                                   uint8_t lanes, const uint8_t *tx, uint8_t *rx, uint32_t len);
 
 // I2C, on the same terms: install the port once on the caller's pins, then address a device on it.
 // @p bus selects the controller. Each call carries its own timeout in milliseconds, so a wedged
@@ -600,8 +714,8 @@ int protocore_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order,
 int protocore_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz);
 int protocore_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32_t len, uint32_t ms);
 int protocore_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len, uint32_t ms);
-int protocore_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r, uint32_t rlen,
-                               uint32_t ms);
+int protocore_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r,
+                                      uint32_t rlen, uint32_t ms);
 
 // Set @p bus to @p hz. Standard mode is 100 kHz, fast 400 kHz, fast-plus 1 MHz.
 int protocore_platform_i2c_set_clock(uint8_t bus, uint32_t hz);
@@ -635,7 +749,7 @@ PROTOCORE_INLINE void protocore_platform_gpio_mode(uint8_t pin, uint8_t mode)
     gpio_set_direction(g, (mode == PROTOCORE_GPIO_OUT) ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT);
     gpio_set_pull_mode(g, (mode == PROTOCORE_GPIO_IN_PULLUP)     ? GPIO_PULLUP_ONLY
                           : (mode == PROTOCORE_GPIO_IN_PULLDOWN) ? GPIO_PULLDOWN_ONLY
-                                                          : GPIO_FLOATING);
+                                                                 : GPIO_FLOATING);
 }
 #define protocore_platform_gpio_write(pin, level) gpio_set_level((gpio_num_t)(pin), (level) ? 1 : 0)
 #define protocore_platform_gpio_read(pin) ((uint8_t)gpio_get_level((gpio_num_t)(pin)))
@@ -777,6 +891,7 @@ typedef ip_addr_t protocore_net_ip;
 #endif
 
 // A single "targets real silicon" convenience (any vendor backend, i.e. not the host software floor).
-#define PROTOCORE_VENDOR_SILICON (PROTOCORE_VENDOR_ESP || PROTOCORE_VENDOR_STM || PROTOCORE_VENDOR_RP || PROTOCORE_VENDOR_TI)
+#define PROTOCORE_VENDOR_SILICON                                                                                       \
+    (PROTOCORE_VENDOR_ESP || PROTOCORE_VENDOR_STM || PROTOCORE_VENDOR_RP || PROTOCORE_VENDOR_TI)
 
 #endif // PROTOCORE_PLATFORM_H

@@ -9,7 +9,7 @@
 #include "services/radio/ble_gatt/ble_gatt.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
-#include "shared_primitives/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
+#include "shared/hex/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
 
 #if PROTOCORE_ENABLE_BLE_GATT
 

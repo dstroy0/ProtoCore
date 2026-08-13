@@ -15,18 +15,18 @@
 
 // Thin local names over the shared byte verbs (bytes.h) so the call sites
 // below read the same as before; the cursor invariants live in one place.
-static void put(pc_span *w, uint8_t b)
+static void put(protocore_span *w, uint8_t b)
 {
-    pc_bw_put(w, b);
+    protocore_bw_put(w, b);
 }
 
 // Write the low @p nbytes of @p val, big-endian (MessagePack is network order).
-static void put_be(pc_span *w, uint64_t val, int32_t nbytes)
+static void put_be(protocore_span *w, uint64_t val, int32_t nbytes)
 {
-    pc_bw_put_be(w, val, nbytes);
+    protocore_bw_put_be(w, val, nbytes);
 }
 
-static void pc_msgpack_uint(pc_span *w, uint64_t v)
+static void protocore_msgpack_uint(protocore_span *w, uint64_t v)
 {
     if (v <= 0x7f)
     {
@@ -54,11 +54,11 @@ static void pc_msgpack_uint(pc_span *w, uint64_t v)
     }
 }
 
-static void pc_msgpack_int(pc_span *w, int64_t v)
+static void protocore_msgpack_int(protocore_span *w, int64_t v)
 {
     if (v >= 0)
     {
-        pc_msgpack_uint(w, (uint64_t)v);
+        protocore_msgpack_uint(w, (uint64_t)v);
         return;
     }
     if (v >= -32)
@@ -87,7 +87,7 @@ static void pc_msgpack_int(pc_span *w, int64_t v)
     }
 }
 
-static void pc_msgpack_str_n(pc_span *w, const char *s, size_t len)
+static void protocore_msgpack_str_n(protocore_span *w, const char *s, size_t len)
 {
     if (len <= 31)
     {
@@ -114,12 +114,12 @@ static void pc_msgpack_str_n(pc_span *w, const char *s, size_t len)
     }
 }
 
-static void pc_msgpack_str(pc_span *w, const char *s)
+static void protocore_msgpack_str(protocore_span *w, const char *s)
 {
-    pc_msgpack_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
+    protocore_msgpack_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
 }
 
-static void pc_msgpack_bytes(pc_span *w, const uint8_t *data, size_t len)
+static void protocore_msgpack_bytes(protocore_span *w, const uint8_t *data, size_t len)
 {
     if (len <= 0xff)
     {
@@ -142,17 +142,17 @@ static void pc_msgpack_bytes(pc_span *w, const uint8_t *data, size_t len)
     }
 }
 
-static void pc_msgpack_bool(pc_span *w, proto_bool b)
+static void protocore_msgpack_bool(protocore_span *w, proto_bool b)
 {
     put(w, b ? 0xc3 : 0xc2);
 }
 
-static void pc_msgpack_null(pc_span *w)
+static void protocore_msgpack_null(protocore_span *w)
 {
     put(w, 0xc0);
 }
 
-static void pc_msgpack_float(pc_span *w, float f)
+static void protocore_msgpack_float(protocore_span *w, float f)
 {
     uint32_t bits;
     mem.cpy(&bits, &f, sizeof(bits));
@@ -160,7 +160,7 @@ static void pc_msgpack_float(pc_span *w, float f)
     put_be(w, bits, 4);
 }
 
-static void pc_msgpack_array(pc_span *w, size_t count)
+static void protocore_msgpack_array(protocore_span *w, size_t count)
 {
     if (count <= 15)
     {
@@ -178,7 +178,7 @@ static void pc_msgpack_array(pc_span *w, size_t count)
     }
 }
 
-static void pc_msgpack_map(pc_span *w, size_t count)
+static void protocore_msgpack_map(protocore_span *w, size_t count)
 {
     if (count <= 15)
     {
@@ -196,10 +196,10 @@ static void pc_msgpack_map(pc_span *w, size_t count)
     }
 }
 
-static void pc_msgpack_label(pc_span *w, const char *name, int64_t num)
+static void protocore_msgpack_label(protocore_span *w, const char *name, int64_t num)
 {
     (void)name; // the binary packs carry the integer label form, as CBOR does
-    pc_msgpack_int(w, num);
+    protocore_msgpack_int(w, num);
 }
 
 // ---------------------------------------------------------------------------
@@ -209,16 +209,16 @@ static void pc_msgpack_label(pc_span *w, const char *name, int64_t num)
 // Consume the format byte at the cursor plus the @p nbytes big-endian argument that follows it.
 //
 // The format byte is MessagePack's framing, so stepping over it is this codec's step. It used to
-// live inside pc_br_take_be(), which made the shared cursor unable to express a plain big-endian
+// live inside protocore_br_take_be(), which made the shared cursor unable to express a plain big-endian
 // read; this function is where that knowledge belongs. A cursor already at the end advances to
-// len + 1 and pc_br_take_be() rejects it, so the step needs no guard of its own.
-static proto_bool take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
+// len + 1 and protocore_br_take_be() rejects it, so the step needs no guard of its own.
+static proto_bool take_be(protocore_cspan *r, size_t nbytes, uint64_t *out)
 {
     r->pos += 1;
-    return pc_br_take_be(r, nbytes, out);
+    return protocore_br_take_be(r, nbytes, out);
 }
 
-static pc_codec_type pc_msgpack_peek(pc_cspan *r)
+static protocore_codec_type protocore_msgpack_peek(protocore_cspan *r)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -286,7 +286,7 @@ static pc_codec_type pc_msgpack_peek(pc_cspan *r)
     }
 }
 
-static proto_bool pc_msgpack_read_uint(pc_cspan *r, uint64_t *out)
+static proto_bool protocore_msgpack_read_uint(protocore_cspan *r, uint64_t *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -335,7 +335,7 @@ static proto_bool pc_msgpack_read_uint(pc_cspan *r, uint64_t *out)
     return PROTO_TRUE;
 }
 
-static proto_bool pc_msgpack_read_int(pc_cspan *r, int64_t *out)
+static proto_bool protocore_msgpack_read_int(protocore_cspan *r, int64_t *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -420,7 +420,7 @@ static proto_bool pc_msgpack_read_int(pc_cspan *r, int64_t *out)
     }
 }
 
-static proto_bool pc_msgpack_read_bool(pc_cspan *r, proto_bool *out)
+static proto_bool protocore_msgpack_read_bool(protocore_cspan *r, proto_bool *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -445,7 +445,7 @@ static proto_bool pc_msgpack_read_bool(pc_cspan *r, proto_bool *out)
     return PROTO_TRUE;
 }
 
-static proto_bool pc_msgpack_read_null(pc_cspan *r)
+static proto_bool protocore_msgpack_read_null(protocore_cspan *r)
 {
     if (r->err || r->pos >= r->len || r->buf[r->pos] != 0xc0)
     {
@@ -456,7 +456,7 @@ static proto_bool pc_msgpack_read_null(pc_cspan *r)
     return PROTO_TRUE;
 }
 
-static proto_bool pc_msgpack_read_float(pc_cspan *r, float *out)
+static proto_bool protocore_msgpack_read_float(protocore_cspan *r, float *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -491,7 +491,7 @@ static proto_bool pc_msgpack_read_float(pc_cspan *r, float *out)
 }
 
 // Shared body for the str family (fixstr / str8/16/32) and bin family (bin8/16/32).
-static proto_bool read_blob(pc_cspan *r, proto_bool want_str, const uint8_t **out, size_t *len)
+static proto_bool read_blob(protocore_cspan *r, proto_bool want_str, const uint8_t **out, size_t *len)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -550,18 +550,18 @@ static proto_bool read_blob(pc_cspan *r, proto_bool want_str, const uint8_t **ou
     return PROTO_TRUE;
 }
 
-static proto_bool pc_msgpack_read_str(pc_cspan *r, const char **out, size_t *len)
+static proto_bool protocore_msgpack_read_str(protocore_cspan *r, const char **out, size_t *len)
 {
     return read_blob(r, PROTO_TRUE, (const uint8_t **)out, len);
 }
 
-static proto_bool pc_msgpack_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
+static proto_bool protocore_msgpack_read_bytes(protocore_cspan *r, const uint8_t **out, size_t *len)
 {
     return read_blob(r, PROTO_FALSE, out, len);
 }
 
 // Shared body for the array family (fixarray / array16/32) and map family.
-static proto_bool read_count(pc_cspan *r, proto_bool want_map, size_t *count)
+static proto_bool read_count(protocore_cspan *r, proto_bool want_map, size_t *count)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -603,23 +603,23 @@ static proto_bool read_count(pc_cspan *r, proto_bool want_map, size_t *count)
     return PROTO_TRUE;
 }
 
-static proto_bool pc_msgpack_read_array(pc_cspan *r, size_t *count)
+static proto_bool protocore_msgpack_read_array(protocore_cspan *r, size_t *count)
 {
     return read_count(r, PROTO_FALSE, count);
 }
 
-static proto_bool pc_msgpack_read_map(pc_cspan *r, size_t *count)
+static proto_bool protocore_msgpack_read_map(protocore_cspan *r, size_t *count)
 {
     return read_count(r, PROTO_TRUE, count);
 }
 
 /** @brief MessagePack as an instance of the codec interface. */
-const pc_codec MsgPack = {
-    pc_msgpack_uint,       pc_msgpack_int,        pc_msgpack_bytes,     pc_msgpack_str,       pc_msgpack_str_n,
-    pc_msgpack_bool,       pc_msgpack_null,       pc_msgpack_float,     pc_msgpack_array,     pc_msgpack_map,
-    pc_msgpack_label,      pc_msgpack_peek,       pc_msgpack_read_uint, pc_msgpack_read_int,  pc_msgpack_read_bytes,
-    pc_msgpack_read_str,   pc_msgpack_read_array, pc_msgpack_read_map,  pc_msgpack_read_bool, pc_msgpack_read_null,
-    pc_msgpack_read_float,
+const protocore_codec MsgPack = {
+    protocore_msgpack_uint,       protocore_msgpack_int,        protocore_msgpack_bytes,     protocore_msgpack_str,       protocore_msgpack_str_n,
+    protocore_msgpack_bool,       protocore_msgpack_null,       protocore_msgpack_float,     protocore_msgpack_array,     protocore_msgpack_map,
+    protocore_msgpack_label,      protocore_msgpack_peek,       protocore_msgpack_read_uint, protocore_msgpack_read_int,  protocore_msgpack_read_bytes,
+    protocore_msgpack_read_str,   protocore_msgpack_read_array, protocore_msgpack_read_map,  protocore_msgpack_read_bool, protocore_msgpack_read_null,
+    protocore_msgpack_read_float,
 };
 
 #endif // PROTOCORE_ENABLE_MSGPACK

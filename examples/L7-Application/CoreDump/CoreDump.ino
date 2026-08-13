@@ -32,9 +32,9 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/file_transfer/ftp/ftp_session.h"
-#include "server/exc_decoder.h"
-#include "shared_primitives/log.h"
-#include "shared_primitives/mime.h"
+#include "server/system/exc_decoder.h"
+#include "shared/log/log.h"
+#include "shared/mime/mime.h"
 #include <SD_MMC.h>
 
 static const char *WIFI_SSID = "your-ssid";

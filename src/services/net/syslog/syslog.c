@@ -11,7 +11,7 @@
 
 #if PROTOCORE_ENABLE_SYSLOG
 
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include <stdio.h>
 
 // All syslog client state, owned by one instance (internal linkage): the collector endpoint,

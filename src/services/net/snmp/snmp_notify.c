@@ -15,7 +15,7 @@
 
 // The two mandatory bindings of any v2c/v3 notification (RFC 3416 4.2.6).
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "server/clock/clock.h" // protocore_millis() - the library's clock seam (ban 5: never bare millis)
 #endif
 static const uint32_t OID_SYSUPTIME_0[] = {1, 3, 6, 1, 2, 1, 1, 3, 0};

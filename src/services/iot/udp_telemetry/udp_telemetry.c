@@ -22,7 +22,7 @@
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #endif
 static void line_append(protocore_line *l, const char *s)
 {

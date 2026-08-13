@@ -1125,6 +1125,7 @@ typedef void (*protocore_net_udp_recv_fn)(void *, protocore_udp_pcb *, protocore
 struct protocore_pcb
 {
     uint8_t tos;
+    uint8_t ttl; // RFC 9293 sec 3.9.2 MUST-49: the TTL segments go out with, configurable
     uint8_t state;
     uint16_t local_port;
     uint16_t remote_port;
@@ -1399,10 +1400,42 @@ static inline protocore_net_err protocore_net_output(protocore_pcb *p)
     (void)p;
     return PROTOCORE_NET_OK;
 }
+// Window reopening, captured. On the target this is what moves the right window edge; RFC 9293
+// section 3.8.6 makes the amount the assertable part (the receiver advertises RCV.BUFF - RCV.USER,
+// and SHLD-14 says it never moves that edge left), so a no-op here left the transport's
+// ack-on-consume model untestable. Records the call count, the running total, and the last length.
+__attribute__((weak)) int protocore_net_host_recved_calls;
+__attribute__((weak)) uint32_t protocore_net_host_recved_total;
+__attribute__((weak)) uint16_t protocore_net_host_recved_last;
+
 static inline void protocore_net_recved(protocore_pcb *p, uint16_t len)
 {
     (void)p;
-    (void)len;
+    protocore_net_host_recved_calls++;
+    protocore_net_host_recved_total += len;
+    protocore_net_host_recved_last = len;
+}
+
+/** @brief How many window updates the code under test issued. */
+static inline int mock_recved_call_count(void)
+{
+    return protocore_net_host_recved_calls;
+}
+/** @brief Total bytes the window was reopened by since the last reset. */
+static inline uint32_t mock_recved_total(void)
+{
+    return protocore_net_host_recved_total;
+}
+/** @brief The length the most recent window update carried. */
+static inline uint16_t mock_recved_last(void)
+{
+    return protocore_net_host_recved_last;
+}
+static inline void mock_recved_reset(void)
+{
+    protocore_net_host_recved_calls = 0;
+    protocore_net_host_recved_total = 0;
+    protocore_net_host_recved_last = 0;
 }
 // How much room the stack reports for the next write. A test shrinks it to drive the
 // backpressure-and-resume path, where a response has to page out across several worker loops
@@ -1444,7 +1477,7 @@ static inline void protocore_net_opt_set(void *p, uint32_t opt)
 // renderer in protocore_net_pcap.h turns that log into a .pcap the test parses and Wireshark opens.
 //
 // The log holds the fields rather than the pcap bytes because this header is parsed from inside
-// protocore_config.h, before shared_primitives/protocore_types.h supplies PROTOCORE_INLINE - so pcap.h cannot be
+// protocore_config.h, before shared/protocore_types.h supplies PROTOCORE_INLINE - so pcap.h cannot be
 // included here.
 
 #ifndef PROTOCORE_NET_HOST_PBUFS

@@ -89,7 +89,7 @@
 // --- Unaligned load ---
 // Whether this die's load instruction accepts an address that is not a multiple of the access
 // width. Xtensa does not, and the compiler then synthesizes each unaligned word from byte loads plus
-// shifts and ors, which is why shared_primitives/ aligns first and steps whole words after.
+// shifts and ors, which is why shared/ aligns first and steps whole words after.
 #ifndef PROTOCORE_HW_UNALIGNED_LOAD
 #define PROTOCORE_HW_UNALIGNED_LOAD 0
 #endif

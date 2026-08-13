@@ -15,7 +15,7 @@
 #include "services/security/audit_log/audit_log.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
-#include "shared_primitives/hex.h"
+#include "shared/hex/hex.h"
 
 #if PROTOCORE_ENABLE_AUDIT_LOG
 

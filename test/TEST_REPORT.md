@@ -486,7 +486,7 @@ _Host tests for services/web/edge_cache/edge_mesh: the CDN edge cache's mesh (si
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for the shared parameterized CRC engine (shared_primitives/crc.h)._
+_Host tests for the shared parameterized CRC engine (shared/crc/crc.h)._
 
 |   # | Test                                                  | Status | Description                                                                                    |
 | --: | :---------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
@@ -563,7 +563,7 @@ _Unit tests for the protocore_ip address core (network_drivers/network/protocore
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the unified double-ended arena (network_drivers/session/protocore_arena):_
+_Unit tests for the unified double-ended arena (server/system/protocore_arena):_
 
 |   # | Test                                                | Status | Description                                                                              |
 | --: | :-------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------- |
@@ -3820,7 +3820,7 @@ _Unit tests for the Protocol Buffers wire codec (services/iot/protobuf): the str
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the preempting work queue (network_drivers/session/preempt_queue): a lane's FIFO_
+_Unit tests for the preempting work queue (server/system/preempt_queue): a lane's FIFO_
 
 |   # | Test                                                               | Status | Description                                                                                         |
 | --: | :----------------------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
@@ -9743,7 +9743,7 @@ _Unit tests for the removable-storage state machine (services/storage/hotswap): 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the abstract logging layer (shared_primitives/log.h). Built at_
+_Unit tests for the abstract logging layer (shared/log/log.h). Built at_
 
 |   # | Test                                                  | Status | Description                                                                                                 |
 | --: | :---------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------------------- |

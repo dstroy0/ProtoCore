@@ -20,13 +20,13 @@
 
 // ProtoHandler is named by protocore_opcua_protocore_handler() in BOTH build arms, so it cannot sit behind
 // the PROTOCORE_HAS_NET_STACK guard below.
-#include "network_drivers/session/proto_handler.h"
+#include "server/system/proto_handler.h"
 
 // ---------------------------------------------------------------------------
 // Built-in type codec
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <time.h>
 #endif
 static void w_bytes(UaWriter *w, const void *src, size_t n)

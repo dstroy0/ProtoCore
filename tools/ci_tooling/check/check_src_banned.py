@@ -170,7 +170,7 @@ _CONSTEXPR_MSG = (
 # Ban #20: snprintf and vsnprintf. A format string is parsed at
 # RUNTIME, every call, to rediscover what the code already knew at compile time - roughly 3x
 # the cost of appending the pieces directly, plus it drags in the libc float formatter. Build
-# the frame instead: protocore_sb (shared_primitives/strbuf.h) bump-appends into a caller-owned
+# the frame instead: protocore_sb (shared/strbuf.h) bump-appends into a caller-owned
 # buffer and latches ok=false the first time something would not fit, so overflow is one flag
 # test at the end rather than a truncation nobody notices. It also carries its own capacity,
 # which is why this ban is swept BEFORE #19: it makes each buffer's size explicit at the
@@ -179,7 +179,7 @@ _CONSTEXPR_MSG = (
 _SNPRINTF = re.compile(r"\bv?snprintf\s*\(")
 _ALLOW_SNPRINTF = "PROTOCORE_ALLOW_SNPRINTF"
 _SNPRINTF_MSG = (
-    "snprintf/format-string formatting; build the frame with protocore_sb (shared_primitives/"
+    "snprintf/format-string formatting; build the frame with protocore_sb (shared/"
     "strbuf.h) - protocore_sb_put/protocore_sb_u32/protocore_sb_json then protocore_sb_finish (justify a true "
     "exception with // PROTOCORE_ALLOW_SNPRINTF: <reason>)"
 )

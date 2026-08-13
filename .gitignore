@@ -76,3 +76,6 @@ dependencies.lock
 # stays tracked. sdkconfig is generated from it per target and sdkconfig.old is its backup.
 sdkconfig
 sdkconfig.old
+
+# Generated per-suite Unity runners (test/gen_test_runners.py)
+unity_runner.c

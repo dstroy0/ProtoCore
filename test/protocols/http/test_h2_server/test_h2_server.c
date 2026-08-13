@@ -12,7 +12,7 @@
 #include "network_drivers/presentation/http/http2/h2_frame.h"
 #include "network_drivers/presentation/http/http2/hpack.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
-#include "network_drivers/transport/tcp/tcp_conn.h"
+#include "network_drivers/transport/tcp/protocol/protocol.h"
 
 #include <string.h>
 #include <unity.h>

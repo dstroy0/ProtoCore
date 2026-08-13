@@ -13,6 +13,6 @@
 //
 // Deliberately NO `#include "protocore.h"`. The sibling benches pull a root header in so arduino-cli's
 // dependency finder attaches the library by name, but that also drags every other header into the
-// build - and this branch is mid C-conversion, so transport/tcp.h reaches mmgr/ring.h
+// build - and this branch is mid C-conversion, so transport/tcp/tcp.h reaches mmgr/ring.h
 // whose _Atomic does not compile as C++. The bench needs mmgr/swar.h and nothing else,
 // so the build script puts src/ on the include path directly and never attaches the library at all.

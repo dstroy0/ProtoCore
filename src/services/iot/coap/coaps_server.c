@@ -17,7 +17,7 @@
 #include "services/iot/coap/coaps.h" // protocore_coaps_process()
 
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #endif
 
 // Largest inbound datagram buffered: a ClientHello, a client Finished, or one CoAP application record

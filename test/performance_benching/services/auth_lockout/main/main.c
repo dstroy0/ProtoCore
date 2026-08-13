@@ -16,7 +16,7 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "services/security/auth_lockout/auth_lockout.h"
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 
 #include <stdbool.h>
 #include <stddef.h>

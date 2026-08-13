@@ -3,7 +3,7 @@
 //
 // Host-side microbenchmark for the chunked send-pump framing (docs/FEATURE_PERFORMANCE.md section 3):
 // the per-chunk HTTP/1.1 transfer-coding framing the pump adds around each body piece
-// ("<hexlen>\r\n<body>\r\n", src/server/response.c chunk_send_pump). Isolates the framing overhead
+// ("<hexlen>\r\n<body>\r\n", src/server/io/response.c chunk_send_pump). Isolates the framing overhead
 // (the ChunkSource that fills the body is measured elsewhere - file I/O in section 1, template render
 // in the request path). Compares the current snprintf("%x\r\n") size line against a hand-rolled hex
 // writer, since snprintf's format-string parsing dominates such a tiny write. A deterministic host

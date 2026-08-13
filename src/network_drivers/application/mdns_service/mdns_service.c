@@ -24,7 +24,7 @@
 #include "mmgr/secure.h"                          // protocore_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves share
 #include "network_drivers/physical/physical.h"    // protocore_net_egress_ip: the address the A record carries
-#include "network_drivers/transport/udp.h"        // Udp.listener: the 5353 group bind and the reply
+#include "network_drivers/transport/udp/udp.h"        // Udp.listener: the 5353 group bind and the reply
 #endif
 
 #if PROTOCORE_HAS_VENDOR_MDNS

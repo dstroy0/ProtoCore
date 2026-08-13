@@ -4,7 +4,7 @@
 // Unit tests for the RFC 5424 syslog client (protocore_syslog_format formatter + protocore_syslog_init /
 // protocore_syslog_log over the udp_transport host capture seam).
 
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "services/net/syslog/syslog.h"
 #include <string.h>
 

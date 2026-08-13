@@ -12,7 +12,7 @@
 #if PROTOCORE_ENABLE_C37118
 
 #include "mmgr/endian.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_IBM_3740
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
 uint16_t protocore_c37118_crc(const uint8_t *data, size_t len)
 {

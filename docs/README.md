@@ -56,7 +56,7 @@ L6  src/network_drivers/presentation/
         sha1.h/cpp  base64.h/cpp                  mbedTLS hardware-accelerated helpers
         websocket.h/cpp  sse.h/cpp                WS frame parser; SSE connection pool
         multipart.h/cpp                           Multipart form-data parser
-L5  src/network_drivers/session/
+L5  src/server/system/
         session.h/cpp                             FreeRTOS event queue drain
 L4  src/network_drivers/transport/
         tcp.h/cpp                           lwIP callbacks, ring buffers, timeouts
@@ -380,12 +380,22 @@ src/
 │   │   └── tls_record.h
 │   └── transport/
 │       ├── tcp/
-│       │   ├── tcp_client.c
-│       │   ├── tcp_client.h
-│       │   ├── tcp_conn.c
-│       │   ├── tcp_conn.h
-│       │   ├── tcp_listener.c
-│       │   └── tcp_listener.h
+│       │   ├── client/
+│       │   │   ├── client.c
+│       │   │   └── client.h
+│       │   ├── lower/
+│       │   │   ├── lower.c
+│       │   │   └── lower.h
+│       │   ├── protocol/
+│       │   │   ├── protocol.c
+│       │   │   └── protocol.h
+│       │   ├── server/
+│       │   │   ├── server.c
+│       │   │   └── server.h
+│       │   ├── common.h
+│       │   ├── evt.h
+│       │   ├── tcp.c
+│       │   └── tcp.h
 │       ├── udp/
 │       │   ├── udp_client.c
 │       │   ├── udp_client.h
@@ -396,9 +406,6 @@ src/
 │       ├── diffserv.h
 │       ├── net_addr.c
 │       ├── net_addr.h
-│       ├── tcp.c
-│       ├── tcp.h
-│       ├── tcp_evt.h
 │       ├── udp.c
 │       └── udp.h
 ├── server/
@@ -720,7 +727,7 @@ src/
 │       ├── httpcache/  (httpcache.h, httpcache.c)
 │       ├── spa_router/  (spa_router.h, spa_router.c)
 │       └── web_terminal/  (web_terminal.h, web_terminal.c)
-├── shared_primitives/
+├── shared/
 │   ├── can.h
 │   ├── crc.h
 │   ├── hex.h

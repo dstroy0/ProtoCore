@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h3_conn.c
- * @brief HTTP/3 application engine over QUIC streams (see pc_h3_conn.h).
+ * @file protocore_h3_conn.c
+ * @brief HTTP/3 application engine over QUIC streams (see protocore_h3_conn.h).
  */
 
 #include "network_drivers/presentation/http/http3/h3_conn.h"
@@ -15,14 +15,14 @@
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 
-// pc_h3_conn_respond builds its response HEADERS frame from a fixed 256-byte QPACK block into a
+// protocore_h3_conn_respond builds its response HEADERS frame from a fixed 256-byte QPACK block into a
 // PROTOCORE_H3_STREAM_BUF output buffer, which is why that builder's failure guard carries a coverage
 // exclusion. PROTOCORE_H3_STREAM_BUF is an overridable macro (h3_conn.h), so pin the relationship here
 // rather than let a shrunken buffer silently make the excluded path reachable: 256 bytes of QPACK
 // plus the frame's type + length varints (at most 8 each).
 static_assert(PROTOCORE_H3_STREAM_BUF >= 256 + 16,
               "PROTOCORE_H3_STREAM_BUF must hold a whole response HEADERS frame: the 256-byte QPACK field section "
-              "pc_h3_conn_respond builds plus the H3 frame type and length varints");
+              "protocore_h3_conn_respond builds plus the H3 frame type and length varints");
 
 // The plaintext-pool term this file declares: one borrow per HTTP/3 connection, taken from the
 // persistent end on first use and held for the connection's life.
@@ -43,8 +43,8 @@ static proto_bool h3_conn_slot_storage(H3Conn *h3)
     uint8_t *base = h3->streams[0].buf; // H3_OFF_BUF is 0, so the borrow is recoverable from it
     if (base == NULL)
     {
-        pc_span b = pc_plaintext_persist_span(PROTOCORE_H3_CONN_BORROW);
-        if (!pc_span_ok(b))
+        protocore_span b = protocore_plaintext_persist_span(PROTOCORE_H3_CONN_BORROW);
+        if (!protocore_span_ok(b))
         {
             return PROTO_FALSE;
         }
@@ -60,7 +60,7 @@ static proto_bool h3_conn_slot_storage(H3Conn *h3)
     return PROTO_TRUE;
 }
 
-static H3Stream *pc_h3_stream_get(H3Conn *h3, uint64_t id, proto_bool create)
+static H3Stream *protocore_h3_stream_get(H3Conn *h3, uint64_t id, proto_bool create)
 {
     H3Stream *free_slot = NULL;
     for (size_t i = 0; i < PROTOCORE_H3_MAX_STREAMS; i++)
@@ -137,7 +137,7 @@ static void h3_fail(H3Conn *h3, uint64_t error_code)
 {
     if (h3->qc)
     {
-        pc_quic_conn_close_app(h3->qc, error_code);
+        protocore_quic_conn_close_app(h3->qc, error_code);
     }
 }
 
@@ -146,12 +146,12 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
 {
     // The bytes this dispatch works out of: the coalesced body and what QPACK decodes through. They
     // live for the call, so they come from the transient end and go back at every exit.
-    const size_t mark = pc_plaintext_mark();
-    pc_span bs = pc_plaintext_span(PROTOCORE_H3_STREAM_BUF, 4);
-    pc_span sc = pc_plaintext_span(PROTOCORE_H3_QPACK_SCRATCH, 4);
-    if (!pc_span_ok(bs) || !pc_span_ok(sc))
+    const size_t mark = protocore_plaintext_mark();
+    protocore_span bs = protocore_plaintext_span(PROTOCORE_H3_STREAM_BUF, 4);
+    protocore_span sc = protocore_plaintext_span(PROTOCORE_H3_QPACK_SCRATCH, 4);
+    if (!protocore_span_ok(bs) || !protocore_span_ok(sc))
     {
-        pc_plaintext_release(mark);
+        protocore_plaintext_release(mark);
         h3_fail(h3, H3_INTERNAL_ERROR);
         return;
     }
@@ -163,7 +163,7 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
     while (off < st->buf_len)
     {
         H3Frame fr;
-        if (!pc_h3_frame_parse(st->buf + off, st->buf_len - off, &fr))
+        if (!protocore_h3_frame_parse(st->buf + off, st->buf_len - off, &fr))
         {
             break;
         }
@@ -178,20 +178,20 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
         // previously skipped over as if the frame were an unknown type.
         if (fr.type == H3_SETTINGS || fr.type == H3_GOAWAY || fr.type == H3_MAX_PUSH_ID || fr.type == H3_CANCEL_PUSH)
         {
-            pc_plaintext_release(mark);
+            protocore_plaintext_release(mark);
             h3_fail(h3, H3_FRAME_UNEXPECTED);
             return;
         }
         if (fr.type == H3_DATA && !st->have_headers)
         {
-            pc_plaintext_release(mark);
+            protocore_plaintext_release(mark);
             h3_fail(h3, H3_FRAME_UNEXPECTED);
             return;
         }
         if (fr.type == H3_HEADERS)
         {
             ReqEmit e = {st};
-            pc_qpack_decode(fp, (size_t)fr.length, scratch, PROTOCORE_H3_QPACK_SCRATCH, req_emit, &e);
+            protocore_qpack_decode(fp, (size_t)fr.length, scratch, PROTOCORE_H3_QPACK_SCRATCH, req_emit, &e);
             st->have_headers = PROTO_TRUE;
         }
         else if (fr.type == H3_DATA)
@@ -220,7 +220,7 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
     {
         h3->on_request(h3->app, h3, st->id, st->method, st->path, st->authority, body, body_len);
     }
-    pc_plaintext_release(mark);
+    protocore_plaintext_release(mark);
 }
 
 static void append(H3Stream *st, const uint8_t *data, size_t len)
@@ -235,11 +235,11 @@ static void append(H3Stream *st, const uint8_t *data, size_t len)
 
 // Read the leading stream-type varint of a uni stream and set st->role; consumes it from the buffer.
 // Returns false if more bytes are needed (nothing consumed).
-static proto_bool pc_h3_classify_uni_stream(H3Conn *h3, H3Stream *st)
+static proto_bool protocore_h3_classify_uni_stream(H3Conn *h3, H3Stream *st)
 {
     uint64_t type = 0;
     size_t c = 0;
-    if (!pc_quic_varint_decode(st->buf, st->buf_len, &type, &c))
+    if (!protocore_quic_varint_decode(st->buf, st->buf_len, &type, &c))
     {
         return PROTO_FALSE; // need more bytes for the varint
     }
@@ -275,13 +275,13 @@ static proto_bool pc_h3_classify_uni_stream(H3Conn *h3, H3Stream *st)
 }
 
 // Parse whatever complete frames the control stream holds (SETTINGS first), consuming them.
-static void pc_h3_consume_control(H3Conn *h3, H3Stream *st)
+static void protocore_h3_consume_control(H3Conn *h3, H3Stream *st)
 {
     size_t off = 0;
     while (off < st->buf_len)
     {
         H3Frame fr;
-        if (!pc_h3_frame_parse(st->buf + off, st->buf_len - off, &fr))
+        if (!protocore_h3_frame_parse(st->buf + off, st->buf_len - off, &fr))
         {
             break;
         }
@@ -304,8 +304,8 @@ static void pc_h3_consume_control(H3Conn *h3, H3Stream *st)
                 return;
             }
             h3->peer_settings_seen = PROTO_TRUE;
-            pc_h3_settings_defaults(&h3->peer_settings);
-            if (!pc_h3_parse_settings(st->buf + off + fr.header_len, (size_t)fr.length, &h3->peer_settings))
+            protocore_h3_settings_defaults(&h3->peer_settings);
+            if (!protocore_h3_parse_settings(st->buf + off + fr.header_len, (size_t)fr.length, &h3->peer_settings))
             {
                 h3_fail(h3, H3_SETTINGS_ERROR);
                 return;
@@ -321,7 +321,7 @@ static void on_stream_data(void *app, struct QuicConn *, uint64_t stream_id, con
                            proto_bool fin)
 {
     H3Conn *h3 = (H3Conn *)app;
-    H3Stream *st = pc_h3_stream_get(h3, stream_id, PROTO_TRUE);
+    H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_TRUE);
     if (!st)
     {
         return;
@@ -335,14 +335,14 @@ static void on_stream_data(void *app, struct QuicConn *, uint64_t stream_id, con
     append(st, data, len);
 
     // A unidirectional stream begins with a stream-type varint; classify it once.
-    if (st->role != H3_ROLE_REQUEST && !st->type_read && st->buf_len >= 1 && !pc_h3_classify_uni_stream(h3, st))
+    if (st->role != H3_ROLE_REQUEST && !st->type_read && st->buf_len >= 1 && !protocore_h3_classify_uni_stream(h3, st))
     {
         return; // need more bytes for the varint, or the stream was refused
     }
 
     if (st->role == H3_ROLE_CONTROL)
     {
-        pc_h3_consume_control(h3, st);
+        protocore_h3_consume_control(h3, st);
         return;
     }
     if (st->role != H3_ROLE_REQUEST)
@@ -368,22 +368,22 @@ static void on_handshake_done(void *app, struct QuicConn *qc)
 
     // Server control stream (id 3): stream type 0x00 + SETTINGS.
     uint8_t buf[64];
-    size_t p = pc_quic_varint_encode(buf, sizeof(buf), 0x00);
+    size_t p = protocore_quic_varint_encode(buf, sizeof(buf), 0x00);
     static const uint64_t ids[] = {H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, H3_SETTINGS_QPACK_BLOCKED_STREAMS};
     static const uint64_t vals[] = {0, 0};
-    p += pc_h3_build_settings(buf + p, sizeof(buf) - p, ids, vals, 2);
-    pc_quic_conn_stream_send(qc, 3, buf, p, PROTO_FALSE);
+    p += protocore_h3_build_settings(buf + p, sizeof(buf) - p, ids, vals, 2);
+    protocore_quic_conn_stream_send(qc, 3, buf, p, PROTO_FALSE);
 
     // QPACK encoder (id 7, type 0x02) and decoder (id 11, type 0x03) streams: type byte only.
     uint8_t t;
-    size_t n = pc_quic_varint_encode(&t, 1, 0x02);
-    pc_quic_conn_stream_send(qc, 7, &t, n, PROTO_FALSE);
-    n = pc_quic_varint_encode(&t, 1, 0x03);
-    pc_quic_conn_stream_send(qc, 11, &t, n, PROTO_FALSE);
+    size_t n = protocore_quic_varint_encode(&t, 1, 0x02);
+    protocore_quic_conn_stream_send(qc, 7, &t, n, PROTO_FALSE);
+    n = protocore_quic_varint_encode(&t, 1, 0x03);
+    protocore_quic_conn_stream_send(qc, 11, &t, n, PROTO_FALSE);
     h3->next_uni_id = 15;
 }
 
-void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app)
+void protocore_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app)
 {
     uint8_t *base = h3->streams[0].buf; // the borrow is the connection's, not the call's
     mem.set(h3, 0, sizeof(*h3));
@@ -403,16 +403,16 @@ void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, vo
     {
         h3->streams[i].id = UINT64_MAX;
     }
-    pc_h3_settings_defaults(&h3->peer_settings);
+    protocore_h3_settings_defaults(&h3->peer_settings);
 
     QuicConnCallbacks cb = {on_stream_data, on_handshake_done, h3};
     qc->cb = cb;
 }
 
-proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type, const uint8_t *body,
+proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type, const uint8_t *body,
                               size_t body_len)
 {
-    H3Stream *st = pc_h3_stream_get(h3, stream_id, PROTO_FALSE);
+    H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_FALSE);
     if (st)
     {
         st->responded = PROTO_TRUE;
@@ -420,31 +420,31 @@ proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const 
 
     // The bytes this response is built out of: the QPACK field section and the frames carrying it.
     // Both live for the call.
-    const size_t mark = pc_plaintext_mark();
-    pc_span bl = pc_plaintext_span(PROTOCORE_H3_QPACK_BLOCK, 4);
-    pc_span ob = pc_plaintext_span(PROTOCORE_H3_STREAM_BUF, 4);
-    if (!pc_span_ok(bl) || !pc_span_ok(ob))
+    const size_t mark = protocore_plaintext_mark();
+    protocore_span bl = protocore_plaintext_span(PROTOCORE_H3_QPACK_BLOCK, 4);
+    protocore_span ob = protocore_plaintext_span(PROTOCORE_H3_STREAM_BUF, 4);
+    if (!protocore_span_ok(bl) || !protocore_span_ok(ob))
     {
-        pc_plaintext_release(mark);
+        protocore_plaintext_release(mark);
         return PROTO_FALSE;
     }
     uint8_t *block = bl.buf;
     uint8_t *out = ob.buf;
 
     // QPACK field section: prefix + :status + optional content-type + content-length.
-    size_t bp = pc_qpack_encode_prefix(block, PROTOCORE_H3_QPACK_BLOCK);
+    size_t bp = protocore_qpack_encode_prefix(block, PROTOCORE_H3_QPACK_BLOCK);
     char st3[4];
     st3[0] = (char)('0' + (status / 100) % 10);
     st3[1] = (char)('0' + (status / 10) % 10);
     st3[2] = (char)('0' + status % 10);
     st3[3] = '\0';
-    bp += pc_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, ":status", 7, st3, 3);
+    bp += protocore_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, ":status", 7, st3, 3);
     if (content_type)
     {
         // Cap above the largest content-type that can fit this block even at QPACK-Huffman's best
         // 5-bit/char (~PROTOCORE_H3_QPACK_BLOCK * 8/5), so an over-long value trips the encode's reject
-        // below instead of being truncated into a fittable length (see the matching pc_h2_conn note).
-        bp += pc_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12, content_type,
+        // below instead of being truncated into a fittable length (see the matching protocore_h2_conn note).
+        bp += protocore_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12, content_type,
                                      strnlen(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
     }
     char clen[16];
@@ -464,28 +464,28 @@ proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const 
             clen[cl++] = tmp[--n];
         }
     }
-    bp += pc_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-length", 14, clen, cl);
+    bp += protocore_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-length", 14, clen, cl);
 
     // HEADERS frame + DATA frame, sent on the request stream with FIN.
-    size_t op = pc_h3_build_headers(out, PROTOCORE_H3_STREAM_BUF, block, bp);
+    size_t op = protocore_h3_build_headers(out, PROTOCORE_H3_STREAM_BUF, block, bp);
     if (!op)
     {
-        pc_plaintext_release(mark);
+        protocore_plaintext_release(mark);
         return PROTO_FALSE;
         // fits
     }
     if (body_len)
     {
-        size_t dn = pc_h3_build_data(out + op, PROTOCORE_H3_STREAM_BUF - op, body, body_len);
+        size_t dn = protocore_h3_build_data(out + op, PROTOCORE_H3_STREAM_BUF - op, body, body_len);
         if (!dn)
         {
-            pc_plaintext_release(mark);
+            protocore_plaintext_release(mark);
             return PROTO_FALSE;
         }
         op += dn;
     }
-    const proto_bool sent = pc_quic_conn_stream_send(h3->qc, stream_id, out, op, PROTO_TRUE) == op;
-    pc_plaintext_release(mark);
+    const proto_bool sent = protocore_quic_conn_stream_send(h3->qc, stream_id, out, op, PROTO_TRUE) == op;
+    protocore_plaintext_release(mark);
     return sent;
 }
 

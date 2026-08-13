@@ -8,7 +8,7 @@
 
 #include "services/fieldbus/rawl2/rawl2.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC32_ISO_HDLC
+#include "shared/crc/crc.h" // PROTOCORE_CRC32_ISO_HDLC
 
 #if PROTOCORE_ENABLE_RAWL2
 

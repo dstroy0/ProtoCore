@@ -11,7 +11,7 @@
  */
 
 #include "services/radio/zigbee/zigbee.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_IBM_3740
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
 #if PROTOCORE_ENABLE_ZIGBEE
 

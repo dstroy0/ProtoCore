@@ -4,7 +4,7 @@
 // On-device CCOUNT microbenchmark for the FANUC Stream Motion / option J519 UDP codec
 // (services/machine_tool/fanuc_j519): builders and parsers for the PC->robot Motion Command and the robot->PC
 // Robot Status and Ack packets - straight-line field packing at fixed offsets (integers
-// little-endian via shared_primitives/endian.h, floats moved through a uint32_t with memcpy), pure
+// little-endian via shared/endian.h, floats moved through a uint32_t with memcpy), pure
 // (no sockets, no heap). Worked pattern follows performance_benching/device/modbus (a pure protocol codec with no
 // hardware involved), so every call here exercises the real production code path; there is no
 // hardware to stub (Stream Motion is a plain UDP payload codec - the caller owns the socket).

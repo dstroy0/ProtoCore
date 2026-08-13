@@ -21,7 +21,7 @@
 #include "mmgr/float_bits.h"       // proto_dbl_sign / proto_dbl_exp / proto_dbl_mant - the field reads
 #include "mmgr/protostr.h"         // str.len - a word per test, bounded by a known width
 #include "mmgr/rawmemcpy.h"        // proto_raw_read - the span move protocore_sb_put_n is built on
-#include "shared_primitives/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
+#include "shared/hex/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
 
 /** @brief Bump-append target; @c ok latches false once an append would overflow @c cap. */
 typedef struct

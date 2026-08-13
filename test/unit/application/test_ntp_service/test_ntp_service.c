@@ -7,7 +7,7 @@
 
 #include "network_drivers/application/ntp/ntp.h" // the packet under test
 #include "network_drivers/application/ntp_service/ntp_service.h"
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "protocore_net_host.h"
 #include <string.h>
 

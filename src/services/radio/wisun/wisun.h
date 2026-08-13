@@ -22,7 +22,7 @@
 #define PROTOCORE_WISUN_H
 
 #include "protocore_config.h"
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 
 PROTOCORE_BEGIN_DECLS
 

@@ -37,7 +37,6 @@ typedef struct
  * @param peer_window   the peer's initial window from CHANNEL_OPEN / CONFIRMATION.
  * @param peer_max_pkt  the peer's maximum packet size from the same message.
  */
-void protocore_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_window, uint32_t peer_max_pkt);
 
 /**
  * @brief Account @p n inbound bytes against our window.
@@ -45,7 +44,6 @@ void protocore_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_wi
  * @return false if @p n exceeds what we advertised - the peer overran the window (RFC 4254 sec 5.2)
  *         and the caller must fail the channel. The window is left untouched on failure.
  */
-proto_bool protocore_ssh_flow_recv_take(SshFlow *f, uint32_t n);
 
 /**
  * @brief Decide whether a WINDOW_ADJUST is due, and for how much. Does not mutate.
@@ -60,13 +58,10 @@ proto_bool protocore_ssh_flow_recv_take(SshFlow *f, uint32_t n);
  *
  * @return true if a WINDOW_ADJUST is due; @p *add receives the delta to advertise.
  */
-proto_bool protocore_ssh_flow_replenish_due(const SshFlow *f, uint32_t *add);
 
 /** @brief Credit our window by @p add, once that WINDOW_ADJUST has actually been sent. */
-void protocore_ssh_flow_local_credit(SshFlow *f, uint32_t add);
 
 /** @brief True if @p len bytes fit both the peer's remaining window and its maximum packet size. */
-proto_bool protocore_ssh_flow_send_allows(const SshFlow *f, size_t len);
 
 /**
  * @brief Clamp a would-be send to what the peer currently permits.
@@ -77,10 +72,8 @@ proto_bool protocore_ssh_flow_send_allows(const SshFlow *f, size_t len);
  *
  * @return min(@p want, peer window, peer maximum packet size).
  */
-uint32_t protocore_ssh_flow_send_cap(const SshFlow *f, uint32_t want);
 
 /** @brief Account @p n outbound bytes against the peer's window (call only after send_allows()). */
-void protocore_ssh_flow_send_take(SshFlow *f, uint32_t n);
 
 /**
  * @brief Credit the peer's window from an inbound WINDOW_ADJUST.
@@ -88,7 +81,6 @@ void protocore_ssh_flow_send_take(SshFlow *f, uint32_t n);
  * Saturates at UINT32_MAX rather than wrapping: a peer advertising a total past 2^32 is out of spec,
  * and wrapping would hand us a tiny window and stall the transfer.
  */
-void protocore_ssh_flow_peer_add(SshFlow *f, uint32_t add);
 
 // ---------------------------------------------------------------------------
 // Channel signaling (RFC 4254 sec 5)
@@ -194,7 +186,6 @@ extern SshChannel ssh_chan[MAX_SSH_CONNS][PROTOCORE_SSH_MAX_CHANNELS];
  *  the channel id it arrived on. */
 typedef void (*SshChannelDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
 /** @brief Install the inbound-data callback (session channels). */
-void protocore_ssh_channel_set_data_cb(SshChannelDataCb cb);
 
 /**
  * @brief "direct-tcpip" forward request: a client asked the server to open a TCP
@@ -212,10 +203,8 @@ typedef int (*SshForwardOpenCb)(uint8_t slot, uint32_t channel, const char *host
  *  forwarded TCP socket). Kept separate from the session data callback. */
 typedef void (*SshForwardDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
 /** @brief Install the direct-tcpip forward open-policy callback (opt-in). */
-void protocore_ssh_channel_set_forward_open_cb(SshForwardOpenCb cb);
 
 /** @brief Install the direct-tcpip forward inbound-data callback. */
-void protocore_ssh_channel_set_forward_data_cb(SshForwardDataCb cb);
 
 /**
  * @brief "tcpip-forward" remote-forward request (ssh -R): the client asks the server
@@ -232,10 +221,8 @@ typedef int (*SshRemoteForwardOpenCb)(uint8_t slot, const char *bind_addr, size_
  *  @return 0 if a matching forward was cancelled, < 0 if none / unsupported. */
 typedef int (*SshRemoteForwardCancelCb)(uint8_t slot, const char *bind_addr, size_t addr_len, uint16_t bind_port);
 /** @brief Install the remote-forward (ssh -R) open-policy callback (opt-in). */
-void protocore_ssh_channel_set_rforward_open_cb(SshRemoteForwardOpenCb cb);
 
 /** @brief Install the remote-forward (ssh -R) cancel callback (opt-in). */
-void protocore_ssh_channel_set_rforward_cancel_cb(SshRemoteForwardCancelCb cb);
 
 /**
  * @brief Result of the client's reply to a server-initiated forwarded-tcpip channel:
@@ -245,15 +232,12 @@ void protocore_ssh_channel_set_rforward_cancel_cb(SshRemoteForwardCancelCb cb);
  */
 typedef void (*SshForwardConfirmCb)(uint8_t slot, uint32_t channel, proto_bool ok);
 /** @brief Install the forwarded-tcpip open-confirmation callback (opt-in, ssh -R). */
-void protocore_ssh_channel_set_forward_confirm_cb(SshForwardConfirmCb cb);
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 /** @brief A `subsystem "sftp"` request was accepted on @p channel; the binding starts an SFTP session. */
 typedef void (*SshSftpOpenCb)(uint8_t slot, uint32_t channel);
 /** @brief Inbound bytes on an SFTP channel (the raw SSH_FXP_* stream) - kept out of the session data cb. */
 typedef void (*SshSftpDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
-void protocore_ssh_channel_set_sftp_open_cb(SshSftpOpenCb cb);
-void protocore_ssh_channel_set_sftp_data_cb(SshSftpDataCb cb);
 /** @brief The registered sftp-open callback, or null; fired when sec 6.5 names the subsystem. */
 SshSftpOpenCb protocore_ssh_channel_sftp_open_cb(void);
 #endif
@@ -263,8 +247,6 @@ SshSftpOpenCb protocore_ssh_channel_sftp_open_cb(void);
 typedef void (*SshScpOpenCb)(uint8_t slot, uint32_t channel, const char *cmd, size_t cmd_len);
 /** @brief Inbound bytes on an SCP channel (the RCP protocol stream). */
 typedef void (*SshScpDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
-void protocore_ssh_channel_set_scp_open_cb(SshScpOpenCb cb);
-void protocore_ssh_channel_set_scp_data_cb(SshScpDataCb cb);
 /** @brief The registered scp-open callback, or null; fired when sec 6.5 names an scp command. */
 SshScpOpenCb protocore_ssh_channel_scp_open_cb(void);
 #endif
@@ -281,8 +263,6 @@ SshScpOpenCb protocore_ssh_channel_scp_open_cb(void);
  *         small). On success the caller emits @p out and, on the eventual confirm,
  *         bridges bytes on the returned channel.
  */
-int protocore_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t conn_port, const char *orig_addr,
-                                         uint16_t orig_port, uint8_t *out, size_t *out_len, size_t cap);
 
 /**
  * @brief Handle SSH_MSG_CHANNEL_OPEN_CONFIRMATION for a channel we opened (ssh -R).
@@ -291,7 +271,6 @@ int protocore_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint1
  * window / max-packet, and marks it open. Fires the confirm callback (@p ok = true).
  * @return 0 on success, -1 if malformed or no matching pending channel.
  */
-int protocore_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload, size_t len);
 
 /**
  * @brief Handle SSH_MSG_CHANNEL_OPEN_FAILURE for a channel we opened (ssh -R).
@@ -299,7 +278,6 @@ int protocore_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload,
  * Frees the pending channel and fires the confirm callback (@p ok = false).
  * @return 0 on success, -1 if malformed or no matching pending channel.
  */
-int protocore_ssh_channel_handle_open_failure(uint8_t i, const uint8_t *payload, size_t len);
 
 /**
  * @brief Handle SSH_MSG_GLOBAL_REQUEST (RFC 4254 §4).
@@ -315,7 +293,6 @@ int protocore_ssh_channel_handle_open_failure(uint8_t i, const uint8_t *payload,
  * @return 0 on success (a reply is in @p out with *@p out_len bytes, or *@p out_len is
  *         0 when no reply is due), -1 if the message is malformed.
  */
-int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap);
 
 /**
  * @brief Bind a sec 6.5 file-transfer service to an open channel.
@@ -327,19 +304,15 @@ int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uin
  *
  * @return 0 on success, -1 when the channel is closed or unknown.
  */
-int protocore_ssh_channel_bind_service(uint8_t i, uint32_t channel, SshChanService service);
 
 /** @brief Reset channel state for slot @p i. */
-void protocore_ssh_channel_init(uint8_t i);
 
 /** @brief The open channel @p id on connection @p i, or null. Local id == slot index. */
-SshChannel *protocore_ssh_chan_by_id(uint8_t i, uint32_t id);
 
 /**
  * @brief First free channel slot on connection @p i, or -1 if the pool is full. A pending
  *        (opened-but-unconfirmed) channel is in use just like an open one.
  */
-int protocore_ssh_chan_alloc(uint8_t i);
 
 /**
  * @brief Handle SSH_MSG_CHANNEL_OPEN and emit CHANNEL_OPEN_CONFIRMATION.
@@ -347,18 +320,14 @@ int protocore_ssh_chan_alloc(uint8_t i);
  * Accepts a "session" channel; any other type yields CHANNEL_OPEN_FAILURE.
  * @return 0 if a response was produced, -1 if malformed.
  */
-int protocore_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                                      size_t cap);
 
 // RFC 4250 sec 4.9.3 lists pty-req, env, shell, exec and subsystem under "Connection Protocol
 // Channel Request Names", so what each carries after want_reply is this layer's to check. Both
 // answer one question: are the fields the section names present and whole.
 
 /** @brief Read @p n consecutive strings from @p off: true when every one is present and whole. */
-proto_bool ssh_req_strings_present(const uint8_t *p, size_t len, size_t off, uint8_t n);
 
 /** @brief RFC 4254 sec 6.2: string TERM, four uint32 dimensions, string encoded terminal modes. */
-proto_bool ssh_pty_req_fields_present(const uint8_t *p, size_t len, size_t off);
 
 // ---------------------------------------------------------------------------
 // RFC 4254 sec 6.2 / sec 6.7 / sec 8 - the pseudo-terminal a session channel carries
@@ -393,19 +362,16 @@ typedef struct
  * @param len       Bytes in @p modes.
  * @param consumed  Set to the bytes parsed before TTY_OP_END or an undefined opcode. May be null.
  */
-proto_bool ssh_pty_modes_valid(const uint8_t *modes, uint32_t len, uint32_t *consumed);
 
 /**
  * @brief Parse a "pty-req" body (sec 6.2) starting at @p off.
  * @return true when every field is present and whole and the mode stream parses.
  */
-proto_bool ssh_pty_req_parse(const uint8_t *p, size_t len, size_t off, SshPtyRequest *out);
 
 /**
  * @brief Parse a "window-change" body (sec 6.7): four uint32 dimensions, no reply.
  * @return true when all four are present.
  */
-proto_bool ssh_window_change_parse(const uint8_t *p, size_t len, size_t off, SshPtyRequest *out);
 
 /** @brief An accepted "pty-req" on channel @p channel. Return false to refuse the terminal. */
 typedef proto_bool (*SshPtyReqCb)(uint8_t i, uint32_t channel, const SshPtyRequest *pty);
@@ -415,14 +381,10 @@ typedef void (*SshWindowChangeCb)(uint8_t i, uint32_t channel, uint32_t width_ch
                                   uint32_t width_px, uint32_t height_px);
 
 /** @brief Install the sec 6.2 handler. Without one a "pty-req" is refused: no terminal exists. */
-void protocore_ssh_channel_set_pty_req_cb(SshPtyReqCb cb);
 
 /** @brief Install the sec 6.7 handler. */
-void protocore_ssh_channel_set_window_change_cb(SshWindowChangeCb cb);
 
 /** @brief The terminal dimensions channel @p channel carries, or false when it has no pty. */
-proto_bool protocore_ssh_channel_pty(uint8_t i, uint32_t channel, uint32_t *width_chars, uint32_t *height_rows,
-                                     uint32_t *width_px, uint32_t *height_px);
 
 // ---------------------------------------------------------------------------
 // RFC 4254 sec 6.10 - returning exit status
@@ -438,7 +400,6 @@ proto_bool protocore_ssh_channel_pty(uint8_t i, uint32_t channel, uint32_t *widt
  *
  * @return 0 on success, -1 when the channel is closed or the stream is gone.
  */
-int protocore_ssh_channel_send_exit_status(uint8_t i, uint32_t channel, uint32_t exit_status);
 
 /**
  * @brief Send "exit-signal" for a command killed by a signal (RFC 4254 sec 6.10).
@@ -448,8 +409,6 @@ int protocore_ssh_channel_send_exit_status(uint8_t i, uint32_t channel, uint32_t
  * @param err_msg      Error message in UTF-8; may be null for an empty one.
  * @return 0 on success, -1 when the channel is closed, the stream is gone, or the names do not fit.
  */
-int protocore_ssh_channel_send_exit_signal(uint8_t i, uint32_t channel, const char *signal_name, proto_bool core_dumped,
-                                           const char *err_msg);
 
 #if PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
 /**
@@ -460,8 +419,6 @@ int protocore_ssh_channel_send_exit_signal(uint8_t i, uint32_t channel, const ch
  * than including a header from the layer above. @p off points at the request-specific argument and
  * may be advanced; *@p accept is raised for a subsystem the base set does not already admit.
  */
-void ssh_classify_file_transfer_request(uint8_t i, uint32_t channel, const uint8_t *rtype, uint32_t rtype_len,
-                                        const uint8_t *payload, size_t len, size_t *off, proto_bool *accept);
 #endif
 
 /**
@@ -474,8 +431,6 @@ void ssh_classify_file_transfer_request(uint8_t i, uint32_t channel, const uint8
  * CHANNEL_FAILURE is written to @p out and *@p out_len > 0; otherwise *@p out_len is 0.
  * @return 0 on success, -1 if malformed.
  */
-int protocore_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                                         size_t cap);
 
 /**
  * @brief Handle SSH_MSG_CHANNEL_DATA: bounds-check, update the window, and
@@ -483,8 +438,6 @@ int protocore_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size
  *        CHANNEL_WINDOW_ADJUST is written to @p out (*@p out_len > 0).
  * @return 0 on success, -1 if malformed or channel not open.
  */
-int protocore_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                                      size_t cap);
 
 /**
  * @brief Handle SSH_MSG_CHANNEL_EXTENDED_DATA (RFC 4254 §5.2): bounds-check, update
@@ -494,8 +447,6 @@ int protocore_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t 
  *        (*@p out_len > 0).
  * @return 0 on success, -1 if malformed or channel not open.
  */
-int protocore_ssh_channel_handle_extended_data(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out,
-                                               size_t *out_len, size_t cap);
 
 /**
  * @brief Build an SSH_MSG_CHANNEL_DATA message carrying @p data to the client on
@@ -503,27 +454,22 @@ int protocore_ssh_channel_handle_extended_data(uint8_t i, const uint8_t *payload
  * @return 0 on success, -1 if the channel is closed/unknown, the peer window is
  *         too small, or @p out is too small.
  */
-int protocore_ssh_channel_build_data(uint8_t i, uint32_t channel, const uint8_t *data, size_t len, uint8_t *out,
-                                     size_t *out_len, size_t cap);
 
 /**
  * @brief Handle SSH_MSG_CHANNEL_WINDOW_ADJUST (grows the peer window).
  * @return 0 on success, -1 if malformed.
  */
-int protocore_ssh_channel_handle_window_adjust(uint8_t i, const uint8_t *payload, size_t len);
 
 /**
  * @brief Build SSH_MSG_CHANNEL_EOF for channel @p channel and latch that we sent it.
  *        The channel stays open (RFC 4254 sec 5.3).
  * @return 0 on success, -1 if the channel is closed/unknown or @p out is too small.
  */
-int protocore_ssh_channel_build_eof(uint8_t i, uint32_t channel, uint8_t *out, size_t *out_len, size_t cap);
 
 /**
  * @brief Build SSH_MSG_CHANNEL_CLOSE for channel @p channel and mark it closed.
  * @return 0 on success, -1 if the channel is closed/unknown or @p out is too small.
  */
-int protocore_ssh_channel_build_close(uint8_t i, uint32_t channel, uint8_t *out, size_t *out_len, size_t cap);
 
 /** @brief Bytes in SSH_MSG_CHANNEL_EOF: the message number and the recipient channel. */
 #define SSH_CHANNEL_EOF_LEN 5u
@@ -535,26 +481,21 @@ int protocore_ssh_channel_build_close(uint8_t i, uint32_t channel, uint8_t *out,
  * @brief Build SSH_MSG_CHANNEL_DATA for @p channel and put it on the slot's stream (sec 5.2).
  * @return the bytes accepted from @p data, -1 when the stream is gone or the build failed.
  */
-int protocore_ssh_channel_send_data(uint8_t i, uint32_t channel, const uint8_t *data, size_t len);
 
 /**
  * @brief Build SSH_MSG_CHANNEL_EOF for @p channel and put it on the slot's stream (sec 5.3).
  * @return 0 on success, -1 otherwise.
  */
-int protocore_ssh_channel_send_eof(uint8_t i, uint32_t channel);
 
 /**
  * @brief Build SSH_MSG_CHANNEL_CLOSE for @p channel and put it on the slot's stream (sec 5.3).
  * @return 0 on success, -1 otherwise.
  */
-int protocore_ssh_channel_send_close(uint8_t i, uint32_t channel);
 
 /**
  * @brief Open a "forwarded-tcpip" channel to the peer and put it on the slot's stream (sec 7.2).
  * @return the local channel number on success, -1 when the pool is full or the stream is gone.
  */
-int protocore_ssh_channel_send_open_forwarded(uint8_t i, const char *conn_addr, uint16_t conn_port,
-                                              const char *orig_addr, uint16_t orig_port);
 
 /**
  * @brief Handle an inbound SSH_MSG_CHANNEL_EOF: mark the peer done sending on the
@@ -562,15 +503,12 @@ int protocore_ssh_channel_send_open_forwarded(uint8_t i, const char *conn_addr, 
  *        direction keeps carrying data (RFC 4254 sec 5.3).
  * @return 0 on success, -1 if malformed or the channel is unknown.
  */
-int protocore_ssh_channel_handle_eof(uint8_t i, const uint8_t *payload, size_t len);
 
 /**
  * @brief Handle an inbound SSH_MSG_CHANNEL_CLOSE: route to the recipient channel,
  *        reply with EOF + CLOSE, and mark it closed.
  * @return 0 if a response was produced, -1 if malformed or the channel is unknown.
  */
-int protocore_ssh_channel_handle_close(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                                       size_t cap);
 
 // ---------------------------------------------------------------------------
 // RFC 4254 sec 7 - TCP/IP port forwarding
@@ -588,7 +526,6 @@ int protocore_ssh_channel_handle_close(uint8_t i, const uint8_t *payload, size_t
 typedef proto_bool (*SshForwardPolicyCb)(const char *host, uint16_t port);
 
 /** @brief Install the forward-target policy (optional; default permits all). */
-void protocore_ssh_forward_set_policy_cb(SshForwardPolicyCb cb);
 
 /**
  * @brief Enable direct-tcpip forwarding: install the channel forward callbacks.
@@ -596,14 +533,12 @@ void protocore_ssh_forward_set_policy_cb(SshForwardPolicyCb cb);
  * Call once after protocore_ssh_conn_setup(). Until then (or if PROTOCORE_SSH_PORT_FORWARD is 0)
  * the channel codec refuses every direct-tcpip open, so there is no open relay.
  */
-void protocore_ssh_forward_begin(void);
 
 /**
  * @brief Pump every forward on SSH connection @p ssh_slot: move buffered target
  *        bytes to the client (bounded by the channel's peer window) and propagate
  *        a close from either side. Called from the SSH connection poll each loop.
  */
-void protocore_ssh_forward_pump(uint8_t ssh_slot);
 
 /**
  * @brief RFC 4254 sec 7.2: the sec 7.1 binding that owns @p listener_idx.
@@ -612,16 +547,198 @@ void protocore_ssh_forward_pump(uint8_t ssh_slot);
  * carrying "the address that was connected" and "port that was connected", which are the ones the
  * binding requested. False when no active binding owns the listener.
  */
-proto_bool protocore_ssh_forward_binding(uint8_t listener_idx, uint8_t *ssh_slot, uint16_t *bind_port,
-                                         const char **bind_addr);
 
 /** @brief Tear down all forwards on @p ssh_slot (its SSH connection is closing). */
-void protocore_ssh_forward_reset(uint8_t ssh_slot);
 
 #endif // PROTOCORE_SSH_PORT_FORWARD
 
 /** @brief Dispatch messages 80 to 127 (RFC 4254). */
-int ssh_connection_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, size_t len);
+
+/** @brief The connection layer's own state and the calls that reach it, described only in connection.c. */
+struct SshConnectionInternal;
+
+/** @brief RFC 4254 sec 5.2 window: what a flow-control call reads and writes. */
+typedef struct
+{
+    SshFlow *f;            ///< the window a call acts on
+    uint32_t local_window; ///< our initial window
+    uint32_t peer_window;  ///< the peer's
+    uint32_t peer_max_pkt; ///< the largest packet it will take
+    uint32_t n;            ///< bytes a take accounts for
+    uint32_t add;          ///< in: credit to add; out: what a replenish owes
+    uint32_t want;         ///< bytes a send would like to put out
+    size_t len;            ///< the length a send test measures
+} SshFlowArgs;
+
+/** @brief RFC 4254 sec 5 channels: what a channel call acts on. */
+typedef struct
+{
+    uint8_t slot;            ///< the SSH slot
+    uint32_t channel;        ///< the channel number on it
+    uint32_t id;             ///< the channel a lookup names
+    SshChanService service;  ///< the service a bind attaches
+    const uint8_t *payload;  ///< the message body
+    size_t len;              ///< how many bytes it has
+    const uint8_t *data;     ///< payload bytes a send carries
+    uint8_t *out;            ///< where a reply is written
+    size_t out_len;          ///< what was written
+    size_t cap;              ///< how much room it has
+    uint32_t exit_status;    ///< sec 6.10 exit-status
+    const char *signal_name; ///< sec 6.10 exit-signal
+    proto_bool core_dumped;  ///< whether it dumped core
+    const char *err_msg;     ///< the message that accompanies it
+    const uint8_t *rtype;    ///< sec 5.4 request type
+    uint32_t rtype_len;      ///< its length
+} SshChanArgs;
+
+/** @brief RFC 4254 sec 6.2 pty-req and sec 6.7 window-change: what a terminal call parses. */
+typedef struct
+{
+    const uint8_t *p;     ///< the request bytes
+    size_t len;           ///< how many
+    size_t off;           ///< where the fields start
+    uint8_t n;            ///< strings a presence check counts
+    const uint8_t *modes; ///< the encoded terminal modes
+    uint32_t modes_len;   ///< their length
+    uint32_t consumed;    ///< what a mode walk consumed
+    SshPtyRequest *req;   ///< where a parse lands
+    uint32_t width_chars; ///< the reported terminal width
+    uint32_t height_rows; ///< its height
+    uint32_t width_px;    ///< the same in pixels
+    uint32_t height_px;   ///<
+} SshPtyArgs;
+
+/** @brief RFC 4254 sec 7 TCP/IP forwarding: what a forwarding call names. */
+typedef struct
+{
+    uint8_t slot;          ///< the SSH slot a forward belongs to
+    const char *conn_addr; ///< the address connected to
+    uint16_t conn_port;    ///< its port
+    const char *orig_addr; ///< where the connection came from
+    uint16_t orig_port;    ///< its port
+    uint8_t listener_idx;  ///< the listener row a binding lookup names
+    uint8_t out_slot;      ///< the slot that binding belongs to
+    uint16_t bind_port;    ///< the port it bound
+    const char *bind_addr; ///< the address it bound
+} SshFwdArgs;
+
+/**
+ * @brief The SSH connection protocol (RFC 4254): channels, their windows, and what runs on them.
+ *
+ * A caller fills the group its call belongs to, invokes the call through ::SshConnection, and reads
+ * the outcome off the same handle. The groups are separate because a window has nothing to do with
+ * a forwarding binding, and neither has anything to do with a pty request.
+ *
+ * @var SshConnectionNs::flow      sec 5.2 window arguments
+ * @var SshConnectionNs::chan      sec 5 channel arguments
+ * @var SshConnectionNs::pty       sec 6.2 / 6.7 terminal arguments
+ * @var SshConnectionNs::fwd       sec 7 forwarding arguments
+ * @var SshConnectionNs::msg_type  the message a dispatch routes
+ * @var SshConnectionNs::ok        a call's true/false outcome
+ * @var SshConnectionNs::i32       a call's signed outcome
+ * @var SshConnectionNs::u32       a call's 32-bit outcome
+ * @var SshConnectionNs::found     the channel a lookup reports, or NULL
+ * @var SshConnectionNs::internal  the layer's state and the calls that reach it
+ */
+typedef struct
+{
+    SshFlowArgs flow;
+    SshChanArgs chan;
+    SshPtyArgs pty;
+    SshFwdArgs fwd;
+    uint8_t msg_type;
+
+    proto_bool ok;
+    int i32;
+    uint32_t u32;
+    SshChannel *found;
+
+    // sec 5.2 window
+    void (*flow_init)(struct SshConnectionInternal *ctx);
+    void (*flow_recv_take)(struct SshConnectionInternal *ctx);
+    void (*flow_replenish_due)(struct SshConnectionInternal *ctx);
+    void (*flow_local_credit)(struct SshConnectionInternal *ctx);
+    void (*flow_send_allows)(struct SshConnectionInternal *ctx);
+    void (*flow_send_cap)(struct SshConnectionInternal *ctx);
+    void (*flow_send_take)(struct SshConnectionInternal *ctx);
+    void (*flow_peer_add)(struct SshConnectionInternal *ctx);
+
+    // sec 5 channels
+    void (*channel_init)(struct SshConnectionInternal *ctx);
+    void (*chan_alloc)(struct SshConnectionInternal *ctx);
+    void (*chan_by_id)(struct SshConnectionInternal *ctx);
+    void (*channel_bind_service)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_open)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_open_confirm)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_open_failure)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_request)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_data)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_extended_data)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_window_adjust)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_eof)(struct SshConnectionInternal *ctx);
+    void (*channel_handle_close)(struct SshConnectionInternal *ctx);
+    void (*channel_build_data)(struct SshConnectionInternal *ctx);
+    void (*channel_build_eof)(struct SshConnectionInternal *ctx);
+    void (*channel_build_close)(struct SshConnectionInternal *ctx);
+    void (*channel_send_data)(struct SshConnectionInternal *ctx);
+    void (*channel_send_eof)(struct SshConnectionInternal *ctx);
+    void (*channel_send_close)(struct SshConnectionInternal *ctx);
+    void (*channel_send_exit_status)(struct SshConnectionInternal *ctx);
+    void (*channel_send_exit_signal)(struct SshConnectionInternal *ctx);
+    void (*channel_open_forwarded)(struct SshConnectionInternal *ctx);
+    void (*channel_send_open_forwarded)(struct SshConnectionInternal *ctx);
+    void (*channel_pty)(struct SshConnectionInternal *ctx);
+
+    // sec 6.2 / 6.7 terminal
+    void (*req_strings_present)(struct SshConnectionInternal *ctx);
+    void (*pty_req_fields_present)(struct SshConnectionInternal *ctx);
+    void (*pty_modes_valid)(struct SshConnectionInternal *ctx);
+    void (*pty_req_parse)(struct SshConnectionInternal *ctx);
+    void (*window_change_parse)(struct SshConnectionInternal *ctx);
+
+    // sec 7 forwarding
+    void (*forward_begin)(struct SshConnectionInternal *ctx);
+    void (*forward_pump)(struct SshConnectionInternal *ctx);
+    void (*forward_binding)(struct SshConnectionInternal *ctx);
+    void (*forward_reset)(struct SshConnectionInternal *ctx);
+    void (*global_request_handle)(struct SshConnectionInternal *ctx);
+    void (*dispatch)(struct SshConnectionInternal *ctx);
+
+    // the application handlers this layer calls back into
+    void (*set_data_cb)(struct SshConnectionInternal *ctx);
+    void (*set_pty_req_cb)(struct SshConnectionInternal *ctx);
+    void (*set_window_change_cb)(struct SshConnectionInternal *ctx);
+    void (*set_forward_open_cb)(struct SshConnectionInternal *ctx);
+    void (*set_forward_data_cb)(struct SshConnectionInternal *ctx);
+    void (*set_forward_confirm_cb)(struct SshConnectionInternal *ctx);
+    void (*set_forward_policy_cb)(struct SshConnectionInternal *ctx);
+    void (*set_rforward_open_cb)(struct SshConnectionInternal *ctx);
+    void (*set_rforward_cancel_cb)(struct SshConnectionInternal *ctx);
+    void (*set_sftp_open_cb)(struct SshConnectionInternal *ctx);
+    void (*set_sftp_data_cb)(struct SshConnectionInternal *ctx);
+    void (*set_scp_open_cb)(struct SshConnectionInternal *ctx);
+    void (*set_scp_data_cb)(struct SshConnectionInternal *ctx);
+
+    // the handler a setter installs, read by the setter it belongs to
+    SshChannelDataCb data_cb;
+    SshPtyReqCb pty_req_cb;
+    SshWindowChangeCb window_change_cb;
+    SshForwardOpenCb forward_open_cb;
+    SshForwardDataCb forward_data_cb;
+    SshForwardConfirmCb forward_confirm_cb;
+    SshForwardPolicyCb forward_policy_cb;
+    SshRemoteForwardOpenCb rforward_open_cb;
+    SshRemoteForwardCancelCb rforward_cancel_cb;
+    SshSftpOpenCb sftp_open_cb;
+    SshSftpDataCb sftp_data_cb;
+    SshScpOpenCb scp_open_cb;
+    SshScpDataCb scp_data_cb;
+
+    struct SshConnectionInternal *internal;
+} SshConnectionNs;
+
+/** @brief The one symbol this module exports. */
+extern SshConnectionNs SshConnection;
 
 PROTOCORE_END_DECLS
 

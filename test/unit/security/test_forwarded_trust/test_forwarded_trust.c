@@ -8,7 +8,7 @@
 // NEVER honored, and any malformed / obfuscated / unspecified token falls back to the TCP peer.
 
 #include "services/security/forwarded_trust/forwarded_trust.h"
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 #include <unity.h>
 
 static protocore_ip v4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)

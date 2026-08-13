@@ -31,7 +31,7 @@ src/mmgr/       the memory manager: the two pools every borrow comes from
                 region that carries its own bound (span), and every operation
                 that moves a byte (mem, str, swar, endian, ring, membuild,
                 frame). See "mmgr" below.
-src/shared_primitives/  layer-agnostic primitives shared across the tree so
+src/shared/  layer-agnostic primitives shared across the tree so
                 logic is never duplicated: crc.h (one parameterized CRC engine),
                 hex.h (base-16), mime.h (the Content-Type vocabulary), utf8.h
                 (RFC 3629 validation), http_date.h (IMF-fixdate), ip.h (a
@@ -462,7 +462,7 @@ lands in one place and every codec inherits it.
   name the lane that fired. Byte order enters in exactly one place,
   `protocore_swar_zero_lane`. Nothing in it walks a buffer or takes a capacity, which is what
   keeps that claim true. The walks built on it are `str` and nothing else:
-  `shared_primitives/runops.h` was a second full implementation of the same operations
+  `shared/runops.h` was a second full implementation of the same operations
   and was removed on 2026-08-08 (docs/BUGS.md), with its 44 call sites rewritten onto
   `str`.
 - **`rawmemcpy.h`** owns the load itself: `PROTO_RAW` (`aligned(1)` + `may_alias`) for

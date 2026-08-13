@@ -60,7 +60,7 @@
 #ifndef PROTOCORE_WEBSOCKET_H
 #define PROTOCORE_WEBSOCKET_H
 
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "protocore_config.h"
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
@@ -212,123 +212,112 @@ typedef void (*WsCloseHandler)(uint8_t ws_id);
 /** @brief The id a route carries when it serves no WebSocket. */
 #define PROTOCORE_WS_NONE 0xFFu
 
+/** @brief The three handlers one route records. */
+typedef struct
+{
+    WsConnectHandler on_connect; ///< the handler recorded for a route's open
+    WsMessageHandler on_message; ///< the handler recorded for a message
+    WsCloseHandler on_close;     ///< the handler recorded for a close
+} WsRouteArgs;
+
+/** @brief RFC 6455 sec 5.2 base framing, and the sec 7.4 status a Close carries. */
+typedef struct
+{
+    WsOpcode opcode;        ///< the frame type a send emits
+    const uint8_t *payload; ///< its payload bytes; may be NULL for a zero-length frame
+    uint16_t len;           ///< how many
+    WsCloseCode code;       ///< the status code a close carries
+} WsFrameArgs;
+
+/** @brief The socket pool's own state and the calls that reach it, described only in websocket.c. */
+struct WsInternal;
+
 /**
- * @brief Record one route's handlers and return the id naming them, or ::PROTOCORE_WS_NONE when full.
+ * @brief The WebSocket connections this server holds open (RFC 6455).
+ *
+ * A caller sets the members a call takes, invokes it through ::Ws, and reads the outcome off the
+ * same handle.
  *
  * The handlers live here, not in the route table: a route decides where a request goes, and what
  * runs once the socket is open belongs to this module. A route stores the id, so nothing above
  * holds a pointer into here and the same handler set can serve more than one route.
+ *
+ * @var WsNs::slot        the TCP slot a call acts on
+ * @var WsNs::ws_id       the socket a call names
+ * @var WsNs::id          the route id a lookup names
+ * @var WsNs::route      the handlers one route records
+ * @var WsNs::conn        the socket a call acts on, when it takes one by pointer
+ * @var WsNs::frame      one frame's type, payload and close status (RFC 6455 sec 5.2, 7.4)
+ * @var WsNs::byte        one already-plaintext byte for the frame state machine
+ * @var WsNs::frag_size   the outbound fragmentation size in payload bytes; 0 = off
+ * @var WsNs::ok          a call's true/false outcome
+ * @var WsNs::u8          the route id an add reports, or ::PROTOCORE_WS_NONE when full
+ * @var WsNs::text        the reassembled message payload a lookup reports, or NULL
+ * @var WsNs::found       the socket an alloc or a find reports, or NULL
+ * @var WsNs::connect_handler  the connect handler an id names, or NULL
+ * @var WsNs::message_handler  the message handler an id names, or NULL
+ * @var WsNs::close_handler    the close handler an id names, or NULL
+ * @var WsNs::route_add        record one route's handlers
+ * @var WsNs::route_connect    the connect handler an id names
+ * @var WsNs::route_message    the message handler an id names
+ * @var WsNs::route_close      the close handler an id names
+ * @var WsNs::init             set every pool slot inactive; called once from begin()
+ * @var WsNs::active           whether ws_id is a valid, in-use socket
+ * @var WsNs::payload_of       the reassembled message payload for ws_id
+ * @var WsNs::alloc            take a socket and bind it to a TCP slot
+ * @var WsNs::find             the socket bound to a TCP slot
+ * @var WsNs::free             release the socket bound to a TCP slot
+ * @var WsNs::parse            feed the slot's bytes through the frame state machine
+ * @var WsNs::feed_byte        feed one already-plaintext byte through it
+ * @var WsNs::reset_frame      back to WS_HEADER1, ready for the next frame
+ * @var WsNs::send_frame       build and send one frame; server-to-client frames are never masked
+ * @var WsNs::set_frag_size    the outbound fragmentation size (RFC 6455 sec 5.4)
+ * @var WsNs::close            send a Close frame and mark the socket WS_CLOSED
+ * @var WsNs::internal         the pool's state and the calls that reach it
+ *
+ * A caller that needs immediate delivery flushes the connection itself after a send.
  */
-uint8_t ws_route_add(WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close);
+typedef struct
+{
+    uint8_t slot;       ///< the TCP slot a call acts on
+    uint8_t ws_id;      ///< the socket a call names
+    uint8_t id;         ///< the route id a lookup names
+    WsConn *conn;       ///< the socket a call acts on, when it takes one by pointer
+    uint8_t byte;       ///< one already-plaintext byte for the frame state machine
+    uint16_t frag_size; ///< the outbound fragmentation size in payload bytes; 0 = off
 
-/// @brief The connect handler @p id names, or nullptr when @p id names nothing.
-WsConnectHandler ws_route_connect(uint8_t id);
+    WsRouteArgs route; ///< the handlers one route records
+    WsFrameArgs frame; ///< one frame's type, payload and close status
 
-/// @brief The message handler @p id names, or nullptr when @p id names nothing.
-WsMessageHandler ws_route_message(uint8_t id);
+    proto_bool ok;
+    uint8_t u8;
+    const char *text;
+    WsConn *found;
+    WsConnectHandler connect_handler;
+    WsMessageHandler message_handler;
+    WsCloseHandler close_handler;
 
-/// @brief The close handler @p id names, or nullptr when @p id names nothing.
-WsCloseHandler ws_route_close(uint8_t id);
+    void (*route_add)(struct WsInternal *ctx);
+    void (*route_connect)(struct WsInternal *ctx);
+    void (*route_message)(struct WsInternal *ctx);
+    void (*route_close)(struct WsInternal *ctx);
+    void (*init)(struct WsInternal *ctx);
+    void (*active)(struct WsInternal *ctx);
+    void (*payload_of)(struct WsInternal *ctx);
+    void (*alloc)(struct WsInternal *ctx);
+    void (*find)(struct WsInternal *ctx);
+    void (*free)(struct WsInternal *ctx);
+    void (*parse)(struct WsInternal *ctx);
+    void (*feed_byte)(struct WsInternal *ctx);
+    void (*reset_frame)(struct WsInternal *ctx);
+    void (*send_frame)(struct WsInternal *ctx);
+    void (*set_frag_size)(struct WsInternal *ctx);
+    void (*close)(struct WsInternal *ctx);
 
-/**
- * @brief Initialize all WebSocket pool slots to inactive.
- *
- * Called once from begin().
- */
-void ws_init();
+    struct WsInternal *internal;
+} WsNs;
 
-/// @brief True if @p ws_id is a valid, in-use WebSocket slot. Use this instead of reaching into
-///        ws_pool[ws_id].active from another module.
-proto_bool ws_active(uint8_t ws_id);
-
-/// @brief The NUL-terminated reassembled message payload for @p ws_id, or nullptr if the slot is
-///        out of range / inactive. Use this instead of reaching into ws_pool[ws_id].buf.
-const char *ws_payload(uint8_t ws_id);
-
-/**
- * @brief Allocate a WsConn slot and bind it to a TCP slot.
- *
- * @param slot_id  TCP connection slot that just completed an upgrade.
- * @return Pointer to the allocated WsConn, or nullptr if the pool is full.
- */
-WsConn *ws_alloc(uint8_t slot_id);
-
-/**
- * @brief Find the WsConn for a given TCP slot, or nullptr if none.
- *
- * @param slot_id  TCP connection slot index.
- */
-WsConn *ws_find(uint8_t slot_id);
-
-/**
- * @brief Free the WsConn associated with a TCP slot.
- *
- * @param slot_id  TCP connection slot index.
- */
-void ws_free(uint8_t slot_id);
-
-/**
- * @brief Drain the ring buffer for slot_id and feed bytes to the WS parser.
- *
- * Stops when the ring buffer is empty or the parser reaches a terminal state
- * (WS_FRAME_READY, WS_CLOSED, WS_ERROR).
- *
- * @param ws  WebSocket connection to drain into.
- */
-void ws_parse(WsConn *ws);
-
-/**
- * @brief Feed one already-plaintext byte through the WS frame state machine.
- *
- * The per-byte core shared by ws_parse() (which reads the plaintext rx ring) and
- * the TLS receive path (which decrypts ciphertext and feeds the plaintext here).
- * Callers must stop feeding once parse_state reaches a terminal state
- * (WS_FRAME_READY / WS_CLOSED / WS_ERROR) and dispatch/reset before
- * continuing.
- *
- * @param ws    WebSocket connection.
- * @param byte  Next plaintext byte of the client frame stream.
- */
-void ws_feed_byte(WsConn *ws, uint8_t byte);
-
-/**
- * @brief Reset the frame parser back to WS_HEADER1, ready for the next frame.
- *
- * Does not change ws->active or ws->slot_id.
- *
- * @param ws  WebSocket connection to reset.
- */
-void ws_reset_frame(WsConn *ws);
-
-/**
- * @brief Send a WebSocket frame to the client.
- *
- * Builds the header (no masking -- server-to-client frames are never masked)
- * and hands both to the transport layer (Tcp.conn->send()).  The caller is
- * responsible for flushing afterwards (Tcp.conn->flush()).
- *
- * @param ws       WebSocket connection.
- * @param opcode   Frame opcode (WS_OP_TEXT, WS_OP_BINARY, WS_OP_PONG, etc.).
- * @param payload  Payload bytes (may be nullptr for zero-length frames).
- * @param len      Payload length in bytes.
- * @return true on success, false if the TCP slot is not active.
- */
-proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, uint16_t len);
-
-/**
- * @brief Set the outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes; 0 = off.
- *
- * A runtime override of PROTOCORE_WS_FRAG_SIZE. When >0, a data message longer than @p bytes is split into
- * that-sized frames by ws_send_frame() (see PROTOCORE_WS_FRAG_SIZE). Applies to all connections.
- */
-void ws_set_frag_size(uint16_t bytes);
-
-/**
- * @brief Send a Close frame and mark the slot WS_CLOSED.
- *
- * @param ws    WebSocket connection.
- * @param code  Close status code (e.g. WS_CLOSE_NORMAL).
- */
-void ws_close(WsConn *ws, WsCloseCode code);
+/** @brief The one symbol this module exports. */
+extern WsNs Ws;
 
 #endif

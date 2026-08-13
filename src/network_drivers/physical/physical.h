@@ -22,7 +22,7 @@
 
 #include "core_setup/board_profiles/protocore_platform.h" // PROTOCORE_VENDOR_* selector (picks the L1 backend)
 #include "protocore_config.h"                             // protocore_if_kind
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 
 // Is there a physical (L1) backend to drive? The real bring-up (radio / Ethernet PHY / lwIP netif
 // access) lives beside its owner - core_setup/physical/esp/ for silicon, test/mocks/physical/ for a

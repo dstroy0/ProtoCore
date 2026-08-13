@@ -15,29 +15,46 @@
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/transport/transport.h"
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
-#include "shared_primitives/log.h"
+#include "shared/log/log.h"
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
 // Public API
 // ---------------------------------------------------------------------------
 
-protocore_ssh_client_state protocore_ssh_client_state_get(void)
+/**
+ * @brief The application face of the SSH client: what a sketch asks about the forward.
+ *
+ * @var SshAppClientInternal::ns  the handle a caller reads a call's outcome off
+ */
+struct SshAppClientInternal
 {
-    return SshClient.state();
+    SshAppClientNs *ns;
+};
+
+static struct SshAppClientInternal s_app = {.ns = &SshAppClient};
+
+static void state_get(struct SshAppClientInternal *restrict ctx)
+{
+    SshClient.state(SshClient.internal);
+    ctx->ns->state = SshClient.state_of;
 }
 
-proto_bool protocore_ssh_client_up(void)
+static void up(struct SshAppClientInternal *restrict ctx)
 {
-    return SshClient.state() == PROTOCORE_SSH_CLIENT_UP;
+    SshClient.state(SshClient.internal);
+    ctx->ns->ok = SshClient.state_of == PROTOCORE_SSH_CLIENT_UP;
 }
 
 // Key derivation for provisioning: the seed's public half, without a connection.
-void protocore_ssh_client_pubkey(const uint8_t seed[32], uint8_t pub[32])
+static void pubkey(struct SshAppClientInternal *restrict ctx)
 {
-    uint8_t *work = SshClient.crypto_work();
+    const uint8_t *seed = ctx->ns->seed;
+    uint8_t *pub = ctx->ns->pub;
+    SshClient.crypto_work(SshClient.internal);
+    uint8_t *work = SshClient.work;
     if (work == NULL)
     {
         mem.zero(pub, 32);
@@ -47,3 +64,6 @@ void protocore_ssh_client_pubkey(const uint8_t seed[32], uint8_t pub[32])
 }
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+SshAppClientNs SshAppClient = {.state_get = state_get, .up = up, .pubkey = pubkey, .internal = &s_app};

@@ -5,7 +5,7 @@
 // protocore_csrf_issue() builds a fresh `<nonce_hex>.<sig_hex>` token (HMAC-SHA256 over a 6-byte nonce,
 // truncated + hex-encoded) and protocore_csrf_verify() recomputes that HMAC and constant-time compares
 // it - both pure (no Arduino, no sockets, no heap). Also bench the shared hex codec
-// (shared_primitives/hex.h) the token layer builds on, since encode/decode of the nonce and
+// (shared/hex/hex.h) the token layer builds on, since encode/decode of the nonce and
 // signature bytes is on the same hot path as issue/verify. Worked example for performance_benching/device/<service>/:
 // a pure protocol codec with no hardware involved, so every call here exercises the real production
 // code path (contrast with performance_benching/device/ads1115, a peripheral driver where the bus transaction itself
@@ -19,7 +19,7 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "services/security/csrf/csrf.h"
-#include "shared_primitives/hex.h"
+#include "shared/hex/hex.h"
 
 #include <stdbool.h>
 #include <stddef.h>

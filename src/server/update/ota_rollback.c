@@ -3,7 +3,7 @@
 
 /**
  * @file ota_rollback.c
- * @brief OTA rollback decision (pure) + esp_ota_ops commit/rollback (ESP32).
+ * @brief OTA rollback decision (pure) + the platform seam's commit/rollback.
  */
 
 #include "server/update/ota_rollback.h"
@@ -11,83 +11,107 @@
 #if PROTOCORE_ENABLE_OTA_ROLLBACK
 
 #if PROTOCORE_HAS_VENDOR_OTA
-#include "esp_ota_ops.h"
-#include "server/clock/clock.h" // protocore_millis() (pulls in Arduino millis())
+#include "server/clock/clock.h" // protocore_millis()
 #endif
-protocore_ota_action protocore_ota_decide(uint8_t img_state, proto_bool self_test_ok, uint32_t ms_since_boot,
-                                          uint32_t window_ms)
+/**
+ * @brief The rollback's calls - what OtaRollbackNs points at.
+ *
+ * @var OtaRollbackInternal::ns  the handle a caller sets a call's members on
+ */
+struct OtaRollbackInternal
 {
-    if (img_state != PROTOCORE_OTA_IMG_PENDING_VERIFY)
+    OtaRollbackNs *ns;
+};
+
+static struct OtaRollbackInternal s_ota_rb = {.ns = &OtaRollback};
+
+static void ota_decide(struct OtaRollbackInternal *restrict ctx)
+{
+    const OtaDecideArgs *a = &ctx->ns->decide_args;
+
+    if (a->img_state != PROTOCORE_OTA_IMG_PENDING_VERIFY)
     {
-        return PROTOCORE_OTA_WAIT; // not a freshly-updated image: nothing to do
+        ctx->ns->action = PROTOCORE_OTA_WAIT; // not a freshly-updated image: nothing to do
+        return;
     }
-    if (self_test_ok)
+    if (a->self_test_ok)
     {
-        return PROTOCORE_OTA_COMMIT;
+        ctx->ns->action = PROTOCORE_OTA_COMMIT;
+        return;
     }
-    if (ms_since_boot >= window_ms)
+    if (a->ms_since_boot >= a->window_ms)
     {
-        return PROTOCORE_OTA_ROLLBACK; // never confirmed in time -> self-heal
+        ctx->ns->action = PROTOCORE_OTA_ROLLBACK; // never confirmed in time -> self-heal
+        return;
     }
-    return PROTOCORE_OTA_WAIT;
+    ctx->ns->action = PROTOCORE_OTA_WAIT;
 }
 
 #if PROTOCORE_HAS_VENDOR_OTA
 
-uint8_t protocore_ota_img_state(void)
+static void ota_state(struct OtaRollbackInternal *restrict ctx)
 {
-    const esp_partition_t *running = esp_ota_get_running_partition();
-    esp_ota_img_states_t st = ESP_OTA_IMG_UNDEFINED;
-    if (!running || esp_ota_get_state_partition(running, &st) != ESP_OK)
+    ctx->ns->img_state = protocore_platform_img_state();
+}
+
+static void ota_commit(struct OtaRollbackInternal *restrict ctx)
+{
+    (void)ctx;
+    protocore_platform_img_commit();
+}
+
+static void ota_rollback(struct OtaRollbackInternal *restrict ctx)
+{
+    (void)ctx;
+    protocore_platform_img_rollback(); // does not return on a device
+}
+
+static void ota_tick(struct OtaRollbackInternal *restrict ctx)
+{
+    ota_state(ctx);
+    ctx->ns->decide_args.img_state = ctx->ns->img_state;
+    ctx->ns->decide_args.self_test_ok = ctx->ns->self_test_ok;
+    Clock.millis(Clock.internal);
+    ctx->ns->decide_args.ms_since_boot = Clock.ms;
+    ctx->ns->decide_args.window_ms = PROTOCORE_OTA_CONFIRM_WINDOW_MS;
+    ota_decide(ctx);
+    if (ctx->ns->action == PROTOCORE_OTA_COMMIT)
     {
-        return PROTOCORE_OTA_IMG_UNDEFINED;
+        ota_commit(ctx);
     }
-    return (uint8_t)st;
-}
-
-void protocore_ota_commit(void)
-{
-    esp_ota_mark_app_valid_cancel_rollback();
-}
-
-void protocore_ota_rollback(void)
-{
-    esp_ota_mark_app_invalid_rollback_and_reboot(); // does not return
-}
-
-protocore_ota_action protocore_ota_rollback_tick(proto_bool self_test_ok)
-{
-    protocore_ota_action a = protocore_ota_decide(protocore_ota_img_state(), self_test_ok, protocore_millis(),
-                                                  PROTOCORE_OTA_CONFIRM_WINDOW_MS);
-    if (a == PROTOCORE_OTA_COMMIT)
+    else if (ctx->ns->action == PROTOCORE_OTA_ROLLBACK)
     {
-        protocore_ota_commit();
+        ota_rollback(ctx);
     }
-    else if (a == PROTOCORE_OTA_ROLLBACK)
-    {
-        protocore_ota_rollback();
-    }
-    return a;
 }
 
-#else // host build - no OTA partitions
+#else // no image partitions to read or mark
 
-uint8_t protocore_ota_img_state(void)
+static void ota_state(struct OtaRollbackInternal *restrict ctx)
 {
-    return PROTOCORE_OTA_IMG_UNDEFINED;
+    ctx->ns->img_state = PROTOCORE_OTA_IMG_UNDEFINED;
 }
-void protocore_ota_commit(void)
+static void ota_commit(struct OtaRollbackInternal *restrict ctx)
 {
+    (void)ctx;
 }
-void protocore_ota_rollback(void)
+static void ota_rollback(struct OtaRollbackInternal *restrict ctx)
 {
+    (void)ctx;
 }
-protocore_ota_action protocore_ota_rollback_tick(proto_bool self_test_ok)
+static void ota_tick(struct OtaRollbackInternal *restrict ctx)
 {
-    (void)self_test_ok;
-    return PROTOCORE_OTA_WAIT;
+    ctx->ns->action = PROTOCORE_OTA_WAIT;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_OTA
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+OtaRollbackNs OtaRollback = {.decide = ota_decide,
+                             .state = ota_state,
+                             .commit = ota_commit,
+                             .rollback = ota_rollback,
+                             .tick = ota_tick,
+                             .internal = &s_ota_rb};
 
 #endif // PROTOCORE_ENABLE_OTA_ROLLBACK

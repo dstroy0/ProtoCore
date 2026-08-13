@@ -23,7 +23,7 @@
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "services/web/httpcache/httpcache.h" // protocore_cache_control, cache_freshness_lifetime
-#include "shared_primitives/http_date.h"      // PROTOCORE_HTTP_DATE_MAX (the stored-date floor)
+#include "shared/http_date/http_date.h"      // PROTOCORE_HTTP_DATE_MAX (the stored-date floor)
 
 // --- raw response header-block field access ------------------------------------------------------
 

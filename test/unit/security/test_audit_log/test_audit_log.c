@@ -7,7 +7,7 @@
 // rendering behave. SHA-256 is exercised through protocore_sha256.
 
 #include "services/security/audit_log/audit_log.h"
-#include "shared_primitives/hex.h"
+#include "shared/hex/hex.h"
 #include <string.h>
 
 #include <unity.h>

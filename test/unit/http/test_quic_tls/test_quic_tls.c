@@ -11,7 +11,7 @@
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/quic_tls.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
-#include "network_drivers/tls/tls13_kdf.h"
+#include "network_drivers/tls/key_schedule/key_schedule.h"
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "../../../integration/ssh/test_ssh_pqc/mlkem_ref.h" // protocore_mlkem768_decaps_ref (the client side)
 #include "../../pqc/test_pqc_mlkem/mlkem_kat.h"              // kat_ek, kat_dk (a valid ML-KEM key pair)

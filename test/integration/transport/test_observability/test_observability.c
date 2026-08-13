@@ -6,7 +6,7 @@
 // lwIP callbacks (recv FIN / error / timeout / local close / backpressure) drive
 // the right counter and fire the hook.
 
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <string.h>
 
 #include <unity.h>
@@ -368,7 +368,7 @@ void test_accept_cb_enqueue_failure_posts_defer_drop()
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // still claimed
 }
 
-void test_recv_during_closing_is_drained_not_processed()
+void test_recv_during_closing_is_reset_not_processed()
 {
     protocore_pcb pcb;
     pcb.snd_queuelen = 1;
@@ -377,13 +377,15 @@ void test_recv_during_closing_is_drained_not_processed()
     Tcp.conn->begin_close(0);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
-    // Late inbound data while closing: acked + dropped, slot stays CLOSING.
+    // Late inbound data while closing cannot be delivered, so the connection is reset to show it
+    // was lost (RFC 9293 sec 3.6.1 SHLD-3) and the slot is released, recorded as an abort.
     protocore_pbuf p;
     memset(&p, 0, sizeof(p));
     p.tot_len = 8;
     protocore_net_err rc = lowlevel_recv_cb(&conn_pool[0], &pcb, &p, PROTOCORE_NET_OK);
-    TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, rc);
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_ABRT, rc);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(PROTOCORE_CONN_R_ABORT, g_reason);
 }
 
 int main()
@@ -407,7 +409,7 @@ int main()
     RUN_TEST(test_begin_close_finalizes_immediately_when_already_drained);
     RUN_TEST(test_begin_close_noop_if_not_active);
     RUN_TEST(test_closing_timeout_reaps_stuck_slot);
-    RUN_TEST(test_recv_during_closing_is_drained_not_processed);
+    RUN_TEST(test_recv_during_closing_is_reset_not_processed);
     RUN_TEST(test_stop_posts_abort_transition_for_each_live_slot);
     RUN_TEST(test_err_cb_during_closing_counts_drained_not_error);
     RUN_TEST(test_enqueue_failure_from_recv_cb_counts_defer_drop);

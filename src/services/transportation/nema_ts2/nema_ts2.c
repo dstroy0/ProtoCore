@@ -8,7 +8,7 @@
 
 #include "services/transportation/nema_ts2/nema_ts2.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_X25
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
 #if PROTOCORE_ENABLE_NEMA_TS2
 

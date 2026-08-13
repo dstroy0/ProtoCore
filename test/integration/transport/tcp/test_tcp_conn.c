@@ -4,7 +4,7 @@
 // transport/tcp/tcp_conn.c (RFC 9293): the per-slot receive buffer that holds
 // RCV.USER, and the slot bitmaps that keep an index out of circulation.
 
-#include "network_drivers/transport/tcp/tcp_conn.h"
+#include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "mmgr/ring.h"
 #include <stdint.h>
 

@@ -27,10 +27,10 @@
   "network_drivers/tls/tls.c -> server/clock/clock.h",
   "network_drivers/tls/tls_conn.h -> network_drivers/presentation/http/http3/tls13_msg.h",
   "network_drivers/transport/tcp/tcp_client.c -> server/clock/clock.h",
-  "network_drivers/transport/tcp/tcp_conn.c -> network_drivers/session/worker.h",
+  "network_drivers/transport/tcp/tcp_conn.c -> server/system/worker.h",
   "network_drivers/transport/tcp/tcp_conn.c -> network_drivers/tls/tls.h",
   "network_drivers/transport/tcp/tcp_conn.c -> server/clock/clock.h",
-  "network_drivers/transport/tcp/tcp_listener.c -> network_drivers/session/worker.h",
+  "network_drivers/transport/tcp/tcp_listener.c -> server/system/worker.h",
   "network_drivers/transport/tcp/tcp_listener.c -> network_drivers/tls/tls.h",
   "network_drivers/transport/tcp/tcp_listener.c -> server/clock/clock.h",
   "services/file_transfer/ftp/ftp_session.c -> server/clock/clock.h",
@@ -58,8 +58,8 @@
   "services/storage/wal/wal_fs.h -> server/filesystem/mnt.h",
   "services/system/provisioning_service/provisioning_service.c -> server/clock/clock.h",
   "services/web/edge_cache/edge_cache_proxy.c -> server/clock/clock.h",
-  "shared_primitives/ip.c -> mmgr/protomem.h",
-  "shared_primitives/log.c -> mmgr/protoframe.h",
-  "shared_primitives/log.c -> server/logbuf.h",
-  "shared_primitives/pcap.h -> mmgr/endian.h"
+  "shared/ip/ip.c -> mmgr/protomem.h",
+  "shared/log/log.c -> mmgr/protoframe.h",
+  "shared/log/log.c -> server/system/logbuf.h",
+  "shared/pcap/pcap.h -> mmgr/endian.h"
 ]

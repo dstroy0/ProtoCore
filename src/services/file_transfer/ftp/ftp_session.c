@@ -12,10 +12,10 @@
 
 #if PROTOCORE_ENABLE_FTP_SESSION
 
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis, pcdelay
 #include "services/file_transfer/ftp/ftp.h"
-#include "shared_primitives/log.h"
+#include "shared/log/log.h"
 #include <stdio.h>
 
 /** @brief Owned session state. One transfer at a time; the buffers are too big for the stack. */

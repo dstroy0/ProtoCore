@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
 
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 
 /** @brief Empty the trusted-upstream table (trust no forwarded header). */
 void protocore_forwarded_trust_reset(void);

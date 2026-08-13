@@ -15,7 +15,7 @@ as each connection is accepted / connected, so nothing is added to the send hot
 path. Three levels of control, coarse to fine:
 
 ```cpp
-#include "network_drivers/transport/diffserv.h"
+#include "network_drivers/transport/diffserv/diffserv.h"
 
 protocore_set_default_dscp(PROTOCORE_DSCP_EF);       // every outbound TCP connection (accepted + client)
 protocore_listen_set_dscp(80, PROTOCORE_DSCP_AF41);  // override for one listener's connections
@@ -61,7 +61,7 @@ The complete sketch ([DiffServ.ino](DiffServ.ino)):
 ```cpp
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/diffserv.h"
+#include "network_drivers/transport/diffserv/diffserv.h"
 
 PC server;
 

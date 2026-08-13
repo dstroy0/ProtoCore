@@ -21,7 +21,7 @@
                    // strlen, memcmp
 
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #endif
 #if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_SMTP_TLS
 #include "network_drivers/tls/tls.h"

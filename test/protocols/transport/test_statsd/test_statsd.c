@@ -6,7 +6,7 @@
 // (protocore_statsd_count/gauge/timing/set), whose formatted-and-sent bytes are captured through the
 // transport UDP service's host capture seam.
 
-#include "network_drivers/transport/udp.h" // protocore_udp_capture_* (host seam)
+#include "network_drivers/transport/udp/udp.h" // protocore_udp_capture_* (host seam)
 #include "services/iot/statsd/statsd.h"
 #include <string.h>
 #include <unity.h>

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_packet.h
+ * @file protocore_quic_packet.h
  * @brief QUIC packet headers and packet-number coding (RFC 9000 sec 17).
  *
  * The structural, version-independent layer of a QUIC packet: the long-header form (Initial /
@@ -62,10 +62,10 @@ typedef struct
 } QuicShortHeader;
 
 /** @brief True if byte 0 selects the long header form (0x80 set). */
-proto_bool pc_quic_is_long_header(uint8_t first);
+proto_bool protocore_quic_is_long_header(uint8_t first);
 
 /** @brief Parse a long header. @return false if truncated or a connection ID exceeds 20 bytes. */
-proto_bool pc_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHeader *out);
+proto_bool protocore_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHeader *out);
 
 /**
  * @brief Build a long header's invariant fields (first byte .. Source Connection ID). The caller
@@ -73,31 +73,31 @@ proto_bool pc_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHea
  * packet-number length in bytes (1..4); the reserved bits are written as 0 (pre-protection).
  * @return bytes written, or 0 on overflow / bad length.
  */
-size_t pc_quic_build_long_header(uint8_t *out, size_t cap, uint8_t type, uint32_t version, const uint8_t *dcid,
-                                 uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len, uint8_t pn_len);
+size_t protocore_quic_build_long_header(uint8_t *out, size_t cap, uint8_t type, uint32_t version, const uint8_t *dcid,
+                                        uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len, uint8_t pn_len);
 
 /** @brief Parse a short (1-RTT) header given the locally chosen @p dcid_len. @return false if truncated. */
-proto_bool pc_quic_parse_short_header(const uint8_t *buf, size_t len, uint8_t dcid_len, QuicShortHeader *out);
+proto_bool protocore_quic_parse_short_header(const uint8_t *buf, size_t len, uint8_t dcid_len, QuicShortHeader *out);
 
 /**
  * @brief Build a Version Negotiation packet (RFC 9000 sec 17.2.1): Version 0 and the list of
  * @p versions the server supports. The caller passes the connection IDs already echoed (its DCID =
  * the received SCID, its SCID = the received DCID). @return bytes written, or 0 on overflow.
  */
-size_t pc_quic_build_version_negotiation(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcid_len,
-                                         const uint8_t *scid, uint8_t scid_len, const uint32_t *versions,
-                                         size_t nversions);
+size_t protocore_quic_build_version_negotiation(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcid_len,
+                                                const uint8_t *scid, uint8_t scid_len, const uint32_t *versions,
+                                                size_t nversions);
 
 // --- Packet-number coding (RFC 9000 sec 17.1, Appendix A.2 / A.3) -----------------------------
 
 /** @brief Packet-number length in bytes (1..4) for @p full_pn; @p largest_acked < 0 means none. */
-uint8_t pc_quic_pn_length(uint64_t full_pn, int64_t largest_acked);
+uint8_t protocore_quic_pn_length(uint64_t full_pn, int64_t largest_acked);
 
-/** @brief Encode @p full_pn truncated to pc_quic_pn_length() bytes, big-endian. @return bytes written or 0. */
-size_t pc_quic_pn_encode(uint8_t *out, size_t cap, uint64_t full_pn, int64_t largest_acked);
+/** @brief Encode @p full_pn truncated to protocore_quic_pn_length() bytes, big-endian. @return bytes written or 0. */
+size_t protocore_quic_pn_encode(uint8_t *out, size_t cap, uint64_t full_pn, int64_t largest_acked);
 
 /** @brief Recover the full packet number from a @p truncated_pn of @p pn_nbits bits (Appendix A.3). */
-uint64_t pc_quic_pn_decode(uint64_t largest_pn, uint64_t truncated_pn, uint8_t pn_nbits);
+uint64_t protocore_quic_pn_decode(uint64_t largest_pn, uint64_t truncated_pn, uint8_t pn_nbits);
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

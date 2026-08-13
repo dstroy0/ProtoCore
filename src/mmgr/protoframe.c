@@ -11,7 +11,7 @@
 
 #include "mmgr/protoframe.h"
 #include "mmgr/protostr.h" // str: the bounded-run walks
-#include "shared_primitives/speed_opt.h"
+#include "shared/speed_opt/speed_opt.h"
 
 #ifndef PROTOCORE_FRAME_SCAN_LITERALS
 #define PROTOCORE_FRAME_SCAN_LITERALS 0 // 1 = find each literal length at runtime instead of reading it from the spec

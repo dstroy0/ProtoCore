@@ -15,7 +15,7 @@
 
 #if PROTOCORE_ENABLE_MQTT
 
-#include "shared_primitives/utf8.h"
+#include "shared/utf8/utf8.h"
 
 // ---------------------------------------------------------------------------
 // Pure codec (host-testable)
@@ -23,7 +23,7 @@
 
 // Big-endian 16-bit helpers and a length-prefixed UTF-8 string writer.
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
+#include "network_drivers/transport/tcp/tcp.h" // shared outbound TCP client (L4)
 #endif
 #if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_MQTT_TLS
 #include "network_drivers/tls/tls.h" // persistent client TLS session (csess)

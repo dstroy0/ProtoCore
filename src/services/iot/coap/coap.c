@@ -11,7 +11,7 @@
 
 #if PROTOCORE_ENABLE_COAP
 
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 
 #if PROTOCORE_ENABLE_COAP_OBSERVE || PROTOCORE_COAP_DEDUP_ENTRIES > 0
 #include "server/clock/clock.h" // protocore_millis(): Observe notification sequencing + dedup entry freshness

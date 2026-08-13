@@ -12,8 +12,8 @@
 #include "provisioning_service.h"
 #include "mmgr/protomem.h"
 #include "server/clock/clock.h" // pcdelay
-#include "shared_primitives/hex.h"
-#include "shared_primitives/mime.h"
+#include "shared/hex/hex.h"
+#include "shared/mime/mime.h"
 
 // ---------------------------------------------------------------------------
 // Form-field parser (always compiled; the only non-trivial logic, unit-tested).
@@ -23,7 +23,7 @@
 #include "core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "protocore.h"
 #endif
 proto_bool protocore_prov_form_field(const char *body, const char *key, char *out, size_t cap)

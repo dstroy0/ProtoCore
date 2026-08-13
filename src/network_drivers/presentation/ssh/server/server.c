@@ -14,8 +14,8 @@
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport.h"
-#include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/tcp.h"
+#include "server/system/proto_handler.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp.h"
@@ -23,18 +23,33 @@
 
 // The listening role's own state (RFC 4253 sec 4.1): whether each slot's connection is to be torn
 // down once the current pass finishes. The slot-to-socket binding is the network layer's.
-typedef struct
+struct SshServerStorage
 {
     volatile proto_bool close[MAX_SSH_CONNS];
-} SshServerCtx;
-static SshServerCtx s_srv;
+};
+
+/**
+ * @brief The listening role's state and the calls that reach it - what SshServerNs points at.
+ *
+ * @var SshServerInternal::store  the per-slot teardown flags
+ * @var SshServerInternal::ns     the handle a caller sets a call's members on
+ */
+struct SshServerInternal
+{
+    struct SshServerStorage *store;
+    SshServerNs *ns;
+};
+
+static struct SshServerStorage s_store;
+
+static struct SshServerInternal s_srv = {.store = &s_store, .ns = &SshServer};
 
 // ssh_pkt_recv handler: dispatch one decrypted message, remember fatal results.
 static void msg_handler(uint8_t i, uint8_t msg_type, const uint8_t *payload, size_t len)
 {
     if (ssh_transport_dispatch(i, msg_type, payload, len) < 0)
     {
-        s_srv.close[i] = PROTO_TRUE;
+        s_store.close[i] = PROTO_TRUE;
     }
 }
 
@@ -54,12 +69,12 @@ static void net_setup(void)
 static const ProtoHandler s_ssh_handler = {
     .on_accept = net_accept, .on_data = net_rx, .on_close = net_close, .on_poll = net_poll};
 
-const ProtoHandler *ssh_protocore_handler(void)
+void ssh_protocore_handler(struct SshServerInternal *restrict ctx)
 {
     // Wire the emit callback here, at the one seam every consumer must go through to install SSH: a
     // consumer that registers this handler can then never be left with it unset. Idempotent.
     net_setup();
-    return &s_ssh_handler;
+    ctx->ns->handler = &s_ssh_handler;
 }
 
 // ---------------------------------------------------------------------------
@@ -80,7 +95,7 @@ static void net_accept(uint8_t conn_slot)
     }
 
     conn->proto_slot = j;
-    s_srv.close[j] = PROTO_FALSE;
+    s_store.close[j] = PROTO_FALSE;
 
     ssh_transport_init(j);
     ssh_pkt_init(j);
@@ -139,7 +154,7 @@ static void net_rx(uint8_t conn_slot)
 
     SshNetwork.tx_drain(conn_slot, j); // the reply the dispatch framed leaves on this pass
 
-    if (s_srv.close[j])
+    if (s_store.close[j])
     {
         close_conn(conn_slot);
     }
@@ -291,8 +306,9 @@ static const ProtoHandler s_rfwd_handler = {
 
 // RFC 4254 sec 7.1: the socket a binding accepts on. The pool and its dynamic create/stop are the
 // listening role's, so the connection protocol names a port and gets a handle back.
-int ssh_rfwd_listener_open(uint16_t bind_port)
+void ssh_rfwd_listener_open(struct SshServerInternal *restrict ctx)
 {
+    const uint16_t bind_port = ctx->ns->bind_port;
     int li = -1;
     for (int k = 0; k < MAX_LISTENERS; k++)
     {
@@ -304,27 +320,38 @@ int ssh_rfwd_listener_open(uint16_t bind_port)
     }
     if (li < 0)
     {
-        return -1; // no listener capacity
+        ctx->ns->i32 = -1;
+        return; // no listener capacity
     }
     // Dynamic (tcpip_thread-marshaled) create: this runs in the SSH worker task.
     if (Tcp.listener->add_dynamic((uint8_t)li, bind_port, PROTO_SSH_RFWD) != 1)
     {
-        return -1; // bind failed (port already in use, etc.)
+        ctx->ns->i32 = -1;
+        return; // bind failed (port already in use, etc.)
     }
-    return li;
+    ctx->ns->i32 = li;
+    return;
 }
 
-void ssh_rfwd_listener_close(int handle)
+void ssh_rfwd_listener_close(struct SshServerInternal *restrict ctx)
 {
+    const int handle = ctx->ns->handle;
     if (handle >= 0 && handle < MAX_LISTENERS)
     {
         Tcp.listener->stop_dynamic((uint8_t)handle);
     }
 }
 
-const ProtoHandler *ssh_protocore_rfwd_handler(void)
+void ssh_protocore_rfwd_handler(struct SshServerInternal *restrict ctx)
 {
-    return &s_rfwd_handler;
+    ctx->ns->handler = &s_rfwd_handler;
 }
 
 #endif // PROTOCORE_SSH_PORT_FORWARD
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+SshServerNs SshServer = {.rfwd_listener_open = ssh_rfwd_listener_open,
+                         .rfwd_listener_close = ssh_rfwd_listener_close,
+                         .proto_handler = ssh_protocore_handler,
+                         .rfwd_proto_handler = ssh_protocore_rfwd_handler,
+                         .internal = &s_srv};

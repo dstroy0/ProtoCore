@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_hpack_prim.c
- * @brief Shared HPACK/QPACK field-coding primitives - implementation. See pc_hpack_prim.h.
+ * @file protocore_hpack_prim.c
+ * @brief Shared HPACK/QPACK field-coding primitives - implementation. See protocore_hpack_prim.h.
  *
  * The Huffman code (Appendix B) and the canonical Huffman decode tables are generated verbatim
  * from RFC 7541. RFC 9204 (QPACK) references the same integer coding and Huffman table.
@@ -83,7 +83,7 @@ static const uint16_t DEC_SYM[257] = {
     251, 252, 253, 254, 2,   3,   4,   5,   6,   7,   8,   11,  12,  14,  15,  16,  17,  18,  19,  20,  21,  23,
     24,  25,  26,  27,  28,  29,  30,  31,  127, 220, 249, 10,  13,  22,  256};
 
-static size_t pc_hpack_encode_int(uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_t flags, uint32_t value)
+static size_t protocore_hpack_encode_int(uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_t flags, uint32_t value)
 {
     uint8_t max = (uint8_t)((1u << prefix_bits) - 1);
     if (cap < 1)
@@ -115,7 +115,7 @@ static size_t pc_hpack_encode_int(uint8_t *out, size_t cap, uint8_t prefix_bits,
     return i;
 }
 
-static proto_bool pc_hpack_decode_int(const uint8_t *in, size_t len, uint8_t prefix_bits, size_t *consumed,
+static proto_bool protocore_hpack_decode_int(const uint8_t *in, size_t len, uint8_t prefix_bits, size_t *consumed,
                                       uint32_t *value)
 {
     if (len < 1)
@@ -161,7 +161,7 @@ static proto_bool pc_hpack_decode_int(const uint8_t *in, size_t len, uint8_t pre
     return PROTO_TRUE;
 }
 
-static size_t pc_hpack_huff_len(const char *s, size_t n)
+static size_t protocore_hpack_huff_len(const char *s, size_t n)
 {
     size_t bits = 0;
     for (size_t i = 0; i < n; i++)
@@ -171,7 +171,7 @@ static size_t pc_hpack_huff_len(const char *s, size_t n)
     return (bits + 7) / 8;
 }
 
-static size_t pc_hpack_huff_encode(uint8_t *out, size_t cap, const char *s, size_t n)
+static size_t protocore_hpack_huff_encode(uint8_t *out, size_t cap, const char *s, size_t n)
 {
     uint64_t acc = 0;
     int nbits = 0;
@@ -203,7 +203,7 @@ static size_t pc_hpack_huff_encode(uint8_t *out, size_t cap, const char *s, size
     return o;
 }
 
-static proto_bool pc_hpack_huff_decode(const uint8_t *in, size_t n, char *out, size_t cap, size_t *out_len)
+static proto_bool protocore_hpack_huff_decode(const uint8_t *in, size_t n, char *out, size_t cap, size_t *out_len)
 {
     uint32_t code = 0;
     int len = 0;
@@ -266,7 +266,7 @@ static proto_bool pc_hpack_huff_decode(const uint8_t *in, size_t n, char *out, s
 
 // --- string literal (RFC 7541 sec 5.2; RFC 9204 reuses it verbatim) -------------------------------
 
-static proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *pos, char *out, size_t cap,
+static proto_bool protocore_hpack_decode_str(const uint8_t *block, size_t len, size_t *pos, char *out, size_t cap,
                                       size_t *out_len)
 {
     if (*pos >= len)
@@ -276,7 +276,7 @@ static proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *
     proto_bool huff = (block[*pos] & 0x80) != 0;
     size_t c = 0;
     uint32_t slen = 0;
-    if (!pc_hpack_decode_int(block + *pos, len - *pos, 7, &c, &slen))
+    if (!protocore_hpack_decode_int(block + *pos, len - *pos, 7, &c, &slen))
     {
         return PROTO_FALSE;
     }
@@ -287,7 +287,7 @@ static proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *
     }
     if (huff)
     {
-        if (!pc_hpack_huff_decode(block + *pos, slen, out, cap, out_len))
+        if (!protocore_hpack_huff_decode(block + *pos, slen, out, cap, out_len))
         {
             return PROTO_FALSE;
         }
@@ -305,24 +305,24 @@ static proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *
     return PROTO_TRUE;
 }
 
-static size_t pc_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_t n)
+static size_t protocore_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_t n)
 {
-    size_t hl = pc_hpack_huff_len(s, n);
+    size_t hl = protocore_hpack_huff_len(s, n);
     if (hl < n)
     {
-        size_t hdr = pc_hpack_encode_int(out, cap, 7, 0x80, (uint32_t)hl);
+        size_t hdr = protocore_hpack_encode_int(out, cap, 7, 0x80, (uint32_t)hl);
         if (!hdr)
         {
             return 0;
         }
-        size_t body = pc_hpack_huff_encode(out + hdr, cap - hdr, s, n);
+        size_t body = protocore_hpack_huff_encode(out + hdr, cap - hdr, s, n);
         if (body != hl)
         {
             return 0;
         }
         return hdr + body;
     }
-    size_t hdr = pc_hpack_encode_int(out, cap, 7, 0x00, (uint32_t)n);
+    size_t hdr = protocore_hpack_encode_int(out, cap, 7, 0x00, (uint32_t)n);
     if (!hdr || hdr + n > cap)
     {
         return 0;
@@ -331,7 +331,7 @@ static size_t pc_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_
     return hdr + n;
 }
 
-const HpackPrimNs HpackPrim = {pc_hpack_encode_int,  pc_hpack_decode_int, pc_hpack_huff_encode, pc_hpack_huff_len,
-                               pc_hpack_huff_decode, pc_hpack_decode_str, pc_hpack_encode_str};
+const HpackPrimNs HpackPrim = {protocore_hpack_encode_int,  protocore_hpack_decode_int, protocore_hpack_huff_encode, protocore_hpack_huff_len,
+                               protocore_hpack_huff_decode, protocore_hpack_decode_str, protocore_hpack_encode_str};
 
 #endif // PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3

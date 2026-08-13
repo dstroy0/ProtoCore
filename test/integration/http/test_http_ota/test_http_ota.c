@@ -12,7 +12,7 @@
 // edge case's own coverage must be demonstrated for this build.
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
-#include "shared_primitives/ip.h" // PROTOCORE_IP_STR_MAX for the bracketed-IPv6 overflow case
+#include "shared/ip/ip.h" // PROTOCORE_IP_STR_MAX for the bracketed-IPv6 overflow case
 #include <stdio.h>
 #include <string.h>
 

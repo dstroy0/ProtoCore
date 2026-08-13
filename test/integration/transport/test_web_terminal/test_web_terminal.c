@@ -5,7 +5,7 @@
 // page serving, the WS upgrade + connect tracking, browser->device commands, and
 // device->browser broadcast.
 
-#include "network_drivers/transport/tcp.h" // TcpConn, conn_pool - the slot a test arms by hand
+#include "network_drivers/transport/tcp/tcp.h" // TcpConn, conn_pool - the slot a test arms by hand
 #include "protocore.h"                     // PROTO_HTTP, the ws/sse entry points
 #include "services/web/web_terminal/web_terminal.h"
 #include <stdio.h>

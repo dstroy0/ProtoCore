@@ -3,7 +3,7 @@
 //
 // Host tests for services/sleep_sched: the dynamic sleep-cycle decision core. Pure, synthetic clock.
 
-#include "server/sleep_sched.h"
+#include "server/system/sleep_sched.h"
 #include <unity.h>
 
 void setUp(void)

@@ -10,7 +10,7 @@
  */
 
 #include "ntp_service.h"
-#include "shared_primitives/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
+#include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
 #include <time.h>                        // time_t: the epoch this module reports
 
 #if PROTOCORE_ENABLE_NTP
@@ -18,9 +18,9 @@
 #include "mmgr/endian.h"                         // protocore_rd32be / protocore_wr32be: the timestamp fields
 #include "mmgr/secure.h"                         // protocore_secure_persist_span: this module's storage
 #include "network_drivers/application/ntp/ntp.h" // the packet this role asks with
-#include "network_drivers/transport/udp.h"       // Udp.listener: the client port and the ask
+#include "network_drivers/transport/udp/udp.h"       // Udp.listener: the client port and the ask
 #include "server/clock/clock.h"                  // protocore_millis: how the epoch advances between syncs
-#include "shared_primitives/ip.h"                // Ip.parse: a server given as a literal address
+#include "shared/ip/ip.h"                // Ip.parse: a server given as a literal address
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
 // a cold-booted RTC sits near the Unix epoch.

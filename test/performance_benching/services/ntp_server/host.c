@@ -13,7 +13,7 @@
 //   src/services/timing_position/time_source/time_source.c src/network_drivers/transport/udp.c
 //   src/network_drivers/transport/udp/udp_listener.c src/network_drivers/transport/udp/udp_client.c
 //   src/network_drivers/transport/net_addr.c src/server/clock/clock.c src/mmgr/protomem.c
-//   src/mmgr/protostr.c src/shared_primitives/ip.c -o /tmp/bn && /tmp/bn
+//   src/mmgr/protostr.c src/shared/ip/ip.c -o /tmp/bn && /tmp/bn
 
 #define PROTOCORE_ENABLE_TIME_SOURCE 1
 #define PROTOCORE_ENABLE_NTP_SERVER 1

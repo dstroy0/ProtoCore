@@ -12,7 +12,7 @@
 //   src/services/fieldbus/modbus/modbus.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bm && /tmp/bm
 
 #define PROTOCORE_ENABLE_MODBUS 1
-#include "network_drivers/transport/tcp.h" // TcpConn / conn_pool type (for the stubs)
+#include "network_drivers/transport/tcp/tcp.h" // TcpConn / conn_pool type (for the stubs)
 #include "services/fieldbus/modbus/modbus.h"
 
 #include "host_bench.h"

@@ -10,7 +10,7 @@
 #include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#include "shared_primitives/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
+#include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 

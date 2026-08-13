@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_INTERBUS
 
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_IBM_3740
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
 uint16_t protocore_interbus_fcs(const uint8_t *bytes, size_t len)
 {

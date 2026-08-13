@@ -6,13 +6,12 @@
  * @brief Layer 6 (Presentation) - wires the transport ring buffer to the HTTP parser.
  *
  * This layer owns two responsibilities:
- *   1. Drain bytes via the transport read API (protocore_conn_available / protocore_conn_read_byte)
- *      and feed them into the HTTP parser one at a time - the ring is transport's.
- *   2. Expose slot-indexed `http_reset()` and `http_parse()` helpers that the
- *      session layer (server_tick) and application layer (handle) call by slot ID.
+ *   1. Hold HTTP's own per-slot state - the request tally, the request deadline, the response sink,
+ *      and the h2/h3 fields - keyed on the transport slot index.
+ *   2. Expose ::HttpConn, the calls the session layer dispatches through and the application layer
+ *      drives by slot.
  *
- * The actual HTTP parsing logic lives in `http_parser.h / http_parser.cpp`.
- * This file merely includes it so callers only need one include.
+ * The parsing itself lives in `http_parser.h`, which this includes so callers need one include.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -21,7 +20,7 @@
 #ifndef PROTOCORE_PRESENTATION_H
 #define PROTOCORE_PRESENTATION_H
 
-#include "../transport/tcp_evt.h" // EvtType: the event a handler is dispatched on
+#include "../transport/tcp/evt.h" // EvtType: the event a handler is dispatched on
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
 // ---------------------------------------------------------------------------
@@ -36,7 +35,6 @@
  *
  * @param slot_id Index into conn_pool / http_pool (0 … MAX_CONNS-1).
  */
-void http_reset(uint8_t slot_id);
 
 #if PROTOCORE_ENABLE_KEEPALIVE
 /**
@@ -48,6 +46,48 @@ void http_reset(uint8_t slot_id);
  * presentation.c.
  */
 extern uint16_t http_req_count[MAX_CONNS];
+#endif
+
+/**
+ * @brief Self-framing response sink (Layer 5 TX seam).
+ *
+ * HTTP/2 installs it at ALPN, HTTP/3 at dispatch, so the response methods route through it instead
+ * of building an HTTP/1.1 message. Null means plain HTTP/1.1, the default builder.
+ */
+typedef proto_bool (*protocore_resp_sink_fn)(uint8_t slot, int code, const char *content_type, const char *body,
+                                             size_t len);
+
+/**
+ * @brief HTTP's own per-slot state, keyed on the transport slot index.
+ *
+ * All of it HTTP semantics, so it lives here rather than in TcpConn, the same way
+ * ::http_req_count already does. Sized CONN_POOL_SLOTS, not MAX_CONNS: the HTTP/3 dispatch slot is
+ * a reserved index above the TCP range. Defined in presentation.c.
+ *
+ * @var http_req_start_ms  protocore_millis() at the first byte of the in-progress request (0 = none).
+ *                         The request-header deadline (PROTOCORE_REQUEST_TIMEOUT_MS, slow-loris
+ *                         defense) measures against this; unlike the transport's idle timer a
+ *                         trickle byte cannot reset it. Armed by the HTTP layer on the first byte.
+ * @var http_resp_sink     the TX seam above, per slot.
+ */
+extern uint32_t http_req_start_ms[CONN_POOL_SLOTS];
+extern protocore_resp_sink_fn http_resp_sink[CONN_POOL_SLOTS];
+
+#if PROTOCORE_ENABLE_HTTP2
+/** @brief Negotiated HTTP/2 (ALPN "h2"), whether that check has run, and the stream being served. */
+extern uint8_t http_h2[CONN_POOL_SLOTS];
+extern uint8_t http_h2_checked[CONN_POOL_SLOTS];
+extern uint32_t http_h2_stream[CONN_POOL_SLOTS];
+#endif
+
+#if PROTOCORE_ENABLE_HTTP3
+/** @brief The reserved HTTP/3 dispatch slot, and the QUIC connection and stream a response routes back on. */
+extern uint8_t http_h3[CONN_POOL_SLOTS];
+extern uint32_t http_h3_conn_id[CONN_POOL_SLOTS];
+extern uint64_t http_h3_stream[CONN_POOL_SLOTS];
+#endif
+
+#if PROTOCORE_ENABLE_KEEPALIVE
 
 /**
  * @brief Whether the connection carrying @p slot_id's request is reused for the next one.
@@ -56,7 +96,6 @@ extern uint16_t http_req_count[MAX_CONNS];
  * unless Connection carries "close", and 1.0 is the reverse. A kept connection counts against
  * PROTOCORE_KEEPALIVE_MAX_REQUESTS and closes once it reaches the bound.
  */
-proto_bool keepalive_eval(uint8_t slot_id);
 #endif
 
 #if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
@@ -66,7 +105,6 @@ proto_bool keepalive_eval(uint8_t slot_id);
  * The value is a comma-delimited list ("Keep-Alive, Upgrade"), matched case insensitively on whole
  * elements so a longer token cannot match on its prefix.
  */
-proto_bool protocore_http_conn_has_token(const char *hdr, const char *token);
 #endif
 
 /**
@@ -79,7 +117,6 @@ proto_bool protocore_http_conn_has_token(const char *hdr, const char *token);
  *
  * @param slot_id Index into conn_pool / http_pool (0 … MAX_CONNS-1).
  */
-void http_conn_open(uint8_t slot_id);
 
 /**
  * @brief Drain the transport ring buffer and advance the HTTP parser.
@@ -93,7 +130,6 @@ void http_conn_open(uint8_t slot_id);
  *
  * @param slot_id Connection slot to parse.
  */
-void http_parse(uint8_t slot_id);
 
 /**
  * @brief The HTTP connection ProtoHandler (the L5 dispatch seam).
@@ -104,16 +140,63 @@ void http_parse(uint8_t slot_id);
  * session layer; Session.proto->register_builtins() installs it.
  */
 struct ProtoHandler;
-const struct ProtoHandler *http_protocore_handler(void);
+
+/** @brief RFC 9110 sec 5.6.1: a comma-separated header, and the token looked for in it. */
+typedef struct
+{
+    const char *hdr;   ///< the field value scanned
+    const char *token; ///< the token looked for, case-insensitive
+} HttpHdrArgs;
+
+/** @brief The HTTP connection glue's own state and the calls that reach it, described only in presentation.c. */
+struct HttpConnInternal;
 
 /**
- * @brief Install the HTTP per-slot poll pump (the routing core's instance-bound `on_poll`).
+ * @brief Layer 6 - the HTTP connection: what wires a transport slot to the HTTP parser.
  *
- * HTTP is the one protocol whose poll needs the `PC` instance (routing), so the
- * application layer installs its pump here at `begin()` - the TX-seam (`protocore_resp_sink`) counterpart
- * for the poll direction. With it set, HTTP plugs into the uniform `ProtoHandler::on_poll` seam
- * exactly like every other protocol, so the L5/worker dispatch loop has no HTTP special case.
+ * A caller sets the members a call takes, invokes it through ::HttpConn, and reads the outcome off
+ * the same handle.
+ *
+ * @var HttpConnNs::slot      the connection a call acts on
+ * @var HttpConnNs::hdr_args  the header value a token test reads, and the element it looks for
+ * @var HttpConnNs::poll      the per-slot poll pump the application installs
+ * @var HttpConnNs::ok        a call's true/false outcome
+ * @var HttpConnNs::handler   the ProtoHandler a lookup reports
+ * @var HttpConnNs::reset       reset the parser between requests, leaving the keep-alive tally
+ * @var HttpConnNs::conn_open   initialize a slot for a freshly-accepted connection
+ * @var HttpConnNs::parse       drain the slot's bytes and advance the parser
+ * @var HttpConnNs::keepalive_eval  whether the connection is reused for the next request
+ * @var HttpConnNs::has_token   whether hdr_args.token appears as an element of hdr_args.hdr
+ * @var HttpConnNs::proto_handler  the L5 dispatch seam this module registers into
+ * @var HttpConnNs::set_poll    install the per-slot poll pump
+ * @var HttpConnNs::internal    the glue's state and the calls that reach it
  */
-void http_protocore_set_poll(void (*fn)(uint8_t slot));
+typedef struct
+{
+    uint8_t slot;               ///< the connection every call names
+    void (*poll)(uint8_t slot); ///< what set_poll installs as the per-tick step
+
+    HttpHdrArgs hdr_args; ///< the header a token scan reads
+
+    proto_bool ok;
+    const struct ProtoHandler *handler;
+
+    void (*reset)(struct HttpConnInternal *ctx);
+    void (*conn_open)(struct HttpConnInternal *ctx);
+    void (*parse)(struct HttpConnInternal *ctx);
+#if PROTOCORE_ENABLE_KEEPALIVE
+    void (*keepalive_eval)(struct HttpConnInternal *ctx);
+#endif
+#if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
+    void (*has_token)(struct HttpConnInternal *ctx);
+#endif
+    void (*proto_handler)(struct HttpConnInternal *ctx);
+    void (*set_poll)(struct HttpConnInternal *ctx);
+
+    struct HttpConnInternal *internal;
+} HttpConnNs;
+
+/** @brief The one symbol this module exports. */
+extern HttpConnNs HttpConn;
 
 #endif

@@ -14,9 +14,28 @@
 // A subsystem/exec CHANNEL_REQUEST may name a file-transfer service (SFTP or SCP). Tag @p c and fire the
 // matching open callback when it does; @p off points at the request-specific arg and may be advanced. Flips
 // *accept true for an accepted SFTP subsystem (exec is already in the base accept set).
-void ssh_classify_file_transfer_request(uint8_t i, uint32_t channel, const uint8_t *rtype, uint32_t rtype_len,
-                                           const uint8_t *payload, size_t len, size_t *off, proto_bool *accept)
+/**
+ * @brief The classifier's state and the call that reaches it - what SshAppServerNs points at.
+ *
+ * @var SshAppServerInternal::ns  the handle a caller sets the call's members on
+ */
+struct SshAppServerInternal
 {
+    SshAppServerNs *ns;
+};
+
+static struct SshAppServerInternal s_appsrv = {.ns = &SshAppServer};
+
+void ssh_classify_file_transfer_request(struct SshAppServerInternal *restrict ctx)
+{
+    const uint8_t i = ctx->ns->slot;
+    const uint32_t channel = ctx->ns->channel;
+    const uint8_t *rtype = ctx->ns->req.rtype;
+    const uint32_t rtype_len = ctx->ns->req.rtype_len;
+    const uint8_t *payload = ctx->ns->req.payload;
+    const size_t len = ctx->ns->req.len;
+    size_t *off = &ctx->ns->req.off;
+    proto_bool *accept = &ctx->ns->accept;
 #if !PROTOCORE_ENABLE_SSH_SFTP
     (void)accept; // only the SFTP subsystem path flips acceptance; scp exec is already accepted
 #endif
@@ -57,3 +76,6 @@ void ssh_classify_file_transfer_request(uint8_t i, uint32_t channel, const uint8
 #endif
 }
 #endif
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+SshAppServerNs SshAppServer = {.classify = ssh_classify_file_transfer_request, .internal = &s_appsrv};

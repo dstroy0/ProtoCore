@@ -9,8 +9,8 @@
  * 6-byte MAC: namespace = the RFC 4122 DNS namespace, name = the lowercase MAC
  * hex, hashed with the library's SHA-1. The same MAC always yields the same
  * UUID, so it is a stable device identity (mDNS hostname, MQTT client ID, ...)
- * that needs no storage. protocore_device_uuid() reads the ESP32 factory MAC and
- * formats it (ESP32 only). Pure, host-testable core; no heap.
+ * that needs no storage. protocore_device_uuid() reads the part's factory MAC
+ * and formats it. Pure, host-testable core; no heap.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -35,14 +35,45 @@ PROTOCORE_BEGIN_DECLS
  * @param out  buffer of at least PROTOCORE_UUID_STR_LEN bytes; receives
  *             "xxxxxxxx-xxxx-5xxx-yxxx-xxxxxxxxxxxx" (lowercase, null-terminated).
  */
-void protocore_uuid_from_mac(const uint8_t mac[6], char out[PROTOCORE_UUID_STR_LEN]);
+/** @brief The address a UUID is derived from, and where the text lands. */
+typedef struct
+{
+    const uint8_t *mac; ///< the six address bytes a format reads, when the caller supplies them
+    char *out;          ///< PROTOCORE_UUID_STR_LEN bytes the formatted UUID is written into
+} DeviceIdArgs;
+
+/** @brief The identity's own calls, described only in device_id.c. */
+struct DeviceIdInternal;
+
+/**
+ * @brief The stable MAC-derived device identity.
+ *
+ * @var DeviceIdNs::args      the address a UUID is derived from, and where the text lands
+ * @var DeviceIdNs::from_mac  format a UUIDv5 from the caller's address
+ * @var DeviceIdNs::uuid      format one from the part's own burned-in address
+ * @var DeviceIdNs::internal  the calls that derive it
+ *
+ * No storage member: both calls write into the caller's buffer and hold nothing.
+ */
+typedef struct
+{
+    DeviceIdArgs args;
+
+    void (*from_mac)(struct DeviceIdInternal *ctx);
+    void (*uuid)(struct DeviceIdInternal *ctx);
+
+    struct DeviceIdInternal *internal;
+} DeviceIdNs;
+
+/** @brief The one symbol this module exports. */
+extern DeviceIdNs DeviceId;
 
 #if PROTOCORE_HAS_VENDOR_MAC
 /**
- * @brief Format this device's UUID from its ESP32 factory (WiFi STA) MAC.
+ * @brief Format this device's UUID from its burned-in factory station MAC.
  * @param out  buffer of at least PROTOCORE_UUID_STR_LEN bytes.
  */
-void protocore_device_uuid(char out[PROTOCORE_UUID_STR_LEN]);
+
 #endif
 
 #endif // PROTOCORE_ENABLE_DEVICE_ID

@@ -5,8 +5,8 @@
 // ring-buffer arithmetic, timeout logic, event-queue behavior, and
 // sustained-load correctness.
 
-#include "network_drivers/transport/tcp.h"
-#include "shared_primitives/ip.h"
+#include "network_drivers/transport/tcp/tcp.h"
+#include "shared/ip/ip.h"
 #include <string.h>
 #include <unity.h>
 
@@ -1103,9 +1103,9 @@ void test_touch_active_bounds_and_state_guard()
 
 // ---- lwIP callback direct-call coverage --------------------------------
 
-// lowlevel_recv_cb: null arg is rejected, and a CLOSING slot drains (and ACKs) both a
-// real segment and a null (FIN) pbuf without processing it.
-void test_recv_cb_null_arg_and_closing_drain()
+// lowlevel_recv_cb: null arg is rejected; a CLOSING slot keeps dwelling through a null (FIN) pbuf,
+// and resets on a segment carrying data it can no longer deliver (RFC 9293 sec 3.6.1 SHLD-3).
+void test_recv_cb_null_arg_and_closing_reset()
 {
     protocore_pcb fake = {0};
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL, lowlevel_recv_cb(NULL, &fake, NULL, PROTOCORE_NET_OK));
@@ -1114,18 +1114,23 @@ void test_recv_cb_null_arg_and_closing_drain()
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_CLOSING);
 
+    // A FIN while closing carries no data - both sides are simply done, so the dwell continues.
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK,
+                          lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PROTOCORE_NET_OK));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
+
+    // Data while closing is lost, so the connection is reset to show it.
     protocore_pbuf seg = {0};
     uint8_t payload[4] = {1, 2, 3, 4};
     seg.payload = payload;
     seg.len = 4;
     seg.tot_len = 4;
     seg.next = NULL;
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PROTOCORE_NET_OK));
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state); // still dwelling
-
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK,
-                          lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PROTOCORE_NET_OK)); // FIN while closing
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
+    int before = mock_abort_call_count();
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_ABRT, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PROTOCORE_NET_OK));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_NULL(conn_pool[0].pcb);
+    TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
 }
 
 // A null pbuf on an ACTIVE slot is a graceful remote FIN: the slot is freed and an
@@ -1522,7 +1527,7 @@ int main()
     RUN_TEST(test_check_timeouts_reaps_stale_closing_slots);
     RUN_TEST(test_check_timeouts_detaches_and_aborts_a_real_pcb);
     RUN_TEST(test_touch_active_bounds_and_state_guard);
-    RUN_TEST(test_recv_cb_null_arg_and_closing_drain);
+    RUN_TEST(test_recv_cb_null_arg_and_closing_reset);
     RUN_TEST(test_recv_cb_fin_close_falls_back_to_abort_on_tcp_close_failure);
     RUN_TEST(test_recv_cb_fin_close_ordinary_path_does_not_abort);
     RUN_TEST(test_recv_cb_rejects_non_active_slot);

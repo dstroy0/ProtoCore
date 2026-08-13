@@ -8,7 +8,7 @@
 #include "mmgr/arena.h" // protocore_worker_set_self()
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
-#include "network_drivers/session/worker.h"
+#include "server/system/worker.h"
 #include <stdint.h>
 #include <unity.h>
 

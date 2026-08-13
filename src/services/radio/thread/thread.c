@@ -11,7 +11,7 @@
  */
 
 #include "services/radio/thread/thread.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_X25
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
 #if PROTOCORE_ENABLE_THREAD
 

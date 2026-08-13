@@ -9,7 +9,7 @@
 #include "services/energy/dnp3/dnp3.h"
 #include "mmgr/endian.h" // protocore_rd16le / protocore_rd32le
 #include "mmgr/protomem.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_DNP
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_DNP
 
 #if PROTOCORE_ENABLE_DNP3
 

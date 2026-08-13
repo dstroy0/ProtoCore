@@ -15,7 +15,7 @@
 
 #include "network_drivers/application/web_assets.h" // PROTOCORE_SERVICE_WORKER
 #include "protocore.h"
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 
 // All service-worker route state, owned by one instance (internal linkage): the server handle plus
 // the borrowed precache list the manifest is rebuilt from on each request. The route handlers are

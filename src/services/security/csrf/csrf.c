@@ -19,7 +19,7 @@
 #include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/hmac_sha256.h"
 #include "mmgr/secure.h" // the token MAC's working set, wiped on release
-#include "shared_primitives/hex.h"
+#include "shared/hex/hex.h"
 
 // nonce-hex "." signature-hex
 static const protocore_field CSRF_TOKEN[] = {

@@ -27,7 +27,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/web/spa_router/spa_router.h"
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 
 static const char *WIFI_SSID = "your-ssid";
 static const char *WIFI_PASS = "your-password";

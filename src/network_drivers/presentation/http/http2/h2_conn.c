@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h2_conn.c
- * @brief HTTP/2 connection + stream engine - implementation. See pc_h2_conn.h.
+ * @file protocore_h2_conn.c
+ * @brief HTTP/2 connection + stream engine - implementation. See protocore_h2_conn.h.
  */
 
 #include "network_drivers/presentation/http/http2/h2_conn.h"
-#include "mmgr/membuild.h"  // pc_sb frame builder
+#include "mmgr/membuild.h"  // protocore_sb frame builder
 #include "mmgr/plaintext.h" // HTTP is plaintext; its frames borrow from that arena
 #include "mmgr/protomem.h"
 
@@ -47,8 +47,8 @@ static proto_bool h2_conn_slot_storage(H2Conn *c)
     uint8_t *base = c->fbuf; // H2_OFF_FBUF is 0, so the borrow is recoverable from the first field
     if (base == NULL)
     {
-        pc_span b = pc_plaintext_persist_span(PROTOCORE_H2_CONN_BORROW);
-        if (!pc_span_ok(b))
+        protocore_span b = protocore_plaintext_persist_span(PROTOCORE_H2_CONN_BORROW);
+        if (!protocore_span_ok(b))
         {
             return PROTO_FALSE;
         }
@@ -95,14 +95,14 @@ static void send_our_settings(H2Conn *c)
                                     H2_SETTINGS_INITIAL_WINDOW_SIZE, H2_SETTINGS_MAX_FRAME_SIZE};
     static const uint32_t vals[4] = {0, PROTOCORE_H2_MAX_STREAMS, 65535, PROTOCORE_H2_MAX_FRAME};
     uint8_t buf[H2_FRAME_HEADER_LEN + 4 * 6];
-    size_t n = pc_h2_build_settings(buf, sizeof buf, ids, vals, 4);
+    size_t n = protocore_h2_build_settings(buf, sizeof buf, ids, vals, 4);
     wr(c, buf, n);
 }
 
 // Builds a RST_STREAM naming stream 0 with error code 0, in the shape send_control takes.
 static size_t build_rst_refuse(uint8_t *b, size_t cap)
 {
-    return pc_h2_build_rst_stream(b, cap, 0, 0);
+    return protocore_h2_build_rst_stream(b, cap, 0, 0);
 }
 
 static void send_control(H2Conn *c, size_t (*build)(uint8_t *, size_t))
@@ -123,9 +123,9 @@ static void send_control(H2Conn *c, size_t (*build)(uint8_t *, size_t))
 
 // Reset one stream (RFC 9113 sec 5.4.2: a stream error kills the stream, not the connection). The
 // frame is built in the dispatcher's borrow, which is where every outbound control frame is staged.
-static void send_rst(H2Conn *c, pc_span f, uint32_t stream_id, uint32_t err)
+static void send_rst(H2Conn *c, protocore_span f, uint32_t stream_id, uint32_t err)
 {
-    size_t n = pc_h2_build_rst_stream(f.buf, f.cap, stream_id, err);
+    size_t n = protocore_h2_build_rst_stream(f.buf, f.cap, stream_id, err);
     wr(c, f.buf, n);
 }
 
@@ -133,7 +133,7 @@ static void send_rst(H2Conn *c, pc_span f, uint32_t stream_id, uint32_t err)
 // have been a number to begin with. A body past the declared length settles the moment it goes
 // over; a short one settles when the stream ends. Either way the request is malformed, which is a
 // stream error. @return false when the stream has been reset.
-static proto_bool content_length_holds(H2Conn *c, H2Stream *s, pc_span f, proto_bool end_stream)
+static proto_bool content_length_holds(H2Conn *c, H2Stream *s, protocore_span f, proto_bool end_stream)
 {
     if (!s->has_content_length)
     {
@@ -164,7 +164,7 @@ typedef struct
 {
     H2Conn *c;
     uint32_t stream_id;
-    pc_span f;
+    protocore_span f;
     proto_bool end_stream;
     proto_bool trailers;
     proto_bool pseudo_in_trailer;
@@ -233,7 +233,7 @@ static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char
 static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
 {
     H2Conn *c = b->c;
-    if (!pc_hpack_decode(&c->hdec, block, len, c->hscratch, PROTOCORE_H2_HDR_BLOCK, emit_header, b))
+    if (!protocore_hpack_decode(&c->hdec, block, len, c->hscratch, PROTOCORE_H2_HDR_BLOCK, emit_header, b))
     {
         return PROTO_FALSE; // COMPRESSION_ERROR
     }
@@ -271,7 +271,7 @@ static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
     return PROTO_TRUE;
 }
 
-static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, pc_span f)
+static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, protocore_span f)
 {
     if (h->stream_id == 0 || (h->stream_id & 1) == 0)
     {
@@ -354,7 +354,7 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
     return PROTO_TRUE;
 }
 
-static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, pc_span f)
+static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, protocore_span f)
 {
     if (!c->in_header_block || h->stream_id != c->hblock_stream)
     {
@@ -380,7 +380,7 @@ static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const u
     return PROTO_TRUE;
 }
 
-static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, pc_span f)
+static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *payload, protocore_span f)
 {
     if (h->stream_id == 0)
     {
@@ -440,9 +440,9 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
     // Replenish flow-control windows for the bytes we consumed (whole frame length).
     if (h->length > 0)
     {
-        size_t n = pc_h2_build_window_update(f.buf, f.cap, 0, h->length);
+        size_t n = protocore_h2_build_window_update(f.buf, f.cap, 0, h->length);
         wr(c, f.buf, n);
-        n = pc_h2_build_window_update(f.buf, f.cap, h->stream_id, h->length);
+        n = protocore_h2_build_window_update(f.buf, f.cap, h->stream_id, h->length);
         wr(c, f.buf, n);
     }
     return PROTO_TRUE;
@@ -450,7 +450,7 @@ static proto_bool handle_data(H2Conn *c, const H2FrameHeader *h, const uint8_t *
 
 // Route one parsed frame. Every outbound control frame it produces is staged in @p f, the one borrow
 // the dispatcher below takes for this frame.
-static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payload, pc_span f)
+static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payload, protocore_span f)
 {
     switch (h.type)
     {
@@ -463,11 +463,11 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
         {
             return h.length == 0; // ACK of our settings
         }
-        if (!pc_h2_parse_settings(payload, h.length, &c->peer))
+        if (!protocore_h2_parse_settings(payload, h.length, &c->peer))
         {
             return PROTO_FALSE;
         }
-        send_control(c, pc_h2_build_settings_ack);
+        send_control(c, protocore_h2_build_settings_ack);
         return PROTO_TRUE;
     case H2_PING:
         if (h.stream_id != 0)
@@ -483,7 +483,7 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
             return PROTO_FALSE;
         }
         {
-            size_t n = pc_h2_build_ping_ack(f.buf, f.cap, payload);
+            size_t n = protocore_h2_build_ping_ack(f.buf, f.cap, payload);
             wr(c, f.buf, n);
         }
         return PROTO_TRUE;
@@ -582,7 +582,7 @@ static proto_bool dispatch_frame(H2Conn *c, H2FrameHeader h, const uint8_t *payl
 static proto_bool process_frame(H2Conn *c)
 {
     H2FrameHeader h;
-    pc_h2_parse_header(c->fhdr, H2_FRAME_HEADER_LEN, &h);
+    protocore_h2_parse_header(c->fhdr, H2_FRAME_HEADER_LEN, &h);
     const uint8_t *payload = c->fbuf;
 
     // A header block must be continued only by CONTINUATION on the same stream (sec 6.10).
@@ -593,19 +593,19 @@ static proto_bool process_frame(H2Conn *c)
 
     // The one borrow for whatever this frame provokes us to send. It belongs here, at the frame's
     // owner, so no handler below stages a frame of its own.
-    const size_t mark = pc_plaintext_mark();
-    pc_span f = pc_plaintext_span(H2_CTL_FRAME_MAX, 4);
-    if (!pc_span_ok(f))
+    const size_t mark = protocore_plaintext_mark();
+    protocore_span f = protocore_plaintext_span(H2_CTL_FRAME_MAX, 4);
+    if (!protocore_span_ok(f))
     {
-        pc_plaintext_release(mark);
+        protocore_plaintext_release(mark);
         return PROTO_FALSE; // arena exhausted: fail closed
     }
     const proto_bool ok = dispatch_frame(c, h, payload, f);
-    pc_plaintext_release(mark);
+    protocore_plaintext_release(mark);
     return ok;
 }
 
-void pc_h2_conn_init(H2Conn *c, const H2Callbacks *cb)
+void protocore_h2_conn_init(H2Conn *c, const H2Callbacks *cb)
 {
     // The borrow belongs to the connection, not to the call: it is taken across the zero below, or
     // every init would draw a fresh one from an end that is never given back.
@@ -619,13 +619,13 @@ void pc_h2_conn_init(H2Conn *c, const H2Callbacks *cb)
     }
     c->cb = *cb;
     c->phase = 0;
-    pc_h2_settings_defaults(&c->peer);
+    protocore_h2_settings_defaults(&c->peer);
     c->conn_send_window = 65535;
-    pc_hpack_dyn_init(&c->hdec, PROTOCORE_HPACK_TABLE_BYTES);
+    protocore_hpack_dyn_init(&c->hdec, PROTOCORE_HPACK_TABLE_BYTES);
     send_our_settings(c);
 }
 
-proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
+proto_bool protocore_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
 {
     size_t off = 0;
     if (c->phase == 0)
@@ -694,7 +694,7 @@ proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
     return PROTO_TRUE;
 }
 
-proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const char *content_type, const char *body,
+proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const char *content_type, const char *body,
                               size_t body_len)
 {
     H2Stream *s = find_stream(c, stream_id);
@@ -707,10 +707,10 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
     uint8_t block[256];
     size_t bo = 0;
     char num[16];
-    pc_sb sb_num = {num, sizeof num, 0, PROTO_TRUE};
-    pc_sb_i64(&sb_num, (int64_t)(status));
-    int nl = (int)pc_sb_finish(&sb_num);
-    size_t w = pc_hpack_encode_header(block + bo, sizeof block - bo, ":status", 7, num, (size_t)nl);
+    protocore_sb sb_num = {num, sizeof num, 0, PROTO_TRUE};
+    protocore_sb_i64(&sb_num, (int64_t)(status));
+    int nl = (int)protocore_sb_finish(&sb_num);
+    size_t w = protocore_hpack_encode_header(block + bo, sizeof block - bo, ":status", 7, num, (size_t)nl);
     if (!w)
     {
         return PROTO_FALSE;
@@ -721,7 +721,7 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
         // Cap above the largest content-type that can fit this block even at HPACK-Huffman's best
         // 5-bit/char (~sizeof block * 8/5): a longer value can never fit, so measuring it as `2*block`
         // still trips the encode's reject below instead of being truncated into a fittable length.
-        w = pc_hpack_encode_header(block + bo, sizeof block - bo, "content-type", 12, content_type,
+        w = protocore_hpack_encode_header(block + bo, sizeof block - bo, "content-type", 12, content_type,
                                    strnlen(content_type, sizeof block * 2));
         if (!w)
         {
@@ -729,10 +729,10 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
         }
         bo += w;
     }
-    pc_sb sb_num2 = {num, sizeof num, 0, PROTO_TRUE};
-    pc_sb_u32(&sb_num2, (uint32_t)((unsigned)body_len));
-    int cl = (int)pc_sb_finish(&sb_num2);
-    w = pc_hpack_encode_header(block + bo, sizeof block - bo, "content-length", 14, num, (size_t)cl);
+    protocore_sb sb_num2 = {num, sizeof num, 0, PROTO_TRUE};
+    protocore_sb_u32(&sb_num2, (uint32_t)((unsigned)body_len));
+    int cl = (int)protocore_sb_finish(&sb_num2);
+    w = protocore_hpack_encode_header(block + bo, sizeof block - bo, "content-length", 14, num, (size_t)cl);
     // Reachable: bo has already been advanced by the caller-supplied content-type, which can consume nearly
     // the whole block, leaving too little room for content-length even though it is only a few octets.
     if (!w)
@@ -742,7 +742,7 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
     bo += w;
 
     uint8_t frame[H2_FRAME_HEADER_LEN + sizeof block];
-    size_t n = pc_h2_build_headers(frame, sizeof frame, stream_id, block, bo, body_len == 0);
+    size_t n = protocore_h2_build_headers(frame, sizeof frame, stream_id, block, bo, body_len == 0);
     if (!n)
     {
         return PROTO_FALSE;
@@ -762,7 +762,7 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
         proto_bool last = (sent + chunk == body_len);
         uint8_t dh[H2_FRAME_HEADER_LEN];
         size_t hn =
-            pc_h2_write_header(dh, sizeof dh, (uint32_t)chunk, H2_DATA, last ? H2_FLAG_END_STREAM : 0, stream_id);
+            protocore_h2_write_header(dh, sizeof dh, (uint32_t)chunk, H2_DATA, last ? H2_FLAG_END_STREAM : 0, stream_id);
         if (!hn)
         {
             return PROTO_FALSE;
@@ -777,10 +777,10 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
     return PROTO_TRUE;
 }
 
-void pc_h2_conn_goaway(H2Conn *c, uint32_t error)
+void protocore_h2_conn_goaway(H2Conn *c, uint32_t error)
 {
     uint8_t buf[H2_FRAME_HEADER_LEN + 8];
-    size_t n = pc_h2_build_goaway(buf, sizeof buf, c->last_peer_stream, error);
+    size_t n = protocore_h2_build_goaway(buf, sizeof buf, c->last_peer_stream, error);
     wr(c, buf, n);
     c->phase = 2;
 }

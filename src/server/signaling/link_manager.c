@@ -10,7 +10,21 @@
 
 #if PROTOCORE_ENABLE_LINK_MANAGER
 
-int protocore_link_select(const LinkManager *m)
+/**
+ * @brief The manager's calls - what LinkManagerNs points at.
+ *
+ * @var LinkManagerInternal::ns  the handle a caller sets a call's members on
+ */
+struct LinkManagerInternal
+{
+    LinkManagerNs *ns;
+};
+
+static struct LinkManagerInternal s_link = {.ns = &Link};
+
+// The highest-priority interface that is up, or -1. Higher priority wins; the lower index breaks a
+// tie, because best is the first entry seen at that priority.
+static int select_best(const LinkManager *m)
 {
     if (!m || !m->ifaces)
     {
@@ -23,7 +37,6 @@ int protocore_link_select(const LinkManager *m)
         {
             continue;
         }
-        // Higher priority wins; the lower index breaks a tie (best is the first at that priority).
         if (best < 0 || m->ifaces[i].priority > m->ifaces[best].priority)
         {
             best = (int)i;
@@ -32,48 +45,54 @@ int protocore_link_select(const LinkManager *m)
     return best;
 }
 
-void protocore_link_init(LinkManager *m, LinkIface *ifaces, size_t n)
+static void link_select(struct LinkManagerInternal *restrict ctx)
 {
+    ctx->ns->i32 = select_best(ctx->ns->args.m_ro);
+}
+
+static void link_init(struct LinkManagerInternal *restrict ctx)
+{
+    LinkManager *m = ctx->ns->args.m;
     if (!m)
     {
         return;
     }
-    m->ifaces = ifaces;
-    m->n = ifaces ? n : 0;
-    m->active = protocore_link_select(m);
+    m->ifaces = ctx->ns->args.ifaces;
+    m->n = ctx->ns->args.ifaces ? ctx->ns->args.n : 0;
+    m->active = select_best(m);
 }
 
-int protocore_link_active(const LinkManager *m)
+static void link_active(struct LinkManagerInternal *restrict ctx)
 {
-    return m ? m->active : -1;
+    const LinkManager *m = ctx->ns->args.m_ro;
+    ctx->ns->i32 = m ? m->active : -1;
 }
 
-proto_bool protocore_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to)
+static void link_set(struct LinkManagerInternal *restrict ctx)
 {
+    LinkManager *m = ctx->ns->args.m;
+    const size_t idx = ctx->ns->args.idx;
+
     if (!m || !m->ifaces || idx >= m->n)
     {
-        if (from)
-        {
-            *from = m ? m->active : -1;
-        }
-        if (to)
-        {
-            *to = m ? m->active : -1;
-        }
-        return PROTO_FALSE;
+        ctx->ns->from = m ? m->active : -1;
+        ctx->ns->to = ctx->ns->from;
+        ctx->ns->changed = PROTO_FALSE;
+        return;
     }
     int prev = m->active;
-    m->ifaces[idx].up = up;
-    m->active = protocore_link_select(m);
-    if (from)
-    {
-        *from = prev;
-    }
-    if (to)
-    {
-        *to = m->active;
-    }
-    return m->active != prev;
+    m->ifaces[idx].up = ctx->ns->args.up;
+    m->active = select_best(m);
+    ctx->ns->from = prev;
+    ctx->ns->to = m->active;
+    ctx->ns->changed = (m->active != prev);
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+LinkManagerNs Link = {.init = link_init,
+                      .select = link_select,
+                      .active = link_active,
+                      .set = link_set,
+                      .internal = &s_link};
 
 #endif // PROTOCORE_ENABLE_LINK_MANAGER

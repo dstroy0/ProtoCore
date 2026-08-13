@@ -12,7 +12,7 @@
 
 #if PROTOCORE_ENABLE_WEBHOOK
 
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 
 #include <stdio.h>
 

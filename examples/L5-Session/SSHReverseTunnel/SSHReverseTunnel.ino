@@ -31,7 +31,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/presentation/ssh/ssh_client.h"
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 
 // ---- Provisioning: replace these for your network + relay ----
 static const char *WIFI_SSID = "your-ssid";

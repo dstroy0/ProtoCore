@@ -7,7 +7,7 @@
 #include "protocore.h"
 #include <stdio.h>
 
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "rx_feed.h"
 #include <unity.h>
 

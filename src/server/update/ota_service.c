@@ -15,7 +15,7 @@
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "protocore.h"
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 #include <Update.h>
 
 // All OTA-service state, owned by one instance (internal linkage): the server handle, the
@@ -132,8 +132,24 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-void protocore_ota_begin(const char *path, const char *user, const char *pass)
+/**
+ * @brief The service's call - what OtaServiceNs points at.
+ *
+ * @var OtaServiceInternal::ns  the handle a caller sets the call's members on
+ */
+struct OtaServiceInternal
 {
+    OtaServiceNs *ns;
+};
+
+static struct OtaServiceInternal s_ota_svc = {.ns = &OtaService};
+
+static void ota_service_begin(struct OtaServiceInternal *restrict ctx)
+{
+    const char *path = ctx->ns->args.path;
+    const char *user = ctx->ns->args.user;
+    const char *pass = ctx->ns->args.pass;
+
     s_ota.path = path;
     strncpy(s_ota.user, user ? user : "", sizeof(s_ota.user) - 1);
     s_ota.user[sizeof(s_ota.user) - 1] = '\0';
@@ -144,13 +160,23 @@ void protocore_ota_begin(const char *path, const char *user, const char *pass)
     on_http(path, HTTP_POST, ota_handle);
 }
 
+OtaServiceNs OtaService = {.begin = ota_service_begin, .internal = &s_ota_svc};
+
 #else
 
-void protocore_ota_begin(const char *path, const char *user, const char *pass)
+/** @brief The service's call - what OtaServiceNs points at, with no updater to install onto. */
+struct OtaServiceInternal
 {
-    (void)path;
-    (void)user;
-    (void)pass;
+    OtaServiceNs *ns;
+};
+
+static struct OtaServiceInternal s_ota_svc = {.ns = &OtaService};
+
+static void ota_service_begin(struct OtaServiceInternal *restrict ctx)
+{
+    (void)ctx;
 }
+
+OtaServiceNs OtaService = {.begin = ota_service_begin, .internal = &s_ota_svc};
 
 #endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA

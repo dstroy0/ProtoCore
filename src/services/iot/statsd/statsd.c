@@ -16,7 +16,7 @@
 
 #if PROTOCORE_ENABLE_STATSD
 
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 
 // Unsigned -> decimal (not NUL-terminated); returns the digit count.
 static size_t u64_str(char *b, uint64_t v)

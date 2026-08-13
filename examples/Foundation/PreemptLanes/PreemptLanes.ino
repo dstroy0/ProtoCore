@@ -15,7 +15,7 @@
 // Build flag (whole build): PROTOCORE_ENABLE_PREEMPT_QUEUE=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "network_drivers/session/preempt_queue.h"
+#include "server/system/preempt_queue.h"
 
 // A queue item padded to the lane item size (the queue copies a fixed PROTOCORE_PQ_ITEM_SIZE
 // bytes, so the posted object must be at least that large).

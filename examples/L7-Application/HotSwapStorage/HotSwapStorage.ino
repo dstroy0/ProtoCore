@@ -28,7 +28,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/storage/hotswap/hotswap.h"
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 #include <SD_MMC.h>
 
 static const char *WIFI_SSID = "your-ssid";

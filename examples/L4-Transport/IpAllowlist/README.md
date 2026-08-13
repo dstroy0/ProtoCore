@@ -59,7 +59,7 @@ verbatim with added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp_listener.h" // Tcp.listener->ip_allow_add_cidr
+#include "network_drivers/transport/tcp/server/server.h" // Tcp.listener->ip_allow_add_cidr
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

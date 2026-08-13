@@ -76,39 +76,58 @@ typedef struct
     uint32_t samples_dropped;   ///< feed() samples rejected because the window buffer was full
 } protocore_tc_stats;
 
-/**
- * @brief Configure the assembler and reset all state.
- * @return true if configured; false on a null config/sink, a zero split, or a split that
- *         exceeds PROTOCORE_TC_MAX_WINDOW_SAMPLES.
- */
-proto_bool protocore_tc_begin(const protocore_tc_config *cfg);
+/** @brief The samples one feed carries, and where a stats read lands. */
+typedef struct
+{
+    const uint16_t *samples;   ///< the block just sampled
+    uint16_t n;                ///< how many
+    protocore_tc_stats *stats; ///< where a stats read copies the tallies
+} TcFeedArgs;
+
+/** @brief The capture's own state and the calls that reach it, described only in trace_capture.c. */
+struct TraceCaptureInternal;
 
 /**
- * @brief Feed @p n newly-arrived samples (oldest first). Always refreshes the pre-trigger
- *        ring; while a window is filling, also appends into it - completing and firing the
- *        sink the instant @ref protocore_tc_config::posttrigger_samples have arrived since
- *        trigger(). ISR-safe: no blocking, no allocation, bounded work proportional to @p n.
- * @return @p n once configured; 0 (all @p n counted into @ref protocore_tc_stats::samples_dropped,
- *         fail-closed) if called before protocore_tc_begin() / after protocore_tc_end().
+ * @brief The pre/post-trigger sample capture.
+ *
+ * A caller sets the members a call takes, invokes it through ::TraceCapture, and reads the outcome
+ * off the same handle. The pre-roll ring and the assembled window are behind @ref internal.
+ *
+ * @var TraceCaptureNs::cfg        what arming the capture takes
+ * @var TraceCaptureNs::feed       the samples one feed carries, and where a stats read lands
+ * @var TraceCaptureNs::ok         a call's true/false outcome
+ * @var TraceCaptureNs::accepted   samples the feed took
+ * @var TraceCaptureNs::begin      arm the capture at its pre/post sample counts
+ * @var TraceCaptureNs::feed_in    push samples through the pre-roll ring and the window
+ * @var TraceCaptureNs::trigger    latch the pre-roll and start collecting post-trigger samples
+ * @var TraceCaptureNs::get_stats  copy the tallies out
+ * @var TraceCaptureNs::capturing  a window is being assembled right now
+ * @var TraceCaptureNs::end        disarm
+ * @var TraceCaptureNs::internal   the ring, the window and the calls that fill them
+ *
+ * The window completes inside a feed: when the last post-trigger sample lands, the sink is called
+ * with the assembled window before the feed returns.
  */
-uint16_t protocore_tc_feed(const uint16_t *samples, uint16_t n);
+typedef struct
+{
+    const protocore_tc_config *cfg;
+    TcFeedArgs feed;
 
-/**
- * @brief Declare the trigger instant now: the pre-trigger ring's current content becomes the
- *        window's pre-trigger half, and subsequent protocore_tc_feed() calls fill the post-trigger
- *        half. ISR-safe.
- * @return true if armed; false (fail-closed, counted) if a window was already filling.
- */
-proto_bool protocore_tc_trigger(void);
+    proto_bool ok;
+    uint16_t accepted;
 
-/** @brief Rolling telemetry snapshot (see @ref protocore_tc_stats). */
-void protocore_tc_get_stats(protocore_tc_stats *out);
+    void (*begin)(struct TraceCaptureInternal *ctx);
+    void (*feed_in)(struct TraceCaptureInternal *ctx);
+    void (*trigger)(struct TraceCaptureInternal *ctx);
+    void (*get_stats)(struct TraceCaptureInternal *ctx);
+    void (*capturing)(struct TraceCaptureInternal *ctx);
+    void (*end)(struct TraceCaptureInternal *ctx);
 
-/** @brief True while a window is between trigger() and the post-trigger count completing. */
-proto_bool protocore_tc_capturing(void);
+    struct TraceCaptureInternal *internal;
+} TraceCaptureNs;
 
-/** @brief Tear down: no further sink calls until protocore_tc_begin() again. */
-void protocore_tc_end(void);
+/** @brief The one symbol this module exports. */
+extern TraceCaptureNs TraceCapture;
 
 #endif // PROTOCORE_ENABLE_TRACE_CAPTURE
 

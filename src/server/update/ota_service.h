@@ -6,10 +6,10 @@
  * @brief Optional authenticated OTA firmware update (PROTOCORE_ENABLE_OTA).
  *
  * Registers a POST endpoint that streams a firmware image straight into the
- * ESP32 `Update` API via the parser's streaming-body hook
+ * platform update API via the parser's streaming-body hook
  * (http_parser_set_stream_hooks), so the image never has to fit in RAM. On a
  * successful flash the device responds and reboots into the new firmware.
- * Compiled to a no-op stub when PROTOCORE_ENABLE_OTA is 0 or off-Arduino.
+ * Compiled to a no-op stub when PROTOCORE_ENABLE_OTA is 0 or the platform has no updater.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -40,7 +40,35 @@ PROTOCORE_BEGIN_DECLS
  * curl -u admin:s3cret --data-binary @firmware.bin http://<ip>/update
  * @endcode
  */
-void protocore_ota_begin(const char *path, const char *user, const char *pass);
+/** @brief What installing the upload route takes. */
+typedef struct
+{
+    const char *path; ///< URL to accept the upload on (e.g. "/update"); a persistent string
+    const char *user; ///< required HTTP Basic username
+    const char *pass; ///< required HTTP Basic password
+} OtaServiceArgs;
+
+/** @brief The service's own call, described only in ota_service.c. */
+struct OtaServiceInternal;
+
+/**
+ * @brief The firmware upload route.
+ *
+ * @var OtaServiceNs::args      what installing the route takes
+ * @var OtaServiceNs::begin     install the route and the streaming-body hooks
+ * @var OtaServiceNs::internal  the credentials and the call that installs the route
+ */
+typedef struct
+{
+    OtaServiceArgs args;
+
+    void (*begin)(struct OtaServiceInternal *ctx);
+
+    struct OtaServiceInternal *internal;
+} OtaServiceNs;
+
+/** @brief The one symbol this module exports. */
+extern OtaServiceNs OtaService;
 
 #endif // PROTOCORE_ENABLE_OTA
 

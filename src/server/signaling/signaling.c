@@ -10,71 +10,90 @@
  */
 
 #include "server/signaling/signaling.h"
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 
-// The deposited bucket, one owner with internal linkage: storage for facts the loop established,
-// never a source of them. Static storage zero-initializes, so a read taken before the first tick
-// answers an idle server rather than garbage.
-typedef struct
+/**
+ * @brief The bucket's compile-time storage: the one snapshot every deposit lands in.
+ */
+struct SignalingStorage
 {
     protocore_signal_snapshot state;
-} SignalingCtx;
-static SignalingCtx s_sig;
+};
 
-void protocore_signal_put_response(int code)
+/**
+ * @brief The bucket and the calls that reach it - what SignalingNs points at.
+ *
+ * @var SignalingInternal::store  the snapshot every deposit lands in
+ * @var SignalingInternal::ns     the handle a caller sets a call's members on
+ */
+struct SignalingInternal
 {
-    s_sig.state.requests_total++;
+    struct SignalingStorage *store;
+    SignalingNs *ns;
+};
 
-    // The class is the leading digit, so one divide yields it. A ladder of range compares would
-    // re-derive what the division already answered, and would have to agree with itself about the
-    // boundaries in three places.
-    int cls = code / 100;
-    if (cls == 2)
+static struct SignalingStorage s_store;
+
+static struct SignalingInternal s_sig = {.store = &s_store, .ns = &Signal};
+
+static void signal_put_response(struct SignalingInternal *restrict ctx)
+{
+    const int code = ctx->ns->put.code;
+
+    ctx->store->state.requests_total++;
+    if (code >= 200 && code < 300)
     {
-        s_sig.state.responses_2xx++;
+        ctx->store->state.responses_2xx++;
     }
-    else if (cls == 4)
+    else if (code >= 400 && code < 500)
     {
-        s_sig.state.responses_4xx++;
+        ctx->store->state.responses_4xx++;
     }
-    else if (cls == 5)
+    else if (code >= 500 && code < 600)
     {
-        s_sig.state.responses_5xx++;
+        ctx->store->state.responses_5xx++;
     }
-    // 1xx and 3xx count toward the total and carry no class tally of their own: nothing reads one,
-    // and a counter nobody reads is state that can only be wrong.
 }
 
-void protocore_signal_put_tick(uint32_t uptime_ms, uint32_t conns_active, uint32_t listeners_up)
+static void signal_put_tick(struct SignalingInternal *restrict ctx)
 {
-    s_sig.state.uptime_ms = uptime_ms;
-    s_sig.state.conns_active = conns_active;
-    s_sig.state.listeners_up = listeners_up;
+    ctx->store->state.uptime_ms = ctx->ns->put.uptime_ms;
+    ctx->store->state.conns_active = ctx->ns->put.conns_active;
+    ctx->store->state.listeners_up = ctx->ns->put.listeners_up;
 }
 
-void protocore_signal_know(protocore_signal_snapshot *out)
+static void signal_know(struct SignalingInternal *restrict ctx)
 {
-    if (out == NULL)
+    if (ctx->ns->out == NULL)
     {
         return;
     }
     // A copy, not a pointer into the bucket. A reader formats several fields and the loop deposits
     // between its reads, so handing out the storage would let one report mix two server states.
-    *out = s_sig.state;
+    *ctx->ns->out = ctx->store->state;
 }
 
-void protocore_signal_reset(void)
+static void signal_reset(struct SignalingInternal *restrict ctx)
 {
     // The tallies are per-run: a server that has started over has answered no requests. Zero is the
     // bucket's initial state, so the reset is the same store the static initialization performs.
-    static const SignalingCtx blank = {0};
-    s_sig = blank;
+    static const struct SignalingStorage blank = {0};
+    *ctx->store = blank;
 }
 
-void protocore_signal_kill(uint8_t slot)
+static void signal_kill(struct SignalingInternal *restrict ctx)
 {
     // A plain forward: no liveness test, no result. Transport owns the slot's lifetime and its idle
     // sweep reaps a stale one regardless, so a check here would answer a question transport has
     // already answered, and the answer could be stale before the caller read it.
-    Tcp.conn->close(slot);
+    Tcp.conn->close(ctx->ns->slot);
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+SignalingNs Signal = {.know = signal_know,
+                      .reset = signal_reset,
+                      .put_response = signal_put_response,
+                      .put_tick = signal_put_tick,
+                      .kill = signal_kill,
+                      .internal = &s_sig};
+

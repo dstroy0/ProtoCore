@@ -14,7 +14,7 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "protocore.h"
 #include "server/filesystem/mnt.h" // the storage seam: protocore_mnt_active()
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 #include <stdio.h>
 
 static const protocore_field UPLOAD_OK[] = {

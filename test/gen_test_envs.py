@@ -117,6 +117,13 @@ build_flags =
     ; Keep this here rather than only in the coverage run so the tested build and the measured
     ; build are the same build.
     -fno-exceptions
+    ; Link-time optimization, required rather than preferred. The transport's slot state lives
+    ; behind an incomplete type, so its accessors are defined in one translation unit and called
+    ; from others. Measured on gcc 13.2, gcc 16.1 and clang 22 (tools/dev_env/pimpl_bench): without
+    ; -flto those calls are NEVER inlined at any level - -O0 through -Os and -Oz all emit the call.
+    ; With -flto they inline from -O1 (gcc) / -O2 (clang), and the hot loop comes out the same size
+    ; or smaller than the fully-public struct it replaced.
+    -flto
     -I test/mocks
     -I test/support
     -I src
@@ -136,6 +143,11 @@ build_flags =
 ; include lfs.h build it - the dependency finder does not compile what nothing reaches for.
 lib_deps =
     anurag3301/littlefs@^2.11.6
+; Link library objects directly instead of collecting them into a .a first. Unity is meant to be
+; compiled from source with the project's own flags (UnityConfigurationGuide.md), and an archive
+; built without LTO IR cannot satisfy an LTO link: the plugin drops UnityAssertEqualNumber and
+; UnityFail and every suite fails to link.
+lib_archive = no
 test_build_src = yes"""
 
 

@@ -24,7 +24,7 @@
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
+#include "network_drivers/transport/tcp/tcp.h" // shared outbound TCP client (L4)
 #endif
 #if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_WS_CLIENT_TLS
 #include "network_drivers/tls/tls.h"

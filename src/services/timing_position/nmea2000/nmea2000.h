@@ -29,7 +29,7 @@
 #if PROTOCORE_ENABLE_NMEA2000
 
 #include "services/fieldbus/j1939/j1939.h" // reuses the J1939 29-bit identifier codec
-#include "shared_primitives/can.h"
+#include "shared/can/can.h"
 
 #define N2K_FP_SEQ_SHIFT 5      ///< control octet: sequence counter in bits 7..5
 #define N2K_FP_FRAME_MASK 0x1Fu ///< control octet: frame counter in bits 4..0

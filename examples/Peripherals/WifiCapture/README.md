@@ -20,7 +20,7 @@ Wi-Fi radio ─protocore_promisc_begin()→ sink ─protocore_forward_ingress()�
   an Ethernet destination, add a `WIFI → ETH` ALLOW rule (with a rate cap so a busy channel can't
   swamp the uplink), and every ingress frame is handed to the Ethernet interface's send callback.
 - The **Ethernet egress** here wraps each frame in a **libpcap record** (`protocore_pcap_record_header()`
-  from `shared_primitives/pcap.h`, link type `PROTOCORE_DLT_IEEE802_11`) and UDPs it to the collector
+  from `shared/pcap/pcap.h`, link type `PROTOCORE_DLT_IEEE802_11`) and UDPs it to the collector
   with `Udp.client->sendto()`, which routes over the wired default route.
 
 On the collector, receive the UDP datagrams, prepend one
