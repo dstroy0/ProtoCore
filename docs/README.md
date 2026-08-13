@@ -153,6 +153,27 @@ src/
 │   ├── rng/  (rng.h, rng.c)
 │   ├── crypto_opt.h
 │   └── ct_eq.h
+├── idemIP/
+│   ├── arp/
+│   │   └── arp.h
+│   ├── ethernet/
+│   │   ├── ethernet.h
+│   │   ├── mii.h
+│   │   ├── phy.c
+│   │   └── phy.h
+│   ├── icmp/
+│   │   ├── icmp.h
+│   │   └── icmpv6.h
+│   ├── ip/
+│   │   ├── ipv4.h
+│   │   └── ipv6.h
+│   ├── tcp/
+│   │   └── tcp.h
+│   ├── udp/
+│   │   └── udp.h
+│   ├── checksum.h
+│   ├── common.h
+│   └── endian.h
 ├── mmgr/
 │   ├── arena.c
 │   ├── arena.h
@@ -308,35 +329,32 @@ src/
 │   │   │       ├── dtls_record.c
 │   │   │       └── dtls_record.h
 │   │   ├── ssh/
-│   │   │   ├── auth/  (ssh_auth.h, ssh_auth.c)
-│   │   │   ├── connection/
-│   │   │   │   ├── ssh_channel.c
-│   │   │   │   ├── ssh_channel.h
-│   │   │   │   ├── ssh_conn.c
-│   │   │   │   ├── ssh_conn.h
-│   │   │   │   ├── ssh_flow_control.c
-│   │   │   │   ├── ssh_flow_control.h
-│   │   │   │   ├── ssh_forward.c
-│   │   │   │   └── ssh_forward.h
+│   │   │   ├── app/
+│   │   │   │   ├── client.c
+│   │   │   │   ├── client.h
+│   │   │   │   ├── server.c
+│   │   │   │   └── server.h
+│   │   │   ├── auth/  (auth.h, auth.c)
+│   │   │   ├── client/  (client.h, client.c)
+│   │   │   ├── connection/  (connection.h, connection.c)
+│   │   │   ├── network/  (network.h, network.c)
+│   │   │   ├── server/  (server.h, server.c)
 │   │   │   ├── transport/
-│   │   │   │   ├── ssh_comp.c
-│   │   │   │   ├── ssh_comp.h
-│   │   │   │   ├── ssh_dh.c
-│   │   │   │   ├── ssh_dh.h
-│   │   │   │   ├── ssh_inflate.c
-│   │   │   │   ├── ssh_inflate.h
-│   │   │   │   ├── ssh_keymat.c
-│   │   │   │   ├── ssh_keymat.h
-│   │   │   │   ├── ssh_packet.c
-│   │   │   │   ├── ssh_packet.h
-│   │   │   │   ├── ssh_transport.c
-│   │   │   │   ├── ssh_transport.h
-│   │   │   │   ├── ssh_zlib.c
-│   │   │   │   └── ssh_zlib.h
-│   │   │   ├── ssh_client.c
-│   │   │   ├── ssh_client.h
-│   │   │   ├── ssh_server.c
-│   │   │   └── ssh_server.h
+│   │   │   │   ├── comp.c
+│   │   │   │   ├── comp.h
+│   │   │   │   ├── extension.c
+│   │   │   │   ├── extension.h
+│   │   │   │   ├── inflate.c
+│   │   │   │   ├── inflate.h
+│   │   │   │   ├── phase_machine.c
+│   │   │   │   ├── phase_machine.h
+│   │   │   │   ├── transport.c
+│   │   │   │   ├── transport.h
+│   │   │   │   ├── zlib.c
+│   │   │   │   └── zlib.h
+│   │   │   ├── common.h
+│   │   │   ├── ssh.c
+│   │   │   └── ssh.h
 │   │   ├── telnet/  (telnet.h, telnet.c)
 │   │   ├── presentation.c
 │   │   └── presentation.h
@@ -715,18 +733,17 @@ src/
 │   ├── pcap.h
 │   ├── speed_opt.h
 │   ├── time_compat.h
-│   ├── protocore_types.h
 │   └── utf8.h
 ├── web_assets/
 │   ├── favicons/  (288 generated files)
 │   ├── input/
-│   │   ├── PROTOCORE_DASHBOARD_PAGE.html
-│   │   ├── PROTOCORE_METRICS_PROM.txt
-│   │   ├── PROTOCORE_PROV_FORM.html
-│   │   ├── PROTOCORE_PROV_SAVED_HTML.html
-│   │   ├── PROTOCORE_SERVICE_WORKER.js
-│   │   ├── PROTOCORE_STATS_JSON.json
-│   │   └── PROTOCORE_TERMINAL_PAGE.html
+│   │   ├── PC_DASHBOARD_PAGE.html
+│   │   ├── PC_METRICS_PROM.txt
+│   │   ├── PC_PROV_FORM.html
+│   │   ├── PC_PROV_SAVED_HTML.html
+│   │   ├── PC_SERVICE_WORKER.js
+│   │   ├── PC_STATS_JSON.json
+│   │   └── PC_TERMINAL_PAGE.html
 │   ├── themes/  (112 generated files)
 │   ├── wizard/
 │   │   ├── __init__.py
@@ -738,7 +755,8 @@ src/
 │   └── README.md
 ├── protocore.c
 ├── protocore.h
-└── protocore_config.h
+├── protocore_config.h
+└── protocore_types.h
 ```
 
 <!-- prettier-ignore-end -->
@@ -1499,6 +1517,7 @@ guards at compile time.
 | `PROTOCORE_SSH_FWD_MAX` | `2` | Maximum concurrent forwarded TCP connections (must be <= PROTOCORE_CLIENT_CONNS). |
 | `PROTOCORE_SSH_MAX_CHANNELS` | `1` | Maximum concurrent SSH channels per connection (RFC 4254 multiplexing). |
 | `PROTOCORE_SSH_PORT_FORWARD` | `0` | SSH TCP port forwarding (`direct-tcpip`, i.e. |
+| `PROTOCORE_SSH_PTY_TERM_MAX` | `24` | Max stored TERM value from a pty-req (RFC 4254 sec 6.2). |
 | `PROTOCORE_SSH_PW_CHANGE_COOLDOWN_MS` | `60000u` |  |
 | `PROTOCORE_SSH_RFWD_BRIDGE_MAX` | `2` | Maximum concurrent bridged connections across all remote forwards. |
 | `PROTOCORE_SSH_RFWD_MAX` | `1` | Maximum concurrent remote-forward listeners (`ssh -R` / `tcpip-forward`). |
@@ -1571,7 +1590,9 @@ guards at compile time.
 | `SNMP_V3_ENGINEID_MAX` | `32` | Maximum SNMPv3 authoritative engine-ID length in bytes (RFC 3411 allows 5..32). |
 | `SNMP_V3_USER_MAX` | `32` | Maximum SNMPv3 USM user-name length (including null terminator). |
 | `SSE_BUF_SIZE` | `256` | Output buffer size in bytes for a single SSE event. |
+| `SSH_AUTH_ALGO_MAX` | `20` | Max stored public-key algorithm name ("rsa-sha2-512", "ecdsa-sha2-nistp256", RFC 4253 sec 6.6). |
 | `SSH_AUTH_PASS_MAX` | `64` | Max stored password length. |
+| `SSH_AUTH_TIMEOUT_MS` | `600000u` | How long a connection may stay unauthenticated before it is disconnected, milliseconds. |
 | `SSH_AUTH_USER_MAX` | `32` | Max stored user name (RFC 4252 imposes no limit; we cap for BSS). |
 | `SSH_CHAN_WINDOW` | `32768u` | Initial receive window the SSH server advertises (RFC 4254 §5.1). |
 | `SSH_KEXINIT_MAX` | `2048` | Max stored size of the CLIENT KEXINIT payload (I_C, for the exchange hash). |

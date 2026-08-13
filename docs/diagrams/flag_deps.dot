@@ -24,7 +24,6 @@ digraph flag_deps {
   FORWARDED_TRUST [label="FORWARDED_TRUST", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#forwarded-trust", target="_blank", tooltip="PROTOCORE_ENABLE_FORWARDED_TRUST - needs AUTH_LOCKOUT"];
   FTP [label="FTP", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ftp", target="_blank", tooltip="PROTOCORE_ENABLE_FTP - enables 1"];
   FTP_SESSION [label="FTP_SESSION", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ftp-session", target="_blank", tooltip="PROTOCORE_ENABLE_FTP_SESSION - needs FTP"];
-  HTTP3 [label="HTTP3", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http3", target="_blank", tooltip="PROTOCORE_ENABLE_HTTP3 - needs SSH_SNTRUP761"];
   HTTP_CACHE [label="HTTP_CACHE", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-cache", target="_blank", tooltip="PROTOCORE_ENABLE_HTTP_CACHE - enables 1"];
   HTTP_CLIENT [label="HTTP_CLIENT", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-client", target="_blank", tooltip="PROTOCORE_ENABLE_HTTP_CLIENT - enables 1"];
   HTTP_CLIENT_TLS [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD><FONT COLOR="#e6edf3">HTTP_CLIENT_TLS  </FONT></TD><TD BGCOLOR="#238636"><FONT COLOR="#eaffef" POINT-SIZE="8.5">TLS</FONT></TD></TR></TABLE>>, fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-client-tls", target="_blank", tooltip="PROTOCORE_ENABLE_HTTP_CLIENT_TLS - needs HTTP_CLIENT"];
@@ -47,12 +46,11 @@ digraph flag_deps {
   SNMP_TRAP [label="SNMP_TRAP", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp-trap", target="_blank", tooltip="PROTOCORE_ENABLE_SNMP_TRAP - needs SNMP"];
   SNMP_V3 [label="SNMP_V3", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp-v3", target="_blank", tooltip="PROTOCORE_ENABLE_SNMP_V3 - needs SNMP"];
   SSE [label="SSE", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#sse", target="_blank", tooltip="PROTOCORE_ENABLE_SSE - enables 1"];
-  SSH [label="SSH", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh", target="_blank", tooltip="PROTOCORE_ENABLE_SSH - needs SSH_SNTRUP761 - enables 5"];
-  SSH_CLIENT [label="SSH_CLIENT", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-client", target="_blank", tooltip="PROTOCORE_ENABLE_SSH_CLIENT - needs SSH_SNTRUP761"];
+  SSH [label="SSH", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh", target="_blank", tooltip="PROTOCORE_ENABLE_SSH - enables 5"];
   SSH_KEYBOARD_INTERACTIVE [label="SSH_KEYBOARD_INTERACTIVE", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-keyboard-interactive", target="_blank", tooltip="PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE - needs SSH"];
   SSH_SCP [label="SSH_SCP", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-scp", target="_blank", tooltip="PROTOCORE_ENABLE_SSH_SCP - needs SSH"];
   SSH_SFTP [label="SSH_SFTP", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-sftp", target="_blank", tooltip="PROTOCORE_ENABLE_SSH_SFTP - needs SSH"];
-  SSH_SNTRUP761 [label="SSH_SNTRUP761", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-sntrup761", target="_blank", tooltip="PROTOCORE_ENABLE_SSH_SNTRUP761 - enables 4"];
+  SSH_SNTRUP761 [label="SSH_SNTRUP761", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-sntrup761", target="_blank", tooltip="PROTOCORE_ENABLE_SSH_SNTRUP761 - enables 1"];
   SSH_ZLIB [label="SSH_ZLIB", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-zlib", target="_blank", tooltip="PROTOCORE_ENABLE_SSH_ZLIB - needs SSH"];
   STATS [label="STATS", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#stats", target="_blank", tooltip="PROTOCORE_ENABLE_STATS - enables 1"];
   TIME_SOURCE [label="TIME_SOURCE", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#time-source", target="_blank", tooltip="PROTOCORE_ENABLE_TIME_SOURCE - enables 1"];
@@ -94,10 +92,7 @@ digraph flag_deps {
   SSH -> SSH_SCP;
   SSH -> SSH_SFTP;
   SSH -> SSH_ZLIB;
-  SSH_SNTRUP761 -> HTTP3;
   SSH_SNTRUP761 -> PQC_KEX;
-  SSH_SNTRUP761 -> SSH;
-  SSH_SNTRUP761 -> SSH_CLIENT;
   STATS -> METRICS;
   TIME_SOURCE -> NTP_SERVER;
   WEBSOCKET -> WEB_TERMINAL;
