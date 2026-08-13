@@ -236,7 +236,6 @@ Each **green** node is a parent feature and each **blue** node a child that need
 
 | Enabling this... | ...auto-enables |
 | --- | --- |
-| `PROTOCORE_ENABLE_EDGE_ORIGIN_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
 | `PROTOCORE_ENABLE_HTTP_CLIENT_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
 | `PROTOCORE_ENABLE_MQTT_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
 | `PROTOCORE_ENABLE_OTA` | `PROTOCORE_ENABLE_STREAM_BODY` |
@@ -253,7 +252,7 @@ Each **green** node is a parent feature and each **blue** node a child that need
 | `PROTOCORE_ENABLE_TLS` | MAX_TLS_CONNS gt 1 |
 </details>
 
-_45 hard dependencies, 2 PSRAM gates, 7 derived flags._
+_42 hard dependencies, 2 PSRAM gates, 6 derived flags._
 
 <!-- prettier-ignore-end -->
 

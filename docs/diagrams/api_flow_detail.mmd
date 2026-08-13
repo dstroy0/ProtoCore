@@ -12,7 +12,7 @@ flowchart TB
   listen["Accept a connection<br/>listener_accept_cb"]
   ring[("Hold the bytes<br/>conn_pool + rx ring")]
   udprx["Receive a datagram<br/>protocore_udp"]
-  seam{{"Which protocol?<br/>ProtoHandler seam<br/>HTTP / TELNET / SSH / MODBUS / OPCUA"}}
+  seam{{"Which protocol?<br/>ProtoHandler seam<br/>HTTP / TELNET / SSH / SSH_RFWD / MODBUS / OPCUA"}}
   tls["Decrypt + choose version<br/>protocore_tls + ALPN"]
   parser["Read HTTP/1.1<br/>http_parser"]
   h2["Decode HTTP/2<br/>h2_conn"]
