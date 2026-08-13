@@ -2,29 +2,36 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_snmp_agent.h
- * @brief Zero-heap SNMP v1/v2c agent: PDU processing + a fixed MIB table.
+ * @file snmp_agent.h
+ * @brief The command responder: community-framed messages, PDU processing, and a fixed MIB.
  *
- * The agent is split into a pure, host-testable core and an ESP32-only UDP
- * transport (mirroring how the provisioning service splits its form parser from
- * its lwIP DNS responder):
+ * The agent answers management requests against a fixed table of managed objects. Two framings
+ * reach the same table:
  *
- *  - protocore_snmp_agent_process() takes a complete request datagram and produces a
- *    complete response datagram in a caller buffer - no sockets, no heap. It is
- *    unit-tested on the host (env:native_snmp).
- *  - protocore_snmp_agent_begin_udp() binds the agent on :161 via the protocore_udp_* transport
- *    API (Arduino only) and feeds received datagrams through protocore_snmp_agent_process().
+ *  - **SNMPv1**, RFC 1157 sec 4: `Message ::= SEQUENCE { version version-1(0), community OCTET
+ *    STRING, data ANY }`. RFC 1157 sec 3.2.5 makes the community the whole of authentication: a
+ *    message is authentic when it belongs to the community it names. RFC 1157 sec 4.1 says an
+ *    entity that fails authentication notes the failure and discards the datagram, so an unknown
+ *    community is answered with nothing at all.
+ *  - **SNMPv2c**, RFC 1901 sec 3: the same wrapper with version(1), carrying the RFC 3416 PDUs.
  *
- * The MIB is a fixed BSS table of SNMP_MAX_MIB_ENTRIES objects. Register objects
- * with protocore_snmp_agent_add_*; values are either static (stored in the entry) or
- * fetched through a getter callback (e.g. sysUpTime). All string/OID values are
- * referenced by pointer and must outlive the agent (point them at flash/static
- * data, exactly like the rest of the library's strings).
+ * PDU processing is RFC 3416 sec 4.2: the GetRequest-PDU (sec 4.2.1), the GetNextRequest-PDU
+ * (sec 4.2.2), the GetBulkRequest-PDU (sec 4.2.3) and the SetRequest-PDU (sec 4.2.5), each
+ * answered by a Response-PDU (sec 4.2.4). The GetBulkRequest-PDU and the per-binding exceptions
+ * noSuchObject, noSuchInstance and endOfMibView belong to v2c and v3; v1 reports through
+ * error-status and error-index instead (RFC 1157 sec 4.1.1).
  *
- * Get / GetNext / GetBulk / Set are supported. GetBulk and per-varbind
- * exceptions (noSuchObject / noSuchInstance / endOfMibView) apply to v2c; v1 uses
- * the classic error-status / error-index reporting. SNMPv3 (USM) is a separate,
- * gated layer.
+ * The MIB is a fixed table of SNMP_MAX_MIB_ENTRIES object instances, in BSS. A value is either
+ * held in the entry or fetched through a getter, as sysUpTime.0 is. String and OBJECT IDENTIFIER
+ * values are referenced by pointer and must outlive the agent.
+ *
+ * Message processing is pure: request octets in, response octets out, no socket and no heap, so
+ * it is unit-tested with no network stack under it. RFC 3417 sec 3.2 suggests command responders
+ * listen on UDP port 161, which @ref SnmpAgentNs::listen binds through the transport UDP service.
+ * SNMPv3 is the separate USM layer, reached through ::SnmpV3.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_SNMP_AGENT_H
@@ -37,15 +44,15 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SNMP
 
-// SNMP message versions (the on-wire INTEGER value).
+/** @brief The version field of the message wrapper, as it is encoded. */
 typedef enum PROTO_ENUM_PACKED
 {
-    SNMP_V1 = 0,
-    SNMP_V2C = 1,
-    SNMP_V3 = 3,
+    SNMP_V1 = 0,  ///< version-1(0), RFC 1157 sec 4
+    SNMP_V2C = 1, ///< version(1), RFC 1901 sec 3
+    SNMP_V3 = 3,  ///< msgVersion, RFC 3412 sec 6
 } SnmpVersion;
 
-// PDU error-status values (RFC 1157 / RFC 3416).
+/** @brief error-status values (RFC 1157 sec 4.1.1 for 0 through 5, RFC 3416 sec 3 for the rest). */
 typedef enum PROTO_ENUM_PACKED
 {
     SNMP_ERR_NO_ERROR = 0,
@@ -60,111 +67,133 @@ typedef enum PROTO_ENUM_PACKED
 } SnmpErr;
 
 /**
- * @brief A typed SNMP value (a varbind's value, or a MIB object's value).
+ * @brief The value half of a variable-binding (RFC 3416 sec 3).
  *
- * Only the field matching @ref type is meaningful. String and OID values are
- * referenced by pointer and are not copied - they must remain valid.
+ * Only the field matching @ref type carries anything. String and OBJECT IDENTIFIER values are
+ * referenced, not copied, so they must stay valid.
  */
 typedef struct
 {
-    uint8_t type;        ///< BER tag: SNMP_TAG_BER_INTEGER / SNMP_TAG_BER_OCTET_STRING / SNMP_TAG_BER_OID /
-                         ///< SNMP_TAG_SNMP_TIMETICKS / SNMP_TAG_SNMP_COUNTER32 / SNMP_TAG_SNMP_GAUGE32 /
-                         ///< SNMP_TAG_SNMP_IPADDRESS, or an exception tag.
-    long ival;           ///< value for SNMP_TAG_BER_INTEGER
-    uint32_t uval;       ///< value for SNMP_TAG_SNMP_TIMETICKS / SNMP_TAG_SNMP_COUNTER32 / SNMP_TAG_SNMP_GAUGE32 /
-                         ///< SNMP_TAG_SNMP_IPADDRESS
-    const char *str;     ///< bytes for SNMP_TAG_BER_OCTET_STRING (not owned)
-    size_t str_len;      ///< length of @ref str
-    const uint32_t *oid; ///< arcs for SNMP_TAG_BER_OID (not owned)
-    size_t oid_len;      ///< number of arcs in @ref oid
+    uint8_t type;        ///< the value's tag: an ASN.1 simple type, an SMIv2 application-wide type
+                         ///< (RFC 2578 sec 7.1), or a VarBind exception marker
+    long ival;           ///< the INTEGER value
+    uint32_t uval;       ///< the TimeTicks, Counter32, Gauge32 or IpAddress value
+    const char *str;     ///< the OCTET STRING octets, not owned
+    size_t str_len;      ///< how many
+    const uint32_t *oid; ///< the OBJECT IDENTIFIER subidentifiers, not owned
+    size_t oid_len;      ///< how many
 } SnmpValue;
 
-/** @brief Dynamic value getter; fill @p out and return true, or return false for noSuchInstance. */
+/** @brief Read a dynamic object's value: fill @p out and return true, or false for noSuchInstance. */
 typedef proto_bool (*SnmpGetFn)(SnmpValue *out);
-/** @brief Value setter for a writable object; return true on success, false to reject (wrongType/badValue). */
+/** @brief Write a read-write object (RFC 2578 sec 7.3): true on success, false to reject the value. */
 typedef proto_bool (*SnmpSetFn)(const SnmpValue *in);
 
-// ---------------------------------------------------------------------------
-// Agent configuration / MIB registration
-// ---------------------------------------------------------------------------
+/** @brief RFC 1157 sec 3.2.5: the communities a message is authenticated against. */
+typedef struct
+{
+    const char *ro; ///< the community that authorizes reads; NULL keeps the built-in default
+    const char *rw; ///< the community that authorizes a SetRequest-PDU; NULL or empty refuses every write
+} SnmpCommunityArgs;
+
+/** @brief RFC 2578 sec 7: one managed object instance and how its value is reached. */
+typedef struct
+{
+    const uint32_t *oid; ///< the instance name, as subidentifiers
+    size_t oid_len;      ///< how many, at least 2
+    uint8_t type;        ///< a dynamic object's value tag (RFC 2578 sec 7.1)
+    const char *text;    ///< the OCTET STRING value a static registration takes, referenced not copied
+    long ival;           ///< the INTEGER value a static registration takes
+    SnmpGetFn getter;    ///< what a dynamic object's value is read through
+    SnmpSetFn setter;    ///< what a write reaches; NULL leaves the object read-only (RFC 2578 sec 7.3)
+} SnmpObjectArgs;
+
+/** @brief RFC 3418 sec 2: the system group under 1.3.6.1.2.1.1. */
+typedef struct
+{
+    const char *descr;    ///< sysDescr.0
+    const char *contact;  ///< sysContact.0
+    const char *name;     ///< sysName.0
+    const char *location; ///< sysLocation.0
+    long services;        ///< sysServices.0, the layer bitmask
+} SnmpSystemArgs;
+
+/** @brief RFC 3417 sec 3.1: the serialized message read, and the one written back. */
+typedef struct
+{
+    const uint8_t *req; ///< the received message octets
+    size_t req_len;     ///< how many
+    uint8_t *resp;      ///< where the response message is written
+    size_t resp_cap;    ///< how many octets that holds
+} SnmpMsgArgs;
+
+/** @brief RFC 3416 sec 4.2: the request PDU dispatched, and the Response-PDU written. */
+typedef struct
+{
+    const uint8_t *req;     ///< one complete request-PDU TLV
+    size_t req_len;         ///< its length in octets
+    uint8_t *out;           ///< where the Response-PDU TLV is written
+    size_t out_cap;         ///< how many octets that holds
+    proto_bool allow_write; ///< a SetRequest-PDU is authorized (RFC 3416 sec 4.2.5)
+    proto_bool v2c;         ///< report per-binding exceptions rather than v1 error-status
+} SnmpPduArgs;
+
+/** @brief The MIB's own state and the calls that reach it, described only in snmp_agent.c. */
+struct SnmpAgentInternal;
 
 /**
- * @brief Reset the agent and set the read-only community (default "public").
+ * @brief The command responder: the MIB, the PDU processing, and the message framing.
  *
- * Clears the MIB table. Call before registering objects. Pass nullptr to keep
- * the default community.
+ * A caller sets the members a call takes, invokes it through ::SnmpAgent, and reads the outcome
+ * off the same handle.
+ *
+ * @var SnmpAgentNs::port           the UDP port a listen binds, 161 by convention (RFC 3417 sec 3.2)
+ * @var SnmpAgentNs::community      the communities a message is authenticated against
+ * @var SnmpAgentNs::object         the managed object a registration binds
+ * @var SnmpAgentNs::system         the system group values (RFC 3418 sec 2)
+ * @var SnmpAgentNs::msg            the message read and the one written back
+ * @var SnmpAgentNs::pdu            the PDU dispatched and the Response-PDU written
+ * @var SnmpAgentNs::ok             a registration's true/false outcome: the table had room
+ * @var SnmpAgentNs::n              octets written, 0 to send nothing
+ * @var SnmpAgentNs::init           empty the MIB and take the read-only community
+ * @var SnmpAgentNs::set_rw_community  take the community that authorizes a SetRequest-PDU
+ * @var SnmpAgentNs::set_system     register the system group (RFC 3418 sec 2)
+ * @var SnmpAgentNs::add_string     register an object whose value is an OCTET STRING
+ * @var SnmpAgentNs::add_integer    register an object whose value is an INTEGER
+ * @var SnmpAgentNs::add_dynamic    register an object whose value is read through a getter
+ * @var SnmpAgentNs::dispatch_pdu   run one request PDU against the MIB and write a Response-PDU
+ * @var SnmpAgentNs::process        decode one message, dispatch it, and frame the response message
+ * @var SnmpAgentNs::listen         answer requests arriving on @c port
+ * @var SnmpAgentNs::internal       the MIB and the calls that reach it
  */
-void protocore_snmp_agent_init(const char *ro_community);
+typedef struct
+{
+    uint16_t port; ///< the UDP port a listen binds
 
-/** @brief Set the read-write community used to authorize Set requests (default: none -> Sets refused). */
-void protocore_snmp_agent_set_rw_community(const char *rw_community);
+    SnmpCommunityArgs community; ///< what authenticates a message (RFC 1157 sec 3.2.5)
+    SnmpObjectArgs object;       ///< what a registration binds (RFC 2578 sec 7)
+    SnmpSystemArgs system;       ///< the system group values (RFC 3418 sec 2)
+    SnmpMsgArgs msg;             ///< the message pair (RFC 3417 sec 3.1)
+    SnmpPduArgs pdu;             ///< the PDU pair (RFC 3416 sec 4.2)
 
-/**
- * @brief Populate the standard MIB-II system group (1.3.6.1.2.1.1).
- *
- * Adds sysDescr.0, sysObjectID.0, sysUpTime.0 (dynamic, hundredths of a second
- * since boot), sysContact.0, sysName.0, sysLocation.0 and sysServices.0. The
- * string arguments are referenced by pointer (not copied). @p services is the
- * sysServices bitmask (commonly 72 = application + internet layers).
- */
-void protocore_snmp_agent_set_system(const char *descr, const char *contact, const char *name, const char *location,
-                                     long services);
+    proto_bool ok;
+    size_t n;
 
-/** @brief Register a static OCTET STRING object. @return false if the table is full. */
-proto_bool protocore_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter);
-/** @brief Register a static INTEGER object. @return false if the table is full. */
-proto_bool protocore_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter);
-/** @brief Register a dynamic object served by @p getter (@p type names the value's BER tag). */
-proto_bool protocore_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter);
+    void (*init)(struct SnmpAgentInternal *ctx);
+    void (*set_rw_community)(struct SnmpAgentInternal *ctx);
+    void (*set_system)(struct SnmpAgentInternal *ctx);
+    void (*add_string)(struct SnmpAgentInternal *ctx);
+    void (*add_integer)(struct SnmpAgentInternal *ctx);
+    void (*add_dynamic)(struct SnmpAgentInternal *ctx);
+    void (*dispatch_pdu)(struct SnmpAgentInternal *ctx);
+    void (*process)(struct SnmpAgentInternal *ctx);
+    void (*listen)(struct SnmpAgentInternal *ctx);
 
-// ---------------------------------------------------------------------------
-// Core processing (host-testable; no sockets, no heap)
-// ---------------------------------------------------------------------------
+    struct SnmpAgentInternal *internal;
+} SnmpAgentNs;
 
-/**
- * @brief Process one SNMP request datagram and build the response datagram.
- *
- * Decodes the v1/v2c message, dispatches the PDU against the MIB, and encodes a
- * Response PDU into @p resp. A request with an unknown community, a malformed
- * message, or a v3 message (when SNMPv3 is not enabled) yields no response.
- *
- * @param req      request datagram bytes.
- * @param req_len  number of bytes in @p req.
- * @param resp     destination buffer for the response datagram.
- * @param protocore_resp_cap capacity of @p resp.
- * @return number of response bytes written, or 0 to send nothing.
- */
-size_t protocore_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap);
-
-/**
- * @brief Process one request PDU against the MIB and emit a GetResponse PDU.
- *
- * The shared dispatch core used by both the v1/v2c community framing and the v3
- * USM layer: it decodes a Get / GetNext / GetBulk / Set PDU TLV, runs it against
- * the registered MIB, and encodes a single GetResponse PDU TLV.
- *
- * @param pdu         a complete request-PDU TLV.
- * @param pdu_len     length of @p pdu.
- * @param allow_write authorize Set (true for the read-write community / a v3 user with write access).
- * @param v2c         use v2c-style per-varbind exceptions (true for v2c and v3); false = v1 error-status.
- * @param out         destination for the response PDU TLV.
- * @param out_cap     capacity of @p out.
- * @return number of response-PDU bytes written, or 0 on a malformed/unsupported PDU.
- */
-size_t protocore_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow_write, proto_bool v2c,
-                                   uint8_t *out, size_t out_cap);
-
-// ---------------------------------------------------------------------------
-// UDP transport (needs a UDP transport)
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Bind the agent to UDP @p port (default 161) via the transport-layer UDP service.
- *
- * Callback-driven (no per-loop servicing). Call after WiFi is up. On non-Arduino
- * builds this is a no-op so the core remains host-testable.
- */
-void protocore_snmp_agent_begin_udp(uint16_t port);
+/** @brief The one symbol this module exports. */
+extern SnmpAgentNs SnmpAgent;
 
 #endif // PROTOCORE_ENABLE_SNMP
 
