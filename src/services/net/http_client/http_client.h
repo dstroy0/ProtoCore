@@ -46,7 +46,8 @@ PROTOCORE_BEGIN_DECLS
 typedef enum PROTO_ENUM_PACKED
 {
     HTTP_CLIENT_ERR_URL = -1,      ///< the target URI does not parse (RFC 9110 sec 4.2.1 / 4.2.2)
-    HTTP_CLIENT_ERR_DNS = -2,      ///< the uri-host did not resolve
+    HTTP_CLIENT_ERR_DNS = -2,      ///< the uri-host did not resolve; the transport reports that as a close, so an
+                                   ///< exchange that fails to resolve reports ::HTTP_CLIENT_ERR_CONNECT
     HTTP_CLIENT_ERR_CONNECT = -3,  ///< the connection did not come up (RFC 9112 sec 9.1)
     HTTP_CLIENT_ERR_TIMEOUT = -4,  ///< no complete message arrived before the deadline
     HTTP_CLIENT_ERR_SEND = -5,     ///< the request message did not go out
@@ -112,6 +113,9 @@ struct HttpClientInternal;
  * the same handle. There is no slot member: the module runs one exchange at a time, so no call names
  * a row.
  *
+ * An exchange sets @c target.host, @c target.path and @c request.out to the module's own buffers
+ * before it splits the target URI, so a caller sets only @c target.url and reads the parts back.
+ *
  * @var HttpClientNs::target   the target URI a call splits, dials, or names in a request-line
  * @var HttpClientNs::request  the method, the content, and where the request message is built
  * @var HttpClientNs::message  the received message a parse frames
@@ -127,10 +131,6 @@ struct HttpClientInternal;
  * @var HttpClientNs::parse_response    read the status-line and frame the message body
  * @var HttpClientNs::get               run one GET exchange (RFC 9110 sec 9.3.1)
  * @var HttpClientNs::post              run one POST exchange (RFC 9110 sec 9.3.3)
- *
- * An exchange sets @c target.host, @c target.path and @c request.out to the module's own buffers
- * before it splits the target URI, so a caller sets only @c target.url and reads the parts back.
- *
  * @var HttpClientNs::set_ca            install the trust anchor an https handshake verifies against
  * @var HttpClientNs::set_pin           install the certificate pin an https handshake verifies against
  * @var HttpClientNs::clear_verify      drop both, back to encrypt-only

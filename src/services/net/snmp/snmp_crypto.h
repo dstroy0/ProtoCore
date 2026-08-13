@@ -13,7 +13,7 @@
  * [RFC3414] using the same SHA-2 hash function as in the HMAC-SHA-2 authentication protocol", and
  * RFC 7860 sec 9.3 states the password-to-key derivation: the password is repeated to a 1,048,576
  * octet string and hashed to digest1, then digest1, snmpEngineID and digest1 again are hashed to
- * the localized key. That is the RFC 3414 Appendix A.1 algorithm with SHA-256 in place of MD5.
+ * the localized key. It is the RFC 3414 password-to-key algorithm with SHA-256 in place of MD5.
  * The same procedure produces the authentication key and the privacy key, each from its own
  * password.
  *

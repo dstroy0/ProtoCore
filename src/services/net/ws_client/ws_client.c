@@ -28,7 +28,6 @@
 #endif
 #if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_WS_CLIENT_TLS
 #include "network_drivers/tls/tls.h"
-#include <mbedtls/ssl.h> // the platform TLS stack's want-read / want-write signals for the BIO
 #endif
 #ifdef PROTOCORE_WS_CLIENT_DEBUG
 #include <stdio.h>
@@ -470,7 +469,7 @@ static int ws_tls_send(void *bio, const unsigned char *buf, size_t len)
 {
     (void)bio;
     const size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return ws_tx_plain(&s_ws, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
+    return ws_tx_plain(&s_ws, buf, cap) ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 
 static int ws_tls_recv(void *bio, unsigned char *buf, size_t len)
@@ -485,7 +484,7 @@ static int ws_tls_recv(void *bio, unsigned char *buf, size_t len)
     {
         TcpClient.cid = s_ws.store->cid;
         TcpClient.is_closed(TcpClient.internal);
-        return TcpClient.ok ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+        return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }

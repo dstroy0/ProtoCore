@@ -2,58 +2,75 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_snmp_v3.c
- * @brief SNMPv3 USM: message framing, engine discovery, timeliness, auth, privacy.
+ * @file snmp_v3.c
+ * @brief SNMPv3 and USM (RFC 3412 sec 6, RFC 3414) - implementation. See snmp_v3.h.
  */
 
 #include "services/net/snmp/snmp_v3.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem.h" // mem.cpy / mem.set / mem.cmp
+#include "mmgr/protostr.h" // str.len / str.copy
 
 #if PROTOCORE_ENABLE_SNMP_V3
 
 #include "crypto/mac/hmac_sha256.h"
-#include "mmgr/endian.h"
+#include "mmgr/endian.h" // endian.wr32be: the big-endian fields of the IV and the salt
 #include "services/net/snmp/snmp_agent.h"
 #include "services/net/snmp/snmp_ber.h"
 #include "services/net/snmp/snmp_crypto.h"
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
-#include "network_drivers/transport/udp/udp.h"
-#include "services/net/snmp/snmp_notify.h"
-#endif
-#if PROTOCORE_HAS_NET_STACK
-#include "server/clock/clock.h" // protocore_millis() - the library's clock seam (ban 5: never bare millis)
-static uint32_t protocore_snmp_v3_uptime_s()
-{
-    return (uint32_t)(protocore_millis() / 1000ULL);
-}
-#else
-static uint32_t protocore_snmp_v3_uptime_s()
-{
-    return 0; // no clock in this build; tests drive boots/time via the discovery handshake
-}
+#include "network_drivers/transport/udp/client/client.h" // UdpClient: the notification out
+#include "services/net/snmp/snmp_notify.h"               // SnmpNotify.build_pdu: the notification PDU
+#include "shared/ip/ip.h"                                // Ip.parse: the receiver's address, once
 #endif
 
-// usmStats... subtree: 1.3.6.1.6.3.15.1.1.<n>.0
+#if PROTOCORE_HAS_NET_STACK
+#include "server/clock/clock.h" // protocore_millis(): the library's clock seam
+#endif
+
+// The usmStats subtree, 1.3.6.1.6.3.15.1.1 (RFC 3414 sec 5). Each counter is reported as
+// usmStats<n>.0 in a Report PDU.
 static const uint32_t kUsmStatsBase[] = {1, 3, 6, 1, 6, 3, 15, 1, 1};
+
+/** @brief The usmStats counter a Report names (RFC 3414 sec 5). */
 typedef enum PROTO_ENUM_PACKED
 {
-    USM_STAT_NOT_IN_TIME = 2,
-    USM_STAT_UNKNOWN_USER = 3,
-    USM_STAT_UNKNOWN_ENGINE = 4,
-    USM_STAT_WRONG_DIGEST = 5,
-    USM_STAT_DECRYPT = 6,
+    USM_STAT_NOT_IN_TIME = 2,    ///< usmStatsNotInTimeWindows
+    USM_STAT_UNKNOWN_USER = 3,   ///< usmStatsUnknownUserNames
+    USM_STAT_UNKNOWN_ENGINE = 4, ///< usmStatsUnknownEngineIDs
+    USM_STAT_WRONG_DIGEST = 5,   ///< usmStatsWrongDigests
+    USM_STAT_DECRYPT = 6,        ///< usmStatsDecryptionErrors
 } UsmStat;
 
-// ---------------------------------------------------------------------------
-// Engine / user state
-// ---------------------------------------------------------------------------
-
-// All SNMPv3 USM engine state, owned by one instance (internal linkage): the engine id/boots,
-// the configured user + localized auth/priv keys, the USM stats counters, and the per-request
-// working buffers (staggered lifetimes; see protocore_snmp_v3_process), grouped so it is one named owner,
-// unreachable cross-TU. Single-threaded (the lwIP callback or a test, never reentrant).
-typedef struct
+/**
+ * @brief The engine's compile-time storage: its identity, its user, its counters, its buffers.
+ *
+ * All of it BSS, so a message costs no heap and none of it lands on a task stack. The working
+ * buffers have staggered lifetimes and never alias within one message.
+ *
+ * @var SnmpV3Storage::engine_id      the authoritative snmpEngineID (RFC 3414 sec 2.4)
+ * @var SnmpV3Storage::engine_id_len  how many octets
+ * @var SnmpV3Storage::boots          msgAuthoritativeEngineBoots (RFC 3414 sec 2.2.2)
+ * @var SnmpV3Storage::user           msgUserName of the configured user
+ * @var SnmpV3Storage::auth_key       its localized authentication key (RFC 7860 sec 9.3)
+ * @var SnmpV3Storage::priv_key       its localized privacy key
+ * @var SnmpV3Storage::auth_set       an authentication password was configured
+ * @var SnmpV3Storage::priv_set       a privacy password was configured
+ * @var SnmpV3Storage::salt_ctr       the low half of the next msgPrivacyParameters salt
+ * @var SnmpV3Storage::stat_unknown_engine  usmStatsUnknownEngineIDs
+ * @var SnmpV3Storage::stat_unknown_user    usmStatsUnknownUserNames
+ * @var SnmpV3Storage::stat_wrong_digest    usmStatsWrongDigests
+ * @var SnmpV3Storage::stat_not_in_time     usmStatsNotInTimeWindows
+ * @var SnmpV3Storage::stat_decrypt         usmStatsDecryptionErrors
+ * @var SnmpV3Storage::v3_a           the auth-verify copy, then the decrypted ScopedPDU
+ * @var SnmpV3Storage::v3_b           the inner response PDU
+ * @var SnmpV3Storage::v3_c           the outgoing ScopedPDU
+ * @var SnmpV3Storage::v3_d           the privacy ciphertext
+ * @var SnmpV3Storage::v3_sec         the msgSecurityParameters SEQUENCE
+ * @var SnmpV3Storage::v3_tx          one outgoing notification message
+ * @var SnmpV3Storage::mac_work       the scratch the hash and the MAC borrow, one at a time
+ */
+struct SnmpV3Storage
 {
     uint8_t engine_id[SNMP_V3_ENGINEID_MAX];
     size_t engine_id_len;
@@ -66,88 +83,129 @@ typedef struct
     proto_bool priv_set;
     uint32_t salt_ctr;
 
-    // USM stats counters (reported in discovery / error Reports)
     uint32_t stat_unknown_engine;
     uint32_t stat_unknown_user;
     uint32_t stat_wrong_digest;
     uint32_t stat_not_in_time;
     uint32_t stat_decrypt;
 
-    // Working buffers; lifetimes staggered so they never alias within a single request.
-    uint8_t v3_a[SNMP_MSG_BUF_SIZE]; // auth-verify copy / decrypted scopedPDU
-    uint8_t v3_b[SNMP_MSG_BUF_SIZE]; // inner response PDU
-    uint8_t v3_c[SNMP_MSG_BUF_SIZE]; // outgoing scopedPDU
-    uint8_t v3_d[SNMP_MSG_BUF_SIZE]; // privacy ciphertext
-    uint8_t v3_sec[256];             // msgSecurityParameters scratch
-    // The USM key localization and the per-message auth MAC work out of these; they run in sequence.
+    uint8_t v3_a[SNMP_MSG_BUF_SIZE];
+    uint8_t v3_b[SNMP_MSG_BUF_SIZE];
+    uint8_t v3_c[SNMP_MSG_BUF_SIZE];
+    uint8_t v3_d[SNMP_MSG_BUF_SIZE];
+    uint8_t v3_sec[256];
+    uint8_t v3_tx[SNMP_MSG_BUF_SIZE];
     uint8_t mac_work[PROTOCORE_HMAC_SHA256_BORROW];
-} SnmpV3Ctx;
+};
 
-// Only the three fields with a non-zero start are named; static storage zeroes the rest, which is
-// what every counter, key and working buffer wants anyway.
-static SnmpV3Ctx s_v3 = {
+/**
+ * @brief The engine state and the calls that reach it - what SnmpV3Ns points at.
+ *
+ * @var SnmpV3Internal::store  the engine identity, the user, the counters and the buffers
+ * @var SnmpV3Internal::ns     the handle a caller sets a call's members on
+ */
+struct SnmpV3Internal
+{
+    struct SnmpV3Storage *store;
+    SnmpV3Ns *ns;
+};
+
+// Three fields start non-zero; static storage zeroes every counter, key and buffer, which is what
+// each of them wants.
+static struct SnmpV3Storage s_store = {
     .engine_id = {0x80, 0x00, 0xC0, 0xDE, 0x05, 0x01, 0x02, 0x03, 0x04},
     .engine_id_len = 9,
     .boots = 1,
 };
 
-// v3_sec is a fixed 256 bytes but what build_message() packs into it scales with two overridable
-// macros, so pin the worst case at compile time instead of assuming it. The msgSecurityParameters
-// SEQUENCE is: 4 (seq tag + back-patched 3-byte length) + 3 + SNMP_V3_ENGINEID_MAX (engineID
-// OCTET STRING) + 7 + 7 (engineBoots/engineTime INTEGERs, <=5 content octets each) + 3 +
-// SNMP_V3_USER_MAX (userName) + 2 + SNMP_V3_AUTH_PARAM_LEN (authParams) + 2 +
-// SNMP_V3_PRIV_PARAM_LEN (privParams). Raising either max past this turns the "cannot overflow"
-// guard below into a live path, so make that a build error rather than a silent behavior change.
+static struct SnmpV3Internal s_v3 = {.store = &s_store, .ns = &SnmpV3};
+
+// v3_sec is a fixed 256 octets and what build_message() packs into it scales with two overridable
+// maxima. The msgSecurityParameters SEQUENCE is 4 (tag + back-patched 3-octet length) + 3 +
+// SNMP_V3_ENGINEID_MAX + 7 + 7 (two INTEGERs of at most 5 content octets) + 3 + SNMP_V3_USER_MAX +
+// 2 + SNMP_V3_AUTH_PARAM_LEN + 2 + SNMP_V3_PRIV_PARAM_LEN. Raising either maximum past that turns
+// the encoder's overflow guard into a live path, so it is a build error here.
 _Static_assert(4 + 3 + SNMP_V3_ENGINEID_MAX + 7 + 7 + 3 + SNMP_V3_USER_MAX + 2 + SNMP_V3_AUTH_PARAM_LEN + 2 +
                        SNMP_V3_PRIV_PARAM_LEN <=
-                   sizeof(s_v3.v3_sec),
+                   sizeof(s_store.v3_sec),
                "v3_sec is too small for SNMP_V3_ENGINEID_MAX + SNMP_V3_USER_MAX: raise v3_sec or lower the maxima");
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
-void protocore_snmp_v3_init(const uint8_t *engine_id, size_t engine_id_len)
+// msgAuthoritativeEngineTime: seconds since this engine was last re-initialized (RFC 3414 sec 2.2.2).
+static uint32_t v3_uptime_s(void)
 {
+#if PROTOCORE_HAS_NET_STACK
+    return (uint32_t)(protocore_millis() / 1000ULL);
+#else
+    return 0; // no clock in this build; boots and time come through the discovery handshake
+#endif
+}
+
+static void v3_init(struct SnmpV3Internal *restrict ctx)
+{
+    const uint8_t *engine_id = ctx->ns->engine.engine_id;
+    const size_t engine_id_len = ctx->ns->engine.engine_id_len;
     if (engine_id && engine_id_len >= 5 && engine_id_len <= SNMP_V3_ENGINEID_MAX)
     {
-        mem.cpy(s_v3.engine_id, engine_id, engine_id_len);
-        s_v3.engine_id_len = engine_id_len;
+        mem.cpy(ctx->store->engine_id, engine_id, engine_id_len);
+        ctx->store->engine_id_len = engine_id_len;
     }
-    s_v3.user[0] = '\0';
-    s_v3.auth_set = PROTO_FALSE;
-    s_v3.priv_set = PROTO_FALSE;
+    ctx->store->user[0] = '\0';
+    ctx->store->auth_set = PROTO_FALSE;
+    ctx->store->priv_set = PROTO_FALSE;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-void protocore_snmp_v3_set_user(const char *user, const char *auth_pass, const char *priv_pass)
+// The localized keys depend on the snmpEngineID, so they are derived here, once, rather than per
+// message (RFC 3414 sec 2.6, derivation per RFC 7860 sec 9.3).
+static void v3_set_user(struct SnmpV3Internal *restrict ctx)
 {
-    strncpy(s_v3.user, user ? user : "", sizeof(s_v3.user) - 1);
-    s_v3.user[sizeof(s_v3.user) - 1] = '\0';
-    s_v3.auth_set = auth_pass && auth_pass[0];
-    s_v3.priv_set = priv_pass && priv_pass[0];
-    if (s_v3.auth_set)
+    const char *user = ctx->ns->user.user;
+    const char *auth_pass = ctx->ns->user.auth_pass;
+    const char *priv_pass = ctx->ns->user.priv_pass;
+
+    (void)str.copy(ctx->store->user, user ? user : "", sizeof(ctx->store->user));
+    ctx->store->auth_set = auth_pass && auth_pass[0];
+    ctx->store->priv_set = priv_pass && priv_pass[0];
+
+    SnmpCrypto.work = ctx->store->mac_work;
+    SnmpCrypto.key.engine_id = ctx->store->engine_id;
+    SnmpCrypto.key.engine_id_len = ctx->store->engine_id_len;
+    if (ctx->store->auth_set)
     {
-        protocore_snmp_usm_localize_key(s_v3.mac_work, auth_pass, s_v3.engine_id, s_v3.engine_id_len, s_v3.auth_key);
+        SnmpCrypto.key.password = auth_pass;
+        SnmpCrypto.key.out = ctx->store->auth_key;
+        SnmpCrypto.localize_key(SnmpCrypto.internal);
     }
-    if (s_v3.priv_set)
+    if (ctx->store->priv_set)
     {
-        protocore_snmp_usm_localize_key(s_v3.mac_work, priv_pass, s_v3.engine_id, s_v3.engine_id_len, s_v3.priv_key);
+        SnmpCrypto.key.password = priv_pass;
+        SnmpCrypto.key.out = ctx->store->priv_key;
+        SnmpCrypto.localize_key(SnmpCrypto.internal);
     }
+    ctx->ns->ok = ctx->store->auth_set;
 }
 
-void protocore_snmp_v3_set_boots(uint32_t boots)
+static void v3_set_boots(struct SnmpV3Internal *restrict ctx)
 {
-    s_v3.boots = boots;
+    ctx->store->boots = ctx->ns->engine.boots;
+    ctx->ns->ok = PROTO_TRUE;
 }
-uint32_t protocore_snmp_v3_get_boots()
+
+static void v3_get_boots(struct SnmpV3Internal *restrict ctx)
 {
-    return s_v3.boots;
+    ctx->ns->u32 = ctx->store->boots;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Message helpers
 // ---------------------------------------------------------------------------
 
+// Compare n octets without an early exit, so a forged digest never reveals how many octets matched.
 static proto_bool ct_eq(const uint8_t *a, const uint8_t *b, size_t n)
 {
     uint8_t r = 0;
@@ -158,41 +216,50 @@ static proto_bool ct_eq(const uint8_t *a, const uint8_t *b, size_t n)
     return r == 0;
 }
 
-// Split a scopedPDU SEQUENCE into its contextName and inner PDU TLV.
+// Split a ScopedPDU SEQUENCE (RFC 3412 sec 6) into its contextName and the PDU TLV that follows.
+// Reads the octets it is given and no engine state.
 static proto_bool parse_scoped(const uint8_t *buf, size_t len, const uint8_t **ctxname, size_t *ctxname_len,
                                const uint8_t **pdu, size_t *pdu_len)
 {
     BerDec d;
-    protocore_ber_dec_init(&d, buf, len);
-    uint8_t tag;
-    size_t l;
-    if (!protocore_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    SnmpBer.dec = &d;
+    SnmpBer.buf.in = buf;
+    SnmpBer.buf.cap = len;
+    SnmpBer.dec_init(SnmpBer.internal);
+
+    SnmpBer.read_header(SnmpBer.internal);
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
-    if (!protocore_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING) // contextEngineID
+    SnmpBer.read_header(SnmpBer.internal); // contextEngineID
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
-    d.pos += l;
-    if (!protocore_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING) // contextName
+    d.pos += SnmpBer.vlen;
+    SnmpBer.read_header(SnmpBer.internal); // contextName
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     *ctxname = d.buf + d.pos;
-    *ctxname_len = l;
-    d.pos += l;
-    size_t pdu_start = d.pos;
-    if (!protocore_ber_read_header(&d, &tag, &l)) // PDU header (kept)
+    *ctxname_len = SnmpBer.vlen;
+    d.pos += SnmpBer.vlen;
+
+    const size_t pdu_start = d.pos;
+    SnmpBer.read_header(SnmpBer.internal); // the PDU header, which stays part of the TLV
+    if (!SnmpBer.ok)
     {
         return PROTO_FALSE;
     }
     *pdu = buf + pdu_start;
-    *pdu_len = (size_t)(d.pos - pdu_start) + l;
+    *pdu_len = (size_t)(d.pos - pdu_start) + SnmpBer.vlen;
     return d.ok;
 }
 
-// Best-effort read of the inner request-id from a plaintext probe (for Reports).
+// The inner request-id of a plaintext ScopedPDU, so a Report can name the request it answers. An
+// encrypted msgData has none to read, and reports 0.
 static long inner_request_id(const uint8_t *mdata, size_t mdata_len, proto_bool priv)
 {
     if (priv)
@@ -208,123 +275,179 @@ static long inner_request_id(const uint8_t *mdata, size_t mdata_len, proto_bool 
         return 0;
     }
     BerDec d;
-    protocore_ber_dec_init(&d, pdu, pdu_len);
-    uint8_t tag;
-    size_t l;
-    long rid;
-    // parse_scoped already read this exact header and sized pdu_len as (header bytes + content
-    // length), so re-reading it from the start of pdu always succeeds; only the request-id
-    // INTEGER read below can fail.
-    if (!protocore_ber_read_header(&d, &tag, &l) || !protocore_ber_read_integer(&d, &rid))
+    SnmpBer.dec = &d;
+    SnmpBer.buf.in = pdu;
+    SnmpBer.buf.cap = pdu_len;
+    SnmpBer.dec_init(SnmpBer.internal);
+    // parse_scoped read this exact header and sized pdu_len as its header octets plus its content,
+    // so only the request-id INTEGER below can fail.
+    SnmpBer.read_header(SnmpBer.internal);
+    if (!SnmpBer.ok)
     {
-        return 0; // re-read cannot fail (see above)
+        return 0;
     }
-    return rid;
+    SnmpBer.read_integer(SnmpBer.internal);
+    return SnmpBer.ok ? SnmpBer.ival : 0;
 }
 
-// Build a complete v3 message wrapping the already-built scopedPDU bytes.
-static size_t build_message(long msg_id, proto_bool auth, proto_bool priv, const uint8_t *scoped, size_t scoped_len,
-                            uint8_t *resp, size_t protocore_resp_cap)
+// Wrap an already-built ScopedPDU in a complete SNMPv3Message (RFC 3412 sec 6). With privacy the
+// ScopedPDU is encrypted first under the RFC 3826 sec 3.1.2.1 IV and carried as an OCTET STRING;
+// with authentication the digest is computed over the finished message with
+// msgAuthenticationParameters zeroed, then written back into that field (RFC 7860 sec 4.2.1).
+static size_t build_message(struct SnmpV3Internal *restrict ctx, long msg_id, proto_bool auth, proto_bool priv,
+                            const uint8_t *scoped, size_t scoped_len, uint8_t *resp, size_t resp_cap)
 {
-    uint32_t now = protocore_snmp_v3_uptime_s();
+    const uint32_t now = v3_uptime_s();
     const uint8_t *data_ptr = scoped;
     size_t data_len = scoped_len;
     uint8_t salt[SNMP_V3_PRIV_PARAM_LEN];
 
     if (priv)
     {
-        endian.wr32be(salt, s_v3.boots);
-        endian.wr32be(salt + 4, ++s_v3.salt_ctr);
+        // msgPrivacyParameters: snmpEngineBoots and a per-message counter, both big-endian.
+        endian.wr32be(salt, ctx->store->boots);
+        endian.wr32be(salt + 4, ++ctx->store->salt_ctr);
+        // IV: snmpEngineBoots, snmpEngineTime, then the salt (RFC 3826 sec 3.1.2.1).
         uint8_t iv[16];
-        endian.wr32be(iv, s_v3.boots);
+        endian.wr32be(iv, ctx->store->boots);
         endian.wr32be(iv + 4, now);
         mem.cpy(iv + 8, salt, SNMP_V3_PRIV_PARAM_LEN);
-        if (scoped_len > sizeof(s_v3.v3_d))
+        if (scoped_len > sizeof(ctx->store->v3_d))
         {
             return 0;
         }
-        protocore_snmp_aes128_cfb(s_v3.priv_key, iv, scoped, s_v3.v3_d, scoped_len, PROTO_TRUE);
-        data_ptr = s_v3.v3_d;
+        SnmpCrypto.priv.key = ctx->store->priv_key;
+        SnmpCrypto.priv.iv = iv;
+        SnmpCrypto.priv.in = scoped;
+        SnmpCrypto.priv.out = ctx->store->v3_d;
+        SnmpCrypto.priv.len = scoped_len;
+        SnmpCrypto.priv.encrypt = PROTO_TRUE;
+        SnmpCrypto.aes_cfb128(SnmpCrypto.internal);
+        data_ptr = ctx->store->v3_d;
     }
 
-    // msgSecurityParameters (a SEQUENCE, later wrapped in an OCTET STRING).
+    // msgSecurityParameters: a SEQUENCE that the message carries inside an OCTET STRING
+    // (RFC 3414 sec 2.4).
     BerEnc se;
-    protocore_ber_enc_init(&se, s_v3.v3_sec, sizeof(s_v3.v3_sec));
-    size_t ss = protocore_ber_seq_begin(&se, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, s_v3.engine_id, s_v3.engine_id_len);
-    protocore_ber_put_integer(&se, (long)s_v3.boots);
-    protocore_ber_put_integer(&se, (long)now);
-    protocore_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)s_v3.user,
-                            strnlen(s_v3.user, SNMP_V3_USER_MAX));
+    SnmpBer.enc = &se;
+    SnmpBer.buf.out = ctx->store->v3_sec;
+    SnmpBer.buf.cap = sizeof(ctx->store->v3_sec);
+    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t ss = SnmpBer.tlv.token;
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = ctx->store->engine_id; // msgAuthoritativeEngineID
+    SnmpBer.tlv.len = ctx->store->engine_id_len;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.ival = (long)ctx->store->boots; // msgAuthoritativeEngineBoots
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.ival = (long)now; // msgAuthoritativeEngineTime
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = (const uint8_t *)ctx->store->user; // msgUserName
+    SnmpBer.tlv.len = str.len(ctx->store->user, SNMP_V3_USER_MAX);
+    SnmpBer.put_octet_string(SnmpBer.internal);
+
+    // msgAuthenticationParameters: the field is written as zero octets and the digest lands in it
+    // after the message is finished (RFC 7860 sec 4.2.1). zeros stays in scope across the write.
+    uint8_t zeros[SNMP_V3_AUTH_PARAM_LEN];
+    mem.set(zeros, 0, sizeof(zeros));
     size_t auth_off = 0;
     if (auth)
     {
-        auth_off = se.len + 2; // value follows tag + 1-byte length (24 < 128)
-        uint8_t zeros[SNMP_V3_AUTH_PARAM_LEN];
-        mem.set(zeros, 0, sizeof(zeros));
-        protocore_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, zeros, SNMP_V3_AUTH_PARAM_LEN);
+        auth_off = se.len + 2; // the value follows a tag and a one-octet length, 24 being under 128
+        SnmpBer.tlv.bytes = zeros;
+        SnmpBer.tlv.len = SNMP_V3_AUTH_PARAM_LEN;
     }
     else
     {
-        protocore_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+        SnmpBer.tlv.bytes = NULL;
+        SnmpBer.tlv.len = 0;
     }
-    if (priv)
-    {
-        protocore_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, salt, SNMP_V3_PRIV_PARAM_LEN);
-    }
-    else
-    {
-        protocore_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
-    }
-    protocore_ber_seq_end(&se, ss);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = priv ? salt : NULL; // msgPrivacyParameters
+    SnmpBer.tlv.len = priv ? SNMP_V3_PRIV_PARAM_LEN : 0;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.token = ss;
+    SnmpBer.seq_end(SnmpBer.internal);
     if (!se.ok)
     {
         return 0;
-        // so se.ok always holds here
     }
-    size_t sec_len = se.len;
+    const size_t sec_len = se.len;
 
-    // Full message.
+    // The message itself.
     BerEnc e;
-    protocore_ber_enc_init(&e, resp, protocore_resp_cap);
-    size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_integer(&e, (int)SNMP_V3);
-    size_t hdr = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_integer(&e, msg_id);
-    protocore_ber_put_integer(&e, 65507); // msgMaxSize
+    SnmpBer.enc = &e;
+    SnmpBer.buf.out = resp;
+    SnmpBer.buf.cap = resp_cap;
+    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t msg = SnmpBer.tlv.token;
+    SnmpBer.tlv.ival = (int)SNMP_V3; // msgVersion
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal); // msgGlobalData
+    const size_t hdr = SnmpBer.tlv.token;
+    SnmpBer.tlv.ival = msg_id; // msgID
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.ival = 65507; // msgMaxSize
+    SnmpBer.put_integer(SnmpBer.internal);
+    // msgFlags: authFlag and privFlag, reportableFlag clear on a response (RFC 3412 sec 6.4).
     uint8_t fl = (uint8_t)((auth ? 0x01 : 0) | (priv ? 0x02 : 0));
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
-    protocore_ber_put_integer(&e, 3); // msgSecurityModel = USM
-    protocore_ber_seq_end(&e, hdr);
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, s_v3.v3_sec, sec_len);
-    size_t sec_value_pos = e.len - sec_len;
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = &fl;
+    SnmpBer.tlv.len = 1;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.ival = 3; // msgSecurityModel: USM (RFC 3414)
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.token = hdr;
+    SnmpBer.seq_end(SnmpBer.internal);
+
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = ctx->store->v3_sec;
+    SnmpBer.tlv.len = sec_len;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    const size_t sec_value_pos = e.len - sec_len;
+
+    // msgData: an encryptedPDU OCTET STRING, or the plaintext ScopedPDU as it stands.
+    SnmpBer.tlv.bytes = data_ptr;
+    SnmpBer.tlv.len = data_len;
     if (priv)
     {
-        protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, data_ptr, data_len);
+        SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+        SnmpBer.put_octet_string(SnmpBer.internal);
     }
     else
     {
-        protocore_ber_put_raw(&e, data_ptr, data_len);
+        SnmpBer.put_raw(SnmpBer.internal);
     }
-    protocore_ber_seq_end(&e, msg);
+    SnmpBer.tlv.token = msg;
+    SnmpBer.seq_end(SnmpBer.internal);
     if (!e.ok)
     {
         return 0;
     }
-    size_t total = e.len;
+    const size_t total = e.len;
 
     if (auth)
     {
         uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-        protocore_hmac_sha256(s_v3.mac_work, s_v3.auth_key, SNMP_USM_KEY_LEN, resp, total, mac);
+        protocore_hmac_sha256(ctx->store->mac_work, ctx->store->auth_key, SNMP_USM_KEY_LEN, resp, total, mac);
         mem.cpy(resp + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
     return total;
 }
 
-// Build a Report PDU (usmStats<stat>.0 = Counter32) and wrap it in a v3 message.
-static size_t build_report(long msg_id, proto_bool auth, uint32_t stat, uint32_t count, long request_id, uint8_t *resp,
-                           size_t protocore_resp_cap)
+// A Report PDU carrying usmStats<stat>.0 = Counter32, wrapped in a v3 message. RFC 3414 sec 4 uses
+// it for discovery and RFC 3414 sec 5 names the counters.
+static size_t build_report(struct SnmpV3Internal *restrict ctx, long msg_id, proto_bool auth, uint32_t stat,
+                           uint32_t count, long request_id, uint8_t *resp, size_t resp_cap)
 {
     uint32_t oid[11];
     for (int i = 0; i < 9; i++)
@@ -332,234 +455,319 @@ static size_t build_report(long msg_id, proto_bool auth, uint32_t stat, uint32_t
         oid[i] = kUsmStatsBase[i];
     }
     oid[9] = stat;
-    oid[10] = 0;
+    oid[10] = 0; // the instance subidentifier
 
     BerEnc e;
-    protocore_ber_enc_init(&e, s_v3.v3_b, sizeof(s_v3.v3_b));
-    size_t pdu = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_REPORT);
-    protocore_ber_put_integer(&e, request_id);
-    protocore_ber_put_integer(&e, 0);
-    protocore_ber_put_integer(&e, 0);
-    size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_oid(&e, oid, 11);
-    protocore_ber_put_uint(&e, (uint8_t)SNMP_TAG_SNMP_COUNTER32, count);
-    protocore_ber_seq_end(&e, vb);
-    protocore_ber_seq_end(&e, vbl);
-    protocore_ber_seq_end(&e, pdu);
+    SnmpBer.enc = &e;
+    SnmpBer.buf.out = ctx->store->v3_b;
+    SnmpBer.buf.cap = sizeof(ctx->store->v3_b);
+    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_PDU_REPORT;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t pdu = SnmpBer.tlv.token;
+    SnmpBer.tlv.ival = request_id;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.ival = 0; // error-status
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.ival = 0; // error-index
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t vbl = SnmpBer.tlv.token;
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t vb = SnmpBer.tlv.token;
+    SnmpBer.tlv.arcs = oid;
+    SnmpBer.tlv.arc_count = 11;
+    SnmpBer.put_oid(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_COUNTER32;
+    SnmpBer.tlv.uval = count;
+    SnmpBer.put_uint(SnmpBer.internal);
+    SnmpBer.tlv.token = vb;
+    SnmpBer.seq_end(SnmpBer.internal);
+    SnmpBer.tlv.token = vbl;
+    SnmpBer.seq_end(SnmpBer.internal);
+    SnmpBer.tlv.token = pdu;
+    SnmpBer.seq_end(SnmpBer.internal);
     if (!e.ok)
     {
         return 0;
     }
+    const size_t pdu_len = e.len;
 
+    // ScopedPDU { contextEngineID = this engine, contextName = "", the Report PDU }.
     BerEnc sc;
-    protocore_ber_enc_init(&sc, s_v3.v3_c, sizeof(s_v3.v3_c));
-    size_t s = protocore_ber_seq_begin(&sc, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_octet_string(&sc, (uint8_t)SNMP_TAG_BER_OCTET_STRING, s_v3.engine_id, s_v3.engine_id_len);
-    protocore_ber_put_octet_string(&sc, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
-    protocore_ber_put_raw(&sc, s_v3.v3_b, e.len);
-    protocore_ber_seq_end(&sc, s);
+    SnmpBer.enc = &sc;
+    SnmpBer.buf.out = ctx->store->v3_c;
+    SnmpBer.buf.cap = sizeof(ctx->store->v3_c);
+    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t s = SnmpBer.tlv.token;
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = ctx->store->engine_id;
+    SnmpBer.tlv.len = ctx->store->engine_id_len;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.bytes = NULL;
+    SnmpBer.tlv.len = 0;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.bytes = ctx->store->v3_b;
+    SnmpBer.tlv.len = pdu_len;
+    SnmpBer.put_raw(SnmpBer.internal);
+    SnmpBer.tlv.token = s;
+    SnmpBer.seq_end(SnmpBer.internal);
     if (!sc.ok)
     {
         return 0;
     }
 
-    return build_message(msg_id, auth, PROTO_FALSE, s_v3.v3_c, sc.len, resp, protocore_resp_cap);
+    return build_message(ctx, msg_id, auth, PROTO_FALSE, ctx->store->v3_c, sc.len, resp, resp_cap);
 }
 
 // ---------------------------------------------------------------------------
 // Message processing
 // ---------------------------------------------------------------------------
 
-size_t protocore_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap)
+static void v3_process(struct SnmpV3Internal *restrict ctx)
 {
+    const uint8_t *req = ctx->ns->msg.req;
+    const size_t req_len = ctx->ns->msg.req_len;
+    uint8_t *resp = ctx->ns->msg.resp;
+    const size_t resp_cap = ctx->ns->msg.resp_cap;
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+
     BerDec d;
-    protocore_ber_dec_init(&d, req, req_len);
-    uint8_t tag;
-    size_t l;
-    if (!protocore_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    SnmpBer.dec = &d;
+    SnmpBer.buf.in = req;
+    SnmpBer.buf.cap = req_len;
+    SnmpBer.dec_init(SnmpBer.internal);
+    SnmpBer.read_header(SnmpBer.internal);
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return 0;
+        return;
     }
-    long version;
-    if (!protocore_ber_read_integer(&d, &version) || version != (int)SNMP_V3)
+    SnmpBer.read_integer(SnmpBer.internal); // msgVersion
+    if (!SnmpBer.ok || SnmpBer.ival != (int)SNMP_V3)
     {
-        return 0;
+        return;
     }
 
-    // msgGlobalData
-    if (!protocore_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    // msgGlobalData (RFC 3412 sec 6).
+    SnmpBer.read_header(SnmpBer.internal);
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return 0;
+        return;
     }
-    long msg_id;
-    long msg_max;
-    long sec_model;
-    if (!protocore_ber_read_integer(&d, &msg_id) || !protocore_ber_read_integer(&d, &msg_max))
+    SnmpBer.read_integer(SnmpBer.internal); // msgID
+    if (!SnmpBer.ok)
     {
-        return 0;
+        return;
     }
-    (void)msg_max;
-    size_t flags_len;
-    if (!protocore_ber_read_header(&d, &tag, &flags_len) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING || flags_len < 1)
+    const long msg_id = SnmpBer.ival;
+    SnmpBer.read_integer(SnmpBer.internal); // msgMaxSize, which this responder does not shrink to
+    if (!SnmpBer.ok)
     {
-        return 0;
+        return;
     }
-    uint8_t flags = d.buf[d.pos];
-    d.pos += flags_len;
-    if (!protocore_ber_read_integer(&d, &sec_model) || sec_model != 3) // USM only
+    SnmpBer.read_header(SnmpBer.internal); // msgFlags
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING || SnmpBer.vlen < 1)
     {
-        return 0;
+        return;
     }
-    proto_bool req_auth = flags & 0x01;
-    proto_bool req_priv = flags & 0x02;
+    const uint8_t flags = d.buf[d.pos];
+    d.pos += SnmpBer.vlen;
+    SnmpBer.read_integer(SnmpBer.internal); // msgSecurityModel
+    if (!SnmpBer.ok || SnmpBer.ival != 3)   // USM only (RFC 3414)
+    {
+        return;
+    }
+    const proto_bool req_auth = flags & 0x01;
+    const proto_bool req_priv = flags & 0x02;
     if (req_priv && !req_auth)
     {
-        return 0;
+        return; // RFC 3412 sec 6.4: privFlag without authFlag is not a defined securityLevel
     }
 
-    // msgSecurityParameters: OCTET STRING wrapping a SEQUENCE.
-    size_t sec_len;
-    if (!protocore_ber_read_header(&d, &tag, &sec_len) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    // msgSecurityParameters: an OCTET STRING wrapping the USM SEQUENCE (RFC 3414 sec 2.4).
+    SnmpBer.read_header(SnmpBer.internal);
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return 0;
+        return;
     }
     const uint8_t *sec = d.buf + d.pos;
+    const size_t sec_len = SnmpBer.vlen;
     d.pos += sec_len;
 
     BerDec sd;
-    protocore_ber_dec_init(&sd, sec, sec_len);
-    if (!protocore_ber_read_header(&sd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    SnmpBer.dec = &sd;
+    SnmpBer.buf.in = sec;
+    SnmpBer.buf.cap = sec_len;
+    SnmpBer.dec_init(SnmpBer.internal);
+    SnmpBer.read_header(SnmpBer.internal);
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return 0;
+        return;
     }
-    size_t eid_len;
-    if (!protocore_ber_read_header(&sd, &tag, &eid_len) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    SnmpBer.read_header(SnmpBer.internal); // msgAuthoritativeEngineID
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return 0;
+        return;
     }
     const uint8_t *eid = sd.buf + sd.pos;
+    const size_t eid_len = SnmpBer.vlen;
     sd.pos += eid_len;
-    long req_boots;
-    long req_time;
-    if (!protocore_ber_read_integer(&sd, &req_boots) || !protocore_ber_read_integer(&sd, &req_time))
+    SnmpBer.read_integer(SnmpBer.internal); // msgAuthoritativeEngineBoots
+    if (!SnmpBer.ok)
     {
-        return 0;
+        return;
     }
-    size_t uname_len;
-    if (!protocore_ber_read_header(&sd, &tag, &uname_len) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    const long req_boots = SnmpBer.ival;
+    SnmpBer.read_integer(SnmpBer.internal); // msgAuthoritativeEngineTime
+    if (!SnmpBer.ok)
     {
-        return 0;
+        return;
+    }
+    const long req_time = SnmpBer.ival;
+    SnmpBer.read_header(SnmpBer.internal); // msgUserName
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    {
+        return;
     }
     const uint8_t *uname = sd.buf + sd.pos;
+    const size_t uname_len = SnmpBer.vlen;
     sd.pos += uname_len;
-    size_t aparm_len;
-    if (!protocore_ber_read_header(&sd, &tag, &aparm_len) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    SnmpBer.read_header(SnmpBer.internal); // msgAuthenticationParameters
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return 0;
+        return;
     }
     const uint8_t *aparm = sd.buf + sd.pos;
-    size_t aparm_off = (size_t)(aparm - req);
+    const size_t aparm_len = SnmpBer.vlen;
+    const size_t aparm_off = (size_t)(aparm - req); // its offset in the message the digest covers
     sd.pos += aparm_len;
-    size_t pparm_len;
-    if (!protocore_ber_read_header(&sd, &tag, &pparm_len) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    SnmpBer.read_header(SnmpBer.internal); // msgPrivacyParameters
+    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return 0;
+        return;
     }
     const uint8_t *pparm = sd.buf + sd.pos;
+    const size_t pparm_len = SnmpBer.vlen;
     sd.pos += pparm_len;
     if (!sd.ok)
     {
-        return 0;
-        // here
+        return;
     }
 
     const uint8_t *mdata = d.buf + d.pos;
-    size_t mdata_len = req_len - d.pos;
+    const size_t mdata_len = req_len - d.pos;
 
-    // Engine discovery: unknown/empty authoritative engine ID.
-    proto_bool engine_match = (eid_len == s_v3.engine_id_len) && (mem.cmp(eid, s_v3.engine_id, eid_len) == 0);
+    // Discovery (RFC 3414 sec 4): a request naming an engine this is not is answered with a Report
+    // carrying usmStatsUnknownEngineIDs and this engine's snmpEngineID, boots and time.
+    const proto_bool engine_match =
+        (eid_len == ctx->store->engine_id_len) && (mem.cmp(eid, ctx->store->engine_id, eid_len) == 0);
     if (!engine_match)
     {
-        s_v3.stat_unknown_engine++;
-        return build_report(msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_ENGINE, s_v3.stat_unknown_engine,
-                            inner_request_id(mdata, mdata_len, req_priv), resp, protocore_resp_cap);
+        ctx->store->stat_unknown_engine++;
+        ctx->ns->n = build_report(ctx, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_ENGINE,
+                                  ctx->store->stat_unknown_engine, inner_request_id(mdata, mdata_len, req_priv), resp,
+                                  resp_cap);
+        return;
     }
 
-    if (!req_auth) // non-discovery noAuthNoPriv is not supported
+    if (!req_auth)
     {
-        return 0;
+        return; // noAuthNoPriv outside discovery is not served
     }
 
-    // Known user?
-    if (!s_v3.auth_set || !(uname_len == strnlen(s_v3.user, SNMP_V3_USER_MAX) && s_v3.user[0] &&
-                            mem.cmp(uname, s_v3.user, uname_len) == 0))
+    // usmStatsUnknownUserNames (RFC 3414 sec 5): msgUserName names no configured user.
+    if (!ctx->store->auth_set || !(uname_len == str.len(ctx->store->user, SNMP_V3_USER_MAX) && ctx->store->user[0] &&
+                                   mem.cmp(uname, ctx->store->user, uname_len) == 0))
     {
-        s_v3.stat_unknown_user++;
-        return build_report(msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_USER, s_v3.stat_unknown_user, 0, resp,
-                            protocore_resp_cap);
+        ctx->store->stat_unknown_user++;
+        ctx->ns->n = build_report(ctx, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_USER, ctx->store->stat_unknown_user,
+                                  0, resp, resp_cap);
+        return;
     }
 
-    // Authenticate: HMAC over the whole message with the auth field zeroed.
-    if (aparm_len != SNMP_V3_AUTH_PARAM_LEN || req_len > sizeof(s_v3.v3_a))
+    // Authentication (RFC 7860 sec 4.2.2): the digest is recomputed over the whole message with
+    // msgAuthenticationParameters replaced by zero octets, then compared.
+    if (aparm_len != SNMP_V3_AUTH_PARAM_LEN || req_len > sizeof(ctx->store->v3_a))
     {
-        s_v3.stat_wrong_digest++;
-        return build_report(msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST, s_v3.stat_wrong_digest, 0, resp,
-                            protocore_resp_cap);
+        ctx->store->stat_wrong_digest++;
+        ctx->ns->n = build_report(ctx, msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST, ctx->store->stat_wrong_digest,
+                                  0, resp, resp_cap);
+        return;
     }
-    mem.cpy(s_v3.v3_a, req, req_len);
-    mem.set(s_v3.v3_a + aparm_off, 0, SNMP_V3_AUTH_PARAM_LEN);
+    mem.cpy(ctx->store->v3_a, req, req_len);
+    mem.set(ctx->store->v3_a + aparm_off, 0, SNMP_V3_AUTH_PARAM_LEN);
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-    protocore_hmac_sha256(s_v3.mac_work, s_v3.auth_key, SNMP_USM_KEY_LEN, s_v3.v3_a, req_len, mac);
+    protocore_hmac_sha256(ctx->store->mac_work, ctx->store->auth_key, SNMP_USM_KEY_LEN, ctx->store->v3_a, req_len, mac);
     if (!ct_eq(mac, aparm, SNMP_V3_AUTH_PARAM_LEN))
     {
-        s_v3.stat_wrong_digest++;
-        return build_report(msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST, s_v3.stat_wrong_digest, 0, resp,
-                            protocore_resp_cap);
+        ctx->store->stat_wrong_digest++;
+        ctx->ns->n = build_report(ctx, msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST, ctx->store->stat_wrong_digest,
+                                  0, resp, resp_cap);
+        return;
     }
 
-    // Timeliness window (RFC 3414 §3.2): boots must match, time within +/-150s.
-    uint32_t now = protocore_snmp_v3_uptime_s();
+    // Timeliness (RFC 3414 sec 2.2.3): the boot count must match and the time must fall inside the
+    // 150-second window.
+    const uint32_t now = v3_uptime_s();
     long dt = (long)now - req_time;
     if (dt < 0)
     {
         dt = -dt;
     }
-    if ((uint32_t)req_boots != s_v3.boots || dt > 150)
+    if ((uint32_t)req_boots != ctx->store->boots || dt > 150)
     {
-        s_v3.stat_not_in_time++;
-        return build_report(msg_id, PROTO_TRUE, (int)USM_STAT_NOT_IN_TIME, s_v3.stat_not_in_time, 0, resp, protocore_resp_cap);
+        ctx->store->stat_not_in_time++;
+        ctx->ns->n = build_report(ctx, msg_id, PROTO_TRUE, (int)USM_STAT_NOT_IN_TIME, ctx->store->stat_not_in_time, 0,
+                                  resp, resp_cap);
+        return;
     }
 
-    // Privacy: decrypt the scopedPDU if the priv flag is set.
+    // Privacy: an encryptedPDU is decrypted under the IV of RFC 3826 sec 3.1.2.1, whose salt is the
+    // sender's msgPrivacyParameters.
     const uint8_t *scoped;
     size_t scoped_len;
     if (req_priv)
     {
-        if (!s_v3.priv_set || pparm_len != SNMP_V3_PRIV_PARAM_LEN)
+        if (!ctx->store->priv_set || pparm_len != SNMP_V3_PRIV_PARAM_LEN)
         {
-            s_v3.stat_decrypt++;
-            return build_report(msg_id, PROTO_TRUE, (int)USM_STAT_DECRYPT, s_v3.stat_decrypt, 0, resp, protocore_resp_cap);
+            ctx->store->stat_decrypt++;
+            ctx->ns->n = build_report(ctx, msg_id, PROTO_TRUE, (int)USM_STAT_DECRYPT, ctx->store->stat_decrypt, 0,
+                                      resp, resp_cap);
+            return;
         }
         BerDec md;
-        protocore_ber_dec_init(&md, mdata, mdata_len);
-        if (!protocore_ber_read_header(&md, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+        SnmpBer.dec = &md;
+        SnmpBer.buf.in = mdata;
+        SnmpBer.buf.cap = mdata_len;
+        SnmpBer.dec_init(SnmpBer.internal);
+        SnmpBer.read_header(SnmpBer.internal);
+        if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
         {
-            return 0;
+            return;
         }
         const uint8_t *ct = md.buf + md.pos;
-        size_t ct_len = l;
-        if (ct_len > sizeof(s_v3.v3_a))
+        const size_t ct_len = SnmpBer.vlen;
+        if (ct_len > sizeof(ctx->store->v3_a))
         {
-            return 0;
-            // digest step
+            return;
         }
         uint8_t iv[16];
         endian.wr32be(iv, (uint32_t)req_boots);
         endian.wr32be(iv + 4, (uint32_t)req_time);
         mem.cpy(iv + 8, pparm, SNMP_V3_PRIV_PARAM_LEN);
-        protocore_snmp_aes128_cfb(s_v3.priv_key, iv, ct, s_v3.v3_a, ct_len, PROTO_FALSE);
-        scoped = s_v3.v3_a;
+        SnmpCrypto.priv.key = ctx->store->priv_key;
+        SnmpCrypto.priv.iv = iv;
+        SnmpCrypto.priv.in = ct;
+        SnmpCrypto.priv.out = ctx->store->v3_a;
+        SnmpCrypto.priv.len = ct_len;
+        SnmpCrypto.priv.encrypt = PROTO_FALSE;
+        SnmpCrypto.aes_cfb128(SnmpCrypto.internal);
+        scoped = ctx->store->v3_a;
         scoped_len = ct_len;
     }
     else
@@ -568,97 +776,169 @@ size_t protocore_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *re
         scoped_len = mdata_len;
     }
 
-    // Inner PDU -> dispatch (authenticated: writes allowed; v2c-style semantics).
+    // The inner PDU goes to the shared MIB core, authenticated, so writes are allowed and the v2c
+    // per-binding exceptions apply.
     const uint8_t *ctxname;
     const uint8_t *pdu;
     size_t ctxname_len;
     size_t pdu_len;
     if (!parse_scoped(scoped, scoped_len, &ctxname, &ctxname_len, &pdu, &pdu_len))
     {
-        return 0;
+        return;
     }
-    size_t rpdu = protocore_snmp_dispatch_pdu(pdu, pdu_len, PROTO_TRUE, PROTO_TRUE, s_v3.v3_b, sizeof(s_v3.v3_b));
+    SnmpAgent.pdu.req = pdu;
+    SnmpAgent.pdu.req_len = pdu_len;
+    SnmpAgent.pdu.allow_write = PROTO_TRUE;
+    SnmpAgent.pdu.v2c = PROTO_TRUE;
+    SnmpAgent.pdu.out = ctx->store->v3_b;
+    SnmpAgent.pdu.out_cap = sizeof(ctx->store->v3_b);
+    SnmpAgent.dispatch_pdu(SnmpAgent.internal);
+    const size_t rpdu = SnmpAgent.n;
     if (rpdu == 0)
     {
-        return 0;
+        return;
     }
 
-    // Response scopedPDU { our engineID, echoed contextName, response PDU }.
+    // The response ScopedPDU: this engine's ID, the contextName echoed back, the Response-PDU.
     BerEnc sc;
-    protocore_ber_enc_init(&sc, s_v3.v3_c, sizeof(s_v3.v3_c));
-    size_t s = protocore_ber_seq_begin(&sc, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_octet_string(&sc, (uint8_t)SNMP_TAG_BER_OCTET_STRING, s_v3.engine_id, s_v3.engine_id_len);
-    protocore_ber_put_octet_string(&sc, (uint8_t)SNMP_TAG_BER_OCTET_STRING, ctxname, ctxname_len);
-    protocore_ber_put_raw(&sc, s_v3.v3_b, rpdu);
-    protocore_ber_seq_end(&sc, s);
+    SnmpBer.enc = &sc;
+    SnmpBer.buf.out = ctx->store->v3_c;
+    SnmpBer.buf.cap = sizeof(ctx->store->v3_c);
+    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t s = SnmpBer.tlv.token;
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = ctx->store->engine_id;
+    SnmpBer.tlv.len = ctx->store->engine_id_len;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.bytes = ctxname;
+    SnmpBer.tlv.len = ctxname_len;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.bytes = ctx->store->v3_b;
+    SnmpBer.tlv.len = rpdu;
+    SnmpBer.put_raw(SnmpBer.internal);
+    SnmpBer.tlv.token = s;
+    SnmpBer.seq_end(SnmpBer.internal);
     if (!sc.ok)
     {
-        return 0;
+        return;
     }
 
-    return build_message(msg_id, PROTO_TRUE, req_priv, s_v3.v3_c, sc.len, resp, protocore_resp_cap);
+    ctx->ns->n = build_message(ctx, msg_id, PROTO_TRUE, req_priv, ctx->store->v3_c, sc.len, resp, resp_cap);
+    ctx->ns->ok = (ctx->ns->n != 0);
 }
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 
-// Shared SNMPv3 USM notification path: authenticated, and encrypted when a
-// privacy password is configured. Reuses the engine ID + localized keys from
-// protocore_snmp_v3_init()/protocore_snmp_v3_set_user() and the same build_message() as responses.
-// @p pdu_tag selects Trap ((uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2) vs InformRequest (0xA6); @p request_id
-// is the inner PDU request-id (the inform receiver echoes it in its Response).
-static proto_bool send_v3_notify(const char *dst_ip, uint16_t port, uint8_t pdu_tag, uint32_t request_id,
-                                 const uint32_t *trap_oid, size_t trap_oid_len, const SnmpVarbind *vbs, size_t n)
+// A v3 notification: authenticated always, encrypted when a privacy password is configured. The
+// PDU is the notify module's, the ScopedPDU and the message are this one's. pdu_tag selects the
+// SNMPv2-Trap-PDU or the InformRequest-PDU.
+static void send_notify(struct SnmpV3Internal *restrict ctx, uint8_t pdu_tag)
 {
-    if (!s_v3.auth_set) // a v3 notification must be authenticated
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->n = 0;
+    if (!ctx->store->auth_set)
     {
-        return PROTO_FALSE;
+        return; // a v3 notification carries a digest or it does not leave
     }
 
-    // Notification PDU into the inner-PDU scratch.
+    // The notification PDU into the inner-PDU scratch.
     BerEnc e;
-    protocore_ber_enc_init(&e, s_v3.v3_b, sizeof(s_v3.v3_b));
-    protocore_snmp_notify_build_pdu(&e, pdu_tag, request_id, trap_oid, trap_oid_len, protocore_snmp_v3_uptime_s() * 100, vbs, n);
+    SnmpBer.enc = &e;
+    SnmpBer.buf.out = ctx->store->v3_b;
+    SnmpBer.buf.cap = sizeof(ctx->store->v3_b);
+    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpNotify.buf.enc = &e;
+    SnmpNotify.pdu.pdu_tag = pdu_tag;
+    SnmpNotify.pdu.request_id = ctx->ns->notify.request_id;
+    SnmpNotify.pdu.trap_oid = ctx->ns->notify.trap_oid;
+    SnmpNotify.pdu.trap_oid_len = ctx->ns->notify.trap_oid_len;
+    SnmpNotify.pdu.uptime_ticks = v3_uptime_s() * 100; // TimeTicks: hundredths of a second
+    SnmpNotify.pdu.vbs = ctx->ns->notify.vbs;
+    SnmpNotify.pdu.vb_count = ctx->ns->notify.vb_count;
+    SnmpNotify.build_pdu(SnmpNotify.internal);
     if (!e.ok)
     {
-        return PROTO_FALSE;
+        return;
     }
+    const size_t pdu_len = e.len;
 
-    // scopedPDU { contextEngineID = our engine, contextName = "", PDU }.
+    // ScopedPDU { contextEngineID = this engine, contextName = "", the notification PDU }.
     BerEnc sc;
-    protocore_ber_enc_init(&sc, s_v3.v3_c, sizeof(s_v3.v3_c));
-    size_t s = protocore_ber_seq_begin(&sc, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_octet_string(&sc, (uint8_t)SNMP_TAG_BER_OCTET_STRING, s_v3.engine_id, s_v3.engine_id_len);
-    protocore_ber_put_octet_string(&sc, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
-    protocore_ber_put_raw(&sc, s_v3.v3_b, e.len);
-    protocore_ber_seq_end(&sc, s);
+    SnmpBer.enc = &sc;
+    SnmpBer.buf.out = ctx->store->v3_c;
+    SnmpBer.buf.cap = sizeof(ctx->store->v3_c);
+    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t s = SnmpBer.tlv.token;
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = ctx->store->engine_id;
+    SnmpBer.tlv.len = ctx->store->engine_id_len;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.bytes = NULL;
+    SnmpBer.tlv.len = 0;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.tlv.bytes = ctx->store->v3_b;
+    SnmpBer.tlv.len = pdu_len;
+    SnmpBer.put_raw(SnmpBer.internal);
+    SnmpBer.tlv.token = s;
+    SnmpBer.seq_end(SnmpBer.internal);
     if (!sc.ok)
     {
-        return PROTO_FALSE;
+        return;
     }
 
-    uint8_t out[SNMP_MSG_BUF_SIZE];
-    size_t len = build_message((long)request_id, s_v3.auth_set, s_v3.priv_set, s_v3.v3_c, sc.len, out, sizeof(out));
+    const size_t len = build_message(ctx, (long)ctx->ns->notify.request_id, ctx->store->auth_set, ctx->store->priv_set,
+                                     ctx->store->v3_c, sc.len, ctx->store->v3_tx, sizeof(ctx->store->v3_tx));
+    ctx->ns->n = len;
+    if (len == 0)
+    {
+        return;
+    }
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    return len && Ip.parse(dst_ip, &dst) && Udp.client->sendto(&dst, port, out, len);
+    Ip.args.text = ctx->ns->notify.dst_ip;
+    Ip.args.out = &dst;
+    Ip.parse(Ip.internal);
+    if (!Ip.ok)
+    {
+        return;
+    }
+    UdpClient.dst = &dst;
+    UdpClient.dst_port = ctx->ns->notify.port;
+    UdpClient.data = ctx->store->v3_tx;
+    UdpClient.len = len;
+    UdpClient.sendto(UdpClient.internal);
+    ctx->ns->ok = UdpClient.ok;
 }
 
-proto_bool protocore_snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,
-                           const SnmpVarbind *vbs, size_t n)
+// SNMPv2-Trap-PDU in a v3 message (RFC 3416 sec 4.2.6): unacknowledged, so the request-id is
+// informational and the caller may leave it at whatever it last set.
+static void v3_trap(struct SnmpV3Internal *restrict ctx)
 {
-    static uint32_t s_v3_trap_id = 1; // a trap is unconfirmed; the id is informational
-    return send_v3_notify(dst_ip, port, (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, s_v3_trap_id++, trap_oid, trap_oid_len, vbs,
-                          n);
+    send_notify(ctx, (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2);
 }
 
-// SNMPv3 USM InformRequest (confirmed notification, RFC 3416 4.2.7). Symmetric to
-// protocore_snmp_inform_v2c: builds + sends the InformRequest. The caller owns the
-// request_id and, for confirmed delivery, retransmits until the receiver's
-// Response (echoing request_id) arrives.
-proto_bool protocore_snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
-                             size_t trap_oid_len, const SnmpVarbind *vbs, size_t n)
+// InformRequest-PDU in a v3 message (RFC 3416 sec 4.2.7): confirmed, so the caller owns the
+// request-id the receiver's Response-PDU echoes and retransmits until that Response arrives.
+static void v3_inform(struct SnmpV3Internal *restrict ctx)
 {
-    return send_v3_notify(dst_ip, port, 0xA6 /* InformRequest */, request_id, trap_oid, trap_oid_len, vbs, n);
+    send_notify(ctx, (uint8_t)SNMP_TAG_SNMP_PDU_INFORM);
 }
+
 #endif // PROTOCORE_ENABLE_SNMP_TRAP
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+SnmpV3Ns SnmpV3 = {.init = v3_init,
+                   .set_user = v3_set_user,
+                   .set_boots = v3_set_boots,
+                   .get_boots = v3_get_boots,
+                   .process = v3_process,
+#if PROTOCORE_ENABLE_SNMP_TRAP
+                   .trap = v3_trap,
+                   .inform = v3_inform,
+#endif
+                   .internal = &s_v3};
 
 #endif // PROTOCORE_ENABLE_SNMP_V3

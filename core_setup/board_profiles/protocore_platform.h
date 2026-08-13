@@ -223,6 +223,17 @@
 #endif
 #endif
 
+// What a BIO returns to the record engine when no octet moved and the call is to be retried. The
+// engine owns these values, so they are taken from it rather than restated: a BIO that invents its
+// own would be read as a fatal error and drop the session. Only defined where a vendor engine
+// exists, which is the only arm that runs a BIO - a build that enables a TLS client without one
+// fails on the module's own #error rather than silently sending a wrong sentinel.
+#if PROTOCORE_HAS_VENDOR_TLS
+#include <mbedtls/ssl.h> // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor arm resolved
+#define PROTOCORE_PLATFORM_TLS_WANT_READ MBEDTLS_ERR_SSL_WANT_READ
+#define PROTOCORE_PLATFORM_TLS_WANT_WRITE MBEDTLS_ERR_SSL_WANT_WRITE
+#endif
+
 // SNTP has no vendor seam: network_drivers/application/ntp_service is the client on every target. It
 // asks a server over the UDP listener, keeps the epoch in its own state, and hands it out through
 // protocore_ntp_epoch(); nothing in libc moves.

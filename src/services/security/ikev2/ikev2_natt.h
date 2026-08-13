@@ -3,25 +3,27 @@
 
 /**
  * @file ikev2_natt.h
- * @brief IKEv2 NAT traversal - NAT detection (RFC 7296 §2.23) + UDP-encapsulation demux (RFC 3948).
+ * @brief IKEv2 NAT traversal: NAT detection (RFC 7296 sec 2.23) and the UDP encapsulation demux
+ *        (RFC 3948 sec 2).
  *
- * When a NAT sits between two IKE peers it rewrites the outer IP address / UDP port, which breaks ESP's
- * integrity check over the addresses and hides the peers from each other. IKEv2 detects this by each side
- * sending, in IKE_SA_INIT, two Notify payloads whose data is a hash binding the SA to the addresses each
- * side believes are in use:
+ * RFC 7296 sec 2.23: both peers put NAT_DETECTION_SOURCE_IP and NAT_DETECTION_DESTINATION_IP Notify
+ * payloads in their IKE_SA_INIT messages, just after Ni and Nr. The data of the first is a SHA-1
+ * digest of the SPIs in the order they appear in the header, the IP address, and the port the packet
+ * was sent from; the data of the second is the same digest over the address and port it was sent to.
+ * The Notify Message Types are 16388 and 16389 (sec 3.10.1).
  *
- *   NAT_DETECTION_SOURCE_IP      = SHA-1( SPIi | SPIr | source IP | source port )
- *   NAT_DETECTION_DESTINATION_IP = SHA-1( SPIi | SPIr | dest IP   | dest port   )
+ * A recipient recomputes each digest over the addresses it actually observes. No match on any
+ * received NAT_DETECTION_SOURCE_IP means the peer's source was translated, so the peer is behind a
+ * NAT. A mismatching NAT_DETECTION_DESTINATION_IP means this system is behind a NAT and should send
+ * the keepalives of RFC 3948. Once a NAT is detected both peers move to port 4500 and encapsulate
+ * ESP in UDP.
  *
- * The SPIs are taken in header order (initiator then responder). The receiver recomputes each hash over
- * the addresses it actually observes: a mismatch on the SOURCE hash means the peer's source was translated
- * (the peer is behind a NAT); a mismatch on the DESTINATION hash means our own address was translated (we
- * are behind a NAT). When either side is behind a NAT both move ESP into UDP on port 4500 (RFC 3948) and
- * the NATed side sends keepalives.
+ * RFC 3948 sec 2.2: an IKE message on port 4500 is prefixed with the Non-ESP Marker, four zero
+ * octets aligned with the SPI field of an ESP packet, and sec 2.1 requires that SPI to be non-zero,
+ * so the marker separates IKE from ESP. RFC 3948 sec 2.3: a NAT-keepalive is a one octet payload
+ * with the value 0xFF.
  *
- * This file is the host-testable NAT-T logic: the detection hash, the two Notify builders (over the tier-1
- * @ref protocore_ike_notify_build), the mismatch tests, and the RFC 3948 marker / keepalive demux. The device
- * side only has to feed it the observed addresses off the socket.
+ * The module exports one symbol, @ref IkeNatt. Everything in ikev2_natt.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -31,97 +33,127 @@
 #define PROTOCORE_IKEV2_NATT_H
 
 #include "protocore_config.h"
+#include "services/security/ikev2/ikev2.h" // IkePayloadType: the Next Payload a detection Notify carries
+
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_IKEV2
 
-#include "services/security/ikev2/ikev2.h"
+// ---------------------------------------------------------------------------
+// Literals
+// ---------------------------------------------------------------------------
 
-/** @brief NAT_DETECTION_SOURCE_IP notify message type (RFC 7296 §3.10.1). */
+/** @brief NAT_DETECTION_SOURCE_IP Notify Message Type (RFC 7296 sec 3.10.1). */
 #define PROTOCORE_IKE_N_NAT_DETECTION_SOURCE_IP 16388
-/** @brief NAT_DETECTION_DESTINATION_IP notify message type (RFC 7296 §3.10.1). */
+/** @brief NAT_DETECTION_DESTINATION_IP Notify Message Type (RFC 7296 sec 3.10.1). */
 #define PROTOCORE_IKE_N_NAT_DETECTION_DESTINATION_IP 16389
-/** @brief NAT-detection hash length (SHA-1). */
+/** @brief Length of the SHA-1 digest a detection payload carries (RFC 7296 sec 2.23). */
 #define PROTOCORE_IKE_NATD_HASH_LEN 20
-/** @brief The IKE / ESP UDP port used once NAT-T is active (RFC 3948). */
+/** @brief The UDP port reserved for UDP-encapsulated ESP and IKE (RFC 3948 sec 2.1, sec 2.2). */
 #define PROTOCORE_NATT_PORT 4500
-/** @brief The Non-ESP Marker length: IKE-in-UDP on port 4500 is prefixed with this many zero octets. */
+/** @brief Non-ESP Marker length: four zero octets before an IKE message on port 4500 (RFC 3948 sec 2.2). */
 #define PROTOCORE_NATT_NON_ESP_MARKER_LEN 4
-/** @brief A NAT-keepalive packet is this single byte (RFC 3948 §4). */
+/** @brief The single octet a NAT-keepalive carries (RFC 3948 sec 2.3). */
 #define PROTOCORE_NATT_KEEPALIVE_BYTE 0xFF
 
-/**
- * @brief Compute a NAT-detection hash: SHA-1( @p init_spi | @p resp_spi | @p ip | @p port ) (RFC 7296 §2.23).
- * @param ip      the address octets (big-endian), @p ip_len long.
- * @param ip_len  4 (IPv4) or 16 (IPv6).
- * @param port    the UDP port (host order; encoded big-endian into the hash input).
- * @param out     receives @ref PROTOCORE_IKE_NATD_HASH_LEN bytes.
- * @return @ref PROTOCORE_IKE_NATD_HASH_LEN on success, or 0 on a null argument / bad @p ip_len.
- */
-size_t protocore_ike_natd_hash(const uint8_t init_spi[PROTOCORE_IKE_SPI_LEN],
-                               const uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN], const uint8_t *ip, size_t ip_len,
-                               uint16_t port, uint8_t out[PROTOCORE_IKE_NATD_HASH_LEN]);
+// ---------------------------------------------------------------------------
+// Typedefs
+// ---------------------------------------------------------------------------
+
+/** @brief The SPIs a digest covers, in the order they appear in the header (RFC 7296 sec 2.23). */
+typedef struct
+{
+    const uint8_t *init_spi; ///< IKE SA Initiator's SPI
+    const uint8_t *resp_spi; ///< IKE SA Responder's SPI
+} IkeNattSpiArgs;
+
+/** @brief The address and port a digest covers (RFC 7296 sec 2.23). */
+typedef struct
+{
+    const uint8_t *ip; ///< the address octets, big endian
+    size_t ip_len;     ///< 4 for IPv4 or 16 for IPv6
+    uint16_t port;     ///< the UDP port, host order, encoded big endian into the digest
+} IkeNattAddrArgs;
+
+/** @brief Where a digest lands, and the one a compare judges (RFC 7296 sec 2.23). */
+typedef struct
+{
+    uint8_t *out;            ///< receives PROTOCORE_IKE_NATD_HASH_LEN octets
+    const uint8_t *received; ///< the Notification Data from the peer
+} IkeNattDigestArgs;
+
+/** @brief Where a Notify payload is written (RFC 7296 sec 3.10). */
+typedef struct
+{
+    uint8_t *buf;                ///< where the payload is written
+    size_t cap;                  ///< room there
+    IkePayloadType next_payload; ///< Next Payload: the type of the payload that follows this one
+} IkeNattOutArgs;
+
+/** @brief The UDP payload the port 4500 demux judges (RFC 3948 sec 2.1, 2.2, 2.3). */
+typedef struct
+{
+    const uint8_t *p; ///< the datagram payload
+    size_t len;       ///< its length
+} IkeNattPktArgs;
+
+/** @brief The NAT traversal calls, described only in ikev2_natt.c. */
+struct IkeNattInternal;
 
 /**
- * @brief Build a NAT_DETECTION_SOURCE_IP Notify (the sender's own address) - RFC 7296 §2.23.
- * @return the payload length written, or 0 on overflow / bad argument.
- */
-size_t protocore_ike_natd_source_build(uint8_t *buf, size_t cap, IkePayloadType next_payload,
-                                       const uint8_t init_spi[PROTOCORE_IKE_SPI_LEN],
-                                       const uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN], const uint8_t *src_ip,
-                                       size_t ip_len, uint16_t src_port);
-
-/**
- * @brief Build a NAT_DETECTION_DESTINATION_IP Notify (the address the sender is sending to) - RFC 7296 §2.23.
- * @return the payload length written, or 0 on overflow / bad argument.
- */
-size_t protocore_ike_natd_dest_build(uint8_t *buf, size_t cap, IkePayloadType next_payload,
-                                     const uint8_t init_spi[PROTOCORE_IKE_SPI_LEN],
-                                     const uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN], const uint8_t *dst_ip,
-                                     size_t ip_len, uint16_t dst_port);
-
-/**
- * @brief True iff @p hash matches the NAT-detection hash recomputed over the given SPIs and address.
+ * @brief The IKEv2 NAT traversal handle (RFC 7296 sec 2.23, RFC 3948).
  *
- * A NAT-detection payload verifies (no translation on that axis) when this returns true; the two detection
- * helpers below express what a mismatch means.
- */
-proto_bool protocore_ike_natd_match(const uint8_t init_spi[PROTOCORE_IKE_SPI_LEN],
-                                    const uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN], const uint8_t *ip, size_t ip_len,
-                                    uint16_t port, const uint8_t *hash);
-
-/**
- * @brief The peer is behind a NAT: the received NAT_DETECTION_SOURCE_IP hash does not match the address the
- *        packet was actually observed to come from (its source was translated in transit).
- * @param observed_src_ip / @p observed_src_port  the packet's real source, as seen on our socket.
- * @param received_source_hash  the NAT_DETECTION_SOURCE_IP payload data from the peer.
- */
-proto_bool protocore_ike_natd_peer_behind_nat(const uint8_t init_spi[PROTOCORE_IKE_SPI_LEN],
-                                              const uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN],
-                                              const uint8_t *observed_src_ip, size_t ip_len, uint16_t observed_src_port,
-                                              const uint8_t *received_source_hash);
-
-/**
- * @brief We are behind a NAT: the received NAT_DETECTION_DESTINATION_IP hash does not match our own local
- *        address (the peer sent to a translated destination - our public address differs from our local one).
- * @param local_ip / @p local_port  our own address the packet arrived on.
- * @param received_dest_hash  the NAT_DETECTION_DESTINATION_IP payload data from the peer.
- */
-proto_bool protocore_ike_natd_self_behind_nat(const uint8_t init_spi[PROTOCORE_IKE_SPI_LEN],
-                                              const uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN], const uint8_t *local_ip,
-                                              size_t ip_len, uint16_t local_port, const uint8_t *received_dest_hash);
-
-// ── RFC 3948 UDP-encapsulation demux (port 4500 carries IKE, ESP, and keepalives) ────────────────
-
-/** @brief True iff @p p / @p len is a NAT-keepalive (a single 0xFF octet, RFC 3948 §4). */
-proto_bool protocore_natt_is_keepalive(const uint8_t *p, size_t len);
-
-/**
- * @brief True iff a UDP-4500 payload is an IKE message (it carries the 4-octet zero Non-ESP Marker).
+ * A caller sets the members a call takes, invokes it through ::IkeNatt, and reads the outcome off
+ * the same handle.
  *
- * On port 4500 an ESP packet begins with its SPI (never zero), so a leading 32-bit zero distinguishes an
- * IKE message; the caller strips @ref PROTOCORE_NATT_NON_ESP_MARKER_LEN octets before parsing it as IKE.
+ * No storage member: the addresses come off the socket and the payload buffers are the caller's, so
+ * nothing survives a call.
+ *
+ * @var IkeNattNs::spi     the SPIs a digest covers, in header order
+ * @var IkeNattNs::addr    the address and port a digest covers
+ * @var IkeNattNs::digest  where a digest lands, and the one a compare judges
+ * @var IkeNattNs::out     where a Notify payload is written
+ * @var IkeNattNs::pkt     the UDP payload the port 4500 demux judges
+ * @var IkeNattNs::ok      a call's true/false outcome
+ * @var IkeNattNs::n       octets written, zero on failure
+ * @var IkeNattNs::hash    SHA-1(SPIi | SPIr | IP | Port) into @c digest.out (sec 2.23)
+ * @var IkeNattNs::source_build  write a NAT_DETECTION_SOURCE_IP Notify over the sender's own address
+ * @var IkeNattNs::dest_build    write a NAT_DETECTION_DESTINATION_IP Notify over the address sent to
+ * @var IkeNattNs::match         @c digest.received equals the digest over @c spi and @c addr
+ * @var IkeNattNs::peer_behind_nat  the received source digest does not match the observed source
+ * @var IkeNattNs::self_behind_nat  the received destination digest does not match our own address
+ * @var IkeNattNs::is_keepalive  the payload is the one octet 0xFF (RFC 3948 sec 2.3)
+ * @var IkeNattNs::is_ike        the payload carries the Non-ESP Marker (RFC 3948 sec 2.2)
+ * @var IkeNattNs::internal  the calls that read this handle
  */
-proto_bool protocore_natt_is_ike(const uint8_t *p, size_t len);
+typedef struct
+{
+    IkeNattSpiArgs spi;       ///< the SPIs a digest covers (sec 2.23)
+    IkeNattAddrArgs addr;     ///< the address and port a digest covers (sec 2.23)
+    IkeNattDigestArgs digest; ///< where a digest lands and the one a compare judges
+    IkeNattOutArgs out;       ///< where a Notify payload is written (sec 3.10)
+    IkeNattPktArgs pkt;       ///< the UDP payload the demux judges (RFC 3948 sec 2)
+
+    proto_bool ok;
+    size_t n;
+
+    void (*hash)(struct IkeNattInternal *ctx);
+    void (*source_build)(struct IkeNattInternal *ctx);
+    void (*dest_build)(struct IkeNattInternal *ctx);
+    void (*match)(struct IkeNattInternal *ctx);
+    void (*peer_behind_nat)(struct IkeNattInternal *ctx);
+    void (*self_behind_nat)(struct IkeNattInternal *ctx);
+    void (*is_keepalive)(struct IkeNattInternal *ctx);
+    void (*is_ike)(struct IkeNattInternal *ctx);
+
+    struct IkeNattInternal *internal;
+} IkeNattNs;
+
+/** @brief The one symbol this module exports. */
+extern IkeNattNs IkeNatt;
 
 #endif // PROTOCORE_ENABLE_IKEV2
+
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_IKEV2_NATT_H

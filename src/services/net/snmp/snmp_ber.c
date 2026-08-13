@@ -177,7 +177,9 @@ static void put_uint(struct SnmpBerInternal *restrict ctx)
     ctx->ns->ok = e->ok;
 }
 
-static void put_octet_string(struct SnmpBerInternal *restrict ctx)
+// One primitive TLV from tlv.tag and tlv.bytes. An OCTET STRING, an IpAddress, an Opaque and a
+// bare exception marker are all this same encoding, so both calls bind here.
+static void put_tlv(struct SnmpBerInternal *restrict ctx)
 {
     enc_tlv(ctx->ns->enc, ctx->ns->tlv.tag, ctx->ns->tlv.bytes, ctx->ns->tlv.len);
     ctx->ns->ok = ctx->ns->enc->ok;
@@ -213,12 +215,6 @@ static void put_oid(struct SnmpBerInternal *restrict ctx)
     }
     enc_tlv(e, (uint8_t)SNMP_TAG_BER_OID, tmp, t);
     ctx->ns->ok = e->ok;
-}
-
-static void put_tlv(struct SnmpBerInternal *restrict ctx)
-{
-    enc_tlv(ctx->ns->enc, ctx->ns->tlv.tag, ctx->ns->tlv.bytes, ctx->ns->tlv.len);
-    ctx->ns->ok = ctx->ns->enc->ok;
 }
 
 static void put_raw(struct SnmpBerInternal *restrict ctx)
@@ -363,8 +359,8 @@ static void read_integer(struct SnmpBerInternal *restrict ctx)
 static void read_oid(struct SnmpBerInternal *restrict ctx)
 {
     BerDec *d = ctx->ns->dec;
-    uint32_t *arcs = ctx->ns->read.arc_out;
-    const size_t max = ctx->ns->read.arc_cap;
+    uint32_t *arcs = ctx->ns->read_args.arc_out;
+    const size_t max = ctx->ns->read_args.arc_cap;
     uint8_t tag;
     size_t len;
     if (!dec_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_OID || len == 0 || max < 2)
@@ -415,7 +411,7 @@ static void read_oid(struct SnmpBerInternal *restrict ctx)
 static void skip(struct SnmpBerInternal *restrict ctx)
 {
     BerDec *d = ctx->ns->dec;
-    const size_t length = ctx->ns->read.skip;
+    const size_t length = ctx->ns->read_args.skip;
     if (!d->ok || d->pos > d->len || length > d->len - d->pos) // wrap-safe, as in dec_header
     {
         d->ok = PROTO_FALSE;
@@ -430,7 +426,7 @@ static void skip(struct SnmpBerInternal *restrict ctx)
 SnmpBerNs SnmpBer = {.enc_init = enc_init,
                      .put_integer = put_integer,
                      .put_uint = put_uint,
-                     .put_octet_string = put_octet_string,
+                     .put_octet_string = put_tlv,
                      .put_null = put_null,
                      .put_oid = put_oid,
                      .put_tlv = put_tlv,

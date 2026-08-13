@@ -172,6 +172,12 @@ static void append_pdu(struct SnmpNotifyInternal *restrict ctx, BerEnc *e)
 
 static void build_pdu(struct SnmpNotifyInternal *restrict ctx)
 {
+    if (ctx->ns->buf.enc == NULL || ctx->ns->pdu.trap_oid == NULL)
+    {
+        ctx->ns->n = 0;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
+    }
     append_pdu(ctx, ctx->ns->buf.enc);
     ctx->ns->ok = ctx->ns->buf.enc->ok;
 }

@@ -27,7 +27,6 @@
 #endif
 #if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_MQTT_TLS
 #include "network_drivers/tls/tls.h" // persistent client TLS session (csess)
-#include <mbedtls/ssl.h>             // MBEDTLS_ERR_SSL_WANT_* for the BIO callbacks
 #endif
 static inline void put_u16(uint8_t *p, uint16_t v)
 {
@@ -580,7 +579,7 @@ static int mq_tls_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx;
     size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return Tcp.client->send(s_mqtt.cid, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
+    return Tcp.client->send(s_mqtt.cid, buf, cap) ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 static int mq_tls_recv(void *ctx, unsigned char *buf, size_t len)
 {
@@ -588,7 +587,7 @@ static int mq_tls_recv(void *ctx, unsigned char *buf, size_t len)
     size_t n = Tcp.client->read(s_mqtt.cid, buf, len);
     if (n == 0)
     {
-        return Tcp.client->is_closed(s_mqtt.cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+        return Tcp.client->is_closed(s_mqtt.cid) ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }

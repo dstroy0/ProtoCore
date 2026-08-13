@@ -15,20 +15,19 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-#include "mmgr/membuild.h"  // protocore_sb: the message builder
-#include "mmgr/protomem.h"  // mem.cpy / mem.move / mem.cmp / mem.chr
-#include "mmgr/protostr.h"  // str.len / diff / starts / to_long
+#include "mmgr/membuild.h"    // protocore_sb: the message builder
+#include "mmgr/protomem.h"    // mem.cpy / mem.move / mem.cmp / mem.chr
+#include "mmgr/protostr.h"    // str.len / diff / starts / digit / to_long
 #include "shared/mime/mime.h" // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport
-#include "server/clock/clock.h"                          // protocore_millis, pcdelay
+#include "server/clock/clock.h"                          // ::Clock and pcdelay
 #endif
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
 #include "network_drivers/tls/tls.h" // the client TLS session (RFC 9112 sec 9.7)
 #endif
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
-#include <mbedtls/ssl.h> // the record engine's retry sentinel for a BIO read
 #endif
 #ifdef PROTOCORE_HTTP_CLIENT_DEBUG
 #include <stdio.h>
@@ -526,9 +525,16 @@ static int tls_bio_recv(void *bio, unsigned char *buf, size_t len)
     }
     TcpClient.cid = s_http_client.store->cid;
     TcpClient.is_closed(TcpClient.internal);
-    return TcpClient.ok ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+    return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
 }
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
+
+// The library's monotonic millisecond count.
+static uint32_t now_ms(void)
+{
+    Clock.millis(Clock.internal);
+    return Clock.ms;
+}
 
 // The peer closed and its wire ring is drained: no further octet can arrive (RFC 9112 sec 6.3
 // item 8, the close-delimited body).
@@ -597,7 +603,7 @@ static void exchange(struct HttpClientInternal *restrict ctx)
         return;
     }
 
-    const uint32_t deadline = protocore_millis() + PROTOCORE_HTTP_CLIENT_TIMEOUT_MS;
+    const uint32_t deadline = now_ms() + PROTOCORE_HTTP_CLIENT_TIMEOUT_MS;
 
     // Active OPEN (RFC 9293 sec 3.9.1.1) through the shared transport; the host it dials lives in
     // this module's storage, so it outlives the resolve.
@@ -630,7 +636,7 @@ static void exchange(struct HttpClientInternal *restrict ctx)
             ns->status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
             return;
         }
-        if ((int32_t)(deadline - protocore_millis()) <= 0)
+        if ((int32_t)(deadline - now_ms()) <= 0)
         {
             close_conn(ctx);
             ns->status = (int32_t)HTTP_CLIENT_ERR_TIMEOUT;
@@ -653,7 +659,7 @@ static void exchange(struct HttpClientInternal *restrict ctx)
             return;
         }
         protocore_tls_state hs = protocore_tls_client_session_handshake();
-        while (hs == PROTOCORE_TLS_BUSY && (int32_t)(deadline - protocore_millis()) > 0)
+        while (hs == PROTOCORE_TLS_BUSY && (int32_t)(deadline - now_ms()) > 0)
         {
             pcdelay(5);
             hs = protocore_tls_client_session_handshake();
@@ -673,7 +679,7 @@ static void exchange(struct HttpClientInternal *restrict ctx)
             ns->status = (int32_t)HTTP_CLIENT_ERR_SEND;
             return;
         }
-        while ((int32_t)(deadline - protocore_millis()) > 0)
+        while ((int32_t)(deadline - now_ms()) > 0)
         {
             int got = protocore_tls_client_session_read(ctx->store->rx + msg_len, sizeof(ctx->store->rx) - msg_len);
             if (got < 0)
@@ -709,7 +715,7 @@ static void exchange(struct HttpClientInternal *restrict ctx)
             ns->status = (int32_t)HTTP_CLIENT_ERR_SEND;
             return;
         }
-        while ((int32_t)(deadline - protocore_millis()) > 0)
+        while ((int32_t)(deadline - now_ms()) > 0)
         {
             TcpClient.cid = ctx->store->cid;
             TcpClient.io.buf = ctx->store->rx + msg_len;
