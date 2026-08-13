@@ -48,7 +48,7 @@ static proto_mv_word src_word(const unsigned char *p, size_t avail)
 {
     const size_t off = (size_t)((uintptr_t)p & PROTOCORE_MEM_MASK);
     const unsigned char *sa = p - off;
-    const proto_mv_word w0 = proto_mv_load(sa);
+    const proto_mv_word w0 = raw.mv_load(sa);
 
     if (off == 0u)
     {
@@ -60,7 +60,7 @@ static proto_mv_word src_word(const unsigned char *p, size_t avail)
     proto_mv_word w1 = 0;
     if (avail > PROTO_RAW_WORD - off)
     {
-        w1 = proto_mv_load(sa + PROTO_RAW_WORD);
+        w1 = raw.mv_load(sa + PROTO_RAW_WORD);
     }
 #if PROTOCORE_HW_BIG_ENDIAN
     return (proto_mv_word)((w0 << lo) | (w1 >> hi));
@@ -77,13 +77,13 @@ void protocore_mem_cpy(void *dst, const void *src, size_t n)
 
     while (i + PROTO_RAW_WORD <= n)
     {
-        proto_mv_put(d + i, src_word(s + i, n - i));
+        raw.mv_put(d + i, src_word(s + i, n - i));
         i += PROTO_RAW_WORD;
     }
     if (i < n)
     {
         const proto_mv_word keep = span_lanes(0u, n - i);
-        proto_mv_put(d + i, (proto_mv_word)((src_word(s + i, n - i) & keep) | (proto_mv_load(d + i) & ~keep)));
+        raw.mv_put(d + i, (proto_mv_word)((src_word(s + i, n - i) & keep) | (raw.mv_load(d + i) & ~keep)));
     }
 }
 
@@ -108,12 +108,12 @@ void protocore_mem_move(void *dst, const void *src, size_t n)
     if (i < n)
     {
         const proto_mv_word keep = span_lanes(0u, n - i);
-        proto_mv_put(d + i, (proto_mv_word)((src_word(s + i, n - i) & keep) | (proto_mv_load(d + i) & ~keep)));
+        raw.mv_put(d + i, (proto_mv_word)((src_word(s + i, n - i) & keep) | (raw.mv_load(d + i) & ~keep)));
     }
     while (i >= PROTO_RAW_WORD)
     {
         i -= PROTO_RAW_WORD;
-        proto_mv_put(d + i, src_word(s + i, n - i));
+        raw.mv_put(d + i, src_word(s + i, n - i));
     }
 }
 
@@ -211,13 +211,13 @@ void protocore_mem_set(void *dst, unsigned char v, size_t n)
 
     while (i + PROTO_RAW_WORD <= n)
     {
-        proto_mv_put(d + i, w);
+        raw.mv_put(d + i, w);
         i += PROTO_RAW_WORD;
     }
     if (i < n)
     {
         const proto_mv_word keep = span_lanes(0u, n - i);
-        proto_mv_put(d + i, (proto_mv_word)((w & keep) | (proto_mv_load(d + i) & ~keep)));
+        raw.mv_put(d + i, (proto_mv_word)((w & keep) | (raw.mv_load(d + i) & ~keep)));
     }
 }
 

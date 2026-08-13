@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the FDC2114/2214 capacitance-to-digital codec
-// (services/peripherals/fdc2214): combining a channel's DATA MSB/LSB register pair into the 28-bit result,
+// (server/peripherals/fdc2214): combining a channel's DATA MSB/LSB register pair into the 28-bit result,
 // pulling the 4 error flags out of the MSB register, scaling a 28-bit result to a sensor
 // frequency (data/2^28 * fref, a 64-bit multiply+shift), and building the single-channel (CH0)
 // continuous-conversion config sequence - all pure, no I2C. Worked example for
@@ -16,7 +16,7 @@
 //   idf.py -C test/performance_benching/fdc2214 -t upload --upload-port COM7
 // then open the port to capture the repeating "DB ..." lines.
 #include "device_bench.h"
-#include "services/peripherals/fdc2214/fdc2214.h"
+#include "server/peripherals/fdc2214/fdc2214.h"
 
 #include <stdbool.h>
 #include <stddef.h>

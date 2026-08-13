@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the LD2410 mmWave radar codec (services/peripherals/ld2410): decoding a basic and an
+// Unit tests for the LD2410 mmWave radar codec (server/peripherals/ld2410): decoding a basic and an
 // engineering-mode report frame, rejecting malformed frames, the byte-by-byte stream
 // reassembler (including resync past leading noise and split feeds), the presence/distance
 // helpers, and the exact bytes of the config-command encoders. The UART pump is ESP32-only and
 // not exercised here.
 
-#include "services/peripherals/ld2410/ld2410.h"
+#include "server/peripherals/ld2410/ld2410.h"
 #include <stdint.h>
 #include <string.h>
 

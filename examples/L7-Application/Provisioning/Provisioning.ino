@@ -18,7 +18,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/system/provisioning_service/provisioning_service.h"
+#include "server/core/provisioning_service/provisioning_service.h"
 
 
 void handle_root(uint8_t slot_id, HttpReq *req)

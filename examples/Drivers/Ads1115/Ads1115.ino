@@ -20,7 +20,7 @@
 #define PROTOCORE_ENABLE_ADS1115 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
-#include "services/peripherals/ads1115/ads1115.h"
+#include "server/peripherals/ads1115/ads1115.h"
 
 void setup()
 {

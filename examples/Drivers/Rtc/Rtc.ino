@@ -27,7 +27,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/peripherals/rtc/rtc.h"
+#include "server/peripherals/rtc/rtc.h"
 #include "network_drivers/application/ntp_service/ntp_service.h"
 #include "services/timing_position/time_source/time_source.h"
 

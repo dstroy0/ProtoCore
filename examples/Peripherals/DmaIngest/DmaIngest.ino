@@ -18,7 +18,7 @@
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "mmgr/dma.h"
-#include "server/system/preempt_queue.h"
+#include "server/core/preempt_queue.h"
 
 
 // The preempting-queue item: a SELF-CONTAINED copy of the frame bytes, padded to the

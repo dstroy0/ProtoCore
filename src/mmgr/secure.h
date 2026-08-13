@@ -53,6 +53,64 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_SEC_POOL_SLOTS (PROTOCORE_GHOST_WORKER_SLOT + 1)
 
 /**
+ * @brief The pool's own state: the per-slot arenas and the block they hand out of. Defined in
+ *        secure.c.
+ *
+ * Incomplete here, so nothing outside secure.c can name a field, size the block or reach a slot
+ * around the accessors. The calls below take no handle - each resolves the calling worker's slot
+ * itself - so this is named only to give the state one owner.
+ */
+struct SecureInternal;
+
+/**
+ * @brief The secure pool: the same mechanism as @ref plain, with reclaiming that wipes.
+ *
+ * @var SecureNs::alloc         borrow @c n bytes aligned to @c align, or NULL if it does not fit
+ * @var SecureNs::span          the same borrow as a span, so the length travels with the pointer
+ * @var SecureNs::persist_span  borrow from the end no mark walks, zeroed, for the life of the program
+ * @var SecureNs::reset       wipe and empty the calling worker's arena
+ * @var SecureNs::mark        capture the arena offset, to release back to
+ * @var SecureNs::release     wipe everything borrowed since a mark, then reclaim it, LIFO
+ * @var SecureNs::used        bytes currently handed out
+ * @var SecureNs::high_water  the largest @c used any slot has reached, for sizing the arena
+ * @var SecureNs::capacity    one arena's total extent
+ * @var SecureNs::owns        whether a pointer lies inside the pool
+ * @var SecureNs::slot_of     which slot holds a pointer, or -1
+ * @var SecureNs::internal    the per-slot arenas and their backing block, described only in secure.c
+ *
+ * @ref SecureNs::owns and protocore_plaintext_owns() are mutually exclusive: the two pools are disjoint
+ * regions, so a secret can never be handed back where plaintext is expected, or the reverse.
+ *
+ * The arenas and their backing bytes belong to secure.c, and a caller reaches its own by calling -
+ * the slot is resolved from the worker, never passed in. @ref SecureNs::internal names that state
+ * without describing it.
+ */
+typedef struct
+{
+    void *(*alloc)(size_t n, size_t align);
+    protocore_span (*span)(size_t n, size_t align);
+    protocore_span (*persist_span)(size_t n);
+    void (*reset)(void);
+    size_t (*mark)(void);
+    void (*release)(size_t mark);
+    size_t (*used)(void);
+    size_t (*high_water)(void);
+    size_t (*capacity)(void);
+    proto_bool (*owns)(const void *p);
+    int (*slot_of)(const void *p);
+
+    struct SecureInternal *internal;
+} SecureNs;
+
+/**
+ * @brief The pool's state, the one object every call in secure.c reaches its slot through.
+ *
+ * Zero at boot: the arenas and the block they hand out of bind on the first borrow, so a build that
+ * never borrows a secret carries neither.
+ */
+extern struct SecureInternal protocore_secure_state;
+
+/**
  * @brief Securely zero @p len bytes at @p ptr with a volatile store the compiler cannot elide.
  *
  * The canonical wipe. Use this, never mem.zero(), for any buffer that held key material: a plain
@@ -154,50 +212,16 @@ size_t protocore_secure_capacity(void);
 /**
  * @brief True if @p p points inside the secure pool.
  *
- * One unsigned subtract and compare: the slot count and slot size are compile-time, so the pool is
- * one region of known extent. Mutually exclusive with protocore_plaintext_owns() because the regions are
- * disjoint - which is the whole access control, with no per-allocation bookkeeping.
+ * One unsigned subtract and compare against the block the first borrow bound: the slot count and
+ * slot size are compile-time, so the pool is one region of known extent. Mutually exclusive with
+ * protocore_plaintext_owns() because the regions are disjoint - which is the whole access control, with no
+ * per-allocation bookkeeping. False while no slot has borrowed, when no pointer into the pool
+ * exists to ask about.
  */
 proto_bool protocore_secure_owns(const void *p);
 
 /** @brief Which secure slot owns @p p, or -1 if @p p is not in the secure pool. */
 int protocore_secure_slot_of(const void *p);
-
-/**
- * @brief The secure pool: the same mechanism as @ref plain, with reclaiming that wipes.
- *
- * @var SecureNs::alloc         borrow @c n bytes aligned to @c align, or NULL if it does not fit
- * @var SecureNs::span          the same borrow as a span, so the length travels with the pointer
- * @var SecureNs::persist_span  borrow from the end no mark walks, zeroed, for the life of the program
- * @var SecureNs::reset       wipe and empty the calling worker's arena
- * @var SecureNs::mark        capture the arena offset, to release back to
- * @var SecureNs::release     wipe everything borrowed since a mark, then reclaim it, LIFO
- * @var SecureNs::used        bytes currently handed out
- * @var SecureNs::high_water  the largest @c used any slot has reached, for sizing the arena
- * @var SecureNs::capacity    one arena's total extent
- * @var SecureNs::owns        whether a pointer lies inside the pool
- * @var SecureNs::slot_of     which slot holds a pointer, or -1
- *
- * @ref SecureNs::owns and protocore_plaintext_owns() are mutually exclusive: the two pools are disjoint
- * regions, so a secret can never be handed back where plaintext is expected, or the reverse.
- *
- * No storage member. The arenas and their backing bytes belong to secure.c, and a caller reaches its
- * own by calling - the slot is resolved from the worker, never passed in.
- */
-typedef struct
-{
-    void *(*alloc)(size_t n, size_t align);
-    protocore_span (*span)(size_t n, size_t align);
-    protocore_span (*persist_span)(size_t n);
-    void (*reset)(void);
-    size_t (*mark)(void);
-    void (*release)(size_t mark);
-    size_t (*used)(void);
-    size_t (*high_water)(void);
-    size_t (*capacity)(void);
-    proto_bool (*owns)(const void *p);
-    int (*slot_of)(const void *p);
-} SecureNs;
 
 /**
  * @brief The names, aliased.
@@ -211,10 +235,19 @@ typedef struct
  *
  * `unused` because this header reaches files that take none of it.
  */
-static const SecureNs secure __attribute__((unused)) = {
-    protocore_secure_alloc,    protocore_secure_span,    protocore_secure_persist_span, protocore_secure_reset,
-    protocore_secure_mark,     protocore_secure_release, protocore_secure_used,         protocore_secure_high_water,
-    protocore_secure_capacity, protocore_secure_owns,    protocore_secure_slot_of};
+// Designated, so a member's position in the struct does not decide what it binds to.
+static const SecureNs secure __attribute__((unused)) = {.alloc = protocore_secure_alloc,
+                                                        .span = protocore_secure_span,
+                                                        .persist_span = protocore_secure_persist_span,
+                                                        .reset = protocore_secure_reset,
+                                                        .mark = protocore_secure_mark,
+                                                        .release = protocore_secure_release,
+                                                        .used = protocore_secure_used,
+                                                        .high_water = protocore_secure_high_water,
+                                                        .capacity = protocore_secure_capacity,
+                                                        .owns = protocore_secure_owns,
+                                                        .slot_of = protocore_secure_slot_of,
+                                                        .internal = &protocore_secure_state};
 
 PROTOCORE_END_DECLS
 

@@ -72,7 +72,7 @@ added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/security/audit_log/audit_log.h"
+#include "server/security/audit_log/audit_log.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

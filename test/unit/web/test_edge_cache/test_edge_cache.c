@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Pure host tests for the CDN edge-cache engine (services/web/edge_cache): response header-field access,
+// Pure host tests for the CDN edge-cache engine (server/web/edge_cache): response header-field access,
 // HTTP-date parsing, RFC 9111 freshness, and the cache key + digest + Vary secondary key.
 
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (Range/206 serving from the cache)
-#include "services/web/edge_cache/edge_cache.h"
-#include "services/web/httpcache/httpcache.h"
+#include "server/web/edge_cache/edge_cache.h"
+#include "network_drivers/presentation/http/httpcache/httpcache.h"
 #include <stdio.h>
 #include <string.h>
 

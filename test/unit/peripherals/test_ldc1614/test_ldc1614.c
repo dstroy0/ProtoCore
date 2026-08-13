@@ -4,7 +4,7 @@
 // Host tests for services/ldc1614: the inductance-to-digital codec (data combine, error flags,
 // frequency scale, config sequence). The Wire binding is ESP32-only and not exercised here.
 
-#include "services/peripherals/ldc1614/ldc1614.h"
+#include "server/peripherals/ldc1614/ldc1614.h"
 #include <unity.h>
 
 void setUp(void)

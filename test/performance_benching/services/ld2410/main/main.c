@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the HLK-LD2410 24 GHz mmWave radar codec (services/peripherals/ld2410):
+// On-device CCOUNT microbenchmark for the HLK-LD2410 24 GHz mmWave radar codec (server/peripherals/ld2410):
 // a pure protocol codec, so every call here exercises the real production code path (contrast with
 // performance_benching/device/ads1115, a peripheral driver where the bus transaction is stubbed). What is benched:
 //   - pc_ld2410_parse_report over a basic (13B payload) and an engineering-mode (35B payload)
@@ -20,7 +20,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/ld2410/ld2410.h"
+#include "server/peripherals/ld2410/ld2410.h"
 
 #include <stdbool.h>
 #include <stddef.h>

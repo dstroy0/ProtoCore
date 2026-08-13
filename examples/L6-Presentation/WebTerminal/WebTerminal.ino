@@ -27,7 +27,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/web/web_terminal/web_terminal.h"
+#include "server/web/web_terminal/web_terminal.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

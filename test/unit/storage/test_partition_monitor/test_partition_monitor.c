@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the partition-map core (services/storage/partition_monitor): the
+// Unit tests for the partition-map core (server/storage/partition_monitor): the
 // type/subtype -> kind classifier and the JSON serializer. The flash walk is
 // ESP32-only and a no-op on the host.
 
-#include "services/storage/partition_monitor/partition_monitor.h"
+#include "server/storage/partition_monitor/partition_monitor.h"
 #include <unity.h>
 
 void setUp()

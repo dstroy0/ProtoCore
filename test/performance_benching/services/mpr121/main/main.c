@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the NXP MPR121 capacitive-touch codec (services/peripherals/mpr121):
+// On-device CCOUNT microbenchmark for the NXP MPR121 capacitive-touch codec (server/peripherals/mpr121):
 // decoding the 16-bit touch-status word into a 12-electrode bitmask (pc_mpr121_touched), the
 // per-electrode touched test (pc_mpr121_is_touched), the proximity / over-current status flags,
 // combining an LSB/MSB register pair into a 10-bit filtered/baseline value (pc_mpr121_word10),
@@ -15,7 +15,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/mpr121/mpr121.h"
+#include "server/peripherals/mpr121/mpr121.h"
 
 #include <stdbool.h>
 #include <stddef.h>

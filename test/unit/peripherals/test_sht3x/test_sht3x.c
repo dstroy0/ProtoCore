@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the Sensirion SHT3x codec (services/peripherals/sht3x): the CRC-8 against the datasheet
+// Unit tests for the Sensirion SHT3x codec (server/peripherals/sht3x): the CRC-8 against the datasheet
 // check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity conversions at
 // the range endpoints and a mid value, and the six-byte single-shot response parse (both CRCs
 // checked, corrupt CRC rejected, null out-pointers tolerated). The I2C transfer is ESP32-only.
 
-#include "services/peripherals/sht3x/sht3x.h"
+#include "server/peripherals/sht3x/sht3x.h"
 #include <stdint.h>
 #include <unity.h>
 

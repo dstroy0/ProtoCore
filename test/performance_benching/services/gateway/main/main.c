@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the radio / wireless gateway bridge (services/net/gateway):
+// On-device CCOUNT microbenchmark for the radio / wireless gateway bridge (server/net/gateway):
 // protocore_gateway_uplink() envelopes a received southbound frame (src address / port / rssi / seq) and
 // publishes it northbound (fail-closed on no sink / unknown port / rate cap), protocore_gateway_downlink()
 // routes a command to a port's transmit callback, and protocore_gateway_topic() formats the routing key -
@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/gateway/gateway.h"
+#include "server/net/gateway/gateway.h"
 
 #include <stdbool.h>
 #include <stddef.h>

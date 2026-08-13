@@ -37,7 +37,7 @@ static void put_i64(protocore_sb *b, int64_t v)
         out[k++] = tmp[n - 1 - i];
     }
     out[k] = '\0';
-    protocore_sb_put(b, out);
+    Sb.put(b, out);
 }
 
 static const char *NS = " xmlns=\"urn:ieee:std:2030.5:ns\"";
@@ -47,55 +47,55 @@ size_t protocore_sep2_device_capability(uint32_t poll_rate, const char *edev_lis
                                  size_t cap)
 {
     protocore_sb b = {out, cap, 0, out != NULL && cap > 0};
-    protocore_sb_put(&b, DECL);
-    protocore_sb_put(&b, "<DeviceCapability");
-    protocore_sb_put(&b, NS);
-    protocore_sb_put(&b, " pollRate=\"");
+    Sb.put(&b, DECL);
+    Sb.put(&b, "<DeviceCapability");
+    Sb.put(&b, NS);
+    Sb.put(&b, " pollRate=\"");
     put_i64(&b, poll_rate);
-    protocore_sb_put(&b, "\">");
-    protocore_sb_put(&b, "<EndDeviceListLink href=\"");
-    protocore_sb_xml(&b, edev_list_href);
-    protocore_sb_put(&b, "\"/>");
-    protocore_sb_put(&b, "<DERProgramListLink href=\"");
-    protocore_sb_xml(&b, derp_list_href);
-    protocore_sb_put(&b, "\"/>");
-    protocore_sb_put(&b, "</DeviceCapability>");
-    return protocore_sb_finish(&b);
+    Sb.put(&b, "\">");
+    Sb.put(&b, "<EndDeviceListLink href=\"");
+    Sb.xml(&b, edev_list_href);
+    Sb.put(&b, "\"/>");
+    Sb.put(&b, "<DERProgramListLink href=\"");
+    Sb.xml(&b, derp_list_href);
+    Sb.put(&b, "\"/>");
+    Sb.put(&b, "</DeviceCapability>");
+    return Sb.finish(&b);
 }
 
 size_t protocore_sep2_end_device(uint64_t sfdi, const char *lfdi, const char *href, char *out, size_t cap)
 {
     protocore_sb b2 = {out, cap, 0, out != NULL && cap > 0};
-    protocore_sb_put(&b2, DECL);
-    protocore_sb_put(&b2, "<EndDevice");
-    protocore_sb_put(&b2, NS);
-    protocore_sb_put(&b2, " href=\"");
-    protocore_sb_xml(&b2, href);
-    protocore_sb_put(&b2, "\"><sFDI>");
+    Sb.put(&b2, DECL);
+    Sb.put(&b2, "<EndDevice");
+    Sb.put(&b2, NS);
+    Sb.put(&b2, " href=\"");
+    Sb.xml(&b2, href);
+    Sb.put(&b2, "\"><sFDI>");
     put_i64(&b2, (int64_t)sfdi);
-    protocore_sb_put(&b2, "</sFDI><lFDI>");
-    protocore_sb_xml(&b2, lfdi);
-    protocore_sb_put(&b2, "</lFDI></EndDevice>");
-    return protocore_sb_finish(&b2);
+    Sb.put(&b2, "</sFDI><lFDI>");
+    Sb.xml(&b2, lfdi);
+    Sb.put(&b2, "</lFDI></EndDevice>");
+    return Sb.finish(&b2);
 }
 
 size_t protocore_sep2_der_control(const char *mrid, uint32_t start, uint32_t duration, int32_t opmod_target_w, char *out,
                            size_t cap)
 {
     protocore_sb b3 = {out, cap, 0, out != NULL && cap > 0};
-    protocore_sb_put(&b3, DECL);
-    protocore_sb_put(&b3, "<DERControl");
-    protocore_sb_put(&b3, NS);
-    protocore_sb_put(&b3, "><mRID>");
-    protocore_sb_xml(&b3, mrid);
-    protocore_sb_put(&b3, "</mRID><interval><start>");
+    Sb.put(&b3, DECL);
+    Sb.put(&b3, "<DERControl");
+    Sb.put(&b3, NS);
+    Sb.put(&b3, "><mRID>");
+    Sb.xml(&b3, mrid);
+    Sb.put(&b3, "</mRID><interval><start>");
     put_i64(&b3, start);
-    protocore_sb_put(&b3, "</start><duration>");
+    Sb.put(&b3, "</start><duration>");
     put_i64(&b3, duration);
-    protocore_sb_put(&b3, "</duration></interval><DERControlBase><opModFixedW>");
+    Sb.put(&b3, "</duration></interval><DERControlBase><opModFixedW>");
     put_i64(&b3, opmod_target_w);
-    protocore_sb_put(&b3, "</opModFixedW></DERControlBase></DERControl>");
-    return protocore_sb_finish(&b3);
+    Sb.put(&b3, "</opModFixedW></DERControlBase></DERControl>");
+    return Sb.finish(&b3);
 }
 
 #endif // PROTOCORE_ENABLE_SEP2

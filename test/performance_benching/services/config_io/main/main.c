@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for schema-driven config export/restore (services/storage/config_io):
+// On-device CCOUNT microbenchmark for schema-driven config export/restore (server/storage/config_io):
 // protocore_config_export() serializes a schema's current values from the config store into `key=value`
 // lines; protocore_config_import() parses such a blob back into the store. Both functions call through to
-// services/storage/config_store, and both call protocore_config_begin() internally on *every* invocation - on
+// server/storage/config_store, and both call protocore_config_begin() internally on *every* invocation - on
 // ESP32 that is the real Arduino `Preferences` NVS wrapper, so (unlike modbus's pure protocol codec)
 // each iteration here really does close/reopen the NVS namespace handle, and import performs a real
 // flash write per field. There is no missing/unattached peripheral to work around here (contrast
@@ -21,8 +21,8 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/storage/config_io/config_io.h"
-#include "services/storage/config_store/config_store.h"
+#include "server/storage/config_io/config_io.h"
+#include "server/storage/config_store/config_store.h"
 
 #include <stdbool.h>
 #include <stddef.h>

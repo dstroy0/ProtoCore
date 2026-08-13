@@ -5,7 +5,7 @@
 // scripts, or the device came up degraded. On a machine you can actuate, "the page did not load" is
 // not an acceptable state - an operator still has to see what is happening and be able to stop it.
 //
-// services/web/spa_router routes for that:
+// server/web/spa_router routes for that:
 //
 //   /api/...        -> PASSTHROUGH   the handlers, always - including in fallback mode
 //   /app.js         -> SERVE_FILE    a real asset (a missing one is a real 404, not a rewrite)
@@ -26,7 +26,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/web/spa_router/spa_router.h"
+#include "server/web/spa_router/spa_router.h"
 #include "shared/mime/mime.h"
 
 static const char *WIFI_SSID = "your-ssid";

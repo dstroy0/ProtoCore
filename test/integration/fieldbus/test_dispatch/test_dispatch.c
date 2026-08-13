@@ -13,7 +13,7 @@
 #include <unity.h>
 #if PROTOCORE_ENABLE_CSRF
 #include "network_drivers/transport/tcp/tcp.h"
-#include "services/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch
+#include "server/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch
 #endif
 
 static proto_bool handler_called = PROTO_FALSE;

@@ -8,7 +8,7 @@
 // ls -l longname formatter, reader bounds safety, and builder overflow. Pure host tests (no fs, no SSH).
 
 #include "network_drivers/application/sftp/sftp.h"
-#include "server/filesystem/filesystem.h"
+#include "server/storage/filesystem.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -315,7 +315,7 @@ static void test_builder_overflow()
     TEST_ASSERT_EQUAL_UINT(0, pc_sftp_build_data(1, "0123456789", 10, tiny, sizeof(tiny)));
 }
 
-// --- shared path-traversal guard (server/filesystem/filesystem.h) -------------------------------------------
+// --- shared path-traversal guard (server/storage/filesystem.h) -------------------------------------------
 static void test_pc_fs_resolve()
 {
     char out[128];

@@ -12,7 +12,7 @@
 
 #include "mmgr/protoframe.h" // the log frames below need the complete type
 #include "mmgr/ring.h"       // shared SPSC byte-ring primitive, exercised at the bottom
-#include "server/system/logbuf.h"
+#include "server/core/logbuf.h"
 #include "shared/log/log.h"
 #include <stdio.h>
 #include <string.h>

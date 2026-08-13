@@ -161,7 +161,7 @@ proto_bool protocore_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_chann
 /**
  * @brief Start a live channel-hopping sniff across [first_chan, last_chan].
  *
- * Requires the radio to be up (Physical.wifi->init() or Physical.wifi->init_radio()).
+ * Requires the radio to be up (Physical.wifi_init or Physical.wifi_radio_init).
  * Resets the stats + survey.
  * @return true if capture started.
  */

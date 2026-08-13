@@ -12,10 +12,12 @@
  * with its invariant dropped; passing the region keeps the bound attached to the bytes.
  *
  * A failed allocation yields a null pointer with zero capacity, never a null pointer with a live
- * capacity, so a caller that skips protocore_span_ok() writes nothing instead of dereferencing null.
+ * capacity, so a caller that skips span.ok() writes nothing instead of dereferencing null.
  *
- * The reading accessors take the region by value and protocore_span_reset() takes a pointer, so a caller
- * can see at the call site which one writes.
+ * The reading accessors take the region by value and span.reset() takes a pointer, so a caller can
+ * see at the call site which one writes.
+ *
+ * The bodies live in span.c and are reached through @ref span.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -24,7 +26,9 @@
 #ifndef PROTOCORE_SPAN_H
 #define PROTOCORE_SPAN_H
 
-#include "protocore_config.h" // the entry point: PROTOCORE_INLINE, and protocore_types.h for proto_bool / size_t
+#include "protocore_config.h" // the entry point: protocore_types.h for proto_bool / size_t / uint8_t
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief A writable byte region: the storage, the capacity that belongs to it, and what has been
@@ -42,8 +46,8 @@ typedef struct
 /**
  * @brief A read-only byte region.
  *
- * Bind with protocore_cspan_from() and check with protocore_cspan_ok(). A read is bounded by the region itself,
- * which is why nothing here takes a separate length.
+ * Bind with span.cfrom() and check with span.cok(). A read is bounded by the region itself, which is
+ * why nothing here takes a separate length.
  */
 typedef struct
 {
@@ -54,123 +58,111 @@ typedef struct
 } protocore_cspan;
 
 /**
- * @brief Bind a span to memory whose extent is only known at run time.
+ * @brief The bounded-region module. Every constructor normalizes the empty case; every sub-region
+ *        clamps to what its parent holds.
  *
- * Normalizes the empty case so a span with storage but no capacity - or capacity but no storage -
- * cannot be constructed.
+ * @var SpanNs::from
+ * Bind a span to memory whose extent is only known at run time. Storage without capacity, or capacity
+ * without storage, normalizes to `{NULL, 0}`.
+ *
+ * @var SpanNs::ok
+ * True when the span refers to real storage and every write so far has fit.
+ *
+ * @var SpanNs::has_storage
+ * True when the span refers to real storage, whether or not a write has overflowed.
+ *
+ * @var SpanNs::len
+ * Bytes the payload needs - the backward direction. Equals the bytes written while everything fit.
+ * After an overflow it keeps counting, so a value greater than @ref protocore_span::cap is exactly the
+ * capacity the run-length constant should have had.
+ *
+ * @var SpanNs::room
+ * Writable bytes remaining (0 once the region is full or has overflowed).
+ *
+ * @var SpanNs::reset
+ * Rewind to empty, keeping the same storage and clearing the overflow flag. Takes a pointer, so the
+ * call site shows that this one writes.
+ *
+ * @var SpanNs::after
+ * The sub-span starting @c off bytes into @c s, a fresh empty cursor over that tail. Clamps rather
+ * than trapping: an @c off past the end yields an empty span, which writes nothing.
+ *
+ * @var SpanNs::first
+ * The first @c n bytes of @c s as a fresh span, clamped to what @c s actually has.
+ *
+ * @var SpanNs::produced
+ * A read-only view of what has been produced into @c s: the length comes from the span's own cursor,
+ * so a reader is never handed a length that disagrees with the bytes. Yields an empty view when the
+ * span overflowed.
+ *
+ * @var SpanNs::read
+ * A read-only view of the first @c len bytes of @c s, clamped to its capacity.
+ *
+ * @var SpanNs::cfrom
+ * Bind a read-only span to memory whose extent is only known at run time. Normalizes the empty case
+ * the way @ref SpanNs::from does.
+ *
+ * @var SpanNs::cok
+ * True when the read-only span refers to real bytes and no read has run past the end.
+ *
+ * No storage member: every accessor works on the region the caller passes and holds nothing of its
+ * own.
  */
-PROTOCORE_INLINE protocore_span protocore_span_from(uint8_t *p, size_t cap)
+typedef struct
 {
-    protocore_span s;
-    s.buf = (p != NULL && cap != 0) ? p : NULL;
-    s.cap = (s.buf != NULL) ? cap : 0;
-    s.pos = 0;
-    s.overflow = PROTO_FALSE;
-    return s;
-}
+    protocore_span (*from)(uint8_t *p, size_t cap);
+    proto_bool (*ok)(protocore_span s);
+    proto_bool (*has_storage)(protocore_span s);
+    size_t (*len)(protocore_span s);
+    size_t (*room)(protocore_span s);
+    void (*reset)(protocore_span *s);
+    protocore_span (*after)(protocore_span s, size_t off);
+    protocore_span (*first)(protocore_span s, size_t n);
+    protocore_cspan (*produced)(protocore_span s);
+    protocore_cspan (*read)(protocore_span s, size_t len);
+    protocore_cspan (*cfrom)(const uint8_t *p, size_t len);
+    proto_bool (*cok)(protocore_cspan s);
+} SpanNs;
 
-/** @brief Bind a read-only span to memory whose extent is only known at run time. */
-PROTOCORE_INLINE protocore_cspan protocore_cspan_from(const uint8_t *p, size_t len)
-{
-    protocore_cspan s;
-    s.buf = (p != NULL && len != 0) ? p : NULL;
-    s.len = (s.buf != NULL) ? len : 0;
-    s.pos = 0;
-    s.err = PROTO_FALSE;
-    return s;
-}
-
-/** @brief True when the span refers to real storage and every write so far has fit. */
-PROTOCORE_INLINE proto_bool protocore_span_ok(protocore_span s)
-{
-    return s.buf != NULL && !s.overflow;
-}
-
-/** @brief True when the span refers to real storage, whether or not a write has overflowed. */
-PROTOCORE_INLINE proto_bool protocore_span_has_storage(protocore_span s)
-{
-    return s.buf != NULL;
-}
-
-/** @brief True when the read-only span refers to real bytes and no read has run past the end. */
-PROTOCORE_INLINE proto_bool protocore_cspan_ok(protocore_cspan s)
-{
-    return s.buf != NULL && !s.err;
-}
+// The accessors, in span.c. Named here because the table below has to name them, and prefixed
+// because that puts them in the linker's namespace.
+protocore_span protocore_span_from(uint8_t *p, size_t cap);
+proto_bool protocore_span_ok(protocore_span s);
+proto_bool protocore_span_has_storage(protocore_span s);
+size_t protocore_span_len(protocore_span s);
+size_t protocore_span_room(protocore_span s);
+void protocore_span_reset(protocore_span *s);
+protocore_span protocore_span_after(protocore_span s, size_t off);
+protocore_span protocore_span_first(protocore_span s, size_t n);
+protocore_cspan protocore_span_produced(protocore_span s);
+protocore_cspan protocore_span_read(protocore_span s, size_t len);
+protocore_cspan protocore_cspan_from(const uint8_t *p, size_t len);
+proto_bool protocore_cspan_ok(protocore_cspan s);
 
 /**
- * @brief Bytes the payload needs - the backward direction.
+ * @brief The names, aliased.
  *
- * Equals the bytes written while everything fit. After an overflow it keeps counting, so a value
- * greater than @ref protocore_span::cap is exactly the capacity the run-length constant should have had.
- */
-PROTOCORE_INLINE size_t protocore_span_len(protocore_span s)
-{
-    return s.pos;
-}
-
-/** @brief Writable bytes remaining (0 once the region is full or has overflowed). */
-PROTOCORE_INLINE size_t protocore_span_room(protocore_span s)
-{
-    return (s.pos < s.cap) ? (s.cap - s.pos) : 0;
-}
-
-/** @brief Rewind to empty, keeping the same storage and clearing the overflow flag. */
-PROTOCORE_INLINE void protocore_span_reset(protocore_span *s)
-{
-    s->pos = 0;
-    s->overflow = PROTO_FALSE;
-}
-
-/**
- * @brief The sub-span starting @p off bytes into @p s (a fresh, empty cursor over that tail).
+ * `static const` and initialized here, not declared `extern` against a definition in the .c: a
+ * translation unit that can see this initializer knows which function each member holds, so a member
+ * read folds away and the call to the body in span.c is direct, leaving the table referenced by
+ * nothing for the linker to drop.
  *
- * Clamps rather than trapping: an @p off past the end yields an empty span, so a truncated frame
- * produces a zero-capacity region that writes nothing instead of a pointer past the allocation.
+ * `unused` because a header this wide is included by files that take none of it.
  */
-PROTOCORE_INLINE protocore_span protocore_span_after(protocore_span s, size_t off)
-{
-    if (!protocore_span_has_storage(s) || off >= s.cap)
-    {
-        return protocore_span_from(NULL, 0);
-    }
-    return protocore_span_from(s.buf + off, s.cap - off);
-}
+// Designated, so a member's position in the struct does not decide what it binds to.
+static const SpanNs span __attribute__((unused)) = {.from = protocore_span_from,
+                                                    .ok = protocore_span_ok,
+                                                    .has_storage = protocore_span_has_storage,
+                                                    .len = protocore_span_len,
+                                                    .room = protocore_span_room,
+                                                    .reset = protocore_span_reset,
+                                                    .after = protocore_span_after,
+                                                    .first = protocore_span_first,
+                                                    .produced = protocore_span_produced,
+                                                    .read = protocore_span_read,
+                                                    .cfrom = protocore_cspan_from,
+                                                    .cok = protocore_cspan_ok};
 
-/** @brief The first @p n bytes of @p s as a fresh span, clamped to what @p s actually has. */
-PROTOCORE_INLINE protocore_span protocore_span_first(protocore_span s, size_t n)
-{
-    if (!protocore_span_has_storage(s))
-    {
-        return protocore_span_from(NULL, 0);
-    }
-    return protocore_span_from(s.buf, (n < s.cap) ? n : s.cap);
-}
-
-/**
- * @brief A read-only view of what has been produced into @p s.
- *
- * The natural handoff once a frame is built: the length comes from the span's own cursor, so a
- * reader cannot be handed a length that disagrees with the bytes. Yields an empty view if the span
- * overflowed - a partially written frame must not be transmitted as though it were whole.
- */
-PROTOCORE_INLINE protocore_cspan protocore_span_produced(protocore_span s)
-{
-    if (!protocore_span_ok(s))
-    {
-        return protocore_cspan_from(NULL, 0);
-    }
-    return protocore_cspan_from(s.buf, s.pos);
-}
-
-/** @brief A read-only view of the first @p len bytes of @p s, clamped to its capacity. */
-PROTOCORE_INLINE protocore_cspan protocore_span_read(protocore_span s, size_t len)
-{
-    if (!protocore_span_has_storage(s))
-    {
-        return protocore_cspan_from(NULL, 0);
-    }
-    return protocore_cspan_from(s.buf, (len < s.cap) ? len : s.cap);
-}
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SPAN_H

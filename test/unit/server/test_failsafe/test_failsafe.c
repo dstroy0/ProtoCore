@@ -4,7 +4,7 @@
 // Host tests for services/failsafe: the software watchdog / deadlock detector. Uses the explicit
 // *_at(now) API with a synthetic clock, so no time mock is needed.
 
-#include "server/system/failsafe.h"
+#include "server/core/failsafe.h"
 #include <string.h>
 
 #include <unity.h>

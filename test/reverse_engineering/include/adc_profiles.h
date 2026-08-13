@@ -17,7 +17,7 @@
  *    to write to it; the only number that matters here is its pipeline latency.
  *  - **AD9238** (12-bit, 20/40/65 MSPS, dual channel): the same parallel-bus family, PLUS a
  *    real SPI configuration port (power-down, output format, test patterns - see
- *    services/peripherals/ad9238/ad9238.h). main.cpp's ad9238_bringup() only runs when the selected
+ *    server/peripherals/ad9238/ad9238.h). main.cpp's ad9238_bringup() only runs when the selected
  *    profile has one.
  *  - **DAQ_ADC_GENERIC**: a conservative stand-in for any other sub-GSPS part behind the
  *    same FPGA/CPLD burst-drain architecture (TI ADSxxxx, other ADI AD92xx/AD98xx siblings)

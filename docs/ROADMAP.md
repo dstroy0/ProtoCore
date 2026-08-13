@@ -725,7 +725,7 @@ Built-in radio:
   `protocore_southbound_read` / `_write` / `_read_block` / `_write_block`, where the block calls are the atomic
   multi-point (register-matrix) path. Each driver owns its transport (a read/write vtable + ctx). Pure
   registry + dispatch, host-tested (`native_southbound`). **The Modbus adapter is shipped**
-  (`services/net/southbound/sb_modbus`, `PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER`): it binds the
+  (`services/southbound/sb_modbus`, `PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER`): it binds the
   transport-agnostic Modbus TCP master codec into a `SouthboundDriver`, so an app reads register points
   by driver name through the one facade - `protocore_sb_modbus_init` (holding FC 0x03 / input FC 0x04, unit,
   a rolling txid) + `protocore_sb_modbus_driver` install the full vtable over an app-supplied request/response

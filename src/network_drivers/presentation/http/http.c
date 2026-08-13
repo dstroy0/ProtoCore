@@ -11,20 +11,20 @@
 #include "network_drivers/presentation/http/http.h"
 #include "mmgr/membuild.h"  // protocore_sb: the Allow list is appended, not formatted
 #include "mmgr/protostr.h"  // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h" // proto_raw_read: a captured segment moves into our own buffer
+#include "mmgr/rawmemcpy.h" // raw.read: a captured segment moves into our own buffer
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
 #include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
 #include "protocore.h"                                          // http_pool, and the request and route widths
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // protocore_millis() stamps the attempt the lockout counts
-#include "services/security/auth_lockout/auth_lockout.h"
+#include "server/security/auth_lockout/auth_lockout.h"
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
-#include "services/security/forwarded_trust/forwarded_trust.h"
+#include "server/security/forwarded_trust/forwarded_trust.h"
 #endif
 #endif
 #if PROTOCORE_ENABLE_CSRF
-#include "services/security/csrf/csrf.h"
+#include "server/security/csrf/csrf.h"
 #endif
 
 /**
@@ -71,7 +71,7 @@ static void reset(struct HttpInternal *restrict ctx)
 }
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
-// Edge-cache async-fetch pump seam (see services/web/edge_cache/edge_cache_proxy): a cache miss
+// Edge-cache async-fetch pump seam (see server/web/edge_cache/edge_cache_proxy): a cache miss
 // suspends the client request and drives the non-blocking origin fetch from this slot's poll.
 static void set_edge_poll(struct HttpInternal *restrict ctx)
 {
@@ -319,13 +319,13 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
     {
         klen = QUERY_KEY_LEN - 1;
     }
-    proto_raw_read(qp->key, key, klen);
+    raw.read(qp->key, key, klen);
     qp->key[klen] = '\0';
     if (vlen > QUERY_VAL_LEN - 1)
     {
         vlen = QUERY_VAL_LEN - 1;
     }
-    proto_raw_read(qp->val, val, vlen);
+    raw.read(qp->val, val, vlen);
     qp->val[vlen] = '\0';
 }
 
@@ -413,8 +413,8 @@ static void allow_append(struct HttpInternal *restrict ctx)
     if (len == 0)
     {
         protocore_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
-        protocore_sb_put(&sb_buf, m);
-        if (protocore_sb_finish(&sb_buf) == 0)
+        Sb.put(&sb_buf, m);
+        if (Sb.finish(&sb_buf) == 0)
         {
             buf[0] = '\0';
         }
@@ -422,9 +422,9 @@ static void allow_append(struct HttpInternal *restrict ctx)
     else
     {
         protocore_sb sb1300 = {buf + len, cap - len, 0, PROTO_TRUE};
-        protocore_sb_put(&sb1300, ", ");
-        protocore_sb_put(&sb1300, m);
-        if (protocore_sb_finish(&sb1300) == 0)
+        Sb.put(&sb1300, ", ");
+        Sb.put(&sb1300, m);
+        if (Sb.finish(&sb1300) == 0)
         {
             sb1300.p[0] = '\0';
         }
@@ -449,16 +449,16 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     // (send_method_not_allowed, send_too_many_requests) build a non-null header string. Kept so the
     // parameter stays optional for a future caller with nothing extra to add.
     protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_header, "HTTP/1.1 ");
-    protocore_sb_put(&sb_header, status);
-    protocore_sb_put(&sb_header, "\r\n");
-    protocore_sb_put(&sb_header, extra_hdr ? extra_hdr : "");
-    protocore_sb_put(&sb_header, "Content-Type: ");
-    protocore_sb_put(&sb_header, PROTOCORE_MIME_TEXT_PLAIN);
-    protocore_sb_put(&sb_header, "\r\nContent-Length: ");
-    protocore_sb_i64(&sb_header, (int64_t)(blen));
-    protocore_sb_put(&sb_header, "\r\nConnection: close\r\n\r\n");
-    int hlen = (int)protocore_sb_finish(&sb_header);
+    Sb.put(&sb_header, "HTTP/1.1 ");
+    Sb.put(&sb_header, status);
+    Sb.put(&sb_header, "\r\n");
+    Sb.put(&sb_header, extra_hdr ? extra_hdr : "");
+    Sb.put(&sb_header, "Content-Type: ");
+    Sb.put(&sb_header, PROTOCORE_MIME_TEXT_PLAIN);
+    Sb.put(&sb_header, "\r\nContent-Length: ");
+    Sb.i64(&sb_header, (int64_t)(blen));
+    Sb.put(&sb_header, "\r\nConnection: close\r\n\r\n");
+    int hlen = (int)Sb.finish(&sb_header);
 
     // The last write carries the flush: send_flush is write+output in one marshal, so
     // the response leaves in a single trip whether or not a body follows the header.
@@ -491,10 +491,10 @@ static void send_method_not_allowed(uint8_t slot_id, const char *allow)
 {
     char extra[80];
     protocore_sb sb_extra = {extra, sizeof(extra), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_extra, "Allow: ");
-    protocore_sb_put(&sb_extra, allow);
-    protocore_sb_put(&sb_extra, "\r\n");
-    if (protocore_sb_finish(&sb_extra) == 0)
+    Sb.put(&sb_extra, "Allow: ");
+    Sb.put(&sb_extra, allow);
+    Sb.put(&sb_extra, "\r\n");
+    if (Sb.finish(&sb_extra) == 0)
     {
         extra[0] = '\0';
     }
@@ -521,10 +521,10 @@ static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 {
     char extra[40];
     protocore_sb sb_extra2 = {extra, sizeof(extra), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_extra2, "Retry-After: ");
-    protocore_sb_u32(&sb_extra2, (uint32_t)((unsigned long)retry_after_s));
-    protocore_sb_put(&sb_extra2, "\r\n");
-    if (protocore_sb_finish(&sb_extra2) == 0)
+    Sb.put(&sb_extra2, "Retry-After: ");
+    Sb.u32(&sb_extra2, (uint32_t)((unsigned long)retry_after_s));
+    Sb.put(&sb_extra2, "\r\n");
+    if (Sb.finish(&sb_extra2) == 0)
     {
         extra[0] = '\0';
     }
@@ -571,10 +571,10 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
             set_cookie(slot_id, "csrf", tok, "Path=/; SameSite=Strict");
             char body[CSRF_TOKEN_BUF + 16];
             protocore_sb sb_body = {body, sizeof(body), 0, PROTO_TRUE};
-            protocore_sb_put(&sb_body, "{\"token\":\"");
-            protocore_sb_put(&sb_body, tok);
-            protocore_sb_put(&sb_body, "\"}");
-            if (protocore_sb_finish(&sb_body) == 0)
+            Sb.put(&sb_body, "{\"token\":\"");
+            Sb.put(&sb_body, tok);
+            Sb.put(&sb_body, "\"}");
+            if (Sb.finish(&sb_body) == 0)
             {
                 body[0] = '\0';
             }
@@ -663,7 +663,7 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // worker, so two workers never share these bytes.
     size_t auth_mark = protocore_secure_mark();
     protocore_span auth_ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-    if (!protocore_span_ok(auth_ws))
+    if (!span.ok(auth_ws))
     {
         protocore_secure_release(auth_mark);
         return PROTO_FALSE; // pool exhausted: fail closed

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the hash-chained audit log (services/security/audit_log):
+// On-device CCOUNT microbenchmark for the hash-chained audit log (server/security/audit_log):
 // protocore_audit_append() (SHA-256 chain-hash a new record onto the ring, protocore_sha256 HW-accelerated
 // on ESP32), protocore_audit_verify() (recompute the chain over the retained window), and the JSON
 // renderers protocore_audit_format()/protocore_audit_dump_json() - all pure (fixed RAM ring, no heap, no
@@ -15,7 +15,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/security/audit_log/audit_log.h"
+#include "server/security/audit_log/audit_log.h"
 
 #include <stdbool.h>
 #include <stddef.h>

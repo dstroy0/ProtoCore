@@ -5,8 +5,8 @@
 // three fold a power-of-two exponent into the word, so the decode is a shift and the sign
 // extension of a 5-bit and an 11-bit field is where it goes wrong.
 
-#include "services/peripherals/pmbus.h"
-#include "services/peripherals/smbus.h" // protocore_smbus_set_pec: the wire shape depends on it
+#include "server/peripherals/pmbus.h"
+#include "server/peripherals/smbus.h" // protocore_smbus_set_pec: the wire shape depends on it
 #include <unity.h>
 
 void setUp(void)

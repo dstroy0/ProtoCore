@@ -56,7 +56,7 @@ L6  src/network_drivers/presentation/
         sha1.h/cpp  base64.h/cpp                  mbedTLS hardware-accelerated helpers
         websocket.h/cpp  sse.h/cpp                WS frame parser; SSE connection pool
         multipart.h/cpp                           Multipart form-data parser
-L5  src/server/system/
+L5  src/server/core/
         session.h/cpp                             FreeRTOS event queue drain
 L4  src/network_drivers/transport/
         tcp.h/cpp                           lwIP callbacks, ring buffers, timeouts
@@ -1112,7 +1112,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_HW_HEALTH` | `0` | Opt-in hardware-health diagnostics. |
 | `PROTOCORE_ENABLE_ICCP` | `0` | Opt-in ICCP / TASE.2 (IEC 60870-6) inter-control-center telemetry codec. |
 | `PROTOCORE_ENABLE_IEC60870` | `0` | IEC 60870-5-101 / -104 telecontrol (SCADA) codec (`services/iec60870`). |
-| `PROTOCORE_ENABLE_IFACE_BRIDGE` | `0` | User-defined address:port -> hardware-bus bridge (services/net/iface_bridge). |
+| `PROTOCORE_ENABLE_IFACE_BRIDGE` | `0` | User-defined address:port -> hardware-bus bridge (server/net/iface_bridge). |
 | `PROTOCORE_ENABLE_IKEV2` | `0` | IKEv2 (RFC 7296) message + payload codec (`services/ikev2`). |
 | `PROTOCORE_ENABLE_INA219` | `0` | TI INA219 high-side current / power monitor (I2C). |
 | `PROTOCORE_ENABLE_INTERBUS` | `0` | Opt-in INTERBUS summation-frame fieldbus codec. |
@@ -1261,7 +1261,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_WEBDAV` | `0` | WebDAV server (RFC 4918, class 1 + advisory locks) over the file system. |
 | `PROTOCORE_ENABLE_WEBHOOK` | `0` | Opt-in outbound webhooks / IFTTT. |
 | `PROTOCORE_ENABLE_WEBSOCKET` | `0` | WebSocket support (RFC 6455 framing + SHA-1/base64 handshake). |
-| `PROTOCORE_ENABLE_WEB_TERMINAL` | `0` | Browser "web serial" terminal over WebSocket (src/services/web/web_terminal). |
+| `PROTOCORE_ENABLE_WEB_TERMINAL` | `0` | Browser "web serial" terminal over WebSocket (src/server/web/web_terminal). |
 | `PROTOCORE_ENABLE_WIFI_SNIFFER` | `0` | Opt-in 802.11 sniffer / traffic analyzer. |
 | `PROTOCORE_ENABLE_WISUN` | `0` | Opt-in Wi-SUN FAN border-router connector. |
 | `PROTOCORE_ENABLE_WS_CLIENT` | `0` | Outbound WebSocket client (RFC 6455 over raw lwIP, optional wss:// TLS). |
@@ -1335,9 +1335,9 @@ guards at compile time.
 | `PROTOCORE_AUTH_LOCKOUT_THRESHOLD` | `5` | Consecutive failed auths from one IP before it is locked out. |
 | `PROTOCORE_BASE64_SWAR` | `1` | Use the SWAR base64 decoder (classify 4 characters per 32-bit word). |
 | `PROTOCORE_BRIDGE_MAX_DRAIN` | `8` | Chunks a STREAM target moves per poll before yielding, bounding the UART drain loop. |
-| `PROTOCORE_BRIDGE_MAX_RULES` | `8` | Max concurrent address:port -> bus rules (services/net/iface_bridge). |
-| `PROTOCORE_BRIDGE_STREAM_CHUNK` | `256` | STREAM (UART) pipe chunk size (bytes) for services/net/iface_bridge - one socket<->UART hop. |
-| `PROTOCORE_BRIDGE_TXN_MAX` | `256` | Max write / read payload (bytes) per TRANSACTION frame (services/net/iface_bridge). |
+| `PROTOCORE_BRIDGE_MAX_RULES` | `8` | Max concurrent address:port -> bus rules (server/net/iface_bridge). |
+| `PROTOCORE_BRIDGE_STREAM_CHUNK` | `256` | STREAM (UART) pipe chunk size (bytes) for server/net/iface_bridge - one socket<->UART hop. |
+| `PROTOCORE_BRIDGE_TXN_MAX` | `256` | Max write / read payload (bytes) per TRANSACTION frame (server/net/iface_bridge). |
 | `PROTOCORE_BRIDGE_UART_TXN_MS` | `50` | UART TRANSACTION read window (ms): how long a write-then-read waits for the read_len reply. |
 | `PROTOCORE_CLIENT_RX_BUF` | `8192` | Per-connection wire receive ring size (bytes). |
 | `PROTOCORE_CLOSING_TIMEOUT_MS` | `2000` | Upper bound (ms) a slot may dwell in CONN_CLOSING after a graceful close before the idle sweep force-aborts it. |
@@ -1485,7 +1485,7 @@ guards at compile time.
 | `PROTOCORE_QUIC_MAX_CONNS` | `2` | Simultaneous HTTP/3 connections. |
 | `PROTOCORE_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
 | `PROTOCORE_RADIO_WIFI_PS` | `0` | WiFi modem-sleep mode: 0 = none (max perf), 1 = min modem, 2 = max modem. |
-| `PROTOCORE_RELAY_BUF` | `2048` | Per-direction relay buffer size (bytes) for services/net/relay. |
+| `PROTOCORE_RELAY_BUF` | `2048` | Per-direction relay buffer size (bytes) for server/net/relay. |
 | `PROTOCORE_RELAY_CONNECT_MS` | `5000` | Blocking connect timeout (ms) when the relay listener dials the origin on a new inbound. |
 | `PROTOCORE_RELAY_DRAIN_MAX` | `8` | Max protocore_relay_step passes per poll for the relay listener. |
 | `PROTOCORE_RELAY_HOST_MAX` | `64` | Max origin hostname length (bytes, incl. |

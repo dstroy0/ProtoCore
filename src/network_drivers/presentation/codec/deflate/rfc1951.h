@@ -119,7 +119,7 @@ PROTOCORE_INLINE void protocore_rfc1951_build_fixed(uint16_t *ll_code, uint8_t *
 PROTOCORE_INLINE void protocore_rfc1951_emit_literal(protocore_bit_writer *w, const uint16_t *ll_code,
                                                      const uint8_t *ll_len, uint8_t b)
 {
-    protocore_bitw_put(w, ll_code[b], ll_len[b]);
+    bitw.put(w, ll_code[b], ll_len[b]);
 }
 
 /** @brief Emit a (@p len, @p dist) back-reference through the fixed code tables (RFC 1951 sec 3.2.5). */
@@ -134,10 +134,10 @@ PROTOCORE_INLINE void protocore_rfc1951_emit_match(protocore_bit_writer *w, cons
         li++;
     }
     int lsym = 257 + li;
-    protocore_bitw_put(w, ll_code[lsym], ll_len[lsym]);
+    bitw.put(w, ll_code[lsym], ll_len[lsym]);
     if (r->len_extra[li])
     {
-        protocore_bitw_put(w, (uint32_t)(len - r->len_base[li]), r->len_extra[li]);
+        bitw.put(w, (uint32_t)(len - r->len_base[li]), r->len_extra[li]);
     }
 
     int di = 0;
@@ -145,10 +145,10 @@ PROTOCORE_INLINE void protocore_rfc1951_emit_match(protocore_bit_writer *w, cons
     {
         di++;
     }
-    protocore_bitw_put(w, d_code[di], d_len[di]);
+    bitw.put(w, d_code[di], d_len[di]);
     if (r->dist_extra[di])
     {
-        protocore_bitw_put(w, (uint32_t)(dist - r->dist_base[di]), r->dist_extra[di]);
+        bitw.put(w, (uint32_t)(dist - r->dist_base[di]), r->dist_extra[di]);
     }
 }
 

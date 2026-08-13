@@ -12,7 +12,7 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "server/system/proto_handler.h"
+#include "server/core/proto_handler.h"
 #include "network_drivers/transport/tcp/tcp.h"
 
 // One published mountpoint on a listener.

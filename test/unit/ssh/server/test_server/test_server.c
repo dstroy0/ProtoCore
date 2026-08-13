@@ -10,7 +10,7 @@
 // here and the binding asks for it by port.
 
 #include "network_drivers/presentation/ssh/server/server.h"
-#include "server/system/proto_handler.h"
+#include "server/core/proto_handler.h"
 #include <stdint.h>
 
 #include <unity.h>

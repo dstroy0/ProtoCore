@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the mounted storage (server/filesystem/mnt) over its RAM backend:
+// On-device CCOUNT microbenchmark for the mounted storage (server/storage/mnt) over its RAM backend:
 // write_file / read_file / exists. The RAM backend keeps everything in memory (no flash I/O), so this
 // measures the pure VFS bookkeeping + copy cost; the LittleFS/SD backends carry real I/O latency.
 //
 // Build/flash:  pio run -d performance_benching/services/mnt -t upload --upload-port COM7
 #include "device_bench.h"
-#include "server/filesystem/filesystem.h"
+#include "server/storage/filesystem.h"
 
 #include <stdbool.h>
 #include <stddef.h>

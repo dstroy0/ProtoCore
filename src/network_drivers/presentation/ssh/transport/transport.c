@@ -18,7 +18,7 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512.h"
 #include "crypto/rng/rng.h" // protocore_rand_fill
-#include "mmgr/bytes.h"     // protocore_bw_* / protocore_rd_str() - the byte verbs this file frames with
+#include "mmgr/bytes.h"     // bytes.* writers / bytes.rd_str() - the byte verbs this file frames with
 #include "mmgr/membuild.h"  // protocore_sb frame builder
 #include "mmgr/plaintext.h" // protocore_plaintext_span - host-key staging off the worker stack
 #include "mmgr/protomem.h"
@@ -229,29 +229,29 @@ static void build_kex_list(char *out, size_t cap, proto_bool as_client)
     // the full both-hybrid list with margin, so the appends never truncate).
 #if PROTOCORE_ENABLE_PQC_KEX
     protocore_sb sb_mlkem = {out + n, cap - n, 0, PROTO_TRUE};
-    protocore_sb_put(&sb_mlkem, KEX_MLKEM768);
+    Sb.put(&sb_mlkem, KEX_MLKEM768);
     protocore_sb_lit(&sb_mlkem, ",");
-    n += protocore_sb_finish(&sb_mlkem);
+    n += Sb.finish(&sb_mlkem);
 #endif
 #if PROTOCORE_ENABLE_SSH_SNTRUP761
     protocore_sb sb_sntrup = {out + n, cap - n, 0, PROTO_TRUE};
-    protocore_sb_put(&sb_sntrup, KEX_SNTRUP761);
+    Sb.put(&sb_sntrup, KEX_SNTRUP761);
     protocore_sb_lit(&sb_sntrup, ",");
-    n += protocore_sb_finish(&sb_sntrup);
+    n += Sb.finish(&sb_sntrup);
 #endif
     if (s_sshtr.prefer_rsa)
     {
         protocore_sb sb157 = {out + n, cap - n, 0, PROTO_TRUE};
-        protocore_sb_put(&sb157, dh);
-        protocore_sb_put(&sb157, ",");
-        protocore_sb_put(&sb157, ec);
-        protocore_sb_put(&sb157, ",");
-        protocore_sb_put(&sb157, c1);
-        protocore_sb_put(&sb157, ",");
-        protocore_sb_put(&sb157, c2);
+        Sb.put(&sb157, dh);
+        Sb.put(&sb157, ",");
+        Sb.put(&sb157, ec);
+        Sb.put(&sb157, ",");
+        Sb.put(&sb157, c1);
+        Sb.put(&sb157, ",");
+        Sb.put(&sb157, c2);
         protocore_sb_lit(&sb157, ",");
-        protocore_sb_put(&sb157, ext_info);
-        if (protocore_sb_finish(&sb157) == 0)
+        Sb.put(&sb157, ext_info);
+        if (Sb.finish(&sb157) == 0)
         {
             sb157.p[0] = '\0';
         }
@@ -259,16 +259,16 @@ static void build_kex_list(char *out, size_t cap, proto_bool as_client)
     else
     {
         protocore_sb sb159 = {out + n, cap - n, 0, PROTO_TRUE};
-        protocore_sb_put(&sb159, c1);
-        protocore_sb_put(&sb159, ",");
-        protocore_sb_put(&sb159, c2);
-        protocore_sb_put(&sb159, ",");
-        protocore_sb_put(&sb159, ec);
-        protocore_sb_put(&sb159, ",");
-        protocore_sb_put(&sb159, dh);
+        Sb.put(&sb159, c1);
+        Sb.put(&sb159, ",");
+        Sb.put(&sb159, c2);
+        Sb.put(&sb159, ",");
+        Sb.put(&sb159, ec);
+        Sb.put(&sb159, ",");
+        Sb.put(&sb159, dh);
         protocore_sb_lit(&sb159, ",");
-        protocore_sb_put(&sb159, ext_info);
-        if (protocore_sb_finish(&sb159) == 0)
+        Sb.put(&sb159, ext_info);
+        if (Sb.finish(&sb159) == 0)
         {
             sb159.p[0] = '\0';
         }
@@ -318,9 +318,9 @@ static void build_hostkey_list(char *out, size_t cap, proto_bool as_client)
         }
         size_t l = str.len(out, cap);
         protocore_sb sb194 = {out + l, cap - l, 0, PROTO_TRUE};
-        protocore_sb_put(&sb194, l ? "," : "");
-        protocore_sb_put(&sb194, cand[k].name);
-        if (protocore_sb_finish(&sb194) == 0)
+        Sb.put(&sb194, l ? "," : "");
+        Sb.put(&sb194, cand[k].name);
+        if (Sb.finish(&sb194) == 0)
         {
             sb194.p[0] = '\0';
         }
@@ -678,12 +678,12 @@ void ssh_kexinit_build(struct SshTransportInternal *restrict ctx)
     SshSession *s = &ssh_sess[i];
     const proto_bool as_client = ssh_pkt[i].is_client;
 
-    protocore_span w = protocore_span_from(payload, cap);
-    protocore_bw_put(&w, SSH_MSG_KEXINIT);
+    protocore_span w = span.from(payload, cap);
+    bytes.put(&w, SSH_MSG_KEXINIT);
 
     uint8_t cookie[16];
     protocore_rand_fill(cookie, sizeof(cookie));
-    protocore_bw_bytes(&w, cookie, sizeof(cookie));
+    bytes.raw(&w, cookie, sizeof(cookie));
 
     char kexlist[SSH_KEXLIST_BUF];
     // All four host-key algs = "ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256" is 57
@@ -701,10 +701,10 @@ void ssh_kexinit_build(struct SshTransportInternal *restrict ctx)
     protocore_ssh_wr_cstr(&w, ALG_COMP_ZLIB);   // compression s2c (zlib@openssh.com / zlib when built in, else none)
     protocore_ssh_wr_cstr(&w, "");              // languages c2s
     protocore_ssh_wr_cstr(&w, "");              // languages s2c
-    protocore_bw_put(&w, 0);                    // first_kex_packet_follows = false
-    protocore_bw_put_be(&w, 0, 4);              // reserved
+    bytes.put(&w, 0);                           // first_kex_packet_follows = false
+    bytes.put_be(&w, 0, 4);                     // reserved
 
-    if (!protocore_span_ok(w))
+    if (!span.ok(w))
     {
         ctx->ns->i32 = -1;
         return;
@@ -734,7 +734,7 @@ void ssh_kexinit_build(struct SshTransportInternal *restrict ctx)
 }
 
 // A KEXINIT name-list is an RFC 4251 sec 5 string holding comma-separated names, so reading one is
-// protocore_rd_str(); what makes it a name-list is what negotiate_alg()/namelist_contains() do with it.
+// bytes.rd_str(); what makes it a name-list is what negotiate_alg()/namelist_contains() do with it.
 
 // Negotiate the key-exchange method from the client's kex_algorithms name-list, in our preference order
 // (PQC hybrid first when enabled; RSA group first when prefer_rsa). false = no mutual method.
@@ -863,7 +863,7 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
     uint32_t nlen;
 
     // kex_algorithms: negotiate the KEX method by the CLIENT's preference (RFC 4253 §7.1).
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -882,7 +882,7 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
         return; // no mutual KEX
     }
     // server_host_key_algorithms: negotiate, restricted to keys we actually hold.
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -900,7 +900,7 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
     const AlgCand cc[3] = {{"chacha20-poly1305@openssh.com", SSH_CIPHER_CHACHA20POLY1305, PROTO_TRUE},
                            {ALG_CIPHER_GCM, SSH_CIPHER_AES256GCM, PROTO_TRUE},
                            {ALG_CIPHER, SSH_CIPHER_AES256CTR, PROTO_TRUE}};
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -912,7 +912,7 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
         ctx->ns->i32 = -1;
         return;
     }
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -935,7 +935,7 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
     proto_bool need_mac_s2c = (s->cipher_alg_s2c == SSH_CIPHER_AES256CTR);
     int m_c2s = SSH_MAC_HMAC_SHA256;
     int m_s2c = SSH_MAC_HMAC_SHA256;
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -945,7 +945,7 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
         ctx->ns->i32 = -1;
         return;
     }
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -965,14 +965,14 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
                                   {"zlib", SSH_COMP_ZLIB, PROTO_TRUE},
                                   {"none", SSH_COMP_NONE, PROTO_TRUE}};
         int comp = 0;
-        if (!protocore_rd_str(payload, len, &off, &list, &nlen) ||
+        if (!bytes.rd_str(payload, len, &off, &list, &nlen) ||
             negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
             ctx->ns->i32 = -1;
         return;
         }
         ssh_comp_set_c2s(i, comp);
-        if (!protocore_rd_str(payload, len, &off, &list, &nlen) ||
+        if (!bytes.rd_str(payload, len, &off, &list, &nlen) ||
             negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
             ctx->ns->i32 = -1;
@@ -982,12 +982,12 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
     }
 #else
     // Both directions must offer "none" (no compression built in).
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
     {
         ctx->ns->i32 = -1;
         return;
     }
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
     {
         ctx->ns->i32 = -1;
         return;
@@ -996,12 +996,12 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
 
     // Two language name-lists (RFC 4253 sec 7.1, ignored), then the guess flag and the reserved uint32.
     // Each read advances off, so these are the first list and then the second.
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
         ctx->ns->i32 = -1;
         return;
     }
-    if (!protocore_rd_str(payload, len, &off, &list, &nlen))
+    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -1151,7 +1151,7 @@ static proto_bool parse_rsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t *
     size_t off = 0;
     const uint8_t *type;
     uint32_t type_len;
-    if (!protocore_rd_str(blob, blen, &off, &type, &type_len))
+    if (!bytes.rd_str(blob, blen, &off, &type, &type_len))
     {
         return PROTO_FALSE;
     }
@@ -1161,14 +1161,14 @@ static proto_bool parse_rsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t *
     }
     const uint8_t *e_mp;
     uint32_t e_len;
-    if (!protocore_rd_str(blob, blen, &off, &e_mp, &e_len) || !protocore_mpint_to_fixed(e_mp, e_len, e_be, 4))
+    if (!bytes.rd_str(blob, blen, &off, &e_mp, &e_len) || !bytes.mpint_fixed(e_mp, e_len, e_be, 4))
     {
         return PROTO_FALSE;
     }
     const uint8_t *n_mp;
     uint32_t n_len;
-    if (!protocore_rd_str(blob, blen, &off, &n_mp, &n_len) ||
-        !protocore_mpint_to_fixed(n_mp, n_len, n_be, PROTOCORE_RSA_KEY_BYTES))
+    if (!bytes.rd_str(blob, blen, &off, &n_mp, &n_len) ||
+        !bytes.mpint_fixed(n_mp, n_len, n_be, PROTOCORE_RSA_KEY_BYTES))
     {
         return PROTO_FALSE;
     }
@@ -1181,7 +1181,7 @@ static proto_bool parse_ed25519_pubkey(const uint8_t *blob, uint32_t blen, uint8
     size_t off = 0;
     const uint8_t *type;
     uint32_t type_len;
-    if (!protocore_rd_str(blob, blen, &off, &type, &type_len))
+    if (!bytes.rd_str(blob, blen, &off, &type, &type_len))
     {
         return PROTO_FALSE;
     }
@@ -1191,7 +1191,7 @@ static proto_bool parse_ed25519_pubkey(const uint8_t *blob, uint32_t blen, uint8
     }
     const uint8_t *pk;
     uint32_t pk_len;
-    if (!protocore_rd_str(blob, blen, &off, &pk, &pk_len) || pk_len != 32)
+    if (!bytes.rd_str(blob, blen, &off, &pk, &pk_len) || pk_len != 32)
     {
         return PROTO_FALSE;
     }
@@ -1206,7 +1206,7 @@ static proto_bool parse_ecdsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t
     size_t off = 0;
     const uint8_t *type;
     uint32_t type_len;
-    if (!protocore_rd_str(blob, blen, &off, &type, &type_len))
+    if (!bytes.rd_str(blob, blen, &off, &type, &type_len))
     {
         return PROTO_FALSE;
     }
@@ -1216,7 +1216,7 @@ static proto_bool parse_ecdsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t
     }
     const uint8_t *curve;
     uint32_t curve_len;
-    if (!protocore_rd_str(blob, blen, &off, &curve, &curve_len))
+    if (!bytes.rd_str(blob, blen, &off, &curve, &curve_len))
     {
         return PROTO_FALSE;
     }
@@ -1226,7 +1226,7 @@ static proto_bool parse_ecdsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t
     }
     const uint8_t *q;
     uint32_t q_len;
-    if (!protocore_rd_str(blob, blen, &off, &q, &q_len))
+    if (!bytes.rd_str(blob, blen, &off, &q, &q_len))
     {
         return PROTO_FALSE;
     }
@@ -1246,12 +1246,12 @@ static proto_bool parse_ecdsa_sig(const uint8_t *sig, uint32_t slen, uint8_t *ou
     const uint8_t *s;
     uint32_t r_len;
     uint32_t s_len;
-    if (!protocore_rd_str(sig, slen, &off, &r, &r_len) || !protocore_rd_str(sig, slen, &off, &s, &s_len))
+    if (!bytes.rd_str(sig, slen, &off, &r, &r_len) || !bytes.rd_str(sig, slen, &off, &s, &s_len))
     {
         return PROTO_FALSE;
     }
-    return protocore_mpint_to_fixed(r, r_len, out, PROTOCORE_ECDSA_P256_COORD_LEN) &&
-           protocore_mpint_to_fixed(s, s_len, out + PROTOCORE_ECDSA_P256_COORD_LEN, PROTOCORE_ECDSA_P256_COORD_LEN);
+    return bytes.mpint_fixed(r, r_len, out, PROTOCORE_ECDSA_P256_COORD_LEN) &&
+           bytes.mpint_fixed(s, s_len, out + PROTOCORE_ECDSA_P256_COORD_LEN, PROTOCORE_ECDSA_P256_COORD_LEN);
 }
 
 proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const uint8_t *sig, size_t sig_len,
@@ -1268,8 +1268,8 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
     uint32_t stype_len;
     const uint8_t *raw;
     uint32_t raw_len;
-    if (!protocore_rd_str(sig, (uint32_t)sig_len, &soff, &stype, &stype_len) ||
-        !protocore_rd_str(sig, (uint32_t)sig_len, &soff, &raw, &raw_len))
+    if (!bytes.rd_str(sig, (uint32_t)sig_len, &soff, &stype, &stype_len) ||
+        !bytes.rd_str(sig, (uint32_t)sig_len, &soff, &raw, &raw_len))
     {
         return PROTO_FALSE;
     }
@@ -1281,7 +1281,7 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
     protocore_span e_be = protocore_plaintext_span(4, 4);
     protocore_span pub = protocore_plaintext_span(PROTOCORE_ECDSA_P256_PUB_LEN, 4);
     protocore_span ec_sig = protocore_plaintext_span(PROTOCORE_ECDSA_P256_SIG_LEN, 4);
-    if (!protocore_span_ok(n_be) || !protocore_span_ok(e_be) || !protocore_span_ok(pub) || !protocore_span_ok(ec_sig))
+    if (!span.ok(n_be) || !span.ok(e_be) || !span.ok(pub) || !span.ok(ec_sig))
     {
         protocore_plaintext_release(mark);
         return PROTO_FALSE;
@@ -1395,10 +1395,10 @@ static int encode_hostkey(uint8_t i, uint8_t *ks, size_t *ks_len, size_t cap)
 {
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ED25519)
     {
-        protocore_span w = protocore_span_from(ks, cap);
+        protocore_span w = span.from(ks, cap);
         protocore_ssh_wr_str(&w, (const uint8_t *)HOSTKEY_ED, sizeof(HOSTKEY_ED) - 1);
         protocore_ssh_wr_str(&w, s_store.ed_pub, 32);
-        if (!protocore_span_ok(w))
+        if (!span.ok(w))
         {
             return -1;
         }
@@ -1407,11 +1407,11 @@ static int encode_hostkey(uint8_t i, uint8_t *ks, size_t *ks_len, size_t cap)
     }
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ECDSA_NISTP256)
     {
-        protocore_span w = protocore_span_from(ks, cap);
+        protocore_span w = span.from(ks, cap);
         protocore_ssh_wr_str(&w, (const uint8_t *)HOSTKEY_ECDSA, sizeof(HOSTKEY_ECDSA) - 1);
         protocore_ssh_wr_str(&w, (const uint8_t *)"nistp256", 8); // RFC 5656 curve identifier
         protocore_ssh_wr_str(&w, s_store.ecdsa_pub, PROTOCORE_ECDSA_P256_PUB_LEN);
-        if (!protocore_span_ok(w))
+        if (!span.ok(w))
         {
             return -1;
         }
@@ -1449,10 +1449,10 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
             return -1;
         }
         // ECDSA signature blob is mpint(r) || mpint(s) (RFC 5656 §3.1.2).
-        protocore_span w = protocore_span_from(sig, sig_cap);
+        protocore_span w = span.from(sig, sig_cap);
         protocore_ssh_wr_mpint(&w, raw, PROTOCORE_ECDSA_P256_COORD_LEN);
         protocore_ssh_wr_mpint(&w, raw + PROTOCORE_ECDSA_P256_COORD_LEN, PROTOCORE_ECDSA_P256_COORD_LEN);
-        if (!protocore_span_ok(w))
+        if (!span.ok(w))
         {
             return -1;
         }
@@ -1483,8 +1483,8 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
                            const char *sig_name, const uint8_t *sig, size_t sig_len, uint8_t *out, size_t *out_len,
                            size_t cap)
 {
-    protocore_span w = protocore_span_from(out, cap);
-    protocore_bw_put(&w, SSH_MSG_KEXDH_REPLY);
+    protocore_span w = span.from(out, cap);
+    bytes.put(&w, SSH_MSG_KEXDH_REPLY);
     protocore_ssh_wr_str(&w, ks, ks_len); // K_S
     if (ssh_sess[i].kex_alg == SSH_KEX_DH_GROUP14)
     {
@@ -1495,10 +1495,10 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
         protocore_ssh_wr_str(&w, spub, spub_len); // Q_S (curve25519) or S_REPLY (hybrid), a raw string
     }
     uint32_t nl = (uint32_t)str.len(sig_name, w.cap);
-    protocore_bw_put_be(&w, 4 + nl + 4 + (uint32_t)sig_len, 4); // signature blob length
+    bytes.put_be(&w, 4 + nl + 4 + (uint32_t)sig_len, 4); // signature blob length
     protocore_ssh_wr_str(&w, (const uint8_t *)sig_name, nl);
     protocore_ssh_wr_str(&w, sig, sig_len);
-    if (!protocore_span_ok(w))
+    if (!span.ok(w))
     {
         return -1;
     }
@@ -3337,7 +3337,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     // the library. protocore_plaintext_span binds the capacity to the allocation.
     size_t mark = protocore_plaintext_mark();
     protocore_span reply = protocore_plaintext_span(SSH_PKT_BUF_SIZE, 16);
-    if (!protocore_span_ok(reply))
+    if (!span.ok(reply))
     {
         protocore_plaintext_release(mark);
         return -1; // arena exhausted: fail closed, the caller drops the connection
@@ -3512,7 +3512,7 @@ int ssh_transport_service_request(const uint8_t *payload, size_t len, uint8_t *o
         return -1;
     }
     out[0] = SSH_MSG_SERVICE_ACCEPT;
-    protocore_wr32be(out + 1, nl);
+    endian.wr32be(out + 1, nl);
     mem.cpy(out + 5, name, nl);
     *out_len = 5 + nl;
     return 0;
@@ -3687,7 +3687,7 @@ proto_bool ssh_pubkey_algo_supported(const char *pk_algo, const uint8_t *blob, u
     }
 
     const uint32_t tlen = (uint32_t)str.len(blob_type, SSH_AUTH_ALGO_MAX);
-    return blob_len >= 4u + tlen && protocore_rd32be(blob) == tlen && mem.cmp(blob + 4, blob_type, tlen) == 0;
+    return blob_len >= 4u + tlen && endian.rd32be(blob) == tlen && mem.cmp(blob + 4, blob_type, tlen) == 0;
 }
 
 proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len)
@@ -3705,8 +3705,8 @@ proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len)
     protocore_span e_be = protocore_plaintext_span(4, 4);
     protocore_span ed_pub = protocore_plaintext_span(32, 4);
     protocore_span ec_pub = protocore_plaintext_span(PROTOCORE_ECDSA_P256_PUB_LEN, 4);
-    if (!protocore_span_ok(n_be) || !protocore_span_ok(e_be) || !protocore_span_ok(ed_pub) ||
-        !protocore_span_ok(ec_pub))
+    if (!span.ok(n_be) || !span.ok(e_be) || !span.ok(ed_pub) ||
+        !span.ok(ec_pub))
     {
         protocore_plaintext_release(mark);
         return PROTO_FALSE;
@@ -3753,8 +3753,8 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     protocore_span e_be = protocore_plaintext_span(4, 4);
     protocore_span ed_pub = protocore_plaintext_span(32, 4);
     protocore_span ec_pub = protocore_plaintext_span(PROTOCORE_ECDSA_P256_PUB_LEN, 4);
-    if (!protocore_span_ok(n_be) || !protocore_span_ok(e_be) || !protocore_span_ok(ed_pub) ||
-        !protocore_span_ok(ec_pub))
+    if (!span.ok(n_be) || !span.ok(e_be) || !span.ok(ed_pub) ||
+        !span.ok(ec_pub))
     {
         protocore_plaintext_release(mark);
         return PROTO_FALSE;
@@ -3799,7 +3799,7 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     else if (is_ecdsa)
     {
         protocore_span ec_sig = protocore_plaintext_span(PROTOCORE_ECDSA_P256_SIG_LEN, 4);
-        sig_ok = protocore_span_ok(ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
+        sig_ok = span.ok(ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
                  protocore_ecdsa_p256_verify(ec_pub.buf, work, signed_data, signed_len, ec_sig.buf);
     }
     else

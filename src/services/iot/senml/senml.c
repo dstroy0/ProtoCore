@@ -40,8 +40,8 @@ static void json_num(protocore_json_writer *w, double d)
     if (is_integral(d))
     {
         protocore_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-        protocore_sb_i64(&sb_tmp, (int64_t)((long long)d));
-        if (protocore_sb_finish(&sb_tmp) == 0)
+        Sb.i64(&sb_tmp, (int64_t)((long long)d));
+        if (Sb.finish(&sb_tmp) == 0)
         {
             tmp[0] = '\0';
         }
@@ -49,8 +49,8 @@ static void json_num(protocore_json_writer *w, double d)
     else
     {
         protocore_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-        protocore_sb_g(&sb_tmp2, (double)(d), 6);
-        if (protocore_sb_finish(&sb_tmp2) == 0)
+        Sb.g(&sb_tmp2, (double)(d), 6);
+        if (Sb.finish(&sb_tmp2) == 0)
         {
             tmp[0] = '\0';
         }
@@ -168,7 +168,7 @@ size_t protocore_senml_build(const protocore_codec *c, uint8_t *buf, size_t cap,
     {
         return 0;
     }
-    protocore_span w = protocore_span_from(buf, cap);
+    protocore_span w = span.from(buf, cap);
     c->put_array(&w, count);
     for (size_t i = 0; i < count; i++)
     {
@@ -223,7 +223,7 @@ size_t protocore_senml_build(const protocore_codec *c, uint8_t *buf, size_t cap,
             codec_num(c, &w, r->time);
         }
     }
-    return protocore_span_ok(w) ? protocore_span_len(w) : 0;
+    return span.ok(w) ? span.len(w) : 0;
 }
 
 // --- resolution (RFC 8428 §4.6) ---
@@ -255,9 +255,9 @@ size_t protocore_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *o
         SenmlResolved *o = &out[i];
         // Resolved name = active base name + record name (either part may be absent).
         protocore_sb sb_name = {o->name, sizeof(o->name), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_name, base_name ? base_name : "");
-        protocore_sb_put(&sb_name, r->name ? r->name : "");
-        int w = (int)protocore_sb_finish(&sb_name);
+        Sb.put(&sb_name, base_name ? base_name : "");
+        Sb.put(&sb_name, r->name ? r->name : "");
+        int w = (int)Sb.finish(&sb_name);
         if (!sb_name.ok)
         {
             o->name[0] = '\0';

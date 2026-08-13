@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the dashboard widget-table JSON serializers (services/web/dashboard
+// Unit tests for the dashboard widget-table JSON serializers (server/web/dashboard
 // core). Pure logic - no server - so it runs on the host.
 
-#include "services/web/dashboard/dashboard.h"
+#include "server/web/dashboard/dashboard.h"
 #include <stdio.h>
 #include <string.h>
 

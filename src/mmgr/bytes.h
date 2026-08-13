@@ -5,17 +5,18 @@
  * @file bytes.h
  * @brief The byte verbs - append into a protocore_span, take out of a protocore_cspan.
  *
- * A bounded byte region is one thing with two accessors. span.h is the region: where the storage
- * came from, how big it is, how much has been produced, and whether anything overran. This file is
- * what you do to it. The two halves are split that way so a region can be passed somewhere that only
- * reads it without carrying an append API along.
+ * A bounded byte region is one thing with two accessors. span.h is the region: where the storage came
+ * from, how big it is, how much has been produced, and whether anything overran. This file is what you
+ * do to it.
  *
- * The subtle invariants live here once, so a bug is fixed in one place and every codec inherits it:
- * keep counting `pos` past `cap` on overflow so the caller can size the buffer, sticky fault flags,
- * and network (big-endian) byte order.
+ * A write past the capacity stores nothing, latches the sticky overflow flag, and still advances
+ * `pos`, so `pos` reports the capacity the payload needs. Widths go out and come back big-endian
+ * (network order).
  *
- * These take protocore_span / protocore_cspan directly rather than being written per codec, so one concrete pair
- * serves every codec and the field names are fixed rather than restated.
+ * These take protocore_span / protocore_cspan directly rather than being written per codec, so one
+ * concrete pair serves every codec and the field names are fixed rather than restated.
+ *
+ * The surface is @ref bytes. The walks are in bytes.c.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -24,147 +25,89 @@
 #ifndef PROTOCORE_BYTES_H
 #define PROTOCORE_BYTES_H
 
-#include "mmgr/endian.h"   // protocore_rd32be - the fixed-width serializers live there
+#include "mmgr/endian.h"   // protocore_rd32be - the fixed-width serializers the reads step with
 #include "mmgr/protomem.h" // mem.set / mem.cpy - the byte movers
 #include "mmgr/protostr.h" // str.len - the bounded run length
 #include "mmgr/span.h"     // protocore_span / protocore_cspan - the region these verbs act on
 
-// --- append into a protocore_span ---
-
-/** @brief Append one byte; on overflow set the flag but keep counting @p pos. */
-PROTOCORE_INLINE void protocore_bw_put(protocore_span *w, uint8_t b)
-{
-    if (w->pos < w->cap)
-    {
-        w->buf[w->pos] = b;
-    }
-    else
-    {
-        w->overflow = PROTO_TRUE;
-    }
-    w->pos++; // keep counting so protocore_span_len() reports the size the payload needs
-}
-
-/** @brief Append the low @p nbytes of @p val, big-endian (network order). */
-PROTOCORE_INLINE void protocore_bw_put_be(protocore_span *w, uint64_t val, int32_t nbytes)
-{
-    for (int32_t s = (nbytes - 1) * 8; s >= 0; s -= 8)
-    {
-        protocore_bw_put(w, (uint8_t)(val >> s));
-    }
-}
-
-/** @brief Append @p n raw bytes from @p src; on overflow set the flag but keep counting @p pos. */
-PROTOCORE_INLINE void protocore_bw_bytes(protocore_span *w, const void *src, size_t n)
-{
-    if (w->buf != NULL && w->pos <= w->cap && w->cap - w->pos >= n)
-    {
-        mem.cpy(w->buf + w->pos, src, n);
-    }
-    else if (n > 0)
-    {
-        w->overflow = PROTO_TRUE;
-    }
-    w->pos += n; // keep counting so protocore_span_len() reports the size the payload needs
-}
-
-// --- take out of a protocore_cspan ---
+PROTOCORE_BEGIN_DECLS
 
 /**
- * @brief Read @p nbytes big-endian at the cursor, advancing past them.
+ * @brief The byte-verb module: append into a write region, take out of a read region, and walk a
+ *        caller-owned payload by offset.
  *
- * Sets the sticky err and returns false if the read would run past the end.
+ * @var BytesNs::put
+ * Append one byte to @c w. Past @c cap nothing is stored and the overflow flag latches; @c pos counts
+ * the byte either way.
+ *
+ * @var BytesNs::put_be
+ * Append the low @c nbytes of @c val most significant byte first, one @ref BytesNs::put per byte.
+ *
+ * @var BytesNs::raw
+ * Append @c n bytes from @c src. Stores when @c w has storage and @c n fits the room that remains,
+ * otherwise latches the overflow flag; @c pos advances by @c n either way.
+ *
+ * @var BytesNs::take_be
+ * Read @c nbytes big-endian at @c r's cursor and advance past them. A read reaching past the end sets
+ * the sticky err, leaves the cursor and @c out untouched, and returns false.
  *
  * Reads at the cursor and nowhere else: no framing byte is consumed here. A codec that leads with a
- * tag - CBOR's head byte, MessagePack's format byte - advances past it itself, which keeps this a
- * plain big-endian read any caller can spell.
- */
-PROTOCORE_INLINE proto_bool protocore_br_take_be(protocore_cspan *r, size_t nbytes, uint64_t *out)
-{
-    if (r->pos > r->len || r->len - r->pos < nbytes)
-    {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
-    }
-    uint64_t v = 0;
-    for (size_t i = 0; i < nbytes; i++)
-    {
-        v = (v << 8) | r->buf[r->pos + i];
-    }
-    *out = v;
-    r->pos += nbytes;
-    return PROTO_TRUE;
-}
-
-// --- offset-passing reads over a caller-owned buffer (no region object needed) ---
-//
-// A length-prefixed field is the same shape in every protocol: a big-endian u32 count, then that
-// many bytes. SSH calls it a "string" (RFC 4251 sec 5). These bounds-check and advance an offset the
-// caller owns, for parsers that walk a raw payload.
-
-// Every bound here is written as a subtraction against the space that remains, never as a sum
-// compared to the length. A sum overflows: size_t is 32 bits on esp32 and c2000, the length prefix
-// on the wire is a full u32, and `*off + n > len` with n = 0xFFFFFFFF wraps to a small number that
-// passes the check. The peer picks n, so the sum form hands out a length larger than the buffer.
-// Subtracting cannot wrap once *off <= len is established, which each check does first.
-
-/** @brief Read a big-endian u32 at @p *off, advancing it by 4. False if it would run past @p len. */
-PROTOCORE_INLINE proto_bool protocore_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
-{
-    if (*off > len || len - *off < 4)
-    {
-        return PROTO_FALSE;
-    }
-    *out = protocore_rd32be(p + *off);
-    *off += 4;
-    return PROTO_TRUE;
-}
-
-/**
- * @brief Read a u32-length-prefixed blob: @p out points into @p p, @p slen is its length.
+ * tag - CBOR's head byte, MessagePack's format byte - advances past it itself.
  *
- * Nothing is copied, so the result must not outlive @p p. On a length that would run past the end,
- * @p *off is left where it started so the caller can report which field failed.
+ * @var BytesNs::rd_u32
+ * Read a big-endian u32 at @c *off and advance it by 4. False when fewer than four bytes of @c len
+ * remain, with @c *off left where it started.
+ *
+ * @var BytesNs::rd_str
+ * Read a u32-length-prefixed blob: @c out points into @c p and @c slen is its length. Nothing is
+ * copied, so the result must not outlive @c p. A length reaching past the end leaves @c *off where it
+ * started and returns false. SSH names this shape a "string" (RFC 4251 sec 5).
+ *
+ * Every bound here subtracts against the space that remains, after establishing @c *off is within
+ * @c len so the subtraction cannot wrap. size_t is 32 bits on some targets and the length prefix is a
+ * full u32, so the sum form wraps on a peer-chosen length.
+ *
+ * @var BytesNs::mpint_fixed
+ * Strip an mpint's leading zero bytes and right-align the rest into @c out[@c outlen], zeroing the
+ * lanes ahead of it. False when the magnitude is wider than @c outlen.
+ *
+ * No storage member: every verb works on the caller's region or pointers and holds nothing of its own.
  */
-PROTOCORE_INLINE proto_bool protocore_rd_str(const uint8_t *p, size_t len, size_t *off, const uint8_t **out,
-                                             uint32_t *slen)
+typedef struct
 {
-    size_t start = *off;
-    uint32_t n = 0;
-    if (!protocore_rd_u32(p, len, off, &n))
-    {
-        return PROTO_FALSE;
-    }
-    if (n > len - *off) // protocore_rd_u32 succeeding established *off <= len, so this cannot wrap
-    {
-        *off = start;
-        return PROTO_FALSE;
-    }
-    *out = p + *off;
-    *slen = n;
-    *off += n;
-    return PROTO_TRUE;
-}
+    void (*put)(protocore_span *w, uint8_t b);
+    void (*put_be)(protocore_span *w, uint64_t val, int32_t nbytes);
+    void (*raw)(protocore_span *w, const void *src, size_t n);
+    proto_bool (*take_be)(protocore_cspan *r, size_t nbytes, uint64_t *out);
+    proto_bool (*rd_u32)(const uint8_t *p, size_t len, size_t *off, uint32_t *out);
+    proto_bool (*rd_str)(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen);
+    proto_bool (*mpint_fixed)(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen);
+} BytesNs;
+
+// The verbs, in bytes.c. Named here because the table below has to name them, and prefixed because
+// that puts them in the linker's namespace.
+void protocore_bw_put(protocore_span *w, uint8_t b);
+void protocore_bw_put_be(protocore_span *w, uint64_t val, int32_t nbytes);
+void protocore_bw_bytes(protocore_span *w, const void *src, size_t n);
+proto_bool protocore_br_take_be(protocore_cspan *r, size_t nbytes, uint64_t *out);
+proto_bool protocore_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out);
+proto_bool protocore_rd_str(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen);
+proto_bool protocore_mpint_to_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen);
 
 /**
- * @brief Strip an mpint's leading zero bytes and right-align the rest into @p out[@p outlen].
- * @return false if the magnitude is wider than @p outlen.
+ * @brief The names, aliased.
+ *
+ * `static const` and initialized here, not declared `extern` against a definition in the .c: a
+ * translation unit that can see this initializer knows which function each member holds, so a member
+ * read folds away and the call to the verb in bytes.c is direct, leaving the table referenced by
+ * nothing for the linker to drop.
+ *
+ * `unused` because a header this wide is included by files that take none of it.
  */
-PROTOCORE_INLINE proto_bool protocore_mpint_to_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen)
-{
-    uint32_t off = 0;
-    while (off < mlen && m[off] == 0)
-    {
-        off++;
-    }
-    uint32_t vlen = mlen - off;
-    if (vlen > outlen)
-    {
-        return PROTO_FALSE;
-    }
-    mem.set(out, 0, outlen);
-    mem.cpy(out + (outlen - vlen), m + off, vlen);
-    return PROTO_TRUE;
-}
+static const BytesNs bytes __attribute__((unused)) = {protocore_bw_put,     protocore_bw_put_be, protocore_bw_bytes,
+                                                      protocore_br_take_be, protocore_rd_u32,    protocore_rd_str,
+                                                      protocore_mpint_to_fixed};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_BYTES_H

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the radio / wireless gateway bridge (services/net/gateway): an uplink
+// Unit tests for the radio / wireless gateway bridge (server/net/gateway): an uplink
 // envelopes a received frame and publishes it (with src address / port / rssi / seq),
 // fail-closed when there is no sink / an unknown port / the rate cap is hit / the sink
 // refuses; a downlink routes to the port transmit callback; the topic helper formats
@@ -11,7 +11,7 @@
 // The env sizes PROTOCORE_GW_MAX_PORTS = 4.
 
 #include "server/clock/clock.h" // protocore_set_clock(): the one time source the rate window reads
-#include "services/net/gateway/gateway.h"
+#include "server/net/gateway/gateway.h"
 #include <string.h>
 
 #include <unity.h>

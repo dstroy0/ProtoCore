@@ -48,7 +48,10 @@ LAYERS = (
     ("network_drivers/network/", 6),
     ("network_drivers/transport/", 7),
     ("network_drivers/tls/", 8),
-    ("server/system/", 9),
+    ("server/core/", 9),
+    # The session layer uses the server core rather than being part of it, so it ranks with it:
+    # session may include the core, and an equal rank is what permits that.
+    ("network_drivers/session/", 9),
     ("network_drivers/presentation/", 10),
     ("network_drivers/application/", 11),
     ("services/", 12),
@@ -67,7 +70,7 @@ ORPHAN_ALLOW = {
     "network_drivers/tls/handshake/handshake.h": (
         "SW TLS server handshake driver, landed ahead of the software arm that will call it"
     ),
-    "services/peripherals/pmbus.h": (
+    "server/peripherals/pmbus.h": (
         "peripheral API with its own env compiling pmbus.c; no in-tree caller until a board wants it"
     ),
     "network_drivers/datalink/datalink.h": (

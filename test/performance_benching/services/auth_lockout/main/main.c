@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the per-IP brute-force auth lockout (services/security/auth_lockout):
+// On-device CCOUNT microbenchmark for the per-IP brute-force auth lockout (server/security/auth_lockout):
 // auth_lockout_fail() / auth_lockout_remaining_ms() / auth_lockout_succeed() / auth_lockout_reset()
 // are the exponential-backoff lockout state machine over a fixed 16-slot BSS bucket table, keyed by
 // the full family-tagged protocore_ip - pure (the millisecond clock is passed in by the caller), no heap, no
@@ -15,7 +15,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/security/auth_lockout/auth_lockout.h"
+#include "server/security/auth_lockout/auth_lockout.h"
 #include "shared/ip/ip.h"
 
 #include <stdbool.h>

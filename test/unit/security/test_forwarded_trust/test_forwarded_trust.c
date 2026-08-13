@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the trusted-reverse-proxy forwarded-client resolver (services/security/forwarded_trust).
+// Unit tests for the trusted-reverse-proxy forwarded-client resolver (server/security/forwarded_trust).
 // A Forwarded / X-Forwarded-For address is client-spoofable, so it may only be believed when the real
 // TCP peer is a configured trusted upstream. The resolver is pure (no sockets), so the host drives it
 // directly. The security-critical property under test: a direct/untrusted peer's forwarded header is
 // NEVER honored, and any malformed / obfuscated / unspecified token falls back to the TCP peer.
 
-#include "services/security/forwarded_trust/forwarded_trust.h"
+#include "server/security/forwarded_trust/forwarded_trust.h"
 #include "shared/ip/ip.h"
 #include <unity.h>
 

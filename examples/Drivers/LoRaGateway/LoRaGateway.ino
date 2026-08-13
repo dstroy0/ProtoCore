@@ -19,7 +19,7 @@
 // Build flags (whole build): PROTOCORE_ENABLE_LORA=1 PROTOCORE_ENABLE_GATEWAY=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "services/net/gateway/gateway.h"
+#include "server/net/gateway/gateway.h"
 #include "services/radio/lora/lora.h"
 #include <SPI.h>
 

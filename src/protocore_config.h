@@ -537,7 +537,7 @@ from halves and is slower than the width it decomposes into"
 //
 // A pure codec for the AD9238 dual ADC's low-speed SPI CONFIGURATION port (power-down,
 // output format, output test patterns, offset trim) - NOT its parallel sample-data bus,
-// which is out of an MCU's reach at this part's sample rates. See services/peripherals/ad9238/ad9238.h
+// which is out of an MCU's reach at this part's sample rates. See server/peripherals/ad9238/ad9238.h
 // for the hardware-verification caveat: the per-register bit fields are transcribed from
 // the datasheet, not yet confirmed against physical silicon.
 
@@ -553,11 +553,12 @@ from halves and is slower than the width it decomposes into"
 // A forwarding plane over the ingest pipeline: register interfaces (Wi-Fi STA / AP,
 // Ethernet, a peripheral bus, a radio), each with an egress send callback, then add
 // per-pair allow / deny rules with an optional rate cap. A frame arriving on one
-// interface (protocore_forward_ingress(), typically from a DMA-complete event posted onto the
-// FORWARD lane) is forwarded to every allowed destination, so the device bridges / routes
-// between its interfaces instead of only terminating traffic. Default-deny and fail-closed
-// (a full destination or an exceeded rate cap drops, never blocks). Static tables (zero
-// heap). See network_drivers/network/forward/forward.h.
+// interface (set Forward.src_if and Forward.frame.data / .len, then call Forward.ingress,
+// typically from a DMA-complete event posted onto the FORWARD lane) is forwarded to every
+// allowed destination, so the device bridges / routes between its interfaces instead of only
+// terminating traffic. Forward.n reports how many next hops the frame reached. Default-deny and
+// fail-closed (a full destination or an exceeded rate cap drops, never blocks). Static tables
+// (zero heap). See network_drivers/network/forward/forward.h.
 
 /** @brief Enable the interface forwarding plane (default off). */
 #ifndef PROTOCORE_ENABLE_FORWARD
@@ -592,9 +593,10 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief Build-time toggle for the forwarding-path inspection hook (default off, for cost +
- *         privacy). When 1, protocore_forward_set_inspector() installs a runtime callback that observes
- *         / filters each ingress frame before it is forwarded; when 0 the hook is compiled out
- *         entirely (no call site). Runtime toggle: register or clear (null) the inspector. */
+ *         privacy). When 1, Forward.inspect.fn + Forward.set_inspector install a runtime callback
+ *         that observes / filters each ingress frame before it is forwarded; when 0 the hook is
+ *         compiled out entirely (no call site). Runtime toggle: register or clear (null) the
+ *         inspector. */
 #ifndef PROTOCORE_FWD_INSPECT
 #define PROTOCORE_FWD_INSPECT 0
 #endif
@@ -616,7 +618,7 @@ from halves and is slower than the width it decomposes into"
 // way through protocore_gateway_downlink() to the port's transmit callback. The radio TX + the
 // northbound publish are callbacks (the seam a real radio driver / protocol binding plugs
 // into), so the bridge is host- and device-testable with no radio. Static tables (zero
-// heap). See services/net/gateway/gateway.h.
+// heap). See server/net/gateway/gateway.h.
 
 /** @brief Enable the radio / wireless gateway bridge (default off). */
 #ifndef PROTOCORE_ENABLE_GATEWAY
@@ -723,7 +725,7 @@ from halves and is slower than the width it decomposes into"
 // ACK frame. protocore_pn532_build_frame() / protocore_pn532_parse_frame() assemble and verify those frames
 // (the per-command PData is the application's), and protocore_pn532_is_ack() detects the ACK. Pure -
 // you carry the frame bytes over your I2C / SPI / UART - so it is fully host-testable.
-// See services/peripherals/pn532/pn532.h.
+// See server/peripherals/pn532/pn532.h.
 
 /** @brief Enable the PN532 NFC frame codec (default off). */
 #ifndef PROTOCORE_ENABLE_PN532
@@ -847,21 +849,21 @@ from halves and is slower than the width it decomposes into"
 // ---------------------------------------------------------------------------
 //
 // Bring up a wired Ethernet link (an RMII PHY: LAN8720 / TLK110 / RTL8201 / DP83848) so the
-// server runs over Ethernet instead of (or alongside) Wi-Fi. Physical.eth->init() is a thin
+// server runs over Ethernet instead of (or alongside) Wi-Fi. Physical.eth_init is a thin
 // wrapper over the Arduino ETH library; the PHY pins / type / clock come from the standard
 // ETH_PHY_* build flags for your board (see example Ethernet). The egress reporting
-// (Physical.link->egress -> PROTOCORE_IF_ETH) and the per-route interface classifier already handle a
-// wired route, so once the link has an IP the server accepts on it with no other change.
-// Default off (zero cost / the ETH library is not linked). ESP32-only.
+// (Physical.egress -> Physical.if_kind == PROTOCORE_IF_ETH) and the per-route interface classifier
+// already handle a wired route, so once the link has an IP the server accepts on it with no other
+// change. Default off (zero cost / the ETH library is not linked). ESP32-only.
 
-/** @brief Enable wired Ethernet bring-up (init_eth_physical / eth_ready). Default off. */
+/** @brief Enable wired Ethernet bring-up (Physical.eth_init / Physical.eth_ready). Default off. */
 #ifndef PROTOCORE_ENABLE_ETHERNET
 #define PROTOCORE_ENABLE_ETHERNET 0
 #endif
 
 // W5500 SPI Ethernet (arduino-esp32 3.x only). Set PROTOCORE_ETH_W5500=1 to select the SPI PHY over the RMII
 // default; the pins below are the ESP32-S3-DevKitC wiring (HSPI / SPI3). The 2.x ETH library has no W5500,
-// so Physical.eth->init() falls back to the RMII ETH.begin() when the core is older.
+// so Physical.eth_init falls back to the RMII ETH.begin() when the core is older.
 #ifndef PROTOCORE_ETH_W5500
 #define PROTOCORE_ETH_W5500 0
 #endif
@@ -893,7 +895,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Enable IPv6 on the network interface (dual-stack). Default off.
  *
- * When set, Physical.ip6->init() turns on IPv6 for the Wi-Fi netif (SLAAC link-local plus any
+ * When set, Physical.ip6_init turns on IPv6 for the Wi-Fi netif (SLAAC link-local plus any
  * router-advertised global address). The TCP and UDP listeners already bind IPADDR_TYPE_ANY, so
  * the server accepts IPv6 connections the moment the interface has a v6 address; the protocore_ip core
  * (shared/ip/ip.h) parses / formats / classifies both families. Requires an
@@ -2887,12 +2889,13 @@ from halves and is slower than the width it decomposes into"
  * @brief Authoritative DNS server (network_drivers/network/dns/dns_server) on UDP/53.
  *
  * Default off. Resolves a small fixed table of `name -> IPv4` A records you register with
- * protocore_dns_server_add(), so devices on an offline / air-gapped LAN can use names instead of raw
- * IPs (a companion to the NTP server for offline infrastructure). Answers A/IN queries from
- * the table, returns NXDOMAIN for unknown names, and ignores other query types. The response
- * builder is pure and host-tested; the wire binding is the transport UDP service. This is a
- * general resolver, distinct from the provisioning captive-portal DNS (which answers every
- * query with the softAP IP) - do not enable both (they both bind :53).
+ * DnsServer.rec.name / .a / .b / .c / .d + DnsServer.add, so devices on an offline / air-gapped
+ * LAN can use names instead of raw IPs (a companion to the NTP server for offline
+ * infrastructure). Answers A/IN queries from the table, returns NXDOMAIN for unknown names,
+ * and ignores other query types. The response builder is pure and host-tested; the wire binding
+ * is the transport UDP service. This is a general resolver, distinct from the provisioning
+ * captive-portal DNS (which answers every query with the softAP IP) - do not enable both (they
+ * both bind :53).
  */
 #ifndef PROTOCORE_ENABLE_DNS_SERVER
 #define PROTOCORE_ENABLE_DNS_SERVER 0
@@ -2959,7 +2962,7 @@ from halves and is slower than the width it decomposes into"
 
 /**
  * @brief Shared I2C bus pins for the sensor / peripheral drivers (RTC, SHT3x, MPR121, ADS1115,
- * INA219, PCA9685). All of them share one bus via protocore_i2c_begin() (services/peripherals/i2c.h), so
+ * INA219, PCA9685). All of them share one bus via protocore_i2c_begin() (server/peripherals/i2c.h), so
  * this is the single place to move it. The default -1 uses the platform's default pins (GPIO 21
  * SDA / 22 SCL on the classic ESP32). Set both to free GPIOs when those pins are taken - most
  * importantly a **wired-Ethernet PHY**: the LAN8720 RMII uses GPIO 21 (TX_EN) and GPIO 22
@@ -2994,7 +2997,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief I2C real-time-clock driver (DS1307 / DS3231) - a battery-backed time source.
  *
- * Default off. services/peripherals/rtc reads and sets a DS1307/DS3231 RTC over I2C (Wire), so the device
+ * Default off. server/peripherals/rtc reads and sets a DS1307/DS3231 RTC over I2C (Wire), so the device
  * keeps accurate wall-clock time across reboots and power loss with no network - the ideal
  * fallback below GPS and above upstream NTP in a time-source chain (feeds `protocore_time_now()`
  * and the NTP server). The BCD<->epoch conversion (7 time registers, 12/24-hour, leap years,
@@ -3012,7 +3015,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief HLK-LD2410 24 GHz mmWave presence / motion radar (UART).
  *
- * Default off. services/peripherals/ld2410 syncs to the LD2410's framed serial output (256000 baud) and
+ * Default off. server/peripherals/ld2410 syncs to the LD2410's framed serial output (256000 baud) and
  * decodes the target report - presence state (none / moving / stationary / both), the moving
  * and stationary target distance (cm) and energy (0-100), and, in engineering mode, the
  * per-gate energies - plus encodes the config commands (enter / exit config, enable / disable
@@ -3110,7 +3113,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief DFRobot SEN0192 10.525 GHz microwave Doppler motion sensor (single digital OUT line).
  *
- * Default off. services/peripherals/sen0192 tracks the module's OUT line as a debounced presence signal: it asserts
+ * Default off. server/peripherals/sen0192 tracks the module's OUT line as a debounced presence signal: it asserts
  * presence on an active sample and holds it for PROTOCORE_SEN0192_HOLD_MS after the last active sample, so
  * brief gaps between Doppler returns don't make presence flap. The presence state machine is pure and
  * host-tested; only the GPIO read touches hardware. Unlike a PIR it senses motion through thin non-metal
@@ -3138,7 +3141,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief NXP MPR121 12-channel capacitive-touch controller (I2C).
  *
- * Default off. services/peripherals/mpr121 decodes the touch-status word (12 electrode bits + proximity +
+ * Default off. server/peripherals/mpr121 decodes the touch-status word (12 electrode bits + proximity +
  * over-current) and the 10-bit filtered / baseline per-electrode data, and builds the register
  * init sequence (soft reset, the NXP filter/AFE defaults, per-electrode touch/release
  * thresholds, and the electrode-configuration start). The decode + init-sequence builder are
@@ -3168,7 +3171,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Sensirion SHT3x temperature / humidity sensor (I2C).
  *
- * Default off. services/peripherals/sht3x issues the single-shot measurement command, checks the CRC-8 on
+ * Default off. server/peripherals/sht3x issues the single-shot measurement command, checks the CRC-8 on
  * each returned word (polynomial 0x31, init 0xFF - the Sensirion check value 0xBEEF -> 0x92),
  * and converts the raw 16-bit ticks to temperature and relative humidity in integer milli-units
  * (no float printf needed). The CRC + conversion are pure and host-tested; only the command
@@ -3187,7 +3190,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief NXP PCA9685 16-channel 12-bit PWM / servo driver (I2C).
  *
- * Default off. services/peripherals/pca9685 computes the PRESCALE value for a PWM frequency from the 25 MHz
+ * Default off. server/peripherals/pca9685 computes the PRESCALE value for a PWM frequency from the 25 MHz
  * oscillator, the per-channel register address, the 12-bit ON/OFF pulse counts, and a servo
  * pulse-width (microseconds) -> count conversion; it also emits the 5-byte channel PWM write.
  * The prescale / count math + the register encoder are pure and host-tested; only the register
@@ -3210,7 +3213,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief TI ADS1115 16-bit ADC (I2C) - a precise external analog input.
  *
- * Default off. services/peripherals/ads1115 builds the 16-bit config register (OS start, single-ended
+ * Default off. server/peripherals/ads1115 builds the 16-bit config register (OS start, single-ended
  * channel MUX, programmable gain, single-shot mode, data rate, comparator disabled) for a
  * single-shot reading, and converts the signed 16-bit result to microvolts for the selected
  * gain's full-scale range. The config encoder + conversion are pure and host-tested; only the
@@ -3247,7 +3250,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief SMBus 3.1 transaction shapes over the shared I2C bus.
  *
- * Default off. services/peripherals/smbus adds the named transaction forms SMBus defines on top of
+ * Default off. server/peripherals/smbus adds the named transaction forms SMBus defines on top of
  * I2C: quick command, send / receive byte, write / read byte and word, block write and read, and
  * the two process calls. A part that speaks SMBus (a battery gauge, a fan controller, a power
  * sequencer) answers this fixed set rather than a register layout its datasheet invents.
@@ -3264,7 +3267,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief PMBus 1.3 power-management command set over SMBus.
  *
- * Default off. services/peripherals/pmbus adds the standard command codes and the two numeric
+ * Default off. server/peripherals/pmbus adds the standard command codes and the two numeric
  * encodings PMBus reports in: LINEAR11 for most telemetry (a 5-bit signed exponent and an 11-bit
  * signed mantissa in one word) and LINEAR16 for output voltage (a 16-bit unsigned mantissa scaled
  * by an exponent the part reports separately). Reading a digital point-of-load converter's input
@@ -3279,7 +3282,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief TI INA219 high-side current / power monitor (I2C).
  *
- * Default off. services/peripherals/ina219 decodes the bus-voltage register (LSB 4 mV) and the shunt-voltage
+ * Default off. server/peripherals/ina219 decodes the bus-voltage register (LSB 4 mV) and the shunt-voltage
  * register (LSB 10 uV), computes the calibration register from the shunt resistance and the
  * chosen current LSB, and scales the raw current / power registers to microamps / microwatts.
  * The decode + calibration + scaling math are pure and host-tested; only the register read /
@@ -3310,7 +3313,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Typed NVS configuration store (WiFi creds, IP config, ... as blobs).
  *
- * When set, src/services/storage/config_store/config_store.h provides a typed key/value
+ * When set, src/server/storage/config_store/config_store.h provides a typed key/value
  * API (string / u32 / blob) that routes core settings into the ESP32's native
  * NVS partition (via `Preferences`) instead of a JSON file on the filesystem -
  * which survives FS corruption and is the corruption-resistant home for
@@ -3419,7 +3422,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in flash partition-map monitor endpoint (PROTOCORE_ENABLE_PARTITION_MONITOR).
  *
- * Default off. When set, services/storage/partition_monitor reports the device's flash
+ * Default off. When set, server/storage/partition_monitor reports the device's flash
  * partition table (label, kind, type / subtype, offset, size, and which app slot
  * is running) as JSON, for diagnostics and OTA dashboards. The partition walk uses
  * esp_partition / esp_ota_ops; the JSON serializer and the kind classifier are
@@ -3507,7 +3510,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in runtime heap/stack guardrails (PROTOCORE_ENABLE_GUARDRAILS).
  *
- * Default off. When set, services/security/guardrails samples free heap, the heap low-water
+ * Default off. When set, server/core/guardrails samples free heap, the heap low-water
  * mark, the largest free block (fragmentation), and the calling task's remaining
  * stack, and fires a callback when any crosses its threshold - a proactive
  * fail-safe hook beyond the passive numbers in /metrics. The threshold evaluator
@@ -3566,7 +3569,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in flash wear-leveling slot selector (PROTOCORE_ENABLE_WEARLEVEL).
  *
- * When set, server/filesystem/wearlevel provides protocore_wearlevel_pick(): given per-slot write counts it returns
+ * When set, server/storage/wearlevel provides protocore_wearlevel_pick(): given per-slot write counts it returns
  * the least-worn slot to write next, so repeated flash/NVS writes spread evenly and the region ages
  * together instead of burning out one block. Pure core (the app owns the slots + persisted counts).
  * Default off.
@@ -3649,7 +3652,7 @@ from halves and is slower than the width it decomposes into"
  *
  * An SD card is a connector, and it can be pulled mid-write. The failure is quiet: the driver still
  * reports a mounted volume, writes fail into a void, and code carries on believing it has storage.
- * When set, services/storage/hotswap runs a small state machine per volume (ABSENT / READY / FAULTED): a run
+ * When set, server/storage/hotswap runs a small state machine per volume (ABSENT / READY / FAULTED): a run
  * of consecutive I/O errors declares the medium gone and unmounts it immediately, `protocore_hotswap_ready()`
  * becomes the fail-closed gate callers check before any filesystem call, and a periodic probe
  * remounts when a card comes back. The core is pure and takes an explicit `now`, so the whole state
@@ -3682,7 +3685,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in network adaptation decisions (PROTOCORE_ENABLE_NETADAPT).
  *
- * When set, services/net/netadapt provides two pure decisions: protocore_netadapt_window() sizes the TCP
+ * When set, server/net/netadapt provides two pure decisions: protocore_netadapt_window() sizes the TCP
  * receive window from the free heap (bigger when RAM is plentiful, shrinking when tight), and
  * protocore_netadapt_dhcp_fallback() decides when to give up on DHCP and use a static IP. The app applies
  * the results (lwIP window / netif config). Default off.
@@ -3694,7 +3697,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in DShot ESC throttle protocol codec (PROTOCORE_ENABLE_DSHOT).
  *
- * When set, services/peripherals/dshot provides protocore_dshot_encode() / _decode(): the 16-bit DShot frame
+ * When set, server/peripherals/dshot provides protocore_dshot_encode() / _decode(): the 16-bit DShot frame
  * (11-bit throttle/command + telemetry bit + 4-bit CRC), the bidirectional/extended inverted-CRC
  * variant, and the per-rate bit timing for an RMT driver. Pure codec (the app clocks it out via RMT).
  * Default off.
@@ -3766,7 +3769,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in single-page-app micro-routing decision (PROTOCORE_ENABLE_SPA_ROUTER).
  *
- * When set, services/web/spa_router provides protocore_spa_route(): given a request path it returns whether to
+ * When set, server/web/spa_router provides protocore_spa_route(): given a request path it returns whether to
  * serve a real asset file, serve the SPA shell (index.html) for a client-side route, or pass through to
  * the app's handlers under an API prefix - so a single-page UI's client routing works. Pure decision
  * core (the caller wires the result into serve_static / the router). Default off.
@@ -3944,7 +3947,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in TCP relay / DNAT port forwarding (PROTOCORE_ENABLE_RELAY).
  *
- * services/net/relay is a bidirectional byte pump that publishes an internal `host:port` through the
+ * server/net/relay is a bidirectional byte pump that publishes an internal `host:port` through the
  * server: an inbound connection is relayed to an origin (an outbound protocore_client connection), moving
  * bytes both ways with backpressure and independent half-close, so the device fronts a service that
  * lives behind it. The engine is a pure step function over two send/recv seams (host-testable); the
@@ -3955,7 +3958,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief User-defined address:port -> hardware-bus bridge (services/net/iface_bridge).
+ * @brief User-defined address:port -> hardware-bus bridge (server/net/iface_bridge).
  *
  * A configurable "device server": the app registers rules mapping a listen `x.x.x.x:nnnn` (TCP/UDP) to a
  * UART, SPI chip-select, or I2C address. A network client talking to the port is bridged to that bus -
@@ -3968,13 +3971,13 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_ENABLE_IFACE_BRIDGE 0
 #endif
 
-/** @brief Max concurrent address:port -> bus rules (services/net/iface_bridge). */
+/** @brief Max concurrent address:port -> bus rules (server/net/iface_bridge). */
 #ifndef PROTOCORE_BRIDGE_MAX_RULES
 #define PROTOCORE_BRIDGE_MAX_RULES 8
 #endif
 
 /**
- * @brief Max write / read payload (bytes) per TRANSACTION frame (services/net/iface_bridge).
+ * @brief Max write / read payload (bytes) per TRANSACTION frame (server/net/iface_bridge).
  *
  * Bounds the per-transaction stack scratch used to clock an SPI/I2C write-then-read, and rejects a frame
  * whose write_len or read_len exceeds it. Device-server transactions are small register accesses, so the
@@ -3985,7 +3988,7 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_BRIDGE_TXN_MAX 256
 #endif
 
-/** @brief STREAM (UART) pipe chunk size (bytes) for services/net/iface_bridge - one socket<->UART hop. */
+/** @brief STREAM (UART) pipe chunk size (bytes) for server/net/iface_bridge - one socket<->UART hop. */
 #ifndef PROTOCORE_BRIDGE_STREAM_CHUNK
 #define PROTOCORE_BRIDGE_STREAM_CHUNK 256
 #endif
@@ -4040,7 +4043,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Per-direction relay buffer size (bytes) for services/net/relay (PROTOCORE_ENABLE_RELAY).
+ * @brief Per-direction relay buffer size (bytes) for server/net/relay (PROTOCORE_ENABLE_RELAY).
  *
  * Each active relay holds two buffers of this size (one per direction) for bytes read from one peer
  * but not yet accepted by the other (backpressure carry). Larger buffers raise throughput per step
@@ -4166,7 +4169,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in HTTP Cache-Control directive helpers (PROTOCORE_ENABLE_HTTP_CACHE).
  *
- * services/web/httpcache is the origin-side of edge caching (RFC 9111 + RFC 8246 + RFC 5861): a
+ * network_drivers/presentation/http/httpcache is the origin-side of edge caching (RFC 9111 + RFC 8246 + RFC 5861): a
  * structured `Cache-Control` builder (`cache_control_build` + first-class presets like
  * `cache_immutable_asset` / `cache_shared`) so app routes emit correct, edge-cacheable responses
  * (hand the value to set_cache_control()), a tolerant directive parser
@@ -4180,7 +4183,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in CDN edge-cache tier (PROTOCORE_ENABLE_EDGE_CACHE, requires HTTP_CACHE).
  *
- * services/web/edge_cache is the caching reverse-proxy edge that services/web/httpcache is the origin-side
+ * server/web/edge_cache is the caching reverse-proxy edge that network_drivers/presentation/http/httpcache is the origin-side
  * groundwork for: a device sits in front of a remote upstream origin, fetches a response once, and
  * serves subsequent hits from a bounded local store - honoring `Cache-Control` / `Expires` / `ETag` /
  * `Last-Modified`, revalidating stale entries with conditional requests (`If-None-Match` /
@@ -4710,7 +4713,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in dynamic socket recycling: an LRU connection-slot pool (PROTOCORE_ENABLE_SOCKPOOL).
  *
- * The transport-pool half of the adaptive-networking work: services/net/sockpool keeps a fixed table of
+ * The transport-pool half of the adaptive-networking work: server/net/sockpool keeps a fixed table of
  * connection slots and, when saturated, recycles the least-recently-used slot for a new peer
  * (protocore_sockpool_acquire returns the evicted id so the transport closes it), plus touch / release /
  * find. The app owns the real sockets; this owns which slot a connection lives in and which to reclaim
@@ -4808,7 +4811,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in FDC2114/2214 capacitance-to-digital field sensor (PROTOCORE_ENABLE_FDC2214).
  *
- * A field-perturbation sensing peripheral: services/peripherals/fdc2214 decodes the FDC2x14's 28-bit conversion
+ * A field-perturbation sensing peripheral: server/peripherals/fdc2214 decodes the FDC2x14's 28-bit conversion
  * result (a capacitance shift moves the LC-tank frequency, giving contactless proximity / liquid-level /
  * material sensing) - protocore_fdc2214_data combines the register pair, protocore_fdc2214_error pulls the flags,
  * protocore_fdc2214_sensor_freq_hz scales to frequency, and protocore_fdc2214_build_config emits a single-channel
@@ -4821,7 +4824,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in LDC1614 inductance-to-digital field sensor (PROTOCORE_ENABLE_LDC1614).
  *
- * A field-perturbation sensing peripheral: services/peripherals/ldc1614 decodes the LDC1614's 28-bit conversion
+ * A field-perturbation sensing peripheral: server/peripherals/ldc1614 decodes the LDC1614's 28-bit conversion
  * result (a nearby conductor changes the coil inductance via eddy currents, giving contactless metal
  * proximity / displacement / EM-field sensing) - protocore_ldc1614_data combines the register pair,
  * protocore_ldc1614_error pulls the flags, protocore_ldc1614_sensor_freq_hz scales to frequency, and
@@ -4835,7 +4838,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in VL53L0X optical time-of-flight ranging sensor (PROTOCORE_ENABLE_VL53L0X).
  *
- * A field-perturbation sensing peripheral for contactless distance / gesture: services/peripherals/vl53l0x decodes
+ * A field-perturbation sensing peripheral for contactless distance / gesture: server/peripherals/vl53l0x decodes
  * the ST VL53L0X ranging registers - protocore_vl53l0x_range_mm combines the range byte pair,
  * protocore_vl53l0x_data_ready decodes the interrupt-status byte, and protocore_vl53l0x_range_valid checks the device
  * range-status field; the ESP32 binding verifies the model id, starts continuous ranging, and reads the distance over
@@ -4875,7 +4878,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Opt-in TLS version negotiation + pinned cipher-suite policy (PROTOCORE_ENABLE_TLS_POLICY).
  *
  * A policy layer on top of the mbedTLS-backed transport TLS (which already runs the 1.2 / 1.3 record +
- * handshake): services/security/tls_policy pins the version to an audited [min,max] and makes the negotiated
+ * handshake): server/security/tls_policy pins the version to an audited [min,max] and makes the negotiated
  * version observable (protocore_tls_negotiate_version / protocore_tls_version_name), and pins the cipher suites
  * to an audited allowlist selected by server preference (protocore_tls_select_cipher), with an AEAD-only
  * classifier (protocore_tls_is_aead) for a hardened profile. Pure, host-tested; the app feeds the results to
@@ -4957,7 +4960,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Opt-in schema-driven config export / restore (PROTOCORE_ENABLE_CONFIG_IO).
  *
  * Default off. Requires PROTOCORE_ENABLE_CONFIG_STORE. The app declares a fixed schema
- * (key + type); services/storage/config_io serializes the current values to a portable
+ * (key + type); server/storage/config_io serializes the current values to a portable
  * `key=value` text blob (backup / migrate) and parses one back into the store
  * (restore / bulk template). Schema-driven rather than enumerating NVS, so it
  * stays deterministic and zero-heap; the serialize / parse is host-tested.
@@ -5059,7 +5062,7 @@ from halves and is slower than the width it decomposes into"
  *
  * The vendor backend takes its servers from the stack (DHCP), so this is the portable one's only
  * starting point. A device that learns a server from DHCP or provisioning should hand it over with
- * Resolver.set_server() rather than query this one.
+ * Resolver.server.ip + Resolver.set_server rather than query this one.
  */
 #ifndef PROTOCORE_DNS_SERVER
 #define PROTOCORE_DNS_SERVER "9.9.9.9"
@@ -5077,7 +5080,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Tamper-evident audit log (PROTOCORE_ENABLE_AUDIT_LOG).
  *
- * Default off. services/security/audit_log keeps an append-only, hash-chained security
+ * Default off. server/security/audit_log keeps an append-only, hash-chained security
  * log: each record carries SHA-256(prev_hash || fields), so altering, deleting,
  * or reordering any retained record breaks the chain (protocore_audit_verify()
  * detects it). Storage is a fixed RAM ring of PROTOCORE_AUDIT_LOG_ENTRIES records
@@ -5118,10 +5121,10 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Mounted storage (PROTOCORE_ENABLE_MNT).
  *
- * Default off. server/filesystem/mnt says *what is mounted*: a pluggable backend
+ * Default off. server/storage/mnt says *what is mounted*: a pluggable backend
  * vtable (open/read/write/close/seek, exists/size/remove/rename, mkdir/rmdir/stat,
  * opendir/readdir) that a feature reaches through the filesystem accessor
- * (server/filesystem/filesystem.h), so it can target storage without knowing the medium. A
+ * (server/storage/filesystem.h), so it can target storage without knowing the medium. A
  * built-in zero-heap RAM backend (fixed BSS pool - deterministic, host-identical)
  * ships for scratch / tests, which is what lets the file-transfer servers run under
  * a native test; an Arduino-FS backend (board layer) wraps a real fs::FS (LittleFS
@@ -5697,7 +5700,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Browser "web serial" terminal over WebSocket (src/services/web/web_terminal).
+ * @brief Browser "web serial" terminal over WebSocket (src/server/web/web_terminal).
  *
  * Serves a self-contained terminal page and a WebSocket endpoint: device output
  * is broadcast to all connected browsers, browser input is delivered to a
@@ -7760,7 +7763,7 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
 #endif
 
 #if PROTOCORE_ENABLE_AUDIT_LOG
-// -- Audit log (services/security/audit_log) --
+// -- Audit log (server/security/audit_log) --
 #ifndef PROTOCORE_AUDIT_LOG_ENTRIES
 #define PROTOCORE_AUDIT_LOG_ENTRIES 32 ///< RAM ring depth (records retained for query/verify).
 #endif
@@ -7905,7 +7908,7 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
 #endif // PROTOCORE_ENABLE_OPCUA
 
 #if PROTOCORE_ENABLE_PROVISIONING
-// -- Wi-Fi provisioning credential store (services/system/provisioning_service) --
+// -- Wi-Fi provisioning credential store (server/core/provisioning_service) --
 // The NVS namespace and its keys, overridable per deployment (e.g. to avoid an NVS-namespace
 // collision with the application's own store).
 #ifndef PROTOCORE_PROV_NVS_NAMESPACE

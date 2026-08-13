@@ -20,11 +20,11 @@
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/transport/tcp/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
 #include "protocore.h"
-#include "server/filesystem/filesystem.h"  // protocore_fs_* - the accessor owns the root, the join, and the .. guard
-#include "shared/mime/mime.h"        // mime_type, PROTOCORE_MIME_*
+#include "server/storage/filesystem.h"   // protocore_fs_* - the accessor owns the root, the join, and the .. guard
+#include "shared/mime/mime.h"               // mime_type, PROTOCORE_MIME_*
 #include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
-#include <stdio.h>                         // snprintf, sscanf
-                                           // strncasecmp, strchr, strstr, strncmp, strnlen
+#include <stdio.h>                          // snprintf, sscanf
+                                            // strncasecmp, strchr, strstr, strncmp, strnlen
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
 
 // ---------------------------------------------------------------------------
@@ -261,10 +261,10 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     if (content_encoding)
     {
         protocore_sb sb_enc_line = {enc_line, sizeof(enc_line), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_enc_line, "Content-Encoding: ");
-        protocore_sb_put(&sb_enc_line, content_encoding);
-        protocore_sb_put(&sb_enc_line, "\r\n");
-        if (protocore_sb_finish(&sb_enc_line) == 0)
+        Sb.put(&sb_enc_line, "Content-Encoding: ");
+        Sb.put(&sb_enc_line, content_encoding);
+        Sb.put(&sb_enc_line, "\r\n");
+        if (Sb.finish(&sb_enc_line) == 0)
         {
             enc_line[0] = '\0';
         }
@@ -278,12 +278,12 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     time_t mtime = (time_t)(st.mtime);
     char etag[40];
     protocore_sb sb_etag = {etag, sizeof(etag), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_etag, "\"");
-    protocore_sb_hex(&sb_etag, (uint64_t)((unsigned)file_size), 1);
-    protocore_sb_put(&sb_etag, "-");
-    protocore_sb_hex(&sb_etag, (uint64_t)((unsigned long)mtime), 1);
-    protocore_sb_put(&sb_etag, "\"");
-    if (protocore_sb_finish(&sb_etag) == 0)
+    Sb.put(&sb_etag, "\"");
+    Sb.hex(&sb_etag, (uint64_t)((unsigned)file_size), 1);
+    Sb.put(&sb_etag, "-");
+    Sb.hex(&sb_etag, (uint64_t)((unsigned long)mtime), 1);
+    Sb.put(&sb_etag, "\"");
+    if (Sb.finish(&sb_etag) == 0)
     {
         etag[0] = '\0';
     }
@@ -295,10 +295,10 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     if (lm_date[0])
     {
         protocore_sb sb_lastmod_line = {lastmod_line, sizeof(lastmod_line), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_lastmod_line, "Last-Modified: ");
-        protocore_sb_put(&sb_lastmod_line, lm_date);
-        protocore_sb_put(&sb_lastmod_line, "\r\n");
-        if (protocore_sb_finish(&sb_lastmod_line) == 0)
+        Sb.put(&sb_lastmod_line, "Last-Modified: ");
+        Sb.put(&sb_lastmod_line, lm_date);
+        Sb.put(&sb_lastmod_line, "\r\n");
+        if (Sb.finish(&sb_lastmod_line) == 0)
         {
             lastmod_line[0] = '\0';
         }
@@ -313,25 +313,25 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         protocore_fs_close(fh);
         char h304[RESP_HDR_BUF_SIZE];
         protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
-        protocore_sb_put(&sb_h304, etag);
-        protocore_sb_put(&sb_h304, "\r\n");
-        protocore_sb_put(&sb_h304, lastmod_line);
-        protocore_sb_put(&sb_h304, protocore_resp_cache_control());
-        protocore_sb_put(&sb_h304, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-        protocore_sb_put(&sb_h304, cl);
-        protocore_sb_put(&sb_h304, "\r\n");
-        int n304 = (int)protocore_sb_finish(&sb_h304);
+        Sb.put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
+        Sb.put(&sb_h304, etag);
+        Sb.put(&sb_h304, "\r\n");
+        Sb.put(&sb_h304, lastmod_line);
+        Sb.put(&sb_h304, protocore_resp_cache_control());
+        Sb.put(&sb_h304, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+        Sb.put(&sb_h304, cl);
+        Sb.put(&sb_h304, "\r\n");
+        int n304 = (int)Sb.finish(&sb_h304);
         Tcp.conn->send_flush(slot_id, h304, (proto_u16)n304); // header-only reply: write and flush in one marshal
         protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
     char etag_line[48];
     protocore_sb sb_etag_line = {etag_line, sizeof(etag_line), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_etag_line, "ETag: ");
-    protocore_sb_put(&sb_etag_line, etag);
-    protocore_sb_put(&sb_etag_line, "\r\n");
-    if (protocore_sb_finish(&sb_etag_line) == 0)
+    Sb.put(&sb_etag_line, "ETag: ");
+    Sb.put(&sb_etag_line, etag);
+    Sb.put(&sb_etag_line, "\r\n");
+    if (Sb.finish(&sb_etag_line) == 0)
     {
         etag_line[0] = '\0';
     }
@@ -359,13 +359,13 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         protocore_fs_close(fh);
         char h416[RESP_HDR_BUF_SIZE];
         protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
-        protocore_sb_u32(&sb_h416, (uint32_t)((unsigned)file_size));
-        protocore_sb_put(&sb_h416, "\r\nContent-Length: 0\r\n");
-        protocore_sb_put(&sb_h416, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-        protocore_sb_put(&sb_h416, cl);
-        protocore_sb_put(&sb_h416, "\r\n");
-        int n416 = (int)protocore_sb_finish(&sb_h416);
+        Sb.put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
+        Sb.u32(&sb_h416, (uint32_t)((unsigned)file_size));
+        Sb.put(&sb_h416, "\r\nContent-Length: 0\r\n");
+        Sb.put(&sb_h416, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+        Sb.put(&sb_h416, cl);
+        Sb.put(&sb_h416, "\r\n");
+        int n416 = (int)Sb.finish(&sb_h416);
         Tcp.conn->send_flush(slot_id, h416, (proto_u16)n416);
         protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
@@ -375,14 +375,14 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         status = 206;
         body_len = r_end - r_start + 1;
         protocore_sb sb_range_line = {range_line, sizeof(range_line), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_range_line, "Content-Range: bytes ");
-        protocore_sb_u32(&sb_range_line, (uint32_t)((unsigned)r_start));
-        protocore_sb_put(&sb_range_line, "-");
-        protocore_sb_u32(&sb_range_line, (uint32_t)((unsigned)r_end));
-        protocore_sb_put(&sb_range_line, "/");
-        protocore_sb_u32(&sb_range_line, (uint32_t)((unsigned)file_size));
-        protocore_sb_put(&sb_range_line, "\r\n");
-        if (protocore_sb_finish(&sb_range_line) == 0)
+        Sb.put(&sb_range_line, "Content-Range: bytes ");
+        Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_start));
+        Sb.put(&sb_range_line, "-");
+        Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_end));
+        Sb.put(&sb_range_line, "/");
+        Sb.u32(&sb_range_line, (uint32_t)((unsigned)file_size));
+        Sb.put(&sb_range_line, "\r\n");
+        if (Sb.finish(&sb_range_line) == 0)
         {
             range_line[0] = '\0';
         }
@@ -403,25 +403,25 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
 
     char header[RESP_HDR_BUF_SIZE];
     protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_header, "HTTP/1.1 ");
-    protocore_sb_i64(&sb_header, (int64_t)(status));
-    protocore_sb_put(&sb_header, " ");
-    protocore_sb_put(&sb_header, Http.status_text(status));
-    protocore_sb_put(&sb_header, "\r\nContent-Type: ");
-    protocore_sb_put(&sb_header, content_type);
-    protocore_sb_put(&sb_header, "\r\nContent-Length: ");
-    protocore_sb_u32(&sb_header, (uint32_t)((unsigned)body_len));
-    protocore_sb_put(&sb_header, "\r\n");
-    protocore_sb_put(&sb_header, accept_ranges);
-    protocore_sb_put(&sb_header, range_line);
-    protocore_sb_put(&sb_header, enc_line);
-    protocore_sb_put(&sb_header, etag_line);
-    protocore_sb_put(&sb_header, lastmod_line);
-    protocore_sb_put(&sb_header, protocore_resp_cache_control());
-    protocore_sb_put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-    protocore_sb_put(&sb_header, cl);
-    protocore_sb_put(&sb_header, "\r\n");
-    int hlen = (int)protocore_sb_finish(&sb_header);
+    Sb.put(&sb_header, "HTTP/1.1 ");
+    Sb.i64(&sb_header, (int64_t)(status));
+    Sb.put(&sb_header, " ");
+    Sb.put(&sb_header, Http.status_text(status));
+    Sb.put(&sb_header, "\r\nContent-Type: ");
+    Sb.put(&sb_header, content_type);
+    Sb.put(&sb_header, "\r\nContent-Length: ");
+    Sb.u32(&sb_header, (uint32_t)((unsigned)body_len));
+    Sb.put(&sb_header, "\r\n");
+    Sb.put(&sb_header, accept_ranges);
+    Sb.put(&sb_header, range_line);
+    Sb.put(&sb_header, enc_line);
+    Sb.put(&sb_header, etag_line);
+    Sb.put(&sb_header, lastmod_line);
+    Sb.put(&sb_header, protocore_resp_cache_control());
+    Sb.put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    Sb.put(&sb_header, cl);
+    Sb.put(&sb_header, "\r\n");
+    int hlen = (int)Sb.finish(&sb_header);
     if (hlen == 0)
     {
         header[0] = '\0';
@@ -544,12 +544,12 @@ void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys,
     char pat[MAX_PATH_LEN];
     size_t n = strnlen(url_prefix, MAX_PATH_LEN);
     protocore_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_pat, url_prefix);
+    Sb.put(&sb_pat, url_prefix);
     if (n == 0 || url_prefix[n - 1] != '*')
     {
-        protocore_sb_put(&sb_pat, "*"); // not already a wildcard: append one
+        Sb.put(&sb_pat, "*"); // not already a wildcard: append one
     }
-    if (protocore_sb_finish(&sb_pat) == 0)
+    if (Sb.finish(&sb_pat) == 0)
     {
         return; // prefix + wildcard does not fit: register nothing
     }
@@ -602,14 +602,14 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     // and serving one the caller never asked for is worse than a 404.
     char fs_path[256];
     protocore_sb sb_path = {fs_path, sizeof(fs_path), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_path, root);
-    protocore_sb_put(&sb_path, sep);
-    protocore_sb_put(&sb_path, sub);
+    Sb.put(&sb_path, root);
+    Sb.put(&sb_path, sep);
+    Sb.put(&sb_path, sub);
     if (dir)
     {
         protocore_sb_lit(&sb_path, "index.html");
     }
-    if (protocore_sb_finish(&sb_path) == 0)
+    if (Sb.finish(&sb_path) == 0)
     {
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
@@ -625,9 +625,9 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     {
         char gz[260];
         protocore_sb sb_gz = {gz, sizeof(gz), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_gz, fs_path);
-        protocore_sb_put(&sb_gz, ".gz");
-        int gn = (int)protocore_sb_finish(&sb_gz);
+        Sb.put(&sb_gz, fs_path);
+        Sb.put(&sb_gz, ".gz");
+        int gn = (int)Sb.finish(&sb_gz);
         // Neither length half can fail: fs_path is a 256-byte buffer, so gn is at most 258 and
         // always under gz's 260. Both are kept because the two buffer sizes are independent
         // constants. The exclusion is per-line, so it also drops the exists() halves - those ARE

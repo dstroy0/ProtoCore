@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the typed NVS config store (services/storage/config_store): the
+// On-device CCOUNT microbenchmark for the typed NVS config store (server/storage/config_store): the
 // string/u32/blob getters' bounds-checked default-fallback path, and the string setter's guarded
 // length scan. On ESP32 (ARDUINO) config_store's get/set functions are thin wrappers directly over
 // Arduino `Preferences` (real NVS flash) - unlike performance_benching/device/ads1115 there is no separable pure
@@ -21,7 +21,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/storage/config_store/config_store.h"
+#include "server/storage/config_store/config_store.h"
 
 #include <stdbool.h>
 #include <stddef.h>

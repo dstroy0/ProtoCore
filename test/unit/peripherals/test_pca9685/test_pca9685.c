@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the PCA9685 PWM/servo codec (services/peripherals/pca9685): the PRESCALE computation from a
+// Unit tests for the PCA9685 PWM/servo codec (server/peripherals/pca9685): the PRESCALE computation from a
 // PWM frequency (with clamping), the per-channel register address, the servo pulse-width ->
 // 12-bit count conversion (with clamping), and the 5-byte channel PWM write encoder (including
 // the full-on/off flag). The I2C writes are ESP32-only.
 
-#include "services/peripherals/pca9685/pca9685.h"
+#include "server/peripherals/pca9685/pca9685.h"
 #include <stdint.h>
 #include <unity.h>
 

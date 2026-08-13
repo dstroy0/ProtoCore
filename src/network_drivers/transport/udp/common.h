@@ -30,7 +30,7 @@
 #ifndef PROTOCORE_UDP_COMMON_H
 #define PROTOCORE_UDP_COMMON_H
 
-#include "mmgr/bytes.h"           // protocore_bw_put / protocore_bw_put_be / protocore_br_take_be over a span
+#include "mmgr/bytes.h"           // bytes.put / bytes.put_be / bytes.take_be over a span
 #include "mmgr/ring.h"            // the SPSC ring the datagrams sit in
 #include "shared/ip/ip.h" // protocore_ip: the address a datagram carries, network order
 
@@ -50,11 +50,11 @@ typedef struct
 /** @brief Write the header of @p d into @p w at its cursor. */
 PROTOCORE_INLINE void protocore_udp_dgram_encode(protocore_span *w, const protocore_udp_dgram *d)
 {
-    protocore_bw_put(w, (uint8_t)d->addr.family);
-    protocore_bw_put_be(w, d->port, 2);
-    protocore_bw_put_be(w, d->len, 2);
-    protocore_bw_put_be(w, protocore_rd64be(d->addr.bytes), 8);
-    protocore_bw_put_be(w, protocore_rd64be(d->addr.bytes + 8), 8);
+    bytes.put(w, (uint8_t)d->addr.family);
+    bytes.put_be(w, d->port, 2);
+    bytes.put_be(w, d->len, 2);
+    bytes.put_be(w, endian.rd64be(d->addr.bytes), 8);
+    bytes.put_be(w, endian.rd64be(d->addr.bytes + 8), 8);
 }
 
 /**
@@ -70,8 +70,8 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(protocore_cspan *r, proto
     uint64_t len = 0;
     uint64_t hi = 0;
     uint64_t lo = 0;
-    if (!protocore_br_take_be(r, 1, &family) || !protocore_br_take_be(r, 2, &port) ||
-        !protocore_br_take_be(r, 2, &len) || !protocore_br_take_be(r, 8, &hi) || !protocore_br_take_be(r, 8, &lo))
+    if (!bytes.take_be(r, 1, &family) || !bytes.take_be(r, 2, &port) || !bytes.take_be(r, 2, &len) ||
+        !bytes.take_be(r, 8, &hi) || !bytes.take_be(r, 8, &lo))
     {
         return PROTO_FALSE;
     }
@@ -84,8 +84,8 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(protocore_cspan *r, proto
     {
         d->addr.family = PROTOCORE_IP_V6;
     }
-    (void)protocore_wr64be(d->addr.bytes, hi);
-    (void)protocore_wr64be(d->addr.bytes + 8, lo);
+    (void)endian.wr64be(d->addr.bytes, hi);
+    (void)endian.wr64be(d->addr.bytes + 8, lo);
     d->port = (uint16_t)port;
     d->len = (uint16_t)len;
     return PROTO_TRUE;
@@ -107,7 +107,7 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_take(uint8_t *ring, size_t cap, 
         return PROTO_FALSE;
     }
     protocore_ring_peek(ring, cap, tail, 0, hdr, PROTOCORE_UDP_DGRAM_HDR);
-    protocore_cspan r = protocore_cspan_from(hdr, PROTOCORE_UDP_DGRAM_HDR);
+    protocore_cspan r = span.cfrom(hdr, PROTOCORE_UDP_DGRAM_HDR);
     if (!protocore_udp_dgram_decode(&r, d))
     {
         return PROTO_FALSE;

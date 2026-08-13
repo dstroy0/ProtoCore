@@ -31,11 +31,11 @@ static proto_bool write_super(WalStore *s, int ab, uint64_t gen, uint64_t head, 
 {
     uint8_t sb[WAL_SUPER_SIZE];
     mem.set(sb, 0, sizeof(sb));
-    protocore_wr32le(sb + 0, WAL_SUPER_MAGIC);
-    protocore_wr64le(sb + 4, gen);
-    protocore_wr64le(sb + 12, head);
-    protocore_wr64le(sb + 20, seq);
-    protocore_wr32le(sb + 28, protocore_wal_crc32(sb, SUPER_USED));
+    endian.wr32le(sb + 0, WAL_SUPER_MAGIC);
+    endian.wr64le(sb + 4, gen);
+    endian.wr64le(sb + 12, head);
+    endian.wr64le(sb + 20, seq);
+    endian.wr32le(sb + 28, protocore_wal_crc32(sb, SUPER_USED));
     return dev_write(&s->dev, (uint64_t)ab * WAL_SUPER_SIZE, sb, sizeof(sb));
 }
 
@@ -47,17 +47,17 @@ static proto_bool read_super(const WalStore *s, int ab, uint64_t *gen, uint64_t 
     {
         return PROTO_FALSE;
     }
-    if (protocore_rd32le(sb + 0) != WAL_SUPER_MAGIC)
+    if (endian.rd32le(sb + 0) != WAL_SUPER_MAGIC)
     {
         return PROTO_FALSE;
     }
-    if (protocore_rd32le(sb + 28) != protocore_wal_crc32(sb, SUPER_USED))
+    if (endian.rd32le(sb + 28) != protocore_wal_crc32(sb, SUPER_USED))
     {
         return PROTO_FALSE;
     }
-    *gen = protocore_rd64le(sb + 4);
-    *head = protocore_rd64le(sb + 12);
-    *seq = protocore_rd64le(sb + 20);
+    *gen = endian.rd64le(sb + 4);
+    *head = endian.rd64le(sb + 12);
+    *seq = endian.rd64le(sb + 20);
     // A head past the data region is corruption a matching CRC cannot happen for, but guard anyway.
     if (*head > s->data_cap)
     {
@@ -83,13 +83,13 @@ static void protocore_wal_replay_tail(WalStore *s)
         {
             break;
         }
-        if (protocore_rd32le(hdr + 0) != WAL_MAGIC)
+        if (endian.rd32le(hdr + 0) != WAL_MAGIC)
         {
             break;
         }
-        uint64_t seq = protocore_rd64le(hdr + 4);
-        uint32_t plen = protocore_rd32le(hdr + 12);
-        uint32_t crc_stored = protocore_rd32le(hdr + 16);
+        uint64_t seq = endian.rd64le(hdr + 4);
+        uint32_t plen = endian.rd32le(hdr + 12);
+        uint32_t crc_stored = endian.rd32le(hdr + 16);
         if (off + (uint64_t)WAL_RECORD_HEADER + plen > s->data_cap)
         {
             break; // truncated tail
@@ -207,12 +207,12 @@ proto_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint3
     }
     // Assemble the 20-byte header (magic+seq+len+crc); CRC covers header + payload without buffering both.
     uint8_t hdr[WAL_RECORD_HEADER];
-    protocore_wr32le(hdr + 0, WAL_MAGIC);
-    protocore_wr64le(hdr + 4, s->next_seq);
-    protocore_wr32le(hdr + 12, len);
+    endian.wr32le(hdr + 0, WAL_MAGIC);
+    endian.wr64le(hdr + 4, s->next_seq);
+    endian.wr32le(hdr + 12, len);
     uint32_t crc = protocore_wal_crc32_update(protocore_wal_crc32_init(), hdr, 16);
     crc = protocore_wal_crc32_update(crc, payload, len);
-    protocore_wr32le(hdr + 16, protocore_wal_crc32_final(crc));
+    endian.wr32le(hdr + 16, protocore_wal_crc32_final(crc));
 
     uint64_t at = s->data_off + s->head;
     if (!dev_write(&s->dev, at, hdr, WAL_RECORD_HEADER))
@@ -266,11 +266,11 @@ size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uin
         {
             break;
         }
-        if (protocore_rd32le(scratch) != WAL_MAGIC)
+        if (endian.rd32le(scratch) != WAL_MAGIC)
         {
             break;
         }
-        uint32_t plen = protocore_rd32le(scratch + 12);
+        uint32_t plen = endian.rd32le(scratch + 12);
         size_t total = (size_t)WAL_RECORD_HEADER + plen;
         if (off + total > s->head || total > scratch_len)
         {
@@ -282,13 +282,13 @@ size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uin
         }
         uint32_t crc = protocore_wal_crc32_update(protocore_wal_crc32_init(), scratch, 16);
         crc = protocore_wal_crc32_update(crc, scratch + WAL_RECORD_HEADER, plen);
-        if (protocore_wal_crc32_final(crc) != protocore_rd32le(scratch + 16))
+        if (protocore_wal_crc32_final(crc) != endian.rd32le(scratch + 16))
         {
             break;
         }
         if (cb)
         {
-            cb(protocore_rd64le(scratch + 4), off, scratch + WAL_RECORD_HEADER, plen, ctx);
+            cb(endian.rd64le(scratch + 4), off, scratch + WAL_RECORD_HEADER, plen, ctx);
         }
         count++;
         off += total;

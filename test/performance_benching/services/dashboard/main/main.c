@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the dashboard widget-table JSON serializers
-// (services/web/dashboard core): protocore_dashboard_set() (the per-sample hot path that feeds
+// (server/web/dashboard core): protocore_dashboard_set() (the per-sample hot path that feeds
 // telemetry into the widget table), the layout/values JSON serializers that back the
 // page's initial fetch and each SSE publish, and the inbound control-message parser +
 // dispatcher (WebSocket control messages from the page). All pure - no heap, no server,
@@ -18,7 +18,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/web/dashboard/dashboard.h"
+#include "server/web/dashboard/dashboard.h"
 
 #include <stdbool.h>
 #include <stddef.h>

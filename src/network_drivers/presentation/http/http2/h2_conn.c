@@ -48,7 +48,7 @@ static proto_bool h2_conn_slot_storage(H2Conn *c)
     if (base == NULL)
     {
         protocore_span b = protocore_plaintext_persist_span(PROTOCORE_H2_CONN_BORROW);
-        if (!protocore_span_ok(b))
+        if (!span.ok(b))
         {
             return PROTO_FALSE;
         }
@@ -595,7 +595,7 @@ static proto_bool process_frame(H2Conn *c)
     // owner, so no handler below stages a frame of its own.
     const size_t mark = protocore_plaintext_mark();
     protocore_span f = protocore_plaintext_span(H2_CTL_FRAME_MAX, 4);
-    if (!protocore_span_ok(f))
+    if (!span.ok(f))
     {
         protocore_plaintext_release(mark);
         return PROTO_FALSE; // arena exhausted: fail closed
@@ -708,8 +708,8 @@ proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, 
     size_t bo = 0;
     char num[16];
     protocore_sb sb_num = {num, sizeof num, 0, PROTO_TRUE};
-    protocore_sb_i64(&sb_num, (int64_t)(status));
-    int nl = (int)protocore_sb_finish(&sb_num);
+    Sb.i64(&sb_num, (int64_t)(status));
+    int nl = (int)Sb.finish(&sb_num);
     size_t w = protocore_hpack_encode_header(block + bo, sizeof block - bo, ":status", 7, num, (size_t)nl);
     if (!w)
     {
@@ -730,8 +730,8 @@ proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, 
         bo += w;
     }
     protocore_sb sb_num2 = {num, sizeof num, 0, PROTO_TRUE};
-    protocore_sb_u32(&sb_num2, (uint32_t)((unsigned)body_len));
-    int cl = (int)protocore_sb_finish(&sb_num2);
+    Sb.u32(&sb_num2, (uint32_t)((unsigned)body_len));
+    int cl = (int)Sb.finish(&sb_num2);
     w = protocore_hpack_encode_header(block + bo, sizeof block - bo, "content-length", 14, num, (size_t)cl);
     // Reachable: bo has already been advanced by the caller-supplied content-type, which can consume nearly
     // the whole block, leaving too little room for content-length even though it is only a few octets.

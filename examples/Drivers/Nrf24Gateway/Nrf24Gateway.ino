@@ -17,7 +17,7 @@
 // Build flags (whole build): PROTOCORE_ENABLE_NRF24=1 PROTOCORE_ENABLE_GATEWAY=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "services/net/gateway/gateway.h"
+#include "server/net/gateway/gateway.h"
 #include "services/radio/nrf24/nrf24.h"
 #include <SPI.h>
 

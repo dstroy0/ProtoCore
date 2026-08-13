@@ -7,7 +7,7 @@
 
 #include "mmgr/protoframe.h" // the spec tables below need the complete type
 #include "network_drivers/presentation/telnet/telnet.h"
-#include "server/system/proto_handler.h" // ProtoHandler: full type needed to check Telnet.proto_handler()'s fields
+#include "server/core/proto_handler.h" // ProtoHandler: full type needed to check Telnet.proto_handler()'s fields
 #include "network_drivers/transport/tcp/tcp.h"
 #include <stdint.h>
 #include <string.h>

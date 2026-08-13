@@ -110,9 +110,9 @@ void protocore_line_set_timestamp(protocore_line *l, int64_t timestamp)
     }
     char num[24];
     protocore_sb sb_num = {num, sizeof(num), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_num, " ");
-    protocore_sb_i64(&sb_num, (int64_t)((long long)timestamp));
-    if (protocore_sb_finish(&sb_num) == 0)
+    Sb.put(&sb_num, " ");
+    Sb.i64(&sb_num, (int64_t)((long long)timestamp));
+    if (Sb.finish(&sb_num) == 0)
     {
         num[0] = '\0'; // space-separated trailing timestamp
     }
@@ -123,9 +123,9 @@ void protocore_line_add_int(protocore_line *l, const char *field, int64_t v)
 {
     char num[24];
     protocore_sb sb_num2 = {num, sizeof(num), 0, PROTO_TRUE};
-    protocore_sb_i64(&sb_num2, (int64_t)((long long)v));
-    protocore_sb_put(&sb_num2, "i");
-    if (protocore_sb_finish(&sb_num2) == 0)
+    Sb.i64(&sb_num2, (int64_t)((long long)v));
+    Sb.put(&sb_num2, "i");
+    if (Sb.finish(&sb_num2) == 0)
     {
         num[0] = '\0'; // InfluxDB integer suffix
     }
@@ -139,9 +139,9 @@ void protocore_line_add_uint(protocore_line *l, const char *field, uint64_t v)
 {
     char num[24];
     protocore_sb sb_num3 = {num, sizeof(num), 0, PROTO_TRUE};
-    protocore_sb_u64(&sb_num3, (uint64_t)((unsigned long long)v));
-    protocore_sb_put(&sb_num3, "u");
-    if (protocore_sb_finish(&sb_num3) == 0)
+    Sb.u64(&sb_num3, (uint64_t)((unsigned long long)v));
+    Sb.put(&sb_num3, "u");
+    if (Sb.finish(&sb_num3) == 0)
     {
         num[0] = '\0'; // InfluxDB UInteger suffix 'u' (not signed 'i')
     }
@@ -155,8 +155,8 @@ void protocore_line_add_float(protocore_line *l, const char *field, float v, uin
 {
     char num[32];
     protocore_sb sb_num4 = {num, sizeof(num), 0, PROTO_TRUE};
-    protocore_sb_fixed(&sb_num4, (double)((double)v), (unsigned)((int)decimals));
-    if (protocore_sb_finish(&sb_num4) == 0)
+    Sb.fixed(&sb_num4, (double)((double)v), (unsigned)((int)decimals));
+    if (Sb.finish(&sb_num4) == 0)
     {
         num[0] = '\0';
     }

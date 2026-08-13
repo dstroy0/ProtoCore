@@ -24,8 +24,8 @@ size_t protocore_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, u
     buf[1] = 'S';
     buf[2] = (uint8_t)(type);
     buf[3] = control;
-    protocore_wr32be(buf + 4, parameter);
-    protocore_wr64be(buf + 8, payload_len);
+    endian.wr32be(buf + 4, parameter);
+    endian.wr64be(buf + 8, payload_len);
     return PROTOCORE_HISLIP_HEADER_LEN;
 }
 
@@ -37,8 +37,8 @@ proto_bool protocore_hislip_parse_header(const uint8_t *buf, size_t len, HislipH
     }
     out->type = (HislipMsg)(buf[2]);
     out->control = buf[3];
-    out->parameter = protocore_rd32be(buf + 4);
-    out->payload_len = protocore_rd64be(buf + 8);
+    out->parameter = endian.rd32be(buf + 4);
+    out->payload_len = endian.rd64be(buf + 8);
     return PROTO_TRUE;
 }
 

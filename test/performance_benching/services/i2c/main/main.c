@@ -5,7 +5,7 @@
 // so this sketch deliberately benches nothing and exists only to keep services/i2c under the same
 // performance_benching/device/<service>/ umbrella and to prove the header still compiles and links.
 //
-// Why nothing is benched: services/peripherals/i2c.h is a single header whose entire public surface is one inline
+// Why nothing is benched: server/peripherals/i2c.h is a single header whose entire public surface is one inline
 // function, protocore_i2c_begin(), which is a direct pass-through to Wire.begin(PROTOCORE_I2C_SDA_PIN,
 // PROTOCORE_I2C_SCL_PIN) - it brings up the shared I2C bus for the peripheral drivers (RTC, SHT3x, MPR121,
 // ADS1115, INA219, PCA9685). There is no CPU-side codec, no encode/decode/parse/checksum/CRC, no
@@ -22,7 +22,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a capture
 // opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/i2c.h"
+#include "server/peripherals/i2c.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -39,9 +39,9 @@ void dbench_run(void)
     for (;;)
     {
         DBENCH_BANNER("i2c");
-        // NOTE-4 service: services/peripherals/i2c.h is 100% a hardware bus bring-up (Wire.begin()) with no pure
+        // NOTE-4 service: server/peripherals/i2c.h is 100% a hardware bus bring-up (Wire.begin()) with no pure
         // CPU-side operation to time. Nothing is benched here on purpose - see the file header.
-        printf("DB (no pure op to bench: services/peripherals/i2c.h is hardware bus bring-up only)"
+        printf("DB (no pure op to bench: server/peripherals/i2c.h is hardware bus bring-up only)"
                "\n");
         DBENCH_DONE();
     }

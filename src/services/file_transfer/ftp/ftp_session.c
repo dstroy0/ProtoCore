@@ -170,14 +170,14 @@ static proto_bool ftp_open_data(const FtpTarget *target)
             return PROTO_FALSE;
         }
         protocore_sb sb_host = {host, sizeof(host), 0, PROTO_TRUE};
-        protocore_sb_u32(&sb_host, (uint32_t)((unsigned)ip[0]));
-        protocore_sb_put(&sb_host, ".");
-        protocore_sb_u32(&sb_host, (uint32_t)((unsigned)ip[1]));
-        protocore_sb_put(&sb_host, ".");
-        protocore_sb_u32(&sb_host, (uint32_t)((unsigned)ip[2]));
-        protocore_sb_put(&sb_host, ".");
-        protocore_sb_u32(&sb_host, (uint32_t)((unsigned)ip[3]));
-        if (protocore_sb_finish(&sb_host) == 0)
+        Sb.u32(&sb_host, (uint32_t)((unsigned)ip[0]));
+        Sb.put(&sb_host, ".");
+        Sb.u32(&sb_host, (uint32_t)((unsigned)ip[1]));
+        Sb.put(&sb_host, ".");
+        Sb.u32(&sb_host, (uint32_t)((unsigned)ip[2]));
+        Sb.put(&sb_host, ".");
+        Sb.u32(&sb_host, (uint32_t)((unsigned)ip[3]));
+        if (Sb.finish(&sb_host) == 0)
         {
             host[0] = '\0';
         }

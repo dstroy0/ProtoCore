@@ -20,9 +20,9 @@
 //   PROTOCORE_ENABLE_DMA=1 PROTOCORE_ENABLE_PREEMPT_QUEUE=1 PROTOCORE_ENABLE_GATEWAY=1 PROTOCORE_DMA_SIMULATE=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "services/net/gateway/gateway.h"
+#include "server/net/gateway/gateway.h"
 #include "mmgr/dma.h"
-#include "server/system/preempt_queue.h"
+#include "server/core/preempt_queue.h"
 
 
 static const uint8_t RADIO_PORT = 0; // DMA channel 0 == the LoRa module

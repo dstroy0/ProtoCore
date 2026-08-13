@@ -6,7 +6,7 @@
 // separate steps here as they are on the target. Covers the routing by slot owner and the
 // fail-closed cases.
 
-#include "server/system/worker.h"
+#include "server/core/worker.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
 #include <unity.h>

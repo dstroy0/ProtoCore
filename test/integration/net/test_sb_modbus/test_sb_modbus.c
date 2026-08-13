@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Unit tests for the Modbus-master southbound driver adapter
-// (services/net/southbound/sb_modbus): register the driver, then read register points
+// (services/southbound/sb_modbus): register the driver, then read register points
 // by name through the southbound facade, driven end to end against the real slave
 // codec (protocore_modbus_process_adu) via a mock transaction seam - no hardware needed.
 
 #include "services/fieldbus/modbus/modbus.h"
-#include "services/net/southbound/sb_modbus.h"
-#include "services/net/southbound/southbound.h"
+#include "services/southbound/sb_modbus.h"
+#include "services/southbound/southbound.h"
 #include <unity.h>
 
 // A transaction seam that routes the master's request straight into the slave codec, so a read through

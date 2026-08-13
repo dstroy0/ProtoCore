@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SDI-12 sensor-bus codec (services/peripherals/sdi12): the command
+// On-device CCOUNT microbenchmark for the SDI-12 sensor-bus codec (server/peripherals/sdi12): the command
 // builders, the measurement-response parser, the data-value parser, and the SDI-12 CRC-16. All
 // pure ASCII/codec logic - the 1200-baud UART line handling is real-hardware and out of scope; only
 // the deterministic per-message CPU path is benched.
@@ -9,7 +9,7 @@
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/sdi12 -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/peripherals/sdi12/sdi12.h"
+#include "server/peripherals/sdi12/sdi12.h"
 
 #include <stdbool.h>
 #include <stddef.h>

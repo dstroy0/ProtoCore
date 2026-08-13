@@ -3,7 +3,7 @@
 //
 // Host tests for services/exc_decoder: parsing a real ESP32 Guru Meditation panic dump.
 
-#include "server/system/exc_decoder.h"
+#include "server/core/exc_decoder.h"
 #include <stdio.h>
 #include <string.h>
 

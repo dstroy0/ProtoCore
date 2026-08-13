@@ -9,7 +9,7 @@
 
 #include "services/iot/mqtt/mqtt.h"
 #include "mmgr/protomem.h"
-#include "mmgr/rawmemcpy.h"     // proto_raw_read: a partial packet shifts to the front of rx
+#include "mmgr/rawmemcpy.h"     // raw.read: a partial packet shifts to the front of rx
 #include "mmgr/secure.h"        // protocore_secure_persist_span: this module's storage
 #include "server/clock/clock.h" // protocore_millis: the link timer and the keep-alive read it
 
@@ -627,7 +627,7 @@ static proto_bool mq_mem_bind(void)
         return PROTO_TRUE;
     }
     protocore_span mem = protocore_secure_persist_span(2u * PROTOCORE_MQTT_BUF_SIZE);
-    if (!protocore_span_ok(mem))
+    if (!span.ok(mem))
     {
         return PROTO_FALSE;
     }
@@ -877,7 +877,7 @@ static void process_rx()
         s_mqtt.rx_len -= off;
         if (s_mqtt.rx_len != 0)
         {
-            proto_raw_read(s_mqtt.rx, s_mqtt.rx + off, s_mqtt.rx_len); // the partial waits at the front
+            raw.read(s_mqtt.rx, s_mqtt.rx + off, s_mqtt.rx_len); // the partial waits at the front
         }
     }
 }

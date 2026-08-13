@@ -35,7 +35,7 @@
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #include "network_drivers/tls/ssh_rsa.h"
 #include "core_setup/hal/esp/esp_mnt_fs.h"
-#include "server/filesystem/filesystem.h"
+#include "server/storage/filesystem.h"
 #include "network_drivers/application/scp/ssh_scp.h"
 #include "network_drivers/application/sftp/ssh_sftp.h"
 #include <LittleFS.h>

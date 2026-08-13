@@ -13,7 +13,6 @@
 
 #include "client.h"
 #include "mmgr/protomem.h"
-#include "network_drivers/network/network.h"
 
 // Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
 // build leaves DNS_RESOLVER off, so the resolver symbols this unit calls would not be declared -
@@ -80,7 +79,7 @@ static struct TcpClientStorage s_store;
 
 static struct TcpClientInternal s_client = {.store = &s_store, .ns = &TcpClient, .pump = cc_pump};
 
-// Hostname resolution goes through network.dns->resolver.
+// Hostname resolution goes through @ref Resolver, the library's one DNS owner.
 
 // --- stack callbacks (stack context); arg = the owning ClientConn* -----------
 
@@ -273,8 +272,10 @@ static void cc_pump(struct TcpClientInternal *restrict ctx)
     }
 
     // Resolve through the shared DNS owner, which reports busy until its own answer lands.
-    uint32_t ip = 0;
-    protocore_dns_state s = network.dns->resolver->resolve(c->host, &ip);
+    Resolver.query.host = c->host;
+    Resolver.resolve(Resolver.internal);
+    protocore_dns_state s = Resolver.state;
+    uint32_t ip = Resolver.u32;
     if (s == PROTOCORE_DNS_BUSY)
     {
         return;

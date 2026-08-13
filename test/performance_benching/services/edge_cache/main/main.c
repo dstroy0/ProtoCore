@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the CDN edge-cache pure engine (services/web/edge_cache):
+// On-device CCOUNT microbenchmark for the CDN edge-cache pure engine (server/web/edge_cache):
 // response header-field access, HTTP-date parsing (IMF-fixdate), RFC 9111 cache-key canonicalization
 // + SHA-256 digest + Vary secondary-key serialization, and the L1 RAM store's O(slots) lookup - all
 // pure (no sockets, no heap, no PC). Worked example for performance_benching/device/<service>/: a pure protocol
@@ -15,7 +15,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/web/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache.h"
 
 #include <strings.h>
 

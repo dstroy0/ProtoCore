@@ -3,7 +3,7 @@
 //
 // Host tests for services/tls_policy: version negotiation, cipher selection, AEAD classification.
 
-#include "services/security/tls_policy/tls_policy.h"
+#include "server/security/tls_policy/tls_policy.h"
 
 #include <unity.h>
 

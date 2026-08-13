@@ -193,7 +193,7 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     // as struct members they cannot drift from a layout documented somewhere else.
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(sizeof(BnExpmodWork), _Alignof(BnExpmodWork));
-    if (!protocore_span_ok(ws))
+    if (!span.ok(ws))
     {
         protocore_secure_release(mark);
         memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check

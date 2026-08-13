@@ -305,11 +305,11 @@ static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
 
 int protocore_ssh_rsa_load_pubkey(void)
 {
-    if (!protocore_span_has_storage(s_rsa.d))
+    if (!span.has_storage(s_rsa.d))
     {
         s_rsa.d = protocore_secure_persist_span(PROTOCORE_RSA_KEY_BYTES);
     }
-    if (!protocore_span_has_storage(s_rsa.d))
+    if (!span.has_storage(s_rsa.d))
     {
         return -1;
     }
@@ -319,7 +319,7 @@ int protocore_ssh_rsa_load_pubkey(void)
     // The DER is a working set: borrowed for this call, wiped by the release on every path out.
     const size_t mark = protocore_secure_mark();
     protocore_span der = protocore_secure_span(SSH_RSA_KEY_DER_MAX, 0);
-    if (!protocore_span_has_storage(der))
+    if (!span.has_storage(der))
     {
         protocore_secure_release(mark);
         return -1;

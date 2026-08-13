@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the INA219 current/power codec (services/peripherals/ina219): decoding the bus-voltage
+// Unit tests for the INA219 current/power codec (server/peripherals/ina219): decoding the bus-voltage
 // register (value in bits [15:3], LSB 4 mV, low status bits ignored) and the shunt-voltage
 // register (signed, LSB 10 uV), computing the calibration register from the current LSB and the
 // shunt resistance, and scaling the raw current / power registers. The I2C transfer is
 // ESP32-only.
 
-#include "services/peripherals/ina219/ina219.h"
+#include "server/peripherals/ina219/ina219.h"
 #include <stdint.h>
 #include <unity.h>
 

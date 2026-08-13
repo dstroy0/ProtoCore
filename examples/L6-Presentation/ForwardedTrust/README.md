@@ -72,7 +72,7 @@ verbatim with added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/security/forwarded_trust/forwarded_trust.h" // protocore_forwarded_trust_add_cidr()
+#include "server/security/forwarded_trust/forwarded_trust.h" // protocore_forwarded_trust_add_cidr()
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

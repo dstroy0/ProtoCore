@@ -22,7 +22,7 @@
 #include "../../net_addr/net_addr.h" // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
 #include "../tcp.h"      // the aggregate the halves hang off
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's queues, under our names
-#include "server/system/worker.h"        // Workers.wake() - nudge the owning worker task
+#include "server/core/worker.h"        // Workers.wake() - nudge the owning worker task
 #include "network_drivers/tls/tls.h"               // TLS handshake begin (self-stubbing)
 #include "server/clock/clock.h"                    // protocore_millis() pluggable monotonic clock
 #include "../common.h" // TcpConn, conn_pool: the slots an accept claims

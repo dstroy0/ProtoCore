@@ -207,8 +207,8 @@ static void protocore_json_int(protocore_json_writer *w, long v)
 {
     char tmp[24];
     protocore_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    protocore_sb_i64(&sb_tmp, (int64_t)(v));
-    if (protocore_sb_finish(&sb_tmp) == 0)
+    Sb.i64(&sb_tmp, (int64_t)(v));
+    if (Sb.finish(&sb_tmp) == 0)
     {
         tmp[0] = '\0';
     }
@@ -220,8 +220,8 @@ static void protocore_json_uint(protocore_json_writer *w, unsigned long v)
 {
     char tmp[24];
     protocore_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    protocore_sb_u32(&sb_tmp2, (uint32_t)(v));
-    if (protocore_sb_finish(&sb_tmp2) == 0)
+    Sb.u32(&sb_tmp2, (uint32_t)(v));
+    if (Sb.finish(&sb_tmp2) == 0)
     {
         tmp[0] = '\0';
     }

@@ -34,7 +34,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/web/edge_cache/edge_cache_proxy.h"
+#include "server/web/edge_cache/edge_cache_proxy.h"
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";

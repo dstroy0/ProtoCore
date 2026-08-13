@@ -3,10 +3,12 @@
 
 /**
  * @file totp.c
- * @brief HMAC-SHA1 HOTP/TOTP (RFC 4226 / 6238) + base32 decode (pure).
+ * @brief HOTP (RFC 4226) and TOTP (RFC 6238) over HMAC-SHA-1, and the base32 secret (RFC 4648).
  *
- * HMAC-SHA1 is built on the existing one-shot software SHA-1; the TOTP message is
- * the 8-byte counter, so all working buffers are fixed and stack-local.
+ * HMAC-SHA-1 is RFC 2104 sec 2 H(K XOR opad, H(K XOR ipad, text)) built on the platform's one-shot
+ * SHA-1. The text is always the 8-byte counter of RFC 4226 sec 5.2, so every working buffer is a
+ * fixed size and stack-local. RFC 4226 sec 5.3 truncates the MAC and reduces it mod 10^Digit;
+ * RFC 6238 sec 4.2 supplies the counter as T = (Current Unix time - T0) / X.
  */
 
 #include "services/security/totp/totp.h"
@@ -16,42 +18,27 @@
 
 #include "crypto/hash/sha1.h"
 
-#define PROTOCORE_BLOCK 64 // SHA-1 block size
+/** @brief B: the block length HMAC pads K out to for SHA-1 (RFC 2104 sec 2). */
+#define PROTOCORE_TOTP_HMAC_B 64
 
-// HMAC-SHA1 over an 8-byte message (the HOTP/TOTP counter).
-static void protocore_hmac_sha1_8(const uint8_t *key, size_t keylen, const uint8_t msg[8],
-                                  uint8_t out[PROTOCORE_SHA1_DIGEST_LEN])
+/** @brief The counter C occupies 8 bytes, high-order byte first (RFC 4226 sec 5.2). */
+#define PROTOCORE_TOTP_C_LEN 8
+
+/**
+ * @brief The module's handle onto its own calls - what TotpNs points at.
+ *
+ * No store member: nothing in this file has static lifetime past the handle itself.
+ *
+ * @var TotpInternal::ns  the handle a caller sets a call's members on
+ */
+struct TotpInternal
 {
-    uint8_t k[PROTOCORE_BLOCK] = {0};
-    if (keylen > PROTOCORE_BLOCK)
-    {
-        uint8_t kh[PROTOCORE_SHA1_DIGEST_LEN];
-        protocore_sha1(key, keylen, kh);
-        mem.cpy(k, kh, PROTOCORE_SHA1_DIGEST_LEN);
-    }
-    else
-    {
-        mem.cpy(k, key, keylen);
-    }
+    TotpNs *ns;
+};
 
-    uint8_t inner_in[PROTOCORE_BLOCK + 8];
-    for (int i = 0; i < PROTOCORE_BLOCK; i++)
-    {
-        inner_in[i] = k[i] ^ 0x36; // ipad
-    }
-    mem.cpy(inner_in + PROTOCORE_BLOCK, msg, 8);
-    uint8_t inner[PROTOCORE_SHA1_DIGEST_LEN];
-    protocore_sha1(inner_in, sizeof(inner_in), inner);
+static struct TotpInternal s_totp = {.ns = &Totp};
 
-    uint8_t outer_in[PROTOCORE_BLOCK + PROTOCORE_SHA1_DIGEST_LEN];
-    for (int i = 0; i < PROTOCORE_BLOCK; i++)
-    {
-        outer_in[i] = k[i] ^ 0x5c; // opad
-    }
-    mem.cpy(outer_in + PROTOCORE_BLOCK, inner, PROTOCORE_SHA1_DIGEST_LEN);
-    protocore_sha1(outer_in, sizeof(outer_in), out);
-}
-
+// 10^n.
 static uint32_t pow10u(uint8_t n)
 {
     uint32_t v = 1;
@@ -62,87 +49,163 @@ static uint32_t pow10u(uint8_t n)
     return v;
 }
 
-uint32_t protocore_hotp(const uint8_t *key, size_t keylen, uint64_t counter, uint8_t digits)
+// RFC 2104 sec 2 H(K XOR opad, H(K XOR ipad, text)) with text the 8-byte counter C: K is zero-padded
+// to B bytes, or replaced by H(K) when it is longer than B.
+static void hmac_sha1_counter(const uint8_t *key, size_t keylen, const uint8_t c[PROTOCORE_TOTP_C_LEN],
+                              uint8_t out[PROTOCORE_SHA1_DIGEST_LEN])
 {
-    uint8_t msg[8];
-    for (int i = 7; i >= 0; i--)
+    uint8_t k[PROTOCORE_TOTP_HMAC_B] = {0};
+    if (keylen > PROTOCORE_TOTP_HMAC_B)
     {
-        msg[i] = (uint8_t)(counter & 0xFF);
+        uint8_t kh[PROTOCORE_SHA1_DIGEST_LEN];
+        protocore_sha1(key, keylen, kh);
+        mem.cpy(k, kh, PROTOCORE_SHA1_DIGEST_LEN);
+    }
+    else
+    {
+        mem.cpy(k, key, keylen);
+    }
+
+    uint8_t inner_in[PROTOCORE_TOTP_HMAC_B + PROTOCORE_TOTP_C_LEN];
+    for (int i = 0; i < PROTOCORE_TOTP_HMAC_B; i++)
+    {
+        inner_in[i] = k[i] ^ 0x36; // ipad
+    }
+    mem.cpy(inner_in + PROTOCORE_TOTP_HMAC_B, c, PROTOCORE_TOTP_C_LEN);
+    uint8_t inner[PROTOCORE_SHA1_DIGEST_LEN];
+    protocore_sha1(inner_in, sizeof(inner_in), inner);
+
+    uint8_t outer_in[PROTOCORE_TOTP_HMAC_B + PROTOCORE_SHA1_DIGEST_LEN];
+    for (int i = 0; i < PROTOCORE_TOTP_HMAC_B; i++)
+    {
+        outer_in[i] = k[i] ^ 0x5c; // opad
+    }
+    mem.cpy(outer_in + PROTOCORE_TOTP_HMAC_B, inner, PROTOCORE_SHA1_DIGEST_LEN);
+    protocore_sha1(outer_in, sizeof(outer_in), out);
+}
+
+// RFC 4226 sec 5.2 HOTP(K,C) = Truncate(HMAC-SHA-1(K,C)): C goes in high-order byte first, DT takes
+// the low 4 bits of the last MAC byte as an offset, reads 4 bytes there and masks the top bit, and
+// the resulting 31-bit number reduces mod 10^Digit (RFC 4226 sec 5.3).
+static uint32_t hotp_value(const uint8_t *key, size_t keylen, uint64_t counter, uint8_t digit)
+{
+    uint8_t c[PROTOCORE_TOTP_C_LEN];
+    for (int i = PROTOCORE_TOTP_C_LEN - 1; i >= 0; i--)
+    {
+        c[i] = (uint8_t)(counter & 0xFF);
         counter >>= 8;
     }
-    uint8_t mac[PROTOCORE_SHA1_DIGEST_LEN];
-    protocore_hmac_sha1_8(key, keylen, msg, mac);
+    uint8_t hs[PROTOCORE_SHA1_DIGEST_LEN];
+    hmac_sha1_counter(key, keylen, c, hs);
 
-    int off = mac[PROTOCORE_SHA1_DIGEST_LEN - 1] & 0x0F; // dynamic truncation (RFC 4226 §5.3)
-    uint32_t bin = ((uint32_t)(mac[off] & 0x7F) << 24) | ((uint32_t)mac[off + 1] << 16) |
-                   ((uint32_t)mac[off + 2] << 8) | (uint32_t)mac[off + 3];
-    return bin % pow10u(digits);
+    int offset = hs[PROTOCORE_SHA1_DIGEST_LEN - 1] & 0x0F;
+    uint32_t sbits = ((uint32_t)(hs[offset] & 0x7F) << 24) | ((uint32_t)hs[offset + 1] << 16) |
+                     ((uint32_t)hs[offset + 2] << 8) | (uint32_t)hs[offset + 3];
+    return sbits % pow10u(digit);
 }
 
-uint32_t protocore_totp(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t period, uint8_t digits)
+// Digit, with 0 taking the RFC 4226 sec 5.3 minimum.
+static uint8_t otp_digit(struct TotpInternal *restrict ctx)
 {
-    if (period == 0)
-    {
-        period = 30;
-    }
-    return protocore_hotp(key, keylen, unix_time / period, digits);
+    return ctx->ns->digit ? ctx->ns->digit : (uint8_t)PROTOCORE_TOTP_DIGIT_MIN;
 }
 
-proto_bool protocore_totp_verify(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t code, uint32_t period,
-                                 uint8_t digits, int window)
+// RFC 6238 sec 4.2 T = (Current Unix time - T0) / X, floored. X of 0 takes the default; a clock
+// behind T0 gives step 0.
+static uint64_t time_step(struct TotpInternal *restrict ctx)
 {
-    if (period == 0)
+    uint32_t x = ctx->ns->step.x;
+    if (x == 0)
     {
-        period = 30;
+        x = PROTOCORE_TOTP_X_DEFAULT;
     }
-    int64_t step = (int64_t)(unix_time / period);
-    for (int w = -window; w <= window; w++)
+    if (ctx->ns->step.unix_time < ctx->ns->step.t0)
     {
-        int64_t c = step + w;
+        return 0;
+    }
+    return (ctx->ns->step.unix_time - ctx->ns->step.t0) / x;
+}
+
+// HOTP(K,C) for the counter the caller set (RFC 4226 sec 5.3).
+static void hotp(struct TotpInternal *restrict ctx)
+{
+    ctx->ns->u32 = hotp_value(ctx->ns->k, ctx->ns->keylen, ctx->ns->step.counter, otp_digit(ctx));
+}
+
+// RFC 6238 sec 4.2 TOTP = HOTP(K, T).
+static void totp(struct TotpInternal *restrict ctx)
+{
+    ctx->ns->u32 = hotp_value(ctx->ns->k, ctx->ns->keylen, time_step(ctx), otp_digit(ctx));
+}
+
+// RFC 6238 sec 6: match the submitted OTP against T and every step within the drift limit forward
+// and backward of it. Steps below the epoch are skipped; a negative drift matches nothing.
+static void verify(struct TotpInternal *restrict ctx)
+{
+    ctx->ns->ok = PROTO_FALSE;
+    const int32_t drift = ctx->ns->check.drift;
+    if (drift < 0)
+    {
+        return;
+    }
+    const uint8_t digit = otp_digit(ctx);
+    const int64_t t = (int64_t)time_step(ctx);
+    for (int32_t w = -drift; w <= drift; w++)
+    {
+        const int64_t c = t + w;
         if (c < 0)
         {
             continue;
         }
-        if (protocore_hotp(key, keylen, (uint64_t)c, digits) == code)
+        if (hotp_value(ctx->ns->k, ctx->ns->keylen, (uint64_t)c, digit) == ctx->ns->check.otp)
         {
-            return PROTO_TRUE;
+            ctx->ns->ok = PROTO_TRUE;
+            return;
         }
     }
-    return PROTO_FALSE;
 }
 
-int protocore_base32_decode(const char *b32, uint8_t *out, size_t cap)
+// RFC 4648 sec 6 base32 to bytes, 5 bits per character, most significant bit first. A-Z carry 0..25
+// and 2-7 carry 26..31; lowercase carries the same values as uppercase, and '=', ' ' and '-' are
+// skipped rather than rejected under RFC 4648 sec 3.3. Any other character, or a byte past cap,
+// ends the decode at -1.
+static void base32_decode(struct TotpInternal *restrict ctx)
 {
+    const char *b32 = ctx->ns->secret.b32;
+    uint8_t *out = ctx->ns->secret.out;
+    const size_t cap = ctx->ns->secret.cap;
+
+    ctx->ns->i32 = -1;
     if (!b32 || !out)
     {
-        return -1;
+        return;
     }
     uint32_t buffer = 0;
     int bits = 0;
     size_t n = 0;
     for (const char *p = b32; *p; p++)
     {
-        char c = *p;
+        char ch = *p;
         int val;
-        if (c >= 'A' && c <= 'Z')
+        if (ch >= 'A' && ch <= 'Z')
         {
-            val = c - 'A';
+            val = ch - 'A';
         }
-        else if (c >= 'a' && c <= 'z')
+        else if (ch >= 'a' && ch <= 'z')
         {
-            val = c - 'a';
+            val = ch - 'a';
         }
-        else if (c >= '2' && c <= '7')
+        else if (ch >= '2' && ch <= '7')
         {
-            val = c - '2' + 26;
+            val = ch - '2' + 26;
         }
-        else if (c == '=' || c == ' ' || c == '-')
+        else if (ch == '=' || ch == ' ' || ch == '-')
         {
-            continue; // padding / cosmetic separators
+            continue;
         }
         else
         {
-            return -1; // invalid base32 character
+            return;
         }
         buffer = (buffer << 5) | (uint32_t)val;
         bits += 5;
@@ -151,12 +214,15 @@ int protocore_base32_decode(const char *b32, uint8_t *out, size_t cap)
             bits -= 8;
             if (n >= cap)
             {
-                return -1;
+                return;
             }
             out[n++] = (uint8_t)((buffer >> bits) & 0xFF);
         }
     }
-    return (int)n;
+    ctx->ns->i32 = (int32_t)n;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+TotpNs Totp = {.hotp = hotp, .totp = totp, .verify = verify, .base32_decode = base32_decode, .internal = &s_totp};
 
 #endif // PROTOCORE_ENABLE_TOTP

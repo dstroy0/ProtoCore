@@ -24,7 +24,7 @@
 #define PROTOCORE_ENABLE_SEN0192 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
-#include "services/peripherals/sen0192/sen0192.h"
+#include "server/peripherals/sen0192/sen0192.h"
 
 static const int LED_PIN = 2; // onboard LED on most ESP32 dev boards
 

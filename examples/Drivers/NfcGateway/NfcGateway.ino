@@ -15,8 +15,8 @@
 // Build flags (whole build): PROTOCORE_ENABLE_PN532=1 PROTOCORE_ENABLE_GATEWAY=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "services/net/gateway/gateway.h"
-#include "services/peripherals/pn532/pn532.h"
+#include "server/net/gateway/gateway.h"
+#include "server/peripherals/pn532/pn532.h"
 #include <Wire.h>
 
 static const uint8_t PN532_I2C_ADDR = 0x24;

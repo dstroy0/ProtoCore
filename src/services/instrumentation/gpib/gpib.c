@@ -20,9 +20,9 @@ size_t protocore_gpib_command(char *buf, size_t cap, const char *cmd)
     }
     protocore_sb sb_cmd = {buf, cap, 0, PROTO_TRUE};
     protocore_sb_lit(&sb_cmd, "++");
-    protocore_sb_put(&sb_cmd, cmd);
+    Sb.put(&sb_cmd, cmd);
     protocore_sb_lit(&sb_cmd, "\n");
-    return protocore_sb_finish(&sb_cmd);
+    return Sb.finish(&sb_cmd);
 }
 
 size_t protocore_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad)
@@ -33,14 +33,14 @@ size_t protocore_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad)
     }
     protocore_sb sb_addr = {buf, cap, 0, PROTO_TRUE};
     protocore_sb_lit(&sb_addr, "++addr ");
-    protocore_sb_u32(&sb_addr, pad);
+    Sb.u32(&sb_addr, pad);
     if (sad >= 0)
     {
-        protocore_sb_ch(&sb_addr, ' ');
-        protocore_sb_i64(&sb_addr, sad);
+        Sb.ch(&sb_addr, ' ');
+        Sb.i64(&sb_addr, sad);
     }
     protocore_sb_lit(&sb_addr, "\n");
-    return protocore_sb_finish(&sb_addr);
+    return Sb.finish(&sb_addr);
 }
 
 size_t protocore_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
@@ -57,7 +57,7 @@ size_t protocore_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
         break;
     case UNTIL_CHAR:
         protocore_sb_lit(&sb_read, "++read ");
-        protocore_sb_u32(&sb_read, ch);
+        Sb.u32(&sb_read, ch);
         protocore_sb_lit(&sb_read, "\n");
         break;
     case UNTIL_TIMEOUT:
@@ -65,7 +65,7 @@ size_t protocore_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
         protocore_sb_lit(&sb_read, "++read\n");
         break;
     }
-    return protocore_sb_finish(&sb_read);
+    return Sb.finish(&sb_read);
 }
 
 size_t protocore_gpib_spoll(char *buf, size_t cap, int pad, int sad)
@@ -78,16 +78,16 @@ size_t protocore_gpib_spoll(char *buf, size_t cap, int pad, int sad)
     protocore_sb_lit(&sb_spoll, "++spoll");
     if (pad >= 0)
     {
-        protocore_sb_ch(&sb_spoll, ' ');
-        protocore_sb_i64(&sb_spoll, pad);
+        Sb.ch(&sb_spoll, ' ');
+        Sb.i64(&sb_spoll, pad);
         if (sad >= 0)
         {
-            protocore_sb_ch(&sb_spoll, ' ');
-            protocore_sb_i64(&sb_spoll, sad);
+            Sb.ch(&sb_spoll, ' ');
+            Sb.i64(&sb_spoll, sad);
         }
     }
     protocore_sb_lit(&sb_spoll, "\n");
-    return protocore_sb_finish(&sb_spoll);
+    return Sb.finish(&sb_spoll);
 }
 
 size_t protocore_gpib_eos(char *buf, size_t cap, GpibEos eos)
@@ -98,9 +98,9 @@ size_t protocore_gpib_eos(char *buf, size_t cap, GpibEos eos)
     }
     protocore_sb sb_eos = {buf, cap, 0, PROTO_TRUE};
     protocore_sb_lit(&sb_eos, "++eos ");
-    protocore_sb_i64(&sb_eos, (int64_t)eos); // the wire field IS the enumerator's decimal value
+    Sb.i64(&sb_eos, (int64_t)eos); // the wire field IS the enumerator's decimal value
     protocore_sb_lit(&sb_eos, "\n");
-    return protocore_sb_finish(&sb_eos);
+    return Sb.finish(&sb_eos);
 }
 
 size_t protocore_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, size_t len)

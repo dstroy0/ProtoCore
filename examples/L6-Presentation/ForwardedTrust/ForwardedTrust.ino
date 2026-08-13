@@ -32,7 +32,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/security/forwarded_trust/forwarded_trust.h"
+#include "server/security/forwarded_trust/forwarded_trust.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

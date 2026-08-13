@@ -27,7 +27,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/net/relay/relay_listener.h" // protocore_relay_publish
+#include "server/net/relay/relay_listener.h" // protocore_relay_publish
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";

@@ -44,7 +44,7 @@ reproduced verbatim with added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/storage/partition_monitor/partition_monitor.h"
+#include "server/storage/partition_monitor/partition_monitor.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

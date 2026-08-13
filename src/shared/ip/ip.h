@@ -131,9 +131,9 @@ struct IpInternal;
  * @var IpNs::is_unspecified  whether the address names nothing
  * @var IpNs::prefix_match    whether @c addr falls inside @c net at @c prefix_len bits
  *
- * No storage member: every operation reads its operands and holds nothing. Reached as
- * network.ip->parse(...), or directly as @ref Ip from inside the network layer.
- * , or directly as @ref Ip from inside the network layer.
+ * No storage member: every operation reads its operands and holds nothing. Reached as @ref Ip,
+ * or through network.ip, which points at it: set @c args, invoke the call with @c Ip.internal,
+ * then read the result member.
  */
 typedef struct
 {

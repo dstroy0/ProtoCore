@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the network-adaptation decision core (services/net/netadapt):
+// On-device CCOUNT microbenchmark for the network-adaptation decision core (server/net/netadapt):
 // pc_netadapt_window() sizes the TCP receive window / RX buffer from the free heap (reserve +
 // quarter-of-spare, clamped to [min,max]) and pc_netadapt_dhcp_fallback() decides when to stop
 // waiting on DHCP and switch to a static IP. Both are pure integer decisions - zero heap, no stdlib,
@@ -14,7 +14,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/netadapt/netadapt.h"
+#include "server/net/netadapt/netadapt.h"
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -3,15 +3,19 @@
 
 /**
  * @file dns.h
- * @brief Name resolution, both directions: asking and answering.
+ * @brief Layer 3 (Network) - name resolution, both directions: asking and answering.
  *
- * One module with two halves. The resolver turns a name into an address; the server answers a query
- * with one. They are the same protocol seen from either end, so they sit together and a caller
- * reaches whichever it needs through @ref Dns rather than knowing two modules.
+ * RFC 1034 sec 2.4 names two of the DNS's three major components as programs: RESOLVERS, "programs
+ * that extract information from name servers in response to client requests", described in sec 5,
+ * and NAME SERVERS, "server programs which hold information about the domain tree's structure and
+ * set information", described in sec 4. This module holds one of each and nothing else.
  *
- * Reached as `network.dns->resolver->resolve(...)`. The halves are pointers rather than values
- * because a table in one translation unit is not a constant expression in another, so a by-value
- * member could not be initialized from here.
+ * Each component is reached through its own handle: ::Resolver and ::DnsServer. Behind @ref
+ * DnsNs::internal they are pointers rather than values, because a table in one translation unit is
+ * not a constant expression in another, so a by-value member could not be initialized from here.
+ *
+ * A component its feature flag leaves out is not a member at all, so dns.c names only what the
+ * image already contains.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -20,38 +24,31 @@
 #ifndef PROTOCORE_DNS_H
 #define PROTOCORE_DNS_H
 
-#include "network_drivers/network/dns/dns_resolver.h"
-#include "network_drivers/network/dns/dns_server.h"
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
 
+/** @brief The two components, held where only dns.c describes them. */
+struct DnsInternal;
+
 /**
- * @brief Name resolution.
+ * @brief Name resolution (RFC 1034 sec 2.4).
  *
- * @var DnsNs::resolver  turning a name into an address
- * @var DnsNs::server    answering a query with one
+ * The handle carries no arguments and no results: it takes no call of its own, and each component
+ * takes its own arguments off its own handle.
  *
- * A half that its feature flag leaves out is a null member, so a caller tests the pointer rather
- * than repeating the flag.
+ * No storage member: the RESOLVER's timer and in-flight query belong to dns_resolver.c and the NAME
+ * SERVER's record table to dns_server.c, so this module owns no pool.
+ *
+ * @var DnsNs::internal  the RESOLVER (RFC 1034 sec 5) and the NAME SERVER (RFC 1034 sec 4)
  */
 typedef struct
 {
-#if PROTOCORE_NEED_DNS_RESOLVER
-    const ResolverNs *resolver;
-#endif
-#if PROTOCORE_ENABLE_DNS_SERVER
-    const DnsServerNs *server;
-#endif
-    // A struct with no members is not valid C, so the module keeps one when both halves are gated
-    // out. It states the same thing the members do: nothing here is available.
-#if !PROTOCORE_NEED_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
-    proto_bool present;
-#endif
+    struct DnsInternal *internal;
 } DnsNs;
 
 /** @brief The one symbol this module exports. */
-extern const DnsNs Dns;
+extern DnsNs Dns;
 
 PROTOCORE_END_DECLS
 

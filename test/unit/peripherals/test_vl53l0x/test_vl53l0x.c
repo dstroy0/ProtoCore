@@ -4,7 +4,7 @@
 // Host tests for services/vl53l0x: the ToF ranging codec (range combine, data-ready, range status).
 // The Wire ranging binding is ESP32-only and not exercised here.
 
-#include "services/peripherals/vl53l0x/vl53l0x.h"
+#include "server/peripherals/vl53l0x/vl53l0x.h"
 #include <unity.h>
 
 void setUp(void)

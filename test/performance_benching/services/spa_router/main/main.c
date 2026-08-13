@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SPA router core (services/web/spa_router): the path
+// On-device CCOUNT microbenchmark for the SPA router core (server/web/spa_router): the path
 // extension check (deep-link vs asset) and the conditional UI-fragment streamer that assembles a
 // single-page-app shell one fragment at a time. Pure string logic; no server.
 //
 // Build/flash:  idf.py -C test/performance_benching/spa_router -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/web/spa_router/spa_router.h"
+#include "server/web/spa_router/spa_router.h"
 
 #include <stdbool.h>
 #include <stddef.h>

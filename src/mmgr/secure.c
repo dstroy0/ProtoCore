@@ -15,22 +15,45 @@
 #include "mmgr/arena.h"
 #include <assert.h>
 
-// Per-slot pool instances, owned by one instance with internal linkage.
-typedef struct
+/** @brief The pool's compile-time backing bytes: one arena's worth per slot, in one block. */
+struct SecureStorage
 {
+    _Alignas(32) uint8_t mem[PROTOCORE_SEC_POOL_SLOTS][PROTOCORE_SECURE_ARENA_SIZE];
+};
+
+/**
+ * @brief The pool's state: the per-slot arenas, the block they hand out of, and the debug owner
+ *        table.
+ *
+ * @var SecureInternal::store  the backing block, NULL until the first borrow binds it
+ * @var SecureInternal::pool   one arena per slot, indexed by the calling worker's slot
+ * @var SecureInternal::owner  the execution context that first touched each slot, debug builds only
+ */
+struct SecureInternal
+{
+    struct SecureStorage *store;
     protocore_arena pool[PROTOCORE_SEC_POOL_SLOTS];
-} SecurePoolCtx;
-static SecurePoolCtx s_secure;
+#if PROTOCORE_DEBUG_CHECKS
+    uintptr_t owner[PROTOCORE_SEC_POOL_SLOTS];
+#endif
+};
 
 // Backing storage in its OWN linker symbol, named only from bind() below and therefore only from the
 // allocation path. A firmware that never borrows secure storage has the allocator garbage-collected and
 // this storage with it. protocore_secure_reset() must NOT bind, for the same reason protocore_plaintext_reset() must
 // not: --gc-sections is per-symbol and one always-live reference would anchor the whole block.
-typedef struct
+static struct SecureStorage s_store;
+
+// Every mutable this module has, in one object. Zero at boot: bind() fills in the block pointer and
+// the slot's arena on that slot's first borrow, so the state holds a reference to the block only
+// once something has borrowed from it.
+struct SecureInternal protocore_secure_state;
+
+// The state, under one name.
+static inline struct SecureInternal *secure_ctx(void)
 {
-    _Alignas(32) uint8_t mem[PROTOCORE_SEC_POOL_SLOTS][PROTOCORE_SECURE_ARENA_SIZE];
-} SecurePoolStorageCtx;
-static SecurePoolStorageCtx s_secure_storage;
+    return &protocore_secure_state;
+}
 
 // Byte offset of @p p within the whole secure block. The slot count and slot size are compile-time,
 // so the pool is ONE region of known extent: no loop, no per-slot compare, just an unsigned
@@ -39,9 +62,9 @@ static SecurePoolStorageCtx s_secure_storage;
 //
 // No power-of-two requirement, matching the plaintext pool: the per-die profiles size these to what
 // each part can afford (s3 12288, c6 10240), and subtract-and-compare does not care.
-static inline uintptr_t secure_offset(const void *p)
+static inline uintptr_t secure_offset(const struct SecureInternal *ctx, const void *p)
 {
-    return (uintptr_t)p - (uintptr_t)s_secure_storage.mem;
+    return (uintptr_t)p - (uintptr_t)ctx->store;
 }
 
 // The clamp guarantees a legal index, and only that: a caller that is not a server worker lands on
@@ -53,42 +76,43 @@ static inline int cur_worker(void)
 }
 
 // Debug tripwire: one execution context per slot, as on the plaintext side.
-static inline void assert_single_owner(int w)
+static inline void assert_single_owner(struct SecureInternal *ctx, int w)
 {
 #if PROTOCORE_DEBUG_CHECKS
     // Off by default; see PROTOCORE_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
     // not name an RTOS.
-    static uintptr_t s_owner[PROTOCORE_SEC_POOL_SLOTS] = {0};
     const uintptr_t cur = protocore_platform_context_id();
-    if (s_owner[w] == 0)
+    if (ctx->owner[w] == 0)
     {
-        s_owner[w] = cur;
+        ctx->owner[w] = cur;
     }
     else
     {
-        assert(s_owner[w] == cur && "secure pool borrowed from a foreign task");
+        assert(ctx->owner[w] == cur && "secure pool borrowed from a foreign task");
     }
 #else
+    (void)ctx;
     (void)w;
 #endif
 }
 
-// Bind slot @p w to its storage on first use. The ONLY reference to s_secure_storage.
-static inline protocore_arena *bind(int w)
+// Bind slot @p w to its storage on first use. The ONLY reference to s_store.
+static inline protocore_arena *bind(struct SecureInternal *ctx, int w)
 {
-    protocore_arena *a = &s_secure.pool[w];
+    protocore_arena *a = &ctx->pool[w];
     if (a->base == NULL)
     {
-        protocore_arena_init(a, s_secure_storage.mem[w], PROTOCORE_SECURE_ARENA_SIZE);
+        ctx->store = &s_store;
+        protocore_arena_init(a, ctx->store->mem[w], PROTOCORE_SECURE_ARENA_SIZE);
     }
     return a;
 }
 
 // The slot WITHOUT binding it, for observers and the reset. An unbound slot has never allocated, so
 // it holds nothing to wipe.
-static inline protocore_arena *peek(int w)
+static inline protocore_arena *peek(struct SecureInternal *ctx, int w)
 {
-    protocore_arena *a = &s_secure.pool[w];
+    protocore_arena *a = &ctx->pool[w];
     return (a->base != NULL) ? a : NULL;
 }
 
@@ -112,10 +136,11 @@ static inline void wipe_down_to(protocore_arena *a, size_t mark)
 
 void *protocore_secure_alloc(size_t n, size_t align)
 {
+    struct SecureInternal *ctx = secure_ctx();
     int w = cur_worker();
-    assert_single_owner(w);
+    assert_single_owner(ctx, w);
     assert((align & (align - 1)) == 0 && "secure alignment must be a power of two");
-    return protocore_arena_scratch_alloc_aligned(bind(w), n, align);
+    return protocore_arena_scratch_alloc_aligned(bind(ctx, w), n, align);
 }
 
 protocore_span protocore_secure_span(size_t n, size_t align)
@@ -125,33 +150,37 @@ protocore_span protocore_secure_span(size_t n, size_t align)
 
 protocore_span protocore_secure_persist_span(size_t n)
 {
+    struct SecureInternal *ctx = secure_ctx();
     int w = cur_worker();
-    assert_single_owner(w);
+    assert_single_owner(ctx, w);
     // The persistent end grows up from the base and the scratch end bumps down from the top, so a
     // mark taken on the scratch end never reaches this and no release reclaims it. The arena hands
     // these bytes back zeroed.
-    return protocore_span_from((uint8_t *)protocore_arena_persist_alloc(bind(w), n), n);
+    return protocore_span_from((uint8_t *)protocore_arena_persist_alloc(bind(ctx, w), n), n);
 }
 
 size_t protocore_secure_mark(void)
 {
+    struct SecureInternal *ctx = secure_ctx();
     int w = cur_worker();
-    assert_single_owner(w);
-    return protocore_arena_scratch_mark(bind(w));
+    assert_single_owner(ctx, w);
+    return protocore_arena_scratch_mark(bind(ctx, w));
 }
 
 void protocore_secure_release(size_t mark)
 {
+    struct SecureInternal *ctx = secure_ctx();
     int w = cur_worker();
-    assert_single_owner(w);
-    wipe_down_to(bind(w), mark);
+    assert_single_owner(ctx, w);
+    wipe_down_to(bind(ctx, w), mark);
 }
 
 void protocore_secure_reset(void)
 {
+    struct SecureInternal *ctx = secure_ctx();
     int w = cur_worker();
-    assert_single_owner(w);
-    protocore_arena *a = peek(w); // must not bind: would anchor the storage into builds that never borrow
+    assert_single_owner(ctx, w);
+    protocore_arena *a = peek(ctx, w); // must not bind: would anchor the storage into builds that never borrow
     if (a != NULL)
     {
         wipe_down_to(a, a->size); // the empty position: wipes everything live
@@ -160,16 +189,17 @@ void protocore_secure_reset(void)
 
 size_t protocore_secure_used(void)
 {
-    const protocore_arena *a = peek(cur_worker());
+    const protocore_arena *a = peek(secure_ctx(), cur_worker());
     return (a != NULL) ? protocore_arena_scratch_used(a) : 0;
 }
 
 size_t protocore_secure_high_water(void)
 {
+    struct SecureInternal *ctx = secure_ctx();
     size_t peak = 0;
     for (int w = 0; w < PROTOCORE_SEC_POOL_SLOTS; w++)
     {
-        const protocore_arena *a = peek(w);
+        const protocore_arena *a = peek(ctx, w);
         if (a != NULL && a->scratch_hw > peak)
         {
             peak = a->scratch_hw;
@@ -185,13 +215,21 @@ size_t protocore_secure_capacity(void)
 
 proto_bool protocore_secure_owns(const void *p)
 {
-    return secure_offset(p) < (uintptr_t)sizeof(s_secure_storage.mem);
+    const struct SecureInternal *ctx = secure_ctx();
+    // An unbound block has handed out nothing, so no pointer is inside it and the subtract has no
+    // base to run against.
+    return ctx->store != NULL && secure_offset(ctx, p) < (uintptr_t)sizeof(ctx->store->mem);
 }
 
 int protocore_secure_slot_of(const void *p)
 {
-    const uintptr_t off = secure_offset(p);
-    if (off >= (uintptr_t)sizeof(s_secure_storage.mem))
+    const struct SecureInternal *ctx = secure_ctx();
+    if (ctx->store == NULL)
+    {
+        return -1;
+    }
+    const uintptr_t off = secure_offset(ctx, p);
+    if (off >= (uintptr_t)sizeof(ctx->store->mem))
     {
         return -1;
     }

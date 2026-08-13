@@ -25,19 +25,19 @@ static size_t write_header(uint8_t *buf, size_t cap, const AdsRequest *r, AdsCom
     // AMS/TCP header: reserved(2) + length(4). length covers the AMS header + payload.
     buf[p++] = 0x00;
     buf[p++] = 0x00;
-    p += protocore_wr32le(buf + p, (uint32_t)ADS_AMS_HDR_LEN + payload_len);
+    p += endian.wr32le(buf + p, (uint32_t)ADS_AMS_HDR_LEN + payload_len);
     // AMS header.
     mem.cpy(buf + p, r->target.net_id, ADS_NET_ID_LEN);
     p += ADS_NET_ID_LEN;
-    p += protocore_wr16le(buf + p, r->target.port);
+    p += endian.wr16le(buf + p, r->target.port);
     mem.cpy(buf + p, r->source.net_id, ADS_NET_ID_LEN);
     p += ADS_NET_ID_LEN;
-    p += protocore_wr16le(buf + p, r->source.port);
-    p += protocore_wr16le(buf + p, (uint16_t)cmd); // wire byte in
-    p += protocore_wr16le(buf + p, ADS_STATE_REQUEST);
-    p += protocore_wr32le(buf + p, payload_len); // cbData
-    p += protocore_wr32le(buf + p, 0);           // error code (0 on a request)
-    p += protocore_wr32le(buf + p, r->invoke_id);
+    p += endian.wr16le(buf + p, r->source.port);
+    p += endian.wr16le(buf + p, (uint16_t)cmd); // wire byte in
+    p += endian.wr16le(buf + p, ADS_STATE_REQUEST);
+    p += endian.wr32le(buf + p, payload_len); // cbData
+    p += endian.wr32le(buf + p, 0);           // error code (0 on a request)
+    p += endian.wr32le(buf + p, r->invoke_id);
     return p; // == ADS_HDR_LEN
 }
 
@@ -59,9 +59,9 @@ size_t protocore_ads_build_read(uint8_t *buf, size_t cap, const AdsRequest *r, u
     {
         return 0;
     }
-    p += protocore_wr32le(buf + p, index_group);
-    p += protocore_wr32le(buf + p, index_offset);
-    p += protocore_wr32le(buf + p, read_len);
+    p += endian.wr32le(buf + p, index_group);
+    p += endian.wr32le(buf + p, index_offset);
+    p += endian.wr32le(buf + p, read_len);
     return p;
 }
 
@@ -77,9 +77,9 @@ size_t protocore_ads_build_write(uint8_t *buf, size_t cap, const AdsRequest *r, 
     {
         return 0;
     }
-    p += protocore_wr32le(buf + p, index_group);
-    p += protocore_wr32le(buf + p, index_offset);
-    p += protocore_wr32le(buf + p, len);
+    p += endian.wr32le(buf + p, index_group);
+    p += endian.wr32le(buf + p, index_offset);
+    p += endian.wr32le(buf + p, len);
     if (len)
     {
         mem.cpy(buf + p, data, len);
@@ -100,10 +100,10 @@ size_t protocore_ads_build_read_write(uint8_t *buf, size_t cap, const AdsRequest
     {
         return 0;
     }
-    p += protocore_wr32le(buf + p, index_group);
-    p += protocore_wr32le(buf + p, index_offset);
-    p += protocore_wr32le(buf + p, read_len);
-    p += protocore_wr32le(buf + p, write_len);
+    p += endian.wr32le(buf + p, index_group);
+    p += endian.wr32le(buf + p, index_offset);
+    p += endian.wr32le(buf + p, read_len);
+    p += endian.wr32le(buf + p, write_len);
     if (write_len)
     {
         mem.cpy(buf + p, write_data, write_len);
@@ -124,9 +124,9 @@ size_t protocore_ads_build_write_control(uint8_t *buf, size_t cap, const AdsRequ
     {
         return 0;
     }
-    p += protocore_wr16le(buf + p, protocore_ads_state);
-    p += protocore_wr16le(buf + p, device_state);
-    p += protocore_wr32le(buf + p, len);
+    p += endian.wr16le(buf + p, protocore_ads_state);
+    p += endian.wr16le(buf + p, device_state);
+    p += endian.wr32le(buf + p, len);
     if (len)
     {
         mem.cpy(buf + p, data, len);
@@ -145,12 +145,12 @@ size_t protocore_ads_build_add_notification(uint8_t *buf, size_t cap, const AdsR
     {
         return 0;
     }
-    p += protocore_wr32le(buf + p, index_group);
-    p += protocore_wr32le(buf + p, index_offset);
-    p += protocore_wr32le(buf + p, length);
-    p += protocore_wr32le(buf + p, (uint32_t)mode); // wire byte in
-    p += protocore_wr32le(buf + p, max_delay);
-    p += protocore_wr32le(buf + p, cycle_time);
+    p += endian.wr32le(buf + p, index_group);
+    p += endian.wr32le(buf + p, index_offset);
+    p += endian.wr32le(buf + p, length);
+    p += endian.wr32le(buf + p, (uint32_t)mode); // wire byte in
+    p += endian.wr32le(buf + p, max_delay);
+    p += endian.wr32le(buf + p, cycle_time);
     mem.set(buf + p, 0, 16); // reserved
     p += 16;
     return p;
@@ -163,7 +163,7 @@ size_t protocore_ads_build_del_notification(uint8_t *buf, size_t cap, const AdsR
     {
         return 0;
     }
-    p += protocore_wr32le(buf + p, notification_handle);
+    p += endian.wr32le(buf + p, notification_handle);
     return p;
 }
 
@@ -177,7 +177,7 @@ proto_bool protocore_ads_parse_ams_header(const uint8_t *buf, size_t len, AdsAms
     {
         return PROTO_FALSE;
     }
-    uint32_t frame_len = protocore_rd32le(buf + 2); // AMS header + payload
+    uint32_t frame_len = endian.rd32le(buf + 2); // AMS header + payload
     if (frame_len < (uint32_t)ADS_AMS_HDR_LEN)
     {
         return PROTO_FALSE;
@@ -188,14 +188,14 @@ proto_bool protocore_ads_parse_ams_header(const uint8_t *buf, size_t len, AdsAms
     }
     const uint8_t *a = buf + ADS_AMSTCP_HDR_LEN;
     mem.cpy(out->target.net_id, a, ADS_NET_ID_LEN);
-    out->target.port = protocore_rd16le(a + 6);
+    out->target.port = endian.rd16le(a + 6);
     mem.cpy(out->source.net_id, a + 8, ADS_NET_ID_LEN);
-    out->source.port = protocore_rd16le(a + 14);
-    out->cmd = (AdsCommand)protocore_rd16le(a + 16); // wire byte out
-    out->state_flags = protocore_rd16le(a + 18);
-    out->data_len = protocore_rd32le(a + 20);
-    out->error_code = protocore_rd32le(a + 24);
-    out->invoke_id = protocore_rd32le(a + 28);
+    out->source.port = endian.rd16le(a + 14);
+    out->cmd = (AdsCommand)endian.rd16le(a + 16); // wire byte out
+    out->state_flags = endian.rd16le(a + 18);
+    out->data_len = endian.rd32le(a + 20);
+    out->error_code = endian.rd32le(a + 24);
+    out->invoke_id = endian.rd32le(a + 28);
     // cbData must fit inside the frame the AMS/TCP length promised.
     if ((uint32_t)ADS_AMS_HDR_LEN + out->data_len > frame_len)
     {
@@ -211,8 +211,8 @@ proto_bool protocore_ads_parse_read(const uint8_t *data, size_t data_len, AdsRea
     {
         return PROTO_FALSE;
     }
-    out->result = protocore_rd32le(data);
-    out->len = protocore_rd32le(data + 4);
+    out->result = endian.rd32le(data);
+    out->len = endian.rd32le(data + 4);
     if (8 + (size_t)out->len > data_len)
     {
         return PROTO_FALSE;
@@ -227,7 +227,7 @@ proto_bool protocore_ads_parse_result(const uint8_t *data, size_t data_len, uint
     {
         return PROTO_FALSE;
     }
-    *result = protocore_rd32le(data);
+    *result = endian.rd32le(data);
     return PROTO_TRUE;
 }
 
@@ -237,9 +237,9 @@ proto_bool protocore_ads_parse_read_state(const uint8_t *data, size_t data_len, 
     {
         return PROTO_FALSE;
     }
-    out->result = protocore_rd32le(data);
-    out->protocore_ads_state = protocore_rd16le(data + 4);
-    out->device_state = protocore_rd16le(data + 6);
+    out->result = endian.rd32le(data);
+    out->protocore_ads_state = endian.rd16le(data + 4);
+    out->device_state = endian.rd16le(data + 6);
     return PROTO_TRUE;
 }
 
@@ -249,10 +249,10 @@ proto_bool protocore_ads_parse_read_device_info(const uint8_t *data, size_t data
     {
         return PROTO_FALSE;
     }
-    out->result = protocore_rd32le(data);
+    out->result = endian.rd32le(data);
     out->version_major = data[4];
     out->version_minor = data[5];
-    out->version_build = protocore_rd16le(data + 6);
+    out->version_build = endian.rd16le(data + 6);
     mem.cpy(out->device_name, data + 8, ADS_DEVICE_NAME_LEN);
     out->device_name[ADS_DEVICE_NAME_LEN] = '\0'; // the field is not guaranteed NUL-terminated
     return PROTO_TRUE;
@@ -264,8 +264,8 @@ proto_bool protocore_ads_parse_add_notification(const uint8_t *data, size_t data
     {
         return PROTO_FALSE;
     }
-    *result = protocore_rd32le(data);
-    *handle = protocore_rd32le(data + 4);
+    *result = endian.rd32le(data);
+    *handle = endian.rd32le(data + 4);
     return PROTO_TRUE;
 }
 
@@ -277,8 +277,8 @@ proto_bool protocore_ads_parse_notification(const uint8_t *data, size_t data_len
     {
         return PROTO_FALSE;
     }
-    uint32_t length = protocore_rd32le(data); // octets after this field
-    uint32_t stamps = protocore_rd32le(data + 4);
+    uint32_t length = endian.rd32le(data); // octets after this field
+    uint32_t stamps = endian.rd32le(data + 4);
     if (4 + (size_t)length > data_len)
     {
         return PROTO_FALSE;
@@ -290,8 +290,8 @@ proto_bool protocore_ads_parse_notification(const uint8_t *data, size_t data_len
         {
             return PROTO_FALSE;
         }
-        uint64_t timestamp = protocore_rd64le(data + p);
-        uint32_t samples = protocore_rd32le(data + p + 8);
+        uint64_t timestamp = endian.rd64le(data + p);
+        uint32_t samples = endian.rd32le(data + p + 8);
         p += 12;
         for (uint32_t i = 0; i < samples; i++)
         {
@@ -299,8 +299,8 @@ proto_bool protocore_ads_parse_notification(const uint8_t *data, size_t data_len
             {
                 return PROTO_FALSE;
             }
-            uint32_t handle = protocore_rd32le(data + p);
-            uint32_t size = protocore_rd32le(data + p + 4);
+            uint32_t handle = endian.rd32le(data + p);
+            uint32_t size = endian.rd32le(data + p + 4);
             p += 8;
             if (p + (size_t)size > data_len)
             {

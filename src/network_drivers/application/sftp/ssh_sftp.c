@@ -6,9 +6,9 @@
  * @brief SFTP server subsystem - the SSH_FXP_* state machine. See ssh_sftp.h.
  *
  * Accumulates SSH_FXP_* request packets from the channel byte stream, runs each against the filesystem
- * accessor, and frames responses back with protocore_ssh_channel_send_data. A large WRITE is streamed straight to the file
- * (never buffered whole); a READ returns a short DATA (the client re-requests). A fixed handle table holds
- * open files and directory cursors.
+ * accessor, and frames responses back with protocore_ssh_channel_send_data. A large WRITE is streamed straight to the
+ * file (never buffered whole); a READ returns a short DATA (the client re-requests). A fixed handle table holds open
+ * files and directory cursors.
  *
  * A request path goes to an operation as the bytes the client sent. This file does not join it, does not
  * resolve it, and does not check it for `..` - the accessor owns the root and the traversal guard, and a
@@ -25,7 +25,7 @@
 #include "network_drivers/application/sftp/sftp.h"
 #include "network_drivers/presentation/ssh/connection/connection.h" // callbacks + setters
 #include "network_drivers/presentation/ssh/network/network.h" // protocore_ssh_channel_send_data / protocore_ssh_channel_send_close
-#include "server/filesystem/filesystem.h"
+#include "server/storage/filesystem.h"
 
 // Leave headroom below one SSH packet for the CHANNEL_DATA framing, so protocore_ssh_channel_send_data never rejects a
 // response.
@@ -132,7 +132,7 @@ static int handle_index(SftpSession *s, const uint8_t *h, uint32_t hl)
     {
         return -1;
     }
-    uint32_t idx = protocore_rd32be(h);
+    uint32_t idx = endian.rd32be(h);
     return handle_open(s, (int)idx) ? (int)idx : -1;
 }
 
@@ -182,7 +182,7 @@ static void send_status(SftpSession *s, uint32_t id, uint32_t code, const char *
 static void send_handle(SftpSession *s, uint32_t id, int hi)
 {
     // The serializer returns the width it wrote, which is the length the HANDLE string carries.
-    size_t n = protocore_wr32be(s_sftp.hb, (uint32_t)hi);
+    size_t n = endian.wr32be(s_sftp.hb, (uint32_t)hi);
     send_resp(s, protocore_sftp_build_handle(id, s_sftp.hb, n, s_sftp.out, PROTOCORE_SFTP_RESP_CAP));
 }
 // --- write streaming ------------------------------------------------------------------------------
@@ -640,7 +640,7 @@ static proto_bool process_acc(SftpSession *s)
         {
             return PROTO_TRUE; // need the length prefix + the type byte
         }
-        uint32_t plen = protocore_rd32be(s->acc);
+        uint32_t plen = endian.rd32be(s->acc);
         if (plen == 0)
         {
             return PROTO_FALSE; // malformed

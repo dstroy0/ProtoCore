@@ -20,7 +20,7 @@
 #define PROTOCORE_ENABLE_INA219 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
-#include "services/peripherals/ina219/ina219.h"
+#include "server/peripherals/ina219/ina219.h"
 
 void setup()
 {

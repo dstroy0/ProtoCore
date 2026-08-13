@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for schema-driven config export/restore (services/storage/config_io) over
+// Unit tests for schema-driven config export/restore (server/storage/config_io) over
 // the host in-memory config store: export formatting, round-trip, unknown-key
 // skipping, and fail-closed overflow.
 
-#include "services/storage/config_io/config_io.h"
-#include "services/storage/config_store/config_store.h"
+#include "server/storage/config_io/config_io.h"
+#include "server/storage/config_store/config_store.h"
 #include <string.h>
 
 #include <unity.h>

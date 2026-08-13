@@ -69,9 +69,9 @@ protocore_cspan protocore_aesgcm_seal(struct protocore_aesgcm_key *k, const uint
     if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PROTOCORE_AESGCM_IV_LEN, aad, aad_len, pt,
                                   ct_out, PROTOCORE_AESGCM_TAG_LEN, tag_out) != 0)
     {
-        return protocore_cspan_from(NULL, 0);
+        return span.cfrom(NULL, 0);
     }
-    return protocore_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
+    return span.cfrom(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
 proto_bool protocore_aesgcm_open(struct protocore_aesgcm_key *k, const uint8_t nonce[PROTOCORE_AESGCM_IV_LEN],

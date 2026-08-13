@@ -22,7 +22,7 @@
 #define PROTOCORE_ENABLE_LD2410 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
-#include "services/peripherals/ld2410/ld2410.h"
+#include "server/peripherals/ld2410/ld2410.h"
 
 static const int RADAR_RX = 16; // ESP32 RX  <- module TX/OUT
 static const int RADAR_TX = 17; // ESP32 TX  -> module RX

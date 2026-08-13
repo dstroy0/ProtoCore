@@ -4,7 +4,7 @@
 // Host tests for services/fdc2214: the capacitance-to-digital codec (data combine, error flags,
 // frequency scale, config sequence). The Wire binding is ESP32-only and not exercised here.
 
-#include "services/peripherals/fdc2214/fdc2214.h"
+#include "server/peripherals/fdc2214/fdc2214.h"
 #include <unity.h>
 
 void setUp(void)

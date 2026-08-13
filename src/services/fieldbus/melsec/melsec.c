@@ -25,19 +25,19 @@ size_t protocore_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code
     buf[p++] = MELSEC_3E_REQ_SUBHEADER1;
     buf[p++] = MELSEC_NETWORK_DEFAULT;
     buf[p++] = MELSEC_PROTOCORE_DEFAULT;
-    p += protocore_wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
+    p += endian.wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
     buf[p++] = MELSEC_DEST_MULTIDROP_DEFAULT;
     // request data length = the octets from the monitoring timer onward:
     // timer(2) + command(2) + subcommand(2) + head device(3) + device code(1) + points(2) = 12
-    p += protocore_wr16le(buf + p, MELSEC_3E_READ_REQ_DATA_LEN);
-    p += protocore_wr16le(buf + p, monitoring_timer);
-    p += protocore_wr16le(buf + p, MELSEC_CMD_BATCH_READ);
-    p += protocore_wr16le(buf + p, MELSEC_SUBCMD_WORD);
+    p += endian.wr16le(buf + p, MELSEC_3E_READ_REQ_DATA_LEN);
+    p += endian.wr16le(buf + p, monitoring_timer);
+    p += endian.wr16le(buf + p, MELSEC_CMD_BATCH_READ);
+    p += endian.wr16le(buf + p, MELSEC_SUBCMD_WORD);
     buf[p++] = (uint8_t)(head_device & 0xFF); // head device number, 3 octets little-endian
     buf[p++] = (uint8_t)((head_device >> 8) & 0xFF);
     buf[p++] = (uint8_t)((head_device >> 16) & 0xFF);
     buf[p++] = device_code;
-    p += protocore_wr16le(buf + p, points);
+    p += endian.wr16le(buf + p, points);
     return p; // == MELSEC_3E_READ_REQ_LEN
 }
 
@@ -61,18 +61,18 @@ size_t protocore_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_cod
     buf[p++] = MELSEC_3E_REQ_SUBHEADER1;
     buf[p++] = MELSEC_NETWORK_DEFAULT;
     buf[p++] = MELSEC_PROTOCORE_DEFAULT;
-    p += protocore_wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
+    p += endian.wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
     buf[p++] = MELSEC_DEST_MULTIDROP_DEFAULT;
     // request data length = the fixed 12 (timer..points) plus the write data octets.
-    p += protocore_wr16le(buf + p, (uint16_t)(MELSEC_3E_READ_REQ_DATA_LEN + data_len));
-    p += protocore_wr16le(buf + p, monitoring_timer);
-    p += protocore_wr16le(buf + p, MELSEC_CMD_BATCH_WRITE);
-    p += protocore_wr16le(buf + p, MELSEC_SUBCMD_WORD);
+    p += endian.wr16le(buf + p, (uint16_t)(MELSEC_3E_READ_REQ_DATA_LEN + data_len));
+    p += endian.wr16le(buf + p, monitoring_timer);
+    p += endian.wr16le(buf + p, MELSEC_CMD_BATCH_WRITE);
+    p += endian.wr16le(buf + p, MELSEC_SUBCMD_WORD);
     buf[p++] = (uint8_t)(head_device & 0xFF); // head device number, 3 octets little-endian
     buf[p++] = (uint8_t)((head_device >> 8) & 0xFF);
     buf[p++] = (uint8_t)((head_device >> 16) & 0xFF);
     buf[p++] = device_code;
-    p += protocore_wr16le(buf + p, points);
+    p += endian.wr16le(buf + p, points);
     if (data_len)
     {
         mem.cpy(buf + p, data, data_len);
@@ -92,7 +92,7 @@ proto_bool protocore_melsec_parse_response(const uint8_t *buf, size_t len, Melse
     {
         return PROTO_FALSE;
     }
-    uint16_t data_length = protocore_rd16le(buf + MELSEC_3E_RES_LEN_OFFSET); // covers the end code + the response data
+    uint16_t data_length = endian.rd16le(buf + MELSEC_3E_RES_LEN_OFFSET); // covers the end code + the response data
     if (data_length < MELSEC_ENDCODE_LEN)
     {
         return PROTO_FALSE;
@@ -101,7 +101,7 @@ proto_bool protocore_melsec_parse_response(const uint8_t *buf, size_t len, Melse
     {
         return PROTO_FALSE;
     }
-    out->end_code = protocore_rd16le(buf + MELSEC_3E_RES_DATALEN_BASE);
+    out->end_code = endian.rd16le(buf + MELSEC_3E_RES_DATALEN_BASE);
     out->data = buf + MELSEC_3E_RES_DATA_OFFSET;
     out->data_len = (size_t)data_length - MELSEC_ENDCODE_LEN; // minus the 2-octet end code
     return PROTO_TRUE;

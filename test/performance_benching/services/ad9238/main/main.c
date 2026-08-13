@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the AD9238 SPI configuration-port codec (services/peripherals/ad9238):
+// On-device CCOUNT microbenchmark for the AD9238 SPI configuration-port codec (server/peripherals/ad9238):
 // building the 16-bit instruction word (R/W + 2-bit byte-count + 13-bit address, MSB first), the
 // single-register write and read transaction framing, and the "device update" shadow-register
 // transfer transaction - all pure (no SPI clocking, no real silicon). Worked example for
@@ -15,7 +15,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/ad9238/ad9238.h"
+#include "server/peripherals/ad9238/ad9238.h"
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -3,24 +3,28 @@
 
 /**
  * @file jwt.h
- * @brief Zero-heap JWT (JSON Web Token) bearer-auth verification, HS256.
+ * @brief JSON Web Token verification, HS256: RFC 7519 claims carried in an RFC 7515 JWS.
  *
- * Stateless request authentication: a client presents `Authorization: Bearer
- * <jwt>` and the server verifies the token's HMAC-SHA-256 signature against a
- * shared secret (reusing the SSH crypto layer's HMAC). No sessions, no per-client
- * state, no heap - all work happens in fixed stack/BSS buffers and the whole core
- * is host-testable (env:native_jwt).
+ * A token arrives in the JWS Compact Serialization (RFC 7515 sec 7.1),
+ * `BASE64URL(UTF8(JWS Protected Header)) || '.' || BASE64URL(JWS Payload) || '.' ||
+ * BASE64URL(JWS Signature)`, normally inside `Authorization: Bearer <token>` (RFC 6750 sec 2.1).
+ * The verifier recomputes the MAC over the JWS Signing Input (RFC 7515 sec 2), compares it against
+ * the signature segment in constant time (RFC 7518 sec 3.2), and reads claims out of the payload
+ * (RFC 7519 sec 4).
  *
- * Only HS256 (HMAC-SHA-256) is supported - the deterministic, allocation-free
- * choice for a constrained device sharing a secret with its issuer. RS256/ES256
- * (asymmetric) are out of scope. Signature verification is constant-time.
+ * Only HS256 is served: that `alg` value is HMAC using SHA-256 (RFC 7518 sec 3.1), and the JOSE
+ * header's `alg` is required to name it before any MAC is computed (RFC 7515 sec 4.1.1, RFC 8725
+ * sec 3.1), which rejects `none` and every other algorithm substitution. RS256 ID tokens belong to
+ * the OIDC module. Every segment decodes with the URL and filename safe alphabet, padding skipped
+ * (RFC 4648 sec 5).
  *
- * The base verifier (protocore_jwt_verify_hs256 / protocore_jwt_bearer_valid) checks only the
- * signature. The `*_at` variants additionally enforce the RFC 7519 time claims
- * (`exp` §4.1.4 and `nbf` §4.1.5) against a caller-supplied wall-clock epoch, with a
- * skew leeway - pass now=0 on a clockless device to skip the time checks (the
- * signature still gates). `iat` (§4.1.6) is informational; read it with
- * protocore_jwt_claim_int() if you want it.
+ * The base calls judge the signature alone. The `_at` calls also judge `exp` (RFC 7519 sec 4.1.4)
+ * and `nbf` (sec 4.1.5) against a caller-supplied NumericDate (sec 2) with a skew leeway; `iat`
+ * (sec 4.1.6) is read like any other integer claim. Nothing here allocates: every buffer is a local
+ * of the call that fills it, and the whole path runs on a host build.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_JWT_H
@@ -32,105 +36,125 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_JWT
 
-/**
- * @brief Verify the HS256 signature of a JWT.
- *
- * Checks that the token has exactly the `header.payload.signature` shape and that
- * base64url(HMAC-SHA-256(secret, "header.payload")) equals the signature segment
- * (constant-time). Does not inspect claims.
- *
- * @param token       the compact JWT string.
- * @param token_len   length of @p token (e.g. strlen).
- * @param secret      HMAC key bytes.
- * @param secret_len  key length.
- * @return true if the signature is valid.
- */
-proto_bool protocore_jwt_verify_hs256(const char *token, size_t token_len, const uint8_t *secret, size_t secret_len);
+/** @brief RFC 7515 sec 7.1: the compact serialization a call reads, bare or inside Bearer credentials. */
+typedef struct
+{
+    const char *jws;         ///< BASE64URL(header) '.' BASE64URL(payload) '.' BASE64URL(signature)
+    size_t jws_len;          ///< readable characters of @c jws, at most PROTOCORE_JWT_MAX_LEN
+    const char *credentials; ///< an Authorization field value: "Bearer" 1*SP b64token (RFC 6750 sec 2.1)
+} JwtTokenArgs;
+
+/** @brief RFC 7518 sec 3.2: the shared key the HMAC-SHA-256 runs under, 256 bits or larger. */
+typedef struct
+{
+    const uint8_t *secret; ///< the key octets
+    size_t secret_len;     ///< how many of them there are
+} JwtKeyArgs;
+
+/** @brief RFC 7519 sec 4.1.4 / 4.1.5: the clock `exp` and `nbf` are judged against. */
+typedef struct
+{
+    long now;      ///< NumericDate now (RFC 7519 sec 2); 0 or less states there is no wall clock
+    long leeway_s; ///< seconds of clock skew both claims are given
+} JwtTimeArgs;
+
+/** @brief RFC 7519 sec 4: the claim a read names, and where a string claim lands. */
+typedef struct
+{
+    const char *name; ///< the claim's member name inside the JWS Payload, unquoted
+    char *out;        ///< where a string claim is written, NUL-terminated
+    size_t out_cap;   ///< how many bytes @c out holds
+} JwtClaimArgs;
+
+/** @brief RFC 8693 sec 4.2: the `scope` claim's value and the scope a check demands. */
+typedef struct
+{
+    const char *claim;    ///< the claim value: space-delimited, case-sensitive tokens (RFC 6749 sec 3.3)
+    const char *required; ///< the one scope token being looked for
+} JwtScopeArgs;
+
+/** @brief The verifier's calls and the handle they read, described only in jwt.c. */
+struct JwtInternal;
 
 /**
- * @brief Validate an `Authorization` header value carrying a Bearer JWT.
+ * @brief The HS256 JWT verifier.
  *
- * Accepts a value beginning with `Bearer ` (case-insensitive scheme), then
- * verifies the token via protocore_jwt_verify_hs256().
+ * A caller sets the members a call takes, invokes it through ::Jwt, and reads the outcome off the
+ * same handle. No slot member: the verifier owns no table, so a call names its own inputs and
+ * nothing else. No storage member: nothing survives a call, so every buffer is a local of the call
+ * that fills it.
  *
- * @param auth_header the full Authorization header value (may be nullptr).
- * @param secret      HMAC key bytes.
- * @param secret_len  key length.
- * @return true if a well-formed Bearer token validates.
+ * @var JwtNs::token  how the token arrives: the compact serialization, or the Bearer credentials
+ *                    carrying it
+ * @var JwtNs::key    the HS256 shared key (RFC 7518 sec 3.2)
+ * @var JwtNs::time   the NumericDate an `_at` call judges the time claims against
+ * @var JwtNs::claim  the claim a read names and the buffer a string claim is copied into
+ * @var JwtNs::scope  the `scope` claim value and the scope a check demands
+ * @var JwtNs::ok     a call's true/false outcome
+ * @var JwtNs::num    the integer a claim read returns; a NumericDate for `exp` / `nbf` / `iat`
+ *
+ * @var JwtNs::verify_mac
+ * Validate the JWS Signature over the JWS Signing Input (RFC 7515 sec 5.2). The JOSE header's `alg`
+ * must be HS256, the signature segment must be the 43 characters an unpadded base64url 256-bit MAC
+ * takes, and the compare is constant time (RFC 7518 sec 3.2). Claims are not read.
+ *
+ * @var JwtNs::verify_bearer
+ * ::JwtNs::verify_mac on the b64token inside @c token.credentials (RFC 6750 sec 2.1). The scheme
+ * name is matched without regard to case (RFC 7235 sec 2.1) and @c token.jws is left pointing at
+ * the token that was found.
+ *
+ * @var JwtNs::time_claims_valid
+ * True when the token is inside its validity window: not at or after `exp` (RFC 7519 sec 4.1.4) and
+ * not before `nbf` (sec 4.1.5), each given @c time.leeway_s of skew. An absent claim is not
+ * enforced; a @c time.now of 0 or less states there is no wall clock, so neither claim can be judged
+ * and the answer is true. The signature is not checked here, so pair this with ::JwtNs::verify_mac.
+ *
+ * @var JwtNs::verify_mac_at
+ * ::JwtNs::verify_mac and then ::JwtNs::time_claims_valid.
+ *
+ * @var JwtNs::verify_bearer_at
+ * ::JwtNs::verify_bearer and then ::JwtNs::time_claims_valid.
+ *
+ * @var JwtNs::claim_int
+ * Read the integer claim @c claim.name out of the JWS Payload into @c num. The signature is not
+ * checked, so a verify call comes first.
+ *
+ * @var JwtNs::claim_str
+ * Copy the string claim @c claim.name into @c claim.out, bounded by @c claim.out_cap. A backslash is
+ * dropped and the character after it taken literally, which carries a quoted or backslashed
+ * character through a `sub`, `role` or `scope` value. The signature is not checked.
+ *
+ * @var JwtNs::scope_allows
+ * True when @c scope.required is one whole token of the space-delimited @c scope.claim (RFC 6749
+ * sec 3.3, the syntax RFC 8693 sec 4.2 gives the claim). A prefix of a token never passes.
+ *
+ * @var JwtNs::internal  the handle a call reads its members from
  */
-proto_bool protocore_jwt_bearer_valid(const char *auth_header, const uint8_t *secret, size_t secret_len);
+typedef struct
+{
+    JwtTokenArgs token; ///< how the token arrives
+    JwtKeyArgs key;     ///< the HS256 shared key
+    JwtTimeArgs time;   ///< the clock the time claims are judged against
+    JwtClaimArgs claim; ///< the claim a read names
+    JwtScopeArgs scope; ///< the scope claim and the scope demanded of it
 
-/**
- * @brief Check a JWT's time-based validity (RFC 7519 `exp` / `nbf`) against a clock.
- *
- * Enforces `exp` (§4.1.4: rejected once @p now_epoch has passed it) and `nbf`
- * (§4.1.5: rejected before it), each within @p leeway_s seconds of skew tolerance.
- * An absent claim is not enforced. Does NOT check the signature - pair with
- * protocore_jwt_verify_hs256(). The comparisons are written to avoid integer overflow near the
- * `long` epoch range.
- *
- * @param now_epoch  current Unix time in seconds; <= 0 means "no wall clock", so the
- *                   time claims cannot be evaluated and the function returns true (the
- *                   signature check remains the gate).
- * @param leeway_s   allowed clock skew in seconds (0 for none).
- * @return true if the token is currently within its validity window (or no clock is set).
- */
-proto_bool protocore_jwt_time_valid(const char *token, size_t token_len, long now_epoch, long leeway_s);
+    proto_bool ok;
+    long num;
 
-/**
- * @brief Verify a JWT's HS256 signature AND its `exp` / `nbf` time claims.
- *
- * protocore_jwt_verify_hs256() && protocore_jwt_time_valid(). On a clockless device (@p now_epoch <= 0)
- * this reduces to the signature-only check.
- */
-proto_bool protocore_jwt_verify_hs256_at(const char *token, size_t token_len, const uint8_t *secret, size_t secret_len,
-                                         long now_epoch, long leeway_s);
+    void (*verify_mac)(struct JwtInternal *ctx);
+    void (*verify_bearer)(struct JwtInternal *ctx);
+    void (*time_claims_valid)(struct JwtInternal *ctx);
+    void (*verify_mac_at)(struct JwtInternal *ctx);
+    void (*verify_bearer_at)(struct JwtInternal *ctx);
+    void (*claim_int)(struct JwtInternal *ctx);
+    void (*claim_str)(struct JwtInternal *ctx);
+    void (*scope_allows)(struct JwtInternal *ctx);
 
-/**
- * @brief Validate a Bearer `Authorization` header, enforcing `exp` / `nbf` when clocked.
- *
- * protocore_jwt_bearer_valid() plus the RFC 7519 time-claim check. Pass @p now_epoch from your
- * time source (e.g. `(long)protocore_time_now()`); 0 skips the time checks.
- */
-proto_bool protocore_jwt_bearer_valid_at(const char *auth_header, const uint8_t *secret, size_t secret_len,
-                                         long now_epoch, long leeway_s);
+    struct JwtInternal *internal;
+} JwtNs;
 
-/**
- * @brief Read an integer claim (e.g. "exp", "iat", "nbf") from a JWT payload.
- *
- * base64url-decodes the payload segment and scans the JSON for a top-level
- * numeric member @p name. Does not verify the signature - call
- * protocore_jwt_verify_hs256() first.
- *
- * @param token      the compact JWT string.
- * @param token_len  length of @p token.
- * @param name       claim name (without quotes).
- * @param out        receives the parsed value on success.
- * @return true if the claim is present and parses as an integer.
- */
-proto_bool protocore_jwt_claim_int(const char *token, size_t token_len, const char *name, long *out);
-
-/**
- * @brief Read a string claim (e.g. "sub", "role", "scope") from a JWT payload.
- *
- * base64url-decodes the payload and copies the top-level string member @p name
- * into @p out (null-terminated, bounded by @p out_cap). Does not verify the
- * signature - call protocore_jwt_verify_hs256() first. Minimal unescaping (handles `\"` and
- * `\\`; other escapes are copied without their backslash), which suits
- * scope / role / sub values.
- *
- * @return true if the claim is present and is a string that fit in @p out.
- */
-proto_bool protocore_jwt_claim_str(const char *token, size_t token_len, const char *name, char *out, size_t out_cap);
-
-/**
- * @brief Test whether a space-separated OAuth2 scope claim grants @p required.
- *
- * @param scope_claim the `scope` claim value (space-delimited scopes, RFC 6749 3.3).
- * @param required    the scope to look for.
- * @return true if @p required is one of the whole space-separated tokens.
- */
-proto_bool protocore_jwt_scope_allows(const char *scope_claim, const char *required);
+/** @brief The one symbol this module exports. */
+extern JwtNs Jwt;
 
 #endif // PROTOCORE_ENABLE_JWT
 

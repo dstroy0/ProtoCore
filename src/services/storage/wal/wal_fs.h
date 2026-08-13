@@ -36,7 +36,7 @@
 
 #include "mmgr/protomem.h"
 #include "protocore_config.h"
-#include "server/filesystem/mnt.h" // protocore_mnt_backend - the store the log lives on
+#include "server/storage/mnt.h" // protocore_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store.h"
 
 #if PROTOCORE_ENABLE_WAL

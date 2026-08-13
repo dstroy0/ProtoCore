@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the HAProxy PROXY protocol codec (services/net/proxy_protocol):
+// On-device CCOUNT microbenchmark for the HAProxy PROXY protocol codec (network_drivers/transport/proxy_protocol):
 // the v1 (text) and v2 (binary) TCP/IPv4 header builders and the unified parser a server uses to
 // recover the real client IPv4 when it sits behind a load balancer. Every operation here is pure
 // (no sockets, no heap, no transport) - the header bytes are prepended once before the proxied
@@ -20,7 +20,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/proxy_protocol/proxy_protocol.h"
+#include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
 
 #include <stdbool.h>
 #include <stddef.h>

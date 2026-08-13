@@ -20,7 +20,7 @@
 // bitfields, the holding / input registers, and the write callback, grouped so it is one
 // named owner, unreachable from any other translation unit.
 #if PROTOCORE_HAS_NET_STACK
-#include "server/system/proto_handler.h"
+#include "server/core/proto_handler.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #endif
 typedef struct

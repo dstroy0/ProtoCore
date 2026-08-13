@@ -21,7 +21,7 @@
 #define PROTOCORE_ENABLE_PCA9685 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
-#include "services/peripherals/pca9685/pca9685.h"
+#include "server/peripherals/pca9685/pca9685.h"
 
 static const uint8_t SERVO_CH = 0;
 

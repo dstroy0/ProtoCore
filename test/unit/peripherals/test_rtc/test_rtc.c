@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the DS1307/DS3231 RTC conversions (services/peripherals/rtc): the BCD time registers
+// Unit tests for the DS1307/DS3231 RTC conversions (server/peripherals/rtc): the BCD time registers
 // <-> Unix epoch, in both 24-hour and 12-hour encodings, with leap years, the clock-halt /
 // century bit masks, range validation, and a round-trip bijection over the RTC's 2000-2099
 // range. The I2C read/write is ESP32-only and not exercised here.
 
-#include "services/peripherals/rtc/rtc.h"
+#include "server/peripherals/rtc/rtc.h"
 #include <stdint.h>
 #include <unity.h>
 

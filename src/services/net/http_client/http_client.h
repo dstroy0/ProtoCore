@@ -3,23 +3,29 @@
 
 /**
  * @file http_client.h
- * @brief Zero-heap outbound HTTP(S) client over raw lwIP (PROTOCORE_ENABLE_HTTP_CLIENT).
+ * @brief Layer 7 - the user agent (RFC 9110 sec 3.5): one outbound HTTP/1.1 message exchange.
  *
- * A blocking client for issuing requests *from* the device: webhooks, telemetry
- * push, REST calls. Split, like the other services, into a pure host-testable
- * core and an ESP32-only transport:
+ * RFC 9110 sec 3.5: "the term 'user agent' refers to any of the various client programs that
+ * initiate a request." This is that side of HTTP. The serving side is network_drivers/presentation/http.
  *
- *  - http_client_parse_url() / http_client_build_request() /
- *    http_client_parse_response() are pure string functions, unit-tested on the
- *    host (env:native_http_client).
- *  - http_get() / http_post() resolve the host (DNS), open a raw lwIP TCP
- *    connection (https:// via client-side mbedTLS over the shared static arena),
- *    send the request, and fill the result from a fixed BSS receive buffer. No
- *    heap; one request at a time (single-task device).
+ * The exchange runs in three steps, each a call on ::HttpClient:
  *
- * Response bodies are delimited by Content-Length or by connection close;
- * chunked transfer-decoding is applied when present. The body is returned by
- * pointer into the client's static buffer (valid until the next call).
+ *  - @ref HttpClientNs::parse_target_uri splits the target URI (RFC 9110 sec 7.1) into the authority
+ *    it dials and the origin-form request target it sends (RFC 9112 sec 3.2.1).
+ *  - @ref HttpClientNs::build_request writes the request-line and field lines of an HTTP-message
+ *    (RFC 9112 sec 2.1, sec 3).
+ *  - @ref HttpClientNs::parse_response reads the status-line (RFC 9112 sec 4) and frames the message
+ *    body by the rules of RFC 9112 sec 6.3.
+ *
+ * Those three touch no socket and are unit-tested on the host. @ref HttpClientNs::get and
+ * @ref HttpClientNs::post run all three over the shared outbound transport (::TcpClient), with the
+ * TLS record layer under them for an https target URI (RFC 9112 sec 9.7).
+ *
+ * The content is returned by pointer into the module's receive buffer and is valid until the next
+ * call. One exchange at a time: the module holds one connection and one buffer.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_HTTP_CLIENT_H
@@ -31,95 +37,133 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-// Transport / result error codes (negative; HTTP status codes are positive).
+/**
+ * @brief What went wrong below the status code.
+ *
+ * RFC 9110 sec 15: every status code is in the range 100..599, so a negative value can never
+ * collide with one and @ref HttpClientNs::status carries both.
+ */
 typedef enum PROTO_ENUM_PACKED
 {
-    HTTP_CLIENT_ERR_URL = -1,      ///< Malformed URL.
-    HTTP_CLIENT_ERR_DNS = -2,      ///< Host resolution failed.
-    HTTP_CLIENT_ERR_CONNECT = -3,  ///< TCP/TLS connect failed.
-    HTTP_CLIENT_ERR_TIMEOUT = -4,  ///< No (complete) response before the timeout.
-    HTTP_CLIENT_ERR_SEND = -5,     ///< Failed to send the request.
-    HTTP_CLIENT_ERR_RESPONSE = -6, ///< Malformed / unparseable response.
-    HTTP_CLIENT_ERR_TLS = -7,      ///< HTTPS requested but TLS unavailable / handshake failed.
+    HTTP_CLIENT_ERR_URL = -1,      ///< the target URI does not parse (RFC 9110 sec 4.2.1 / 4.2.2)
+    HTTP_CLIENT_ERR_DNS = -2,      ///< the uri-host did not resolve
+    HTTP_CLIENT_ERR_CONNECT = -3,  ///< the connection did not come up (RFC 9112 sec 9.1)
+    HTTP_CLIENT_ERR_TIMEOUT = -4,  ///< no complete message arrived before the deadline
+    HTTP_CLIENT_ERR_SEND = -5,     ///< the request message did not go out
+    HTTP_CLIENT_ERR_RESPONSE = -6, ///< the response does not parse (RFC 9112 sec 4)
+    HTTP_CLIENT_ERR_TLS = -7,      ///< an https target URI with no TLS, or a failed handshake
 } HttpClientError;
 
-/** @brief Result of an HTTP client request. */
+/**
+ * @brief RFC 9110 sec 7.1: the target URI, split into the parts a request sends.
+ *
+ * A parse writes @c host, @c path, @c port and @c https out of @c url; a build reads them back.
+ * Scheme defaults are RFC 9110 sec 4.2.1 (http, TCP port 80) and sec 4.2.2 (https, TCP port 443).
+ */
 typedef struct
 {
-    int status;          ///< HTTP status code (e.g. 200), or a negative HttpClientError.
-    const uint8_t *body; ///< Response body (points into the client's static buffer).
-    size_t body_len;     ///< Response body length in bytes.
-} HttpClientResult;
+    const char *url;  ///< the absolute target URI, "http://..." or "https://..."
+    char *host;       ///< where the uri-host goes, and what the Host field carries (RFC 9110 sec 7.2)
+    size_t host_cap;  ///< how much room it has
+    char *path;       ///< where the origin-form request target goes (RFC 9112 sec 3.2.1)
+    size_t path_cap;  ///< how much room it has
+    uint16_t port;    ///< the authority's port; 80 for http, 443 for https when the URI omits it
+    proto_bool https; ///< the scheme is "https", so the exchange runs over TLS (RFC 9112 sec 9.7)
+} HttpTargetArgs;
 
-// ---------------------------------------------------------------------------
-// Pure helpers (host-testable; no sockets, no heap)
-// ---------------------------------------------------------------------------
+/** @brief RFC 9112 sec 3: the request-line's method, the content it encloses, and where it is built. */
+typedef struct
+{
+    const char *method;       ///< the method token (RFC 9112 sec 3.1), "GET" or "POST" here
+    const char *content_type; ///< the Content-Type field value (RFC 9110 sec 8.3); null takes application/octet-stream
+    const uint8_t *body;      ///< the content the message encloses, or null
+    size_t body_len;          ///< its octet count, sent as Content-Length (RFC 9110 sec 8.6)
+    char *out;                ///< where the request message is written
+    size_t cap;               ///< how much room it has
+} HttpRequestArgs;
 
-/**
- * @brief Parse an absolute URL into scheme/host/port/path.
- *
- * Accepts `http://host[:port][/path]` and `https://...`. Defaults: port 80
- * (http) / 443 (https), path "/".
- *
- * @return true on success; false if malformed or a field overflows its buffer.
- */
-proto_bool http_client_parse_url(const char *url, proto_bool *is_https, char *host, size_t host_cap, uint16_t *port,
-                                 char *path, size_t path_cap);
-
-/**
- * @brief Build an HTTP/1.1 request line + headers (+ optional body) into @p out.
- *
- * Emits `Host`, `User-Agent`, `Connection: close`, and (when @p body) a
- * `Content-Type` + `Content-Length`.
- *
- * @return number of bytes written, or 0 if it would not fit @p cap.
- */
-size_t http_client_build_request(const char *method, const char *host, uint16_t port, const char *path,
-                                 const char *content_type, const uint8_t *body, size_t body_len, char *out, size_t cap);
+/** @brief RFC 9112 sec 2.1: the received message a parse frames. Chunked decoding rewrites it. */
+typedef struct
+{
+    uint8_t *buf; ///< the octets received, start-line first
+    size_t len;   ///< how many
+} HttpMessageArgs;
 
 /**
- * @brief Parse a complete HTTP response: status code + body location.
+ * @brief RFC 9110 sec 4.2.2: what authenticates the origin server of an https target URI.
  *
- * Locates the body after the header terminator and bounds it by Content-Length,
- * decodes chunked transfer-encoding in place, or (absent both) treats the rest
- * as the body (connection-close framing).
- *
- * @param buf       full response bytes.
- * @param len       number of bytes in @p buf (mutable: chunked decode rewrites in place).
- * @param body_off  receives the body offset within @p buf.
- * @param body_len  receives the (decoded) body length.
- * @return the HTTP status code, or a negative HttpClientError on a malformed response.
+ * Without either of these the exchange is encrypted but the peer is unauthenticated. Both are
+ * installed once, before the first request.
  */
-int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_t *body_len);
+typedef struct
+{
+    const uint8_t *ca;  ///< trust anchor, PEM including its NUL or DER; null clears
+    size_t ca_len;      ///< its octet count
+    const uint8_t *pin; ///< 32 octets: the SHA-256 of the peer certificate's DER; null clears
+} HttpVerifyArgs;
 
-// ---------------------------------------------------------------------------
-// Transport (needs a client transport)
-// ---------------------------------------------------------------------------
-
-/** @brief Blocking GET @p url. @return the status code (>0) or a negative HttpClientError. */
-int http_get(const char *url, HttpClientResult *out);
+/** @brief The client's own state and the calls that reach it, described only in http_client.c. */
+struct HttpClientInternal;
 
 /**
- * @brief Blocking POST @p body to @p url with @p content_type.
- * @return the status code (>0) or a negative HttpClientError.
+ * @brief The HTTP user agent (RFC 9110 sec 3.5).
+ *
+ * A caller sets the members a call takes, invokes it through ::HttpClient, and reads the outcome off
+ * the same handle. There is no slot member: the module runs one exchange at a time, so no call names
+ * a row.
+ *
+ * @var HttpClientNs::target   the target URI a call splits, dials, or names in a request-line
+ * @var HttpClientNs::request  the method, the content, and where the request message is built
+ * @var HttpClientNs::message  the received message a parse frames
+ * @var HttpClientNs::verify   what authenticates an https origin server
+ * @var HttpClientNs::ok       a call's true/false outcome
+ * @var HttpClientNs::status   the status-code (RFC 9112 sec 4), or a negative ::HttpClientError
+ * @var HttpClientNs::n        octets a build wrote; 0 when the message would not fit
+ * @var HttpClientNs::body_off where the content starts inside the parsed message
+ * @var HttpClientNs::body_len the content's octet count (RFC 9112 sec 6.3)
+ * @var HttpClientNs::body     the content an exchange read, pointing into the module's receive buffer
+ * @var HttpClientNs::parse_target_uri  split the target URI into authority, port and request target
+ * @var HttpClientNs::build_request     write the request-line and field lines of one HTTP-message
+ * @var HttpClientNs::parse_response    read the status-line and frame the message body
+ * @var HttpClientNs::get               run one GET exchange (RFC 9110 sec 9.3.1)
+ * @var HttpClientNs::post              run one POST exchange (RFC 9110 sec 9.3.3)
+ *
+ * An exchange sets @c target.host, @c target.path and @c request.out to the module's own buffers
+ * before it splits the target URI, so a caller sets only @c target.url and reads the parts back.
+ *
+ * @var HttpClientNs::set_ca            install the trust anchor an https handshake verifies against
+ * @var HttpClientNs::set_pin           install the certificate pin an https handshake verifies against
+ * @var HttpClientNs::clear_verify      drop both, back to encrypt-only
+ * @var HttpClientNs::internal          the client's state and the calls that reach it
  */
-int http_post(const char *url, const char *content_type, const uint8_t *body, size_t body_len, HttpClientResult *out);
+typedef struct
+{
+    HttpTargetArgs target;   ///< the target URI and its parts (RFC 9110 sec 7.1)
+    HttpRequestArgs request; ///< what a request-line and its field lines carry (RFC 9112 sec 3)
+    HttpMessageArgs message; ///< the received message a parse frames (RFC 9112 sec 2.1)
+    HttpVerifyArgs verify;   ///< what authenticates an https origin server (RFC 9110 sec 4.2.2)
 
-// ---------------------------------------------------------------------------
-// https:// server authentication (optional; needs PROTOCORE_ENABLE_HTTP_CLIENT_TLS)
-// ---------------------------------------------------------------------------
-// By default the client encrypts but does NOT authenticate the server (no trust
-// store). Install a CA and/or a certificate pin to authenticate the peer; calls
-// are no-ops on a build without client TLS. Set once before issuing requests.
+    proto_bool ok;
+    int32_t status;
+    size_t n;
+    size_t body_off;
+    size_t body_len;
+    const uint8_t *body;
 
-/** @brief Trust anchor for https:// verification (PEM incl. NUL, or DER; nullptr clears). */
-void http_client_set_ca(const uint8_t *ca, size_t ca_len);
+    void (*parse_target_uri)(struct HttpClientInternal *ctx);
+    void (*build_request)(struct HttpClientInternal *ctx);
+    void (*parse_response)(struct HttpClientInternal *ctx);
+    void (*get)(struct HttpClientInternal *ctx);
+    void (*post)(struct HttpClientInternal *ctx);
+    void (*set_ca)(struct HttpClientInternal *ctx);
+    void (*set_pin)(struct HttpClientInternal *ctx);
+    void (*clear_verify)(struct HttpClientInternal *ctx);
 
-/** @brief Pin the server certificate by its SHA-256 (32 bytes of the DER; nullptr clears). */
-void http_client_set_pin(const uint8_t sha256[32]);
+    struct HttpClientInternal *internal;
+} HttpClientNs;
 
-/** @brief Clear any installed CA / pin (back to encrypt-only). */
-void http_client_clear_verify();
+/** @brief The one symbol this module exports. */
+extern HttpClientNs HttpClient;
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT
 

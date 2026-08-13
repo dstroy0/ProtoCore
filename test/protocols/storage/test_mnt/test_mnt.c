@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for mounted storage (server/filesystem/mnt) exercised the way every real caller
+// Unit tests for mounted storage (server/storage/mnt) exercised the way every real caller
 // reaches it - through the filesystem accessor - over the built-in RAM backend: read/write/
 // append/truncate, whole-file helpers, exists/size/remove/rename, and the bounded fail-closed
 // paths (file-full, pool/handle exhaustion, unmounted, undersized read buffer). The same API
 // drives the Arduino FS backend on hardware.
 
-#include "server/filesystem/filesystem.h"
+#include "server/storage/filesystem.h"
 #include <stdio.h>
 #include <string.h>
 

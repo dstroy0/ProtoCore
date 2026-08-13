@@ -1,14 +1,14 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the per-peer brute-force auth lockout (services/security/auth_lockout).
+// Unit tests for the per-peer brute-force auth lockout (server/security/auth_lockout).
 // Every bucket keys on the FULL family-tagged address (protocore_ip) - never a hash or a
 // uint32 flattening - so IPv4 and IPv6 peers are distinct buckets and no address can
 // share or poison another's lockout. The state machine takes the millisecond clock as
 // a parameter, so the host drives a synthetic clock - no real time, no ESP32. Uses the
 // default sizing (THRESHOLD=5, BASE=1000 ms, MAX=300000 ms) from protocore_config.h.
 
-#include "services/security/auth_lockout/auth_lockout.h"
+#include "server/security/auth_lockout/auth_lockout.h"
 #include "shared/ip/ip.h"
 #include <unity.h>
 

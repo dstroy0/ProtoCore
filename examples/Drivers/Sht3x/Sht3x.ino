@@ -20,7 +20,7 @@
 #define PROTOCORE_ENABLE_SHT3X 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
-#include "services/peripherals/sht3x/sht3x.h"
+#include "server/peripherals/sht3x/sht3x.h"
 
 void setup()
 {

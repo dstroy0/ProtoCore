@@ -14,8 +14,8 @@
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp.h"
 #endif
-#include "server/system/proto_handler.h"
-#include "server/system/worker.h" // Workers.wake(): the owner drains the flagged packet
+#include "server/core/proto_handler.h"
+#include "server/core/worker.h" // Workers.wake(): the owner drains the flagged packet
 #include "network_drivers/transport/tcp/client/client.h"   // TcpClient: a dialled stream
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: an accepted stream
 #include "server/clock/clock.h" // protocore_millis() for the re-key timer

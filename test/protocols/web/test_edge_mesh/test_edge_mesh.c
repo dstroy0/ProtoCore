@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for services/web/edge_cache/edge_mesh: the CDN edge cache's mesh (sibling-cache) wire codec and
+// Host tests for server/web/edge_cache/edge_mesh: the CDN edge cache's mesh (sibling-cache) wire codec and
 // async peer-query engine. Covers the request/response frame build + tri-state accumulating parse (partial
 // reads, magic/version/opcode validation), the freshness-carrying entry frame round-trip (content via the
 // shared edge_sd body plus the timing trailer, incl. a binary body), RFC 9111 age propagation (a peer's
@@ -9,8 +9,8 @@
 // and the requester engine reaching HIT / MISS / FAILED (open fail, send fail, timeout, peer close, malformed)
 // over a scripted mock transport seam.
 
-#include "services/web/edge_cache/edge_cache.h"
-#include "services/web/edge_cache/edge_mesh.h"
+#include "server/web/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_mesh.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>

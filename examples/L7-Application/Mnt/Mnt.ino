@@ -34,7 +34,7 @@
 #include "protocore.h"
 #include "core_setup/hal/esp/esp_mnt_fs.h"
 #include "network_drivers/physical/physical.h"
-#include "server/filesystem/filesystem.h"
+#include "server/storage/filesystem.h"
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";

@@ -233,11 +233,11 @@ static size_t build_message(long msg_id, proto_bool auth, proto_bool priv, const
 
     if (priv)
     {
-        protocore_wr32be(salt, s_v3.boots);
-        protocore_wr32be(salt + 4, ++s_v3.salt_ctr);
+        endian.wr32be(salt, s_v3.boots);
+        endian.wr32be(salt + 4, ++s_v3.salt_ctr);
         uint8_t iv[16];
-        protocore_wr32be(iv, s_v3.boots);
-        protocore_wr32be(iv + 4, now);
+        endian.wr32be(iv, s_v3.boots);
+        endian.wr32be(iv + 4, now);
         mem.cpy(iv + 8, salt, SNMP_V3_PRIV_PARAM_LEN);
         if (scoped_len > sizeof(s_v3.v3_d))
         {
@@ -555,8 +555,8 @@ size_t protocore_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *re
             // digest step
         }
         uint8_t iv[16];
-        protocore_wr32be(iv, (uint32_t)req_boots);
-        protocore_wr32be(iv + 4, (uint32_t)req_time);
+        endian.wr32be(iv, (uint32_t)req_boots);
+        endian.wr32be(iv + 4, (uint32_t)req_time);
         mem.cpy(iv + 8, pparm, SNMP_V3_PRIV_PARAM_LEN);
         protocore_snmp_aes128_cfb(s_v3.priv_key, iv, ct, s_v3.v3_a, ct_len, PROTO_FALSE);
         scoped = s_v3.v3_a;

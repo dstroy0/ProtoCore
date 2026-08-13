@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the removable-storage state machine (services/storage/hotswap): the fault threshold and
+// Unit tests for the removable-storage state machine (server/storage/hotswap): the fault threshold and
 // what resets it, probe pacing (including across a millis() rollover), present-but-unmountable,
 // the removal/reinsertion cycle, and that the whole thing is fail-closed. Plus the owned binding -
 // how poll()/io() drive the app's mount / unmount / card-detect callbacks and the state-change event.
 
 #include "server/clock/clock.h"
-#include "services/storage/hotswap/hotswap.h"
+#include "server/storage/hotswap/hotswap.h"
 #include <stdio.h>
 
 #include <unity.h>

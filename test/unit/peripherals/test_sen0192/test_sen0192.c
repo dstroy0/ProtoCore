@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Unit tests for the SEN0192 microwave motion sensor's pure presence state machine
-// (services/peripherals/sen0192): presence asserts on an active sample, holds for the configured window after the
+// (server/peripherals/sen0192): presence asserts on an active sample, holds for the configured window after the
 // last active sample, clears after it, counts clear->present edges, and honors OUT polarity. Host tests.
 
-#include "services/peripherals/sen0192/sen0192.h"
+#include "server/peripherals/sen0192/sen0192.h"
 #include <unity.h>
 
 void setUp()

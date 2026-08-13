@@ -11,8 +11,9 @@
  * (ssh/transport/ssh_zlib) both write their bitstreams through it.
  *
  * Distinct from bytes.h's @c protocore_bw_* helpers, which are a BYTE-oriented (big-endian) codec cursor.
- * This is a BIT writer (@c protocore_bitw_*), for the DEFLATE bitstream. Header-only, pure (only
- * @c <stdint.h> / @c <stddef.h>), zero link cost when unused.
+ * This is a BIT writer, for the DEFLATE bitstream.
+ *
+ * The module exports one symbol, @ref bitw. The walks live in bitio.c.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -21,7 +22,9 @@
 #ifndef PROTOCORE_BITIO_H
 #define PROTOCORE_BITIO_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief LSB-first bit writer over the caller's output buffer; @c overflow latches once @c cap is exceeded. */
 typedef struct
@@ -34,45 +37,45 @@ typedef struct
     proto_bool overflow;
 } protocore_bit_writer;
 
-/** @brief Append the low @p n bits of @p bits, LSB-first, spilling any completed bytes to the output. */
-PROTOCORE_INLINE void protocore_bitw_put(protocore_bit_writer *w, uint32_t bits, int n)
+/**
+ * @brief The bit-writer module. Bits enter an accumulator at the low end and leave it a byte at a time.
+ *
+ * @var BitwNs::put
+ * Append the low @c n bits of @c bits to @c w, LSB-first, and spill every byte the accumulator
+ * completes to @c out. A spill with @c cnt already at @c cap sets @c overflow, clears the
+ * accumulator, and every later call returns at once.
+ *
+ * @var BitwNs::align
+ * Write the partial byte @c w still holds, its high bits zero, then clear the accumulator. Nothing is
+ * written when @c nbits is zero. A write with @c cnt already at @c cap sets @c overflow instead.
+ *
+ * No storage member: the buffer, the cursor and the accumulator all live in the caller's
+ * ::protocore_bit_writer, and this module holds nothing of its own.
+ */
+typedef struct
 {
-    if (w->overflow)
-    {
-        return; // latched: nbits is no longer a shift distance this can use
-    }
-    w->acc |= bits << w->nbits;
-    w->nbits += n;
-    while (w->nbits >= 8)
-    {
-        if (w->cnt >= w->cap)
-        {
-            w->overflow = PROTO_TRUE;
-            w->nbits = 0;
-            w->acc = 0;
-            return;
-        }
-        w->out[w->cnt] = (uint8_t)(w->acc & 0xFF);
-        w->cnt++;
-        w->acc >>= 8;
-        w->nbits -= 8;
-    }
-}
+    void (*put)(protocore_bit_writer *w, uint32_t bits, int n);
+    void (*align)(protocore_bit_writer *w);
+} BitwNs;
 
-/** @brief Flush any partial byte, padding the high bits with zero (byte alignment). */
-PROTOCORE_INLINE void protocore_bitw_align(protocore_bit_writer *w)
-{
-    if (w->nbits > 0)
-    {
-        if (w->cnt >= w->cap)
-        {
-            w->overflow = PROTO_TRUE;
-            return;
-        }
-        w->out[w->cnt++] = (uint8_t)(w->acc & 0xFF);
-        w->acc = 0;
-        w->nbits = 0;
-    }
-}
+// The bit walks, in bitio.c. Named here because the table below has to name them, and prefixed
+// because that puts them in the linker's namespace.
+void protocore_bitw_put(protocore_bit_writer *w, uint32_t bits, int n);
+void protocore_bitw_align(protocore_bit_writer *w);
+
+/**
+ * @brief The names, aliased.
+ *
+ * `static const` and initialized here, not declared `extern` against a definition in the .c: a
+ * translation unit that can see this initializer knows which function each member holds, so a member
+ * read folds away and the call to the walk in bitio.c is direct, leaving the table referenced by
+ * nothing for the linker to drop.
+ *
+ * `unused` because this header reaches files that take none of it.
+ */
+// Designated, so a member's position in the struct does not decide what it binds to.
+static const BitwNs bitw __attribute__((unused)) = {.put = protocore_bitw_put, .align = protocore_bitw_align};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_BITIO_H

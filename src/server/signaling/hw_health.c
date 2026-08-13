@@ -77,15 +77,15 @@ static void rail_json(struct HwHealthInternal *restrict ctx)
         return;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&b, "{\"nominal_mv\":");
-    protocore_sb_u32(&b, m->nominal_mv);
-    protocore_sb_put(&b, ",\"min_mv\":");
-    protocore_sb_u32(&b, m->min_mv);
-    protocore_sb_put(&b, ",\"sag\":");
-    protocore_sb_u32(&b, m->sag_events);
-    protocore_sb_put(&b, ",\"brownout\":");
-    protocore_sb_u32(&b, m->brownout_events);
-    protocore_sb_put(&b, "}");
+    Sb.put(&b, "{\"nominal_mv\":");
+    Sb.u32(&b, m->nominal_mv);
+    Sb.put(&b, ",\"min_mv\":");
+    Sb.u32(&b, m->min_mv);
+    Sb.put(&b, ",\"sag\":");
+    Sb.u32(&b, m->sag_events);
+    Sb.put(&b, ",\"brownout\":");
+    Sb.u32(&b, m->brownout_events);
+    Sb.put(&b, "}");
     if (!b.ok)
     {
         return;

@@ -33,7 +33,7 @@ static void xw_u32(XdrW *w, uint32_t v)
         w->ok = PROTO_FALSE;
         return;
     }
-    protocore_wr32be(w->p + w->off, v);
+    endian.wr32be(w->p + w->off, v);
     w->off += 4;
 }
 
@@ -46,7 +46,7 @@ static void xw_bytes(XdrW *w, const uint8_t *d, size_t n)
         w->ok = PROTO_FALSE;
         return;
     }
-    protocore_wr32be(w->p + w->off, (uint32_t)n);
+    endian.wr32be(w->p + w->off, (uint32_t)n);
     w->off += 4;
     if (n)
     {
@@ -74,7 +74,7 @@ static uint32_t xr_u32(XdrR *r)
         r->ok = PROTO_FALSE;
         return 0;
     }
-    uint32_t v = protocore_rd32be(r->p + r->off);
+    uint32_t v = endian.rd32be(r->p + r->off);
     r->off += 4;
     return v;
 }
@@ -113,7 +113,7 @@ size_t protocore_rpc_record_mark(uint8_t *buf, size_t cap, uint32_t payload_len)
     {
         return 0;
     }
-    protocore_wr32be(buf, 0x80000000u | payload_len); // last-fragment flag set
+    endian.wr32be(buf, 0x80000000u | payload_len); // last-fragment flag set
     return 4;
 }
 
@@ -123,7 +123,7 @@ proto_bool protocore_rpc_parse_record_mark(const uint8_t *buf, size_t len, proto
     {
         return PROTO_FALSE;
     }
-    uint32_t rm = protocore_rd32be(buf);
+    uint32_t rm = endian.rd32be(buf);
     if (last)
     {
         *last = (rm & 0x80000000u) != 0;

@@ -12,7 +12,7 @@
 
 #include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_rand_u32: the device TRNG
 #include "mmgr/protostr.h"                                // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"                               // proto_raw_read: each field moves into the slot
+#include "mmgr/rawmemcpy.h"                               // raw.read: each field moves into the slot
 #include "network_drivers/presentation/http/http.h"       // Http.match_and_execute
 #include "network_drivers/transport/tcp/protocol/protocol.h"  // ConnPool: the reserved dispatch slot
 #include "protocore.h"                                    // http_pool, PROTOCORE_H3_DISPATCH_SLOT, http_reset
@@ -47,7 +47,7 @@ static void rng(struct H3ServerInternal *restrict ctx)
         {
             n = len - i;
         }
-        proto_raw_read(out + i, &r, n);
+        raw.read(out + i, &r, n);
         i += n;
     }
 }
@@ -79,7 +79,7 @@ static void request(struct H3ServerInternal *restrict ctx)
     {
         mn = sizeof(r->method) - 1;
     }
-    proto_raw_read(r->method, method, mn);
+    raw.read(r->method, method, mn);
     r->method[mn] = 0;
 
     // Bounded by everything the request could occupy here, path and query together, rather than by
@@ -91,7 +91,7 @@ static void request(struct H3ServerInternal *restrict ctx)
     {
         plen = sizeof(r->path) - 1;
     }
-    proto_raw_read(r->path, path, plen);
+    raw.read(r->path, path, plen);
     r->path[plen] = 0;
     r->path_idx = str.len(r->path, sizeof(r->path));
     if (q != NULL)
@@ -101,7 +101,7 @@ static void request(struct H3ServerInternal *restrict ctx)
         {
             ql = sizeof(r->query) - 1;
         }
-        proto_raw_read(r->query, q + 1, ql);
+        raw.read(r->query, q + 1, ql);
         r->query[ql] = 0;
         r->query_idx = str.len(r->query, sizeof(r->query));
     }
@@ -111,20 +111,20 @@ static void request(struct H3ServerInternal *restrict ctx)
     {
         Header *h = &r->headers[r->header_count];
         r->header_count++;
-        proto_raw_read(h->key, "host", 5);
+        raw.read(h->key, "host", 5);
         size_t vl = str.len(authority, sizeof(h->val));
         if (vl >= sizeof(h->val))
         {
             vl = sizeof(h->val) - 1;
         }
-        proto_raw_read(h->val, authority, vl);
+        raw.read(h->val, authority, vl);
         h->val[vl] = 0;
     }
 
     if (body && body_len)
     {
         size_t n = body_len > BODY_BUF_SIZE ? BODY_BUF_SIZE : body_len;
-        proto_raw_read(r->body, body, n);
+        raw.read(r->body, body, n);
         r->body_len = n;
         r->body[r->body_len] = 0;
         r->body_bytes_read = body_len;

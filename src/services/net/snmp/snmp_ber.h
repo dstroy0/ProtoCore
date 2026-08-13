@@ -2,15 +2,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_snmp_ber.h
- * @brief Zero-heap ASN.1 BER encoder/decoder for the SNMP agent (PROTOCORE_ENABLE_SNMP).
+ * @file snmp_ber.h
+ * @brief The SNMP serialization: ASN.1 Basic Encoding Rules over a caller buffer.
  *
- * A minimal, bounded TLV codec covering exactly the types SNMP uses: INTEGER,
- * OCTET STRING, NULL, OBJECT IDENTIFIER, SEQUENCE, and the SNMP application
- * types (Counter32/Gauge32/TimeTicks/IpAddress/Counter64) and PDU context tags.
- * Encoder and decoder both operate over caller-provided fixed buffers - no heap.
- * This is the shared base for SNMP v1/v2c and (later) v3; it is unit-tested on
- * its own (env:native_snmp) since it needs no lwIP.
+ * RFC 3417 sec 3.1: "Each instance of a message is serialized (i.e., encoded according to the
+ * convention of [BER]) onto a single UDP over IPv4 datagram, using the algorithm specified in
+ * Section 8." The encoding rules themselves are not an IETF RFC: they are ITU-T Recommendation
+ * X.690 (ISO/IEC 8825-1), which RFC 3417 cites as [BER].
+ *
+ * RFC 3417 sec 8 states the two restrictions this codec is built to. Item (1): "When encoding the
+ * length field, only the definite form is used; use of the indefinite form encoding is
+ * prohibited. Note that when using the definite-long form, it is permissible to use more than the
+ * minimum number of length octets necessary to encode the length field." A constructed type
+ * therefore opens with a reserved 3-octet definite-long length that is back-patched at close, so
+ * no value is buffered and no octet is shifted. Item (2): simple types are encoded primitive, and
+ * the constructed form is used only for SEQUENCE.
+ *
+ * The tags cover exactly what SNMP puts on the wire: the ASN.1 simple types, the SMIv2
+ * application-wide types (RFC 2578 sec 7.1.5 through 7.1.10), the variable-binding exception
+ * markers and the context-specific PDU tags of the RFC 3416 sec 3 ASN.1.
+ *
+ * Encoder and decoder both run over caller-provided fixed buffers, so the module holds nothing
+ * between calls and is unit-testable with no network stack under it.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_SNMP_BER_H
@@ -22,83 +38,165 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SNMP
 
-// ASN.1 / SNMP tags
+/** @brief The identifier octets SNMP puts on the wire. */
 typedef enum PROTO_ENUM_PACKED
 {
+    // ASN.1 simple types, encoded primitive (RFC 3417 sec 8 item 2).
     SNMP_TAG_BER_INTEGER = 0x02,
     SNMP_TAG_BER_OCTET_STRING = 0x04,
     SNMP_TAG_BER_NULL = 0x05,
     SNMP_TAG_BER_OID = 0x06,
     SNMP_TAG_BER_SEQUENCE = 0x30,
-    // SNMP application types (RFC 2578)
+    // SMIv2 application-wide types (RFC 2578 sec 7.1.5 through 7.1.10).
     SNMP_TAG_SNMP_IPADDRESS = 0x40,
     SNMP_TAG_SNMP_COUNTER32 = 0x41,
     SNMP_TAG_SNMP_GAUGE32 = 0x42,
     SNMP_TAG_SNMP_TIMETICKS = 0x43,
     SNMP_TAG_SNMP_OPAQUE = 0x44,
     SNMP_TAG_SNMP_COUNTER64 = 0x46,
-    // VarBind exception markers (RFC 3416)
+    // VarBind CHOICE exception markers (RFC 3416 sec 3; used per sec 4.2.1 and sec 4.2.2).
     SNMP_TAG_SNMP_NO_SUCH_OBJECT = 0x80,
     SNMP_TAG_SNMP_NO_SUCH_INSTANCE = 0x81,
     SNMP_TAG_SNMP_END_OF_MIB_VIEW = 0x82,
-    // PDU tags (context-specific, constructed)
-    SNMP_TAG_SNMP_PDU_GET = 0xA0,
-    SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1,
-    SNMP_TAG_SNMP_PDU_RESPONSE = 0xA2,
-    SNMP_TAG_SNMP_PDU_SET = 0xA3,
-    SNMP_TAG_SNMP_PDU_GETBULK = 0xA5,
-    SNMP_TAG_SNMP_PDU_TRAPV2 = 0xA7,
-    SNMP_TAG_SNMP_PDU_REPORT = 0xA8,
+    // PDU tags, context-specific constructed (RFC 3416 sec 3).
+    SNMP_TAG_SNMP_PDU_GET = 0xA0,     ///< GetRequest-PDU ::= [0] IMPLICIT PDU
+    SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1, ///< GetNextRequest-PDU ::= [1] IMPLICIT PDU
+    SNMP_TAG_SNMP_PDU_RESPONSE = 0xA2, ///< Response-PDU ::= [2] IMPLICIT PDU
+    SNMP_TAG_SNMP_PDU_SET = 0xA3,      ///< SetRequest-PDU ::= [3] IMPLICIT PDU
+    SNMP_TAG_SNMP_PDU_GETBULK = 0xA5,  ///< GetBulkRequest-PDU ::= [5] IMPLICIT BulkPDU
+    SNMP_TAG_SNMP_PDU_INFORM = 0xA6,   ///< InformRequest-PDU ::= [6] IMPLICIT PDU
+    SNMP_TAG_SNMP_PDU_TRAPV2 = 0xA7,   ///< SNMPv2-Trap-PDU ::= [7] IMPLICIT PDU
+    SNMP_TAG_SNMP_PDU_REPORT = 0xA8,   ///< Report-PDU ::= [8] IMPLICIT PDU
 } SnmpTag;
 
-// ---------------------------------------------------------------------------
-// Encoder - forward writer over a caller buffer. Constructed types reserve a
-// 3-byte long-form length that is back-patched at close (valid BER; accepted by
-// net-snmp etc.), so no buffering or shifting is needed.
-// ---------------------------------------------------------------------------
+/**
+ * @brief An encoder's cursor: the caller buffer, how far it is written, and whether it still fits.
+ *
+ * The cursor is the caller's, so several encodings can be open at once (a PDU into one buffer
+ * while the message that will carry it is framed in another).
+ */
 typedef struct BerEnc
 {
-    uint8_t *buf;
-    size_t cap;
-    size_t len;
-    proto_bool ok;
+    uint8_t *buf;   ///< the buffer octets are written into
+    size_t cap;     ///< how many it holds
+    size_t len;     ///< how many are written
+    proto_bool ok;  ///< no write has run past cap
 } BerEnc;
 
-void protocore_ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap);
-
-proto_bool protocore_ber_put_integer(BerEnc *e, long v);               ///< INTEGER (signed, minimal)
-proto_bool protocore_ber_put_uint(BerEnc *e, uint8_t tag, uint32_t v); ///< non-negative int with @p tag
-proto_bool protocore_ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *d,
-                                          size_t n);                         ///< OCTET STRING / IpAddress / Opaque
-proto_bool protocore_ber_put_null(BerEnc *e);                                ///< NULL
-proto_bool protocore_ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t n); ///< OBJECT IDENTIFIER (n >= 2)
-proto_bool protocore_ber_put_tlv(BerEnc *e, uint8_t tag, const uint8_t *val, size_t n); ///< raw primitive TLV
-proto_bool protocore_ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t n); ///< append pre-encoded bytes verbatim
-
-size_t protocore_ber_seq_begin(BerEnc *e, uint8_t tag); ///< open a constructed type; returns a token
-void protocore_ber_seq_end(BerEnc *e, size_t token);    ///< close it (back-patch the length)
-
-// ---------------------------------------------------------------------------
-// Decoder - forward reader over a buffer.
-// ---------------------------------------------------------------------------
+/** @brief A decoder's cursor: the octets being read, and how far the read has walked. */
 typedef struct
 {
-    const uint8_t *buf;
-    size_t len;
-    size_t pos;
-    proto_bool ok;
+    const uint8_t *buf; ///< the octets being read
+    size_t len;         ///< how many
+    size_t pos;         ///< the next octet a read takes
+    proto_bool ok;      ///< no read has run past len
 } BerDec;
 
-void protocore_ber_dec_init(BerDec *d, const uint8_t *buf, size_t len);
+/** @brief The caller buffer a codec runs over. */
+typedef struct
+{
+    uint8_t *out;      ///< where an encoder writes its octets
+    const uint8_t *in; ///< the octets a decoder reads
+    size_t cap;        ///< octets available at @c out, or held by @c in
+} SnmpBerBufArgs;
 
-/** @brief Read a tag + length; on success @p d->pos is left at the value. */
-proto_bool protocore_ber_read_header(BerDec *d, uint8_t *tag, size_t *length);
-/** @brief Read an INTEGER into @p out. */
-proto_bool protocore_ber_read_integer(BerDec *d, long *out);
-/** @brief Read an OBJECT IDENTIFIER into @p arcs (capacity @p max); count in @p n. */
-proto_bool protocore_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n);
-/** @brief Advance the cursor past @p length value bytes. */
-proto_bool protocore_ber_skip(BerDec *d, size_t length);
+/** @brief The TLV a write carries: its identifier octet and the value under it. */
+typedef struct
+{
+    uint8_t tag;          ///< the identifier octet the write emits
+    long ival;            ///< the INTEGER value
+    uint32_t uval;        ///< the non-negative application-type value (RFC 2578 sec 7.1.6 through 7.1.8)
+    const uint8_t *bytes; ///< OCTET STRING octets, or pre-encoded octets a raw append copies
+    size_t len;           ///< how many
+    const uint32_t *arcs; ///< the OBJECT IDENTIFIER subidentifiers
+    size_t arc_count;     ///< how many, at least 2
+    size_t token;         ///< in: the constructed type a close back-patches; out: the one an open reserved
+} SnmpBerTlvArgs;
+
+/** @brief Where a read lands what it took. */
+typedef struct
+{
+    uint32_t *arc_out; ///< where an OBJECT IDENTIFIER read lands its subidentifiers
+    size_t arc_cap;    ///< how many that holds, at least 2
+    size_t skip;       ///< value octets a skip steps over
+} SnmpBerReadArgs;
+
+/** @brief The codec's calls, described only in snmp_ber.c. */
+struct SnmpBerInternal;
+
+/**
+ * @brief The SNMP serialization (RFC 3417 sec 8, over ITU-T X.690).
+ *
+ * A caller binds a cursor with an init, sets the members a call takes, invokes it through
+ * ::SnmpBer, and reads the outcome off the same handle. Nesting is explicit: an open reports the
+ * token its close needs, so the caller holds it while the inner types are written.
+ *
+ * No storage member: both cursors are the caller's and every call reads or writes only through
+ * them, so the module keeps nothing between calls.
+ *
+ * @var SnmpBerNs::enc       the encoder cursor a write acts on
+ * @var SnmpBerNs::dec       the decoder cursor a read acts on
+ * @var SnmpBerNs::buf       the caller buffer an init binds a cursor to
+ * @var SnmpBerNs::tlv       the identifier octet and value a write carries
+ * @var SnmpBerNs::read      where a read lands what it took
+ * @var SnmpBerNs::ok        a call's true/false outcome: the cursor still fits its buffer
+ * @var SnmpBerNs::tag       the identifier octet a header read took
+ * @var SnmpBerNs::vlen      the value length that header states, in octets
+ * @var SnmpBerNs::ival      the value an INTEGER read took
+ * @var SnmpBerNs::n         subidentifiers an OBJECT IDENTIFIER read landed
+ * @var SnmpBerNs::enc_init          bind an encoder cursor to @c buf.out for @c buf.cap octets
+ * @var SnmpBerNs::put_integer       write an INTEGER, two's complement, minimal
+ * @var SnmpBerNs::put_uint          write a non-negative value under @c tlv.tag, big-endian, minimal
+ * @var SnmpBerNs::put_octet_string  write @c tlv.bytes under @c tlv.tag
+ * @var SnmpBerNs::put_null          write NULL, the value a GetRequest-PDU binding carries
+ * @var SnmpBerNs::put_oid           write an OBJECT IDENTIFIER from @c tlv.arcs
+ * @var SnmpBerNs::put_tlv           write one primitive TLV verbatim
+ * @var SnmpBerNs::put_raw           append already-encoded octets, no header of their own
+ * @var SnmpBerNs::seq_begin         open a constructed type, reserving its definite-long length
+ * @var SnmpBerNs::seq_end           close it, back-patching that length (RFC 3417 sec 8 item 1)
+ * @var SnmpBerNs::dec_init          bind a decoder cursor to @c buf.in for @c buf.cap octets
+ * @var SnmpBerNs::read_header       take a tag and length, leaving the cursor at the value
+ * @var SnmpBerNs::read_integer      take an INTEGER, sign-extended from its first octet
+ * @var SnmpBerNs::read_oid          take an OBJECT IDENTIFIER into @c read.arc_out
+ * @var SnmpBerNs::skip              step the cursor past @c read.skip value octets
+ * @var SnmpBerNs::internal          the calls that reach the cursors
+ */
+typedef struct
+{
+    BerEnc *enc; ///< the encoder cursor every write names
+    BerDec *dec; ///< the decoder cursor every read names
+
+    SnmpBerBufArgs buf;  ///< the caller buffer an init binds
+    SnmpBerTlvArgs tlv;  ///< what a write carries
+    SnmpBerReadArgs read; ///< where a read lands
+
+    proto_bool ok;
+    uint8_t tag;
+    size_t vlen;
+    long ival;
+    size_t n;
+
+    void (*enc_init)(struct SnmpBerInternal *ctx);
+    void (*put_integer)(struct SnmpBerInternal *ctx);
+    void (*put_uint)(struct SnmpBerInternal *ctx);
+    void (*put_octet_string)(struct SnmpBerInternal *ctx);
+    void (*put_null)(struct SnmpBerInternal *ctx);
+    void (*put_oid)(struct SnmpBerInternal *ctx);
+    void (*put_tlv)(struct SnmpBerInternal *ctx);
+    void (*put_raw)(struct SnmpBerInternal *ctx);
+    void (*seq_begin)(struct SnmpBerInternal *ctx);
+    void (*seq_end)(struct SnmpBerInternal *ctx);
+    void (*dec_init)(struct SnmpBerInternal *ctx);
+    void (*read_header)(struct SnmpBerInternal *ctx);
+    void (*read_integer)(struct SnmpBerInternal *ctx);
+    void (*read_oid)(struct SnmpBerInternal *ctx);
+    void (*skip)(struct SnmpBerInternal *ctx);
+
+    struct SnmpBerInternal *internal;
+} SnmpBerNs;
+
+/** @brief The one symbol this module exports. */
+extern SnmpBerNs SnmpBer;
 
 #endif // PROTOCORE_ENABLE_SNMP
 

@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the MPR121 capacitive-touch codec (services/peripherals/mpr121): decoding the touch-status
+// Unit tests for the MPR121 capacitive-touch codec (server/peripherals/mpr121): decoding the touch-status
 // word into an electrode bitmask (masking proximity / over-current), the per-electrode
 // touched test, the proximity / over-current flags, the 10-bit filtered/baseline word, and the
 // exact bytes of the register bring-up sequence. The I2C read/write is ESP32-only.
 
-#include "services/peripherals/mpr121/mpr121.h"
+#include "server/peripherals/mpr121/mpr121.h"
 #include <stdint.h>
 #include <unity.h>
 

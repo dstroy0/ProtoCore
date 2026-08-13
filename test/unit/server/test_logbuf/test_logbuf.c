@@ -4,7 +4,7 @@
 // Unit tests for the rotating log ring (server/logbuf): append order, the
 // level prefix, oldest-pruned rotation, dump formatting, and the severity trap.
 
-#include "server/system/logbuf.h"
+#include "server/core/logbuf.h"
 #include <stdio.h>
 
 #include <unity.h>

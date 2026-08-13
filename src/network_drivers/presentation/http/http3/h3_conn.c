@@ -44,7 +44,7 @@ static proto_bool h3_conn_slot_storage(H3Conn *h3)
     if (base == NULL)
     {
         protocore_span b = protocore_plaintext_persist_span(PROTOCORE_H3_CONN_BORROW);
-        if (!protocore_span_ok(b))
+        if (!span.ok(b))
         {
             return PROTO_FALSE;
         }
@@ -149,7 +149,7 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
     const size_t mark = protocore_plaintext_mark();
     protocore_span bs = protocore_plaintext_span(PROTOCORE_H3_STREAM_BUF, 4);
     protocore_span sc = protocore_plaintext_span(PROTOCORE_H3_QPACK_SCRATCH, 4);
-    if (!protocore_span_ok(bs) || !protocore_span_ok(sc))
+    if (!span.ok(bs) || !span.ok(sc))
     {
         protocore_plaintext_release(mark);
         h3_fail(h3, H3_INTERNAL_ERROR);
@@ -423,7 +423,7 @@ proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status,
     const size_t mark = protocore_plaintext_mark();
     protocore_span bl = protocore_plaintext_span(PROTOCORE_H3_QPACK_BLOCK, 4);
     protocore_span ob = protocore_plaintext_span(PROTOCORE_H3_STREAM_BUF, 4);
-    if (!protocore_span_ok(bl) || !protocore_span_ok(ob))
+    if (!span.ok(bl) || !span.ok(ob))
     {
         protocore_plaintext_release(mark);
         return PROTO_FALSE;

@@ -64,15 +64,15 @@ size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *
     // 802.15.4 TAP header: version(1)=0, reserved(1)=0, length(2 LE) = whole TAP block.
     p[0] = 0;
     p[1] = 0;
-    protocore_wr16le(p + 2, RADIO_SNIFF_TAP_LEN);
+    endian.wr16le(p + 2, RADIO_SNIFF_TAP_LEN);
     // TLV: Received Signal Strength (type 1, len 4), float32 dBm.
-    protocore_wr16le(p + 4, 1);
-    protocore_wr16le(p + 6, 4);
-    protocore_wr32le(p + 8, protocore_radiosniff_i2f32(rssi_dbm));
+    endian.wr16le(p + 4, 1);
+    endian.wr16le(p + 6, 4);
+    endian.wr32le(p + 8, protocore_radiosniff_i2f32(rssi_dbm));
     // TLV: Channel Assignment (type 3, len 3 -> padded to 4): channel number(2 LE) + page(1).
-    protocore_wr16le(p + 12, 3);
-    protocore_wr16le(p + 14, 3);
-    protocore_wr16le(p + 16, channel);
+    endian.wr16le(p + 12, 3);
+    endian.wr16le(p + 14, 3);
+    endian.wr16le(p + 16, channel);
     p[18] = 0; // channel page 0
     p[19] = 0; // pad
 

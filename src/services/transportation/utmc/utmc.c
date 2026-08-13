@@ -27,32 +27,32 @@ static void put_u(protocore_sb *b, uint32_t v)
         out[i] = tmp[n - 1 - i];
     }
     out[n] = '\0';
-    protocore_sb_put(b, out);
+    Sb.put(b, out);
 }
 
 size_t protocore_utmc_request(const char *object_id, char *out, size_t cap)
 {
     protocore_sb b = {out, cap, 0, out != NULL && cap > 0};
-    protocore_sb_put(&b, "<?xml version=\"1.0\"?><UTMCRequest><object id=\"");
-    protocore_sb_xml(&b, object_id);
-    protocore_sb_put(&b, "\"/></UTMCRequest>");
-    return protocore_sb_finish(&b);
+    Sb.put(&b, "<?xml version=\"1.0\"?><UTMCRequest><object id=\"");
+    Sb.xml(&b, object_id);
+    Sb.put(&b, "\"/></UTMCRequest>");
+    return Sb.finish(&b);
 }
 
 size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp, char *out,
                         size_t cap)
 {
     protocore_sb b2 = {out, cap, 0, out != NULL && cap > 0};
-    protocore_sb_put(&b2, "<?xml version=\"1.0\"?><UTMCResponse><object id=\"");
-    protocore_sb_xml(&b2, object_id);
-    protocore_sb_put(&b2, "\" value=\"");
-    protocore_sb_xml(&b2, value);
-    protocore_sb_put(&b2, "\" quality=\"");
+    Sb.put(&b2, "<?xml version=\"1.0\"?><UTMCResponse><object id=\"");
+    Sb.xml(&b2, object_id);
+    Sb.put(&b2, "\" value=\"");
+    Sb.xml(&b2, value);
+    Sb.put(&b2, "\" quality=\"");
     put_u(&b2, quality);
-    protocore_sb_put(&b2, "\" timestamp=\"");
-    protocore_sb_xml(&b2, timestamp);
-    protocore_sb_put(&b2, "\"/></UTMCResponse>");
-    return protocore_sb_finish(&b2);
+    Sb.put(&b2, "\" timestamp=\"");
+    Sb.xml(&b2, timestamp);
+    Sb.put(&b2, "\"/></UTMCResponse>");
+    return Sb.finish(&b2);
 }
 
 size_t protocore_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap)

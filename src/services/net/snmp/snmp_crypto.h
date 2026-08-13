@@ -2,20 +2,34 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_snmp_crypto.h
- * @brief USM cryptographic primitives for SNMPv3 (PROTOCORE_ENABLE_SNMP_V3).
+ * @file snmp_crypto.h
+ * @brief The two USM transforms: key localization and the privacy cipher (PROTOCORE_ENABLE_SNMP_V3).
  *
- * Provides exactly what the User-based Security Model needs and nothing more:
+ * Exactly what the User-based Security Model needs, and nothing more.
  *
- *  - **Key localization** (RFC 3414 §2.6, SHA-256 variant per RFC 7860): turn a
- *    human password into the engine-localized authentication/privacy key.
- *  - **AES-128 in CFB-128 mode** (RFC 3826): the v3 privacy transform. A compact
- *    portable software AES is used on both host and ESP32 - SNMP payloads are a
- *    few hundred bytes, so this is not a throughput path; it is therefore
- *    identical and unit-testable off-target. (Like the SSH software crypto, it is
- *    not constant-time; for SNMP this is acceptable - see SECURITY.md.)
+ * **Key localization.** RFC 3414 sec 2.6 defines a localized key as one derived from a user's
+ * secret and the authoritative snmpEngineID, so a key that leaks reaches one engine only. RFC 7860
+ * sec 5 says that localization for the HMAC-SHA-2 protocols "SHALL be performed according to
+ * [RFC3414] using the same SHA-2 hash function as in the HMAC-SHA-2 authentication protocol", and
+ * RFC 7860 sec 9.3 states the password-to-key derivation: the password is repeated to a 1,048,576
+ * octet string and hashed to digest1, then digest1, snmpEngineID and digest1 again are hashed to
+ * the localized key. That is the RFC 3414 Appendix A.1 algorithm with SHA-256 in place of MD5.
+ * The same procedure produces the authentication key and the privacy key, each from its own
+ * password.
  *
- * SHA-256 and HMAC-SHA-256 are reused from the existing SSH crypto layer.
+ * **Privacy.** RFC 3826 defines usmAesCfb128Protocol: CFB128-AES-128. The cipher is AES (FIPS 197,
+ * not an RFC) and the mode is CFB with a 128-bit feedback segment (NIST SP 800-38A, not an RFC).
+ * RFC 3826 sec 3.1.2.1 states the 16-octet IV: snmpEngineBoots big-endian, then snmpEngineTime
+ * big-endian, then the 8-octet msgPrivacyParameters salt. The privacy key is the first 16 octets
+ * of the localized key.
+ *
+ * CFB is a stream mode, so the output length equals the input length and no padding is added, and
+ * decryption is the same construction with the feedback taken from the ciphertext. The transform
+ * is safe in place. SHA-256 and HMAC-SHA-256 come from the shared hash and MAC modules. This
+ * software AES is not constant time.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_SNMP_CRYPTO_H
@@ -27,42 +41,66 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SNMP_V3
 
-/** @brief Localized-key length (SHA-256 digest size). */
+/** @brief Localized-key length: the SHA-256 digest size (RFC 7860 sec 9.3). */
 #define SNMP_USM_KEY_LEN 32
 
-/**
- * @brief Derive the engine-localized USM key from a password (RFC 3414 §2.6).
- *
- * Expands @p password to 2^20 bytes and hashes it with SHA-256 to form the
- * user key Ku, then computes the localized key Kul = SHA-256(Ku || engineID ||
- * Ku). The same procedure produces both the authentication key and the privacy
- * key (each from its own password). The privacy transform uses the first 16
- * bytes of the result as the AES-128 key.
- *
- * @param password       NUL-terminated auth/priv password (>= 8 chars per RFC 3414).
- * @param engine_id      authoritative engine ID bytes.
- * @param engine_id_len  length of @p engine_id.
- * @param key_out        receives SNMP_USM_KEY_LEN localized key bytes.
- */
-void protocore_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id,
-                                     size_t engine_id_len, uint8_t key_out[SNMP_USM_KEY_LEN]);
+/** @brief RFC 7860 sec 9.3: what a password-to-key derivation reads, and where the key lands. */
+typedef struct
+{
+    const char *password;     ///< the user's authentication or privacy password
+    const uint8_t *engine_id; ///< the authoritative snmpEngineID (RFC 3414 sec 2.6)
+    size_t engine_id_len;     ///< how many octets
+    uint8_t *out;             ///< where ::SNMP_USM_KEY_LEN localized-key octets land
+} SnmpUsmKeyArgs;
+
+/** @brief RFC 3826 sec 3.1.2.1: what the privacy transform reads and where it writes. */
+typedef struct
+{
+    const uint8_t *key;  ///< the 16-octet AES key: the first 16 octets of the localized privacy key
+    const uint8_t *iv;   ///< the 16-octet IV: snmpEngineBoots, snmpEngineTime, msgPrivacyParameters
+    const uint8_t *in;   ///< the octets to transform
+    uint8_t *out;        ///< where they land; may be @c in
+    size_t len;          ///< how many
+    proto_bool encrypt;  ///< encrypt, otherwise decrypt with the feedback taken from the ciphertext
+} SnmpUsmPrivArgs;
+
+/** @brief The transforms, described only in snmp_crypto.c. */
+struct SnmpCryptoInternal;
 
 /**
- * @brief AES-128 CFB-128 transform (RFC 3826), used for SNMPv3 privacy.
+ * @brief The USM transforms (RFC 3414 sec 2.6, RFC 7860 sec 9.3, RFC 3826 sec 3.1.2.1).
  *
- * CFB is a stream mode: the output length equals the input length (no padding),
- * and decryption is the same construction with the feedback taken from the
- * ciphertext. Safe for in-place use (@p out may equal @p in).
+ * A caller sets the members a call takes, invokes it through ::SnmpCrypto, and reads the outcome
+ * off the same handle.
  *
- * @param key      16-byte AES-128 key (first 16 bytes of the localized priv key).
- * @param iv       16-byte IV = engineBoots(4, big-endian) || engineTime(4) || privParams(8).
- * @param in       input bytes.
- * @param out      output bytes (length @p len).
- * @param len      number of bytes.
- * @param encrypt  true to encrypt, false to decrypt.
+ * No storage member: both transforms read their inputs and write the caller's destination, so the
+ * module holds no key and no state between calls.
+ *
+ * @var SnmpCryptoNs::work          the caller's scratch region the hash borrows
+ * @var SnmpCryptoNs::key           what a password-to-key derivation reads, and where its key lands
+ * @var SnmpCryptoNs::priv          what the privacy transform reads and where it writes
+ * @var SnmpCryptoNs::ok            a call's true/false outcome
+ * @var SnmpCryptoNs::localize_key  derive the engine-localized key from a password
+ * @var SnmpCryptoNs::aes_cfb128    run CFB128-AES-128 over @c priv.in into @c priv.out
+ * @var SnmpCryptoNs::internal      the calls that reach the transforms
  */
-void protocore_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8_t *in, uint8_t *out, size_t len,
-                               proto_bool encrypt);
+typedef struct
+{
+    uint8_t *work; ///< PROTOCORE_HMAC_SHA256_BORROW octets, aligned for uint32_t, alive across the call
+
+    SnmpUsmKeyArgs key;   ///< what a derivation reads and writes
+    SnmpUsmPrivArgs priv; ///< what the privacy transform reads and writes
+
+    proto_bool ok;
+
+    void (*localize_key)(struct SnmpCryptoInternal *ctx);
+    void (*aes_cfb128)(struct SnmpCryptoInternal *ctx);
+
+    struct SnmpCryptoInternal *internal;
+} SnmpCryptoNs;
+
+/** @brief The one symbol this module exports. */
+extern SnmpCryptoNs SnmpCrypto;
 
 #endif // PROTOCORE_ENABLE_SNMP_V3
 

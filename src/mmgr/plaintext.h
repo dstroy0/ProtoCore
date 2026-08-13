@@ -25,13 +25,13 @@
  *
  * **Race-safety.** Each arena has exactly one accessor - the worker that owns
  * its slot - so allocation is a plain bump with no lock. Work reaches a worker
- * through its queue, so a context that is not a worker never borrows: the lwIP
- * callbacks run in tcpip_thread and only fill the rx ring + enqueue events, and
- * an ISR posts a fixed-size item to a preempt-queue lane whose task does the
- * work. In debug builds an owner assertion (protocore_platform_context_id()) records
- * the first context to touch each arena and fails loud if a second one does,
- * turning a future mistake into an immediate visible failure instead of a
- * silent cross-core race.
+ * through its queue, so a context that is not a worker never borrows: the
+ * network stack's callbacks run on its own thread and only fill the rx ring +
+ * enqueue events, and an ISR posts a fixed-size item to a preempt-queue lane
+ * whose task does the work. In debug builds an owner assertion
+ * (protocore_platform_context_id()) records the first context to touch each arena
+ * and fails loud if a second one does, turning a future mistake into an
+ * immediate visible failure instead of a silent cross-core race.
  *
  * **Exhaustion-safety.** Borrows live only within one dispatch and are
  * auto-reclaimed by the reset, so a forgotten free cannot accumulate (no
@@ -67,6 +67,49 @@ PROTOCORE_BEGIN_DECLS
  * derived from the other - one pool growing a slot is not a reason for the other to.
  */
 #define PROTOCORE_REG_POOL_SLOTS (PROTOCORE_GHOST_WORKER_SLOT + 1)
+
+/** @brief The per-slot arenas and the bytes they hand out, laid out only in plaintext.c. */
+struct PlainInternal;
+
+/**
+ * @brief The plaintext pool.
+ *
+ * @var PlainNs::alloc       borrow @c n bytes aligned to @c align, or NULL if it does not fit
+ * @var PlainNs::span        the same borrow as a span, so the length travels with the pointer
+ * @var PlainNs::persist     a span that outlives the dispatch, for state that spans polls
+ * @var PlainNs::reset       empty the calling worker's arena
+ * @var PlainNs::mark        capture the arena offset, to release back to
+ * @var PlainNs::release     reclaim everything borrowed since a mark, LIFO
+ * @var PlainNs::used        bytes currently handed out
+ * @var PlainNs::high_water  the largest @c used any slot has reached, for sizing the arena
+ * @var PlainNs::capacity    one arena's total extent
+ * @var PlainNs::owns        whether a pointer lies inside the pool
+ * @var PlainNs::slot_of     which slot holds a pointer, or -1
+ * @var PlainNs::internal    the per-slot arenas and the storage behind them
+ *
+ * The extent and the layout of that storage are plaintext.c's alone: the handle is an incomplete
+ * type here, so a caller can carry it and nothing else. Every call resolves the slot from the
+ * calling worker, so no caller passes one in.
+ */
+typedef struct
+{
+    void *(*alloc)(size_t n, size_t align);
+    protocore_span (*span)(size_t n, size_t align);
+    protocore_span (*persist)(size_t n);
+    void (*reset)(void);
+    size_t (*mark)(void);
+    void (*release)(size_t mark);
+    size_t (*used)(void);
+    size_t (*high_water)(void);
+    size_t (*capacity)(void);
+    proto_bool (*owns)(const void *p);
+    int (*slot_of)(const void *p);
+
+    struct PlainInternal *internal;
+} PlainNs;
+
+/** @brief The one pool instance every call below reaches its arenas through. */
+extern struct PlainInternal protocore_plaintext_internal;
 
 /**
  * @brief Borrow @p n bytes of plaintext, aligned to @p align.
@@ -159,7 +202,8 @@ size_t protocore_plaintext_capacity(void);
  * compile-time, so the whole pool is ONE region of known extent and the test is a single unsigned
  * subtract and compare - no loop, no per-slot comparison, no per-allocation metadata. A pointer
  * below the base wraps to a huge offset and fails the same bound as one past the end, so a buffer
- * overrun cannot test as still-inside.
+ * overrun cannot test as still-inside. Nothing is inside a pool no slot has taken a borrow from,
+ * so an untouched pool answers false.
  *
  * This is the plaintext half of the control strategy. The secure pool is a disjoint region and
  * answers its own question, so a secure-pool pointer can never be accepted where a plaintext one
@@ -175,39 +219,6 @@ proto_bool protocore_plaintext_owns(const void *p);
  * way the lock-free single-accessor invariant can be violated, and this makes it checkable.
  */
 int protocore_plaintext_slot_of(const void *p);
-
-/**
- * @brief The plaintext pool.
- *
- * @var PlainNs::alloc       borrow @c n bytes aligned to @c align, or NULL if it does not fit
- * @var PlainNs::span        the same borrow as a span, so the length travels with the pointer
- * @var PlainNs::persist     a span that outlives the dispatch, for state that spans polls
- * @var PlainNs::reset       empty the calling worker's arena
- * @var PlainNs::mark        capture the arena offset, to release back to
- * @var PlainNs::release     reclaim everything borrowed since a mark, LIFO
- * @var PlainNs::used        bytes currently handed out
- * @var PlainNs::high_water  the largest @c used any slot has reached, for sizing the arena
- * @var PlainNs::capacity    one arena's total extent
- * @var PlainNs::owns        whether a pointer lies inside the pool
- * @var PlainNs::slot_of     which slot holds a pointer, or -1
- *
- * No storage member. The arenas and their backing bytes belong to plaintext.c, and a caller reaches
- * its own by calling - the slot is resolved from the worker, never passed in.
- */
-typedef struct
-{
-    void *(*alloc)(size_t n, size_t align);
-    protocore_span (*span)(size_t n, size_t align);
-    protocore_span (*persist)(size_t n);
-    void (*reset)(void);
-    size_t (*mark)(void);
-    void (*release)(size_t mark);
-    size_t (*used)(void);
-    size_t (*high_water)(void);
-    size_t (*capacity)(void);
-    proto_bool (*owns)(const void *p);
-    int (*slot_of)(const void *p);
-} PlainNs;
 
 /**
  * @brief The names, aliased.
@@ -227,7 +238,8 @@ static const PlainNs plain __attribute__((unused)) = {.alloc = protocore_plainte
                                                       .high_water = protocore_plaintext_high_water,
                                                       .capacity = protocore_plaintext_capacity,
                                                       .owns = protocore_plaintext_owns,
-                                                      .slot_of = protocore_plaintext_slot_of};
+                                                      .slot_of = protocore_plaintext_slot_of,
+                                                      .internal = &protocore_plaintext_internal};
 
 PROTOCORE_END_DECLS
 

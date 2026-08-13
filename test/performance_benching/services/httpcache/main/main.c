@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the HTTP Cache-Control helpers (services/web/httpcache): the
+// On-device CCOUNT microbenchmark for the HTTP Cache-Control helpers (network_drivers/presentation/http/httpcache): the
 // RFC 9111 (+ 8246 / 5861) directive builder, the tolerant directive parser, a first-class origin
 // preset, and the freshness-lifetime calculation. Every op here is pure text - no heap, no stdlib
 // allocation, no sockets - so like performance_benching/device/modbus (and unlike a peripheral driver such as
@@ -14,7 +14,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/web/httpcache/httpcache.h"
+#include "network_drivers/presentation/http/httpcache/httpcache.h"
 
 #include <stdbool.h>
 #include <stddef.h>

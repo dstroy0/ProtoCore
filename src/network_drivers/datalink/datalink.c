@@ -3,19 +3,34 @@
 
 /**
  * @file datalink.c
- * @brief Layer 2 (Data Link) - IEEE 802.11 frame handling stub. See datalink.h.
+ * @brief Layer 2 (Data Link) - the LINK LAYER of RFC 1122 sec 2. See datalink.h.
  *
- * Every Layer 2 operation (WLAN MAC, frame assembly/disassembly, CSMA/CA) is owned by the vendor
- * WiFi driver and the lwIP port. This is the extension point for a target where it is not.
+ * The platform's link driver and IP stack port carry out every Layer 2 operation: MAC framing,
+ * medium access, and the RFC 894 / RFC 1042 encapsulation RFC 1122 sec 2.3.3 requires. The one call
+ * here reports the layer up.
  *
  * The one symbol this file exports is @ref Datalink.
  */
 
-#include "datalink.h"
+#include "network_drivers/datalink/datalink.h"
 
-static void init(void)
+/**
+ * @brief The calls that reach the layer - what DatalinkNs points at.
+ *
+ * @var DatalinkInternal::ns  the handle a caller reads a call's outcome off
+ */
+struct DatalinkInternal
 {
-    // No-op: the vendor WiFi driver and lwIP own every L2 operation.
+    DatalinkNs *ns;
+};
+
+static struct DatalinkInternal s_datalink = {.ns = &Datalink};
+
+// Reports the layer up. The driver below performs every RFC 1122 sec 2.3.3 encapsulation step.
+static void datalink_init(struct DatalinkInternal *restrict ctx)
+{
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-const DatalinkNs Datalink = {init};
+// Designated, so a member's position in the struct does not decide what it binds to.
+DatalinkNs Datalink = {.init = datalink_init, .internal = &s_datalink};

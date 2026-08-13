@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the INA219 current/power codec (services/peripherals/ina219): decoding the
+// On-device CCOUNT microbenchmark for the INA219 current/power codec (server/peripherals/ina219): decoding the
 // bus-voltage register (bits [15:3], LSB 4 mV, status bits ignored), decoding the signed shunt-voltage
 // register (LSB 10 uV), computing the calibration register from the current LSB and shunt resistance,
 // and scaling the raw current / power registers by the current LSB - all pure integer math, no I2C.
@@ -15,7 +15,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/ina219/ina219.h"
+#include "server/peripherals/ina219/ina219.h"
 
 #include <stdbool.h>
 #include <stddef.h>

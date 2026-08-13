@@ -13,7 +13,7 @@
 
 #include "mnt_mock.h"
 #include "protocore.h"             // protocore_file_holds_slot: does the file pump hold this slot
-#include "server/filesystem/mnt.h" // protocore_mnt_mount: the fixture is the mounted store
+#include "server/storage/mnt.h" // protocore_mnt_mount: the fixture is the mounted store
 #include <stdio.h>
 #include <string.h>
 

@@ -5,11 +5,13 @@
  * @file membuild.h
  * @brief Bounded no-heap builder that writes into memory the caller already owns.
  *
- * Under mmgr because building into a buffer is a memory operation: the builder never allocates,
- * it is handed a region and fills it. It bump-appends into a caller-owned `char[]` and latches
- * @c ok to false the first time something would not fit, so every later append is a no-op and the
- * caller tests one flag at the end rather than a return value per call. Header-only inline, so
- * there is zero link cost when unused.
+ * Under mmgr because building into a buffer is a memory operation: the builder never allocates, it
+ * is handed a region and fills it. It bump-appends into a caller-owned `char[]` and latches @c ok to
+ * false the first time something would not fit, so every later append is a no-op and the caller
+ * tests one flag at the end rather than a return value per call.
+ *
+ * The module exports one symbol, @ref Sb. The appends it names are in membuild.c, and everything
+ * else in that file has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -18,10 +20,21 @@
 #ifndef PROTOCORE_MEMBUILD_H
 #define PROTOCORE_MEMBUILD_H
 
-#include "mmgr/float_bits.h"       // proto_dbl_sign / proto_dbl_exp / proto_dbl_mant - the field reads
-#include "mmgr/protostr.h"         // str.len - a word per test, bounded by a known width
-#include "mmgr/rawmemcpy.h"        // proto_raw_read - the span move protocore_sb_put_n is built on
-#include "shared/hex/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
+#include "protocore_config.h"
+
+PROTOCORE_BEGIN_DECLS
+
+/**
+ * @brief Append a string literal, taking the length from the array type.
+ *
+ * `sizeof(s) - 1` is the extent the array type already states, folded at compile time. A macro
+ * because only the array type carries that extent: passing a literal to a function decays it to a
+ * pointer and loses the length.
+ *
+ * @warning @p s must be a string literal or a `char[]`. A `const char *` compiles here and yields the
+ *          pointer size, so it appends 3 or 7 bytes. ::SbNs::put takes a runtime string.
+ */
+#define protocore_sb_lit(b, s) protocore_sb_put_n((b), (s), sizeof(s) - 1)
 
 /** @brief Bump-append target; @c ok latches false once an append would overflow @c cap. */
 typedef struct
@@ -33,700 +46,164 @@ typedef struct
 } protocore_sb;
 
 /**
- * @brief Append @p sl bytes of @p s - the primitive the others build on.
+ * @brief The builder module. Every append measures its field, tests the one bound, then writes.
  *
- * Takes the length rather than finding it. Every frame here is mostly literal text whose length the
- * compiler already knows; scanning for a NUL to rediscover it is the same waste as re-parsing a
- * format string. Appending a literal goes through protocore_sb_lit, which deduces the length.
+ * @var SbNs::put_n
+ * Append @c sl bytes of @c s. The primitive the others are built on: it takes the length rather than
+ * scanning for a NUL. Appending a literal goes through ::protocore_sb_lit, which deduces the length.
+ *
+ * @var SbNs::put
+ * Append the NUL-terminated @c s, measured within @c cap. Leaves the buffer untouched and clears
+ * @c ok when the whole string would not fit.
+ *
+ * @var SbNs::put_clip
+ * Append as much of @c s as fits and stop, WITHOUT latching @c ok. A NULL @c s appends nothing.
+ *
+ * Display text only - an `ls -l` line, a log message. A protocol field takes ::SbNs::put: a clipped
+ * header or frame has no terminator and desynchronizes the peer, which the latch is what stops.
+ *
+ * @var SbNs::u64_clip
+ * Append @c v as decimal, right-aligned in at least @c columns with leading spaces, if the whole
+ * field fits - else append nothing, without latching @c ok. @c columns of 0 asks for the natural
+ * width. All-or-nothing where ::SbNs::put_clip is byte-wise, since half a number reads as a
+ * different number. Space padding, not the zero padding ::SbNs::uint writes.
+ *
+ * @var SbNs::xml
+ * Append @c s XML-escaped (&amp; &lt; &gt; &quot;); a NULL @c s appends nothing.
+ *
+ * @var SbNs::ch
+ * Append one character.
+ *
+ * @var SbNs::uint
+ * Append @c v in @c base (10 or 16), left-padded with '0' to at least @c min_digits. The one engine
+ * behind the decimal and hex appenders: measure the field, bounds-check once, then fill it
+ * back-to-front in place, so neither needs a scratch array. A power-of-two base takes each digit
+ * with a shift and a mask; base 10 divides, in 32-bit arithmetic when the value fits 32 bits.
+ * @c min_digits is what carries a printf width like %08lx or %02d.
+ *
+ * @var SbNs::u32w
+ * Append @c v as decimal, zero-padded to at least @c min_digits (printf "%0Nu").
+ *
+ * @var SbNs::hex
+ * Append @c v as lowercase hex, zero-padded to at least @c min_digits (printf "%0Nx").
+ *
+ * @var SbNs::u32
+ * Append @c v as decimal, no leading zeros ("0" for zero).
+ *
+ * @var SbNs::u64
+ * Append @c v as decimal, 64-bit.
+ *
+ * @var SbNs::i64
+ * Append @c v as signed decimal, 64-bit, with a leading '-' when negative. The magnitude is taken
+ * through unsigned arithmetic, so the most negative value does not overflow on the way.
+ *
+ * @var SbNs::sign_bit
+ * True when @c v carries the IEEE-754 sign bit, including for -0.0. A mask on the encoding, not a
+ * divide.
+ *
+ * @var SbNs::is_inf
+ * True when @c v is an infinity: all exponent bits set, zero significand.
+ *
+ * @var SbNs::is_nan
+ * True when @c v is a NaN: all exponent bits set, nonzero significand.
+ *
+ * @var SbNs::g
+ * Append @c v with @c sig significant digits, choosing fixed or scientific form - the printf
+ * "%.<sig>g" rendering, including trailing-zero removal. Byte-identical to printf for @c sig up to
+ * 10. Above that the scaling is done in double, which runs out of precision around 16 significant
+ * digits, so @c sig of 15 or more can differ from libc in the last digit.
+ *
+ * @var SbNs::fixed
+ * Append @c v with exactly @c decimals digits after the point (printf "%.<decimals>f"), @c decimals
+ * clamped to 18. Byte-identical to printf for a magnitude below 2^64; at or above it the value falls
+ * back to ::SbNs::g, whose exact expansion needs no big-integer arithmetic.
+ *
+ * @var SbNs::json
+ * Append @c s as a JSON string literal: double-quoted, with `"` and `\` backslash-escaped. A NULL
+ * @c s appends `""`. Control characters pass through unescaped.
+ *
+ * @var SbNs::finish
+ * NUL-terminate and return the built length, or 0 when the build overflowed or @c cap is 0.
+ *
+ * No storage member: every call works on the caller's @ref protocore_sb and the module holds nothing
+ * of its own.
  */
-static inline void protocore_sb_put_n(protocore_sb *b, const char *s, size_t sl)
+typedef struct
 {
-    if (!b->ok)
-    {
-        return;
-    }
-    if (b->len + sl >= b->cap)
-    {
-        b->ok = PROTO_FALSE;
-        return;
-    }
-    // The destination is a position inside the caller's buffer, so the exact mover: the bytes past
-    // the append still belong to whoever owns the rest of it.
-    proto_raw_read(b->p + b->len, s, sl);
-    b->len += sl;
-}
+    void (*put_n)(protocore_sb *b, const char *s, size_t sl);
+    void (*put)(protocore_sb *b, const char *s);
+    void (*put_clip)(protocore_sb *b, const char *s);
+    void (*u64_clip)(protocore_sb *b, uint64_t v, uint8_t columns);
+    void (*xml)(protocore_sb *b, const char *s);
+    void (*ch)(protocore_sb *b, char c);
+    void (*uint)(protocore_sb *b, uint64_t v, unsigned base, unsigned min_digits);
+    void (*u32w)(protocore_sb *b, uint32_t v, unsigned min_digits);
+    void (*hex)(protocore_sb *b, uint64_t v, unsigned min_digits);
+    void (*u32)(protocore_sb *b, uint32_t v);
+    void (*u64)(protocore_sb *b, uint64_t v);
+    void (*i64)(protocore_sb *b, int64_t v);
+    proto_bool (*sign_bit)(double v);
+    proto_bool (*is_inf)(double v);
+    proto_bool (*is_nan)(double v);
+    void (*g)(protocore_sb *b, double v, unsigned sig);
+    void (*fixed)(protocore_sb *b, double v, unsigned decimals);
+    void (*json)(protocore_sb *b, const char *s);
+    size_t (*finish)(protocore_sb *b);
+} SbNs;
 
-/** @brief Append NUL-terminated @p s; leaves the buffer untouched and clears @c ok if it would not fit. */
-static inline void protocore_sb_put(protocore_sb *b, const char *s)
-{
-    if (!b->ok)
-    {
-        return;
-    }
-    protocore_sb_put_n(b, s, str.len(s, b->cap));
-}
+// The appends, in membuild.c. Named here because the table below has to name them, and prefixed
+// because that puts them in the linker's namespace.
+void protocore_sb_put_n(protocore_sb *b, const char *s, size_t sl);
+void protocore_sb_put(protocore_sb *b, const char *s);
+void protocore_sb_put_clip(protocore_sb *b, const char *s);
+void protocore_sb_u64_clip(protocore_sb *b, uint64_t v, uint8_t columns);
+void protocore_sb_xml(protocore_sb *b, const char *s);
+void protocore_sb_ch(protocore_sb *b, char c);
+void protocore_sb_uint(protocore_sb *b, uint64_t v, unsigned base, unsigned min_digits);
+void protocore_sb_u32w(protocore_sb *b, uint32_t v, unsigned min_digits);
+void protocore_sb_hex(protocore_sb *b, uint64_t v, unsigned min_digits);
+void protocore_sb_u32(protocore_sb *b, uint32_t v);
+void protocore_sb_u64(protocore_sb *b, uint64_t v);
+void protocore_sb_i64(protocore_sb *b, int64_t v);
+proto_bool protocore_signbit(double v);
+proto_bool protocore_isinf(double v);
+proto_bool protocore_isnan(double v);
+void protocore_sb_g(protocore_sb *b, double v, unsigned sig);
+void protocore_sb_fixed(protocore_sb *b, double v, unsigned decimals);
+void protocore_sb_json(protocore_sb *b, const char *s);
+size_t protocore_sb_finish(protocore_sb *b);
 
 /**
- * @brief Append a string literal, taking the length from the array type.
+ * @brief The names, aliased.
  *
- * `protocore_sb_put(b, "HTTP/1.1 ")` scans nine bytes at runtime to learn what the type already states;
- * `sizeof(s) - 1` is a constant the compiler folds. A macro because only the array type carries
- * the extent - passing a literal to a function decays it to a pointer and loses the length.
+ * `static const` and initialized here, not declared `extern` against a definition in the .c: a
+ * translation unit that can see this initializer knows which function each member holds, so a member
+ * read folds away and the call to the append in membuild.c is direct, leaving the table referenced
+ * by nothing for the linker to drop.
  *
- * @warning @p s must be a string literal or a `char[]`. A `const char *` compiles here and yields
- *          the pointer size, so it silently appends 3 or 7 bytes. Use protocore_sb_put for a runtime
- *          string.
+ * `unused` because a header this wide is included by files that take none of it.
  */
-#define protocore_sb_lit(b, s) protocore_sb_put_n((b), (s), sizeof(s) - 1)
+// Designated, so a member's position in the struct does not decide what it binds to.
+static const SbNs Sb __attribute__((unused)) = {.put_n = protocore_sb_put_n,
+                                                .put = protocore_sb_put,
+                                                .put_clip = protocore_sb_put_clip,
+                                                .u64_clip = protocore_sb_u64_clip,
+                                                .xml = protocore_sb_xml,
+                                                .ch = protocore_sb_ch,
+                                                .uint = protocore_sb_uint,
+                                                .u32w = protocore_sb_u32w,
+                                                .hex = protocore_sb_hex,
+                                                .u32 = protocore_sb_u32,
+                                                .u64 = protocore_sb_u64,
+                                                .i64 = protocore_sb_i64,
+                                                .sign_bit = protocore_signbit,
+                                                .is_inf = protocore_isinf,
+                                                .is_nan = protocore_isnan,
+                                                .g = protocore_sb_g,
+                                                .fixed = protocore_sb_fixed,
+                                                .json = protocore_sb_json,
+                                                .finish = protocore_sb_finish};
 
-/**
- * @brief Append as much of @p s as fits and stop, WITHOUT latching @c ok.
- *
- * For display text only - an `ls -l` line, a log message - where a short rendering is better than
- * none and nothing downstream parses the result. Never use it for a protocol field: a clipped
- * header or frame has no terminator and desynchronizes the peer, which is exactly what the
- * latching protocore_sb_put exists to prevent. The two are deliberately different functions so the choice
- * is visible at the call site rather than being a flag someone sets once and forgets.
- */
-static inline void protocore_sb_put_clip(protocore_sb *b, const char *s)
-{
-    if (!b->ok || !s || b->len + 1 >= b->cap)
-    {
-        return;
-    }
-    size_t room = b->cap - b->len - 1;
-    size_t sl = str.len(s, room);
-    // The destination is a position inside the caller's buffer, so the exact mover: the bytes past
-    // the append still belong to whoever owns the rest of it.
-    proto_raw_read(b->p + b->len, s, sl);
-    b->len += sl;
-}
-
-/**
- * @brief Append @p v as decimal, right-aligned in at least @p columns with leading spaces, if the
- *        whole field fits - else append nothing, without latching @c ok.
- *
- * The display-text counterpart to protocore_sb_u64. A half-written number reads as a different number, so
- * this one is all-or-nothing where protocore_sb_put_clip is byte-wise. @p columns is what aligns a
- * fixed-width column (an `ls -l` date is `%2d` day and `%5d` year); 0 asks for the natural width.
- * Space padding, not the zero padding protocore_sb_uint does: a column pads to align, a field pads to a
- * fixed digit count, and the two are not interchangeable on the wire.
- */
-static inline void protocore_sb_u64_clip(protocore_sb *b, uint64_t v, uint8_t columns)
-{
-    if (!b->ok)
-    {
-        return;
-    }
-    uint64_t probe = v;
-    size_t digits = 1;
-    while (probe >= 10)
-    {
-        probe /= 10;
-        digits++;
-    }
-    size_t width = (digits < columns) ? columns : digits;
-    if (b->len + width >= b->cap)
-    {
-        return;
-    }
-    for (size_t i = width - digits; i-- > 0;)
-    {
-        b->p[b->len + i] = ' ';
-    }
-    for (size_t i = width; i-- > width - digits;)
-    {
-        b->p[b->len + i] = (char)('0' + (unsigned)(v % 10));
-        v /= 10;
-    }
-    b->len += width;
-}
-
-/** @brief Append @p s XML-escaped (&amp; &lt; &gt; &quot;); a NULL @p s appends nothing. */
-static inline void protocore_sb_xml(protocore_sb *b, const char *s)
-{
-    if (!b->ok || !s)
-    {
-        return;
-    }
-    for (; *s; s++)
-    {
-        const char *rep = NULL;
-        switch (*s)
-        {
-        case '&':
-            rep = "&amp;";
-            break;
-        case '<':
-            rep = "&lt;";
-            break;
-        case '>':
-            rep = "&gt;";
-            break;
-        case '"':
-            rep = "&quot;";
-            break;
-        default:
-            break;
-        }
-        if (rep)
-        {
-            protocore_sb_put(b, rep);
-        }
-        else
-        {
-            if (b->len + 1 >= b->cap)
-            {
-                b->ok = PROTO_FALSE;
-                return;
-            }
-            b->p[b->len] = *s;
-            b->len++;
-        }
-    }
-}
-
-/** @brief Append a single character. */
-static inline void protocore_sb_ch(protocore_sb *b, char c)
-{
-    if (!b->ok)
-    {
-        return;
-    }
-    if (b->len + 1 >= b->cap)
-    {
-        b->ok = PROTO_FALSE;
-        return;
-    }
-    b->p[b->len++] = c;
-}
-
-/**
- * @brief Append @p v in @p base (10 or 16), left-padded with '0' to at least @p min_digits.
- *
- * The one shared engine behind the decimal and hex appenders: measure the field, bounds-check
- * once, then fill it back-to-front in place. Same shape as protocore_sb_u32 so neither needs a
- * scratch array. @p min_digits is what carries a printf width like %08lx or %02d.
- */
-static inline void protocore_sb_uint(protocore_sb *b, uint64_t v, unsigned base, unsigned min_digits)
-{
-    if (!b->ok)
-    {
-        return;
-    }
-    // A power-of-two base is a bit field, not an arithmetic one: one hex digit IS four bits and
-    // one octal digit IS three, so extracting them is a shift and a mask. Only base 10 has to
-    // divide. Naming the width says which it is; the constants are the digit width, not a
-    // hand-tuned bit pattern.
-    const unsigned bits_per_digit = (base == 16) ? 4u : (base == 8) ? 3u : 0u;
-    const proto_bool power_of_two = bits_per_digit != 0;
-    const uint64_t digit_mask = power_of_two ? ((1ull << bits_per_digit) - 1u) : 0u;
-
-    // Decimal on a value that fits 32 bits uses 32-bit arithmetic: these cores are 32-bit, so a
-    // uint64_t `/= 10` is a __udivdi3 libgcc call per digit. Hex and octal shift, so neither cares.
-    const proto_bool narrow = !power_of_two && v <= 0xFFFFFFFFu;
-
-    uint64_t probe = v;
-    unsigned digits = 1;
-    if (power_of_two)
-    {
-        while ((probe >>= bits_per_digit) != 0)
-        {
-            digits++;
-        }
-    }
-    else if (narrow)
-    {
-        uint32_t p32 = (uint32_t)v;
-        while (p32 >= 10u)
-        {
-            p32 /= 10u;
-            digits++;
-        }
-    }
-    else
-    {
-        while (probe >= 10)
-        {
-            probe /= 10;
-            digits++;
-        }
-    }
-    if (digits < min_digits)
-    {
-        digits = min_digits;
-    }
-    if (b->len + digits >= b->cap)
-    {
-        b->ok = PROTO_FALSE;
-        return;
-    }
-    if (power_of_two)
-    {
-        for (unsigned i = digits; i-- > 0;)
-        {
-            b->p[b->len + i] = PROTOCORE_HEX_LOWER[v & digit_mask];
-            v >>= bits_per_digit;
-        }
-    }
-    else if (narrow)
-    {
-        uint32_t v32 = (uint32_t)v;
-        for (unsigned i = digits; i-- > 0;)
-        {
-            b->p[b->len + i] = (char)('0' + (unsigned)(v32 % 10u));
-            v32 /= 10u;
-        }
-    }
-    else
-    {
-        for (unsigned i = digits; i-- > 0;)
-        {
-            b->p[b->len + i] = (char)('0' + (unsigned)(v % 10));
-            v /= 10;
-        }
-    }
-    b->len += digits;
-}
-
-/** @brief Append @p v as decimal, zero-padded to at least @p min_digits (printf "%0Nu"). */
-static inline void protocore_sb_u32w(protocore_sb *b, uint32_t v, unsigned min_digits)
-{
-    protocore_sb_uint(b, v, 10, min_digits);
-}
-
-/** @brief Append @p v as lowercase hex, zero-padded to at least @p min_digits (printf "%0Nx"). */
-static inline void protocore_sb_hex(protocore_sb *b, uint64_t v, unsigned min_digits)
-{
-    protocore_sb_uint(b, v, 16, min_digits);
-}
-
-/** @brief Append @p v as decimal (no leading zeros; "0" for zero). */
-static inline void protocore_sb_u32(protocore_sb *b, uint32_t v)
-{
-    protocore_sb_uint(b, v, 10, 1);
-}
-
-/** @brief Append @p v as decimal (64-bit). */
-static inline void protocore_sb_u64(protocore_sb *b, uint64_t v)
-{
-    protocore_sb_uint(b, v, 10, 1);
-}
-
-/** @brief Append @p v as signed decimal (64-bit), with a leading '-' when negative. */
-static inline void protocore_sb_i64(protocore_sb *b, int64_t v)
-{
-    // Negating INT64_MIN overflows, so the magnitude is taken through unsigned arithmetic
-    // rather than by negating the signed value.
-    uint64_t mag = (v < 0) ? (uint64_t)(-(v + 1)) + 1u : (uint64_t)v;
-    if (v < 0)
-    {
-        protocore_sb_ch(b, '-');
-    }
-    protocore_sb_uint(b, mag, 10, 1);
-}
-
-/** @brief True if @p v carries the IEEE-754 sign bit, including for -0.0 (a mask, not a divide). */
-static inline proto_bool protocore_signbit(double v)
-{
-    return proto_dbl_sign(v) != 0u;
-}
-
-/** @brief True if @p v is an infinity: all exponent bits set, zero significand. */
-static inline proto_bool protocore_isinf(double v)
-{
-    return proto_dbl_exp(v) == 0x7FFu && proto_dbl_mant(v) == 0u;
-}
-
-/** @brief True if @p v is a NaN: all exponent bits set, nonzero significand. */
-static inline proto_bool protocore_isnan(double v)
-{
-    return proto_dbl_exp(v) == 0x7FFu && proto_dbl_mant(v) != 0u;
-}
-
-/**
- * @brief Emit @p digits decimal digits of @p mant, with a '.' after the first @p point_after.
- *
- * Peels digits by division so no scratch array is needed. @p point_after == 0 or == @p digits
- * emits no point.
- */
-static inline void protocore_sb_digits(protocore_sb *b, uint64_t mant, unsigned digits, unsigned point_after)
-{
-    uint64_t div = 1;
-    for (unsigned i = 1; i < digits; i++)
-    {
-        div *= 10;
-    }
-    for (unsigned i = 0; i < digits; i++)
-    {
-        if (i == point_after && i != 0)
-        {
-            protocore_sb_ch(b, '.');
-        }
-        protocore_sb_ch(b, (char)('0' + (unsigned)((mant / div) % 10)));
-        div /= 10;
-    }
-}
-
-/// @brief Working width of the `n * 2^s` pair below: four bits clear of the top so a decade fits.
-#define PROTOCORE_G_WORK_BITS 58u
-
-/** @brief Renormalize `n * 2^s` so @p n sits in the top half of the working width. */
-static inline void protocore_g_renorm(proto_u64 *n, proto_i32 *s)
-{
-    if (*n == 0u)
-    {
-        return;
-    }
-    while (*n >= (1ull << PROTOCORE_G_WORK_BITS))
-    {
-        *n >>= 1;
-        *s += 1;
-    }
-    while (*n < (1ull << (PROTOCORE_G_WORK_BITS - 1u)))
-    {
-        *n <<= 1;
-        *s -= 1;
-    }
-}
-
-/** @brief Multiply the pair by ten. */
-static inline void protocore_g_mul10(proto_u64 *n, proto_i32 *s)
-{
-    *n *= 10u;
-    protocore_g_renorm(n, s);
-}
-
-/** @brief Divide the pair by ten, shifting up first so the divide keeps the low bits. */
-static inline void protocore_g_div10(proto_u64 *n, proto_i32 *s)
-{
-    *n <<= 4;
-    *s -= 4;
-    *n /= 10u;
-    protocore_g_renorm(n, s);
-}
-
-/**
- * @brief The integer part of `n * 2^s`, rounded half to even on the bits below the point.
- *
- * printf breaks a tie toward the even digit, and the tie is exactly the case where the bits below
- * the point are one followed by zeros.
- */
-static inline proto_u64 protocore_g_round(proto_u64 n, proto_i32 s)
-{
-    if (s >= 0)
-    {
-        return n << (unsigned)s;
-    }
-    unsigned sh = (unsigned)(-s);
-    if (sh >= 64u)
-    {
-        return 0u;
-    }
-    proto_u64 r = n >> sh;
-    proto_u64 rem = n - (r << sh);
-    proto_u64 half = 1ull << (sh - 1u);
-    if (rem > half || (rem == half && (r & 1u) != 0u))
-    {
-        r++;
-    }
-    return r;
-}
-
-/**
- * @brief Append @p v with @p sig significant digits, choosing fixed or scientific form - the
- *        printf "%.<sig>g" rendering, including trailing-zero removal.
- *
- * Needed because %g is a wire format here, not a debug convenience: SCPI's NR2/NR3 numeric forms
- * and SenML/JSON numbers are both defined by what this produces, so the shape has to match what
- * the format string produced rather than being approximated with fixed decimals.
- *
- * Byte-identical to printf %.<sig>g for sig <= 10, which covers every call site in this library
- * (SCPI uses 10, JSON/SenML use the default 6). Above that the scaling is done in double, which
- * runs out of precision around 16 significant digits, so sig >= 15 can differ from libc in the
- * last digit.
- */
-static inline void protocore_sb_g(protocore_sb *b, double v, unsigned sig)
-{
-    if (!b->ok)
-    {
-        return;
-    }
-    if (sig == 0)
-    {
-        sig = 1;
-    }
-    if (protocore_isnan(v))
-    {
-        protocore_sb_put(b, "nan");
-        return;
-    }
-    // `v < 0` is false for -0.0, but printf emits "-0" for it. The sign is a single bit of the
-    // encoding, so it is read with a mask rather than recovered by dividing into it.
-    if (protocore_signbit(v))
-    {
-        protocore_sb_ch(b, '-');
-        v = -v;
-    }
-    if (protocore_isinf(v))
-    {
-        protocore_sb_put(b, "inf");
-        return;
-    }
-    proto_u64 be = proto_dbl_exp(v);
-    proto_u64 n = proto_dbl_mant(v);
-    if (be == 0u && n == 0u)
-    {
-        protocore_sb_ch(b, '0');
-        return;
-    }
-
-    // The value IS n * 2^s. A normal carries an implicit 1 above the stored mantissa; a subnormal
-    // stores no leading 1 and denotes an exponent field of 1.
-    proto_i32 s = 1 - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
-    if (be != 0u)
-    {
-        n |= 1ull << PROTO_DBL_MANT_BITS;
-        s = (proto_i32)be - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
-    }
-    protocore_g_renorm(&n, &s);
-
-    proto_u64 limit = 1u;
-    for (unsigned i = 0; i < sig; i++)
-    {
-        limit *= 10u;
-    }
-
-    // The binary exponent gives the decimal one to within a step, log10(2) being 78913/2^18. The
-    // renormalize left the value in [2^(WORK-1+s), 2^(WORK+s)), and the settle below closes the step.
-    int e = (int)(((int64_t)((int)PROTOCORE_G_WORK_BITS - 1 + s) * 78913) >> 18);
-
-    // Whole decades onto the pair, so the scale is a multiply or a divide by ten and never a power
-    // of ten that leaves the range.
-    int p = (int)sig - 1 - e;
-    while (p > 0)
-    {
-        protocore_g_mul10(&n, &s);
-        p--;
-    }
-    while (p < 0)
-    {
-        protocore_g_div10(&n, &s);
-        p++;
-    }
-
-    // A decade out either way is one more step on the pair, then the digits are taken again from
-    // the unrounded value rather than rounded a second time.
-    proto_u64 mant = protocore_g_round(n, s);
-    for (unsigned guard = 0; guard < 4u; guard++)
-    {
-        if (mant >= limit) // the round carried into a new decade (9.9995 -> 10.000)
-        {
-            protocore_g_div10(&n, &s);
-            e++;
-        }
-        else if (sig > 1u && mant < limit / 10u)
-        {
-            protocore_g_mul10(&n, &s);
-            e--;
-        }
-        else
-        {
-            break;
-        }
-        mant = protocore_g_round(n, s);
-    }
-
-    unsigned digits = sig;
-    while (digits > 1 && mant % 10 == 0) // %g strips trailing zeros
-    {
-        mant /= 10;
-        digits--;
-    }
-
-    if (e < -4 || e >= (int)sig) // scientific, matching %g's threshold
-    {
-        protocore_sb_digits(b, mant, digits, 1);
-        protocore_sb_ch(b, 'e');
-        protocore_sb_ch(b, e < 0 ? '-' : '+');
-        unsigned mag = (unsigned)(e < 0 ? -e : e);
-        protocore_sb_u32w(b, mag, 2); // %g always emits at least two exponent digits
-        return;
-    }
-    if (e >= (int)digits - 1) // integral: all significant digits, then padding zeros
-    {
-        protocore_sb_digits(b, mant, digits, 0);
-        for (int i = 0; i < e - (int)digits + 1; i++)
-        {
-            protocore_sb_ch(b, '0');
-        }
-        return;
-    }
-    if (e >= 0)
-    {
-        protocore_sb_digits(b, mant, digits, (unsigned)e + 1);
-        return;
-    }
-    protocore_sb_put(b, "0.");
-    for (int i = 0; i < -e - 1; i++)
-    {
-        protocore_sb_ch(b, '0');
-    }
-    protocore_sb_digits(b, mant, digits, 0);
-}
-
-/**
- * @brief Append @p v with exactly @p decimals digits after the point (printf "%.<decimals>f").
- *
- * Byte-identical to printf for |v| < 2^64, which is the range a fixed-decimal reading occupies.
- * A larger magnitude falls back to the significant-digit form (see protocore_sb_g) rather than being
- * rendered wrong: its exact %f expansion needs big-integer arithmetic.
- */
-static inline void protocore_sb_fixed(protocore_sb *b, double v, unsigned decimals)
-{
-    if (!b->ok)
-    {
-        return;
-    }
-    if (protocore_isnan(v))
-    {
-        protocore_sb_put(b, "nan");
-        return;
-    }
-    // Same negative-zero rule as protocore_sb_g, read from the sign bit.
-    if (protocore_signbit(v))
-    {
-        protocore_sb_ch(b, '-');
-        v = -v;
-    }
-    if (protocore_isinf(v))
-    {
-        protocore_sb_put(b, "inf");
-        return;
-    }
-    // Beyond the 64-bit range the integer part cannot go through uint64 at all - the cast wraps.
-    // An exact %f expansion of such a magnitude needs big-integer arithmetic (~309 digits), so it
-    // falls back to the significant-digit form rather than rendering a wrapped value. "At or above
-    // 2^64" is the exponent field alone: 64 unbiased is 1023 + 64 biased.
-    if (proto_dbl_exp(v) >= (PROTO_DBL_BIAS + 64))
-    {
-        protocore_sb_g(b, v, 10); // 10 is the precision protocore_sb_g is exact to; asking for more only adds noise
-        return;
-    }
-    if (decimals > 18u) // 10^19 leaves the 64-bit range the carry check below is done in
-    {
-        decimals = 18u;
-    }
-    proto_u64 scale = 1u;
-    for (unsigned i = 0; i < decimals; i++)
-    {
-        scale *= 10u;
-    }
-
-    // The value IS mant * 2^exp2, so the digits come off those integers. A normal carries an
-    // implicit 1 above the stored mantissa; a subnormal stores no leading 1 and denotes an
-    // exponent field of 1.
-    proto_u64 mant = proto_dbl_mant(v);
-    proto_u64 be = proto_dbl_exp(v);
-    proto_i32 exp2 = 1 - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
-    if (be != 0u)
-    {
-        mant |= 1ull << PROTO_DBL_MANT_BITS;
-        exp2 = (proto_i32)be - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
-    }
-
-    proto_u64 ip = 0u;
-    proto_u64 frac = 0u;
-    if (exp2 >= 0)
-    {
-        ip = mant << (unsigned)exp2; // an integer already: nothing below the point to round
-    }
-    else
-    {
-        unsigned shift = (unsigned)(-exp2);
-        proto_u64 num = mant;
-        if (shift < 64u)
-        {
-            ip = mant >> shift;
-            num = mant - (ip << shift);
-        }
-        // Each digit costs one multiply and one shift, so the numerator must stay clear of the top
-        // four bits. Below 2^-60 of the value there is no digit left to decide.
-        if (shift > 60u)
-        {
-            num >>= (shift - 60u);
-            shift = 60u;
-        }
-        const proto_u64 den = 1ull << shift;
-        for (unsigned i = 0; i < decimals; i++)
-        {
-            num *= 10u;
-            proto_u64 digit = num >> shift;
-            num -= digit << shift;
-            frac = frac * 10u + digit;
-        }
-        // What is left is the remainder over the same denominator, so the tie is num*2 == den, and
-        // printf breaks it toward the even digit.
-        proto_u64 twice = num * 2u;
-        if (twice > den || (twice == den && (frac & 1u) != 0u))
-        {
-            frac++;
-        }
-    }
-    if (frac >= scale) // the fraction rounded up into the integer part
-    {
-        ip++;
-        frac = 0u;
-    }
-    protocore_sb_u64(b, ip);
-    if (decimals)
-    {
-        protocore_sb_ch(b, '.');
-        protocore_sb_uint(b, frac, 10, decimals);
-    }
-}
-
-/** @brief Append @p s as a JSON string literal: double-quoted, with `"` and `\` backslash-escaped. A NULL
- * @p s appends `""`. Control characters are passed through unescaped. */
-static inline void protocore_sb_json(protocore_sb *b, const char *s)
-{
-    protocore_sb_put(b, "\"");
-    for (const char *p = s ? s : ""; *p; p++)
-    {
-        if (*p == '"' || *p == '\\')
-        {
-            if (b->len + 2 >= b->cap)
-            {
-                b->ok = PROTO_FALSE;
-                return;
-            }
-            b->p[b->len++] = '\\';
-            b->p[b->len++] = *p;
-        }
-        else if (b->len + 1 < b->cap)
-        {
-            b->p[b->len++] = *p;
-        }
-        else
-        {
-            b->ok = PROTO_FALSE;
-        }
-    }
-    protocore_sb_put(b, "\"");
-}
-
-/** @brief NUL-terminate and return the built length, or 0 if the build overflowed. */
-static inline size_t protocore_sb_finish(protocore_sb *b)
-{
-    // cap == 0 owns no bytes at all, so even the terminator is out of bounds. Every appender
-    // refuses to write into a zero-capacity buffer without latching `ok`, which left this the one
-    // path that would still have written p[0].
-    if (!b->ok || b->cap == 0)
-    {
-        return 0;
-    }
-    b->p[b->len] = '\0';
-    return b->len;
-}
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_MEMBUILD_H

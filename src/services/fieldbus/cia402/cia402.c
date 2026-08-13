@@ -95,7 +95,7 @@ uint16_t protocore_cia402_enable_sequence(Cia402State state)
 proto_bool protocore_cia402_sdo_set_controlword(CanFrame *out, uint8_t node, uint16_t controlword)
 {
     uint8_t d[2];
-    protocore_wr16le(d, controlword);
+    endian.wr16le(d, controlword);
     return protocore_canopen_build_sdo_write(out, node, CIA402_OD_CONTROLWORD, 0, d, 2);
 }
 
@@ -108,21 +108,21 @@ proto_bool protocore_cia402_sdo_set_mode(CanFrame *out, uint8_t node, Cia402Mode
 proto_bool protocore_cia402_sdo_set_target_position(CanFrame *out, uint8_t node, int32_t position)
 {
     uint8_t d[4];
-    protocore_wr32le(d, (uint32_t)position);
+    endian.wr32le(d, (uint32_t)position);
     return protocore_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_POSITION, 0, d, 4);
 }
 
 proto_bool protocore_cia402_sdo_set_target_velocity(CanFrame *out, uint8_t node, int32_t velocity)
 {
     uint8_t d[4];
-    protocore_wr32le(d, (uint32_t)velocity);
+    endian.wr32le(d, (uint32_t)velocity);
     return protocore_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_VELOCITY, 0, d, 4);
 }
 
 proto_bool protocore_cia402_sdo_set_target_torque(CanFrame *out, uint8_t node, int16_t torque)
 {
     uint8_t d[2];
-    protocore_wr16le(d, (uint16_t)torque);
+    endian.wr16le(d, (uint16_t)torque);
     return protocore_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_TORQUE, 0, d, 2);
 }
 
@@ -159,7 +159,7 @@ proto_bool protocore_cia402_sdo_get_u16(const CanFrame *f, uint16_t want_index, 
     {
         return PROTO_FALSE;
     }
-    *value = protocore_rd16le(d);
+    *value = endian.rd16le(d);
     return PROTO_TRUE;
 }
 
@@ -170,7 +170,7 @@ proto_bool protocore_cia402_sdo_get_i32(const CanFrame *f, uint16_t want_index, 
     {
         return PROTO_FALSE;
     }
-    *value = (int32_t)protocore_rd32le(d);
+    *value = (int32_t)endian.rd32le(d);
     return PROTO_TRUE;
 }
 
@@ -180,8 +180,8 @@ size_t protocore_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlw
     {
         return 0;
     }
-    size_t p = protocore_wr16le(buf, controlword);
-    p += protocore_wr32le(buf + p, (uint32_t)target);
+    size_t p = endian.wr16le(buf, controlword);
+    p += endian.wr32le(buf + p, (uint32_t)target);
     return p; // 6
 }
 
@@ -191,8 +191,8 @@ proto_bool protocore_cia402_unpack_status(const uint8_t *buf, size_t len, uint16
     {
         return PROTO_FALSE;
     }
-    *statusword = protocore_rd16le(buf);
-    *actual = (int32_t)protocore_rd32le(buf + 2);
+    *statusword = endian.rd16le(buf);
+    *actual = (int32_t)endian.rd32le(buf + 2);
     return PROTO_TRUE;
 }
 

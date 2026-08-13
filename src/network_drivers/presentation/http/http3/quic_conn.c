@@ -72,7 +72,7 @@ static proto_bool quic_conn_slot_storage(struct QuicConn *qc)
     if (base == NULL)
     {
         protocore_span b = protocore_plaintext_persist_span(PROTOCORE_QUIC_CONN_BORROW);
-        if (!protocore_span_ok(b))
+        if (!span.ok(b))
         {
             return PROTO_FALSE;
         }

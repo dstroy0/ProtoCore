@@ -133,8 +133,8 @@ int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_
     }
 
     // One fixed-Huffman block, not final: BFINAL=0 (1 bit), BTYPE=01 (2 bits, value 1).
-    protocore_bitw_put(&w, 0, 1);
-    protocore_bitw_put(&w, 1, 2);
+    bitw.put(&w, 0, 1);
+    bitw.put(&w, 1, 2);
 
     size_t i = hist; // emit tokens only for the new input
     while (i < total)
@@ -183,10 +183,10 @@ int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_
 
     // End-of-block, then a Z_SYNC_FLUSH: byte-align via an empty stored block and KEEP its
     // 0x00 0x00 0xff 0xff tail on the wire (SSH sends it; a zlib inflate() flushes at the boundary).
-    protocore_bitw_put(&w, z->ll_code[256], z->ll_len[256]); // end-of-block symbol
-    protocore_bitw_put(&w, 0, 1);                            // BFINAL=0 (empty stored block)
-    protocore_bitw_put(&w, 0, 2);                            // BTYPE=00 (stored)
-    protocore_bitw_align(&w);
+    bitw.put(&w, z->ll_code[256], z->ll_len[256]); // end-of-block symbol
+    bitw.put(&w, 0, 1);                            // BFINAL=0 (empty stored block)
+    bitw.put(&w, 0, 2);                            // BTYPE=00 (stored)
+    bitw.align(&w);
     put_byte(&w, 0x00);
     put_byte(&w, 0x00);
     put_byte(&w, 0xff);

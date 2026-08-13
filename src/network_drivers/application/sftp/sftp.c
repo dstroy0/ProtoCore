@@ -355,20 +355,20 @@ size_t protocore_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_
     // a directory listing with an empty column. The wire framing is the separate length-prefixed
     // string written by protocore_sftp_wr_string, and that is never clipped. The date is appended in
     // place rather than staged: the two column widths are what `ls -l` alignment means, and
-    // protocore_sb_u64_clip states them directly.
+    // Sb.u64_clip states them directly.
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put_clip(&sb_out, mode);
-    protocore_sb_put_clip(&sb_out, " 1 0 0 ");
-    protocore_sb_u64_clip(&sb_out, (uint64_t)size, 0);
-    protocore_sb_put_clip(&sb_out, " ");
-    protocore_sb_put_clip(&sb_out, kMonths[mon]);
-    protocore_sb_put_clip(&sb_out, " ");
-    protocore_sb_u64_clip(&sb_out, (uint64_t)tmv.tm_mday, 2);
-    protocore_sb_put_clip(&sb_out, " ");
-    protocore_sb_u64_clip(&sb_out, (uint64_t)(tmv.tm_year + 1900), 5);
-    protocore_sb_put_clip(&sb_out, " ");
-    protocore_sb_put_clip(&sb_out, name);
-    return protocore_sb_finish(&sb_out);
+    Sb.put_clip(&sb_out, mode);
+    Sb.put_clip(&sb_out, " 1 0 0 ");
+    Sb.u64_clip(&sb_out, (uint64_t)size, 0);
+    Sb.put_clip(&sb_out, " ");
+    Sb.put_clip(&sb_out, kMonths[mon]);
+    Sb.put_clip(&sb_out, " ");
+    Sb.u64_clip(&sb_out, (uint64_t)tmv.tm_mday, 2);
+    Sb.put_clip(&sb_out, " ");
+    Sb.u64_clip(&sb_out, (uint64_t)(tmv.tm_year + 1900), 5);
+    Sb.put_clip(&sb_out, " ");
+    Sb.put_clip(&sb_out, name);
+    return Sb.finish(&sb_out);
 }
 
 #endif // PROTOCORE_ENABLE_SSH_SFTP

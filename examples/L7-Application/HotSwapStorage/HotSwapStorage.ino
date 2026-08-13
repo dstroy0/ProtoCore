@@ -4,7 +4,7 @@
 // driver still reports a mounted volume, every write fails into nothing, and code that does not
 // check carries on believing it has storage. Logs vanish, uploads truncate, and nothing says why.
 //
-// services/storage/hotswap makes that loud and recoverable:
+// server/storage/hotswap makes that loud and recoverable:
 //
 //   ABSENT  --probe finds a card, mount ok-->  READY
 //   READY   --N consecutive I/O errors------>  FAULTED   (unmounts immediately)
@@ -27,7 +27,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/storage/hotswap/hotswap.h"
+#include "server/storage/hotswap/hotswap.h"
 #include "shared/mime/mime.h"
 #include <SD_MMC.h>
 

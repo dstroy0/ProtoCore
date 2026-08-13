@@ -11,16 +11,16 @@
 
 #include "ntp_service.h"
 #include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
-#include <time.h>                        // time_t: the epoch this module reports
+#include <time.h>                       // time_t: the epoch this module reports
 
 #if PROTOCORE_ENABLE_NTP
 
-#include "mmgr/endian.h"                         // protocore_rd32be / protocore_wr32be: the timestamp fields
+#include "mmgr/endian.h"                         // endian.rd32be / endian.wr32be: the timestamp fields
 #include "mmgr/secure.h"                         // protocore_secure_persist_span: this module's storage
 #include "network_drivers/application/ntp/ntp.h" // the packet this role asks with
-#include "network_drivers/transport/udp/udp.h"       // Udp.listener: the client port and the ask
+#include "network_drivers/transport/udp/udp.h"   // Udp.listener: the client port and the ask
 #include "server/clock/clock.h"                  // protocore_millis: how the epoch advances between syncs
-#include "shared/ip/ip.h"                // Ip.parse: a server given as a literal address
+#include "shared/ip/ip.h"                        // Ip.parse: a server given as a literal address
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
 // a cold-booted RTC sits near the Unix epoch.
@@ -43,12 +43,12 @@ static NtpSvcCtx s_ntp_svc = {0, 0, 0, {NULL, 0, 0, PROTO_FALSE}};
 // wipes. False when the pool cannot cover it, and begin() fails closed on that.
 static proto_bool ntp_mem_bind(void)
 {
-    if (protocore_span_has_storage(s_ntp_svc.req))
+    if (span.has_storage(s_ntp_svc.req))
     {
         return PROTO_TRUE;
     }
     s_ntp_svc.req = protocore_secure_persist_span(PROTOCORE_NTP_PACKET_LEN);
-    return protocore_span_has_storage(s_ntp_svc.req);
+    return span.has_storage(s_ntp_svc.req);
 }
 
 /**
@@ -74,11 +74,11 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
     {
         return; // stratum 0 is a kiss-o'-death; past 15 is unsynchronized
     }
-    if (protocore_rd32be(data + PROTOCORE_NTP_OFF_ORIGIN_SEC) != s_ntp_svc.cookie)
+    if (endian.rd32be(data + PROTOCORE_NTP_OFF_ORIGIN_SEC) != s_ntp_svc.cookie)
     {
         return; // not an answer to what this client asked
     }
-    uint32_t secs = protocore_rd32be(data + PROTOCORE_NTP_OFF_TX_SEC);
+    uint32_t secs = endian.rd32be(data + PROTOCORE_NTP_OFF_TX_SEC);
     if (secs <= PROTOCORE_NTP_UNIX_OFFSET)
     {
         return;
@@ -122,7 +122,7 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
         req[i] = 0;
     }
     req[0] = PROTOCORE_NTP_LI_VN_MODE(PROTOCORE_NTP_LI_NONE, PROTOCORE_NTP_VERSION, PROTOCORE_NTP_MODE_CLIENT);
-    protocore_wr32be(req + PROTOCORE_NTP_OFF_TX_SEC, s_ntp_svc.cookie);
+    endian.wr32be(req + PROTOCORE_NTP_OFF_TX_SEC, s_ntp_svc.cookie);
     return Udp.listener->sendto(PROTOCORE_NTP_CLIENT_PORT, &dst, PROTOCORE_NTP_PORT, req, PROTOCORE_NTP_PACKET_LEN);
 }
 

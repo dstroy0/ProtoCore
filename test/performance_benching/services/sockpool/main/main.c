@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the socket pool (services/net/sockpool): the LRU acquire (free
+// On-device CCOUNT microbenchmark for the socket pool (server/net/sockpool): the LRU acquire (free
 // slot, else recycle the least-recently-used), the id->slot lookup, and touch. Pure fixed-size
 // bookkeeping; no real sockets.
 //
 // Build/flash:  idf.py -C test/performance_benching/sockpool -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/net/sockpool/sockpool.h"
+#include "server/net/sockpool/sockpool.h"
 
 #include <stdbool.h>
 #include <stddef.h>

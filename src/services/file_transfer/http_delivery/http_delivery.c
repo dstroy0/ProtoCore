@@ -32,12 +32,12 @@ size_t protocore_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char
         return 0;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&b, "public, max-age=");
-    protocore_sb_u32(&b, max_age_s);
+    Sb.put(&b, "public, max-age=");
+    Sb.u32(&b, max_age_s);
     if (swr_s)
     {
-        protocore_sb_put(&b, ", stale-while-revalidate=");
-        protocore_sb_u32(&b, swr_s);
+        Sb.put(&b, ", stale-while-revalidate=");
+        Sb.u32(&b, swr_s);
     }
     if (!b.ok)
     {
@@ -54,18 +54,18 @@ size_t protocore_delivery_sw_manifest(const char *const *paths, size_t n, const 
         return 0;
     }
     protocore_sb b2 = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&b2, "{\"version\":");
-    protocore_sb_json(&b2, version ? version : "");
-    protocore_sb_put(&b2, ",\"precache\":[");
+    Sb.put(&b2, "{\"version\":");
+    Sb.json(&b2, version ? version : "");
+    Sb.put(&b2, ",\"precache\":[");
     for (size_t i = 0; i < n; i++)
     {
         if (i)
         {
-            protocore_sb_put(&b2, ",");
+            Sb.put(&b2, ",");
         }
-        protocore_sb_json(&b2, paths[i]);
+        Sb.json(&b2, paths[i]);
     }
-    protocore_sb_put(&b2, "]}");
+    Sb.put(&b2, "]}");
     if (!b2.ok)
     {
         return 0;

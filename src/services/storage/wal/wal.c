@@ -83,13 +83,13 @@ size_t protocore_wal_record_encode(uint8_t *out, size_t cap, uint64_t seq, const
     {
         return 0;
     }
-    protocore_wr32le(out + 0, WAL_MAGIC);
-    protocore_wr64le(out + 4, seq);
-    protocore_wr32le(out + 12, len);
+    endian.wr32le(out + 0, WAL_MAGIC);
+    endian.wr64le(out + 4, seq);
+    endian.wr32le(out + 12, len);
     // crc over the 16 header bytes (magic+seq+len) then the payload
     uint32_t crc = crc32_step(0xFFFFFFFFu, out, 16);
     crc = crc32_step(crc, payload, len) ^ 0xFFFFFFFFu;
-    protocore_wr32le(out + 16, crc);
+    endian.wr32le(out + 16, crc);
     if (len)
     {
         mem.cpy(out + WAL_RECORD_HEADER, payload, len);
@@ -103,13 +103,13 @@ size_t protocore_wal_replay(const uint8_t *img, size_t len, WalRecordCb cb, void
     while (off + WAL_RECORD_HEADER <= len)
     {
         const uint8_t *r = img + off;
-        if (protocore_rd32le(r) != WAL_MAGIC)
+        if (endian.rd32le(r) != WAL_MAGIC)
         {
             break; // not a record start (end of log or garbage)
         }
-        uint64_t seq = protocore_rd64le(r + 4);
-        uint32_t plen = protocore_rd32le(r + 12);
-        uint32_t crc_stored = protocore_rd32le(r + 16);
+        uint64_t seq = endian.rd64le(r + 4);
+        uint32_t plen = endian.rd32le(r + 12);
+        uint32_t crc_stored = endian.rd32le(r + 16);
         if (off + (size_t)WAL_RECORD_HEADER + plen > len)
         {
             break; // truncated tail (power loss mid-record)
