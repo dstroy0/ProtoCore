@@ -6,7 +6,7 @@
 // same-TU case, where the initializer is visible and gcc folds it; this measures whether the fold
 // survives the TU boundary, which is the case every consumer is in.
 //
-// Built twice from this one file (see ../build_s3_nsabi.sh): PC_NS_XTU=1 is the owning TU, =2 is the
+// Built twice from this one file (see ../build_s3_nsabi.sh): PROTOCORE_NS_XTU=1 is the owning TU, =2 is the
 // caller. Link the two and disassemble app_main.
 
 #include <stdint.h>
@@ -23,7 +23,7 @@ typedef struct
 
 extern const RadioNs Radio;
 
-#if PC_NS_XTU == 1
+#if PROTOCORE_NS_XTU == 1
 
 // The owning TU: storage and entry points have internal linkage, the struct instance is the only
 // symbol that leaves.

@@ -52,12 +52,12 @@ Turn the knob and watch the voltage track it, smoothly, to the millivolt.
 
 ## Where this fits
 
-`pc_ads1115_read_uv(channel, gain, &microvolts)` gives you a channel's voltage in **microvolts** (an
+`protocore_ads1115_read_uv(channel, gain, &microvolts)` gives you a channel's voltage in **microvolts** (an
 integer, so no floating point). From here you can log a battery's charge, read a sensor that
 outputs a voltage, or publish the reading over **MQTT** / a web page - the same "read a cheap
 breakout, bridge it onto the network" pattern used by the RTC, the radar (62), the touch pad
 (63), and the SHT3x (64). Change `ADS1115_GAIN_1` to a higher gain to zoom in on small signals,
-or read `pc_ads1115_read_raw()` for the plain 16-bit count.
+or read `protocore_ads1115_read_raw()` for the plain 16-bit count.
 
 ## Troubleshooting
 
@@ -75,7 +75,7 @@ The feature lives in the library, so its flag must reach the whole build:
 ```bash
 pio ci examples/Drivers/Ads1115 \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_ADS1115=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_ADS1115=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
@@ -83,10 +83,10 @@ pio ci examples/Drivers/Ads1115 \
 ## How it works (for the curious)
 
 Reading the ADS1115 is two I2C transfers: write the 16-bit **config register** to start a
-conversion, then read the 16-bit **conversion register**. `pc_ads1115_config_single(channel, gain,
+conversion, then read the 16-bit **conversion register**. `protocore_ads1115_config_single(channel, gain,
 rate)` builds that config word from the datasheet bit fields - the start bit, the channel
 multiplexer, the gain, single-shot mode, the data rate, and the disabled comparator (so
 `ch0, ±4.096 V, 128 SPS` becomes `0xC383`). The result is a signed 16-bit number spanning the
-full-scale range, and `pc_ads1115_raw_to_uv()` scales it to microvolts (for ±4.096 V that is
+full-scale range, and `protocore_ads1115_raw_to_uv()` scales it to microvolts (for ±4.096 V that is
 125 µV per count). Both are unit-tested on a PC (see `test/test_ads1115`); only the two register
 transfers run on the ESP32.

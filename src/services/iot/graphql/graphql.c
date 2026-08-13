@@ -12,22 +12,22 @@
  */
 
 #include "services/iot/graphql/graphql.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_GRAPHQL
+#if PROTOCORE_ENABLE_GRAPHQL
 
 #include <stdio.h>
 
-typedef struct pc_gql_args
+typedef struct protocore_gql_args
 {
     const int *idx; // indices into s_gql.args that are in scope
     int count;
-} pc_gql_args;
+} protocore_gql_args;
 
 typedef struct
 {
-    char name[PC_GQL_NAME_MAX];
+    char name[PROTOCORE_GQL_NAME_MAX];
     int first_arg;
     int n_args;
     int first_child; // -1 if leaf
@@ -35,8 +35,8 @@ typedef struct
 } Node;
 typedef struct
 {
-    char name[PC_GQL_NAME_MAX];
-    pc_gql_value val;
+    char name[PROTOCORE_GQL_NAME_MAX];
+    protocore_gql_value val;
 } Arg;
 
 // All GraphQL parser + executor state, owned by one instance (internal linkage): the node /
@@ -46,27 +46,27 @@ typedef struct
 // machine, so its helpers reach this owner directly.
 typedef struct
 {
-    Node nodes[PC_GQL_MAX_NODES];
-    Arg args[PC_GQL_MAX_ARGS];
-    char strbuf[PC_GQL_STRBUF];
+    Node nodes[PROTOCORE_GQL_MAX_NODES];
+    Arg args[PROTOCORE_GQL_MAX_ARGS];
+    char strbuf[PROTOCORE_GQL_STRBUF];
     int nnodes;
     int nargs;
     int str_len;
     int root;
-    pc_gql_result err;
+    protocore_gql_result err;
     // executor: scope stack of in-scope arg indices, resolver, and dotted path
-    int scope[PC_GQL_MAX_ARGS];
+    int scope[PROTOCORE_GQL_MAX_ARGS];
     int scope_n;
-    pc_gql_resolver_fn resolver;
-    char path[PC_GQL_PATH_MAX];
+    protocore_gql_resolver_fn resolver;
+    char path[PROTOCORE_GQL_PATH_MAX];
 } GqlCtx;
 static GqlCtx s_gql;
 
 static int new_node()
 {
-    if (s_gql.nnodes >= PC_GQL_MAX_NODES)
+    if (s_gql.nnodes >= PROTOCORE_GQL_MAX_NODES)
     {
-        s_gql.err = PC_GQL_ERR_LIMIT;
+        s_gql.err = PROTOCORE_GQL_ERR_LIMIT;
         return -1;
     }
     Node *n = &s_gql.nodes[s_gql.nnodes];
@@ -117,9 +117,9 @@ static char peek(Lex *L)
 // Record a generic parse error, preserving any more specific error already set.
 static void gql_flag_parse_err()
 {
-    if (s_gql.err == PC_GQL_OK)
+    if (s_gql.err == PROTOCORE_GQL_OK)
     {
-        s_gql.err = PC_GQL_ERR_PARSE;
+        s_gql.err = PROTOCORE_GQL_ERR_PARSE;
     }
 }
 
@@ -133,10 +133,10 @@ static proto_bool is_name(char c)
 }
 
 // @p cap is the size of @p out. It is bounded by the CALLER's buffer, not only by
-// PC_GQL_NAME_MAX: parse_value() passes a small scratch array that only ever has to hold
+// PROTOCORE_GQL_NAME_MAX: parse_value() passes a small scratch array that only ever has to hold
 // "true"/"false"/"null", and bounding solely by the global maximum let a longer bareword in an
 // argument position - e.g. `{ f(a: LONGENUMVALUE) }`, straight from untrusted query text - write
-// past the end of it. Names still cannot exceed PC_GQL_NAME_MAX; whichever limit is tighter wins.
+// past the end of it. Names still cannot exceed PROTOCORE_GQL_NAME_MAX; whichever limit is tighter wins.
 static proto_bool parse_name(Lex *L, char *out, size_t cap)
 {
     skipws(L);
@@ -144,7 +144,7 @@ static proto_bool parse_name(Lex *L, char *out, size_t cap)
     {
         return PROTO_FALSE;
     }
-    const size_t limit = cap < (size_t)PC_GQL_NAME_MAX ? cap : (size_t)PC_GQL_NAME_MAX;
+    const size_t limit = cap < (size_t)PROTOCORE_GQL_NAME_MAX ? cap : (size_t)PROTOCORE_GQL_NAME_MAX;
     size_t i = 0;
     while (L->p < L->e && is_name(*L->p))
     {
@@ -153,7 +153,7 @@ static proto_bool parse_name(Lex *L, char *out, size_t cap)
         // and defeat the bound entirely. No separate cap==0 guard needed (and none to leave dead).
         if (i + 1 >= limit)
         {
-            s_gql.err = PC_GQL_ERR_LIMIT;
+            s_gql.err = PROTOCORE_GQL_ERR_LIMIT;
             return PROTO_FALSE;
         }
         out[i++] = *L->p++;
@@ -165,9 +165,9 @@ static proto_bool parse_name(Lex *L, char *out, size_t cap)
 // Copy a decoded string into the strbuf pool; returns pointer or nullptr.
 static const char *intern(const char *s, int len)
 {
-    if (s_gql.str_len + len + 1 > PC_GQL_STRBUF)
+    if (s_gql.str_len + len + 1 > PROTOCORE_GQL_STRBUF)
     {
-        s_gql.err = PC_GQL_ERR_LIMIT;
+        s_gql.err = PROTOCORE_GQL_ERR_LIMIT;
         return NULL;
     }
     char *dst = s_gql.strbuf + s_gql.str_len;
@@ -177,13 +177,13 @@ static const char *intern(const char *s, int len)
     return dst;
 }
 
-static proto_bool parse_value(Lex *L, pc_gql_value *v)
+static proto_bool parse_value(Lex *L, protocore_gql_value *v)
 {
     char c = peek(L);
     if (c == '"')
     {
         L->p++; // opening quote
-        char tmp[PC_GQL_STRBUF];
+        char tmp[PROTOCORE_GQL_STRBUF];
         int n = 0;
         while (L->p < L->e && *L->p != '"')
         {
@@ -218,14 +218,14 @@ static proto_bool parse_value(Lex *L, pc_gql_value *v)
             }
             if (n >= (int)sizeof(tmp) - 1)
             {
-                s_gql.err = PC_GQL_ERR_LIMIT;
+                s_gql.err = PROTOCORE_GQL_ERR_LIMIT;
                 return PROTO_FALSE;
             }
             tmp[n++] = ch;
         }
         if (L->p >= L->e)
         {
-            s_gql.err = PC_GQL_ERR_PARSE;
+            s_gql.err = PROTOCORE_GQL_ERR_PARSE;
             return PROTO_FALSE;
         }
         L->p++; // closing quote
@@ -234,7 +234,7 @@ static proto_bool parse_value(Lex *L, pc_gql_value *v)
         {
             return PROTO_FALSE;
         }
-        v->type = PC_GQL_STR;
+        v->type = PROTOCORE_GQL_STR;
         v->s = s;
         return PROTO_TRUE;
     }
@@ -297,17 +297,17 @@ static proto_bool parse_value(Lex *L, pc_gql_value *v)
         }
         if (!any)
         {
-            s_gql.err = PC_GQL_ERR_PARSE;
+            s_gql.err = PROTOCORE_GQL_ERR_PARSE;
             return PROTO_FALSE;
         }
         if (is_float)
         {
-            v->type = PC_GQL_FLOAT;
+            v->type = PROTOCORE_GQL_FLOAT;
             v->f = neg ? -fval : fval;
         }
         else
         {
-            v->type = PC_GQL_INT;
+            v->type = PROTOCORE_GQL_INT;
             // Negate in signed space: ipart is unsigned (to dodge signed-overflow UB while
             // accumulating), so -ipart would be a modular unsigned negation, not arithmetic negation.
             v->i = neg ? -(long long)ipart : (long long)ipart;
@@ -320,23 +320,23 @@ static proto_bool parse_value(Lex *L, pc_gql_value *v)
     {
         if (strcmp(kw, "true") == 0)
         {
-            v->type = PC_GQL_BOOL;
+            v->type = PROTOCORE_GQL_BOOL;
             v->b = PROTO_TRUE;
             return PROTO_TRUE;
         }
         if (strcmp(kw, "false") == 0)
         {
-            v->type = PC_GQL_BOOL;
+            v->type = PROTOCORE_GQL_BOOL;
             v->b = PROTO_FALSE;
             return PROTO_TRUE;
         }
         if (strcmp(kw, "null") == 0)
         {
-            v->type = PC_GQL_NULL;
+            v->type = PROTOCORE_GQL_NULL;
             return PROTO_TRUE;
         }
     }
-    s_gql.err = PC_GQL_ERR_PARSE;
+    s_gql.err = PROTOCORE_GQL_ERR_PARSE;
     return PROTO_FALSE;
 }
 
@@ -362,9 +362,9 @@ static int parse_field(Lex *L, int depth)
         int count = 0;
         while (peek(L) != ')')
         {
-            if (s_gql.nargs >= PC_GQL_MAX_ARGS)
+            if (s_gql.nargs >= PROTOCORE_GQL_MAX_ARGS)
             {
-                s_gql.err = PC_GQL_ERR_LIMIT;
+                s_gql.err = PROTOCORE_GQL_ERR_LIMIT;
                 return -1;
             }
             Arg *a = &s_gql.args[s_gql.nargs];
@@ -375,7 +375,7 @@ static int parse_field(Lex *L, int depth)
             }
             if (peek(L) != ':')
             {
-                s_gql.err = PC_GQL_ERR_PARSE;
+                s_gql.err = PROTOCORE_GQL_ERR_PARSE;
                 return -1;
             }
             L->p++; // ':'
@@ -399,19 +399,19 @@ static int parse_field(Lex *L, int depth)
     {
         s_gql.nodes[idx].first_child = parse_selection(L, depth + 1);
     }
-    return s_gql.err != PC_GQL_OK ? -1 : idx;
+    return s_gql.err != PROTOCORE_GQL_OK ? -1 : idx;
 }
 
 static int parse_selection(Lex *L, int depth)
 {
-    if (depth > PC_GQL_MAX_DEPTH)
+    if (depth > PROTOCORE_GQL_MAX_DEPTH)
     {
-        s_gql.err = PC_GQL_ERR_LIMIT;
+        s_gql.err = PROTOCORE_GQL_ERR_LIMIT;
         return -1;
     }
     if (peek(L) != '{')
     {
-        s_gql.err = PC_GQL_ERR_PARSE;
+        s_gql.err = PROTOCORE_GQL_ERR_PARSE;
         return -1;
     }
     L->p++; // '{'
@@ -421,7 +421,7 @@ static int parse_selection(Lex *L, int depth)
     {
         if (L->p >= L->e)
         {
-            s_gql.err = PC_GQL_ERR_PARSE;
+            s_gql.err = PROTOCORE_GQL_ERR_PARSE;
             return -1;
         }
         int f = parse_field(L, depth);
@@ -448,15 +448,15 @@ static proto_bool parse_document(Lex *L)
     char c = peek(L);
     if (c != '{')
     {
-        char kw[PC_GQL_NAME_MAX];
+        char kw[PROTOCORE_GQL_NAME_MAX];
         if (!parse_name(L, kw, sizeof(kw)) || strcmp(kw, "query") != 0)
         {
-            s_gql.err = PC_GQL_ERR_PARSE; // only anonymous or `query` operations
+            s_gql.err = PROTOCORE_GQL_ERR_PARSE; // only anonymous or `query` operations
             return PROTO_FALSE;
         }
         if (peek(L) != '{') // optional operation name
         {
-            char opname[PC_GQL_NAME_MAX];
+            char opname[PROTOCORE_GQL_NAME_MAX];
             if (!parse_name(L, opname, sizeof(opname)))
             {
                 gql_flag_parse_err();
@@ -465,13 +465,13 @@ static proto_bool parse_document(Lex *L)
         }
     }
     s_gql.root = parse_selection(L, 1);
-    if (s_gql.err != PC_GQL_OK)
+    if (s_gql.err != PROTOCORE_GQL_OK)
     {
         return PROTO_FALSE;
     }
     if (peek(L) != '\0') // trailing junk after the operation
     {
-        s_gql.err = PC_GQL_ERR_PARSE;
+        s_gql.err = PROTOCORE_GQL_ERR_PARSE;
         return PROTO_FALSE;
     }
     return PROTO_TRUE;
@@ -532,10 +532,10 @@ static void w_json_str(Writer *w, const char *s)
         else if (ch < 0x20)
         {
             char u[7];
-            pc_sb sb_u = {u, sizeof(u), 0, PROTO_TRUE};
-            pc_sb_put(&sb_u, "\\u");
-            pc_sb_hex(&sb_u, (uint64_t)(ch), 4);
-            if (pc_sb_finish(&sb_u) == 0)
+            protocore_sb sb_u = {u, sizeof(u), 0, PROTO_TRUE};
+            protocore_sb_put(&sb_u, "\\u");
+            protocore_sb_hex(&sb_u, (uint64_t)(ch), 4);
+            if (protocore_sb_finish(&sb_u) == 0)
             {
                 u[0] = '\0';
             }
@@ -548,35 +548,35 @@ static void w_json_str(Writer *w, const char *s)
     }
     w_raw(w, "\"", 1);
 }
-static void w_scalar(Writer *w, const pc_gql_value *v)
+static void w_scalar(Writer *w, const protocore_gql_value *v)
 {
     char b[40];
     switch (v->type)
     {
-    case PC_GQL_INT: {
-        pc_sb sb_b = {b, sizeof(b), 0, PROTO_TRUE};
-        pc_sb_i64(&sb_b, (int64_t)(v->i));
-        if (pc_sb_finish(&sb_b) == 0)
+    case PROTOCORE_GQL_INT: {
+        protocore_sb sb_b = {b, sizeof(b), 0, PROTO_TRUE};
+        protocore_sb_i64(&sb_b, (int64_t)(v->i));
+        if (protocore_sb_finish(&sb_b) == 0)
         {
             b[0] = '\0';
         }
     }
         w_str(w, b);
         break;
-    case PC_GQL_FLOAT: {
-        pc_sb sb_b2 = {b, sizeof(b), 0, PROTO_TRUE};
-        pc_sb_g(&sb_b2, (double)(v->f), 6);
-        if (pc_sb_finish(&sb_b2) == 0)
+    case PROTOCORE_GQL_FLOAT: {
+        protocore_sb sb_b2 = {b, sizeof(b), 0, PROTO_TRUE};
+        protocore_sb_g(&sb_b2, (double)(v->f), 6);
+        if (protocore_sb_finish(&sb_b2) == 0)
         {
             b[0] = '\0';
         }
     }
         w_str(w, b);
         break;
-    case PC_GQL_BOOL:
+    case PROTOCORE_GQL_BOOL:
         w_str(w, v->b ? "true" : "false");
         break;
-    case PC_GQL_STR:
+    case PROTOCORE_GQL_STR:
         w_json_str(w, v->s ? v->s : "");
         break;
     default:
@@ -593,15 +593,15 @@ static void emit_field(Writer *w, int idx, int path_len)
     int plen = path_len;
     if (plen > 0)
     {
-        if (plen + 1 >= PC_GQL_PATH_MAX)
+        if (plen + 1 >= PROTOCORE_GQL_PATH_MAX)
         {
             w->ovf = PROTO_TRUE;
             return;
         }
         s_gql.path[plen++] = '.';
     }
-    int nl = (int)strnlen(node->name, PC_GQL_PATH_MAX);
-    if (plen + nl >= PC_GQL_PATH_MAX)
+    int nl = (int)strnlen(node->name, PROTOCORE_GQL_PATH_MAX);
+    if (plen + nl >= PROTOCORE_GQL_PATH_MAX)
     {
         w->ovf = PROTO_TRUE;
         return;
@@ -614,10 +614,10 @@ static void emit_field(Writer *w, int idx, int path_len)
     int pushed = 0;
     for (int a = 0; a < node->n_args; a++)
     {
-        // scope_n cannot reach the cap: scope[] and args[] are both PC_GQL_MAX_ARGS long,
-        // parse_field refuses to record arg number PC_GQL_MAX_ARGS, and the nodes on one
+        // scope_n cannot reach the cap: scope[] and args[] are both PROTOCORE_GQL_MAX_ARGS long,
+        // parse_field refuses to record arg number PROTOCORE_GQL_MAX_ARGS, and the nodes on one
         // root-to-leaf path own disjoint slices of that pool - so the guard never bites.
-        if (s_gql.scope_n < PC_GQL_MAX_ARGS)
+        if (s_gql.scope_n < PROTOCORE_GQL_MAX_ARGS)
         {
             s_gql.scope[s_gql.scope_n++] = node->first_arg + a;
             pushed++;
@@ -644,9 +644,9 @@ static void emit_field(Writer *w, int idx, int path_len)
     }
     else
     {
-        pc_gql_value v;
-        v.type = PC_GQL_NULL;
-        pc_gql_args view = {s_gql.scope, s_gql.scope_n};
+        protocore_gql_value v;
+        v.type = PROTOCORE_GQL_NULL;
+        protocore_gql_args view = {s_gql.scope, s_gql.scope_n};
         if (s_gql.resolver && s_gql.resolver(s_gql.path, &view, &v))
         {
             w_scalar(w, &v);
@@ -661,7 +661,7 @@ static void emit_field(Writer *w, int idx, int path_len)
     s_gql.path[path_len] = '\0';
 }
 
-proto_bool pc_gql_arg_int(const struct pc_gql_args *args, const char *name, long long *out)
+proto_bool protocore_gql_arg_int(const struct protocore_gql_args *args, const char *name, long long *out)
 {
     if (!args)
     {
@@ -670,7 +670,7 @@ proto_bool pc_gql_arg_int(const struct pc_gql_args *args, const char *name, long
     for (int k = 0; k < args->count; k++)
     {
         Arg *a = &s_gql.args[args->idx[k]];
-        if (strcmp(a->name, name) == 0 && a->val.type == PC_GQL_INT)
+        if (strcmp(a->name, name) == 0 && a->val.type == PROTOCORE_GQL_INT)
         {
             *out = a->val.i;
             return PROTO_TRUE;
@@ -678,7 +678,7 @@ proto_bool pc_gql_arg_int(const struct pc_gql_args *args, const char *name, long
     }
     return PROTO_FALSE;
 }
-proto_bool pc_gql_arg_str(const struct pc_gql_args *args, const char *name, const char **out)
+proto_bool protocore_gql_arg_str(const struct protocore_gql_args *args, const char *name, const char **out)
 {
     if (!args)
     {
@@ -687,7 +687,7 @@ proto_bool pc_gql_arg_str(const struct pc_gql_args *args, const char *name, cons
     for (int k = 0; k < args->count; k++)
     {
         Arg *a = &s_gql.args[args->idx[k]];
-        if (strcmp(a->name, name) == 0 && a->val.type == PC_GQL_STR)
+        if (strcmp(a->name, name) == 0 && a->val.type == PROTOCORE_GQL_STR)
         {
             *out = a->val.s;
             return PROTO_TRUE;
@@ -695,7 +695,7 @@ proto_bool pc_gql_arg_str(const struct pc_gql_args *args, const char *name, cons
     }
     return PROTO_FALSE;
 }
-proto_bool pc_gql_arg_bool(const struct pc_gql_args *args, const char *name, proto_bool *out)
+proto_bool protocore_gql_arg_bool(const struct protocore_gql_args *args, const char *name, proto_bool *out)
 {
     if (!args)
     {
@@ -704,7 +704,7 @@ proto_bool pc_gql_arg_bool(const struct pc_gql_args *args, const char *name, pro
     for (int k = 0; k < args->count; k++)
     {
         Arg *a = &s_gql.args[args->idx[k]];
-        if (strcmp(a->name, name) == 0 && a->val.type == PC_GQL_BOOL)
+        if (strcmp(a->name, name) == 0 && a->val.type == PROTOCORE_GQL_BOOL)
         {
             *out = a->val.b;
             return PROTO_TRUE;
@@ -713,26 +713,27 @@ proto_bool pc_gql_arg_bool(const struct pc_gql_args *args, const char *name, pro
     return PROTO_FALSE;
 }
 
-pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_fn resolver, char *out, size_t cap)
+protocore_gql_result protocore_graphql_execute(const char *query, size_t len, protocore_gql_resolver_fn resolver,
+                                               char *out, size_t cap)
 {
     s_gql.nnodes = 0;
     s_gql.nargs = 0;
     s_gql.str_len = 0;
     s_gql.scope_n = 0;
     s_gql.root = -1;
-    s_gql.err = PC_GQL_OK;
+    s_gql.err = PROTOCORE_GQL_OK;
     s_gql.resolver = resolver;
     s_gql.path[0] = '\0';
 
     Lex L = {query, query + (query ? len : 0)};
     if (!query || !out || cap == 0)
     {
-        return PC_GQL_ERR_PARSE;
+        return PROTOCORE_GQL_ERR_PARSE;
     }
 
     if (!parse_document(&L))
     {
-        const char *msg = (s_gql.err == PC_GQL_ERR_LIMIT) ? "query exceeds a configured limit" : "syntax error";
+        const char *msg = (s_gql.err == PROTOCORE_GQL_ERR_LIMIT) ? "query exceeds a configured limit" : "syntax error";
         Writer w = {out, cap, 0, PROTO_FALSE};
         w_str(&w, "{\"errors\":[{\"message\":");
         w_json_str(&w, msg);
@@ -742,8 +743,8 @@ pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_
             out[w.n] = '\0';
         }
         // every path that makes parse_document() return false has already set s_gql.err, so the
-        // PC_GQL_OK side of this test is unreachable
-        return s_gql.err != PC_GQL_OK ? s_gql.err : PC_GQL_ERR_PARSE;
+        // PROTOCORE_GQL_OK side of this test is unreachable
+        return s_gql.err != PROTOCORE_GQL_OK ? s_gql.err : PROTOCORE_GQL_ERR_PARSE;
     }
 
     Writer w = {out, cap, 0, PROTO_FALSE};
@@ -761,10 +762,10 @@ pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_
     w_str(&w, "}}");
     if (w.ovf || w.n >= cap)
     {
-        return PC_GQL_ERR_OVERFLOW;
+        return PROTOCORE_GQL_ERR_OVERFLOW;
     }
     out[w.n] = '\0';
-    return PC_GQL_OK;
+    return PROTOCORE_GQL_OK;
 }
 
-#endif // PC_ENABLE_GRAPHQL
+#endif // PROTOCORE_ENABLE_GRAPHQL

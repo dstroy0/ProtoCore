@@ -4,7 +4,7 @@
 
 Role: the *device is the client*. This peer binds a UDP socket (a StatsD collector), triggers the device
 (via the rig's GET /statsd/probe?host=&port=&name=&value=&type= route) to format one metric line and
-pc_udp_sendto it, then receives the datagram and validates it against the StatsD line grammar as an
+protocore_udp_sendto it, then receives the datagram and validates it against the StatsD line grammar as an
 independent receiver:
 
   name:value|type[|@rate][|#tags]

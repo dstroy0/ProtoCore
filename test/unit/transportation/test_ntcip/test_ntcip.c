@@ -38,12 +38,14 @@ void test_oid_builder_scalar_and_index(void)
 {
     uint32_t out[24];
     // A scalar takes .0.
-    size_t n = pc_ntcip_oid(NTCIP_1202_MAX_PHASES, NTCIP_1202_MAX_PHASES_LEN, 0, out, sizeof(out) / sizeof(out[0]));
+    size_t n =
+        protocore_ntcip_oid(NTCIP_1202_MAX_PHASES, NTCIP_1202_MAX_PHASES_LEN, 0, out, sizeof(out) / sizeof(out[0]));
     TEST_ASSERT_EQUAL_size_t(NTCIP_1202_MAX_PHASES_LEN + 1, n);
     TEST_ASSERT_EQUAL_UINT32(0, out[n - 1]);
 
     // A table column takes the row index.
-    n = pc_ntcip_oid(NTCIP_1202_PHASE_MIN_GREEN, NTCIP_1202_PHASE_MIN_GREEN_LEN, 4, out, sizeof(out) / sizeof(out[0]));
+    n = protocore_ntcip_oid(NTCIP_1202_PHASE_MIN_GREEN, NTCIP_1202_PHASE_MIN_GREEN_LEN, 4, out,
+                            sizeof(out) / sizeof(out[0]));
     TEST_ASSERT_EQUAL_size_t(NTCIP_1202_PHASE_MIN_GREEN_LEN + 1, n);
     TEST_ASSERT_EQUAL_UINT32(4, out[n - 1]);
     // The root is copied verbatim before the index.
@@ -56,20 +58,21 @@ void test_oid_builder_scalar_and_index(void)
 void test_oid_builder_overflow(void)
 {
     uint32_t out[4]; // too small
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_ntcip_oid(NTCIP_1203_DMS_MESSAGE_MULTI, NTCIP_1203_DMS_MESSAGE_MULTI_LEN, 1, out, 4));
+    TEST_ASSERT_EQUAL_size_t(
+        0, protocore_ntcip_oid(NTCIP_1203_DMS_MESSAGE_MULTI, NTCIP_1203_DMS_MESSAGE_MULTI_LEN, 1, out, 4));
 }
 
 void test_oid_builder_invalid_args(void)
 {
     uint32_t out[24];
     // NULL root.
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntcip_oid(NULL, NTCIP_1202_MAX_PHASES_LEN, 0, out, sizeof(out) / sizeof(out[0])));
-    // NULL out.
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ntcip_oid(NTCIP_1202_MAX_PHASES, NTCIP_1202_MAX_PHASES_LEN, 0, NULL, sizeof(out) / sizeof(out[0])));
+        0, protocore_ntcip_oid(NULL, NTCIP_1202_MAX_PHASES_LEN, 0, out, sizeof(out) / sizeof(out[0])));
+    // NULL out.
+    TEST_ASSERT_EQUAL_size_t(0, protocore_ntcip_oid(NTCIP_1202_MAX_PHASES, NTCIP_1202_MAX_PHASES_LEN, 0, NULL,
+                                                    sizeof(out) / sizeof(out[0])));
     // Zero-length root.
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntcip_oid(NTCIP_1202_MAX_PHASES, 0, 0, out, sizeof(out) / sizeof(out[0])));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_ntcip_oid(NTCIP_1202_MAX_PHASES, 0, 0, out, sizeof(out) / sizeof(out[0])));
 }
 
 int main(void)

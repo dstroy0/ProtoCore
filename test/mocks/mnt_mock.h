@@ -1,14 +1,14 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// In-memory pc_mnt_backend for the host tests.
+// In-memory protocore_mnt_backend for the host tests.
 //
 // The suite used to reach an Arduino `fs::FS` mock, which the file-serving code no longer speaks -
-// it takes a pc_mnt_backend now, like every other store. This is that same fixture behind the seam:
+// it takes a protocore_mnt_backend now, like every other store. This is that same fixture behind the seam:
 // a small registry of path/data/mtime entries the test points at its own string literals, so the
 // bytes are borrowed rather than copied and a test can assert on the exact buffer it supplied.
 //
-// It is NOT pc_mnt_ram(): the RAM disk keeps no clock and documents mtime as always 0, and the
+// It is NOT protocore_mnt_ram(): the RAM disk keeps no clock and documents mtime as always 0, and the
 // conditional-GET tests (Last-Modified / If-Modified-Since) need a real timestamp per file.
 //
 // Two knobs model the failures a real store has and memory does not: a short-read cap, so the
@@ -64,7 +64,7 @@ typedef struct
 } MockMntCtx;
 
 // One instance for the whole program: the test registers files from its own translation unit and
-// the code under test reads them from another. See the note on linkage in pc_net_host.h.
+// the code under test reads them from another. See the note on linkage in protocore_net_host.h.
 __attribute__((weak)) MockMntCtx g_mock_mnt;
 
 static inline int mock_mnt_find(const char *path)
@@ -147,7 +147,7 @@ static inline int mock_mnt_open(const char *path, int mode)
         return -1;
     }
     int e = mock_mnt_find(path);
-    if (e < 0 && mode != (int)PC_MNT_READ)
+    if (e < 0 && mode != (int)PROTOCORE_MNT_READ)
     {
         e = -1; // a write creates: the bytes land in the write capture, not in the registry
     }
@@ -281,7 +281,7 @@ static inline proto_bool mock_mnt_exists(const char *path)
     return mock_mnt_size(path) >= 0 ? PROTO_TRUE : PROTO_FALSE;
 }
 
-static inline proto_bool mock_mnt_stat(const char *path, pc_mnt_stat *out)
+static inline proto_bool mock_mnt_stat(const char *path, protocore_mnt_stat *out)
 {
     int e = mock_mnt_find(path);
     if (e >= 0)
@@ -320,7 +320,7 @@ static inline int mock_mnt_opendir(const char *path)
     return -1;
 }
 
-static inline proto_bool mock_mnt_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap)
+static inline proto_bool mock_mnt_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
 {
     (void)handle;
     (void)out;
@@ -329,12 +329,12 @@ static inline proto_bool mock_mnt_readdir(int handle, pc_mnt_stat *out, char *na
     return PROTO_FALSE;
 }
 
-__attribute__((weak)) const pc_mnt_backend g_mock_mnt_backend = {
+__attribute__((weak)) const protocore_mnt_backend g_mock_mnt_backend = {
     mock_mnt_open,    mock_mnt_read,   mock_mnt_write,   mock_mnt_close,     mock_mnt_seek,
     mock_mnt_size,    mock_mnt_exists, mock_mnt_no_path, mock_mnt_no_rename, mock_mnt_no_path,
     mock_mnt_no_path, mock_mnt_stat,   mock_mnt_opendir, mock_mnt_readdir};
 
-static inline const pc_mnt_backend *mock_mnt(void)
+static inline const protocore_mnt_backend *mock_mnt(void)
 {
     return &g_mock_mnt_backend;
 }

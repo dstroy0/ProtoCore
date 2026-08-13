@@ -1,6 +1,6 @@
 # Telnet - a line-oriented Telnet console
 
-**Layer:** L5 Session · **Build flags:** `PC_ENABLE_TELNET`
+**Layer:** L5 Session · **Build flags:** `PROTOCORE_ENABLE_TELNET`
 
 ## What this example teaches
 
@@ -18,25 +18,25 @@ write a tiny command interpreter, not a byte pump.
 
 ```cpp
 server.listen(23, ProtoConn::PROTO_TELNET); // open the Telnet port
-pc_telnet_on_command(on_command);   // register the line handler
+protocore_telnet_on_command(on_command);   // register the line handler
 server.begin(80);                // also start HTTP; begin() activates every listener
 ```
 
 **A line-at-a-time command handler.** The callback receives a fully-edited line
-and the connection id; reply with `pc_telnet_print` / `pc_telnet_println` /
-`pc_telnet_frame`. This example is a minimal shell with `help`, `heap`, `uptime`,
+and the connection id; reply with `protocore_telnet_print` / `protocore_telnet_println` /
+`protocore_telnet_frame`. This example is a minimal shell with `help`, `heap`, `uptime`,
 and an echo fallback:
 
 ```cpp
 void on_command(const char *line, uint8_t conn_id) {
     if (strcmp(line, "heap") == 0)
-        pc_telnet_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        protocore_telnet_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else if (line[0])
-        pc_telnet_frame(REPLY_ECHO, line);
+        protocore_telnet_frame(REPLY_ECHO, line);
 }
 ```
 
-**Build-flag note.** `PC_ENABLE_TELNET` must be set for the whole build; an
+**Build-flag note.** `PROTOCORE_ENABLE_TELNET` must be set for the whole build; an
 in-sketch `#define` does not reach the separately compiled library, so pass it as
 a `build_flag` (see the [build_flags gotcha](../../../docs/EXAMPLES.md)).
 
@@ -47,7 +47,7 @@ session.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_TELNET=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TELNET=1" \
   --lib="." examples/L5-Session/Telnet/Telnet.ino
 ```
 
@@ -66,11 +66,11 @@ added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_TELNET 1
+#define PROTOCORE_ENABLE_TELNET 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/presentation/telnet/telnet.h" // pc_telnet_on_command / pc_telnet_frame
+#include "network_drivers/presentation/telnet/telnet.h" // protocore_telnet_on_command / protocore_telnet_frame
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -82,13 +82,13 @@ void on_command(const char *line, uint8_t conn_id)
 {
     (void)conn_id;
     if (strcmp(line, "help") == 0)
-        pc_telnet_println("commands: help, heap, uptime, <echo>");
+        protocore_telnet_println("commands: help, heap, uptime, <echo>");
     else if (strcmp(line, "heap") == 0)
-        pc_telnet_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        protocore_telnet_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else if (strcmp(line, "uptime") == 0)
-        pc_telnet_frame(REPLY_UPTIME, (uint32_t)millis());
+        protocore_telnet_frame(REPLY_UPTIME, (uint32_t)millis());
     else if (line[0])                       // non-empty -> echo it
-        pc_telnet_frame(REPLY_ECHO, line);
+        protocore_telnet_frame(REPLY_ECHO, line);
 }
 
 void setup()
@@ -106,7 +106,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     server.listen(23, ProtoConn::PROTO_TELNET);         // open the Telnet port
-    pc_telnet_on_command(on_command);
+    protocore_telnet_on_command(on_command);
 
     server.begin(80);                        // also start HTTP (begin() activates all listeners)
     Serial.println("Telnet on port 23 (try: telnet <ip>)");

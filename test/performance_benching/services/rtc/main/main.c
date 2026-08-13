@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the RTC codec (services/peripherals/rtc): the pure BCD-register <-> Unix
-// epoch conversions pc_rtc_regs_to_epoch() / pc_rtc_epoch_to_regs() (24h/12h encodings, leap
-// years). The I2C register read/write (pc_rtc_begin/read_epoch/set_epoch) is real-hardware and out
+// epoch conversions protocore_rtc_regs_to_epoch() / protocore_rtc_epoch_to_regs() (24h/12h encodings, leap
+// years). The I2C register read/write (protocore_rtc_begin/read_epoch/set_epoch) is real-hardware and out
 // of scope here; only the deterministic conversion math is benched.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -25,10 +25,10 @@ void dbench_run(void)
         DBENCH_BANNER("rtc");
         volatile uint32_t sink = 0;
         uint32_t epoch = 0;
-        DBENCH_OP("pc_rtc_regs_to_epoch", 200000, sink += pc_rtc_regs_to_epoch(regs, &epoch));
+        DBENCH_OP("protocore_rtc_regs_to_epoch", 200000, sink += protocore_rtc_regs_to_epoch(regs, &epoch));
         uint8_t out[RTC_REG_COUNT];
-        DBENCH_OP("pc_rtc_epoch_to_regs", 200000, {
-            pc_rtc_epoch_to_regs(1751632496u, out);
+        DBENCH_OP("protocore_rtc_epoch_to_regs", 200000, {
+            protocore_rtc_epoch_to_regs(1751632496u, out);
             sink += out[0];
         });
         (void)sink;

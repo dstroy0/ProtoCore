@@ -3,7 +3,7 @@
 
 /**
  * @file OTA.ino
- * @brief Authenticated over-the-air firmware update (PC_ENABLE_OTA).
+ * @brief Authenticated over-the-air firmware update (PROTOCORE_ENABLE_OTA).
  *
  * Registers a streaming `POST /update` endpoint: a firmware image POSTed with
  * valid HTTP Basic credentials is fed straight into the ESP32 Update API via
@@ -16,7 +16,7 @@
  * (Generate firmware.bin with `pio run` - it is .pio/build/<env>/firmware.bin.)
  */
 
-#define PC_ENABLE_OTA 1
+#define PROTOCORE_ENABLE_OTA 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -53,7 +53,7 @@ void setup()
     }
 
     // Authenticated streaming OTA at POST /update.
-    pc_ota_begin("/update", "admin", "s3cret");
+    protocore_ota_begin("/update", "admin", "s3cret");
 
     Serial.println("Server up; OTA at POST /update");
 }

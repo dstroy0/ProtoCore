@@ -15,7 +15,7 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_UPLOAD=1 -DMAX_CONNS=4
+ *     build_flags = -DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.) The upload
  * sink shares the parser streaming hook with OTA - enable one or the other, not both.
  *
@@ -26,13 +26,13 @@
  * dialed to 4 to fit the classic ESP32; a PSRAM/large-SRAM board can raise it.
  */
 
-#define PC_ENABLE_UPLOAD 1
+#define PROTOCORE_ENABLE_UPLOAD 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/application/upload_service/upload_service.h"
-#include "core_setup/hal/esp/esp_mnt_fs.h" // pc_mnt_fs(): bind an Arduino FS to the storage seam
-#include "server/filesystem/mnt.h"            // pc_mnt_mount()
+#include "core_setup/hal/esp/esp_mnt_fs.h" // protocore_mnt_fs(): bind an Arduino FS to the storage seam
+#include "server/filesystem/mnt.h"            // protocore_mnt_mount()
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";
@@ -62,10 +62,10 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Mount LittleFS through the storage seam; the upload service writes to whatever is mounted.
-    pc_mnt_mount(pc_mnt_fs(&LittleFS));
+    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
 
     // POST /upload -> stream the body into DEST on the mounted store.
-    pc_upload_begin("/upload", DEST);
+    protocore_upload_begin("/upload", DEST);
 
     // GET /file -> serve the stored file back.
     on_http("/file", HTTP_GET,

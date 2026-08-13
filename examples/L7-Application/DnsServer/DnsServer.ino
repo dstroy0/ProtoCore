@@ -3,7 +3,7 @@
 
 /**
  * @file DnsServer.ino
- * @brief Run a tiny DNS server so LAN devices can use names, not IPs (PC_ENABLE_DNS_SERVER).
+ * @brief Run a tiny DNS server so LAN devices can use names, not IPs (PROTOCORE_ENABLE_DNS_SERVER).
  *
  * On a network with no real DNS (offline, air-gapped, a lab bench), nothing turns
  * "printer.lan" into an address. This makes the ESP32 answer those lookups from a small table
@@ -12,10 +12,10 @@
  *
  * Point another device's DNS at this board's IP, then `nslookup printer.lan <board-ip>`.
  *
- * Build flags (PlatformIO): `-DPC_ENABLE_DNS_SERVER=1`
+ * Build flags (PlatformIO): `-DPROTOCORE_ENABLE_DNS_SERVER=1`
  */
 
-#define PC_ENABLE_DNS_SERVER 1
+#define PROTOCORE_ENABLE_DNS_SERVER 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -40,12 +40,12 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // The name -> IPv4 records this server will answer. Edit these for your network.
-    pc_dns_server_add("esp32.lan", (uint8_t)(ip & 0xFF), (uint8_t)((ip >> 8) & 0xFF), (uint8_t)((ip >> 16) & 0xFF),
+    protocore_dns_server_add("esp32.lan", (uint8_t)(ip & 0xFF), (uint8_t)((ip >> 8) & 0xFF), (uint8_t)((ip >> 16) & 0xFF),
                       (uint8_t)((ip >> 24) & 0xFF)); // this board, by name
-    pc_dns_server_add("printer.lan", 192, 168, 1, 50);
-    pc_dns_server_add("nas.lan", 192, 168, 1, 60);
+    protocore_dns_server_add("printer.lan", 192, 168, 1, 50);
+    protocore_dns_server_add("nas.lan", 192, 168, 1, 60);
 
-    if (pc_dns_server_begin())
+    if (protocore_dns_server_begin())
     {
         Serial.println("DNS server on UDP/53 (point a device's DNS here, then: nslookup printer.lan <this-ip>)");
     }

@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_tls13_msg.c
- * @brief TLS 1.3 handshake messages for the QUIC handshake (see pc_tls13_msg.h).
+ * @file protocore_tls13_msg.c
+ * @brief TLS 1.3 handshake messages for the QUIC handshake (see protocore_tls13_msg.h).
  */
 
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 #include "crypto/asymmetric/ed25519.h"
 #include "mmgr/protomem.h"
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // MLKEM768_EK_BYTES (X25519MLKEM768 share sizing)
 #endif
 
@@ -206,7 +206,7 @@ static void parse_key_share(const uint8_t *body, size_t blen, Tls13ClientHello *
             mem.cpy(out->client_x25519, body + i, 32);
             out->has_key_share = PROTO_TRUE;
         }
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
         else if (group == TLS_GROUP_X25519MLKEM768 && klen == MLKEM768_EK_BYTES + 32)
         {
             out->client_mlkem_ek = body + i;                               // ML-KEM-768 ek (first)
@@ -286,7 +286,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
             return;
         }
         size_t ll = body[0];
-        out->offers_tls13 = list16_contains(body + 1, blen - 1, ll, dtls ? PC_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
+        out->offers_tls13 = list16_contains(body + 1, blen - 1, ll, dtls ? PROTOCORE_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
         break;
     }
     case TLS_EXT_SUPPORTED_GROUPS: {
@@ -296,7 +296,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         }
         size_t ll = (body[0] << 8) | body[1];
         out->offers_x25519 = list16_contains(body + 2, blen - 2, ll, TLS_GROUP_X25519);
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
         out->offers_x25519mlkem768 = list16_contains(body + 2, blen - 2, ll, TLS_GROUP_X25519MLKEM768);
 #endif
         break;
@@ -336,7 +336,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
             {
                 out->offers_x509_server_cert = PROTO_TRUE;
             }
-#if PC_ENABLE_TLS_RPK
+#if PROTOCORE_ENABLE_TLS_RPK
             if (body[1 + i] == TLS_CERT_TYPE_RAW_PUBLIC_KEY)
             {
                 out->offers_rpk_server_cert = PROTO_TRUE;
@@ -346,8 +346,8 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         break;
     }
     case TLS_EXT_QUIC_TRANSPORT_PARAMS:
-        out->pc_quic_tp = body;
-        out->pc_quic_tp_len = blen;
+        out->protocore_quic_tp = body;
+        out->protocore_quic_tp_len = blen;
         break;
     case TLS_EXT_COOKIE: {
         // Cookie { opaque cookie<1..2^16-1> } (RFC 8446 §4.2.2): 2-byte length then the cookie bytes.
@@ -389,7 +389,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
     }
 }
 
-proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHello *out, proto_bool dtls)
+proto_bool protocore_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHello *out, proto_bool dtls)
 {
     mem.zero(out, sizeof(*out));
 
@@ -452,7 +452,7 @@ proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13Clie
     }
     // RFC 8446 sec 4.1.3: the server selects its suite "from the list in ClientHello.cipher_suites",
     // so what the client offered has to reach the caller rather than being read past.
-    out->offers_aes128gcm_sha256 = list16_contains(cs, cs_len, cs_len, PC_TLS_SUITE_AES_128_GCM_SHA256);
+    out->offers_aes128gcm_sha256 = list16_contains(cs, cs_len, cs_len, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
 
     uint8_t comp_len = 0;
     const uint8_t *comp = NULL;
@@ -495,7 +495,7 @@ proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13Clie
 // ---------------------------------------------------------------------------
 // Builders
 // ---------------------------------------------------------------------------
-size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
+size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
                                    uint8_t session_id_len, const uint8_t *share, size_t share_len, uint16_t group,
                                    proto_bool dtls, const uint8_t *conn_id, size_t conn_id_len)
 {
@@ -504,11 +504,11 @@ size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t rando
     size_t hs_len = w_mark(&w, 3);
 
     // legacy_version is 0x0303 (TLS 1.2) for TLS/QUIC, 0xFEFD (DTLS 1.2) for DTLS (RFC 9147 §5.3).
-    w_u16(&w, dtls ? PC_TLS_LEGACY_VERSION_DTLS : (uint16_t)0x0303);
+    w_u16(&w, dtls ? PROTOCORE_TLS_LEGACY_VERSION_DTLS : (uint16_t)0x0303);
     w_bytes(&w, random, 32);
     w_u8(&w, session_id_len);
     w_bytes(&w, session_id, session_id_len);
-    w_u16(&w, PC_TLS_SUITE_AES_128_GCM_SHA256);
+    w_u16(&w, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
     w_u8(&w, 0x00); // legacy_compression_method
 
     size_t ext_len = w_mark(&w, 2);
@@ -522,7 +522,7 @@ size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t rando
     // supported_versions -> selected version (DTLS 1.3 = 0xFEFC, TLS 1.3 = 0x0304).
     w_u16(&w, TLS_EXT_SUPPORTED_VERSIONS);
     w_u16(&w, 2);
-    w_u16(&w, dtls ? PC_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
+    w_u16(&w, dtls ? PROTOCORE_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
     // connection_id (RFC 9146 / RFC 9147 §9) -> the server's CID the client must place in the records
     // it sends. Sent in the ServerHello (epoch 0) so the client uses it from its first protected record.
     if (conn_id)
@@ -539,11 +539,11 @@ size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t rando
 }
 
 // SHA-256("HelloRetryRequest") - RFC 8446 §4.1.3. A ServerHello with this random is a HelloRetryRequest.
-const uint8_t pc_tls13_hrr_random[32] = {0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE, 0x1D, 0x8C,
+const uint8_t protocore_tls13_hrr_random[32] = {0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE, 0x1D, 0x8C,
                                          0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB,
                                          0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C};
 
-size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_t *session_id, uint8_t session_id_len,
+size_t protocore_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_t *session_id, uint8_t session_id_len,
                                           uint16_t selected_group, const uint8_t *cookie, size_t cookie_len,
                                           proto_bool dtls)
 {
@@ -558,18 +558,18 @@ size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_
     // legacy_version and the supported_versions selection use the DTLS codepoints for DTLS 1.3
     // (0xFEFD / 0xFEFC, RFC 9147 §5.3), the TLS ones (0x0303 / 0x0304) otherwise - a HelloRetryRequest
     // is a ServerHello, so it carries the same version fields.
-    w_u16(&w, dtls ? PC_TLS_LEGACY_VERSION_DTLS : (uint16_t)0x0303); // legacy_version
-    w_bytes(&w, pc_tls13_hrr_random, 32);
+    w_u16(&w, dtls ? PROTOCORE_TLS_LEGACY_VERSION_DTLS : (uint16_t)0x0303); // legacy_version
+    w_bytes(&w, protocore_tls13_hrr_random, 32);
     w_u8(&w, session_id_len);
     w_bytes(&w, session_id, session_id_len);
-    w_u16(&w, PC_TLS_SUITE_AES_128_GCM_SHA256);
+    w_u16(&w, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
     w_u8(&w, 0x00); // legacy_compression_method
 
     size_t ext_len = w_mark(&w, 2);
     // supported_versions -> the selected version.
     w_u16(&w, TLS_EXT_SUPPORTED_VERSIONS);
     w_u16(&w, 2);
-    w_u16(&w, dtls ? PC_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
+    w_u16(&w, dtls ? PROTOCORE_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
     // key_share (HelloRetryRequest form) -> just the selected group (RFC 8446 §4.2.8).
     w_u16(&w, TLS_EXT_KEY_SHARE);
     w_u16(&w, 2);
@@ -588,7 +588,7 @@ size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_
     return w.ok ? w.pos : 0;
 }
 
-#if PC_ENABLE_TLS_RPK
+#if PROTOCORE_ENABLE_TLS_RPK
 // server_certificate_type response (RFC 7250 sec 4.2): a single CertificateType value, RawPublicKey.
 static void w_server_cert_type_rpk(Writer *w)
 {
@@ -598,7 +598,7 @@ static void w_server_cert_type_rpk(Writer *w)
 }
 #endif
 
-size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert)
+size_t protocore_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
@@ -606,7 +606,7 @@ size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto
     // The DTLS profile carries no ALPN / transport params; the only possible extension is the
     // negotiated server_certificate_type (RFC 7250) when RawPublicKey was selected.
     size_t ext_len = w_mark(&w, 2);
-#if PC_ENABLE_TLS_RPK
+#if PROTOCORE_ENABLE_TLS_RPK
     if (rpk_server_cert)
     {
         w_server_cert_type_rpk(&w);
@@ -619,7 +619,7 @@ size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto
     return w.ok ? w.pos : 0;
 }
 
-size_t pc_tls13_build_message_hash(uint8_t *out, size_t cap, const uint8_t ch1_hash[32])
+size_t protocore_tls13_build_message_hash(uint8_t *out, size_t cap, const uint8_t ch1_hash[32])
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, 254); // message_hash synthetic handshake type (RFC 8446 §4.4.1)
@@ -628,7 +628,7 @@ size_t pc_tls13_build_message_hash(uint8_t *out, size_t cap, const uint8_t ch1_h
     return w.ok ? w.pos : 0;
 }
 
-size_t pc_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *pc_quic_tp, size_t pc_quic_tp_len,
+size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *protocore_quic_tp, size_t protocore_quic_tp_len,
                                            proto_bool rpk_server_cert)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
@@ -642,11 +642,11 @@ size_t pc_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8
     w_u16(&w, 3); // ProtocolNameList length
     w_u8(&w, 2);  // name length
     w_bytes(&w, (const uint8_t *)"h3", 2);
-    // pc_quic_transport_parameters.
+    // protocore_quic_transport_parameters.
     w_u16(&w, TLS_EXT_QUIC_TRANSPORT_PARAMS);
-    w_u16(&w, (uint16_t)pc_quic_tp_len);
-    w_bytes(&w, pc_quic_tp, pc_quic_tp_len);
-#if PC_ENABLE_TLS_RPK
+    w_u16(&w, (uint16_t)protocore_quic_tp_len);
+    w_bytes(&w, protocore_quic_tp, protocore_quic_tp_len);
+#if PROTOCORE_ENABLE_TLS_RPK
     // negotiated server_certificate_type = RawPublicKey (RFC 7250), when selected.
     if (rpk_server_cert)
     {
@@ -661,7 +661,7 @@ size_t pc_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8
     return w.ok ? w.pos : 0;
 }
 
-size_t pc_tls13_build_certificate(uint8_t *out, size_t cap, const uint8_t *cert_der, size_t cert_len)
+size_t protocore_tls13_build_certificate(uint8_t *out, size_t cap, const uint8_t *cert_der, size_t cert_len)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_CERTIFICATE);
@@ -678,33 +678,33 @@ size_t pc_tls13_build_certificate(uint8_t *out, size_t cap, const uint8_t *cert_
     return w.ok ? w.pos : 0;
 }
 
-#if PC_ENABLE_TLS_RPK
-size_t pc_tls13_ed25519_spki(uint8_t *out, size_t cap, const uint8_t pub[32])
+#if PROTOCORE_ENABLE_TLS_RPK
+size_t protocore_tls13_ed25519_spki(uint8_t *out, size_t cap, const uint8_t pub[32])
 {
     // DER SubjectPublicKeyInfo for id-Ed25519 (RFC 8410 sec 4): a fixed 12-byte prefix - SEQUENCE
     // { SEQUENCE { OID 1.3.101.112 } , BIT STRING (33, 0 unused) } - then the 32-byte public key.
     static const uint8_t PREFIX[12] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
-    if (cap < PC_TLS13_ED25519_SPKI_LEN)
+    if (cap < PROTOCORE_TLS13_ED25519_SPKI_LEN)
     {
         return 0;
     }
     mem.cpy(out, PREFIX, sizeof(PREFIX));
     mem.cpy(out + sizeof(PREFIX), pub, 32);
-    return PC_TLS13_ED25519_SPKI_LEN;
+    return PROTOCORE_TLS13_ED25519_SPKI_LEN;
 }
 
-size_t pc_tls13_build_certificate_rpk(uint8_t *out, size_t cap, const uint8_t ed25519_pub[32])
+size_t protocore_tls13_build_certificate_rpk(uint8_t *out, size_t cap, const uint8_t ed25519_pub[32])
 {
-    uint8_t spki[PC_TLS13_ED25519_SPKI_LEN];
-    if (!pc_tls13_ed25519_spki(spki, sizeof(spki), ed25519_pub))
+    uint8_t spki[PROTOCORE_TLS13_ED25519_SPKI_LEN];
+    if (!protocore_tls13_ed25519_spki(spki, sizeof(spki), ed25519_pub))
     {
         return 0;
     }
-    return pc_tls13_build_certificate(out, cap, spki, sizeof(spki));
+    return protocore_tls13_build_certificate(out, cap, spki, sizeof(spki));
 }
 #endif
 
-size_t pc_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t transcript_hash[32], proto_bool is_server)
+size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t transcript_hash[32], proto_bool is_server)
 {
     // RFC 8446 sec 4.4.3: 64 spaces || context string || 0x00 || transcript hash.
     static const char SRV[] = "TLS 1.3, server CertificateVerify";
@@ -723,29 +723,29 @@ size_t pc_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t tran
     return total;
 }
 
-size_t pc_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
+size_t protocore_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
                                   const uint8_t seed[32])
 {
     uint8_t content[64 + 33 + 1 + 32];
-    size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), transcript_hash, PROTO_TRUE);
+    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), transcript_hash, PROTO_TRUE);
     if (!clen)
     {
         return 0;
     }
-    uint8_t sig[PC_ED25519_SIG_LEN];
-    pc_ed25519_sign(work, sig, content, clen, seed);
+    uint8_t sig[PROTOCORE_ED25519_SIG_LEN];
+    protocore_ed25519_sign(work, sig, content, clen, seed);
 
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_CERTIFICATE_VERIFY);
     size_t hs_len = w_mark(&w, 3);
     w_u16(&w, TLS_SIG_ED25519);
-    w_u16(&w, PC_ED25519_SIG_LEN);
-    w_bytes(&w, sig, PC_ED25519_SIG_LEN);
+    w_u16(&w, PROTOCORE_ED25519_SIG_LEN);
+    w_bytes(&w, sig, PROTOCORE_ED25519_SIG_LEN);
     w_patch24(&w, hs_len);
     return w.ok ? w.pos : 0;
 }
 
-size_t pc_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t verify_data[32])
+size_t protocore_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t verify_data[32])
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_FINISHED);
@@ -755,4 +755,4 @@ size_t pc_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t verify_da
     return w.ok ? w.pos : 0;
 }
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE

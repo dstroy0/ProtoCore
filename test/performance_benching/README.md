@@ -17,7 +17,7 @@ test/performance_benching/
 
 - **On-device CCOUNT bench** - `<feature>/main/main.c`. An ESP-IDF application that times the
   feature's pure hot path on a real ESP32-S3 with the Xtensa cycle counter (`CCOUNT`, via
-  `pc_cycles()`), printing `DB ...` lines over USB-Serial/JTAG. This is the real device cost in
+  `protocore_cycles()`), printing `DB ...` lines over USB-Serial/JTAG. This is the real device cost in
   cycles / ns / MB/s at 240 MHz.
 - **Host bench** - `<feature>/host.c`. A standalone `gcc` program giving a fast relative ns/op +
   MB/s baseline on a desktop/RPi core (not the device cost). Its build command is in its header
@@ -29,7 +29,7 @@ them too.
 ## device_bench.h
 
 `common/device_bench.h` provides the measurement macros `DBENCH_OP(label, N, expr)` and
-`DBENCH_BULK(label, N, bytes, expr)` (built on `pc_cycles()` / `pc_cycles_to_ns()`), the
+`DBENCH_BULK(label, N, bytes, expr)` (built on `protocore_cycles()` / `protocore_cycles_to_ns()`), the
 `DBENCH_BANNER` / `DBENCH_DONE` frame lines, and `DBENCH_MAIN(label)`, which supplies `app_main()`
 and the pinned task. A bench therefore holds only what is specific to it:
 
@@ -43,7 +43,7 @@ void dbench_run(void)
     for (;;)
     {
         DBENCH_BANNER("modbus");
-        DBENCH_OP("pc_modbus_process_adu read x8 (FC3)", 20000, ...);
+        DBENCH_OP("protocore_modbus_process_adu read x8 (FC3)", 20000, ...);
         DBENCH_DONE();
     }
 }
@@ -65,11 +65,11 @@ idf.py -C test/performance_benching/services/modbus -p COM7 flash monitor
 
 ```
 DB ==== modbus device microbench start (CCOUNT @ 240 MHz) ====
-DB pc_modbus_process_adu read x8 (FC3)  cyc=1830        us=7.63      ns=7625
+DB protocore_modbus_process_adu read x8 (FC3)  cyc=1830        us=7.63      ns=7625
 DB ==== DONE ====
 ```
 
-A feature's `PC_ENABLE_*` flags go in its own `CMakeLists.txt` as `add_compile_definitions()` before
+A feature's `PROTOCORE_ENABLE_*` flags go in its own `CMakeLists.txt` as `add_compile_definitions()` before
 `project()`, so they reach the separately-compiled library and not just the bench translation unit.
 
 ## Worked example templates

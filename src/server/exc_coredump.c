@@ -16,12 +16,12 @@
 #include "mmgr/protomem.h"
 #include "server/exc_decoder.h"
 
-#if PC_ENABLE_EXC_DECODER && PC_HAS_VENDOR_COREDUMP
+#if PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP
 
 #include <esp_core_dump.h>
 #include <esp_partition.h>
 
-proto_bool pc_exc_coredump_present(ExcCoreDump *out)
+proto_bool protocore_exc_coredump_present(ExcCoreDump *out)
 {
     size_t addr = 0;
     size_t size = 0;
@@ -43,7 +43,7 @@ proto_bool pc_exc_coredump_present(ExcCoreDump *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_exc_coredump_summary(ExcInfo *out)
+proto_bool protocore_exc_coredump_summary(ExcInfo *out)
 {
     if (!out)
     {
@@ -70,9 +70,9 @@ proto_bool pc_exc_coredump_summary(ExcInfo *out)
     out->excvaddr = s.ex_info.exc_vaddr;
     out->has_excvaddr = PROTO_TRUE;
     size_t depth = s.exc_bt_info.depth;
-    if (depth > PC_EXC_MAX_FRAMES)
+    if (depth > PROTOCORE_EXC_MAX_FRAMES)
     {
-        depth = PC_EXC_MAX_FRAMES;
+        depth = PROTOCORE_EXC_MAX_FRAMES;
     }
     for (size_t i = 0; i < depth; i++)
     {
@@ -99,7 +99,7 @@ proto_bool pc_exc_coredump_summary(ExcInfo *out)
 static proto_bool coredump_locate(const esp_partition_t **part_out, size_t *base_out, size_t *size_out)
 {
     ExcCoreDump img;
-    if (!pc_exc_coredump_present(&img))
+    if (!protocore_exc_coredump_present(&img))
     {
         return PROTO_FALSE;
     }
@@ -120,7 +120,7 @@ static proto_bool coredump_locate(const esp_partition_t **part_out, size_t *base
     return PROTO_TRUE;
 }
 
-proto_bool pc_exc_coredump_read(size_t offset, void *buf, size_t len)
+proto_bool protocore_exc_coredump_read(size_t offset, void *buf, size_t len)
 {
     if (!buf)
     {
@@ -146,7 +146,7 @@ proto_bool pc_exc_coredump_read(size_t offset, void *buf, size_t len)
     return esp_partition_read(part, base + offset, buf, len) == ESP_OK;
 }
 
-proto_bool pc_exc_coredump_save(const pc_mnt_backend *file_sys, const char *path)
+proto_bool protocore_exc_coredump_save(const protocore_mnt_backend *file_sys, const char *path)
 {
     if (!file_sys || !path || path[0] == '\0')
     {
@@ -161,14 +161,14 @@ proto_bool pc_exc_coredump_save(const pc_mnt_backend *file_sys, const char *path
         return PROTO_FALSE;
     }
 
-    int fh = file_sys->open(path, PC_MNT_WRITE);
+    int fh = file_sys->open(path, PROTOCORE_MNT_WRITE);
     if (fh < 0)
     {
         return PROTO_FALSE;
     }
 
     // Streamed in fixed chunks: a dump can be tens of KB and must never need to fit RAM at once.
-    uint8_t buf[PC_EXC_COREDUMP_CHUNK];
+    uint8_t buf[PROTOCORE_EXC_COREDUMP_CHUNK];
     size_t off = 0;
     proto_bool ok = PROTO_TRUE;
     while (off < size)
@@ -189,9 +189,9 @@ proto_bool pc_exc_coredump_save(const pc_mnt_backend *file_sys, const char *path
     return ok;
 }
 
-proto_bool pc_exc_coredump_erase(void)
+proto_bool protocore_exc_coredump_erase(void)
 {
     return esp_core_dump_image_erase() == ESP_OK;
 }
 
-#endif // PC_ENABLE_EXC_DECODER && PC_HAS_VENDOR_COREDUMP
+#endif // PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP

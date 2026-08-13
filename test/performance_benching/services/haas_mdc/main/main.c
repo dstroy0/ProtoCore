@@ -44,8 +44,8 @@ void dbench_run(void)
     // against these already-split field views so each op times only its own decode work.
     static HaasMdcResp r_status;
     static HaasMdcResp r_macro;
-    pc_haas_mdc_parse(frame_status, sizeof(frame_status) - 1, &r_status);
-    pc_haas_mdc_parse(frame_macro, sizeof(frame_macro) - 1, &r_macro);
+    protocore_haas_mdc_parse(frame_status, sizeof(frame_status) - 1, &r_status);
+    protocore_haas_mdc_parse(frame_macro, sizeof(frame_macro) - 1, &r_macro);
 
     for (;;)
     {
@@ -53,28 +53,28 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // Query builders (snprintf-backed `?Q###\r` / `?Q600 <var>\r`).
-        DBENCH_OP("pc_haas_mdc_build_q Q500", 50000,
-                  sink += pc_haas_mdc_build_q(qbuf, sizeof(qbuf), HAAS_Q_PROGRAM_STATUS));
-        DBENCH_OP("pc_haas_mdc_build_var 5021", 50000, sink += pc_haas_mdc_build_var(qbuf, sizeof(qbuf), 5021));
+        DBENCH_OP("protocore_haas_mdc_build_q Q500", 50000,
+                  sink += protocore_haas_mdc_build_q(qbuf, sizeof(qbuf), HAAS_Q_PROGRAM_STATUS));
+        DBENCH_OP("protocore_haas_mdc_build_var 5021", 50000, sink += protocore_haas_mdc_build_var(qbuf, sizeof(qbuf), 5021));
 
         // Frame parse: STX/ETB scan + CSV field split (Q500 5-field payload).
         HaasMdcResp r;
-        DBENCH_OP("pc_haas_mdc_parse Q500 frame", 20000,
-                  sink += pc_haas_mdc_parse(frame_status, sizeof(frame_status) - 1, &r) ? 1 : 0);
+        DBENCH_OP("protocore_haas_mdc_parse Q500 frame", 20000,
+                  sink += protocore_haas_mdc_parse(frame_status, sizeof(frame_status) - 1, &r) ? 1 : 0);
 
         // Typed decoders over the pre-split field views.
         HaasMdcStatus st;
-        DBENCH_OP("pc_haas_mdc_parse_status", 50000, sink += pc_haas_mdc_parse_status(&r_status, &st) ? 1 : 0);
+        DBENCH_OP("protocore_haas_mdc_parse_status", 50000, sink += protocore_haas_mdc_parse_status(&r_status, &st) ? 1 : 0);
         uint32_t var = 0;
         const char *val = NULL;
         size_t vl = 0;
-        DBENCH_OP("pc_haas_mdc_parse_macro", 50000, sink += pc_haas_mdc_parse_macro(&r_macro, &var, &val, &vl) ? 1 : 0);
+        DBENCH_OP("protocore_haas_mdc_parse_macro", 50000, sink += protocore_haas_mdc_parse_macro(&r_macro, &var, &val, &vl) ? 1 : 0);
 
         // Unframed DPRNT push strip/de-mux.
         const char *txt = NULL;
         size_t txt_len = 0;
-        DBENCH_OP("pc_haas_mdc_dprnt_line", 50000,
-                  sink += pc_haas_mdc_dprnt_line(dprnt, sizeof(dprnt) - 1, &txt, &txt_len) ? 1 : 0);
+        DBENCH_OP("protocore_haas_mdc_dprnt_line", 50000,
+                  sink += protocore_haas_mdc_dprnt_line(dprnt, sizeof(dprnt) - 1, &txt, &txt_len) ? 1 : 0);
 
         (void)sink;
         DBENCH_DONE();

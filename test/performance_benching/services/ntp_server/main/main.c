@@ -28,14 +28,14 @@ void dbench_run(void)
 {
     // A plausible, spec-conformant client request (byte layout straight from
     // test/test_ntp_server: LI=0, VN=4, Mode=3 client, poll=6, transmit stamp 0xDEADBEEF.12345678).
-    static const uint8_t req[PC_NTP_PACKET_LEN] = {
+    static const uint8_t req[PROTOCORE_NTP_PACKET_LEN] = {
         0x23, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34, 0x56, 0x78};
     // Arbitrary NTP time / half-second fraction (same literals the host test uses).
     static const uint32_t secs = 0xE6C50000u;
     static const uint32_t frac = 0x80000000u;
-    static uint8_t out[PC_NTP_PACKET_LEN];
+    static uint8_t out[PROTOCORE_NTP_PACKET_LEN];
 
     for (;;)
     {
@@ -43,16 +43,16 @@ void dbench_run(void)
         volatile size_t sink = 0;
         // Full server reply build: stratum 3 relay advertising the local clock (LOCL).
         DBENCH_OP("pc_ntp_server_build_response", 100000,
-                  sink +=
-                  pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, secs, frac, out, sizeof(out)));
+                  sink += pc_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out,
+                                                       sizeof(out)));
         // Same codec advertising a stratum-1 GPS reference clock (different stratum/refid inputs).
         DBENCH_OP("build_response gps stratum1", 100000,
-                  sink +=
-                  pc_ntp_server_build_response(req, sizeof(req), 1, PC_NTP_REFID_GPS, secs, frac, out, sizeof(out)));
+                  sink += pc_ntp_server_build_response(req, sizeof(req), 1, PROTOCORE_NTP_REFID_GPS, secs, frac, out,
+                                                       sizeof(out)));
         // Throughput view: the reply is a fixed 48-octet packet, so report ns/byte + MB/s.
-        DBENCH_BULK("build_response throughput", 100000, PC_NTP_PACKET_LEN,
-                    sink +=
-                    pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, secs, frac, out, sizeof(out)));
+        DBENCH_BULK("build_response throughput", 100000, PROTOCORE_NTP_PACKET_LEN,
+                    sink += pc_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out,
+                                                         sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

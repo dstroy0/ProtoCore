@@ -8,11 +8,11 @@
 // lookup the scheduler uses. Every op here is in-memory FreeRTOS queue work; there is NO hardware,
 // bus, or socket involved, so nothing is stubbed - the real production code path runs.
 //
-// To keep the fixed PC_PQ_DEPTH=4 lane from saturating (which would collapse every post into the
+// To keep the fixed PROTOCORE_PQ_DEPTH=4 lane from saturating (which would collapse every post into the
 // fail-closed early-return), a high-priority sink task drains the lane concurrently on the OTHER
 // core (core 0) while this bench task posts from core 1 - the "hardware event -> process now" shape
 // the service exists for. Draining on device is done by that task; PreemptQueue.drain() is a no-op
-// here (host-only), so we never call it. Items are 4-byte u32s, matching PC_PQ_ITEM_SIZE=4 and the
+// here (host-only), so we never call it. Items are 4-byte u32s, matching PROTOCORE_PQ_ITEM_SIZE=4 and the
 // known-good payloads in test/test_preempt_queue/test_preempt_queue.cpp.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -42,15 +42,15 @@ void dbench_run(void)
     // Start the USER lane: creates its fixed-capacity queue and a dedicated draining task pinned to
     // core 0 (the opposite core from this bench task, which xTaskCreatePinnedToCore pinned to core 1),
     // at max priority so posts are consumed promptly instead of piling up against the depth-4 ring.
-    pc_pq_config cfg = {};
+    protocore_pq_config cfg = {};
     cfg.handler = pq_drain_handler;
     cfg.ctx = NULL;
     cfg.priority = 24; // ceiling (configMAX_PRIORITIES-1); high enough to drain between posts
     cfg.core = 0;      // drain on the other core so this task's CCOUNT measures the post side
     cfg.name = "pq_sink";
-    pc_pq_start(&cfg);
+    protocore_pq_start(&cfg);
 
-    uint32_t item = 0xDEADBEEF; // one 4-byte item == PC_PQ_ITEM_SIZE
+    uint32_t item = 0xDEADBEEF; // one 4-byte item == PROTOCORE_PQ_ITEM_SIZE
 
     for (;;)
     {
@@ -59,13 +59,13 @@ void dbench_run(void)
         volatile uint32_t psink = 0; // accumulate priorities; keeps the pure lookup live
 
         // Back-post (normal ingest): guard + xQueueSendToBack(copy 4B) + high-water note.
-        DBENCH_OP("pc_pq_post back", 20000, sink += pc_pq_post(&item, 0) ? 1u : 0u);
+        DBENCH_OP("protocore_pq_post back", 20000, sink += protocore_pq_post(&item, 0) ? 1u : 0u);
         // Front-post (urgent-to-front ingest): xQueueSendToFront so it jumps ahead of queued work.
-        DBENCH_OP("pc_pq_post_urgent front", 20000, sink += pc_pq_post_urgent(&item, 0) ? 1u : 0u);
+        DBENCH_OP("protocore_pq_post_urgent front", 20000, sink += protocore_pq_post_urgent(&item, 0) ? 1u : 0u);
         // ISR-style post: xQueueSendToBackFromISR + a (no-op cross-core) yield request.
-        DBENCH_OP("pc_pq_post_from_isr", 20000, sink += pc_pq_post_from_isr(&item) ? 1u : 0u);
+        DBENCH_OP("protocore_pq_post_from_isr", 20000, sink += protocore_pq_post_from_isr(&item) ? 1u : 0u);
         // Pure scheduler math: the per-lane default priority switch (no queue touched).
-        DBENCH_OP("pc_pq_lane_priority", 200000, psink += PreemptQueue.priority(PC_PQ_LANE_DMA));
+        DBENCH_OP("protocore_pq_lane_priority", 200000, psink += PreemptQueue.priority(PROTOCORE_PQ_LANE_DMA));
 
         (void)sink;
         (void)psink;

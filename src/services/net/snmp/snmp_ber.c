@@ -2,19 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_ber.c
+ * @file protocore_snmp_ber.c
  * @brief ASN.1 BER codec implementation for the SNMP agent.
  */
 
 #include "services/net/snmp/snmp_ber.h"
 
-#if PC_ENABLE_SNMP
+#if PROTOCORE_ENABLE_SNMP
 
 // ---------------------------------------------------------------------------
 // Encoder
 // ---------------------------------------------------------------------------
 
-void pc_ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap)
+void protocore_ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap)
 {
     e->buf = buf;
     e->cap = cap;
@@ -67,7 +67,7 @@ static void enc_len(BerEnc *e, size_t length)
     }
 }
 
-proto_bool pc_ber_put_tlv(BerEnc *e, uint8_t tag, const uint8_t *val, size_t n)
+proto_bool protocore_ber_put_tlv(BerEnc *e, uint8_t tag, const uint8_t *val, size_t n)
 {
     enc_byte(e, tag);
     enc_len(e, n);
@@ -75,13 +75,13 @@ proto_bool pc_ber_put_tlv(BerEnc *e, uint8_t tag, const uint8_t *val, size_t n)
     return e->ok;
 }
 
-proto_bool pc_ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t n)
+proto_bool protocore_ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t n)
 {
     enc_bytes(e, bytes, n);
     return e->ok;
 }
 
-proto_bool pc_ber_put_integer(BerEnc *e, long v)
+proto_bool protocore_ber_put_integer(BerEnc *e, long v)
 {
     // Minimal two's-complement encoding.
     uint8_t tmp[8];
@@ -104,7 +104,7 @@ proto_bool pc_ber_put_integer(BerEnc *e, long v)
     return e->ok;
 }
 
-proto_bool pc_ber_put_uint(BerEnc *e, uint8_t tag, uint32_t v)
+proto_bool protocore_ber_put_uint(BerEnc *e, uint8_t tag, uint32_t v)
 {
     // Non-negative integer: big-endian, minimal, with a leading 0x00 if the top
     // bit would otherwise make it look negative.
@@ -132,12 +132,12 @@ proto_bool pc_ber_put_uint(BerEnc *e, uint8_t tag, uint32_t v)
     return e->ok;
 }
 
-proto_bool pc_ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *d, size_t n)
+proto_bool protocore_ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *d, size_t n)
 {
-    return pc_ber_put_tlv(e, tag, d, n);
+    return protocore_ber_put_tlv(e, tag, d, n);
 }
 
-proto_bool pc_ber_put_null(BerEnc *e)
+proto_bool protocore_ber_put_null(BerEnc *e)
 {
     enc_byte(e, (uint8_t)SNMP_TAG_BER_NULL);
     enc_byte(e, 0x00);
@@ -172,7 +172,7 @@ static void oid_emit_arc(uint8_t *tmp, size_t cap, size_t *t, uint32_t v, BerEnc
     }
 }
 
-proto_bool pc_ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t n)
+proto_bool protocore_ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t n)
 {
     if (n < 2)
     {
@@ -188,10 +188,10 @@ proto_bool pc_ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t n)
     {
         oid_emit_arc(tmp, sizeof(tmp), &t, arcs[i], e);
     }
-    return pc_ber_put_tlv(e, (uint8_t)SNMP_TAG_BER_OID, tmp, t);
+    return protocore_ber_put_tlv(e, (uint8_t)SNMP_TAG_BER_OID, tmp, t);
 }
 
-size_t pc_ber_seq_begin(BerEnc *e, uint8_t tag)
+size_t protocore_ber_seq_begin(BerEnc *e, uint8_t tag)
 {
     enc_byte(e, tag);
     size_t token = e->len; // position of the (reserved) length field
@@ -201,7 +201,7 @@ size_t pc_ber_seq_begin(BerEnc *e, uint8_t tag)
     return token;
 }
 
-void pc_ber_seq_end(BerEnc *e, size_t token)
+void protocore_ber_seq_end(BerEnc *e, size_t token)
 {
     if (!e->ok)
     {
@@ -222,7 +222,7 @@ void pc_ber_seq_end(BerEnc *e, size_t token)
 // Decoder
 // ---------------------------------------------------------------------------
 
-void pc_ber_dec_init(BerDec *d, const uint8_t *buf, size_t len)
+void protocore_ber_dec_init(BerDec *d, const uint8_t *buf, size_t len)
 {
     d->buf = buf;
     d->len = len;
@@ -230,7 +230,7 @@ void pc_ber_dec_init(BerDec *d, const uint8_t *buf, size_t len)
     d->ok = (buf != NULL);
 }
 
-proto_bool pc_ber_read_header(BerDec *d, uint8_t *tag, size_t *length)
+proto_bool protocore_ber_read_header(BerDec *d, uint8_t *tag, size_t *length)
 {
     if (!d->ok || d->pos >= d->len)
     {
@@ -277,11 +277,11 @@ proto_bool pc_ber_read_header(BerDec *d, uint8_t *tag, size_t *length)
     return PROTO_TRUE;
 }
 
-proto_bool pc_ber_read_integer(BerDec *d, long *out)
+proto_bool protocore_ber_read_integer(BerDec *d, long *out)
 {
     uint8_t tag;
     size_t len;
-    if (!pc_ber_read_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_INTEGER || len == 0 || len > 8)
+    if (!protocore_ber_read_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_INTEGER || len == 0 || len > 8)
     {
         d->ok = PROTO_FALSE;
         return PROTO_FALSE;
@@ -298,11 +298,11 @@ proto_bool pc_ber_read_integer(BerDec *d, long *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n)
+proto_bool protocore_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n)
 {
     uint8_t tag;
     size_t len;
-    if (!pc_ber_read_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_OID || len == 0 || max < 2)
+    if (!protocore_ber_read_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_OID || len == 0 || max < 2)
     {
         d->ok = PROTO_FALSE;
         return PROTO_FALSE;
@@ -347,9 +347,9 @@ proto_bool pc_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n)
     return PROTO_TRUE;
 }
 
-proto_bool pc_ber_skip(BerDec *d, size_t length)
+proto_bool protocore_ber_skip(BerDec *d, size_t length)
 {
-    if (!d->ok || d->pos > d->len || length > d->len - d->pos) // wrap-safe (see pc_ber_read_header)
+    if (!d->ok || d->pos > d->len || length > d->len - d->pos) // wrap-safe (see protocore_ber_read_header)
     {
         d->ok = PROTO_FALSE;
         return PROTO_FALSE;
@@ -358,4 +358,4 @@ proto_bool pc_ber_skip(BerDec *d, size_t length)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_SNMP
+#endif // PROTOCORE_ENABLE_SNMP

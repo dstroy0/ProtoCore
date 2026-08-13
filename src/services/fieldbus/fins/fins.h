@@ -3,7 +3,7 @@
 
 /**
  * @file fins.h
- * @brief Omron FINS frame codec (PC_ENABLE_FINS) - zero-heap command/response builder +
+ * @brief Omron FINS frame codec (PROTOCORE_ENABLE_FINS) - zero-heap command/response builder +
  *        parser for the Factory Interface Network Service (FINS/UDP), so a device can talk
  *        to an Omron PLC over the shipped UDP transport.
  *
@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_FINS
+#if PROTOCORE_ENABLE_FINS
 
 #define FINS_HEADER_SIZE 10
 
@@ -71,15 +71,15 @@ typedef struct
 } FinsHeader;
 
 /** @brief Build a command frame: header + MRC + SRC + params. Returns total octets, or 0. */
-size_t pc_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t mrc, uint8_t src,
-                             const uint8_t *params, size_t params_len);
+size_t protocore_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t mrc, uint8_t src,
+                                    const uint8_t *params, size_t params_len);
 
 /**
  * @brief Build a Memory Area Read command (0101): area code, 2-octet word address + bit,
  *        2-octet item count. The number of items is big-endian.
  */
-size_t pc_fins_build_memory_area_read(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area, uint16_t address,
-                                      uint8_t bit, uint16_t count);
+size_t protocore_fins_build_memory_area_read(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area,
+                                             uint16_t address, uint8_t bit, uint16_t count);
 
 /**
  * @brief Build a Memory Area Write command (0102): the same area / word address + bit / item-count
@@ -87,20 +87,21 @@ size_t pc_fins_build_memory_area_read(uint8_t *buf, size_t cap, const FinsHeader
  *        per item, big-endian). @p count is the number of items (big-endian).
  * @return total octets written, or 0 on a null data pointer with a nonzero length, or an overflow.
  */
-size_t pc_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area, uint16_t address,
-                                       uint8_t bit, uint16_t count, const uint8_t *data, size_t data_len);
+size_t protocore_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area,
+                                              uint16_t address, uint8_t bit, uint16_t count, const uint8_t *data,
+                                              size_t data_len);
 
 /**
  * @brief Build a RUN command (0401): switches the PLC to @p mode. Parameters are the program number
  *        (0xFFFF, all programs) followed by the 1-octet mode code. @return total octets, or 0 on overflow.
  */
-size_t pc_fins_build_run(uint8_t *buf, size_t cap, const FinsHeader *h, FinsRunMode mode);
+size_t protocore_fins_build_run(uint8_t *buf, size_t cap, const FinsHeader *h, FinsRunMode mode);
 
 /**
  * @brief Build a STOP command (0402): switches the PLC to PROGRAM mode (stops execution). The command
  *        carries no parameters. @return total octets, or 0 on overflow.
  */
-size_t pc_fins_build_stop(uint8_t *buf, size_t cap, const FinsHeader *h);
+size_t protocore_fins_build_stop(uint8_t *buf, size_t cap, const FinsHeader *h);
 
 /** @brief A parsed command (request side). @ref params points INTO the source buffer. */
 typedef struct
@@ -113,7 +114,7 @@ typedef struct
 } FinsCommand;
 
 /** @brief Parse a command frame (header + MRC + SRC + params). */
-proto_bool pc_fins_parse_command(const uint8_t *buf, size_t len, FinsCommand *out);
+proto_bool protocore_fins_parse_command(const uint8_t *buf, size_t len, FinsCommand *out);
 
 /** @brief A parsed response. @ref data points INTO the source buffer. */
 typedef struct
@@ -128,10 +129,10 @@ typedef struct
 } FinsResponse;
 
 /** @brief Parse a response frame (header + MRC + SRC + MRES + SRES + data). */
-proto_bool pc_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *out);
+proto_bool protocore_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *out);
 
-#endif // PC_ENABLE_FINS
+#endif // PROTOCORE_ENABLE_FINS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FINS_H

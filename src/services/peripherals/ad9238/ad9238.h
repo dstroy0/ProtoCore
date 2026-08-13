@@ -4,7 +4,7 @@
 /**
  * @file ad9238.h
  * @brief SPI configuration-port codec for the AD9238 (and the shared ADI high-speed-ADC SPI
- *        map it belongs to) - PC_ENABLE_AD9238.
+ *        map it belongs to) - PROTOCORE_ENABLE_AD9238.
  *
  * The AD9238 (12-bit, 20/40/65 MSPS dual ADC) has TWO interfaces that must not be confused:
  *  - The **sample data path**: a parallel CMOS/LVDS bus (12 data lines + DCO/output clock per
@@ -40,9 +40,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_AD9238
+#if PROTOCORE_ENABLE_AD9238
 
 /** @brief SPI register addresses (13-bit address field). Verify against your datasheet revision. */
 typedef enum PROTO_ENUM_PACKED
@@ -102,14 +102,14 @@ typedef enum PROTO_ENUM_PACKED
  * @param out2      receives the 2-byte instruction word.
  * @return true; false only if @p out2 is null or @p nbytes is 0 or > 4.
  */
-proto_bool pc_ad9238_build_instruction(proto_bool read, uint16_t reg_addr, uint8_t nbytes, uint8_t out2[2]);
+proto_bool protocore_ad9238_build_instruction(proto_bool read, uint16_t reg_addr, uint8_t nbytes, uint8_t out2[2]);
 
 /**
  * @brief Build a complete single-register write transaction (instruction word + one data byte)
  *        ready to clock out over SPI.
  * @return 3 (bytes written to @p out), or 0 if @p out is null / @p cap < 3.
  */
-size_t pc_ad9238_build_write(uint16_t reg_addr, uint8_t value, uint8_t *out, size_t cap);
+size_t protocore_ad9238_build_write(uint16_t reg_addr, uint8_t value, uint8_t *out, size_t cap);
 
 /**
  * @brief Build a single-register read instruction (the 2-byte header; the caller then clocks one
@@ -117,17 +117,17 @@ size_t pc_ad9238_build_write(uint16_t reg_addr, uint8_t value, uint8_t *out, siz
  *        transport of its own).
  * @return 2 (bytes written to @p out), or 0 if @p out is null / @p cap < 2.
  */
-size_t pc_ad9238_build_read(uint16_t reg_addr, uint8_t *out, size_t cap);
+size_t protocore_ad9238_build_read(uint16_t reg_addr, uint8_t *out, size_t cap);
 
 /**
  * @brief Build the "device update" transfer transaction (write 0x01 to AD9238_REG_DEVICE_UPDATE):
  *        every shadowed register write above needs this to take effect.
  * @return 3, or 0 if @p out is null / @p cap < 3.
  */
-size_t pc_ad9238_build_transfer(uint8_t *out, size_t cap);
+size_t protocore_ad9238_build_transfer(uint8_t *out, size_t cap);
 
-#endif // PC_ENABLE_AD9238
+#endif // PROTOCORE_ENABLE_AD9238
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_AD9238_H

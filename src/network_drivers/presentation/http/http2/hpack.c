@@ -13,12 +13,12 @@
 #include "network_drivers/presentation/http/http2/hpack.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP2
+#if PROTOCORE_ENABLE_HTTP2
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
 
-#define HPACK_BYTES PC_HPACK_TABLE_BYTES
-#define HPACK_ENTS PC_HPACK_MAX_ENTRIES
+#define HPACK_BYTES PROTOCORE_HPACK_TABLE_BYTES
+#define HPACK_ENTS PROTOCORE_HPACK_MAX_ENTRIES
 
 // Static table (1-indexed; entry 0 is a placeholder). {name, value}. Generated from RFC 7541 App A.
 static const char *const STATIC[62][2] = {
@@ -160,7 +160,7 @@ static void dyn_insert(HpackDynTable *t, const char *name, size_t nlen, const ch
         return;
     }
     // Both the entry-count half of the || and the trailing ecount>0 check are dead: entry_size <=
-    // t->max_size is already guaranteed above, and PC_HPACK_TABLE_BYTES / 32 == PC_HPACK_MAX_ENTRIES
+    // t->max_size is already guaranteed above, and PROTOCORE_HPACK_TABLE_BYTES / 32 == PROTOCORE_HPACK_MAX_ENTRIES
     // exactly, so the byte-budget half always trips at or before the entry-count half could, and
     // ecount can't be 0 whenever either half of the || is true.
     while ((t->used + entry_size > t->max_size || t->ecount >= HPACK_ENTS) && t->ecount > 0)
@@ -395,4 +395,4 @@ size_t pc_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
     return o + vs;
 }
 
-#endif // PC_ENABLE_HTTP2
+#endif // PROTOCORE_ENABLE_HTTP2

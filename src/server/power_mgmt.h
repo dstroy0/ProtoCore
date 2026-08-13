@@ -4,7 +4,7 @@
 /**
  * @file power_mgmt.h
  * @brief SoC power governor: frequency scaling, thermal throttle, brownout recovery, gating
- *        (PC_ENABLE_POWER_MGMT).
+ *        (PROTOCORE_ENABLE_POWER_MGMT).
  *
  * network_drivers/physical/radio_power owns the radio and server/sleep_sched decides how *long* to sleep. Neither
  * owns the SoC itself, which is where the rest of the power budget goes: the CPU clock, the die
@@ -37,9 +37,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_POWER_MGMT
+#if PROTOCORE_ENABLE_POWER_MGMT
 
 /** @brief Governor limits. Temperatures in whole degrees C; frequencies in MHz. */
 typedef struct
@@ -74,32 +74,32 @@ typedef struct
  * @param was_throttled  the previous tick's `throttled` - this is what gives the thermal decision
  *                       its hysteresis, so pass the plan's own output back in.
  */
-PowerPlan pc_power_plan(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout_boot,
-                        uint32_t since_boot_ms, proto_bool was_throttled);
+PowerPlan protocore_power_plan(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout_boot,
+                               uint32_t since_boot_ms, proto_bool was_throttled);
 
-/** @brief Defaults from the PC_POWER_* build flags. */
-void pc_power_cfg_defaults(PowerCfg *cfg);
+/** @brief Defaults from the PROTOCORE_POWER_* build flags. */
+void protocore_power_cfg_defaults(PowerCfg *cfg);
 
 /**
  * @brief Serialize a plan as `{"cpu_mhz":N,"throttled":bool,"recovering":bool,"temp_c":N}`.
  * @return length written (excl NUL), or 0 on overflow / bad args.
  */
-size_t pc_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t cap);
+size_t protocore_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t cap);
 
-#if PC_HAS_VENDOR_PM
+#if PROTOCORE_HAS_VENDOR_PM
 // --- device binding -----------------------------------------------------------------------
 
 /** @brief True if the last reset was a brownout (esp_reset_reason). Latched, so it stays true. */
-proto_bool pc_power_brownout_boot(void);
+proto_bool protocore_power_brownout_boot(void);
 
 /** @brief Die temperature in whole degrees C, or INT16_MIN if this part has no sensor. */
-int16_t pc_power_temp_c(void);
+int16_t protocore_power_temp_c(void);
 
 /** @brief Apply @p plan's clock (no-op if it already matches). @return true if the clock changed. */
-proto_bool pc_power_apply(const PowerPlan *plan);
+proto_bool protocore_power_apply(const PowerPlan *plan);
 
 /** @brief Current CPU clock in MHz. */
-uint16_t pc_power_cpu_mhz(void);
+uint16_t protocore_power_cpu_mhz(void);
 
 /**
  * @brief Release the Bluetooth controller's power domain when the firmware does not use BT.
@@ -108,11 +108,11 @@ uint16_t pc_power_cpu_mhz(void);
  * is free power back. Safe to call when BT was never initialized, and safe to call twice.
  * @return true if a release actually happened.
  */
-proto_bool pc_power_gate_bt(void);
-#endif // PC_HAS_VENDOR_PM
+proto_bool protocore_power_gate_bt(void);
+#endif // PROTOCORE_HAS_VENDOR_PM
 
-#endif // PC_ENABLE_POWER_MGMT
+#endif // PROTOCORE_ENABLE_POWER_MGMT
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_POWER_MGMT_H

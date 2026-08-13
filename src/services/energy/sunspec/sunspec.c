@@ -9,7 +9,7 @@
 #include "services/energy/sunspec/sunspec.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SUNSPEC
+#if PROTOCORE_ENABLE_SUNSPEC
 
 static uint16_t be16(const uint8_t *p)
 {
@@ -21,14 +21,14 @@ static uint32_t be32(const uint8_t *p)
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
 }
 
-proto_bool pc_sunspec_check_marker(const uint8_t *regs, size_t len)
+proto_bool protocore_sunspec_check_marker(const uint8_t *regs, size_t len)
 {
     return regs && len >= 4 && be32(regs) == SUNSPEC_MARKER;
 }
 
-proto_bool pc_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset)
+proto_bool protocore_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset)
 {
-    if (!offset || !pc_sunspec_check_marker(regs, len))
+    if (!offset || !protocore_sunspec_check_marker(regs, len))
     {
         return PROTO_FALSE;
     }
@@ -36,7 +36,7 @@ proto_bool pc_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset)
     return PROTO_TRUE;
 }
 
-proto_bool pc_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset, SunSpecModel *out)
+proto_bool protocore_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset, SunSpecModel *out)
 {
     if (!regs || !offset || !out)
     {
@@ -66,27 +66,27 @@ proto_bool pc_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset
     return PROTO_TRUE;
 }
 
-uint16_t pc_sunspec_u16(const uint8_t *body, size_t reg)
+uint16_t protocore_sunspec_u16(const uint8_t *body, size_t reg)
 {
     return be16(body + reg * 2);
 }
 
-int16_t pc_sunspec_i16(const uint8_t *body, size_t reg)
+int16_t protocore_sunspec_i16(const uint8_t *body, size_t reg)
 {
     return (int16_t)be16(body + reg * 2);
 }
 
-uint32_t pc_sunspec_u32(const uint8_t *body, size_t reg)
+uint32_t protocore_sunspec_u32(const uint8_t *body, size_t reg)
 {
     return be32(body + reg * 2);
 }
 
-int32_t pc_sunspec_i32(const uint8_t *body, size_t reg)
+int32_t protocore_sunspec_i32(const uint8_t *body, size_t reg)
 {
     return (int32_t)be32(body + reg * 2);
 }
 
-proto_bool pc_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char *out, size_t out_cap)
+proto_bool protocore_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char *out, size_t out_cap)
 {
     if (!body || !out || out_cap == 0)
     {
@@ -109,7 +109,7 @@ proto_bool pc_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char
 
 // ---- writer ----
 
-void pc_sunspec_writer_init(SunSpecWriter *w, uint8_t *buf, size_t cap)
+void protocore_sunspec_writer_init(SunSpecWriter *w, uint8_t *buf, size_t cap)
 {
     w->buf = buf;
     w->cap = cap;
@@ -133,39 +133,39 @@ static proto_bool ss_put(SunSpecWriter *w, const uint8_t *p, size_t n)
     return PROTO_TRUE;
 }
 
-proto_bool pc_sunspec_write_u16(SunSpecWriter *w, uint16_t v)
+proto_bool protocore_sunspec_write_u16(SunSpecWriter *w, uint16_t v)
 {
     uint8_t b[2] = {(uint8_t)(v >> 8), (uint8_t)v};
     return ss_put(w, b, 2);
 }
 
-proto_bool pc_sunspec_write_i16(SunSpecWriter *w, int16_t v)
+proto_bool protocore_sunspec_write_i16(SunSpecWriter *w, int16_t v)
 {
-    return pc_sunspec_write_u16(w, (uint16_t)v);
+    return protocore_sunspec_write_u16(w, (uint16_t)v);
 }
 
-proto_bool pc_sunspec_write_u32(SunSpecWriter *w, uint32_t v)
+proto_bool protocore_sunspec_write_u32(SunSpecWriter *w, uint32_t v)
 {
     uint8_t b[4] = {(uint8_t)(v >> 24), (uint8_t)(v >> 16), (uint8_t)(v >> 8), (uint8_t)v};
     return ss_put(w, b, 4);
 }
 
-proto_bool pc_sunspec_write_i32(SunSpecWriter *w, int32_t v)
+proto_bool protocore_sunspec_write_i32(SunSpecWriter *w, int32_t v)
 {
-    return pc_sunspec_write_u32(w, (uint32_t)v);
+    return protocore_sunspec_write_u32(w, (uint32_t)v);
 }
 
-proto_bool pc_sunspec_write_marker(SunSpecWriter *w)
+proto_bool protocore_sunspec_write_marker(SunSpecWriter *w)
 {
-    return pc_sunspec_write_u32(w, SUNSPEC_MARKER);
+    return protocore_sunspec_write_u32(w, SUNSPEC_MARKER);
 }
 
-proto_bool pc_sunspec_write_model_header(SunSpecWriter *w, uint16_t id, uint16_t length)
+proto_bool protocore_sunspec_write_model_header(SunSpecWriter *w, uint16_t id, uint16_t length)
 {
-    return pc_sunspec_write_u16(w, id) && pc_sunspec_write_u16(w, length);
+    return protocore_sunspec_write_u16(w, id) && protocore_sunspec_write_u16(w, length);
 }
 
-proto_bool pc_sunspec_write_string(SunSpecWriter *w, const char *s, size_t nregs)
+proto_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s, size_t nregs)
 {
     if (!s)
     {
@@ -190,14 +190,14 @@ proto_bool pc_sunspec_write_string(SunSpecWriter *w, const char *s, size_t nregs
     return PROTO_TRUE;
 }
 
-proto_bool pc_sunspec_write_end_model(SunSpecWriter *w)
+proto_bool protocore_sunspec_write_end_model(SunSpecWriter *w)
 {
-    return pc_sunspec_write_u16(w, SUNSPEC_END_MODEL) && pc_sunspec_write_u16(w, 0);
+    return protocore_sunspec_write_u16(w, SUNSPEC_END_MODEL) && protocore_sunspec_write_u16(w, 0);
 }
 
-size_t pc_sunspec_writer_finish(SunSpecWriter *w)
+size_t protocore_sunspec_writer_finish(SunSpecWriter *w)
 {
     return w->error ? 0 : w->pos;
 }
 
-#endif // PC_ENABLE_SUNSPEC
+#endif // PROTOCORE_ENABLE_SUNSPEC

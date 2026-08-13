@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// A pc_mnt_backend over real littlefs, on a RAM block device.
+// A protocore_mnt_backend over real littlefs, on a RAM block device.
 //
 // This is the filesystem the device runs, so a caller that walks a collection - WebDAV's PROPFIND,
 // a recursive copy, anything that opens a directory - is answered by the same code on the host as
@@ -393,11 +393,11 @@ static inline int lfsm_open(const char *path, int mode)
         return -1;
     }
     int flags = LFS_O_RDONLY;
-    if (mode == (int)PC_MNT_WRITE)
+    if (mode == (int)PROTOCORE_MNT_WRITE)
     {
         flags = LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC;
     }
-    else if (mode == (int)PC_MNT_APPEND)
+    else if (mode == (int)PROTOCORE_MNT_APPEND)
     {
         flags = LFS_O_WRONLY | LFS_O_CREAT | LFS_O_APPEND;
     }
@@ -475,7 +475,7 @@ static inline proto_bool lfsm_seek(int handle, uint64_t off)
                                                                                                   : PROTO_FALSE;
 }
 
-static inline proto_bool lfsm_stat(const char *path, pc_mnt_stat *out)
+static inline proto_bool lfsm_stat(const char *path, protocore_mnt_stat *out)
 {
     struct lfs_info info;
     if (!g_lfsm.mounted || lfs_stat(&g_lfsm.lfs, path, &info) < 0)
@@ -492,13 +492,13 @@ static inline proto_bool lfsm_stat(const char *path, pc_mnt_stat *out)
 
 static inline long lfsm_size(const char *path)
 {
-    pc_mnt_stat st;
+    protocore_mnt_stat st;
     return lfsm_stat(path, &st) ? (long)st.size : -1;
 }
 
 static inline proto_bool lfsm_exists(const char *path)
 {
-    pc_mnt_stat st;
+    protocore_mnt_stat st;
     return lfsm_stat(path, &st);
 }
 
@@ -534,7 +534,7 @@ static inline int lfsm_opendir(const char *path)
     return i;
 }
 
-static inline proto_bool lfsm_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap)
+static inline proto_bool lfsm_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
 {
     if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || !g_lfsm.h[handle].is_dir)
     {
@@ -565,12 +565,12 @@ static inline proto_bool lfsm_readdir(int handle, pc_mnt_stat *out, char *name, 
     }
 }
 
-__attribute__((weak)) const pc_mnt_backend g_lfsm_backend = {
+__attribute__((weak)) const protocore_mnt_backend g_lfsm_backend = {
     lfsm_open,   lfsm_read,   lfsm_write,    lfsm_close, lfsm_seek, lfsm_size,    lfsm_exists,
     lfsm_remove, lfsm_rename, lfsm_mkdir_op, lfsm_rmdir, lfsm_stat, lfsm_opendir, lfsm_readdir};
 
-/** @brief The backend to hand pc_mnt_mount(). */
-static inline const pc_mnt_backend *lfsm(void)
+/** @brief The backend to hand protocore_mnt_mount(). */
+static inline const protocore_mnt_backend *lfsm(void)
 {
     return &g_lfsm_backend;
 }

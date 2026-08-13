@@ -21,10 +21,10 @@
 #ifndef PROTOCORE_MIME_H
 #define PROTOCORE_MIME_H
 
-static const char *const PC_MIME_JSON = "application/json";
-static const char *const PC_MIME_TEXT_PLAIN = "text/plain";
-static const char *const PC_MIME_TEXT_HTML = "text/html";
-static const char *const PC_MIME_OCTET_STREAM = "application/octet-stream";
-static const char *const PC_MIME_JAVASCRIPT = "application/javascript";
+static const char *const PROTOCORE_MIME_JSON = "application/json";
+static const char *const PROTOCORE_MIME_TEXT_PLAIN = "text/plain";
+static const char *const PROTOCORE_MIME_TEXT_HTML = "text/html";
+static const char *const PROTOCORE_MIME_OCTET_STREAM = "application/octet-stream";
+static const char *const PROTOCORE_MIME_JAVASCRIPT = "application/javascript";
 
 #endif // PROTOCORE_MIME_H

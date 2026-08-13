@@ -9,7 +9,7 @@
 #include "services/system/control/control.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_CONTROL
+#if PROTOCORE_ENABLE_CONTROL
 
 // clamp helper is control_clamp() from control.h (inline) - reused here, not re-declared.
 
@@ -163,4 +163,4 @@ size_t pid_log_record(uint8_t *buf, size_t cap, float setpoint, float measuremen
     return o; // == PID_LOG_RECORD_LEN
 }
 
-#endif // PC_ENABLE_CONTROL
+#endif // PROTOCORE_ENABLE_CONTROL

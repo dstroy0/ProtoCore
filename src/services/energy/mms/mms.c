@@ -9,7 +9,7 @@
 #include "services/energy/mms/mms.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_MMS
+#if PROTOCORE_ENABLE_MMS
 
 // BER definite-length octet count for a length value < 64 KiB.
 static size_t len_octets(size_t len)
@@ -106,7 +106,7 @@ static size_t int_content(uint32_t v, uint8_t *buf)
 // Decode a BER definite length at pdu[at]. Sets *value and *hdr (octets the length field spans: 1 for
 // short form, 1+nb for long form). Returns false for an out-of-bounds field or an unsupported long form
 // (nb outside 1..2). Only short/2-byte lengths occur in the PDUs this codec accepts.
-static proto_bool pc_ber_len(const uint8_t *pdu, size_t len, size_t at, size_t *value, size_t *hdr)
+static proto_bool protocore_ber_len(const uint8_t *pdu, size_t len, size_t at, size_t *value, size_t *hdr)
 {
     if (at >= len)
     {
@@ -135,7 +135,7 @@ static proto_bool pc_ber_len(const uint8_t *pdu, size_t len, size_t at, size_t *
     return PROTO_TRUE;
 }
 
-size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *out, size_t cap)
+size_t protocore_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *out, size_t cap)
 {
     if (!out || !item_name)
     {
@@ -202,7 +202,7 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
     return tlv(MMS_PDU_CONFIRMED_REQUEST, body, bn, out, cap);
 }
 
-size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
+size_t protocore_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
 {
     if (!out || (data_len && !data))
     {
@@ -239,7 +239,7 @@ size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data
     return tlv(MMS_PDU_CONFIRMED_RESPONSE, body, bn, out, cap);
 }
 
-proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
+proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
 {
     if (!pdu || !out || len < 2)
     {
@@ -255,7 +255,7 @@ proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
     size_t off = 1;
     size_t body_len = 0;
     size_t lhdr = 0;
-    if (!pc_ber_len(pdu, len, off, &body_len, &lhdr))
+    if (!protocore_ber_len(pdu, len, off, &body_len, &lhdr))
     {
         return PROTO_FALSE;
     }
@@ -293,7 +293,7 @@ proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
         size_t sp = p + 1;
         size_t slen = 0;
         size_t hdr = 0;
-        if (!pc_ber_len(pdu, len, sp, &slen, &hdr))
+        if (!protocore_ber_len(pdu, len, sp, &slen, &hdr))
         {
             return PROTO_FALSE;
         }
@@ -313,4 +313,4 @@ proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_MMS
+#endif // PROTOCORE_ENABLE_MMS

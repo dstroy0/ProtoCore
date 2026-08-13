@@ -12,7 +12,7 @@
  */
 
 #include "crypto/ct_eq.h"       // pc_ct_eq
-#include "crypto/hash/sha256.h" // pc_sha256, PC_SHA256_DIGEST_LEN (Digest)
+#include "crypto/hash/sha256.h" // pc_sha256, PROTOCORE_SHA256_DIGEST_LEN (Digest)
 #include "mmgr/membuild.h"      // pc_sb frame builder
 #include "mmgr/protomem.h"      // mem.chr: a span scan, for the decoded credential that carries NULs
 #include "mmgr/protostr.h"      // str.len / find / starts / eq / copy
@@ -28,13 +28,13 @@
 // Basic Auth helpers
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_AUTH
+#if PROTOCORE_ENABLE_AUTH
 // One-shot SHA-256 of @p data, written as 64 lowercase hex chars + NUL.
 static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[65])
 {
-    uint8_t d[PC_SHA256_DIGEST_LEN];
+    uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     pc_sha256(work, data, len, d);
-    pc_hex_encode(d, PC_SHA256_DIGEST_LEN, out, PROTO_FALSE);
+    pc_hex_encode(d, PROTOCORE_SHA256_DIGEST_LEN, out, PROTO_FALSE);
 }
 
 // Extract the value of @p key from a Digest auth header into @p out.
@@ -132,7 +132,7 @@ typedef struct
 } AuthCtx;
 static AuthCtx *s_auth;
 
-_Static_assert(sizeof(AuthCtx) <= PC_WORK_AUTH_TABLE, "credential table outgrew PC_WORK_AUTH_TABLE");
+_Static_assert(sizeof(AuthCtx) <= PROTOCORE_WORK_AUTH_TABLE, "credential table outgrew PROTOCORE_WORK_AUTH_TABLE");
 
 // Bound on first use rather than at an init the caller has to remember: registration and the
 // first rekey both arrive before any request is served, and either one is a fine moment. The borrow
@@ -162,14 +162,14 @@ static const AuthCred *cred_at(uint8_t id)
     return &a->cred[id];
 }
 
-// Record one credential set and return the id that names it, or PC_AUTH_NONE when the table is
+// Record one credential set and return the id that names it, or PROTOCORE_AUTH_NONE when the table is
 // full. Registration runs at setup, so there is no release path and none is offered.
 static uint8_t add(const char *realm, const char *user, const char *pass, proto_bool digest)
 {
     AuthCtx *a = bind_auth();
     if (a == NULL || a->count >= MAX_ROUTES)
     {
-        return PC_AUTH_NONE;
+        return PROTOCORE_AUTH_NONE;
     }
     AuthCred *c = &a->cred[a->count];
     (void)str.copy(c->realm, realm, MAX_AUTH_LEN);
@@ -203,7 +203,7 @@ static void rekey(uint8_t *work)
     uint32_t t = (uint32_t)pc_millis();
     proto_raw_put_u32(seed + 16, c);
     proto_raw_put_u32(seed + 20, t);
-    uint8_t d[PC_SHA256_DIGEST_LEN];
+    uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     pc_sha256(work, seed, sizeof(seed), d);
     proto_raw_read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
 }
@@ -218,7 +218,7 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     uint8_t material[20];
     proto_raw_read(material, secret, 16);
     proto_raw_put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
-    uint8_t d[PC_SHA256_DIGEST_LEN];
+    uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     pc_sha256(work, material, sizeof(material), d);
     pc_hex_encode(d, 16, mac_hex, PROTO_FALSE); // 16 bytes -> 32 hex chars + NUL
     return issue;
@@ -278,7 +278,7 @@ static proto_bool verify_nonce(uint8_t *work, const char *nonce, proto_bool *exp
         return PROTO_FALSE; // not a nonce this server minted
     }
     uint32_t age = pc_millis() - issue; // unsigned: tolerant of the 32-bit millis wrap
-    *expired = (age > PC_DIGEST_NONCE_LIFETIME_MS);
+    *expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
     return PROTO_TRUE;
 }
 
@@ -412,7 +412,7 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
         return PROTO_FALSE;
     }
     const char *d = hdr + 7;
-    const size_t dcap = PC_AUTH_HDR_CAP - 7u;
+    const size_t dcap = PROTOCORE_AUTH_HDR_CAP - 7u;
 
     char username[MAX_AUTH_LEN];
     char nonce[48];
@@ -559,4 +559,4 @@ static void reset(void)
 
 const AuthNs Auth = {add, check, challenge, rekey, mint_nonce, verify_nonce, reset};
 
-#endif // PC_ENABLE_AUTH
+#endif // PROTOCORE_ENABLE_AUTH

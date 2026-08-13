@@ -7,12 +7,12 @@
 // but it pulls in base64 + HMAC-SHA256 + SHA-256, so link those. The device figure comes from the rig /bench
 // pc_jwt_verify_hs256 op; this host ns/op is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_JWT=1 test/performance_benching/services/jwt/host.c
+//   -DPROTOCORE_ENABLE_JWT=1 test/performance_benching/services/jwt/host.c
 //   src/services/security/jwt/jwt.c src/network_drivers/presentation/codec/base64/base64.c
 //   src/crypto/mac/hmac_sha256.c src/crypto/hash/sha256.c src/mmgr/secure.c src/mmgr/arena.c
 //   src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bjwt && /tmp/bjwt
 
-#define PC_ENABLE_JWT 1
+#define PROTOCORE_ENABLE_JWT 1
 #include "services/security/jwt/jwt.h"
 
 #include "host_bench.h"

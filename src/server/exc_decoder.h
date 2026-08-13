@@ -3,7 +3,7 @@
 
 /**
  * @file exc_decoder.h
- * @brief ESP32 panic / exception decoder for a live diagnostics panel (PC_ENABLE_EXC_DECODER).
+ * @brief ESP32 panic / exception decoder for a live diagnostics panel (PROTOCORE_ENABLE_EXC_DECODER).
  *
  * When an ESP32 panics it prints a Guru Meditation dump: a cause ("LoadProhibited"), a per-core register
  * dump (PC, EXCVADDR, ...), and a backtrace of `PC:SP` frame pairs. To resolve those PCs to file:line an
@@ -21,14 +21,14 @@
 #define PROTOCORE_EXC_DECODER_H
 
 #include "protocore_config.h"
-#include "server/filesystem/mnt.h" // pc_mnt_backend - the store a dump is offloaded to
+#include "server/filesystem/mnt.h" // protocore_mnt_backend - the store a dump is offloaded to
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_EXC_DECODER
+#if PROTOCORE_ENABLE_EXC_DECODER
 
-#ifndef PC_EXC_MAX_FRAMES
-#define PC_EXC_MAX_FRAMES 32 ///< backtrace frames retained (Xtensa panics rarely exceed this).
+#ifndef PROTOCORE_EXC_MAX_FRAMES
+#define PROTOCORE_EXC_MAX_FRAMES 32 ///< backtrace frames retained (Xtensa panics rarely exceed this).
 #endif
 
 /** @brief One backtrace frame: a program counter and its stack pointer. */
@@ -41,12 +41,12 @@ typedef struct
 /** @brief A decoded panic. Fields not found in the input are left at their zeroed / -1 defaults. */
 typedef struct
 {
-    int core;                           ///< panicking core number, or -1 if not present.
-    char cause[32];                     ///< exception cause text (e.g. "LoadProhibited"), "" if absent.
-    uint32_t pc;                        ///< faulting PC (register-dump PC, else first backtrace frame).
-    uint32_t excvaddr;                  ///< faulting data address (EXCVADDR), 0 if absent.
-    proto_bool has_excvaddr;            ///< true if an EXCVADDR field was present.
-    ExcFrame frames[PC_EXC_MAX_FRAMES]; ///< backtrace, outermost-first as printed.
+    int core;                                  ///< panicking core number, or -1 if not present.
+    char cause[32];                            ///< exception cause text (e.g. "LoadProhibited"), "" if absent.
+    uint32_t pc;                               ///< faulting PC (register-dump PC, else first backtrace frame).
+    uint32_t excvaddr;                         ///< faulting data address (EXCVADDR), 0 if absent.
+    proto_bool has_excvaddr;                   ///< true if an EXCVADDR field was present.
+    ExcFrame frames[PROTOCORE_EXC_MAX_FRAMES]; ///< backtrace, outermost-first as printed.
     size_t frame_count;
 } ExcInfo;
 
@@ -57,7 +57,7 @@ typedef struct
  * `Backtrace: pc:sp pc:sp ...` frame list. Tolerant of missing fields and of a trailing "|<-CORRUPTED".
  * @return true if at least one of {cause, pc, a backtrace frame} was found.
  */
-proto_bool pc_exc_parse(const char *text, ExcInfo *out);
+proto_bool protocore_exc_parse(const char *text, ExcInfo *out);
 
 /**
  * @brief Serialize a decoded panic as
@@ -65,9 +65,9 @@ proto_bool pc_exc_parse(const char *text, ExcInfo *out);
  * `core` is omitted when -1; `excvaddr` is omitted when absent.
  * @return length written (excl NUL), or 0 on overflow / bad args.
  */
-size_t pc_exc_json(const ExcInfo *info, char *out, size_t cap);
+size_t protocore_exc_json(const ExcInfo *info, char *out, size_t cap);
 
-#if PC_HAS_VENDOR_COREDUMP
+#if PROTOCORE_HAS_VENDOR_COREDUMP
 // --- Core-dump partition (ESP32) ---------------------------------------------------------
 //
 // A panic that reboots the device takes its console output with it. ESP-IDF also writes a core
@@ -88,7 +88,7 @@ typedef struct
  * @param out optional; filled with the image address/size when one is present.
  * @return true if a valid dump is waiting to be read.
  */
-proto_bool pc_exc_coredump_present(ExcCoreDump *out);
+proto_bool protocore_exc_coredump_present(ExcCoreDump *out);
 
 /**
  * @brief Fill an ExcInfo from the stored dump's summary, so the existing `/exception` panel can
@@ -99,12 +99,12 @@ proto_bool pc_exc_coredump_present(ExcCoreDump *out);
  *    (pc only; sp is not part of the summary) along with the exception cause and faulting address.
  *  - **RISC-V** (C3 / C6 / H2 / P4): the summary carries a stack dump, not a backtrace - resolving
  *    it needs DWARF off-device. `frame_count` is therefore 0 and only the faulting PC and the
- *    machine trap cause / value are filled. Offload the image (pc_exc_coredump_save) and resolve it
+ *    machine trap cause / value are filled. Offload the image (protocore_exc_coredump_save) and resolve it
  *    with `esp-coredump` or GDB against the firmware ELF.
  *
  * @return true if a summary was read.
  */
-proto_bool pc_exc_coredump_summary(ExcInfo *out);
+proto_bool protocore_exc_coredump_summary(ExcInfo *out);
 
 /**
  * @brief Read @p len raw bytes of the stored image starting at @p offset within it.
@@ -117,15 +117,15 @@ proto_bool pc_exc_coredump_summary(ExcInfo *out);
  * @return true if the whole range was read; false if no valid dump is stored or the range runs
  *         past its end (a short read is never reported as success).
  */
-proto_bool pc_exc_coredump_read(size_t offset, void *buf, size_t len);
+proto_bool protocore_exc_coredump_read(size_t offset, void *buf, size_t len);
 
 /**
  * @brief Copy the raw core-dump image out of flash into a file on @p file_sys.
  *
- * Streams in PC_EXC_COREDUMP_CHUNK-sized pieces, so it costs no heap and a large dump does not
+ * Streams in PROTOCORE_EXC_COREDUMP_CHUNK-sized pieces, so it costs no heap and a large dump does not
  * need to fit RAM.
  *
- * @param file_sys the store to write into: any pc_mnt_backend, so pc_mnt_active(), the RAM disk, or
+ * @param file_sys the store to write into: any protocore_mnt_backend, so protocore_mnt_active(), the RAM disk, or
  *        a board adapter over SD / LittleFS all work and this file names no vendor type.
  *
  * The written file is the **raw core-dump image** in ESP-IDF's flash format, not a bare ELF: a
@@ -136,17 +136,17 @@ proto_bool pc_exc_coredump_read(size_t offset, void *buf, size_t len);
  *
  * @return true if the whole image was written.
  */
-proto_bool pc_exc_coredump_save(const pc_mnt_backend *file_sys, const char *path);
+proto_bool protocore_exc_coredump_save(const protocore_mnt_backend *file_sys, const char *path);
 
 /**
  * @brief Erase the stored dump so the next boot does not re-offload the same crash.
  *        Call only after a successful save.
  */
-proto_bool pc_exc_coredump_erase(void);
-#endif // PC_HAS_VENDOR_COREDUMP
+proto_bool protocore_exc_coredump_erase(void);
+#endif // PROTOCORE_HAS_VENDOR_COREDUMP
 
-#endif // PC_ENABLE_EXC_DECODER
+#endif // PROTOCORE_ENABLE_EXC_DECODER
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_EXC_DECODER_H

@@ -9,9 +9,9 @@
 #include "services/transportation/wave/wave.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_WAVE
+#if PROTOCORE_ENABLE_WAVE
 
-size_t pc_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
+size_t protocore_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
 {
     // P-encoding: the number of leading 1 bits in the first octet gives the length.
     if (psid < 0x80)
@@ -55,7 +55,7 @@ size_t pc_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
     return 4;
 }
 
-size_t pc_wave_decode_psid(const uint8_t *in, size_t len, uint32_t *psid)
+size_t protocore_wave_decode_psid(const uint8_t *in, size_t len, uint32_t *psid)
 {
     if (!in || len < 1 || !psid)
     {
@@ -97,7 +97,7 @@ size_t pc_wave_decode_psid(const uint8_t *in, size_t len, uint32_t *psid)
     return 0;
 }
 
-size_t pc_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
+size_t protocore_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
 {
     if (!out || (payload_len && !payload) || payload_len > 255)
     {
@@ -109,7 +109,7 @@ size_t pc_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, 
     }
     size_t i = 0;
     out[i++] = WSMP_VERSION; // version/subtype (low nibble = version)
-    size_t p = pc_wave_encode_psid(psid, out + i, cap - i);
+    size_t p = protocore_wave_encode_psid(psid, out + i, cap - i);
     if (!p)
     {
         return 0;
@@ -128,7 +128,7 @@ size_t pc_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, 
     return i;
 }
 
-proto_bool pc_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out)
+proto_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out)
 {
     if (!frame || !out || len < 3)
     {
@@ -139,7 +139,7 @@ proto_bool pc_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out)
         return PROTO_FALSE;
     }
     uint32_t psid = 0;
-    size_t p = pc_wave_decode_psid(frame + 1, len - 1, &psid);
+    size_t p = protocore_wave_decode_psid(frame + 1, len - 1, &psid);
     if (!p)
     {
         return PROTO_FALSE;
@@ -160,7 +160,7 @@ proto_bool pc_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out)
     return PROTO_TRUE;
 }
 
-size_t pc_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
+size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
 {
     if (!out || (payload_len && !payload))
     {
@@ -180,4 +180,4 @@ size_t pc_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_
     return n;
 }
 
-#endif // PC_ENABLE_WAVE
+#endif // PROTOCORE_ENABLE_WAVE

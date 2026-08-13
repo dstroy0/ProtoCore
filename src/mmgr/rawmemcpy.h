@@ -29,7 +29,7 @@
 
 #include "protocore_config.h" // PROTO_WORD_BITS: the register width the die declared
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The attributes that make a raw access legal, named once.
@@ -51,7 +51,7 @@ PROTO_BEGIN_DECLS
  * are the same decision seen from either end, and a codebase that spells alignment two ways ends up
  * with a pool that is aligned on one target and not on the next. @p n must be a power of two.
  *
- *     static uint8_t PROTO_ALIGN(PC_ARENA_MAX_ALIGN) arena_store[PC_ARENA_SIZE];
+ *     static uint8_t PROTO_ALIGN(PROTOCORE_ARENA_MAX_ALIGN) arena_store[PROTOCORE_ARENA_SIZE];
  *
  * This is the declaration, not the arithmetic: rounding a runtime offset up to a boundary is the
  * arena's job (mmgr/arena.h), which is where that already lives.
@@ -162,7 +162,7 @@ typedef uint64_t proto_al_u64_t PROTO_ALIAS;
  * instructions per word and one. Passing an unaligned address here is undefined and on a
  * strict-alignment part it faults, which is the honest trade for what it buys.
  *
- * PC_HW_UNALIGNED_LOAD says whether a die needs any of this. Where it is 1 the raw load is already a
+ * PROTOCORE_HW_UNALIGNED_LOAD says whether a die needs any of this. Where it is 1 the raw load is already a
  * single instruction and a caller has no reason to walk to a boundary first.
  */
 static inline uint64_t proto_al_load(const void *p, size_t n)
@@ -304,7 +304,7 @@ static inline void proto_raw_read(void *dst, const void *p, size_t sz)
         {
             sa += PROTO_RAW_WORD;
             proto_mv_word cur = proto_mv_load(sa);
-#if PC_HW_BIG_ENDIAN
+#if PROTOCORE_HW_BIG_ENDIAN
             proto_mv_put(d + i, (proto_mv_word)((prev << lo) | (cur >> hi)));
 #else
             proto_mv_put(d + i, (proto_mv_word)((prev >> lo) | (cur << hi)));
@@ -322,6 +322,6 @@ static inline void proto_raw_read(void *dst, const void *p, size_t sz)
     }
 }
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_RAWMEMCPY_H

@@ -9,11 +9,11 @@
 #include "services/iot/dds/dds.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_DDS
+#if PROTOCORE_ENABLE_DDS
 
 const uint8_t RTPS_VERSION[2] = {2, 4};
 
-size_t pc_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint8_t *out, size_t cap)
+size_t protocore_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint8_t *out, size_t cap)
 {
     if (!guid_prefix || !vendor_id || !out || cap < RTPS_HEADER_LEN)
     {
@@ -31,7 +31,7 @@ size_t pc_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint
     return RTPS_HEADER_LEN;
 }
 
-size_t pc_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16_t body_len, uint8_t *out, size_t cap)
+size_t protocore_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16_t body_len, uint8_t *out, size_t cap)
 {
     if (!out || (body_len && !body))
     {
@@ -62,7 +62,7 @@ size_t pc_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16
     return n;
 }
 
-proto_bool pc_rtps_parse(const uint8_t *msg, size_t len, pc_rtps_cb cb, void *arg)
+proto_bool protocore_rtps_parse(const uint8_t *msg, size_t len, protocore_rtps_cb cb, void *arg)
 {
     if (!msg || len < RTPS_HEADER_LEN)
     {
@@ -103,4 +103,4 @@ proto_bool pc_rtps_parse(const uint8_t *msg, size_t len, pc_rtps_cb cb, void *ar
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_DDS
+#endif // PROTOCORE_ENABLE_DDS

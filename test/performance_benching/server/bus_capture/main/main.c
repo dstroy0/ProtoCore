@@ -4,7 +4,7 @@
 // On-device CCOUNT microbenchmark for the CAN listen-only capture framing (server/signaling/bus_capture):
 // can_to_socketcan() building the 16-byte Linux SocketCAN frame (big-endian can_id, EFF/RTR flags,
 // length, data) for a standard data frame, an extended (29-bit) id frame, and an RTR frame, plus
-// pc_pcap_global_header() writing the libpcap global header with the DLT_CAN_SOCKETCAN link type
+// protocore_pcap_global_header() writing the libpcap global header with the DLT_CAN_SOCKETCAN link type
 // (shared_primitives/pcap.h). Every call here is pure (no heap, no bus) - worked example for
 // performance_benching/device/<service>/: a pure protocol codec with no hardware involved, so every call exercises
 // the real production code path (contrast with performance_benching/device/ads1115, a peripheral driver where the
@@ -54,19 +54,19 @@ void dbench_run(void)
     rtr4.dlc = 4;
     rtr4.data[0] = 0xFF;
 
-    static uint8_t out[PC_SOCKETCAN_FRAME_LEN];
-    static uint8_t pcap_hdr[PC_PCAP_GLOBAL_HDR_LEN];
+    static uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
+    static uint8_t pcap_hdr[PROTOCORE_PCAP_GLOBAL_HDR_LEN];
 
     for (;;)
     {
         DBENCH_BANNER("bus_capture");
         volatile size_t sink = 0;
-        DBENCH_BULK("can_to_socketcan std8", 100000, PC_SOCKETCAN_FRAME_LEN,
+        DBENCH_BULK("can_to_socketcan std8", 100000, PROTOCORE_SOCKETCAN_FRAME_LEN,
                     sink += can_to_socketcan(&std8, out, sizeof(out)));
         DBENCH_OP("can_to_socketcan ext2", 100000, sink += can_to_socketcan(&ext2, out, sizeof(out)));
         DBENCH_OP("can_to_socketcan rtr4", 100000, sink += can_to_socketcan(&rtr4, out, sizeof(out)));
-        DBENCH_OP("pc_pcap_global_header can", 100000,
-                  sink += pc_pcap_global_header(pcap_hdr, sizeof(pcap_hdr), PC_DLT_CAN_SOCKETCAN));
+        DBENCH_OP("protocore_pcap_global_header can", 100000,
+                  sink += protocore_pcap_global_header(pcap_hdr, sizeof(pcap_hdr), PROTOCORE_DLT_CAN_SOCKETCAN));
         (void)sink;
         DBENCH_DONE();
     }

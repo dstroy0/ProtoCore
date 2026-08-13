@@ -4,7 +4,7 @@
 #
 # rebuild_arduino_core_psram.sh - rebuild the arduino-esp32 core for ESP32-S3 with
 # CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y so a static EXT_RAM_BSS_ATTR array (the
-# ProtoCore TLS arena under PC_TLS_ARENA_IN_PSRAM=1) is placed in
+# ProtoCore TLS arena under PROTOCORE_TLS_ARENA_IN_PSRAM=1) is placed in
 # PSRAM with ZERO heap.
 #
 # WHY THIS EXISTS
@@ -45,8 +45,8 @@ INSTALL=1
 JOBS=""
 # Work dir needs ~6 GB free and must NOT be a small RAM-backed tmpfs (e.g. /tmp on a
 # Raspberry Pi is tmpfs and overflows mid-clone with "No space left on device"). Default to a
-# home-dir path on real storage; override with PC_PSRAM_WORK.
-WORK="${PC_PSRAM_WORK:-$HOME/.cache/pc-arduino-psram}"
+# home-dir path on real storage; override with PROTOCORE_PSRAM_WORK.
+WORK="${PROTOCORE_PSRAM_WORK:-$HOME/.cache/pc-arduino-psram}"
 
 while [ $# -gt 0 ]; do
   case "$1" in

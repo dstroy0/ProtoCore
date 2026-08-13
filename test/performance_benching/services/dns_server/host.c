@@ -6,13 +6,13 @@
 // it links standalone; the device UDP binding is compiled out on host. The device figure comes from the rig
 // /bench op; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_DNS_SERVER=1 test/performance_benching/services/dns_server/host.c
+//   -DPROTOCORE_ENABLE_DNS_SERVER=1 test/performance_benching/services/dns_server/host.c
 //   src/network_drivers/network/dns/dns_server.c src/network_drivers/network/dns/dns_wire.c
 //   src/network_drivers/transport/udp.c src/network_drivers/transport/udp/udp_listener.c
 //   src/network_drivers/transport/udp/udp_client.c src/network_drivers/transport/net_addr.c
 //   src/mmgr/protomem.c src/mmgr/protostr.c src/shared_primitives/ip.c -o /tmp/bd && /tmp/bd
 
-#define PC_ENABLE_DNS_SERVER 1
+#define PROTOCORE_ENABLE_DNS_SERVER 1
 #include "network_drivers/network/dns/dns_server.h"
 
 #include "host_bench.h"
@@ -38,7 +38,7 @@ int main(void)
     const uint8_t query[] = {0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
                              't',  'e',  's',  't',  0x03, 'l',  'a',  'n',  0x00, 0x00, 0x01, 0x00, 0x01};
     const size_t qlen = sizeof(query);
-    uint8_t out[192]; // >= PC_DNS_NAME_MAX (128) + one A answer
+    uint8_t out[192]; // >= PROTOCORE_DNS_NAME_MAX (128) + one A answer
 
     hbench_header();
 

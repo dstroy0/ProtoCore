@@ -3,7 +3,7 @@
 
 /**
  * @file cotp.h
- * @brief TPKT (RFC 1006) + COTP / ISO 8073 X.224 class-0 frame codec (PC_ENABLE_COTP) -
+ * @brief TPKT (RFC 1006) + COTP / ISO 8073 X.224 class-0 frame codec (PROTOCORE_ENABLE_COTP) -
  *        zero-heap "ISO transport on TCP" framing, the reusable foundation under S7comm and
  *        IEC 61850 MMS.
  *
@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_COTP
+#if PROTOCORE_ENABLE_COTP
 
 #define TPKT_VERSION 0x03  ///< RFC 1006 TPKT version (always 3)
 #define TPKT_HEADER_SIZE 4 ///< version + reserved + 2-octet length
@@ -50,27 +50,27 @@ PROTO_BEGIN_DECLS
 // ---- TPKT ----
 
 /** @brief Wrap @p payload in a TPKT envelope. Returns total octets, or 0 on overflow. */
-size_t pc_tpkt_build(uint8_t *buf, size_t cap, const uint8_t *payload, size_t payload_len);
+size_t protocore_tpkt_build(uint8_t *buf, size_t cap, const uint8_t *payload, size_t payload_len);
 
 /**
  * @brief Parse a TPKT envelope; reports the X.224 payload slice and bytes consumed.
  * @return true on a complete, version-3 packet; false on bad version / truncation.
  */
-proto_bool pc_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload, size_t *payload_len,
-                         size_t *consumed);
+proto_bool protocore_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload, size_t *payload_len,
+                                size_t *consumed);
 
 // ---- COTP (X.224 class 0) ----
 
 /** @brief Build a COTP Data TPDU around @p data: `LI=2, 0xF0, (EOT|0)` + data. */
-size_t pc_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, proto_bool eot);
+size_t protocore_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, proto_bool eot);
 
 /**
  * @brief Build a COTP Connection Request: `LI 0xE0 dst-ref(0) src-ref class(0)` + a TPDU-size
  *        parameter + any @p extra_params (e.g. the S7 src/dst TSAP parameters).
  * @param tpdu_size_code the TPDU-size exponent (e.g. 0x0A = 1024).
  */
-size_t pc_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu_size_code, const uint8_t *extra_params,
-                        size_t extra_len);
+size_t protocore_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu_size_code,
+                               const uint8_t *extra_params, size_t extra_len);
 
 /**
  * @brief Build a COTP Connection Confirm (the server's response to a CR): `LI 0xD0 dst-ref src-ref
@@ -79,8 +79,8 @@ size_t pc_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu
  * @param src_ref        this end's source reference.
  * @param tpdu_size_code the negotiated TPDU-size exponent (e.g. 0x0A = 1024).
  */
-size_t pc_cotp_build_cc(uint8_t *buf, size_t cap, uint16_t dst_ref, uint16_t src_ref, uint8_t tpdu_size_code,
-                        const uint8_t *extra_params, size_t extra_len);
+size_t protocore_cotp_build_cc(uint8_t *buf, size_t cap, uint16_t dst_ref, uint16_t src_ref, uint8_t tpdu_size_code,
+                               const uint8_t *extra_params, size_t extra_len);
 
 /** @brief A parsed COTP header. For DT, @ref data is the user data; for CR/CC, the refs. */
 typedef struct
@@ -94,10 +94,10 @@ typedef struct
 } CotpHeader;
 
 /** @brief Parse a COTP TPDU (typically the TPKT payload). */
-proto_bool pc_cotp_parse(const uint8_t *buf, size_t len, CotpHeader *out);
+proto_bool protocore_cotp_parse(const uint8_t *buf, size_t len, CotpHeader *out);
 
-#endif // PC_ENABLE_COTP
+#endif // PROTOCORE_ENABLE_COTP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_COTP_H

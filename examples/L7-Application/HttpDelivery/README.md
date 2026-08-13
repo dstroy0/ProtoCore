@@ -1,6 +1,6 @@
 # HttpDelivery - an app shell that loads instantly and refreshes in the background
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_HTTP_DELIVERY`, `PC_ENABLE_FILE_SERVING`, `PC_ENABLE_RANGE`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HTTP_DELIVERY`, `PROTOCORE_ENABLE_FILE_SERVING`, `PROTOCORE_ENABLE_RANGE`
 
 ## What this example teaches
 
@@ -11,22 +11,22 @@ asleep. Three standards make that acceptable to a browser, and this wires all th
 `Cache-Control: public, max-age=60, stale-while-revalidate=300` on every served file. For 60 s the
 client just uses its copy; for 300 s after that it may serve the stale copy **and** refresh in the
 background. The page never blocks waiting on this device. The header is built by the same
-`pc_delivery_cache_control` core that backs the `pc_delivery_swr` decision, so the two cannot
+`protocore_delivery_cache_control` core that backs the `protocore_delivery_swr` decision, so the two cannot
 drift apart.
 
-**2. A service worker.** `pc_delivery_serve_sw()` registers two routes:
+**2. A service worker.** `protocore_delivery_serve_sw()` registers two routes:
 
-| HttpRoute        | Serves                                                  |
-| ---------------- | ------------------------------------------------------- |
-| `/sw.js`         | the worker (flash-resident asset)                       |
-| `/precache.json` | the versioned manifest from `pc_delivery_sw_manifest()` |
+| HttpRoute        | Serves                                                         |
+| ---------------- | -------------------------------------------------------------- |
+| `/sw.js`         | the worker (flash-resident asset)                              |
+| `/precache.json` | the versioned manifest from `protocore_delivery_sw_manifest()` |
 
 The worker precaches the listed shell, then serves it stale-while-revalidate **client-side** - so a
 repeat visit paints without touching the device at all, and still works while it is offline or
 asleep. The cache is named after the manifest `version`, so bumping it invalidates the old shell
 exactly once.
 
-**3. Byte ranges (RFC 7233).** Already handled by the file server (`PC_ENABLE_RANGE`) - a client
+**3. Byte ranges (RFC 7233).** Already handled by the file server (`PROTOCORE_ENABLE_RANGE`) - a client
 fetches only the new tail of a growing log with `Range: bytes=N-` and gets a `206`. Note this lives
 in `network_drivers/application/http_range.h`, which is the single owner of the range math (shared with the edge cache);
 `services/http_delivery` deliberately does **not** carry a second parser.
@@ -37,7 +37,7 @@ in `network_drivers/application/http_range.h`, which is the single owner of the 
 its **SD card** - a 1000-byte file of repeating `0123456789`:
 
 ```
-GET /files/pc_test.txt
+GET /files/protocore_test.txt
   HTTP/1.1 200 OK
   Accept-Ranges: bytes
   Cache-Control: public, max-age=60, stale-while-revalidate=300
@@ -65,15 +65,15 @@ static const char *SHELL_VERSION = "1.0.0";   // bump when SHELL contents change
 ```
 
 The manifest is rebuilt per request, so the list and version can change at runtime with no stale
-copy surviving. If it would not fit `PC_DELIVERY_MANIFEST_BUF`, the route answers **500** rather
+copy surviving. If it would not fit `PROTOCORE_DELIVERY_MANIFEST_BUF`, the route answers **500** rather
 than serving truncated JSON a worker would choke on.
 
 ## Tunables
 
-| Flag                       | Default | Meaning                                |
-| -------------------------- | ------- | -------------------------------------- |
-| `PC_DELIVERY_PRECACHE_MAX` | 16      | most paths a manifest may list         |
-| `PC_DELIVERY_MANIFEST_BUF` | 512     | buffer the manifest JSON is built into |
+| Flag                              | Default | Meaning                                |
+| --------------------------------- | ------- | -------------------------------------- |
+| `PROTOCORE_DELIVERY_PRECACHE_MAX` | 16      | most paths a manifest may list         |
+| `PROTOCORE_DELIVERY_MANIFEST_BUF` | 512     | buffer the manifest JSON is built into |
 
 ## Build footprint
 
@@ -88,6 +88,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_HTTP_DELIVERY=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_RANGE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_HTTP_DELIVERY=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_RANGE=1" \
   --lib="." examples/L7-Application/HttpDelivery/HttpDelivery.ino
 ```

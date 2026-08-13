@@ -3,11 +3,11 @@
 
 /**
  * @file wearlevel.h
- * @brief Flash wear-leveling slot selector (PC_ENABLE_WEARLEVEL).
+ * @brief Flash wear-leveling slot selector (PROTOCORE_ENABLE_WEARLEVEL).
  *
  * Flash/NVS cells wear out after a bounded number of erase cycles, so a device that repeatedly writes a
  * record (a log line, a config snapshot, a counter) to the *same* location burns that block out early.
- * This is the pure core of wear leveling: given a per-slot erase/write count, `pc_wearlevel_pick`
+ * This is the pure core of wear leveling: given a per-slot erase/write count, `protocore_wearlevel_pick`
  * returns the least-worn slot to write next, so writes spread evenly and the whole region ages together.
  *
  * The app owns the actual slots (NVS keys, flash sectors, VFS files) and the persisted counts; this core
@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_WEARLEVEL
+#if PROTOCORE_ENABLE_WEARLEVEL
 
 /**
  * @brief Pick the least-worn slot to write next.
@@ -32,13 +32,13 @@ PROTO_BEGIN_DECLS
  * @return the index of the slot with the lowest count (ties resolve to the lowest index), or 0 if
  *         @p counts is null or @p n is 0.
  *
- * Round-robins naturally: after writing to the chosen slot the app bumps its count (pc_wearlevel_mark),
+ * Round-robins naturally: after writing to the chosen slot the app bumps its count (protocore_wearlevel_mark),
  * so the next pick moves on, and the region wears uniformly.
  */
-size_t pc_wearlevel_pick(const uint32_t *counts, size_t n);
+size_t protocore_wearlevel_pick(const uint32_t *counts, size_t n);
 
 /** @brief Record a write to slot @p idx (saturating increment, so a count never wraps to 0). */
-void pc_wearlevel_mark(uint32_t *counts, size_t n, size_t idx);
+void protocore_wearlevel_mark(uint32_t *counts, size_t n, size_t idx);
 
 /**
  * @brief Wear imbalance = max count - min count across the slots (0 = perfectly level).
@@ -46,10 +46,10 @@ void pc_wearlevel_mark(uint32_t *counts, size_t n, size_t idx);
  * A monotone health metric for a /health-style endpoint: it stays small under `pick`+`mark` and grows
  * if the app writes off-policy.
  */
-uint32_t pc_wearlevel_spread(const uint32_t *counts, size_t n);
+uint32_t protocore_wearlevel_spread(const uint32_t *counts, size_t n);
 
-#endif // PC_ENABLE_WEARLEVEL
+#endif // PROTOCORE_ENABLE_WEARLEVEL
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_WEARLEVEL_H

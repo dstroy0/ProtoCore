@@ -7,11 +7,11 @@
  */
 
 #include "services/radio/ble_gatt/ble_gatt.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
-#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
+#include "shared_primitives/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
 
-#if PC_ENABLE_BLE_GATT
+#if PROTOCORE_ENABLE_BLE_GATT
 
 size_t att_read_req(uint16_t handle, uint8_t *out, size_t cap)
 {
@@ -137,39 +137,39 @@ proto_bool att_parse(const uint8_t *pdu, size_t len, AttPdu *out)
     }
 }
 
-static void put_hex16(pc_sb *b, uint16_t v)
+static void put_hex16(protocore_sb *b, uint16_t v)
 {
     char t[7] = "0x0000";
     for (int i = 0; i < 4; i++)
     {
-        t[2 + i] = PC_HEX_LOWER[(v >> ((3 - i) * 4)) & 0xF];
+        t[2 + i] = PROTOCORE_HEX_LOWER[(v >> ((3 - i) * 4)) & 0xF];
     }
-    pc_sb_put(b, t);
+    protocore_sb_put(b, t);
 }
 
-size_t pc_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap)
+size_t protocore_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap)
 {
     if (!out || cap == 0 || (n && !chars))
     {
         return 0;
     }
-    pc_sb b = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&b, "[");
+    protocore_sb b = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&b, "[");
     for (size_t i = 0; i < n; i++)
     {
         if (i)
         {
-            pc_sb_put(&b, ",");
+            protocore_sb_put(&b, ",");
         }
-        pc_sb_put(&b, "{\"handle\":");
-        pc_sb_u32(&b, chars[i].handle);
-        pc_sb_put(&b, ",\"uuid\":\"");
+        protocore_sb_put(&b, "{\"handle\":");
+        protocore_sb_u32(&b, chars[i].handle);
+        protocore_sb_put(&b, ",\"uuid\":\"");
         put_hex16(&b, chars[i].uuid);
-        pc_sb_put(&b, "\",\"props\":");
-        pc_sb_u32(&b, chars[i].props);
-        pc_sb_put(&b, "}");
+        protocore_sb_put(&b, "\",\"props\":");
+        protocore_sb_u32(&b, chars[i].props);
+        protocore_sb_put(&b, "}");
     }
-    pc_sb_put(&b, "]");
+    protocore_sb_put(&b, "]");
     if (!b.ok)
     {
         return 0;
@@ -178,4 +178,4 @@ size_t pc_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap)
     return b.len;
 }
 
-#endif // PC_ENABLE_BLE_GATT
+#endif // PROTOCORE_ENABLE_BLE_GATT

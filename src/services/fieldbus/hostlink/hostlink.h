@@ -3,7 +3,7 @@
 
 /**
  * @file hostlink.h
- * @brief Omron Host Link (C-mode) frame codec (PC_ENABLE_HOSTLINK) - zero-heap ASCII
+ * @brief Omron Host Link (C-mode) frame codec (PROTOCORE_ENABLE_HOSTLINK) - zero-heap ASCII
  *        command/response framing for the Omron serial host-link protocol, the RS-232/485
  *        sibling of FINS.
  *
@@ -28,12 +28,12 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HOSTLINK
+#if PROTOCORE_ENABLE_HOSTLINK
 
 /** @brief FCS: 8-bit XOR of [data, data+len). */
-uint8_t pc_hostlink_fcs(const char *data, size_t len);
+uint8_t protocore_hostlink_fcs(const char *data, size_t len);
 
 /**
  * @brief Build a frame: `@UU` + header_code(2) + text + FCS(2 hex) + `*` + CR.
@@ -44,8 +44,8 @@ uint8_t pc_hostlink_fcs(const char *data, size_t len);
  *        byte; the return value is the frame length, so callers may also treat @p buf as a
  *        C-string.
  */
-size_t pc_hostlink_build(char *buf, size_t cap, uint8_t node, const char *header_code, const char *text,
-                         size_t text_len);
+size_t protocore_hostlink_build(char *buf, size_t cap, uint8_t node, const char *header_code, const char *text,
+                                size_t text_len);
 
 /** @brief A parsed frame; @ref text points INTO the source buffer (after the header, before the FCS). */
 typedef struct
@@ -60,37 +60,37 @@ typedef struct
  * @brief Parse + FCS-validate a frame (command or response).
  * @return true on a complete, FCS-valid `@...*CR` frame; false otherwise.
  */
-proto_bool pc_hostlink_parse(const char *buf, size_t len, HostlinkFrame *out);
+proto_bool protocore_hostlink_parse(const char *buf, size_t len, HostlinkFrame *out);
 
 /** @brief Read a response's 2-char end code (the first two text characters) as a byte. */
-proto_bool pc_hostlink_end_code(const HostlinkFrame *f, uint8_t *code);
+proto_bool protocore_hostlink_end_code(const HostlinkFrame *f, uint8_t *code);
 
 /**
  * @brief Build an RD (DM-area read) command: `@UU` + `RD` + a 4-digit beginning word address + a 4-digit
  *        word count + FCS + `*` CR.
  * @return the frame length, or 0 on overflow, an address or count outside 0..9999, or a zero count.
  */
-size_t pc_hostlink_build_read(char *buf, size_t cap, uint8_t node, uint16_t address, uint16_t count);
+size_t protocore_hostlink_build_read(char *buf, size_t cap, uint8_t node, uint16_t address, uint16_t count);
 
 /**
  * @brief Extract word @p index (0-based) from an RD response's text: a 4-hex-char value that follows the
  *        2-character end code.
  * @return true iff the response text holds that word and it is valid hex; false otherwise.
  */
-proto_bool pc_hostlink_read_word(const HostlinkFrame *f, size_t index, uint16_t *out);
+proto_bool protocore_hostlink_read_word(const HostlinkFrame *f, size_t index, uint16_t *out);
 
 /**
  * @brief Build a WR (DM-area write) command: `@UU` + `WR` + a 4-digit beginning word address + one
  *        4-hex-char value per word + FCS + `*` CR. The PLC's response text is only the 2-character end
- *        code (read it with pc_hostlink_end_code).
+ *        code (read it with protocore_hostlink_end_code).
  * @return the frame length, or 0 on overflow, an address outside 0..9999, a zero @p word_count, or a
  *         null @p words.
  */
-size_t pc_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t address, const uint16_t *words,
-                               size_t word_count);
+size_t protocore_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t address, const uint16_t *words,
+                                      size_t word_count);
 
-#endif // PC_ENABLE_HOSTLINK
+#endif // PROTOCORE_ENABLE_HOSTLINK
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HOSTLINK_H

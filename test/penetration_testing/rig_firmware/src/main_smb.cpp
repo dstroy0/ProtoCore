@@ -4,12 +4,12 @@
 /**
  * @file main_smb.cpp
  * @brief Slim SMB2-client test-rig firmware (env:rig_s3_smb) - the target for the SMB2 interop peer +
- *        the malicious-SMB2-server attack in penetration_testing/pc_pentest.py.
+ *        the malicious-SMB2-server attack in penetration_testing/protocore_pentest.py.
  *
  * The device is the SMB2 *client*: the /smb/probe endpoint connects OUT to the server named in the query
- * (?host=&port=&user=&pass=&share=&path=) over the shared outbound transport (pc_client_*), runs the
+ * (?host=&port=&user=&pass=&share=&path=) over the shared outbound transport (protocore_client_*), runs the
  * smb_client.h dialogue (NEGOTIATE -> NTLMv2 SESSION_SETUP -> TREE_CONNECT -> CREATE -> READ -> CLOSE) and
- * reports each step. Against a real samba it is the interop oracle; against pc_pentest.py's fake server
+ * reports each step. Against a real samba it is the interop oracle; against protocore_pentest.py's fake server
  * it exercises the response parsers (the malicious-server harness, like the FTP / SMTP / NATS probes).
  *
  * Deliberately minimal (HTTP/80 + the one probe) so it stays DRAM-light on the stock arduino-esp32 core -
@@ -19,7 +19,7 @@
 #include "network_drivers/application/smb/smb2.h"       // Smb2Access / Smb2Disposition masks
 #include "network_drivers/application/smb/smb_client.h" // smb_open / smb_read / smb_close dialogue engine
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h" // pc_client_* (device-as-SMB2-client probe transport)
+#include "network_drivers/transport/client.h" // protocore_client_* (device-as-SMB2-client probe transport)
 #include "protocore.h"
 #include <Arduino.h>
 #include <WiFi.h>
@@ -42,7 +42,7 @@ PC server;
 static int smb_probe_send(void *ctx, const uint8_t *data, size_t len)
 {
     int cid = (int)(intptr_t)ctx;
-    return pc_client_send(cid, data, len) ? (int)len : -1;
+    return protocore_client_send(cid, data, len) ? (int)len : -1;
 }
 static int smb_probe_recv(void *ctx, uint8_t *buf, size_t cap)
 {
@@ -50,7 +50,7 @@ static int smb_probe_recv(void *ctx, uint8_t *buf, size_t cap)
     uint32_t t0 = millis();
     while (millis() - t0 < 4000)
     {
-        size_t got = pc_client_read(cid, buf, cap);
+        size_t got = protocore_client_read(cid, buf, cap);
         if (got > 0)
         {
             return (int)got;
@@ -107,7 +107,7 @@ static void h_smb_probe(uint8_t id, HttpReq *r)
     char unc[128];
     snprintf(unc, sizeof(unc), "\\\\%s\\%s", host, sharen);
 
-    int cid = pc_client_open(host, port, 4000);
+    int cid = protocore_client_open(host, port, 4000);
     if (cid < 0)
     {
         server.send(id, 200, "application/json", "{\"connected\":0}");
@@ -153,7 +153,7 @@ static void h_smb_probe(uint8_t id, HttpReq *r)
         }
         rc = smb_close(&h, smb_probe_send, smb_probe_recv, ctx);
     }
-    pc_client_close(cid);
+    protocore_client_close(cid);
 
     // (int) on the SmbResult members is the report/wire boundary (JSON status out), not an enum silencing.
     char b[288];

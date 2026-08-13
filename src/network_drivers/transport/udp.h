@@ -13,7 +13,7 @@
  * Both halves own their stack plumbing (`udp_pcb`, `pbuf`) and hand out framed rings instead, so no
  * stack type reaches a layer above this one.
  *
- * Every send here takes a `pc_ip`, never a name or its text. A caller that starts from either turns
+ * Every send here takes a `protocore_ip`, never a name or its text. A caller that starts from either turns
  * it into an address once, where it enters, and keeps that: resolving a name or parsing a string
  * per datagram puts that work on the send path of every call.
  *
@@ -32,7 +32,7 @@
 #include "network_drivers/transport/udp/udp_listener.h"
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The datagram service.
@@ -49,6 +49,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const UdpNs Udp;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UDP_H

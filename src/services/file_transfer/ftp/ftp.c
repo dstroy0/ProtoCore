@@ -9,12 +9,12 @@
 #include "ftp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_FTP
+#if PROTOCORE_ENABLE_FTP
 
 static const size_t FTP_SENT = (size_t)-1; // "overflowed" sentinel threaded through the emitters
 
 // Append raw bytes; propagates the overflow sentinel.
-static size_t pc_ftp_emit(char *buf, size_t cap, size_t n, const char *s, size_t slen)
+static size_t protocore_ftp_emit(char *buf, size_t cap, size_t n, const char *s, size_t slen)
 {
     // Overflow-safe bound: n <= cap is invariant (every non-sentinel return is <= cap), but guard
     // n > cap explicitly so cap - n provably cannot underflow; written as subtraction so a huge
@@ -31,7 +31,7 @@ static size_t pc_ftp_emit(char *buf, size_t cap, size_t n, const char *s, size_t
 }
 
 // Append an unsigned decimal; propagates the overflow sentinel.
-static size_t pc_ftp_emit_uint(char *buf, size_t cap, size_t n, unsigned v)
+static size_t protocore_ftp_emit_uint(char *buf, size_t cap, size_t n, unsigned v)
 {
     if (n == FTP_SENT)
     {
@@ -63,7 +63,7 @@ static size_t pc_ftp_emit_uint(char *buf, size_t cap, size_t n, unsigned v)
 }
 
 // Finish: on no overflow and room for the NUL, terminate and return the length; else 0.
-static size_t pc_ftp_finish(char *buf, size_t cap, size_t n)
+static size_t protocore_ftp_finish(char *buf, size_t cap, size_t n)
 {
     if (n == FTP_SENT || n >= cap) // no room for the NUL (n == cap); n <= cap invariant avoids n + 1 overflow
     {
@@ -73,72 +73,72 @@ static size_t pc_ftp_finish(char *buf, size_t cap, size_t n)
     return n;
 }
 
-size_t pc_ftp_build_command(char *buf, size_t cap, const char *verb, const char *arg)
+size_t protocore_ftp_build_command(char *buf, size_t cap, const char *verb, const char *arg)
 {
     if (!buf || !verb || !verb[0])
     {
         return 0;
     }
     size_t n = 0;
-    n = pc_ftp_emit(buf, cap, n, verb, strnlen(verb, cap));
+    n = protocore_ftp_emit(buf, cap, n, verb, strnlen(verb, cap));
     if (arg && arg[0])
     {
-        n = pc_ftp_emit(buf, cap, n, " ", 1);
-        n = pc_ftp_emit(buf, cap, n, arg, strnlen(arg, cap));
+        n = protocore_ftp_emit(buf, cap, n, " ", 1);
+        n = protocore_ftp_emit(buf, cap, n, arg, strnlen(arg, cap));
     }
-    n = pc_ftp_emit(buf, cap, n, "\r\n", 2);
-    return pc_ftp_finish(buf, cap, n);
+    n = protocore_ftp_emit(buf, cap, n, "\r\n", 2);
+    return protocore_ftp_finish(buf, cap, n);
 }
 
-size_t pc_ftp_build_port(char *buf, size_t cap, const uint8_t ip[4], uint16_t port)
+size_t protocore_ftp_build_port(char *buf, size_t cap, const uint8_t ip[4], uint16_t port)
 {
     if (!buf || !ip)
     {
         return 0;
     }
     size_t n = 0;
-    n = pc_ftp_emit(buf, cap, n, "PORT ", 5);
+    n = protocore_ftp_emit(buf, cap, n, "PORT ", 5);
     for (int i = 0; i < 4; i++)
     {
-        n = pc_ftp_emit_uint(buf, cap, n, ip[i]);
-        n = pc_ftp_emit(buf, cap, n, ",", 1);
+        n = protocore_ftp_emit_uint(buf, cap, n, ip[i]);
+        n = protocore_ftp_emit(buf, cap, n, ",", 1);
     }
-    n = pc_ftp_emit_uint(buf, cap, n, (unsigned)(port >> 8));
-    n = pc_ftp_emit(buf, cap, n, ",", 1);
-    n = pc_ftp_emit_uint(buf, cap, n, (unsigned)(port & 0xFF));
-    n = pc_ftp_emit(buf, cap, n, "\r\n", 2);
-    return pc_ftp_finish(buf, cap, n);
+    n = protocore_ftp_emit_uint(buf, cap, n, (unsigned)(port >> 8));
+    n = protocore_ftp_emit(buf, cap, n, ",", 1);
+    n = protocore_ftp_emit_uint(buf, cap, n, (unsigned)(port & 0xFF));
+    n = protocore_ftp_emit(buf, cap, n, "\r\n", 2);
+    return protocore_ftp_finish(buf, cap, n);
 }
 
-size_t pc_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, proto_bool ipv6, uint16_t port)
+size_t protocore_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, proto_bool ipv6, uint16_t port)
 {
     if (!buf || !ip_str || !ip_str[0])
     {
         return 0;
     }
     size_t n = 0;
-    n = pc_ftp_emit(buf, cap, n, "EPRT |", 6);
-    n = pc_ftp_emit(buf, cap, n, ipv6 ? "2" : "1", 1);
-    n = pc_ftp_emit(buf, cap, n, "|", 1);
-    n = pc_ftp_emit(buf, cap, n, ip_str, strnlen(ip_str, cap));
-    n = pc_ftp_emit(buf, cap, n, "|", 1);
-    n = pc_ftp_emit_uint(buf, cap, n, port);
-    n = pc_ftp_emit(buf, cap, n, "|\r\n", 3);
-    return pc_ftp_finish(buf, cap, n);
+    n = protocore_ftp_emit(buf, cap, n, "EPRT |", 6);
+    n = protocore_ftp_emit(buf, cap, n, ipv6 ? "2" : "1", 1);
+    n = protocore_ftp_emit(buf, cap, n, "|", 1);
+    n = protocore_ftp_emit(buf, cap, n, ip_str, strnlen(ip_str, cap));
+    n = protocore_ftp_emit(buf, cap, n, "|", 1);
+    n = protocore_ftp_emit_uint(buf, cap, n, port);
+    n = protocore_ftp_emit(buf, cap, n, "|\r\n", 3);
+    return protocore_ftp_finish(buf, cap, n);
 }
 
-static proto_bool pc_ftp_is_3digit(const char *p)
+static proto_bool protocore_ftp_is_3digit(const char *p)
 {
     return p[0] >= '0' && p[0] <= '9' && p[1] >= '0' && p[1] <= '9' && p[2] >= '0' && p[2] <= '9';
 }
 
-static int pc_ftp_code3(const char *p)
+static int protocore_ftp_code3(const char *p)
 {
     return (p[0] - '0') * 100 + (p[1] - '0') * 10 + (p[2] - '0');
 }
 
 // Index just past the LF of the line starting at @p start, or 0 if the line is not yet complete.
-static size_t pc_ftp_line_end(const char *buf, size_t len, size_t start)
+static size_t protocore_ftp_line_end(const char *buf, size_t len, size_t start)
 {
     for (size_t i = start; i < len; i++)
     {
@@ -150,18 +150,18 @@ static size_t pc_ftp_line_end(const char *buf, size_t len, size_t start)
     return 0;
 }
 
-proto_bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *consumed)
+proto_bool protocore_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *consumed)
 {
-    if (!buf || len < 4 || !pc_ftp_is_3digit(buf))
+    if (!buf || len < 4 || !protocore_ftp_is_3digit(buf))
     {
         return PROTO_FALSE;
     }
-    int first = pc_ftp_code3(buf);
+    int first = protocore_ftp_code3(buf);
     char sep = buf[3];
 
     if (sep == ' ')
     {
-        size_t eol = pc_ftp_line_end(buf, len, 0);
+        size_t eol = protocore_ftp_line_end(buf, len, 0);
         if (!eol)
         {
             return PROTO_FALSE; // line not fully received
@@ -176,16 +176,16 @@ proto_bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *co
     }
 
     // Multiline: end at the first line that begins with the same code followed by a space.
-    size_t pos = pc_ftp_line_end(buf, len, 0);
+    size_t pos = protocore_ftp_line_end(buf, len, 0);
     if (!pos)
     {
         return PROTO_FALSE;
     }
     while (pos < len)
     {
-        if (len - pos >= 4 && pc_ftp_is_3digit(buf + pos) && pc_ftp_code3(buf + pos) == first && buf[pos + 3] == ' ')
+        if (len - pos >= 4 && protocore_ftp_is_3digit(buf + pos) && protocore_ftp_code3(buf + pos) == first && buf[pos + 3] == ' ')
         {
-            size_t eol = pc_ftp_line_end(buf, len, pos);
+            size_t eol = protocore_ftp_line_end(buf, len, pos);
             if (!eol)
             {
                 return PROTO_FALSE; // terminator line not fully received
@@ -194,7 +194,7 @@ proto_bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *co
             *consumed = eol;
             return PROTO_TRUE;
         }
-        size_t eol = pc_ftp_line_end(buf, len, pos);
+        size_t eol = protocore_ftp_line_end(buf, len, pos);
         if (!eol)
         {
             return PROTO_FALSE; // partial continuation line; need more
@@ -204,7 +204,7 @@ proto_bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *co
     return PROTO_FALSE; // no terminator yet
 }
 
-proto_bool pc_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_t *port)
+proto_bool protocore_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_t *port)
 {
     if (!buf || !ip || !port)
     {
@@ -256,7 +256,7 @@ proto_bool pc_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_
     return PROTO_TRUE;
 }
 
-proto_bool pc_ftp_parse_epsv(const char *buf, size_t len, uint16_t *port)
+proto_bool protocore_ftp_parse_epsv(const char *buf, size_t len, uint16_t *port)
 {
     if (!buf || !port)
     {
@@ -311,4 +311,4 @@ proto_bool pc_ftp_parse_epsv(const char *buf, size_t len, uint16_t *port)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_FTP
+#endif // PROTOCORE_ENABLE_FTP

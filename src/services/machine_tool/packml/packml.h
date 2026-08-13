@@ -19,8 +19,8 @@
  *  - the **PackTags**: the standard Command / Status / Admin tag groups the model surfaces - the current
  *    state + unit mode, the requested/actual machine speed, and the production counters.
  *
- * This is a pure, fixed-BSS service: no heap, no I/O. The state engine (pc_packml_command /
- * pc_packml_state_complete) is a pure transition table; the owned service (pc_packml_svc_*) layers the
+ * This is a pure, fixed-BSS service: no heap, no I/O. The state engine (protocore_packml_command /
+ * protocore_packml_state_complete) is a pure transition table; the owned service (protocore_packml_svc_*) layers the
  * PackTags + counters + timers on top for a machine to run directly. Host-tested (native_packml).
  *
  * @author  Douglas Quigg (dstroy0)
@@ -32,9 +32,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_PACKML
+#if PROTOCORE_ENABLE_PACKML
 
 /**
  * @brief PackML unit / machine state. The underlying value is the ISA-TR88.00.02 StateCurrent wire number
@@ -65,7 +65,7 @@ typedef enum PROTO_ENUM_PACKED
 /** @brief PackML control command (the Command.CntrlCmd tag). Value is the conventional CntrlCmd number. */
 typedef enum PROTO_ENUM_PACKED
 {
-    PACK_ML_COMMAND_PC_NONE = 0,
+    PACK_ML_COMMAND_PROTOCORE_NONE = 0,
     PACK_ML_COMMAND_RESET = 1,
     PACK_ML_COMMAND_START = 2,
     PACK_ML_COMMAND_STOP = 3,
@@ -96,29 +96,29 @@ typedef enum PROTO_ENUM_PACKED
  * every state except the abort branch and the already-stopping/stopped/clearing states). Otherwise only the
  * command valid in @p s per the model transitions; an invalid command returns @p s unchanged.
  */
-PackMlState pc_packml_command(PackMlState s, PackMlCommand c);
+PackMlState protocore_packml_command(PackMlState s, PackMlCommand c);
 
 /**
  * @brief Advance an "acting" (transient) state to its target once its action completes (the SC / State
  *        Complete transition, e.g. Starting -> Execute, Aborting -> Aborted). A "wait" state is returned
  *        unchanged - only acting states auto-advance.
  */
-PackMlState pc_packml_state_complete(PackMlState s);
+PackMlState protocore_packml_state_complete(PackMlState s);
 
 /** @brief The production cycle finished: Execute -> Completing. Any other state is returned unchanged. */
-PackMlState pc_packml_execute_complete(PackMlState s);
+PackMlState protocore_packml_execute_complete(PackMlState s);
 
 /** @brief True if @p s is an acting (transient, auto-advancing) state rather than a wait (stable) state. */
-proto_bool pc_packml_is_acting(PackMlState s);
+proto_bool protocore_packml_is_acting(PackMlState s);
 
-/** @brief True if @p c is a legal command in @p s (i.e. pc_packml_command would change the state). */
-proto_bool pc_packml_command_valid(PackMlState s, PackMlCommand c);
+/** @brief True if @p c is a legal command in @p s (i.e. protocore_packml_command would change the state). */
+proto_bool protocore_packml_command_valid(PackMlState s, PackMlCommand c);
 
 /** @brief Human-readable state name (e.g. "Execute") for an HMI / log. Never null. */
-const char *pc_packml_state_name(PackMlState s);
+const char *protocore_packml_state_name(PackMlState s);
 
 /** @brief Human-readable command name (e.g. "Start"). Never null. */
-const char *pc_packml_command_name(PackMlCommand c);
+const char *protocore_packml_command_name(PackMlCommand c);
 
 // ---------------------------------------------------------------------------
 // Owned service: the PackTags + counters + timers a machine runs directly (fixed BSS, one owner)
@@ -137,45 +137,45 @@ typedef struct
 } PackMlStatus;
 
 /** @brief Initialize the service: state = Stopped, unit mode @p mode, counters/speed cleared. */
-void pc_packml_svc_init(PackMlMode mode);
+void protocore_packml_svc_init(PackMlMode mode);
 
 /**
  * @brief Apply a control command (Command.CntrlCmd) to the running service.
  * @return true if the command was legal in the current state and the state advanced.
  */
-proto_bool pc_packml_svc_command(PackMlCommand c);
+proto_bool protocore_packml_svc_command(PackMlCommand c);
 
 /**
  * @brief Signal that the current acting state's action has finished (the machine's State-Complete). Advances
  *        an acting state to its target; a no-op in a wait state.
  * @return the new state.
  */
-PackMlState pc_packml_svc_state_complete(void);
+PackMlState protocore_packml_svc_state_complete(void);
 
 /**
  * @brief Signal one production unit finished while in Execute: increments ProdProcessedCount (and, if
- *        @p defective, ProdDefectiveCount). Does not itself leave Execute (call pc_packml_svc_complete_run
+ *        @p defective, ProdDefectiveCount). Does not itself leave Execute (call protocore_packml_svc_complete_run
  *        to end the run).
  */
-void pc_packml_svc_count(proto_bool defective);
+void protocore_packml_svc_count(proto_bool defective);
 
 /** @brief End the production run: Execute -> Completing (then State-Complete carries it to Complete). */
-proto_bool pc_packml_svc_complete_run(void);
+proto_bool protocore_packml_svc_complete_run(void);
 
 /** @brief Request a unit-mode change. Allowed only in a stable, non-producing state (Stopped/Idle/Aborted). */
-proto_bool pc_packml_svc_set_mode(PackMlMode mode);
+proto_bool protocore_packml_svc_set_mode(PackMlMode mode);
 
 /** @brief Set the commanded machine speed (Command.MachSpeed); reflected as MachSpeedActual while in Execute. */
-void pc_packml_svc_set_speed(float mach_speed);
+void protocore_packml_svc_set_speed(float mach_speed);
 
 /** @brief Current state. */
-PackMlState pc_packml_svc_state(void);
+PackMlState protocore_packml_svc_state(void);
 
 /** @brief Fill @p out with the current Status/Admin tag snapshot. */
-void pc_packml_svc_status(PackMlStatus *out);
+void protocore_packml_svc_status(PackMlStatus *out);
 
-#endif // PC_ENABLE_PACKML
+#endif // PROTOCORE_ENABLE_PACKML
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PACKML_H

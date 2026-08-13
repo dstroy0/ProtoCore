@@ -8,10 +8,10 @@
  * The 20-round ARX permutation used by the chacha20-poly1305@openssh.com cipher. Two views of the
  * same core are exposed:
  *
- *   - pc_chacha20_xor(): the original ChaCha layout OpenSSH uses - a 64-bit little-endian block
+ *   - protocore_chacha20_xor(): the original ChaCha layout OpenSSH uses - a 64-bit little-endian block
  *     counter (state words 12-13) and a 64-bit nonce/IV (words 14-15). This is what the SSH AEAD
  *     drives; the counter increments per 64-byte block.
- *   - pc_chacha20_block_ietf(): the RFC 8439 layout (32-bit counter in word 12, 96-bit nonce in
+ *   - protocore_chacha20_block_ietf(): the RFC 8439 layout (32-bit counter in word 12, 96-bit nonce in
  *     words 13-15), exposed so the core can be checked against the published RFC 8439 Section 2.3.2
  *     block test vector.
  *
@@ -24,14 +24,14 @@
 #ifndef PROTOCORE_CHACHA20_H
 #define PROTOCORE_CHACHA20_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#define PC_CHACHA20_KEY_LEN 32
-#define PC_CHACHA20_BLOCK_LEN 64
+#define PROTOCORE_CHACHA20_KEY_LEN 32
+#define PROTOCORE_CHACHA20_BLOCK_LEN 64
 
 /**
  * @brief XOR @p len bytes of @p in with the ChaCha20 keystream into @p out (OpenSSH layout).
@@ -42,8 +42,8 @@ PROTO_BEGIN_DECLS
  * @param in        plaintext (or ciphertext when decrypting); may be nullptr to emit raw keystream.
  * @param out       output buffer (@p len bytes); may alias @p in.
  */
-void pc_chacha20_xor(const uint8_t key[PC_CHACHA20_KEY_LEN], const uint8_t iv[8], uint64_t counter, const uint8_t *in,
-                     uint8_t *out, size_t len);
+void protocore_chacha20_xor(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], const uint8_t iv[8], uint64_t counter,
+                            const uint8_t *in, uint8_t *out, size_t len);
 
 /**
  * @brief One 64-byte ChaCha20 keystream block in the RFC 8439 layout (for the KAT).
@@ -52,9 +52,9 @@ void pc_chacha20_xor(const uint8_t key[PC_CHACHA20_KEY_LEN], const uint8_t iv[8]
  * @param nonce   12-byte nonce (words 13-15).
  * @param out     64-byte keystream block.
  */
-void pc_chacha20_block_ietf(const uint8_t key[PC_CHACHA20_KEY_LEN], uint32_t counter, const uint8_t nonce[12],
-                            uint8_t out[PC_CHACHA20_BLOCK_LEN]);
+void protocore_chacha20_block_ietf(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], uint32_t counter,
+                                   const uint8_t nonce[12], uint8_t out[PROTOCORE_CHACHA20_BLOCK_LEN]);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CHACHA20_H

@@ -15,9 +15,9 @@ special-cased. The piping is straight; what remains below is the map, not a to-d
 src/network_drivers/
   physical/     WiFi / Ethernet bring-up, link state
   datalink/     L2 framing concerns
-  network/      IPv4 / interface tagging (pc_if_kind: STA vs AP)
+  network/      IPv4 / interface tagging (protocore_if_kind: STA vs AP)
   transport/    lwIP raw-API callbacks, the per-connection RX ring, the TcpEvt
-                event queue, and the pc_conn_* I/O API. OWNS all socket I/O.
+                event queue, and the protocore_conn_* I/O API. OWNS all socket I/O.
   tls/          mbedTLS record layer (static-pool BIO) - plaintext <-> ciphertext
   session/      worker task(s), event dispatch (server_tick), deferred-callback
                 queues, the ProtoHandler dispatch table
@@ -35,14 +35,14 @@ src/shared_primitives/  layer-agnostic primitives shared across the tree so
                 logic is never duplicated: crc.h (one parameterized CRC engine),
                 hex.h (base-16), mime.h (the Content-Type vocabulary), utf8.h
                 (RFC 3629 validation), http_date.h (IMF-fixdate), ip.h (a
-                family-tagged IP address), can.h, pcap.h, log.h, and types.h (the
+                family-tagged IP address), can.h, pcap.h, log.h, and protocore_types.h (the
                 one place <stdint.h> appears). Two more shared concerns live in
                 their natural module instead of here: base64url (base64 module,
                 used by JWT + OIDC) and host->IP resolution
                 (network_drivers/network/dns/dns_resolver, used by the
-                server-adjacent code AND pc_client, so a client has one DNS owner).
+                server-adjacent code AND protocore_client, so a client has one DNS owner).
 core_setup/     NOT under src/: board profiles (per-die sizing and capability
-                macros), the crypto HAL, and the pc_platform selector.
+                macros), the crypto HAL, and the protocore_platform selector.
 ```
 
 ## Two threads, two boundaries
@@ -60,7 +60,7 @@ boundaries:
 
 Cross-thread synchronization primitives (no hot-path locks):
 
-- `pc_atomic<>` (acquire/release) on `TcpConn::state`, `rx_head`, `rx_tail`.
+- `protocore_atomic<>` (acquire/release) on `TcpConn::state`, `rx_head`, `rx_tail`.
 - The FreeRTOS `TcpEvt` queue (producer -> owner worker).
 - `tcpip_api_call` marshaling for the app->lwIP direction (see TX below).
 
@@ -70,16 +70,16 @@ Every layer that sends bytes calls the transport API; nobody calls lwIP `tcp_*`
 directly:
 
 ```
-app / presentation  -->  Tcp.conn->send / Tcp.conn->flush / pc_conn_sndbuf
-                         (TLS slots route through pc_tls_write)
+app / presentation  -->  Tcp.conn->send / Tcp.conn->flush / protocore_conn_sndbuf
+                         (TLS slots route through protocore_tls_write)
                               |
-                         pc_tcp_marshal (PC_OP_*)  -->  tcpip_thread: tcp_write / tcp_output
+                         protocore_tcp_marshal (PROTOCORE_OP_*)  -->  tcpip_thread: tcp_write / tcp_output
 ```
 
 The **same marshal rule covers every raw lwIP call, not just app data**: the TCP
-listener bring-up (`listener_add` / `Tcp.listener->stop`), the UDP transport (`pc_udp_*`,
+listener bring-up (`listener_add` / `Tcp.listener->stop`), the UDP transport (`protocore_udp_*`,
 used by SNMP / CoAP / captive-DNS / syslog / telemetry), the outbound client
-(`pc_client`), and the DNS resolver all route their `tcp_*` / `udp_*` through
+(`protocore_client`), and the DNS resolver all route their `tcp_*` / `udp_*` through
 `tcpip_api_call`. This is mandatory on arduino-esp32 3.x, where lwIP core-locking
 asserts on a raw call from any task but `tcpip_thread` (see docs/BUGS.md); keeping raw
 lwIP out of the app and worker tasks is the one thing this layer exists to enforce.
@@ -103,8 +103,8 @@ See docs/BUGS.md "RX flow-control deadlock".
 
 **RX ring read API: now single-owner (transport).** Consumers no longer index
 `rx_buffer` or advance `rx_tail`. They drain through the transport read API -
-`pc_conn_available` / `pc_conn_read_byte` / `pc_conn_read` / `pc_conn_peek` /
-`pc_conn_consume` (inline in tcp.h, single-consumer per slot). Migrated:
+`protocore_conn_available` / `protocore_conn_read_byte` / `protocore_conn_read` / `protocore_conn_peek` /
+`protocore_conn_consume` (inline in tcp.h, single-consumer per slot). Migrated:
 `presentation.c` (HTTP), `websocket.c`, `telnet.c`, `src/network_drivers/presentation/ssh/connection/ssh_conn.c`,
 `src/network_drivers/tls/tls.c`, and the conn_pool-ring services `modbus.c` / `opcua.c` (their
 duplicated `ring_peek/consume/avail` are now thin adapters over the API). The read
@@ -112,15 +112,15 @@ functions only consume; the window is reopened by the worker's single
 `Tcp.conn->ack_consumed()` per loop - so there is exactly one place that touches the
 ring indices for draining and one that ACKs.
 
-## Outbound clients - the unified client transport (pc_client)
+## Outbound clients - the unified client transport (protocore_client)
 
 The device's clients (`http_client`, `mqtt`, `ws_client`) do not each own a raw lwIP
-stack: they share **`pc_client`** (`network_drivers/transport/pc_client.*`), the
+stack: they share **`protocore_client`** (`network_drivers/transport/protocore_client.*`), the
 client-side peer of the server transport. It is a small fixed pool of outbound
 connections with the same rules - every raw `tcp_*()` marshaled to tcpip_thread, a
 per-connection wire ring, and **ack-on-consume** (`Tcp.client->read()` reopens the
-window as the caller drains; `PC_CLIENT_RX_BUF >= TCP_WND`), so client and server
-share one flow-control model. TLS clients layer `pc_tls_client_session_*` on top, pointing
+window as the caller drains; `PROTOCORE_CLIENT_RX_BUF >= TCP_WND`), so client and server
+share one flow-control model. TLS clients layer `protocore_tls_client_session_*` on top, pointing
 the BIO at `Tcp.client->send` / `Tcp.client->read` (the ring carries ciphertext).
 
 The `s_rx` ring inside `mqtt.c` / `ws_client.c` is a separate **plaintext frame
@@ -129,13 +129,13 @@ owned solely by that module - the client mirror of the server's `http body[]` vs
 `conn_pool` wire ring. Not cross-layer, correct as-is.
 
 Both transports use ONE shared primitive for the whole ring: `ring.h` (the
-`pc_atomic` SPSC index wrapper + the drain math `pc_ring_available / read_byte /
-read / peek / consume` AND the fill math `pc_ring_free / pc_ring_write_span`). The
-server (`pc_conn_*` + `recv_cb`) and client (`pc_client_*` + `cc_recv`) are thin
+`protocore_atomic` SPSC index wrapper + the drain math `protocore_ring_available / read_byte /
+read / peek / consume` AND the fill math `protocore_ring_free / protocore_ring_write_span`). The
+server (`protocore_conn_*` + `recv_cb`) and client (`protocore_client_*` + `cc_recv`) are thin
 wrappers over it, so the ring invariants - wrap, ordering, lossless backpressure -
 live in a single place and no layer reimplements them by hand. Both recv callbacks
 bulk-memcpy each pbuf span and publish `head` once. The client ring's indices were
-`volatile`; they are now `pc_atomic` like the server (correct cross-core
+`volatile`; they are now `protocore_atomic` like the server (correct cross-core
 acquire/release ordering).
 
 ## Streaming-body hooks - slot-aware
@@ -149,22 +149,22 @@ each connection streams to its own file. This fixed the concurrent-PUT clobber
 
 ## Ownership: current vs target
 
-| Concern              | Owner (target)              | Status                                            |
-| -------------------- | --------------------------- | ------------------------------------------------- |
-| Socket TX            | transport `pc_conn_*`       | DONE                                              |
-| RX receive window    | transport                   | DONE (`Tcp.conn->ack_consumed`, ack-on-consume)   |
-| RX ring read/drain   | transport (read API)        | DONE (`pc_conn_read*`; consumers off the ring)    |
-| Streaming sink state | per-slot, slot-aware        | DONE (`g_dav_put[MAX_CONNS]`, slot-aware hooks)   |
-| Event routing        | session (owner queue)       | DONE                                              |
-| Working memory       | mmgr `plain` (per slot)     | DONE (worker resets it per dispatch)              |
-| Key material         | mmgr `secure` (per slot)    | DONE (disjoint region; reclaiming wipes)          |
-| Byte moves / parsing | mmgr (`mem`, `str`, `swar`) | DONE (one owner per operation)                    |
-| Outbound client I/O  | transport (`pc_client`)     | DONE (pooled, ack-on-consume; all clients use it) |
+| Concern              | Owner (target)                 | Status                                                |
+| -------------------- | ------------------------------ | ----------------------------------------------------- |
+| Socket TX            | transport `protocore_conn_*`   | DONE                                                  |
+| RX receive window    | transport                      | DONE (`Tcp.conn->ack_consumed`, ack-on-consume)       |
+| RX ring read/drain   | transport (read API)           | DONE (`protocore_conn_read*`; consumers off the ring) |
+| Streaming sink state | per-slot, slot-aware           | DONE (`g_dav_put[MAX_CONNS]`, slot-aware hooks)       |
+| Event routing        | session (owner queue)          | DONE                                                  |
+| Working memory       | mmgr `plain` (per slot)        | DONE (worker resets it per dispatch)                  |
+| Key material         | mmgr `secure` (per slot)       | DONE (disjoint region; reclaiming wipes)              |
+| Byte moves / parsing | mmgr (`mem`, `str`, `swar`)    | DONE (one owner per operation)                        |
+| Outbound client I/O  | transport (`protocore_client`) | DONE (pooled, ack-on-consume; all clients use it)     |
 
 ## Straightening plan (phased; each phase host + HW regresses every consumer)
 
-1. **DONE - RX read API in transport** - `pc_conn_available` / `pc_conn_read_byte`
-   / `pc_conn_read` / `pc_conn_peek` / `pc_conn_consume` (inline, tcp.h).
+1. **DONE - RX read API in transport** - `protocore_conn_available` / `protocore_conn_read_byte`
+   / `protocore_conn_read` / `protocore_conn_peek` / `protocore_conn_consume` (inline, tcp.h).
 2. **DONE - migrate the consumers** - HTTP / websocket / telnet / ssh / tls + the
    conn_pool-ring services (modbus / opcua) all drain through the API; no external
    `rx_tail` modulo remains. The read functions consume only; `Tcp.conn->ack_consumed`
@@ -174,8 +174,8 @@ each connection streams to its own file. This fixed the concurrent-PUT clobber
    per-slot WebDAV PUT state `g_dav_put[MAX_CONNS]`; fixed the concurrent-PUT bug
    (HW: 4 parallel PUTs, distinct payloads, all byte-exact).
 4. **DONE - outbound clients** - all clients (http_client / mqtt / ws_client) share
-   `pc_client`, the unified client transport; brought to the same ack-on-consume
-   flow control as the server (`PC_CLIENT_RX_BUF >= TCP_WND`). Each module's `s_rx`
+   `protocore_client`, the unified client transport; brought to the same ack-on-consume
+   flow control as the server (`PROTOCORE_CLIENT_RX_BUF >= TCP_WND`). Each module's `s_rx`
    is its own plaintext frame buffer (the client mirror of the server's `body[]`),
    module-owned and correct as-is.
 
@@ -199,8 +199,8 @@ struct ProtoHandler { on_accept; on_data; on_close; on_poll; }; // all take a sl
 
 `dispatch_event()` routes each drained `TcpEvt` to `on_{accept,data,close}` by
 `conn_pool[slot].proto`; `handle()` calls `on_poll` for each active slot. Every
-handler reads its bytes through the transport RX API (`pc_conn_read` copy-out, or
-`pc_conn_peek`+`pc_conn_consume` zero-copy - never the ring internals) and writes
+handler reads its bytes through the transport RX API (`protocore_conn_read` copy-out, or
+`protocore_conn_peek`+`protocore_conn_consume` zero-copy - never the ring internals) and writes
 through `Tcp.conn->send`/`Tcp.conn->flush`. So Telnet, SSH (+ `PROTO_SSH_RFWD`), Modbus,
 and OPC UA are fully homogeneous: each is a module that exposes a `ProtoHandler` and
 touches the core only through those two APIs.
@@ -214,8 +214,8 @@ would be a forced fit. Two transport models, two matched seams.
 **The request/response core is protocol(version)-agnostic:** every version decodes into the
 shared `HttpReq` and converges on one `match_and_execute` / route / `Handler` (HTTP/1.1,
 HTTP/2, and HTTP/3), and the response funnels back through the symmetric **TX seam** - a
-per-connection `pc_resp_sink` function pointer (`TcpConn::pc_resp_sink`) that HTTP/2 installs at
-ALPN and HTTP/3 at dispatch. `PC::send()` / `send_empty()` call `conn->pc_resp_sink(...)`
+per-connection `protocore_resp_sink` function pointer (`TcpConn::protocore_resp_sink`) that HTTP/2 installs at
+ALPN and HTTP/3 at dispatch. `PC::send()` / `send_empty()` call `conn->protocore_resp_sink(...)`
 when it is set (h2 frames the reply as HEADERS+DATA on the stream; h3 as an HTTP/3 response on
 its QUIC stream) and otherwise build the HTTP/1.1 message - so the response methods name no
 protocol. It is the RX `ProtoHandler` seam's TX counterpart: request decode and response encode
@@ -243,13 +243,13 @@ every public API method, every registered protocol, and every Layer-6 module on 
 1. **`session.c` (L5) is now protocol-agnostic - DONE.** The dispatcher owns only the
    mechanism (register / look up / route / drain) and names no protocol. Each protocol's
    handler lives in its own module and is exposed by a pure accessor
-   (`http_proto_handler()` in presentation, `ssh_proto_handler()` in ssh_conn, ...) that
+   (`http_protocore_handler()` in presentation, `ssh_protocore_handler()` in ssh_conn, ...) that
    carries no dependency on the session layer. The single policy file `proto_builtins.c`
    maps each built-in to its accessor behind its feature flag; `proto_get()` calls
    `proto_register_builtins()` once, lazily, so the native harness still works before
    `begin()`. Adding a protocol = write its module + one guarded line in `proto_builtins.c`
     - never editing the dispatcher. (The SSH remote-forward listener still self-registers from
-      its own opt-in `pc_ssh_forward_begin()`.)
+      its own opt-in `protocore_ssh_forward_begin()`.)
 
 2. **The HTTP TLS/h2/ws data-pump moved out of L5 - DONE.** `presentation.c` (Layer 6,
    already the HTTP-connection glue) now owns the HTTP `ProtoHandler`: `http_evt_{accept,
@@ -261,17 +261,17 @@ data,close}` plus `tls_data` (the TLS handshake pump + ALPN "h2" detection + Web
    pumps, the WebSocket + SSE drains, the keep-alive re-parse, request dispatch) is instance-bound - it
    dispatches into a `PC`'s routes - so it used to be a large inline block in the worker loop
    guarded by `if (proto != PROTO_HTTP)`. That block is now `PC::http_poll_slot()`, installed
-   as the HTTP `ProtoHandler`'s `on_poll` (via `http_proto_set_poll()`, the `on_poll` analogue of the
-   `pc_resp_sink` TX seam; the running instance is wired in at the top of `service_once()`). The worker
+   as the HTTP `ProtoHandler`'s `on_poll` (via `http_protocore_set_poll()`, the `on_poll` analogue of the
+   `protocore_resp_sink` TX seam; the running instance is wired in at the top of `service_once()`). The worker
    dispatch loop now calls `on_poll` uniformly for **every** protocol including HTTP - it names no
    protocol and has no special case. The singleton pollers (ssh, rfwd) gate on `CONN_ACTIVE` inside
    their own `on_poll`, preserving the behavior the loop-level gate used to give them.
 
 4. **The response path is behind a uniform TX seam - DONE.** `send()` / `send_empty()` no longer
-   branch on `conn->h2` / `conn->h3`; a self-framing protocol installs a `TcpConn::pc_resp_sink`
+   branch on `conn->h2` / `conn->h3`; a self-framing protocol installs a `TcpConn::protocore_resp_sink`
    function pointer (h2 at ALPN, h3 at dispatch) and the response methods route through it, so the
    L7 responders name no protocol. This is the TX counterpart of the RX `ProtoHandler` seam; adding
-   a self-framing protocol means installing one `pc_resp_sink`, not editing the responders.
+   a self-framing protocol means installing one `protocore_resp_sink`, not editing the responders.
 
 5. **TLS is an inline transform inside the HTTP handler**, not a composable wrapper, so only
    HTTP can be TLS-wrapped. Acceptable and inherent (SSH carries its own crypto; Telnet /
@@ -279,7 +279,7 @@ data,close}` plus `tls_data` (the TLS handshake pump + ALPN "h2" detection + Web
 
 Net: L5 is pure dispatch and every protocol (including HTTP) lives behind the same uniform seam via
 its own module - request decode through the `ProtoHandler` seam (accept / data / close / **poll**),
-response encode through the `pc_resp_sink` seam. The worker dispatch loop names no protocol and has no
+response encode through the `protocore_resp_sink` seam. The worker dispatch loop names no protocol and has no
 special case: HTTP plugs in exactly like SSH, Telnet, Modbus, or OPC UA. The one remaining inherent
 trait is that TLS is an HTTP-only inline transform (item 5). The piping is straight.
 
@@ -300,7 +300,7 @@ src/mmgr/
   arena.c/.h      the double-ended allocator, and the worker identity a borrow keys on
   plaintext.c/.h  the plaintext pool accessor (`plain`)
   secure.c/.h     the secret pool accessor (`secure`); reclaiming wipes
-  span.h          pc_span / pc_cspan - a byte region that carries its own bound
+  span.h          protocore_span / protocore_cspan - a byte region that carries its own bound
   bytes.h         the byte verbs: append into a span, take out of a cspan
   endian.h        a fixed width moved between an integer and the bytes at a pointer
   bitio.h         LSB-first bit writer (DEFLATE, ssh zlib)
@@ -308,16 +308,16 @@ src/mmgr/
   swar.h          lane math - one word treated as its byte lanes, branchless
   protomem.c/.h   the span walks (`mem`): cpy, move, cmp, chr, set, zero
   protostr.c/.h   the bounded-run walks (`str`): len, diff, eq, starts, find, copy, to_*
-  membuild.h      pc_sb - bounded no-heap builder into bytes the caller already owns
+  membuild.h      protocore_sb - bounded no-heap builder into bytes the caller already owns
   frame.c/.h      declarative frame builder: a frame is a static table of typed fields
   float_bits.h    a double read as the three fields it is
   ring.h          the SPSC byte ring, the segment ring, and the slot-mask view
-  dma.c/.h        DMA channel ingest / egress (PC_ENABLE_DMA)
+  dma.c/.h        DMA channel ingest / egress (PROTOCORE_ENABLE_DMA)
 ```
 
 ### Two pools, one mechanism
 
-`pc_arena` is the mechanism and there is exactly one of it: one contiguous region with
+`protocore_arena` is the mechanism and there is exactly one of it: one contiguous region with
 two allocators growing toward each other and the free space floating in the middle.
 
 ```
@@ -328,24 +328,24 @@ two allocators growing toward each other and the free space floating in the midd
 The **persistent** end is a first-fit free list - individual free in any order,
 adjacent-block coalesce, top-block shrink, and the bytes come back zeroed. The
 **scratch** end is a bump with O(1) reset and mark/release savepoints, aligned up to
-`PC_ARENA_MAX_ALIGN` (16). Whichever side needs room takes it, and both ends fail
-closed (NULL) rather than crossing. `pc_arena_set` chains a DRAM base and a PSRAM
+`PROTOCORE_ARENA_MAX_ALIGN` (16). Whichever side needs room takes it, and both ends fail
+closed (NULL) rather than crossing. `protocore_arena_set` chains a DRAM base and a PSRAM
 extension: a borrow takes the first region that fits, a free routes to the owning
-region by address. No heap, no stdlib, all state in `pc_arena` (no globals), so it is
+region by address. No heap, no stdlib, all state in `protocore_arena` (no globals), so it is
 unit-tested on the host.
 
 `plaintext.c` and `secure.c` are **not** second allocators. Each is an access layer
 that instantiates that one mechanism over its own compile-time-sized storage and
-decides who may reach it. Nothing outside `src/mmgr/` names `pc_arena`.
+decides who may reach it. Nothing outside `src/mmgr/` names `protocore_arena`.
 
-|                    | plaintext (`plain`)                        | secure (`secure`)                                       |
-| ------------------ | ------------------------------------------ | ------------------------------------------------------- |
-| holds              | anything whose bytes are not secret        | key material only                                       |
-| hand-out           | uninitialized                              | uninitialized                                           |
-| reclaim            | move the offset                            | **wipe, then** move the offset                          |
-| who reclaims       | the worker, once per dispatch              | the borrower, at its own mark/release                   |
-| long-lived storage | (none - the pool is emptied each dispatch) | `secure.persist_span()`, the end no mark walks          |
-| per-slot size      | `PC_PLAINTEXT_ARENA_SIZE`                  | `PC_SECURE_ARENA_SIZE`, derived from the enabled crypto |
+|                    | plaintext (`plain`)                        | secure (`secure`)                                              |
+| ------------------ | ------------------------------------------ | -------------------------------------------------------------- |
+| holds              | anything whose bytes are not secret        | key material only                                              |
+| hand-out           | uninitialized                              | uninitialized                                                  |
+| reclaim            | move the offset                            | **wipe, then** move the offset                                 |
+| who reclaims       | the worker, once per dispatch              | the borrower, at its own mark/release                          |
+| long-lived storage | (none - the pool is emptied each dispatch) | `secure.persist_span()`, the end no mark walks                 |
+| per-slot size      | `PROTOCORE_PLAINTEXT_ARENA_SIZE`           | `PROTOCORE_SECURE_ARENA_SIZE`, derived from the enabled crypto |
 
 The pool is chosen by whether the contents are secret and by nothing else. Lifetime is
 not the axis: both pools carry long-lived and ephemeral borrows. A peer's public point,
@@ -354,11 +354,11 @@ putting them in the secure pool only shrinks the room left for real secrets.
 
 ### One slot per worker, so a borrow needs no lock
 
-Each pool is cut one arena per slot: one per server worker (`PC_WORKER_COUNT`), plus
-the **ghost** at `PC_GHOST_WORKER_SLOT`, which is the library's own. A borrow resolves
-its slot from `pc_worker_self()` and never takes one as an argument, so a borrow cannot
+Each pool is cut one arena per slot: one per server worker (`PROTOCORE_WORKER_COUNT`), plus
+the **ghost** at `PROTOCORE_GHOST_WORKER_SLOT`, which is the library's own. A borrow resolves
+its slot from `protocore_worker_self()` and never takes one as an argument, so a borrow cannot
 cross workers and the bump needs no lock. A caller that is not a server worker clamps
-to the ghost rather than to worker 0. Under `PC_DEBUG_CHECKS` each slot records the
+to the ghost rather than to worker 0. Under `PROTOCORE_DEBUG_CHECKS` each slot records the
 first execution context to touch it and asserts on a second, turning a future
 cross-core mistake into an immediate visible failure.
 
@@ -368,16 +368,16 @@ those workers is scheduling and stays in `session/worker`.
 
 ### Who reclaims what
 
-- **Plaintext: the worker.** `dispatch_event()` calls `pc_plaintext_reset()` before
+- **Plaintext: the worker.** `dispatch_event()` calls `protocore_plaintext_reset()` before
   handing an event to its protocol handler, so a borrow is valid only until that
   handler returns and a forgotten release cannot accumulate across events. Inside one
   dispatch, `plain.mark()` / `plain.release()` nest.
-- **Secure: the borrower, and reclaiming wipes.** `pc_secure_release()` zeroes the
+- **Secure: the borrower, and reclaiming wipes.** `protocore_secure_release()` zeroes the
   reclaimed extent **before** the position moves, so the bytes are already zero at the
   instant they become available again - there is no window in which the next borrow is
   handed the previous tenant's key material. The wipe is structural rather than a
   discipline every return path has to remember, which is the form that had already been
-  missed on two SSH key-exchange error paths. `pc_secure_wipe()` is the same primitive
+  missed on two SSH key-exchange error paths. `protocore_secure_wipe()` is the same primitive
   for storage that was never in a pool.
 - **Long-lived secrets: the persistent end.** `secure.persist_span(n)` takes the end no
   mark walks, so a credential table or a key schedule bound once at setup survives every
@@ -386,7 +386,7 @@ those workers is scheduling and stays in `session/worker`.
 ### Ownership is an address range
 
 The two pools are disjoint regions, so the owner is recoverable from the pointer alone.
-`pc_plaintext_owns()` and `pc_secure_owns()` are one unsigned subtract and compare
+`protocore_plaintext_owns()` and `protocore_secure_owns()` are one unsigned subtract and compare
 against a compile-time extent, with no loop, no per-slot comparison and no
 per-allocation metadata, and they are mutually exclusive by construction: a secret can
 never be accepted where plaintext is expected, or the reverse. A pointer below the base
@@ -402,14 +402,14 @@ Each pool's backing storage is named only from its `bind()`, on the allocation p
 ### Every TU declares its own worst case
 
 A pool size is not a chosen number. Each translation unit states the worst-case bytes
-it borrows in a single call as a `PC_WORK_*` constant in `protocore_config.h`, and the
+it borrows in a single call as a `PROTOCORE_WORK_*` constant in `protocore_config.h`, and the
 module that owns the working set proves it where the struct lives:
 
 ```c
-static_assert(sizeof(ChachapolyWork) <= PC_WORK_CHACHAPOLY, "...");
+static_assert(sizeof(ChachapolyWork) <= PROTOCORE_WORK_CHACHAPOLY, "...");
 ```
 
-`PC_SECURE_ARENA_SIZE` is then the **sum** of the terms a build actually compiles, each
+`PROTOCORE_SECURE_ARENA_SIZE` is then the **sum** of the terms a build actually compiles, each
 gated by its feature flag, so a build pays only for the code it has. A sum rather than a
 deepest-nest figure: the sum is a strict upper bound however those working sets nest,
 where a nest depth is only correct while the call graph stays as it is. It buys
@@ -445,22 +445,22 @@ Borrowing and moving live in the same module because both are about memory the l
 owns. Every operation below acts on a pool borrow, and each is stated once so a fix
 lands in one place and every codec inherits it.
 
-- **`pc_span` / `pc_cspan`** (span.h) carry storage, capacity, the produced length, and
+- **`protocore_span` / `protocore_cspan`** (span.h) carry storage, capacity, the produced length, and
   a sticky overflow flag. `pos` keeps counting past `cap` on overflow, so an undersized
   region reports the capacity it should have had instead of only failing. A failed
   borrow yields `{NULL, 0}`, never a null with a live capacity, so a caller that skips
-  `pc_span_ok()` writes nothing rather than dereferencing null. `plain.span()` /
+  `protocore_span_ok()` writes nothing rather than dereferencing null. `plain.span()` /
   `secure.span()` are the preferred borrow: one argument sets both fields, so the
   length cannot drift from what was reserved.
 - **`mem`** (protomem) walks a span a register word at a time; a source not co-aligned
   with the destination is funneled through two shifts and an OR. `mem.cmp` is not
-  constant time - a secret comparison uses `pc_ct_eq` (crypto/ct_eq.h).
+  constant time - a secret comparison uses `protocore_ct_eq` (crypto/ct_eq.h).
 - **`str`** (protostr) answers where a bounded run ends and where two part company, one
   word per test, with `ci` folding ASCII case inside the one body. Also the no-stdlib
   number parsing (`to_long` / `to_ulong` / `to_double` / `to_float`).
 - **`swar`** is the access layer under both: load a word, test its lanes branchless,
   name the lane that fired. Byte order enters in exactly one place,
-  `pc_swar_zero_lane`. Nothing in it walks a buffer or takes a capacity, which is what
+  `protocore_swar_zero_lane`. Nothing in it walks a buffer or takes a capacity, which is what
   keeps that claim true. The walks built on it are `str` and nothing else:
   `shared_primitives/runops.h` was a second full implementation of the same operations
   and was removed on 2026-08-08 (docs/BUGS.md), with its 44 call sites rewritten onto
@@ -470,16 +470,16 @@ lands in one place and every codec inherits it.
   and `proto_raw_read` for a span move at any alignment. `PROTO_RAW_WORD` follows
   `PROTO_WORD_BITS` from the board profile, not the build machine's pointer width.
 - **`membuild` / `frame`** build into bytes the caller already owns and never allocate.
-  `pc_sb` latches `ok` false on the first append that does not fit, so the caller tests
+  `protocore_sb` latches `ok` false on the first append that does not fit, so the caller tests
   one flag at the end instead of a return value per call. A frame is a
-  `static const pc_field[]` in rodata walked by one engine, so nothing is parsed at
+  `static const protocore_field[]` in rodata walked by one engine, so nothing is parsed at
   runtime and no float formatter is linked unless a frame declares a float field.
 - **`ring.h`** holds the SPSC drain and fill math both transports share (see the RX
   path above), plus the segment ring and the slot-mask view.
 
 ## Multi-vendor portability (ESP / STM / RP / TI ...)
 
-The library is already OSI-layered and the code prefix (`pc_` / `PC_`) is
+The library is already OSI-layered and the code prefix (`pc_` / `PROTOCORE_`) is
 vendor-neutral, but three layers still bake in ESP silicon: the per-die board
 profiles, the crypto accelerator HAL, and the physical (EMAC + PHY + raw-register
 / lwIP glue) layer. The goal is to **move the vendor-neutral majority into common
@@ -505,7 +505,7 @@ core_setup/hal/                     # the accelerator HAL - it is ONLY a HAL, pa
   rp/  { ... }                     # RP2350 SHA-256 block etc, else the crypto/ software path
   ti/  { ... }
 src/crypto/                  # stays vendor-AGNOSTIC: portable algorithms only, no move. The HW field/modmul
-  <chacha20, poly1305, sha*, ed25519, x25519, rsa/bignum>   # win is pulled in via the HAL's PC_RSA_MODMUL_HW
+  <chacha20, poly1305, sha*, ed25519, x25519, rsa/bignum>   # win is pulled in via the HAL's PROTOCORE_RSA_MODMUL_HW
                                                             # capability macro (already how it works today)
 src/network_drivers/physical/
   physical.h                 # common PHY/link API
@@ -515,20 +515,20 @@ src/network_drivers/physical/
   ti/  { ... }
 ```
 
-**Selector (the one new common seam):** a single `core_setup/board_profiles/pc_platform.h`
+**Selector (the one new common seam):** a single `core_setup/board_profiles/protocore_platform.h`
 maps the toolchain's target macro onto two axes and nothing else pulls vendor
 detail directly:
 
-- vendor: `PC_VENDOR_ESP` (from `CONFIG_IDF_TARGET_*`), `PC_VENDOR_STM` (from
-  `STM32*` / CMSIS device), `PC_VENDOR_RP` (`PICO_RP2350` ...), `PC_VENDOR_TI`.
+- vendor: `PROTOCORE_VENDOR_ESP` (from `CONFIG_IDF_TARGET_*`), `PROTOCORE_VENDOR_STM` (from
+  `STM32*` / CMSIS device), `PROTOCORE_VENDOR_RP` (`PICO_RP2350` ...), `PROTOCORE_VENDOR_TI`.
 - die/board: the existing `CONFIG_IDF_TARGET_*`-style discriminator per vendor.
 
 A **common selector point** then resolves the backend once per layer:
-`#if PC_VENDOR_ESP` -> `#include "esp/..."` `#elif PC_VENDOR_STM` -> `stm/...`
+`#if PROTOCORE_VENDOR_ESP` -> `#include "esp/..."` `#elif PROTOCORE_VENDOR_STM` -> `stm/...`
 else -> the portable software path (this is how `board_profile.h` picks the die
 profile). The crypto layer already does the vendor-agnostic thing without a
 dispatcher: `crypto/` is portable C, and each TU keys off the HAL's capability
-macro (`PC_RSA_MODMUL_HW`) that the selected `core_setup/hal/<vendor>/` backend defines - so
+macro (`PROTOCORE_RSA_MODMUL_HW`) that the selected `core_setup/hal/<vendor>/` backend defines - so
 `crypto/` never moves and never names a vendor. Common code sees an API/macro, not
 a vendor subdir.
 
@@ -538,7 +538,7 @@ a vendor subdir.
   portable software impl in `crypto/`, so a brand-new vendor with no accelerator
   still links and runs from day one; accel is added incrementally.
 - **Zero vendor-SDK symbols inside a HAL backend** - direct register access, our
-  own `PC_` register map, no `HAL_*` / `esp_*` / vendor struct (the
+  own `PROTOCORE_` register map, no `HAL_*` / `esp_*` / vendor struct (the
   `esp_crypto_hal` rule, applied per vendor). STM32 backends poke CRYP/HASH/PKA
   registers directly.
 - **Ground-truth-verify every backend** against that vendor's own headers with the
@@ -553,14 +553,14 @@ a vendor subdir.
   retained as the portable fallback + cold-path stack, not the fast path.
 - **One RTOS seam.** ESP is FreeRTOS; STM/RP may be FreeRTOS or bare-metal. Fold
   the few primitives we use (mutex, critical section, task spawn, the already-
-  abstracted `services/clock.h` time) behind a thin `services/pc_rtos` so a
+  abstracted `services/clock.h` time) behind a thin `services/protocore_rtos` so a
   vendor picks its RTOS without touching callers.
 - **MISRA C / AUTOSAR C++ hold across every backend** (global directive) and no
   `stdlib` in `src/`.
 
 **Sub-items (sized):**
 
-- Extract the ESP backends into `esp/` subdirs + add the `pc_platform.h` selector,
+- Extract the ESP backends into `esp/` subdirs + add the `protocore_platform.h` selector,
   with **zero behavior change on ESP32** (pure move + include rewire, CI-gated). (M)
 - Second vendor: **STM32** board profile + STM crypto HAL (PKA/CRYP/HASH) +
   STM ETH MAC/PHY physical backend, each ground-truth-verified vs CMSIS + KAT'd on
@@ -569,7 +569,7 @@ a vendor subdir.
   bootable before any accel exists. (L each)
 
 **Rename - drop "esp" from the name (`DeterministicAsyncWebServer`).** The code
-prefix `pc_`/`PC_` is _already_ vendor-neutral ("Deterministic Web Server"), so
+prefix `pc_`/`PROTOCORE_` is _already_ vendor-neutral ("Deterministic Web Server"), so
 this is a product/library-name + docs change, not a code-wide symbol churn. It
 touches the repo/library display name (`library.json` / `library.properties`),
 README, and the doc prose that says "ESP" where it now means "any target". Do it
@@ -584,12 +584,12 @@ on every die - there is **no software fallback being wrongly taken** on firmware
 But the mbedtls path uses `CONFIG_MBEDTLS_MPI_USE_INTERRUPT=y`: it blocks on the
 RSA-done interrupt for **every** modular multiply, and that per-op round-trip, not
 the accelerator, dominates. Evidence: our own polling-mode HAL `fe_mul` (single-shot
-`pc_rsa_modmul`) is comparable across dies (S3 1403 / P4 1896 / C6 1695 cyc for a
+`protocore_rsa_modmul`) is comparable across dies (S3 1403 / P4 1896 / C6 1695 cyc for a
 256-bit MODMULT), yet mbedtls's 2048-bit DH modexp spreads ~7.5x (P4 ~20.7k cyc per
 2048-bit modmul vs a raw modmul that should cost only a few thousand). The overhead
 is the interrupt/driver layer, not the silicon.
 
-**Opportunity:** build a PC modexp on top of the crypto HAL's polling `pc_rsa_modmul`
+**Opportunity:** build a PC modexp on top of the crypto HAL's polling `protocore_rsa_modmul`
 (Montgomery, CRT for RSA sign, constant-time exponent handling) so RSA/DH run at the
 accelerator's real throughput instead of interrupt-round-trip-bound. This is _also_ a
 portability win: it gives the library a **vendor-agnostic HW modexp** (the same HAL
@@ -597,7 +597,7 @@ API the STM PKA / others implement), so RSA/DH stop depending on each vendor's m
 port. **Tradeoff to measure, not assume** (run the experiment): polling busy-waits the
 worker for the modexp duration where interrupt mode yields; for the deterministic
 single-owner model a bounded ~tens-of-ms blocking op is likely fine, but confirm
-against `PC_WORKER_COUNT` scheduling before switching the default. Keep mbedtls as
+against `PROTOCORE_WORKER_COUNT` scheduling before switching the default. Keep mbedtls as
 the fallback where the HAL has no MODMULT (classic ESP32) or where a die's interrupt
 path already wins (measure C6). Legacy finite-field DH is lower-priority than RSA sign;
 modern KEX is curve25519/ECDH already.
@@ -607,7 +607,7 @@ modern KEX is curve25519/ECDH already.
 Raised 2026-07-27. lwIP is a fine portable reference stack but it is slow in the
 places that matter for a deterministic single-owner server, and several of its costs
 are structural, not tunable. Mirror what the crypto HAL did (`src/hal`: direct
-registers, our own `PC_` register map, **zero** `soc/` / vendor symbols, ground-truth
+registers, our own `PROTOCORE_` register map, **zero** `soc/` / vendor symbols, ground-truth
 `static_assert`-verified vs the vendor headers): pull the networking **data path** out
 of lwIP into a direct-register/DMA HAL under `network_drivers/physical/<vendor>/`, and
 keep lwIP only as the portable fallback / cold-path L3+ where throughput does not
@@ -630,7 +630,7 @@ matter.
 - **coarse timers + conservative window/retransmit logic** - leave throughput on the
   table on a fast local link.
 
-**Opportunity:** a `pc_net` datapath HAL (RX/TX descriptor rings + a minimal,
+**Opportunity:** a `protocore_net` datapath HAL (RX/TX descriptor rings + a minimal,
 deterministic TCP fast-path) that runs the common case at wire/DMA speed, with lwIP
 retained for ARP/ICMP/DHCP/edge cases and as the portability floor for a new vendor
 before its HAL exists. Same shape as the crypto HAL: vendor-agnostic API, per-die
@@ -670,7 +670,7 @@ instructions. Asserting them in a comment does not make them survive a toolchain
 
 ### What was decided
 
-**The API is C-shaped; the implementation stays C++.** Flat `pc_` / `PC_` names at global scope, no
+**The API is C-shaped; the implementation stays C++.** Flat `pc_` / `PROTOCORE_` names at global scope, no
 namespace, so a C caller can reach everything (see [SYMBOLS.md](SYMBOLS.md) for the full naming law and the
 designs rejected). The C++ objection for control law is about the behavior of the emitted binary, and that
 is established directly at the instruction level rather than inferred from the source language - so the
@@ -680,7 +680,7 @@ rejected as unnecessary churn.
 **One octet abstraction, packed everywhere.**
 
 ```
-pc_octet_ptr   // byte-addressable targets: a plain uint8_t*, the macros compile to nothing
+protocore_octet_ptr   // byte-addressable targets: a plain uint8_t*, the macros compile to nothing
                // C28x:                     word address + lane selector, asm accessors
 ```
 

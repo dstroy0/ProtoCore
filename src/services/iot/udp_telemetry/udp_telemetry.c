@@ -10,10 +10,10 @@
  */
 
 #include "services/iot/udp_telemetry/udp_telemetry.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_UDP_TELEMETRY
+#if PROTOCORE_ENABLE_UDP_TELEMETRY
 
 #include <stdio.h>
 
@@ -21,10 +21,10 @@
 // Line builder (pure)
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/udp.h"
 #endif
-static void line_append(pc_line *l, const char *s)
+static void line_append(protocore_line *l, const char *s)
 {
     if (l->overflow)
     {
@@ -42,13 +42,13 @@ static void line_append(pc_line *l, const char *s)
 }
 
 // Separator before a field: a space before the first, a comma after.
-static void line_sep(pc_line *l)
+static void line_sep(protocore_line *l)
 {
     line_append(l, l->have_fields ? "," : " ");
     l->have_fields = PROTO_TRUE;
 }
 
-void pc_line_init(pc_line *l, char *buf, size_t cap, const char *measurement)
+void protocore_line_init(protocore_line *l, char *buf, size_t cap, const char *measurement)
 {
     l->buf = buf;
     l->cap = cap;
@@ -64,7 +64,7 @@ void pc_line_init(pc_line *l, char *buf, size_t cap, const char *measurement)
 
 // Append a string with InfluxDB tag/key escaping: comma, equals and space are
 // backslash-escaped (line protocol, "Special characters").
-static void line_append_escaped(pc_line *l, const char *s)
+static void line_append_escaped(protocore_line *l, const char *s)
 {
     if (!s)
     {
@@ -85,7 +85,7 @@ static void line_append_escaped(pc_line *l, const char *s)
     }
 }
 
-void pc_line_add_tag(pc_line *l, const char *key, const char *val)
+void protocore_line_add_tag(protocore_line *l, const char *key, const char *val)
 {
     // Tags are part of the series key: they come right after the measurement,
     // comma-separated, BEFORE the space-separated fields. Adding one after a field
@@ -101,7 +101,7 @@ void pc_line_add_tag(pc_line *l, const char *key, const char *val)
     line_append_escaped(l, val);
 }
 
-void pc_line_set_timestamp(pc_line *l, int64_t timestamp)
+void protocore_line_set_timestamp(protocore_line *l, int64_t timestamp)
 {
     if (!l->have_fields) // a line needs at least one field before the timestamp
     {
@@ -109,23 +109,23 @@ void pc_line_set_timestamp(pc_line *l, int64_t timestamp)
         return;
     }
     char num[24];
-    pc_sb sb_num = {num, sizeof(num), 0, PROTO_TRUE};
-    pc_sb_put(&sb_num, " ");
-    pc_sb_i64(&sb_num, (int64_t)((long long)timestamp));
-    if (pc_sb_finish(&sb_num) == 0)
+    protocore_sb sb_num = {num, sizeof(num), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_num, " ");
+    protocore_sb_i64(&sb_num, (int64_t)((long long)timestamp));
+    if (protocore_sb_finish(&sb_num) == 0)
     {
         num[0] = '\0'; // space-separated trailing timestamp
     }
     line_append(l, num);
 }
 
-void pc_line_add_int(pc_line *l, const char *field, int64_t v)
+void protocore_line_add_int(protocore_line *l, const char *field, int64_t v)
 {
     char num[24];
-    pc_sb sb_num2 = {num, sizeof(num), 0, PROTO_TRUE};
-    pc_sb_i64(&sb_num2, (int64_t)((long long)v));
-    pc_sb_put(&sb_num2, "i");
-    if (pc_sb_finish(&sb_num2) == 0)
+    protocore_sb sb_num2 = {num, sizeof(num), 0, PROTO_TRUE};
+    protocore_sb_i64(&sb_num2, (int64_t)((long long)v));
+    protocore_sb_put(&sb_num2, "i");
+    if (protocore_sb_finish(&sb_num2) == 0)
     {
         num[0] = '\0'; // InfluxDB integer suffix
     }
@@ -135,13 +135,13 @@ void pc_line_add_int(pc_line *l, const char *field, int64_t v)
     line_append(l, num);
 }
 
-void pc_line_add_uint(pc_line *l, const char *field, uint64_t v)
+void protocore_line_add_uint(protocore_line *l, const char *field, uint64_t v)
 {
     char num[24];
-    pc_sb sb_num3 = {num, sizeof(num), 0, PROTO_TRUE};
-    pc_sb_u64(&sb_num3, (uint64_t)((unsigned long long)v));
-    pc_sb_put(&sb_num3, "u");
-    if (pc_sb_finish(&sb_num3) == 0)
+    protocore_sb sb_num3 = {num, sizeof(num), 0, PROTO_TRUE};
+    protocore_sb_u64(&sb_num3, (uint64_t)((unsigned long long)v));
+    protocore_sb_put(&sb_num3, "u");
+    if (protocore_sb_finish(&sb_num3) == 0)
     {
         num[0] = '\0'; // InfluxDB UInteger suffix 'u' (not signed 'i')
     }
@@ -151,12 +151,12 @@ void pc_line_add_uint(pc_line *l, const char *field, uint64_t v)
     line_append(l, num);
 }
 
-void pc_line_add_float(pc_line *l, const char *field, float v, uint8_t decimals)
+void protocore_line_add_float(protocore_line *l, const char *field, float v, uint8_t decimals)
 {
     char num[32];
-    pc_sb sb_num4 = {num, sizeof(num), 0, PROTO_TRUE};
-    pc_sb_fixed(&sb_num4, (double)((double)v), (unsigned)((int)decimals));
-    if (pc_sb_finish(&sb_num4) == 0)
+    protocore_sb sb_num4 = {num, sizeof(num), 0, PROTO_TRUE};
+    protocore_sb_fixed(&sb_num4, (double)((double)v), (unsigned)((int)decimals));
+    if (protocore_sb_finish(&sb_num4) == 0)
     {
         num[0] = '\0';
     }
@@ -166,12 +166,12 @@ void pc_line_add_float(pc_line *l, const char *field, float v, uint8_t decimals)
     line_append(l, num);
 }
 
-size_t pc_line_len(const pc_line *l)
+size_t protocore_line_len(const protocore_line *l)
 {
     return l->pos;
 }
 
-proto_bool pc_line_ok(const pc_line *l)
+proto_bool protocore_line_ok(const protocore_line *l)
 {
     return !l->overflow && l->have_fields;
 }
@@ -180,25 +180,25 @@ proto_bool pc_line_ok(const pc_line *l)
 // Cast
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 
 // All UDP-telemetry cast state, owned by one instance (internal linkage): the collector
 // endpoint and the begun flag, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    pc_ip collector; // parsed once by begin(); a cast is a build and a queue
+    protocore_ip collector; // parsed once by begin(); a cast is a build and a queue
     uint16_t port;
     proto_bool begun;
 } UdpTelemetryCtx;
 static UdpTelemetryCtx s_ut;
 
-void pc_udp_telemetry_begin(const char *collector_ip, uint16_t port)
+void protocore_udp_telemetry_begin(const char *collector_ip, uint16_t port)
 {
     s_ut.begun = Ip.parse(collector_ip, &s_ut.collector);
     s_ut.port = port;
 }
 
-proto_bool pc_udp_telemetry_send(const char *data, size_t len)
+proto_bool protocore_udp_telemetry_send(const char *data, size_t len)
 {
     if (!s_ut.begun || !data)
     {
@@ -209,28 +209,28 @@ proto_bool pc_udp_telemetry_send(const char *data, size_t len)
 
 #else // host build - no network
 
-void pc_udp_telemetry_begin(const char *collector_ip, uint16_t port)
+void protocore_udp_telemetry_begin(const char *collector_ip, uint16_t port)
 {
     (void)collector_ip;
     (void)port;
 }
 
-proto_bool pc_udp_telemetry_send(const char *buf, size_t pos)
+proto_bool protocore_udp_telemetry_send(const char *buf, size_t pos)
 {
     (void)buf;
     (void)pos;
     return PROTO_FALSE;
 }
 
-#endif // PC_HAS_NET_STACK
+#endif // PROTOCORE_HAS_NET_STACK
 
-proto_bool pc_udp_telemetry_cast(const pc_line *l)
+proto_bool protocore_udp_telemetry_cast(const protocore_line *l)
 {
-    if (!pc_line_ok(l))
+    if (!protocore_line_ok(l))
     {
         return PROTO_FALSE;
     }
-    return pc_udp_telemetry_send(l->buf, l->pos);
+    return protocore_udp_telemetry_send(l->buf, l->pos);
 }
 
-#endif // PC_ENABLE_UDP_TELEMETRY
+#endif // PROTOCORE_ENABLE_UDP_TELEMETRY

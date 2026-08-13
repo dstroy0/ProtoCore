@@ -3,7 +3,7 @@
 
 /**
  * @file ocit.h
- * @brief OCIT-Outstations message codec (PC_ENABLE_OCIT).
+ * @brief OCIT-Outstations message codec (PROTOCORE_ENABLE_OCIT).
  *
  * OCIT (Open Communication Interface for Road Traffic Control) is the DE/AT/CH open field-controller
  * interface between central traffic computers, field controllers, and detectors. The OCIT-Outstations
@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_OCIT
+#if PROTOCORE_ENABLE_OCIT
 
 // OCIT message types: wire bytes compared/emitted, so integer constants in a namespacing struct.
 // (OcitMsg is the parsed-message struct below; these codes live in OcitMsgType.)
@@ -51,11 +51,11 @@ PROTO_BEGIN_DECLS
  * @param value_len   value length.
  * @return the message length (6 + value_len), or 0 on overflow / bad args.
  */
-size_t pc_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type, const uint8_t *value,
-                     size_t value_len, uint8_t *out, size_t cap);
+size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type,
+                            const uint8_t *value, size_t value_len, uint8_t *out, size_t cap);
 
 /** @brief Convenience: build a SET of a uint16 value. */
-size_t pc_ocit_set_u16(uint16_t object_type, uint16_t instance, uint16_t value, uint8_t *out, size_t cap);
+size_t protocore_ocit_set_u16(uint16_t object_type, uint16_t instance, uint16_t value, uint8_t *out, size_t cap);
 
 /** @brief A parsed OCIT message (value points into the input). */
 typedef struct
@@ -69,13 +69,13 @@ typedef struct
 } OcitMsg;
 
 /** @brief Parse an OCIT message. @return true if @p len >= 6. */
-proto_bool pc_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out);
+proto_bool protocore_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out);
 
 /** @brief Read a big-endian uint16 value out of a parsed message (0 if the type/length does not match). */
-uint16_t pc_ocit_value_u16(const OcitMsg *m);
+uint16_t protocore_ocit_value_u16(const OcitMsg *m);
 
-#endif // PC_ENABLE_OCIT
+#endif // PROTOCORE_ENABLE_OCIT
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_OCIT_H

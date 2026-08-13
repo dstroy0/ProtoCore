@@ -18,22 +18,22 @@
 #include "network_drivers/presentation/http/http.h" // HttpMethod and Handler: what a row dispatches on
 #include "protocore_config.h"                       // the entry point: MAX_ROUTES, and the widths
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Discriminates between HTTP, WebSocket, and SSE route entries. */
 typedef enum
 {
     ROUTE_HTTP, ///< Standard HTTP request/response.
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
     ROUTE_WS, ///< WebSocket upgrade route.
 #endif
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
     ROUTE_SSE, ///< Server-Sent Events route.
 #endif
-#if PC_ENABLE_FILE_SERVING
+#if PROTOCORE_ENABLE_FILE_SERVING
     ROUTE_STATIC, ///< Static-file subtree mount (serve_static()).
 #endif
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
     ROUTE_DAV, ///< WebDAV subtree mount (dav()).
 #endif
 } HttpRouteType;
@@ -51,37 +51,37 @@ typedef struct HttpRoute
     HttpMethod method;       ///< HTTP method (ROUTE_HTTP only).
     Handler callback;        ///< HTTP handler (ROUTE_HTTP only).
 
-#if PC_ENABLE_WEBSOCKET
-    /// The handler set this route serves, or PC_WS_NONE. The handlers belong to the websocket
+#if PROTOCORE_ENABLE_WEBSOCKET
+    /// The handler set this route serves, or PROTOCORE_WS_NONE. The handlers belong to the websocket
     /// module: a route decides where a request goes, and what runs once the socket is open is not
     /// routing's business.
     uint8_t ws_id;
 #endif
 
-#if PC_ENABLE_SSE
-    /// The handler this route serves, or PC_SSE_NONE. The handler belongs to the sse module: a
+#if PROTOCORE_ENABLE_SSE
+    /// The handler this route serves, or PROTOCORE_SSE_NONE. The handler belongs to the sse module: a
     /// route decides where a request goes, not what runs once a client subscribes.
     uint8_t sse_id;
 #endif
 
-#if PC_ENABLE_FILE_SERVING
-    /// The mount point this route serves, or PC_MNT_NONE. The backend and subtree belong to mnt:
+#if PROTOCORE_ENABLE_FILE_SERVING
+    /// The mount point this route serves, or PROTOCORE_MNT_NONE. The backend and subtree belong to mnt:
     /// two registrars describe a mount the same way, so the description lives with mounting.
     uint8_t mnt_id;
 #endif
 
-#if PC_ENABLE_AUTH
-    /// The credential set this route needs, or PC_AUTH_NONE. The credentials themselves belong to
+#if PROTOCORE_ENABLE_AUTH
+    /// The credential set this route needs, or PROTOCORE_AUTH_NONE. The credentials themselves belong to
     /// the auth module: a route decides where a request goes, and key material in a routing entry is
     /// a copy of a secret in a place that has no reason to hold one.
     uint8_t auth_id; ///< Required password.
 #endif
 
-    proto_bool is_active;    ///< `false` for unused table slots.
-    proto_bool is_wildcard;  ///< `true` when path ends with `*`.
-    proto_bool is_param;     ///< `true` when the path contains a `:name` segment.
-    proto_bool is_regex;     ///< `true` when the path is a regex (see on_regex()).
-    pc_if_kind iface_filter; ///< Interface gate; PC_IF_ANY (0) = match any interface.
+    proto_bool is_active;           ///< `false` for unused table slots.
+    proto_bool is_wildcard;         ///< `true` when path ends with `*`.
+    proto_bool is_param;            ///< `true` when the path contains a `:name` segment.
+    proto_bool is_regex;            ///< `true` when the path is a regex (see on_regex()).
+    protocore_if_kind iface_filter; ///< Interface gate; PROTOCORE_IF_ANY (0) = match any interface.
 } HttpRoute;
 
 /** @brief The table's storage. Declared, never defined here: the layout stays in route.c. */
@@ -112,6 +112,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const HttpRouteNs HttpRoutes;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HTTP_ROUTE_H

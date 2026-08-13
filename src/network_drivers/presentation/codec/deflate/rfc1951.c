@@ -24,7 +24,7 @@ static const short dist_extra[30] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,
 // The one instance the header hands out.
 static const Rfc1951Ns instance = {len_base, len_extra, dist_base, dist_extra};
 
-const Rfc1951Ns *pc_rfc1951(void)
+const Rfc1951Ns *protocore_rfc1951(void)
 {
     return &instance;
 }

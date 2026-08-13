@@ -1,6 +1,6 @@
 # Pentesting suite - live adversarial tester
 
-**What this is:** `pc_pentest.py`, a stdlib-only Python driver that attacks a
+**What this is:** `protocore_pentest.py`, a stdlib-only Python driver that attacks a
 **running** ProtoCore device the way a hostile client would,
 and asserts the guarantees that keep a deterministic, zero-heap device safe. It is
 the on-device companion to the host-side parser fuzzer (`env:native_pentest`, see
@@ -30,7 +30,7 @@ reproducible, and runs in CI.
 
 But a real device is more than its parsers: it has a fixed connection pool, accept
 and per-IP throttles, auth lockout, TLS, idle-timeout reaping, and a strict "no
-heap after `begin()`" promise. Those only exist on the wire. `pc_pentest.py`
+heap after `begin()`" promise. Those only exist on the wire. `protocore_pentest.py`
 drives a flashed board and confirms the **live** behavior:
 
 - **It fails closed** - oversized/malformed requests get 4xx, never a crash.
@@ -70,8 +70,8 @@ text:
 HEALTH_PATHS = ("/health", "/stats", "/metrics", "/diag")
 ```
 
-So if you build with `PC_ENABLE_GUARDRAILS` (`/health`), `PC_ENABLE_STATS`
-(`/stats`), or `PC_ENABLE_METRICS` (`/metrics`), heap-drift detection lights up
+So if you build with `PROTOCORE_ENABLE_GUARDRAILS` (`/health`), `PROTOCORE_ENABLE_STATS`
+(`/stats`), or `PROTOCORE_ENABLE_METRICS` (`/metrics`), heap-drift detection lights up
 for free. Without any of them the tool still runs; it just reports `heap=n/a`.
 
 The third oracle, **fail-closed**, is asserted per-attack (e.g. an oversized
@@ -83,17 +83,17 @@ You do not want to run the SNMP fuzzer against a build with SNMP compiled out. T
 tool picks the applicable attacks three ways, in increasing manual control:
 
 1. **Auto-detect (`--diag`)** - read the device's own `/diag` endpoint
-   (`PC_ENABLE_DIAG`) and enable the matching attacks. `/diag` reports a
+   (`PROTOCORE_ENABLE_DIAG`) and enable the matching attacks. `/diag` reports a
    `features` map and a `config` block; the tool maps the booleans to flags and
    uses the sizes (e.g. `MAX_CONNS`) to tune the attack intensity:
 
     ```python
     DIAG_FEATURE_FLAG = {
-        "websocket": "PC_ENABLE_WEBSOCKET",
-        "sse": "PC_ENABLE_SSE",
-        "multipart": "PC_ENABLE_MULTIPART",
-        "file_serving": "PC_ENABLE_FILE_SERVING",
-        "auth": "PC_ENABLE_AUTH",
+        "websocket": "PROTOCORE_ENABLE_WEBSOCKET",
+        "sse": "PROTOCORE_ENABLE_SSE",
+        "multipart": "PROTOCORE_ENABLE_MULTIPART",
+        "file_serving": "PROTOCORE_ENABLE_FILE_SERVING",
+        "auth": "PROTOCORE_ENABLE_AUTH",
     }
     ```
 
@@ -101,7 +101,7 @@ tool picks the applicable attacks three ways, in increasing manual control:
    features `/diag` does not enumerate (CoAP, SNMP, Modbus, TLS, throttles, ...):
 
     ```sh
-    --flags PC_ENABLE_AUTH,PC_ENABLE_ACCEPT_THROTTLE,PC_ENABLE_COAP
+    --flags PROTOCORE_ENABLE_AUTH,PROTOCORE_ENABLE_ACCEPT_THROTTLE,PROTOCORE_ENABLE_COAP
     ```
 
 3. **Everything (`--all`)** - run every attack whose port is reachable, regardless
@@ -141,7 +141,7 @@ A representative module - path traversal - shows the shape: probe a set of
 encoded escapes and only flag a finding if the filesystem actually leaks:
 
 ```python
-@attack("http_path_traversal", ["http", "traversal"], ["PC_ENABLE_FILE_SERVING"], "http",
+@attack("http_path_traversal", ["http", "traversal"], ["PROTOCORE_ENABLE_FILE_SERVING"], "http",
         "../ and encoded traversal must never escape the served root.")
 def a_traversal(ctx, res):
     probes = ["/../../../../etc/passwd", "/%2e%2e/%2e%2e/%2e%2e/etc/passwd",
@@ -207,35 +207,35 @@ library's zero-dependency ethos and means it runs anywhere Python does.
 List everything the tool can do (no target needed):
 
 ```sh
-python3 pc_pentest.py --list
+python3 protocore_pentest.py --list
 ```
 
 Auto-detect features from `/diag` and run the applicable suite at medium intensity:
 
 ```sh
-python3 pc_pentest.py --host 192.168.1.85 --diag --authorized
+python3 protocore_pentest.py --host 192.168.1.85 --diag --authorized
 ```
 
 Declare your flags explicitly (when `/diag` is off or for non-HTTP features):
 
 ```sh
-python3 pc_pentest.py --host 192.168.1.85 \
-  --flags PC_ENABLE_AUTH,PC_ENABLE_AUTH_LOCKOUT,PC_ENABLE_ACCEPT_THROTTLE \
+python3 protocore_pentest.py --host 192.168.1.85 \
+  --flags PROTOCORE_ENABLE_AUTH,PROTOCORE_ENABLE_AUTH_LOCKOUT,PROTOCORE_ENABLE_ACCEPT_THROTTLE \
   --secure-path /admin --username admin --password hunter2 --authorized
 ```
 
 Throw everything reachable at it, hard, and save a machine-readable report:
 
 ```sh
-python3 pc_pentest.py --host 192.168.1.85 --all --intensity high \
+python3 protocore_pentest.py --host 192.168.1.85 --all --intensity high \
   --json report.json --authorized
 ```
 
 Target the binary protocols on their own ports:
 
 ```sh
-python3 pc_pentest.py --host 192.168.1.85 \
-  --flags PC_ENABLE_COAP,PC_ENABLE_SNMP,PC_ENABLE_MODBUS \
+python3 protocore_pentest.py --host 192.168.1.85 \
+  --flags PROTOCORE_ENABLE_COAP,PROTOCORE_ENABLE_SNMP,PROTOCORE_ENABLE_MODBUS \
   --coap-port 5683 --snmp-port 161 --modbus-port 502 --authorized
 ```
 
@@ -261,7 +261,7 @@ Adding an attack is one decorated function. Declare its tags and required featur
 fill the `TestResult`, and let the global oracles handle liveness + heap:
 
 ```python
-@attack("my_attack", ["http", "fuzz"], ["PC_ENABLE_THING"], "http",
+@attack("my_attack", ["http", "fuzz"], ["PROTOCORE_ENABLE_THING"], "http",
         "One-line description of what must hold.")
 def a_my_attack(ctx, res):
     r = http_request(ctx.target, "GET", "/thing")

@@ -24,8 +24,8 @@ its own little phone book.
 2. Edit the **name records** - the phone-book entries - to match your network:
 
     ```cpp
-    pc_dns_server_add("printer.lan", 192, 168, 1, 50);   // name, then the four numbers of the IP
-    pc_dns_server_add("nas.lan",     192, 168, 1, 60);
+    protocore_dns_server_add("printer.lan", 192, 168, 1, 50);   // name, then the four numbers of the IP
+    protocore_dns_server_add("nas.lan",     192, 168, 1, 60);
     ```
 
     (`esp32.lan` is added for you and points at the board itself.)
@@ -69,14 +69,14 @@ The feature lives in the library, so the flag must reach the whole build:
 ```bash
 pio ci examples/L7-Application/DnsServer \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_DNS_SERVER=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DNS_SERVER=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
 
 ## How it works (for the curious)
 
-`pc_dns_server_add(name, a, b, c, d)` stores a `name -> IPv4` record in a small fixed table.
+`protocore_dns_server_add(name, a, b, c, d)` stores a `name -> IPv4` record in a small fixed table.
 `DnsServer.begin()` binds UDP/53 through the library's transport UDP service; each query is
 handed to the pure `DnsServer.build_response()`, which parses the question, looks the name up
 (case-insensitively), and - for an A/IN query that hits - appends one answer record (using DNS

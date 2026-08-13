@@ -9,7 +9,7 @@
 #include "network_drivers/application/nts/nts.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_NTS
+#if PROTOCORE_ENABLE_NTS
 
 const char NTS_EXPORTER_LABEL[] = "EXPORTER-network-time-security";
 
@@ -23,7 +23,7 @@ static uint16_t get_u16(const uint8_t *p)
     return (uint16_t)((p[0] << 8) | p[1]);
 }
 
-size_t pc_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, uint8_t *out,
+size_t protocore_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, uint8_t *out,
                         size_t cap)
 {
     if (!out || (body_len && !body) || body_len > 0xFFFF)
@@ -44,7 +44,7 @@ size_t pc_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body,
     return n;
 }
 
-size_t pc_nts_ke_request(uint8_t *out, size_t cap)
+size_t protocore_nts_ke_request(uint8_t *out, size_t cap)
 {
     uint8_t proto[2];
     put_u16(proto, NTS_NEXT_PROTO_NTPV4);
@@ -53,19 +53,19 @@ size_t pc_nts_ke_request(uint8_t *out, size_t cap)
 
     size_t n = 0;
     size_t r;
-    r = pc_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, proto, 2, out + n, cap - n);
+    r = protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, proto, 2, out + n, cap - n);
     if (!r)
     {
         return 0;
     }
     n += r;
-    r = pc_nts_ke_record(PROTO_TRUE, NTS_KE_AEAD_ALGORITHM, aead, 2, out + n, cap - n);
+    r = protocore_nts_ke_record(PROTO_TRUE, NTS_KE_AEAD_ALGORITHM, aead, 2, out + n, cap - n);
     if (!r)
     {
         return 0;
     }
     n += r;
-    r = pc_nts_ke_record(PROTO_TRUE, NTS_KE_END_OF_MESSAGE, NULL, 0, out + n, cap - n);
+    r = protocore_nts_ke_record(PROTO_TRUE, NTS_KE_END_OF_MESSAGE, NULL, 0, out + n, cap - n);
     if (!r)
     {
         return 0;
@@ -74,7 +74,7 @@ size_t pc_nts_ke_request(uint8_t *out, size_t cap)
     return n;
 }
 
-proto_bool pc_nts_ke_parse(const uint8_t *buf, size_t len, pc_nts_ke_cb cb, void *arg)
+proto_bool protocore_nts_ke_parse(const uint8_t *buf, size_t len, protocore_nts_ke_cb cb, void *arg)
 {
     size_t off = 0;
     proto_bool saw_end = PROTO_FALSE;
@@ -102,7 +102,7 @@ proto_bool pc_nts_ke_parse(const uint8_t *buf, size_t len, pc_nts_ke_cb cb, void
     return saw_end; // a well-formed stream is terminated by an End-of-Message record
 }
 
-size_t pc_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_len, uint8_t *out, size_t cap)
+size_t protocore_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_len, uint8_t *out, size_t cap)
 {
     if (!out || (value_len && !value))
     {
@@ -128,14 +128,14 @@ size_t pc_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_len, ui
     return padded;
 }
 
-size_t pc_nts_ef_unique_id(const uint8_t *nonce, size_t nonce_len, uint8_t *out, size_t cap)
+size_t protocore_nts_ef_unique_id(const uint8_t *nonce, size_t nonce_len, uint8_t *out, size_t cap)
 {
-    return pc_nts_ef(NTS_EF_UNIQUE_IDENTIFIER, nonce, nonce_len, out, cap);
+    return protocore_nts_ef(NTS_EF_UNIQUE_IDENTIFIER, nonce, nonce_len, out, cap);
 }
 
-size_t pc_nts_ef_cookie(const uint8_t *cookie, size_t cookie_len, uint8_t *out, size_t cap)
+size_t protocore_nts_ef_cookie(const uint8_t *cookie, size_t cookie_len, uint8_t *out, size_t cap)
 {
-    return pc_nts_ef(NTS_EF_COOKIE, cookie, cookie_len, out, cap);
+    return protocore_nts_ef(NTS_EF_COOKIE, cookie, cookie_len, out, cap);
 }
 
-#endif // PC_ENABLE_NTS
+#endif // PROTOCORE_ENABLE_NTS

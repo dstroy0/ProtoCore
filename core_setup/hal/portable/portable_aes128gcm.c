@@ -6,65 +6,65 @@
  * @brief AES-128-GCM and the AES-128 block in software - the backend for a target with no accelerated AEAD.
  *
  * Software AES-128 plus a 4-bit-table GHASH. Selected explicitly by a vendor profile that sets
- * PC_HAS_HW_AESGCM 0; never a fallback. There is no weak symbol anywhere in the chain, so linking no
+ * PROTOCORE_HAS_HW_AESGCM 0; never a fallback. There is no weak symbol anywhere in the chain, so linking no
  * backend is an undefined reference and linking two is a duplicate definition.
  *
  * The context is keyed: the AES schedule, H and the GHASH table are built once per key. Only J0 and the
  * counter are per record.
  */
 
-#include "core_setup/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/protocore_platform.h"
 #include "crypto/aead/aes128gcm.h"
 #include "crypto/cipher/aes_block.h"
 #include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h" // pc_ct_eq
+#include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/ghash.h"
 #include "mmgr/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
 #include "mmgr/secure.h"
-#include "protocore_config.h" // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
+#include "protocore_config.h" // PROTOCORE_ENABLE_* gate the whole file; protocore_platform.h does not pull this in
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE)
-#if !PC_HAS_HW_AESGCM
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB || PROTOCORE_TLS_SOFTWARE)
+#if !PROTOCORE_HAS_HW_AESGCM
 
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
-// pc_aes128 - definition private to this backend; aes128gcm.h forward-declares the symbol only.
-typedef struct pc_aes128
+// protocore_aes128 - definition private to this backend; aes128gcm.h forward-declares the symbol only.
+typedef struct protocore_aes128
 {
     uint32_t rk[44]; ///< AES-128 expanded round-key schedule (11 round keys x 4 words).
-} pc_aes128;
+} protocore_aes128;
 
-static_assert(sizeof(pc_aes128) <= PC_WORK_AES128, "pc_aes128 outgrew PC_WORK_AES128 - raise it in protocore_config.h");
+static_assert(sizeof(protocore_aes128) <= PROTOCORE_WORK_AES128, "protocore_aes128 outgrew PROTOCORE_WORK_AES128 - raise it in protocore_config.h");
 
-struct pc_aes128 *pc_aes128_wants(void)
+struct protocore_aes128 *protocore_aes128_wants(void)
 {
-    pc_span ws = pc_secure_span(sizeof(pc_aes128), _Alignof(pc_aes128));
-    return pc_span_ok(ws) ? (struct pc_aes128 *)(ws.buf) : NULL;
+    protocore_span ws = protocore_secure_span(sizeof(protocore_aes128), _Alignof(protocore_aes128));
+    return protocore_span_ok(ws) ? (struct protocore_aes128 *)(ws.buf) : NULL;
 }
 
-void pc_aes128_init(struct pc_aes128 *ctx, const uint8_t key[16])
+void protocore_aes128_init(struct protocore_aes128 *ctx, const uint8_t key[16])
 {
-    pc_aes_key_expand(key, 4, ctx->rk);
+    protocore_aes_key_expand(key, 4, ctx->rk);
 }
 
-void pc_aes128_encrypt_block(struct pc_aes128 *ctx, const uint8_t in[16], uint8_t out[16])
+void protocore_aes128_encrypt_block(struct protocore_aes128 *ctx, const uint8_t in[16], uint8_t out[16])
 {
-    pc_aes_encrypt_block(ctx->rk, 10, in, out);
+    protocore_aes_encrypt_block(ctx->rk, 10, in, out);
 }
 
-void pc_aes128_wipe(struct pc_aes128 *ctx)
+void protocore_aes128_wipe(struct protocore_aes128 *ctx)
 {
-    pc_secure_wipe(ctx, sizeof(pc_aes128));
+    protocore_secure_wipe(ctx, sizeof(protocore_aes128));
 }
 
 // ===========================================================================
 // AEAD_AES_128_GCM (NIST SP 800-38D). The struct IS the keyed context: aes/h/ghk are built once per key
-// by pc_aes128gcm_key_init, the rest is per-record scratch.
+// by protocore_aes128gcm_key_init, the rest is per-record scratch.
 // ===========================================================================
 
 typedef struct
 {
-    pc_aes128 aes;   ///< AES-128 key schedule.
+    protocore_aes128 aes;   ///< AES-128 key schedule.
     uint8_t h[16];   ///< GHASH subkey H = E(K, 0^128).
     GhashKey ghk;    ///< 4-bit GHASH table built from H.
     uint8_t ks[16];  ///< GCTR keystream block.
@@ -75,9 +75,9 @@ typedef struct
     uint8_t ctr[16]; ///< running GCTR counter.
     uint8_t tag[16]; ///< computed tag (open: compared; seal writes the caller's buffer directly).
 } Aes128GcmWork;
-static_assert(sizeof(Aes128GcmWork) <= PC_WORK_AES128GCM,
-              "Aes128GcmWork outgrew PC_WORK_AES128GCM - raise it in protocore_config.h, which derives "
-              "PC_SECURE_ARENA_SIZE from it");
+static_assert(sizeof(Aes128GcmWork) <= PROTOCORE_WORK_AES128GCM,
+              "Aes128GcmWork outgrew PROTOCORE_WORK_AES128GCM - raise it in protocore_config.h, which derives "
+              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
 static inline void xor16(uint8_t *dst, const uint8_t *src)
 {
@@ -129,7 +129,7 @@ static void gctr(Aes128GcmWork *w, const uint8_t *in, size_t len, uint8_t *out)
     size_t off = 0;
     while (off < len)
     {
-        pc_aes128_encrypt_block(&w->aes, w->ctr, w->ks);
+        protocore_aes128_encrypt_block(&w->aes, w->ctr, w->ks);
         inc32(w->ctr);
         size_t take = len - off;
         if (take > 16)
@@ -151,7 +151,7 @@ static void gcm_core(Aes128GcmWork *w, const uint8_t nonce[12], const uint8_t *a
                      const uint8_t *cipher, size_t cipher_len, uint8_t tag_out[16])
 {
     memset(w->h, 0, 16);
-    pc_aes128_encrypt_block(&w->aes, w->h, w->h); // H = E(K, 0^128)
+    protocore_aes128_encrypt_block(&w->aes, w->h, w->h); // H = E(K, 0^128)
     ghash_key_init(&w->ghk, w->h);
 
     // 96-bit nonce: J0 = nonce || 0^31 || 1.
@@ -169,7 +169,7 @@ static void gcm_core(Aes128GcmWork *w, const uint8_t nonce[12], const uint8_t *a
     xor16(w->acc, w->lb);
     ghash_mul(&w->ghk, w->acc);
 
-    pc_aes128_encrypt_block(&w->aes, w->j0, w->ej0);
+    protocore_aes128_encrypt_block(&w->aes, w->j0, w->ej0);
     for (int i = 0; i < 16; i++)
     {
         tag_out[i] = w->acc[i] ^ w->ej0[i];
@@ -199,33 +199,33 @@ static void gcm_tag(Aes128GcmWork *w, const uint8_t *aad, size_t aad_len, const 
     xor16(w->acc, w->lb);
     ghash_mul(&w->ghk, w->acc);
 
-    pc_aes128_encrypt_block(&w->aes, w->j0, w->ej0);
+    protocore_aes128_encrypt_block(&w->aes, w->j0, w->ej0);
     for (int i = 0; i < 16; i++)
     {
         tag_out[i] = w->acc[i] ^ w->ej0[i];
     }
 }
 
-struct pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN])
+struct protocore_aes128gcm_key *protocore_aes128gcm_key_init(void *storage, const uint8_t key[PROTOCORE_AES128GCM_KEY_LEN])
 {
     Aes128GcmWork *w = (Aes128GcmWork *)(storage);
-    pc_aes128_init(&w->aes, key);
+    protocore_aes128_init(&w->aes, key);
     memset(w->h, 0, 16);
-    pc_aes128_encrypt_block(&w->aes, w->h, w->h); // H = E(K, 0^128)
+    protocore_aes128_encrypt_block(&w->aes, w->h, w->h); // H = E(K, 0^128)
     ghash_key_init(&w->ghk, w->h);
-    return (struct pc_aes128gcm_key *)(w);
+    return (struct protocore_aes128gcm_key *)(w);
 }
 
-void pc_aes128gcm_key_wipe(struct pc_aes128gcm_key *k)
+void protocore_aes128gcm_key_wipe(struct protocore_aes128gcm_key *k)
 {
     Aes128GcmWork *w = (Aes128GcmWork *)(k);
-    pc_aes128_wipe(&w->aes);
-    pc_secure_wipe((uint8_t *)(w), sizeof(Aes128GcmWork));
+    protocore_aes128_wipe(&w->aes);
+    protocore_secure_wipe((uint8_t *)(w), sizeof(Aes128GcmWork));
 }
 
-pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+protocore_cspan protocore_aes128gcm_seal(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,
                            size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                           uint8_t tag_out[PC_AES128GCM_TAG_LEN])
+                           uint8_t tag_out[PROTOCORE_AES128GCM_TAG_LEN])
 {
     Aes128GcmWork *w = (Aes128GcmWork *)(k);
     set_j0(w, nonce);
@@ -234,18 +234,18 @@ pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AE
     inc32(w->ctr);
     gctr(w, pt, pt_len, ct_out);
     gcm_tag(w, aad, aad_len, ct_out, pt_len, tag_out);
-    return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
+    return protocore_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
-                             size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
+proto_bool protocore_aes128gcm_open(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,
+                             size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PROTOCORE_AES128GCM_TAG_LEN],
                              uint8_t *out)
 {
     Aes128GcmWork *w = (Aes128GcmWork *)(k);
     set_j0(w, nonce);
     // Authenticate over the received ciphertext BEFORE producing any plaintext.
     gcm_tag(w, aad, aad_len, ct, ct_len, w->tag);
-    if (!pc_ct_eq(w->tag, tag, PC_AES128GCM_TAG_LEN))
+    if (!protocore_ct_eq(w->tag, tag, PROTOCORE_AES128GCM_TAG_LEN))
     {
         return PROTO_FALSE; // tag mismatch: nothing written
     }
@@ -255,5 +255,5 @@ proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_
     return PROTO_TRUE;
 }
 
-#endif // !PC_HAS_HW_AESGCM
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE
+#endif // !PROTOCORE_HAS_HW_AESGCM
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB || PROTOCORE_TLS_SOFTWARE

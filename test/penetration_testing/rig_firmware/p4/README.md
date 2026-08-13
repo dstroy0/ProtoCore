@@ -14,7 +14,7 @@ no radio — brings up the **wired PHY** (`Physical.eth->init`) instead of WiFi.
 Identical to `rig_s3_tls`: HTTP/80 (`/`, `/health`, `/status`, `/diag`) + **HTTPS/443** with the same
 self-signed ECDSA-P256 test cert, and `GET /bench/tls` — the CCOUNT decomposition of the handshake ECC
 (ECDHE gen/shared for x25519 / P-256 / P-521 + one ECDSA-P256 sign, `us/op` at the reported `cpu_mhz`).
-Built with `PC_TLS_HS_BENCH`, so it also prints `TLSHSBENCH cpu_us=.. wall_us=..` per handshake.
+Built with `PROTOCORE_TLS_HS_BENCH`, so it also prints `TLSHSBENCH cpu_us=.. wall_us=..` per handshake.
 
 ## Build + flash
 

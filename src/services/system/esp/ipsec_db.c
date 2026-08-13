@@ -9,7 +9,7 @@
 #include "services/system/esp/ipsec_db.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_IKEV2
+#if PROTOCORE_ENABLE_IKEV2
 
 // addr is within the inclusive [lo, hi] range. Addresses are big-endian, so a byte-wise unsigned compare
 // (memcmp) is the numeric compare.
@@ -24,7 +24,7 @@ static proto_bool port_in(uint16_t p, uint16_t lo, uint16_t hi)
 
 // ── SPD ─────────────────────────────────────────────────────────────────────────────────────────
 
-void pc_ipsec_spd_init(IpsecSpd *spd)
+void protocore_ipsec_spd_init(IpsecSpd *spd)
 {
     if (!spd)
     {
@@ -33,9 +33,9 @@ void pc_ipsec_spd_init(IpsecSpd *spd)
     spd->count = 0;
 }
 
-proto_bool pc_ipsec_spd_add(IpsecSpd *spd, const IpsecSelector *sel, IpsecAction action, uint32_t sa_spi)
+proto_bool protocore_ipsec_spd_add(IpsecSpd *spd, const IpsecSelector *sel, IpsecAction action, uint32_t sa_spi)
 {
-    if (!spd || !sel || spd->count >= PC_IPSEC_SPD_MAX)
+    if (!spd || !sel || spd->count >= PROTOCORE_IPSEC_SPD_MAX)
     {
         return PROTO_FALSE;
     }
@@ -47,7 +47,7 @@ proto_bool pc_ipsec_spd_add(IpsecSpd *spd, const IpsecSelector *sel, IpsecAction
     return PROTO_TRUE;
 }
 
-proto_bool pc_ipsec_selector_match(const IpsecSelector *sel, const IpsecFlow *flow)
+proto_bool protocore_ipsec_selector_match(const IpsecSelector *sel, const IpsecFlow *flow)
 {
     if (!sel || !flow || !flow->src || !flow->dst)
     {
@@ -84,7 +84,7 @@ proto_bool pc_ipsec_selector_match(const IpsecSelector *sel, const IpsecFlow *fl
     return PROTO_TRUE;
 }
 
-const IpsecPolicy *pc_ipsec_spd_lookup(const IpsecSpd *spd, const IpsecFlow *flow)
+const IpsecPolicy *protocore_ipsec_spd_lookup(const IpsecSpd *spd, const IpsecFlow *flow)
 {
     if (!spd || !flow)
     {
@@ -92,7 +92,7 @@ const IpsecPolicy *pc_ipsec_spd_lookup(const IpsecSpd *spd, const IpsecFlow *flo
     }
     for (size_t i = 0; i < spd->count; i++) // first match wins (order is significant)
     {
-        if (pc_ipsec_selector_match(&spd->entries[i].sel, flow))
+        if (protocore_ipsec_selector_match(&spd->entries[i].sel, flow))
         {
             return &spd->entries[i];
         }
@@ -100,7 +100,7 @@ const IpsecPolicy *pc_ipsec_spd_lookup(const IpsecSpd *spd, const IpsecFlow *flo
     return NULL;
 }
 
-proto_bool pc_ipsec_selector_from_ts(IpsecSelector *out, const IkeTrafficSelector *ts_src,
+proto_bool protocore_ipsec_selector_from_ts(IpsecSelector *out, const IkeTrafficSelector *ts_src,
                                      const IkeTrafficSelector *ts_dst)
 {
     if (!out || !ts_src || !ts_dst)
@@ -142,33 +142,33 @@ proto_bool pc_ipsec_selector_from_ts(IpsecSelector *out, const IkeTrafficSelecto
 
 // ── SAD ─────────────────────────────────────────────────────────────────────────────────────────
 
-void pc_ipsec_sad_init(IpsecSad *sad)
+void protocore_ipsec_sad_init(IpsecSad *sad)
 {
     if (!sad)
     {
         return;
     }
     sad->count = 0;
-    for (size_t i = 0; i < PC_IPSEC_SAD_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_IPSEC_SAD_MAX; i++)
     {
         sad->entries[i].valid = PROTO_FALSE;
     }
 }
 
-IpsecSaEntry *pc_ipsec_sad_add(IpsecSad *sad, uint32_t spi, const uint8_t *dst, uint8_t addr_len,
-                               const uint8_t key[PC_ESP_KEY_LEN], const uint8_t salt[PC_ESP_SALT_LEN],
+IpsecSaEntry *protocore_ipsec_sad_add(IpsecSad *sad, uint32_t spi, const uint8_t *dst, uint8_t addr_len,
+                               const uint8_t key[PROTOCORE_ESP_KEY_LEN], const uint8_t salt[PROTOCORE_ESP_SALT_LEN],
                                proto_bool inbound)
 {
     if (!sad || !dst || !key || !salt || (addr_len != 4 && addr_len != 16))
     {
         return NULL;
     }
-    if (pc_ipsec_sad_find(sad, spi)) // SPIs are unique within a SAD
+    if (protocore_ipsec_sad_find(sad, spi)) // SPIs are unique within a SAD
     {
         return NULL;
     }
     IpsecSaEntry *e = NULL;
-    for (size_t i = 0; i < PC_IPSEC_SAD_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_IPSEC_SAD_MAX; i++)
     {
         if (!sad->entries[i].valid)
         {
@@ -185,26 +185,26 @@ IpsecSaEntry *pc_ipsec_sad_add(IpsecSad *sad, uint32_t spi, const uint8_t *dst, 
     e->spi = spi;
     e->addr_len = addr_len;
     mem.cpy(e->dst, dst, addr_len);
-    mem.cpy(e->key, key, PC_ESP_KEY_LEN);
-    mem.cpy(e->salt, salt, PC_ESP_SALT_LEN);
+    mem.cpy(e->key, key, PROTOCORE_ESP_KEY_LEN);
+    mem.cpy(e->salt, salt, PROTOCORE_ESP_SALT_LEN);
     e->seq = 0;
     e->inbound = inbound;
     if (inbound)
     {
-        pc_esp_replay_init(&e->replay);
+        protocore_esp_replay_init(&e->replay);
     }
     e->valid = PROTO_TRUE;
     sad->count++;
     return e;
 }
 
-IpsecSaEntry *pc_ipsec_sad_find(IpsecSad *sad, uint32_t spi)
+IpsecSaEntry *protocore_ipsec_sad_find(IpsecSad *sad, uint32_t spi)
 {
     if (!sad)
     {
         return NULL;
     }
-    for (size_t i = 0; i < PC_IPSEC_SAD_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_IPSEC_SAD_MAX; i++)
     {
         if (sad->entries[i].valid && sad->entries[i].spi == spi)
         {
@@ -214,9 +214,9 @@ IpsecSaEntry *pc_ipsec_sad_find(IpsecSad *sad, uint32_t spi)
     return NULL;
 }
 
-proto_bool pc_ipsec_sad_remove(IpsecSad *sad, uint32_t spi)
+proto_bool protocore_ipsec_sad_remove(IpsecSad *sad, uint32_t spi)
 {
-    IpsecSaEntry *e = pc_ipsec_sad_find(sad, spi);
+    IpsecSaEntry *e = protocore_ipsec_sad_find(sad, spi);
     if (!e)
     {
         return PROTO_FALSE;
@@ -230,7 +230,7 @@ proto_bool pc_ipsec_sad_remove(IpsecSad *sad, uint32_t spi)
     return PROTO_TRUE;
 }
 
-proto_bool pc_ipsec_sad_next_seq(IpsecSaEntry *sa, uint32_t *seq_out)
+proto_bool protocore_ipsec_sad_next_seq(IpsecSaEntry *sa, uint32_t *seq_out)
 {
     if (!sa || !seq_out)
     {
@@ -245,4 +245,4 @@ proto_bool pc_ipsec_sad_next_seq(IpsecSaEntry *sa, uint32_t *seq_out)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_IKEV2
+#endif // PROTOCORE_ENABLE_IKEV2

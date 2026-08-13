@@ -6,11 +6,11 @@
  * @brief Layer 1 (Physical) - link bring-up and live egress-interface reporting.
  *
  * The "physical" link is the 802.11 radio or a wired Ethernet PHY, brought up by
- * the vendor backend selected with PC_VENDOR_* (core_setup/physical/<vendor>/).
+ * the vendor backend selected with PROTOCORE_VENDOR_* (core_setup/physical/<vendor>/).
  * Failover between interfaces is owned by the network stack itself (it reselects the
  * default route when a link drops) - this layer adds no manager and no polling
  * tick; it only *reports* which interface currently carries outbound traffic via
- * pc_net_egress(), read on demand from the live default route so the answer is
+ * protocore_net_egress(), read on demand from the live default route so the answer is
  * always current.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -20,8 +20,8 @@
 #ifndef PROTOCORE_PHYSICAL_H
 #define PROTOCORE_PHYSICAL_H
 
-#include "core_setup/board_profiles/pc_platform.h" // PC_VENDOR_* selector (picks the L1 backend)
-#include "protocore_config.h"                      // pc_if_kind
+#include "core_setup/board_profiles/protocore_platform.h" // PROTOCORE_VENDOR_* selector (picks the L1 backend)
+#include "protocore_config.h"                             // protocore_if_kind
 #include "shared_primitives/ip.h"
 
 // Is there a physical (L1) backend to drive? The real bring-up (radio / Ethernet PHY / lwIP netif
@@ -29,22 +29,22 @@
 // suite. When 0, physical.c supplies no-op stubs so a build with no PHY still links headless.
 //
 // A detected vendor answers for its silicon; anything else answers 0 and turns it on with
-// -DPC_PHYSICAL_HAS_BACKEND=1, which is how a suite drives the backend path without silicon.
-#ifndef PC_PHYSICAL_HAS_BACKEND
-#if PC_VENDOR_ESP
-#define PC_PHYSICAL_HAS_BACKEND 1
+// -DPROTOCORE_PHYSICAL_HAS_BACKEND=1, which is how a suite drives the backend path without silicon.
+#ifndef PROTOCORE_PHYSICAL_HAS_BACKEND
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_PHYSICAL_HAS_BACKEND 1
 #else
-#define PC_PHYSICAL_HAS_BACKEND 0
+#define PROTOCORE_PHYSICAL_HAS_BACKEND 0
 #endif
 #endif
 
 // The ESP backend is C++ (it calls the Arduino WiFi and ETH objects), so these names carry C
 // linkage and the C callers above this layer link against them unchanged.
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Layer 1's own functions. @ref Physical is built from them and is how the layer is reached; the
-// bodies come from whichever backend the PC_VENDOR_* selector compiled, which is a detail of this
+// bodies come from whichever backend the PROTOCORE_VENDOR_* selector compiled, which is a detail of this
 // layer rather than a boundary of it.
 // ---------------------------------------------------------------------------
 
@@ -84,12 +84,12 @@ proto_bool init_wifi_radio_physical(uint8_t channel);
 proto_bool init_wifi_ap_physical(const char *ssid, const char *password);
 
 /**
- * @brief Bring up a wired Ethernet link (PC_ENABLE_ETHERNET).
+ * @brief Bring up a wired Ethernet link (PROTOCORE_ENABLE_ETHERNET).
  *
  * A thin wrapper over the Arduino ETH library (`ETH.begin()`); the RMII PHY pins / type /
  * clock come from the standard `ETH_PHY_*` build flags for your board. Returns immediately
  * (bring-up is asynchronous); poll eth_ready(). The egress reporting already classifies a
- * wired route as PC_IF_ETH, so the server accepts on the link once it has an IP.
+ * wired route as PROTOCORE_IF_ETH, so the server accepts on the link once it has an IP.
  *
  * @return true if ETH.begin() started the driver; false if Ethernet is disabled at build
  *         time or the driver failed to start (and always false on host builds).
@@ -100,11 +100,11 @@ proto_bool init_eth_physical(void);
 proto_bool eth_ready(void);
 
 /**
- * @brief Enable IPv6 (dual-stack) on the Wi-Fi interface (PC_ENABLE_IPV6).
+ * @brief Enable IPv6 (dual-stack) on the Wi-Fi interface (PROTOCORE_ENABLE_IPV6).
  *
  * Turns on IPv6 for the netif so it acquires a SLAAC link-local address and, if the network
  * advertises a prefix, a global address. Returns immediately (address configuration is
- * asynchronous); poll pc_ipv6_ready(). The listeners already bind IPADDR_TYPE_ANY, so the server
+ * asynchronous); poll protocore_ipv6_ready(). The listeners already bind IPADDR_TYPE_ANY, so the server
  * answers over IPv6 as soon as an address is up.
  *
  * @return true if IPv6 was enabled; false if disabled at build time or on host builds.
@@ -113,31 +113,31 @@ proto_bool init_ipv6_physical(void);
 
 /**
  * @brief The interface's global (routable) IPv6 address, if it has one.
- * @param[out] out receives the address (family PC_IP_V6) when true is returned.
+ * @param[out] out receives the address (family PROTOCORE_IP_V6) when true is returned.
  * @return true if a valid global IPv6 address is assigned; false otherwise (incl. host builds).
  */
-proto_bool net_global_ipv6(pc_ip *out);
+proto_bool net_global_ipv6(protocore_ip *out);
 
 /** @brief True once the interface has a global IPv6 address (see net_global_ipv6()). */
-proto_bool pc_ipv6_ready(void);
+proto_bool protocore_ipv6_ready(void);
 
 /**
  * @brief Which interface currently carries outbound traffic.
  *
  * Reads the live lwIP default route, so it reflects the current state after any
- * failover the stack performed - no polling, no cached state. Returns PC_IF_ETH /
- * PC_IF_WIFI_STA / PC_IF_WIFI_AP, or PC_IF_ANY when no route is up (and on host builds).
+ * failover the stack performed - no polling, no cached state. Returns PROTOCORE_IF_ETH /
+ * PROTOCORE_IF_WIFI_STA / PROTOCORE_IF_WIFI_AP, or PROTOCORE_IF_ANY when no route is up (and on host builds).
  */
-pc_if_kind pc_net_egress(void);
+protocore_if_kind protocore_net_egress(void);
 
 /** @brief IPv4 (network byte order) of the current egress interface, or 0 if none. */
-uint32_t pc_net_egress_ip(void);
+uint32_t protocore_net_egress_ip(void);
 
 /** @brief softAP IPv4 (network byte order), or 0 if the softAP is not up (and on host builds). */
-uint32_t pc_net_ap_ip(void);
+uint32_t protocore_net_ap_ip(void);
 
 /** @brief Station link RSSI in dBm, or 0 if not associated (and on host builds). */
-int8_t pc_net_rssi(void);
+int8_t protocore_net_rssi(void);
 
 /**
  * @brief Copy the WiFi station interface MAC (6 bytes) into @p out.
@@ -145,31 +145,31 @@ int8_t pc_net_rssi(void);
  * This is specifically the 802.11 STA address (what ESP-NOW and WiFi diagnostics want). It is only valid once
  * the WiFi driver is up; on an Ethernet-only device (e.g. the P4 that never starts WiFi) it reads back as
  * zeros. For "the MAC this device is actually using on the wire right now", regardless of link type, use
- * pc_net_egress_mac().
+ * protocore_net_egress_mac().
  *
  * @return true on success; false if @p out is null or on a host build (out is left untouched).
  */
-proto_bool pc_net_mac(uint8_t out[6]);
+proto_bool protocore_net_mac(uint8_t out[6]);
 
 /**
  * @brief Copy the MAC of the current egress interface (the live default-route netif) into @p out.
  *
  * Vendor- and link-neutral: returns the Ethernet PHY's MAC on a wired link, the WiFi STA MAC on a wireless
- * one - whichever netif currently carries outbound traffic (the same interface pc_net_egress_ip() reports).
+ * one - whichever netif currently carries outbound traffic (the same interface protocore_net_egress_ip() reports).
  *
  * @return true and fills @p out when a default interface with a 6-byte hwaddr exists; false otherwise (no
  *         egress up, @p out null, or a host build), leaving @p out untouched.
  */
-proto_bool pc_net_egress_mac(uint8_t out[6]);
+proto_bool protocore_net_egress_mac(uint8_t out[6]);
 
 /**
  * @brief Copy the associated SSID (null-terminated) into @p out.
  * @return the SSID length in bytes, or 0 if not associated, @p cap is 0, or on a host build.
  */
-size_t pc_net_ssid(char *out, size_t cap);
+size_t protocore_net_ssid(char *out, size_t cap);
 
 /** @brief Station WiFi channel (1..14), or 0 if not associated (and on host builds). */
-uint8_t pc_net_channel(void);
+uint8_t protocore_net_channel(void);
 
 /**
  * @brief Classify an egress IPv4 against the WiFi station / softAP IPs (pure helper,
@@ -182,7 +182,7 @@ uint8_t pc_net_channel(void);
  * @param sta_ip    WiFi station IPv4 (network order), 0 if not connected.
  * @param ap_ip     softAP IPv4 (network order), 0 if the softAP is not up.
  */
-pc_if_kind pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
+protocore_if_kind protocore_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
 
 /* --------------------------------------------------------------------------------------------
  * Radio control (L1 capability contract)
@@ -192,16 +192,16 @@ pc_if_kind pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_i
  * core_setup/physical/<vendor>/.
  *
  * Every entry point below returns false / does nothing when the selected vendor has no radio
- * backend (PC_PHYSICAL_HAS_BACKEND == 0), so callers build and run headless on any target.
+ * backend (PROTOCORE_PHYSICAL_HAS_BACKEND == 0), so callers build and run headless on any target.
  * ------------------------------------------------------------------------------------------ */
 
 /** @brief Radio power-save mode, in the library's own vocabulary. */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_PHY_PS_NONE = 0,      ///< Radio always on: lowest latency, highest average draw.
-    PC_PHY_PS_MIN_MODEM = 1, ///< Wake on every DTIM beacon.
-    PC_PHY_PS_MAX_MODEM = 2, ///< Wake on a longer listen interval: lowest draw, highest latency.
-} pc_phy_ps;
+    PROTOCORE_PHY_PS_NONE = 0,      ///< Radio always on: lowest latency, highest average draw.
+    PROTOCORE_PHY_PS_MIN_MODEM = 1, ///< Wake on every DTIM beacon.
+    PROTOCORE_PHY_PS_MAX_MODEM = 2, ///< Wake on a longer listen interval: lowest draw, highest latency.
+} protocore_phy_ps;
 
 /**
  * @brief One received frame, delivered in neutral terms.
@@ -214,29 +214,29 @@ typedef enum PROTO_ENUM_PACKED
  * @param rssi    Received signal strength, dBm.
  * @param channel Channel the frame arrived on.
  */
-typedef void (*pc_phy_frame_fn)(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
+typedef void (*protocore_phy_frame_fn)(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
 
 /** @brief Apply a power-save mode. @return false if there is no radio backend. */
-proto_bool pc_phy_ps_set(pc_phy_ps mode);
+proto_bool protocore_phy_ps_set(protocore_phy_ps mode);
 
-/** @brief Read the active power-save mode (PC_PHY_PS_NONE when unsupported). */
-pc_phy_ps pc_phy_ps_get(void);
+/** @brief Read the active power-save mode (PROTOCORE_PHY_PS_NONE when unsupported). */
+protocore_phy_ps protocore_phy_ps_get(void);
 
 /**
  * @brief Cap transmit power.
  * @param dbm Maximum transmit power in whole dBm; the backend converts to its own unit.
  * @return false if there is no radio backend.
  */
-proto_bool pc_phy_tx_power_set(int8_t dbm);
+proto_bool protocore_phy_tx_power_set(int8_t dbm);
 
 /** @brief Enter monitor mode on @p channel, delivering frames to @p cb. */
-proto_bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb);
+proto_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb);
 
 /** @brief Retune monitor mode to @p channel. */
-void pc_phy_monitor_set_channel(uint8_t channel);
+void protocore_phy_monitor_set_channel(uint8_t channel);
 
 /** @brief Leave monitor mode. */
-void pc_phy_monitor_end(void);
+void protocore_phy_monitor_end(void);
 
 /** @brief The Wi-Fi station and softAP interface. */
 typedef struct
@@ -262,7 +262,7 @@ typedef struct
 typedef struct
 {
     proto_bool (*init)(void);
-    proto_bool (*global_addr)(pc_ip *out);
+    proto_bool (*global_addr)(protocore_ip *out);
     proto_bool (*ready)(void);
 } PhysicalIp6Ns;
 
@@ -270,9 +270,9 @@ typedef struct
 typedef struct
 {
     proto_bool (*egress_mac)(uint8_t out[6]);
-    pc_if_kind (*classify_ip)(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
+    protocore_if_kind (*classify_ip)(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
     uint32_t (*egress_ip)(void);
-    pc_if_kind (*egress)(void);
+    protocore_if_kind (*egress)(void);
     proto_bool (*mac)(uint8_t out[6]);
 } PhysicalLinkNs;
 
@@ -283,13 +283,13 @@ typedef struct
 // Ethernet ports, a station and a softAP, a bus bridged to a socket.
 // ---------------------------------------------------------------------------
 
-// pc_if_kind is protocore_config.h's: one vocabulary for the kind and the filter.
+// protocore_if_kind is protocore_config.h's: one vocabulary for the kind and the filter.
 
 /**
  * @brief Put @p len bytes on interface @p if_id.
  * @return true if the interface accepted them; false drops.
  */
-typedef proto_bool (*pc_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
+typedef proto_bool (*protocore_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
 
 /**
  * @brief The interface registry.
@@ -298,28 +298,28 @@ typedef proto_bool (*pc_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t
  * @var PhysicalIfaceNs::reset   forget every interface
  * @var PhysicalIfaceNs::present whether @c id is registered
  * @var PhysicalIfaceNs::kind    what @c id is
- * @var PhysicalIfaceNs::at      the id held in registry row @c i, or PC_IF_NONE
+ * @var PhysicalIfaceNs::at      the id held in registry row @c i, or PROTOCORE_IF_NONE
  * @var PhysicalIfaceNs::count   registered interfaces
  * @var PhysicalIfaceNs::send    put bytes on @c id
  */
 typedef struct
 {
-    proto_bool (*add)(uint8_t id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
+    proto_bool (*add)(uint8_t id, protocore_if_kind kind, protocore_if_send_fn send, void *ctx);
     void (*reset)(void);
     proto_bool (*present)(uint8_t id);
-    pc_if_kind (*kind)(uint8_t id);
+    protocore_if_kind (*kind)(uint8_t id);
     int16_t (*at)(uint8_t i);
     uint8_t (*count)(void);
     proto_bool (*send)(uint8_t id, const uint8_t *data, uint16_t len);
 } PhysicalIfaceNs;
 
 /** @brief No interface. Returned by PhysicalIfaceNs::at for an empty row. */
-#define PC_IF_NONE (-1)
+#define PROTOCORE_IF_NONE (-1)
 
 /**
  * @brief The radio interface, defined in radio_power.h.
  *
- * Named here rather than included: radio_power.h needs this file's pc_phy_ps and pc_phy_frame_fn, so
+ * Named here rather than included: radio_power.h needs this file's protocore_phy_ps and protocore_phy_frame_fn, so
  * the dependency runs one way. A child is a pointer, so its declaration is all this needs.
  */
 typedef struct RadioNs RadioNs;
@@ -345,6 +345,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const PhysicalNs Physical;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

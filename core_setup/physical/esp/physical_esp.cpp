@@ -7,30 +7,30 @@
  *        live egress readout, straight off the Arduino-ESP32 WiFi/ETH wrappers and lwIP's default netif.
  *
  * The vendor-specific half of the physical layer. The common API is in network_drivers/physical/physical.h and the
- * vendor is chosen by the PC_VENDOR_* selector (core_setup/board_profiles/pc_platform.h); this whole TU compiles to
- * nothing on any non-ESP vendor, where physical.c's fallback stubs stand in (PC_PHYSICAL_HAS_BACKEND == 0). WiFi
- * station bring-up is asynchronous (poll wifi_ready()); pc_net_egress() reads the live default-route netif and hands it
- * to the pure pc_net_classify_ip() that lives in physical.c. Adding STM/RP/TI = a sibling
+ * vendor is chosen by the PROTOCORE_VENDOR_* selector (core_setup/board_profiles/protocore_platform.h); this whole TU
+ * compiles to nothing on any non-ESP vendor, where physical.c's fallback stubs stand in (PROTOCORE_PHYSICAL_HAS_BACKEND
+ * == 0). WiFi station bring-up is asynchronous (poll wifi_ready()); protocore_net_egress() reads the live default-route
+ * netif and hands it to the pure protocore_net_classify_ip() that lives in physical.c. Adding STM/RP/TI = a sibling
  * core_setup/physical/<vendor>/ TU guarded by that vendor's macro, no change here.
  *
  * C++, because WiFi and ETH are Arduino objects whose methods cannot be named from C
  * (docs/SYMBOLS.md section 4). physical.h declares everything this file defines between
- * PROTO_BEGIN_DECLS and PROTO_END_DECLS, so the names it exports are C names.
+ * PROTOCORE_BEGIN_DECLS and PROTOCORE_END_DECLS, so the names it exports are C names.
  */
 
 #include "network_drivers/physical/physical.h"
 
-#if PC_VENDOR_ESP
+#if PROTOCORE_VENDOR_ESP
 
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
 #include <WiFi.h>
 #include <esp_wifi.h> // esp_wifi_set_channel / esp_wifi_sta_get_ap_info (raw-radio bring-up + SSID readout)
                       // strnlen / memcpy
-#if PC_ENABLE_ETHERNET
+#if PROTOCORE_ENABLE_ETHERNET
 #include <ETH.h>
 #endif
-#if PC_ENABLE_IPV6
+#if PROTOCORE_ENABLE_IPV6
 #include "lwip/ip6_addr.h"
 #endif
 
@@ -63,15 +63,16 @@ proto_bool init_wifi_ap_physical(const char *ssid, const char *password)
     return WiFi.softAP(ssid, password);
 }
 
-#if PC_ENABLE_ETHERNET
+#if PROTOCORE_ENABLE_ETHERNET
 proto_bool init_eth_physical(void)
 {
-#if defined(PC_ETH_W5500) && PC_ETH_W5500 && ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+#if defined(PROTOCORE_ETH_W5500) && PROTOCORE_ETH_W5500 && ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
     // W5500 SPI Ethernet (arduino-esp32 3.x ETH SPI API): the HSPI host (SPI3) clocks the W5500 on the
-    // PC_ETH_W5500_* pins (CS/INT/RST + SCK/MISO/MOSI). Needs CONFIG_ETH_SPI_ETHERNET_W5500 in the SDK
+    // PROTOCORE_ETH_W5500_* pins (CS/INT/RST + SCK/MISO/MOSI). Needs CONFIG_ETH_SPI_ETHERNET_W5500 in the SDK
     // (default on for the S3). W5500 SPI is arduino-esp32 3.x only - the 2.x ETH library has no W5500.
-    return ETH.begin(ETH_PHY_W5500, 1 /*phy addr*/, PC_ETH_W5500_CS, PC_ETH_W5500_INT, PC_ETH_W5500_RST, SPI3_HOST,
-                     PC_ETH_W5500_SCK, PC_ETH_W5500_MISO, PC_ETH_W5500_MOSI, PC_ETH_W5500_SPI_MHZ);
+    return ETH.begin(ETH_PHY_W5500, 1 /*phy addr*/, PROTOCORE_ETH_W5500_CS, PROTOCORE_ETH_W5500_INT,
+                     PROTOCORE_ETH_W5500_RST, SPI3_HOST, PROTOCORE_ETH_W5500_SCK, PROTOCORE_ETH_W5500_MISO,
+                     PROTOCORE_ETH_W5500_MOSI, PROTOCORE_ETH_W5500_SPI_MHZ);
 #else
     // RMII PHY: pins / type / clock come from the ETH_PHY_* build flags (ETH.begin() defaults).
     return ETH.begin();
@@ -84,7 +85,7 @@ proto_bool eth_ready(void)
 #else
 proto_bool init_eth_physical(void)
 {
-    return PROTO_FALSE; // Ethernet not enabled (PC_ENABLE_ETHERNET)
+    return PROTO_FALSE; // Ethernet not enabled (PROTOCORE_ENABLE_ETHERNET)
 }
 proto_bool eth_ready(void)
 {
@@ -92,7 +93,7 @@ proto_bool eth_ready(void)
 }
 #endif
 
-#if PC_ENABLE_IPV6
+#if PROTOCORE_ENABLE_IPV6
 
 proto_bool init_ipv6_physical(void)
 {
@@ -105,7 +106,7 @@ proto_bool init_ipv6_physical(void)
 #endif
 }
 
-proto_bool net_global_ipv6(pc_ip *out)
+proto_bool net_global_ipv6(protocore_ip *out)
 {
     if (!out || !netif_default)
     {
@@ -122,62 +123,62 @@ proto_bool net_global_ipv6(pc_ip *out)
         {
             continue;
         }
-        out->family = PC_IP_V6;
+        out->family = PROTOCORE_IP_V6;
         memcpy(out->bytes, a6->addr, 16); // lwIP holds the 16 bytes in network order
         return PROTO_TRUE;
     }
     return PROTO_FALSE;
 }
 
-proto_bool pc_ipv6_ready(void)
+proto_bool protocore_ipv6_ready(void)
 {
-    pc_ip tmp;
+    protocore_ip tmp;
     return net_global_ipv6(&tmp);
 }
 #else
 proto_bool init_ipv6_physical(void)
 {
-    return PROTO_FALSE; // IPv6 not enabled (PC_ENABLE_IPV6)
+    return PROTO_FALSE; // IPv6 not enabled (PROTOCORE_ENABLE_IPV6)
 }
-proto_bool net_global_ipv6(pc_ip *)
+proto_bool net_global_ipv6(protocore_ip *)
 {
     return PROTO_FALSE;
 }
-proto_bool pc_ipv6_ready(void)
+proto_bool protocore_ipv6_ready(void)
 {
     return PROTO_FALSE;
 }
 #endif
 
-uint32_t pc_net_egress_ip(void)
+uint32_t protocore_net_egress_ip(void)
 {
     // netif_default is the current default-route interface (the egress).
     return netif_default ? ip4_addr_get_u32(ip_2_ip4(&netif_default->ip_addr)) : 0;
 }
 
-pc_if_kind pc_net_egress(void)
+protocore_if_kind protocore_net_egress(void)
 {
-    uint32_t egress = pc_net_egress_ip();
+    uint32_t egress = protocore_net_egress_ip();
     if (egress == 0)
     {
-        return PC_IF_ANY;
+        return PROTOCORE_IF_ANY;
     }
     uint32_t sta = WiFi.isConnected() ? (uint32_t)WiFi.localIP() : 0;
-    uint32_t ap = pc_net_ap_ip();
-    return pc_net_classify_ip(egress, sta, ap);
+    uint32_t ap = protocore_net_ap_ip();
+    return protocore_net_classify_ip(egress, sta, ap);
 }
 
-uint32_t pc_net_ap_ip(void)
+uint32_t protocore_net_ap_ip(void)
 {
     return (WiFi.getMode() & WIFI_AP) ? (uint32_t)WiFi.softAPIP() : 0;
 }
 
-int8_t pc_net_rssi(void)
+int8_t protocore_net_rssi(void)
 {
     return WiFi.isConnected() ? (int8_t)WiFi.RSSI() : 0;
 }
 
-proto_bool pc_net_mac(uint8_t out[6])
+proto_bool protocore_net_mac(uint8_t out[6])
 {
     if (!out)
     {
@@ -187,7 +188,7 @@ proto_bool pc_net_mac(uint8_t out[6])
     return PROTO_TRUE;
 }
 
-proto_bool pc_net_egress_mac(uint8_t out[6])
+proto_bool protocore_net_egress_mac(uint8_t out[6])
 {
     // The egress interface's own link-layer address, straight off the live default netif - the Ethernet PHY's
     // MAC on a wired link, the WiFi STA MAC on a wireless one. Independent of which driver started.
@@ -199,7 +200,7 @@ proto_bool pc_net_egress_mac(uint8_t out[6])
     return PROTO_TRUE;
 }
 
-size_t pc_net_ssid(char *out, size_t cap)
+size_t protocore_net_ssid(char *out, size_t cap)
 {
     if (!out || cap == 0)
     {
@@ -221,24 +222,24 @@ size_t pc_net_ssid(char *out, size_t cap)
     return n;
 }
 
-uint8_t pc_net_channel(void)
+uint8_t protocore_net_channel(void)
 {
     return (uint8_t)WiFi.channel();
 }
 
 /* ------------------------------------------------------------------ radio control (L1 contract)
- * The vendor half of pc_phy_*: mode translation, the quarter-dBm transmit unit, and the
+ * The vendor half of protocore_phy_*: mode translation, the quarter-dBm transmit unit, and the
  * received-packet struct all stay on this side of the boundary. The core sees whole dBm, its own
  * power-save vocabulary, and a plain frame pointer.
  */
 
-static wifi_ps_type_t to_esp_ps(pc_phy_ps mode)
+static wifi_ps_type_t to_esp_ps(protocore_phy_ps mode)
 {
-    if (mode == PC_PHY_PS_MIN_MODEM)
+    if (mode == PROTOCORE_PHY_PS_MIN_MODEM)
     {
         return WIFI_PS_MIN_MODEM;
     }
-    if (mode == PC_PHY_PS_MAX_MODEM)
+    if (mode == PROTOCORE_PHY_PS_MAX_MODEM)
     {
         return WIFI_PS_MAX_MODEM;
     }
@@ -248,7 +249,7 @@ static wifi_ps_type_t to_esp_ps(pc_phy_ps mode)
 // One named owner for the monitor-mode sink (owner-context guard).
 typedef struct
 {
-    pc_phy_frame_fn sink;
+    protocore_phy_frame_fn sink;
 } PhyMonitorCtx;
 static PhyMonitorCtx s_phy_monitor = {NULL};
 
@@ -268,36 +269,36 @@ static void phy_monitor_trampoline(void *buf, wifi_promiscuous_pkt_type_t)
     s_phy_monitor.sink(pkt->payload, (uint16_t)(len - 4), (int8_t)pkt->rx_ctrl.rssi, (uint8_t)pkt->rx_ctrl.channel);
 }
 
-proto_bool pc_phy_ps_set(pc_phy_ps mode)
+proto_bool protocore_phy_ps_set(protocore_phy_ps mode)
 {
     return esp_wifi_set_ps(to_esp_ps(mode)) == ESP_OK;
 }
 
-pc_phy_ps pc_phy_ps_get(void)
+protocore_phy_ps protocore_phy_ps_get(void)
 {
     wifi_ps_type_t m = WIFI_PS_NONE;
     if (esp_wifi_get_ps(&m) != ESP_OK)
     {
-        return PC_PHY_PS_NONE;
+        return PROTOCORE_PHY_PS_NONE;
     }
     if (m == WIFI_PS_MIN_MODEM)
     {
-        return PC_PHY_PS_MIN_MODEM;
+        return PROTOCORE_PHY_PS_MIN_MODEM;
     }
     if (m == WIFI_PS_MAX_MODEM)
     {
-        return PC_PHY_PS_MAX_MODEM;
+        return PROTOCORE_PHY_PS_MAX_MODEM;
     }
-    return PC_PHY_PS_NONE;
+    return PROTOCORE_PHY_PS_NONE;
 }
 
-proto_bool pc_phy_tx_power_set(int8_t dbm)
+proto_bool protocore_phy_tx_power_set(int8_t dbm)
 {
     // The vendor API takes quarter-dBm; that unit is vendor detail, so it converts here.
     return esp_wifi_set_max_tx_power((int8_t)(dbm * 4)) == ESP_OK;
 }
 
-proto_bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb)
+proto_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb)
 {
     if (!cb)
     {
@@ -310,15 +311,15 @@ proto_bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb)
     return PROTO_TRUE;
 }
 
-void pc_phy_monitor_set_channel(uint8_t channel)
+void protocore_phy_monitor_set_channel(uint8_t channel)
 {
     esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
 }
 
-void pc_phy_monitor_end(void)
+void protocore_phy_monitor_end(void)
 {
     esp_wifi_set_promiscuous(PROTO_FALSE);
     s_phy_monitor.sink = NULL;
 }
 
-#endif // PC_VENDOR_ESP
+#endif // PROTOCORE_VENDOR_ESP

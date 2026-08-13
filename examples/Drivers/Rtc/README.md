@@ -59,8 +59,8 @@ No network needed. That is what an RTC buys you.
 
 ## Where this fits
 
-`pc_time_now()` asks your registered time sources best-first. Here the RTC is source #1, so
-your whole app just calls `pc_time_now()` and gets good time offline. Chain it with GPS
+`protocore_time_now()` asks your registered time sources best-first. Here the RTC is source #1, so
+your whole app just calls `protocore_time_now()` and gets good time offline. Chain it with GPS
 (example 58) and upstream NTP for the full picture - **GPS (best) -> RTC (offline) -> NTP** -
 and feed it to the NTP server (example 58) to serve time to your entire LAN.
 
@@ -82,7 +82,7 @@ The feature lives in the library, so its flags must reach the whole build:
 ```bash
 pio ci examples/Drivers/Rtc \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_RTC=1 -DPC_ENABLE_TIME_SOURCE=1 -DPC_ENABLE_NTP=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_RTC=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1 -DPROTOCORE_ENABLE_NTP=1"
 ```
 
 (The Arduino IDE reads the flags from `build_opt.h` beside the sketch automatically.)
@@ -90,9 +90,9 @@ pio ci examples/Drivers/Rtc \
 ## How it works (for the curious)
 
 The DS1307/DS3231 store the time in seven **BCD** registers (each nibble is one decimal digit)
-at I2C address `0x68`. `pc_rtc_read_epoch()` reads those seven bytes and `pc_rtc_regs_to_epoch()`
+at I2C address `0x68`. `protocore_rtc_read_epoch()` reads those seven bytes and `protocore_rtc_regs_to_epoch()`
 converts them - handling 12/24-hour encoding, leap years, and the chip's clock-halt/century
-bits - into a Unix timestamp; `pc_rtc_set_epoch()` does the reverse to set the chip. All the date
+bits - into a Unix timestamp; `protocore_rtc_set_epoch()` does the reverse to set the chip. All the date
 math is fixed-point and heap-free, and the conversions are unit-tested on a PC across the
 2000-2099 range (that round-trip test caught a real 32-bit overflow past 2038 - see
 `test/test_rtc`). Only the register read/write touches I2C.

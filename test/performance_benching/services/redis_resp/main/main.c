@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the Redis RESP2/RESP3 codec (services/iot/redis_resp):
-// pc_resp_encode_command() (the device builds an outbound command) and pc_resp_parse() (the
+// protocore_resp_encode_command() (the device builds an outbound command) and protocore_resp_parse() (the
 // device decodes a server reply - the untrusted-input hot op). Pure; no socket.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -25,14 +25,14 @@ void dbench_run(void)
         DBENCH_BANNER("redis_resp");
         volatile size_t sink = 0;
         static char cmd[64];
-        DBENCH_OP("pc_resp_encode_command (3 args)", 200000,
-                  sink += pc_resp_encode_command(cmd, sizeof(cmd), argv, NULL, 3));
+        DBENCH_OP("protocore_resp_encode_command (3 args)", 200000,
+                  sink += protocore_resp_encode_command(cmd, sizeof(cmd), argv, NULL, 3));
         const size_t rlen = sizeof(reply) - 1;
-        DBENCH_OP("pc_resp_parse (walk array)", 200000, {
+        DBENCH_OP("protocore_resp_parse (walk array)", 200000, {
             size_t off = 0;
             size_t used = 0;
             RespReply r;
-            while (off < rlen && pc_resp_parse(reply + off, rlen - off, &r, &used) && used)
+            while (off < rlen && protocore_resp_parse(reply + off, rlen - off, &r, &used) && used)
             {
                 off += used;
                 sink += (size_t)r.type;

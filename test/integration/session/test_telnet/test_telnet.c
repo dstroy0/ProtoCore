@@ -41,7 +41,7 @@ void setUp()
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         conn_pool[i].proto = PROTO_TELNET;
     }
     g_last_cmd[0] = '\0';
@@ -251,8 +251,8 @@ void test_output_escaping_and_printf()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 4);
 
     tcp_capture_reset();
-    static const pc_field NEQ[] = {{PC_FK_LIT, 0, 2, "n="}, PC_U32, PC_END};
-    Telnet.frame(NEQ, (const pc_fval[]){PC_VU32(7u)}, 1);
+    static const protocore_field NEQ[] = {{PROTOCORE_FK_LIT, 0, 2, "n="}, PROTOCORE_U32, PROTOCORE_END};
+    Telnet.frame(NEQ, (const protocore_fval[]){PROTOCORE_VU32(7u)}, 1);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "n=7"));
 }
 
@@ -360,13 +360,13 @@ void test_print_println_null_and_printf_empty()
     TEST_ASSERT_EQUAL_STRING("\r\n", tcp_captured()); // the unconditional CRLF still goes out
 
     tcp_capture_reset();
-    static const pc_field EMPTY[] = {PC_END};
+    static const protocore_field EMPTY[] = {PROTOCORE_END};
     Telnet.frame(EMPTY, NULL, 0);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 }
 
 // The Layer 5 ProtoHandler accessor exposes the installed dispatch table.
-void test_proto_handler_accessor()
+void test_protocore_handler_accessor()
 {
     const ProtoHandler *h = Telnet.proto_handler();
     TEST_ASSERT_NOT_NULL(h);
@@ -402,6 +402,6 @@ int main()
     RUN_TEST(test_backspace_del_and_empty_noop);
     RUN_TEST(test_line_buffer_overflow_truncates);
     RUN_TEST(test_print_println_null_and_printf_empty);
-    RUN_TEST(test_proto_handler_accessor);
+    RUN_TEST(test_protocore_handler_accessor);
     return UNITY_END();
 }

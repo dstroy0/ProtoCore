@@ -3,7 +3,7 @@
 
 /**
  * @file dashboard.c
- * @brief Dashboard widget table + JSON serializers (PC_ENABLE_DASHBOARD).
+ * @brief Dashboard widget table + JSON serializers (PROTOCORE_ENABLE_DASHBOARD).
  *
  * The host-testable core: it owns the widget table and value array and turns them
  * into the layout / values JSON the page consumes. No server or web
@@ -13,60 +13,61 @@
 
 #include "services/web/dashboard/dashboard.h"
 
-#if PC_ENABLE_DASHBOARD
+#if PROTOCORE_ENABLE_DASHBOARD
 
 #include "mmgr/protoframe.h"
 #include "mmgr/protostr.h"
 
 // A message key as it appears in the JSON: quoted, so it cannot match a widget key containing it.
-static const pc_field QUOTED_KEY[] = {{PC_FK_LIT, 0, 1, "\""}, PC_STR, {PC_FK_LIT, 0, 1, "\""}, PC_END};
+static const protocore_field QUOTED_KEY[] = {
+    {PROTOCORE_FK_LIT, 0, 1, "\""}, PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 1, "\""}, PROTOCORE_END};
 
 // All dashboard state, owned by one instance (internal linkage): the widget table, the
 // per-widget value array, and the inbound-control callback, grouped so it is one named owner,
 // unreachable from any other translation unit.
 typedef struct
 {
-    const pc_widget *widgets;
+    const protocore_widget *widgets;
     uint8_t count;
-    float values[PC_DASHBOARD_MAX_WIDGETS];
-    pc_control_cb control_cb;
+    float values[PROTOCORE_DASHBOARD_MAX_WIDGETS];
+    protocore_control_cb control_cb;
 } DashboardCtx;
 static DashboardCtx s_dash;
 
-static const char *widget_type_name(pc_widget_type t)
+static const char *widget_type_name(protocore_widget_type t)
 {
     switch (t)
     {
-    case PC_WIDGET_GAUGE:
+    case PROTOCORE_WIDGET_GAUGE:
         return "gauge";
-    case PC_WIDGET_BAR:
+    case PROTOCORE_WIDGET_BAR:
         return "bar";
-    case PC_WIDGET_SPARKLINE:
+    case PROTOCORE_WIDGET_SPARKLINE:
         return "sparkline";
-    case PC_WIDGET_CHART:
+    case PROTOCORE_WIDGET_CHART:
         return "chart";
-    case PC_WIDGET_BUTTON:
+    case PROTOCORE_WIDGET_BUTTON:
         return "button";
-    case PC_WIDGET_TOGGLE:
+    case PROTOCORE_WIDGET_TOGGLE:
         return "toggle";
-    case PC_WIDGET_SLIDER:
+    case PROTOCORE_WIDGET_SLIDER:
         return "slider";
     default:
         return "value";
     }
 }
 
-void pc_dashboard_configure(const pc_widget *widgets, uint8_t count)
+void protocore_dashboard_configure(const protocore_widget *widgets, uint8_t count)
 {
     s_dash.widgets = widgets;
-    s_dash.count = count > PC_DASHBOARD_MAX_WIDGETS ? PC_DASHBOARD_MAX_WIDGETS : count;
-    for (uint8_t i = 0; i < PC_DASHBOARD_MAX_WIDGETS; i++)
+    s_dash.count = count > PROTOCORE_DASHBOARD_MAX_WIDGETS ? PROTOCORE_DASHBOARD_MAX_WIDGETS : count;
+    for (uint8_t i = 0; i < PROTOCORE_DASHBOARD_MAX_WIDGETS; i++)
     {
         s_dash.values[i] = 0.0f;
     }
 }
 
-proto_bool pc_dashboard_set(const char *key, float value)
+proto_bool protocore_dashboard_set(const char *key, float value)
 {
     if (!key || !s_dash.widgets)
     {
@@ -87,39 +88,39 @@ proto_bool pc_dashboard_set(const char *key, float value)
 // pairs. Both open, repeat one frame per widget, and close, with the separating comma carried as
 // the repeated frame's first field.
 // The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
-static const char *const PC_JSON_SEP[2] = {"", ","};
+static const char *const PROTOCORE_JSON_SEP[2] = {"", ","};
 
-static const pc_field DASH_ARRAY_OPEN[] = {{PC_FK_LIT, 0, 1, "["}, PC_END};
-static const pc_field DASH_ARRAY_CLOSE[] = {{PC_FK_LIT, 0, 1, "]"}, PC_END};
-static const pc_field DASH_WIDGET[] = {
-    PC_STR,                           // "," from the second widget on
-    {PC_FK_LIT, 0, 8, "{\"type\":"},  //
-    PC_JSON,                          // type name
-    {PC_FK_LIT, 0, 9, ",\"label\":"}, //
-    PC_JSON,                          //
-    {PC_FK_LIT, 0, 7, ",\"key\":"},   //
-    PC_JSON,                          //
-    {PC_FK_LIT, 0, 7, ",\"min\":"},   //
-    {PC_FK_G, 0, 0, NULL},            // width 0 == 6 significant digits, the %g default
-    {PC_FK_LIT, 0, 7, ",\"max\":"},   //
-    {PC_FK_G, 0, 0, NULL},            //
-    {PC_FK_LIT, 0, 8, ",\"unit\":"},  //
-    PC_JSON,                          //
-    {PC_FK_LIT, 0, 1, "}"},           //
-    PC_END,
+static const protocore_field DASH_ARRAY_OPEN[] = {{PROTOCORE_FK_LIT, 0, 1, "["}, PROTOCORE_END};
+static const protocore_field DASH_ARRAY_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 1, "]"}, PROTOCORE_END};
+static const protocore_field DASH_WIDGET[] = {
+    PROTOCORE_STR,                           // "," from the second widget on
+    {PROTOCORE_FK_LIT, 0, 8, "{\"type\":"},  //
+    PROTOCORE_JSON,                          // type name
+    {PROTOCORE_FK_LIT, 0, 9, ",\"label\":"}, //
+    PROTOCORE_JSON,                          //
+    {PROTOCORE_FK_LIT, 0, 7, ",\"key\":"},   //
+    PROTOCORE_JSON,                          //
+    {PROTOCORE_FK_LIT, 0, 7, ",\"min\":"},   //
+    {PROTOCORE_FK_G, 0, 0, NULL},            // width 0 == 6 significant digits, the %g default
+    {PROTOCORE_FK_LIT, 0, 7, ",\"max\":"},   //
+    {PROTOCORE_FK_G, 0, 0, NULL},            //
+    {PROTOCORE_FK_LIT, 0, 8, ",\"unit\":"},  //
+    PROTOCORE_JSON,                          //
+    {PROTOCORE_FK_LIT, 0, 1, "}"},           //
+    PROTOCORE_END,
 };
 
-static const pc_field DASH_OBJECT_OPEN[] = {{PC_FK_LIT, 0, 1, "{"}, PC_END};
-static const pc_field DASH_OBJECT_CLOSE[] = {{PC_FK_LIT, 0, 1, "}"}, PC_END};
-static const pc_field DASH_VALUE[] = {
-    PC_STR,                 // "," from the second pair on
-    PC_JSON,                // key
-    {PC_FK_LIT, 0, 1, ":"}, //
-    {PC_FK_G, 0, 0, NULL},  // the reading
-    PC_END,
+static const protocore_field DASH_OBJECT_OPEN[] = {{PROTOCORE_FK_LIT, 0, 1, "{"}, PROTOCORE_END};
+static const protocore_field DASH_OBJECT_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 1, "}"}, PROTOCORE_END};
+static const protocore_field DASH_VALUE[] = {
+    PROTOCORE_STR,                 // "," from the second pair on
+    PROTOCORE_JSON,                // key
+    {PROTOCORE_FK_LIT, 0, 1, ":"}, //
+    {PROTOCORE_FK_G, 0, 0, NULL},  // the reading
+    PROTOCORE_END,
 };
 
-int32_t pc_dashboard_layout_json(char *out, uint32_t cap)
+int32_t protocore_dashboard_layout_json(char *out, uint32_t cap)
 {
     if (!out || cap == 0)
     {
@@ -136,11 +137,12 @@ int32_t pc_dashboard_layout_json(char *out, uint32_t cap)
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
-        const pc_widget *w = &s_dash.widgets[i];
+        const protocore_widget *w = &s_dash.widgets[i];
         if (frame.append(out, cap, DASH_WIDGET,
-                         (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(widget_type_name(w->type)),
-                                           PC_VJSON(w->label), PC_VJSON(w->key), PC_VG((double)w->min),
-                                           PC_VG((double)w->max), PC_VJSON(w->unit)},
+                         (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]),
+                                                  PROTOCORE_VJSON(widget_type_name(w->type)), PROTOCORE_VJSON(w->label),
+                                                  PROTOCORE_VJSON(w->key), PROTOCORE_VG((double)w->min),
+                                                  PROTOCORE_VG((double)w->max), PROTOCORE_VJSON(w->unit)},
                          7) == 0)
         {
             return 0;
@@ -149,7 +151,7 @@ int32_t pc_dashboard_layout_json(char *out, uint32_t cap)
     return (int32_t)frame.append(out, cap, DASH_ARRAY_CLOSE, NULL, 0);
 }
 
-int32_t pc_dashboard_values_json(char *out, uint32_t cap)
+int32_t protocore_dashboard_values_json(char *out, uint32_t cap)
 {
     if (!out || cap == 0)
     {
@@ -167,8 +169,9 @@ int32_t pc_dashboard_values_json(char *out, uint32_t cap)
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
         if (frame.append(out, cap, DASH_VALUE,
-                         (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(s_dash.widgets[i].key),
-                                           PC_VG((double)s_dash.values[i])},
+                         (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]),
+                                                  PROTOCORE_VJSON(s_dash.widgets[i].key),
+                                                  PROTOCORE_VG((double)s_dash.values[i])},
                          3) == 0)
         {
             return 0;
@@ -181,7 +184,7 @@ int32_t pc_dashboard_values_json(char *out, uint32_t cap)
 // Controls (inbound WebSocket messages)
 // ---------------------------------------------------------------------------
 
-void pc_dashboard_on_control(pc_control_cb cb)
+void protocore_dashboard_on_control(protocore_control_cb cb)
 {
     s_dash.control_cb = cb;
 }
@@ -193,7 +196,7 @@ static const char *control_value_ptr(const char *s, const char *key)
 {
     char pat[8];
     // A key too long for the buffer leaves pat empty, and strstr then finds nothing - fail closed.
-    frame.build(pat, sizeof(pat), QUOTED_KEY, (const pc_fval[]){PC_VSTR(key)}, 1);
+    frame.build(pat, sizeof(pat), QUOTED_KEY, (const protocore_fval[]){PROTOCORE_VSTR(key)}, 1);
     const char *p = strstr(s, pat);
     if (!p)
     {
@@ -216,7 +219,7 @@ static const char *control_value_ptr(const char *s, const char *key)
     return p;
 }
 
-proto_bool pc_dashboard_parse_control(const char *msg, char *key_out, size_t key_cap, float *value_out)
+proto_bool protocore_dashboard_parse_control(const char *msg, char *key_out, size_t key_cap, float *value_out)
 {
     if (!msg || !key_out || key_cap == 0 || !value_out)
     {
@@ -251,11 +254,11 @@ proto_bool pc_dashboard_parse_control(const char *msg, char *key_out, size_t key
     return PROTO_TRUE;
 }
 
-proto_bool pc_dashboard_dispatch_control(const char *msg)
+proto_bool protocore_dashboard_dispatch_control(const char *msg)
 {
     char key[32];
     float value;
-    if (!pc_dashboard_parse_control(msg, key, sizeof(key), &value))
+    if (!protocore_dashboard_parse_control(msg, key, sizeof(key), &value))
     {
         return PROTO_FALSE;
     }
@@ -266,4 +269,4 @@ proto_bool pc_dashboard_dispatch_control(const char *msg)
     return s_dash.control_cb != NULL;
 }
 
-#endif // PC_ENABLE_DASHBOARD
+#endif // PROTOCORE_ENABLE_DASHBOARD

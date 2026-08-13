@@ -7,7 +7,7 @@ Three subcommands, used by .github/workflows/esp32-build.yml:
       Print a one-line JSON array of {name, ino, flags, feature} for every
       example .ino, to drive the build matrix. `flags` is the first
       `build_flags=...` documented in the example's README (empty if none);
-      `feature` is the example's PC_ENABLE_* signature (e.g. "TLS+MTLS"), or
+      `feature` is the example's PROTOCORE_ENABLE_* signature (e.g. "TLS+MTLS"), or
       "core/<name>" when it enables nothing.
 
       With a newline-separated list of changed paths on stdin, prints only the
@@ -56,10 +56,10 @@ def find_flags(readme):
 
 
 def feature_key(flags, name):
-    enables = re.findall(r"-D(PC_[A-Z0-9_]+)=", flags)
+    enables = re.findall(r"-D(PROTOCORE_[A-Z0-9_]+)=", flags)
     short = []
     for e in enables:
-        s = e.replace("PC_ENABLE_", "").replace("PC_", "")
+        s = e.replace("PROTOCORE_ENABLE_", "").replace("PROTOCORE_", "")
         if s and s not in short:
             short.append(s)
     return "+".join(short) if short else f"core/{name}"
@@ -87,7 +87,7 @@ def affected_items(items, changed, base=None, head=None):
 
     src/protocore_config.h is touched by every feature (a new default-off gate). With a diff base
     that change is classified by content: an additive gate cannot alter any example that does not
-    opt into the new PC_ENABLE_* flag, so it is ignored rather than forcing a full rebuild; a
+    opt into the new PROTOCORE_ENABLE_* flag, so it is ignored rather than forcing a full rebuild; a
     non-additive protocore_config.h change still falls back to FULL.
     """
     features = set()  # src/services/<sub>/... -> feature subdir

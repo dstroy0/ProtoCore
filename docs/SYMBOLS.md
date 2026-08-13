@@ -21,33 +21,33 @@ C11, which every compiler in that list ships. Three of its features are load-bea
 
 ## The contract
 
-| Thing                      | Form                                              | Example                                       |
-| -------------------------- | ------------------------------------------------- | --------------------------------------------- |
-| Function (API, primitive)  | `proto_snake_case`, flat                          | `proto_begin_ws`, `proto_sha256_init`         |
-| Type (struct, enum, union) | `StructName`, flat                                | `HttpReq`, `AuthNs`, `TcpConn`, `ConnState`   |
-| Struct member, local       | `snake_case`                                      | `rx_head`, `auth_id`                          |
-| Macro / compile-time flag  | `PROTO_UPPER_SNAKE`, flat                         | `PROTO_ENABLE_SSH`, `PROTO_SHA256_DIGEST_LEN` |
-| Sizing / capacity bound    | `PROTO_MAX_*`, flat                               | `PROTO_MAX_CONNS`, `PROTO_MAX_HANDLERS`       |
-| Enum member                | `PROTO_UPPER_SNAKE`, keeps its descriptive prefix | `PROTO_IP_V4`                                 |
-| Include guard              | `PROTOCORE_<FILE>_H`, max 31                      | `PROTOCORE_SHA256_H`                          |
-| File and directory         | `snake_case`                                      | `src/crypto/mac/hmac_sha256.h`                |
-| Test env / suite           | `native_<topic>` / `test_<topic>`                 | `native_ip`, `test_ip`                        |
+| Thing                      | Form                                                  | Example                                               |
+| -------------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| Function (API, primitive)  | `protocore_snake_case`, flat                          | `protocore_begin_ws`, `protocore_sha256_init`         |
+| Type (struct, enum, union) | `StructName`, flat                                    | `HttpReq`, `AuthNs`, `TcpConn`, `ConnState`           |
+| Struct member, local       | `snake_case`                                          | `rx_head`, `auth_id`                                  |
+| Macro / compile-time flag  | `PROTOCORE_UPPER_SNAKE`, flat                         | `PROTOCORE_ENABLE_SSH`, `PROTOCORE_SHA256_DIGEST_LEN` |
+| Sizing / capacity bound    | `PROTOCORE_MAX_*`, flat                               | `PROTOCORE_MAX_CONNS`, `PROTOCORE_MAX_HANDLERS`       |
+| Enum member                | `PROTOCORE_UPPER_SNAKE`, keeps its descriptive prefix | `PROTOCORE_IP_V4`                                     |
+| Include guard              | `PROTOCORE_<FILE>_H`, max 31                          | `PROTOCORE_SHA256_H`                                  |
+| File and directory         | `snake_case`                                          | `src/crypto/mac/hmac_sha256.h`                        |
+| Test env / suite           | `native_<topic>` / `test_<topic>`                     | `native_ip`, `test_ip`                                |
 
 No `namespace`. No `using namespace`. The table is the rule; the sections below are the reasoning.
 
-**The tree is mid-rename.** `pc_` / `PC_` is the internal spelling the library carries today;
-`proto_` / `PROTO_` is what it publishes. `check_symbols.py` still gates the internal spelling and
+**The tree is mid-rename.** `pc_` / `PROTOCORE_` is the internal spelling the library carries today;
+`protocore_` / `PROTOCORE_` is what it publishes. `check_symbols.py` still gates the internal spelling and
 `tools/ci_tooling/check/symbols_baseline.json` counts the distance left, which ratchets down only. The
 table above is the destination, and the rename lands before 1.0.0.
 
-**One prefix, two cases: `proto_` for anything callable, `PROTO_` for anything the preprocessor
-sees.** A two-letter prefix does not own a token. `PROTO_` is long enough and specific enough to
+**One prefix, two cases:** `protocore_` for anything callable, `PROTOCORE_` for anything the preprocessor
+sees. A two-letter prefix does not own a token. `PROTOCORE_` is long enough and specific enough to
 actually be ours. A type carries no prefix because `StructName` casing already separates it from
 every C library's token space.
 
 **Hard ban: a bare `MAX_` name.** `MAX_CONNS`, `MAX_ROUTES`, `MAX_HEADERS` and their kind are among
 the most collided identifiers in embedded C, and the preprocessor has no scope to protect ours from a
-vendor SDK's. Every capacity bound carries `PROTO_MAX_`, with no exception.
+vendor SDK's. Every capacity bound carries `PROTOCORE_MAX_`, with no exception.
 
 **One exemption: `core_setup/`.** That is where vendor SDKs are spoken to, and their headers
 are full of names this law does not govern. A vendor symbol appears verbatim inside `core_setup/`
@@ -58,19 +58,19 @@ exemption covers what a driver must consume, never what it publishes.
 
 C has no namespaces. A C caller disambiguates by name alone, so every exported function must be
 globally unique on its own, and the prefix is what buys that. A prefix with holes in it is not a
-guarantee, so there is no split by layer: a function is `proto_` whether it is API or primitive.
+guarantee, so there is no split by layer: a function is `protocore_` whether it is API or primitive.
 
 ```c
 typedef struct Sha256Ctx Sha256Ctx;
 
-void proto_sha256_init(Sha256Ctx *ctx);
-void proto_sha256_update(Sha256Ctx *ctx, const uint8_t *data, size_t len);
-void proto_sha256_final(Sha256Ctx *ctx, uint8_t digest[PROTO_SHA256_DIGEST_LEN]);
+void protocore_sha256_init(Sha256Ctx *ctx);
+void protocore_sha256_update(Sha256Ctx *ctx, const uint8_t *data, size_t len);
+void protocore_sha256_final(Sha256Ctx *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
 ```
 
 ## 2. Macros are flat because they have to be
 
-**Macros are `PROTO_UPPER_SNAKE`, at global scope, always.** The preprocessor runs before the
+**Macros are `PROTOCORE_UPPER_SNAKE`, at global scope, always.** The preprocessor runs before the
 compiler and knows nothing about scope, so there is no construct that can contain one.
 
 That produces genuinely confusing errors, because a macro rewrites a token that is already scoped:
@@ -82,16 +82,16 @@ typedef enum { OUTPUT } TcpOp;        // error: expands to `{ 1 }`
 ```
 
 Substitution happens before the compiler sees a declaration, so nothing can protect a member. This is
-why enum members keep descriptive prefixes (section 3) and why `PROTO_` on every macro matters.
+why enum members keep descriptive prefixes (section 3) and why `PROTOCORE_` on every macro matters.
 
 **Keep macro names under 31 characters.** C89 guarantees only the first 31 characters of an external
 identifier are significant, and the target list includes toolchains where that is real, c2000
 included. Two macros agreeing in their first 31 characters are the same macro there, silently.
-`PROTO_` spends six of the 31, leaving 25.
+`PROTOCORE_` spends six of the 31, leaving 25.
 
 **When a name does not fit, abbreviate whole words. Never cut a word short.** A chopped last word
 reads as a typo and the reader stops to work out the real name. An abbreviation keeps the word
-boundaries, so the correspondence to the spec survives: in `PROTO_SSH_MSG_CH_WIN_ADJ`, `CH`=CHANNEL,
+boundaries, so the correspondence to the spec survives: in `PROTOCORE_SSH_MSG_CH_WIN_ADJ`, `CH`=CHANNEL,
 `WIN`=WINDOW, `ADJ`=ADJUST still recovers `SSH_MSG_CHANNEL_WINDOW_ADJUST` from RFC 4254, which is
 what a reviewer checks the constant against. That matters most for names quoted from a document:
 protocol messages, IANA cipher suites, datasheet registers.
@@ -111,16 +111,16 @@ Macros over the limit are tracked in [ROADMAP.md](ROADMAP.md) and renamed before
 ## 3. Enums are flat; the prefix is what scopes them
 
 **Every enum is a `typedef enum` with a `StructName` type. Members carry a descriptive
-`PROTO_UPPER_SNAKE` prefix, always.**
+`PROTOCORE_UPPER_SNAKE` prefix, always.**
 
 ```c
 typedef enum
 {
-    PROTO_IP_V4,
-    PROTO_IP_V6,
+    PROTOCORE_IP_V4,
+    PROTOCORE_IP_V6,
 } IpFamily;
 
-IpFamily fam = PROTO_IP_V4;
+IpFamily fam = PROTOCORE_IP_V4;
 ```
 
 C has no scoped enum. Every member lands in one global namespace the moment it is declared, so the
@@ -130,7 +130,7 @@ ones: `FAILED`, `IDLE`, `STOP`, `START`, `DONE`, `PENDING`, `MISS`, `HIT`.
 Two further reasons the prefix is mandatory rather than a per-enum decision:
 
 1. **Names are for human recognition.** A member is read far more often at a use site, in a log, a
-   packet dump, or a debugger than in its declaration. `PROTO_IP_V4` is self-describing when it
+   packet dump, or a debugger than in its declaration. `PROTOCORE_IP_V4` is self-describing when it
    appears alone. `V4` is not.
 2. **Some members cannot be de-prefixed at all.** These would become identifiers starting with a
    digit, which is not legal:
@@ -148,8 +148,8 @@ A rule that cannot be applied uniformly is not a rule.
 **Include guards are `PROTOCORE_<FILE>_H`**, built from the file's own name:
 `src/crypto/hash/sha256.h` guards with `PROTOCORE_SHA256_H`.
 
-A guard takes the full library name rather than the `PROTO_` prefix, because it is the one macro that
-has to be unique across _someone else's_ build: `PROTO_HTTP_PARSER_H` is a plausible name for another
+A guard takes the full library name rather than the `PROTOCORE_` prefix, because it is the one macro that
+has to be unique across _someone else's_ build: `PROTOCORE_HTTP_PARSER_H` is a plausible name for another
 library's guard while `PROTOCORE_HTTP_PARSER_H` is not.
 
 **Every header file name under `src/` is unique, and `check_symbols.py` enforces it.** That is what
@@ -187,18 +187,18 @@ firmware serves and the Python that compiles them, so it carries `.html`, `.css`
 the directory is inert to the build. The rule for it is the input's own: an em-dash in an HTML
 document reaches ban #7 through the generated `.c`.
 
-**One exception, the same boundary section 1 draws.** A `core_setup/` adapter whose entire job is
+**Two exceptions, the same boundary section 1 draws.** A `core_setup/` adapter whose entire job is
 to wrap a C++ vendor API keeps `.cpp`, because the extension selects the compiler and the vendor type
 cannot be named from C at all. Today that is three files:
 
-| File                                       | The C++ it wraps                                          |
-| ------------------------------------------ | --------------------------------------------------------- |
-| `core_setup/hal/esp/esp_mnt_fs.cpp`        | an Arduino `fs::FS`, turned into a `pc_mnt_backend`       |
-| `core_setup/hal/esp/esp_nvs.cpp`           | an Arduino `Preferences` namespace, behind `nvs.h`        |
-| `core_setup/physical/esp/physical_esp.cpp` | the Arduino `WiFi` and `ETH` objects, behind `physical.h` |
+| File                                       | The C++ it wraps                                           |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| `core_setup/hal/esp/esp_mnt_fs.cpp`        | an Arduino `fs::FS`, turned into a `protocore_mnt_backend` |
+| `core_setup/hal/esp/esp_nvs.cpp`           | an Arduino `Preferences` namespace, behind `nvs.h`         |
+| `core_setup/physical/esp/physical_esp.cpp` | the Arduino `WiFi` and `ETH` objects, behind `physical.h`  |
 
 It covers what a driver must consume, never what it publishes: every name `physical_esp.cpp` defines
-is declared in `physical.h` between `PROTO_BEGIN_DECLS` and `PROTO_END_DECLS`, so every caller above
+is declared in `physical.h` between `PROTOCORE_BEGIN_DECLS` and `PROTOCORE_END_DECLS`, so every caller above
 the board layer is C speaking to C. A `.cpp` anywhere else under `src/`, or one that exports a C++
 type, is a violation rather than an instance of this. The list is written down because a rule with an
 unrecorded exception gets "fixed" by the next mechanical pass.

@@ -12,7 +12,7 @@
 <!-- AUTH -->
 <g id="node1" class="node">
 <title>AUTH</title>
-<g id="a_node1"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#auth" xlink:title="PC_ENABLE_AUTH &#45; enables 1" target="_blank">
+<g id="a_node1"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#auth" xlink:title="PROTOCORE_ENABLE_AUTH &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-36C86.5,-36 56.5,-36 56.5,-36 50.5,-36 44.5,-30 44.5,-24 44.5,-24 44.5,-12 44.5,-12 44.5,-6 50.5,0 56.5,0 56.5,0 86.5,0 86.5,0 92.5,0 98.5,-6 98.5,-12 98.5,-12 98.5,-24 98.5,-24 98.5,-30 92.5,-36 86.5,-36"/>
 <text text-anchor="middle" x="71.5" y="-15.2" font-family="monospace" font-size="11.00" fill="#e6edf3">AUTH</text>
 </a>
@@ -21,7 +21,7 @@
 <!-- AUTH_LOCKOUT -->
 <g id="node2" class="node">
 <title>AUTH_LOCKOUT</title>
-<g id="a_node2"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#auth-lockout" xlink:title="PC_ENABLE_AUTH_LOCKOUT &#45; needs AUTH &#45; enables 1" target="_blank">
+<g id="a_node2"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#auth-lockout" xlink:title="PROTOCORE_ENABLE_AUTH_LOCKOUT &#45; needs AUTH &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M315.5,-36C315.5,-36 241.5,-36 241.5,-36 235.5,-36 229.5,-30 229.5,-24 229.5,-24 229.5,-12 229.5,-12 229.5,-6 235.5,0 241.5,0 241.5,0 315.5,0 315.5,0 321.5,0 327.5,-6 327.5,-12 327.5,-12 327.5,-24 327.5,-24 327.5,-30 321.5,-36 315.5,-36"/>
 <text text-anchor="middle" x="278.5" y="-15.2" font-family="monospace" font-size="11.00" fill="#e6edf3">AUTH_LOCKOUT</text>
 </a>
@@ -36,7 +36,7 @@
 <!-- FORWARDED_TRUST -->
 <g id="node16" class="node">
 <title>FORWARDED_TRUST</title>
-<g id="a_node16"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#forwarded-trust" xlink:title="PC_ENABLE_FORWARDED_TRUST &#45; needs AUTH_LOCKOUT" target="_blank">
+<g id="a_node16"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#forwarded-trust" xlink:title="PROTOCORE_ENABLE_FORWARDED_TRUST &#45; needs AUTH_LOCKOUT" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M550.5,-36C550.5,-36 456.5,-36 456.5,-36 450.5,-36 444.5,-30 444.5,-24 444.5,-24 444.5,-12 444.5,-12 444.5,-6 450.5,0 456.5,0 456.5,0 550.5,0 550.5,0 556.5,0 562.5,-6 562.5,-12 562.5,-12 562.5,-24 562.5,-24 562.5,-30 556.5,-36 550.5,-36"/>
 <text text-anchor="middle" x="503.5" y="-15.2" font-family="monospace" font-size="11.00" fill="#e6edf3">FORWARDED_TRUST</text>
 </a>
@@ -51,7 +51,7 @@
 <!-- CANOPEN -->
 <g id="node3" class="node">
 <title>CANOPEN</title>
-<g id="a_node3"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#canopen" xlink:title="PC_ENABLE_CANOPEN &#45; enables 1" target="_blank">
+<g id="a_node3"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#canopen" xlink:title="PROTOCORE_ENABLE_CANOPEN &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M91.5,-84C91.5,-84 51.5,-84 51.5,-84 45.5,-84 39.5,-78 39.5,-72 39.5,-72 39.5,-60 39.5,-60 39.5,-54 45.5,-48 51.5,-48 51.5,-48 91.5,-48 91.5,-48 97.5,-48 103.5,-54 103.5,-60 103.5,-60 103.5,-72 103.5,-72 103.5,-78 97.5,-84 91.5,-84"/>
 <text text-anchor="middle" x="71.5" y="-63.2" font-family="monospace" font-size="11.00" fill="#e6edf3">CANOPEN</text>
 </a>
@@ -60,7 +60,7 @@
 <!-- CIA402 -->
 <g id="node4" class="node">
 <title>CIA402</title>
-<g id="a_node4"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#cia402" xlink:title="PC_ENABLE_CIA402 &#45; needs CANOPEN" target="_blank">
+<g id="a_node4"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#cia402" xlink:title="PROTOCORE_ENABLE_CIA402 &#45; needs CANOPEN" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M295,-84C295,-84 262,-84 262,-84 256,-84 250,-78 250,-72 250,-72 250,-60 250,-60 250,-54 256,-48 262,-48 262,-48 295,-48 295,-48 301,-48 307,-54 307,-60 307,-60 307,-72 307,-72 307,-78 301,-84 295,-84"/>
 <text text-anchor="middle" x="278.5" y="-63.2" font-family="monospace" font-size="11.00" fill="#e6edf3">CIA402</text>
 </a>
@@ -75,7 +75,7 @@
 <!-- COAP -->
 <g id="node5" class="node">
 <title>COAP</title>
-<g id="a_node5"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#coap" xlink:title="PC_ENABLE_COAP &#45; enables 2" target="_blank">
+<g id="a_node5"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#coap" xlink:title="PROTOCORE_ENABLE_COAP &#45; enables 2" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-156C86.5,-156 56.5,-156 56.5,-156 50.5,-156 44.5,-150 44.5,-144 44.5,-144 44.5,-132 44.5,-132 44.5,-126 50.5,-120 56.5,-120 56.5,-120 86.5,-120 86.5,-120 92.5,-120 98.5,-126 98.5,-132 98.5,-132 98.5,-144 98.5,-144 98.5,-150 92.5,-156 86.5,-156"/>
 <text text-anchor="middle" x="71.5" y="-135.2" font-family="monospace" font-size="11.00" fill="#e6edf3">COAP</text>
 </a>
@@ -84,7 +84,7 @@
 <!-- COAP_BLOCK -->
 <g id="node6" class="node">
 <title>COAP_BLOCK</title>
-<g id="a_node6"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#coap-block" xlink:title="PC_ENABLE_COAP_BLOCK &#45; needs COAP" target="_blank">
+<g id="a_node6"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#coap-block" xlink:title="PROTOCORE_ENABLE_COAP_BLOCK &#45; needs COAP" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M308.5,-192C308.5,-192 248.5,-192 248.5,-192 242.5,-192 236.5,-186 236.5,-180 236.5,-180 236.5,-168 236.5,-168 236.5,-162 242.5,-156 248.5,-156 248.5,-156 308.5,-156 308.5,-156 314.5,-156 320.5,-162 320.5,-168 320.5,-168 320.5,-180 320.5,-180 320.5,-186 314.5,-192 308.5,-192"/>
 <text text-anchor="middle" x="278.5" y="-171.2" font-family="monospace" font-size="11.00" fill="#e6edf3">COAP_BLOCK</text>
 </a>
@@ -99,7 +99,7 @@
 <!-- COAP_OBSERVE -->
 <g id="node7" class="node">
 <title>COAP_OBSERVE</title>
-<g id="a_node7"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#coap-observe" xlink:title="PC_ENABLE_COAP_OBSERVE &#45; needs COAP" target="_blank">
+<g id="a_node7"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#coap-observe" xlink:title="PROTOCORE_ENABLE_COAP_OBSERVE &#45; needs COAP" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M315.5,-144C315.5,-144 241.5,-144 241.5,-144 235.5,-144 229.5,-138 229.5,-132 229.5,-132 229.5,-120 229.5,-120 229.5,-114 235.5,-108 241.5,-108 241.5,-108 315.5,-108 315.5,-108 321.5,-108 327.5,-114 327.5,-120 327.5,-120 327.5,-132 327.5,-132 327.5,-138 321.5,-144 315.5,-144"/>
 <text text-anchor="middle" x="278.5" y="-123.2" font-family="monospace" font-size="11.00" fill="#e6edf3">COAP_OBSERVE</text>
 </a>
@@ -114,7 +114,7 @@
 <!-- CONFIG_IO -->
 <g id="node8" class="node">
 <title>CONFIG_IO</title>
-<g id="a_node8"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#config-io" xlink:title="PC_ENABLE_CONFIG_IO &#45; needs CONFIG_STORE" target="_blank">
+<g id="a_node8"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#config-io" xlink:title="PROTOCORE_ENABLE_CONFIG_IO &#45; needs CONFIG_STORE" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M305,-240C305,-240 252,-240 252,-240 246,-240 240,-234 240,-228 240,-228 240,-216 240,-216 240,-210 246,-204 252,-204 252,-204 305,-204 305,-204 311,-204 317,-210 317,-216 317,-216 317,-228 317,-228 317,-234 311,-240 305,-240"/>
 <text text-anchor="middle" x="278.5" y="-219.2" font-family="monospace" font-size="11.00" fill="#e6edf3">CONFIG_IO</text>
 </a>
@@ -123,7 +123,7 @@
 <!-- CONFIG_STORE -->
 <g id="node9" class="node">
 <title>CONFIG_STORE</title>
-<g id="a_node9"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#config-store" xlink:title="PC_ENABLE_CONFIG_STORE &#45; enables 1" target="_blank">
+<g id="a_node9"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#config-store" xlink:title="PROTOCORE_ENABLE_CONFIG_STORE &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M108.5,-240C108.5,-240 34.5,-240 34.5,-240 28.5,-240 22.5,-234 22.5,-228 22.5,-228 22.5,-216 22.5,-216 22.5,-210 28.5,-204 34.5,-204 34.5,-204 108.5,-204 108.5,-204 114.5,-204 120.5,-210 120.5,-216 120.5,-216 120.5,-228 120.5,-228 120.5,-234 114.5,-240 108.5,-240"/>
 <text text-anchor="middle" x="71.5" y="-219.2" font-family="monospace" font-size="11.00" fill="#e6edf3">CONFIG_STORE</text>
 </a>
@@ -138,7 +138,7 @@
 <!-- DASHBOARD -->
 <g id="node10" class="node">
 <title>DASHBOARD</title>
-<g id="a_node10"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#dashboard" xlink:title="PC_ENABLE_DASHBOARD &#45; needs SSE" target="_blank">
+<g id="a_node10"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#dashboard" xlink:title="PROTOCORE_ENABLE_DASHBOARD &#45; needs SSE" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M305,-288C305,-288 252,-288 252,-288 246,-288 240,-282 240,-276 240,-276 240,-264 240,-264 240,-258 246,-252 252,-252 252,-252 305,-252 305,-252 311,-252 317,-258 317,-264 317,-264 317,-276 317,-276 317,-282 311,-288 305,-288"/>
 <text text-anchor="middle" x="278.5" y="-267.2" font-family="monospace" font-size="11.00" fill="#e6edf3">DASHBOARD</text>
 </a>
@@ -147,7 +147,7 @@
 <!-- EDGE_CACHE -->
 <g id="node11" class="node">
 <title>EDGE_CACHE</title>
-<g id="a_node11"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#edge-cache" xlink:title="PC_ENABLE_EDGE_CACHE &#45; needs HTTP_CACHE &#45; enables 2" target="_blank">
+<g id="a_node11"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#edge-cache" xlink:title="PROTOCORE_ENABLE_EDGE_CACHE &#45; needs HTTP_CACHE &#45; enables 2" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M308.5,-336C308.5,-336 248.5,-336 248.5,-336 242.5,-336 236.5,-330 236.5,-324 236.5,-324 236.5,-312 236.5,-312 236.5,-306 242.5,-300 248.5,-300 248.5,-300 308.5,-300 308.5,-300 314.5,-300 320.5,-306 320.5,-312 320.5,-312 320.5,-324 320.5,-324 320.5,-330 314.5,-336 308.5,-336"/>
 <text text-anchor="middle" x="278.5" y="-315.2" font-family="monospace" font-size="11.00" fill="#e6edf3">EDGE_CACHE</text>
 </a>
@@ -156,7 +156,7 @@
 <!-- EDGE_MESH -->
 <g id="node12" class="node">
 <title>EDGE_MESH</title>
-<g id="a_node12"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#edge-mesh" xlink:title="PC_ENABLE_EDGE_MESH &#45; needs EDGE_CACHE" target="_blank">
+<g id="a_node12"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#edge-mesh" xlink:title="PROTOCORE_ENABLE_EDGE_MESH &#45; needs EDGE_CACHE" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M530,-360C530,-360 477,-360 477,-360 471,-360 465,-354 465,-348 465,-348 465,-336 465,-336 465,-330 471,-324 477,-324 477,-324 530,-324 530,-324 536,-324 542,-330 542,-336 542,-336 542,-348 542,-348 542,-354 536,-360 530,-360"/>
 <text text-anchor="middle" x="503.5" y="-339.2" font-family="monospace" font-size="11.00" fill="#e6edf3">EDGE_MESH</text>
 </a>
@@ -171,7 +171,7 @@
 <!-- EDGE_ORIGIN_TLS -->
 <g id="node13" class="node">
 <title>EDGE_ORIGIN_TLS</title>
-<g id="a_node13"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#edge-origin-tls" xlink:title="PC_ENABLE_EDGE_ORIGIN_TLS &#45; needs EDGE_CACHE" target="_blank">
+<g id="a_node13"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#edge-origin-tls" xlink:title="PROTOCORE_ENABLE_EDGE_ORIGIN_TLS &#45; needs EDGE_CACHE" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M566,-312C566,-312 441,-312 441,-312 435,-312 429,-306 429,-300 429,-300 429,-288 429,-288 429,-282 435,-276 441,-276 441,-276 566,-276 566,-276 572,-276 578,-282 578,-288 578,-288 578,-300 578,-300 578,-306 572,-312 566,-312"/>
 <text text-anchor="start" x="438.5" y="-291.2" font-family="monospace" font-size="11.00" fill="#e6edf3">EDGE_ORIGIN_TLS &#160;</text>
 <polygon fill="#238636" stroke="transparent" points="554.5,-287 554.5,-301 570.5,-301 570.5,-287 554.5,-287"/>
@@ -188,7 +188,7 @@
 <!-- EUROMAP77 -->
 <g id="node14" class="node">
 <title>EUROMAP77</title>
-<g id="a_node14"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#euromap77" xlink:title="PC_ENABLE_EUROMAP77 &#45; needs OPCUA" target="_blank">
+<g id="a_node14"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#euromap77" xlink:title="PROTOCORE_ENABLE_EUROMAP77 &#45; needs OPCUA" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M305,-528C305,-528 252,-528 252,-528 246,-528 240,-522 240,-516 240,-516 240,-504 240,-504 240,-498 246,-492 252,-492 252,-492 305,-492 305,-492 311,-492 317,-498 317,-504 317,-504 317,-516 317,-516 317,-522 311,-528 305,-528"/>
 <text text-anchor="middle" x="278.5" y="-507.2" font-family="monospace" font-size="11.00" fill="#e6edf3">EUROMAP77</text>
 </a>
@@ -197,7 +197,7 @@
 <!-- FILE_SERVING -->
 <g id="node15" class="node">
 <title>FILE_SERVING</title>
-<g id="a_node15"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#file-serving" xlink:title="PC_ENABLE_FILE_SERVING &#45; enables 2" target="_blank">
+<g id="a_node15"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#file-serving" xlink:title="PROTOCORE_ENABLE_FILE_SERVING &#45; enables 2" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M108.5,-600C108.5,-600 34.5,-600 34.5,-600 28.5,-600 22.5,-594 22.5,-588 22.5,-588 22.5,-576 22.5,-576 22.5,-570 28.5,-564 34.5,-564 34.5,-564 108.5,-564 108.5,-564 114.5,-564 120.5,-570 120.5,-576 120.5,-576 120.5,-588 120.5,-588 120.5,-594 114.5,-600 108.5,-600"/>
 <text text-anchor="middle" x="71.5" y="-579.2" font-family="monospace" font-size="11.00" fill="#e6edf3">FILE_SERVING</text>
 </a>
@@ -206,7 +206,7 @@
 <!-- RANGE -->
 <g id="node33" class="node">
 <title>RANGE</title>
-<g id="a_node33"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#range" xlink:title="PC_ENABLE_RANGE &#45; needs FILE_SERVING" target="_blank">
+<g id="a_node33"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#range" xlink:title="PROTOCORE_ENABLE_RANGE &#45; needs FILE_SERVING" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M293.5,-624C293.5,-624 263.5,-624 263.5,-624 257.5,-624 251.5,-618 251.5,-612 251.5,-612 251.5,-600 251.5,-600 251.5,-594 257.5,-588 263.5,-588 263.5,-588 293.5,-588 293.5,-588 299.5,-588 305.5,-594 305.5,-600 305.5,-600 305.5,-612 305.5,-612 305.5,-618 299.5,-624 293.5,-624"/>
 <text text-anchor="middle" x="278.5" y="-603.2" font-family="monospace" font-size="11.00" fill="#e6edf3">RANGE</text>
 </a>
@@ -221,7 +221,7 @@
 <!-- WEBDAV -->
 <g id="node54" class="node">
 <title>WEBDAV</title>
-<g id="a_node54"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#webdav" xlink:title="PC_ENABLE_WEBDAV &#45; needs FILE_SERVING" target="_blank">
+<g id="a_node54"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#webdav" xlink:title="PROTOCORE_ENABLE_WEBDAV &#45; needs FILE_SERVING" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M295,-576C295,-576 262,-576 262,-576 256,-576 250,-570 250,-564 250,-564 250,-552 250,-552 250,-546 256,-540 262,-540 262,-540 295,-540 295,-540 301,-540 307,-546 307,-552 307,-552 307,-564 307,-564 307,-570 301,-576 295,-576"/>
 <text text-anchor="middle" x="278.5" y="-555.2" font-family="monospace" font-size="11.00" fill="#e6edf3">WEBDAV</text>
 </a>
@@ -236,7 +236,7 @@
 <!-- FTP -->
 <g id="node17" class="node">
 <title>FTP</title>
-<g id="a_node17"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ftp" xlink:title="PC_ENABLE_FTP &#45; enables 1" target="_blank">
+<g id="a_node17"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ftp" xlink:title="PROTOCORE_ENABLE_FTP &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-672C86.5,-672 56.5,-672 56.5,-672 50.5,-672 44.5,-666 44.5,-660 44.5,-660 44.5,-648 44.5,-648 44.5,-642 50.5,-636 56.5,-636 56.5,-636 86.5,-636 86.5,-636 92.5,-636 98.5,-642 98.5,-648 98.5,-648 98.5,-660 98.5,-660 98.5,-666 92.5,-672 86.5,-672"/>
 <text text-anchor="middle" x="71.5" y="-651.2" font-family="monospace" font-size="11.00" fill="#e6edf3">FTP</text>
 </a>
@@ -245,7 +245,7 @@
 <!-- FTP_SESSION -->
 <g id="node18" class="node">
 <title>FTP_SESSION</title>
-<g id="a_node18"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ftp-session" xlink:title="PC_ENABLE_FTP_SESSION &#45; needs FTP" target="_blank">
+<g id="a_node18"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ftp-session" xlink:title="PROTOCORE_ENABLE_FTP_SESSION &#45; needs FTP" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M312,-672C312,-672 245,-672 245,-672 239,-672 233,-666 233,-660 233,-660 233,-648 233,-648 233,-642 239,-636 245,-636 245,-636 312,-636 312,-636 318,-636 324,-642 324,-648 324,-648 324,-660 324,-660 324,-666 318,-672 312,-672"/>
 <text text-anchor="middle" x="278.5" y="-651.2" font-family="monospace" font-size="11.00" fill="#e6edf3">FTP_SESSION</text>
 </a>
@@ -260,7 +260,7 @@
 <!-- HTTP3 -->
 <g id="node19" class="node">
 <title>HTTP3</title>
-<g id="a_node19"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http3" xlink:title="PC_ENABLE_HTTP3 &#45; needs SSH_SNTRUP761" target="_blank">
+<g id="a_node19"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http3" xlink:title="PROTOCORE_ENABLE_HTTP3 &#45; needs SSH_SNTRUP761" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M293.5,-864C293.5,-864 263.5,-864 263.5,-864 257.5,-864 251.5,-858 251.5,-852 251.5,-852 251.5,-840 251.5,-840 251.5,-834 257.5,-828 263.5,-828 263.5,-828 293.5,-828 293.5,-828 299.5,-828 305.5,-834 305.5,-840 305.5,-840 305.5,-852 305.5,-852 305.5,-858 299.5,-864 293.5,-864"/>
 <text text-anchor="middle" x="278.5" y="-843.2" font-family="monospace" font-size="11.00" fill="#e6edf3">HTTP3</text>
 </a>
@@ -269,7 +269,7 @@
 <!-- HTTP_CACHE -->
 <g id="node20" class="node">
 <title>HTTP_CACHE</title>
-<g id="a_node20"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-cache" xlink:title="PC_ENABLE_HTTP_CACHE &#45; enables 1" target="_blank">
+<g id="a_node20"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-cache" xlink:title="PROTOCORE_ENABLE_HTTP_CACHE &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M101.5,-336C101.5,-336 41.5,-336 41.5,-336 35.5,-336 29.5,-330 29.5,-324 29.5,-324 29.5,-312 29.5,-312 29.5,-306 35.5,-300 41.5,-300 41.5,-300 101.5,-300 101.5,-300 107.5,-300 113.5,-306 113.5,-312 113.5,-312 113.5,-324 113.5,-324 113.5,-330 107.5,-336 101.5,-336"/>
 <text text-anchor="middle" x="71.5" y="-315.2" font-family="monospace" font-size="11.00" fill="#e6edf3">HTTP_CACHE</text>
 </a>
@@ -284,7 +284,7 @@
 <!-- HTTP_CLIENT -->
 <g id="node21" class="node">
 <title>HTTP_CLIENT</title>
-<g id="a_node21"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-client" xlink:title="PC_ENABLE_HTTP_CLIENT &#45; enables 1" target="_blank">
+<g id="a_node21"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-client" xlink:title="PROTOCORE_ENABLE_HTTP_CLIENT &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M105,-912C105,-912 38,-912 38,-912 32,-912 26,-906 26,-900 26,-900 26,-888 26,-888 26,-882 32,-876 38,-876 38,-876 105,-876 105,-876 111,-876 117,-882 117,-888 117,-888 117,-900 117,-900 117,-906 111,-912 105,-912"/>
 <text text-anchor="middle" x="71.5" y="-891.2" font-family="monospace" font-size="11.00" fill="#e6edf3">HTTP_CLIENT</text>
 </a>
@@ -293,7 +293,7 @@
 <!-- HTTP_CLIENT_TLS -->
 <g id="node22" class="node">
 <title>HTTP_CLIENT_TLS</title>
-<g id="a_node22"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-client-tls" xlink:title="PC_ENABLE_HTTP_CLIENT_TLS &#45; needs HTTP_CLIENT" target="_blank">
+<g id="a_node22"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#http-client-tls" xlink:title="PROTOCORE_ENABLE_HTTP_CLIENT_TLS &#45; needs HTTP_CLIENT" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M341,-912C341,-912 216,-912 216,-912 210,-912 204,-906 204,-900 204,-900 204,-888 204,-888 204,-882 210,-876 216,-876 216,-876 341,-876 341,-876 347,-876 353,-882 353,-888 353,-888 353,-900 353,-900 353,-906 347,-912 341,-912"/>
 <text text-anchor="start" x="213.5" y="-891.2" font-family="monospace" font-size="11.00" fill="#e6edf3">HTTP_CLIENT_TLS &#160;</text>
 <polygon fill="#238636" stroke="transparent" points="329.5,-887 329.5,-901 345.5,-901 345.5,-887 329.5,-887"/>
@@ -310,7 +310,7 @@
 <!-- METRICS -->
 <g id="node23" class="node">
 <title>METRICS</title>
-<g id="a_node23"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#metrics" xlink:title="PC_ENABLE_METRICS &#45; needs STATS" target="_blank">
+<g id="a_node23"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#metrics" xlink:title="PROTOCORE_ENABLE_METRICS &#45; needs STATS" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M298.5,-960C298.5,-960 258.5,-960 258.5,-960 252.5,-960 246.5,-954 246.5,-948 246.5,-948 246.5,-936 246.5,-936 246.5,-930 252.5,-924 258.5,-924 258.5,-924 298.5,-924 298.5,-924 304.5,-924 310.5,-930 310.5,-936 310.5,-936 310.5,-948 310.5,-948 310.5,-954 304.5,-960 298.5,-960"/>
 <text text-anchor="middle" x="278.5" y="-939.2" font-family="monospace" font-size="11.00" fill="#e6edf3">METRICS</text>
 </a>
@@ -319,7 +319,7 @@
 <!-- MQTT -->
 <g id="node24" class="node">
 <title>MQTT</title>
-<g id="a_node24"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mqtt" xlink:title="PC_ENABLE_MQTT &#45; enables 1" target="_blank">
+<g id="a_node24"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mqtt" xlink:title="PROTOCORE_ENABLE_MQTT &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-1008C86.5,-1008 56.5,-1008 56.5,-1008 50.5,-1008 44.5,-1002 44.5,-996 44.5,-996 44.5,-984 44.5,-984 44.5,-978 50.5,-972 56.5,-972 56.5,-972 86.5,-972 86.5,-972 92.5,-972 98.5,-978 98.5,-984 98.5,-984 98.5,-996 98.5,-996 98.5,-1002 92.5,-1008 86.5,-1008"/>
 <text text-anchor="middle" x="71.5" y="-987.2" font-family="monospace" font-size="11.00" fill="#e6edf3">MQTT</text>
 </a>
@@ -328,7 +328,7 @@
 <!-- MQTT_TLS -->
 <g id="node25" class="node">
 <title>MQTT_TLS</title>
-<g id="a_node25"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mqtt-tls" xlink:title="PC_ENABLE_MQTT_TLS &#45; needs MQTT" target="_blank">
+<g id="a_node25"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mqtt-tls" xlink:title="PROTOCORE_ENABLE_MQTT_TLS &#45; needs MQTT" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M317.5,-1008C317.5,-1008 239.5,-1008 239.5,-1008 233.5,-1008 227.5,-1002 227.5,-996 227.5,-996 227.5,-984 227.5,-984 227.5,-978 233.5,-972 239.5,-972 239.5,-972 317.5,-972 317.5,-972 323.5,-972 329.5,-978 329.5,-984 329.5,-984 329.5,-996 329.5,-996 329.5,-1002 323.5,-1008 317.5,-1008"/>
 <text text-anchor="start" x="236.5" y="-987.2" font-family="monospace" font-size="11.00" fill="#e6edf3">MQTT_TLS &#160;</text>
 <polygon fill="#238636" stroke="transparent" points="305.5,-983 305.5,-997 321.5,-997 321.5,-983 305.5,-983"/>
@@ -345,7 +345,7 @@
 <!-- MTLS -->
 <g id="node26" class="node">
 <title>MTLS</title>
-<g id="a_node26"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mtls" xlink:title="PC_ENABLE_MTLS" target="_blank">
+<g id="a_node26"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#mtls" xlink:title="PROTOCORE_ENABLE_MTLS" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M97,-1056C97,-1056 46,-1056 46,-1056 40,-1056 34,-1050 34,-1044 34,-1044 34,-1032 34,-1032 34,-1026 40,-1020 46,-1020 46,-1020 97,-1020 97,-1020 103,-1020 109,-1026 109,-1032 109,-1032 109,-1044 109,-1044 109,-1050 103,-1056 97,-1056"/>
 <text text-anchor="start" x="43.5" y="-1035.2" font-family="monospace" font-size="11.00" fill="#e6edf3">MTLS &#160;</text>
 <polygon fill="#238636" stroke="transparent" points="85.5,-1031 85.5,-1045 101.5,-1045 101.5,-1031 85.5,-1031"/>
@@ -356,7 +356,7 @@
 <!-- NTP_SERVER -->
 <g id="node27" class="node">
 <title>NTP_SERVER</title>
-<g id="a_node27"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ntp-server" xlink:title="PC_ENABLE_NTP_SERVER &#45; needs TIME_SOURCE" target="_blank">
+<g id="a_node27"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ntp-server" xlink:title="PROTOCORE_ENABLE_NTP_SERVER &#45; needs TIME_SOURCE" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M308.5,-1104C308.5,-1104 248.5,-1104 248.5,-1104 242.5,-1104 236.5,-1098 236.5,-1092 236.5,-1092 236.5,-1080 236.5,-1080 236.5,-1074 242.5,-1068 248.5,-1068 248.5,-1068 308.5,-1068 308.5,-1068 314.5,-1068 320.5,-1074 320.5,-1080 320.5,-1080 320.5,-1092 320.5,-1092 320.5,-1098 314.5,-1104 308.5,-1104"/>
 <text text-anchor="middle" x="278.5" y="-1083.2" font-family="monospace" font-size="11.00" fill="#e6edf3">NTP_SERVER</text>
 </a>
@@ -365,7 +365,7 @@
 <!-- OIDC -->
 <g id="node28" class="node">
 <title>OIDC</title>
-<g id="a_node28"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#oidc" xlink:title="PC_ENABLE_OIDC &#45; needs SSH" target="_blank">
+<g id="a_node28"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#oidc" xlink:title="PROTOCORE_ENABLE_OIDC &#45; needs SSH" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M518.5,-864C518.5,-864 488.5,-864 488.5,-864 482.5,-864 476.5,-858 476.5,-852 476.5,-852 476.5,-840 476.5,-840 476.5,-834 482.5,-828 488.5,-828 488.5,-828 518.5,-828 518.5,-828 524.5,-828 530.5,-834 530.5,-840 530.5,-840 530.5,-852 530.5,-852 530.5,-858 524.5,-864 518.5,-864"/>
 <text text-anchor="middle" x="503.5" y="-843.2" font-family="monospace" font-size="11.00" fill="#e6edf3">OIDC</text>
 </a>
@@ -374,7 +374,7 @@
 <!-- OPCUA -->
 <g id="node29" class="node">
 <title>OPCUA</title>
-<g id="a_node29"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#opcua" xlink:title="PC_ENABLE_OPCUA &#45; enables 4" target="_blank">
+<g id="a_node29"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#opcua" xlink:title="PROTOCORE_ENABLE_OPCUA &#45; enables 4" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-456C86.5,-456 56.5,-456 56.5,-456 50.5,-456 44.5,-450 44.5,-444 44.5,-444 44.5,-432 44.5,-432 44.5,-426 50.5,-420 56.5,-420 56.5,-420 86.5,-420 86.5,-420 92.5,-420 98.5,-426 98.5,-432 98.5,-432 98.5,-444 98.5,-444 98.5,-450 92.5,-456 86.5,-456"/>
 <text text-anchor="middle" x="71.5" y="-435.2" font-family="monospace" font-size="11.00" fill="#e6edf3">OPCUA</text>
 </a>
@@ -389,7 +389,7 @@
 <!-- OPCUA_CLIENT -->
 <g id="node30" class="node">
 <title>OPCUA_CLIENT</title>
-<g id="a_node30"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#opcua-client" xlink:title="PC_ENABLE_OPCUA_CLIENT &#45; needs OPCUA" target="_blank">
+<g id="a_node30"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#opcua-client" xlink:title="PROTOCORE_ENABLE_OPCUA_CLIENT &#45; needs OPCUA" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M315.5,-480C315.5,-480 241.5,-480 241.5,-480 235.5,-480 229.5,-474 229.5,-468 229.5,-468 229.5,-456 229.5,-456 229.5,-450 235.5,-444 241.5,-444 241.5,-444 315.5,-444 315.5,-444 321.5,-444 327.5,-450 327.5,-456 327.5,-456 327.5,-468 327.5,-468 327.5,-474 321.5,-480 315.5,-480"/>
 <text text-anchor="middle" x="278.5" y="-459.2" font-family="monospace" font-size="11.00" fill="#e6edf3">OPCUA_CLIENT</text>
 </a>
@@ -404,7 +404,7 @@
 <!-- ROBOTICS -->
 <g id="node34" class="node">
 <title>ROBOTICS</title>
-<g id="a_node34"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#robotics" xlink:title="PC_ENABLE_ROBOTICS &#45; needs OPCUA" target="_blank">
+<g id="a_node34"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#robotics" xlink:title="PROTOCORE_ENABLE_ROBOTICS &#45; needs OPCUA" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M302,-432C302,-432 255,-432 255,-432 249,-432 243,-426 243,-420 243,-420 243,-408 243,-408 243,-402 249,-396 255,-396 255,-396 302,-396 302,-396 308,-396 314,-402 314,-408 314,-408 314,-420 314,-420 314,-426 308,-432 302,-432"/>
 <text text-anchor="middle" x="278.5" y="-411.2" font-family="monospace" font-size="11.00" fill="#e6edf3">ROBOTICS</text>
 </a>
@@ -419,7 +419,7 @@
 <!-- UMATI -->
 <g id="node53" class="node">
 <title>UMATI</title>
-<g id="a_node53"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#umati" xlink:title="PC_ENABLE_UMATI &#45; needs OPCUA" target="_blank">
+<g id="a_node53"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#umati" xlink:title="PROTOCORE_ENABLE_UMATI &#45; needs OPCUA" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M293.5,-384C293.5,-384 263.5,-384 263.5,-384 257.5,-384 251.5,-378 251.5,-372 251.5,-372 251.5,-360 251.5,-360 251.5,-354 257.5,-348 263.5,-348 263.5,-348 293.5,-348 293.5,-348 299.5,-348 305.5,-354 305.5,-360 305.5,-360 305.5,-372 305.5,-372 305.5,-378 299.5,-384 293.5,-384"/>
 <text text-anchor="middle" x="278.5" y="-363.2" font-family="monospace" font-size="11.00" fill="#e6edf3">UMATI</text>
 </a>
@@ -434,7 +434,7 @@
 <!-- PMBUS -->
 <g id="node31" class="node">
 <title>PMBUS</title>
-<g id="a_node31"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#pmbus" xlink:title="PC_ENABLE_PMBUS &#45; needs SMBUS" target="_blank">
+<g id="a_node31"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#pmbus" xlink:title="PROTOCORE_ENABLE_PMBUS &#45; needs SMBUS" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M293.5,-1152C293.5,-1152 263.5,-1152 263.5,-1152 257.5,-1152 251.5,-1146 251.5,-1140 251.5,-1140 251.5,-1128 251.5,-1128 251.5,-1122 257.5,-1116 263.5,-1116 263.5,-1116 293.5,-1116 293.5,-1116 299.5,-1116 305.5,-1122 305.5,-1128 305.5,-1128 305.5,-1140 305.5,-1140 305.5,-1146 299.5,-1152 293.5,-1152"/>
 <text text-anchor="middle" x="278.5" y="-1131.2" font-family="monospace" font-size="11.00" fill="#e6edf3">PMBUS</text>
 </a>
@@ -443,7 +443,7 @@
 <!-- PQC_KEX -->
 <g id="node32" class="node">
 <title>PQC_KEX</title>
-<g id="a_node32"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#pqc-kex" xlink:title="PC_ENABLE_PQC_KEX &#45; needs SSH_SNTRUP761" target="_blank">
+<g id="a_node32"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#pqc-kex" xlink:title="PROTOCORE_ENABLE_PQC_KEX &#45; needs SSH_SNTRUP761" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M298.5,-816C298.5,-816 258.5,-816 258.5,-816 252.5,-816 246.5,-810 246.5,-804 246.5,-804 246.5,-792 246.5,-792 246.5,-786 252.5,-780 258.5,-780 258.5,-780 298.5,-780 298.5,-780 304.5,-780 310.5,-786 310.5,-792 310.5,-792 310.5,-804 310.5,-804 310.5,-810 304.5,-816 298.5,-816"/>
 <text text-anchor="middle" x="278.5" y="-795.2" font-family="monospace" font-size="11.00" fill="#e6edf3">PQC_KEX</text>
 </a>
@@ -452,7 +452,7 @@
 <!-- SMBUS -->
 <g id="node35" class="node">
 <title>SMBUS</title>
-<g id="a_node35"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smbus" xlink:title="PC_ENABLE_SMBUS &#45; enables 1" target="_blank">
+<g id="a_node35"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smbus" xlink:title="PROTOCORE_ENABLE_SMBUS &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-1152C86.5,-1152 56.5,-1152 56.5,-1152 50.5,-1152 44.5,-1146 44.5,-1140 44.5,-1140 44.5,-1128 44.5,-1128 44.5,-1122 50.5,-1116 56.5,-1116 56.5,-1116 86.5,-1116 86.5,-1116 92.5,-1116 98.5,-1122 98.5,-1128 98.5,-1128 98.5,-1140 98.5,-1140 98.5,-1146 92.5,-1152 86.5,-1152"/>
 <text text-anchor="middle" x="71.5" y="-1131.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SMBUS</text>
 </a>
@@ -467,7 +467,7 @@
 <!-- SMTP -->
 <g id="node36" class="node">
 <title>SMTP</title>
-<g id="a_node36"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smtp" xlink:title="PC_ENABLE_SMTP &#45; enables 1" target="_blank">
+<g id="a_node36"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smtp" xlink:title="PROTOCORE_ENABLE_SMTP &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-1200C86.5,-1200 56.5,-1200 56.5,-1200 50.5,-1200 44.5,-1194 44.5,-1188 44.5,-1188 44.5,-1176 44.5,-1176 44.5,-1170 50.5,-1164 56.5,-1164 56.5,-1164 86.5,-1164 86.5,-1164 92.5,-1164 98.5,-1170 98.5,-1176 98.5,-1176 98.5,-1188 98.5,-1188 98.5,-1194 92.5,-1200 86.5,-1200"/>
 <text text-anchor="middle" x="71.5" y="-1179.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SMTP</text>
 </a>
@@ -476,7 +476,7 @@
 <!-- SMTP_TLS -->
 <g id="node37" class="node">
 <title>SMTP_TLS</title>
-<g id="a_node37"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smtp-tls" xlink:title="PC_ENABLE_SMTP_TLS &#45; needs SMTP" target="_blank">
+<g id="a_node37"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smtp-tls" xlink:title="PROTOCORE_ENABLE_SMTP_TLS &#45; needs SMTP" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M302,-1200C302,-1200 255,-1200 255,-1200 249,-1200 243,-1194 243,-1188 243,-1188 243,-1176 243,-1176 243,-1170 249,-1164 255,-1164 255,-1164 302,-1164 302,-1164 308,-1164 314,-1170 314,-1176 314,-1176 314,-1188 314,-1188 314,-1194 308,-1200 302,-1200"/>
 <text text-anchor="middle" x="278.5" y="-1179.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SMTP_TLS</text>
 </a>
@@ -491,7 +491,7 @@
 <!-- SNMP -->
 <g id="node38" class="node">
 <title>SNMP</title>
-<g id="a_node38"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp" xlink:title="PC_ENABLE_SNMP &#45; enables 2" target="_blank">
+<g id="a_node38"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp" xlink:title="PROTOCORE_ENABLE_SNMP &#45; enables 2" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-1260C86.5,-1260 56.5,-1260 56.5,-1260 50.5,-1260 44.5,-1254 44.5,-1248 44.5,-1248 44.5,-1236 44.5,-1236 44.5,-1230 50.5,-1224 56.5,-1224 56.5,-1224 86.5,-1224 86.5,-1224 92.5,-1224 98.5,-1230 98.5,-1236 98.5,-1236 98.5,-1248 98.5,-1248 98.5,-1254 92.5,-1260 86.5,-1260"/>
 <text text-anchor="middle" x="71.5" y="-1239.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SNMP</text>
 </a>
@@ -500,7 +500,7 @@
 <!-- SNMP_TRAP -->
 <g id="node39" class="node">
 <title>SNMP_TRAP</title>
-<g id="a_node39"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp-trap" xlink:title="PC_ENABLE_SNMP_TRAP &#45; needs SNMP" target="_blank">
+<g id="a_node39"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp-trap" xlink:title="PROTOCORE_ENABLE_SNMP_TRAP &#45; needs SNMP" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M305,-1296C305,-1296 252,-1296 252,-1296 246,-1296 240,-1290 240,-1284 240,-1284 240,-1272 240,-1272 240,-1266 246,-1260 252,-1260 252,-1260 305,-1260 305,-1260 311,-1260 317,-1266 317,-1272 317,-1272 317,-1284 317,-1284 317,-1290 311,-1296 305,-1296"/>
 <text text-anchor="middle" x="278.5" y="-1275.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SNMP_TRAP</text>
 </a>
@@ -515,7 +515,7 @@
 <!-- SNMP_V3 -->
 <g id="node40" class="node">
 <title>SNMP_V3</title>
-<g id="a_node40"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp-v3" xlink:title="PC_ENABLE_SNMP_V3 &#45; needs SNMP" target="_blank">
+<g id="a_node40"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp-v3" xlink:title="PROTOCORE_ENABLE_SNMP_V3 &#45; needs SNMP" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M298.5,-1248C298.5,-1248 258.5,-1248 258.5,-1248 252.5,-1248 246.5,-1242 246.5,-1236 246.5,-1236 246.5,-1224 246.5,-1224 246.5,-1218 252.5,-1212 258.5,-1212 258.5,-1212 298.5,-1212 298.5,-1212 304.5,-1212 310.5,-1218 310.5,-1224 310.5,-1224 310.5,-1236 310.5,-1236 310.5,-1242 304.5,-1248 298.5,-1248"/>
 <text text-anchor="middle" x="278.5" y="-1227.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SNMP_V3</text>
 </a>
@@ -530,7 +530,7 @@
 <!-- SSE -->
 <g id="node41" class="node">
 <title>SSE</title>
-<g id="a_node41"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#sse" xlink:title="PC_ENABLE_SSE &#45; enables 1" target="_blank">
+<g id="a_node41"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#sse" xlink:title="PROTOCORE_ENABLE_SSE &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-288C86.5,-288 56.5,-288 56.5,-288 50.5,-288 44.5,-282 44.5,-276 44.5,-276 44.5,-264 44.5,-264 44.5,-258 50.5,-252 56.5,-252 56.5,-252 86.5,-252 86.5,-252 92.5,-252 98.5,-258 98.5,-264 98.5,-264 98.5,-276 98.5,-276 98.5,-282 92.5,-288 86.5,-288"/>
 <text text-anchor="middle" x="71.5" y="-267.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SSE</text>
 </a>
@@ -545,7 +545,7 @@
 <!-- SSH -->
 <g id="node42" class="node">
 <title>SSH</title>
-<g id="a_node42"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh" xlink:title="PC_ENABLE_SSH &#45; needs SSH_SNTRUP761 &#45; enables 5" target="_blank">
+<g id="a_node42"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh" xlink:title="PROTOCORE_ENABLE_SSH &#45; needs SSH_SNTRUP761 &#45; enables 5" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M293.5,-768C293.5,-768 263.5,-768 263.5,-768 257.5,-768 251.5,-762 251.5,-756 251.5,-756 251.5,-744 251.5,-744 251.5,-738 257.5,-732 263.5,-732 263.5,-732 293.5,-732 293.5,-732 299.5,-732 305.5,-738 305.5,-744 305.5,-744 305.5,-756 305.5,-756 305.5,-762 299.5,-768 293.5,-768"/>
 <text text-anchor="middle" x="278.5" y="-747.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SSH</text>
 </a>
@@ -560,7 +560,7 @@
 <!-- SSH_KEYBOARD_INTERACTIVE -->
 <g id="node44" class="node">
 <title>SSH_KEYBOARD_INTERACTIVE</title>
-<g id="a_node44"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-keyboard-interactive" xlink:title="PC_ENABLE_SSH_KEYBOARD_INTERACTIVE &#45; needs SSH" target="_blank">
+<g id="a_node44"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-keyboard-interactive" xlink:title="PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE &#45; needs SSH" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M581,-816C581,-816 426,-816 426,-816 420,-816 414,-810 414,-804 414,-804 414,-792 414,-792 414,-786 420,-780 426,-780 426,-780 581,-780 581,-780 587,-780 593,-786 593,-792 593,-792 593,-804 593,-804 593,-810 587,-816 581,-816"/>
 <text text-anchor="middle" x="503.5" y="-795.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SSH_KEYBOARD_INTERACTIVE</text>
 </a>
@@ -575,7 +575,7 @@
 <!-- SSH_SCP -->
 <g id="node45" class="node">
 <title>SSH_SCP</title>
-<g id="a_node45"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-scp" xlink:title="PC_ENABLE_SSH_SCP &#45; needs SSH" target="_blank">
+<g id="a_node45"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-scp" xlink:title="PROTOCORE_ENABLE_SSH_SCP &#45; needs SSH" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M523.5,-768C523.5,-768 483.5,-768 483.5,-768 477.5,-768 471.5,-762 471.5,-756 471.5,-756 471.5,-744 471.5,-744 471.5,-738 477.5,-732 483.5,-732 483.5,-732 523.5,-732 523.5,-732 529.5,-732 535.5,-738 535.5,-744 535.5,-744 535.5,-756 535.5,-756 535.5,-762 529.5,-768 523.5,-768"/>
 <text text-anchor="middle" x="503.5" y="-747.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SSH_SCP</text>
 </a>
@@ -590,7 +590,7 @@
 <!-- SSH_SFTP -->
 <g id="node46" class="node">
 <title>SSH_SFTP</title>
-<g id="a_node46"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-sftp" xlink:title="PC_ENABLE_SSH_SFTP &#45; needs SSH" target="_blank">
+<g id="a_node46"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-sftp" xlink:title="PROTOCORE_ENABLE_SSH_SFTP &#45; needs SSH" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M527,-720C527,-720 480,-720 480,-720 474,-720 468,-714 468,-708 468,-708 468,-696 468,-696 468,-690 474,-684 480,-684 480,-684 527,-684 527,-684 533,-684 539,-690 539,-696 539,-696 539,-708 539,-708 539,-714 533,-720 527,-720"/>
 <text text-anchor="middle" x="503.5" y="-699.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SSH_SFTP</text>
 </a>
@@ -605,7 +605,7 @@
 <!-- SSH_ZLIB -->
 <g id="node48" class="node">
 <title>SSH_ZLIB</title>
-<g id="a_node48"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-zlib" xlink:title="PC_ENABLE_SSH_ZLIB &#45; needs SSH" target="_blank">
+<g id="a_node48"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-zlib" xlink:title="PROTOCORE_ENABLE_SSH_ZLIB &#45; needs SSH" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M527,-672C527,-672 480,-672 480,-672 474,-672 468,-666 468,-660 468,-660 468,-648 468,-648 468,-642 474,-636 480,-636 480,-636 527,-636 527,-636 533,-636 539,-642 539,-648 539,-648 539,-660 539,-660 539,-666 533,-672 527,-672"/>
 <text text-anchor="middle" x="503.5" y="-651.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SSH_ZLIB</text>
 </a>
@@ -620,7 +620,7 @@
 <!-- SSH_CLIENT -->
 <g id="node43" class="node">
 <title>SSH_CLIENT</title>
-<g id="a_node43"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-client" xlink:title="PC_ENABLE_SSH_CLIENT &#45; needs SSH_SNTRUP761" target="_blank">
+<g id="a_node43"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-client" xlink:title="PROTOCORE_ENABLE_SSH_CLIENT &#45; needs SSH_SNTRUP761" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M308.5,-720C308.5,-720 248.5,-720 248.5,-720 242.5,-720 236.5,-714 236.5,-708 236.5,-708 236.5,-696 236.5,-696 236.5,-690 242.5,-684 248.5,-684 248.5,-684 308.5,-684 308.5,-684 314.5,-684 320.5,-690 320.5,-696 320.5,-696 320.5,-708 320.5,-708 320.5,-714 314.5,-720 308.5,-720"/>
 <text text-anchor="middle" x="278.5" y="-699.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SSH_CLIENT</text>
 </a>
@@ -629,7 +629,7 @@
 <!-- SSH_SNTRUP761 -->
 <g id="node47" class="node">
 <title>SSH_SNTRUP761</title>
-<g id="a_node47"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-sntrup761" xlink:title="PC_ENABLE_SSH_SNTRUP761 &#45; enables 4" target="_blank">
+<g id="a_node47"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ssh-sntrup761" xlink:title="PROTOCORE_ENABLE_SSH_SNTRUP761 &#45; enables 4" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M111.5,-792C111.5,-792 31.5,-792 31.5,-792 25.5,-792 19.5,-786 19.5,-780 19.5,-780 19.5,-768 19.5,-768 19.5,-762 25.5,-756 31.5,-756 31.5,-756 111.5,-756 111.5,-756 117.5,-756 123.5,-762 123.5,-768 123.5,-768 123.5,-780 123.5,-780 123.5,-786 117.5,-792 111.5,-792"/>
 <text text-anchor="middle" x="71.5" y="-771.2" font-family="monospace" font-size="11.00" fill="#e6edf3">SSH_SNTRUP761</text>
 </a>
@@ -662,7 +662,7 @@
 <!-- STATS -->
 <g id="node49" class="node">
 <title>STATS</title>
-<g id="a_node49"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#stats" xlink:title="PC_ENABLE_STATS &#45; enables 1" target="_blank">
+<g id="a_node49"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#stats" xlink:title="PROTOCORE_ENABLE_STATS &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M86.5,-960C86.5,-960 56.5,-960 56.5,-960 50.5,-960 44.5,-954 44.5,-948 44.5,-948 44.5,-936 44.5,-936 44.5,-930 50.5,-924 56.5,-924 56.5,-924 86.5,-924 86.5,-924 92.5,-924 98.5,-930 98.5,-936 98.5,-936 98.5,-948 98.5,-948 98.5,-954 92.5,-960 86.5,-960"/>
 <text text-anchor="middle" x="71.5" y="-939.2" font-family="monospace" font-size="11.00" fill="#e6edf3">STATS</text>
 </a>
@@ -677,7 +677,7 @@
 <!-- TIME_SOURCE -->
 <g id="node50" class="node">
 <title>TIME_SOURCE</title>
-<g id="a_node50"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#time-source" xlink:title="PC_ENABLE_TIME_SOURCE &#45; enables 1" target="_blank">
+<g id="a_node50"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#time-source" xlink:title="PROTOCORE_ENABLE_TIME_SOURCE &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M105,-1104C105,-1104 38,-1104 38,-1104 32,-1104 26,-1098 26,-1092 26,-1092 26,-1080 26,-1080 26,-1074 32,-1068 38,-1068 38,-1068 105,-1068 105,-1068 111,-1068 117,-1074 117,-1080 117,-1080 117,-1092 117,-1092 117,-1098 111,-1104 105,-1104"/>
 <text text-anchor="middle" x="71.5" y="-1083.2" font-family="monospace" font-size="11.00" fill="#e6edf3">TIME_SOURCE</text>
 </a>
@@ -692,7 +692,7 @@
 <!-- TLS -->
 <g id="node51" class="node">
 <title>TLS</title>
-<g id="a_node51"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#tls" xlink:title="PC_ENABLE_TLS" target="_blank">
+<g id="a_node51"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#tls" xlink:title="PROTOCORE_ENABLE_TLS" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M86.5,-1308C86.5,-1308 56.5,-1308 56.5,-1308 50.5,-1308 44.5,-1302 44.5,-1296 44.5,-1296 44.5,-1284 44.5,-1284 44.5,-1278 50.5,-1272 56.5,-1272 56.5,-1272 86.5,-1272 86.5,-1272 92.5,-1272 98.5,-1278 98.5,-1284 98.5,-1284 98.5,-1296 98.5,-1296 98.5,-1302 92.5,-1308 86.5,-1308"/>
 <text text-anchor="middle" x="71.5" y="-1287.2" font-family="monospace" font-size="11.00" fill="#e6edf3">TLS</text>
 </a>
@@ -701,7 +701,7 @@
 <!-- TLS_RESUMPTION -->
 <g id="node52" class="node">
 <title>TLS_RESUMPTION</title>
-<g id="a_node52"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#tls-resumption" xlink:title="PC_ENABLE_TLS_RESUMPTION" target="_blank">
+<g id="a_node52"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#tls-resumption" xlink:title="PROTOCORE_ENABLE_TLS_RESUMPTION" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M131,-1356C131,-1356 12,-1356 12,-1356 6,-1356 0,-1350 0,-1344 0,-1344 0,-1332 0,-1332 0,-1326 6,-1320 12,-1320 12,-1320 131,-1320 131,-1320 137,-1320 143,-1326 143,-1332 143,-1332 143,-1344 143,-1344 143,-1350 137,-1356 131,-1356"/>
 <text text-anchor="start" x="9.5" y="-1335.2" font-family="monospace" font-size="11.00" fill="#e6edf3">TLS_RESUMPTION &#160;</text>
 <polygon fill="#238636" stroke="transparent" points="119.5,-1331 119.5,-1345 135.5,-1345 135.5,-1331 119.5,-1331"/>
@@ -712,7 +712,7 @@
 <!-- WEBSOCKET -->
 <g id="node55" class="node">
 <title>WEBSOCKET</title>
-<g id="a_node55"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#websocket" xlink:title="PC_ENABLE_WEBSOCKET &#45; enables 2" target="_blank">
+<g id="a_node55"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#websocket" xlink:title="PROTOCORE_ENABLE_WEBSOCKET &#45; enables 2" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M98,-1404C98,-1404 45,-1404 45,-1404 39,-1404 33,-1398 33,-1392 33,-1392 33,-1380 33,-1380 33,-1374 39,-1368 45,-1368 45,-1368 98,-1368 98,-1368 104,-1368 110,-1374 110,-1380 110,-1380 110,-1392 110,-1392 110,-1398 104,-1404 98,-1404"/>
 <text text-anchor="middle" x="71.5" y="-1383.2" font-family="monospace" font-size="11.00" fill="#e6edf3">WEBSOCKET</text>
 </a>
@@ -721,7 +721,7 @@
 <!-- WEB_TERMINAL -->
 <g id="node56" class="node">
 <title>WEB_TERMINAL</title>
-<g id="a_node56"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#web-terminal" xlink:title="PC_ENABLE_WEB_TERMINAL &#45; needs WEBSOCKET" target="_blank">
+<g id="a_node56"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#web-terminal" xlink:title="PROTOCORE_ENABLE_WEB_TERMINAL &#45; needs WEBSOCKET" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M315.5,-1416C315.5,-1416 241.5,-1416 241.5,-1416 235.5,-1416 229.5,-1410 229.5,-1404 229.5,-1404 229.5,-1392 229.5,-1392 229.5,-1386 235.5,-1380 241.5,-1380 241.5,-1380 315.5,-1380 315.5,-1380 321.5,-1380 327.5,-1386 327.5,-1392 327.5,-1392 327.5,-1404 327.5,-1404 327.5,-1410 321.5,-1416 315.5,-1416"/>
 <text text-anchor="middle" x="278.5" y="-1395.2" font-family="monospace" font-size="11.00" fill="#e6edf3">WEB_TERMINAL</text>
 </a>
@@ -736,7 +736,7 @@
 <!-- WS_DEFLATE -->
 <g id="node59" class="node">
 <title>WS_DEFLATE</title>
-<g id="a_node59"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ws-deflate" xlink:title="PC_ENABLE_WS_DEFLATE &#45; needs WEBSOCKET" target="_blank">
+<g id="a_node59"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ws-deflate" xlink:title="PROTOCORE_ENABLE_WS_DEFLATE &#45; needs WEBSOCKET" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M308.5,-1368C308.5,-1368 248.5,-1368 248.5,-1368 242.5,-1368 236.5,-1362 236.5,-1356 236.5,-1356 236.5,-1344 236.5,-1344 236.5,-1338 242.5,-1332 248.5,-1332 248.5,-1332 308.5,-1332 308.5,-1332 314.5,-1332 320.5,-1338 320.5,-1344 320.5,-1344 320.5,-1356 320.5,-1356 320.5,-1362 314.5,-1368 308.5,-1368"/>
 <text text-anchor="middle" x="278.5" y="-1347.2" font-family="monospace" font-size="11.00" fill="#e6edf3">WS_DEFLATE</text>
 </a>
@@ -751,7 +751,7 @@
 <!-- WS_CLIENT -->
 <g id="node57" class="node">
 <title>WS_CLIENT</title>
-<g id="a_node57"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ws-client" xlink:title="PC_ENABLE_WS_CLIENT &#45; enables 1" target="_blank">
+<g id="a_node57"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ws-client" xlink:title="PROTOCORE_ENABLE_WS_CLIENT &#45; enables 1" target="_blank">
 <path fill="#173626" stroke="#3fb950" stroke-width="1.3" d="M98,-1464C98,-1464 45,-1464 45,-1464 39,-1464 33,-1458 33,-1452 33,-1452 33,-1440 33,-1440 33,-1434 39,-1428 45,-1428 45,-1428 98,-1428 98,-1428 104,-1428 110,-1434 110,-1440 110,-1440 110,-1452 110,-1452 110,-1458 104,-1464 98,-1464"/>
 <text text-anchor="middle" x="71.5" y="-1443.2" font-family="monospace" font-size="11.00" fill="#e6edf3">WS_CLIENT</text>
 </a>
@@ -760,7 +760,7 @@
 <!-- WS_CLIENT_TLS -->
 <g id="node58" class="node">
 <title>WS_CLIENT_TLS</title>
-<g id="a_node58"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ws-client-tls" xlink:title="PC_ENABLE_WS_CLIENT_TLS &#45; needs WS_CLIENT" target="_blank">
+<g id="a_node58"><a xlink:href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#ws-client-tls" xlink:title="PROTOCORE_ENABLE_WS_CLIENT_TLS &#45; needs WS_CLIENT" target="_blank">
 <path fill="#1c2338" stroke="#7c85e8" stroke-width="1.3" d="M334.5,-1464C334.5,-1464 222.5,-1464 222.5,-1464 216.5,-1464 210.5,-1458 210.5,-1452 210.5,-1452 210.5,-1440 210.5,-1440 210.5,-1434 216.5,-1428 222.5,-1428 222.5,-1428 334.5,-1428 334.5,-1428 340.5,-1428 346.5,-1434 346.5,-1440 346.5,-1440 346.5,-1452 346.5,-1452 346.5,-1458 340.5,-1464 334.5,-1464"/>
 <text text-anchor="start" x="219.5" y="-1443.2" font-family="monospace" font-size="11.00" fill="#e6edf3">WS_CLIENT_TLS &#160;</text>
 <polygon fill="#238636" stroke="transparent" points="322.5,-1439 322.5,-1453 338.5,-1453 338.5,-1439 322.5,-1439"/>

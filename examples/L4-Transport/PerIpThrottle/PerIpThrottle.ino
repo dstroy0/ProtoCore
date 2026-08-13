@@ -3,28 +3,28 @@
 
 /**
  * @file PerIpThrottle.ino
- * @brief Per-source-IP connection-flood defense (PC_ENABLE_PER_IP_THROTTLE).
+ * @brief Per-source-IP connection-flood defense (PROTOCORE_ENABLE_PER_IP_THROTTLE).
  *
  * When enabled, the accept callback rejects a new connection once one source IPv4
- * address has opened more than PC_PER_IP_THROTTLE_MAX connections within
- * PC_PER_IP_THROTTLE_WINDOW_MS. A fixed BSS table of PC_PER_IP_THROTTLE_SLOTS
+ * address has opened more than PROTOCORE_PER_IP_THROTTLE_MAX connections within
+ * PROTOCORE_PER_IP_THROTTLE_WINDOW_MS. A fixed BSS table of PROTOCORE_PER_IP_THROTTLE_SLOTS
  * buckets tracks the busiest recent addresses, so one noisy client is throttled
  * without affecting others - the gap the global accept throttle cannot close (it
  * cannot tell one noisy client from many). There is no runtime API: it is a
  * build-time defense, and this sketch just shows enabling it. Pairs well with the
- * global accept throttle (PC_ENABLE_ACCEPT_THROTTLE) - see the AcceptThrottle example.
+ * global accept throttle (PROTOCORE_ENABLE_ACCEPT_THROTTLE) - see the AcceptThrottle example.
  *
  * NOTE: this feature is compiled into the library only when the flag is set for
  * the whole build (a .ino #define does not reach the separately compiled
  * library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_PER_IP_THROTTLE=1
- *                   -DPC_PER_IP_THROTTLE_MAX=10
- *                   -DPC_PER_IP_THROTTLE_WINDOW_MS=10000
- *                   -DPC_PER_IP_THROTTLE_SLOTS=16
+ *     build_flags = -DPROTOCORE_ENABLE_PER_IP_THROTTLE=1
+ *                   -DPROTOCORE_PER_IP_THROTTLE_MAX=10
+ *                   -DPROTOCORE_PER_IP_THROTTLE_WINDOW_MS=10000
+ *                   -DPROTOCORE_PER_IP_THROTTLE_SLOTS=16
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_PER_IP_THROTTLE 1
+#define PROTOCORE_ENABLE_PER_IP_THROTTLE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

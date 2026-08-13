@@ -10,12 +10,12 @@
  *
  * C++, because `Preferences` is an Arduino class whose methods cannot be named from C
  * (docs/SYMBOLS.md section 4). nvs.h declares everything this file defines between
- * PROTO_BEGIN_DECLS and PROTO_END_DECLS, so the names it exports are C names.
+ * PROTOCORE_BEGIN_DECLS and PROTOCORE_END_DECLS, so the names it exports are C names.
  */
 
 #include "core_setup/hal/nvs.h"
 
-#if PC_VENDOR_ESP
+#if PROTOCORE_VENDOR_ESP
 
 #include <Preferences.h>
 
@@ -31,7 +31,7 @@ static EspNvsCtx s_nvs;
 // key. `ns` gets the same check: NVS names both with the same limit.
 static proto_bool name_ok(const char *name)
 {
-    return name && name[0] && strnlen(name, PC_CONFIG_KEY_MAX) < PC_CONFIG_KEY_MAX;
+    return name && name[0] && strnlen(name, PROTOCORE_CONFIG_KEY_MAX) < PROTOCORE_CONFIG_KEY_MAX;
 }
 
 static proto_bool nvs_open(const char *ns, proto_bool read_only)
@@ -39,7 +39,7 @@ static proto_bool nvs_open(const char *ns, proto_bool read_only)
     return name_ok(ns) && s_nvs.prefs.begin(ns, read_only);
 }
 
-proto_bool pc_nvs_has(const char *ns, const char *key)
+proto_bool protocore_nvs_has(const char *ns, const char *key)
 {
     if (!name_ok(key) || !nvs_open(ns, PROTO_TRUE))
     {
@@ -50,7 +50,7 @@ proto_bool pc_nvs_has(const char *ns, const char *key)
     return found;
 }
 
-size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
+size_t protocore_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
 {
     if (!out || cap == 0 || !name_ok(key) || !nvs_open(ns, PROTO_TRUE))
     {
@@ -61,7 +61,7 @@ size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
     return n;
 }
 
-proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len)
+proto_bool protocore_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len)
 {
     if (!in || !name_ok(key) || !nvs_open(ns, PROTO_FALSE))
     {
@@ -72,7 +72,7 @@ proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size
     return ok;
 }
 
-size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
+size_t protocore_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
 {
     if (!out || cap == 0 || !name_ok(key) || !nvs_open(ns, PROTO_TRUE))
     {
@@ -86,19 +86,19 @@ size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
     return n;
 }
 
-proto_bool pc_nvs_put_str(const char *ns, const char *key, const char *val)
+proto_bool protocore_nvs_put_str(const char *ns, const char *key, const char *val)
 {
     if (!val || !name_ok(key) || !nvs_open(ns, PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
-    size_t len = strnlen(val, PC_CONFIG_VAL_MAX);
+    size_t len = strnlen(val, PROTOCORE_CONFIG_VAL_MAX);
     proto_bool ok = s_nvs.prefs.putString(key, val) == len;
     s_nvs.prefs.end();
     return ok;
 }
 
-uint32_t pc_nvs_get_u32(const char *ns, const char *key, uint32_t def)
+uint32_t protocore_nvs_get_u32(const char *ns, const char *key, uint32_t def)
 {
     if (!name_ok(key) || !nvs_open(ns, PROTO_TRUE))
     {
@@ -109,7 +109,7 @@ uint32_t pc_nvs_get_u32(const char *ns, const char *key, uint32_t def)
     return v;
 }
 
-proto_bool pc_nvs_put_u32(const char *ns, const char *key, uint32_t val)
+proto_bool protocore_nvs_put_u32(const char *ns, const char *key, uint32_t val)
 {
     if (!name_ok(key) || !nvs_open(ns, PROTO_FALSE))
     {
@@ -120,7 +120,7 @@ proto_bool pc_nvs_put_u32(const char *ns, const char *key, uint32_t val)
     return ok;
 }
 
-proto_bool pc_nvs_erase(const char *ns, const char *key)
+proto_bool protocore_nvs_erase(const char *ns, const char *key)
 {
     if (!name_ok(key) || !nvs_open(ns, PROTO_FALSE))
     {
@@ -131,7 +131,7 @@ proto_bool pc_nvs_erase(const char *ns, const char *key)
     return ok;
 }
 
-proto_bool pc_nvs_clear(const char *ns)
+proto_bool protocore_nvs_clear(const char *ns)
 {
     if (!nvs_open(ns, PROTO_FALSE))
     {
@@ -142,4 +142,4 @@ proto_bool pc_nvs_clear(const char *ns)
     return ok;
 }
 
-#endif // PC_VENDOR_ESP
+#endif // PROTOCORE_VENDOR_ESP

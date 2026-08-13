@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 
-#if PC_ENABLE_RADIO_POWER
+#if PROTOCORE_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power.h"
 #endif
 
@@ -24,7 +24,7 @@ void app_main(void)
 {
     printf("pc: conversion canary\n");
 
-#if PC_ENABLE_RADIO_POWER
+#if PROTOCORE_ENABLE_RADIO_POWER
     // Radio is the module's whole footprint in the symbol space; reaching it through the struct is
     // what makes the linker resolve the entry points behind it.
     Radio.power();

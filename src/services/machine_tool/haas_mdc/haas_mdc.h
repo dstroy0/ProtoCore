@@ -3,18 +3,18 @@
 
 /**
  * @file haas_mdc.h
- * @brief Haas Machine Data Collection (MDC) Q-command codec (PC_ENABLE_HAAS_MDC) - a zero-heap codec
+ * @brief Haas Machine Data Collection (MDC) Q-command codec (PROTOCORE_ENABLE_HAAS_MDC) - a zero-heap codec
  *        for the documented Haas Automation MDC protocol, the `?Q` query set a Haas CNC mill / lathe
  *        control answers over RS-232 (7-E-1, XON/XOFF) or a raw TCP socket (Setting 143, default port
  *        5051). A small, fully-documented CNC read source that fans machine status into HTTP / MQTT.
  *
  * The device is the collector: it sends `?Q###` queries and the control replies with a framed,
- * comma-delimited payload. This codec builds the queries (@ref pc_haas_mdc_build_q for the numbered
- * commands and @ref pc_haas_mdc_build_var for the `?Q600 <var>` macro/system-variable read) and
- * parses the responses (@ref pc_haas_mdc_parse extracts the CSV payload framed between STX and ETB,
- * then @ref pc_haas_mdc_value / @ref pc_haas_mdc_parse_status / @ref pc_haas_mdc_parse_macro read
+ * comma-delimited payload. This codec builds the queries (@ref protocore_haas_mdc_build_q for the numbered
+ * commands and @ref protocore_haas_mdc_build_var for the `?Q600 <var>` macro/system-variable read) and
+ * parses the responses (@ref protocore_haas_mdc_parse extracts the CSV payload framed between STX and ETB,
+ * then @ref protocore_haas_mdc_value / @ref protocore_haas_mdc_parse_status / @ref protocore_haas_mdc_parse_macro read
  * the typed forms). It also de-multiplexes the unprompted `DPRNT(...)` lines a running G-code program
- * pushes on the same link (@ref pc_haas_mdc_dprnt_line - raw text, no STX/ETB).
+ * pushes on the same link (@ref protocore_haas_mdc_dprnt_line - raw text, no STX/ETB).
  *
  * Wire framing (byte-exact): a request is `?Q###` + CR (`\r`), UPPERCASE. A response payload lives
  * strictly between STX (0x02) and ETB (0x17), followed by CR LF and a `>` (0x3E) prompt byte, e.g.
@@ -34,24 +34,24 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HAAS_MDC
+#if PROTOCORE_ENABLE_HAAS_MDC
 
 /** @brief Default Haas MDC TCP port (Setting 143 "Machine Data Collect"). */
-#define PC_HAAS_MDC_TCP_PORT 5051
+#define PROTOCORE_HAAS_MDC_TCP_PORT 5051
 /** @brief Start-of-payload byte in an MDC response frame. */
-#define PC_HAAS_MDC_STX 0x02
+#define PROTOCORE_HAAS_MDC_STX 0x02
 /** @brief End-of-payload byte in an MDC response frame. */
-#define PC_HAAS_MDC_ETB 0x17
+#define PROTOCORE_HAAS_MDC_ETB 0x17
 /** @brief Trailing ready/prompt byte the control emits after a response. */
-#define PC_HAAS_MDC_PROMPT 0x3E
+#define PROTOCORE_HAAS_MDC_PROMPT 0x3E
 /** @brief Maximum comma-separated fields kept from a response payload (Q500 has 5). */
-#define PC_HAAS_MDC_MAX_FIELDS 8
+#define PROTOCORE_HAAS_MDC_MAX_FIELDS 8
 
-/** @brief The documented numbered Q queries (pass to @ref pc_haas_mdc_build_q). Unscoped so a value
+/** @brief The documented numbered Q queries (pass to @ref protocore_haas_mdc_build_q). Unscoped so a value
  *  converts to the `uint16_t` command number without a cast; `?Q600` takes an argument, so it has its
- *  own builder (@ref pc_haas_mdc_build_var) rather than a member here. */
+ *  own builder (@ref protocore_haas_mdc_build_var) rather than a member here. */
 enum HaasQ : uint16_t // NOSONAR(cpp:S3642): unscoped is the documented contract - the builder accepts any Haas
                       // command number, and this header has no second enum whose values could be confused
 {
@@ -74,8 +74,8 @@ enum HaasQ : uint16_t // NOSONAR(cpp:S3642): unscoped is the documented contract
  *  and pointing INTO the caller's buffer (zero-copy; the buffer must outlive the struct). */
 typedef struct
 {
-    const char *field[PC_HAAS_MDC_MAX_FIELDS];
-    size_t field_len[PC_HAAS_MDC_MAX_FIELDS];
+    const char *field[PROTOCORE_HAAS_MDC_MAX_FIELDS];
+    size_t field_len[PROTOCORE_HAAS_MDC_MAX_FIELDS];
     uint8_t n_fields;
 } HaasMdcResp;
 
@@ -92,18 +92,18 @@ typedef struct
 } HaasMdcStatus;
 
 /**
- * @brief Build a numbered query line: `?Q<qnum>` + CR (e.g. `pc_haas_mdc_build_q(..., HAAS_Q_SERIAL)`
+ * @brief Build a numbered query line: `?Q<qnum>` + CR (e.g. `protocore_haas_mdc_build_q(..., HAAS_Q_SERIAL)`
  *        -> `"?Q100\r"`). Pass a @ref HaasQ value or a raw command number.
  * @return characters written (excluding the NUL), or 0 on overflow / bad input.
  */
-size_t pc_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum);
+size_t protocore_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum);
 
 /**
- * @brief Build a macro/system-variable read: `?Q600 <var>` + CR (e.g. `pc_haas_mdc_build_var(..., 100)`
+ * @brief Build a macro/system-variable read: `?Q600 <var>` + CR (e.g. `protocore_haas_mdc_build_var(..., 100)`
  *        -> `"?Q600 100\r"`). Reads any readable macro (e.g. #1-999) or system variable.
  * @return characters written (excluding the NUL), or 0 on overflow / bad input.
  */
-size_t pc_haas_mdc_build_var(char *buf, size_t cap, uint32_t var);
+size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var);
 
 /**
  * @brief Parse a response frame: locate the payload between STX (0x02) and ETB (0x17) - scanning, not
@@ -112,25 +112,25 @@ size_t pc_haas_mdc_build_var(char *buf, size_t cap, uint32_t var);
  * @return true if a complete `STX ... ETB` frame with at least one field was found; false otherwise
  *         (no frame yet - the caller should accumulate more bytes).
  */
-proto_bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out);
+proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out);
 
 /**
  * @brief Random-access a parsed field. @p p / @p l receive a pointer into the original buffer + length.
  * @return true if @p idx < n_fields.
  */
-proto_bool pc_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l);
+proto_bool protocore_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l);
 
 /**
  * @brief The value of a simple `LABEL, value` response - field[1] (e.g. the serial for Q100, the
  *        version for Q101, the mode token for Q104).
  * @return true if the response has at least two fields.
  */
-proto_bool pc_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l);
+proto_bool protocore_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l);
 
 /**
  * @brief True if the response is the control's `UNKNOWN` error (an unsupported / lowercase command).
  */
-proto_bool pc_haas_mdc_is_error(const HaasMdcResp *r);
+proto_bool protocore_haas_mdc_is_error(const HaasMdcResp *r);
 
 /**
  * @brief Decode a Q500 response into @ref HaasMdcStatus, handling both branches: `PROGRAM, Oxxxxx,
@@ -138,7 +138,7 @@ proto_bool pc_haas_mdc_is_error(const HaasMdcResp *r);
  *        HaasMdcStatus::busy). All string members point into the parsed buffer.
  * @return true if the response is a recognizable Q500 form; false otherwise.
  */
-proto_bool pc_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out);
+proto_bool protocore_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out);
 
 /**
  * @brief Decode a Q600 response `MACRO, <var>, <value>`. @p var receives the variable number; @p value
@@ -146,7 +146,7 @@ proto_bool pc_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out);
  *        on the wire; exposed as text so the caller keeps full precision without a float parse).
  * @return true on a well-formed `MACRO, ...` response with a numeric variable field.
  */
-proto_bool pc_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len);
+proto_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len);
 
 /**
  * @brief Extract an unprompted `DPRNT(...)` line pushed by a running program: a raw ASCII text line
@@ -156,10 +156,10 @@ proto_bool pc_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const ch
  * @return true for a non-empty pushed line; false if @p buf contains an STX (it is a framed Q
  *         response, not DPRNT) or is empty after stripping.
  */
-proto_bool pc_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len);
+proto_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len);
 
-#endif // PC_ENABLE_HAAS_MDC
+#endif // PROTOCORE_ENABLE_HAAS_MDC
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HAAS_MDC_H

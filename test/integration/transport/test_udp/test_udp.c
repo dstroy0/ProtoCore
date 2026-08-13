@@ -3,28 +3,28 @@
 //
 // The UDP target path, run on the host. The env declares the capabilities the stack needs,
 // so these are the same lines that
-// ship to silicon, driven against test/mocks/pc_net_host.h instead of lwIP.
+// ship to silicon, driven against test/mocks/protocore_net_host.h instead of lwIP.
 //
 // What it covers: the listener's RX ring, both send paths reaching the wire in the call that makes
 // them, NetAddr carrying v4 and v6 in both directions, the pbuf pool refusing, and every datagram
-// the core handed to the stack read back as a DLT_RAW libpcap capture (test/mocks/pc_net_pcap.h)
+// the core handed to the stack read back as a DLT_RAW libpcap capture (test/mocks/protocore_net_pcap.h)
 // whose IP and UDP headers are checked field by field.
 
 #include "network_drivers/transport/udp/udp_client.h"
 #include "network_drivers/transport/udp/udp_listener.h"
 #include "shared_primitives/ip.h" // Ip.parse, for the v6 address the mock cannot spell
 
-#include "pc_net_pcap.h"
+#include "protocore_net_pcap.h"
 
 #include <string.h>
 
 #include <unity.h>
 
 // The sends take an address; a test spelling a literal turns it into one here.
-static const pc_ip *addr(const char *s)
+static const protocore_ip *addr(const char *s)
 {
-    static pc_ip a;
-    a = (pc_ip){PC_IP_NONE, {0}};
+    static protocore_ip a;
+    a = (protocore_ip){PROTOCORE_IP_NONE, {0}};
     Ip.parse(s, &a);
     return &a;
 }
@@ -43,7 +43,7 @@ static uint8_t g_pcap[16384];
 // stays bound for the whole suite, so its pcb has to survive setUp.
 void setUp()
 {
-    pc_net_host_udp_reset();
+    protocore_net_host_udp_reset();
     g_calls = 0;
     memset(g_len, 0, sizeof(g_len));
 }
@@ -51,7 +51,7 @@ void tearDown()
 {
 }
 
-static void on_dgram(const uint8_t *d, size_t n, const struct pc_udp_peer *peer, void *ctx)
+static void on_dgram(const uint8_t *d, size_t n, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     if (g_calls < 8)
@@ -78,7 +78,7 @@ static void ensure_listening(void)
 // Deliver one datagram through the recv callback, which is what lwIP calls on the target.
 static void deliver(const char *src_ip, uint16_t src_port, const uint8_t *data, uint16_t len)
 {
-    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(PORT, src_ip, src_port, (void *)(uintptr_t)data, len));
+    TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(PORT, src_ip, src_port, (void *)(uintptr_t)data, len));
 }
 
 void test_listener_delivers_in_order_with_boundaries()
@@ -109,20 +109,20 @@ void test_listener_delivers_in_order_with_boundaries()
 void test_listener_peer_carries_v6()
 {
     ensure_listening();
-    pc_udp_pcb *p = pc_net_host_udp_pcb(PORT);
+    protocore_udp_pcb *p = protocore_net_host_udp_pcb(PORT);
     TEST_ASSERT_NOT_NULL(p);
 
     // A v6 source the mock's dotted-quad parser cannot build, so it is set through the v6 seam.
-    pc_net_ip src;
+    protocore_net_ip src;
     memset(&src, 0, sizeof(src));
-    pc_net_ip6_mark(&src);
-    pc_ip parsed;
+    protocore_net_ip6_mark(&src);
+    protocore_ip parsed;
     memset(&parsed, 0, sizeof(parsed));
     TEST_ASSERT_TRUE(Ip.parse("2001:db8::dead:beef", &parsed));
-    memcpy(pc_net_ip6_wbytes(&src), parsed.bytes, 16);
+    memcpy(protocore_net_ip6_wbytes(&src), parsed.bytes, 16);
 
     const uint8_t d[] = {0xEE};
-    pc_pbuf b;
+    protocore_pbuf b;
     memset(&b, 0, sizeof(b));
     b.payload = (void *)(uintptr_t)d;
     b.len = 1;
@@ -146,22 +146,22 @@ void test_listener_sends_from_a_bound_port()
     for (size_t i = 1; i <= 8; i++)
     {
         TEST_ASSERT_TRUE(UdpListener.sendto(PORT, addr("10.0.0.9"), 99, pay, sizeof(pay)));
-        TEST_ASSERT_EQUAL_UINT(i, pc_net_host_udp_sent());
+        TEST_ASSERT_EQUAL_UINT(i, protocore_net_host_udp_sent());
     }
 
     // An unbound port has no control block to send from.
     TEST_ASSERT_FALSE(UdpListener.sendto(PORT + 1, addr("10.0.0.9"), 99, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(8, pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_UINT(8, protocore_net_host_udp_sent());
 }
 
 void test_client_refuses_a_malformed_address_without_sending()
 {
     uint8_t pay[8];
     memset(pay, 0x11, sizeof(pay));
-    pc_ip none = {PC_IP_NONE, {0}};
+    protocore_ip none = {PROTOCORE_IP_NONE, {0}};
     TEST_ASSERT_FALSE(UdpClient.sendto(&none, 99, pay, sizeof(pay))); // an address it never got
     TEST_ASSERT_FALSE(UdpClient.sendto(NULL, 99, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_UINT(0, protocore_net_host_udp_sent());
 }
 
 void test_client_sends_both_families()
@@ -171,9 +171,9 @@ void test_client_sends_both_families()
     // Each send reaches the wire on its own: sendto reports what the stack did, not what a queue took.
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("2001:db8::1"), 99, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(2, pc_net_host_udp_count());
-    TEST_ASSERT_EQUAL_UINT8(PC_NET_TYPE_V4, pc_net_host_udp_at(0)->type);
-    TEST_ASSERT_EQUAL_UINT8(PC_NET_TYPE_V6, pc_net_host_udp_at(1)->type);
+    TEST_ASSERT_EQUAL_UINT(2, protocore_net_host_udp_count());
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_NET_TYPE_V4, protocore_net_host_udp_at(0)->type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_NET_TYPE_V6, protocore_net_host_udp_at(1)->type);
 }
 
 void test_a_spent_pbuf_pool_drops_the_datagram()
@@ -183,24 +183,24 @@ void test_a_spent_pbuf_pool_drops_the_datagram()
     // No pbuf to carry it, so the send is refused where it is made and the stack never sees it.
     mock_pbuf_fail_once();
     TEST_ASSERT_FALSE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_UINT(0, protocore_net_host_udp_sent());
 
     // The pool is available again, so the next send reaches the stack.
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(1, pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_UINT(1, protocore_net_host_udp_sent());
 }
 
 void test_every_send_returns_its_pbuf()
 {
     uint8_t pay[8];
     memset(pay, 0x33, sizeof(pay));
-    for (int i = 0; i < PC_NET_HOST_PBUFS * 3; i++)
+    for (int i = 0; i < PROTOCORE_NET_HOST_PBUFS * 3; i++)
     {
         TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
     }
-    TEST_ASSERT_EQUAL_UINT(PC_NET_HOST_PBUFS * 3, pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NET_HOST_PBUFS * 3, protocore_net_host_udp_sent());
     // A leaked pbuf would have spent the pool by now.
-    TEST_ASSERT_NOT_NULL(pc_net_pbuf_alloc(PC_NET_PBUF_TRANSPORT, 8, PC_NET_PBUF_RAM));
+    TEST_ASSERT_NOT_NULL(protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, 8, PROTOCORE_NET_PBUF_RAM));
 }
 
 void test_capture_renders_a_v4_datagram()
@@ -211,21 +211,21 @@ void test_capture_renders_a_v4_datagram()
         pay[i] = (uint8_t)(0x40 + i);
     }
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 9999, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(1, pc_net_host_udp_count());
+    TEST_ASSERT_EQUAL_UINT(1, protocore_net_host_udp_count());
 
-    size_t n = pc_net_pcap_render(g_pcap, sizeof(g_pcap));
-    TEST_ASSERT_EQUAL_UINT(PC_PCAP_GLOBAL_HDR_LEN + PC_PCAP_REC_HDR_LEN + 20 + 8 + 64, n);
-    TEST_ASSERT_EQUAL_HEX8(PC_DLT_RAW, g_pcap[20]); // the link type the records are in
+    size_t n = protocore_net_pcap_render(g_pcap, sizeof(g_pcap));
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PCAP_GLOBAL_HDR_LEN + PROTOCORE_PCAP_REC_HDR_LEN + 20 + 8 + 64, n);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DLT_RAW, g_pcap[20]); // the link type the records are in
 
-    const uint8_t *ip = g_pcap + PC_PCAP_GLOBAL_HDR_LEN + PC_PCAP_REC_HDR_LEN;
+    const uint8_t *ip = g_pcap + PROTOCORE_PCAP_GLOBAL_HDR_LEN + PROTOCORE_PCAP_REC_HDR_LEN;
     TEST_ASSERT_EQUAL_HEX8(0x45, ip[0]);                         // IPv4, 5-word header
     TEST_ASSERT_EQUAL_UINT16(20 + 8 + 64, (ip[2] << 8) | ip[3]); // total length
-    TEST_ASSERT_EQUAL_HEX8(PC_NET_PCAP_TTL, ip[8]);              // TTL
-    TEST_ASSERT_EQUAL_HEX8(PC_NET_PCAP_PROTO_UDP, ip[9]);        // protocol 17
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_NET_PCAP_TTL, ip[8]);       // TTL
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_NET_PCAP_PROTO_UDP, ip[9]); // protocol 17
     TEST_ASSERT_EQUAL_HEX8(10, ip[16]);                          // destination 10.0.0.9
     TEST_ASSERT_EQUAL_HEX8(9, ip[19]);
     // A header carrying its own checksum folds to zero over the whole header.
-    TEST_ASSERT_EQUAL_HEX16(0, pc_net_pcap_fold(pc_net_pcap_sum(0, ip, 20)));
+    TEST_ASSERT_EQUAL_HEX16(0, protocore_net_pcap_fold(protocore_net_pcap_sum(0, ip, 20)));
 
     const uint8_t *udp = ip + 20;
     TEST_ASSERT_EQUAL_UINT16(9999, (udp[2] << 8) | udp[3]); // destination port
@@ -239,15 +239,15 @@ void test_capture_renders_a_v6_datagram()
     memset(pay, 0x5A, sizeof(pay));
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("2001:db8::1"), 5353, pay, sizeof(pay)));
 
-    size_t n = pc_net_pcap_render(g_pcap, sizeof(g_pcap));
-    TEST_ASSERT_EQUAL_UINT(PC_PCAP_GLOBAL_HDR_LEN + PC_PCAP_REC_HDR_LEN + 40 + 8 + 17, n);
+    size_t n = protocore_net_pcap_render(g_pcap, sizeof(g_pcap));
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PCAP_GLOBAL_HDR_LEN + PROTOCORE_PCAP_REC_HDR_LEN + 40 + 8 + 17, n);
 
-    const uint8_t *ip = g_pcap + PC_PCAP_GLOBAL_HDR_LEN + PC_PCAP_REC_HDR_LEN;
-    TEST_ASSERT_EQUAL_HEX8(0x60, ip[0] & 0xF0);             // version 6
-    TEST_ASSERT_EQUAL_UINT16(8 + 17, (ip[4] << 8) | ip[5]); // payload length
-    TEST_ASSERT_EQUAL_HEX8(PC_NET_PCAP_PROTO_UDP, ip[6]);   // next header
-    TEST_ASSERT_EQUAL_HEX8(PC_NET_PCAP_TTL, ip[7]);         // hop limit
-    TEST_ASSERT_EQUAL_HEX8(0x20, ip[24]);                   // destination 2001:db8::1
+    const uint8_t *ip = g_pcap + PROTOCORE_PCAP_GLOBAL_HDR_LEN + PROTOCORE_PCAP_REC_HDR_LEN;
+    TEST_ASSERT_EQUAL_HEX8(0x60, ip[0] & 0xF0);                  // version 6
+    TEST_ASSERT_EQUAL_UINT16(8 + 17, (ip[4] << 8) | ip[5]);      // payload length
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_NET_PCAP_PROTO_UDP, ip[6]); // next header
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_NET_PCAP_TTL, ip[7]);       // hop limit
+    TEST_ASSERT_EQUAL_HEX8(0x20, ip[24]);                        // destination 2001:db8::1
     TEST_ASSERT_EQUAL_HEX8(0x01, ip[24 + 15]);
 
     const uint8_t *udp = ip + 40;
@@ -261,8 +261,8 @@ void test_capture_refuses_a_buffer_that_cannot_hold_it()
     uint8_t pay[8];
     memset(pay, 0x44, sizeof(pay));
     TEST_ASSERT_TRUE(UdpClient.sendto(addr("10.0.0.9"), 99, pay, sizeof(pay)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_net_pcap_render(g_pcap, PC_PCAP_GLOBAL_HDR_LEN));
-    TEST_ASSERT_EQUAL_UINT(0, pc_net_pcap_render(g_pcap, 8));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_net_pcap_render(g_pcap, PROTOCORE_PCAP_GLOBAL_HDR_LEN));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_net_pcap_render(g_pcap, 8));
 }
 
 int main()

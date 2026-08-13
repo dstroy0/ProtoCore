@@ -8,43 +8,44 @@
 
 #include "services/storage/docstore/docstore.h"
 
-#if PC_ENABLE_DOCSTORE
+#if PROTOCORE_ENABLE_DOCSTORE
 
 #include "network_drivers/presentation/codec/json/json.h"
 
-void pc_docstore_open(pc_doc_store *ds, struct pc_dbm *db)
+void protocore_docstore_open(protocore_doc_store *ds, struct protocore_dbm *db)
 {
     ds->db = db;
 }
 
-proto_bool pc_docstore_put(pc_doc_store *ds, const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len)
+proto_bool protocore_docstore_put(protocore_doc_store *ds, const char *id, uint16_t id_len, const uint8_t *json,
+                                  uint32_t json_len)
 {
-    return pc_dbm_put(ds->db, id, id_len, json, json_len);
+    return protocore_dbm_put(ds->db, id, id_len, json, json_len);
 }
 
-long pc_docstore_get(pc_doc_store *ds, const char *id, uint16_t id_len, uint8_t *buf, size_t cap)
+long protocore_docstore_get(protocore_doc_store *ds, const char *id, uint16_t id_len, uint8_t *buf, size_t cap)
 {
-    return pc_dbm_get(ds->db, id, id_len, buf, cap);
+    return protocore_dbm_get(ds->db, id, id_len, buf, cap);
 }
 
-proto_bool pc_docstore_del(pc_doc_store *ds, const char *id, uint16_t id_len)
+proto_bool protocore_docstore_del(protocore_doc_store *ds, const char *id, uint16_t id_len)
 {
-    return pc_dbm_del(ds->db, id, id_len);
+    return protocore_dbm_del(ds->db, id, id_len);
 }
 
-proto_bool pc_docstore_contains(const pc_doc_store *ds, const char *id, uint16_t id_len)
+proto_bool protocore_docstore_contains(const protocore_doc_store *ds, const char *id, uint16_t id_len)
 {
-    return pc_dbm_contains(ds->db, id, id_len);
+    return protocore_dbm_contains(ds->db, id, id_len);
 }
 
-uint32_t pc_docstore_count(const pc_doc_store *ds)
+uint32_t protocore_docstore_count(const protocore_doc_store *ds)
 {
-    return pc_dbm_count(ds->db);
+    return protocore_dbm_count(ds->db);
 }
 
-proto_bool pc_docstore_sync(pc_doc_store *ds)
+proto_bool protocore_docstore_sync(protocore_doc_store *ds)
 {
-    return pc_dbm_sync(ds->db);
+    return protocore_dbm_sync(ds->db);
 }
 
 typedef enum PROTO_ENUM_PACKED
@@ -54,27 +55,27 @@ typedef enum PROTO_ENUM_PACKED
     FIND_BOOL
 } FindKind;
 
-// Per-scan state carried through pc_dbm_iterate. `doc` reads each document's JSON body (NUL-terminated
+// Per-scan state carried through protocore_dbm_iterate. `doc` reads each document's JSON body (NUL-terminated
 // for the reader); `fieldtmp` extracts a string field for comparison. Both are bounded (no heap).
 typedef struct
 {
-    struct pc_dbm *db;
+    struct protocore_dbm *db;
     const char *field;
     FindKind kind;
     const char *sval;
     long ival;
     proto_bool bval;
-    pc_doc_match_cb user_cb;
+    protocore_doc_match_cb user_cb;
     void *user_ctx;
     uint32_t matches;
-    uint8_t doc[PC_DBM_VAL_MAX + 1];
-    char fieldtmp[PC_DOCSTORE_FIELD_MAX + 1];
+    uint8_t doc[PROTOCORE_DBM_VAL_MAX + 1];
+    char fieldtmp[PROTOCORE_DOCSTORE_FIELD_MAX + 1];
 } FindCtx;
 
 static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
 {
     FindCtx *f = (FindCtx *)vctx;
-    long n = pc_dbm_get(f->db, key, key_len, f->doc, PC_DBM_VAL_MAX);
+    long n = protocore_dbm_get(f->db, key, key_len, f->doc, PROTOCORE_DBM_VAL_MAX);
     if (n < 0)
     {
         return PROTO_TRUE; // unreadable (shouldn't happen mid-iteration) - skip
@@ -121,11 +122,12 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
 static uint32_t run_find(FindCtx *f)
 {
     f->matches = 0;
-    pc_dbm_iterate(f->db, find_cb, f);
+    protocore_dbm_iterate(f->db, find_cb, f);
     return f->matches;
 }
 
-uint32_t pc_docstore_find_str(pc_doc_store *ds, const char *field, const char *value, pc_doc_match_cb cb, void *ctx)
+uint32_t protocore_docstore_find_str(protocore_doc_store *ds, const char *field, const char *value,
+                                     protocore_doc_match_cb cb, void *ctx)
 {
     FindCtx f;
     f.db = ds->db;
@@ -137,7 +139,8 @@ uint32_t pc_docstore_find_str(pc_doc_store *ds, const char *field, const char *v
     return run_find(&f);
 }
 
-uint32_t pc_docstore_find_int(pc_doc_store *ds, const char *field, long value, pc_doc_match_cb cb, void *ctx)
+uint32_t protocore_docstore_find_int(protocore_doc_store *ds, const char *field, long value, protocore_doc_match_cb cb,
+                                     void *ctx)
 {
     FindCtx f;
     f.db = ds->db;
@@ -149,7 +152,8 @@ uint32_t pc_docstore_find_int(pc_doc_store *ds, const char *field, long value, p
     return run_find(&f);
 }
 
-uint32_t pc_docstore_find_bool(pc_doc_store *ds, const char *field, proto_bool value, pc_doc_match_cb cb, void *ctx)
+uint32_t protocore_docstore_find_bool(protocore_doc_store *ds, const char *field, proto_bool value,
+                                      protocore_doc_match_cb cb, void *ctx)
 {
     FindCtx f;
     f.db = ds->db;
@@ -161,4 +165,4 @@ uint32_t pc_docstore_find_bool(pc_doc_store *ds, const char *field, proto_bool v
     return run_find(&f);
 }
 
-#endif // PC_ENABLE_DOCSTORE
+#endif // PROTOCORE_ENABLE_DOCSTORE

@@ -24,23 +24,23 @@ void dbench_run(void)
         payload[i] = (uint8_t)(i * 7 + 1);
     }
     static uint8_t frame[128], vframe[128];
-    size_t flen = pc_eth_build(DST, SRC, 0x88B8, payload, sizeof(payload), frame, sizeof(frame));
-    pc_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), vframe, sizeof(vframe));
+    size_t flen = protocore_eth_build(DST, SRC, 0x88B8, payload, sizeof(payload), frame, sizeof(frame));
+    protocore_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), vframe, sizeof(vframe));
 
     for (;;)
     {
         DBENCH_BANNER("rawl2");
         volatile size_t sink = 0;
         static uint8_t out[128];
-        DBENCH_OP("pc_eth_build (64B payload)", 200000,
-                  sink += pc_eth_build(DST, SRC, 0x88B8, payload, sizeof(payload), out, sizeof(out)));
-        DBENCH_OP("pc_eth_build_vlan (64B)", 200000,
+        DBENCH_OP("protocore_eth_build (64B payload)", 200000,
+                  sink += protocore_eth_build(DST, SRC, 0x88B8, payload, sizeof(payload), out, sizeof(out)));
+        DBENCH_OP("protocore_eth_build_vlan (64B)", 200000,
                   sink +=
-                  pc_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), out, sizeof(out)));
+                  protocore_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), out, sizeof(out)));
         EthFrame ef;
-        DBENCH_OP("pc_eth_parse", 200000, sink += pc_eth_parse(frame, flen, &ef));
-        DBENCH_OP("pc_eth_parse (vlan)", 200000, sink += pc_eth_parse(vframe, flen + 4, &ef));
-        DBENCH_BULK("pc_eth_fcs (CRC-32)", 50000, flen, sink += pc_eth_fcs(frame, flen));
+        DBENCH_OP("protocore_eth_parse", 200000, sink += protocore_eth_parse(frame, flen, &ef));
+        DBENCH_OP("protocore_eth_parse (vlan)", 200000, sink += protocore_eth_parse(vframe, flen + 4, &ef));
+        DBENCH_BULK("protocore_eth_fcs (CRC-32)", 50000, flen, sink += protocore_eth_fcs(frame, flen));
         (void)sink;
         DBENCH_DONE();
     }

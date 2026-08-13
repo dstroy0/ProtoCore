@@ -22,7 +22,7 @@ void test_known_epoch_2000()
 {
     uint8_t r[7] = {0x00, 0x00, 0x00, 0x07, 0x01, 0x01, 0x00}; // s,m,h,dow,date,month,year
     uint32_t e = 0;
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(r, &e));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &e));
     TEST_ASSERT_EQUAL_UINT32(946684800u, e);
 }
 
@@ -31,7 +31,7 @@ void test_decode_datetime()
 {
     uint8_t r[7] = {0x56, 0x34, 0x12, 0x06, 0x04, 0x07, 0x26};
     uint32_t e = 0;
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(r, &e));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &e));
     TEST_ASSERT_EQUAL_UINT32(1783168496u, e);
 }
 
@@ -41,8 +41,8 @@ void test_12hour_mode_equivalence()
     uint8_t base[7] = {0x00, 0x00, 0x14, 0x01, 0x01, 0x06, 0x24}; // 2024-06-01 14:00:00
     uint8_t twelve[7] = {0x00, 0x00, 0x62, 0x01, 0x01, 0x06, 0x24};
     uint32_t a = 0, b = 0;
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(base, &a));
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(twelve, &b));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(base, &a));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(twelve, &b));
     TEST_ASSERT_EQUAL_UINT32(a, b);
 }
 
@@ -53,11 +53,11 @@ void test_12hour_midnight_and_noon()
     uint8_t h24_0[7] = {0x00, 0x00, 0x00, 0x01, 0x01, 0x06, 0x24};
     uint8_t h24_12[7] = {0x00, 0x00, 0x12, 0x01, 0x01, 0x06, 0x24};
     uint32_t am = 0, mid = 0, pm = 0, noon_ref = 0;
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(midnight, &am));
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(h24_0, &mid));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(midnight, &am));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(h24_0, &mid));
     TEST_ASSERT_EQUAL_UINT32(mid, am);
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(noon, &pm));
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(h24_12, &noon_ref));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(noon, &pm));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(h24_12, &noon_ref));
     TEST_ASSERT_EQUAL_UINT32(noon_ref, pm);
 }
 
@@ -73,9 +73,9 @@ void test_roundtrip_over_range()
     for (unsigned i = 0; i < sizeof(samples) / sizeof(samples[0]); i++)
     {
         uint8_t r[7];
-        pc_rtc_epoch_to_regs(samples[i], r);
+        protocore_rtc_epoch_to_regs(samples[i], r);
         uint32_t back = 0;
-        TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(r, &back));
+        TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &back));
         TEST_ASSERT_EQUAL_UINT32(samples[i], back);
     }
 }
@@ -84,9 +84,9 @@ void test_leap_day()
 {
     uint8_t r[7] = {0x00, 0x00, 0x00, 0x04, 0x29, 0x02, 0x24}; // 2024-02-29 (valid leap day)
     uint32_t e = 0;
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(r, &e));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &e));
     uint8_t back[7];
-    pc_rtc_epoch_to_regs(e, back);
+    protocore_rtc_epoch_to_regs(e, back);
     TEST_ASSERT_EQUAL_UINT8(0x29, back[4]); // date 29
     TEST_ASSERT_EQUAL_UINT8(0x02, back[5]); // February
 }
@@ -97,9 +97,9 @@ void test_masks_ch_and_century()
     // masked off, not fold into the value.
     uint8_t r[7] = {0x80 | 0x30, 0x00, 0x00, 0x01, 0x01, 0x80 | 0x06, 0x24}; // CH+30s, century+June
     uint32_t e = 0;
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(r, &e));
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &e));
     uint8_t back[7];
-    pc_rtc_epoch_to_regs(e, back);
+    protocore_rtc_epoch_to_regs(e, back);
     TEST_ASSERT_EQUAL_UINT8(0x30, back[0]); // 30 seconds (CH bit gone)
     TEST_ASSERT_EQUAL_UINT8(0x06, back[5]); // June (century bit gone)
 }
@@ -108,14 +108,14 @@ void test_invalid_guards()
 {
     uint32_t e = 0;
     uint8_t bad_sec[7] = {0x60, 0x00, 0x00, 0x01, 0x01, 0x01, 0x24}; // 60 seconds (max 59)
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(bad_sec, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(bad_sec, &e));
     uint8_t bad_month[7] = {0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x24}; // month 0
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(bad_month, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(bad_month, &e));
     uint8_t bad_date[7] = {0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x24}; // date 0
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(bad_date, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(bad_date, &e));
     uint8_t bad_hour[7] = {0x00, 0x00, 0x24, 0x01, 0x01, 0x01, 0x24}; // 24 hours (24h mode)
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(bad_hour, &e));
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(bad_sec, NULL)); // null out
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(bad_hour, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(bad_sec, NULL)); // null out
 }
 
 // The other half of the null guard: a null register pointer must also be rejected (not just a
@@ -123,7 +123,7 @@ void test_invalid_guards()
 void test_null_regs_pointer()
 {
     uint32_t e = 0;
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(NULL, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(NULL, &e));
 }
 
 // The upper-bound half of each range guard: minutes > 59, day-of-month > 31, and month > 12.
@@ -132,11 +132,11 @@ void test_invalid_guards_upper_bounds()
 {
     uint32_t e = 0;
     uint8_t bad_min[7] = {0x00, 0x60, 0x00, 0x01, 0x01, 0x01, 0x24}; // 60 minutes (max 59)
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(bad_min, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(bad_min, &e));
     uint8_t bad_date[7] = {0x00, 0x00, 0x00, 0x01, 0x32, 0x01, 0x24}; // date 32 (max 31)
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(bad_date, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(bad_date, &e));
     uint8_t bad_month[7] = {0x00, 0x00, 0x00, 0x01, 0x01, 0x13, 0x24}; // month 13 (max 12)
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(bad_month, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(bad_month, &e));
 }
 
 // 12-hour mode with an out-of-range h12 digit (0, or 13+) must be rejected before it is ever
@@ -145,9 +145,9 @@ void test_12hour_invalid_h12()
 {
     uint32_t e = 0;
     uint8_t h12_zero[7] = {0x00, 0x00, 0x40, 0x01, 0x01, 0x06, 0x24}; // 12h mode, h12 = 0
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(h12_zero, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(h12_zero, &e));
     uint8_t h12_thirteen[7] = {0x00, 0x00, 0x53, 0x01, 0x01, 0x06, 0x24}; // 12h mode, h12 = 13
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(h12_thirteen, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(h12_thirteen, &e));
 }
 
 // A year field that decodes past 2106 (the 32-bit Unix epoch rollover) must be rejected rather
@@ -156,35 +156,35 @@ void test_epoch_overflow_rejected()
 {
     uint8_t r[7] = {0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0xFF}; // year = 2000 + bcd2int(0xFF) = 2165
     uint32_t e = 0;
-    TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(r, &e));
+    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
 }
 
 // A read points at register 0 and burst-reads the seven time registers in one transaction; a
 // write lays the pointer in front of them. The capture shows both on the wire.
 void test_read_and_set_drive_the_bus()
 {
-    pc_bus_host_reset();
-    TEST_ASSERT_TRUE(pc_rtc_begin());
+    protocore_bus_host_reset();
+    TEST_ASSERT_TRUE(protocore_rtc_begin());
 
     const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24}; // 2024-01-02 03:04:05 BCD
-    pc_bus_host_preload(regs, sizeof(regs));
+    protocore_bus_host_preload(regs, sizeof(regs));
 
     uint32_t want = 0;
-    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(regs, &want));
-    TEST_ASSERT_EQUAL_UINT32(want, pc_rtc_read_epoch());
+    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(regs, &want));
+    TEST_ASSERT_EQUAL_UINT32(want, protocore_rtc_read_epoch());
 
     // One transaction: a one-byte write joined to a seven-byte read by a repeated start.
-    TEST_ASSERT_EQUAL_UINT32(1, pc_bus_host_count());
-    TEST_ASSERT_EQUAL_UINT32(1, pc_bus_host_txn_at(0)->wlen);
-    TEST_ASSERT_EQUAL_UINT32(7, pc_bus_host_txn_at(0)->rlen);
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_bus_host_count());
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_bus_host_txn_at(0)->wlen);
+    TEST_ASSERT_EQUAL_UINT32(7, protocore_bus_host_txn_at(0)->rlen);
 
-    pc_bus_host_reset();
-    TEST_ASSERT_TRUE(pc_rtc_set_epoch(1730882977u));
+    protocore_bus_host_reset();
+    TEST_ASSERT_TRUE(protocore_rtc_set_epoch(1730882977u));
     uint8_t expect[8];
     expect[0] = 0x00;
-    pc_rtc_epoch_to_regs(1730882977u, &expect[1]);
+    protocore_rtc_epoch_to_regs(1730882977u, &expect[1]);
     uint32_t n = 0;
-    const uint8_t *tx = pc_bus_host_written(&n);
+    const uint8_t *tx = protocore_bus_host_written(&n);
     TEST_ASSERT_EQUAL_UINT32(sizeof(expect), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, tx, sizeof(expect));
 }
@@ -193,10 +193,10 @@ void test_read_and_set_drive_the_bus()
 // chain keys off to fall through to the next source.
 void test_absent_rtc_reports_zero()
 {
-    pc_bus_host_reset();
-    pc_bus_host_fail_next(2);
-    TEST_ASSERT_EQUAL_UINT32(0, pc_rtc_read_epoch());
-    TEST_ASSERT_EQUAL_UINT32(0, pc_rtc_time_source());
+    protocore_bus_host_reset();
+    protocore_bus_host_fail_next(2);
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_rtc_read_epoch());
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_rtc_time_source());
 }
 
 int main()

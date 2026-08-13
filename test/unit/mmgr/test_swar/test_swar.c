@@ -23,37 +23,37 @@ void tearDown()
 
 void test_has_zero_finds_any_lane()
 {
-    TEST_ASSERT_TRUE(pc_swar_has_zero(0x00FFFFFFu) != 0);
-    TEST_ASSERT_TRUE(pc_swar_has_zero(0xFF00FFFFu) != 0);
-    TEST_ASSERT_TRUE(pc_swar_has_zero(0xFFFF00FFu) != 0);
-    TEST_ASSERT_TRUE(pc_swar_has_zero(0xFFFFFF00u) != 0);
-    TEST_ASSERT_TRUE(pc_swar_has_zero(0x00000000u) != 0);
-    TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0xFFFFFFFFu));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0x01010101u));
+    TEST_ASSERT_TRUE(protocore_swar_has_zero(0x00FFFFFFu) != 0);
+    TEST_ASSERT_TRUE(protocore_swar_has_zero(0xFF00FFFFu) != 0);
+    TEST_ASSERT_TRUE(protocore_swar_has_zero(0xFFFF00FFu) != 0);
+    TEST_ASSERT_TRUE(protocore_swar_has_zero(0xFFFFFF00u) != 0);
+    TEST_ASSERT_TRUE(protocore_swar_has_zero(0x00000000u) != 0);
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_swar_has_zero(0xFFFFFFFFu));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_swar_has_zero(0x01010101u));
     // A lane whose high bit is already set is not a zero lane - the `& ~w` term is what rules it out.
-    TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0x80808080u));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0x80010280u));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_swar_has_zero(0x80808080u));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_swar_has_zero(0x80010280u));
 }
 
 // The mask states the lane; this pins that reading against a word built from known bytes, at every
 // position, so a byte-order or shift error cannot pass.
 void test_zero_lane_from_mask()
 {
-    for (size_t at = 0; at < PC_SWAR_BYTES; at++)
+    for (size_t at = 0; at < PROTOCORE_SWAR_BYTES; at++)
     {
-        char bytes[PC_SWAR_BYTES];
+        char bytes[PROTOCORE_SWAR_BYTES];
         memset(bytes, 'z', sizeof(bytes));
         bytes[at] = '\0';
-        pc_swar_word m = pc_swar_has_zero(pc_swar_load(bytes));
+        protocore_swar_word m = protocore_swar_has_zero(protocore_swar_load(bytes));
         TEST_ASSERT_TRUE(m != 0);
-        TEST_ASSERT_EQUAL_UINT32(at, pc_swar_zero_lane(m));
+        TEST_ASSERT_EQUAL_UINT32(at, protocore_swar_zero_lane(m));
     }
     // With several zero lanes the answer is the first in address order, not any of the others.
-    char two[PC_SWAR_BYTES];
+    char two[PROTOCORE_SWAR_BYTES];
     memset(two, 'z', sizeof(two));
     two[1] = '\0';
-    two[PC_SWAR_BYTES - 1] = '\0';
-    TEST_ASSERT_EQUAL_UINT32(1, pc_swar_zero_lane(pc_swar_has_zero(pc_swar_load(two))));
+    two[PROTOCORE_SWAR_BYTES - 1] = '\0';
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_swar_zero_lane(protocore_swar_has_zero(protocore_swar_load(two))));
 }
 
 void test_lane_compares()
@@ -61,21 +61,21 @@ void test_lane_compares()
     const uint32_t w = 0x41305A61u; // lanes, high to low: 'A' 0x41, '0' 0x30, 'Z' 0x5A, 'a' 0x61
 
     // Every lane is >= '0'.
-    TEST_ASSERT_EQUAL_UINT32(0x80808080u, pc_swar_ge(w, '0'));
+    TEST_ASSERT_EQUAL_UINT32(0x80808080u, protocore_swar_ge(w, '0'));
     // Only the 'a' lane is >= 'a'.
-    TEST_ASSERT_EQUAL_UINT32(0x00000080u, pc_swar_ge(w, 'a'));
+    TEST_ASSERT_EQUAL_UINT32(0x00000080u, protocore_swar_ge(w, 'a'));
     // 'A' and '0' are <= 'A'; 'Z' and 'a' are not.
-    TEST_ASSERT_EQUAL_UINT32(0x80800000u, pc_swar_le(w, 'A'));
+    TEST_ASSERT_EQUAL_UINT32(0x80800000u, protocore_swar_le(w, 'A'));
     // The A-Z window selects the 'A' and 'Z' lanes and nothing else.
-    TEST_ASSERT_EQUAL_UINT32(0x80008000u, pc_swar_ge(w, 'A') & pc_swar_le(w, 'Z'));
+    TEST_ASSERT_EQUAL_UINT32(0x80008000u, protocore_swar_ge(w, 'A') & protocore_swar_le(w, 'Z'));
 
-    TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, pc_swar_spread(0x80808080u));
-    TEST_ASSERT_EQUAL_UINT32(0x000000FFu, pc_swar_spread(0x00000080u));
-    TEST_ASSERT_EQUAL_UINT32(0x00000000u, pc_swar_spread(0x00000000u));
+    TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, protocore_swar_spread(0x80808080u));
+    TEST_ASSERT_EQUAL_UINT32(0x000000FFu, protocore_swar_spread(0x00000080u));
+    TEST_ASSERT_EQUAL_UINT32(0x00000000u, protocore_swar_spread(0x00000000u));
 
     // sub7 is the lane-local subtraction the decoder folds its alphabet offsets with.
-    TEST_ASSERT_EQUAL_UINT32(0x00000000u, pc_swar_sub7(0x30303030u, '0'));
-    TEST_ASSERT_EQUAL_UINT32(0x01010101u, pc_swar_sub7(0x31313131u, '0'));
+    TEST_ASSERT_EQUAL_UINT32(0x00000000u, protocore_swar_sub7(0x30303030u, '0'));
+    TEST_ASSERT_EQUAL_UINT32(0x01010101u, protocore_swar_sub7(0x31313131u, '0'));
 }
 
 int main()

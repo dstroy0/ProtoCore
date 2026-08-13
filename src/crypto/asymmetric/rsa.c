@@ -11,25 +11,25 @@
 
 #include "crypto/asymmetric/rsa.h"
 #include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h" // pc_ct_eq
+#include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
-#if PC_HAS_HW_BIGNUM
+#if PROTOCORE_HAS_HW_BIGNUM
 #include <mbedtls/md.h>
 #include <mbedtls/rsa.h>
 #else
 #include "crypto/asymmetric/bignum.h" // SW path RSA
 #endif
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // ---------------------------------------------------------------------------
 // DigestInfo for SHA-256 / SHA-512 (PKCS#1 v1.5, RFC 8017 §9.2, RFC 5754)
 // ---------------------------------------------------------------------------
 
-const uint8_t pc_pkcs1_sha256_digestinfo[PC_PKCS1_DIGESTINFO_LEN] = {
+const uint8_t protocore_pkcs1_sha256_digestinfo[PROTOCORE_PKCS1_DIGESTINFO_LEN] = {
     0x30, 0x31,                                           // SEQUENCE, length 49
     0x30, 0x0d,                                           // SEQUENCE, length 13 (AlgorithmIdentifier)
     0x06, 0x09,                                           // OID, length 9
@@ -38,7 +38,7 @@ const uint8_t pc_pkcs1_sha256_digestinfo[PC_PKCS1_DIGESTINFO_LEN] = {
     0x04, 0x20                                            // OCTET STRING, length 32 (digest follows)
 };
 
-const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN] = {
+const uint8_t protocore_pkcs1_sha512_digestinfo[PROTOCORE_PKCS1_SHA512_DIGESTINFO_LEN] = {
     0x30, 0x51,                                           // SEQUENCE, length 81
     0x30, 0x0d,                                           // SEQUENCE, length 13 (AlgorithmIdentifier)
     0x06, 0x09,                                           // OID, length 9
@@ -47,16 +47,16 @@ const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN] = {
     0x04, 0x40                                            // OCTET STRING, length 64 (digest follows)
 };
 
-#if PC_HAS_HW_BIGNUM
+#if PROTOCORE_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
 // HW path - mbedtls verify
 // ---------------------------------------------------------------------------
 
-int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
-                  size_t msg_len, const uint8_t *sig, size_t sig_len, pc_rsa_hash hash)
+int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
+                  size_t msg_len, const uint8_t *sig, size_t sig_len, protocore_rsa_hash hash)
 {
-    if (sig_len != PC_RSA_KEY_BYTES)
+    if (sig_len != PROTOCORE_RSA_KEY_BYTES)
     {
         return -1;
     }
@@ -72,7 +72,7 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
     mbedtls_mpi E;
     mbedtls_mpi_init(&N);
     mbedtls_mpi_init(&E);
-    mbedtls_mpi_read_binary(&N, n_be, PC_RSA_KEY_BYTES);
+    mbedtls_mpi_read_binary(&N, n_be, PROTOCORE_RSA_KEY_BYTES);
     mbedtls_mpi_read_binary(&E, e_be4, 4);
 
     int rc = mbedtls_rsa_import(&rsa, &N, NULL, NULL, NULL, &E);
@@ -81,19 +81,19 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
         rc = mbedtls_rsa_complete(&rsa);
     }
 
-    const proto_bool sha512 = (hash == PC_RSA_HASH_SHA512);
+    const proto_bool sha512 = (hash == PROTOCORE_RSA_HASH_SHA512);
     const mbedtls_md_type_t md = sha512 ? MBEDTLS_MD_SHA512 : MBEDTLS_MD_SHA256;
-    const size_t dlen = sha512 ? PC_SHA512_DIGEST_LEN : PC_SHA256_DIGEST_LEN;
-    uint8_t digest[PC_SHA512_DIGEST_LEN];
+    const size_t dlen = sha512 ? PROTOCORE_SHA512_DIGEST_LEN : PROTOCORE_SHA256_DIGEST_LEN;
+    uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN];
     if (rc == 0)
     {
         if (sha512)
         {
-            pc_sha512(work, msg, msg_len, digest);
+            protocore_sha512(work, msg, msg_len, digest);
         }
         else
         {
-            pc_sha256(work, msg, msg_len, digest);
+            protocore_sha256(work, msg, msg_len, digest);
         }
 #if MBEDTLS_VERSION_MAJOR >= 3
         rc = mbedtls_rsa_pkcs1_verify(&rsa, md, dlen, digest, sig);
@@ -115,33 +115,33 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
 // ---------------------------------------------------------------------------
 
 // Hash msg with the selected algorithm and return the matching DigestInfo.
-//   digest must be >= PC_SHA512_DIGEST_LEN bytes.
-static void rsa_digest(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash hash,
-                       uint8_t digest[PC_SHA512_DIGEST_LEN], size_t *digest_len, const uint8_t **di, size_t *di_len)
+//   digest must be >= PROTOCORE_SHA512_DIGEST_LEN bytes.
+static void rsa_digest(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash,
+                       uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN], size_t *digest_len, const uint8_t **di, size_t *di_len)
 {
-    if (hash == PC_RSA_HASH_SHA512)
+    if (hash == PROTOCORE_RSA_HASH_SHA512)
     {
-        pc_sha512(work, msg, msg_len, digest);
-        *digest_len = PC_SHA512_DIGEST_LEN;
-        *di = pc_pkcs1_sha512_digestinfo;
-        *di_len = PC_PKCS1_SHA512_DIGESTINFO_LEN;
+        protocore_sha512(work, msg, msg_len, digest);
+        *digest_len = PROTOCORE_SHA512_DIGEST_LEN;
+        *di = protocore_pkcs1_sha512_digestinfo;
+        *di_len = PROTOCORE_PKCS1_SHA512_DIGESTINFO_LEN;
     }
     else
     {
-        pc_sha256(work, msg, msg_len, digest);
-        *digest_len = PC_SHA256_DIGEST_LEN;
-        *di = pc_pkcs1_sha256_digestinfo;
-        *di_len = PC_PKCS1_DIGESTINFO_LEN;
+        protocore_sha256(work, msg, msg_len, digest);
+        *digest_len = PROTOCORE_SHA256_DIGEST_LEN;
+        *di = protocore_pkcs1_sha256_digestinfo;
+        *di_len = PROTOCORE_PKCS1_DIGESTINFO_LEN;
     }
 }
 
 // Builds the 256-byte padded message:
 //   0x00 0x01 [pad × 0xFF] 0x00 [DigestInfo] [digest]
 static void pkcs1v15_encode(const uint8_t *digest, size_t digest_len, const uint8_t *di, size_t di_len,
-                            uint8_t em[PC_RSA_KEY_BYTES])
+                            uint8_t em[PROTOCORE_RSA_KEY_BYTES])
 {
     const size_t total = di_len + digest_len;
-    const size_t pad_len = PC_RSA_KEY_BYTES - 3 - total;
+    const size_t pad_len = PROTOCORE_RSA_KEY_BYTES - 3 - total;
     em[0] = 0x00;
     em[1] = 0x01;
     mem.set(em + 2, 0xFF, pad_len);
@@ -156,26 +156,26 @@ static void pkcs1v15_encode(const uint8_t *digest, size_t digest_len, const uint
 // ---------------------------------------------------------------------------
 
 // Full 128-limb product of two 64-limb little-endian integers.
-static void bn_mul_full(const uint32_t a[PC_BN_LIMBS], const uint32_t b[PC_BN_LIMBS], uint32_t p[2 * PC_BN_LIMBS])
+static void bn_mul_full(const uint32_t a[PROTOCORE_BN_LIMBS], const uint32_t b[PROTOCORE_BN_LIMBS], uint32_t p[2 * PROTOCORE_BN_LIMBS])
 {
-    for (int k = 0; k < 2 * PC_BN_LIMBS; k++)
+    for (int k = 0; k < 2 * PROTOCORE_BN_LIMBS; k++)
     {
         p[k] = 0;
     }
-    for (int i = 0; i < PC_BN_LIMBS; i++)
+    for (int i = 0; i < PROTOCORE_BN_LIMBS; i++)
     {
         uint64_t carry = 0;
-        for (int j = 0; j < PC_BN_LIMBS; j++)
+        for (int j = 0; j < PROTOCORE_BN_LIMBS; j++)
         {
             uint64_t cur = (uint64_t)p[i + j] + (uint64_t)a[i] * b[j] + carry;
             p[i + j] = (uint32_t)cur;
             carry = cur >> 32;
         }
-        int k = i + PC_BN_LIMBS;
-        // a and b are both PC_BN_LIMBS (64) limbs, so their full product is bounded by 2*PC_BN_LIMBS
+        int k = i + PROTOCORE_BN_LIMBS;
+        // a and b are both PROTOCORE_BN_LIMBS (64) limbs, so their full product is bounded by 2*PROTOCORE_BN_LIMBS
         // (128) limbs; carry propagation out of the top half can never still be pending when k reaches
-        // 2*PC_BN_LIMBS. The "k < 2*PC_BN_LIMBS" half of this guard is defensive and provably unreachable.
-        while (carry && k < 2 * PC_BN_LIMBS)
+        // 2*PROTOCORE_BN_LIMBS. The "k < 2*PROTOCORE_BN_LIMBS" half of this guard is defensive and provably unreachable.
+        while (carry && k < 2 * PROTOCORE_BN_LIMBS)
         {
             uint64_t cur = (uint64_t)p[k] + carry;
             p[k] = (uint32_t)cur;
@@ -186,18 +186,18 @@ static void bn_mul_full(const uint32_t a[PC_BN_LIMBS], const uint32_t b[PC_BN_LI
 }
 
 // Reduce a 128-limb value mod a 64-limb modulus, bit-serial. out = p mod m.
-static void bn_reduce_full(const uint32_t p[2 * PC_BN_LIMBS], const uint32_t m[PC_BN_LIMBS], uint32_t out[PC_BN_LIMBS])
+static void bn_reduce_full(const uint32_t p[2 * PROTOCORE_BN_LIMBS], const uint32_t m[PROTOCORE_BN_LIMBS], uint32_t out[PROTOCORE_BN_LIMBS])
 {
-    uint32_t r[PC_BN_LIMBS + 1];
-    for (int k = 0; k <= PC_BN_LIMBS; k++)
+    uint32_t r[PROTOCORE_BN_LIMBS + 1];
+    for (int k = 0; k <= PROTOCORE_BN_LIMBS; k++)
     {
         r[k] = 0;
     }
 
-    for (int bit = 2 * PC_BN_LIMBS * 32 - 1; bit >= 0; bit--)
+    for (int bit = 2 * PROTOCORE_BN_LIMBS * 32 - 1; bit >= 0; bit--)
     {
         uint32_t carry = 0;
-        for (int k = 0; k <= PC_BN_LIMBS; k++)
+        for (int k = 0; k <= PROTOCORE_BN_LIMBS; k++)
         {
             uint32_t nc = r[k] >> 31;
             r[k] = (r[k] << 1) | carry;
@@ -205,11 +205,11 @@ static void bn_reduce_full(const uint32_t p[2 * PC_BN_LIMBS], const uint32_t m[P
         }
         r[0] |= (p[bit >> 5] >> (bit & 31)) & 1u;
 
-        proto_bool ge = r[PC_BN_LIMBS] != 0;
+        proto_bool ge = r[PROTOCORE_BN_LIMBS] != 0;
         if (!ge)
         {
             ge = PROTO_TRUE;
-            for (int k = PC_BN_LIMBS - 1; k >= 0; k--)
+            for (int k = PROTOCORE_BN_LIMBS - 1; k >= 0; k--)
             {
                 if (r[k] != m[k])
                 {
@@ -221,35 +221,35 @@ static void bn_reduce_full(const uint32_t p[2 * PC_BN_LIMBS], const uint32_t m[P
         if (ge)
         {
             uint64_t borrow = 0;
-            for (int k = 0; k < PC_BN_LIMBS; k++)
+            for (int k = 0; k < PROTOCORE_BN_LIMBS; k++)
             {
                 uint64_t v = (uint64_t)r[k] - m[k] - borrow;
                 r[k] = (uint32_t)v;
                 borrow = (v >> 32) & 1u;
             }
-            r[PC_BN_LIMBS] -= (uint32_t)borrow;
+            r[PROTOCORE_BN_LIMBS] -= (uint32_t)borrow;
         }
     }
-    for (int k = 0; k < PC_BN_LIMBS; k++)
+    for (int k = 0; k < PROTOCORE_BN_LIMBS; k++)
     {
         out[k] = r[k];
     }
 }
 
 // out = base^e mod n, e a small public exponent.
-static void bn_modexp_pub(const pc_bignum *base, uint32_t e, const pc_bignum *n, pc_bignum *out)
+static void bn_modexp_pub(const protocore_bignum *base, uint32_t e, const protocore_bignum *n, protocore_bignum *out)
 {
-    uint32_t prod[2 * PC_BN_LIMBS];
+    uint32_t prod[2 * PROTOCORE_BN_LIMBS];
 
-    pc_bignum b;
-    for (int k = 0; k < PC_BN_LIMBS; k++)
+    protocore_bignum b;
+    for (int k = 0; k < PROTOCORE_BN_LIMBS; k++)
     {
         prod[k] = base->d[k];
-        prod[k + PC_BN_LIMBS] = 0;
+        prod[k + PROTOCORE_BN_LIMBS] = 0;
     }
     bn_reduce_full(prod, n->d, b.d);
 
-    pc_bignum r;
+    protocore_bignum r;
     mem.set(r.d, 0, sizeof(r.d));
     r.d[0] = 1; // r = 1
 
@@ -272,23 +272,23 @@ static void bn_modexp_pub(const pc_bignum *base, uint32_t e, const pc_bignum *n,
 }
 
 // out = base^exp mod n, exp a full-width 2048-bit private exponent.
-static void bn_modexp_full(const pc_bignum *base, const pc_bignum *exp, const pc_bignum *n, pc_bignum *out)
+static void bn_modexp_full(const protocore_bignum *base, const protocore_bignum *exp, const protocore_bignum *n, protocore_bignum *out)
 {
-    uint32_t prod[2 * PC_BN_LIMBS];
+    uint32_t prod[2 * PROTOCORE_BN_LIMBS];
 
-    pc_bignum b;
-    for (int k = 0; k < PC_BN_LIMBS; k++)
+    protocore_bignum b;
+    for (int k = 0; k < PROTOCORE_BN_LIMBS; k++)
     {
         prod[k] = base->d[k];
-        prod[k + PC_BN_LIMBS] = 0;
+        prod[k + PROTOCORE_BN_LIMBS] = 0;
     }
     bn_reduce_full(prod, n->d, b.d);
 
-    pc_bignum r;
+    protocore_bignum r;
     mem.set(r.d, 0, sizeof(r.d));
     r.d[0] = 1; // r = 1
 
-    int top_limb = PC_BN_LIMBS - 1;
+    int top_limb = PROTOCORE_BN_LIMBS - 1;
     while (top_limb >= 0 && exp->d[top_limb] == 0)
     {
         top_limb--;
@@ -323,55 +323,55 @@ static void bn_modexp_full(const pc_bignum *base, const pc_bignum *exp, const pc
     *out = r;
 }
 
-int pc_rsa_sign_sw(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t d_be[PC_RSA_KEY_BYTES], uint8_t *work,
-                   const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
+int protocore_rsa_sign_sw(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t d_be[PROTOCORE_RSA_KEY_BYTES], uint8_t *work,
+                   const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash, uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
 {
     // 1. SHA-256/512 digest of the message + matching DigestInfo.
-    uint8_t digest[PC_SHA512_DIGEST_LEN];
+    uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN];
     size_t digest_len = 0;
     const uint8_t *di = NULL;
     size_t di_len = 0;
     rsa_digest(work, msg, msg_len, hash, digest, &digest_len, &di, &di_len);
 
     // 2. PKCS#1 v1.5 encode: 0x00 0x01 0xFF... 0x00 DigestInfo digest
-    uint8_t em[PC_RSA_KEY_BYTES];
+    uint8_t em[PROTOCORE_RSA_KEY_BYTES];
     pkcs1v15_encode(digest, digest_len, di, di_len, em);
-    pc_secure_wipe(digest, sizeof(digest));
+    protocore_secure_wipe(digest, sizeof(digest));
 
     // 3. RSA private-key operation: s = em^d mod n (full-width).
-    pc_bignum n_bn;
-    pc_bignum d_bn;
-    pc_bignum m_bn;
-    pc_bignum s_bn;
-    bn_from_bytes(&n_bn, n_be, PC_RSA_KEY_BYTES);
-    bn_from_bytes(&d_bn, d_be, PC_RSA_KEY_BYTES);
-    bn_from_bytes(&m_bn, em, PC_RSA_KEY_BYTES);
-    pc_secure_wipe(em, sizeof(em));
+    protocore_bignum n_bn;
+    protocore_bignum d_bn;
+    protocore_bignum m_bn;
+    protocore_bignum s_bn;
+    bn_from_bytes(&n_bn, n_be, PROTOCORE_RSA_KEY_BYTES);
+    bn_from_bytes(&d_bn, d_be, PROTOCORE_RSA_KEY_BYTES);
+    bn_from_bytes(&m_bn, em, PROTOCORE_RSA_KEY_BYTES);
+    protocore_secure_wipe(em, sizeof(em));
 
     bn_modexp_full(&m_bn, &d_bn, &n_bn, &s_bn);
 
     bn_to_bytes(sig, &s_bn);
 
-    pc_secure_wipe(&n_bn, sizeof(n_bn));
-    pc_secure_wipe(&d_bn, sizeof(d_bn));
-    pc_secure_wipe(&m_bn, sizeof(m_bn));
-    pc_secure_wipe(&s_bn, sizeof(s_bn));
+    protocore_secure_wipe(&n_bn, sizeof(n_bn));
+    protocore_secure_wipe(&d_bn, sizeof(d_bn));
+    protocore_secure_wipe(&m_bn, sizeof(m_bn));
+    protocore_secure_wipe(&s_bn, sizeof(s_bn));
     return 0;
 }
 
-int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
-                  size_t msg_len, const uint8_t *sig, size_t sig_len, pc_rsa_hash hash)
+int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
+                  size_t msg_len, const uint8_t *sig, size_t sig_len, protocore_rsa_hash hash)
 {
-    if (sig_len != PC_RSA_KEY_BYTES)
+    if (sig_len != PROTOCORE_RSA_KEY_BYTES)
     {
         return -1;
     }
 
-    pc_bignum n;
-    pc_bignum s;
-    pc_bignum m;
-    bn_from_bytes(&n, n_be, PC_RSA_KEY_BYTES);
-    bn_from_bytes(&s, sig, PC_RSA_KEY_BYTES);
+    protocore_bignum n;
+    protocore_bignum s;
+    protocore_bignum m;
+    bn_from_bytes(&n, n_be, PROTOCORE_RSA_KEY_BYTES);
+    bn_from_bytes(&s, sig, PROTOCORE_RSA_KEY_BYTES);
     if (bn_cmp(&s, &n) >= 0)
     {
         return -1; // signature must be reduced mod n
@@ -380,19 +380,19 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
     uint32_t e = ((uint32_t)e_be4[0] << 24) | ((uint32_t)e_be4[1] << 16) | ((uint32_t)e_be4[2] << 8) | e_be4[3];
     bn_modexp_pub(&s, e, &n, &m);
 
-    uint8_t em[PC_RSA_KEY_BYTES];
+    uint8_t em[PROTOCORE_RSA_KEY_BYTES];
     bn_to_bytes(em, &m);
 
     // Recompute the expected PKCS#1 v1.5 block and compare in constant time.
-    uint8_t digest[PC_SHA512_DIGEST_LEN];
+    uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN];
     size_t digest_len = 0;
     const uint8_t *di = NULL;
     size_t di_len = 0;
     rsa_digest(work, msg, msg_len, hash, digest, &digest_len, &di, &di_len);
-    uint8_t expected[PC_RSA_KEY_BYTES];
+    uint8_t expected[PROTOCORE_RSA_KEY_BYTES];
     pkcs1v15_encode(digest, digest_len, di, di_len, expected);
 
-    return pc_ct_eq(em, expected, PC_RSA_KEY_BYTES) ? 0 : -1;
+    return protocore_ct_eq(em, expected, PROTOCORE_RSA_KEY_BYTES) ? 0 : -1;
 }
 
-#endif // PC_HAS_HW_BIGNUM
+#endif // PROTOCORE_HAS_HW_BIGNUM

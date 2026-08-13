@@ -1,20 +1,20 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host-side microbenchmark for the CoAP server codec (RFC 7252): pc_coap_server_process() takes a full
+// Host-side microbenchmark for the CoAP server codec (RFC 7252): protocore_coap_server_process() takes a full
 // request datagram and produces the response datagram - parse header + options, reconstruct the
 // Uri-Path, dispatch against the resource table, encode a piggybacked reply. Pure (no sockets, no
 // heap), so it links standalone (the UDP transport symbols it references are stubbed below). The
 // device number comes from the rig /bench endpoint; this host ns/op + MB/s is a relative baseline.
 // Build + run (udp.c provides the host no-op UDP stubs coap.c's transport path references):
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_COAP=1 test/performance_benching/services/coap/host.c src/services/iot/coap/coap.c
+//   -DPROTOCORE_ENABLE_COAP=1 test/performance_benching/services/coap/host.c src/services/iot/coap/coap.c
 //   src/network_drivers/transport/udp.c src/network_drivers/transport/udp/udp_listener.c
 //   src/network_drivers/transport/udp/udp_client.c src/network_drivers/transport/net_addr.c
 //   src/server/clock/clock.c src/mmgr/protomem.c src/mmgr/protostr.c src/shared_primitives/ip.c
 //   -o /tmp/bc && /tmp/bc
 
-#define PC_ENABLE_COAP 1
+#define PROTOCORE_ENABLE_COAP 1
 #include "services/iot/coap/coap.h"
 
 #include "host_bench.h"
@@ -38,9 +38,9 @@ static void h_info(const CoapRequest *req, CoapResponse *resp)
 
 int main(void)
 {
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/info", COAP_ALLOW_GET, h_info);
-    pc_coap_server_add_resource("/a/b/c", COAP_ALLOW_GET, h_info);
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/info", COAP_ALLOW_GET, h_info);
+    protocore_coap_server_add_resource("/a/b/c", COAP_ALLOW_GET, h_info);
 
     // A CON GET /info: ver=1 type=CON tkl=4, code=0.01 GET, MID, 4-byte token, Uri-Path "info".
     const uint8_t get_info[] = {0x44, 0x01, 0x12, 0x34, 0xAA, 0xBB, 0xCC, 0xDD, 0xB4, 'i', 'n', 'f', 'o'};
@@ -54,14 +54,14 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(1000000, sink += pc_coap_server_process(get_info, sizeof(get_info), resp, sizeof(resp)), ns);
+        HBENCH_NS(1000000, sink += protocore_coap_server_process(get_info, sizeof(get_info), resp, sizeof(resp)), ns);
         hbench_row("coap", "process GET /info", ns, (double)sizeof(get_info));
         (void)sink;
     }
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(1000000, sink += pc_coap_server_process(get_abc, sizeof(get_abc), resp, sizeof(resp)), ns);
+        HBENCH_NS(1000000, sink += protocore_coap_server_process(get_abc, sizeof(get_abc), resp, sizeof(resp)), ns);
         hbench_row("coap", "process GET /a/b/c", ns, (double)sizeof(get_abc));
         (void)sink;
     }

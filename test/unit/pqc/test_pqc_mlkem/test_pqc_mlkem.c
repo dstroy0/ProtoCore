@@ -20,7 +20,7 @@
 // not build). Without a definition here the ML-KEM program does not link at all. ML-KEM itself is
 // derandomized - the seeds come from the caller - so nothing below depends on what this returns.
 static uint32_t s_rng = 0x1234567u;
-void pc_rand_fill(uint8_t *buf, size_t len)
+void protocore_rand_fill(uint8_t *buf, size_t len)
 {
     for (size_t i = 0; i < len; ++i)
     {
@@ -56,7 +56,7 @@ void test_mlkem768_keygen_kat()
     kat_seeds(d, z);
     uint8_t ek[MLKEM768_EK_BYTES];
     uint8_t dk[MLKEM768_DK_BYTES];
-    pc_mlkem768_keygen(d, z, ek, dk);
+    protocore_mlkem768_keygen(d, z, ek, dk);
     // rho is the trailing 32 octets of ek (ByteEncode12(t) || rho); matching it isolates the G(d||k)
     // derivation from the matrix-ordering / t computation, so a failure points at exactly one of them.
     TEST_ASSERT_EQUAL_HEX8_ARRAY(kat_ek + 1152, ek + 1152, 32);
@@ -71,7 +71,7 @@ void test_mlkem768_keygen_kat()
 void test_mlkem768_decaps_kat()
 {
     uint8_t ss[MLKEM768_SS_BYTES];
-    pc_mlkem768_decaps(kat_dk, kat_ct, ss);
+    protocore_mlkem768_decaps(kat_dk, kat_ct, ss);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(kat_ss, ss, MLKEM768_SS_BYTES);
 }
 
@@ -86,7 +86,7 @@ void test_mlkem768_roundtrip()
     z[9] ^= 0x5A;
     uint8_t ek[MLKEM768_EK_BYTES];
     uint8_t dk[MLKEM768_DK_BYTES];
-    pc_mlkem768_keygen(d, z, ek, dk);
+    protocore_mlkem768_keygen(d, z, ek, dk);
 
     uint8_t m[MLKEM768_MSG_BYTES];
     for (unsigned i = 0; i < sizeof(m); i++)
@@ -95,10 +95,10 @@ void test_mlkem768_roundtrip()
     }
     uint8_t ct[MLKEM768_CT_BYTES];
     uint8_t ss_enc[MLKEM768_SS_BYTES];
-    TEST_ASSERT_TRUE(pc_mlkem768_encaps(ek, m, ct, ss_enc));
+    TEST_ASSERT_TRUE(protocore_mlkem768_encaps(ek, m, ct, ss_enc));
 
     uint8_t ss_dec[MLKEM768_SS_BYTES];
-    pc_mlkem768_decaps(dk, ct, ss_dec);
+    protocore_mlkem768_decaps(dk, ct, ss_dec);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ss_enc, ss_dec, MLKEM768_SS_BYTES);
 }
 
@@ -112,8 +112,8 @@ void test_mlkem768_decaps_implicit_reject()
 
     uint8_t ss1[MLKEM768_SS_BYTES];
     uint8_t ss2[MLKEM768_SS_BYTES];
-    pc_mlkem768_decaps(kat_dk, bad, ss1);
-    pc_mlkem768_decaps(kat_dk, bad, ss2);
+    protocore_mlkem768_decaps(kat_dk, bad, ss1);
+    protocore_mlkem768_decaps(kat_dk, bad, ss2);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ss1, ss2, MLKEM768_SS_BYTES);        // deterministic
     TEST_ASSERT_NOT_EQUAL(0, memcmp(ss1, kat_ss, MLKEM768_SS_BYTES)); // not the real secret
 }
@@ -123,7 +123,7 @@ void test_mlkem768_encaps_kat()
 {
     uint8_t ct[MLKEM768_CT_BYTES];
     uint8_t ss[MLKEM768_SS_BYTES];
-    proto_bool ok = pc_mlkem768_encaps(kat_ek, kat_m, ct, ss);
+    proto_bool ok = protocore_mlkem768_encaps(kat_ek, kat_m, ct, ss);
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(kat_ct, ct, MLKEM768_CT_BYTES);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(kat_ss, ss, MLKEM768_SS_BYTES);
@@ -138,7 +138,7 @@ void test_mlkem768_encaps_varies_with_m()
     m2[0] ^= 0xFF;
     uint8_t ct[MLKEM768_CT_BYTES];
     uint8_t ss[MLKEM768_SS_BYTES];
-    TEST_ASSERT_TRUE(pc_mlkem768_encaps(kat_ek, m2, ct, ss));
+    TEST_ASSERT_TRUE(protocore_mlkem768_encaps(kat_ek, m2, ct, ss));
     TEST_ASSERT_NOT_EQUAL(0, memcmp(ss, kat_ss, MLKEM768_SS_BYTES));
     TEST_ASSERT_NOT_EQUAL(0, memcmp(ct, kat_ct, MLKEM768_CT_BYTES));
 }
@@ -153,7 +153,7 @@ void test_mlkem768_rejects_malformed_ek()
     bad[1] = (uint8_t)(bad[1] | 0x0F);
     uint8_t ct[MLKEM768_CT_BYTES];
     uint8_t ss[MLKEM768_SS_BYTES];
-    TEST_ASSERT_FALSE(pc_mlkem768_encaps(bad, kat_m, ct, ss));
+    TEST_ASSERT_FALSE(protocore_mlkem768_encaps(bad, kat_m, ct, ss));
 }
 
 // The FIPS 203 modulus check is a strict `< q` bound, not an approximation: a coefficient of exactly
@@ -170,13 +170,13 @@ void test_mlkem768_ek_modulus_check_boundary()
     ek[0] = 0x00;
     ek[1] = (uint8_t)((kat_ek[1] & 0xF0) | 0x0D); // 0x0D00 = 3328 = q-1
     TEST_ASSERT_NOT_EQUAL(0, memcmp(ek, kat_ek, sizeof(ek)));
-    TEST_ASSERT_TRUE(pc_mlkem768_encaps(ek, kat_m, ct, ss));
+    TEST_ASSERT_TRUE(protocore_mlkem768_encaps(ek, kat_m, ct, ss));
     TEST_ASSERT_NOT_EQUAL(0, memcmp(ss, kat_ss, sizeof(ss))); // a different key derives a different K
 
     memcpy(ek, kat_ek, sizeof(ek));
     ek[0] = 0x01;
     ek[1] = (uint8_t)((kat_ek[1] & 0xF0) | 0x0D); // 0x0D01 = 3329 = q
-    TEST_ASSERT_FALSE(pc_mlkem768_encaps(ek, kat_m, ct, ss));
+    TEST_ASSERT_FALSE(protocore_mlkem768_encaps(ek, kat_m, ct, ss));
 }
 
 // The check covers the whole key, not just the first polynomial: an out-of-range coefficient in the
@@ -189,7 +189,7 @@ void test_mlkem768_rejects_ek_last_coefficient()
     ek[768 + 383] = 0xFF; // decodes to >= 0xFF0, well above q
     uint8_t ct[MLKEM768_CT_BYTES];
     uint8_t ss[MLKEM768_SS_BYTES];
-    TEST_ASSERT_FALSE(pc_mlkem768_encaps(ek, kat_m, ct, ss));
+    TEST_ASSERT_FALSE(protocore_mlkem768_encaps(ek, kat_m, ct, ss));
 }
 
 // The implicit-reject secret is not merely "not the real one": FIPS 203 pins it to J(z || ct) =
@@ -201,13 +201,13 @@ void test_mlkem768_implicit_reject_equals_j_of_z_and_ct()
     bad[sizeof(bad) - 1] ^= 0x80; // tamper with the compressed v, not u
 
     uint8_t ss[MLKEM768_SS_BYTES];
-    pc_mlkem768_decaps(kat_dk, bad, ss);
+    protocore_mlkem768_decaps(kat_dk, bad, ss);
 
     uint8_t jbuf[32 + MLKEM768_CT_BYTES];
     memcpy(jbuf, kat_dk + (MLKEM768_DK_BYTES - 32), 32); // z
     memcpy(jbuf + 32, bad, sizeof(bad));
     uint8_t want[32];
-    pc_shake256(want, sizeof(want), jbuf, sizeof(jbuf));
+    protocore_shake256(want, sizeof(want), jbuf, sizeof(jbuf));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, ss, MLKEM768_SS_BYTES);
 }
 

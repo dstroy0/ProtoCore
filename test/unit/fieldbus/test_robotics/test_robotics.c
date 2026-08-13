@@ -90,7 +90,7 @@ void setUp(void)
     g_mds.safety.operational_mode = ROBOTICS_MODE_AUTOMATIC;
     g_mds.safety.emergency_stop = PROTO_FALSE;
     g_mds.safety.protective_stop = PROTO_TRUE;
-    pc_robotics_bind(&g_mds);
+    protocore_robotics_bind(&g_mds);
 }
 void tearDown(void)
 {
@@ -98,7 +98,7 @@ void tearDown(void)
 
 static int32_t browse(uint16_t ns, uint32_t id, OpcUaReference *refs, uint32_t cap)
 {
-    return pc_robotics_browse(ns, id, refs, cap);
+    return protocore_robotics_browse(ns, id, refs, cap);
 }
 static const OpcUaReference *find_ref(const OpcUaReference *refs, int32_t n, const char *name)
 {
@@ -119,7 +119,7 @@ static void test_browse_objects_folder_has_system(void)
     int32_t n = browse(0, 85, refs, 8); // Objects folder
     TEST_ASSERT_EQUAL_INT32(1, n);
     TEST_ASSERT_EQUAL_UINT32(N_MOTIONDEVICESYSTEM, refs[0].target_id);
-    TEST_ASSERT_EQUAL_UINT32(PC_ROBOTICS_NS, refs[0].target_ns);
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_ROBOTICS_NS, refs[0].target_ns);
     TEST_ASSERT_EQUAL_UINT32(OPCUA_NODECLASS_OBJECT, refs[0].node_class);
     TEST_ASSERT_EQUAL_UINT32(OPCUA_REFTYPE_ORGANIZES, refs[0].ref_type_id);
     TEST_ASSERT_EQUAL_STRING("Robot-1", refs[0].browse_name); // uses mds->name
@@ -128,7 +128,7 @@ static void test_browse_objects_folder_has_system(void)
 static void test_browse_system_folders(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_ROBOTICS_NS, N_MOTIONDEVICESYSTEM, refs, 8);
+    int32_t n = browse(PROTOCORE_ROBOTICS_NS, N_MOTIONDEVICESYSTEM, refs, 8);
     TEST_ASSERT_EQUAL_INT32(3, n); // MotionDevices, Controllers, SafetyStates
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "MotionDevices"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Controllers"));
@@ -138,12 +138,12 @@ static void test_browse_system_folders(void)
 static void test_browse_motiondevice_components(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_ROBOTICS_NS, N_MOTIONDEVICES, refs, 8);
+    int32_t n = browse(PROTOCORE_ROBOTICS_NS, N_MOTIONDEVICES, refs, 8);
     TEST_ASSERT_EQUAL_INT32(1, n);                                          // MotionDevice
     TEST_ASSERT_EQUAL_UINT32(OPCUA_REFTYPE_ORGANIZES, refs[0].ref_type_id); // folder -> member
     TEST_ASSERT_EQUAL_UINT32(N_MOTIONDEVICE, refs[0].target_id);
 
-    n = browse(PC_ROBOTICS_NS, N_MOTIONDEVICE, refs, 8);
+    n = browse(PROTOCORE_ROBOTICS_NS, N_MOTIONDEVICE, refs, 8);
     TEST_ASSERT_EQUAL_INT32(7, n); // Manufacturer, Model, ProductCode, SerialNumber, Category, ParameterSet, Axes
     const OpcUaReference *man = find_ref(refs, n, "Manufacturer");
     TEST_ASSERT_NOT_NULL(man);
@@ -156,7 +156,7 @@ static void test_browse_motiondevice_components(void)
 static void test_browse_parameterset(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_ROBOTICS_NS, N_MD_PARAMSET, refs, 8);
+    int32_t n = browse(PROTOCORE_ROBOTICS_NS, N_MD_PARAMSET, refs, 8);
     TEST_ASSERT_EQUAL_INT32(3, n); // OnPath, InControl, SpeedOverride
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "OnPath"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "InControl"));
@@ -166,7 +166,7 @@ static void test_browse_parameterset(void)
 static void test_browse_axes_parametric(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_ROBOTICS_NS, N_MD_AXES, refs, 8);
+    int32_t n = browse(PROTOCORE_ROBOTICS_NS, N_MD_AXES, refs, 8);
     TEST_ASSERT_EQUAL_INT32(3, n); // axis_count = 3
     const OpcUaReference *a1 = find_ref(refs, n, "Axis_1");
     TEST_ASSERT_NOT_NULL(a1);
@@ -179,7 +179,7 @@ static void test_browse_axes_parametric(void)
     TEST_ASSERT_NULL(find_ref(refs, n, "Axis_4")); // only 3 bound
 
     // Browse an Axis_k object -> its four variables.
-    n = browse(PC_ROBOTICS_NS, N_AXIS1, refs, 8);
+    n = browse(PROTOCORE_ROBOTICS_NS, N_AXIS1, refs, 8);
     TEST_ASSERT_EQUAL_INT32(4, n);
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "ActualPosition"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "ActualSpeed"));
@@ -192,15 +192,15 @@ static void test_browse_axes_parametric(void)
 static void test_browse_controller_and_software(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_ROBOTICS_NS, N_CONTROLLERS, refs, 8);
+    int32_t n = browse(PROTOCORE_ROBOTICS_NS, N_CONTROLLERS, refs, 8);
     TEST_ASSERT_EQUAL_INT32(1, n); // Controller
     TEST_ASSERT_EQUAL_UINT32(N_CONTROLLER, refs[0].target_id);
 
-    n = browse(PC_ROBOTICS_NS, N_CONTROLLER, refs, 8);
+    n = browse(PROTOCORE_ROBOTICS_NS, N_CONTROLLER, refs, 8);
     TEST_ASSERT_EQUAL_INT32(5, n); // Manufacturer, Model, ProductCode, SerialNumber, Software
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Software"));
 
-    n = browse(PC_ROBOTICS_NS, N_CT_SOFTWARE, refs, 8);
+    n = browse(PROTOCORE_ROBOTICS_NS, N_CT_SOFTWARE, refs, 8);
     TEST_ASSERT_EQUAL_INT32(3, n); // Manufacturer, Model, SoftwareRevision
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "SoftwareRevision"));
 }
@@ -208,12 +208,12 @@ static void test_browse_controller_and_software(void)
 static void test_browse_safetystate(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_ROBOTICS_NS, N_SAFETYSTATES, refs, 8);
+    int32_t n = browse(PROTOCORE_ROBOTICS_NS, N_SAFETYSTATES, refs, 8);
     TEST_ASSERT_EQUAL_INT32(1, n); // SafetyState
-    n = browse(PC_ROBOTICS_NS, N_SAFETYSTATE, refs, 8);
+    n = browse(PROTOCORE_ROBOTICS_NS, N_SAFETYSTATE, refs, 8);
     TEST_ASSERT_EQUAL_INT32(1, n); // ParameterSet
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "ParameterSet"));
-    n = browse(PC_ROBOTICS_NS, N_SS_PARAMSET, refs, 8);
+    n = browse(PROTOCORE_ROBOTICS_NS, N_SS_PARAMSET, refs, 8);
     TEST_ASSERT_EQUAL_INT32(3, n); // OperationalMode, EmergencyStop, ProtectiveStop
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "OperationalMode"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "EmergencyStop"));
@@ -223,30 +223,30 @@ static void test_browse_safetystate(void)
 static void test_browse_leaf_and_unknown_return_negative(void)
 {
     OpcUaReference refs[4];
-    TEST_ASSERT_EQUAL_INT32(-1, browse(PC_ROBOTICS_NS, N_MD_MANUFACTURER, refs, 4)); // a leaf Variable
-    TEST_ASSERT_EQUAL_INT32(-1, browse(PC_ROBOTICS_NS, N_AXIS1_POSITION, refs, 4));  // an axis-variable leaf
-    TEST_ASSERT_EQUAL_INT32(-1, browse(PC_ROBOTICS_NS, 999999, refs, 4));            // unknown node
+    TEST_ASSERT_EQUAL_INT32(-1, browse(PROTOCORE_ROBOTICS_NS, N_MD_MANUFACTURER, refs, 4)); // a leaf Variable
+    TEST_ASSERT_EQUAL_INT32(-1, browse(PROTOCORE_ROBOTICS_NS, N_AXIS1_POSITION, refs, 4));  // an axis-variable leaf
+    TEST_ASSERT_EQUAL_INT32(-1, browse(PROTOCORE_ROBOTICS_NS, 999999, refs, 4));            // unknown node
     TEST_ASSERT_EQUAL_INT32(-1, browse(7, N_MOTIONDEVICESYSTEM, refs, 4));           // wrong namespace
-    TEST_ASSERT_EQUAL_INT32(-1, browse(PC_ROBOTICS_NS, N_AXIS_BASE + 40, refs, 4));  // Axis_4 (past axis_count)
+    TEST_ASSERT_EQUAL_INT32(-1, browse(PROTOCORE_ROBOTICS_NS, N_AXIS_BASE + 40, refs, 4));  // Axis_4 (past axis_count)
 }
 
 // --- Read resolver ----------------------------------------------------------
 static void test_read_motiondevice_identity(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_MD_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MD_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_STRING, v.type);
     TEST_ASSERT_EQUAL_STRING("Acme Robotics", v.str);
 
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_MD_CATEGORY, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MD_CATEGORY, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_INT32, v.type);
     TEST_ASSERT_EQUAL_INT32((int32_t)ROBOTICS_CAT_ARTICULATED_ROBOT, v.i32);
 
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_MDP_ONPATH, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MDP_ONPATH, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_BOOL, v.type);
     TEST_ASSERT_TRUE(v.b);
 
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_MDP_SPEEDOVERRIDE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MDP_SPEEDOVERRIDE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_DOUBLE, v.type);
     TEST_ASSERT_TRUE(v.f64 == 75.0);
 }
@@ -255,34 +255,34 @@ static void test_read_axes_pick_the_right_axis(void)
 {
     OpcUaVariant v;
     // Axis_1 ActualPosition = 10.5
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1_POSITION, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1_POSITION, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_DOUBLE, v.type);
     TEST_ASSERT_TRUE(v.f64 == 10.5);
     // Axis_1 MotionProfile enum
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1_PROFILE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1_PROFILE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_INT32, v.type);
     TEST_ASSERT_EQUAL_INT32((int32_t)ROBOTICS_PROFILE_ROTARY, v.i32);
     // Axis_2 ActualSpeed = 2.0 (distinct axis)
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS2_SPEED, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS2_SPEED, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 2.0);
     // Axis_3 ActualPosition = 33.0
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, 6430 + 1, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, 6430 + 1, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 33.0);
 }
 
 static void test_read_controller_and_safety(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_CT_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_CT_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("Acme Controls", v.str);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_SW_REVISION, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_SW_REVISION, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("4.2.0", v.str);
 
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_SSP_OPMODE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_SSP_OPMODE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_INT32((int32_t)ROBOTICS_MODE_AUTOMATIC, v.i32);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_SSP_ESTOP, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_SSP_ESTOP, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_FALSE(v.b);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_SSP_PSTOP, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_SSP_PSTOP, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.b);
 }
 
@@ -290,7 +290,7 @@ static void test_read_null_string_served_as_empty(void)
 {
     g_mds.device.model = NULL; // a null field must not crash - served as ""
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, 6202 /*Model*/, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, 6202 /*Model*/, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_STRING, v.type);
     TEST_ASSERT_EQUAL_STRING("", v.str);
     TEST_ASSERT_EQUAL_INT32(0, v.str_len);
@@ -299,19 +299,19 @@ static void test_read_null_string_served_as_empty(void)
 static void test_read_rejects_unknown_ns_attr_and_axis_out_of_range(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_FALSE(pc_robotics_read(PC_ROBOTICS_NS, 999999, OPCUA_ATTR_VALUE, &v));              // unknown node
-    TEST_ASSERT_FALSE(pc_robotics_read(7, N_MD_MANUFACTURER, OPCUA_ATTR_VALUE, &v));                // wrong namespace
-    TEST_ASSERT_FALSE(pc_robotics_read(PC_ROBOTICS_NS, N_MD_MANUFACTURER, 12 /*!Value*/, &v));      // not Value attr
-    TEST_ASSERT_FALSE(pc_robotics_read(PC_ROBOTICS_NS, 6441 /*Axis_4 pos*/, OPCUA_ATTR_VALUE, &v)); // past axis_count
+    TEST_ASSERT_FALSE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, 999999, OPCUA_ATTR_VALUE, &v));              // unknown node
+    TEST_ASSERT_FALSE(protocore_robotics_read(7, N_MD_MANUFACTURER, OPCUA_ATTR_VALUE, &v));                // wrong namespace
+    TEST_ASSERT_FALSE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MD_MANUFACTURER, 12 /*!Value*/, &v));      // not Value attr
+    TEST_ASSERT_FALSE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, 6441 /*Axis_4 pos*/, OPCUA_ATTR_VALUE, &v)); // past axis_count
 }
 
 static void test_read_before_bind_is_a_clean_miss(void)
 {
-    pc_robotics_bind(NULL); // no model bound
+    protocore_robotics_bind(NULL); // no model bound
     OpcUaVariant v;
-    TEST_ASSERT_FALSE(pc_robotics_read(PC_ROBOTICS_NS, N_MD_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_FALSE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MD_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
     OpcUaReference refs[4];
-    TEST_ASSERT_EQUAL_INT32(-1, pc_robotics_browse(0, 85, refs, 4));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_robotics_browse(0, 85, refs, 4));
 }
 
 // Every MotionDevice / Controller / Software leaf the focused tests above skip still resolves to its
@@ -319,25 +319,25 @@ static void test_read_before_bind_is_a_clean_miss(void)
 static void test_read_every_remaining_leaf(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_MD_PRODUCTCODE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MD_PRODUCTCODE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_STRING, v.type);
     TEST_ASSERT_EQUAL_STRING("AR6-STD", v.str);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_MD_SERIAL, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MD_SERIAL, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("SN-R-0007", v.str);
 
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_MDP_INCONTROL, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MDP_INCONTROL, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_BOOL, v.type);
     TEST_ASSERT_TRUE(v.b);
 
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_CT_MODEL, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_CT_MODEL, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("CTRL-9", v.str);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_CT_PRODUCTCODE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_CT_PRODUCTCODE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("C9-STD", v.str);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_CT_SERIAL, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_CT_SERIAL, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("SN-C-0009", v.str);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_SW_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_SW_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("Acme Software", v.str);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_SW_MODEL, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_SW_MODEL, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("RobOS", v.str);
 }
 
@@ -346,14 +346,14 @@ static void test_read_every_remaining_leaf(void)
 static void test_read_axis_all_four_variables(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1_POSITION, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1_POSITION, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 10.5);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1_SPEED, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1_SPEED, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 1.0);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1_ACCEL, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1_ACCEL, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_DOUBLE, v.type);
     TEST_ASSERT_TRUE(v.f64 == 0.1);
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1_PROFILE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1_PROFILE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_INT32, v.type);
 }
 
@@ -363,9 +363,9 @@ static void test_read_axis_all_four_variables(void)
 static void test_read_axis_sub_id_bounds(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_FALSE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1, OPCUA_ATTR_VALUE, &v));     // sub 0: the object
-    TEST_ASSERT_FALSE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1 + 5, OPCUA_ATTR_VALUE, &v)); // sub 5: past MotionProfile
-    TEST_ASSERT_FALSE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS_BASE + 5, OPCUA_ATTR_VALUE, &v)); // k == 0
+    TEST_ASSERT_FALSE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1, OPCUA_ATTR_VALUE, &v));     // sub 0: the object
+    TEST_ASSERT_FALSE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1 + 5, OPCUA_ATTR_VALUE, &v)); // sub 5: past MotionProfile
+    TEST_ASSERT_FALSE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS_BASE + 5, OPCUA_ATTR_VALUE, &v)); // k == 0
 }
 
 // A Browse buffer smaller than the node's child count is filled to the brim and then left alone -
@@ -374,7 +374,7 @@ static void test_browse_clamps_to_max(void)
 {
     OpcUaReference refs[8];
     memset(refs, 0, sizeof(refs));
-    int32_t n = browse(PC_ROBOTICS_NS, N_MOTIONDEVICE, refs, 2); // MotionDevice has 7 children
+    int32_t n = browse(PROTOCORE_ROBOTICS_NS, N_MOTIONDEVICE, refs, 2); // MotionDevice has 7 children
     TEST_ASSERT_EQUAL_INT32(2, n);
     TEST_ASSERT_EQUAL_STRING("Manufacturer", refs[0].browse_name);
     TEST_ASSERT_EQUAL_STRING("Model", refs[1].browse_name);
@@ -403,17 +403,17 @@ static void test_browse_objects_folder_without_model_name(void)
 }
 
 // The Axes folder never publishes more axes than the build compiled room for, even if the bound
-// model over-declares axis_count - the loop is clamped by PC_ROBOTICS_AXES as well.
+// model over-declares axis_count - the loop is clamped by PROTOCORE_ROBOTICS_AXES as well.
 static void test_browse_axes_clamped_to_compiled_maximum(void)
 {
-    g_mds.device.axis_count = PC_ROBOTICS_AXES + 1; // over-declared by one
-    OpcUaReference refs[PC_ROBOTICS_AXES + 2];
+    g_mds.device.axis_count = PROTOCORE_ROBOTICS_AXES + 1; // over-declared by one
+    OpcUaReference refs[PROTOCORE_ROBOTICS_AXES + 2];
     memset(refs, 0, sizeof(refs));
-    int32_t n = browse(PC_ROBOTICS_NS, N_MD_AXES, refs, PC_ROBOTICS_AXES + 2);
-    TEST_ASSERT_EQUAL_INT32((int32_t)PC_ROBOTICS_AXES, n);
+    int32_t n = browse(PROTOCORE_ROBOTICS_NS, N_MD_AXES, refs, PROTOCORE_ROBOTICS_AXES + 2);
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_ROBOTICS_AXES, n);
     TEST_ASSERT_EQUAL_STRING("Axis_1", refs[0].browse_name);
-    TEST_ASSERT_EQUAL_UINT32(N_AXIS_BASE + PC_ROBOTICS_AXES * 10, refs[PC_ROBOTICS_AXES - 1].target_id);
-    TEST_ASSERT_NULL(refs[PC_ROBOTICS_AXES].browse_name); // the over-declared axis was not emitted
+    TEST_ASSERT_EQUAL_UINT32(N_AXIS_BASE + PROTOCORE_ROBOTICS_AXES * 10, refs[PROTOCORE_ROBOTICS_AXES - 1].target_id);
+    TEST_ASSERT_NULL(refs[PROTOCORE_ROBOTICS_AXES].browse_name); // the over-declared axis was not emitted
 }
 
 // install() binds the model as well as registering the resolvers with the OPC UA server, so a Read
@@ -427,15 +427,15 @@ static void test_install_binds_the_model(void)
     other.device.axis_count = 1;
     other.device.axes[0].actual_position = 99.5;
 
-    pc_robotics_install(&other);
+    protocore_robotics_install(&other);
 
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_MD_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_MD_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("Other Robotics", v.str); // the installed model, not the setUp one
-    TEST_ASSERT_TRUE(pc_robotics_read(PC_ROBOTICS_NS, N_AXIS1_POSITION, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_robotics_read(PROTOCORE_ROBOTICS_NS, N_AXIS1_POSITION, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 99.5);
     OpcUaReference refs[4];
-    int32_t n = pc_robotics_browse(0, 85, refs, 4);
+    int32_t n = protocore_robotics_browse(0, 85, refs, 4);
     TEST_ASSERT_EQUAL_INT32(1, n);
     TEST_ASSERT_EQUAL_STRING("Robot-2", refs[0].browse_name);
 }

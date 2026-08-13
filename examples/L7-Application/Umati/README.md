@@ -1,6 +1,6 @@
 # Umati - OPC UA for Machine Tools (umati) MachineTool model
 
-**Layer:** L7-Application · **Flags:** `PC_ENABLE_OPCUA` + `PC_ENABLE_UMATI`
+**Layer:** L7-Application · **Flags:** `PROTOCORE_ENABLE_OPCUA` + `PROTOCORE_ENABLE_UMATI`
 
 Turns the board into a **umati** machine-tool server. umati ("universal machine technology interface",
 VDW / OPC Foundation, **OPC 40501-1**) is the OPC UA companion specification for machine tools: it
@@ -26,7 +26,7 @@ MachineTool
 ```
 
 You fill a `UmatiMachineTool` struct and refresh its live fields each `loop()` from your machine I/O;
-the server reads straight out of it. `pc_umati_install(&mt)` binds the struct and registers the OPC UA
+the server reads straight out of it. `protocore_umati_install(&mt)` binds the struct and registers the OPC UA
 Browse + Read resolvers - that is the whole wiring.
 
 ## What you teach
@@ -42,7 +42,7 @@ example **OpcUa**.
 2. Build with both flags set (already in `build_opt.h` for the Arduino IDE):
     ```sh
     pio ci examples/L7-Application/Umati --board esp32dev --lib "." \
-      --project-option="build_flags=-DPC_ENABLE_OPCUA=1 -DPC_ENABLE_UMATI=1"
+      --project-option="build_flags=-DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_UMATI=1"
     ```
 3. Flash, open Serial @115200, note the IP.
 

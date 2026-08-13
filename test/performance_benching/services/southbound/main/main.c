@@ -44,18 +44,18 @@ static int drv_read_block(void *, uint32_t first, int32_t *out, size_t n)
 void dbench_run(void)
 {
     static const SouthboundDriver drv = {"plc1", drv_read, drv_write, drv_read_block, NULL, NULL};
-    pc_southbound_clear();
-    pc_southbound_register(&drv);
+    protocore_southbound_clear();
+    protocore_southbound_register(&drv);
 
     for (;;)
     {
         DBENCH_BANNER("southbound");
         volatile int sink = 0;
         int32_t v = 0;
-        DBENCH_OP("pc_southbound_read (dispatch)", 200000, sink += pc_southbound_read("plc1", 5, &v));
-        DBENCH_OP("pc_southbound_write (dispatch)", 200000, sink += pc_southbound_write("plc1", 5, sink));
+        DBENCH_OP("protocore_southbound_read (dispatch)", 200000, sink += protocore_southbound_read("plc1", 5, &v));
+        DBENCH_OP("protocore_southbound_write (dispatch)", 200000, sink += protocore_southbound_write("plc1", 5, sink));
         int32_t block[16];
-        DBENCH_OP("pc_southbound_read_block x16", 100000, sink += pc_southbound_read_block("plc1", 0, block, 16));
+        DBENCH_OP("protocore_southbound_read_block x16", 100000, sink += protocore_southbound_read_block("plc1", 0, block, 16));
         (void)sink;
         DBENCH_DONE();
     }

@@ -173,20 +173,6 @@ Set `SSID` / `PASSWORD`, flash, and open Serial at 115200 for the IP. Full walkt
 
 <!-- END GENERATED QUICK START -->
 
-## Installation
-
-Install the **esp32 by Espressif** boards package (3.x), then install this library (Library Manager, or drop it in your `libraries/` folder). The bundled examples build unmodified; each ships a `build_opt.h` that turns on the features it needs.
-
-Optional features are compile-time flags. In the Arduino IDE there is no `build_flags` field, and a `#define` in your `.ino` does **not** reach the library's separately-compiled `.cpp` files, so to enable a feature you place a file named **`build_opt.h`** in the same folder as your sketch (the one file the IDE feeds to every translation unit). The easy way:
-
-1. Open the [interactive configurator](https://dstroy0.github.io/ProtoCore/configurator.html) and pick the features you want (dependencies resolve for you).
-2. Switch to the **Arduino build_opt.h** tab and click **Download**.
-3. Drop the downloaded `build_opt.h` next to your `.ino` and compile.
-
-PlatformIO users ignore all of this and just use `build_flags` in `platformio.ini` (the configurator's default tab emits that block). ESP-IDF is supported as an arduino-as-ESP-IDF component.
-
-There are **per-variant** (classic, C6, P4, etc.) default values (psram, flash) to allow operation out of the box. Your application may require tuning. Moving the TLS arena and connection pool to psram allows for a stupid amount of concurrent connections for this device class.
-
 ## 📚 Documentation
 
 **[Read the Full Documentation Here 📖](https://dstroy0.github.io/ProtoCore/)**
@@ -203,7 +189,7 @@ The technical reference documentation has been moved to a dedicated landing page
 
 <!-- prettier-ignore-start -->
 
-**256 features**, every one a compile-time `PC_ENABLE_*` flag that is off unless you ask for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are always on and are not flags.
+**256 features**, every one a compile-time `PROTOCORE_ENABLE_*` flag that is off unless you ask for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are always on and are not flags.
 
 <a href="https://dstroy0.github.io/ProtoCore/features.html" title="Browse every feature">
   <img alt="Feature map: the OSI stack and the feature groups on each layer" src="docs/diagrams/features_map.svg" width="100%">
@@ -236,35 +222,35 @@ cryptic linker error). Enable a child flag only together with its parent.
 
 <!-- prettier-ignore-start -->
 
-> Generated from the declared `PC_ENABLE_<A>_NEEDS_<B>` symbols in [src/protocore_config.h](src/protocore_config.h) by `tools/ci_tooling/generate/gen_flag_deps.py` - do not edit by hand. The picture is an SVG: every node is a link to that feature's entry and carries a hover tooltip naming what it needs. Graphviz source: [`docs/diagrams/flag_deps.dot`](docs/diagrams/flag_deps.dot).
+> Generated from the declared `PROTOCORE_ENABLE_<A>_NEEDS_<B>` symbols in [src/protocore_config.h](src/protocore_config.h) by `tools/ci_tooling/generate/gen_flag_deps.py` - do not edit by hand. The picture is an SVG: every node is a link to that feature's entry and carries a hover tooltip naming what it needs. Graphviz source: [`docs/diagrams/flag_deps.dot`](docs/diagrams/flag_deps.dot).
 
-Each **green** node is a parent feature and each **blue** node a child that needs it (a hard `#error` otherwise) - enable the parent to build the child. A green **`TLS`** badge on a node means that feature also needs `PC_ENABLE_TLS` (shown as a badge rather than an edge so no lines cross). **Hover a flag for what it needs; click it to read the feature.** (Auto-derived flags and PSRAM-class features are listed below the picture rather than drawn as edges, so the graph stays a clean family forest.)
+Each **green** node is a parent feature and each **blue** node a child that needs it (a hard `#error` otherwise) - enable the parent to build the child. A green **`TLS`** badge on a node means that feature also needs `PROTOCORE_ENABLE_TLS` (shown as a badge rather than an edge so no lines cross). **Hover a flag for what it needs; click it to read the feature.** (Auto-derived flags and PSRAM-class features are listed below the picture rather than drawn as edges, so the graph stays a clean family forest.)
 
 <a href="docs/diagrams/flag_deps.svg" title="Open the build-flag dependency graph full size">
   <img alt="Build-flag dependencies" src="docs/diagrams/flag_deps.svg">
 </a>
 
-> Not drawn (so the forest stays uncrossed): **`PC_ENABLE_RANGE`** also need `PC_ENABLE_EDGE_CACHE`; **`PC_ENABLE_EDGE_CACHE`** also need `PC_ENABLE_HTTP_CLIENT`.
+> Not drawn (so the forest stays uncrossed): **`PROTOCORE_ENABLE_RANGE`** also need `PROTOCORE_ENABLE_EDGE_CACHE`; **`PROTOCORE_ENABLE_EDGE_CACHE`** also need `PROTOCORE_ENABLE_HTTP_CLIENT`.
 
 <details><summary><b>Auto-derived flags</b> - enabling the left flag turns the right one on for you; do not set it yourself.</summary>
 
 | Enabling this... | ...auto-enables |
 | --- | --- |
-| `PC_ENABLE_EDGE_ORIGIN_TLS` | `PC_ENABLE_CLIENT_TLS` |
-| `PC_ENABLE_HTTP_CLIENT_TLS` | `PC_ENABLE_CLIENT_TLS` |
-| `PC_ENABLE_MQTT_TLS` | `PC_ENABLE_CLIENT_TLS` |
-| `PC_ENABLE_OTA` | `PC_ENABLE_STREAM_BODY` |
-| `PC_ENABLE_UPLOAD` | `PC_ENABLE_STREAM_BODY` |
-| `PC_ENABLE_WEBDAV` | `PC_ENABLE_STREAM_BODY` |
-| `PC_ENABLE_WS_CLIENT_TLS` | `PC_ENABLE_CLIENT_TLS` |
+| `PROTOCORE_ENABLE_EDGE_ORIGIN_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
+| `PROTOCORE_ENABLE_HTTP_CLIENT_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
+| `PROTOCORE_ENABLE_MQTT_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
+| `PROTOCORE_ENABLE_OTA` | `PROTOCORE_ENABLE_STREAM_BODY` |
+| `PROTOCORE_ENABLE_UPLOAD` | `PROTOCORE_ENABLE_STREAM_BODY` |
+| `PROTOCORE_ENABLE_WEBDAV` | `PROTOCORE_ENABLE_STREAM_BODY` |
+| `PROTOCORE_ENABLE_WS_CLIENT_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
 </details>
 
 <details><summary><b>PSRAM-class features</b> - the pool cannot fit internal DRAM; enable `*_IN_PSRAM` or acknowledge with an `*_ACK_DRAM` opt-out.</summary>
 
 | Feature | Gate |
 | --- | --- |
-| `PC_ENABLE_SSH_ZLIB` | PSRAM pool |
-| `PC_ENABLE_TLS` | MAX_TLS_CONNS gt 1 |
+| `PROTOCORE_ENABLE_SSH_ZLIB` | PSRAM pool |
+| `PROTOCORE_ENABLE_TLS` | MAX_TLS_CONNS gt 1 |
 </details>
 
 _45 hard dependencies, 2 PSRAM gates, 7 derived flags._
@@ -275,7 +261,7 @@ _45 hard dependencies, 2 PSRAM gates, 7 derived flags._
 
 ## Build Footprint
 
-The jump from a bare sketch to a running server is almost entirely the WiFi/lwIP stack, not this library: an empty RTOS/Arduino sketch is already ~228 KB flash / ~21 KB RAM. TLS's larger RAM is the fixed mbedTLS arena (`PC_TLS_ARENA_SIZE`, 48 KB default); an outbound client links no code until a sketch actually calls it.
+The jump from a bare sketch to a running server is almost entirely the WiFi/lwIP stack, not this library: an empty RTOS/Arduino sketch is already ~228 KB flash / ~21 KB RAM. TLS's larger RAM is the fixed mbedTLS arena (`PROTOCORE_TLS_ARENA_SIZE`, 48 KB default); an outbound client links no code until a sketch actually calls it.
 
 <!-- BEGIN GENERATED FOOTPRINT BUDGET (tools/ci_tooling/generate/feature_budget.py) -->
 
@@ -303,10 +289,6 @@ Per-feature examples are under [`examples/`](examples/).
   capability rather than on a chip check, so what remains is per-vendor silicon support, tracked
   in [docs/ROADMAP.md](docs/ROADMAP.md). TI C2000 is the hard case: `CHAR_BIT == 16`, so there is
   no 8-bit addressable memory and a byte pointer is not a byte pointer.
-
-### Continuous integration
-
-Fifteen workflows run on every push to `main` - builds for ESP32 and Arduino, the host test suite, the interop harness against real peers, CodeQL and SonarCloud, a pentest pass, three formatting/lint gates, and the four that regenerate what you are reading. Their live status is in the badges at the top of this file; each one links to its own runs, and all of them are in [`.github/workflows/`](.github/workflows/).
 
 ## Licensing & Commercial Use
 

@@ -16,12 +16,12 @@
  * This demo uses a wss:// echo, so it needs the TLS flags. Optional services are
  * gated by a compile flag the *library* sources must also see; for PlatformIO
  * enable them for the whole build:
- *     build_flags = -DPC_ENABLE_WS_CLIENT=1 -DPC_ENABLE_TLS=1 -DPC_ENABLE_WS_CLIENT_TLS=1
- * For a plain ws:// endpoint, just -DPC_ENABLE_WS_CLIENT=1 and set USE_TLS=false
+ *     build_flags = -DPROTOCORE_ENABLE_WS_CLIENT=1 -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_WS_CLIENT_TLS=1
+ * For a plain ws:// endpoint, just -DPROTOCORE_ENABLE_WS_CLIENT=1 and set USE_TLS=false
  * / PORT=80. (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_WS_CLIENT 1
+#define PROTOCORE_ENABLE_WS_CLIENT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

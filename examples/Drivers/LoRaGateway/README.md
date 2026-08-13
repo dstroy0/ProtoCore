@@ -1,6 +1,6 @@
 # LoRaGateway - a real LoRa radio bridged to the gateway
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_LORA`, `PC_ENABLE_GATEWAY`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_LORA`, `PROTOCORE_ENABLE_GATEWAY`
 
 ## What this example teaches
 
@@ -9,7 +9,7 @@ simulated feed, this drives an actual **Semtech SX127x / RFM95-96** over SPI and
 its frames to the [gateway](../RadioGateway/README.md).
 
 ```
-RFM95 RX --SPI--> pc_lora_recv() --> pc_lora_frame_parse() --> pc_gateway_uplink()
+RFM95 RX --SPI--> protocore_lora_recv() --> protocore_lora_frame_parse() --> protocore_gateway_uplink()
                                                               |
                                            envelope + topic  lora/0/<from>
                                                               |
@@ -18,26 +18,26 @@ RFM95 RX --SPI--> pc_lora_recv() --> pc_lora_frame_parse() --> pc_gateway_uplink
 
 The `services/lora` module has two layers, and only the first is hardware-specific:
 
-- **Driver** - the SX127x register protocol over a `pc_lora_bus` (two callbacks that read /
+- **Driver** - the SX127x register protocol over a `protocore_lora_bus` (two callbacks that read /
   write a chip register). Here they are a few SPI transfers; that is the _only_ code tied
   to your board.
-- **Codec** - `pc_lora_frame_parse` / `pc_lora_frame_build` handle the RadioHead 4-byte header
+- **Codec** - `protocore_lora_frame_parse` / `protocore_lora_frame_build` handle the RadioHead 4-byte header
   (`to` / `from` / `id` / `flags`) that sits on top of the header-less LoRa PHY.
 
 ```cpp
-pc_lora_config cfg = {}; cfg.freq_hz = 915000000; cfg.spreading = 7; cfg.bandwidth = 7;
+protocore_lora_config cfg = {}; cfg.freq_hz = 915000000; cfg.spreading = 7; cfg.bandwidth = 7;
 cfg.coding_rate = 1; cfg.sync_word = 0x12; cfg.tx_power = 17;
-pc_lora_init(&bus, &cfg);           // verifies the chip id, applies the config
-pc_lora_set_rx(&bus);               // listen
+protocore_lora_init(&bus, &cfg);           // verifies the chip id, applies the config
+protocore_lora_set_rx(&bus);               // listen
 
-int n = pc_lora_recv(&bus, buf, sizeof(buf), &rssi);   // -> a frame, or -1
-pc_lora_header h; const uint8_t *payload; uint16_t plen;
-pc_lora_frame_parse(buf, n, &h, &payload, &plen);
-pc_gateway_uplink(0, h.from, payload, plen, rssi);      // bridge northbound
+int n = protocore_lora_recv(&bus, buf, sizeof(buf), &rssi);   // -> a frame, or -1
+protocore_lora_header h; const uint8_t *payload; uint16_t plen;
+protocore_lora_frame_parse(buf, n, &h, &payload, &plen);
+protocore_gateway_uplink(0, h.from, payload, plen, rssi);      // bridge northbound
 ```
 
-A **downlink** (a northbound command) is the mirror: `pc_lora_frame_build()` then
-`pc_lora_send()`, driven by the gateway port's transmit callback.
+A **downlink** (a northbound command) is the mirror: `protocore_lora_frame_build()` then
+`protocore_lora_send()`, driven by the gateway port's transmit callback.
 
 ## Wiring (ESP32 <-> RFM95)
 
@@ -63,6 +63,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_LORA=1 -DPC_ENABLE_GATEWAY=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_LORA=1 -DPROTOCORE_ENABLE_GATEWAY=1" \
   --lib="." examples/Drivers/LoRaGateway/LoRaGateway.ino
 ```

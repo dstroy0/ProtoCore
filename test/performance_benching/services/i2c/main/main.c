@@ -6,15 +6,15 @@
 // performance_benching/device/<service>/ umbrella and to prove the header still compiles and links.
 //
 // Why nothing is benched: services/peripherals/i2c.h is a single header whose entire public surface is one inline
-// function, pc_i2c_begin(), which is a direct pass-through to Wire.begin(PC_I2C_SDA_PIN,
-// PC_I2C_SCL_PIN) - it brings up the shared I2C bus for the peripheral drivers (RTC, SHT3x, MPR121,
+// function, protocore_i2c_begin(), which is a direct pass-through to Wire.begin(PROTOCORE_I2C_SDA_PIN,
+// PROTOCORE_I2C_SCL_PIN) - it brings up the shared I2C bus for the peripheral drivers (RTC, SHT3x, MPR121,
 // ADS1115, INA219, PCA9685). There is no CPU-side codec, no encode/decode/parse/checksum/CRC, no
 // config-word build, no conversion math - nothing separable from the real hardware bus. Calling
-// pc_i2c_begin() would perform an actual I2C bring-up on GPIO 21/22, which is exactly the kind of real
+// protocore_i2c_begin() would perform an actual I2C bring-up on GPIO 21/22, which is exactly the kind of real
 // hardware I/O this rig (no peripherals attached) must never do. Unlike performance_benching/device/ads1115 - where the
 // I2C transaction is stubbed but a deterministic config-word/conversion codec remains to bench - i2c.h
 // has no such codec to isolate, so the honest result is an empty benchmark. We still #include the header
-// and take (never call) the address of pc_i2c_begin() so the compiler/linker prove the real production
+// and take (never call) the address of protocore_i2c_begin() so the compiler/linker prove the real production
 // symbol is valid in this context.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -31,9 +31,9 @@
 void dbench_run(void)
 {
     // Reference the real production symbol so it is compiled/linked, but NEVER call it: invoking
-    // pc_i2c_begin() would drive a live I2C bus bring-up (Wire.begin()), which this rig has no
+    // protocore_i2c_begin() would drive a live I2C bus bring-up (Wire.begin()), which this rig has no
     // peripherals for and which is out of scope for a pure microbench.
-    void (*volatile fn)() = &pc_i2c_begin;
+    void (*volatile fn)() = &protocore_i2c_begin;
     (void)fn;
 
     for (;;)

@@ -15,10 +15,10 @@ from the live frequency; **a hardcoded 240 inflates every P4 figure by 1.5x.**
 
 ## The benches
 
-| bench      | source                     | what it answers                                                                |
-| ---------- | -------------------------- | ------------------------------------------------------------------------------ |
-| crypto     | `src/main_cryptobench.cpp` | cycles/op for every primitive the library implements itself                    |
-| formatting | `src/main_fmtbench.cpp`    | `snprintf` vs `pc_sb` vs `pc_frame_build` - the number behind SRCBANNED ban 20 |
+| bench      | source                     | what it answers                                                                              |
+| ---------- | -------------------------- | -------------------------------------------------------------------------------------------- |
+| crypto     | `src/main_cryptobench.cpp` | cycles/op for every primitive the library implements itself                                  |
+| formatting | `src/main_fmtbench.cpp`    | `snprintf` vs `protocore_sb` vs `protocore_frame_build` - the number behind SRCBANNED ban 20 |
 
 ## Build and flash
 
@@ -75,7 +75,7 @@ python -m serial.tools.miniterm COM4 115200 --rts 0 --dtr 1
 CB CHECK resp frame            identical
 CB --- frames ---
 CB resp/snprintf               cyc=4212      ns=17550
-CB resp/pc_frame               cyc=1461      ns=6088
+CB resp/protocore_frame               cyc=1461      ns=6088
 ```
 
 - `CHECK` lines run first and prove each variant produces **byte-identical output** to the `snprintf`

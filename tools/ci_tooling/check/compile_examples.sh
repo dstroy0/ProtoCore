@@ -20,19 +20,19 @@
 # Exit: 0 if every sketch builds, 1 otherwise (the failures are listed).
 set -u
 
-REMOTE_HOST="${PC_RPI_HOST:-192.168.1.223}"
-REMOTE_USER="${PC_RPI_USER:-dstroy0}"
-FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
-JOBS="${PC_JOBS:-4}"
+REMOTE_HOST="${PROTOCORE_RPI_HOST:-192.168.1.223}"
+REMOTE_USER="${PROTOCORE_RPI_USER:-dstroy0}"
+FQBN="${PROTOCORE_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
+JOBS="${PROTOCORE_JOBS:-4}"
 
 # Test-network credentials, injected into COPIES under the work dir so the tree
 # keeps YOUR_SSID and no rig credential is ever committed.
-SSID="${PC_TEST_SSID:-q_6}"
-PASS="${PC_TEST_PASS:-12345678!}"
+SSID="${PROTOCORE_TEST_SSID:-q_6}"
+PASS="${PROTOCORE_TEST_PASS:-12345678!}"
 
 here() { cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd; }
 ROOT="$(here)"
-WORK="${PC_WORK:-/tmp/pc_examples}"
+WORK="${PROTOCORE_WORK:-/tmp/protocore_examples}"
 
 run_local() {
     local acli="$HOME/bin/arduino-cli"
@@ -88,17 +88,17 @@ run_local() {
 
 run_remote() {
     local rsh="ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
-    command -v sshpass >/dev/null 2>&1 && [ -n "${PC_RPI_PASS:-}" ] && \
-        rsh="sshpass -p $PC_RPI_PASS $rsh"
+    command -v sshpass >/dev/null 2>&1 && [ -n "${PROTOCORE_RPI_PASS:-}" ] && \
+        rsh="sshpass -p $PROTOCORE_RPI_PASS $rsh"
 
     echo ">> syncing to $REMOTE_USER@$REMOTE_HOST"
     rsync -a --delete -e "$rsh" "$ROOT/" "$REMOTE_USER@$REMOTE_HOST:~/pc/" || return 2
 
     echo ">> launching detached (survives this ssh session)"
     $rsh "$REMOTE_USER@$REMOTE_HOST" \
-        "setsid nohup bash ~/pc/ci_tooling/check/compile_examples.sh > ~/pc_examples_run.log 2>&1 < /dev/null & echo started"
+        "setsid nohup bash ~/pc/ci_tooling/check/compile_examples.sh > ~/protocore_examples_run.log 2>&1 < /dev/null & echo started"
 
-    echo ">> poll with:  $rsh $REMOTE_USER@$REMOTE_HOST 'tail -20 ~/pc_examples_run.log'"
+    echo ">> poll with:  $rsh $REMOTE_USER@$REMOTE_HOST 'tail -20 ~/protocore_examples_run.log'"
 }
 
 case "${1:-}" in

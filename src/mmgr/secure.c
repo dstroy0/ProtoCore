@@ -5,30 +5,30 @@
  * @file secure.c
  * @brief Secure pool accessor - implementation.
  *
- * An access layer, not a second allocator: the pool mechanism is ::pc_arena and there is exactly one
+ * An access layer, not a second allocator: the pool mechanism is ::protocore_arena and there is exactly one
  * of it. This module owns a second set of instances over its own compile-time-sized storage, and
  * adds the one control the plaintext side does not have - reclaiming wipes.
  */
 
 #include "secure.h"
-#include "core_setup/board_profiles/pc_platform.h" // pc_platform_context_id()
+#include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_context_id()
 #include "mmgr/arena.h"
 #include <assert.h>
 
 // Per-slot pool instances, owned by one instance with internal linkage.
 typedef struct
 {
-    pc_arena pool[PC_SEC_POOL_SLOTS];
+    protocore_arena pool[PROTOCORE_SEC_POOL_SLOTS];
 } SecurePoolCtx;
 static SecurePoolCtx s_secure;
 
 // Backing storage in its OWN linker symbol, named only from bind() below and therefore only from the
 // allocation path. A firmware that never borrows secure storage has the allocator garbage-collected and
-// this storage with it. pc_secure_reset() must NOT bind, for the same reason pc_plaintext_reset() must
+// this storage with it. protocore_secure_reset() must NOT bind, for the same reason protocore_plaintext_reset() must
 // not: --gc-sections is per-symbol and one always-live reference would anchor the whole block.
 typedef struct
 {
-    _Alignas(32) uint8_t mem[PC_SEC_POOL_SLOTS][PC_SECURE_ARENA_SIZE];
+    _Alignas(32) uint8_t mem[PROTOCORE_SEC_POOL_SLOTS][PROTOCORE_SECURE_ARENA_SIZE];
 } SecurePoolStorageCtx;
 static SecurePoolStorageCtx s_secure_storage;
 
@@ -48,18 +48,18 @@ static inline uintptr_t secure_offset(const void *p)
 // the ghost instead of worker 0. Two such callers still share the ghost, which the tripwire catches.
 static inline int cur_worker(void)
 {
-    int w = pc_worker_self();
-    return (w >= 0 && w < PC_SEC_POOL_SLOTS) ? w : PC_GHOST_WORKER_SLOT;
+    int w = protocore_worker_self();
+    return (w >= 0 && w < PROTOCORE_SEC_POOL_SLOTS) ? w : PROTOCORE_GHOST_WORKER_SLOT;
 }
 
 // Debug tripwire: one execution context per slot, as on the plaintext side.
 static inline void assert_single_owner(int w)
 {
-#if PC_DEBUG_CHECKS
-    // Off by default; see PC_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
+#if PROTOCORE_DEBUG_CHECKS
+    // Off by default; see PROTOCORE_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
     // not name an RTOS.
-    static uintptr_t s_owner[PC_SEC_POOL_SLOTS] = {0};
-    const uintptr_t cur = pc_platform_context_id();
+    static uintptr_t s_owner[PROTOCORE_SEC_POOL_SLOTS] = {0};
+    const uintptr_t cur = protocore_platform_context_id();
     if (s_owner[w] == 0)
     {
         s_owner[w] = cur;
@@ -74,21 +74,21 @@ static inline void assert_single_owner(int w)
 }
 
 // Bind slot @p w to its storage on first use. The ONLY reference to s_secure_storage.
-static inline pc_arena *bind(int w)
+static inline protocore_arena *bind(int w)
 {
-    pc_arena *a = &s_secure.pool[w];
+    protocore_arena *a = &s_secure.pool[w];
     if (a->base == NULL)
     {
-        pc_arena_init(a, s_secure_storage.mem[w], PC_SECURE_ARENA_SIZE);
+        protocore_arena_init(a, s_secure_storage.mem[w], PROTOCORE_SECURE_ARENA_SIZE);
     }
     return a;
 }
 
 // The slot WITHOUT binding it, for observers and the reset. An unbound slot has never allocated, so
 // it holds nothing to wipe.
-static inline pc_arena *peek(int w)
+static inline protocore_arena *peek(int w)
 {
-    pc_arena *a = &s_secure.pool[w];
+    protocore_arena *a = &s_secure.pool[w];
     return (a->base != NULL) ? a : NULL;
 }
 
@@ -100,76 +100,76 @@ static inline pc_arena *peek(int w)
 // preempting handler, not to the very next borrow - in which memory still holding the previous
 // tenant's key material can be handed out. Reclaiming first and wiping after would leave exactly
 // that window.
-static inline void wipe_down_to(pc_arena *a, size_t mark)
+static inline void wipe_down_to(protocore_arena *a, size_t mark)
 {
-    const size_t top = pc_arena_scratch_mark(a); // current position (an offset from the base)
+    const size_t top = protocore_arena_scratch_mark(a); // current position (an offset from the base)
     if (mark > top && mark <= a->size)
     {
-        pc_secure_wipe(a->base + top, mark - top); // volatile: the compiler may not elide it
+        protocore_secure_wipe(a->base + top, mark - top); // volatile: the compiler may not elide it
     }
-    pc_arena_scratch_release(a, mark);
+    protocore_arena_scratch_release(a, mark);
 }
 
-void *pc_secure_alloc(size_t n, size_t align)
+void *protocore_secure_alloc(size_t n, size_t align)
 {
     int w = cur_worker();
     assert_single_owner(w);
     assert((align & (align - 1)) == 0 && "secure alignment must be a power of two");
-    return pc_arena_scratch_alloc_aligned(bind(w), n, align);
+    return protocore_arena_scratch_alloc_aligned(bind(w), n, align);
 }
 
-pc_span pc_secure_span(size_t n, size_t align)
+protocore_span protocore_secure_span(size_t n, size_t align)
 {
-    return pc_span_from((uint8_t *)pc_secure_alloc(n, align), n);
+    return protocore_span_from((uint8_t *)protocore_secure_alloc(n, align), n);
 }
 
-pc_span pc_secure_persist_span(size_t n)
+protocore_span protocore_secure_persist_span(size_t n)
 {
     int w = cur_worker();
     assert_single_owner(w);
     // The persistent end grows up from the base and the scratch end bumps down from the top, so a
     // mark taken on the scratch end never reaches this and no release reclaims it. The arena hands
     // these bytes back zeroed.
-    return pc_span_from((uint8_t *)pc_arena_persist_alloc(bind(w), n), n);
+    return protocore_span_from((uint8_t *)protocore_arena_persist_alloc(bind(w), n), n);
 }
 
-size_t pc_secure_mark(void)
+size_t protocore_secure_mark(void)
 {
     int w = cur_worker();
     assert_single_owner(w);
-    return pc_arena_scratch_mark(bind(w));
+    return protocore_arena_scratch_mark(bind(w));
 }
 
-void pc_secure_release(size_t mark)
+void protocore_secure_release(size_t mark)
 {
     int w = cur_worker();
     assert_single_owner(w);
     wipe_down_to(bind(w), mark);
 }
 
-void pc_secure_reset(void)
+void protocore_secure_reset(void)
 {
     int w = cur_worker();
     assert_single_owner(w);
-    pc_arena *a = peek(w); // must not bind: would anchor the storage into builds that never borrow
+    protocore_arena *a = peek(w); // must not bind: would anchor the storage into builds that never borrow
     if (a != NULL)
     {
         wipe_down_to(a, a->size); // the empty position: wipes everything live
     }
 }
 
-size_t pc_secure_used(void)
+size_t protocore_secure_used(void)
 {
-    const pc_arena *a = peek(cur_worker());
-    return (a != NULL) ? pc_arena_scratch_used(a) : 0;
+    const protocore_arena *a = peek(cur_worker());
+    return (a != NULL) ? protocore_arena_scratch_used(a) : 0;
 }
 
-size_t pc_secure_high_water(void)
+size_t protocore_secure_high_water(void)
 {
     size_t peak = 0;
-    for (int w = 0; w < PC_SEC_POOL_SLOTS; w++)
+    for (int w = 0; w < PROTOCORE_SEC_POOL_SLOTS; w++)
     {
-        const pc_arena *a = peek(w);
+        const protocore_arena *a = peek(w);
         if (a != NULL && a->scratch_hw > peak)
         {
             peak = a->scratch_hw;
@@ -178,17 +178,17 @@ size_t pc_secure_high_water(void)
     return peak;
 }
 
-size_t pc_secure_capacity(void)
+size_t protocore_secure_capacity(void)
 {
-    return PC_SECURE_ARENA_SIZE;
+    return PROTOCORE_SECURE_ARENA_SIZE;
 }
 
-proto_bool pc_secure_owns(const void *p)
+proto_bool protocore_secure_owns(const void *p)
 {
     return secure_offset(p) < (uintptr_t)sizeof(s_secure_storage.mem);
 }
 
-int pc_secure_slot_of(const void *p)
+int protocore_secure_slot_of(const void *p)
 {
     const uintptr_t off = secure_offset(p);
     if (off >= (uintptr_t)sizeof(s_secure_storage.mem))
@@ -196,5 +196,5 @@ int pc_secure_slot_of(const void *p)
         return -1;
     }
     // A divide by a compile-time constant, which the compiler emits as a multiply-and-shift.
-    return (int)(off / PC_SECURE_ARENA_SIZE);
+    return (int)(off / PROTOCORE_SECURE_ARENA_SIZE);
 }

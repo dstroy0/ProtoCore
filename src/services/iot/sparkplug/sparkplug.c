@@ -9,7 +9,7 @@
 #include "services/iot/sparkplug/sparkplug.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SPARKPLUG
+#if PROTOCORE_ENABLE_SPARKPLUG
 
 #include "services/iot/protobuf/protobuf.h"
 
@@ -30,8 +30,8 @@
 #define SPB_MET_BOOL 14
 #define SPB_MET_STRING 15
 
-size_t pc_spb_build_topic(char *buf, size_t cap, const char *group, const char *message_type, const char *edge_node,
-                          const char *device)
+size_t protocore_spb_build_topic(char *buf, size_t cap, const char *group, const char *message_type,
+                                 const char *edge_node, const char *device)
 {
     if (!buf || !group || !message_type || !edge_node)
     {
@@ -73,82 +73,82 @@ size_t pc_spb_build_topic(char *buf, size_t cap, const char *group, const char *
     return p;
 }
 
-size_t pc_spb_build_metric(uint8_t *buf, size_t cap, const SpbMetric *m)
+size_t protocore_spb_build_metric(uint8_t *buf, size_t cap, const SpbMetric *m)
 {
     if (!buf || !m)
     {
         return 0;
     }
     PbWriter w;
-    pc_pb_writer_init(&w, buf, cap);
+    protocore_pb_writer_init(&w, buf, cap);
     if (m->name)
     {
-        pc_pb_string(&w, SPB_MET_NAME, m->name);
+        protocore_pb_string(&w, SPB_MET_NAME, m->name);
     }
     if (m->has_alias)
     {
-        pc_pb_uint64(&w, SPB_MET_ALIAS, m->alias);
+        protocore_pb_uint64(&w, SPB_MET_ALIAS, m->alias);
     }
     if (m->has_timestamp)
     {
-        pc_pb_uint64(&w, SPB_MET_TIMESTAMP, m->timestamp);
+        protocore_pb_uint64(&w, SPB_MET_TIMESTAMP, m->timestamp);
     }
-    pc_pb_uint64(&w, SPB_MET_DATATYPE, m->datatype); // datatype is a uint32; the varint covers it
+    protocore_pb_uint64(&w, SPB_MET_DATATYPE, m->datatype); // datatype is a uint32; the varint covers it
     switch (m->kind)
     {
     case SPB_M_INT:
-        pc_pb_uint64(&w, SPB_MET_INT, m->int_value);
+        protocore_pb_uint64(&w, SPB_MET_INT, m->int_value);
         break;
     case SPB_M_LONG:
-        pc_pb_uint64(&w, SPB_MET_LONG, m->long_value);
+        protocore_pb_uint64(&w, SPB_MET_LONG, m->long_value);
         break;
     case SPB_M_FLOAT:
-        pc_pb_float(&w, SPB_MET_FLOAT, m->float_value);
+        protocore_pb_float(&w, SPB_MET_FLOAT, m->float_value);
         break;
     case SPB_M_DOUBLE:
-        pc_pb_double(&w, SPB_MET_DOUBLE, m->double_value);
+        protocore_pb_double(&w, SPB_MET_DOUBLE, m->double_value);
         break;
     case SPB_M_BOOL:
-        pc_pb_bool(&w, SPB_MET_BOOL, m->bool_value);
+        protocore_pb_bool(&w, SPB_MET_BOOL, m->bool_value);
         break;
     case SPB_M_STRING:
         if (m->string_value)
         {
-            pc_pb_string(&w, SPB_MET_STRING, m->string_value);
+            protocore_pb_string(&w, SPB_MET_STRING, m->string_value);
         }
         break;
     }
-    return pc_pb_writer_finish(&w);
+    return protocore_pb_writer_finish(&w);
 }
 
-size_t pc_spb_build_payload(uint8_t *buf, size_t cap, uint64_t timestamp, uint64_t seq, const SpbMetric *metrics,
-                            size_t n)
+size_t protocore_spb_build_payload(uint8_t *buf, size_t cap, uint64_t timestamp, uint64_t seq, const SpbMetric *metrics,
+                                   size_t n)
 {
     if (!buf || (n && !metrics))
     {
         return 0;
     }
     PbWriter w;
-    pc_pb_writer_init(&w, buf, cap);
-    pc_pb_uint64(&w, SPB_PL_TIMESTAMP, timestamp);
+    protocore_pb_writer_init(&w, buf, cap);
+    protocore_pb_uint64(&w, SPB_PL_TIMESTAMP, timestamp);
     for (size_t i = 0; i < n; i++)
     {
         // Serialize each Metric submessage into a bounded temp, then add it as a
         // length-delimited field (Payload.metrics). A metric stays well under this bound
         // unless it carries a large string, in which case the build fails closed.
-        uint8_t metric[PC_SPB_METRIC_MAX];
-        size_t mlen = pc_spb_build_metric(metric, sizeof(metric), &metrics[i]);
+        uint8_t metric[PROTOCORE_SPB_METRIC_MAX];
+        size_t mlen = protocore_spb_build_metric(metric, sizeof(metric), &metrics[i]);
         if (!mlen)
         {
             return 0;
         }
-        pc_pb_bytes(&w, SPB_PL_METRICS, metric, mlen);
+        protocore_pb_bytes(&w, SPB_PL_METRICS, metric, mlen);
     }
-    pc_pb_uint64(&w, SPB_PL_SEQ, seq);
-    return pc_pb_writer_finish(&w);
+    protocore_pb_uint64(&w, SPB_PL_SEQ, seq);
+    return protocore_pb_writer_finish(&w);
 }
 
-proto_bool pc_spb_parse_payload(const uint8_t *buf, size_t len, SpbPayloadHeader *out)
+proto_bool protocore_spb_parse_payload(const uint8_t *buf, size_t len, SpbPayloadHeader *out)
 {
     if (!buf || !out)
     {
@@ -159,7 +159,7 @@ proto_bool pc_spb_parse_payload(const uint8_t *buf, size_t len, SpbPayloadHeader
     PbField f;
     while (pos < len)
     {
-        if (!pc_pb_read_field(buf, len, &pos, &f))
+        if (!protocore_pb_read_field(buf, len, &pos, &f))
         {
             return PROTO_FALSE;
         }
@@ -178,8 +178,8 @@ proto_bool pc_spb_parse_payload(const uint8_t *buf, size_t len, SpbPayloadHeader
     return PROTO_TRUE;
 }
 
-proto_bool pc_spb_payload_next_metric(const uint8_t *buf, size_t len, size_t *pos, const uint8_t **metric,
-                                      size_t *metric_len)
+proto_bool protocore_spb_payload_next_metric(const uint8_t *buf, size_t len, size_t *pos, const uint8_t **metric,
+                                             size_t *metric_len)
 {
     if (!buf || !pos || !metric || !metric_len)
     {
@@ -188,7 +188,7 @@ proto_bool pc_spb_payload_next_metric(const uint8_t *buf, size_t len, size_t *po
     PbField f;
     while (*pos < len)
     {
-        if (!pc_pb_read_field(buf, len, pos, &f))
+        if (!protocore_pb_read_field(buf, len, pos, &f))
         {
             return PROTO_FALSE;
         }
@@ -265,7 +265,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const PbField *f)
         {
             out->has_value = PROTO_TRUE;
             out->kind = SPB_M_FLOAT;
-            out->float_value = pc_pb_float_bits((uint32_t)f->value);
+            out->float_value = protocore_pb_float_bits((uint32_t)f->value);
         }
         break;
     case SPB_MET_DOUBLE:
@@ -273,7 +273,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const PbField *f)
         {
             out->has_value = PROTO_TRUE;
             out->kind = SPB_M_DOUBLE;
-            out->double_value = pc_pb_double_bits(f->value);
+            out->double_value = protocore_pb_double_bits(f->value);
         }
         break;
     case SPB_MET_BOOL:
@@ -298,7 +298,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const PbField *f)
     }
 }
 
-proto_bool pc_spb_parse_metric(const uint8_t *buf, size_t len, SpbMetricDecoded *out)
+proto_bool protocore_spb_parse_metric(const uint8_t *buf, size_t len, SpbMetricDecoded *out)
 {
     if (!buf || !out)
     {
@@ -309,7 +309,7 @@ proto_bool pc_spb_parse_metric(const uint8_t *buf, size_t len, SpbMetricDecoded 
     PbField f;
     while (pos < len)
     {
-        if (!pc_pb_read_field(buf, len, &pos, &f))
+        if (!protocore_pb_read_field(buf, len, &pos, &f))
         {
             return PROTO_FALSE;
         }
@@ -319,4 +319,4 @@ proto_bool pc_spb_parse_metric(const uint8_t *buf, size_t len, SpbMetricDecoded 
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_SPARKPLUG
+#endif // PROTOCORE_ENABLE_SPARKPLUG

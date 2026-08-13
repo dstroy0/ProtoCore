@@ -4,10 +4,10 @@
 /**
  * @file main_tls.cpp
  * @brief Slim HTTPS test-rig firmware (env:rig_s3_tls) - the target for the TLS interop peer + the TLS
- *        attacks in penetration_testing/pc_pentest.py.
+ *        attacks in penetration_testing/protocore_pentest.py.
  *
  * A deliberately minimal build: just HTTP/80 (for the liveness oracle) + HTTPS/443 (the TLS surface). With
- * only a handful of routes and no other protocol stacks, the fixed 48 KB TLS arena (PC_TLS_ARENA_SIZE,
+ * only a handful of routes and no other protocol stacks, the fixed 48 KB TLS arena (PROTOCORE_TLS_ARENA_SIZE,
  * static BSS, ZERO heap) fits comfortably in internal DRAM - so TLS runs on the stock arduino-esp32 core with
  * no PSRAM and no core rebuild (the full 20-protocol rig, by contrast, is DRAM-full and needs the PSRAM arena).
  *
@@ -16,8 +16,8 @@
  */
 #include "network_drivers/physical/physical.h"
 #include "protocore.h"
-#ifdef PC_TLS_HS_BENCH
-#include "network_drivers/tls/tls.h" // pc_tls_hs_bench (handshake device-CPU vs wall probe)
+#ifdef PROTOCORE_TLS_HS_BENCH
+#include "network_drivers/tls/tls.h" // protocore_tls_hs_bench (handshake device-CPU vs wall probe)
 #endif
 #include <Arduino.h>
 #include <esp_system.h> // esp_fill_random
@@ -201,18 +201,19 @@ void setup()
 void loop()
 {
     server.handle();
-#ifdef PC_TLS_HS_BENCH
+#ifdef PROTOCORE_TLS_HS_BENCH
     // Print each completed TLS handshake's device-CPU time (summed over the pumped mbedtls_ssl_handshake
     // calls) vs its wall time (incl. network waits), so we can split the handshake into compute vs link.
     static unsigned seen_hs = 0;
-    if (pc_tls_hs_bench.count != seen_hs)
+    if (protocore_tls_hs_bench.count != seen_hs)
     {
-        seen_hs = pc_tls_hs_bench.count;
-        Serial.printf("TLSHSBENCH #%u  cpu_us=%lld  wall_us=%lld  pumps[%d]=", seen_hs, pc_tls_hs_bench.last_cpu_us,
-                      pc_tls_hs_bench.last_wall_us, pc_tls_hs_bench.n_pumps);
-        for (int i = 0; i < pc_tls_hs_bench.n_pumps; i++)
+        seen_hs = protocore_tls_hs_bench.count;
+        Serial.printf("TLSHSBENCH #%u  cpu_us=%lld  wall_us=%lld  pumps[%d]=", seen_hs,
+                      protocore_tls_hs_bench.last_cpu_us, protocore_tls_hs_bench.last_wall_us,
+                      protocore_tls_hs_bench.n_pumps);
+        for (int i = 0; i < protocore_tls_hs_bench.n_pumps; i++)
         {
-            Serial.printf("%lld ", pc_tls_hs_bench.pumps[i]);
+            Serial.printf("%lld ", protocore_tls_hs_bench.pumps[i]);
         }
         Serial.println();
     }

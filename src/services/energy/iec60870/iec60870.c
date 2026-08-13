@@ -9,11 +9,11 @@
 #include "services/energy/iec60870/iec60870.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_IEC60870
+#if PROTOCORE_ENABLE_IEC60870
 
 // --- -104 APCI ---
 
-size_t pc_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, const uint8_t *asdu, size_t asdu_len)
+size_t protocore_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, const uint8_t *asdu, size_t asdu_len)
 {
     if (!buf || (asdu_len && !asdu) || asdu_len > 249) // APDU length octet maxes at 253 (= 4 + 249)
     {
@@ -37,7 +37,7 @@ size_t pc_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, con
     return total;
 }
 
-size_t pc_iec104_build_s(uint8_t *buf, size_t cap, uint16_t nr)
+size_t protocore_iec104_build_s(uint8_t *buf, size_t cap, uint16_t nr)
 {
     if (!buf || cap < IEC104_APCI_LEN)
     {
@@ -52,7 +52,7 @@ size_t pc_iec104_build_s(uint8_t *buf, size_t cap, uint16_t nr)
     return IEC104_APCI_LEN;
 }
 
-size_t pc_iec104_build_u(uint8_t *buf, size_t cap, uint8_t u_cmd)
+size_t protocore_iec104_build_u(uint8_t *buf, size_t cap, uint8_t u_cmd)
 {
     if (!buf || cap < IEC104_APCI_LEN)
     {
@@ -67,7 +67,7 @@ size_t pc_iec104_build_u(uint8_t *buf, size_t cap, uint8_t u_cmd)
     return IEC104_APCI_LEN;
 }
 
-proto_bool pc_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *out, size_t *consumed)
+proto_bool protocore_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *out, size_t *consumed)
 {
     if (!buf || !out || len < 2 || buf[0] != IEC_START_104)
     {
@@ -115,7 +115,7 @@ proto_bool pc_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *out, size
 
 // --- ASDU header + IOA ---
 
-size_t pc_iec_asdu_build_header(uint8_t *buf, size_t cap, const IecAsduHeader *h)
+size_t protocore_iec_asdu_build_header(uint8_t *buf, size_t cap, const IecAsduHeader *h)
 {
     if (!buf || !h || cap < 6)
     {
@@ -130,7 +130,7 @@ size_t pc_iec_asdu_build_header(uint8_t *buf, size_t cap, const IecAsduHeader *h
     return 6;
 }
 
-proto_bool pc_iec_asdu_parse_header(const uint8_t *buf, size_t len, IecAsduHeader *out, size_t *consumed)
+proto_bool protocore_iec_asdu_parse_header(const uint8_t *buf, size_t len, IecAsduHeader *out, size_t *consumed)
 {
     if (!buf || !out || len < 6)
     {
@@ -151,7 +151,7 @@ proto_bool pc_iec_asdu_parse_header(const uint8_t *buf, size_t len, IecAsduHeade
     return PROTO_TRUE;
 }
 
-size_t pc_iec_put_ioa(uint8_t *buf, size_t cap, uint32_t ioa)
+size_t protocore_iec_put_ioa(uint8_t *buf, size_t cap, uint32_t ioa)
 {
     if (!buf || cap < 3)
     {
@@ -163,25 +163,25 @@ size_t pc_iec_put_ioa(uint8_t *buf, size_t cap, uint32_t ioa)
     return 3;
 }
 
-uint32_t pc_iec_get_ioa(const uint8_t *p)
+uint32_t protocore_iec_get_ioa(const uint8_t *p)
 {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16);
 }
 
 // --- typed information objects ---
 
-size_t pc_iec_io_build_sp(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, uint8_t quality)
+size_t protocore_iec_io_build_sp(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, uint8_t quality)
 {
     if (!buf || cap < 4)
     {
         return 0;
     }
-    pc_iec_put_ioa(buf, cap, ioa);
+    protocore_iec_put_ioa(buf, cap, ioa);
     buf[3] = (uint8_t)((on ? 0x01u : 0u) | (quality & 0xF0u)); // SIQ: SPI (bit 0) + quality (bits 4..7)
     return 4;
 }
 
-proto_bool pc_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, uint8_t *quality)
+proto_bool protocore_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, uint8_t *quality)
 {
     if (!buf || len < 4)
     {
@@ -189,7 +189,7 @@ proto_bool pc_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *ioa, pro
     }
     if (ioa)
     {
-        *ioa = pc_iec_get_ioa(buf);
+        *ioa = protocore_iec_get_ioa(buf);
     }
     if (on)
     {
@@ -202,13 +202,13 @@ proto_bool pc_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *ioa, pro
     return PROTO_TRUE;
 }
 
-size_t pc_iec_io_build_float(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds)
+size_t protocore_iec_io_build_float(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds)
 {
     if (!buf || cap < 8)
     {
         return 0;
     }
-    pc_iec_put_ioa(buf, cap, ioa);
+    protocore_iec_put_ioa(buf, cap, ioa);
     uint32_t bits;
     mem.cpy(&bits, &value, 4); // the IEEE-754 bit pattern, written little-endian (endian-safe)
     buf[3] = (uint8_t)bits;
@@ -219,7 +219,7 @@ size_t pc_iec_io_build_float(uint8_t *buf, size_t cap, uint32_t ioa, float value
     return 8;
 }
 
-proto_bool pc_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds)
+proto_bool protocore_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds)
 {
     if (!buf || len < 8)
     {
@@ -227,7 +227,7 @@ proto_bool pc_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, 
     }
     if (ioa)
     {
-        *ioa = pc_iec_get_ioa(buf);
+        *ioa = protocore_iec_get_ioa(buf);
     }
     if (value)
     {
@@ -242,13 +242,13 @@ proto_bool pc_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, 
     return PROTO_TRUE;
 }
 
-size_t pc_iec_io_build_scaled(uint8_t *buf, size_t cap, uint32_t ioa, int16_t value, uint8_t qds)
+size_t protocore_iec_io_build_scaled(uint8_t *buf, size_t cap, uint32_t ioa, int16_t value, uint8_t qds)
 {
     if (!buf || cap < 6)
     {
         return 0;
     }
-    pc_iec_put_ioa(buf, cap, ioa);
+    protocore_iec_put_ioa(buf, cap, ioa);
     uint16_t u = (uint16_t)value; // two's-complement wire form, little-endian
     buf[3] = (uint8_t)u;
     buf[4] = (uint8_t)(u >> 8);
@@ -256,7 +256,7 @@ size_t pc_iec_io_build_scaled(uint8_t *buf, size_t cap, uint32_t ioa, int16_t va
     return 6;
 }
 
-proto_bool pc_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa, int16_t *value, uint8_t *qds)
+proto_bool protocore_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa, int16_t *value, uint8_t *qds)
 {
     if (!buf || len < 6)
     {
@@ -264,7 +264,7 @@ proto_bool pc_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa,
     }
     if (ioa)
     {
-        *ioa = pc_iec_get_ioa(buf);
+        *ioa = protocore_iec_get_ioa(buf);
     }
     if (value)
     {
@@ -277,13 +277,13 @@ proto_bool pc_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa,
     return PROTO_TRUE;
 }
 
-size_t pc_iec_io_build_normalized(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds)
+size_t protocore_iec_io_build_normalized(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds)
 {
     if (!buf || cap < 6)
     {
         return 0;
     }
-    pc_iec_put_ioa(buf, cap, ioa);
+    protocore_iec_put_ioa(buf, cap, ioa);
     int32_t nva = (int32_t)(value * 32768.0f); // normalized fraction -> signed 16-bit, clamped to the field
     if (nva > 32767)
     {
@@ -300,7 +300,7 @@ size_t pc_iec_io_build_normalized(uint8_t *buf, size_t cap, uint32_t ioa, float 
     return 6;
 }
 
-proto_bool pc_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds)
+proto_bool protocore_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds)
 {
     if (!buf || len < 6)
     {
@@ -308,7 +308,7 @@ proto_bool pc_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *
     }
     if (ioa)
     {
-        *ioa = pc_iec_get_ioa(buf);
+        *ioa = protocore_iec_get_ioa(buf);
     }
     if (value)
     {
@@ -322,13 +322,13 @@ proto_bool pc_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *
     return PROTO_TRUE;
 }
 
-size_t pc_iec_io_build_counter(uint8_t *buf, size_t cap, uint32_t ioa, int32_t value, uint8_t seq)
+size_t protocore_iec_io_build_counter(uint8_t *buf, size_t cap, uint32_t ioa, int32_t value, uint8_t seq)
 {
     if (!buf || cap < 8)
     {
         return 0;
     }
-    pc_iec_put_ioa(buf, cap, ioa);
+    protocore_iec_put_ioa(buf, cap, ioa);
     uint32_t u = (uint32_t)value; // two's-complement wire form, little-endian
     buf[3] = (uint8_t)u;
     buf[4] = (uint8_t)(u >> 8);
@@ -338,7 +338,7 @@ size_t pc_iec_io_build_counter(uint8_t *buf, size_t cap, uint32_t ioa, int32_t v
     return 8;
 }
 
-proto_bool pc_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa, int32_t *value, uint8_t *seq)
+proto_bool protocore_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa, int32_t *value, uint8_t *seq)
 {
     if (!buf || len < 8)
     {
@@ -346,7 +346,7 @@ proto_bool pc_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa
     }
     if (ioa)
     {
-        *ioa = pc_iec_get_ioa(buf);
+        *ioa = protocore_iec_get_ioa(buf);
     }
     if (value)
     {
@@ -360,18 +360,18 @@ proto_bool pc_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa
     return PROTO_TRUE;
 }
 
-size_t pc_iec_io_build_sc(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, proto_bool select)
+size_t protocore_iec_io_build_sc(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, proto_bool select)
 {
     if (!buf || cap < 4)
     {
         return 0;
     }
-    pc_iec_put_ioa(buf, cap, ioa);
+    protocore_iec_put_ioa(buf, cap, ioa);
     buf[3] = (uint8_t)((on ? IEC_SCO_ON : 0u) | (select ? IEC_SCO_SE : 0u)); // SCO: SCS (bit 0) + S/E (bit 7)
     return 4;
 }
 
-proto_bool pc_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, proto_bool *select)
+proto_bool protocore_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, proto_bool *select)
 {
     if (!buf || len < 4)
     {
@@ -379,7 +379,7 @@ proto_bool pc_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, pro
     }
     if (ioa)
     {
-        *ioa = pc_iec_get_ioa(buf);
+        *ioa = protocore_iec_get_ioa(buf);
     }
     if (on)
     {
@@ -392,18 +392,18 @@ proto_bool pc_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, pro
     return PROTO_TRUE;
 }
 
-size_t pc_iec_io_build_dp(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dpi, uint8_t quality)
+size_t protocore_iec_io_build_dp(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dpi, uint8_t quality)
 {
     if (!buf || cap < 4)
     {
         return 0;
     }
-    pc_iec_put_ioa(buf, cap, ioa);
+    protocore_iec_put_ioa(buf, cap, ioa);
     buf[3] = (uint8_t)((dpi & IEC_DP_MASK) | (quality & 0xF0u)); // DIQ: DPI (bits 0..1) + quality (bits 4..7)
     return 4;
 }
 
-proto_bool pc_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dpi, uint8_t *quality)
+proto_bool protocore_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dpi, uint8_t *quality)
 {
     if (!buf || len < 4)
     {
@@ -411,7 +411,7 @@ proto_bool pc_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uin
     }
     if (ioa)
     {
-        *ioa = pc_iec_get_ioa(buf);
+        *ioa = protocore_iec_get_ioa(buf);
     }
     if (dpi)
     {
@@ -424,19 +424,19 @@ proto_bool pc_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uin
     return PROTO_TRUE;
 }
 
-size_t pc_iec_io_build_dc(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dcs, uint8_t qu, proto_bool select)
+size_t protocore_iec_io_build_dc(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dcs, uint8_t qu, proto_bool select)
 {
     if (!buf || cap < 4)
     {
         return 0;
     }
-    pc_iec_put_ioa(buf, cap, ioa);
+    protocore_iec_put_ioa(buf, cap, ioa);
     // DCO: DCS (bits 0..1) + QU (bits 2..6) + S/E (bit 7).
     buf[3] = (uint8_t)((dcs & IEC_DP_MASK) | ((qu & IEC_DCO_QU_MASK) << IEC_DCO_QU_SHIFT) | (select ? IEC_DCO_SE : 0u));
     return 4;
 }
 
-proto_bool pc_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dcs, uint8_t *qu,
+proto_bool protocore_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dcs, uint8_t *qu,
                               proto_bool *select)
 {
     if (!buf || len < 4)
@@ -445,7 +445,7 @@ proto_bool pc_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *ioa, uin
     }
     if (ioa)
     {
-        *ioa = pc_iec_get_ioa(buf);
+        *ioa = protocore_iec_get_ioa(buf);
     }
     if (dcs)
     {
@@ -474,7 +474,7 @@ static uint8_t sum8(const uint8_t *p, size_t n)
     return s;
 }
 
-size_t pc_iec101_build_fixed(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr)
+size_t protocore_iec101_build_fixed(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr)
 {
     if (!buf || cap < 5)
     {
@@ -488,7 +488,7 @@ size_t pc_iec101_build_fixed(uint8_t *buf, size_t cap, uint8_t control, uint8_t 
     return 5;
 }
 
-size_t pc_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr, const uint8_t *asdu,
+size_t protocore_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr, const uint8_t *asdu,
                                 uint8_t asdu_len)
 {
     if (!buf || (asdu_len && !asdu) || asdu_len > 253)
@@ -516,7 +516,7 @@ size_t pc_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control, uint8
     return total;
 }
 
-proto_bool pc_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *out, size_t *consumed)
+proto_bool protocore_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *out, size_t *consumed)
 {
     if (!buf || !out || len < 1)
     {
@@ -571,4 +571,4 @@ proto_bool pc_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *out, siz
     return PROTO_FALSE;
 }
 
-#endif // PC_ENABLE_IEC60870
+#endif // PROTOCORE_ENABLE_IEC60870

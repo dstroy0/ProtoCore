@@ -9,9 +9,9 @@
 #include "services/radio/radio_sniff/radio_sniff.h"
 #include "mmgr/endian.h"
 
-#if PC_ENABLE_RADIO_SNIFF
+#if PROTOCORE_ENABLE_RADIO_SNIFF
 
-uint32_t pc_radiosniff_i2f32(int32_t dbm)
+uint32_t protocore_radiosniff_i2f32(int32_t dbm)
 {
     if (dbm == 0)
     {
@@ -38,12 +38,12 @@ uint32_t pc_radiosniff_i2f32(int32_t dbm)
     return sign | (exp << 23) | mant;
 }
 
-size_t pc_radiosniff_global(uint8_t *out, size_t cap)
+size_t protocore_radiosniff_global(uint8_t *out, size_t cap)
 {
-    return pc_pcap_global_header(out, cap, PC_DLT_IEEE802_15_4_TAP);
+    return protocore_pcap_global_header(out, cap, PROTOCORE_DLT_IEEE802_15_4_TAP);
 }
 
-size_t pc_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, size_t flen, int32_t rssi_dbm,
+size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, size_t flen, int32_t rssi_dbm,
                                 uint16_t channel, uint32_t ts_sec, uint32_t ts_usec)
 {
     if (!out || !frame || flen == 0)
@@ -51,28 +51,28 @@ size_t pc_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, 
         return 0;
     }
     size_t caplen = RADIO_SNIFF_TAP_LEN + flen;
-    size_t total = PC_PCAP_REC_HDR_LEN + caplen;
+    size_t total = PROTOCORE_PCAP_REC_HDR_LEN + caplen;
     if (cap < total)
     {
         return 0;
     }
 
     // pcap record header.
-    pc_pcap_record_header(out, cap, ts_sec, ts_usec, (uint32_t)caplen, (uint32_t)caplen);
-    uint8_t *p = out + PC_PCAP_REC_HDR_LEN;
+    protocore_pcap_record_header(out, cap, ts_sec, ts_usec, (uint32_t)caplen, (uint32_t)caplen);
+    uint8_t *p = out + PROTOCORE_PCAP_REC_HDR_LEN;
 
     // 802.15.4 TAP header: version(1)=0, reserved(1)=0, length(2 LE) = whole TAP block.
     p[0] = 0;
     p[1] = 0;
-    pc_wr16le(p + 2, RADIO_SNIFF_TAP_LEN);
+    protocore_wr16le(p + 2, RADIO_SNIFF_TAP_LEN);
     // TLV: Received Signal Strength (type 1, len 4), float32 dBm.
-    pc_wr16le(p + 4, 1);
-    pc_wr16le(p + 6, 4);
-    pc_wr32le(p + 8, pc_radiosniff_i2f32(rssi_dbm));
+    protocore_wr16le(p + 4, 1);
+    protocore_wr16le(p + 6, 4);
+    protocore_wr32le(p + 8, protocore_radiosniff_i2f32(rssi_dbm));
     // TLV: Channel Assignment (type 3, len 3 -> padded to 4): channel number(2 LE) + page(1).
-    pc_wr16le(p + 12, 3);
-    pc_wr16le(p + 14, 3);
-    pc_wr16le(p + 16, channel);
+    protocore_wr16le(p + 12, 3);
+    protocore_wr16le(p + 14, 3);
+    protocore_wr16le(p + 16, channel);
     p[18] = 0; // channel page 0
     p[19] = 0; // pad
 
@@ -85,4 +85,4 @@ size_t pc_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, 
     return total;
 }
 
-#endif // PC_ENABLE_RADIO_SNIFF
+#endif // PROTOCORE_ENABLE_RADIO_SNIFF

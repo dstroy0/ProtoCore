@@ -6,8 +6,8 @@
  * @brief Ed25519 signatures (RFC 8032) for ssh-ed25519 host keys + client auth.
  *
  * PureEdDSA over edwards25519. Deterministic signing (RFC 8032 §5.1.6) - no RNG - and
- * verification, built on the shared Curve25519 field arithmetic (pc_curve25519) and
- * SHA-512 (pc_sha512). No heap; state is on the stack. Correctness is pinned to the
+ * verification, built on the shared Curve25519 field arithmetic (protocore_curve25519) and
+ * SHA-512 (protocore_sha512). No heap; state is on the stack. Correctness is pinned to the
  * RFC 8032 §7.1 vectors and to a reference implementation (test_ed25519).
  *
  * The server signs the KEX exchange hash with its ssh-ed25519 host key, and verifies a
@@ -20,34 +20,35 @@
 #ifndef PROTOCORE_ED25519_H
 #define PROTOCORE_ED25519_H
 
-#include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Ed25519 seed (private key) length. */
-#define PC_ED25519_SEED_LEN 32
+#define PROTOCORE_ED25519_SEED_LEN 32
 /** @brief Ed25519 public key length. */
-#define PC_ED25519_PUBKEY_LEN 32
+#define PROTOCORE_ED25519_PUBKEY_LEN 32
 /** @brief Ed25519 signature length (R || S). */
-#define PC_ED25519_SIG_LEN 64
+#define PROTOCORE_ED25519_SIG_LEN 64
 
 /** @brief Derive the 32-byte public key A from a 32-byte @p seed. */
-void pc_ed25519_pubkey(uint8_t *work, uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t seed[PC_ED25519_SEED_LEN]);
+void protocore_ed25519_pubkey(uint8_t *work, uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN],
+                              const uint8_t seed[PROTOCORE_ED25519_SEED_LEN]);
 
 /**
  * @brief Deterministically sign @p mlen bytes of @p msg with @p seed (RFC 8032 §5.1.6).
- * @param sig  Output R || S, PC_ED25519_SIG_LEN bytes.
+ * @param sig  Output R || S, PROTOCORE_ED25519_SIG_LEN bytes.
  */
-void pc_ed25519_sign(uint8_t *work, uint8_t sig[PC_ED25519_SIG_LEN], const uint8_t *msg, size_t mlen,
-                     const uint8_t seed[PC_ED25519_SEED_LEN]);
+void protocore_ed25519_sign(uint8_t *work, uint8_t sig[PROTOCORE_ED25519_SIG_LEN], const uint8_t *msg, size_t mlen,
+                            const uint8_t seed[PROTOCORE_ED25519_SEED_LEN]);
 
 /**
  * @brief Verify an Ed25519 signature (RFC 8032 §5.1.7).
  * @return true if @p sig is a valid signature of @p msg under public key @p pub.
  */
-proto_bool pc_ed25519_verify(uint8_t *work, const uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t *msg, size_t mlen,
-                             const uint8_t sig[PC_ED25519_SIG_LEN]);
+proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN], const uint8_t *msg,
+                                    size_t mlen, const uint8_t sig[PROTOCORE_ED25519_SIG_LEN]);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ED25519_H

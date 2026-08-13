@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_lwm2m_tlv.h
- * @brief OMA LwM2M TLV codec (PC_ENABLE_LWM2M) - zero-heap writer + cursor reader for the
+ * @file protocore_lwm2m_tlv.h
+ * @brief OMA LwM2M TLV codec (PROTOCORE_ENABLE_LWM2M) - zero-heap writer + cursor reader for the
  *        `application/vnd.oma.lwm2m+tlv` resource encoding, carried over the shipped CoAP
  *        service for LwM2M device management.
  *
@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_LWM2M
+#if PROTOCORE_ENABLE_LWM2M
 
 // Identifier kinds (Type byte bits 7-6).
 #define LWM2M_TLV_OBJECT_INSTANCE 0x00
@@ -55,25 +55,26 @@ typedef struct
     proto_bool error;
 } Lwm2mTlvWriter;
 
-void pc_lwm2m_tlv_init(Lwm2mTlvWriter *w, uint8_t *buf, size_t cap);
+void protocore_lwm2m_tlv_init(Lwm2mTlvWriter *w, uint8_t *buf, size_t cap);
 
 /** @brief Write a TLV with raw value bytes. @p id_type is one of LWM2M_TLV_*. */
-proto_bool pc_lwm2m_tlv_write(Lwm2mTlvWriter *w, uint8_t id_type, uint16_t id, const uint8_t *value, size_t value_len);
+proto_bool protocore_lwm2m_tlv_write(Lwm2mTlvWriter *w, uint8_t id_type, uint16_t id, const uint8_t *value,
+                                     size_t value_len);
 
 /** @brief Write a Resource integer (shortest of 1/2/4/8 octets, big-endian two's complement). */
-proto_bool pc_lwm2m_tlv_write_int(Lwm2mTlvWriter *w, uint16_t id, int64_t v);
+proto_bool protocore_lwm2m_tlv_write_int(Lwm2mTlvWriter *w, uint16_t id, int64_t v);
 
 /** @brief Write a Resource boolean (one octet, 0/1). */
-proto_bool pc_lwm2m_tlv_write_bool(Lwm2mTlvWriter *w, uint16_t id, proto_bool v);
+proto_bool protocore_lwm2m_tlv_write_bool(Lwm2mTlvWriter *w, uint16_t id, proto_bool v);
 
 /** @brief Write a Resource UTF-8 string. */
-proto_bool pc_lwm2m_tlv_write_string(Lwm2mTlvWriter *w, uint16_t id, const char *s);
+proto_bool protocore_lwm2m_tlv_write_string(Lwm2mTlvWriter *w, uint16_t id, const char *s);
 
 /** @brief Write a Resource float (8-octet IEEE-754, big-endian). */
-proto_bool pc_lwm2m_tlv_write_float(Lwm2mTlvWriter *w, uint16_t id, double v);
+proto_bool protocore_lwm2m_tlv_write_float(Lwm2mTlvWriter *w, uint16_t id, double v);
 
 /** @brief Bytes written so far, or 0 if any write overflowed. */
-size_t pc_lwm2m_tlv_finish(Lwm2mTlvWriter *w);
+size_t protocore_lwm2m_tlv_finish(Lwm2mTlvWriter *w);
 
 /** @brief One decoded TLV; @ref value points INTO the source buffer. */
 typedef struct
@@ -88,13 +89,13 @@ typedef struct
  * @brief Read one TLV at [buf+*pos]; advances *pos past it.
  * @return true on a complete TLV; false at end-of-buffer or on truncation.
  */
-proto_bool pc_lwm2m_tlv_read(const uint8_t *buf, size_t len, size_t *pos, Lwm2mTlv *out);
+proto_bool protocore_lwm2m_tlv_read(const uint8_t *buf, size_t len, size_t *pos, Lwm2mTlv *out);
 
 /** @brief Decode a TLV integer value (1/2/4/8 octets, big-endian two's complement). */
-proto_bool pc_lwm2m_tlv_value_int(const uint8_t *value, size_t len, int64_t *out);
+proto_bool protocore_lwm2m_tlv_value_int(const uint8_t *value, size_t len, int64_t *out);
 
-#endif // PC_ENABLE_LWM2M
+#endif // PROTOCORE_ENABLE_LWM2M
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_LWM2M_TLV_H

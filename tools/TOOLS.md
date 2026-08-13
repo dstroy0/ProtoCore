@@ -34,6 +34,7 @@ A docstring is a claim; treat one that disagrees with this table as the thing th
 | rebuild the coverage baseline from scratch      | `tools/ci_tooling/coverage/covbase.py`                     |
 | regenerate a doc region CI checks for drift     | the matching `generate/gen_*.py` (all take `--check`)      |
 | read a whole file at image density              | `tools/dev_env/src2png.py`                                 |
+| move line ranges from one file into another     | `tools/dev_env/move_code.py`                               |
 | build several envs in the WSL clone             | `tools/dev_env/build_envs.sh`                              |
 | measure what an `#include` costs                | `tools/include_footprint.py`                               |
 | measure what a feature costs in flash           | `tools/ci_tooling/generate/example_footprints.py`          |
@@ -131,6 +132,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `sonar/accept_style_conflicts.py`     |     | (SonarCloud API)         |
 | `dev_env/build_envs.sh`               |     | pio                      |
 | `dev_env/src2png.py`                  |     |                          |
+| `dev_env/move_code.py`                | W   |                          |
 | `git-hooks/add_cspell_words.py`       | W   | cspell                   |
 | `git-hooks/merge_dependabot.sh`       |     | git                      |
 | `psram/rebuild_arduino_core_psram.sh` | W   | arduino-cli, cmake, git  |

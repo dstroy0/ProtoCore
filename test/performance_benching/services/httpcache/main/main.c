@@ -24,7 +24,7 @@ void dbench_run(void)
 {
     // A fully-populated directive set (mirrors test_build_all_directives) - exercises every emit
     // branch of the builder (bare tokens, "key=value" deltas, and the bare max-stale case).
-    pc_cache_control full;
+    protocore_cache_control full;
     cache_control_init(&full);
     full.cc_private = true;
     full.no_cache = true;
@@ -47,7 +47,7 @@ void dbench_run(void)
     static const size_t kResponseLen = sizeof(kResponseHdr) - 1;
 
     // A freshness input with both s-maxage and max-age set (shared cache honors s-maxage first).
-    pc_cache_control fresh;
+    protocore_cache_control fresh;
     cache_control_init(&fresh);
     fresh.max_age = 100;
     fresh.s_maxage = 200;
@@ -59,7 +59,7 @@ void dbench_run(void)
         DBENCH_BANNER("httpcache");
         volatile size_t sink = 0;
         volatile long lsink = 0;
-        pc_cache_control scratch;
+        protocore_cache_control scratch;
 
         // Build the full directive set into a text buffer (all emit branches).
         DBENCH_OP("cache_control_build full", 50000, sink += cache_control_build(out, sizeof(out), &full));

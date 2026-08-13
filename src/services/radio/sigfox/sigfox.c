@@ -11,7 +11,7 @@
 
 #include "services/radio/sigfox/sigfox.h"
 
-#if PC_ENABLE_SIGFOX
+#if PROTOCORE_ENABLE_SIGFOX
 
 static char hex_nibble(uint8_t v)
 {
@@ -45,9 +45,9 @@ static proto_bool contains(const char *hay, uint16_t len, const char *needle)
     return PROTO_FALSE;
 }
 
-uint16_t pc_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char *out, uint16_t cap)
+uint16_t protocore_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char *out, uint16_t cap)
 {
-    if (!out || !payload || len == 0 || len > PC_SIGFOX_MAX_PAYLOAD)
+    if (!out || !payload || len == 0 || len > PROTOCORE_SIGFOX_MAX_PAYLOAD)
     {
         return 0;
     }
@@ -74,7 +74,7 @@ uint16_t pc_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char *out, 
     return p;
 }
 
-pc_sigfox_result pc_sigfox_parse_response(const char *buf, uint16_t len)
+protocore_sigfox_result protocore_sigfox_parse_response(const char *buf, uint16_t len)
 {
     if (!buf || len == 0)
     {
@@ -91,4 +91,4 @@ pc_sigfox_result pc_sigfox_parse_response(const char *buf, uint16_t len)
     return SIGFOX_PENDING;
 }
 
-#endif // PC_ENABLE_SIGFOX
+#endif // PROTOCORE_ENABLE_SIGFOX

@@ -51,13 +51,14 @@ void dbench_run(void)
         DBENCH_OP("pc_lsv2_build_run_info", 200000,
                   sink += pc_lsv2_build_run_info(buf, sizeof(buf), LSV2_RI_PGM_STATE));
         DBENCH_OP("pc_lsv2_build_login", 100000,
-                  sink += pc_lsv2_build_login(buf, sizeof(buf), PC_LSV2_LOGIN_INSPECT, NULL));
+                  sink += pc_lsv2_build_login(buf, sizeof(buf), PROTOCORE_LSV2_LOGIN_INSPECT, NULL));
         DBENCH_OP("pc_lsv2_build_filename", 100000,
-                  sink += pc_lsv2_build_filename(buf, sizeof(buf), PC_LSV2_CMD_FILE_LOAD, "PGM.H"));
+                  sink += pc_lsv2_build_filename(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_LOAD, "PGM.H"));
 
         // ── framer throughput over a 256-byte payload block ────────────────────────────────────
         DBENCH_BULK("pc_lsv2_build 256B", 100000, sizeof(big_payload),
-                    sink += pc_lsv2_build(buf, sizeof(buf), PC_LSV2_CMD_FILE_SEND, big_payload, sizeof(big_payload)));
+                    sink +=
+                    pc_lsv2_build(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_SEND, big_payload, sizeof(big_payload)));
 
         // ── parse + response readers ───────────────────────────────────────────────────────────
         {

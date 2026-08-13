@@ -9,12 +9,12 @@
 #include "services/iot/coap/coap.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_COAP
+#if PROTOCORE_ENABLE_COAP
 
 #include "network_drivers/transport/udp.h"
 
-#if PC_ENABLE_COAP_OBSERVE || PC_COAP_DEDUP_ENTRIES > 0
-#include "server/clock/clock.h" // pc_millis(): Observe notification sequencing + dedup entry freshness
+#if PROTOCORE_ENABLE_COAP_OBSERVE || PROTOCORE_COAP_DEDUP_ENTRIES > 0
+#include "server/clock/clock.h" // protocore_millis(): Observe notification sequencing + dedup entry freshness
 #endif
 
 // CoAP option numbers we understand (RFC 7252 §5.10, RFC 7959). Others are skipped.
@@ -39,7 +39,7 @@ typedef struct
     CoapHandler handler;
 } CoapResource;
 
-#if PC_COAP_DEDUP_ENTRIES > 0
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
 // A cached response for message de-duplication (RFC 7252 §4.5). Keyed by the FULL source endpoint
 // (address string + port) and the Message-ID - never a hash, so two peers cannot collide onto one
 // entry and be handed each other's cached response. A retransmitted Confirmable request that hits a
@@ -51,13 +51,13 @@ typedef struct
     char ip[16];
     uint16_t port;
     uint16_t mid;
-    uint32_t stamp_ms; // pc_millis() at store; the entry expires after PC_COAP_DEDUP_LIFETIME_MS
+    uint32_t stamp_ms; // protocore_millis() at store; the entry expires after PROTOCORE_COAP_DEDUP_LIFETIME_MS
     uint16_t len;      // cached response length
-    uint8_t resp[PC_COAP_DEDUP_RESP_MAX];
+    uint8_t resp[PROTOCORE_COAP_DEDUP_RESP_MAX];
 } CoapDedupEntry;
 #endif
 
-#if PC_ENABLE_COAP_OBSERVE
+#if PROTOCORE_ENABLE_COAP_OBSERVE
 // An Observe registration (RFC 7641): a client awaiting notifications on a resource.
 typedef struct
 {
@@ -76,31 +76,31 @@ typedef struct
 // `const CoapCtx&` and cannot mutate the table), and nothing here is ambient.
 typedef struct
 {
-    CoapResource res[PC_COAP_MAX_RESOURCES]; // resource table: set before begin, read-only during dispatch
+    CoapResource res[PROTOCORE_COAP_MAX_RESOURCES]; // resource table: set before begin, read-only during dispatch
     size_t res_count;
 
-    char path[PC_COAP_MAX_PATH];      // scratch: reconstructed Uri-Path of the request in flight
-    char query[PC_COAP_MAX_QUERY];    // scratch: reconstructed Uri-Query
-    uint8_t pl[PC_COAP_MAX_PAYLOAD];  // scratch: handler response body
-    uint8_t tx[PC_COAP_MSG_BUF_SIZE]; // scratch: outbound response (request buffer is transport-owned)
+    char path[PROTOCORE_COAP_MAX_PATH];      // scratch: reconstructed Uri-Path of the request in flight
+    char query[PROTOCORE_COAP_MAX_QUERY];    // scratch: reconstructed Uri-Query
+    uint8_t pl[PROTOCORE_COAP_MAX_PAYLOAD];  // scratch: handler response body
+    uint8_t tx[PROTOCORE_COAP_MSG_BUF_SIZE]; // scratch: outbound response (request buffer is transport-owned)
 
-#if PC_COAP_DEDUP_ENTRIES > 0
-    CoapDedupEntry dedup[PC_COAP_DEDUP_ENTRIES]; // message de-duplication cache (RFC 7252 §4.5)
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
+    CoapDedupEntry dedup[PROTOCORE_COAP_DEDUP_ENTRIES]; // message de-duplication cache (RFC 7252 §4.5)
 #endif
 
-#if PC_ENABLE_COAP_OBSERVE
-    uint16_t port; // UDP port the observe transport notifies from; set by pc_coap_server_begin()
-    CoapObserver obs[PC_COAP_MAX_OBSERVERS];
-    // Last-request fields recorded by pc_coap_server_process_ex() for the Observe transport.
+#if PROTOCORE_ENABLE_COAP_OBSERVE
+    uint16_t port; // UDP port the observe transport notifies from; set by protocore_coap_server_begin()
+    CoapObserver obs[PROTOCORE_COAP_MAX_OBSERVERS];
+    // Last-request fields recorded by protocore_coap_server_process_ex() for the Observe transport.
     int last_observe; // reset to -1 at the top of every request parse
     uint8_t last_method;
     uint8_t last_token[8];
     uint8_t last_tkl;
 #endif
 
-#if PC_ENABLE_COAP_BLOCK
+#if PROTOCORE_ENABLE_COAP_BLOCK
     // Single in-flight Block1 (request upload) reassembly (RFC 7959); one transfer at a time.
-    uint8_t b1[PC_COAP_BLOCK1_MAX];
+    uint8_t b1[PROTOCORE_COAP_BLOCK1_MAX];
     size_t b1_len;  // bytes reassembled so far (also the next expected offset)
     uint8_t b1_szx; // negotiated block-size exponent for this transfer
 #endif
@@ -108,25 +108,25 @@ typedef struct
 
 static CoapCtx s_coap;
 
-void pc_coap_server_reset()
+void protocore_coap_server_reset()
 {
     s_coap.res_count = 0;
     mem.set(s_coap.res, 0, sizeof(s_coap.res));
-#if PC_ENABLE_COAP_BLOCK
+#if PROTOCORE_ENABLE_COAP_BLOCK
     s_coap.b1_len = 0;
     s_coap.b1_szx = 0;
 #endif
-#if PC_COAP_DEDUP_ENTRIES > 0
-    for (size_t i = 0; i < PC_COAP_DEDUP_ENTRIES; i++)
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
+    for (size_t i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
     {
         s_coap.dedup[i].valid = PROTO_FALSE;
     }
 #endif
 }
 
-proto_bool pc_coap_server_add_resource(const char *path, uint8_t methods, CoapHandler handler)
+proto_bool protocore_coap_server_add_resource(const char *path, uint8_t methods, CoapHandler handler)
 {
-    if (s_coap.res_count >= PC_COAP_MAX_RESOURCES || !path || !handler)
+    if (s_coap.res_count >= PROTOCORE_COAP_MAX_RESOURCES || !path || !handler)
     {
         return PROTO_FALSE;
     }
@@ -277,7 +277,7 @@ static size_t emit_options_payload(uint8_t *resp, size_t cap, size_t n, uint8_t 
                        enc_uint_minimal((uint16_t)content_format, v));
     }
 
-#if PC_ENABLE_COAP_BLOCK
+#if PROTOCORE_ENABLE_COAP_BLOCK
     if (block2_val >= 0)
     {
         n = append_opt(resp, cap, n, &last_opt, COAP_OPT_BLOCK2, v, enc_uint_minimal((uint32_t)block2_val, v));
@@ -308,7 +308,7 @@ static size_t emit_options_payload(uint8_t *resp, size_t cap, size_t n, uint8_t 
 // Core processing (no sockets, no heap)
 // ---------------------------------------------------------------------------
 
-size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap,
+size_t protocore_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap,
                                  int32_t observe_seq)
 {
     if (req_len < 4)
@@ -334,14 +334,14 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
     // reject a CON with an RST; stay silent for a NON.
     if (ver != 1 || tkl > COAP_MAX_TOKEN)
     {
-        return (type == COAP_TYPE_CON) ? emit_header(resp, pc_resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0) : 0;
+        return (type == COAP_TYPE_CON) ? emit_header(resp, protocore_resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0) : 0;
     }
 
     const uint8_t *p = req + 4;
     const uint8_t *end = req + req_len;
     if (p + tkl > end)
     {
-        return (type == COAP_TYPE_CON) ? emit_header(resp, pc_resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0) : 0;
+        return (type == COAP_TYPE_CON) ? emit_header(resp, protocore_resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0) : 0;
     }
     const uint8_t *token = p;
     p += tkl;
@@ -349,10 +349,10 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
     // An empty message (Code 0.00): CON is a ping -> RST; anything else -> ignore.
     if (code == 0)
     {
-        return (type == COAP_TYPE_CON) ? emit_header(resp, pc_resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0) : 0;
+        return (type == COAP_TYPE_CON) ? emit_header(resp, protocore_resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0) : 0;
     }
 
-#if PC_ENABLE_COAP_OBSERVE
+#if PROTOCORE_ENABLE_COAP_OBSERVE
     s_coap.last_observe = -1;
     s_coap.last_method = code;
     s_coap.last_tkl = tkl;
@@ -373,7 +373,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
     uint32_t opt_num = 0;
     proto_bool bad = PROTO_FALSE;
     proto_bool bad_option = PROTO_FALSE; // unrecognized critical (odd-numbered) option seen (RFC 7252 5.4.1)
-#if PC_ENABLE_COAP_BLOCK
+#if PROTOCORE_ENABLE_COAP_BLOCK
     int32_t req_block1 = -1; // request Block1 option value (RFC 7959), or -1 if absent
     int32_t req_block2 = -1; // request Block2 option value, or -1 if absent
 #endif
@@ -459,12 +459,12 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
         case COAP_OPT_CONTENT_FORMAT:
             req_cf = (CoapContentFormat)opt_uint(val, olen);
             break;
-#if PC_ENABLE_COAP_OBSERVE
+#if PROTOCORE_ENABLE_COAP_OBSERVE
         case COAP_OPT_OBSERVE:
             s_coap.last_observe = (int)opt_uint(val, olen); // 0 = register, 1 = deregister
             break;
 #endif
-#if PC_ENABLE_COAP_BLOCK
+#if PROTOCORE_ENABLE_COAP_BLOCK
         case COAP_OPT_BLOCK1: // block-wise request uploads (RFC 7959)
             if (olen > 3)
             {
@@ -505,11 +505,11 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
 
     if (bad)
     {
-        return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
+        return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
     }
     if (bad_option)
     {
-        return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_OPTION, mid, token, tkl);
+        return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_OPTION, mid, token, tkl);
     }
 
     if (path_len == 0)
@@ -523,7 +523,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
     // (Method Not Allowed) piggybacked response."
     if ((code >> 5) != 0 || code < (uint8_t)COAP_GET || code > (uint8_t)COAP_DELETE)
     {
-        return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
+        return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
     }
 
     // The response the emit path below serializes (block-wise if large). Filled
@@ -542,7 +542,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
     {
         if (code != (uint8_t)COAP_GET)
         {
-            return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
+            return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
         }
         size_t pl = 0;
         for (size_t i = 0; i < s_coap.res_count; i++)
@@ -571,17 +571,17 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
         const CoapResource *r = find_resource(&s_coap, s_coap.path);
         if (!r)
         {
-            return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_NOT_FOUND, mid, token, tkl);
+            return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_NOT_FOUND, mid, token, tkl);
         }
         if (!(r->methods & (1u << code)))
         {
-            return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
+            return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
         }
 
         const uint8_t *eff_payload = payload;
         size_t eff_payload_len = payload_len;
 
-#if PC_ENABLE_COAP_BLOCK
+#if PROTOCORE_ENABLE_COAP_BLOCK
         // --- Block1: reassemble a chunked POST/PUT payload (RFC 7959 §2.5) ---
         if (req_block1 >= 0 && (code == (uint8_t)COAP_POST || code == (uint8_t)COAP_PUT))
         {
@@ -591,7 +591,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
             uint8_t szx = (uint8_t)(b & 7);
             if (szx == 7) // reserved block size
             {
-                return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_OPTION, mid, token, tkl);
+                return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_OPTION, mid, token, tkl);
             }
             uint32_t bsize = 1u << (szx + 4);
             if (num == 0) // first block starts a fresh transfer
@@ -604,12 +604,12 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
             if (szx != s_coap.b1_szx || (size_t)num * bsize != s_coap.b1_len)
             {
                 s_coap.b1_len = 0;
-                return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_INCOMPLETE, mid, token, tkl);
+                return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_INCOMPLETE, mid, token, tkl);
             }
             if (s_coap.b1_len + payload_len > sizeof(s_coap.b1))
             {
                 s_coap.b1_len = 0;
-                return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_TOO_LARGE, mid, token, tkl);
+                return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_TOO_LARGE, mid, token, tkl);
             }
             if (payload_len)
             {
@@ -621,12 +621,12 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
             {
                 // More blocks coming: acknowledge with 2.31 Continue + Block1 echo
                 // (no representation yet; the handler runs only on the final block).
-                size_t cn = emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_CONTINUE, mid, token, tkl);
+                size_t cn = emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_CONTINUE, mid, token, tkl);
                 if (cn == 0)
                 {
                     return 0;
                 }
-                return emit_options_payload(resp, pc_resp_cap, cn, (uint8_t)COAP_RSP_CONTINUE, -1, COAP_CF_NONE, -1,
+                return emit_options_payload(resp, protocore_resp_cap, cn, (uint8_t)COAP_RSP_CONTINUE, -1, COAP_CF_NONE, -1,
                                             (int32_t)((num << 4) | (1u << 3) | szx), NULL, 0);
             }
             // Final block: hand the whole reassembled payload to the handler.
@@ -653,7 +653,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
 
     int32_t block2_echo = -1;
 
-#if PC_ENABLE_COAP_BLOCK
+#if PROTOCORE_ENABLE_COAP_BLOCK
     if (block1_echo >= 0)
     {
         s_coap.b1_len = 0; // the reassembled upload has been handed to the handler; clear it
@@ -663,7 +663,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
     // block at a time (RFC 7959 §2.4). Applies only to a successful body. ---
     if ((cresp.code >> 5) == 2)
     {
-        uint8_t szx = PC_COAP_BLOCK_SZX_MAX;
+        uint8_t szx = PROTOCORE_COAP_BLOCK_SZX_MAX;
         uint32_t num = 0;
         proto_bool block_wise = PROTO_FALSE;
         if (req_block2 >= 0)
@@ -673,11 +673,11 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
             szx = (uint8_t)(b & 7);
             if (szx == 7)
             {
-                return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_OPTION, mid, token, tkl);
+                return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_OPTION, mid, token, tkl);
             }
-            if (szx > PC_COAP_BLOCK_SZX_MAX)
+            if (szx > PROTOCORE_COAP_BLOCK_SZX_MAX)
             {
-                szx = PC_COAP_BLOCK_SZX_MAX;
+                szx = PROTOCORE_COAP_BLOCK_SZX_MAX;
             }
             block_wise = PROTO_TRUE; // the client asked for block-wise transfer
         }
@@ -692,7 +692,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
             // A block number past the end of the representation is a bad request.
             if (off > cresp.payload_len || (off == cresp.payload_len && num > 0))
             {
-                return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
+                return emit_header(resp, protocore_resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
             }
             size_t this_len = cresp.payload_len - off;
             uint8_t more = 0;
@@ -709,37 +709,37 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
 #endif
 
     // Build the response: header + token + options (ascending order) + payload.
-    size_t n = emit_header(resp, pc_resp_cap, rsp_type, cresp.code, mid, token, tkl);
+    size_t n = emit_header(resp, protocore_resp_cap, rsp_type, cresp.code, mid, token, tkl);
     if (n == 0)
     {
         return 0;
     }
-    return emit_options_payload(resp, pc_resp_cap, n, cresp.code, observe_seq, cresp.content_format, block2_echo,
+    return emit_options_payload(resp, protocore_resp_cap, n, cresp.code, observe_seq, cresp.content_format, block2_echo,
                                 block1_echo, cresp.payload, cresp.payload_len);
 }
 
-size_t pc_coap_server_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap)
+size_t protocore_coap_server_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap)
 {
-    return pc_coap_server_process_ex(req, req_len, resp, pc_resp_cap, -1); // no Observe option
+    return protocore_coap_server_process_ex(req, req_len, resp, protocore_resp_cap, -1); // no Observe option
 }
 
-#if PC_COAP_DEDUP_ENTRIES > 0
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
 // ---------------------------------------------------------------------------
 // Message de-duplication cache (RFC 7252 §4.5) - host-testable core
 // ---------------------------------------------------------------------------
 
-proto_bool pc_coap_dedup_lookup(const char *src_ip, uint16_t src_port, uint16_t mid, const uint8_t **out,
+proto_bool protocore_coap_dedup_lookup(const char *src_ip, uint16_t src_port, uint16_t mid, const uint8_t **out,
                                 size_t *out_len)
 {
     if (!src_ip)
     {
         return PROTO_FALSE;
     }
-    uint32_t now = pc_millis();
-    for (size_t i = 0; i < PC_COAP_DEDUP_ENTRIES; i++)
+    uint32_t now = protocore_millis();
+    for (size_t i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
     {
         const CoapDedupEntry *e = &s_coap.dedup[i];
-        if (e->valid && e->mid == mid && e->port == src_port && (now - e->stamp_ms) < PC_COAP_DEDUP_LIFETIME_MS &&
+        if (e->valid && e->mid == mid && e->port == src_port && (now - e->stamp_ms) < PROTOCORE_COAP_DEDUP_LIFETIME_MS &&
             strncmp(e->ip, src_ip, sizeof(e->ip)) == 0)
         {
             if (out)
@@ -756,17 +756,17 @@ proto_bool pc_coap_dedup_lookup(const char *src_ip, uint16_t src_port, uint16_t 
     return PROTO_FALSE;
 }
 
-void pc_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, const uint8_t *resp, size_t len)
+void protocore_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, const uint8_t *resp, size_t len)
 {
-    if (!src_ip || !resp || len == 0 || len > PC_COAP_DEDUP_RESP_MAX)
+    if (!src_ip || !resp || len == 0 || len > PROTOCORE_COAP_DEDUP_RESP_MAX)
     {
         return; // an over-large response is not cached - a retransmission simply re-processes it
     }
-    uint32_t now = pc_millis();
+    uint32_t now = protocore_millis();
     // Prefer the entry already holding this key, then a free / expired slot, else evict the oldest.
     size_t victim = 0;
     uint32_t oldest = 0;
-    for (size_t i = 0; i < PC_COAP_DEDUP_ENTRIES; i++)
+    for (size_t i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
     {
         const CoapDedupEntry *e = &s_coap.dedup[i];
         if (e->valid && e->mid == mid && e->port == src_port && strncmp(e->ip, src_ip, sizeof(e->ip)) == 0)
@@ -774,7 +774,7 @@ void pc_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, co
             victim = i;
             break;
         }
-        if (!e->valid || (now - e->stamp_ms) >= PC_COAP_DEDUP_LIFETIME_MS)
+        if (!e->valid || (now - e->stamp_ms) >= PROTOCORE_COAP_DEDUP_LIFETIME_MS)
         {
             victim = i;
             break;
@@ -797,16 +797,16 @@ void pc_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, co
     mem.cpy(e->resp, resp, len);
     e->valid = PROTO_TRUE;
 }
-#endif // PC_COAP_DEDUP_ENTRIES > 0
+#endif // PROTOCORE_COAP_DEDUP_ENTRIES > 0
 
 // ---------------------------------------------------------------------------
 // UDP transport (Udp.listener->listen is a host stub on non-Arduino builds)
 // ---------------------------------------------------------------------------
 
-#if PC_COAP_DEDUP_ENTRIES > 0
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
 // If @p data is a Confirmable request already answered for this peer (RFC 7252 §4.5), resend the cached
 // response and return true so the caller stops (the handler is not re-run). Else return false.
-static proto_bool coap_dedup_replay(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, const char *ip,
+static proto_bool coap_dedup_replay(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, const char *ip,
                                     uint16_t port, proto_bool have_peer)
 {
     if (!have_peer || len < 4 || ((data[0] >> 4) & 0x03) != (uint8_t)COAP_TYPE_CON)
@@ -816,7 +816,7 @@ static proto_bool coap_dedup_replay(const uint8_t *data, size_t len, const struc
     uint16_t mid = (uint16_t)((data[2] << 8) | data[3]);
     const uint8_t *cached = NULL;
     size_t clen = 0;
-    if (!pc_coap_dedup_lookup(ip, port, mid, &cached, &clen))
+    if (!protocore_coap_dedup_lookup(ip, port, mid, &cached, &clen))
     {
         return PROTO_FALSE;
     }
@@ -833,11 +833,11 @@ static void coap_dedup_remember(const uint8_t *data, size_t len, const char *ip,
         return;
     }
     uint16_t mid = (uint16_t)((data[2] << 8) | data[3]);
-    pc_coap_dedup_store(ip, port, mid, resp, resp_len);
+    protocore_coap_dedup_store(ip, port, mid, resp, resp_len);
 }
-#endif // PC_COAP_DEDUP_ENTRIES > 0
+#endif // PROTOCORE_COAP_DEDUP_ENTRIES > 0
 
-#if PC_ENABLE_COAP_OBSERVE
+#if PROTOCORE_ENABLE_COAP_OBSERVE
 // ---------------------------------------------------------------------------
 // Observe registry + notifications (RFC 7641)
 // ---------------------------------------------------------------------------
@@ -862,7 +862,7 @@ static proto_bool same_token(const CoapObserver *o, const uint8_t *token, uint8_
 // Find/refresh an observer; create one on first registration. Returns its slot or -1.
 static int obs_register(const char *ip, uint16_t port, const uint8_t *token, uint8_t tkl, int res_idx)
 {
-    for (int i = 0; i < PC_COAP_MAX_OBSERVERS; i++)
+    for (int i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
         if (s_coap.obs[i].active && s_coap.obs[i].res_idx == res_idx && s_coap.obs[i].port == port &&
             same_token(&s_coap.obs[i], token, tkl) && strcmp(s_coap.obs[i].ip, ip) == 0)
@@ -870,7 +870,7 @@ static int obs_register(const char *ip, uint16_t port, const uint8_t *token, uin
             return i; // already observing
         }
     }
-    for (int i = 0; i < PC_COAP_MAX_OBSERVERS; i++)
+    for (int i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
         if (!s_coap.obs[i].active)
         {
@@ -895,7 +895,7 @@ static int obs_register(const char *ip, uint16_t port, const uint8_t *token, uin
 // (a Reset). Pass token=nullptr to drop all of @p ip:@p port.
 static void obs_remove(const char *ip, uint16_t port, const uint8_t *token, uint8_t tkl)
 {
-    for (int i = 0; i < PC_COAP_MAX_OBSERVERS; i++)
+    for (int i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
         if (s_coap.obs[i].active && s_coap.obs[i].port == port && strcmp(s_coap.obs[i].ip, ip) == 0 &&
             (token == NULL || same_token(&s_coap.obs[i], token, tkl)))
@@ -905,14 +905,14 @@ static void obs_remove(const char *ip, uint16_t port, const uint8_t *token, uint
     }
 }
 
-void pc_coap_notify(const char *path)
+void protocore_coap_notify(const char *path)
 {
     int ridx = find_resource_index(&s_coap, path);
     if (ridx < 0)
     {
         return;
     }
-    for (int i = 0; i < PC_COAP_MAX_OBSERVERS; i++)
+    for (int i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
         if (!s_coap.obs[i].active || s_coap.obs[i].res_idx != ridx)
         {
@@ -939,7 +939,7 @@ void pc_coap_notify(const char *path)
         }
 
         // Build a NON notification: header + token + Observe(seq) + body.
-        uint16_t mid = (uint16_t)pc_millis();
+        uint16_t mid = (uint16_t)protocore_millis();
         s_coap.obs[i].seq = (s_coap.obs[i].seq + 1) & 0xFFFFFF;
         size_t n = emit_header(s_coap.tx, sizeof(s_coap.tx), COAP_TYPE_NON, cresp.code, mid, s_coap.obs[i].token,
                                s_coap.obs[i].tkl);
@@ -948,7 +948,7 @@ void pc_coap_notify(const char *path)
             n = emit_options_payload(s_coap.tx, sizeof(s_coap.tx), n, cresp.code, (int32_t)s_coap.obs[i].seq,
                                      cresp.content_format, -1, -1, cresp.payload, cresp.payload_len);
         }
-        pc_ip dst = {PC_IP_NONE, {0}};
+        protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
         if (!n || !Ip.parse(s_coap.obs[i].ip, &dst) ||
             !Udp.listener->sendto(s_coap.port, &dst, s_coap.obs[i].port, s_coap.tx, n))
         {
@@ -957,7 +957,7 @@ void pc_coap_notify(const char *path)
     }
 }
 
-static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void coap_udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     char ip[16];
@@ -974,7 +974,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
         return;
     }
 
-#if PC_COAP_DEDUP_ENTRIES > 0
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     // A retransmitted CON we already answered is re-answered from the cache without re-dispatching.
     if (coap_dedup_replay(data, len, peer, ip, pport, have_peer))
     {
@@ -982,7 +982,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
     }
 #endif
 
-    size_t rn = pc_coap_server_process_ex(data, len, s_coap.tx, sizeof(s_coap.tx), -1);
+    size_t rn = protocore_coap_server_process_ex(data, len, s_coap.tx, sizeof(s_coap.tx), -1);
     if (!rn)
     {
         return;
@@ -1000,7 +1000,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
             {
                 // Re-encode the response carrying the Observe option (registration ack).
                 size_t rn2 =
-                    pc_coap_server_process_ex(data, len, s_coap.tx, sizeof(s_coap.tx), (int32_t)s_coap.obs[slot].seq);
+                    protocore_coap_server_process_ex(data, len, s_coap.tx, sizeof(s_coap.tx), (int32_t)s_coap.obs[slot].seq);
                 // rn2 == 0 is unreachable: the re-encode differs from the call above - which already
                 // returned rn > 0 - only by the Observe option, which append_opt() drops rather than
                 // failing on, so the same request into the same buffer cannot now produce 0 bytes.
@@ -1016,16 +1016,16 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
         obs_remove(ip, pport, s_coap.last_token, s_coap.last_tkl);
     }
 
-#if PC_COAP_DEDUP_ENTRIES > 0
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     coap_dedup_remember(data, len, ip, pport, have_peer, s_coap.tx, rn); // cache for a future retransmission
 #endif
     Udp.listener->reply(peer, s_coap.tx, rn);
 }
 
-void pc_coap_server_begin(uint16_t port)
+void protocore_coap_server_begin(uint16_t port)
 {
     s_coap.port = port;
-    for (int i = 0; i < PC_COAP_MAX_OBSERVERS; i++)
+    for (int i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
         s_coap.obs[i].active = PROTO_FALSE;
     }
@@ -1034,10 +1034,10 @@ void pc_coap_server_begin(uint16_t port)
 
 #else // Observe disabled: the basic request/response handler
 
-static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void coap_udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)ctx;
-#if PC_COAP_DEDUP_ENTRIES > 0
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     char ip[16];
     uint16_t pport = 0;
     proto_bool have_peer = Udp.listener->peer_addr(peer, ip, sizeof(ip), &pport);
@@ -1046,21 +1046,21 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
         return;
     }
 #endif
-    size_t rn = pc_coap_server_process(data, len, s_coap.tx, sizeof(s_coap.tx));
+    size_t rn = protocore_coap_server_process(data, len, s_coap.tx, sizeof(s_coap.tx));
     if (rn)
     {
-#if PC_COAP_DEDUP_ENTRIES > 0
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
         coap_dedup_remember(data, len, ip, pport, have_peer, s_coap.tx, rn);
 #endif
         Udp.listener->reply(peer, s_coap.tx, rn);
     }
 }
 
-void pc_coap_server_begin(uint16_t port)
+void protocore_coap_server_begin(uint16_t port)
 {
     Udp.listener->listen(port, coap_udp_handler, NULL);
 }
 
-#endif // PC_ENABLE_COAP_OBSERVE
+#endif // PROTOCORE_ENABLE_COAP_OBSERVE
 
-#endif // PC_ENABLE_COAP
+#endif // PROTOCORE_ENABLE_COAP

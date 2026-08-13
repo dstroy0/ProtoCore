@@ -1,6 +1,6 @@
 # MdnsAdaptive - stay discoverable on a crowded channel without adding to the noise
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_MDNS`, `PC_ENABLE_PROMISC`, `PC_ENABLE_WIFI_SNIFFER`, `PC_ENABLE_MDNS_ADAPTIVE`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_MDNS`, `PROTOCORE_ENABLE_PROMISC`, `PROTOCORE_ENABLE_WIFI_SNIFFER`, `PROTOCORE_ENABLE_MDNS_ADAPTIVE`
 
 ## What this example teaches
 
@@ -33,7 +33,7 @@ You cannot back off past the TTL - the record would lapse from caches before the
 the device undiscoverable, which is the exact opposite of the point. So:
 
 - the base cadence is **TTL/2** (two refreshes per TTL, comfortable headroom),
-- the backoff ceiling is **capped at ~7/8 of the TTL** by `pc_mdns_adaptive_begin()`, whatever
+- the backoff ceiling is **capped at ~7/8 of the TTL** by `protocore_mdns_adaptive_begin()`, whatever
   `max_interval_ms` you request.
 
 The adaptive range is therefore fundamentally `[TTL/2, ~TTL)`. A short TTL is a narrow range; a longer
@@ -90,8 +90,8 @@ cfg.ttl_s = 30;              // base cadence = TTL/2 = 15 s
 cfg.max_interval_ms = 25000; // requested ceiling (capped at ~7/8 of the TTL regardless)
 cfg.hi_contention = 40;      // >= 40 frames/window counts as "busy"
 cfg.window_ms = 1000;        // contention sampling window
-pc_mdns_adaptive_begin(&cfg);
-// then pc_mdns_adaptive_tick() every loop
+protocore_mdns_adaptive_begin(&cfg);
+// then protocore_mdns_adaptive_tick() every loop
 ```
 
 ## Build footprint
@@ -107,6 +107,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_MDNS=1 -DPC_ENABLE_PROMISC=1 -DPC_ENABLE_WIFI_SNIFFER=1 -DPC_ENABLE_MDNS_ADAPTIVE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_MDNS=1 -DPROTOCORE_ENABLE_PROMISC=1 -DPROTOCORE_ENABLE_WIFI_SNIFFER=1 -DPROTOCORE_ENABLE_MDNS_ADAPTIVE=1" \
   --lib="." examples/L7-Application/MdnsAdaptive/MdnsAdaptive.ino
 ```

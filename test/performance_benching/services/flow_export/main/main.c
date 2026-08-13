@@ -9,7 +9,7 @@
 // a pure protocol codec with no hardware involved (same category as performance_benching/device/modbus) - every
 // call here exercises the real production code path against wire-byte-verified sample data
 // lifted straight from test/test_flow_export/test_flow_export.cpp. Out of scope: the flow
-// cache (5-tuple + counters) and the UDP send itself (pc_udp_sendto), which are the app's
+// cache (5-tuple + counters) and the UDP send itself (protocore_udp_sendto), which are the app's
 // concern, not this codec's.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

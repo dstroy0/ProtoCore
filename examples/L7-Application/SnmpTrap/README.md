@@ -1,6 +1,6 @@
 # SnmpTrap - the agent pushes SNMP traps to a manager
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_SNMP`, `PC_ENABLE_SNMP_TRAP` (optional `PC_ENABLE_SNMP_V3`)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_SNMP`, `PROTOCORE_ENABLE_SNMP_TRAP` (optional `PROTOCORE_ENABLE_SNMP_V3`)
 
 ## What this example teaches
 
@@ -19,20 +19,20 @@ vb.oid_len = sizeof(HEAP_OID) / sizeof(uint32_t);
 vb.type = SnmpVbType::SNMP_VB_GAUGE32;
 vb.ival = (long)ESP.getFreeHeap();
 
-bool ok = pc_snmp_trap_v2c(MANAGER, TRAP_PORT, "public",
+bool ok = protocore_snmp_trap_v2c(MANAGER, TRAP_PORT, "public",
                         TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), &vb, 1);
 ```
 
-`pc_snmp_trap_v2c(manager, port, community, trap_oid, trap_oid_len, varbinds, n)`
+`protocore_snmp_trap_v2c(manager, port, community, trap_oid, trap_oid_len, varbinds, n)`
 sends one notification with `n` attached varbinds. Point `MANAGER` at your trap
 receiver (for example `snmptrapd` on UDP/162). For SNMPv3 traps, add
-`-DPC_ENABLE_SNMP_V3=1` and call `pc_snmp_trap_v3` instead.
+`-DPROTOCORE_ENABLE_SNMP_V3=1` and call `protocore_snmp_trap_v3` instead.
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_SNMP=1 -DPC_ENABLE_SNMP_TRAP=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SNMP=1 -DPROTOCORE_ENABLE_SNMP_TRAP=1" \
   --lib="." examples/L7-Application/SnmpTrap/SnmpTrap.ino
 ```
 
@@ -50,8 +50,8 @@ added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_SNMP 1
-#define PC_ENABLE_SNMP_TRAP 1
+#define PROTOCORE_ENABLE_SNMP 1
+#define PROTOCORE_ENABLE_SNMP_TRAP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -99,7 +99,7 @@ void loop()
         vb.type = SnmpVbType::SNMP_VB_GAUGE32;
         vb.ival = (long)ESP.getFreeHeap();
 
-        bool ok = pc_snmp_trap_v2c(MANAGER, TRAP_PORT, "public", TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), &vb, 1);
+        bool ok = protocore_snmp_trap_v2c(MANAGER, TRAP_PORT, "public", TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), &vb, 1);
         Serial.printf("trap -> %s : %s (heap=%ld)\n", MANAGER, ok ? "sent" : "failed", vb.ival);
     }
 }

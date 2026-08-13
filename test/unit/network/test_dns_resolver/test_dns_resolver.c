@@ -11,7 +11,7 @@
 
 #include "network_drivers/network/dns/dns_resolver.h"
 #include "network_drivers/transport/udp.h"
-#include "pc_net_host.h"
+#include "protocore_net_host.h"
 #include <string.h>
 
 #include <unity.h>
@@ -20,32 +20,32 @@
 
 void setUp()
 {
-    pc_net_host_reset();
+    protocore_net_host_reset();
     set_millis(0);
     Resolver.set_server("9.9.9.9");
 }
 void tearDown()
 {
-    Udp.listener->close(PC_DNS_CLIENT_PORT);
+    Udp.listener->close(PROTOCORE_DNS_CLIENT_PORT);
 }
 
 // --- the classifier ------------------------------------------------------------------------------
 
 void test_classify()
 {
-    TEST_ASSERT_EQUAL_INT(PC_IP_UNSPECIFIED, Resolver.classify(0u));
-    TEST_ASSERT_EQUAL_INT(PC_IP_BROADCAST, Resolver.classify(0xFFFFFFFFu));
-    TEST_ASSERT_EQUAL_INT(PC_IP_LOOPBACK, Resolver.classify(IPV4(127, 0, 0, 1)));
-    TEST_ASSERT_EQUAL_INT(PC_IP_PRIVATE, Resolver.classify(IPV4(10, 0, 0, 1)));
-    TEST_ASSERT_EQUAL_INT(PC_IP_PRIVATE, Resolver.classify(IPV4(172, 16, 0, 1)));
-    TEST_ASSERT_EQUAL_INT(PC_IP_PRIVATE, Resolver.classify(IPV4(172, 31, 255, 254)));
-    TEST_ASSERT_EQUAL_INT(PC_IP_PUBLIC, Resolver.classify(IPV4(172, 15, 0, 1))); // just below the /12
-    TEST_ASSERT_EQUAL_INT(PC_IP_PUBLIC, Resolver.classify(IPV4(172, 32, 0, 1))); // just above it
-    TEST_ASSERT_EQUAL_INT(PC_IP_PRIVATE, Resolver.classify(IPV4(192, 168, 1, 1)));
-    TEST_ASSERT_EQUAL_INT(PC_IP_LINKLOCAL, Resolver.classify(IPV4(169, 254, 1, 1)));
-    TEST_ASSERT_EQUAL_INT(PC_IP_MULTICAST, Resolver.classify(IPV4(224, 0, 0, 251)));
-    TEST_ASSERT_EQUAL_INT(PC_IP_MULTICAST, Resolver.classify(IPV4(239, 255, 255, 255)));
-    TEST_ASSERT_EQUAL_INT(PC_IP_PUBLIC, Resolver.classify(IPV4(93, 184, 216, 34)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_UNSPECIFIED, Resolver.classify(0u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_BROADCAST, Resolver.classify(0xFFFFFFFFu));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_LOOPBACK, Resolver.classify(IPV4(127, 0, 0, 1)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, Resolver.classify(IPV4(10, 0, 0, 1)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, Resolver.classify(IPV4(172, 16, 0, 1)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, Resolver.classify(IPV4(172, 31, 255, 254)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, Resolver.classify(IPV4(172, 15, 0, 1))); // just below the /12
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, Resolver.classify(IPV4(172, 32, 0, 1))); // just above it
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, Resolver.classify(IPV4(192, 168, 1, 1)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_LINKLOCAL, Resolver.classify(IPV4(169, 254, 1, 1)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_MULTICAST, Resolver.classify(IPV4(224, 0, 0, 251)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_MULTICAST, Resolver.classify(IPV4(239, 255, 255, 255)));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, Resolver.classify(IPV4(93, 184, 216, 34)));
 }
 
 void test_verify_rejects_suspicious()
@@ -68,7 +68,7 @@ void test_verify_accepts_plausible()
 void test_query_build_writes_one_a_question()
 {
     uint8_t q[128];
-    size_t n = pc_dns_query_build(q, sizeof(q), 0xBEEF, "example.com");
+    size_t n = protocore_dns_query_build(q, sizeof(q), 0xBEEF, "example.com");
     TEST_ASSERT_TRUE(n > 12);
 
     TEST_ASSERT_EQUAL_UINT8(0xBE, q[0]);
@@ -88,10 +88,10 @@ void test_query_build_writes_one_a_question()
 void test_query_build_guards()
 {
     uint8_t q[128];
-    TEST_ASSERT_EQUAL_UINT(0, pc_dns_query_build(NULL, sizeof(q), 1, "a.com"));
-    TEST_ASSERT_EQUAL_UINT(0, pc_dns_query_build(q, sizeof(q), 1, NULL));
-    TEST_ASSERT_EQUAL_UINT(0, pc_dns_query_build(q, 8, 1, "a.com"));  // no room for a header
-    TEST_ASSERT_EQUAL_UINT(0, pc_dns_query_build(q, 16, 1, "a.com")); // header fits, the name does not
+    TEST_ASSERT_EQUAL_UINT(0, protocore_dns_query_build(NULL, sizeof(q), 1, "a.com"));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_dns_query_build(q, sizeof(q), 1, NULL));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_dns_query_build(q, 8, 1, "a.com"));  // no room for a header
+    TEST_ASSERT_EQUAL_UINT(0, protocore_dns_query_build(q, 16, 1, "a.com")); // header fits, the name does not
 }
 
 // --- the answer ----------------------------------------------------------------------------------
@@ -184,7 +184,7 @@ void test_answer_parse_takes_the_a_record()
     n = rr(p, n, 1, 1, addr, 4);
 
     uint32_t ip = 0;
-    TEST_ASSERT_TRUE(pc_dns_answer_parse(p, n, 0x1234, &ip));
+    TEST_ASSERT_TRUE(protocore_dns_answer_parse(p, n, 0x1234, &ip));
     TEST_ASSERT_EQUAL_UINT32(IPV4(93, 184, 216, 34), ip);
 }
 
@@ -201,7 +201,7 @@ void test_answer_parse_walks_past_a_cname()
     n = rr(p, n, 1, 1, addr, 4);
 
     uint32_t ip = 0;
-    TEST_ASSERT_TRUE(pc_dns_answer_parse(p, n, 0x1234, &ip));
+    TEST_ASSERT_TRUE(protocore_dns_answer_parse(p, n, 0x1234, &ip));
     TEST_ASSERT_EQUAL_UINT32(IPV4(10, 1, 2, 3), ip);
 }
 
@@ -213,7 +213,7 @@ void test_answer_parse_refuses_a_foreign_id()
     n = rr(p, n, 1, 1, addr, 4);
 
     uint32_t ip = 0;
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, n, 0x9999, &ip)); // answers a question nobody asked
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, n, 0x9999, &ip)); // answers a question nobody asked
 }
 
 void test_answer_parse_refuses_a_question_and_an_rcode()
@@ -224,11 +224,11 @@ void test_answer_parse_refuses_a_question_and_an_rcode()
 
     size_t n = response_head(p, 0x1234, 0x0100, 1); // QR clear: this is a query
     n = rr(p, n, 1, 1, addr, 4);
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, n, 0x1234, &ip));
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, n, 0x1234, &ip));
 
     n = response_head(p, 0x1234, 0x8183, 1); // NXDOMAIN
     n = rr(p, n, 1, 1, addr, 4);
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, n, 0x1234, &ip));
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, n, 0x1234, &ip));
 }
 
 void test_answer_parse_refuses_when_no_a_record_is_present()
@@ -237,18 +237,18 @@ void test_answer_parse_refuses_when_no_a_record_is_present()
     uint32_t ip = 0;
 
     size_t n = response_head(p, 0x1234, 0x8180, 0); // ANCOUNT 0
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, n, 0x1234, &ip));
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, n, 0x1234, &ip));
 
     n = response_head(p, 0x1234, 0x8180, 1);
     uint8_t cname[32];
     size_t cl = put_name(cname, 0, "cdn.example.net");
     n = rr(p, n, 5, 1, cname, (uint16_t)cl); // a CNAME and nothing else
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, n, 0x1234, &ip));
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, n, 0x1234, &ip));
 
     const uint8_t addr[4] = {1, 2, 3, 4};
     n = response_head(p, 0x1234, 0x8180, 1);
     n = rr(p, n, 1, 3, addr, 4); // an A record in the wrong class
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, n, 0x1234, &ip));
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, n, 0x1234, &ip));
 }
 
 void test_answer_parse_refuses_a_truncated_record()
@@ -259,10 +259,10 @@ void test_answer_parse_refuses_a_truncated_record()
     n = rr(p, n, 1, 1, addr, 4);
 
     uint32_t ip = 0;
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, n - 2, 0x1234, &ip)); // rdata runs off the end
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, 8, 0x1234, &ip));     // shorter than a header
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(NULL, n, 0x1234, &ip));
-    TEST_ASSERT_FALSE(pc_dns_answer_parse(p, n, 0x1234, NULL));
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, n - 2, 0x1234, &ip)); // rdata runs off the end
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, 8, 0x1234, &ip));     // shorter than a header
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(NULL, n, 0x1234, &ip));
+    TEST_ASSERT_FALSE(protocore_dns_answer_parse(p, n, 0x1234, NULL));
 }
 
 // --- resolve -------------------------------------------------------------------------------------
@@ -271,18 +271,18 @@ void test_answer_parse_refuses_a_truncated_record()
 void test_resolve_literal_skips_dns()
 {
     uint32_t ip = 0;
-    TEST_ASSERT_EQUAL_INT(PC_DNS_READY, Resolver.resolve("192.168.4.7", &ip));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, Resolver.resolve("192.168.4.7", &ip));
     TEST_ASSERT_EQUAL_UINT32(IPV4(192, 168, 4, 7), ip);
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
-    TEST_ASSERT_NULL(pc_net_host_udp_pcb(PC_DNS_CLIENT_PORT));
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
+    TEST_ASSERT_NULL(protocore_net_host_udp_pcb(PROTOCORE_DNS_CLIENT_PORT));
     TEST_ASSERT_FALSE(Resolver.busy()); // no query, so nothing to be busy with
 }
 
 void test_resolve_refuses_null_arguments()
 {
     uint32_t ip = 0;
-    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve(NULL, &ip));
-    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve("example.com", NULL));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_FAILED, Resolver.resolve(NULL, &ip));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_FAILED, Resolver.resolve("example.com", NULL));
 }
 
 // A name puts a query on the wire, addressed to the server that was set, and the call reports busy
@@ -291,32 +291,32 @@ void test_resolve_asks_the_configured_server()
 {
     TEST_ASSERT_TRUE(Resolver.set_server("192.168.1.1"));
     uint32_t ip = 0;
-    TEST_ASSERT_EQUAL_INT(PC_DNS_BUSY, Resolver.resolve("example.com", &ip));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_BUSY, Resolver.resolve("example.com", &ip));
     TEST_ASSERT_TRUE(Resolver.busy());
 
-    TEST_ASSERT_TRUE(pc_net_host_udp_count() > 0);
-    const pc_net_host_dgram *d = pc_net_host_udp_at(0);
+    TEST_ASSERT_TRUE(protocore_net_host_udp_count() > 0);
+    const protocore_net_host_dgram *d = protocore_net_host_udp_at(0);
     TEST_ASSERT_EQUAL_UINT16(53, d->dst_port);
-    TEST_ASSERT_EQUAL_UINT16(PC_DNS_CLIENT_PORT, d->src_port);
+    TEST_ASSERT_EQUAL_UINT16(PROTOCORE_DNS_CLIENT_PORT, d->src_port);
     TEST_ASSERT_EQUAL_UINT8(192, d->addr[0]);
     TEST_ASSERT_EQUAL_UINT8(1, d->addr[3]);
     TEST_ASSERT_EQUAL_UINT8(1, d->data[5]); // one question
 
     // A second ask while that one is out gets the same answer, and puts no second query on the wire.
-    size_t sent = pc_net_host_udp_count();
-    TEST_ASSERT_EQUAL_INT(PC_DNS_BUSY, Resolver.resolve("elsewhere.example", &ip));
-    TEST_ASSERT_EQUAL_size_t(sent, pc_net_host_udp_count());
+    size_t sent = protocore_net_host_udp_count();
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_BUSY, Resolver.resolve("elsewhere.example", &ip));
+    TEST_ASSERT_EQUAL_size_t(sent, protocore_net_host_udp_count());
 }
 
 // The module's timer is what ends a query nothing answers, and the caller is what advances it.
 void test_resolve_gives_up_at_the_deadline()
 {
     uint32_t ip = 0;
-    TEST_ASSERT_EQUAL_INT(PC_DNS_BUSY, Resolver.resolve("example.com", &ip));
-    set_millis(millis() + PC_DNS_TIMEOUT_MS - 1);
-    TEST_ASSERT_EQUAL_INT(PC_DNS_BUSY, Resolver.resolve("example.com", &ip)); // one tick short
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_BUSY, Resolver.resolve("example.com", &ip));
+    set_millis(millis() + PROTOCORE_DNS_TIMEOUT_MS - 1);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_BUSY, Resolver.resolve("example.com", &ip)); // one tick short
     set_millis(millis() + 1);
-    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve("example.com", &ip));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_FAILED, Resolver.resolve("example.com", &ip));
     TEST_ASSERT_FALSE(Resolver.busy()); // the timer released it, so the next ask starts a new query
 }
 
@@ -334,9 +334,9 @@ void test_set_server_refuses_what_does_not_parse()
 void test_resolve_verified_rejects_a_rebinding_answer()
 {
     uint32_t ip = 0;
-    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve_verified("127.0.0.1", &ip)); // loopback
-    TEST_ASSERT_EQUAL_INT(PC_DNS_FAILED, Resolver.resolve_verified("224.0.0.251", &ip));
-    TEST_ASSERT_EQUAL_INT(PC_DNS_READY, Resolver.resolve_verified("93.184.216.34", &ip));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_FAILED, Resolver.resolve_verified("127.0.0.1", &ip)); // loopback
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_FAILED, Resolver.resolve_verified("224.0.0.251", &ip));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, Resolver.resolve_verified("93.184.216.34", &ip));
     TEST_ASSERT_EQUAL_UINT32(IPV4(93, 184, 216, 34), ip);
 }
 

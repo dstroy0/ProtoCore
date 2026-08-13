@@ -1,6 +1,6 @@
 # MsgPack - compact binary telemetry with MessagePack
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_MSGPACK`
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_MSGPACK`
 
 ## What this example teaches
 
@@ -12,18 +12,18 @@ MessagePack is widely supported across languages, so pick it over CBOR when your
 consuming stack already speaks it - the API and the zero-heap pattern are
 identical.
 
-**Encoding with `pc_span`.** Initialize over a stack buffer, declare the map
-size, emit pairs, check `pc_span_ok()`, write `pc_span_len()` bytes:
+**Encoding with `protocore_span`.** Initialize over a stack buffer, declare the map
+size, emit pairs, check `protocore_span_ok()`, write `protocore_span_len()` bytes:
 
 ```cpp
 uint8_t buf[64];
-pc_span w;
-w = pc_span_from( buf, sizeof(buf));
+protocore_span w;
+w = protocore_span_from( buf, sizeof(buf));
 MsgPack.put_map(&w, 3);
 MsgPack.put_str(&w, "heap"); MsgPack.put_uint(&w, ESP.getFreeHeap());
 MsgPack.put_str(&w, "uptime"); MsgPack.put_uint(&w, millis() / 1000);
 MsgPack.put_str(&w, "rssi"); MsgPack.put_int(&w, Physical.wifi->rssi());
-ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;   // page these bytes out below
+ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;   // page these bytes out below
 ```
 
 As with CBOR, the payload is binary so it is delivered through the binary-safe
@@ -31,22 +31,22 @@ As with CBOR, the payload is binary so it is delivered through the binary-safe
 (slice by slice, returning 0 to finish) rather than the C-string `send()`. The
 generator's `ctx` must outlive the call, so it is `static`.
 
-**Decoding with `pc_cspan`.** The cursor decoder is the mirror image: bind a
+**Decoding with `protocore_cspan`.** The cursor decoder is the mirror image: bind a
 reader to the bytes, read the map header, then each key/value, and check
-`pc_cspan_ok()` once at the end (it is sticky, so a single check covers the
+`protocore_cspan_ok()` once at the end (it is sticky, so a single check covers the
 whole parse). Strings point straight into the source buffer, no copy:
 
 ```cpp
-pc_cspan r;
-r = pc_cspan_from( req->body, req->body_len);
+protocore_cspan r;
+r = protocore_cspan_from( req->body, req->body_len);
 size_t count;
 if (!MsgPack.get_map(&r, &count)) { /* not a map */ }
-for (size_t i = 0; i < count && pc_cspan_ok(r); i++) {
+for (size_t i = 0; i < count && protocore_cspan_ok(r); i++) {
     const char *key; size_t klen; int64_t val;
     if (!MsgPack.get_str(&r, &key, &klen) || !MsgPack.get_int(&r, &val)) break;
     // use key[0..klen) and val
 }
-if (!pc_cspan_ok(r)) { /* malformed / truncated */ }
+if (!protocore_cspan_ok(r)) { /* malformed / truncated */ }
 ```
 
 Every read is bounds-checked, so malformed or truncated input fails closed rather
@@ -57,7 +57,7 @@ branch on it.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_MSGPACK=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_MSGPACK=1" \
   --lib="." examples/L6-Presentation/MsgPack/MsgPack.ino
 ```
 
@@ -76,7 +76,7 @@ added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_MSGPACK 1
+#define PROTOCORE_ENABLE_MSGPACK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -94,7 +94,7 @@ struct MpCtx
     uint8_t buf[64];
     size_t len, off;
 };
-static size_t pc_msgpack_source(uint8_t *out, size_t cap, void *vctx)
+static size_t protocore_msgpack_source(uint8_t *out, size_t cap, void *vctx)
 {
     MpCtx *c = (MpCtx *)vctx;
     if (c->off >= c->len)
@@ -110,8 +110,8 @@ static size_t pc_msgpack_source(uint8_t *out, size_t cap, void *vctx)
 // Decodes a posted MessagePack map of {string: integer} and echoes "key=value".
 static void on_decode(uint8_t id, HttpReq *req)
 {
-    pc_cspan r;
-    r = pc_cspan_from( req->body, req->body_len); // cursor over the request body
+    protocore_cspan r;
+    r = protocore_cspan_from( req->body, req->body_len); // cursor over the request body
     size_t count;
     if (!MsgPack.get_map(&r, &count)) // header must be a map
     {
@@ -120,7 +120,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     }
     char out[160];
     size_t o = 0;
-    for (size_t i = 0; i < count && pc_cspan_ok(r); i++)
+    for (size_t i = 0; i < count && protocore_cspan_ok(r); i++)
     {
         const char *key;
         size_t klen;
@@ -129,7 +129,7 @@ static void on_decode(uint8_t id, HttpReq *req)
             break;
         o += snprintf(out + o, sizeof(out) - o, "%.*s=%lld\n", (int)klen, key, (long long)val);
     }
-    if (!pc_cspan_ok(r)) // one sticky check covers the whole parse
+    if (!protocore_cspan_ok(r)) // one sticky check covers the whole parse
     {
         server.send(id, 400, "text/plain", "malformed MessagePack");
         return;
@@ -153,8 +153,8 @@ void setup()
 
     server.on("/telemetry.msgpack", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static MpCtx ctx; // static: must outlive send_chunked
-        pc_span w;
-        w = pc_span_from( ctx.buf, sizeof(ctx.buf));
+        protocore_span w;
+        w = protocore_span_from( ctx.buf, sizeof(ctx.buf));
         MsgPack.put_map(&w, 3);
         MsgPack.put_str(&w, "heap");
         MsgPack.put_uint(&w, ESP.getFreeHeap());
@@ -162,9 +162,9 @@ void setup()
         MsgPack.put_uint(&w, millis() / 1000);
         MsgPack.put_str(&w, "rssi");
         MsgPack.put_int(&w, Physical.wifi->rssi());
-        ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
+        ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
         ctx.off = 0;
-        server.send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);
+        server.send_chunked(id, 200, "application/msgpack", protocore_msgpack_source, &ctx);
     });
     server.on("/decode", HttpMethod::HTTP_POST, on_decode); // decode side
     server.begin(80);

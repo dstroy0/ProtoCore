@@ -19,7 +19,7 @@
 
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
 #define SSH_KEXHASH_MAX_LEN 64 ///< longest exchange-hash / session_id (SHA-512)
 
@@ -27,24 +27,24 @@
 typedef struct
 {
     proto_bool is512;
-    pc_sha256_ctx c256;
-    pc_sha512_ctx c512;
+    protocore_sha256_ctx c256;
+    protocore_sha512_ctx c512;
 } SshKexHash;
 
 /**
  * @brief Bind the digest to @p work and start it.
- * @param work PC_SHA256_BORROW bytes of caller storage; the SHA-512 arm carries its own.
+ * @param work PROTOCORE_SHA256_BORROW bytes of caller storage; the SHA-512 arm carries its own.
  */
 static inline void ssh_kexhash_init(SshKexHash *h, uint8_t *work, proto_bool is512)
 {
     h->is512 = is512;
     if (is512)
     {
-        pc_sha512_init(&h->c512, work);
+        protocore_sha512_init(&h->c512, work);
     }
     else
     {
-        pc_sha256_init(&h->c256, work);
+        protocore_sha256_init(&h->c256, work);
     }
 }
 
@@ -52,11 +52,11 @@ static inline void ssh_kexhash_update(SshKexHash *h, const uint8_t *data, size_t
 {
     if (h->is512)
     {
-        pc_sha512_update(&h->c512, data, len);
+        protocore_sha512_update(&h->c512, data, len);
     }
     else
     {
-        pc_sha256_update(&h->c256, data, len);
+        protocore_sha256_update(&h->c256, data, len);
     }
 }
 
@@ -65,17 +65,17 @@ static inline size_t ssh_kexhash_final(SshKexHash *h, uint8_t out[SSH_KEXHASH_MA
 {
     if (h->is512)
     {
-        pc_sha512_final(&h->c512, out);
-        return PC_SHA512_DIGEST_LEN;
+        protocore_sha512_final(&h->c512, out);
+        return PROTOCORE_SHA512_DIGEST_LEN;
     }
-    pc_sha256_final(&h->c256, out);
-    return PC_SHA256_DIGEST_LEN;
+    protocore_sha256_final(&h->c256, out);
+    return PROTOCORE_SHA256_DIGEST_LEN;
 }
 
 /** @brief The digest length for a given hash selection (32 or 64). */
 static inline size_t ssh_kexhash_len(proto_bool is512)
 {
-    return is512 ? PC_SHA512_DIGEST_LEN : PC_SHA256_DIGEST_LEN;
+    return is512 ? PROTOCORE_SHA512_DIGEST_LEN : PROTOCORE_SHA256_DIGEST_LEN;
 }
 
 #endif // PROTOCORE_SSH_KEXHASH_H

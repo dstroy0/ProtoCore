@@ -2,26 +2,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_dtls_handshake.h
+ * @file protocore_dtls_handshake.h
  * @brief DTLS 1.3 handshake framing and reliability (RFC 9147 §5, §7).
  *
- * The datagram-reliability layer that sits between the DTLS record layer (pc_dtls_record) and the
- * reused TLS 1.3 message builders (pc_tls13_msg). TLS 1.3 assumes an in-order reliable byte stream;
+ * The datagram-reliability layer that sits between the DTLS record layer (protocore_dtls_record) and the
+ * reused TLS 1.3 message builders (protocore_tls13_msg). TLS 1.3 assumes an in-order reliable byte stream;
  * DTLS carries the same handshake messages over lossy, reorderable datagrams, so each message gains
  * a 12-byte DTLS handshake header (RFC 9147 §5.2) that lets a fragment be placed independently of
  * the record that carried it, and lost flights are recovered with acknowledgements (§7) rather than
  * TCP retransmission.
  *
  * This file is pure framing - no crypto state, no sockets. It provides:
- *   - the 12-byte handshake header (@ref pc_dtls_hs_header_parse / @ref pc_dtls_hs_frag_build);
+ *   - the 12-byte handshake header (@ref protocore_dtls_hs_header_parse / @ref protocore_dtls_hs_frag_build);
  *   - overlap-tolerant message reassembly (@ref DtlsHsReasm), modelled on the QUIC CRYPTO-stream
  *     reassembler - a fragment may arrive split, duplicated, or overlapping (§5.4);
- *   - the ACK message (@ref pc_dtls_ack_build / @ref pc_dtls_ack_parse, content type 26, §7);
- *   - the stateless HelloRetryRequest cookie (@ref pc_dtls_cookie_make / @ref pc_dtls_cookie_verify,
+ *   - the ACK message (@ref protocore_dtls_ack_build / @ref protocore_dtls_ack_parse, content type 26, §7);
+ *   - the stateless HelloRetryRequest cookie (@ref protocore_dtls_cookie_make / @ref protocore_dtls_cookie_verify,
  *     the §5.1 return-routability / anti-amplification defense).
  *
- * The handshake state machine that drives these (flights, epochs, PTO) is pc_dtls_conn; the TLS 1.3
- * message bodies and key schedule are reused verbatim from the HTTP/3 stack (pc_tls13_msg, pc_tls13_kdf).
+ * The handshake state machine that drives these (flights, epochs, PTO) is protocore_dtls_conn; the TLS 1.3
+ * message bodies and key schedule are reused verbatim from the HTTP/3 stack (protocore_tls13_msg, protocore_tls13_kdf).
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -32,17 +32,17 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DTLS
+#if PROTOCORE_ENABLE_DTLS
 
 /** @brief DTLS handshake header length: msg_type(1) + length(3) + message_seq(2) + fragment_offset(3)
  *         + fragment_length(3) = 12 bytes (RFC 9147 §5.2). */
-#define PC_DTLS_HS_HDR_LEN 12
+#define PROTOCORE_DTLS_HS_HDR_LEN 12
 
 /** @brief message_hash synthetic-message type used when wrapping ClientHello1 for a HelloRetryRequest
- *         transcript (RFC 8446 §4.4.1). Framing constant; the transcript itself lives in pc_dtls_conn. */
-#define PC_DTLS_HS_TYPE_MESSAGE_HASH 254
+ *         transcript (RFC 8446 §4.4.1). Framing constant; the transcript itself lives in protocore_dtls_conn. */
+#define PROTOCORE_DTLS_HS_TYPE_MESSAGE_HASH 254
 
 // ---------------------------------------------------------------------------
 // Handshake message header (RFC 9147 §5.2)
@@ -65,7 +65,7 @@ typedef struct
 
 /** @brief Max distinct byte ranges tracked while reassembling one message (bounds the work an
  *         adversary can force by sending maximally fragmented flights). */
-#define PC_DTLS_HS_REASM_MAX_RANGES 8
+#define PROTOCORE_DTLS_HS_REASM_MAX_RANGES 8
 
 /**
  * @brief Reassembles the fragments of a single handshake message into a contiguous body.
@@ -76,16 +76,16 @@ typedef struct
  */
 typedef struct
 {
-    proto_bool active;                              ///< false until the first fragment of the target message is seen
-    proto_bool have_len;                            ///< true once a fragment established the full message length
-    uint8_t msg_type;                               ///< HandshakeType of the message being reassembled
-    uint16_t msg_seq;                               ///< the message sequence number this reassembler accepts
-    uint32_t length;                                ///< full body length (from the first non-empty fragment)
-    uint8_t *buf;                                   ///< caller-provided body buffer (>= length bytes)
-    size_t buf_cap;                                 ///< capacity of @ref buf
-    uint32_t range_lo[PC_DTLS_HS_REASM_MAX_RANGES]; ///< received interval starts
-    uint32_t range_hi[PC_DTLS_HS_REASM_MAX_RANGES]; ///< received interval ends (exclusive)
-    uint8_t range_count;                            ///< number of active intervals
+    proto_bool active;   ///< false until the first fragment of the target message is seen
+    proto_bool have_len; ///< true once a fragment established the full message length
+    uint8_t msg_type;    ///< HandshakeType of the message being reassembled
+    uint16_t msg_seq;    ///< the message sequence number this reassembler accepts
+    uint32_t length;     ///< full body length (from the first non-empty fragment)
+    uint8_t *buf;        ///< caller-provided body buffer (>= length bytes)
+    size_t buf_cap;      ///< capacity of @ref buf
+    uint32_t range_lo[PROTOCORE_DTLS_HS_REASM_MAX_RANGES]; ///< received interval starts
+    uint32_t range_hi[PROTOCORE_DTLS_HS_REASM_MAX_RANGES]; ///< received interval ends (exclusive)
+    uint8_t range_count;                                   ///< number of active intervals
 } DtlsHsReasm;
 
 // ---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ typedef struct
 
 /** @brief Maximum cookie length this implementation emits / accepts. Overhead is 43 bytes
  *         (version + timestamp + payload_len + HMAC); the rest is available for the payload. */
-#define PC_DTLS_COOKIE_MAX 128
+#define PROTOCORE_DTLS_COOKIE_MAX 128
 
 /**
  * @brief The handshake carried over the record layer: fragments, reassembly, ACKs, and the HRR cookie.
@@ -130,10 +130,10 @@ typedef struct
     int (*reasm_add)(DtlsHsReasm *r, const DtlsHsHeader *frag);
     size_t (*ack_build)(const DtlsRecordNumber *nums, size_t count, uint8_t *out, size_t out_cap);
     proto_bool (*ack_parse)(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap, size_t *out_count);
-    size_t (*cookie_make)(uint8_t *work, const uint8_t pc_hmac_key[32], uint64_t timestamp, const uint8_t *payload,
-                          size_t payload_len, const uint8_t *client_addr, size_t addr_len, uint8_t *out,
-                          size_t out_cap);
-    proto_bool (*cookie_verify)(uint8_t *work, const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
+    size_t (*cookie_make)(uint8_t *work, const uint8_t protocore_hmac_key[32], uint64_t timestamp,
+                          const uint8_t *payload, size_t payload_len, const uint8_t *client_addr, size_t addr_len,
+                          uint8_t *out, size_t out_cap);
+    proto_bool (*cookie_verify)(uint8_t *work, const uint8_t protocore_hmac_key[32], uint64_t now, uint64_t max_age,
                                 const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie, size_t cookie_len,
                                 uint8_t *payload_out, size_t payload_cap, size_t *payload_len_out);
 } DtlsHandshakeNs;
@@ -141,8 +141,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DtlsHandshakeNs DtlsHandshake;
 
-#endif // PC_ENABLE_DTLS
+#endif // PROTOCORE_ENABLE_DTLS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DTLS_HANDSHAKE_H

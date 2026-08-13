@@ -3,18 +3,18 @@
 
 /**
  * @file web_terminal.c
- * @brief Browser web-serial terminal over WebSocket (PC_ENABLE_WEB_TERMINAL).
+ * @brief Browser web-serial terminal over WebSocket (PROTOCORE_ENABLE_WEB_TERMINAL).
  */
 
 #include "services/web/web_terminal/web_terminal.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "protocore.h"     // MAX_PATH_LEN, MAX_WS_CONNS, HttpReq, send_text
 
-#if PC_ENABLE_WEB_TERMINAL
+#if PROTOCORE_ENABLE_WEB_TERMINAL
 
 // Dependency (WEB_TERMINAL requires WEBSOCKET) is enforced centrally in protocore_config.h.
 
-#include "network_drivers/application/web_assets.h" // PC_TERMINAL_PAGE
+#include "network_drivers/application/web_assets.h" // PROTOCORE_TERMINAL_PAGE
 #include "shared_primitives/mime.h"
 
 // ---------------------------------------------------------------------------
@@ -40,9 +40,9 @@ static WebTerminalCtx s_term;
 static void term_page_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    // This route only exists once pc_web_terminal_begin() has installed it, so there is nothing to
+    // This route only exists once protocore_web_terminal_begin() has installed it, so there is nothing to
     // test: the handler running IS the proof the service started.
-    send_text(slot_id, 200, PC_MIME_TEXT_HTML, PC_TERMINAL_PAGE);
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_HTML, PROTOCORE_TERMINAL_PAGE);
 }
 
 static void term_ws_connect(uint8_t ws_id)
@@ -78,7 +78,7 @@ static void term_ws_close(uint8_t ws_id)
 
 // ---- public API -----------------------------------------------------------
 
-void pc_web_terminal_begin(const char *path)
+void protocore_web_terminal_begin(const char *path)
 {
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
@@ -89,10 +89,10 @@ void pc_web_terminal_begin(const char *path)
     {
         path = "/terminal";
     }
-    pc_sb sb_ws_path = {s_term.ws_path, sizeof(s_term.ws_path), 0, PROTO_TRUE};
-    pc_sb_put(&sb_ws_path, path);
-    pc_sb_put(&sb_ws_path, "/ws");
-    if (pc_sb_finish(&sb_ws_path) == 0)
+    protocore_sb sb_ws_path = {s_term.ws_path, sizeof(s_term.ws_path), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_ws_path, path);
+    protocore_sb_put(&sb_ws_path, "/ws");
+    if (protocore_sb_finish(&sb_ws_path) == 0)
     {
         s_term.ws_path[0] = '\0';
     }
@@ -101,12 +101,12 @@ void pc_web_terminal_begin(const char *path)
     on_ws(s_term.ws_path, term_ws_connect, term_ws_message, term_ws_close);
 }
 
-void pc_web_terminal_on_command(TermCommandCb cb)
+void protocore_web_terminal_on_command(TermCommandCb cb)
 {
     s_term.cb = cb;
 }
 
-void pc_web_terminal_print(const char *s)
+void protocore_web_terminal_print(const char *s)
 {
     if (!s)
     {
@@ -121,20 +121,20 @@ void pc_web_terminal_print(const char *s)
     }
 }
 
-void pc_web_terminal_println(const char *s)
+void protocore_web_terminal_println(const char *s)
 {
     char buf[TERM_TX_BUF_SIZE];
-    pc_sb sb_buf = {buf, sizeof(buf), 0, PROTO_TRUE};
-    pc_sb_put(&sb_buf, s ? s : "");
-    pc_sb_put(&sb_buf, "\n");
-    if (pc_sb_finish(&sb_buf) == 0)
+    protocore_sb sb_buf = {buf, sizeof(buf), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_buf, s ? s : "");
+    protocore_sb_put(&sb_buf, "\n");
+    if (protocore_sb_finish(&sb_buf) == 0)
     {
         buf[0] = '\0';
     }
-    pc_web_terminal_print(buf);
+    protocore_web_terminal_print(buf);
 }
 
-uint8_t pc_web_terminal_client_count()
+uint8_t protocore_web_terminal_client_count()
 {
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
@@ -147,4 +147,4 @@ uint8_t pc_web_terminal_client_count()
     return n;
 }
 
-#endif // PC_ENABLE_WEB_TERMINAL
+#endif // PROTOCORE_ENABLE_WEB_TERMINAL

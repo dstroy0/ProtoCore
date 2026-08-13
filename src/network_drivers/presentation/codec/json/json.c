@@ -9,7 +9,7 @@
 #include "json.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 #include "mmgr/protostr.h"
-#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
+#include "shared_primitives/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
 
 // Longest member name pc_json_find_member will scan for.
 #define JSON_KEY_MAX 256
@@ -110,8 +110,8 @@ static void json_put_escaped(pc_json_writer *w, const char *s)
                 json_put(w, 'u');
                 json_put(w, '0');
                 json_put(w, '0');
-                json_put(w, PC_HEX_LOWER[(c >> 4) & 0x0f]);
-                json_put(w, PC_HEX_LOWER[c & 0x0f]);
+                json_put(w, PROTOCORE_HEX_LOWER[(c >> 4) & 0x0f]);
+                json_put(w, PROTOCORE_HEX_LOWER[c & 0x0f]);
             }
             else
             {

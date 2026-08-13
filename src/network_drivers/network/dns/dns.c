@@ -13,13 +13,13 @@
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 const DnsNs Dns = {
-#if PC_NEED_DNS_RESOLVER
+#if PROTOCORE_NEED_DNS_RESOLVER
     .resolver = &Resolver,
 #endif
-#if PC_ENABLE_DNS_SERVER
+#if PROTOCORE_ENABLE_DNS_SERVER
     .server = &DnsServer,
 #endif
-#if !PC_NEED_DNS_RESOLVER && !PC_ENABLE_DNS_SERVER
+#if !PROTOCORE_NEED_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
     .present = PROTO_FALSE,
 #endif
 };

@@ -9,33 +9,33 @@
 #include "services/iot/coap/coaps_server.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_DTLS && PC_ENABLE_COAP
+#if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
-#include "mmgr/ring.h" // pc_atomic (SPSC ingest-ring cursors)
+#include "mmgr/ring.h" // protocore_atomic (SPSC ingest-ring cursors)
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
-#include "server/clock/clock.h"      // pc_millis() - idle-reap clock (the DTLS PTO uses it internally too)
-#include "services/iot/coap/coaps.h" // pc_coaps_process()
+#include "server/clock/clock.h"      // protocore_millis() - idle-reap clock (the DTLS PTO uses it internally too)
+#include "services/iot/coap/coaps.h" // protocore_coaps_process()
 
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/udp.h"
 #endif
 
 // Largest inbound datagram buffered: a ClientHello, a client Finished, or one CoAP application record
 // (CoAP messages fit a single datagram, RFC 7252 §4.6). The server's outbound flight is larger but is
 // sent straight out, never buffered here.
-#ifndef PC_COAPS_MAX_DATAGRAM
-#define PC_COAPS_MAX_DATAGRAM 1500
+#ifndef PROTOCORE_COAPS_MAX_DATAGRAM
+#define PROTOCORE_COAPS_MAX_DATAGRAM 1500
 #endif
 // Scratch for one poll's outbound datagram: a full server flight (ServerHello..Finished) or a sealed
 // CoAP response. The Certificate-dominated flight is the largest thing written here.
-#define PC_COAPS_OUT_CAP 2048
+#define PROTOCORE_COAPS_OUT_CAP 2048
 // The HelloRetryRequest cookie binds the peer's IPv4 address (4) + port (2); the transport is IPv4.
-#define PC_COAPS_PEER_SER 6
+#define PROTOCORE_COAPS_PEER_SER 6
 
 // One buffered inbound datagram (payload + the peer it arrived from).
 typedef struct
 {
-    uint8_t data[PC_COAPS_MAX_DATAGRAM];
+    uint8_t data[PROTOCORE_COAPS_MAX_DATAGRAM];
     uint16_t len;
     char ip[16];
     uint16_t port;
@@ -52,7 +52,7 @@ typedef struct
     uint8_t srand[32];    ///< fresh ServerHello random for this handshake
     char peer_ip[16];
     uint16_t peer_port;
-    uint32_t last_ms; ///< pc_millis() of the last inbound datagram (idle-reaping clock)
+    uint32_t last_ms; ///< protocore_millis() of the last inbound datagram (idle-reaping clock)
 } CoapsSlot;
 
 // The DtlsConn pool + the ingest ring, owned by one instance (internal linkage). Kept separate from
@@ -60,8 +60,8 @@ typedef struct
 // HTTP/3 pool if a large pool were ever wanted). One named owner, unreachable cross-TU.
 typedef struct
 {
-    CoapsSlot pool[PC_COAPS_MAX_CONNS];
-    CoapsIngest ring[PC_COAPS_INGEST_RING];
+    CoapsSlot pool[PROTOCORE_COAPS_MAX_CONNS];
+    CoapsIngest ring[PROTOCORE_COAPS_INGEST_RING];
 } CoapsServerPoolCtx;
 static CoapsServerPoolCtx s_cpool;
 
@@ -79,7 +79,7 @@ typedef struct
     void (*rng)(uint8_t *out, size_t len);
     uint16_t port;
     proto_bool running;
-#if !PC_HAS_NET_STACK
+#if !PROTOCORE_HAS_NET_STACK
     CoapsServerOutFn out_sink;
     void *out_ctx;
 #endif
@@ -103,7 +103,7 @@ static void copy_str(char *dst, size_t cap, const char *src)
 // Serialize an IPv4 dotted-quad @p ip + @p port into the address the HelloRetryRequest cookie binds, so
 // a cookie minted for one peer is worthless to another (RFC 9147 §5.1). Returns false on a malformed
 // address (then no address is bound and the peer simply cannot take the HRR path).
-static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PC_COAPS_PEER_SER])
+static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PROTOCORE_COAPS_PEER_SER])
 {
     uint32_t oct = 0;
     int octets = 0;
@@ -151,8 +151,8 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PC_C
 
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
-#if PC_HAS_NET_STACK
-    pc_ip dst = {PC_IP_NONE, {0}};
+#if PROTOCORE_HAS_NET_STACK
+    protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     if (Ip.parse(ip, &dst))
     {
         Udp.listener->sendto(s_coaps.port, &dst, port, data, len);
@@ -165,15 +165,15 @@ static void server_send(const char *ip, uint16_t port, const uint8_t *data, size
 #endif
 }
 
-// --- ingest ring (SPSC: one producer fills, pc_coaps_server_poll consumes) ------------------------
+// --- ingest ring (SPSC: one producer fills, protocore_coaps_server_poll consumes) ------------------------
 static proto_bool ring_push(const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
-    if (len == 0 || len > PC_COAPS_MAX_DATAGRAM)
+    if (len == 0 || len > PROTOCORE_COAPS_MAX_DATAGRAM)
     {
         return PROTO_FALSE;
     }
     size_t head = s_coaps.ring_head;
-    size_t next = (head + 1) % PC_COAPS_INGEST_RING;
+    size_t next = (head + 1) % PROTOCORE_COAPS_INGEST_RING;
     if (next == (size_t)s_coaps.ring_tail)
     {
         return PROTO_FALSE; // ring full: drop (DTLS recovers via retransmission)
@@ -195,14 +195,14 @@ static proto_bool ring_pop(CoapsIngest *out)
         return PROTO_FALSE;
     }
     *out = s_cpool.ring[tail];
-    s_coaps.ring_tail = (tail + 1) % PC_COAPS_INGEST_RING;
+    s_coaps.ring_tail = (tail + 1) % PROTOCORE_COAPS_INGEST_RING;
     return PROTO_TRUE;
 }
 
 // --- slot pool (keyed by peer address, or by connection id once one is negotiated) -------------
 static CoapsSlot *slot_by_peer(const char *ip, uint16_t port)
 {
-    for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         CoapsSlot *s = &s_cpool.pool[i];
         if (s->used && s->peer_port == port && strcmp(s->peer_ip, ip) == 0)
@@ -218,8 +218,8 @@ static CoapsSlot *slot_by_peer(const char *ip, uint16_t port)
 // @p cid points just past the record's first byte; @p avail is the bytes available there.
 static CoapsSlot *slot_by_cid(const uint8_t *cid, size_t avail)
 {
-    uint8_t sc[PC_DTLS_CID_MAX];
-    for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)
+    uint8_t sc[PROTOCORE_DTLS_CID_MAX];
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         CoapsSlot *s = &s_cpool.pool[i];
         if (!s->used)
@@ -237,7 +237,7 @@ static CoapsSlot *slot_by_cid(const uint8_t *cid, size_t avail)
 
 static CoapsSlot *alloc_slot()
 {
-    for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         if (!s_cpool.pool[i].used)
         {
@@ -266,7 +266,7 @@ static CoapsSlot *open_conn(const char *ip, uint16_t port)
     s->cfg.ephemeral_priv = s->eph;
     s->cfg.server_random = s->srand;
     s->cfg.cookie_key = s_coaps.cookie_key;
-    uint8_t paddr[PC_COAPS_PEER_SER];
+    uint8_t paddr[PROTOCORE_COAPS_PEER_SER];
     proto_bool ok = serialize_peer(ip, port, paddr);
     DtlsServer.init(&s->conn, &s->cfg, ok ? paddr : NULL, ok ? sizeof paddr : 0);
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
@@ -274,8 +274,8 @@ static CoapsSlot *open_conn(const char *ip, uint16_t port)
     return s;
 }
 
-#if PC_HAS_NET_STACK
-static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+#if PROTOCORE_HAS_NET_STACK
+static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     char ip[16];
@@ -316,7 +316,7 @@ static void coaps_route_datagram(const CoapsIngest *ig, uint32_t now, uint8_t *o
         s->peer_port = ig->port;
     }
     s->last_ms = now;
-    int n = pc_coaps_process(&s->conn, ig->data, ig->len, out, out_cap);
+    int n = protocore_coaps_process(&s->conn, ig->data, ig->len, out, out_cap);
     if (n > 0)
     {
         server_send(s->peer_ip, s->peer_port, out, (size_t)n);
@@ -348,13 +348,13 @@ static void coaps_service_slot(CoapsSlot *s, uint32_t now, uint8_t *out, size_t 
             return;
         }
     }
-    if (now - s->last_ms >= PC_COAPS_IDLE_MS) // wrap-safe idle delta (uint32_t arithmetic)
+    if (now - s->last_ms >= PROTOCORE_COAPS_IDLE_MS) // wrap-safe idle delta (uint32_t arithmetic)
     {
         s->used = PROTO_FALSE;
     }
 }
 
-proto_bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg)
+proto_bool protocore_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg)
 {
     if (!cfg || !cfg->rng || !cfg->cert_der || cfg->cert_len == 0)
     {
@@ -365,29 +365,29 @@ proto_bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg)
     mem.cpy(s_coaps.ed25519_seed, cfg->ed25519_seed, sizeof s_coaps.ed25519_seed);
     mem.cpy(s_coaps.cookie_key, cfg->cookie_key, sizeof s_coaps.cookie_key);
     s_coaps.rng = cfg->rng;
-    s_coaps.port = port ? port : PC_COAPS_PORT;
-    for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)
+    s_coaps.port = port ? port : PROTOCORE_COAPS_PORT;
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         s_cpool.pool[i].used = PROTO_FALSE;
     }
     s_coaps.ring_head = 0;
     s_coaps.ring_tail = 0;
     s_coaps.running = PROTO_TRUE;
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
     return Udp.listener->listen(s_coaps.port, udp_ingest_cb, NULL);
 #else
-    return PROTO_TRUE; // host: fed through pc_coaps_server_ingest()
+    return PROTO_TRUE; // host: fed through protocore_coaps_server_ingest()
 #endif
 }
 
-void pc_coaps_server_poll()
+void protocore_coaps_server_poll()
 {
     if (!s_coaps.running)
     {
         return;
     }
-    uint32_t now = pc_millis();
-    uint8_t out[PC_COAPS_OUT_CAP];
+    uint32_t now = protocore_millis();
+    uint8_t out[PROTOCORE_COAPS_OUT_CAP];
 
     // Drain queued datagrams: route each to its peer's slot (opening one for a new peer) and drive the
     // handshake / CoAP exchange through the bridge.
@@ -398,16 +398,16 @@ void pc_coaps_server_poll()
     }
 
     // Fire the retransmission timer for any outstanding flight, then reap closed / idle connections.
-    for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         coaps_service_slot(&s_cpool.pool[i], now, out, sizeof out);
     }
 }
 
-uint8_t pc_coaps_server_active_conns()
+uint8_t protocore_coaps_server_active_conns()
 {
     uint8_t n = 0;
-    for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         if (s_cpool.pool[i].used)
         {
@@ -417,10 +417,10 @@ uint8_t pc_coaps_server_active_conns()
     return n;
 }
 
-void pc_coaps_server_stop()
+void protocore_coaps_server_stop()
 {
     s_coaps.running = PROTO_FALSE;
-    for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         s_cpool.pool[i].used = PROTO_FALSE;
     }
@@ -428,17 +428,17 @@ void pc_coaps_server_stop()
     s_coaps.ring_tail = 0;
 }
 
-#if !PC_HAS_NET_STACK
-void pc_coaps_server_set_out_sink_cb(CoapsServerOutFn fn, void *ctx)
+#if !PROTOCORE_HAS_NET_STACK
+void protocore_coaps_server_set_out_sink_cb(CoapsServerOutFn fn, void *ctx)
 {
     s_coaps.out_sink = fn;
     s_coaps.out_ctx = ctx;
 }
 
-proto_bool pc_coaps_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port)
+proto_bool protocore_coaps_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port)
 {
     return ring_push(datagram, len, ip, port);
 }
 #endif
 
-#endif // PC_ENABLE_DTLS && PC_ENABLE_COAP
+#endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

@@ -3,7 +3,7 @@
 
 /**
  * @file NtripCaster.ino
- * @brief GNSS RTK base + NTRIP caster, and a matching rover (PC_ENABLE_NTRIP_CASTER).
+ * @brief GNSS RTK base + NTRIP caster, and a matching rover (PROTOCORE_ENABLE_NTRIP_CASTER).
  *
  * Two ESP32-S3 boards, each with a GT-U7 GPS on Serial1 (GPS TX -> GPIO18, GPS RX -> GPIO17, PPS -> GPIO4):
  *
@@ -26,10 +26,10 @@
  * base board's IP (printed by the base at boot). Open Serial @ 115200 to watch each side.
  *
  * NOTE (PlatformIO): the caster is compiled into the *library*, so the flag must reach the whole build:
- * `build_flags = -DPC_ENABLE_NTRIP_CASTER=1`. In the Arduino IDE it is set in build_opt.h.
+ * `build_flags = -DPROTOCORE_ENABLE_NTRIP_CASTER=1`. In the Arduino IDE it is set in build_opt.h.
  */
 
-#define PC_ENABLE_NTRIP_CASTER 1
+#define PROTOCORE_ENABLE_NTRIP_CASTER 1
 
 // --- CHANGE ME: 1 = base (survey-in + caster), 0 = rover (NTRIP client) ---
 #define NTRIP_ROLE_BASE 1
@@ -105,7 +105,7 @@ void setup()
     Serial1.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
     pinMode(PPS_PIN, INPUT);
     attachInterrupt(digitalPinToInterrupt(PPS_PIN), on_pps, RISING);
-    pc_gnss_survey_reset(&s_survey);
+    protocore_gnss_survey_reset(&s_survey);
 
     Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
@@ -129,7 +129,7 @@ void setup()
     mount.nmea_required = false;
 
     int32_t li = listen(CASTER_PORT, PROTO_NTRIP_CASTER);
-    if (li < 0 || !pc_ntrip_caster_add_mount((uint8_t)li, &mount, nullptr /*open access*/))
+    if (li < 0 || !protocore_ntrip_caster_add_mount((uint8_t)li, &mount, nullptr /*open access*/))
     {
         Serial.println("caster add_mount failed");
     }
@@ -148,20 +148,20 @@ void loop()
     if (read_nmea_line(line, sizeof(line), &len))
     {
         Nmea0183 m;
-        if (pc_nmea0183_parse(line, strlen(line), &m) && m.type[0] == 'G' && m.type[1] == 'G' && m.type[2] == 'A')
+        if (protocore_nmea0183_parse(line, strlen(line), &m) && m.type[0] == 'G' && m.type[1] == 'G' && m.type[2] == 'A')
         {
             if (!s_surveyed)
             {
-                if (pc_gnss_survey_add_gga(&s_survey, &m))
+                if (protocore_gnss_survey_add_gga(&s_survey, &m))
                 {
-                    uint32_t n = pc_gnss_survey_count(&s_survey);
+                    uint32_t n = protocore_gnss_survey_count(&s_survey);
                     if (n % 10 == 0)
                     {
-                        Serial.printf("survey: %u fixes, spread %.2f m\n", n, pc_gnss_survey_accuracy_m(&s_survey));
+                        Serial.printf("survey: %u fixes, spread %.2f m\n", n, protocore_gnss_survey_accuracy_m(&s_survey));
                     }
-                    if (pc_gnss_survey_complete(&s_survey, SURVEY_MIN_OBS, SURVEY_ACC_LIMIT_M))
+                    if (protocore_gnss_survey_complete(&s_survey, SURVEY_MIN_OBS, SURVEY_ACC_LIMIT_M))
                     {
-                        pc_gnss_survey_mean(&s_survey, &s_base_ecef);
+                        protocore_gnss_survey_mean(&s_survey, &s_base_ecef);
                         s_surveyed = true;
                         Serial.printf("survey COMPLETE after %u fixes; serving 1005 for /%s\n", n, MOUNTPOINT);
                     }
@@ -175,9 +175,9 @@ void loop()
     {
         s_last_bcast_ms = millis();
         uint8_t frame[32];
-        size_t n = pc_rtcm3_build_1005(frame, sizeof(frame), STATION_ID, pc_gnss_ecef_m_to_01mm(s_base_ecef.x),
-                                       pc_gnss_ecef_m_to_01mm(s_base_ecef.y), pc_gnss_ecef_m_to_01mm(s_base_ecef.z));
-        int sent = pc_ntrip_caster_broadcast(MOUNTPOINT, frame, n);
+        size_t n = protocore_rtcm3_build_1005(frame, sizeof(frame), STATION_ID, protocore_gnss_ecef_m_to_01mm(s_base_ecef.x),
+                                       protocore_gnss_ecef_m_to_01mm(s_base_ecef.y), protocore_gnss_ecef_m_to_01mm(s_base_ecef.z));
+        int sent = protocore_ntrip_caster_broadcast(MOUNTPOINT, frame, n);
         if (sent > 0)
         {
             Serial.printf("1005 -> %d rover(s)  [pps=%u]\n", sent, s_pps_count);
@@ -238,7 +238,7 @@ void setup()
 }
 
 // Feed one RTCM byte into the sync/parse buffer; decode any complete 1005 frames.
-static void pc_rtcm_push(uint8_t b)
+static void protocore_rtcm_push(uint8_t b)
 {
     if (s_rtcm_len < sizeof(s_rtcm))
     {
@@ -247,14 +247,14 @@ static void pc_rtcm_push(uint8_t b)
 
     for (;;)
     {
-        size_t off = pc_rtcm3_sync(s_rtcm, s_rtcm_len); // drop bytes before the next 0xD3 preamble
+        size_t off = protocore_rtcm3_sync(s_rtcm, s_rtcm_len); // drop bytes before the next 0xD3 preamble
         if (off > 0)
         {
             memmove(s_rtcm, s_rtcm + off, s_rtcm_len - off);
             s_rtcm_len -= off;
         }
         Rtcm3Frame f;
-        size_t used = pc_rtcm3_frame_parse(s_rtcm, s_rtcm_len, &f);
+        size_t used = protocore_rtcm3_frame_parse(s_rtcm, s_rtcm_len, &f);
         if (used == 0)
         {
             return; // need more bytes for a full frame
@@ -263,11 +263,11 @@ static void pc_rtcm_push(uint8_t b)
         if (f.crc_ok && f.msg_type == 1005)
         {
             Rtcm3StationArp arp;
-            if (pc_rtcm3_parse_1005(f.payload, f.payload_len, &arp))
+            if (protocore_rtcm3_parse_1005(f.payload, f.payload_len, &arp))
             {
                 GnssEcef e = {arp.ecef_x_01mm / 10000.0, arp.ecef_y_01mm / 10000.0, arp.ecef_z_01mm / 10000.0};
                 GnssGeodetic g;
-                pc_gnss_ecef_to_geodetic(&e, &g);
+                protocore_gnss_ecef_to_geodetic(&e, &g);
                 Serial.printf("RTCM 1005 sta=%u  ECEF %.3f, %.3f, %.3f m  ->  %.7f, %.7f  h=%.2f m  [pps=%u]\n",
                               arp.station_id, e.x, e.y, e.z, g.lat_deg, g.lon_deg, g.height_m, s_pps_count);
             }
@@ -311,7 +311,7 @@ void loop()
             }
             continue;
         }
-        pc_rtcm_push(b);
+        protocore_rtcm_push(b);
     }
 }
 #endif

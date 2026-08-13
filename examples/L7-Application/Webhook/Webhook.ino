@@ -3,19 +3,19 @@
 
 /**
  * @file Webhook.ino
- * @brief Outbound webhooks / IFTTT (PC_ENABLE_WEBHOOK).
+ * @brief Outbound webhooks / IFTTT (PROTOCORE_ENABLE_WEBHOOK).
  *
  * Pushes an event FROM the device: builds an IFTTT Maker URL + value1/2/3 JSON
  * and POSTs it through the outbound http_client. GET /fire triggers it on demand;
  * point WEBHOOK_URL at IFTTT, a Slack/Discord incoming webhook, or your own API.
  *
  * NOTE: enable both flags for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_HTTP_CLIENT=1 -DPC_ENABLE_WEBHOOK=1
+ *     build_flags = -DPROTOCORE_ENABLE_HTTP_CLIENT=1 -DPROTOCORE_ENABLE_WEBHOOK=1
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_HTTP_CLIENT 1
-#define PC_ENABLE_WEBHOOK 1
+#define PROTOCORE_ENABLE_HTTP_CLIENT 1
+#define PROTOCORE_ENABLE_WEBHOOK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -53,11 +53,11 @@ void loop()
     {
         fired = true;
         char body[128];
-        pc_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body));
-        int status = pc_webhook_post(WEBHOOK_URL, body);
+        protocore_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body));
+        int status = protocore_webhook_post(WEBHOOK_URL, body);
         Serial.printf("[webhook] POST -> status %d\n", status);
 
         // IFTTT Maker form (needs your real key):
-        //   pc_ifttt_trigger("device_boot", "YOUR_IFTTT_KEY", "esp32", nullptr, nullptr);
+        //   protocore_ifttt_trigger("device_boot", "YOUR_IFTTT_KEY", "esp32", nullptr, nullptr);
     }
 }

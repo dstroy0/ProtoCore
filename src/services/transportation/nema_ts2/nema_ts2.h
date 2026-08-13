@@ -3,7 +3,7 @@
 
 /**
  * @file nema_ts2.h
- * @brief NEMA TS 2 traffic-cabinet SDLC frame codec (PC_ENABLE_NEMA_TS2).
+ * @brief NEMA TS 2 traffic-cabinet SDLC frame codec (PROTOCORE_ENABLE_NEMA_TS2).
  *
  * NEMA TS 2 links the devices inside a traffic-signal control cabinet - the controller, the Malfunction
  * Management Unit (MMU), the Bus Interface Units (BIUs) and detector racks - over a synchronous SDLC
@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_NEMA_TS2
+#if PROTOCORE_ENABLE_NEMA_TS2
 
 /** @brief Common TS 2 frame types (the third octet). */
 // NEMA TS2 frame types: wire values compared, so integer constants in a namespacing struct.
@@ -37,14 +37,14 @@ typedef struct
 } NemaTs2;
 
 /** @brief HDLC/X.25 CRC-16 (CRC-16/X-25) over @p len bytes. */
-uint16_t pc_nema_ts2_crc(const uint8_t *bytes, size_t len);
+uint16_t protocore_nema_ts2_crc(const uint8_t *bytes, size_t len);
 
 /**
  * @brief Build a TS 2 SDLC frame: [address][control][frame_type][data...][FCS lo][FCS hi].
  * @return the frame length (3 + data_len + 2), or 0 on overflow / bad args.
  */
-size_t pc_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_type, const uint8_t *data, size_t data_len,
-                         uint8_t *out, size_t cap);
+size_t protocore_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_type, const uint8_t *data,
+                                size_t data_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed TS 2 frame (data points into the input). */
 typedef struct
@@ -57,10 +57,10 @@ typedef struct
 } NemaTs2Frame;
 
 /** @brief Validate the FCS and parse a TS 2 frame. @return true if the CRC matches and it is well-formed. */
-proto_bool pc_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out);
+proto_bool protocore_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out);
 
-#endif // PC_ENABLE_NEMA_TS2
+#endif // PROTOCORE_ENABLE_NEMA_TS2
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NEMA_TS2_H

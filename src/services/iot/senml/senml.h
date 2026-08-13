@@ -3,7 +3,7 @@
 
 /**
  * @file senml.h
- * @brief SenML (RFC 8428) sensor-measurement pack builder (PC_ENABLE_SENML) - zero-heap
+ * @brief SenML (RFC 8428) sensor-measurement pack builder (PROTOCORE_ENABLE_SENML) - zero-heap
  *        SenML-JSON and SenML-CBOR encoders over the shipped JSON / CBOR codecs. SenML is
  *        the standard measurement format for CoAP / LwM2M / HTTP telemetry.
  *
@@ -19,7 +19,7 @@
  *
  * The caller fills a @ref SenmlRecord array and the builder emits the whole pack into a
  * caller buffer (fail-closed on overflow). Verified against the RFC 8428 example. A resolver
- * (@ref pc_senml_resolve, RFC 8428 §4.6) folds the base name / base time into each record so a
+ * (@ref protocore_senml_resolve, RFC 8428 §4.6) folds the base name / base time into each record so a
  * consumer gets standalone records with a full name and an absolute time.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -29,12 +29,12 @@
 #ifndef PROTOCORE_SENML_H
 #define PROTOCORE_SENML_H
 
-#include "network_drivers/presentation/codec/codec.h" // pc_codec - the encoding is a parameter
+#include "network_drivers/presentation/codec/codec.h" // protocore_codec - the encoding is a parameter
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SENML
+#if PROTOCORE_ENABLE_SENML
 
 /** @brief Which value field a record carries. */
 typedef enum PROTO_ENUM_PACKED
@@ -62,7 +62,7 @@ typedef struct
 } SenmlRecord;
 
 /** @brief Build a SenML-JSON pack. Returns bytes written (excluding NUL), or 0 on overflow. */
-size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count);
+size_t protocore_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count);
 
 /** @brief Build a SenML-CBOR pack (a CBOR array of integer-keyed maps). Returns bytes, or 0. */
 /**
@@ -74,7 +74,8 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
  *
  * @return bytes written, or 0 if the arguments are bad or the buffer was too small.
  */
-size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRecord *records, size_t count);
+size_t protocore_senml_build(const protocore_codec *c, uint8_t *buf, size_t cap, const SenmlRecord *records,
+                             size_t count);
 
 // --- resolution (RFC 8428 §4.6): apply the base fields to produce standalone records ---
 
@@ -102,10 +103,10 @@ typedef struct
  * record overrides it. Each input record produces one resolved record (a base-only carrier resolves to a
  * value-less record the caller can skip). @return the number of records resolved (min of @p n and @p max).
  */
-size_t pc_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, size_t max);
+size_t protocore_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, size_t max);
 
-#endif // PC_ENABLE_SENML
+#endif // PROTOCORE_ENABLE_SENML
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SENML_H

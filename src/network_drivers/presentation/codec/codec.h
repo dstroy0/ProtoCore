@@ -22,9 +22,9 @@
 #define PROTOCORE_CODEC_H
 
 #include "mmgr/span.h"
-#include "protocore_config.h" // PC_NEED_CBOR / PC_ENABLE_MSGPACK gate the instances below
+#include "protocore_config.h" // PROTOCORE_NEED_CBOR / PROTOCORE_ENABLE_MSGPACK gate the instances below
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The next item's type, reported by pc_codec::peek without consuming it.
@@ -35,16 +35,16 @@ PROTO_BEGIN_DECLS
  */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_CODEC_UINT = 0,
-    PC_CODEC_INT,
-    PC_CODEC_BYTES,
-    PC_CODEC_STR,
-    PC_CODEC_ARRAY,
-    PC_CODEC_MAP,
-    PC_CODEC_BOOL,
-    PC_CODEC_NULL,
-    PC_CODEC_FLOAT,
-    PC_CODEC_INVALID ///< end of buffer, a prior error, or an item this format does not carry
+    PROTOCORE_CODEC_UINT = 0,
+    PROTOCORE_CODEC_INT,
+    PROTOCORE_CODEC_BYTES,
+    PROTOCORE_CODEC_STR,
+    PROTOCORE_CODEC_ARRAY,
+    PROTOCORE_CODEC_MAP,
+    PROTOCORE_CODEC_BOOL,
+    PROTOCORE_CODEC_NULL,
+    PROTOCORE_CODEC_FLOAT,
+    PROTOCORE_CODEC_INVALID ///< end of buffer, a prior error, or an item this format does not carry
 } pc_codec_type;
 
 /**
@@ -95,6 +95,6 @@ typedef struct
 // MsgPack. The instance is the storage, so the format that owns the operations owns the
 // table built from them, and a build that compiles a format out has neither.
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CODEC_H

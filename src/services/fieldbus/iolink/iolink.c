@@ -8,34 +8,34 @@
 
 #include "services/fieldbus/iolink/iolink.h"
 
-#if PC_ENABLE_IOLINK
+#if PROTOCORE_ENABLE_IOLINK
 
-uint8_t pc_iol_mc(proto_bool read, uint8_t channel, uint8_t address)
+uint8_t protocore_iol_mc(proto_bool read, uint8_t channel, uint8_t address)
 {
     return (uint8_t)((read ? IOL_MC_READ : 0u) | ((channel & 0x03u) << 5) | (address & 0x1Fu));
 }
 
-proto_bool pc_iol_mc_is_read(uint8_t mc)
+proto_bool protocore_iol_mc_is_read(uint8_t mc)
 {
     return (mc & IOL_MC_READ) != 0;
 }
 
-uint8_t pc_iol_mc_channel(uint8_t mc)
+uint8_t protocore_iol_mc_channel(uint8_t mc)
 {
     return (uint8_t)((mc >> 5) & 0x03u);
 }
 
-uint8_t pc_iol_mc_address(uint8_t mc)
+uint8_t protocore_iol_mc_address(uint8_t mc)
 {
     return (uint8_t)(mc & 0x1Fu);
 }
 
-uint8_t pc_iol_ckt(uint8_t mseq_type, uint8_t checksum6)
+uint8_t protocore_iol_ckt(uint8_t mseq_type, uint8_t checksum6)
 {
     return (uint8_t)(((mseq_type & 0x03u) << 6) | (checksum6 & IOL_CHECK_SUM_MASK));
 }
 
-uint8_t pc_iol_cks(proto_bool event, proto_bool pd_invalid, uint8_t checksum6)
+uint8_t protocore_iol_cks(proto_bool event, proto_bool pd_invalid, uint8_t checksum6)
 {
     return (uint8_t)((event ? IOL_CKS_EVENT : 0u) | (pd_invalid ? IOL_CKS_PD_INVALID : 0u) |
                      (checksum6 & IOL_CHECK_SUM_MASK));
@@ -55,7 +55,7 @@ static uint8_t compress6(uint8_t b)
     return (uint8_t)((d5 << 5) | (d4 << 4) | (d3 << 3) | (d2 << 2) | (d1 << 1) | d0);
 }
 
-uint8_t pc_iol_checksum6(const uint8_t *msg, size_t len)
+uint8_t protocore_iol_checksum6(const uint8_t *msg, size_t len)
 {
     uint8_t x = IOL_CHECKSUM_SEED; // seed XORed with the first octet, then every octet
     for (size_t i = 0; i < len; i++)
@@ -65,19 +65,19 @@ uint8_t pc_iol_checksum6(const uint8_t *msg, size_t len)
     return compress6(x);
 }
 
-uint8_t pc_iol_finalize(uint8_t *msg, size_t len, size_t check_idx)
+uint8_t protocore_iol_finalize(uint8_t *msg, size_t len, size_t check_idx)
 {
     if (!msg || check_idx >= len)
     {
         return 0;
     }
     msg[check_idx] = (uint8_t)(msg[check_idx] & IOL_CHECK_HIGH_MASK); // zero the checksum field
-    uint8_t c6 = pc_iol_checksum6(msg, len);
+    uint8_t c6 = protocore_iol_checksum6(msg, len);
     msg[check_idx] = (uint8_t)(msg[check_idx] | (c6 & IOL_CHECK_SUM_MASK));
     return msg[check_idx];
 }
 
-proto_bool pc_iol_verify(const uint8_t *msg, size_t len, size_t check_idx)
+proto_bool protocore_iol_verify(const uint8_t *msg, size_t len, size_t check_idx)
 {
     if (!msg || check_idx >= len)
     {
@@ -91,4 +91,4 @@ proto_bool pc_iol_verify(const uint8_t *msg, size_t len, size_t check_idx)
     return compress6(x) == (uint8_t)(msg[check_idx] & IOL_CHECK_SUM_MASK);
 }
 
-#endif // PC_ENABLE_IOLINK
+#endif // PROTOCORE_ENABLE_IOLINK

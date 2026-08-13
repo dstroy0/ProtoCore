@@ -16,22 +16,22 @@ void tearDown(void)
 
 void test_data_combine(void)
 {
-    uint32_t d = pc_ldc1614_data(0xF123, 0x4567); // error nibble 0xF, data MSB 0x123
+    uint32_t d = protocore_ldc1614_data(0xF123, 0x4567); // error nibble 0xF, data MSB 0x123
     TEST_ASSERT_EQUAL_HEX32(0x01234567, d);
-    TEST_ASSERT_EQUAL_UINT8(0xF, pc_ldc1614_error(0xF123));
-    TEST_ASSERT_EQUAL_UINT8(0x0, pc_ldc1614_error(0x0123));
+    TEST_ASSERT_EQUAL_UINT8(0xF, protocore_ldc1614_error(0xF123));
+    TEST_ASSERT_EQUAL_UINT8(0x0, protocore_ldc1614_error(0x0123));
 }
 
 void test_freq_scale(void)
 {
-    TEST_ASSERT_EQUAL_UINT64(20000000ULL, pc_ldc1614_sensor_freq_hz(1u << 27, 40000000u));
-    TEST_ASSERT_EQUAL_UINT64(0ULL, pc_ldc1614_sensor_freq_hz(0, 40000000u));
+    TEST_ASSERT_EQUAL_UINT64(20000000ULL, protocore_ldc1614_sensor_freq_hz(1u << 27, 40000000u));
+    TEST_ASSERT_EQUAL_UINT64(0ULL, protocore_ldc1614_sensor_freq_hz(0, 40000000u));
 }
 
 void test_build_config(void)
 {
     uint8_t buf[LDC1614_CONFIG_MAX];
-    size_t n = pc_ldc1614_build_config(buf, sizeof(buf), 0xFFFF, 0x0400);
+    size_t n = protocore_ldc1614_build_config(buf, sizeof(buf), 0xFFFF, 0x0400);
     TEST_ASSERT_EQUAL_size_t(21, n);
     TEST_ASSERT_EQUAL_HEX8(LDC1614_REG_RCOUNT_CH0, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, buf[1]);
@@ -45,12 +45,12 @@ void test_build_config(void)
 void test_build_config_too_small(void)
 {
     uint8_t small[10];
-    TEST_ASSERT_EQUAL_size_t(0, pc_ldc1614_build_config(small, sizeof(small), 0xFFFF, 0x0400));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_ldc1614_build_config(small, sizeof(small), 0xFFFF, 0x0400));
 }
 
 void test_build_config_null_buf(void)
 {
-    TEST_ASSERT_EQUAL_size_t(0, pc_ldc1614_build_config(NULL, LDC1614_CONFIG_MAX, 0xFFFF, 0x0400));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_ldc1614_build_config(NULL, LDC1614_CONFIG_MAX, 0xFFFF, 0x0400));
 }
 
 int main(void)

@@ -19,7 +19,7 @@ From those four numbers:
 - **offset** (how wrong the slave clock is) = `((t2 - t1) - (t4 - t3)) / 2`
 - **path delay** (one-way network latency) = `((t2 - t1) + (t4 - t3)) / 2`
 
-`pc_ptp_compute()` does that arithmetic; the codec builds and parses every message.
+`protocore_ptp_compute()` does that arithmetic; the codec builds and parses every message.
 
 ## What you will need
 
@@ -86,7 +86,7 @@ disciplined grandmaster, combine with the **UbloxGnss** example.
 ```bash
 pio ci examples/L7-Application/Ptp \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_PTP=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PTP=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
@@ -96,8 +96,8 @@ pio ci examples/L7-Application/Ptp \
 Every PTP message starts with the same 34-octet header (message type, a version, length, domain, a
 64-bit correction field, the sender's 8-octet clock identity + port, a sequence id, and a control
 byte), all **big-endian**. Timestamps are 10 octets: 6 for seconds, 4 for nanoseconds.
-`pc_ptp_parse_header` decodes the header; `pc_ptp_parse_timestamp_msg` / `_parse_delay_resp` /
-`_parse_announce` decode the bodies; the `pc_ptp_build_*` functions do the reverse and stamp the
+`protocore_ptp_parse_header` decodes the header; `protocore_ptp_parse_timestamp_msg` / `_parse_delay_resp` /
+`_parse_announce` decode the bodies; the `protocore_ptp_build_*` functions do the reverse and stamp the
 right message-type and control values for you. It is fixed-size with **no heap**, unit-tested on a PC
 (`test/test_ptp`) against the IEEE 1588-2008 wire format. Only the UDP send/receive and the
 timestamping run on the ESP32. See [`src/network_drivers/application/ptp/ptp.h`](../../../src/network_drivers/application/ptp/ptp.h).

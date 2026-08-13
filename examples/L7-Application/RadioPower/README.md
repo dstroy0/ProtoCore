@@ -1,6 +1,6 @@
 # RadioPower - WiFi radio power controls
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_RADIO_POWER` (+ `PC_RADIO_WIFI_PS`, optional `PC_RADIO_MAX_TX_DBM`)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_RADIO_POWER` (+ `PROTOCORE_RADIO_WIFI_PS`, optional `PROTOCORE_RADIO_MAX_TX_DBM`)
 
 ## What this example teaches
 
@@ -18,8 +18,8 @@ Serial.printf("radio modem-sleep: %s\n", Radio.ps_name(Radio.ps_mode()));
 ```
 
 **The mode is a build flag, not a runtime call**, so it reaches the
-separately-compiled library: `PC_RADIO_WIFI_PS` is `0` (none), `1` (min modem
-sleep), or `2` (max modem sleep), with an optional `PC_RADIO_MAX_TX_DBM` cap.
+separately-compiled library: `PROTOCORE_RADIO_WIFI_PS` is `0` (none), `1` (min modem
+sleep), or `2` (max modem sleep), with an optional `PROTOCORE_RADIO_MAX_TX_DBM` cap.
 `Radio.ps_mode()` reads the live mode back and `Radio.ps_name()` turns
 it into a string for the endpoint.
 
@@ -27,7 +27,7 @@ it into a string for the endpoint.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_RADIO_POWER=1 -DPC_RADIO_WIFI_PS=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_RADIO_POWER=1 -DPROTOCORE_RADIO_WIFI_PS=1" \
   --lib="." examples/L7-Application/RadioPower/RadioPower.ino
 ```
 
@@ -44,7 +44,7 @@ with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_RADIO_POWER 1
+#define PROTOCORE_ENABLE_RADIO_POWER 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

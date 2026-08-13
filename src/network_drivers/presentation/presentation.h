@@ -6,7 +6,7 @@
  * @brief Layer 6 (Presentation) - wires the transport ring buffer to the HTTP parser.
  *
  * This layer owns two responsibilities:
- *   1. Drain bytes via the transport read API (pc_conn_available / pc_conn_read_byte)
+ *   1. Drain bytes via the transport read API (protocore_conn_available / protocore_conn_read_byte)
  *      and feed them into the HTTP parser one at a time - the ring is transport's.
  *   2. Expose slot-indexed `http_reset()` and `http_parse()` helpers that the
  *      session layer (server_tick) and application layer (handle) call by slot ID.
@@ -38,7 +38,7 @@
  */
 void http_reset(uint8_t slot_id);
 
-#if PC_ENABLE_KEEPALIVE
+#if PROTOCORE_ENABLE_KEEPALIVE
 /**
  * @brief Requests served on each connection slot (HTTP keep-alive fairness bound).
  *
@@ -54,19 +54,19 @@ extern uint16_t http_req_count[MAX_CONNS];
  *
  * Reads the parsed request: a message whose boundary is not known closes, HTTP/1.1 is persistent
  * unless Connection carries "close", and 1.0 is the reverse. A kept connection counts against
- * PC_KEEPALIVE_MAX_REQUESTS and closes once it reaches the bound.
+ * PROTOCORE_KEEPALIVE_MAX_REQUESTS and closes once it reaches the bound.
  */
 proto_bool keepalive_eval(uint8_t slot_id);
 #endif
 
-#if PC_ENABLE_KEEPALIVE || PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
 /**
  * @brief Whether @p token appears as an element of the Connection header value @p hdr.
  *
  * The value is a comma-delimited list ("Keep-Alive, Upgrade"), matched case insensitively on whole
  * elements so a longer token cannot match on its prefix.
  */
-proto_bool pc_http_conn_has_token(const char *hdr, const char *token);
+proto_bool protocore_http_conn_has_token(const char *hdr, const char *token);
 #endif
 
 /**
@@ -104,16 +104,16 @@ void http_parse(uint8_t slot_id);
  * session layer; Session.proto->register_builtins() installs it.
  */
 struct ProtoHandler;
-const struct ProtoHandler *http_proto_handler(void);
+const struct ProtoHandler *http_protocore_handler(void);
 
 /**
  * @brief Install the HTTP per-slot poll pump (the routing core's instance-bound `on_poll`).
  *
  * HTTP is the one protocol whose poll needs the `PC` instance (routing), so the
- * application layer installs its pump here at `begin()` - the TX-seam (`pc_resp_sink`) counterpart
+ * application layer installs its pump here at `begin()` - the TX-seam (`protocore_resp_sink`) counterpart
  * for the poll direction. With it set, HTTP plugs into the uniform `ProtoHandler::on_poll` seam
  * exactly like every other protocol, so the L5/worker dispatch loop has no HTTP special case.
  */
-void http_proto_set_poll(void (*fn)(uint8_t slot));
+void http_protocore_set_poll(void (*fn)(uint8_t slot));
 
 #endif

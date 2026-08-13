@@ -74,16 +74,16 @@ static uint8_t g_disk[131072]; // 128 KiB: comfortably covers one pass's seed + 
 static RamDisk g_ramdisk = {g_disk, sizeof(g_disk)};
 static WalDev g_dev;
 static WalStore g_wal;
-static pc_dbm g_db;
-static pc_doc_store g_ds;
+static protocore_dbm g_db;
+static protocore_doc_store g_ds;
 
 static bool put_s(const char *id, const char *json)
 {
-    return pc_docstore_put(&g_ds, id, (uint16_t)strlen(id), (const uint8_t *)json, (uint32_t)strlen(json));
+    return protocore_docstore_put(&g_ds, id, (uint16_t)strlen(id), (const uint8_t *)json, (uint32_t)strlen(json));
 }
 
 // Field-query fill: NUM_DOCS documents split 2:1 paris/lyon, bodies lifted verbatim from
-// test_docstore.cpp's test_find_by_field, so pc_docstore_find_str/find_int below scan a realistic-sized
+// test_docstore.cpp's test_find_by_field, so protocore_docstore_find_str/find_int below scan a realistic-sized
 // live set instead of a single document.
 #define NUM_DOCS 60
 static const char *doc_paris = "{\"name\":\"alice\",\"age\":30,\"city\":\"paris\"}"; // test_find_by_field
@@ -91,16 +91,16 @@ static const char *doc_lyon = "{\"name\":\"carol\",\"age\":25,\"city\":\"lyon\"}
 
 void dbench_run(void)
 {
-    static uint8_t getbuf[PC_DBM_VAL_MAX + 1];
+    static uint8_t getbuf[PROTOCORE_DBM_VAL_MAX + 1];
 
     for (;;)
     {
         // Fresh log + index + docstore each pass, so a repeating run never accumulates dead space or
         // exhausts g_disk across cycles (same reformat-per-pass pattern as performance_benching/device/dbm).
         g_dev = dev_over(&g_ramdisk);
-        pc_wal_store_format(&g_wal, &g_dev);
-        pc_dbm_open(&g_db, &g_wal);
-        pc_docstore_open(&g_ds, &g_db);
+        protocore_wal_store_format(&g_wal, &g_dev);
+        protocore_dbm_open(&g_db, &g_wal);
+        protocore_docstore_open(&g_ds, &g_db);
 
         // Seed the field-query set.
         for (int i = 0; i < NUM_DOCS; i++)
@@ -123,24 +123,24 @@ void dbench_run(void)
         static const char *put_update_json = "{\"name\":\"alice2\",\"age\":31}";
         const uint32_t put_update_len = (uint32_t)strlen(put_update_json);
 
-        // Overwrite an existing document: pc_docstore_put is pc_dbm_put underneath, so this still
+        // Overwrite an existing document: protocore_docstore_put is protocore_dbm_put underneath, so this still
         // appends one WAL record per call - N is sized to stay well inside one pass's g_disk capacity.
-        DBENCH_OP("pc_docstore_put (overwrite)", 1000,
-                  sinkb = pc_docstore_put(&g_ds, "u1", 2, (const uint8_t *)put_update_json, put_update_len));
+        DBENCH_OP("protocore_docstore_put (overwrite)", 1000,
+                  sinkb = protocore_docstore_put(&g_ds, "u1", 2, (const uint8_t *)put_update_json, put_update_len));
 
         // Read path: dbm index lookup + a pread of the JSON body back out of the WAL data region. Does
         // not append, so it is free to run at a much larger N.
-        DBENCH_OP("pc_docstore_get (existing id)", 50000,
-                  sinkl = pc_docstore_get(&g_ds, "u1", 2, getbuf, sizeof(getbuf)));
+        DBENCH_OP("protocore_docstore_get (existing id)", 50000,
+                  sinkl = protocore_docstore_get(&g_ds, "u1", 2, getbuf, sizeof(getbuf)));
 
         // Field query: scan all NUM_DOCS live documents, parsing each JSON body through the zero-heap
         // json.h reader and comparing the top-level string field. Null callback = count-only (the same
         // shape as test_find_count_only_null_cb).
-        DBENCH_OP("pc_docstore_find_str (city==paris)", 2000,
-                  sinku = pc_docstore_find_str(&g_ds, "city", "paris", NULL, NULL));
+        DBENCH_OP("protocore_docstore_find_str (city==paris)", 2000,
+                  sinku = protocore_docstore_find_str(&g_ds, "city", "paris", NULL, NULL));
 
         // Same scan, top-level integer field comparison.
-        DBENCH_OP("pc_docstore_find_int (age==30)", 2000, sinku = pc_docstore_find_int(&g_ds, "age", 30, NULL, NULL));
+        DBENCH_OP("protocore_docstore_find_int (age==30)", 2000, sinku = protocore_docstore_find_int(&g_ds, "age", 30, NULL, NULL));
 
         (void)sinkb;
         (void)sinkl;

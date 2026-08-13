@@ -39,12 +39,12 @@ EXAMPLES = os.path.join(ROOT, "examples")
 # vendor call in an example is teaching the unmapped form.
 VENDOR = [
     (re.compile(r"#include\s*<WiFi\.h>"), "#include <WiFi.h>", "the library's own physical.h"),
-    (re.compile(r"\bWiFi\.localIP\(\)"), "WiFi.localIP()", "pc_net_egress_ip()"),
-    (re.compile(r"\bWiFi\.softAPIP\(\)"), "WiFi.softAPIP()", "pc_net_ap_ip()"),
-    (re.compile(r"\bWiFi\.RSSI\(\)"), "WiFi.RSSI()", "pc_net_rssi()"),
-    (re.compile(r"\bWiFi\.macAddress\b"), "WiFi.macAddress()", "pc_net_mac()"),
-    (re.compile(r"\bWiFi\.SSID\(\)"), "WiFi.SSID()", "pc_net_ssid()"),
-    (re.compile(r"\bWiFi\.channel\(\)"), "WiFi.channel()", "pc_net_channel()"),
+    (re.compile(r"\bWiFi\.localIP\(\)"), "WiFi.localIP()", "protocore_net_egress_ip()"),
+    (re.compile(r"\bWiFi\.softAPIP\(\)"), "WiFi.softAPIP()", "protocore_net_ap_ip()"),
+    (re.compile(r"\bWiFi\.RSSI\(\)"), "WiFi.RSSI()", "protocore_net_rssi()"),
+    (re.compile(r"\bWiFi\.macAddress\b"), "WiFi.macAddress()", "protocore_net_mac()"),
+    (re.compile(r"\bWiFi\.SSID\(\)"), "WiFi.SSID()", "protocore_net_ssid()"),
+    (re.compile(r"\bWiFi\.channel\(\)"), "WiFi.channel()", "protocore_net_channel()"),
     (re.compile(r"\bWiFi\.softAP\("), "WiFi.softAP()", "init_wifi_ap_physical()"),
     (re.compile(r"\bWiFi\.setSleep\("), "WiFi.setSleep()", "nothing - no sketch needs it"),
     (re.compile(r"\bWiFi\.mode\("), "WiFi.mode()", "the init_wifi_*_physical() you call"),
@@ -52,9 +52,9 @@ VENDOR = [
     (re.compile(r"\besp_wifi_\w+"), "esp_wifi_*", "the library's physical layer"),
     (re.compile(r"\besp_netif_\w+"), "esp_netif_*", "the library's physical layer"),
     # rule 6 proper: banned outright, not merely superseded
-    (re.compile(r"\bWiFiClient(?:Secure)?\b"), "WiFiClient", "pc_client_* (SRCBANNED rule 6)"),
-    (re.compile(r"\bWiFiUDP\b"), "WiFiUDP", "pc_udp_* (SRCBANNED rule 6)"),
-    (re.compile(r"\bAsyncUDP\b"), "AsyncUDP", "pc_udp_* (SRCBANNED rule 6)"),
+    (re.compile(r"\bWiFiClient(?:Secure)?\b"), "WiFiClient", "protocore_client_* (SRCBANNED rule 6)"),
+    (re.compile(r"\bWiFiUDP\b"), "WiFiUDP", "protocore_udp_* (SRCBANNED rule 6)"),
+    (re.compile(r"\bAsyncUDP\b"), "AsyncUDP", "protocore_udp_* (SRCBANNED rule 6)"),
 ]
 
 _STR = re.compile(r'"(?:[^"\\]|\\.)*"')

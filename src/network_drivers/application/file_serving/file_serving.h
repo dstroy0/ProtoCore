@@ -7,7 +7,7 @@
  *
  * serve_file_internal() opens the file and writes the response head; file_send_pump() writes one
  * send-buffer window per call until the file is drained, so a response larger than the buffer is
- * spread across dispatches instead of held in one. pc_file_holds_slot() reports whether a slot is
+ * spread across dispatches instead of held in one. protocore_file_holds_slot() reports whether a slot is
  * mid-paging.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -20,14 +20,14 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq
 #include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
 #include "protocore_config.h"
-#include "server/filesystem/mnt.h" // pc_mnt_backend
+#include "server/filesystem/mnt.h" // protocore_mnt_backend
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Format @p epoch as an RFC 1123 GMT date into @p out (cap bytes); @p out is emptied for epoch <= 0. */
 void http_rfc1123(int64_t epoch, char *out, size_t cap);
 
-#if PC_ENABLE_FILE_SERVING
+#if PROTOCORE_ENABLE_FILE_SERVING
 
 /** @brief Dispatch a ROUTE_STATIC match: resolve the FS path and serve it (MIME/index/gzip). */
 void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r);
@@ -36,14 +36,14 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r);
  * @brief Open @p fs_path on @p file_sys and stream it as 200 with the given type and optional
  *        Content-Encoding. A null @p file_sys means whatever is mounted.
  */
-void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend *file_sys, const char *fs_path,
+void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_backend *file_sys, const char *fs_path,
                          const char *content_type, const char *content_encoding);
 
 /** @brief Resume a pending file response: page out one send-buffer window, finishing when drained. */
 void file_send_pump(uint8_t slot_id);
 
 /** @brief True while a file response is paging out on @p slot. */
-proto_bool pc_file_holds_slot(uint8_t slot);
+proto_bool protocore_file_holds_slot(uint8_t slot);
 
 /**
  * @brief Serve a file from the mounted volume.
@@ -57,7 +57,7 @@ proto_bool pc_file_holds_slot(uint8_t slot);
  * @param fs_path      Request path to the file, resolved against the mount root.
  * @param content_type MIME type string, e.g. "text/html".
  */
-void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_path, const char *content_type);
+void serve_file(uint8_t slot_id, const protocore_mnt_backend *file_sys, const char *fs_path, const char *content_type);
 
 /**
  * @brief Mount a filesystem subtree at a URL prefix (one-call static serving).
@@ -71,17 +71,17 @@ void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_
  *
  * @code
  * serve_static("/", NULL, "/www");          // the board's own storage
- * serve_static("/ram/", pc_mnt_ram(), "/"); // or any backend that satisfies our vtable
+ * serve_static("/ram/", protocore_mnt_ram(), "/"); // or any backend that satisfies our vtable
  * @endcode
  *
  * @param url_prefix  URL prefix to mount (with or without a trailing `*`).
  * @param file_sys    Backend to serve from; NULL uses whatever is mounted (the board's).
  * @param fs_root     Subtree on that backend (persistent string).
  */
-void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root);
+void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys, const char *fs_root);
 
-#endif // PC_ENABLE_FILE_SERVING
+#endif // PROTOCORE_ENABLE_FILE_SERVING
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FILE_SERVING_H

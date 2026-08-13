@@ -39,19 +39,19 @@ void dbench_run(void)
     g_mt.axis_z.actual_position = 42.0;
     g_mt.active_program = "PART_A.NC";
     g_mt.produced_part_count = 7;
-    pc_umati_bind(&g_mt);
+    protocore_umati_bind(&g_mt);
 
     for (;;)
     {
         DBENCH_BANNER("umati");
         volatile int sink = 0;
         OpcUaVariant v;
-        DBENCH_OP("pc_umati_read manufacturer", 200000,
-                  sink += pc_umati_read(PC_UMATI_NS, 5101 /*N_ID_MANUFACTURER*/, OPCUA_ATTR_VALUE, &v));
-        DBENCH_OP("pc_umati_read year", 200000,
-                  sink += pc_umati_read(PC_UMATI_NS, 5104 /*N_ID_YEAR*/, OPCUA_ATTR_VALUE, &v));
+        DBENCH_OP("protocore_umati_read manufacturer", 200000,
+                  sink += protocore_umati_read(PROTOCORE_UMATI_NS, 5101 /*N_ID_MANUFACTURER*/, OPCUA_ATTR_VALUE, &v));
+        DBENCH_OP("protocore_umati_read year", 200000,
+                  sink += protocore_umati_read(PROTOCORE_UMATI_NS, 5104 /*N_ID_YEAR*/, OPCUA_ATTR_VALUE, &v));
         OpcUaReference refs[8];
-        DBENCH_OP("pc_umati_browse (ObjectsFolder)", 200000, sink += pc_umati_browse(0, 85, refs, 8));
+        DBENCH_OP("protocore_umati_browse (ObjectsFolder)", 200000, sink += protocore_umati_browse(0, 85, refs, 8));
         (void)sink;
         DBENCH_DONE();
     }

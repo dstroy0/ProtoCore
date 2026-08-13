@@ -10,9 +10,9 @@
  * events interoperable with serverless / event-mesh consumers. Two content modes:
  *
  *  - **structured** - the whole event is one `application/cloudevents+json` body;
- *    build it with pc_cloudevents_build_json() into a caller buffer.
+ *    build it with protocore_cloudevents_build_json() into a caller buffer.
  *  - **binary** - the event attributes ride as `ce-*` HTTP headers and the payload
- *    is the body; read an inbound binary event with pc_cloudevents_from_headers().
+ *    is the body; read an inbound binary event with protocore_cloudevents_from_headers().
  *
  * Emit a binary event from a handler by adding the `ce-id` / `ce-source` /
  * `ce-type` / `ce-specversion` response headers yourself (and the data as the body)
@@ -27,7 +27,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_CLOUDEVENTS
+#if PROTOCORE_ENABLE_CLOUDEVENTS
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
@@ -59,7 +59,7 @@ typedef struct
  *
  * @return number of bytes written (excluding the NUL), or 0 on error.
  */
-size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce);
+size_t protocore_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce);
 
 /**
  * @brief Read an inbound binary-mode CloudEvent from a request's `ce-*` headers.
@@ -70,8 +70,8 @@ size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce);
  *
  * @return true if the three required attributes (id, source, type) are present.
  */
-proto_bool pc_cloudevents_from_headers(const HttpReq *req, CloudEvent *out);
+proto_bool protocore_cloudevents_from_headers(const HttpReq *req, CloudEvent *out);
 
-#endif // PC_ENABLE_CLOUDEVENTS
+#endif // PROTOCORE_ENABLE_CLOUDEVENTS
 
 #endif // PROTOCORE_CLOUDEVENTS_H

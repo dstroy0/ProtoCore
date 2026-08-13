@@ -1,6 +1,6 @@
 # SSHReverseTunnel - reach a device behind NAT over a public relay
 
-**Layer:** L5 Session · **Build flags:** `PC_ENABLE_SSH`, `PC_ENABLE_SSH_CLIENT`
+**Layer:** L5 Session · **Build flags:** `PROTOCORE_ENABLE_SSH`, `PROTOCORE_ENABLE_SSH_CLIENT`
 
 ## What this example teaches
 
@@ -21,24 +21,24 @@ curl http://127.0.0.1:8022/      # -> the device's web server, over the tunnel
 ## Run the tunnel in its own task (important)
 
 The handshake's field arithmetic runs in the caller's task and needs real stack:
-curve25519/ed25519 peak ~10.5 KB, and the ML-KEM hybrid (`PC_ENABLE_PQC_KEX`)
+curve25519/ed25519 peak ~10.5 KB, and the ML-KEM hybrid (`PROTOCORE_ENABLE_PQC_KEX`)
 ~16 KB. The Arduino `loop()` task's default 8 KB is **not enough** - create a
 dedicated task and drive `begin()`/`poll()` from it (a build guard enforces the
 matching worker-stack floor):
 
 ```cpp
 static void tunnel_task(void *) {
-    pc_ssh_tunnel_cfg cfg = {};
+    protocore_ssh_tunnel_cfg cfg = {};
     cfg.host = RELAY_HOST; cfg.port = 22; cfg.user = RELAY_USER;
     cfg.auth_seed = AUTH_SEED;   // the device's ed25519 seed
     cfg.host_pin  = HOST_PIN;    // SHA-256 of the relay's host-key blob (pinned)
     cfg.bind_port = 8022;        // relay listens here
     cfg.local_port = 80;         // tunnelled to our web server
-    pc_ssh_tunnel_begin(&cfg);
-    for (;;) { pc_ssh_tunnel_poll(); delay(5); }
+    protocore_ssh_tunnel_begin(&cfg);
+    for (;;) { protocore_ssh_tunnel_poll(); delay(5); }
 }
 // 20 KB stack covers the hybrid KEX; begin() and poll() must share this task.
-xTaskCreatePinnedToCore(tunnel_task, "pc_ssh_tun", 20480, nullptr, 5, nullptr, 0);
+xTaskCreatePinnedToCore(tunnel_task, "protocore_ssh_tun", 20480, nullptr, 5, nullptr, 0);
 ```
 
 ## The relay's host key is pinned
@@ -63,14 +63,14 @@ awk '{print $2}' /etc/ssh/ssh_host_ed25519_key.pub | base64 -d | sha256sum
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_CLIENT=1 -DPC_SSH_CLIENT_MAX_CHANNELS=2 -DPC_CLIENT_RX_BUF=2048 -DMAX_CONNS=4" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SSH=1 -DPROTOCORE_ENABLE_SSH_CLIENT=1 -DPROTOCORE_SSH_CLIENT_MAX_CHANNELS=2 -DPROTOCORE_CLIENT_RX_BUF=2048 -DMAX_CONNS=4" \
   --lib="." examples/L5-Session/SSHReverseTunnel/SSHReverseTunnel.ino
 ```
 
 The dialed-down channel count and client RX buffer keep this within the classic
 ESP32's ~122 KB internal DRAM (the reverse client holds a relay connection plus
 one bridge per channel); a PSRAM/large-SRAM board uses the roomier per-variant
-defaults from its board profile, and add `-DPC_ENABLE_PQC_KEX=1` for the ML-KEM
+defaults from its board profile, and add `-DPROTOCORE_ENABLE_PQC_KEX=1` for the ML-KEM
 hybrid (run the tunnel task with a >= 20 KB stack, as above).
 
 ## What it negotiates
@@ -79,7 +79,7 @@ The client offers the full modern suite and interoperates with any current SSH
 server: KEX `mlkem768x25519-sha256` (when PQC is built), `curve25519-sha256`,
 `ecdh-sha2-nistp256`, `diffie-hellman-group14-sha256`; host keys ed25519 / ECDSA /
 RSA (all pinned); ciphers chacha20-poly1305 / aes256-gcm / aes256-ctr. Forwarded
-connections are bridged through a channel pool (`PC_SSH_CLIENT_MAX_CHANNELS`), so
+connections are bridged through a channel pool (`PROTOCORE_SSH_CLIENT_MAX_CHANNELS`), so
 concurrent requests each get a channel.
 
 HW-verified against OpenSSH 10.0 on an ESP32-S3: handshake + ed25519 auth +

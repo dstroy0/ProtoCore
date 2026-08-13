@@ -20,7 +20,7 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The data-link module.
@@ -38,6 +38,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DatalinkNs Datalink;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

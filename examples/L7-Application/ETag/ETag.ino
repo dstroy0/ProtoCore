@@ -3,16 +3,16 @@
 
 /**
  * @file ETag.ino
- * @brief Conditional GET with ETag for served files (PC_ENABLE_ETAG).
+ * @brief Conditional GET with ETag for served files (PROTOCORE_ENABLE_ETAG).
  *
  * With ETag enabled, serve_file()/serve_static() emit a strong ETag (derived
  * from the file size + mtime) and answer a matching If-None-Match with
  * 304 Not Modified - saving bandwidth on repeat fetches of static assets.
  *
- * NOTE: this feature is compiled into the library only when PC_ENABLE_ETAG
+ * NOTE: this feature is compiled into the library only when PROTOCORE_ENABLE_ETAG
  * is set for the whole build (a .ino #define does not reach the separately
  * compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_ETAG=1
+ *     build_flags = -DPROTOCORE_ENABLE_ETAG=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Put a file at `data/www/index.html`, upload the LittleFS image, then:
@@ -20,7 +20,7 @@
  *   curl -i -H 'If-None-Match: "<etag>"' http://<ip>/   # 304 Not Modified
  */
 
-#define PC_ENABLE_ETAG 1
+#define PROTOCORE_ENABLE_ETAG 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

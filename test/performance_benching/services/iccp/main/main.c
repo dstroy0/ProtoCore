@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the ICCP / TASE.2 (IEC 60870-6) Data_Value codec
-// (services/energy/iccp): pc_iccp_state_q() builds the StateQ indication-point BER structure (a 2-bit
-// discrete state + quality-flags byte, optional 4-octet timestamp) and pc_iccp_real_q() builds the
+// (services/energy/iccp): protocore_iccp_state_q() builds the StateQ indication-point BER structure (a 2-bit
+// discrete state + quality-flags byte, optional 4-octet timestamp) and protocore_iccp_real_q() builds the
 // RealQ structure (a scaled signed INTEGER in milli-units + quality, optional timestamp). Both are
 // pure, zero-heap, no-stdlib BER blob builders - the byte-for-byte production code path, benched
 // with the exact spec-conformant inputs from test/test_iccp. This is a pure protocol codec: there
 // is no hardware, socket, or MMS transport involved, so the TASE.2 bilateral table and the MMS Read
-// wrapper (pc_mms_read_response) are deliberately out of scope here - only the deterministic
+// wrapper (protocore_mms_read_response) are deliberately out of scope here - only the deterministic
 // CPU-side data-value encoder is timed.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -34,17 +34,17 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // StateQ without timestamp: A2 { 85 01 <state<<6 | quality> } - the minimal indication point.
-        DBENCH_OP("pc_iccp_state_q no-time", 200000,
-                  sink += pc_iccp_state_q(ICCP_STATE_ON, ICCP_QUAL_VALID, NULL, out, sizeof(out)));
+        DBENCH_OP("protocore_iccp_state_q no-time", 200000,
+                  sink += protocore_iccp_state_q(ICCP_STATE_ON, ICCP_QUAL_VALID, NULL, out, sizeof(out)));
         // StateQ with the optional 4-octet TimeStamp TLV appended.
-        DBENCH_OP("pc_iccp_state_q +time", 200000,
-                  sink += pc_iccp_state_q(ICCP_STATE_OFF, ICCP_QUAL_SUSPECT, time4, out, sizeof(out)));
+        DBENCH_OP("protocore_iccp_state_q +time", 200000,
+                  sink += protocore_iccp_state_q(ICCP_STATE_OFF, ICCP_QUAL_SUSPECT, time4, out, sizeof(out)));
         // RealQ, small positive value: exercises the minimal-length signed-INTEGER content path.
-        DBENCH_OP("pc_iccp_real_q +12345", 200000,
-                  sink += pc_iccp_real_q(12345, ICCP_QUAL_VALID, NULL, out, sizeof(out)));
+        DBENCH_OP("protocore_iccp_real_q +12345", 200000,
+                  sink += protocore_iccp_real_q(12345, ICCP_QUAL_VALID, NULL, out, sizeof(out)));
         // RealQ, negative value + timestamp: two's-complement trimming plus the time TLV (worst case).
-        DBENCH_OP("pc_iccp_real_q -256 +time", 200000,
-                  sink += pc_iccp_real_q(-256, ICCP_QUAL_SUSPECT, time4, out, sizeof(out)));
+        DBENCH_OP("protocore_iccp_real_q -256 +time", 200000,
+                  sink += protocore_iccp_real_q(-256, ICCP_QUAL_SUSPECT, time4, out, sizeof(out)));
 
         (void)sink;
         DBENCH_DONE();

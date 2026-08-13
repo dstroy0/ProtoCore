@@ -3,7 +3,7 @@
 
 /**
  * @file Umati.ino
- * @brief umati - OPC UA for Machine Tools (OPC 40501-1) MachineTool model (PC_ENABLE_UMATI).
+ * @brief umati - OPC UA for Machine Tools (OPC 40501-1) MachineTool model (PROTOCORE_ENABLE_UMATI).
  *
  * Turns the board into a umati machine-tool server: it exposes the standard MachineTool information
  * model (Identification, Monitoring - MachineTool / Channel / Spindle / Axis_X..Z, Production,
@@ -11,19 +11,19 @@
  * in loop(). Any umati / OPC UA client (the umati dashboard, UaExpert, python asyncua) browses the
  * MachineTool and reads live values by their standard BrowseNames - the same shape across vendors.
  *
- *   pc_umati_install(&mt)                    -> registers the OPC UA Browse + Read resolvers
+ *   protocore_umati_install(&mt)                    -> registers the OPC UA Browse + Read resolvers
  *   listen(4840, PROTO_OPCUA)      -> the OPC UA / umati endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); umati is the machine-tool model on top. The
  * HTTP server on :80 runs alongside on the same event loop.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_OPCUA=1 -DPC_ENABLE_UMATI=1
+ *     build_flags = -DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_UMATI=1
  * (Arduino IDE: already set for you in the build_opt.h beside this sketch.)
  */
 
-#define PC_ENABLE_OPCUA 1
-#define PC_ENABLE_UMATI 1
+#define PROTOCORE_ENABLE_OPCUA 1
+#define PROTOCORE_ENABLE_UMATI 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -69,7 +69,7 @@ void setup()
     mt.message_text = ""; // no active message
     mt.message_severity = 0;
 
-    pc_umati_install(&mt); // bind + register the OPC UA Browse/Read resolvers
+    protocore_umati_install(&mt); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "umati MachineTool on :4840"); });
     listen(4840, PROTO_OPCUA); // OPC UA / umati endpoint - before begin()

@@ -9,7 +9,7 @@
 #include "services/iot/cloudevents/cloudevents.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_CLOUDEVENTS
+#if PROTOCORE_ENABLE_CLOUDEVENTS
 
 #include "network_drivers/presentation/codec/json/json.h"
 
@@ -23,7 +23,7 @@ static proto_bool ce_present(const char *s)
 static const char *const CE_KEY_DATACONTENTTYPE = "datacontenttype";
 static const char *const CE_KEY_DATA = "data";
 
-size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce)
+size_t protocore_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce)
 {
     if (!buf || cap == 0 || !ce)
     {
@@ -35,7 +35,7 @@ size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce)
         return 0;
     }
 
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_object(&w);
     Json.kv_str(&w, "specversion", "1.0");
@@ -69,10 +69,10 @@ size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce)
     }
 
     Json.end_object(&w);
-    return pc_json_ok(&w) ? strnlen(buf, cap) : 0;
+    return protocore_json_ok(&w) ? strnlen(buf, cap) : 0;
 }
 
-proto_bool pc_cloudevents_from_headers(const HttpReq *req, CloudEvent *out)
+proto_bool protocore_cloudevents_from_headers(const HttpReq *req, CloudEvent *out)
 {
     if (!req || !out)
     {
@@ -87,4 +87,4 @@ proto_bool pc_cloudevents_from_headers(const HttpReq *req, CloudEvent *out)
     return ce_present(out->id) && ce_present(out->source) && ce_present(out->type);
 }
 
-#endif // PC_ENABLE_CLOUDEVENTS
+#endif // PROTOCORE_ENABLE_CLOUDEVENTS

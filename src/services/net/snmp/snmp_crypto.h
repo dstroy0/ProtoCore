@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_crypto.h
- * @brief USM cryptographic primitives for SNMPv3 (PC_ENABLE_SNMP_V3).
+ * @file protocore_snmp_crypto.h
+ * @brief USM cryptographic primitives for SNMPv3 (PROTOCORE_ENABLE_SNMP_V3).
  *
  * Provides exactly what the User-based Security Model needs and nothing more:
  *
@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SNMP_V3
+#if PROTOCORE_ENABLE_SNMP_V3
 
 /** @brief Localized-key length (SHA-256 digest size). */
 #define SNMP_USM_KEY_LEN 32
@@ -44,8 +44,8 @@ PROTO_BEGIN_DECLS
  * @param engine_id_len  length of @p engine_id.
  * @param key_out        receives SNMP_USM_KEY_LEN localized key bytes.
  */
-void pc_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id, size_t engine_id_len,
-                              uint8_t key_out[SNMP_USM_KEY_LEN]);
+void protocore_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id,
+                                     size_t engine_id_len, uint8_t key_out[SNMP_USM_KEY_LEN]);
 
 /**
  * @brief AES-128 CFB-128 transform (RFC 3826), used for SNMPv3 privacy.
@@ -61,11 +61,11 @@ void pc_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t
  * @param len      number of bytes.
  * @param encrypt  true to encrypt, false to decrypt.
  */
-void pc_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8_t *in, uint8_t *out, size_t len,
-                        proto_bool encrypt);
+void protocore_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8_t *in, uint8_t *out, size_t len,
+                               proto_bool encrypt);
 
-#endif // PC_ENABLE_SNMP_V3
+#endif // PROTOCORE_ENABLE_SNMP_V3
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SNMP_CRYPTO_H

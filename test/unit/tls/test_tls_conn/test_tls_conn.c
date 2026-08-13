@@ -40,8 +40,8 @@ static TlsConn c;
 
 void setUp()
 {
-    pc_secure_reset();
-    pc_ed25519_pubkey(tw, g_server_pub, SERVER_SEED);
+    protocore_secure_reset();
+    protocore_ed25519_pubkey(tw, g_server_pub, SERVER_SEED);
 }
 void tearDown()
 {
@@ -167,7 +167,7 @@ static size_t build_client_hello(uint8_t *rec, size_t cap, ChFlaw flaw)
     msg[2] = (uint8_t)(p >> 8);
     msg[3] = (uint8_t)p;
     memcpy(msg + 4, body, p);
-    return TlsRecord.plaintext_build(PC_TLS_CT_HANDSHAKE, msg, p + 4, rec, cap);
+    return TlsRecord.plaintext_build(PROTOCORE_TLS_CT_HANDSHAKE, msg, p + 4, rec, cap);
 }
 
 // init takes the one borrow and wires every region of it (tls_conn.c TLS_OFF_*). Nothing is
@@ -197,7 +197,7 @@ void test_client_hello_draws_the_server_flight()
     static uint8_t rec[600];
     size_t rec_len = build_client_hello(rec, sizeof rec, CH_COMPLETE);
     TEST_ASSERT_TRUE(rec_len > 0);
-    TEST_ASSERT_TRUE(rec_len <= PC_TLS_CONN_REC_CAP);
+    TEST_ASSERT_TRUE(rec_len <= PROTOCORE_TLS_CONN_REC_CAP);
 
     static uint8_t out[4096];
     memcpy(c.rx, rec, rec_len);
@@ -210,10 +210,10 @@ void test_client_hello_draws_the_server_flight()
 
     // The flight opens with a plaintext ServerHello; everything after it is protected, so the
     // record after the first carries application_data on the wire (RFC 8446 sec 5.2).
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_HANDSHAKE, out[0]);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_HANDSHAKE, out[0]);
     const size_t sh_len = 5 + (((size_t)out[3] << 8) | out[4]);
     TEST_ASSERT_TRUE(sh_len < (size_t)n);
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_APPLICATION_DATA, out[sh_len]);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_APPLICATION_DATA, out[sh_len]);
 }
 
 // RFC 8446 sec 4.1.3 / sec 9.1: one profile - TLS 1.3, X25519 with the share up front, Ed25519,
@@ -223,7 +223,7 @@ void test_client_hello_outside_the_profile_is_refused()
     static const ChFlaw flaws[] = {CH_NO_TLS13, CH_NO_X25519, CH_NO_KEY_SHARE, CH_NO_ED25519, CH_NO_SUITE};
     for (size_t i = 0; i < sizeof flaws / sizeof flaws[0]; i++)
     {
-        pc_secure_reset();
+        protocore_secure_reset();
         TlsConnConfig cfg = server_cfg();
         TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
@@ -248,7 +248,7 @@ void test_malformed_record_is_a_decode_error()
     TEST_ASSERT_TRUE(TlsConnection.init(&c, TLS_ROLE_SERVER, &cfg));
 
     static uint8_t out[256];
-    const uint8_t truncated[4] = {PC_TLS_CT_HANDSHAKE, 0x03, 0x03, 0x00}; // short of the 5-byte header
+    const uint8_t truncated[4] = {PROTOCORE_TLS_CT_HANDSHAKE, 0x03, 0x03, 0x00}; // short of the 5-byte header
     memcpy(c.rx, truncated, sizeof truncated);
     TEST_ASSERT_TRUE(TlsConnection.process(&c, sizeof truncated, out, sizeof out) < 0);
     TEST_ASSERT_EQUAL_INT(TLS_CONN_FAILED, c.state);

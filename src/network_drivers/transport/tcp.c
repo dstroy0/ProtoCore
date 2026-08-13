@@ -16,7 +16,7 @@
 const TcpNs Tcp = {
     .conn = &ConnPool,
     .listener = &TcpListener,
-#if PC_NEED_CLIENT
+#if PROTOCORE_NEED_CLIENT
     .client = &TcpClient,
 #endif
 };

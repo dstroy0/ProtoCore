@@ -11,7 +11,7 @@
  * backend once at startup and everything above it - SFTP, SCP, WebDAV, file serving - reaches it
  * through the filesystem accessor without knowing the medium.
  *
- * Example: `pc_mnt_mount(pc_mnt_fs(&LittleFS));`
+ * Example: `protocore_mnt_mount(protocore_mnt_fs(&LittleFS));`
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -22,7 +22,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_MNT && defined(ARDUINO)
+#if PROTOCORE_ENABLE_MNT && defined(ARDUINO)
 
 #include "server/filesystem/mnt.h"
 
@@ -32,12 +32,12 @@ class FS;
 }
 
 /**
- * @brief Bind @p filesystem and return the backend to hand to pc_mnt_mount().
+ * @brief Bind @p filesystem and return the backend to hand to protocore_mnt_mount().
  *
  * @param filesystem an already-mounted Arduino filesystem (call its own begin() first).
  * @return the backend vtable; it stays valid for the life of the program.
  */
-const pc_mnt_backend *pc_mnt_fs(fs::FS *filesystem);
+const protocore_mnt_backend *protocore_mnt_fs(fs::FS *filesystem);
 
-#endif // PC_ENABLE_MNT && ARDUINO
+#endif // PROTOCORE_ENABLE_MNT && ARDUINO
 #endif // PROTOCORE_ESP_MNT_FS_H

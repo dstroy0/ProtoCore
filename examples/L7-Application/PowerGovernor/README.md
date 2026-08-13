@@ -1,6 +1,6 @@
 # PowerGovernor - clock the SoC to what the work, the die, and the supply allow
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_POWER_MGMT`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_POWER_MGMT`
 
 ## What this example teaches
 
@@ -23,8 +23,8 @@ must not be clocked up merely because it is busy, and neither must a hot one.
 The previous tick's throttle flag goes back into the next call:
 
 ```cpp
-PowerPlan p = pc_power_plan(&cfg, load_pct, temp_c, brownout, now, g_plan.throttled);
-pc_power_apply(&p);
+PowerPlan p = protocore_power_plan(&cfg, load_pct, temp_c, brownout, now, g_plan.throttled);
+protocore_power_apply(&p);
 g_plan = p;                       // <- this is what gives the thermal decision its hysteresis
 ```
 
@@ -88,14 +88,14 @@ latched at boot); the policy it feeds is covered by `native_power_mgmt`.
 
 ## Tunables
 
-| Flag                   | Default | Meaning                                           |
-| ---------------------- | ------- | ------------------------------------------------- |
-| `PC_POWER_MHZ_MAX`     | 240     | clock when there is work to do                    |
-| `PC_POWER_MHZ_MIN`     | 80      | clock when idle, throttled, or recovering         |
-| `PC_POWER_BUSY_PCT`    | 40      | load at/above which the ceiling is used           |
-| `PC_POWER_TEMP_HOT_C`  | 80      | throttle at/above this die temperature            |
-| `PC_POWER_TEMP_COOL_C` | 70      | release at/below - keep the band wide (see above) |
-| `PC_POWER_RECOVER_MS`  | 10000   | floor-clock hold after a brownout reset           |
+| Flag                          | Default | Meaning                                           |
+| ----------------------------- | ------- | ------------------------------------------------- |
+| `PROTOCORE_POWER_MHZ_MAX`     | 240     | clock when there is work to do                    |
+| `PROTOCORE_POWER_MHZ_MIN`     | 80      | clock when idle, throttled, or recovering         |
+| `PROTOCORE_POWER_BUSY_PCT`    | 40      | load at/above which the ceiling is used           |
+| `PROTOCORE_POWER_TEMP_HOT_C`  | 80      | throttle at/above this die temperature            |
+| `PROTOCORE_POWER_TEMP_COOL_C` | 70      | release at/below - keep the band wide (see above) |
+| `PROTOCORE_POWER_RECOVER_MS`  | 10000   | floor-clock hold after a brownout reset           |
 
 A part with no usable internal sensor (classic ESP32) reports `INT16_MIN`, which the governor treats
 as "no reading" rather than ice-cold - so it never throttles and never silently releases one.
@@ -112,6 +112,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_POWER_MGMT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_POWER_MGMT=1" \
   --lib="." examples/L7-Application/PowerGovernor/PowerGovernor.ino
 ```

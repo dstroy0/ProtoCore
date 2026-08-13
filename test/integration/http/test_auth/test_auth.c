@@ -39,7 +39,7 @@ static void handle_ok(uint8_t slot_id, HttpReq *req)
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     handler_called = PROTO_FALSE;
     handler_slot = 0xFF;
 
@@ -49,11 +49,11 @@ void setUp()
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
 
     tcp_capture_reset();
 }
@@ -159,7 +159,7 @@ void test_protected_and_unprotected_routes_coexist()
     handler_called = PROTO_FALSE;
     conn_pool[1].state = CONN_ACTIVE;
     conn_pool[1].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[1].pcb = pc_net_host_pcb();
+    conn_pool[1].pcb = protocore_net_host_pcb();
     http_reset(1);
     tcp_capture_reset();
 
@@ -208,7 +208,7 @@ void stress_auth_50_valid_requests()
         conn_pool[slot].id = slot;
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[slot].pcb = pc_net_host_pcb();
+        conn_pool[slot].pcb = protocore_net_host_pcb();
         http_reset(slot);
 
         handler_called = PROTO_FALSE;
@@ -232,7 +232,7 @@ void stress_auth_50_invalid_requests()
         conn_pool[slot].id = slot;
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[slot].pcb = pc_net_host_pcb();
+        conn_pool[slot].pcb = protocore_net_host_pcb();
         http_reset(slot);
 
         handler_called = PROTO_FALSE;
@@ -253,7 +253,7 @@ static void rearm(uint8_t slot)
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
-    conn_pool[slot].pcb = pc_net_host_pcb();
+    conn_pool[slot].pcb = protocore_net_host_pcb();
     http_reset(slot);
     tcp_capture_reset();
 }
@@ -335,10 +335,10 @@ static const char *kDPass = "s3cret";
 
 static void sha256_hex_str(const char *s, char out[65])
 {
-    uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256(tw, (const uint8_t *)s, strlen(s), d);
+    uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
+    protocore_sha256(tw, (const uint8_t *)s, strlen(s), d);
     static const char *hx = "0123456789abcdef";
-    for (int i = 0; i < PC_SHA256_DIGEST_LEN; i++)
+    for (int i = 0; i < PROTOCORE_SHA256_DIGEST_LEN; i++)
     {
         out[i * 2] = hx[d[i] >> 4];
         out[i * 2 + 1] = hx[d[i] & 0x0f];

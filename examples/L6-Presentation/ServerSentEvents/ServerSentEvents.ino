@@ -3,10 +3,10 @@
 
 /**
  * @file ServerSentEvents.ino
- * @brief Server-Sent Events (text/event-stream) push via on_sse() + pc_sse_broadcast().
+ * @brief Server-Sent Events (text/event-stream) push via on_sse() + protocore_sse_broadcast().
  *
  * Subscribes browsers at /events; the loop pushes a counter to every subscriber
- * once a second with pc_sse_broadcast(). A test page at / shows the live stream.
+ * once a second with protocore_sse_broadcast(). A test page at / shows the live stream.
  *
  * Flash, open Serial @ 115200 for the IP, then browse to http://<ip>/.
  */
@@ -22,9 +22,9 @@ static const char PAGE[] = "<!doctype html><meta charset=utf-8><title>SSE</title
                            "var s=new EventSource('/events');"
                            "s.addEventListener('tick',function(e){o.textContent+=e.data+'\\n'})</script>";
 
-void pc_sse_connect(uint8_t pc_sse_id)
+void protocore_sse_connect(uint8_t protocore_sse_id)
 {
-    pc_sse_send(pc_sse_id, "subscribed", "tick", NULL);
+    protocore_sse_send(protocore_sse_id, "subscribed", "tick", NULL);
 }
 
 void setup()
@@ -42,7 +42,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", PAGE); });
-    on_sse("/events", pc_sse_connect);
+    on_sse("/events", protocore_sse_connect);
     begin_http(80, NULL);
 }
 
@@ -57,6 +57,6 @@ void loop()
         last = millis();
         char buf[24];
         snprintf(buf, sizeof(buf), "%lu", n++);
-        pc_sse_broadcast("/events", buf, "tick", NULL);
+        protocore_sse_broadcast("/events", buf, "tick", NULL);
     }
 }

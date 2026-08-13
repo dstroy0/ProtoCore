@@ -17,58 +17,58 @@
 #ifndef PROTOCORE_PCAP_H
 #define PROTOCORE_PCAP_H
 
-#include "mmgr/endian.h"      // pc_wr32le / pc_wr16le - libpcap headers are little-endian
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "mmgr/endian.h"      // protocore_wr32le / protocore_wr16le - libpcap headers are little-endian
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
 /** @brief libpcap header sizes. */
-#define PC_PCAP_GLOBAL_HDR_LEN 24
-#define PC_PCAP_REC_HDR_LEN 16
+#define PROTOCORE_PCAP_GLOBAL_HDR_LEN 24
+#define PROTOCORE_PCAP_REC_HDR_LEN 16
 
 /** @brief Common libpcap DLT link-layer types. */
-#define PC_DLT_IEEE802_11 105         ///< raw 802.11 (Wi-Fi promiscuous capture)
-#define PC_DLT_CAN_SOCKETCAN 227      ///< Linux SocketCAN classic/FD frames
-#define PC_DLT_ETHERNET 1             ///< IEEE 802.3 Ethernet
-#define PC_DLT_IEEE802_15_4_NOFCS 230 ///< raw 802.15.4 MAC frame, no FCS
-#define PC_DLT_IEEE802_15_4_TAP 283   ///< 802.15.4 with a TAP pseudo-header (RSSI / channel TLVs)
-#define PC_DLT_RAW 101                ///< the record starts at the IP header, with no link layer
+#define PROTOCORE_DLT_IEEE802_11 105         ///< raw 802.11 (Wi-Fi promiscuous capture)
+#define PROTOCORE_DLT_CAN_SOCKETCAN 227      ///< Linux SocketCAN classic/FD frames
+#define PROTOCORE_DLT_ETHERNET 1             ///< IEEE 802.3 Ethernet
+#define PROTOCORE_DLT_IEEE802_15_4_NOFCS 230 ///< raw 802.15.4 MAC frame, no FCS
+#define PROTOCORE_DLT_IEEE802_15_4_TAP 283   ///< 802.15.4 with a TAP pseudo-header (RSSI / channel TLVs)
+#define PROTOCORE_DLT_RAW 101                ///< the record starts at the IP header, with no link layer
 
 /**
  * @brief Write the 24-byte libpcap global header (little-endian, microsecond timestamps).
- * @param linktype the DLT_* link type of the frames that follow (e.g. ::PC_DLT_IEEE802_11).
- * @return ::PC_PCAP_GLOBAL_HDR_LEN, or 0 if @p cap is too small.
+ * @param linktype the DLT_* link type of the frames that follow (e.g. ::PROTOCORE_DLT_IEEE802_11).
+ * @return ::PROTOCORE_PCAP_GLOBAL_HDR_LEN, or 0 if @p cap is too small.
  */
-PC_INLINE size_t pc_pcap_global_header(uint8_t *out, size_t cap, uint32_t linktype)
+PROTOCORE_INLINE size_t protocore_pcap_global_header(uint8_t *out, size_t cap, uint32_t linktype)
 {
-    if (!out || cap < PC_PCAP_GLOBAL_HDR_LEN)
+    if (!out || cap < PROTOCORE_PCAP_GLOBAL_HDR_LEN)
     {
         return 0;
     }
-    pc_wr32le(out + 0, 0xa1b2c3d4); // magic: usec timestamps, little-endian
-    pc_wr16le(out + 4, 2);          // version major
-    pc_wr16le(out + 6, 4);          // version minor
-    pc_wr32le(out + 8, 0);          // thiszone (GMT)
-    pc_wr32le(out + 12, 0);         // sigfigs
-    pc_wr32le(out + 16, 65535);     // snaplen
-    pc_wr32le(out + 20, linktype);  // network / DLT
-    return PC_PCAP_GLOBAL_HDR_LEN;
+    protocore_wr32le(out + 0, 0xa1b2c3d4); // magic: usec timestamps, little-endian
+    protocore_wr16le(out + 4, 2);          // version major
+    protocore_wr16le(out + 6, 4);          // version minor
+    protocore_wr32le(out + 8, 0);          // thiszone (GMT)
+    protocore_wr32le(out + 12, 0);         // sigfigs
+    protocore_wr32le(out + 16, 65535);     // snaplen
+    protocore_wr32le(out + 20, linktype);  // network / DLT
+    return PROTOCORE_PCAP_GLOBAL_HDR_LEN;
 }
 
 /**
  * @brief Write a 16-byte libpcap record header for one captured frame.
- * @return ::PC_PCAP_REC_HDR_LEN, or 0 if @p cap is too small.
+ * @return ::PROTOCORE_PCAP_REC_HDR_LEN, or 0 if @p cap is too small.
  */
-PC_INLINE size_t pc_pcap_record_header(uint8_t *out, size_t cap, uint32_t ts_sec, uint32_t ts_usec, uint32_t caplen,
-                                       uint32_t origlen)
+PROTOCORE_INLINE size_t protocore_pcap_record_header(uint8_t *out, size_t cap, uint32_t ts_sec, uint32_t ts_usec,
+                                                     uint32_t caplen, uint32_t origlen)
 {
-    if (!out || cap < PC_PCAP_REC_HDR_LEN)
+    if (!out || cap < PROTOCORE_PCAP_REC_HDR_LEN)
     {
         return 0;
     }
-    pc_wr32le(out + 0, ts_sec);
-    pc_wr32le(out + 4, ts_usec);
-    pc_wr32le(out + 8, caplen);
-    pc_wr32le(out + 12, origlen);
-    return PC_PCAP_REC_HDR_LEN;
+    protocore_wr32le(out + 0, ts_sec);
+    protocore_wr32le(out + 4, ts_usec);
+    protocore_wr32le(out + 8, caplen);
+    protocore_wr32le(out + 12, origlen);
+    return PROTOCORE_PCAP_REC_HDR_LEN;
 }
 
 #endif // PROTOCORE_PCAP_H

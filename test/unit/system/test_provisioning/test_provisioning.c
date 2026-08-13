@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for pc_prov_form_field(): the x-www-form-urlencoded field
+// Unit tests for protocore_prov_form_field(): the x-www-form-urlencoded field
 // extractor + URL-decoder used by the WiFi provisioning captive portal. The
 // rest of the provisioning module is ESP32-only (softAP / lwIP UDP / NVS).
 
@@ -20,9 +20,9 @@ void tearDown()
 void test_plain_fields()
 {
     char v[64];
-    TEST_ASSERT_TRUE(pc_prov_form_field("ssid=MyAP&psk=secret", "ssid", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=MyAP&psk=secret", "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("MyAP", v);
-    TEST_ASSERT_TRUE(pc_prov_form_field("ssid=MyAP&psk=secret", "psk", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=MyAP&psk=secret", "psk", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("secret", v);
 }
 
@@ -30,9 +30,9 @@ void test_plain_fields()
 void test_url_decoding()
 {
     char v[64];
-    TEST_ASSERT_TRUE(pc_prov_form_field("ssid=My+AP&psk=p%40ss%21", "ssid", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=My+AP&psk=p%40ss%21", "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("My AP", v);
-    TEST_ASSERT_TRUE(pc_prov_form_field("ssid=My+AP&psk=p%40ss%21", "psk", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=My+AP&psk=p%40ss%21", "psk", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("p@ss!", v);
 }
 
@@ -40,7 +40,7 @@ void test_url_decoding()
 void test_missing_field()
 {
     char v[64];
-    TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", "psk", v, sizeof(v)));
+    TEST_ASSERT_FALSE(protocore_prov_form_field("ssid=x", "psk", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("", v);
 }
 
@@ -48,7 +48,7 @@ void test_missing_field()
 void test_no_substring_match()
 {
     char v[64];
-    TEST_ASSERT_TRUE(pc_prov_form_field("myssid=wrong&ssid=right", "ssid", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("myssid=wrong&ssid=right", "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("right", v);
 }
 
@@ -58,7 +58,7 @@ void test_no_substring_match()
 void test_no_prefix_match()
 {
     char v[64];
-    TEST_ASSERT_TRUE(pc_prov_form_field("ssidx=wrong&ssid=right", "ssid", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("ssidx=wrong&ssid=right", "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("right", v);
 }
 
@@ -67,7 +67,7 @@ void test_no_prefix_match()
 void test_invalid_hex_escape_first_digit()
 {
     char v[64];
-    TEST_ASSERT_TRUE(pc_prov_form_field("ssid=a%zzb", "ssid", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=a%zzb", "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("a%zzb", v);
 }
 
@@ -76,7 +76,7 @@ void test_invalid_hex_escape_first_digit()
 void test_invalid_hex_escape_second_digit()
 {
     char v[64];
-    TEST_ASSERT_TRUE(pc_prov_form_field("ssid=a%4zb", "ssid", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=a%4zb", "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("a%4zb", v);
 }
 
@@ -84,7 +84,7 @@ void test_invalid_hex_escape_second_digit()
 void test_capacity_bound()
 {
     char v[4];
-    TEST_ASSERT_TRUE(pc_prov_form_field("ssid=abcdef", "ssid", v, sizeof(v)));
+    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=abcdef", "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("abc", v); // 3 chars + null
 }
 
@@ -92,21 +92,21 @@ void test_form_field_null_guards()
 {
     // Any null argument (or zero cap) fails closed and leaves a writable out empty.
     char v[8] = "x";
-    TEST_ASSERT_FALSE(pc_prov_form_field(NULL, "ssid", v, sizeof(v)));
+    TEST_ASSERT_FALSE(protocore_prov_form_field(NULL, "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("", v);
-    TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", NULL, v, sizeof(v)));
-    TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", "ssid", NULL, sizeof(v)));
-    TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", "ssid", v, 0));
+    TEST_ASSERT_FALSE(protocore_prov_form_field("ssid=x", NULL, v, sizeof(v)));
+    TEST_ASSERT_FALSE(protocore_prov_form_field("ssid=x", "ssid", NULL, sizeof(v)));
+    TEST_ASSERT_FALSE(protocore_prov_form_field("ssid=x", "ssid", v, 0));
 }
 
 void test_host_provisioning_stubs()
 {
     // On host there is no NVS/WiFi: load reports no stored creds and clears the buffers; clear no-ops.
     char ssid[8] = "x", psk[8] = "y";
-    TEST_ASSERT_FALSE(pc_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)));
+    TEST_ASSERT_FALSE(protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)));
     TEST_ASSERT_EQUAL_STRING("", ssid);
     TEST_ASSERT_EQUAL_STRING("", psk);
-    pc_provisioning_clear(); // no-op, must not crash
+    protocore_provisioning_clear(); // no-op, must not crash
 }
 
 // The ssid and psk guards in the host stub are independent; exercise both of their
@@ -114,21 +114,21 @@ void test_host_provisioning_stubs()
 void test_provisioning_load_partial_null_or_zero_cap()
 {
     char psk[8] = "y";
-    TEST_ASSERT_FALSE(pc_provisioning_load(NULL, 8, psk, 0));
+    TEST_ASSERT_FALSE(protocore_provisioning_load(NULL, 8, psk, 0));
     TEST_ASSERT_EQUAL_STRING("y", psk); // psk_cap == 0 => psk left untouched
 
     char ssid[8] = "z";
-    TEST_ASSERT_FALSE(pc_provisioning_load(ssid, 0, NULL, 8));
+    TEST_ASSERT_FALSE(protocore_provisioning_load(ssid, 0, NULL, 8));
     TEST_ASSERT_EQUAL_STRING("z", ssid); // ssid_cap == 0 => ssid left untouched
 }
 
-// pc_provisioning_begin() on host is a stub that only (void)s both arguments;
+// protocore_provisioning_begin() on host is a stub that only (void)s both arguments;
 // call it to prove that. PC is forward-declared in provisioning_service.h and
 // never given a full definition on this (non-Arduino) build, so a minimal local
 // stand-in is enough to bind the reference without ever being dereferenced.
 void test_provisioning_begin_stub()
 {
-    pc_provisioning_begin("TestAP"); // must not crash
+    protocore_provisioning_begin("TestAP"); // must not crash
 }
 
 int main()

@@ -22,14 +22,14 @@ void dbench_run(void)
         DBENCH_BANNER("wamp");
         volatile size_t sink = 0;
         static char buf[256];
-        DBENCH_OP("pc_wamp_build_hello", 200000,
-                  sink += pc_wamp_build_hello(buf, sizeof(buf), "realm1", "{\"roles\":{\"subscriber\":{}}}"));
-        DBENCH_OP("pc_wamp_build_subscribe", 200000,
-                  sink += pc_wamp_build_subscribe(buf, sizeof(buf), 713845233ull, "com.pc.telemetry", NULL));
-        DBENCH_OP("pc_wamp_build_goodbye", 200000,
-                  sink += pc_wamp_build_goodbye(buf, sizeof(buf), "wamp.close.normal", NULL));
+        DBENCH_OP("protocore_wamp_build_hello", 200000,
+                  sink += protocore_wamp_build_hello(buf, sizeof(buf), "realm1", "{\"roles\":{\"subscriber\":{}}}"));
+        DBENCH_OP("protocore_wamp_build_subscribe", 200000,
+                  sink += protocore_wamp_build_subscribe(buf, sizeof(buf), 713845233ull, "com.pc.telemetry", NULL));
+        DBENCH_OP("protocore_wamp_build_goodbye", 200000,
+                  sink += protocore_wamp_build_goodbye(buf, sizeof(buf), "wamp.close.normal", NULL));
         int type = 0;
-        DBENCH_OP("pc_wamp_get_type (parse)", 200000, sink += pc_wamp_get_type(welcome, &type));
+        DBENCH_OP("protocore_wamp_get_type (parse)", 200000, sink += protocore_wamp_get_type(welcome, &type));
         (void)sink;
         DBENCH_DONE();
     }

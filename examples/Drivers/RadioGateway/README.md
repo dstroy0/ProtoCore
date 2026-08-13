@@ -1,7 +1,7 @@
 # RadioGateway - bridge a southbound radio to the northbound stack
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_DMA`,
-`PC_ENABLE_PREEMPT_QUEUE`, `PC_ENABLE_GATEWAY`, `PC_DMA_SIMULATE`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_DMA`,
+`PROTOCORE_ENABLE_PREEMPT_QUEUE`, `PROTOCORE_ENABLE_GATEWAY`, `PROTOCORE_DMA_SIMULATE`
 
 ## What this example teaches
 
@@ -10,7 +10,7 @@ The capstone of the v5 ingest pipeline: a **wireless gateway**. A southbound rad
 device **bridges** them to the web stack - MQTT / HTTP / WebSocket.
 
 ```
-radio RX --DMA--> callback --post--> FORWARD lane --> codec --> pc_gateway_uplink()
+radio RX --DMA--> callback --post--> FORWARD lane --> codec --> protocore_gateway_uplink()
                                                                      |
                                             envelope + topic  lora/<port>/<addr>
                                                                      |
@@ -33,31 +33,31 @@ Register each radio as a **port** (with an optional transmit callback for downli
 install the **uplink** - the northbound publish:
 
 ```cpp
-pc_gateway_port_config p = {};
-p.port_id = 0; p.kind = pc_gateway_kind::PC_GW_LORA; p.tx = radio_tx; // tx = the radio's send()
-pc_gateway_add_port(&p);
-pc_gateway_set_uplink_cb(northbound_publish, nullptr);       // e.g. mqtt.publish(...)
-pc_gateway_set_topic_prefix("lora");
+protocore_gateway_port_config p = {};
+p.port_id = 0; p.kind = protocore_gateway_kind::PROTOCORE_GW_LORA; p.tx = radio_tx; // tx = the radio's send()
+protocore_gateway_add_port(&p);
+protocore_gateway_set_uplink_cb(northbound_publish, nullptr);       // e.g. mqtt.publish(...)
+protocore_gateway_set_topic_prefix("lora");
 
 // a frame arrived from node 0x42 on port 0:
-pc_gateway_uplink(0, 0x42, payload, len, rssi);           // -> publishes lora/0/66
+protocore_gateway_uplink(0, 0x42, payload, len, rssi);           // -> publishes lora/0/66
 ```
 
-- **Envelope**: each uplink builds a `pc_gateway_msg` with the source address, port, RSSI,
-  and a sequence number. `pc_gateway_topic()` formats a routing key `<prefix>/<port>/<addr>`.
-- **Downlink**: `pc_gateway_downlink(port, dst_addr, payload, len)` transmits a northbound
+- **Envelope**: each uplink builds a `protocore_gateway_msg` with the source address, port, RSSI,
+  and a sequence number. `protocore_gateway_topic()` formats a routing key `<prefix>/<port>/<addr>`.
+- **Downlink**: `protocore_gateway_downlink(port, dst_addr, payload, len)` transmits a northbound
   command back out the radio via the port's transmit callback.
 - **Rate cap**: a per-port `rate_cap` (frames/second) throttles a chatty radio; excess is
   dropped, not blocked.
 - **Fail-closed**: no installed sink, an unknown port, an exceeded cap, or a callback
-  refusing drops the frame and is counted (`pc_gateway_get_stats()`), never blocks.
+  refusing drops the frame and is counted (`protocore_gateway_get_stats()`), never blocks.
 
 The radio TX and the northbound publish are **callbacks**, so this runs with no radio
 hardware: the sketch feeds simulated frames through the DMA simulator and prints the
 publishes. A real build swaps the feed for the module's SPI RX and the publish for an
 MQTT client - the pipeline is unchanged.
 
-Storage is static (zero heap): `PC_GW_MAX_PORTS` ports.
+Storage is static (zero heap): `PROTOCORE_GW_MAX_PORTS` ports.
 
 ## Build-flag note
 
@@ -65,6 +65,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_DMA=1 -DPC_ENABLE_PREEMPT_QUEUE=1 -DPC_ENABLE_GATEWAY=1 -DPC_DMA_SIMULATE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DMA=1 -DPROTOCORE_ENABLE_PREEMPT_QUEUE=1 -DPROTOCORE_ENABLE_GATEWAY=1 -DPROTOCORE_DMA_SIMULATE=1" \
   --lib="." examples/Drivers/RadioGateway/RadioGateway.ino
 ```

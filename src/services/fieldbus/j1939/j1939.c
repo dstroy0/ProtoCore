@@ -9,9 +9,9 @@
 #include "services/fieldbus/j1939/j1939.h"
 #include "mmgr/protomem.h"
 
-#if PC_NEED_J1939
+#if PROTOCORE_NEED_J1939
 
-proto_bool pc_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da)
+proto_bool protocore_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da)
 {
     if (!id || priority > 7 || pgn > 0x3FFFFu)
     {
@@ -28,13 +28,13 @@ proto_bool pc_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pgn, uint
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_decode_id(uint32_t id, J1939Id *out)
+proto_bool protocore_j1939_decode_id(uint32_t id, J1939Id *out)
 {
     if (!out)
     {
         return PROTO_FALSE;
     }
-    id &= PC_CAN_EXT_ID_MASK;
+    id &= PROTOCORE_CAN_EXT_ID_MASK;
     out->priority = (uint8_t)((id >> 26) & 7u);
     uint8_t edp = (uint8_t)((id >> 25) & 1u);
     uint8_t dp = (uint8_t)((id >> 24) & 1u);
@@ -59,7 +59,7 @@ proto_bool pc_j1939_decode_id(uint32_t id, J1939Id *out)
 static proto_bool ext_frame(CanFrame *f, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da, uint8_t dlc)
 {
     uint32_t id;
-    if (!pc_j1939_encode_id(&id, priority, pgn, sa, da))
+    if (!protocore_j1939_encode_id(&id, priority, pgn, sa, da))
     {
         return PROTO_FALSE;
     }
@@ -71,10 +71,10 @@ static proto_bool ext_frame(CanFrame *f, uint8_t priority, uint32_t pgn, uint8_t
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
+proto_bool protocore_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
                                   const uint8_t *data, uint8_t len)
 {
-    if (!out || len > PC_CAN_MAX_DLC || (len && !data))
+    if (!out || len > PROTOCORE_CAN_MAX_DLC || (len && !data))
     {
         return PROTO_FALSE;
     }
@@ -89,7 +89,7 @@ proto_bool pc_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn,
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, uint32_t requested_pgn)
+proto_bool protocore_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, uint32_t requested_pgn)
 {
     if (!out || requested_pgn > 0x3FFFFu)
     {
@@ -108,7 +108,7 @@ proto_bool pc_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, uint32_
     return PROTO_TRUE;
 }
 
-uint64_t pc_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t industry_group,
+uint64_t protocore_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t industry_group,
                              uint8_t vehicle_system_instance, uint8_t vehicle_system, uint8_t function,
                              uint8_t function_instance, uint8_t ecu_instance, uint16_t manufacturer_code,
                              uint32_t identity_number)
@@ -130,7 +130,7 @@ uint64_t pc_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t indus
     return n;
 }
 
-proto_bool pc_j1939_build_address_claim(CanFrame *out, uint8_t sa, uint64_t name)
+proto_bool protocore_j1939_build_address_claim(CanFrame *out, uint8_t sa, uint64_t name)
 {
     // Address Claimed (priority 6, broadcast): NAME as 8 octets, little-endian.
     if (!ext_frame(out, 6, J1939_PGN_ADDRESS_CLAIM, sa, J1939_ADDR_GLOBAL, 8))
@@ -147,14 +147,14 @@ proto_bool pc_j1939_build_address_claim(CanFrame *out, uint8_t sa, uint64_t name
     return PROTO_TRUE;
 }
 
-uint8_t pc_j1939_tp_num_packets(uint16_t total_size)
+uint8_t protocore_j1939_tp_num_packets(uint16_t total_size)
 {
     return (uint8_t)((total_size + (J1939_TP_DT_LEN - 1)) / J1939_TP_DT_LEN);
 }
 
-proto_bool pc_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16_t total_size)
+proto_bool protocore_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16_t total_size)
 {
-    if (!out || total_size < 9 || total_size > PC_J1939_TP_MAX || pgn > 0x3FFFFu)
+    if (!out || total_size < 9 || total_size > PROTOCORE_J1939_TP_MAX || pgn > 0x3FFFFu)
     {
         return PROTO_FALSE; // BAM is for 9..1785 octet messages
     }
@@ -168,7 +168,7 @@ proto_bool pc_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16
     out->data[0] = J1939_TP_CM_BAM;
     out->data[1] = (uint8_t)total_size; // message size, little-endian
     out->data[2] = (uint8_t)(total_size >> 8);
-    out->data[3] = pc_j1939_tp_num_packets(total_size); // total packets
+    out->data[3] = protocore_j1939_tp_num_packets(total_size); // total packets
     out->data[4] = 0xFF;                                // reserved
     out->data[5] = (uint8_t)pgn;                        // transported PGN, little-endian
     out->data[6] = (uint8_t)(pgn >> 8);
@@ -176,7 +176,7 @@ proto_bool pc_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t seq, const uint8_t *chunk,
+proto_bool protocore_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t seq, const uint8_t *chunk,
                                 uint8_t chunk_len)
 {
     if (!out || seq == 0 || chunk_len == 0 || chunk_len > J1939_TP_DT_LEN || !chunk)
@@ -194,7 +194,7 @@ proto_bool pc_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t s
     return PROTO_TRUE;
 }
 
-void pc_j1939_tp_reset(J1939TpRx *rx)
+void protocore_j1939_tp_reset(J1939TpRx *rx)
 {
     if (rx)
     {
@@ -202,14 +202,14 @@ void pc_j1939_tp_reset(J1939TpRx *rx)
     }
 }
 
-J1939TpResult pc_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
+J1939TpResult protocore_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
 {
     if (!rx || !f || !f->extended)
     {
         return J1939_TP_IGNORED;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id))
+    if (!protocore_j1939_decode_id(f->id, &id))
     // is non-null
     {
         return J1939_TP_IGNORED;
@@ -226,7 +226,7 @@ J1939TpResult pc_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
         uint16_t total = (uint16_t)(f->data[1] | (f->data[2] << 8));
         uint8_t packets = f->data[3];
         uint32_t pgn = (uint32_t)f->data[5] | ((uint32_t)f->data[6] << 8) | ((uint32_t)f->data[7] << 16);
-        if (total < 9 || total > PC_J1939_TP_MAX || packets != pc_j1939_tp_num_packets(total))
+        if (total < 9 || total > PROTOCORE_J1939_TP_MAX || packets != protocore_j1939_tp_num_packets(total))
         {
             return J1939_TP_ERROR;
         }
@@ -249,7 +249,7 @@ J1939TpResult pc_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
         uint8_t seq = f->data[0];
         if (seq != rx->next_seq)
         {
-            pc_j1939_tp_reset(rx);
+            protocore_j1939_tp_reset(rx);
             return J1939_TP_ERROR; // out-of-sequence: abort the session
         }
         uint16_t remaining = (uint16_t)(rx->total_size - rx->received);
@@ -270,14 +270,14 @@ J1939TpResult pc_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
 
 // --- typed decoders (SAE J1939-71) ---
 
-proto_bool pc_j1939_decode_eec1(const CanFrame *f, J1939Eec1 *out)
+proto_bool protocore_j1939_decode_eec1(const CanFrame *f, J1939Eec1 *out)
 {
     if (!f || !out || f->dlc < 8)
     {
         return PROTO_FALSE;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_EEC1)
+    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_EEC1)
     {
         return PROTO_FALSE;
     }
@@ -291,14 +291,14 @@ proto_bool pc_j1939_decode_eec1(const CanFrame *f, J1939Eec1 *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_decode_et1(const CanFrame *f, J1939Et1 *out)
+proto_bool protocore_j1939_decode_et1(const CanFrame *f, J1939Et1 *out)
 {
     if (!f || !out || f->dlc < 8)
     {
         return PROTO_FALSE;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_ET1)
+    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_ET1)
     {
         return PROTO_FALSE;
     }
@@ -312,14 +312,14 @@ proto_bool pc_j1939_decode_et1(const CanFrame *f, J1939Et1 *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_decode_lfe(const CanFrame *f, J1939Lfe *out)
+proto_bool protocore_j1939_decode_lfe(const CanFrame *f, J1939Lfe *out)
 {
     if (!f || !out || f->dlc < 8)
     {
         return PROTO_FALSE;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_LFE)
+    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_LFE)
     {
         return PROTO_FALSE;
     }
@@ -337,14 +337,14 @@ proto_bool pc_j1939_decode_lfe(const CanFrame *f, J1939Lfe *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_decode_amb(const CanFrame *f, J1939Amb *out)
+proto_bool protocore_j1939_decode_amb(const CanFrame *f, J1939Amb *out)
 {
     if (!f || !out || f->dlc < 8)
     {
         return PROTO_FALSE;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_AMB)
+    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_AMB)
     {
         return PROTO_FALSE;
     }
@@ -364,14 +364,14 @@ proto_bool pc_j1939_decode_amb(const CanFrame *f, J1939Amb *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_decode_ic1(const CanFrame *f, J1939Ic1 *out)
+proto_bool protocore_j1939_decode_ic1(const CanFrame *f, J1939Ic1 *out)
 {
     if (!f || !out || f->dlc < 8)
     {
         return PROTO_FALSE;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_IC1)
+    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_IC1)
     {
         return PROTO_FALSE;
     }
@@ -393,14 +393,14 @@ proto_bool pc_j1939_decode_ic1(const CanFrame *f, J1939Ic1 *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_decode_vd(const CanFrame *f, J1939Vd *out)
+proto_bool protocore_j1939_decode_vd(const CanFrame *f, J1939Vd *out)
 {
     if (!f || !out || f->dlc < 8)
     {
         return PROTO_FALSE;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_VD)
+    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_VD)
     {
         return PROTO_FALSE;
     }
@@ -416,14 +416,14 @@ proto_bool pc_j1939_decode_vd(const CanFrame *f, J1939Vd *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_decode_ccvs(const CanFrame *f, J1939Ccvs *out)
+proto_bool protocore_j1939_decode_ccvs(const CanFrame *f, J1939Ccvs *out)
 {
     if (!f || !out || f->dlc < 8)
     {
         return PROTO_FALSE;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_CCVS)
+    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_CCVS)
     {
         return PROTO_FALSE;
     }
@@ -436,7 +436,7 @@ proto_bool pc_j1939_decode_ccvs(const CanFrame *f, J1939Ccvs *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dtc *out_dtcs, size_t max)
+proto_bool protocore_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dtc *out_dtcs, size_t max)
 {
     if (!body || !out || len < 2) // the lamp-status + flash-status octets
     {
@@ -476,4 +476,4 @@ proto_bool pc_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J
     return PROTO_TRUE;
 }
 
-#endif // PC_NEED_J1939
+#endif // PROTOCORE_NEED_J1939

@@ -22,8 +22,8 @@ static void check_int(long v, const uint8_t *exp, size_t explen)
 {
     uint8_t buf[16];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_integer(&e, v);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_integer(&e, v);
     TEST_ASSERT_TRUE(e.ok);
     TEST_ASSERT_EQUAL_UINT(explen, e.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(exp, buf, explen);
@@ -57,8 +57,8 @@ void test_oid_vector()
     uint32_t a[] = {1, 3, 6, 1};
     uint8_t buf[16];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_oid(&e, a, 4);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_oid(&e, a, 4);
     const uint8_t exp[] = {0x06, 0x03, 0x2B, 0x06, 0x01};
     TEST_ASSERT_TRUE(e.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(exp), e.len);
@@ -66,8 +66,8 @@ void test_oid_vector()
 
     // sysName.0 = 1.3.6.1.2.1.1.5.0 -> 06 08 2B 06 01 02 01 01 05 00
     uint32_t b[] = {1, 3, 6, 1, 2, 1, 1, 5, 0};
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_oid(&e, b, 9);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_oid(&e, b, 9);
     const uint8_t exp2[] = {0x06, 0x08, 0x2B, 0x06, 0x01, 0x02, 0x01, 0x01, 0x05, 0x00};
     TEST_ASSERT_TRUE(e.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(exp2), e.len);
@@ -78,14 +78,14 @@ void test_octet_string_and_null()
 {
     uint8_t buf[16];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
     const uint8_t exp[] = {0x04, 0x06, 'p', 'u', 'b', 'l', 'i', 'c'};
     TEST_ASSERT_TRUE(e.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(exp, buf, sizeof(exp));
 
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_null(&e);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_null(&e);
     const uint8_t expn[] = {0x05, 0x00};
     TEST_ASSERT_EQUAL_UINT(2, e.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expn, buf, 2);
@@ -96,8 +96,8 @@ void test_counter32_keeps_unsigned()
     // 0x80000000 has the top bit set -> a leading 0x00 must be added.
     uint8_t buf[16];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_uint(&e, (uint8_t)SNMP_TAG_SNMP_COUNTER32, 0x80000000u);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_uint(&e, (uint8_t)SNMP_TAG_SNMP_COUNTER32, 0x80000000u);
     const uint8_t exp[] = {0x41, 0x05, 0x00, 0x80, 0x00, 0x00, 0x00};
     TEST_ASSERT_TRUE(e.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(exp), e.len);
@@ -110,26 +110,26 @@ void test_sequence_roundtrip()
 {
     uint8_t buf[64];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    size_t seq = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    pc_ber_put_integer(&e, 1); // e.g. SNMP version (v2c=1)
-    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
-    pc_ber_seq_end(&e, seq);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    size_t seq = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    protocore_ber_put_integer(&e, 1); // e.g. SNMP version (v2c=1)
+    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
+    protocore_ber_seq_end(&e, seq);
     TEST_ASSERT_TRUE(e.ok);
 
     // Decode: outer SEQUENCE, then INTEGER + OCTET STRING.
     BerDec d;
-    pc_ber_dec_init(&d, buf, e.len);
+    protocore_ber_dec_init(&d, buf, e.len);
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_TRUE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_TRUE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, tag);
 
     long ver = -99;
-    TEST_ASSERT_TRUE(pc_ber_read_integer(&d, &ver));
+    TEST_ASSERT_TRUE(protocore_ber_read_integer(&d, &ver));
     TEST_ASSERT_EQUAL_INT(1, ver);
 
-    TEST_ASSERT_TRUE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_TRUE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, tag);
     TEST_ASSERT_EQUAL_UINT(6, len);
     TEST_ASSERT_EQUAL_MEMORY("public", d.buf + d.pos, 6);
@@ -140,15 +140,15 @@ void test_oid_roundtrip()
     uint32_t in[] = {1, 3, 6, 1, 2, 1, 1, 5, 0};
     uint8_t buf[32];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_oid(&e, in, 9);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_oid(&e, in, 9);
     TEST_ASSERT_TRUE(e.ok);
 
     BerDec d;
-    pc_ber_dec_init(&d, buf, e.len);
+    protocore_ber_dec_init(&d, buf, e.len);
     uint32_t out[SNMP_MAX_OID_LEN];
     size_t n = 0;
-    TEST_ASSERT_TRUE(pc_ber_read_oid(&d, out, SNMP_MAX_OID_LEN, &n));
+    TEST_ASSERT_TRUE(protocore_ber_read_oid(&d, out, SNMP_MAX_OID_LEN, &n));
     TEST_ASSERT_EQUAL_UINT(9, n);
     for (size_t i = 0; i < 9; i++)
     {
@@ -162,15 +162,15 @@ void test_large_arc_roundtrip()
     uint32_t in[] = {1, 3, 6, 1, 4, 1, 8072, 3, 2, 10};
     uint8_t buf[32];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_oid(&e, in, 10);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_oid(&e, in, 10);
     TEST_ASSERT_TRUE(e.ok);
 
     BerDec d;
-    pc_ber_dec_init(&d, buf, e.len);
+    protocore_ber_dec_init(&d, buf, e.len);
     uint32_t out[SNMP_MAX_OID_LEN];
     size_t n = 0;
-    TEST_ASSERT_TRUE(pc_ber_read_oid(&d, out, SNMP_MAX_OID_LEN, &n));
+    TEST_ASSERT_TRUE(protocore_ber_read_oid(&d, out, SNMP_MAX_OID_LEN, &n));
     TEST_ASSERT_EQUAL_UINT(10, n);
     TEST_ASSERT_EQUAL_UINT32(8072u, out[6]);
 }
@@ -183,15 +183,15 @@ void test_oid_large_first_subidentifier_roundtrip()
     uint32_t in[] = {2, 100, 3};
     uint8_t buf[16];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_oid(&e, in, 3);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_oid(&e, in, 3);
     TEST_ASSERT_TRUE(e.ok);
 
     BerDec d;
-    pc_ber_dec_init(&d, buf, e.len);
+    protocore_ber_dec_init(&d, buf, e.len);
     uint32_t out[SNMP_MAX_OID_LEN];
     size_t n = 0;
-    TEST_ASSERT_TRUE(pc_ber_read_oid(&d, out, SNMP_MAX_OID_LEN, &n));
+    TEST_ASSERT_TRUE(protocore_ber_read_oid(&d, out, SNMP_MAX_OID_LEN, &n));
     TEST_ASSERT_EQUAL_UINT(3, n);
     TEST_ASSERT_EQUAL_UINT32(2u, out[0]);
     TEST_ASSERT_EQUAL_UINT32(100u, out[1]);
@@ -204,8 +204,8 @@ void test_encoder_overflow_sets_not_ok()
 {
     uint8_t buf[3];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"too long", 8);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"too long", 8);
     TEST_ASSERT_FALSE(e.ok);
 }
 
@@ -214,10 +214,10 @@ void test_decoder_truncated_length_fails()
     // Claims 10 bytes of content but only 2 are present.
     const uint8_t bad[] = {0x04, 0x0A, 0x01, 0x02};
     BerDec d;
-    pc_ber_dec_init(&d, bad, sizeof(bad));
+    protocore_ber_dec_init(&d, bad, sizeof(bad));
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_FALSE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_FALSE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_FALSE(d.ok);
 }
 
@@ -227,10 +227,10 @@ void test_decoder_longform_length_count_past_buffer_fails()
 {
     const uint8_t bad[] = {0x04, 0x84, 0x00, 0x00}; // says 4 len octets, only 2 present
     BerDec d;
-    pc_ber_dec_init(&d, bad, sizeof(bad));
+    protocore_ber_dec_init(&d, bad, sizeof(bad));
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_FALSE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_FALSE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_FALSE(d.ok);
 }
 
@@ -240,10 +240,10 @@ void test_decoder_longform_length_too_wide_fails()
 {
     const uint8_t bad[] = {0x04, 0x85, 0x01, 0x00, 0x00, 0x00, 0x00}; // 5 length octets
     BerDec d;
-    pc_ber_dec_init(&d, bad, sizeof(bad));
+    protocore_ber_dec_init(&d, bad, sizeof(bad));
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_FALSE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_FALSE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_FALSE(d.ok);
 }
 
@@ -253,10 +253,10 @@ void test_decoder_longform_length_content_past_buffer_fails()
     // 0x82 0x01 0x00 = long form, length 256; only a few content bytes follow.
     const uint8_t bad[] = {0x04, 0x82, 0x01, 0x00, 0xAA, 0xBB};
     BerDec d;
-    pc_ber_dec_init(&d, bad, sizeof(bad));
+    protocore_ber_dec_init(&d, bad, sizeof(bad));
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_FALSE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_FALSE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_FALSE(d.ok);
 }
 
@@ -268,10 +268,10 @@ void test_decoder_longform_length_max_uint32_fails()
 {
     const uint8_t bad[] = {0x04, 0x84, 0xFF, 0xFF, 0xFF, 0xFF, 0xAA};
     BerDec d;
-    pc_ber_dec_init(&d, bad, sizeof(bad));
+    protocore_ber_dec_init(&d, bad, sizeof(bad));
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_FALSE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_FALSE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_FALSE(d.ok);
 }
 
@@ -280,10 +280,10 @@ void test_decoder_indefinite_length_fails()
 {
     const uint8_t bad[] = {0x30, 0x80, 0x00, 0x00};
     BerDec d;
-    pc_ber_dec_init(&d, bad, sizeof(bad));
+    protocore_ber_dec_init(&d, bad, sizeof(bad));
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_FALSE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_FALSE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_FALSE(d.ok);
 }
 
@@ -292,9 +292,9 @@ void test_decoder_oversized_integer_fails()
 {
     const uint8_t bad[] = {0x02, 0x09, 0, 0, 0, 0, 0, 0, 0, 0, 1}; // 9-octet INTEGER
     BerDec d;
-    pc_ber_dec_init(&d, bad, sizeof(bad));
+    protocore_ber_dec_init(&d, bad, sizeof(bad));
     long v;
-    TEST_ASSERT_FALSE(pc_ber_read_integer(&d, &v));
+    TEST_ASSERT_FALSE(protocore_ber_read_integer(&d, &v));
     TEST_ASSERT_FALSE(d.ok);
 }
 
@@ -303,21 +303,21 @@ void test_enc_len_long_form()
     // A value >= 128 octets forces the long-form definite length (0x81 <len>).
     uint8_t buf[300];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
     uint8_t val[200];
     for (int i = 0; i < 200; i++)
     {
         val[i] = (uint8_t)i;
     }
-    TEST_ASSERT_TRUE(pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, val, sizeof(val)));
+    TEST_ASSERT_TRUE(protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, val, sizeof(val)));
     TEST_ASSERT_EQUAL_size_t(203, e.len); // tag(1) + 0x81 0xC8 (2) + 200
     TEST_ASSERT_EQUAL_HEX8(0x81, buf[1]); // long form, one length octet
     TEST_ASSERT_EQUAL_HEX8(0xC8, buf[2]); // 200
     BerDec d;
-    pc_ber_dec_init(&d, buf, e.len);
+    protocore_ber_dec_init(&d, buf, e.len);
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_TRUE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_TRUE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, tag);
     TEST_ASSERT_EQUAL_size_t(200, len);
 }
@@ -326,18 +326,18 @@ void test_put_oid_guards()
 {
     uint8_t buf[256];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
     uint32_t one[1] = {1};
-    TEST_ASSERT_FALSE(pc_ber_put_oid(&e, one, 1)); // fewer than 2 arcs
+    TEST_ASSERT_FALSE(protocore_ber_put_oid(&e, one, 1)); // fewer than 2 arcs
     TEST_ASSERT_FALSE(e.ok);
     // More subidentifier octets than the internal scratch (SNMP_MAX_OID_LEN*5) holds.
-    pc_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
     uint32_t big[40];
     for (int i = 0; i < 40; i++)
     {
         big[i] = 0xFFFFFFFFu; // each encodes to five base-128 octets
     }
-    TEST_ASSERT_FALSE(pc_ber_put_oid(&e, big, 40));
+    TEST_ASSERT_FALSE(protocore_ber_put_oid(&e, big, 40));
     TEST_ASSERT_FALSE(e.ok);
 }
 
@@ -346,34 +346,34 @@ void test_seq_end_overflow()
     // A content region larger than the 16-bit back-patched length field fails closed.
     uint8_t buf[16];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
-    size_t tok = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
+    size_t tok = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     e.len = tok + 3 + 0x10000; // pretend > 64 KiB of content was written
-    pc_ber_seq_end(&e, tok);
+    protocore_ber_seq_end(&e, tok);
     TEST_ASSERT_FALSE(e.ok);
 }
 
 void test_read_oid_rejects()
 {
-    // pc_ber_read_oid on a non-OID TLV.
+    // protocore_ber_read_oid on a non-OID TLV.
     const uint8_t intv[] = {(uint8_t)SNMP_TAG_BER_INTEGER, 0x01, 0x05};
     BerDec d;
-    pc_ber_dec_init(&d, intv, sizeof(intv));
+    protocore_ber_dec_init(&d, intv, sizeof(intv));
     uint32_t arcs[8];
     size_t n = 0;
-    TEST_ASSERT_FALSE(pc_ber_read_oid(&d, arcs, 8, &n));
+    TEST_ASSERT_FALSE(protocore_ber_read_oid(&d, arcs, 8, &n));
     TEST_ASSERT_FALSE(d.ok);
     // An OID with more subidentifiers than the caller's array holds.
     uint8_t buf[64];
     BerEnc e;
-    pc_ber_enc_init(&e, buf, sizeof(buf));
+    protocore_ber_enc_init(&e, buf, sizeof(buf));
     uint32_t oid[4] = {1, 3, 6, 1};
-    TEST_ASSERT_TRUE(pc_ber_put_oid(&e, oid, 4));
+    TEST_ASSERT_TRUE(protocore_ber_put_oid(&e, oid, 4));
     BerDec d2;
-    pc_ber_dec_init(&d2, buf, e.len);
+    protocore_ber_dec_init(&d2, buf, e.len);
     uint32_t out2[2];
     size_t n2 = 0;
-    TEST_ASSERT_FALSE(pc_ber_read_oid(&d2, out2, 2, &n2)); // 4 arcs into max 2
+    TEST_ASSERT_FALSE(protocore_ber_read_oid(&d2, out2, 2, &n2)); // 4 arcs into max 2
     TEST_ASSERT_FALSE(d2.ok);
 }
 
@@ -381,14 +381,14 @@ void test_ber_skip()
 {
     const uint8_t data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     BerDec d;
-    pc_ber_dec_init(&d, data, sizeof(data));
-    TEST_ASSERT_TRUE(pc_ber_skip(&d, 3));
+    protocore_ber_dec_init(&d, data, sizeof(data));
+    TEST_ASSERT_TRUE(protocore_ber_skip(&d, 3));
     TEST_ASSERT_EQUAL_size_t(3, d.pos);
-    TEST_ASSERT_FALSE(pc_ber_skip(&d, 100)); // beyond the remaining buffer
+    TEST_ASSERT_FALSE(protocore_ber_skip(&d, 100)); // beyond the remaining buffer
     TEST_ASSERT_FALSE(d.ok);
     BerDec d2;
-    pc_ber_dec_init(&d2, NULL, 0); // ok == false
-    TEST_ASSERT_FALSE(pc_ber_skip(&d2, 1));
+    protocore_ber_dec_init(&d2, NULL, 0); // ok == false
+    TEST_ASSERT_FALSE(protocore_ber_skip(&d2, 1));
 }
 
 // The encoder fails closed when handed no buffer at all, or a zero-capacity one, rather
@@ -397,12 +397,12 @@ void test_enc_init_rejects_unusable_buffer()
 {
     uint8_t buf[8];
     BerEnc e;
-    pc_ber_enc_init(&e, NULL, sizeof(buf)); // no buffer
+    protocore_ber_enc_init(&e, NULL, sizeof(buf)); // no buffer
     TEST_ASSERT_FALSE(e.ok);
-    TEST_ASSERT_FALSE(pc_ber_put_null(&e)); // and stays closed for every write
-    pc_ber_enc_init(&e, buf, 0);            // buffer, but no capacity
+    TEST_ASSERT_FALSE(protocore_ber_put_null(&e)); // and stays closed for every write
+    protocore_ber_enc_init(&e, buf, 0);            // buffer, but no capacity
     TEST_ASSERT_FALSE(e.ok);
-    TEST_ASSERT_FALSE(pc_ber_put_integer(&e, 1));
+    TEST_ASSERT_FALSE(protocore_ber_put_integer(&e, 1));
     TEST_ASSERT_EQUAL_size_t(0, e.len);
 }
 
@@ -411,11 +411,11 @@ void test_enc_init_rejects_unusable_buffer()
 void test_read_header_on_failed_decoder()
 {
     BerDec d;
-    pc_ber_dec_init(&d, NULL, 4); // ok == false
+    protocore_ber_dec_init(&d, NULL, 4); // ok == false
     TEST_ASSERT_FALSE(d.ok);
     uint8_t tag;
     size_t len;
-    TEST_ASSERT_FALSE(pc_ber_read_header(&d, &tag, &len));
+    TEST_ASSERT_FALSE(protocore_ber_read_header(&d, &tag, &len));
     TEST_ASSERT_EQUAL_size_t(0, d.pos); // cursor untouched
 }
 
@@ -425,15 +425,15 @@ void test_read_integer_rejects_bad_tlv()
 {
     const uint8_t zero_len[] = {0x02, 0x00};
     BerDec d;
-    pc_ber_dec_init(&d, zero_len, sizeof(zero_len));
+    protocore_ber_dec_init(&d, zero_len, sizeof(zero_len));
     long v = 12345;
-    TEST_ASSERT_FALSE(pc_ber_read_integer(&d, &v));
+    TEST_ASSERT_FALSE(protocore_ber_read_integer(&d, &v));
     TEST_ASSERT_FALSE(d.ok);
     TEST_ASSERT_EQUAL_INT(12345, v); // output left alone
 
     const uint8_t octet_string[] = {0x04, 0x01, 0x05}; // parses as a TLV, but is not an INTEGER
-    pc_ber_dec_init(&d, octet_string, sizeof(octet_string));
-    TEST_ASSERT_FALSE(pc_ber_read_integer(&d, &v));
+    protocore_ber_dec_init(&d, octet_string, sizeof(octet_string));
+    TEST_ASSERT_FALSE(protocore_ber_read_integer(&d, &v));
     TEST_ASSERT_FALSE(d.ok);
     TEST_ASSERT_EQUAL_INT(12345, v);
 }
@@ -444,44 +444,44 @@ void test_read_integer_sign_extends_negative()
 {
     const uint8_t m1[] = {0x02, 0x01, 0xFF};
     BerDec d;
-    pc_ber_dec_init(&d, m1, sizeof(m1));
+    protocore_ber_dec_init(&d, m1, sizeof(m1));
     long v = 0;
-    TEST_ASSERT_TRUE(pc_ber_read_integer(&d, &v));
+    TEST_ASSERT_TRUE(protocore_ber_read_integer(&d, &v));
     TEST_ASSERT_EQUAL_INT(-1, v);
 
     const uint8_t m256[] = {0x02, 0x02, 0xFF, 0x00};
-    pc_ber_dec_init(&d, m256, sizeof(m256));
-    TEST_ASSERT_TRUE(pc_ber_read_integer(&d, &v));
+    protocore_ber_dec_init(&d, m256, sizeof(m256));
+    TEST_ASSERT_TRUE(protocore_ber_read_integer(&d, &v));
     TEST_ASSERT_EQUAL_INT(-256, v);
 }
 
-// pc_ber_read_oid rejects a truncated TLV header, and refuses a caller array too
+// protocore_ber_read_oid rejects a truncated TLV header, and refuses a caller array too
 // small to hold even the two arcs the first subidentifier always yields.
 void test_read_oid_truncated_header_and_tiny_max()
 {
     const uint8_t truncated[] = {0x06}; // OID tag with no length octet
     BerDec d;
-    pc_ber_dec_init(&d, truncated, sizeof(truncated));
+    protocore_ber_dec_init(&d, truncated, sizeof(truncated));
     uint32_t arcs[8];
     size_t n = 99;
-    TEST_ASSERT_FALSE(pc_ber_read_oid(&d, arcs, 8, &n));
+    TEST_ASSERT_FALSE(protocore_ber_read_oid(&d, arcs, 8, &n));
     TEST_ASSERT_FALSE(d.ok);
 
     const uint8_t oid_1_3_6_1[] = {0x06, 0x03, 0x2B, 0x06, 0x01};
-    pc_ber_dec_init(&d, oid_1_3_6_1, sizeof(oid_1_3_6_1));
-    TEST_ASSERT_FALSE(pc_ber_read_oid(&d, arcs, 1, &n)); // max < 2 cannot hold arc0 + arc1
+    protocore_ber_dec_init(&d, oid_1_3_6_1, sizeof(oid_1_3_6_1));
+    TEST_ASSERT_FALSE(protocore_ber_read_oid(&d, arcs, 1, &n)); // max < 2 cannot hold arc0 + arc1
     TEST_ASSERT_FALSE(d.ok);
 }
 
-// pc_ber_skip fails closed when the cursor is already past the end of the buffer,
+// protocore_ber_skip fails closed when the cursor is already past the end of the buffer,
 // even for a zero-length skip - it never trusts pos <= len.
 void test_ber_skip_cursor_past_end()
 {
     const uint8_t data[4] = {1, 2, 3, 4};
     BerDec d;
-    pc_ber_dec_init(&d, data, sizeof(data));
+    protocore_ber_dec_init(&d, data, sizeof(data));
     d.pos = sizeof(data) + 1; // cursor beyond the buffer
-    TEST_ASSERT_FALSE(pc_ber_skip(&d, 0));
+    TEST_ASSERT_FALSE(protocore_ber_skip(&d, 0));
     TEST_ASSERT_FALSE(d.ok);
 }
 

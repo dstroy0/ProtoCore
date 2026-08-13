@@ -3,7 +3,7 @@
 """syslog (RFC 5424) interop: drive the device as a syslog client against a UDP collector (stdlib).
 
 Role: the *device is the client*. This peer binds a UDP socket (a syslog collector), triggers the device
-(via the rig's GET /syslog/probe?host=&port=&msg=&sev= route) to format one RFC 5424 line and pc_udp_sendto
+(via the rig's GET /syslog/probe?host=&port=&msg=&sev= route) to format one RFC 5424 line and protocore_udp_sendto
 it, then receives the datagram and validates it against the RFC 5424 grammar as an independent receiver:
 
   <PRI>1 SP TIMESTAMP SP HOSTNAME SP APP-NAME SP PROCID SP MSGID SP STRUCTURED-DATA SP MSG

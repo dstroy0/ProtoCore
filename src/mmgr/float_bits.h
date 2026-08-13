@@ -19,7 +19,7 @@
 
 #include "mmgr/rawmemcpy.h" // proto_raw_u64 - the one spelling of a bit read at a pointer
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 #define PROTO_DBL_SIGN_MASK 0x8000000000000000ull ///< bit 63
 #define PROTO_DBL_EXP_MASK 0x7FF0000000000000ull  ///< bits 62..52
@@ -31,38 +31,38 @@ PROTO_BEGIN_DECLS
 #define PROTO_DBL_BIAS 1023        ///< subtracted from the exponent field to get the power of two
 
 /** @brief The sign bit of @p v as 0 or 1. */
-PC_INLINE proto_u64 proto_dbl_sign(double v)
+PROTOCORE_INLINE proto_u64 proto_dbl_sign(double v)
 {
     return (proto_raw_u64(&v) & PROTO_DBL_SIGN_MASK) >> PROTO_DBL_SIGN_SHIFT;
 }
 
 /** @brief The exponent field of @p v, still biased. */
-PC_INLINE proto_u64 proto_dbl_exp(double v)
+PROTOCORE_INLINE proto_u64 proto_dbl_exp(double v)
 {
     return (proto_raw_u64(&v) & PROTO_DBL_EXP_MASK) >> PROTO_DBL_MANT_BITS;
 }
 
 /** @brief The mantissa field of @p v. */
-PC_INLINE proto_u64 proto_dbl_mant(double v)
+PROTOCORE_INLINE proto_u64 proto_dbl_mant(double v)
 {
     return proto_raw_u64(&v) & PROTO_DBL_MANT_MASK;
 }
 
 /** @brief The three fields shifted into place and merged: the bits of the double they describe. */
-PC_INLINE proto_u64 proto_dbl_merge(proto_u64 sign, proto_u64 exp, proto_u64 mant)
+PROTOCORE_INLINE proto_u64 proto_dbl_merge(proto_u64 sign, proto_u64 exp, proto_u64 mant)
 {
     return ((sign & PROTO_DBL_SIGN_ONE) << PROTO_DBL_SIGN_SHIFT) | ((exp & PROTO_DBL_EXP_ALL) << PROTO_DBL_MANT_BITS) |
            (mant & PROTO_DBL_MANT_MASK);
 }
 
 /** @brief The double those bits are. */
-PC_INLINE double proto_dbl_from_bits(proto_u64 bits)
+PROTOCORE_INLINE double proto_dbl_from_bits(proto_u64 bits)
 {
     double v = 0.0;
     proto_raw_read(&v, &bits, sizeof(v));
     return v;
 }
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FLOAT_BITS_H

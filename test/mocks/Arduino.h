@@ -15,20 +15,20 @@
 #endif
 
 // The virtual clock the suite drives: a test calls set_millis() and the library reads it back
-// through pc_millis(). The counter is one object for the whole program - a test writes it from
+// through protocore_millis(). The counter is one object for the whole program - a test writes it from
 // its own translation unit and server/clock/clock.c reads it from another, so a per-TU copy
 // would leave the library reading a counter nobody set. A weak definition in the header gives
 // every TU the same symbol and lets the linker collapse them to one instance, which is what the
 // C++ build got for free from ODR merging of inline-function-local statics.
-__attribute__((weak)) uint32_t g_pc_mock_millis = 0;
+__attribute__((weak)) uint32_t g_protocore_mock_millis = 0;
 
 static inline uint32_t millis(void)
 {
-    return g_pc_mock_millis;
+    return g_protocore_mock_millis;
 }
 static inline void set_millis(uint32_t v)
 {
-    g_pc_mock_millis = v;
+    g_protocore_mock_millis = v;
 }
 
 // ---------------------------------------------------------------------------

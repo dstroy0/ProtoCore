@@ -8,16 +8,16 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
-## pc_ssh_conn_accept hands an inbound connection the SSH slot the reverse tunnel is already using
+## protocore_ssh_conn_accept hands an inbound connection the SSH slot the reverse tunnel is already using
 
-- **Status:** FIXED 2026-08-11. Found by reading `pc_ssh_conn_accept` against `ssh_client.c`'s
+- **Status:** FIXED 2026-08-11. Found by reading `protocore_ssh_conn_accept` against `ssh_client.c`'s
   `begin()` while tracing who owns a slot.
-- **What happens:** `pc_ssh_conn_accept` (`ssh_conn.c:363`) allocates by scanning
+- **What happens:** `protocore_ssh_conn_accept` (`ssh_conn.c:363`) allocates by scanning
   `s_sshc.conn_for_ssh[]` from 0 for the first entry equal to `0xFF`, then calls
   `ssh_transport_init(j)`, whose first act is `mem.set(s, 0, sizeof(*s))`. The client takes
   `SSH_CLI_SLOT 0` in `begin()` and reaches its relay through `Tcp.client`, so nothing ever writes
   `conn_for_ssh[0]` and the slot reads as free for the tunnel's whole life.
-- **Consequence:** in a build with both `PC_ENABLE_SSH` and `PC_ENABLE_SSH_CLIENT`, the first
+- **Consequence:** in a build with both `PROTOCORE_ENABLE_SSH` and `PROTOCORE_ENABLE_SSH_CLIENT`, the first
   inbound SSH connection takes slot 0 and zeroes the live tunnel's session: its keys, its phase,
   its V_C / V_S / I_C / I_S. Twelve ESP board profiles carry `MAX_SSH_CONNS` under the comment
   "SSH server + reverse-SSH client", so both roles in one image is a configuration the tree
@@ -27,18 +27,18 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   in the matrix drives an accept against a claimed slot.
 - **Root cause:** the table records which connection owns a slot, and one of the two ways a slot
   gets owned never wrote to it. There was no missing state - only a missing write.
-- **Fix:** `pc_ssh_conn_claim(ssh_slot, cid)` / `pc_ssh_conn_release(ssh_slot)` (`ssh_conn.h`).
-  `begin()` claims slot 0 with its `pc_client` cid once the dial succeeds and fails the tunnel
-  closed if the slot is already owned; `cli_teardown` and `pc_ssh_tunnel_end` release it. The
+- **Fix:** `protocore_ssh_conn_claim(ssh_slot, cid)` / `protocore_ssh_conn_release(ssh_slot)` (`ssh_conn.h`).
+  `begin()` claims slot 0 with its `protocore_client` cid once the dial succeeds and fails the tunnel
+  closed if the slot is already owned; `cli_teardown` and `protocore_ssh_tunnel_end` release it. The
   accept scan is unchanged - it already passes over any entry that is not `0xFF`.
 - **Why the cid and not a sentinel:** the entry is the index of the connection that owns the slot,
   and inside SSH it cannot be anything but an SSH connection, so the client's cid is the direct
   value and keeps the owner traceable. A sentinel would be worse: `0xFF` is the only value the four
-  unguarded readers (`ssh_emit:78`, `pc_ssh_conn_send:162`, `pc_ssh_conn_close_channel:209`,
-  `pc_ssh_conn_open_forwarded:255`) test before `&conn_pool[...]`, so a new one would read out of
+  unguarded readers (`ssh_emit:78`, `protocore_ssh_conn_send:162`, `protocore_ssh_conn_close_channel:209`,
+  `protocore_ssh_conn_open_forwarded:255`) test before `&conn_pool[...]`, so a new one would read out of
   bounds at all four until each grew a test for it.
 - **Still worth a look, not touched:** those four readers check only `!= 0xFF` before indexing
-  `conn_pool`, while `pc_ssh_conn_rx:301` and `pc_ssh_conn_close:424` check
+  `conn_pool`, while `protocore_ssh_conn_rx:301` and `protocore_ssh_conn_close:424` check
   `conn_for_ssh[j] != conn_slot` and are safe under any value. No caller reaches the four with the
   client's slot today - the client sends through `cli_send` / `Tcp.client`, and those four are the
   server-side channel API - so this is a hardening question rather than a reachable defect.
@@ -50,32 +50,32 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Oracle:** the two sizing constants and what they say about themselves. `SSH_KEXINIT_MAX 2048`
   (`protocore_config.h:7691`): "A modern OpenSSH client's KEXINIT (post-quantum KEX names + cert
   host-key algs + EtM MACs + ext-info-c) runs well past 1 KB, so this must be large enough to hold
-  it - a smaller bound silently rejects real clients at key exchange." `PC_SSH_KEXINIT_S_MAX 704`
+  it - a smaller bound silently rejects real clients at key exchange." `PROTOCORE_SSH_KEXINIT_S_MAX 704`
   (`ssh_transport.h:59`): "Max stored size of our own KEXINIT (I_S)", with
-  `static_assert(PC_SSH_KEXINIT_S_MAX >= SSH_KEXINIT_S_WORST)` (`ssh_transport.c:120`) proving 704
+  `static_assert(PROTOCORE_SSH_KEXINIT_S_MAX >= SSH_KEXINIT_S_WORST)` (`ssh_transport.c:120`) proving 704
   covers every name this build advertises.
 - **What happens:** the span gives `SSH_OFF_I_C` 2048 bytes and `SSH_OFF_I_S` 704
   (`ssh_conn.h:59-61`). That split is the server's: I_C is whatever a real client sends, I_S is our
   own. The client role inverts it - I_C is ours and I_S is the relay's - but the offsets are
   compile-time and do not move. `ssh_kexinit_parse` (`ssh_transport.c:726-735`) picks `peer_cap =
-PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So the client caps
+PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So the client caps
   the relay's KEXINIT at 704 bytes and refuses anything longer, while our own 704-byte list sits in
   a 2048-byte buffer.
-- **Consequence:** `PC_ENABLE_SSH_CLIENT` fails key exchange against any relay whose KEXINIT
+- **Consequence:** `PROTOCORE_ENABLE_SSH_CLIENT` fails key exchange against any relay whose KEXINIT
   exceeds 704 bytes. By the two comments above that is what a current OpenSSH sends.
 - **Not measured:** I have not put a live OpenSSH KEXINIT on the wire and counted its bytes. The
   1 KB figure is what the two sizing comments and the deleted `s_cli.i_s[SSH_KEXINIT_MAX]` field
   ("server KEXINIT payload (for H); OpenSSH's is ~1.1 KB") assert, not something this session ran.
 - **Why the suite does not catch it:** `test/integration/ssh/test_ssh_client` builds its relay
   KEXINIT from the names the test needs, which is well under 704.
-- **Fix:** `PC_SSH_I_C_MAX` / `PC_SSH_I_S_MAX` (`ssh_transport.h:61`) size each buffer from the roles
+- **Fix:** `PROTOCORE_SSH_I_C_MAX` / `PROTOCORE_SSH_I_S_MAX` (`ssh_transport.h:61`) size each buffer from the roles
   compiled in: the peer bound (`SSH_KEXINIT_MAX`) in the role that receives into it, our own bound
-  (`PC_SSH_KEXINIT_S_MAX`) in the role that writes it, and the peer bound for both when both roles
+  (`PROTOCORE_SSH_KEXINIT_S_MAX`) in the role that writes it, and the peer bound for both when both roles
   are built. `SSH_OFF_I_S` / `SSH_OFF_KEXINIT` and the `kept_cap` / `peer_cap` in
   `ssh_kexinit_build` / `ssh_kexinit_parse` all read the two names, so the span and the bounds
   checks cannot drift apart.
 - **Measured:** `nm -S` on `ssh_conn.o`. `native_ssh_client` (both roles) `s_sshc` 0x4f0d = 20237,
-  up 1344 from 18893 - one `SSH_KEXINIT_MAX` less one `PC_SSH_KEXINIT_S_MAX`, which is the I_S
+  up 1344 from 18893 - one `SSH_KEXINIT_MAX` less one `PROTOCORE_SSH_KEXINIT_S_MAX`, which is the I_S
   buffer widening. `native_ssh_conn` (server only) 0x49cd = 18893: the server-only branch expands
   to the same two constants the file carried before, so a server build is unchanged. 17 SSH
   environments run 258 cases; `native_ssh`, `native_ssh_pqc` and `native_ssh_comp` still fail to
@@ -85,7 +85,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 - **Status:** FIXED 2026-08-11, validated by `native_ssh_client` running 11/11 and the other 16 SSH
   environments running 242 cases with no change. Found by building `native_ssh_client` with
-  `-DPC_LOG_LEVEL=PC_LOG_LEVEL_WARN` (reverted after), which printed the client's own `cli_fail`
+  `-DPROTOCORE_LOG_LEVEL=PROTOCORE_LOG_LEVEL_WARN` (reverted after), which printed the client's own `cli_fail`
   reason: `ssh-tunnel: KEXINIT negotiation failed`.
 - **Oracle:** RFC 4253 sec 7.1, `server_host_key_algorithms`: "The server lists the algorithms for
   which it has host keys; the client lists the algorithms that it is willing to accept." And on
@@ -95,18 +95,18 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   `SSH_TRANSPORT->kexinit_parse`, and reads the incoming KEXINIT as if it were always the client's.
   Two consequences, both role-blind:
     1. `negotiate_hostkey` (`ssh_transport.c:592`) builds its candidate table from
-       `hostkey_rsa_available()` / `pc_ssh_hostkey_ed25519_available()` /
-       `pc_ssh_hostkey_ecdsa_available()`, and `cand_match` (`:330`) requires `cands[c].avail`. A
+       `hostkey_rsa_available()` / `protocore_ssh_hostkey_ed25519_available()` /
+       `protocore_ssh_hostkey_ecdsa_available()`, and `cand_match` (`:330`) requires `cands[c].avail`. A
        client holds no host key of its own - it pins the relay's - so every candidate is unavailable
        and the call returns -1 for any name-list the relay could send.
     2. `negotiate_alg` (`:351`) iterates the _incoming_ name-list. In the client role that is the
        server's list, in the server's preference order, rather than the client's own.
 - **Measured:** `test_diag_hostkey_availability_gates_client_negotiation`. With no host key held,
-  the tunnel reaches `PC_TUN_FAILED` on the first poll after the relay's KEXINIT with 0 bytes
-  written. Calling `pc_ssh_hostkey_ed25519_set()` - provisioning the _device_ with a server host
+  the tunnel reaches `PROTOCORE_TUN_FAILED` on the first poll after the relay's KEXINIT with 0 bytes
+  written. Calling `protocore_ssh_hostkey_ed25519_set()` - provisioning the _device_ with a server host
   key a client has no use for - is the only change, and the same handshake then reaches
-  `PC_TUN_CONNECTING` and writes 48 bytes whose first message byte is 30 (`SSH_MSG_KEXDH_INIT`).
-- **Consequence:** `PC_ENABLE_SSH_CLIENT` cannot complete a key exchange against any relay unless
+  `PROTOCORE_TUN_CONNECTING` and writes 48 bytes whose first message byte is 30 (`SSH_MSG_KEXDH_INIT`).
+- **Consequence:** `PROTOCORE_ENABLE_SSH_CLIENT` cannot complete a key exchange against any relay unless
   the device happens to have been provisioned as an SSH server as well. The reverse tunnel is the
   whole point of the feature, so the feature does not work in its own configuration.
 - **Why it was never caught:** no environment compiled `ssh_client.c` against a peer.
@@ -131,15 +131,15 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 ## ssh_scp.c does not compile: the mode enum is named by its short form
 
 - **Status:** FIXED 2026-08-11, validated by `native_scp_server` building and running 9/9.
-- **What broke:** `pc_scp_on_open` compared the parsed mode against bare `SINK` and `SOURCE`
+- **What broke:** `protocore_scp_on_open` compared the parsed mode against bare `SINK` and `SOURCE`
   (`ssh_scp.c:137`, `:146`). The enum in `scp.h:36-38` spells them `SCP_MODE_SINK` and
   `SCP_MODE_SOURCE`, and no alias for the short forms exists anywhere. Any build with
-  `PC_ENABLE_SSH_SCP=1` failed with `error: 'SINK' undeclared`.
+  `PROTOCORE_ENABLE_SSH_SCP=1` failed with `error: 'SINK' undeclared`.
 - **Why it was never caught:** the same gap that hid the `ssh_forward.c` defect - no environment in
   `test_matrix.json` compiled the file. Both SSH file-transfer bindings were unbuilt, and one of the
   two did not compile.
 - **Fix:** name the enum members as the header declares them.
-- **Reach:** compile-time only, and only when the feature is on. `PC_ENABLE_SSH_SCP` defaults to 0,
+- **Reach:** compile-time only, and only when the feature is on. `PROTOCORE_ENABLE_SSH_SCP` defaults to 0,
   so no shipped default configuration was affected.
 
 ## SFTP: SSH_FXP_VERSION ignores the client's version instead of answering the lower of the two
@@ -150,15 +150,15 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   transfer protocol starts, it first sends a SSH_FXP_INIT (including its version number) packet to
   the server. The server responds with a SSH_FXP_VERSION packet, supplying the lowest of its own and
   the client's version number."
-- **What happens:** `handle_packet` (`ssh_sftp.c:316`) matches `PC_SSH_FXP_INIT` and immediately
-  calls `pc_sftp_build_version`, which writes the fixed `PC_SFTP_VERSION` (3, `sftp.h:30`). The
+- **What happens:** `handle_packet` (`ssh_sftp.c:316`) matches `PROTOCORE_SSH_FXP_INIT` and immediately
+  calls `protocore_sftp_build_version`, which writes the fixed `PROTOCORE_SFTP_VERSION` (3, `sftp.h:30`). The
   `uint32 version` the client sent is never read off the reader. A client that offers version 1 or 2
   is answered 3 - a version higher than it asked for.
 - **Consequence:** sec 10.1 records that v3 changed the status codes and added `longname` to the
   NAME response, so a v2 client is answered in a dialect it cannot parse. Every current OpenSSH
   client speaks v3, which is why this has not been visible in practice.
 - **Not fixed:** answering the minimum means reading the client version and carrying it, which is a
-  contract change to `pc_sftp_build_version` and the owner's call.
+  contract change to `protocore_sftp_build_version` and the owner's call.
 
 ## RFC 4252 sec 5: a new USERAUTH_REQUEST does not abandon an armed keyboard-interactive exchange
 
@@ -170,7 +170,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   user name changes.
 - **What happens:** a `keyboard-interactive` request arms `s_auth.ki[i]` with `pending` and the user
   it named (`ssh_auth.c:626`). That slot is cleared only by its own INFO_RESPONSE (`:727`) or by
-  `pc_ssh_auth_reset` (`:59`); no other USERAUTH_REQUEST touches it. A client can therefore arm the
+  `protocore_ssh_auth_reset` (`:59`); no other USERAUTH_REQUEST touches it. A client can therefore arm the
   exchange as user A, send a further request as user B, and then answer the original prompt - the
   INFO_RESPONSE is still accepted and authenticates **A**, the user the superseded request named.
 - **Not an authentication bypass:** the response is still checked with `pw_cb(A, response)`, so the
@@ -204,15 +204,15 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   today, not what the RFC names.
 - **Every owner refusal reports code 2.** `SshForwardOpenCb` returns `int`, and
   `ssh_channel.c:436` maps any `< 0` to `build_open_failure(..., 2u)`. So an administratively
-  denied target, a host longer than `PC_SSH_FWD_HOST_MAX`, and a full `PC_SSH_FWD_MAX` table all
+  denied target, a host longer than `PROTOCORE_SSH_FWD_HOST_MAX`, and a full `PROTOCORE_SSH_FWD_MAX` table all
   report SSH_OPEN_CONNECT_FAILED. Sec 5.1 names 1 (ADMINISTRATIVELY_PROHIBITED) for the policy
   denial and 4 (RESOURCE_SHORTAGE) for the full table. The callback cannot express which, so
   distinguishing them is a contract change, not a local fix.
 - **Code 2 is unreachable for the case it names.** `on_forward_open` (`ssh_forward.c:238`) treats
-  `Tcp.client->open() < 0` as the connect failure, but `pc_client_open` (`tcp_client.c:308`) calls
+  `Tcp.client->open() < 0` as the connect failure, but `protocore_client_open` (`tcp_client.c:308`) calls
   `cc_pump` and then returns the slot id without consulting `c->closed` - the transport is
   non-blocking and the connect has not settled yet. A refused target therefore yields
-  CHANNEL_OPEN_CONFIRMATION followed by EOF + CLOSE on the next `pc_ssh_forward_pump`, never
+  CHANNEL_OPEN_CONFIRMATION followed by EOF + CLOSE on the next `protocore_ssh_forward_pump`, never
   SSH_OPEN_CONNECT_FAILED. Not a protocol violation, but the client is told a channel opened to a
   host nothing ever connected to.
 - **Stale comment:** `ssh_forward.c:238` says the open "blocks on DNS + connect". It does not.
@@ -222,42 +222,42 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Status:** OPEN. Sec 7.1: "Implementations should only allow forwarding privileged ports if the
   user has been authenticated as a privileged user."
 - **What is missing:** `on_rforward_open` (`ssh_forward.c:274`) checks port 0, a duplicate binding,
-  `PC_SSH_RFWD_MAX` capacity and `MAX_LISTENERS` capacity. There is no port-range check anywhere in
+  `PROTOCORE_SSH_RFWD_MAX` capacity and `MAX_LISTENERS` capacity. There is no port-range check anywhere in
   the file, so any authenticated user can bind 22, 80 or 443 on the device with `ssh -R`.
-- **Reach:** `PC_SSH_PORT_FORWARD` defaults to 0 and remote forwarding is inert until the
-  application calls `pc_ssh_forward_begin()`, so no default configuration is exposed. A deployment
+- **Reach:** `PROTOCORE_SSH_PORT_FORWARD` defaults to 0 and remote forwarding is inert until the
+  application calls `protocore_ssh_forward_begin()`, so no default configuration is exposed. A deployment
   that turns forwarding on gets the whole port range.
 - **Not fixed:** a privileged-port gate is a new policy surface and the owner's call.
 
 ## ssh_forward.c does not compile: `Session` undeclared
 
 - **Status:** FIXED 2026-08-10, validated by `native_ssh_forward` building and running 14/14.
-- **What broke:** `pc_ssh_forward_begin` calls `Session.proto->add(PROTO_SSH_RFWD, &s_rfwd_handler)`
+- **What broke:** `protocore_ssh_forward_begin` calls `Session.proto->add(PROTO_SSH_RFWD, &s_rfwd_handler)`
   at `ssh_forward.c:466`. `Session` is declared in `network_drivers/session/session.h:46`, which the
   file never included - it includes `session/proto_handler.h`, which declares `ProtoRegistryNs` but
-  not the `Session` instance. Any build with `PC_SSH_PORT_FORWARD=1` fails with
+  not the `Session` instance. Any build with `PROTOCORE_SSH_PORT_FORWARD=1` fails with
   `error: 'Session' undeclared (first use in this function); did you mean 'SshSession'?`.
 - **Why it was never caught:** no environment in `test_matrix.json` compiled the file. The whole of
   `ssh -L` and `ssh -R` was unbuilt, so the error sat in the tree rather than failing CI. Found by
   adding `native_ssh_forward`, the first env that builds it.
 - **Fix:** the missing `#include "network_drivers/session/session.h"`. The direction is acyclic -
   `session.h` reaches only into `session/` and `transport/`, never back into `presentation/`.
-- **Reach:** compile-time only, and only when the feature is on. `PC_SSH_PORT_FORWARD` defaults to 0
+- **Reach:** compile-time only, and only when the feature is on. `PROTOCORE_SSH_PORT_FORWARD` defaults to 0
   (`protocore_config.h:6365`), so no shipped default configuration was affected.
 
 ## Audit F3 "a framing failure permanently wedges the channel" - OVERSTATED, the idle sweep reclaims it
 
 - **Status:** CLOSED 2026-08-09 as not the defect it was filed as. The leak is real; the consequence
   is not. Filed so the severity is not acted on twice.
-- **The leak, confirmed:** `pc_ssh_conn_open_forwarded` (`ssh_conn.c:271`) releases the secure mark
-  and returns -1 when `ssh_pkt_send` fails, while the channel `pc_ssh_channel_open_forwarded`
+- **The leak, confirmed:** `protocore_ssh_conn_open_forwarded` (`ssh_conn.c:271`) releases the secure mark
+  and returns -1 when `ssh_pkt_send` fails, while the channel `protocore_ssh_channel_open_forwarded`
   allocated at `:263` stays `pending`. `chan_alloc` skips any slot with `open || pending`, so with
-  the default `PC_SSH_MAX_CHANNELS == 1` no further channel opens on that connection.
+  the default `PROTOCORE_SSH_MAX_CHANNELS == 1` no further channel opens on that connection.
 - **The claim that does not hold:** F3 calls it "unrecoverable short of a reconnect", which reads as
   a permanent wedge. The reconnect is automatic and bounded. `tcp_conn.c:443` arms the connection
   pool's idle sweep at `CONN_TIMEOUT_MS` (5000 ms, `protocore_config.h:220`); `ssh_conn.c:133` binds
-  `.on_close = pc_ssh_conn_close`, so the sweep frees the SSH slot; and `pc_ssh_conn_accept` calls
-  `pc_ssh_channel_init` (`:357`), which clears the slot's channels for the next tenant. A wedged
+  `.on_close = protocore_ssh_conn_close`, so the sweep frees the SSH slot; and `protocore_ssh_conn_accept` calls
+  `protocore_ssh_channel_init` (`:357`), which clears the slot's channels for the next tenant. A wedged
   channel therefore costs at most one idle timeout.
 - **What it actually is:** up to 5 s during which an `ssh -R` accept on that connection returns -1
   and `rfwd_on_accept` closes the inbound socket. Worth tidying, not worth an API.
@@ -270,7 +270,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 - **Status:** OPEN for the desync. The reporting half is FIXED in `cd435b1b6`; this entry is the part
   that fix does not reach. Found in the `network_drivers/presentation` resource audit (F2).
-- **What is fixed:** `pc_ssh_conn_send` discarded the `Tcp.conn->send` return and returned `len`
+- **What is fixed:** `protocore_ssh_conn_send` discarded the `Tcp.conn->send` return and returned `len`
   regardless, so a short send window read to the caller as a complete write. It now returns -1.
 - **What is not:** by the time that send runs, `ssh_pkt_send` has already done `s->seq_no_send++`
   (`ssh_packet.c:372`) and advanced the AEAD invocation counter (`:352`). A refused queue therefore
@@ -278,7 +278,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   packet fails the peer's MAC**. Returning -1 tells the caller the write failed; it does not undo
   the cipher step, and nothing retries the framed bytes. The session is unrecoverable from that
   point whether or not the caller notices.
-- **Reach:** `pc_ssh_conn_send` is the port-forward data path (`ssh_forward.c:211`, `:521`), which is
+- **Reach:** `protocore_ssh_conn_send` is the port-forward data path (`ssh_forward.c:211`, `:521`), which is
   exactly where sustained load fills a send buffer. `ssh_scp.c:88,93` and `ssh_sftp.c:170` discard
   the return entirely, so those two do not even learn.
 - **Resolved shape (maintainer, 2026-08-09):** retrying is the wrong answer. A refused queue means
@@ -287,7 +287,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   torn down instead of preserving cipher state for a peer that will never read it. That leaves the
   fix as propagating the failure to a teardown, not as a retry queue, and unties this finding from
   F1's borrow-placement question.
-- **Still to write:** the teardown itself. `pc_ssh_conn_send` now returns -1; `ssh_scp.c:88,93` and
+- **Still to write:** the teardown itself. `protocore_ssh_conn_send` now returns -1; `ssh_scp.c:88,93` and
   `ssh_sftp.c:170` still discard that, so they neither learn nor close.
 
 ## The server's SSH_MSG_NEWKEYS is framed into an occupied slot and dropped, and the test cannot see it
@@ -309,8 +309,8 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
        The first emit sets `tx_ready` (`:176`). The second therefore returns -1 and the payload is never
        framed. `emit()` returns `void`, so nothing upstream learns of it, and `ssh_newkeys_sent(i)` on the
        very next line turns `enc_out` on regardless.
-- **Nothing drains in between.** `Workers.wake` -> `pc_worker_wake` (`worker.c`) is
-  `pc_platform_task_notify` - it signals a task, it does not run one. The only drain is
+- **Nothing drains in between.** `Workers.wake` -> `protocore_worker_wake` (`worker.c`) is
+  `protocore_platform_task_notify` - it signals a task, it does not run one. The only drain is
   `ssh_tx_drain`, called at `ssh_conn.c:419`, _after_ `ssh_pkt_recv` at `:414` has returned, and at
   `:316` on a later poll.
 - **Consequence:** the peer never sees NEWKEYS, so it never switches its inbound cipher, while the
@@ -320,7 +320,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   is likewise dropped and the peer keeps a half-open channel.
 - **Why the suite is green:** `test_ssh_server.c:186-190` asserts exactly this - `emt_n == 2`,
   `emt_type[0] == KEXDH_REPLY`, `emt_type[1] == NEWKEYS` - and passes. It installs its own callback
-  through `pc_ssh_server_set_emit_cb`, so it proves `pc_ssh_server_dispatch` _calls_ emit twice and
+  through `protocore_ssh_server_set_emit_cb`, so it proves `protocore_ssh_server_dispatch` _calls_ emit twice and
   never exercises `ssh_emit` or `ssh_pkt_emit`. The one-packet-per-slot rule is on the other side of
   the seam the test replaces. No native env covers the real emit path.
 - **Fix:** the wire holds two packets (`SSH_WIRE_CAP = 2 * SSH_PKT_WIRE_MAX`), and `ssh_pkt_emit`
@@ -337,8 +337,8 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   reproduced identically at `0c8fa67db`, the commit before the cascade, in a clean worktree with
   only the `mmgr` link deps added. Same eight tests, same counts. Nothing in the cascade touches it.
 - **Symptom:** 8 of 20 fail, every one on connection-ID routing or address migration:
-    - `:458` `test_server_single_peer` - `pc_coaps_server_ingest` refuses the first application
-      record, though the handshake completed and `pc_coaps_server_active_conns()` is 1.
+    - `:458` `test_server_single_peer` - `protocore_coaps_server_ingest` refuses the first application
+      record, though the handshake completed and `protocore_coaps_server_active_conns()` is 1.
     - `:478` `test_two_peers_routing`, `:551` `test_cid_address_migration`,
       `:766` `test_unknown_cid_dropped`, `:800` `test_slot_lookup_same_port_different_ip`,
       `:832` `test_slot_by_cid_skips_and_bounds`, `:862` `test_cid_no_migration_when_address_unchanged`,
@@ -349,7 +349,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Not a crash.** pio reports `SIGFPE`, which is Unity's exit code - it exits with the failure count,
   and 8 renders as signal 8. Under gdb the program runs to completion with no fault and no stack.
   The same artifact renders 5 failures as `SIGTRAP` and 1 as `SIGHUP` elsewhere in the suite.
-- **Root cause:** not investigated. `PC_COAPS_MAX_CONNS` (2) and `PC_COAPS_INGEST_RING` (6) are sane
+- **Root cause:** not investigated. `PROTOCORE_COAPS_MAX_CONNS` (2) and `PROTOCORE_COAPS_INGEST_RING` (6) are sane
   in `coaps_server.h:42,45`, so the ring arithmetic at `coaps_server.c:176,198` is not at fault.
 - **Fix:** not written.
 
@@ -378,7 +378,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   abandoned unwiped - `f`/`ginv` (the sntrup761 private key), `r`, and ML-KEM's `shat`/`mprime` -
   which is the same exposure as F7 and belongs with it, not with a stack-overflow finding.
 - **Lesson for the next audit read:** the figures were right and the consequence was wrong. The
-  audit did not read `PC_WORKER_TASK_STACK`.
+  audit did not read `PROTOCORE_WORKER_TASK_STACK`.
 
 ## The hash context became a view, so every copy of one silently aliased its source
 
@@ -387,17 +387,17 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Symptom:** the DTLS and QUIC suites disagreed with the server on the Finished MAC
   (`test_dtls_conn.c:441`, five tests), `native_coaps_server` took a SIGBUS, and the h3 / quic
   servers failed to complete a handshake.
-- **Root cause:** the ownership cascade turned `pc_sha256_ctx` / `pc_sha512_ctx` into views - `rx`,
+- **Root cause:** the ownership cascade turned `protocore_sha256_ctx` / `protocore_sha512_ctx` into views - `rx`,
   `tx` and `fs` point into the caller's working bytes. Anything that duplicated or shared those
   bytes therefore aliased a live hash instead of snapshotting it. It surfaced three ways, and the
   first two look nothing alike:
-    1. **Struct assignment.** `pc_sha256_ctx b = a;` was a snapshot when the context owned its
+    1. **Struct assignment.** `protocore_sha256_ctx b = a;` was a snapshot when the context owned its
        storage. 19 sites finalized the copy and destroyed the running transcript.
-    2. **By-value parameter.** `complete_handshake_from_flight(DtlsConn *, pc_sha256_ctx tr, ...)`
+    2. **By-value parameter.** `complete_handshake_from_flight(DtlsConn *, protocore_sha256_ctx tr, ...)`
        is the same copy in argument form, which a search for `ctx X = Y;` does not find.
     3. **One shared work buffer.** The test conversion gave each TU a single `tw[4096]` and passed
        it to every entry point. A context keeps working out of the bytes it was initialized with,
-       so a one-shot taking the same buffer overwrote it mid-life: the `pc_ed25519_verify` between
+       so a one-shot taking the same buffer overwrote it mid-life: the `protocore_ed25519_verify` between
        CertificateVerify and Finished clobbered the transcript.
 - **Why the library was never exposed:** `src/` holds every context in its owner and passes it by
   pointer. A sweep for all three forms across `src/` returns nothing. The hazard was real but only
@@ -416,7 +416,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   is closed - the buffer moved out of function scope into the caller's borrow - and this is the
   remainder. Needs a contract decision, not a patch.
 - **Symptom:** `crypto/kdf/hkdf.c:21` sets `HKDF_INFO_CAP` to `(2 + 1 + 255 + 1 + 255)` = 514, and
-  every consumer's `PC_HKDF_BORROW` carries it. The file's own comment at `:71-73` bounds what this
+  every consumer's `PROTOCORE_HKDF_BORROW` carries it. The file's own comment at `:71-73` bounds what this
   tree actually produces: the longest label is `tls13 client in` (15) and the context is a
   Transcript-Hash (<= 32) or empty, so 2 + 1 + 15 + 1 + 32 = **51 bytes** of the 514 are ever used.
 - **Why it is not just a smaller number:** the 514 is not arbitrary, it matches the clamp.
@@ -426,22 +426,22 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   all.
 - **The decision:** `TUNING.md:100` says a pool size is the TU's precomputed worst case, not a
   chosen number - which argues for sizing to this tree's real callers and clamping to match. Against
-  that, `pc_hkdf_expand_label_ctx` is written as a protocol-general RFC 8446 sec 7.1 primitive whose
+  that, `protocore_hkdf_expand_label_ctx` is written as a protocol-general RFC 8446 sec 7.1 primitive whose
   label is `opaque<7..255>`, and narrowing the clamp narrows what it accepts. Roughly 460 bytes per
   consumer borrow ride on the answer.
 
-## Five crypto TUs carry PC_CRYPTO_HOT against crypto_opt.h's own prohibition, and its own bench numbers
+## Five crypto TUs carry PROTOCORE_CRYPTO_HOT against crypto_opt.h's own prohibition, and its own bench numbers
 
 - **Status:** OPEN, found 2026-08-08 in the `src/` resource audit (`crypto.md` F19). Needs a decision,
   not a patch: the two halves of `crypto_opt.h` disagree and only the maintainer can pick.
-- **Symptom:** `crypto_opt.h:40-46` caveat 1 says to apply `PC_CRYPTO_HOT` ONLY to code that is
+- **Symptom:** `crypto_opt.h:40-46` caveat 1 says to apply `PROTOCORE_CRYPTO_HOT` ONLY to code that is
   constant-time by structure, and "Do NOT put it on scalar-multiplication / bignum / point-arithmetic
   code that relies on branchless mask-selects". All five TUs that carry it are those categories:
     - `crypto/asymmetric/bignum.c:32` and `rsa.c:25` - bignum.
-    - `crypto/asymmetric/curve25519.c:31` - a Montgomery ladder resting on `pc_gf_cswap:305`.
+    - `crypto/asymmetric/curve25519.c:31` - a Montgomery ladder resting on `protocore_gf_cswap:305`.
     - `crypto/asymmetric/ed25519.c:32` - point arithmetic resting on `ed_cswap:457`.
     - `crypto/asymmetric/ecdsa.c:74,76` - point arithmetic resting on `pt_table_select:666`, and it
-      takes the stronger `PC_CRYPTO_HOT_PEEL` on the S3.
+      takes the stronger `PROTOCORE_CRYPTO_HOT_PEEL` on the S3.
 - **Why this is not a straight removal:** the caveat argues those paths are accelerator-dominated so
   the `-O` level "buys them almost nothing - all risk, no reward". The same header's measured
   per-die defaults (`:69-74`) contradict that for two of them: on the P4, x25519 is 6.8% and ed25519
@@ -460,13 +460,13 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 ## Six SSH sites read a slot's crypto bytes before the slot was bound, so the first host-key set faulted
 
 - **Status:** FIXED 2026-08-09 in `145c3b925`, found by the native suite (`native_ssh_pqc`).
-- **Symptom:** `pc_ssh_hostkey_ed25519_set()` segfaulted. gdb put it in `pc_sha512_update` with the
-  key pointer at address 0, three frames under `pc_ed25519_pubkey`.
+- **Symptom:** `protocore_ssh_hostkey_ed25519_set()` segfaulted. gdb put it in `protocore_sha512_update` with the
+  key pointer at address 0, three frames under `protocore_ed25519_pubkey`.
 - **Root cause:** the crypto-ownership cascade moved every hash and signature onto caller-supplied
   working bytes, and the SSH sites take theirs from `ssh_pkt[i].crypto_work`. That member is null
   until `ssh_pkt_slot_storage()` binds it, and `cli_crypto_work()` returns null when the pool cannot
   cover the slot. Six sites read it without either:
-    - `transport/ssh_transport.c:117` - `pc_ssh_hostkey_ed25519_set`, the one that faulted.
+    - `transport/ssh_transport.c:117` - `protocore_ssh_hostkey_ed25519_set`, the one that faulted.
     - `transport/ssh_transport.c:1011` - the Ed25519 arm of `sign_hash`; the ECDSA and RSA arms
       beside it were already guarded.
     - `connection/ssh_client.c` x4 - `cli_crypto_work()` passed straight in as an argument, so the
@@ -482,15 +482,15 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 - **Status:** FIXED 2026-08-09 in `f7bc5d0dc`, found by the native suite (`native_coaps`).
 - **Symptom:** `test_quic_aead_open_rejects_short_ciphertext` segfaulted.
-- **Root cause:** the test passed `uint8_t key[16]` where `pc_aes128gcm_open()` takes
-  `struct pc_aes128gcm_key *`, and passed a null tag. Its comment claimed neither was dereferenced
+- **Root cause:** the test passed `uint8_t key[16]` where `protocore_aes128gcm_open()` takes
+  `struct protocore_aes128gcm_key *`, and passed a null tag. Its comment claimed neither was dereferenced
   because open() rejects a short ciphertext first. That guard was moved out to the callers -
   `quic_crypto.c:139` records the move - so the portable backend now casts the key and calls
   `set_j0()` on its first line, writing past a 16-byte stack array.
 - **Fix:** the test is deleted rather than repaired: with the current contract it cannot be written
-  at all, since a null tag faults in `pc_ct_eq` even with a valid key context. The guard is covered
+  at all, since a null tag faults in `protocore_ct_eq` even with a valid key context. The guard is covered
   where it now lives, by `test_gcm_open_rejects_short` in `test_quic_crypto`. Every caller of
-  `pc_aes128gcm_open` was checked for the length guard first: `quic_crypto.c`, `dtls_record.c` and
+  `protocore_aes128gcm_open` was checked for the length guard first: `quic_crypto.c`, `dtls_record.c` and
   `tls_record.c` all hold it, and `smb2.c` reads its tag from a separate 16-byte copy.
 
 ## The mbedtls-backed asymmetric and CCM paths may call the heap at run time
@@ -500,7 +500,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Symptom:** unconfirmed. On the accelerated builds, one X25519 key exchange, one ECDSA sign, one
   RSA verify and every AES-CCM record may each take and release heap, which would break the
   "no heap after `begin()`" guarantee on the configuration the library actually ships.
-    - `crypto/asymmetric/curve25519.c:270-285` - `pc_gf_inv` declares four `mbedtls_mpi` and calls
+    - `crypto/asymmetric/curve25519.c:270-285` - `protocore_gf_inv` declares four `mbedtls_mpi` and calls
       `mbedtls_mpi_read_binary` / `mbedtls_mpi_exp_mod` / `mbedtls_mpi_write_binary`.
     - `crypto/asymmetric/ecdsa.c:95-118,128-151,160-183,189-212` - the four mbedtls entry points,
       through `mbedtls_ecp_group_load` and `mbedtls_ecp_mul`.
@@ -522,7 +522,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   same about itself. Acting on an unconfirmed vendor-behavior claim would mean rewriting four
   working crypto paths on a guess.
 - **What would settle it:** build for `esp32dev`, disassemble the linked image, and check whether
-  `mbedtls_calloc` is reachable from `pc_gf_inv`, the four `ecdsa.c` entry points, `rsa.c`'s verify,
+  `mbedtls_calloc` is reachable from `protocore_gf_inv`, the four `ecdsa.c` entry points, `rsa.c`'s verify,
   and `mbedtls_ccm_setkey`. Either it is reachable, and this becomes a real SRC_LAW rule-1 violation
   with a known blast radius, or it is not, and the entry is closed as NOT A BUG.
 - **Filed site:** `git_project/audit/resource/crypto.md` F12.
@@ -533,10 +533,10 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   filed in its own area report, the class is filed in none.
 - **Symptom:** the pools fail closed and these callers fail open.
     - `crypto/mac/hmac_sha256.c:72` returns without setting `ctx->okey`, which is then used.
-    - `crypto/rng/rng.c:74` dereferences an unchecked `pc_secure_persist_span()`.
-    - `network_drivers/application/smb/smb2.c:917,929,987,998` pass `pc_secure_span(...).buf` with no
-      `pc_span_ok()`.
-    - `network_drivers/presentation/http/http3/quic_crypto.c:46,50,180` write through `pc_secure_alloc`
+    - `crypto/rng/rng.c:74` dereferences an unchecked `protocore_secure_persist_span()`.
+    - `network_drivers/application/smb/smb2.c:917,929,987,998` pass `protocore_secure_span(...).buf` with no
+      `protocore_span_ok()`.
+    - `network_drivers/presentation/http/http3/quic_crypto.c:46,50,180` write through `protocore_secure_alloc`
       with no NULL test.
     - `services/security/ikev2/ikev2.c:1434,1458` the same, and `sk_message_build:1697` discards the
       seal result on top.
@@ -546,8 +546,8 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
     through `storage` unconditionally, so a NULL arrives as a store rather than as a check.
 
 - **Root cause:** `mmgr/secure.h:99-105` states the contract - "Returns NULL if the request does not
-  fit - callers MUST handle null and fail closed" - and `pc_secure_span()` yields an empty span so an
-  omitted `pc_span_ok()` writes nothing rather than dereferencing null. Both are advisory. Nothing in
+  fit - callers MUST handle null and fail closed" - and `protocore_secure_span()` yields an empty span so an
+  omitted `protocore_span_ok()` writes nothing rather than dereferencing null. Both are advisory. Nothing in
   the signature forces the check, so six independent TUs skipped it the same way.
 - **Worst consequence:** `hmac_sha256.c:72` leaves `ctx->okey` indeterminate and proceeds. Under
   deterministic ECDSA nonce generation that is a nonce-reuse path, and nonce reuse recovers the
@@ -555,30 +555,30 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Nothing can catch it:** no test drives an arena to exhaustion, so every one of these paths is
   unreachable in the native suite by construction.
 - **Fix:** not written. The durable form is to make the check unskippable rather than to add six
-  checks - a borrow that cannot be handed to a keyed init without passing `pc_span_ok()` first.
+  checks - a borrow that cannot be handed to a keyed init without passing `protocore_span_ok()` first.
 - **Filed sites:** `git_project/audit/resource/crypto.md`,
   `network_drivers_application.md`, `network_drivers_http.md`, `services_security_storage.md`,
   `services_net_system.md`.
 
-## `PC_PLAINTEXT_ARENA_SIZE` is a chosen number, not a sum, so concurrent borrows are never proved
+## `PROTOCORE_PLAINTEXT_ARENA_SIZE` is a chosen number, not a sum, so concurrent borrows are never proved
 
 - **Status:** PARTIALLY FIXED 2026-08-09. The arena is now a sum:
-  `PC_PLAINTEXT_SCRATCH + PC_PLAINTEXT_WORK_H2CONN + PC_PLAINTEXT_WORK_H3CONN + 256`, and the twelve
-  board profiles pin `PC_PLAINTEXT_SCRATCH` instead of the total, so a per-connection term always
+  `PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H2CONN + PROTOCORE_PLAINTEXT_WORK_H3CONN + 256`, and the twelve
+  board profiles pin `PROTOCORE_PLAINTEXT_SCRATCH` instead of the total, so a per-connection term always
   adds on top of whatever a die tuned. What remains open is the transient half: the scratch figure is
-  still a per-die guess rather than the max over the declared `PC_PLAINTEXT_WORK_*` transient terms,
+  still a per-die guess rather than the max over the declared `PROTOCORE_PLAINTEXT_WORK_*` transient terms,
   so the 8,760 B compressed-SSH draw against an 8,192 B c2/s2 scratch is still unproved.
 - **Status:** OPEN, found 2026-08-08 in the `src/` resource audit. Cross-cutting: the derivation gap
   and the failure it causes are filed in two different area reports and connected in neither.
-- **Symptom:** `protocore_config.h:6477` sets `PC_PLAINTEXT_ARENA_SIZE` to 8192. The plaintext work
+- **Symptom:** `protocore_config.h:6477` sets `PROTOCORE_PLAINTEXT_ARENA_SIZE` to 8192. The plaintext work
   terms sum to **15,011 B**. Each module header asserts only that its own term fits the arena alone,
   so no two concurrent borrows are ever proved to coexist. The live consequence: SSH's real nested
-  draw is **8,760 B** with `PC_ENABLE_SSH_ZLIB=1`, against the 8,192 B arena, so publickey auth fails
+  draw is **8,760 B** with `PROTOCORE_ENABLE_SSH_ZLIB=1`, against the 8,192 B arena, so publickey auth fails
   closed on every compressed session.
-- **Root cause:** the secure side derives `PC_SECURE_ARENA_SIZE` from its `PC_WORK_*` terms, so a new
+- **Root cause:** the secure side derives `PROTOCORE_SECURE_ARENA_SIZE` from its `PROTOCORE_WORK_*` terms, so a new
   draw that is not budgeted fails the build. The plaintext side has no equivalent derivation, so a
   new draw that is not budgeted fails at run time instead, on the path that happened to be second.
-  `PC_PLAINTEXT_WORK_SSH_TRANSPORT` is defined and referenced nowhere, which is the same gap showing
+  `PROTOCORE_PLAINTEXT_WORK_SSH_TRANSPORT` is defined and referenced nowhere, which is the same gap showing
   from the other direction.
 - **Nothing can catch it:** an assert that a term fits alone passes for every term individually at
   any arena size down to the largest single term.
@@ -592,15 +592,15 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Status:** OPEN, found 2026-08-09 converting `h2_conn` and `h3_conn` onto the connection-owns-the-
   memory law.
 - **Symptom:** `h2_conn` and `h3_conn` used to hold their frame, header-block, scratch and per-stream
-  buffers inline, inside `s_h2` (`PC_H2_POOL_ATTR`) and `s_qpool` (`PC_QUIC_POOL_ATTR`) - both of
+  buffers inline, inside `s_h2` (`PROTOCORE_H2_POOL_ATTR`) and `s_qpool` (`PROTOCORE_QUIC_POOL_ATTR`) - both of
   which a board can move to PSRAM. As pool borrows those bytes now live in
   `PlainPoolStorageCtx.mem`, which has no placement attribute, so on an S3 they are 346,816 B of
   internal DRAM where they were previously PSRAM-movable.
-- **Second multiplier:** the storage is `[PC_REG_POOL_SLOTS][PC_PLAINTEXT_ARENA_SIZE]`, and
-  `PC_REG_POOL_SLOTS` is `PC_WORKER_COUNT + 1`. A per-connection persistent borrow is therefore
+- **Second multiplier:** the storage is `[PROTOCORE_REG_POOL_SLOTS][PROTOCORE_PLAINTEXT_ARENA_SIZE]`, and
+  `PROTOCORE_REG_POOL_SLOTS` is `PROTOCORE_WORKER_COUNT + 1`. A per-connection persistent borrow is therefore
   budgeted once per worker slot plus once for the ghost, which never serves a connection. On the
   default single-worker build that is 2x: 693,632 B on an S3 against ~400 KB of usable DRAM.
-- **Not a new class:** `PC_WORK_SSH_CONN` and `PC_WORK_TLS_CONN` are budgeted the same way in
+- **Not a new class:** `PROTOCORE_WORK_SSH_CONN` and `PROTOCORE_WORK_TLS_CONN` are budgeted the same way in
   `s_secure_storage`, which also has no placement attribute. The conversion made the existing
   accounting expensive enough to see, it did not introduce it.
 - **Fix:** not written, and it is two decisions, not one. Whether pool storage gets the placement
@@ -654,7 +654,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## The SSH userauth service name is parsed and never compared
 
-- **Status:** FIXED 2026-08-09 (`ssh_auth.c` `pc_ssh_auth_parse_request`). Found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #3).
+- **Status:** FIXED 2026-08-09 (`ssh_auth.c` `protocore_ssh_auth_parse_request`). Found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #3).
 - **Symptom:** `ssh_auth.c:279` reads the `service` field of `SSH_MSG_USERAUTH_REQUEST` into
   `req->service`, and that member appears nowhere else in the file. A request naming service `"bogus"`
   authenticates exactly as one naming `"ssh-connection"`.
@@ -668,7 +668,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## A publickey signature is verified against a session id that no key exchange produced
 
-- **Status:** FIXED 2026-08-09 (`ssh_auth.c` `pc_ssh_auth_handle_pubkey`). Found 2026-08-08 auditing
+- **Status:** FIXED 2026-08-09 (`ssh_auth.c` `protocore_ssh_auth_handle_pubkey`). Found 2026-08-08 auditing
   `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #2).
 - **Symptom:** the signed blob is `string(session_id) || request` (RFC 4252 sec 7), but the length was
   taken from `ssh_sess[i].session_id_len` without consulting `have_session_id`. Before any KEX both are
@@ -683,7 +683,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## `pty-req`, `exec` and `env` are accepted on the request name alone
 
-- **Status:** FIXED 2026-08-09 (`ssh_channel.c` `pc_ssh_channel_handle_request`). Found 2026-08-08
+- **Status:** FIXED 2026-08-09 (`ssh_channel.c` `protocore_ssh_channel_handle_request`). Found 2026-08-08
   auditing `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #8, #9).
 - **Symptom:** acceptance was one boolean over four `mem.cmp` name matches, so a CHANNEL_REQUEST
   truncated immediately after `want_reply` was answered `CHANNEL_SUCCESS`. A `pty-req` carrying no
@@ -711,7 +711,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## `CHANNEL_WINDOW_ADJUST` and `CHANNEL_EOF` skip the pre-auth guard the other six arms have
 
-- **Status:** FIXED 2026-08-09 (`ssh_server.c` `pc_ssh_server_dispatch`). Found 2026-08-08 auditing
+- **Status:** FIXED 2026-08-09 (`ssh_server.c` `protocore_ssh_server_dispatch`). Found 2026-08-08 auditing
   `test/` for RFC conformance (`git_project/audit/ssh-auth-connection-telnet.md` #13).
 - **Symptom:** six channel arms open with `if (!s->authed) return -1;` and these two did not, so both
   were dispatched on an unauthenticated session. Not exploitable: `chan_by_id` finds no open channel
@@ -721,18 +721,18 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Fix:** both arms carry the guard, and the `authed_arms[]` list in all three suites now names all
   eight. Verified: `native_ssh` + 14 more envs, 573/573.
 
-## Two SSH test envs build the SSH stack without defining `PC_ENABLE_SSH`
+## Two SSH test envs build the SSH stack without defining `PROTOCORE_ENABLE_SSH`
 
 - **Status:** FIXED 2026-08-09 (`test/test_matrix.json`, `native_ssh_hardened` and `native_ssh_pqc`).
   Found 2026-08-09 while running the suites for the four fixes above.
 - **Symptom:** both envs list the SSH sources in `src` but their `flags` never define
-  `PC_ENABLE_SSH=1`, so the derived arena terms for SSH were absent and the pool borrows on the
+  `PROTOCORE_ENABLE_SSH=1`, so the derived arena terms for SSH were absent and the pool borrows on the
   publickey and KEX paths failed. Every borrow-taking test in them failed closed:
   `test_ecdsa_publickey_auth_succeeds_when_password_disabled` returned USERAUTH_FAILURE, and all five
   `native_ssh_pqc` KEX tests returned -1 out of `ssh_kexinit_parse`.
 - **Nothing can catch it:** the tests that do not take a borrow still pass, so each env looked healthy
   as long as nobody added one that does. `native_ssh_pqc` now runs 10 cases where it reported 5.
-- **Fix:** both envs declare `PC_ENABLE_SSH=1`, then `platformio.ini` regenerated with
+- **Fix:** both envs declare `PROTOCORE_ENABLE_SSH=1`, then `platformio.ini` regenerated with
   `test/gen_test_envs.py`. A sweep of the matrix found no third env in this state.
   Verified: `native_ssh_hardened` 4/4, `native_ssh_pqc` 10/10.
 
@@ -822,7 +822,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## A DTLS receiver rejected a legal legacy_record_version
 
-- **Status:** FIXED 2026-08-09 (`dtls_record.c` `pc_dtls_plaintext_parse`), superseding the OPEN
+- **Status:** FIXED 2026-08-09 (`dtls_record.c` `protocore_dtls_plaintext_parse`), superseding the OPEN
   entry this replaces. Found 2026-08-08 auditing `test/` for RFC conformance
   (`git_project/audit/dtls13-rpk.md` #4).
 - **Symptom:** RFC 9147 sec 4: legacy_record_version "MUST be set to {254, 253} for all records
@@ -884,7 +884,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Symptom:** RFC 7250 sec 4.2 outcome 2: a server that supports the extension but has no
   certificate type in common with the client "terminates the session with a fatal alert of type
   unsupported_certificate". The server answered X.509 regardless - including for a RawPublicKey-only
-  offer, and always when `PC_ENABLE_TLS_RPK` is 0, because the whole extension case sat inside that
+  offer, and always when `PROTOCORE_ENABLE_TLS_RPK` is 0, because the whole extension case sat inside that
   guard and was not even parsed.
 - **Root cause:** the parser recorded only whether RawPublicKey was offered, which cannot express
   "the client named types and none of them is one we can send".
@@ -897,7 +897,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 - **Status:** FIXED 2026-08-09 (`tls_conn.c` `tls_conn_slot_storage`). Found 2026-08-09 building the
   per-file suite the driver did not have.
-- **Symptom:** `conn_init` called `pc_secure_wipe(c, sizeof(*c))` and then `secure.persist_span()`.
+- **Symptom:** `conn_init` called `protocore_secure_wipe(c, sizeof(*c))` and then `secure.persist_span()`.
   The wipe nulls the very pointers that record whether the connection already holds storage, so the
   guard could never fire: a slot that closed and was re-accepted took another borrow from the
   persistent end, which is never given back. `MAX_TLS_CONNS` inits exhaust the pool permanently.
@@ -917,15 +917,15 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 ## The portable TLS arm could not be built at all
 
 - **Status:** FIXED 2026-08-09 (`protocore_config.h`). Found 2026-08-09 standing up `native_tls_conn`.
-- **Symptom:** `tls_conn.c:41` asserts `PC_ENABLE_TLS_RPK` because the portable arm authenticates by
-  RFC 7250 raw public key, but the config guard accepted that flag only alongside `PC_ENABLE_DTLS`
-  or `PC_ENABLE_HTTP3`. The two conditions cannot both hold for a standalone software-TLS build, so
-  `PC_TLS_SOFTWARE` was unbuildable on its own - which is why it had no env.
+- **Symptom:** `tls_conn.c:41` asserts `PROTOCORE_ENABLE_TLS_RPK` because the portable arm authenticates by
+  RFC 7250 raw public key, but the config guard accepted that flag only alongside `PROTOCORE_ENABLE_DTLS`
+  or `PROTOCORE_ENABLE_HTTP3`. The two conditions cannot both hold for a standalone software-TLS build, so
+  `PROTOCORE_TLS_SOFTWARE` was unbuildable on its own - which is why it had no env.
 - **Fix:** the guard names the portable arm as the third carrier of the extension.
 
 ## A zero-length TLS Handshake or Alert record was both sent and accepted
 
-- **Status:** FIXED 2026-08-09 (`tls_record.c` `pc_tls_record_protect` / `_unprotect`). Found
+- **Status:** FIXED 2026-08-09 (`tls_record.c` `protocore_tls_record_protect` / `_unprotect`). Found
   2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/tls13.md` #1).
 - **Symptom:** RFC 8446 sec 5.4: "Implementations MUST NOT send Handshake and Alert records that
   have a zero-length TLSInnerPlaintext.content; if such a message is received, the receiving
@@ -954,23 +954,23 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Note on the memory:** `Tls13ClientHello` lives inside the TLS connection's own borrow
   (`tls_conn.c` `TLS_OFF_HELLO`), and `TLS_OFF_KS` is derived from `sizeof(Tls13ClientHello)`, so
   growing the struct shifts the offsets after it. They follow correctly because they are computed
-  rather than written down, and the `PC_TLS_CONN_STATE_CAP` static_assert proves the slot still
+  rather than written down, and the `PROTOCORE_TLS_CONN_STATE_CAP` static_assert proves the slot still
   covers them. Verified: 184/184 across all ten TLS/DTLS envs plus `native_crypto_kat`.
 
 ## HKDF-Expand had no published-vector coverage at all
 
-- **Status:** FIXED 2026-08-09 (`hkdf.h` `pc_hkdf_expand`, `test_crypto_kat.c`, the RFC 5869 vector
+- **Status:** FIXED 2026-08-09 (`hkdf.h` `protocore_hkdf_expand`, `test_crypto_kat.c`, the RFC 5869 vector
   file and its curator/generator). Found 2026-08-08 auditing `test/` for RFC conformance
   (`git_project/audit/tls13.md` #5, #11).
 - **Symptom:** the vector file carried `salt`/`ikm`/`prk` and the suite called only
-  `pc_hkdf_extract`. Expand - the half that derives every TLS and QUIC traffic key - was checked
+  `protocore_hkdf_extract`. Expand - the half that derives every TLS and QUIC traffic key - was checked
   against nothing published. The only >32-byte check anywhere was `test_quic_crypto.c`'s
   `expand_label_ref`, a line-by-line mirror of the same T(i) loop in the same file, so a shared
   convention error (T(0) as 32 zeros rather than empty) agreed with itself and passed.
-- **Root cause of the gap:** only `pc_hkdf_expand_label` was public, and it wraps `info` in the
+- **Root cause of the gap:** only `protocore_hkdf_expand_label` was public, and it wraps `info` in the
   RFC 8446 HkdfLabel structure. RFC 5869 Appendix A expands an arbitrary `info`, so its vectors
   could not reach the code through the exported surface at all.
-- **Fix:** `pc_hkdf_expand` is exported - the bare sec 2.3 primitive the file already implemented
+- **Fix:** `protocore_hkdf_expand` is exported - the bare sec 2.3 primitive the file already implemented
   internally, which is what the RFC's own vectors address. The vector file, its curator and the
   generator field list now carry `info`, `L` and `OKM` for A.1-A.3, and both halves run. A.2 asks
   for 82 bytes, three SHA-256 blocks, which is the only published multi-block case and the first
@@ -992,8 +992,8 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## HTTP/3 error codes had no correct frame to travel in
 
-- **Status:** FIXED 2026-08-09 (`quic_frame.c` `pc_quic_build_connection_close`, `quic_conn.c`
-  `pc_quic_conn_close_app`). Found 2026-08-09 implementing the HTTP/3 state-machine rules from
+- **Status:** FIXED 2026-08-09 (`quic_frame.c` `protocore_quic_build_connection_close`, `quic_conn.c`
+  `protocore_quic_conn_close_app`). Found 2026-08-09 implementing the HTTP/3 state-machine rules from
   `git_project/audit/quic-http3-qpack.md`.
 - **Symptom:** the close path could only build a transport CONNECTION_CLOSE (0x1c). RFC 9114 sec 8
   carries HTTP/3 errors in the application variant (0x1d), whose code comes from the application's
@@ -1002,7 +1002,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   sequencing error as "crypto failure, TLS alert 5". The frame parser already accepted both types;
   only the builder and the queue were transport-only.
 - **Fix:** the builder takes the variant and omits the Frame Type field for 0x1d, which sec 19.19
-  says that variant does not carry. `queue_close` records which was chosen. `pc_quic_conn_close_app`
+  says that variant does not carry. `queue_close` records which was chosen. `protocore_quic_conn_close_app`
   is the entry point for an application error; per sec 10.2.3 the 0x1d frame is only legal in
   0-RTT/1-RTT, so before those keys exist it falls back to a transport close with APPLICATION_ERROR,
   and there is a test for that arm. Verified: `native_quic_frame`, `native_quic_conn`,
@@ -1029,14 +1029,14 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 - **Status:** FIXED 2026-08-09 (`quic_packet.c`, `quic_conn.c`, `quic_tp.c`). Found 2026-08-08
   auditing `test/` for RFC conformance (`git_project/audit/quic-http3-qpack.md` #4, #5, #6, #7).
-- **Symptom:** `pc_quic_parse_long_header` tested only the header-form bit and
-  `pc_quic_parse_short_header` only its absence, so a packet with the Fixed Bit (0x40) clear parsed
+- **Symptom:** `protocore_quic_parse_long_header` tested only the header-form bit and
+  `protocore_quic_parse_short_header` only its absence, so a packet with the Fixed Bit (0x40) clear parsed
   normally where RFC 9000 sec 17.2 / 17.3.1 says it "MUST be discarded". The Reserved Bits were
   never read, though sec 17.2 makes a non-zero value a PROTOCOL_VIOLATION. `initial_max_streams_bidi`
   and `_uni` took any 62-bit varint, where sec 4.6 caps them at 2^60.
 - **Fix:** the long-header test exempts version 0, which is the Version Negotiation packet the RFC
   excludes; a short header is never one, so it holds there without exception. The Reserved Bits are
-  read in `quic_conn` after the AEAD open rather than inside `pc_quic_packet_unprotect`: the header
+  read in `quic_conn` after the AEAD open rather than inside `protocore_quic_packet_unprotect`: the header
   is authenticated by then, so a bit flipped in flight cannot close a connection, and the connection
   is also the only layer that can send the error. Verified: `native_quic_packet`, `native_quic_tp`
   and six more.
@@ -1051,7 +1051,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   stream 0 and at any length, PRIORITY at any length and on stream 0, GOAWAY shorter than its two
   mandatory fields and on a non-zero stream, SETTINGS and PING on a non-zero stream, and
   RST_STREAM or WINDOW_UPDATE naming a stream no HEADERS had ever opened.
-- **Root cause:** `pc_h2_parse_header` validates the framing, and each handler validated what it
+- **Root cause:** `protocore_h2_parse_header` validates the framing, and each handler validated what it
   needed to do its own job. Nothing owned the rules that are a property of the frame type itself.
 - **Nothing can catch it:** `test_h2_unknown_stream_frames` asserted three of these were tolerated,
   so the suite pinned the violation.
@@ -1064,11 +1064,11 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## An empty HTTP/2 CONTINUATION frame could be sent without end
 
-- **Status:** FIXED 2026-08-09 (`h2_conn.c` `handle_continuation`, `PC_H2_MAX_CONTINUATION`).
-- **Symptom:** a header block spanning CONTINUATION frames was bounded only by `PC_H2_HDR_BLOCK`,
+- **Status:** FIXED 2026-08-09 (`h2_conn.c` `handle_continuation`, `PROTOCORE_H2_MAX_CONTINUATION`).
+- **Symptom:** a header block spanning CONTINUATION frames was bounded only by `PROTOCORE_H2_HDR_BLOCK`,
   the bytes it may accumulate. A CONTINUATION carrying no payload adds no bytes, so a peer could
   send them without limit and the block would never have to end, at no memory cost to the attacker.
-- **Fix:** `PC_H2_MAX_CONTINUATION` bounds the frame count as well as the byte total. The two
+- **Fix:** `PROTOCORE_H2_MAX_CONTINUATION` bounds the frame count as well as the byte total. The two
   bounds answer different questions and the byte one could never have answered this.
   Verified: `native_h2conn` 56/56.
 
@@ -1077,7 +1077,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Status:** FIXED 2026-08-09 (`test_coaps_server.c` `client_get_temp`, `assert_coap_205`). Found
   2026-08-09 sweeping the envs that build the shared HTTP sources.
 - **Symptom:** `native_coaps_server` ERRORED, 8 of 21 cases red, every one on
-  `TEST_ASSERT_TRUE(pc_coaps_server_ingest(...))` returning FALSE.
+  `TEST_ASSERT_TRUE(protocore_coaps_server_ingest(...))` returning FALSE.
 - **Root cause:** not the ingest. `client_get_temp(DtlsRecordKeys *w, ...)` called
   `DtlsRecord.protect(&w, ...)` - the address of its own pointer parameter, a `DtlsRecordKeys **`,
   where `protect` takes `DtlsRecordKeys *`. The sealer read a stack slot holding a pointer as key
@@ -1183,7 +1183,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## An oversize HPACK dynamic-table size update was clamped instead of refused
 
-- **Status:** FIXED 2026-08-09 (`hpack.c` `pc_hpack_decode`, the 0x20 arm). Found 2026-08-08 auditing
+- **Status:** FIXED 2026-08-09 (`hpack.c` `protocore_hpack_decode`, the 0x20 arm). Found 2026-08-08 auditing
   `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #1).
 - **Symptom:** a size update naming any value was accepted; `dyn_set_max` silently lowered it to the
   table's storage. RFC 7541 sec 6.3 says a value above the limit the enclosing protocol determined
@@ -1192,7 +1192,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Root cause:** the clamp reads as defensive, and it does keep the table inside its storage, but it
   is answering a different question than the RFC asks. The limit here is 4096: `h2_conn.c` advertises
   no SETTINGS_HEADER_TABLE_SIZE, so the RFC 9113 sec 6.5.2 default applies and it equals
-  `PC_HPACK_TABLE_BYTES`.
+  `PROTOCORE_HPACK_TABLE_BYTES`.
 - **Nothing can catch it:** `test_dyn_size_update` encoded an update to 100000 and asserted the decode
   returned TRUE, pinning the clamp as correct.
 - **Fix:** the decode refuses `nm > HPACK_BYTES` before applying it. The test now pins the boundary -
@@ -1200,7 +1200,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 ## HPACK prefix-integer decode wraps at `m == 28`
 
-- **Status:** FIXED 2026-08-09 (`hpack_prim.c` `pc_hpack_decode_int`). Found 2026-08-08 auditing
+- **Status:** FIXED 2026-08-09 (`hpack_prim.c` `protocore_hpack_decode_int`). Found 2026-08-08 auditing
   `test/` for RFC conformance (`git_project/audit/http2-hpack.md` #8).
 - **Symptom:** `hpack_prim.c:137` bounds the continuation with `m > 28`, so `m == 28` is admitted and
   `(b & 0x7f) << 28` shifts up to 127 into a `uint32_t`. Confirmed by compiling the function verbatim:
@@ -1217,11 +1217,11 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   Verified: `native_hpack`, `native_h2conn`, `native_qpack` and four more, 96/96 - QPACK shares this
   primitive, so the fix is on the HTTP/3 path too.
 
-## `pc_base64url_decode` stops at `=` and reports the partial decode as success
+## `protocore_base64url_decode` stops at `=` and reports the partial decode as success
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/websocket-and-codecs.md` #2).
 - **Symptom:** `base64.c:330-333` breaks out of the loop on `'='` and returns the bytes accumulated so
-  far as the decoded length. `pc_base64url_decode("Zm9v=", 5, ...)` returns 3. Everything after the
+  far as the decoded length. `protocore_base64url_decode("Zm9v=", 5, ...)` returns 3. Everything after the
   first `=` is discarded without a diagnostic, so on the JWT/JWS path `<segment>=<anything>` decodes
   identically to `<segment>`.
 - **Root cause:** the branch is commented "optional padding ends the input (public length information)",
@@ -1236,7 +1236,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 ## SSE field values are copied verbatim, so a newline in application data injects an event
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/websocket-and-codecs.md` #3).
-- **Symptom:** `sse.c:110-142` `pc_sse_format` memcpy's `data`, `event` and `id` into the record with no
+- **Symptom:** `sse.c:110-142` `protocore_sse_format` memcpy's `data`, `event` and `id` into the record with no
   escaping. A value containing `\n\n` terminates the record early and the remainder is parsed by the
   client as new fields; a single `\n` silently truncates the field.
 - **Root cause:** the WHATWG event-stream format is line-oriented - CR, LF or CRLF separate lines and a
@@ -1250,14 +1250,14 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/coap-mqtt.md` #3).
 - **Symptom:** `mqtt.c:1141` sets `s_mqtt.tx[0] |= 0x08` and calls `mq_tx(s_mqtt.inflight[i].len)`. `tx`
-  is one shared framing buffer that every later `pc_mqtt_build_ack` / `pingreq` / `subscribe` / second
+  is one shared framing buffer that every later `protocore_mqtt_build_ack` / `pingreq` / `subscribe` / second
   `PUBLISH` overwrites (`:776, :790, :814, :822, :1067, :1077, :1116`), so a retransmit sends the
   current contents of that buffer, with bit 3 set, for the _old_ PUBLISH's length. A PINGREQ `0xC0`
   goes out as `0xC8`.
 - **Root cause:** the comment at `:1139-1140` states the invariant it relies on - "One packet is in
-  flight at a time, so tx is that packet" - and `PC_MQTT_MAX_INFLIGHT` is 4, so the invariant is false.
+  flight at a time, so tx is that packet" - and `PROTOCORE_MQTT_MAX_INFLIGHT` is 4, so the invariant is false.
   The retransmit needs the packet, and what it has is a buffer.
-- **Nothing can catch it:** `native_mqtt` is a host build with `PC_HAS_NET_STACK` 0, so the whole
+- **Nothing can catch it:** `native_mqtt` is a host build with `PROTOCORE_HAS_NET_STACK` 0, so the whole
   transport - QoS 1/2 flows, dedup, keepalive, `MqLinkState` - is compiled by no test env.
 - **Fix:** not written. The inflight record owns its bytes, or the DUP re-frame rebuilds the PUBLISH
   from the retained topic/payload. Wants a host env that compiles the transport first, or the fix is
@@ -1266,14 +1266,14 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 ## JWT claim validation fails open when there is no wall clock
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http-cache-and-auth.md` #1).
-- **Symptom:** `jwt.c:146-148` returns `PROTO_TRUE` from `pc_jwt_time_valid` whenever `now_epoch <= 0`,
+- **Symptom:** `jwt.c:146-148` returns `PROTO_TRUE` from `protocore_jwt_time_valid` whenever `now_epoch <= 0`,
   so on a device that has not yet synced time every `exp` and `nbf` is accepted. A token that expired in
   1970 validates.
 - **Root cause:** the comment reads "no wall clock -> time claims cannot be evaluated (the signature is
   the gate)", which chooses availability over the RFC 7519 sec 4.1.4 MUST NOT. An unevaluatable claim is
   not a satisfied claim.
 - **Nothing can catch it:** `test_jwt.c:286-287` asserts the fail-open as correct behavior for both
-  `pc_jwt_time_valid` and `pc_jwt_verify_hs256_at`.
+  `protocore_jwt_time_valid` and `protocore_jwt_verify_hs256_at`.
 - **Fix:** not written. Fail closed when a token carries `exp`/`nbf` and no clock is available, or make
   the caller pass an explicit "time claims not required" flag so the decision is at the call site.
 
@@ -1282,26 +1282,26 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http-cache-and-auth.md`, non-RFC note).
 - **Symptom:** `auth.c:519` is `if (!str.eq(expected, response, sizeof(expected), PROTO_TRUE))` on the
   computed versus client-supplied Digest response - an early-exit byte compare on an authentication tag,
-  which is a timing oracle. `check_basic` at `auth.c:396-397` does use `pc_ct_eq`, so the two auth paths
+  which is a timing oracle. `check_basic` at `auth.c:396-397` does use `protocore_ct_eq`, so the two auth paths
   in one file disagree.
 - **Root cause:** `protostr.h:113` states the rule in the library's own words - "A secret comparison uses
-  `pc_ct_eq`" - and `str.eq` is the general-purpose comparison that stops at the first difference.
-- **Fix:** not written. `pc_ct_eq` over the full 64-hex-character width, matching the Basic path.
+  `protocore_ct_eq`" - and `str.eq` is the general-purpose comparison that stops at the first difference.
+- **Fix:** not written. `protocore_ct_eq` over the full 64-hex-character width, matching the Basic path.
 
 ## `serve_file_internal()` accepts a backend and never uses it
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/mocks` for harness holes (`git_project/audit/mock-mnt-and-support-fixtures.md` #3).
-- **Symptom:** `file_serving.c:227` takes `const pc_mnt_backend *file_sys` and the body never reads it -
+- **Symptom:** `file_serving.c:227` takes `const protocore_mnt_backend *file_sys` and the body never reads it -
   `file_sys` occurs in the file only at `:227` (the parameter), `:525`/`:527` (passed through from
   `serve_file`) and `:530`/`:560` (recorded by `serve_static`). Line 230 goes straight to
-  `pc_fs_open(file_root(), ...)`, the globally mounted store. An application following the documented
-  `serve_static("/ram/", pc_mnt_ram(), "/")` idiom serves from whatever is mounted, not from the backend
+  `protocore_fs_open(file_root(), ...)`, the globally mounted store. An application following the documented
+  `serve_static("/ram/", protocore_mnt_ram(), "/")` idiom serves from whatever is mounted, not from the backend
   it named.
 - **Root cause:** the multipoint mount table records the per-prefix backend (`mnt.c:47-57`) and
   `file_serving.c:637`/`:642` and `webdav_handler.c:433` read it back and pass it down, so the plumbing
   is complete up to the last function, which drops it. There is not even a `(void)file_sys;`, and the
   build is `-std=gnu11` without `-Wextra`, so the unused parameter is silent.
-- **Nothing can catch it:** `test_file_serving.c:24` declares `static const pc_mnt_backend *g_fs;` and
+- **Nothing can catch it:** `test_file_serving.c:24` declares `static const protocore_mnt_backend *g_fs;` and
   never assigns it, so all 18 `serve_static()` calls pass NULL. The `setUp` comment at `:69-70` records
   the symptom ("resolves through the accessor, not through the backend handed to `serve_file()`")
   without treating it as a defect.
@@ -1335,7 +1335,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Fix:** not written. Select `invalid` first and fill the remainder with flagged-valid, or cap the two
   classes separately. Re-curating changes the committed corpus, so it wants its own commit.
 
-## `pc_ct_eq` has no test of any kind
+## `protocore_ct_eq` has no test of any kind
 
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for crypto coverage (`git_project/audit/crypto-primitives-and-vectors.md` #3).
 - **Symptom:** `src/crypto/ct_eq.h:33` is the library's single comparator for, in its own doc comment
@@ -1356,7 +1356,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Root cause:** RFC 2474 defines the high 6 bits and RFC 3168 sec 5 gives the low 2 to ECN as a
   separate field with a separate owner. The setter treats the octet as one value.
 - **Nothing can catch it:** `test_diffserv.c:57-68` always starts from `pcb.tos = 0`, and `:35` pins
-  `pc_dscp_to_tos(63) == 0xFC` with the comment "ECN still 0" - so no test ever presents a pcb already
+  `protocore_dscp_to_tos(63) == 0xFC` with the comment "ECN still 0" - so no test ever presents a pcb already
   carrying ECT(0), ECT(1) or CE.
 - **Fix:** not written. Read-modify-write the octet, preserving the low two bits, at all five sites; add
   a test that seeds a non-zero ECN and asserts it survives.
@@ -1366,7 +1366,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Status:** OPEN, found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/fieldbus-and-files-naming.md` #7, #14).
 - **Symptom:** `dns_wire.c:53` accepts any pointer offset within the message, including one greater than
   the current position, so forward and mutually-referential chains are followed - bounded only by the
-  8-hop `PC_DNS_PTR_HOPS` counter. Separately, `dns_wire.c:82` bounds the assembled name only by the
+  8-hop `PROTOCORE_DNS_PTR_HOPS` counter. Separately, `dns_wire.c:82` bounds the assembled name only by the
   caller's `out_cap`, so with a large buffer a chain of 63-octet labels yields a name past the RFC 1035
   sec 2.3.4 limit of 255 octets.
 - **Root cause:** RFC 1035 sec 4.1.4 defines a pointer as referring to "a prior occurrence of the same
@@ -1450,7 +1450,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   says out loud ("physical separation only raises the bar, not a hard wall"). The secure pool exists
   for exactly this content and wipes on release; as BSS these arrays are outside both it and the
   plaintext arena, so they are covered by neither derived worst case.
-- **Fix:** not written. Both borrow from the secure pool with a declared `PC_WORK_SSH_*` term proved
+- **Fix:** not written. Both borrow from the secure pool with a declared `PROTOCORE_WORK_SSH_*` term proved
   by a `static_assert` at the borrow site, the shape `crypto/aead/aes128gcm.h` already uses.
 
 ## The If-Modified-Since date is parsed with `sscanf`, under a comment that says "no stdlib"
@@ -1475,7 +1475,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   all** - among them `server/middleware.c:17`, `server/websocket_sse.c:25`, `server/logbuf.c`,
   `server/power_mgmt.c`, `codec/json/json.c`, `ssh/transport/ssh_transport.c`. Eight more mention a
   stdio name only inside a comment.
-- **Root cause:** the include outlived the `snprintf` calls that were replaced by `pc_sb`; nothing
+- **Root cause:** the include outlived the `snprintf` calls that were replaced by `protocore_sb`; nothing
   removes an include that nothing needs, and the baseline records the site rather than expiring it.
 - **Fix:** not written. Delete the 19 dead includes and their baseline entries. The three live users
   are separate: `file_serving.c` (entry above), and the `WSC_DBG` / `CL_DBG` debug `printf` macros in
@@ -1485,7 +1485,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 
 - **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
 - **Symptom:** `src/` is C: 349 `.c`, 378 `.h`, zero `.cpp`. 46 comments still point at the old
-  names - `bignum.h:48` "see pc_bignum.cpp", `md.h:27` "md.c", `presentation.h:14`
+  names - `bignum.h:48` "see protocore_bignum.cpp", `md.h:27` "md.c", `presentation.h:14`
   "http_parser.h / http_parser.c", `ssh_flow_control.h:13` "ssh_channel.c held the counters",
   `websocket.c:459` "lowlevel_recv_cb() (tcp.c)", `aes256ctr.h:56` "the mode ssh_packet.c uses",
   and 40 more. Every path names a file that cannot be opened.
@@ -1495,7 +1495,7 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
 - **Fix:** not written. Rewrite the 46 references, and add a rule to `check_comments.py` that resolves
   any `<name>.<ext>` token in a comment against the tree - mechanical, and it cannot regress after.
 
-## `pc_frame_append` re-scans the whole accumulated document on every call
+## `protocore_frame_append` re-scans the whole accumulated document on every call
 
 - **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
 - **Symptom:** `frame.c:115` is `size_t used = proto_scan_nul(out, cap);` on entry. Appending n
@@ -1503,14 +1503,14 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   O(n^2) in document length: `dashboard.c:130-169`, `gpio_map.c:67-80`,
   `partition_monitor.c:99-113`.
 - **Root cause:** the append takes only `(out, cap)`, so the length it needs is not in the signature
-  and has to be recovered by scanning. `pc_frame_vbuild` returns the length it wrote, so the caller
+  and has to be recovered by scanning. `protocore_frame_vbuild` returns the length it wrote, so the caller
   already holds the number the scan re-derives.
 - **Partial mitigation, not a fix:** `proto_scan_nul` is the SWAR scan and tests four bytes per
   iteration rather than one. That is a constant factor on a quadratic.
 - **Fix:** not written. The append takes the current length as an in/out parameter and returns the
-  new one; the scan goes. Touches the three emitters and any other `pc_frame_append` caller.
+  new one; the scan goes. Touches the three emitters and any other `protocore_frame_append` caller.
 
-## `PC_PLAINTEXT_ARENA_SIZE` is guessed twelve times, and scaled by the wrong quantity
+## `PROTOCORE_PLAINTEXT_ARENA_SIZE` is guessed twelve times, and scaled by the wrong quantity
 
 - **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
 - **Symptom:** the arena size is a `#ifndef` default in `protocore_config.h:6469` (8192) and again in
@@ -1521,23 +1521,23 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   SSH plus websocket borrows. `core_setup/board_profiles/derived_sizing.h` states that principle in
   its own header for `RX_BUF_SIZE` and the plaintext pool never got it.
 - **What is already in place:** the per-TU worst-case terms exist and are proved at their borrow
-  sites - `PC_PLAINTEXT_WORK_WS_SEND` / `_WS_RECV` (`websocket.h:76,84`), `_SSH_TRANSPORT`
+  sites - `PROTOCORE_PLAINTEXT_WORK_WS_SEND` / `_WS_RECV` (`websocket.h:76,84`), `_SSH_TRANSPORT`
   (`ssh_packet.h:197`), `_OIDC` (`oidc.h:58`), `_DIAG` (`protocore.c:757`). Each is `static_assert`ed
   against the arena individually. The arena is not derived from them.
 - **Consequence today is silent:** a borrow past the guess returns NULL and the call site falls
   through to a degraded path (websocket sends uncompressed), so no peer, log line or test shows it.
-- **Fix:** not written. The arena becomes the max over the declared `PC_PLAINTEXT_WORK_*` terms -
+- **Fix:** not written. The arena becomes the max over the declared `PROTOCORE_PLAINTEXT_WORK_*` terms -
   max, not sum, because the arena resets per dispatch - taken in `protocore_config.h`, which is the
   only file that sees them all. The eleven board-profile defaults then delete, and
-  `pc_plaintext_alloc`'s NULL return becomes unreachable.
+  `protocore_plaintext_alloc`'s NULL return becomes unreachable.
 
 ## The portable DNS resolve spins on a blocking loop that pumps a listener it does not own
 
 - **Status:** OPEN, found 2026-08-08 removing the UDP send rings.
 - **Symptom:** `dns_resolver.c:432` waits for its answer in
-  `while (!s_dr.done && (int32_t)(deadline - pc_millis()) > 0) { Udp.listener->poll(); pcdelay(5); }`.
+  `while (!s_dr.done && (int32_t)(deadline - protocore_millis()) > 0) { Udp.listener->poll(); pcdelay(5); }`.
   A resolve issued from inside a UDP handler never sees its reply and always returns false after the
-  full `PC_DNS_TIMEOUT_MS`.
+  full `PROTOCORE_DNS_TIMEOUT_MS`.
 - **Root cause:** two faults in one loop. `poll_all()` sets `s_lst.polling` for its duration and
   returns immediately on a reentrant call, so a resolve called from inside a handler polls nothing
   for every iteration of the wait. And the listener pump belongs to `session.c`, which calls it from
@@ -1553,28 +1553,28 @@ PC_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return -1`. So
   FAILED, which is the shape `ntp_service.h` already states ("Returns immediately; the first sync
   arrives asynchronously") and the shape lwIP's `ERR_INPROGRESS` uses.
 - **Blast radius:** one contract change across `dns_resolver.{h,c}` (both arms), `tcp_client.c`
-  (`pc_client_open` blocks on DNS then on connect), `edge_cache_proxy.c:163/211/229`, the AdsClient
+  (`protocore_client_open` blocks on DNS then on connect), `edge_cache_proxy.c:163/211/229`, the AdsClient
   example, and `test_dns_resolver` / `test_client`. It converts as one piece: `resolve()` moving
   from `proto_bool` to an enum silently inverts `if (!resolve(...))` at `tcp_client.c:250`.
 
 ## Deflate and Inflate bind their namespace instance below the gate that declares its type
 
-- **Status:** FIXED, found 2026-08-08 running the envs behind the `PC_HAS_BUS` batch. Pre-existing
+- **Status:** FIXED, found 2026-08-08 running the envs behind the `PROTOCORE_HAS_BUS` batch. Pre-existing
   on `main`: `94c236e9` without the batch gives the identical four errors.
 - **Symptom:** `pio test -e native_swar` ERRORS in the compile stage. `deflate.c:297: unknown type
 name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and the same pair for
   `InflateNs` / `inflate_raw` at `inflate.c:455`.
 - **Root cause:** both headers declare the namespace type and its `extern` inside
-  `#if PC_ENABLE_WS_DEFLATE` (`deflate.h:67-74`, `inflate.h:35-71`), and both sources close that
-  same gate before defining the instance: `deflate.c:295` is `#endif // PC_ENABLE_WS_DEFLATE` and
+  `#if PROTOCORE_ENABLE_WS_DEFLATE` (`deflate.h:67-74`, `inflate.h:35-71`), and both sources close that
+  same gate before defining the instance: `deflate.c:295` is `#endif // PROTOCORE_ENABLE_WS_DEFLATE` and
   the definition sits at `:297`, one line past it. With the feature off the type is not in scope but
   the definition is still compiled, and `native_swar` is an env that builds the codec with
-  `PC_ENABLE_WS_DEFLATE` off.
+  `PROTOCORE_ENABLE_WS_DEFLATE` off.
 - **Fix:** the definition moves above the `#endif` in both files, so the instance is inside the gate
   that declares what it is. This is the same shape as `radio_power.c`, where six entry points bound
   outside their gate.
 - **What it uncovered:** `native_swar` still fails, now at the link rather than the compile, on
-  `pc_aesgcm_key_init` / `pc_aesgcm_key_wipe` / `pc_aesgcm_seal` out of `ssh_conn.c`, `ssh_dh.c` and
+  `protocore_aesgcm_key_init` / `protocore_aesgcm_key_wipe` / `protocore_aesgcm_seal` out of `ssh_conn.c`, `ssh_dh.c` and
   `ssh_packet.c`, plus `bn_expmod_group14`. That is the entry below, and it is why the compile error
   had been sitting there: nothing downstream of it had ever run.
 
@@ -1583,12 +1583,12 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
 - **Status:** FIXED for `native_swar`, found 2026-08-08 behind the `Deflate` / `Inflate` gate fix
   above. The general question the last bullet raises is still open.
 - **Symptom:** `pio test -e native_swar` fails at the link with undefined references to
-  `pc_aesgcm_key_init`, `pc_aesgcm_key_wipe`, `pc_aesgcm_seal` and `bn_expmod_group14`, out of
+  `protocore_aesgcm_key_init`, `protocore_aesgcm_key_wipe`, `protocore_aesgcm_seal` and `bn_expmod_group14`, out of
   translation units the suite has nothing to do with. `test_swar` covers `mmgr/swar.h`, which is
   header-only lane math.
 - **Root cause:** `test/test_matrix.json` gives `native_swar` `"src": []` and `"flags": []`, so
   `gen_test_envs.py` emits no `build_src_filter` and PlatformIO falls back to its default of `+<*>`:
-  the env compiles every file under `src/`. With no flags, every `PC_ENABLE_*` takes its default, so
+  the env compiles every file under `src/`. With no flags, every `PROTOCORE_ENABLE_*` takes its default, so
   SSH is on and `ssh_conn.c` / `ssh_dh.c` / `ssh_packet.c` compile for real. The AEAD and bignum
   backends they call live under `core_setup/hal/portable`, which sits outside `src/` and so is in no
   env's default filter. Same family as the `native_quic_server` entry below: an env whose source set
@@ -1620,9 +1620,9 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
 - **Fix:** the test takes the name the library publishes. The header's pair is self-consistent and
   is what `ina219.c` reads, so the test was the side that was wrong.
 
-## pc_server_reset() left the not-found handler installed, so no route miss ever answered 404
+## protocore_server_reset() left the not-found handler installed, so no route miss ever answered 404
 
-- **Status:** FIXED, found 2026-08-08 running the envs behind the `PC_HAS_BUS` batch. Pre-existing on
+- **Status:** FIXED, found 2026-08-08 running the envs behind the `PROTOCORE_HAS_BUS` batch. Pre-existing on
   `main`: `94c236e9` without the batch fails identically, and the other 36 envs in that run pass.
 - **Symptom:** `pio test -e native_application` reports 96 cases, 2 failed.
   `test_empty_route_pattern_matches_nothing` (`:1873`) and `test_path_param_segment_mismatches`
@@ -1632,17 +1632,17 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
 - **What is ruled out:** the capture harness works. `:885` runs the identical
   `arm_slot` / `pcb` / `tcp_capture_reset` / `handle` / `strstr(out, "404")` sequence on
   `GET /nope.txt` and passes. Cross-test route pollution is ruled out too: `setUp` calls
-  `pc_server_reset()` (`protocore.c:117`), which resets the route table, the mount points, the
+  `protocore_server_reset()` (`protocore.c:117`), which resets the route table, the mount points, the
   response headers, the middleware and the signal table.
 - **Root cause:** `http.c:728` answers a route miss with `s_http.not_found` when one is set and the
-  built-in 404 only when it is not. `pc_server_reset()` empties every other owner that holds an app
-  registration - `HttpRoutes.reset()`, `Auth.reset()`, `pc_mnt_point_reset()`, `pc_resp_reset()`,
-  `pc_middleware_reset()`, `pc_signal_reset()` - but HTTP's own `HttpCtx` was not among them, because
+  built-in 404 only when it is not. `protocore_server_reset()` empties every other owner that holds an app
+  registration - `HttpRoutes.reset()`, `Auth.reset()`, `protocore_mnt_point_reset()`, `protocore_resp_reset()`,
+  `protocore_middleware_reset()`, `protocore_signal_reset()` - but HTTP's own `HttpCtx` was not among them, because
   HTTP was the one owner that never exposed a reset. Two tests near the top of the suite call
   `on_not_found()`, so from that point on every route miss in the binary ran their handler instead.
   The path had nothing to do with it; `GET /nope.txt` passed only because it runs before those two.
 - **Fix:** `HttpNs` gains `reset`, which puts `HttpCtx` back to the blank template the same way
-  `pc_server_reset()` does for its own `ServerCtx`, and `pc_server_reset()` calls it. That also
+  `protocore_server_reset()` does for its own `ServerCtx`, and `protocore_server_reset()` calls it. That also
   clears the edge-cache poll seam, which had the same escape.
 
 ## native_quic_server does not link: it builds the HTTP/3 bridge without the HTTP or TCP owners
@@ -1653,7 +1653,7 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
 - **Symptom:** `pio test -e native_quic_server` ERRORS in the link stage, before any test runs.
   `native_h3_server` builds the same file and passes.
 - **Root cause:** the env's `src` list carries `presentation/http/http3/h3_server.c`, whose
-  `pc_h3_resp_sink` and `pc_h3_server_request` reference `conn_pool`, `http_pool`, `http_reset`,
+  `protocore_h3_resp_sink` and `protocore_h3_server_request` reference `conn_pool`, `http_pool`, `http_reset`,
   `Tcp`, and `Http`. It carries neither the HTTP owner nor the TCP owner that define them, so
   `ld` reports eight undefined references out of `h3_server.o`.
 - **Fix:** the env drops `h3_server.c` and tests `quic_server.c` alone. The dispatch bridge is what
@@ -1661,31 +1661,31 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   bridge reaches are already in the image. The env now also carries the UDP listener, the client, the
   address mapping and `ip.c`, which is what `quic_server.c` binds its port through.
 
-## pc_quic_server_stop() left the UDP port bound and its handler armed
+## protocore_quic_server_stop() left the UDP port bound and its handler armed
 
 - **Status:** FIXED, found 2026-08-07 while putting test_quic_server on the real listener.
 - **Symptom:** none on a device, where the server is stopped once at most. A suite that stops and
-  restarts saw the second `pc_quic_server_begin()` take `listen_on`'s already-bound path, which
+  restarts saw the second `protocore_quic_server_begin()` take `listen_on`'s already-bound path, which
   rebinds the handler without a fresh pcb.
-- **Root cause:** `pc_quic_server_stop()` cleared the running flag, the pool and the ring cursors,
+- **Root cause:** `protocore_quic_server_stop()` cleared the running flag, the pool and the ring cursors,
   but never called `Udp.listener->close()`, so the bind outlived the server it belonged to and a
   datagram arriving after the stop still filled the ingest ring. `quic_server.h` has documented the
   call as closing the binding since it was written.
-- **Fix:** `pc_quic_server_stop()` closes the port first, before releasing the pool, so nothing more
+- **Fix:** `protocore_quic_server_stop()` closes the port first, before releasing the pool, so nothing more
   reaches the ring while it is being torn down.
 
 ## Two includes in protocore.c were gated on a flag their callers do not carry
 
 - **Status:** FIXED (2026-08-06), found auditing the include block after the dispatch-chain move.
-- **Symptom:** none in any env the matrix builds today, because no env sets `PC_ENABLE_HTTP3` or a
-  nonzero `PC_REQUEST_TIMEOUT_MS` or `PC_ENABLE_HTTP_DELIVERY` with `PC_ENABLE_AUTH` off. Any build
+- **Symptom:** none in any env the matrix builds today, because no env sets `PROTOCORE_ENABLE_HTTP3` or a
+  nonzero `PROTOCORE_REQUEST_TIMEOUT_MS` or `PROTOCORE_ENABLE_HTTP_DELIVERY` with `PROTOCORE_ENABLE_AUTH` off. Any build
   that does fails to compile on an implicit declaration.
-- **Root cause:** `server/clock/clock.h` and `http_delivery.h` sat inside `#if PC_ENABLE_AUTH`. Their
-  callers are elsewhere: `pc_millis()` runs the QUIC poll under `PC_ENABLE_HTTP3` and the request
-  timeout under `PC_REQUEST_TIMEOUT_MS`, and `pc_delivery_cache_control()` runs under
-  `PC_ENABLE_HTTP_DELIVERY` alone. An include nested under a flag it does not belong to reads as
+- **Root cause:** `server/clock/clock.h` and `http_delivery.h` sat inside `#if PROTOCORE_ENABLE_AUTH`. Their
+  callers are elsewhere: `protocore_millis()` runs the QUIC poll under `PROTOCORE_ENABLE_HTTP3` and the request
+  timeout under `PROTOCORE_REQUEST_TIMEOUT_MS`, and `protocore_delivery_cache_control()` runs under
+  `PROTOCORE_ENABLE_HTTP_DELIVERY` alone. An include nested under a flag it does not belong to reads as
   correct as long as one flag implies the other in every configuration anyone has built.
-- **Fix:** `clock.h` is unconditional and `http_delivery.h` takes its own `PC_ENABLE_HTTP_DELIVERY`
+- **Fix:** `clock.h` is unconditional and `http_delivery.h` takes its own `PROTOCORE_ENABLE_HTTP_DELIVERY`
   guard. `sha1.h`, `base64.h` and `sha256.h` came out with them: nothing in the file names a symbol
   from any of the three.
 
@@ -1698,7 +1698,7 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
 - **Symptom:** `native_application` fails to compile with `'Auth' undeclared`, `'HttpRoute' has no
 member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Root cause:** the extraction script took each function's body and the comment block above it,
-  but not the `#if` on the line before that, and not the `#endif` after. `pc_csrf_gate`,
+  but not the `#if` on the line before that, and not the `#endif` after. `protocore_csrf_gate`,
   `handle_ws_route`, `proto_authorize_request`, `lockout_client_ip` and `send_too_many_requests`
   arrived in the new file unguarded, while `protocore.c` kept four `#if`/`#endif` pairs with nothing
   between them. Every call site was still guarded, so the guards read as intact.
@@ -1717,15 +1717,15 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   a static file in one case and 404s the identical setup two cases later. Nothing distinguishes a
   passing case from a failing one except how many ran before it.
 - **Root cause:** a route stores an id naming a row in another module's table, and `add()` returns
-  the row index. `pc_server_reset()` emptied the route table and left every one of those tables
+  the row index. `protocore_server_reset()` emptied the route table and left every one of those tables
   full. `Auth` and the mount registry both cap at `MAX_ROUTES`, so once the count reached it
-  `Auth.add()` returned `PC_AUTH_NONE` and `pc_mnt_point_add()` returned `PC_MNT_NONE`. A route that
+  `Auth.add()` returned `PROTOCORE_AUTH_NONE` and `protocore_mnt_point_add()` returned `PROTOCORE_MNT_NONE`. A route that
   holds those answers dispatches unguarded and serves nothing, silently, and both are the
   fail-open direction.
 - **Blast radius:** any long-lived server that re-registers its routes, and every test suite that
   registers more than `MAX_ROUTES` protected routes or mounts across its cases.
-- **Fix:** `Auth` publishes a `reset`, `mnt.c` publishes `pc_mnt_point_reset()`, and
-  `pc_server_reset()` calls both beside `network.route->reset()`. An id is a row index, so the
+- **Fix:** `Auth` publishes a `reset`, `mnt.c` publishes `protocore_mnt_point_reset()`, and
+  `protocore_server_reset()` calls both beside `network.route->reset()`. An id is a row index, so the
   tables empty with the routes that index them.
 
 ---
@@ -1733,19 +1733,19 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 ## Two long-lived tables borrowed from a pool sized only for crypto working sets
 
 - **Status:** FIXED (2026-08-06), found while chasing the `test_auth` failures above.
-- **Symptom:** in `native_auth`, `Auth.add()` returns `PC_AUTH_NONE` for the first credential set
+- **Symptom:** in `native_auth`, `Auth.add()` returns `PROTOCORE_AUTH_NONE` for the first credential set
   ever registered, so every protected route dispatches unguarded. 17 of 23 cases fail.
-- **Root cause:** `PC_SECURE_ARENA_SIZE` is the sum of the `PC_WORK_*` terms a build compiles, and
+- **Root cause:** `PROTOCORE_SECURE_ARENA_SIZE` is the sum of the `PROTOCORE_WORK_*` terms a build compiles, and
   `protocore_config.h` states the rule that every borrow declares one, proved by a `static_assert`
   in the owning module. `route.c` and `auth.c` both borrow from the pool and neither declared a
   term. Measured under `native_auth`: the arena is 1664 bytes (bignum 1408 + 256 round-up), the
   route table is 1416 and the credential table 1569. The route table binds first and leaves 248,
   so the credential table never binds.
-- **Both were also on the wrong end of the arena.** `pc_secure_span()` bumps down from the scratch
+- **Both were also on the wrong end of the arena.** `protocore_secure_span()` bumps down from the scratch
   end, which `mark` walks and `release` reclaims. Both tables are held for the life of the program.
-- **Fix:** `secure.h` publishes `pc_secure_persist_span()`, over the arena's persistent end, which
-  no mark reaches and which hands back zeroed bytes. Both tables take it, `PC_WORK_ROUTE_TABLE` and
-  `PC_WORK_AUTH_TABLE` join `PC_SECURE_ARENA_SIZE`, and each module `static_assert`s its struct
+- **Fix:** `secure.h` publishes `protocore_secure_persist_span()`, over the arena's persistent end, which
+  no mark reaches and which hands back zeroed bytes. Both tables take it, `PROTOCORE_WORK_ROUTE_TABLE` and
+  `PROTOCORE_WORK_AUTH_TABLE` join `PROTOCORE_SECURE_ARENA_SIZE`, and each module `static_assert`s its struct
   against its term.
 
 ---
@@ -1760,7 +1760,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Root cause:** moving the route table into the secure pool (3ef5c5a50) replaced its BSS with a
   borrow taken in a new `HttpRouteNs::init`, and no caller anywhere in `src/` calls it. BSS needed no
   init, so nothing existed to update. `s_route` stays NULL, `add()` returns NULL on its first guard,
-  and every registration path drops the route it was handed. `pc_server_reset()` calls
+  and every registration path drops the route it was handed. `protocore_server_reset()` calls
   `network.route->reset()`, which is also a no-op on a NULL handle, so the table reads empty and
   consistent at every seam.
 - **Blast radius:** every HTTP, WebSocket, SSE, file-serving and WebDAV route in the library. The
@@ -1794,7 +1794,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Status:** FIXED (2026-08-05), found on the same run.
 - **Symptom:** `native_scp` and `native_ssh_sftp` fail at link with `undefined reference to
 'proto_scan_nul'`, preceded by an implicit-declaration warning at `src/mmgr/protoframe.c:113`.
-- **Root cause:** `pc_frame_append` calls `proto_scan_nul`, which is a `static inline` in
+- **Root cause:** `protocore_frame_append` calls `proto_scan_nul`, which is a `static inline` in
   `shared_primitives/runops.h`, and `protoframe.c` includes only `mmgr/protoframe.h` and
   `shared_primitives/speed_opt.h`. Under C99 rules the implicit declaration makes it an external
   call to a name no TU defines, so it survives compilation and dies at link. Every other env that
@@ -1809,12 +1809,12 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 
 - **Status:** FIXED (2026-08-05), found while adding the first env that builds the target path.
 - **Symptom:** a native env that adds `-DPROTOCORE_HOT_FORCE` still compiles the host path.
-  `PC_VENDOR_MOCK` comes out 1 and `PROTOCORE_HOT` comes out 0 at the same time, which the
+  `PROTOCORE_VENDOR_MOCK` comes out 1 and `PROTOCORE_HOT` comes out 0 at the same time, which the
   platform header states is impossible ("exact complements, there is no third"). No diagnostic:
   the env builds and its tests pass, against the wrong arm.
-- **Root cause:** two sources of truth for one macro. `pc_platform.h` derives `PROTOCORE_HOST` from
+- **Root cause:** two sources of truth for one macro. `protocore_platform.h` derives `PROTOCORE_HOST` from
   the vendor axis, defining it only in the else-arm reached when no vendor matched, and
-  `PROTOCORE_HOT_FORCE` selects `PC_VENDOR_MOCK` in the arm above it. But `gen_test_envs.py` also
+  `PROTOCORE_HOT_FORCE` selects `PROTOCORE_VENDOR_MOCK` in the arm above it. But `gen_test_envs.py` also
   passed `-DPROTOCORE_HOST=1` in the flags every native env extends. The command-line define wins:
   the guard that would have set it is skipped, `#ifndef PROTOCORE_HOST` then finds it already
   defined, and `#if PROTOCORE_HOST` selects the host path under a mock vendor. The vendor axis
@@ -1822,7 +1822,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   no arrangement inside the header could have recovered.
 - **Blast radius:** every one of the 310 native envs carried the flag, and the whole
   `PROTOCORE_HOT` half of the tree had no test env at all - `core_setup/*/mock/` exists to stand
-  in for silicon and nothing was compiling against it. That is how the `pc_lwip_to_ip` bug above
+  in for silicon and nothing was compiling against it. That is how the `protocore_lwip_to_ip` bug above
   survived: its arm was unreachable from the suite.
 - **Fix:** drop `-DPROTOCORE_HOST=1` from `native_base`. It was redundant - nothing on a native
   build matches a vendor, so the else-arm defines it anyway - and dropping it makes the vendor axis
@@ -1835,24 +1835,24 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 
 ---
 
-## pc_lwip_to_ip reverses the octets on the mock arm
+## protocore_lwip_to_ip reverses the octets on the mock arm
 
-- **Status:** FIXED (2026-08-05), found while giving UDP a wire layout built on `pc_ip`.
-- **Symptom:** `pc_conn_remote_addr()` and the accept-callback address both report `5.0.0.10` where
-  the peer is `10.0.0.5`, on any build that selects `PC_VENDOR_MOCK` (`-DPROTOCORE_HOT_FORCE`). No
-  host suite catches it because the non-hot arm returns `PC_IP_NONE` and never reaches the mapping.
-- **Root cause:** the two backends disagree on what `pc_net_ip4_u32` returns. lwIP's
+- **Status:** FIXED (2026-08-05), found while giving UDP a wire layout built on `protocore_ip`.
+- **Symptom:** `protocore_conn_remote_addr()` and the accept-callback address both report `5.0.0.10` where
+  the peer is `10.0.0.5`, on any build that selects `PROTOCORE_VENDOR_MOCK` (`-DPROTOCORE_HOT_FORCE`). No
+  host suite catches it because the non-hot arm returns `PROTOCORE_IP_NONE` and never reaches the mapping.
+- **Root cause:** the two backends disagree on what `protocore_net_ip4_u32` returns. lwIP's
   `ip4_addr_get_u32` hands back the stored `u32_t`, whose **memory bytes** are the network octets.
-  The mock (`test/mocks/pc_net_host.h:730`) instead composes a **numeric** value,
+  The mock (`test/mocks/protocore_net_host.h:730`) instead composes a **numeric** value,
   `bytes[0]<<24 | bytes[1]<<16 | bytes[2]<<8 | bytes[3]`. On a little-endian host those are byte
-  reversed. `pc_lwip_to_ip` (`src/network_drivers/transport/tcp.c:915`) peels with
+  reversed. `protocore_lwip_to_ip` (`src/network_drivers/transport/tcp.c:915`) peels with
   `(uint8_t)be, (uint8_t)(be >> 8), ...`, which is right for lwIP on a little-endian target and
   backwards for the mock.
 - **Second defect in the same three lines:** that peel is itself endianness-dependent. lwIP's value
   is network order in memory, so on a big-endian target the first octet is the high byte and the
   same code reverses there too. The portable read is of the u32's bytes, not of its value.
-- **Blast radius:** `pc_net_ip4_u32` has two other callers that compare or return the value
-  opaquely (`listener.c:486` interface tagging, `tcp.c:890` `pc_conn_remote_ip`), so changing the
+- **Blast radius:** `protocore_net_ip4_u32` has two other callers that compare or return the value
+  opaquely (`listener.c:486` interface tagging, `tcp.c:890` `protocore_conn_remote_ip`), so changing the
   mock to match lwIP moves those too and needs its own verification pass.
 - **Fix:** the mock returns the u32 lwIP does (the four bytes copied, not composed arithmetically),
   and the mapping moved out of `tcp.c` into `network_drivers/transport/net_addr.c` as
@@ -1861,8 +1861,8 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   it per received datagram, so one owner sits beside both rather than inside either.
 - **Verified:** `10.0.0.5`, `192.168.4.1`, `224.0.0.251`, `255.254.253.252` round-trip through
   `NetAddr.to_ip()` and back out of `Ip.format()` unchanged on the mock arm; a null source leaves
-  the out-param `PC_IP_NONE` rather than stale. Still to re-run: `native_tcp`, the listener suites,
-  and `test_iface` (which asserts on `pc_ap_ip`, the value `listener.c` compares against).
+  the out-param `PROTOCORE_IP_NONE` rather than stale. Still to re-run: `native_tcp`, the listener suites,
+  and `test_iface` (which asserts on `protocore_ap_ip`, the value `listener.c` compares against).
 
 ---
 
@@ -1890,25 +1890,25 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Status:** FIXED (2026-08-05). Found by the end-to-end wire suite: every driver call returned
   false on host while the owners themselves worked.
 - **Root cause:** the bus owners (`i2c.h`, `spi.h`, `uart.h`) were changed to key their real arm off
-  `PC_PLATFORM_HAS_BUS` so a host build with the test seam drives the capture. The thirteen drivers
+  `PROTOCORE_PLATFORM_HAS_BUS` so a host build with the test seam drives the capture. The thirteen drivers
   that sit on them still split on `#if PROTOCORE_HOT`, so each took its own refusing stub and never
   composed a byte. The owner worked and the driver above it did not.
 - **What it hid:** the interesting half of every driver - which bytes it composes, in what order, to
   which address - was unreachable on host, so it was asserted only by reading the code.
-- **Fix:** the same `PROTOCORE_HOT || PC_PLATFORM_HAS_BUS` condition on all thirteen drivers.
+- **Fix:** the same `PROTOCORE_HOT || PROTOCORE_PLATFORM_HAS_BUS` condition on all thirteen drivers.
 
 ---
 
 ## pcdelay spun forever on a host clock nothing advanced
 
 - **Status:** FIXED (2026-08-05). Found while making the drivers' real body reachable on host.
-- **Symptom:** latent until then. `pcdelay`'s host arm spun on `pc_millis()`, and the host virtual
+- **Symptom:** latent until then. `pcdelay`'s host arm spun on `protocore_millis()`, and the host virtual
   clock only moves when a test calls `set_millis`, so any wait with a non-zero argument never
   terminated. Nothing had reached it because the host arm of every driver refused before delaying.
 - **Root cause:** the host arm was written as a bare spin on the assumption that only device code
-  paths call it. Making the drivers real broke that assumption - `pc_pca9685_begin` waits 500 us for
-  the oscillator and `pc_sht3x_read` waits 20 ms for a measurement.
-- **Fix:** the host arm makes the same one-tick `pc_platform_task_delay(1)` hand-off the RTOS arm
+  paths call it. Making the drivers real broke that assumption - `protocore_pca9685_begin` waits 500 us for
+  the oscillator and `protocore_sht3x_read` waits 20 ms for a measurement.
+- **Fix:** the host arm makes the same one-tick `protocore_platform_task_delay(1)` hand-off the RTOS arm
   does, and the host mock advances its virtual clock there. The microsecond source also advances one
   per read, so a sub-millisecond settle terminates and its elapsed time is deterministic.
 
@@ -1917,14 +1917,14 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 ## Every OIDC token verification leaked four scratch borrows, and the arena never came back
 
 - **Status:** FIXED (2026-08-03). Found by running `native_oidc` for the first time: the suite had
-  not compiled since the C conversion, so nothing had executed `pc_oidc_verify_with_key` at all.
-- **Symptom:** every verify returned `PC_OIDC_ERR_FORMAT` (-1), including a valid, correctly-signed
+  not compiled since the C conversion, so nothing had executed `protocore_oidc_verify_with_key` at all.
+- **Symptom:** every verify returned `PROTOCORE_OIDC_ERR_FORMAT` (-1), including a valid, correctly-signed
   token that should have returned 0. Twelve of the suite's tests failed with the same code whatever
   they were actually testing, because the failure happened before any of their input was examined.
-- **Root cause:** `pc_oidc_verify_with_key` borrows four buffers from the plaintext arena (header,
+- **Root cause:** `protocore_oidc_verify_with_key` borrows four buffers from the plaintext arena (header,
   signature, payload, issuer - about 2.6 KB together, hoisted off the worker stack). The C++ version
   scoped them with a `PlaintextScope` whose destructor released on every return path. The conversion
-  deleted the guard and did not replace it with a `pc_plaintext_mark()` / `pc_plaintext_release()`
+  deleted the guard and did not replace it with a `protocore_plaintext_mark()` / `protocore_plaintext_release()`
   pair, so **every call leaked all four borrows**. The comment above the allocation still said
   "PlaintextScope reclaims them on every return path", which is how it read as correct.
 - **What it does on a device:** the arena is a fixed per-worker pool reset per dispatch, so a single
@@ -1936,8 +1936,8 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Why nothing caught it:** the suite did not compile, so it never ran. `check_src_banned` does not
   model borrow/release pairing, and the leak is invisible to a reader because the comment describes
   the guard that used to be there.
-- **Fix:** `size_t scope = pc_plaintext_mark();` before the first borrow, and
-  `pc_plaintext_release(scope);` on each of the eleven returns after it. The two early returns above
+- **Fix:** `size_t scope = protocore_plaintext_mark();` before the first borrow, and
+  `protocore_plaintext_release(scope);` on each of the eleven returns after it. The two early returns above
   the mark (null token, `split3` failure) borrow nothing and are unchanged. Comment rewritten to
   describe what the code does now.
 - **Worth auditing:** this is the same shape as the 17 `PlaintextScope` / `SecureScope` guards
@@ -1945,7 +1945,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   lost their release. Any other site where a deleted guard left a borrow unpaired has the same
   failure mode and the same invisibility.
 
-## The C11 conversion never covered the PROTOCORE_HOT path, and pc_mnt_backend has no sync
+## The C11 conversion never covered the PROTOCORE_HOT path, and protocore_mnt_backend has no sync
 
 - **Status:** OPEN (2026-08-03). Found by grepping `src/` for C++ constructs after the native compile
   sweep came back clean on the files it can reach.
@@ -1953,15 +1953,15 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   `#if PROTOCORE_HOT` is still C++, and no native env compiles it, so 307 envs of compile sweep
   cannot see any of it. Found: `namespace fs { class FS; }` plus `fs::FS &` parameters in
   `server/exc_decoder.h` / `server/exc_coredump.c`, `namespace fs` and `fs::FS *` / `fs::File &` in
-  `core_setup/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace pc_wal_fs_detail` over `fs::File`
+  `core_setup/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace protocore_wal_fs_detail` over `fs::File`
   in `services/storage/wal/wal_fs.h`. A target build of any of them is a hard C error.
 - **Root cause:** the conversion was driven by the native suites, which are the only thing that
   compiles during it. `PROTOCORE_HOT` is false on the host, so those regions were never parsed.
-- **Fixed here:** `pc_exc_coredump_save` now takes `const pc_mnt_backend *` and goes through the
+- **Fixed here:** `protocore_exc_coredump_save` now takes `const protocore_mnt_backend *` and goes through the
   vtable, so `server/` names no vendor type; `exc_decoder.h` drops the `namespace fs` forward
   declaration.
 - **Still open, and why:** `wal_fs.h` cannot be retargeted onto the seam as it stands. Its durability
-  barrier is `File::flush()`, and **`pc_mnt_backend` has no sync/flush entry**. Translating it
+  barrier is `File::flush()`, and **`protocore_mnt_backend` has no sync/flush entry**. Translating it
   without one would leave `WalDev::sync` returning true having done nothing, which turns a
   power-loss-safe log into one that only looks safe. Adding `sync` to the vtable touches every
   backend (RAM disk, the ESP adapter, the lfs mock), so it is an owner decision rather than a
@@ -1970,22 +1970,22 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   adapter's whole job. Resolved by compiling `core_setup/hal/esp/` as C++ (owner decision), which
   needs the build rule and a SYMBOLS.md amendment recording the exemption.
 
-## A board profile's PC_GPIO_OUT macro rewrote the pc_gpio_dir enum member of the same name
+## A board profile's PROTOCORE_GPIO_OUT macro rewrote the protocore_gpio_dir enum member of the same name
 
 - **Status:** FIXED (2026-08-03), pending a target build. Found by the full-tree compile sweep: an
   env that pulls in both the host net mock and `gpio_map.h` failed with
-  `test/mocks/pc_net_host.h:214:20: error: expected identifier before numeric constant`.
-- **Symptom:** two encodings of a pin direction shared four names. `pc_gpio_dir` declared
-  `PC_GPIO_IN`, `PC_GPIO_IN_PULLUP`, `PC_GPIO_IN_PULLDOWN`, `PC_GPIO_OUT` as enum members numbered
-  0/1/2/3 in that order; `board_profiles/pc_platform.h` (and the host mock beside it) `#define` the
+  `test/mocks/protocore_net_host.h:214:20: error: expected identifier before numeric constant`.
+- **Symptom:** two encodings of a pin direction shared four names. `protocore_gpio_dir` declared
+  `PROTOCORE_GPIO_IN`, `PROTOCORE_GPIO_IN_PULLUP`, `PROTOCORE_GPIO_IN_PULLDOWN`, `PROTOCORE_GPIO_OUT` as enum members numbered
+  0/1/2/3 in that order; `board_profiles/protocore_platform.h` (and the host mock beside it) `#define` the
   same four names as the pin-mode argument, numbered IN=0, OUT=1, PULLUP=2, PULLDOWN=3. Where both
   headers reach one translation unit the macro wins, because substitution happens before the
   compiler sees the declaration.
-- **What it did on a target:** in `pc_gpio_begin_pins`, `case PC_GPIO_OUT:` became `case 1:`, which
+- **What it did on a target:** in `protocore_gpio_begin_pins`, `case PROTOCORE_GPIO_OUT:` became `case 1:`, which
   is the enum's `IN_PULLUP`. A pin mapped as an output has `dir == 3`, matches no case, and falls to
   the default arm, so it was configured as an **input**: a mapped LED or relay never drives. A pin
   mapped `IN_PULLUP` (`dir == 1`) took the OUT arm and was configured as an **output**, so the panel
-  drove a pin wired to a button. `pc_gpio_is_output()` compared against the same rewritten constant,
+  drove a pin wired to a button. `protocore_gpio_is_output()` compared against the same rewritten constant,
   so the write route agreed with the wrong table.
 - **Root cause:** exactly the failure docs/SYMBOLS.md section 2 describes. The enum member carried
   the bare subsystem prefix rather than its own type's, leaving it in the same token space as a macro
@@ -1994,9 +1994,9 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   `native_gpio_map` was not one of them, so the enum was never parsed with the macro already
   defined. Where they did not meet, the enum spelled itself and every test passed. On a target the
   numbers silently disagree and nothing is diagnosed, because both sides are valid integers.
-- **Fix:** the members take the type's own prefix: `PC_GPIO_DIR_IN`, `PC_GPIO_DIR_IN_PULLUP`,
-  `PC_GPIO_DIR_IN_PULLDOWN`, `PC_GPIO_DIR_OUT` (`gpio_map.h`), so the case labels are the enum and
-  the arguments to `pc_platform_gpio_mode()` stay the board profile's numbers. Call sites updated in
+- **Fix:** the members take the type's own prefix: `PROTOCORE_GPIO_DIR_IN`, `PROTOCORE_GPIO_DIR_IN_PULLUP`,
+  `PROTOCORE_GPIO_DIR_IN_PULLDOWN`, `PROTOCORE_GPIO_DIR_OUT` (`gpio_map.h`), so the case labels are the enum and
+  the arguments to `protocore_platform_gpio_mode()` stay the board profile's numbers. Call sites updated in
   `gpio_map.c`, `test_gpio_map.c` and the `GpioMap` example.
 
 ## HTTP/2 refuses an over-limit stream with a RST_STREAM naming stream 0
@@ -2004,7 +2004,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Status:** OPEN (2026-08-03). Found while converting `h2_conn`'s last lambda to a named function,
   which put the builder's arguments on their own line.
 - **Symptom:** when the stream table is full, `handle_headers()` answers the new HEADERS with
-  `pc_h2_build_rst_stream(b, cap, 0, 0)` - stream id 0, error code 0 - and keeps the connection.
+  `protocore_h2_build_rst_stream(b, cap, 0, 0)` - stream id 0, error code 0 - and keeps the connection.
   RFC 9113 sec 6.4 says a RST_STREAM with a stream identifier of 0x00 is a connection error of type
   PROTOCOL_ERROR, so a conforming peer must respond with GOAWAY and close. The refusal that was
   meant to shed one stream takes the whole connection down instead, and the error code says
@@ -2043,7 +2043,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   for a prepended `static`. This is the same defect a previous session fixed by hand in
   `crypto/pqc/sntrup761.c` using `nm` on the object file, which is the authoritative check and the
   one to repeat once the tree compiles.
-- **Not affected:** the public API. `pc_gql_arg_*`, `pc_espnow_*` and their kind were declared
+- **Not affected:** the public API. `protocore_gql_arg_*`, `protocore_espnow_*` and their kind were declared
   outside the namespace in 0.0.1 and are correctly external.
 - **Separately:** `check_owned_context` matched only the C++ spelling `thread_local`, so
   `static _Thread_local int t_worker_id` in `mmgr/arena.c` read as a loose global. The C11 spelling
@@ -2053,7 +2053,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 
 - **Status:** OPEN (2026-08-02). Found by widening `check_duplicate_symbols` to `.c`, which it had
   stopped reading.
-- **Symptom:** `PC_THEME_BLOBS` and `PC_THEME_BLOB_COUNT` are each defined in two tracked files,
+- **Symptom:** `PROTOCORE_THEME_BLOBS` and `PROTOCORE_THEME_BLOB_COUNT` are each defined in two tracked files,
   `binary_asset_blobs.c` and `binary_asset_blobs.c`. Any build that compiles the whole tree -
   Arduino, and the ESP-IDF component, whose `CMakeLists.txt` globs `src/*.c` and `src/*.cpp` -
   gets two definitions of both and fails to link. The native envs name their sources explicitly
@@ -2092,13 +2092,13 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 ## `check_docs` stopped reading `src/*.c`, so 78 flags and 63 functions became invisible to it
 
 - **Status:** FIXED (2026-08-02). Found while clearing the checker's one live finding, the stale
-  `PC_DIAG_JSON` citation.
+  `PROTOCORE_DIAG_JSON` citation.
 - **Symptom:** none yet. The next doc to cite a symbol that lives only in a `.c` file gets reported
   as a stale citation and fails CI, with the symbol sitting in the tree the whole time.
 - **Root cause:** the checker builds its authority set - "does this symbol exist" - from
   `git ls-files src/*.h src/*.cpp test/*.h test/*.cpp penetration_testing/*.h penetration_testing/*.cpp`. That list
   was written when every implementation file was a `.cpp`. The C conversion left 576 `.c` files
-  outside it, and with them 78 `PC_*` names and 63 `pc_*` functions that no longer appear anywhere
+  outside it, and with them 78 `PROTOCORE_*` names and 63 `pc_*` functions that no longer appear anywhere
   the checker looks.
 - **Why nothing caught it:** the gap only produces false positives, and only for a doc citing one
   of those 141 symbols in backticks. No current doc does, so the checker kept reporting OK while
@@ -2111,16 +2111,16 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 
 - **Status:** FIXED (2026-08-02), pending a target build. Found by diffing `network_drivers/`
   against v0.0.1.
-- **Symptom:** no failure and no diagnostic. `sizeof` grew on `TcpConn`, `TcpEvt` and `pc_ip`, so
+- **Symptom:** no failure and no diagnostic. `sizeof` grew on `TcpConn`, `TcpEvt` and `protocore_ip`, so
   the static pools built from them grew with no source change naming a size.
 - **Root cause:** `enum class X : uint8_t` states the width in the declaration. Rewriting it as a
   plain `typedef enum` drops that clause, and a C enum with no attribute is whatever the
   implementation picks, which is `int` on every target here. Six declarations lost it:
-  `ConnState`, `EvtType` and `pc_conn_reason` in `transport/tcp.h`, `pc_ip_family` and
-  `pc_ip_scope` in `network/ip.h`, and `pc_tcp_op` in `transport/tcp.c`. Three are stored rather
+  `ConnState`, `EvtType` and `protocore_conn_reason` in `transport/tcp.h`, `protocore_ip_family` and
+  `protocore_ip_scope` in `network/ip.h`, and `protocore_tcp_op` in `transport/tcp.c`. Three are stored rather
   than only passed, so each one multiplies: `TcpConn` holds `_Atomic ConnState state` and
   `conn_pool` is `TcpConn[CONN_POOL_SLOTS]`; `TcpEvt` holds `EvtType type` and every listener
-  carries `_queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]`; `pc_ip` holds `pc_ip_family family`
+  carries `_queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]`; `protocore_ip` holds `protocore_ip_family family`
   and is embedded wherever an address is stored. One byte to four, per instance, in the pools whose
   total is meant to be computable before flashing.
 - **Why nothing caught it:** the width was never asserted anywhere. It lived only in the
@@ -2128,11 +2128,11 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   reads a size it could disagree with. Every test still passes because no behavior depends on the
   width, only the footprint does.
 - **Fix:** `PROTO_ENUM_PACKED` on all six. The attribute asks for the narrowest type the values fit,
-  which is a byte for each of these, and `types.h` already proves the toolchain honors it with a
-  `static_assert` on `proto_enum_probe`. `pc_phy_ps` in `physical/physical.h` was the same defect,
+  which is a byte for each of these, and `protocore_types.h` already proves the toolchain honors it with a
+  `static_assert` on `proto_enum_probe`. `protocore_phy_ps` in `physical/physical.h` was the same defect,
   found and fixed separately, which is what prompted pairing every `enum class X : T` in v0.0.1
   against its counterpart here: 34 enums carried a declared width, 6 had lost it.
 - **Not affected:** `WsCloseCode` (`uint16_t` -> packed) still occupies two bytes because its values
   run 1000-4999 and packed widens to fit. `DeflateResult` and `InflateResult` (`int32_t` -> packed)
   narrow to a byte, and both are return values rather than stored fields. `CborType` and
-  `MsgpackType` were folded into `pc_codec_type`, which is packed.
+  `MsgpackType` were folded into `protocore_codec_type`, which is packed.

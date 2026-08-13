@@ -8,16 +8,16 @@
 
 #include "server/failsafe.h"
 
-#if PC_ENABLE_FAILSAFE
+#if PROTOCORE_ENABLE_FAILSAFE
 
-#include "server/clock/clock.h" // pc_millis() - the pluggable monotonic clock
+#include "server/clock/clock.h" // protocore_millis() - the pluggable monotonic clock
 
 // All failsafe state, owned by one instance and static, so it has internal linkage:
 // grouped for auditability, unreachable from any other translation unit.
 typedef struct
 {
-    pc_lifeline lines[PC_FAILSAFE_MAX_LIFELINES];
-    pc_failsafe_cb cb;
+    protocore_lifeline lines[PROTOCORE_FAILSAFE_MAX_LIFELINES];
+    protocore_failsafe_cb cb;
     void *cb_arg;
 } FailsafeCtx;
 static FailsafeCtx s_fs;
@@ -39,10 +39,10 @@ static size_t u32_dec(uint32_t v, char *out)
     return n;
 }
 
-void pc_failsafe_reset(void)
+void protocore_failsafe_reset(void)
 {
-    const pc_lifeline blank = {0};
-    for (int i = 0; i < PC_FAILSAFE_MAX_LIFELINES; i++)
+    const protocore_lifeline blank = {0};
+    for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
         s_fs.lines[i] = blank;
     }
@@ -50,9 +50,9 @@ void pc_failsafe_reset(void)
     s_fs.cb_arg = NULL;
 }
 
-int pc_failsafe_register_at(const char *name, uint32_t deadline_ms, uint32_t now)
+int protocore_failsafe_register_at(const char *name, uint32_t deadline_ms, uint32_t now)
 {
-    for (int i = 0; i < PC_FAILSAFE_MAX_LIFELINES; i++)
+    for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
         if (!s_fs.lines[i].armed)
         {
@@ -67,14 +67,14 @@ int pc_failsafe_register_at(const char *name, uint32_t deadline_ms, uint32_t now
     return -1;
 }
 
-int pc_failsafe_register(const char *name, uint32_t deadline_ms)
+int protocore_failsafe_register(const char *name, uint32_t deadline_ms)
 {
-    return pc_failsafe_register_at(name, deadline_ms, pc_millis());
+    return protocore_failsafe_register_at(name, deadline_ms, protocore_millis());
 }
 
-proto_bool pc_failsafe_feed_at(int id, uint32_t now)
+proto_bool protocore_failsafe_feed_at(int id, uint32_t now)
 {
-    if (id < 0 || id >= PC_FAILSAFE_MAX_LIFELINES || !s_fs.lines[id].armed)
+    if (id < 0 || id >= PROTOCORE_FAILSAFE_MAX_LIFELINES || !s_fs.lines[id].armed)
     {
         return PROTO_FALSE;
     }
@@ -83,28 +83,28 @@ proto_bool pc_failsafe_feed_at(int id, uint32_t now)
     return PROTO_TRUE;
 }
 
-proto_bool pc_failsafe_feed(int id)
+proto_bool protocore_failsafe_feed(int id)
 {
-    return pc_failsafe_feed_at(id, pc_millis());
+    return protocore_failsafe_feed_at(id, protocore_millis());
 }
 
-void pc_failsafe_on_breach(pc_failsafe_cb cb, void *arg)
+void protocore_failsafe_on_breach(protocore_failsafe_cb cb, void *arg)
 {
     s_fs.cb = cb;
     s_fs.cb_arg = arg;
 }
 
-uint32_t pc_failsafe_check_at(uint32_t now)
+uint32_t protocore_failsafe_check_at(uint32_t now)
 {
     uint32_t mask = 0;
-    for (int i = 0; i < PC_FAILSAFE_MAX_LIFELINES; i++)
+    for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
-        pc_lifeline *l = &s_fs.lines[i];
+        protocore_lifeline *l = &s_fs.lines[i];
         if (!l->armed)
         {
             continue;
         }
-        if (!pc_lifeline_overdue(now, l->last_feed_ms, l->deadline_ms))
+        if (!protocore_lifeline_overdue(now, l->last_feed_ms, l->deadline_ms))
         {
             continue;
         }
@@ -122,9 +122,9 @@ uint32_t pc_failsafe_check_at(uint32_t now)
     return mask;
 }
 
-uint32_t pc_failsafe_check(void)
+uint32_t protocore_failsafe_check(void)
 {
-    return pc_failsafe_check_at(pc_millis());
+    return protocore_failsafe_check_at(protocore_millis());
 }
 
 // append a literal into out[*n], bounded by cap (leaving room for the NUL); truncates safely on overflow.
@@ -146,7 +146,7 @@ static void fs_put_u32(char *out, size_t cap, size_t *n, uint32_t v)
     }
 }
 
-int pc_failsafe_json_at(uint32_t now, char *out, size_t cap)
+int protocore_failsafe_json_at(uint32_t now, char *out, size_t cap)
 {
     // {"lifelines":[{"name":"...","overdue":false,"age_ms":N,"deadline_ms":N},...]}
     if (!out || cap == 0)
@@ -156,9 +156,9 @@ int pc_failsafe_json_at(uint32_t now, char *out, size_t cap)
     size_t n = 0;
     fs_put(out, cap, &n, "{\"lifelines\":[");
     proto_bool first = PROTO_TRUE;
-    for (int i = 0; i < PC_FAILSAFE_MAX_LIFELINES; i++)
+    for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
-        const pc_lifeline *l = &s_fs.lines[i];
+        const protocore_lifeline *l = &s_fs.lines[i];
         if (!l->armed)
         {
             continue;
@@ -171,7 +171,7 @@ int pc_failsafe_json_at(uint32_t now, char *out, size_t cap)
         fs_put(out, cap, &n, "{\"name\":\"");
         fs_put(out, cap, &n, l->name ? l->name : "");
         fs_put(out, cap, &n, "\",\"overdue\":");
-        fs_put(out, cap, &n, pc_lifeline_overdue(now, l->last_feed_ms, l->deadline_ms) ? "true" : "false");
+        fs_put(out, cap, &n, protocore_lifeline_overdue(now, l->last_feed_ms, l->deadline_ms) ? "true" : "false");
         fs_put(out, cap, &n, ",\"age_ms\":");
         fs_put_u32(out, cap, &n, now - l->last_feed_ms);
         fs_put(out, cap, &n, ",\"deadline_ms\":");
@@ -185,4 +185,4 @@ int pc_failsafe_json_at(uint32_t now, char *out, size_t cap)
     return (int)n;
 }
 
-#endif // PC_ENABLE_FAILSAFE
+#endif // PROTOCORE_ENABLE_FAILSAFE

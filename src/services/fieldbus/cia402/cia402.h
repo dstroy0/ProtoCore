@@ -3,7 +3,7 @@
 
 /**
  * @file cia402.h
- * @brief CiA 402 / IEC 61800-7-201 drive + motion profile (PC_ENABLE_CIA402) over CANopen.
+ * @brief CiA 402 / IEC 61800-7-201 drive + motion profile (PROTOCORE_ENABLE_CIA402) over CANopen.
  *
  * The standardized servo / stepper drive profile: the power state machine (Controlword 0x6040 /
  * Statusword 0x6041), the Modes of Operation, and the target/actual position-velocity-torque
@@ -24,7 +24,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_CIA402
+#if PROTOCORE_ENABLE_CIA402
 
 #include "services/fieldbus/canopen/canopen.h"
 
@@ -111,44 +111,44 @@ typedef enum PROTO_ENUM_PACKED
 // --- state machine (pure value logic; no CAN needed) ---
 
 /// Decode the drive's power state from a Statusword (per the CiA 402 mask/value table).
-Cia402State pc_cia402_state(uint16_t statusword);
+Cia402State protocore_cia402_state(uint16_t statusword);
 
 /// The Controlword value that requests transition @p cmd. Fault-reset is 0x0080 and must be a
 /// rising edge on bit 7 (clear it on the next cycle).
-uint16_t pc_cia402_controlword(Cia402Command cmd);
+uint16_t protocore_cia402_controlword(Cia402Command cmd);
 
 /// Given the drive's current @p state, the Controlword to command the next step toward Operation
 /// Enabled (fault -> reset, switch-on-disabled -> shutdown, ready -> switch on, switched-on ->
 /// enable). Returns 0x000F once already enabled. Drives the "bring the axis live" bring-up loop.
-uint16_t pc_cia402_enable_sequence(Cia402State state);
+uint16_t protocore_cia402_enable_sequence(Cia402State state);
 
 /// @return true if the Statusword's Target Reached flag (bit 10) is set.
-static inline proto_bool pc_cia402_target_reached(uint16_t sw)
+static inline proto_bool protocore_cia402_target_reached(uint16_t sw)
 {
     return (sw & CIA402_SW_TARGET_REACHED) != 0;
 }
 /// @return true if the drive reports a fault (bit 3).
-static inline proto_bool pc_cia402_has_fault(uint16_t sw)
+static inline proto_bool protocore_cia402_has_fault(uint16_t sw)
 {
     return (sw & CIA402_SW_FAULT) != 0;
 }
 /// @return true if a warning is present (bit 7).
-static inline proto_bool pc_cia402_warning(uint16_t sw)
+static inline proto_bool protocore_cia402_warning(uint16_t sw)
 {
     return (sw & CIA402_SW_WARNING) != 0;
 }
 /// @return true if the drive's power stage voltage is applied (bit 4).
-static inline proto_bool pc_cia402_voltage_enabled(uint16_t sw)
+static inline proto_bool protocore_cia402_voltage_enabled(uint16_t sw)
 {
     return (sw & CIA402_SW_VOLTAGE_ENABLED) != 0;
 }
 /// @return true if the drive follows the Controlword (bit 9 remote).
-static inline proto_bool pc_cia402_remote(uint16_t sw)
+static inline proto_bool protocore_cia402_remote(uint16_t sw)
 {
     return (sw & CIA402_SW_REMOTE) != 0;
 }
 /// @return true if a set-point was internally limited (bit 11).
-static inline proto_bool pc_cia402_internal_limit(uint16_t sw)
+static inline proto_bool protocore_cia402_internal_limit(uint16_t sw)
 {
     return (sw & CIA402_SW_INTERNAL_LIMIT) != 0;
 }
@@ -156,35 +156,35 @@ static inline proto_bool pc_cia402_internal_limit(uint16_t sw)
 // --- CANopen SDO setters (expedited download to the object); fill *out, return false on bad arg ---
 
 /// SDO-write the Controlword (0x6040, u16) on @p node.
-proto_bool pc_cia402_sdo_set_controlword(CanFrame *out, uint8_t node, uint16_t controlword);
+proto_bool protocore_cia402_sdo_set_controlword(CanFrame *out, uint8_t node, uint16_t controlword);
 /// SDO-write the requested Mode of Operation (0x6060, i8) on @p node.
-proto_bool pc_cia402_sdo_set_mode(CanFrame *out, uint8_t node, Cia402Mode mode);
+proto_bool protocore_cia402_sdo_set_mode(CanFrame *out, uint8_t node, Cia402Mode mode);
 /// SDO-write Target Position (0x607A, i32) on @p node.
-proto_bool pc_cia402_sdo_set_target_position(CanFrame *out, uint8_t node, int32_t position);
+proto_bool protocore_cia402_sdo_set_target_position(CanFrame *out, uint8_t node, int32_t position);
 /// SDO-write Target Velocity (0x60FF, i32) on @p node.
-proto_bool pc_cia402_sdo_set_target_velocity(CanFrame *out, uint8_t node, int32_t velocity);
+proto_bool protocore_cia402_sdo_set_target_velocity(CanFrame *out, uint8_t node, int32_t velocity);
 /// SDO-write Target Torque (0x6071, i16) on @p node.
-proto_bool pc_cia402_sdo_set_target_torque(CanFrame *out, uint8_t node, int16_t torque);
+proto_bool protocore_cia402_sdo_set_target_torque(CanFrame *out, uint8_t node, int16_t torque);
 
-/// SDO-read request for any drive object (thin wrapper over pc_canopen_build_sdo_read).
-proto_bool pc_cia402_sdo_read(CanFrame *out, uint8_t node, uint16_t index, uint8_t sub);
+/// SDO-read request for any drive object (thin wrapper over protocore_canopen_build_sdo_read).
+proto_bool protocore_cia402_sdo_read(CanFrame *out, uint8_t node, uint16_t index, uint8_t sub);
 
 /// Decode an SDO upload response into a 16-bit object value (e.g. the Statusword). @p want_index,
 /// if non-zero, must match the response's index. Returns false on an abort / wrong / short reply.
-proto_bool pc_cia402_sdo_get_u16(const CanFrame *f, uint16_t want_index, uint16_t *value);
+proto_bool protocore_cia402_sdo_get_u16(const CanFrame *f, uint16_t want_index, uint16_t *value);
 /// Decode an SDO upload response into a signed 32-bit value (position / velocity actual).
-proto_bool pc_cia402_sdo_get_i32(const CanFrame *f, uint16_t want_index, int32_t *value);
+proto_bool protocore_cia402_sdo_get_i32(const CanFrame *f, uint16_t want_index, int32_t *value);
 
 // --- PDO packing for cyclic operation (the common default mappings) ---
 
 /// Pack an RPDO payload = Controlword (u16 LE) + Target (i32 LE) = 6 octets (a typical CSP/PP
 /// RPDO map). Returns the octet count, or 0 if cap < 6.
-size_t pc_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlword, int32_t target);
+size_t protocore_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlword, int32_t target);
 
 /// Unpack a TPDO payload = Statusword (u16 LE) + Actual (i32 LE) into @p statusword / @p actual
 /// (a typical CSP/PP TPDO map). Returns false if len < 6.
-proto_bool pc_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual);
+proto_bool protocore_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual);
 
-#endif // PC_ENABLE_CIA402
+#endif // PROTOCORE_ENABLE_CIA402
 
 #endif // PROTOCORE_CIA402_H

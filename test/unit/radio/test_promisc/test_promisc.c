@@ -168,18 +168,18 @@ void test_qos_len_less_than_hlen()
 
 void test_pcap_headers()
 {
-    uint8_t g[PC_PCAP_GLOBAL_HDR_LEN];
-    TEST_ASSERT_EQUAL_UINT(PC_PCAP_GLOBAL_HDR_LEN, pc_pcap_global_header(g, sizeof(g), PC_DLT_IEEE802_11));
+    uint8_t g[PROTOCORE_PCAP_GLOBAL_HDR_LEN];
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PCAP_GLOBAL_HDR_LEN, protocore_pcap_global_header(g, sizeof(g), PROTOCORE_DLT_IEEE802_11));
     // Magic 0xa1b2c3d4 little-endian, and link type 105 (DLT_IEEE802_11) at offset 20.
     TEST_ASSERT_EQUAL_HEX8(0xd4, g[0]);
     TEST_ASSERT_EQUAL_HEX8(0xc3, g[1]);
     TEST_ASSERT_EQUAL_HEX8(0xb2, g[2]);
     TEST_ASSERT_EQUAL_HEX8(0xa1, g[3]);
     TEST_ASSERT_EQUAL_HEX8(105, g[20]);
-    TEST_ASSERT_EQUAL_UINT(0, pc_pcap_global_header(g, 10, PC_DLT_IEEE802_11)); // too small
+    TEST_ASSERT_EQUAL_UINT(0, protocore_pcap_global_header(g, 10, PROTOCORE_DLT_IEEE802_11)); // too small
 
-    uint8_t r[PC_PCAP_REC_HDR_LEN];
-    TEST_ASSERT_EQUAL_UINT(PC_PCAP_REC_HDR_LEN, pc_pcap_record_header(r, sizeof(r), 0x11223344, 0x55667788, 100, 120));
+    uint8_t r[PROTOCORE_PCAP_REC_HDR_LEN];
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PCAP_REC_HDR_LEN, protocore_pcap_record_header(r, sizeof(r), 0x11223344, 0x55667788, 100, 120));
     TEST_ASSERT_EQUAL_HEX8(0x44, r[0]); // ts_sec little-endian
     TEST_ASSERT_EQUAL_HEX8(0x11, r[3]);
     TEST_ASSERT_EQUAL_HEX8(100, r[8]);  // caplen
@@ -188,9 +188,9 @@ void test_pcap_headers()
 
 void test_host_stubs_and_short_frame()
 {
-    TEST_ASSERT_FALSE(pc_promisc_begin(6, NULL)); // host: esp_wifi unavailable
-    pc_promisc_set_channel(11);
-    pc_promisc_end();
+    TEST_ASSERT_FALSE(protocore_promisc_begin(6, NULL)); // host: esp_wifi unavailable
+    protocore_promisc_set_channel(11);
+    protocore_promisc_end();
     WifiFrameInfo info;
     uint8_t too_short[2] = {0x08, 0x00};
     TEST_ASSERT_FALSE(wifi_frame_parse(too_short, sizeof(too_short), &info));

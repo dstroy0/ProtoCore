@@ -10,7 +10,7 @@
  *        simulation of one.
  *
  * The leaky operation is deliberately the smallest possible one: a single AES SubBytes step,
- * `PC_AES_SBOX[plaintext ^ KEY_BYTE] ^ plaintext` - the exact Hamming-distance intermediate
+ * `PROTOCORE_AES_SBOX[plaintext ^ KEY_BYTE] ^ plaintext` - the exact Hamming-distance intermediate
  * this whole reverse_engineering suite's CPA/TVLA/SPA code already targets. TRIGGER_PIN goes
  * high right before it runs and low right after, so an external capture front end has a clean
  * edge to arm on.
@@ -89,7 +89,7 @@ void loop()
     // (void) below only stop the compiler from optimizing the "dead" result away - on real
     // silicon this line's own CMOS switching current is the actual side channel, physics the
     // firmware cannot fake or suppress by itself (that is what a real probe is for).
-    volatile uint8_t intermediate = PC_AES_SBOX[plaintext ^ KEY_BYTE] ^ plaintext;
+    volatile uint8_t intermediate = PROTOCORE_AES_SBOX[plaintext ^ KEY_BYTE] ^ plaintext;
     digitalWrite(TRIGGER_PIN, LOW);
     (void)intermediate;
 

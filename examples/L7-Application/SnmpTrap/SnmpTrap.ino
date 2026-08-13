@@ -12,13 +12,13 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_SNMP=1 -DPC_ENABLE_SNMP_TRAP=1
- *     ; for SNMPv3 traps also: -DPC_ENABLE_SNMP_V3=1 (then call pc_snmp_trap_v3)
+ *     build_flags = -DPROTOCORE_ENABLE_SNMP=1 -DPROTOCORE_ENABLE_SNMP_TRAP=1
+ *     ; for SNMPv3 traps also: -DPROTOCORE_ENABLE_SNMP_V3=1 (then call protocore_snmp_trap_v3)
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_SNMP 1
-#define PC_ENABLE_SNMP_TRAP 1
+#define PROTOCORE_ENABLE_SNMP 1
+#define PROTOCORE_ENABLE_SNMP_TRAP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -65,7 +65,7 @@ void loop()
         vb.type = (uint8_t)SNMP_VB_GAUGE32;
         vb.ival = (long)ESP.getFreeHeap();
 
-        bool ok = pc_snmp_trap_v2c(MANAGER, TRAP_PORT, "public", TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), &vb, 1);
+        bool ok = protocore_snmp_trap_v2c(MANAGER, TRAP_PORT, "public", TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), &vb, 1);
         Serial.printf("trap -> %s : %s (heap=%ld)\n", MANAGER, ok ? "sent" : "failed", vb.ival);
     }
 }

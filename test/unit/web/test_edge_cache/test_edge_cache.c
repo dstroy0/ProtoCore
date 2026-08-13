@@ -84,7 +84,7 @@ static void test_http_date_epoch_zero_and_invalid()
 
 static void test_freshness_lifetime_precedence()
 {
-    pc_cache_control cc;
+    protocore_cache_control cc;
     cache_control_init(&cc);
     cc.max_age = 100;
     cc.s_maxage = 50;
@@ -92,7 +92,7 @@ static void test_freshness_lifetime_precedence()
     TEST_ASSERT_EQUAL_INT32(100,
                             edge_freshness_lifetime(&cc, /*shared=*/PROTO_FALSE, -1, -1)); // private ignores s-maxage
 
-    pc_cache_control empty;
+    protocore_cache_control empty;
     cache_control_init(&empty);
     TEST_ASSERT_EQUAL_INT32(100, edge_freshness_lifetime(&empty, PROTO_TRUE, 1000, 1100)); // Expires - Date
     TEST_ASSERT_EQUAL_INT32(-1, edge_freshness_lifetime(&empty, PROTO_TRUE, -1, -1));      // nothing explicit
@@ -225,7 +225,7 @@ static void test_store_lru_evict()
 {
     edge_store_init(&g_store);
     char key[32];
-    for (int i = 0; i < PC_EDGE_CACHE_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
         snprintf(key, sizeof(key), "GET\nh\n/%d", i);
         TEST_ASSERT_NOT_NULL(edge_store_alloc(&g_store, key, ""));
@@ -241,7 +241,7 @@ static void test_store_lru_evict()
 static void test_store_ttl_sweep()
 {
     edge_store_init(&g_store);
-    pc_cache_control s10, s1000;
+    protocore_cache_control s10, s1000;
     cache_control_init(&s10);
     s10.max_age = 10;
     cache_control_init(&s1000);
@@ -324,7 +324,7 @@ static void test_store_find_vary()
 static void test_entry_freshness_resolution()
 {
     edge_store_init(&g_store);
-    pc_cache_control cc, empty;
+    protocore_cache_control cc, empty;
     cache_control_init(&cc);
     cc.max_age = 100;
     cache_control_init(&empty);
@@ -337,7 +337,7 @@ static void test_entry_freshness_resolution()
 
     EdgeEntry *dflt = edge_store_alloc(&g_store, "GET\nh\n/b", "");
     edge_entry_set_freshness(dflt, &empty, PROTO_TRUE, -1, -1, -1, 0, -1, 1000); // no directive -> default TTL
-    TEST_ASSERT_EQUAL_INT32(PC_EDGE_DEFAULT_TTL_S, (int32_t)dflt->lifetime_s);
+    TEST_ASSERT_EQUAL_INT32(PROTOCORE_EDGE_DEFAULT_TTL_S, (int32_t)dflt->lifetime_s);
 
     EdgeEntry *heur = edge_store_alloc(&g_store, "GET\nh\n/c", "");
     edge_entry_set_freshness(heur, &empty, PROTO_TRUE, 1000000, -1, 1000000 - 1000, 0, -1, 1000); // 10% heuristic
@@ -350,7 +350,7 @@ static void test_entry_freshness_resolution()
 
 static void test_storeability()
 {
-    pc_cache_control cc, ns, pv;
+    protocore_cache_control cc, ns, pv;
     cache_control_init(&cc);
     cache_control_init(&ns);
     ns.no_store = PROTO_TRUE;
@@ -358,14 +358,14 @@ static void test_storeability()
     pv.cc_private = PROTO_TRUE;
 
     TEST_ASSERT_TRUE(edge_is_storeable(200, "GET", &cc, NULL, 100));
-    TEST_ASSERT_TRUE(edge_is_storeable(200, "GET", NULL, "Accept-Encoding", PC_EDGE_BODY_MAX));
+    TEST_ASSERT_TRUE(edge_is_storeable(200, "GET", NULL, "Accept-Encoding", PROTOCORE_EDGE_BODY_MAX));
     TEST_ASSERT_FALSE(edge_is_storeable(200, "POST", &cc, NULL, 100)); // not GET
     TEST_ASSERT_FALSE(edge_is_storeable(404, "GET", &cc, NULL, 100));  // not 200
     TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &ns, NULL, 100));  // no-store
     TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &pv, NULL, 100));  // private
     TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &cc, "*", 100));   // Vary: *
     TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &cc, "Accept-Encoding, *", 100));
-    TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &cc, NULL, PC_EDGE_BODY_MAX + 1)); // oversize
+    TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &cc, NULL, PROTOCORE_EDGE_BODY_MAX + 1)); // oversize
 }
 
 // --- conditional revalidation --------------------------------------------------------------------
@@ -388,7 +388,7 @@ static void test_build_conditional()
 static void test_apply_304()
 {
     edge_store_init(&g_store);
-    pc_cache_control s10;
+    protocore_cache_control s10;
     cache_control_init(&s10);
     s10.max_age = 10;
     EdgeEntry *e = edge_store_alloc(&g_store, "GET\nh\n/a", "");
@@ -695,7 +695,7 @@ static void test_vary_serialize_long_name_and_separator_runs()
 static void test_store_alloc_key_too_long()
 {
     edge_store_init(&g_store);
-    char big[PC_EDGE_KEY_MAX + 8];
+    char big[PROTOCORE_EDGE_KEY_MAX + 8];
     memset(big, 'k', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
     TEST_ASSERT_NULL(edge_store_alloc(&g_store, big, "")); // will not fit the key field -> non-cacheable
@@ -710,24 +710,24 @@ static void test_store_alloc_null_and_oversize_vary_key()
     TEST_ASSERT_EQUAL_STRING("", e->vary_vals);
     TEST_ASSERT_EQUAL_PTR(e, edge_store_lookup(&g_store, "GET\nh\n/a", NULL, 5)); // NULL matches ""
 
-    char big[PC_EDGE_VARY_MAX + 16];
+    char big[PROTOCORE_EDGE_VARY_MAX + 16];
     memset(big, 'v', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
     EdgeEntry *t = edge_store_alloc(&g_store, "GET\nh\n/b", big);
     TEST_ASSERT_NOT_NULL(t);
-    TEST_ASSERT_EQUAL_UINT(PC_EDGE_VARY_MAX - 1, strlen(t->vary_vals)); // clamped, still terminated
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_EDGE_VARY_MAX - 1, strlen(t->vary_vals)); // clamped, still terminated
 }
 
 static void test_store_alloc_no_free_slot_and_empty_lru()
 {
-    // Every slot marked used with an empty LRU list (the PC_EDGE_CACHE_SLOTS == 0 shape): alloc must
-    // fail closed rather than index the PC_EDGE_LRU_NONE sentinel.
+    // Every slot marked used with an empty LRU list (the PROTOCORE_EDGE_CACHE_SLOTS == 0 shape): alloc must
+    // fail closed rather than index the PROTOCORE_EDGE_LRU_NONE sentinel.
     edge_store_init(&g_store);
-    for (uint16_t i = 0; i < PC_EDGE_CACHE_SLOTS; i++)
+    for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
         g_store.entries[i].used = PROTO_TRUE;
     }
-    TEST_ASSERT_EQUAL_UINT16(PC_EDGE_LRU_NONE, g_store.lru_tail);
+    TEST_ASSERT_EQUAL_UINT16(PROTOCORE_EDGE_LRU_NONE, g_store.lru_tail);
     TEST_ASSERT_NULL(edge_store_alloc(&g_store, "GET\nh\n/x", ""));
 }
 
@@ -770,7 +770,7 @@ static void test_store_free_entry_foreign_pointer()
 
 static void test_storeability_null_method()
 {
-    pc_cache_control cc;
+    protocore_cache_control cc;
     cache_control_init(&cc);
     TEST_ASSERT_FALSE(edge_is_storeable(200, NULL, &cc, NULL, 100));
 }
@@ -923,7 +923,7 @@ static void test_vary_serialize_space_tab_and_empty_elements()
 }
 
 static int g_evicted;
-static char g_evicted_key[PC_EDGE_KEY_MAX];
+static char g_evicted_key[PROTOCORE_EDGE_KEY_MAX];
 static void count_evict(void *ctx, const EdgeEntry *e)
 {
     (void)ctx;
@@ -943,7 +943,7 @@ static void test_store_evict_hook_skips_empty_victim()
 
     // Fill every slot, then force one more allocation so the LRU tail is recycled.
     char key[64];
-    for (uint16_t i = 0; i < PC_EDGE_CACHE_SLOTS; i++)
+    for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
         snprintf(key, sizeof(key), "GET\nh\n/e%u", (unsigned)i);
         TEST_ASSERT_NOT_NULL(edge_store_alloc(&g_store, key, ""));

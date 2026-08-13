@@ -3,7 +3,7 @@
 
 /**
  * @file df1.h
- * @brief Allen-Bradley DF1 full-duplex frame codec (PC_ENABLE_DF1) - zero-heap framing +
+ * @brief Allen-Bradley DF1 full-duplex frame codec (PROTOCORE_ENABLE_DF1) - zero-heap framing +
  *        DLE byte-stuffing + BCC/CRC for the Rockwell serial PLC link layer.
  *
  * A DF1 full-duplex message frame (AB pub. 1770-6.5.16):
@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DF1
+#if PROTOCORE_ENABLE_DF1
 
 #define DF1_DLE 0x10
 #define DF1_STX 0x02
@@ -45,10 +45,10 @@ typedef enum PROTO_ENUM_PACKED
 } Df1Check;
 
 /** @brief BCC: 2's complement of the modulo-256 sum of [data, data+len). */
-uint8_t pc_df1_bcc(const uint8_t *data, size_t len);
+uint8_t protocore_df1_bcc(const uint8_t *data, size_t len);
 
 /** @brief CRC-16/ARC (poly 0x8005 / 0xA001 reflected, init 0) over [data, data+len). */
-uint16_t pc_df1_crc(const uint8_t *data, size_t len);
+uint16_t protocore_df1_crc(const uint8_t *data, size_t len);
 
 /**
  * @brief Build a full-duplex frame around @p data: DLE STX + stuffed data + DLE ETX + check.
@@ -56,7 +56,7 @@ uint16_t pc_df1_crc(const uint8_t *data, size_t len);
  *              the data + ETX).
  * @return total octets written, or 0 on overflow / bad input.
  */
-size_t pc_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, Df1Check check);
+size_t protocore_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, Df1Check check);
 
 /**
  * @brief Parse + validate a full-duplex frame, un-stuffing the application data.
@@ -66,11 +66,11 @@ size_t pc_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t 
  * @return true on a complete, check-valid frame; false on bad framing, truncation, an
  *         out overflow, or a BCC/CRC mismatch.
  */
-proto_bool pc_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap,
-                              size_t *out_len);
+proto_bool protocore_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap,
+                                     size_t *out_len);
 
-#endif // PC_ENABLE_DF1
+#endif // PROTOCORE_ENABLE_DF1
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DF1_H

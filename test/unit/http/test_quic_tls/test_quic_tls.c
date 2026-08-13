@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Unit tests for the TLS 1.3 server handshake state machine (network_drivers/presentation/http/http3/
-// pc_quic_tls; RFC 9001 / RFC 8446). The main test drives the server with a hand-built ClientHello and
+// protocore_quic_tls; RFC 9001 / RFC 8446). The main test drives the server with a hand-built ClientHello and
 // then runs the *client* half of the key schedule independently in the test, proving both sides
 // derive identical handshake + application secrets and that the server accepts the client Finished
 // (a full interop round-trip of the state machine). Plus: capability-negotiation rejections.
@@ -12,8 +12,8 @@
 #include "network_drivers/presentation/http/http3/quic_tls.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
-#if PC_ENABLE_PQC_KEX
-#include "../../../integration/ssh/test_ssh_pqc/mlkem_ref.h" // pc_mlkem768_decaps_ref (the client side)
+#if PROTOCORE_ENABLE_PQC_KEX
+#include "../../../integration/ssh/test_ssh_pqc/mlkem_ref.h" // protocore_mlkem768_decaps_ref (the client side)
 #include "../../pqc/test_pqc_mlkem/mlkem_kat.h"              // kat_ek, kat_dk (a valid ML-KEM key pair)
 #include "crypto/pqc/mlkem.h"                                // MLKEM768_EK_BYTES / MLKEM768_CT_BYTES
 #endif
@@ -60,7 +60,7 @@ enum
     INC_SA = 4,    // signature_algorithms (ed25519)
     INC_KS = 8,    // key_share (x25519 + pub)
     INC_ALPN = 16, // ALPN h3
-    INC_TP = 32,   // pc_quic_transport_parameters
+    INC_TP = 32,   // protocore_quic_transport_parameters
     INC_ALL = 63,
 };
 
@@ -122,7 +122,7 @@ static size_t build_ch_ext(uint8_t *out, const uint8_t client_pub[32], const uin
         memcpy(out + p, alpn, sizeof(alpn));
         p += sizeof(alpn);
     }
-    if (inc & INC_TP) // pc_quic_transport_parameters
+    if (inc & INC_TP) // protocore_quic_transport_parameters
     {
         out[p++] = 0x00;
         out[p++] = 0x39;
@@ -156,7 +156,7 @@ static void make_server_config(QuicTlsConfig *cfg)
     memcpy(cfg->ed25519_seed, SERVER_SEED, 32);
     memcpy(cfg->ephemeral_priv, SERVER_PRIV, 32);
     memcpy(cfg->random, SERVER_RANDOM, 32);
-    pc_quic_tp_defaults(&cfg->params);
+    protocore_quic_tp_defaults(&cfg->params);
     cfg->params.has_initial_scid = PROTO_TRUE;
     cfg->params.initial_scid_len = 4;
     memcpy(cfg->params.initial_scid, "\x11\x22\x33\x44", 4);
@@ -170,62 +170,62 @@ void test_full_handshake_roundtrip()
     QuicTlsConfig cfg;
     make_server_config(&cfg);
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     // Client transport params.
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.has_initial_scid = PROTO_TRUE;
     ctp.initial_scid_len = 4;
     memcpy(ctp.initial_scid, "\xaa\xbb\xcc\xdd", 4);
     ctp.initial_max_data = 524288;
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
 
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
 
     // 1) Feed the ClientHello. The server should build its flights and derive keys.
-    size_t used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    size_t used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT(ch_len, used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
     TEST_ASSERT_TRUE(qt.hs_keys_ready);
     TEST_ASSERT_TRUE(qt.ap_keys_ready);
 
     size_t si_len = 0, sh_flight_len = 0;
-    const uint8_t *si = pc_quic_tls_flight(&qt, QUIC_ENC_INITIAL, &si_len);
-    const uint8_t *sh_flight = pc_quic_tls_flight(&qt, QUIC_ENC_HANDSHAKE, &sh_flight_len);
+    const uint8_t *si = protocore_quic_tls_flight(&qt, QUIC_ENC_INITIAL, &si_len);
+    const uint8_t *sh_flight = protocore_quic_tls_flight(&qt, QUIC_ENC_HANDSHAKE, &sh_flight_len);
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_SERVER_HELLO, si[0]);                // Initial flight = ServerHello
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_ENCRYPTED_EXTENSIONS, sh_flight[0]); // then EE..Finished
 
     // Server parsed our transport params.
-    const QuicTransportParams *peer = pc_quic_tls_peer_params(&qt);
+    const QuicTransportParams *peer = protocore_quic_tls_peer_params(&qt);
     TEST_ASSERT_NOT_NULL(peer);
     TEST_ASSERT_EQUAL_UINT64(524288, peer->initial_max_data);
 
     // 2) Independently run the CLIENT key schedule and confirm the secrets match the server's.
     uint8_t server_pub[32], ecdhe[32];
-    pc_x25519_base(server_pub, SERVER_PRIV);
-    pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
+    protocore_x25519_base(server_pub, SERVER_PRIV);
+    protocore_x25519(ecdhe, CLIENT_PRIV, server_pub);
 
-    pc_sha256_ctx t;
+    protocore_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, ch_len);
-    pc_sha256_update(&t, si, si_len);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, ch_len);
+    protocore_sha256_update(&t, si, si_len);
     { // snapshot H(CH..SH)
-        pc_sha256_final(&t, ch_sh);
+        protocore_sha256_final(&t, ch_sh);
     }
-    pc_sha256_update(&t, sh_flight, sh_flight_len);
-    pc_sha256_final(&t, ch_sf); // H(CH..server Finished)
+    protocore_sha256_update(&t, sh_flight, sh_flight_len);
+    protocore_sha256_final(&t, ch_sf); // H(CH..server Finished)
 
     Tls13KeySchedule cks;
-    static uint8_t ks_store_221[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_221);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
-    pc_tls13_ks_master(&cks, ch_sf);
+    static uint8_t ks_store_221[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_221);
+    protocore_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
+    protocore_tls13_ks_master(&cks, ch_sf);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_HANDSHAKE, cks.s + TLS13_KS_HANDSHAKE, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_CLIENT_HS, cks.s + TLS13_KS_CLIENT_HS, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_HS, cks.s + TLS13_KS_SERVER_HS, 32);
@@ -234,26 +234,26 @@ void test_full_handshake_roundtrip()
 
     // The server Finished (tail of the handshake flight) must verify under the server hs secret.
     uint8_t ch_cv[32]; // H(CH..CertificateVerify) = everything but the trailing 36-byte Finished
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, ch_len);
-    pc_sha256_update(&t, si, si_len);
-    pc_sha256_update(&t, sh_flight, sh_flight_len - 36);
-    pc_sha256_final(&t, ch_cv);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, ch_len);
+    protocore_sha256_update(&t, si, si_len);
+    protocore_sha256_update(&t, sh_flight, sh_flight_len - 36);
+    protocore_sha256_final(&t, ch_cv);
     uint8_t sfin_expected[32];
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(sfin_expected, sh_flight + sh_flight_len - 32, 32);
 
     // 3) Client builds its Finished and the server accepts it.
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
-    used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
+    used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
     TEST_ASSERT_EQUAL_UINT(sizeof(cfin), used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, qt.state);
     TEST_ASSERT_TRUE(qt.complete);
 
     // Keys are exposed for both directions at both levels.
-    TEST_ASSERT_NOT_NULL(pc_quic_tls_keys(&qt, QUIC_ENC_HANDSHAKE, PROTO_TRUE));
-    TEST_ASSERT_NOT_NULL(pc_quic_tls_keys(&qt, QUIC_ENC_APP, PROTO_FALSE));
+    TEST_ASSERT_NOT_NULL(protocore_quic_tls_keys(&qt, QUIC_ENC_HANDSHAKE, PROTO_TRUE));
+    TEST_ASSERT_NOT_NULL(protocore_quic_tls_keys(&qt, QUIC_ENC_APP, PROTO_FALSE));
 }
 
 void test_reject_bad_client_finished()
@@ -262,23 +262,23 @@ void test_reject_bad_client_finished()
     QuicTlsConfig cfg;
     make_server_config(&cfg);
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[64];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
 
     // A Finished with the wrong verify_data must be rejected (decrypt_error).
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
     memset(cfin + 4, 0x99, 32);
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(51, qt.alert); // decrypt_error
 }
@@ -290,14 +290,14 @@ void test_reject_no_h3_alpn()
     QuicTlsConfig cfg;
     make_server_config(&cfg);
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[64];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
     // Corrupt the ALPN protocol name "h3" -> "h9" so it no longer offers h3.
@@ -309,7 +309,7 @@ void test_reject_no_h3_alpn()
             break;
         }
     }
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(120, qt.alert); // no_application_protocol
 }
@@ -321,22 +321,22 @@ void test_partial_client_hello()
     QuicTlsConfig cfg;
     make_server_config(&cfg);
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[64];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
 
-    size_t used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len - 10);
+    size_t used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len - 10);
     TEST_ASSERT_EQUAL_UINT(0, used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_START, qt.state);
     // Delivering the whole message now completes it.
-    used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT(ch_len, used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
 }
@@ -349,20 +349,20 @@ static uint8_t reject_alert(unsigned inc, const uint8_t *bad_tp, size_t bad_tp_l
     QuicTlsConfig cfg;
     make_server_config(&cfg);
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[64];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     const uint8_t *tp = bad_tp ? bad_tp : ctp_enc;
     size_t tpl = bad_tp ? bad_tp_len : ctp_len;
 
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_ch_ext(ch, client_pub, tp, tpl, inc);
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     return qt.alert;
 }
@@ -387,7 +387,7 @@ void test_reject_no_ed25519()
     TEST_ASSERT_EQUAL_UINT8(40, reject_alert(INC_ALL & ~INC_SA, NULL, 0));
 }
 
-// No pc_quic_transport_parameters extension -> missing_extension(109).
+// No protocore_quic_transport_parameters extension -> missing_extension(109).
 void test_reject_no_transport_params()
 {
     TEST_ASSERT_EQUAL_UINT8(109, reject_alert(INC_ALL & ~INC_TP, NULL, 0));
@@ -407,10 +407,10 @@ void test_reject_malformed_client_hello()
     QuicTlsConfig cfg;
     make_server_config(&cfg);
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
     // ClientHello, handshake length 2, body = legacy_version only (no random / ciphers / extensions).
     uint8_t bad[] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0x02, 0x03, 0x03};
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, bad, sizeof(bad));
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, bad, sizeof(bad));
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(50, qt.alert); // decode_error
 }
@@ -420,32 +420,32 @@ static void drive_to_wait_finished(QuicTls *qt, QuicTlsConfig *cfg)
 {
     fill_test_material();
     make_server_config(cfg);
-    pc_quic_tls_server_init(qt, cfg);
+    protocore_quic_tls_server_init(qt, cfg);
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[64];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
-    pc_quic_tls_recv_crypto(qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(qt, QUIC_ENC_INITIAL, ch, ch_len);
 }
 
 // Drive a fresh server through a ClientHello with the given config; return the resulting state.
 static QtlsState run_handshake(const QuicTlsConfig *cfg)
 {
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, cfg);
+    protocore_quic_tls_server_init(&qt, cfg);
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[64];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     return qt.state;
 }
 
@@ -462,13 +462,13 @@ void test_quic_tls_cert_size_boundary_emit_fails()
     const size_t buf = sizeof(dummy.flight_hs);
     uint8_t scratch[4096];
     uint8_t tp_enc[512];
-    size_t tp_len = pc_quic_tp_encode(&cfg.params, tp_enc, sizeof(tp_enc));
+    size_t tp_len = protocore_quic_tp_encode(&cfg.params, tp_enc, sizeof(tp_enc));
     size_t ee =
-        pc_tls13_build_encrypted_extensions(scratch, sizeof(scratch), tp_enc, tp_len, /*rpk_server_cert=*/PROTO_FALSE);
-    size_t cert_overhead = pc_tls13_build_certificate(scratch, sizeof(scratch), CERT, 0); // fixed part only
+        protocore_tls13_build_encrypted_extensions(scratch, sizeof(scratch), tp_enc, tp_len, /*rpk_server_cert=*/PROTO_FALSE);
+    size_t cert_overhead = protocore_tls13_build_certificate(scratch, sizeof(scratch), CERT, 0); // fixed part only
     uint8_t z[32] = {0};
-    size_t cv = pc_tls13_build_cert_verify(tw, scratch, sizeof(scratch), z, cfg.ed25519_seed);
-    size_t fin = pc_tls13_build_finished(scratch, sizeof(scratch), z);
+    size_t cv = protocore_tls13_build_cert_verify(tw, scratch, sizeof(scratch), z, cfg.ed25519_seed);
+    size_t fin = protocore_tls13_build_finished(scratch, sizeof(scratch), z);
     TEST_ASSERT_TRUE(ee > 0 && cert_overhead > 0 && cv > 4 && fin > 4);
 
     static uint8_t big_cert[4096];
@@ -499,53 +499,53 @@ void test_quic_tls_more_guards()
     drive_to_wait_finished(&qt, &cfg);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
     uint8_t fin_badlen[8] = {TLS_HS_FINISHED, 0x00, 0x00, 0x04, 1, 2, 3, 4}; // 4-byte verify, not 32
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, fin_badlen, sizeof(fin_badlen));
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, fin_badlen, sizeof(fin_badlen));
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(50, qt.alert); // decode_error
 
     // A non-Finished message while awaiting the client Finished -> UNEXPECTED_MESSAGE.
     drive_to_wait_finished(&qt, &cfg);
     uint8_t wrong[36] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0x20};
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, wrong, sizeof(wrong));
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, wrong, sizeof(wrong));
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(10, qt.alert); // unexpected_message
 
     // recv_crypto on a FAILED handshake drains (returns the whole length, changes nothing).
     uint8_t more[4] = {0, 0, 0, 0};
-    TEST_ASSERT_EQUAL_UINT(sizeof(more), pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, more, sizeof(more)));
+    TEST_ASSERT_EQUAL_UINT(sizeof(more), protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, more, sizeof(more)));
 
     // flight() for a level that is neither Initial nor Handshake -> NULL / zero length.
     size_t l = 123;
-    TEST_ASSERT_NULL(pc_quic_tls_flight(&qt, QUIC_ENC_APP, &l));
+    TEST_ASSERT_NULL(protocore_quic_tls_flight(&qt, QUIC_ENC_APP, &l));
     TEST_ASSERT_EQUAL_UINT(0, l);
 
     // keys() before the handshake has derived them -> NULL (both levels + an unknown level).
     QuicTls fresh;
-    pc_quic_tls_server_init(&fresh, &cfg);
-    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, QUIC_ENC_HANDSHAKE, PROTO_TRUE));
-    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, QUIC_ENC_APP, PROTO_FALSE));
-    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, 999, PROTO_TRUE));
+    protocore_quic_tls_server_init(&fresh, &cfg);
+    TEST_ASSERT_NULL(protocore_quic_tls_keys(&fresh, QUIC_ENC_HANDSHAKE, PROTO_TRUE));
+    TEST_ASSERT_NULL(protocore_quic_tls_keys(&fresh, QUIC_ENC_APP, PROTO_FALSE));
+    TEST_ASSERT_NULL(protocore_quic_tls_keys(&fresh, 999, PROTO_TRUE));
 
     // An oversized certificate overruns the handshake flight buffer, so the emit() flight-bound guard
     // fails the handshake with INTERNAL_ERROR (cert_der/cert_len are caller-supplied and unbounded).
     fill_test_material();
     make_server_config(&cfg);
-    cfg.cert_len = 100000; // far larger than PC_H3_CRYPTO_BUF; the Certificate builder returns 0
-    pc_quic_tls_server_init(&qt, &cfg);
+    cfg.cert_len = 100000; // far larger than PROTOCORE_H3_CRYPTO_BUF; the Certificate builder returns 0
+    protocore_quic_tls_server_init(&qt, &cfg);
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[64];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(80, qt.alert); // internal_error
 }
 
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
 // Build a ClientHello offering X25519MLKEM768: supported_groups {0x11ec, x25519} and a key_share
 // carrying the client's ML-KEM ek (@p ek, normally kat_ek) || X25519 pub (1216 B), plus the other
 // required extensions. With @p offer_hybrid_group false the hybrid share is sent but supported_groups
@@ -623,7 +623,7 @@ static size_t build_client_hello_hybrid(uint8_t *out, const uint8_t client_pub[3
         p += sizeof(alpn);
     }
     {
-        out[p++] = 0x00; // pc_quic_transport_parameters
+        out[p++] = 0x00; // protocore_quic_transport_parameters
         out[p++] = 0x39;
         out[p++] = (uint8_t)(tp_len >> 8);
         out[p++] = (uint8_t)tp_len;
@@ -693,7 +693,7 @@ static size_t build_client_hello_hybrid_classical(uint8_t *out, const uint8_t cl
         p += sizeof(alpn);
     }
     {
-        out[p++] = 0x00; // pc_quic_transport_parameters
+        out[p++] = 0x00; // protocore_quic_transport_parameters
         out[p++] = 0x39;
         out[p++] = (uint8_t)(tp_len >> 8);
         out[p++] = (uint8_t)tp_len;
@@ -725,45 +725,45 @@ void test_hybrid_hrr_roundtrip()
         cfg.mlkem_m[i] = (uint8_t)(0x5a ^ i);
     }
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.has_initial_scid = PROTO_TRUE;
     ctp.initial_scid_len = 4;
     memcpy(ctp.initial_scid, "\xaa\xbb\xcc\xdd", 4);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
 
     // --- ClientHello1: hybrid group offered, classical share only -> HelloRetryRequest ---
     static uint8_t ch1[2048];
     size_t ch1_len = build_client_hello_hybrid_classical(ch1, client_pub, ctp_enc, ctp_len);
-    size_t used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch1, ch1_len);
+    size_t used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch1, ch1_len);
     TEST_ASSERT_EQUAL_UINT(ch1_len, used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_START, qt.state); // awaiting the retry, not WAIT_FINISHED
     TEST_ASSERT_FALSE(qt.hs_keys_ready);
     TEST_ASSERT_TRUE(qt.hrr_sent);
 
     size_t hrr_len = 0;
-    const uint8_t *hrr = pc_quic_tls_flight(&qt, QUIC_ENC_INITIAL, &hrr_len);
+    const uint8_t *hrr = protocore_quic_tls_flight(&qt, QUIC_ENC_INITIAL, &hrr_len);
     TEST_ASSERT_TRUE(hrr_len > 0);
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_SERVER_HELLO, hrr[0]);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(pc_tls13_hrr_random, hrr + 6, 32); // the HRR magic random
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(protocore_tls13_hrr_random, hrr + 6, 32); // the HRR magic random
     static uint8_t hrr_saved[256];
     memcpy(hrr_saved, hrr, hrr_len);
 
     // --- ClientHello2: the hybrid ClientHello -> completes ---
     static uint8_t ch2[2048];
     size_t ch2_len = build_client_hello_hybrid(ch2, client_pub, ctp_enc, ctp_len, kat_ek, PROTO_TRUE);
-    used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch2, ch2_len);
+    used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch2, ch2_len);
     TEST_ASSERT_EQUAL_UINT(ch2_len, used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
 
     size_t si_len = 0, sh_flight_len = 0;
-    const uint8_t *si = pc_quic_tls_flight(&qt, QUIC_ENC_INITIAL, &si_len); // HRR || ServerHello
-    const uint8_t *sh_flight = pc_quic_tls_flight(&qt, QUIC_ENC_HANDSHAKE, &sh_flight_len);
+    const uint8_t *si = protocore_quic_tls_flight(&qt, QUIC_ENC_INITIAL, &si_len); // HRR || ServerHello
+    const uint8_t *sh_flight = protocore_quic_tls_flight(&qt, QUIC_ENC_HANDSHAKE, &sh_flight_len);
     TEST_ASSERT_TRUE(si_len > hrr_len);
     const uint8_t *sh = si + hrr_len; // the ServerHello is appended after the HRR
     size_t sh_len = si_len - hrr_len;
@@ -788,9 +788,9 @@ void test_hybrid_hrr_roundtrip()
     TEST_ASSERT_NOT_NULL(server_ct);
 
     uint8_t ml_ss[32];
-    pc_mlkem768_decaps_ref(kat_dk, server_ct, ml_ss);
+    protocore_mlkem768_decaps_ref(kat_dk, server_ct, ml_ss);
     uint8_t x_ss[32];
-    pc_x25519(x_ss, CLIENT_PRIV, server_x25519);
+    protocore_x25519(x_ss, CLIENT_PRIV, server_x25519);
     uint8_t ecdhe[64];
     memcpy(ecdhe, ml_ss, 32);
     memcpy(ecdhe + 32, x_ss, 32);
@@ -798,54 +798,54 @@ void test_hybrid_hrr_roundtrip()
     // Client transcript: message_hash(Hash(CH1)) || HRR || CH2 || ServerHello || ...
     uint8_t ch1_hash[32];
     {
-        pc_sha256_ctx h;
-        pc_sha256_init(&h, tw_h);
-        pc_sha256_update(&h, ch1, ch1_len);
-        pc_sha256_final(&h, ch1_hash);
+        protocore_sha256_ctx h;
+        protocore_sha256_init(&h, tw_h);
+        protocore_sha256_update(&h, ch1, ch1_len);
+        protocore_sha256_final(&h, ch1_hash);
     }
     uint8_t mh[40];
-    size_t mhn = pc_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
-    pc_sha256_ctx t;
+    size_t mhn = protocore_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
+    protocore_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, mh, mhn);
-    pc_sha256_update(&t, hrr_saved, hrr_len);
-    pc_sha256_update(&t, ch2, ch2_len);
-    pc_sha256_update(&t, sh, sh_len);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, mh, mhn);
+    protocore_sha256_update(&t, hrr_saved, hrr_len);
+    protocore_sha256_update(&t, ch2, ch2_len);
+    protocore_sha256_update(&t, sh, sh_len);
     {
-        pc_sha256_final(&t, ch_sh); // H(..ServerHello)
+        protocore_sha256_final(&t, ch_sh); // H(..ServerHello)
     }
-    pc_sha256_update(&t, sh_flight, sh_flight_len);
-    pc_sha256_final(&t, ch_sf); // H(..server Finished)
+    protocore_sha256_update(&t, sh_flight, sh_flight_len);
+    protocore_sha256_final(&t, ch_sf); // H(..server Finished)
 
     Tls13KeySchedule cks;
-    static uint8_t ks_store_818[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_818);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, 64);
-    pc_tls13_ks_master(&cks, ch_sf);
+    static uint8_t ks_store_818[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_818);
+    protocore_tls13_ks_handshake(&cks, ecdhe, ch_sh, 64);
+    protocore_tls13_ks_master(&cks, ch_sf);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_HS, cks.s + TLS13_KS_SERVER_HS, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_CLIENT_HS, cks.s + TLS13_KS_CLIENT_HS, 32);
 
     // Server Finished verifies over the HRR transcript through CertificateVerify.
     uint8_t ch_cv[32];
     {
-        pc_sha256_ctx tt;
-        pc_sha256_init(&tt, tw_tt);
-        pc_sha256_update(&tt, mh, mhn);
-        pc_sha256_update(&tt, hrr_saved, hrr_len);
-        pc_sha256_update(&tt, ch2, ch2_len);
-        pc_sha256_update(&tt, sh, sh_len);
-        pc_sha256_update(&tt, sh_flight, sh_flight_len - 36);
-        pc_sha256_final(&tt, ch_cv);
+        protocore_sha256_ctx tt;
+        protocore_sha256_init(&tt, tw_tt);
+        protocore_sha256_update(&tt, mh, mhn);
+        protocore_sha256_update(&tt, hrr_saved, hrr_len);
+        protocore_sha256_update(&tt, ch2, ch2_len);
+        protocore_sha256_update(&tt, sh, sh_len);
+        protocore_sha256_update(&tt, sh_flight, sh_flight_len - 36);
+        protocore_sha256_final(&tt, ch_cv);
     }
     uint8_t sfin_expected[32];
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(sfin_expected, sh_flight + sh_flight_len - 32, 32);
 
     // The server accepts the client Finished -> DONE.
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
-    used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
+    used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
     TEST_ASSERT_EQUAL_UINT(sizeof(cfin), used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, qt.state);
 }
@@ -863,28 +863,28 @@ void test_hybrid_handshake_roundtrip()
         cfg.mlkem_m[i] = (uint8_t)(0x5a ^ i); // fixed Encaps randomness for a repeatable test
     }
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.has_initial_scid = PROTO_TRUE;
     ctp.initial_scid_len = 4;
     memcpy(ctp.initial_scid, "\xaa\xbb\xcc\xdd", 4);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
 
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     static uint8_t ch[2048];
     size_t ch_len = build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len, kat_ek, PROTO_TRUE);
 
-    size_t used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    size_t used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT(ch_len, used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
 
     size_t si_len = 0, sh_flight_len = 0;
-    const uint8_t *si = pc_quic_tls_flight(&qt, QUIC_ENC_INITIAL, &si_len);
-    const uint8_t *sh_flight = pc_quic_tls_flight(&qt, QUIC_ENC_HANDSHAKE, &sh_flight_len);
+    const uint8_t *si = protocore_quic_tls_flight(&qt, QUIC_ENC_INITIAL, &si_len);
+    const uint8_t *sh_flight = protocore_quic_tls_flight(&qt, QUIC_ENC_HANDSHAKE, &sh_flight_len);
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_SERVER_HELLO, si[0]);
 
     // Walk the ServerHello extensions (start = 4+2+32+1+2+1+2 = 44 with a 0-length session id) to the
@@ -912,29 +912,29 @@ void test_hybrid_handshake_roundtrip()
 
     // Client combiner: ML-KEM secret first, then X25519.
     uint8_t ml_ss[32];
-    pc_mlkem768_decaps_ref(kat_dk, server_ct, ml_ss);
+    protocore_mlkem768_decaps_ref(kat_dk, server_ct, ml_ss);
     uint8_t x_ss[32];
-    pc_x25519(x_ss, CLIENT_PRIV, server_x25519);
+    protocore_x25519(x_ss, CLIENT_PRIV, server_x25519);
     uint8_t ecdhe[64];
     memcpy(ecdhe, ml_ss, 32);
     memcpy(ecdhe + 32, x_ss, 32);
 
-    pc_sha256_ctx t;
+    protocore_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, ch_len);
-    pc_sha256_update(&t, si, si_len);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, ch_len);
+    protocore_sha256_update(&t, si, si_len);
     {
-        pc_sha256_final(&t, ch_sh);
+        protocore_sha256_final(&t, ch_sh);
     }
-    pc_sha256_update(&t, sh_flight, sh_flight_len);
-    pc_sha256_final(&t, ch_sf);
+    protocore_sha256_update(&t, sh_flight, sh_flight_len);
+    protocore_sha256_final(&t, ch_sf);
 
     Tls13KeySchedule cks;
-    static uint8_t ks_store_930[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_930);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, 64); // 64-byte hybrid secret
-    pc_tls13_ks_master(&cks, ch_sf);
+    static uint8_t ks_store_930[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_930);
+    protocore_tls13_ks_handshake(&cks, ecdhe, ch_sh, 64); // 64-byte hybrid secret
+    protocore_tls13_ks_master(&cks, ch_sf);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_HANDSHAKE, cks.s + TLS13_KS_HANDSHAKE, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_CLIENT_HS, cks.s + TLS13_KS_CLIENT_HS, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.s + TLS13_KS_SERVER_HS, cks.s + TLS13_KS_SERVER_HS, 32);
@@ -942,18 +942,18 @@ void test_hybrid_handshake_roundtrip()
 
     // Server Finished verifies, then the server accepts the client Finished.
     uint8_t ch_cv[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, ch_len);
-    pc_sha256_update(&t, si, si_len);
-    pc_sha256_update(&t, sh_flight, sh_flight_len - 36);
-    pc_sha256_final(&t, ch_cv);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, ch_len);
+    protocore_sha256_update(&t, si, si_len);
+    protocore_sha256_update(&t, sh_flight, sh_flight_len - 36);
+    protocore_sha256_final(&t, ch_cv);
     uint8_t sfin_expected[32];
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, ch_cv, sfin_expected);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(sfin_expected, sh_flight + sh_flight_len - 32, 32);
 
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
-    used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
+    used = protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, cfin, sizeof(cfin));
     TEST_ASSERT_EQUAL_UINT(sizeof(cfin), used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, qt.state);
 }
@@ -970,19 +970,19 @@ void test_hybrid_share_without_group_offer()
         cfg.mlkem_m[i] = (uint8_t)(0x5a ^ i);
     }
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     static uint8_t ch[2048];
     size_t ch_len =
         build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len, kat_ek, /*offer_hybrid_group=*/PROTO_FALSE);
 
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(40, qt.alert); // handshake_failure: no usable key_share
     TEST_ASSERT_FALSE(qt.hs_keys_ready);
@@ -1000,24 +1000,24 @@ void test_hybrid_hrr_retry_without_share_is_fatal()
         cfg.mlkem_m[i] = (uint8_t)(0x5a ^ i);
     }
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     static uint8_t ch[2048];
     size_t ch_len = build_client_hello_hybrid_classical(ch, client_pub, ctp_enc, ctp_len);
 
     // ClientHello1: hybrid group offered, classical share only -> HelloRetryRequest.
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_TRUE(qt.hrr_sent);
     TEST_ASSERT_EQUAL_UINT8(QTLS_START, qt.state);
 
     // ClientHello2 is identical - still no hybrid share. A second HRR is not sent; it is fatal.
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(40, qt.alert); // handshake_failure
 }
@@ -1034,14 +1034,14 @@ void test_hybrid_bad_mlkem_key_rejected()
         cfg.mlkem_m[i] = (uint8_t)(0x5a ^ i);
     }
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_server_init(&qt, &cfg);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
 
     static uint8_t bad_ek[MLKEM768_EK_BYTES];
     memcpy(bad_ek, kat_ek, sizeof(bad_ek));
@@ -1050,7 +1050,7 @@ void test_hybrid_bad_mlkem_key_rejected()
 
     static uint8_t ch[2048];
     size_t ch_len = build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len, bad_ek, PROTO_TRUE);
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(40, qt.alert); // handshake_failure
     TEST_ASSERT_FALSE(qt.hs_keys_ready);   // no keys were installed from a bad encapsulation
@@ -1062,11 +1062,11 @@ void test_hybrid_key_share_entry_skipping()
 {
     fill_test_material();
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
 
     // Start from the valid hybrid ClientHello, then rebuild its key_share with two unusable entries
     // in front of the good one.
@@ -1155,7 +1155,7 @@ void test_hybrid_key_share_entry_skipping()
     ch[hs_len_at + 2] = (uint8_t)hs_len;
 
     Tls13ClientHello parsed;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, p, &parsed, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(ch, p, &parsed, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_TRUE(parsed.has_hybrid_share); // the third entry was picked up
     TEST_ASSERT_FALSE(parsed.has_key_share);   // neither unusable entry was mistaken for X25519
     TEST_ASSERT_TRUE(parsed.offers_x25519mlkem768);
@@ -1170,11 +1170,11 @@ void test_hybrid_key_share_entry_skipping()
         cfg.mlkem_m[i] = (uint8_t)(0x5a ^ i);
     }
     QuicTls qt;
-    pc_quic_tls_server_init(&qt, &cfg);
-    TEST_ASSERT_EQUAL_UINT(p, pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, p));
+    protocore_quic_tls_server_init(&qt, &cfg);
+    TEST_ASSERT_EQUAL_UINT(p, protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, p));
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
 }
-#endif // PC_ENABLE_PQC_KEX
+#endif // PROTOCORE_ENABLE_PQC_KEX
 
 // process_message's level/state/type dispatch: a handshake message that matches neither arm is an
 // unexpected_message, whichever of the three conditions is the one that does not hold.
@@ -1187,7 +1187,7 @@ void test_quic_tls_message_dispatch_guards()
     drive_to_wait_finished(&qt, &cfg);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
     uint8_t ch2[36] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0x20};
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch2, sizeof(ch2));
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch2, sizeof(ch2));
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(10, qt.alert); // unexpected_message
 
@@ -1195,23 +1195,23 @@ void test_quic_tls_message_dispatch_guards()
     fill_test_material();
     make_server_config(&cfg);
     uint8_t fin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_quic_tls_server_init(&qt, &cfg);
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, fin, sizeof(fin));
+    protocore_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, fin, sizeof(fin));
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(10, qt.alert);
 
     // (c) A Finished at the Handshake level before the ServerHello: the right level and type, but
     // the state is still START.
-    pc_quic_tls_server_init(&qt, &cfg);
-    pc_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, fin, sizeof(fin));
+    protocore_quic_tls_server_init(&qt, &cfg);
+    protocore_quic_tls_recv_crypto(&qt, QUIC_ENC_HANDSHAKE, fin, sizeof(fin));
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(10, qt.alert);
 
     // (d) The peer's transport parameters are unavailable until a ClientHello has been parsed.
-    pc_quic_tls_server_init(&qt, &cfg);
-    TEST_ASSERT_NULL(pc_quic_tls_peer_params(&qt));
+    protocore_quic_tls_server_init(&qt, &cfg);
+    TEST_ASSERT_NULL(protocore_quic_tls_peer_params(&qt));
     drive_to_wait_finished(&qt, &cfg);
-    TEST_ASSERT_NOT_NULL(pc_quic_tls_peer_params(&qt));
+    TEST_ASSERT_NOT_NULL(protocore_quic_tls_peer_params(&qt));
 }
 
 int main(void)
@@ -1231,7 +1231,7 @@ int main(void)
     RUN_TEST(test_reject_malformed_client_hello);
     RUN_TEST(test_quic_tls_more_guards);
     RUN_TEST(test_quic_tls_cert_size_boundary_emit_fails);
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
     RUN_TEST(test_hybrid_handshake_roundtrip);
     RUN_TEST(test_hybrid_hrr_roundtrip);
     RUN_TEST(test_hybrid_share_without_group_offer);

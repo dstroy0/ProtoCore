@@ -15,14 +15,14 @@
 #include "network_drivers/application/file_serving/file_serving.h"
 #include "network_drivers/presentation/http/http.h"
 
-#include "mmgr/membuild.h"                          // pc_sb frame builder
+#include "mmgr/membuild.h"                          // protocore_sb frame builder
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (shared with the edge cache)
 #include "network_drivers/presentation/http/route/http_route.h"
-#include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_*, TcpConn/ConnState
+#include "network_drivers/transport/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
 #include "protocore.h"
-#include "server/filesystem/filesystem.h"  // pc_fs_* - the accessor owns the root, the join, and the .. guard
-#include "shared_primitives/mime.h"        // mime_type, PC_MIME_*
-#include "shared_primitives/time_compat.h" // pc_gmtime_r (portable reentrant UTC)
+#include "server/filesystem/filesystem.h"  // protocore_fs_* - the accessor owns the root, the join, and the .. guard
+#include "shared_primitives/mime.h"        // mime_type, PROTOCORE_MIME_*
+#include "shared_primitives/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
 #include <stdio.h>                         // snprintf, sscanf
                                            // strncasecmp, strchr, strstr, strncmp, strnlen
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
@@ -31,7 +31,7 @@
 // File serving
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_FILE_SERVING
+#if PROTOCORE_ENABLE_FILE_SERVING
 
 // ---------------------------------------------------------------------------
 // File-send state - owned here
@@ -41,7 +41,7 @@
 // once the window fills and the remainder would be dropped. serve_file_internal sends the headers,
 // opens the file and hands it to this per-slot state; file_send_pump pages out at most
 // Tcp.conn->sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
-// Nothing outside this file can name the state: the poll asks pc_file_holds_slot().
+// Nothing outside this file can name the state: the poll asks protocore_file_holds_slot().
 
 // Per-slot file-send continuation: the open file and how much of it is left.
 typedef struct
@@ -78,12 +78,12 @@ static int file_root(void)
 {
     if (s_file.root < 0)
     {
-        s_file.root = pc_fs_begin("/");
+        s_file.root = protocore_fs_begin("/");
     }
     return s_file.root;
 }
 
-proto_bool pc_file_holds_slot(uint8_t slot)
+proto_bool protocore_file_holds_slot(uint8_t slot)
 {
     return s_file.send[slot].active;
 }
@@ -103,7 +103,7 @@ void http_rfc1123(int64_t epoch, char *out, size_t cap)
     // only the conversion seam is allowed to name it.
     time_t t = (time_t)epoch;
     struct tm tmv;
-    if (!pc_gmtime_r(&t, &tmv)) // reentrant: never the shared static buffer (worker-safe)
+    if (!protocore_gmtime_r(&t, &tmv)) // reentrant: never the shared static buffer (worker-safe)
     {
         return;
     }
@@ -144,7 +144,7 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
     int imon = (int)(mp - MONTHS) / 3; // 0-based, matches struct tm tm_mon
 
     struct tm tf;
-    if (!pc_gmtime_r(&mtime, &tf)) // reentrant: never the shared static buffer (worker-safe)
+    if (!protocore_gmtime_r(&mtime, &tf)) // reentrant: never the shared static buffer (worker-safe)
     {
         return PROTO_FALSE;
     }
@@ -224,66 +224,66 @@ static proto_bool inm_matches(const char *inm, const char *etag)
     return PROTO_FALSE;
 }
 
-void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend *file_sys, const char *fs_path,
+void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_backend *file_sys, const char *fs_path,
                          const char *content_type, const char *content_encoding)
 {
-    int fh = pc_fs_open(file_root(), fs_path, "", PC_MNT_READ);
+    int fh = protocore_fs_open(file_root(), fs_path, "", PROTOCORE_MNT_READ);
     if (fh < 0)
     {
-        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
 
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
-        pc_fs_close(fh);
+        protocore_fs_close(fh);
         http_reset(slot_id);
         return;
     }
 
     // Size and mtime come from one stat, not two calls on the handle: they are two fields of the same
     // directory record, and asking separately is two lookups of what one read already had.
-    pc_mnt_stat st;
-    if (!pc_fs_stat(file_root(), fs_path, "", &st))
+    protocore_mnt_stat st;
+    if (!protocore_fs_stat(file_root(), fs_path, "", &st))
     {
-        pc_fs_close(fh);
-        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        protocore_fs_close(fh);
+        send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
     size_t file_size = (size_t)(st.size);
 
     proto_bool keep;
-    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+    const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     // Optional Content-Encoding line (e.g. gzip for pre-compressed assets).
     char enc_line[40];
     enc_line[0] = '\0';
     if (content_encoding)
     {
-        pc_sb sb_enc_line = {enc_line, sizeof(enc_line), 0, PROTO_TRUE};
-        pc_sb_put(&sb_enc_line, "Content-Encoding: ");
-        pc_sb_put(&sb_enc_line, content_encoding);
-        pc_sb_put(&sb_enc_line, "\r\n");
-        if (pc_sb_finish(&sb_enc_line) == 0)
+        protocore_sb sb_enc_line = {enc_line, sizeof(enc_line), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_enc_line, "Content-Encoding: ");
+        protocore_sb_put(&sb_enc_line, content_encoding);
+        protocore_sb_put(&sb_enc_line, "\r\n");
+        if (protocore_sb_finish(&sb_enc_line) == 0)
         {
             enc_line[0] = '\0';
         }
     }
 
-#if PC_ENABLE_ETAG
+#if PROTOCORE_ENABLE_ETAG
     // Conditional GET. Strong validator (ETag) from size + mtime; plus a
     // Last-Modified date validator. A conditional request answers 304 when either
     // the client's If-None-Match matches the ETag, or - per RFC 9110, only when no
     // If-None-Match is present - its If-Modified-Since is not older than the file.
     time_t mtime = (time_t)(st.mtime);
     char etag[40];
-    pc_sb sb_etag = {etag, sizeof(etag), 0, PROTO_TRUE};
-    pc_sb_put(&sb_etag, "\"");
-    pc_sb_hex(&sb_etag, (uint64_t)((unsigned)file_size), 1);
-    pc_sb_put(&sb_etag, "-");
-    pc_sb_hex(&sb_etag, (uint64_t)((unsigned long)mtime), 1);
-    pc_sb_put(&sb_etag, "\"");
-    if (pc_sb_finish(&sb_etag) == 0)
+    protocore_sb sb_etag = {etag, sizeof(etag), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_etag, "\"");
+    protocore_sb_hex(&sb_etag, (uint64_t)((unsigned)file_size), 1);
+    protocore_sb_put(&sb_etag, "-");
+    protocore_sb_hex(&sb_etag, (uint64_t)((unsigned long)mtime), 1);
+    protocore_sb_put(&sb_etag, "\"");
+    if (protocore_sb_finish(&sb_etag) == 0)
     {
         etag[0] = '\0';
     }
@@ -294,11 +294,11 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
     http_rfc1123(mtime, lm_date, sizeof(lm_date));
     if (lm_date[0])
     {
-        pc_sb sb_lastmod_line = {lastmod_line, sizeof(lastmod_line), 0, PROTO_TRUE};
-        pc_sb_put(&sb_lastmod_line, "Last-Modified: ");
-        pc_sb_put(&sb_lastmod_line, lm_date);
-        pc_sb_put(&sb_lastmod_line, "\r\n");
-        if (pc_sb_finish(&sb_lastmod_line) == 0)
+        protocore_sb sb_lastmod_line = {lastmod_line, sizeof(lastmod_line), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_lastmod_line, "Last-Modified: ");
+        protocore_sb_put(&sb_lastmod_line, lm_date);
+        protocore_sb_put(&sb_lastmod_line, "\r\n");
+        if (protocore_sb_finish(&sb_lastmod_line) == 0)
         {
             lastmod_line[0] = '\0';
         }
@@ -310,28 +310,28 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
             : http_not_modified_since(mtime, http_get_header(&http_pool[slot_id], "If-Modified-Since"));
     if (not_modified)
     {
-        pc_fs_close(fh);
+        protocore_fs_close(fh);
         char h304[RESP_HDR_BUF_SIZE];
-        pc_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
-        pc_sb_put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
-        pc_sb_put(&sb_h304, etag);
-        pc_sb_put(&sb_h304, "\r\n");
-        pc_sb_put(&sb_h304, lastmod_line);
-        pc_sb_put(&sb_h304, pc_resp_cache_control());
-        pc_sb_put(&sb_h304, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
-        pc_sb_put(&sb_h304, cl);
-        pc_sb_put(&sb_h304, "\r\n");
-        int n304 = (int)pc_sb_finish(&sb_h304);
+        protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
+        protocore_sb_put(&sb_h304, etag);
+        protocore_sb_put(&sb_h304, "\r\n");
+        protocore_sb_put(&sb_h304, lastmod_line);
+        protocore_sb_put(&sb_h304, protocore_resp_cache_control());
+        protocore_sb_put(&sb_h304, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+        protocore_sb_put(&sb_h304, cl);
+        protocore_sb_put(&sb_h304, "\r\n");
+        int n304 = (int)protocore_sb_finish(&sb_h304);
         Tcp.conn->send_flush(slot_id, h304, (proto_u16)n304); // header-only reply: write and flush in one marshal
-        pc_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+        protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
     char etag_line[48];
-    pc_sb sb_etag_line = {etag_line, sizeof(etag_line), 0, PROTO_TRUE};
-    pc_sb_put(&sb_etag_line, "ETag: ");
-    pc_sb_put(&sb_etag_line, etag);
-    pc_sb_put(&sb_etag_line, "\r\n");
-    if (pc_sb_finish(&sb_etag_line) == 0)
+    protocore_sb sb_etag_line = {etag_line, sizeof(etag_line), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_etag_line, "ETag: ");
+    protocore_sb_put(&sb_etag_line, etag);
+    protocore_sb_put(&sb_etag_line, "\r\n");
+    if (protocore_sb_finish(&sb_etag_line) == 0)
     {
         etag_line[0] = '\0';
     }
@@ -348,7 +348,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
     char range_line[64];
     range_line[0] = '\0';
 
-#if PC_ENABLE_RANGE
+#if PROTOCORE_ENABLE_RANGE
     accept_ranges = "Accept-Ranges: bytes\r\n"; // advertise range support on every file response
     size_t r_start = 0;
     size_t r_end = 0;
@@ -356,39 +356,39 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
     if (rr < 0)
     {
         // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
-        pc_fs_close(fh);
+        protocore_fs_close(fh);
         char h416[RESP_HDR_BUF_SIZE];
-        pc_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
-        pc_sb_put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
-        pc_sb_u32(&sb_h416, (uint32_t)((unsigned)file_size));
-        pc_sb_put(&sb_h416, "\r\nContent-Length: 0\r\n");
-        pc_sb_put(&sb_h416, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
-        pc_sb_put(&sb_h416, cl);
-        pc_sb_put(&sb_h416, "\r\n");
-        int n416 = (int)pc_sb_finish(&sb_h416);
+        protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
+        protocore_sb_u32(&sb_h416, (uint32_t)((unsigned)file_size));
+        protocore_sb_put(&sb_h416, "\r\nContent-Length: 0\r\n");
+        protocore_sb_put(&sb_h416, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+        protocore_sb_put(&sb_h416, cl);
+        protocore_sb_put(&sb_h416, "\r\n");
+        int n416 = (int)protocore_sb_finish(&sb_h416);
         Tcp.conn->send_flush(slot_id, h416, (proto_u16)n416);
-        pc_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+        protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
     if (rr > 0)
     {
         status = 206;
         body_len = r_end - r_start + 1;
-        pc_sb sb_range_line = {range_line, sizeof(range_line), 0, PROTO_TRUE};
-        pc_sb_put(&sb_range_line, "Content-Range: bytes ");
-        pc_sb_u32(&sb_range_line, (uint32_t)((unsigned)r_start));
-        pc_sb_put(&sb_range_line, "-");
-        pc_sb_u32(&sb_range_line, (uint32_t)((unsigned)r_end));
-        pc_sb_put(&sb_range_line, "/");
-        pc_sb_u32(&sb_range_line, (uint32_t)((unsigned)file_size));
-        pc_sb_put(&sb_range_line, "\r\n");
-        if (pc_sb_finish(&sb_range_line) == 0)
+        protocore_sb sb_range_line = {range_line, sizeof(range_line), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_range_line, "Content-Range: bytes ");
+        protocore_sb_u32(&sb_range_line, (uint32_t)((unsigned)r_start));
+        protocore_sb_put(&sb_range_line, "-");
+        protocore_sb_u32(&sb_range_line, (uint32_t)((unsigned)r_end));
+        protocore_sb_put(&sb_range_line, "/");
+        protocore_sb_u32(&sb_range_line, (uint32_t)((unsigned)file_size));
+        protocore_sb_put(&sb_range_line, "\r\n");
+        if (protocore_sb_finish(&sb_range_line) == 0)
         {
             range_line[0] = '\0';
         }
         // A backend that cannot seek serves the whole representation instead, which keeps the body
         // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
-        if (pc_fs_seek(fh, (uint64_t)r_start))
+        if (protocore_fs_seek(fh, (uint64_t)r_start))
         {
             body_off = r_start;
         }
@@ -402,26 +402,26 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
 #endif
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    pc_sb_put(&sb_header, "HTTP/1.1 ");
-    pc_sb_i64(&sb_header, (int64_t)(status));
-    pc_sb_put(&sb_header, " ");
-    pc_sb_put(&sb_header, Http.status_text(status));
-    pc_sb_put(&sb_header, "\r\nContent-Type: ");
-    pc_sb_put(&sb_header, content_type);
-    pc_sb_put(&sb_header, "\r\nContent-Length: ");
-    pc_sb_u32(&sb_header, (uint32_t)((unsigned)body_len));
-    pc_sb_put(&sb_header, "\r\n");
-    pc_sb_put(&sb_header, accept_ranges);
-    pc_sb_put(&sb_header, range_line);
-    pc_sb_put(&sb_header, enc_line);
-    pc_sb_put(&sb_header, etag_line);
-    pc_sb_put(&sb_header, lastmod_line);
-    pc_sb_put(&sb_header, pc_resp_cache_control());
-    pc_sb_put(&sb_header, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
-    pc_sb_put(&sb_header, cl);
-    pc_sb_put(&sb_header, "\r\n");
-    int hlen = (int)pc_sb_finish(&sb_header);
+    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_header, "HTTP/1.1 ");
+    protocore_sb_i64(&sb_header, (int64_t)(status));
+    protocore_sb_put(&sb_header, " ");
+    protocore_sb_put(&sb_header, Http.status_text(status));
+    protocore_sb_put(&sb_header, "\r\nContent-Type: ");
+    protocore_sb_put(&sb_header, content_type);
+    protocore_sb_put(&sb_header, "\r\nContent-Length: ");
+    protocore_sb_u32(&sb_header, (uint32_t)((unsigned)body_len));
+    protocore_sb_put(&sb_header, "\r\n");
+    protocore_sb_put(&sb_header, accept_ranges);
+    protocore_sb_put(&sb_header, range_line);
+    protocore_sb_put(&sb_header, enc_line);
+    protocore_sb_put(&sb_header, etag_line);
+    protocore_sb_put(&sb_header, lastmod_line);
+    protocore_sb_put(&sb_header, protocore_resp_cache_control());
+    protocore_sb_put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    protocore_sb_put(&sb_header, cl);
+    protocore_sb_put(&sb_header, "\r\n");
+    int hlen = (int)protocore_sb_finish(&sb_header);
     if (hlen == 0)
     {
         header[0] = '\0';
@@ -432,15 +432,15 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
     // HEAD or empty body: headers only, finish now.
     if (head || body_len == 0)
     {
-        pc_fs_close(fh);
-        pc_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
+        protocore_fs_close(fh);
+        protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
         return;
     }
 
     // Hand the body to the cross-loop pump: it pages out at most one send-buffer
     // window now and resumes on later loops as the window drains, so a file larger
     // than TCP_SND_BUF is never truncated. The pump owns the file and calls
-    // pc_resp_end() at completion - do not close f or end the response here.
+    // protocore_resp_end() at completion - do not close f or end the response here.
     FileSend *s = &s_file.send[slot_id];
     s->fh = fh;
     s->off = body_off;
@@ -464,10 +464,10 @@ void file_send_pump(uint8_t slot_id)
         return;
     }
 
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
         // Connection went away mid-transfer: drop the source and the continuation.
-        pc_fs_close(s->fh);
+        protocore_fs_close(s->fh);
         s->active = PROTO_FALSE;
         return;
     }
@@ -492,7 +492,7 @@ void file_send_pump(uint8_t slot_id)
         }
         // The backend reports a fault as -1 and end-of-data as 0; both stop the transfer, and the
         // comparison is <= so a fault can never be added to the offset as a negative count.
-        int n = pc_fs_read(s->fh, chunk, want);
+        int n = protocore_fs_read(s->fh, chunk, want);
         if (n <= 0)
         {
             s->remaining = 0; // read error / short file: stop (response will be short)
@@ -502,9 +502,9 @@ void file_send_pump(uint8_t slot_id)
         {
             // Un-read the bytes that did not go out so the next loop resends them. A backend that
             // cannot rewind would resume at the wrong offset, so the transfer ends there instead.
-            if (!pc_fs_seek(s->fh, s->off))
+            if (!protocore_fs_seek(s->fh, s->off))
             {
-                pc_fs_close(s->fh);
+                protocore_fs_close(s->fh);
                 s->active = PROTO_FALSE;
                 s->remaining = 0;
             }
@@ -516,18 +516,18 @@ void file_send_pump(uint8_t slot_id)
     }
 
     // Whole body queued: finish the response (flush, keep-alive/close, log, reset).
-    pc_fs_close(s->fh);
+    protocore_fs_close(s->fh);
     s->active = PROTO_FALSE;
     Tcp.conn->flush(slot_id);
-    pc_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
+    protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
-void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_path, const char *content_type)
+void serve_file(uint8_t slot_id, const protocore_mnt_backend *file_sys, const char *fs_path, const char *content_type)
 {
     serve_file_internal(slot_id, Http.req_is_head(slot_id), file_sys, fs_path, content_type, NULL);
 }
 
-void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
+void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys, const char *fs_root)
 {
     HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
@@ -543,13 +543,13 @@ void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const 
     // than what was asked for is worse than a route that does not exist.
     char pat[MAX_PATH_LEN];
     size_t n = strnlen(url_prefix, MAX_PATH_LEN);
-    pc_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
-    pc_sb_put(&sb_pat, url_prefix);
+    protocore_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_pat, url_prefix);
     if (n == 0 || url_prefix[n - 1] != '*')
     {
-        pc_sb_put(&sb_pat, "*"); // not already a wildcard: append one
+        protocore_sb_put(&sb_pat, "*"); // not already a wildcard: append one
     }
-    if (pc_sb_finish(&sb_pat) == 0)
+    if (protocore_sb_finish(&sb_pat) == 0)
     {
         return; // prefix + wildcard does not fit: register nothing
     }
@@ -557,7 +557,7 @@ void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const 
     fill_route_base(r, pat);
     r->type = ROUTE_STATIC;
     r->method = HTTP_GET;
-    r->mnt_id = pc_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
+    r->mnt_id = protocore_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
 }
 
 void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
@@ -580,11 +580,11 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     // Reject path traversal before touching the filesystem.
     if (strstr(sub, ".."))
     {
-        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
 
-    const char *root = pc_mnt_point_root(r->mnt_id);
+    const char *root = protocore_mnt_point_root(r->mnt_id);
     size_t rlen = strnlen(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
@@ -601,17 +601,17 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     // A path that does not fit is refused, not truncated: a clipped path names a different file,
     // and serving one the caller never asked for is worse than a 404.
     char fs_path[256];
-    pc_sb sb_path = {fs_path, sizeof(fs_path), 0, PROTO_TRUE};
-    pc_sb_put(&sb_path, root);
-    pc_sb_put(&sb_path, sep);
-    pc_sb_put(&sb_path, sub);
+    protocore_sb sb_path = {fs_path, sizeof(fs_path), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_path, root);
+    protocore_sb_put(&sb_path, sep);
+    protocore_sb_put(&sb_path, sub);
     if (dir)
     {
-        pc_sb_lit(&sb_path, "index.html");
+        protocore_sb_lit(&sb_path, "index.html");
     }
-    if (pc_sb_finish(&sb_path) == 0)
+    if (protocore_sb_finish(&sb_path) == 0)
     {
-        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
 
@@ -624,21 +624,21 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     if (ae && strstr(ae, "gzip"))
     {
         char gz[260];
-        pc_sb sb_gz = {gz, sizeof(gz), 0, PROTO_TRUE};
-        pc_sb_put(&sb_gz, fs_path);
-        pc_sb_put(&sb_gz, ".gz");
-        int gn = (int)pc_sb_finish(&sb_gz);
+        protocore_sb sb_gz = {gz, sizeof(gz), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_gz, fs_path);
+        protocore_sb_put(&sb_gz, ".gz");
+        int gn = (int)protocore_sb_finish(&sb_gz);
         // Neither length half can fail: fs_path is a 256-byte buffer, so gn is at most 258 and
         // always under gz's 260. Both are kept because the two buffer sizes are independent
         // constants. The exclusion is per-line, so it also drops the exists() halves - those ARE
         // exercised both ways (see the gzip tests).
-        if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(file_root(), gz, ""))
+        if (gn > 0 && gn < (int)sizeof(gz) && protocore_fs_exists(file_root(), gz, ""))
         {
-            serve_file_internal(slot_id, head, pc_mnt_point_backend(r->mnt_id), gz, ctype, "gzip");
+            serve_file_internal(slot_id, head, protocore_mnt_point_backend(r->mnt_id), gz, ctype, "gzip");
             return;
         }
     }
 
-    serve_file_internal(slot_id, head, pc_mnt_point_backend(r->mnt_id), fs_path, ctype, NULL);
+    serve_file_internal(slot_id, head, protocore_mnt_point_backend(r->mnt_id), fs_path, ctype, NULL);
 }
-#endif // PC_ENABLE_FILE_SERVING
+#endif // PROTOCORE_ENABLE_FILE_SERVING

@@ -16,7 +16,7 @@
 #include "protocore.h"
 #include <WiFi.h>
 
-#ifdef PC_SSH_BENCH
+#ifdef PROTOCORE_SSH_BENCH
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/asymmetric/ed25519.h"
 #include "driver/periph_ctrl.h" // periph_module_enable(PERIPH_RSA_MODULE) - proper clk/reset for the accelerator
@@ -29,7 +29,7 @@ static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 
 // Balance radix-2^16 limbs into signed-16-bit (value-preserving mod p), so the product is a pure
 // s16xs16 convolution (the validated C model, test_gf_mul_s16_model_matches_scalar).
-static void balance_s16(int16_t o[16], const pc_gf a)
+static void balance_s16(int16_t o[16], const protocore_gf a)
 {
     int64_t c[16];
     for (int i = 0; i < 16; i++)
@@ -158,7 +158,7 @@ static void gf_conv_inreg(const int16_t *as, const int16_t *bp, int64_t *t)
                  : "a3", "a4", "a6", "a7", "a8", "a9", "a10", "memory");
 }
 
-static void pc_gf_mul_s3(pc_gf out, const pc_gf a, const pc_gf b)
+static void protocore_gf_mul_s3(protocore_gf out, const protocore_gf a, const protocore_gf b)
 {
     __attribute__((aligned(16))) int16_t as[16];
     int16_t bs[16];
@@ -245,22 +245,22 @@ static void mpi_modmul256(uint32_t z[8], const uint32_t x[8], const uint32_t y[8
 }
 
 // THE CRYPTO REWRITE PROTOTYPE: field multiply via the HW MODMULT. Pack both operands to canonical uint32[8]
-// (< p) with the library's own pc_gf_pack, one MODMULT (Z = X*Y mod p), unpack the result back to pc_gf.
-// Byte-exact with the scalar pc_gf_mul by construction (pack/unpack are the validated canonical conversions;
-// MODMULT is exact). This is the drop-in that replaces pc_gf_mul_s3 on the S3. Assumes mpi_hw_enable() done.
-static void pc_gf_mul_mpi(pc_gf out, const pc_gf a, const pc_gf b)
+// (< p) with the library's own protocore_gf_pack, one MODMULT (Z = X*Y mod p), unpack the result back to protocore_gf.
+// Byte-exact with the scalar protocore_gf_mul by construction (pack/unpack are the validated canonical conversions;
+// MODMULT is exact). This is the drop-in that replaces protocore_gf_mul_s3 on the S3. Assumes mpi_hw_enable() done.
+static void protocore_gf_mul_mpi(protocore_gf out, const protocore_gf a, const protocore_gf b)
 {
     uint32_t xw[8], yw[8], zw[8];
-    pc_gf_pack((uint8_t *)xw, a); // canonical little-endian 32 bytes == 8 LE words, each < p
-    pc_gf_pack((uint8_t *)yw, b);
+    protocore_gf_pack((uint8_t *)xw, a); // canonical little-endian 32 bytes == 8 LE words, each < p
+    protocore_gf_pack((uint8_t *)yw, b);
     mpi_modmul256(zw, xw, yw, MOD_P, MOD_R2, MOD_MPRIME);
-    pc_gf_unpack(out, (const uint8_t *)zw);
+    protocore_gf_unpack(out, (const uint8_t *)zw);
 }
 
 // ============================================================================================
 // fe25519: field elements as canonical uint32[8] (< p = 2^255-19), THROUGHOUT the ladder - so mul/sq are the
 // raw HW MODMULT (1381 cyc, no per-op pack/unpack) and add/sub are native 32-bit. bytes<->fe conversion is
-// once per scalar-mult. This is the real X25519 rewrite; validated byte-exact vs the library pc_x25519_base.
+// once per scalar-mult. This is the real X25519 rewrite; validated byte-exact vs the library protocore_x25519_base.
 // ============================================================================================
 typedef uint32_t fe[8];
 static const uint32_t FE_A24[8] = {121665u, 0, 0, 0, 0, 0, 0, 0}; // X25519 a24 = (486662-2)/4 (RFC 7748 section 5)
@@ -456,7 +456,7 @@ static void fe_x25519_base(uint8_t out[32], const uint8_t scalar[32])
 
 static void ssh_bench_task(void *)
 {
-    pc_gf a, b, r1, r2;
+    protocore_gf a, b, r1, r2;
     uint8_t p1[32], p2[32];
     uint32_t s = 0x1234567u;
     int fails = 0;
@@ -469,10 +469,10 @@ static void ssh_bench_task(void *)
             s = s * 1664525u + 1013904223u;
             b[i] = (int64_t)(s & 0x3FFFF) - 0x10000;
         }
-        pc_gf_mul(r1, a, b);
-        pc_gf_mul_s3(r2, a, b);
-        pc_gf_pack(p1, r1);
-        pc_gf_pack(p2, r2);
+        protocore_gf_mul(r1, a, b);
+        protocore_gf_mul_s3(r2, a, b);
+        protocore_gf_pack(p1, r1);
+        protocore_gf_pack(p2, r2);
         if (memcmp(p1, p2, 32) != 0)
         {
             if (fails < 3)
@@ -482,44 +482,44 @@ static void ssh_bench_task(void *)
             fails++;
         }
     }
-    pc_gf a2, b2, o;
+    protocore_gf a2, b2, o;
     for (int i = 0; i < 16; i++)
     {
         a2[i] = 0x5a5a + i;
         b2[i] = 0x1234 - i;
     }
-    pc_gf_mul_s3(o, a2, b2);
+    protocore_gf_mul_s3(o, a2, b2);
     uint32_t c0 = ESP.getCycleCount();
     for (int i = 0; i < 2000; i++)
     {
-        pc_gf_mul_s3(o, a2, b2);
+        protocore_gf_mul_s3(o, a2, b2);
     }
     uint32_t cyc = (ESP.getCycleCount() - c0) / 2000;
     Serial.printf("SSHBENCH gf_mul_s3 %s  %d/3000  cyc=%u (scalar=13308)\n", fails == 0 ? "PASS" : "FAIL", 3000 - fails,
                   cyc);
 
-    // End-to-end cost with the shipped vector pc_gf_mul in the ladder (was: X25519 150.8ms, ed25519 547.9ms).
+    // End-to-end cost with the shipped vector protocore_gf_mul in the ladder (was: X25519 150.8ms, ed25519 547.9ms).
     volatile uint32_t sink = 0;
     uint8_t sk[32], pk[32], peer[32], shared[32];
     memset(sk, 0x11, 32);
     memset(peer, 0x22, 32);
-    pc_x25519_base(pk, sk); // warm
+    protocore_x25519_base(pk, sk); // warm
     uint32_t x0 = ESP.getCycleCount();
     for (int i = 0; i < 8; i++)
     {
-        pc_x25519_base(pk, sk);
+        protocore_x25519_base(pk, sk);
     }
     uint32_t xc = (ESP.getCycleCount() - x0) / 8;
     sink += pk[0];
-    (void)pc_x25519;
+    (void)protocore_x25519;
     uint8_t seed[32], sig[64], h[32];
     memset(seed, 0x33, 32);
     memset(h, 0x44, 32);
-    pc_ed25519_sign(tw, sig, h, 32, seed); // warm
+    protocore_ed25519_sign(tw, sig, h, 32, seed); // warm
     uint32_t e0 = ESP.getCycleCount();
     for (int i = 0; i < 4; i++)
     {
-        pc_ed25519_sign(tw, sig, h, 32, seed);
+        protocore_ed25519_sign(tw, sig, h, 32, seed);
     }
     uint32_t ec = (ESP.getCycleCount() - e0) / 4;
     sink += sig[0];
@@ -548,12 +548,12 @@ static void ssh_bench_task(void *)
     Serial.printf("SSHBENCH mpi_modmul256 %s  cyc=%u  (simd gf_mul=7955, scalar=13308)  Z=%08x %08x %08x\n", which,
                   mcyc, mz[0], mz[1], mz[7]);
 
-    // THE REWRITE: validate pc_gf_mul_mpi (pack -> MODMULT -> unpack) byte-exact vs scalar pc_gf_mul across
-    // 3000 random operands, then time it (pack + modmul + unpack all included) - the real per-mul cost that
-    // will land in the ladder.
+    // THE REWRITE: validate protocore_gf_mul_mpi (pack -> MODMULT -> unpack) byte-exact vs scalar protocore_gf_mul
+    // across 3000 random operands, then time it (pack + modmul + unpack all included) - the real per-mul cost that will
+    // land in the ladder.
     int mpifails = 0;
     uint32_t ss = 0x99aabbccu;
-    pc_gf ma, mb, mr1, mr3;
+    protocore_gf ma, mb, mr1, mr3;
     uint8_t mp1[32], mp3[32];
     for (int t = 0; t < 3000; t++)
     {
@@ -564,10 +564,10 @@ static void ssh_bench_task(void *)
             ss = ss * 1664525u + 1013904223u;
             mb[i] = (int64_t)(ss & 0x3FFFF) - 0x10000;
         }
-        pc_gf_mul(mr1, ma, mb);
-        pc_gf_mul_mpi(mr3, ma, mb);
-        pc_gf_pack(mp1, mr1);
-        pc_gf_pack(mp3, mr3);
+        protocore_gf_mul(mr1, ma, mb);
+        protocore_gf_mul_mpi(mr3, ma, mb);
+        protocore_gf_pack(mp1, mr1);
+        protocore_gf_pack(mp3, mr3);
         if (memcmp(mp1, mp3, 32) != 0)
         {
             if (mpifails < 3)
@@ -577,11 +577,11 @@ static void ssh_bench_task(void *)
             mpifails++;
         }
     }
-    pc_gf_mul_mpi(mr3, ma, mb); // warm
+    protocore_gf_mul_mpi(mr3, ma, mb); // warm
     uint32_t mm0 = ESP.getCycleCount();
     for (int i = 0; i < 2000; i++)
     {
-        pc_gf_mul_mpi(mr3, ma, mb);
+        protocore_gf_mul_mpi(mr3, ma, mb);
     }
     uint32_t mmcyc = (ESP.getCycleCount() - mm0) / 2000;
     Serial.printf("SSHBENCH gf_mul_mpi %s  %d/3000  cyc=%u (pack+modmul+unpack; simd=7955 scalar=13308)\n",
@@ -685,13 +685,13 @@ static void ssh_bench_task(void *)
                                          0x71, 0xf7, 0x54, 0xb4, 0x07, 0x55, 0x77, 0xa2, 0x85, 0x52};
         uint8_t kfe[32], klib[32];
         fe_x25519(kfe, ksc, kus);
-        pc_x25519(klib, ksc, kus);
+        protocore_x25519(klib, ksc, kus);
         Serial.printf("SSHBENCH fe_kat fe=%s lib=%s  fe=%02x%02x%02x exp=%02x%02x%02x\n",
                       memcmp(kfe, kexp, 32) == 0 ? "MATCH" : "WRONG", memcmp(klib, kexp, 32) == 0 ? "MATCH" : "WRONG",
                       kfe[0], kfe[1], kfe[31], kexp[0], kexp[1], kexp[31]);
     }
 
-    // THE FULL REWRITE: fe25519 X25519 ladder (uint32[8] throughout) vs the library pc_x25519_base, byte-exact
+    // THE FULL REWRITE: fe25519 X25519 ladder (uint32[8] throughout) vs the library protocore_x25519_base, byte-exact
     // across 200 random scalars, then timed end-to-end (was 97646 us with the SIMD ladder).
     uint8_t fsk[32], fpk_lib[32], fpk_fe[32];
     int fefails = 0;
@@ -703,7 +703,7 @@ static void ssh_bench_task(void *)
             fs = fs * 1664525u + 1013904223u;
             fsk[i] = (uint8_t)(fs >> 16);
         }
-        pc_x25519_base(fpk_lib, fsk);
+        protocore_x25519_base(fpk_lib, fsk);
         fe_x25519_base(fpk_fe, fsk);
         if (memcmp(fpk_lib, fpk_fe, 32) != 0)
         {
@@ -745,7 +745,7 @@ static bool ssh_password_auth(const char *user, const char *pass)
 
 static void ssh_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len)
 {
-    pc_ssh_conn_send(slot, channel, data, len); // echo back on the same channel
+    protocore_ssh_conn_send(slot, channel, data, len); // echo back on the same channel
 }
 
 void setup()
@@ -763,15 +763,15 @@ void setup()
     Serial.println(WiFi.localIP());
     WiFi.setSleep(false);
 
-    pc_ssh_hostkey_ed25519_set(SSH_HOST_SEED);
+    protocore_ssh_hostkey_ed25519_set(SSH_HOST_SEED);
     ssh_kex_set_prefer_rsa(false); // only an ed25519 host key is installed - do not advertise/pick RSA
-    pc_ssh_auth_set_password_cb(ssh_password_auth);
-    pc_ssh_channel_set_data_cb(ssh_on_data);
+    protocore_ssh_auth_set_password_cb(ssh_password_auth);
+    protocore_ssh_channel_set_data_cb(ssh_on_data);
 
     server.listen(22, ProtoConn::PROTO_SSH);
     int32_t rc = server.begin();
     Serial.printf("SSH BEGIN=%ld  (port 22, admin/s3cret)\n", (long)rc);
-#ifdef PC_SSH_BENCH
+#ifdef PROTOCORE_SSH_BENCH
     xTaskCreatePinnedToCore(ssh_bench_task, "sshbench", 16384, nullptr, 24, nullptr, 1);
 #endif
 }
@@ -779,16 +779,16 @@ void setup()
 void loop()
 {
     server.handle();
-#ifdef PC_SSH_KEX_BENCH
+#ifdef PROTOCORE_SSH_KEX_BENCH
     // Print each completed KEX's device-side compute spans (performance_benching/FEATURE_PERFORMANCE wall-clock item).
     // ssh_transport records the numbers; the firmware owns the (USB-CDC) serial, so it prints them here.
     static unsigned seen_kex = 0;
-    if (pc_ssh_kex_bench.kex_count != seen_kex)
+    if (protocore_ssh_kex_bench.kex_count != seen_kex)
     {
-        seen_kex = pc_ssh_kex_bench.kex_count;
+        seen_kex = protocore_ssh_kex_bench.kex_count;
         Serial.printf("KEXBENCH #%u  gen_us=%lld  reply_us=%lld  device_us=%lld\n", seen_kex,
-                      pc_ssh_kex_bench.last_kexgen_us, pc_ssh_kex_bench.last_kexreply_us,
-                      pc_ssh_kex_bench.last_kexgen_us + pc_ssh_kex_bench.last_kexreply_us);
+                      protocore_ssh_kex_bench.last_kexgen_us, protocore_ssh_kex_bench.last_kexreply_us,
+                      protocore_ssh_kex_bench.last_kexgen_us + protocore_ssh_kex_bench.last_kexreply_us);
     }
 #endif
 }

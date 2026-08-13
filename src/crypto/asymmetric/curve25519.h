@@ -7,7 +7,7 @@
  *
  * Field elements are GF(2^255 - 19) in a portable radix-2^16 representation (sixteen
  * int64 limbs), so no 128-bit integer type is needed - important because 32-bit xtensa
- * (ESP32) gcc has no __int128. The same field arithmetic backs Ed25519 (pc_ed25519),
+ * (ESP32) gcc has no __int128. The same field arithmetic backs Ed25519 (protocore_ed25519),
  * so the field ops are exported here. Correctness is pinned to the RFC 7748 §5.2 test
  * vectors (test_ed25519). No heap; all state is on the stack.
  *
@@ -18,24 +18,24 @@
 #ifndef PROTOCORE_CURVE25519_H
 #define PROTOCORE_CURVE25519_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief A field element of GF(2^255 - 19): 16 limbs, radix 2^16 (limb i weighs 2^(16i)). */
-typedef int64_t pc_gf[16];
+typedef int64_t protocore_gf[16];
 
-// --- Field arithmetic (shared with pc_ed25519) ----------------------------
+// --- Field arithmetic (shared with protocore_ed25519) ----------------------------
 
-void pc_gf_copy(pc_gf out, const pc_gf in);              ///< out = in
-void pc_gf_add(pc_gf out, const pc_gf a, const pc_gf b); ///< out = a + b (unreduced)
-void pc_gf_sub(pc_gf out, const pc_gf a, const pc_gf b); ///< out = a - b (unreduced)
-void pc_gf_mul(pc_gf out, const pc_gf a, const pc_gf b); ///< out = a * b mod p
-void pc_gf_sq(pc_gf out, const pc_gf a);                 ///< out = a^2 mod p
-void pc_gf_inv(pc_gf out, const pc_gf a);                ///< out = a^-1 mod p (= a^(p-2))
-void pc_gf_pack(uint8_t out[32], const pc_gf a);         ///< canonical little-endian 32-byte encoding
-void pc_gf_unpack(pc_gf out, const uint8_t in[32]);      ///< decode 32 bytes (high bit ignored)
-void pc_gf_cswap(pc_gf p, pc_gf q, int b);               ///< constant-time conditional swap of p,q when b==1
+void protocore_gf_copy(protocore_gf out, const protocore_gf in);                     ///< out = in
+void protocore_gf_add(protocore_gf out, const protocore_gf a, const protocore_gf b); ///< out = a + b (unreduced)
+void protocore_gf_sub(protocore_gf out, const protocore_gf a, const protocore_gf b); ///< out = a - b (unreduced)
+void protocore_gf_mul(protocore_gf out, const protocore_gf a, const protocore_gf b); ///< out = a * b mod p
+void protocore_gf_sq(protocore_gf out, const protocore_gf a);                        ///< out = a^2 mod p
+void protocore_gf_inv(protocore_gf out, const protocore_gf a);                       ///< out = a^-1 mod p (= a^(p-2))
+void protocore_gf_pack(uint8_t out[32], const protocore_gf a);    ///< canonical little-endian 32-byte encoding
+void protocore_gf_unpack(protocore_gf out, const uint8_t in[32]); ///< decode 32 bytes (high bit ignored)
+void protocore_gf_cswap(protocore_gf p, protocore_gf q, int b);   ///< constant-time conditional swap of p,q when b==1
 
 // --- X25519 (RFC 7748) -----------------------------------------------------
 
@@ -46,11 +46,11 @@ void pc_gf_cswap(pc_gf p, pc_gf q, int b);               ///< constant-time cond
  * @p out may alias neither input. Constant-time in the scalar (Montgomery ladder with
  * conditional swaps).
  */
-void pc_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32]);
+void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32]);
 
 /** @brief X25519 with the standard base point u=9: @p out = @p scalar * G. */
-void pc_x25519_base(uint8_t out[32], const uint8_t scalar[32]);
+void protocore_x25519_base(uint8_t out[32], const uint8_t scalar[32]);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CURVE25519_H

@@ -3,7 +3,7 @@
 
 /**
  * @file hotswap.h
- * @brief Safeties for removable storage that can vanish mid-write (PC_ENABLE_HOTSWAP).
+ * @brief Safeties for removable storage that can vanish mid-write (PROTOCORE_ENABLE_HOTSWAP).
  *
  * An SD card is a connector, and a connector can be pulled - during a log append, an upload, a
  * core-dump save. The failure is nasty because it is quiet: the driver keeps handing back a mounted
@@ -21,8 +21,8 @@
  * full volume), so one error does not tear down a working volume. A run of them is proof enough.
  * Any success resets the run, so intermittent noise never accumulates into a false removal.
  *
- * Callers gate on `pc_hotswap_ready()` and report every filesystem outcome through
- * `pc_hotswap_io()`. It is deliberately **fail-closed**: while not READY, ready() is false, so a
+ * Callers gate on `protocore_hotswap_ready()` and report every filesystem outcome through
+ * `protocore_hotswap_io()`. It is deliberately **fail-closed**: while not READY, ready() is false, so a
  * caller that honors it writes nothing rather than writing into a stale mount.
  *
  * The core is pure and takes an explicit `now`, so the whole state machine is host-testable with a
@@ -38,9 +38,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HOTSWAP
+#if PROTOCORE_ENABLE_HOTSWAP
 
 /** @brief Where a removable volume currently stands. */
 typedef enum PROTO_ENUM_PACKED
@@ -73,7 +73,7 @@ typedef struct
  * Starting ABSENT rather than READY is the safe default: nothing may touch the volume until a probe
  * has actually mounted it.
  */
-void pc_hotswap_core_init(HotswapCore *c, uint8_t fail_threshold, uint32_t probe_interval_ms, uint32_t now);
+void protocore_hotswap_core_init(HotswapCore *c, uint8_t fail_threshold, uint32_t probe_interval_ms, uint32_t now);
 
 /**
  * @brief Report one filesystem outcome.
@@ -84,7 +84,7 @@ void pc_hotswap_core_init(HotswapCore *c, uint8_t fail_threshold, uint32_t probe
  *
  * @return true if the state changed (so the binding knows to unmount + notify).
  */
-proto_bool pc_hotswap_core_io(HotswapCore *c, proto_bool ok);
+proto_bool protocore_hotswap_core_io(HotswapCore *c, proto_bool ok);
 
 /**
  * @brief Is a (re)mount probe due at @p now?
@@ -92,7 +92,7 @@ proto_bool pc_hotswap_core_io(HotswapCore *c, proto_bool ok);
  * Only while not READY, and only once per probe_interval_ms - so a missing card costs one cheap
  * check every interval instead of a mount storm. Wrap-safe across a millis() rollover.
  */
-proto_bool pc_hotswap_core_due(const HotswapCore *c, uint32_t now);
+proto_bool protocore_hotswap_core_due(const HotswapCore *c, uint32_t now);
 
 /**
  * @brief Report what a probe found.
@@ -102,55 +102,56 @@ proto_bool pc_hotswap_core_due(const HotswapCore *c, uint32_t now);
  * Present-but-unmountable stays ABSENT rather than READY: a card that will not mount is not storage.
  * @return true if the state changed.
  */
-proto_bool pc_hotswap_core_probe(HotswapCore *c, proto_bool present, proto_bool mounted, uint32_t now);
+proto_bool protocore_hotswap_core_probe(HotswapCore *c, proto_bool present, proto_bool mounted, uint32_t now);
 
 // ---------------------------------------------------------------------------
 // Binding
 // ---------------------------------------------------------------------------
 
 /** @brief Mount the volume. @return true on success. */
-typedef proto_bool (*pc_hotswap_mount)(void *ctx);
+typedef proto_bool (*protocore_hotswap_mount)(void *ctx);
 /** @brief Drop the mount and any handles it owns. Must tolerate being called when not mounted. */
-typedef void (*pc_hotswap_unmount)(void *ctx);
+typedef void (*protocore_hotswap_unmount)(void *ctx);
 /** @brief Optional card-detect probe. nullptr means "assume present and let the mount decide". */
-typedef proto_bool (*pc_hotswap_present)(void *ctx);
+typedef proto_bool (*protocore_hotswap_present)(void *ctx);
 /** @brief Fired on every state change, so an app can log it or light an LED. */
-typedef void (*pc_hotswap_event)(StorageState from, StorageState to, void *ctx);
+typedef void (*protocore_hotswap_event)(StorageState from, StorageState to, void *ctx);
 
 /** @brief Install the callbacks and reset to ABSENT. A first poll will attempt the mount. */
-void pc_hotswap_begin(pc_hotswap_mount mount, pc_hotswap_unmount unmount, pc_hotswap_present present, void *ctx);
+void protocore_hotswap_begin(protocore_hotswap_mount mount, protocore_hotswap_unmount unmount,
+                             protocore_hotswap_present present, void *ctx);
 
 /** @brief Install (or clear, with nullptr) the state-change callback. */
-void pc_hotswap_set_event_cb(pc_hotswap_event cb);
+void protocore_hotswap_set_event_cb(protocore_hotswap_event cb);
 
 /** @brief Run the state machine: probe when due, unmount on a fresh fault. Cheap; call each loop. */
-void pc_hotswap_poll(void);
-void pc_hotswap_poll_at(uint32_t now);
+void protocore_hotswap_poll(void);
+void protocore_hotswap_poll_at(uint32_t now);
 
 /**
  * @brief Is it safe to touch the filesystem right now?
  *
  * The gate every caller checks first. False whenever the volume is ABSENT or FAULTED.
  */
-proto_bool pc_hotswap_ready(void);
+proto_bool protocore_hotswap_ready(void);
 
 /** @brief Report a filesystem outcome; unmounts and notifies if this is the failure that faults it. */
-void pc_hotswap_io(proto_bool ok);
+void protocore_hotswap_io(proto_bool ok);
 
 /** @brief Current state. */
-StorageState pc_hotswap_state(void);
+StorageState protocore_hotswap_state(void);
 
 /** @brief Short name for @p s ("absent" / "ready" / "faulted"), for logs and JSON. */
-const char *pc_hotswap_state_name(StorageState s);
+const char *protocore_hotswap_state_name(StorageState s);
 
 /**
  * @brief Serialize as `{"storage":"ready","mounts":N,"faults":N}` for a /health panel.
  * @return length written (excl NUL), or 0 on overflow.
  */
-size_t pc_hotswap_json(char *out, size_t cap);
+size_t protocore_hotswap_json(char *out, size_t cap);
 
-#endif // PC_ENABLE_HOTSWAP
+#endif // PROTOCORE_ENABLE_HOTSWAP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HOTSWAP_H

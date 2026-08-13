@@ -30,12 +30,12 @@ void dbench_run(void)
         DBENCH_BANNER("stomp");
         volatile size_t sink = 0;
         static char frame[384];
-        DBENCH_OP("pc_stomp_build_frame (SEND)", 200000,
-                  sink += pc_stomp_build_frame(frame, sizeof(frame), "SEND", bk, bv, 2, body, blen));
-        DBENCH_OP("pc_stomp_parse_frame (MESSAGE)", 200000, {
+        DBENCH_OP("protocore_stomp_build_frame (SEND)", 200000,
+                  sink += protocore_stomp_build_frame(frame, sizeof(frame), "SEND", bk, bv, 2, body, blen));
+        DBENCH_OP("protocore_stomp_parse_frame (MESSAGE)", 200000, {
             StompFrame f;
             size_t used = 0;
-            sink += pc_stomp_parse_frame(msg, mlen, &f, &used) ? used : 0;
+            sink += protocore_stomp_parse_frame(msg, mlen, &f, &used) ? used : 0;
         });
         (void)sink;
         DBENCH_DONE();

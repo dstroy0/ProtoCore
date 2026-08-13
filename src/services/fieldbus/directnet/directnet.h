@@ -3,7 +3,7 @@
 
 /**
  * @file directnet.h
- * @brief AutomationDirect / Koyo DirectNET serial frame codec (PC_ENABLE_DIRECTNET).
+ * @brief AutomationDirect / Koyo DirectNET serial frame codec (PROTOCORE_ENABLE_DIRECTNET).
  *
  * DirectNET is the AutomationDirect (Koyo) DirectLOGIC-PLC master-slave serial protocol for reading and
  * writing V-memory. A transaction is a control-char-delimited frame with an LRC checksum. This builds
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DIRECTNET
+#if PROTOCORE_ENABLE_DIRECTNET
 
 /** @brief DirectNET control bytes: wire values compared/emitted, so integer constants in a struct. */
 #define DNET_ENQ 0x05
@@ -41,7 +41,7 @@ PROTO_BEGIN_DECLS
 #define DNET_WRITE 0x38 ///< request type: write ('8').
 
 /** @brief Longitudinal XOR checksum (the DirectNET LRC) over @p len bytes. */
-uint8_t pc_dnet_lrc(const uint8_t *bytes, size_t len);
+uint8_t protocore_dnet_lrc(const uint8_t *bytes, size_t len);
 
 /**
  * @brief Build a DirectNET header frame: SOH + [slave][type][addr:4hex][blocks:2hex] + ETB + LRC.
@@ -51,22 +51,22 @@ uint8_t pc_dnet_lrc(const uint8_t *bytes, size_t len);
  * @param blocks  number of data blocks, emitted as 2 ASCII-hex digits.
  * @return the frame length, or 0 on overflow. The LRC covers slave..ETB.
  */
-size_t pc_dnet_header(uint8_t slave, uint8_t type, uint16_t address, uint8_t blocks, uint8_t *out, size_t cap);
+size_t protocore_dnet_header(uint8_t slave, uint8_t type, uint16_t address, uint8_t blocks, uint8_t *out, size_t cap);
 
 /**
  * @brief Build a DirectNET data frame: STX + data + ETX + LRC. The LRC covers data..ETX.
  * @return the frame length (1 + data_len + 1 + 1), or 0 on overflow.
  */
-size_t pc_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
+size_t protocore_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
 
 /**
  * @brief Validate a DirectNET data frame (STX..ETX + LRC) and expose its payload.
  * @return true if it is well-formed and the LRC matches; sets @p data / @p data_len (pointers into @p frame).
  */
-proto_bool pc_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **data, size_t *data_len);
+proto_bool protocore_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **data, size_t *data_len);
 
-#endif // PC_ENABLE_DIRECTNET
+#endif // PROTOCORE_ENABLE_DIRECTNET
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DIRECTNET_H

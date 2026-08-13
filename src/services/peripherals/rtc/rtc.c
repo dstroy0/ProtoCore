@@ -12,9 +12,9 @@
 #include "services/peripherals/rtc/rtc.h"
 #include "protocore_config.h"
 
-#if PC_ENABLE_RTC
+#if PROTOCORE_ENABLE_RTC
 
-#if PC_HAS_BUS
+#if PROTOCORE_HAS_BUS
 #include "services/peripherals/i2c.h"
 #endif
 static int bcd2int(uint8_t b)
@@ -54,7 +54,7 @@ static void civil_from_days(long z, int *y, int *m, int *d)
     *y = (int)(yy + (*m <= 2));
 }
 
-proto_bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
+proto_bool protocore_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
 {
     if (!r || !epoch)
     {
@@ -96,7 +96,7 @@ proto_bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
     return PROTO_TRUE;
 }
 
-void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
+void protocore_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
 {
     long days = (long)(epoch / 86400u);
     int rem = (int)(epoch % 86400u);
@@ -117,7 +117,7 @@ void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_BUS
+#if PROTOCORE_HAS_BUS
 
 // All RTC I2C-binding state, owned by one instance (internal linkage): the bus frame, which is a
 // register-pointer byte followed by the seven time registers. It is a member rather than a local
@@ -128,55 +128,55 @@ typedef struct
 } RtcCtx;
 static RtcCtx s_rtc = {.frame = {0}};
 
-proto_bool pc_rtc_begin(void)
+proto_bool protocore_rtc_begin(void)
 {
-    pc_i2c_begin();
+    protocore_i2c_begin();
     return PROTO_TRUE;
 }
 
-uint32_t pc_rtc_read_epoch(void)
+uint32_t protocore_rtc_read_epoch(void)
 {
     uint8_t reg = 0x00; // register 0: seconds
-    if (!pc_i2c_write_read(PC_RTC_I2C_ADDR, &reg, 1, s_rtc.frame, RTC_REG_COUNT))
+    if (!protocore_i2c_write_read(PROTOCORE_RTC_I2C_ADDR, &reg, 1, s_rtc.frame, RTC_REG_COUNT))
     {
         return 0;
     }
     uint32_t e = 0;
-    return pc_rtc_regs_to_epoch(s_rtc.frame, &e) ? e : 0;
+    return protocore_rtc_regs_to_epoch(s_rtc.frame, &e) ? e : 0;
 }
 
-proto_bool pc_rtc_set_epoch(uint32_t epoch)
+proto_bool protocore_rtc_set_epoch(uint32_t epoch)
 {
     s_rtc.frame[0] = 0x00; // point at register 0, then the seven registers follow it
-    pc_rtc_epoch_to_regs(epoch, &s_rtc.frame[1]);
-    return pc_i2c_write(PC_RTC_I2C_ADDR, s_rtc.frame, sizeof(s_rtc.frame));
+    protocore_rtc_epoch_to_regs(epoch, &s_rtc.frame[1]);
+    return protocore_i2c_write(PROTOCORE_RTC_I2C_ADDR, s_rtc.frame, sizeof(s_rtc.frame));
 }
 
-uint32_t pc_rtc_time_source(void)
+uint32_t protocore_rtc_time_source(void)
 {
-    return pc_rtc_read_epoch();
+    return protocore_rtc_read_epoch();
 }
 
 #else // no bus seam. The BCD<->epoch conversions above are host-tested.
 
-proto_bool pc_rtc_begin(void)
+proto_bool protocore_rtc_begin(void)
 {
     return PROTO_TRUE;
 }
-uint32_t pc_rtc_read_epoch(void)
+uint32_t protocore_rtc_read_epoch(void)
 {
     return 0;
 }
-proto_bool pc_rtc_set_epoch(uint32_t epoch)
+proto_bool protocore_rtc_set_epoch(uint32_t epoch)
 {
     (void)epoch;
     return PROTO_FALSE;
 }
-uint32_t pc_rtc_time_source(void)
+uint32_t protocore_rtc_time_source(void)
 {
     return 0;
 }
 
-#endif // PC_HAS_BUS
+#endif // PROTOCORE_HAS_BUS
 
-#endif // PC_ENABLE_RTC
+#endif // PROTOCORE_ENABLE_RTC

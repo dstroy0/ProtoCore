@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Concurrency proof for the cross-thread slot fields (pc_atomic state / rx_head /
+// Concurrency proof for the cross-thread slot fields (protocore_atomic state / rx_head /
 // rx_tail in tcp.h). Two threads model the real tcpip_thread (producer) and
 // worker (consumer) hammering one slot's SPSC ring with the SAME access pattern as
 // the production code. It asserts byte-exact, in-order delivery (no tearing); run
 // under ThreadSanitizer (env native_tsan) it additionally proves there is no data
-// race - the acquire/release discipline in pc_atomic provides the happens-before
+// race - the acquire/release discipline in protocore_atomic provides the happens-before
 // that lets the plain rx_buffer[] writes be read safely on the other core.
 
 #include "network_drivers/transport/tcp.h"

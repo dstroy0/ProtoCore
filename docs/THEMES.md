@@ -8,7 +8,7 @@
 python -m src.web_assets.wizard.gen_themes custom --base '#36454f' --mode dark --name charcoal --out my.css
 ```
 
-&dagger; = named after a company/product trademark: shipped in the open-source (AGPL) build, but dropped from a commercial build (`PC_THEMES_INCLUDE_TRADEMARKED=0`). The palette is just colors; only the branded name is gated.
+&dagger; = named after a company/product trademark: shipped in the open-source (AGPL) build, but dropped from a commercial build (`PROTOCORE_THEMES_INCLUDE_TRADEMARKED=0`). The palette is just colors; only the branded name is gated.
 
 ## Bespoke
 

@@ -12,12 +12,12 @@
 
 #include "mmgr/protoframe.h" // the one frame engine
 #include "protocore.h"
-#include "server/clock/clock.h"     // pc_millis: the library clock, not the platform's
-#include "shared_primitives/mime.h" // PC_MIME_TEXT_PLAIN
+#include "server/clock/clock.h"     // protocore_millis: the library clock, not the platform's
+#include "shared_primitives/mime.h" // PROTOCORE_MIME_TEXT_PLAIN
 #include <stdio.h>
 
 // Retry-After carries one number and nothing else.
-static const pc_field RETRY_AFTER[] = {PC_U32, PC_END};
+static const protocore_field RETRY_AFTER[] = {PROTOCORE_U32, PROTOCORE_END};
 
 // ---------------------------------------------------------------------------
 // Middleware chain + built-in rate limiter
@@ -40,7 +40,7 @@ typedef struct
 } MiddlewareCtx;
 static MiddlewareCtx s_mw;
 
-void pc_middleware_reset(void)
+void protocore_middleware_reset(void)
 {
     // The chain and the rate-limit window are both per-run configuration, and a test case starts
     // with neither. One store: the zero state is the initial state (empty chain, limiter off).
@@ -77,7 +77,7 @@ void enable_rate_limit(uint16_t max_requests, uint32_t window_ms)
 {
     s_mw.rl_max = max_requests;
     s_mw.rl_window_ms = window_ms;
-    s_mw.rl_window_start = pc_millis();
+    s_mw.rl_window_start = protocore_millis();
     s_mw.rl_count = 0;
 }
 
@@ -90,7 +90,7 @@ proto_bool rate_limit_check(uint8_t slot_id)
         return PROTO_FALSE; // disabled
     }
 
-    uint32_t now = pc_millis();
+    uint32_t now = protocore_millis();
     if ((uint32_t)(now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
     {
         s_mw.rl_window_start = now; // new window
@@ -111,8 +111,8 @@ proto_bool rate_limit_check(uint8_t slot_id)
     uint32_t remain_ms = (s_mw.rl_window_ms > elapsed) ? (s_mw.rl_window_ms - elapsed) : 0;
     char secs[12];
     // Fails closed to an empty string on its own, so there is no failure arm to write here.
-    frame.build(secs, sizeof(secs), RETRY_AFTER, (const pc_fval[]){PC_VU32((uint32_t)((remain_ms + 999) / 1000))}, 1);
+    frame.build(secs, sizeof(secs), RETRY_AFTER, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)((remain_ms + 999) / 1000))}, 1);
     proto_add_response_header(slot_id, "Retry-After", secs);
-    send_text(slot_id, 429, PC_MIME_TEXT_PLAIN, "Too Many Requests");
+    send_text(slot_id, 429, PROTOCORE_MIME_TEXT_PLAIN, "Too Many Requests");
     return PROTO_TRUE;
 }

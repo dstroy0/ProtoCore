@@ -3,22 +3,22 @@
 
 /**
  * @file mDNS.ino
- * @brief Advertise the device over mDNS / DNS-SD (PC_ENABLE_MDNS).
+ * @brief Advertise the device over mDNS / DNS-SD (PROTOCORE_ENABLE_MDNS).
  *
- * pc_mdns_begin(hostname, port) makes the device reachable at
+ * protocore_mdns_begin(hostname, port) makes the device reachable at
  * `<hostname>.local` and advertises an `_http._tcp` service, so clients on the
  * LAN can find it without knowing its IP.
  *
- * NOTE: this service is compiled into the library only when PC_ENABLE_MDNS
+ * NOTE: this service is compiled into the library only when PROTOCORE_ENABLE_MDNS
  * is set for the whole build (a .ino #define does not reach the separately
  * compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_MDNS=1
+ *     build_flags = -DPROTOCORE_ENABLE_MDNS=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Flash, then browse to http://pc-demo.local/.
  */
 
-#define PC_ENABLE_MDNS 1
+#define PROTOCORE_ENABLE_MDNS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -47,12 +47,12 @@ void setup()
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello via mDNS"); });
     begin_http(80, NULL);
 
-    if (pc_mdns_begin(HOSTNAME, 80))
+    if (protocore_mdns_begin(HOSTNAME, 80))
     {
         // Bonjour TXT records (shown by DNS-SD browsers) + advertise HTTPS too.
-        pc_mdns_txt("path", "/");
-        pc_mdns_txt("fw", "1.0");
-        pc_mdns_add_service("_https", "_tcp", 443);
+        protocore_mdns_txt("path", "/");
+        protocore_mdns_txt("fw", "1.0");
+        protocore_mdns_add_service("_https", "_tcp", 443);
         Serial.printf("mDNS: http://%s.local/\n", HOSTNAME);
     }
 }

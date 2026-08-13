@@ -47,7 +47,7 @@ can reach in to ask it.
    `esp32.heap.free:210000|g|#device:esp32-demo`).
 
 The `|#device:esp32-demo` on the end is a **tag** - an optional label (here set once in
-`pc_statsd_begin`) that lets your dashboard group metrics by device. Plain StatsD collectors
+`protocore_statsd_begin`) that lets your dashboard group metrics by device. Plain StatsD collectors
 ignore it; Datadog/Telegraf use it.
 
 ## Put your own numbers in
@@ -55,12 +55,12 @@ ignore it; Datadog/Telegraf use it.
 The API is one call per metric - drop these wherever something interesting happens:
 
 ```cpp
-pc_statsd_count("orders.placed", 1);          // a counter (how often)
-pc_statsd_gauge("tank.level_pct", level);     // a gauge (the current value)
-pc_statsd_gauge_delta("connections", +1);     // nudge a gauge up or down
-pc_statsd_timing("sensor.read_ms", elapsed);  // how long something took
-pc_statsd_set("unique.users", clientId);      // count distinct values
-pc_statsd_count_sampled("chatty.event", 1, 0.1f); // only sending 1-in-10? tell the server so
+protocore_statsd_count("orders.placed", 1);          // a counter (how often)
+protocore_statsd_gauge("tank.level_pct", level);     // a gauge (the current value)
+protocore_statsd_gauge_delta("connections", +1);     // nudge a gauge up or down
+protocore_statsd_timing("sensor.read_ms", elapsed);  // how long something took
+protocore_statsd_set("unique.users", clientId);      // count distinct values
+protocore_statsd_count_sampled("chatty.event", 1, 0.1f); // only sending 1-in-10? tell the server so
 ```
 
 ## Troubleshooting
@@ -79,16 +79,16 @@ The feature lives in the library, so the flag must reach the whole build:
 ```bash
 pio ci examples/L7-Application/StatsdMetrics \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_STATSD=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_STATSD=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
 
 ## How it works (for the curious)
 
-`pc_statsd_begin(host, port, tags)` stores the target and optional global tags in fixed BSS.
-Each `pc_statsd_*` call renders the value by hand (no `printf` float/64-bit formatting, which
+`protocore_statsd_begin(host, port, tags)` stores the target and optional global tags in fixed BSS.
+Each `protocore_statsd_*` call renders the value by hand (no `printf` float/64-bit formatting, which
 needs extra support on some targets), builds the `name:value|type[|@rate][|#tags]` line with
-the pure `pc_statsd_format()` builder, and sends it with the transport UDP service
+the pure `protocore_statsd_format()` builder, and sends it with the transport UDP service
 (`Udp.client->sendto`). Zero heap; the line format is unit-tested on a PC against the StatsD spec
 (see `test/test_statsd`).

@@ -18,12 +18,12 @@
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see. The `#define` below documents intent, but for PlatformIO you must
  * enable it for the whole build, e.g. in platformio.ini:
- *     build_flags = -DPC_ENABLE_WEB_TERMINAL=1
+ *     build_flags = -DPROTOCORE_ENABLE_WEB_TERMINAL=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.) A define in the
  * sketch alone does not reach the separately-compiled library .cpp.
  */
 
-#define PC_ENABLE_WEB_TERMINAL 1
+#define PROTOCORE_ENABLE_WEB_TERMINAL 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -36,16 +36,16 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // Each line's shape is a table, declared once. The library builds it by walking the table, so
 // nothing parses a format string at runtime and no line can come out half-written.
 // The fields are {kind, width, literal length, literal}; a valued field takes one argument below.
-static const pc_field REPLY_HEAP[] = {
-    {PC_FK_LIT, 0, 11, "free heap: "}, PC_U32, {PC_FK_LIT, 0, 7, " bytes\n"}, PC_END};
-static const pc_field REPLY_UPTIME[] = {{PC_FK_LIT, 0, 8, "uptime: "}, PC_U32, {PC_FK_LIT, 0, 4, " ms\n"}, PC_END};
-static const pc_field REPLY_ECHO[] = {{PC_FK_LIT, 0, 6, "echo: "}, PC_STR, {PC_FK_LIT, 0, 1, "\n"}, PC_END};
-static const pc_field HEARTBEAT[] = {{PC_FK_LIT, 0, 7, "uptime "},
-                                     PC_U32,
-                                     {PC_FK_LIT, 0, 10, " ms, heap "},
-                                     PC_U32,
-                                     {PC_FK_LIT, 0, 1, "\n"},
-                                     PC_END};
+static const protocore_field REPLY_HEAP[] = {
+    {PROTOCORE_FK_LIT, 0, 11, "free heap: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 7, " bytes\n"}, PROTOCORE_END};
+static const protocore_field REPLY_UPTIME[] = {{PROTOCORE_FK_LIT, 0, 8, "uptime: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 4, " ms\n"}, PROTOCORE_END};
+static const protocore_field REPLY_ECHO[] = {{PROTOCORE_FK_LIT, 0, 6, "echo: "}, PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 1, "\n"}, PROTOCORE_END};
+static const protocore_field HEARTBEAT[] = {{PROTOCORE_FK_LIT, 0, 7, "uptime "},
+                                     PROTOCORE_U32,
+                                     {PROTOCORE_FK_LIT, 0, 10, " ms, heap "},
+                                     PROTOCORE_U32,
+                                     {PROTOCORE_FK_LIT, 0, 1, "\n"},
+                                     PROTOCORE_END};
 
 // Browser -> device: handle a typed command line.
 void on_command(const char *line, uint8_t client_id)
@@ -53,7 +53,7 @@ void on_command(const char *line, uint8_t client_id)
     (void)client_id;
     if (strcmp(line, "help") == 0)
     {
-        pc_web_terminal_println("commands: help, heap, uptime, <echo>");
+        protocore_web_terminal_println("commands: help, heap, uptime, <echo>");
         return;
     }
 
@@ -61,17 +61,17 @@ void on_command(const char *line, uint8_t client_id)
     char out[96];
     if (strcmp(line, "heap") == 0)
     {
-        frame.build(out, sizeof(out), REPLY_HEAP, (const pc_fval[]){PC_VU32((uint32_t)ESP.getFreeHeap())}, 1);
+        frame.build(out, sizeof(out), REPLY_HEAP, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())}, 1);
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        frame.build(out, sizeof(out), REPLY_UPTIME, (const pc_fval[]){PC_VU32((uint32_t)millis())}, 1);
+        frame.build(out, sizeof(out), REPLY_UPTIME, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)millis())}, 1);
     }
     else
     {
-        frame.build(out, sizeof(out), REPLY_ECHO, (const pc_fval[]){PC_VSTR(line)}, 1);
+        frame.build(out, sizeof(out), REPLY_ECHO, (const protocore_fval[]){PROTOCORE_VSTR(line)}, 1);
     }
-    pc_web_terminal_print(out);
+    protocore_web_terminal_print(out);
 }
 
 void setup()
@@ -90,8 +90,8 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     Serial.println("Open http://<ip>/terminal in a browser");
 
-    pc_web_terminal_begin("/terminal");
-    pc_web_terminal_on_command(on_command);
+    protocore_web_terminal_begin("/terminal");
+    protocore_web_terminal_on_command(on_command);
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)
@@ -111,12 +111,12 @@ void loop()
     if (millis() - last >= 3000)
     {
         last = millis();
-        if (pc_web_terminal_client_count() > 0)
+        if (protocore_web_terminal_client_count() > 0)
         {
             char out[96];
             frame.build(out, sizeof(out), HEARTBEAT,
-                           (const pc_fval[]){PC_VU32((uint32_t)millis()), PC_VU32((uint32_t)ESP.getFreeHeap())}, 2);
-            pc_web_terminal_print(out);
+                           (const protocore_fval[]){PROTOCORE_VU32((uint32_t)millis()), PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())}, 2);
+            protocore_web_terminal_print(out);
         }
     }
 }

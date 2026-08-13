@@ -44,19 +44,19 @@ void dbench_run(void)
         DBENCH_BANNER("iface_bridge");
         volatile size_t sink = 0;
 
-        // 1) Register path: build the rule, validate/parse the bind address (pc_ip_parse), scan for a
+        // 1) Register path: build the rule, validate/parse the bind address (protocore_ip_parse), scan for a
         //    port+proto duplicate, and insert. First iteration inserts; the rest exercise the identical
         //    parse+dedup-scan cost (the dominant work the config-time register path does).
-        pc_iface_bridge_clear();
-        DBENCH_OP("pc_iface_bridge_map", 50000,
-                  sink += pc_iface_bridge_map("192.168.1.50", 4001, BRIDGE_PROTO_TCP, &uart) ? 1u : 0u);
+        protocore_iface_bridge_clear();
+        DBENCH_OP("protocore_iface_bridge_map", 50000,
+                  sink += protocore_iface_bridge_map("192.168.1.50", 4001, BRIDGE_PROTO_TCP, &uart) ? 1u : 0u);
 
         // 2) Listener dispatch: find the rule bound to a port+proto - run on every accepted connection.
-        DBENCH_OP("pc_iface_bridge_find", 200000, sink += (uintptr_t)pc_iface_bridge_find(4001, BRIDGE_PROTO_TCP));
+        DBENCH_OP("protocore_iface_bridge_find", 200000, sink += (uintptr_t)protocore_iface_bridge_find(4001, BRIDGE_PROTO_TCP));
 
         // 3) Transaction frame build (write-then-read request), MB/s over the whole emitted frame.
-        DBENCH_BULK("pc_iface_bridge_txn_build", 100000, (size_t)PC_BRIDGE_TXN_HDR + sizeof(wr),
-                    sink += pc_iface_bridge_txn_build(out, sizeof(out), wr, (uint16_t)sizeof(wr), 5));
+        DBENCH_BULK("protocore_iface_bridge_txn_build", 100000, (size_t)PROTOCORE_BRIDGE_TXN_HDR + sizeof(wr),
+                    sink += protocore_iface_bridge_txn_build(out, sizeof(out), wr, (uint16_t)sizeof(wr), 5));
 
         // 4) Transaction frame parse: the per-request codec on the hot transaction-listener path
         //    (header decode + bounds check, returns a pointer into the buffer - no copy).
@@ -64,8 +64,8 @@ void dbench_run(void)
             uint16_t wl = 0;
             uint16_t rl = 0;
             const uint8_t *wd = NULL;
-            DBENCH_OP("pc_iface_bridge_txn_parse", 200000,
-                      sink += pc_iface_bridge_txn_parse(frame, sizeof(frame), &wl, &rl, &wd));
+            DBENCH_OP("protocore_iface_bridge_txn_parse", 200000,
+                      sink += protocore_iface_bridge_txn_parse(frame, sizeof(frame), &wl, &rl, &wd));
         }
 
         (void)sink;

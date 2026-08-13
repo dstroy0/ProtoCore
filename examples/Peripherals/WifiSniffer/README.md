@@ -1,6 +1,6 @@
 # WifiSniffer - channel-hopping 802.11 traffic analyzer + roaming decision
 
-**Layer:** Peripherals · **Build flags:** `PC_ENABLE_WIFI_SNIFFER`, `PC_ENABLE_PROMISC`
+**Layer:** Peripherals · **Build flags:** `PROTOCORE_ENABLE_WIFI_SNIFFER`, `PROTOCORE_ENABLE_PROMISC`
 
 ## What this example teaches
 
@@ -10,10 +10,10 @@ strongest AP on each channel. That survey is exactly what a **channel-agility ro
 another channel enough stronger than mine to be worth moving?"
 
 ```
-Wi-Fi radio --pc_promisc_begin--> sink --pc_wifi_parse--> stats tally
+Wi-Fi radio --protocore_promisc_begin--> sink --protocore_wifi_parse--> stats tally
                                                          \-> per-channel survey -> roam decision
                   ^                                                                     |
-                  +---------------- pc_wifi_sniffer_tick() hops on the dwell ----------+
+                  +---------------- protocore_wifi_sniffer_tick() hops on the dwell ----------+
 ```
 
 Note the split: the radio itself is owned by [`services/promisc`](../WifiCapture/README.md) (one
@@ -23,16 +23,16 @@ callback.
 
 ## The pieces
 
-| Call                                              | Does                                                     |
-| ------------------------------------------------- | -------------------------------------------------------- |
-| `pc_wifi_sniffer_begin(first, last, dwell_ms)`    | start capture + reset the tally/survey                   |
-| `pc_wifi_sniffer_tick()`                          | hop to the next channel once the dwell elapses           |
-| `pc_wifi_sniffer_stats()`                         | frames by type (mgmt / ctrl / data / other / total)      |
-| `pc_wifi_survey_get(sv, ch)`                      | one channel's frame count + strongest RSSI and its BSSID |
-| `pc_wifi_survey_best(sv, exclude_ch, &ch, &rssi)` | the strongest **other** channel - the roam candidate     |
-| `pc_wifi_should_roam(cur, cand, hysteresis_db)`   | the RSSI-hysteresis decision                             |
+| Call                                                     | Does                                                     |
+| -------------------------------------------------------- | -------------------------------------------------------- |
+| `protocore_wifi_sniffer_begin(first, last, dwell_ms)`    | start capture + reset the tally/survey                   |
+| `protocore_wifi_sniffer_tick()`                          | hop to the next channel once the dwell elapses           |
+| `protocore_wifi_sniffer_stats()`                         | frames by type (mgmt / ctrl / data / other / total)      |
+| `protocore_wifi_survey_get(sv, ch)`                      | one channel's frame count + strongest RSSI and its BSSID |
+| `protocore_wifi_survey_best(sv, exclude_ch, &ch, &rssi)` | the strongest **other** channel - the roam candidate     |
+| `protocore_wifi_should_roam(cur, cand, hysteresis_db)`   | the RSSI-hysteresis decision                             |
 
-The schedule and survey are pure and wrap-safe against a `pc_millis()` rollover; only the thin
+The schedule and survey are pure and wrap-safe against a `protocore_millis()` rollover; only the thin
 radio binding is device-side. All of it is host-tested in `test/test_wifi_sniffer`.
 
 ## Verified on hardware
@@ -84,6 +84,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_WIFI_SNIFFER=1 -DPC_ENABLE_PROMISC=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WIFI_SNIFFER=1 -DPROTOCORE_ENABLE_PROMISC=1" \
   --lib="." examples/Peripherals/WifiSniffer/WifiSniffer.ino
 ```

@@ -9,7 +9,7 @@
  * RSA-2048 host key, loaded from NVS by both backends, signs handshake data with
  * it, and serializes the public key into the RFC 4253 / RFC 8332 "ssh-rsa" blob. The
  * protocol-agnostic RSASSA-PKCS1-v1.5 math (verify, software sign, PKCS#1 encoding, modexp) lives in
- * crypto/rsa (pc_rsa_verify / pc_rsa_sign_sw); peers' signatures are verified via that primitive.
+ * crypto/rsa (protocore_rsa_verify / protocore_rsa_sign_sw); peers' signatures are verified via that primitive.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * SECURITY MODEL - PRIVATE KEY LIFETIME
@@ -18,7 +18,7 @@
  * parsed key is held in a private mbedtls context for the server lifetime (as an SSH host key normally
  * is) and every sign runs under a mutex; on the software backend the private exponent is a secure-pool
  * borrow (mmgr/secure.h), the DER it was walked out of is released and wiped before the load returns,
- * and the software sign (pc_rsa_sign_sw) wipes its own temporaries. The signature scheme is PKCS#1
+ * and the software sign (protocore_rsa_sign_sw) wipes its own temporaries. The signature scheme is PKCS#1
  * v1.5 (RFC 8017 §8.2), "rsa-sha2-256" / "rsa-sha2-512" (RFC 8332) - only the hash and its DigestInfo
  * OID differ.
  *
@@ -32,9 +32,9 @@
 #ifndef PROTOCORE_SSH_RSA_H
 #define PROTOCORE_SSH_RSA_H
 
-#include "crypto/asymmetric/rsa.h" // pc_rsa_hash, PC_RSA_KEY_BYTES/SIG_BYTES, pc_rsa_verify / pc_rsa_sign_sw
+#include "crypto/asymmetric/rsa.h" // protocore_rsa_hash, PROTOCORE_RSA_KEY_BYTES/SIG_BYTES, protocore_rsa_verify / protocore_rsa_sign_sw
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Maximum DER size for a PKCS#1 RSAPrivateKey with 2048-bit fields. */
 #define SSH_RSA_KEY_DER_MAX 1700
@@ -67,12 +67,12 @@ PROTO_BEGIN_DECLS
  */
 typedef struct
 {
-    uint8_t n[PC_RSA_KEY_BYTES]; ///< Modulus n (256 bytes, big-endian).
-    uint8_t e_bytes[4];          ///< Public exponent e (big-endian uint32).
-    proto_bool loaded;           ///< True after pc_ssh_rsa_load_pubkey() succeeds.
+    uint8_t n[PROTOCORE_RSA_KEY_BYTES]; ///< Modulus n (256 bytes, big-endian).
+    uint8_t e_bytes[4];                 ///< Public exponent e (big-endian uint32).
+    proto_bool loaded;                  ///< True after protocore_ssh_rsa_load_pubkey() succeeds.
 } SshRsaPubKey;
 
-/** @brief Static host public key (BSS). Set by pc_ssh_rsa_load_pubkey(). */
+/** @brief Static host public key (BSS). Set by protocore_ssh_rsa_load_pubkey(). */
 extern SshRsaPubKey ssh_host_pubkey;
 
 /** @brief Upper bound on the encoded "ssh-rsa" public-key blob (len+alg + mpint e + mpint n). */
@@ -90,13 +90,14 @@ extern SshRsaPubKey ssh_host_pubkey;
  * startup (single-threaded).
  * @return 0 on success, -1 if the key is absent or malformed.
  */
-int pc_ssh_rsa_load_pubkey(void);
+int protocore_ssh_rsa_load_pubkey(void);
 
 /**
  * @brief Sign @p msg with the RSA host key (PKCS#1 v1.5, rsa-sha2-256/512).
- * @return 0 on success, -1 on failure. @p sig receives PC_RSA_SIG_BYTES big-endian.
+ * @return 0 on success, -1 on failure. @p sig receives PROTOCORE_RSA_SIG_BYTES big-endian.
  */
-int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES]);
+int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash,
+                 uint8_t sig[PROTOCORE_RSA_SIG_BYTES]);
 
 /**
  * @brief Encode ssh_host_pubkey as the RFC 4253 §6.6 "ssh-rsa" public-key blob.
@@ -104,6 +105,6 @@ int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash 
  */
 int ssh_rsa_encode_pubkey(uint8_t *out, size_t *out_len, size_t out_cap);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SSH_RSA_H

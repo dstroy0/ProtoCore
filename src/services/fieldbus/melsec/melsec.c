@@ -9,11 +9,11 @@
 #include "services/fieldbus/melsec/melsec.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_MELSEC
+#if PROTOCORE_ENABLE_MELSEC
 
 #include "mmgr/endian.h"
 
-size_t pc_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
+size_t protocore_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
                             uint16_t monitoring_timer)
 {
     if (!buf || cap < MELSEC_3E_READ_REQ_LEN)
@@ -24,24 +24,24 @@ size_t pc_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint3
     buf[p++] = MELSEC_3E_REQ_SUBHEADER0;
     buf[p++] = MELSEC_3E_REQ_SUBHEADER1;
     buf[p++] = MELSEC_NETWORK_DEFAULT;
-    buf[p++] = MELSEC_PC_DEFAULT;
-    p += pc_wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
+    buf[p++] = MELSEC_PROTOCORE_DEFAULT;
+    p += protocore_wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
     buf[p++] = MELSEC_DEST_MULTIDROP_DEFAULT;
     // request data length = the octets from the monitoring timer onward:
     // timer(2) + command(2) + subcommand(2) + head device(3) + device code(1) + points(2) = 12
-    p += pc_wr16le(buf + p, MELSEC_3E_READ_REQ_DATA_LEN);
-    p += pc_wr16le(buf + p, monitoring_timer);
-    p += pc_wr16le(buf + p, MELSEC_CMD_BATCH_READ);
-    p += pc_wr16le(buf + p, MELSEC_SUBCMD_WORD);
+    p += protocore_wr16le(buf + p, MELSEC_3E_READ_REQ_DATA_LEN);
+    p += protocore_wr16le(buf + p, monitoring_timer);
+    p += protocore_wr16le(buf + p, MELSEC_CMD_BATCH_READ);
+    p += protocore_wr16le(buf + p, MELSEC_SUBCMD_WORD);
     buf[p++] = (uint8_t)(head_device & 0xFF); // head device number, 3 octets little-endian
     buf[p++] = (uint8_t)((head_device >> 8) & 0xFF);
     buf[p++] = (uint8_t)((head_device >> 16) & 0xFF);
     buf[p++] = device_code;
-    p += pc_wr16le(buf + p, points);
+    p += protocore_wr16le(buf + p, points);
     return p; // == MELSEC_3E_READ_REQ_LEN
 }
 
-size_t pc_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
+size_t protocore_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
                              uint16_t monitoring_timer, const uint8_t *data, size_t data_len)
 {
     if (!buf || (data_len && !data))
@@ -60,19 +60,19 @@ size_t pc_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint
     buf[p++] = MELSEC_3E_REQ_SUBHEADER0;
     buf[p++] = MELSEC_3E_REQ_SUBHEADER1;
     buf[p++] = MELSEC_NETWORK_DEFAULT;
-    buf[p++] = MELSEC_PC_DEFAULT;
-    p += pc_wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
+    buf[p++] = MELSEC_PROTOCORE_DEFAULT;
+    p += protocore_wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
     buf[p++] = MELSEC_DEST_MULTIDROP_DEFAULT;
     // request data length = the fixed 12 (timer..points) plus the write data octets.
-    p += pc_wr16le(buf + p, (uint16_t)(MELSEC_3E_READ_REQ_DATA_LEN + data_len));
-    p += pc_wr16le(buf + p, monitoring_timer);
-    p += pc_wr16le(buf + p, MELSEC_CMD_BATCH_WRITE);
-    p += pc_wr16le(buf + p, MELSEC_SUBCMD_WORD);
+    p += protocore_wr16le(buf + p, (uint16_t)(MELSEC_3E_READ_REQ_DATA_LEN + data_len));
+    p += protocore_wr16le(buf + p, monitoring_timer);
+    p += protocore_wr16le(buf + p, MELSEC_CMD_BATCH_WRITE);
+    p += protocore_wr16le(buf + p, MELSEC_SUBCMD_WORD);
     buf[p++] = (uint8_t)(head_device & 0xFF); // head device number, 3 octets little-endian
     buf[p++] = (uint8_t)((head_device >> 8) & 0xFF);
     buf[p++] = (uint8_t)((head_device >> 16) & 0xFF);
     buf[p++] = device_code;
-    p += pc_wr16le(buf + p, points);
+    p += protocore_wr16le(buf + p, points);
     if (data_len)
     {
         mem.cpy(buf + p, data, data_len);
@@ -81,7 +81,7 @@ size_t pc_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint
     return p; // == MELSEC_3E_READ_REQ_LEN + data_len
 }
 
-proto_bool pc_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out)
+proto_bool protocore_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out)
 {
     // subheader(2)+net(1)+pc(1)+io(2)+multidrop(1)+length(2)+endcode(2) = MELSEC_3E_RES_MIN_LEN
     if (!buf || !out || len < MELSEC_3E_RES_MIN_LEN)
@@ -92,7 +92,7 @@ proto_bool pc_melsec_parse_response(const uint8_t *buf, size_t len, MelsecRespon
     {
         return PROTO_FALSE;
     }
-    uint16_t data_length = pc_rd16le(buf + MELSEC_3E_RES_LEN_OFFSET); // covers the end code + the response data
+    uint16_t data_length = protocore_rd16le(buf + MELSEC_3E_RES_LEN_OFFSET); // covers the end code + the response data
     if (data_length < MELSEC_ENDCODE_LEN)
     {
         return PROTO_FALSE;
@@ -101,10 +101,10 @@ proto_bool pc_melsec_parse_response(const uint8_t *buf, size_t len, MelsecRespon
     {
         return PROTO_FALSE;
     }
-    out->end_code = pc_rd16le(buf + MELSEC_3E_RES_DATALEN_BASE);
+    out->end_code = protocore_rd16le(buf + MELSEC_3E_RES_DATALEN_BASE);
     out->data = buf + MELSEC_3E_RES_DATA_OFFSET;
     out->data_len = (size_t)data_length - MELSEC_ENDCODE_LEN; // minus the 2-octet end code
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_MELSEC
+#endif // PROTOCORE_ENABLE_MELSEC

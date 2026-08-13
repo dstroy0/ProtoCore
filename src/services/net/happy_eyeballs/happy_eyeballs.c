@@ -8,36 +8,36 @@
 
 #include "services/net/happy_eyeballs/happy_eyeballs.h"
 
-#if PC_ENABLE_HAPPY_EYEBALLS
+#if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
 // Effective family for interleave: an IPv4-mapped IPv6 address is treated as IPv4.
-static proto_bool eff_is_v6(const pc_ip *ip)
+static proto_bool eff_is_v6(const protocore_ip *ip)
 {
-    return ip->family == PC_IP_V6 && !pc_ip_is_v4_mapped(ip);
+    return ip->family == PROTOCORE_IP_V6 && !protocore_ip_is_v4_mapped(ip);
 }
 
-static int scope_rank(const pc_ip *ip)
+static int scope_rank(const protocore_ip *ip)
 {
     switch (Ip.classify(ip))
     {
-    case PC_IP_SCOPE_GLOBAL:
+    case PROTOCORE_IP_SCOPE_GLOBAL:
         return 5;
-    case PC_IP_SCOPE_PRIVATE:
+    case PROTOCORE_IP_SCOPE_PRIVATE:
         return 4;
-    case PC_IP_SCOPE_LINK_LOCAL:
+    case PROTOCORE_IP_SCOPE_LINK_LOCAL:
         return 3;
-    case PC_IP_SCOPE_LOOPBACK:
+    case PROTOCORE_IP_SCOPE_LOOPBACK:
         return 2;
-    case PC_IP_SCOPE_MULTICAST:
+    case PROTOCORE_IP_SCOPE_MULTICAST:
         return 1;
     default:
         return 0; // unspecified
     }
 }
 
-int pc_he_pref(const pc_ip *ip)
+int protocore_he_pref(const protocore_ip *ip)
 {
-    if (!ip || ip->family == PC_IP_NONE)
+    if (!ip || ip->family == PROTOCORE_IP_NONE)
     {
         return -1;
     }
@@ -45,7 +45,7 @@ int pc_he_pref(const pc_ip *ip)
     return scope_rank(ip) * 2 + (eff_is_v6(ip) ? 1 : 0);
 }
 
-void pc_he_order(pc_ip *list, size_t n)
+void protocore_he_order(protocore_ip *list, size_t n)
 {
     if (!list || n < 2)
     {
@@ -55,10 +55,10 @@ void pc_he_order(pc_ip *list, size_t n)
     // Stable insertion sort by preference (descending).
     for (size_t i = 1; i < n; i++)
     {
-        pc_ip key = list[i];
-        int kp = pc_he_pref(&key);
+        protocore_ip key = list[i];
+        int kp = protocore_he_pref(&key);
         size_t j = i;
-        while (j > 0 && pc_he_pref(&list[j - 1]) < kp)
+        while (j > 0 && protocore_he_pref(&list[j - 1]) < kp)
         {
             list[j] = list[j - 1];
             j--;
@@ -66,20 +66,20 @@ void pc_he_order(pc_ip *list, size_t n)
         list[j] = key;
     }
 
-    if (n > PC_HE_MAX)
+    if (n > PROTOCORE_HE_MAX)
     {
         return; // too large to interleave in the fixed scratch; sorted order stands.
     }
 
     // RFC 8305 sec 4: interleave families so successive attempts alternate v6/v4. Preserve the
     // preference order within each family; start with the family of the top-preference address.
-    pc_ip out[PC_HE_MAX];
+    protocore_ip out[PROTOCORE_HE_MAX];
     size_t o = 0;
     size_t iv6 = 0;
     size_t iv4 = 0;
     // Collect indices per family in preference order.
-    size_t v6[PC_HE_MAX];
-    size_t v4[PC_HE_MAX];
+    size_t v6[PROTOCORE_HE_MAX];
+    size_t v4[PROTOCORE_HE_MAX];
     size_t nv6 = 0;
     size_t nv4 = 0;
     for (size_t i = 0; i < n; i++)
@@ -120,10 +120,10 @@ void pc_he_order(pc_ip *list, size_t n)
     }
 }
 
-proto_bool pc_he_attempt_due(uint32_t last_start_ms, uint32_t now_ms, uint32_t attempt_delay_ms)
+proto_bool protocore_he_attempt_due(uint32_t last_start_ms, uint32_t now_ms, uint32_t attempt_delay_ms)
 {
     uint32_t elapsed = now_ms - last_start_ms; // wrap-safe modular subtraction
     return elapsed >= attempt_delay_ms;
 }
 
-#endif // PC_ENABLE_HAPPY_EYEBALLS
+#endif // PROTOCORE_ENABLE_HAPPY_EYEBALLS

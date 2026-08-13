@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/http/http3/quic_packet.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 static uint32_t rd_be32(const uint8_t *p)
 {
@@ -186,4 +186,4 @@ uint64_t pc_quic_pn_decode(uint64_t largest_pn, uint64_t truncated_pn, uint8_t p
     return candidate;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

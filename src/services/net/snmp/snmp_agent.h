@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_agent.h
+ * @file protocore_snmp_agent.h
  * @brief Zero-heap SNMP v1/v2c agent: PDU processing + a fixed MIB table.
  *
  * The agent is split into a pure, host-testable core and an ESP32-only UDP
  * transport (mirroring how the provisioning service splits its form parser from
  * its lwIP DNS responder):
  *
- *  - pc_snmp_agent_process() takes a complete request datagram and produces a
+ *  - protocore_snmp_agent_process() takes a complete request datagram and produces a
  *    complete response datagram in a caller buffer - no sockets, no heap. It is
  *    unit-tested on the host (env:native_snmp).
- *  - pc_snmp_agent_begin_udp() binds the agent on :161 via the pc_udp_* transport
- *    API (Arduino only) and feeds received datagrams through pc_snmp_agent_process().
+ *  - protocore_snmp_agent_begin_udp() binds the agent on :161 via the protocore_udp_* transport
+ *    API (Arduino only) and feeds received datagrams through protocore_snmp_agent_process().
  *
  * The MIB is a fixed BSS table of SNMP_MAX_MIB_ENTRIES objects. Register objects
- * with pc_snmp_agent_add_*; values are either static (stored in the entry) or
+ * with protocore_snmp_agent_add_*; values are either static (stored in the entry) or
  * fetched through a getter callback (e.g. sysUpTime). All string/OID values are
  * referenced by pointer and must outlive the agent (point them at flash/static
  * data, exactly like the rest of the library's strings).
@@ -33,9 +33,9 @@
 #include "protocore_config.h"
 #include "services/net/snmp/snmp_ber.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SNMP
+#if PROTOCORE_ENABLE_SNMP
 
 // SNMP message versions (the on-wire INTEGER value).
 typedef enum PROTO_ENUM_PACKED
@@ -94,10 +94,10 @@ typedef proto_bool (*SnmpSetFn)(const SnmpValue *in);
  * Clears the MIB table. Call before registering objects. Pass nullptr to keep
  * the default community.
  */
-void pc_snmp_agent_init(const char *ro_community);
+void protocore_snmp_agent_init(const char *ro_community);
 
 /** @brief Set the read-write community used to authorize Set requests (default: none -> Sets refused). */
-void pc_snmp_agent_set_rw_community(const char *rw_community);
+void protocore_snmp_agent_set_rw_community(const char *rw_community);
 
 /**
  * @brief Populate the standard MIB-II system group (1.3.6.1.2.1.1).
@@ -107,15 +107,15 @@ void pc_snmp_agent_set_rw_community(const char *rw_community);
  * string arguments are referenced by pointer (not copied). @p services is the
  * sysServices bitmask (commonly 72 = application + internet layers).
  */
-void pc_snmp_agent_set_system(const char *descr, const char *contact, const char *name, const char *location,
-                              long services);
+void protocore_snmp_agent_set_system(const char *descr, const char *contact, const char *name, const char *location,
+                                     long services);
 
 /** @brief Register a static OCTET STRING object. @return false if the table is full. */
-proto_bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter);
+proto_bool protocore_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter);
 /** @brief Register a static INTEGER object. @return false if the table is full. */
-proto_bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter);
+proto_bool protocore_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter);
 /** @brief Register a dynamic object served by @p getter (@p type names the value's BER tag). */
-proto_bool pc_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter);
+proto_bool protocore_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter);
 
 // ---------------------------------------------------------------------------
 // Core processing (host-testable; no sockets, no heap)
@@ -131,10 +131,10 @@ proto_bool pc_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_
  * @param req      request datagram bytes.
  * @param req_len  number of bytes in @p req.
  * @param resp     destination buffer for the response datagram.
- * @param pc_resp_cap capacity of @p resp.
+ * @param protocore_resp_cap capacity of @p resp.
  * @return number of response bytes written, or 0 to send nothing.
  */
-size_t pc_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap);
+size_t protocore_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap);
 
 /**
  * @brief Process one request PDU against the MIB and emit a GetResponse PDU.
@@ -151,8 +151,8 @@ size_t pc_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, 
  * @param out_cap     capacity of @p out.
  * @return number of response-PDU bytes written, or 0 on a malformed/unsupported PDU.
  */
-size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow_write, proto_bool v2c, uint8_t *out,
-                            size_t out_cap);
+size_t protocore_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow_write, proto_bool v2c,
+                                   uint8_t *out, size_t out_cap);
 
 // ---------------------------------------------------------------------------
 // UDP transport (needs a UDP transport)
@@ -164,10 +164,10 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
  * Callback-driven (no per-loop servicing). Call after WiFi is up. On non-Arduino
  * builds this is a no-op so the core remains host-testable.
  */
-void pc_snmp_agent_begin_udp(uint16_t port);
+void protocore_snmp_agent_begin_udp(uint16_t port);
 
-#endif // PC_ENABLE_SNMP
+#endif // PROTOCORE_ENABLE_SNMP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SNMP_AGENT_H

@@ -3,9 +3,9 @@
 //
 // HTTP/3 server-glue test: the same end-to-end flow as test_h3_e2e (a QUIC client completes the
 // TLS 1.3 handshake, sends an HTTP/3 GET, and verifies the 200 + body), but driven THROUGH the
-// pc_quic_server module and through the wire it binds. Datagrams are handed to the UDP pcb the
+// protocore_quic_server module and through the wire it binds. Datagrams are handed to the UDP pcb the
 // server bound, the listener's poll() carries them to its ingest callback, and its replies are read
-// back out of the host stack's send log. It exercises what pc_quic_server adds over the raw engines:
+// back out of the host stack's send log. It exercises what protocore_quic_server adds over the raw engines:
 // opening a connection from a client Initial, routing later datagrams by Destination Connection ID
 // (odcid for the long-header handshake packets, our chosen SCID for the 1-RTT short header), the
 // ingest ring, and the request/response callback seam.
@@ -24,7 +24,7 @@
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
 #include "network_drivers/transport/udp.h"
-#include "pc_net_host.h"
+#include "protocore_net_host.h"
 #include <string.h>
 
 #include <unity.h>
@@ -34,7 +34,7 @@ static uint8_t tw_t[4096]; // t works out of its own bytes // test-side working 
 
 void setUp()
 {
-    pc_net_host_reset(); // drop the pcbs and the datagram log a previous case left behind
+    protocore_net_host_reset(); // drop the pcbs and the datagram log a previous case left behind
 }
 void tearDown()
 {
@@ -64,7 +64,7 @@ static void test_rng(uint8_t *out, size_t len)
     }
     else
     {
-        memcpy(out, SERVER_SCID, len); // PC_QUIC_SCID_LEN == sizeof(SERVER_SCID)
+        memcpy(out, SERVER_SCID, len); // PROTOCORE_QUIC_SCID_LEN == sizeof(SERVER_SCID)
     }
     g_rng_call++;
 }
@@ -78,9 +78,9 @@ static int g_out_n;
 static void harvest(void)
 {
     g_out_n = 0;
-    for (size_t i = 0; i < pc_net_host_udp_count() && g_out_n < 16; i++)
+    for (size_t i = 0; i < protocore_net_host_udp_count() && g_out_n < 16; i++)
     {
-        const pc_net_host_dgram *d = pc_net_host_udp_at(i);
+        const protocore_net_host_dgram *d = protocore_net_host_udp_at(i);
         if (d->len <= sizeof(g_out[0]))
         {
             memcpy(g_out[g_out_n], d->data, d->len);
@@ -94,7 +94,7 @@ static void harvest(void)
 // in the listener's receive ring; poll() is what carries it to the ingest callback.
 static void deliver(const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
-    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(H3_PORT, ip, port, (void *)dg, (uint16_t)len));
+    TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(H3_PORT, ip, port, (void *)dg, (uint16_t)len));
 }
 
 // One turn of the loop: drain the listener into the server's ingest ring, run the server, then put
@@ -102,7 +102,7 @@ static void deliver(const uint8_t *dg, size_t len, const char *ip, uint16_t port
 static void run(uint32_t now_ms)
 {
     Udp.listener->poll();
-    pc_quic_server_poll(now_ms);
+    protocore_quic_server_poll(now_ms);
     Udp.listener->poll();
     harvest();
 }
@@ -110,7 +110,7 @@ static void run(uint32_t now_ms)
 // Deliver one datagram and run a turn, keeping only the replies that turn produced.
 static void feed(const uint8_t *dg, size_t len, const char *ip, uint16_t port, uint32_t now_ms)
 {
-    pc_net_host_udp_reset();
+    protocore_net_host_udp_reset();
     deliver(dg, len, ip, port);
     run(now_ms);
 }
@@ -122,7 +122,7 @@ static void app_request(void *, uint32_t conn_id, uint64_t sid, const char *meth
 {
     strncpy(g_method, method, sizeof(g_method) - 1);
     strncpy(g_path, path, sizeof(g_path) - 1);
-    pc_quic_server_respond(conn_id, sid, 200, "text/plain", (const uint8_t *)"hello h3", 8);
+    protocore_quic_server_respond(conn_id, sid, 200, "text/plain", (const uint8_t *)"hello h3", 8);
 }
 
 static void fill()
@@ -160,60 +160,60 @@ static void wr_pn(uint8_t *o, uint64_t pn, uint8_t pn_len)
 static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *dcid, uint8_t dcl, const uint8_t *scid,
                          uint8_t scl, uint64_t pn, QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    uint8_t pn_len = pc_quic_pn_length(pn, -1);
-    size_t p = pc_quic_build_long_header(out, cap, type, QUIC_VERSION_1, dcid, dcl, scid, scl, pn_len);
+    uint8_t pn_len = protocore_quic_pn_length(pn, -1);
+    size_t p = protocore_quic_build_long_header(out, cap, type, QUIC_VERSION_1, dcid, dcl, scid, scl, pn_len);
     if (type == QUIC_LP_INITIAL)
     {
-        p += pc_quic_varint_encode(out + p, cap - p, 0);
+        p += protocore_quic_varint_encode(out + p, cap - p, 0);
     }
-    p += pc_quic_varint_encode(out + p, cap - p, (uint64_t)pn_len + frame_len + 16);
+    p += protocore_quic_varint_encode(out + p, cap - p, (uint64_t)pn_len + frame_len + 16);
     size_t pn_off = p;
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
+    return protocore_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn, QuicPacketKeys *keys,
                           const uint8_t *frames, size_t frame_len)
 {
-    uint8_t pn_len = pc_quic_pn_length(pn, -1);
+    uint8_t pn_len = protocore_quic_pn_length(pn, -1);
     out[0] = (uint8_t)(0x40 | (pn_len - 1));
     memcpy(out + 1, dcid, dcl);
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
+    return protocore_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
 }
 static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
 {
     QuicLongHeader h;
-    TEST_ASSERT_TRUE(pc_quic_parse_long_header(dg, len, &h));
+    TEST_ASSERT_TRUE(protocore_quic_parse_long_header(dg, len, &h));
     *type = h.type;
     size_t off = h.hdr_len;
     if (h.type == QUIC_LP_INITIAL)
     {
         uint64_t tl = 0;
         size_t c = 0;
-        pc_quic_varint_decode(dg + off, len - off, &tl, &c);
+        protocore_quic_varint_decode(dg + off, len - off, &tl, &c);
         off += c + (size_t)tl;
     }
     uint64_t length = 0;
     size_t c = 0;
-    pc_quic_varint_decode(dg + off, len - off, &length, &c);
+    protocore_quic_varint_decode(dg + off, len - off, &length, &c);
     off += c;
     *wire = off + (size_t)length;
     static uint8_t work[2048];
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
+    return protocore_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
 }
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
+    return protocore_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 {
@@ -226,7 +226,7 @@ static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
             continue;
         }
         QuicFrame f;
-        size_t n = pc_quic_frame_parse(p + off, len - off, &f);
+        size_t n = protocore_quic_frame_parse(p + off, len - off, &f);
         if (!n)
         {
             break;
@@ -299,19 +299,19 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], con
 static size_t make_client_initial(uint8_t *dg, size_t cap)
 {
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctpe[128];
-    size_t ctpl = pc_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
+    size_t ctpl = protocore_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     return build_long(dg, cap, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0, &init.client,
@@ -344,7 +344,7 @@ static proto_bool response_ok(QuicPacketKeys *ap_s)
     {
         const uint8_t *dg = g_out[d];
         size_t len = g_out_len[d];
-        if (pc_quic_is_long_header(dg[0]))
+        if (protocore_quic_is_long_header(dg[0]))
         {
             continue; // handshake / coalesced long-header packets: not the 1-RTT response
         }
@@ -362,7 +362,7 @@ static proto_bool response_ok(QuicPacketKeys *ap_s)
                 continue;
             }
             QuicFrame f;
-            size_t n = pc_quic_frame_parse(plain + fo, p2 - fo, &f);
+            size_t n = protocore_quic_frame_parse(plain + fo, p2 - fo, &f);
             if (!n)
             {
                 break;
@@ -379,7 +379,7 @@ static proto_bool response_ok(QuicPacketKeys *ap_s)
             while (so < sn)
             {
                 H3Frame hf;
-                if (!pc_h3_frame_parse(sp + so, sn - so, &hf))
+                if (!protocore_h3_frame_parse(sp + so, sn - so, &hf))
                 {
                     break;
                 }
@@ -388,7 +388,7 @@ static proto_bool response_ok(QuicPacketKeys *ap_s)
                 {
                     char sc[128];
                     StatusCapture e = {status};
-                    (void)pc_qpack_decode(hp, (size_t)hf.length, sc, sizeof(sc), capture_status, &e);
+                    (void)protocore_qpack_decode(hp, (size_t)hf.length, sc, sizeof(sc), capture_status, &e);
                 }
                 else if (hf.type == H3_DATA)
                 {
@@ -416,33 +416,33 @@ void test_quic_server_http3_get()
     // connection ID.
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     // Client Initial(ClientHello), padded to the 1200-byte minimum.
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctpe[128];
-    size_t ctpl = pc_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
+    size_t ctpl = protocore_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
 
-    // Put it on the wire: pc_quic_server opens the connection and produces the server flight.
+    // Put it on the wire: protocore_quic_server opens the connection and produces the server flight.
     feed(dg, dl, "192.0.2.10", 40000, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
     TEST_ASSERT_GREATER_THAN(0, g_out_n); // the coalesced Initial(SH) + Handshake(EE..Finished) flight
 
     // Derive the client-side handshake + 1-RTT keys from the captured flight.
@@ -452,58 +452,58 @@ void test_quic_server_http3_get()
     size_t pt = open_long(g_out[0], g_out_len[0], &init.server, plain, &wire, &ty);
     size_t shl = extract_crypto(plain, pt, sh);
     uint8_t server_pub[32], ecdhe[32];
-    pc_x25519_base(server_pub, SERVER_PRIV);
-    pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
-    pc_sha256_ctx t;
+    protocore_x25519_base(server_pub, SERVER_PRIV);
+    protocore_x25519(ecdhe, CLIENT_PRIV, server_pub);
+    protocore_sha256_ctx t;
     uint8_t chsh[32], chsf[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, chl);
-    pc_sha256_update(&t, sh, shl);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, chl);
+    protocore_sha256_update(&t, sh, shl);
     {
-        pc_sha256_final(&t, chsh);
+        protocore_sha256_final(&t, chsh);
     }
     Tls13KeySchedule cks;
-    static uint8_t ks_store_464[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_464);
-    pc_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
+    static uint8_t ks_store_464[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_464);
+    protocore_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
     size_t hsfl = extract_crypto(plain, hpt, hsf);
-    pc_sha256_update(&t, hsf, hsfl);
-    pc_sha256_final(&t, chsf);
-    pc_tls13_ks_master(&cks, chsf);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
+    protocore_sha256_update(&t, hsf, hsfl);
+    protocore_sha256_final(&t, chsf);
+    protocore_tls13_ks_master(&cks, chsf);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
     // Client Initial(ACK) + Handshake(ACK + Finished) -> server completes the handshake.
     uint8_t ifr[64];
-    size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
+    size_t ifl = protocore_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, chsf, cfin + 4);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, chsf, cfin + 4);
     uint8_t hfr[64];
-    size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
-    hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
+    size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
+    hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     feed(idg, idl + hdl, "192.0.2.10", 40000, 0); // drains HANDSHAKE_DONE + the control/QPACK streams
 
     // Client HTTP/3 GET on request stream 0 (1-RTT). The short-header DCID is the server's SCID.
     uint8_t block[128];
-    size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/hello", 6);
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":authority", 10, "h3.test", 7);
+    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/hello", 6);
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":authority", 10, "h3.test", 7);
     uint8_t h3req[256];
-    size_t h3l = pc_h3_build_headers(h3req, sizeof(h3req), block, bp);
+    size_t h3l = protocore_h3_build_headers(h3req, sizeof(h3req), block, bp);
     uint8_t sfr[300];
-    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
+    size_t sfrl = protocore_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
 
@@ -515,8 +515,8 @@ void test_quic_server_http3_get()
     // ...and the 200 + body came back on the 1-RTT request stream.
     TEST_ASSERT_TRUE(response_ok(&ap_s));
 
-    pc_quic_server_stop();
-    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
+    protocore_quic_server_stop();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
 }
 
 // A connection with no traffic past the idle timeout is reclaimed (the fixed pool cannot be leaked
@@ -528,23 +528,23 @@ void test_idle_connection_reaped()
 
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     // Open a connection with a client Initial (the handshake need not complete to hold a slot).
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, "192.0.2.10", 40000, now);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
 
     // Just before the timeout it is kept; just after, a poll reclaims it.
-    now += PC_QUIC_IDLE_MS - 1;
+    now += PROTOCORE_QUIC_IDLE_MS - 1;
     run(now);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
     now += 2;
     run(now);
-    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
 // An RNG safe for any length / call count (test_rng only sources one handshake's fixed material).
@@ -561,9 +561,9 @@ static void bulk_rng(uint8_t *out, size_t len)
 static size_t make_min_initial(uint8_t *dg, size_t cap, const uint8_t *dcid, uint8_t dcl)
 {
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, dcid, dcl, &init);
+    protocore_quic_derive_initial_secrets(tw, dcid, dcl, &init);
     uint8_t frames[64];
-    size_t fl = pc_quic_build_ack(frames, sizeof(frames), 0, 0, 0);
+    size_t fl = protocore_quic_build_ack(frames, sizeof(frames), 0, 0, 0);
     return build_long(dg, cap, QUIC_LP_INITIAL, dcid, dcl, CLIENT_SCID, sizeof(CLIENT_SCID), 0, &init.client, frames,
                       fl);
 }
@@ -572,29 +572,29 @@ void test_quic_server_input_guards()
 {
     fill();
     // begin() rejects a null config and a null RNG.
-    TEST_ASSERT_FALSE(pc_quic_server_begin(H3_PORT, NULL, app_request, NULL));
+    TEST_ASSERT_FALSE(protocore_quic_server_begin(H3_PORT, NULL, app_request, NULL));
     QuicServerConfig scfg;
     config(&scfg, NULL);
-    TEST_ASSERT_FALSE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_FALSE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     // poll() before a successful begin is a no-op (running == false).
-    pc_quic_server_stop();
-    pc_quic_server_poll(0);
+    protocore_quic_server_stop();
+    protocore_quic_server_poll(0);
 
     scfg.rng = test_rng;
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
-    // The ingest ring refuses an empty datagram and one longer than PC_QUIC_MAX_DATAGRAM: both reach
+    // The ingest ring refuses an empty datagram and one longer than PROTOCORE_QUIC_MAX_DATAGRAM: both reach
     // the ingest callback and are dropped there, so neither opens a connection or draws a reply.
     uint8_t one[1] = {0x40};
     feed(one, 0, "192.0.2.1", 1, 0);
-    static uint8_t huge[PC_QUIC_MAX_DATAGRAM + 1];
+    static uint8_t huge[PROTOCORE_QUIC_MAX_DATAGRAM + 1];
     feed(huge, sizeof(huge), "192.0.2.1", 1, 0);
-    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 
     // respond() with an unknown connection id fails.
-    TEST_ASSERT_FALSE(pc_quic_server_respond(999999, 0, 200, "text/plain", NULL, 0));
+    TEST_ASSERT_FALSE(protocore_quic_server_respond(999999, 0, 200, "text/plain", NULL, 0));
 
     // route() guards: a malformed long header, a too-short short header, and a short header with an
     // unknown DCID each route to nothing and are dropped.
@@ -602,14 +602,14 @@ void test_quic_server_input_guards()
     feed(bad_long, sizeof(bad_long), "192.0.2.1", 1, 0);
     uint8_t short_tiny[2] = {0x40, 0x00}; // short header shorter than 1 + SCID_LEN
     feed(short_tiny, sizeof(short_tiny), "192.0.2.1", 1, 0);
-    uint8_t short_unknown[1 + PC_QUIC_SCID_LEN] = {0x40, 9, 9, 9, 9, 9, 9, 9, 9}; // no matching conn
+    uint8_t short_unknown[1 + PROTOCORE_QUIC_SCID_LEN] = {0x40, 9, 9, 9, 9, 9, 9, 9, 9}; // no matching conn
     feed(short_unknown, sizeof(short_unknown), "192.0.2.1", 1, 0);
-    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
-// The ingest ring is fail-closed: between polls it holds PC_QUIC_INGEST_RING-1 datagrams and drops
+// The ingest ring is fail-closed: between polls it holds PROTOCORE_QUIC_INGEST_RING-1 datagrams and drops
 // the rest. Two client Initials go into one listener drain; with junk between them that fits, both
 // open a connection, and with enough to push the second past the ring, only the first does.
 void test_ingest_ring_drops_past_capacity()
@@ -617,7 +617,7 @@ void test_ingest_ring_drops_past_capacity()
     fill();
     QuicServerConfig scfg;
     config(&scfg, bulk_rng); // two connections are opened, so the RNG must serve any call count
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     uint8_t dcid_a[8] = {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7};
     uint8_t dcid_b[8] = {0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7};
@@ -627,28 +627,28 @@ void test_ingest_ring_drops_past_capacity()
 
     // Both Initials inside the ring's capacity: two connections open.
     deliver(a, al, "192.0.2.1", 1);
-    for (int i = 0; i < PC_QUIC_INGEST_RING - 3; i++)
+    for (int i = 0; i < PROTOCORE_QUIC_INGEST_RING - 3; i++)
     {
         deliver(junk, sizeof(junk), "192.0.2.1", 1);
     }
     deliver(b, bl, "192.0.2.1", 1);
     run(0);
-    TEST_ASSERT_EQUAL_UINT8(2, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_quic_server_active_conns());
 
-    pc_quic_server_stop();
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    protocore_quic_server_stop();
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
-    // The same pair, with the second pushed past PC_QUIC_INGEST_RING-1: it never reaches the engines.
+    // The same pair, with the second pushed past PROTOCORE_QUIC_INGEST_RING-1: it never reaches the engines.
     deliver(a, al, "192.0.2.1", 1);
-    for (int i = 0; i < PC_QUIC_INGEST_RING; i++)
+    for (int i = 0; i < PROTOCORE_QUIC_INGEST_RING; i++)
     {
         deliver(junk, sizeof(junk), "192.0.2.1", 1);
     }
     deliver(b, bl, "192.0.2.1", 1);
     run(0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
 void test_quic_server_pool_full()
@@ -656,10 +656,10 @@ void test_quic_server_pool_full()
     fill();
     QuicServerConfig scfg;
     config(&scfg, bulk_rng); // several connections are opened, so the RNG must serve any call count
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     // One more distinct-DCID Initial than the pool holds: the extra alloc_slot()/open_conn() fails.
-    for (int i = 0; i <= PC_QUIC_MAX_CONNS; i++)
+    for (int i = 0; i <= PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         uint8_t dcid[8] = {0xA0, (uint8_t)i, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5};
         uint8_t dg[256];
@@ -667,8 +667,8 @@ void test_quic_server_pool_full()
         deliver(dg, dl, "192.0.2.10", 40000);
     }
     run(0);
-    TEST_ASSERT_EQUAL_UINT8(PC_QUIC_MAX_CONNS, pc_quic_server_active_conns()); // capped at the pool size
-    pc_quic_server_stop();
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_QUIC_MAX_CONNS, protocore_quic_server_active_conns()); // capped at the pool size
+    protocore_quic_server_stop();
 }
 
 // The peer the ingest callback captured is what the reply is addressed to, and it survives the two
@@ -679,22 +679,22 @@ void test_quic_server_replies_to_the_captured_peer()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, "255.255.255.255", 40009, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
 
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_net_host_udp_count());
-    const pc_net_host_dgram *d = pc_net_host_udp_at(0);
-    TEST_ASSERT_EQUAL_UINT8(PC_NET_TYPE_V4, d->type);
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_net_host_udp_count());
+    const protocore_net_host_dgram *d = protocore_net_host_udp_at(0);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_NET_TYPE_V4, d->type);
     TEST_ASSERT_EQUAL_UINT8(255, d->addr[0]);
     TEST_ASSERT_EQUAL_UINT8(255, d->addr[3]);
     TEST_ASSERT_EQUAL_UINT16(40009, d->dst_port);
     TEST_ASSERT_EQUAL_UINT16(H3_PORT, d->src_port);
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
 // udp_ingest_cb drops a datagram whose sender the listener cannot render - here one that arrived with
@@ -704,19 +704,19 @@ void test_quic_server_unrenderable_peer_dropped()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, NULL, 40000, 0);
 
-    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns());
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
-// pc_quic_server_respond() with an unknown conn_id while a real connection IS active: slot_by_id's
+// protocore_quic_server_respond() with an unknown conn_id while a real connection IS active: slot_by_id's
 // loop must fall through the id mismatch (used == true, id != conn_id), not just the used == false
 // case already covered by test_quic_server_input_guards.
 void test_quic_server_respond_unknown_id_with_active_conn()
@@ -724,28 +724,28 @@ void test_quic_server_respond_unknown_id_with_active_conn()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     uint8_t dg0[256];
     size_t dl0 = make_min_initial(dg0, sizeof(dg0), ODCID, sizeof(ODCID));
     feed(dg0, dl0, "192.0.2.10", 40000, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns()); // the one active conn gets id 1 (next_id starts at 1)
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns()); // the one active conn gets id 1 (next_id starts at 1)
 
-    TEST_ASSERT_FALSE(pc_quic_server_respond(2, 0, 200, "text/plain", NULL, 0)); // no slot has id 2
+    TEST_ASSERT_FALSE(protocore_quic_server_respond(2, 0, 200, "text/plain", NULL, 0)); // no slot has id 2
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
-// pc_quic_server_begin() with port == 0 must fall back to PC_HTTP3_PORT (every other test in this
+// protocore_quic_server_begin() with port == 0 must fall back to PROTOCORE_HTTP3_PORT (every other test in this
 // file passes a nonzero port, so the ternary's zero branch is otherwise never taken).
 void test_quic_server_begin_default_port()
 {
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(0, &scfg, app_request, NULL));
-    TEST_ASSERT_NOT_NULL(pc_net_host_udp_pcb(PC_HTTP3_PORT)); // the default port is what got bound
-    pc_quic_server_stop();
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(0, &scfg, app_request, NULL));
+    TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(PROTOCORE_HTTP3_PORT)); // the default port is what got bound
+    protocore_quic_server_stop();
 }
 
 // route()'s long-header cid_eq matching (against an open connection's SCID and ODCID) and its
@@ -760,20 +760,20 @@ void test_quic_server_route_header_edges()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng); // 3rd rng call yields SERVER_SCID, a known value to address packets to
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     // Open one connection so the loops below have a real "used" slot to compare against.
     uint8_t dg0[256];
     size_t dl0 = make_min_initial(dg0, sizeof(dg0), ODCID, sizeof(ODCID));
     feed(dg0, dl0, "192.0.2.10", 40000, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
 
     // A long-header HANDSHAKE packet (not INITIAL) with a DCID SHORTER than the open connection's
     // 8-byte SCID/ODCID: cid_eq's alen == blen short-circuits false against both, and the
     // version/type guard's "type != INITIAL" branch keeps it from opening a new connection.
     uint8_t short_dcid[4] = {0x11, 0x22, 0x33, 0x44};
     uint8_t hs_hdr[64];
-    size_t hs_len = pc_quic_build_long_header(hs_hdr, sizeof(hs_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, short_dcid,
+    size_t hs_len = protocore_quic_build_long_header(hs_hdr, sizeof(hs_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, short_dcid,
                                               sizeof(short_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     deliver(hs_hdr, hs_len, "192.0.2.11", 40001);
 
@@ -781,7 +781,7 @@ void test_quic_server_route_header_edges()
     // short-circuits before the type check.
     uint8_t other_dcid[8] = {0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78};
     uint8_t ver_hdr[64];
-    size_t ver_len = pc_quic_build_long_header(ver_hdr, sizeof(ver_hdr), QUIC_LP_INITIAL, 0xAABBCCDDu, other_dcid,
+    size_t ver_len = protocore_quic_build_long_header(ver_hdr, sizeof(ver_hdr), QUIC_LP_INITIAL, 0xAABBCCDDu, other_dcid,
                                                sizeof(other_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     deliver(ver_hdr, ver_len, "192.0.2.12", 40002);
 
@@ -790,28 +790,28 @@ void test_quic_server_route_header_edges()
     // compare is short-circuited away).
     uint8_t scid_hdr[64];
     size_t scid_hdr_len =
-        pc_quic_build_long_header(scid_hdr, sizeof(scid_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, SERVER_SCID,
+        protocore_quic_build_long_header(scid_hdr, sizeof(scid_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, SERVER_SCID,
                                   sizeof(SERVER_SCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     deliver(scid_hdr, scid_hdr_len, "192.0.2.13", 40003);
 
     run(0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns()); // still just the one connection
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns()); // still just the one connection
 
     // A short header (1-RTT) with the right length but a SCID that does not match: the memcmp
     // mismatch branch of the short-header routing loop.
-    uint8_t wrong_scid[1 + PC_QUIC_SCID_LEN];
+    uint8_t wrong_scid[1 + PROTOCORE_QUIC_SCID_LEN];
     wrong_scid[0] = 0x40;
-    for (int i = 0; i < PC_QUIC_SCID_LEN; i++)
+    for (int i = 0; i < PROTOCORE_QUIC_SCID_LEN; i++)
     {
         wrong_scid[1 + i] = (uint8_t)(0xEE + i);
     }
     feed(wrong_scid, sizeof(wrong_scid), "192.0.2.14", 40004, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
-// A client CONNECTION_CLOSE well before the idle timeout: pc_quic_conn_is_closed() must reap the
+// A client CONNECTION_CLOSE well before the idle timeout: protocore_quic_conn_is_closed() must reap the
 // slot on its own (flush_and_reap's "||" short-circuits before the idle-timeout comparison), not
 // just via the idle path already covered by test_idle_connection_reaped.
 void test_quic_server_close_reaped_before_idle()
@@ -821,32 +821,32 @@ void test_quic_server_close_reaped_before_idle()
 
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t frames0[64];
-    size_t fl0 = pc_quic_build_ack(frames0, sizeof(frames0), 0, 0, 0);
+    size_t fl0 = protocore_quic_build_ack(frames0, sizeof(frames0), 0, 0, 0);
     uint8_t dg0[256];
     size_t dl0 = build_long(dg0, sizeof(dg0), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             0, &init.client, frames0, fl0);
     feed(dg0, dl0, "192.0.2.20", 40010, now);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
 
     uint8_t cc_frames[64];
-    size_t cc_len = pc_quic_build_connection_close(cc_frames, sizeof(cc_frames), PROTO_FALSE, 0, 0, NULL, 0);
+    size_t cc_len = protocore_quic_build_connection_close(cc_frames, sizeof(cc_frames), PROTO_FALSE, 0, 0, NULL, 0);
     uint8_t dg1[256];
     size_t dl1 = build_long(dg1, sizeof(dg1), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, cc_frames, cc_len);
-    now += 5; // far short of PC_QUIC_IDLE_MS
+    now += 5; // far short of PROTOCORE_QUIC_IDLE_MS
     feed(dg1, dl1, "192.0.2.20", 40010, now);
-    TEST_ASSERT_EQUAL_UINT8(0, pc_quic_server_active_conns()); // reaped by is_closed(), not by idle
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns()); // reaped by is_closed(), not by idle
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
-// With on_request == NULL, pc_h3_on_request's "if (s_quic.on_request)" guard must skip the
+// With on_request == NULL, protocore_h3_on_request's "if (s_quic.on_request)" guard must skip the
 // forwarding call instead of dereferencing a null function pointer, once a real HTTP/3 request
 // completes on a fully-established connection.
 void test_quic_server_on_request_null()
@@ -855,23 +855,23 @@ void test_quic_server_on_request_null()
 
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(pc_quic_server_begin(H3_PORT, &scfg, NULL, NULL)); // no request callback
+    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, NULL, NULL)); // no request callback
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctpe[128];
-    size_t ctpl = pc_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
+    size_t ctpl = protocore_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
@@ -879,7 +879,7 @@ void test_quic_server_on_request_null()
                            &init.client, frames, fl);
 
     feed(dg, dl, "192.0.2.10", 40000, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     uint8_t plain[2048], sh[512], hsf[1024];
@@ -888,66 +888,66 @@ void test_quic_server_on_request_null()
     size_t pt = open_long(g_out[0], g_out_len[0], &init.server, plain, &wire, &ty);
     size_t shl = extract_crypto(plain, pt, sh);
     uint8_t server_pub[32], ecdhe[32];
-    pc_x25519_base(server_pub, SERVER_PRIV);
-    pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
-    pc_sha256_ctx t;
+    protocore_x25519_base(server_pub, SERVER_PRIV);
+    protocore_x25519(ecdhe, CLIENT_PRIV, server_pub);
+    protocore_sha256_ctx t;
     uint8_t chsh[32], chsf[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, chl);
-    pc_sha256_update(&t, sh, shl);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, chl);
+    protocore_sha256_update(&t, sh, shl);
     {
-        pc_sha256_final(&t, chsh);
+        protocore_sha256_final(&t, chsh);
     }
     Tls13KeySchedule cks;
-    static uint8_t ks_store_900[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_900);
-    pc_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
+    static uint8_t ks_store_900[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_900);
+    protocore_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
     QuicPacketKeys hs_s, hs_c, ap_c;
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
     size_t hsfl = extract_crypto(plain, hpt, hsf);
-    pc_sha256_update(&t, hsf, hsfl);
-    pc_sha256_final(&t, chsf);
-    pc_tls13_ks_master(&cks, chsf);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
+    protocore_sha256_update(&t, hsf, hsfl);
+    protocore_sha256_final(&t, chsf);
+    protocore_tls13_ks_master(&cks, chsf);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
     uint8_t ifr[64];
-    size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
+    size_t ifl = protocore_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, chsf, cfin + 4);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, chsf, cfin + 4);
     uint8_t hfr[64];
-    size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
-    hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
+    size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
+    hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     feed(idg, idl + hdl, "192.0.2.10", 40000, 0);
 
     uint8_t block[128];
-    size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/hello", 6);
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":authority", 10, "h3.test", 7);
+    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/hello", 6);
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":authority", 10, "h3.test", 7);
     uint8_t h3req[256];
-    size_t h3l = pc_h3_build_headers(h3req, sizeof(h3req), block, bp);
+    size_t h3l = protocore_h3_build_headers(h3req, sizeof(h3req), block, bp);
     uint8_t sfr[300];
-    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
+    size_t sfrl = protocore_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
 
-    // The H3 engine completes the request and calls pc_h3_on_request, which must see
+    // The H3 engine completes the request and calls protocore_h3_on_request, which must see
     // s_quic.on_request == NULL and skip forwarding, not crash.
     feed(s1, s1l, "192.0.2.10", 40000, 0);
 
     TEST_ASSERT_EQUAL_STRING("", g_method); // never invoked: no crash and nothing forwarded
-    TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
 int main(void)

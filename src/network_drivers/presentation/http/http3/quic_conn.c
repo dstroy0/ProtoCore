@@ -10,9 +10,9 @@
 #include "mmgr/plaintext.h" // the streams carry HTTP/3; their bytes borrow from that arena
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
-#include "crypto/aead/aes128gcm.h" // PC_AES128GCM_TAG_LEN
+#include "crypto/aead/aes128gcm.h" // PROTOCORE_AES128GCM_TAG_LEN
 #include "network_drivers/presentation/http/http3/quic_frame.h"
 #include "network_drivers/presentation/http/http3/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
@@ -20,17 +20,17 @@
 // A single STREAM frame's payload cannot exceed one datagram, so it can never overflow a stream's
 // reassembly buffer - which is why that clamp in handle_stream carries a coverage exclusion. Both
 // sizes are overridable macros (quic_conn.h), so pin the relationship here rather than let a jumbo
-// PC_QUIC_MAX_DATAGRAM or a shrunken PC_QUIC_STREAM_RX silently make the excluded path reachable.
-static_assert(PC_QUIC_MAX_DATAGRAM < PC_QUIC_STREAM_RX,
-              "PC_QUIC_STREAM_RX must exceed PC_QUIC_MAX_DATAGRAM: one STREAM frame's payload is bounded by the "
+// PROTOCORE_QUIC_MAX_DATAGRAM or a shrunken PROTOCORE_QUIC_STREAM_RX silently make the excluded path reachable.
+static_assert(PROTOCORE_QUIC_MAX_DATAGRAM < PROTOCORE_QUIC_STREAM_RX,
+              "PROTOCORE_QUIC_STREAM_RX must exceed PROTOCORE_QUIC_MAX_DATAGRAM: one STREAM frame's payload is bounded by the "
               "datagram, and handle_stream relies on that to deliver it without clamping");
 
 // The frame payload build_frames fills is one datagram; every builder it calls (ACK, CRYPTO header,
 // HANDSHAKE_DONE, STREAM header) must fit with room to spare, which is why their failure guards
 // carry coverage exclusions. RFC 9000 sec 14.1 already requires at least 1200 octets for Initial
 // packets, so pin that floor: a smaller datagram would make those guards reachable.
-static_assert(PC_QUIC_MAX_DATAGRAM >= 1200,
-              "PC_QUIC_MAX_DATAGRAM must be at least the RFC 9000 sec 14.1 minimum of 1200 octets, which is also "
+static_assert(PROTOCORE_QUIC_MAX_DATAGRAM >= 1200,
+              "PROTOCORE_QUIC_MAX_DATAGRAM must be at least the RFC 9000 sec 14.1 minimum of 1200 octets, which is also "
               "what lets build_frames assume every frame builder has room");
 
 // The open (decrypt) keys for an encryption level: Initial keys come from the DCID, Handshake and
@@ -55,13 +55,13 @@ static QuicPacketKeys *seal_keys(struct QuicConn *qc, int level)
 // Find a stream slot by id, or allocate one; NULL if the table is full.
 // The plaintext-pool term this file declares: one borrow per QUIC connection, taken from the
 // persistent end on first use and held for the connection's life.
-static_assert(PC_WORK_QUIC_CONN >= (size_t)PC_QUIC_MAX_CONNS * PC_QUIC_CONN_BORROW,
-              "PC_WORK_QUIC_CONN must cover one outbound buffer per stream plus one CRYPTO window per "
+static_assert(PROTOCORE_WORK_QUIC_CONN >= (size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_QUIC_CONN_BORROW,
+              "PROTOCORE_WORK_QUIC_CONN must cover one outbound buffer per stream plus one CRYPTO window per "
               "packet-number space on every connection: raise it in protocore_config.h");
 
 // Offsets into the one borrow. Grouped by field, so each region's stride is a power of two.
 #define QUIC_OFF_TX 0u
-#define QUIC_OFF_CRYPTO (QUIC_OFF_TX + (size_t)PC_QUIC_MAX_STREAMS * PC_QUIC_STREAM_TX)
+#define QUIC_OFF_CRYPTO (QUIC_OFF_TX + (size_t)PROTOCORE_QUIC_MAX_STREAMS * PROTOCORE_QUIC_STREAM_TX)
 
 // The connection's bytes, split by offset over its streams and packet-number spaces. Idempotent: a
 // connection initialised again keeps the borrow it already holds, because the persistent end is
@@ -71,20 +71,20 @@ static proto_bool quic_conn_slot_storage(struct QuicConn *qc)
     uint8_t *base = qc->streams[0].tx; // QUIC_OFF_TX is 0, so the borrow is recoverable from it
     if (base == NULL)
     {
-        pc_span b = pc_plaintext_persist_span(PC_QUIC_CONN_BORROW);
+        pc_span b = pc_plaintext_persist_span(PROTOCORE_QUIC_CONN_BORROW);
         if (!pc_span_ok(b))
         {
             return PROTO_FALSE;
         }
         base = b.buf;
     }
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
-        qc->streams[i].tx = base + QUIC_OFF_TX + i * PC_QUIC_STREAM_TX;
+        qc->streams[i].tx = base + QUIC_OFF_TX + i * PROTOCORE_QUIC_STREAM_TX;
     }
     for (size_t i = 0; i < 3; i++)
     {
-        qc->space[i].crypto_rx = base + QUIC_OFF_CRYPTO + i * PC_QUIC_CRYPTO_RX;
+        qc->space[i].crypto_rx = base + QUIC_OFF_CRYPTO + i * PROTOCORE_QUIC_CRYPTO_RX;
     }
     return PROTO_TRUE;
 }
@@ -96,7 +96,7 @@ static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool creat
         return NULL; // the connection has no bytes; it holds no streams either
     }
     QuicStream *free_slot = NULL;
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         if (qc->streams[i].id == id && qc->streams[i].id != UINT64_MAX)
         {
@@ -115,7 +115,7 @@ static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool creat
     uint8_t *tx = free_slot->tx;
     mem.set(free_slot, 0, sizeof(*free_slot));
     free_slot->tx = tx;
-    mem.set(tx, 0, PC_QUIC_STREAM_TX);
+    mem.set(tx, 0, PROTOCORE_QUIC_STREAM_TX);
     free_slot->id = id;
     return free_slot;
 }
@@ -133,7 +133,7 @@ void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint
         return;
     }
     // The borrow carries the previous connection's stream and handshake bytes.
-    mem.set(qc->streams[0].tx, 0, PC_QUIC_CONN_BORROW);
+    mem.set(qc->streams[0].tx, 0, PROTOCORE_QUIC_CONN_BORROW);
     mem.cpy(qc->odcid, odcid, odcid_len);
     qc->odcid_len = odcid_len;
     mem.cpy(qc->dcid, peer_scid, peer_scid_len);
@@ -152,7 +152,7 @@ void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint
         qc->space[i].largest_acked = -1;
         qc->space[i].last_ae_pn = -1;
     }
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         qc->streams[i].id = UINT64_MAX;
     }
@@ -199,9 +199,9 @@ static void handle_crypto(struct QuicConn *qc, int level, const QuicFrame *f)
     size_t skip = (size_t)(want - f->crypto.offset);
     const uint8_t *nd = f->crypto.data + skip;
     size_t nl = (size_t)(f->crypto.length - skip);
-    if (s->crypto_rx_have + nl > PC_QUIC_CRYPTO_RX)
+    if (s->crypto_rx_have + nl > PROTOCORE_QUIC_CRYPTO_RX)
     {
-        nl = PC_QUIC_CRYPTO_RX - s->crypto_rx_have; // clamp to the reassembly window
+        nl = PROTOCORE_QUIC_CRYPTO_RX - s->crypto_rx_have; // clamp to the reassembly window
     }
     mem.cpy(s->crypto_rx + s->crypto_rx_have, nd, nl);
     s->crypto_rx_have += nl;
@@ -251,9 +251,9 @@ static void handle_stream(struct QuicConn *qc, const QuicFrame *f)
         size_t skip = (size_t)(want - f->stream.offset);
         const uint8_t *nd = f->stream.data + skip;
         size_t nl = (size_t)(f->stream.length - skip);
-        if (nl > PC_QUIC_STREAM_RX)
+        if (nl > PROTOCORE_QUIC_STREAM_RX)
         {
-            nl = PC_QUIC_STREAM_RX;
+            nl = PROTOCORE_QUIC_STREAM_RX;
         }
         // Deliver in place (we hand the callback the contiguous new bytes directly).
         st->rx_off += nl;
@@ -437,8 +437,8 @@ static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
 
     // Unprotect on a copy so a failed decrypt does not corrupt following coalesced packets. The
     // engine runs sequentially on one task, so the scratch is a shared static (not reentrant).
-    static uint8_t work[PC_QUIC_MAX_DATAGRAM];
-    static uint8_t plain[PC_QUIC_MAX_DATAGRAM];
+    static uint8_t work[PROTOCORE_QUIC_MAX_DATAGRAM];
+    static uint8_t plain[PROTOCORE_QUIC_MAX_DATAGRAM];
     if (pkt_len > sizeof(work))
     {
         return 0;
@@ -580,7 +580,7 @@ static size_t build_app_frames(struct QuicConn *qc, int level, uint8_t *buf, siz
             *ae = PROTO_TRUE;
         }
     }
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         QuicStream *st = &qc->streams[i];
         if (st->id == UINT64_MAX)
@@ -643,7 +643,7 @@ static uint8_t level_lp_type(int level)
 // Bytes a protected packet needs on top of its payload: AEAD tag + packet number, plus the header.
 static size_t packet_overhead(const struct QuicConn *qc, proto_bool is_long, uint8_t pn_len)
 {
-    size_t overhead = (size_t)PC_AES128GCM_TAG_LEN + pn_len;
+    size_t overhead = (size_t)PROTOCORE_AES128GCM_TAG_LEN + pn_len;
     if (is_long)
     {
         // type(1) + version(4) + dcid_len(1) + dcid + scid_len(1) + scid, then the Initial token
@@ -680,7 +680,7 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     // turns out not to fit once the header, packet number and AEAD tag are added cannot simply be
     // rejected further down: those bytes would already be counted as sent and would never go out.
     // That is silent data loss, and it was reachable - build_frames was handed the whole
-    // PC_QUIC_MAX_DATAGRAM scratch while the packet needs header + pn + 16-byte tag on top of it,
+    // PROTOCORE_QUIC_MAX_DATAGRAM scratch while the packet needs header + pn + 16-byte tag on top of it,
     // so a stream with ~1326+ bytes pending, or a Handshake CRYPTO flight carrying a large
     // certificate, produced a payload the packet had no room for. Bound the payload instead.
     size_t overhead = packet_overhead(qc, is_long, pn_len);
@@ -690,9 +690,9 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     }
     size_t budget = cap - overhead;
 
-    uint8_t frames[PC_QUIC_MAX_DATAGRAM];
+    uint8_t frames[PROTOCORE_QUIC_MAX_DATAGRAM];
     // Dead with every current caller - quic_server's datagram buffer is itself
-    // PC_QUIC_MAX_DATAGRAM, so `cap - overhead` is always below `frames` - but kept as the bound
+    // PROTOCORE_QUIC_MAX_DATAGRAM, so `cap - overhead` is always below `frames` - but kept as the bound
     // on the memcpy target if a caller ever hands us a larger buffer.
     if (budget > sizeof(frames))
     {
@@ -741,7 +741,7 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
             }
             p += n;
         }
-        uint64_t length = (uint64_t)pn_len + frame_len + PC_AES128GCM_TAG_LEN;
+        uint64_t length = (uint64_t)pn_len + frame_len + PROTOCORE_AES128GCM_TAG_LEN;
         size_t n = pc_quic_varint_encode(out + p, cap - p, length);
         if (!n)
         {
@@ -767,7 +767,7 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     // writing it (avoids a size_t addition wrap in the bounds check, cpp:S3519).
     // Redundant since the payload is now budgeted against `overhead` up front, which is exactly
     // what makes the offsets build_frames() advanced safe to keep. Retained as defense in depth.
-    if (cap - p < (size_t)pn_len + frame_len + PC_AES128GCM_TAG_LEN)
+    if (cap - p < (size_t)pn_len + frame_len + PROTOCORE_AES128GCM_TAG_LEN)
     {
         return 0;
     }
@@ -821,9 +821,9 @@ size_t pc_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap)
     {
         return 0;
     }
-    if (cap > PC_QUIC_MAX_DATAGRAM)
+    if (cap > PROTOCORE_QUIC_MAX_DATAGRAM)
     {
-        cap = PC_QUIC_MAX_DATAGRAM;
+        cap = PROTOCORE_QUIC_MAX_DATAGRAM;
     }
 
     // A queued transport CONNECTION_CLOSE is sent once - at the highest encryption level we still hold
@@ -866,7 +866,7 @@ size_t pc_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap)
 // PTO period with exponential backoff, capped so the shift cannot overflow (RFC 9002 sec 6.2.1).
 static uint32_t pto_period(uint8_t count)
 {
-    uint32_t p = PC_QUIC_PTO_MS;
+    uint32_t p = PROTOCORE_QUIC_PTO_MS;
     for (uint8_t i = 0; i < count && p < (1u << 30); i++)
     {
         p <<= 1;
@@ -928,7 +928,7 @@ void pc_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms)
             qc->handshake_done_queued = PROTO_TRUE;
             qc->handshake_done_sent = PROTO_FALSE;
         }
-        for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+        for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
         {
             QuicStream *st = &qc->streams[i];
             if (st->id == UINT64_MAX)
@@ -955,7 +955,7 @@ size_t pc_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const u
     {
         return 0;
     }
-    size_t room = PC_QUIC_STREAM_TX - st->tx_have;
+    size_t room = PROTOCORE_QUIC_STREAM_TX - st->tx_have;
     size_t take = len < room ? len : room;
     mem.cpy(st->tx + st->tx_have, data, take);
     st->tx_have += take;
@@ -997,4 +997,4 @@ proto_bool pc_quic_conn_is_closed(const struct QuicConn *qc)
     return qc->closed || qc->draining;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

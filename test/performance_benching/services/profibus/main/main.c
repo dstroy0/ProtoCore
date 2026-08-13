@@ -3,8 +3,8 @@
 //
 // On-device CCOUNT microbenchmark for the PROFIBUS-DP FDL telegram codec (services/fieldbus/profibus):
 // building/validating the SD1 (no-data) and SD2 (variable-data) telegrams a DP master exchanges with
-// its slaves, plus the underlying arithmetic-sum FCS. All four benched calls (pc_pb_fcs,
-// pc_pb_build_sd1, pc_pb_build_sd2, pc_pb_parse) are pure - zero heap, no stdlib, no I/O - so each
+// its slaves, plus the underlying arithmetic-sum FCS. All four benched calls (protocore_pb_fcs,
+// protocore_pb_build_sd1, protocore_pb_build_sd2, protocore_pb_parse) are pure - zero heap, no stdlib, no I/O - so each
 // exercises the real production code path (like performance_benching/device/modbus, a pure codec; contrast with
 // performance_benching/device/ads1115, a peripheral driver where the bus transaction is stubbed). The RS-485 UART
 // timing + the DP-V0 cyclic state machine are the physical "device step" and are deliberately out of
@@ -29,11 +29,11 @@ void dbench_run(void)
     static const uint8_t fcs_body[3] = {0x03, 0x02, PB_FC_REQUEST_FDL_STATUS};
     static uint8_t out[16];
 
-    // Prebuilt telegrams for the parse bench (known-good, so pc_pb_parse takes the accept path).
+    // Prebuilt telegrams for the parse bench (known-good, so protocore_pb_parse takes the accept path).
     static uint8_t sd1_frame[8];
     static uint8_t sd2_frame[16];
-    size_t sd1_len = pc_pb_build_sd1(0x03, 0x02, PB_FC_REQUEST_FDL_STATUS, sd1_frame, sizeof(sd1_frame));
-    size_t sd2_len = pc_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), sd2_frame, sizeof(sd2_frame));
+    size_t sd1_len = protocore_pb_build_sd1(0x03, 0x02, PB_FC_REQUEST_FDL_STATUS, sd1_frame, sizeof(sd1_frame));
+    size_t sd2_len = protocore_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), sd2_frame, sizeof(sd2_frame));
 
     for (;;)
     {
@@ -42,13 +42,13 @@ void dbench_run(void)
         volatile uint8_t sink8 = 0;
         PbTelegram tg;
 
-        DBENCH_OP("pc_pb_fcs (DA+SA+FC)", 100000, sink8 += pc_pb_fcs(fcs_body, sizeof(fcs_body)));
-        DBENCH_OP("pc_pb_build_sd1", 100000,
-                  sink += pc_pb_build_sd1(0x03, 0x02, PB_FC_REQUEST_FDL_STATUS, out, sizeof(out)));
-        DBENCH_OP("pc_pb_build_sd2 (3B data)", 50000,
-                  sink += pc_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), out, sizeof(out)));
-        DBENCH_OP("pc_pb_parse SD1", 100000, sink += pc_pb_parse(sd1_frame, sd1_len, &tg) ? 1 : 0);
-        DBENCH_OP("pc_pb_parse SD2 (3B data)", 100000, sink += pc_pb_parse(sd2_frame, sd2_len, &tg) ? 1 : 0);
+        DBENCH_OP("protocore_pb_fcs (DA+SA+FC)", 100000, sink8 += protocore_pb_fcs(fcs_body, sizeof(fcs_body)));
+        DBENCH_OP("protocore_pb_build_sd1", 100000,
+                  sink += protocore_pb_build_sd1(0x03, 0x02, PB_FC_REQUEST_FDL_STATUS, out, sizeof(out)));
+        DBENCH_OP("protocore_pb_build_sd2 (3B data)", 50000,
+                  sink += protocore_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), out, sizeof(out)));
+        DBENCH_OP("protocore_pb_parse SD1", 100000, sink += protocore_pb_parse(sd1_frame, sd1_len, &tg) ? 1 : 0);
+        DBENCH_OP("protocore_pb_parse SD2 (3B data)", 100000, sink += protocore_pb_parse(sd2_frame, sd2_len, &tg) ? 1 : 0);
 
         (void)sink;
         (void)sink8;

@@ -9,14 +9,14 @@
 #include "services/fieldbus/sercos/sercos.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SERCOS
+#if PROTOCORE_ENABLE_SERCOS
 
-uint16_t pc_sercos_idn(proto_bool is_product, uint8_t param_set, uint16_t data_block)
+uint16_t protocore_sercos_idn(proto_bool is_product, uint8_t param_set, uint16_t data_block)
 {
     return (uint16_t)(((is_product ? 1u : 0u) << 15) | ((uint32_t)(param_set & 0x7) << 12) | (data_block & 0x0FFF));
 }
 
-void pc_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *param_set, uint16_t *data_block)
+void protocore_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *param_set, uint16_t *data_block)
 {
     if (is_product)
     {
@@ -32,7 +32,7 @@ void pc_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *param_se
     }
 }
 
-size_t pc_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_t *data, size_t data_len, uint8_t *out,
+size_t protocore_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_t *data, size_t data_len, uint8_t *out,
                        size_t cap)
 {
     if (!out || (data_len && !data) || (type != SERCOS_TEL_MDT && type != SERCOS_TEL_AT))
@@ -55,7 +55,7 @@ size_t pc_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_
     return n;
 }
 
-proto_bool pc_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out)
+proto_bool protocore_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out)
 {
     if (!frame || !out || len < SERCOS_HDR_LEN)
     {
@@ -73,4 +73,4 @@ proto_bool pc_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_SERCOS
+#endif // PROTOCORE_ENABLE_SERCOS

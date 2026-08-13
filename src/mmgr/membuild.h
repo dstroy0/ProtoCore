@@ -20,8 +20,8 @@
 
 #include "mmgr/float_bits.h"       // proto_dbl_sign / proto_dbl_exp / proto_dbl_mant - the field reads
 #include "mmgr/protostr.h"         // str.len - a word per test, bounded by a known width
-#include "mmgr/rawmemcpy.h"        // proto_raw_read - the span move pc_sb_put_n is built on
-#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
+#include "mmgr/rawmemcpy.h"        // proto_raw_read - the span move protocore_sb_put_n is built on
+#include "shared_primitives/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
 
 /** @brief Bump-append target; @c ok latches false once an append would overflow @c cap. */
 typedef struct
@@ -30,16 +30,16 @@ typedef struct
     size_t cap;
     size_t len;
     proto_bool ok;
-} pc_sb;
+} protocore_sb;
 
 /**
  * @brief Append @p sl bytes of @p s - the primitive the others build on.
  *
  * Takes the length rather than finding it. Every frame here is mostly literal text whose length the
  * compiler already knows; scanning for a NUL to rediscover it is the same waste as re-parsing a
- * format string. Appending a literal goes through pc_sb_lit, which deduces the length.
+ * format string. Appending a literal goes through protocore_sb_lit, which deduces the length.
  */
-static inline void pc_sb_put_n(pc_sb *b, const char *s, size_t sl)
+static inline void protocore_sb_put_n(protocore_sb *b, const char *s, size_t sl)
 {
     if (!b->ok)
     {
@@ -57,27 +57,27 @@ static inline void pc_sb_put_n(pc_sb *b, const char *s, size_t sl)
 }
 
 /** @brief Append NUL-terminated @p s; leaves the buffer untouched and clears @c ok if it would not fit. */
-static inline void pc_sb_put(pc_sb *b, const char *s)
+static inline void protocore_sb_put(protocore_sb *b, const char *s)
 {
     if (!b->ok)
     {
         return;
     }
-    pc_sb_put_n(b, s, str.len(s, b->cap));
+    protocore_sb_put_n(b, s, str.len(s, b->cap));
 }
 
 /**
  * @brief Append a string literal, taking the length from the array type.
  *
- * `pc_sb_put(b, "HTTP/1.1 ")` scans nine bytes at runtime to learn what the type already states;
+ * `protocore_sb_put(b, "HTTP/1.1 ")` scans nine bytes at runtime to learn what the type already states;
  * `sizeof(s) - 1` is a constant the compiler folds. A macro because only the array type carries
  * the extent - passing a literal to a function decays it to a pointer and loses the length.
  *
  * @warning @p s must be a string literal or a `char[]`. A `const char *` compiles here and yields
- *          the pointer size, so it silently appends 3 or 7 bytes. Use pc_sb_put for a runtime
+ *          the pointer size, so it silently appends 3 or 7 bytes. Use protocore_sb_put for a runtime
  *          string.
  */
-#define pc_sb_lit(b, s) pc_sb_put_n((b), (s), sizeof(s) - 1)
+#define protocore_sb_lit(b, s) protocore_sb_put_n((b), (s), sizeof(s) - 1)
 
 /**
  * @brief Append as much of @p s as fits and stop, WITHOUT latching @c ok.
@@ -85,10 +85,10 @@ static inline void pc_sb_put(pc_sb *b, const char *s)
  * For display text only - an `ls -l` line, a log message - where a short rendering is better than
  * none and nothing downstream parses the result. Never use it for a protocol field: a clipped
  * header or frame has no terminator and desynchronizes the peer, which is exactly what the
- * latching pc_sb_put exists to prevent. The two are deliberately different functions so the choice
+ * latching protocore_sb_put exists to prevent. The two are deliberately different functions so the choice
  * is visible at the call site rather than being a flag someone sets once and forgets.
  */
-static inline void pc_sb_put_clip(pc_sb *b, const char *s)
+static inline void protocore_sb_put_clip(protocore_sb *b, const char *s)
 {
     if (!b->ok || !s || b->len + 1 >= b->cap)
     {
@@ -106,13 +106,13 @@ static inline void pc_sb_put_clip(pc_sb *b, const char *s)
  * @brief Append @p v as decimal, right-aligned in at least @p columns with leading spaces, if the
  *        whole field fits - else append nothing, without latching @c ok.
  *
- * The display-text counterpart to pc_sb_u64. A half-written number reads as a different number, so
- * this one is all-or-nothing where pc_sb_put_clip is byte-wise. @p columns is what aligns a
+ * The display-text counterpart to protocore_sb_u64. A half-written number reads as a different number, so
+ * this one is all-or-nothing where protocore_sb_put_clip is byte-wise. @p columns is what aligns a
  * fixed-width column (an `ls -l` date is `%2d` day and `%5d` year); 0 asks for the natural width.
- * Space padding, not the zero padding pc_sb_uint does: a column pads to align, a field pads to a
+ * Space padding, not the zero padding protocore_sb_uint does: a column pads to align, a field pads to a
  * fixed digit count, and the two are not interchangeable on the wire.
  */
-static inline void pc_sb_u64_clip(pc_sb *b, uint64_t v, uint8_t columns)
+static inline void protocore_sb_u64_clip(protocore_sb *b, uint64_t v, uint8_t columns)
 {
     if (!b->ok)
     {
@@ -143,7 +143,7 @@ static inline void pc_sb_u64_clip(pc_sb *b, uint64_t v, uint8_t columns)
 }
 
 /** @brief Append @p s XML-escaped (&amp; &lt; &gt; &quot;); a NULL @p s appends nothing. */
-static inline void pc_sb_xml(pc_sb *b, const char *s)
+static inline void protocore_sb_xml(protocore_sb *b, const char *s)
 {
     if (!b->ok || !s)
     {
@@ -171,7 +171,7 @@ static inline void pc_sb_xml(pc_sb *b, const char *s)
         }
         if (rep)
         {
-            pc_sb_put(b, rep);
+            protocore_sb_put(b, rep);
         }
         else
         {
@@ -187,7 +187,7 @@ static inline void pc_sb_xml(pc_sb *b, const char *s)
 }
 
 /** @brief Append a single character. */
-static inline void pc_sb_ch(pc_sb *b, char c)
+static inline void protocore_sb_ch(protocore_sb *b, char c)
 {
     if (!b->ok)
     {
@@ -205,10 +205,10 @@ static inline void pc_sb_ch(pc_sb *b, char c)
  * @brief Append @p v in @p base (10 or 16), left-padded with '0' to at least @p min_digits.
  *
  * The one shared engine behind the decimal and hex appenders: measure the field, bounds-check
- * once, then fill it back-to-front in place. Same shape as pc_sb_u32 so neither needs a
+ * once, then fill it back-to-front in place. Same shape as protocore_sb_u32 so neither needs a
  * scratch array. @p min_digits is what carries a printf width like %08lx or %02d.
  */
-static inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_digits)
+static inline void protocore_sb_uint(protocore_sb *b, uint64_t v, unsigned base, unsigned min_digits)
 {
     if (!b->ok)
     {
@@ -265,7 +265,7 @@ static inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_
     {
         for (unsigned i = digits; i-- > 0;)
         {
-            b->p[b->len + i] = PC_HEX_LOWER[v & digit_mask];
+            b->p[b->len + i] = PROTOCORE_HEX_LOWER[v & digit_mask];
             v >>= bits_per_digit;
         }
     }
@@ -290,56 +290,56 @@ static inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_
 }
 
 /** @brief Append @p v as decimal, zero-padded to at least @p min_digits (printf "%0Nu"). */
-static inline void pc_sb_u32w(pc_sb *b, uint32_t v, unsigned min_digits)
+static inline void protocore_sb_u32w(protocore_sb *b, uint32_t v, unsigned min_digits)
 {
-    pc_sb_uint(b, v, 10, min_digits);
+    protocore_sb_uint(b, v, 10, min_digits);
 }
 
 /** @brief Append @p v as lowercase hex, zero-padded to at least @p min_digits (printf "%0Nx"). */
-static inline void pc_sb_hex(pc_sb *b, uint64_t v, unsigned min_digits)
+static inline void protocore_sb_hex(protocore_sb *b, uint64_t v, unsigned min_digits)
 {
-    pc_sb_uint(b, v, 16, min_digits);
+    protocore_sb_uint(b, v, 16, min_digits);
 }
 
 /** @brief Append @p v as decimal (no leading zeros; "0" for zero). */
-static inline void pc_sb_u32(pc_sb *b, uint32_t v)
+static inline void protocore_sb_u32(protocore_sb *b, uint32_t v)
 {
-    pc_sb_uint(b, v, 10, 1);
+    protocore_sb_uint(b, v, 10, 1);
 }
 
 /** @brief Append @p v as decimal (64-bit). */
-static inline void pc_sb_u64(pc_sb *b, uint64_t v)
+static inline void protocore_sb_u64(protocore_sb *b, uint64_t v)
 {
-    pc_sb_uint(b, v, 10, 1);
+    protocore_sb_uint(b, v, 10, 1);
 }
 
 /** @brief Append @p v as signed decimal (64-bit), with a leading '-' when negative. */
-static inline void pc_sb_i64(pc_sb *b, int64_t v)
+static inline void protocore_sb_i64(protocore_sb *b, int64_t v)
 {
     // Negating INT64_MIN overflows, so the magnitude is taken through unsigned arithmetic
     // rather than by negating the signed value.
     uint64_t mag = (v < 0) ? (uint64_t)(-(v + 1)) + 1u : (uint64_t)v;
     if (v < 0)
     {
-        pc_sb_ch(b, '-');
+        protocore_sb_ch(b, '-');
     }
-    pc_sb_uint(b, mag, 10, 1);
+    protocore_sb_uint(b, mag, 10, 1);
 }
 
 /** @brief True if @p v carries the IEEE-754 sign bit, including for -0.0 (a mask, not a divide). */
-static inline proto_bool pc_signbit(double v)
+static inline proto_bool protocore_signbit(double v)
 {
     return proto_dbl_sign(v) != 0u;
 }
 
 /** @brief True if @p v is an infinity: all exponent bits set, zero significand. */
-static inline proto_bool pc_isinf(double v)
+static inline proto_bool protocore_isinf(double v)
 {
     return proto_dbl_exp(v) == 0x7FFu && proto_dbl_mant(v) == 0u;
 }
 
 /** @brief True if @p v is a NaN: all exponent bits set, nonzero significand. */
-static inline proto_bool pc_isnan(double v)
+static inline proto_bool protocore_isnan(double v)
 {
     return proto_dbl_exp(v) == 0x7FFu && proto_dbl_mant(v) != 0u;
 }
@@ -350,7 +350,7 @@ static inline proto_bool pc_isnan(double v)
  * Peels digits by division so no scratch array is needed. @p point_after == 0 or == @p digits
  * emits no point.
  */
-static inline void pc_sb_digits(pc_sb *b, uint64_t mant, unsigned digits, unsigned point_after)
+static inline void protocore_sb_digits(protocore_sb *b, uint64_t mant, unsigned digits, unsigned point_after)
 {
     uint64_t div = 1;
     for (unsigned i = 1; i < digits; i++)
@@ -361,29 +361,29 @@ static inline void pc_sb_digits(pc_sb *b, uint64_t mant, unsigned digits, unsign
     {
         if (i == point_after && i != 0)
         {
-            pc_sb_ch(b, '.');
+            protocore_sb_ch(b, '.');
         }
-        pc_sb_ch(b, (char)('0' + (unsigned)((mant / div) % 10)));
+        protocore_sb_ch(b, (char)('0' + (unsigned)((mant / div) % 10)));
         div /= 10;
     }
 }
 
 /// @brief Working width of the `n * 2^s` pair below: four bits clear of the top so a decade fits.
-#define PC_G_WORK_BITS 58u
+#define PROTOCORE_G_WORK_BITS 58u
 
 /** @brief Renormalize `n * 2^s` so @p n sits in the top half of the working width. */
-static inline void pc_g_renorm(proto_u64 *n, proto_i32 *s)
+static inline void protocore_g_renorm(proto_u64 *n, proto_i32 *s)
 {
     if (*n == 0u)
     {
         return;
     }
-    while (*n >= (1ull << PC_G_WORK_BITS))
+    while (*n >= (1ull << PROTOCORE_G_WORK_BITS))
     {
         *n >>= 1;
         *s += 1;
     }
-    while (*n < (1ull << (PC_G_WORK_BITS - 1u)))
+    while (*n < (1ull << (PROTOCORE_G_WORK_BITS - 1u)))
     {
         *n <<= 1;
         *s -= 1;
@@ -391,19 +391,19 @@ static inline void pc_g_renorm(proto_u64 *n, proto_i32 *s)
 }
 
 /** @brief Multiply the pair by ten. */
-static inline void pc_g_mul10(proto_u64 *n, proto_i32 *s)
+static inline void protocore_g_mul10(proto_u64 *n, proto_i32 *s)
 {
     *n *= 10u;
-    pc_g_renorm(n, s);
+    protocore_g_renorm(n, s);
 }
 
 /** @brief Divide the pair by ten, shifting up first so the divide keeps the low bits. */
-static inline void pc_g_div10(proto_u64 *n, proto_i32 *s)
+static inline void protocore_g_div10(proto_u64 *n, proto_i32 *s)
 {
     *n <<= 4;
     *s -= 4;
     *n /= 10u;
-    pc_g_renorm(n, s);
+    protocore_g_renorm(n, s);
 }
 
 /**
@@ -412,7 +412,7 @@ static inline void pc_g_div10(proto_u64 *n, proto_i32 *s)
  * printf breaks a tie toward the even digit, and the tie is exactly the case where the bits below
  * the point are one followed by zeros.
  */
-static inline proto_u64 pc_g_round(proto_u64 n, proto_i32 s)
+static inline proto_u64 protocore_g_round(proto_u64 n, proto_i32 s)
 {
     if (s >= 0)
     {
@@ -446,7 +446,7 @@ static inline proto_u64 pc_g_round(proto_u64 n, proto_i32 s)
  * runs out of precision around 16 significant digits, so sig >= 15 can differ from libc in the
  * last digit.
  */
-static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
+static inline void protocore_sb_g(protocore_sb *b, double v, unsigned sig)
 {
     if (!b->ok)
     {
@@ -456,28 +456,28 @@ static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
     {
         sig = 1;
     }
-    if (pc_isnan(v))
+    if (protocore_isnan(v))
     {
-        pc_sb_put(b, "nan");
+        protocore_sb_put(b, "nan");
         return;
     }
     // `v < 0` is false for -0.0, but printf emits "-0" for it. The sign is a single bit of the
     // encoding, so it is read with a mask rather than recovered by dividing into it.
-    if (pc_signbit(v))
+    if (protocore_signbit(v))
     {
-        pc_sb_ch(b, '-');
+        protocore_sb_ch(b, '-');
         v = -v;
     }
-    if (pc_isinf(v))
+    if (protocore_isinf(v))
     {
-        pc_sb_put(b, "inf");
+        protocore_sb_put(b, "inf");
         return;
     }
     proto_u64 be = proto_dbl_exp(v);
     proto_u64 n = proto_dbl_mant(v);
     if (be == 0u && n == 0u)
     {
-        pc_sb_ch(b, '0');
+        protocore_sb_ch(b, '0');
         return;
     }
 
@@ -489,7 +489,7 @@ static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
         n |= 1ull << PROTO_DBL_MANT_BITS;
         s = (proto_i32)be - PROTO_DBL_BIAS - (proto_i32)PROTO_DBL_MANT_BITS;
     }
-    pc_g_renorm(&n, &s);
+    protocore_g_renorm(&n, &s);
 
     proto_u64 limit = 1u;
     for (unsigned i = 0; i < sig; i++)
@@ -499,42 +499,42 @@ static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
 
     // The binary exponent gives the decimal one to within a step, log10(2) being 78913/2^18. The
     // renormalize left the value in [2^(WORK-1+s), 2^(WORK+s)), and the settle below closes the step.
-    int e = (int)(((int64_t)((int)PC_G_WORK_BITS - 1 + s) * 78913) >> 18);
+    int e = (int)(((int64_t)((int)PROTOCORE_G_WORK_BITS - 1 + s) * 78913) >> 18);
 
     // Whole decades onto the pair, so the scale is a multiply or a divide by ten and never a power
     // of ten that leaves the range.
     int p = (int)sig - 1 - e;
     while (p > 0)
     {
-        pc_g_mul10(&n, &s);
+        protocore_g_mul10(&n, &s);
         p--;
     }
     while (p < 0)
     {
-        pc_g_div10(&n, &s);
+        protocore_g_div10(&n, &s);
         p++;
     }
 
     // A decade out either way is one more step on the pair, then the digits are taken again from
     // the unrounded value rather than rounded a second time.
-    proto_u64 mant = pc_g_round(n, s);
+    proto_u64 mant = protocore_g_round(n, s);
     for (unsigned guard = 0; guard < 4u; guard++)
     {
         if (mant >= limit) // the round carried into a new decade (9.9995 -> 10.000)
         {
-            pc_g_div10(&n, &s);
+            protocore_g_div10(&n, &s);
             e++;
         }
         else if (sig > 1u && mant < limit / 10u)
         {
-            pc_g_mul10(&n, &s);
+            protocore_g_mul10(&n, &s);
             e--;
         }
         else
         {
             break;
         }
-        mant = pc_g_round(n, s);
+        mant = protocore_g_round(n, s);
     }
 
     unsigned digits = sig;
@@ -546,62 +546,62 @@ static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
 
     if (e < -4 || e >= (int)sig) // scientific, matching %g's threshold
     {
-        pc_sb_digits(b, mant, digits, 1);
-        pc_sb_ch(b, 'e');
-        pc_sb_ch(b, e < 0 ? '-' : '+');
+        protocore_sb_digits(b, mant, digits, 1);
+        protocore_sb_ch(b, 'e');
+        protocore_sb_ch(b, e < 0 ? '-' : '+');
         unsigned mag = (unsigned)(e < 0 ? -e : e);
-        pc_sb_u32w(b, mag, 2); // %g always emits at least two exponent digits
+        protocore_sb_u32w(b, mag, 2); // %g always emits at least two exponent digits
         return;
     }
     if (e >= (int)digits - 1) // integral: all significant digits, then padding zeros
     {
-        pc_sb_digits(b, mant, digits, 0);
+        protocore_sb_digits(b, mant, digits, 0);
         for (int i = 0; i < e - (int)digits + 1; i++)
         {
-            pc_sb_ch(b, '0');
+            protocore_sb_ch(b, '0');
         }
         return;
     }
     if (e >= 0)
     {
-        pc_sb_digits(b, mant, digits, (unsigned)e + 1);
+        protocore_sb_digits(b, mant, digits, (unsigned)e + 1);
         return;
     }
-    pc_sb_put(b, "0.");
+    protocore_sb_put(b, "0.");
     for (int i = 0; i < -e - 1; i++)
     {
-        pc_sb_ch(b, '0');
+        protocore_sb_ch(b, '0');
     }
-    pc_sb_digits(b, mant, digits, 0);
+    protocore_sb_digits(b, mant, digits, 0);
 }
 
 /**
  * @brief Append @p v with exactly @p decimals digits after the point (printf "%.<decimals>f").
  *
  * Byte-identical to printf for |v| < 2^64, which is the range a fixed-decimal reading occupies.
- * A larger magnitude falls back to the significant-digit form (see pc_sb_g) rather than being
+ * A larger magnitude falls back to the significant-digit form (see protocore_sb_g) rather than being
  * rendered wrong: its exact %f expansion needs big-integer arithmetic.
  */
-static inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
+static inline void protocore_sb_fixed(protocore_sb *b, double v, unsigned decimals)
 {
     if (!b->ok)
     {
         return;
     }
-    if (pc_isnan(v))
+    if (protocore_isnan(v))
     {
-        pc_sb_put(b, "nan");
+        protocore_sb_put(b, "nan");
         return;
     }
-    // Same negative-zero rule as pc_sb_g, read from the sign bit.
-    if (pc_signbit(v))
+    // Same negative-zero rule as protocore_sb_g, read from the sign bit.
+    if (protocore_signbit(v))
     {
-        pc_sb_ch(b, '-');
+        protocore_sb_ch(b, '-');
         v = -v;
     }
-    if (pc_isinf(v))
+    if (protocore_isinf(v))
     {
-        pc_sb_put(b, "inf");
+        protocore_sb_put(b, "inf");
         return;
     }
     // Beyond the 64-bit range the integer part cannot go through uint64 at all - the cast wraps.
@@ -610,7 +610,7 @@ static inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
     // 2^64" is the exponent field alone: 64 unbiased is 1023 + 64 biased.
     if (proto_dbl_exp(v) >= (PROTO_DBL_BIAS + 64))
     {
-        pc_sb_g(b, v, 10); // 10 is the precision pc_sb_g is exact to; asking for more only adds noise
+        protocore_sb_g(b, v, 10); // 10 is the precision protocore_sb_g is exact to; asking for more only adds noise
         return;
     }
     if (decimals > 18u) // 10^19 leaves the 64-bit range the carry check below is done in
@@ -678,19 +678,19 @@ static inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
         ip++;
         frac = 0u;
     }
-    pc_sb_u64(b, ip);
+    protocore_sb_u64(b, ip);
     if (decimals)
     {
-        pc_sb_ch(b, '.');
-        pc_sb_uint(b, frac, 10, decimals);
+        protocore_sb_ch(b, '.');
+        protocore_sb_uint(b, frac, 10, decimals);
     }
 }
 
 /** @brief Append @p s as a JSON string literal: double-quoted, with `"` and `\` backslash-escaped. A NULL
  * @p s appends `""`. Control characters are passed through unescaped. */
-static inline void pc_sb_json(pc_sb *b, const char *s)
+static inline void protocore_sb_json(protocore_sb *b, const char *s)
 {
-    pc_sb_put(b, "\"");
+    protocore_sb_put(b, "\"");
     for (const char *p = s ? s : ""; *p; p++)
     {
         if (*p == '"' || *p == '\\')
@@ -712,11 +712,11 @@ static inline void pc_sb_json(pc_sb *b, const char *s)
             b->ok = PROTO_FALSE;
         }
     }
-    pc_sb_put(b, "\"");
+    protocore_sb_put(b, "\"");
 }
 
 /** @brief NUL-terminate and return the built length, or 0 if the build overflowed. */
-static inline size_t pc_sb_finish(pc_sb *b)
+static inline size_t protocore_sb_finish(protocore_sb *b)
 {
     // cap == 0 owns no bytes at all, so even the terminator is out of bounds. Every appender
     // refuses to write into a zero-capacity buffer without latching `ok`, which left this the one

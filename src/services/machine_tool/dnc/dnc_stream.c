@@ -10,7 +10,7 @@
 #include "dnc_stream.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_DNC
+#if PROTOCORE_ENABLE_DNC
 
 // Drain any reverse-channel bytes into the flow state (non-blocking); false on a recv error.
 static proto_bool flow_drain(DncFlow *flow, DncRecvFn recv, void *ctx)
@@ -23,7 +23,7 @@ static proto_bool flow_drain(DncFlow *flow, DncRecvFn recv, void *ctx)
     }
     for (int i = 0; i < r; i++)
     {
-        pc_dnc_flow_feed(flow, tmp[i]);
+        protocore_dnc_flow_feed(flow, tmp[i]);
     }
     return PROTO_TRUE;
 }
@@ -36,9 +36,9 @@ static proto_bool emit(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx,
         return PROTO_FALSE;
     }
     uint32_t polls = 0;
-    while (!pc_dnc_flow_can_send(flow))
+    while (!protocore_dnc_flow_can_send(flow))
     {
-        if (++polls > PC_DNC_XOFF_MAX_POLLS)
+        if (++polls > PROTOCORE_DNC_XOFF_MAX_POLLS)
         {
             return PROTO_FALSE; // XOFF never cleared
         }
@@ -76,8 +76,8 @@ DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_l
     }
 
     DncFlow flow;
-    pc_dnc_flow_init(&flow);
-    uint8_t buf[PC_DNC_LINE_MAX + 8];
+    protocore_dnc_flow_init(&flow);
+    uint8_t buf[PROTOCORE_DNC_LINE_MAX + 8];
 
     // leader runout
     if (cfg->leader_len && !emit_runout(&flow, send, recv, ctx, cfg->leader_len))
@@ -87,9 +87,9 @@ DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_l
 
     // program-start marker
     // A marker is at most three bytes ('%' or EOR, plus the CR/LF end-of-block) and buf is
-    // PC_DNC_LINE_MAX + 8, so the encode has no failing arm to reach here; the check is what keeps
+    // PROTOCORE_DNC_LINE_MAX + 8, so the encode has no failing arm to reach here; the check is what keeps
     // that true if the marker ever grows.
-    size_t n = pc_dnc_encode_marker(cfg, buf, sizeof(buf));
+    size_t n = protocore_dnc_encode_marker(cfg, buf, sizeof(buf));
     if (n == 0)
     {
         return DNC_STREAM_ERR_ENCODE;
@@ -113,7 +113,7 @@ DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_l
         {
             line_len--; // strip a trailing CR (CRLF sources)
         }
-        n = pc_dnc_encode_block(cfg, program + i, line_len, buf, sizeof(buf));
+        n = protocore_dnc_encode_block(cfg, program + i, line_len, buf, sizeof(buf));
         if (n == 0)
         {
             return DNC_STREAM_ERR_ENCODE; // untranslatable char or over-long block - fail closed
@@ -126,7 +126,7 @@ DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_l
     }
 
     // program-end marker (byte-identical to the start marker)
-    n = pc_dnc_encode_marker(cfg, buf, sizeof(buf));
+    n = protocore_dnc_encode_marker(cfg, buf, sizeof(buf));
     if (!emit(&flow, send, recv, ctx, buf, n))
     {
         return DNC_STREAM_ERR_IO;
@@ -141,4 +141,4 @@ DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_l
     return DNC_STREAM_OK;
 }
 
-#endif // PC_ENABLE_DNC
+#endif // PROTOCORE_ENABLE_DNC

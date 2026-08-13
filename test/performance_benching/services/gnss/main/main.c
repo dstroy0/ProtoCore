@@ -11,7 +11,7 @@
 // All of this is pure, zero-heap, no-I/O math and bit-shuffling, so every call exercises the real
 // production path. Deliberately out of scope: the NTRIP caster/listener transport glue
 // (ntrip_caster_listener.*) - it drives real TCP sockets this rig has no peer for - and the NMEA0183
-// GGA folding helper (built only under PC_ENABLE_NMEA0183, which this bench does not enable).
+// GGA folding helper (built only under PROTOCORE_ENABLE_NMEA0183, which this bench does not enable).
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/gnss -t upload --upload-port COM7
@@ -49,43 +49,43 @@ void dbench_run(void)
 
         // --- RTCM3 framing + 1005/1006 station-reference codec ---
         // Build a full 1005 frame: pack the ARP fields MSB-first, then CRC-24Q the header+payload.
-        DBENCH_OP("rtcm3_build_1005", 20000, sink += pc_rtcm3_build_1005(frame, sizeof(frame), SID, EX, EY, EZ));
+        DBENCH_OP("rtcm3_build_1005", 20000, sink += protocore_rtcm3_build_1005(frame, sizeof(frame), SID, EX, EY, EZ));
         // Build a full 1006 frame (adds the 16-bit antenna-height field).
-        DBENCH_OP("rtcm3_build_1006", 20000, sink += pc_rtcm3_build_1006(frame, sizeof(frame), SID, EX, EY, EZ, AH));
+        DBENCH_OP("rtcm3_build_1006", 20000, sink += protocore_rtcm3_build_1006(frame, sizeof(frame), SID, EX, EY, EZ, AH));
         // Parse a framed 1005: length probe + CRC-24Q verify + read the 12-bit message number.
         {
             Rtcm3Frame f;
-            DBENCH_OP("rtcm3_frame_parse", 20000, sink += pc_rtcm3_frame_parse(FRAME_1005, sizeof(FRAME_1005), &f));
+            DBENCH_OP("rtcm3_frame_parse", 20000, sink += protocore_rtcm3_frame_parse(FRAME_1005, sizeof(FRAME_1005), &f));
         }
         // Decode the 1005 payload into the station ARP struct (MSB-first bit unpack of every DF field).
         {
             const uint8_t *payload = FRAME_1005 + RTCM3_HDR_LEN;
             Rtcm3StationArp arp;
             DBENCH_OP("rtcm3_parse_1005", 20000,
-                      bsink ^= pc_rtcm3_parse_1005(payload, sizeof(FRAME_1005) - RTCM3_HDR_LEN - RTCM3_CRC_LEN, &arp));
+                      bsink ^= protocore_rtcm3_parse_1005(payload, sizeof(FRAME_1005) - RTCM3_HDR_LEN - RTCM3_CRC_LEN, &arp));
         }
         // CRC-24Q kernel over the full frame body (the RTCM3 / Qualcomm CRC).
-        DBENCH_BULK("rtcm3_crc24q", 20000, sizeof(FRAME_1005), sink += pc_rtcm3_crc24q(FRAME_1005, sizeof(FRAME_1005)));
+        DBENCH_BULK("rtcm3_crc24q", 20000, sizeof(FRAME_1005), sink += protocore_rtcm3_crc24q(FRAME_1005, sizeof(FRAME_1005)));
 
         // --- GNSS survey-in geodesy math ---
         // WGS84 geodetic -> ECEF (closed form; sin/cos/sqrt per call).
         {
             GnssGeodetic g = {40.44338, -79.94238, 312.5};
             GnssEcef e = {0, 0, 0};
-            DBENCH_OP("gnss_geodetic_to_ecef", 20000, pc_gnss_geodetic_to_ecef(&g, &e); dsink += e.x);
+            DBENCH_OP("gnss_geodetic_to_ecef", 20000, protocore_gnss_geodetic_to_ecef(&g, &e); dsink += e.x);
         }
         // ECEF -> WGS84 geodetic (6-pass iterative inverse; the more expensive direction).
         {
             GnssEcef e = {849490.0, -4813977.0, 4114789.0};
             GnssGeodetic g = {0, 0, 0};
-            DBENCH_OP("gnss_ecef_to_geodetic", 10000, pc_gnss_ecef_to_geodetic(&e, &g); dsink += g.lat_deg);
+            DBENCH_OP("gnss_ecef_to_geodetic", 10000, protocore_gnss_ecef_to_geodetic(&e, &g); dsink += g.lat_deg);
         }
         // One survey-in accumulation step (running mean + 3-D spread), the per-fix hot path.
         {
             GnssSurvey s;
-            pc_gnss_survey_reset(&s);
+            protocore_gnss_survey_reset(&s);
             GnssEcef e = {849490.0, -4813977.0, 4114789.0};
-            DBENCH_OP("gnss_survey_add_ecef", 50000, pc_gnss_survey_add_ecef(&s, &e));
+            DBENCH_OP("gnss_survey_add_ecef", 50000, protocore_gnss_survey_add_ecef(&s, &e));
         }
 
         (void)sink;

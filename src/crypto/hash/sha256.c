@@ -14,20 +14,20 @@
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
 
-#if PC_HAS_HW_SHA
+#if PROTOCORE_HAS_HW_SHA
 #include <mbedtls/sha256.h> // hardware SHA accelerator
 #else
 #include "mmgr/endian.h" // native software SHA-256
 #endif
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
-#if PC_HAS_HW_SHA
+#if PROTOCORE_HAS_HW_SHA
 
 // ---------------------------------------------------------------------------
 // HW path: streaming + one-shot via mbedtls.
 // ---------------------------------------------------------------------------
 
-void pc_sha256_init(pc_sha256_ctx *ctx, uint8_t *work)
+void protocore_sha256_init(protocore_sha256_ctx *ctx, uint8_t *work)
 {
     (void)work; // the accelerator carries its own
     mbedtls_sha256_init(&ctx->mbed);
@@ -38,7 +38,7 @@ void pc_sha256_init(pc_sha256_ctx *ctx, uint8_t *work)
 #endif
 }
 
-void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
+void protocore_sha256_update(protocore_sha256_ctx *ctx, const uint8_t *data, size_t len)
 {
 #if MBEDTLS_VERSION_MAJOR >= 3
     mbedtls_sha256_update(&ctx->mbed, data, len);
@@ -47,7 +47,7 @@ void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
 #endif
 }
 
-void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
+void protocore_sha256_final(protocore_sha256_ctx *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
 {
 #if MBEDTLS_VERSION_MAJOR >= 3
     mbedtls_sha256_finish(&ctx->mbed, digest);
@@ -57,7 +57,7 @@ void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
     mbedtls_sha256_free(&ctx->mbed);
 }
 
-void pc_sha256(const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_LEN])
+void protocore_sha256(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
 {
     (void)mbedtls_sha256(data, len, digest, 0 /* 0 = SHA-256, 1 = SHA-224 */);
 }
@@ -80,16 +80,16 @@ static const uint32_t K256[64] = {
 };
 
 // Where the 64-bit message length sits in the final block (FIPS 180-4 §5.1.1).
-#define SHA256_LEN_OFF (PC_SHA256_BLOCK_LEN - 8u)
+#define SHA256_LEN_OFF (PROTOCORE_SHA256_BLOCK_LEN - 8u)
 
 // The caller's working bytes, split: the block as it arrives, the padded last one, and the state copy
 // the padded blocks compress into so finalizing leaves the running hash alone.
 #define SHA256_OFF_RX 0u
-#define SHA256_OFF_TX (SHA256_OFF_RX + PC_SHA256_BLOCK_LEN)
-#define SHA256_OFF_STATE (SHA256_OFF_TX + PC_SHA256_BLOCK_LEN)
-static_assert(SHA256_OFF_STATE + sizeof(uint32_t) * 8 <= PC_SHA256_BORROW,
-              "PC_SHA256_BORROW is short of the schedule and the two blocks - raise it in protocore_config.h, "
-              "which derives PC_SECURE_ARENA_SIZE from it");
+#define SHA256_OFF_TX (SHA256_OFF_RX + PROTOCORE_SHA256_BLOCK_LEN)
+#define SHA256_OFF_STATE (SHA256_OFF_TX + PROTOCORE_SHA256_BLOCK_LEN)
+static_assert(SHA256_OFF_STATE + sizeof(uint32_t) * 8 <= PROTOCORE_SHA256_BORROW,
+              "PROTOCORE_SHA256_BORROW is short of the schedule and the two blocks - raise it in protocore_config.h, "
+              "which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
 static const uint32_t H0[8] = {
     0x6a09e667u, 0xbb67ae85u, 0x3c6ef372u, 0xa54ff53au, 0x510e527fu, 0x9b05688cu, 0x1f83d9abu, 0x5be0cd19u,
@@ -134,24 +134,24 @@ static inline uint32_t sha256_ssig1(uint32_t x)
 // sixteen, and sixteen is a whole number of eights, so the compression repeats every sixteen rounds -
 // written once and run four times with k stepping. Naming the register a round lands on IS the shift,
 // so no word is ever moved and the schedule stays sixteen words rather than sixty-four.
-static void sha256_block(uint32_t h[8], const uint8_t blk[PC_SHA256_BLOCK_LEN])
+static void sha256_block(uint32_t h[8], const uint8_t blk[PROTOCORE_SHA256_BLOCK_LEN])
 {
-    uint32_t m0 = pc_rd32be(blk);
-    uint32_t m1 = pc_rd32be(blk + 4);
-    uint32_t m2 = pc_rd32be(blk + 8);
-    uint32_t m3 = pc_rd32be(blk + 12);
-    uint32_t m4 = pc_rd32be(blk + 16);
-    uint32_t m5 = pc_rd32be(blk + 20);
-    uint32_t m6 = pc_rd32be(blk + 24);
-    uint32_t m7 = pc_rd32be(blk + 28);
-    uint32_t m8 = pc_rd32be(blk + 32);
-    uint32_t m9 = pc_rd32be(blk + 36);
-    uint32_t m10 = pc_rd32be(blk + 40);
-    uint32_t m11 = pc_rd32be(blk + 44);
-    uint32_t m12 = pc_rd32be(blk + 48);
-    uint32_t m13 = pc_rd32be(blk + 52);
-    uint32_t m14 = pc_rd32be(blk + 56);
-    uint32_t m15 = pc_rd32be(blk + 60);
+    uint32_t m0 = protocore_rd32be(blk);
+    uint32_t m1 = protocore_rd32be(blk + 4);
+    uint32_t m2 = protocore_rd32be(blk + 8);
+    uint32_t m3 = protocore_rd32be(blk + 12);
+    uint32_t m4 = protocore_rd32be(blk + 16);
+    uint32_t m5 = protocore_rd32be(blk + 20);
+    uint32_t m6 = protocore_rd32be(blk + 24);
+    uint32_t m7 = protocore_rd32be(blk + 28);
+    uint32_t m8 = protocore_rd32be(blk + 32);
+    uint32_t m9 = protocore_rd32be(blk + 36);
+    uint32_t m10 = protocore_rd32be(blk + 40);
+    uint32_t m11 = protocore_rd32be(blk + 44);
+    uint32_t m12 = protocore_rd32be(blk + 48);
+    uint32_t m13 = protocore_rd32be(blk + 52);
+    uint32_t m14 = protocore_rd32be(blk + 56);
+    uint32_t m15 = protocore_rd32be(blk + 60);
 
     uint32_t v0 = h[0];
     uint32_t v1 = h[1];
@@ -281,7 +281,7 @@ static void sha256_block(uint32_t h[8], const uint8_t blk[PC_SHA256_BLOCK_LEN])
     h[7] += v7;
 }
 
-void pc_sha256_init(pc_sha256_ctx *ctx, uint8_t *work)
+void protocore_sha256_init(protocore_sha256_ctx *ctx, uint8_t *work)
 {
     mem.cpy(ctx->s, H0, sizeof(H0));
     ctx->n = 0;
@@ -291,12 +291,12 @@ void pc_sha256_init(pc_sha256_ctx *ctx, uint8_t *work)
     ctx->rxlen = 0;
 }
 
-void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
+void protocore_sha256_update(protocore_sha256_ctx *ctx, const uint8_t *data, size_t len)
 {
     ctx->n += len;
     while (len > 0)
     {
-        uint32_t take = PC_SHA256_BLOCK_LEN - ctx->rxlen;
+        uint32_t take = PROTOCORE_SHA256_BLOCK_LEN - ctx->rxlen;
         if (len < take)
         {
             take = (uint32_t)len;
@@ -307,7 +307,7 @@ void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
         ctx->rxlen += take;
         data += take;
         len -= take;
-        if (ctx->rxlen == PC_SHA256_BLOCK_LEN)
+        if (ctx->rxlen == PROTOCORE_SHA256_BLOCK_LEN)
         {
             sha256_block(ctx->s, ctx->rx);
             ctx->rxlen = 0;
@@ -315,7 +315,7 @@ void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len)
     }
 }
 
-void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
+void protocore_sha256_final(protocore_sha256_ctx *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
 {
     uint64_t bitlen = ctx->n << 3;
 
@@ -325,7 +325,7 @@ void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
 
     // The last block is composed in tx, whole: what rx holds, the mark, zeros, and the length. rx is
     // read and never written back, so nothing it still carries from an earlier block reaches the wire.
-    mem.zero(ctx->tx, PC_SHA256_BLOCK_LEN);
+    mem.zero(ctx->tx, PROTOCORE_SHA256_BLOCK_LEN);
     mem.cpy(ctx->tx, ctx->rx, ctx->rxlen);
     ctx->tx[ctx->rxlen] = 0x80;
 
@@ -333,28 +333,28 @@ void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN])
     if (ctx->rxlen >= SHA256_LEN_OFF)
     {
         sha256_block(ctx->fs, ctx->tx);
-        mem.zero(ctx->tx, PC_SHA256_BLOCK_LEN);
+        mem.zero(ctx->tx, PROTOCORE_SHA256_BLOCK_LEN);
     }
 
-    pc_wr64be(ctx->tx + SHA256_LEN_OFF, bitlen);
+    protocore_wr64be(ctx->tx + SHA256_LEN_OFF, bitlen);
     sha256_block(ctx->fs, ctx->tx);
 
-    pc_wr32be(digest, ctx->fs[0]);
-    pc_wr32be(digest + 4, ctx->fs[1]);
-    pc_wr32be(digest + 8, ctx->fs[2]);
-    pc_wr32be(digest + 12, ctx->fs[3]);
-    pc_wr32be(digest + 16, ctx->fs[4]);
-    pc_wr32be(digest + 20, ctx->fs[5]);
-    pc_wr32be(digest + 24, ctx->fs[6]);
-    pc_wr32be(digest + 28, ctx->fs[7]);
+    protocore_wr32be(digest, ctx->fs[0]);
+    protocore_wr32be(digest + 4, ctx->fs[1]);
+    protocore_wr32be(digest + 8, ctx->fs[2]);
+    protocore_wr32be(digest + 12, ctx->fs[3]);
+    protocore_wr32be(digest + 16, ctx->fs[4]);
+    protocore_wr32be(digest + 20, ctx->fs[5]);
+    protocore_wr32be(digest + 24, ctx->fs[6]);
+    protocore_wr32be(digest + 28, ctx->fs[7]);
 }
 
-void pc_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_LEN])
+void protocore_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
 {
-    pc_sha256_ctx ctx = {0};
-    pc_sha256_init(&ctx, work);
-    pc_sha256_update(&ctx, data, len);
-    pc_sha256_final(&ctx, digest);
+    protocore_sha256_ctx ctx = {0};
+    protocore_sha256_init(&ctx, work);
+    protocore_sha256_update(&ctx, data, len);
+    protocore_sha256_final(&ctx, digest);
 }
 
-#endif // !PC_HAS_HW_SHA (SW path)
+#endif // !PROTOCORE_HAS_HW_SHA (SW path)

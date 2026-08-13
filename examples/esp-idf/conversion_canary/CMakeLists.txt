@@ -9,11 +9,11 @@ cmake_minimum_required(VERSION 3.16)
 
 # Repo root is three levels up (conversion_canary -> esp-idf -> examples -> root) and is itself a
 # component. Derived, so the checkout folder name does not matter.
-get_filename_component(PC_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
-set(EXTRA_COMPONENT_DIRS "${PC_ROOT}")
+get_filename_component(PROTOCORE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+set(EXTRA_COMPONENT_DIRS "${PROTOCORE_ROOT}")
 
 # Plain ESP-IDF: the library's CMakeLists leaves arduino-esp32 out of its REQUIRES under this.
-set(PC_WITH_ARDUINO OFF CACHE BOOL "" FORCE)
+set(PROTOCORE_WITH_ARDUINO OFF CACHE BOOL "" FORCE)
 
 # Build only what this project reaches. The library's registry manifest declares arduino-esp32
 # unconditionally (the manifest format cannot condition on a build flag), so the component manager
@@ -23,4 +23,4 @@ set(PC_WITH_ARDUINO OFF CACHE BOOL "" FORCE)
 set(COMPONENTS main ProtoCore)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(pc_conversion_canary)
+project(protocore_conversion_canary)

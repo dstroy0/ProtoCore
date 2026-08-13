@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // HTTP/3 dispatch-bridge test: proves an HTTP/3 request served by a *real PC route*. A
-// QUIC client in the test completes the TLS 1.3 handshake and sends an HTTP/3 GET; pc_quic_server routes
+// QUIC client in the test completes the TLS 1.3 handshake and sends an HTTP/3 GET; protocore_quic_server routes
 // it to the reserved dispatch slot; PC::match_and_execute runs the registered "/hello"
-// handler; and the handler's send() is routed back onto the request stream via pc_quic_server_respond.
-// The whole Layer-7 app is built with PC_ENABLE_HTTP3=1, so this is the end-to-end wiring: the
+// handler; and the handler's send() is routed back onto the request stream via protocore_quic_server_respond.
+// The whole Layer-7 app is built with PROTOCORE_ENABLE_HTTP3=1, so this is the end-to-end wiring: the
 // same routes serve HTTP/1.1, HTTP/2, and HTTP/3.
 //
 // The client extracts the server's ephemeral X25519 public key and its chosen connection ID from the
@@ -29,7 +29,7 @@
 
 #include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/udp.h"
-#include "pc_net_host.h"
+#include "protocore_net_host.h"
 #include <unity.h>
 
 static uint8_t tw[4096];
@@ -85,9 +85,9 @@ static int g_out_n;
 static void harvest(void)
 {
     g_out_n = 0;
-    for (size_t i = 0; i < pc_net_host_udp_count() && g_out_n < 16; i++)
+    for (size_t i = 0; i < protocore_net_host_udp_count() && g_out_n < 16; i++)
     {
-        const pc_net_host_dgram *d = pc_net_host_udp_at(i);
+        const protocore_net_host_dgram *d = protocore_net_host_udp_at(i);
         if (d->len <= sizeof(g_out[0]))
         {
             memcpy(g_out[g_out_n], d->data, d->len);
@@ -102,8 +102,8 @@ static void harvest(void)
 // the second poll is what puts its replies out.
 static void feed(const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
-    pc_net_host_udp_reset();
-    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(H3_PORT, ip, port, (void *)dg, (uint16_t)len));
+    protocore_net_host_udp_reset();
+    TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(H3_PORT, ip, port, (void *)dg, (uint16_t)len));
     service_once(0);
     Udp.listener->poll();
     harvest();
@@ -131,60 +131,60 @@ static void wr_pn(uint8_t *o, uint64_t pn, uint8_t pn_len)
 static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *dcid, uint8_t dcl, const uint8_t *scid,
                          uint8_t scl, uint64_t pn, const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    uint8_t pn_len = pc_quic_pn_length(pn, -1);
-    size_t p = pc_quic_build_long_header(out, cap, type, QUIC_VERSION_1, dcid, dcl, scid, scl, pn_len);
+    uint8_t pn_len = protocore_quic_pn_length(pn, -1);
+    size_t p = protocore_quic_build_long_header(out, cap, type, QUIC_VERSION_1, dcid, dcl, scid, scl, pn_len);
     if (type == QUIC_LP_INITIAL)
     {
-        p += pc_quic_varint_encode(out + p, cap - p, 0);
+        p += protocore_quic_varint_encode(out + p, cap - p, 0);
     }
-    p += pc_quic_varint_encode(out + p, cap - p, (uint64_t)pn_len + frame_len + 16);
+    p += protocore_quic_varint_encode(out + p, cap - p, (uint64_t)pn_len + frame_len + 16);
     size_t pn_off = p;
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
+    return protocore_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn,
                           const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    uint8_t pn_len = pc_quic_pn_length(pn, -1);
+    uint8_t pn_len = protocore_quic_pn_length(pn, -1);
     out[0] = (uint8_t)(0x40 | (pn_len - 1));
     memcpy(out + 1, dcid, dcl);
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
+    return protocore_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
 }
 static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
 {
     QuicLongHeader h;
-    TEST_ASSERT_TRUE(pc_quic_parse_long_header(dg, len, &h));
+    TEST_ASSERT_TRUE(protocore_quic_parse_long_header(dg, len, &h));
     *type = h.type;
     size_t off = h.hdr_len;
     if (h.type == QUIC_LP_INITIAL)
     {
         uint64_t tl = 0;
         size_t c = 0;
-        pc_quic_varint_decode(dg + off, len - off, &tl, &c);
+        protocore_quic_varint_decode(dg + off, len - off, &tl, &c);
         off += c + (size_t)tl;
     }
     uint64_t length = 0;
     size_t c = 0;
-    pc_quic_varint_decode(dg + off, len - off, &length, &c);
+    protocore_quic_varint_decode(dg + off, len - off, &length, &c);
     off += c;
     *wire = off + (size_t)length;
     static uint8_t work[2048];
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
+    return protocore_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
 }
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, const QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
+    return protocore_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 {
@@ -197,7 +197,7 @@ static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
             continue;
         }
         QuicFrame f;
-        size_t n = pc_quic_frame_parse(p + off, len - off, &f);
+        size_t n = protocore_quic_frame_parse(p + off, len - off, &f);
         if (!n)
         {
             break;
@@ -285,7 +285,7 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
     uint8_t plain[2048];
     for (int d = 0; d < g_out_n; d++)
     {
-        if (pc_quic_is_long_header(g_out[d][0]))
+        if (protocore_quic_is_long_header(g_out[d][0]))
         {
             continue;
         }
@@ -303,7 +303,7 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
                 continue;
             }
             QuicFrame f;
-            size_t n = pc_quic_frame_parse(plain + fo, p2 - fo, &f);
+            size_t n = protocore_quic_frame_parse(plain + fo, p2 - fo, &f);
             if (!n)
             {
                 break;
@@ -320,7 +320,7 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
             while (so < sn)
             {
                 H3Frame hf;
-                if (!pc_h3_frame_parse(sp + so, sn - so, &hf))
+                if (!protocore_h3_frame_parse(sp + so, sn - so, &hf))
                 {
                     break;
                 }
@@ -329,7 +329,7 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
                 {
                     char sc[128];
                     H3StatusCtx e = {status};
-                    pc_qpack_decode(hp, (size_t)hf.length, sc, sizeof(sc), h3_take_status, &e);
+                    protocore_qpack_decode(hp, (size_t)hf.length, sc, sizeof(sc), h3_take_status, &e);
                 }
                 else if (hf.type == H3_DATA)
                 {
@@ -355,36 +355,36 @@ void test_h3_request_served_by_route()
 
     // Bring up an HTTP/3-only PC with one route.
     on_http("/hello", HTTP_GET, h_hello);
-    TEST_ASSERT_TRUE(pc_h3_cert(CERT, sizeof(CERT), SERVER_SEED, 443));
-    TEST_ASSERT_EQUAL_INT32(PC_OK, proto_begin(NULL)); // binds the HTTP/3 UDP port
+    TEST_ASSERT_TRUE(protocore_h3_cert(CERT, sizeof(CERT), SERVER_SEED, 443));
+    TEST_ASSERT_EQUAL_INT32(PROTOCORE_OK, proto_begin(NULL)); // binds the HTTP/3 UDP port
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     // Client Initial(ClientHello) padded to the 1200-byte minimum.
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctpe[128];
-    size_t ctpl = pc_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
+    size_t ctpl = protocore_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    feed(dg, dl, "192.0.2.10", 40000); // -> pc_quic_server_poll(): opens the connection, emits the flight
+    feed(dg, dl, "192.0.2.10", 40000); // -> protocore_quic_server_poll(): opens the connection, emits the flight
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     // Learn the server's chosen SCID (for the 1-RTT short header) from the flight's long header.
     QuicLongHeader sh_hdr;
-    TEST_ASSERT_TRUE(pc_quic_parse_long_header(g_out[0], g_out_len[0], &sh_hdr));
+    TEST_ASSERT_TRUE(protocore_quic_parse_long_header(g_out[0], g_out_len[0], &sh_hdr));
     uint8_t server_scid[QUIC_MAX_CID_LEN];
     uint8_t server_scid_len = sh_hdr.scid_len;
     memcpy(server_scid, sh_hdr.scid, server_scid_len);
@@ -397,84 +397,84 @@ void test_h3_request_served_by_route()
     size_t shl = extract_crypto(plain, pt, sh);
     uint8_t server_pub[32], ecdhe[32];
     TEST_ASSERT_TRUE(server_pub_from_sh(sh, shl, server_pub));
-    pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
-    pc_sha256_ctx t;
+    protocore_x25519(ecdhe, CLIENT_PRIV, server_pub);
+    protocore_sha256_ctx t;
     uint8_t chsh[32], chsf[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, chl);
-    pc_sha256_update(&t, sh, shl);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, chl);
+    protocore_sha256_update(&t, sh, shl);
     {
-        pc_sha256_final(&t, chsh);
+        protocore_sha256_final(&t, chsh);
     }
     Tls13KeySchedule cks;
-    static uint8_t ks_store_408[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_408);
-    pc_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
+    static uint8_t ks_store_408[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_408);
+    protocore_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
     size_t hsfl = extract_crypto(plain, hpt, hsf);
-    pc_sha256_update(&t, hsf, hsfl);
-    pc_sha256_final(&t, chsf);
-    pc_tls13_ks_master(&cks, chsf);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
+    protocore_sha256_update(&t, hsf, hsfl);
+    protocore_sha256_final(&t, chsf);
+    protocore_tls13_ks_master(&cks, chsf);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
     // Client Initial(ACK) + Handshake(ACK + Finished) -> server completes the handshake.
     uint8_t ifr[64];
-    size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
+    size_t ifl = protocore_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, chsf, cfin + 4);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, chsf, cfin + 4);
     uint8_t hfr[64];
-    size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
-    hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
+    size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
+    hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     feed(idg, idl + hdl, "192.0.2.10", 40000);
 
     // Client HTTP/3 GET on request stream 0 (1-RTT); DCID is the server's SCID.
     uint8_t block[128];
-    size_t bp = pc_qpack_encode_prefix(block, sizeof(block));
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/hello", 6);
-    bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":authority", 10, "h3.test", 7);
+    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/hello", 6);
+    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":authority", 10, "h3.test", 7);
     uint8_t h3req[256];
-    size_t h3l = pc_h3_build_headers(h3req, sizeof(h3req), block, bp);
+    size_t h3l = protocore_h3_build_headers(h3req, sizeof(h3req), block, bp);
     uint8_t sfr[300];
-    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
+    size_t sfrl = protocore_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), server_scid, server_scid_len, 0, &ap_c, sfr, sfrl);
 
-    // -> pc_quic_server_poll -> pc_h3_server_request -> h_hello -> send -> respond
+    // -> protocore_quic_server_poll -> protocore_h3_server_request -> h_hello -> send -> respond
     feed(s1, s1l, "192.0.2.10", 40000);
 
     TEST_ASSERT_TRUE(g_handler_ran);                               // the registered route actually ran
     TEST_ASSERT_TRUE(response_ok(&ap_s));                          // its 200 + body came back on the request stream
-    TEST_ASSERT_EQUAL_UINT8(0, conn_pool[PC_H3_DISPATCH_SLOT].h3); // dispatch slot released
+    TEST_ASSERT_EQUAL_UINT8(0, conn_pool[PROTOCORE_H3_DISPATCH_SLOT].h3); // dispatch slot released
 
-    pc_quic_server_stop();
+    protocore_quic_server_stop();
 }
 
 // proto_begin(NULL) shape-checks that the HTTP/3 end-to-end path never takes: a server with no listeners and no
 // HTTP/3 is rejected; a plain TCP server (a listener, no HTTP/3) is accepted and its service_once() gate
-// runs with pc_h3_running still false. Must run BEFORE the h3 test, which sets pc_h3_running true for
+// runs with protocore_h3_running still false. Must run BEFORE the h3 test, which sets protocore_h3_running true for
 // the rest of the process. Separate instances so the global h3 server the other tests use is untouched.
 void test_h3_begin_edges()
 {
     // No listeners, no HTTP/3 -> rejected (listener_count==0 && !_h3_enabled true side).
-    TEST_ASSERT_EQUAL_INT32((int32_t)PC_ERR_NO_LISTENERS, proto_begin(NULL));
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_ERR_NO_LISTENERS, proto_begin(NULL));
 
     // A TCP listener, no HTTP/3 -> accepted (listener_count!=0) and the h3 bind is skipped (_h3_enabled false).
-    TEST_ASSERT_EQUAL_INT32((int32_t)PC_OK, begin_http(8080, NULL));
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OK, begin_http(8080, NULL));
 
-    // Pump the gate with h3 not running (pc_h3_running still false here) and on a non-zero worker id ->
-    // the otherwise-untaken sides of `worker_id == 0 && s_inst.pc_h3_running` in service_once().
+    // Pump the gate with h3 not running (protocore_h3_running still false here) and on a non-zero worker id ->
+    // the otherwise-untaken sides of `worker_id == 0 && s_inst.protocore_h3_running` in service_once().
     service_once(0);
     service_once(1);
 }
@@ -484,13 +484,13 @@ static proto_bool g_empty_ran = PROTO_FALSE;
 static void h_empty(uint8_t slot, HttpReq *)
 {
     g_empty_ran = PROTO_TRUE;
-    send_empty(slot, 204); // -> conn->pc_resp_sink -> pc_quic_server_respond (send_empty sink branch)
+    send_empty(slot, 204); // -> conn->protocore_resp_sink -> protocore_quic_server_respond (send_empty sink branch)
 }
 
-// Directly drive pc_h3_server_request / pc_h3_cert / send_empty over the edge inputs that the
+// Directly drive protocore_h3_server_request / protocore_h3_cert / send_empty over the edge inputs that the
 // full end-to-end path never produces: bad cert args, oversized method/path/query/authority, a query
 // string, an empty/absent :authority, and a request body. There is no live QUIC connection here, so
-// pc_quic_server_respond() harmlessly returns false for the bogus conn id; we only care that the
+// protocore_quic_server_respond() harmlessly returns false for the bogus conn id; we only care that the
 // dispatch bookkeeping runs every branch.
 void test_h3_dispatch_edges()
 {
@@ -500,20 +500,20 @@ void test_h3_dispatch_edges()
 
     const uint32_t CID = 0xDEADBEEF; // no such QUIC slot -> respond() returns false, no transport needed
 
-    // pc_h3_cert argument validation: each bad arg returns false (covers the || guard + return false).
-    TEST_ASSERT_FALSE(pc_h3_cert(NULL, sizeof(CERT), SERVER_SEED, 443));
-    TEST_ASSERT_FALSE(pc_h3_cert(CERT, 0, SERVER_SEED, 443));
-    TEST_ASSERT_FALSE(pc_h3_cert(CERT, sizeof(CERT), NULL, 443));
+    // protocore_h3_cert argument validation: each bad arg returns false (covers the || guard + return false).
+    TEST_ASSERT_FALSE(protocore_h3_cert(NULL, sizeof(CERT), SERVER_SEED, 443));
+    TEST_ASSERT_FALSE(protocore_h3_cert(CERT, 0, SERVER_SEED, 443));
+    TEST_ASSERT_FALSE(protocore_h3_cert(CERT, sizeof(CERT), NULL, 443));
 
-    // Oversized method (> PC_METHOD_BUF_SIZE) -> truncated; unknown method -> 501 via sink.
+    // Oversized method (> PROTOCORE_METHOD_BUF_SIZE) -> truncated; unknown method -> 501 via sink.
     char long_method[32];
     memset(long_method, 'A', sizeof(long_method) - 1);
     long_method[sizeof(long_method) - 1] = 0;
-    pc_h3_server_request(NULL, CID, 0, long_method, "/hello", "h3.test", NULL, 0);
+    protocore_h3_server_request(NULL, CID, 0, long_method, "/hello", "h3.test", NULL, 0);
 
     // Path carrying a short query string: '?' split + query copied (short, no truncation).
     g_handler_ran = PROTO_FALSE;
-    pc_h3_server_request(NULL, CID, 0, "GET", "/hello?a=1&b=2", "h3.test", NULL, 0);
+    protocore_h3_server_request(NULL, CID, 0, "GET", "/hello?a=1&b=2", "h3.test", NULL, 0);
     TEST_ASSERT_TRUE(g_handler_ran); // route still matched on the query-stripped path
 
     // Oversized query (> MAX_QUERY_LEN) -> query truncated.
@@ -522,48 +522,48 @@ void test_h3_dispatch_edges()
     memcpy(long_query + 1, "hello?", 6);
     memset(long_query + 7, 'q', sizeof(long_query) - 8);
     long_query[sizeof(long_query) - 1] = 0;
-    pc_h3_server_request(NULL, CID, 0, "GET", long_query, "h3.test", NULL, 0);
+    protocore_h3_server_request(NULL, CID, 0, "GET", long_query, "h3.test", NULL, 0);
 
     // Oversized path (> MAX_PATH_LEN, no query) -> path truncated; no route matches -> 404 via sink.
     char long_path[256];
     long_path[0] = '/';
     memset(long_path + 1, 'p', sizeof(long_path) - 2);
     long_path[sizeof(long_path) - 1] = 0;
-    pc_h3_server_request(NULL, CID, 0, "GET", long_path, "h3.test", NULL, 0);
+    protocore_h3_server_request(NULL, CID, 0, "GET", long_path, "h3.test", NULL, 0);
 
     // Oversized :authority (> MAX_VAL_LEN) -> Host header value truncated.
     char long_auth[128];
     memset(long_auth, 'h', sizeof(long_auth) - 1);
     long_auth[sizeof(long_auth) - 1] = 0;
-    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", long_auth, NULL, 0);
+    protocore_h3_server_request(NULL, CID, 0, "GET", "/hello", long_auth, NULL, 0);
 
     // Absent and empty :authority -> the authority guard's short-circuit branches.
-    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", NULL, NULL, 0);
-    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", "", NULL, 0);
+    protocore_h3_server_request(NULL, CID, 0, "GET", "/hello", NULL, NULL, 0);
+    protocore_h3_server_request(NULL, CID, 0, "GET", "/hello", "", NULL, 0);
 
     // Request body present (non-empty) -> body copied into the slot's HttpReq.
     static const uint8_t BODY[16] = {'h', 'e', 'l', 'l', 'o', '-', 'b', 'o', 'd', 'y', '!', '!', '!', '!', '!', '!'};
-    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", "h3.test", BODY, sizeof(BODY));
+    protocore_h3_server_request(NULL, CID, 0, "GET", "/hello", "h3.test", BODY, sizeof(BODY));
     // Non-null body pointer but zero length -> the body_len half of the guard is false.
-    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", "h3.test", BODY, 0);
+    protocore_h3_server_request(NULL, CID, 0, "GET", "/hello", "h3.test", BODY, 0);
 
-    // A handler that calls send_empty() -> exercises send_empty()'s pc_resp_sink branch.
+    // A handler that calls send_empty() -> exercises send_empty()'s protocore_resp_sink branch.
     g_empty_ran = PROTO_FALSE;
-    pc_h3_server_request(NULL, CID, 0, "GET", "/empty", "h3.test", NULL, 0);
+    protocore_h3_server_request(NULL, CID, 0, "GET", "/empty", "h3.test", NULL, 0);
     TEST_ASSERT_TRUE(g_empty_ran);
 
     // send() / send_empty() on a slot with NO HTTP/3 sink -> the non-sink (TCP-transport) branch of the
-    // pc_resp_sink guard. The slot has no pcb, so both fall straight through to http_reset().
-    conn_pool[0].pc_resp_sink = NULL;
+    // protocore_resp_sink guard. The slot has no pcb, so both fall straight through to http_reset().
+    conn_pool[0].protocore_resp_sink = NULL;
     conn_pool[0].pcb = NULL;
-    send_text(0, 200, "text/plain", "x"); // send(): pc_resp_sink == NULL
-    send_empty(0, 204);                   // send_empty(): pc_resp_sink == NULL
+    send_text(0, 200, "text/plain", "x"); // send(): protocore_resp_sink == NULL
+    send_empty(0, 204);                   // send_empty(): protocore_resp_sink == NULL
 }
 
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_h3_begin_edges); // first: before the h3 test latches pc_h3_running true
+    RUN_TEST(test_h3_begin_edges); // first: before the h3 test latches protocore_h3_running true
     RUN_TEST(test_h3_request_served_by_route);
     RUN_TEST(test_h3_dispatch_edges);
     return UNITY_END();

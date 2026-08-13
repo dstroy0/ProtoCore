@@ -1,6 +1,6 @@
 # SimaticSerial - Siemens 3964R + RK512 point-to-point link
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_SIMATIC`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_SIMATIC`
 
 ## What this example teaches
 
@@ -18,18 +18,18 @@ telegram addressing a DB / flag / I-O area, big-endian words, answered by a reac
 
 ```cpp
 // 3964R block framing (pure)
-size_t n = pc_3964r_build_block(buf, sizeof(buf), data, len, /*with_bcc=*/true);
-pc_3964r_parse_block(buf, n, true, out, sizeof(out), &olen);   // un-stuff + verify BCC
+size_t n = protocore_3964r_build_block(buf, sizeof(buf), data, len, /*with_bcc=*/true);
+protocore_3964r_parse_block(buf, n, true, out, sizeof(out), &olen);   // un-stuff + verify BCC
 
 // the interactive link state machine (drives STX/DLE + retries via a tx sink)
-pc_3964r_init(&ctx, /*high_priority=*/true, /*with_bcc=*/true, tx_sink, on_rx, user);
-pc_3964r_send(&ctx, telegram, tn, pc_millis());
-pc_3964r_rx_byte(&ctx, incoming, pc_millis());   // feed UART bytes
-pc_3964r_tick(&ctx, pc_millis());                // drive QVZ/ZVZ timeouts
+protocore_3964r_init(&ctx, /*high_priority=*/true, /*with_bcc=*/true, tx_sink, on_rx, user);
+protocore_3964r_send(&ctx, telegram, tn, protocore_millis());
+protocore_3964r_rx_byte(&ctx, incoming, protocore_millis());   // feed UART bytes
+protocore_3964r_tick(&ctx, protocore_millis());                // drive QVZ/ZVZ timeouts
 
 // RK512 telegrams (big-endian words)
-pc_rk512_build_fetch(t, sizeof(t), Rk512Area::DB, 5, 0x0000, 2);  // read DB5.DBW0, 2 words
-pc_rk512_build_send(t, sizeof(t), Rk512Area::MB, 0, 0x0010, words, 4);
+protocore_rk512_build_fetch(t, sizeof(t), Rk512Area::DB, 5, 0x0000, 2);  // read DB5.DBW0, 2 words
+protocore_rk512_build_send(t, sizeof(t), Rk512Area::MB, 0, 0x0010, words, 4);
 ```
 
 ## Run it (no second device needed)
@@ -40,7 +40,7 @@ itself. A completed round increments a counter served at `GET /simatic`:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_SIMATIC=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SIMATIC=1" \
   --lib="." examples/L7-Application/SimaticSerial/SimaticSerial.ino
 ```
 
@@ -50,7 +50,7 @@ $ curl http://192.168.1.42/simatic
 ```
 
 On a real installation station A is this device and station B a Siemens PtP CP over an RS-232/RS-485
-UART - feed the UART's received bytes to `pc_3964r_rx_byte` and let the state machine's tx sink write
+UART - feed the UART's received bytes to `protocore_3964r_rx_byte` and let the state machine's tx sink write
 the UART.
 
 ## Annotated source

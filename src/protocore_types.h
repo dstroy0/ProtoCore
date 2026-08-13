@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file types.h
+ * @file protocore_types.h
  * @brief The primitive types every other file is written in, and the one place <stdint.h> and
  *        <stddef.h> appear.
  *
@@ -82,13 +82,13 @@ typedef _Bool proto_bool;
  * src/ is C.
  */
 #ifdef __cplusplus
-#define PROTO_BEGIN_DECLS                                                                                              \
+#define PROTOCORE_BEGIN_DECLS                                                                                              \
     extern "C"                                                                                                         \
     {
-#define PROTO_END_DECLS }
+#define PROTOCORE_END_DECLS }
 #else
-#define PROTO_BEGIN_DECLS
-#define PROTO_END_DECLS
+#define PROTOCORE_BEGIN_DECLS
+#define PROTOCORE_END_DECLS
 #endif
 
 /**

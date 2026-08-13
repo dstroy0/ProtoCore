@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_tls.h
+ * @file protocore_quic_tls.h
  * @brief TLS 1.3 server handshake state machine for QUIC (RFC 9001 / RFC 8446).
  *
  * Drives the server side of the TLS 1.3 handshake that QUIC carries in CRYPTO frames. It ties the
- * key schedule (pc_tls13_kdf), the handshake messages (pc_tls13_msg), and the transport parameters
- * (pc_quic_tp) together: it runs the transcript hash, consumes the client's ClientHello, produces the
+ * key schedule (protocore_tls13_kdf), the handshake messages (protocore_tls13_msg), and the transport parameters
+ * (protocore_quic_tp) together: it runs the transcript hash, consumes the client's ClientHello, produces the
  * server flight (ServerHello at the Initial level; EncryptedExtensions + Certificate +
  * CertificateVerify + Finished at the Handshake level), derives the Handshake and 1-RTT packet keys
  * for both directions, and verifies the client's Finished.
  *
- * The transport engine (pc_quic_conn) owns CRYPTO stream reassembly and packet protection; this module
- * is transport-free. It consumes an in-order byte run (pc_quic_tls_recv_crypto returns how many bytes it
- * used) and exposes the outbound flight per encryption level (pc_quic_tls_flight), so it is fully
+ * The transport engine (protocore_quic_conn) owns CRYPTO stream reassembly and packet protection; this module
+ * is transport-free. It consumes an in-order byte run (protocore_quic_tls_recv_crypto returns how many bytes it
+ * used) and exposes the outbound flight per encryption level (protocore_quic_tls_flight), so it is fully
  * host-testable by feeding it a captured ClientHello and inspecting the flight and derived keys.
  *
- * Profile: TLS_AES_128_GCM_SHA256, X25519 (or the X25519MLKEM768 PQ/T hybrid when PC_ENABLE_PQC_KEX),
+ * Profile: TLS_AES_128_GCM_SHA256, X25519 (or the X25519MLKEM768 PQ/T hybrid when PROTOCORE_ENABLE_PQC_KEX),
  * Ed25519 certificate, no PSK / 0-RTT / client authentication. A client that offers X25519MLKEM768 but
  * sends only a classical key_share is answered with a HelloRetryRequest (RFC 8446 sec 4.1.4) so it
  * retries with the hybrid share instead of being downgraded to X25519. The ephemeral X25519 private key
@@ -33,7 +33,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
@@ -54,7 +54,7 @@ typedef struct
     QuicTransportParams params; ///< the server's transport parameters (caller sets the CIDs)
     uint8_t ephemeral_priv[32]; ///< server X25519 private key
     uint8_t random[32];         ///< ServerHello random
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
     uint8_t mlkem_m[32]; ///< ML-KEM Encaps randomness (X25519MLKEM768 hybrid); fresh per handshake
 #endif
 } QuicTlsConfig;
@@ -72,19 +72,19 @@ typedef enum PROTO_ENUM_PACKED
 typedef struct
 {
     QuicTlsConfig cfg;
-    pc_sha256_ctx transcript;             ///< running Transcript-Hash over the handshake messages
-    Tls13KeySchedule ks;                  ///< TLS 1.3 key schedule, over @ref ks_store
-    uint8_t ks_store[PC_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
+    protocore_sha256_ctx transcript;             ///< running Transcript-Hash over the handshake messages
+    Tls13KeySchedule ks;                         ///< TLS 1.3 key schedule, over @ref ks_store
+    uint8_t ks_store[PROTOCORE_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
     // The transcript hash and the one-off hashes taken beside it work out of these. Live and die with
     // this connection, so no hash on the handshake path touches a pool.
-    uint8_t hash_work[PC_SHA256_BORROW];
-    uint8_t hash_work2[PC_SHA256_BORROW];
-    uint8_t sign_work[PC_SHA512_BORROW];    ///< the CertificateVerify signature's SHA-512
-    uint8_t keys_work[PC_QUIC_KEYS_BORROW]; ///< the packet-key expansion at each encryption level
+    uint8_t hash_work[PROTOCORE_SHA256_BORROW];
+    uint8_t hash_work2[PROTOCORE_SHA256_BORROW];
+    uint8_t sign_work[PROTOCORE_SHA512_BORROW];    ///< the CertificateVerify signature's SHA-512
+    uint8_t keys_work[PROTOCORE_QUIC_KEYS_BORROW]; ///< the packet-key expansion at each encryption level
 
     QtlsState state;
     uint8_t alert; ///< TLS alert code (RFC 8446 sec 6) when state == QTLS_FAILED
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
     proto_bool hrr_sent; ///< a HelloRetryRequest was sent (X25519MLKEM768); the next ClientHello is the retry
 #endif
     proto_bool hs_keys_ready; ///< Handshake-level keys derived (after ServerHello)
@@ -98,13 +98,13 @@ typedef struct
 
     uint8_t hs_finished_hash[32]; ///< H(ClientHello..server Finished), to verify client Finished
 
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
     uint8_t flight_initial[1400]; ///< outbound Initial CRYPTO (ServerHello; hybrid key_share is ~1.1 KB)
 #else
     uint8_t flight_initial[256]; ///< outbound Initial CRYPTO (ServerHello)
 #endif
     size_t flight_initial_len;
-    uint8_t flight_hs[PC_H3_CRYPTO_BUF]; ///< outbound Handshake CRYPTO (EE..Finished)
+    uint8_t flight_hs[PROTOCORE_H3_CRYPTO_BUF]; ///< outbound Handshake CRYPTO (EE..Finished)
     size_t flight_hs_len;
 
     QuicTransportParams peer; ///< the client's parsed transport parameters
@@ -112,7 +112,7 @@ typedef struct
 } QuicTls;
 
 /** @brief Initialize a server handshake with @p cfg (copied). Resets the transcript and state. */
-void pc_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg);
+void protocore_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg);
 
 /**
  * @brief Feed in-order CRYPTO stream bytes for encryption level @p level.
@@ -123,23 +123,23 @@ void pc_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg);
  * state to QTLS_FAILED and an alert. @return the number of leading bytes of @p data consumed (a
  * partial trailing message is left for the next call).
  */
-size_t pc_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *data, size_t len);
+size_t protocore_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *data, size_t len);
 
 /**
  * @brief The pending outbound CRYPTO flight for @p level (QUIC_ENC_INITIAL / QUIC_ENC_HANDSHAKE).
  * @return a pointer to the flight bytes and its length via @p len (0 if none). The transport engine
  * fragments these into CRYPTO frames and tracks its own send offset / retransmission.
  */
-const uint8_t *pc_quic_tls_flight(const QuicTls *qt, int level, size_t *len);
+const uint8_t *protocore_quic_tls_flight(const QuicTls *qt, int level, size_t *len);
 
 /**
  * @brief The packet-protection keys for @p level (QUIC_ENC_HANDSHAKE / QUIC_ENC_APP), @p is_server
  * picking the seal (server) or open (client) direction. @return NULL if those keys are not ready.
  */
-QuicPacketKeys *pc_quic_tls_keys(QuicTls *qt, int level, proto_bool is_server);
+QuicPacketKeys *protocore_quic_tls_keys(QuicTls *qt, int level, proto_bool is_server);
 
 /** @brief The client's parsed transport parameters (valid once the ClientHello is processed). */
-const QuicTransportParams *pc_quic_tls_peer_params(const QuicTls *qt);
+const QuicTransportParams *protocore_quic_tls_peer_params(const QuicTls *qt);
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_TLS_H

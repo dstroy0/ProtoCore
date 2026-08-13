@@ -3,7 +3,7 @@
 
 /**
  * @file bus_capture.h
- * @brief Wired field-bus listen-only capture (PC_ENABLE_BUS_CAPTURE) - passive CAN sniffing.
+ * @brief Wired field-bus listen-only capture (PROTOCORE_ENABLE_BUS_CAPTURE) - passive CAN sniffing.
  *
  * The wired counterpart to the Wi-Fi promiscuous tap: put the CAN (TWAI) controller in
  * **listen-only** mode - it receives and decodes every frame on the bus but never ACKs or
@@ -25,25 +25,25 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_BUS_CAPTURE
+#if PROTOCORE_ENABLE_BUS_CAPTURE
 
 #include "shared_primitives/can.h"  // CanFrame
-#include "shared_primitives/pcap.h" // PC_DLT_CAN_SOCKETCAN
+#include "shared_primitives/pcap.h" // PROTOCORE_DLT_CAN_SOCKETCAN
 
 /** @brief A Linux SocketCAN classic frame is 16 bytes on the wire (and in a PCAP record). */
-#define PC_SOCKETCAN_FRAME_LEN 16
+#define PROTOCORE_SOCKETCAN_FRAME_LEN 16
 
 /** @brief SocketCAN can_id flag bits, set in the top of the big-endian can_id word. */
-#define PC_CAN_EFF_FLAG 0x80000000u ///< extended (29-bit) identifier
-#define PC_CAN_RTR_FLAG 0x40000000u ///< remote-transmission-request frame
-#define PC_CAN_ERR_FLAG 0x20000000u ///< error message frame
+#define PROTOCORE_CAN_EFF_FLAG 0x80000000u ///< extended (29-bit) identifier
+#define PROTOCORE_CAN_RTR_FLAG 0x40000000u ///< remote-transmission-request frame
+#define PROTOCORE_CAN_ERR_FLAG 0x20000000u ///< error message frame
 
 /**
- * @brief Format @p f as a 16-byte Linux SocketCAN frame (for a `PC_DLT_CAN_SOCKETCAN` PCAP).
+ * @brief Format @p f as a 16-byte Linux SocketCAN frame (for a `PROTOCORE_DLT_CAN_SOCKETCAN` PCAP).
  *
  * `can_id` (big-endian) = the identifier ORed with EFF / RTR flags; then the data length, three
  * reserved octets, and eight data octets (RTR frames carry no data).
- * @return ::PC_SOCKETCAN_FRAME_LEN, or 0 if @p out is null / @p cap is too small.
+ * @return ::PROTOCORE_SOCKETCAN_FRAME_LEN, or 0 if @p out is null / @p cap is too small.
  */
 size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap);
 
@@ -67,6 +67,6 @@ void bus_capture_poll(void);
 /** @brief Stop capture and release the TWAI driver. */
 void bus_capture_end(void);
 
-#endif // PC_ENABLE_BUS_CAPTURE
+#endif // PROTOCORE_ENABLE_BUS_CAPTURE
 
 #endif // PROTOCORE_BUS_CAPTURE_H

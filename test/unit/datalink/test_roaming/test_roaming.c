@@ -6,7 +6,7 @@
 
 #include "network_drivers/datalink/roaming.h"
 
-#include "mmgr/plaintext.h" // pc_roam_btm is written through mem, so it is borrowed, not declared
+#include "mmgr/plaintext.h" // protocore_roam_btm is written through mem, so it is borrowed, not declared
 #include "mmgr/protomem.h"  // mem.cpy / mem.zero
 #include <string.h>
 
@@ -23,30 +23,30 @@ static const uint8_t CUR[6] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
 static const uint8_t AP_A[6] = {0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA};
 static const uint8_t AP_B[6] = {0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB};
 
-static const pc_roam_policy POLICY = {/*roam_rssi_threshold_dbm=*/-70, /*hysteresis_db=*/8};
+static const protocore_roam_policy POLICY = {/*roam_rssi_threshold_dbm=*/-70, /*hysteresis_db=*/8};
 
 void test_stay_when_link_strong()
 {
     // Strong current link (-50); even a stronger candidate does not trigger a roam below the threshold.
-    pc_roam_neighbor nb[2] = {{{0}, 6, -45}, {{0}, 11, -80}};
+    protocore_roam_neighbor nb[2] = {{{0}, 6, -45}, {{0}, 11, -80}};
     memcpy(nb[0].bssid, AP_A, 6);
     memcpy(nb[1].bssid, AP_B, 6);
-    pc_roam_decision d;
+    protocore_roam_decision d;
     Roam.decide(CUR, -50, nb, 2, NULL, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
-    TEST_ASSERT_EQUAL(PC_ROAM_NONE, d.reason);
+    TEST_ASSERT_EQUAL(PROTOCORE_ROAM_NONE, d.reason);
 }
 
 void test_roam_on_low_rssi_to_strongest()
 {
     // Weak current link (-78) and AP_A is clearly stronger (-55): roam to AP_A.
-    pc_roam_neighbor nb[2] = {{{0}, 6, -55}, {{0}, 11, -85}};
+    protocore_roam_neighbor nb[2] = {{{0}, 6, -55}, {{0}, 11, -85}};
     memcpy(nb[0].bssid, AP_A, 6);
     memcpy(nb[1].bssid, AP_B, 6);
-    pc_roam_decision d;
+    protocore_roam_decision d;
     Roam.decide(CUR, -78, nb, 2, NULL, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
-    TEST_ASSERT_EQUAL(PC_ROAM_LOW_RSSI, d.reason);
+    TEST_ASSERT_EQUAL(PROTOCORE_ROAM_LOW_RSSI, d.reason);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
     TEST_ASSERT_EQUAL_UINT8(6, d.target_channel);
 }
@@ -54,22 +54,22 @@ void test_roam_on_low_rssi_to_strongest()
 void test_hysteresis_blocks_marginal_roam()
 {
     // Weak link (-78) but the best candidate is only 4 dB better (< 8 dB hysteresis): stay.
-    pc_roam_neighbor nb[1] = {{{0}, 6, -74}};
+    protocore_roam_neighbor nb[1] = {{{0}, 6, -74}};
     memcpy(nb[0].bssid, AP_A, 6);
-    pc_roam_decision d;
+    protocore_roam_decision d;
     Roam.decide(CUR, -78, nb, 1, NULL, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
 }
 
 void test_btm_imminent_forces_roam()
 {
-    pc_roam_neighbor nb[2] = {{{0}, 6, -60}, {{0}, 11, -50}};
+    protocore_roam_neighbor nb[2] = {{{0}, 6, -60}, {{0}, 11, -50}};
     memcpy(nb[0].bssid, AP_A, 6);
     memcpy(nb[1].bssid, AP_B, 6);
-    size_t scope = pc_plaintext_mark();
-    pc_span bs = pc_plaintext_span(sizeof(pc_roam_btm), 8);
-    TEST_ASSERT_TRUE(pc_span_ok(bs));
-    pc_roam_btm *btm = (pc_roam_btm *)bs.buf;
+    size_t scope = protocore_plaintext_mark();
+    protocore_span bs = protocore_plaintext_span(sizeof(protocore_roam_btm), 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(bs));
+    protocore_roam_btm *btm = (protocore_roam_btm *)bs.buf;
     mem.zero(btm, sizeof(*btm));
     btm->present = PROTO_TRUE;
     btm->disassoc_imminent = PROTO_TRUE;
@@ -78,10 +78,10 @@ void test_btm_imminent_forces_roam()
 
     // A strong current link (-45) would normally stay, but disassoc-imminent forces the roam to the
     // preferred AP_A.
-    pc_roam_decision d;
+    protocore_roam_decision d;
     Roam.decide(CUR, -45, nb, 2, btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
-    TEST_ASSERT_EQUAL(PC_ROAM_BTM_IMMINENT, d.reason);
+    TEST_ASSERT_EQUAL(PROTOCORE_ROAM_BTM_IMMINENT, d.reason);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
 
     // No preferred -> roam to the strongest candidate (AP_B).
@@ -89,24 +89,24 @@ void test_btm_imminent_forces_roam()
     Roam.decide(CUR, -45, nb, 2, btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_B, d.target_bssid, 6);
-    pc_plaintext_release(scope);
+    protocore_plaintext_release(scope);
 }
 
 void test_btm_suggested_honoured_only_if_not_weaker()
 {
-    pc_roam_neighbor nb[1] = {{{0}, 11, -55}}; // AP_B at -55
+    protocore_roam_neighbor nb[1] = {{{0}, 11, -55}}; // AP_B at -55
     memcpy(nb[0].bssid, AP_B, 6);
-    size_t scope = pc_plaintext_mark();
-    pc_span bs = pc_plaintext_span(sizeof(pc_roam_btm), 8);
-    TEST_ASSERT_TRUE(pc_span_ok(bs));
-    pc_roam_btm *btm = (pc_roam_btm *)bs.buf;
+    size_t scope = protocore_plaintext_mark();
+    protocore_span bs = protocore_plaintext_span(sizeof(protocore_roam_btm), 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(bs));
+    protocore_roam_btm *btm = (protocore_roam_btm *)bs.buf;
     mem.zero(btm, sizeof(*btm));
     btm->present = PROTO_TRUE;
     btm->has_preferred = PROTO_TRUE;
     mem.cpy(btm->preferred_bssid, AP_B, 6);
 
     // Current link -50 (strong), suggested AP_B is -55 (weaker): do NOT chase into a worse AP.
-    pc_roam_decision d;
+    protocore_roam_decision d;
     Roam.decide(CUR, -50, nb, 1, btm, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
 
@@ -114,26 +114,26 @@ void test_btm_suggested_honoured_only_if_not_weaker()
     nb[0].rssi_dbm = -48;
     Roam.decide(CUR, -50, nb, 1, btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
-    TEST_ASSERT_EQUAL(PC_ROAM_BTM_SUGGESTED, d.reason);
+    TEST_ASSERT_EQUAL(PROTOCORE_ROAM_BTM_SUGGESTED, d.reason);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_B, d.target_bssid, 6);
-    pc_plaintext_release(scope);
+    protocore_plaintext_release(scope);
 }
 
 void test_never_targets_current_and_guards()
 {
     // The neighbour list contains only the current BSSID -> nothing to roam to even on a weak link.
-    pc_roam_neighbor nb[1] = {{{0}, 6, -30}};
+    protocore_roam_neighbor nb[1] = {{{0}, 6, -30}};
     memcpy(nb[0].bssid, CUR, 6);
-    pc_roam_decision d;
+    protocore_roam_decision d;
     Roam.decide(CUR, -90, nb, 1, NULL, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
 
     // A null policy falls back to a conservative default (threshold -75, hysteresis 8).
-    pc_roam_neighbor good[1] = {{{0}, 6, -50}};
+    protocore_roam_neighbor good[1] = {{{0}, 6, -50}};
     memcpy(good[0].bssid, AP_A, 6);
     Roam.decide(CUR, -80, good, 1, NULL, NULL, &d);
     TEST_ASSERT_TRUE(d.roam);
-    TEST_ASSERT_EQUAL(PC_ROAM_LOW_RSSI, d.reason);
+    TEST_ASSERT_EQUAL(PROTOCORE_ROAM_LOW_RSSI, d.reason);
 
     // Null out is a no-op (no crash); an empty neighbour list stays.
     Roam.decide(CUR, -90, NULL, 0, NULL, &POLICY, NULL);
@@ -170,19 +170,19 @@ void test_parse_neighbor_report()
     buf[p++] = 3;
     p = nr_elem(buf, p, AP_B, 11);
 
-    pc_roam_neighbor nb[4];
+    protocore_roam_neighbor nb[4];
     uint8_t count = Roam.parse_neighbor_report(buf, p, nb, 4);
     TEST_ASSERT_EQUAL_UINT8(2, count);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, nb[0].bssid, 6);
     TEST_ASSERT_EQUAL_UINT8(6, nb[0].channel);
-    TEST_ASSERT_EQUAL_INT8(PC_ROAM_RSSI_UNKNOWN, nb[0].rssi_dbm); // RSSI not in the report
+    TEST_ASSERT_EQUAL_INT8(PROTOCORE_ROAM_RSSI_UNKNOWN, nb[0].rssi_dbm); // RSSI not in the report
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_B, nb[1].bssid, 6);
     TEST_ASSERT_EQUAL_UINT8(11, nb[1].channel);
 
     // End to end: fill measured RSSI, then the decision layer picks the strong candidate on a weak link.
     nb[0].rssi_dbm = -50;
     nb[1].rssi_dbm = -80;
-    pc_roam_decision d;
+    protocore_roam_decision d;
     Roam.decide(CUR, -78, nb, count, NULL, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
@@ -194,7 +194,7 @@ void test_parse_neighbor_report()
 
 void test_parse_neighbor_report_edges()
 {
-    pc_roam_neighbor nb[4];
+    protocore_roam_neighbor nb[4];
     // A neighbor element shorter than the 13-octet body is skipped (not decoded).
     uint8_t shortelem[12] = {52, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     TEST_ASSERT_EQUAL_UINT8(0, Roam.parse_neighbor_report(shortelem, sizeof(shortelem), nb, 4));
@@ -217,10 +217,10 @@ void test_parse_btm_request()
     f[p++] = 0x0A;              // validity interval
     p = nr_elem(f, p, AP_A, 6); // candidate list
 
-    size_t scope = pc_plaintext_mark();
-    pc_span bs = pc_plaintext_span(sizeof(pc_roam_btm), 8);
-    TEST_ASSERT_TRUE(pc_span_ok(bs));
-    pc_roam_btm *btm = (pc_roam_btm *)bs.buf;
+    size_t scope = protocore_plaintext_mark();
+    protocore_span bs = protocore_plaintext_span(sizeof(protocore_roam_btm), 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(bs));
+    protocore_roam_btm *btm = (protocore_roam_btm *)bs.buf;
     TEST_ASSERT_TRUE(Roam.parse_btm_request(f, p, btm));
     TEST_ASSERT_TRUE(btm->present);
     TEST_ASSERT_TRUE(btm->disassoc_imminent);
@@ -228,14 +228,14 @@ void test_parse_btm_request()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, btm->preferred_bssid, 6);
 
     // Feed the parsed hint to the decision layer: even a strong link roams to the preferred AP.
-    pc_roam_neighbor nb[1] = {{{0}, 6, -60}};
+    protocore_roam_neighbor nb[1] = {{{0}, 6, -60}};
     memcpy(nb[0].bssid, AP_A, 6);
-    pc_roam_decision d;
+    protocore_roam_decision d;
     Roam.decide(CUR, -45, nb, 1, btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
-    TEST_ASSERT_EQUAL(PC_ROAM_BTM_IMMINENT, d.reason);
+    TEST_ASSERT_EQUAL(PROTOCORE_ROAM_BTM_IMMINENT, d.reason);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
-    pc_plaintext_release(scope);
+    protocore_plaintext_release(scope);
 }
 
 void test_parse_btm_request_optional_fields_and_guards()
@@ -257,10 +257,10 @@ void test_parse_btm_request_optional_fields_and_guards()
     }
     p = nr_elem(f, p, AP_B, 11);
 
-    size_t scope = pc_plaintext_mark();
-    pc_span bs = pc_plaintext_span(sizeof(pc_roam_btm), 8);
-    TEST_ASSERT_TRUE(pc_span_ok(bs));
-    pc_roam_btm *btm = (pc_roam_btm *)bs.buf;
+    size_t scope = protocore_plaintext_mark();
+    protocore_span bs = protocore_plaintext_span(sizeof(protocore_roam_btm), 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(bs));
+    protocore_roam_btm *btm = (protocore_roam_btm *)bs.buf;
     TEST_ASSERT_TRUE(Roam.parse_btm_request(f, p, btm));
     TEST_ASSERT_TRUE(btm->has_preferred);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_B, btm->preferred_bssid, 6); // decoded past the termination field
@@ -277,7 +277,7 @@ void test_parse_btm_request_optional_fields_and_guards()
     TEST_ASSERT_FALSE(Roam.parse_btm_request(wrong, sizeof(wrong), btm));
     TEST_ASSERT_FALSE(Roam.parse_btm_request(f, 5, btm)); // too short
     TEST_ASSERT_FALSE(Roam.parse_btm_request(NULL, 7, btm));
-    pc_plaintext_release(scope);
+    protocore_plaintext_release(scope);
 }
 
 int main()

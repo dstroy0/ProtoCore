@@ -1,6 +1,6 @@
 # Diagnostics - a build configuration endpoint
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_DIAG`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_DIAG`
 
 ## What this example teaches
 
@@ -28,7 +28,7 @@ answers 503 with an empty body, so no partial document reaches the wire.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_DIAG=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DIAG=1" \
   --lib="." examples/L7-Application/Diagnostics/Diagnostics.ino
 ```
 
@@ -45,7 +45,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_DIAG 1
+#define PROTOCORE_ENABLE_DIAG 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

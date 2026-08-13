@@ -8,37 +8,40 @@
 
 #include "network_drivers/tls/tls_conn.h"
 
-#if PC_TLS_SOFTWARE
+#if PROTOCORE_TLS_SOFTWARE
 
-#include "crypto/asymmetric/curve25519.h" // pc_x25519, pc_x25519_base
-#include "crypto/ct_eq.h"                 // pc_ct_eq: the Finished compare
+#include "crypto/asymmetric/curve25519.h" // protocore_x25519, protocore_x25519_base
+#include "crypto/ct_eq.h"                 // protocore_ct_eq: the Finished compare
 #include "mmgr/rawmemcpy.h"               // proto_raw_read
-#include "mmgr/secure.h"                  // the borrow this driver runs out of, and pc_secure_wipe
+#include "mmgr/secure.h"                  // the borrow this driver runs out of, and protocore_secure_wipe
 
-// The secure-pool term this file declares against PC_SECURE_ARENA_SIZE: one borrow per TLS
+// The secure-pool term this file declares against PROTOCORE_SECURE_ARENA_SIZE: one borrow per TLS
 // connection, taken from the persistent end and held for the life of the connection.
-#define PC_TLS_CONN_BORROW                                                                                             \
-    ((size_t)PC_TLS_CONN_MSG_CAP + PC_TLS_CONN_REC_CAP + PC_TLS_CONN_TERMS_CAP + PC_TLS_CONN_STATE_CAP)
-static_assert(PC_WORK_TLS_CONN >= (size_t)MAX_TLS_CONNS * PC_TLS_CONN_BORROW,
-              "PC_WORK_TLS_CONN must cover one TX + RX + terms + state borrow per TLS connection: raise it in "
+#define PROTOCORE_TLS_CONN_BORROW                                                                                      \
+    ((size_t)PROTOCORE_TLS_CONN_MSG_CAP + PROTOCORE_TLS_CONN_REC_CAP + PROTOCORE_TLS_CONN_TERMS_CAP +                  \
+     PROTOCORE_TLS_CONN_STATE_CAP)
+static_assert(PROTOCORE_WORK_TLS_CONN >= (size_t)MAX_TLS_CONNS * PROTOCORE_TLS_CONN_BORROW,
+              "PROTOCORE_WORK_TLS_CONN must cover one TX + RX + terms + state borrow per TLS connection: raise it in "
               "protocore_config.h");
-static_assert(PC_SHA256_BORROW + sizeof(Tls13ClientHello) + PC_TLS13_KS_BORROW + PC_SHA512_BORROW <=
-                  PC_TLS_CONN_STATE_CAP,
-              "PC_TLS_CONN_STATE_CAP must cover the transcript's working bytes, the parsed ClientHello, the "
+static_assert(PROTOCORE_SHA256_BORROW + sizeof(Tls13ClientHello) + PROTOCORE_TLS13_KS_BORROW +
+                      PROTOCORE_SHA512_BORROW <=
+                  PROTOCORE_TLS_CONN_STATE_CAP,
+              "PROTOCORE_TLS_CONN_STATE_CAP must cover the transcript's working bytes, the parsed ClientHello, the "
               "key schedule and the Ed25519 signature's SHA-512: raise it in protocore_config.h");
 
 // Offsets into the one borrow.
 #define TLS_OFF_TX 0
-#define TLS_OFF_RX ((size_t)PC_TLS_CONN_MSG_CAP)
-#define TLS_OFF_TERMS (TLS_OFF_RX + PC_TLS_CONN_REC_CAP)
-#define TLS_OFF_HASH (TLS_OFF_TERMS + PC_TLS_CONN_TERMS_CAP)
-#define TLS_OFF_HELLO (TLS_OFF_HASH + PC_SHA256_BORROW)
+#define TLS_OFF_RX ((size_t)PROTOCORE_TLS_CONN_MSG_CAP)
+#define TLS_OFF_TERMS (TLS_OFF_RX + PROTOCORE_TLS_CONN_REC_CAP)
+#define TLS_OFF_HASH (TLS_OFF_TERMS + PROTOCORE_TLS_CONN_TERMS_CAP)
+#define TLS_OFF_HELLO (TLS_OFF_HASH + PROTOCORE_SHA256_BORROW)
 #define TLS_OFF_KS (TLS_OFF_HELLO + sizeof(Tls13ClientHello))
-#define TLS_OFF_SIGN (TLS_OFF_KS + PC_TLS13_KS_BORROW)
+#define TLS_OFF_SIGN (TLS_OFF_KS + PROTOCORE_TLS13_KS_BORROW)
 
 // The profile in tls_conn.h: the portable arm authenticates by RFC 7250 raw public key, so the
 // Certificate message it builds is the RPK one.
-static_assert(PC_ENABLE_TLS_RPK, "PC_TLS_SOFTWARE authenticates by RFC 7250 raw public key: set PC_ENABLE_TLS_RPK");
+static_assert(PROTOCORE_ENABLE_TLS_RPK,
+              "PROTOCORE_TLS_SOFTWARE authenticates by RFC 7250 raw public key: set PROTOCORE_ENABLE_TLS_RPK");
 
 // RFC 8446 sec 6.2 alerts this driver raises.
 #define TLS_ALERT_HANDSHAKE_FAILURE 40
@@ -68,14 +71,14 @@ static int fail(TlsConn *c, uint8_t alert)
 // Fold a whole handshake message (header included) into the running Transcript-Hash.
 static void transcript_add(TlsConn *c, const uint8_t *msg, size_t len)
 {
-    pc_sha256_update(&c->transcript, msg, len);
+    protocore_sha256_update(&c->transcript, msg, len);
 }
 
 // The Transcript-Hash so far into terms[off]. Finalizing compresses the padded blocks into a copy of
 // the state, so the running context is untouched and keeps taking messages.
 static void transcript_peek(TlsConn *c, size_t off)
 {
-    pc_sha256_final(&c->transcript, c->terms + off);
+    protocore_sha256_final(&c->transcript, c->terms + off);
 }
 
 // The body length a handshake message header declares.
@@ -93,7 +96,7 @@ static size_t emit_encrypted(TlsConn *c, size_t msg_len, uint8_t *out, size_t ou
         return 0;
     }
     transcript_add(c, c->tx, msg_len);
-    return TlsRecord.protect(&c->hs_tx, PC_TLS_CT_HANDSHAKE, c->tx, msg_len, out, out_cap);
+    return TlsRecord.protect(&c->hs_tx, PROTOCORE_TLS_CT_HANDSHAKE, c->tx, msg_len, out, out_cap);
 }
 
 // ---------------------------------------------------------------------------
@@ -104,21 +107,21 @@ static size_t emit_encrypted(TlsConn *c, size_t msg_len, uint8_t *out, size_t ou
 // Bytes written to out, or a negative alert-bearing failure.
 static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
 {
-    pc_x25519_base(c->terms + TLS_TERM_SHARE, c->cfg->ephemeral_priv);
-    pc_x25519(c->terms + TLS_TERM_SECRET, c->cfg->ephemeral_priv, c->hello->client_x25519);
+    protocore_x25519_base(c->terms + TLS_TERM_SHARE, c->cfg->ephemeral_priv);
+    protocore_x25519(c->terms + TLS_TERM_SECRET, c->cfg->ephemeral_priv, c->hello->client_x25519);
 
     size_t off = 0;
 
     // ServerHello travels as TLSPlaintext: the keys it establishes do not protect it.
-    size_t n = pc_tls13_build_server_hello(c->tx, PC_TLS_CONN_MSG_CAP, c->cfg->random, c->hello->session_id,
-                                           c->hello->session_id_len, c->terms + TLS_TERM_SHARE, TLS13_SECRET_LEN,
-                                           TLS_GROUP_X25519, PROTO_FALSE, NULL, 0);
+    size_t n = protocore_tls13_build_server_hello(
+        c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->random, c->hello->session_id, c->hello->session_id_len,
+        c->terms + TLS_TERM_SHARE, TLS13_SECRET_LEN, TLS_GROUP_X25519, PROTO_FALSE, NULL, 0);
     if (n == 0)
     {
         return fail(c, TLS_ALERT_INTERNAL_ERROR);
     }
     transcript_add(c, c->tx, n);
-    size_t w = TlsRecord.plaintext_build(PC_TLS_CT_HANDSHAKE, c->tx, n, out + off, out_cap - off);
+    size_t w = TlsRecord.plaintext_build(PROTOCORE_TLS_CT_HANDSHAKE, c->tx, n, out + off, out_cap - off);
     if (w == 0)
     {
         return fail(c, TLS_ALERT_INTERNAL_ERROR);
@@ -127,12 +130,12 @@ static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
 
     // Everything from here is protected by the handshake traffic keys, keyed off CH..SH.
     transcript_peek(c, TLS_TERM_HASH);
-    pc_tls13_ks_handshake(&c->ks, c->terms + TLS_TERM_SECRET, c->terms + TLS_TERM_HASH, TLS13_SECRET_LEN);
+    protocore_tls13_ks_handshake(&c->ks, c->terms + TLS_TERM_SECRET, c->terms + TLS_TERM_HASH, TLS13_SECRET_LEN);
     TlsRecord.keys_derive(&c->hs_tx, TLS_CIPHER_AES_128_GCM_SHA256, c->ks.s + TLS13_KS_SERVER_HS);
     TlsRecord.keys_derive(&c->hs_rx, TLS_CIPHER_AES_128_GCM_SHA256, c->ks.s + TLS13_KS_CLIENT_HS);
     c->hs_keys_ready = PROTO_TRUE;
 
-    n = pc_tls13_build_encrypted_extensions_empty(c->tx, PC_TLS_CONN_MSG_CAP, PROTO_TRUE);
+    n = protocore_tls13_build_encrypted_extensions_empty(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, PROTO_TRUE);
     w = emit_encrypted(c, n, out + off, out_cap - off);
     if (w == 0)
     {
@@ -140,7 +143,7 @@ static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
     }
     off += w;
 
-    n = pc_tls13_build_certificate_rpk(c->tx, PC_TLS_CONN_MSG_CAP, c->cfg->ed25519_pub);
+    n = protocore_tls13_build_certificate_rpk(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->ed25519_pub);
     w = emit_encrypted(c, n, out + off, out_cap - off);
     if (w == 0)
     {
@@ -150,8 +153,8 @@ static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
 
     // CertificateVerify signs the transcript through the Certificate message.
     transcript_peek(c, TLS_TERM_HASH);
-    n = pc_tls13_build_cert_verify(c->sign_work, c->tx, PC_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_HASH,
-                                   c->cfg->ed25519_seed);
+    n = protocore_tls13_build_cert_verify(c->sign_work, c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_HASH,
+                                          c->cfg->ed25519_seed);
     w = emit_encrypted(c, n, out + off, out_cap - off);
     if (w == 0)
     {
@@ -161,8 +164,9 @@ static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
 
     // Finished covers the transcript through CertificateVerify.
     transcript_peek(c, TLS_TERM_HASH);
-    pc_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_SERVER_HS, c->terms + TLS_TERM_HASH, c->terms + TLS_TERM_MAC);
-    n = pc_tls13_build_finished(c->tx, PC_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_MAC);
+    protocore_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_SERVER_HS, c->terms + TLS_TERM_HASH,
+                                 c->terms + TLS_TERM_MAC);
+    n = protocore_tls13_build_finished(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_MAC);
     w = emit_encrypted(c, n, out + off, out_cap - off);
     if (w == 0)
     {
@@ -172,7 +176,7 @@ static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
 
     // The application keys are keyed off CH..server Finished, which is the transcript right now.
     transcript_peek(c, TLS_TERM_HS_FIN);
-    pc_tls13_ks_master(&c->ks, c->terms + TLS_TERM_HS_FIN);
+    protocore_tls13_ks_master(&c->ks, c->terms + TLS_TERM_HS_FIN);
     TlsRecord.keys_derive(&c->ap_tx, TLS_CIPHER_AES_128_GCM_SHA256, c->ks.s + TLS13_KS_SERVER_AP);
     TlsRecord.keys_derive(&c->ap_rx, TLS_CIPHER_AES_128_GCM_SHA256, c->ks.s + TLS13_KS_CLIENT_AP);
     c->ap_keys_ready = PROTO_TRUE;
@@ -184,7 +188,7 @@ static int server_flight(TlsConn *c, uint8_t *out, size_t out_cap)
 // A ClientHello arrived whole. Check it against the profile and answer it.
 static int server_on_client_hello(TlsConn *c, const uint8_t *msg, size_t len, uint8_t *out, size_t out_cap)
 {
-    if (!pc_tls13_parse_client_hello(msg, len, c->hello, PROTO_FALSE))
+    if (!protocore_tls13_parse_client_hello(msg, len, c->hello, PROTO_FALSE))
     {
         return fail(c, TLS_ALERT_DECODE_ERROR);
     }
@@ -206,8 +210,9 @@ static int server_on_finished(TlsConn *c, const uint8_t *msg, size_t len)
     {
         return fail(c, TLS_ALERT_DECODE_ERROR);
     }
-    pc_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_CLIENT_HS, c->terms + TLS_TERM_HS_FIN, c->terms + TLS_TERM_MAC);
-    if (!pc_ct_eq(c->terms + TLS_TERM_MAC, msg + TLS_HS_HDR_LEN, TLS13_SECRET_LEN))
+    protocore_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_CLIENT_HS, c->terms + TLS_TERM_HS_FIN,
+                                 c->terms + TLS_TERM_MAC);
+    if (!protocore_ct_eq(c->terms + TLS_TERM_MAC, msg + TLS_HS_HDR_LEN, TLS13_SECRET_LEN))
     {
         return fail(c, TLS_ALERT_DECRYPT_ERROR);
     }
@@ -229,8 +234,8 @@ proto_bool tls_conn_slot_storage(TlsConn *c)
     {
         return PROTO_TRUE;
     }
-    pc_span b = secure.persist_span(PC_TLS_CONN_BORROW);
-    if (!pc_span_ok(b))
+    protocore_span b = secure.persist_span(PROTOCORE_TLS_CONN_BORROW);
+    if (!protocore_span_ok(b))
     {
         return PROTO_FALSE;
     }
@@ -252,23 +257,23 @@ static proto_bool conn_init(TlsConn *c, TlsRole role, const TlsConnConfig *cfg)
     }
     // The bytes carry the previous tenant's key material; the pointers to them stay, or the next
     // init would ask the persistent end for a second borrow it never gives back.
-    pc_secure_wipe(c->tx, PC_TLS_CONN_BORROW);
-    pc_secure_wipe(&c->ks, sizeof(c->ks));
-    pc_secure_wipe(&c->hs_tx, sizeof(c->hs_tx));
-    pc_secure_wipe(&c->hs_rx, sizeof(c->hs_rx));
-    pc_secure_wipe(&c->ap_tx, sizeof(c->ap_tx));
-    pc_secure_wipe(&c->ap_rx, sizeof(c->ap_rx));
+    protocore_secure_wipe(c->tx, PROTOCORE_TLS_CONN_BORROW);
+    protocore_secure_wipe(&c->ks, sizeof(c->ks));
+    protocore_secure_wipe(&c->hs_tx, sizeof(c->hs_tx));
+    protocore_secure_wipe(&c->hs_rx, sizeof(c->hs_rx));
+    protocore_secure_wipe(&c->ap_tx, sizeof(c->ap_tx));
+    protocore_secure_wipe(&c->ap_rx, sizeof(c->ap_rx));
     c->hs_keys_ready = PROTO_FALSE;
     c->ap_keys_ready = PROTO_FALSE;
     c->alert = 0;
     c->cfg = cfg;
     c->role = role;
     c->state = TLS_CONN_START;
-    pc_sha256_init(&c->transcript, c->hash_work);
-    return pc_tls13_ks_early(&TLS13_KDF, &c->ks, c->ks_work);
+    protocore_sha256_init(&c->transcript, c->hash_work);
+    return protocore_tls13_ks_early(&TLS13_KDF, &c->ks, c->ks_work);
 }
 
-// The client half needs the mirror of pc_tls13_msg - a ClientHello builder and a ServerHello
+// The client half needs the mirror of protocore_tls13_msg - a ClientHello builder and a ServerHello
 // parser - which that module does not have yet. Until it does, a client connection refuses.
 static size_t conn_start(TlsConn *c, uint8_t *out, size_t out_cap)
 {
@@ -297,10 +302,10 @@ static int conn_process(TlsConn *c, size_t rx_len, uint8_t *out, size_t out_cap)
     const uint8_t *msg = pt.fragment;
     size_t len = pt.frag_len;
     uint8_t inner_type = pt.content_type;
-    if (inner_type == PC_TLS_CT_APPLICATION_DATA && c->hs_keys_ready)
+    if (inner_type == PROTOCORE_TLS_CT_APPLICATION_DATA && c->hs_keys_ready)
     {
         TlsCiphertext info = {0};
-        if (!TlsRecord.unprotect(&c->hs_rx, c->rx, rx_len, c->tx, PC_TLS_CONN_MSG_CAP, &info))
+        if (!TlsRecord.unprotect(&c->hs_rx, c->rx, rx_len, c->tx, PROTOCORE_TLS_CONN_MSG_CAP, &info))
         {
             return fail(c, TLS_ALERT_DECRYPT_ERROR);
         }
@@ -309,11 +314,11 @@ static int conn_process(TlsConn *c, size_t rx_len, uint8_t *out, size_t out_cap)
         inner_type = info.content_type;
     }
 
-    if (inner_type == PC_TLS_CT_CHANGE_CIPHER_SPEC)
+    if (inner_type == PROTOCORE_TLS_CT_CHANGE_CIPHER_SPEC)
     {
         return 0; // middlebox compatibility record, outside the transcript (sec 5)
     }
-    if (inner_type != PC_TLS_CT_HANDSHAKE || len < TLS_HS_HDR_LEN || len != TLS_HS_HDR_LEN + hs_body_len(msg))
+    if (inner_type != PROTOCORE_TLS_CT_HANDSHAKE || len < TLS_HS_HDR_LEN || len != TLS_HS_HDR_LEN + hs_body_len(msg))
     {
         return fail(c, TLS_ALERT_ILLEGAL_PARAMETER);
     }
@@ -344,7 +349,7 @@ static size_t conn_seal_app(TlsConn *c, const uint8_t *data, size_t len, uint8_t
     {
         return 0;
     }
-    return TlsRecord.protect(&c->ap_tx, PC_TLS_CT_APPLICATION_DATA, data, len, out, out_cap);
+    return TlsRecord.protect(&c->ap_tx, PROTOCORE_TLS_CT_APPLICATION_DATA, data, len, out, out_cap);
 }
 
 static proto_bool conn_open_app(TlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
@@ -363,7 +368,7 @@ static proto_bool conn_open_app(TlsConn *c, const uint8_t *rec, size_t rec_len, 
     {
         *out_len = info.pt_len;
     }
-    return info.content_type == PC_TLS_CT_APPLICATION_DATA;
+    return info.content_type == PROTOCORE_TLS_CT_APPLICATION_DATA;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -375,4 +380,4 @@ const TlsConnNs TlsConnection = {.init = conn_init,
                                  .seal_app = conn_seal_app,
                                  .open_app = conn_open_app};
 
-#endif // PC_TLS_SOFTWARE
+#endif // PROTOCORE_TLS_SOFTWARE

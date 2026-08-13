@@ -3,12 +3,12 @@
 // A passive RF-diagnostics panel: sweep the 2.4 GHz channels, decode every 802.11 MAC header the
 // radio hears, tally frames by type, and keep a per-channel survey of the strongest AP. That
 // survey is what a channel-agility roam decides on - "is another channel enough better than mine
-// to be worth moving?" (pc_wifi_should_roam's RSSI hysteresis).
+// to be worth moving?" (protocore_wifi_should_roam's RSSI hysteresis).
 //
-//   Wi-Fi radio --pc_promisc_begin--> sink --pc_wifi_parse--> stats tally
+//   Wi-Fi radio --protocore_promisc_begin--> sink --protocore_wifi_parse--> stats tally
 //                                                            \-> per-channel survey -> roam decision
 //                     ^                                                                    |
-//                     +----------------- pc_wifi_sniffer_tick() hops on the dwell --------+
+//                     +----------------- protocore_wifi_sniffer_tick() hops on the dwell --------+
 //
 // The capture itself is owned by services/radio/promisc (one owner for the radio); services/radio/wifi_sniffer
 // adds the decode, the tally, the channel-hop schedule, and the survey. Everything except the thin
@@ -17,12 +17,12 @@
 // Strictly passive: no injection, no association. Sniffing a network you do not administer may be
 // unlawful where you are - point it at your own.
 //
-// Build flags (whole build): PC_ENABLE_WIFI_SNIFFER=1 PC_ENABLE_PROMISC=1
+// Build flags (whole build): PROTOCORE_ENABLE_WIFI_SNIFFER=1 PROTOCORE_ENABLE_PROMISC=1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
-#include "server/clock/clock.h" // pc_millis
+#include "server/clock/clock.h" // protocore_millis
 
 static const uint8_t CHAN_FIRST = 1; // sweep 1..11 (the US 2.4 GHz plan)
 static const uint8_t CHAN_LAST = 11;
@@ -37,7 +37,7 @@ void setup()
     // Radio up for capture only - promiscuous mode does not associate.
     Physical.wifi->init_radio(0);
 
-    if (!pc_wifi_sniffer_begin(CHAN_FIRST, CHAN_LAST, DWELL_MS))
+    if (!protocore_wifi_sniffer_begin(CHAN_FIRST, CHAN_LAST, DWELL_MS))
     {
         Serial.println("sniffer: failed to start promiscuous capture");
         return;
@@ -47,18 +47,18 @@ void setup()
 
 void loop()
 {
-    pc_wifi_sniffer_tick(); // hops to the next channel when the dwell elapses
+    protocore_wifi_sniffer_tick(); // hops to the next channel when the dwell elapses
 
     static uint32_t last_report = 0;
-    if (pc_millis() - last_report < 5000)
+    if (protocore_millis() - last_report < 5000)
     {
         return;
     }
-    last_report = pc_millis();
+    last_report = protocore_millis();
 
-    const WifiStats *st = pc_wifi_sniffer_stats();
-    const WifiSurvey *sv = pc_wifi_sniffer_survey();
-    const WifiScan *sc = pc_wifi_sniffer_scan();
+    const WifiStats *st = protocore_wifi_sniffer_stats();
+    const WifiSurvey *sv = protocore_wifi_sniffer_survey();
+    const WifiScan *sc = protocore_wifi_sniffer_scan();
 
     Serial.printf("\n-- ch %u, sweep %lu -- frames %lu (mgmt %lu, ctrl %lu, data %lu, other %lu)\n", sc->channel,
                   (unsigned long)sc->sweeps, (unsigned long)st->total, (unsigned long)st->mgmt, (unsigned long)st->ctrl,
@@ -66,7 +66,7 @@ void loop()
 
     for (uint8_t ch = CHAN_FIRST; ch <= CHAN_LAST; ch++)
     {
-        const WifiChannelSurvey *e = pc_wifi_survey_get(sv, ch);
+        const WifiChannelSurvey *e = protocore_wifi_survey_get(sv, ch);
         if (!e || e->frames == 0)
         {
             continue;
@@ -77,12 +77,12 @@ void loop()
     }
 
     // Channel-agility: is any other channel enough stronger than the one we are on?
-    const WifiChannelSurvey *cur = pc_wifi_survey_get(sv, sc->channel);
+    const WifiChannelSurvey *cur = protocore_wifi_survey_get(sv, sc->channel);
     uint8_t cand_ch = 0;
     int8_t cand_rssi = 0;
-    if (cur && cur->best_rssi != PC_WIFI_RSSI_NONE && pc_wifi_survey_best(sv, sc->channel, &cand_ch, &cand_rssi))
+    if (cur && cur->best_rssi != PROTOCORE_WIFI_RSSI_NONE && protocore_wifi_survey_best(sv, sc->channel, &cand_ch, &cand_rssi))
     {
-        bool roam = pc_wifi_should_roam(cur->best_rssi, cand_rssi, ROAM_HYSTERESIS_DB);
+        bool roam = protocore_wifi_should_roam(cur->best_rssi, cand_rssi, ROAM_HYSTERESIS_DB);
         Serial.printf("  roam? ch %u (%d dBm) -> ch %u (%d dBm): %s\n", sc->channel, (int)cur->best_rssi, cand_ch,
                       (int)cand_rssi, roam ? "YES" : "no");
     }

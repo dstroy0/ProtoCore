@@ -3,7 +3,7 @@
 
 /**
  * @file flow_export.h
- * @brief Flow-record export codec (PC_ENABLE_FLOW_EXPORT) - zero-heap exporter-side
+ * @brief Flow-record export codec (PROTOCORE_ENABLE_FLOW_EXPORT) - zero-heap exporter-side
  *        builders for NetFlow v5, NetFlow v9 (RFC 3954), and IPFIX (RFC 7011), so a device
  *        can ship on-device flow accounting to a collector over the existing UDP transport.
  *
@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_FLOW_EXPORT
+#if PROTOCORE_ENABLE_FLOW_EXPORT
 
 // ---- NetFlow v5 (fixed legacy format) ----
 
@@ -127,8 +127,8 @@ proto_bool flow_export_data_end(FlowWriter *w);
 /** @brief Finish the message (auto-closes an open set); returns total bytes, or 0 on error. */
 size_t flow_export_finish(FlowWriter *w);
 
-#endif // PC_ENABLE_FLOW_EXPORT
+#endif // PROTOCORE_ENABLE_FLOW_EXPORT
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FLOW_EXPORT_H

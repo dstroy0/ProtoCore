@@ -1,6 +1,6 @@
 # FileServing - serve a static site from LittleFS
 
-**Layer:** L7 Application · **Build flags:** none (`PC_ENABLE_FILE_SERVING` is on by default)
+**Layer:** L7 Application · **Build flags:** none (`PROTOCORE_ENABLE_FILE_SERVING` is on by default)
 
 ## What this example teaches
 

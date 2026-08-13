@@ -3,14 +3,14 @@
 
 /**
  * @file ota_service.c
- * @brief Authenticated streaming OTA firmware update (PC_ENABLE_OTA).
+ * @brief Authenticated streaming OTA firmware update (PROTOCORE_ENABLE_OTA).
  */
 
 #include "ota_service.h"
 #include "mmgr/protomem.h"
 #include "server/clock/clock.h" // pcdelay
 
-#if PC_ENABLE_OTA && PC_HAS_VENDOR_OTA
+#if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA
 
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
@@ -109,12 +109,12 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
 {
     if (!req->body_streaming)
     {
-        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "POST a raw firmware image");
+        send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "POST a raw firmware image");
         return;
     }
     if (!s_ota.authed)
     {
-        send_text(slot_id, 401, PC_MIME_TEXT_PLAIN, "Unauthorized");
+        send_text(slot_id, 401, PROTOCORE_MIME_TEXT_PLAIN, "Unauthorized");
         return;
     }
     proto_bool ok = s_ota.active && !s_ota.error && Update.end(PROTO_TRUE);
@@ -124,15 +124,15 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
         {
             Update.abort();
         }
-        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "Update failed");
+        send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "Update failed");
         return;
     }
-    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "OK - rebooting");
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, "OK - rebooting");
     pcdelay(150); // let the response flush before the reboot
-    pc_platform_restart();
+    protocore_platform_restart();
 }
 
-void pc_ota_begin(const char *path, const char *user, const char *pass)
+void protocore_ota_begin(const char *path, const char *user, const char *pass)
 {
     s_ota.path = path;
     strncpy(s_ota.user, user ? user : "", sizeof(s_ota.user) - 1);
@@ -146,11 +146,11 @@ void pc_ota_begin(const char *path, const char *user, const char *pass)
 
 #else
 
-void pc_ota_begin(const char *path, const char *user, const char *pass)
+void protocore_ota_begin(const char *path, const char *user, const char *pass)
 {
     (void)path;
     (void)user;
     (void)pass;
 }
 
-#endif // PC_ENABLE_OTA && PC_HAS_VENDOR_OTA
+#endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA

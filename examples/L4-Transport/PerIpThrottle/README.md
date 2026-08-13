@@ -1,17 +1,17 @@
 # PerIpThrottle - per-source-IP flood defense
 
-**Layer:** L4 Transport · **Build flags:** `PC_ENABLE_PER_IP_THROTTLE`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_PER_IP_THROTTLE`
 
 ## What this example teaches
 
 The global [accept throttle](../AcceptThrottle) caps total accepts but cannot
 tell one noisy client from many legitimate ones. This per-IP throttle closes that
 gap: the accept callback rejects a new connection once a single source IPv4 has
-opened more than `PC_PER_IP_THROTTLE_MAX` connections within
-`PC_PER_IP_THROTTLE_WINDOW_MS`, so one abusive host is throttled without
+opened more than `PROTOCORE_PER_IP_THROTTLE_MAX` connections within
+`PROTOCORE_PER_IP_THROTTLE_WINDOW_MS`, so one abusive host is throttled without
 affecting everyone else.
 
-**Bounded memory, no heap.** A fixed BSS table of `PC_PER_IP_THROTTLE_SLOTS`
+**Bounded memory, no heap.** A fixed BSS table of `PROTOCORE_PER_IP_THROTTLE_SLOTS`
 buckets tracks the busiest recent addresses (an LRU-ish set, not one slot per
 possible IP), so the defense itself stays deterministic.
 
@@ -27,15 +27,15 @@ server.begin(80); // per-IP throttle is active automatically when the flag is bu
 pair it with the global accept throttle for layered defense:
 
 ```text
-build_flags = -DPC_ENABLE_PER_IP_THROTTLE=1 -DPC_PER_IP_THROTTLE_MAX=10 \
-              -DPC_PER_IP_THROTTLE_WINDOW_MS=10000 -DPC_PER_IP_THROTTLE_SLOTS=16
+build_flags = -DPROTOCORE_ENABLE_PER_IP_THROTTLE=1 -DPROTOCORE_PER_IP_THROTTLE_MAX=10 \
+              -DPROTOCORE_PER_IP_THROTTLE_WINDOW_MS=10000 -DPROTOCORE_PER_IP_THROTTLE_SLOTS=16
 ```
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_PER_IP_THROTTLE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PER_IP_THROTTLE=1" \
   --lib="." examples/L4-Transport/PerIpThrottle/PerIpThrottle.ino
 ```
 
@@ -51,7 +51,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_PER_IP_THROTTLE 1
+#define PROTOCORE_ENABLE_PER_IP_THROTTLE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

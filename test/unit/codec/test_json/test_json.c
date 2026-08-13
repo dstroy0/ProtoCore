@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the zero-heap JSON helper: pc_json_writer (serialization) and the
+// Unit tests for the zero-heap JSON helper: protocore_json_writer (serialization) and the
 // json_get_* top-level object readers.
 
 #include "network_drivers/presentation/codec/json/json.h"
@@ -23,20 +23,20 @@ void tearDown()
 void test_writer_simple_object()
 {
     char buf[64];
-    pc_json_writer w;
+    protocore_json_writer w;
     Json.init(&w, buf, sizeof(buf));
     Json.begin_object(&w);
     Json.kv_str(&w, "status", "ok");
     Json.kv_int(&w, "count", 3);
     Json.end_object(&w);
-    TEST_ASSERT_TRUE(pc_json_ok(&w));
-    TEST_ASSERT_EQUAL_STRING("{\"status\":\"ok\",\"count\":3}", pc_json_c_str(&w));
+    TEST_ASSERT_TRUE(protocore_json_ok(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"status\":\"ok\",\"count\":3}", protocore_json_c_str(&w));
 }
 
 void test_writer_nested_and_array()
 {
     char buf[96];
-    pc_json_writer w;
+    protocore_json_writer w;
     Json.init(&w, buf, sizeof(buf));
     Json.begin_object(&w);
     Json.key(&w, "a");
@@ -50,14 +50,14 @@ void test_writer_nested_and_array()
     Json.kv_null(&w, "n");
     Json.end_object(&w);
     Json.end_object(&w);
-    TEST_ASSERT_TRUE(pc_json_ok(&w));
-    TEST_ASSERT_EQUAL_STRING("{\"a\":[1,2],\"b\":true,\"c\":{\"n\":null}}", pc_json_c_str(&w));
+    TEST_ASSERT_TRUE(protocore_json_ok(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"a\":[1,2],\"b\":true,\"c\":{\"n\":null}}", protocore_json_c_str(&w));
 }
 
 void test_writer_value_types()
 {
     char buf[96];
-    pc_json_writer w;
+    protocore_json_writer w;
     Json.init(&w, buf, sizeof(buf));
     Json.begin_object(&w);
     Json.kv_int(&w, "i", -7);
@@ -67,57 +67,58 @@ void test_writer_value_types()
     Json.kv_null(&w, "z");
     Json.kv_raw(&w, "r", "3.14");
     Json.end_object(&w);
-    TEST_ASSERT_TRUE(pc_json_ok(&w));
-    TEST_ASSERT_EQUAL_STRING("{\"i\":-7,\"u\":42,\"t\":true,\"f\":false,\"z\":null,\"r\":3.14}", pc_json_c_str(&w));
+    TEST_ASSERT_TRUE(protocore_json_ok(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"i\":-7,\"u\":42,\"t\":true,\"f\":false,\"z\":null,\"r\":3.14}",
+                             protocore_json_c_str(&w));
 }
 
 void test_writer_escapes_strings()
 {
     char buf[64];
-    pc_json_writer w;
+    protocore_json_writer w;
     Json.init(&w, buf, sizeof(buf));
     Json.begin_object(&w);
     Json.kv_str(&w, "k", "a\"b\nc\t\\d");
     Json.end_object(&w);
-    TEST_ASSERT_TRUE(pc_json_ok(&w));
+    TEST_ASSERT_TRUE(protocore_json_ok(&w));
     // a " b \n c \t \ d  ->  a\"b\nc\t\\d
-    TEST_ASSERT_EQUAL_STRING("{\"k\":\"a\\\"b\\nc\\t\\\\d\"}", pc_json_c_str(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"k\":\"a\\\"b\\nc\\t\\\\d\"}", protocore_json_c_str(&w));
 }
 
 void test_writer_control_char_unicode_escape()
 {
     char buf[48];
-    pc_json_writer w;
+    protocore_json_writer w;
     Json.init(&w, buf, sizeof(buf));
     Json.begin_object(&w);
     Json.kv_str(&w, "c", "\x01"); // SOH -> 
     Json.end_object(&w);
-    TEST_ASSERT_TRUE(pc_json_ok(&w));
-    TEST_ASSERT_EQUAL_STRING("{\"c\":\"\\u0001\"}", pc_json_c_str(&w));
+    TEST_ASSERT_TRUE(protocore_json_ok(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"c\":\"\\u0001\"}", protocore_json_c_str(&w));
 }
 
 void test_writer_overflow_sets_not_ok_and_stays_terminated()
 {
     char buf[8];
-    pc_json_writer w;
+    protocore_json_writer w;
     Json.init(&w, buf, sizeof(buf));
     Json.begin_object(&w);
     Json.kv_str(&w, "aaaa", "bbbb"); // cannot fit in 8 bytes
     Json.end_object(&w);
-    TEST_ASSERT_FALSE(pc_json_ok(&w));
-    TEST_ASSERT_TRUE(strlen(pc_json_c_str(&w)) < sizeof(buf)); // never overran the buffer
+    TEST_ASSERT_FALSE(protocore_json_ok(&w));
+    TEST_ASSERT_TRUE(strlen(protocore_json_c_str(&w)) < sizeof(buf)); // never overran the buffer
 }
 
 void test_writer_depth_overflow_sets_not_ok()
 {
     char buf[64];
-    pc_json_writer w;
+    protocore_json_writer w;
     Json.init(&w, buf, sizeof(buf));
     for (int i = 0; i < JSON_MAX_DEPTH + 1; i++)
     {
         Json.begin_object(&w);
     }
-    TEST_ASSERT_FALSE(pc_json_ok(&w)); // nesting past JSON_MAX_DEPTH
+    TEST_ASSERT_FALSE(protocore_json_ok(&w)); // nesting past JSON_MAX_DEPTH
 }
 
 // ====================================================================
@@ -216,26 +217,26 @@ void test_reader_negative_int()
 void test_writer_null_and_remaining_escapes()
 {
     char buf[32];
-    pc_json_writer w;
+    protocore_json_writer w;
     Json.init(&w, buf, sizeof(buf));
     Json.begin_array(&w);
     Json.put_str(&w, NULL); // put_escaped(NULL) is a no-op
     Json.put_raw(&w, NULL); // put_raw(NULL) is a no-op
     Json.end_array(&w);
-    TEST_ASSERT_TRUE(pc_json_ok(&w)); // no overrun / crash
+    TEST_ASSERT_TRUE(protocore_json_ok(&w)); // no overrun / crash
 
     char b2[16];
-    pc_json_writer e;
+    protocore_json_writer e;
     Json.init(&e, b2, sizeof(b2));
     Json.put_str(&e, "\r\b\f");
-    TEST_ASSERT_TRUE(pc_json_ok(&e));
-    TEST_ASSERT_EQUAL_STRING("\"\\r\\b\\f\"", pc_json_c_str(&e));
+    TEST_ASSERT_TRUE(protocore_json_ok(&e));
+    TEST_ASSERT_EQUAL_STRING("\"\\r\\b\\f\"", protocore_json_c_str(&e));
 
     char b3[16];
-    pc_json_writer u;
+    protocore_json_writer u;
     Json.init(&u, b3, sizeof(b3));
     Json.end_object(&u); // nothing open -> unbalanced
-    TEST_ASSERT_FALSE(pc_json_ok(&u));
+    TEST_ASSERT_FALSE(protocore_json_ok(&u));
 }
 
 // Reader guards: null out / null json / zero capacity are rejected.
@@ -267,14 +268,14 @@ void test_reader_all_escapes()
 // (covers both operands of the `buf != NULL && cap >= 1` guard, and the ctor's `if (_ok)`).
 void test_writer_null_buffer_and_zero_capacity()
 {
-    pc_json_writer w1;
+    protocore_json_writer w1;
     Json.init(&w1, NULL, 16);
-    TEST_ASSERT_FALSE(pc_json_ok(&w1));
+    TEST_ASSERT_FALSE(protocore_json_ok(&w1));
 
     char buf[4];
-    pc_json_writer w2;
+    protocore_json_writer w2;
     Json.init(&w2, buf, 0);
-    TEST_ASSERT_FALSE(pc_json_ok(&w2));
+    TEST_ASSERT_FALSE(protocore_json_ok(&w2));
 }
 
 // Whitespace (space, tab, CR, LF) between tokens is skipped by the reader, exercising every

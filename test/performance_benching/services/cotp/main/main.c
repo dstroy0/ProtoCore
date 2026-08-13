@@ -29,7 +29,7 @@ void dbench_run(void)
     // COTP Data TPDU: 3-octet user data, EOT set (mirrors test_cotp_dt_bytes).
     static const uint8_t dt_data[] = {0x41, 0x42, 0x43}; // "ABC"
     static uint8_t dt_buf[16];
-    size_t dt_len = pc_cotp_build_dt(dt_buf, sizeof(dt_buf), dt_data, sizeof(dt_data), true);
+    size_t dt_len = protocore_cotp_build_dt(dt_buf, sizeof(dt_buf), dt_data, sizeof(dt_data), true);
 
     // COTP Connection Request: plain (mirrors test_cotp_cr_bytes).
     static uint8_t cr_buf[32];
@@ -44,28 +44,28 @@ void dbench_run(void)
         DBENCH_BANNER("cotp");
         volatile size_t sink = 0;
 
-        DBENCH_OP("pc_tpkt_build", 100000,
-                  sink += pc_tpkt_build(tpkt_buf, sizeof(tpkt_buf), tpkt_payload, sizeof(tpkt_payload)));
+        DBENCH_OP("protocore_tpkt_build", 100000,
+                  sink += protocore_tpkt_build(tpkt_buf, sizeof(tpkt_buf), tpkt_payload, sizeof(tpkt_payload)));
 
         {
             const uint8_t *payload;
             size_t payload_len, consumed;
             const size_t tpkt_len = TPKT_HEADER_SIZE + sizeof(tpkt_payload); // 4 + 3 = 7
-            DBENCH_OP("pc_tpkt_parse", 100000,
-                      sink += pc_tpkt_parse(tpkt_buf, tpkt_len, &payload, &payload_len, &consumed));
+            DBENCH_OP("protocore_tpkt_parse", 100000,
+                      sink += protocore_tpkt_parse(tpkt_buf, tpkt_len, &payload, &payload_len, &consumed));
         }
 
-        DBENCH_OP("pc_cotp_build_dt", 100000,
-                  sink += pc_cotp_build_dt(dt_buf, sizeof(dt_buf), dt_data, sizeof(dt_data), true));
+        DBENCH_OP("protocore_cotp_build_dt", 100000,
+                  sink += protocore_cotp_build_dt(dt_buf, sizeof(dt_buf), dt_data, sizeof(dt_data), true));
 
-        DBENCH_OP("pc_cotp_build_cr", 100000, sink += pc_cotp_build_cr(cr_buf, sizeof(cr_buf), 0x0001, 0x0A, NULL, 0));
+        DBENCH_OP("protocore_cotp_build_cr", 100000, sink += protocore_cotp_build_cr(cr_buf, sizeof(cr_buf), 0x0001, 0x0A, NULL, 0));
 
-        DBENCH_OP("pc_cotp_build_cr+tsaps", 100000,
-                  sink += pc_cotp_build_cr(cr_tsap_buf, sizeof(cr_tsap_buf), 0x0002, 0x0A, tsaps, sizeof(tsaps)));
+        DBENCH_OP("protocore_cotp_build_cr+tsaps", 100000,
+                  sink += protocore_cotp_build_cr(cr_tsap_buf, sizeof(cr_tsap_buf), 0x0002, 0x0A, tsaps, sizeof(tsaps)));
 
         {
             CotpHeader h;
-            DBENCH_OP("pc_cotp_parse (DT)", 100000, sink += pc_cotp_parse(dt_buf, dt_len, &h));
+            DBENCH_OP("protocore_cotp_parse (DT)", 100000, sink += protocore_cotp_parse(dt_buf, dt_len, &h));
         }
 
         (void)sink;

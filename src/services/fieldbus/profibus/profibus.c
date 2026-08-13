@@ -9,9 +9,9 @@
 #include "services/fieldbus/profibus/profibus.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_PROFIBUS
+#if PROTOCORE_ENABLE_PROFIBUS
 
-uint8_t pc_pb_fcs(const uint8_t *bytes, size_t len)
+uint8_t protocore_pb_fcs(const uint8_t *bytes, size_t len)
 {
     uint8_t sum = 0;
     for (size_t i = 0; i < len; i++)
@@ -21,7 +21,7 @@ uint8_t pc_pb_fcs(const uint8_t *bytes, size_t len)
     return sum;
 }
 
-size_t pc_pb_build_sd1(uint8_t da, uint8_t sa, uint8_t fc, uint8_t *out, size_t cap)
+size_t protocore_pb_build_sd1(uint8_t da, uint8_t sa, uint8_t fc, uint8_t *out, size_t cap)
 {
     if (!out || cap < 6)
     {
@@ -32,12 +32,12 @@ size_t pc_pb_build_sd1(uint8_t da, uint8_t sa, uint8_t fc, uint8_t *out, size_t 
     out[2] = sa;
     out[3] = fc;
     uint8_t body[3] = {da, sa, fc};
-    out[4] = pc_pb_fcs(body, 3);
+    out[4] = protocore_pb_fcs(body, 3);
     out[5] = PB_ED;
     return 6;
 }
 
-size_t pc_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, size_t data_len, uint8_t *out,
+size_t protocore_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, size_t data_len, uint8_t *out,
                        size_t cap)
 {
     if (!out || (data_len && !data) || data_len > 246)
@@ -65,12 +65,12 @@ size_t pc_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, 
         i += data_len;
     }
     // FCS over DA+SA+FC+data (out[4 .. 4+le-1]).
-    out[i++] = pc_pb_fcs(out + 4, le);
+    out[i++] = protocore_pb_fcs(out + 4, le);
     out[i++] = PB_ED;
     return i;
 }
 
-size_t pc_pb_build_sd3(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, uint8_t *out, size_t cap)
+size_t protocore_pb_build_sd3(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, uint8_t *out, size_t cap)
 {
     if (!out || !data || cap < 14) // SD3 DA SA FC data[8] FCS ED
     {
@@ -81,7 +81,7 @@ size_t pc_pb_build_sd3(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, 
     out[2] = sa;
     out[3] = fc;
     mem.cpy(out + 4, data, 8);
-    out[12] = pc_pb_fcs(out + 1, 11); // FCS over DA+SA+FC+data(8)
+    out[12] = protocore_pb_fcs(out + 1, 11); // FCS over DA+SA+FC+data(8)
     out[13] = PB_ED;
     return 14;
 }
@@ -93,7 +93,7 @@ static proto_bool pb_parse_sd3(const uint8_t *frame, size_t len, PbTelegram *out
     {
         return PROTO_FALSE;
     }
-    if (pc_pb_fcs(frame + 1, 11) != frame[12] || frame[13] != PB_ED)
+    if (protocore_pb_fcs(frame + 1, 11) != frame[12] || frame[13] != PB_ED)
     {
         return PROTO_FALSE;
     }
@@ -109,9 +109,9 @@ static proto_bool pb_parse_sd3(const uint8_t *frame, size_t len, PbTelegram *out
 // SD1 no-data telegram: SD1 DA SA FC FCS ED (6 octets).
 static proto_bool pb_parse_sd1(const uint8_t *frame, size_t len, PbTelegram *out)
 {
-    (void)len; // len >= 6 already guaranteed by pc_pb_parse
+    (void)len; // len >= 6 already guaranteed by protocore_pb_parse
     uint8_t body[3] = {frame[1], frame[2], frame[3]};
-    if (pc_pb_fcs(body, 3) != frame[4] || frame[5] != PB_ED)
+    if (protocore_pb_fcs(body, 3) != frame[4] || frame[5] != PB_ED)
     {
         return PROTO_FALSE;
     }
@@ -145,7 +145,7 @@ static proto_bool pb_parse_sd2(const uint8_t *frame, size_t len, PbTelegram *out
     {
         return PROTO_FALSE;
     }
-    if (pc_pb_fcs(frame + 4, le) != frame[4 + le] || frame[4 + le + 1] != PB_ED)
+    if (protocore_pb_fcs(frame + 4, le) != frame[4 + le] || frame[4 + le + 1] != PB_ED)
     {
         return PROTO_FALSE;
     }
@@ -159,7 +159,7 @@ static proto_bool pb_parse_sd2(const uint8_t *frame, size_t len, PbTelegram *out
     return PROTO_TRUE;
 }
 
-proto_bool pc_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out)
+proto_bool protocore_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out)
 {
     if (!frame || !out || len < 6)
     {
@@ -180,4 +180,4 @@ proto_bool pc_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out)
     return PROTO_FALSE;
 }
 
-#endif // PC_ENABLE_PROFIBUS
+#endif // PROTOCORE_ENABLE_PROFIBUS

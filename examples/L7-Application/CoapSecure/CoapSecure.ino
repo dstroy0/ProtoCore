@@ -13,8 +13,8 @@
  *
  * coaps_server owns a small pool of DTLS connections keyed by peer address, binds UDP/5684 through the
  * transport layer, and (once a peer's handshake completes) hands each decrypted CoAP request to the
- * same pc_coap_server_process() the plaintext server uses - so the resource table is registered exactly
- * once with pc_coap_server_add_resource(). pc_coaps_server_poll() drives the handshakes, the DTLS
+ * same protocore_coap_server_process() the plaintext server uses - so the resource table is registered exactly
+ * once with protocore_coap_server_add_resource(). protocore_coaps_server_poll() drives the handshakes, the DTLS
  * retransmission timer, and idle-connection reaping; call it every loop iteration.
  *
  * The profile is TLS_AES_128_GCM_SHA256 + X25519 + an Ed25519 server certificate. The sketch ships a
@@ -28,17 +28,17 @@
  * Flash, open Serial @ 115200 for the IP, then from a host with a DTLS 1.3 CoAP client:
  *   coap-client -m get coaps://<ip>/info      # libcoap built with DTLS 1.3 (accept the demo cert)
  *   aiocoap-client coaps://<ip>/hello         # aiocoap with a DTLS backend
- * The verified reference client is the wolfSSL harness in test/servers/pc_dtls_wolfssl.
+ * The verified reference client is the wolfSSL harness in test/servers/protocore_dtls_wolfssl.
  *
  * NOTE: optional services are gated by compile flags the *library* sources must also see. The
  * `#define`s below document intent, but for PlatformIO enable them for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_COAP=1 -DPC_ENABLE_DTLS=1
+ *     build_flags = -DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_DTLS=1
  * (Arduino IDE: already set for you in build_opt.h beside this sketch, so it builds as-is.) A define in
  * the sketch alone does not reach the separately-compiled library .cpp.
  */
 
-#define PC_ENABLE_COAP 1
-#define PC_ENABLE_DTLS 1
+#define PROTOCORE_ENABLE_COAP 1
+#define PROTOCORE_ENABLE_DTLS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -152,10 +152,10 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the resource table once (shared by every transport), then start the DTLS front-end on 5684.
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/info", COAP_ALLOW_GET, coap_info);
-    pc_coap_server_add_resource("/led", COAP_ALLOW_GET | COAP_ALLOW_PUT, coap_led);
-    pc_coap_server_add_resource("/hello", COAP_ALLOW_GET, coap_hello);
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/info", COAP_ALLOW_GET, coap_info);
+    protocore_coap_server_add_resource("/led", COAP_ALLOW_GET | COAP_ALLOW_PUT, coap_led);
+    protocore_coap_server_add_resource("/hello", COAP_ALLOW_GET, coap_hello);
 
     CoapsServerConfig cfg;
     memset(&cfg, 0, sizeof cfg);
@@ -164,13 +164,13 @@ void setup()
     memcpy(cfg.ed25519_seed, COAPS_ED25519_SEED, sizeof cfg.ed25519_seed);
     esp_fill_random(cfg.cookie_key, sizeof cfg.cookie_key); // fresh HelloRetryRequest cookie secret per boot
     cfg.rng = coaps_rng;
-    if (pc_coaps_server_begin(PC_COAPS_PORT, &cfg))
+    if (protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &cfg))
     {
         Serial.println("CoAPs (DTLS 1.3) server listening on UDP/5684 (try: coap-client -m get coaps://<ip>/info)");
     }
     else
     {
-        Serial.println("pc_coaps_server_begin() failed (UDP bind)");
+        Serial.println("protocore_coaps_server_begin() failed (UDP bind)");
     }
 
     int32_t result = begin_http(80, NULL);
@@ -182,6 +182,6 @@ void setup()
 
 void loop()
 {
-    pc_coaps_server_poll(); // drive DTLS handshakes, the retransmission timer, and idle-connection reaping
+    protocore_coaps_server_poll(); // drive DTLS handshakes, the retransmission timer, and idle-connection reaping
     handle();        // the TCP server (CoAPs itself runs off lwIP UDP callbacks + this poll)
 }

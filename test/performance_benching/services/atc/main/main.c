@@ -37,7 +37,7 @@ void dbench_run(void)
 
     static char buf[256];
     // Prime once so we know the serialized length to report bulk throughput against.
-    size_t snap_len = pc_atc_snapshot_json(&io, buf, sizeof(buf));
+    size_t snap_len = protocore_atc_snapshot_json(&io, buf, sizeof(buf));
     if (snap_len == 0)
     {
         snap_len = 1; // guard against div-by-zero in DBENCH_BULK if the table/buffer ever mismatch
@@ -50,9 +50,10 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile uint8_t sink8 = 0;
 
-        DBENCH_BULK("pc_atc_snapshot_json", 20000, snap_len, sinkz += pc_atc_snapshot_json(&io, buf, sizeof(buf)));
-        DBENCH_OP("pc_atc_set_output", 100000, sinkb |= pc_atc_set_output(&io, "phase.1.green", 1));
-        DBENCH_OP("pc_atc_get", 100000, sink8 += pc_atc_get(&io, "det.1", NULL));
+        DBENCH_BULK("protocore_atc_snapshot_json", 20000, snap_len,
+                    sinkz += protocore_atc_snapshot_json(&io, buf, sizeof(buf)));
+        DBENCH_OP("protocore_atc_set_output", 100000, sinkb |= protocore_atc_set_output(&io, "phase.1.green", 1));
+        DBENCH_OP("protocore_atc_get", 100000, sink8 += protocore_atc_get(&io, "det.1", NULL));
 
         (void)sinkz;
         (void)sinkb;

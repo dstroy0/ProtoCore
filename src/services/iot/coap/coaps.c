@@ -8,15 +8,15 @@
 
 #include "services/iot/coap/coaps.h"
 
-#if PC_ENABLE_DTLS && PC_ENABLE_COAP
+#if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
 #include "services/iot/coap/coap.h"
 
 // Largest CoAP request/response carried in one DTLS application record. CoAP messages are expected to
 // fit a single datagram (RFC 7252 §4.6); anything larger is dropped rather than fragmented here.
-#define PC_COAPS_MSG_CAP 1152
+#define PROTOCORE_COAPS_MSG_CAP 1152
 
-int pc_coaps_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap)
+int protocore_coaps_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap)
 {
     if (!DtlsServer.established(c))
     {
@@ -28,21 +28,21 @@ int pc_coaps_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out
     // else (a retransmitted epoch-2 client Finished) back to the state machine to be re-acknowledged.
     if (len >= 1 && (dgram[0] & 0xE0) == 0x20 && (dgram[0] & 0x03) == 3)
     {
-        uint8_t req[PC_COAPS_MSG_CAP];
+        uint8_t req[PROTOCORE_COAPS_MSG_CAP];
         size_t req_len = 0;
         if (!DtlsServer.open_app(c, dgram, len, req, sizeof(req), &req_len))
         {
             return 0; // replay, truncated, or not application data
         }
-        uint8_t resp[PC_COAPS_MSG_CAP];
-        size_t pc_resp_len = pc_coap_server_process(req, req_len, resp, sizeof(resp));
-        if (!pc_resp_len)
+        uint8_t resp[PROTOCORE_COAPS_MSG_CAP];
+        size_t protocore_resp_len = protocore_coap_server_process(req, req_len, resp, sizeof(resp));
+        if (!protocore_resp_len)
         {
             return 0; // no response (e.g. a Non-confirmable message with no resource match)
         }
-        return (int)DtlsServer.seal_app(c, resp, pc_resp_len, out, out_cap);
+        return (int)DtlsServer.seal_app(c, resp, protocore_resp_len, out, out_cap);
     }
     return DtlsServer.process(c, dgram, len, out, out_cap);
 }
 
-#endif // PC_ENABLE_DTLS && PC_ENABLE_COAP
+#endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

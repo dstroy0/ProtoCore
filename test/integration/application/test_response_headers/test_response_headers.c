@@ -13,7 +13,7 @@
 //   - clear_response_headers() discards queued headers
 //   - An oversized header is dropped whole (no malformed half-line)
 
-#include "network_drivers/application/ntp_service/ntp_service.h" // pc_ntp_set_test_epoch() for the Date-header tests
+#include "network_drivers/application/ntp_service/ntp_service.h" // protocore_ntp_set_test_epoch() for the Date-header tests
 #include "protocore.h"
 #include <stdio.h>
 #include <string.h>
@@ -94,26 +94,26 @@ static void h_oversized(uint8_t slot, HttpReq *req)
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     tcp_capture_reset();
-    pc_ntp_set_test_epoch(0); // clockless by default; Date tests opt in
+    protocore_ntp_set_test_epoch(0); // clockless by default; Date tests opt in
 }
 
 void tearDown()
 {
     tcp_capture_disable();
-    pc_ntp_set_test_epoch(0);
+    protocore_ntp_set_test_epoch(0);
 }
 
 static void feed_and_handle(uint8_t slot, const char *req_str)
@@ -187,7 +187,7 @@ void test_headers_do_not_leak_across_requests()
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[0].pcb = pc_net_host_pcb();
+    conn_pool[0].pcb = protocore_net_host_pcb();
     http_reset(0);
     tcp_capture_reset();
 
@@ -214,11 +214,11 @@ void test_oversized_header_dropped_whole()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "X-Small: ok\r\n"));
 }
 
-// PC_HTTP_EMIT_DATE: with a valid wall-clock time, every response carries the
+// PROTOCORE_HTTP_EMIT_DATE: with a valid wall-clock time, every response carries the
 // RFC 7231 IMF-fixdate Date header (epoch 784111777 = the RFC's example date).
 void test_date_header_emitted_when_time_set()
 {
-    pc_ntp_set_test_epoch(784111777); // Sun, 06 Nov 1994 08:49:37 GMT
+    protocore_ntp_set_test_epoch(784111777); // Sun, 06 Nov 1994 08:49:37 GMT
     on_http("/h", HTTP_GET, h_plain);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Date: Sun, 06 Nov 1994 08:49:37 GMT\r\n"));
@@ -228,7 +228,7 @@ void test_date_header_emitted_when_time_set()
 // than emitting a wrong date (RFC 7231 7.1.1.2).
 void test_date_header_omitted_when_clockless()
 {
-    pc_ntp_set_test_epoch(0);
+    protocore_ntp_set_test_epoch(0);
     on_http("/h", HTTP_GET, h_plain);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -238,29 +238,29 @@ void test_date_header_omitted_when_clockless()
 void test_ntp_host_seam_accessors()
 {
     // Host build: begin() is a no-op returning false; synced()/epoch() reflect the injected epoch.
-    TEST_ASSERT_FALSE(pc_ntp_begin("UTC0", "a.pool.ntp.org", "b.pool.ntp.org"));
-    pc_ntp_set_test_epoch(0);
-    TEST_ASSERT_FALSE(pc_ntp_synced());
-    TEST_ASSERT_EQUAL_INT(0, (long)pc_ntp_epoch());
-    TEST_ASSERT_EQUAL_UINT32(0, pc_ntp_time_source()); // registry adapter: 0 when unsynced
-    pc_ntp_set_test_epoch(784111777);
-    TEST_ASSERT_TRUE(pc_ntp_synced());
-    TEST_ASSERT_EQUAL_INT(784111777, (long)pc_ntp_epoch());
-    TEST_ASSERT_EQUAL_UINT32(784111777, pc_ntp_time_source()); // registry adapter mirrors the epoch
+    TEST_ASSERT_FALSE(protocore_ntp_begin("UTC0", "a.pool.ntp.org", "b.pool.ntp.org"));
+    protocore_ntp_set_test_epoch(0);
+    TEST_ASSERT_FALSE(protocore_ntp_synced());
+    TEST_ASSERT_EQUAL_INT(0, (long)protocore_ntp_epoch());
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_ntp_time_source()); // registry adapter: 0 when unsynced
+    protocore_ntp_set_test_epoch(784111777);
+    TEST_ASSERT_TRUE(protocore_ntp_synced());
+    TEST_ASSERT_EQUAL_INT(784111777, (long)protocore_ntp_epoch());
+    TEST_ASSERT_EQUAL_UINT32(784111777, protocore_ntp_time_source()); // registry adapter mirrors the epoch
     // http_date guards: null out / zero cap both return 0 without writing.
     char buf[40];
-    TEST_ASSERT_EQUAL_UINT(0, pc_ntp_http_date(NULL, sizeof(buf)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ntp_http_date(buf, 0));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_http_date(NULL, sizeof(buf)));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_http_date(buf, 0));
     // Valid IMF-fixdate for the injected epoch.
-    TEST_ASSERT_TRUE(pc_ntp_http_date(buf, sizeof(buf)) > 0);
+    TEST_ASSERT_TRUE(protocore_ntp_http_date(buf, sizeof(buf)) > 0);
     TEST_ASSERT_EQUAL_STRING("Sun, 06 Nov 1994 08:49:37 GMT", buf);
     // A pathologically large epoch overflows the broken-down year, so gmtime_r fails and http_date
     // fails closed (empty string, length 0). glibc returns EOVERFLOW here; the host test runs on glibc.
-    pc_ntp_set_test_epoch((time_t)100000000000000000LL);
+    protocore_ntp_set_test_epoch((time_t)100000000000000000LL);
     buf[0] = 'x';
-    TEST_ASSERT_EQUAL_UINT(0, pc_ntp_http_date(buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_http_date(buf, sizeof(buf)));
     TEST_ASSERT_EQUAL_CHAR('\0', buf[0]);
-    pc_ntp_set_test_epoch(0); // restore the clockless default for the other tests
+    protocore_ntp_set_test_epoch(0); // restore the clockless default for the other tests
 }
 
 int main()

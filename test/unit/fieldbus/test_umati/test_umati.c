@@ -76,7 +76,7 @@ void setUp(void)
     g_mt.produced_part_count = 7;
     g_mt.message_text = "Door open";
     g_mt.message_severity = 500;
-    pc_umati_bind(&g_mt);
+    protocore_umati_bind(&g_mt);
 }
 void tearDown(void)
 {
@@ -85,7 +85,7 @@ void tearDown(void)
 // Browse a node into a fixed buffer; returns the count.
 static int32_t browse(uint16_t ns, uint32_t id, OpcUaReference *refs, uint32_t cap)
 {
-    return pc_umati_browse(ns, id, refs, cap);
+    return protocore_umati_browse(ns, id, refs, cap);
 }
 static const OpcUaReference *find_ref(const OpcUaReference *refs, int32_t n, const char *name)
 {
@@ -106,7 +106,7 @@ static void test_browse_objects_folder_has_machinetool(void)
     int32_t n = browse(0, 85, refs, 8); // Objects folder
     TEST_ASSERT_EQUAL_INT32(1, n);
     TEST_ASSERT_EQUAL_UINT32(N_MACHINETOOL, refs[0].target_id);
-    TEST_ASSERT_EQUAL_UINT32(PC_UMATI_NS, refs[0].target_ns);
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_UMATI_NS, refs[0].target_ns);
     TEST_ASSERT_EQUAL_UINT32(OPCUA_NODECLASS_OBJECT, refs[0].node_class);
     TEST_ASSERT_EQUAL_UINT32(OPCUA_REFTYPE_ORGANIZES, refs[0].ref_type_id); // Organizes, not HasComponent
     TEST_ASSERT_EQUAL_STRING("CNC-1", refs[0].browse_name);                 // uses mt->name
@@ -115,7 +115,7 @@ static void test_browse_objects_folder_has_machinetool(void)
 static void test_browse_machinetool_components(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_UMATI_NS, N_MACHINETOOL, refs, 8);
+    int32_t n = browse(PROTOCORE_UMATI_NS, N_MACHINETOOL, refs, 8);
     TEST_ASSERT_EQUAL_INT32(4, n); // Identification, Monitoring, Production, Notification
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Identification"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Monitoring"));
@@ -129,7 +129,7 @@ static void test_browse_machinetool_components(void)
 static void test_browse_identification_variables(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_UMATI_NS, N_IDENTIFICATION, refs, 8);
+    int32_t n = browse(PROTOCORE_UMATI_NS, N_IDENTIFICATION, refs, 8);
     TEST_ASSERT_EQUAL_INT32(6, n);
     const OpcUaReference *man = find_ref(refs, n, "Manufacturer");
     TEST_ASSERT_NOT_NULL(man);
@@ -144,22 +144,22 @@ static void test_browse_identification_variables(void)
 static void test_browse_monitoring_and_children(void)
 {
     OpcUaReference refs[8];
-    int32_t n = browse(PC_UMATI_NS, N_MONITORING, refs, 8);
+    int32_t n = browse(PROTOCORE_UMATI_NS, N_MONITORING, refs, 8);
     TEST_ASSERT_EQUAL_INT32(6, n); // MachineTool, Channel, Spindle, Axis_X/Y/Z
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Channel"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Spindle"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Axis_X"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Axis_Z"));
 
-    n = browse(PC_UMATI_NS, N_MON_CHANNEL, refs, 8);
+    n = browse(PROTOCORE_UMATI_NS, N_MON_CHANNEL, refs, 8);
     TEST_ASSERT_EQUAL_INT32(4, n); // ChannelState, FeedOverride, RapidOverride, ActiveProgram
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "ChannelState"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "FeedOverride"));
 
-    n = browse(PC_UMATI_NS, N_MON_SPINDLE, refs, 8);
+    n = browse(PROTOCORE_UMATI_NS, N_MON_SPINDLE, refs, 8);
     TEST_ASSERT_EQUAL_INT32(3, n); // RotationSpeed, OverrideValue, IsRotating
 
-    n = browse(PC_UMATI_NS, N_MON_AXIS_X, refs, 8);
+    n = browse(PROTOCORE_UMATI_NS, N_MON_AXIS_X, refs, 8);
     TEST_ASSERT_EQUAL_INT32(1, n); // ActualPosition
     TEST_ASSERT_EQUAL_STRING("ActualPosition", refs[0].browse_name);
     TEST_ASSERT_EQUAL_UINT32(N_AX_X_POS, refs[0].target_id);
@@ -168,8 +168,8 @@ static void test_browse_monitoring_and_children(void)
 static void test_browse_leaf_and_unknown_return_negative(void)
 {
     OpcUaReference refs[4];
-    TEST_ASSERT_EQUAL_INT32(-1, browse(PC_UMATI_NS, N_SP_SPEED, refs, 4)); // a leaf Variable has no children
-    TEST_ASSERT_EQUAL_INT32(-1, browse(PC_UMATI_NS, 999999, refs, 4));     // unknown node
+    TEST_ASSERT_EQUAL_INT32(-1, browse(PROTOCORE_UMATI_NS, N_SP_SPEED, refs, 4)); // a leaf Variable has no children
+    TEST_ASSERT_EQUAL_INT32(-1, browse(PROTOCORE_UMATI_NS, 999999, refs, 4));     // unknown node
     TEST_ASSERT_EQUAL_INT32(-1, browse(7, N_MACHINETOOL, refs, 4));        // wrong namespace
 }
 
@@ -177,11 +177,11 @@ static void test_browse_leaf_and_unknown_return_negative(void)
 static void test_read_identification(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_ID_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_STRING, v.type);
     TEST_ASSERT_EQUAL_STRING("Acme Machines", v.str);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_ID_YEAR, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_YEAR, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_UINT32, v.type);
     TEST_ASSERT_EQUAL_UINT32(2026, v.u32);
 }
@@ -189,39 +189,39 @@ static void test_read_identification(void)
 static void test_read_monitoring_values(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_MON_OPMODE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_MON_OPMODE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_INT32, v.type);
     TEST_ASSERT_EQUAL_INT32((int32_t)UMATI_OP_AUTOMATIC, v.i32);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_CH_STATE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_CH_STATE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_INT32((int32_t)UMATI_CH_RUNNING, v.i32);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_CH_FEEDOVR, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_CH_FEEDOVR, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_DOUBLE, v.type);
     TEST_ASSERT_TRUE(v.f64 == 85.0); // exact value; the suite compares doubles with == (Unity double asserts off)
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_SP_SPEED, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_SP_SPEED, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 1200.0);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_SP_ROTATING, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_SP_ROTATING, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_BOOL, v.type);
     TEST_ASSERT_TRUE(v.b);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_AX_X_POS, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_AX_X_POS, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 10.5);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_CH_ACTIVEPROG, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_CH_ACTIVEPROG, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("PART_A.NC", v.str);
 }
 
 static void test_read_production_and_notification(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_PROD_PARTCOUNT, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_PROD_PARTCOUNT, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_UINT32(7, v.u32);
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_NOTIF_MESSAGE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_NOTIF_MESSAGE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("Door open", v.str);
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_NOTIF_SEVERITY, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_NOTIF_SEVERITY, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_UINT32(500, v.u32);
 }
 
@@ -229,7 +229,7 @@ static void test_read_null_string_served_as_empty(void)
 {
     g_mt.ident.model = NULL; // a null field must not crash - served as ""
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, 5102 /*Model*/, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, 5102 /*Model*/, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_STRING, v.type);
     TEST_ASSERT_EQUAL_STRING("", v.str);
     TEST_ASSERT_EQUAL_INT32(0, v.str_len);
@@ -238,18 +238,18 @@ static void test_read_null_string_served_as_empty(void)
 static void test_read_rejects_unknown_ns_attr_and_node(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_FALSE(pc_umati_read(PC_UMATI_NS, 999999, OPCUA_ATTR_VALUE, &v));         // unknown node
-    TEST_ASSERT_FALSE(pc_umati_read(7, N_ID_MANUFACTURER, OPCUA_ATTR_VALUE, &v));        // wrong namespace
-    TEST_ASSERT_FALSE(pc_umati_read(PC_UMATI_NS, N_ID_MANUFACTURER, 12 /*!Value*/, &v)); // not the Value attribute
+    TEST_ASSERT_FALSE(protocore_umati_read(PROTOCORE_UMATI_NS, 999999, OPCUA_ATTR_VALUE, &v));         // unknown node
+    TEST_ASSERT_FALSE(protocore_umati_read(7, N_ID_MANUFACTURER, OPCUA_ATTR_VALUE, &v));        // wrong namespace
+    TEST_ASSERT_FALSE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_MANUFACTURER, 12 /*!Value*/, &v)); // not the Value attribute
 }
 
 static void test_read_before_bind_is_a_clean_miss(void)
 {
-    pc_umati_bind(NULL); // no model bound
+    protocore_umati_bind(NULL); // no model bound
     OpcUaVariant v;
-    TEST_ASSERT_FALSE(pc_umati_read(PC_UMATI_NS, N_ID_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_FALSE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
     OpcUaReference refs[4];
-    TEST_ASSERT_EQUAL_INT32(-1, pc_umati_browse(0, 85, refs, 4));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_umati_browse(0, 85, refs, 4));
 }
 
 // Every remaining Identification / Monitoring / Production leaf resolves to the bound model field
@@ -257,29 +257,29 @@ static void test_read_before_bind_is_a_clean_miss(void)
 static void test_read_every_remaining_leaf(void)
 {
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_ID_MODEL, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_MODEL, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("AX-500", v.str);
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_ID_SERIAL, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_SERIAL, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("SN-00042", v.str);
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_ID_SWREV, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_SWREV, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("2.7.1", v.str);
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_ID_PRODURI, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_PRODURI, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("urn:acme:AX-500:SN-00042", v.str);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_MON_POWERON, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_MON_POWERON, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_DOUBLE, v.type);
     TEST_ASSERT_TRUE(v.f64 == 12345.0);
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_CH_RAPIDOVR, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_CH_RAPIDOVR, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 100.0);
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_SP_OVERRIDE, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_SP_OVERRIDE, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 90.0);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_AX_Y_POS, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_AX_Y_POS, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == -3.25);
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_AX_Z_POS, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_AX_Z_POS, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_TRUE(v.f64 == 42.0);
 
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_PROD_ACTIVEPROG, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_PROD_ACTIVEPROG, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL(OPCUA_VAR_STRING, v.type);
     TEST_ASSERT_EQUAL_STRING("PART_A.NC", v.str);
 }
@@ -289,24 +289,24 @@ static void test_browse_every_remaining_container(void)
 {
     OpcUaReference refs[8];
 
-    int32_t n = browse(PC_UMATI_NS, N_MON_MACHINE, refs, 8);
+    int32_t n = browse(PROTOCORE_UMATI_NS, N_MON_MACHINE, refs, 8);
     TEST_ASSERT_EQUAL_INT32(2, n); // OperationMode, PowerOnDuration
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "OperationMode"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "PowerOnDuration"));
 
-    n = browse(PC_UMATI_NS, N_MON_AXIS_Y, refs, 8);
+    n = browse(PROTOCORE_UMATI_NS, N_MON_AXIS_Y, refs, 8);
     TEST_ASSERT_EQUAL_INT32(1, n);
     TEST_ASSERT_EQUAL_UINT32(N_AX_Y_POS, refs[0].target_id);
-    n = browse(PC_UMATI_NS, N_MON_AXIS_Z, refs, 8);
+    n = browse(PROTOCORE_UMATI_NS, N_MON_AXIS_Z, refs, 8);
     TEST_ASSERT_EQUAL_INT32(1, n);
     TEST_ASSERT_EQUAL_UINT32(N_AX_Z_POS, refs[0].target_id);
 
-    n = browse(PC_UMATI_NS, N_PRODUCTION, refs, 8);
+    n = browse(PROTOCORE_UMATI_NS, N_PRODUCTION, refs, 8);
     TEST_ASSERT_EQUAL_INT32(2, n); // ActiveProgram, ProducedPartCount
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "ActiveProgram"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "ProducedPartCount"));
 
-    n = browse(PC_UMATI_NS, N_NOTIFICATION, refs, 8);
+    n = browse(PROTOCORE_UMATI_NS, N_NOTIFICATION, refs, 8);
     TEST_ASSERT_EQUAL_INT32(2, n); // ActiveMessage, Severity
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "ActiveMessage"));
     TEST_ASSERT_NOT_NULL(find_ref(refs, n, "Severity"));
@@ -318,13 +318,13 @@ static void test_browse_clamps_to_max(void)
 {
     OpcUaReference refs[8];
     memset(refs, 0, sizeof(refs));
-    int32_t n = browse(PC_UMATI_NS, N_MACHINETOOL, refs, 2); // MachineTool has 4 children
+    int32_t n = browse(PROTOCORE_UMATI_NS, N_MACHINETOOL, refs, 2); // MachineTool has 4 children
     TEST_ASSERT_EQUAL_INT32(2, n);
     TEST_ASSERT_EQUAL_STRING("Identification", refs[0].browse_name);
     TEST_ASSERT_EQUAL_STRING("Monitoring", refs[1].browse_name);
     TEST_ASSERT_NULL(refs[2].browse_name); // the third child was dropped, not written
 
-    n = browse(PC_UMATI_NS, N_IDENTIFICATION, refs, 1); // 6 children, room for 1
+    n = browse(PROTOCORE_UMATI_NS, N_IDENTIFICATION, refs, 1); // 6 children, room for 1
     TEST_ASSERT_EQUAL_INT32(1, n);
     TEST_ASSERT_EQUAL_STRING("Manufacturer", refs[0].browse_name);
 }
@@ -360,15 +360,15 @@ static void test_install_binds_the_model(void)
     other.ident.manufacturer = "Other Machines";
     other.produced_part_count = 99;
 
-    pc_umati_install(&other);
+    protocore_umati_install(&other);
 
     OpcUaVariant v;
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_ID_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_ID_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_STRING("Other Machines", v.str); // the installed model, not the setUp one
-    TEST_ASSERT_TRUE(pc_umati_read(PC_UMATI_NS, N_PROD_PARTCOUNT, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_TRUE(protocore_umati_read(PROTOCORE_UMATI_NS, N_PROD_PARTCOUNT, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_UINT32(99, v.u32);
     OpcUaReference refs[4];
-    int32_t n = pc_umati_browse(0, 85, refs, 4);
+    int32_t n = protocore_umati_browse(0, 85, refs, 4);
     TEST_ASSERT_EQUAL_INT32(1, n);
     TEST_ASSERT_EQUAL_STRING("CNC-2", refs[0].browse_name);
 }

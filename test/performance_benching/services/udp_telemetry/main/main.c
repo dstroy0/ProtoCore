@@ -20,15 +20,15 @@ void dbench_run(void)
         DBENCH_BANNER("udp_telemetry");
         volatile size_t sink = 0;
         static char buf[256];
-        DBENCH_OP("pc_line build (2 tags, 3 fields)", 200000, {
-            pc_line l;
-            pc_line_init(&l, buf, sizeof(buf), "env");
-            pc_line_add_tag(&l, "host", "rig-1");
-            pc_line_add_tag(&l, "room", "lab");
-            pc_line_add_float(&l, "temp", 21.5f, 1);
-            pc_line_add_int(&l, "rssi", -42);
-            pc_line_add_uint(&l, "uptime", 1234u);
-            sink += pc_line_len(&l);
+        DBENCH_OP("protocore_line build (2 tags, 3 fields)", 200000, {
+            protocore_line l;
+            protocore_line_init(&l, buf, sizeof(buf), "env");
+            protocore_line_add_tag(&l, "host", "rig-1");
+            protocore_line_add_tag(&l, "room", "lab");
+            protocore_line_add_float(&l, "temp", 21.5f, 1);
+            protocore_line_add_int(&l, "rssi", -42);
+            protocore_line_add_uint(&l, "uptime", 1234u);
+            sink += protocore_line_len(&l);
         });
         (void)sink;
         DBENCH_DONE();

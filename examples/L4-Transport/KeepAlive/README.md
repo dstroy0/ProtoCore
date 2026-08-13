@@ -1,6 +1,6 @@
 # KeepAlive - HTTP/1.1 persistent connections
 
-**Layer:** L4 Transport · **Build flags:** `PC_ENABLE_KEEPALIVE`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_KEEPALIVE`
 
 ## What this example teaches
 
@@ -16,7 +16,7 @@ write the same routes; the server decides keep-alive vs close and emits the righ
 - HTTP/1.1: the connection stays open unless the client sends `Connection: close`.
 - HTTP/1.0: it closes unless the client sends `Connection: keep-alive`.
 - Error responses (400/413/414) always close - the next request boundary is unknown after a parse error.
-- Each connection serves at most `PC_KEEPALIVE_MAX_REQUESTS`, then closes.
+- Each connection serves at most `PROTOCORE_KEEPALIVE_MAX_REQUESTS`, then closes.
 - Idle connections are still reclaimed by the `conn_timeout` sweep.
 
 **There is no API to learn.** Enabling the flag changes the transport behavior;
@@ -31,15 +31,15 @@ server.on("/time", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
 });
 ```
 
-**Build-flag note.** `PC_ENABLE_KEEPALIVE` must reach the library build, so
+**Build-flag note.** `PROTOCORE_ENABLE_KEEPALIVE` must reach the library build, so
 pass it as a `build_flag` (an in-sketch `#define` only affects the sketch). You
-can also tune `PC_KEEPALIVE_MAX_REQUESTS` the same way.
+can also tune `PROTOCORE_KEEPALIVE_MAX_REQUESTS` the same way.
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_KEEPALIVE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_KEEPALIVE=1" \
   --lib="." examples/L4-Transport/KeepAlive/KeepAlive.ino
 ```
 
@@ -57,7 +57,7 @@ with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_KEEPALIVE 1
+#define PROTOCORE_ENABLE_KEEPALIVE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

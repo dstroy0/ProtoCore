@@ -8,9 +8,9 @@
 
 #include "server/signaling/link_manager.h"
 
-#if PC_ENABLE_LINK_MANAGER
+#if PROTOCORE_ENABLE_LINK_MANAGER
 
-int pc_link_select(const LinkManager *m)
+int protocore_link_select(const LinkManager *m)
 {
     if (!m || !m->ifaces)
     {
@@ -32,7 +32,7 @@ int pc_link_select(const LinkManager *m)
     return best;
 }
 
-void pc_link_init(LinkManager *m, LinkIface *ifaces, size_t n)
+void protocore_link_init(LinkManager *m, LinkIface *ifaces, size_t n)
 {
     if (!m)
     {
@@ -40,15 +40,15 @@ void pc_link_init(LinkManager *m, LinkIface *ifaces, size_t n)
     }
     m->ifaces = ifaces;
     m->n = ifaces ? n : 0;
-    m->active = pc_link_select(m);
+    m->active = protocore_link_select(m);
 }
 
-int pc_link_active(const LinkManager *m)
+int protocore_link_active(const LinkManager *m)
 {
     return m ? m->active : -1;
 }
 
-proto_bool pc_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to)
+proto_bool protocore_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to)
 {
     if (!m || !m->ifaces || idx >= m->n)
     {
@@ -64,7 +64,7 @@ proto_bool pc_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int
     }
     int prev = m->active;
     m->ifaces[idx].up = up;
-    m->active = pc_link_select(m);
+    m->active = protocore_link_select(m);
     if (from)
     {
         *from = prev;
@@ -76,4 +76,4 @@ proto_bool pc_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int
     return m->active != prev;
 }
 
-#endif // PC_ENABLE_LINK_MANAGER
+#endif // PROTOCORE_ENABLE_LINK_MANAGER

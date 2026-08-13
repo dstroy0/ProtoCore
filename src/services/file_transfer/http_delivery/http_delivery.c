@@ -7,11 +7,11 @@
  */
 
 #include "services/file_transfer/http_delivery/http_delivery.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
-#if PC_ENABLE_HTTP_DELIVERY
+#if PROTOCORE_ENABLE_HTTP_DELIVERY
 
-DeliveryVerdict pc_delivery_swr(uint32_t age_s, uint32_t max_age_s, uint32_t swr_s)
+DeliveryVerdict protocore_delivery_swr(uint32_t age_s, uint32_t max_age_s, uint32_t swr_s)
 {
     if (age_s <= max_age_s)
     {
@@ -25,19 +25,19 @@ DeliveryVerdict pc_delivery_swr(uint32_t age_s, uint32_t max_age_s, uint32_t swr
     return DELIVERY_EXPIRED;
 }
 
-size_t pc_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char *out, size_t cap)
+size_t protocore_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char *out, size_t cap)
 {
     if (!out || cap == 0)
     {
         return 0;
     }
-    pc_sb b = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&b, "public, max-age=");
-    pc_sb_u32(&b, max_age_s);
+    protocore_sb b = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&b, "public, max-age=");
+    protocore_sb_u32(&b, max_age_s);
     if (swr_s)
     {
-        pc_sb_put(&b, ", stale-while-revalidate=");
-        pc_sb_u32(&b, swr_s);
+        protocore_sb_put(&b, ", stale-while-revalidate=");
+        protocore_sb_u32(&b, swr_s);
     }
     if (!b.ok)
     {
@@ -47,25 +47,25 @@ size_t pc_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char *out, 
     return b.len;
 }
 
-size_t pc_delivery_sw_manifest(const char *const *paths, size_t n, const char *version, char *out, size_t cap)
+size_t protocore_delivery_sw_manifest(const char *const *paths, size_t n, const char *version, char *out, size_t cap)
 {
     if (!out || cap == 0 || (n && !paths))
     {
         return 0;
     }
-    pc_sb b2 = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&b2, "{\"version\":");
-    pc_sb_json(&b2, version ? version : "");
-    pc_sb_put(&b2, ",\"precache\":[");
+    protocore_sb b2 = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&b2, "{\"version\":");
+    protocore_sb_json(&b2, version ? version : "");
+    protocore_sb_put(&b2, ",\"precache\":[");
     for (size_t i = 0; i < n; i++)
     {
         if (i)
         {
-            pc_sb_put(&b2, ",");
+            protocore_sb_put(&b2, ",");
         }
-        pc_sb_json(&b2, paths[i]);
+        protocore_sb_json(&b2, paths[i]);
     }
-    pc_sb_put(&b2, "]}");
+    protocore_sb_put(&b2, "]}");
     if (!b2.ok)
     {
         return 0;
@@ -74,4 +74,4 @@ size_t pc_delivery_sw_manifest(const char *const *paths, size_t n, const char *v
     return b2.len;
 }
 
-#endif // PC_ENABLE_HTTP_DELIVERY
+#endif // PROTOCORE_ENABLE_HTTP_DELIVERY

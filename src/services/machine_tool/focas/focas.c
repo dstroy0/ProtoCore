@@ -9,7 +9,7 @@
 #include "services/machine_tool/focas/focas.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_FOCAS
+#if PROTOCORE_ENABLE_FOCAS
 
 // FOCAS is big-endian throughout.
 static size_t put16be(uint8_t *p, uint16_t v)
@@ -57,7 +57,7 @@ static size_t write_envelope(uint8_t *buf, size_t cap, FocasFrameType type, uint
     return p; // == FOCAS_FRAME_HDR_LEN
 }
 
-size_t pc_focas_build_open(uint8_t *buf, size_t cap)
+size_t protocore_focas_build_open(uint8_t *buf, size_t cap)
 {
     size_t p = write_envelope(buf, cap, FOCAS_FRAME_TYPE_OPEN_REQ, 2);
     if (!p)
@@ -68,12 +68,12 @@ size_t pc_focas_build_open(uint8_t *buf, size_t cap)
     return p;
 }
 
-size_t pc_focas_build_close(uint8_t *buf, size_t cap)
+size_t protocore_focas_build_close(uint8_t *buf, size_t cap)
 {
     return write_envelope(buf, cap, FOCAS_FRAME_TYPE_CLOSE_REQ, 0);
 }
 
-size_t pc_focas_build_request(uint8_t *buf, size_t cap, FocasCmd cmd, int32_t v1, int32_t v2, int32_t v3, int32_t v4,
+size_t protocore_focas_build_request(uint8_t *buf, size_t cap, FocasCmd cmd, int32_t v1, int32_t v2, int32_t v3, int32_t v4,
                               int32_t v5, const uint8_t *extra, size_t extra_len)
 {
     if (extra_len && !extra)
@@ -106,42 +106,42 @@ size_t pc_focas_build_request(uint8_t *buf, size_t cap, FocasCmd cmd, int32_t v1
     return p;
 }
 
-size_t pc_focas_build_sysinfo(uint8_t *buf, size_t cap)
+size_t protocore_focas_build_sysinfo(uint8_t *buf, size_t cap)
 {
-    return pc_focas_build_request(buf, cap, FOCAS_CMD_SYS_INFO, 0, 0, 0, 0, 0, NULL, 0);
+    return protocore_focas_build_request(buf, cap, FOCAS_CMD_SYS_INFO, 0, 0, 0, 0, 0, NULL, 0);
 }
 
-size_t pc_focas_build_read_alarm(uint8_t *buf, size_t cap)
+size_t protocore_focas_build_read_alarm(uint8_t *buf, size_t cap)
 {
-    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_ALARM, 0, 0, 0, 0, 0, NULL, 0);
+    return protocore_focas_build_request(buf, cap, FOCAS_CMD_READ_ALARM, 0, 0, 0, 0, 0, NULL, 0);
 }
 
-size_t pc_focas_build_read_param(uint8_t *buf, size_t cap, int32_t first, int32_t last, int32_t axis)
+size_t protocore_focas_build_read_param(uint8_t *buf, size_t cap, int32_t first, int32_t last, int32_t axis)
 {
-    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_CNC_PARAM, first, last, axis, 0, 0, NULL, 0);
+    return protocore_focas_build_request(buf, cap, FOCAS_CMD_READ_CNC_PARAM, first, last, axis, 0, 0, NULL, 0);
 }
 
-size_t pc_focas_build_read_macro(uint8_t *buf, size_t cap, int32_t first, int32_t last)
+size_t protocore_focas_build_read_macro(uint8_t *buf, size_t cap, int32_t first, int32_t last)
 {
-    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_MACRO, first, last, 0, 0, 0, NULL, 0);
+    return protocore_focas_build_request(buf, cap, FOCAS_CMD_READ_MACRO, first, last, 0, 0, 0, NULL, 0);
 }
 
-size_t pc_focas_build_read_position(uint8_t *buf, size_t cap, int32_t kind, int32_t axis)
+size_t protocore_focas_build_read_position(uint8_t *buf, size_t cap, int32_t kind, int32_t axis)
 {
-    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_POSITION, kind, axis, 0, 0, 0, NULL, 0);
+    return protocore_focas_build_request(buf, cap, FOCAS_CMD_READ_POSITION, kind, axis, 0, 0, 0, NULL, 0);
 }
 
-size_t pc_focas_build_read_feedrate(uint8_t *buf, size_t cap)
+size_t protocore_focas_build_read_feedrate(uint8_t *buf, size_t cap)
 {
-    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_FEEDRATE, 0, 0, 0, 0, 0, NULL, 0);
+    return protocore_focas_build_request(buf, cap, FOCAS_CMD_READ_FEEDRATE, 0, 0, 0, 0, 0, NULL, 0);
 }
 
-size_t pc_focas_build_read_spindle(uint8_t *buf, size_t cap)
+size_t protocore_focas_build_read_spindle(uint8_t *buf, size_t cap)
 {
-    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_SPINDLE, 0, 0, 0, 0, 0, NULL, 0);
+    return protocore_focas_build_request(buf, cap, FOCAS_CMD_READ_SPINDLE, 0, 0, 0, 0, 0, NULL, 0);
 }
 
-proto_bool pc_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out)
+proto_bool protocore_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out)
 {
     if (!buf || !out || len < (size_t)FOCAS_FRAME_HDR_LEN)
     {
@@ -162,7 +162,7 @@ proto_bool pc_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_focas_parse_response(const uint8_t *payload, size_t payload_len, FocasResponse *out)
+proto_bool protocore_focas_parse_response(const uint8_t *payload, size_t payload_len, FocasResponse *out)
 {
     if (!payload || !out || payload_len < (size_t)FOCAS_RESP_HDR_LEN)
     {
@@ -181,10 +181,10 @@ proto_bool pc_focas_parse_response(const uint8_t *payload, size_t payload_len, F
     return PROTO_TRUE;
 }
 
-proto_bool pc_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasResponse *out)
+proto_bool protocore_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasResponse *out)
 {
     FocasFrame f;
-    if (!pc_focas_parse_frame(buf, len, &f))
+    if (!protocore_focas_parse_frame(buf, len, &f))
     {
         return PROTO_FALSE;
     }
@@ -192,10 +192,10 @@ proto_bool pc_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasRes
     {
         return PROTO_FALSE;
     }
-    return pc_focas_parse_response(f.payload, f.payload_len, out);
+    return protocore_focas_parse_response(f.payload, f.payload_len, out);
 }
 
-proto_bool pc_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSysInfo *out)
+proto_bool protocore_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSysInfo *out)
 {
     if (!data || !out || data_len < (size_t)FOCAS_SYSINFO_LEN)
     {
@@ -216,7 +216,7 @@ proto_bool pc_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSys
     return PROTO_TRUE;
 }
 
-proto_bool pc_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *alarm_status)
+proto_bool protocore_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *alarm_status)
 {
     if (!data || !alarm_status || data_len < 4)
     {
@@ -226,7 +226,7 @@ proto_bool pc_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *
     return PROTO_TRUE;
 }
 
-proto_bool pc_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out)
+proto_bool protocore_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out)
 {
     if (!chunk || !out || len < (size_t)FOCAS_VALUE_LEN)
     {
@@ -240,7 +240,7 @@ proto_bool pc_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out)
     return out->valid;
 }
 
-float pc_focas_value_f(const FocasValue *v)
+float protocore_focas_value_f(const FocasValue *v)
 {
     if (!v || !v->valid)
     {
@@ -254,4 +254,4 @@ float pc_focas_value_f(const FocasValue *v)
     return (float)v->data / div;
 }
 
-#endif // PC_ENABLE_FOCAS
+#endif // PROTOCORE_ENABLE_FOCAS

@@ -103,12 +103,12 @@ void test_compresses_json()
     TEST_ASSERT_TRUE(clen < n);
 }
 
-// A run of far more than PC_MAX_CHAIN (64) positions sharing the same 3-byte hash
+// A run of far more than PROTOCORE_MAX_CHAIN (64) positions sharing the same 3-byte hash
 // ("ABC"), each followed by a distinct 4th byte so every candidate match stops
-// at exactly PC_MIN_MATCH (3) and never reaches max_len. That forces the
-// hash-chain walk to exhaust its PC_MAX_CHAIN budget - loop exit via chain == 0 -
+// at exactly PROTOCORE_MIN_MATCH (3) and never reaches max_len. That forces the
+// hash-chain walk to exhaust its PROTOCORE_MAX_CHAIN budget - loop exit via chain == 0 -
 // rather than stopping early on a length-based break or running off the end of
-// the chain (PC_NONE sentinel).
+// the chain (PROTOCORE_NONE sentinel).
 void test_hash_chain_exhaustion()
 {
     uint8_t buf[480];
@@ -122,11 +122,11 @@ void test_hash_chain_exhaustion()
     roundtrip(buf, sizeof(buf));
 }
 
-// Two occurrences of a distinctive 3-byte tag more than PC_WINDOW (512) bytes
+// Two occurrences of a distinctive 3-byte tag more than PROTOCORE_WINDOW (512) bytes
 // apart, with nothing else in the buffer able to collide with that hash
 // bucket: the chain walk's first (and only) candidate for the second
 // occurrence is farther than the window, so it must be discarded via the
-// dist > PC_WINDOW break rather than matched against.
+// dist > PROTOCORE_WINDOW break rather than matched against.
 void test_match_distance_exceeds_window()
 {
     uint8_t buf[600];

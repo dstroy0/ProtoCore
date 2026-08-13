@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // DTLS 1.3 real-peer interop harness: a tiny UDP server that wraps the library's transport-neutral
-// pc_dtls_conn state machine, so it can be driven by a reference DTLS 1.3 client (wolfSSL). It is a
+// protocore_dtls_conn state machine, so it can be driven by a reference DTLS 1.3 client (wolfSSL). It is a
 // Linux test driver, NOT part of the library. See README.md for the wolfSSL build + run steps.
 //
-//   usage: pc_dtls_interop_server <udp-port> <cert.der> <ed25519-seed-32.bin>
+//   usage: protocore_dtls_interop_server <udp-port> <cert.der> <ed25519-seed-32.bin>
 //
 // It completes the DTLS 1.3 handshake against the peer, then decrypts inbound application records
 // (epoch 3) and echoes them back, printing "INTEROP OK" once a full round trip has happened.
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
             }
             if (DtlsServer.established(&conn))
             {
-                uint8_t cid[PC_DTLS_CID_MAX];
+                uint8_t cid[PROTOCORE_DTLS_CID_MAX];
                 size_t cidlen = DtlsServer.local_cid(&conn, cid);
                 fprintf(stderr, "HANDSHAKE OK%s%s", pre_flights >= 2 ? " (via HelloRetryRequest)" : "",
                         cidlen ? " (with connection ID, " : "\n");

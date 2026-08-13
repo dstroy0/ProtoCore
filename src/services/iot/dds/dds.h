@@ -3,7 +3,7 @@
 
 /**
  * @file dds.h
- * @brief DDS / RTPS wire-protocol codec (PC_ENABLE_DDS).
+ * @brief DDS / RTPS wire-protocol codec (PROTOCORE_ENABLE_DDS).
  *
  * DDS (OMG Data Distribution Service) publishes on the wire as **RTPS** (DDSI-RTPS, the Real-Time
  * Publish-Subscribe protocol), normally over UDP multicast. An RTPS **message** is a 20-octet header
@@ -12,8 +12,8 @@
  *   Header (20): "RTPS" | protocol version (2) | vendorId (2) | guidPrefix (12)
  *   Submessage:  submessageId (1) | flags (1) | octetsToNextHeader (2, endian per the E flag) | body
  *
- * This is the message + submessage framing codec: `pc_rtps_header` / `pc_rtps_submessage` build
- * them and `pc_rtps_parse` validates the header (magic + version) and walks the submessages,
+ * This is the message + submessage framing codec: `protocore_rtps_header` / `protocore_rtps_submessage` build
+ * them and `protocore_rtps_parse` validates the header (magic + version) and walks the submessages,
  * surfacing each via a callback. The per-submessage bodies (DATA serialized-payload/CDR, HEARTBEAT
  * sequence-number sets, the discovery SPDP/SEDP topics) layer on top of this framing.
  *
@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DDS
+#if PROTOCORE_ENABLE_DDS
 
 /** @brief RTPS submessage kinds (DDSI-RTPS 8.3.7) + the flag bit for little-endian. */
 // RTPS submessage kinds + the little-endian flag bit + fixed lengths: wire values (the flag is OR'd),
@@ -56,7 +56,7 @@ extern const uint8_t RTPS_VERSION[2]; ///< {2, 4}.
  * @param vendor_id   2-byte vendor id (0x0000 = unknown).
  * @return 20, or 0 if @p cap < 20 or a pointer is null.
  */
-size_t pc_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint8_t *out, size_t cap);
+size_t protocore_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint8_t *out, size_t cap);
 
 /**
  * @brief Build one RTPS submessage `[id][flags][octetsToNextHeader][body]`.
@@ -66,20 +66,21 @@ size_t pc_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint
  * @param body_len contents length (the octetsToNextHeader value).
  * @return 4 + body_len bytes written, or 0 if it won't fit.
  */
-size_t pc_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16_t body_len, uint8_t *out, size_t cap);
+size_t protocore_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16_t body_len, uint8_t *out,
+                                 size_t cap);
 
-/** @brief One submessage surfaced by pc_rtps_parse. */
-typedef void (*pc_rtps_cb)(uint8_t id, uint8_t flags, const uint8_t *body, size_t body_len, void *arg);
+/** @brief One submessage surfaced by protocore_rtps_parse. */
+typedef void (*protocore_rtps_cb)(uint8_t id, uint8_t flags, const uint8_t *body, size_t body_len, void *arg);
 
 /**
  * @brief Validate an RTPS message header and walk its submessages.
  * @return true if the header is a well-formed RTPS message (magic + version <= ours) and every
  *         submessage fits. An octetsToNextHeader of 0 on the last submessage means "to end of message".
  */
-proto_bool pc_rtps_parse(const uint8_t *msg, size_t len, pc_rtps_cb cb, void *arg);
+proto_bool protocore_rtps_parse(const uint8_t *msg, size_t len, protocore_rtps_cb cb, void *arg);
 
-#endif // PC_ENABLE_DDS
+#endif // PROTOCORE_ENABLE_DDS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DDS_H

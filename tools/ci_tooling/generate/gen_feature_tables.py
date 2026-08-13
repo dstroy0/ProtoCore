@@ -4,7 +4,7 @@
 """Generate the README feature/codec tables from docs/FEATURES.md.
 
 docs/FEATURES.md is the single source of truth: every feature is a `## Name`
-heading, an optional `` `PC_ENABLE_*` `` flag line, and a description
+heading, an optional `` `PROTOCORE_ENABLE_*` `` flag line, and a description
 paragraph. This script parses those entries, splits them into a FEATURES table
 and a CODECS table, and writes both (as HTML tables with a merged header) into
 the marked region of README.md and docs/README.md. The hover tooltip is the
@@ -41,12 +41,12 @@ FEATURES_MD = os.path.join(ROOT, "docs", "FEATURES.md")
 CONFIG_H = os.path.join(ROOT, "src", "protocore_config.h")
 
 # Internal derived flags: auto-set from other flags, not user-facing opt-ins, so they
-# get no FEATURES.md entry of their own. Every other PC_ENABLE_* must be documented
+# get no FEATURES.md entry of their own. Every other PROTOCORE_ENABLE_* must be documented
 # (the coverage guard below fails CI otherwise - this is how the whole industrial-protocol
 # wave once drifted out of the feature grid unnoticed).
 INTERNAL_FLAGS = {
-    "PC_ENABLE_STREAM_BODY",  # = OTA || UPLOAD || WEBDAV (shared parser machinery)
-    "PC_ENABLE_CLIENT_TLS",  # = HTTP_CLIENT_TLS || MQTT_TLS || WS_CLIENT_TLS || EDGE_ORIGIN_TLS
+    "PROTOCORE_ENABLE_STREAM_BODY",  # = OTA || UPLOAD || WEBDAV (shared parser machinery)
+    "PROTOCORE_ENABLE_CLIENT_TLS",  # = HTTP_CLIENT_TLS || MQTT_TLS || WS_CLIENT_TLS || EDGE_ORIGIN_TLS
 }
 
 COLUMNS = 5
@@ -133,7 +133,7 @@ def build_block(link_prefix):
 
     return "\n".join(
         [
-            f"**{total} features**, every one a compile-time `PC_ENABLE_*` flag that is off unless you ask"
+            f"**{total} features**, every one a compile-time `PROTOCORE_ENABLE_*` flag that is off unless you ask"
             " for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are"
             " always on and are not flags.",
             "",
@@ -154,17 +154,17 @@ def build_block(link_prefix):
 
 
 def check_flag_coverage():
-    """Fail if a PC_ENABLE_* flag in the config header has no FEATURES.md entry
+    """Fail if a PROTOCORE_ENABLE_* flag in the config header has no FEATURES.md entry
     (excluding the internal derived flags). Guards against a shipped feature silently
     never reaching the feature grid."""
     cfg = open(CONFIG_H, "r", encoding="utf-8").read()
     feat = open(FEATURES_MD, "r", encoding="utf-8").read()
-    defined = set(re.findall(r"^#define (PC_ENABLE_[A-Z0-9_]+) 0", cfg, re.M))
-    documented = set(re.findall(r"^`(PC_ENABLE_[A-Z0-9_]+)`", feat, re.M))
+    defined = set(re.findall(r"^#define (PROTOCORE_ENABLE_[A-Z0-9_]+) 0", cfg, re.M))
+    documented = set(re.findall(r"^`(PROTOCORE_ENABLE_[A-Z0-9_]+)`", feat, re.M))
     missing = sorted(defined - documented - INTERNAL_FLAGS)
     if missing:
         raise SystemExit(
-            "FEATURES.md is missing entries for these PC_ENABLE_* flags "
+            "FEATURES.md is missing entries for these PROTOCORE_ENABLE_* flags "
             "(add a `## Name` section, or list the flag in INTERNAL_FLAGS if it is "
             f"internal): {missing}"
         )

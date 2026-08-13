@@ -1,6 +1,6 @@
 # EnOceanGateway - an EnOcean (ESP3) radio bridged to the gateway
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_ENOCEAN`, `PC_ENABLE_GATEWAY`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_ENOCEAN`, `PROTOCORE_ENABLE_GATEWAY`
 
 ## What this example teaches
 
@@ -12,7 +12,7 @@ chip driver here - the module does the RF, so the "driver" is purely the **ESP3 
 codec**.
 
 ```
-TCM310 --UART--> pc_esp3_parse() --> RADIO_ERP1 sender + payload -> pc_gateway_uplink()
+TCM310 --UART--> protocore_esp3_parse() --> RADIO_ERP1 sender + payload -> protocore_gateway_uplink()
                                                                        |
                                                 envelope + topic  enocean/0/<sender>
                                                                        |
@@ -24,15 +24,15 @@ The codec accumulates the byte stream and frames one telegram at a time, verifyi
 CRC-8s and resynchronizing on garbage:
 
 ```cpp
-pc_esp3_packet pkt;
-int n = pc_esp3_parse(buf, len, &pkt);   // >0 = a telegram, 0 = need more, -1 = drop a byte
-if (n > 0 && pkt.type == pc_esp3_type::ESP3_RADIO_ERP1) {
+protocore_esp3_packet pkt;
+int n = protocore_esp3_parse(buf, len, &pkt);   // >0 = a telegram, 0 = need more, -1 = drop a byte
+if (n > 0 && pkt.type == protocore_esp3_type::ESP3_RADIO_ERP1) {
     const uint8_t *sender = pkt.data + pkt.data_len - 5;  // 4-byte id + status
-    pc_gateway_uplink(0, (sender[2] << 8) | sender[3], pkt.data, pkt.data_len - 5, 0);
+    protocore_gateway_uplink(0, (sender[2] << 8) | sender[3], pkt.data, pkt.data_len - 5, 0);
 }
 ```
 
-`pc_esp3_build()` assembles a telegram the same way (for sending a common command / a
+`protocore_esp3_build()` assembles a telegram the same way (for sending a common command / a
 teach-in reply). The codec is pure - you feed it the UART bytes - and fully host-tested
 (CRC-8 known answers, round trip, malformed framing, resync) in `test/test_enocean`.
 
@@ -53,6 +53,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_ENOCEAN=1 -DPC_ENABLE_GATEWAY=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_ENOCEAN=1 -DPROTOCORE_ENABLE_GATEWAY=1" \
   --lib="." examples/Drivers/EnOceanGateway/EnOceanGateway.ino
 ```

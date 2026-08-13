@@ -1,6 +1,6 @@
 # mTLS - mutual TLS (verified client certificates)
 
-**Layer:** L4 Transport · **Build flags:** `PC_ENABLE_TLS`, `PC_ENABLE_MTLS`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_TLS`, `PROTOCORE_ENABLE_MTLS`
 
 ## What this example teaches
 
@@ -25,7 +25,7 @@ int32_t result = server.begin();                             // activate
 certificate subject is available to handlers:
 
 ```cpp
-char subject[PC_MTLS_SUBJECT_MAX];
+char subject[PROTOCORE_MTLS_SUBJECT_MAX];
 if (server.tls_client_subject(id, subject, sizeof(subject)) > 0)
     server.send(id, 200, "text/plain", subject);    // e.g. "CN=alice@example.com"
 else
@@ -45,7 +45,7 @@ handshake - so the `/whoami` route is reached only by verified peers.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_TLS=1 -DPC_ENABLE_MTLS=1 -DMAX_CONNS=4 -DPC_TLS_ARENA_SIZE=32768" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_MTLS=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
   --lib="." examples/L4-Transport/mTLS/mTLS.ino
 ```
 
@@ -67,8 +67,8 @@ comments.
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_TLS 1
-#define PC_ENABLE_MTLS 1
+#define PROTOCORE_ENABLE_TLS 1
+#define PROTOCORE_ENABLE_MTLS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -114,7 +114,7 @@ void setup()
 
     // Reached only by verified clients; report their certificate subject DN.
     server.on("/whoami", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
-        char subject[PC_MTLS_SUBJECT_MAX];
+        char subject[PROTOCORE_MTLS_SUBJECT_MAX];
         if (server.tls_client_subject(id, subject, sizeof(subject)) > 0)
             server.send(id, 200, "text/plain", subject);
         else

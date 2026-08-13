@@ -9,7 +9,7 @@
 // IMF-fixdate HTTP `Date` header (pc_ntp_http_date -> shared pc_http_date -> gmtime_r + strftime),
 // plus the cheap epoch/synced poll accessors and the time_source registry adapter.
 //
-// Time seam: PC_ENABLE_NTP defaults to 0 (and test_matrix.json's flag set for this service does not
+// Time seam: PROTOCORE_ENABLE_NTP defaults to 0 (and test_matrix.json's flag set for this service does not
 // enable it), so the host branch of ntp_service.cpp is what compiles here - it exposes the
 // pc_ntp_set_test_epoch() seam the unit tests use to inject a wall clock. We forward-declare it
 // (the header only declares it for !ARDUINO) and seed a realistic modern epoch once at task start,
@@ -28,7 +28,7 @@
 #include <stdint.h>
 
 // Host/test time seam (see file header): defined by the host branch of ntp_service.cpp, which is the
-// branch that compiles when PC_ENABLE_NTP is 0. The public header hides its declaration behind
+// branch that compiles when PROTOCORE_ENABLE_NTP is 0. The public header hides its declaration behind
 // !defined(ARDUINO), so forward-declare it here (matching C++ linkage) to inject a wall clock.
 extern void pc_ntp_set_test_epoch(time_t epoch);
 

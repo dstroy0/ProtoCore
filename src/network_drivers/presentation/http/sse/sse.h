@@ -32,30 +32,30 @@
 #include "network_drivers/transport/tcp.h"
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Per-connection SSE state
 // ---------------------------------------------------------------------------
 
 /**
- * @brief SSE connection state stored in pc_sse_pool[].
+ * @brief SSE connection state stored in protocore_sse_pool[].
  *
  * Allocated when the SSE handshake (200 + headers) is sent.  slot_id ties
  * this entry back to conn_pool[] and the underlying TCP PCB.
  */
 typedef struct
 {
-    uint8_t pc_sse_id; ///< Index into pc_sse_pool[] (set at init).
-    uint8_t slot_id;   ///< Owning TCP slot in conn_pool[].
-    proto_bool active; ///< True when this entry is in use.
+    uint8_t protocore_sse_id; ///< Index into protocore_sse_pool[] (set at init).
+    uint8_t slot_id;          ///< Owning TCP slot in conn_pool[].
+    proto_bool active;        ///< True when this entry is in use.
 
-    /** Path this client subscribed to (for pc_sse_broadcast() matching). */
+    /** Path this client subscribed to (for protocore_sse_broadcast() matching). */
     char path[MAX_PATH_LEN];
 } SseConn;
 
 /** @brief Pool of SSE connection state, one per MAX_SSE_CONNS. */
-extern SseConn pc_sse_pool[MAX_SSE_CONNS];
+extern SseConn protocore_sse_pool[MAX_SSE_CONNS];
 
 // ---------------------------------------------------------------------------
 // SSE pool API
@@ -64,32 +64,32 @@ extern SseConn pc_sse_pool[MAX_SSE_CONNS];
 /**
  * @brief Callback fired when a new SSE client connects.
  *
- * Use pc_sse_send() inside this callback to push an initial event if needed.
+ * Use protocore_sse_send() inside this callback to push an initial event if needed.
  *
- * @param pc_sse_id  Index into pc_sse_pool[] for this connection.
+ * @param protocore_sse_id  Index into protocore_sse_pool[] for this connection.
  */
-typedef void (*SseConnectHandler)(uint8_t pc_sse_id);
+typedef void (*SseConnectHandler)(uint8_t protocore_sse_id);
 
 /** @brief The id a route carries when it serves no SSE stream. */
-#define PC_SSE_NONE 0xFFu
+#define PROTOCORE_SSE_NONE 0xFFu
 
 /**
- * @brief Record one route's subscribe handler and return the id naming it, or ::PC_SSE_NONE when full.
+ * @brief Record one route's subscribe handler and return the id naming it, or ::PROTOCORE_SSE_NONE when full.
  *
  * The handler lives here, not in the route table: a route decides where a request goes, and what
  * runs once a client subscribes belongs to this module.
  */
-uint8_t pc_sse_route_add(SseConnectHandler on_connect);
+uint8_t protocore_sse_route_add(SseConnectHandler on_connect);
 
 /// @brief The subscribe handler @p id names, or nullptr when @p id names nothing.
-SseConnectHandler pc_sse_route_connect(uint8_t id);
+SseConnectHandler protocore_sse_route_connect(uint8_t id);
 
 /**
  * @brief Initialize all SSE pool slots to inactive.
  *
  * Called once from begin().
  */
-void pc_sse_init();
+void protocore_sse_init();
 
 /**
  * @brief Allocate an SseConn and bind it to a TCP slot.
@@ -98,21 +98,21 @@ void pc_sse_init();
  * @param path     URL path the client subscribed to (stored for broadcast).
  * @return Pointer to the allocated SseConn, or nullptr if the pool is full.
  */
-SseConn *pc_sse_alloc(uint8_t slot_id, const char *path);
+SseConn *protocore_sse_alloc(uint8_t slot_id, const char *path);
 
 /**
  * @brief Find the SseConn for a given TCP slot, or nullptr.
  *
  * @param slot_id  TCP connection slot index.
  */
-SseConn *pc_sse_find(uint8_t slot_id);
+SseConn *protocore_sse_find(uint8_t slot_id);
 
 /**
  * @brief Free the SseConn associated with a TCP slot.
  *
  * @param slot_id  TCP connection slot index.
  */
-void pc_sse_free(uint8_t slot_id);
+void protocore_sse_free(uint8_t slot_id);
 
 /**
  * @brief Format one SSE event record into a caller buffer (no transport).
@@ -120,7 +120,7 @@ void pc_sse_free(uint8_t slot_id);
  * Emits `event: <event>\n` (if event), `id: <id>\n` (if id), then
  * `data: <data>\n\n` per the WHATWG event-stream format.  data must not be
  * nullptr.  Pure: no connection state, so it is unit-testable and benchable
- * on its own; pc_sse_write() wraps it with the Tcp.conn->send() I/O.
+ * on its own; protocore_sse_write() wraps it with the Tcp.conn->send() I/O.
  *
  * @param buf    Destination buffer.
  * @param n      Size of @p buf.
@@ -129,7 +129,7 @@ void pc_sse_free(uint8_t slot_id);
  * @param id     Event ID (optional).
  * @return Bytes written (excluding the terminator), or 0 on empty/overflow.
  */
-int pc_sse_format(char *buf, size_t n, const char *data, const char *event, const char *id);
+int protocore_sse_format(char *buf, size_t n, const char *data, const char *event, const char *id);
 
 /**
  * @brief Write one SSE event record to a client.
@@ -146,8 +146,8 @@ int pc_sse_format(char *buf, size_t n, const char *data, const char *event, cons
  * @param id     Event ID (optional).
  * @return true on success, false if the TCP slot is not active.
  */
-proto_bool pc_sse_write(SseConn *sse, const char *data, const char *event, const char *id);
+proto_bool protocore_sse_write(SseConn *sse, const char *data, const char *event, const char *id);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

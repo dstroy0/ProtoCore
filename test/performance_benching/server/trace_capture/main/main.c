@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the pre/post-trigger capture assembler (server/signaling/trace_capture):
-// pc_tc_feed() is the per-batch hot op (most naturally called from a DMA-complete handler) that fills
+// protocore_tc_feed() is the per-batch hot op (most naturally called from a DMA-complete handler) that fills
 // the pre-trigger ring and, after a trigger, the post-trigger half. Pure ring bookkeeping over a
 // caller sample batch; the DMA source and the completed-window sink are the application's.
 //
@@ -15,7 +15,7 @@
 #include <stdint.h>
 
 static volatile uint32_t g_windows;
-static void sink_cb(const pc_tc_window *, void *)
+static void sink_cb(const protocore_tc_window *, void *)
 {
     g_windows++; // count completed windows; do no work in the hot path
 }
@@ -31,13 +31,13 @@ void dbench_run(void)
     for (;;)
     {
         DBENCH_BANNER("trace_capture");
-        pc_tc_config cfg = {512, 512, sink_cb, NULL};
-        pc_tc_begin(&cfg);
+        protocore_tc_config cfg = {512, 512, sink_cb, NULL};
+        protocore_tc_begin(&cfg);
         volatile uint32_t sink = 0;
         // Steady pre-trigger feeding: the continuous ring fill that runs every DMA-complete.
-        DBENCH_OP("pc_tc_feed (64 samples)", 100000, sink += pc_tc_feed(batch, 64));
+        DBENCH_OP("protocore_tc_feed (64 samples)", 100000, sink += protocore_tc_feed(batch, 64));
         (void)sink;
-        pc_tc_end();
+        protocore_tc_end();
         DBENCH_DONE();
     }
 }

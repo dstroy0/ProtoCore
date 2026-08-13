@@ -3,9 +3,9 @@
 
 /**
  * @file log.c
- * @brief The emitted half of the PC_LOG* macros (see log.h).
+ * @brief The emitted half of the PROTOCORE_LOG* macros (see log.h).
  *
- * Nothing here is compiled when PC_LOG_LEVEL is PC_NONE - not even the sink pointer - so a build that
+ * Nothing here is compiled when PROTOCORE_LOG_LEVEL is PROTOCORE_NONE - not even the sink pointer - so a build that
  * logs nothing links no logging code and spends no BSS on it.
  */
 
@@ -13,27 +13,27 @@
 
 #include "mmgr/protoframe.h" // frame.build: the line is a spec, not a format string
 
-#if PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
+#if PROTOCORE_LOG_LEVEL < PROTOCORE_LOG_LEVEL_NONE
 
 #include <stdarg.h>
 
-#if PC_ENABLE_LOGBUF
+#if PROTOCORE_ENABLE_LOGBUF
 #include "server/logbuf.h"
 #endif
 
 /** @brief Owned state: just the sink the formatted line is handed to. */
 typedef struct
 {
-    pc_log_sink_fn sink;
+    protocore_log_sink_fn sink;
 } LogCtx;
 static LogCtx s_log = {NULL};
 
-void pc_log_set_sink(pc_log_sink_fn cb)
+void protocore_log_set_sink(protocore_log_sink_fn cb)
 {
     s_log.sink = cb;
 }
 
-void pc_log_frame(uint8_t level, const struct pc_field *spec, const struct pc_fval *v, size_t nv)
+void protocore_log_frame(uint8_t level, const struct protocore_field *spec, const struct protocore_fval *v, size_t nv)
 {
     if (!spec)
     {
@@ -44,11 +44,11 @@ void pc_log_frame(uint8_t level, const struct pc_field *spec, const struct pc_fv
     // it is a spec that was written wrong, not a runtime condition to absorb: every log frame
     // states its literals' lengths and bounds its string fields, so whether a message fits is
     // settled when the frame is declared. Nothing here decides it from the data.
-    char line[PC_LOG_LINE_LEN];
+    char line[PROTOCORE_LOG_LINE_LEN];
     (void)frame.build(line, sizeof(line), spec, v, nv);
 
-#if PC_ENABLE_LOGBUF
-    pc_log(level, line);
+#if PROTOCORE_ENABLE_LOGBUF
+    protocore_log(level, line);
 #endif
     if (s_log.sink)
     {
@@ -56,4 +56,4 @@ void pc_log_frame(uint8_t level, const struct pc_field *spec, const struct pc_fv
     }
 }
 
-#endif // PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
+#endif // PROTOCORE_LOG_LEVEL < PROTOCORE_LOG_LEVEL_NONE

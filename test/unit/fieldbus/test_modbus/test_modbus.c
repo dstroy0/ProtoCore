@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Unit tests for the Modbus TCP slave core (services/fieldbus/modbus): the data model and
-// the MBAP/PDU codec (pc_modbus_process_adu). No sockets - pure host tests.
+// the MBAP/PDU codec (protocore_modbus_process_adu). No sockets - pure host tests.
 
 #include "services/fieldbus/modbus/modbus.h"
 #include <string.h>
 
 #include <unity.h>
 
-// Last write reported via pc_modbus_on_write().
+// Last write reported via protocore_modbus_on_write().
 static uint8_t g_wfc;
 static uint16_t g_wstart, g_wcount;
 static int g_wcalls;
@@ -23,8 +23,8 @@ static void on_write(uint8_t fc, uint16_t start, uint16_t count)
 
 void setUp()
 {
-    pc_modbus_server_init();
-    pc_modbus_on_write(on_write);
+    protocore_modbus_server_init();
+    protocore_modbus_on_write(on_write);
     g_wfc = 0;
     g_wstart = g_wcount = 0;
     g_wcalls = 0;
@@ -57,14 +57,14 @@ static uint16_t rd16(const uint8_t *p)
 
 void test_read_holding_registers()
 {
-    pc_modbus_set_holding_reg(0, 0x1234);
-    pc_modbus_set_holding_reg(1, 0xABCD);
-    pc_modbus_set_holding_reg(2, 0x0001);
+    protocore_modbus_set_holding_reg(0, 0x1234);
+    protocore_modbus_set_holding_reg(1, 0xABCD);
+    protocore_modbus_set_holding_reg(2, 0x0001);
 
     uint8_t pdu[] = {0x03, 0x00, 0x00, 0x00, 0x03}; // FC3, start 0, qty 3
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 0x0001, 0x11, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
 
     TEST_ASSERT_EQUAL_size_t(7 + 2 + 6, n);           // MBAP + fc + bytecount + 3*2
     TEST_ASSERT_EQUAL_UINT16(0x0001, rd16(resp));     // tid echoed
@@ -80,11 +80,11 @@ void test_read_holding_registers()
 
 void test_read_input_registers()
 {
-    pc_modbus_set_input_reg(5, 0xBEEF);
+    protocore_modbus_set_input_reg(5, 0xBEEF);
     uint8_t pdu[] = {0x04, 0x00, 0x05, 0x00, 0x01};
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 0x0002, 0x01, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 2 + 2, n);
     TEST_ASSERT_EQUAL_UINT8(0x04, resp[7]);
     TEST_ASSERT_EQUAL_UINT16(0xBEEF, rd16(resp + 9));
@@ -92,15 +92,15 @@ void test_read_input_registers()
 
 void test_read_coils_packs_bits()
 {
-    pc_modbus_set_coil(0, PROTO_TRUE);
-    pc_modbus_set_coil(1, PROTO_FALSE);
-    pc_modbus_set_coil(2, PROTO_TRUE);
-    pc_modbus_set_coil(9, PROTO_TRUE); // second byte, bit 1
+    protocore_modbus_set_coil(0, PROTO_TRUE);
+    protocore_modbus_set_coil(1, PROTO_FALSE);
+    protocore_modbus_set_coil(2, PROTO_TRUE);
+    protocore_modbus_set_coil(9, PROTO_TRUE); // second byte, bit 1
 
     uint8_t pdu[] = {0x01, 0x00, 0x00, 0x00, 0x0A}; // FC1, start 0, qty 10
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 1, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 2 + 2, n); // 10 bits -> 2 bytes
     TEST_ASSERT_EQUAL_UINT8(0x01, resp[7]);
     TEST_ASSERT_EQUAL_UINT8(2, resp[8]);
@@ -113,10 +113,10 @@ void test_write_single_coil()
     uint8_t pdu[] = {0x05, 0x00, 0x03, 0xFF, 0x00}; // set coil 3 ON
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 5, n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pdu, resp + 7, 5); // echo
-    TEST_ASSERT_TRUE(pc_modbus_get_coil(3));
+    TEST_ASSERT_TRUE(protocore_modbus_get_coil(3));
     TEST_ASSERT_EQUAL_INT(1, g_wcalls);
     TEST_ASSERT_EQUAL_UINT8(0x05, g_wfc);
     TEST_ASSERT_EQUAL_UINT16(3, g_wstart);
@@ -127,9 +127,9 @@ void test_write_single_register()
     uint8_t pdu[] = {0x06, 0x00, 0x0A, 0x12, 0x34};
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 5, n);
-    TEST_ASSERT_EQUAL_UINT16(0x1234, pc_modbus_get_holding_reg(10));
+    TEST_ASSERT_EQUAL_UINT16(0x1234, protocore_modbus_get_holding_reg(10));
     TEST_ASSERT_EQUAL_INT(1, g_wcalls);
 }
 
@@ -138,13 +138,13 @@ void test_write_multiple_registers()
     uint8_t pdu[] = {0x10, 0x00, 0x02, 0x00, 0x02, 0x04, 0xAA, 0xBB, 0xCC, 0xDD};
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 5, n);
     TEST_ASSERT_EQUAL_UINT8(0x10, resp[7]);
     TEST_ASSERT_EQUAL_UINT16(2, rd16(resp + 8));  // start
     TEST_ASSERT_EQUAL_UINT16(2, rd16(resp + 10)); // qty
-    TEST_ASSERT_EQUAL_UINT16(0xAABB, pc_modbus_get_holding_reg(2));
-    TEST_ASSERT_EQUAL_UINT16(0xCCDD, pc_modbus_get_holding_reg(3));
+    TEST_ASSERT_EQUAL_UINT16(0xAABB, protocore_modbus_get_holding_reg(2));
+    TEST_ASSERT_EQUAL_UINT16(0xCCDD, protocore_modbus_get_holding_reg(3));
     TEST_ASSERT_EQUAL_UINT16(2, g_wcount);
 }
 
@@ -154,13 +154,13 @@ void test_write_multiple_coils()
     uint8_t pdu[] = {0x0F, 0x00, 0x00, 0x00, 0x05, 0x01, 0x0D};
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 5, n);
-    TEST_ASSERT_TRUE(pc_modbus_get_coil(0));
-    TEST_ASSERT_FALSE(pc_modbus_get_coil(1));
-    TEST_ASSERT_TRUE(pc_modbus_get_coil(2));
-    TEST_ASSERT_TRUE(pc_modbus_get_coil(3));
-    TEST_ASSERT_FALSE(pc_modbus_get_coil(4));
+    TEST_ASSERT_TRUE(protocore_modbus_get_coil(0));
+    TEST_ASSERT_FALSE(protocore_modbus_get_coil(1));
+    TEST_ASSERT_TRUE(protocore_modbus_get_coil(2));
+    TEST_ASSERT_TRUE(protocore_modbus_get_coil(3));
+    TEST_ASSERT_FALSE(protocore_modbus_get_coil(4));
     TEST_ASSERT_EQUAL_UINT16(5, g_wcount);
 }
 
@@ -169,7 +169,7 @@ void test_exception_illegal_function()
     uint8_t pdu[] = {0x7F, 0x00, 0x00}; // unsupported FC
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 2, n);
     TEST_ASSERT_EQUAL_UINT8(0x7F | 0x80, resp[7]);
     TEST_ASSERT_EQUAL_UINT8(MODBUS_EX_ILLEGAL_FUNCTION, resp[8]);
@@ -181,7 +181,7 @@ void test_exception_illegal_address()
     uint8_t pdu[] = {0x03, 0x00, 0x3C, 0x00, 0x0A}; // start 60, qty 10 -> 70 > 64
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 2, n);
     TEST_ASSERT_EQUAL_UINT8(0x03 | 0x80, resp[7]);
     TEST_ASSERT_EQUAL_UINT8(MODBUS_EX_ILLEGAL_DATA_ADDRESS, resp[8]);
@@ -192,7 +192,7 @@ void test_exception_illegal_value()
     uint8_t pdu[] = {0x03, 0x00, 0x00, 0x00, 0x00}; // qty 0
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 2, n);
     TEST_ASSERT_EQUAL_UINT8(MODBUS_EX_ILLEGAL_DATA_VALUE, resp[8]);
 }
@@ -202,7 +202,7 @@ void test_write_single_coil_bad_value()
     uint8_t pdu[] = {0x05, 0x00, 0x00, 0x12, 0x34}; // not 0x0000/0xFF00
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_UINT8(0x05 | 0x80, resp[7]);
     TEST_ASSERT_EQUAL_UINT8(MODBUS_EX_ILLEGAL_DATA_VALUE, resp[8]);
     TEST_ASSERT_EQUAL_INT(0, g_wcalls); // not applied
@@ -214,7 +214,7 @@ void test_non_modbus_protocol_id_ignored()
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
     req[3] = 0x01; // corrupt the protocol id (must be 0)
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(0, n); // not a Modbus frame -> no response
 }
 
@@ -223,16 +223,16 @@ void test_truncated_frame_ignored()
     uint8_t pdu[] = {0x03, 0x00, 0x00, 0x00, 0x03};
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl - 2, resp, sizeof(resp)); // drop 2 bytes
+    size_t n = protocore_modbus_process_adu(req, rl - 2, resp, sizeof(resp)); // drop 2 bytes
     TEST_ASSERT_EQUAL_size_t(0, n);                                    // length field disagrees -> wait/ignore
 }
 
 // Run a PDU through the TCP ADU path and return the response length.
-static size_t run_pdu(const uint8_t *pdu, size_t plen, uint8_t *resp, size_t pc_resp_cap)
+static size_t run_pdu(const uint8_t *pdu, size_t plen, uint8_t *resp, size_t protocore_resp_cap)
 {
     uint8_t req[300];
     size_t rl = build_adu(req, 1, 1, pdu, plen);
-    return pc_modbus_process_adu(req, rl, resp, pc_resp_cap);
+    return protocore_modbus_process_adu(req, rl, resp, protocore_resp_cap);
 }
 
 // Assert a PDU yields a Modbus exception (fc|0x80, code).
@@ -248,16 +248,16 @@ static void assert_exception(const uint8_t *pdu, size_t plen, uint8_t fc, uint8_
 // Discrete inputs, out-of-range accessors, and an FC2 read (never exercised elsewhere).
 void test_discrete_and_input_accessors()
 {
-    pc_modbus_set_discrete_input(3, PROTO_TRUE);
-    pc_modbus_set_discrete_input(0xFFFF, PROTO_TRUE); // out of range -> ignored
-    TEST_ASSERT_TRUE(pc_modbus_get_discrete_input(3));
-    TEST_ASSERT_FALSE(pc_modbus_get_discrete_input(2));
-    TEST_ASSERT_FALSE(pc_modbus_get_discrete_input(0xFFFF)); // out of range -> false
-    TEST_ASSERT_EQUAL_UINT16(0, pc_modbus_get_input_reg(0xFFFF));
-    pc_modbus_set_coil(0xFFFF, PROTO_TRUE); // out-of-range coil / holding ignored
-    TEST_ASSERT_FALSE(pc_modbus_get_coil(0xFFFF));
-    pc_modbus_set_holding_reg(0xFFFF, 1);
-    TEST_ASSERT_EQUAL_UINT16(0, pc_modbus_get_holding_reg(0xFFFF));
+    protocore_modbus_set_discrete_input(3, PROTO_TRUE);
+    protocore_modbus_set_discrete_input(0xFFFF, PROTO_TRUE); // out of range -> ignored
+    TEST_ASSERT_TRUE(protocore_modbus_get_discrete_input(3));
+    TEST_ASSERT_FALSE(protocore_modbus_get_discrete_input(2));
+    TEST_ASSERT_FALSE(protocore_modbus_get_discrete_input(0xFFFF)); // out of range -> false
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_modbus_get_input_reg(0xFFFF));
+    protocore_modbus_set_coil(0xFFFF, PROTO_TRUE); // out-of-range coil / holding ignored
+    TEST_ASSERT_FALSE(protocore_modbus_get_coil(0xFFFF));
+    protocore_modbus_set_holding_reg(0xFFFF, 1);
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_modbus_get_holding_reg(0xFFFF));
 
     const uint8_t pdu[] = {0x02, 0x00, 0x03, 0x00, 0x01}; // FC2 read 1 discrete input @3
     uint8_t resp[64];
@@ -327,7 +327,7 @@ void test_small_response_buffer()
     TEST_ASSERT_EQUAL_size_t(0, run_pdu(wr_regs, 8, small, 8));
 }
 
-#if PC_ENABLE_MODBUS_RTU
+#if PROTOCORE_ENABLE_MODBUS_RTU
 // Independent CRC16-Modbus (init 0xFFFF, reflected poly 0xA001) for building RTU
 // frames + verifying response CRCs. Anchored to a known vector below.
 static uint16_t t_crc16(const uint8_t *d, size_t n)
@@ -363,12 +363,12 @@ void test_rtu_crc16_known_vector()
 
 void test_rtu_read_holding_roundtrip()
 {
-    pc_modbus_set_holding_reg(0, 0x1234);
-    pc_modbus_set_holding_reg(1, 0xABCD);
+    protocore_modbus_set_holding_reg(0, 0x1234);
+    protocore_modbus_set_holding_reg(1, 0xABCD);
     const uint8_t pdu[] = {0x03, 0x00, 0x00, 0x00, 0x02}; // read 2 holding regs @0
     uint8_t req[16], resp[64];
     size_t rl = build_rtu(req, 0x11, pdu, sizeof(pdu));
-    size_t n = pc_modbus_rtu_process_adu(req, rl, resp, sizeof(resp), 0x11);
+    size_t n = protocore_modbus_rtu_process_adu(req, rl, resp, sizeof(resp), 0x11);
     TEST_ASSERT_GREATER_THAN(0, n);
     TEST_ASSERT_EQUAL_HEX8(0x11, resp[0]); // echoed slave address
     TEST_ASSERT_EQUAL_HEX8(0x03, resp[1]); // function code
@@ -387,7 +387,7 @@ void test_rtu_bad_crc_dropped()
     uint8_t req[16], resp[64];
     size_t rl = build_rtu(req, 0x11, pdu, sizeof(pdu));
     req[rl - 1] ^= 0xFF; // corrupt the CRC
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_rtu_process_adu(req, rl, resp, sizeof(resp), 0x11));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_rtu_process_adu(req, rl, resp, sizeof(resp), 0x11));
 }
 
 void test_rtu_wrong_address_dropped()
@@ -396,7 +396,7 @@ void test_rtu_wrong_address_dropped()
     uint8_t req[16], resp[64];
     size_t rl = build_rtu(req, 0x05, pdu, sizeof(pdu));
     TEST_ASSERT_EQUAL_size_t(0,
-                             pc_modbus_rtu_process_adu(req, rl, resp, sizeof(resp), 0x11)); // addressed to 0x05, not us
+                             protocore_modbus_rtu_process_adu(req, rl, resp, sizeof(resp), 0x11)); // addressed to 0x05, not us
 }
 
 void test_rtu_broadcast_executes_without_reply()
@@ -404,41 +404,41 @@ void test_rtu_broadcast_executes_without_reply()
     const uint8_t pdu[] = {0x06, 0x00, 0x00, 0xBE, 0xEF}; // write single reg @0 = 0xBEEF
     uint8_t req[16], resp[64];
     size_t rl = build_rtu(req, 0x00, pdu, sizeof(pdu));                                        // broadcast address 0
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_rtu_process_adu(req, rl, resp, sizeof(resp), 0x11)); // no reply
-    TEST_ASSERT_EQUAL_HEX16(0xBEEF, pc_modbus_get_holding_reg(0));                             // but executed
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_rtu_process_adu(req, rl, resp, sizeof(resp), 0x11)); // no reply
+    TEST_ASSERT_EQUAL_HEX16(0xBEEF, protocore_modbus_get_holding_reg(0));                             // but executed
 }
 
 void test_rtu_edge_cases()
 {
     uint8_t resp[64];
     const uint8_t tiny[3] = {0x11, 0x03, 0x00};
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_rtu_process_adu(tiny, sizeof(tiny), resp, sizeof(resp), 0x11)); // < 4
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_rtu_process_adu(tiny, sizeof(tiny), resp, sizeof(resp), 0x11)); // < 4
 
     // A valid frame whose reply cannot fit sends nothing (PDU handler returns 0).
     const uint8_t pdu[] = {0x03, 0x00, 0x00, 0x00, 0x01};
     uint8_t req[16];
     size_t rl = build_rtu(req, 0x11, pdu, sizeof(pdu));
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_rtu_process_adu(req, rl, resp, 4, 0x11)); // out_cap tiny
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_rtu_process_adu(req, rl, resp, 4, 0x11)); // out_cap tiny
 }
-#endif // PC_ENABLE_MODBUS_RTU
+#endif // PROTOCORE_ENABLE_MODBUS_RTU
 
 void test_server_init_bounds_and_handler()
 {
-    pc_modbus_server_init();
-    pc_modbus_set_coil(0xFFFF, PROTO_TRUE);
-    TEST_ASSERT_FALSE(pc_modbus_get_coil(0xFFFF));                  // out of range -> false
-    TEST_ASSERT_EQUAL_UINT16(0, pc_modbus_get_holding_reg(0xFFFF)); // out of range -> 0
-    (void)pc_modbus_proto_handler();
+    protocore_modbus_server_init();
+    protocore_modbus_set_coil(0xFFFF, PROTO_TRUE);
+    TEST_ASSERT_FALSE(protocore_modbus_get_coil(0xFFFF));                  // out of range -> false
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_modbus_get_holding_reg(0xFFFF)); // out of range -> 0
+    (void)protocore_modbus_protocore_handler();
 }
 
 // Input registers round-trip in range and are ignored out of range.
 void test_input_register_accessor_bounds()
 {
-    pc_modbus_set_input_reg(7, 0xCAFE);
-    TEST_ASSERT_EQUAL_UINT16(0xCAFE, pc_modbus_get_input_reg(7));
-    pc_modbus_set_input_reg(0xFFFF, 0x1111); // out of range -> dropped
-    TEST_ASSERT_EQUAL_UINT16(0, pc_modbus_get_input_reg(0xFFFF));
-    TEST_ASSERT_EQUAL_UINT16(0xCAFE, pc_modbus_get_input_reg(7)); // neighbours untouched
+    protocore_modbus_set_input_reg(7, 0xCAFE);
+    TEST_ASSERT_EQUAL_UINT16(0xCAFE, protocore_modbus_get_input_reg(7));
+    protocore_modbus_set_input_reg(0xFFFF, 0x1111); // out of range -> dropped
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_modbus_get_input_reg(0xFFFF));
+    TEST_ASSERT_EQUAL_UINT16(0xCAFE, protocore_modbus_get_input_reg(7)); // neighbours untouched
 }
 
 // A zero quantity is rejected for bit reads, and an oversized one for register reads
@@ -455,42 +455,42 @@ void test_read_quantity_bounds()
 // Writing a single coil OFF (value 0x0000) is the other legal value.
 void test_write_single_coil_off()
 {
-    pc_modbus_set_coil(3, PROTO_TRUE);
+    protocore_modbus_set_coil(3, PROTO_TRUE);
     uint8_t pdu[] = {0x05, 0x00, 0x03, 0x00, 0x00}; // clear coil 3
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
-    size_t n = pc_modbus_process_adu(req, rl, resp, sizeof(resp));
+    size_t n = protocore_modbus_process_adu(req, rl, resp, sizeof(resp));
     TEST_ASSERT_EQUAL_size_t(7 + 5, n);
-    TEST_ASSERT_FALSE(pc_modbus_get_coil(3));
+    TEST_ASSERT_FALSE(protocore_modbus_get_coil(3));
     TEST_ASSERT_EQUAL_INT(1, g_wcalls);
 }
 
 // With no write callback registered every write path still applies and replies.
 void test_writes_without_callback()
 {
-    pc_modbus_on_write(NULL);
+    protocore_modbus_on_write(NULL);
     uint8_t req[260], resp[260];
 
     uint8_t fc5[] = {0x05, 0x00, 0x01, 0xFF, 0x00};
     size_t rl = build_adu(req, 1, 1, fc5, sizeof(fc5));
-    TEST_ASSERT_EQUAL_size_t(7 + 5, pc_modbus_process_adu(req, rl, resp, sizeof(resp)));
-    TEST_ASSERT_TRUE(pc_modbus_get_coil(1));
+    TEST_ASSERT_EQUAL_size_t(7 + 5, protocore_modbus_process_adu(req, rl, resp, sizeof(resp)));
+    TEST_ASSERT_TRUE(protocore_modbus_get_coil(1));
 
     uint8_t fc6[] = {0x06, 0x00, 0x02, 0x11, 0x22};
     rl = build_adu(req, 1, 1, fc6, sizeof(fc6));
-    TEST_ASSERT_EQUAL_size_t(7 + 5, pc_modbus_process_adu(req, rl, resp, sizeof(resp)));
-    TEST_ASSERT_EQUAL_UINT16(0x1122, pc_modbus_get_holding_reg(2));
+    TEST_ASSERT_EQUAL_size_t(7 + 5, protocore_modbus_process_adu(req, rl, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT16(0x1122, protocore_modbus_get_holding_reg(2));
 
     uint8_t fc15[] = {0x0F, 0x00, 0x08, 0x00, 0x02, 0x01, 0x03};
     rl = build_adu(req, 1, 1, fc15, sizeof(fc15));
-    TEST_ASSERT_EQUAL_size_t(7 + 5, pc_modbus_process_adu(req, rl, resp, sizeof(resp)));
-    TEST_ASSERT_TRUE(pc_modbus_get_coil(8));
-    TEST_ASSERT_TRUE(pc_modbus_get_coil(9));
+    TEST_ASSERT_EQUAL_size_t(7 + 5, protocore_modbus_process_adu(req, rl, resp, sizeof(resp)));
+    TEST_ASSERT_TRUE(protocore_modbus_get_coil(8));
+    TEST_ASSERT_TRUE(protocore_modbus_get_coil(9));
 
     uint8_t fc16[] = {0x10, 0x00, 0x06, 0x00, 0x01, 0x02, 0x33, 0x44};
     rl = build_adu(req, 1, 1, fc16, sizeof(fc16));
-    TEST_ASSERT_EQUAL_size_t(7 + 5, pc_modbus_process_adu(req, rl, resp, sizeof(resp)));
-    TEST_ASSERT_EQUAL_UINT16(0x3344, pc_modbus_get_holding_reg(6));
+    TEST_ASSERT_EQUAL_size_t(7 + 5, protocore_modbus_process_adu(req, rl, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT16(0x3344, protocore_modbus_get_holding_reg(6));
 
     TEST_ASSERT_EQUAL_INT(0, g_wcalls); // nothing was reported: no callback installed
 }
@@ -524,24 +524,24 @@ void test_adu_framing_guards()
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_process_adu(req, 7, resp, sizeof(resp))); // req_len < 8
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_process_adu(req, rl, resp, 7));           // resp cap < 8
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_process_adu(req, 7, resp, sizeof(resp))); // req_len < 8
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_process_adu(req, rl, resp, 7));           // resp cap < 8
 
     // len field = 1 (unit id only, no PDU) with a full-size frame on the wire.
     uint8_t shortlen[] = {0x00, 0x07, 0x00, 0x00, 0x00, 0x01, 0x01, 0x03, 0x00};
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_process_adu(shortlen, sizeof(shortlen), resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_process_adu(shortlen, sizeof(shortlen), resp, sizeof(resp)));
 }
 
-#if PC_ENABLE_MODBUS_RTU
+#if PROTOCORE_ENABLE_MODBUS_RTU
 // An RTU response buffer too small even for addr + PDU + CRC is refused up front.
 void test_rtu_response_buffer_too_small()
 {
     const uint8_t pdu[] = {0x03, 0x00, 0x00, 0x00, 0x01};
     uint8_t req[16], resp[64];
     size_t rl = build_rtu(req, 0x11, pdu, sizeof(pdu));
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_rtu_process_adu(req, rl, resp, 3, 0x11));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_rtu_process_adu(req, rl, resp, 3, 0x11));
 }
-#endif // PC_ENABLE_MODBUS_RTU
+#endif // PROTOCORE_ENABLE_MODBUS_RTU
 
 int main()
 {
@@ -562,7 +562,7 @@ int main()
     RUN_TEST(test_discrete_and_input_accessors);
     RUN_TEST(test_exceptions_per_function);
     RUN_TEST(test_small_response_buffer);
-#if PC_ENABLE_MODBUS_RTU
+#if PROTOCORE_ENABLE_MODBUS_RTU
     RUN_TEST(test_rtu_crc16_known_vector);
     RUN_TEST(test_rtu_read_holding_roundtrip);
     RUN_TEST(test_rtu_bad_crc_dropped);
@@ -577,7 +577,7 @@ int main()
     RUN_TEST(test_writes_without_callback);
     RUN_TEST(test_multi_write_field_validation);
     RUN_TEST(test_adu_framing_guards);
-#if PC_ENABLE_MODBUS_RTU
+#if PROTOCORE_ENABLE_MODBUS_RTU
     RUN_TEST(test_rtu_response_buffer_too_small);
 #endif
     return UNITY_END();

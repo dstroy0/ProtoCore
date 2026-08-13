@@ -27,7 +27,7 @@ void test_json_canonical()
     r.value_kind = SENML_V_FLOAT;
     r.value = 23.1;
     char buf[128];
-    size_t n = pc_senml_json_build(buf, sizeof(buf), &r, 1);
+    size_t n = protocore_senml_json_build(buf, sizeof(buf), &r, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_EQUAL_STRING("[{\"bn\":\"urn:dev:ow:10e2073a01080063\",\"u\":\"Cel\",\"v\":23.1}]", buf);
 }
@@ -46,7 +46,7 @@ void test_json_multi_record()
     r[1].value_kind = SENML_V_FLOAT;
     r[1].value = 1.25;
     char buf[160];
-    size_t n = pc_senml_json_build(buf, sizeof(buf), r, 2);
+    size_t n = protocore_senml_json_build(buf, sizeof(buf), r, 2);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_EQUAL_STRING(
         "[{\"bn\":\"urn:dev:ow:1;\",\"n\":\"voltage\",\"u\":\"V\",\"v\":120.1},{\"n\":\"current\",\"u\":\"A\",\"v\":1."
@@ -64,14 +64,14 @@ void test_json_string_bool_time()
     rs.has_time = PROTO_TRUE;
     rs.time = 1600000000; // integral -> "1600000000", not "1.6e+09"
     char buf[128];
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(buf, sizeof(buf), &rs, 1));
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_senml_json_build(buf, sizeof(buf), &rs, 1));
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"status\",\"vs\":\"ok\",\"t\":1600000000}]", buf);
 
     SenmlRecord rb = {0};
     rb.name = "open";
     rb.value_kind = SENML_V_BOOL;
     rb.value_bool = PROTO_TRUE;
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(buf, sizeof(buf), &rb, 1));
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_senml_json_build(buf, sizeof(buf), &rb, 1));
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"open\",\"vb\":true}]", buf);
 }
 
@@ -84,11 +84,11 @@ void test_cbor_round_trip()
     r.value_kind = SENML_V_FLOAT;
     r.value = 42; // integral -> emitted as a CBOR integer
     uint8_t buf[64];
-    size_t n = pc_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
+    size_t n = protocore_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
 
-    pc_cspan rd;
-    rd = pc_cspan_from(buf, n);
+    protocore_cspan rd;
+    rd = protocore_cspan_from(buf, n);
     size_t arr;
     TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
     TEST_ASSERT_EQUAL_size_t(1, arr);
@@ -114,7 +114,7 @@ void test_cbor_round_trip()
     int64_t v;
     TEST_ASSERT_TRUE(Cbor.get_int(&rd, &v));
     TEST_ASSERT_EQUAL_INT64(42, v);
-    TEST_ASSERT_TRUE(pc_cspan_ok(rd));
+    TEST_ASSERT_TRUE(protocore_cspan_ok(rd));
 }
 
 // A negative base-label is encoded (bn = -2) and reads back as a negative key.
@@ -124,9 +124,9 @@ void test_cbor_base_name_key()
     r.base_name = "dev1";
     r.value_kind = SENML_V_NONE;
     uint8_t buf[32];
-    size_t n = pc_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
-    pc_cspan rd;
-    rd = pc_cspan_from(buf, n);
+    size_t n = protocore_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
+    protocore_cspan rd;
+    rd = protocore_cspan_from(buf, n);
     size_t arr, fields;
     TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
     TEST_ASSERT_TRUE(Cbor.get_map(&rd, &fields));
@@ -144,12 +144,12 @@ void test_overflow_fails_closed()
     r.value_kind = SENML_V_FLOAT;
     r.value = 23.1;
     char small[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(small, sizeof(small), &r, 1));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_senml_json_build(small, sizeof(small), &r, 1));
     uint8_t csmall[4];
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(&Cbor, csmall, sizeof(csmall), &r, 1));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_senml_build(&Cbor, csmall, sizeof(csmall), &r, 1));
 }
 
-// JSON with a base time and a value-less (PC_NONE) record.
+// JSON with a base time and a value-less (PROTOCORE_NONE) record.
 void test_json_base_time_and_none()
 {
     SenmlRecord r = {0};
@@ -158,7 +158,7 @@ void test_json_base_time_and_none()
     r.base_time = 100; // integral -> "100"
     r.value_kind = SENML_V_NONE;
     char buf[64];
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(buf, sizeof(buf), &r, 1));
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_senml_json_build(buf, sizeof(buf), &r, 1));
     TEST_ASSERT_EQUAL_STRING("[{\"bn\":\"dev\",\"bt\":100}]", buf);
 }
 
@@ -174,11 +174,11 @@ void test_cbor_all_kinds()
     r.has_time = PROTO_TRUE;
     r.time = 9;
     uint8_t buf[64];
-    size_t n = pc_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
+    size_t n = protocore_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
 
-    pc_cspan rd;
-    rd = pc_cspan_from(buf, n);
+    protocore_cspan rd;
+    rd = protocore_cspan_from(buf, n);
     size_t arr, fields;
     TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
     TEST_ASSERT_TRUE(Cbor.get_map(&rd, &fields));
@@ -207,10 +207,10 @@ void test_cbor_all_kinds()
     rb.value_kind = SENML_V_BOOL;
     rb.value_bool = PROTO_TRUE;
     uint8_t bb[32];
-    size_t bn = pc_senml_build(&Cbor, bb, sizeof(bb), &rb, 1);
+    size_t bn = protocore_senml_build(&Cbor, bb, sizeof(bb), &rb, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)bn);
-    pc_cspan rd2;
-    rd2 = pc_cspan_from(bb, bn);
+    protocore_cspan rd2;
+    rd2 = protocore_cspan_from(bb, bn);
     TEST_ASSERT_TRUE(Cbor.get_array(&rd2, &arr));
     TEST_ASSERT_TRUE(Cbor.get_map(&rd2, &fields));
     TEST_ASSERT_EQUAL_size_t(2, fields); // n, vb
@@ -228,10 +228,10 @@ void test_senml_null_args()
     SenmlRecord r = {0};
     char jb[32];
     uint8_t cb[32];
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(NULL, sizeof(jb), &r, 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(jb, sizeof(jb), NULL, 1)); // count && !records
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(&Cbor, NULL, sizeof(cb), &r, 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(&Cbor, cb, sizeof(cb), NULL, 1));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_senml_json_build(NULL, sizeof(jb), &r, 1));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_senml_json_build(jb, sizeof(jb), NULL, 1)); // count && !records
+    TEST_ASSERT_EQUAL_size_t(0, protocore_senml_build(&Cbor, NULL, sizeof(cb), &r, 1));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_senml_build(&Cbor, cb, sizeof(cb), NULL, 1));
 }
 
 // A magnitude outside the int64 range is emitted as a float rather than being truncated
@@ -244,11 +244,11 @@ void test_json_non_integral_magnitudes()
 
     r.value = 1e19; // above the int64 range
     char buf[64];
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(buf, sizeof(buf), &r, 1));
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_senml_json_build(buf, sizeof(buf), &r, 1));
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"big\",\"v\":1e+19}]", buf);
 
     r.value = -1e19; // below the int64 range
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(buf, sizeof(buf), &r, 1));
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_senml_json_build(buf, sizeof(buf), &r, 1));
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"big\",\"v\":-1e+19}]", buf);
 }
 
@@ -262,14 +262,14 @@ void test_string_kind_without_value()
     r.value_str = NULL;
 
     char jb[64];
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(jb, sizeof(jb), &r, 1));
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_senml_json_build(jb, sizeof(jb), &r, 1));
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"s\"}]", jb);
 
     uint8_t cb[32];
-    size_t n = pc_senml_build(&Cbor, cb, sizeof(cb), &r, 1);
+    size_t n = protocore_senml_build(&Cbor, cb, sizeof(cb), &r, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
-    pc_cspan rd;
-    rd = pc_cspan_from(cb, n);
+    protocore_cspan rd;
+    rd = protocore_cspan_from(cb, n);
     size_t arr, fields;
     TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
     TEST_ASSERT_EQUAL_size_t(1, arr);
@@ -288,15 +288,15 @@ void test_string_kind_without_value()
 void test_empty_pack_allows_null_records()
 {
     char jb[16];
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(jb, sizeof(jb), NULL, 0));
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_senml_json_build(jb, sizeof(jb), NULL, 0));
     TEST_ASSERT_EQUAL_STRING("[]", jb);
 
     uint8_t cb[16];
-    size_t cn = pc_senml_build(&Cbor, cb, sizeof(cb), NULL, 0);
+    size_t cn = protocore_senml_build(&Cbor, cb, sizeof(cb), NULL, 0);
     TEST_ASSERT_GREATER_THAN(0, (int)cn);
-    pc_cspan rd;
+    protocore_cspan rd;
     size_t arr;
-    rd = pc_cspan_from(cb, cn);
+    rd = protocore_cspan_from(cb, cn);
     TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
     TEST_ASSERT_EQUAL_size_t(0, arr);
 }
@@ -324,7 +324,7 @@ void test_resolve()
     rec[2].value_str = "ok";
 
     SenmlResolved res[3];
-    size_t n = pc_senml_resolve(rec, 3, res, 3);
+    size_t n = protocore_senml_resolve(rec, 3, res, 3);
     TEST_ASSERT_EQUAL_size_t(3, n);
     TEST_ASSERT_EQUAL_STRING("urn:dev:ow:10e2073a;temp", res[0].name);
     TEST_ASSERT_TRUE(res[0].has_time);
@@ -353,15 +353,15 @@ void test_resolve_edges()
     rec[1].value_kind = SENML_V_BOOL;
     rec[1].value_bool = PROTO_TRUE;
     SenmlResolved res[2];
-    TEST_ASSERT_EQUAL_size_t(2, pc_senml_resolve(rec, 2, res, 2));
+    TEST_ASSERT_EQUAL_size_t(2, protocore_senml_resolve(rec, 2, res, 2));
     TEST_ASSERT_FALSE(res[0].has_time);
     TEST_ASSERT_EQUAL_STRING("a", res[0].name); // no base name -> just the record name
     TEST_ASSERT_TRUE(res[1].value_bool);
 
     // max caps the output; null arguments resolve nothing.
-    TEST_ASSERT_EQUAL_size_t(1, pc_senml_resolve(rec, 2, res, 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_resolve(NULL, 2, res, 2));
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_resolve(rec, 2, NULL, 2));
+    TEST_ASSERT_EQUAL_size_t(1, protocore_senml_resolve(rec, 2, res, 1));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_senml_resolve(NULL, 2, res, 2));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_senml_resolve(rec, 2, NULL, 2));
 
     // A base name + name longer than the buffer truncates safely (no overflow).
     SenmlRecord big[1];
@@ -372,7 +372,7 @@ void test_resolve_edges()
     big[0].base_name = longbn;
     big[0].name = "y";
     SenmlResolved r1;
-    TEST_ASSERT_EQUAL_size_t(1, pc_senml_resolve(big, 1, &r1, 1));
+    TEST_ASSERT_EQUAL_size_t(1, protocore_senml_resolve(big, 1, &r1, 1));
     TEST_ASSERT_TRUE(strlen(r1.name) < SENML_RESOLVED_NAME_MAX);
 }
 

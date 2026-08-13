@@ -19,10 +19,10 @@ void dbench_run(void)
     {
         DBENCH_BANNER("vl53l0x");
         volatile uint32_t sink = 0;
-        DBENCH_OP("pc_vl53l0x_range_mm", 200000, sink += pc_vl53l0x_range_mm(0x03, 0xE8));
-        DBENCH_OP("pc_vl53l0x_data_ready", 200000, sink += pc_vl53l0x_data_ready(0x01));
-        DBENCH_OP("pc_vl53l0x_range_status", 200000, sink += pc_vl53l0x_range_status(0x58));
-        DBENCH_OP("pc_vl53l0x_range_valid", 200000, sink += pc_vl53l0x_range_valid(0x58));
+        DBENCH_OP("protocore_vl53l0x_range_mm", 200000, sink += protocore_vl53l0x_range_mm(0x03, 0xE8));
+        DBENCH_OP("protocore_vl53l0x_data_ready", 200000, sink += protocore_vl53l0x_data_ready(0x01));
+        DBENCH_OP("protocore_vl53l0x_range_status", 200000, sink += protocore_vl53l0x_range_status(0x58));
+        DBENCH_OP("protocore_vl53l0x_range_valid", 200000, sink += protocore_vl53l0x_range_valid(0x58));
         (void)sink;
         DBENCH_DONE();
     }

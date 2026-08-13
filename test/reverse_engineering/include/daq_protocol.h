@@ -63,7 +63,7 @@ struct DaqPacketHeader
     float y_increment;    ///< volts/code (scope :WAV:YINC?, or the ADC engine's v_ref / full-scale-codes)
     float y_origin;       ///< volts at code 0 after y_increment scaling (scope :WAV:YOR?/:YREF?; 0 for a raw ADC)
     uint32_t windows_dropped; ///< triggers_dropped + samples_dropped telemetry since link-up
-    uint32_t assembly_ns;     ///< trigger-to-window latency (pc_cycles_to_ns); 0 when not applicable
+    uint32_t assembly_ns;     ///< trigger-to-window latency (protocore_cycles_to_ns); 0 when not applicable
     uint64_t wall_clock_us;   ///< Unix epoch microseconds this window's trigger landed at (NTP/GNSS-anchored;
                               ///< see main.cpp's wall_clock_us_now()); 0 if no time source has synced yet
     uint16_t payload_len;     ///< bytes following this header (n_samples * sample_bytes * channel_count)

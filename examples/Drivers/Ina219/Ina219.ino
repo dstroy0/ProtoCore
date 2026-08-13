@@ -3,7 +3,7 @@
 
 /**
  * @file Ina219.ino
- * @brief Measure current and power with an INA219 monitor (PC_ENABLE_INA219).
+ * @brief Measure current and power with an INA219 monitor (PROTOCORE_ENABLE_INA219).
  *
  * The INA219 sits in series with a load and reports the voltage, the current flowing through it,
  * and the power it uses - so you can answer "how much power does this actually draw?". This
@@ -14,10 +14,10 @@
  * Put the board in the power path: supply (+) -> Vin+, Vin- -> your load (+), load (-) -> GND.
  * The default assumes the common 0.1 ohm shunt on these breakouts.
  *
- * Build flag (PlatformIO): `-DPC_ENABLE_INA219=1`
+ * Build flag (PlatformIO): `-DPROTOCORE_ENABLE_INA219=1`
  */
 
-#define PC_ENABLE_INA219 1
+#define PROTOCORE_ENABLE_INA219 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
 #include "services/peripherals/ina219/ina219.h"
@@ -26,7 +26,7 @@ void setup()
 {
     Serial.begin(115200);
     // current LSB 100 uA/bit, 0.1 ohm (100 mohm) shunt -> up to ~3.2 A full scale.
-    if (pc_ina219_begin(0x40, 100, 100))
+    if (protocore_ina219_begin(0x40, 100, 100))
     {
         Serial.println("INA219 ready");
     }
@@ -39,9 +39,9 @@ void setup()
 void loop()
 {
     int32_t bus_mv = 0, current_ua = 0, power_uw = 0;
-    bool ok = pc_ina219_read_bus_mv(&bus_mv);
-    ok &= pc_ina219_read_current_ua(&current_ua);
-    ok &= pc_ina219_read_power_uw(&power_uw);
+    bool ok = protocore_ina219_read_bus_mv(&bus_mv);
+    ok &= protocore_ina219_read_current_ua(&current_ua);
+    ok &= protocore_ina219_read_power_uw(&power_uw);
 
     if (ok)
     {

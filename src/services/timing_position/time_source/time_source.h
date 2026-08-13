@@ -3,20 +3,20 @@
 
 /**
  * @file time_source.h
- * @brief Multi-source time fallback matrix (PC_ENABLE_TIME_SOURCE).
+ * @brief Multi-source time fallback matrix (PROTOCORE_ENABLE_TIME_SOURCE).
  *
  * A small, zero-heap registry of user-defined time sources (NTP, an RTC, GPS, a
  * manually-set clock, ...). Each source is a callback returning the current Unix
  * epoch seconds, or 0 when that source currently has no valid time. Sources are
- * registered with a priority; pc_time_now() queries them in ascending priority
+ * registered with a priority; protocore_time_now() queries them in ascending priority
  * order and returns the first nonzero result, so the device falls back
  * automatically when its preferred clock is unavailable (e.g. GPS loses its fix
  * -> RTC -> NTP). The validity rule lives in each user callback (return 0 when
  * invalid/stale), keeping this layer a pure prioritizer.
  *
- * Everything lives in a fixed BSS table (PC_TIME_SOURCE_MAX entries); no heap.
+ * Everything lives in a fixed BSS table (PROTOCORE_TIME_SOURCE_MAX entries); no heap.
  * The whole core is host-testable. The API is declared unconditionally and
- * compiles to no-op stubs when PC_ENABLE_TIME_SOURCE is 0.
+ * compiles to no-op stubs when PROTOCORE_ENABLE_TIME_SOURCE is 0.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -27,7 +27,7 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief A time source: returns the current Unix epoch seconds for this source,
@@ -38,7 +38,7 @@ PROTO_BEGIN_DECLS
  */
 typedef uint32_t (*TimeSourceFn)(void);
 
-#if PC_ENABLE_TIME_SOURCE
+#if PROTOCORE_ENABLE_TIME_SOURCE
 
 /**
  * @brief Register a time source.
@@ -49,7 +49,7 @@ typedef uint32_t (*TimeSourceFn)(void);
  * @param fn        the source callback.
  * @return true if registered; false if @p fn is null or the table is full.
  */
-proto_bool pc_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn);
+proto_bool protocore_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn);
 
 /**
  * @brief Current best time.
@@ -57,26 +57,26 @@ proto_bool pc_time_source_add(const char *name, uint8_t priority, TimeSourceFn f
  * Queries registered sources in ascending priority and returns the first nonzero
  * epoch (stopping at the first valid source). Returns 0 if none have valid time.
  */
-uint32_t pc_time_now(void);
+uint32_t protocore_time_now(void);
 
-/** @brief Name of the source that satisfied the last pc_time_now(), or nullptr. */
-const char *pc_time_source_active(void);
+/** @brief Name of the source that satisfied the last protocore_time_now(), or nullptr. */
+const char *protocore_time_source_active(void);
 
 /** @brief Clear all registered sources. */
-void pc_time_source_reset(void);
+void protocore_time_source_reset(void);
 
 /**
- * @brief The current best time (pc_time_now, any registered NTP / GPS / RTC / ... source)
+ * @brief The current best time (protocore_time_now, any registered NTP / GPS / RTC / ... source)
  *        formatted as an RFC 7231 IMF-fixdate into @p out.
  * @return bytes written, or 0 with an empty @p out when no source currently has a valid time.
  *
  * This is what lets the HTTP `Date:` header be fed by whatever time source is enabled, not just
- * NTP: register RTC / GPS / NTP via pc_time_source_add() and the header follows the priority.
+ * NTP: register RTC / GPS / NTP via protocore_time_source_add() and the header follows the priority.
  */
-size_t pc_time_http_date(char *out, size_t out_cap);
+size_t protocore_time_http_date(char *out, size_t out_cap);
 
-#endif // PC_ENABLE_TIME_SOURCE
+#endif // PROTOCORE_ENABLE_TIME_SOURCE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_TIME_SOURCE_H

@@ -41,7 +41,7 @@ def _need(tool):
         sys.exit("error: %s not found on PATH (needed to generate the key)" % tool)
 
 
-# Width of the RSA-2048 fields the C side declares (PC_RSA_KEY_BYTES).
+# Width of the RSA-2048 fields the C side declares (PROTOCORE_RSA_KEY_BYTES).
 RSA_KEY_BYTES = 256
 
 

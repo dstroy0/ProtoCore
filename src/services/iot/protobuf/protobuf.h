@@ -3,7 +3,7 @@
 
 /**
  * @file protobuf.h
- * @brief Protocol Buffers wire codec (PC_ENABLE_PROTOBUF) - zero-heap streaming writer
+ * @brief Protocol Buffers wire codec (PROTOCORE_ENABLE_PROTOBUF) - zero-heap streaming writer
  *        + cursor reader over caller buffers, the same shape as the shipped CBOR /
  *        MessagePack codecs. This is the standalone Protobuf deliverable; gRPC (framed
  *        Protobuf over HTTP/2) is gated on the HTTP/2 roadmap item.
@@ -17,7 +17,7 @@
  *  - sint32/sint64 use ZigZag: `(n << 1) ^ (n >> 31|63)`.
  *
  * The writer encodes one field at a time into a caller buffer (fail-closed on overflow);
- * embedded messages are built into a separate buffer and added with @ref pc_pb_bytes. The
+ * embedded messages are built into a separate buffer and added with @ref protocore_pb_bytes. The
  * reader is a cursor: it decodes the field at the buffer head and reports bytes consumed.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_NEED_PROTOBUF
+#if PROTOCORE_NEED_PROTOBUF
 
 // Wire types.
 #define PB_WT_VARINT 0
@@ -50,27 +50,27 @@ typedef struct
     proto_bool error; ///< sticky overflow flag
 } PbWriter;
 
-void pc_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap);
+void protocore_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap);
 
 /** @brief Write a raw varint (no tag). */
-proto_bool pc_pb_write_varint(PbWriter *w, uint64_t v);
+proto_bool protocore_pb_write_varint(PbWriter *w, uint64_t v);
 
 /** @brief Write a field tag `(field << 3) | wire_type`. */
-proto_bool pc_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type);
+proto_bool protocore_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type);
 
-proto_bool pc_pb_uint64(PbWriter *w, uint32_t field, uint64_t v); ///< varint (uint32/uint64/enum)
-proto_bool pc_pb_int64(PbWriter *w, uint32_t field, int64_t v);   ///< varint, two's complement (int32/int64)
-proto_bool pc_pb_sint64(PbWriter *w, uint32_t field, int64_t v);  ///< ZigZag varint (sint32/sint64)
-proto_bool pc_pb_bool(PbWriter *w, uint32_t field, proto_bool v);
-proto_bool pc_pb_fixed32(PbWriter *w, uint32_t field, uint32_t v); ///< wire type 5
-proto_bool pc_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v); ///< wire type 1
-proto_bool pc_pb_float(PbWriter *w, uint32_t field, float v);
-proto_bool pc_pb_double(PbWriter *w, uint32_t field, double v);
-proto_bool pc_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t len); ///< wire type 2
-proto_bool pc_pb_string(PbWriter *w, uint32_t field, const char *s);
+proto_bool protocore_pb_uint64(PbWriter *w, uint32_t field, uint64_t v); ///< varint (uint32/uint64/enum)
+proto_bool protocore_pb_int64(PbWriter *w, uint32_t field, int64_t v);   ///< varint, two's complement (int32/int64)
+proto_bool protocore_pb_sint64(PbWriter *w, uint32_t field, int64_t v);  ///< ZigZag varint (sint32/sint64)
+proto_bool protocore_pb_bool(PbWriter *w, uint32_t field, proto_bool v);
+proto_bool protocore_pb_fixed32(PbWriter *w, uint32_t field, uint32_t v); ///< wire type 5
+proto_bool protocore_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v); ///< wire type 1
+proto_bool protocore_pb_float(PbWriter *w, uint32_t field, float v);
+proto_bool protocore_pb_double(PbWriter *w, uint32_t field, double v);
+proto_bool protocore_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t len); ///< wire type 2
+proto_bool protocore_pb_string(PbWriter *w, uint32_t field, const char *s);
 
 /** @brief Finish: returns the encoded byte count, or 0 if any write overflowed. */
-size_t pc_pb_writer_finish(PbWriter *w);
+size_t protocore_pb_writer_finish(PbWriter *w);
 
 // ---- reader ----
 
@@ -85,22 +85,22 @@ typedef struct
 } PbField;
 
 /** @brief Read a raw varint at [buf+*pos]; advances *pos. False on truncation / overlong (>10 bytes). */
-proto_bool pc_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64_t *out);
+proto_bool protocore_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64_t *out);
 
 /**
  * @brief Read one field at [buf+*pos]; advances *pos past it.
  * @return true on a complete field; false at end-of-buffer or on a malformed / group field.
  */
-proto_bool pc_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField *out);
+proto_bool protocore_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField *out);
 
 // Value decoders.
-int64_t pc_pb_zigzag64(uint64_t v);
-int32_t pc_pb_zigzag32(uint32_t v);
-float pc_pb_float_bits(uint32_t bits);
-double pc_pb_double_bits(uint64_t bits);
+int64_t protocore_pb_zigzag64(uint64_t v);
+int32_t protocore_pb_zigzag32(uint32_t v);
+float protocore_pb_float_bits(uint32_t bits);
+double protocore_pb_double_bits(uint64_t bits);
 
-#endif // PC_NEED_PROTOBUF
+#endif // PROTOCORE_NEED_PROTOBUF
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PROTOBUF_H

@@ -1,6 +1,6 @@
 # HttpClient - the device makes outbound HTTP(S) requests
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_HTTP_CLIENT` (optional `PC_ENABLE_TLS` + `PC_ENABLE_HTTP_CLIENT_TLS` for `https://`)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HTTP_CLIENT` (optional `PROTOCORE_ENABLE_TLS` + `PROTOCORE_ENABLE_HTTP_CLIENT_TLS` for `https://`)
 
 ## What this example teaches
 
@@ -34,11 +34,11 @@ before issuing requests, and a verification failure aborts the request.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_HTTP_CLIENT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_HTTP_CLIENT=1" \
   --lib="." examples/L7-Application/HttpClient/HttpClient.ino
 ```
 
-For `https://`, add `-DPC_ENABLE_TLS=1 -DPC_ENABLE_HTTP_CLIENT_TLS=1`. The
+For `https://`, add `-DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_HTTP_CLIENT_TLS=1`. The
 sketch fetches `URL` once at boot and prints the result to Serial @ 115200.
 
 ## Annotated source
@@ -50,7 +50,7 @@ with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_HTTP_CLIENT 1
+#define PROTOCORE_ENABLE_HTTP_CLIENT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

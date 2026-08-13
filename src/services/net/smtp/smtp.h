@@ -7,9 +7,9 @@
  *
  * A blocking one-shot: connect, greet, optional AUTH LOGIN, then MAIL FROM / RCPT TO /
  * DATA a plain-text message and QUIT. It rides the shared outbound client transport
- * (`pc_client`), with implicit TLS (SMTPS, typically port 465) when the config sets
- * `tls` and PC_ENABLE_TLS is on. Zero heap; every buffer is a compile-time size
- * (`PC_SMTP_*`). Gated by PC_ENABLE_SMTP.
+ * (`protocore_client`), with implicit TLS (SMTPS, typically port 465) when the config sets
+ * `tls` and PROTOCORE_ENABLE_TLS is on. Zero heap; every buffer is a compile-time size
+ * (`PROTOCORE_SMTP_*`). Gated by PROTOCORE_ENABLE_SMTP.
  *
  * The dialogue itself (smtp_run) is written against a send/recv seam, so the whole
  * protocol exchange - greeting codes, AUTH, dot-stuffing, the terminating `.` - is
@@ -25,11 +25,11 @@
 #ifndef PROTOCORE_SMTP_H
 #define PROTOCORE_SMTP_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SMTP
+#if PROTOCORE_ENABLE_SMTP
 
 /** @brief Result of an SMTP send. 0 is success; every failure is a distinct negative code. */
 typedef enum PROTO_ENUM_PACKED
@@ -108,15 +108,15 @@ SmtpResult smtp_run(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn se
                     SmtpStartTlsFn starttls, void *ctx);
 
 /**
- * @brief Blocking one-shot send over the real transport (pc_client, plus TLS when
+ * @brief Blocking one-shot send over the real transport (protocore_client, plus TLS when
  * `cfg->tls`). Opens the connection, runs smtp_run(), and closes.
  * @return SMTP_OK or an ::SmtpResult error. On non-Arduino (host) builds there is no
  *         lwIP, so this returns SMTP_ERR_CONNECT; use smtp_run() directly in tests.
  */
 SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg);
 
-#endif // PC_ENABLE_SMTP
+#endif // PROTOCORE_ENABLE_SMTP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SMTP_H

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the RCWL-0516 presence core (services/peripherals/rcwl0516): the pure
-// debounce/hold state machine pc_presence_core_update() that turns a raw doppler-radar OUT-pin
-// level into a debounced presence verdict + edge events. The GPIO read (pc_rcwl0516_poll) is
+// debounce/hold state machine protocore_presence_core_update() that turns a raw doppler-radar OUT-pin
+// level into a debounced presence verdict + edge events. The GPIO read (protocore_rcwl0516_poll) is
 // real-hardware and out of scope; only the deterministic per-sample state machine is benched.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -22,14 +22,14 @@ void dbench_run(void)
         DBENCH_BANNER("rcwl0516");
         volatile uint32_t sink = 0;
         PresenceCore c;
-        pc_presence_core_init(&c, 50, 2000, 0);
+        protocore_presence_core_init(&c, 50, 2000, 0);
         uint32_t t = 0;
         // Alternate the pin each call so both edges + debounce/hold paths are exercised.
-        DBENCH_OP("pc_presence_core_update", 200000, {
-            sink += pc_presence_core_update(&c, (t & 64) != 0, t);
+        DBENCH_OP("protocore_presence_core_update", 200000, {
+            sink += protocore_presence_core_update(&c, (t & 64) != 0, t);
             t += 3;
         });
-        DBENCH_OP("pc_presence_core_get", 200000, sink += pc_presence_core_get(&c));
+        DBENCH_OP("protocore_presence_core_get", 200000, sink += protocore_presence_core_get(&c));
         (void)sink;
         DBENCH_DONE();
     }

@@ -24,16 +24,16 @@ void dbench_run(void)
     for (;;)
     {
         DBENCH_BANNER("mnt");
-        pc_mnt_mount(pc_mnt_ram());
-        pc_mnt_ram_format();
-        int root = pc_fs_begin("");
-        pc_fs_write_file(root, "", "cfg.bin", data, sizeof(data));
+        protocore_mnt_mount(protocore_mnt_ram());
+        protocore_mnt_ram_format();
+        int root = protocore_fs_begin("");
+        protocore_fs_write_file(root, "", "cfg.bin", data, sizeof(data));
         volatile long sink = 0;
-        DBENCH_OP("pc_fs_write_file (256B)", 50000,
-                  sink += pc_fs_write_file(root, "", "cfg.bin", data, sizeof(data)) ? 1 : 0);
+        DBENCH_OP("protocore_fs_write_file (256B)", 50000,
+                  sink += protocore_fs_write_file(root, "", "cfg.bin", data, sizeof(data)) ? 1 : 0);
         static uint8_t rd[256];
-        DBENCH_OP("pc_fs_read_file (256B)", 50000, sink += pc_fs_read_file(root, "", "cfg.bin", rd, sizeof(rd)));
-        DBENCH_OP("pc_fs_exists", 200000, sink += pc_fs_exists(root, "", "cfg.bin") ? 1 : 0);
+        DBENCH_OP("protocore_fs_read_file (256B)", 50000, sink += protocore_fs_read_file(root, "", "cfg.bin", rd, sizeof(rd)));
+        DBENCH_OP("protocore_fs_exists", 200000, sink += protocore_fs_exists(root, "", "cfg.bin") ? 1 : 0);
         (void)sink;
         DBENCH_DONE();
     }

@@ -6,7 +6,7 @@
  * @brief HMAC-SHA2-512 (RFC 2104 + FIPS 198-1) - streaming context and one-shot API.
  *
  * The shared HMAC-SHA512 primitive. Backs the SSH hmac-sha2-512 / hmac-sha2-512-etm@openssh.com
- * integrity algorithms. Built over the pc_sha512 streaming functions (SHA-512 block size 128 bytes).
+ * integrity algorithms. Built over the protocore_sha512 streaming functions (SHA-512 block size 128 bytes).
  * SSH-derived MAC keys are 64 bytes (<= the block size), so the key is zero-padded, not pre-hashed.
  * Pure crypto; the protocol layer that uses it owns the verify-before-act ordering.
  *
@@ -18,41 +18,41 @@
 #define PROTOCORE_HMAC_SHA512_H
 
 #include "crypto/hash/sha512.h"
-#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief HMAC-SHA2-512 output length in bytes. */
-#define PC_HMAC_SHA512_LEN 64
+#define PROTOCORE_HMAC_SHA512_LEN 64
 
 /**
  * @brief Streaming HMAC-SHA2-512 context.
  *
- * The context owns nothing and touches no pool. The caller hands it ::PC_HMAC_SHA512_BORROW working
+ * The context owns nothing and touches no pool. The caller hands it ::PROTOCORE_HMAC_SHA512_BORROW working
  * bytes, alive until the MAC comes back, and the context splits them by offset.
  */
 typedef struct
 {
-    pc_sha512_ctx inner; ///< inner hash: H((key XOR ipad) || message)
-    uint8_t *work;       ///< Caller storage: the outer key block and the transient set
-} pc_hmac_sha512_ctx;
+    protocore_sha512_ctx inner; ///< inner hash: H((key XOR ipad) || message)
+    uint8_t *work;              ///< Caller storage: the outer key block and the transient set
+} protocore_hmac_sha512_ctx;
 
 /**
  * @brief Begin an HMAC-SHA2-512 over @p key (keys > 128 bytes are pre-hashed per RFC 2104).
- * @param work  PC_HMAC_SHA512_BORROW bytes of caller storage, alive until final() returns.
+ * @param work  PROTOCORE_HMAC_SHA512_BORROW bytes of caller storage, alive until final() returns.
  */
-void pc_hmac_sha512_init(pc_hmac_sha512_ctx *ctx, uint8_t *work, const uint8_t *key, size_t key_len);
+void protocore_hmac_sha512_init(protocore_hmac_sha512_ctx *ctx, uint8_t *work, const uint8_t *key, size_t key_len);
 /** @brief Feed @p len message bytes. */
-void pc_hmac_sha512_update(pc_hmac_sha512_ctx *ctx, const uint8_t *data, size_t len);
+void protocore_hmac_sha512_update(protocore_hmac_sha512_ctx *ctx, const uint8_t *data, size_t len);
 /** @brief Finish, writing the 64-byte MAC. */
-void pc_hmac_sha512_final(pc_hmac_sha512_ctx *ctx, uint8_t mac[PC_HMAC_SHA512_LEN]);
+void protocore_hmac_sha512_final(protocore_hmac_sha512_ctx *ctx, uint8_t mac[PROTOCORE_HMAC_SHA512_LEN]);
 
 /** @brief One-shot HMAC-SHA2-512 over a single buffer, out of @p work. */
-void pc_hmac_sha512(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
-                    uint8_t mac[PC_HMAC_SHA512_LEN]);
+void protocore_hmac_sha512(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
+                           uint8_t mac[PROTOCORE_HMAC_SHA512_LEN]);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HMAC_SHA512_H

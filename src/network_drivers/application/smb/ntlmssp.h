@@ -3,7 +3,7 @@
 
 /**
  * @file ntlmssp.h
- * @brief NTLMSSP message codec (MS-NLMP §2.2.1) for the SMB2 client (PC_ENABLE_SMB).
+ * @brief NTLMSSP message codec (MS-NLMP §2.2.1) for the SMB2 client (PROTOCORE_ENABLE_SMB).
  *
  * The three-message NTLM handshake tokens that carry the NTLMv2 response (ntlm.h) inside SMB2
  * SESSION_SETUP: the client sends a NEGOTIATE (type 1), the server replies with a CHALLENGE
@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
 /** @brief NTLMSSP NegotiateFlags (MS-NLMP §2.2.2.5), the subset a basic NTLMv2 client uses. */
 #define NTLMSSP_NEGOTIATE_UNICODE 0x00000001
@@ -54,7 +54,7 @@ typedef struct
  * @brief Build a NEGOTIATE_MESSAGE (type 1) with @p flags and empty domain/workstation.
  * @return message length (32), or 0 if @p cap < 32.
  */
-size_t pc_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags);
+size_t protocore_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags);
 
 /**
  * @brief Parse a CHALLENGE_MESSAGE (type 2): extract the flags, the 8-byte server challenge, and
@@ -62,37 +62,37 @@ size_t pc_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags);
  * @return true on a valid CHALLENGE; false on a bad signature / type / truncation / out-of-bounds
  *         target info.
  */
-proto_bool pc_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChallenge *out);
+proto_bool protocore_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChallenge *out);
 
 /**
  * @brief Offset of the 16-byte MIC field within an AUTHENTICATE_MESSAGE built @p with_mic (MS-NLMP
  *        §2.2.1.3): the 64-byte fixed header + the 8-byte Version field. The caller writes the computed
  *        MIC here after the message is built and the digest taken over it with these bytes zeroed.
  */
-#define PC_NTLMSSP_MIC_OFFSET 72
+#define PROTOCORE_NTLMSSP_MIC_OFFSET 72
 
 /** @brief Length of the AUTHENTICATE MIC field (an HMAC-MD5 digest). */
-#define PC_NTLMSSP_MIC_LEN 16
+#define PROTOCORE_NTLMSSP_MIC_LEN 16
 
 /**
  * @brief Build an AUTHENTICATE_MESSAGE (type 3) carrying the LM + NT responses and the identity.
  *
  * @param lm_resp / lm_len  the LM(v2) response (may be null/0).
- * @param nt_resp / nt_len  the NtChallengeResponse from pc_ntlm_v2_response.
+ * @param nt_resp / nt_len  the NtChallengeResponse from protocore_ntlm_v2_response.
  * @param domain / user / workstation  ASCII/UTF-8 identity strings (encoded UTF-16LE); user
  *        and domain are typically required, workstation is optional (may be null).
  * @param flags  the NegotiateFlags to echo (usually the server's from the CHALLENGE).
  * @param with_mic  when true, reserve the 8-byte Version + 16-byte MIC fields between the fixed header
- *        and the payload (set NTLMSSP_NEGOTIATE_VERSION, MIC zeroed at ::PC_NTLMSSP_MIC_OFFSET); the
+ *        and the payload (set NTLMSSP_NEGOTIATE_VERSION, MIC zeroed at ::PROTOCORE_NTLMSSP_MIC_OFFSET); the
  *        caller then computes the MIC and writes it there. When false the message has no Version/MIC.
  * @return total message length, or 0 on overflow. No session-key exchange (EncryptedRandomSessionKey empty).
  */
-size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm_resp, size_t lm_len,
-                                     const uint8_t *nt_resp, size_t nt_len, const char *domain, const char *user,
-                                     const char *workstation, uint32_t flags, proto_bool with_mic);
+size_t protocore_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm_resp, size_t lm_len,
+                                            const uint8_t *nt_resp, size_t nt_len, const char *domain, const char *user,
+                                            const char *workstation, uint32_t flags, proto_bool with_mic);
 
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_ENABLE_SMB
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NTLMSSP_H

@@ -3,7 +3,7 @@
 
 /**
  * @file Euromap77.ino
- * @brief EUROMAP 77 (OPC 40077) - OPC UA for injection moulding machines (IMM <-> MES) (PC_ENABLE_EUROMAP77).
+ * @brief EUROMAP 77 (OPC 40077) - OPC UA for injection moulding machines (IMM <-> MES) (PROTOCORE_ENABLE_EUROMAP77).
  *
  * Turns the board into an EUROMAP 77 IMM server: it exposes the standard IMM_MES_Interface information
  * model (MachineInformation, MachineStatus, Jobs -> ActiveJob + ActiveJobValues with the UInt64
@@ -11,7 +11,7 @@
  * loop(). Any OPC UA / MES client (UaExpert, python asyncua, open62541) browses the IMM and reads live
  * values by their standard BrowseNames - the same shape across machine vendors.
  *
- *   pc_em77_install(&imm)                 -> registers the OPC UA Browse + Read resolvers
+ *   protocore_em77_install(&imm)                 -> registers the OPC UA Browse + Read resolvers
  *   listen(4840, PROTO_OPCUA)       -> the OPC UA / EUROMAP endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); EUROMAP 77 is the injection-molding model on top -
@@ -19,12 +19,12 @@
  * alongside on the same event loop.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_OPCUA=1 -DPC_ENABLE_EUROMAP77=1
+ *     build_flags = -DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_EUROMAP77=1
  * (Arduino IDE: already set for you in the build_opt.h beside this sketch.)
  */
 
-#define PC_ENABLE_OPCUA 1
-#define PC_ENABLE_EUROMAP77 1
+#define PROTOCORE_ENABLE_OPCUA 1
+#define PROTOCORE_ENABLE_EUROMAP77 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -75,7 +75,7 @@ void setup()
     imm.active_job.nominal_parts = 100000;
     imm.active_job_values.job_status = EM_JOB_IN_PRODUCTION;
 
-    pc_em77_install(&imm); // bind + register the OPC UA Browse/Read resolvers
+    protocore_em77_install(&imm); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "EUROMAP 77 IMM on :4840"); });
     listen(4840, PROTO_OPCUA); // OPC UA / EUROMAP endpoint - before begin()

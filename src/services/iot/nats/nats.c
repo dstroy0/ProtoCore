@@ -9,7 +9,7 @@
 #include "services/iot/nats/nats.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_NATS
+#if PROTOCORE_ENABLE_NATS
 
 // A tiny bounded append cursor; sets ok=false on overflow and stops.
 typedef struct
@@ -109,7 +109,7 @@ static size_t finish(Buf *b)
     return b->pos;
 }
 
-size_t pc_nats_build_connect(char *buf, size_t cap, const char *options_json)
+size_t protocore_nats_build_connect(char *buf, size_t cap, const char *options_json)
 {
     if (!buf || !options_json)
     {
@@ -122,7 +122,7 @@ size_t pc_nats_build_connect(char *buf, size_t cap, const char *options_json)
     return finish(&b);
 }
 
-size_t pc_nats_build_pub(char *buf, size_t cap, const char *subject, const char *reply_to, const uint8_t *payload,
+size_t protocore_nats_build_pub(char *buf, size_t cap, const char *subject, const char *reply_to, const uint8_t *payload,
                          size_t payload_len)
 {
     if (!buf || !subject || (payload_len && !payload))
@@ -145,7 +145,7 @@ size_t pc_nats_build_pub(char *buf, size_t cap, const char *subject, const char 
     return finish(&b);
 }
 
-size_t pc_nats_build_hpub(char *buf, size_t cap, const char *subject, const char *reply_to, const char *headers,
+size_t protocore_nats_build_hpub(char *buf, size_t cap, const char *subject, const char *reply_to, const char *headers,
                           size_t headers_len, const uint8_t *payload, size_t payload_len)
 {
     if (!buf || !subject || !headers || headers_len == 0 || (payload_len && !payload))
@@ -171,7 +171,7 @@ size_t pc_nats_build_hpub(char *buf, size_t cap, const char *subject, const char
     return finish(&b);
 }
 
-size_t pc_nats_build_sub(char *buf, size_t cap, const char *subject, const char *queue, const char *sid)
+size_t protocore_nats_build_sub(char *buf, size_t cap, const char *subject, const char *queue, const char *sid)
 {
     if (!buf || !subject || !sid)
     {
@@ -191,7 +191,7 @@ size_t pc_nats_build_sub(char *buf, size_t cap, const char *subject, const char 
     return finish(&b);
 }
 
-size_t pc_nats_build_unsub(char *buf, size_t cap, const char *sid, uint32_t max_msgs, proto_bool with_max)
+size_t protocore_nats_build_unsub(char *buf, size_t cap, const char *sid, uint32_t max_msgs, proto_bool with_max)
 {
     if (!buf || !sid)
     {
@@ -209,14 +209,14 @@ size_t pc_nats_build_unsub(char *buf, size_t cap, const char *sid, uint32_t max_
     return finish(&b);
 }
 
-size_t pc_nats_build_ping(char *buf, size_t cap)
+size_t protocore_nats_build_ping(char *buf, size_t cap)
 {
     Buf b = {buf, cap, 0, PROTO_TRUE};
     put_str(&b, "PING\r\n");
     return finish(&b);
 }
 
-size_t pc_nats_build_pong(char *buf, size_t cap)
+size_t protocore_nats_build_pong(char *buf, size_t cap)
 {
     Buf b = {buf, cap, 0, PROTO_TRUE};
     put_str(&b, "PONG\r\n");
@@ -273,7 +273,7 @@ static proto_bool verb_is(const char *buf, size_t line_len, const char *op)
     return line_len == n || buf[n] == ' ' || buf[n] == '\t';
 }
 
-proto_bool pc_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *consumed)
+proto_bool protocore_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *consumed)
 {
     if (!buf || !out || !consumed)
     {
@@ -451,4 +451,4 @@ proto_bool pc_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *cons
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_NATS
+#endif // PROTOCORE_ENABLE_NATS

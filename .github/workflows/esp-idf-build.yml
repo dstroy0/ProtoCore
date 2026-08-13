@@ -9,7 +9,7 @@ name: ESP-IDF Build
 #
 # The two projects under examples/esp-idf/ are built as committed, sdkconfig.defaults included.
 # Both set CONFIG_AUTOSTART_ARDUINO, so this is the Arduino-as-component flavor; the plain-IDF
-# flavor (idf.py -DPC_WITH_ARDUINO=OFF) is not covered here.
+# flavor (idf.py -DPROTOCORE_WITH_ARDUINO=OFF) is not covered here.
 
 on:
   push:

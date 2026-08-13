@@ -15,14 +15,14 @@
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
 #include "protocore.h"                                          // http_pool, and the request and route widths
-#if PC_ENABLE_AUTH_LOCKOUT
+#if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // pc_millis() stamps the attempt the lockout counts
 #include "services/security/auth_lockout/auth_lockout.h"
-#if PC_ENABLE_FORWARDED_TRUST
+#if PROTOCORE_ENABLE_FORWARDED_TRUST
 #include "services/security/forwarded_trust/forwarded_trust.h"
 #endif
 #endif
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
 #include "services/security/csrf/csrf.h"
 #endif
 
@@ -31,7 +31,7 @@
 typedef struct
 {
     Handler not_found;
-#if PC_ENABLE_EDGE_CACHE
+#if PROTOCORE_ENABLE_EDGE_CACHE
     proto_bool (*edge_poll)(uint8_t slot);
 #endif
 } HttpCtx;
@@ -51,7 +51,7 @@ static void reset(void)
     s_http = blank;
 }
 
-#if PC_ENABLE_EDGE_CACHE
+#if PROTOCORE_ENABLE_EDGE_CACHE
 // Edge-cache async-fetch pump seam (see pc_http_set_edge_poll / services/web/edge_cache/edge_cache_proxy):
 // a cache miss suspends the client request and drives the non-blocking origin fetch from this slot's poll.
 static void set_edge_poll(proto_bool (*fn)(uint8_t slot))
@@ -81,7 +81,7 @@ const char *status_text(int code)
         return "No Content";
     case 206:
         return "Partial Content";
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
     case 207:
         return "Multi-Status";
 #endif
@@ -111,7 +111,7 @@ const char *status_text(int code)
         return "Request Timeout";
     case 409:
         return "Conflict";
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
     case 412:
         return "Precondition Failed";
     case 423:
@@ -377,7 +377,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     pc_sb_put(&sb_header, "\r\n");
     pc_sb_put(&sb_header, extra_hdr ? extra_hdr : "");
     pc_sb_put(&sb_header, "Content-Type: ");
-    pc_sb_put(&sb_header, PC_MIME_TEXT_PLAIN);
+    pc_sb_put(&sb_header, PROTOCORE_MIME_TEXT_PLAIN);
     pc_sb_put(&sb_header, "\r\nContent-Length: ");
     pc_sb_i64(&sb_header, (int64_t)(blen));
     pc_sb_put(&sb_header, "\r\nConnection: close\r\n\r\n");
@@ -413,14 +413,14 @@ static void send_method_not_allowed(uint8_t slot_id, const char *allow)
     send_error_close(slot_id, "405 Method Not Allowed", extra, "Method Not Allowed");
 }
 
-#if PC_ENABLE_AUTH_LOCKOUT
+#if PROTOCORE_ENABLE_AUTH_LOCKOUT
 // The peer's family-tagged source address for the connection in slot_id (unspecified on native /
 // no pcb). Used as the auth-lockout bucket key - the full IPv4 or IPv6 address, so a v6 peer is
 // never flattened onto a shared v4 bucket nor folded into a collideable hash.
 static pc_ip lockout_client_ip(uint8_t slot_id)
 {
     pc_ip ip;
-    ip.family = PC_IP_NONE;
+    ip.family = PROTOCORE_IP_NONE;
     Tcp.conn->remote_addr(slot_id, &ip);
     return ip;
 }
@@ -440,7 +440,7 @@ static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
     }
     send_error_close(slot_id, "429 Too Many Requests", extra, "Too Many Requests");
 }
-#endif // PC_ENABLE_AUTH_LOCKOUT
+#endif // PROTOCORE_ENABLE_AUTH_LOCKOUT
 
 static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req)
 {
@@ -457,14 +457,14 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
     }
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
-    if (r->iface_filter != PC_IF_ANY && r->iface_filter != pc_conn_iface(slot_id))
+    if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != pc_conn_iface(slot_id))
     {
         return PROTO_FALSE;
     }
     return PROTO_TRUE;
 }
 
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
 static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 {
     // Built-in token endpoint: GET /csrf issues a signed token (also set as the
@@ -484,11 +484,11 @@ static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
             {
                 body[0] = '\0';
             }
-            send_text(slot_id, 200, PC_MIME_JSON, body);
+            send_text(slot_id, 200, PROTOCORE_MIME_JSON, body);
         }
         else
         {
-            send_text(slot_id, 500, PC_MIME_TEXT_PLAIN, "CSRF unavailable");
+            send_text(slot_id, 500, PROTOCORE_MIME_TEXT_PLAIN, "CSRF unavailable");
         }
         return PROTO_TRUE;
     }
@@ -500,15 +500,15 @@ static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
         const char *tok = http_get_header(req, "X-CSRF-Token");
         if (!tok || !pc_csrf_verify(tok))
         {
-            send_text(slot_id, 403, PC_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
+            send_text(slot_id, 403, PROTOCORE_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
             return PROTO_TRUE;
         }
     }
     return PROTO_FALSE;
 }
-#endif // PC_ENABLE_CSRF
+#endif // PROTOCORE_ENABLE_CSRF
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
 {
     const char *upgrade_hdr = http_get_header(req, "Upgrade");
@@ -519,7 +519,7 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
                                pc_http_conn_has_token(http_get_header(req, "Connection"), "upgrade");
     if (!is_ws_upgrade)
     {
-        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "WebSocket upgrade required");
+        send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "WebSocket upgrade required");
         return;
     }
     // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
@@ -533,22 +533,22 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
     // client error, RFC 6455 4.2.1), so answer 400 rather than 503.
     if (!ws_do_upgrade(slot_id, req, ws_route_connect(r->ws_id)))
     {
-        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "Bad WebSocket handshake");
+        send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "Bad WebSocket handshake");
     }
 }
-#endif // PC_ENABLE_WEBSOCKET
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
-#if PC_ENABLE_AUTH
+#if PROTOCORE_ENABLE_AUTH
 static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
-#if PC_ENABLE_AUTH_LOCKOUT
+#if PROTOCORE_ENABLE_AUTH_LOCKOUT
     pc_ip cip = lockout_client_ip(slot_id);
-#if PC_ENABLE_FORWARDED_TRUST
+#if PROTOCORE_ENABLE_FORWARDED_TRUST
     // Behind a trusted reverse proxy, key the lockout on the original client (the proxy's Forwarded /
     // X-Forwarded-For), not the proxy's shared TCP address. Ignored for a direct/untrusted peer, so a
     // spoofed header can neither evade a lockout nor frame another address.
     {
-        char fbuf[PC_IP_STR_MAX];
+        char fbuf[PROTOCORE_IP_STR_MAX];
         const char *fwd = http_forwarded_client(req, fbuf, sizeof(fbuf), NULL) ? fbuf : NULL;
         pc_ip eff;
         pc_forwarded_effective_ip(&cip, fwd, &eff);
@@ -568,7 +568,7 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // out of it, and it goes back before the handler runs. The pool resolves the slot from the calling
     // worker, so two workers never share these bytes.
     size_t auth_mark = pc_secure_mark();
-    pc_span auth_ws = pc_secure_span(PC_SHA256_BORROW, _Alignof(uint32_t));
+    pc_span auth_ws = pc_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
     if (!pc_span_ok(auth_ws))
     {
         pc_secure_release(auth_mark);
@@ -576,7 +576,7 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     }
     proto_bool stale = PROTO_FALSE;
     proto_bool ok = Auth.check(auth_ws.buf, slot_id, req, r->auth_id, &stale);
-#if PC_ENABLE_AUTH_LOCKOUT
+#if PROTOCORE_ENABLE_AUTH_LOCKOUT
     // A stale-nonce retry carries valid credentials, so it is not a failed
     // attempt: don't count it toward the lockout (nor reset the counter).
     if (ok)
@@ -597,31 +597,31 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     pc_secure_release(auth_mark);
     return PROTO_TRUE;
 }
-#endif // PC_ENABLE_AUTH
+#endif // PROTOCORE_ENABLE_AUTH
 
 static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r,
                                          proto_bool *path_matched, char *allow_buf, size_t allow_cap)
 {
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
     if (r->type == ROUTE_WS)
     {
         handle_ws_route(slot_id, req, method, r);
         return PROTO_TRUE;
     }
-#endif // PC_ENABLE_WEBSOCKET
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
     if (r->type == ROUTE_SSE)
     {
         if (!pc_sse_do_upgrade(slot_id, req, pc_sse_route_connect(r->sse_id)))
         {
-            send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, "Service Unavailable");
+            send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "Service Unavailable");
         }
         return PROTO_TRUE;
     }
-#endif // PC_ENABLE_SSE
+#endif // PROTOCORE_ENABLE_SSE
 
-#if PC_ENABLE_FILE_SERVING
+#if PROTOCORE_ENABLE_FILE_SERVING
     if (r->type == ROUTE_STATIC)
     {
         // Static mounts answer GET (and HEAD via GET); other methods → 405.
@@ -635,7 +635,7 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
         serve_static_request(slot_id, req, r);
         return PROTO_TRUE;
     }
-#endif // PC_ENABLE_FILE_SERVING
+#endif // PROTOCORE_ENABLE_FILE_SERVING
 
     // ROUTE_HTTP - a HEAD request is served by the GET handler with the
     // response body suppressed (RFC 7231 §4.3.2).
@@ -652,12 +652,12 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
         }
         return PROTO_FALSE;
     }
-#if PC_ENABLE_AUTH
-    if (r->auth_id != PC_AUTH_NONE && !proto_authorize_request(slot_id, req, r))
+#if PROTOCORE_ENABLE_AUTH
+    if (r->auth_id != PROTOCORE_AUTH_NONE && !proto_authorize_request(slot_id, req, r))
     {
         return PROTO_TRUE; // 401/429 already sent
     }
-#endif // PC_ENABLE_AUTH
+#endif // PROTOCORE_ENABLE_AUTH
     r->callback(slot_id, req);
     return PROTO_TRUE;
 }
@@ -683,7 +683,7 @@ void match_and_execute(uint8_t slot_id)
         return;
     }
 
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
     // A WebDAV mount owns its whole subtree and every method on it (including
     // PROPFIND/MKCOL/etc., which Http.parse_method() does not recognize), so intercept
     // before the unknown-method 501 and the normal route loop.
@@ -700,7 +700,7 @@ void match_and_execute(uint8_t slot_id)
         return;
     }
 
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
     if (pc_csrf_gate(slot_id, req, method))
     {
         return;
@@ -710,14 +710,14 @@ void match_and_execute(uint8_t slot_id)
     // RFC 7230 §3.3.1: reject Transfer-Encoding
     if (http_get_header(req, "Transfer-Encoding") != NULL)
     {
-        send_text(slot_id, 501, PC_MIME_TEXT_PLAIN, "Not Implemented");
+        send_text(slot_id, 501, PROTOCORE_MIME_TEXT_PLAIN, "Not Implemented");
         return;
     }
 
     // RFC 7231 §6.5.2: a method the server does not implement → 501.
     if (method == HTTP_METHOD_UNKNOWN)
     {
-        send_text(slot_id, 501, PC_MIME_TEXT_PLAIN, "Not Implemented");
+        send_text(slot_id, 501, PROTOCORE_MIME_TEXT_PLAIN, "Not Implemented");
         return;
     }
 
@@ -753,7 +753,7 @@ void match_and_execute(uint8_t slot_id)
     }
     else
     {
-        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
     }
 }
 
@@ -763,7 +763,7 @@ void match_and_execute(uint8_t slot_id)
 // dispatches a completed request into the route table.
 static void poll_slot(uint8_t i)
 {
-#if PC_ENABLE_EDGE_CACHE
+#if PROTOCORE_ENABLE_EDGE_CACHE
     // An edge-cache origin fetch in flight for this slot owns it: pump the fetch and skip the rest of the
     // HTTP pipeline until it completes (and hands off to send_chunked for the cached response).
     if (s_http.edge_poll != NULL && s_http.edge_poll(i))
@@ -771,7 +771,7 @@ static void poll_slot(uint8_t i)
         return;
     }
 #endif
-#if PC_ENABLE_FILE_SERVING
+#if PROTOCORE_ENABLE_FILE_SERVING
     // A file response in flight owns the slot: page out the next window and
     // skip the rest of the pipeline until the whole body has been sent.
     if (pc_file_holds_slot(i))
@@ -787,12 +787,12 @@ static void poll_slot(uint8_t i)
         return;
     }
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
     // WebSocket slot - drain ring buffer and dispatch ready frames
     WsConn *ws = ws_find(i);
     if (ws)
     {
-#if PC_ENABLE_TLS
+#if PROTOCORE_ENABLE_TLS
         if (conn_pool[i].tls)
         {
             // wss://: the rx ring holds ciphertext, so decrypt records here and
@@ -829,7 +829,7 @@ static void poll_slot(uint8_t i)
             }
             return;
         }
-#endif // PC_ENABLE_TLS
+#endif // PROTOCORE_ENABLE_TLS
 
         ws_parse(ws);
 
@@ -851,23 +851,23 @@ static void poll_slot(uint8_t i)
         }
         return; // slot is owned by WS; skip HTTP dispatch
     }
-#endif // PC_ENABLE_WEBSOCKET
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
     // SSE slot - connection stays open, nothing to parse from client
     if (pc_sse_find(i))
     {
         return;
     }
-#endif // PC_ENABLE_SSE
+#endif // PROTOCORE_ENABLE_SSE
 
-#if PC_ENABLE_KEEPALIVE
+#if PROTOCORE_ENABLE_KEEPALIVE
     // Keep-alive: a slot recycled after a response may already hold the next
     // (pipelined) request in its ring buffer with no new EVT_DATA to trigger a
     // parse. Drain it here each tick so it gets dispatched. TLS slots are
     // skipped - their ring holds ciphertext, decrypted in the session layer.
     if (conn_pool[i].state == CONN_ACTIVE && http_pool[i].parse_state != PARSE_COMPLETE
-#if PC_ENABLE_TLS
+#if PROTOCORE_ENABLE_TLS
         && !conn_pool[i].tls
 #endif
     )
@@ -876,10 +876,10 @@ static void poll_slot(uint8_t i)
     }
 #endif
 
-#if PC_REQUEST_TIMEOUT_MS > 0
+#if PROTOCORE_REQUEST_TIMEOUT_MS > 0
     // Slow-loris defense (the nginx client_header_timeout semantic): bound the request HEADER phase. A
     // connection that sent its first byte but has not completed its request headers within
-    // PC_REQUEST_TIMEOUT_MS is answered 408 and closed, freeing the slot. Unlike the idle timeout, req_start_ms
+    // PROTOCORE_REQUEST_TIMEOUT_MS is answered 408 and closed, freeing the slot. Unlike the idle timeout, req_start_ms
     // is NOT reset by a trickle byte (it is armed once, on the first RX byte), so a drip-fed partial header
     // cannot hold a slot open indefinitely, which is the connection-slot exhaustion this bounds. The deadline is
     // scoped to the header phase (parse_state < PARSE_BODY, since every header state precedes PARSE_BODY in the
@@ -887,10 +887,10 @@ static void poll_slot(uint8_t i)
     // duration and is governed by the streaming handler + idle timer, not this deadline. WebSocket / SSE were
     // already returned above.
     if (conn_pool[i].state == CONN_ACTIVE && conn_pool[i].req_start_ms != 0 && http_pool[i].parse_state < PARSE_BODY &&
-        (pc_millis() - conn_pool[i].req_start_ms) >= PC_REQUEST_TIMEOUT_MS)
+        (pc_millis() - conn_pool[i].req_start_ms) >= PROTOCORE_REQUEST_TIMEOUT_MS)
     {
         conn_pool[i].req_start_ms = 0;
-        send_text(i, 408, PC_MIME_TEXT_PLAIN, "Request Timeout"); // terminal error response -> connection closes
+        send_text(i, 408, PROTOCORE_MIME_TEXT_PLAIN, "Request Timeout"); // terminal error response -> connection closes
         return;
     }
 #endif
@@ -907,22 +907,22 @@ static void poll_slot(uint8_t i)
     }
     else if (http_pool[i].parse_state == PARSE_ERROR)
     {
-        send_text(i, 400, PC_MIME_TEXT_PLAIN, "Bad Request");
+        send_text(i, 400, PROTOCORE_MIME_TEXT_PLAIN, "Bad Request");
     }
     else if (http_pool[i].parse_state == PARSE_ENTITY_TOO_LARGE)
     {
-        send_text(i, 413, PC_MIME_TEXT_PLAIN, "Payload Too Large");
+        send_text(i, 413, PROTOCORE_MIME_TEXT_PLAIN, "Payload Too Large");
     }
     else if (http_pool[i].parse_state == PARSE_URI_TOO_LONG)
     {
-        send_text(i, 414, PC_MIME_TEXT_PLAIN, "URI Too Long");
+        send_text(i, 414, PROTOCORE_MIME_TEXT_PLAIN, "URI Too Long");
     }
 }
 
 const HttpNs Http = {status_text,       parse_method, method_name,  path_matches,
                      match_path_params, req_is_head,  allow_append, match_and_execute,
                      set_not_found,     poll_slot,    reset,
-#if PC_ENABLE_EDGE_CACHE
+#if PROTOCORE_ENABLE_EDGE_CACHE
                      set_edge_poll
 #endif
 };

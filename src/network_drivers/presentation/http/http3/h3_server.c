@@ -8,14 +8,14 @@
 
 #include "network_drivers/presentation/http/http3/h3_server.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "core_setup/board_profiles/pc_platform.h"  // pc_platform_rand_u32: the device TRNG
 #include "mmgr/protostr.h"                          // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h"                         // proto_raw_read: each field moves into the slot
 #include "network_drivers/presentation/http/http.h" // Http.match_and_execute
 #include "network_drivers/transport/tcp.h"          // TcpConn, conn_pool: the reserved dispatch slot
-#include "protocore.h"                              // http_pool, PC_H3_DISPATCH_SLOT, http_reset
+#include "protocore.h"                              // http_pool, PROTOCORE_H3_DISPATCH_SLOT, http_reset
 
 // Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs:
 // four bytes per platform draw, the last draw truncated to what is left.
@@ -48,7 +48,7 @@ void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const
                           const char *authority, const uint8_t *body, size_t body_len)
 {
     (void)app; // the route table and the slot pools are global owners; nothing is carried here
-    const uint8_t slot = PC_H3_DISPATCH_SLOT;
+    const uint8_t slot = PROTOCORE_H3_DISPATCH_SLOT;
     HttpReq *r = &http_pool[slot];
     http_reset(slot);
 
@@ -118,7 +118,7 @@ void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const
     c->pc_h3_conn_id = conn_id;
     c->pc_h3_stream = stream_id;
     c->pc_resp_sink = pc_h3_resp_sink;
-    c->iface = PC_IF_WIFI_STA;
+    c->iface = PROTOCORE_IF_WIFI_STA;
     Tcp.conn->set_state(slot, CONN_ACTIVE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
     c->pcb = NULL;
 
@@ -131,4 +131,4 @@ void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const
     http_reset(slot);
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

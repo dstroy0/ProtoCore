@@ -3,12 +3,12 @@
 //
 // On-device CCOUNT microbenchmark for the TI LDC1614 inductance-to-digital codec
 // (services/peripherals/ldc1614): combining a DATA MSB/LSB register pair into the 28-bit result
-// (pc_ldc1614_data), pulling the 4 error flags off the MSB register (pc_ldc1614_error),
-// scaling a 28-bit result to a sensor frequency in Hz (pc_ldc1614_sensor_freq_hz, the
+// (protocore_ldc1614_data), pulling the 4 error flags off the MSB register (protocore_ldc1614_error),
+// scaling a 28-bit result to a sensor frequency in Hz (protocore_ldc1614_sensor_freq_hz, the
 // data / 2^28 * fref math), and emitting the single-channel CH0 continuous-conversion
-// bring-up as (reg, msb, lsb) triples (pc_ldc1614_build_config). All four are pure - no
+// bring-up as (reg, msb, lsb) triples (protocore_ldc1614_build_config). All four are pure - no
 // I2C, no heap. This rig has no LDC1614 breakout attached, so the Wire binding
-// (pc_ldc1614_begin / pc_ldc1614_read_ch0, the I2C-over-Wire half) is deliberately out of
+// (protocore_ldc1614_begin / protocore_ldc1614_read_ch0, the I2C-over-Wire half) is deliberately out of
 // scope everywhere here; only the deterministic CPU-side codec is ever benched (same posture
 // as performance_benching/device/ads1115, the peripheral-driver worked example).
 //
@@ -42,12 +42,12 @@ void dbench_run(void)
         volatile uint64_t sink64 = 0;
         volatile size_t sinksz = 0;
 
-        DBENCH_OP("pc_ldc1614_data (28b combine)", 200000, sink32 += pc_ldc1614_data(msb_reg, lsb_reg));
-        DBENCH_OP("pc_ldc1614_error (flag nibble)", 200000, sink8 += pc_ldc1614_error(msb_reg));
-        DBENCH_OP("pc_ldc1614_sensor_freq_hz", 200000, sink64 += pc_ldc1614_sensor_freq_hz(data28, fref_hz));
+        DBENCH_OP("protocore_ldc1614_data (28b combine)", 200000, sink32 += protocore_ldc1614_data(msb_reg, lsb_reg));
+        DBENCH_OP("protocore_ldc1614_error (flag nibble)", 200000, sink8 += protocore_ldc1614_error(msb_reg));
+        DBENCH_OP("protocore_ldc1614_sensor_freq_hz", 200000, sink64 += protocore_ldc1614_sensor_freq_hz(data28, fref_hz));
         // Config builder emits 21 bytes (7 register writes * 3 bytes) - benched as a bulk producer.
-        DBENCH_BULK("pc_ldc1614_build_config", 100000, LDC1614_CONFIG_MAX,
-                    sinksz += pc_ldc1614_build_config(cfg, sizeof(cfg), 0xFFFF, 0x0400));
+        DBENCH_BULK("protocore_ldc1614_build_config", 100000, LDC1614_CONFIG_MAX,
+                    sinksz += protocore_ldc1614_build_config(cfg, sizeof(cfg), 0xFFFF, 0x0400));
 
         (void)sink32;
         (void)sink8;

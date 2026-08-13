@@ -13,7 +13,7 @@
 //
 // The RSA-2048 baseline is the committed host key in
 // test/fixtures/ssh_test_host_key/ssh_test_host_key.h, restated as
-// PC_SSH_BASELINE_KEY_* in the build-time header tools/crypto/gen_ssh_test_keys.py
+// PROTOCORE_SSH_BASELINE_KEY_* in the build-time header tools/crypto/gen_ssh_test_keys.py
 // writes beside it.
 
 #ifndef PROTOCORE_TEST_BASELINE_KEYS_H

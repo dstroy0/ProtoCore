@@ -14,9 +14,9 @@
  * Types: counter (`c`), gauge (`g`, absolute or a signed `+`/`-` delta), timing (`ms`), and
  * set (`s`). Optional sample rate (`|@0.1`) and DogStatsD tags (`|#env:prod,host:a`).
  *
- * The line builder (pc_statsd_format) is pure and host-tested; the emit helpers format the value
+ * The line builder (protocore_statsd_format) is pure and host-tested; the emit helpers format the value
  * and send via the transport UDP service (Udp.client->sendto), so they are host-testable through
- * its capture seam too. Zero heap; gated by PC_ENABLE_STATSD.
+ * its capture seam too. Zero heap; gated by PROTOCORE_ENABLE_STATSD.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -25,11 +25,11 @@
 #ifndef PROTOCORE_STATSD_H
 #define PROTOCORE_STATSD_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_STATSD
+#if PROTOCORE_ENABLE_STATSD
 
 /** @brief StatsD metric type codes (the token after the `|`). */
 typedef enum PROTO_ENUM_PACKED
@@ -52,37 +52,37 @@ typedef enum PROTO_ENUM_PACKED
  * @param tags   DogStatsD tag string "k:v,k2:v2" (no leading `#`), or nullptr for none.
  * @return       line length (excluding the NUL), or 0 on a bad argument or overflow.
  */
-size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *value, StatsdType type, float rate,
-                        const char *tags);
+size_t protocore_statsd_format(char *out, size_t cap, const char *name, const char *value, StatsdType type, float rate,
+                               const char *tags);
 
 /**
  * @brief Point the client at a collector and set optional global tags (added to every metric).
  * @param host        collector hostname/IP.
- * @param port        UDP port (0 selects PC_STATSD_PORT).
+ * @param port        UDP port (0 selects PROTOCORE_STATSD_PORT).
  * @param global_tags DogStatsD tags applied to every metric, or nullptr.
  */
-void pc_statsd_begin(const char *host, uint16_t port, const char *global_tags);
+void protocore_statsd_begin(const char *host, uint16_t port, const char *global_tags);
 
 /** @brief Increment a counter by @p delta (may be negative). */
-void pc_statsd_count(const char *name, int64_t delta);
+void protocore_statsd_count(const char *name, int64_t delta);
 
 /** @brief Increment a counter, annotated with sample @p rate (0,1] so the server scales up. */
-void pc_statsd_count_sampled(const char *name, int64_t delta, float rate);
+void protocore_statsd_count_sampled(const char *name, int64_t delta, float rate);
 
 /** @brief Set a gauge to an absolute @p value. */
-void pc_statsd_gauge(const char *name, int64_t value);
+void protocore_statsd_gauge(const char *name, int64_t value);
 
 /** @brief Adjust a gauge by a signed @p delta (sent as a `+`/`-` gauge update). */
-void pc_statsd_gauge_delta(const char *name, int64_t delta);
+void protocore_statsd_gauge_delta(const char *name, int64_t delta);
 
 /** @brief Record a timing/duration of @p ms milliseconds. */
-void pc_statsd_timing(const char *name, uint32_t ms);
+void protocore_statsd_timing(const char *name, uint32_t ms);
 
 /** @brief Add a unique @p member to a set (counts distinct values server-side). */
-void pc_statsd_set(const char *name, const char *member);
+void protocore_statsd_set(const char *name, const char *member);
 
-#endif // PC_ENABLE_STATSD
+#endif // PROTOCORE_ENABLE_STATSD
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_STATSD_H

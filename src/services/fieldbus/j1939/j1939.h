@@ -3,7 +3,7 @@
 
 /**
  * @file j1939.h
- * @brief SAE J1939 message codec (PC_ENABLE_J1939) - the heavy-duty-vehicle / agriculture /
+ * @brief SAE J1939 message codec (PROTOCORE_ENABLE_J1939) - the heavy-duty-vehicle / agriculture /
  *        marine / genset CAN higher-layer protocol, over 29-bit extended CAN frames.
  *
  * J1939 packs a 29-bit extended identifier as:
@@ -14,7 +14,7 @@
  * for PDU2 (broadcast, PF >= 240); for PDU1 (PF < 240) PS is the destination address (DA) and
  * the PGN's low octet is 0. This codec encodes / decodes that id, builds single-frame
  * messages, runs the Transport Protocol (BAM broadcast + RTS/CTS connection mode) with a
- * reassembler for messages up to `PC_J1939_TP_MAX` octets, and builds the Address Claimed
+ * reassembler for messages up to `PROTOCORE_J1939_TP_MAX` octets, and builds the Address Claimed
  * (with a 64-bit NAME) and Request PGN messages.
  *
  * Pure and host-tested. Drive it from the ESP32 TWAI peripheral (or an MCP2515 over SPI) to
@@ -29,7 +29,7 @@
 
 #include "protocore_config.h"
 
-#if PC_NEED_J1939
+#if PROTOCORE_NEED_J1939
 
 #include "shared_primitives/can.h"
 
@@ -83,52 +83,52 @@ typedef struct
     uint8_t num_packets; ///< announced packet count
     uint8_t next_seq;    ///< next expected sequence number (1-based)
     uint16_t received;   ///< octets stored so far
-    uint8_t buf[PC_J1939_TP_MAX];
+    uint8_t buf[PROTOCORE_J1939_TP_MAX];
 } J1939TpRx;
 
 // --- identifier ---
 
 /** @brief Encode a 29-bit J1939 id. @p da is used only for a PDU1 (PF < 240) PGN. */
-proto_bool pc_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da);
+proto_bool protocore_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da);
 
 /** @brief Decode a 29-bit J1939 id into its fields. */
-proto_bool pc_j1939_decode_id(uint32_t id, J1939Id *out);
+proto_bool protocore_j1939_decode_id(uint32_t id, J1939Id *out);
 
 // --- single-frame messages ---
 
 /** @brief Build a single-frame (<= 8 octet) J1939 message. */
-proto_bool pc_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
-                                  const uint8_t *data, uint8_t len);
+proto_bool protocore_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
+                                         const uint8_t *data, uint8_t len);
 
 /** @brief Build a Request-PGN frame asking @p da for @p requested_pgn. */
-proto_bool pc_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, uint32_t requested_pgn);
+proto_bool protocore_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, uint32_t requested_pgn);
 
 /** @brief Build an Address-Claimed frame announcing @p sa with the 64-bit @p name. */
-proto_bool pc_j1939_build_address_claim(CanFrame *out, uint8_t sa, uint64_t name);
+proto_bool protocore_j1939_build_address_claim(CanFrame *out, uint8_t sa, uint64_t name);
 
 /** @brief Compose a 64-bit J1939 NAME from its fields (see J1939-81). */
-uint64_t pc_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t industry_group,
-                             uint8_t vehicle_system_instance, uint8_t vehicle_system, uint8_t function,
-                             uint8_t function_instance, uint8_t ecu_instance, uint16_t manufacturer_code,
-                             uint32_t identity_number);
+uint64_t protocore_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t industry_group,
+                                    uint8_t vehicle_system_instance, uint8_t vehicle_system, uint8_t function,
+                                    uint8_t function_instance, uint8_t ecu_instance, uint16_t manufacturer_code,
+                                    uint32_t identity_number);
 
 // --- transport protocol (multi-packet) ---
 
 /** @brief Octet count -> TP packet count (ceil(size / 7)). */
-uint8_t pc_j1939_tp_num_packets(uint16_t total_size);
+uint8_t protocore_j1939_tp_num_packets(uint16_t total_size);
 
 /** @brief Build the BAM (broadcast) TP.CM announce frame for @p pgn / @p total_size. */
-proto_bool pc_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16_t total_size);
+proto_bool protocore_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16_t total_size);
 
 /** @brief Build TP.DT data packet @p seq (1-based) carrying @p chunk_len (1..7) octets. */
-proto_bool pc_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t seq, const uint8_t *chunk,
-                                uint8_t chunk_len);
+proto_bool protocore_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t seq, const uint8_t *chunk,
+                                       uint8_t chunk_len);
 
 /** @brief Reset a reassembly context to idle. */
-void pc_j1939_tp_reset(J1939TpRx *rx);
+void protocore_j1939_tp_reset(J1939TpRx *rx);
 
 /** @brief Feed a received frame to the reassembler; see @ref J1939TpResult. */
-J1939TpResult pc_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f);
+J1939TpResult protocore_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f);
 
 // --- typed decoders for common engine PGNs (SAE J1939-71) ---
 //
@@ -173,13 +173,13 @@ typedef struct
  * @brief Decode an EEC1 (PGN 61444) single frame into @p out.
  * @return true iff @p f decodes to PGN 61444 and carries 8 data octets; false otherwise.
  */
-proto_bool pc_j1939_decode_eec1(const CanFrame *f, J1939Eec1 *out);
+proto_bool protocore_j1939_decode_eec1(const CanFrame *f, J1939Eec1 *out);
 
 /**
  * @brief Decode an ET1 (PGN 65262) single frame into @p out.
  * @return true iff @p f decodes to PGN 65262 and carries 8 data octets; false otherwise.
  */
-proto_bool pc_j1939_decode_et1(const CanFrame *f, J1939Et1 *out);
+proto_bool protocore_j1939_decode_et1(const CanFrame *f, J1939Et1 *out);
 
 /** @brief Decoded LFE (PGN 65266). Each value has its own validity flag (cleared for a not-available raw). */
 typedef struct
@@ -198,7 +198,7 @@ typedef struct
  * @brief Decode an LFE (PGN 65266) single frame into @p out.
  * @return true iff @p f decodes to PGN 65266 and carries 8 data octets; false otherwise.
  */
-proto_bool pc_j1939_decode_lfe(const CanFrame *f, J1939Lfe *out);
+proto_bool protocore_j1939_decode_lfe(const CanFrame *f, J1939Lfe *out);
 
 /** @brief Decoded AMB (PGN 65269). Each measurement has its own validity flag (cleared for a
  *  not-available raw). Barometric pressure is a 1-octet SPN; the temperatures are 2-octet except the
@@ -221,7 +221,7 @@ typedef struct
  * @brief Decode an AMB (PGN 65269) single frame into @p out.
  * @return true iff @p f decodes to PGN 65269 and carries 8 data octets; false otherwise.
  */
-proto_bool pc_j1939_decode_amb(const CanFrame *f, J1939Amb *out);
+proto_bool protocore_j1939_decode_amb(const CanFrame *f, J1939Amb *out);
 
 /** @brief Decoded IC1 (PGN 65270). Each measurement has its own validity flag (cleared for a
  *  not-available raw). Exhaust gas temperature is a 2-octet SPN; the rest are 1-octet. */
@@ -247,7 +247,7 @@ typedef struct
  * @brief Decode an IC1 (PGN 65270) single frame into @p out.
  * @return true iff @p f decodes to PGN 65270 and carries 8 data octets; false otherwise.
  */
-proto_bool pc_j1939_decode_ic1(const CanFrame *f, J1939Ic1 *out);
+proto_bool protocore_j1939_decode_ic1(const CanFrame *f, J1939Ic1 *out);
 
 /** @brief Decoded VD (PGN 65248). The distances are held as double: at 0.125 km/bit a 32-bit odometer
  *  spans hundreds of millions of km, beyond float's ~7-digit precision. */
@@ -263,7 +263,7 @@ typedef struct
  * @brief Decode a VD (PGN 65248) single frame into @p out.
  * @return true iff @p f decodes to PGN 65248 and carries 8 data octets; false otherwise.
  */
-proto_bool pc_j1939_decode_vd(const CanFrame *f, J1939Vd *out);
+proto_bool protocore_j1939_decode_vd(const CanFrame *f, J1939Vd *out);
 
 /** @brief Decoded CCVS (PGN 65265): the wheel-based vehicle speed plus the cruise-control-active state.
  *  Only the two signals with cross-source-verified positions are decoded; the many discrete switches in
@@ -280,7 +280,7 @@ typedef struct
  * @brief Decode a CCVS (PGN 65265) single frame into @p out.
  * @return true iff @p f decodes to PGN 65265 and carries 8 data octets; false otherwise.
  */
-proto_bool pc_j1939_decode_ccvs(const CanFrame *f, J1939Ccvs *out);
+proto_bool protocore_j1939_decode_ccvs(const CanFrame *f, J1939Ccvs *out);
 
 /** @brief One decoded Diagnostic Trouble Code (J1939-73 SPN conversion method 4). */
 typedef struct
@@ -308,7 +308,7 @@ typedef struct
  * @param out_dtcs  caller array receiving up to @p max decoded DTCs (may be null to only read the lamps).
  * @return true iff @p len is at least 2 octets (the two status octets); false otherwise.
  */
-proto_bool pc_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dtc *out_dtcs, size_t max);
+proto_bool protocore_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dtc *out_dtcs, size_t max);
 
-#endif // PC_NEED_J1939
+#endif // PROTOCORE_NEED_J1939
 #endif // PROTOCORE_J1939_H

@@ -7,7 +7,7 @@
 // standalone. The device number comes from the rig /bench endpoint; this host ns/op + MB/s is a relative
 // baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_WEBSOCKET=1 -DPC_ENABLE_WS_DEFLATE=1
+//   -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_WS_DEFLATE=1
 //   test/performance_benching/network_drivers/presentation/deflate/host.c
 //   src/network_drivers/presentation/codec/deflate/deflate.c
 //   src/network_drivers/presentation/codec/inflate/inflate.c src/mmgr/protomem.c -o /tmp/bd && /tmp/bd

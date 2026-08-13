@@ -5,8 +5,8 @@
 // reading off the interrupt. Zero heap (static queue), fail-closed when full.
 //
 // Build flag (must be set for the whole build, not just this sketch):
-//   PC_ENABLE_PREEMPT_QUEUE=1
-// Optional sizing: PC_PQ_DEPTH, PC_PQ_ITEM_SIZE, PC_PQ_STACK.
+//   PROTOCORE_ENABLE_PREEMPT_QUEUE=1
+// Optional sizing: PROTOCORE_PQ_DEPTH, PROTOCORE_PQ_ITEM_SIZE, PROTOCORE_PQ_STACK.
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "esp_timer.h"
@@ -29,14 +29,14 @@ static void on_reading(const void *item, void *)
 static hw_timer_t *tmr = nullptr;
 static uint32_t g_seq = 0;
 
-// Keep the ISR tiny: timestamp + post. pc_pq_post_from_isr() is interrupt-safe
+// Keep the ISR tiny: timestamp + post. protocore_pq_post_from_isr() is interrupt-safe
 // and asks the scheduler to switch to the high-priority task the moment we return.
 static void IRAM_ATTR sample_isr()
 {
     Reading r;
     r.t_us = esp_timer_get_time();
     r.value = g_seq++;
-    pc_pq_post_from_isr(&r);
+    protocore_pq_post_from_isr(&r);
 }
 
 void setup()
@@ -44,12 +44,12 @@ void setup()
     Serial.begin(115200);
     delay(300);
 
-    pc_pq_config cfg = {};
+    protocore_pq_config cfg = {};
     cfg.handler = on_reading;
     cfg.priority = 6; // above loop(): a post preempts straight into on_reading
     cfg.core = 1;
     cfg.name = "sampler";
-    if (!pc_pq_start(&cfg))
+    if (!protocore_pq_start(&cfg))
     {
         Serial.println("preempt queue failed to start");
         return;

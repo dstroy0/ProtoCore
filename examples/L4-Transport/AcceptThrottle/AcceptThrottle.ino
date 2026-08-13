@@ -3,11 +3,11 @@
 
 /**
  * @file AcceptThrottle.ino
- * @brief Connection-flood defense via the accept-rate throttle (PC_ENABLE_ACCEPT_THROTTLE).
+ * @brief Connection-flood defense via the accept-rate throttle (PROTOCORE_ENABLE_ACCEPT_THROTTLE).
  *
  * When enabled, the accept callback rejects new connections once more than
- * PC_ACCEPT_THROTTLE_MAX have been accepted within
- * PC_ACCEPT_THROTTLE_WINDOW_MS (a global fixed window, two counters, no per-IP
+ * PROTOCORE_ACCEPT_THROTTLE_MAX have been accepted within
+ * PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS (a global fixed window, two counters, no per-IP
  * table). It bounds connection churn (e.g. reconnect brute force) on top of the
  * bounded connection pool. There is no runtime API - it is purely a build-time
  * defense; this sketch just shows enabling it.
@@ -15,13 +15,13 @@
  * NOTE: this feature is compiled into the library only when the flag is set for
  * the whole build (a .ino #define does not reach the separately compiled
  * library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_ACCEPT_THROTTLE=1
- *                   -DPC_ACCEPT_THROTTLE_MAX=20
- *                   -DPC_ACCEPT_THROTTLE_WINDOW_MS=1000
+ *     build_flags = -DPROTOCORE_ENABLE_ACCEPT_THROTTLE=1
+ *                   -DPROTOCORE_ACCEPT_THROTTLE_MAX=20
+ *                   -DPROTOCORE_ACCEPT_THROTTLE_WINDOW_MS=1000
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_ACCEPT_THROTTLE 1
+#define PROTOCORE_ENABLE_ACCEPT_THROTTLE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

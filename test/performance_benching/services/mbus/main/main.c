@@ -38,7 +38,7 @@ void dbench_run(void)
 
     // Wrap the record body in a real RSP_UD long frame once; parse benches this exact buffer.
     static uint8_t frame[64];
-    size_t frame_len = pc_mbus_build_long(frame, sizeof(frame), MBUS_C_RSP_UD, 0x01, MBUS_CI_RSP_VARIABLE, record_body,
+    size_t frame_len = protocore_mbus_build_long(frame, sizeof(frame), MBUS_C_RSP_UD, 0x01, MBUS_CI_RSP_VARIABLE, record_body,
                                           (uint8_t)sizeof(record_body));
     static uint8_t out[16];
 
@@ -50,22 +50,22 @@ void dbench_run(void)
         size_t consumed = 0;
 
         // Short-frame builder (SND_NKE link reset): start/CS/stop over just C + A.
-        DBENCH_OP("pc_mbus_build_snd_nke", 100000, sink += pc_mbus_build_snd_nke(out, sizeof(out), 0x05));
+        DBENCH_OP("protocore_mbus_build_snd_nke", 100000, sink += protocore_mbus_build_snd_nke(out, sizeof(out), 0x05));
 
         // Long-frame builder: framing + 8-bit sum checksum over the 23-octet record body.
-        DBENCH_OP("pc_mbus_build_long", 50000,
-                  sink += pc_mbus_build_long(frame, sizeof(frame), MBUS_C_RSP_UD, 0x01, MBUS_CI_RSP_VARIABLE,
+        DBENCH_OP("protocore_mbus_build_long", 50000,
+                  sink += protocore_mbus_build_long(frame, sizeof(frame), MBUS_C_RSP_UD, 0x01, MBUS_CI_RSP_VARIABLE,
                                              record_body, (uint8_t)sizeof(record_body)));
 
         // Parser: validates start/stop, doubled length, and re-sums the checksum. Bulk => MB/s too.
-        DBENCH_BULK("pc_mbus_parse (long)", 50000, frame_len, sink += pc_mbus_parse(frame, frame_len, &f, &consumed));
+        DBENCH_BULK("protocore_mbus_parse (long)", 50000, frame_len, sink += protocore_mbus_parse(frame, frame_len, &f, &consumed));
 
         // Variable-data record walker: one full pass over all 4 records (DIFE/VIFE + LVAR).
         DBENCH_OP(
-            "pc_mbus_record_walk x4", 50000, do {
+            "protocore_mbus_record_walk x4", 50000, do {
                 size_t p = 0;
                 MbusRecord r;
-                while (pc_mbus_record_next(record_body, sizeof(record_body), &p, &r))
+                while (protocore_mbus_record_next(record_body, sizeof(record_body), &p, &r))
                 {
                     sink += r.data_len;
                 }

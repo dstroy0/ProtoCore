@@ -3,7 +3,7 @@
 
 /**
  * @file wamp.h
- * @brief WAMP (Web Application Messaging Protocol) codec (PC_ENABLE_WAMP) - zero-heap
+ * @brief WAMP (Web Application Messaging Protocol) codec (PROTOCORE_ENABLE_WAMP) - zero-heap
  *        builders + a positional parser for the unified RPC + PubSub protocol, which rides
  *        the shipped WebSocket layer (subprotocol `wamp.2.json`).
  *
@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_WAMP
+#if PROTOCORE_ENABLE_WAMP
 
 // WAMP message type codes (basic + advanced profile).
 #define WAMP_HELLO 1
@@ -59,54 +59,56 @@ PROTO_BEGIN_DECLS
 // the positional layout stays valid.
 
 /** @brief HELLO: `[1, "realm", Details]`. */
-size_t pc_wamp_build_hello(char *buf, size_t cap, const char *realm, const char *details_json);
+size_t protocore_wamp_build_hello(char *buf, size_t cap, const char *realm, const char *details_json);
 
 /** @brief GOODBYE: `[6, Details, "reason_uri"]`. */
-size_t pc_wamp_build_goodbye(char *buf, size_t cap, const char *reason_uri, const char *details_json);
+size_t protocore_wamp_build_goodbye(char *buf, size_t cap, const char *reason_uri, const char *details_json);
 
 /** @brief SUBSCRIBE: `[32, Request, Options, "topic"]`. */
-size_t pc_wamp_build_subscribe(char *buf, size_t cap, uint64_t request, const char *topic, const char *options_json);
+size_t protocore_wamp_build_subscribe(char *buf, size_t cap, uint64_t request, const char *topic,
+                                      const char *options_json);
 
 /** @brief UNSUBSCRIBE: `[34, Request, SubscriptionId]`. */
-size_t pc_wamp_build_unsubscribe(char *buf, size_t cap, uint64_t request, uint64_t subscription_id);
+size_t protocore_wamp_build_unsubscribe(char *buf, size_t cap, uint64_t request, uint64_t subscription_id);
 
 /** @brief PUBLISH: `[16, Request, Options, "topic"(, Arguments(, ArgumentsKw))]`. */
-size_t pc_wamp_build_publish(char *buf, size_t cap, uint64_t request, const char *topic, const char *options_json,
-                             const char *args_json, const char *kwargs_json);
+size_t protocore_wamp_build_publish(char *buf, size_t cap, uint64_t request, const char *topic,
+                                    const char *options_json, const char *args_json, const char *kwargs_json);
 
 /** @brief CALL: `[48, Request, Options, "procedure"(, Arguments(, ArgumentsKw))]`. */
-size_t pc_wamp_build_call(char *buf, size_t cap, uint64_t request, const char *procedure, const char *options_json,
-                          const char *args_json, const char *kwargs_json);
+size_t protocore_wamp_build_call(char *buf, size_t cap, uint64_t request, const char *procedure,
+                                 const char *options_json, const char *args_json, const char *kwargs_json);
 
 /** @brief REGISTER: `[64, Request, Options, "procedure"]`. */
-size_t pc_wamp_build_register(char *buf, size_t cap, uint64_t request, const char *procedure, const char *options_json);
+size_t protocore_wamp_build_register(char *buf, size_t cap, uint64_t request, const char *procedure,
+                                     const char *options_json);
 
 /** @brief UNREGISTER: `[66, Request, RegistrationId]` (the RPC-side sibling of UNSUBSCRIBE). */
-size_t pc_wamp_build_unregister(char *buf, size_t cap, uint64_t request, uint64_t registration_id);
+size_t protocore_wamp_build_unregister(char *buf, size_t cap, uint64_t request, uint64_t registration_id);
 
 /** @brief YIELD: `[70, Request, Options(, Arguments(, ArgumentsKw))]` (replies to an INVOCATION). */
-size_t pc_wamp_build_yield(char *buf, size_t cap, uint64_t request, const char *options_json, const char *args_json,
-                           const char *kwargs_json);
+size_t protocore_wamp_build_yield(char *buf, size_t cap, uint64_t request, const char *options_json,
+                                  const char *args_json, const char *kwargs_json);
 
 // ---- parser (positional access over an inbound JSON-array message) ----
 
 /** @brief Slice the raw text of the top-level array element at @p index (into @p msg). */
-proto_bool pc_wamp_element(const char *msg, size_t index, const char **start, size_t *len);
+proto_bool protocore_wamp_element(const char *msg, size_t index, const char **start, size_t *len);
 
 /** @brief Read the message type (element 0) as an integer. */
-proto_bool pc_wamp_get_type(const char *msg, int *out);
+proto_bool protocore_wamp_get_type(const char *msg, int *out);
 
 /** @brief Read the unsigned integer (e.g. a Request / Subscription / Publication id) at @p index. */
-proto_bool pc_wamp_get_uint(const char *msg, size_t index, uint64_t *out);
+proto_bool protocore_wamp_get_uint(const char *msg, size_t index, uint64_t *out);
 
 /**
  * @brief Copy the URI/string element at @p index (surrounding quotes stripped) into @p out.
  * @note No unescaping - WAMP URIs are restricted to unescaped characters. Bounded by @p out_cap.
  */
-proto_bool pc_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_cap);
+proto_bool protocore_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_cap);
 
-#endif // PC_ENABLE_WAMP
+#endif // PROTOCORE_ENABLE_WAMP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_WAMP_H

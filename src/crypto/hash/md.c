@@ -12,10 +12,10 @@
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h" // the secure pool: digest state, wiped on release
 
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // The one definition of MdCtx - private to this TU (md.h forward-declares it). External callers hold it
-// only via pointer and get their storage from pc_md_wants() below, so the size never leaves this file.
+// only via pointer and get their storage from protocore_md_wants() below, so the size never leaves this file.
 typedef struct MdCtx
 {
     uint32_t state[4];
@@ -23,13 +23,13 @@ typedef struct MdCtx
     uint8_t buf[64];  ///< partial block
     uint32_t buf_len; ///< bytes currently in buf
 } MdCtx;
-static_assert(sizeof(struct MdCtx) <= PC_WORK_MD,
-              "MdCtx outgrew PC_WORK_MD - raise it in protocore_config.h, which derives PC_SECURE_ARENA_SIZE from it");
+static_assert(sizeof(struct MdCtx) <= PROTOCORE_WORK_MD,
+              "MdCtx outgrew PROTOCORE_WORK_MD - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-struct MdCtx *pc_md_wants(void)
+struct MdCtx *protocore_md_wants(void)
 {
-    pc_span ws = pc_secure_span(sizeof(struct MdCtx), _Alignof(struct MdCtx));
-    return pc_span_ok(ws) ? (struct MdCtx *)ws.buf : NULL;
+    protocore_span ws = protocore_secure_span(sizeof(struct MdCtx), _Alignof(struct MdCtx));
+    return protocore_span_ok(ws) ? (struct MdCtx *)ws.buf : NULL;
 }
 
 static inline uint32_t rotl(uint32_t v, unsigned n)
@@ -54,12 +54,12 @@ static const uint8_t MD5_S[64] = {7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7
                                   4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
                                   6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21};
 
-static void pc_md5_compress(uint32_t s[4], const uint8_t block[64])
+static void protocore_md5_compress(uint32_t s[4], const uint8_t block[64])
 {
     uint32_t m[16];
     for (int i = 0; i < 16; i++)
     {
-        m[i] = pc_rd32le(block + i * 4);
+        m[i] = protocore_rd32le(block + i * 4);
     }
     uint32_t a = s[0];
     uint32_t b = s[1];
@@ -101,7 +101,7 @@ static void pc_md5_compress(uint32_t s[4], const uint8_t block[64])
     s[3] += d;
 }
 
-void pc_md5_init(struct MdCtx *c)
+void protocore_md5_init(struct MdCtx *c)
 {
     c->state[0] = 0x67452301;
     c->state[1] = 0xefcdab89;
@@ -113,12 +113,12 @@ void pc_md5_init(struct MdCtx *c)
 
 // --- MD4 (RFC 1320) --------------------------------------------------------
 
-static void pc_md4_compress(uint32_t s[4], const uint8_t block[64])
+static void protocore_md4_compress(uint32_t s[4], const uint8_t block[64])
 {
     uint32_t x[16];
     for (int i = 0; i < 16; i++)
     {
-        x[i] = pc_rd32le(block + i * 4);
+        x[i] = protocore_rd32le(block + i * 4);
     }
     uint32_t a = s[0];
     uint32_t b = s[1];
@@ -190,7 +190,7 @@ static void pc_md4_compress(uint32_t s[4], const uint8_t block[64])
     s[3] += d;
 }
 
-void pc_md4_init(struct MdCtx *c)
+void protocore_md4_init(struct MdCtx *c)
 {
     c->state[0] = 0x67452301;
     c->state[1] = 0xefcdab89;
@@ -244,51 +244,51 @@ static void md_finish(struct MdCtx *c, uint8_t out[16], md_compress_fn compress)
     md_absorb(c, lenbuf, 8, compress); // triggers the final compress
     for (int i = 0; i < 4; i++)
     {
-        pc_wr32le(out + i * 4, c->state[i]);
+        protocore_wr32le(out + i * 4, c->state[i]);
     }
 }
 
-void pc_md5_update(struct MdCtx *c, const uint8_t *data, size_t len)
+void protocore_md5_update(struct MdCtx *c, const uint8_t *data, size_t len)
 {
-    md_absorb(c, data, len, pc_md5_compress);
+    md_absorb(c, data, len, protocore_md5_compress);
 }
-void pc_md5_final(struct MdCtx *c, uint8_t out[16])
+void protocore_md5_final(struct MdCtx *c, uint8_t out[16])
 {
-    md_finish(c, out, pc_md5_compress);
+    md_finish(c, out, protocore_md5_compress);
 }
-void pc_md4_update(struct MdCtx *c, const uint8_t *data, size_t len)
+void protocore_md4_update(struct MdCtx *c, const uint8_t *data, size_t len)
 {
-    md_absorb(c, data, len, pc_md4_compress);
+    md_absorb(c, data, len, protocore_md4_compress);
 }
-void pc_md4_final(struct MdCtx *c, uint8_t out[16])
+void protocore_md4_final(struct MdCtx *c, uint8_t out[16])
 {
-    md_finish(c, out, pc_md4_compress);
+    md_finish(c, out, protocore_md4_compress);
 }
 
-void pc_md5(const uint8_t *data, size_t len, uint8_t out[16])
+void protocore_md5(const uint8_t *data, size_t len, uint8_t out[16])
 {
     struct MdCtx c;
-    pc_md5_init(&c);
-    pc_md5_update(&c, data, len);
-    pc_md5_final(&c, out);
+    protocore_md5_init(&c);
+    protocore_md5_update(&c, data, len);
+    protocore_md5_final(&c, out);
 }
-void pc_md4(const uint8_t *data, size_t len, uint8_t out[16])
+void protocore_md4(const uint8_t *data, size_t len, uint8_t out[16])
 {
     struct MdCtx c;
-    pc_md4_init(&c);
-    pc_md4_update(&c, data, len);
-    pc_md4_final(&c, out);
+    protocore_md4_init(&c);
+    protocore_md4_update(&c, data, len);
+    protocore_md4_final(&c, out);
 }
 
 // --- HMAC-MD5 (RFC 2104) ---------------------------------------------------
 
-void pc_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16])
+void protocore_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16])
 {
     uint8_t k[64];
     mem.set(k, 0, sizeof(k));
     if (key_len > 64)
     {
-        pc_md5(key, key_len, k); // keys longer than the block are hashed down (leaves 16 bytes, rest zero)
+        protocore_md5(key, key_len, k); // keys longer than the block are hashed down (leaves 16 bytes, rest zero)
     }
     else
     {
@@ -305,13 +305,13 @@ void pc_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t 
 
     uint8_t inner[16];
     struct MdCtx c;
-    pc_md5_init(&c);
-    pc_md5_update(&c, ipad, 64);
-    pc_md5_update(&c, msg, msg_len);
-    pc_md5_final(&c, inner);
+    protocore_md5_init(&c);
+    protocore_md5_update(&c, ipad, 64);
+    protocore_md5_update(&c, msg, msg_len);
+    protocore_md5_final(&c, inner);
 
-    pc_md5_init(&c);
-    pc_md5_update(&c, opad, 64);
-    pc_md5_update(&c, inner, 16);
-    pc_md5_final(&c, out);
+    protocore_md5_init(&c);
+    protocore_md5_update(&c, opad, 64);
+    protocore_md5_update(&c, inner, 16);
+    protocore_md5_final(&c, out);
 }

@@ -11,9 +11,9 @@
  */
 
 #include "services/radio/zigbee/zigbee.h"
-#include "shared_primitives/crc.h" // PC_CRC16_IBM_3740
+#include "shared_primitives/crc.h" // PROTOCORE_CRC16_IBM_3740
 
-#if PC_ENABLE_ZIGBEE
+#if PROTOCORE_ENABLE_ZIGBEE
 
 static proto_bool is_reserved(uint8_t b)
 {
@@ -43,24 +43,24 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
     return PROTO_TRUE;
 }
 
-uint16_t pc_ash_crc16(const uint8_t *buf, uint16_t len)
+uint16_t protocore_ash_crc16(const uint8_t *buf, uint16_t len)
 {
     // ASH uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
-    return (uint16_t)pc_crc(&PC_CRC16_IBM_3740, buf, len);
+    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_IBM_3740, buf, len);
 }
 
-uint16_t pc_ash_frame_encode(uint8_t control, const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap)
+uint16_t protocore_ash_frame_encode(uint8_t control, const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap)
 {
-    if (!out || len > PC_ZIGBEE_MAX_DATA || (payload == NULL && len > 0))
+    if (!out || len > PROTOCORE_ZIGBEE_MAX_DATA || (payload == NULL && len > 0))
     {
         return 0;
     }
     // CRC over control + payload. They are not contiguous in memory, which is what the engine's
     // begin/update/final split is for - no scratch buffer to assemble them into.
-    uint32_t c = pc_crc_begin(&PC_CRC16_IBM_3740);
-    c = pc_crc_update(&PC_CRC16_IBM_3740, c, &control, 1);
-    c = pc_crc_update(&PC_CRC16_IBM_3740, c, payload, len);
-    const uint16_t crc = (uint16_t)pc_crc_final(&PC_CRC16_IBM_3740, c);
+    uint32_t c = protocore_crc_begin(&PROTOCORE_CRC16_IBM_3740);
+    c = protocore_crc_update(&PROTOCORE_CRC16_IBM_3740, c, &control, 1);
+    c = protocore_crc_update(&PROTOCORE_CRC16_IBM_3740, c, payload, len);
+    const uint16_t crc = (uint16_t)protocore_crc_final(&PROTOCORE_CRC16_IBM_3740, c);
 
     uint16_t p = 0;
     if (!put_stuffed(out, &p, cap, control))
@@ -86,8 +86,8 @@ uint16_t pc_ash_frame_encode(uint8_t control, const uint8_t *payload, uint16_t l
     return p;
 }
 
-int pc_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint8_t *payload, uint16_t pay_cap,
-                        uint16_t *pay_len)
+int protocore_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint8_t *payload, uint16_t pay_cap,
+                               uint16_t *pay_len)
 {
     if (!raw)
     {
@@ -105,7 +105,7 @@ int pc_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint
     }
 
     // Remove the byte-stuffing from raw[0, flag) into a fixed scratch: control + payload + CRC(2).
-    uint8_t un[PC_ZIGBEE_MAX_DATA + 3];
+    uint8_t un[PROTOCORE_ZIGBEE_MAX_DATA + 3];
     uint16_t n = 0;
     for (uint16_t i = 0; i < flag; i++)
     {
@@ -129,7 +129,7 @@ int pc_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint
         return -1; // need at least control + CRC(2)
     }
     uint16_t body = (uint16_t)(n - 2);
-    uint16_t crc = pc_ash_crc16(un, body);
+    uint16_t crc = protocore_ash_crc16(un, body);
     if ((uint16_t)((un[n - 2] << 8) | un[n - 1]) != crc)
     {
         return -1; // CRC mismatch
@@ -155,4 +155,4 @@ int pc_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint
     return (int)(flag + 1); // consume up to and including the flag
 }
 
-#endif // PC_ENABLE_ZIGBEE
+#endif // PROTOCORE_ENABLE_ZIGBEE

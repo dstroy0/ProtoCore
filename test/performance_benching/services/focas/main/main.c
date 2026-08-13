@@ -5,7 +5,7 @@
 // the 10-octet big-endian frame envelope + a generic command request (selector + five i32 args),
 // and parsing a command-response frame (envelope -> echoed selector/status/length -> SysInfo
 // (ODBSYS) fields, plus the 8-octet `data / base^exp` numeric value decode). Pure codec, no
-// sockets - the caller owns the TCP 8193 connection (pc_client_*), so that transport is out of
+// sockets - the caller owns the TCP 8193 connection (protocore_client_*), so that transport is out of
 // scope everywhere here; every call below exercises the real production build/parse path. Worked
 // example for performance_benching/device/<service>/: a pure protocol codec with no hardware involved, following
 // the same pattern as performance_benching/device/modbus.
@@ -54,20 +54,20 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile float sinkf = 0.0f;
 
-        DBENCH_OP("pc_focas_build_sysinfo", 50000, sinkz += pc_focas_build_sysinfo(buf, sizeof(buf)));
-        DBENCH_OP("pc_focas_build_read_position", 50000,
-                  sinkz += pc_focas_build_read_position(buf, sizeof(buf), FOCAS_POS_ABSOLUTE, 0));
+        DBENCH_OP("protocore_focas_build_sysinfo", 50000, sinkz += protocore_focas_build_sysinfo(buf, sizeof(buf)));
+        DBENCH_OP("protocore_focas_build_read_position", 50000,
+                  sinkz += protocore_focas_build_read_position(buf, sizeof(buf), FOCAS_POS_ABSOLUTE, 0));
 
         FocasResponse resp;
-        DBENCH_OP("pc_focas_parse_command_frame", 50000,
-                  sinkb = pc_focas_parse_command_frame(sysinfo_frame, sizeof(sysinfo_frame), &resp));
+        DBENCH_OP("protocore_focas_parse_command_frame", 50000,
+                  sinkb = protocore_focas_parse_command_frame(sysinfo_frame, sizeof(sysinfo_frame), &resp));
 
         FocasSysInfo si;
-        DBENCH_OP("pc_focas_parse_sysinfo", 50000, sinkb = pc_focas_parse_sysinfo(resp.data, resp.data_len, &si));
+        DBENCH_OP("protocore_focas_parse_sysinfo", 50000, sinkb = protocore_focas_parse_sysinfo(resp.data, resp.data_len, &si));
 
         FocasValue fv;
-        DBENCH_OP("pc_focas_decode8", 50000, sinkb = pc_focas_decode8(value8, sizeof(value8), &fv));
-        DBENCH_OP("pc_focas_value_f", 50000, sinkf = pc_focas_value_f(&fv));
+        DBENCH_OP("protocore_focas_decode8", 50000, sinkb = protocore_focas_decode8(value8, sizeof(value8), &fv));
+        DBENCH_OP("protocore_focas_value_f", 50000, sinkf = protocore_focas_value_f(&fv));
 
         (void)sinkz;
         (void)sinkb;

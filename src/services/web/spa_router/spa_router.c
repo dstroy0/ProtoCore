@@ -9,9 +9,9 @@
 #include "services/web/spa_router/spa_router.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SPA_ROUTER
+#if PROTOCORE_ENABLE_SPA_ROUTER
 
-proto_bool pc_spa_has_extension(const char *path)
+proto_bool protocore_spa_has_extension(const char *path)
 {
     if (!path)
     {
@@ -24,11 +24,11 @@ proto_bool pc_spa_has_extension(const char *path)
     return dot && dot != seg && dot[1] != '\0';
 }
 
-pc_spa_action pc_spa_route(const char *path, const char *api_prefix)
+protocore_spa_action protocore_spa_route(const char *path, const char *api_prefix)
 {
     if (!path || path[0] == '\0' || (path[0] == '/' && path[1] == '\0'))
     {
-        return PC_SPA_SERVE_SHELL; // "" or "/" -> the app shell
+        return PROTOCORE_SPA_SERVE_SHELL; // "" or "/" -> the app shell
     }
 
     if (api_prefix && api_prefix[0])
@@ -36,31 +36,31 @@ pc_spa_action pc_spa_route(const char *path, const char *api_prefix)
         size_t pl = strnlen(api_prefix, MAX_PATH_LEN + 1);
         if (strncmp(path, api_prefix, pl) == 0)
         {
-            return PC_SPA_PASSTHROUGH; // "/api/..." -> handlers
+            return PROTOCORE_SPA_PASSTHROUGH; // "/api/..." -> handlers
         }
     }
 
-    return pc_spa_has_extension(path) ? PC_SPA_SERVE_FILE : PC_SPA_SERVE_SHELL;
+    return protocore_spa_has_extension(path) ? PROTOCORE_SPA_SERVE_FILE : PROTOCORE_SPA_SERVE_SHELL;
 }
 
-pc_spa_action pc_spa_route_ex(const char *path, const pc_spa_ctx *ctx)
+protocore_spa_action protocore_spa_route_ex(const char *path, const protocore_spa_ctx *ctx)
 {
     if (!ctx)
     {
-        return pc_spa_route(path, NULL);
+        return protocore_spa_route(path, NULL);
     }
 
-    pc_spa_action a = pc_spa_route(path, ctx->api_prefix);
+    protocore_spa_action a = protocore_spa_route(path, ctx->api_prefix);
     // Only the shell decision can degrade. An asset request still resolves to the file (the caller
     // reports a real 404 if it is missing), and the API must keep passing through - the fallback
     // page posts to those same endpoints, so cutting them off would make it useless.
-    if (a != PC_SPA_SERVE_SHELL)
+    if (a != PROTOCORE_SPA_SERVE_SHELL)
     {
         return a;
     }
     if (!ctx->shell_available || !ctx->client_scripting || ctx->degraded)
     {
-        return PC_SPA_SERVE_FALLBACK;
+        return PROTOCORE_SPA_SERVE_FALLBACK;
     }
     return a;
 }
@@ -69,7 +69,7 @@ pc_spa_action pc_spa_route_ex(const char *path, const pc_spa_ctx *ctx)
 // Conditional UI streaming
 // ---------------------------------------------------------------------------
 
-void pc_ui_stream_begin(pc_ui_stream *s, const pc_ui_fragment *frags, size_t count, void *ctx)
+void protocore_ui_stream_begin(protocore_ui_stream *s, const protocore_ui_fragment *frags, size_t count, void *ctx)
 {
     if (!s)
     {
@@ -83,7 +83,7 @@ void pc_ui_stream_begin(pc_ui_stream *s, const pc_ui_fragment *frags, size_t cou
     s->done = (s->count == 0);
 }
 
-size_t pc_ui_stream_next(pc_ui_stream *s, char *out, size_t cap)
+size_t protocore_ui_stream_next(protocore_ui_stream *s, char *out, size_t cap)
 {
     if (!s || !out || cap == 0 || s->done)
     {
@@ -93,7 +93,7 @@ size_t pc_ui_stream_next(pc_ui_stream *s, char *out, size_t cap)
     size_t written = 0;
     while (written < cap && s->idx < s->count)
     {
-        const pc_ui_fragment *f = &s->frags[s->idx];
+        const protocore_ui_fragment *f = &s->frags[s->idx];
         // Evaluated here rather than at begin(), so a fragment reflects the state that holds when
         // the stream reaches it. Skipping costs nothing - no bytes are emitted for it at all.
         if (!f->html || (f->when && !f->when(s->ctx)))
@@ -125,9 +125,9 @@ size_t pc_ui_stream_next(pc_ui_stream *s, char *out, size_t cap)
     return written;
 }
 
-proto_bool pc_ui_stream_done(const pc_ui_stream *s)
+proto_bool protocore_ui_stream_done(const protocore_ui_stream *s)
 {
     return !s || s->done;
 }
 
-#endif // PC_ENABLE_SPA_ROUTER
+#endif // PROTOCORE_ENABLE_SPA_ROUTER

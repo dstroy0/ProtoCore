@@ -3,7 +3,7 @@
 
 /**
  * @file upload_service.h
- * @brief Streaming file upload to an Arduino FS (PC_ENABLE_UPLOAD).
+ * @brief Streaming file upload to an Arduino FS (PROTOCORE_ENABLE_UPLOAD).
  *
  * Registers a POST route whose request body is streamed straight into a file on
  * a filesystem (LittleFS / SPIFFS / SD) in FILE_CHUNK_SIZE pieces - the upload
@@ -11,7 +11,7 @@
  * mechanism OTA uses), so it is zero-heap and bounded.
  *
  * One upload at a time (the device runs a single loop task). Only one streaming
- * sink can be installed, so PC_ENABLE_UPLOAD and PC_ENABLE_OTA share the
+ * sink can be installed, so PROTOCORE_ENABLE_UPLOAD and PROTOCORE_ENABLE_OTA share the
  * parser hook - register whichever you need (not both on the same build).
  */
 
@@ -20,9 +20,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_UPLOAD
+#if PROTOCORE_ENABLE_UPLOAD
 
 /**
  * @brief Register a streaming-upload endpoint.
@@ -31,20 +31,20 @@ PROTO_BEGIN_DECLS
  * (the file is truncated/created). The route handler replies `200 OK <n> bytes` on
  * success, or 500 on a write failure or when nothing is mounted.
  *
- * The destination store is whatever pc_mnt_mount() last mounted, read through
- * pc_mnt_active() at each request, so an upload follows a hotswap rather than
+ * The destination store is whatever protocore_mnt_mount() last mounted, read through
+ * protocore_mnt_active() at each request, so an upload follows a hotswap rather than
  * capturing one filesystem at registration time.
  *
  * @param path      the upload URL (e.g. "/upload").
  * @param dest_path destination file path (e.g. "/uploads/data.bin").
  */
-void pc_upload_begin(const char *path, const char *dest_path);
+void protocore_upload_begin(const char *path, const char *dest_path);
 
 /** @brief Bytes written by the most recent upload (for handlers / tests). */
-size_t pc_upload_last_size();
+size_t protocore_upload_last_size();
 
-#endif // PC_ENABLE_UPLOAD
+#endif // PROTOCORE_ENABLE_UPLOAD
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UPLOAD_SERVICE_H

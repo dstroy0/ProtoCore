@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the CC-Link cyclic fieldbus frame codec (services/fieldbus/cclink):
-// pc_cclink_build()/pc_cclink_parse() frame and validate the cyclic
-// [station][command][bit_data][word_data][checksum] exchange, pc_cclink_sum() is the arithmetic
-// checksum on its own, and pc_cclink_get_bit()/pc_cclink_get_word() are the RX/RY bit-device and
+// protocore_cclink_build()/protocore_cclink_parse() frame and validate the cyclic
+// [station][command][bit_data][word_data][checksum] exchange, protocore_cclink_sum() is the arithmetic
+// checksum on its own, and protocore_cclink_get_bit()/protocore_cclink_get_word() are the RX/RY bit-device and
 // RWr/RWw word-device process-image accessors. Everything here is pure (no heap, no RS-485, no
 // CC-Link IE Field PHY) - worked example for performance_benching/device/<service>/: a pure protocol codec with no
 // hardware involved, so every call exercises the real production code path (contrast with
@@ -28,7 +28,7 @@ void dbench_run(void)
     static const uint8_t words[4] = {0x34, 0x12, 0x78, 0x56}; // 0x1234, 0x5678
     static uint8_t frame[16];
     size_t frame_len =
-        pc_cclink_build(5, CCLINK_CMD_REFRESH, bits, sizeof(bits), words, sizeof(words), frame, sizeof(frame));
+        protocore_cclink_build(5, CCLINK_CMD_REFRESH, bits, sizeof(bits), words, sizeof(words), frame, sizeof(frame));
 
     for (;;)
     {
@@ -38,18 +38,18 @@ void dbench_run(void)
         volatile uint16_t sink16 = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("pc_cclink_sum", 100000, sink8 += pc_cclink_sum(frame, frame_len));
+        DBENCH_OP("protocore_cclink_sum", 100000, sink8 += protocore_cclink_sum(frame, frame_len));
 
-        DBENCH_OP("pc_cclink_build", 100000,
-                  sinkz += pc_cclink_build(5, CCLINK_CMD_REFRESH, bits, sizeof(bits), words, sizeof(words), frame,
-                                           sizeof(frame)));
+        DBENCH_OP("protocore_cclink_build", 100000,
+                  sinkz += protocore_cclink_build(5, CCLINK_CMD_REFRESH, bits, sizeof(bits), words, sizeof(words),
+                                                  frame, sizeof(frame)));
 
         static CcLinkFrame parsed;
-        DBENCH_OP("pc_cclink_parse", 100000, sinkb ^= pc_cclink_parse(frame, frame_len, &parsed));
+        DBENCH_OP("protocore_cclink_parse", 100000, sinkb ^= protocore_cclink_parse(frame, frame_len, &parsed));
 
-        DBENCH_OP("pc_cclink_get_bit", 200000, sinkb ^= pc_cclink_get_bit(bits, sizeof(bits), 7));
+        DBENCH_OP("protocore_cclink_get_bit", 200000, sinkb ^= protocore_cclink_get_bit(bits, sizeof(bits), 7));
 
-        DBENCH_OP("pc_cclink_get_word", 200000, sink16 += pc_cclink_get_word(words, sizeof(words), 1));
+        DBENCH_OP("protocore_cclink_get_word", 200000, sink16 += protocore_cclink_get_word(words, sizeof(words), 1));
 
         (void)sinkz;
         (void)sink8;

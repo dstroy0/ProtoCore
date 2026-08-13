@@ -3,7 +3,7 @@
 
 /**
  * @file config_io.h
- * @brief Schema-driven config export / restore (PC_ENABLE_CONFIG_IO).
+ * @brief Schema-driven config export / restore (PROTOCORE_ENABLE_CONFIG_IO).
  *
  * The app declares a fixed schema - an array of {key, type} fields - and this
  * service serializes their current values from the config store to a portable
@@ -21,30 +21,30 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_CONFIG_IO
+#if PROTOCORE_ENABLE_CONFIG_IO
 
 /** @brief Type of a config field (selects the typed get/set used). */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_CFG_STR = 0, ///< null-terminated string.
-    PC_CFG_U32 = 1, ///< unsigned 32-bit integer (serialized as decimal).
-} pc_cfg_type;
+    PROTOCORE_CFG_STR = 0, ///< null-terminated string.
+    PROTOCORE_CFG_U32 = 1, ///< unsigned 32-bit integer (serialized as decimal).
+} protocore_cfg_type;
 
 /** @brief One field in an export/restore schema. */
 typedef struct
 {
-    const char *key;  ///< config-store key (<= 15 chars).
-    pc_cfg_type type; ///< the field's value type.
-} pc_cfg_field;
+    const char *key;         ///< config-store key (<= 15 chars).
+    protocore_cfg_type type; ///< the field's value type.
+} protocore_cfg_field;
 
 /**
  * @brief Export the schema's current values from namespace @p ns as `key=value`
  *        lines into @p out.
  * @return characters written, or 0 on a too-small buffer / failure (fail-closed).
  */
-int pc_config_export(const char *ns, const pc_cfg_field *fields, size_t n, char *out, size_t cap);
+int protocore_config_export(const char *ns, const protocore_cfg_field *fields, size_t n, char *out, size_t cap);
 
 /**
  * @brief Import `key=value` lines from @p text into namespace @p ns, writing each
@@ -52,10 +52,10 @@ int pc_config_export(const char *ns, const pc_cfg_field *fields, size_t n, char 
  *        skipped.
  * @return number of fields written.
  */
-int pc_config_import(const char *ns, const pc_cfg_field *fields, size_t n, const char *text, size_t len);
+int protocore_config_import(const char *ns, const protocore_cfg_field *fields, size_t n, const char *text, size_t len);
 
-#endif // PC_ENABLE_CONFIG_IO
+#endif // PROTOCORE_ENABLE_CONFIG_IO
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CONFIG_IO_H

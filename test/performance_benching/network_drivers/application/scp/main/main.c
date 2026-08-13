@@ -26,11 +26,11 @@ void dbench_run(void)
         uint32_t mode;
         uint64_t size;
         char name[64];
-        DBENCH_OP("pc_scp_parse_cline", 200000,
-                  sink += pc_scp_parse_cline(cline, sizeof(cline) - 1, &mode, &size, name, sizeof(name)));
+        DBENCH_OP("protocore_scp_parse_cline", 200000,
+                  sink += protocore_scp_parse_cline(cline, sizeof(cline) - 1, &mode, &size, name, sizeof(name)));
         static char out[64];
-        DBENCH_OP("pc_scp_build_cline", 200000,
-                  sink += pc_scp_build_cline(0644, 262144, "firmware.bin", out, sizeof(out)));
+        DBENCH_OP("protocore_scp_build_cline", 200000,
+                  sink += protocore_scp_build_cline(0644, 262144, "firmware.bin", out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

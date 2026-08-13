@@ -12,7 +12,7 @@
  */
 
 #include "server/webdav_handler.h"
-#include "crypto/rng/rng.h" // pc_rand_fill(): the lock token's unpredictable half
+#include "crypto/rng/rng.h" // protocore_rand_fill(): the lock token's unpredictable half
 #include "mmgr/membuild.h"
 #include "mmgr/protomem.h"
 #include "network_drivers/application/webdav/webdav.h"
@@ -23,27 +23,28 @@
 #include "server/clock/clock.h"
 #include "shared_primitives/mime.h"
 
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
 
 // The parser's streaming-body sink is a single global hook (http_parser_set_stream_hooks): the last
 // registrar wins, so an OTA or upload service registering after dav() takes the sink away and a
 // bodied PUT to a DAV route buffers (bounded by BODY_BUF_SIZE) instead of streaming. The
 // buffered-PUT fallback below assumes that cannot happen, so the combination is rejected here.
-#if PC_ENABLE_OTA || PC_ENABLE_UPLOAD
-#error "PC_ENABLE_WEBDAV cannot be combined with PC_ENABLE_OTA or PC_ENABLE_UPLOAD: the parser's \
+#if PROTOCORE_ENABLE_OTA || PROTOCORE_ENABLE_UPLOAD
+#error                                                                                                                 \
+    "PROTOCORE_ENABLE_WEBDAV cannot be combined with PROTOCORE_ENABLE_OTA or PROTOCORE_ENABLE_UPLOAD: the parser's \
 streaming-body sink is a single global hook, so whichever registers last silently disables the others."
 #endif
 
-// Floor on the bytes one <D:response> costs. The fixed text of pc_webdav_ms_entry is 204 (27 href
+// Floor on the bytes one <D:response> costs. The fixed text of protocore_webdav_ms_entry is 204 (27 href
 // prologue + 66 prop/resourcetype opening + 18 resourcetype close + 93 propstat/response close) and
 // the href adds at least one more, so 192 under-states every real element. That makes
 // BUF_SIZE / 192 an over-estimate of how many entries the buffer holds, and the assert below still
 // requires it to come out under MAX_ENTRIES - which is what keeps the buffer, not the count, the
 // bound the Depth-1 PROPFIND listing loop stops on.
-#define PC_WEBDAV_MIN_ENTRY_BYTES 192u
-static_assert(PC_WEBDAV_BUF_SIZE / PC_WEBDAV_MIN_ENTRY_BYTES < PC_WEBDAV_MAX_ENTRIES,
-              "PC_WEBDAV_BUF_SIZE is large enough to hold PC_WEBDAV_MAX_ENTRIES entries: raise "
-              "PC_WEBDAV_MAX_ENTRIES or lower PC_WEBDAV_BUF_SIZE so the buffer bound stays the "
+#define PROTOCORE_WEBDAV_MIN_ENTRY_BYTES 192u
+static_assert(PROTOCORE_WEBDAV_BUF_SIZE / PROTOCORE_WEBDAV_MIN_ENTRY_BYTES < PROTOCORE_WEBDAV_MAX_ENTRIES,
+              "PROTOCORE_WEBDAV_BUF_SIZE is large enough to hold PROTOCORE_WEBDAV_MAX_ENTRIES entries: raise "
+              "PROTOCORE_WEBDAV_MAX_ENTRIES or lower PROTOCORE_WEBDAV_BUF_SIZE so the buffer bound stays the "
               "binding one (see the PROPFIND listing loop).");
 
 // WebDAV response scratch: the 207 Multi-Status build buffer (BSS).
@@ -54,12 +55,12 @@ typedef struct
     // the subtree is part of the request and one root serves every mount registered.
     int root;
 
-    char buf[PC_WEBDAV_BUF_SIZE];
+    char buf[PROTOCORE_WEBDAV_BUF_SIZE];
 
     // One directory entry's own name, for the Depth-1 PROPFIND listing - the only thing here that
     // walks anything, and it walks exactly one level. Removing and copying a tree are the
-    // accessor's operations (pc_fs_remove, pc_fs_copy), so neither needs a stack here.
-    char child[PC_FILESYSTEM_PATH_MAX];
+    // accessor's operations (protocore_fs_remove, protocore_fs_copy), so neither needs a stack here.
+    char child[PROTOCORE_FILESYSTEM_PATH_MAX];
 } DavBufCtx;
 
 // Unbound is -1, not the zero static storage would give: root 0 is a valid root, so a zeroed field
@@ -78,11 +79,11 @@ static proto_bool dav_join(const char *root, const char *sub, char *out, size_t 
     }
     proto_bool sub_slash = (sub[0] == '/');
     const char *sep = (root_slash || sub_slash) ? "" : "/";
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, root);
-    pc_sb_put(&sb_out, sep);
-    pc_sb_put(&sb_out, sub);
-    int wn = (int)pc_sb_finish(&sb_out);
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, root);
+    protocore_sb_put(&sb_out, sep);
+    protocore_sb_put(&sb_out, sub);
+    int wn = (int)protocore_sb_finish(&sb_out);
     // wn <= 0 cannot fire: snprintf only returns negative on an encoding error, which "%s%s%s"
     // cannot raise, and sep is "/" whenever root and sub are both empty, so the shortest join is
     // one byte. The truncation half (wn >= cap) is exercised.
@@ -111,7 +112,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     {
         return 403;
     }
-    const char *root = pc_mnt_point_root(r->mnt_id);
+    const char *root = protocore_mnt_point_root(r->mnt_id);
     if (!dav_join(root, sub, out, cap))
     {
         return 414;
@@ -124,7 +125,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     return 0;
 }
 
-#if PC_ENABLE_STREAM_BODY
+#if PROTOCORE_ENABLE_STREAM_BODY
 // Per-connection streaming-PUT state: each slot streams its body to its own file, so concurrent
 // PUTs never clobber one another and a transfer is never bounded by BODY_BUF_SIZE. Indexed by the
 // request's slot (req - http_pool).
@@ -160,9 +161,9 @@ static DavLockCtx s_dav_lock;
 static proto_bool dav_write_blocked(HttpReq *req, const char *path)
 {
     const char *if_hdr = http_get_header(req, "If");
-    char tok[PC_DAV_LOCK_TOKEN_MAX];
-    const char *presented = (if_hdr && pc_dav_if_token(if_hdr, tok, sizeof(tok))) ? tok : NULL;
-    return !pc_dav_lock_can_write(&s_dav_lock.table, path, presented);
+    char tok[PROTOCORE_DAV_LOCK_TOKEN_MAX];
+    const char *presented = (if_hdr && protocore_dav_if_token(if_hdr, tok, sizeof(tok))) ? tok : NULL;
+    return !protocore_dav_lock_can_write(&s_dav_lock.table, path, presented);
 }
 
 // True if the (always NUL-terminated) request body contains @p needle - used to spot a <shared> lockscope.
@@ -205,7 +206,7 @@ void dav_put_abort_tramp(HttpReq *req)
     // long, so the bound still has to be tested here.
     if (slot < MAX_CONNS && s_davput.put[slot].active)
     {
-        pc_fs_close(s_davput.put[slot].fh);
+        protocore_fs_close(s_davput.put[slot].fh);
         s_davput.put[slot].active = PROTO_FALSE;
     }
 }
@@ -230,7 +231,7 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         {
             continue;
         }
-        if (r->iface_filter != PC_IF_ANY && r->iface_filter != pc_conn_iface(slot))
+        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != protocore_conn_iface(slot))
         {
             continue;
         }
@@ -251,8 +252,8 @@ proto_bool dav_stream_put_begin(HttpReq *req)
             d->locked = PROTO_TRUE;
             return PROTO_TRUE;
         }
-        d->existed = pc_fs_exists(s_dav.root, fs_path, "");
-        d->fh = pc_fs_open(s_dav.root, fs_path, "", PC_MNT_WRITE);
+        d->existed = protocore_fs_exists(s_dav.root, fs_path, "");
+        d->fh = protocore_fs_open(s_dav.root, fs_path, "", PROTOCORE_MNT_WRITE);
         if (d->fh >= 0)
         {
             d->active = PROTO_TRUE;
@@ -276,7 +277,7 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
     DavPut *d = &s_davput.put[slot];
     if (d->active && !d->error)
     {
-        if (pc_fs_write(d->fh, data, len) != (int)len)
+        if (protocore_fs_write(d->fh, data, len) != (int)len)
         {
             d->error = PROTO_TRUE;
         }
@@ -286,9 +287,9 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
         }
     }
 }
-#endif // PC_ENABLE_STREAM_BODY
+#endif // PROTOCORE_ENABLE_STREAM_BODY
 
-void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
+void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const char *fs_root)
 {
     HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
@@ -300,62 +301,62 @@ void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_
     size_t n = strnlen(url_prefix, MAX_PATH_LEN);
     if (n > 0 && url_prefix[n - 1] == '*')
     {
-        pc_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
-        pc_sb_put(&sb_pat, url_prefix);
-        if (pc_sb_finish(&sb_pat) == 0)
+        protocore_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_pat, url_prefix);
+        if (protocore_sb_finish(&sb_pat) == 0)
         {
             pat[0] = '\0';
         }
     }
     else
     {
-        pc_sb sb_pat2 = {pat, sizeof(pat), 0, PROTO_TRUE};
-        pc_sb_put(&sb_pat2, url_prefix);
-        pc_sb_put(&sb_pat2, "*");
-        if (pc_sb_finish(&sb_pat2) == 0)
+        protocore_sb sb_pat2 = {pat, sizeof(pat), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_pat2, url_prefix);
+        protocore_sb_put(&sb_pat2, "*");
+        if (protocore_sb_finish(&sb_pat2) == 0)
         {
             pat[0] = '\0';
         }
     }
     fill_route_base(r, pat);
     r->type = ROUTE_DAV;
-    r->method = HTTP_GET;                            // unused: WebDAV dispatch keys off the raw method token
-    r->mnt_id = pc_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
+    r->method = HTTP_GET;                                   // unused: WebDAV dispatch keys off the raw method token
+    r->mnt_id = protocore_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
 
     // Bind the root every operation in this file resolves against. Re-binding a name already bound
     // hands back the same handle, so a second mount costs nothing and both see the same storage.
-    s_dav.root = pc_fs_begin("/");
+    s_dav.root = protocore_fs_begin("/");
 
-#if PC_ENABLE_STREAM_BODY
-    // Stream PUT bodies straight to the file (one global sink; see PC_ENABLE_STREAM_BODY).
+#if PROTOCORE_ENABLE_STREAM_BODY
+    // Stream PUT bodies straight to the file (one global sink; see PROTOCORE_ENABLE_STREAM_BODY).
     http_parser_set_stream_hooks(dav_stream_put_begin, dav_stream_put_data, dav_put_abort_tramp);
 #endif
 }
 
 void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
 {
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
         http_reset(slot_id);
         return;
     }
     proto_bool keep;
-    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+    const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
     char header[RESP_HDR_BUF_SIZE];
     // in this file passes either "" or a string literal. Kept so the parameter stays optional.
-    pc_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    pc_sb_put(&sb_header, "HTTP/1.1 ");
-    pc_sb_i64(&sb_header, (int64_t)(code));
-    pc_sb_put(&sb_header, " ");
-    pc_sb_put(&sb_header, Http.status_text(code));
-    pc_sb_put(&sb_header, "\r\n");
-    pc_sb_put(&sb_header, extra_headers ? extra_headers : "");
-    pc_sb_put(&sb_header, "Content-Length: 0\r\n");
-    pc_sb_put(&sb_header, cl);
-    pc_sb_put(&sb_header, "\r\n");
-    int hlen = (int)pc_sb_finish(&sb_header);
+    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_header, "HTTP/1.1 ");
+    protocore_sb_i64(&sb_header, (int64_t)(code));
+    protocore_sb_put(&sb_header, " ");
+    protocore_sb_put(&sb_header, Http.status_text(code));
+    protocore_sb_put(&sb_header, "\r\n");
+    protocore_sb_put(&sb_header, extra_headers ? extra_headers : "");
+    protocore_sb_put(&sb_header, "Content-Length: 0\r\n");
+    protocore_sb_put(&sb_header, cl);
+    protocore_sb_put(&sb_header, "\r\n");
+    int hlen = (int)protocore_sb_finish(&sb_header);
     Tcp.conn->send(slot_id, header, (proto_u16)hlen);
-    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
+    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
 proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
@@ -373,7 +374,7 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
         {
             continue;
         }
-        if (r->iface_filter != PC_IF_ANY && r->iface_filter != pc_conn_iface(slot_id))
+        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != protocore_conn_iface(slot_id))
         {
             continue;
         }
@@ -400,14 +401,14 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     {
         plen--;
     }
-    const char *root = pc_mnt_point_root(r->mnt_id);
+    const char *root = protocore_mnt_point_root(r->mnt_id);
 
     // Expire any timed-out locks (RFC 4918 §6.6) before this request consults the table, so a stale lock
-    // never gates a write. The clock is pc_millis() (pluggable); seconds are enough for lock lifetimes.
-    uint32_t dav_now_s = (uint32_t)(pc_millis() / 1000u);
-    pc_dav_lock_sweep(&s_dav_lock.table, dav_now_s);
+    // never gates a write. The clock is protocore_millis() (pluggable); seconds are enough for lock lifetimes.
+    uint32_t dav_now_s = (uint32_t)(protocore_millis() / 1000u);
+    protocore_dav_lock_sweep(&s_dav_lock.table, dav_now_s);
 
-    switch (pc_webdav_method(req->method))
+    switch (protocore_webdav_method(req->method))
     {
     case DAV_M_OPTIONS:
         proto_add_response_header(slot_id, "DAV", "1, 2");
@@ -420,8 +421,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     case DAV_M_GET:
     case DAV_M_HEAD: {
         // One stat answers both questions this method asks: does it exist, and is it a collection.
-        pc_mnt_stat gst;
-        if (!pc_fs_stat(s_dav.root, fs_path, "", &gst))
+        protocore_mnt_stat gst;
+        if (!protocore_fs_stat(s_dav.root, fs_path, "", &gst))
         {
             dav_send_status(slot_id, 404, "");
             return;
@@ -431,13 +432,13 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             dav_send_status(slot_id, 405, ""); // GET on a collection is not a download
             return;
         }
-        serve_file_internal(slot_id, pc_webdav_method(req->method) == DAV_M_HEAD, pc_mnt_point_backend(r->mnt_id),
-                            fs_path, mime_type(fs_path), NULL);
+        serve_file_internal(slot_id, protocore_webdav_method(req->method) == DAV_M_HEAD,
+                            protocore_mnt_point_backend(r->mnt_id), fs_path, mime_type(fs_path), NULL);
         return;
     }
 
     case DAV_M_PUT: {
-#if PC_ENABLE_STREAM_BODY
+#if PROTOCORE_ENABLE_STREAM_BODY
         if (req->body_streaming)
         {
             // The body was written to this slot's file as it arrived (dav_stream_put_*).
@@ -450,7 +451,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             }
             if (d->active)
             {
-                pc_fs_close(d->fh);
+                protocore_fs_close(d->fh);
                 d->active = PROTO_FALSE; // closed here: the abort hook must not double-close
             }
             else
@@ -481,8 +482,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // stream_begin's only decline reasons for a matched DAV route are the ones that also fail the
         // top-level resolve above. The body is written anyway so a caller that somehow does arrive
         // buffered stores it instead of having it silently dropped.
-        proto_bool existed = pc_fs_exists(s_dav.root, fs_path, "");
-        if (!pc_fs_write_file(s_dav.root, fs_path, "", req->body, req->body_len))
+        proto_bool existed = protocore_fs_exists(s_dav.root, fs_path, "");
+        if (!protocore_fs_write_file(s_dav.root, fs_path, "", req->body, req->body_len))
         {
             dav_send_status(slot_id, 409, ""); // parent missing / not writable
             return;
@@ -497,14 +498,14 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             dav_send_status(slot_id, 423, "");
             return;
         }
-        if (!pc_fs_exists(s_dav.root, fs_path, ""))
+        if (!protocore_fs_exists(s_dav.root, fs_path, ""))
         {
             dav_send_status(slot_id, 404, "");
             return;
         }
         // A collection and its members go in one call: the accessor owns the walk, so the target
         // being a file or a tree does not change what DELETE does here.
-        dav_send_status(slot_id, pc_fs_remove(s_dav.root, fs_path, "") ? 204 : 403, "");
+        dav_send_status(slot_id, protocore_fs_remove(s_dav.root, fs_path, "") ? 204 : 403, "");
         return;
     }
 
@@ -514,19 +515,19 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             dav_send_status(slot_id, 423, "");
             return;
         }
-        if (pc_fs_exists(s_dav.root, fs_path, ""))
+        if (protocore_fs_exists(s_dav.root, fs_path, ""))
         {
             dav_send_status(slot_id, 405, ""); // already exists
             return;
         }
-        dav_send_status(slot_id, pc_fs_mkdir(s_dav.root, fs_path, "") ? 201 : 409, "");
+        dav_send_status(slot_id, protocore_fs_mkdir(s_dav.root, fs_path, "") ? 201 : 409, "");
         return;
 
     case DAV_M_COPY:
     case DAV_M_MOVE: {
         const char *dest_hdr = http_get_header(req, "Destination");
         char dest_url[256];
-        if (!dest_hdr || !pc_webdav_dest_path(dest_hdr, dest_url, sizeof(dest_url)))
+        if (!dest_hdr || !protocore_webdav_dest_path(dest_hdr, dest_url, sizeof(dest_url)))
         {
             dav_send_status(slot_id, 400, "");
             return;
@@ -545,7 +546,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         }
         // Both COPY and MOVE write the destination; MOVE additionally removes the source. Each locked
         // target needs the matching token in the If header (RFC 4918 §7).
-        proto_bool is_move = pc_webdav_method(req->method) == DAV_M_MOVE;
+        proto_bool is_move = protocore_webdav_method(req->method) == DAV_M_MOVE;
         if (dav_write_blocked(req, dest_url) || (is_move && dav_write_blocked(req, req->path)))
         {
             dav_send_status(slot_id, 423, "");
@@ -565,7 +566,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
         const char *ow = http_get_header(req, "Overwrite");
         proto_bool overwrite = !(ow && (ow[0] == 'F' || ow[0] == 'f'));
-        proto_bool dest_exists = pc_fs_exists(s_dav.root, dest_fs, "");
+        proto_bool dest_exists = protocore_fs_exists(s_dav.root, dest_fs, "");
         if (dest_exists && !overwrite)
         {
             dav_send_status(slot_id, 412, "");
@@ -576,9 +577,9 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         {
             if (dest_exists)
             {
-                pc_fs_remove(s_dav.root, dest_fs, ""); // replace
+                protocore_fs_remove(s_dav.root, dest_fs, ""); // replace
             }
-            proto_bool moved = pc_fs_rename(s_dav.root, fs_path, "", dest_fs, "");
+            proto_bool moved = protocore_fs_rename(s_dav.root, fs_path, "", dest_fs, "");
             dav_send_status(slot_id, moved ? (dest_exists ? 204 : 201) : 409, "");
             return;
         }
@@ -586,8 +587,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // COPY: a file or a whole collection (RFC 4918 9.8). Depth applies to a collection source:
         // "0" copies just the collection itself, "infinity" (the default, also when absent) copies
         // the entire tree. One stat says whether the source exists and which of those it is.
-        pc_mnt_stat sst;
-        if (!pc_fs_stat(s_dav.root, fs_path, "", &sst))
+        protocore_mnt_stat sst;
+        if (!protocore_fs_stat(s_dav.root, fs_path, "", &sst))
         {
             dav_send_status(slot_id, 404, "");
             return;
@@ -598,17 +599,17 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
         if (dest_exists)
         {
-            pc_fs_remove(s_dav.root, dest_fs, ""); // overwrite: clear the target first
+            protocore_fs_remove(s_dav.root, dest_fs, ""); // overwrite: clear the target first
         }
 
         proto_bool ok;
         if (sst.is_dir && shallow)
         {
-            ok = pc_fs_mkdir(s_dav.root, dest_fs, ""); // collection, Depth:0 - no members
+            ok = protocore_fs_mkdir(s_dav.root, dest_fs, ""); // collection, Depth:0 - no members
         }
         else
         {
-            ok = pc_fs_copy(s_dav.root, fs_path, "", dest_fs, "");
+            ok = protocore_fs_copy(s_dav.root, fs_path, "", dest_fs, "");
         }
         dav_send_status(slot_id, ok ? (dest_exists ? 204 : 201) : 409, "");
         return;
@@ -621,20 +622,20 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // A LOCK carrying the token in its If header is a refresh (RFC 4918 §9.10.2): extend the held
         // lock's timeout rather than taking a new one.
         const char *if_hdr = http_get_header(req, "If");
-        char iftok[PC_DAV_LOCK_TOKEN_MAX];
+        char iftok[PROTOCORE_DAV_LOCK_TOKEN_MAX];
         const DavLock *lk = NULL;
-        if (if_hdr && pc_dav_if_token(if_hdr, iftok, sizeof(iftok)))
+        if (if_hdr && protocore_dav_if_token(if_hdr, iftok, sizeof(iftok)))
         {
-            lk = pc_dav_lock_refresh(&s_dav_lock.table, iftok, expiry_s);
+            lk = protocore_dav_lock_refresh(&s_dav_lock.table, iftok, expiry_s);
         }
 
-        char token[PC_DAV_LOCK_TOKEN_MAX];
+        char token[PROTOCORE_DAV_LOCK_TOKEN_MAX];
         proto_bool shared, depth_inf;
         if (lk) // refreshed an existing lock: echo its stored scope / depth / token
         {
-            pc_sb sb_token = {token, sizeof(token), 0, PROTO_TRUE};
-            pc_sb_put(&sb_token, lk->token);
-            if (pc_sb_finish(&sb_token) == 0)
+            protocore_sb sb_token = {token, sizeof(token), 0, PROTO_TRUE};
+            protocore_sb_put(&sb_token, lk->token);
+            if (protocore_sb_finish(&sb_token) == 0)
             {
                 token[0] = '\0';
             }
@@ -646,49 +647,50 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             // New lock: a lockinfo body naming <shared> is a shared lock (else exclusive); a LOCK defaults
             // to Depth: infinity when the header is absent (RFC 4918 §9.10.3).
             shared = req->body_len && dav_body_has(req, "shared");
-            depth_inf = pc_webdav_depth(http_get_header(req, "Depth"), PC_DAV_DEPTH_INFINITY) != 0;
-            unsigned long tok = (unsigned long)pc_millis();
+            depth_inf = protocore_webdav_depth(http_get_header(req, "Depth"), PROTOCORE_DAV_DEPTH_INFINITY) != 0;
+            unsigned long tok = (unsigned long)protocore_millis();
             uint32_t tok_rand = 0;
-            pc_rand_fill((uint8_t *)&tok_rand, sizeof(tok_rand)); // boundary: bytes into the scalar
+            protocore_rand_fill((uint8_t *)&tok_rand, sizeof(tok_rand)); // boundary: bytes into the scalar
             tok ^= (unsigned long)tok_rand;
-            pc_sb sb_token2 = {token, sizeof(token), 0, PROTO_TRUE};
-            pc_sb_put(&sb_token2, "opaquelocktoken:");
-            pc_sb_hex(&sb_token2, (uint64_t)(tok), 8);
-            pc_sb_put(&sb_token2, "-pc");
-            if (pc_sb_finish(&sb_token2) == 0)
+            protocore_sb sb_token2 = {token, sizeof(token), 0, PROTO_TRUE};
+            protocore_sb_put(&sb_token2, "opaquelocktoken:");
+            protocore_sb_hex(&sb_token2, (uint64_t)(tok), 8);
+            protocore_sb_put(&sb_token2, "-pc");
+            if (protocore_sb_finish(&sb_token2) == 0)
             {
                 token[0] = '\0';
             }
-            if (!pc_dav_lock_acquire(&s_dav_lock.table, req->path, token, /*exclusive=*/!shared, depth_inf, expiry_s))
+            if (!protocore_dav_lock_acquire(&s_dav_lock.table, req->path, token, /*exclusive=*/!shared, depth_inf,
+                                            expiry_s))
             {
                 dav_send_status(slot_id, 423, ""); // a conflicting lock already holds this resource / subtree
                 return;
             }
         }
-        pc_sb sb_buf = {s_dav.buf, sizeof(s_dav.buf), 0, PROTO_TRUE};
-        pc_sb_put(
+        protocore_sb sb_buf = {s_dav.buf, sizeof(s_dav.buf), 0, PROTO_TRUE};
+        protocore_sb_put(
             &sb_buf,
             "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:prop "
             "xmlns:D=\"DAV:\"><D:lockdiscovery><D:activelock><D:locktype><D:write/></D:locktype><D:lockscope><D:");
-        pc_sb_put(&sb_buf, shared ? "shared" : "exclusive");
-        pc_sb_put(&sb_buf, "/></D:lockscope><D:depth>");
-        pc_sb_put(&sb_buf, depth_inf ? "infinity" : "0");
-        pc_sb_put(&sb_buf, "</D:depth><D:timeout>Second-");
-        pc_sb_u32(&sb_buf, (uint32_t)((unsigned long)timeout_s));
-        pc_sb_put(&sb_buf, "</D:timeout><D:locktoken><D:href>");
-        pc_sb_put(&sb_buf, token);
-        pc_sb_put(&sb_buf, "</D:href></D:locktoken></D:activelock></D:lockdiscovery></D:prop>\n");
-        if (pc_sb_finish(&sb_buf) == 0)
+        protocore_sb_put(&sb_buf, shared ? "shared" : "exclusive");
+        protocore_sb_put(&sb_buf, "/></D:lockscope><D:depth>");
+        protocore_sb_put(&sb_buf, depth_inf ? "infinity" : "0");
+        protocore_sb_put(&sb_buf, "</D:depth><D:timeout>Second-");
+        protocore_sb_u32(&sb_buf, (uint32_t)((unsigned long)timeout_s));
+        protocore_sb_put(&sb_buf, "</D:timeout><D:locktoken><D:href>");
+        protocore_sb_put(&sb_buf, token);
+        protocore_sb_put(&sb_buf, "</D:href></D:locktoken></D:activelock></D:lockdiscovery></D:prop>\n");
+        if (protocore_sb_finish(&sb_buf) == 0)
         {
             s_dav.buf[0] = '\0';
         }
         // RFC 4918 §10.5: Lock-Token uses a Coded-URL (angle-bracketed).
         char lt[64];
-        pc_sb sb_lt = {lt, sizeof(lt), 0, PROTO_TRUE};
-        pc_sb_put(&sb_lt, "<");
-        pc_sb_put(&sb_lt, token);
-        pc_sb_put(&sb_lt, ">");
-        if (pc_sb_finish(&sb_lt) == 0)
+        protocore_sb sb_lt = {lt, sizeof(lt), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_lt, "<");
+        protocore_sb_put(&sb_lt, token);
+        protocore_sb_put(&sb_lt, ">");
+        if (protocore_sb_finish(&sb_lt) == 0)
         {
             lt[0] = '\0';
         }
@@ -700,8 +702,9 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     case DAV_M_UNLOCK: {
         // Release the lock named by the Lock-Token header (a Coded-URL: "<opaquelocktoken:...>").
         const char *lt = http_get_header(req, "Lock-Token");
-        char token[PC_DAV_LOCK_TOKEN_MAX];
-        if (!lt || !dav_coded_url_token(lt, token, sizeof(token)) || !pc_dav_lock_release(&s_dav_lock.table, token))
+        char token[PROTOCORE_DAV_LOCK_TOKEN_MAX];
+        if (!lt || !dav_coded_url_token(lt, token, sizeof(token)) ||
+            !protocore_dav_lock_release(&s_dav_lock.table, token))
         {
             dav_send_status(slot_id, 409, ""); // no such lock to release (RFC 4918 §9.11.1)
             return;
@@ -713,8 +716,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     case DAV_M_PROPFIND: {
         // Every property reported for the target - collection or not, size, mtime - is a field of
         // one directory record, so one stat reads all three.
-        pc_mnt_stat fst;
-        if (!pc_fs_stat(s_dav.root, fs_path, "", &fst))
+        protocore_mnt_stat fst;
+        if (!protocore_fs_stat(s_dav.root, fs_path, "", &fst))
         {
             dav_send_status(slot_id, 404, "");
             return;
@@ -723,13 +726,13 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         uint32_t fsize = (uint32_t)fst.size;
         time_t mtime = (time_t)fst.mtime;
 
-        int depth = pc_webdav_depth(http_get_header(req, "Depth"), 1);
+        int depth = protocore_webdav_depth(http_get_header(req, "Depth"), 1);
 
         // RFC 4918 9.1.1: this server lists at most one level, so a Depth: infinity
         // PROPFIND is rejected with 403 + the propfind-finite-depth precondition rather
         // than silently returning a partial (one-level) 207 the client would read as
         // complete. Clients wanting a listing use Depth: 0 or 1.
-        if (depth == PC_DAV_DEPTH_INFINITY)
+        if (depth == PROTOCORE_DAV_DEPTH_INFINITY)
         {
             static const char body[] = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n"
                                        "<D:error xmlns:D=\"DAV:\"><D:propfind-finite-depth/></D:error>\r\n";
@@ -739,9 +742,9 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
         // Self href: the request path, with a trailing '/' for a collection.
         char self_href[MAX_PATH_LEN + 2];
-        pc_sb sb_self_href = {self_href, sizeof(self_href), 0, PROTO_TRUE};
-        pc_sb_put(&sb_self_href, req->path);
-        if (pc_sb_finish(&sb_self_href) == 0)
+        protocore_sb sb_self_href = {self_href, sizeof(self_href), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_self_href, req->path);
+        if (protocore_sb_finish(&sb_self_href) == 0)
         {
             self_href[0] = '\0';
         }
@@ -760,14 +763,15 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
         size_t cap = sizeof(s_dav.buf);
         size_t len = 0;
-        len = pc_webdav_ms_begin(s_dav.buf, cap, len);
+        len = protocore_webdav_ms_begin(s_dav.buf, cap, len);
         char mt[40];
         http_rfc1123(mtime, mt, sizeof(mt));
-        len = pc_webdav_ms_entry(s_dav.buf, cap, len, self_href, isdir, fsize, mt, isdir ? "" : mime_type(fs_path));
+        len = protocore_webdav_ms_entry(s_dav.buf, cap, len, self_href, isdir, fsize, mt,
+                                        isdir ? "" : mime_type(fs_path));
 
         if (isdir && depth >= 1)
         {
-            int d = pc_fs_opendir(s_dav.root, fs_path, "");
+            int d = protocore_fs_opendir(s_dav.root, fs_path, "");
             if (d < 0)
             {
                 dav_send_status(slot_id, 404, "");
@@ -778,38 +782,38 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             {
                 // One readdir hands back the entry's facts and its own name together, so a child
                 // costs one call and the name it writes is already the leaf.
-                pc_mnt_stat cst;
-                if (!pc_fs_readdir(d, &cst, s_dav.child, sizeof(s_dav.child)))
+                protocore_mnt_stat cst;
+                if (!protocore_fs_readdir(d, &cst, s_dav.child, sizeof(s_dav.child)))
                 {
                     break;
                 }
-                if (count >= PC_WEBDAV_MAX_ENTRIES)
+                if (count >= PROTOCORE_WEBDAV_MAX_ENTRIES)
                 {
                     break;
                 }
                 char chref[MAX_PATH_LEN + 80];
-                pc_sb sb_chref = {chref, sizeof(chref), 0, PROTO_TRUE};
-                pc_sb_put(&sb_chref, self_href);
-                pc_sb_put(&sb_chref, s_dav.child);
-                pc_sb_put(&sb_chref, cst.is_dir ? "/" : "");
-                if (pc_sb_finish(&sb_chref) == 0)
+                protocore_sb sb_chref = {chref, sizeof(chref), 0, PROTO_TRUE};
+                protocore_sb_put(&sb_chref, self_href);
+                protocore_sb_put(&sb_chref, s_dav.child);
+                protocore_sb_put(&sb_chref, cst.is_dir ? "/" : "");
+                if (protocore_sb_finish(&sb_chref) == 0)
                 {
                     chref[0] = '\0';
                 }
                 char cmtbuf[40];
                 http_rfc1123((time_t)cst.mtime, cmtbuf, sizeof(cmtbuf));
                 size_t before = len;
-                len = pc_webdav_ms_entry(s_dav.buf, cap, len, chref, cst.is_dir, (uint32_t)cst.size, cmtbuf,
-                                         cst.is_dir ? "" : mime_type(s_dav.child));
+                len = protocore_webdav_ms_entry(s_dav.buf, cap, len, chref, cst.is_dir, (uint32_t)cst.size, cmtbuf,
+                                                cst.is_dir ? "" : mime_type(s_dav.child));
                 if (len == before)
                 {
                     break; // buffer full - stop listing
                 }
                 count++;
             }
-            pc_fs_close(d);
+            protocore_fs_close(d);
         }
-        len = pc_webdav_ms_end(s_dav.buf, cap, len);
+        len = protocore_webdav_ms_end(s_dav.buf, cap, len);
         send_text(slot_id, 207, "application/xml; charset=utf-8", s_dav.buf);
         return;
     }
@@ -818,13 +822,13 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // Read-only properties (no dead-property store): answer 207 with each
         // requested property refused 403, rather than 405 - keeps Explorer/Finder,
         // which PROPPATCH a timestamp right after a PUT, from erroring.
-        if (!pc_fs_exists(s_dav.root, fs_path, ""))
+        if (!protocore_fs_exists(s_dav.root, fs_path, ""))
         {
             dav_send_status(slot_id, 404, "");
             return;
         }
-        size_t n =
-            pc_webdav_proppatch_ms(s_dav.buf, sizeof(s_dav.buf), req->path, (const char *)req->body, req->body_len);
+        size_t n = protocore_webdav_proppatch_ms(s_dav.buf, sizeof(s_dav.buf), req->path, (const char *)req->body,
+                                                 req->body_len);
         if (!n)
         {
             dav_send_status(slot_id, 507, ""); // Insufficient Storage: response did not fit the buffer
@@ -842,4 +846,4 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         return;
     }
 }
-#endif // PC_ENABLE_WEBDAV
+#endif // PROTOCORE_ENABLE_WEBDAV

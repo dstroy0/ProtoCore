@@ -7,9 +7,9 @@
 //   - http_client_parse_response() : locate the status code and body, bounded by Content-Length /
 //                                    connection-close, or decoded from chunked transfer-encoding.
 // These are pure string functions (no sockets, no heap) - the same code the host suite unit-tests in
-// test/test_http_client. The lwIP/mbedTLS transport (http_get/http_post, pc_client_*, the TLS BIO)
+// test/test_http_client. The lwIP/mbedTLS transport (http_get/http_post, protocore_client_*, the TLS BIO)
 // is ESP32-only and deliberately OUT OF SCOPE: this rig has no network up, so no real DNS/TCP/TLS
-// transaction is ever issued - only the CPU-side codec is timed. (Enabling PC_ENABLE_HTTP_CLIENT
+// transaction is ever issued - only the CPU-side codec is timed. (Enabling PROTOCORE_ENABLE_HTTP_CLIENT
 // still compiles + links that transport TU via the Library Dependency Finder; we simply never call
 // into it, exactly as bench_modbus/bench_coap keep the wire half stubbed/untouched.)
 //

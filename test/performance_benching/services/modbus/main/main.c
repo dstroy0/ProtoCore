@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the Modbus TCP slave codec (services/fieldbus/modbus):
-// pc_modbus_process_adu() takes a complete ADU (MBAP header + PDU), dispatches the function code
+// protocore_modbus_process_adu() takes a complete ADU (MBAP header + PDU), dispatches the function code
 // against the data model, and builds the response - pure (no sockets, no heap). Worked example for
 // performance_benching/device/<service>/: a pure protocol codec with no hardware involved, so every call here
 // exercises the real production code path (contrast with performance_benching/device/ads1115, a peripheral driver
@@ -21,10 +21,10 @@
 
 void dbench_run(void)
 {
-    pc_modbus_server_init();
+    protocore_modbus_server_init();
     for (int i = 0; i < 16; i++)
     {
-        pc_modbus_set_holding_reg((uint16_t)i, (uint16_t)(0x1000 + i));
+        protocore_modbus_set_holding_reg((uint16_t)i, (uint16_t)(0x1000 + i));
     }
 
     // Read Holding Registers (FC 0x03), 8 regs from addr 0: MBAP(txn,proto,len,unit) + PDU(fc,addr,qty).
@@ -38,10 +38,10 @@ void dbench_run(void)
     {
         DBENCH_BANNER("modbus");
         volatile size_t sink = 0;
-        DBENCH_OP("pc_modbus_process_adu read x8 (FC3)", 20000,
-                  sink += pc_modbus_process_adu(rd8, sizeof(rd8), resp, sizeof(resp)));
-        DBENCH_OP("pc_modbus_process_adu write x2 (FC16)", 20000,
-                  sink += pc_modbus_process_adu(wr2, sizeof(wr2), resp, sizeof(resp)));
+        DBENCH_OP("protocore_modbus_process_adu read x8 (FC3)", 20000,
+                  sink += protocore_modbus_process_adu(rd8, sizeof(rd8), resp, sizeof(resp)));
+        DBENCH_OP("protocore_modbus_process_adu write x2 (FC16)", 20000,
+                  sink += protocore_modbus_process_adu(wr2, sizeof(wr2), resp, sizeof(resp)));
         (void)sink;
         DBENCH_DONE();
     }

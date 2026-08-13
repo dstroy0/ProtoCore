@@ -1,6 +1,6 @@
 # Webhook - outbound webhooks / IFTTT
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_HTTP_CLIENT`, `PC_ENABLE_WEBHOOK`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HTTP_CLIENT`, `PROTOCORE_ENABLE_WEBHOOK`
 
 ## What this example teaches
 
@@ -13,13 +13,13 @@ IFTTT Maker `value1/2/3` shape. It fires once at boot.
 
 ```cpp
 char body[128];
-pc_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body)); // {"value1":...,"value2":...}
-int status = pc_webhook_post(WEBHOOK_URL, body);                // returns the HTTP status
+protocore_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body)); // {"value1":...,"value2":...}
+int status = protocore_webhook_post(WEBHOOK_URL, body);                // returns the HTTP status
 ```
 
-`pc_ifttt_payload()` formats the three IFTTT values into JSON;
-`pc_webhook_post()` sends it. There is also a one-shot
-`pc_ifttt_trigger(event, key, v1, v2, v3)` that builds the Maker URL for you.
+`protocore_ifttt_payload()` formats the three IFTTT values into JSON;
+`protocore_webhook_post()` sends it. There is also a one-shot
+`protocore_ifttt_trigger(event, key, v1, v2, v3)` that builds the Maker URL for you.
 
 **Where it fires matters.** The POST is blocking, so the example fires it from
 `loop()` (guarded by a `fired` flag), not from a request handler - a blocking
@@ -30,7 +30,7 @@ server.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_HTTP_CLIENT=1 -DPC_ENABLE_WEBHOOK=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_HTTP_CLIENT=1 -DPROTOCORE_ENABLE_WEBHOOK=1" \
   --lib="." examples/L7-Application/Webhook/Webhook.ino
 ```
 
@@ -48,8 +48,8 @@ added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_HTTP_CLIENT 1
-#define PC_ENABLE_WEBHOOK 1
+#define PROTOCORE_ENABLE_HTTP_CLIENT 1
+#define PROTOCORE_ENABLE_WEBHOOK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -87,12 +87,12 @@ void loop()
     {
         fired = true;
         char body[128];
-        pc_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body));
-        int status = pc_webhook_post(WEBHOOK_URL, body);
+        protocore_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body));
+        int status = protocore_webhook_post(WEBHOOK_URL, body);
         Serial.printf("[webhook] POST -> status %d\n", status);
 
         // IFTTT Maker form (needs your real key):
-        //   pc_ifttt_trigger("device_boot", "YOUR_IFTTT_KEY", "esp32", nullptr, nullptr);
+        //   protocore_ifttt_trigger("device_boot", "YOUR_IFTTT_KEY", "esp32", nullptr, nullptr);
     }
 }
 ```

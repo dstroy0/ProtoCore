@@ -4,7 +4,7 @@
 // Unit tests for send_chunked(, NULL) / ChunkedResponse streaming responses.
 
 #include "protocore.h"
-#include "shared_primitives/hex.h" // pc_hex_u32 (the chunk size-line writer)
+#include "shared_primitives/hex.h" // protocore_hex_u32 (the chunk size-line writer)
 #include <stdio.h>
 #include <string.h>
 
@@ -191,18 +191,18 @@ static void h_with_hdr(uint8_t s, HttpReq *r)
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     tcp_capture_reset();
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT); // reopen the window a backpressure test may have shrunk
     g_log_status = 0;
@@ -389,13 +389,13 @@ void test_chunked_source_overreport_clamped()
     TEST_ASSERT_EQUAL_INT(CHUNK_BUF_SIZE, g_log_len); // body length is the clamped count
 }
 
-// pc_hex_u32 (the chunk size-line writer that replaced snprintf("%x") in chunk_send_pump): the digits
+// protocore_hex_u32 (the chunk size-line writer that replaced snprintf("%x") in chunk_send_pump): the digits
 // must match snprintf("%x") across the range, and 0 must write "0" (the branch the chunked path itself
 // never hits - its terminating chunk is a literal "0\r\n\r\n").
 void test_hex_u32_size_line()
 {
     char out[8];
-    size_t nd = pc_hex_u32(0, out);
+    size_t nd = protocore_hex_u32(0, out);
     TEST_ASSERT_EQUAL_size_t(1, nd);
     TEST_ASSERT_EQUAL_HEX8('0', out[0]);
 
@@ -404,7 +404,7 @@ void test_hex_u32_size_line()
     {
         char ref[16];
         int rn = snprintf(ref, sizeof(ref), "%x", (unsigned)vals[i]);
-        nd = pc_hex_u32(vals[i], out);
+        nd = protocore_hex_u32(vals[i], out);
         TEST_ASSERT_EQUAL_size_t((size_t)rn, nd);
         TEST_ASSERT_EQUAL_MEMORY(ref, out, nd); // most-significant nibble first, matches %x
     }

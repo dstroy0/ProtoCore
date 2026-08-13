@@ -19,7 +19,7 @@
 static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 
 // A test-controllable monotonic clock (ms) so the stale-nonce path can be exercised
-// deterministically: tests advance g_fake_ms and the library reads it via pc_millis().
+// deterministically: tests advance g_fake_ms and the library reads it via protocore_millis().
 static uint32_t g_fake_ms = 0;
 static uint32_t fake_clock()
 {
@@ -41,10 +41,10 @@ static void h_secure(uint8_t slot, HttpReq *req)
 
 static void sha256_hex(const char *s, char out[65])
 {
-    uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256(tw, (const uint8_t *)s, strlen(s), d);
+    uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
+    protocore_sha256(tw, (const uint8_t *)s, strlen(s), d);
     static const char *hx = "0123456789abcdef";
-    for (int i = 0; i < PC_SHA256_DIGEST_LEN; i++)
+    for (int i = 0; i < PROTOCORE_SHA256_DIGEST_LEN; i++)
     {
         out[i * 2] = hx[d[i] >> 4];
         out[i * 2 + 1] = hx[d[i] & 0x0f];
@@ -90,7 +90,7 @@ static void compute_response(const char *user, const char *realm, const char *pa
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     g_called = PROTO_FALSE;
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -98,18 +98,18 @@ void setUp()
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     tcp_capture_reset();
 }
 
 void tearDown()
 {
     tcp_capture_disable();
-    pc_set_clock(NULL, 0); // revert any injected clock so tests stay independent
+    protocore_set_clock(NULL, 0); // revert any injected clock so tests stay independent
 }
 
 static void rearm_slot(uint8_t slot)
@@ -118,7 +118,7 @@ static void rearm_slot(uint8_t slot)
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[slot].pcb = pc_net_host_pcb();
+    conn_pool[slot].pcb = protocore_net_host_pcb();
     http_reset(slot);
     tcp_capture_reset();
 }
@@ -347,9 +347,9 @@ void test_nonce_is_stateless_timestamped()
 // the fresh nonce from that response authenticates at the same (advanced) time.
 void test_stale_nonce_triggers_transparent_retry()
 {
-    pc_set_clock(fake_clock, 1000); // 1000 ticks/sec -> 1 tick == 1 ms
+    protocore_set_clock(fake_clock, 1000); // 1000 ticks/sec -> 1 tick == 1 ms
     g_fake_ms = 0;
-    pc_server_reset(); // re-seed the keying secret under the injected clock
+    protocore_server_reset(); // re-seed the keying secret under the injected clock
     on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
 
     // Mint a nonce at t=0.
@@ -358,7 +358,7 @@ void test_stale_nonce_triggers_transparent_retry()
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
 
     // Jump past the nonce lifetime, then present a valid response with the old nonce.
-    g_fake_ms = PC_DIGEST_NONCE_LIFETIME_MS + 1;
+    g_fake_ms = PROTOCORE_DIGEST_NONCE_LIFETIME_MS + 1;
     char resp[65];
     compute_response(kUser, kRealm, kPass, "GET", "/secure", nonce, "00000001", "abc", resp);
     char authreq[640];

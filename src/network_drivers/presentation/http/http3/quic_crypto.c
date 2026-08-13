@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "crypto/aead/aes128gcm.h"
 #include "crypto/kdf/hkdf.h"
@@ -35,30 +35,30 @@ static void build_nonce(const uint8_t iv[12], uint64_t full_pn, uint8_t nonce[12
     }
 }
 
-void pc_quic_keys_from_secret(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], QuicPacketKeys *out)
+void pc_quic_keys_from_secret(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], QuicPacketKeys *out)
 {
     // RFC 9001 sec 5.1: every encryption level's packet keys are these three Expand-Labels of the
     // level's traffic secret (the Initial secrets below, or the TLS handshake / application secrets).
     // The key becomes a context here and the raw bytes are wiped: nothing downstream needs them.
-    uint8_t *k = work + PC_HKDF_BORROW;
-    uint8_t *hpk = k + PC_AES128GCM_KEY_LEN;
-    pc_hkdf_expand_label(work, secret, "quic key", k, PC_AES128GCM_KEY_LEN, PC_HKDF_LABEL_PREFIX);
+    uint8_t *k = work + PROTOCORE_HKDF_BORROW;
+    uint8_t *hpk = k + PROTOCORE_AES128GCM_KEY_LEN;
+    pc_hkdf_expand_label(work, secret, "quic key", k, PROTOCORE_AES128GCM_KEY_LEN, PROTOCORE_HKDF_LABEL_PREFIX);
     (void)pc_aes128gcm_key_init(out->gcm, k);
-    pc_hkdf_expand_label(work, secret, "quic iv", out->iv, sizeof(out->iv), PC_HKDF_LABEL_PREFIX);
-    pc_hkdf_expand_label(work, secret, "quic hp", hpk, PC_AES128GCM_KEY_LEN, PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(work, secret, "quic iv", out->iv, sizeof(out->iv), PROTOCORE_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(work, secret, "quic hp", hpk, PROTOCORE_AES128GCM_KEY_LEN, PROTOCORE_HKDF_LABEL_PREFIX);
     pc_aes128_init((struct pc_aes128 *)(out->hp), hpk);
-    pc_secure_wipe(k, 2 * PC_AES128GCM_KEY_LEN);
+    pc_secure_wipe(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
 }
 
 void pc_quic_derive_initial_secrets(uint8_t *work, const uint8_t *dcid, size_t dcid_len, QuicInitialSecrets *out)
 {
-    uint8_t initial_secret[PC_HKDF_HASH_LEN];
+    uint8_t initial_secret[PROTOCORE_HKDF_HASH_LEN];
     pc_hkdf_extract(work, INITIAL_SALT, sizeof(INITIAL_SALT), dcid, dcid_len, initial_secret);
 
-    uint8_t client_secret[PC_HKDF_HASH_LEN];
-    uint8_t server_secret[PC_HKDF_HASH_LEN];
-    pc_hkdf_expand_label(work, initial_secret, "client in", client_secret, sizeof(client_secret), PC_HKDF_LABEL_PREFIX);
-    pc_hkdf_expand_label(work, initial_secret, "server in", server_secret, sizeof(server_secret), PC_HKDF_LABEL_PREFIX);
+    uint8_t client_secret[PROTOCORE_HKDF_HASH_LEN];
+    uint8_t server_secret[PROTOCORE_HKDF_HASH_LEN];
+    pc_hkdf_expand_label(work, initial_secret, "client in", client_secret, sizeof(client_secret), PROTOCORE_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(work, initial_secret, "server in", server_secret, sizeof(server_secret), PROTOCORE_HKDF_LABEL_PREFIX);
 
     pc_quic_keys_from_secret(work, client_secret, &out->client);
     pc_quic_keys_from_secret(work, server_secret, &out->server);
@@ -72,7 +72,7 @@ size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_
         return 0;
     }
     size_t hdr_len = pn_offset + pn_len;
-    size_t total = hdr_len + payload_len + PC_AES128GCM_TAG_LEN;
+    size_t total = hdr_len + payload_len + PROTOCORE_AES128GCM_TAG_LEN;
     if (total > cap)
     {
         return 0;
@@ -106,7 +106,7 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
 {
     // Header protection needs a full 16-byte sample starting at pn_offset + 4, and the AEAD region
     // must carry at least the 16-byte tag once the (<=4-byte) packet number is removed.
-    if (length < 4 + PC_AES128GCM_TAG_LEN)
+    if (length < 4 + PROTOCORE_AES128GCM_TAG_LEN)
     {
         return (size_t)-1;
     }
@@ -137,13 +137,13 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
     // length and the tag pointer separately, so it no longer has a combined length to range-check on
     // the caller's behalf - and ct_len comes off the wire, so the subtraction below would wrap to a
     // huge size_t rather than fail. This guard used to live inside pc_aes128gcm_open().
-    if (ct_len < PC_AES128GCM_TAG_LEN)
+    if (ct_len < PROTOCORE_AES128GCM_TAG_LEN)
     {
         return (size_t)-1;
     }
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
-    const size_t pt_len = ct_len - PC_AES128GCM_TAG_LEN;
+    const size_t pt_len = ct_len - PROTOCORE_AES128GCM_TAG_LEN;
     if (!pc_aes128gcm_open((struct pc_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, pt_len,
                            pkt + hdr_len + pt_len, out))
     {
@@ -153,7 +153,7 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
     // On success pkt[0] holds the unprotected first byte, which is where the caller reads the
     // RFC 9000 sec 17.2 / 17.3.1 Reserved Bits: this is the only point at which both protections
     // are off, and only the connection can answer a violation with a CONNECTION_CLOSE.
-    return ct_len - PC_AES128GCM_TAG_LEN;
+    return ct_len - PROTOCORE_AES128GCM_TAG_LEN;
 }
 
 void pc_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, const uint8_t *retry, size_t retry_len,
@@ -177,11 +177,11 @@ void pc_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, const u
     // Empty plaintext: seal writes only the 16-byte tag.
     { // fixed RFC 9001 key, once per Retry packet - not worth a resident context
         size_t mark = pc_secure_mark();
-        struct pc_aes128gcm_key *rk = pc_aes128gcm_key_init(pc_secure_alloc(PC_WORK_AES128GCM, 8), RETRY_KEY);
+        struct pc_aes128gcm_key *rk = pc_aes128gcm_key_init(pc_secure_alloc(PROTOCORE_WORK_AES128GCM, 8), RETRY_KEY);
         (void)pc_aes128gcm_seal(rk, RETRY_NONCE, aad, p, NULL, 0, tag, tag);
         pc_aes128gcm_key_wipe(rk);
         pc_secure_release(mark);
     }
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

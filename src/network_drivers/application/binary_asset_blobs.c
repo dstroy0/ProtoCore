@@ -6,11 +6,11 @@
 
 #include "network_drivers/application/binary_asset_blobs.h"
 
-#if PC_ENABLE_THEMES
+#if PROTOCORE_ENABLE_THEMES
 
 
 
-static const char PC_THEME_AMBER_CRT[] =
+static const char PROTOCORE_THEME_AMBER_CRT[] =
     ":root{--bg:#0a0600;--bg2:#140d00;--card:#140d00;--ink:#ffb000;--muted:#8a6000;--accent:#ffcc33;--accent2:#ff88"
     "00;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -28,8 +28,8 @@ static const char PC_THEME_AMBER_CRT[] =
     "\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);"
     "}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_AMONG_US[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_AMONG_US[] =
     ":root{--bg:#132a3e;--bg2:#1a3a52;--card:#c51111;--ink:#ffffff;--muted:#7a8b99;--accent:#c51111;--accent2:#ef7d"
     "0d;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -48,7 +48,7 @@ static const char PC_THEME_AMONG_US[] =
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_ANDROMEDA[] =
+static const char PROTOCORE_THEME_ANDROMEDA[] =
     ":root{--bg:#23262e;--bg2:#1e2025;--card:#2b2f38;--ink:#d5ced9;--muted:#746f77;--accent:#00e8c6;--accent2:#ff53"
     "70;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -66,7 +66,7 @@ static const char PC_THEME_ANDROMEDA[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_ARCTIC[] =
+static const char PROTOCORE_THEME_ARCTIC[] =
     ":root{--bg:#f0f6fb;--bg2:#e2edf5;--card:#ffffff;--ink:#1e3a4c;--muted:#5f7d8f;--accent:#0ea5e9;--accent2:#38bd"
     "f8;--radius:12px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.65 \"Georgia\",\"Segoe UI\",serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -84,7 +84,7 @@ static const char PC_THEME_ARCTIC[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_AURA[] =
+static const char PROTOCORE_THEME_AURA[] =
     ":root{--bg:#15141b;--bg2:#110f18;--card:#1c1b22;--ink:#edecee;--muted:#6d6d6d;--accent:#a277ff;--accent2:#61ff"
     "ca;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -102,7 +102,7 @@ static const char PC_THEME_AURA[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_AUTUMN[] =
+static const char PROTOCORE_THEME_AUTUMN[] =
     ":root{--bg:#fbf3e8;--bg2:#f3e2cc;--card:#ffffff;--ink:#4a2f1a;--muted:#8a6a4a;--accent:#c05621;--accent2:#8a6d"
     "3b;--radius:12px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.65 \"Georgia\",\"Segoe UI\",serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -120,7 +120,7 @@ static const char PC_THEME_AUTUMN[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_AYU_DARK[] =
+static const char PROTOCORE_THEME_AYU_DARK[] =
     ":root{--bg:#0a0e14;--bg2:#0d1017;--card:#141a22;--ink:#b3b1ad;--muted:#565b66;--accent:#ffb454;--accent2:#59c2"
     "ff;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -138,7 +138,7 @@ static const char PC_THEME_AYU_DARK[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_AYU_LIGHT[] =
+static const char PROTOCORE_THEME_AYU_LIGHT[] =
     ":root{--bg:#fafafa;--bg2:#f3f4f5;--card:#ffffff;--ink:#5c6773;--muted:#abb0b6;--accent:#ff9940;--accent2:#399e"
     "e6;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -156,7 +156,7 @@ static const char PC_THEME_AYU_LIGHT[] =
     "olas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0"
     ".6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_AYU_MIRAGE[] =
+static const char PROTOCORE_THEME_AYU_MIRAGE[] =
     ":root{--bg:#1f2430;--bg2:#232834;--card:#2a303c;--ink:#cbccc6;--muted:#707a8c;--accent:#ffcc66;--accent2:#5ccf"
     "e6;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -174,7 +174,7 @@ static const char PC_THEME_AYU_MIRAGE[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_AZURE_PRO[] =
+static const char PROTOCORE_THEME_AZURE_PRO[] =
     ":root{--bg:#f0f6ff;--bg2:#e2edfb;--card:#ffffff;--ink:#0f2540;--muted:#5b7699;--accent:#0067c5;--accent2:#00a3"
     "e0;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -192,8 +192,8 @@ static const char PC_THEME_AZURE_PRO[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_BARBIE[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_BARBIE[] =
     ":root{--bg:#ffe0f0;--bg2:#ffd0ec;--card:#ffffff;--ink:#a10c58;--muted:#d16ba5;--accent:#e91e8c;--accent2:#ff4f"
     "a3;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -212,7 +212,7 @@ static const char PC_THEME_BARBIE[] =
     "dius) * 0.6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_BLULOCO_DARK[] =
+static const char PROTOCORE_THEME_BLULOCO_DARK[] =
     ":root{--bg:#282c34;--bg2:#21252b;--card:#2c313a;--ink:#abb2bf;--muted:#636d83;--accent:#3691ff;--accent2:#ff64"
     "80;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -230,7 +230,7 @@ static const char PC_THEME_BLULOCO_DARK[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_BORDEAUX[] =
+static const char PROTOCORE_THEME_BORDEAUX[] =
     ":root{--bg:#faf6f6;--bg2:#f0e6e6;--card:#ffffff;--ink:#3a1420;--muted:#8a6a72;--accent:#7a1f3d;--accent2:#a832"
     "4f;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -248,7 +248,7 @@ static const char PC_THEME_BORDEAUX[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_BORLAND[] =
+static const char PROTOCORE_THEME_BORLAND[] =
     ":root{--bg:#0000aa;--bg2:#0000cc;--card:#0000aa;--ink:#ffff55;--muted:#5555ff;--accent:#ffff55;--accent2:#55ff"
     "ff;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -266,7 +266,7 @@ static const char PC_THEME_BORLAND[] =
     "\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);"
     "}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_BUBBLEGUM[] =
+static const char PROTOCORE_THEME_BUBBLEGUM[] =
     ":root{--bg:#fff0f6;--bg2:#ffe0ee;--card:#ffffff;--ink:#7a2a55;--muted:#c86a95;--accent:#ff5fa2;--accent2:#7ac7"
     "ff;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -284,7 +284,7 @@ static const char PC_THEME_BUBBLEGUM[] =
     "de\",Consolas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--ra"
     "dius) * 0.6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_BUBBLY[] =
+static const char PROTOCORE_THEME_BUBBLY[] =
     ":root{--bg1:#e0f7fa;--bg2:#fce4ec;--card:#ffffff;--ink:#37474f;--accent:#26c6da;--accent2:#ec407a;}html,body{m"
     "argin:0;min-height:100%;color:var(--ink);font:16px/1.6 \"Segoe UI\",\"Helvetica Neue\",system-ui,sans-serif;ba"
     "ckground:linear-gradient(135deg,var(--bg1),var(--bg2));}h1,h2,h3{color:var(--accent2);font-weight:800;}a{color"
@@ -296,7 +296,7 @@ static const char PC_THEME_BUBBLY[] =
     "on:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(38,198,218,0.5);}button:active{transform:trans"
     "lateY(1px);}";
 
-static const char PC_THEME_C64[] =
+static const char PROTOCORE_THEME_C64[] =
     ":root{--bg:#40318d;--bg2:#4a3a9e;--card:#4a3a9e;--ink:#a5a0e0;--muted:#7a72c0;--accent:#a5a0e0;--accent2:#ffff"
     "ff;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -314,7 +314,7 @@ static const char PC_THEME_C64[] =
     "\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);"
     "}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_CATPPUCCIN_FRAPPE[] =
+static const char PROTOCORE_THEME_CATPPUCCIN_FRAPPE[] =
     ":root{--bg:#303446;--bg2:#292c3c;--card:#414559;--ink:#c6d0f5;--muted:#737994;--accent:#8caaee;--accent2:#f4b8"
     "e4;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -332,7 +332,7 @@ static const char PC_THEME_CATPPUCCIN_FRAPPE[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_CATPPUCCIN_LATTE[] =
+static const char PROTOCORE_THEME_CATPPUCCIN_LATTE[] =
     ":root{--bg:#eff1f5;--bg2:#e6e9ef;--card:#ffffff;--ink:#4c4f69;--muted:#8c8fa1;--accent:#1e66f5;--accent2:#ea76"
     "cb;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -350,7 +350,7 @@ static const char PC_THEME_CATPPUCCIN_LATTE[] =
     "olas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0"
     ".6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_CATPPUCCIN_MACCHIATO[] =
+static const char PROTOCORE_THEME_CATPPUCCIN_MACCHIATO[] =
     ":root{--bg:#24273a;--bg2:#1e2030;--card:#363a4f;--ink:#cad3f5;--muted:#6e738d;--accent:#8aadf4;--accent2:#f5bd"
     "e6;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -368,7 +368,7 @@ static const char PC_THEME_CATPPUCCIN_MACCHIATO[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_CATPPUCCIN_MOCHA[] =
+static const char PROTOCORE_THEME_CATPPUCCIN_MOCHA[] =
     ":root{--bg:#1e1e2e;--bg2:#181825;--card:#313244;--ink:#cdd6f4;--muted:#6c7086;--accent:#89b4fa;--accent2:#f5c2"
     "e7;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -386,7 +386,7 @@ static const char PC_THEME_CATPPUCCIN_MOCHA[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_CHERRY_BLOSSOM[] =
+static const char PROTOCORE_THEME_CHERRY_BLOSSOM[] =
     ":root{--bg:#fff5f8;--bg2:#ffe4ec;--card:#ffffff;--ink:#6a2540;--muted:#b57a92;--accent:#ec4899;--accent2:#a78b"
     "fa;--radius:12px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.65 \"Georgia\",\"Segoe UI\",serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -404,7 +404,7 @@ static const char PC_THEME_CHERRY_BLOSSOM[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_CITY_LIGHTS[] =
+static const char PROTOCORE_THEME_CITY_LIGHTS[] =
     ":root{--bg:#1d252c;--bg2:#171d23;--card:#28323a;--ink:#b7c5d3;--muted:#41505e;--accent:#5ec4ff;--accent2:#e27e"
     "8d;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -422,7 +422,7 @@ static const char PC_THEME_CITY_LIGHTS[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_COBALT2[] =
+static const char PROTOCORE_THEME_COBALT2[] =
     ":root{--bg:#193549;--bg2:#1f4662;--card:#15232d;--ink:#ffffff;--muted:#8aa6c1;--accent:#ffc600;--accent2:#ff9d"
     "00;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -440,7 +440,7 @@ static const char PC_THEME_COBALT2[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_COMMODORE_PET[] =
+static const char PROTOCORE_THEME_COMMODORE_PET[] =
     ":root{--bg:#000000;--bg2:#0a1a0a;--card:#0a1a0a;--ink:#4aff4a;--muted:#2a8a2a;--accent:#4aff4a;--accent2:#88ff"
     "88;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -458,7 +458,7 @@ static const char PC_THEME_COMMODORE_PET[] =
     "\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);"
     "}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_CORPORATE_SLATE[] =
+static const char PROTOCORE_THEME_CORPORATE_SLATE[] =
     ":root{--bg:#f8fafc;--bg2:#eef2f7;--card:#ffffff;--ink:#1e293b;--muted:#64748b;--accent:#2563eb;--accent2:#0ea5"
     "e9;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -476,7 +476,7 @@ static const char PC_THEME_CORPORATE_SLATE[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_COTTON_CANDY[] =
+static const char PROTOCORE_THEME_COTTON_CANDY[] =
     ":root{--bg:#fdf0f7;--bg2:#f7e0f0;--card:#ffffff;--ink:#5a3a52;--muted:#b088a5;--accent:#f472b6;--accent2:#818c"
     "f8;--radius:16px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.7 \"Nunito\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -494,13 +494,13 @@ static const char PC_THEME_COTTON_CANDY[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_CRT_GREEN[] =
+static const char PROTOCORE_THEME_CRT_GREEN[] =
     ":root{--g:#2bb35a;--g2:#00c000;--bg:#080c08;}html,body{margin:0;background:var(--bg);color:var(--g);font:14px/"
     "1.45 \"Consolas\",\"DejaVu Sans Mono\",monospace;text-shadow:0 0 4px rgba(43,179,90,0.55);}h1,h2,h3{color:var("
     "--g2);font-weight:600;}a{color:var(--g2);}input,button,select,textarea{background:#0a0f0a;color:var(--g);borde"
     "r:1px solid #14401f;font:inherit;padding:8px;outline:none;}button{color:var(--g2);cursor:pointer;}";
 
-static const char PC_THEME_CUTE[] =
+static const char PROTOCORE_THEME_CUTE[] =
     ":root{--bg:#fff0f6;--ink:#6d4452;--pink:#ff6fae;--pink2:#ffa6cf;--card:#ffffff;}html,body{margin:0;background:"
     "var(--bg);color:var(--ink);font:16px/1.6 \"Comic Sans MS\",\"Segoe UI Rounded\",\"Quicksand\",system-ui,sans-s"
     "erif;}h1,h2,h3{color:var(--pink);font-weight:800;text-shadow:1px 1px 0 #ffd6e8;}h1::before,h2::before{content:"
@@ -511,7 +511,7 @@ static const char PC_THEME_CUTE[] =
     "inherit;font-weight:700;cursor:pointer;box-shadow:0 4px 0 #d64f8e;}button:hover{background:var(--pink2);}butto"
     "n:active{transform:translateY(3px);box-shadow:0 1px 0 #d64f8e;}";
 
-static const char PC_THEME_CYBERPUNK[] =
+static const char PROTOCORE_THEME_CYBERPUNK[] =
     ":root{--bg:#0d0221;--bg2:#190b33;--card:#241540;--ink:#f0f0ff;--muted:#7b6ba8;--accent:#fcee0a;--accent2:#ff00"
     "3c;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -529,8 +529,8 @@ static const char PC_THEME_CYBERPUNK[] =
     ",\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6)"
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_DARCULA[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_DARCULA[] =
     ":root{--bg:#2b2b2b;--bg2:#313335;--card:#3c3f41;--ink:#a9b7c6;--muted:#808080;--accent:#cc7832;--accent2:#6897"
     "bb;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -549,7 +549,7 @@ static const char PC_THEME_DARCULA[] =
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_DEEP_SEA[] =
+static const char PROTOCORE_THEME_DEEP_SEA[] =
     ":root{--bg:#031b2e;--bg2:#052a45;--card:#073a5c;--ink:#cfe8f7;--muted:#5a8aa8;--accent:#00b4d8;--accent2:#48ca"
     "e4;--radius:12px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.65 \"Georgia\",\"Segoe UI\",serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -567,7 +567,7 @@ static const char PC_THEME_DEEP_SEA[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_DESERT[] =
+static const char PROTOCORE_THEME_DESERT[] =
     ":root{--bg:#faf3e8;--bg2:#f0e2ca;--card:#ffffff;--ink:#4a3520;--muted:#8a7050;--accent:#d97706;--accent2:#65a3"
     "0d;--radius:12px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.65 \"Georgia\",\"Segoe UI\",serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -585,8 +585,8 @@ static const char PC_THEME_DESERT[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_DISCORD[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_DISCORD[] =
     ":root{--bg:#313338;--bg2:#2b2d31;--card:#383a40;--ink:#dbdee1;--muted:#949ba4;--accent:#5865f2;--accent2:#00a8"
     "fc;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -605,7 +605,7 @@ static const char PC_THEME_DISCORD[] =
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_DOGE[] =
+static const char PROTOCORE_THEME_DOGE[] =
     ":root{--bg:#f5e6c8;--bg2:#f0dcae;--card:#ffffff;--ink:#5a4a2a;--muted:#a08a5a;--accent:#f2a900;--accent2:#3fa7"
     "d6;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -623,8 +623,8 @@ static const char PC_THEME_DOGE[] =
     "de\",Consolas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--ra"
     "dius) * 0.6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_DOOM[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_DOOM[] =
     ":root{--bg:#1a0000;--bg2:#2a0505;--card:#3a0a0a;--ink:#ffcc66;--muted:#8b3a3a;--accent:#ff4500;--accent2:#b222"
     "22;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -643,7 +643,7 @@ static const char PC_THEME_DOOM[] =
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_DRACULA[] =
+static const char PROTOCORE_THEME_DRACULA[] =
     ":root{--bg:#282a36;--bg2:#21222c;--card:#343746;--ink:#f8f8f2;--muted:#6272a4;--accent:#bd93f9;--accent2:#ff79"
     "c6;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -661,7 +661,7 @@ static const char PC_THEME_DRACULA[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_EVERFOREST[] =
+static const char PROTOCORE_THEME_EVERFOREST[] =
     ":root{--bg:#2b3339;--bg2:#323c41;--card:#3a464c;--ink:#d3c6aa;--muted:#859289;--accent:#a7c080;--accent2:#e698"
     "75;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -679,7 +679,7 @@ static const char PC_THEME_EVERFOREST[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_FIREWATCH[] =
+static const char PROTOCORE_THEME_FIREWATCH[] =
     ":root{--bg:#1e2027;--bg2:#25282f;--card:#2c2f38;--ink:#d5d8da;--muted:#545864;--accent:#dd6862;--accent2:#6cbc"
     "d8;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -697,7 +697,7 @@ static const char PC_THEME_FIREWATCH[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_FLUENT_DARK[] =
+static const char PROTOCORE_THEME_FLUENT_DARK[] =
     ":root{--bg:#201f1e;--bg2:#292827;--card:#323130;--ink:#ffffff;--muted:#a19f9d;--accent:#2899f5;--accent2:#8a88"
     "86;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -715,7 +715,7 @@ static const char PC_THEME_FLUENT_DARK[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_FOREST_EXEC[] =
+static const char PROTOCORE_THEME_FOREST_EXEC[] =
     ":root{--bg:#f4f7f4;--bg2:#e6efe6;--card:#ffffff;--ink:#1b3a2b;--muted:#5f7d6c;--accent:#1a7a4c;--accent2:#0f76"
     "6e;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -733,8 +733,8 @@ static const char PC_THEME_FOREST_EXEC[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_GAMEBOY[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_GAMEBOY[] =
     ":root{--bg:#9bbc0f;--bg2:#8bac0f;--card:#9bbc0f;--ink:#0f380f;--muted:#306230;--accent:#0f380f;--accent2:#3062"
     "30;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -753,7 +753,7 @@ static const char PC_THEME_GAMEBOY[] =
     "ius) * 0.6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_GITHUB_DARK[] =
+static const char PROTOCORE_THEME_GITHUB_DARK[] =
     ":root{--bg:#0d1117;--bg2:#161b22;--card:#161b22;--ink:#c9d1d9;--muted:#8b949e;--accent:#58a6ff;--accent2:#a371"
     "f7;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -771,7 +771,7 @@ static const char PC_THEME_GITHUB_DARK[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_GITHUB_LIGHT[] =
+static const char PROTOCORE_THEME_GITHUB_LIGHT[] =
     ":root{--bg:#ffffff;--bg2:#f6f8fa;--card:#ffffff;--ink:#24292f;--muted:#6e7781;--accent:#0969da;--accent2:#8250"
     "df;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -789,7 +789,7 @@ static const char PC_THEME_GITHUB_LIGHT[] =
     "olas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0"
     ".6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_GRAPHITE[] =
+static const char PROTOCORE_THEME_GRAPHITE[] =
     ":root{--bg:#f5f5f4;--bg2:#e7e5e4;--card:#ffffff;--ink:#292524;--muted:#78716c;--accent:#334155;--accent2:#0891"
     "b2;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -807,7 +807,7 @@ static const char PC_THEME_GRAPHITE[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_GREEN_PHOSPHOR[] =
+static const char PROTOCORE_THEME_GREEN_PHOSPHOR[] =
     ":root{--bg:#001100;--bg2:#002200;--card:#002200;--ink:#33ff66;--muted:#1a8a33;--accent:#66ff99;--accent2:#00cc"
     "44;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -825,7 +825,7 @@ static const char PC_THEME_GREEN_PHOSPHOR[] =
     "\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);"
     "}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_GRUVBOX_DARK[] =
+static const char PROTOCORE_THEME_GRUVBOX_DARK[] =
     ":root{--bg:#282828;--bg2:#32302f;--card:#3c3836;--ink:#ebdbb2;--muted:#a89984;--accent:#fabd2f;--accent2:#fe80"
     "19;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -843,7 +843,7 @@ static const char PC_THEME_GRUVBOX_DARK[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_GRUVBOX_LIGHT[] =
+static const char PROTOCORE_THEME_GRUVBOX_LIGHT[] =
     ":root{--bg:#fbf1c7;--bg2:#f2e5bc;--card:#ffffff;--ink:#3c3836;--muted:#7c6f64;--accent:#b57614;--accent2:#af3a"
     "03;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -861,7 +861,7 @@ static const char PC_THEME_GRUVBOX_LIGHT[] =
     "olas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0"
     ".6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_GRUVBOX_MATERIAL[] =
+static const char PROTOCORE_THEME_GRUVBOX_MATERIAL[] =
     ":root{--bg:#282828;--bg2:#32302f;--card:#3c3836;--ink:#d4be98;--muted:#928374;--accent:#a9b665;--accent2:#d8a6"
     "57;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -879,7 +879,7 @@ static const char PC_THEME_GRUVBOX_MATERIAL[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_HORIZON[] =
+static const char PROTOCORE_THEME_HORIZON[] =
     ":root{--bg:#1c1e26;--bg2:#16171e;--card:#232530;--ink:#d5d8da;--muted:#6c6f93;--accent:#e95678;--accent2:#fab7"
     "95;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -897,7 +897,7 @@ static const char PC_THEME_HORIZON[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_HOTDOG_STAND[] =
+static const char PROTOCORE_THEME_HOTDOG_STAND[] =
     ":root{--bg:#ff0000;--bg2:#ffff00;--card:#ffff00;--ink:#000000;--muted:#aa0000;--accent:#000000;--accent2:#ff00"
     "00;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -915,7 +915,7 @@ static const char PC_THEME_HOTDOG_STAND[] =
     "de\",Consolas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--ra"
     "dius) * 0.6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_IBM_3270[] =
+static const char PROTOCORE_THEME_IBM_3270[] =
     ":root{--bg:#0d0208;--bg2:#1a0410;--card:#1a0410;--ink:#33ff33;--muted:#1a8a1a;--accent:#33ff33;--accent2:#00cc"
     "00;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -933,7 +933,7 @@ static const char PC_THEME_IBM_3270[] =
     "\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);"
     "}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_IBM_CARBON[] =
+static const char PROTOCORE_THEME_IBM_CARBON[] =
     ":root{--bg:#161616;--bg2:#262626;--card:#262626;--ink:#f4f4f4;--muted:#8d8d8d;--accent:#0f62fe;--accent2:#33b1"
     "ff;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -951,7 +951,7 @@ static const char PC_THEME_IBM_CARBON[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_IBM_G10[] =
+static const char PROTOCORE_THEME_IBM_G10[] =
     ":root{--bg:#f4f4f4;--bg2:#e0e0e0;--card:#ffffff;--ink:#161616;--muted:#8d8d8d;--accent:#0f62fe;--accent2:#0072"
     "c3;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -969,7 +969,7 @@ static const char PC_THEME_IBM_G10[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_IBM_G90[] =
+static const char PROTOCORE_THEME_IBM_G90[] =
     ":root{--bg:#262626;--bg2:#333333;--card:#393939;--ink:#f4f4f4;--muted:#8d8d8d;--accent:#4589ff;--accent2:#33b1"
     "ff;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -987,7 +987,7 @@ static const char PC_THEME_IBM_G90[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_KANAGAWA[] =
+static const char PROTOCORE_THEME_KANAGAWA[] =
     ":root{--bg:#1f1f28;--bg2:#16161d;--card:#2a2a37;--ink:#dcd7ba;--muted:#727169;--accent:#7e9cd8;--accent2:#e6c3"
     "84;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1005,8 +1005,8 @@ static const char PC_THEME_KANAGAWA[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_KEROPPI[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_KEROPPI[] =
     ":root{--pond:#d6f1ff;--frog:#6cc24a;--frog2:#3f9e3a;--cheek:#ff9ec3;--red:#e8453c;--ink:#244a22;--white:#fffff"
     "f;}html,body{margin:0;background:var(--pond);color:var(--ink);font:16px/1.6 \"Segoe UI Rounded\",\"Comic Sans "
     "MS\",\"Quicksand\",system-ui,sans-serif;}h1,h2,h3{color:var(--frog2);font-weight:800;}h1::before{content:\"\\1"
@@ -1020,7 +1020,7 @@ static const char PC_THEME_KEROPPI[] =
     "sform:translateY(3px);box-shadow:0 1px 0 var(--frog2);}";
 #endif
 
-static const char PC_THEME_LAVENDER[] =
+static const char PROTOCORE_THEME_LAVENDER[] =
     ":root{--bg:#f3f0fb;--bg2:#e8e2f7;--card:#ffffff;--ink:#3a2f5a;--muted:#8579a5;--accent:#8b5cf6;--accent2:#ec48"
     "99;--radius:16px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.7 \"Nunito\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -1038,7 +1038,7 @@ static const char PC_THEME_LAVENDER[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_LINEAR[] =
+static const char PROTOCORE_THEME_LINEAR[] =
     ":root{--bg:#0b0b0e;--bg2:#101014;--card:#18181c;--ink:#e6e6e6;--muted:#8a8f98;--accent:#5e6ad2;--accent2:#26d0"
     "b0;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1056,7 +1056,7 @@ static const char PC_THEME_LINEAR[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_MATERIAL_DARKER[] =
+static const char PROTOCORE_THEME_MATERIAL_DARKER[] =
     ":root{--bg:#212121;--bg2:#1a1a1a;--card:#2a2a2a;--ink:#eeffff;--muted:#616161;--accent:#82aaff;--accent2:#c792"
     "ea;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1074,7 +1074,7 @@ static const char PC_THEME_MATERIAL_DARKER[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_MATERIAL_OCEAN[] =
+static const char PROTOCORE_THEME_MATERIAL_OCEAN[] =
     ":root{--bg:#0f111a;--bg2:#0b0d14;--card:#1a1c25;--ink:#a6accd;--muted:#4b526d;--accent:#82aaff;--accent2:#c792"
     "ea;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1092,7 +1092,7 @@ static const char PC_THEME_MATERIAL_OCEAN[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_MATRIX[] =
+static const char PROTOCORE_THEME_MATRIX[] =
     ":root{--bg:#000000;--bg2:#001100;--card:#001a00;--ink:#00ff41;--muted:#008f11;--accent:#00ff41;--accent2:#22ff"
     "66;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -1110,8 +1110,8 @@ static const char PC_THEME_MATRIX[] =
     ",\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6)"
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_MINECRAFT[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_MINECRAFT[] =
     ":root{--bg:#7fb238;--bg2:#8fc44a;--card:#8b6f47;--ink:#3a2a16;--muted:#6b5333;--accent:#5a9e2f;--accent2:#8b6f"
     "47;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -1130,7 +1130,7 @@ static const char PC_THEME_MINECRAFT[] =
     "dius) * 0.6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_MINT[] =
+static const char PROTOCORE_THEME_MINT[] =
     ":root{--bg:#eafaf1;--bg2:#d6f5e3;--card:#ffffff;--ink:#1e4635;--muted:#5f8a74;--accent:#2ecc71;--accent2:#16a0"
     "85;--radius:16px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.7 \"Nunito\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -1148,7 +1148,7 @@ static const char PC_THEME_MINT[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_MOLOKAI[] =
+static const char PROTOCORE_THEME_MOLOKAI[] =
     ":root{--bg:#1b1d1e;--bg2:#232526;--card:#293739;--ink:#f8f8f2;--muted:#465457;--accent:#a6e22e;--accent2:#f926"
     "72;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1166,7 +1166,7 @@ static const char PC_THEME_MOLOKAI[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_MONO_MINIMAL[] =
+static const char PROTOCORE_THEME_MONO_MINIMAL[] =
     ":root{--bg:#ffffff;--bg2:#fafafa;--card:#ffffff;--ink:#111111;--muted:#8a8a8a;--accent:#111111;--accent2:#5555"
     "55;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1184,7 +1184,7 @@ static const char PC_THEME_MONO_MINIMAL[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_MONOKAI[] =
+static const char PROTOCORE_THEME_MONOKAI[] =
     ":root{--bg:#272822;--bg2:#2d2e27;--card:#3e3d32;--ink:#f8f8f2;--muted:#75715e;--accent:#a6e22e;--accent2:#f926"
     "72;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1202,7 +1202,7 @@ static const char PC_THEME_MONOKAI[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_MOONLIGHT[] =
+static const char PROTOCORE_THEME_MOONLIGHT[] =
     ":root{--bg:#212337;--bg2:#1e2030;--card:#2f334d;--ink:#c8d3f5;--muted:#7a88cf;--accent:#82aaff;--accent2:#c099"
     "ff;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1220,7 +1220,7 @@ static const char PC_THEME_MOONLIGHT[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_NAVY_OXFORD[] =
+static const char PROTOCORE_THEME_NAVY_OXFORD[] =
     ":root{--bg:#0b1f3a;--bg2:#0f2a4d;--card:#132f56;--ink:#e8eef7;--muted:#8ba3c1;--accent:#3b82f6;--accent2:#22d3"
     "ee;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1238,7 +1238,7 @@ static const char PC_THEME_NAVY_OXFORD[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_NEUTRAL_DARK[] =
+static const char PROTOCORE_THEME_NEUTRAL_DARK[] =
     ":root{--bg:#171717;--bg2:#0a0a0a;--card:#262626;--ink:#fafafa;--muted:#737373;--accent:#3b82f6;--accent2:#22d3"
     "ee;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1256,7 +1256,7 @@ static const char PC_THEME_NEUTRAL_DARK[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_NIGHT_OWL[] =
+static const char PROTOCORE_THEME_NIGHT_OWL[] =
     ":root{--bg:#011627;--bg2:#0b2942;--card:#0e293f;--ink:#d6deeb;--muted:#637777;--accent:#82aaff;--accent2:#c792"
     "ea;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1274,7 +1274,7 @@ static const char PC_THEME_NIGHT_OWL[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_NIGHTFLY[] =
+static const char PROTOCORE_THEME_NIGHTFLY[] =
     ":root{--bg:#011627;--bg2:#0e293f;--card:#0e293f;--ink:#c3ccdc;--muted:#7c8f8f;--accent:#82aaff;--accent2:#c792"
     "ea;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1292,7 +1292,7 @@ static const char PC_THEME_NIGHTFLY[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_NORD[] =
+static const char PROTOCORE_THEME_NORD[] =
     ":root{--bg:#2e3440;--bg2:#3b4252;--card:#3b4252;--ink:#eceff4;--muted:#81a1c1;--accent:#88c0d0;--accent2:#a3be"
     "8c;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1310,7 +1310,7 @@ static const char PC_THEME_NORD[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_NOTION_DARK[] =
+static const char PROTOCORE_THEME_NOTION_DARK[] =
     ":root{--bg:#191919;--bg2:#202020;--card:#2f2f2f;--ink:#d4d4d4;--muted:#9b9b9b;--accent:#529cca;--accent2:#e9a2"
     "3b;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1328,8 +1328,8 @@ static const char PC_THEME_NOTION_DARK[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_NYANCAT[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_NYANCAT[] =
     ":root{--space:#0a0a2e;--ink:#ffffff;--tart:#fc99cc;--tart2:#ff6ab3;--trail:repeating-linear-gradient( 0deg,#ff"
     "0000 0 6px,#ff9900 6px 12px,#ffff00 12px 18px,#33ff00 18px 24px,#0099ff 24px 30px,#6633ff 30px 36px );}html,bo"
     "dy{margin:0;color:var(--ink);font:16px/1.6 \"Comic Sans MS\",\"Segoe UI\",system-ui,sans-serif;background-colo"
@@ -1345,7 +1345,7 @@ static const char PC_THEME_NYANCAT[] =
     "nsform:translateY(3px);box-shadow:none;}";
 #endif
 
-static const char PC_THEME_OCEANIC_NEXT[] =
+static const char PROTOCORE_THEME_OCEANIC_NEXT[] =
     ":root{--bg:#1b2b34;--bg2:#22333b;--card:#2b3a42;--ink:#d8dee9;--muted:#65737e;--accent:#6699cc;--accent2:#5fb3"
     "b3;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1363,7 +1363,7 @@ static const char PC_THEME_OCEANIC_NEXT[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_ONE_DARK[] =
+static const char PROTOCORE_THEME_ONE_DARK[] =
     ":root{--bg:#282c34;--bg2:#21252b;--card:#2c313a;--ink:#abb2bf;--muted:#5c6370;--accent:#61afef;--accent2:#c678"
     "dd;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1381,7 +1381,7 @@ static const char PC_THEME_ONE_DARK[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_ONE_LIGHT[] =
+static const char PROTOCORE_THEME_ONE_LIGHT[] =
     ":root{--bg:#fafafa;--bg2:#f0f0f0;--card:#ffffff;--ink:#383a42;--muted:#a0a1a7;--accent:#4078f2;--accent2:#a626"
     "a4;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1399,7 +1399,7 @@ static const char PC_THEME_ONE_LIGHT[] =
     "olas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0"
     ".6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_PALENIGHT[] =
+static const char PROTOCORE_THEME_PALENIGHT[] =
     ":root{--bg:#292d3e;--bg2:#242837;--card:#323649;--ink:#a6accd;--muted:#676e95;--accent:#c792ea;--accent2:#89dd"
     "ff;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1417,7 +1417,7 @@ static const char PC_THEME_PALENIGHT[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_PANDA[] =
+static const char PROTOCORE_THEME_PANDA[] =
     ":root{--bg:#292a2b;--bg2:#242526;--card:#31353a;--ink:#e6e6e6;--muted:#676b79;--accent:#ff9ac1;--accent2:#45a9"
     "f9;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1435,7 +1435,7 @@ static const char PC_THEME_PANDA[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_PEACH[] =
+static const char PROTOCORE_THEME_PEACH[] =
     ":root{--bg:#fff3ec;--bg2:#ffe6d6;--card:#ffffff;--ink:#5a3a2a;--muted:#a5836a;--accent:#ff8a5c;--accent2:#ffb7"
     "03;--radius:16px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.7 \"Nunito\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -1453,8 +1453,8 @@ static const char PC_THEME_PEACH[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_PIP_BOY[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_PIP_BOY[] =
     ":root{--bg:#0a1a0a;--bg2:#0f240f;--card:#0f240f;--ink:#41ff00;--muted:#1a7a1a;--accent:#41ff00;--accent2:#88ff"
     "44;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -1473,7 +1473,7 @@ static const char PC_THEME_PIP_BOY[] =
     "}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_POIMANDRES[] =
+static const char PROTOCORE_THEME_POIMANDRES[] =
     ":root{--bg:#1b1e28;--bg2:#171922;--card:#252b37;--ink:#e4f0fb;--muted:#767c9d;--accent:#5de4c7;--accent2:#add7"
     "ff;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1491,7 +1491,7 @@ static const char PC_THEME_POIMANDRES[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_RAINBOW[] =
+static const char PROTOCORE_THEME_RAINBOW[] =
     ":root{--bg:#15151f;--ink:#f5f5fa;--rainbow:linear-gradient( 90deg,#ff004d,#ff7a00,#ffd400,#00c853,#00b0ff,#7c4"
     "dff,#ff00c8 );}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 \"Segoe UI\",system-ui,s"
     "ans-serif;}h1,h2,h3{font-weight:800;background:var(--rainbow);-webkit-background-clip:text;background-clip:tex"
@@ -1502,7 +1502,7 @@ static const char PC_THEME_RAINBOW[] =
     "herit;font-weight:700;cursor:pointer;background:var(--rainbow);background-size:200% 100%;transition:background"
     "-position 0.4s;}button:hover{background-position:100% 0;}";
 
-static const char PC_THEME_RGB_GAMER[] =
+static const char PROTOCORE_THEME_RGB_GAMER[] =
     ":root{--bg:#0a0a0a;--bg2:#141414;--card:#1a1a1a;--ink:#f0f0f0;--muted:#666666;--accent:#ff2d55;--accent2:#00e5"
     "ff;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -1520,7 +1520,7 @@ static const char PC_THEME_RGB_GAMER[] =
     ",\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6)"
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_ROSE_PINE[] =
+static const char PROTOCORE_THEME_ROSE_PINE[] =
     ":root{--bg:#191724;--bg2:#1f1d2e;--card:#26233a;--ink:#e0def4;--muted:#6e6a86;--accent:#c4a7e7;--accent2:#ebbc"
     "ba;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1538,7 +1538,7 @@ static const char PC_THEME_ROSE_PINE[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_ROSE_PINE_DAWN[] =
+static const char PROTOCORE_THEME_ROSE_PINE_DAWN[] =
     ":root{--bg:#faf4ed;--bg2:#fffaf3;--card:#ffffff;--ink:#575279;--muted:#9893a5;--accent:#907aa9;--accent2:#d782"
     "7e;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1556,7 +1556,7 @@ static const char PC_THEME_ROSE_PINE_DAWN[] =
     "olas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0"
     ".6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_SAKURA[] =
+static const char PROTOCORE_THEME_SAKURA[] =
     ":root{--bg:#fff5f7;--bg2:#ffe4ea;--card:#ffffff;--ink:#6a2a3a;--muted:#b57a88;--accent:#ff6f91;--accent2:#845e"
     "c2;--radius:12px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.65 \"Georgia\",\"Segoe UI\",serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -1574,7 +1574,7 @@ static const char PC_THEME_SAKURA[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_SANDSTONE[] =
+static const char PROTOCORE_THEME_SANDSTONE[] =
     ":root{--bg:#faf7f0;--bg2:#f0e9da;--card:#ffffff;--ink:#3a3226;--muted:#8a7a5f;--accent:#b45309;--accent2:#0e74"
     "90;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1592,7 +1592,7 @@ static const char PC_THEME_SANDSTONE[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_SEAFOAM[] =
+static const char PROTOCORE_THEME_SEAFOAM[] =
     ":root{--bg:#effcf6;--bg2:#d6f5e8;--card:#ffffff;--ink:#134e4a;--muted:#5f9a8f;--accent:#14b8a6;--accent2:#0ea5"
     "e9;--radius:16px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.7 \"Nunito\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -1610,7 +1610,7 @@ static const char PC_THEME_SEAFOAM[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_SHADES_OF_PURPLE[] =
+static const char PROTOCORE_THEME_SHADES_OF_PURPLE[] =
     ":root{--bg:#2d2b55;--bg2:#1e1e3f;--card:#38356e;--ink:#ffffff;--muted:#a599e9;--accent:#fad000;--accent2:#ff62"
     "8c;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1628,7 +1628,7 @@ static const char PC_THEME_SHADES_OF_PURPLE[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_SKY[] =
+static const char PROTOCORE_THEME_SKY[] =
     ":root{--bg:#eef7ff;--bg2:#d9edff;--card:#ffffff;--ink:#123a5a;--muted:#5f88a5;--accent:#3b9dff;--accent2:#00b4"
     "d8;--radius:16px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.7 \"Nunito\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -1646,8 +1646,8 @@ static const char PC_THEME_SKY[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_SLACK_AUBERGINE[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_SLACK_AUBERGINE[] =
     ":root{--bg:#3f0e40;--bg2:#350d36;--card:#4a154b;--ink:#f8f8f8;--muted:#b49bb5;--accent:#ecb22e;--accent2:#36c5"
     "f0;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -1666,7 +1666,7 @@ static const char PC_THEME_SLACK_AUBERGINE[] =
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_SOLARIZED_DARK[] =
+static const char PROTOCORE_THEME_SOLARIZED_DARK[] =
     ":root{--bg:#002b36;--bg2:#073642;--card:#073642;--ink:#eee8d5;--muted:#93a1a1;--accent:#268bd2;--accent2:#2aa1"
     "98;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1684,7 +1684,7 @@ static const char PC_THEME_SOLARIZED_DARK[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_SOLARIZED_LIGHT[] =
+static const char PROTOCORE_THEME_SOLARIZED_LIGHT[] =
     ":root{--bg:#fdf6e3;--bg2:#eee8d5;--card:#ffffff;--ink:#586e75;--muted:#93a1a1;--accent:#268bd2;--accent2:#cb4b"
     "16;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1702,8 +1702,8 @@ static const char PC_THEME_SOLARIZED_LIGHT[] =
     "olas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0"
     ".6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_SPOTIFY[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_SPOTIFY[] =
     ":root{--bg:#121212;--bg2:#181818;--card:#282828;--ink:#ffffff;--muted:#b3b3b3;--accent:#1db954;--accent2:#1ed7"
     "60;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -1722,7 +1722,7 @@ static const char PC_THEME_SPOTIFY[] =
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_SSH_TERMINAL[] =
+static const char PROTOCORE_THEME_SSH_TERMINAL[] =
     ":root{--bg:#000000;--fg:#c5c8c6;--accent:#81a2be;--muted:#5f6b75;}html,body{margin:0;background:var(--bg);colo"
     "r:var(--fg);font:14px/1.5 \"Consolas\",\"DejaVu Sans Mono\",\"Courier New\",monospace;}h1,h2,h3{color:#fff;fon"
     "t-weight:600;border-bottom:1px solid #1c1c1c;padding-bottom:4px;}a{color:var(--accent);}p{color:var(--muted);}"
@@ -1730,7 +1730,7 @@ static const char PC_THEME_SSH_TERMINAL[] =
     "8px;outline:none;}input:focus,textarea:focus,select:focus{border-color:var(--accent);}button{color:var(--accen"
     "t);cursor:pointer;}button:hover{background:#141414;}";
 
-static const char PC_THEME_STEEL[] =
+static const char PROTOCORE_THEME_STEEL[] =
     ":root{--bg:#1c2530;--bg2:#232f3c;--card:#2a3745;--ink:#e6edf3;--muted:#93a4b5;--accent:#4f8cc9;--accent2:#5eb0"
     "d8;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1748,7 +1748,7 @@ static const char PC_THEME_STEEL[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_STRIPE[] =
+static const char PROTOCORE_THEME_STRIPE[] =
     ":root{--bg:#f6f9fc;--bg2:#eef3f8;--card:#ffffff;--ink:#32325d;--muted:#6b7c93;--accent:#635bff;--accent2:#00d4"
     "ff;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1766,7 +1766,7 @@ static const char PC_THEME_STRIPE[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_SYNTHWAVE[] =
+static const char PROTOCORE_THEME_SYNTHWAVE[] =
     ":root{--bg:#262335;--bg2:#241b2f;--card:#34294f;--ink:#ffffff;--muted:#848bbd;--accent:#ff7edb;--accent2:#36f9"
     "f6;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1784,7 +1784,7 @@ static const char PC_THEME_SYNTHWAVE[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_TAILWIND_STONE[] =
+static const char PROTOCORE_THEME_TAILWIND_STONE[] =
     ":root{--bg:#fafaf9;--bg2:#f5f5f4;--card:#ffffff;--ink:#1c1917;--muted:#78716c;--accent:#0ea5e9;--accent2:#f59e"
     "0b;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1802,7 +1802,7 @@ static const char PC_THEME_TAILWIND_STONE[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_TAILWIND_ZINC[] =
+static const char PROTOCORE_THEME_TAILWIND_ZINC[] =
     ":root{--bg:#fafafa;--bg2:#f4f4f5;--card:#ffffff;--ink:#18181b;--muted:#71717a;--accent:#6366f1;--accent2:#0ea5"
     "e9;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1820,7 +1820,7 @@ static const char PC_THEME_TAILWIND_ZINC[] =
     "las,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0."
     "6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_TOKYO_NIGHT[] =
+static const char PROTOCORE_THEME_TOKYO_NIGHT[] =
     ":root{--bg:#1a1b26;--bg2:#16161e;--card:#24283b;--ink:#c0caf5;--muted:#565f89;--accent:#7aa2f7;--accent2:#bb9a"
     "f7;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1838,7 +1838,7 @@ static const char PC_THEME_TOKYO_NIGHT[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_TOMORROW_NIGHT[] =
+static const char PROTOCORE_THEME_TOMORROW_NIGHT[] =
     ":root{--bg:#1d1f21;--bg2:#282a2e;--card:#282a2e;--ink:#c5c8c6;--muted:#969896;--accent:#81a2be;--accent2:#b294"
     "bb;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1856,7 +1856,7 @@ static const char PC_THEME_TOMORROW_NIGHT[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_VAPORWAVE[] =
+static const char PROTOCORE_THEME_VAPORWAVE[] =
     ":root{--bg:#2d1b4e;--bg2:#3d2063;--card:#ff71ce;--ink:#ffffff;--muted:#b967ff;--accent:#01cdfe;--accent2:#05ff"
     "a1;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -1874,7 +1874,7 @@ static const char PC_THEME_VAPORWAVE[] =
     ",\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6)"
     ";}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_VERCEL[] =
+static const char PROTOCORE_THEME_VERCEL[] =
     ":root{--bg:#000000;--bg2:#0a0a0a;--card:#111111;--ink:#ededed;--muted:#888888;--accent:#0070f3;--accent2:#7928"
     "ca;--radius:8px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 \"Segoe UI\",system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,."
@@ -1892,7 +1892,7 @@ static const char PC_THEME_VERCEL[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_VITESSE_DARK[] =
+static const char PROTOCORE_THEME_VITESSE_DARK[] =
     ":root{--bg:#121212;--bg2:#181818;--card:#222222;--ink:#dbd7ca;--muted:#758575;--accent:#4d9375;--accent2:#cb76"
     "76;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1910,7 +1910,7 @@ static const char PC_THEME_VITESSE_DARK[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_VITESSE_LIGHT[] =
+static const char PROTOCORE_THEME_VITESSE_LIGHT[] =
     ":root{--bg:#ffffff;--bg2:#f7f7f7;--card:#ffffff;--ink:#393a34;--muted:#a0ada0;--accent:#1e754f;--accent2:#ab59"
     "59;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1928,7 +1928,7 @@ static const char PC_THEME_VITESSE_LIGHT[] =
     "olas,monospace;background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:calc(var(--radius) * 0"
     ".6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_VOLCANO[] =
+static const char PROTOCORE_THEME_VOLCANO[] =
     ":root{--bg:#1a0d0a;--bg2:#2a1410;--card:#3a1c16;--ink:#ffddcc;--muted:#a56a5a;--accent:#ff5722;--accent2:#ffab"
     "00;--radius:12px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.65 \"Georgia\",\"Segoe UI\",serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,.w"
@@ -1946,8 +1946,8 @@ static const char PC_THEME_VOLCANO[] =
     "a Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pad"
     "ding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-#if PC_THEMES_INCLUDE_TRADEMARKED
-static const char PC_THEME_WINDOWS_XP[] =
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+static const char PROTOCORE_THEME_WINDOWS_XP[] =
     ":root{--bg:#3a6ea5;--bg2:#245edb;--card:#ece9d8;--ink:#0a246a;--muted:#7a96c8;--accent:#316ac5;--accent2:#f5a6"
     "23;--radius:18px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 1"
     "6px/1.6 \"Comic Sans MS\",\"Segoe UI\",sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixe"
@@ -1966,7 +1966,7 @@ static const char PC_THEME_WINDOWS_XP[] =
     "dius) * 0.6);}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 #endif
 
-static const char PC_THEME_ZENBURN[] =
+static const char PROTOCORE_THEME_ZENBURN[] =
     ":root{--bg:#3f3f3f;--bg2:#383838;--card:#4a4a4a;--ink:#dcdccc;--muted:#7f9f7f;--accent:#f0dfaf;--accent2:#dca3"
     "a3;--radius:6px;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15"
     "px/1.6 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}main,"
@@ -1984,7 +1984,7 @@ static const char PC_THEME_ZENBURN[] =
     "ia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);}code{pa"
     "dding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-static const char PC_THEME_ZX_SPECTRUM[] =
+static const char PROTOCORE_THEME_ZX_SPECTRUM[] =
     ":root{--bg:#000000;--bg2:#0000d7;--card:#0000d7;--ink:#ffffff;--muted:#00d7d7;--accent:#ffd700;--accent2:#00d7"
     "00;--radius:0;}*{box-sizing:border-box;}html,body{margin:0;min-height:100%;color:var(--ink);font:16px/1.6 15px"
     "/1.55 ui-monospace,\"Cascadia Code\",monospace;background:linear-gradient(135deg,var(--bg),var(--bg2)) fixed;}"
@@ -2002,162 +2002,162 @@ static const char PC_THEME_ZX_SPECTRUM[] =
     "\"Cascadia Code\",Consolas,monospace;background:rgba(255,255,255,.08);border-radius:calc(var(--radius) * 0.6);"
     "}code{padding:2px 6px;}pre{padding:14px 16px;overflow-x:auto;}";
 
-const pc_theme_blob PC_THEME_BLOBS[] = {
-    {"amber-crt", PC_THEME_AMBER_CRT},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"among-us", PC_THEME_AMONG_US},
+const protocore_theme_blob PROTOCORE_THEME_BLOBS[] = {
+    {"amber-crt", PROTOCORE_THEME_AMBER_CRT},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"among-us", PROTOCORE_THEME_AMONG_US},
 #endif
-    {"andromeda", PC_THEME_ANDROMEDA},
-    {"arctic", PC_THEME_ARCTIC},
-    {"aura", PC_THEME_AURA},
-    {"autumn", PC_THEME_AUTUMN},
-    {"ayu-dark", PC_THEME_AYU_DARK},
-    {"ayu-light", PC_THEME_AYU_LIGHT},
-    {"ayu-mirage", PC_THEME_AYU_MIRAGE},
-    {"azure-pro", PC_THEME_AZURE_PRO},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"barbie", PC_THEME_BARBIE},
+    {"andromeda", PROTOCORE_THEME_ANDROMEDA},
+    {"arctic", PROTOCORE_THEME_ARCTIC},
+    {"aura", PROTOCORE_THEME_AURA},
+    {"autumn", PROTOCORE_THEME_AUTUMN},
+    {"ayu-dark", PROTOCORE_THEME_AYU_DARK},
+    {"ayu-light", PROTOCORE_THEME_AYU_LIGHT},
+    {"ayu-mirage", PROTOCORE_THEME_AYU_MIRAGE},
+    {"azure-pro", PROTOCORE_THEME_AZURE_PRO},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"barbie", PROTOCORE_THEME_BARBIE},
 #endif
-    {"bluloco-dark", PC_THEME_BLULOCO_DARK},
-    {"bordeaux", PC_THEME_BORDEAUX},
-    {"borland", PC_THEME_BORLAND},
-    {"bubblegum", PC_THEME_BUBBLEGUM},
-    {"bubbly", PC_THEME_BUBBLY},
-    {"c64", PC_THEME_C64},
-    {"catppuccin-frappe", PC_THEME_CATPPUCCIN_FRAPPE},
-    {"catppuccin-latte", PC_THEME_CATPPUCCIN_LATTE},
-    {"catppuccin-macchiato", PC_THEME_CATPPUCCIN_MACCHIATO},
-    {"catppuccin-mocha", PC_THEME_CATPPUCCIN_MOCHA},
-    {"cherry-blossom", PC_THEME_CHERRY_BLOSSOM},
-    {"city-lights", PC_THEME_CITY_LIGHTS},
-    {"cobalt2", PC_THEME_COBALT2},
-    {"commodore-pet", PC_THEME_COMMODORE_PET},
-    {"corporate-slate", PC_THEME_CORPORATE_SLATE},
-    {"cotton-candy", PC_THEME_COTTON_CANDY},
-    {"crt-green", PC_THEME_CRT_GREEN},
-    {"cute", PC_THEME_CUTE},
-    {"cyberpunk", PC_THEME_CYBERPUNK},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"darcula", PC_THEME_DARCULA},
+    {"bluloco-dark", PROTOCORE_THEME_BLULOCO_DARK},
+    {"bordeaux", PROTOCORE_THEME_BORDEAUX},
+    {"borland", PROTOCORE_THEME_BORLAND},
+    {"bubblegum", PROTOCORE_THEME_BUBBLEGUM},
+    {"bubbly", PROTOCORE_THEME_BUBBLY},
+    {"c64", PROTOCORE_THEME_C64},
+    {"catppuccin-frappe", PROTOCORE_THEME_CATPPUCCIN_FRAPPE},
+    {"catppuccin-latte", PROTOCORE_THEME_CATPPUCCIN_LATTE},
+    {"catppuccin-macchiato", PROTOCORE_THEME_CATPPUCCIN_MACCHIATO},
+    {"catppuccin-mocha", PROTOCORE_THEME_CATPPUCCIN_MOCHA},
+    {"cherry-blossom", PROTOCORE_THEME_CHERRY_BLOSSOM},
+    {"city-lights", PROTOCORE_THEME_CITY_LIGHTS},
+    {"cobalt2", PROTOCORE_THEME_COBALT2},
+    {"commodore-pet", PROTOCORE_THEME_COMMODORE_PET},
+    {"corporate-slate", PROTOCORE_THEME_CORPORATE_SLATE},
+    {"cotton-candy", PROTOCORE_THEME_COTTON_CANDY},
+    {"crt-green", PROTOCORE_THEME_CRT_GREEN},
+    {"cute", PROTOCORE_THEME_CUTE},
+    {"cyberpunk", PROTOCORE_THEME_CYBERPUNK},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"darcula", PROTOCORE_THEME_DARCULA},
 #endif
-    {"deep-sea", PC_THEME_DEEP_SEA},
-    {"desert", PC_THEME_DESERT},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"discord", PC_THEME_DISCORD},
+    {"deep-sea", PROTOCORE_THEME_DEEP_SEA},
+    {"desert", PROTOCORE_THEME_DESERT},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"discord", PROTOCORE_THEME_DISCORD},
 #endif
-    {"doge", PC_THEME_DOGE},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"doom", PC_THEME_DOOM},
+    {"doge", PROTOCORE_THEME_DOGE},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"doom", PROTOCORE_THEME_DOOM},
 #endif
-    {"dracula", PC_THEME_DRACULA},
-    {"everforest", PC_THEME_EVERFOREST},
-    {"firewatch", PC_THEME_FIREWATCH},
-    {"fluent-dark", PC_THEME_FLUENT_DARK},
-    {"forest-exec", PC_THEME_FOREST_EXEC},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"gameboy", PC_THEME_GAMEBOY},
+    {"dracula", PROTOCORE_THEME_DRACULA},
+    {"everforest", PROTOCORE_THEME_EVERFOREST},
+    {"firewatch", PROTOCORE_THEME_FIREWATCH},
+    {"fluent-dark", PROTOCORE_THEME_FLUENT_DARK},
+    {"forest-exec", PROTOCORE_THEME_FOREST_EXEC},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"gameboy", PROTOCORE_THEME_GAMEBOY},
 #endif
-    {"github-dark", PC_THEME_GITHUB_DARK},
-    {"github-light", PC_THEME_GITHUB_LIGHT},
-    {"graphite", PC_THEME_GRAPHITE},
-    {"green-phosphor", PC_THEME_GREEN_PHOSPHOR},
-    {"gruvbox-dark", PC_THEME_GRUVBOX_DARK},
-    {"gruvbox-light", PC_THEME_GRUVBOX_LIGHT},
-    {"gruvbox-material", PC_THEME_GRUVBOX_MATERIAL},
-    {"horizon", PC_THEME_HORIZON},
-    {"hotdog-stand", PC_THEME_HOTDOG_STAND},
-    {"ibm-3270", PC_THEME_IBM_3270},
-    {"ibm-carbon", PC_THEME_IBM_CARBON},
-    {"ibm-g10", PC_THEME_IBM_G10},
-    {"ibm-g90", PC_THEME_IBM_G90},
-    {"kanagawa", PC_THEME_KANAGAWA},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"keroppi", PC_THEME_KEROPPI},
+    {"github-dark", PROTOCORE_THEME_GITHUB_DARK},
+    {"github-light", PROTOCORE_THEME_GITHUB_LIGHT},
+    {"graphite", PROTOCORE_THEME_GRAPHITE},
+    {"green-phosphor", PROTOCORE_THEME_GREEN_PHOSPHOR},
+    {"gruvbox-dark", PROTOCORE_THEME_GRUVBOX_DARK},
+    {"gruvbox-light", PROTOCORE_THEME_GRUVBOX_LIGHT},
+    {"gruvbox-material", PROTOCORE_THEME_GRUVBOX_MATERIAL},
+    {"horizon", PROTOCORE_THEME_HORIZON},
+    {"hotdog-stand", PROTOCORE_THEME_HOTDOG_STAND},
+    {"ibm-3270", PROTOCORE_THEME_IBM_3270},
+    {"ibm-carbon", PROTOCORE_THEME_IBM_CARBON},
+    {"ibm-g10", PROTOCORE_THEME_IBM_G10},
+    {"ibm-g90", PROTOCORE_THEME_IBM_G90},
+    {"kanagawa", PROTOCORE_THEME_KANAGAWA},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"keroppi", PROTOCORE_THEME_KEROPPI},
 #endif
-    {"lavender", PC_THEME_LAVENDER},
-    {"linear", PC_THEME_LINEAR},
-    {"material-darker", PC_THEME_MATERIAL_DARKER},
-    {"material-ocean", PC_THEME_MATERIAL_OCEAN},
-    {"matrix", PC_THEME_MATRIX},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"minecraft", PC_THEME_MINECRAFT},
+    {"lavender", PROTOCORE_THEME_LAVENDER},
+    {"linear", PROTOCORE_THEME_LINEAR},
+    {"material-darker", PROTOCORE_THEME_MATERIAL_DARKER},
+    {"material-ocean", PROTOCORE_THEME_MATERIAL_OCEAN},
+    {"matrix", PROTOCORE_THEME_MATRIX},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"minecraft", PROTOCORE_THEME_MINECRAFT},
 #endif
-    {"mint", PC_THEME_MINT},
-    {"molokai", PC_THEME_MOLOKAI},
-    {"mono-minimal", PC_THEME_MONO_MINIMAL},
-    {"monokai", PC_THEME_MONOKAI},
-    {"moonlight", PC_THEME_MOONLIGHT},
-    {"navy-oxford", PC_THEME_NAVY_OXFORD},
-    {"neutral-dark", PC_THEME_NEUTRAL_DARK},
-    {"night-owl", PC_THEME_NIGHT_OWL},
-    {"nightfly", PC_THEME_NIGHTFLY},
-    {"nord", PC_THEME_NORD},
-    {"notion-dark", PC_THEME_NOTION_DARK},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"nyancat", PC_THEME_NYANCAT},
+    {"mint", PROTOCORE_THEME_MINT},
+    {"molokai", PROTOCORE_THEME_MOLOKAI},
+    {"mono-minimal", PROTOCORE_THEME_MONO_MINIMAL},
+    {"monokai", PROTOCORE_THEME_MONOKAI},
+    {"moonlight", PROTOCORE_THEME_MOONLIGHT},
+    {"navy-oxford", PROTOCORE_THEME_NAVY_OXFORD},
+    {"neutral-dark", PROTOCORE_THEME_NEUTRAL_DARK},
+    {"night-owl", PROTOCORE_THEME_NIGHT_OWL},
+    {"nightfly", PROTOCORE_THEME_NIGHTFLY},
+    {"nord", PROTOCORE_THEME_NORD},
+    {"notion-dark", PROTOCORE_THEME_NOTION_DARK},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"nyancat", PROTOCORE_THEME_NYANCAT},
 #endif
-    {"oceanic-next", PC_THEME_OCEANIC_NEXT},
-    {"one-dark", PC_THEME_ONE_DARK},
-    {"one-light", PC_THEME_ONE_LIGHT},
-    {"palenight", PC_THEME_PALENIGHT},
-    {"panda", PC_THEME_PANDA},
-    {"peach", PC_THEME_PEACH},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"pip-boy", PC_THEME_PIP_BOY},
+    {"oceanic-next", PROTOCORE_THEME_OCEANIC_NEXT},
+    {"one-dark", PROTOCORE_THEME_ONE_DARK},
+    {"one-light", PROTOCORE_THEME_ONE_LIGHT},
+    {"palenight", PROTOCORE_THEME_PALENIGHT},
+    {"panda", PROTOCORE_THEME_PANDA},
+    {"peach", PROTOCORE_THEME_PEACH},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"pip-boy", PROTOCORE_THEME_PIP_BOY},
 #endif
-    {"poimandres", PC_THEME_POIMANDRES},
-    {"rainbow", PC_THEME_RAINBOW},
-    {"rgb-gamer", PC_THEME_RGB_GAMER},
-    {"rose-pine", PC_THEME_ROSE_PINE},
-    {"rose-pine-dawn", PC_THEME_ROSE_PINE_DAWN},
-    {"sakura", PC_THEME_SAKURA},
-    {"sandstone", PC_THEME_SANDSTONE},
-    {"seafoam", PC_THEME_SEAFOAM},
-    {"shades-of-purple", PC_THEME_SHADES_OF_PURPLE},
-    {"sky", PC_THEME_SKY},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"slack-aubergine", PC_THEME_SLACK_AUBERGINE},
+    {"poimandres", PROTOCORE_THEME_POIMANDRES},
+    {"rainbow", PROTOCORE_THEME_RAINBOW},
+    {"rgb-gamer", PROTOCORE_THEME_RGB_GAMER},
+    {"rose-pine", PROTOCORE_THEME_ROSE_PINE},
+    {"rose-pine-dawn", PROTOCORE_THEME_ROSE_PINE_DAWN},
+    {"sakura", PROTOCORE_THEME_SAKURA},
+    {"sandstone", PROTOCORE_THEME_SANDSTONE},
+    {"seafoam", PROTOCORE_THEME_SEAFOAM},
+    {"shades-of-purple", PROTOCORE_THEME_SHADES_OF_PURPLE},
+    {"sky", PROTOCORE_THEME_SKY},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"slack-aubergine", PROTOCORE_THEME_SLACK_AUBERGINE},
 #endif
-    {"solarized-dark", PC_THEME_SOLARIZED_DARK},
-    {"solarized-light", PC_THEME_SOLARIZED_LIGHT},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"spotify", PC_THEME_SPOTIFY},
+    {"solarized-dark", PROTOCORE_THEME_SOLARIZED_DARK},
+    {"solarized-light", PROTOCORE_THEME_SOLARIZED_LIGHT},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"spotify", PROTOCORE_THEME_SPOTIFY},
 #endif
-    {"ssh-terminal", PC_THEME_SSH_TERMINAL},
-    {"steel", PC_THEME_STEEL},
-    {"stripe", PC_THEME_STRIPE},
-    {"synthwave", PC_THEME_SYNTHWAVE},
-    {"tailwind-stone", PC_THEME_TAILWIND_STONE},
-    {"tailwind-zinc", PC_THEME_TAILWIND_ZINC},
-    {"tokyo-night", PC_THEME_TOKYO_NIGHT},
-    {"tomorrow-night", PC_THEME_TOMORROW_NIGHT},
-    {"vaporwave", PC_THEME_VAPORWAVE},
-    {"vercel", PC_THEME_VERCEL},
-    {"vitesse-dark", PC_THEME_VITESSE_DARK},
-    {"vitesse-light", PC_THEME_VITESSE_LIGHT},
-    {"volcano", PC_THEME_VOLCANO},
-#if PC_THEMES_INCLUDE_TRADEMARKED
-    {"windows-xp", PC_THEME_WINDOWS_XP},
+    {"ssh-terminal", PROTOCORE_THEME_SSH_TERMINAL},
+    {"steel", PROTOCORE_THEME_STEEL},
+    {"stripe", PROTOCORE_THEME_STRIPE},
+    {"synthwave", PROTOCORE_THEME_SYNTHWAVE},
+    {"tailwind-stone", PROTOCORE_THEME_TAILWIND_STONE},
+    {"tailwind-zinc", PROTOCORE_THEME_TAILWIND_ZINC},
+    {"tokyo-night", PROTOCORE_THEME_TOKYO_NIGHT},
+    {"tomorrow-night", PROTOCORE_THEME_TOMORROW_NIGHT},
+    {"vaporwave", PROTOCORE_THEME_VAPORWAVE},
+    {"vercel", PROTOCORE_THEME_VERCEL},
+    {"vitesse-dark", PROTOCORE_THEME_VITESSE_DARK},
+    {"vitesse-light", PROTOCORE_THEME_VITESSE_LIGHT},
+    {"volcano", PROTOCORE_THEME_VOLCANO},
+#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED
+    {"windows-xp", PROTOCORE_THEME_WINDOWS_XP},
 #endif
-    {"zenburn", PC_THEME_ZENBURN},
-    {"zx-spectrum", PC_THEME_ZX_SPECTRUM},
+    {"zenburn", PROTOCORE_THEME_ZENBURN},
+    {"zx-spectrum", PROTOCORE_THEME_ZX_SPECTRUM},
 };
-const size_t PC_THEME_BLOB_COUNT = sizeof(PC_THEME_BLOBS) / sizeof(PC_THEME_BLOBS[0]);
+const size_t PROTOCORE_THEME_BLOB_COUNT = sizeof(PROTOCORE_THEME_BLOBS) / sizeof(PROTOCORE_THEME_BLOBS[0]);
 
-const char *pc_theme_css(const char *name)
+const char *protocore_theme_css(const char *name)
 {
     if (!name)
     {
         return NULL;
     }
-    for (size_t i = 0; i < PC_THEME_BLOB_COUNT; i++)
+    for (size_t i = 0; i < PROTOCORE_THEME_BLOB_COUNT; i++)
     {
-        if (strcmp(PC_THEME_BLOBS[i].name, name) == 0)
+        if (strcmp(PROTOCORE_THEME_BLOBS[i].name, name) == 0)
         {
-            return PC_THEME_BLOBS[i].css;
+            return PROTOCORE_THEME_BLOBS[i].css;
         }
     }
     return NULL;
 }
 
-#endif // PC_ENABLE_THEMES
+#endif // PROTOCORE_ENABLE_THEMES

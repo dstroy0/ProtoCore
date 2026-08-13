@@ -9,7 +9,7 @@
 #include "services/fieldbus/fins/fins.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_FINS
+#if PROTOCORE_ENABLE_FINS
 
 static size_t write_header(uint8_t *buf, const FinsHeader *h)
 {
@@ -40,7 +40,7 @@ static void read_header(const uint8_t *buf, FinsHeader *h)
     h->sid = buf[9];
 }
 
-size_t pc_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t mrc, uint8_t src,
+size_t protocore_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t mrc, uint8_t src,
                              const uint8_t *params, size_t params_len)
 {
     if (!buf || !h || (params_len && !params))
@@ -63,7 +63,7 @@ size_t pc_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *h, uint
     return p;
 }
 
-size_t pc_fins_build_memory_area_read(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area, uint16_t address,
+size_t protocore_fins_build_memory_area_read(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area, uint16_t address,
                                       uint8_t bit, uint16_t count)
 {
     uint8_t params[6];
@@ -73,10 +73,10 @@ size_t pc_fins_build_memory_area_read(uint8_t *buf, size_t cap, const FinsHeader
     params[3] = bit;
     params[4] = (uint8_t)(count >> 8);
     params[5] = (uint8_t)(count & 0xFF);
-    return pc_fins_build_command(buf, cap, h, FINS_MRC_MEMORY_AREA, FINS_SRC_MEMORY_AREA_READ, params, sizeof(params));
+    return protocore_fins_build_command(buf, cap, h, FINS_MRC_MEMORY_AREA, FINS_SRC_MEMORY_AREA_READ, params, sizeof(params));
 }
 
-size_t pc_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area, uint16_t address,
+size_t protocore_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area, uint16_t address,
                                        uint8_t bit, uint16_t count, const uint8_t *data, size_t data_len)
 {
     if (data_len && !data)
@@ -92,7 +92,7 @@ size_t pc_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeade
     prefix[5] = (uint8_t)(count & 0xFF);
     // The command builder lays down header + MRC + SRC + the 6-octet prefix; the write data follows it.
     size_t n =
-        pc_fins_build_command(buf, cap, h, FINS_MRC_MEMORY_AREA, FINS_SRC_MEMORY_AREA_WRITE, prefix, sizeof(prefix));
+        protocore_fins_build_command(buf, cap, h, FINS_MRC_MEMORY_AREA, FINS_SRC_MEMORY_AREA_WRITE, prefix, sizeof(prefix));
     if (!n)
     {
         return 0; // header + prefix did not fit
@@ -108,21 +108,21 @@ size_t pc_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeade
     return n + data_len;
 }
 
-size_t pc_fins_build_run(uint8_t *buf, size_t cap, const FinsHeader *h, FinsRunMode mode)
+size_t protocore_fins_build_run(uint8_t *buf, size_t cap, const FinsHeader *h, FinsRunMode mode)
 {
     uint8_t params[3];
     params[0] = 0xFF;          // program number 0xFFFF (all programs)
     params[1] = 0xFF;          //
     params[2] = (uint8_t)mode; // wire byte: 0x02 MONITOR / 0x04 RUN
-    return pc_fins_build_command(buf, cap, h, FINS_MRC_OPERATING_MODE, FINS_SRC_RUN, params, sizeof(params));
+    return protocore_fins_build_command(buf, cap, h, FINS_MRC_OPERATING_MODE, FINS_SRC_RUN, params, sizeof(params));
 }
 
-size_t pc_fins_build_stop(uint8_t *buf, size_t cap, const FinsHeader *h)
+size_t protocore_fins_build_stop(uint8_t *buf, size_t cap, const FinsHeader *h)
 {
-    return pc_fins_build_command(buf, cap, h, FINS_MRC_OPERATING_MODE, FINS_SRC_STOP, NULL, 0);
+    return protocore_fins_build_command(buf, cap, h, FINS_MRC_OPERATING_MODE, FINS_SRC_STOP, NULL, 0);
 }
 
-proto_bool pc_fins_parse_command(const uint8_t *buf, size_t len, FinsCommand *out)
+proto_bool protocore_fins_parse_command(const uint8_t *buf, size_t len, FinsCommand *out)
 {
     if (!buf || !out || len < FINS_HEADER_SIZE + 2)
     {
@@ -136,7 +136,7 @@ proto_bool pc_fins_parse_command(const uint8_t *buf, size_t len, FinsCommand *ou
     return PROTO_TRUE;
 }
 
-proto_bool pc_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *out)
+proto_bool protocore_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *out)
 {
     if (!buf || !out || len < FINS_HEADER_SIZE + 4) // header + MRC + SRC + MRES + SRES
     {
@@ -152,4 +152,4 @@ proto_bool pc_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_FINS
+#endif // PROTOCORE_ENABLE_FINS

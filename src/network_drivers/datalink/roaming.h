@@ -3,7 +3,7 @@
 
 /**
  * @file roaming.h
- * @brief Wi-Fi roaming decision layer (PC_ENABLE_ROAMING) - the policy that picks a roam target.
+ * @brief Wi-Fi roaming decision layer (PROTOCORE_ENABLE_ROAMING) - the policy that picks a roam target.
  *
  * The three 802.11 roaming primitives are supplicant / hardware territory: 802.11k surfaces a neighbor
  * report (candidate APs), 802.11v delivers a BSS-Transition-Management hint from the network, and 802.11r
@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_ROAMING
+#if PROTOCORE_ENABLE_ROAMING
 
 /** @brief A candidate access point (from an 802.11k neighbor report or a scan). */
 typedef struct
@@ -31,7 +31,7 @@ typedef struct
     uint8_t bssid[6]; ///< the AP's BSSID
     uint8_t channel;  ///< operating channel
     int8_t rssi_dbm;  ///< measured signal strength (dBm; more negative is weaker)
-} pc_roam_neighbor;
+} protocore_roam_neighbor;
 
 /** @brief An 802.11v BSS-Transition-Management hint from the network. */
 typedef struct
@@ -40,45 +40,45 @@ typedef struct
     proto_bool disassoc_imminent; ///< the AP will disassociate us shortly (we must leave)
     proto_bool has_preferred;     ///< @ref preferred_bssid names a specific target
     uint8_t preferred_bssid[6];
-} pc_roam_btm;
+} protocore_roam_btm;
 
 /** @brief Roaming policy thresholds (caller-supplied, so no global tuning knob). */
 typedef struct
 {
     int8_t roam_rssi_threshold_dbm; ///< only consider an RSSI-driven roam when the link is at/below this
     uint8_t hysteresis_db;          ///< a candidate must beat the current link by this margin to be worth it
-} pc_roam_policy;
+} protocore_roam_policy;
 
 /** @brief Why the decision was made. */
 typedef enum
 {
-    PC_ROAM_NONE = 0,      ///< stay on the current AP
-    PC_ROAM_BTM_IMMINENT,  ///< forced off by a disassociation-imminent BTM request
-    PC_ROAM_BTM_SUGGESTED, ///< the network steered us (BTM) to a preferred, no-weaker AP
-    PC_ROAM_LOW_RSSI,      ///< the link is weak and a candidate is clearly stronger
-} pc_roam_reason;
+    PROTOCORE_ROAM_NONE = 0,      ///< stay on the current AP
+    PROTOCORE_ROAM_BTM_IMMINENT,  ///< forced off by a disassociation-imminent BTM request
+    PROTOCORE_ROAM_BTM_SUGGESTED, ///< the network steered us (BTM) to a preferred, no-weaker AP
+    PROTOCORE_ROAM_LOW_RSSI,      ///< the link is weak and a candidate is clearly stronger
+} protocore_roam_reason;
 
 /** @brief The roaming decision. */
 typedef struct
 {
-    proto_bool roam;         ///< true to transition to @ref target_bssid
-    uint8_t target_bssid[6]; ///< the AP to roam to (valid only when @ref roam)
-    uint8_t target_channel;  ///< that AP's channel
-    pc_roam_reason reason;   ///< why (see @ref pc_roam_reason)
-} pc_roam_decision;
+    proto_bool roam;              ///< true to transition to @ref target_bssid
+    uint8_t target_bssid[6];      ///< the AP to roam to (valid only when @ref roam)
+    uint8_t target_channel;       ///< that AP's channel
+    protocore_roam_reason reason; ///< why (see @ref protocore_roam_reason)
+} protocore_roam_decision;
 
 /** @brief 802.11 Neighbor Report element id (IEEE 802.11 §9.4.2.36). */
-#define PC_ROAM_NR_ELEM_ID 52
+#define PROTOCORE_ROAM_NR_ELEM_ID 52
 /** @brief Sentinel RSSI: the candidate carries no signal reading yet, and the caller supplies one. */
-#define PC_ROAM_RSSI_UNKNOWN ((int8_t)-128)
+#define PROTOCORE_ROAM_RSSI_UNKNOWN ((int8_t)-128)
 
 // 802.11v BSS Transition Management Request (WNM action frame).
-#define PC_ROAM_WNM_CATEGORY 0x0A     ///< WNM action category
-#define PC_ROAM_BTM_REQ_ACTION 0x07   ///< BSS Transition Management Request action code
-#define PC_ROAM_BTM_PREF_LIST 0x01u   ///< Request Mode bit 0: a preferred candidate list is included
-#define PC_ROAM_BTM_DISASSOC 0x04u    ///< Request Mode bit 2: disassociation imminent
-#define PC_ROAM_BTM_TERM_INCL 0x08u   ///< Request Mode bit 3: BSS Termination Duration is included
-#define PC_ROAM_BTM_ESS_DISASSOC 0x10 ///< Request Mode bit 4: an ESS-disassoc Session Info URL is included
+#define PROTOCORE_ROAM_WNM_CATEGORY 0x0A     ///< WNM action category
+#define PROTOCORE_ROAM_BTM_REQ_ACTION 0x07   ///< BSS Transition Management Request action code
+#define PROTOCORE_ROAM_BTM_PREF_LIST 0x01u   ///< Request Mode bit 0: a preferred candidate list is included
+#define PROTOCORE_ROAM_BTM_DISASSOC 0x04u    ///< Request Mode bit 2: disassociation imminent
+#define PROTOCORE_ROAM_BTM_TERM_INCL 0x08u   ///< Request Mode bit 3: BSS Termination Duration is included
+#define PROTOCORE_ROAM_BTM_ESS_DISASSOC 0x10 ///< Request Mode bit 4: an ESS-disassoc Session Info URL is included
 
 /**
  * @brief The roaming module.
@@ -97,11 +97,11 @@ typedef struct
  * many were parsed. @c elems is the element list an 802.11k Neighbor Report Response action frame
  * carries, with the action header already stripped. Each Neighbor Report element (id 52) supplies a
  * candidate's BSSID and operating channel; other element ids are skipped. The report carries no signal
- * strength, so each candidate's @c rssi_dbm comes back as @ref PC_ROAM_RSSI_UNKNOWN for the caller to
+ * strength, so each candidate's @c rssi_dbm comes back as @ref PROTOCORE_ROAM_RSSI_UNKNOWN for the caller to
  * fill before feeding the list to @ref RoamNs::decide.
  *
  * @var RoamNs::parse_btm_request
- * Parse an 802.11v BSS Transition Management Request action frame into a @ref pc_roam_btm hint, true
+ * Parse an 802.11v BSS Transition Management Request action frame into a @ref protocore_roam_btm hint, true
  * only for a well-formed request (@c out is cleared otherwise). @c frame starts at the action-frame
  * Category octet (WNM category 0x0A, BTM-Request action 0x07). The Request Mode flags set
  * @c disassoc_imminent (bit 2); when the preferred-candidate-list bit (bit 0) is set, the
@@ -112,17 +112,18 @@ typedef struct
  */
 typedef struct
 {
-    void (*decide)(const uint8_t current_bssid[6], int8_t current_rssi_dbm, const pc_roam_neighbor *neighbors,
-                   uint8_t n, const pc_roam_btm *btm, const pc_roam_policy *policy, pc_roam_decision *out);
-    uint8_t (*parse_neighbor_report)(const uint8_t *elems, size_t len, pc_roam_neighbor *out, uint8_t max);
-    proto_bool (*parse_btm_request)(const uint8_t *frame, size_t len, pc_roam_btm *out);
+    void (*decide)(const uint8_t current_bssid[6], int8_t current_rssi_dbm, const protocore_roam_neighbor *neighbors,
+                   uint8_t n, const protocore_roam_btm *btm, const protocore_roam_policy *policy,
+                   protocore_roam_decision *out);
+    uint8_t (*parse_neighbor_report)(const uint8_t *elems, size_t len, protocore_roam_neighbor *out, uint8_t max);
+    proto_bool (*parse_btm_request)(const uint8_t *frame, size_t len, protocore_roam_btm *out);
 } RoamNs;
 
 /** @brief The one symbol this module exports. */
 extern const RoamNs Roam;
 
-#endif // PC_ENABLE_ROAMING
+#endif // PROTOCORE_ENABLE_ROAMING
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ROAMING_H

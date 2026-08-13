@@ -15,10 +15,10 @@ void app_main(void);
 void app_main(void)
 {
     unsigned long n = 0;
-    for (size_t i = 0; i + PC_SWAR_BYTES <= sizeof(buf); i += PC_SWAR_BYTES)
+    for (size_t i = 0; i + PROTOCORE_SWAR_BYTES <= sizeof(buf); i += PROTOCORE_SWAR_BYTES)
     {
-        pc_swar_word w = swar.load_al(buf + i);
-        pc_swar_word m = swar.ge(w, 'a') & swar.le(w, 'z');
+        protocore_swar_word w = swar.load_al(buf + i);
+        protocore_swar_word m = swar.ge(w, 'a') & swar.le(w, 'z');
         if (m != 0)
         {
             n += swar.zero_lane(m);

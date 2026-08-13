@@ -11,8 +11,8 @@ cmake_minimum_required(VERSION 3.16)
 # Point IDF at the repo root (three levels up: minimal -> esp-idf -> examples -> repo root), which
 # is itself a component (has the repo-root CMakeLists.txt). Derive the path so the example is
 # independent of where the repo is checked out.
-get_filename_component(PC_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
-set(EXTRA_COMPONENT_DIRS "${PC_ROOT}")
+get_filename_component(PROTOCORE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+set(EXTRA_COMPONENT_DIRS "${PROTOCORE_ROOT}")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(pc_minimal)
+project(protocore_minimal)

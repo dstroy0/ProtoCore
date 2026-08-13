@@ -3,7 +3,7 @@
 
 /**
  * @file iec60870.h
- * @brief IEC 60870-5-101 / -104 telecontrol (SCADA) codec (PC_ENABLE_IEC60870).
+ * @brief IEC 60870-5-101 / -104 telecontrol (SCADA) codec (PROTOCORE_ENABLE_IEC60870).
  *
  * The IEC 60870-5 utility-SCADA protocol in its two common transports:
  *  - **-104** over TCP: the APCI (`68 LEN` + 4 control octets) in its I / S / U formats,
@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_IEC60870
+#if PROTOCORE_ENABLE_IEC60870
 
 #define IEC_START_104 0x68u   ///< -104 APCI start octet (also the -101 variable-frame start)
 #define IEC_START_FIXED 0x10u ///< -101 fixed-length frame start octet
@@ -113,30 +113,31 @@ typedef struct
 // --- IEC 60870-5-104 APCI (over TCP) ---
 
 /** @brief Build an I-format APDU carrying @p asdu (numbered with @p ns / @p nr). */
-size_t pc_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, const uint8_t *asdu, size_t asdu_len);
+size_t protocore_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, const uint8_t *asdu,
+                                size_t asdu_len);
 
 /** @brief Build an S-format (supervisory) APDU acknowledging up to @p nr. */
-size_t pc_iec104_build_s(uint8_t *buf, size_t cap, uint16_t nr);
+size_t protocore_iec104_build_s(uint8_t *buf, size_t cap, uint16_t nr);
 
 /** @brief Build a U-format APDU with command @p u_cmd (IEC104_STARTDT_ACT, ...). */
-size_t pc_iec104_build_u(uint8_t *buf, size_t cap, uint8_t u_cmd);
+size_t protocore_iec104_build_u(uint8_t *buf, size_t cap, uint8_t u_cmd);
 
 /** @brief Parse one -104 APDU. Fills @p out and @p consumed (the whole APDU length). */
-proto_bool pc_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *out, size_t *consumed);
+proto_bool protocore_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *out, size_t *consumed);
 
 // --- ASDU header + Information Object Address (shared by -101 and -104) ---
 
 /** @brief Build the 6-octet ASDU header (type id, VSQ, COT[2], common address[2]). */
-size_t pc_iec_asdu_build_header(uint8_t *buf, size_t cap, const IecAsduHeader *h);
+size_t protocore_iec_asdu_build_header(uint8_t *buf, size_t cap, const IecAsduHeader *h);
 
 /** @brief Parse the 6-octet ASDU header; @p consumed is 6 on success. */
-proto_bool pc_iec_asdu_parse_header(const uint8_t *buf, size_t len, IecAsduHeader *out, size_t *consumed);
+proto_bool protocore_iec_asdu_parse_header(const uint8_t *buf, size_t len, IecAsduHeader *out, size_t *consumed);
 
 /** @brief Write a 3-octet Information Object Address (little-endian). */
-size_t pc_iec_put_ioa(uint8_t *buf, size_t cap, uint32_t ioa);
+size_t protocore_iec_put_ioa(uint8_t *buf, size_t cap, uint32_t ioa);
 
 /** @brief Read a 3-octet Information Object Address (little-endian). */
-uint32_t pc_iec_get_ioa(const uint8_t *p);
+uint32_t protocore_iec_get_ioa(const uint8_t *p);
 
 // --- typed information objects (the value(s) inside an ASDU, without a time tag) ---
 //
@@ -174,29 +175,29 @@ uint32_t pc_iec_get_ioa(const uint8_t *p);
  * @param quality  the quality flags (IEC_QUAL_BL / _SB / _NT / _IV; the low bits are ignored).
  * @return 4 on success, 0 on overflow / a null buffer.
  */
-size_t pc_iec_io_build_sp(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, uint8_t quality);
+size_t protocore_iec_io_build_sp(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, uint8_t quality);
 
 /** @brief Parse a single-point information object into its IOA, value, and quality flags. False if < 4 octets. */
-proto_bool pc_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, uint8_t *quality);
+proto_bool protocore_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, uint8_t *quality);
 
 /**
  * @brief Build a short-float measured-value object (M_ME_NC_1, type 13): IOA(3) + IEEE-754 float(4, LE) + QDS(1).
  * @return 8 on success, 0 on overflow / a null buffer.
  */
-size_t pc_iec_io_build_float(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds);
+size_t protocore_iec_io_build_float(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds);
 
 /** @brief Parse a short-float measured-value object into its IOA, value, and quality byte. False if < 8 octets. */
-proto_bool pc_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds);
+proto_bool protocore_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds);
 
 /**
  * @brief Build a scaled measured-value object (M_ME_NB_1, type 11): IOA(3) + SVA(2, signed 16-bit LE) + QDS(1).
  *        The scaled value is a raw signed integer the receiver rescales by its engineering range.
  * @return 6 on success, 0 on overflow / a null buffer.
  */
-size_t pc_iec_io_build_scaled(uint8_t *buf, size_t cap, uint32_t ioa, int16_t value, uint8_t qds);
+size_t protocore_iec_io_build_scaled(uint8_t *buf, size_t cap, uint32_t ioa, int16_t value, uint8_t qds);
 
 /** @brief Parse a scaled measured-value object into its IOA, signed value, and quality byte. False if < 6 octets. */
-proto_bool pc_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa, int16_t *value, uint8_t *qds);
+proto_bool protocore_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa, int16_t *value, uint8_t *qds);
 
 /**
  * @brief Build a normalized measured-value object (M_ME_NA_1, type 9): IOA(3) + NVA(2, signed 16-bit LE) +
@@ -204,11 +205,11 @@ proto_bool pc_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa,
  *        signed-16-bit range) - the fixed-point companion to the scaled (raw integer) and short-float forms.
  * @return 6 on success, 0 on overflow / a null buffer.
  */
-size_t pc_iec_io_build_normalized(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds);
+size_t protocore_iec_io_build_normalized(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds);
 
 /** @brief Parse a normalized measured-value object into its IOA, the fraction value (NVA / 32768), and the
  *  quality byte. False if < 6 octets. */
-proto_bool pc_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds);
+proto_bool protocore_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds);
 
 /**
  * @brief Build an integrated-totals object (M_IT_NA_1, type 15): IOA(3) + BCR(5) = a signed 32-bit counter
@@ -217,11 +218,11 @@ proto_bool pc_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *
  *        pulse total) companion to the measured values.
  * @return 8 on success, 0 on overflow / a null buffer.
  */
-size_t pc_iec_io_build_counter(uint8_t *buf, size_t cap, uint32_t ioa, int32_t value, uint8_t seq);
+size_t protocore_iec_io_build_counter(uint8_t *buf, size_t cap, uint32_t ioa, int32_t value, uint8_t seq);
 
 /** @brief Parse an integrated-totals object into its IOA, the signed counter value, and the raw sequence-notation
  *  octet (test it with IEC_BCR_SQ_MASK / _CY / _CA / _IV). False if < 8 octets. */
-proto_bool pc_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa, int32_t *value, uint8_t *seq);
+proto_bool protocore_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa, int32_t *value, uint8_t *seq);
 
 /**
  * @brief Build a single command object (C_SC_NA_1, type 45): IOA(3) + SCO(1).
@@ -229,10 +230,10 @@ proto_bool pc_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa
  * @param select  true for a select, false for an execute (S/E bit).
  * @return 4 on success, 0 on overflow / a null buffer.
  */
-size_t pc_iec_io_build_sc(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, proto_bool select);
+size_t protocore_iec_io_build_sc(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, proto_bool select);
 
 /** @brief Parse a single command object into its IOA, commanded state, and select/execute flag. False if < 4. */
-proto_bool pc_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, proto_bool *select);
+proto_bool protocore_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, proto_bool *select);
 
 /**
  * @brief Build a double-point information object (M_DP_NA_1, type 3): IOA(3) + DIQ(1).
@@ -240,10 +241,10 @@ proto_bool pc_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, pro
  * @param quality  the quality flags (IEC_QUAL_BL / _SB / _NT / _IV; other bits are ignored).
  * @return 4 on success, 0 on overflow / a null buffer.
  */
-size_t pc_iec_io_build_dp(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dpi, uint8_t quality);
+size_t protocore_iec_io_build_dp(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dpi, uint8_t quality);
 
 /** @brief Parse a double-point information object into its IOA, 2-bit value, and quality flags. False if < 4. */
-proto_bool pc_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dpi, uint8_t *quality);
+proto_bool protocore_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dpi, uint8_t *quality);
 
 /**
  * @brief Build a double command object (C_DC_NA_1, type 46): IOA(3) + DCO(1).
@@ -252,20 +253,20 @@ proto_bool pc_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uin
  * @param select  true for a select, false for an execute (S/E bit).
  * @return 4 on success, 0 on overflow / a null buffer.
  */
-size_t pc_iec_io_build_dc(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dcs, uint8_t qu, proto_bool select);
+size_t protocore_iec_io_build_dc(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dcs, uint8_t qu, proto_bool select);
 
 /** @brief Parse a double command object into its IOA, 2-bit state, qualifier, and select/execute flag. False if < 4. */
-proto_bool pc_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dcs, uint8_t *qu,
-                              proto_bool *select);
+proto_bool protocore_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dcs, uint8_t *qu,
+                                     proto_bool *select);
 
 // --- IEC 60870-5-101 FT1.2 link frames (over serial) ---
 
 /** @brief Build a fixed-length frame: 10 C A CS 16 (1-octet link address). */
-size_t pc_iec101_build_fixed(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr);
+size_t protocore_iec101_build_fixed(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr);
 
 /** @brief Build a variable-length frame: 68 L L 68 C A <asdu> CS 16 (1-octet link address). */
-size_t pc_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr, const uint8_t *asdu,
-                                uint8_t asdu_len);
+size_t protocore_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr, const uint8_t *asdu,
+                                       uint8_t asdu_len);
 
 /** @brief A parsed -101 FT1.2 frame. */
 typedef struct
@@ -278,10 +279,10 @@ typedef struct
 } Iec101Frame;
 
 /** @brief Parse one -101 FT1.2 frame (validates start/stop, doubled length, sum checksum). */
-proto_bool pc_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *out, size_t *consumed);
+proto_bool protocore_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *out, size_t *consumed);
 
-#endif // PC_ENABLE_IEC60870
+#endif // PROTOCORE_ENABLE_IEC60870
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_IEC60870_H

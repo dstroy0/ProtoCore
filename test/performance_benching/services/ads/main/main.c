@@ -5,7 +5,7 @@
 // AMS-header request builders (little-endian, target-before-source addressing, cmd id + state
 // flags + cbData + invoke id) and the response parsers (AMS-header validation, Read/ReadWrite
 // payload, DeviceNotification stamp/sample walk). Pure codec, no sockets - the caller owns the TCP
-// connection (`pc_client_*`) and the AMS route registration, both out of scope here. Worked
+// connection (`protocore_client_*`) and the AMS route registration, both out of scope here. Worked
 // example for performance_benching/device/<service>/: a pure protocol codec with no hardware involved (contrast
 // with performance_benching/device/ads1115, a peripheral driver where the bus transaction itself is stubbed).
 //
@@ -23,7 +23,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// pc_ads_parse_notification requires a real callback (it fails closed on a null one); this just
+// protocore_ads_parse_notification requires a real callback (it fails closed on a null one); this just
 // counts samples so the walk itself - not the callback body - is what gets timed.
 static volatile uint32_t g_notif_samples = 0;
 static void on_sample(uint32_t /*handle*/, const uint8_t * /*sample*/, uint32_t /*sample_len*/, uint64_t /*ts*/,
@@ -87,24 +87,24 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("pc_ads_build_read", 100000,
-                  sink += pc_ads_build_read(buf, sizeof(buf), &r, ADS_IGRP_PLC_RW_M, 0, 4));
-        DBENCH_OP("pc_ads_build_write", 100000,
-                  sink += pc_ads_build_write(buf, sizeof(buf), &r, ADS_IGRP_PLC_RW_M, 8, val, sizeof(val)));
-        DBENCH_OP("pc_ads_build_read_write", 50000,
-                  sink += pc_ads_build_read_write(buf, sizeof(buf), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4,
-                                                  (const uint8_t *)name, (uint32_t)name_len));
+        DBENCH_OP("protocore_ads_build_read", 100000,
+                  sink += protocore_ads_build_read(buf, sizeof(buf), &r, ADS_IGRP_PLC_RW_M, 0, 4));
+        DBENCH_OP("protocore_ads_build_write", 100000,
+                  sink += protocore_ads_build_write(buf, sizeof(buf), &r, ADS_IGRP_PLC_RW_M, 8, val, sizeof(val)));
+        DBENCH_OP("protocore_ads_build_read_write", 50000,
+                  sink += protocore_ads_build_read_write(buf, sizeof(buf), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4,
+                                                         (const uint8_t *)name, (uint32_t)name_len));
 
         AdsAmsHeader h;
-        DBENCH_BULK("pc_ads_parse_ams_header", 100000, sizeof(read_resp),
-                    sinkb = pc_ads_parse_ams_header(read_resp, sizeof(read_resp), &h));
+        DBENCH_BULK("protocore_ads_parse_ams_header", 100000, sizeof(read_resp),
+                    sinkb = protocore_ads_parse_ams_header(read_resp, sizeof(read_resp), &h));
 
-        (void)pc_ads_parse_ams_header(read_resp, sizeof(read_resp), &h); // refresh h.data for the parse below
+        (void)protocore_ads_parse_ams_header(read_resp, sizeof(read_resp), &h); // refresh h.data for the parse below
         AdsReadResult rr;
-        DBENCH_OP("pc_ads_parse_read", 100000, sinkb = pc_ads_parse_read(h.data, h.data_len, &rr));
+        DBENCH_OP("protocore_ads_parse_read", 100000, sinkb = protocore_ads_parse_read(h.data, h.data_len, &rr));
 
-        DBENCH_BULK("pc_ads_parse_notification", 50000, sizeof(notif_payload),
-                    sinkb = pc_ads_parse_notification(notif_payload, sizeof(notif_payload), on_sample, NULL));
+        DBENCH_BULK("protocore_ads_parse_notification", 50000, sizeof(notif_payload),
+                    sinkb = protocore_ads_parse_notification(notif_payload, sizeof(notif_payload), on_sample, NULL));
 
         (void)sink;
         (void)sinkb;

@@ -38,8 +38,8 @@ void dbench_run(void)
     }
 
     s_frame_small_len =
-        pc_dnp3_build_frame(s_frame_small, sizeof(s_frame_small), 0x44, 0x1234, 0x0A0B, user_small, sizeof(user_small));
-    s_frame_large_len = pc_dnp3_build_frame(s_frame_large, sizeof(s_frame_large), 0x44, 0x1234, 0x0A0B, s_user_large,
+        protocore_dnp3_build_frame(s_frame_small, sizeof(s_frame_small), 0x44, 0x1234, 0x0A0B, user_small, sizeof(user_small));
+    s_frame_large_len = protocore_dnp3_build_frame(s_frame_large, sizeof(s_frame_large), 0x44, 0x1234, 0x0A0B, s_user_large,
                                             sizeof(s_user_large));
 
     static uint8_t out_small[64];
@@ -55,20 +55,20 @@ void dbench_run(void)
         Dnp3Frame f;
         size_t user_len;
 
-        DBENCH_BULK("pc_dnp3_crc (250B)", 2000, sizeof(s_user_large),
-                    sink16 += pc_dnp3_crc(s_user_large, sizeof(s_user_large)));
-        DBENCH_OP("pc_dnp3_build_frame (5B)", 20000,
-                  sink += pc_dnp3_build_frame(build_scratch_small, sizeof(build_scratch_small), 0x44, 0x1234, 0x0A0B,
+        DBENCH_BULK("protocore_dnp3_crc (250B)", 2000, sizeof(s_user_large),
+                    sink16 += protocore_dnp3_crc(s_user_large, sizeof(s_user_large)));
+        DBENCH_OP("protocore_dnp3_build_frame (5B)", 20000,
+                  sink += protocore_dnp3_build_frame(build_scratch_small, sizeof(build_scratch_small), 0x44, 0x1234, 0x0A0B,
                                               user_small, sizeof(user_small)));
-        DBENCH_OP("pc_dnp3_build_frame (250B)", 2000,
-                  sink += pc_dnp3_build_frame(build_scratch_large, sizeof(build_scratch_large), 0x44, 0x1234, 0x0A0B,
+        DBENCH_OP("protocore_dnp3_build_frame (250B)", 2000,
+                  sink += protocore_dnp3_build_frame(build_scratch_large, sizeof(build_scratch_large), 0x44, 0x1234, 0x0A0B,
                                               s_user_large, sizeof(s_user_large)));
-        DBENCH_OP("pc_dnp3_parse_frame (5B)", 20000,
+        DBENCH_OP("protocore_dnp3_parse_frame (5B)", 20000,
                   sink +=
-                  pc_dnp3_parse_frame(s_frame_small, s_frame_small_len, &f, out_small, sizeof(out_small), &user_len));
-        DBENCH_OP("pc_dnp3_parse_frame (250B)", 2000,
+                  protocore_dnp3_parse_frame(s_frame_small, s_frame_small_len, &f, out_small, sizeof(out_small), &user_len));
+        DBENCH_OP("protocore_dnp3_parse_frame (250B)", 2000,
                   sink +=
-                  pc_dnp3_parse_frame(s_frame_large, s_frame_large_len, &f, out_large, sizeof(out_large), &user_len));
+                  protocore_dnp3_parse_frame(s_frame_large, s_frame_large_len, &f, out_large, sizeof(out_large), &user_len));
         (void)sink16;
         (void)sink;
         DBENCH_DONE();

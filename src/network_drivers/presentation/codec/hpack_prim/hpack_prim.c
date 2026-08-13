@@ -12,7 +12,7 @@
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
 
 // --- Huffman tables generated from RFC 7541 Appendix B ---------------------------------------
 
@@ -334,4 +334,4 @@ static size_t pc_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_
 const HpackPrimNs HpackPrim = {pc_hpack_encode_int,  pc_hpack_decode_int, pc_hpack_huff_encode, pc_hpack_huff_len,
                                pc_hpack_huff_decode, pc_hpack_decode_str, pc_hpack_encode_str};
 
-#endif // PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3

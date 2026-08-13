@@ -22,7 +22,7 @@ The table schema (test/test_matrix.json), per env:
     "native_x": {
         "desc":  "free text -> emitted as ; comments above the env",
         "base":  "native_base" (default) | "env:native_stack_l46" | "env:native_stack_http",
-        "flags": ["-DPC_ENABLE_X=1", ...],     # extras beyond the base flags
+        "flags": ["-DPROTOCORE_ENABLE_X=1", ...],     # extras beyond the base flags
         "src":   ["+<services/x/x.cpp>", "-<*>"], # build_src_filter lines, verbatim
         "tests": ["test_x", ...],                 # test_filter entries; [] means run no suite
         "test_build_src": "no",                   # optional override
@@ -123,7 +123,7 @@ build_flags =
     ; core_setup/ sits beside src/, not inside it, so the board profile an include names as
     ; core_setup/board_profiles/... resolves from the repo root rather than from src/.
     -I .
-    ; PROTOCORE_HOST is NOT defined here. board_profiles/pc_platform.h derives it from the vendor
+    ; PROTOCORE_HOST is NOT defined here. board_profiles/protocore_platform.h derives it from the vendor
     ; axis: nothing on a native build matches a vendor, so its else-arm defines it. Passing it on
     ; the command line as well made a second source of truth that the vendor axis could not
     ; libm is a separate library to the C driver. g++ pulled it in behind libstdc++, so nothing here

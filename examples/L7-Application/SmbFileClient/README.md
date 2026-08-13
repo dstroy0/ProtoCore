@@ -132,7 +132,7 @@ The sketch prints `SmbResult` codes; here is what each means.
 | `-2` | `SMB_ERR_IO`       | can't reach the server, or it closed the connection (firewall? port 445 open? `sudo systemctl status smbd`) |
 | `-3` | `SMB_ERR_PROTOCOL` | share not found (`SMB_SHARE` name), or file not found (`SMB_PATH`), or access denied                        |
 | `-4` | `SMB_ERR_AUTH`     | wrong username / password / domain - re-run `smbpasswd -a`                                                  |
-| `-5` | `SMB_ERR_OVERFLOW` | a message didn't fit `PC_SMB_BUF`; raise it (see below) for very large paths                                |
+| `-5` | `SMB_ERR_OVERFLOW` | a message didn't fit `PROTOCORE_SMB_BUF`; raise it (see below) for very large paths                         |
 
 "connect failed" (before any `SmbResult`) means the TCP connection never opened -
 the server is unreachable on port 445. From another machine, test with
@@ -145,8 +145,8 @@ the server is unreachable on port 445. From another machine, test with
 - **Upload a file.** Open with `desired_access = SMB2_FILE_GENERIC_WRITE` and
   `disposition = SMB2_FILE_OVERWRITE_IF`, then call
   `smb_write(&h, 0, data, len, &wrote, cl_send, cl_recv, &x)`.
-- **Throughput.** Each READ / WRITE round trip carries up to `PC_SMB_BUF`
-  bytes; raise `PC_SMB_BUF` (default 1024) in `protocore_config.h` for bigger
+- **Throughput.** Each READ / WRITE round trip carries up to `PROTOCORE_SMB_BUF`
+  bytes; raise `PROTOCORE_SMB_BUF` (default 1024) in `protocore_config.h` for bigger
   transfers, at the cost of stack.
 
 ## Build and run (PlatformIO)
@@ -157,7 +157,7 @@ SMB lives inside the library, so the flag must reach the whole build:
 pio ci examples/L7-Application/SmbFileClient \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_SMB=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SMB=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
@@ -171,7 +171,7 @@ pio ci examples/L7-Application/SmbFileClient \
 protocol is unit-tested on a PC against a scripted mock server, with no real
 network. To run it on a real device you provide the glue that connects the seam
 to a socket. In this sketch that glue is `cl_send` / `cl_recv`, which sit on top
-of `pc_client`, the library's shared outbound TCP transport:
+of `protocore_client`, the library's shared outbound TCP transport:
 
 - `cl_send` writes all the bytes with `Tcp.client->send`.
 - `cl_recv` polls `Tcp.client->read` until data arrives, the peer closes, or a

@@ -3,7 +3,7 @@
 #
 # Times a full curve25519-sha256 key exchange from a real OpenSSH client against the PC SSH server, and
 # pairs it with the device-side compute spans the rig prints (flash rig_s3_ssh, which defines
-# PC_SSH_KEX_BENCH: ssh_transport records the ephemeral-keygen span and the reply span in microseconds and
+# PROTOCORE_SSH_KEX_BENCH: ssh_transport records the ephemeral-keygen span and the reply span in microseconds and
 # main_ssh.cpp prints "KEXBENCH #n gen_us=.. reply_us=.. device_us=.." per completed KEX over its serial).
 #
 #   python3 performance_benching/ssh/ssh_kex_time.py <server-ip> [runs] [kex-name]

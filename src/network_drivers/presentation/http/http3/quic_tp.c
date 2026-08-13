@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_tp.c
- * @brief QUIC transport parameters codec (see pc_quic_tp.h).
+ * @file protocore_quic_tp.c
+ * @brief QUIC transport parameters codec (see protocore_quic_tp.h).
  */
 
 #include "network_drivers/presentation/http/http3/quic_tp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 
-void pc_quic_tp_defaults(QuicTransportParams *tp)
+void protocore_quic_tp_defaults(QuicTransportParams *tp)
 {
     mem.set(tp, 0, sizeof(*tp));
     tp->max_udp_payload_size = 65527;
@@ -25,13 +25,13 @@ void pc_quic_tp_defaults(QuicTransportParams *tp)
 // Append one parameter: ID (varint) || Length (varint) || raw value bytes.
 static proto_bool put_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val, size_t val_len)
 {
-    size_t n = pc_quic_varint_encode(out + *p, cap - *p, id);
+    size_t n = protocore_quic_varint_encode(out + *p, cap - *p, id);
     if (!n)
     {
         return PROTO_FALSE;
     }
     *p += n;
-    n = pc_quic_varint_encode(out + *p, cap - *p, val_len);
+    n = protocore_quic_varint_encode(out + *p, cap - *p, val_len);
     if (!n)
     {
         return PROTO_FALSE;
@@ -55,7 +55,7 @@ static proto_bool put_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, co
 static proto_bool put_varint_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, uint64_t value)
 {
     uint8_t v[8];
-    size_t vlen = pc_quic_varint_encode(v, sizeof(v), value);
+    size_t vlen = protocore_quic_varint_encode(v, sizeof(v), value);
     if (!vlen)
     {
         return PROTO_FALSE;
@@ -63,7 +63,7 @@ static proto_bool put_varint_param(uint8_t *out, size_t cap, size_t *p, uint64_t
     return put_param(out, cap, p, id, v, vlen);
 }
 
-size_t pc_quic_tp_encode(const QuicTransportParams *tp, uint8_t *out, size_t cap)
+size_t protocore_quic_tp_encode(const QuicTransportParams *tp, uint8_t *out, size_t cap)
 {
     size_t p = 0;
     proto_bool ok = PROTO_TRUE;
@@ -103,7 +103,7 @@ size_t pc_quic_tp_encode(const QuicTransportParams *tp, uint8_t *out, size_t cap
 static proto_bool value_varint(const uint8_t *val, size_t len, uint64_t *out)
 {
     size_t consumed = 0;
-    if (!pc_quic_varint_decode(val, len, out, &consumed))
+    if (!protocore_quic_varint_decode(val, len, out, &consumed))
     {
         return PROTO_FALSE;
     }
@@ -125,7 +125,7 @@ static proto_bool copy_cid(const uint8_t *val, size_t len, uint8_t *dst, uint8_t
 
 // Apply a connection-ID transport parameter. *handled is set true if id names a CID param (whether or
 // not the copy succeeded); false leaves it for another category. Returns false only on a bad value.
-static proto_bool pc_quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
+static proto_bool protocore_quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
                                        proto_bool *handled)
 {
     *handled = PROTO_TRUE;
@@ -144,7 +144,7 @@ static proto_bool pc_quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t v
 }
 
 // Apply a varint-valued transport parameter with its RFC 9000 range checks. *handled is set as above.
-static proto_bool pc_quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
+static proto_bool protocore_quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
                                           proto_bool *handled)
 {
     *handled = PROTO_TRUE;
@@ -181,10 +181,10 @@ static proto_bool pc_quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_
 
 // Dispatch one parsed transport parameter to tp; false on a malformed / out-of-range value. Unknown
 // (GREASE) IDs are silently ignored, matching RFC 9000 §7.4.1.
-static proto_bool pc_quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp)
+static proto_bool protocore_quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp)
 {
     proto_bool handled = PROTO_FALSE;
-    if (!pc_quic_tp_apply_cid(id, val, vlen, tp, &handled))
+    if (!protocore_quic_tp_apply_cid(id, val, vlen, tp, &handled))
     {
         return PROTO_FALSE;
     }
@@ -192,7 +192,7 @@ static proto_bool pc_quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen,
     {
         return PROTO_TRUE;
     }
-    if (!pc_quic_tp_apply_varint(id, val, vlen, tp, &handled))
+    if (!protocore_quic_tp_apply_varint(id, val, vlen, tp, &handled))
     {
         return PROTO_FALSE;
     }
@@ -211,9 +211,9 @@ static proto_bool pc_quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen,
     return PROTO_TRUE; // unknown / GREASE: skip
 }
 
-proto_bool pc_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams *tp)
+proto_bool protocore_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams *tp)
 {
-    pc_quic_tp_defaults(tp);
+    protocore_quic_tp_defaults(tp);
     uint32_t seen = 0; // dup-guard bitmask over the known IDs (all < 32)
 
     size_t off = 0;
@@ -222,12 +222,12 @@ proto_bool pc_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams 
         uint64_t id = 0;
         uint64_t vlen = 0;
         size_t c = 0;
-        if (!pc_quic_varint_decode(buf + off, len - off, &id, &c))
+        if (!protocore_quic_varint_decode(buf + off, len - off, &id, &c))
         {
             return PROTO_FALSE;
         }
         off += c;
-        if (!pc_quic_varint_decode(buf + off, len - off, &vlen, &c))
+        if (!protocore_quic_varint_decode(buf + off, len - off, &vlen, &c))
         {
             return PROTO_FALSE;
         }
@@ -249,7 +249,7 @@ proto_bool pc_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams 
             seen |= bit;
         }
 
-        if (!pc_quic_tp_apply(id, val, vlen, tp))
+        if (!protocore_quic_tp_apply(id, val, vlen, tp))
         {
             return PROTO_FALSE;
         }
@@ -257,4 +257,4 @@ proto_bool pc_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams 
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

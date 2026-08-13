@@ -3,7 +3,7 @@
 
 /**
  * @file thread.h
- * @brief Thread spinel / HDLC-lite framing codec (PC_ENABLE_THREAD) - OpenThread RCP.
+ * @brief Thread spinel / HDLC-lite framing codec (PROTOCORE_ENABLE_THREAD) - OpenThread RCP.
  *
  * The HDLC-lite framing that carries spinel frames to an OpenThread radio co-processor (an
  * nRF52840 / EFR32 RCP) over UART - an 802.15.4 / Thread mesh bridged to IP and the web.
@@ -17,8 +17,8 @@
  * bytes stuffed (as 0x7D, byte XOR 0x20) are the Flag 0x7E, the Escape 0x7D, XON 0x11, and
  * XOFF 0x13.
  *
- * pc_spinel_frame_encode() wraps a payload; pc_spinel_frame_decode() finds the flag, removes the
- * stuffing, and verifies the FCS. pc_spinel_fcs() is the shared checksum. The spinel command
+ * protocore_spinel_frame_encode() wraps a payload; protocore_spinel_frame_decode() finds the flag, removes the
+ * stuffing, and verifies the FCS. protocore_spinel_fcs() is the shared checksum. The spinel command
  * inside (a property get/set/insert, an 802.15.4 stream) is the application's. Pure - you
  * carry the bytes over your UART - so it is fully host-testable.
  *
@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_THREAD
+#if PROTOCORE_ENABLE_THREAD
 
 /** @brief HDLC-lite markers. */
 #define HDLC_FLAG 0x7E   ///< frame delimiter
@@ -116,23 +116,23 @@ PROTO_BEGIN_DECLS
 // --- Header byte (bit7 = flag, bits6-4 = interface id, bits3-0 = transaction id) --------
 
 /** @brief Build a spinel header byte for interface @p iid and transaction @p tid (tid 0 = no response wanted). */
-static inline uint8_t pc_spinel_header(uint8_t iid, uint8_t tid)
+static inline uint8_t protocore_spinel_header(uint8_t iid, uint8_t tid)
 {
     return (uint8_t)(0x80 | ((iid & 0x03) << 4) | (tid & 0x0F));
 }
 /** @brief The transaction id carried in header byte @p h. */
-static inline uint8_t pc_spinel_header_tid(uint8_t h)
+static inline uint8_t protocore_spinel_header_tid(uint8_t h)
 {
     return (uint8_t)(h & 0x0F);
 }
 /** @brief The interface id carried in header byte @p h. */
-static inline uint8_t pc_spinel_header_iid(uint8_t h)
+static inline uint8_t protocore_spinel_header_iid(uint8_t h)
 {
     return (uint8_t)((h >> 4) & 0x03);
 }
 
 /** @brief HDLC frame check sequence: CRC-16/X-25 over @p buf. */
-uint16_t pc_spinel_fcs(const uint8_t *buf, uint16_t len);
+uint16_t protocore_spinel_fcs(const uint8_t *buf, uint16_t len);
 
 // --- Spinel command layer (rides inside a decoded HDLC frame's payload) ---------------
 
@@ -141,22 +141,22 @@ uint16_t pc_spinel_fcs(const uint8_t *buf, uint16_t len);
  *        continuation) into @p out.
  * @return the number of bytes written (1..5), or 0 if it would not fit @p cap.
  */
-uint8_t pc_spinel_pack_uint(uint32_t value, uint8_t *out, uint8_t cap);
+uint8_t protocore_spinel_pack_uint(uint32_t value, uint8_t *out, uint8_t cap);
 
 /**
  * @brief Decode a spinel packed unsigned integer from the front of @p raw.
  * @return the bytes consumed (> 0, value in @p value), 0 if more bytes are needed, or -1 if
  *         the encoding overflows a uint32.
  */
-int pc_spinel_unpack_uint(const uint8_t *raw, uint8_t len, uint32_t *value);
+int protocore_spinel_unpack_uint(const uint8_t *raw, uint8_t len, uint32_t *value);
 
 /**
  * @brief Build a spinel property-command payload (`header | CMD | PROP | value`) - the
  *        content of an HDLC frame - into @p out. CMD and PROP are packed integers.
  * @return the payload length, or 0 if it would not fit @p cap.
  */
-uint16_t pc_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, const uint8_t *value, uint16_t value_len,
-                                 uint8_t *out, uint16_t cap);
+uint16_t protocore_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, const uint8_t *value,
+                                        uint16_t value_len, uint8_t *out, uint16_t cap);
 
 /**
  * @brief Parse a spinel property-command payload (from a decoded HDLC frame).
@@ -167,8 +167,8 @@ uint16_t pc_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, co
  * @param[out] value_len the value length.
  * @return the value offset (> 0), or -1 if the header / command / property is malformed.
  */
-int pc_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t *header, uint32_t *cmd, uint32_t *prop,
-                            const uint8_t **value, uint16_t *value_len);
+int protocore_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t *header, uint32_t *cmd, uint32_t *prop,
+                                   const uint8_t **value, uint16_t *value_len);
 
 // --- Spinel value semantics (the typed datatypes carried in a property value) -----------
 //
@@ -197,42 +197,42 @@ typedef struct
     proto_bool err; ///< set once any write would overflow @c cap
 } SpinelWriter;
 
-void pc_spinel_reader_init(SpinelReader *r, const uint8_t *value, uint16_t len);
-proto_bool pc_spinel_get_bool(SpinelReader *r, proto_bool *out);
-proto_bool pc_spinel_get_u8(SpinelReader *r, uint8_t *out);
-proto_bool pc_spinel_get_i8(SpinelReader *r, int8_t *out);
-proto_bool pc_spinel_get_u16(SpinelReader *r, uint16_t *out);
-proto_bool pc_spinel_get_i16(SpinelReader *r, int16_t *out);
-proto_bool pc_spinel_get_u32(SpinelReader *r, uint32_t *out);
-proto_bool pc_spinel_get_i32(SpinelReader *r, int32_t *out);
-proto_bool pc_spinel_get_uint(SpinelReader *r, uint32_t *out); ///< packed 'i'
-proto_bool pc_spinel_get_eui64(SpinelReader *r, const uint8_t **out8);
-proto_bool pc_spinel_get_ipv6(SpinelReader *r, const uint8_t **out16);
+void protocore_spinel_reader_init(SpinelReader *r, const uint8_t *value, uint16_t len);
+proto_bool protocore_spinel_get_bool(SpinelReader *r, proto_bool *out);
+proto_bool protocore_spinel_get_u8(SpinelReader *r, uint8_t *out);
+proto_bool protocore_spinel_get_i8(SpinelReader *r, int8_t *out);
+proto_bool protocore_spinel_get_u16(SpinelReader *r, uint16_t *out);
+proto_bool protocore_spinel_get_i16(SpinelReader *r, int16_t *out);
+proto_bool protocore_spinel_get_u32(SpinelReader *r, uint32_t *out);
+proto_bool protocore_spinel_get_i32(SpinelReader *r, int32_t *out);
+proto_bool protocore_spinel_get_uint(SpinelReader *r, uint32_t *out); ///< packed 'i'
+proto_bool protocore_spinel_get_eui64(SpinelReader *r, const uint8_t **out8);
+proto_bool protocore_spinel_get_ipv6(SpinelReader *r, const uint8_t **out16);
 /** @brief UTF8 'U': @p out points into the value, @p out_len excludes the NUL; advances past it. */
-proto_bool pc_spinel_get_utf8(SpinelReader *r, const char **out, uint16_t *out_len);
+proto_bool protocore_spinel_get_utf8(SpinelReader *r, const char **out, uint16_t *out_len);
 /** @brief Data 'D' (to end of value): @p out points into the value, @p out_len is the remainder. */
-proto_bool pc_spinel_get_data(SpinelReader *r, const uint8_t **out, uint16_t *out_len);
+proto_bool protocore_spinel_get_data(SpinelReader *r, const uint8_t **out, uint16_t *out_len);
 /** @brief Data 'd' (uint16-LE length prefix): reads the count, then that many bytes. */
-proto_bool pc_spinel_get_data_wlen(SpinelReader *r, const uint8_t **out, uint16_t *out_len);
+proto_bool protocore_spinel_get_data_wlen(SpinelReader *r, const uint8_t **out, uint16_t *out_len);
 /** @brief True if every read so far stayed in bounds. */
-proto_bool pc_spinel_reader_ok(const SpinelReader *r);
+proto_bool protocore_spinel_reader_ok(const SpinelReader *r);
 
-void pc_spinel_writer_init(SpinelWriter *w, uint8_t *out, uint16_t cap);
-proto_bool pc_spinel_put_bool(SpinelWriter *w, proto_bool v);
-proto_bool pc_spinel_put_u8(SpinelWriter *w, uint8_t v);
-proto_bool pc_spinel_put_i8(SpinelWriter *w, int8_t v);
-proto_bool pc_spinel_put_u16(SpinelWriter *w, uint16_t v);
-proto_bool pc_spinel_put_i16(SpinelWriter *w, int16_t v);
-proto_bool pc_spinel_put_u32(SpinelWriter *w, uint32_t v);
-proto_bool pc_spinel_put_i32(SpinelWriter *w, int32_t v);
-proto_bool pc_spinel_put_uint(SpinelWriter *w, uint32_t v); ///< packed 'i'
-proto_bool pc_spinel_put_eui64(SpinelWriter *w, const uint8_t *v8);
-proto_bool pc_spinel_put_ipv6(SpinelWriter *w, const uint8_t *v16);
-proto_bool pc_spinel_put_utf8(SpinelWriter *w, const char *s);                     ///< 'U' incl. the NUL
-proto_bool pc_spinel_put_data(SpinelWriter *w, const uint8_t *d, uint16_t n);      ///< 'D' raw bytes
-proto_bool pc_spinel_put_data_wlen(SpinelWriter *w, const uint8_t *d, uint16_t n); ///< 'd' uint16-LE len + bytes
+void protocore_spinel_writer_init(SpinelWriter *w, uint8_t *out, uint16_t cap);
+proto_bool protocore_spinel_put_bool(SpinelWriter *w, proto_bool v);
+proto_bool protocore_spinel_put_u8(SpinelWriter *w, uint8_t v);
+proto_bool protocore_spinel_put_i8(SpinelWriter *w, int8_t v);
+proto_bool protocore_spinel_put_u16(SpinelWriter *w, uint16_t v);
+proto_bool protocore_spinel_put_i16(SpinelWriter *w, int16_t v);
+proto_bool protocore_spinel_put_u32(SpinelWriter *w, uint32_t v);
+proto_bool protocore_spinel_put_i32(SpinelWriter *w, int32_t v);
+proto_bool protocore_spinel_put_uint(SpinelWriter *w, uint32_t v); ///< packed 'i'
+proto_bool protocore_spinel_put_eui64(SpinelWriter *w, const uint8_t *v8);
+proto_bool protocore_spinel_put_ipv6(SpinelWriter *w, const uint8_t *v16);
+proto_bool protocore_spinel_put_utf8(SpinelWriter *w, const char *s);                     ///< 'U' incl. the NUL
+proto_bool protocore_spinel_put_data(SpinelWriter *w, const uint8_t *d, uint16_t n);      ///< 'D' raw bytes
+proto_bool protocore_spinel_put_data_wlen(SpinelWriter *w, const uint8_t *d, uint16_t n); ///< 'd' uint16-LE len + bytes
 /** @brief The finished value length, or 0 if any write overflowed. */
-uint16_t pc_spinel_writer_len(const SpinelWriter *w);
+uint16_t protocore_spinel_writer_len(const SpinelWriter *w);
 
 // --- Property registry (id -> name + primary datatype) ----------------------------------
 
@@ -245,18 +245,18 @@ typedef struct
 } SpinelPropInfo;
 
 /** @brief Look up a property's registry entry, or nullptr if it is not in the registry. */
-const SpinelPropInfo *pc_spinel_prop_lookup(uint32_t id);
+const SpinelPropInfo *protocore_spinel_prop_lookup(uint32_t id);
 /** @brief A property's human name, or "UNKNOWN" if unregistered. */
-const char *pc_spinel_prop_name(uint32_t id);
+const char *protocore_spinel_prop_name(uint32_t id);
 /** @brief A `LAST_STATUS` code's human name, or "UNKNOWN" if unregistered. */
-const char *pc_spinel_status_name(uint32_t status);
+const char *protocore_spinel_status_name(uint32_t status);
 
 /**
  * @brief Encode an HDLC-lite frame: @p payload + FCS, byte-stuffed, flag-terminated.
- * @return the encoded frame length, or 0 if @p len exceeds PC_THREAD_MAX_DATA or the
+ * @return the encoded frame length, or 0 if @p len exceeds PROTOCORE_THREAD_MAX_DATA or the
  *         stuffed frame would not fit @p cap.
  */
-uint16_t pc_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap);
+uint16_t protocore_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap);
 
 /**
  * @brief Decode one HDLC-lite frame from the front of @p raw: find the flag, remove the
@@ -266,10 +266,11 @@ uint16_t pc_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *o
  *         (need more), or -1 if the frame is malformed (too short, bad FCS, dangling escape,
  *         or the payload overflows @p pay_cap) - the caller drops one byte and retries.
  */
-int pc_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap, uint16_t *pay_len);
+int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap,
+                                  uint16_t *pay_len);
 
-#endif // PC_ENABLE_THREAD
+#endif // PROTOCORE_ENABLE_THREAD
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_THREAD_H

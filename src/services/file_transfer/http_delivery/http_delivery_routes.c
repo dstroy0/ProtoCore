@@ -11,9 +11,9 @@
 
 #include "services/file_transfer/http_delivery/http_delivery.h"
 
-#if PC_ENABLE_HTTP_DELIVERY
+#if PROTOCORE_ENABLE_HTTP_DELIVERY
 
-#include "network_drivers/application/web_assets.h" // PC_SERVICE_WORKER
+#include "network_drivers/application/web_assets.h" // PROTOCORE_SERVICE_WORKER
 #include "protocore.h"
 #include "shared_primitives/mime.h"
 
@@ -32,26 +32,26 @@ static void sw_script_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     // No instance test: a handler only runs because this service registered the route.
-    send_text(slot_id, 200, PC_MIME_JAVASCRIPT, PC_SERVICE_WORKER);
+    send_text(slot_id, 200, PROTOCORE_MIME_JAVASCRIPT, PROTOCORE_SERVICE_WORKER);
 }
 
 static void sw_manifest_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    char buf[PC_DELIVERY_MANIFEST_BUF];
+    char buf[PROTOCORE_DELIVERY_MANIFEST_BUF];
     // Rebuilt per request rather than cached: it is small, and the version/list can be changed at
     // runtime without a stale copy surviving.
-    if (pc_delivery_sw_manifest(s_delr.paths, s_delr.n, s_delr.version, buf, sizeof(buf)) == 0)
+    if (protocore_delivery_sw_manifest(s_delr.paths, s_delr.n, s_delr.version, buf, sizeof(buf)) == 0)
     {
-        send_text(slot_id, 500, PC_MIME_JSON, "{\"error\":\"manifest too large\"}");
+        send_text(slot_id, 500, PROTOCORE_MIME_JSON, "{\"error\":\"manifest too large\"}");
         return;
     }
-    send_text(slot_id, 200, PC_MIME_JSON, buf);
+    send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-proto_bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *version)
+proto_bool protocore_delivery_serve_sw(const char *const *paths, size_t n, const char *version)
 {
-    if (!paths || n == 0 || n > PC_DELIVERY_PRECACHE_MAX || !version)
+    if (!paths || n == 0 || n > PROTOCORE_DELIVERY_PRECACHE_MAX || !version)
     {
         return PROTO_FALSE;
     }
@@ -65,4 +65,4 @@ proto_bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_HTTP_DELIVERY
+#endif // PROTOCORE_ENABLE_HTTP_DELIVERY

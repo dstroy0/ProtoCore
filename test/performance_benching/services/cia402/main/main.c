@@ -60,15 +60,17 @@ void dbench_run(void)
         volatile bool sinkb = false;
         CanFrame f = {0};
 
-        DBENCH_OP("pc_cia402_state", 200000, sink8 += (uint8_t)pc_cia402_state(sw_op_enabled));
-        DBENCH_OP("pc_cia402_enable_sequence", 200000, sink16 += pc_cia402_enable_sequence(CIA402_STATE_SWITCHED_ON));
-        DBENCH_OP("pc_cia402_sdo_set_controlword", 100000, sinkb |= pc_cia402_sdo_set_controlword(&f, 5, 0x000F));
-        DBENCH_OP("pc_cia402_sdo_get_u16", 100000,
-                  sinkb |= pc_cia402_sdo_get_u16(&sdo_resp, CIA402_OD_STATUSWORD, &sdo_val));
-        DBENCH_BULK("pc_cia402_pack_command", 100000, 6,
-                    sinksz += pc_cia402_pack_command(pdo_out, sizeof(pdo_out), 0x000F, -12345));
-        DBENCH_BULK("pc_cia402_unpack_status", 100000, 6,
-                    sinkb |= pc_cia402_unpack_status(tpdo, sizeof(tpdo), &pdo_sw, &pdo_actual));
+        DBENCH_OP("protocore_cia402_state", 200000, sink8 += (uint8_t)protocore_cia402_state(sw_op_enabled));
+        DBENCH_OP("protocore_cia402_enable_sequence", 200000,
+                  sink16 += protocore_cia402_enable_sequence(CIA402_STATE_SWITCHED_ON));
+        DBENCH_OP("protocore_cia402_sdo_set_controlword", 100000,
+                  sinkb |= protocore_cia402_sdo_set_controlword(&f, 5, 0x000F));
+        DBENCH_OP("protocore_cia402_sdo_get_u16", 100000,
+                  sinkb |= protocore_cia402_sdo_get_u16(&sdo_resp, CIA402_OD_STATUSWORD, &sdo_val));
+        DBENCH_BULK("protocore_cia402_pack_command", 100000, 6,
+                    sinksz += protocore_cia402_pack_command(pdo_out, sizeof(pdo_out), 0x000F, -12345));
+        DBENCH_BULK("protocore_cia402_unpack_status", 100000, 6,
+                    sinkb |= protocore_cia402_unpack_status(tpdo, sizeof(tpdo), &pdo_sw, &pdo_actual));
 
         (void)sink8;
         (void)sink16;

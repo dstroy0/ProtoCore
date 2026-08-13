@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for QUIC Initial packet crypto (network_drivers/presentation/http/http3/pc_hkdf,
-// pc_quic_aead, pc_quic_crypto; RFC 9001). Everything is checked against authoritative vectors:
+// Unit tests for QUIC Initial packet crypto (network_drivers/presentation/http/http3/protocore_hkdf,
+// protocore_quic_aead, protocore_quic_crypto; RFC 9001). Everything is checked against authoritative vectors:
 //   - AES-128 block:  FIPS 197 Appendix B known-answer.
 //   - AES-128-GCM:    the McGrew/Viega GCM Test Case 4 (non-block-aligned plaintext + AAD).
 //   - Initial keys:   RFC 9001 Appendix A.1 client/server key/iv/hp.
@@ -26,41 +26,41 @@ static uint8_t tw_c[4096]; // c works out of its own bytes // test-side working 
 
 // The keyed api needs a context, not a key. One scratch context, rebuilt per call and released first so
 // a backend that attaches vendor resources to a context does not leak one per vector.
-static uint8_t g_gcm_ws[PC_WORK_AES128GCM] __attribute__((aligned(8)));
+static uint8_t g_gcm_ws[PROTOCORE_WORK_AES128GCM] __attribute__((aligned(8)));
 static proto_bool g_gcm_live = PROTO_FALSE;
-static struct pc_aes128gcm_key *gcm_key(const uint8_t *key)
+static struct protocore_aes128gcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
-        pc_aes128gcm_key_wipe((struct pc_aes128gcm_key *)(g_gcm_ws));
+        protocore_aes128gcm_key_wipe((struct protocore_aes128gcm_key *)(g_gcm_ws));
     }
     g_gcm_live = PROTO_TRUE;
-    return pc_aes128gcm_key_init(g_gcm_ws, key);
+    return protocore_aes128gcm_key_init(g_gcm_ws, key);
 }
 
 // hp is a keyed AES-128 context now, not the raw key, so compare what it produces.
 static void check_same_hp(const uint8_t expect_key[16], uint8_t *derived_ctx)
 {
-    static uint8_t ref[PC_WORK_AES128] __attribute__((aligned(8)));
+    static uint8_t ref[PROTOCORE_WORK_AES128] __attribute__((aligned(8)));
     uint8_t blk[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, m1[16], m2[16];
-    pc_aes128_init((struct pc_aes128 *)(ref), expect_key);
-    pc_aes128_encrypt_block((struct pc_aes128 *)(ref), blk, m1);
-    pc_aes128_encrypt_block((struct pc_aes128 *)(derived_ctx), blk, m2);
+    protocore_aes128_init((struct protocore_aes128 *)(ref), expect_key);
+    protocore_aes128_encrypt_block((struct protocore_aes128 *)(ref), blk, m1);
+    protocore_aes128_encrypt_block((struct protocore_aes128 *)(derived_ctx), blk, m2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(m1, m2, 16);
-    pc_aes128_wipe((struct pc_aes128 *)(ref));
+    protocore_aes128_wipe((struct protocore_aes128 *)(ref));
 }
 
 // Assert that a context derived by the library seals exactly as one built from the expected raw key.
 static void check_same_key(const uint8_t expect_key[16], uint8_t *derived_ctx)
 {
     uint8_t n12[12] = {0}, zpt[16] = {0}, c1[16], t1[16], c2[16], t2[16];
-    static uint8_t ref_ws[PC_WORK_AES128GCM] __attribute__((aligned(8)));
-    struct pc_aes128gcm_key *ref = pc_aes128gcm_key_init(ref_ws, expect_key);
-    pc_aes128gcm_seal(ref, n12, NULL, 0, zpt, sizeof zpt, c1, t1);
-    pc_aes128gcm_seal((struct pc_aes128gcm_key *)(derived_ctx), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
+    static uint8_t ref_ws[PROTOCORE_WORK_AES128GCM] __attribute__((aligned(8)));
+    struct protocore_aes128gcm_key *ref = protocore_aes128gcm_key_init(ref_ws, expect_key);
+    protocore_aes128gcm_seal(ref, n12, NULL, 0, zpt, sizeof zpt, c1, t1);
+    protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(derived_ctx), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(c1, c2, sizeof c1);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(t1, t2, sizeof t1);
-    pc_aes128gcm_key_wipe(ref);
+    protocore_aes128gcm_key_wipe(ref);
 }
 
 void setUp()
@@ -113,16 +113,16 @@ static size_t hx(const char *s, uint8_t *buf, size_t cap)
 // --- AES-128 block: FIPS 197 Appendix B (the worked example) --------------------------------
 void test_aes128_block_fips197()
 {
-    size_t scope = pc_secure_mark();
+    size_t scope = protocore_secure_mark();
     uint8_t key[16], in[16], exp[16], out[16];
     hx("000102030405060708090a0b0c0d0e0f", key, 16);
     hx("00112233445566778899aabbccddeeff", in, 16);
     hx("69c4e0d86a7b0430d8cdb78070b4c55a", exp, 16);
-    struct pc_aes128 *aes = pc_aes128_wants(); // the owner of the opaque type supplies the storage
+    struct protocore_aes128 *aes = protocore_aes128_wants(); // the owner of the opaque type supplies the storage
     TEST_ASSERT_NOT_NULL(aes);
-    pc_aes128_init(aes, key);
-    pc_aes128_encrypt_block(aes, in, out);
-    pc_aes128_wipe(aes);
+    protocore_aes128_init(aes, key);
+    protocore_aes128_encrypt_block(aes, in, out);
+    protocore_aes128_wipe(aes);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, out, 16);
 }
 
@@ -142,17 +142,17 @@ void test_aes128_gcm_testcase4()
     hx("5bc94fbc3221a5db94fae95ae7121a47", exp_tag, 16);
 
     uint8_t sealed[60 + 16];
-    pc_aes128gcm_seal(gcm_key(key), iv, aad, 20, pt, 60, sealed, sealed + 60);
+    protocore_aes128gcm_seal(gcm_key(key), iv, aad, 20, pt, 60, sealed, sealed + 60);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_ct, sealed, 60);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_tag, sealed + 60, 16);
 
     uint8_t opened[60];
-    TEST_ASSERT_TRUE(pc_aes128gcm_open(gcm_key(key), iv, aad, 20, sealed, 60, sealed + 60, opened));
+    TEST_ASSERT_TRUE(protocore_aes128gcm_open(gcm_key(key), iv, aad, 20, sealed, 60, sealed + 60, opened));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, opened, 60);
 
     // A single flipped ciphertext bit must fail authentication and write nothing.
     sealed[0] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_aes128gcm_open(gcm_key(key), iv, aad, 20, sealed, 60, sealed + 60, opened));
+    TEST_ASSERT_FALSE(protocore_aes128gcm_open(gcm_key(key), iv, aad, 20, sealed, 60, sealed + 60, opened));
 }
 
 // --- RFC 9001 A.1: Initial secret derivation from the Destination Connection ID -------------
@@ -161,7 +161,7 @@ void test_initial_secrets_appendix_a1()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(tw, dcid, 8, &s);
+    protocore_quic_derive_initial_secrets(tw, dcid, 8, &s);
 
     uint8_t ck[16], civ[12], chp[16], sk[16], siv[12], shp[16];
     hx("1f369613dd76d5467730efcbe3b1a22d", ck, 16);
@@ -187,7 +187,7 @@ void test_server_initial_a3()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(tw, dcid, 8, &s);
+    protocore_quic_derive_initial_secrets(tw, dcid, 8, &s);
 
     // Unprotected header (20 bytes: pn_offset 18, 2-byte pn = 1) then the 99-byte payload.
     uint8_t pkt[256];
@@ -200,7 +200,7 @@ void test_server_initial_a3()
                      pkt + hdr, sizeof pkt - hdr);
     TEST_ASSERT_EQUAL_INT(99, (int)plen);
 
-    size_t total = pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 18, /*pn_len*/ 2, /*full_pn*/ 1,
+    size_t total = protocore_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 18, /*pn_len*/ 2, /*full_pn*/ 1,
                                           /*payload_len*/ 99, &s.server, /*is_long*/ PROTO_TRUE);
     uint8_t exp[256];
     size_t elen = hx("cf000000010008f067a5502a4262b5004075c0d95a482cd0991cd25b0aac406a"
@@ -216,7 +216,7 @@ void test_server_initial_a3()
     // Round-trip: unprotect the wire bytes back to pn=1 and the original payload.
     uint8_t out[128];
     uint64_t pn = 0;
-    size_t got = pc_quic_packet_unprotect(exp, /*pn_offset*/ 18, /*length*/ 117, /*largest_pn*/ 0, &s.server,
+    size_t got = protocore_quic_packet_unprotect(exp, /*pn_offset*/ 18, /*length*/ 117, /*largest_pn*/ 0, &s.server,
                                           /*is_long*/ PROTO_TRUE, out, &pn);
     TEST_ASSERT_EQUAL_INT(99, (int)got);
     TEST_ASSERT_EQUAL_UINT64(1, pn);
@@ -236,7 +236,7 @@ void test_client_initial_a2()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(tw, dcid, 8, &s);
+    protocore_quic_derive_initial_secrets(tw, dcid, 8, &s);
 
     // Unprotected header (22 bytes: pn_offset 18, 4-byte pn = 2), then a 1162-byte payload made of
     // the CRYPTO frame (245 bytes) zero-padded with PADDING frames, per A.2.
@@ -256,7 +256,7 @@ void test_client_initial_a2()
     TEST_ASSERT_EQUAL_INT(245, (int)clen);
     const size_t payload_len = 1162; // CRYPTO frame + zero PADDING to the mandated size
 
-    size_t total = pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 18, /*pn_len*/ 4, /*full_pn*/ 2, payload_len,
+    size_t total = protocore_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 18, /*pn_len*/ 4, /*full_pn*/ 2, payload_len,
                                           &s.client, /*is_long*/ PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT((int)(22 + payload_len + 16), (int)total);
 
@@ -271,7 +271,7 @@ void test_client_initial_a2()
     // Round-trip unprotect recovers pn=2 and the padded payload.
     static uint8_t out[1200];
     uint64_t pn = 0;
-    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 18, /*length*/ 1182, /*largest_pn*/ 0, &s.client,
+    size_t got = protocore_quic_packet_unprotect(pkt, /*pn_offset*/ 18, /*length*/ 1182, /*largest_pn*/ 0, &s.client,
                                           /*is_long*/ PROTO_TRUE, out, &pn);
     TEST_ASSERT_EQUAL_INT((int)payload_len, (int)got);
     TEST_ASSERT_EQUAL_UINT64(2, pn);
@@ -305,7 +305,7 @@ void test_retry_integrity_a4()
     TEST_ASSERT_EQUAL_INT(20, (int)rlen);
 
     uint8_t tag[16], exp[16];
-    pc_quic_retry_integrity_tag(odcid, 8, retry, rlen, tag);
+    protocore_quic_retry_integrity_tag(odcid, 8, retry, rlen, tag);
     hx("04a265ba2eff4d829058fb3f0f2496ba", exp, 16);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, tag, 16);
 }
@@ -321,12 +321,12 @@ void test_gcm_open_rejects_short()
     uint8_t pkt[32];
     memset(pkt, 0, sizeof pkt);
     // length (8) - pn_len (1) = 7 bytes of "ciphertext + tag", i.e. less than one 16-byte tag.
-    TEST_ASSERT_EQUAL_UINT64((uint64_t)(size_t)-1, (uint64_t)pc_quic_packet_unprotect(
+    TEST_ASSERT_EQUAL_UINT64((uint64_t)(size_t)-1, (uint64_t)protocore_quic_packet_unprotect(
                                                        pkt, /*pn_offset*/ 4, /*length*/ 8, /*largest_pn*/ 0, &keys,
                                                        /*is_long*/ PROTO_TRUE, pkt, NULL));
 }
 
-// --- pc_quic_packet_protect parameter/capacity guards ------------------------------------------
+// --- protocore_quic_packet_protect parameter/capacity guards ------------------------------------------
 // The packet-number length must be 1..4; anything else is a parameter error (returns 0). Drives both
 // sides of the `pn_len < 1 || pn_len > 4` reject that the RFC-vector protect/unprotect never hits.
 void test_protect_rejects_bad_pn_len()
@@ -335,9 +335,9 @@ void test_protect_rejects_bad_pn_len()
     memset(&keys, 0, sizeof keys);
     uint8_t pkt[64];
     memset(pkt, 0, sizeof pkt);
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 0, /*full_pn*/ 1,
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 0, /*full_pn*/ 1,
                                                          /*payload_len*/ 8, &keys, /*is_long*/ PROTO_TRUE));
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 5, /*full_pn*/ 1,
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 5, /*full_pn*/ 1,
                                                          /*payload_len*/ 8, &keys, /*is_long*/ PROTO_TRUE));
 }
 
@@ -349,11 +349,11 @@ void test_protect_rejects_small_cap()
     uint8_t pkt[8];
     memset(pkt, 0, sizeof pkt);
     // hdr(pn_offset 4 + pn_len 2 = 6) + payload(100) + tag(16) = 122 > cap 8.
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 2, /*full_pn*/ 1,
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 2, /*full_pn*/ 1,
                                                          /*payload_len*/ 100, &keys, /*is_long*/ PROTO_TRUE));
 }
 
-// --- pc_quic_packet_unprotect reject paths -----------------------------------------------------
+// --- protocore_quic_packet_unprotect reject paths -----------------------------------------------------
 // A record whose Length is below the header-protection sample + tag minimum (4 + 16) is rejected up
 // front with (size_t)-1, before touching the buffer.
 void test_unprotect_rejects_short()
@@ -364,7 +364,7 @@ void test_unprotect_rejects_short()
     memset(pkt, 0, sizeof pkt);
     uint8_t out[32];
     uint64_t pn = 0;
-    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 0, /*length*/ 19, /*largest_pn*/ 0, &keys,
+    size_t got = protocore_quic_packet_unprotect(pkt, /*pn_offset*/ 0, /*length*/ 19, /*largest_pn*/ 0, &keys,
                                           /*is_long*/ PROTO_TRUE, out, &pn);
     TEST_ASSERT_TRUE(got == (size_t)-1);
 }
@@ -377,7 +377,7 @@ void test_unprotect_rejects_tampered()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(tw, dcid, 8, &s);
+    protocore_quic_derive_initial_secrets(tw, dcid, 8, &s);
 
     uint8_t pkt[256];
     size_t elen = hx("cf000000010008f067a5502a4262b5004075c0d95a482cd0991cd25b0aac406a"
@@ -391,7 +391,7 @@ void test_unprotect_rejects_tampered()
 
     uint8_t out[128];
     uint64_t pn = 0;
-    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 18, /*length*/ 117, /*largest_pn*/ 0, &s.server,
+    size_t got = protocore_quic_packet_unprotect(pkt, /*pn_offset*/ 18, /*length*/ 117, /*largest_pn*/ 0, &s.server,
                                           /*is_long*/ PROTO_TRUE, out, &pn);
     TEST_ASSERT_TRUE(got == (size_t)-1);
 }
@@ -406,7 +406,7 @@ void test_header_protection_mask_width()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(tw, dcid, 8, &s);
+    protocore_quic_derive_initial_secrets(tw, dcid, 8, &s);
 
     const size_t pn_offset = 9;
     const uint8_t pn_len = 2;
@@ -421,7 +421,7 @@ void test_header_protection_mask_width()
     memcpy(pkt + pn_offset + pn_len, payload, sizeof payload);
     uint8_t before = pkt[0];
     TEST_ASSERT_TRUE(
-        pc_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, 7, sizeof payload, &s.client, PROTO_FALSE) > 0);
+        protocore_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, 7, sizeof payload, &s.client, PROTO_FALSE) > 0);
     TEST_ASSERT_EQUAL_HEX8(0, (uint8_t)((before ^ pkt[0]) & (uint8_t)~0x1f));
 
     // Long header: the mask is one bit narrower, so 0xf0 must survive.
@@ -432,7 +432,7 @@ void test_header_protection_mask_width()
     memcpy(pkt + pn_offset + pn_len, payload, sizeof payload);
     before = pkt[0];
     TEST_ASSERT_TRUE(
-        pc_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, 7, sizeof payload, &s.client, PROTO_TRUE) > 0);
+        protocore_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, 7, sizeof payload, &s.client, PROTO_TRUE) > 0);
     TEST_ASSERT_EQUAL_HEX8(0, (uint8_t)((before ^ pkt[0]) & (uint8_t)~0x0f));
 }
 
@@ -448,7 +448,7 @@ void test_short_header_roundtrip_null_out_pn()
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, 8);
     QuicInitialSecrets s;
-    pc_quic_derive_initial_secrets(tw, dcid, 8, &s);
+    protocore_quic_derive_initial_secrets(tw, dcid, 8, &s);
 
     const size_t pn_offset = 9;
     const uint8_t pn_len = 2;
@@ -462,18 +462,18 @@ void test_short_header_roundtrip_null_out_pn()
     pkt[pn_offset + 1] = 0x07; // truncated packet number for full_pn = 7
     memcpy(pkt + pn_offset + pn_len, payload, sizeof payload);
 
-    size_t total = pc_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, /*full_pn*/ 7, sizeof payload, &s.client,
+    size_t total = protocore_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, /*full_pn*/ 7, sizeof payload, &s.client,
                                           /*is_long*/ PROTO_FALSE);
-    TEST_ASSERT_EQUAL_INT((int)(pn_offset + pn_len + sizeof payload + PC_AES128GCM_TAG_LEN), (int)total);
+    TEST_ASSERT_EQUAL_INT((int)(pn_offset + pn_len + sizeof payload + PROTOCORE_AES128GCM_TAG_LEN), (int)total);
 
     uint8_t out[8];
-    size_t got = pc_quic_packet_unprotect(pkt, pn_offset, total - pn_offset, /*largest_pn*/ 0, &s.client,
+    size_t got = protocore_quic_packet_unprotect(pkt, pn_offset, total - pn_offset, /*largest_pn*/ 0, &s.client,
                                           /*is_long*/ PROTO_FALSE, out, /*out_pn*/ NULL);
     TEST_ASSERT_EQUAL_INT((int)sizeof payload, (int)got);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(payload, out, sizeof payload);
 }
 
-// --- pc_quic_retry_integrity_tag guard ---------------------------------------------------------
+// --- protocore_quic_retry_integrity_tag guard ---------------------------------------------------------
 // Either an over-long ODCID (> QUIC_MAX_CID_LEN) or a Retry that would overflow the AAD scratch
 // buffer zeroes the tag rather than reading out of bounds. Drives both sides of the compound guard.
 void test_retry_tag_rejects_oversize()
@@ -487,7 +487,7 @@ void test_retry_tag_rejects_oversize()
 
     // ODCID length beyond the QUIC maximum -> first guard condition.
     memset(tag, 0xEE, sizeof tag);
-    pc_quic_retry_integrity_tag(odcid, QUIC_MAX_CID_LEN + 1, retry, sizeof retry, tag);
+    protocore_quic_retry_integrity_tag(odcid, QUIC_MAX_CID_LEN + 1, retry, sizeof retry, tag);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(zero, tag, 16);
 
     // A valid-length ODCID but a Retry so long that 1 + odcid_len + retry_len exceeds the AAD buffer
@@ -495,11 +495,11 @@ void test_retry_tag_rejects_oversize()
     static uint8_t big_retry[300];
     memset(big_retry, 0, sizeof big_retry);
     memset(tag, 0xEE, sizeof tag);
-    pc_quic_retry_integrity_tag(odcid, 8, big_retry, sizeof big_retry, tag);
+    protocore_quic_retry_integrity_tag(odcid, 8, big_retry, sizeof big_retry, tag);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(zero, tag, 16);
 }
 
-// --- pc_hkdf HKDF-Expand-Label multi-block output -----------------------------------------
+// --- protocore_hkdf HKDF-Expand-Label multi-block output -----------------------------------------
 // A recomputation of RFC 5869 HKDF-Expand over the RFC 8446 sec 7.1 HkdfLabel, using the
 // KAT-verified HMAC-SHA256 primitive. It checks the > 32-byte path of the library's expander, which
 // QUIC itself never exercises (all its outputs are <= 32).
@@ -531,12 +531,12 @@ static void expand_label_ref(const uint8_t secret[32], const char *label, uint8_
     while (done < out_len)
     {
         counter++;
-        pc_hmac_sha256_ctx c;
-        pc_hmac_sha256_init(&c, tw_c, secret, 32);
-        pc_hmac_sha256_update(&c, t, t_len);
-        pc_hmac_sha256_update(&c, info, p);
-        pc_hmac_sha256_update(&c, &counter, 1);
-        pc_hmac_sha256_final(&c, t);
+        protocore_hmac_sha256_ctx c;
+        protocore_hmac_sha256_init(&c, tw_c, secret, 32);
+        protocore_hmac_sha256_update(&c, t, t_len);
+        protocore_hmac_sha256_update(&c, info, p);
+        protocore_hmac_sha256_update(&c, &counter, 1);
+        protocore_hmac_sha256_final(&c, t);
         t_len = 32;
         size_t take = out_len - done;
         if (take > 32)
@@ -559,7 +559,7 @@ void test_hkdf_expand_label_multiblock()
     }
 
     uint8_t got[48], exp[48];
-    pc_hkdf_expand_label(tw, secret, "test label", got, sizeof got, PC_HKDF_LABEL_PREFIX);
+    protocore_hkdf_expand_label(tw, secret, "test label", got, sizeof got, PROTOCORE_HKDF_LABEL_PREFIX);
     expand_label_ref(secret, "test label", exp, sizeof exp);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, got, sizeof got);
 }

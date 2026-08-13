@@ -61,16 +61,16 @@ static void bench_borrow()
 
     BENCH_OP("scratch_span 256B", BENCH_ITERS, {
         PlaintextScope s;
-        g_sink = pc_span_ok(pc_plaintext_span(256, 16));
+        g_sink = protocore_span_ok(protocore_plaintext_span(256, 16));
     });
     BENCH_OP("secure_span 256B", BENCH_ITERS, {
         SecureScope s;
-        g_sink = pc_span_ok(pc_secure_span(256, 16));
+        g_sink = protocore_span_ok(protocore_secure_span(256, 16));
     });
     // The SSH reply buffer - the borrow the rule-19 sweep was aimed at.
     BENCH_OP("scratch_span 2048B (SSH reply)", BENCH_ITERS, {
         PlaintextScope s;
-        g_sink = pc_span_ok(pc_plaintext_span(2048, 16));
+        g_sink = protocore_span_ok(protocore_plaintext_span(2048, 16));
     });
 }
 
@@ -82,8 +82,8 @@ static void bench_probe()
 {
     Serial.println("PB -- where the time goes --");
     BENCH_OP("xTaskGetCurrentTaskHandle", BENCH_ITERS, g_sink = (xTaskGetCurrentTaskHandle() != nullptr));
-    BENCH_OP("pc_plaintext_mark alone", BENCH_ITERS, g_isink = (int)pc_plaintext_mark());
-    BENCH_OP("pc_secure_mark alone", BENCH_ITERS, g_isink = (int)pc_secure_mark());
+    BENCH_OP("protocore_plaintext_mark alone", BENCH_ITERS, g_isink = (int)protocore_plaintext_mark());
+    BENCH_OP("protocore_secure_mark alone", BENCH_ITERS, g_isink = (int)protocore_secure_mark());
 }
 
 static void bench_owns()
@@ -91,23 +91,23 @@ static void bench_owns()
     Serial.println("PB -- ownership test (the access control) --");
 
     PlaintextScope pscope;
-    pc_span plain = pc_plaintext_span(64, 16);
+    protocore_span plain = protocore_plaintext_span(64, 16);
     SecureScope sscope;
-    pc_span sec = pc_secure_span(64, 16);
+    protocore_span sec = protocore_secure_span(64, 16);
     static uint8_t foreign[16];
 
-    if (!pc_span_ok(plain) || !pc_span_ok(sec))
+    if (!protocore_span_ok(plain) || !protocore_span_ok(sec))
     {
         Serial.println("PB ownership: SKIPPED (a pool borrow failed)");
         return;
     }
 
-    BENCH_OP("pc_plaintext_owns hit", BENCH_ITERS, g_sink = pc_plaintext_owns(plain.buf));
+    BENCH_OP("protocore_plaintext_owns hit", BENCH_ITERS, g_sink = protocore_plaintext_owns(plain.buf));
     // The security-relevant direction: a secure pointer offered where plaintext is expected.
-    BENCH_OP("pc_plaintext_owns secure ptr (reject)", BENCH_ITERS, g_sink = pc_plaintext_owns(sec.buf));
-    BENCH_OP("pc_secure_owns hit", BENCH_ITERS, g_sink = pc_secure_owns(sec.buf));
-    BENCH_OP("pc_secure_owns foreign ptr (reject)", BENCH_ITERS, g_sink = pc_secure_owns(foreign));
-    BENCH_OP("pc_secure_slot_of", BENCH_ITERS, g_isink = pc_secure_slot_of(sec.buf));
+    BENCH_OP("protocore_plaintext_owns secure ptr (reject)", BENCH_ITERS, g_sink = protocore_plaintext_owns(sec.buf));
+    BENCH_OP("protocore_secure_owns hit", BENCH_ITERS, g_sink = protocore_secure_owns(sec.buf));
+    BENCH_OP("protocore_secure_owns foreign ptr (reject)", BENCH_ITERS, g_sink = protocore_secure_owns(foreign));
+    BENCH_OP("protocore_secure_slot_of", BENCH_ITERS, g_isink = protocore_secure_slot_of(sec.buf));
 }
 
 // Same mechanism on both sides, so the difference at equal byte counts IS the wipe.
@@ -115,13 +115,13 @@ static void bench_release(size_t n)
 {
     char label[48];
 
-    snprintf(label, sizeof(label), "pc_plaintext_release %uB", (unsigned)n);
+    snprintf(label, sizeof(label), "protocore_plaintext_release %uB", (unsigned)n);
     uint32_t c0 = cyc_now();
     for (uint32_t i = 0; i < BENCH_ITERS; i++)
     {
-        size_t mark = pc_plaintext_mark();
-        g_sink = pc_span_ok(pc_plaintext_span(n, 16));
-        pc_plaintext_release(mark);
+        size_t mark = protocore_plaintext_mark();
+        g_sink = protocore_span_ok(protocore_plaintext_span(n, 16));
+        protocore_plaintext_release(mark);
     }
     double plain = (double)(cyc_now() - c0) / (double)BENCH_ITERS;
     Serial.printf("PB %-34s cyc=%-9.1f ns=%.1f\n", label, plain, plain * 1000.0 / g_mhz);
@@ -131,9 +131,9 @@ static void bench_release(size_t n)
     c0 = cyc_now();
     for (uint32_t i = 0; i < BENCH_ITERS; i++)
     {
-        size_t mark = pc_secure_mark();
-        g_sink = pc_span_ok(pc_secure_span(n, 16));
-        pc_secure_release(mark);
+        size_t mark = protocore_secure_mark();
+        g_sink = protocore_span_ok(protocore_secure_span(n, 16));
+        protocore_secure_release(mark);
     }
     double secure = (double)(cyc_now() - c0) / (double)BENCH_ITERS;
     Serial.printf("PB %-34s cyc=%-9.1f ns=%.1f\n", label, secure, secure * 1000.0 / g_mhz);
@@ -188,15 +188,15 @@ static void bench_vs_traditional()
 
     BENCH_SPREAD("pool borrow+release", {
         PlaintextScope s;
-        pc_span sp = pc_plaintext_span(256, 16);
-        g_sink = pc_span_ok(sp);
+        protocore_span sp = protocore_plaintext_span(256, 16);
+        g_sink = protocore_span_ok(sp);
     });
 
     // Two boundary crossings instead of three: mark+alloc in the ctor, release in the dtor. Same
     // work, one fewer call, and the slot resolved once.
     BENCH_SPREAD("pool borrow+release (2-call)", {
         PlaintextBorrow b(256, 16);
-        g_sink = pc_span_ok(b.span());
+        g_sink = protocore_span_ok(b.span());
     });
 
     BENCH_SPREAD("malloc+free", {
@@ -209,15 +209,15 @@ static void bench_vs_traditional()
     // which is what a caller must do today to get the same guarantee.
     BENCH_SPREAD("secure borrow+release (wipes)", {
         SecureScope s;
-        pc_span sp = pc_secure_span(256, 16);
-        g_sink = pc_span_ok(sp);
+        protocore_span sp = protocore_secure_span(256, 16);
+        g_sink = protocore_span_ok(sp);
     });
 
     BENCH_SPREAD("malloc+wipe+free", {
         void *p = malloc(256);
         if (p != nullptr)
         {
-            pc_secure_wipe(p, 256);
+            protocore_secure_wipe(p, 256);
         }
         g_sink = (p != nullptr);
         free(p);
@@ -236,8 +236,8 @@ static void bench_vs_traditional()
     BENCH_SPREAD("pool borrow 256/2048 alternating", {
         static bool _big2 = false;
         PlaintextScope s;
-        pc_span sp = pc_plaintext_span(_big2 ? 2048 : 256, 16);
-        g_sink = pc_span_ok(sp);
+        protocore_span sp = protocore_plaintext_span(_big2 ? 2048 : 256, 16);
+        g_sink = protocore_span_ok(sp);
         _big2 = !_big2;
     });
 }
@@ -247,7 +247,8 @@ static void bench_task(void *)
     g_mhz = (double)getCpuFrequencyMhz();
     Serial.println("PB ==== memory-manager microbench start (CCOUNT) ====");
     Serial.printf("PB cpu_mhz=%u slots=%u plaintext_slot=%uB secure_slot=%uB\n", (unsigned)getCpuFrequencyMhz(),
-                  (unsigned)PC_REG_POOL_SLOTS, (unsigned)pc_plaintext_capacity(), (unsigned)pc_secure_capacity());
+                  (unsigned)PROTOCORE_REG_POOL_SLOTS, (unsigned)protocore_plaintext_capacity(),
+                  (unsigned)protocore_secure_capacity());
 
     bench_borrow();
     bench_owns();
@@ -260,8 +261,9 @@ static void bench_task(void *)
     bench_release(2048);
 
     // The backward direction of the size constants: what the pools actually needed.
-    Serial.printf("PB high_water plaintext=%u/%uB secure=%u/%uB\n", (unsigned)pc_plaintext_high_water(),
-                  (unsigned)pc_plaintext_capacity(), (unsigned)pc_secure_high_water(), (unsigned)pc_secure_capacity());
+    Serial.printf("PB high_water plaintext=%u/%uB secure=%u/%uB\n", (unsigned)protocore_plaintext_high_water(),
+                  (unsigned)protocore_plaintext_capacity(), (unsigned)protocore_secure_high_water(),
+                  (unsigned)protocore_secure_capacity());
     Serial.println("PB ==== done ====");
     vTaskDelete(nullptr);
 }

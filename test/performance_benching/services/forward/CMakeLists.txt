@@ -8,12 +8,12 @@ cmake_minimum_required(VERSION 3.16)
 # This bench's feature switches, applied to the whole build so they reach the separately-compiled
 # library and not just this translation unit. Must precede project().
 add_compile_definitions(
-    PC_ENABLE_FORWARD=1
-    PC_FWD_MAX_IFACES=4
-    PC_FWD_MAX_RULES=4
-    PC_FWD_MAX_ACL=4
-    PC_FWD_MAX_ROUTES=4
-    PC_FWD_INSPECT=1
+    PROTOCORE_ENABLE_FORWARD=1
+    PROTOCORE_FWD_MAX_IFACES=4
+    PROTOCORE_FWD_MAX_RULES=4
+    PROTOCORE_FWD_MAX_ACL=4
+    PROTOCORE_FWD_MAX_ROUTES=4
+    PROTOCORE_FWD_INSPECT=1
 )
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../common/bench_project.cmake")

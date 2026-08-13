@@ -12,12 +12,12 @@
 
 // tcp.cpp + listener.cpp are compiled into the native env - no stubs needed.
 
-// Build a v4 pc_ip from a host-order word (0xC0A80005 -> 192.168.0.5). The accept-time
-// gates key on the full family-tagged address, so the tests carry a pc_ip, not a uint32.
-static pc_ip v4w(uint32_t host_order)
+// Build a v4 protocore_ip from a host-order word (0xC0A80005 -> 192.168.0.5). The accept-time
+// gates key on the full family-tagged address, so the tests carry a protocore_ip, not a uint32.
+static protocore_ip v4w(uint32_t host_order)
 {
-    return pc_ip_from_v4_octets((uint8_t)(host_order >> 24), (uint8_t)(host_order >> 16), (uint8_t)(host_order >> 8),
-                                (uint8_t)host_order);
+    return protocore_ip_from_v4_octets((uint8_t)(host_order >> 24), (uint8_t)(host_order >> 16),
+                                       (uint8_t)(host_order >> 8), (uint8_t)host_order);
 }
 
 void setUp()
@@ -469,7 +469,7 @@ void stress_ring_buffer_byte_by_byte_fill_and_drain()
 void test_accept_throttle_blocks_over_budget()
 {
     Tcp.listener->accept_throttle_reset();
-    for (int i = 0; i < PC_ACCEPT_THROTTLE_MAX; i++)
+    for (int i = 0; i < PROTOCORE_ACCEPT_THROTTLE_MAX; i++)
     {
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(0));
     }
@@ -480,13 +480,13 @@ void test_accept_throttle_blocks_over_budget()
 void test_accept_throttle_window_refills()
 {
     Tcp.listener->accept_throttle_reset();
-    for (int i = 0; i < PC_ACCEPT_THROTTLE_MAX; i++)
+    for (int i = 0; i < PROTOCORE_ACCEPT_THROTTLE_MAX; i++)
     {
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(10));
     }
     TEST_ASSERT_FALSE(Tcp.listener->accept_allowed(10));
     // One full window later the counter resets.
-    TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(10 + PC_ACCEPT_THROTTLE_WINDOW_MS));
+    TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(10 + PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS));
 }
 
 // The unsigned window math survives a millis() rollover near 2^32.
@@ -496,7 +496,7 @@ void test_accept_throttle_handles_rollover()
     uint32_t near_max = 0xFFFFFFFFu - 5;
     TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(near_max));
     // Wrap past zero: elapsed = (small - near_max) wraps to a large window jump.
-    TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(near_max + PC_ACCEPT_THROTTLE_WINDOW_MS));
+    TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(near_max + PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS));
 }
 
 // ====================================================================
@@ -507,8 +507,8 @@ void test_accept_throttle_handles_rollover()
 void test_per_ip_throttle_blocks_over_budget()
 {
     Tcp.listener->per_ip_throttle_reset();
-    pc_ip ip = v4w(0xC0A80005u); // 192.168.0.5
-    for (int i = 0; i < PC_PER_IP_THROTTLE_MAX; i++)
+    protocore_ip ip = v4w(0xC0A80005u); // 192.168.0.5
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, 0));
     }
@@ -519,8 +519,8 @@ void test_per_ip_throttle_blocks_over_budget()
 void test_per_ip_throttle_isolates_addresses()
 {
     Tcp.listener->per_ip_throttle_reset();
-    pc_ip noisy = v4w(0x0A000001u), quiet = v4w(0x0A000002u);
-    for (int i = 0; i < PC_PER_IP_THROTTLE_MAX; i++)
+    protocore_ip noisy = v4w(0x0A000001u), quiet = v4w(0x0A000002u);
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&noisy, 0));
     }
@@ -532,13 +532,13 @@ void test_per_ip_throttle_isolates_addresses()
 void test_per_ip_throttle_window_refills()
 {
     Tcp.listener->per_ip_throttle_reset();
-    pc_ip ip = v4w(0x0A000003u);
-    for (int i = 0; i < PC_PER_IP_THROTTLE_MAX; i++)
+    protocore_ip ip = v4w(0x0A000003u);
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, 50));
     }
     TEST_ASSERT_FALSE(Tcp.listener->accept_allowed_ip(&ip, 50));
-    TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, 50 + PC_PER_IP_THROTTLE_WINDOW_MS));
+    TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, 50 + PROTOCORE_PER_IP_THROTTLE_WINDOW_MS));
 }
 
 // When the bucket table is full of distinct addresses, a brand-new address still
@@ -546,12 +546,12 @@ void test_per_ip_throttle_window_refills()
 void test_per_ip_throttle_evicts_when_full()
 {
     Tcp.listener->per_ip_throttle_reset();
-    for (int i = 0; i < PC_PER_IP_THROTTLE_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
-        pc_ip ip = v4w(0xAC100001u + (uint32_t)i);
+        protocore_ip ip = v4w(0xAC100001u + (uint32_t)i);
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, 100));
     }
-    pc_ip fresh = v4w(0xDEADBEEFu);
+    protocore_ip fresh = v4w(0xDEADBEEFu);
     TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&fresh, 100)); // evicts an old bucket
 }
 
@@ -560,9 +560,9 @@ void test_per_ip_throttle_evicts_when_full()
 void test_per_ip_throttle_zero_ip_always_allowed()
 {
     Tcp.listener->per_ip_throttle_reset();
-    pc_ip none;
-    none.family = PC_IP_NONE;
-    for (int i = 0; i < PC_PER_IP_THROTTLE_MAX + 5; i++)
+    protocore_ip none;
+    none.family = PROTOCORE_IP_NONE;
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX + 5; i++)
     {
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&none, 0));
     }
@@ -573,13 +573,13 @@ void test_per_ip_throttle_zero_ip_always_allowed()
 void test_per_ip_throttle_v6_distinct()
 {
     Tcp.listener->per_ip_throttle_reset();
-    pc_ip a;
-    a.family = PC_IP_NONE;
-    pc_ip b;
-    b.family = PC_IP_NONE;
+    protocore_ip a;
+    a.family = PROTOCORE_IP_NONE;
+    protocore_ip b;
+    b.family = PROTOCORE_IP_NONE;
     TEST_ASSERT_TRUE(Ip.parse("2001:db8::1", &a));
     TEST_ASSERT_TRUE(Ip.parse("2001:db8::2", &b));
-    for (int i = 0; i < PC_PER_IP_THROTTLE_MAX; i++)
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&a, 0));
     }
@@ -591,10 +591,10 @@ void test_per_ip_throttle_v6_distinct()
 void test_per_ip_throttle_handles_rollover()
 {
     Tcp.listener->per_ip_throttle_reset();
-    pc_ip ip = v4w(0x0A000009u);
+    protocore_ip ip = v4w(0x0A000009u);
     uint32_t near_max = 0xFFFFFFFFu - 5;
     TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, near_max));
-    TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, near_max + PC_PER_IP_THROTTLE_WINDOW_MS));
+    TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, near_max + PROTOCORE_PER_IP_THROTTLE_WINDOW_MS));
 }
 
 // ====================================================================
@@ -606,9 +606,9 @@ void test_per_ip_throttle_handles_rollover()
 void test_ip_allowlist_empty_allows_all()
 {
     Tcp.listener->ip_allowlist_reset();
-    pc_ip a = v4w(0xC0A8010Au), b = v4w(0x08080808u); // 192.168.1.10, 8.8.8.8
-    pc_ip none;
-    none.family = PC_IP_NONE;
+    protocore_ip a = v4w(0xC0A8010Au), b = v4w(0x08080808u); // 192.168.1.10, 8.8.8.8
+    protocore_ip none;
+    none.family = PROTOCORE_IP_NONE;
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&a));
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&b));
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&none));
@@ -618,9 +618,9 @@ void test_ip_allowlist_empty_allows_all()
 void test_ip_allowlist_host_match()
 {
     Tcp.listener->ip_allowlist_reset();
-    pc_ip net = v4w(0xC0A8010Au); // 192.168.1.10
+    protocore_ip net = v4w(0xC0A8010Au); // 192.168.1.10
     TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add(&net, 32));
-    pc_ip host = v4w(0xC0A8010Au), near = v4w(0xC0A8010Bu), far = v4w(0x0A000001u);
+    protocore_ip host = v4w(0xC0A8010Au), near = v4w(0xC0A8010Bu), far = v4w(0x0A000001u);
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&host));
     TEST_ASSERT_FALSE(Tcp.listener->ip_allowed(&near));
     TEST_ASSERT_FALSE(Tcp.listener->ip_allowed(&far));
@@ -630,9 +630,9 @@ void test_ip_allowlist_host_match()
 void test_ip_allowlist_cidr_match()
 {
     Tcp.listener->ip_allowlist_reset();
-    pc_ip net = v4w(0xC0A80100u); // 192.168.1.0
+    protocore_ip net = v4w(0xC0A80100u); // 192.168.1.0
     TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add(&net, 24));
-    pc_ip lo = v4w(0xC0A80101u), hi = v4w(0xC0A801FEu), out = v4w(0xC0A80201u);
+    protocore_ip lo = v4w(0xC0A80101u), hi = v4w(0xC0A801FEu), out = v4w(0xC0A80201u);
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&lo));
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&hi));
     TEST_ASSERT_FALSE(Tcp.listener->ip_allowed(&out));
@@ -643,9 +643,9 @@ void test_ip_allowlist_cidr_match()
 void test_ip_allowlist_masks_host_bits()
 {
     Tcp.listener->ip_allowlist_reset();
-    pc_ip net = v4w(0xC0A80137u); // 192.168.1.55 as a /24
+    protocore_ip net = v4w(0xC0A80137u); // 192.168.1.55 as a /24
     TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add(&net, 24));
-    pc_ip lo = v4w(0xC0A80101u), hi = v4w(0xC0A801C8u);
+    protocore_ip lo = v4w(0xC0A80101u), hi = v4w(0xC0A801C8u);
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&lo));
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&hi));
 }
@@ -654,10 +654,10 @@ void test_ip_allowlist_masks_host_bits()
 void test_ip_allowlist_multiple_rules()
 {
     Tcp.listener->ip_allowlist_reset();
-    pc_ip r1 = v4w(0x0A000000u), r2 = v4w(0xC0A80000u); // 10.0.0.0/8, 192.168.0.0/16
+    protocore_ip r1 = v4w(0x0A000000u), r2 = v4w(0xC0A80000u); // 10.0.0.0/8, 192.168.0.0/16
     TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add(&r1, 8));
     TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add(&r2, 16));
-    pc_ip a = v4w(0x0A010203u), b = v4w(0xC0A80505u), out = v4w(0xAC100001u);
+    protocore_ip a = v4w(0x0A010203u), b = v4w(0xC0A80505u), out = v4w(0xAC100001u);
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&a));
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&b));
     TEST_ASSERT_FALSE(Tcp.listener->ip_allowed(&out));
@@ -667,9 +667,9 @@ void test_ip_allowlist_multiple_rules()
 void test_ip_allowlist_zero_prefix_matches_all()
 {
     Tcp.listener->ip_allowlist_reset();
-    pc_ip z = v4w(0u);
+    protocore_ip z = v4w(0u);
     TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add(&z, 0));
-    pc_ip a = v4w(0x01020304u), b = v4w(0xFFFFFFFFu);
+    protocore_ip a = v4w(0x01020304u), b = v4w(0xFFFFFFFFu);
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&a));
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&b));
 }
@@ -679,15 +679,15 @@ void test_ip_allowlist_v6_cidr()
 {
     Tcp.listener->ip_allowlist_reset();
     TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add_cidr("2001:db8::/32"));
-    pc_ip in;
-    in.family = PC_IP_NONE;
-    pc_ip out;
-    out.family = PC_IP_NONE;
+    protocore_ip in;
+    in.family = PROTOCORE_IP_NONE;
+    protocore_ip out;
+    out.family = PROTOCORE_IP_NONE;
     TEST_ASSERT_TRUE(Ip.parse("2001:db8:0:0:1234::abcd", &in));
     TEST_ASSERT_TRUE(Ip.parse("2001:db9::1", &out));
     TEST_ASSERT_TRUE(Tcp.listener->ip_allowed(&in));
     TEST_ASSERT_FALSE(Tcp.listener->ip_allowed(&out));
-    pc_ip v4peer = v4w(0xC0A80101u);
+    protocore_ip v4peer = v4w(0xC0A80101u);
     TEST_ASSERT_FALSE(Tcp.listener->ip_allowed(&v4peer)); // a v4 peer never matches a v6 rule
 }
 
@@ -695,7 +695,7 @@ void test_ip_allowlist_v6_cidr()
 void test_ip_allowlist_rejects_bad_prefix()
 {
     Tcp.listener->ip_allowlist_reset();
-    pc_ip net = v4w(0xC0A80100u);
+    protocore_ip net = v4w(0xC0A80100u);
     TEST_ASSERT_FALSE(Tcp.listener->ip_allow_add(&net, 33));
 }
 
@@ -703,12 +703,12 @@ void test_ip_allowlist_rejects_bad_prefix()
 void test_ip_allowlist_table_full()
 {
     Tcp.listener->ip_allowlist_reset();
-    for (int i = 0; i < PC_IP_ALLOWLIST_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_IP_ALLOWLIST_SLOTS; i++)
     {
-        pc_ip r = v4w(0x0A000000u + (uint32_t)i);
+        protocore_ip r = v4w(0x0A000000u + (uint32_t)i);
         TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add(&r, 32));
     }
-    pc_ip overflow = v4w(0x0A010000u);
+    protocore_ip overflow = v4w(0x0A010000u);
     TEST_ASSERT_FALSE(Tcp.listener->ip_allow_add(&overflow, 32));
 }
 
@@ -720,14 +720,14 @@ void test_ip_allowlist_table_full()
 void test_per_ip_throttle_scans_expired_and_lru_across_a_full_table()
 {
     Tcp.listener->per_ip_throttle_reset();
-    for (int i = 0; i < PC_PER_IP_THROTTLE_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
-        pc_ip ip = v4w(0x0A000000u + (uint32_t)(i + 1));
-        uint32_t start = (uint32_t)(PC_PER_IP_THROTTLE_SLOTS - 1 - i) * 100;
+        protocore_ip ip = v4w(0x0A000000u + (uint32_t)(i + 1));
+        uint32_t start = (uint32_t)(PROTOCORE_PER_IP_THROTTLE_SLOTS - 1 - i) * 100;
         TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&ip, start));
     }
-    uint32_t now = PC_PER_IP_THROTTLE_WINDOW_MS + (uint32_t)PC_PER_IP_THROTTLE_SLOTS * 100;
-    pc_ip fresh = v4w(0xAC100001u);
+    uint32_t now = PROTOCORE_PER_IP_THROTTLE_WINDOW_MS + (uint32_t)PROTOCORE_PER_IP_THROTTLE_SLOTS * 100;
+    protocore_ip fresh = v4w(0xAC100001u);
     TEST_ASSERT_TRUE(Tcp.listener->accept_allowed_ip(&fresh, now)); // table full, every bucket expired -> reuses one
 }
 
@@ -739,8 +739,8 @@ void test_ip_allowlist_rejects_null_args()
     TEST_ASSERT_FALSE(Tcp.listener->ip_allow_add(NULL, 24));
     TEST_ASSERT_FALSE(Tcp.listener->ip_allow_add_cidr(NULL));
 
-    pc_ip none;
-    none.family = PC_IP_NONE;
+    protocore_ip none;
+    none.family = PROTOCORE_IP_NONE;
     TEST_ASSERT_FALSE(Tcp.listener->ip_allow_add(&none, 24));
 }
 
@@ -752,7 +752,7 @@ void test_ip_allowlist_rejects_overlong_address_text()
     char too_long[64];
     for (int i = 0; i < 60; i++)
     {
-        too_long[i] = '1'; // no '/' at all -> parser keeps scanning past PC_IP_STR_MAX
+        too_long[i] = '1'; // no '/' at all -> parser keeps scanning past PROTOCORE_IP_STR_MAX
     }
     too_long[60] = '\0';
     TEST_ASSERT_FALSE(Tcp.listener->ip_allow_add_cidr(too_long));
@@ -813,7 +813,7 @@ void test_dynamic_listener_lifecycle()
     TEST_ASSERT_FALSE(listener_pool[1].active);
 }
 
-// The live-slot bitmask + ctz allocator (Tcp.conn->set_state / pc_conn_alloc_free): claim, free, pool-full,
+// The live-slot bitmask + ctz allocator (Tcp.conn->set_state / protocore_conn_alloc_free): claim, free, pool-full,
 // lowest-first, and that CONN_CLOSING keeps a slot reserved. setUp() ran Tcp.conn->init() -> all slots free.
 void test_freeslot_bitmask_alloc()
 {
@@ -842,7 +842,7 @@ void test_freeslot_bitmask_alloc()
 // ====================================================================
 // Direct-call coverage for tcp.cpp low-level paths not reached through
 // the tests above (bounds guards, host-build branches, and the raw lwIP
-// callbacks driven directly with a fabricated pc_pcb / pbuf).
+// callbacks driven directly with a fabricated protocore_pcb / pbuf).
 // ====================================================================
 
 // Out-of-range slot guards are pure defensive bounds checks - direct-call them to
@@ -864,8 +864,8 @@ void test_bounds_guards_reject_out_of_range_slots()
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
-// pc_conn_sndbuf / Tcp.conn->close / Tcp.conn->abort_slot all no-op safely when the
-// slot's pcb is already null (never attached, or already torn down); pc_conn_sndbuf
+// protocore_conn_sndbuf / Tcp.conn->close / Tcp.conn->abort_slot all no-op safely when the
+// slot's pcb is already null (never attached, or already torn down); protocore_conn_sndbuf
 // with a live pcb reports the mock's advertised send window instead.
 void test_null_pcb_slots_are_safe_no_ops()
 {
@@ -874,14 +874,14 @@ void test_null_pcb_slots_are_safe_no_ops()
     Tcp.conn->close(0);      // no pcb -> returns before touching state
     Tcp.conn->abort_slot(0); // same
 
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[1].pcb = &fake;
     TEST_ASSERT_EQUAL_UINT16(MOCK_SNDBUF_DEFAULT, Tcp.conn->sndbuf(1));
 }
 
 // Tcp.conn->ack_consumed(): out-of-range slot and an inactive slot are no-ops; an ACTIVE
 // slot with unacked bytes advances rx_acked and issues a real tcp_recved() (marshaled
-// via PC_OP_RECVED off-host, called directly here) for exactly the consumed count.
+// via PROTOCORE_OP_RECVED off-host, called directly here) for exactly the consumed count.
 void test_ack_consumed_bounds_inactive_and_real_advance()
 {
     Tcp.conn->ack_consumed((uint8_t)(MAX_CONNS + 1)); // out of range: no-op
@@ -892,7 +892,7 @@ void test_ack_consumed_bounds_inactive_and_real_advance()
     Tcp.conn->ack_consumed(0);
     TEST_ASSERT_EQUAL(0u, (size_t)conn_pool[0].rx_acked); // untouched
 
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_ACTIVE);
     conn_pool[0].rx_tail = 5;
@@ -908,7 +908,7 @@ void test_ack_consumed_bounds_inactive_and_real_advance()
 // failed write reports failure instead of silently "succeeding" and flushing anyway.
 void test_send_flush_success_and_write_failure()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].pcb = &fake;
     TEST_ASSERT_TRUE(Tcp.conn->send_flush(0, "x", 1));
 
@@ -924,7 +924,7 @@ void test_raw_send_null_success_and_failure()
 {
     TEST_ASSERT_FALSE(Tcp.conn->raw_send(NULL, "x", 1));
 
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     TEST_ASSERT_FALSE(Tcp.conn->raw_send(&fake, "hello", 5)); // no slot holds it
 
     conn_pool[0].pcb = &fake; // now it is a live connection's control block
@@ -941,7 +941,7 @@ void test_raw_send_null_success_and_failure()
 // mock's call counter, since tcp_abort itself has no other observable effect).
 void test_close_falls_back_to_abort_on_tcp_close_failure()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_ACTIVE);
@@ -974,7 +974,7 @@ void test_begin_close_finalizes_immediately_with_and_without_a_pcb()
 
     // With a pcb whose send queue already drained (snd_queuelen==0, the default): finalizes
     // immediately via the ordinary tcp_close path.
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[2].id = 2;
     conn_pool[2].pcb = &fake;
     Tcp.conn->set_state(2, CONN_ACTIVE);
@@ -984,7 +984,7 @@ void test_begin_close_finalizes_immediately_with_and_without_a_pcb()
     TEST_ASSERT_EQUAL_INT(before, mock_abort_call_count()); // ordinary close, no abort
 
     // Same, but tcp_close is forced to fail: closing_finalize falls back to tcp_abort.
-    pc_pcb fake2 = {0};
+    protocore_pcb fake2 = {0};
     conn_pool[3].id = 3;
     conn_pool[3].pcb = &fake2;
     Tcp.conn->set_state(3, CONN_ACTIVE);
@@ -1000,9 +1000,9 @@ void test_remote_addr_accessors_host_stub()
 {
     TEST_ASSERT_EQUAL_UINT32(0, Tcp.conn->remote_ip(0));
 
-    pc_ip out;
+    protocore_ip out;
     TEST_ASSERT_FALSE(Tcp.conn->remote_addr(0, &out));
-    TEST_ASSERT_EQUAL_INT((int)PC_IP_NONE, (int)out.family);
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_IP_NONE, (int)out.family);
     TEST_ASSERT_FALSE(Tcp.conn->remote_addr(0, NULL)); // null out is tolerated, not dereferenced
 }
 
@@ -1010,8 +1010,8 @@ void test_remote_addr_accessors_host_stub()
 // leaves a pcb-less slot alone (nothing to abort), and frees an already-free slot as a no-op.
 void test_stop_aborts_live_slots_and_skips_the_rest()
 {
-    pc_pcb fake_active = {0};
-    pc_pcb fake_closing = {0};
+    protocore_pcb fake_active = {0};
+    protocore_pcb fake_closing = {0};
 
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake_active;
@@ -1041,10 +1041,10 @@ void test_stop_aborts_live_slots_and_skips_the_rest()
 }
 
 // Tcp.conn->check_timeouts()'s CLOSING branch: a slot dwelling in CLOSING survives until
-// PC_CLOSING_TIMEOUT_MS, then is force-freed (with, and without, a live pcb).
+// PROTOCORE_CLOSING_TIMEOUT_MS, then is force-freed (with, and without, a live pcb).
 void test_check_timeouts_reaps_stale_closing_slots()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
 
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
@@ -1056,13 +1056,13 @@ void test_check_timeouts_reaps_stale_closing_slots()
     Tcp.conn->set_state(1, CONN_CLOSING);
     conn_pool[1].last_activity_ms = 0;
 
-    set_millis(PC_CLOSING_TIMEOUT_MS - 1); // not yet stale: both must survive
+    set_millis(PROTOCORE_CLOSING_TIMEOUT_MS - 1); // not yet stale: both must survive
     Tcp.conn->check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[1].state);
 
     int before = mock_abort_call_count();
-    set_millis(PC_CLOSING_TIMEOUT_MS); // now stale: force-freed
+    set_millis(PROTOCORE_CLOSING_TIMEOUT_MS); // now stale: force-freed
     Tcp.conn->check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
@@ -1074,7 +1074,7 @@ void test_check_timeouts_reaps_stale_closing_slots()
 // pcb==NULL case the constants/stress tests above already cover).
 void test_check_timeouts_detaches_and_aborts_a_real_pcb()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_ACTIVE);
@@ -1107,23 +1107,24 @@ void test_touch_active_bounds_and_state_guard()
 // real segment and a null (FIN) pbuf without processing it.
 void test_recv_cb_null_arg_and_closing_drain()
 {
-    pc_pcb fake = {0};
-    TEST_ASSERT_EQUAL_INT(PC_NET_ERR_VAL, lowlevel_recv_cb(NULL, &fake, NULL, PC_NET_OK));
+    protocore_pcb fake = {0};
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL, lowlevel_recv_cb(NULL, &fake, NULL, PROTOCORE_NET_OK));
 
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_CLOSING);
 
-    pc_pbuf seg = {0};
+    protocore_pbuf seg = {0};
     uint8_t payload[4] = {1, 2, 3, 4};
     seg.payload = payload;
     seg.len = 4;
     seg.tot_len = 4;
     seg.next = NULL;
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state); // still dwelling
 
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK)); // FIN while closing
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK,
+                          lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PROTOCORE_NET_OK)); // FIN while closing
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 }
 
@@ -1132,7 +1133,7 @@ void test_recv_cb_null_arg_and_closing_drain()
 // fallback as Tcp.conn->close()/closing_finalize() applies here too.
 void test_recv_cb_fin_close_falls_back_to_abort_on_tcp_close_failure()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     conn_pool[0].listener_id = 0;
@@ -1140,7 +1141,7 @@ void test_recv_cb_fin_close_falls_back_to_abort_on_tcp_close_failure()
 
     mock_close_fail_once();
     int before = mock_abort_call_count();
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
@@ -1149,14 +1150,14 @@ void test_recv_cb_fin_close_falls_back_to_abort_on_tcp_close_failure()
 // The ordinary (tcp_close succeeds) side of the same FIN-close path: no abort.
 void test_recv_cb_fin_close_ordinary_path_does_not_abort()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     conn_pool[0].listener_id = 0;
     Tcp.conn->set_state(0, CONN_ACTIVE);
 
     int before = mock_abort_call_count();
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_INT(before, mock_abort_call_count());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
@@ -1165,18 +1166,18 @@ void test_recv_cb_fin_close_ordinary_path_does_not_abort()
 // connection) rejects incoming data instead of touching a slot no one owns.
 void test_recv_cb_rejects_non_active_slot()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_FREE);
-    TEST_ASSERT_EQUAL_INT(PC_NET_ERR_VAL, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PROTOCORE_NET_OK));
 }
 
 // A segment larger than the ring's free space is refused (ERR_MEM, lwIP keeps and
 // redelivers it) rather than partially copied - lossless backpressure.
 void test_recv_cb_refuses_a_segment_that_does_not_fit()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_ACTIVE);
@@ -1184,14 +1185,14 @@ void test_recv_cb_refuses_a_segment_that_does_not_fit()
     conn_pool[0].rx_tail = 0;
     conn_pool[0].last_activity_ms = 5;
 
-    pc_pbuf seg = {0};
+    protocore_pbuf seg = {0};
     uint8_t payload[10] = {0};
     seg.payload = payload;
     seg.len = 10;
     seg.tot_len = 10; // > the 1 free byte
     seg.next = NULL;
 
-    TEST_ASSERT_EQUAL_INT(PC_NET_ERR_MEM, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_MEM, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_UINT32(5, conn_pool[0].last_activity_ms); // NOT refreshed on refusal (see tcp.cpp comment)
 }
 
@@ -1200,7 +1201,7 @@ void test_recv_cb_refuses_a_segment_that_does_not_fit()
 // armed on the first byte only, and an EVT_DATA event is posted.
 void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     conn_pool[0].listener_id = 0; // listener 0 is armed by setUp()'s Tcp.listener->add(0, 80, ..., PROTO_FALSE)
@@ -1213,18 +1214,18 @@ void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
 
     uint8_t part1[3] = {'a', 'b', 'c'};
     uint8_t part2[2] = {'d', 'e'};
-    pc_pbuf seg2 = {0};
+    protocore_pbuf seg2 = {0};
     seg2.payload = part2;
     seg2.len = 2;
     seg2.tot_len = 2;
     seg2.next = NULL;
-    pc_pbuf seg1 = {0};
+    protocore_pbuf seg1 = {0};
     seg1.payload = part1;
     seg1.len = 3;
     seg1.tot_len = 5; // whole-chain total, as lwIP sets it on the head pbuf
     seg1.next = &seg2;
 
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg1, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg1, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_UINT32(4242, conn_pool[0].last_activity_ms);
     TEST_ASSERT_EQUAL_UINT32(4242, conn_pool[0].req_start_ms); // first byte of a new request arms the deadline
     TEST_ASSERT_EQUAL(5u, (size_t)conn_pool[0].rx_head);       // 5 bytes copied
@@ -1238,23 +1239,23 @@ void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
 
     // A second segment must NOT re-arm req_start_ms (only the first byte of a request does).
     uint8_t part3[1] = {'f'};
-    pc_pbuf seg3 = {0};
+    protocore_pbuf seg3 = {0};
     seg3.payload = part3;
     seg3.len = 1;
     seg3.tot_len = 1;
     seg3.next = NULL;
     set_millis(5000);
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg3, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg3, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_UINT32(4242, conn_pool[0].req_start_ms); // unchanged
 }
 
-// Edge cases in the accept-and-copy path: pc_millis()==0 at the very first byte (the
+// Edge cases in the accept-and-copy path: protocore_millis()==0 at the very first byte (the
 // req_start_ms ternary's "rx_now falsy" side - armed to 1, not left at the 0 "unarmed"
 // sentinel), and a zero-length segment (fits trivially, but posts no EVT_DATA -
 // there is nothing to drain).
 void test_recv_cb_zero_clock_and_zero_length_segment_edge_cases()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     conn_pool[0].listener_id = 0;
@@ -1262,23 +1263,23 @@ void test_recv_cb_zero_clock_and_zero_length_segment_edge_cases()
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
     conn_pool[0].req_start_ms = 0;
-    set_millis(0); // pc_millis() reports 0 at the very first byte
+    set_millis(0); // protocore_millis() reports 0 at the very first byte
 
     uint8_t byte = 'z';
-    pc_pbuf seg = {0};
+    protocore_pbuf seg = {0};
     seg.payload = &byte;
     seg.len = 1;
     seg.tot_len = 1;
     seg.next = NULL;
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_UINT32(1, conn_pool[0].req_start_ms); // rx_now==0 -> armed to 1, not left "unarmed"
 
-    pc_pbuf empty_seg = {0};
+    protocore_pbuf empty_seg = {0};
     empty_seg.payload = NULL;
     empty_seg.len = 0;
     empty_seg.tot_len = 0;
     empty_seg.next = NULL;
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &empty_seg, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &empty_seg, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL(1u, (size_t)conn_pool[0].rx_head); // unchanged: nothing to copy
 }
 
@@ -1286,22 +1287,22 @@ void test_recv_cb_zero_clock_and_zero_length_segment_edge_cases()
 // and a CLOSING slot finalizes through closing_check once its send queue has drained.
 void test_sent_cb_null_active_and_closing()
 {
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_sent_cb(NULL, NULL, 0)); // no-op, no crash
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_sent_cb(NULL, NULL, 0)); // no-op, no crash
 
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_ACTIVE);
     conn_pool[0].last_activity_ms = 0;
     set_millis(777);
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_sent_cb(&conn_pool[0], &fake, 10));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_sent_cb(&conn_pool[0], &fake, 10));
     TEST_ASSERT_EQUAL_UINT32(777, conn_pool[0].last_activity_ms);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // untouched
 
     conn_pool[1].id = 1;
     conn_pool[1].pcb = &fake;
     Tcp.conn->set_state(1, CONN_CLOSING);
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_sent_cb(&conn_pool[1], &fake, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_sent_cb(&conn_pool[1], &fake, 0));
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state); // finalized (drained: snd_queuelen==0)
 }
 
@@ -1309,20 +1310,20 @@ void test_sent_cb_null_active_and_closing()
 // that was already dwelling in CLOSING just releases the slot (no re-posted close event).
 void test_err_cb_null_active_and_closing()
 {
-    lowlevel_err_cb(NULL, PC_NET_ERR_ABRT); // no-op, no crash
+    lowlevel_err_cb(NULL, PROTOCORE_NET_ERR_ABRT); // no-op, no crash
 
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     Tcp.conn->set_state(0, CONN_ACTIVE);
-    lowlevel_err_cb(&conn_pool[0], PC_NET_ERR_ABRT);
+    lowlevel_err_cb(&conn_pool[0], PROTOCORE_NET_ERR_ABRT);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 
     conn_pool[1].id = 1;
     conn_pool[1].pcb = &fake;
     Tcp.conn->set_state(1, CONN_CLOSING);
-    lowlevel_err_cb(&conn_pool[1], PC_NET_ERR_ABRT);
+    lowlevel_err_cb(&conn_pool[1], PROTOCORE_NET_ERR_ABRT);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
     TEST_ASSERT_NULL(conn_pool[1].pcb);
 }
@@ -1339,22 +1340,24 @@ void test_err_cb_null_active_and_closing()
 // A non-ERR_OK accept error, or a null newpcb, is rejected without touching the pool.
 void test_accept_cb_rejects_error_and_null_pcb()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     int32_t before = Tcp.conn->alloc_free();
 
-    TEST_ASSERT_EQUAL_INT(PC_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_ERR_ABRT));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL,
+                          listener_accept_cb((void *)(uintptr_t)0, &fake, PROTOCORE_NET_ERR_ABRT));
     TEST_ASSERT_EQUAL_INT32(before, Tcp.conn->alloc_free()); // no slot claimed
 
-    TEST_ASSERT_EQUAL_INT(PC_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, NULL, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, NULL, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_INT32(before, Tcp.conn->alloc_free());
 }
 
 // An out-of-range listener index (the PCB user-data arg) is rejected before any pool work.
 void test_accept_cb_rejects_out_of_range_listener_idx()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     int before_aborts = mock_abort_call_count();
-    TEST_ASSERT_EQUAL_INT(PC_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)MAX_LISTENERS, &fake, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL,
+                          listener_accept_cb((void *)(uintptr_t)MAX_LISTENERS, &fake, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_INT(before_aborts, mock_abort_call_count()); // rejected before the pool-full abort path
 }
 
@@ -1367,9 +1370,9 @@ void test_accept_cb_rejects_when_pool_full()
     }
     TEST_ASSERT_EQUAL_INT32(-1, Tcp.conn->alloc_free());
 
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     int before_aborts = mock_abort_call_count();
-    TEST_ASSERT_EQUAL_INT(PC_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &fake, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_INT(before_aborts + 1, mock_abort_call_count());
 }
 
@@ -1378,10 +1381,10 @@ void test_accept_cb_rejects_when_pool_full()
 // defaults, empty ring, no request-deadline armed yet.
 void test_accept_cb_claims_slot_and_wires_connection()
 {
-    pc_pcb fake = {0};
+    protocore_pcb fake = {0};
     set_millis(9001);
 
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PROTOCORE_NET_OK));
 
     TcpConn *c = &conn_pool[0]; // Tcp.conn->init() in setUp() guarantees slot 0 is the lowest free
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)c->state);
@@ -1393,33 +1396,33 @@ void test_accept_cb_claims_slot_and_wires_connection()
     TEST_ASSERT_EQUAL_UINT8(0, c->listener_id);
     TEST_ASSERT_EQUAL_INT((int)PROTO_HTTP, (int)c->proto); // from listener_pool[0] (setUp's listener_add)
     // No softAP address configured, so the accept's local IP cannot match one: it classifies STA.
-    TEST_ASSERT_EQUAL_UINT32(0, pc_ap_ip);
-    TEST_ASSERT_EQUAL_INT((int)PC_IF_WIFI_STA, (int)c->iface);
-    TEST_ASSERT_EQUAL_UINT8(0, c->tls); // PC_ENABLE_TLS is off on native
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_ap_ip);
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_IF_WIFI_STA, (int)c->iface);
+    TEST_ASSERT_EQUAL_UINT8(0, c->tls); // PROTOCORE_ENABLE_TLS is off on native
 }
 
 // The same accept, with the local IP matching the configured softAP address, classifies AP - the
 // half of the ingress tag a per-route STA/AP filter keys on.
 void test_accept_cb_classifies_the_ap_interface()
 {
-    pc_pcb fake;
+    protocore_pcb fake;
     memset(&fake, 0, sizeof(fake));
-    pc_net_ip4_set(&fake.local_ip, 192, 168, 4, 1);
-    pc_ap_ip = pc_net_ip4_u32(pc_net_ip_as_v4(&fake.local_ip));
+    protocore_net_ip4_set(&fake.local_ip, 192, 168, 4, 1);
+    protocore_ap_ip = protocore_net_ip4_u32(protocore_net_ip_as_v4(&fake.local_ip));
 
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK));
-    TEST_ASSERT_EQUAL_INT((int)PC_IF_WIFI_AP, (int)conn_pool[0].iface);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PROTOCORE_NET_OK));
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_IF_WIFI_AP, (int)conn_pool[0].iface);
 
-    pc_ap_ip = 0; // leave the classifier as the rest of the suite expects it
+    protocore_ap_ip = 0; // leave the classifier as the rest of the suite expects it
 }
 
 // Two back-to-back accepts on the same listener claim two DIFFERENT slots (not a stale
 // reuse of slot 0) and each is independently addressable afterward.
 void test_accept_cb_second_accept_claims_a_different_slot()
 {
-    pc_pcb fake1 = {0}, fake2 = {0};
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake1, PC_NET_OK));
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake2, PC_NET_OK));
+    protocore_pcb fake1 = {0}, fake2 = {0};
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake1, PROTOCORE_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake2, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_PTR(&fake1, conn_pool[0].pcb);
     TEST_ASSERT_EQUAL_PTR(&fake2, conn_pool[1].pcb);
 }
@@ -1430,8 +1433,8 @@ void test_accept_cb_second_accept_claims_a_different_slot()
 void test_accept_cb_survives_a_failed_enqueue()
 {
     listener_pool[0].active = PROTO_FALSE; // makes Tcp.listener->enqueue() report failure
-    pc_pcb fake = {0};
-    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK));
+    protocore_pcb fake = {0};
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // still claimed
     TEST_ASSERT_EQUAL_PTR(&fake, conn_pool[0].pcb);
 }

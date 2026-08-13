@@ -3,7 +3,7 @@
 
 /**
  * @file UdpTelemetry.ino
- * @brief Fire-and-forget UDP telemetry cast (PC_ENABLE_UDP_TELEMETRY).
+ * @brief Fire-and-forget UDP telemetry cast (PROTOCORE_ENABLE_UDP_TELEMETRY).
  *
  * Builds an InfluxDB line-protocol record (`esp32 heap=...i,rssi=...i,temp=...`)
  * and casts it to a collector over UDP once a second - zero-heap, no ACK, no
@@ -12,11 +12,11 @@
  *
  * NOTE: enable it for the whole build (a .ino #define does not reach the
  * separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_UDP_TELEMETRY=1
+ *     build_flags = -DPROTOCORE_ENABLE_UDP_TELEMETRY=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_UDP_TELEMETRY 1
+#define PROTOCORE_ENABLE_UDP_TELEMETRY 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -43,7 +43,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
+    protocore_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
 }
 
 void loop()
@@ -52,13 +52,13 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        char buf[PC_UDP_TELEMETRY_BUF];
-        pc_line line;
-        pc_line_init(&line, buf, sizeof(buf), "esp32");
-        pc_line_add_uint(&line, "heap", ESP.getFreeHeap());
-        pc_line_add_int(&line, "rssi", Physical.wifi->rssi());
-        pc_line_add_float(&line, "temp", temperatureRead(), 1);
-        if (pc_udp_telemetry_cast(&line))
+        char buf[PROTOCORE_UDP_TELEMETRY_BUF];
+        protocore_line line;
+        protocore_line_init(&line, buf, sizeof(buf), "esp32");
+        protocore_line_add_uint(&line, "heap", ESP.getFreeHeap());
+        protocore_line_add_int(&line, "rssi", Physical.wifi->rssi());
+        protocore_line_add_float(&line, "temp", temperatureRead(), 1);
+        if (protocore_udp_telemetry_cast(&line))
         {
             Serial.printf("cast: %s\n", buf);
         }

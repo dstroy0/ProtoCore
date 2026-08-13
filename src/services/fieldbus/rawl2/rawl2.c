@@ -8,11 +8,11 @@
 
 #include "services/fieldbus/rawl2/rawl2.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/crc.h" // PC_CRC32_ISO_HDLC
+#include "shared_primitives/crc.h" // PROTOCORE_CRC32_ISO_HDLC
 
-#if PC_ENABLE_RAWL2
+#if PROTOCORE_ENABLE_RAWL2
 
-size_t pc_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, const uint8_t *payload,
+size_t protocore_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, const uint8_t *payload,
                     size_t payload_len, uint8_t *out, size_t cap)
 {
     if (!dst || !src || !out || (payload_len && !payload))
@@ -35,7 +35,7 @@ size_t pc_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, 
     return n;
 }
 
-size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, proto_bool dei, uint16_t vid,
+size_t protocore_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, proto_bool dei, uint16_t vid,
                          uint16_t ethertype, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
 {
     if (!dst || !src || !out || (payload_len && !payload))
@@ -63,7 +63,7 @@ size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, pr
     return n;
 }
 
-proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out)
+proto_bool protocore_eth_parse(const uint8_t *frame, size_t len, EthFrame *out)
 {
     if (!frame || !out || len < ETH_HDR_LEN)
     {
@@ -98,10 +98,10 @@ proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out)
     return PROTO_TRUE;
 }
 
-uint32_t pc_eth_fcs(const uint8_t *bytes, size_t len)
+uint32_t protocore_eth_fcs(const uint8_t *bytes, size_t len)
 {
     // CRC-32/ISO-HDLC (the Ethernet FCS): reflected poly 0xEDB88320, init/xorout 0xFFFFFFFF.
-    return pc_crc(&PC_CRC32_ISO_HDLC, bytes, len);
+    return protocore_crc(&PROTOCORE_CRC32_ISO_HDLC, bytes, len);
 }
 
-#endif // PC_ENABLE_RAWL2
+#endif // PROTOCORE_ENABLE_RAWL2

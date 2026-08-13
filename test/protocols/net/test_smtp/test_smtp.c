@@ -317,7 +317,7 @@ void test_reply_buffer_overflow(void)
     size_t n = 0;
     while (n < 600)
     {
-        const char *line = "250-continuation\r\n"; // > PC_SMTP_REPLY_MAX, no final line
+        const char *line = "250-continuation\r\n"; // > PROTOCORE_SMTP_REPLY_MAX, no final line
         size_t l = strlen(line);
         memcpy(huge + n, line, l);
         n += l;
@@ -356,7 +356,7 @@ void test_body_send_fails(void)
 void test_auth_secret_too_long(void)
 {
     SmtpConfig c = base_cfg();
-    static char longuser[401]; // base64 grows it past PC_SMTP_LINE_MAX
+    static char longuser[401]; // base64 grows it past PROTOCORE_SMTP_LINE_MAX
     memset(longuser, 'u', sizeof longuser - 1);
     longuser[sizeof longuser - 1] = '\0';
     c.user = longuser;
@@ -405,7 +405,7 @@ void test_protocol_error_at_each_step(void)
 }
 
 // Each outgoing command line that is built with snprintf overflows when its variable
-// field (helo / from / to) is longer than PC_SMTP_LINE_MAX.
+// field (helo / from / to) is longer than PROTOCORE_SMTP_LINE_MAX.
 void test_command_line_overflows(void)
 {
     static char big[301];

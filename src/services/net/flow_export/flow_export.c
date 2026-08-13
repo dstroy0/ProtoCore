@@ -9,7 +9,7 @@
 #include "services/net/flow_export/flow_export.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_FLOW_EXPORT
+#if PROTOCORE_ENABLE_FLOW_EXPORT
 
 #include "mmgr/endian.h"
 
@@ -20,15 +20,15 @@ size_t flow_v5_write_header(uint8_t *buf, size_t cap, const FlowV5Header *h)
         return 0;
     }
     size_t p = 0;
-    p += pc_wr16be(buf + p, 5); // version
-    p += pc_wr16be(buf + p, h->count);
-    p += pc_wr32be(buf + p, h->sys_uptime);
-    p += pc_wr32be(buf + p, h->unix_secs);
-    p += pc_wr32be(buf + p, h->unix_nsecs);
-    p += pc_wr32be(buf + p, h->flow_sequence);
+    p += protocore_wr16be(buf + p, 5); // version
+    p += protocore_wr16be(buf + p, h->count);
+    p += protocore_wr32be(buf + p, h->sys_uptime);
+    p += protocore_wr32be(buf + p, h->unix_secs);
+    p += protocore_wr32be(buf + p, h->unix_nsecs);
+    p += protocore_wr32be(buf + p, h->flow_sequence);
     buf[p++] = h->engine_type;
     buf[p++] = h->engine_id;
-    p += pc_wr16be(buf + p, h->sampling_interval);
+    p += protocore_wr16be(buf + p, h->sampling_interval);
     return p; // 24
 }
 
@@ -39,23 +39,23 @@ size_t flow_v5_write_record(uint8_t *buf, size_t cap, const FlowV5Record *r)
         return 0;
     }
     size_t p = 0;
-    p += pc_wr32be(buf + p, r->src_addr);
-    p += pc_wr32be(buf + p, r->dst_addr);
-    p += pc_wr32be(buf + p, r->next_hop);
-    p += pc_wr16be(buf + p, r->input);
-    p += pc_wr16be(buf + p, r->output);
-    p += pc_wr32be(buf + p, r->d_pkts);
-    p += pc_wr32be(buf + p, r->d_octets);
-    p += pc_wr32be(buf + p, r->first);
-    p += pc_wr32be(buf + p, r->last);
-    p += pc_wr16be(buf + p, r->src_port);
-    p += pc_wr16be(buf + p, r->dst_port);
+    p += protocore_wr32be(buf + p, r->src_addr);
+    p += protocore_wr32be(buf + p, r->dst_addr);
+    p += protocore_wr32be(buf + p, r->next_hop);
+    p += protocore_wr16be(buf + p, r->input);
+    p += protocore_wr16be(buf + p, r->output);
+    p += protocore_wr32be(buf + p, r->d_pkts);
+    p += protocore_wr32be(buf + p, r->d_octets);
+    p += protocore_wr32be(buf + p, r->first);
+    p += protocore_wr32be(buf + p, r->last);
+    p += protocore_wr16be(buf + p, r->src_port);
+    p += protocore_wr16be(buf + p, r->dst_port);
     buf[p++] = 0; // pad1
     buf[p++] = r->tcp_flags;
     buf[p++] = r->prot;
     buf[p++] = r->tos;
-    p += pc_wr16be(buf + p, r->src_as);
-    p += pc_wr16be(buf + p, r->dst_as);
+    p += protocore_wr16be(buf + p, r->src_as);
+    p += protocore_wr16be(buf + p, r->dst_as);
     buf[p++] = r->src_mask;
     buf[p++] = r->dst_mask;
     buf[p++] = 0; // pad2 (2 octets)
@@ -76,7 +76,7 @@ static void w_u16(FlowWriter *w, uint16_t v)
         w->error = PROTO_TRUE;
         return;
     }
-    w->pos += pc_wr16be(w->buf + w->pos, v);
+    w->pos += protocore_wr16be(w->buf + w->pos, v);
 }
 
 static void w_u32(FlowWriter *w, uint32_t v)
@@ -90,7 +90,7 @@ static void w_u32(FlowWriter *w, uint32_t v)
         w->error = PROTO_TRUE;
         return;
     }
-    w->pos += pc_wr32be(w->buf + w->pos, v);
+    w->pos += protocore_wr32be(w->buf + w->pos, v);
 }
 
 static void w_bytes(FlowWriter *w, const uint8_t *p, size_t n)
@@ -126,7 +126,7 @@ static void w_zero(FlowWriter *w, size_t n)
 
 static void patch16(FlowWriter *w, size_t off, uint16_t v)
 {
-    pc_wr16be(w->buf + off, v);
+    protocore_wr16be(w->buf + off, v);
 }
 
 proto_bool flow_ipfix_begin(FlowWriter *w, uint8_t *buf, size_t cap, uint32_t export_time, uint32_t seq,
@@ -280,4 +280,4 @@ size_t flow_export_finish(FlowWriter *w)
     return w->pos;
 }
 
-#endif // PC_ENABLE_FLOW_EXPORT
+#endif // PROTOCORE_ENABLE_FLOW_EXPORT

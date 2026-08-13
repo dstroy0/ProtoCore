@@ -3,7 +3,7 @@
 
 /**
  * @file dmx.h
- * @brief DMX512 framing + RDM (ANSI E1.20) management codec (PC_ENABLE_DMX).
+ * @brief DMX512 framing + RDM (ANSI E1.20) management codec (PROTOCORE_ENABLE_DMX).
  *
  * DMX512 (lighting / stage control over RS-485) is positional: after a break, a start code
  * octet (0x00 for dimmer data) is followed by up to 512 channel slots, with no checksum or
@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DMX
+#if PROTOCORE_ENABLE_DMX
 
 #define DMX_MAX_CHANNELS 512u ///< slots per DMX512 universe
 #define DMX_SC_DIMMER 0x00u   ///< start code for standard dimmer data
@@ -65,13 +65,13 @@ PROTO_BEGIN_DECLS
  * @brief Assemble a DMX512 packet body: [start code][channel slots]. @p n <= 512.
  * Returns the byte count (1 + n) or 0 on overflow. The break is the transport's job.
  */
-size_t pc_dmx_build(uint8_t *buf, size_t cap, uint8_t start_code, const uint8_t *channels, uint16_t n);
+size_t protocore_dmx_build(uint8_t *buf, size_t cap, uint8_t start_code, const uint8_t *channels, uint16_t n);
 
 /**
  * @brief Read channel @p ch (1-based, per DMX convention) from a received packet body.
  * Returns the slot value, or 0 if @p ch is out of range / not present.
  */
-uint8_t pc_dmx_get_channel(const uint8_t *buf, size_t len, uint16_t ch);
+uint8_t protocore_dmx_get_channel(const uint8_t *buf, size_t len, uint16_t ch);
 
 // --- RDM (ANSI E1.20) ---
 
@@ -91,22 +91,22 @@ typedef struct
 } RdmPacket;
 
 /** @brief Compose a 48-bit RDM UID from a manufacturer id and a device id. */
-uint64_t pc_rdm_uid(uint16_t manufacturer, uint32_t device);
+uint64_t protocore_rdm_uid(uint16_t manufacturer, uint32_t device);
 
 /** @brief 16-bit additive checksum over @p len octets (RDM message block). */
-uint16_t pc_rdm_checksum(const uint8_t *buf, size_t len);
+uint16_t protocore_rdm_checksum(const uint8_t *buf, size_t len);
 
 /**
  * @brief Build a full RDM packet (incl. the trailing 16-bit checksum) from @p p and its
  * parameter data. Returns the total length (26 + pdl) or 0 on overflow.
  */
-size_t pc_rdm_build(uint8_t *buf, size_t cap, const RdmPacket *p, const uint8_t *pdata, uint8_t pdl);
+size_t protocore_rdm_build(uint8_t *buf, size_t cap, const RdmPacket *p, const uint8_t *pdata, uint8_t pdl);
 
 /**
  * @brief Parse an RDM packet: validates the start codes, the message length vs PDL, and the
  * checksum. Fills @p out and @p consumed (the whole packet length).
  */
-proto_bool pc_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *consumed);
+proto_bool protocore_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *consumed);
 
 /**
  * @brief Decode a DISC_UNIQUE_BRANCH discovery response into the responder's 48-bit UID. This reply is not a
@@ -116,18 +116,18 @@ proto_bool pc_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *
  *        additive sum of the 12 encoded UID octets) is verified.
  * @return true iff the separator is present, the 16 encoded octets fit, and the checksum matches.
  */
-proto_bool pc_rdm_decode_disc_response(const uint8_t *buf, size_t len, uint64_t *uid);
+proto_bool protocore_rdm_decode_disc_response(const uint8_t *buf, size_t len, uint64_t *uid);
 
 /**
  * @brief Build the DISC_UNIQUE_BRANCH discovery response a responder sends for its 48-bit @p uid (the
- *        complement of pc_rdm_decode_disc_response): @p preamble_len octets of 0xFE (0..7) + the 0xAA
+ *        complement of protocore_rdm_decode_disc_response): @p preamble_len octets of 0xFE (0..7) + the 0xAA
  *        separator + the 6 UID octets each as two copies OR'd with 0xAA / 0x55 + the 2-octet checksum (the
  *        16-bit additive sum of the 12 encoded UID octets) sent the same way.
  * @return octets written (@p preamble_len + 17), or 0 on a null buffer, @p preamble_len > 7, or overflow.
  */
-size_t pc_rdm_build_disc_response(uint8_t *buf, size_t cap, uint64_t uid, uint8_t preamble_len);
+size_t protocore_rdm_build_disc_response(uint8_t *buf, size_t cap, uint64_t uid, uint8_t preamble_len);
 
-#define PC_RDM_DEVICE_INFO_PDL 19 ///< octets in a DEVICE_INFO (PID 0x0060) GET-response parameter block
+#define PROTOCORE_RDM_DEVICE_INFO_PDL 19 ///< octets in a DEVICE_INFO (PID 0x0060) GET-response parameter block
 
 /** @brief Decoded DEVICE_INFO (PID 0x0060) parameter data - the descriptor every RDM responder must
  *  answer, carrying the fields a controller needs to patch and identify the device. */
@@ -150,20 +150,20 @@ typedef struct
  * @brief Pack a DEVICE_INFO (PID 0x0060) GET-response parameter block from @p info into @p pdata: the
  *        19-octet big-endian descriptor (protocol version, device model, product category, software
  *        version, DMX footprint / personality / start address, sub-device and sensor counts). Hand the
- *        result to pc_rdm_build as the pdata of a GET-response with pid RDM_PID_DEVICE_INFO.
- * @return PC_RDM_DEVICE_INFO_PDL (19), or 0 on a null argument or @p cap < 19.
+ *        result to protocore_rdm_build as the pdata of a GET-response with pid RDM_PID_DEVICE_INFO.
+ * @return PROTOCORE_RDM_DEVICE_INFO_PDL (19), or 0 on a null argument or @p cap < 19.
  */
-size_t pc_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDeviceInfo *info);
+size_t protocore_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDeviceInfo *info);
 
 /**
  * @brief Decode a DEVICE_INFO (PID 0x0060) GET-response parameter block into @p out (the complement of
- *        pc_rdm_build_device_info).
+ *        protocore_rdm_build_device_info).
  * @return true iff @p pdl is at least 19 octets; false on a null argument or a short block.
  */
-proto_bool pc_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out);
+proto_bool protocore_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out);
 
-#endif // PC_ENABLE_DMX
+#endif // PROTOCORE_ENABLE_DMX
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DMX_H

@@ -11,13 +11,13 @@
 
 #include "services/peripherals/pn532/pn532.h"
 
-#if PC_ENABLE_PN532
+#if PROTOCORE_ENABLE_PN532
 
 static const uint8_t ACK[6] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 
-uint16_t pc_pn532_build_frame(uint8_t tfi, const uint8_t *data, uint8_t len, uint8_t *out, uint16_t cap)
+uint16_t protocore_pn532_build_frame(uint8_t tfi, const uint8_t *data, uint8_t len, uint8_t *out, uint16_t cap)
 {
-    if (!out || len > PC_PN532_MAX_DATA || (data == NULL && len > 0))
+    if (!out || len > PROTOCORE_PN532_MAX_DATA || (data == NULL && len > 0))
     {
         return 0;
     }
@@ -44,7 +44,8 @@ uint16_t pc_pn532_build_frame(uint8_t tfi, const uint8_t *data, uint8_t len, uin
     return total;
 }
 
-int pc_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, const uint8_t **pdata, uint8_t *pdata_len)
+int protocore_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, const uint8_t **pdata,
+                                uint8_t *pdata_len)
 {
     if (!raw || len < 1)
     {
@@ -67,7 +68,7 @@ int pc_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, const u
     {
         return -1; // length checksum
     }
-    if (frame_len == 0 || frame_len > PC_PN532_MAX_DATA + 1)
+    if (frame_len == 0 || frame_len > PROTOCORE_PN532_MAX_DATA + 1)
     {
         return -1; // no TFI, or implausible length
     }
@@ -100,7 +101,7 @@ int pc_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, const u
     return (int)total;
 }
 
-proto_bool pc_pn532_is_ack(const uint8_t *raw, uint16_t len)
+proto_bool protocore_pn532_is_ack(const uint8_t *raw, uint16_t len)
 {
     if (!raw || len < 6)
     {
@@ -116,7 +117,7 @@ proto_bool pc_pn532_is_ack(const uint8_t *raw, uint16_t len)
     return PROTO_TRUE;
 }
 
-uint16_t pc_pn532_build_ack(uint8_t *out, uint16_t cap)
+uint16_t protocore_pn532_build_ack(uint8_t *out, uint16_t cap)
 {
     if (!out || cap < 6)
     {
@@ -129,4 +130,4 @@ uint16_t pc_pn532_build_ack(uint8_t *out, uint16_t cap)
     return 6;
 }
 
-#endif // PC_ENABLE_PN532
+#endif // PROTOCORE_ENABLE_PN532

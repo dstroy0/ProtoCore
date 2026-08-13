@@ -4,7 +4,7 @@
 /**
  * @file HeidenhainLsv2.ino
  * @brief Heidenhain LSV/2 collector - talk to a Heidenhain TNC control over LSV/2-over-TCP and read its
- *        run state (PC_ENABLE_LSV2).
+ *        run state (PROTOCORE_ENABLE_LSV2).
  *
  * services/machine_tool/lsv2 is a pure codec for the LSV/2 telegram protocol; the sketch owns the TCP socket to the
  * control (default port 19000). Each LSV/2 telegram is a 4-byte big-endian payload-length prefix, a
@@ -18,10 +18,10 @@
  *
  * Point TNC_IP at a Heidenhain control that has the LSV/2 / DNC interface enabled. See README.
  *
- * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_LSV2=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_LSV2=1
  */
 
-#define PC_ENABLE_LSV2 1
+#define PROTOCORE_ENABLE_LSV2 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -42,7 +42,7 @@ static size_t read_response(int cid, uint8_t *out, size_t cap)
 {
     size_t got = 0;
     unsigned long deadline = millis() + 3000;
-    while (got < PC_LSV2_HEADER_LEN && millis() < deadline)
+    while (got < PROTOCORE_LSV2_HEADER_LEN && millis() < deadline)
     {
         if (!Tcp.client->available(cid))
         {
@@ -59,12 +59,12 @@ static size_t read_response(int cid, uint8_t *out, size_t cap)
         }
         got++;
     }
-    if (got < PC_LSV2_HEADER_LEN)
+    if (got < PROTOCORE_LSV2_HEADER_LEN)
     {
         return got;
     }
     uint32_t plen = ((uint32_t)out[0] << 24) | ((uint32_t)out[1] << 16) | ((uint32_t)out[2] << 8) | out[3];
-    size_t need = PC_LSV2_HEADER_LEN + plen;
+    size_t need = PROTOCORE_LSV2_HEADER_LEN + plen;
     while (got < need && got < cap && millis() < deadline)
     {
         if (!Tcp.client->available(cid))
@@ -92,7 +92,7 @@ static bool txrx(int cid, size_t tx_len, Lsv2Telegram *r, const char *label)
     Tcp.client->send(cid, c_tx, tx_len);
     size_t n = read_response(cid, c_rx, sizeof(c_rx));
     size_t consumed = 0;
-    if (!pc_lsv2_parse(c_rx, n, r, &consumed))
+    if (!protocore_lsv2_parse(c_rx, n, r, &consumed))
     {
         Serial.printf("[lsv2] %s: no / short response (%u bytes)\n", label, (unsigned)n);
         return false;
@@ -104,12 +104,12 @@ static bool txrx(int cid, size_t tx_len, Lsv2Telegram *r, const char *label)
 static void query_run_info(int cid, uint16_t sel, const char *label)
 {
     Lsv2Telegram r;
-    if (!txrx(cid, pc_lsv2_build_run_info(c_tx, sizeof(c_tx), sel), &r, label))
+    if (!txrx(cid, protocore_lsv2_build_run_info(c_tx, sizeof(c_tx), sel), &r, label))
     {
         return;
     }
     uint8_t err_class = 0, err_code = 0;
-    if (pc_lsv2_error(&r, &err_class, &err_code))
+    if (protocore_lsv2_error(&r, &err_class, &err_code))
     {
         Serial.printf("[lsv2] %s: error class %u code %u\n", label, (unsigned)err_class, (unsigned)err_code);
         return;
@@ -124,7 +124,7 @@ static void query_run_info(int cid, uint16_t sel, const char *label)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PC_LSV2_TCP_PORT, 8000);
+    int cid = Tcp.client->open(host, PROTOCORE_LSV2_TCP_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[lsv2] connect failed");
@@ -133,8 +133,8 @@ static void run_session(const char *host)
 
     // gain INSPECT (read) access rights
     Lsv2Telegram r;
-    if (!txrx(cid, pc_lsv2_build_login(c_tx, sizeof(c_tx), PC_LSV2_LOGIN_INSPECT, nullptr), &r, "login") ||
-        !pc_lsv2_is_ok(&r))
+    if (!txrx(cid, protocore_lsv2_build_login(c_tx, sizeof(c_tx), PROTOCORE_LSV2_LOGIN_INSPECT, nullptr), &r, "login") ||
+        !protocore_lsv2_is_ok(&r))
     {
         Serial.println("[lsv2] login INSPECT failed");
         Tcp.client->close(cid);
@@ -147,7 +147,7 @@ static void run_session(const char *host)
     query_run_info(cid, LSV2_RI_OVERRIDE, "override");
 
     // drop all access rights
-    txrx(cid, pc_lsv2_build_logout(c_tx, sizeof(c_tx), nullptr), &r, "logout");
+    txrx(cid, protocore_lsv2_build_logout(c_tx, sizeof(c_tx), nullptr), &r, "logout");
     Tcp.client->close(cid);
     Serial.println("[lsv2] done");
 }

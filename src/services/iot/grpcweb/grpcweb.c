@@ -9,9 +9,9 @@
 #include "services/iot/grpcweb/grpcweb.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_GRPC_WEB
+#if PROTOCORE_ENABLE_GRPC_WEB
 
-size_t pc_grpcweb_frame(uint8_t *buf, size_t cap, uint8_t flags, const uint8_t *body, size_t body_len)
+size_t protocore_grpcweb_frame(uint8_t *buf, size_t cap, uint8_t flags, const uint8_t *body, size_t body_len)
 {
     if (!buf || (body_len && !body) || body_len > 0xFFFFFFFFu)
     {
@@ -34,9 +34,9 @@ size_t pc_grpcweb_frame(uint8_t *buf, size_t cap, uint8_t flags, const uint8_t *
     return total;
 }
 
-size_t pc_grpcweb_frame_message(uint8_t *buf, size_t cap, const uint8_t *msg, size_t msg_len, proto_bool compressed)
+size_t protocore_grpcweb_frame_message(uint8_t *buf, size_t cap, const uint8_t *msg, size_t msg_len, proto_bool compressed)
 {
-    return pc_grpcweb_frame(buf, cap, compressed ? GRPCWEB_FLAG_COMPRESSED : 0, msg, msg_len);
+    return protocore_grpcweb_frame(buf, cap, compressed ? GRPCWEB_FLAG_COMPRESSED : 0, msg, msg_len);
 }
 
 // Append a NUL-terminated string at *pos with bounds check; advance *pos. False on overflow.
@@ -85,7 +85,7 @@ static proto_bool put_int(uint8_t *buf, size_t cap, size_t *pos, int v)
     return PROTO_TRUE;
 }
 
-size_t pc_grpcweb_frame_trailer(uint8_t *buf, size_t cap, int status, const char *message)
+size_t protocore_grpcweb_frame_trailer(uint8_t *buf, size_t cap, int status, const char *message)
 {
     if (!buf || cap < GRPCWEB_PREFIX_LEN)
     {
@@ -114,7 +114,7 @@ size_t pc_grpcweb_frame_trailer(uint8_t *buf, size_t cap, int status, const char
     return pos;
 }
 
-proto_bool pc_grpcweb_parse(const uint8_t *buf, size_t len, GrpcWebFrame *out, size_t *consumed)
+proto_bool protocore_grpcweb_parse(const uint8_t *buf, size_t len, GrpcWebFrame *out, size_t *consumed)
 {
     if (!buf || !out || !consumed || len < GRPCWEB_PREFIX_LEN)
     {
@@ -134,7 +134,7 @@ proto_bool pc_grpcweb_parse(const uint8_t *buf, size_t len, GrpcWebFrame *out, s
     return PROTO_TRUE;
 }
 
-proto_bool pc_grpcweb_trailer_status(const uint8_t *body, size_t len, int *status)
+proto_bool protocore_grpcweb_trailer_status(const uint8_t *body, size_t len, int *status)
 {
     if (!body)
     {
@@ -173,7 +173,7 @@ proto_bool pc_grpcweb_trailer_status(const uint8_t *body, size_t len, int *statu
     return PROTO_FALSE;
 }
 
-proto_bool pc_grpcweb_trailer_message(const uint8_t *body, size_t len, const char **msg, size_t *msg_len)
+proto_bool protocore_grpcweb_trailer_message(const uint8_t *body, size_t len, const char **msg, size_t *msg_len)
 {
     if (!body)
     {
@@ -206,4 +206,4 @@ proto_bool pc_grpcweb_trailer_message(const uint8_t *body, size_t len, const cha
     return PROTO_FALSE;
 }
 
-#endif // PC_ENABLE_GRPC_WEB
+#endif // PROTOCORE_ENABLE_GRPC_WEB

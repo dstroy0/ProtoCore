@@ -85,9 +85,9 @@ static void sock_init(MockSock *s, const void *in, size_t in_len, proto_bool eof
     s->in_eof = eof;
 }
 
-static pc_relay_end end_of(MockSock *s)
+static protocore_relay_end end_of(MockSock *s)
 {
-    pc_relay_end e;
+    protocore_relay_end e;
     e.recv = msock_recv;
     e.send = msock_send;
     e.shutdown = msock_shutdown;
@@ -95,17 +95,17 @@ static pc_relay_end end_of(MockSock *s)
     return e;
 }
 
-static pc_relay_status run_relay(pc_relay *r, int max_steps)
+static protocore_relay_status run_relay(protocore_relay *r, int max_steps)
 {
     for (int i = 0; i < max_steps; i++)
     {
-        pc_relay_status st = pc_relay_step(r);
-        if (st != PC_RELAY_RUNNING)
+        protocore_relay_status st = protocore_relay_step(r);
+        if (st != PROTOCORE_RELAY_RUNNING)
         {
             return st;
         }
     }
-    return PC_RELAY_RUNNING; // never finished (a bug if it happens)
+    return PROTOCORE_RELAY_RUNNING; // never finished (a bug if it happens)
 }
 
 void test_bidirectional()
@@ -113,11 +113,11 @@ void test_bidirectional()
     MockSock a, b;
     sock_init(&a, "hello from client", 17, PROTO_TRUE);
     sock_init(&b, "hi from origin", 14, PROTO_TRUE);
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 64));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 64));
     TEST_ASSERT_EQUAL_size_t(17, b.out_len);
     TEST_ASSERT_EQUAL_MEMORY("hello from client", b.out, 17);
     TEST_ASSERT_EQUAL_size_t(14, a.out_len);
@@ -137,11 +137,11 @@ void test_backpressure()
     sock_init(&a, data, sizeof(data), PROTO_TRUE);
     sock_init(&b, NULL, 0, PROTO_TRUE);
     b.send_cap = 7; // the origin accepts only 7 bytes per write
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 1000));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 1000));
     TEST_ASSERT_EQUAL_size_t(1000, b.out_len);
     TEST_ASSERT_EQUAL_MEMORY(data, b.out, 1000); // every byte carried across, in order
 }
@@ -156,24 +156,24 @@ void test_half_close_shutdown()
     MockSock a, b;
     sock_init(&a, "req", 3, PROTO_TRUE);           // client sends a short request then closes
     sock_init(&b, resp, sizeof(resp), PROTO_TRUE); // origin streams a long response
-    a.send_cap = 64; // client drains slowly, so b->a stays multi-step regardless of PC_RELAY_BUF
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    a.send_cap = 64; // client drains slowly, so b->a stays multi-step regardless of PROTOCORE_RELAY_BUF
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
     // once a->b finishes (client EOF) the origin's half-close must fire, while b->a is still
     // streaming its long response (proving the two directions close independently)
-    pc_relay_status st = PC_RELAY_RUNNING;
+    protocore_relay_status st = PROTOCORE_RELAY_RUNNING;
     for (int i = 0; i < 10 && !r.b_shut_sent; i++)
     {
-        st = pc_relay_step(&r);
+        st = protocore_relay_step(&r);
     }
     TEST_ASSERT_TRUE(r.b_shut_sent); // origin's shutdown fired on the client's FIN
     TEST_ASSERT_TRUE(b.shutdown_called);
     TEST_ASSERT_FALSE(r.b2a_done); // ...while the response direction is still open
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_RUNNING, st);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, st);
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 64));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 64));
     TEST_ASSERT_EQUAL_MEMORY("req", b.out, 3);
     TEST_ASSERT_EQUAL_size_t(800, a.out_len);
     TEST_ASSERT_EQUAL_MEMORY(resp, a.out, 800);
@@ -186,16 +186,16 @@ void test_send_error()
     sock_init(&a, "data", 4, PROTO_TRUE);
     sock_init(&b, NULL, 0, PROTO_TRUE);
     b.fail_send = PROTO_TRUE; // the origin's send errors
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
-    pc_relay_status st = PC_RELAY_RUNNING;
-    for (int i = 0; i < 8 && st == PC_RELAY_RUNNING; i++)
+    protocore_relay_status st = PROTOCORE_RELAY_RUNNING;
+    for (int i = 0; i < 8 && st == PROTOCORE_RELAY_RUNNING; i++)
     {
-        st = pc_relay_step(&r);
+        st = protocore_relay_step(&r);
     }
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_ERROR, st);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, st);
 }
 
 void test_one_way_idle_then_close()
@@ -204,35 +204,35 @@ void test_one_way_idle_then_close()
     MockSock a, b;
     sock_init(&a, "GET / HTTP/1.0\r\n\r\n", 18, PROTO_TRUE);
     sock_init(&b, NULL, 0, PROTO_TRUE);
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 32));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 32));
     TEST_ASSERT_EQUAL_size_t(18, b.out_len);
     TEST_ASSERT_EQUAL_size_t(0, a.out_len);
 }
 
-// A transport that signals close out of band (like pc_conn's on_close) rather than via recv < 0:
-// the mocks never EOF through recv; pc_relay_note_eof() drives the finish.
+// A transport that signals close out of band (like protocore_conn's on_close) rather than via recv < 0:
+// the mocks never EOF through recv; protocore_relay_note_eof() drives the finish.
 void test_note_eof_out_of_band()
 {
     MockSock a, b;
     sock_init(&a, "hello", 5, PROTO_FALSE); // in_eof=false: recv returns 0 (not -1) when drained
     sock_init(&b, "world", 5, PROTO_FALSE);
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
     // one step moves the buffered data each way; without an EOF signal the relay keeps running
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_RUNNING, pc_relay_step(&r));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, protocore_relay_step(&r));
     TEST_ASSERT_EQUAL_MEMORY("hello", b.out, 5);
     TEST_ASSERT_EQUAL_MEMORY("world", a.out, 5);
 
     // both peers close out of band -> the relay finishes and both shutdowns fire
-    pc_relay_note_eof(&r, PROTO_FALSE); // inbound closed
-    pc_relay_note_eof(&r, PROTO_TRUE);  // origin closed
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 8));
+    protocore_relay_note_eof(&r, PROTO_FALSE); // inbound closed
+    protocore_relay_note_eof(&r, PROTO_TRUE);  // origin closed
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 8));
     TEST_ASSERT_TRUE(a.shutdown_called);
     TEST_ASSERT_TRUE(b.shutdown_called);
 }
@@ -245,13 +245,13 @@ void test_zero_length_read_no_progress()
     MockSock a, b;
     sock_init(&a, NULL, 0, PROTO_FALSE); // in_eof=false: recv keeps returning 0, never -1
     sock_init(&b, NULL, 0, PROTO_FALSE);
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
     for (int i = 0; i < 5; i++)
     {
-        TEST_ASSERT_EQUAL_INT(PC_RELAY_RUNNING, pc_relay_step(&r));
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, protocore_relay_step(&r));
     }
     TEST_ASSERT_EQUAL_UINT32(0, r.bytes_a2b);
     TEST_ASSERT_EQUAL_UINT32(0, r.bytes_b2a);
@@ -259,9 +259,9 @@ void test_zero_length_read_no_progress()
     TEST_ASSERT_EQUAL_size_t(0, b.out_len);
 
     // now let both sides close out of band so the relay can still finish cleanly
-    pc_relay_note_eof(&r, PROTO_FALSE);
-    pc_relay_note_eof(&r, PROTO_TRUE);
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 8));
+    protocore_relay_note_eof(&r, PROTO_FALSE);
+    protocore_relay_note_eof(&r, PROTO_TRUE);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 8));
 }
 
 // A send that already carried a partial write (backpressure) fails on the *next* step's flush
@@ -278,18 +278,18 @@ void test_flush_send_error()
     sock_init(&a, data, sizeof(data), PROTO_TRUE);
     sock_init(&b, NULL, 0, PROTO_TRUE);
     b.send_cap = 10; // first step only flushes part of the 50 bytes, leaving a backlog
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_RUNNING, pc_relay_step(&r));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, protocore_relay_step(&r));
     TEST_ASSERT_TRUE(r.a2b_off < r.a2b_len); // confirms a backlog is pending for the next flush
 
     b.fail_send = PROTO_TRUE; // now the origin errors on the flush of that pending backlog
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_ERROR, pc_relay_step(&r));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, protocore_relay_step(&r));
 }
 
-// test_send_error fails the a->b direction (the first pump() call in pc_relay_step); this mirrors
+// test_send_error fails the a->b direction (the first pump() call in protocore_relay_step); this mirrors
 // it for the b->a direction so the second pump() call's error path is exercised too.
 void test_send_error_reverse_direction()
 {
@@ -297,11 +297,11 @@ void test_send_error_reverse_direction()
     sock_init(&a, NULL, 0, PROTO_TRUE);   // client has nothing to send: a->b finishes immediately, cleanly
     sock_init(&b, "resp", 4, PROTO_TRUE); // origin has data for the client
     a.fail_send = PROTO_TRUE;             // the client's send (dst for b->a) errors
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_ERROR, pc_relay_step(&r));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, protocore_relay_step(&r));
 }
 
 // Null-argument guards: every entry point bails out safely instead of dereferencing.
@@ -310,16 +310,16 @@ void test_null_argument_guards()
     MockSock a, b;
     sock_init(&a, NULL, 0, PROTO_TRUE);
     sock_init(&b, NULL, 0, PROTO_TRUE);
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
 
-    pc_relay_init(NULL, &ea, &eb); // no crash
-    pc_relay_init(&r, NULL, &eb);  // no crash
-    pc_relay_init(&r, &ea, NULL);  // no crash
+    protocore_relay_init(NULL, &ea, &eb); // no crash
+    protocore_relay_init(&r, NULL, &eb);  // no crash
+    protocore_relay_init(&r, &ea, NULL);  // no crash
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_ERROR, pc_relay_step(NULL));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, protocore_relay_step(NULL));
 
-    pc_relay_note_eof(NULL, PROTO_FALSE); // no crash
+    protocore_relay_note_eof(NULL, PROTO_FALSE); // no crash
 }
 
 // An end with no shutdown seam (shutdown == NULL, allowed per relay.h) must not be called through
@@ -330,20 +330,20 @@ void test_shutdown_null_seam()
     MockSock a, b;
     sock_init(&a, "hi", 2, PROTO_TRUE);
     sock_init(&b, NULL, 0, PROTO_TRUE);
-    pc_relay_end ea = end_of(&a);
-    pc_relay_end eb = end_of(&b);
+    protocore_relay_end ea = end_of(&a);
+    protocore_relay_end eb = end_of(&b);
     eb.shutdown = NULL; // origin publishes no shutdown seam
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 16));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 16));
     TEST_ASSERT_FALSE(r.b_shut_sent); // never latches: there is no seam to call
     TEST_ASSERT_FALSE(b.shutdown_called);
     TEST_ASSERT_TRUE(r.a_shut_sent); // the other direction's real seam still fired
     TEST_ASSERT_TRUE(a.shutdown_called);
 }
 
-// An out-of-band EOF (pc_relay_note_eof) can land while a send backlog is still draining (unlike an
+// An out-of-band EOF (protocore_relay_note_eof) can land while a send backlog is still draining (unlike an
 // EOF discovered through recv(), which only ever happens once the buffer is already empty). The
 // direction must NOT finish until that backlog fully flushes on a later step.
 void test_note_eof_with_backlog_pending()
@@ -357,18 +357,18 @@ void test_note_eof_with_backlog_pending()
     sock_init(&a, data, sizeof(data), PROTO_FALSE); // in_eof=false: only note_eof() signals EOF
     sock_init(&b, NULL, 0, PROTO_TRUE);             // b->a finishes immediately, out of the way
     b.send_cap = 5;                                 // a->b needs multiple flushes to drain 20 bytes
-    pc_relay_end ea = end_of(&a), eb = end_of(&b);
-    pc_relay r;
-    pc_relay_init(&r, &ea, &eb);
+    protocore_relay_end ea = end_of(&a), eb = end_of(&b);
+    protocore_relay r;
+    protocore_relay_init(&r, &ea, &eb);
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_RUNNING, pc_relay_step(&r));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, protocore_relay_step(&r));
     TEST_ASSERT_EQUAL_size_t(5, r.a2b_off);
     TEST_ASSERT_EQUAL_size_t(20, r.a2b_len); // a backlog of 15 bytes is still pending
 
-    pc_relay_note_eof(&r, PROTO_FALSE); // client EOF arrives out of band while the backlog is pending
+    protocore_relay_note_eof(&r, PROTO_FALSE); // client EOF arrives out of band while the backlog is pending
     TEST_ASSERT_FALSE(r.a2b_done);      // must not finish yet: bytes are still queued to flush
 
-    TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 16));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 16));
     TEST_ASSERT_EQUAL_size_t(20, b.out_len);
     TEST_ASSERT_EQUAL_MEMORY(data, b.out, 20); // every byte still carried across, in order
 }

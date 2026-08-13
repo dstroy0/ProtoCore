@@ -11,7 +11,7 @@
 
 #include "services/radio/zwave/zwave.h"
 
-#if PC_ENABLE_ZWAVE
+#if PROTOCORE_ENABLE_ZWAVE
 
 // Checksum: 0xFF XORed with every byte from LEN through the last data byte.
 static uint8_t checksum(const uint8_t *from_len, uint16_t n)
@@ -24,10 +24,10 @@ static uint8_t checksum(const uint8_t *from_len, uint16_t n)
     return c;
 }
 
-uint16_t pc_zwave_build_frame(pc_zwave_type type, uint8_t cmd, const uint8_t *data, uint8_t data_len, uint8_t *out,
-                              uint16_t cap)
+uint16_t protocore_zwave_build_frame(protocore_zwave_type type, uint8_t cmd, const uint8_t *data, uint8_t data_len,
+                                     uint8_t *out, uint16_t cap)
 {
-    if (!out || data_len > PC_ZWAVE_MAX_DATA || (data == NULL && data_len > 0))
+    if (!out || data_len > PROTOCORE_ZWAVE_MAX_DATA || (data == NULL && data_len > 0))
     {
         return 0;
     }
@@ -50,8 +50,8 @@ uint16_t pc_zwave_build_frame(pc_zwave_type type, uint8_t cmd, const uint8_t *da
     return total;
 }
 
-int pc_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd, const uint8_t **pdata,
-                         uint8_t *pdata_len)
+int protocore_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd, const uint8_t **pdata,
+                                uint8_t *pdata_len)
 {
     if (!raw || len < 1)
     {
@@ -66,7 +66,7 @@ int pc_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_
         return 0;
     }
     uint8_t frame_len = raw[1];
-    if (frame_len < 3 || frame_len > PC_ZWAVE_MAX_DATA + 3)
+    if (frame_len < 3 || frame_len > PROTOCORE_ZWAVE_MAX_DATA + 3)
     {
         return -1; // too short for Type+Cmd+Checksum, or implausibly long
     }
@@ -98,20 +98,20 @@ int pc_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_
     return (int)total;
 }
 
-proto_bool pc_zwave_is_ack(uint8_t b)
+proto_bool protocore_zwave_is_ack(uint8_t b)
 {
     return b == ZWAVE_ACK;
 }
-proto_bool pc_zwave_is_nak(uint8_t b)
+proto_bool protocore_zwave_is_nak(uint8_t b)
 {
     return b == ZWAVE_NAK;
 }
-proto_bool pc_zwave_is_can(uint8_t b)
+proto_bool protocore_zwave_is_can(uint8_t b)
 {
     return b == ZWAVE_CAN;
 }
 
-uint16_t pc_zwave_build_ack(uint8_t *out, uint16_t cap)
+uint16_t protocore_zwave_build_ack(uint8_t *out, uint16_t cap)
 {
     if (!out || cap < 1)
     {
@@ -121,4 +121,4 @@ uint16_t pc_zwave_build_ack(uint8_t *out, uint16_t cap)
     return 1;
 }
 
-#endif // PC_ENABLE_ZWAVE
+#endif // PROTOCORE_ENABLE_ZWAVE

@@ -1,6 +1,6 @@
 # DnsResolver - DNS resolution with answer verification
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_DNS_RESOLVER`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_DNS_RESOLVER`
 
 ## What this example teaches
 
@@ -14,12 +14,12 @@ and whether it passed verification.
 
 ```cpp
 uint32_t ip = 0;
-bool ok = pc_dns_resolver_resolve(host, &ip);   // false on lookup failure
+bool ok = protocore_dns_resolver_resolve(host, &ip);   // false on lookup failure
 // ...
-pc_dns_resolver_verify(ip)                        // false for 0.0.0.0 / loopback / broadcast / multicast
+protocore_dns_resolver_verify(ip)                        // false for 0.0.0.0 / loopback / broadcast / multicast
 ```
 
-`pc_dns_resolver_resolve()` does the lookup; `pc_dns_resolver_verify()` is the safety filter you
+`protocore_dns_resolver_resolve()` does the lookup; `protocore_dns_resolver_verify()` is the safety filter you
 apply before you connect anywhere with the result.
 
 **Where to resolve.** The lookup is blocking. This demo runs it in the handler for
@@ -31,7 +31,7 @@ handling.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_DNS_RESOLVER=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DNS_RESOLVER=1" \
   --lib="." examples/L7-Application/DnsResolver/DnsResolver.ino
 ```
 
@@ -48,7 +48,7 @@ with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_DNS_RESOLVER 1
+#define PROTOCORE_ENABLE_DNS_RESOLVER 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -78,7 +78,7 @@ void setup()
             return;
         }
         uint32_t ip = 0;
-        bool ok = pc_dns_resolver_resolve(host, &ip);
+        bool ok = protocore_dns_resolver_resolve(host, &ip);
         if (!ok)
         {
             server.send(id, 502, "application/json", "{\"error\":\"resolve failed\"}");
@@ -86,7 +86,7 @@ void setup()
         }
         char b[80];
         snprintf(b, sizeof(b), "{\"ip\":\"%u.%u.%u.%u\",\"verified\":%s}", (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
-                 (ip >> 8) & 0xFF, ip & 0xFF, pc_dns_resolver_verify(ip) ? "true" : "false");
+                 (ip >> 8) & 0xFF, ip & 0xFF, protocore_dns_resolver_verify(ip) ? "true" : "false");
         server.send(id, 200, "application/json", b);
     });
     server.begin(80);

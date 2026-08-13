@@ -3,21 +3,21 @@
 
 /**
  * @file log.h
- * @brief Abstract logging whose disabled levels cost nothing at all (PC_LOG_LEVEL).
+ * @brief Abstract logging whose disabled levels cost nothing at all (PROTOCORE_LOG_LEVEL).
  *
  * Instrumentation is only worth leaving in the source permanently if a build that does not want it
  * pays nothing for it - not a branch, not a call, and not a format string sitting in flash. A
  * runtime `if (level >= threshold)` fails that last part: every message is still linked in, and on
  * a device flash is the scarce resource.
  *
- * So the filter is the preprocessor. A call below PC_LOG_LEVEL expands to a form that names its
+ * So the filter is the preprocessor. A call below PROTOCORE_LOG_LEVEL expands to a form that names its
  * arguments only inside `sizeof(...)` - an unevaluated context - which emits no code and no string
  * literal, yet still runs the compiler's printf format checking over them and marks the arguments
  * used (so a variable read only by a log does not warn). Enable the level and the same line starts
  * logging, with no source change.
  *
  * Where an emitted line goes is the caller's choice: it is handed to server/logbuf's ring when
- * PC_ENABLE_LOGBUF is on, and to a sink callback registered with pc_log_set_sink() (Serial,
+ * PROTOCORE_ENABLE_LOGBUF is on, and to a sink callback registered with protocore_log_set_sink() (Serial,
  * syslog, a websocket console) if there is one.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -29,15 +29,15 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // Only ever pointed at from here, so the tags are enough and the engine's header stays out of
 // every translation unit that includes this one.
-struct pc_field;
-struct pc_fval;
+struct protocore_field;
+struct protocore_fval;
 
-/** @brief Receives an emitted line, already formatted. @p level is a PC_LOG_LEVEL_* value. */
-typedef void (*pc_log_sink_fn)(uint8_t level, const char *line);
+/** @brief Receives an emitted line, already formatted. @p level is a PROTOCORE_LOG_LEVEL_* value. */
+typedef void (*protocore_log_sink_fn)(uint8_t level, const char *line);
 
 /**
  * @brief Declared, never defined: only ever named inside `sizeof`, so no call is ever generated.
@@ -45,16 +45,16 @@ typedef void (*pc_log_sink_fn)(uint8_t level, const char *line);
  * It exists to mark a discarded statement's arguments as used, so a variable read only by a log
  * does not warn its way into being deleted.
  */
-int pc_log_discard_args(const struct pc_field *spec, const struct pc_fval *v, size_t nv);
+int protocore_log_discard_args(const struct protocore_field *spec, const struct protocore_fval *v, size_t nv);
 
 /** @brief The discarded form: marks arguments used, emits nothing. */
-#define PC_LOG_DISCARD(spec, v, nv)                                                                                    \
+#define PROTOCORE_LOG_DISCARD(spec, v, nv)                                                                             \
     do                                                                                                                 \
     {                                                                                                                  \
-        (void)sizeof(pc_log_discard_args((spec), (v), (nv)));                                                          \
+        (void)sizeof(protocore_log_discard_args((spec), (v), (nv)));                                                   \
     } while (0)
 
-#if PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
+#if PROTOCORE_LOG_LEVEL < PROTOCORE_LOG_LEVEL_NONE
 
 /**
  * @brief Build @p spec into a line and route it to the logbuf ring and/or the registered sink.
@@ -63,45 +63,45 @@ int pc_log_discard_args(const struct pc_field *spec, const struct pc_fval *v, si
  * nothing here parses anything at runtime, and a build whose logs declare no float field links no
  * float formatter.
  */
-void pc_log_frame(uint8_t level, const struct pc_field *spec, const struct pc_fval *v, size_t nv);
+void protocore_log_frame(uint8_t level, const struct protocore_field *spec, const struct protocore_fval *v, size_t nv);
 
 /** @brief Install (or clear, with NULL) the sink emitted lines are handed to. */
-void pc_log_set_sink(pc_log_sink_fn cb);
+void protocore_log_set_sink(protocore_log_sink_fn cb);
 
 #else
 
 /** @brief No level is emitted, so there is nothing to sink; kept so callers still compile. */
-static inline void pc_log_set_sink(pc_log_sink_fn cb)
+static inline void protocore_log_set_sink(protocore_log_sink_fn cb)
 {
     (void)cb;
 }
 
-#endif // PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
+#endif // PROTOCORE_LOG_LEVEL < PROTOCORE_LOG_LEVEL_NONE
 
-#if PC_LOG_LEVEL <= PC_LOG_LEVEL_DEBUG
-#define PC_LOGD(spec, v, nv) pc_log_frame(PC_LOG_LEVEL_DEBUG, (spec), (v), (nv))
+#if PROTOCORE_LOG_LEVEL <= PROTOCORE_LOG_LEVEL_DEBUG
+#define PROTOCORE_LOGD(spec, v, nv) protocore_log_frame(PROTOCORE_LOG_LEVEL_DEBUG, (spec), (v), (nv))
 #else
-#define PC_LOGD(spec, v, nv) PC_LOG_DISCARD((spec), (v), (nv))
+#define PROTOCORE_LOGD(spec, v, nv) PROTOCORE_LOG_DISCARD((spec), (v), (nv))
 #endif
 
-#if PC_LOG_LEVEL <= PC_LOG_LEVEL_INFO
-#define PC_LOGI(spec, v, nv) pc_log_frame(PC_LOG_LEVEL_INFO, (spec), (v), (nv))
+#if PROTOCORE_LOG_LEVEL <= PROTOCORE_LOG_LEVEL_INFO
+#define PROTOCORE_LOGI(spec, v, nv) protocore_log_frame(PROTOCORE_LOG_LEVEL_INFO, (spec), (v), (nv))
 #else
-#define PC_LOGI(spec, v, nv) PC_LOG_DISCARD((spec), (v), (nv))
+#define PROTOCORE_LOGI(spec, v, nv) PROTOCORE_LOG_DISCARD((spec), (v), (nv))
 #endif
 
-#if PC_LOG_LEVEL <= PC_LOG_LEVEL_WARN
-#define PC_LOGW(spec, v, nv) pc_log_frame(PC_LOG_LEVEL_WARN, (spec), (v), (nv))
+#if PROTOCORE_LOG_LEVEL <= PROTOCORE_LOG_LEVEL_WARN
+#define PROTOCORE_LOGW(spec, v, nv) protocore_log_frame(PROTOCORE_LOG_LEVEL_WARN, (spec), (v), (nv))
 #else
-#define PC_LOGW(spec, v, nv) PC_LOG_DISCARD((spec), (v), (nv))
+#define PROTOCORE_LOGW(spec, v, nv) PROTOCORE_LOG_DISCARD((spec), (v), (nv))
 #endif
 
-#if PC_LOG_LEVEL <= PC_LOG_LEVEL_ERROR
-#define PC_LOGE(spec, v, nv) pc_log_frame(PC_LOG_LEVEL_ERROR, (spec), (v), (nv))
+#if PROTOCORE_LOG_LEVEL <= PROTOCORE_LOG_LEVEL_ERROR
+#define PROTOCORE_LOGE(spec, v, nv) protocore_log_frame(PROTOCORE_LOG_LEVEL_ERROR, (spec), (v), (nv))
 #else
-#define PC_LOGE(spec, v, nv) PC_LOG_DISCARD((spec), (v), (nv))
+#define PROTOCORE_LOGE(spec, v, nv) PROTOCORE_LOG_DISCARD((spec), (v), (nv))
 #endif
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_LOG_H

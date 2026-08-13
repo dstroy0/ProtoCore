@@ -9,7 +9,7 @@
 #include "services/fieldbus/simatic/simatic.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SIMATIC
+#if PROTOCORE_ENABLE_SIMATIC
 
 // ---------------------------------------------------------------------------
 // Big-endian word helpers (Siemens words are big-endian; no stdlib)
@@ -30,7 +30,7 @@ static inline uint16_t rd_u16(const uint8_t *p)
 // 3964R block framing
 // ---------------------------------------------------------------------------
 
-uint8_t pc_3964r_bcc(const uint8_t *data, size_t len)
+uint8_t protocore_3964r_bcc(const uint8_t *data, size_t len)
 {
     uint8_t x = 0;
     for (size_t i = 0; i < len; i++)
@@ -40,7 +40,7 @@ uint8_t pc_3964r_bcc(const uint8_t *data, size_t len)
     return x;
 }
 
-size_t pc_3964r_build_block(uint8_t *buf, size_t cap, const uint8_t *data, size_t len, proto_bool with_bcc)
+size_t protocore_3964r_build_block(uint8_t *buf, size_t cap, const uint8_t *data, size_t len, proto_bool with_bcc)
 {
     if (!buf || (!data && len))
     {
@@ -75,7 +75,7 @@ size_t pc_3964r_build_block(uint8_t *buf, size_t cap, const uint8_t *data, size_
         {
             return 0;
         }
-        buf[o] = pc_3964r_bcc(buf, o); // XOR over the stuffed data + DLE ETX
+        buf[o] = protocore_3964r_bcc(buf, o); // XOR over the stuffed data + DLE ETX
         o++;
     }
     return o;
@@ -104,10 +104,10 @@ static proto_bool bcc_ok(const uint8_t *buf, size_t i, size_t len, proto_bool wi
     {
         return PROTO_FALSE; // missing BCC
     }
-    return pc_3964r_bcc(buf, i) == buf[i];
+    return protocore_3964r_bcc(buf, i) == buf[i];
 }
 
-proto_bool pc_3964r_parse_block(const uint8_t *buf, size_t len, proto_bool with_bcc, uint8_t *out, size_t out_cap,
+proto_bool protocore_3964r_parse_block(const uint8_t *buf, size_t len, proto_bool with_bcc, uint8_t *out, size_t out_cap,
                                 size_t *out_len)
 {
     if (!buf || !out || !out_len)
@@ -173,7 +173,7 @@ static void send_stx_await_conn(Simatic3964Ctx *ctx, uint32_t now_ms)
 {
     emit(ctx, SIMATIC_STX);
     ctx->state = SIMATIC3964_STATE_TX_AWAIT_CONN;
-    ctx->deadline_ms = now_ms + PC_SIMATIC_QVZ_MS;
+    ctx->deadline_ms = now_ms + PROTOCORE_SIMATIC_QVZ_MS;
 }
 
 static void send_block(Simatic3964Ctx *ctx, uint32_t now_ms)
@@ -183,7 +183,7 @@ static void send_block(Simatic3964Ctx *ctx, uint32_t now_ms)
         emit(ctx, ctx->txbuf[i]);
     }
     ctx->state = SIMATIC3964_STATE_TX_AWAIT_END;
-    ctx->deadline_ms = now_ms + PC_SIMATIC_QVZ_MS;
+    ctx->deadline_ms = now_ms + PROTOCORE_SIMATIC_QVZ_MS;
 }
 
 static void begin_receive(Simatic3964Ctx *ctx, uint32_t now_ms)
@@ -193,10 +193,10 @@ static void begin_receive(Simatic3964Ctx *ctx, uint32_t now_ms)
     ctx->rxpos = 0;
     ctx->prev_dle = PROTO_FALSE;
     ctx->await_bcc = PROTO_FALSE;
-    ctx->deadline_ms = now_ms + PC_SIMATIC_ZVZ_MS;
+    ctx->deadline_ms = now_ms + PROTOCORE_SIMATIC_ZVZ_MS;
 }
 
-void pc_3964r_init(Simatic3964Ctx *ctx, proto_bool high_priority, proto_bool with_bcc, Simatic3964TxFn tx,
+void protocore_3964r_init(Simatic3964Ctx *ctx, proto_bool high_priority, proto_bool with_bcc, Simatic3964TxFn tx,
                    Simatic3964RxFn rx, void *user)
 {
     mem.set(ctx, 0, sizeof(*ctx));
@@ -208,13 +208,13 @@ void pc_3964r_init(Simatic3964Ctx *ctx, proto_bool high_priority, proto_bool wit
     ctx->user = user;
 }
 
-proto_bool pc_3964r_send(Simatic3964Ctx *ctx, const uint8_t *data, size_t len, uint32_t now_ms)
+proto_bool protocore_3964r_send(Simatic3964Ctx *ctx, const uint8_t *data, size_t len, uint32_t now_ms)
 {
     if (ctx->state != SIMATIC3964_STATE_IDLE)
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_3964r_build_block(ctx->txbuf, sizeof(ctx->txbuf), data, len, ctx->with_bcc);
+    size_t n = protocore_3964r_build_block(ctx->txbuf, sizeof(ctx->txbuf), data, len, ctx->with_bcc);
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -228,13 +228,13 @@ proto_bool pc_3964r_send(Simatic3964Ctx *ctx, const uint8_t *data, size_t len, u
 
 static void deliver_or_nak(Simatic3964Ctx *ctx)
 {
-    uint8_t out[PC_SIMATIC_BLOCK_MAX];
+    uint8_t out[PROTOCORE_SIMATIC_BLOCK_MAX];
     size_t olen = 0;
-    if (pc_3964r_parse_block(ctx->rxbuf, ctx->rxpos, ctx->with_bcc, out, sizeof(out), &olen))
+    if (protocore_3964r_parse_block(ctx->rxbuf, ctx->rxpos, ctx->with_bcc, out, sizeof(out), &olen))
     {
         emit(ctx, SIMATIC_DLE); // ack the received block
         // Return to IDLE BEFORE the delivery callback: a request/response peer replies from inside rx (e.g.
-        // an RK512 FETCH -> a reaction telegram), and pc_3964r_send requires an idle link.
+        // an RK512 FETCH -> a reaction telegram), and protocore_3964r_send requires an idle link.
         ctx->state = SIMATIC3964_STATE_IDLE;
         if (ctx->rx)
         {
@@ -257,7 +257,7 @@ static void rx_collect_byte(Simatic3964Ctx *ctx, uint8_t b, uint32_t now_ms)
         return;
     }
     ctx->rxbuf[ctx->rxpos++] = b;
-    ctx->deadline_ms = now_ms + PC_SIMATIC_ZVZ_MS;
+    ctx->deadline_ms = now_ms + PROTOCORE_SIMATIC_ZVZ_MS;
 
     if (ctx->await_bcc) // this byte was the BCC that follows DLE ETX
     {
@@ -294,7 +294,7 @@ static void rx_collect_byte(Simatic3964Ctx *ctx, uint8_t b, uint32_t now_ms)
     }
 }
 
-void pc_3964r_rx_byte(Simatic3964Ctx *ctx, uint8_t b, uint32_t now_ms)
+void protocore_3964r_rx_byte(Simatic3964Ctx *ctx, uint8_t b, uint32_t now_ms)
 {
     switch (ctx->state)
     {
@@ -352,7 +352,7 @@ void pc_3964r_rx_byte(Simatic3964Ctx *ctx, uint8_t b, uint32_t now_ms)
     }
 }
 
-void pc_3964r_tick(Simatic3964Ctx *ctx, uint32_t now_ms)
+void protocore_3964r_tick(Simatic3964Ctx *ctx, uint32_t now_ms)
 {
     if (ctx->state == SIMATIC3964_STATE_IDLE)
     {
@@ -393,7 +393,7 @@ void pc_3964r_tick(Simatic3964Ctx *ctx, uint32_t now_ms)
     }
 }
 
-proto_bool pc_3964r_idle(const Simatic3964Ctx *ctx)
+proto_bool protocore_3964r_idle(const Simatic3964Ctx *ctx)
 {
     return ctx->state == SIMATIC3964_STATE_IDLE;
 }
@@ -406,7 +406,7 @@ proto_bool pc_3964r_idle(const Simatic3964Ctx *ctx)
 // Request header: [cmd, coord=0, area, dbnr, addr_hi, addr_lo, count_hi, count_lo]  (8 bytes)
 #define RK512_HDR_LEN 8
 
-size_t pc_rk512_build_send(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr, const uint16_t *words,
+size_t protocore_rk512_build_send(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr, const uint16_t *words,
                            uint16_t wcount)
 {
     if (!buf || (!words && wcount))
@@ -431,7 +431,7 @@ size_t pc_rk512_build_send(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbn
     return need;
 }
 
-size_t pc_rk512_build_fetch(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr, uint16_t wcount)
+size_t protocore_rk512_build_fetch(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr, uint16_t wcount)
 {
     if (!buf || cap < RK512_HDR_LEN)
     {
@@ -447,7 +447,7 @@ size_t pc_rk512_build_fetch(uint8_t *buf, size_t cap, Rk512Area area, uint8_t db
 }
 
 // Reaction: [cmd=REACTION, status_hi, status_lo]  (+ FETCH-response data words appended by the caller)
-size_t pc_rk512_build_reaction(uint8_t *buf, size_t cap, uint16_t status)
+size_t protocore_rk512_build_reaction(uint8_t *buf, size_t cap, uint16_t status)
 {
     if (!buf || cap < 3)
     {
@@ -463,7 +463,7 @@ static proto_bool area_valid(uint8_t a)
     return a >= (uint8_t)RK512_AREA_DB && a <= (uint8_t)RK512_AREA_TB;
 }
 
-proto_bool pc_rk512_parse_header(const uint8_t *buf, size_t len, Rk512Header *out)
+proto_bool protocore_rk512_parse_header(const uint8_t *buf, size_t len, Rk512Header *out)
 {
     if (!buf || !out || len < RK512_HDR_LEN)
     {
@@ -486,7 +486,7 @@ proto_bool pc_rk512_parse_header(const uint8_t *buf, size_t len, Rk512Header *ou
     return PROTO_TRUE;
 }
 
-proto_bool pc_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *status, const uint8_t **data, size_t *dlen)
+proto_bool protocore_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *status, const uint8_t **data, size_t *dlen)
 {
     if (!buf || !status || len < 3)
     {
@@ -508,4 +508,4 @@ proto_bool pc_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *sta
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_SIMATIC
+#endif // PROTOCORE_ENABLE_SIMATIC

@@ -3,7 +3,7 @@
 
 /**
  * @file profibus.h
- * @brief PROFIBUS-DP FDL telegram codec (PC_ENABLE_PROFIBUS).
+ * @brief PROFIBUS-DP FDL telegram codec (PROTOCORE_ENABLE_PROFIBUS).
  *
  * PROFIBUS-DP is the Siemens RS-485 master/slave fieldbus (the DP-V0 cyclic I/O exchange). Its FDL data
  * link uses fixed telegram formats delimited by a start byte (SD):
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_PROFIBUS
+#if PROTOCORE_ENABLE_PROFIBUS
 
 // PROFIBUS telegram delimiters + Frame Control values.
 #define PB_SD1 0x10 ///< start delimiter: no data.
@@ -40,12 +40,12 @@ PROTO_BEGIN_DECLS
 #define PB_FC_SRD_HIGH 0x7C           ///< Send and Request Data, high priority.
 
 /** @brief PROFIBUS FCS: arithmetic sum (mod 256) of @p len bytes (DA + SA + FC + data). */
-uint8_t pc_pb_fcs(const uint8_t *bytes, size_t len);
+uint8_t protocore_pb_fcs(const uint8_t *bytes, size_t len);
 
 /**
  * @brief Build an SD1 (no-data) telegram: SD1 DA SA FC FCS ED. @return 6, or 0 on overflow.
  */
-size_t pc_pb_build_sd1(uint8_t da, uint8_t sa, uint8_t fc, uint8_t *out, size_t cap);
+size_t protocore_pb_build_sd1(uint8_t da, uint8_t sa, uint8_t fc, uint8_t *out, size_t cap);
 
 /**
  * @brief Build an SD2 (variable-data) telegram: SD2 LE LEr SD2 DA SA FC data FCS ED.
@@ -53,15 +53,15 @@ size_t pc_pb_build_sd1(uint8_t da, uint8_t sa, uint8_t fc, uint8_t *out, size_t 
  * @param data_len 0..246 (the DP process data).
  * @return the telegram length (6 + 3 + data_len... = 9 + data_len), or 0 on overflow / bad args.
  */
-size_t pc_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, size_t data_len, uint8_t *out,
-                       size_t cap);
+size_t protocore_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, size_t data_len, uint8_t *out,
+                              size_t cap);
 
 /**
  * @brief Build an SD3 (fixed 8-octet data) telegram: SD3 DA SA FC data[8] FCS ED. The data length is always
  *        exactly 8 (the fixed-length data telegram), so @p data must point to 8 octets.
  * @return 14 (the telegram length), or 0 on a null buffer / null data / overflow.
  */
-size_t pc_pb_build_sd3(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, uint8_t *out, size_t cap);
+size_t protocore_pb_build_sd3(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, uint8_t *out, size_t cap);
 
 /** @brief A parsed PROFIBUS telegram (data points into the input, null for SD1). */
 typedef struct
@@ -75,10 +75,10 @@ typedef struct
 } PbTelegram;
 
 /** @brief Validate + parse an SD1 / SD2 / SD3 telegram (FCS + ED checked). @return true if well-formed. */
-proto_bool pc_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out);
+proto_bool protocore_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out);
 
-#endif // PC_ENABLE_PROFIBUS
+#endif // PROTOCORE_ENABLE_PROFIBUS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PROFIBUS_H

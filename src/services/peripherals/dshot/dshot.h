@@ -3,7 +3,7 @@
 
 /**
  * @file dshot.h
- * @brief DShot ESC digital throttle protocol codec (PC_ENABLE_DSHOT).
+ * @brief DShot ESC digital throttle protocol codec (PROTOCORE_ENABLE_DSHOT).
  *
  * DShot is the digital replacement for analog PWM on brushless-motor ESCs (drones, robotics). Each
  * command is a 16-bit frame - 11 bits of value, 1 telemetry-request bit, and a 4-bit CRC:
@@ -13,9 +13,9 @@
  *     bits 3..0   CRC = xor of the three nibbles of (value<<1 | telemetry)
  *
  * For **bidirectional / "extended" DShot** (the ESC sends RPM/telemetry back on the same wire) the CRC
- * is inverted. This is the wire codec: `pc_dshot_encode` builds the 16-bit frame and
- * `pc_dshot_decode` validates the CRC and unpacks it. The physical layer (the bit-timed pulse train
- * at 150/300/600/1200 kbit via the ESP32 RMT peripheral) is the app's transport - `pc_dshot_bit_ns`
+ * is inverted. This is the wire codec: `protocore_dshot_encode` builds the 16-bit frame and
+ * `protocore_dshot_decode` validates the CRC and unpacks it. The physical layer (the bit-timed pulse train
+ * at 150/300/600/1200 kbit via the ESP32 RMT peripheral) is the app's transport - `protocore_dshot_bit_ns`
  * gives the high-time for a 0/1 bit at a given rate so a driver can program the RMT symbols.
  *
  * Pure, zero heap, no stdlib, host-testable.
@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DSHOT
+#if PROTOCORE_ENABLE_DSHOT
 
 /** @brief The standard DShot special commands (value field 0..47; throttle starts at 48). */
 #define DSHOT_CMD_MOTOR_STOP 0 ///< disarm / zero throttle.
@@ -54,7 +54,7 @@ PROTO_BEGIN_DECLS
  * @return the 16-bit frame `(value<<5) | (telemetry<<4) | crc`, ready to clock out MSB-first. @p value11
  *         above 2047 is masked to 11 bits.
  */
-uint16_t pc_dshot_encode(uint16_t value11, proto_bool telemetry, proto_bool bidirectional);
+uint16_t protocore_dshot_encode(uint16_t value11, proto_bool telemetry, proto_bool bidirectional);
 
 /**
  * @brief Validate + unpack a 16-bit DShot frame.
@@ -64,7 +64,7 @@ uint16_t pc_dshot_encode(uint16_t value11, proto_bool telemetry, proto_bool bidi
  * @param bidirectional interpret the CRC as the inverted (bidirectional) form.
  * @return true if the CRC is valid.
  */
-proto_bool pc_dshot_decode(uint16_t frame, uint16_t *value11, proto_bool *telemetry, proto_bool bidirectional);
+proto_bool protocore_dshot_decode(uint16_t frame, uint16_t *value11, proto_bool *telemetry, proto_bool bidirectional);
 
 /**
  * @brief High-time (ns) of a bit at a DShot rate. A DShot bit is one pulse per bit-period; a "1" is
@@ -73,28 +73,28 @@ proto_bool pc_dshot_decode(uint16_t frame, uint16_t *value11, proto_bool *teleme
  * @param bit       the bit value (false = 0, true = 1).
  * @return the high time in nanoseconds, or 0 for an unknown rate.
  */
-uint32_t pc_dshot_bit_ns(uint16_t rate_kbit, proto_bool bit);
+uint32_t protocore_dshot_bit_ns(uint16_t rate_kbit, proto_bool bit);
 
-/** @brief The legacy analog-PWM ESC protocols (pulse width carries the throttle), for pc_esc_pwm_ns. */
+/** @brief The legacy analog-PWM ESC protocols (pulse width carries the throttle), for protocore_esc_pwm_ns. */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_ESC_PWM,        ///< standard servo PWM: 1000-2000 us.
-    PC_ESC_ONESHOT125, ///< OneShot125: 125-250 us.
-    PC_ESC_ONESHOT42,  ///< OneShot42: 42-84 us.
-    PC_ESC_MULTISHOT,  ///< Multishot: 5-25 us.
-} pc_esc_pwm;
+    PROTOCORE_ESC_PWM,        ///< standard servo PWM: 1000-2000 us.
+    PROTOCORE_ESC_ONESHOT125, ///< OneShot125: 125-250 us.
+    PROTOCORE_ESC_ONESHOT42,  ///< OneShot42: 42-84 us.
+    PROTOCORE_ESC_MULTISHOT,  ///< Multishot: 5-25 us.
+} protocore_esc_pwm;
 
 /**
  * @brief Pulse width (ns) for an analog-PWM ESC protocol at a given throttle.
  * @param throttle_1000 throttle 0..1000 (clamped); 0 = min pulse (idle/arm), 1000 = max.
- * @param mode          one of pc_esc_pwm.
+ * @param mode          one of protocore_esc_pwm.
  * @return the pulse high-time in nanoseconds, linearly mapped across the mode's [min, max] range. These
  *         are driven by the MCPWM peripheral; this is the pure throttle->width mapping the driver needs.
  */
-uint32_t pc_esc_pwm_ns(uint16_t throttle_1000, pc_esc_pwm mode);
+uint32_t protocore_esc_pwm_ns(uint16_t throttle_1000, protocore_esc_pwm mode);
 
-#endif // PC_ENABLE_DSHOT
+#endif // PROTOCORE_ENABLE_DSHOT
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DSHOT_H

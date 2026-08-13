@@ -27,12 +27,12 @@ void dbench_run(void)
             counts[i] = (uint32_t)(i * 3 + 1);
         }
         volatile uint32_t sink = 0;
-        DBENCH_OP("pc_wearlevel_pick (16 slots)", 200000, sink += pc_wearlevel_pick(counts, SLOTS));
-        DBENCH_OP("pc_wearlevel_mark", 200000, {
-            pc_wearlevel_mark(counts, SLOTS, sink % SLOTS);
+        DBENCH_OP("protocore_wearlevel_pick (16 slots)", 200000, sink += protocore_wearlevel_pick(counts, SLOTS));
+        DBENCH_OP("protocore_wearlevel_mark", 200000, {
+            protocore_wearlevel_mark(counts, SLOTS, sink % SLOTS);
             sink += 1;
         });
-        DBENCH_OP("pc_wearlevel_spread", 200000, sink += pc_wearlevel_spread(counts, SLOTS));
+        DBENCH_OP("protocore_wearlevel_spread", 200000, sink += protocore_wearlevel_spread(counts, SLOTS));
         (void)sink;
         DBENCH_DONE();
     }

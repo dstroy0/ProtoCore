@@ -26,7 +26,7 @@
 #include <stdint.h>
 
 /** @brief AES-128-CMAC output length (one AES block). */
-#define PC_AES_CMAC_LEN 16
+#define PROTOCORE_AES_CMAC_LEN 16
 
 /**
  * @brief Compute the AES-128-CMAC of @p msg under @p key (RFC 4493).
@@ -36,6 +36,6 @@
  * @param msg_len  message length in bytes (0 is valid - the empty-message CMAC).
  * @param mac      receives the 16-byte tag.
  */
-void pc_aes_cmac(const uint8_t key[16], const uint8_t *msg, size_t msg_len, uint8_t mac[PC_AES_CMAC_LEN]);
+void protocore_aes_cmac(const uint8_t key[16], const uint8_t *msg, size_t msg_len, uint8_t mac[PROTOCORE_AES_CMAC_LEN]);
 
 #endif // PROTOCORE_AES_CMAC_H

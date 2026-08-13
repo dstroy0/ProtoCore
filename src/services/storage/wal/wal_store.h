@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_wal_store.h
- * @brief Durable write-ahead store: A/B superblock + checkpoint over a block-device seam (PC_ENABLE_WAL).
+ * @file protocore_wal_store.h
+ * @brief Durable write-ahead store: A/B superblock + checkpoint over a block-device seam (PROTOCORE_ENABLE_WAL).
  *
  * Increment 2 on top of the pure record codec in wal.h. It turns the codec into a mountable, power-loss-safe
  * append log on a fixed backing region (a preallocated file on any fs::FS - SD card or LittleFS - or any RAM
@@ -17,7 +17,7 @@
  * Records (wal.h framing) are **appended sequentially** into the data region and are *not* synced per op -
  * that matches the measured envelope (docs/FEATURE_PERFORMANCE.md): batch, then checkpoint in bulk.
  *
- * **Checkpoint = the atomic commit.** ::pc_wal_store_checkpoint syncs the appended data, then writes an updated
+ * **Checkpoint = the atomic commit.** ::protocore_wal_store_checkpoint syncs the appended data, then writes an updated
  * superblock (with an incremented generation, the new durable head, and the next seq) to the *inactive* of
  * the two copies and syncs that. Flipping which copy is newest is the single durable pointer move. If a
  * crash tears the new superblock, its CRC fails and mount falls back to the older copy; either way mount
@@ -34,9 +34,9 @@
 #include "protocore_config.h"
 #include "services/storage/wal/wal.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_WAL
+#if PROTOCORE_ENABLE_WAL
 
 /** @brief Superblock magic ("WSB1", little-endian). */
 #define WAL_SUPER_MAGIC 0x31425357u
@@ -81,29 +81,29 @@ typedef struct
  * @brief Format @p dev into an empty store (writes a generation-1 superblock). Erases any existing log.
  * @return false if @p dev is too small to hold both superblocks plus a data region.
  */
-proto_bool pc_wal_store_format(WalStore *s, const WalDev *dev);
+proto_bool protocore_wal_store_format(WalStore *s, const WalDev *dev);
 
 /**
  * @brief Mount an existing store: pick the newest valid superblock, then replay the tail past its committed
  * head to recover records appended since the last checkpoint. @return false if neither superblock is valid
  * (unformatted / both torn).
  */
-proto_bool pc_wal_store_mount(WalStore *s, const WalDev *dev);
+proto_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev);
 
 /**
- * @brief Append one record (wal.h framing) at the current head. Does **not** sync - call ::pc_wal_store_checkpoint
- * to make appends durable. @return false if the record does not fit the remaining data region (log full) or a
- * device write is short.
+ * @brief Append one record (wal.h framing) at the current head. Does **not** sync - call
+ * ::protocore_wal_store_checkpoint to make appends durable. @return false if the record does not fit the remaining data
+ * region (log full) or a device write is short.
  */
-proto_bool pc_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len);
+proto_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len);
 
 /**
  * @brief Make every append so far durable and advance the committed head: sync data, write the next-generation
  * superblock to the inactive copy, sync it. @return false on a device write/sync failure.
  */
-proto_bool pc_wal_store_checkpoint(WalStore *s);
+proto_bool protocore_wal_store_checkpoint(WalStore *s);
 
-/** @brief Per-record callback for ::pc_wal_store_scan - like ::WalRecordCb but also gives the record's
+/** @brief Per-record callback for ::protocore_wal_store_scan - like ::WalRecordCb but also gives the record's
  * data-region byte offset (so an index can record where to re-read the payload later). */
 typedef void (*WalStoreRecordCb)(uint64_t seq, uint64_t data_off, const uint8_t *payload, uint32_t len, void *ctx);
 
@@ -114,32 +114,32 @@ typedef void (*WalStoreRecordCb)(uint64_t seq, uint64_t data_off, const uint8_t 
  * payload) and re-validates it with the codec, stopping at the first bad record. The point is to rebuild an
  * in-RAM index after mount (e.g. the dbm hash table replays puts/deletes this way). @return the record count.
  */
-size_t pc_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch, size_t scratch_len);
+size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch, size_t scratch_len);
 
 /**
  * @brief Read @p len bytes from data-region offset @p off (as reported to ::WalStoreRecordCb) into @p buf.
  * @return true on success. Lets an index re-read a value straight from the log without buffering it.
  */
-proto_bool pc_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len);
+proto_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len);
 
 /** @brief Bytes used in the data region (including appends not yet checkpointed). */
-static inline uint64_t pc_wal_store_used(const WalStore *s)
+static inline uint64_t protocore_wal_store_used(const WalStore *s)
 {
     return s->head;
 }
 /** @brief The durable committed head as of the last checkpoint. */
-static inline uint64_t pc_wal_store_committed(const WalStore *s)
+static inline uint64_t protocore_wal_store_committed(const WalStore *s)
 {
     return s->committed;
 }
 /** @brief Total usable data-region capacity in bytes. */
-static inline uint64_t pc_wal_store_capacity(const WalStore *s)
+static inline uint64_t protocore_wal_store_capacity(const WalStore *s)
 {
     return s->data_cap;
 }
 
-#endif // PC_ENABLE_WAL
+#endif // PROTOCORE_ENABLE_WAL
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_WAL_STORE_H

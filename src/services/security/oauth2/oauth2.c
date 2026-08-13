@@ -10,11 +10,11 @@
 #include "mmgr/protomem.h"
 #include "shared_primitives/hex.h"
 
-#if PC_ENABLE_OAUTH2
+#if PROTOCORE_ENABLE_OAUTH2
 
 #include "network_drivers/presentation/codec/json/json.h"
 
-#if PC_ENABLE_HTTP_CLIENT
+#if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
 #endif
 // Bounded form-body builder.
@@ -68,8 +68,8 @@ static void put_enc(Buf *b, const char *s)
                 return;
             }
             b->o[b->n++] = '%';
-            b->o[b->n++] = pc_hex_digit((c >> 4) & 0xF, PROTO_TRUE);
-            b->o[b->n++] = pc_hex_digit(c & 0xF, PROTO_TRUE);
+            b->o[b->n++] = protocore_hex_digit((c >> 4) & 0xF, PROTO_TRUE);
+            b->o[b->n++] = protocore_hex_digit(c & 0xF, PROTO_TRUE);
         }
     }
 }
@@ -96,8 +96,8 @@ static int finish(Buf *b)
     return (int)b->n;
 }
 
-int pc_oauth2_build_code_request(const char *code, const char *redirect_uri, const char *client_id,
-                                 const char *client_secret, const char *code_verifier, char *out, size_t cap)
+int protocore_oauth2_build_code_request(const char *code, const char *redirect_uri, const char *client_id,
+                                        const char *client_secret, const char *code_verifier, char *out, size_t cap)
 {
     if (!code || !redirect_uri || !client_id || !out || cap == 0)
     {
@@ -119,8 +119,8 @@ int pc_oauth2_build_code_request(const char *code, const char *redirect_uri, con
     return finish(&b);
 }
 
-int pc_oauth2_build_refresh_request(const char *refresh_token, const char *client_id, const char *client_secret,
-                                    char *out, size_t cap)
+int protocore_oauth2_build_refresh_request(const char *refresh_token, const char *client_id, const char *client_secret,
+                                           char *out, size_t cap)
 {
     if (!refresh_token || !client_id || !out || cap == 0)
     {
@@ -137,7 +137,7 @@ int pc_oauth2_build_refresh_request(const char *refresh_token, const char *clien
     return finish(&b);
 }
 
-proto_bool pc_oauth2_parse_token_response(const char *json, pc_o_auth2_tokens *out)
+proto_bool protocore_oauth2_parse_token_response(const char *json, protocore_o_auth2_tokens *out)
 {
     if (!json || !out)
     {
@@ -164,29 +164,29 @@ proto_bool pc_oauth2_parse_token_response(const char *json, pc_o_auth2_tokens *o
     return PROTO_TRUE;
 }
 
-#if PC_ENABLE_HTTP_CLIENT
+#if PROTOCORE_ENABLE_HTTP_CLIENT
 
 // All OAuth2 exchange scratch, owned by one instance (internal linkage): the request-body
 // and response buffers (kept off the caller's stack), grouped so it is one named owner,
 // unreachable cross-TU.
 typedef struct
 {
-    char body[PC_OAUTH2_BODY_BUF];
-    char resp[PC_OAUTH2_RESP_BUF];
+    char body[PROTOCORE_OAUTH2_BODY_BUF];
+    char resp[PROTOCORE_OAUTH2_RESP_BUF];
 } Oauth2Ctx;
 static Oauth2Ctx s_oauth;
 
-static int post_and_parse(Oauth2Ctx *c, const char *token_url, int body_len, pc_o_auth2_tokens *out)
+static int post_and_parse(Oauth2Ctx *c, const char *token_url, int body_len, protocore_o_auth2_tokens *out)
 {
     if (body_len <= 0)
     {
-        return (int)PC_OAUTH2_ERR_BUILD;
+        return (int)PROTOCORE_OAUTH2_ERR_BUILD;
     }
     HttpClientResult r;
     int st = http_post(token_url, "application/x-www-form-urlencoded", (const uint8_t *)c->body, (size_t)body_len, &r);
     if (st <= 0)
     {
-        return (int)PC_OAUTH2_ERR_TRANSPORT;
+        return (int)PROTOCORE_OAUTH2_ERR_TRANSPORT;
     }
     size_t k = r.body_len < sizeof(c->resp) - 1 ? r.body_len : sizeof(c->resp) - 1;
     if (r.body && k)
@@ -194,29 +194,30 @@ static int post_and_parse(Oauth2Ctx *c, const char *token_url, int body_len, pc_
         mem.cpy(c->resp, r.body, k);
     }
     c->resp[k] = '\0';
-    if (!pc_oauth2_parse_token_response(c->resp, out))
+    if (!protocore_oauth2_parse_token_response(c->resp, out))
     {
-        return st >= 400 ? st : (int)PC_OAUTH2_ERR_RESPONSE; // surface the provider's 4xx, else generic
+        return st >= 400 ? st : (int)PROTOCORE_OAUTH2_ERR_RESPONSE; // surface the provider's 4xx, else generic
     }
     return st;
 }
 
-int pc_oauth2_exchange_code(const char *token_url, const char *code, const char *redirect_uri, const char *client_id,
-                            const char *client_secret, const char *code_verifier, pc_o_auth2_tokens *out)
+int protocore_oauth2_exchange_code(const char *token_url, const char *code, const char *redirect_uri,
+                                   const char *client_id, const char *client_secret, const char *code_verifier,
+                                   protocore_o_auth2_tokens *out)
 {
-    int n = pc_oauth2_build_code_request(code, redirect_uri, client_id, client_secret, code_verifier, s_oauth.body,
-                                         sizeof(s_oauth.body));
+    int n = protocore_oauth2_build_code_request(code, redirect_uri, client_id, client_secret, code_verifier,
+                                                s_oauth.body, sizeof(s_oauth.body));
     return post_and_parse(&s_oauth, token_url, n, out);
 }
 
-int pc_oauth2_refresh(const char *token_url, const char *refresh_token, const char *client_id,
-                      const char *client_secret, pc_o_auth2_tokens *out)
+int protocore_oauth2_refresh(const char *token_url, const char *refresh_token, const char *client_id,
+                             const char *client_secret, protocore_o_auth2_tokens *out)
 {
-    int n =
-        pc_oauth2_build_refresh_request(refresh_token, client_id, client_secret, s_oauth.body, sizeof(s_oauth.body));
+    int n = protocore_oauth2_build_refresh_request(refresh_token, client_id, client_secret, s_oauth.body,
+                                                   sizeof(s_oauth.body));
     return post_and_parse(&s_oauth, token_url, n, out);
 }
 
-#endif // PC_ENABLE_HTTP_CLIENT
+#endif // PROTOCORE_ENABLE_HTTP_CLIENT
 
-#endif // PC_ENABLE_OAUTH2
+#endif // PROTOCORE_ENABLE_OAUTH2

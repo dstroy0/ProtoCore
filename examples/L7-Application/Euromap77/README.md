@@ -1,6 +1,6 @@
 # Euromap77 - OPC UA for injection moulding machines (IMM <-> MES)
 
-**Layer:** L7-Application · **Flags:** `PC_ENABLE_OPCUA` + `PC_ENABLE_EUROMAP77`
+**Layer:** L7-Application · **Flags:** `PROTOCORE_ENABLE_OPCUA` + `PROTOCORE_ENABLE_EUROMAP77`
 
 Turns the board into an **EUROMAP 77** injection-molding-machine (IMM) server. **EUROMAP 77** (published
 as **OPC 40077**, with shared types/enums from **EUROMAP 83** / OPC 40083) is the OPC UA companion
@@ -27,7 +27,7 @@ IMM_MES_Interface
 ```
 
 You fill an `EmImm` struct and refresh its live fields each `loop()` from your machine I/O; the server
-reads straight out of it. `pc_em77_install(&imm)` binds the struct and registers the OPC UA Browse +
+reads straight out of it. `protocore_em77_install(&imm)` binds the struct and registers the OPC UA Browse +
 Read resolvers - that is the whole wiring. The production counters are faithful **UInt64** (EUROMAP 77
 defines them 64-bit), served through the OPC UA Variant's UInt64 encoding.
 
@@ -44,7 +44,7 @@ from example **OpcUa**.
 2. Build with both flags set (already in `build_opt.h` for the Arduino IDE):
     ```sh
     pio ci examples/L7-Application/Euromap77 --board esp32dev --lib "." \
-      --project-option="build_flags=-DPC_ENABLE_OPCUA=1 -DPC_ENABLE_EUROMAP77=1"
+      --project-option="build_flags=-DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_EUROMAP77=1"
     ```
 3. Flash, open Serial @115200, note the IP.
 

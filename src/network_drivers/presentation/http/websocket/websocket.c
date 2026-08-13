@@ -20,7 +20,7 @@
 #include "network_drivers/transport/tcp.h"
 #include "shared_primitives/utf8.h"
 
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
 #include "mmgr/plaintext.h"
 #include "network_drivers/presentation/codec/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
@@ -138,13 +138,13 @@ typedef struct
     WsRoute route[MAX_ROUTES];
     uint8_t route_count;
 } WsCtx;
-static WsCtx s_ws = {.frag_size = PC_WS_FRAG_SIZE};
+static WsCtx s_ws = {.frag_size = PROTOCORE_WS_FRAG_SIZE};
 
 uint8_t ws_route_add(WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
 {
     if (s_ws.route_count >= MAX_ROUTES)
     {
-        return PC_WS_NONE;
+        return PROTOCORE_WS_NONE;
     }
     WsRoute *w = &s_ws.route[s_ws.route_count];
     w->on_connect = on_connect;
@@ -217,30 +217,30 @@ static proto_bool ws_emit_one(TcpConn *conn, uint8_t b0, const uint8_t *payload,
 proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, uint16_t len)
 {
     TcpConn *conn = &conn_pool[ws->slot_id];
-    if (!pc_conn_active(ws->slot_id))
+    if (!protocore_conn_active(ws->slot_id))
     {
         return PROTO_FALSE;
     }
 
     uint8_t rsv1 = 0; // permessage-deflate per-message "compressed" flag (RFC 7692)
 
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
     // Compress data frames when permessage-deflate is negotiated. Control frames
     // (close/ping/pong) are never compressed (RFC 7692 sec 5.1). Scratch + output
     // are borrowed from the per-dispatch arena and released when this scope exits;
     // Tcp.conn->send copies (TCP_WRITE_FLAG_COPY) so the buffer can go immediately.
-    // PC_WS_DEFLATE_MAX bounds what the compressor accepts, so the borrow below has a compile-time
+    // PROTOCORE_WS_DEFLATE_MAX bounds what the compressor accepts, so the borrow below has a compile-time
     // worst case and cannot fail. A longer message is sent uncompressed, which the per-message RSV1
     // flag makes legal.
-    static_assert(PC_PLAINTEXT_WORK_WS_SEND <= PC_PLAINTEXT_ARENA_SIZE, "WS deflate scratch exceeds the arena");
+    static_assert(PROTOCORE_PLAINTEXT_WORK_WS_SEND <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "WS deflate scratch exceeds the arena");
     // The compressed buffer is handed to `payload` below and read by the emit calls at the end of
     // this function, so the borrow spans the whole function and is released at each exit.
-    size_t pt_mark = pc_plaintext_mark();
-    if (ws->pmd && len > 0 && len <= PC_WS_DEFLATE_MAX && (opcode == WS_OP_TEXT || opcode == WS_OP_BINARY))
+    size_t pt_mark = protocore_plaintext_mark();
+    if (ws->pmd && len > 0 && len <= PROTOCORE_WS_DEFLATE_MAX && (opcode == WS_OP_TEXT || opcode == WS_OP_BINARY))
     {
         size_t cap = (size_t)len + len / 8 + 16; // static-Huffman worst-case headroom
-        void *scr = pc_plaintext_alloc(DEFLATE_SCRATCH_SIZE, 16);
-        uint8_t *cbuf = (uint8_t *)pc_plaintext_alloc(cap, 1);
+        void *scr = protocore_plaintext_alloc(DEFLATE_SCRATCH_SIZE, 16);
+        uint8_t *cbuf = (uint8_t *)protocore_plaintext_alloc(cap, 1);
         if (scr && cbuf)
         {
             size_t clen = 0;
@@ -271,8 +271,8 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
     if (!data || frag == 0 || len <= frag)
     {
         proto_bool sent = ws_emit_one(conn, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
-#if PC_ENABLE_WS_DEFLATE
-        pc_plaintext_release(pt_mark);
+#if PROTOCORE_ENABLE_WS_DEFLATE
+        protocore_plaintext_release(pt_mark);
 #endif
         return sent;
     }
@@ -289,16 +289,16 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
         uint8_t b0 = (uint8_t)((last ? 0x80 : 0x00) | (first ? (rsv1 | (uint8_t)opcode) : (uint8_t)WS_OP_CONTINUATION));
         if (!ws_emit_one(conn, b0, payload + off, chunk))
         {
-#if PC_ENABLE_WS_DEFLATE
-            pc_plaintext_release(pt_mark);
+#if PROTOCORE_ENABLE_WS_DEFLATE
+            protocore_plaintext_release(pt_mark);
 #endif
             return PROTO_FALSE;
         }
         off = (uint16_t)(off + chunk);
         first = PROTO_FALSE;
     }
-#if PC_ENABLE_WS_DEFLATE
-    pc_plaintext_release(pt_mark);
+#if PROTOCORE_ENABLE_WS_DEFLATE
+    protocore_plaintext_release(pt_mark);
 #endif
     return PROTO_TRUE;
 }
@@ -309,7 +309,7 @@ void ws_close(WsConn *ws, WsCloseCode code)
     uint8_t payload[2] = {(uint8_t)((uint16_t)code >> 8), (uint8_t)code};
     ws_send_frame(ws, WS_OP_CLOSE, payload, 2);
 
-    if (pc_conn_active(ws->slot_id))
+    if (protocore_conn_active(ws->slot_id))
     {
         Tcp.conn->flush(ws->slot_id);
     }
@@ -342,7 +342,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
         if (ws->opcode == WS_OP_PING)
         {
             ws_send_frame(ws, WS_OP_PONG, ws->ctl_buf, (uint16_t)ws->payload_idx);
-            if (pc_conn_active(conn->id))
+            if (protocore_conn_active(conn->id))
             {
                 Tcp.conn->flush(conn->id);
             }
@@ -364,7 +364,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
 
     if (ws->fin)
     {
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
         // permessage-deflate: decompress the reassembled message before delivery.
         // The compressed bytes are in ws->buf; append the RFC 7692 00 00 ff ff
         // marker, INFLATE into an arena buffer, and copy the result back. All
@@ -373,15 +373,15 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
         {
             // The parser closes 1009 before msg_len passes WS_FRAME_SIZE, so all three borrows are
             // bounded and cannot fail.
-            static_assert(PC_PLAINTEXT_WORK_WS_RECV <= PC_PLAINTEXT_ARENA_SIZE, "WS inflate scratch exceeds the arena");
-            size_t pt_mark = pc_plaintext_mark();
+            static_assert(PROTOCORE_PLAINTEXT_WORK_WS_RECV <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "WS inflate scratch exceeds the arena");
+            size_t pt_mark = protocore_plaintext_mark();
             size_t comp_len = ws->msg_len;
-            uint8_t *in = (uint8_t *)pc_plaintext_alloc(comp_len + 4, 1);
-            uint8_t *out = (uint8_t *)pc_plaintext_alloc(WS_FRAME_SIZE, 1);
-            uint8_t *tbl = (uint8_t *)pc_plaintext_alloc(INFLATE_SCRATCH_SIZE, 16);
+            uint8_t *in = (uint8_t *)protocore_plaintext_alloc(comp_len + 4, 1);
+            uint8_t *out = (uint8_t *)protocore_plaintext_alloc(WS_FRAME_SIZE, 1);
+            uint8_t *tbl = (uint8_t *)protocore_plaintext_alloc(INFLATE_SCRATCH_SIZE, 16);
             if (!in || !out || !tbl)
             {
-                pc_plaintext_release(pt_mark);
+                protocore_plaintext_release(pt_mark);
                 ws_close(ws, WS_CLOSE_PROTOCOL); // arena exhausted: fail closed
                 ws->parse_state = WS_ERROR;
                 return;
@@ -395,14 +395,14 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             InflateResult rc = Inflate.raw(in, comp_len + 4, out, WS_FRAME_SIZE, &dlen, tbl, INFLATE_SCRATCH_SIZE);
             if (rc == INFLATE_ERR_OVERFLOW)
             {
-                pc_plaintext_release(pt_mark);
+                protocore_plaintext_release(pt_mark);
                 ws_close(ws, WS_CLOSE_TOO_BIG);
                 ws->parse_state = WS_ERROR;
                 return;
             }
             if (rc != INFLATE_OK)
             {
-                pc_plaintext_release(pt_mark);
+                protocore_plaintext_release(pt_mark);
                 ws_close(ws, WS_CLOSE_PROTOCOL);
                 ws->parse_state = WS_ERROR;
                 return;
@@ -410,14 +410,14 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             mem.cpy(ws->buf, out, dlen);
             ws->msg_len = dlen;
             ws->msg_compressed = PROTO_FALSE;
-            pc_plaintext_release(pt_mark);
+            protocore_plaintext_release(pt_mark);
         }
 #endif
         // Whole message received - surface it to the application.
         size_t n = ws->msg_len < WS_FRAME_SIZE ? ws->msg_len : WS_FRAME_SIZE;
         // RFC 6455 8.1: a TEXT message MUST be valid UTF-8 (checked on the fully
         // reassembled + decompressed message); otherwise fail the connection with 1007.
-        if (ws->msg_opcode == WS_OP_TEXT && !pc_utf8_valid(ws->buf, n))
+        if (ws->msg_opcode == WS_OP_TEXT && !protocore_utf8_valid(ws->buf, n))
         {
             ws_close(ws, WS_CLOSE_INVALID_PAYLOAD);
             ws->parse_state = WS_ERROR;
@@ -440,12 +440,12 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
 
 void ws_parse(WsConn *ws)
 {
-    if (!pc_conn_active(ws->slot_id))
+    if (!protocore_conn_active(ws->slot_id))
     {
         return;
     }
 
-    while (pc_conn_available(ws->slot_id) > 0)
+    while (protocore_conn_available(ws->slot_id) > 0)
     {
         // Stop if we hit a terminal state (leave the rest in the ring)
         if (ws->parse_state == WS_FRAME_READY || ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
@@ -455,7 +455,7 @@ void ws_parse(WsConn *ws)
 
         uint8_t byte = 0;
         // Unreachable by construction (not merely untested): this while-condition's
-        // pc_conn_available() and this call's pc_conn_read_byte() read the identical
+        // protocore_conn_available() and this call's protocore_conn_read_byte() read the identical
         // rx_head/rx_tail pair for this slot with no call in between that could touch either
         // index. rx_head is advanced only by lowlevel_recv_cb() (tcp.cpp), which refuses
         // (ERR_MEM, backpressure) any segment that would not fit in the free space already
@@ -465,7 +465,7 @@ void ws_parse(WsConn *ws)
         // read_byte() succeeds - true on the host AND on-device (SPSC ring, single producer /
         // single consumer per slot); there is no interrupt-race window at this specific call
         // site to reproduce.
-        if (!pc_conn_read_byte(ws->slot_id, &byte))
+        if (!protocore_conn_read_byte(ws->slot_id, &byte))
         {
             break;
         }
@@ -534,7 +534,7 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
                     // Start of a new data message.
                     ws->msg_opcode = ws->opcode;
                     ws->msg_len = 0;
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
                     // RSV1 on the first frame of a data message marks it compressed
                     // (RFC 7692); only honored when permessage-deflate was negotiated.
                     ws->msg_compressed = ws->pmd && (rsv & 0x40);
@@ -543,7 +543,7 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
             }
             // Validate reserved bits. RSV2/RSV3 are never legal; RSV1 is legal only
             // as the per-message compression flag set above (pmd + new data frame).
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
             {
                 proto_bool new_data = !ws_is_control(ws->opcode) && ws->opcode != WS_OP_CONTINUATION;
                 if ((rsv & 0x30) || ((rsv & 0x40) && !(ws->pmd && new_data)))

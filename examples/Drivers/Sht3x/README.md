@@ -30,7 +30,7 @@ The sensor talks over **I2C** (two shared data wires).
 | `SCL`       | GPIO **22** | I2C clock |
 
 Most breakouts fix the address at **0x44**. If yours ties the `ADDR` pin to `3V3`, it is `0x45`
-instead - change the `pc_sht3x_begin(0x44)` call.
+instead - change the `protocore_sht3x_begin(0x44)` call.
 
 ## Part 2 - Flash and read
 
@@ -48,7 +48,7 @@ after the checksum passes.
 
 ## Where this fits
 
-`pc_sht3x_read(&temp_mc, &rh_mpct)` gives you the temperature and humidity in **milli-units**
+`protocore_sht3x_read(&temp_mc, &rh_mpct)` gives you the temperature and humidity in **milli-units**
 (thousandths - so `22417` means 22.417 C, `41882` means 41.882 %RH). Integers keep it heap-free
 and avoid floating-point formatting. From here it is a short hop to a real project: serve the
 reading on a web page, publish it over **MQTT**, chart it over **WebSocket**, or push it to
@@ -71,7 +71,7 @@ The feature lives in the library, so its flag must reach the whole build:
 ```bash
 pio ci examples/Drivers/Sht3x \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_SHT3X=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SHT3X=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
@@ -80,9 +80,9 @@ pio ci examples/Drivers/Sht3x \
 
 A single-shot measurement command (`0x2400`) tells the SHT3x to take a reading; ~15 ms later it
 returns six bytes: a 16-bit temperature word and its CRC, then a 16-bit humidity word and its
-CRC. `pc_sht3x_crc8()` recomputes each checksum (the Sensirion CRC-8: polynomial 0x31, starting at
+CRC. `protocore_sht3x_crc8()` recomputes each checksum (the Sensirion CRC-8: polynomial 0x31, starting at
 0xFF - its documented check value `0xBEEF` -> `0x92` is one of the unit tests), and
-`pc_sht3x_parse()` rejects the whole reading if either fails. The raw ticks convert linearly -
+`protocore_sht3x_parse()` rejects the whole reading if either fails. The raw ticks convert linearly -
 `T = -45 + 175 * raw / 65535`, `RH = 100 * raw / 65535` - done in fixed-point milli-units so
 there is no floating point. All of that is unit-tested on a PC (see `test/test_sht3x`); only the
 command write and the six-byte read run on the ESP32.

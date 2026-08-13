@@ -1,6 +1,6 @@
 # SNMP - a zero-heap SNMP agent
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_SNMP` (optional `PC_ENABLE_SNMP_V3`)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_SNMP` (optional `PROTOCORE_ENABLE_SNMP_V3`)
 
 ## What this example teaches
 
@@ -15,12 +15,12 @@ objects (static, dynamic via a getter, or writable via a setter), then start the
 agent:
 
 ```cpp
-pc_snmp_agent_init("public");              // read-only community
-pc_snmp_agent_set_rw_community("private"); // authorizes Set
-pc_snmp_agent_set_system("...desc...", "admin@example.com", "esp32-pc", "lab bench");
-pc_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, SnmpTag::SNMP_GAUGE32, get_free_heap); // computed each Get
-pc_snmp_agent_add_integer(OID_LED, 9, 0, set_led);                        // writable
-pc_snmp_agent_begin_udp(161);
+protocore_snmp_agent_init("public");              // read-only community
+protocore_snmp_agent_set_rw_community("private"); // authorizes Set
+protocore_snmp_agent_set_system("...desc...", "admin@example.com", "esp32-pc", "lab bench");
+protocore_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, SnmpTag::SNMP_GAUGE32, get_free_heap); // computed each Get
+protocore_snmp_agent_add_integer(OID_LED, 9, 0, set_led);                        // writable
+protocore_snmp_agent_begin_udp(161);
 ```
 
 **Dynamic + writable objects.** A dynamic getter fills an `SnmpValue` on each Get;
@@ -35,16 +35,16 @@ bool set_led(const SnmpValue *in) {
 }
 ```
 
-**Optional SNMPv3 (USM).** Adding `-DPC_ENABLE_SNMP_V3=1` enables an authPriv
-user (HMAC-SHA-256 auth + AES-128 privacy): `pc_snmp_v3_init` / `pc_snmp_v3_set_boots` /
-`pc_snmp_v3_set_user`. For outbound trap notifications, see
+**Optional SNMPv3 (USM).** Adding `-DPROTOCORE_ENABLE_SNMP_V3=1` enables an authPriv
+user (HMAC-SHA-256 auth + AES-128 privacy): `protocore_snmp_v3_init` / `protocore_snmp_v3_set_boots` /
+`protocore_snmp_v3_set_user`. For outbound trap notifications, see
 [SnmpTrap](../SnmpTrap).
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_SNMP=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SNMP=1" \
   --lib="." examples/L7-Application/SNMP/SNMP.ino
 ```
 
@@ -63,16 +63,16 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_SNMP 1
+#define PROTOCORE_ENABLE_SNMP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/net/snmp/snmp_agent.h"
 
 // SNMPv3 (USM) is an additional gated layer. Enable it for the whole build with
-//     build_flags = -DPC_ENABLE_SNMP=1 -DPC_ENABLE_SNMP_V3=1
+//     build_flags = -DPROTOCORE_ENABLE_SNMP=1 -DPROTOCORE_ENABLE_SNMP_V3=1
 // then query with authPriv (HMAC-SHA-256 auth + AES-128 privacy).
-#if PC_ENABLE_SNMP_V3
+#if PROTOCORE_ENABLE_SNMP_V3
 #include "services/net/snmp/snmp_v3.h"
 #endif
 
@@ -123,23 +123,23 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the MIB: standard system group + private objects.
-    pc_snmp_agent_init("public");              // read-only community
-    pc_snmp_agent_set_rw_community("private"); // read-write community (authorizes Set)
-    pc_snmp_agent_set_system("ProtoCore SNMP agent", "admin@example.com", "esp32-pc", "lab bench");
-    pc_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, SnmpTag::SNMP_GAUGE32, get_free_heap);
-    pc_snmp_agent_add_integer(OID_LED, 9, 0, set_led); // writable
+    protocore_snmp_agent_init("public");              // read-only community
+    protocore_snmp_agent_set_rw_community("private"); // read-write community (authorizes Set)
+    protocore_snmp_agent_set_system("ProtoCore SNMP agent", "admin@example.com", "esp32-pc", "lab bench");
+    protocore_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, SnmpTag::SNMP_GAUGE32, get_free_heap);
+    protocore_snmp_agent_add_integer(OID_LED, 9, 0, set_led); // writable
 
-#if PC_ENABLE_SNMP_V3
+#if PROTOCORE_ENABLE_SNMP_V3
     // SNMPv3 USM: a single authPriv user (HMAC-SHA-256 + AES-128). For a unique
     // engine ID, derive it from the chip MAC; persist/increment engineBoots in NVS.
-    pc_snmp_v3_init(nullptr, 0);
-    pc_snmp_v3_set_boots(1);
-    pc_snmp_v3_set_user("pc", "authpass12", "privpass12");
+    protocore_snmp_v3_init(nullptr, 0);
+    protocore_snmp_v3_set_boots(1);
+    protocore_snmp_v3_set_user("pc", "authpass12", "privpass12");
     Serial.println("SNMPv3 user 'pc' enabled (authPriv: SHA-256 / AES-128)");
 #endif
 
     // Bind the agent to UDP/161 (raw lwIP, callback-driven).
-    pc_snmp_agent_begin_udp(161);
+    protocore_snmp_agent_begin_udp(161);
     Serial.println("SNMP agent listening on UDP/161 (try: snmpwalk -v2c -c public <ip> system)");
 
     int32_t result = server.begin(80);

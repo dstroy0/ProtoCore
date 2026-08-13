@@ -7,7 +7,7 @@
 // pure (no heap, no sockets), so every call here exercises the real production code path - a pure
 // protocol codec like performance_benching/device/modbus (contrast with performance_benching/device/ads1115, where the
 // bus half is stubbed). The raw-L2 transmit (ethertype 0x8892, services/fieldbus/rawl2) is the device step and is
-// deliberately out of scope: this rig has no NIC, and pc_pn_dcp_walk's callback is a tiny no-op
+// deliberately out of scope: this rig has no NIC, and protocore_pn_dcp_walk's callback is a tiny no-op
 // sink so nothing here touches hardware or a transport.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -21,7 +21,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// No-op block sink for pc_pn_dcp_walk: counts into a volatile so the walk is not optimized away.
+// No-op block sink for protocore_pn_dcp_walk: counts into a volatile so the walk is not optimized away.
 // Mirrors the host test's `collect` callback but without the bookkeeping (nothing here touches the
 // wire or any transport - the walk is pure CPU work).
 static volatile uint32_t g_walk_sink = 0;
@@ -38,9 +38,9 @@ void dbench_run(void)
     // from test/test_profinet: DEVICE/NameOfStation "plc" (odd -> even-padded) + IP/IPParameter "ABCD").
     static uint8_t body[64];
     size_t body_len = 0;
-    body_len += pc_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
+    body_len += protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
                                 body + body_len, sizeof(body) - body_len);
-    body_len += pc_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, (const uint8_t *)"ABCD", 4, body + body_len,
+    body_len += protocore_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, (const uint8_t *)"ABCD", 4, body + body_len,
                                 sizeof(body) - body_len);
 
     // A known-good Identify-request header (from test/test_profinet test_header_roundtrip) to parse.
@@ -55,15 +55,15 @@ void dbench_run(void)
         volatile size_t sink = 0;
         PnDcpHeader h;
 
-        DBENCH_OP("pc_pn_dcp_header (Identify)", 200000,
-                  sink += pc_pn_dcp_header(PN_FRAMEID_DCP_IDENT_REQ, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_REQUEST,
+        DBENCH_OP("protocore_pn_dcp_header (Identify)", 200000,
+                  sink += protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_REQ, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_REQUEST,
                                            0x11223344, 8, hdr_out, sizeof(hdr_out)));
-        DBENCH_OP("pc_pn_dcp_block (NameOfStation)", 200000,
-                  sink += pc_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
+        DBENCH_OP("protocore_pn_dcp_block (NameOfStation)", 200000,
+                  sink += protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
                                           blk_out, sizeof(blk_out)));
-        DBENCH_OP("pc_pn_dcp_parse_header", 200000,
-                  sink += (size_t)pc_pn_dcp_parse_header(ident_hdr, sizeof(ident_hdr), &h));
-        DBENCH_OP("pc_pn_dcp_walk (2 blocks)", 100000, sink += (size_t)pc_pn_dcp_walk(body, body_len, walk_sink, NULL));
+        DBENCH_OP("protocore_pn_dcp_parse_header", 200000,
+                  sink += (size_t)protocore_pn_dcp_parse_header(ident_hdr, sizeof(ident_hdr), &h));
+        DBENCH_OP("protocore_pn_dcp_walk (2 blocks)", 100000, sink += (size_t)protocore_pn_dcp_walk(body, body_len, walk_sink, NULL));
 
         (void)sink;
         DBENCH_DONE();

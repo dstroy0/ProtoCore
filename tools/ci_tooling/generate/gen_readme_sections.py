@@ -8,7 +8,7 @@ from the code (wrong defaults, missing flags, a stale file layout). This script
 regenerates them from their real sources so they cannot drift again, writing each
 into a marked region:
 
-  FEATURE-FLAGS    every PC_ENABLE_* flag + default + one line   (protocore_config.h)
+  FEATURE-FLAGS    every PROTOCORE_ENABLE_* flag + default + one line   (protocore_config.h)
   CONFIG-OVERRIDES every tunable #define constant + default + desc  (protocore_config.h)
   SOURCE-TREE      an ASCII tree of every library file              (src/)
   BUILD-FOOTPRINT  measured flash/RAM per feature                   (docs/footprints.json)
@@ -48,7 +48,7 @@ def _doc_brief(cfg, name):
         ln = re.sub(r"^\s*\*\s?", "", ln.strip())
         body.append(ln)
     text = " ".join(body).replace("@brief ", "").strip()
-    text = re.sub(r"\s*\((PC_[A-Z0-9_]+)\)", "", text)  # drop the "(FLAG)" tag
+    text = re.sub(r"\s*\((PROTOCORE_[A-Z0-9_]+)\)", "", text)  # drop the "(FLAG)" tag
     text = re.sub(r"\s+", " ", text)
     # first sentence only, keep it terse
     m2 = re.match(r"(.+?[.!])(?:\s|$)", text)
@@ -65,7 +65,7 @@ def parse_config():
             continue
         val = (val or "").strip()
         desc = _doc_brief(cfg, name)
-        if name.startswith("PC_ENABLE_"):
+        if name.startswith("PROTOCORE_ENABLE_"):
             flags.append((name, val, desc))
         elif re.fullmatch(r"[0-9]+[uUlL]*", val) or re.fullmatch(r"0x[0-9A-Fa-f]+[uUlL]*", val):
             consts.append((name, val, desc))

@@ -54,8 +54,8 @@ different channel header and change `SERVO_CH` in the sketch to match.
 
 ## Where this fits
 
-`pc_pca9685_set_servo_us(channel, microseconds)` positions a servo by pulse width;
-`pc_pca9685_set_pwm(channel, on, off)` sets a raw 12-bit duty cycle (great for dimming an LED). From
+`protocore_pca9685_set_servo_us(channel, microseconds)` positions a servo by pulse width;
+`protocore_pca9685_set_pwm(channel, on, off)` sets a raw 12-bit duty cycle (great for dimming an LED). From
 here you can drive a servo from a web page, a slider over **WebSocket**, or a schedule - the same
 "bridge the network to the real world" idea, but as an **output**. Examples 62-64 read sensors;
 this one moves things.
@@ -63,7 +63,7 @@ this one moves things.
 ## Dimming LEDs instead
 
 An LED does not care about servo pulses - it just wants a duty cycle. Wire an LED (through a
-resistor) to a channel and call `pc_pca9685_set_pwm(channel, 0, level)` where `level` is 0
+resistor) to a channel and call `protocore_pca9685_set_pwm(channel, 0, level)` where `level` is 0
 (off) to 4095 (full brightness). `PCA9685_FULL_ON` / `PCA9685_FULL_OFF` switch a channel fully on
 or off with no PWM at all.
 
@@ -83,7 +83,7 @@ The feature lives in the library, so its flag must reach the whole build:
 ```bash
 pio ci examples/Drivers/Pca9685 \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_PCA9685=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PCA9685=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
@@ -91,9 +91,9 @@ pio ci examples/Drivers/Pca9685 \
 ## How it works (for the curious)
 
 The PCA9685 makes PWM from a 25 MHz oscillator divided by a **PRESCALE** value;
-`pc_pca9685_prescale(freq)` computes it as `round(25e6 / (4096 * freq)) - 1` (so 50 Hz -> 121).
+`protocore_pca9685_prescale(freq)` computes it as `round(25e6 / (4096 * freq)) - 1` (so 50 Hz -> 121).
 Each channel has a 12-bit **ON** count and **OFF** count at register `0x06 + 4 * channel`; a
 servo pulse of _N_ microseconds becomes an OFF count of `N * 4096 * freq / 1e6`
-(`pc_pca9685_us_to_count`), and `pc_pca9685_set_pwm_bytes` packs the 5-byte I2C write. All of that math
+(`protocore_pca9685_us_to_count`), and `protocore_pca9685_set_pwm_bytes` packs the 5-byte I2C write. All of that math
 and the register encoding are unit-tested on a PC (see `test/test_pca9685`), including the
 full-on/off flag; only the I2C writes run on the ESP32.

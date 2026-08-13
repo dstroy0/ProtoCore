@@ -3,7 +3,7 @@
 
 /**
  * @file sparkplug.h
- * @brief Sparkplug B payload + topic codec (PC_ENABLE_SPARKPLUG) - zero-heap builder for
+ * @brief Sparkplug B payload + topic codec (PROTOCORE_ENABLE_SPARKPLUG) - zero-heap builder for
  *        the Eclipse Sparkplug B industrial-IoT MQTT payload (a Protobuf message) and its
  *        topic namespace. Builds on the Protobuf codec (services/iot/protobuf) and is published
  *        with the MQTT client.
@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SPARKPLUG
+#if PROTOCORE_ENABLE_SPARKPLUG
 
 // Sparkplug B data type codes (a subset; Tahu DataType enum).
 #define SPB_DT_INT8 1
@@ -74,15 +74,15 @@ typedef struct
 } SpbMetric;
 
 /** @brief Build the `spBv1.0/...` topic. @p device may be null for a node-level topic. */
-size_t pc_spb_build_topic(char *buf, size_t cap, const char *group, const char *message_type, const char *edge_node,
-                          const char *device);
+size_t protocore_spb_build_topic(char *buf, size_t cap, const char *group, const char *message_type,
+                                 const char *edge_node, const char *device);
 
 /** @brief Serialize one Metric (a Tahu Metric protobuf message). Returns length, or 0. */
-size_t pc_spb_build_metric(uint8_t *buf, size_t cap, const SpbMetric *m);
+size_t protocore_spb_build_metric(uint8_t *buf, size_t cap, const SpbMetric *m);
 
 /** @brief Serialize a Payload: timestamp + the @p n metrics + seq. Returns length, or 0. */
-size_t pc_spb_build_payload(uint8_t *buf, size_t cap, uint64_t timestamp, uint64_t seq, const SpbMetric *metrics,
-                            size_t n);
+size_t protocore_spb_build_payload(uint8_t *buf, size_t cap, uint64_t timestamp, uint64_t seq, const SpbMetric *metrics,
+                                   size_t n);
 
 // ---- decoding (the subscriber side, built on the protobuf reader) ----
 
@@ -97,18 +97,18 @@ typedef struct
 
 /**
  * @brief Parse a Sparkplug B Payload's top-level fields: the timestamp (field 1) and sequence number
- *        (field 3). The repeated metrics (field 2) are read with pc_spb_payload_next_metric.
+ *        (field 3). The repeated metrics (field 2) are read with protocore_spb_payload_next_metric.
  * @return true iff the protobuf parses without truncation; false otherwise.
  */
-proto_bool pc_spb_parse_payload(const uint8_t *buf, size_t len, SpbPayloadHeader *out);
+proto_bool protocore_spb_parse_payload(const uint8_t *buf, size_t len, SpbPayloadHeader *out);
 
 /**
  * @brief Iterate the metric sub-messages (field 2) of a Payload. Start @p pos at 0; each call points
  *        @p metric / @p metric_len at the next metric's protobuf bytes and advances @p pos.
  * @return true while a metric remains; false at the end of the payload / on a malformed field.
  */
-proto_bool pc_spb_payload_next_metric(const uint8_t *buf, size_t len, size_t *pos, const uint8_t **metric,
-                                      size_t *metric_len);
+proto_bool protocore_spb_payload_next_metric(const uint8_t *buf, size_t len, size_t *pos, const uint8_t **metric,
+                                             size_t *metric_len);
 
 /** @brief A decoded Sparkplug B Metric. The name / string_value point INTO the buffer (NOT NUL-terminated). */
 typedef struct
@@ -132,14 +132,14 @@ typedef struct
 } SpbMetricDecoded;
 
 /**
- * @brief Decode a Metric message (a slice from pc_spb_payload_next_metric) into @p out: the name, alias,
+ * @brief Decode a Metric message (a slice from protocore_spb_payload_next_metric) into @p out: the name, alias,
  *        timestamp, datatype, and the value oneof (int / long / float / double / boolean / string).
  * @return true iff the protobuf parses without truncation; false otherwise.
  */
-proto_bool pc_spb_parse_metric(const uint8_t *buf, size_t len, SpbMetricDecoded *out);
+proto_bool protocore_spb_parse_metric(const uint8_t *buf, size_t len, SpbMetricDecoded *out);
 
-#endif // PC_ENABLE_SPARKPLUG
+#endif // PROTOCORE_ENABLE_SPARKPLUG
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SPARKPLUG_H

@@ -30,14 +30,14 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
         WifiFrame wf;
         WifiStats st;
-        pc_wifi_stats_reset(&st);
-        DBENCH_OP("pc_wifi_parse", 200000, sink += pc_wifi_parse(frame, sizeof(frame), &wf));
-        pc_wifi_parse(frame, sizeof(frame), &wf);
-        DBENCH_OP("pc_wifi_stats_add", 200000, {
-            pc_wifi_stats_add(&st, &wf);
+        protocore_wifi_stats_reset(&st);
+        DBENCH_OP("protocore_wifi_parse", 200000, sink += protocore_wifi_parse(frame, sizeof(frame), &wf));
+        protocore_wifi_parse(frame, sizeof(frame), &wf);
+        DBENCH_OP("protocore_wifi_stats_add", 200000, {
+            protocore_wifi_stats_add(&st, &wf);
             sink += 1;
         });
-        DBENCH_OP("pc_wifi_should_roam", 200000, sink += pc_wifi_should_roam(-72, -58, 8));
+        DBENCH_OP("protocore_wifi_should_roam", 200000, sink += protocore_wifi_should_roam(-72, -58, 8));
         (void)sink;
         DBENCH_DONE();
     }

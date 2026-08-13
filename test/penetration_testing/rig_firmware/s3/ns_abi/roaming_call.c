@@ -13,8 +13,8 @@ void app_main(void);
 void app_main(void)
 {
     static const uint8_t cur[6] = {1, 2, 3, 4, 5, 6};
-    static const pc_roam_neighbor nb[1] = {{{9, 8, 7, 6, 5, 4}, 6, -40}};
-    pc_roam_decision d;
+    static const protocore_roam_neighbor nb[1] = {{{9, 8, 7, 6, 5, 4}, 6, -40}};
+    protocore_roam_decision d;
 
     Roam.decide(cur, -80, nb, 1, 0, 0, &d);
     roam_sink = (uint8_t)d.reason;

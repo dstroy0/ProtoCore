@@ -16,7 +16,7 @@
  * the handshake messages so far, so this module has no dependency on the message wire formats and is
  * host-testable in isolation against the RFC 8448 sec 3 worked trace (which lists every intermediate
  * secret and the (EC)DHE input directly). The QUIC packet-protection keys ({key, iv, hp}) are then
- * derived from these traffic secrets by pc_quic_keys_from_secret() (RFC 9001 sec 5.1).
+ * derived from these traffic secrets by protocore_quic_keys_from_secret() (RFC 9001 sec 5.1).
  *
  * Pure, zero heap, host-tested against RFC 8448 sec 3.
  *
@@ -29,14 +29,14 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // Shared by the HTTP/3 (QUIC) handshake and the DTLS 1.3 handshake - both run the same TLS 1.3 key
-// schedule (see pc_tls13_msg.h for the matching guard on the message layer).
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
+// schedule (see protocore_tls13_msg.h for the matching guard on the message layer).
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 /** @brief SHA-256 secret length; every TLS 1.3 secret here is 32 bytes. */
-#define TLS13_SECRET_LEN PC_TLS13_SECRET_LEN
+#define TLS13_SECRET_LEN PROTOCORE_TLS13_SECRET_LEN
 
 /**
  * @brief The one thing that differs between the TLS 1.3 and DTLS 1.3 key schedules: the
@@ -57,9 +57,9 @@ extern const Tls13Kdf DTLS13_KDF;
 /**
  * @brief The running key-schedule state for one handshake (server side).
  *
- * Filled in three steps as the handshake progresses: pc_tls13_ks_early() (which also binds the @ref
- * Tls13Kdf variant) before any (EC)DHE, pc_tls13_ks_handshake() once ClientHello..ServerHello is hashed
- * and the shared secret is known, and pc_tls13_ks_master() once ClientHello..server Finished is hashed.
+ * Filled in three steps as the handshake progresses: protocore_tls13_ks_early() (which also binds the @ref
+ * Tls13Kdf variant) before any (EC)DHE, protocore_tls13_ks_handshake() once ClientHello..ServerHello is hashed
+ * and the shared secret is known, and protocore_tls13_ks_master() once ClientHello..server Finished is hashed.
  * Each step also derives that level's client and server traffic secrets, from which the record/packet
  * keys are made.
  */
@@ -76,13 +76,13 @@ extern const Tls13Kdf DTLS13_KDF;
 #define TLS13_KS_FINISHED_KEY (9 * TLS13_SECRET_LEN) ///< HKDF-Expand-Label(traffic, "finished", "", L)
 #define TLS13_KS_ZEROS (10 * TLS13_SECRET_LEN)       ///< 0^Hash.length, never written: the borrow arrives zeroed
 #define TLS13_KS_VERIFY (11 * TLS13_SECRET_LEN)      ///< the Finished verify_data this end built or expects
-#define PC_TLS13_KS_CAP ((size_t)PC_TLS13_KS_TERMS * TLS13_SECRET_LEN)
-#define TLS13_KS_WORK PC_TLS13_KS_CAP ///< past the terms: the bytes this schedule's HKDF works out of
+#define PROTOCORE_TLS13_KS_CAP ((size_t)PROTOCORE_TLS13_KS_TERMS * TLS13_SECRET_LEN)
+#define TLS13_KS_WORK PROTOCORE_TLS13_KS_CAP ///< past the terms: the bytes this schedule's HKDF works out of
 
 typedef struct
 {
-    const Tls13Kdf *kdf; ///< variant (label prefix) bound by pc_tls13_ks_early()
-    uint8_t *s;          ///< PC_TLS13_KS_BORROW secure bytes: the terms, then the HKDF's own
+    const Tls13Kdf *kdf; ///< variant (label prefix) bound by protocore_tls13_ks_early()
+    uint8_t *s;          ///< PROTOCORE_TLS13_KS_BORROW secure bytes: the terms, then the HKDF's own
 } Tls13KeySchedule;
 
 /**
@@ -91,46 +91,46 @@ typedef struct
  * The record-key derivations (key/iv/sn) call this so the label prefix follows the negotiated
  * protocol without the record layer knowing the prefix string.
  */
-void pc_tls13_kdf_expand_label(const Tls13Kdf *kdf, uint8_t *work, const uint8_t secret[TLS13_SECRET_LEN],
-                               const char *label, uint8_t *out, size_t out_len);
+void protocore_tls13_kdf_expand_label(const Tls13Kdf *kdf, uint8_t *work, const uint8_t secret[TLS13_SECRET_LEN],
+                                      const char *label, uint8_t *out, size_t out_len);
 
 /**
  * @brief Derive-Secret (RFC 8446 sec 7.1): HKDF-Expand-Label(secret, label, transcript_hash, 32).
  *
  * @param kdf              KDF variant (label prefix).
- * @param work             PC_HKDF_BORROW bytes of caller storage.
+ * @param work             PROTOCORE_HKDF_BORROW bytes of caller storage.
  * @param secret           A 32-byte PRK / traffic secret.
  * @param label            Short label without the prefix, e.g. "c hs traffic", "derived".
  * @param transcript_hash  Transcript-Hash of the relevant messages (32 bytes; H("") for "derived").
  * @param out              32-byte derived secret.
  */
-void pc_tls13_derive_secret(const Tls13Kdf *kdf, uint8_t *work, const uint8_t secret[TLS13_SECRET_LEN],
-                            const char *label, const uint8_t transcript_hash[TLS13_SECRET_LEN],
-                            uint8_t out[TLS13_SECRET_LEN]);
+void protocore_tls13_derive_secret(const Tls13Kdf *kdf, uint8_t *work, const uint8_t secret[TLS13_SECRET_LEN],
+                                   const char *label, const uint8_t transcript_hash[TLS13_SECRET_LEN],
+                                   uint8_t out[TLS13_SECRET_LEN]);
 
 /**
  * @brief Step 1: bind the @p kdf variant and @p s, then compute early_secret = HKDF-Extract(0, 0^32).
  *
- * @p s is PC_TLS13_KS_BORROW bytes the CONNECTION owns and holds for exactly as long as it lives, so
+ * @p s is PROTOCORE_TLS13_KS_BORROW bytes the CONNECTION owns and holds for exactly as long as it lives, so
  * the schedule dies with it. It must arrive zeroed: TLS13_KS_ZEROS is the extract's IKM and nothing
  * ever writes it. Returns false on a null @p s, which leaves every later step a no-op.
  */
-proto_bool pc_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks, uint8_t *s);
+proto_bool protocore_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks, uint8_t *s);
 
 /**
  * @brief Step 2: handshake_secret and the client/server handshake traffic secrets.
  *
  * handshake_secret = HKDF-Extract(Derive-Secret(early, "derived", H("")), @p ecdhe); the traffic
  * secrets are Derive-Secret(handshake_secret, "c hs traffic"/"s hs traffic", @p ch_sh_hash). The
- * variant bound by pc_tls13_ks_early() is used throughout.
+ * variant bound by protocore_tls13_ks_early() is used throughout.
  *
  * @param ecdhe       The (EC)DHE shared secret: 32 bytes for X25519, or the 64-byte concatenation
  *                    ML-KEM_secret || X25519_secret for the X25519MLKEM768 hybrid group.
  * @param ch_sh_hash  Transcript-Hash of ClientHello..ServerHello.
  * @param ecdhe_len   Length of @p ecdhe (32 for X25519, 64 for the hybrid).
  */
-void pc_tls13_ks_handshake(Tls13KeySchedule *ks, const uint8_t *ecdhe, const uint8_t ch_sh_hash[TLS13_SECRET_LEN],
-                           size_t ecdhe_len);
+void protocore_tls13_ks_handshake(Tls13KeySchedule *ks, const uint8_t *ecdhe,
+                                  const uint8_t ch_sh_hash[TLS13_SECRET_LEN], size_t ecdhe_len);
 
 /**
  * @brief Step 3: master_secret and the client/server application traffic secrets.
@@ -140,7 +140,7 @@ void pc_tls13_ks_handshake(Tls13KeySchedule *ks, const uint8_t *ecdhe, const uin
  *
  * @param ch_sfin_hash  Transcript-Hash of ClientHello..server Finished.
  */
-void pc_tls13_ks_master(Tls13KeySchedule *ks, const uint8_t ch_sfin_hash[TLS13_SECRET_LEN]);
+void protocore_tls13_ks_master(Tls13KeySchedule *ks, const uint8_t ch_sfin_hash[TLS13_SECRET_LEN]);
 
 /**
  * @brief The Finished verify_data (RFC 8446 sec 4.4.4).
@@ -154,11 +154,11 @@ void pc_tls13_ks_master(Tls13KeySchedule *ks, const uint8_t ch_sfin_hash[TLS13_S
  * @param transcript_hash  Transcript-Hash of the handshake up to but excluding this Finished.
  * @param out              32-byte verify_data.
  */
-void pc_tls13_finished_mac(Tls13KeySchedule *ks, const uint8_t base_secret[TLS13_SECRET_LEN],
-                           const uint8_t transcript_hash[TLS13_SECRET_LEN], uint8_t out[TLS13_SECRET_LEN]);
+void protocore_tls13_finished_mac(Tls13KeySchedule *ks, const uint8_t base_secret[TLS13_SECRET_LEN],
+                                  const uint8_t transcript_hash[TLS13_SECRET_LEN], uint8_t out[TLS13_SECRET_LEN]);
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_TLS13_KDF_H

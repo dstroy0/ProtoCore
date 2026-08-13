@@ -8,7 +8,7 @@
 
 #include "dnc.h"
 
-#if PC_ENABLE_DNC
+#if PROTOCORE_ENABLE_DNC
 
 // EIA RS-244 punched-tape code. One source of truth for both translation directions.
 // Each EIA byte is the 8-track hole pattern (bit 0 = channel 1 .. bit 7 = channel 8) with
@@ -75,7 +75,7 @@ static const DncEiaPair DNC_EIA_MAP[] = {
 
 static const size_t DNC_EIA_MAP_LEN = sizeof(DNC_EIA_MAP) / sizeof(DNC_EIA_MAP[0]);
 
-uint8_t pc_dnc_iso_to_eia(char c)
+uint8_t protocore_dnc_iso_to_eia(char c)
 {
     for (size_t i = 0; i < DNC_EIA_MAP_LEN; i++)
     {
@@ -87,7 +87,7 @@ uint8_t pc_dnc_iso_to_eia(char c)
     return 0xFF; // no EIA representation - fail closed
 }
 
-char pc_dnc_eia_to_iso(uint8_t b)
+char protocore_dnc_eia_to_iso(uint8_t b)
 {
     for (size_t i = 0; i < DNC_EIA_MAP_LEN; i++)
     {
@@ -99,7 +99,7 @@ char pc_dnc_eia_to_iso(uint8_t b)
     return 0; // unknown EIA code (e.g. blank / runout)
 }
 
-uint8_t pc_dnc_iso_add_parity(uint8_t ascii7)
+uint8_t protocore_dnc_iso_add_parity(uint8_t ascii7)
 {
     uint8_t v = ascii7 & 0x7F;
     uint8_t x = v;
@@ -112,12 +112,12 @@ uint8_t pc_dnc_iso_add_parity(uint8_t ascii7)
     return (uint8_t)(v | (p ? 0x80 : 0x00)); // even parity: set bit 7 to make the total even
 }
 
-void pc_dnc_flow_init(DncFlow *f)
+void protocore_dnc_flow_init(DncFlow *f)
 {
     f->paused = PROTO_FALSE;
 }
 
-proto_bool pc_dnc_flow_feed(DncFlow *f, uint8_t rx)
+proto_bool protocore_dnc_flow_feed(DncFlow *f, uint8_t rx)
 {
     if (rx == (uint8_t)DNC_XOFF)
     {
@@ -146,14 +146,14 @@ static size_t dnc_put_eob(const DncCfg *cfg, uint8_t *out, size_t cap, size_t n)
     }
     if (cfg->crlf)
     {
-        uint8_t cr = cfg->even_parity ? pc_dnc_iso_add_parity(0x0D) : 0x0D;
+        uint8_t cr = cfg->even_parity ? protocore_dnc_iso_add_parity(0x0D) : 0x0D;
         if (n >= cap)
         {
             return 0;
         }
         out[n++] = cr;
     }
-    uint8_t lf = cfg->even_parity ? pc_dnc_iso_add_parity(0x0A) : 0x0A;
+    uint8_t lf = cfg->even_parity ? protocore_dnc_iso_add_parity(0x0A) : 0x0A;
     if (n >= cap)
     {
         return 0;
@@ -162,7 +162,7 @@ static size_t dnc_put_eob(const DncCfg *cfg, uint8_t *out, size_t cap, size_t n)
     return n;
 }
 
-size_t pc_dnc_encode_block(const DncCfg *cfg, const char *line, size_t line_len, uint8_t *out, size_t out_cap)
+size_t protocore_dnc_encode_block(const DncCfg *cfg, const char *line, size_t line_len, uint8_t *out, size_t out_cap)
 {
     size_t n = 0;
     for (size_t i = 0; i < line_len; i++)
@@ -170,7 +170,7 @@ size_t pc_dnc_encode_block(const DncCfg *cfg, const char *line, size_t line_len,
         uint8_t b;
         if (cfg->code == DNC_CODE_EIA)
         {
-            uint8_t e = pc_dnc_iso_to_eia(line[i]);
+            uint8_t e = protocore_dnc_iso_to_eia(line[i]);
             if (e == 0xFF)
             {
                 return 0; // non-representable character - fail closed
@@ -182,7 +182,7 @@ size_t pc_dnc_encode_block(const DncCfg *cfg, const char *line, size_t line_len,
             b = (uint8_t)line[i] & 0x7F;
             if (cfg->even_parity)
             {
-                b = pc_dnc_iso_add_parity(b);
+                b = protocore_dnc_iso_add_parity(b);
             }
         }
         if (n >= out_cap)
@@ -194,7 +194,7 @@ size_t pc_dnc_encode_block(const DncCfg *cfg, const char *line, size_t line_len,
     return dnc_put_eob(cfg, out, out_cap, n);
 }
 
-size_t pc_dnc_encode_marker(const DncCfg *cfg, uint8_t *out, size_t out_cap)
+size_t protocore_dnc_encode_marker(const DncCfg *cfg, uint8_t *out, size_t out_cap)
 {
     size_t n = 0;
     if (cfg->code == DNC_CODE_EIA)
@@ -207,7 +207,7 @@ size_t pc_dnc_encode_marker(const DncCfg *cfg, uint8_t *out, size_t out_cap)
     }
     else
     {
-        uint8_t pct = cfg->even_parity ? pc_dnc_iso_add_parity(0x25) : 0x25;
+        uint8_t pct = cfg->even_parity ? protocore_dnc_iso_add_parity(0x25) : 0x25;
         if (n >= out_cap)
         {
             return 0;
@@ -217,7 +217,7 @@ size_t pc_dnc_encode_marker(const DncCfg *cfg, uint8_t *out, size_t out_cap)
     return dnc_put_eob(cfg, out, out_cap, n);
 }
 
-size_t pc_dnc_encode_leader(const DncCfg *cfg, uint8_t *out, size_t out_cap)
+size_t protocore_dnc_encode_leader(const DncCfg *cfg, uint8_t *out, size_t out_cap)
 {
     uint16_t n = cfg->leader_len;
     if ((size_t)n > out_cap)
@@ -231,7 +231,7 @@ size_t pc_dnc_encode_leader(const DncCfg *cfg, uint8_t *out, size_t out_cap)
     return n;
 }
 
-void pc_dnc_decode_init(DncDecoder *d, DncCode code)
+void protocore_dnc_decode_init(DncDecoder *d, DncCode code)
 {
     d->code = code;
     d->len = 0;
@@ -241,7 +241,7 @@ void pc_dnc_decode_init(DncDecoder *d, DncCode code)
     d->line[0] = 0;
 }
 
-DncEvent pc_dnc_decode_feed(DncDecoder *d, uint8_t wire)
+DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
 {
     // The line delivered by the previous call is now consumed; start fresh.
     if (d->line_ready)
@@ -252,7 +252,7 @@ DncEvent pc_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     }
 
     // Note: XON/XOFF are NOT filtered here. Flow control rides the reverse channel
-    // (controller -> sender), handled by pc_dnc_flow_feed; this decodes the forward program
+    // (controller -> sender), handled by protocore_dnc_flow_feed; this decodes the forward program
     // stream, where 0x13 is the EIA data character '3', not DC3.
     proto_bool is_eob = PROTO_FALSE;
     proto_bool is_marker = PROTO_FALSE;
@@ -270,7 +270,7 @@ DncEvent pc_dnc_decode_feed(DncDecoder *d, uint8_t wire)
         }
         else
         {
-            ascii = (uint8_t)pc_dnc_eia_to_iso(wire); // 0 for blank/runout/unknown -> ignored
+            ascii = (uint8_t)protocore_dnc_eia_to_iso(wire); // 0 for blank/runout/unknown -> ignored
         }
     }
     else
@@ -335,7 +335,7 @@ DncEvent pc_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     {
         return DNC_EV_NONE; // dropping the rest of an over-long block until its EOB
     }
-    if (d->len >= PC_DNC_LINE_MAX)
+    if (d->len >= PROTOCORE_DNC_LINE_MAX)
     {
         d->overflow = PROTO_TRUE;
         return DNC_EV_NONE;
@@ -344,4 +344,4 @@ DncEvent pc_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     return DNC_EV_NONE;
 }
 
-#endif // PC_ENABLE_DNC
+#endif // PROTOCORE_ENABLE_DNC

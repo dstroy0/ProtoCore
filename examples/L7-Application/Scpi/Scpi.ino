@@ -4,10 +4,10 @@
 /**
  * @file Scpi.ino
  * @brief SCPI / IEEE 488.2 instrument controller - drive a bench instrument over TCP 5025
- *        (PC_ENABLE_SCPI).
+ *        (PROTOCORE_ENABLE_SCPI).
  *
  * services/instrumentation/scpi is a transport-agnostic codec: it builds command lines and parses replies; the
- * app owns the socket. This sketch opens the library's outbound TCP client (pc_client) to an
+ * app owns the socket. This sketch opens the library's outbound TCP client (protocore_client) to an
  * instrument's raw SCPI socket (port 5025 - DMMs, scopes, supplies, function generators, SMUs,
  * loads all speak it) and runs a small session:
  *
@@ -20,10 +20,10 @@
  * `pyvisa` server, or any SCPI simulator listening on port 5025. See the README to fake one with
  * a two-line `socat` / netcat responder for a dry run.
  *
- * Build flag (platformio.ini):  build_flags = -DPC_ENABLE_SCPI=1
+ * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_SCPI=1
  */
 
-#define PC_ENABLE_SCPI 1
+#define PROTOCORE_ENABLE_SCPI 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -35,14 +35,14 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 
 // --- the target instrument ---
 static const char *INSTRUMENT_IP = "192.168.1.60"; // its raw SCPI socket host
-// PC_SCPI_PORT (5025) is the de-facto raw-socket port; override if your instrument differs.
+// PROTOCORE_SCPI_PORT (5025) is the de-facto raw-socket port; override if your instrument differs.
 
 static char c_cmd[128];
 static char c_resp[256];
 
 // Send one command, read one newline-terminated response line. Returns the response length
 // (excluding the newline / NUL), or 0 on timeout. @p cmd must already be newline-terminated
-// (pc_scpi_build does this).
+// (protocore_scpi_build does this).
 static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
 {
     if (cmd_len == 0 || !Tcp.client->send(cid, cmd, cmd_len))
@@ -78,7 +78,7 @@ static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PC_SCPI_PORT, 8000);
+    int cid = Tcp.client->open(host, PROTOCORE_SCPI_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[scpi] connect failed");
@@ -88,7 +88,7 @@ static void run_session(const char *host)
     size_t n;
 
     // 1) *IDN? - identify the instrument (4 comma-separated fields).
-    n = pc_scpi_build(c_cmd, sizeof(c_cmd), pc_scpi_common(SCPI_IDN_Q), nullptr, 0);
+    n = protocore_scpi_build(c_cmd, sizeof(c_cmd), protocore_scpi_common(SCPI_IDN_Q), nullptr, 0);
     if (scpi_exchange(cid, c_cmd, n))
     {
         Serial.printf("[scpi] *IDN? -> %s\n", c_resp);
@@ -99,15 +99,15 @@ static void run_session(const char *host)
     }
 
     // 2) *CLS - clear status byte + error queue (no response).
-    n = pc_scpi_build(c_cmd, sizeof(c_cmd), pc_scpi_common(SCPI_CLS), nullptr, 0);
+    n = protocore_scpi_build(c_cmd, sizeof(c_cmd), protocore_scpi_common(SCPI_CLS), nullptr, 0);
     Tcp.client->send(cid, c_cmd, n);
 
     // 3) MEAS:VOLT:DC? - take a DC voltage reading and parse it as a number.
-    n = pc_scpi_build(c_cmd, sizeof(c_cmd), "MEASure:VOLTage:DC?", nullptr, 0);
+    n = protocore_scpi_build(c_cmd, sizeof(c_cmd), "MEASure:VOLTage:DC?", nullptr, 0);
     if (scpi_exchange(cid, c_cmd, n))
     {
         double volts = 0.0;
-        if (pc_scpi_parse_number(c_resp, strlen(c_resp), &volts))
+        if (protocore_scpi_parse_number(c_resp, strlen(c_resp), &volts))
         {
             Serial.printf("[scpi] DC voltage = %.6f V\n", volts);
         }
@@ -118,7 +118,7 @@ static void run_session(const char *host)
     }
 
     // 4) SYST:ERR? - read one entry off the instrument's error/event queue.
-    n = pc_scpi_build(c_cmd, sizeof(c_cmd), "SYSTem:ERRor?", nullptr, 0);
+    n = protocore_scpi_build(c_cmd, sizeof(c_cmd), "SYSTem:ERRor?", nullptr, 0);
     if (scpi_exchange(cid, c_cmd, n))
     {
         Serial.printf("[scpi] SYST:ERR? -> %s\n", c_resp);

@@ -18,11 +18,11 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_SYSLOG=1
+ *     build_flags = -DPROTOCORE_ENABLE_SYSLOG=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_SYSLOG 1
+#define PROTOCORE_ENABLE_SYSLOG 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -40,7 +40,7 @@ static void access_log(const char *method, const char *path, int status, int len
 {
     char line[96];
     snprintf(line, sizeof(line), "%s %s -> %d (%d bytes)", method, path, status, len);
-    pc_syslog_log(status >= 500   ? SYSLOG_ERR
+    protocore_syslog_log(status >= 500   ? SYSLOG_ERR
                   : status >= 400 ? SYSLOG_WARNING
                                   : SYSLOG_INFO,
                   line);
@@ -61,8 +61,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SYSLOG_FAC_LOCAL0);
-    pc_syslog_log(SYSLOG_NOTICE, "device booted");
+    protocore_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SYSLOG_FAC_LOCAL0);
+    protocore_syslog_log(SYSLOG_NOTICE, "device booted");
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "ok"); });
     on_request_log(access_log); // every response is logged to syslog
@@ -89,6 +89,6 @@ void loop()
         char hb[48];
         snprintf(hb, sizeof(hb), "heartbeat uptime=%lus heap=%u", (unsigned long)(millis() / 1000),
                  (unsigned)ESP.getFreeHeap());
-        pc_syslog_log(SYSLOG_INFO, hb);
+        protocore_syslog_log(SYSLOG_INFO, hb);
     }
 }

@@ -17,7 +17,7 @@
 # stages a file you did not touch: a commit stays reviewable, and an unrelated drifted file can
 # never ride along inside it. Repo-wide drift is surfaced as a warning (step 1b) so you still
 # learn CI will fail - fix it in its own commit, which is where that change belongs.
-# Set PC_HOOK_NO_DRIFT_SCAN=1 to skip the whole-tree drift scan.
+# Set PROTOCORE_HOOK_NO_DRIFT_SCAN=1 to skip the whole-tree drift scan.
 #
 # Install once per clone:   git config core.hooksPath tools/git-hooks
 # Uses the locally installed tools (clang-format, and prettier/cspell via npx); if a tool is
@@ -39,7 +39,7 @@ fi
 # whole tree, so a file that drifted in an earlier commit fails CI on an unrelated one. Warn
 # instead of reformatting it: silently absorbing an unrelated file into this commit is what makes
 # a diff unreviewable. Nothing here writes or stages - fix the listed files in their own commit.
-if [ "${PC_HOOK_NO_DRIFT_SCAN:-0}" != "1" ] && command -v clang-format >/dev/null 2>&1; then
+if [ "${PROTOCORE_HOOK_NO_DRIFT_SCAN:-0}" != "1" ] && command -v clang-format >/dev/null 2>&1; then
     # Candidates = tracked sources minus the staged set (those were just formatted above).
     # Note: `list | grep -Fxv -f staged` exits 1 when it filters everything out, so it is kept
     # out of an `&&/||` chain - `|| cat` there would re-emit the whole list.
@@ -111,8 +111,8 @@ fi
 # not fix or warn: it FAILS the commit. A staged src/ source using strlen, <stdlib.h> / heap / parse
 # functions, the auto keyword, delay(), a non-reentrant gmtime family call, or an em-dash cannot be
 # committed. The scanner self-filters to src/ (examples/ + test/ are exempt) and ignores mentions in
-# comments / string literals, so only real code trips it. Set PC_HOOK_NO_BANNED_SCAN=1 to bypass.
-if [ "${PC_HOOK_NO_BANNED_SCAN:-0}" != "1" ]; then
+# comments / string literals, so only real code trips it. Set PROTOCORE_HOOK_NO_BANNED_SCAN=1 to bypass.
+if [ "${PROTOCORE_HOOK_NO_BANNED_SCAN:-0}" != "1" ]; then
     mapfile -t SB < <(staged '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' '*.ino')
     if [ "${#SB[@]}" -gt 0 ]; then
         PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)

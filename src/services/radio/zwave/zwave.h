@@ -3,7 +3,7 @@
 
 /**
  * @file zwave.h
- * @brief Z-Wave Serial API frame codec (PC_ENABLE_ZWAVE) - Silicon Labs controller.
+ * @brief Z-Wave Serial API frame codec (PROTOCORE_ENABLE_ZWAVE) - Silicon Labs controller.
  *
  * The host-side Serial API of a Silicon Labs 500 / 700-series Z-Wave controller reached
  * over UART: a Z-Wave mesh bridged to the web. The host and the controller exchange **data
@@ -16,9 +16,9 @@
  * acknowledged by a single-byte **ACK (0x06)**, or rejected with **NAK (0x15)** / **CAN
  * (0x18)**.
  *
- * pc_zwave_build_frame() assembles a data frame carrying a function command, pc_zwave_parse_frame()
- * frames + verifies one, and pc_zwave_is_ack() / pc_zwave_is_nak() / pc_zwave_is_can() /
- * pc_zwave_build_ack() handle the flow-control bytes. The per-command payload (GetVersion,
+ * protocore_zwave_build_frame() assembles a data frame carrying a function command, protocore_zwave_parse_frame()
+ * frames + verifies one, and protocore_zwave_is_ack() / protocore_zwave_is_nak() / protocore_zwave_is_can() /
+ * protocore_zwave_build_ack() handle the flow-control bytes. The per-command payload (GetVersion,
  * SendData, AddNodeToNetwork, an ApplicationCommandHandler report, ...) is the application's.
  * Pure - you carry the bytes over your UART - so it is fully host-testable.
  *
@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_ZWAVE
+#if PROTOCORE_ENABLE_ZWAVE
 
 /** @brief Z-Wave Serial API control bytes / frame markers. */
 #define ZWAVE_SOF 0x01 ///< start of a data frame
@@ -46,15 +46,15 @@ typedef enum PROTO_ENUM_PACKED
 {
     ZWAVE_REQ = 0x00, ///< request
     ZWAVE_RES = 0x01, ///< response
-} pc_zwave_type;
+} protocore_zwave_type;
 
 /**
  * @brief Assemble a data frame carrying @p type + @p cmd + @p data into @p out.
  * @return the total frame length, or 0 if it would not fit @p cap or @p data_len exceeds
- *         PC_ZWAVE_MAX_DATA.
+ *         PROTOCORE_ZWAVE_MAX_DATA.
  */
-uint16_t pc_zwave_build_frame(pc_zwave_type type, uint8_t cmd, const uint8_t *data, uint8_t data_len, uint8_t *out,
-                              uint16_t cap);
+uint16_t protocore_zwave_build_frame(protocore_zwave_type type, uint8_t cmd, const uint8_t *data, uint8_t data_len,
+                                     uint8_t *out, uint16_t cap);
 
 /**
  * @brief Frame one data frame from the front of @p raw and verify the checksum.
@@ -67,21 +67,21 @@ uint16_t pc_zwave_build_frame(pc_zwave_type type, uint8_t cmd, const uint8_t *da
  *         control byte (ACK / NAK / CAN) is not a data frame - test it with the helpers
  *         below before calling this.
  */
-int pc_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd, const uint8_t **pdata,
-                         uint8_t *pdata_len);
+int protocore_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd, const uint8_t **pdata,
+                                uint8_t *pdata_len);
 
 /** @brief True if @p b is the ACK control byte. */
-proto_bool pc_zwave_is_ack(uint8_t b);
+proto_bool protocore_zwave_is_ack(uint8_t b);
 /** @brief True if @p b is the NAK control byte. */
-proto_bool pc_zwave_is_nak(uint8_t b);
+proto_bool protocore_zwave_is_nak(uint8_t b);
 /** @brief True if @p b is the CAN control byte. */
-proto_bool pc_zwave_is_can(uint8_t b);
+proto_bool protocore_zwave_is_can(uint8_t b);
 
 /** @brief Write the single ACK byte into @p out. @return 1, or 0 if @p cap < 1. */
-uint16_t pc_zwave_build_ack(uint8_t *out, uint16_t cap);
+uint16_t protocore_zwave_build_ack(uint8_t *out, uint16_t cap);
 
-#endif // PC_ENABLE_ZWAVE
+#endif // PROTOCORE_ENABLE_ZWAVE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ZWAVE_H

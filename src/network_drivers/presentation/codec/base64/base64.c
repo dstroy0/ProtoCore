@@ -21,7 +21,7 @@
 #include "base64.h"
 
 #include "mmgr/swar.h"        // the lane math; the classification below is base64's own
-#include "protocore_config.h" // PC_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
+#include "protocore_config.h" // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
                               // strnlen
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -109,9 +109,9 @@ static inline uint32_t ct_b64_val_plus1(uint32_t c, int urlsafe)
     return v;
 }
 
-#if PC_BASE64_SWAR
+#if PROTOCORE_BASE64_SWAR
 // ---------------------------------------------------------------------------
-// SWAR variant: classify 4 characters per 32-bit word instead of one at a time (opt-in, PC_BASE64_SWAR).
+// SWAR variant: classify 4 characters per 32-bit word instead of one at a time (opt-in, PROTOCORE_BASE64_SWAR).
 // The lane math itself is mmgr/swar.h; what is base64's own is the classification below.
 // Every base64 character is < 0x80, so a byte lane never sets its own high bit, which is what lets the
 // guard-bit subtraction keep borrows inside their lane and the range masks stay data-independent -
@@ -121,20 +121,20 @@ static inline uint32_t ct_b64_val_plus1(uint32_t c, int urlsafe)
 
 // A base64 quad is four characters by definition of the encoding, so this path wants exactly four
 // lanes - it is the one caller of swar.h that cannot follow a retyped word width.
-static_assert(PC_SWAR_BYTES == 4, "base64 SWAR decodes one four-character quad per word");
+static_assert(PROTOCORE_SWAR_BYTES == 4, "base64 SWAR decodes one four-character quad per word");
 
 // Decode 4 packed characters (c0 in the low byte) to 4 packed 6-bit values; *ok gets 0xFF in each valid lane.
 static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
 {
-    uint32_t mAZ = pc_swar_spread(pc_swar_ge(a, 'A') & pc_swar_le(a, 'Z'));
-    uint32_t maz = pc_swar_spread(pc_swar_ge(a, 'a') & pc_swar_le(a, 'z'));
-    uint32_t m09 = pc_swar_spread(pc_swar_ge(a, '0') & pc_swar_le(a, '9'));
-    uint32_t mpl = pc_swar_spread(pc_swar_ge(a, '+') & pc_swar_le(a, '+'));
-    uint32_t msl = pc_swar_spread(pc_swar_ge(a, '/') & pc_swar_le(a, '/'));
-    uint32_t val = (mAZ & (pc_swar_sub7(a, 'A') + 0u * PC_SWAR_ONES)) |
-                   (maz & (pc_swar_sub7(a, 'a') + 26u * PC_SWAR_ONES)) |
-                   (m09 & (pc_swar_sub7(a, '0') + 52u * PC_SWAR_ONES)) | (mpl & (62u * PC_SWAR_ONES)) |
-                   (msl & (63u * PC_SWAR_ONES));
+    uint32_t mAZ = protocore_swar_spread(protocore_swar_ge(a, 'A') & protocore_swar_le(a, 'Z'));
+    uint32_t maz = protocore_swar_spread(protocore_swar_ge(a, 'a') & protocore_swar_le(a, 'z'));
+    uint32_t m09 = protocore_swar_spread(protocore_swar_ge(a, '0') & protocore_swar_le(a, '9'));
+    uint32_t mpl = protocore_swar_spread(protocore_swar_ge(a, '+') & protocore_swar_le(a, '+'));
+    uint32_t msl = protocore_swar_spread(protocore_swar_ge(a, '/') & protocore_swar_le(a, '/'));
+    uint32_t val = (mAZ & (protocore_swar_sub7(a, 'A') + 0u * PROTOCORE_SWAR_ONES)) |
+                   (maz & (protocore_swar_sub7(a, 'a') + 26u * PROTOCORE_SWAR_ONES)) |
+                   (m09 & (protocore_swar_sub7(a, '0') + 52u * PROTOCORE_SWAR_ONES)) | (mpl & (62u * PROTOCORE_SWAR_ONES)) |
+                   (msl & (63u * PROTOCORE_SWAR_ONES));
     *ok = mAZ | maz | m09 | mpl | msl;
     return val;
 }
@@ -278,7 +278,7 @@ static size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
     }
     return out;
 }
-#endif // PC_BASE64_SWAR
+#endif // PROTOCORE_BASE64_SWAR
 
 // ---------------------------------------------------------------------------
 // Base64url (RFC 4648 section 5): '-' / '_' replace '+' / '/', no '=' padding.

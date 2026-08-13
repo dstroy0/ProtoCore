@@ -19,21 +19,21 @@
 #ifndef PROTOCORE_HEX_H
 #define PROTOCORE_HEX_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
 /** @brief The 16 hex digits, lowercase - the default rendering everywhere in this library. */
-static const char *const PC_HEX_LOWER = "0123456789abcdef";
+static const char *const PROTOCORE_HEX_LOWER = "0123456789abcdef";
 /** @brief The 16 hex digits, uppercase - for the protocols that specify capitals (RFC 3986 %XX). */
-static const char *const PC_HEX_UPPER = "0123456789ABCDEF";
+static const char *const PROTOCORE_HEX_UPPER = "0123456789ABCDEF";
 
 /** @brief Low nibble of @p nibble as a hex character, uppercase when @p upper. */
-PC_INLINE char pc_hex_digit(uint8_t nibble, proto_bool upper)
+PROTOCORE_INLINE char protocore_hex_digit(uint8_t nibble, proto_bool upper)
 {
-    return (upper ? PC_HEX_UPPER : PC_HEX_LOWER)[nibble & 0x0Fu];
+    return (upper ? PROTOCORE_HEX_UPPER : PROTOCORE_HEX_LOWER)[nibble & 0x0Fu];
 }
 
 /** @brief Hex character @p c as 0..15, or -1 when @p c is not a hex digit of either case. */
-PC_INLINE int8_t pc_hex_val(char c)
+PROTOCORE_INLINE int8_t protocore_hex_val(char c)
 {
     if (c >= '0' && c <= '9')
     {
@@ -58,7 +58,7 @@ PC_INLINE int8_t pc_hex_val(char c)
  * takes. The width is counted before any digit is written so each digit lands at its final index,
  * which is why no reversal buffer is needed. @p out needs room for 8 characters.
  */
-PC_INLINE uint8_t pc_hex_u32(uint32_t v, char *out)
+PROTOCORE_INLINE uint8_t protocore_hex_u32(uint32_t v, char *out)
 {
     uint8_t digits = 1;
     for (uint32_t probe = v; probe >= 16u; probe >>= 4)
@@ -67,7 +67,7 @@ PC_INLINE uint8_t pc_hex_u32(uint32_t v, char *out)
     }
     for (uint8_t i = digits; i > 0; i--)
     {
-        out[i - 1] = PC_HEX_LOWER[v & 0x0Fu];
+        out[i - 1] = PROTOCORE_HEX_LOWER[v & 0x0Fu];
         v >>= 4;
     }
     return digits;
@@ -80,9 +80,9 @@ PC_INLINE uint8_t pc_hex_u32(uint32_t v, char *out)
  * @p out needs a capacity of at least 2 * @p n + 1; the caller owns that bound, since a byte run
  * has no self-describing end.
  */
-PC_INLINE void pc_hex_encode(const uint8_t *in, uint32_t n, char *out, proto_bool upper)
+PROTOCORE_INLINE void protocore_hex_encode(const uint8_t *in, uint32_t n, char *out, proto_bool upper)
 {
-    const char *digits = upper ? PC_HEX_UPPER : PC_HEX_LOWER;
+    const char *digits = upper ? PROTOCORE_HEX_UPPER : PROTOCORE_HEX_LOWER;
     for (uint32_t i = 0; i < n; i++)
     {
         out[2 * i] = digits[(in[i] >> 4) & 0x0Fu];
@@ -97,7 +97,7 @@ PC_INLINE void pc_hex_encode(const uint8_t *in, uint32_t n, char *out, proto_boo
  *         any character is not a hex digit. Nothing is written on the odd-length or capacity
  *         rejections; a bad digit stops the run where it is found.
  */
-PC_INLINE int32_t pc_hex_decode(const char *in, uint32_t hexlen, uint8_t *out, uint32_t out_cap)
+PROTOCORE_INLINE int32_t protocore_hex_decode(const char *in, uint32_t hexlen, uint8_t *out, uint32_t out_cap)
 {
     if ((hexlen % 2) != 0 || (hexlen / 2) > out_cap)
     {
@@ -105,8 +105,8 @@ PC_INLINE int32_t pc_hex_decode(const char *in, uint32_t hexlen, uint8_t *out, u
     }
     for (uint32_t i = 0; i < hexlen; i += 2)
     {
-        int8_t hi = pc_hex_val(in[i]);
-        int8_t lo = pc_hex_val(in[i + 1]);
+        int8_t hi = protocore_hex_val(in[i]);
+        int8_t lo = protocore_hex_val(in[i + 1]);
         if (hi < 0 || lo < 0)
         {
             return -1;

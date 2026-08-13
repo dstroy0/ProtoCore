@@ -24,32 +24,32 @@ void dbench_run(void)
     static const uint8_t file_id[16] = {0xAA, 0xBB, 0xCC, 0xDD, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     uint8_t nt_hash[16], owf[16];
-    pc_ntlm_nt_hash("Passw0rd!", nt_hash);
-    pc_ntlm_ntowfv2(nt_hash, "user", "DOMAIN", owf);
+    protocore_ntlm_nt_hash("Passw0rd!", nt_hash);
+    protocore_ntlm_ntowfv2(nt_hash, "user", "DOMAIN", owf);
 
     for (;;)
     {
         DBENCH_BANNER("smb");
         volatile size_t sink = 0;
         uint8_t h[16];
-        DBENCH_OP("pc_ntlm_nt_hash (MD4)", 100000, {
-            pc_ntlm_nt_hash("Passw0rd!", h);
+        DBENCH_OP("protocore_ntlm_nt_hash (MD4)", 100000, {
+            protocore_ntlm_nt_hash("Passw0rd!", h);
             sink += h[0];
         });
-        DBENCH_OP("pc_ntlm_ntowfv2 (HMAC-MD5)", 100000, {
-            pc_ntlm_ntowfv2(nt_hash, "user", "DOMAIN", h);
+        DBENCH_OP("protocore_ntlm_ntowfv2 (HMAC-MD5)", 100000, {
+            protocore_ntlm_ntowfv2(nt_hash, "user", "DOMAIN", h);
             sink += h[0];
         });
         static uint8_t resp[256];
         uint8_t skey[16];
-        DBENCH_OP("pc_ntlm_v2_response", 50000,
-                  sink += pc_ntlm_v2_response(owf, server_chal, client_chal, timestamp, target_info,
+        DBENCH_OP("protocore_ntlm_v2_response", 50000,
+                  sink += protocore_ntlm_v2_response(owf, server_chal, client_chal, timestamp, target_info,
                                               sizeof(target_info), resp, sizeof(resp), skey));
         static uint8_t buf[256];
-        DBENCH_OP("pc_ntlmssp_build_negotiate", 200000,
-                  sink += pc_ntlmssp_build_negotiate(buf, sizeof(buf), 0xE2088297u));
-        DBENCH_OP("pc_smb2_build_close", 200000,
-                  sink += pc_smb2_build_close(buf, sizeof(buf), 5, 0x1122334455667788ull, 0x99, file_id));
+        DBENCH_OP("protocore_ntlmssp_build_negotiate", 200000,
+                  sink += protocore_ntlmssp_build_negotiate(buf, sizeof(buf), 0xE2088297u));
+        DBENCH_OP("protocore_smb2_build_close", 200000,
+                  sink += protocore_smb2_build_close(buf, sizeof(buf), 5, 0x1122334455667788ull, 0x99, file_id));
         (void)sink;
         DBENCH_DONE();
     }

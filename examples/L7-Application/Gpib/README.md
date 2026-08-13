@@ -1,6 +1,6 @@
 # Gpib - drive a legacy GPIB instrument through a Prologix adapter
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_GPIB`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_GPIB`
 
 ## What this example teaches
 
@@ -13,18 +13,18 @@ A line starting with `++` is a controller command; anything else is data forward
 to the addressed instrument. Configure the adapter, then send SCPI as data:
 
 ```cpp
-pc_gpib_command(cmd, sizeof(cmd), "mode 1");            // controller-in-charge
-pc_gpib_addr(cmd, sizeof(cmd), 9, -1);                  // ++addr 9  (instrument address)
-pc_gpib_eos(cmd, sizeof(cmd), GpibEos::LF);             // ++eos 2   (append LF over GPIB)
-pc_gpib_command(cmd, sizeof(cmd), "eoi 1");             // assert EOI on the last byte
-pc_gpib_build_data(data, sizeof(data), (const uint8_t *)"*IDN?", 5);  // send SCPI as data
-pc_gpib_read(cmd, sizeof(cmd), GpibRead::UNTIL_EOI, 0); // ++read eoi -> read the reply
+protocore_gpib_command(cmd, sizeof(cmd), "mode 1");            // controller-in-charge
+protocore_gpib_addr(cmd, sizeof(cmd), 9, -1);                  // ++addr 9  (instrument address)
+protocore_gpib_eos(cmd, sizeof(cmd), GpibEos::LF);             // ++eos 2   (append LF over GPIB)
+protocore_gpib_command(cmd, sizeof(cmd), "eoi 1");             // assert EOI on the last byte
+protocore_gpib_build_data(data, sizeof(data), (const uint8_t *)"*IDN?", 5);  // send SCPI as data
+protocore_gpib_read(cmd, sizeof(cmd), GpibRead::UNTIL_EOI, 0); // ++read eoi -> read the reply
 ```
 
 The data escaping is the subtle part: each CR / LF / ESC / `+` byte in the payload is preceded
 by an ESC (27) so it is not eaten as a line terminator or mistaken for a command - verified
 byte-exact against the Prologix manual's binary example. Response parsers cover the serial-poll
-status byte (`pc_gpib_parse_decimal` after `++spoll`), the address, and the `++ver` string.
+status byte (`protocore_gpib_parse_decimal` after `++spoll`), the address, and the `++ver` string.
 
 ## Prerequisites (a Prologix adapter)
 
@@ -37,7 +37,7 @@ dry run.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_GPIB=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_GPIB=1" \
   --lib="." examples/L7-Application/Gpib/Gpib.ino
 ```
 

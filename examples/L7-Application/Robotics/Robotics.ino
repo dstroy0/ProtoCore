@@ -3,7 +3,7 @@
 
 /**
  * @file Robotics.ino
- * @brief OPC UA for Robotics (OPC 40010-1) MotionDeviceSystem model (PC_ENABLE_ROBOTICS).
+ * @brief OPC UA for Robotics (OPC 40010-1) MotionDeviceSystem model (PROTOCORE_ENABLE_ROBOTICS).
  *
  * Turns the board into an OPC UA for Robotics server: it exposes the standard MotionDeviceSystem
  * information model (MotionDevices - MotionDevice / ParameterSet / Axes, Controllers - Controller /
@@ -12,19 +12,19 @@
  * open62541) browses the MotionDeviceSystem and reads live values by their standard BrowseNames - the
  * same shape across robot vendors.
  *
- *   pc_robotics_install(&mds)             -> registers the OPC UA Browse + Read resolvers
+ *   protocore_robotics_install(&mds)             -> registers the OPC UA Browse + Read resolvers
  *   listen(4840, PROTO_OPCUA)       -> the OPC UA / robotics endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); robotics is the MotionDevice model on top - the
  * twin of example Umati (machine tools). The HTTP server on :80 runs alongside on the same event loop.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_OPCUA=1 -DPC_ENABLE_ROBOTICS=1
+ *     build_flags = -DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_ROBOTICS=1
  * (Arduino IDE: already set for you in the build_opt.h beside this sketch.)
  */
 
-#define PC_ENABLE_OPCUA 1
-#define PC_ENABLE_ROBOTICS 1
+#define PROTOCORE_ENABLE_OPCUA 1
+#define PROTOCORE_ENABLE_ROBOTICS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -78,7 +78,7 @@ void setup()
     mds.safety.emergency_stop = false;
     mds.safety.protective_stop = false;
 
-    pc_robotics_install(&mds); // bind + register the OPC UA Browse/Read resolvers
+    protocore_robotics_install(&mds); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) {
         send_text(id, 200, "text/plain", "OPC UA for Robotics MotionDeviceSystem on :4840");
     });

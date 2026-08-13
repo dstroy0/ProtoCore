@@ -21,7 +21,7 @@ Wiring is two calls:
 
 ```cpp
 int32_t li = server.listen(8080, ProtoConn::PROTO_RELAY);   // open the front port
-pc_relay_publish((uint8_t)li, "192.168.1.60", 80); // bind it to the origin
+protocore_relay_publish((uint8_t)li, "192.168.1.60", 80); // bind it to the origin
 ```
 
 The server's normal `handle()` loop pumps the relay - no extra task.
@@ -84,15 +84,15 @@ connect to this board on port 8080 and you reach the origin
   the origin when the inbound connection arrives; if that fails it drops the
   inbound.
 - **"relay publish failed".** The front port could not be opened (already in use)
-  or more than `PC_RELAY_MAX_PUBLISH` ports were published.
+  or more than `PROTOCORE_RELAY_MAX_PUBLISH` ports were published.
 - **Only a few connections work at once.** Concurrent relays are capped by
-  `PC_RELAY_MAX_CONNS` (raise it in `protocore_config.h`).
+  `PROTOCORE_RELAY_MAX_CONNS` (raise it in `protocore_config.h`).
 
 ## Going further
 
-- **Publish several ports.** Call `server.listen` + `pc_relay_publish` once per
-  port (up to `PC_RELAY_MAX_PUBLISH`), each to a different origin.
-- **Throughput.** Each relay carries up to `PC_RELAY_BUF` bytes per pump step;
+- **Publish several ports.** Call `server.listen` + `protocore_relay_publish` once per
+  port (up to `PROTOCORE_RELAY_MAX_PUBLISH`), each to a different origin.
+- **Throughput.** Each relay carries up to `PROTOCORE_RELAY_BUF` bytes per pump step;
   raise it for bulk transfers, at the cost of RAM per connection. **HW-verified**
   on an ESP32-S3 over a W5500 wired link: a 1 MB file pulled through the front port
   came back byte-exact (SHA256 matched the origin). Expect ~44 KB/s on a **single-NIC
@@ -108,7 +108,7 @@ The relay lives inside the library, so the flag must reach the whole build:
 pio ci examples/L7-Application/PortForward \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_RELAY=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_RELAY=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
@@ -119,10 +119,10 @@ pio ci examples/L7-Application/PortForward \
 
 `server.listen(port, PROTO_RELAY)` registers a listener whose accepted
 connections are handled by the relay's `ProtoHandler`. On accept it dials the
-origin through `pc_client` (the shared outbound TCP transport) and pairs the two
-sockets in a `pc_relay`. Each `server.handle()` tick calls `pc_relay_step`,
+origin through `protocore_client` (the shared outbound TCP transport) and pairs the two
+sockets in a `protocore_relay`. Each `server.handle()` tick calls `protocore_relay_step`,
 which moves whatever bytes are ready in each direction, carrying anything the far
 side is too busy to accept yet (backpressure). When either side closes, the relay
 tears the other down. The byte-pump engine is transport-agnostic and unit-tested
 on its own; this listener is the thin glue that binds its seams to the server's
-inbound connection and an outbound `pc_client`.
+inbound connection and an outbound `protocore_client`.

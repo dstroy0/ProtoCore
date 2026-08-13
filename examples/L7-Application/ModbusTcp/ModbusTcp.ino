@@ -14,16 +14,16 @@
  * The application owns the data model: it writes input registers / discrete
  * inputs (read-only to the client) to publish sensor state, reads holding
  * registers / coils the client has written, and is notified of client writes via
- * pc_modbus_on_write(). Modbus has no authentication or encryption - run it only on
+ * protocore_modbus_on_write(). Modbus has no authentication or encryption - run it only on
  * a trusted control network (front it with the per-IP accept throttle).
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_MODBUS=1
+ *     build_flags = -DPROTOCORE_ENABLE_MODBUS=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_MODBUS 1
+#define PROTOCORE_ENABLE_MODBUS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -54,10 +54,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_modbus_server_init();
-    pc_modbus_set_holding_reg(0, 0x1234); // client-writable registers
-    pc_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
-    pc_modbus_on_write(on_write);
+    protocore_modbus_server_init();
+    protocore_modbus_set_holding_reg(0, 0x1234); // client-writable registers
+    protocore_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
+    protocore_modbus_on_write(on_write);
 
     listen(502, PROTO_MODBUS);
     begin();
@@ -73,6 +73,6 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        pc_modbus_set_input_reg(0, (uint16_t)(millis() / 1000)); // uptime seconds
+        protocore_modbus_set_input_reg(0, (uint16_t)(millis() / 1000)); // uptime seconds
     }
 }

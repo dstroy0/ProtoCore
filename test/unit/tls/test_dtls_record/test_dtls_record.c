@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // DTLS 1.3 record layer tests (RFC 9147 §4). The record + key derivation is pinned byte-for-byte
-// to an INDEPENDENT reconstruction (test/scratch pc_dtls_kat.py): HKDF-Expand-Label via stdlib
+// to an INDEPENDENT reconstruction (test/scratch protocore_dtls_kat.py): HKDF-Expand-Label via stdlib
 // hmac/hashlib, AEAD_AES_128_GCM + AES-ECB via the `cryptography` library. A byte-exact match of
 // the whole DTLSCiphertext record proves the unified header, the AEAD nonce (§4.2.2), the AAD
 // selection, and the sequence-number encryption (§4.2.3) are all assembled correctly.
@@ -37,7 +37,7 @@ static const uint8_t KAT_WIRE[36] = {0x2f, 0xce, 0x85, 0x00, 0x1f, 0x48, 0x98, 0
 static const char *KAT_PLAINTEXT = "hello dtls 1.3";
 static const uint16_t KAT_EPOCH = 3;
 static const uint64_t KAT_SEQ = 5;
-static const uint8_t KAT_CT = PC_DTLS_CT_APPLICATION_DATA; // 23
+static const uint8_t KAT_CT = PROTOCORE_DTLS_CT_APPLICATION_DATA; // 23
 
 // The record keys are derived from the traffic secret exactly like the independent tool.
 static void test_dtls_record_keys_derive_kat(void)
@@ -47,24 +47,24 @@ static void test_dtls_record_keys_derive_kat(void)
     // The raw key is no longer stored - it becomes a keyed context - so prove it a step removed: a
     // context built from the expected key must seal identically to the derived one. That is the same
     // assertion plus proof the context was actually built, rather than that two byte arrays matched.
-    static uint8_t ref_ws[PC_WORK_AES128GCM] __attribute__((aligned(8)));
-    struct pc_aes128gcm_key *ref = pc_aes128gcm_key_init(ref_ws, KAT_KEY);
+    static uint8_t ref_ws[PROTOCORE_WORK_AES128GCM] __attribute__((aligned(8)));
+    struct protocore_aes128gcm_key *ref = protocore_aes128gcm_key_init(ref_ws, KAT_KEY);
     uint8_t n12[12] = {0}, zpt[16] = {0}, c1[16], t1[16], c2[16], t2[16];
-    pc_aes128gcm_seal(ref, n12, NULL, 0, zpt, sizeof(zpt), c1, t1);
-    pc_aes128gcm_seal((struct pc_aes128gcm_key *)(k.gcm), n12, NULL, 0, zpt, sizeof(zpt), c2, t2);
+    protocore_aes128gcm_seal(ref, n12, NULL, 0, zpt, sizeof(zpt), c1, t1);
+    protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(k.gcm), n12, NULL, 0, zpt, sizeof(zpt), c2, t2);
     TEST_ASSERT_EQUAL_MEMORY(c1, c2, sizeof(c1));
     TEST_ASSERT_EQUAL_MEMORY(t1, t2, sizeof(t1));
-    pc_aes128gcm_key_wipe(ref);
+    protocore_aes128gcm_key_wipe(ref);
     TEST_ASSERT_EQUAL_MEMORY(KAT_IV, k.iv, 12);
     // sn_key is a keyed AES-128 context now, not the raw key: compare the block it produces against a
     // context built from the expected key.
-    static uint8_t sn_ref[PC_WORK_AES128] __attribute__((aligned(8)));
+    static uint8_t sn_ref[PROTOCORE_WORK_AES128] __attribute__((aligned(8)));
     uint8_t blk[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, s1[16], s2[16];
-    pc_aes128_init((struct pc_aes128 *)(sn_ref), KAT_SN);
-    pc_aes128_encrypt_block((struct pc_aes128 *)(sn_ref), blk, s1);
-    pc_aes128_encrypt_block((struct pc_aes128 *)(k.sn_key), blk, s2);
+    protocore_aes128_init((struct protocore_aes128 *)(sn_ref), KAT_SN);
+    protocore_aes128_encrypt_block((struct protocore_aes128 *)(sn_ref), blk, s1);
+    protocore_aes128_encrypt_block((struct protocore_aes128 *)(k.sn_key), blk, s2);
     TEST_ASSERT_EQUAL_MEMORY(s1, s2, 16);
-    pc_aes128_wipe((struct pc_aes128 *)(sn_ref));
+    protocore_aes128_wipe((struct protocore_aes128 *)(sn_ref));
     TEST_ASSERT_EQUAL_UINT16(KAT_EPOCH, k.epoch);
 }
 
@@ -109,7 +109,7 @@ static void test_dtls_ciphertext_roundtrip(void)
             pt[j] = (uint8_t)(j * 7 + i);
         }
         uint64_t seq = 1000 + i;
-        uint8_t ct = (i & 1) ? PC_DTLS_CT_HANDSHAKE : PC_DTLS_CT_APPLICATION_DATA;
+        uint8_t ct = (i & 1) ? PROTOCORE_DTLS_CT_HANDSHAKE : PROTOCORE_DTLS_CT_APPLICATION_DATA;
 
         uint8_t wire[320];
         size_t n = DtlsRecord.protect(&k, seq, ct, pt, sizes[i], wire, sizeof(wire), NULL, 0);
@@ -143,7 +143,7 @@ static void test_dtls_seq_reconstruction(void)
     {
         uint8_t wire[64];
         size_t n =
-            DtlsRecord.protect(&k, seqs[i], PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
+            DtlsRecord.protect(&k, seqs[i], PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
         TEST_ASSERT_TRUE(n > 0);
         uint8_t out[64];
         DtlsCiphertext info;
@@ -188,8 +188,8 @@ static void test_dtls_plaintext_roundtrip(void)
     const uint8_t frag[19] = "handshake fragment";
     uint8_t rec[64];
     size_t n =
-        DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0x0102030405ull, frag, sizeof(frag), rec, sizeof(rec));
-    TEST_ASSERT_EQUAL_size_t(PC_DTLS_PLAINTEXT_HDR_LEN + sizeof(frag), n);
+        DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0x0102030405ull, frag, sizeof(frag), rec, sizeof(rec));
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + sizeof(frag), n);
     // legacy_version is DTLS 1.2 on the wire.
     TEST_ASSERT_EQUAL_UINT8(0xFE, rec[1]);
     TEST_ASSERT_EQUAL_UINT8(0xFD, rec[2]);
@@ -197,7 +197,7 @@ static void test_dtls_plaintext_roundtrip(void)
     DtlsPlaintext pt;
     size_t consumed = DtlsRecord.plaintext_parse(rec, n, &pt);
     TEST_ASSERT_EQUAL_size_t(n, consumed);
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_HANDSHAKE, pt.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_HANDSHAKE, pt.content_type);
     TEST_ASSERT_EQUAL_UINT16(0, pt.epoch);
     TEST_ASSERT_EQUAL_UINT64(0x0102030405ull, pt.seq);
     TEST_ASSERT_EQUAL_size_t(sizeof(frag), pt.frag_len);
@@ -227,7 +227,7 @@ static size_t build_ciphertext(DtlsRecordKeys *k, uint64_t seq, uint8_t ct, prot
     const size_t seq_len = seq16 ? 2 : 1;
     const size_t hdr_len = 1 + seq_len + (with_len ? 2 : 0);
     const size_t inner_len = pt_len + 1;
-    const size_t enc_len = inner_len + PC_DTLS_TAG_LEN;
+    const size_t enc_len = inner_len + PROTOCORE_DTLS_TAG_LEN;
     if (hdr_len + enc_len > cap)
     {
         return 0;
@@ -267,11 +267,11 @@ static size_t build_ciphertext(DtlsRecordKeys *k, uint64_t seq, uint8_t ct, prot
     {
         nonce[11 - i] ^= (uint8_t)(seq >> (8 * i));
     }
-    pc_aes128gcm_seal((struct pc_aes128gcm_key *)(k->gcm), nonce, out, hdr_len, out + hdr_len, inner_len, out + hdr_len,
+    protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(k->gcm), nonce, out, hdr_len, out + hdr_len, inner_len, out + hdr_len,
                       out + hdr_len + inner_len);
 
     uint8_t mask[16];
-    pc_aes128_encrypt_block((struct pc_aes128 *)(k->sn_key), out + hdr_len, mask);
+    protocore_aes128_encrypt_block((struct protocore_aes128 *)(k->sn_key), out + hdr_len, mask);
     for (unsigned i = 0; i < seq_len; i++)
     {
         out[1 + i] ^= mask[i];
@@ -288,28 +288,28 @@ static void test_dtls_seq8_and_no_length_variants(void)
     // S=0: the sequence number travels in one byte and still reconstructs to the full value.
     uint8_t rec[64];
     size_t n =
-        build_ciphertext(&k, 7, PC_DTLS_CT_APPLICATION_DATA, PROTO_FALSE, PROTO_TRUE, pt, sizeof(pt), rec, sizeof(rec));
+        build_ciphertext(&k, 7, PROTOCORE_DTLS_CT_APPLICATION_DATA, PROTO_FALSE, PROTO_TRUE, pt, sizeof(pt), rec, sizeof(rec));
     TEST_ASSERT_TRUE(n > 0);
     uint8_t out[64];
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&k, 7, rec, n, out, sizeof(out), &info, NULL, 0));
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_EQUAL_UINT64(7, info.seq);
     TEST_ASSERT_EQUAL_size_t(sizeof(pt), info.pt_len);
     TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
 
     // L=0: no length field, so the record runs to the end of the datagram.
-    n = build_ciphertext(&k, 9, PC_DTLS_CT_APPLICATION_DATA, PROTO_TRUE, PROTO_FALSE, pt, sizeof(pt), rec, sizeof(rec));
+    n = build_ciphertext(&k, 9, PROTOCORE_DTLS_CT_APPLICATION_DATA, PROTO_TRUE, PROTO_FALSE, pt, sizeof(pt), rec, sizeof(rec));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&k, 9, rec, n, out, sizeof(out), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT64(9, info.seq);
     TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
 
     // Both at once: an 8-bit sequence number on a length-omitted record.
-    n = build_ciphertext(&k, 11, PC_DTLS_CT_HANDSHAKE, PROTO_FALSE, PROTO_FALSE, pt, sizeof(pt), rec, sizeof(rec));
+    n = build_ciphertext(&k, 11, PROTOCORE_DTLS_CT_HANDSHAKE, PROTO_FALSE, PROTO_FALSE, pt, sizeof(pt), rec, sizeof(rec));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&k, 11, rec, n, out, sizeof(out), &info, NULL, 0));
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_HANDSHAKE, info.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_HANDSHAKE, info.content_type);
     TEST_ASSERT_EQUAL_UINT64(11, info.seq);
     TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
 }
@@ -367,7 +367,7 @@ static void test_dtls_cid_roundtrip(void)
 
     uint8_t wire[64];
     size_t n =
-        DtlsRecord.protect(&k, 7, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), cid, sizeof(cid));
+        DtlsRecord.protect(&k, 7, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), cid, sizeof(cid));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE((wire[0] & 0x10) != 0);              // C bit set
     TEST_ASSERT_EQUAL_MEMORY(cid, wire + 1, sizeof(cid)); // CID immediately after the first byte
@@ -393,7 +393,7 @@ static void test_dtls_cid_rejects(void)
 
     uint8_t wire[64];
     size_t n =
-        DtlsRecord.protect(&k, 3, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), cid, sizeof(cid));
+        DtlsRecord.protect(&k, 3, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), cid, sizeof(cid));
     TEST_ASSERT_TRUE(n > 0);
 
     // A CID record but the receiver expects none -> rejected (unexpected CID).
@@ -406,13 +406,13 @@ static void test_dtls_cid_rejects(void)
 
     // A non-CID record but the receiver expects a CID -> rejected.
     uint8_t plain[64];
-    size_t pn = DtlsRecord.protect(&k, 3, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), plain, sizeof(plain), NULL, 0);
+    size_t pn = DtlsRecord.protect(&k, 3, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), plain, sizeof(plain), NULL, 0);
     TEST_ASSERT_TRUE(pn > 0);
     TEST_ASSERT_FALSE(DtlsRecord.unprotect(&k, 3, plain, pn, out, sizeof(out), &info, cid, sizeof(cid)));
 
-    // A CID longer than PC_DTLS_CID_MAX is refused by protect.
-    uint8_t longcid[PC_DTLS_CID_MAX + 1] = {0};
-    TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.protect(&k, 3, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire,
+    // A CID longer than PROTOCORE_DTLS_CID_MAX is refused by protect.
+    uint8_t longcid[PROTOCORE_DTLS_CID_MAX + 1] = {0};
+    TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.protect(&k, 3, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire,
                                                    sizeof(wire), longcid, sizeof(longcid)));
 }
 
@@ -431,14 +431,14 @@ static void test_dtls_seq_rollover_both_directions(void)
 
     // Forward wrap: sender used 0x10000 (low 16 bits 0x0000); receiver expected 0xF000 (previous window).
     size_t n =
-        DtlsRecord.protect(&k, 0x10000ull, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
+        DtlsRecord.protect(&k, 0x10000ull, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&k, 0xF000ull, wire, n, out, sizeof(out), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT64(0x10000ull, info.seq);
     TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
 
     // Backward wrap: sender used 0xFFFF (low 16 bits 0xFFFF); receiver expected 0x10000 (next window).
-    n = DtlsRecord.protect(&k, 0xFFFFull, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
+    n = DtlsRecord.protect(&k, 0xFFFFull, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&k, 0x10000ull, wire, n, out, sizeof(out), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT64(0xFFFFull, info.seq);
@@ -454,26 +454,26 @@ static void test_dtls_plaintext_bounds(void)
     DtlsPlaintext pt;
 
     // total > out_cap.
-    TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, frag, sizeof(frag), rec, 10));
+    TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, frag, sizeof(frag), rec, 10));
 
     // A zero-length fragment is a valid header-only record.
-    size_t n0 = DtlsRecord.plaintext_build(PC_DTLS_CT_ALERT, 0, 0, NULL, 0, rec, sizeof(rec));
-    TEST_ASSERT_EQUAL_size_t(PC_DTLS_PLAINTEXT_HDR_LEN, n0);
-    TEST_ASSERT_EQUAL_size_t(PC_DTLS_PLAINTEXT_HDR_LEN, DtlsRecord.plaintext_parse(rec, n0, &pt));
+    size_t n0 = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_ALERT, 0, 0, NULL, 0, rec, sizeof(rec));
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_DTLS_PLAINTEXT_HDR_LEN, n0);
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_DTLS_PLAINTEXT_HDR_LEN, DtlsRecord.plaintext_parse(rec, n0, &pt));
     TEST_ASSERT_EQUAL_size_t(0, pt.frag_len);
 
     // A fragment larger than 0xFFFF is refused even with ample capacity (static: too large for the stack).
     static uint8_t bigfrag[0x10000];
-    static uint8_t bigout[0x10000 + PC_DTLS_PLAINTEXT_HDR_LEN + 8];
+    static uint8_t bigout[0x10000 + PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + 8];
     memset(bigfrag, 0, sizeof(bigfrag));
     TEST_ASSERT_EQUAL_size_t(
-        0, DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, bigfrag, sizeof(bigfrag), bigout, sizeof(bigout)));
+        0, DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, bigfrag, sizeof(bigfrag), bigout, sizeof(bigout)));
 
     // parse: header shorter than 13 bytes.
     size_t n =
-        DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0x0102030405ull, frag, sizeof(frag), rec, sizeof(rec));
+        DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0x0102030405ull, frag, sizeof(frag), rec, sizeof(rec));
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.plaintext_parse(rec, PC_DTLS_PLAINTEXT_HDR_LEN - 1, &pt));
+    TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.plaintext_parse(rec, PROTOCORE_DTLS_PLAINTEXT_HDR_LEN - 1, &pt));
     // parse: the length field claims more than the record carries (truncated by one byte).
     TEST_ASSERT_EQUAL_size_t(0, DtlsRecord.plaintext_parse(rec, n - 1, &pt));
 }
@@ -490,13 +490,13 @@ static void test_dtls_protect_bounds(void)
     DtlsRecordKeys kbad = k;
     kbad.cipher = (DtlsCipher)0x7F; // unsupported cipher
     TEST_ASSERT_EQUAL_size_t(
-        0, DtlsRecord.protect(&kbad, 1, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, sizeof(out), NULL, 0));
+        0, DtlsRecord.protect(&kbad, 1, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, sizeof(out), NULL, 0));
     // cid_len > 0 with a null cid pointer.
     TEST_ASSERT_EQUAL_size_t(
-        0, DtlsRecord.protect(&k, 1, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, sizeof(out), NULL, 4));
+        0, DtlsRecord.protect(&k, 1, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, sizeof(out), NULL, 4));
     // Output buffer too small for header + body.
     TEST_ASSERT_EQUAL_size_t(0,
-                             DtlsRecord.protect(&k, 1, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, 5, NULL, 0));
+                             DtlsRecord.protect(&k, 1, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, 5, NULL, 0));
 }
 
 // DtlsRecord.unprotect rejects every malformed shape: unsupported cipher, zero-length record,
@@ -516,8 +516,8 @@ static void test_dtls_unprotect_bounds(void)
         DtlsRecord.unprotect(&kbad, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info, NULL, 0));
     // Zero-length record.
     TEST_ASSERT_FALSE(DtlsRecord.unprotect(&k, KAT_SEQ, KAT_WIRE, 0, out, sizeof(out), &info, NULL, 0));
-    // expected_cid_len beyond PC_DTLS_CID_MAX.
-    uint8_t bigcid[PC_DTLS_CID_MAX + 1] = {0};
+    // expected_cid_len beyond PROTOCORE_DTLS_CID_MAX.
+    uint8_t bigcid[PROTOCORE_DTLS_CID_MAX + 1] = {0};
     TEST_ASSERT_FALSE(
         DtlsRecord.unprotect(&k, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info, bigcid, sizeof(bigcid)));
 
@@ -595,7 +595,7 @@ static void test_dtls_cid_record_too_short_for_expected_cid(void)
     const uint8_t pt[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t wire[64];
     size_t n =
-        DtlsRecord.protect(&k, 11, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), cid, sizeof(cid));
+        DtlsRecord.protect(&k, 11, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), cid, sizeof(cid));
     TEST_ASSERT_TRUE(n > 0);
 
     uint8_t out[64];
@@ -640,7 +640,7 @@ static void test_dtls_seq_reconstruction_overflow_guard(void)
     uint8_t wire[64];
     // seq's low 16 bits are 0 and its high bits are all 1s so that "candidate + win" wraps to 0.
     uint64_t seq = 0xFFFFFFFFFFFF0000ull;
-    size_t n = DtlsRecord.protect(&k, seq, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
+    size_t n = DtlsRecord.protect(&k, seq, PROTOCORE_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     uint8_t out[64];
     DtlsCiphertext info;

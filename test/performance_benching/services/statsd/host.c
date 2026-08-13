@@ -1,19 +1,19 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host-side microbenchmark for the StatsD metrics client: pc_statsd_format() builds one `name:value|type
-// [|@rate][|#tags]` line - the per-metric hot op the device runs before each pc_udp_sendto(). Pure (no
-// socket, no heap). statsd.c also holds the emit helpers which reference pc_udp_sendto(), so link udp.c
-// for the host no-op UDP stubs. The device number comes from the rig /bench pc_statsd_format op; this
+// Host-side microbenchmark for the StatsD metrics client: protocore_statsd_format() builds one `name:value|type
+// [|@rate][|#tags]` line - the per-metric hot op the device runs before each protocore_udp_sendto(). Pure (no
+// socket, no heap). statsd.c also holds the emit helpers which reference protocore_udp_sendto(), so link udp.c
+// for the host no-op UDP stubs. The device number comes from the rig /bench protocore_statsd_format op; this
 // host ns/op + MB/s is a relative baseline:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_STATSD=1 test/performance_benching/services/statsd/host.c
+//   -DPROTOCORE_ENABLE_STATSD=1 test/performance_benching/services/statsd/host.c
 //   src/services/iot/statsd/statsd.c src/network_drivers/transport/udp.c
 //   src/network_drivers/transport/udp/udp_listener.c src/network_drivers/transport/udp/udp_client.c
 //   src/network_drivers/transport/net_addr.c src/mmgr/protomem.c src/shared_primitives/ip.c
 //   -o /tmp/bst && /tmp/bst
 
-#define PC_ENABLE_STATSD 1
+#define PROTOCORE_ENABLE_STATSD 1
 #include "services/iot/statsd/statsd.h"
 
 #include "host_bench.h"
@@ -23,7 +23,7 @@
 int main(void)
 {
     char out[256];
-    size_t len = pc_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f, "env:prod,host:pc-rig");
+    size_t len = protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f, "env:prod,host:pc-rig");
 
     hbench_header();
 
@@ -32,9 +32,9 @@ int main(void)
     double ns = 0.0;
     HBENCH_NS(3000000,
               sink +=
-              pc_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f, "env:prod,host:pc-rig"),
+              protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f, "env:prod,host:pc-rig"),
               ns);
-    hbench_row("statsd", "pc_statsd_format (counter)", ns, (double)len);
+    hbench_row("statsd", "protocore_statsd_format (counter)", ns, (double)len);
     (void)sink;
 
     return 0;

@@ -16,11 +16,11 @@
 #include "mmgr/protomem.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951.h" // RFC1951: the sec 3.2.5 tables
 
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
 
-#define PC_MAXBITS 15    // max bits in a Huffman code
-#define PC_MAXLCODES 288 // max literal/length codes
-#define PC_MAXDCODES 32  // max distance codes (30 used; 32 for safety)
+#define PROTOCORE_MAXBITS 15    // max bits in a Huffman code
+#define PROTOCORE_MAXLCODES 288 // max literal/length codes
+#define PROTOCORE_MAXDCODES 32  // max distance codes (30 used; 32 for safety)
 
 // Huffman decoding table: count[len] = #codes of that length, symbol[] = symbols
 // in canonical order. Both point into the caller's table scratch.
@@ -33,11 +33,11 @@ typedef struct
 // All the table memory inflate_raw() needs, laid over the caller's scratch.
 typedef struct
 {
-    short lcount[PC_MAXBITS + 1];
-    short lsym[PC_MAXLCODES];
-    short dcount[PC_MAXBITS + 1];
-    short dsym[PC_MAXDCODES];
-    short lengths[PC_MAXLCODES + PC_MAXDCODES]; // code lengths during construction
+    short lcount[PROTOCORE_MAXBITS + 1];
+    short lsym[PROTOCORE_MAXLCODES];
+    short dcount[PROTOCORE_MAXBITS + 1];
+    short dsym[PROTOCORE_MAXDCODES];
+    short lengths[PROTOCORE_MAXLCODES + PROTOCORE_MAXDCODES]; // code lengths during construction
 } Tables;
 static_assert(sizeof(Tables) <= INFLATE_SCRATCH_SIZE, "bump INFLATE_SCRATCH_SIZE");
 
@@ -81,7 +81,7 @@ static int decode(State *s, const Huffman *h)
     int code = 0;
     int first = 0;
     int index = 0;
-    for (int len = 1; len <= PC_MAXBITS; len++)
+    for (int len = 1; len <= PROTOCORE_MAXBITS; len++)
     {
         code |= bits(s, 1);
         if (s->err)
@@ -98,14 +98,14 @@ static int decode(State *s, const Huffman *h)
         first <<= 1;
         code <<= 1;
     }
-    return -1; // ran past PC_MAXBITS without a match
+    return -1; // ran past PROTOCORE_MAXBITS without a match
 }
 
 // Build a Huffman table from code lengths. Returns 0 if complete, >0 if
 // incomplete (left-over codes), <0 if over-subscribed.
 static int construct(Huffman *h, const short *lengths, int n)
 {
-    for (int len = 0; len <= PC_MAXBITS; len++)
+    for (int len = 0; len <= PROTOCORE_MAXBITS; len++)
     {
         h->count[len] = 0;
     }
@@ -119,7 +119,7 @@ static int construct(Huffman *h, const short *lengths, int n)
     }
 
     int left = 1;
-    for (int len = 1; len <= PC_MAXBITS; len++)
+    for (int len = 1; len <= PROTOCORE_MAXBITS; len++)
     {
         left <<= 1;
         left -= h->count[len];
@@ -129,9 +129,9 @@ static int construct(Huffman *h, const short *lengths, int n)
         }
     }
 
-    short offs[PC_MAXBITS + 1];
+    short offs[PROTOCORE_MAXBITS + 1];
     offs[1] = 0;
-    for (int len = 1; len < PC_MAXBITS; len++)
+    for (int len = 1; len < PROTOCORE_MAXBITS; len++)
     {
         offs[len + 1] = offs[len] + h->count[len];
     }
@@ -278,7 +278,7 @@ static InflateResult dynamic(State *s, Huffman *lencode, Huffman *distcode, shor
     {
         return INFLATE_ERR_MALFORMED;
     }
-    if (nlen > PC_MAXLCODES || ndist > PC_MAXDCODES)
+    if (nlen > PROTOCORE_MAXLCODES || ndist > PROTOCORE_MAXDCODES)
     {
         return INFLATE_ERR_MALFORMED;
     }
@@ -441,4 +441,4 @@ static InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *ds
 
 const InflateNs Inflate = {inflate_raw};
 
-#endif // PC_ENABLE_WS_DEFLATE
+#endif // PROTOCORE_ENABLE_WS_DEFLATE

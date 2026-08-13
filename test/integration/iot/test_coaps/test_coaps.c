@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // CoAP over DTLS (coaps.h) end-to-end. An in-test DTLS 1.3 client completes the handshake against
-// pc_dtls_conn, then sends a CoAP GET inside a DTLS application record; pc_coaps_process decrypts it, runs
-// pc_coap_server_process against a registered resource, and returns the CoAP response in a DTLS record
+// protocore_dtls_conn, then sends a CoAP GET inside a DTLS application record; protocore_coaps_process decrypts it, runs
+// protocore_coap_server_process against a registered resource, and returns the CoAP response in a DTLS record
 // that the client decrypts and checks. A byte off anywhere - transcript, keys, epoch, CoAP encoding -
 // would fail the AEAD open or the response check.
 
@@ -55,8 +55,8 @@ static void h_temp(const CoapRequest *req, CoapResponse *resp)
 
 void setUp()
 {
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/temp", COAP_ALLOW_GET, h_temp);
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/temp", COAP_ALLOW_GET, h_temp);
 }
 void tearDown()
 {
@@ -195,9 +195,9 @@ static DtlsConn g_dtls2;
 static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordKeys *cli_app_read)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     memset(&cfg, 0, sizeof(cfg));
@@ -211,14 +211,14 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
 
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
-    pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw_tr);
-    pc_sha256_update(&tr, ch, ch_len);
+    protocore_sha256_ctx tr;
+    protocore_sha256_init(&tr, tw_tr);
+    protocore_sha256_update(&tr, ch, ch_len);
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     uint8_t flight[2048];
     int fl = DtlsServer.process(conn, ch_rec, ch_rl, flight, sizeof(flight));
@@ -232,18 +232,18 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     uint8_t sh[512];
     size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
     TEST_ASSERT_TRUE(sh_len > 0);
-    pc_sha256_update(&tr, sh, sh_len);
+    protocore_sha256_update(&tr, sh, sh_len);
     uint8_t server_pub[32];
     TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
 
     uint8_t ecdhe[32];
-    pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
+    protocore_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     Tls13KeySchedule cks;
     uint8_t h[32];
-    pc_sha256_final(&tr, h);
-    static uint8_t ks_store_236[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_236);
-    pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
+    protocore_sha256_final(&tr, h);
+    static uint8_t ks_store_236[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_236);
+    protocore_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys srv_read;
     DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);
 
@@ -261,16 +261,16 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
         uint8_t msg[512];
         size_t mlen = frag_to_tls(inner, info.pt_len, msg);
         TEST_ASSERT_TRUE(mlen > 0);
-        pc_sha256_update(&tr, msg, mlen);
+        protocore_sha256_update(&tr, msg, mlen);
     }
 
     uint8_t h_sfin[32];
-    pc_sha256_final(&tr, h_sfin);
-    pc_tls13_ks_master(&cks, h_sfin);
+    protocore_sha256_final(&tr, h_sfin);
+    protocore_tls13_ks_master(&cks, h_sfin);
     uint8_t cfin_verify[32];
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
     uint8_t cfin[64];
-    size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
+    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
     uint8_t cfin_frag[80];
@@ -278,7 +278,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
                                           cfin_frag, sizeof(cfin_frag));
     uint8_t cfin_rec[128];
     size_t cfr =
-        DtlsRecord.protect(&cli_write, 0, PC_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec), NULL, 0);
+        DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec), NULL, 0);
     uint8_t out2[64];
     TEST_ASSERT_TRUE(DtlsServer.process(conn, cfin_rec, cfr, out2, sizeof(out2)) > 0);
     TEST_ASSERT_TRUE(DtlsServer.established(conn));
@@ -295,12 +295,12 @@ static void test_coap_over_dtls(void)
     // A CoAP CON GET /temp (Ver 1, TKL 0, MID 0x1234; Uri-Path option 11 = "temp").
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     uint8_t app_rec[128];
-    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), app_rec,
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), app_rec,
                                    sizeof(app_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
-    int on = pc_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out));
+    int on = protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out));
     TEST_ASSERT_TRUE(on > 0); // a DTLS-wrapped CoAP response came back
 
     // Decrypt the response: an epoch-3 application record carrying the CoAP answer.
@@ -308,7 +308,7 @@ static void test_coap_over_dtls(void)
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(
         DtlsRecord.unprotect(&cli_app_read, 1, out, (size_t)on, coap_resp, sizeof(coap_resp), &info, NULL, 0));
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);
 
     // CoAP response: piggybacked ACK, code 2.05 Content (0x45), MID echoed, token echoed (none),
     // then payload "hi" after the 0xFF payload marker.
@@ -330,16 +330,16 @@ static void test_coap_over_dtls_replay_dropped(void)
 
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     uint8_t app_rec[128];
-    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), app_rec,
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), app_rec,
                                    sizeof(app_rec), NULL, 0);
     uint8_t out[256];
-    TEST_ASSERT_TRUE(pc_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)) > 0);     // first: answered
-    TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out))); // replay: dropped
+    TEST_ASSERT_TRUE(protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)) > 0);     // first: answered
+    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out))); // replay: dropped
 }
 
-// An established connection whose decrypted CoAP message yields no response drives the pc_resp_len == 0
-// path: pc_coaps_process must return 0 without sealing a record. A CoAP ACK (not a request, RFC 7252
-// §4.2) is ignored by pc_coap_server_process, so it produces zero response bytes.
+// An established connection whose decrypted CoAP message yields no response drives the protocore_resp_len == 0
+// path: protocore_coaps_process must return 0 without sealing a record. A CoAP ACK (not a request, RFC 7252
+// §4.2) is ignored by protocore_coap_server_process, so it produces zero response bytes.
 static void test_coaps_no_coap_response(void)
 {
     DtlsRecordKeys cli_app_write, cli_app_read;
@@ -347,16 +347,16 @@ static void test_coaps_no_coap_response(void)
 
     const uint8_t coap_ack[] = {0x60, 0x00, 0x12, 0x34}; // Ver 1, Type ACK (2), TKL 0, MID 0x1234
     uint8_t app_rec[128];
-    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_ack, sizeof(coap_ack), app_rec,
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_ack, sizeof(coap_ack), app_rec,
                                    sizeof(app_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
-    TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)));
 }
 
 // After establishment a datagram that is not an epoch-3 application record is routed back to the DTLS
-// state machine (pc_coaps_process's fall-through return DtlsServer.process). A zero-length datagram (the
+// state machine (protocore_coaps_process's fall-through return DtlsServer.process). A zero-length datagram (the
 // length guard fails first) and a DTLSPlaintext-content-type byte (not a 0b001xxxxx ciphertext header)
 // both take that path and, being nothing the established machine needs to answer, produce no output.
 static void test_coaps_non_app_record(void)
@@ -366,14 +366,14 @@ static void test_coaps_non_app_record(void)
 
     uint8_t out[256];
     uint8_t byte[1] = {0x16}; // 0x16: a DTLSPlaintext content-type, not a ciphertext unified header
-    TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&g_dtls, byte, 0, out, sizeof(out))); // len < 1
-    TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&g_dtls, byte, 1, out, sizeof(out))); // not (b0 & 0xE0) == 0x20
+    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, byte, 0, out, sizeof(out))); // len < 1
+    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, byte, 1, out, sizeof(out))); // not (b0 & 0xE0) == 0x20
     TEST_ASSERT_TRUE(DtlsServer.established(&g_dtls));                              // neither disturbed the connection
 }
 
 // A DTLSCiphertext record whose epoch is not 3 (0b001xxx with epoch bits != 3) is also routed to the
 // state machine. Here its body is garbage, so the record fails to open and the machine reports a fatal
-// error (-1), which pc_coaps_process passes through. Covers the epoch (low-two-bits) side of the record test.
+// error (-1), which protocore_coaps_process passes through. Covers the epoch (low-two-bits) side of the record test.
 static void test_coaps_wrong_epoch_record(void)
 {
     DtlsRecordKeys cli_app_write, cli_app_read;
@@ -384,18 +384,18 @@ static void test_coaps_wrong_epoch_record(void)
     rec[0] = 0x22; // (0x22 & 0xE0) == 0x20 (ciphertext), (0x22 & 0x03) == 2 (epoch 2, not 3)
     // RFC 9147 sec 4.5.2: an invalid record is discarded and the association survives it.
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&g_dtls, rec, sizeof(rec), out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, rec, sizeof(rec), out, sizeof(out)));
 }
 
-// Before establishment pc_coaps_process forwards the datagram straight to the DTLS handshake state
-// machine (the !DtlsServer.established branch). Driving the ClientHello through pc_coaps_process must emit
+// Before establishment protocore_coaps_process forwards the datagram straight to the DTLS handshake state
+// machine (the !DtlsServer.established branch). Driving the ClientHello through protocore_coaps_process must emit
 // the server's flight, exactly as feeding DtlsServer.process directly does.
 static void test_coaps_forwards_handshake(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     memset(&cfg, 0, sizeof(cfg));
@@ -413,11 +413,11 @@ static void test_coaps_forwards_handshake(void)
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     TEST_ASSERT_FALSE(DtlsServer.established(&g_dtls));
     uint8_t flight[2048];
-    int fl = pc_coaps_process(&g_dtls, ch_rec, ch_rl, flight, sizeof(flight));
+    int fl = protocore_coaps_process(&g_dtls, ch_rec, ch_rl, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0); // the server flight was produced via the handshake-forward path
 }
 
@@ -435,9 +435,9 @@ static void test_aes256_key_expand_kat(void)
     static const uint8_t expect_ct[16] = {0x8e, 0xa2, 0xb7, 0xca, 0x51, 0x67, 0x45, 0xbf,
                                           0xea, 0xfc, 0x49, 0x90, 0x4b, 0x49, 0x60, 0x89};
     uint32_t rk[60];
-    pc_aes_key_expand(key, 8, rk);
+    protocore_aes_key_expand(key, 8, rk);
     uint8_t ct[16];
-    pc_aes_encrypt_block(rk, 14, pt, ct);
+    protocore_aes_encrypt_block(rk, 14, pt, ct);
     TEST_ASSERT_EQUAL_MEMORY(expect_ct, ct, 16);
 }
 

@@ -3,10 +3,10 @@
 
 /**
  * @file net_addr.h
- * @brief Layer 4 (Transport) - the stack's address type, as the library's ::pc_ip.
+ * @brief Layer 4 (Transport) - the stack's address type, as the library's ::protocore_ip.
  *
  * The stack keeps a peer address in its own family-tagged union, laid out however the vendor chose.
- * Everything above the transport carries a ::pc_ip: a one-byte family tag and sixteen bytes in
+ * Everything above the transport carries a ::protocore_ip: a one-byte family tag and sixteen bytes in
  * network order, the same on every target. TCP needs that mapping on accept and on the per-slot
  * address accessor; UDP needs it once per received datagram. One conversion serves both, so it sits
  * beside them rather than inside either.
@@ -24,10 +24,10 @@
 
 #include "protocore_config.h"
 
-#include "core_setup/board_profiles/pc_platform.h" // pc_net_ip: the stack's own address type
-#include "shared_primitives/ip.h"                  // pc_ip: the address everything above carries
+#include "core_setup/board_profiles/protocore_platform.h" // protocore_net_ip: the stack's own address type
+#include "shared_primitives/ip.h"                         // protocore_ip: the address everything above carries
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The stack's address, as the library's address.
@@ -36,20 +36,20 @@ PROTO_BEGIN_DECLS
  * @var NetAddrNs::from_ip  write @c a back into the stack's own type, ready to hand to a send;
  *                          false when the address names a family this stack cannot send to
  *
- * Both families cross both ways. IPv6 is carried where the stack has it (::PC_NET_HAS_IPV6); where
+ * Both families cross both ways. IPv6 is carried where the stack has it (::PROTOCORE_NET_HAS_IPV6); where
  * it does not, a v6 address converts to nothing rather than to a wrong v4.
  *
  * No storage member: the conversions read their operands and hold nothing.
  */
 typedef struct
 {
-    void (*to_ip)(const pc_net_ip *a, pc_ip *out);
-    proto_bool (*from_ip)(const pc_ip *a, pc_net_ip *out);
+    void (*to_ip)(const protocore_net_ip *a, protocore_ip *out);
+    proto_bool (*from_ip)(const protocore_ip *a, protocore_net_ip *out);
 } NetAddrNs;
 
 /** @brief The one symbol this module exports. */
 extern const NetAddrNs NetAddr;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NET_ADDR_H

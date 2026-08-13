@@ -21,8 +21,8 @@
 //
 // This owns promiscuous mode, so it cannot run alongside the wifi_sniffer live channel-hop binding.
 //
-// Build flags (whole build): PC_ENABLE_MDNS=1 PC_ENABLE_PROMISC=1 PC_ENABLE_WIFI_SNIFFER=1
-//                            PC_ENABLE_MDNS_ADAPTIVE=1
+// Build flags (whole build): PROTOCORE_ENABLE_MDNS=1 PROTOCORE_ENABLE_PROMISC=1 PROTOCORE_ENABLE_WIFI_SNIFFER=1
+//                            PROTOCORE_ENABLE_MDNS_ADAPTIVE=1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -39,9 +39,9 @@ static void mdns_handler(uint8_t slot_id, HttpReq *req)
     (void)req;
     char json[128];
     snprintf(json, sizeof(json), "{\"interval_ms\":%lu,\"contention\":%u,\"announces\":%lu,\"channel\":%u}",
-             (unsigned long)pc_mdns_adaptive_interval_ms(), (unsigned)pc_mdns_adaptive_contention(),
-             (unsigned long)pc_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
-    send_text(slot_id, 200, PC_MIME_JSON, json);
+             (unsigned long)protocore_mdns_adaptive_interval_ms(), (unsigned)protocore_mdns_adaptive_contention(),
+             (unsigned long)protocore_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
+    send_text(slot_id, 200, PROTOCORE_MIME_JSON, json);
 }
 
 void setup()
@@ -59,9 +59,9 @@ void setup()
     begin_http(80, NULL);
 
     // Bring up the responder and seed the TXT record the refresher re-applies.
-    if (pc_mdns_begin("adaptive", 80))
+    if (protocore_mdns_begin("adaptive", 80))
     {
-        pc_mdns_txt("role", "sensor");
+        protocore_mdns_txt("role", "sensor");
         Serial.println("mDNS up: adaptive.local");
     }
 
@@ -76,7 +76,7 @@ void setup()
     cfg.hi_contention = 40;      // >= 40 frames/window (1 s) counts as "busy"
     cfg.window_ms = 1000;
 
-    if (pc_mdns_adaptive_begin(&cfg))
+    if (protocore_mdns_adaptive_begin(&cfg))
     {
         Serial.printf("adaptive announcing on channel %u\n", (unsigned)Physical.wifi->channel());
     }
@@ -93,14 +93,14 @@ void setup()
 void loop()
 {
     handle();
-    pc_mdns_adaptive_tick(); // samples, adapts, re-announces when due - rate-limited internally
+    protocore_mdns_adaptive_tick(); // samples, adapts, re-announces when due - rate-limited internally
 
     static uint32_t next = 0;
     if (millis() >= next)
     {
         next = millis() + 5000;
         Serial.printf("interval=%lums contention=%u announces=%lu ch=%u\n",
-                      (unsigned long)pc_mdns_adaptive_interval_ms(), (unsigned)pc_mdns_adaptive_contention(),
-                      (unsigned long)pc_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
+                      (unsigned long)protocore_mdns_adaptive_interval_ms(), (unsigned)protocore_mdns_adaptive_contention(),
+                      (unsigned long)protocore_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
     }
 }

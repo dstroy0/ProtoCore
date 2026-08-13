@@ -9,9 +9,9 @@
 #include "services/peripherals/dmx/dmx.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_DMX
+#if PROTOCORE_ENABLE_DMX
 
-size_t pc_dmx_build(uint8_t *buf, size_t cap, uint8_t start_code, const uint8_t *channels, uint16_t n)
+size_t protocore_dmx_build(uint8_t *buf, size_t cap, uint8_t start_code, const uint8_t *channels, uint16_t n)
 {
     if (!buf || n > DMX_MAX_CHANNELS || (n && !channels))
     {
@@ -30,7 +30,7 @@ size_t pc_dmx_build(uint8_t *buf, size_t cap, uint8_t start_code, const uint8_t 
     return total;
 }
 
-uint8_t pc_dmx_get_channel(const uint8_t *buf, size_t len, uint16_t ch)
+uint8_t protocore_dmx_get_channel(const uint8_t *buf, size_t len, uint16_t ch)
 {
     if (!buf || ch < 1 || ch > DMX_MAX_CHANNELS || (size_t)ch >= len)
     {
@@ -39,12 +39,12 @@ uint8_t pc_dmx_get_channel(const uint8_t *buf, size_t len, uint16_t ch)
     return buf[ch];
 }
 
-uint64_t pc_rdm_uid(uint16_t manufacturer, uint32_t device)
+uint64_t protocore_rdm_uid(uint16_t manufacturer, uint32_t device)
 {
     return ((uint64_t)manufacturer << 32) | device;
 }
 
-uint16_t pc_rdm_checksum(const uint8_t *buf, size_t len)
+uint16_t protocore_rdm_checksum(const uint8_t *buf, size_t len)
 {
     uint16_t s = 0;
     for (size_t i = 0; i < len; i++)
@@ -71,7 +71,7 @@ static uint64_t get_uid(const uint8_t *p)
            ((uint64_t)p[4] << 8) | (uint64_t)p[5];
 }
 
-size_t pc_rdm_build(uint8_t *buf, size_t cap, const RdmPacket *p, const uint8_t *pdata, uint8_t pdl)
+size_t protocore_rdm_build(uint8_t *buf, size_t cap, const RdmPacket *p, const uint8_t *pdata, uint8_t pdl)
 {
     if (!buf || !p || (pdl && !pdata))
     {
@@ -101,13 +101,13 @@ size_t pc_rdm_build(uint8_t *buf, size_t cap, const RdmPacket *p, const uint8_t 
     {
         mem.cpy(buf + 24, pdata, pdl);
     }
-    uint16_t cs = pc_rdm_checksum(buf, ml); // checksum over SC..end of parameter data
+    uint16_t cs = protocore_rdm_checksum(buf, ml); // checksum over SC..end of parameter data
     buf[ml] = (uint8_t)(cs >> 8);
     buf[ml + 1] = (uint8_t)cs;
     return total;
 }
 
-proto_bool pc_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *consumed)
+proto_bool protocore_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *consumed)
 {
     if (!buf || !out || len < RDM_OVERHEAD)
     {
@@ -133,7 +133,7 @@ proto_bool pc_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *
         return PROTO_FALSE;
     }
     uint16_t cs = (uint16_t)((buf[ml] << 8) | buf[ml + 1]);
-    if (cs != pc_rdm_checksum(buf, ml))
+    if (cs != protocore_rdm_checksum(buf, ml))
     {
         return PROTO_FALSE;
     }
@@ -155,7 +155,7 @@ proto_bool pc_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *
     return PROTO_TRUE;
 }
 
-proto_bool pc_rdm_decode_disc_response(const uint8_t *buf, size_t len, uint64_t *uid)
+proto_bool protocore_rdm_decode_disc_response(const uint8_t *buf, size_t len, uint64_t *uid)
 {
     if (!buf || !uid)
     {
@@ -199,7 +199,7 @@ proto_bool pc_rdm_decode_disc_response(const uint8_t *buf, size_t len, uint64_t 
     return PROTO_TRUE;
 }
 
-size_t pc_rdm_build_disc_response(uint8_t *buf, size_t cap, uint64_t uid, uint8_t preamble_len)
+size_t protocore_rdm_build_disc_response(uint8_t *buf, size_t cap, uint64_t uid, uint8_t preamble_len)
 {
     if (!buf || preamble_len > 7) // E1.20 allows 0..7 preamble octets
     {
@@ -236,9 +236,9 @@ size_t pc_rdm_build_disc_response(uint8_t *buf, size_t cap, uint64_t uid, uint8_
     return p;
 }
 
-size_t pc_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDeviceInfo *info)
+size_t protocore_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDeviceInfo *info)
 {
-    if (!pdata || !info || cap < PC_RDM_DEVICE_INFO_PDL)
+    if (!pdata || !info || cap < PROTOCORE_RDM_DEVICE_INFO_PDL)
     {
         return 0;
     }
@@ -261,12 +261,12 @@ size_t pc_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDeviceInfo 
     pdata[16] = (uint8_t)(info->sub_device_count >> 8);
     pdata[17] = (uint8_t)info->sub_device_count;
     pdata[18] = info->sensor_count;
-    return PC_RDM_DEVICE_INFO_PDL;
+    return PROTOCORE_RDM_DEVICE_INFO_PDL;
 }
 
-proto_bool pc_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out)
+proto_bool protocore_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out)
 {
-    if (!pdata || !out || pdl < PC_RDM_DEVICE_INFO_PDL)
+    if (!pdata || !out || pdl < PROTOCORE_RDM_DEVICE_INFO_PDL)
     {
         return PROTO_FALSE;
     }
@@ -285,4 +285,4 @@ proto_bool pc_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDevice
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_DMX
+#endif // PROTOCORE_ENABLE_DMX

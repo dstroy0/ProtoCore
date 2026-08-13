@@ -10,8 +10,8 @@
 //   READY   --N consecutive I/O errors------>  FAULTED   (unmounts immediately)
 //   FAULTED --probe interval, remount ok---->  READY
 //
-// The rule for callers is two lines: gate on pc_hotswap_ready() before touching the filesystem,
-// and report the outcome of every call with pc_hotswap_io(). That is what lets a run of failures
+// The rule for callers is two lines: gate on protocore_hotswap_ready() before touching the filesystem,
+// and report the outcome of every call with protocore_hotswap_io(). That is what lets a run of failures
 // mean "the card left" instead of scrolling past unnoticed.
 //
 // Why a *run* of errors and not one: a single failed write is not proof of removal (a transient bus
@@ -23,7 +23,7 @@
 // GET /yank     -> unmounts underneath the app, so you can watch the fault + auto-recovery without
 //                  physically pulling the card (the writes that follow really do fail)
 //
-// Build flags (whole build): PC_ENABLE_HOTSWAP=1
+// Build flags (whole build): PROTOCORE_ENABLE_HOTSWAP=1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -53,12 +53,12 @@ static void sd_unmount(void *ctx)
 
 // No card-detect pin wired here, so let the mount attempt be the detector. A board that has one
 // should return its GPIO state instead - it is cheaper than a failed mount.
-static pc_hotswap_present sd_present = nullptr;
+static protocore_hotswap_present sd_present = nullptr;
 
 static void on_state_change(StorageState from, StorageState to, void *ctx)
 {
     (void)ctx;
-    Serial.printf("storage: %s -> %s\n", pc_hotswap_state_name(from), pc_hotswap_state_name(to));
+    Serial.printf("storage: %s -> %s\n", protocore_hotswap_state_name(from), protocore_hotswap_state_name(to));
 }
 
 // --- routes ---------------------------------------------------------------
@@ -67,21 +67,21 @@ static void storage_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char json[96];
-    if (pc_hotswap_json(json, sizeof(json)) == 0)
+    if (protocore_hotswap_json(json, sizeof(json)) == 0)
     {
-        send_text(slot_id, 500, PC_MIME_JSON, "{}");
+        send_text(slot_id, 500, PROTOCORE_MIME_JSON, "{}");
         return;
     }
-    send_text(slot_id, 200, PC_MIME_JSON, json);
+    send_text(slot_id, 200, PROTOCORE_MIME_JSON, json);
 }
 
 static void write_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     // The gate. Without it this write would go into a stale mount and be silently lost.
-    if (!pc_hotswap_ready())
+    if (!protocore_hotswap_ready())
     {
-        send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, "storage not ready\n");
+        send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "storage not ready\n");
         return;
     }
 
@@ -96,8 +96,8 @@ static void write_handler(uint8_t slot_id, HttpReq *req)
     }
 
     // Report it either way: successes are what keep a healthy volume from drifting toward a fault.
-    pc_hotswap_io(ok);
-    send_text(slot_id, ok ? 200 : 500, PC_MIME_TEXT_PLAIN, ok ? "ok\n" : "write failed\n");
+    protocore_hotswap_io(ok);
+    send_text(slot_id, ok ? 200 : 500, PROTOCORE_MIME_TEXT_PLAIN, ok ? "ok\n" : "write failed\n");
 }
 
 // Pull the rug out from under the app without touching the hardware. Every write after this really
@@ -106,7 +106,7 @@ static void yank_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     SD_MMC.end();
-    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "unmounted - now hit /write a few times\n");
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, "unmounted - now hit /write a few times\n");
 }
 
 void setup()
@@ -114,10 +114,10 @@ void setup()
     Serial.begin(115200);
     delay(300);
 
-    pc_hotswap_set_event_cb(on_state_change);
-    pc_hotswap_begin(sd_mount, sd_unmount, sd_present, nullptr);
-    pc_hotswap_poll(); // first poll mounts a card that is already in the slot
-    Serial.printf("storage at boot: %s\n", pc_hotswap_state_name(pc_hotswap_state()));
+    protocore_hotswap_set_event_cb(on_state_change);
+    protocore_hotswap_begin(sd_mount, sd_unmount, sd_present, nullptr);
+    protocore_hotswap_poll(); // first poll mounts a card that is already in the slot
+    Serial.printf("storage at boot: %s\n", protocore_hotswap_state_name(protocore_hotswap_state()));
 
     Physical.wifi->init(WIFI_SSID, WIFI_PASS);
     while (!Physical.wifi->ready())
@@ -138,5 +138,5 @@ void setup()
 void loop()
 {
     handle();
-    pc_hotswap_poll(); // rate-limited internally, so this is cheap to call every pass
+    protocore_hotswap_poll(); // rate-limited internally, so this is cheap to call every pass
 }

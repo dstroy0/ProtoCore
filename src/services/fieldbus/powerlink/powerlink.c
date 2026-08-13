@@ -9,9 +9,9 @@
 #include "services/fieldbus/powerlink/powerlink.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_POWERLINK
+#if PROTOCORE_ENABLE_POWERLINK
 
-size_t pc_epl_build(uint8_t msg_type, uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len,
+size_t protocore_epl_build(uint8_t msg_type, uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len,
                     uint8_t *out, size_t cap)
 {
     if (!out || (payload_len && !payload))
@@ -33,32 +33,32 @@ size_t pc_epl_build(uint8_t msg_type, uint8_t dest, uint8_t source, const uint8_
     return n;
 }
 
-size_t pc_epl_soc(uint8_t source, uint8_t *out, size_t cap)
+size_t protocore_epl_soc(uint8_t source, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(EPL_MSG_SOC, EPL_NODE_BROADCAST, source, NULL, 0, out, cap);
+    return protocore_epl_build(EPL_MSG_SOC, EPL_NODE_BROADCAST, source, NULL, 0, out, cap);
 }
 
-size_t pc_epl_preq(uint8_t dest_cn, uint8_t source, const uint8_t *pdo, size_t pdo_len, uint8_t *out, size_t cap)
+size_t protocore_epl_preq(uint8_t dest_cn, uint8_t source, const uint8_t *pdo, size_t pdo_len, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(EPL_MSG_PREQ, dest_cn, source, pdo, pdo_len, out, cap);
+    return protocore_epl_build(EPL_MSG_PREQ, dest_cn, source, pdo, pdo_len, out, cap);
 }
 
-size_t pc_epl_pres(uint8_t source_cn, const uint8_t *pdo, size_t pdo_len, uint8_t *out, size_t cap)
+size_t protocore_epl_pres(uint8_t source_cn, const uint8_t *pdo, size_t pdo_len, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(EPL_MSG_PRES, EPL_NODE_BROADCAST, source_cn, pdo, pdo_len, out, cap);
+    return protocore_epl_build(EPL_MSG_PRES, EPL_NODE_BROADCAST, source_cn, pdo, pdo_len, out, cap);
 }
 
-size_t pc_epl_soa(uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
+size_t protocore_epl_soa(uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(EPL_MSG_SOA, EPL_NODE_BROADCAST, source, payload, payload_len, out, cap);
+    return protocore_epl_build(EPL_MSG_SOA, EPL_NODE_BROADCAST, source, payload, payload_len, out, cap);
 }
 
-size_t pc_epl_asnd(uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
+size_t protocore_epl_asnd(uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(EPL_MSG_ASND, dest, source, payload, payload_len, out, cap);
+    return protocore_epl_build(EPL_MSG_ASND, dest, source, payload, payload_len, out, cap);
 }
 
-proto_bool pc_epl_parse(const uint8_t *frame, size_t len, EplFrame *out)
+proto_bool protocore_epl_parse(const uint8_t *frame, size_t len, EplFrame *out)
 {
     if (!frame || !out || len < 3)
     {
@@ -77,4 +77,4 @@ proto_bool pc_epl_parse(const uint8_t *frame, size_t len, EplFrame *out)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_POWERLINK
+#endif // PROTOCORE_ENABLE_POWERLINK

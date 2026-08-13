@@ -18,7 +18,7 @@
 #include "rx_feed.h"
 #include <unity.h>
 
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
 #include "mmgr/plaintext.h"                                     // arena-exhaustion drive for the fail-closed path
 #include "network_drivers/presentation/codec/deflate/deflate.h" // DEFLATE_SCRATCH_SIZE for the starved-send path
 #include "network_drivers/presentation/codec/inflate/inflate.h"
@@ -76,7 +76,7 @@ void setUp()
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
     }
 }
 
@@ -91,21 +91,21 @@ void tearDown()
 // RFC 3174 test vector: empty string
 void test_sha1_empty_string()
 {
-    uint8_t digest[PC_SHA1_DIGEST_LEN];
-    pc_sha1((const uint8_t *)"", 0, digest);
-    const uint8_t expected[PC_SHA1_DIGEST_LEN] = {0xDA, 0x39, 0xA3, 0xEE, 0x5E, 0x6B, 0x4B, 0x0D, 0x32, 0x55,
-                                                  0xBF, 0xEF, 0x95, 0x60, 0x18, 0x90, 0xAF, 0xD8, 0x07, 0x09};
-    TEST_ASSERT_EQUAL_MEMORY(expected, digest, PC_SHA1_DIGEST_LEN);
+    uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
+    protocore_sha1((const uint8_t *)"", 0, digest);
+    const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xDA, 0x39, 0xA3, 0xEE, 0x5E, 0x6B, 0x4B, 0x0D, 0x32, 0x55,
+                                                         0xBF, 0xEF, 0x95, 0x60, 0x18, 0x90, 0xAF, 0xD8, 0x07, 0x09};
+    TEST_ASSERT_EQUAL_MEMORY(expected, digest, PROTOCORE_SHA1_DIGEST_LEN);
 }
 
 // RFC 3174 test vector: "abc"
 void test_sha1_abc()
 {
-    uint8_t digest[PC_SHA1_DIGEST_LEN];
-    pc_sha1((const uint8_t *)"abc", 3, digest);
-    const uint8_t expected[PC_SHA1_DIGEST_LEN] = {0xA9, 0x99, 0x3E, 0x36, 0x47, 0x06, 0x81, 0x6A, 0xBA, 0x3E,
-                                                  0x25, 0x71, 0x78, 0x50, 0xC2, 0x6C, 0x9C, 0xD0, 0xD8, 0x9D};
-    TEST_ASSERT_EQUAL_MEMORY(expected, digest, PC_SHA1_DIGEST_LEN);
+    uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
+    protocore_sha1((const uint8_t *)"abc", 3, digest);
+    const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xA9, 0x99, 0x3E, 0x36, 0x47, 0x06, 0x81, 0x6A, 0xBA, 0x3E,
+                                                         0x25, 0x71, 0x78, 0x50, 0xC2, 0x6C, 0x9C, 0xD0, 0xD8, 0x9D};
+    TEST_ASSERT_EQUAL_MEMORY(expected, digest, PROTOCORE_SHA1_DIGEST_LEN);
 }
 
 // RFC 6455 §B handshake key: SHA-1 of client key + magic GUID
@@ -114,21 +114,21 @@ void test_sha1_rfc6455_handshake_key()
     // Client sends: Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
     // Server concatenates with magic: 258EAFA5-E914-47DA-95CA-C5AB0DC85B11
     const char *input = "dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-    uint8_t digest[PC_SHA1_DIGEST_LEN];
-    pc_sha1((const uint8_t *)input, strlen(input), digest);
+    uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
+    protocore_sha1((const uint8_t *)input, strlen(input), digest);
 
-    const uint8_t expected[PC_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
-                                                  0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
-    TEST_ASSERT_EQUAL_MEMORY(expected, digest, PC_SHA1_DIGEST_LEN);
+    const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
+                                                         0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
+    TEST_ASSERT_EQUAL_MEMORY(expected, digest, PROTOCORE_SHA1_DIGEST_LEN);
 }
 
 // Digest changes when input changes (basic independence)
 void test_sha1_different_inputs_different_digests()
 {
-    uint8_t d1[PC_SHA1_DIGEST_LEN], d2[PC_SHA1_DIGEST_LEN];
-    pc_sha1((const uint8_t *)"abc", 3, d1);
-    pc_sha1((const uint8_t *)"abd", 3, d2);
-    TEST_ASSERT_NOT_EQUAL(0, memcmp(d1, d2, PC_SHA1_DIGEST_LEN));
+    uint8_t d1[PROTOCORE_SHA1_DIGEST_LEN], d2[PROTOCORE_SHA1_DIGEST_LEN];
+    protocore_sha1((const uint8_t *)"abc", 3, d1);
+    protocore_sha1((const uint8_t *)"abd", 3, d2);
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(d1, d2, PROTOCORE_SHA1_DIGEST_LEN));
 }
 
 // ====================================================================
@@ -165,10 +165,10 @@ void test_base64_encode_three_bytes()
 // Encode the RFC 6455 §B SHA-1 digest → known accept header value
 void test_base64_encode_ws_accept_key()
 {
-    const uint8_t digest[PC_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
-                                                0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
+    const uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
+                                                       0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
     char out[32] = {0};
-    Base64.encode(digest, PC_SHA1_DIGEST_LEN, out);
+    Base64.encode(digest, PROTOCORE_SHA1_DIGEST_LEN, out);
     TEST_ASSERT_EQUAL_STRING("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", out);
 }
 
@@ -205,12 +205,12 @@ void test_base64_decode_three_bytes()
 // Decode the RFC 6455 §B accept key back to the original digest bytes
 void test_base64_decode_ws_accept_key()
 {
-    uint8_t dst[PC_SHA1_DIGEST_LEN + 4] = {0};
+    uint8_t dst[PROTOCORE_SHA1_DIGEST_LEN + 4] = {0};
     size_t n = Base64.decode("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", dst, sizeof(dst));
-    TEST_ASSERT_EQUAL(PC_SHA1_DIGEST_LEN, (int)n);
-    const uint8_t expected[PC_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
-                                                  0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
-    TEST_ASSERT_EQUAL_MEMORY(expected, dst, PC_SHA1_DIGEST_LEN);
+    TEST_ASSERT_EQUAL(PROTOCORE_SHA1_DIGEST_LEN, (int)n);
+    const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
+                                                         0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
+    TEST_ASSERT_EQUAL_MEMORY(expected, dst, PROTOCORE_SHA1_DIGEST_LEN);
 }
 
 // Encode then decode must return identical bytes
@@ -1011,7 +1011,7 @@ void stress_ws_parse_two_consecutive_frames()
     TEST_ASSERT_EQUAL_STRING(t2, (const char *)ws->buf);
 }
 
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
 // permessage-deflate: a compressed (RSV1) frame is decompressed before delivery.
 void test_ws_permessage_deflate_inbound()
 {
@@ -1165,8 +1165,8 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
-    // Consume the whole arena so every pc_plaintext_alloc() in ws_finish_frame returns null.
-    void *hog = pc_plaintext_alloc(pc_plaintext_capacity(), 1);
+    // Consume the whole arena so every protocore_plaintext_alloc() in ws_finish_frame returns null.
+    void *hog = protocore_plaintext_alloc(protocore_plaintext_capacity(), 1);
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
@@ -1176,11 +1176,11 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state); // arena exhausted -> fail closed
 
-    pc_plaintext_reset(); // hand the arena back for the remaining tests
+    protocore_plaintext_reset(); // hand the arena back for the remaining tests
 }
 
 // Feed one compressed (RSV1) frame with the arena pre-drained to leave exactly
-// `leave` free bytes, so a chosen pc_plaintext_alloc() in ws_finish_frame is the one
+// `leave` free bytes, so a chosen protocore_plaintext_alloc() in ws_finish_frame is the one
 // that fails. Exercises the middle/last legs of the `if (!in || !out || !tbl)`
 // short-circuit (out==null with in!=null; tbl==null with in,out!=null).
 static void feed_compressed_with_arena_leaving(size_t leave)
@@ -1192,8 +1192,8 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
-    pc_plaintext_reset();
-    void *hog = pc_plaintext_alloc(pc_plaintext_capacity() - leave, 1);
+    protocore_plaintext_reset();
+    void *hog = protocore_plaintext_alloc(protocore_plaintext_capacity() - leave, 1);
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
@@ -1202,7 +1202,7 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     push_bytes(0, frame, n);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
-    pc_plaintext_reset();
+    protocore_plaintext_reset();
 }
 
 // The inbound arena-exhaustion guard `if (!in || !out || !tbl)` must fail closed
@@ -1255,8 +1255,8 @@ void test_ws_outbound_binary_and_scratch_starved()
     tcp_capture_disable();
 
     // scr (DEFLATE_SCRATCH_SIZE) cannot be borrowed -> compression skipped, sent raw.
-    pc_plaintext_reset();
-    void *hog = pc_plaintext_alloc(pc_plaintext_capacity(), 1);
+    protocore_plaintext_reset();
+    void *hog = protocore_plaintext_alloc(protocore_plaintext_capacity(), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
     TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, bin, sizeof(bin)));
@@ -1265,15 +1265,15 @@ void test_ws_outbound_binary_and_scratch_starved()
     tcp_capture_disable();
 
     // scr ok but cbuf (cap bytes) cannot be borrowed -> same fall-through.
-    pc_plaintext_reset();
-    hog = pc_plaintext_alloc(pc_plaintext_capacity() - (DEFLATE_SCRATCH_SIZE + 8), 1);
+    protocore_plaintext_reset();
+    hog = protocore_plaintext_alloc(protocore_plaintext_capacity() - (DEFLATE_SCRATCH_SIZE + 8), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
     TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, bin, sizeof(bin)));
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]); // no RSV1: cbuf borrow failed
     tcp_capture_disable();
-    pc_plaintext_reset();
+    protocore_plaintext_reset();
 }
 
 // Outbound send-side guard `pmd && len>0 && (TEXT||BINARY)`: pmd true with len==0
@@ -1320,7 +1320,7 @@ void test_ws_pmd_continuation_with_rsv1_rejected()
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
-#endif // PC_ENABLE_WS_DEFLATE
+#endif // PROTOCORE_ENABLE_WS_DEFLATE
 
 // Outbound fragmentation (RFC 6455 sec 5.4): a data message longer than the frag size is split into
 // opcode|FIN=0, CONTINUATION|FIN=0..., CONTINUATION|FIN=1 frames; frag=0 restores the single frame.
@@ -1328,7 +1328,7 @@ void test_ws_outbound_fragmentation()
 {
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
     ws->pmd = PROTO_FALSE; // send the payload verbatim so the split is exactly these bytes
 #endif
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
@@ -1579,7 +1579,7 @@ int main()
     RUN_TEST(test_ws_text_invalid_utf8_rejected);
     RUN_TEST(test_ws_text_valid_utf8_accepted);
     RUN_TEST(test_ws_binary_arbitrary_bytes_accepted);
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
     RUN_TEST(test_ws_permessage_deflate_inbound);
     RUN_TEST(test_ws_rsv1_without_negotiation_closes);
     RUN_TEST(test_ws_permessage_deflate_outbound);

@@ -359,7 +359,7 @@ def group_order():
 
 def parse_features(path=FEATURES_MD):
     """Return [{name, flag, desc, anchor}] in document order. `flag` is the optional
-    `` `PC_ENABLE_*` `` line under the heading (or None); `desc` is the first prose
+    `` `PROTOCORE_ENABLE_*` `` line under the heading (or None); `desc` is the first prose
     paragraph (whitespace-collapsed)."""
     with open(path, "r", encoding="utf-8") as f:
         lines = f.read().splitlines()
@@ -377,7 +377,7 @@ def parse_features(path=FEATURES_MD):
         while i < n and not lines[i].strip():
             i += 1
         flag = None
-        fm = re.match(r"^`(PC_[A-Z0-9_]+)`\s*$", lines[i].strip()) if i < n else None
+        fm = re.match(r"^`(PROTOCORE_[A-Z0-9_]+)`\s*$", lines[i].strip()) if i < n else None
         if fm:
             flag = fm.group(1)
             i += 1

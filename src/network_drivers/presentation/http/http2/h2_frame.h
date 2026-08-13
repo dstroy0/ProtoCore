@@ -19,9 +19,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HTTP2
+#if PROTOCORE_ENABLE_HTTP2
 
 /** @brief The client connection preface that opens every HTTP/2 connection (RFC 9113 sec 3.4). */
 #define H2_PREFACE "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
@@ -125,8 +125,8 @@ size_t pc_h2_build_headers(uint8_t *out, size_t cap, uint32_t stream_id, const u
 size_t pc_h2_build_data(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *data, size_t data_len,
                         proto_bool end_stream);
 
-#endif // PC_ENABLE_HTTP2
+#endif // PROTOCORE_ENABLE_HTTP2
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_H2_FRAME_H

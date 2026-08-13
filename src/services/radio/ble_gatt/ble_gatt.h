@@ -3,7 +3,7 @@
 
 /**
  * @file ble_gatt.h
- * @brief Bluetooth ATT protocol codec + GATT characteristic bridge (PC_ENABLE_BLE_GATT).
+ * @brief Bluetooth ATT protocol codec + GATT characteristic bridge (PROTOCORE_ENABLE_BLE_GATT).
  *
  * The ESP32's BLE radio is on-chip, but bridging GATT to the web still needs the wire protocol under
  * GATT - the **Attribute Protocol** (ATT, Bluetooth Core Vol 3 Part F): the read / write / notify /
@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_BLE_GATT
+#if PROTOCORE_ENABLE_BLE_GATT
 
 /** @brief ATT opcodes (subset). */
 #define ATT_OP_ERROR_RSP 0x01        ///< [op][req-op][handle:2][error]
@@ -81,10 +81,10 @@ typedef struct
  * @brief Serialize a characteristic table as `[{"handle":H,"uuid":"0xXXXX","props":P},...]` for the web.
  * @return length written (excl NUL), or 0 on overflow / bad args.
  */
-size_t pc_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap);
+size_t protocore_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap);
 
-#endif // PC_ENABLE_BLE_GATT
+#endif // PROTOCORE_ENABLE_BLE_GATT
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_BLE_GATT_H

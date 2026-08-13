@@ -38,19 +38,19 @@ void dbench_run(void)
     g_mds.controller.sw_revision = "4.2.0";
     g_mds.safety.operational_mode = ROBOTICS_MODE_AUTOMATIC;
     g_mds.safety.protective_stop = true;
-    pc_robotics_bind(&g_mds);
+    protocore_robotics_bind(&g_mds);
 
     for (;;)
     {
         DBENCH_BANNER("robotics");
         volatile int sink = 0;
         OpcUaVariant v;
-        DBENCH_OP("pc_robotics_read manufacturer", 200000,
-                  sink += pc_robotics_read(PC_ROBOTICS_NS, 6201 /*N_MD_MANUFACTURER*/, OPCUA_ATTR_VALUE, &v));
-        DBENCH_OP("pc_robotics_read axis1 pos", 200000,
-                  sink += pc_robotics_read(PC_ROBOTICS_NS, 6411 /*N_AXIS1_POSITION*/, OPCUA_ATTR_VALUE, &v));
+        DBENCH_OP("protocore_robotics_read manufacturer", 200000,
+                  sink += protocore_robotics_read(PROTOCORE_ROBOTICS_NS, 6201 /*N_MD_MANUFACTURER*/, OPCUA_ATTR_VALUE, &v));
+        DBENCH_OP("protocore_robotics_read axis1 pos", 200000,
+                  sink += protocore_robotics_read(PROTOCORE_ROBOTICS_NS, 6411 /*N_AXIS1_POSITION*/, OPCUA_ATTR_VALUE, &v));
         OpcUaReference refs[8];
-        DBENCH_OP("pc_robotics_browse (ObjectsFolder)", 200000, sink += pc_robotics_browse(0, 85, refs, 8));
+        DBENCH_OP("protocore_robotics_browse (ObjectsFolder)", 200000, sink += protocore_robotics_browse(0, 85, refs, 8));
         (void)sink;
         DBENCH_DONE();
     }

@@ -51,7 +51,7 @@ Compile `smb_interop.cpp` with the SMB + crypto sources and the native mocks:
 
 ```sh
 SMB=src/services/smb; CR=src/crypto
-g++ -std=c++14 -O1 -DPC_ENABLE_SMB=1 -Isrc -Itest/mocks -o /tmp/smb_interop \
+g++ -std=c++14 -O1 -DPROTOCORE_ENABLE_SMB=1 -Isrc -Itest/mocks -o /tmp/smb_interop \
   test/interop/smb3_samba/smb_interop.cpp \
   $SMB/smb2.cpp $SMB/ntlm.cpp $SMB/ntlmssp.cpp $SMB/spnego.cpp $SMB/smb_client.cpp \
   $CR/md.cpp $CR/sha256.cpp $CR/hmac_sha256.cpp $CR/kdf.cpp $CR/aes_cmac.cpp $CR/sha512.cpp
@@ -75,5 +75,5 @@ smb_read -> 0 (74 bytes) match=YES
 
 `algo=AES-CMAC` + `match=YES` against a `server signing = mandatory` Samba means the CMAC signatures and
 the NTLMSSP MIC were accepted by a real server. As a negative check, flipping one byte of the MIC
-(`pc_ntlm_mic`) makes Samba reject the logon with `STATUS_LOGON_FAILURE` - confirming the server
+(`protocore_ntlm_mic`) makes Samba reject the logon with `STATUS_LOGON_FAILURE` - confirming the server
 actually verifies it. Last verified against **Samba 4.19.5** on 2026-07-25.

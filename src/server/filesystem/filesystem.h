@@ -17,7 +17,7 @@
  * two copies of the `..` guard spread across the SFTP and SCP servers. There is one buffer here,
  * and callers do not size it, see it, or carry it.
  *
- * pc_fs_path() is the single exception, for the one caller that genuinely needs the text: SFTP
+ * protocore_fs_path() is the single exception, for the one caller that genuinely needs the text: SFTP
  * REALPATH answers with a path string. It hands back a pointer into this file's storage, or
  * nullptr when it cannot - there is no out/capacity pair to get wrong.
  *
@@ -35,43 +35,43 @@
 #include "protocore_config.h"
 #include "server/filesystem/mnt.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // root, dir, name. A whole path is these three pieces, so it is ONE build: a caller that assembled
 // dir+name itself and handed the result over would frame the same bytes twice, into two buffers,
 // for the same result. A mount root ends with '/', and a dir that carries a name ends with '/', so
 // both separators are already in the strings and the spec needs no literal between the fields.
-static const pc_field FILESYSTEM_JOIN[] = {PC_STR, PC_STR, PC_STR, PC_END};
+static const protocore_field FILESYSTEM_JOIN[] = {PROTOCORE_STR, PROTOCORE_STR, PROTOCORE_STR, PROTOCORE_END};
 
-// The mount root, copied in so its trailing '/' is owned rather than assumed (see pc_fs_begin).
-static const pc_field FILESYSTEM_ROOT[] = {PC_STR, PC_END};
+// The mount root, copied in so its trailing '/' is owned rather than assumed (see protocore_fs_begin).
+static const protocore_field FILESYSTEM_ROOT[] = {PROTOCORE_STR, PROTOCORE_END};
 
 /**
- * @brief Roots that can be bound at once (see pc_fs_begin).
+ * @brief Roots that can be bound at once (see protocore_fs_begin).
  *
  * One per service that wants its own storage - "mnt/scp", "mnt/sftp", a local region held for temp
  * files - and more can be bound by raising this. Two services naming the same root share it and
  * cost one entry.
  */
-#ifndef PC_FS_MAX_ROOTS
-#define PC_FS_MAX_ROOTS 4
+#ifndef PROTOCORE_FS_MAX_ROOTS
+#define PROTOCORE_FS_MAX_ROOTS 4
 #endif
 
 /** @brief Longest root name (e.g. "mnt/sftp"), including the terminator. */
-#ifndef PC_FS_ROOT_NAME_MAX
-#define PC_FS_ROOT_NAME_MAX 24
+#ifndef PROTOCORE_FS_ROOT_NAME_MAX
+#define PROTOCORE_FS_ROOT_NAME_MAX 24
 #endif
 
 /**
- * @brief How deep pc_fs_remove() / pc_fs_copy() descend before refusing a tree.
+ * @brief How deep protocore_fs_remove() / protocore_fs_copy() descend before refusing a tree.
  *
  * The bound is what turns a tree walk into a fixed cost: one level of path storage per level, all of
  * it in this file's context, and no call recursion - the walks are loops over that array, so the
  * depth a request can force is the array's extent rather than however many stack frames it takes to
  * exhaust RAM.
  */
-#ifndef PC_FS_MAX_DEPTH
-#define PC_FS_MAX_DEPTH 8
+#ifndef PROTOCORE_FS_MAX_DEPTH
+#define PROTOCORE_FS_MAX_DEPTH 8
 #endif
 
 /**
@@ -83,12 +83,12 @@ static const pc_field FILESYSTEM_ROOT[] = {PC_STR, PC_END};
  * bytes that were already there. 512 is the SD sector and the common flash program page, so one
  * block is one operation on both.
  *
- * This is why pc_fs_copy() moves a block at a time rather than "some convenient buffer size", and
+ * This is why protocore_fs_copy() moves a block at a time rather than "some convenient buffer size", and
  * why the number lives here instead of at each call site - a caller cannot know what the mounted
  * store erases in, and should not have to.
  */
-#ifndef PC_FS_BLOCK
-#define PC_FS_BLOCK 512
+#ifndef PROTOCORE_FS_BLOCK
+#define PROTOCORE_FS_BLOCK 512
 #endif
 
 /** @brief Join a mount @p root, a request @p dir, and a leaf @p name into @p out.
@@ -98,13 +98,14 @@ static const pc_field FILESYSTEM_ROOT[] = {PC_STR, PC_END};
  *             site rather than tested here.
  * @return bytes written, or 0 on overflow - the engine already knows the length, so it is handed
  *         back rather than left for the caller to rediscover with a scan. */
-PC_INLINE size_t pc_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
+PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
     if (dir[0] == '/')
     {
         dir++; // the root carries the separator; a second one would be "//"
     }
-    return frame.build(out, cap, FILESYSTEM_JOIN, (const pc_fval[]){PC_VSTR(root), PC_VSTR(dir), PC_VSTR(name)}, 3);
+    return frame.build(out, cap, FILESYSTEM_JOIN,
+                       (const protocore_fval[]){PROTOCORE_VSTR(root), PROTOCORE_VSTR(dir), PROTOCORE_VSTR(name)}, 3);
 }
 
 /**
@@ -116,7 +117,7 @@ PC_INLINE size_t pc_fs_join(const char *root, const char *dir, const char *name,
 /** @brief True if @p s contains a `..` traversal.
  *
  * ".." is two bytes at one offset, not a pattern to search for: compare the pair and advance. */
-PC_INLINE proto_bool pc_fs_has_dotdot(const char *s)
+PROTOCORE_INLINE proto_bool protocore_fs_has_dotdot(const char *s)
 {
     for (const char *p = s; p[0] != '\0' && p[1] != '\0'; p++)
     {
@@ -128,14 +129,14 @@ PC_INLINE proto_bool pc_fs_has_dotdot(const char *s)
     return PROTO_FALSE;
 }
 
-PC_INLINE int pc_fs_resolve(const char *root, const char *dir, const char *name, char *out, size_t cap)
+PROTOCORE_INLINE int protocore_fs_resolve(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
     // Both request-supplied pieces are checked; the root is ours.
-    if (pc_fs_has_dotdot(dir) || pc_fs_has_dotdot(name))
+    if (protocore_fs_has_dotdot(dir) || protocore_fs_has_dotdot(name))
     {
         return -1; // path traversal - refuse before touching the filesystem
     }
-    size_t fpl = pc_fs_join(root, dir, name, out, cap);
+    size_t fpl = protocore_fs_join(root, dir, name, out, cap);
     if (fpl == 0)
     {
         return -2;
@@ -153,35 +154,35 @@ PC_INLINE int pc_fs_resolve(const char *root, const char *dir, const char *name,
 // throws away WHY, and the two reasons a caller cares about are not the same thing - "the path you
 // asked for is wrong" and "there is no storage behind this filesystem" want different handling.
 //
-// A null store is a legitimate, intentional configuration, not an error. pc_fs_begin() binds a root
-// and pc_fs_path() resolves against it with nothing mounted, so an application can hold a filesystem
+// A null store is a legitimate, intentional configuration, not an error. protocore_fs_begin() binds a root
+// and protocore_fs_path() resolves against it with nothing mounted, so an application can hold a filesystem
 // and do local-only path work before (or without) ever attaching a store. What it must not do is
 // look identical to a fault.
 //
-// So the reason is a sticky mask, the same way pc_cspan carries a sticky ok: bits accumulate as
+// So the reason is a sticky mask, the same way protocore_cspan carries a sticky ok: bits accumulate as
 // operations fail and a caller tests once, at whatever granularity suits it, instead of branching on
 // every call. Mask it for the bit you care about.
 //
-//     pc_fs_clear_status();
-//     pc_fs_write_file(root, "/a", "", buf, n);
-//     pc_fs_write_file(root, "/b", "", buf, n);
-//     if (pc_fs_status() & PC_FS_STORAGE_EXHAUSTED) { ... }   // no store, or it would not take more
+//     protocore_fs_clear_status();
+//     protocore_fs_write_file(root, "/a", "", buf, n);
+//     protocore_fs_write_file(root, "/b", "", buf, n);
+//     if (protocore_fs_status() & PROTOCORE_FS_STORAGE_EXHAUSTED) { ... }   // no store, or it would not take more
 
-#define PC_FS_OK 0u
-#define PC_FS_STORAGE_EXHAUSTED (1u << 0) ///< nothing mounted, or the store could not take the write.
-#define PC_FS_BAD_ROOT (1u << 1)          ///< the root handle was never bound (see pc_fs_begin).
-#define PC_FS_TRAVERSAL (1u << 2)         ///< the request path contained `..` and was refused.
-#define PC_FS_TOO_LONG (1u << 3)          ///< the resolved path did not fit.
+#define PROTOCORE_FS_OK 0u
+#define PROTOCORE_FS_STORAGE_EXHAUSTED (1u << 0) ///< nothing mounted, or the store could not take the write.
+#define PROTOCORE_FS_BAD_ROOT (1u << 1)          ///< the root handle was never bound (see protocore_fs_begin).
+#define PROTOCORE_FS_TRAVERSAL (1u << 2)         ///< the request path contained `..` and was refused.
+#define PROTOCORE_FS_TOO_LONG (1u << 3)          ///< the resolved path did not fit.
 
 /** @brief The accumulated reasons operations have failed since the last clear. */
-uint32_t pc_fs_status(void);
+uint32_t protocore_fs_status(void);
 
 /** @brief Clear the mask. Call before a sequence whose outcome you intend to test as a whole. */
-void pc_fs_clear_status(void);
+void protocore_fs_clear_status(void);
 
 /** @brief True while no store is mounted - the local-only configuration, stated rather than inferred
  *         from a call that returned false. */
-proto_bool pc_fs_storage_present(void);
+proto_bool protocore_fs_storage_present(void);
 
 /**
  * @brief Bind a root and get the handle a service works through (e.g. "mnt/scp", "mnt/sftp").
@@ -199,16 +200,16 @@ proto_bool pc_fs_storage_present(void);
  *
  * @return a root handle (>= 0), or -1 if the root table is full.
  */
-int pc_fs_begin(const char *name);
+int protocore_fs_begin(const char *name);
 
 /**
  * @brief The resolved on-disk path for request @p dir + leaf @p name.
  *
- * @return a pointer to this file's path storage, valid until the next pc_fs_* call, or nullptr if
+ * @return a pointer to this file's path storage, valid until the next protocore_fs_* call, or nullptr if
  *         the request attempts traversal or does not fit. The buffer is not the caller's: copy it
  *         if it must outlive the next call.
  */
-const char *pc_fs_path(int root, const char *dir, const char *name);
+const char *protocore_fs_path(int root, const char *dir, const char *name);
 
 // --- operations ------------------------------------------------------------------------------
 // A path-taking call carries the @p root it resolves against plus the REQUEST path as its two
@@ -219,21 +220,21 @@ const char *pc_fs_path(int root, const char *dir, const char *name);
 // again would be asking the caller to keep two things in agreement that cannot disagree.
 
 /** @brief Open request path @p dir + @p name under @p root. @return a handle (>= 0), or -1. */
-int pc_fs_open(int root, const char *dir, const char *name, pc_mnt_mode mode);
+int protocore_fs_open(int root, const char *dir, const char *name, protocore_mnt_mode mode);
 /** @brief Read up to @p n bytes from @p handle into @p buf. @return bytes read, or -1. */
-int pc_fs_read(int handle, void *buf, size_t n);
+int protocore_fs_read(int handle, void *buf, size_t n);
 /** @brief Write @p n bytes from @p buf to @p handle. @return bytes written, or -1. */
-int pc_fs_write(int handle, const void *buf, size_t n);
+int protocore_fs_write(int handle, const void *buf, size_t n);
 /** @brief Close an open file or directory @p handle. */
-void pc_fs_close(int handle);
+void protocore_fs_close(int handle);
 /** @brief Seek @p handle to absolute offset @p off. @return true on success. */
-proto_bool pc_fs_seek(int handle, uint64_t off);
+proto_bool protocore_fs_seek(int handle, uint64_t off);
 /** @brief Size of the file at @p dir + @p name. @return the size in bytes, or -1 if absent. */
-long pc_fs_size(int root, const char *dir, const char *name);
+long protocore_fs_size(int root, const char *dir, const char *name);
 /** @brief @return true if @p dir + @p name exists. */
-proto_bool pc_fs_exists(int root, const char *dir, const char *name);
+proto_bool protocore_fs_exists(int root, const char *dir, const char *name);
 /** @brief Fill @p out with the facts about @p dir + @p name. @return false if absent. */
-proto_bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *out);
+proto_bool protocore_fs_stat(int root, const char *dir, const char *name, protocore_mnt_stat *out);
 /**
  * @brief Delete @p dir + @p name: a file, or a directory and everything under it.
  *
@@ -245,34 +246,36 @@ proto_bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *
  *
  * @return true when the whole tree is gone; false if any part of it could not be removed.
  */
-proto_bool pc_fs_remove(int root, const char *dir, const char *name);
+proto_bool protocore_fs_remove(int root, const char *dir, const char *name);
 /** @brief Rename @p from_dir + @p from_name to @p to_dir + @p to_name. @return true on success. */
-proto_bool pc_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name);
+proto_bool protocore_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir,
+                               const char *to_name);
 /**
  * @brief Copy @p from_dir + @p from_name onto @p to_dir + @p to_name: a file, or a whole tree.
  *
  * The destination is replaced if it exists. @return true when the whole tree arrived.
  */
-proto_bool pc_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name);
+proto_bool protocore_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir,
+                             const char *to_name);
 /** @brief Create a directory at @p dir + @p name. @return true on success. */
-proto_bool pc_fs_mkdir(int root, const char *dir, const char *name);
+proto_bool protocore_fs_mkdir(int root, const char *dir, const char *name);
 /** @brief Remove the empty directory at @p dir + @p name. @return true on success. */
-proto_bool pc_fs_rmdir(int root, const char *dir, const char *name);
+proto_bool protocore_fs_rmdir(int root, const char *dir, const char *name);
 /** @brief Open @p dir + @p name as a directory. @return a handle (>= 0), or -1. */
-int pc_fs_opendir(int root, const char *dir, const char *name);
+int protocore_fs_opendir(int root, const char *dir, const char *name);
 /**
  * @brief Next entry of directory @p handle: facts into @p out, the entry's own name into @p name.
  * @return false at the end of the directory. @p name_cap is the caller's, derived from what that
  *         caller's own frame must hold - this file imposes no name length.
  */
-proto_bool pc_fs_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap);
+proto_bool protocore_fs_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap);
 
 /** @brief Read the whole file at @p dir + @p name into @p buf.
  *  @return bytes read (0..cap), or -1 if absent / would exceed @p cap. */
-long pc_fs_read_file(int root, const char *dir, const char *name, void *buf, size_t cap);
+long protocore_fs_read_file(int root, const char *dir, const char *name, void *buf, size_t cap);
 /** @brief Create/truncate @p dir + @p name and write @p n bytes. @return true on success. */
-proto_bool pc_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n);
+proto_bool protocore_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FILESYSTEM_H

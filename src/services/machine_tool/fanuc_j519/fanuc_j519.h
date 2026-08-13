@@ -3,7 +3,7 @@
 
 /**
  * @file fanuc_j519.h
- * @brief FANUC Stream Motion (option J519) UDP codec (PC_ENABLE_FANUC_J519) - the robot counterpart
+ * @brief FANUC Stream Motion (option J519) UDP codec (PROTOCORE_ENABLE_FANUC_J519) - the robot counterpart
  *        to the shipped FOCAS CNC codec (`services/focas`).
  *
  * Stream Motion is FANUC's real-time external motion interface on R-30iB / R-30iA robot controllers:
@@ -12,7 +12,7 @@
  * with its measured state. This is a pure, zero-heap codec for that wire protocol - the caller owns
  * the UDP socket and the real-time cadence.
  *
- * Wire format (UDP port @ref PC_J519_UDP_PORT, default 60015). Every packet opens with an 8-octet
+ * Wire format (UDP port @ref PROTOCORE_J519_UDP_PORT, default 60015). Every packet opens with an 8-octet
  * header, and unlike FOCAS **every multi-octet field is LITTLE-endian** (floats are IEEE-754 binary32):
  * @code
  *   header (8)
@@ -60,29 +60,29 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_FANUC_J519
+#if PROTOCORE_ENABLE_FANUC_J519
 
 /** @brief Default Stream Motion UDP port on the robot controller. */
-#define PC_J519_UDP_PORT 60015
+#define PROTOCORE_J519_UDP_PORT 60015
 
 /** @brief Axis slots carried by every pose / joint / current block (the protocol always sends 9). */
-#define PC_J519_AXES 9
+#define PROTOCORE_J519_AXES 9
 
 /** @brief Entries in each of the Ack's two motion-limit threshold tables. */
-#define PC_J519_THRESHOLDS 20
+#define PROTOCORE_J519_THRESHOLDS 20
 
 /** @brief Exact octet length of each packet (the parsers require these). */
 enum : size_t // NOSONAR(cpp:S3642): anonymous table of exact wire lengths compared as bare size_t in the parsers; enum
               // class would force a cast at every bound check
 {
-    PC_J519_LEN_START = 8,    ///< PC -> robot Start.
-    PC_J519_LEN_MOTION = 64,  ///< PC -> robot Motion Command.
-    PC_J519_LEN_STOP = 8,     ///< PC -> robot Stop.
-    PC_J519_LEN_REQUEST = 16, ///< PC -> robot Request.
-    PC_J519_LEN_STATUS = 132, ///< robot -> PC Robot Status.
-    PC_J519_LEN_ACK = 184,    ///< robot -> PC Ack.
+    PROTOCORE_J519_LEN_START = 8,    ///< PC -> robot Start.
+    PROTOCORE_J519_LEN_MOTION = 64,  ///< PC -> robot Motion Command.
+    PROTOCORE_J519_LEN_STOP = 8,     ///< PC -> robot Stop.
+    PROTOCORE_J519_LEN_REQUEST = 16, ///< PC -> robot Request.
+    PROTOCORE_J519_LEN_STATUS = 132, ///< robot -> PC Robot Status.
+    PROTOCORE_J519_LEN_ACK = 184,    ///< robot -> PC Ack.
 };
 
 /**
@@ -142,40 +142,40 @@ enum : uint8_t // NOSONAR(cpp:S3642): anonymous bitmask constants OR'd/AND'd aga
     J519_STATUS_IN_MOTION = 0x08,    ///< the robot is moving.
 };
 
-/** @brief PC -> robot Motion Command (@ref PC_J519_LEN_MOTION octets on the wire). */
+/** @brief PC -> robot Motion Command (@ref PROTOCORE_J519_LEN_MOTION octets on the wire). */
 typedef struct
 {
-    uint32_t version_no;            ///< header version word.
-    uint32_t sequence_no;           ///< command sequence number (the robot echoes it in Status).
-    uint8_t last_data;              ///< non-zero marks the final command of the stream.
-    uint8_t read_io_type;           ///< @ref J519IoType of the port to read back.
-    uint16_t read_io_index;         ///< index of the port to read back.
-    uint16_t read_io_mask;          ///< bit mask applied to the read-back port.
-    uint8_t data_style;             ///< @ref J519DataStyle of @ref joint_data.
-    uint8_t write_io_type;          ///< @ref J519IoType of the port to write.
-    uint16_t write_io_index;        ///< index of the port to write.
-    uint16_t write_io_mask;         ///< bit mask applied to the written port.
-    uint16_t write_io_value;        ///< value written to the port.
-    float joint_data[PC_J519_AXES]; ///< the 9 setpoints (joint angles or a Cartesian pose).
+    uint32_t version_no;                   ///< header version word.
+    uint32_t sequence_no;                  ///< command sequence number (the robot echoes it in Status).
+    uint8_t last_data;                     ///< non-zero marks the final command of the stream.
+    uint8_t read_io_type;                  ///< @ref J519IoType of the port to read back.
+    uint16_t read_io_index;                ///< index of the port to read back.
+    uint16_t read_io_mask;                 ///< bit mask applied to the read-back port.
+    uint8_t data_style;                    ///< @ref J519DataStyle of @ref joint_data.
+    uint8_t write_io_type;                 ///< @ref J519IoType of the port to write.
+    uint16_t write_io_index;               ///< index of the port to write.
+    uint16_t write_io_mask;                ///< bit mask applied to the written port.
+    uint16_t write_io_value;               ///< value written to the port.
+    float joint_data[PROTOCORE_J519_AXES]; ///< the 9 setpoints (joint angles or a Cartesian pose).
 } J519MotionCommand;
 
-/** @brief robot -> PC Robot Status (@ref PC_J519_LEN_STATUS octets on the wire). */
+/** @brief robot -> PC Robot Status (@ref PROTOCORE_J519_LEN_STATUS octets on the wire). */
 typedef struct
 {
-    uint32_t version_no;                ///< header version word.
-    uint32_t sequence_no;               ///< echoed command sequence number.
-    uint8_t status;                     ///< J519_STATUS_* bits.
-    uint8_t read_io_type;               ///< echoed @ref J519IoType that was read.
-    uint16_t read_io_index;             ///< echoed port index.
-    uint16_t read_io_mask;              ///< echoed mask.
-    uint16_t read_io_value;             ///< the port value read back.
-    uint32_t time_stamp;                ///< controller timestamp.
-    float cartesian_pose[PC_J519_AXES]; ///< measured Cartesian pose (world -> tool0).
-    float joint_pose[PC_J519_AXES];     ///< measured joint angles.
-    float motor_current[PC_J519_AXES];  ///< per-axis motor current.
+    uint32_t version_no;                       ///< header version word.
+    uint32_t sequence_no;                      ///< echoed command sequence number.
+    uint8_t status;                            ///< J519_STATUS_* bits.
+    uint8_t read_io_type;                      ///< echoed @ref J519IoType that was read.
+    uint16_t read_io_index;                    ///< echoed port index.
+    uint16_t read_io_mask;                     ///< echoed mask.
+    uint16_t read_io_value;                    ///< the port value read back.
+    uint32_t time_stamp;                       ///< controller timestamp.
+    float cartesian_pose[PROTOCORE_J519_AXES]; ///< measured Cartesian pose (world -> tool0).
+    float joint_pose[PROTOCORE_J519_AXES];     ///< measured joint angles.
+    float motor_current[PROTOCORE_J519_AXES];  ///< per-axis motor current.
 } J519RobotStatus;
 
-/** @brief PC -> robot Request for a motion-limit table (@ref PC_J519_LEN_REQUEST octets). */
+/** @brief PC -> robot Request for a motion-limit table (@ref PROTOCORE_J519_LEN_REQUEST octets). */
 typedef struct
 {
     uint32_t version_no;     ///< header version word.
@@ -183,16 +183,16 @@ typedef struct
     uint32_t threshold_type; ///< @ref J519ThresholdType.
 } J519Request;
 
-/** @brief robot -> PC Ack carrying the motion-limit tables (@ref PC_J519_LEN_ACK octets). */
+/** @brief robot -> PC Ack carrying the motion-limit tables (@ref PROTOCORE_J519_LEN_ACK octets). */
 typedef struct
 {
-    uint32_t version_no;                          ///< header version word.
-    uint32_t axis_no;                             ///< echoed axis number.
-    uint32_t threshold_type;                      ///< echoed @ref J519ThresholdType.
-    uint32_t max_cart_speed;                      ///< maximum Cartesian speed.
-    uint32_t unknown0;                            ///< reserved word (undocumented; preserved verbatim).
-    float threshold_no_load[PC_J519_THRESHOLDS];  ///< limits with no payload.
-    float threshold_max_load[PC_J519_THRESHOLDS]; ///< limits at maximum payload.
+    uint32_t version_no;                                 ///< header version word.
+    uint32_t axis_no;                                    ///< echoed axis number.
+    uint32_t threshold_type;                             ///< echoed @ref J519ThresholdType.
+    uint32_t max_cart_speed;                             ///< maximum Cartesian speed.
+    uint32_t unknown0;                                   ///< reserved word (undocumented; preserved verbatim).
+    float threshold_no_load[PROTOCORE_J519_THRESHOLDS];  ///< limits with no payload.
+    float threshold_max_load[PROTOCORE_J519_THRESHOLDS]; ///< limits at maximum payload.
 } J519Ack;
 
 // --- header ---------------------------------------------------------------------------------------
@@ -205,48 +205,50 @@ typedef struct
  *
  * @return false if @p len is under 8 octets.
  */
-proto_bool pc_j519_peek(const uint8_t *buf, size_t len, uint32_t *type, uint32_t *version_no);
+proto_bool protocore_j519_peek(const uint8_t *buf, size_t len, uint32_t *type, uint32_t *version_no);
 
 // --- PC -> robot: build ---------------------------------------------------------------------------
 
-/** @brief Build a Start packet. @return octets written (@ref PC_J519_LEN_START), or 0 if @p cap is short. */
-size_t pc_j519_build_start(uint8_t *buf, size_t cap, uint32_t version_no);
+/** @brief Build a Start packet. @return octets written (@ref PROTOCORE_J519_LEN_START), or 0 if @p cap is short. */
+size_t protocore_j519_build_start(uint8_t *buf, size_t cap, uint32_t version_no);
 
-/** @brief Build a Stop packet. @return octets written (@ref PC_J519_LEN_STOP), or 0 if @p cap is short. */
-size_t pc_j519_build_stop(uint8_t *buf, size_t cap, uint32_t version_no);
+/** @brief Build a Stop packet. @return octets written (@ref PROTOCORE_J519_LEN_STOP), or 0 if @p cap is short. */
+size_t protocore_j519_build_stop(uint8_t *buf, size_t cap, uint32_t version_no);
 
-/** @brief Build a Motion Command. @return octets written (@ref PC_J519_LEN_MOTION), or 0 if @p cap is short. */
-size_t pc_j519_build_motion(uint8_t *buf, size_t cap, const J519MotionCommand *cmd);
+/** @brief Build a Motion Command. @return octets written (@ref PROTOCORE_J519_LEN_MOTION), or 0 if @p cap is short. */
+size_t protocore_j519_build_motion(uint8_t *buf, size_t cap, const J519MotionCommand *cmd);
 
-/** @brief Build a Request. @return octets written (@ref PC_J519_LEN_REQUEST), or 0 if @p cap is short. */
-size_t pc_j519_build_request(uint8_t *buf, size_t cap, const J519Request *req);
+/** @brief Build a Request. @return octets written (@ref PROTOCORE_J519_LEN_REQUEST), or 0 if @p cap is short. */
+size_t protocore_j519_build_request(uint8_t *buf, size_t cap, const J519Request *req);
 
 // --- PC -> robot: parse (the robot side of the link, and the round-trip check) ---------------------
 
-/** @brief Parse a Motion Command. @return false unless @p len is exactly @ref PC_J519_LEN_MOTION and the type is 1. */
-proto_bool pc_j519_parse_motion(const uint8_t *buf, size_t len, J519MotionCommand *out);
+/** @brief Parse a Motion Command. @return false unless @p len is exactly @ref PROTOCORE_J519_LEN_MOTION and the type
+ * is 1. */
+proto_bool protocore_j519_parse_motion(const uint8_t *buf, size_t len, J519MotionCommand *out);
 
-/** @brief Parse a Request. @return false unless @p len is exactly @ref PC_J519_LEN_REQUEST and the type is 3. */
-proto_bool pc_j519_parse_request(const uint8_t *buf, size_t len, J519Request *out);
+/** @brief Parse a Request. @return false unless @p len is exactly @ref PROTOCORE_J519_LEN_REQUEST and the type is 3. */
+proto_bool protocore_j519_parse_request(const uint8_t *buf, size_t len, J519Request *out);
 
 // --- robot -> PC: build (robot simulator) ---------------------------------------------------------
 
-/** @brief Build a Robot Status. @return octets written (@ref PC_J519_LEN_STATUS), or 0 if @p cap is short. */
-size_t pc_j519_build_status(uint8_t *buf, size_t cap, const J519RobotStatus *st);
+/** @brief Build a Robot Status. @return octets written (@ref PROTOCORE_J519_LEN_STATUS), or 0 if @p cap is short. */
+size_t protocore_j519_build_status(uint8_t *buf, size_t cap, const J519RobotStatus *st);
 
-/** @brief Build an Ack. @return octets written (@ref PC_J519_LEN_ACK), or 0 if @p cap is short. */
-size_t pc_j519_build_ack(uint8_t *buf, size_t cap, const J519Ack *ack);
+/** @brief Build an Ack. @return octets written (@ref PROTOCORE_J519_LEN_ACK), or 0 if @p cap is short. */
+size_t protocore_j519_build_ack(uint8_t *buf, size_t cap, const J519Ack *ack);
 
 // --- robot -> PC: parse (the streaming controller) ------------------------------------------------
 
-/** @brief Parse a Robot Status. @return false unless @p len is exactly @ref PC_J519_LEN_STATUS and the type is 0. */
-proto_bool pc_j519_parse_status(const uint8_t *buf, size_t len, J519RobotStatus *out);
+/** @brief Parse a Robot Status. @return false unless @p len is exactly @ref PROTOCORE_J519_LEN_STATUS and the type is
+ * 0. */
+proto_bool protocore_j519_parse_status(const uint8_t *buf, size_t len, J519RobotStatus *out);
 
-/** @brief Parse an Ack. @return false unless @p len is exactly @ref PC_J519_LEN_ACK and the type is 3. */
-proto_bool pc_j519_parse_ack(const uint8_t *buf, size_t len, J519Ack *out);
+/** @brief Parse an Ack. @return false unless @p len is exactly @ref PROTOCORE_J519_LEN_ACK and the type is 3. */
+proto_bool protocore_j519_parse_ack(const uint8_t *buf, size_t len, J519Ack *out);
 
-#endif // PC_ENABLE_FANUC_J519
+#endif // PROTOCORE_ENABLE_FANUC_J519
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FANUC_J519_H

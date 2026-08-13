@@ -25,12 +25,12 @@ void dbench_run(void)
         DBENCH_BANNER("sqlite");
         volatile uint64_t sink = 0;
         uint64_t v;
-        DBENCH_OP("pc_sqlite_varint_decode (1B)", 200000, sink += pc_sqlite_varint_decode(vi1, 1, &v));
-        DBENCH_OP("pc_sqlite_varint_decode (2B)", 200000, sink += pc_sqlite_varint_decode(vi2, 2, &v));
-        DBENCH_OP("pc_sqlite_varint_decode (9B)", 200000, sink += pc_sqlite_varint_decode(vi9, 9, &v));
+        DBENCH_OP("protocore_sqlite_varint_decode (1B)", 200000, sink += protocore_sqlite_varint_decode(vi1, 1, &v));
+        DBENCH_OP("protocore_sqlite_varint_decode (2B)", 200000, sink += protocore_sqlite_varint_decode(vi2, 2, &v));
+        DBENCH_OP("protocore_sqlite_varint_decode (9B)", 200000, sink += protocore_sqlite_varint_decode(vi9, 9, &v));
         static uint8_t out[9];
-        DBENCH_OP("pc_sqlite_varint_encode", 200000, sink += pc_sqlite_varint_encode(0x123456789ull, out, sizeof(out)));
-        DBENCH_OP("pc_sqlite_serial_type_size", 200000, sink += pc_sqlite_serial_type_size(6));
+        DBENCH_OP("protocore_sqlite_varint_encode", 200000, sink += protocore_sqlite_varint_encode(0x123456789ull, out, sizeof(out)));
+        DBENCH_OP("protocore_sqlite_serial_type_size", 200000, sink += protocore_sqlite_serial_type_size(6));
         (void)sink;
         DBENCH_DONE();
     }

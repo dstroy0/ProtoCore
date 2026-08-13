@@ -61,7 +61,7 @@ as a **stationary** target. That is the whole point.
 
 ## Where this fits
 
-`pc_ld2410_poll()` decodes each radar frame; `pc_ld2410_present()` and `pc_ld2410_distance_cm()` give you
+`protocore_ld2410_poll()` decodes each radar frame; `protocore_ld2410_present()` and `protocore_ld2410_distance_cm()` give you
 a yes/no and a distance to act on. From here it is a short hop to a real project: publish
 presence over **MQTT** (example with the MQTT feature), push it to a live web page over
 **WebSocket**, or feed it into the **preempting queue** (Foundation examples) so a presence
@@ -70,9 +70,9 @@ pattern the library uses for GPS, the RTC, and the field-bus sensors.
 
 ## Engineering mode (per-gate energies)
 
-The sketch calls `pc_ld2410_set_engineering(true)`, which asks the module for extra detail: the
+The sketch calls `protocore_ld2410_set_engineering(true)`, which asks the module for extra detail: the
 radar splits its range into nine **gates** (distance bins) and reports the energy in each. Those
-land in `pc_ld2410_last()->moving_gate_energy[0..8]` and `static_gate_energy[0..8]` - useful if you
+land in `protocore_ld2410_last()->moving_gate_energy[0..8]` and `static_gate_energy[0..8]` - useful if you
 want to tune sensitivity per distance or draw a little bar chart. Pass `false` for the simpler
 report.
 
@@ -94,7 +94,7 @@ The feature lives in the library, so its flag must reach the whole build:
 ```bash
 pio ci examples/Drivers/Ld2410 \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_LD2410=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_LD2410=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
@@ -105,7 +105,7 @@ The LD2410 sends a framed report ~10 times a second: a fixed **header** (`F4 F3 
 length, the data, and a **footer** (`F8 F7 F6 F5`). Serial data can arrive split across reads or
 with noise, so the library's `Ld2410Stream` reassembles frames one byte at a time - locking onto
 the header, reading the length, collecting exactly that many bytes, and checking the footer -
-then `pc_ld2410_parse_report()` pulls out the state, distances, energies, and (in engineering mode)
+then `protocore_ld2410_parse_report()` pulls out the state, distances, energies, and (in engineering mode)
 the per-gate values. It is a fixed-size buffer with **no heap** and it **resyncs** cleanly if a
 byte is dropped. The frame decoder and reassembler are unit-tested on a PC (see
 `test/test_ld2410`); only the UART read/write runs on the ESP32.

@@ -3,7 +3,7 @@
 
 /**
  * @file SmtpAlert.ino
- * @brief Send an email alert from the ESP32 with the SMTP client (PC_ENABLE_SMTP).
+ * @brief Send an email alert from the ESP32 with the SMTP client (PROTOCORE_ENABLE_SMTP).
  *
  * At boot the board joins WiFi and emails one short message to a mail server, then
  * prints whether it worked. The README beside this sketch walks you - from scratch -
@@ -13,11 +13,11 @@
  * Edit the six lines marked "CHANGE ME" below, flash, and open Serial @ 115200.
  *
  * NOTE (PlatformIO): SMTP is compiled into the *library*, so the flag must reach the
- * whole build: `build_flags = -DPC_ENABLE_SMTP=1`. In the Arduino IDE it is already
+ * whole build: `build_flags = -DPROTOCORE_ENABLE_SMTP=1`. In the Arduino IDE it is already
  * set for you in build_opt.h beside this sketch.
  */
 
-#define PC_ENABLE_SMTP 1
+#define PROTOCORE_ENABLE_SMTP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

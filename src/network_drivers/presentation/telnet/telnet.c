@@ -10,7 +10,7 @@
 #include "mmgr/protoframe.h" // frame.build: a console line is a spec, not a format string
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_TELNET
+#if PROTOCORE_ENABLE_TELNET
 
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
@@ -71,7 +71,7 @@ static TelnetConn *find_conn(uint8_t slot)
 
 static void raw_send(uint8_t slot, const void *data, size_t n)
 {
-    if (!pc_conn_active(slot) ||
+    if (!protocore_conn_active(slot) ||
         // fixed nonzero literal length. (Marker must sit on this line: gcov attributes
         // the whole multi-line condition's branches to the "if" line, not the operand's
         // own line - a marker on the next line silently fails to exclude anything.)
@@ -89,7 +89,7 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
 // (IAC WILL/DO/...) use raw_send directly - they send IAC intentionally.
 static void send_escaped(uint8_t slot, const void *data, size_t n)
 {
-    if (!pc_conn_active(slot) || n == 0)
+    if (!protocore_conn_active(slot) || n == 0)
     {
         return;
     }
@@ -118,7 +118,7 @@ static void send_escaped(uint8_t slot, const void *data, size_t n)
 // Connection lifecycle (called from the session layer)
 // ---------------------------------------------------------------------------
 
-static void pc_telnet_accept(uint8_t slot)
+static void protocore_telnet_accept(uint8_t slot)
 {
     TelnetConn *t = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -147,7 +147,7 @@ static void pc_telnet_accept(uint8_t slot)
     raw_send(slot, greet, sizeof(greet) - 1);
 }
 
-static void pc_telnet_close(uint8_t slot)
+static void protocore_telnet_close(uint8_t slot)
 {
     TelnetConn *t = find_conn(slot);
     if (t)
@@ -214,7 +214,7 @@ static void handle_data(uint8_t slot, TelnetConn *t, uint8_t b)
     }
 }
 
-static void pc_telnet_rx(uint8_t slot)
+static void protocore_telnet_rx(uint8_t slot)
 {
     TelnetConn *t = find_conn(slot);
     if (!t)
@@ -223,7 +223,7 @@ static void pc_telnet_rx(uint8_t slot)
     }
 
     uint8_t b;
-    while (pc_conn_read_byte(slot, &b))
+    while (protocore_conn_read_byte(slot, &b))
     {
         switch (t->st)
         // (TN_NORMAL/TN_IAC/TN_OPT/TN_SB/TN_SB_IAC) has a case below; the compiler's defensive "no case
@@ -303,7 +303,7 @@ static void pc_telnet_rx(uint8_t slot)
 // Application API
 // ---------------------------------------------------------------------------
 
-static void pc_telnet_on_command(TelnetCommandCb cb)
+static void protocore_telnet_on_command(TelnetCommandCb cb)
 {
     s_telnet.cmd_cb = cb;
 }
@@ -319,15 +319,15 @@ static void broadcast(const char *s, size_t n)
     }
 }
 
-static void pc_telnet_print(const char *s)
+static void protocore_telnet_print(const char *s)
 {
     if (s)
     {
-        broadcast(s, strnlen(s, TELNET_BUF_SIZE)); // line-oriented console, same cap as pc_telnet_printf
+        broadcast(s, strnlen(s, TELNET_BUF_SIZE)); // line-oriented console, same cap as protocore_telnet_printf
     }
 }
 
-static void pc_telnet_println(const char *s)
+static void protocore_telnet_println(const char *s)
 {
     if (s)
     {
@@ -336,7 +336,7 @@ static void pc_telnet_println(const char *s)
     broadcast("\r\n", 2);
 }
 
-static void pc_telnet_frame(const struct pc_field *spec, const struct pc_fval *v, size_t nv)
+static void protocore_telnet_frame(const struct protocore_field *spec, const struct protocore_fval *v, size_t nv)
 {
     char buf[TELNET_BUF_SIZE];
     size_t n = frame.build(buf, sizeof(buf), spec, v, nv);
@@ -346,7 +346,7 @@ static void pc_telnet_frame(const struct pc_field *spec, const struct pc_fval *v
     }
 }
 
-static uint8_t pc_telnet_client_count()
+static uint8_t protocore_telnet_client_count()
 {
     uint8_t c = 0;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -361,14 +361,14 @@ static uint8_t pc_telnet_client_count()
 
 // The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by Session.proto->register_builtins() via this
 // accessor, so this module carries no dependency on the session layer.
-static const ProtoHandler s_telnet_handler = {pc_telnet_accept, pc_telnet_rx, pc_telnet_close, NULL};
-static const ProtoHandler *pc_telnet_proto_handler(void)
+static const ProtoHandler s_telnet_handler = {protocore_telnet_accept, protocore_telnet_rx, protocore_telnet_close, NULL};
+static const ProtoHandler *protocore_telnet_protocore_handler(void)
 {
     return &s_telnet_handler;
 }
 
-const TelnetNs Telnet = {pc_telnet_on_command, pc_telnet_print,        pc_telnet_println,
-                         pc_telnet_frame,      pc_telnet_client_count, pc_telnet_accept,
-                         pc_telnet_rx,         pc_telnet_close,        pc_telnet_proto_handler};
+const TelnetNs Telnet = {protocore_telnet_on_command, protocore_telnet_print,        protocore_telnet_println,
+                         protocore_telnet_frame,      protocore_telnet_client_count, protocore_telnet_accept,
+                         protocore_telnet_rx,         protocore_telnet_close,        protocore_telnet_protocore_handler};
 
-#endif // PC_ENABLE_TELNET
+#endif // PROTOCORE_ENABLE_TELNET

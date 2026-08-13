@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_varint.h
+ * @file protocore_quic_varint.h
  * @brief QUIC variable-length integer coding (RFC 9000 sec 16).
  *
  * QUIC, HTTP/3 (RFC 9114), and QPACK (RFC 9204) encode most lengths and identifiers as a
@@ -21,27 +21,27 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 /** @brief Largest value a QUIC varint can hold (2^62 - 1). */
 #define QUIC_VARINT_MAX 0x3FFFFFFFFFFFFFFFull
 
 /** @brief Bytes @p value encodes to (1 / 2 / 4 / 8), or 0 if it exceeds QUIC_VARINT_MAX. */
-size_t pc_quic_varint_len(uint64_t value);
+size_t protocore_quic_varint_len(uint64_t value);
 
 /** @brief Encode @p value in its shortest form. @return bytes written, or 0 on overflow / cap. */
-size_t pc_quic_varint_encode(uint8_t *out, size_t cap, uint64_t value);
+size_t protocore_quic_varint_encode(uint8_t *out, size_t cap, uint64_t value);
 
 /**
  * @brief Decode a varint at @p in. Sets @p value and @p consumed (1/2/4/8). @return false if the
  * buffer is shorter than the length the first byte announces.
  */
-proto_bool pc_quic_varint_decode(const uint8_t *in, size_t len, uint64_t *value, size_t *consumed);
+proto_bool protocore_quic_varint_decode(const uint8_t *in, size_t len, uint64_t *value, size_t *consumed);
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_QUIC_VARINT_H

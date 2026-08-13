@@ -195,7 +195,7 @@ def main():
     if "--only" in sys.argv:
         only = sys.argv[sys.argv.index("--only") + 1]
 
-    work = os.path.join(os.environ.get("TEMP", "/tmp"), "pc_blob_regs")
+    work = os.path.join(os.environ.get("TEMP", "/tmp"), "protocore_blob_regs")
     doc = [
         "# Radio blob register map",
         "",

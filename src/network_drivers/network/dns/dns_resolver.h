@@ -3,24 +3,24 @@
 
 /**
  * @file resolver.h
- * @brief DNS resolver with answer verification (PC_ENABLE_DNS_RESOLVER).
+ * @brief DNS resolver with answer verification (PROTOCORE_ENABLE_DNS_RESOLVER).
  *
  * Resolves a hostname to an IPv4 address and classifies / verifies the answer: a remote name
  * resolving to 0.0.0.0, the broadcast address, loopback, or a multicast address is rejected as a
  * spoof / DNS-rebinding indicator.
  *
  * Nothing here blocks. The module owns one timer and one in-flight query: ::ResolverNs::resolve
- * starts the query, marks itself busy and returns ::PC_DNS_BUSY, and the caller asks again on its
+ * starts the query, marks itself busy and returns ::PROTOCORE_DNS_BUSY, and the caller asks again on its
  * own tick. The reply arrives on the UDP listener's normal drain, so the answer lands without this
  * module pumping anything. Busy is the sending side only - the reply handler is always armed.
  *
- * Two backends, chosen by PC_HAS_VENDOR_DNS_RESOLVER. Where the stack has its own resolver the
+ * Two backends, chosen by PROTOCORE_HAS_VENDOR_DNS_RESOLVER. Where the stack has its own resolver the
  * module marshals into it and inherits its nameserver and its cache. Where it does not, the portable
- * resolver asks PC_DNS_SERVER over the UDP listener - one query at a time, no cache - and
+ * resolver asks PROTOCORE_DNS_SERVER over the UDP listener - one query at a time, no cache - and
  * ::ResolverNs::set_server points it at whatever address DHCP or provisioning turned up.
  *
  * The query and the answer are codecs in their own right, so they are exported and tested as such:
- * ::pc_dns_query_build writes the question, ::pc_dns_answer_parse reads the first A record back, and
+ * ::protocore_dns_query_build writes the question, ::protocore_dns_answer_parse reads the first A record back, and
  * the resolve is what puts a socket between them.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -32,29 +32,29 @@
 
 #include "protocore_config.h"
 
-#if PC_NEED_DNS_RESOLVER
+#if PROTOCORE_NEED_DNS_RESOLVER
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief IPv4 address category (RFC special-purpose ranges). */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_IP_UNSPECIFIED = 0, ///< 0.0.0.0
-    PC_IP_LOOPBACK,        ///< 127.0.0.0/8
-    PC_IP_PRIVATE,         ///< 10/8, 172.16/12, 192.168/16
-    PC_IP_LINKLOCAL,       ///< 169.254.0.0/16
-    PC_IP_MULTICAST,       ///< 224.0.0.0/4
-    PC_IP_BROADCAST,       ///< 255.255.255.255
-    PC_IP_PUBLIC,          ///< globally-routable unicast
-} pc_ip_class;
+    PROTOCORE_IP_UNSPECIFIED = 0, ///< 0.0.0.0
+    PROTOCORE_IP_LOOPBACK,        ///< 127.0.0.0/8
+    PROTOCORE_IP_PRIVATE,         ///< 10/8, 172.16/12, 192.168/16
+    PROTOCORE_IP_LINKLOCAL,       ///< 169.254.0.0/16
+    PROTOCORE_IP_MULTICAST,       ///< 224.0.0.0/4
+    PROTOCORE_IP_BROADCAST,       ///< 255.255.255.255
+    PROTOCORE_IP_PUBLIC,          ///< globally-routable unicast
+} protocore_ip_class;
 
 /** @brief Where a resolve stands. */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_DNS_READY = 0, ///< out_ip holds the address
-    PC_DNS_BUSY,      ///< a query is out; ask again on the next tick
-    PC_DNS_FAILED,    ///< the query did not leave, or the one in flight passed its deadline
-} pc_dns_state;
+    PROTOCORE_DNS_READY = 0, ///< out_ip holds the address
+    PROTOCORE_DNS_BUSY,      ///< a query is out; ask again on the next tick
+    PROTOCORE_DNS_FAILED,    ///< the query did not leave, or the one in flight passed its deadline
+} protocore_dns_state;
 
 // ---------------------------------------------------------------------------
 // Host-testable core
@@ -76,7 +76,7 @@ typedef enum PROTO_ENUM_PACKED
  *
  * @return bytes written, or 0 when the name does not encode or does not fit @p cap.
  */
-size_t pc_dns_query_build(uint8_t *out, size_t cap, uint16_t id, const char *host);
+size_t protocore_dns_query_build(uint8_t *out, size_t cap, uint16_t id, const char *host);
 
 /**
  * @brief Read the first A record out of a response into @p out_ip, host order.
@@ -87,7 +87,7 @@ size_t pc_dns_query_build(uint8_t *out, size_t cap, uint16_t id, const char *hos
  *
  * @return true when an address was found, false also when the module's storage is unavailable.
  */
-proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip);
+proto_bool protocore_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip);
 
 // ---------------------------------------------------------------------------
 // Resolve
@@ -103,24 +103,24 @@ proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint
  * @var ResolverNs::busy      a query is out
  * @var ResolverNs::set_server  the nameserver the portable backend asks, as a literal address
  *
- * resolve() answers a dotted quad from the name itself and reports ::PC_DNS_READY. Any other name
- * starts a query, marks the module busy and reports ::PC_DNS_BUSY; the caller asks again with the
- * same host on its next tick and gets ::PC_DNS_READY once the reply parses, or ::PC_DNS_FAILED once
- * PC_DNS_TIMEOUT_MS passes. One query is in flight at a time, so a second host asked while busy
- * reports ::PC_DNS_BUSY until the first settles.
+ * resolve() answers a dotted quad from the name itself and reports ::PROTOCORE_DNS_READY. Any other name
+ * starts a query, marks the module busy and reports ::PROTOCORE_DNS_BUSY; the caller asks again with the
+ * same host on its next tick and gets ::PROTOCORE_DNS_READY once the reply parses, or ::PROTOCORE_DNS_FAILED once
+ * PROTOCORE_DNS_TIMEOUT_MS passes. One query is in flight at a time, so a second host asked while busy
+ * reports ::PROTOCORE_DNS_BUSY until the first settles.
  *
  * No storage member: the timer and the in-flight query belong to dns_resolver.c, and a caller
  * reaches them by calling.
  */
 typedef struct
 {
-    pc_ip_class (*classify)(uint32_t ip);
+    protocore_ip_class (*classify)(uint32_t ip);
     proto_bool (*verify)(uint32_t ip);
-    pc_dns_state (*resolve)(const char *host, uint32_t *out_ip);
-    pc_dns_state (*resolve_verified)(const char *host, uint32_t *out_ip);
+    protocore_dns_state (*resolve)(const char *host, uint32_t *out_ip);
+    protocore_dns_state (*resolve_verified)(const char *host, uint32_t *out_ip);
     proto_bool (*busy)(void);
     /**
-     * @brief Point the resolver at @p ip, a dotted quad, replacing PC_DNS_SERVER.
+     * @brief Point the resolver at @p ip, a dotted quad, replacing PROTOCORE_DNS_SERVER.
      *
      * What DHCP or provisioning turned up, once the app has it. False when @p ip does not parse, and
      * the previous server stands. On the vendor backend the stack owns its own nameserver list, so
@@ -132,7 +132,7 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const ResolverNs Resolver;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
-#endif // PC_NEED_DNS_RESOLVER
+#endif // PROTOCORE_NEED_DNS_RESOLVER
 #endif // PROTOCORE_DNS_RESOLVER_H

@@ -3,7 +3,7 @@
 
 /**
  * @file Pca9685.ino
- * @brief Drive servos / LEDs with a PCA9685 16-channel PWM board (PC_ENABLE_PCA9685).
+ * @brief Drive servos / LEDs with a PCA9685 16-channel PWM board (PROTOCORE_ENABLE_PCA9685).
  *
  * The PCA9685 gives the ESP32 sixteen hardware PWM channels over just two I2C wires - enough for
  * a walking robot, a set of dimmable LEDs, or one very smooth servo. This sketch sets the PWM
@@ -15,10 +15,10 @@
  * board's V+ screw terminal with a separate 5-6 V supply (a servo can draw far more than the
  * ESP32's 3V3 pin can give) and share GND.
  *
- * Build flag (PlatformIO): `-DPC_ENABLE_PCA9685=1`
+ * Build flag (PlatformIO): `-DPROTOCORE_ENABLE_PCA9685=1`
  */
 
-#define PC_ENABLE_PCA9685 1
+#define PROTOCORE_ENABLE_PCA9685 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
 #include "services/peripherals/pca9685/pca9685.h"
@@ -28,7 +28,7 @@ static const uint8_t SERVO_CH = 0;
 void setup()
 {
     Serial.begin(115200);
-    if (pc_pca9685_begin(0x40, 50)) // 50 Hz suits hobby servos
+    if (protocore_pca9685_begin(0x40, 50)) // 50 Hz suits hobby servos
     {
         Serial.println("PCA9685 ready - sweeping the servo on channel 0");
     }
@@ -43,12 +43,12 @@ void loop()
     // Sweep ~500 us..2500 us (roughly 0..180 degrees on a typical servo) and back.
     for (int us = 500; us <= 2500; us += 20)
     {
-        pc_pca9685_set_servo_us(SERVO_CH, us);
+        protocore_pca9685_set_servo_us(SERVO_CH, us);
         delay(15);
     }
     for (int us = 2500; us >= 500; us -= 20)
     {
-        pc_pca9685_set_servo_us(SERVO_CH, us);
+        protocore_pca9685_set_servo_us(SERVO_CH, us);
         delay(15);
     }
 }

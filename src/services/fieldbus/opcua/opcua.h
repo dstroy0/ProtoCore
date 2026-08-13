@@ -3,7 +3,7 @@
 
 /**
  * @file opcua.h
- * @brief OPC UA Binary server: handshake + SecureChannel + Session + Read/Write + Browse (PC_ENABLE_OPCUA).
+ * @brief OPC UA Binary server: handshake + SecureChannel + Session + Read/Write + Browse (PROTOCORE_ENABLE_OPCUA).
  *
  * OPC UA (IEC 62541) is large; this is built in increments. **Increment 1** is the
  * foundation every OPC UA server needs:
@@ -15,7 +15,7 @@
  *   - the **Hello / Acknowledge** handshake (OPC UA Part 6 §7.1.2): parse a
  *     client `HEL`, negotiate buffer sizes, emit an `ACK`.
  *
- * The codec + framing + handshake are pure and host-tested; pc_opcua_rx() is the
+ * The codec + framing + handshake are pure and host-tested; protocore_opcua_rx() is the
  * ProtoConn::PROTO_OPCUA TCP data handler (ESP32) - `listen(4840, ProtoConn::PROTO_OPCUA)` and a client
  * gets through the handshake. Session and the Read service are later increments.
  * SecurityPolicy is None (no encryption) for now.
@@ -53,9 +53,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_OPCUA
+#if PROTOCORE_ENABLE_OPCUA
 
 // ---------------------------------------------------------------------------
 // OPC UA Binary built-in type codec (little-endian; OPC UA Part 6 §5.2)
@@ -69,16 +69,16 @@ typedef struct
     size_t n;
     proto_bool ok;
 } UaWriter;
-void pc_ua_w_u8(UaWriter *w, uint8_t v);
-void pc_ua_w_u16(UaWriter *w, uint16_t v);
-void pc_ua_w_u32(UaWriter *w, uint32_t v);
-void pc_ua_w_u64(UaWriter *w, uint64_t v);
-void pc_ua_w_i32(UaWriter *w, int32_t v);
-void pc_ua_w_f32(UaWriter *w, float v);
-void pc_ua_w_f64(UaWriter *w, double v);
-void pc_ua_w_bool(UaWriter *w, proto_bool v);
+void protocore_ua_w_u8(UaWriter *w, uint8_t v);
+void protocore_ua_w_u16(UaWriter *w, uint16_t v);
+void protocore_ua_w_u32(UaWriter *w, uint32_t v);
+void protocore_ua_w_u64(UaWriter *w, uint64_t v);
+void protocore_ua_w_i32(UaWriter *w, int32_t v);
+void protocore_ua_w_f32(UaWriter *w, float v);
+void protocore_ua_w_f64(UaWriter *w, double v);
+void protocore_ua_w_bool(UaWriter *w, proto_bool v);
 /** @brief Encode a String/ByteString: int32 length (-1 = null) then the bytes. */
-void pc_ua_w_string(UaWriter *w, const char *s, int32_t len);
+void protocore_ua_w_string(UaWriter *w, const char *s, int32_t len);
 
 /** @brief Bounds-checked little-endian reader; @c err latches on underrun. */
 typedef struct
@@ -88,20 +88,20 @@ typedef struct
     size_t off;
     proto_bool err;
 } UaReader;
-uint8_t pc_ua_r_u8(UaReader *r);
-uint16_t pc_ua_r_u16(UaReader *r);
-uint32_t pc_ua_r_u32(UaReader *r);
-uint64_t pc_ua_r_u64(UaReader *r);
-int32_t pc_ua_r_i32(UaReader *r);
-float pc_ua_r_f32(UaReader *r);
-double pc_ua_r_f64(UaReader *r);
-proto_bool pc_ua_r_bool(UaReader *r);
+uint8_t protocore_ua_r_u8(UaReader *r);
+uint16_t protocore_ua_r_u16(UaReader *r);
+uint32_t protocore_ua_r_u32(UaReader *r);
+uint64_t protocore_ua_r_u64(UaReader *r);
+int32_t protocore_ua_r_i32(UaReader *r);
+float protocore_ua_r_f32(UaReader *r);
+double protocore_ua_r_f64(UaReader *r);
+proto_bool protocore_ua_r_bool(UaReader *r);
 /**
  * @brief Decode a String/ByteString into @p out (NUL-terminated, bounded).
  * @param out_len  set to the decoded length (or -1 for a null string).
  * @return false on underrun or if the value does not fit @p cap.
  */
-proto_bool pc_ua_r_string(UaReader *r, char *out, size_t cap, int32_t *out_len);
+proto_bool protocore_ua_r_string(UaReader *r, char *out, size_t cap, int32_t *out_len);
 
 // ---------------------------------------------------------------------------
 // UA-TCP (UACP) message framing
@@ -116,7 +116,7 @@ typedef struct
 } UaMsgHeader;
 
 /** @brief Parse the 8-byte UACP header from @p buf (need >= 8 bytes). */
-proto_bool pc_opcua_parse_header(const uint8_t *buf, size_t len, UaMsgHeader *h);
+proto_bool protocore_opcua_parse_header(const uint8_t *buf, size_t len, UaMsgHeader *h);
 
 // ---------------------------------------------------------------------------
 // Hello / Acknowledge handshake (OPC UA Part 6 §7.1.2)
@@ -133,28 +133,28 @@ typedef struct
 } OpcUaHello;
 
 /** @brief Parse a complete `HEL` message (header + body). @return true if valid. */
-proto_bool pc_opcua_parse_hello(const uint8_t *msg, size_t len, OpcUaHello *out);
+proto_bool protocore_opcua_parse_hello(const uint8_t *msg, size_t len, OpcUaHello *out);
 
 /**
  * @brief Build the `ACK` reply to a parsed Hello, negotiating buffer sizes down
- *        to the server's PC_OPCUA_BUF limit.
+ *        to the server's PROTOCORE_OPCUA_BUF limit.
  * @return total ACK message bytes written to @p out, or 0 if it does not fit.
  */
-size_t pc_opcua_build_ack(const OpcUaHello *hello, uint8_t *out, size_t cap);
+size_t protocore_opcua_build_ack(const OpcUaHello *hello, uint8_t *out, size_t cap);
 
 // Common transport-level status codes for a UACP ERR message (OPC UA Part 6 §7.1.2.4).
-#define PC_OPCUA_BAD_TCP_MESSAGE_TYPE_INVALID 0x807E0000u
-#define PC_OPCUA_BAD_TCP_MESSAGE_TOO_LARGE 0x80800000u
-#define PC_OPCUA_BAD_TCP_NOT_ENOUGH_RESOURCES 0x80810000u
-#define PC_OPCUA_BAD_TCP_INTERNAL_ERROR 0x80820000u
+#define PROTOCORE_OPCUA_BAD_TCP_MESSAGE_TYPE_INVALID 0x807E0000u
+#define PROTOCORE_OPCUA_BAD_TCP_MESSAGE_TOO_LARGE 0x80800000u
+#define PROTOCORE_OPCUA_BAD_TCP_NOT_ENOUGH_RESOURCES 0x80810000u
+#define PROTOCORE_OPCUA_BAD_TCP_INTERNAL_ERROR 0x80820000u
 
 /**
  * @brief Build a transport-level `ERR` message (the reply a server sends before closing when the handshake
  *        fails): `ERR F <size> <error:UInt32> <reason:String>`. @p error_code is an OPC UA StatusCode
- *        (PC_OPCUA_BAD_TCP_*); @p reason is a short UTF-8 diagnostic (may be null for a null String).
+ *        (PROTOCORE_OPCUA_BAD_TCP_*); @p reason is a short UTF-8 diagnostic (may be null for a null String).
  * @return total ERR message bytes written to @p out, or 0 on a null buffer / overflow.
  */
-size_t pc_opcua_build_error(uint32_t error_code, const char *reason, uint8_t *out, size_t cap);
+size_t protocore_opcua_build_error(uint32_t error_code, const char *reason, uint8_t *out, size_t cap);
 
 // ---------------------------------------------------------------------------
 // NodeId / ExtensionObject / DateTime (OPC UA Part 6 §5.2.2)
@@ -169,16 +169,16 @@ typedef struct
 } UaNodeId;
 
 /** @brief Encode a numeric NodeId, picking the smallest of the TwoByte/FourByte/Numeric forms. */
-void pc_ua_w_nodeid_numeric(UaWriter *w, uint16_t ns, uint32_t id);
+void protocore_ua_w_nodeid_numeric(UaWriter *w, uint16_t ns, uint32_t id);
 
 /**
  * @brief Decode a NodeId. Numeric forms fill @p out; String/Guid/ByteString ids
  *        are skipped (out->numeric=false). Latches @c err on an unknown form.
  */
-proto_bool pc_ua_r_nodeid(UaReader *r, UaNodeId *out);
+proto_bool protocore_ua_r_nodeid(UaReader *r, UaNodeId *out);
 
 /** @brief Convert a Unix epoch (seconds) to an OPC UA DateTime (100 ns ticks since 1601), 0 for <= 0. */
-int64_t pc_opcua_filetime_from_unix(int64_t unix_seconds);
+int64_t protocore_opcua_filetime_from_unix(int64_t unix_seconds);
 
 /** @brief Numeric NodeIds (namespace 0) the SecureChannel service uses (binary encoding ids). */
 #define OPCUA_ID_OPEN_REQ 446  ///< OpenSecureChannelRequest_Encoding_DefaultBinary.
@@ -205,7 +205,7 @@ typedef struct
 } OpcUaOpenChannel;
 
 /** @brief Parse a complete `OPN` message (SecurityPolicy None). @return true if valid. */
-proto_bool pc_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenChannel *out);
+proto_bool protocore_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenChannel *out);
 
 /**
  * @brief Build the `OPN` OpenSecureChannelResponse to a parsed request.
@@ -217,8 +217,9 @@ proto_bool pc_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenChannel 
  * @param lifetime   RevisedLifetime (ms) granted to the token.
  * @return total OPN message bytes written, or 0 if it does not fit @p cap.
  */
-size_t pc_opcua_build_open_response(const OpcUaOpenChannel *req, uint32_t channel_id, uint32_t token_id,
-                                    uint32_t seq_number, int64_t now_ft, uint32_t lifetime, uint8_t *out, size_t cap);
+size_t protocore_opcua_build_open_response(const OpcUaOpenChannel *req, uint32_t channel_id, uint32_t token_id,
+                                           uint32_t seq_number, int64_t now_ft, uint32_t lifetime, uint8_t *out,
+                                           size_t cap);
 
 // ---------------------------------------------------------------------------
 // Session - CreateSession / ActivateSession (MSG service calls, SecurityPolicy None)
@@ -246,7 +247,7 @@ typedef struct
  *        leading RequestHeader (every service request starts with one).
  * @return true if valid. @p out->type_id selects the service to dispatch.
  */
-proto_bool pc_opcua_parse_msg(const uint8_t *msg, size_t len, OpcUaMsg *out);
+proto_bool protocore_opcua_parse_msg(const uint8_t *msg, size_t len, OpcUaMsg *out);
 
 /** @brief Identity the server advertises in GetEndpoints / CreateSession endpoint descriptions. */
 typedef struct
@@ -269,17 +270,17 @@ typedef struct
  * @param now_ft          OPC UA DateTime for the response timestamp (0 = unset).
  * @return total MSG bytes written, or 0 if it does not fit @p cap.
  */
-size_t pc_opcua_build_create_session_response(const OpcUaMsg *req, uint32_t session_id, uint32_t auth_token,
-                                              double revised_timeout, const OpcUaServerInfo *info, uint32_t seq,
-                                              int64_t now_ft, uint8_t *out, size_t cap);
+size_t protocore_opcua_build_create_session_response(const OpcUaMsg *req, uint32_t session_id, uint32_t auth_token,
+                                                     double revised_timeout, const OpcUaServerInfo *info, uint32_t seq,
+                                                     int64_t now_ft, uint8_t *out, size_t cap);
 
 /**
  * @brief Build a `MSG` ActivateSessionResponse (SecurityPolicy None): ServiceResult Good,
  *        empty ServerNonce / Results / DiagnosticInfos.
  * @return total MSG bytes written, or 0 if it does not fit @p cap.
  */
-size_t pc_opcua_build_activate_session_response(const OpcUaMsg *req, uint32_t seq, int64_t now_ft, uint8_t *out,
-                                                size_t cap);
+size_t protocore_opcua_build_activate_session_response(const OpcUaMsg *req, uint32_t seq, int64_t now_ft, uint8_t *out,
+                                                       size_t cap);
 
 // ---------------------------------------------------------------------------
 // Read service (MSG, SecurityPolicy None) + Variant / DataValue encoding
@@ -326,16 +327,16 @@ typedef struct
 } OpcUaVariant;
 
 /** @brief Encode a scalar Variant: encoding byte (built-in type id) then the value. */
-void pc_ua_w_variant(UaWriter *w, const OpcUaVariant *v);
+void protocore_ua_w_variant(UaWriter *w, const OpcUaVariant *v);
 
 /** @brief Encode a DataValue: a value/status mask byte then the Variant and/or StatusCode. */
-void pc_ua_w_datavalue(UaWriter *w, const OpcUaVariant *v, uint32_t status);
+void protocore_ua_w_datavalue(UaWriter *w, const OpcUaVariant *v, uint32_t status);
 
 /**
  * @brief Decode a scalar Variant. A decoded OPCUA_VAR_STRING points into the source
  *        buffer (keep it alive). Non-scalar/array Variants latch @c err.
  */
-proto_bool pc_ua_r_variant(UaReader *r, OpcUaVariant *out);
+proto_bool protocore_ua_r_variant(UaReader *r, OpcUaVariant *out);
 
 /**
  * @brief Decode a DataValue: the mask byte, then (if present) the Variant value and
@@ -343,7 +344,7 @@ proto_bool pc_ua_r_variant(UaReader *r, OpcUaVariant *out);
  * @param out_value filled with the value (type 0 if no value field present).
  * @param out_status set to the StatusCode (0 if not present).
  */
-proto_bool pc_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32_t *out_status);
+proto_bool protocore_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32_t *out_status);
 
 /** @brief One NodeId + attribute the client wants to read (a ReadValueId). */
 typedef struct
@@ -359,12 +360,12 @@ typedef struct
 {
     OpcUaMsg msg;   ///< envelope + RequestHeader (type_id = ReadRequest).
     uint32_t total; ///< nodes requested (may exceed the captured count).
-    uint32_t count; ///< nodes captured (clamped to PC_OPCUA_READ_MAX).
-    OpcUaReadItem items[PC_OPCUA_READ_MAX];
+    uint32_t count; ///< nodes captured (clamped to PROTOCORE_OPCUA_READ_MAX).
+    OpcUaReadItem items[PROTOCORE_OPCUA_READ_MAX];
 } OpcUaReadRequest;
 
 /** @brief Parse a `MSG` ReadRequest. @return true if valid. */
-proto_bool pc_opcua_parse_read(const uint8_t *msg, size_t len, OpcUaReadRequest *out);
+proto_bool protocore_opcua_parse_read(const uint8_t *msg, size_t len, OpcUaReadRequest *out);
 
 /**
  * @brief Build a `MSG` ReadResponse: one DataValue per captured NodesToRead entry.
@@ -372,8 +373,9 @@ proto_bool pc_opcua_parse_read(const uint8_t *msg, size_t len, OpcUaReadRequest 
  * @param statuses per-node StatusCodes (0 = Good).
  * @return total MSG bytes written, or 0 if it does not fit @p cap.
  */
-size_t pc_opcua_build_read_response(const OpcUaReadRequest *req, const OpcUaVariant *values, const uint32_t *statuses,
-                                    uint32_t seq, int64_t now_ft, uint8_t *out, size_t cap);
+size_t protocore_opcua_build_read_response(const OpcUaReadRequest *req, const OpcUaVariant *values,
+                                           const uint32_t *statuses, uint32_t seq, int64_t now_ft, uint8_t *out,
+                                           size_t cap);
 
 /**
  * @brief Application Read resolver: fill @p out for (ns, id, attribute). Return false
@@ -382,7 +384,7 @@ size_t pc_opcua_build_read_response(const OpcUaReadRequest *req, const OpcUaVari
 typedef proto_bool (*OpcUaReadHandler)(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
 
 /** @brief Register the Read resolver the ProtoConn::PROTO_OPCUA server calls for each ReadRequest node. */
-void pc_opcua_set_read_handler(OpcUaReadHandler fn);
+void protocore_opcua_set_read_handler(OpcUaReadHandler fn);
 
 // ---------------------------------------------------------------------------
 // Browse service + Close (MSG, SecurityPolicy None)
@@ -403,10 +405,10 @@ void pc_opcua_set_read_handler(OpcUaReadHandler fn);
 #define OPCUA_TYPEDEF_BASE_DATA_VARIABLE 63
 
 /** @brief Encode a QualifiedName: NamespaceIndex (UInt16) + Name (String). */
-void pc_ua_w_qualifiedname(UaWriter *w, uint16_t ns, const char *name);
+void protocore_ua_w_qualifiedname(UaWriter *w, uint16_t ns, const char *name);
 
 /** @brief Encode a LocalizedText: a present-fields mask then the optional Locale / Text Strings. */
-void pc_ua_w_localizedtext(UaWriter *w, const char *locale, const char *text);
+void protocore_ua_w_localizedtext(UaWriter *w, const char *locale, const char *text);
 
 /** @brief One reference (ReferenceDescription) returned by a Browse. Strings are referenced, not copied. */
 typedef struct
@@ -423,7 +425,7 @@ typedef struct
 } OpcUaReference;
 
 /** @brief Encode a ReferenceDescription. */
-void pc_ua_w_reference(UaWriter *w, const OpcUaReference *ref);
+void protocore_ua_w_reference(UaWriter *w, const OpcUaReference *ref);
 
 /** @brief One NodeId the client wants to browse (a BrowseDescription). */
 typedef struct
@@ -439,11 +441,11 @@ typedef struct
     OpcUaMsg msg;
     uint32_t total;
     uint32_t count;
-    OpcUaBrowseItem items[PC_OPCUA_BROWSE_MAX];
+    OpcUaBrowseItem items[PROTOCORE_OPCUA_BROWSE_MAX];
 } OpcUaBrowseRequest;
 
 /** @brief Parse a `MSG` BrowseRequest. @return true if valid. */
-proto_bool pc_opcua_parse_browse(const uint8_t *msg, size_t len, OpcUaBrowseRequest *out);
+proto_bool protocore_opcua_parse_browse(const uint8_t *msg, size_t len, OpcUaBrowseRequest *out);
 
 /**
  * @brief Application Browse resolver: write up to @p max references for (ns, id) into
@@ -453,19 +455,19 @@ proto_bool pc_opcua_parse_browse(const uint8_t *msg, size_t len, OpcUaBrowseRequ
 typedef int32_t (*OpcUaBrowseHandler)(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max);
 
 /** @brief Register the Browse resolver the ProtoConn::PROTO_OPCUA server calls for each browsed node. */
-void pc_opcua_set_browse_handler(OpcUaBrowseHandler fn);
+void protocore_opcua_set_browse_handler(OpcUaBrowseHandler fn);
 
 /**
  * @brief Build a `MSG` BrowseResponse: one BrowseResult per browsed node, each with the
- *        references the @p handler returns (up to PC_OPCUA_REF_MAX).
+ *        references the @p handler returns (up to PROTOCORE_OPCUA_REF_MAX).
  * @return total MSG bytes written, or 0 if it does not fit @p cap.
  */
-size_t pc_opcua_build_browse_response(const OpcUaBrowseRequest *req, OpcUaBrowseHandler handler, uint32_t seq,
-                                      int64_t now_ft, uint8_t *out, size_t cap);
+size_t protocore_opcua_build_browse_response(const OpcUaBrowseRequest *req, OpcUaBrowseHandler handler, uint32_t seq,
+                                             int64_t now_ft, uint8_t *out, size_t cap);
 
 /** @brief Build a `MSG` CloseSessionResponse (ResponseHeader only, ServiceResult Good). */
-size_t pc_opcua_build_close_session_response(const OpcUaMsg *req, uint32_t seq, int64_t now_ft, uint8_t *out,
-                                             size_t cap);
+size_t protocore_opcua_build_close_session_response(const OpcUaMsg *req, uint32_t seq, int64_t now_ft, uint8_t *out,
+                                                    size_t cap);
 
 // ---------------------------------------------------------------------------
 // GetEndpoints + ServiceFault (third-party client interop)
@@ -480,21 +482,21 @@ size_t pc_opcua_build_close_session_response(const OpcUaMsg *req, uint32_t seq, 
 #define OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED 0x800B0000u
 
 /** @brief Encode one EndpointDescription (SecurityMode/Policy None, one Anonymous user-token policy). */
-void pc_ua_w_endpoint_description(UaWriter *w, const OpcUaServerInfo *info);
+void protocore_ua_w_endpoint_description(UaWriter *w, const OpcUaServerInfo *info);
 
 /** @brief Build a `MSG` GetEndpointsResponse advertising a single SecurityPolicy None endpoint. */
-size_t pc_opcua_build_get_endpoints_response(const OpcUaMsg *req, const OpcUaServerInfo *info, uint32_t seq,
-                                             int64_t now_ft, uint8_t *out, size_t cap);
+size_t protocore_opcua_build_get_endpoints_response(const OpcUaMsg *req, const OpcUaServerInfo *info, uint32_t seq,
+                                                    int64_t now_ft, uint8_t *out, size_t cap);
 
 /**
  * @brief Build a `MSG` ServiceFault (TypeId i=397) - a bare ResponseHeader carrying
  *        @p service_result, the reply for an unsupported/unknown service request.
  */
-size_t pc_opcua_build_service_fault(const OpcUaMsg *req, uint32_t service_result, uint32_t seq, int64_t now_ft,
-                                    uint8_t *out, size_t cap);
+size_t protocore_opcua_build_service_fault(const OpcUaMsg *req, uint32_t service_result, uint32_t seq, int64_t now_ft,
+                                           uint8_t *out, size_t cap);
 
 /** @brief Set the endpoint URL the ProtoConn::PROTO_OPCUA server advertises (GetEndpoints / CreateSession). */
-void pc_opcua_set_endpoint_url(const char *url);
+void protocore_opcua_set_endpoint_url(const char *url);
 
 // ---------------------------------------------------------------------------
 // Write service (MSG, SecurityPolicy None)
@@ -523,19 +525,19 @@ typedef struct
     OpcUaMsg msg;
     uint32_t total;
     uint32_t count;
-    OpcUaWriteItem items[PC_OPCUA_WRITE_MAX];
+    OpcUaWriteItem items[PROTOCORE_OPCUA_WRITE_MAX];
 } OpcUaWriteRequest;
 
 /** @brief Parse a `MSG` WriteRequest. @return true if valid. */
-proto_bool pc_opcua_parse_write(const uint8_t *msg, size_t len, OpcUaWriteRequest *out);
+proto_bool protocore_opcua_parse_write(const uint8_t *msg, size_t len, OpcUaWriteRequest *out);
 
 /**
  * @brief Build a `MSG` WriteResponse: one StatusCode per NodesToWrite entry.
  * @param results per-node StatusCodes (0 = Good); may be null (all Good).
  * @return total MSG bytes written, or 0 if it does not fit @p cap.
  */
-size_t pc_opcua_build_write_response(const OpcUaWriteRequest *req, const uint32_t *results, uint32_t seq,
-                                     int64_t now_ft, uint8_t *out, size_t cap);
+size_t protocore_opcua_build_write_response(const OpcUaWriteRequest *req, const uint32_t *results, uint32_t seq,
+                                            int64_t now_ft, uint8_t *out, size_t cap);
 
 /**
  * @brief Application Write resolver: apply @p value to (ns, id, attribute) and return a
@@ -545,7 +547,7 @@ size_t pc_opcua_build_write_response(const OpcUaWriteRequest *req, const uint32_
 typedef uint32_t (*OpcUaWriteHandler)(uint16_t ns, uint32_t id, uint32_t attribute, const OpcUaVariant *value);
 
 /** @brief Register the Write resolver the ProtoConn::PROTO_OPCUA server calls for each WriteRequest node. */
-void pc_opcua_set_write_handler(OpcUaWriteHandler fn);
+void protocore_opcua_set_write_handler(OpcUaWriteHandler fn);
 
 // ---------------------------------------------------------------------------
 // ESP32 TCP server (ProtoConn::PROTO_OPCUA data handler)
@@ -561,14 +563,14 @@ void pc_opcua_set_write_handler(OpcUaWriteHandler fn);
  * CloseSession -> their responses (Read/Write/Browse call the registered resolvers;
  * an unknown service draws a ServiceFault), `CLO` (CloseSecureChannel) -> close.
  */
-void pc_opcua_rx(uint8_t slot);
+void protocore_opcua_rx(uint8_t slot);
 
 /** @brief The OPC UA ProtoHandler (accessor; nullptr on host builds; installed by the builtins list). */
 struct ProtoHandler;
-const struct ProtoHandler *pc_opcua_proto_handler(void);
+const struct ProtoHandler *protocore_opcua_protocore_handler(void);
 
-#endif // PC_ENABLE_OPCUA
+#endif // PROTOCORE_ENABLE_OPCUA
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_OPCUA_H

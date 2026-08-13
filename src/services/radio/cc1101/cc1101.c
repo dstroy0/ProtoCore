@@ -8,7 +8,7 @@
 
 #include "services/radio/cc1101/cc1101.h"
 
-#if PC_ENABLE_CC1101
+#if PROTOCORE_ENABLE_CC1101
 
 // SPI header bits.
 static const uint8_t READ = 0x80;
@@ -29,14 +29,14 @@ static const uint8_t FIFO = 0x3F;
 // The chip status byte's state field (bits 6-4).
 static const uint8_t STATE_IDLE = 0;
 
-static void write_reg(const pc_cc1101_bus *b, uint8_t addr, uint8_t val)
+static void write_reg(const protocore_cc1101_bus *b, uint8_t addr, uint8_t val)
 {
     uint8_t tx[2] = {addr, val}; // header = address (write, single), then value
     uint8_t rx[2] = {0, 0};
     b->spi(tx, rx, 2, b->ctx);
 }
 
-static uint8_t read_reg(const pc_cc1101_bus *b, uint8_t addr, proto_bool status)
+static uint8_t read_reg(const protocore_cc1101_bus *b, uint8_t addr, proto_bool status)
 {
     // Status registers (0x30-0x3D) require the burst bit to distinguish them from strobes.
     uint8_t hdr = (uint8_t)(addr | READ | (status ? BURST : 0));
@@ -46,14 +46,14 @@ static uint8_t read_reg(const pc_cc1101_bus *b, uint8_t addr, proto_bool status)
     return rx[1];
 }
 
-static void strobe(const pc_cc1101_bus *b, uint8_t cmd)
+static void strobe(const protocore_cc1101_bus *b, uint8_t cmd)
 {
     uint8_t tx[1] = {cmd};
     uint8_t rx[1] = {0};
     b->spi(tx, rx, 1, b->ctx);
 }
 
-static uint8_t status_byte(const pc_cc1101_bus *b)
+static uint8_t status_byte(const protocore_cc1101_bus *b)
 {
     uint8_t tx[1] = {(uint8_t)(0x3D | READ | BURST)}; // SNOP as a read returns the status byte
     uint8_t rx[1] = {0};
@@ -61,14 +61,14 @@ static uint8_t status_byte(const pc_cc1101_bus *b)
     return rx[0];
 }
 
-int16_t pc_cc1101_rssi_dbm(uint8_t raw)
+int16_t protocore_cc1101_rssi_dbm(uint8_t raw)
 {
     // TI CC1101 datasheet: dBm = (raw >= 128 ? (raw - 256) : raw) / 2 - 74.
     int16_t r = raw >= 128 ? (int16_t)raw - 256 : (int16_t)raw;
     return (int16_t)(r / 2 - 74);
 }
 
-proto_bool pc_cc1101_init(const pc_cc1101_bus *bus, const pc_cc1101_config *cfg)
+proto_bool protocore_cc1101_init(const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)
 {
     if (!bus || !bus->spi || !cfg)
     {
@@ -84,7 +84,7 @@ proto_bool pc_cc1101_init(const pc_cc1101_bus *bus, const pc_cc1101_config *cfg)
     return ver != 0x00 && ver != 0xFF; // a floating bus reads all-0 or all-1
 }
 
-proto_bool pc_cc1101_send(const pc_cc1101_bus *bus, const uint8_t *data, uint8_t len)
+proto_bool protocore_cc1101_send(const protocore_cc1101_bus *bus, const uint8_t *data, uint8_t len)
 {
     if (!bus || !bus->spi || !data || len == 0 || len > 63)
     {
@@ -106,7 +106,7 @@ proto_bool pc_cc1101_send(const pc_cc1101_bus *bus, const uint8_t *data, uint8_t
     return PROTO_TRUE;
 }
 
-proto_bool pc_cc1101_tx_done(const pc_cc1101_bus *bus)
+proto_bool protocore_cc1101_tx_done(const protocore_cc1101_bus *bus)
 {
     if (!bus || !bus->spi)
     {
@@ -116,7 +116,7 @@ proto_bool pc_cc1101_tx_done(const pc_cc1101_bus *bus)
     return st == STATE_IDLE;
 }
 
-void pc_cc1101_set_rx(const pc_cc1101_bus *bus)
+void protocore_cc1101_set_rx(const protocore_cc1101_bus *bus)
 {
     if (!bus || !bus->spi)
     {
@@ -127,7 +127,7 @@ void pc_cc1101_set_rx(const pc_cc1101_bus *bus)
     strobe(bus, STROBE_SRX);
 }
 
-int pc_cc1101_recv(const pc_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm)
+int protocore_cc1101_recv(const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm)
 {
     if (!bus || !bus->spi || !buf)
     {
@@ -156,7 +156,7 @@ int pc_cc1101_recv(const pc_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t 
     bus->spi(tx, rx, (uint8_t)(1 + n), bus->ctx);
     if (rssi_dbm)
     {
-        *rssi_dbm = pc_cc1101_rssi_dbm(rx[1 + len]); // first appended status byte is raw RSSI
+        *rssi_dbm = protocore_cc1101_rssi_dbm(rx[1 + len]); // first appended status byte is raw RSSI
     }
     uint8_t out = len < cap ? len : cap;
     for (uint8_t i = 0; i < out; i++)
@@ -166,4 +166,4 @@ int pc_cc1101_recv(const pc_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t 
     return out;
 }
 
-#endif // PC_ENABLE_CC1101
+#endif // PROTOCORE_ENABLE_CC1101

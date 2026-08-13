@@ -3,7 +3,7 @@
 
 /**
  * @file umati.h
- * @brief umati - OPC UA for Machine Tools (OPC 40501-1) information model (PC_ENABLE_UMATI).
+ * @brief umati - OPC UA for Machine Tools (OPC 40501-1) information model (PROTOCORE_ENABLE_UMATI).
  *
  * umati ("universal machine technology interface") is the OPC UA companion specification for machine
  * tools (VDW / OPC Foundation, OPC 40501-1, namespace `http://opcfoundation.org/UA/MachineTool/`). It
@@ -11,7 +11,7 @@
  * umati dashboard, UaExpert, python `asyncua`, ...) reads the same structure across vendors.
  *
  * This module builds the MachineTool address space on top of the OPC UA Binary server
- * (`services/opcua`, PC_ENABLE_OPCUA): it registers a Browse + Read resolver that answers for the
+ * (`services/opcua`, PROTOCORE_ENABLE_OPCUA): it registers a Browse + Read resolver that answers for the
  * MachineTool node hierarchy and serves live values out of a caller-owned @ref UmatiMachineTool struct
  * you refresh in your loop. No heap, no stdlib - the model is a fixed node table, the values are
  * pointers/scalars in your struct.
@@ -44,7 +44,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_UMATI
+#if PROTOCORE_ENABLE_UMATI
 
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
 
@@ -136,28 +136,28 @@ typedef struct
  * @brief Bind the MachineTool the resolvers serve. @p mt must outlive the server (own it statically).
  *        Refresh its fields any time; each Read returns the current values.
  */
-void pc_umati_bind(const UmatiMachineTool *mt);
+void protocore_umati_bind(const UmatiMachineTool *mt);
 
 /**
  * @brief Read resolver for the MachineTool model (an @ref OpcUaReadHandler): fills @p out for a umati
  *        node's Value attribute. Returns false for a node outside the model (the server answers
- *        BadNodeIdUnknown). Install with `pc_opcua_set_read_handler(pc_umati_read)`.
+ *        BadNodeIdUnknown). Install with `protocore_opcua_set_read_handler(protocore_umati_read)`.
  */
-proto_bool pc_umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
+proto_bool protocore_umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
 
 /**
  * @brief Browse resolver for the MachineTool model (an @ref OpcUaBrowseHandler): writes the child
  *        references of a umati node (and of the Objects folder, which organizes the MachineTool) into
  *        @p out. Returns the count, or -1 for a node outside the model. Install with
- *        `pc_opcua_set_browse_handler(pc_umati_browse)`.
+ *        `protocore_opcua_set_browse_handler(protocore_umati_browse)`.
  */
-int32_t pc_umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max);
+int32_t protocore_umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max);
 
 /**
  * @brief Convenience: bind @p mt and register both resolvers on the OPC UA server in one call
- *        (`pc_opcua_set_read_handler` + `pc_opcua_set_browse_handler`). Call before `server.begin()`.
+ *        (`protocore_opcua_set_read_handler` + `protocore_opcua_set_browse_handler`). Call before `server.begin()`.
  */
-void pc_umati_install(const UmatiMachineTool *mt);
+void protocore_umati_install(const UmatiMachineTool *mt);
 
-#endif // PC_ENABLE_UMATI
+#endif // PROTOCORE_ENABLE_UMATI
 #endif // PROTOCORE_UMATI_H

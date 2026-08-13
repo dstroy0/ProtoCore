@@ -3,7 +3,7 @@
 
 /**
  * @file PortForward.ino
- * @brief Publish an internal service through the ESP32 with the TCP relay / DNAT (PC_ENABLE_RELAY).
+ * @brief Publish an internal service through the ESP32 with the TCP relay / DNAT (PROTOCORE_ENABLE_RELAY).
  *
  * The board fronts a port: anything that connects to the ESP32 on FRONT_PORT is relayed to an
  * internal `host:port` that the board can reach, and the return path comes back automatically. This
@@ -11,7 +11,7 @@
  * device that bridges the two networks.
  *
  * Wiring is two calls: `listen(FRONT_PORT, ProtoConn::PROTO_RELAY)` opens the front port, and
- * `pc_relay_publish()` binds it to the origin. The server's own poll loop pumps the bytes.
+ * `protocore_relay_publish()` binds it to the origin. The server's own poll loop pumps the bytes.
  *
  * Edit the lines marked "CHANGE ME" below, flash, and open Serial @ 115200. Then, from another
  * machine, connect to the board on FRONT_PORT and you reach the origin service.
@@ -20,14 +20,14 @@
  * side. Only publish trusted internal targets, and keep FRONT_PORT off untrusted networks.
  *
  * NOTE (PlatformIO): the relay is compiled into the *library*, so the flag must reach the whole
- * build: `build_flags = -DPC_ENABLE_RELAY=1`. In the Arduino IDE it is set for you in build_opt.h.
+ * build: `build_flags = -DPROTOCORE_ENABLE_RELAY=1`. In the Arduino IDE it is set for you in build_opt.h.
  */
 
-#define PC_ENABLE_RELAY 1
+#define PROTOCORE_ENABLE_RELAY 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/net/relay/relay_listener.h" // pc_relay_publish
+#include "services/net/relay/relay_listener.h" // protocore_relay_publish
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";
@@ -56,7 +56,7 @@ void setup()
 
     // Open the front port for the relay, then bind it to the origin.
     int32_t li = listen(FRONT_PORT, PROTO_RELAY);
-    if (li < 0 || !pc_relay_publish((uint8_t)li, ORIGIN_HOST, ORIGIN_PORT))
+    if (li < 0 || !protocore_relay_publish((uint8_t)li, ORIGIN_HOST, ORIGIN_PORT))
     {
         Serial.println("relay publish failed - check the front port and origin");
         return;

@@ -3,7 +3,7 @@
 
 /**
  * @file hart.h
- * @brief HART / HART-IP process-instrument protocol codec (PC_ENABLE_HART).
+ * @brief HART / HART-IP process-instrument protocol codec (PROTOCORE_ENABLE_HART).
  *
  * HART (Highway Addressable Remote Transducer, FieldComm) is the field-instrument protocol that rides
  * the 4-20 mA current loop as an FSK signal, and - as **HART-IP** - travels over UDP/TCP 5094 as the
@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HART
+#if PROTOCORE_ENABLE_HART
 
 /** @brief HART frame delimiter frame-type bits (low 3 bits) + long-address bit (bit 7). Wire values,
  *  the LONG_ADDR bit is OR'd in, so integer constants in a namespacing struct (cast-free). */
@@ -47,7 +47,7 @@ PROTO_BEGIN_DECLS
 #define HARTIP_HEADER_LEN 8
 
 /** @brief Longitudinal XOR checksum of @p len bytes (the HART frame check byte). */
-uint8_t pc_hart_checksum(const uint8_t *bytes, size_t len);
+uint8_t protocore_hart_checksum(const uint8_t *bytes, size_t len);
 
 /**
  * @brief Build a HART command frame (no preamble - the transport prepends the 0xFF sync bytes).
@@ -61,8 +61,8 @@ uint8_t pc_hart_checksum(const uint8_t *bytes, size_t len);
  * @param cap       capacity of @p out.
  * @return the frame length written, or 0 if it would not fit or addr_len is invalid.
  */
-size_t pc_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, uint8_t command, const uint8_t *data,
-                     size_t data_len, uint8_t *out, size_t cap);
+size_t protocore_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, uint8_t command,
+                            const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed HART frame (pointers into the input buffer). */
 typedef struct
@@ -80,7 +80,7 @@ typedef struct
  * @brief Validate + parse a HART frame (checksum checked).
  * @return true if the frame is well-formed and the checksum matches; fills @p out.
  */
-proto_bool pc_hart_parse(const uint8_t *frame, size_t len, HartFrame *out);
+proto_bool protocore_hart_parse(const uint8_t *frame, size_t len, HartFrame *out);
 
 /**
  * @brief Build the 8-octet HART-IP message header into @p out (>= 8 bytes).
@@ -91,8 +91,8 @@ proto_bool pc_hart_parse(const uint8_t *frame, size_t len, HartFrame *out);
  * @param total_len   total message length including this header (header + payload).
  * @return 8, or 0 if @p cap < 8.
  */
-size_t pc_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, uint16_t seq, uint16_t total_len,
-                              uint8_t *out, size_t cap);
+size_t protocore_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, uint16_t seq, uint16_t total_len,
+                                     uint8_t *out, size_t cap);
 
 /** @brief A parsed HART-IP message header + payload slice (the payload points into the input buffer). */
 typedef struct
@@ -112,10 +112,10 @@ typedef struct
  * @return true iff @p len >= 8 and the declared total length is 8..len (the whole message is present); false
  *         on a short buffer, a total length below the header, or a truncated message.
  */
-proto_bool pc_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *out);
+proto_bool protocore_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *out);
 
-#endif // PC_ENABLE_HART
+#endif // PROTOCORE_ENABLE_HART
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HART_H

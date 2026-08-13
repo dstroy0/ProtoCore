@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
 
 /**
  * @brief The two RFC 7541 primitives, in both directions, as HPACK and QPACK both call them.
@@ -55,8 +55,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const HpackPrimNs HpackPrim;
 
-#endif // PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HPACK_PRIM_H

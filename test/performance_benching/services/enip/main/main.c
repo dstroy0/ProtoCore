@@ -32,35 +32,35 @@ void dbench_run(void)
     static uint8_t rr_buf[64];
 
     // Pre-build a SendRRData block once so parse/extract bench a real, valid wire capture.
-    size_t rr_len = pc_eip_build_send_rr_data(rr_buf, sizeof(rr_buf), 0x12345678, sender_context, 5, cip, sizeof(cip));
+    size_t rr_len = protocore_eip_build_send_rr_data(rr_buf, sizeof(rr_buf), 0x12345678, sender_context, 5, cip, sizeof(cip));
 
     for (;;)
     {
         DBENCH_BANNER("enip");
         volatile size_t sink = 0;
 
-        DBENCH_OP("pc_eip_build_register_session", 100000,
-                  sink += pc_eip_build_register_session(reg_buf, sizeof(reg_buf), sender_context));
+        DBENCH_OP("protocore_eip_build_register_session", 100000,
+                  sink += protocore_eip_build_register_session(reg_buf, sizeof(reg_buf), sender_context));
 
-        DBENCH_OP("pc_eip_build_send_rr_data", 50000,
+        DBENCH_OP("protocore_eip_build_send_rr_data", 50000,
                   sink +=
-                  pc_eip_build_send_rr_data(rr_buf, sizeof(rr_buf), 0x12345678, sender_context, 5, cip, sizeof(cip)));
+                  protocore_eip_build_send_rr_data(rr_buf, sizeof(rr_buf), 0x12345678, sender_context, 5, cip, sizeof(cip)));
 
-        DBENCH_OP("pc_eip_parse", 100000, {
+        DBENCH_OP("protocore_eip_parse", 100000, {
             EipHeader h;
             const uint8_t *data;
             size_t data_len;
-            sink += pc_eip_parse(rr_buf, rr_len, &h, &data, &data_len) ? 1 : 0;
+            sink += protocore_eip_parse(rr_buf, rr_len, &h, &data, &data_len) ? 1 : 0;
         });
 
-        DBENCH_OP("pc_eip_parse_send_rr_data", 100000, {
+        DBENCH_OP("protocore_eip_parse_send_rr_data", 100000, {
             EipHeader h;
             const uint8_t *data;
             size_t data_len;
-            pc_eip_parse(rr_buf, rr_len, &h, &data, &data_len);
+            protocore_eip_parse(rr_buf, rr_len, &h, &data, &data_len);
             const uint8_t *out_cip;
             size_t out_len;
-            sink += pc_eip_parse_send_rr_data(data, data_len, &out_cip, &out_len) ? 1 : 0;
+            sink += protocore_eip_parse_send_rr_data(data, data_len, &out_cip, &out_len) ? 1 : 0;
         });
 
         (void)sink;

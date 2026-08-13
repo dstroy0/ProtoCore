@@ -3,7 +3,7 @@
 
 /**
  * @file StatsdMetrics.ino
- * @brief Push metrics to a StatsD collector (PC_ENABLE_STATSD).
+ * @brief Push metrics to a StatsD collector (PROTOCORE_ENABLE_STATSD).
  *
  * StatsD is the standard "push" metrics protocol - one UDP line per metric,
  * `name:value|type` - understood by Graphite/StatsD, Telegraf, Datadog, and friends. It is
@@ -16,10 +16,10 @@
  * quickly, run Telegraf with a `[[inputs.statsd]]` section, or the reference StatsD +
  * Graphite, or `nc -u -l 8125` to just watch the raw lines arrive.
  *
- * Build flags (PlatformIO): `-DPC_ENABLE_STATSD=1`
+ * Build flags (PlatformIO): `-DPROTOCORE_ENABLE_STATSD=1`
  */
 
-#define PC_ENABLE_STATSD 1
+#define PROTOCORE_ENABLE_STATSD 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -49,7 +49,7 @@ void setup()
 
     // Every metric this device sends is tagged so the collector can group by device (DogStatsD
     // tag syntax; harmless with plain StatsD collectors that ignore it).
-    pc_statsd_begin(STATSD_HOST, STATSD_PORT, "device:esp32-demo");
+    protocore_statsd_begin(STATSD_HOST, STATSD_PORT, "device:esp32-demo");
     Serial.printf("StatsD -> %s:%u\n", STATSD_HOST, STATSD_PORT);
 }
 
@@ -60,13 +60,13 @@ void loop()
     {
         last = millis();
 
-        pc_statsd_count("esp32.loops", 1);                              // a counter (rate over time)
-        pc_statsd_gauge("esp32.heap.free", (int64_t)ESP.getFreeHeap()); // a gauge (absolute level)
-        pc_statsd_gauge("esp32.uptime.s", (int64_t)(millis() / 1000));
+        protocore_statsd_count("esp32.loops", 1);                              // a counter (rate over time)
+        protocore_statsd_gauge("esp32.heap.free", (int64_t)ESP.getFreeHeap()); // a gauge (absolute level)
+        protocore_statsd_gauge("esp32.uptime.s", (int64_t)(millis() / 1000));
 
         uint32_t t0 = millis();
         // ... do some work you want to measure here ...
-        pc_statsd_timing("esp32.loop.work_ms", millis() - t0); // a timing/duration
+        protocore_statsd_timing("esp32.loop.work_ms", millis() - t0); // a timing/duration
 
         Serial.println("pushed metrics");
     }

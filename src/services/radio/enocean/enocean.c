@@ -12,18 +12,18 @@
 #include "services/radio/enocean/enocean.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_ENOCEAN
+#if PROTOCORE_ENABLE_ENOCEAN
 
-#include "shared_primitives/crc.h" // PC_CRC8_SMBUS
+#include "shared_primitives/crc.h" // PROTOCORE_CRC8_SMBUS
 
-uint8_t pc_esp3_crc8(const uint8_t *buf, uint16_t len)
+uint8_t protocore_esp3_crc8(const uint8_t *buf, uint16_t len)
 {
     // The ESP3 CRC-8 (the u8CRC8Table generator) is the cataloge's CRC-8/SMBUS: poly 0x07, MSB-first, init 0,
     // no final XOR.
-    return (uint8_t)pc_crc(&PC_CRC8_SMBUS, buf, len);
+    return (uint8_t)protocore_crc(&PROTOCORE_CRC8_SMBUS, buf, len);
 }
 
-int pc_esp3_parse(const uint8_t *raw, uint16_t len, pc_esp3_packet *out)
+int protocore_esp3_parse(const uint8_t *raw, uint16_t len, protocore_esp3_packet *out)
 {
     if (!raw || len < 1)
     {
@@ -40,11 +40,11 @@ int pc_esp3_parse(const uint8_t *raw, uint16_t len, pc_esp3_packet *out)
     uint16_t data_len = (uint16_t)((raw[1] << 8) | raw[2]);
     uint8_t opt_len = raw[3];
     uint8_t type = raw[4];
-    if (data_len > PC_ENOCEAN_MAX_DATA)
+    if (data_len > PROTOCORE_ENOCEAN_MAX_DATA)
     {
         return -1; // implausible length -> resynchronize
     }
-    if (pc_esp3_crc8(&raw[1], 4) != raw[5])
+    if (protocore_esp3_crc8(&raw[1], 4) != raw[5])
     {
         return -1; // header CRC mismatch
     }
@@ -53,13 +53,13 @@ int pc_esp3_parse(const uint8_t *raw, uint16_t len, pc_esp3_packet *out)
     {
         return 0; // wait for the rest of the telegram
     }
-    if (pc_esp3_crc8(&raw[6], (uint16_t)(data_len + opt_len)) != raw[6 + data_len + opt_len])
+    if (protocore_esp3_crc8(&raw[6], (uint16_t)(data_len + opt_len)) != raw[6 + data_len + opt_len])
     {
         return -1; // data CRC mismatch
     }
     if (out)
     {
-        out->type = (pc_esp3_type)type;
+        out->type = (protocore_esp3_type)type;
         out->data = &raw[6];
         out->data_len = data_len;
         out->opt = &raw[6 + data_len];
@@ -68,10 +68,10 @@ int pc_esp3_parse(const uint8_t *raw, uint16_t len, pc_esp3_packet *out)
     return (int)total;
 }
 
-uint16_t pc_esp3_build(pc_esp3_type type, const uint8_t *data, uint16_t data_len, const uint8_t *opt, uint8_t opt_len,
+uint16_t protocore_esp3_build(protocore_esp3_type type, const uint8_t *data, uint16_t data_len, const uint8_t *opt, uint8_t opt_len,
                        uint8_t *out, uint16_t cap)
 {
-    if (!out || data_len > PC_ENOCEAN_MAX_DATA)
+    if (!out || data_len > PROTOCORE_ENOCEAN_MAX_DATA)
     {
         return 0;
     }
@@ -85,7 +85,7 @@ uint16_t pc_esp3_build(pc_esp3_type type, const uint8_t *data, uint16_t data_len
     out[2] = (uint8_t)(data_len & 0xFF);
     out[3] = opt_len;
     out[4] = (uint8_t)type;
-    out[5] = pc_esp3_crc8(&out[1], 4);
+    out[5] = protocore_esp3_crc8(&out[1], 4);
     for (uint16_t i = 0; i < data_len; i++)
     {
         out[6 + i] = data[i];
@@ -94,11 +94,11 @@ uint16_t pc_esp3_build(pc_esp3_type type, const uint8_t *data, uint16_t data_len
     {
         out[6 + data_len + i] = opt[i];
     }
-    out[6 + data_len + opt_len] = pc_esp3_crc8(&out[6], (uint16_t)(data_len + opt_len));
+    out[6 + data_len + opt_len] = protocore_esp3_crc8(&out[6], (uint16_t)(data_len + opt_len));
     return (uint16_t)total;
 }
 
-proto_bool pc_erp1_parse(const uint8_t *data, uint16_t len, pc_erp1 *out)
+proto_bool protocore_erp1_parse(const uint8_t *data, uint16_t len, protocore_erp1 *out)
 {
     if (!data || !out || len < 6) // RORG(1) + sender id(4) + status(1)
     {
@@ -114,7 +114,7 @@ proto_bool pc_erp1_parse(const uint8_t *data, uint16_t len, pc_erp1 *out)
     return PROTO_TRUE;
 }
 
-uint16_t pc_erp1_build(uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *payload, uint8_t payload_len,
+uint16_t protocore_erp1_build(uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *payload, uint8_t payload_len,
                        uint32_t sender_id, uint8_t status)
 {
     if (!out || (payload_len && !payload))
@@ -141,4 +141,4 @@ uint16_t pc_erp1_build(uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *
     return p;
 }
 
-#endif // PC_ENABLE_ENOCEAN
+#endif // PROTOCORE_ENABLE_ENOCEAN

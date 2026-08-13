@@ -9,9 +9,9 @@
 #include "services/fieldbus/hart/hart.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HART
+#if PROTOCORE_ENABLE_HART
 
-uint8_t pc_hart_checksum(const uint8_t *bytes, size_t len)
+uint8_t protocore_hart_checksum(const uint8_t *bytes, size_t len)
 {
     uint8_t x = 0;
     for (size_t i = 0; i < len; i++)
@@ -21,7 +21,7 @@ uint8_t pc_hart_checksum(const uint8_t *bytes, size_t len)
     return x;
 }
 
-size_t pc_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, uint8_t command, const uint8_t *data,
+size_t protocore_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, uint8_t command, const uint8_t *data,
                      size_t data_len, uint8_t *out, size_t cap)
 {
     if (addr_len != 1 && addr_len != 5)
@@ -50,12 +50,12 @@ size_t pc_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, ui
         mem.cpy(out + i, data, data_len);
         i += data_len;
     }
-    out[i] = pc_hart_checksum(out, i); // XOR over delimiter..last data byte
+    out[i] = protocore_hart_checksum(out, i); // XOR over delimiter..last data byte
     i++;
     return i;
 }
 
-proto_bool pc_hart_parse(const uint8_t *frame, size_t len, HartFrame *out)
+proto_bool protocore_hart_parse(const uint8_t *frame, size_t len, HartFrame *out)
 {
     if (!frame || !out)
     {
@@ -77,7 +77,7 @@ proto_bool pc_hart_parse(const uint8_t *frame, size_t len, HartFrame *out)
         return PROTO_FALSE;
     }
 
-    uint8_t want = pc_hart_checksum(frame, expect - 1);
+    uint8_t want = protocore_hart_checksum(frame, expect - 1);
     if (want != frame[expect - 1])
     {
         return PROTO_FALSE;
@@ -93,7 +93,7 @@ proto_bool pc_hart_parse(const uint8_t *frame, size_t len, HartFrame *out)
     return PROTO_TRUE;
 }
 
-size_t pc_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, uint16_t seq, uint16_t total_len,
+size_t protocore_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, uint16_t seq, uint16_t total_len,
                               uint8_t *out, size_t cap)
 {
     if (cap < HARTIP_HEADER_LEN || !out)
@@ -111,7 +111,7 @@ size_t pc_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, 
     return HARTIP_HEADER_LEN;
 }
 
-proto_bool pc_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *out)
+proto_bool protocore_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *out)
 {
     if (!buf || !out || len < HARTIP_HEADER_LEN)
     {
@@ -133,4 +133,4 @@ proto_bool pc_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_HART
+#endif // PROTOCORE_ENABLE_HART

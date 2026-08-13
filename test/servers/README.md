@@ -95,7 +95,7 @@ echoes every topic the device publishes).
 For the device-as-client peers, set the device's target host to this machine's
 LAN IP (the rig in `C:\Users\Douglas\pio_fp` hard-codes test endpoints; edit its
 `main.cpp`). For device-as-server peers, flash the relevant feature
-(`PC_ENABLE_*`), note the printed IP, and pass it as `--host`.
+(`PROTOCORE_ENABLE_*`), note the printed IP, and pass it as `--host`.
 
 ## Adding a peer
 

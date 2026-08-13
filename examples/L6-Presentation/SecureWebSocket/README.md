@@ -1,6 +1,6 @@
 # SecureWebSocket - wss:// and SSE over TLS
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_TLS` (WebSocket + SSE on by default)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_TLS` (WebSocket + SSE on by default)
 
 ## What this example teaches
 
@@ -16,14 +16,14 @@ only `begin_tls()` (instead of `begin()`) makes them encrypted on 443:
 
 ```cpp
 server.on_ws("/ws", ws_connect, ws_message, ws_close);
-server.on_sse("/events", pc_sse_connect);
+server.on_sse("/events", protocore_sse_connect);
 int32_t result = server.begin_tls(443, SERVER_CERT_PEM, sizeof(SERVER_CERT_PEM),
                                        SERVER_KEY_PEM,  sizeof(SERVER_KEY_PEM));
 ```
 
 Under the hood, `wss` receive decrypts TLS records straight into the frame parser,
 and SSE is send-only over the same encrypted stream - so handlers still read
-plaintext from `ws_pool[ws_id].buf` and call `ws_send_text` / `pc_sse_broadcast`
+plaintext from `ws_pool[ws_id].buf` and call `ws_send_text` / `protocore_sse_broadcast`
 normally.
 
 > Demo cert/key as in [HTTPS](../../L4-Transport/HTTPS) - public, demo-only; the PEM blocks
@@ -33,7 +33,7 @@ normally.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_TLS=1 -DMAX_CONNS=4 -DPC_TLS_ARENA_SIZE=32768" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
   --lib="." examples/L6-Presentation/SecureWebSocket/SecureWebSocket.ino
 ```
 
@@ -51,7 +51,7 @@ PEM cert/key are elided here (see the `.ino`); the C++ is verbatim with comments
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_TLS 1
+#define PROTOCORE_ENABLE_TLS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -89,9 +89,9 @@ void ws_close(uint8_t ws_id)
     (void)ws_id;
 }
 
-void pc_sse_connect(uint8_t pc_sse_id)
+void protocore_sse_connect(uint8_t protocore_sse_id)
 {
-    server.pc_sse_send(pc_sse_id, "subscribed", "tick");
+    server.protocore_sse_send(protocore_sse_id, "subscribed", "tick");
 }
 
 void setup()
@@ -111,7 +111,7 @@ void setup()
 
     // Identical callbacks to the plaintext examples...
     server.on_ws("/ws", ws_connect, ws_message, ws_close);
-    server.on_sse("/events", pc_sse_connect);
+    server.on_sse("/events", protocore_sse_connect);
 
     // ...only begin_tls() differs: now everything is encrypted on :443.
     int32_t result = server.begin_tls(443, (const uint8_t *)SERVER_CERT_PEM, sizeof(SERVER_CERT_PEM),
@@ -134,7 +134,7 @@ void loop()
         last = millis();
         char buf[24];
         snprintf(buf, sizeof(buf), "%lu", (unsigned long)n++);
-        server.pc_sse_broadcast("/events", buf, "tick");
+        server.protocore_sse_broadcast("/events", buf, "tick");
     }
 }
 ```

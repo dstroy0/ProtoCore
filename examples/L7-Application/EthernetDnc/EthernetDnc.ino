@@ -3,7 +3,7 @@
 
 /**
  * @file EthernetDnc.ino
- * @brief Drip-feed a G-code program to a CNC controller over TCP (PC_ENABLE_DNC).
+ * @brief Drip-feed a G-code program to a CNC controller over TCP (PROTOCORE_ENABLE_DNC).
  *
  * "DNC" (Distributed Numerical Control) is how a program is streamed to a machine-tool
  * controller a block at a time, with XON/XOFF flow control so the sender pauses when the
@@ -13,16 +13,16 @@
  *
  * At boot the board joins WiFi, connects to the controller's program port, and drip-feeds a
  * short program with `dnc_stream`. The engine is transport-agnostic: this sketch supplies the
- * one piece of glue it needs - `cl_send` / `cl_recv` over `pc_client`, the shared outbound TCP
+ * one piece of glue it needs - `cl_send` / `cl_recv` over `protocore_client`, the shared outbound TCP
  * transport. `cl_recv` returns any reverse-channel bytes so the engine can honor XOFF/XON.
  *
  * Edit the lines marked "CHANGE ME" below, flash, and open Serial @ 115200.
  *
  * NOTE (PlatformIO): DNC is compiled into the *library*, so the flag must reach the whole build:
- * `build_flags = -DPC_ENABLE_DNC=1`. In the Arduino IDE it is set for you in build_opt.h.
+ * `build_flags = -DPROTOCORE_ENABLE_DNC=1`. In the Arduino IDE it is set for you in build_opt.h.
  */
 
-#define PC_ENABLE_DNC 1
+#define PROTOCORE_ENABLE_DNC 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -45,7 +45,7 @@ static const char *PROGRAM = "O0001 (DEMO)\n"
                              "N30 G1 X10 Y5 F100\n"
                              "N40 M30\n";
 
-// dnc_stream's transport seam, bound to pc_client.
+// dnc_stream's transport seam, bound to protocore_client.
 static int cl_send(void *ctx, const uint8_t *data, size_t len)
 {
     int cid = *(int *)ctx;

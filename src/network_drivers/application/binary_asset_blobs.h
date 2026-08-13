@@ -6,10 +6,10 @@
 
 /**
  * @file binary_asset_blobs.h
- * @brief Layer 7 - toggleable embedded theme stylesheets (PC_ENABLE_THEMES).
+ * @brief Layer 7 - toggleable embedded theme stylesheets (PROTOCORE_ENABLE_THEMES).
  *
  * A registry of minified CSS themes in flash (DROM), for serving/switching a theme at runtime.
- * Behind PC_ENABLE_THEMES so a build that does not want it links nothing.
+ * Behind PROTOCORE_ENABLE_THEMES so a build that does not want it links nothing.
  */
 
 #ifndef PROTOCORE_BINARY_ASSET_BLOBS_H
@@ -17,26 +17,26 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_THEMES
+#if PROTOCORE_ENABLE_THEMES
 
 #include <stddef.h>
 
 /** @brief One embedded theme: its name and its minified CSS (NUL-terminated flash string). */
-struct pc_theme_blob
+struct protocore_theme_blob
 {
     const char *name;
     const char *css;
 };
 
 /** @brief The embedded theme registry (sorted by name) and its count. */
-extern const pc_theme_blob PC_THEME_BLOBS[];
-extern const size_t PC_THEME_BLOB_COUNT;
+extern const protocore_theme_blob PROTOCORE_THEME_BLOBS[];
+extern const size_t PROTOCORE_THEME_BLOB_COUNT;
 
 /**
  * @brief Look up a theme's CSS by name (exact match).
  * @return the NUL-terminated minified CSS, or nullptr if no theme by that name is embedded.
  */
-const char *pc_theme_css(const char *name);
+const char *protocore_theme_css(const char *name);
 
-#endif // PC_ENABLE_THEMES
+#endif // PROTOCORE_ENABLE_THEMES
 #endif // PROTOCORE_BINARY_ASSET_BLOBS_H

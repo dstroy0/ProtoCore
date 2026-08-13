@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP2 && PC_ENABLE_TLS
+#if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
 #include "network_drivers/presentation/http/http2/h2_conn.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
@@ -17,24 +17,24 @@
 #include "network_drivers/transport/tcp.h"
 
 // The per-slot engines are large (~28 KB each), so the pool does not fit internal DRAM alongside
-// TLS - it lives in PSRAM (PC_H2_POOL_IN_PSRAM). Same mechanism/caveat as the TLS arena: it
+// TLS - it lives in PSRAM (PROTOCORE_H2_POOL_IN_PSRAM). Same mechanism/caveat as the TLS arena: it
 // needs a framework built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y (the stock
 // arduino-esp32 core ships it OFF, so EXT_RAM_BSS_ATTR would no-op); see tools/psram/README.md.
-#if PC_H2_POOL_IN_PSRAM && PC_HAS_PSRAM
+#if PROTOCORE_H2_POOL_IN_PSRAM && PROTOCORE_HAS_PSRAM
 #include <esp_attr.h> // pulls in sdkconfig.h -> CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
 #if !defined(CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY)
 #error                                                                                                                 \
-    "PC_H2_POOL_IN_PSRAM needs a framework built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y. The stock arduino-esp32 core ships it OFF, so EXT_RAM_BSS_ATTR silently no-ops and the pool would overflow internal DRAM. Rebuild the core (tools/psram/README.md) or unset PC_H2_POOL_IN_PSRAM."
+    "PROTOCORE_H2_POOL_IN_PSRAM needs a framework built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y. The stock arduino-esp32 core ships it OFF, so EXT_RAM_BSS_ATTR silently no-ops and the pool would overflow internal DRAM. Rebuild the core (tools/psram/README.md) or unset PROTOCORE_H2_POOL_IN_PSRAM."
 #endif
 #if defined(EXT_RAM_BSS_ATTR)
-#define PC_H2_POOL_ATTR EXT_RAM_BSS_ATTR // IDF v5 / arduino-esp32 3.x
+#define PROTOCORE_H2_POOL_ATTR EXT_RAM_BSS_ATTR // IDF v5 / arduino-esp32 3.x
 #elif defined(EXT_RAM_ATTR)
-#define PC_H2_POOL_ATTR EXT_RAM_ATTR // IDF v4 / arduino-esp32 2.x
+#define PROTOCORE_H2_POOL_ATTR EXT_RAM_ATTR // IDF v4 / arduino-esp32 2.x
 #else
-#define PC_H2_POOL_ATTR
+#define PROTOCORE_H2_POOL_ATTR
 #endif
 #else
-#define PC_H2_POOL_ATTR
+#define PROTOCORE_H2_POOL_ATTR
 #endif
 
 // RFC 9113 sec 8.3 defines five request pseudo-headers and sec 8.3.1 makes three of them mandatory.
@@ -59,7 +59,7 @@ typedef struct
     H2Conn pool[MAX_CONNS];
     uint8_t hmask[MAX_CONNS]; ///< per-slot header-block bits, cleared when the block is judged
 } H2ServerCtx;
-static PC_H2_POOL_ATTR H2ServerCtx s_h2;
+static PROTOCORE_H2_POOL_ATTR H2ServerCtx s_h2;
 
 // The bytes a field name may carry: an RFC 9110 token minus the uppercase letters RFC 9113 sec 8.2.1
 // forbids, so lowercase, digits and !#$%&'*+-.^_`|~ - one bit each over the 256 byte values. A byte
@@ -349,4 +349,4 @@ void pc_h2_server_close(uint8_t slot)
     conn_pool[slot].pc_resp_sink = NULL;
 }
 
-#endif // PC_ENABLE_HTTP2 && PC_ENABLE_TLS
+#endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS

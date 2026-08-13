@@ -1,6 +1,6 @@
 # PackML - the OMAC packaging-machine state model over HTTP
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_PACKML`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_PACKML`
 
 ## What this example teaches
 
@@ -34,16 +34,16 @@ is three functions plus a couple of predicates:
 
 ```cpp
 PackMlState s = PackMlState::STOPPED;
-s = pc_packml_command(s, PackMlCommand::RESET);   // -> Resetting  (invalid command -> unchanged)
-s = pc_packml_state_complete(s);                  // -> Idle       (acting states auto-advance)
-s = pc_packml_command(s, PackMlCommand::START);   // -> Starting
-s = pc_packml_state_complete(s);                  // -> Execute
-s = pc_packml_execute_complete(s);                // -> Completing (production run finished)
-pc_packml_command_valid(s, PackMlCommand::HOLD);  // is a command legal here?
-pc_packml_is_acting(s);                           // transient (auto-advancing) vs wait state?
+s = protocore_packml_command(s, PackMlCommand::RESET);   // -> Resetting  (invalid command -> unchanged)
+s = protocore_packml_state_complete(s);                  // -> Idle       (acting states auto-advance)
+s = protocore_packml_command(s, PackMlCommand::START);   // -> Starting
+s = protocore_packml_state_complete(s);                  // -> Execute
+s = protocore_packml_execute_complete(s);                // -> Completing (production run finished)
+protocore_packml_command_valid(s, PackMlCommand::HOLD);  // is a command legal here?
+protocore_packml_is_acting(s);                           // transient (auto-advancing) vs wait state?
 ```
 
-On top, the **owned service** (`pc_packml_svc_*`) carries the PackTags a real machine reports: the
+On top, the **owned service** (`protocore_packml_svc_*`) carries the PackTags a real machine reports: the
 current state + unit mode, `MachSpeedActual`, the `ProdProcessedCount` / `ProdDefectiveCount`
 production counters, and the `StateCurrentTime` / `AccTimeSinceReset` timers - so the sketch just
 drives commands and reads a status snapshot.
@@ -62,7 +62,7 @@ GET /packml/unsuspend  GET /packml/abort     GET /packml/clear   GET /packml/com
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_PACKML=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PACKML=1" \
   --lib="." examples/L7-Application/PackML/PackML.ino
 ```
 

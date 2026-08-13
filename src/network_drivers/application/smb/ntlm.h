@@ -3,7 +3,7 @@
 
 /**
  * @file ntlm.h
- * @brief NTLMv2 response computation (MS-NLMP §3.3.2) for the SMB2 client (PC_ENABLE_SMB).
+ * @brief NTLMv2 response computation (MS-NLMP §3.3.2) for the SMB2 client (PROTOCORE_ENABLE_SMB).
  *
  * The auth core: from the user's password and the server's CHALLENGE (the 8-byte server challenge
  * + the target-info AV_PAIR blob), compute the NtChallengeResponse and the session base key that
@@ -27,12 +27,12 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
 /** @brief The NT hash: MD4 of the UTF-16LE password (@p password is ASCII/UTF-8, NUL-terminated). */
-void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16]);
+void protocore_ntlm_nt_hash(const char *password, uint8_t nt_hash[16]);
 
 /**
  * @brief NTOWFv2 = HMAC-MD5(NThash, UTF-16LE(Uppercase(user) + domain)).
@@ -40,12 +40,12 @@ void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16]);
  * Only the @p user is uppercased (ASCII), not the @p domain (MS-NLMP). Both are NUL-terminated.
  * @return true; false if user + domain exceed the internal 256-char scratch.
  */
-proto_bool pc_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16]);
+proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16]);
 
 /**
  * @brief Compute the NTLMv2 NtChallengeResponse (NTProofStr + temp) and the session base key.
  *
- * @param owf              NTOWFv2 (from pc_ntlm_ntowfv2).
+ * @param owf              NTOWFv2 (from protocore_ntlm_ntowfv2).
  * @param server_challenge the 8-byte challenge from the server's CHALLENGE_MESSAGE.
  * @param client_challenge the 8-byte client-generated challenge.
  * @param timestamp        the 8-byte little-endian FILETIME (may be zero).
@@ -53,9 +53,10 @@ proto_bool pc_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const ch
  * @param session_key      receives the 16-byte SessionBaseKey (may be null).
  * @return the NtChallengeResponse length written to @p out (48 + @p ti_len), or 0 on overflow.
  */
-size_t pc_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8], const uint8_t client_challenge[8],
-                           const uint8_t timestamp[8], const uint8_t *target_info, size_t ti_len, uint8_t *out,
-                           size_t out_cap, uint8_t session_key[16]);
+size_t protocore_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8],
+                                  const uint8_t client_challenge[8], const uint8_t timestamp[8],
+                                  const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap,
+                                  uint8_t session_key[16]);
 
 /**
  * @brief Copy the CHALLENGE target-info AV_PAIR list into @p out, setting the MsvAvFlags (AvId 6)
@@ -64,12 +65,12 @@ size_t pc_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge
  * If an MsvAvFlags pair is already present its value is OR'd with 0x2; otherwise a new
  * `AvId=6, AvLen=4, value=0x00000002` pair is inserted immediately before the MsvAvEOL (AvId 0)
  * terminator. The resulting blob is what the NTLMv2 response is computed over, so the server sees the
- * flag and verifies the MIC. Call before ::pc_ntlm_v2_response and feed it the returned blob.
+ * flag and verifies the MIC. Call before ::protocore_ntlm_v2_response and feed it the returned blob.
  *
  * @return the new target-info length in @p out (@p ti_len, or @p ti_len + 8 when a pair was inserted),
  *         or 0 on a null pointer / overflow / a malformed (unterminated) list.
  */
-size_t pc_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap);
+size_t protocore_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap);
 
 /**
  * @brief The NTLMSSP AUTHENTICATE MIC (MS-NLMP §3.1.5.1.2): HMAC-MD5 over the concatenation of the
@@ -79,14 +80,14 @@ size_t pc_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *
  *   MIC = HMAC-MD5(session_key, NEGOTIATE_MESSAGE || CHALLENGE_MESSAGE || AUTHENTICATE_MESSAGE)
  *
  * The three are the raw NTLMSSP token bytes (not SPNEGO-wrapped); @p auth must already have its 16-byte
- * MIC field zeroed (as ::pc_ntlmssp_build_authenticate leaves it). Streams the parts, so no scratch
+ * MIC field zeroed (as ::protocore_ntlmssp_build_authenticate leaves it). Streams the parts, so no scratch
  * concatenation buffer is needed.
  */
-void pc_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_len, const uint8_t *chal,
-                 size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t out[16]);
+void protocore_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_len, const uint8_t *chal,
+                        size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t out[16]);
 
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_ENABLE_SMB
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NTLM_H

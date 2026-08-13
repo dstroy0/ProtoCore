@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_dtls_record.h
+ * @file protocore_dtls_record.h
  * @brief DTLS 1.3 record layer (RFC 9147 §4).
  *
  * The datagram counterpart to the TLS 1.3 record layer: it protects and unprotects individual
  * UDP-carried records. This is the transport-specific half of DTLS 1.3; the handshake it carries
- * reuses the TLS 1.3 crypto that already backs HTTP/3 (pc_tls13_*, pc_hkdf, aes128gcm).
+ * reuses the TLS 1.3 crypto that already backs HTTP/3 (protocore_tls13_*, protocore_hkdf, aes128gcm).
  *
  * Two record shapes (RFC 9147 §4):
  *   - **DTLSPlaintext** - the classic 13-byte header (type, legacy_version, epoch, 48-bit sequence
@@ -19,7 +19,7 @@
  *
  * ─ Reuse ─
  *   AEAD (AEAD_AES_128_GCM) and the AES-128 block used for sequence-number encryption come from
- *   aes128gcm; key/iv/sn derivation from pc_hkdf (HKDF-Expand-Label). Phase 1 supports the one
+ *   aes128gcm; key/iv/sn derivation from protocore_hkdf (HKDF-Expand-Label). Phase 1 supports the one
  *   cipher suite the whole hand-rolled TLS 1.3 stack uses: TLS_AES_128_GCM_SHA256.
  *
  * Pure, zero heap, host-tested. Not the mbedTLS TCP-TLS engine (network_drivers/tls) - this is the
@@ -32,36 +32,36 @@
 #ifndef PROTOCORE_DTLS_RECORD_H
 #define PROTOCORE_DTLS_RECORD_H
 
-#include "crypto/aead/aes128gcm.h" // pc_aes128gcm_key, PC_WORK_AES128GCM
+#include "crypto/aead/aes128gcm.h" // protocore_aes128gcm_key, PROTOCORE_WORK_AES128GCM
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DTLS
+#if PROTOCORE_ENABLE_DTLS
 
 /** @name Record content types (RFC 8446 §5 / RFC 9147 §4).
  *  Shared by the DTLSPlaintext `type` field and the DTLSInnerPlaintext trailing content type. */
 ///@{
-#define PC_DTLS_CT_CHANGE_CIPHER_SPEC 20
-#define PC_DTLS_CT_ALERT 21
-#define PC_DTLS_CT_HANDSHAKE 22
-#define PC_DTLS_CT_APPLICATION_DATA 23
-#define PC_DTLS_CT_ACK 26 ///< DTLS 1.3 acknowledgement (RFC 9147 §7)
+#define PROTOCORE_DTLS_CT_CHANGE_CIPHER_SPEC 20
+#define PROTOCORE_DTLS_CT_ALERT 21
+#define PROTOCORE_DTLS_CT_HANDSHAKE 22
+#define PROTOCORE_DTLS_CT_APPLICATION_DATA 23
+#define PROTOCORE_DTLS_CT_ACK 26 ///< DTLS 1.3 acknowledgement (RFC 9147 §7)
 ///@}
 
 /** @brief DTLSPlaintext legacy_version on the wire: DTLS 1.2 (RFC 9147 §4). */
-#define PC_DTLS_LEGACY_VERSION 0xFEFD
+#define PROTOCORE_DTLS_LEGACY_VERSION 0xFEFD
 
 /** @brief DTLSPlaintext header length: type(1) + version(2) + epoch(2) + seq(6) + length(2). */
-#define PC_DTLS_PLAINTEXT_HDR_LEN 13
+#define PROTOCORE_DTLS_PLAINTEXT_HDR_LEN 13
 
 /** @brief AEAD tag length (all supported suites: 16 bytes). */
-#define PC_DTLS_TAG_LEN 16
+#define PROTOCORE_DTLS_TAG_LEN 16
 
 /** @brief Largest connection id carried in a DTLSCiphertext header (RFC 9146 / RFC 9147 §9). The CID
  *         is not length-prefixed on the wire, so the receiver must know its length from negotiation; 8
  *         bytes is ample routing entropy and bounds the fixed header-scratch buffers. */
-#define PC_DTLS_CID_MAX 8
+#define PROTOCORE_DTLS_CID_MAX 8
 
 /** @brief Record-layer AEAD suites (phase 1: AEAD_AES_128_GCM with SHA-256). */
 typedef enum PROTO_ENUM_PACKED
@@ -77,14 +77,14 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct
 {
-    DtlsCipher cipher;                          ///< negotiated AEAD (phase 1: AES-128-GCM)
-    uint16_t epoch;                             ///< this epoch number; its low 2 bits appear in the unified header
-    _Alignas(8) uint8_t gcm[PC_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
-                                                ///< Replaces the raw key: the schedule is what the
-                                                ///< AEAD needs, so no raw key stays resident.
-    uint8_t iv[12];                             ///< AEAD write IV (per-record nonce = iv XOR sequence_number)
-    _Alignas(8) uint8_t sn_key[PC_WORK_AES128]; ///< Keyed sequence-number-protection context.
-                                                ///< Built once; see quic_crypto.h for the numbers.
+    DtlsCipher cipher; ///< negotiated AEAD (phase 1: AES-128-GCM)
+    uint16_t epoch;    ///< this epoch number; its low 2 bits appear in the unified header
+    _Alignas(8) uint8_t gcm[PROTOCORE_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
+                                                       ///< Replaces the raw key: the schedule is what the
+                                                       ///< AEAD needs, so no raw key stays resident.
+    uint8_t iv[12];                                    ///< AEAD write IV (per-record nonce = iv XOR sequence_number)
+    _Alignas(8) uint8_t sn_key[PROTOCORE_WORK_AES128]; ///< Keyed sequence-number-protection context.
+                                                       ///< Built once; see quic_crypto.h for the numbers.
 } DtlsRecordKeys;
 
 // ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ typedef struct
 // DTLSCiphertext (RFC 9147 §4): AEAD-protected record with the unified header
 // ---------------------------------------------------------------------------
 
-/** @brief Result of a successful @ref pc_dtls_ciphertext_unprotect. */
+/** @brief Result of a successful @ref protocore_dtls_ciphertext_unprotect. */
 typedef struct
 {
     uint8_t content_type; ///< recovered inner content type (last non-zero byte of the inner plaintext)
@@ -138,7 +138,7 @@ typedef struct
  * @var DtlsRecordNs::protect        seal one record (RFC 9147 sec 4.2): the unified header, the AEAD-sealed body, and
  * the encrypted sequence number. The nonce is iv XOR seq and the associated data is the header carrying the plaintext
  * sequence number. A non-zero @p cid_len puts the peer's connection id in the header and under the AAD, and must not
- * exceed PC_DTLS_CID_MAX. Bytes written, or 0 on overflow, an unsupported cipher, or an over-long CID
+ * exceed PROTOCORE_DTLS_CID_MAX. Bytes written, or 0 on overflow, an unsupported cipher, or an over-long CID
  * @var DtlsRecordNs::unprotect      open one received record: decrypt the sequence number, rebuild the full one from
  *                             @p next_seq, open the AEAD, and strip the inner content type and padding.
  *                             @p keys must be the epoch whose low 2 bits match the header. A non-zero
@@ -166,8 +166,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DtlsRecordNs DtlsRecord;
 
-#endif // PC_ENABLE_DTLS
+#endif // PROTOCORE_ENABLE_DTLS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DTLS_RECORD_H

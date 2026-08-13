@@ -6,10 +6,10 @@
 // CRC-validating de-blocking parser. Pure (no socket), so it links standalone. The device figure comes
 // from the rig /bench op; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_DNP3=1 test/performance_benching/services/dnp3/host.c
+//   -DPROTOCORE_ENABLE_DNP3=1 test/performance_benching/services/dnp3/host.c
 //   src/services/energy/dnp3/dnp3.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bd && /tmp/bd
 
-#define PC_ENABLE_DNP3 1
+#define PROTOCORE_ENABLE_DNP3 1
 #include "services/energy/dnp3/dnp3.h"
 
 #include "host_bench.h"
@@ -28,7 +28,7 @@ int main(void)
     memcpy(block, user, DNP3_BLOCK_LEN);
 
     uint8_t frame[512];
-    size_t frame_len = pc_dnp3_build_frame(frame, sizeof(frame), 0x44, 0x0001, 0x0002, user, sizeof(user));
+    size_t frame_len = protocore_dnp3_build_frame(frame, sizeof(frame), 0x44, 0x0001, 0x0002, user, sizeof(user));
 
     hbench_header();
 
@@ -36,7 +36,7 @@ int main(void)
     {
         volatile uint16_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(10000000, sink ^= pc_dnp3_crc(block, sizeof(block)), ns);
+        HBENCH_NS(10000000, sink ^= protocore_dnp3_crc(block, sizeof(block)), ns);
         hbench_row("dnp3", "crc16 (16-octet block)", ns, (double)DNP3_BLOCK_LEN);
         (void)sink;
     }
@@ -45,7 +45,7 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += pc_dnp3_build_frame(frame, sizeof(frame), 0x44, 1, 2, user, 32), ns);
+        HBENCH_NS(2000000, sink += protocore_dnp3_build_frame(frame, sizeof(frame), 0x44, 1, 2, user, 32), ns);
         hbench_row("dnp3", "build_frame (32B user)", ns, (double)frame_len);
         (void)sink;
     }
@@ -60,7 +60,7 @@ int main(void)
                 Dnp3Frame f;
                 uint8_t out[256];
                 size_t ul = 0;
-                if (pc_dnp3_parse_frame(frame, frame_len, &f, out, sizeof(out), &ul))
+                if (protocore_dnp3_parse_frame(frame, frame_len, &f, out, sizeof(out), &ul))
                 {
                     sink += ul;
                 }

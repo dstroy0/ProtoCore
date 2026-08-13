@@ -2,7 +2,7 @@
 # Generate the merged compile_commands.json for the SonarQube C/C++ analyzer.
 # Run from anywhere with PlatformIO (`pio`) on PATH.
 #
-# No single env enables all PC_ENABLE_* features, so a feature-gated source file
+# No single env enables all PROTOCORE_ENABLE_* features, so a feature-gated source file
 # is only compiled in the env that turns its flag on; we run compiledb per env and
 # merge (merge_compiledb.py) to cover every file.
 #

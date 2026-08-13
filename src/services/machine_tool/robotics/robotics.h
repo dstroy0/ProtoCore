@@ -3,7 +3,7 @@
 
 /**
  * @file robotics.h
- * @brief OPC UA for Robotics (OPC 40010-1) MotionDevice information model (PC_ENABLE_ROBOTICS).
+ * @brief OPC UA for Robotics (OPC 40010-1) MotionDevice information model (PROTOCORE_ENABLE_ROBOTICS).
  *
  * OPC 40010-1 "OPC UA for Robotics - Part 1: Vertical Integration" (VDMA / OPC Foundation, namespace
  * `http://opcfoundation.org/UA/Robotics/`) standardizes how an industrial robot / motion device exposes
@@ -11,7 +11,7 @@
  * reads the same MotionDeviceSystem structure across vendors.
  *
  * This module builds the MotionDeviceSystem address space on top of the OPC UA Binary server
- * (`services/opcua`, PC_ENABLE_OPCUA): it registers a Browse + Read resolver that answers for the
+ * (`services/opcua`, PROTOCORE_ENABLE_OPCUA): it registers a Browse + Read resolver that answers for the
  * MotionDeviceSystem node hierarchy and serves live values out of a caller-owned @ref
  * RoboticsMotionDeviceSystem struct you refresh in your loop. Same pattern as `services/umati`
  * (OPC 40501-1); no heap, no stdlib - the model is a fixed node table, the values are pointers/scalars
@@ -33,7 +33,7 @@
  *         ParameterSet   OperationalMode, EmergencyStop, ProtectiveStop
  *
  * The model is read-only (a monitoring model - the robot reports, the client observes). Scope note: one
- * MotionDevice / Controller / SafetyState and PC_ROBOTICS_AXES parametric axes are exposed (the common
+ * MotionDevice / Controller / SafetyState and PROTOCORE_ROBOTICS_AXES parametric axes are exposed (the common
  * embedded robot); the values carry faithful BrowseNames, but the companion-spec TypeDefinitions,
  * PowerTrains, and the NamespaceArray entry for the Robotics URI (which needs array-Variant support in
  * the base server) are a documented follow-on - a generic OPC UA client still browses the structure and
@@ -48,7 +48,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_ROBOTICS
+#if PROTOCORE_ENABLE_ROBOTICS
 
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
 
@@ -128,16 +128,16 @@ typedef struct
 /** @brief One MotionDevice: identity + live motion state (OPC 40010-1 MotionDeviceType, common subset). */
 typedef struct
 {
-    const char *manufacturer;              ///< Manufacturer (LocalizedText -> String).
-    const char *model;                     ///< Model (LocalizedText -> String).
-    const char *product_code;              ///< ProductCode (String).
-    const char *serial_number;             ///< SerialNumber (String).
-    RoboticsMotionDeviceCategory category; ///< MotionDeviceCategory.
-    proto_bool on_path;                    ///< ParameterSet.OnPath.
-    proto_bool in_control;                 ///< ParameterSet.InControl.
-    double speed_override;                 ///< ParameterSet.SpeedOverride (%).
-    uint32_t axis_count;                   ///< number of Axes exposed (<= PC_ROBOTICS_AXES).
-    RoboticsAxis axes[PC_ROBOTICS_AXES];   ///< the axes (axes[0..axis_count-1] are live).
+    const char *manufacturer;                   ///< Manufacturer (LocalizedText -> String).
+    const char *model;                          ///< Model (LocalizedText -> String).
+    const char *product_code;                   ///< ProductCode (String).
+    const char *serial_number;                  ///< SerialNumber (String).
+    RoboticsMotionDeviceCategory category;      ///< MotionDeviceCategory.
+    proto_bool on_path;                         ///< ParameterSet.OnPath.
+    proto_bool in_control;                      ///< ParameterSet.InControl.
+    double speed_override;                      ///< ParameterSet.SpeedOverride (%).
+    uint32_t axis_count;                        ///< number of Axes exposed (<= PROTOCORE_ROBOTICS_AXES).
+    RoboticsAxis axes[PROTOCORE_ROBOTICS_AXES]; ///< the axes (axes[0..axis_count-1] are live).
 } RoboticsMotionDevice;
 
 /**
@@ -157,28 +157,28 @@ typedef struct
  * @brief Bind the MotionDeviceSystem the resolvers serve. @p mds must outlive the server (own it
  *        statically). Refresh its fields any time; each Read returns the current values.
  */
-void pc_robotics_bind(const RoboticsMotionDeviceSystem *mds);
+void protocore_robotics_bind(const RoboticsMotionDeviceSystem *mds);
 
 /**
  * @brief Read resolver for the MotionDeviceSystem model (an @ref OpcUaReadHandler): fills @p out for a
  *        robotics node's Value attribute. Returns false for a node outside the model (the server answers
- *        BadNodeIdUnknown). Install with `pc_opcua_set_read_handler(pc_robotics_read)`.
+ *        BadNodeIdUnknown). Install with `protocore_opcua_set_read_handler(protocore_robotics_read)`.
  */
-proto_bool pc_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
+proto_bool protocore_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
 
 /**
  * @brief Browse resolver for the MotionDeviceSystem model (an @ref OpcUaBrowseHandler): writes the child
  *        references of a robotics node (and of the Objects folder, which organizes the
  *        MotionDeviceSystem) into @p out. Returns the count, or -1 for a node outside the model. Install
- *        with `pc_opcua_set_browse_handler(pc_robotics_browse)`.
+ *        with `protocore_opcua_set_browse_handler(protocore_robotics_browse)`.
  */
-int32_t pc_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max);
+int32_t protocore_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max);
 
 /**
  * @brief Convenience: bind @p mds and register both resolvers on the OPC UA server in one call
- *        (`pc_opcua_set_read_handler` + `pc_opcua_set_browse_handler`). Call before `server.begin()`.
+ *        (`protocore_opcua_set_read_handler` + `protocore_opcua_set_browse_handler`). Call before `server.begin()`.
  */
-void pc_robotics_install(const RoboticsMotionDeviceSystem *mds);
+void protocore_robotics_install(const RoboticsMotionDeviceSystem *mds);
 
-#endif // PC_ENABLE_ROBOTICS
+#endif // PROTOCORE_ENABLE_ROBOTICS
 #endif // PROTOCORE_ROBOTICS_H

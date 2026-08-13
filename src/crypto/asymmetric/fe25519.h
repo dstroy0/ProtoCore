@@ -7,14 +7,14 @@
  *
  * Field elements are canonical `uint32[8]` (< p = 2^255-19) so every field multiply is a single
  * 256-bit modular multiply on the RSA accelerator (S3: ~1,386 cycles vs 7,955 for the software SIMD
- * `pc_gf_mul`; P4: ~2,118 cycles / 5.9 us). add/sub are native 32-bit (carry + one conditional subtract
+ * `protocore_gf_mul`; P4: ~2,118 cycles / 5.9 us). add/sub are native 32-bit (carry + one conditional subtract
  * of p); bytes<->fe is a per-scalar-mult conversion, not per multiply. This is the shared engine behind
- * both the X25519 KEX (`pc_curve25519.cpp`) and the Ed25519 host-key signature (`pc_ed25519.cpp`) on
+ * both the X25519 KEX (`protocore_curve25519.cpp`) and the Ed25519 host-key signature (`protocore_ed25519.cpp`) on
  * every die with a single-shot hardware MODMULT (S3 hw_ver1, P4 and newer hw_ver3 - see the gate below);
- * the radix-2^16 `pc_gf` path is the native / classic-ESP32 fallback in both.
+ * the radix-2^16 `protocore_gf` path is the native / classic-ESP32 fallback in both.
  *
  * The accelerator (and its lock) are shared with mbedTLS RSA/DH, so a scalar-mult brackets itself with
- * `pc_fe_hw_enable()` / `pc_fe_hw_disable()` (mbedTLS's own `esp_mpi_{enable,disable}_hardware_hw_op`,
+ * `protocore_fe_hw_enable()` / `protocore_fe_hw_disable()` (mbedTLS's own `esp_mpi_{enable,disable}_hardware_hw_op`,
  * i.e. acquire the MPI lock + clock/power the peripheral) and holds the lock for its whole run.
  *
  * Header-only `static inline` on purpose: the cheap ops (add/sub/cswap) inline into the ladder in each
@@ -24,16 +24,16 @@
 #ifndef PROTOCORE_FE25519_H
 #define PROTOCORE_FE25519_H
 
-#include "core_setup/hal/esp/esp_crypto_hal.h" // pc_rsa_modmul + pc_rsa_hw_acquire/release (the RSA-accelerator HAL)
-#include "crypto/ct_eq.h"                      // pc_ct_eq
+#include "core_setup/hal/esp/esp_crypto_hal.h" // protocore_rsa_modmul + protocore_rsa_hw_acquire/release (the RSA-accelerator HAL)
+#include "crypto/ct_eq.h"                      // protocore_ct_eq
 
 // 25519 has no dedicated ECC accelerator on any ESP32 die, so the RSA MODMULT is the field-layer win wherever
-// it exists - track the HAL's PC_RSA_MODMUL_HW (S3, P4, ...). Classic ESP32 / native keep the software ladder.
-#ifdef PC_RSA_MODMUL_HW
-#define PC_FE25519_MPI_HW 1
+// it exists - track the HAL's PROTOCORE_RSA_MODMUL_HW (S3, P4, ...). Classic ESP32 / native keep the software ladder.
+#ifdef PROTOCORE_RSA_MODMUL_HW
+#define PROTOCORE_FE25519_MPI_HW 1
 #endif
 
-#ifdef PC_FE25519_MPI_HW
+#ifdef PROTOCORE_FE25519_MPI_HW
 
 /** @brief A field element of GF(2^255-19): canonical, eight little-endian 32-bit limbs (< p). */
 typedef uint32_t fe[8];
@@ -48,22 +48,22 @@ static const uint32_t FE_MOD_R2[8] = {0x000005a4u, 0, 0, 0, 0, 0, 0, 0};
 
 // Acquire the accelerator (lock + power) for a scalar-mult, and drop it after. Bracket every run. Thin names
 // over the HAL so the X25519 ladder / Ed25519 point arithmetic read as before.
-static inline void pc_fe_hw_enable(void)
+static inline void protocore_fe_hw_enable(void)
 {
-    pc_rsa_hw_acquire();
+    protocore_rsa_hw_acquire();
 }
-static inline void pc_fe_hw_disable(void)
+static inline void protocore_fe_hw_disable(void)
 {
-    pc_rsa_hw_release();
+    protocore_rsa_hw_release();
 }
 
-// z = x*y mod p (8 words / 256-bit) on the RSA MODMULT. Requires pc_fe_hw_enable() first. Canonical (< p),
+// z = x*y mod p (8 words / 256-bit) on the RSA MODMULT. Requires protocore_fe_hw_enable() first. Canonical (< p),
 // safe if z aliases x/y. Delegates to the HAL modmul with this domain's constants; the crypto TUs that pull
-// this in build at -O2 (PC_CRYPTO_HOT), where the always_inline HAL folds FE_MOD_P / the mostly-zero
+// this in build at -O2 (PROTOCORE_CRYPTO_HOT), where the always_inline HAL folds FE_MOD_P / the mostly-zero
 // FE_MOD_R2 into immediate stores - the hand-tuned ~1,380-cyc path.
 static inline void fe_mul(fe z, const fe x, const fe y)
 {
-    pc_rsa_modmul(z, x, y, FE_MOD_P, FE_MOD_MPRIME, FE_MOD_R2, 8);
+    protocore_rsa_modmul(z, x, y, FE_MOD_P, FE_MOD_MPRIME, FE_MOD_R2, 8);
 }
 static inline void fe_sq(fe o, const fe x)
 {
@@ -216,8 +216,8 @@ static inline int fe_neq(const fe a, const fe b)
     uint8_t d[32];
     fe_tobytes(c, a);
     fe_tobytes(d, b);
-    return pc_ct_eq(c, d, 32) ? 0 : -1;
+    return protocore_ct_eq(c, d, 32) ? 0 : -1;
 }
 
-#endif // PC_FE25519_MPI_HW
+#endif // PROTOCORE_FE25519_MPI_HW
 #endif // PROTOCORE_FE25519_H

@@ -10,14 +10,14 @@
  * catch. A vendor that DOES have tasks must supply its own, exactly as Espressif does.
  */
 
-#include "core_setup/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/protocore_platform.h"
 
 // "Which execution context is running me" is answered by whoever owns the scheduler, and on the hot
 // path that is always the vendor. Keying this on the path means a vendor whose backend was never
 // written is an undefined reference rather than a silent wrong answer.
 #if PROTOCORE_HOST
 
-uintptr_t pc_platform_context_id(void)
+uintptr_t protocore_platform_context_id(void)
 {
     return 1; // any nonzero constant: the tripwire treats 0 as "no owner recorded yet"
 }

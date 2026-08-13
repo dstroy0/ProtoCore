@@ -5,7 +5,7 @@
  * @file tls_record.h
  * @brief TLS 1.3 record layer over a reliable stream (RFC 8446 sec 5).
  *
- * The TCP counterpart to pc_dtls_record: it protects and unprotects individual records on a byte
+ * The TCP counterpart to protocore_dtls_record: it protects and unprotects individual records on a byte
  * stream. TCP delivers them in order, exactly once, so this half of the protocol is the smaller
  * one - there is no epoch, no sequence number on the wire, no anti-replay window and no fragment
  * reassembly. What remains is the header, the AEAD, and a record counter each side keeps itself.
@@ -21,12 +21,12 @@
  * counts records under that key (sec 5.3), so both ends derive the same nonce from their own count.
  *
  * -- Reuse --
- *   AEAD (AEAD_AES_128_GCM) and the key/iv derivation come from pc_hkdf via pc_tls13_kdf, under the
+ *   AEAD (AEAD_AES_128_GCM) and the key/iv derivation come from protocore_hkdf via protocore_tls13_kdf, under the
  *   "tls13 " label prefix (@ref TLS13_KDF). One cipher suite, the one the whole hand-rolled TLS 1.3
  *   stack uses: TLS_AES_128_GCM_SHA256.
  *
  * Pure, zero heap, host-tested. This is the portable record layer; a build whose vendor ships a TLS
- * stack (PC_HAS_VENDOR_TLS) compiles that instead and none of this.
+ * stack (PROTOCORE_HAS_VENDOR_TLS) compiles that instead and none of this.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -35,33 +35,33 @@
 #ifndef PROTOCORE_TLS_RECORD_H
 #define PROTOCORE_TLS_RECORD_H
 
-#include "crypto/aead/aes128gcm.h" // pc_aes128gcm_key, PC_WORK_AES128GCM
+#include "crypto/aead/aes128gcm.h" // protocore_aes128gcm_key, PROTOCORE_WORK_AES128GCM
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_TLS_SOFTWARE
+#if PROTOCORE_TLS_SOFTWARE
 
 /** @name Record content types (RFC 8446 sec 5).
  *  Shared by the TLSPlaintext `type` field and the TLSInnerPlaintext trailing content type. */
 ///@{
-#define PC_TLS_CT_CHANGE_CIPHER_SPEC 20
-#define PC_TLS_CT_ALERT 21
-#define PC_TLS_CT_HANDSHAKE 22
-#define PC_TLS_CT_APPLICATION_DATA 23
+#define PROTOCORE_TLS_CT_CHANGE_CIPHER_SPEC 20
+#define PROTOCORE_TLS_CT_ALERT 21
+#define PROTOCORE_TLS_CT_HANDSHAKE 22
+#define PROTOCORE_TLS_CT_APPLICATION_DATA 23
 ///@}
 
 /** @brief TLSPlaintext legacy_record_version on the wire: TLS 1.2 (RFC 8446 sec 5.1). */
-#define PC_TLS_LEGACY_VERSION 0x0303
+#define PROTOCORE_TLS_LEGACY_VERSION 0x0303
 
 /** @brief TLSPlaintext header length: type(1) + legacy_record_version(2) + length(2). */
-#define PC_TLS_PLAINTEXT_HDR_LEN 5
+#define PROTOCORE_TLS_PLAINTEXT_HDR_LEN 5
 
 /** @brief AEAD tag length (all supported suites: 16 bytes). */
-#define PC_TLS_TAG_LEN 16
+#define PROTOCORE_TLS_TAG_LEN 16
 
 /** @brief Largest plaintext fragment one record carries: 2^14 (RFC 8446 sec 5.1). */
-#define PC_TLS_MAX_PLAINTEXT 16384
+#define PROTOCORE_TLS_MAX_PLAINTEXT 16384
 
 /**
  * @brief Largest protected record body: the fragment, its inner content type, and the tag.
@@ -69,7 +69,7 @@ PROTO_BEGIN_DECLS
  * RFC 8446 sec 5.2 allows up to 256 further bytes of padding. Nothing here pads, so a record this
  * side builds never reaches that; a peer's may, and @ref TlsRecordNs::unprotect strips it.
  */
-#define PC_TLS_MAX_CIPHERTEXT (PC_TLS_MAX_PLAINTEXT + 1 + PC_TLS_TAG_LEN)
+#define PROTOCORE_TLS_MAX_CIPHERTEXT (PROTOCORE_TLS_MAX_PLAINTEXT + 1 + PROTOCORE_TLS_TAG_LEN)
 
 /** @brief Record-layer AEAD suites (phase 1: AEAD_AES_128_GCM with SHA-256). */
 typedef enum PROTO_ENUM_PACKED
@@ -85,14 +85,14 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct
 {
-    TlsCipher cipher;                           ///< negotiated AEAD (phase 1: AES-128-GCM)
-    _Alignas(8) uint8_t gcm[PC_WORK_AES128GCM]; ///< keyed AEAD context, built once per key
-                                                ///< Replaces the raw key: the schedule is what the
-                                                ///< AEAD needs, so no raw key stays resident.
-    uint8_t iv[PC_AES128GCM_IV_LEN];            ///< AEAD write IV (per-record nonce = iv XOR seq)
-    uint8_t nonce[PC_AES128GCM_IV_LEN];         ///< this record's nonce, rebuilt from iv and seq
-    uint64_t seq;                               ///< records sealed/opened under this key, never sent
-    proto_bool ready;                           ///< the AEAD context holds a key
+    TlsCipher cipher;                                  ///< negotiated AEAD (phase 1: AES-128-GCM)
+    _Alignas(8) uint8_t gcm[PROTOCORE_WORK_AES128GCM]; ///< keyed AEAD context, built once per key
+                                                       ///< Replaces the raw key: the schedule is what the
+                                                       ///< AEAD needs, so no raw key stays resident.
+    uint8_t iv[PROTOCORE_AES128GCM_IV_LEN];            ///< AEAD write IV (per-record nonce = iv XOR seq)
+    uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN];         ///< this record's nonce, rebuilt from iv and seq
+    uint64_t seq;                                      ///< records sealed/opened under this key, never sent
+    proto_bool ready;                                  ///< the AEAD context holds a key
 } TlsRecordKeys;
 
 /** @brief Parsed view of a TLSPlaintext record (fields point into the caller's buffer). */
@@ -144,8 +144,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const TlsRecordNs TlsRecord;
 
-#endif // PC_TLS_SOFTWARE
+#endif // PROTOCORE_TLS_SOFTWARE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_TLS_RECORD_H

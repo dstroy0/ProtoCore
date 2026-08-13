@@ -17,7 +17,7 @@ void tearDown()
 
 // The builders assemble the variable header and payload here before composing into the caller's
 // out buffer. On the device this is a pool borrow; a host test just hands them one of its own.
-static uint8_t g_body[PC_MQTT_BUF_SIZE];
+static uint8_t g_body[PROTOCORE_MQTT_BUF_SIZE];
 #define BODY g_body, sizeof(g_body)
 
 // --- Remaining Length varint (MQTT 3.1.1 2.2.3) ---
@@ -25,11 +25,11 @@ static uint8_t g_body[PC_MQTT_BUF_SIZE];
 static void rl_roundtrip(uint32_t v, size_t expect_bytes)
 {
     uint8_t b[4];
-    size_t n = pc_mqtt_encode_remlen(b, v);
+    size_t n = protocore_mqtt_encode_remlen(b, v);
     TEST_ASSERT_EQUAL_size_t(expect_bytes, n);
     uint32_t out = 0;
     size_t used = 0;
-    TEST_ASSERT_TRUE(pc_mqtt_decode_remlen(b, n, &out, &used));
+    TEST_ASSERT_TRUE(protocore_mqtt_decode_remlen(b, n, &out, &used));
     TEST_ASSERT_EQUAL_UINT32(v, out);
     TEST_ASSERT_EQUAL_size_t(n, used);
 }
@@ -49,7 +49,7 @@ void test_remlen_boundaries()
 void test_remlen_too_big()
 {
     uint8_t b[4];
-    TEST_ASSERT_EQUAL_size_t(0, pc_mqtt_encode_remlen(b, 268435456u));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_mqtt_encode_remlen(b, 268435456u));
 }
 
 void test_remlen_decode_incomplete()
@@ -57,7 +57,7 @@ void test_remlen_decode_incomplete()
     uint8_t b[2] = {0x80, 0x80}; // both continuation, truncated
     uint32_t v;
     size_t used;
-    TEST_ASSERT_FALSE(pc_mqtt_decode_remlen(b, 2, &v, &used));
+    TEST_ASSERT_FALSE(protocore_mqtt_decode_remlen(b, 2, &v, &used));
 }
 
 void test_remlen_decode_malformed()
@@ -65,7 +65,7 @@ void test_remlen_decode_malformed()
     uint8_t b[5] = {0x80, 0x80, 0x80, 0x80, 0x01}; // 5 bytes = malformed
     uint32_t v;
     size_t used;
-    TEST_ASSERT_FALSE(pc_mqtt_decode_remlen(b, 5, &v, &used));
+    TEST_ASSERT_FALSE(protocore_mqtt_decode_remlen(b, 5, &v, &used));
 }
 
 // --- CONNECT ---
@@ -78,14 +78,14 @@ void test_connect_minimal()
     o.clean_session = PROTO_TRUE;
     o.keepalive_s = 30;
     uint8_t buf[64];
-    size_t len = pc_mqtt_build_connect(buf, sizeof(buf), &o, BODY);
+    size_t len = protocore_mqtt_build_connect(buf, sizeof(buf), &o, BODY);
     TEST_ASSERT_GREATER_THAN(0, len);
     TEST_ASSERT_EQUAL_HEX8(0x10, buf[0]); // CONNECT, flags 0
 
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
     TEST_ASSERT_EQUAL(MQTT_CONNECT, type);
     const uint8_t *b = buf + hl;
     TEST_ASSERT_EQUAL_UINT8(0, b[0]);
@@ -113,12 +113,12 @@ void test_connect_full()
     o.will_qos = 1;
     o.will_retain = PROTO_TRUE;
     uint8_t buf[128];
-    size_t len = pc_mqtt_build_connect(buf, sizeof(buf), &o, BODY);
+    size_t len = protocore_mqtt_build_connect(buf, sizeof(buf), &o, BODY);
     TEST_ASSERT_GREATER_THAN(0, len);
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
     // flags: clean(0x02)|will(0x04)|willQoS1(0x08)|willRetain(0x20)|user(0x80)|pass(0x40) = 0xEE
     TEST_ASSERT_EQUAL_HEX8(0xEE, buf[hl + 7]);
 }
@@ -129,20 +129,20 @@ void test_publish_qos0_roundtrip()
 {
     uint8_t buf[64];
     size_t len =
-        pc_mqtt_build_publish(buf, sizeof(buf), "a/b", (const uint8_t *)"hi", 2, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY);
+        protocore_mqtt_build_publish(buf, sizeof(buf), "a/b", (const uint8_t *)"hi", 2, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY);
     TEST_ASSERT_GREATER_THAN(0, len);
     TEST_ASSERT_EQUAL_HEX8(0x30, buf[0]); // PUBLISH, qos0
 
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
     TEST_ASSERT_EQUAL(MQTT_PUBLISH, type);
     char topic[32];
     size_t tlen, plen;
     const uint8_t *payload;
     uint16_t pid;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_publish(buf + hl, rl, flags, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_publish(buf + hl, rl, flags, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
     TEST_ASSERT_EQUAL_STRING("a/b", topic);
     TEST_ASSERT_EQUAL_size_t(2, plen);
     TEST_ASSERT_EQUAL_MEMORY("hi", payload, 2);
@@ -153,19 +153,19 @@ void test_publish_qos1_flags_and_id()
 {
     uint8_t buf[64];
     size_t len =
-        pc_mqtt_build_publish(buf, sizeof(buf), "t", (const uint8_t *)"x", 1, 1, 0x1234, PROTO_TRUE, PROTO_TRUE, BODY);
+        protocore_mqtt_build_publish(buf, sizeof(buf), "t", (const uint8_t *)"x", 1, 1, 0x1234, PROTO_TRUE, PROTO_TRUE, BODY);
     TEST_ASSERT_GREATER_THAN(0, len);
     // PUBLISH(0x30) | dup(0x08) | qos1(0x02) | retain(0x01) = 0x3B
     TEST_ASSERT_EQUAL_HEX8(0x3B, buf[0]);
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
     char topic[8];
     size_t tlen, plen;
     const uint8_t *payload;
     uint16_t pid;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_publish(buf + hl, rl, flags, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_publish(buf + hl, rl, flags, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
     TEST_ASSERT_EQUAL_UINT16(0x1234, pid);
     TEST_ASSERT_EQUAL_size_t(1, plen);
 }
@@ -174,16 +174,16 @@ void test_publish_topic_overflow_rejected()
 {
     uint8_t buf[64];
     size_t len =
-        pc_mqtt_build_publish(buf, sizeof(buf), "abcdef", (const uint8_t *)"", 0, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY);
+        protocore_mqtt_build_publish(buf, sizeof(buf), "abcdef", (const uint8_t *)"", 0, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY);
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    pc_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl);
+    protocore_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl);
     char topic[4]; // too small for "abcdef"
     size_t tlen, plen;
     const uint8_t *payload;
     uint16_t pid;
-    TEST_ASSERT_FALSE(pc_mqtt_parse_publish(buf + hl, rl, flags, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_publish(buf + hl, rl, flags, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
 }
 
 // MQTT-3.3.1-4: a PUBLISH with both QoS bits set (QoS 3) is malformed and must be
@@ -193,29 +193,29 @@ void test_publish_qos3_rejected()
 {
     uint8_t buf[64];
     size_t len =
-        pc_mqtt_build_publish(buf, sizeof(buf), "t", (const uint8_t *)"x", 1, 1, 1, PROTO_FALSE, PROTO_FALSE, BODY);
+        protocore_mqtt_build_publish(buf, sizeof(buf), "t", (const uint8_t *)"x", 1, 1, 1, PROTO_FALSE, PROTO_FALSE, BODY);
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    pc_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl);
+    protocore_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl);
     flags |= 0x06; // force both QoS bits (bits 1-2) set
     char topic[16];
     size_t tlen, plen;
     const uint8_t *payload;
     uint16_t pid;
-    TEST_ASSERT_FALSE(pc_mqtt_parse_publish(buf + hl, rl, flags, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_publish(buf + hl, rl, flags, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
 }
 
 // MQTT-3.3.2-2: a PUBLISH Topic Name MUST NOT contain wildcard characters.
 void test_publish_wildcard_topic_rejected()
 {
     uint8_t buf[64];
-    TEST_ASSERT_EQUAL_size_t(0, pc_mqtt_build_publish(buf, sizeof(buf), "a/+/b", (const uint8_t *)"x", 1, 0, 0,
+    TEST_ASSERT_EQUAL_size_t(0, protocore_mqtt_build_publish(buf, sizeof(buf), "a/+/b", (const uint8_t *)"x", 1, 0, 0,
                                                       PROTO_FALSE, PROTO_FALSE, BODY));
-    TEST_ASSERT_EQUAL_size_t(0, pc_mqtt_build_publish(buf, sizeof(buf), "a/#", (const uint8_t *)"x", 1, 0, 0,
+    TEST_ASSERT_EQUAL_size_t(0, protocore_mqtt_build_publish(buf, sizeof(buf), "a/#", (const uint8_t *)"x", 1, 0, 0,
                                                       PROTO_FALSE, PROTO_FALSE, BODY));
     // A plain topic with no wildcards still builds.
-    TEST_ASSERT_GREATER_THAN(0, pc_mqtt_build_publish(buf, sizeof(buf), "a/b/c", (const uint8_t *)"x", 1, 0, 0,
+    TEST_ASSERT_GREATER_THAN(0, protocore_mqtt_build_publish(buf, sizeof(buf), "a/b/c", (const uint8_t *)"x", 1, 0, 0,
                                                       PROTO_FALSE, PROTO_FALSE, BODY));
 }
 
@@ -229,14 +229,14 @@ void test_publish_topic_nul_or_bad_utf8_rejected()
     // topic length 2, bytes {0xC3,0x28} = invalid UTF-8 sequence, qos0 (flags 0).
     const uint8_t bad_utf8[] = {0x00, 0x02, 0xC3, 0x28};
     TEST_ASSERT_FALSE(
-        pc_mqtt_parse_publish(bad_utf8, sizeof(bad_utf8), 0, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
+        protocore_mqtt_parse_publish(bad_utf8, sizeof(bad_utf8), 0, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
     // topic length 2, bytes {'a',0x00} = embedded NUL.
     const uint8_t embedded_nul[] = {0x00, 0x02, 'a', 0x00};
-    TEST_ASSERT_FALSE(pc_mqtt_parse_publish(embedded_nul, sizeof(embedded_nul), 0, topic, sizeof(topic), &tlen,
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_publish(embedded_nul, sizeof(embedded_nul), 0, topic, sizeof(topic), &tlen,
                                             &payload, &plen, &pid));
     // A well-formed topic of the same shape still parses.
     const uint8_t ok[] = {0x00, 0x03, 'a', '/', 'b'};
-    TEST_ASSERT_TRUE(pc_mqtt_parse_publish(ok, sizeof(ok), 0, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_publish(ok, sizeof(ok), 0, topic, sizeof(topic), &tlen, &payload, &plen, &pid));
     TEST_ASSERT_EQUAL_STRING("a/b", topic);
 }
 
@@ -245,13 +245,13 @@ void test_publish_topic_nul_or_bad_utf8_rejected()
 void test_subscribe()
 {
     uint8_t buf[64];
-    size_t len = pc_mqtt_build_subscribe(buf, sizeof(buf), 10, "s/#", 1, BODY);
+    size_t len = protocore_mqtt_build_subscribe(buf, sizeof(buf), 10, "s/#", 1, BODY);
     TEST_ASSERT_GREATER_THAN(0, len);
     TEST_ASSERT_EQUAL_HEX8(0x82, buf[0]); // SUBSCRIBE, required flags 0010
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_fixed_header(buf, len, &type, &flags, &rl, &hl));
     const uint8_t *b = buf + hl;
     TEST_ASSERT_EQUAL_UINT16(10, (uint16_t)((b[0] << 8) | b[1]));
     TEST_ASSERT_EQUAL_MEMORY("\x00\x03"
@@ -263,7 +263,7 @@ void test_subscribe()
 void test_unsubscribe()
 {
     uint8_t buf[64];
-    size_t len = pc_mqtt_build_unsubscribe(buf, sizeof(buf), 11, "s/#", BODY);
+    size_t len = protocore_mqtt_build_unsubscribe(buf, sizeof(buf), 11, "s/#", BODY);
     TEST_ASSERT_GREATER_THAN(0, len);
     TEST_ASSERT_EQUAL_HEX8(0xA2, buf[0]); // UNSUBSCRIBE, required flags 0010
 }
@@ -273,11 +273,11 @@ void test_unsubscribe()
 void test_ack_packets()
 {
     uint8_t buf[8];
-    TEST_ASSERT_EQUAL_size_t(4, pc_mqtt_build_ack(buf, sizeof(buf), MQTT_PUBACK, 0x2222));
+    TEST_ASSERT_EQUAL_size_t(4, protocore_mqtt_build_ack(buf, sizeof(buf), MQTT_PUBACK, 0x2222));
     TEST_ASSERT_EQUAL_HEX8(0x40, buf[0]);
-    TEST_ASSERT_EQUAL_UINT16(0x2222, pc_mqtt_parse_ack(buf + 2, 2));
+    TEST_ASSERT_EQUAL_UINT16(0x2222, protocore_mqtt_parse_ack(buf + 2, 2));
 
-    TEST_ASSERT_EQUAL_size_t(4, pc_mqtt_build_ack(buf, sizeof(buf), MQTT_PUBREL, 0x3333));
+    TEST_ASSERT_EQUAL_size_t(4, protocore_mqtt_build_ack(buf, sizeof(buf), MQTT_PUBREL, 0x3333));
     TEST_ASSERT_EQUAL_HEX8(0x62, buf[0]); // PUBREL requires flags 0010
 }
 
@@ -285,12 +285,12 @@ void test_connack()
 {
     uint8_t ok[2] = {0x01, 0x00};
     proto_bool sp = PROTO_FALSE;
-    TEST_ASSERT_EQUAL_INT(0, pc_mqtt_parse_connack(ok, 2, &sp));
+    TEST_ASSERT_EQUAL_INT(0, protocore_mqtt_parse_connack(ok, 2, &sp));
     TEST_ASSERT_TRUE(sp);
     uint8_t bad[2] = {0x00, 0x05};
-    TEST_ASSERT_EQUAL_INT(5, pc_mqtt_parse_connack(bad, 2, &sp));
+    TEST_ASSERT_EQUAL_INT(5, protocore_mqtt_parse_connack(bad, 2, &sp));
     TEST_ASSERT_FALSE(sp);
-    TEST_ASSERT_EQUAL_INT(-1, pc_mqtt_parse_connack(bad, 1, &sp));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_mqtt_parse_connack(bad, 1, &sp));
 }
 
 void test_suback()
@@ -298,7 +298,7 @@ void test_suback()
     uint8_t b[3] = {0x00, 0x0A, 0x01}; // pid 10, granted QoS 1
     uint16_t pid;
     uint8_t rc;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_suback(b, 3, &pid, &rc));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_suback(b, 3, &pid, &rc));
     TEST_ASSERT_EQUAL_UINT16(10, pid);
     TEST_ASSERT_EQUAL_UINT8(1, rc);
 }
@@ -306,10 +306,10 @@ void test_suback()
 void test_ping_disconnect()
 {
     uint8_t buf[4];
-    TEST_ASSERT_EQUAL_size_t(2, pc_mqtt_build_pingreq(buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(2, protocore_mqtt_build_pingreq(buf, sizeof(buf)));
     TEST_ASSERT_EQUAL_HEX8(0xC0, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[1]);
-    TEST_ASSERT_EQUAL_size_t(2, pc_mqtt_build_disconnect(buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(2, protocore_mqtt_build_disconnect(buf, sizeof(buf)));
     TEST_ASSERT_EQUAL_HEX8(0xE0, buf[0]);
 }
 
@@ -320,7 +320,7 @@ void test_fixed_header_multibyte_remlen()
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_fixed_header(buf, 3, &type, &flags, &rl, &hl));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_fixed_header(buf, 3, &type, &flags, &rl, &hl));
     TEST_ASSERT_EQUAL_UINT32(300, rl);
     TEST_ASSERT_EQUAL_size_t(3, hl);
 }
@@ -332,46 +332,46 @@ void test_build_guards_and_overflow()
     uint8_t out[64];
     static char big_topic[1030];
     memset(big_topic, 'a', sizeof(big_topic) - 1);
-    big_topic[sizeof(big_topic) - 1] = '\0'; // > PC_MQTT_BUF_SIZE (1024)
+    big_topic[sizeof(big_topic) - 1] = '\0'; // > PROTOCORE_MQTT_BUF_SIZE (1024)
 
     MqttConnectOpts o;
     memset(&o, 0, sizeof(o));
     o.client_id = "c";
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_connect(NULL, sizeof(out), &o, BODY));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_connect(out, sizeof(out), NULL, BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_connect(NULL, sizeof(out), &o, BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_connect(out, sizeof(out), NULL, BODY));
     MqttConnectOpts no_id = o;
     no_id.client_id = NULL;
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_connect(out, sizeof(out), &no_id, BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_connect(out, sizeof(out), &no_id, BODY));
     // Oversized will payload overflows the body buffer.
     MqttConnectOpts wo = o;
     wo.will_topic = "w";
     wo.will_len = 2000;
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_connect(out, sizeof(out), &wo, BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_connect(out, sizeof(out), &wo, BODY));
     // A valid CONNECT that does not fit the output buffer (compose cap check).
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_connect(out, 2, &o, BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_connect(out, 2, &o, BODY));
 
     TEST_ASSERT_EQUAL_UINT(
-        0, pc_mqtt_build_publish(NULL, sizeof(out), "t", NULL, 0, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY));
+        0, protocore_mqtt_build_publish(NULL, sizeof(out), "t", NULL, 0, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY));
     TEST_ASSERT_EQUAL_UINT(
-        0, pc_mqtt_build_publish(out, sizeof(out), "t", NULL, 0, 3, 0, PROTO_FALSE, PROTO_FALSE, BODY)); // qos>2
+        0, protocore_mqtt_build_publish(out, sizeof(out), "t", NULL, 0, 3, 0, PROTO_FALSE, PROTO_FALSE, BODY)); // qos>2
     TEST_ASSERT_EQUAL_UINT(
-        0, pc_mqtt_build_publish(out, sizeof(out), "t", NULL, 2000, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY)); // body
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_publish(out, 2, "topic", (const uint8_t *)"hi", 2, 0, 0, PROTO_FALSE,
+        0, protocore_mqtt_build_publish(out, sizeof(out), "t", NULL, 2000, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY)); // body
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_publish(out, 2, "topic", (const uint8_t *)"hi", 2, 0, 0, PROTO_FALSE,
                                                     PROTO_FALSE, BODY)); // cap
 
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_subscribe(NULL, sizeof(out), 1, "t", 0, BODY));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_subscribe(out, sizeof(out), 1, "t", 3, BODY));       // qos>2
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_subscribe(out, sizeof(out), 1, big_topic, 0, BODY)); // body overflow
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_subscribe(NULL, sizeof(out), 1, "t", 0, BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_subscribe(out, sizeof(out), 1, "t", 3, BODY));       // qos>2
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_subscribe(out, sizeof(out), 1, big_topic, 0, BODY)); // body overflow
 
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_unsubscribe(NULL, sizeof(out), 1, "t", BODY));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_unsubscribe(out, sizeof(out), 1, big_topic, BODY)); // body overflow
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_unsubscribe(NULL, sizeof(out), 1, "t", BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_unsubscribe(out, sizeof(out), 1, big_topic, BODY)); // body overflow
 
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_ack(NULL, 4, (MqttType)4, 1));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_ack(out, 3, (MqttType)4, 1)); // cap < 4
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_pingreq(NULL, 2));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_pingreq(out, 1)); // cap < 2
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_disconnect(NULL, 2));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_disconnect(out, 1)); // cap < 2
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_ack(NULL, 4, (MqttType)4, 1));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_ack(out, 3, (MqttType)4, 1)); // cap < 4
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_pingreq(NULL, 2));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_pingreq(out, 1)); // cap < 2
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_disconnect(NULL, 2));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_disconnect(out, 1)); // cap < 2
 }
 
 // The parsers reject truncated / malformed inputs.
@@ -381,41 +381,41 @@ void test_parse_guards()
     uint32_t rl;
     size_t hl;
     uint8_t one[1] = {0x30};
-    TEST_ASSERT_FALSE(pc_mqtt_parse_fixed_header(one, 1, &type, &flags, &rl, &hl)); // avail < 2
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_fixed_header(one, 1, &type, &flags, &rl, &hl)); // avail < 2
     uint8_t bad_rl[5] = {0x30, 0x80, 0x80, 0x80, 0x80};
-    TEST_ASSERT_FALSE(pc_mqtt_parse_fixed_header(bad_rl, 5, &type, &flags, &rl, &hl)); // malformed remlen
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_fixed_header(bad_rl, 5, &type, &flags, &rl, &hl)); // malformed remlen
 
     char topic[32];
     size_t tl, pl;
     const uint8_t *pay;
     uint16_t pid;
-    TEST_ASSERT_FALSE(pc_mqtt_parse_publish(NULL, 0, 0, topic, sizeof(topic), &tl, &pay, &pl, &pid));
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_publish(NULL, 0, 0, topic, sizeof(topic), &tl, &pay, &pl, &pid));
     uint8_t claim[2] = {0x00, 0x10}; // tlen=16 but remaining_len=2
-    TEST_ASSERT_FALSE(pc_mqtt_parse_publish(claim, 2, 0, topic, sizeof(topic), &tl, &pay, &pl, &pid));
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_publish(claim, 2, 0, topic, sizeof(topic), &tl, &pay, &pl, &pid));
     uint8_t q1[4] = {0x00, 0x02, 'a', 'b'}; // qos1, topic fills the buffer, no room for packet id
-    TEST_ASSERT_FALSE(pc_mqtt_parse_publish(q1, 4, 0x02, topic, sizeof(topic), &tl, &pay, &pl, &pid));
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_publish(q1, 4, 0x02, topic, sizeof(topic), &tl, &pay, &pl, &pid));
 
-    TEST_ASSERT_EQUAL_UINT16(0, pc_mqtt_parse_ack(NULL, 0));
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_mqtt_parse_ack(NULL, 0));
     uint16_t spid;
     uint8_t rc;
     uint8_t two[2] = {0, 0};
-    TEST_ASSERT_FALSE(pc_mqtt_parse_suback(two, 2, &spid, &rc)); // remaining_len < 3
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_suback(two, 2, &spid, &rc)); // remaining_len < 3
 }
 
 // On a host build the transport entry points are inert stubs that fail closed.
 void test_host_transport_stubs()
 {
-    pc_mqtt_set_message_cb(NULL);
+    protocore_mqtt_set_message_cb(NULL);
     MqttConnectOpts o;
     memset(&o, 0, sizeof(o));
     o.client_id = "c";
-    TEST_ASSERT_FALSE(pc_mqtt_connect("h", 1883, PROTO_FALSE, &o));
-    TEST_ASSERT_FALSE(pc_mqtt_publish("t", NULL, 0, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(pc_mqtt_subscribe("t", 0));
-    TEST_ASSERT_FALSE(pc_mqtt_unsubscribe("t"));
-    TEST_ASSERT_FALSE(pc_mqtt_loop());
-    TEST_ASSERT_FALSE(pc_mqtt_connected());
-    pc_mqtt_disconnect();
+    TEST_ASSERT_FALSE(protocore_mqtt_connect("h", 1883, PROTO_FALSE, &o));
+    TEST_ASSERT_FALSE(protocore_mqtt_publish("t", NULL, 0, 0, PROTO_FALSE));
+    TEST_ASSERT_FALSE(protocore_mqtt_subscribe("t", 0));
+    TEST_ASSERT_FALSE(protocore_mqtt_unsubscribe("t"));
+    TEST_ASSERT_FALSE(protocore_mqtt_loop());
+    TEST_ASSERT_FALSE(protocore_mqtt_connected());
+    protocore_mqtt_disconnect();
 }
 
 // Builders reject a null topic pointer even when the output buffer is valid
@@ -426,17 +426,17 @@ void test_build_null_topic_guards_and_empty_field()
 {
     uint8_t out[64];
     TEST_ASSERT_EQUAL_UINT(
-        0, pc_mqtt_build_publish(out, sizeof(out), NULL, NULL, 0, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_subscribe(out, sizeof(out), 1, NULL, 0, BODY));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_unsubscribe(out, sizeof(out), 1, NULL, BODY));
+        0, protocore_mqtt_build_publish(out, sizeof(out), NULL, NULL, 0, 0, 0, PROTO_FALSE, PROTO_FALSE, BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_subscribe(out, sizeof(out), 1, NULL, 0, BODY));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_mqtt_build_unsubscribe(out, sizeof(out), 1, NULL, BODY));
 
     // Empty (non-null) topic: put_field writes just the 2-byte zero length, no memcpy.
-    size_t len = pc_mqtt_build_unsubscribe(out, sizeof(out), 1, "", BODY);
+    size_t len = protocore_mqtt_build_unsubscribe(out, sizeof(out), 1, "", BODY);
     TEST_ASSERT_GREATER_THAN(0, len);
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
-    TEST_ASSERT_TRUE(pc_mqtt_parse_fixed_header(out, len, &type, &flags, &rl, &hl));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_fixed_header(out, len, &type, &flags, &rl, &hl));
     TEST_ASSERT_EQUAL_UINT32(4, rl); // pid(2) + empty topic length prefix(2)
 }
 
@@ -450,18 +450,18 @@ void test_parse_short_len_and_null_outparam_guards()
     const uint8_t *pay;
     uint16_t pid;
     uint8_t one[1] = {0x00};
-    TEST_ASSERT_FALSE(pc_mqtt_parse_publish(one, 1, 0, topic, sizeof(topic), &tl, &pay, &pl, &pid));
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_publish(one, 1, 0, topic, sizeof(topic), &tl, &pay, &pl, &pid));
 
     uint8_t ack_one[1] = {0x00};
-    TEST_ASSERT_EQUAL_UINT16(0, pc_mqtt_parse_ack(ack_one, 1));
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_mqtt_parse_ack(ack_one, 1));
 
     uint8_t ok[2] = {0x00, 0x00};
-    TEST_ASSERT_EQUAL_INT(-1, pc_mqtt_parse_connack(NULL, 2, NULL));
-    TEST_ASSERT_EQUAL_INT(0, pc_mqtt_parse_connack(ok, 2, NULL)); // session_present output not requested
+    TEST_ASSERT_EQUAL_INT(-1, protocore_mqtt_parse_connack(NULL, 2, NULL));
+    TEST_ASSERT_EQUAL_INT(0, protocore_mqtt_parse_connack(ok, 2, NULL)); // session_present output not requested
 
     uint8_t sb[3] = {0x00, 0x0A, 0x01};
-    TEST_ASSERT_FALSE(pc_mqtt_parse_suback(NULL, 3, &pid, NULL));
-    TEST_ASSERT_TRUE(pc_mqtt_parse_suback(sb, 3, NULL, NULL)); // caller wants neither out-param
+    TEST_ASSERT_FALSE(protocore_mqtt_parse_suback(NULL, 3, &pid, NULL));
+    TEST_ASSERT_TRUE(protocore_mqtt_parse_suback(sb, 3, NULL, NULL)); // caller wants neither out-param
 }
 
 int main(void)

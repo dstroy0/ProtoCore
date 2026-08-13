@@ -3,7 +3,7 @@
 
 /**
  * @file amqp.h
- * @brief AMQP 0-9-1 frame codec (PC_ENABLE_AMQP) - zero-heap frame builder + parser for
+ * @brief AMQP 0-9-1 frame codec (PROTOCORE_ENABLE_AMQP) - zero-heap frame builder + parser for
  *        the RabbitMQ wire protocol, so a device can be an AMQP client over the shipped
  *        outbound client transport.
  *
@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_AMQP
+#if PROTOCORE_ENABLE_AMQP
 
 // Frame types (octet 0).
 #define AMQP_FRAME_METHOD 1
@@ -42,15 +42,15 @@ PROTO_BEGIN_DECLS
 #define AMQP_FRAME_OVERHEAD 8 ///< type(1) + channel(2) + size(4) + frame-end(1)
 
 /** @brief Write the 8-octet protocol header ("AMQP" + 0 0 9 1). Returns 8, or 0 on overflow. */
-size_t pc_amqp_protocol_header(uint8_t *buf, size_t cap);
+size_t protocore_amqp_protocol_header(uint8_t *buf, size_t cap);
 
 /** @brief Build a frame: type + channel + size + payload + 0xCE. Returns total octets, or 0. */
-size_t pc_amqp_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint16_t channel, const uint8_t *payload,
-                           size_t payload_len);
+size_t protocore_amqp_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint16_t channel, const uint8_t *payload,
+                                  size_t payload_len);
 
 /** @brief Build a METHOD frame: payload = class-id + method-id + @p args. */
-size_t pc_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id, uint16_t method_id,
-                            const uint8_t *args, size_t args_len);
+size_t protocore_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id, uint16_t method_id,
+                                   const uint8_t *args, size_t args_len);
 
 /**
  * @brief Build a content HEADER frame (type 2) - the frame that follows a Basic.Publish method and precedes
@@ -59,11 +59,12 @@ size_t pc_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t
  *        publish). @p body_size is the total octet count of the message body across all BODY frames.
  * @return total octets, or 0 on a null @p properties with a nonzero length, or an overflow.
  */
-size_t pc_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id, uint64_t body_size,
-                                    uint16_t property_flags, const uint8_t *properties, size_t properties_len);
+size_t protocore_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id,
+                                           uint64_t body_size, uint16_t property_flags, const uint8_t *properties,
+                                           size_t properties_len);
 
 /** @brief Build a heartbeat frame (type 8, channel 0, empty payload). Returns 8, or 0. */
-size_t pc_amqp_build_heartbeat(uint8_t *buf, size_t cap);
+size_t protocore_amqp_build_heartbeat(uint8_t *buf, size_t cap);
 
 /** @brief A parsed frame. @ref payload points INTO the source buffer. */
 typedef struct
@@ -79,14 +80,14 @@ typedef struct
  * @param consumed receives the full frame length so the caller can advance.
  * @return true on a complete, terminated frame; false if incomplete or the end octet is wrong.
  */
-proto_bool pc_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, size_t *consumed);
+proto_bool protocore_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, size_t *consumed);
 
 /** @brief Split a METHOD frame payload into class-id / method-id / arguments. */
-proto_bool pc_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint16_t *class_id, uint16_t *method_id,
-                                const uint8_t **args, size_t *args_len);
+proto_bool protocore_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint16_t *class_id,
+                                       uint16_t *method_id, const uint8_t **args, size_t *args_len);
 
-#endif // PC_ENABLE_AMQP
+#endif // PROTOCORE_ENABLE_AMQP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_AMQP_H

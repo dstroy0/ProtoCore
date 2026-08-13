@@ -5,7 +5,7 @@
 // header-protocol framing around init/detect, variable-length send, TX-done poll, set-rx, packet
 // recv (length byte + payload + RSSI decode), and the RSSI-to-dBm conversion math - all pure CPU-side
 // work. Worked example for performance_benching/device/<service>/ peripheral drivers: this rig has no CC1101 module
-// attached, so pc_cc1101_bus::spi is a tiny canned-response stub (same shape as test/test_cc1101's
+// attached, so protocore_cc1101_bus::spi is a tiny canned-response stub (same shape as test/test_cc1101's
 // mock_spi) that satisfies the linker without ever doing a real bus transaction - only the
 // deterministic framing/parsing code that wraps each SPI call is in scope here.
 //
@@ -50,14 +50,14 @@ void bench_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
     // no-ops: the real bus is never touched, only the caller's framing/parsing cycles are measured.
 }
 
-pc_cc1101_bus g_bus = {bench_spi, NULL};
+protocore_cc1101_bus g_bus = {bench_spi, NULL};
 
 // A minimal SmartRF-style register table (test/test_cc1101's default_cfg() literal).
-const pc_cc1101_reg REGS[] = {{0x00, 0x29}, {0x08, 0x05}};
+const protocore_cc1101_reg REGS[] = {{0x00, 0x29}, {0x08, 0x05}};
 
 void dbench_run(void)
 {
-    pc_cc1101_config cfg = {};
+    protocore_cc1101_config cfg = {};
     cfg.regs = REGS;
     cfg.nregs = 2;
     cfg.channel = 20;
@@ -72,12 +72,13 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile int sinki = 0;
         volatile int16_t sink16 = 0;
-        DBENCH_OP("pc_cc1101_init", 20000, sinkb = pc_cc1101_init(&g_bus, &cfg));
-        DBENCH_OP("pc_cc1101_send", 50000, sinkb = pc_cc1101_send(&g_bus, send_data, sizeof(send_data)));
-        DBENCH_OP("pc_cc1101_tx_done", 100000, sinkb = pc_cc1101_tx_done(&g_bus));
-        DBENCH_OP("pc_cc1101_set_rx", 50000, pc_cc1101_set_rx(&g_bus));
-        DBENCH_OP("pc_cc1101_recv", 50000, sinki = pc_cc1101_recv(&g_bus, recv_buf, sizeof(recv_buf), &recv_rssi));
-        DBENCH_OP("pc_cc1101_rssi_dbm", 200000, sink16 = pc_cc1101_rssi_dbm(0x50));
+        DBENCH_OP("protocore_cc1101_init", 20000, sinkb = protocore_cc1101_init(&g_bus, &cfg));
+        DBENCH_OP("protocore_cc1101_send", 50000, sinkb = protocore_cc1101_send(&g_bus, send_data, sizeof(send_data)));
+        DBENCH_OP("protocore_cc1101_tx_done", 100000, sinkb = protocore_cc1101_tx_done(&g_bus));
+        DBENCH_OP("protocore_cc1101_set_rx", 50000, protocore_cc1101_set_rx(&g_bus));
+        DBENCH_OP("protocore_cc1101_recv", 50000,
+                  sinki = protocore_cc1101_recv(&g_bus, recv_buf, sizeof(recv_buf), &recv_rssi));
+        DBENCH_OP("protocore_cc1101_rssi_dbm", 200000, sink16 = protocore_cc1101_rssi_dbm(0x50));
         (void)sinkb;
         (void)sinki;
         (void)sink16;

@@ -32,15 +32,15 @@ socket.
 - **`aes256-gcm@openssh.com`** encryption (RFC 5647) - AES-256-GCM AEAD, the second negotiated preference; the 4-byte packet length is sent in the clear as additional authenticated data, the packet body is sealed, and the 96-bit nonce's invocation counter advances per packet. AES block hardware-accelerated on ESP32 via mbedTLS (GHASH in software), software AES-256 for native tests; seal/open verified byte-for-byte against the NIST/McGrew AES-256-GCM Test Case 16 vector
 - **AES-256-CTR** encryption (RFC 4344) - the fallback cipher, hardware-accelerated on ESP32 via mbedTLS, software fallback for native tests
 - **HMAC-SHA2-256 / HMAC-SHA2-512** integrity (RFC 6668), including the encrypt-then-MAC variants **`hmac-sha2-256-etm@openssh.com`** / **`hmac-sha2-512-etm@openssh.com`** (OpenSSH's preferred MACs for the aes cipher; the length is authenticated in the clear and the MAC is verified before any decryption) - MAC-verify-before-use invariant; the chacha20-poly1305 AEAD carries its own implicit MAC. All HW-verified against OpenSSH on an ESP32-S3
-- **ssh-ed25519 host key** (RFC 8709 + RFC 8032) - Ed25519 signing over the exchange hash; installed from a 32-byte seed via `pc_ssh_hostkey_ed25519_set()` alongside or instead of the RSA host key
+- **ssh-ed25519 host key** (RFC 8709 + RFC 8032) - Ed25519 signing over the exchange hash; installed from a 32-byte seed via `protocore_ssh_hostkey_ed25519_set()` alongside or instead of the RSA host key
 - **RSA-SHA2-512 / RSA-SHA2-256** host key (RFC 8332) - PKCS#1 v1.5 signing over the exchange hash; both hashes are backed by the one `ssh-rsa` key and negotiated as separate `server_host_key_algorithms` (rsa-sha2-512 preferred). Real on both platforms (ESP32 mbedTLS, native full-width modexp), HW-accelerated on ESP32
-- **ECDSA-SHA2-nistp256** host key (RFC 5656) - ECDSA over NIST P-256 (SHA-256), installed from a 32-byte private scalar via `pc_ssh_hostkey_ecdsa_set()`. ESP32 uses mbedTLS (hardware-accelerated, side-channel-hardened); the native test path is a self-contained software P-256 with RFC 6979 deterministic signing, pinned byte-for-byte to the RFC 6979 A.2.5 (P-256/SHA-256) vectors
+- **ECDSA-SHA2-nistp256** host key (RFC 5656) - ECDSA over NIST P-256 (SHA-256), installed from a 32-byte private scalar via `protocore_ssh_hostkey_ecdsa_set()`. ESP32 uses mbedTLS (hardware-accelerated, side-channel-hardened); the native test path is a self-contained software P-256 with RFC 6979 deterministic signing, pinned byte-for-byte to the RFC 6979 A.2.5 (P-256/SHA-256) vectors
 - **Publickey authentication** (RFC 4252 §7) - client `rsa-sha2-512`, `rsa-sha2-256`, `ecdsa-sha2-nistp256` **and** `ssh-ed25519` signatures are verified for real on both platforms (the RSA hash is chosen from the client's signature-algorithm name); an application callback authorizes keys per user
-- **Password authentication** (RFC 4252 §8) - credentials checked via an application callback; the password is wiped from the stack after every attempt. Compile out with `PC_SSH_ALLOW_PASSWORD=0` for publickey-only hardening
-- **Keyboard-interactive authentication** (RFC 4256) - opt-in via `PC_ENABLE_SSH_KEYBOARD_INTERACTIVE`; the server sends one non-echoed `Password:` prompt (`USERAUTH_INFO_REQUEST`) and verifies the `USERAUTH_INFO_RESPONSE` through the same password callback, so it is the challenge-response face of password auth (the common `ssh -o PreferredAuthentications=keyboard-interactive` / PAM-password case). The response is wiped from the stack; a response with no armed exchange is refused. HW-verified against OpenSSH 10 on an ESP32-P4 (authenticated + byte-exact channel echo)
+- **Password authentication** (RFC 4252 §8) - credentials checked via an application callback; the password is wiped from the stack after every attempt. Compile out with `PROTOCORE_SSH_ALLOW_PASSWORD=0` for publickey-only hardening
+- **Keyboard-interactive authentication** (RFC 4256) - opt-in via `PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE`; the server sends one non-echoed `Password:` prompt (`USERAUTH_INFO_REQUEST`) and verifies the `USERAUTH_INFO_RESPONSE` through the same password callback, so it is the challenge-response face of password auth (the common `ssh -o PreferredAuthentications=keyboard-interactive` / PAM-password case). The response is wiped from the stack; a response with no armed exchange is refused. HW-verified against OpenSSH 10 on an ESP32-P4 (authenticated + byte-exact channel echo)
 - **Session channel** (RFC 4254) - `shell`/`exec`/`pty-req` accepted; inbound channel data surfaced to the app as a raw byte stream, with RFC 4254 §5.2 window flow control
-- **TCP port forwarding** (`direct-tcpip`, the `ssh -L` local forward) - opt-in via `PC_SSH_PORT_FORWARD`; the `ssh_forward` owner opens the outbound connection through the client transport and bridges bytes both ways, with an optional target-allow policy callback
-- **Remote port forwarding** (`forwarded-tcpip`, the `ssh -R` remote forward, RFC 4254 §7) - same `PC_SSH_PORT_FORWARD` gate: the client's `tcpip-forward` global request makes the device open a listener, and each inbound connection is bridged back to the client over a server-initiated `forwarded-tcpip` channel (`pc_ssh_conn_open_forwarded`), gated by the same policy callback. HW-verified on an ESP32-P4: a stock OpenSSH `ssh -R` through the device tunnels a byte-exact reverse round trip. (X11 forwarding is a deliberate non-goal.)
+- **TCP port forwarding** (`direct-tcpip`, the `ssh -L` local forward) - opt-in via `PROTOCORE_SSH_PORT_FORWARD`; the `ssh_forward` owner opens the outbound connection through the client transport and bridges bytes both ways, with an optional target-allow policy callback
+- **Remote port forwarding** (`forwarded-tcpip`, the `ssh -R` remote forward, RFC 4254 §7) - same `PROTOCORE_SSH_PORT_FORWARD` gate: the client's `tcpip-forward` global request makes the device open a listener, and each inbound connection is bridged back to the client over a server-initiated `forwarded-tcpip` channel (`protocore_ssh_conn_open_forwarded`), gated by the same policy callback. HW-verified on an ESP32-P4: a stock OpenSSH `ssh -R` through the device tunnels a byte-exact reverse round trip. (X11 forwarding is a deliberate non-goal.)
 - **OpenSSH interoperability** - works with a stock `ssh` client (no algorithm overrides): the RX ring and KEXINIT store hold a full modern client KEXINIT, and **`ext-info` / `server-sig-algs`** (RFC 8308) is advertised (`rsa-sha2-512`, `rsa-sha2-256`, `ecdsa-sha2-nistp256` and `ssh-ed25519`, in preference order) so the client picks a key type it can offer. Depending on the server preference the client negotiates `curve25519-sha256` + `ssh-ed25519` (default modern client choice) or `diffie-hellman-group14-sha256` + `rsa-sha2-512`. HW-validated on an ESP32-S3 with a stock OpenSSH client on both suites (curve25519/ed25519 and DH/RSA), including an ed25519-only client key
 - **In-session re-keying** (RFC 4253 §9) - client- or server-initiated; the session id is fixed at the first exchange hash across re-keys
 - **Static-only allocation** - all SSH state pre-allocated in BSS; no heap after [`begin()`](@ref PC::begin) (except the one-per-connection mbedTLS RSA operation during KEX, freed immediately)
@@ -77,7 +77,7 @@ socket.
 | Version / KEXINIT negotiation | RFC 4253 §4.2, §7.1        | Implemented - banner exchange + crypto-agnostic negotiation (KEX method, host-key type, cipher [chacha/aes-gcm/aes-ctr], MAC, and s2c compression all negotiated to a runtime preference)      |
 | ext-info / server-sig-algs    | RFC 8308                   | Implemented - advertises accepted client-sig algorithms (`rsa-sha2-512`, `rsa-sha2-256`, `ecdsa-sha2-nistp256`, `ssh-ed25519`) after NEWKEYS         |
 | Exchange hash + NEWKEYS       | RFC 4253 §7.2, §8; RFC 8731 | Implemented - H over `V_C,V_S,I_C,I_S,K_S,` then `e,f` (DH mpints) or `Q_C,Q_S` (curve strings) then `K`; keys activate on NEWKEYS                    |
-| User authentication           | RFC 4252 §5, §7, §8; RFC 4256 | Implemented - `publickey` (`rsa-sha2-512`, `rsa-sha2-256`, `ecdsa-sha2-nistp256`, `ssh-ed25519`), `password`, and (opt-in `PC_ENABLE_SSH_KEYBOARD_INTERACTIVE`) `keyboard-interactive` methods                              |
+| User authentication           | RFC 4252 §5, §7, §8; RFC 4256 | Implemented - `publickey` (`rsa-sha2-512`, `rsa-sha2-256`, `ecdsa-sha2-nistp256`, `ssh-ed25519`), `password`, and (opt-in `PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE`) `keyboard-interactive` methods                              |
 | Connection / channel          | RFC 4254 §5, §6            | Implemented - single `session` channel, data stream, window flow control                                                                            |
 | Re-keying                     | RFC 4253 §9                | Implemented - packet-count threshold; session id preserved across re-keys                                                                           |
 
@@ -88,10 +88,10 @@ socket.
 Two methods are offered. The application installs callbacks:
 
 ```cpp
-pc_ssh_auth_set_pubkey_cb([](const char *user, const uint8_t *blob, size_t len) {
+protocore_ssh_auth_set_pubkey_cb([](const char *user, const uint8_t *blob, size_t len) {
     return is_authorized_key(user, blob, len); // compare against your authorized_keys
 });
-pc_ssh_auth_set_password_cb([](const char *user, const char *pass) {
+protocore_ssh_auth_set_password_cb([](const char *user, const char *pass) {
     return check_password(user, pass);
 });
 ```
@@ -100,7 +100,7 @@ For publickey, the server first answers the no-signature probe with
 `USERAUTH_PK_OK`, then verifies the client's RSA-SHA2-256 signature over the
 session id and request before granting access.
 
-**Hardening:** define `PC_SSH_ALLOW_PASSWORD=0` to compile out password auth
+**Hardening:** define `PROTOCORE_SSH_ALLOW_PASSWORD=0` to compile out password auth
 entirely. The `password` method is then refused and is not advertised in the
 `USERAUTH_FAILURE` method list; only `publickey` remains.
 
@@ -145,7 +145,7 @@ per device:
    Embed `ssh_host.der` as a byte array (e.g. `xxd -i ssh_host.der`), flash the
    provisioning sketch once, then flash your real firmware.
 
-3. **At boot**, call [`pc_ssh_rsa_load_pubkey()`](@ref pc_ssh_rsa_load_pubkey) once (before accepting SSH) so the
+3. **At boot**, call [`protocore_ssh_rsa_load_pubkey()`](@ref protocore_ssh_rsa_load_pubkey) once (before accepting SSH) so the
    public half (n, e) is available for the host-key blob. The private half is
    parsed by the same call and kept for the server's lifetime, as an SSH host key
    normally is: on ESP32 inside a private mbedTLS context, on the software backend
@@ -160,14 +160,14 @@ The matching public key for clients' `known_hosts` is derived from the same DER
 
 For hardware / interop testing there is a committed, **public, insecure** key at
 [`test/fixtures/ssh_test_host_key/`](../test/fixtures/ssh_test_host_key/): the DER as a
-ready-to-include byte array (`ssh_test_host_key.h` -> `PC_SSH_TEST_HOST_KEY_DER`) plus
+ready-to-include byte array (`ssh_test_host_key.h` -> `PROTOCORE_SSH_TEST_HOST_KEY_DER`) plus
 its `.pub`. Provision it in one step from a sketch:
 
 ```cpp
 #include "ssh_test_host_key.h"
 Preferences p;
 p.begin("ssh_host_key", false);
-p.putBytes("priv_der", PC_SSH_TEST_HOST_KEY_DER, PC_SSH_TEST_HOST_KEY_DER_LEN);
+p.putBytes("priv_der", PROTOCORE_SSH_TEST_HOST_KEY_DER, PROTOCORE_SSH_TEST_HOST_KEY_DER_LEN);
 p.end();
 ```
 
@@ -176,9 +176,9 @@ deployments must generate their own key with the steps above and keep it secret.
 
 ## Limitations
 
-- `PC_SSH_MAX_CHANNELS` channels per connection (default 1). Port forwarding
-  (`ssh -L` / `ssh -R`, `PC_SSH_PORT_FORWARD`), the **SFTP** subsystem
-  (`PC_ENABLE_SSH_SFTP`) and **SCP** upload (`PC_ENABLE_SSH_SCP`) are all
+- `PROTOCORE_SSH_MAX_CHANNELS` channels per connection (default 1). Port forwarding
+  (`ssh -L` / `ssh -R`, `PROTOCORE_SSH_PORT_FORWARD`), the **SFTP** subsystem
+  (`PROTOCORE_ENABLE_SSH_SFTP`) and **SCP** upload (`PROTOCORE_ENABLE_SSH_SCP`) are all
   available (opt-in); X11 forwarding is not.
 - SCP serves only the SINK (upload) direction; use SFTP `get` to download.
 - On connection teardown the server closes the TCP without a graceful

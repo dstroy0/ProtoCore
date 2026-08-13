@@ -21,11 +21,11 @@
 #include "network_drivers/network/dns/dns.h"
 #include "protocore_config.h" // first: the feature flags the includes below are gated on
 #include "shared_primitives/ip.h"
-#if PC_ENABLE_FORWARD
+#if PROTOCORE_ENABLE_FORWARD
 #include "network_drivers/network/forward/forward.h" // ForwardNs: carried below as network.forward
 #endif
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The network layer, and the modules it carries.
@@ -45,7 +45,7 @@ typedef struct
 {
     void (*init)(void);
     const DnsNs *dns;
-#if PC_ENABLE_FORWARD
+#if PROTOCORE_ENABLE_FORWARD
     const ForwardNs *forward;
 #endif
     const IpNs *ip;
@@ -54,6 +54,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const NetworkNs network;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

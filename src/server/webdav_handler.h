@@ -20,9 +20,9 @@
 #include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
 
 /** @brief If @p req matches a ROUTE_DAV mount, handle it as WebDAV and return true. */
 proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req);
@@ -33,7 +33,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r);
 /** @brief Send a bodyless WebDAV status with optional extra header lines (each ending in CRLF). */
 void dav_send_status(uint8_t slot_id, int code, const char *extra_headers);
 
-#if PC_ENABLE_STREAM_BODY
+#if PROTOCORE_ENABLE_STREAM_BODY
 
 /** @brief Stream-begin hook: if @p req is a PUT under a DAV mount, open the file and stream the body. */
 proto_bool dav_stream_put_begin(HttpReq *req);
@@ -44,10 +44,10 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len);
 /** @brief Stream-abort hook: close the half-written PUT file if the transfer is torn down early. */
 void dav_put_abort_tramp(HttpReq *req);
 
-#endif // PC_ENABLE_STREAM_BODY
+#endif // PROTOCORE_ENABLE_STREAM_BODY
 
-#endif // PC_ENABLE_WEBDAV
+#endif // PROTOCORE_ENABLE_WEBDAV
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_WEBDAV_HANDLER_H

@@ -2,7 +2,7 @@
 # Build the P4 physical (L1) link bring-up test (the ESP32-P4 twin of pio's rig_s3_linktest) via arduino-cli,
 # then print the esptool flash command. The test source is the SHARED ../src/main_linktest.cpp; this script
 # stages it into the P4LinkTest sketch dir so the one test builds under both toolchains. build_opt.h sets
-# PC_ENABLE_ETHERNET=1 so the RMII PHY (not WiFi) is brought up.
+# PROTOCORE_ENABLE_ETHERNET=1 so the RMII PHY (not WiFi) is brought up.
 #
 #   REPO=/path/to/ProtoCore ./build_p4_linktest.sh
 #

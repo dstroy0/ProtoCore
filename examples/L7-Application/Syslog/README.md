@@ -1,6 +1,6 @@
 # Syslog - remote logging to a syslog server (RFC 5424)
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_SYSLOG`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_SYSLOG`
 
 ## What this example teaches
 
@@ -12,12 +12,12 @@ access-log hook.
 **Initialize the sink, then log by severity.**
 
 ```cpp
-pc_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SyslogFacility::SYSLOG_FAC_LOCAL0);
-pc_syslog_log(SyslogSeverity::SYSLOG_NOTICE, "device booted");
+protocore_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SyslogFacility::SYSLOG_FAC_LOCAL0);
+protocore_syslog_log(SyslogSeverity::SYSLOG_NOTICE, "device booted");
 ```
 
-`pc_syslog_init(host, port, hostname, app_name, facility)` configures the UDP
-destination and the fields stamped into every message; `pc_syslog_log(severity, msg)`
+`protocore_syslog_init(host, port, hostname, app_name, facility)` configures the UDP
+destination and the fields stamped into every message; `protocore_syslog_log(severity, msg)`
 emits one datagram (severities `SYSLOG_ERR` / `SYSLOG_WARNING` / `SYSLOG_INFO` /
 `SYSLOG_NOTICE`, ...).
 
@@ -29,7 +29,7 @@ severity:
 static void access_log(const char *method, const char *path, int status, int len) {
     char line[96];
     snprintf(line, sizeof(line), "%s %s -> %d (%d bytes)", method, path, status, len);
-    pc_syslog_log(status >= 500 ? SyslogSeverity::SYSLOG_ERR : status >= 400 ? SyslogSeverity::SYSLOG_WARNING : SyslogSeverity::SYSLOG_INFO, line);
+    protocore_syslog_log(status >= 500 ? SyslogSeverity::SYSLOG_ERR : status >= 400 ? SyslogSeverity::SYSLOG_WARNING : SyslogSeverity::SYSLOG_INFO, line);
 }
 server.on_request_log(access_log);
 ```
@@ -41,7 +41,7 @@ unprivileged port like 5140 with an ad-hoc UDP listener for testing.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_SYSLOG=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SYSLOG=1" \
   --lib="." examples/L7-Application/Syslog/Syslog.ino
 ```
 
@@ -60,7 +60,7 @@ added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_SYSLOG 1
+#define PROTOCORE_ENABLE_SYSLOG 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -79,7 +79,7 @@ static void access_log(const char *method, const char *path, int status, int len
 {
     char line[96];
     snprintf(line, sizeof(line), "%s %s -> %d (%d bytes)", method, path, status, len);
-    pc_syslog_log(status >= 500 ? SyslogSeverity::SYSLOG_ERR : status >= 400 ? SyslogSeverity::SYSLOG_WARNING : SyslogSeverity::SYSLOG_INFO, line);
+    protocore_syslog_log(status >= 500 ? SyslogSeverity::SYSLOG_ERR : status >= 400 ? SyslogSeverity::SYSLOG_WARNING : SyslogSeverity::SYSLOG_INFO, line);
 }
 
 void setup()
@@ -97,8 +97,8 @@ void setup()
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SyslogFacility::SYSLOG_FAC_LOCAL0);
-    pc_syslog_log(SyslogSeverity::SYSLOG_NOTICE, "device booted");
+    protocore_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SyslogFacility::SYSLOG_FAC_LOCAL0);
+    protocore_syslog_log(SyslogSeverity::SYSLOG_NOTICE, "device booted");
 
     server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "ok"); });
     server.on_request_log(access_log); // every response is logged to syslog
@@ -122,7 +122,7 @@ void loop()
         char hb[48];
         snprintf(hb, sizeof(hb), "heartbeat uptime=%lus heap=%u", (unsigned long)(millis() / 1000),
                  (unsigned)ESP.getFreeHeap());
-        pc_syslog_log(SyslogSeverity::SYSLOG_INFO, hb);
+        protocore_syslog_log(SyslogSeverity::SYSLOG_INFO, hb);
     }
 }
 ```

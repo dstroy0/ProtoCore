@@ -3,7 +3,7 @@
 """DNS (RFC 1035) interop: query the device's authoritative DNS server with a real dnspython client.
 
 Role: the *device is the server*. The device answers A/IN queries for its built-in table on UDP/53
-(`pc_dns_server_begin`), NXDOMAIN for anything else. This peer uses the third-party `dnspython` client to
+(`protocore_dns_server_begin`), NXDOMAIN for anything else. This peer uses the third-party `dnspython` client to
 build/send real DNS queries and parse the replies, then asserts the server semantics:
 
   1. A/IN query for a configured name -> NOERROR + an A record with the expected address, AA (authoritative)

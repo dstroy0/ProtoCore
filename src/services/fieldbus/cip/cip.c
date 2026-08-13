@@ -9,7 +9,7 @@
 #include "services/fieldbus/cip/cip.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_CIP
+#if PROTOCORE_ENABLE_CIP
 
 // Write one logical segment (class/instance/attribute) for @p id; 8-bit when it fits, else
 // 16-bit (segment byte + pad + LE value). Returns the octets written (2 or 4), or 0 if it
@@ -37,7 +37,7 @@ static size_t write_segment(uint8_t *p, size_t cap, uint8_t logical_type, uint16
     return 4;
 }
 
-size_t pc_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id, uint16_t attribute_id,
+size_t protocore_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id, uint16_t attribute_id,
                           proto_bool with_attribute)
 {
     if (!buf)
@@ -69,7 +69,7 @@ size_t pc_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t 
     return p;
 }
 
-size_t pc_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uint8_t *epath, size_t epath_len,
+size_t protocore_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uint8_t *epath, size_t epath_len,
                             const uint8_t *data, size_t data_len)
 {
     // EPATH must be whole 16-bit words and fit the 1-octet word count.
@@ -95,42 +95,42 @@ size_t pc_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uin
     return p;
 }
 
-size_t pc_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
+size_t protocore_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
                                     uint16_t attribute_id)
 {
     uint8_t epath[12];
-    size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
+    size_t elen = protocore_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
     if (!elen)
     {
         return 0;
     }
-    return pc_cip_build_request(buf, cap, CIP_SC_GET_ATTR_SINGLE, epath, elen, NULL, 0);
+    return protocore_cip_build_request(buf, cap, CIP_SC_GET_ATTR_SINGLE, epath, elen, NULL, 0);
 }
 
-size_t pc_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id)
+size_t protocore_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id)
 {
     uint8_t epath[8]; // class + instance logical segments only (no attribute), worst case 4B each
-    size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, 0, PROTO_FALSE);
+    size_t elen = protocore_cip_build_epath(epath, sizeof(epath), class_id, instance_id, 0, PROTO_FALSE);
     if (!elen)
     {
         return 0;
     }
-    return pc_cip_build_request(buf, cap, CIP_SC_GET_ATTR_ALL, epath, elen, NULL, 0);
+    return protocore_cip_build_request(buf, cap, CIP_SC_GET_ATTR_ALL, epath, elen, NULL, 0);
 }
 
-size_t pc_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
+size_t protocore_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
                                     uint16_t attribute_id, const uint8_t *value, size_t value_len)
 {
     uint8_t epath[12];
-    size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
+    size_t elen = protocore_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
     if (!elen)
     {
         return 0;
     }
-    return pc_cip_build_request(buf, cap, CIP_SC_SET_ATTR_SINGLE, epath, elen, value, value_len);
+    return protocore_cip_build_request(buf, cap, CIP_SC_SET_ATTR_SINGLE, epath, elen, value, value_len);
 }
 
-proto_bool pc_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out)
+proto_bool protocore_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out)
 {
     if (!buf || !out || len < 4) // service + reserved + general status + additional-status size
     {
@@ -149,4 +149,4 @@ proto_bool pc_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *ou
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_CIP
+#endif // PROTOCORE_ENABLE_CIP

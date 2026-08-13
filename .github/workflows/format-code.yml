@@ -102,7 +102,7 @@ jobs:
         run: python3 -m tools.ci_tooling.check.check_duplicate_symbols
 
       - name: Frame literals declare their real length
-        # Every PC_FK_LIT carries its length as a literal the compiler cannot check. This verifies
+        # Every PROTOCORE_FK_LIT carries its length as a literal the compiler cannot check. This verifies
         # each declared length against the string it names, across src/, examples/ and
         # penetration_testing/. It was written and never wired to anything.
         run: python3 -m tools.ci_tooling.check.check_frame_specs

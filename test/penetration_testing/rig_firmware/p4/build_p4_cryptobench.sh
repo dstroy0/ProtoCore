@@ -28,10 +28,10 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE/P4CryptoBench"
 cp "$HERE/P4CryptoBench/P4CryptoBench.ino" "$STAGE/P4CryptoBench/"
 cp "$HERE/P4CryptoBench/build_opt.h" "$STAGE/P4CryptoBench/"
-# Optional PC_CRYPTO_OPT_LEVEL sweep (arg 1: 0 = inherit -Os, 2 = -O2, 3 = -O3) - appended to the staged
+# Optional PROTOCORE_CRYPTO_OPT_LEVEL sweep (arg 1: 0 = inherit -Os, 2 = -O2, 3 = -O3) - appended to the staged
 # build_opt.h so the whole src/crypto tree builds at that level for an apples-to-apples per-variant bench.
 if [ -n "${1:-}" ]; then
-  echo "-DPC_CRYPTO_OPT_LEVEL=$1" >>"$STAGE/P4CryptoBench/build_opt.h"
+  echo "-DPROTOCORE_CRYPTO_OPT_LEVEL=$1" >>"$STAGE/P4CryptoBench/build_opt.h"
 fi
 cp "$REPO/penetration_testing/rig_firmware/src/main_cryptobench.cpp" "$STAGE/P4CryptoBench/"
 cp "$REPO/test/fixtures/ssh_test_host_key/ssh_test_host_key.h" "$STAGE/P4CryptoBench/"

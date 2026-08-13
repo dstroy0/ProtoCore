@@ -3,7 +3,7 @@
 
 /**
  * @file ld2410.h
- * @brief HLK-LD2410 24 GHz mmWave presence / motion radar codec (PC_ENABLE_LD2410).
+ * @brief HLK-LD2410 24 GHz mmWave presence / motion radar codec (PROTOCORE_ENABLE_LD2410).
  *
  * The LD2410 streams a framed serial report at 256000 baud: header `F4 F3 F2 F1`, a
  * little-endian intra-frame length, the payload, and footer `F8 F7 F6 F5`. The payload carries
@@ -12,7 +12,7 @@
  * mode" - the per-gate energy of all nine range gates. Configuration is a second frame kind
  * (header `FD FC FB FA`, footer `04 03 02 01`) carrying a 2-byte command word.
  *
- * This codec is pure and host-tested: ::pc_ld2410_parse_report decodes one report frame, and
+ * This codec is pure and host-tested: ::protocore_ld2410_parse_report decodes one report frame, and
  * ::Ld2410Stream reassembles frames byte-by-byte from a UART with resync on noise (no heap,
  * fixed buffer). The command encoders build the config frames. Where a bus seam exists the binding
  * pumps a UART through uart.h and keeps the latest report; only that read/write reaches the seam.
@@ -26,11 +26,11 @@
 #ifndef PROTOCORE_LD2410_H
 #define PROTOCORE_LD2410_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_LD2410
+#if PROTOCORE_ENABLE_LD2410
 
 /** @brief Range gates the LD2410 reports energy for in engineering mode (gate 0..8). */
 #define LD2410_MAX_GATES 9
@@ -69,7 +69,7 @@ typedef struct
  * (0x02 basic / 0x01 engineering), the `0xAA` head marker and the `0x55` tail.
  * @return true on a valid frame; false on any mismatch or a short buffer.
  */
-proto_bool pc_ld2410_parse_report(const uint8_t *frame, size_t len, Ld2410Report *out);
+proto_bool protocore_ld2410_parse_report(const uint8_t *frame, size_t len, Ld2410Report *out);
 
 /** @brief Byte-by-byte report-frame reassembler (fixed buffer, resyncs on noise). */
 typedef struct
@@ -82,32 +82,32 @@ typedef struct
 } Ld2410Stream;
 
 /** @brief Reset a stream to the syncing state. */
-void pc_ld2410_stream_reset(Ld2410Stream *s);
+void protocore_ld2410_stream_reset(Ld2410Stream *s);
 
 /**
  * @brief Feed one received byte. When it completes a valid report frame, fills @p out and
  * returns true; otherwise returns false (still syncing / mid-frame / bad frame - it resyncs).
  */
-proto_bool pc_ld2410_stream_push(Ld2410Stream *s, uint8_t byte, Ld2410Report *out);
+proto_bool protocore_ld2410_stream_push(Ld2410Stream *s, uint8_t byte, Ld2410Report *out);
 
 /** @brief true if @p r shows any target (moving or stationary). */
-proto_bool pc_ld2410_present(const Ld2410Report *r);
+proto_bool protocore_ld2410_present(const Ld2410Report *r);
 
 /** @brief Best available target distance (cm): the moving distance if moving, else stationary. */
-uint16_t pc_ld2410_distance_cm(const Ld2410Report *r);
+uint16_t protocore_ld2410_distance_cm(const Ld2410Report *r);
 
 // --- Config-command encoders (build a full `FD FC FB FA` .. `04 03 02 01` frame) -------------
 // Each returns the frame length written, or 0 if @p cap is too small. Config commands must be
 // bracketed by enable/end; engineering + restart take effect inside that bracket.
 
 /** @brief "Enable configuration" (word 0x00FF, value 0x0001). */
-size_t pc_ld2410_cmd_config_enable(uint8_t *buf, size_t cap);
+size_t protocore_ld2410_cmd_config_enable(uint8_t *buf, size_t cap);
 /** @brief "End configuration" (word 0x00FE). */
-size_t pc_ld2410_cmd_config_end(uint8_t *buf, size_t cap);
+size_t protocore_ld2410_cmd_config_end(uint8_t *buf, size_t cap);
 /** @brief Enable (0x0062) or disable (0x0063) engineering mode. */
-size_t pc_ld2410_cmd_engineering(uint8_t *buf, size_t cap, proto_bool on);
+size_t protocore_ld2410_cmd_engineering(uint8_t *buf, size_t cap, proto_bool on);
 /** @brief Restart the module (word 0x00A3). */
-size_t pc_ld2410_cmd_restart(uint8_t *buf, size_t cap);
+size_t protocore_ld2410_cmd_restart(uint8_t *buf, size_t cap);
 
 // --- LD2410B-only config commands ------------------------------------------------------------
 // The LD2410B is HiLink's BLE-equipped build of the same radar and speaks this identical
@@ -117,10 +117,10 @@ size_t pc_ld2410_cmd_restart(uint8_t *buf, size_t cap);
 // enable/end like any other config command.
 
 /** @brief LD2410B: turn the Bluetooth radio on (value 0x0001) or off (0x0000). Word 0x00A4. */
-size_t pc_ld2410_cmd_bluetooth(uint8_t *buf, size_t cap, proto_bool on);
+size_t protocore_ld2410_cmd_bluetooth(uint8_t *buf, size_t cap, proto_bool on);
 
 /** @brief LD2410B: query the module's Bluetooth MAC address (word 0x00A5, value 0x0001). */
-size_t pc_ld2410_cmd_get_mac(uint8_t *buf, size_t cap);
+size_t protocore_ld2410_cmd_get_mac(uint8_t *buf, size_t cap);
 
 /**
  * @brief LD2410B: set the 6-octet Bluetooth control password (word 0x00A9). Takes effect after a
@@ -132,7 +132,7 @@ size_t pc_ld2410_cmd_get_mac(uint8_t *buf, size_t cap);
  * document states it answers only over Bluetooth and not the serial port, so it belongs to the BLE
  * control channel, which this wired driver does not cover.
  */
-size_t pc_ld2410_cmd_set_bt_password(uint8_t *buf, size_t cap, const char password[6]);
+size_t protocore_ld2410_cmd_set_bt_password(uint8_t *buf, size_t cap, const char password[6]);
 
 // --- Command-ACK decoding --------------------------------------------------------------------
 // The module answers every config command with a frame in the same `FD FC FB FA` envelope, whose
@@ -153,36 +153,36 @@ typedef struct
  * @brief Decode one command-ACK frame (header, intra-frame length, footer and length agreement all
  *        checked). @return false if @p frame is not a well-formed ACK.
  */
-proto_bool pc_ld2410_parse_ack(const uint8_t *frame, size_t len, Ld2410Ack *out);
+proto_bool protocore_ld2410_parse_ack(const uint8_t *frame, size_t len, Ld2410Ack *out);
 
 /** @brief True if @p ack reports success (@ref Ld2410Ack::status == 0). */
-proto_bool pc_ld2410_ack_ok(const Ld2410Ack *ack);
+proto_bool protocore_ld2410_ack_ok(const Ld2410Ack *ack);
 
 /**
  * @brief Extract the 6-octet MAC from a get-MAC ACK (word 0x01A5) into @p mac, in wire order.
  * @return false unless @p ack is a successful get-MAC ACK carrying at least 6 payload octets.
  */
-proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6]);
+proto_bool protocore_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6]);
 
 // --- ESP32 binding (UART pump) ---------------------------------------
 
-/** @brief Open PC_LD2410_UART at PC_LD2410_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
-proto_bool pc_ld2410_begin(int rx_pin, int tx_pin);
+/** @brief Open PROTOCORE_LD2410_UART at PROTOCORE_LD2410_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
+proto_bool protocore_ld2410_begin(int rx_pin, int tx_pin);
 
 /** @brief Pump the UART through the stream. @return true if a fresh report was decoded. */
-proto_bool pc_ld2410_poll(void);
+proto_bool protocore_ld2410_poll(void);
 
 /** @brief The most recently decoded report, or NULL before the first one arrives. */
-const Ld2410Report *pc_ld2410_last(void);
+const Ld2410Report *protocore_ld2410_last(void);
 
 /** @brief Enable/disable engineering mode (brackets the command with enable/end). */
-proto_bool pc_ld2410_set_engineering(proto_bool on);
+proto_bool protocore_ld2410_set_engineering(proto_bool on);
 
 /** @brief Restart the module (brackets the command with enable/end). */
-proto_bool pc_ld2410_restart(void);
+proto_bool protocore_ld2410_restart(void);
 
-#endif // PC_ENABLE_LD2410
+#endif // PROTOCORE_ENABLE_LD2410
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_LD2410_H

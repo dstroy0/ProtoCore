@@ -36,7 +36,7 @@ void dbench_run(void)
     const size_t token_len = strlen(TOKEN);
 
     // Full Authorization header value for the bearer-path bench.
-    static char auth_hdr[PC_AUTH_HDR_CAP_JWT];
+    static char auth_hdr[PROTOCORE_AUTH_HDR_CAP_JWT];
     snprintf(auth_hdr, sizeof(auth_hdr), "Bearer %s", TOKEN);
 
     // A representative space-separated OAuth2 scope claim for the pure-string allow check.

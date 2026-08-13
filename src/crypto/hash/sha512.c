@@ -13,20 +13,20 @@
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
 
-#if PC_HAS_HW_SHA
+#if PROTOCORE_HAS_HW_SHA
 #include <mbedtls/sha512.h> // hardware SHA accelerator
 #else
 #include "mmgr/endian.h" // native software SHA-512
 #endif
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
-#if PC_HAS_HW_SHA
+#if PROTOCORE_HAS_HW_SHA
 
 // ---------------------------------------------------------------------------
 // HW path: streaming + one-shot via mbedtls.
 // ---------------------------------------------------------------------------
 
-void pc_sha512_init(pc_sha512_ctx *ctx, uint8_t *work)
+void protocore_sha512_init(protocore_sha512_ctx *ctx, uint8_t *work)
 {
     (void)work; // the accelerator carries its own
     mbedtls_sha512_init(&ctx->mbed);
@@ -37,7 +37,7 @@ void pc_sha512_init(pc_sha512_ctx *ctx, uint8_t *work)
 #endif
 }
 
-void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
+void protocore_sha512_update(protocore_sha512_ctx *ctx, const uint8_t *data, size_t len)
 {
 #if MBEDTLS_VERSION_MAJOR >= 3
     mbedtls_sha512_update(&ctx->mbed, data, len);
@@ -46,7 +46,7 @@ void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
 #endif
 }
 
-void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN])
+void protocore_sha512_final(protocore_sha512_ctx *ctx, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
 {
 #if MBEDTLS_VERSION_MAJOR >= 3
     mbedtls_sha512_finish(&ctx->mbed, digest);
@@ -56,7 +56,7 @@ void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN])
     mbedtls_sha512_free(&ctx->mbed);
 }
 
-void pc_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN])
+void protocore_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
 {
     (void)work; // the accelerator carries its own
     (void)mbedtls_sha512(data, len, digest, 0 /* 0 = SHA-512, 1 = SHA-384 */);
@@ -93,15 +93,15 @@ static const uint64_t H0[8] = {
 };
 
 // Where the 128-bit message length sits in the final block (FIPS 180-4 §5.1.2).
-#define SHA512_LEN_OFF (PC_SHA512_BLOCK_LEN - 16u)
+#define SHA512_LEN_OFF (PROTOCORE_SHA512_BLOCK_LEN - 16u)
 
 // The caller's working bytes, split: the block as it arrives, the padded last one, and the state copy
 // the padded blocks compress into so finalizing leaves the running hash alone.
 #define SHA512_OFF_RX 0u
-#define SHA512_OFF_TX (SHA512_OFF_RX + PC_SHA512_BLOCK_LEN)
-#define SHA512_OFF_STATE (SHA512_OFF_TX + PC_SHA512_BLOCK_LEN)
-static_assert(SHA512_OFF_STATE + sizeof(uint64_t) * 8 <= PC_SHA512_BORROW,
-              "PC_SHA512_BORROW is short of the two blocks and the state copy - raise it in "
+#define SHA512_OFF_TX (SHA512_OFF_RX + PROTOCORE_SHA512_BLOCK_LEN)
+#define SHA512_OFF_STATE (SHA512_OFF_TX + PROTOCORE_SHA512_BLOCK_LEN)
+static_assert(SHA512_OFF_STATE + sizeof(uint64_t) * 8 <= PROTOCORE_SHA512_BORROW,
+              "PROTOCORE_SHA512_BORROW is short of the two blocks and the state copy - raise it in "
               "protocore_config.h");
 
 static inline uint64_t rotr64(uint64_t x, unsigned n)
@@ -141,24 +141,24 @@ static inline uint64_t sha512_ssig1(uint64_t x)
 // sixteen, and eighty rounds is five whole sixteens, so the compression is written once and run five
 // times with k stepping. Naming the register a round lands on IS the shift, so no word is ever moved
 // and the schedule stays sixteen words rather than eighty.
-static void sha512_block(uint64_t h[8], const uint8_t blk[PC_SHA512_BLOCK_LEN])
+static void sha512_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA512_BLOCK_LEN])
 {
-    uint64_t m0 = pc_rd64be(blk);
-    uint64_t m1 = pc_rd64be(blk + 8);
-    uint64_t m2 = pc_rd64be(blk + 16);
-    uint64_t m3 = pc_rd64be(blk + 24);
-    uint64_t m4 = pc_rd64be(blk + 32);
-    uint64_t m5 = pc_rd64be(blk + 40);
-    uint64_t m6 = pc_rd64be(blk + 48);
-    uint64_t m7 = pc_rd64be(blk + 56);
-    uint64_t m8 = pc_rd64be(blk + 64);
-    uint64_t m9 = pc_rd64be(blk + 72);
-    uint64_t m10 = pc_rd64be(blk + 80);
-    uint64_t m11 = pc_rd64be(blk + 88);
-    uint64_t m12 = pc_rd64be(blk + 96);
-    uint64_t m13 = pc_rd64be(blk + 104);
-    uint64_t m14 = pc_rd64be(blk + 112);
-    uint64_t m15 = pc_rd64be(blk + 120);
+    uint64_t m0 = protocore_rd64be(blk);
+    uint64_t m1 = protocore_rd64be(blk + 8);
+    uint64_t m2 = protocore_rd64be(blk + 16);
+    uint64_t m3 = protocore_rd64be(blk + 24);
+    uint64_t m4 = protocore_rd64be(blk + 32);
+    uint64_t m5 = protocore_rd64be(blk + 40);
+    uint64_t m6 = protocore_rd64be(blk + 48);
+    uint64_t m7 = protocore_rd64be(blk + 56);
+    uint64_t m8 = protocore_rd64be(blk + 64);
+    uint64_t m9 = protocore_rd64be(blk + 72);
+    uint64_t m10 = protocore_rd64be(blk + 80);
+    uint64_t m11 = protocore_rd64be(blk + 88);
+    uint64_t m12 = protocore_rd64be(blk + 96);
+    uint64_t m13 = protocore_rd64be(blk + 104);
+    uint64_t m14 = protocore_rd64be(blk + 112);
+    uint64_t m15 = protocore_rd64be(blk + 120);
 
     uint64_t v0 = h[0];
     uint64_t v1 = h[1];
@@ -288,7 +288,7 @@ static void sha512_block(uint64_t h[8], const uint8_t blk[PC_SHA512_BLOCK_LEN])
     h[7] += v7;
 }
 
-void pc_sha512_init(pc_sha512_ctx *ctx, uint8_t *work)
+void protocore_sha512_init(protocore_sha512_ctx *ctx, uint8_t *work)
 {
     for (int i = 0; i < 8; i++)
     {
@@ -301,12 +301,12 @@ void pc_sha512_init(pc_sha512_ctx *ctx, uint8_t *work)
     ctx->rxlen = 0;
 }
 
-void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
+void protocore_sha512_update(protocore_sha512_ctx *ctx, const uint8_t *data, size_t len)
 {
     ctx->n += len;
     while (len > 0)
     {
-        uint32_t take = PC_SHA512_BLOCK_LEN - ctx->rxlen;
+        uint32_t take = PROTOCORE_SHA512_BLOCK_LEN - ctx->rxlen;
         if (len < take)
         {
             take = (uint32_t)len;
@@ -317,7 +317,7 @@ void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
         ctx->rxlen += take;
         data += take;
         len -= take;
-        if (ctx->rxlen == PC_SHA512_BLOCK_LEN)
+        if (ctx->rxlen == PROTOCORE_SHA512_BLOCK_LEN)
         {
             sha512_block(ctx->s, ctx->rx);
             ctx->rxlen = 0;
@@ -325,7 +325,7 @@ void pc_sha512_update(pc_sha512_ctx *ctx, const uint8_t *data, size_t len)
     }
 }
 
-void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN])
+void protocore_sha512_final(protocore_sha512_ctx *ctx, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
 {
     // 128-bit length in bits. Our byte count fits a uint64, so the high word is n >> 61 (bits above 64)
     // and the low word is n << 3.
@@ -338,7 +338,7 @@ void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN])
 
     // The last block is composed in tx, whole: what rx holds, the mark, zeros, and the length. rx is
     // read and never written back, so nothing it still carries from an earlier block reaches the wire.
-    mem.zero(ctx->tx, PC_SHA512_BLOCK_LEN);
+    mem.zero(ctx->tx, PROTOCORE_SHA512_BLOCK_LEN);
     mem.cpy(ctx->tx, ctx->rx, ctx->rxlen);
     ctx->tx[ctx->rxlen] = 0x80;
 
@@ -347,29 +347,29 @@ void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN])
     if (ctx->rxlen >= SHA512_LEN_OFF)
     {
         sha512_block(ctx->fs, ctx->tx);
-        mem.zero(ctx->tx, PC_SHA512_BLOCK_LEN);
+        mem.zero(ctx->tx, PROTOCORE_SHA512_BLOCK_LEN);
     }
 
-    pc_wr64be(ctx->tx + SHA512_LEN_OFF, len_hi);
-    pc_wr64be(ctx->tx + SHA512_LEN_OFF + 8, len_lo);
+    protocore_wr64be(ctx->tx + SHA512_LEN_OFF, len_hi);
+    protocore_wr64be(ctx->tx + SHA512_LEN_OFF + 8, len_lo);
     sha512_block(ctx->fs, ctx->tx);
 
-    pc_wr64be(digest, ctx->fs[0]);
-    pc_wr64be(digest + 8, ctx->fs[1]);
-    pc_wr64be(digest + 16, ctx->fs[2]);
-    pc_wr64be(digest + 24, ctx->fs[3]);
-    pc_wr64be(digest + 32, ctx->fs[4]);
-    pc_wr64be(digest + 40, ctx->fs[5]);
-    pc_wr64be(digest + 48, ctx->fs[6]);
-    pc_wr64be(digest + 56, ctx->fs[7]);
+    protocore_wr64be(digest, ctx->fs[0]);
+    protocore_wr64be(digest + 8, ctx->fs[1]);
+    protocore_wr64be(digest + 16, ctx->fs[2]);
+    protocore_wr64be(digest + 24, ctx->fs[3]);
+    protocore_wr64be(digest + 32, ctx->fs[4]);
+    protocore_wr64be(digest + 40, ctx->fs[5]);
+    protocore_wr64be(digest + 48, ctx->fs[6]);
+    protocore_wr64be(digest + 56, ctx->fs[7]);
 }
 
-void pc_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN])
+void protocore_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
 {
-    pc_sha512_ctx ctx = {0};
-    pc_sha512_init(&ctx, work);
-    pc_sha512_update(&ctx, data, len);
-    pc_sha512_final(&ctx, digest);
+    protocore_sha512_ctx ctx = {0};
+    protocore_sha512_init(&ctx, work);
+    protocore_sha512_update(&ctx, data, len);
+    protocore_sha512_final(&ctx, digest);
 }
 
-#endif // !PC_HAS_HW_SHA (SW path)
+#endif // !PROTOCORE_HAS_HW_SHA (SW path)

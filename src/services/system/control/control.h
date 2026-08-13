@@ -3,7 +3,7 @@
 
 /**
  * @file control.h
- * @brief Closed-loop control law (PC_ENABLE_CONTROL) - a zero-heap PID controller plus a
+ * @brief Closed-loop control law (PROTOCORE_ENABLE_CONTROL) - a zero-heap PID controller plus a
  *        handful of inline control-law primitives, for driving an actuator toward a setpoint.
  *
  * The PID is the textbook parallel form with the corrections that matter on real hardware:
@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_CONTROL
+#if PROTOCORE_ENABLE_CONTROL
 
 #define CONTROL_UNBOUNDED 1e30f ///< sentinel for "no clamp" (well outside any real actuator range)
 
@@ -232,8 +232,8 @@ size_t pid_log_header(uint8_t *buf, size_t cap, const Pid *p, float dt);
 /// Write one 16-octet dense-binary log record. Returns PID_LOG_RECORD_LEN, or 0 if cap too small.
 size_t pid_log_record(uint8_t *buf, size_t cap, float setpoint, float measurement, float output, proto_bool saturated);
 
-#endif // PC_ENABLE_CONTROL
+#endif // PROTOCORE_ENABLE_CONTROL
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CONTROL_H

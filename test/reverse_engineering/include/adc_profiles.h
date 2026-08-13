@@ -32,7 +32,7 @@
  *
  * **Pipeline latency.** Every pipelined ADC reports sample N for an analog instant that was
  * actually N - latency_samples clock cycles earlier (the datasheet states this in ADC clock
- * cycles from encode to output valid). trace_capture's pc_tc_trigger() freezes the
+ * cycles from encode to output valid). trace_capture's protocore_tc_trigger() freezes the
  * pre-trigger ring at the instant the external trigger GPIO fires, but the samples already
  * *in* that ring at that instant lag the analog signal by the ADC's pipeline latency -
  * DAQ_ADC_PIPELINE_LATENCY_SAMPLES documents that offset so analysis can shift the reported

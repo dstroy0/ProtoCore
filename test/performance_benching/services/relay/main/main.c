@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the byte relay (services/net/relay): pc_relay_step() pumps bytes
+// On-device CCOUNT microbenchmark for the byte relay (services/net/relay): protocore_relay_step() pumps bytes
 // between two ends (client <-> origin) through the per-direction carry buffers - the per-poll hot op
 // of a TCP proxy. Driven here over in-memory mock ends (recv always supplies a chunk, send always
 // accepts), so it measures the pure relay bookkeeping + copy cost; the real sockets are elsewhere.
@@ -31,16 +31,16 @@ static void mock_shutdown(void *)
 
 void dbench_run(void)
 {
-    static pc_relay r;
-    pc_relay_end client = {mock_recv, mock_send, mock_shutdown, NULL};
-    pc_relay_end origin = {mock_recv, mock_send, mock_shutdown, NULL};
+    static protocore_relay r;
+    protocore_relay_end client = {mock_recv, mock_send, mock_shutdown, NULL};
+    protocore_relay_end origin = {mock_recv, mock_send, mock_shutdown, NULL};
 
     for (;;)
     {
         DBENCH_BANNER("relay");
         volatile int sink = 0;
-        pc_relay_init(&r, &client, &origin);
-        DBENCH_OP("pc_relay_step (pump both dirs)", 200000, sink += (int)pc_relay_step(&r));
+        protocore_relay_init(&r, &client, &origin);
+        DBENCH_OP("protocore_relay_step (pump both dirs)", 200000, sink += (int)protocore_relay_step(&r));
         (void)sink;
         DBENCH_DONE();
     }

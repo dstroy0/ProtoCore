@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Verify every PC_FK_LIT field in a frame spec carries its literal's true length.
+"""Verify every PROTOCORE_FK_LIT field in a frame spec carries its literal's true length.
 
-A frame spec is a `static const pc_field[]` whose literal fields are written
-`{PC_FK_LIT, 0, <len>, "<text>"}`. The length is spelled out because computing it would take a
+A frame spec is a `static const protocore_field[]` whose literal fields are written
+`{PROTOCORE_FK_LIT, 0, <len>, "<text>"}`. The length is spelled out because computing it would take a
 function-like macro, which AUTOSAR A16-0-1 forbids, and `constexpr` is banned here as well. A wrong
 length is not a compile error: too small silently truncates the frame, too large reads past the
 literal, and both look correct in review.
 
-This gate closes that. It scans src/, examples/ and penetration_testing/ for PC_FK_LIT initializers, decodes
+This gate closes that. It scans src/, examples/ and penetration_testing/ for PROTOCORE_FK_LIT initializers, decodes
 the C escape sequences in each literal, and compares the byte count against the declared value.
 `--fix` rewrites the declared value in place.
 
@@ -29,10 +29,10 @@ ROOT = pathlib.Path(dr.repo_root(__file__))
 TREES = ("src", "examples", "penetration_testing", "test")
 EXTS = (".h", ".c", ".cpp", ".ino")
 
-# {PC_FK_LIT, <width>, <len>, "text"} - the literal may be several adjacent string tokens, which C
+# {PROTOCORE_FK_LIT, <width>, <len>, "text"} - the literal may be several adjacent string tokens, which C
 # concatenates, so the whole run is captured and measured together.
 FIELD = re.compile(
-    r"\{\s*PC_FK_LIT\s*,\s*(?P<width>[0-9]+)\s*,\s*(?P<len>[0-9]+)\s*,\s*"
+    r"\{\s*PROTOCORE_FK_LIT\s*,\s*(?P<width>[0-9]+)\s*,\s*(?P<len>[0-9]+)\s*,\s*"
     r"(?P<lit>\"(?:[^\"\\]|\\.)*\"(?:\s*\"(?:[^\"\\]|\\.)*\")*)\s*\}"
 )
 
@@ -84,7 +84,7 @@ def main(argv):
             if path.suffix not in EXTS or ".pio" in path.parts or "build" in path.parts:
                 continue
             text = path.read_text(encoding="utf-8", errors="replace")
-            if "PC_FK_LIT" not in text:
+            if "PROTOCORE_FK_LIT" not in text:
                 continue
             edits = []
             for m in FIELD.finditer(text):

@@ -13,12 +13,12 @@ path, so you only change these when you have a specific reason.
 
 The server runs in one or more dedicated FreeRTOS worker tasks, not the user's
 `loop()`. Each worker owns a disjoint partition of connection slots (slot `i` ->
-worker `i % PC_WORKER_COUNT`) plus its own event queue and scratch arena, so no
+worker `i % PROTOCORE_WORKER_COUNT`) plus its own event queue and scratch arena, so no
 two workers ever touch the same state: there are no hot-path locks, which is what
 keeps latency bounded (= deterministic) while cores run disjoint connections in
 parallel. A worker blocks on its FreeRTOS task notification and is woken the moment
 an event or a deferred callback is queued, so event latency is independent of the
-idle-sweep cadence. `PC_WORKER_COUNT == 1` (the default) is byte-for-byte the
+idle-sweep cadence. `PROTOCORE_WORKER_COUNT == 1` (the default) is byte-for-byte the
 original single-pipeline behavior. The lwIP callbacks that run on the tcpip thread
 (shared with WiFi on Core 0) are kept minimal: a received segment is bulk-copied
 into the slot's ring with a single SPSC publish, then one event is posted.
@@ -37,19 +37,19 @@ points re-derives a bound, and that is what makes the footprint a number you can
 compute before flashing rather than a property you measure afterwards.
 
 Working memory is therefore not per-feature buffers but two **pools**, both the same
-mechanism (`pc_arena`, `mmgr/arena.h`) instantiated twice, with one arena per slot -
+mechanism (`protocore_arena`, `mmgr/arena.h`) instantiated twice, with one arena per slot -
 one per worker, plus the ghost, which is the library's own.
 
-| Pool                           | Holds                                                    | Reclaim                                                           |
-| ------------------------------ | -------------------------------------------------------- | ----------------------------------------------------------------- |
-| plaintext (`mmgr/plaintext.h`) | transient bytes that are not secret                      | `pc_plaintext_reset()` per dispatch; `pc_plaintext_release(mark)` |
-| secure (`mmgr/secure.h`)       | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves         |
+| Pool                           | Holds                                                    | Reclaim                                                                         |
+| ------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| plaintext (`mmgr/plaintext.h`) | transient bytes that are not secret                      | `protocore_plaintext_reset()` per dispatch; `protocore_plaintext_release(mark)` |
+| secure (`mmgr/secure.h`)       | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves                       |
 
 The two differ in exactly one thing: reclaiming the secure pool zeroes the region
 before it becomes available again, so a secret cannot outlive its borrow. That makes
 the rule structural instead of a discipline every caller has to remember on every
-return path. The regions are also disjoint, so `pc_secure_owns()` and
-`pc_plaintext_owns()` are mutually exclusive by construction - a secure borrow can
+return path. The regions are also disjoint, so `protocore_secure_owns()` and
+`protocore_plaintext_owns()` are mutually exclusive by construction - a secure borrow can
 never be accepted where a plaintext one is expected, with no tagging and no
 per-allocation metadata.
 
@@ -59,10 +59,10 @@ only question is whether the bytes are secret.
 ### Borrowing
 
 ```c
-size_t mark = pc_secure_mark();
-uint8_t *k  = pc_secure_alloc(PC_AES128GCM_KEY_LEN, 8);
+size_t mark = protocore_secure_mark();
+uint8_t *k  = protocore_secure_alloc(PROTOCORE_AES128GCM_KEY_LEN, 8);
 /* ... use k ... */
-pc_secure_release(mark);          /* wipes, then reclaims */
+protocore_secure_release(mark);          /* wipes, then reclaims */
 ```
 
 The caller asks for RAM and gets a pointer, and **the RAM is guaranteed to be there**.
@@ -81,7 +81,7 @@ becoming a run-time surprise in the core.
 
 Because they meet those conditions, **the core behaves as advertised**: the pointer is
 guaranteed, the footprint is a number you computed before flashing, and no call site
-has a check to write. A consumer writes `pc_secure_alloc(PC_WORK_AES128GCM, 8)` and is
+has a check to write. A consumer writes `protocore_secure_alloc(PROTOCORE_WORK_AES128GCM, 8)` and is
 done - the macro settles the size, the backend has already satisfied the requirement,
 and neither is restated at the point of use.
 
@@ -92,14 +92,14 @@ request; left an ordinary struct member it would inherit only 8, so it is declar
 the base was good enough.
 
 The one thing C does not do for you: on the secure side **every** return path must
-reach `pc_secure_release()`, including the early ones taken when a peer sends
+reach `protocore_secure_release()`, including the early ones taken when a peer sends
 something malformed. That is where the wipe happens.
 
 ### Every TU precomputes, and mmgr knows
 
 The pool sizes are not chosen numbers. Each translation unit precomputes its span -
 the worst-case bytes it borrows in a single call - and declares it as a
-`PC_WORK_<MODULE>` constant in [`protocore_config.h`](../src/protocore_config.h),
+`PROTOCORE_WORK_<MODULE>` constant in [`protocore_config.h`](../src/protocore_config.h),
 the one place that can see them all, since every module header includes it.
 
 **mmgr therefore has preknowledge of every TU's span before the build runs.** It is
@@ -120,7 +120,7 @@ list, no fragmentation, and no layout decision left to make while the device is
 running.
 
 Each span is **proved where the struct lives**, by a
-`static_assert(sizeof(X) <= PC_WORK_X)` in the module that owns it, so a working set
+`static_assert(sizeof(X) <= PROTOCORE_WORK_X)` in the module that owns it, so a working set
 that grows past its declaration fails the build naming itself rather than exhausting a
 pool at run time. The declaration and the truth cannot drift apart.
 
@@ -143,19 +143,19 @@ Both are feature-gated, so a build pays only for the code it compiled.
 
 ## Knobs
 
-| Macro                     | Default              | What it does                                                                                                                                                                                                                                                               |
-| ------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PC_WORKER_COUNT`         | 1                    | Number of worker tasks. `> 1` partitions slots across cores. Must be `<= MAX_CONNS`.                                                                                                                                                                                       |
-| `PC_WORKER_CORE`          | 1                    | Core that worker 0 pins to; worker `k` pins to `(PC_WORKER_CORE + k) % cores`.                                                                                                                                                                                             |
-| `PC_WORKER_TASK_PRIORITY` | 5                    | FreeRTOS priority of the worker task(s).                                                                                                                                                                                                                                   |
-| `PC_WORKER_TASK_STACK`    | 8192                 | Per-worker task stack (bytes). A build guard requires `>= PC_WORKER_STACK_RSA_MIN` when OIDC or SSH is enabled (RSA-2048 verify needs ~7 KB).                                                                                                                              |
-| `PC_WORKER_STACK_RSA_MIN` | 8192                 | Enforced floor for `PC_WORKER_TASK_STACK` once an RSA-2048 verifier (OIDC/SSH) is compiled in. Lower it only if you marshal RSA verifies off the worker.                                                                                                                   |
-| `PC_WORKER_POLL_TICKS`    | 1                    | Idle-sweep block timeout (ticks). Events wake the worker immediately regardless; this only sets how often an idle worker wakes to run the timeout sweep.                                                                                                                   |
-| `EVT_QUEUE_DEPTH`         | `MAX_CONNS * 4` (32) | Per-queue event slots; tracks `MAX_CONNS` so a raised pool never trips the `>= MAX_CONNS * 4` guard. Raise it to absorb larger connection bursts.                                                                                                                          |
-| `MAX_CONNS`               | 8                    | Connection pool size. The hard ceiling on concurrent connections.                                                                                                                                                                                                          |
-| `PROTO_WORD_BITS`         | 32                   | The target's natural register width. Every narrow value is carried in it and truncated at the boundary, because arithmetic narrower than the register costs the mask that keeps the unused half correct. Must be 16, 32 or 64.                                             |
-| `PROTO_INDEX_BITS`        | 32                   | Width of `proto_idx`, which is every offset, length and capacity the library declares (never `size_t`, whose width is inherited from the pointer and so differs between a device build and the host test). Must be 16 or 32, and `<= PROTO_WORD_BITS`.                     |
-| `PROTO_SWAR_BITS`         | `PROTO_WORD_BITS`    | Width of the lane carrier the byte-parallel scans and compares work in (`mmgr/swar.h`). Must be 8, 16, 32 or 64 and `<= PROTO_WORD_BITS` - a wider carrier is synthesized from halves and is slower than the width it decomposes into. 8 degenerates to one lane per word. |
+| Macro                            | Default              | What it does                                                                                                                                                                                                                                                               |
+| -------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PROTOCORE_WORKER_COUNT`         | 1                    | Number of worker tasks. `> 1` partitions slots across cores. Must be `<= MAX_CONNS`.                                                                                                                                                                                       |
+| `PROTOCORE_WORKER_CORE`          | 1                    | Core that worker 0 pins to; worker `k` pins to `(PROTOCORE_WORKER_CORE + k) % cores`.                                                                                                                                                                                      |
+| `PROTOCORE_WORKER_TASK_PRIORITY` | 5                    | FreeRTOS priority of the worker task(s).                                                                                                                                                                                                                                   |
+| `PROTOCORE_WORKER_TASK_STACK`    | 8192                 | Per-worker task stack (bytes). A build guard requires `>= PROTOCORE_WORKER_STACK_RSA_MIN` when OIDC or SSH is enabled (RSA-2048 verify needs ~7 KB).                                                                                                                       |
+| `PROTOCORE_WORKER_STACK_RSA_MIN` | 8192                 | Enforced floor for `PROTOCORE_WORKER_TASK_STACK` once an RSA-2048 verifier (OIDC/SSH) is compiled in. Lower it only if you marshal RSA verifies off the worker.                                                                                                            |
+| `PROTOCORE_WORKER_POLL_TICKS`    | 1                    | Idle-sweep block timeout (ticks). Events wake the worker immediately regardless; this only sets how often an idle worker wakes to run the timeout sweep.                                                                                                                   |
+| `EVT_QUEUE_DEPTH`                | `MAX_CONNS * 4` (32) | Per-queue event slots; tracks `MAX_CONNS` so a raised pool never trips the `>= MAX_CONNS * 4` guard. Raise it to absorb larger connection bursts.                                                                                                                          |
+| `MAX_CONNS`                      | 8                    | Connection pool size. The hard ceiling on concurrent connections.                                                                                                                                                                                                          |
+| `PROTO_WORD_BITS`                | 32                   | The target's natural register width. Every narrow value is carried in it and truncated at the boundary, because arithmetic narrower than the register costs the mask that keeps the unused half correct. Must be 16, 32 or 64.                                             |
+| `PROTO_INDEX_BITS`               | 32                   | Width of `proto_idx`, which is every offset, length and capacity the library declares (never `size_t`, whose width is inherited from the pointer and so differs between a device build and the host test). Must be 16 or 32, and `<= PROTO_WORD_BITS`.                     |
+| `PROTO_SWAR_BITS`                | `PROTO_WORD_BITS`    | Width of the lane carrier the byte-parallel scans and compares work in (`mmgr/swar.h`). Must be 8, 16, 32 or 64 and `<= PROTO_WORD_BITS` - a wider carrier is synthesized from halves and is slower than the width it decomposes into. 8 degenerates to one lane per word. |
 
 ## Feature buffer & limit knobs
 
@@ -164,8 +164,8 @@ thresholds) lives in one place: [`src/protocore_config.h`](../src/protocore_conf
 in the section **"Feature tuning knobs (grouped and gated by feature)"** at the end of
 the file. You never have to open a feature header to turn one. Each is an override-able
 default, so you set a new value in your `build_flags` (for example
-`-D PC_OPCUA_READ_MAX=16` or `-D PC_GQL_MAX_DEPTH=8`) and the owning module picks
-it up. A group is wrapped in its feature's `PC_ENABLE_*` flag, so a knob only exists
+`-D PROTOCORE_OPCUA_READ_MAX=16` or `-D PROTOCORE_GQL_MAX_DEPTH=8`) and the owning module picks
+it up. A group is wrapped in its feature's `PROTOCORE_ENABLE_*` flag, so a knob only exists
 when that feature is compiled in.
 
 What is deliberately _not_ a knob and stays next to its code: protocol- and
@@ -186,7 +186,7 @@ layers defaults along three independent axes, selected in [`board_profile.h`](..
   `c3` / `c5` / `c6` / `c61` / `h2` / `p4` `_defaults.h`, plus preview targets `s31` / `h4` /
   `h21` (in ESP-IDF `master` only). Auto-selected from `CONFIG_IDF_TARGET_*`; classic ESP32
   and host builds use the classic floor. Holds each die's chip-appropriate sizing and its
-  per-die HW-crypto flags - `PC_HW_AES` / `_SHA` / `_RSA` / `_ECC` / `_ECDSA` / `_HMAC` /
+  per-die HW-crypto flags - `PROTOCORE_HW_AES` / `_SHA` / `_RSA` / `_ECC` / `_ECDSA` / `_HMAC` /
   `_DS` - which are genuinely different across the lineup (e.g. C2/C61 have no general-purpose
   AES peripheral and no RSA/MPI; C6 has no ECDSA; H4 has no RSA/DS), so gate a HW path on the
   specific flag, never on "it's an ESP32". Values track each target's ESP-IDF `soc_caps.h`.
@@ -204,15 +204,15 @@ your -D / build_opt.h override  >  PSRAM profile  >  flash profile  >  chip prof
 Nothing here overrides a value you set yourself, and the classic ESP32 gets exactly the
 historical numbers, so no existing board regresses - larger variants just stop being
 capped to the smallest one. Piloted so far: the edge-cache and mesh pools
-(`PC_EDGE_CACHE_SLOTS`, `PC_EDGE_BODY_MAX`, `PC_EDGE_FETCH_SLOTS`, `PC_MESH_MAX_PEERS`,
-`PC_MESH_MAX_CONNS`); more sizing knobs migrate into the profiles over time.
+(`PROTOCORE_EDGE_CACHE_SLOTS`, `PROTOCORE_EDGE_BODY_MAX`, `PROTOCORE_EDGE_FETCH_SLOTS`, `PROTOCORE_MESH_MAX_PEERS`,
+`PROTOCORE_MESH_MAX_CONNS`); more sizing knobs migrate into the profiles over time.
 
 The chip is detected automatically. PSRAM and flash size can't be read reliably from the
 Arduino core, so set them for your board (they default to "none / smallest"):
 
 ```ini
 ; platformio.ini - an S3 with 8 MB PSRAM and 16 MB flash
-build_flags = -DPC_PSRAM_MB=8 -DPC_FLASH_MB=16
+build_flags = -DPROTOCORE_PSRAM_MB=8 -DPROTOCORE_FLASH_MB=16
 ```
 
 ESP-IDF builds fill both in automatically from `CONFIG_SPIRAM_SIZE` /
@@ -224,15 +224,15 @@ which always wins over the profile.
 **Event latency is decoupled from the idle-sweep cadence.** With WiFi power-save
 off to isolate scheduling, `GET /health` over 15 requests:
 
-| `PC_WORKER_POLL_TICKS` | avg     | min     | max     |
-| ---------------------- | ------- | ------- | ------- |
-| 1                      | 27.2 ms | 12.4 ms | 35.1 ms |
-| 100                    | 28.0 ms | 12.5 ms | 42.2 ms |
+| `PROTOCORE_WORKER_POLL_TICKS` | avg     | min     | max     |
+| ----------------------------- | ------- | ------- | ------- |
+| 1                             | 27.2 ms | 12.4 ms | 35.1 ms |
+| 100                           | 28.0 ms | 12.5 ms | 42.2 ms |
 
 Identical at a 100x longer idle sweep. The pre-notification poll would have added
 up to one full sweep per request (~50 ms average at `POLL_TICKS=100`).
 
-**Idle worker wakeups scale as `tick_rate / PC_WORKER_POLL_TICKS`.** At the
+**Idle worker wakeups scale as `tick_rate / PROTOCORE_WORKER_POLL_TICKS`.** At the
 Arduino 1 kHz tick that is `1000 / POLL_TICKS` wakeups per second with no traffic
 (1000/s at the default 1, 10/s at 100), each wakeup being one context switch plus
 one service pass over idle slots. Raising the knob cuts that idle service-loop CPU
@@ -241,7 +241,7 @@ by WiFi/IDF housekeeping, so the headline benefit of a high value is fewer wakeu
 (CPU/power headroom), not a change to request latency.
 
 **Parallel throughput (existing benchmark).** A CPU-bound handler (~0.2 s) under
-4-way concurrency: `PC_WORKER_COUNT=1` ~5.9 req/s vs `=2` ~9.1 req/s (~1.5x).
+4-way concurrency: `PROTOCORE_WORKER_COUNT=1` ~5.9 req/s vs `=2` ~9.1 req/s (~1.5x).
 It is not a full 2x because worker 1 shares Core 0 with WiFi/lwIP; single-request
 latency is unchanged.
 
@@ -249,26 +249,26 @@ latency is unchanged.
 
 - **Default / low latency (most builds).** Leave everything at default. One worker
   on Core 1, `loop()` freed, events serviced immediately.
-- **Battery / mostly idle.** Raise `PC_WORKER_POLL_TICKS` (e.g. 100 for a ~10 Hz
+- **Battery / mostly idle.** Raise `PROTOCORE_WORKER_POLL_TICKS` (e.g. 100 for a ~10 Hz
   idle sweep). Far fewer idle wakeups, and because events still wake the worker
   immediately there is no latency cost. Keep it well below your connection timeout
   so stale connections are still reaped promptly.
-- **CPU-bound handlers / throughput.** Set `PC_WORKER_COUNT=2` to run handlers
+- **CPU-bound handlers / throughput.** Set `PROTOCORE_WORKER_COUNT=2` to run handlers
   on both cores. Expect ~1.5x, not 2x (Core 0 also runs WiFi/lwIP). Ensure
-  `MAX_CONNS >= PC_WORKER_COUNT` and that handlers touch only their own slot's
+  `MAX_CONNS >= PROTOCORE_WORKER_COUNT` and that handlers touch only their own slot's
   state (the model already guarantees slot isolation).
 - **Bursty connection load.** Raise `EVT_QUEUE_DEPTH` so a burst of accepts/data
   events cannot overflow a queue (an overflow is dropped, not blocked, to keep the
   tcpip thread non-blocking). Raise `MAX_CONNS` for more concurrent connections
   (BSS cost is fixed and linear).
-- **Pin away from a busy core.** Set `PC_WORKER_CORE=0` only if your app keeps
+- **Pin away from a busy core.** Set `PROTOCORE_WORKER_CORE=0` only if your app keeps
   Core 1 busy; by default Core 1 is the right home (Core 0 carries WiFi/lwIP).
 
 ## Determinism notes
 
 - Every knob above changes fixed-size BSS or scheduling, never introduces a heap
   allocation or an unbounded loop.
-- `PC_WORKER_COUNT > 1` adds `PC_PLAINTEXT_ARENA_SIZE` of BSS per extra worker
+- `PROTOCORE_WORKER_COUNT > 1` adds `PROTOCORE_PLAINTEXT_ARENA_SIZE` of BSS per extra worker
   and one event queue per worker; all static.
-- The internal time base stays 1000 Hz regardless of `PC_WORKER_POLL_TICKS`
+- The internal time base stays 1000 Hz regardless of `PROTOCORE_WORKER_POLL_TICKS`
   (see `services/clock.h`), so timeouts keep their tested 1 ms granularity.

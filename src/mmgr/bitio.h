@@ -10,8 +10,8 @@
  * (network_drivers/presentation/codec/deflate) and the SSH zlib@openssh.com stream compressor
  * (ssh/transport/ssh_zlib) both write their bitstreams through it.
  *
- * Distinct from bytes.h's @c pc_bw_* helpers, which are a BYTE-oriented (big-endian) codec cursor.
- * This is a BIT writer (@c pc_bitw_*), for the DEFLATE bitstream. Header-only, pure (only
+ * Distinct from bytes.h's @c protocore_bw_* helpers, which are a BYTE-oriented (big-endian) codec cursor.
+ * This is a BIT writer (@c protocore_bitw_*), for the DEFLATE bitstream. Header-only, pure (only
  * @c <stdint.h> / @c <stddef.h>), zero link cost when unused.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_BITIO_H
 #define PROTOCORE_BITIO_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
 /** @brief LSB-first bit writer over the caller's output buffer; @c overflow latches once @c cap is exceeded. */
 typedef struct
@@ -32,10 +32,10 @@ typedef struct
     uint32_t acc; ///< bit accumulator (LSB-first)
     int nbits;    ///< bits currently buffered (< 8 between calls)
     proto_bool overflow;
-} pc_bit_writer;
+} protocore_bit_writer;
 
 /** @brief Append the low @p n bits of @p bits, LSB-first, spilling any completed bytes to the output. */
-PC_INLINE void pc_bitw_put(pc_bit_writer *w, uint32_t bits, int n)
+PROTOCORE_INLINE void protocore_bitw_put(protocore_bit_writer *w, uint32_t bits, int n)
 {
     if (w->overflow)
     {
@@ -60,7 +60,7 @@ PC_INLINE void pc_bitw_put(pc_bit_writer *w, uint32_t bits, int n)
 }
 
 /** @brief Flush any partial byte, padding the high bits with zero (byte alignment). */
-PC_INLINE void pc_bitw_align(pc_bit_writer *w)
+PROTOCORE_INLINE void protocore_bitw_align(protocore_bit_writer *w)
 {
     if (w->nbits > 0)
     {

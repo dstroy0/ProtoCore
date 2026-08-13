@@ -9,7 +9,7 @@
 #include "services/fieldbus/s7comm/s7comm.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_S7COMM
+#if PROTOCORE_ENABLE_S7COMM
 
 static size_t put16(uint8_t *p, uint16_t v)
 {
@@ -36,7 +36,7 @@ static size_t write_job_header(uint8_t *buf, uint16_t pdu_ref, uint16_t param_le
     return p; // 10
 }
 
-size_t pc_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t max_amq_calling, uint16_t max_amq_called,
+size_t protocore_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t max_amq_calling, uint16_t max_amq_called,
                          uint16_t pdu_size)
 {
     if (!buf)
@@ -58,7 +58,7 @@ size_t pc_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t ma
     return p;
 }
 
-size_t pc_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7ReadItem *items, size_t n)
+size_t protocore_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7ReadItem *items, size_t n)
 {
     if (!buf || !items || n == 0 || n > 0xFF)
     {
@@ -92,7 +92,7 @@ size_t pc_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, cons
 }
 
 // The 2-octet data-item length is expressed in bits for the bit/byte/int data transport sizes, else in bytes
-// (the inverse of pc_s7_read_next_item's decode).
+// (the inverse of protocore_s7_read_next_item's decode).
 static uint16_t s7_data_wire_len(uint8_t data_transport_size, uint16_t data_len)
 {
     if (data_transport_size == S7_DTS_BIT || data_transport_size == S7_DTS_BYTE || data_transport_size == S7_DTS_INT)
@@ -102,7 +102,7 @@ static uint16_t s7_data_wire_len(uint8_t data_transport_size, uint16_t data_len)
     return data_len;
 }
 
-size_t pc_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7WriteItem *items, size_t n)
+size_t protocore_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7WriteItem *items, size_t n)
 {
     if (!buf || !items || n == 0 || n > 0xFF)
     {
@@ -171,7 +171,7 @@ size_t pc_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, con
     return p;
 }
 
-proto_bool pc_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out)
+proto_bool protocore_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out)
 {
     if (!buf || !out || len < 10)
     {
@@ -206,7 +206,7 @@ proto_bool pc_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out)
+proto_bool protocore_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out)
 {
     if (!data || !offset || !out)
     {
@@ -249,4 +249,4 @@ proto_bool pc_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *of
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_S7COMM
+#endif // PROTOCORE_ENABLE_S7COMM

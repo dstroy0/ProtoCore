@@ -3,7 +3,7 @@
 
 /**
  * @file provisioning_service.h
- * @brief First-boot WiFi provisioning via a captive portal (PC_ENABLE_PROVISIONING).
+ * @brief First-boot WiFi provisioning via a captive portal (PROTOCORE_ENABLE_PROVISIONING).
  *
  * When no WiFi credentials are stored, the device starts a softAP and a
  * catch-all DNS responder (via the transport-layer UDP service - no add-on library) so any
@@ -12,7 +12,7 @@
  * `Physical.wifi->init_ap()`, the library UDP transport, and `Preferences`; compiled to stubs when disabled
  * or off-Arduino.
  *
- * The form-field parser (pc_prov_form_field) is always compiled and is the
+ * The form-field parser (protocore_prov_form_field) is always compiled and is the
  * only non-trivial logic, so it is unit-tested off-target.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_PROVISIONING
+#if PROTOCORE_ENABLE_PROVISIONING
 
 /**
  * @brief Extract and URL-decode a field from an x-www-form-urlencoded body.
@@ -41,7 +41,7 @@ PROTO_BEGIN_DECLS
  * @param cap   Capacity of @p out (>= 1).
  * @return true if the field was found, false otherwise (out set to "").
  */
-proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap);
+proto_bool protocore_prov_form_field(const char *body, const char *key, char *out, size_t cap);
 
 /**
  * @brief Load stored WiFi credentials from NVS.
@@ -51,7 +51,7 @@ proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size
  * @param psk_cap   Capacity of @p psk.
  * @return true if a non-empty SSID is stored (the app should connect in STA mode).
  */
-proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
+proto_bool protocore_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
 
 /**
  * @brief Start the captive portal: softAP @p ap_ssid + catch-all DNS + form routes.
@@ -60,13 +60,13 @@ proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t p
  * on @p server. The catch-all DNS responder runs from a transport-layer UDP callback,
  * so no per-loop servicing is required. Call after begin().
  */
-void pc_provisioning_begin(const char *ap_ssid);
+void protocore_provisioning_begin(const char *ap_ssid);
 
 /** @brief Erase stored credentials (forces re-provisioning on next boot). */
-void pc_provisioning_clear(void);
+void protocore_provisioning_clear(void);
 
-#endif // PC_ENABLE_PROVISIONING
+#endif // PROTOCORE_ENABLE_PROVISIONING
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PROVISIONING_H

@@ -10,10 +10,10 @@
 #include "protocore_config.h"
 #include "server/clock/clock.h" // pcdelay
 
-#if PC_ENABLE_ADS1115
+#if PROTOCORE_ENABLE_ADS1115
 
-#if PC_HAS_BUS
-#include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
+#if PROTOCORE_HAS_BUS
+#include "mmgr/endian.h" // protocore_wr16be / protocore_rd16be: the registers are big-endian
 #include "services/peripherals/i2c.h"
 #endif
 // Config-register field values (per the ADS1115 datasheet).
@@ -26,7 +26,7 @@ static const uint16_t COMP_DISABLE = 0x0003;
 static const uint16_t PGA_BITS[6] = {0x0000, 0x0200, 0x0400, 0x0600, 0x0800, 0x0A00};
 static const int32_t FSR_UV[6] = {6144000, 4096000, 2048000, 1024000, 512000, 256000};
 
-uint16_t pc_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr)
+uint16_t protocore_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr)
 {
     if (channel > 3)
     {
@@ -34,14 +34,14 @@ uint16_t pc_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr)
     }
     if (gain > ADS1115_GAIN_16)
     {
-        gain = (uint8_t)PC_ADS1115_GAIN;
+        gain = (uint8_t)PROTOCORE_ADS1115_GAIN;
     }
     if (dr > ADS1115_DR_860)
     {
-        dr = (uint8_t)PC_ADS1115_DR;
+        dr = (uint8_t)PROTOCORE_ADS1115_DR;
     }
     uint16_t cfg = OS_SINGLE;
-#if PC_ADS1115_DIFFERENTIAL
+#if PROTOCORE_ADS1115_DIFFERENTIAL
     cfg |= (uint16_t)((uint16_t)channel << 12); // differential pair: MUX 0=AIN0-1, 1=AIN0-3, 2=AIN1-3, 3=AIN2-3
 #else
     cfg |= (uint16_t)(MUX_SINGLE0 | ((uint16_t)channel << 12)); // single-ended AINx
@@ -53,11 +53,11 @@ uint16_t pc_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr)
     return cfg;
 }
 
-int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain)
+int32_t protocore_ads1115_raw_to_uv(int16_t raw, uint8_t gain)
 {
     if (gain > ADS1115_GAIN_16)
     {
-        gain = (uint8_t)PC_ADS1115_GAIN;
+        gain = (uint8_t)PROTOCORE_ADS1115_GAIN;
     }
     return (int32_t)((int64_t)raw * FSR_UV[gain] / 32768);
 }
@@ -66,7 +66,7 @@ int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain)
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_BUS
+#if PROTOCORE_HAS_BUS
 
 // All ADS1115 I2C-binding state, owned by one instance (internal linkage): the device address and
 // the bus frame, so it is one named owner, unreachable from any other translation unit. The frame
@@ -77,50 +77,50 @@ typedef struct
     uint8_t addr;
     uint8_t frame[3];
 } Ads1115Ctx;
-static Ads1115Ctx s_ads = {.addr = PC_ADS1115_I2C_ADDR, .frame = {0}};
+static Ads1115Ctx s_ads = {.addr = PROTOCORE_ADS1115_I2C_ADDR, .frame = {0}};
 
 static proto_bool wr16(uint8_t reg, uint16_t v)
 {
     s_ads.frame[0] = reg;
-    (void)pc_wr16be(&s_ads.frame[1], v);
-    return pc_i2c_write(s_ads.addr, s_ads.frame, sizeof(s_ads.frame));
+    (void)protocore_wr16be(&s_ads.frame[1], v);
+    return protocore_i2c_write(s_ads.addr, s_ads.frame, sizeof(s_ads.frame));
 }
 
 static proto_bool rd16(uint8_t reg, uint16_t *v)
 {
-    if (!pc_i2c_write_read(s_ads.addr, &reg, 1, s_ads.frame, 2))
+    if (!protocore_i2c_write_read(s_ads.addr, &reg, 1, s_ads.frame, 2))
     {
         return PROTO_FALSE;
     }
-    *v = pc_rd16be(s_ads.frame);
+    *v = protocore_rd16be(s_ads.frame);
     return PROTO_TRUE;
 }
 
-proto_bool pc_ads1115_begin(uint8_t addr)
+proto_bool protocore_ads1115_begin(uint8_t addr)
 {
-    s_ads.addr = addr ? addr : (uint8_t)PC_ADS1115_I2C_ADDR;
-    pc_i2c_begin();
+    s_ads.addr = addr ? addr : (uint8_t)PROTOCORE_ADS1115_I2C_ADDR;
+    protocore_i2c_begin();
     return PROTO_TRUE;
 }
 
-proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw)
+proto_bool protocore_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw)
 {
     if (!raw)
     {
         return PROTO_FALSE;
     }
-    uint8_t dr = (uint8_t)PC_ADS1115_DR;
+    uint8_t dr = (uint8_t)PROTOCORE_ADS1115_DR;
     if (dr > ADS1115_DR_860)
     {
         dr = ADS1115_DR_128;
     }
-    if (!wr16(ADS1115_REG_CONFIG, pc_ads1115_config_single(channel, gain, dr)))
+    if (!wr16(ADS1115_REG_CONFIG, protocore_ads1115_config_single(channel, gain, dr)))
     {
         return PROTO_FALSE;
     }
     // Single-shot conversion time tracks the data rate (~1000/SPS ms); wait it out plus a 1 ms margin.
-    static const uint16_t pc_ads1115_sps[8] = {8, 16, 32, 64, 128, 250, 475, 860};
-    pcdelay(1000u / pc_ads1115_sps[dr] + 1);
+    static const uint16_t protocore_ads1115_sps[8] = {8, 16, 32, 64, 128, 250, 475, 860};
+    pcdelay(1000u / protocore_ads1115_sps[dr] + 1);
     uint16_t v = 0;
     if (!rd16(ADS1115_REG_CONVERSION, &v))
     {
@@ -130,35 +130,35 @@ proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw)
     return PROTO_TRUE;
 }
 
-proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts)
+proto_bool protocore_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts)
 {
     int16_t raw = 0;
-    if (!pc_ads1115_read_raw(channel, gain, &raw))
+    if (!protocore_ads1115_read_raw(channel, gain, &raw))
     {
         return PROTO_FALSE;
     }
     if (microvolts)
     {
-        *microvolts = pc_ads1115_raw_to_uv(raw, gain);
+        *microvolts = protocore_ads1115_raw_to_uv(raw, gain);
     }
     return PROTO_TRUE;
 }
 
 #else // no bus seam. The config encoder + conversion above are host-tested.
 
-proto_bool pc_ads1115_begin(uint8_t addr)
+proto_bool protocore_ads1115_begin(uint8_t addr)
 {
     (void)addr;
     return PROTO_FALSE;
 }
-proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw)
+proto_bool protocore_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw)
 {
     (void)channel;
     (void)gain;
     (void)raw;
     return PROTO_FALSE;
 }
-proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts)
+proto_bool protocore_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts)
 {
     (void)channel;
     (void)gain;
@@ -166,6 +166,6 @@ proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts
     return PROTO_FALSE;
 }
 
-#endif // PC_HAS_BUS
+#endif // PROTOCORE_HAS_BUS
 
-#endif // PC_ENABLE_ADS1115
+#endif // PROTOCORE_ENABLE_ADS1115

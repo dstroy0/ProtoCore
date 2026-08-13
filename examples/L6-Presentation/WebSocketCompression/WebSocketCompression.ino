@@ -6,7 +6,7 @@
  * @brief WebSocket permessage-deflate (RFC 7692): transparent two-way compression.
  *
  * Identical to WebSocket (a /ws echo endpoint) except it enables
- * PC_ENABLE_WS_DEFLATE. With the extension compiled in, the server advertises
+ * PROTOCORE_ENABLE_WS_DEFLATE. With the extension compiled in, the server advertises
  * `permessage-deflate; client_no_context_takeover; server_no_context_takeover`
  * during the handshake; any browser that offered the extension (Chrome, Firefox,
  * Safari all do by default) then sends its frames DEFLATE-compressed with the
@@ -27,7 +27,7 @@
  */
 
 // Enable WebSocket permessage-deflate for this sketch (overrides default-off).
-#define PC_ENABLE_WS_DEFLATE 1
+#define PROTOCORE_ENABLE_WS_DEFLATE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

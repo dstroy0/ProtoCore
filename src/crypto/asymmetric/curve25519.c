@@ -13,32 +13,32 @@
  *
  * On the ESP32-S3 (Arduino) X25519 has a second, byte-identical implementation that runs the
  * ladder in canonical uint32[8] and does each field multiply as one 256-bit modular multiply on
- * the RSA/MPI accelerator (~4.3x the software/PIE ladder); the field layer is in pc_fe25519.h (shared with
- * Ed25519, active as PC_FE25519_MPI_HW). It shares the accelerator lock with mbedtls, so a scalar-mult is
- * bracketed by pc_fe_hw_enable()/pc_fe_hw_disable() (esp_mpi_{enable,disable}_hardware_hw_op()).
+ * the RSA/MPI accelerator (~4.3x the software/PIE ladder); the field layer is in protocore_fe25519.h (shared with
+ * Ed25519, active as PROTOCORE_FE25519_MPI_HW). It shares the accelerator lock with mbedtls, so a scalar-mult is
+ * bracketed by protocore_fe_hw_enable()/protocore_fe_hw_disable() (esp_mpi_{enable,disable}_hardware_hw_op()).
  */
 
 #include "crypto/asymmetric/curve25519.h"
 // On the S3, X25519 runs its whole Montgomery ladder in canonical uint32[8] and does each field multiply as
 // one 256-bit modular multiply on the RSA/MPI accelerator (~4.3x the software/PIE ladder). That field layer is
-// shared with Ed25519 (pc_ed25519.cpp) and defines PC_FE25519_MPI_HW when active (Arduino + S3).
+// shared with Ed25519 (protocore_ed25519.cpp) and defines PROTOCORE_FE25519_MPI_HW when active (Arduino + S3).
 #include "crypto/asymmetric/fe25519.h"
-#if PC_HAS_HW_ECC
+#if PROTOCORE_HAS_HW_ECC
 #include "sdkconfig.h"      // CONFIG_IDF_TARGET_ESP32S3 - selects the vector (PIE) field multiply
 #include <mbedtls/bignum.h> // ESP32: field inversion on the MPI/RSA hardware accelerator
 #endif
 #include "crypto/crypto_opt.h"
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // Small field constant (radix-2^16). Used only by the software X25519 ladder (the S3 MODMULT path carries its
 // own canonical a24), so it would be unused there.
-#ifndef PC_FE25519_MPI_HW
-static const pc_gf GF_121665 = {0xDB41, 1}; // 121665 = 0x1DB41 (Montgomery a24)
+#ifndef PROTOCORE_FE25519_MPI_HW
+static const protocore_gf GF_121665 = {0xDB41, 1}; // 121665 = 0x1DB41 (Montgomery a24)
 #endif
 
 // Normalize each limb toward 16 bits, folding the carry above 2^256 back in as *38.
 // Two passes fully reduce a product's limbs; the +2^16 / -1 dance keeps it branch-free.
-static void gf_carry(pc_gf o)
+static void gf_carry(protocore_gf o)
 {
     for (int i = 0; i < 16; i++)
     {
@@ -49,7 +49,7 @@ static void gf_carry(pc_gf o)
     }
 }
 
-void pc_gf_copy(pc_gf out, const pc_gf in)
+void protocore_gf_copy(protocore_gf out, const protocore_gf in)
 {
     for (int i = 0; i < 16; i++)
     {
@@ -57,7 +57,7 @@ void pc_gf_copy(pc_gf out, const pc_gf in)
     }
 }
 
-void pc_gf_add(pc_gf out, const pc_gf a, const pc_gf b)
+void protocore_gf_add(protocore_gf out, const protocore_gf a, const protocore_gf b)
 {
     for (int i = 0; i < 16; i++)
     {
@@ -65,7 +65,7 @@ void pc_gf_add(pc_gf out, const pc_gf a, const pc_gf b)
     }
 }
 
-void pc_gf_sub(pc_gf out, const pc_gf a, const pc_gf b)
+void protocore_gf_sub(protocore_gf out, const protocore_gf a, const protocore_gf b)
 {
     for (int i = 0; i < 16; i++)
     {
@@ -84,7 +84,7 @@ void pc_gf_sub(pc_gf out, const pc_gf a, const pc_gf b)
 
 // Balance a[16] into signed-16-bit limbs of the same value mod p (round-to-nearest carry; limb-15
 // overflow wraps *38 into limb 0 since 2^256 == 38; three passes settle the wrap).
-static void gf_balance_s16(int16_t o[16], const pc_gf a)
+static void gf_balance_s16(int16_t o[16], const protocore_gf a)
 {
     // int32 throughout: limbs stay ~+-2^18 and carries ~+-2, so no value exceeds int32 - which avoids the
     // emulated 64-bit carry-propagation math (48 steps per operand) that dominated the field multiply.
@@ -137,7 +137,7 @@ static inline int64_t gf_accx_dot_win(const int16_t *as, const int16_t *w)
 
 // Shared tail: build the reversed-bs window array, run the ACCX convolution, fold + carry. as points at
 // a 16-byte-aligned int16[16]; bs is read scalar-only (no alignment needed).
-static void gf_conv_finish(pc_gf out, const int16_t *as, const int16_t *bs)
+static void gf_conv_finish(protocore_gf out, const int16_t *as, const int16_t *bs)
 {
     // bp = [15 zeros][bs reversed: bs15..bs0][zeros]; output k's window starts at bp[30-k].
     __attribute__((aligned(16))) int16_t bp[64];
@@ -166,7 +166,7 @@ static void gf_conv_finish(pc_gf out, const int16_t *as, const int16_t *bs)
     gf_carry(out);
 }
 
-void pc_gf_mul(pc_gf out, const pc_gf a, const pc_gf b)
+void protocore_gf_mul(protocore_gf out, const protocore_gf a, const protocore_gf b)
 {
     __attribute__((aligned(16))) int16_t as[16];
     int16_t bs[16];
@@ -177,15 +177,15 @@ void pc_gf_mul(pc_gf out, const pc_gf a, const pc_gf b)
 
 // Squaring balances the operand ONCE (a == b, and gf_balance_s16 is deterministic, so the second balance
 // in mul(a,a) is pure waste). ~2/3 of the Montgomery-ladder field ops are squarings, so this matters.
-// Byte-exact with pc_gf_mul(out, a, a) by construction.
-void pc_gf_sq(pc_gf out, const pc_gf a)
+// Byte-exact with protocore_gf_mul(out, a, a) by construction.
+void protocore_gf_sq(protocore_gf out, const protocore_gf a)
 {
     __attribute__((aligned(16))) int16_t as[16];
     gf_balance_s16(as, a);
     gf_conv_finish(out, as, as);
 }
 #else
-void pc_gf_mul(pc_gf out, const pc_gf a, const pc_gf b)
+void protocore_gf_mul(protocore_gf out, const protocore_gf a, const protocore_gf b)
 {
     int64_t t[31];
     for (int i = 0; i < 31; i++)
@@ -218,31 +218,31 @@ void pc_gf_mul(pc_gf out, const pc_gf a, const pc_gf b)
 #endif
 
 #if !(defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3)
-void pc_gf_sq(pc_gf out, const pc_gf a)
+void protocore_gf_sq(protocore_gf out, const protocore_gf a)
 {
-    pc_gf_mul(out, a, a);
+    protocore_gf_mul(out, a, a);
 }
 #endif
 
 // Software field inversion out = a^-1 = a^(p-2). Fixed addition chain: square 255 times,
 // multiplying in a at every bit except positions 2 and 4 (which are 0 in p-2 = 2^255 - 21).
 // The reference path (native builds) and the fallback if the hardware modexp ever fails.
-static void gf_inv_sw(pc_gf out, const pc_gf a)
+static void gf_inv_sw(protocore_gf out, const protocore_gf a)
 {
-    pc_gf c;
-    pc_gf_copy(c, a);
+    protocore_gf c;
+    protocore_gf_copy(c, a);
     for (int i = 253; i >= 0; i--)
     {
-        pc_gf_sq(c, c);
+        protocore_gf_sq(c, c);
         if (i != 2 && i != 4)
         {
-            pc_gf_mul(c, c, a);
+            protocore_gf_mul(c, c, a);
         }
     }
-    pc_gf_copy(out, c);
+    protocore_gf_copy(out, c);
 }
 
-#if PC_HAS_HW_ECC
+#if PROTOCORE_HAS_HW_ECC
 // p = 2^255 - 19 and the inversion exponent p-2 = 2^255 - 21, big-endian for mbedtls.
 static const uint8_t P25519_BE[32] = {0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                                       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -257,11 +257,11 @@ static const uint8_t P25519_MINUS2_BE[32] = {0x7f, 0xff, 0xff, 0xff, 0xff, 0xff,
 // the 255-round Montgomery ladder multiply stays in the software radix-2^16 core, where
 // per-multiply marshalling to the peripheral would cost more than it saves. The exponent
 // is a public constant; the base is packed to its canonical residue first.
-void pc_gf_inv(pc_gf out, const pc_gf a)
+void protocore_gf_inv(protocore_gf out, const protocore_gf a)
 {
     uint8_t le[32];
     uint8_t be[32];
-    pc_gf_pack(le, a); // canonical little-endian residue in [0, p)
+    protocore_gf_pack(le, a); // canonical little-endian residue in [0, p)
     for (int i = 0; i < 32; i++)
     {
         be[i] = le[31 - i]; // to big-endian for mbedtls
@@ -292,17 +292,17 @@ void pc_gf_inv(pc_gf out, const pc_gf a)
     {
         le[i] = be[31 - i];
     }
-    pc_gf_unpack(out, le);
+    protocore_gf_unpack(out, le);
 }
 #else
-void pc_gf_inv(pc_gf out, const pc_gf a)
+void protocore_gf_inv(protocore_gf out, const protocore_gf a)
 {
     gf_inv_sw(out, a);
 }
 #endif
 
 // Constant-time conditional swap of p and q when b == 1 (b must be 0 or 1).
-void pc_gf_cswap(pc_gf p, pc_gf q, int b)
+void protocore_gf_cswap(protocore_gf p, protocore_gf q, int b)
 {
     int64_t mask = ~((int64_t)b - 1); // all ones when b==1, zero when b==0
     for (int i = 0; i < 16; i++)
@@ -315,11 +315,11 @@ void pc_gf_cswap(pc_gf p, pc_gf q, int b)
 
 // Canonical little-endian encoding: fully reduce mod p (conditional subtract twice),
 // then emit 16-bit limbs low byte first.
-void pc_gf_pack(uint8_t out[32], const pc_gf a)
+void protocore_gf_pack(uint8_t out[32], const protocore_gf a)
 {
-    pc_gf t;
-    pc_gf m;
-    pc_gf_copy(t, a);
+    protocore_gf t;
+    protocore_gf m;
+    protocore_gf_copy(t, a);
     gf_carry(t);
     gf_carry(t);
     gf_carry(t);
@@ -334,7 +334,7 @@ void pc_gf_pack(uint8_t out[32], const pc_gf a)
         m[15] = t[15] - 0x7fff - ((m[14] >> 16) & 1);
         int b = (int)((m[15] >> 16) & 1);
         m[14] &= 0xffff;
-        pc_gf_cswap(t, m, 1 - b); // keep the subtracted value only if it did not borrow
+        protocore_gf_cswap(t, m, 1 - b); // keep the subtracted value only if it did not borrow
     }
     for (int i = 0; i < 16; i++)
     {
@@ -344,7 +344,7 @@ void pc_gf_pack(uint8_t out[32], const pc_gf a)
 }
 
 // Decode 32 little-endian bytes into a field element; the top bit is masked off (255-bit).
-void pc_gf_unpack(pc_gf out, const uint8_t in[32])
+void protocore_gf_unpack(protocore_gf out, const uint8_t in[32])
 {
     for (int i = 0; i < 16; i++)
     {
@@ -353,13 +353,13 @@ void pc_gf_unpack(pc_gf out, const uint8_t in[32])
     out[15] &= 0x7fff;
 }
 
-#ifdef PC_FE25519_MPI_HW
+#ifdef PROTOCORE_FE25519_MPI_HW
 // ============================= ESP32-S3 X25519 on the RSA/MPI accelerator =================================
 // The canonical uint32[8] field layer (fe, fe_add/sub/mul/sq/..., the MODMULT, and the lock+power bring-up)
-// lives in pc_fe25519.h - shared with Ed25519. Here is only the X25519-specific a24 and the RFC 7748 ladder.
+// lives in protocore_fe25519.h - shared with Ed25519. Here is only the X25519-specific a24 and the RFC 7748 ladder.
 static const uint32_t FE_A24[8] = {121665u, 0, 0, 0, 0, 0, 0, 0}; // X25519 a24 = (486662-2)/4 (RFC 7748 §5)
 
-void pc_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
+void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
 {
     uint8_t e[32];
     for (int i = 0; i < 32; i++)
@@ -370,7 +370,7 @@ void pc_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32
     e[31] &= 127;
     e[31] |= 64;
 
-    pc_fe_hw_enable(); // lock + power the accelerator for the whole ladder
+    protocore_fe_hw_enable(); // lock + power the accelerator for the whole ladder
 
     fe x1;
     fe x2;
@@ -429,10 +429,10 @@ void pc_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32
     fe_invert(z2, z2);
     fe_mul(x2, x2, z2);
     fe_tobytes(out, x2);
-    pc_fe_hw_disable(); // release the lock + power down
+    protocore_fe_hw_disable(); // release the lock + power down
 }
 #else
-void pc_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
+void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
 {
     uint8_t z[32];
     for (int i = 0; i < 31; i++)
@@ -442,14 +442,14 @@ void pc_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32
     z[31] = (uint8_t)((scalar[31] & 127) | 64); // clamp the scalar (RFC 7748 §5)
     z[0] &= 248;
 
-    pc_gf x;
-    pc_gf a;
-    pc_gf b;
-    pc_gf c;
-    pc_gf d;
-    pc_gf e;
-    pc_gf f;
-    pc_gf_unpack(x, point);
+    protocore_gf x;
+    protocore_gf a;
+    protocore_gf b;
+    protocore_gf c;
+    protocore_gf d;
+    protocore_gf e;
+    protocore_gf f;
+    protocore_gf_unpack(x, point);
     for (int i = 0; i < 16; i++)
     {
         b[i] = x[i];
@@ -461,39 +461,39 @@ void pc_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32
     for (int i = 254; i >= 0; i--)
     {
         int r = (z[i >> 3] >> (i & 7)) & 1;
-        pc_gf_cswap(a, b, r);
-        pc_gf_cswap(c, d, r);
-        pc_gf_add(e, a, c);
-        pc_gf_sub(a, a, c);
-        pc_gf_add(c, b, d);
-        pc_gf_sub(b, b, d);
-        pc_gf_sq(d, e);
-        pc_gf_sq(f, a);
-        pc_gf_mul(a, c, a);
-        pc_gf_mul(c, b, e);
-        pc_gf_add(e, a, c);
-        pc_gf_sub(a, a, c);
-        pc_gf_sq(b, a);
-        pc_gf_sub(c, d, f);
-        pc_gf_mul(a, c, GF_121665);
-        pc_gf_add(a, a, d);
-        pc_gf_mul(c, c, a);
-        pc_gf_mul(a, d, f);
-        pc_gf_mul(d, b, x);
-        pc_gf_sq(b, e);
-        pc_gf_cswap(a, b, r);
-        pc_gf_cswap(c, d, r);
+        protocore_gf_cswap(a, b, r);
+        protocore_gf_cswap(c, d, r);
+        protocore_gf_add(e, a, c);
+        protocore_gf_sub(a, a, c);
+        protocore_gf_add(c, b, d);
+        protocore_gf_sub(b, b, d);
+        protocore_gf_sq(d, e);
+        protocore_gf_sq(f, a);
+        protocore_gf_mul(a, c, a);
+        protocore_gf_mul(c, b, e);
+        protocore_gf_add(e, a, c);
+        protocore_gf_sub(a, a, c);
+        protocore_gf_sq(b, a);
+        protocore_gf_sub(c, d, f);
+        protocore_gf_mul(a, c, GF_121665);
+        protocore_gf_add(a, a, d);
+        protocore_gf_mul(c, c, a);
+        protocore_gf_mul(a, d, f);
+        protocore_gf_mul(d, b, x);
+        protocore_gf_sq(b, e);
+        protocore_gf_cswap(a, b, r);
+        protocore_gf_cswap(c, d, r);
     }
 
     // Result = X / Z = a * c^-1.
-    pc_gf_inv(c, c);
-    pc_gf_mul(a, a, c);
-    pc_gf_pack(out, a);
+    protocore_gf_inv(c, c);
+    protocore_gf_mul(a, a, c);
+    protocore_gf_pack(out, a);
 }
-#endif // PC_FE25519_MPI_HW
+#endif // PROTOCORE_FE25519_MPI_HW
 
-void pc_x25519_base(uint8_t out[32], const uint8_t scalar[32])
+void protocore_x25519_base(uint8_t out[32], const uint8_t scalar[32])
 {
     uint8_t base[32] = {9};
-    pc_x25519(out, scalar, base);
+    protocore_x25519(out, scalar, base);
 }

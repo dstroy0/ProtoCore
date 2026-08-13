@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the rotating log ring (server/logbuf): a fixed-RAM ring of
-// the last PC_LOG_LINES lines with a severity trap, all pure (no heap, no ESP32 dependency). Four
+// the last PROTOCORE_LOG_LINES lines with a severity trap, all pure (no heap, no ESP32 dependency). Four
 // deterministic operations are benched:
-//   - pc_log()      : the append hot path (snprintf of `<L> msg` into the next ring slot),
-//   - pc_log()+trap : the same append with a severity trap armed and firing (trap-dispatch cost),
-//   - pc_log_at()   : indexed oldest-first retrieval (head+i modulo ring size),
-//   - pc_log_dump()  : dumping the whole ring newline-separated into a caller buffer (bulk memcpy).
+//   - protocore_log()      : the append hot path (snprintf of `<L> msg` into the next ring slot),
+//   - protocore_log()+trap : the same append with a severity trap armed and firing (trap-dispatch cost),
+//   - protocore_log_at()   : indexed oldest-first retrieval (head+i modulo ring size),
+//   - protocore_log_dump()  : dumping the whole ring newline-separated into a caller buffer (bulk memcpy).
 // The trap callback is a tiny no-op here (it only bumps a volatile sink) - it stands in for the real
 // SNMP-trap / webhook forwarder the production caller would install, so no network I/O is ever done;
 // like every performance_benching/device/ sketch this rig touches no peripherals or transport. Nothing in logbuf is
@@ -35,22 +35,22 @@ static void logbuf_trap_noop(uint8_t level, const char *line)
     g_trap_sink++;
 }
 
-// Fill the ring to capacity with realistic, spec-conformant log lines (overflow past PC_LOG_LINES so
+// Fill the ring to capacity with realistic, spec-conformant log lines (overflow past PROTOCORE_LOG_LINES so
 // rotation runs and count settles at the ring size). Untimed setup for the read-side benches below.
 static void fill_ring(void)
 {
-    pc_logbuf_reset();
+    protocore_logbuf_reset();
     char msg[64];
-    for (int i = 0; i < PC_LOG_LINES + 8; i++)
+    for (int i = 0; i < PROTOCORE_LOG_LINES + 8; i++)
     {
         snprintf(msg, sizeof(msg), "client 192.168.1.%d auth failed (attempt %d)", 40 + (i & 7), i);
-        pc_log(PC_LOG_INFO, msg);
+        protocore_log(PROTOCORE_LOG_INFO, msg);
     }
 }
 
 void dbench_run(void)
 {
-    static char dumpbuf[PC_LOG_LINES * PC_LOG_LINE_LEN];
+    static char dumpbuf[PROTOCORE_LOG_LINES * PROTOCORE_LOG_LINE_LEN];
     static const char *kMsg = "client 192.168.1.42 auth failed (attempt 7)";
 
     for (;;)
@@ -59,23 +59,23 @@ void dbench_run(void)
 
         // Read-side benches first, on a freshly filled full ring (append below mutates it).
         fill_ring();
-        pc_log_set_trap(0xFF, NULL); // trap disabled for the read-side ops
-        int dumped = pc_log_dump(dumpbuf, sizeof(dumpbuf));
+        protocore_log_set_trap(0xFF, NULL); // trap disabled for the read-side ops
+        int dumped = protocore_log_dump(dumpbuf, sizeof(dumpbuf));
 
         volatile size_t sink = 0;
         volatile uintptr_t psink = 0;
 
         // Dump the whole ring (oldest-first, newline-joined) into a caller buffer - bulk memcpy path.
-        DBENCH_BULK("pc_log_dump full ring", 20000, (size_t)(dumped > 0 ? dumped : 1),
-                    sink += (size_t)pc_log_dump(dumpbuf, sizeof(dumpbuf)));
+        DBENCH_BULK("protocore_log_dump full ring", 20000, (size_t)(dumped > 0 ? dumped : 1),
+                    sink += (size_t)protocore_log_dump(dumpbuf, sizeof(dumpbuf)));
         // Indexed oldest-first retrieval (head+i modulo ring size).
-        DBENCH_OP("pc_log_at fetch", 200000, psink += (uintptr_t)pc_log_at(7));
+        DBENCH_OP("protocore_log_at fetch", 200000, psink += (uintptr_t)protocore_log_at(7));
 
         // Append hot path with the trap disarmed (snprintf of `<L> msg` into the next slot).
-        DBENCH_OP("pc_log append (no trap)", 50000, pc_log(PC_LOG_INFO, kMsg));
+        DBENCH_OP("protocore_log append (no trap)", 50000, protocore_log(PROTOCORE_LOG_INFO, kMsg));
         // Same append with a WARN trap armed and an ERROR line firing it every iteration.
-        pc_log_set_trap(PC_LOG_WARN, logbuf_trap_noop);
-        DBENCH_OP("pc_log append (trap fires)", 50000, pc_log(PC_LOG_ERROR, kMsg));
+        protocore_log_set_trap(PROTOCORE_LOG_WARN, logbuf_trap_noop);
+        DBENCH_OP("protocore_log append (trap fires)", 50000, protocore_log(PROTOCORE_LOG_ERROR, kMsg));
 
         (void)sink;
         (void)psink;

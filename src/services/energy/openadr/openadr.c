@@ -7,23 +7,23 @@
  */
 
 #include "services/energy/openadr/openadr.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
-#if PC_ENABLE_OPENADR
+#if PROTOCORE_ENABLE_OPENADR
 
-static void put_json_str(pc_sb *b, const char *s)
+static void put_json_str(protocore_sb *b, const char *s)
 {
-    pc_sb_put(b, "\"");
+    protocore_sb_put(b, "\"");
     for (const char *p = s ? s : ""; *p; p++)
     {
         if (*p == '"' || *p == '\\')
         {
             char esc[3] = {'\\', *p, '\0'};
-            pc_sb_put(b, esc);
+            protocore_sb_put(b, esc);
         }
         else if (*p == '\n')
         {
-            pc_sb_put(b, "\\n");
+            protocore_sb_put(b, "\\n");
         }
         else
         {
@@ -35,10 +35,10 @@ static void put_json_str(pc_sb *b, const char *s)
             b->p[b->len++] = *p;
         }
     }
-    pc_sb_put(b, "\"");
+    protocore_sb_put(b, "\"");
 }
 
-static void put_u64(pc_sb *b, uint64_t v)
+static void put_u64(protocore_sb *b, uint64_t v)
 {
     char tmp[21];
     int n = 0;
@@ -53,15 +53,15 @@ static void put_u64(pc_sb *b, uint64_t v)
         out[i] = tmp[n - 1 - i];
     }
     out[n] = '\0';
-    pc_sb_put(b, out);
+    protocore_sb_put(b, out);
 }
 
 // Format a double with 3 decimal places (no stdlib). Rounds to milli-units; handles the sign.
-static void put_double(pc_sb *b, double v)
+static void put_double(protocore_sb *b, double v)
 {
     if (v < 0)
     {
-        pc_sb_put(b, "-");
+        protocore_sb_put(b, "-");
         v = -v;
     }
     // scale by 1000 and round.
@@ -69,67 +69,67 @@ static void put_double(pc_sb *b, double v)
     uint64_t whole = scaled / 1000;
     uint32_t frac = (uint32_t)(scaled % 1000);
     put_u64(b, whole);
-    pc_sb_put(b, ".");
+    protocore_sb_put(b, ".");
     // three digits, zero-padded.
     char f[4] = {(char)('0' + (frac / 100) % 10), (char)('0' + (frac / 10) % 10), (char)('0' + frac % 10), '\0'};
-    pc_sb_put(b, f);
+    protocore_sb_put(b, f);
 }
 
-size_t pc_openadr_event(const char *program_id, const char *event_name, const OpenAdrInterval *intervals, size_t count,
+size_t protocore_openadr_event(const char *program_id, const char *event_name, const OpenAdrInterval *intervals, size_t count,
                         char *out, size_t cap)
 {
     if (!out || (count && !intervals))
     {
         return 0;
     }
-    pc_sb b = {out, cap, 0, cap > 0};
-    pc_sb_put(&b, "{\"objectType\":\"EVENT\",\"programID\":");
+    protocore_sb b = {out, cap, 0, cap > 0};
+    protocore_sb_put(&b, "{\"objectType\":\"EVENT\",\"programID\":");
     put_json_str(&b, program_id);
-    pc_sb_put(&b, ",\"eventName\":");
+    protocore_sb_put(&b, ",\"eventName\":");
     put_json_str(&b, event_name);
-    pc_sb_put(&b, ",\"intervals\":[");
+    protocore_sb_put(&b, ",\"intervals\":[");
     for (size_t i = 0; i < count; i++)
     {
         if (i)
         {
-            pc_sb_put(&b, ",");
+            protocore_sb_put(&b, ",");
         }
-        pc_sb_put(&b, "{\"id\":");
+        protocore_sb_put(&b, "{\"id\":");
         put_u64(&b, i);
-        pc_sb_put(&b, ",\"interval\":{\"start\":");
+        protocore_sb_put(&b, ",\"interval\":{\"start\":");
         put_u64(&b, intervals[i].start);
-        pc_sb_put(&b, ",\"duration\":");
+        protocore_sb_put(&b, ",\"duration\":");
         put_u64(&b, intervals[i].duration);
-        pc_sb_put(&b, "},\"payloads\":[{\"type\":");
+        protocore_sb_put(&b, "},\"payloads\":[{\"type\":");
         put_json_str(&b, intervals[i].type);
-        pc_sb_put(&b, ",\"values\":[");
+        protocore_sb_put(&b, ",\"values\":[");
         put_double(&b, intervals[i].value);
-        pc_sb_put(&b, "]}]}");
+        protocore_sb_put(&b, "]}]}");
     }
-    pc_sb_put(&b, "]}");
-    return pc_sb_finish(&b);
+    protocore_sb_put(&b, "]}");
+    return protocore_sb_finish(&b);
 }
 
-size_t pc_openadr_report(const char *program_id, const char *event_id, const char *resource_name, double value,
+size_t protocore_openadr_report(const char *program_id, const char *event_id, const char *resource_name, double value,
                          uint32_t timestamp, char *out, size_t cap)
 {
     if (!out)
     {
         return 0;
     }
-    pc_sb b2 = {out, cap, 0, cap > 0};
-    pc_sb_put(&b2, "{\"objectType\":\"REPORT\",\"programID\":");
+    protocore_sb b2 = {out, cap, 0, cap > 0};
+    protocore_sb_put(&b2, "{\"objectType\":\"REPORT\",\"programID\":");
     put_json_str(&b2, program_id);
-    pc_sb_put(&b2, ",\"eventID\":");
+    protocore_sb_put(&b2, ",\"eventID\":");
     put_json_str(&b2, event_id);
-    pc_sb_put(&b2, ",\"resources\":[{\"resourceName\":");
+    protocore_sb_put(&b2, ",\"resources\":[{\"resourceName\":");
     put_json_str(&b2, resource_name);
-    pc_sb_put(&b2, ",\"intervals\":[{\"interval\":{\"start\":");
+    protocore_sb_put(&b2, ",\"intervals\":[{\"interval\":{\"start\":");
     put_u64(&b2, timestamp);
-    pc_sb_put(&b2, "},\"payloads\":[{\"type\":\"READING\",\"values\":[");
+    protocore_sb_put(&b2, "},\"payloads\":[{\"type\":\"READING\",\"values\":[");
     put_double(&b2, value);
-    pc_sb_put(&b2, "]}]}]}]}");
-    return pc_sb_finish(&b2);
+    protocore_sb_put(&b2, "]}]}]}]}");
+    return protocore_sb_finish(&b2);
 }
 
-#endif // PC_ENABLE_OPENADR
+#endif // PROTOCORE_ENABLE_OPENADR

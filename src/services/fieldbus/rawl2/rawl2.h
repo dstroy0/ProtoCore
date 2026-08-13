@@ -3,14 +3,14 @@
 
 /**
  * @file rawl2.h
- * @brief Raw Layer-2 Ethernet frame codec (PC_ENABLE_RAWL2).
+ * @brief Raw Layer-2 Ethernet frame codec (PROTOCORE_ENABLE_RAWL2).
  *
  * The host-testable core of raw-L2 frame TX/RX: build and parse Ethernet II frames (and 802.1Q
  * VLAN-tagged frames) so the app can inject/receive arbitrary L2 frames - the basis for the raw-L2
  * industrial protocols (PROFINET DCP, IEC 61850 GOOSE, POWERLINK, SERCOS) and for custom management /
  * proprietary MAC framing. On device the bytes go out through the vendor L2 transmit path
  * (wired or Wi-Fi); the MAC normally appends the FCS, so the builder emits the frame
- * without it and `pc_eth_fcs` is provided for the cases that need it.
+ * without it and `protocore_eth_fcs` is provided for the cases that need it.
  *
  *   Ethernet II:  [dst MAC 6][src MAC 6][ethertype 2][payload]
  *   802.1Q:       [dst 6][src 6][0x8100][TCI 2][ethertype 2][payload]
@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_RAWL2
+#if PROTOCORE_ENABLE_RAWL2
 
 // Ethernet II framing sizes + ethertypes.
 #define ETH_ALEN 6            ///< MAC address length.
@@ -42,8 +42,8 @@ PROTO_BEGIN_DECLS
  * @brief Build an Ethernet II frame (no FCS).
  * @return the frame length (14 + payload_len), or 0 if it won't fit or a pointer is null.
  */
-size_t pc_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, const uint8_t *payload,
-                    size_t payload_len, uint8_t *out, size_t cap);
+size_t protocore_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, const uint8_t *payload,
+                           size_t payload_len, uint8_t *out, size_t cap);
 
 /**
  * @brief Build an 802.1Q VLAN-tagged Ethernet frame (no FCS).
@@ -52,8 +52,9 @@ size_t pc_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, 
  * @param vid   VLAN id (0..4095).
  * @return the frame length (18 + payload_len), or 0 on overflow.
  */
-size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, proto_bool dei, uint16_t vid,
-                         uint16_t ethertype, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap);
+size_t protocore_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, proto_bool dei, uint16_t vid,
+                                uint16_t ethertype, const uint8_t *payload, size_t payload_len, uint8_t *out,
+                                size_t cap);
 
 /** @brief A parsed Ethernet frame (pointers into the input). */
 typedef struct
@@ -69,13 +70,13 @@ typedef struct
 } EthFrame;
 
 /** @brief Parse an Ethernet II / 802.1Q frame (FCS not expected). @return true if well-formed. */
-proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out);
+proto_bool protocore_eth_parse(const uint8_t *frame, size_t len, EthFrame *out);
 
 /** @brief IEEE 802.3 frame check sequence (CRC-32, reflected, init 0xFFFFFFFF, xorout 0xFFFFFFFF). */
-uint32_t pc_eth_fcs(const uint8_t *bytes, size_t len);
+uint32_t protocore_eth_fcs(const uint8_t *bytes, size_t len);
 
-#endif // PC_ENABLE_RAWL2
+#endif // PROTOCORE_ENABLE_RAWL2
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_RAWL2_H

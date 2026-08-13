@@ -1,11 +1,11 @@
 # mDNS - advertise the device over mDNS / DNS-SD
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_MDNS`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_MDNS`
 
 ## What this example teaches
 
 mDNS (multicast DNS) plus DNS-SD lets a device be found on the LAN by name and by
-service, with no central DNS server. `pc_mdns_begin(hostname, port)` claims
+service, with no central DNS server. `protocore_mdns_begin(hostname, port)` claims
 `<hostname>.local` and advertises an `_http._tcp` service, so a browser or a
 DNS-SD tool finds the board without anyone knowing its IP.
 
@@ -13,15 +13,15 @@ DNS-SD tool finds the board without anyone knowing its IP.
 
 ```cpp
 server.begin(80);
-if (pc_mdns_begin(HOSTNAME, 80)) {
-    pc_mdns_txt("path", "/");              // TXT records shown by DNS-SD browsers
-    pc_mdns_txt("fw", "1.0");
-    pc_mdns_add_service("_https", "_tcp", 443); // advertise a second service
+if (protocore_mdns_begin(HOSTNAME, 80)) {
+    protocore_mdns_txt("path", "/");              // TXT records shown by DNS-SD browsers
+    protocore_mdns_txt("fw", "1.0");
+    protocore_mdns_add_service("_https", "_tcp", 443); // advertise a second service
 }
 ```
 
-`pc_mdns_txt()` attaches Bonjour TXT key/value pairs to the primary service,
-and `pc_mdns_add_service()` advertises additional services (here HTTPS on 443).
+`protocore_mdns_txt()` attaches Bonjour TXT key/value pairs to the primary service,
+and `protocore_mdns_add_service()` advertises additional services (here HTTPS on 443).
 After flashing you can reach the board at `http://pc-demo.local/` and see it in
 any DNS-SD browser (`dns-sd -B _http._tcp`, Avahi, Bonjour).
 
@@ -29,7 +29,7 @@ any DNS-SD browser (`dns-sd -B _http._tcp`, Avahi, Bonjour).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_MDNS=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_MDNS=1" \
   --lib="." examples/L7-Application/mDNS/mDNS.ino
 ```
 
@@ -48,7 +48,7 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_MDNS 1
+#define PROTOCORE_ENABLE_MDNS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -78,12 +78,12 @@ void setup()
     server.begin(80);
 
     // Claim <hostname>.local and advertise _http._tcp on port 80.
-    if (pc_mdns_begin(HOSTNAME, 80))
+    if (protocore_mdns_begin(HOSTNAME, 80))
     {
         // Bonjour TXT records (shown by DNS-SD browsers) + advertise HTTPS too.
-        pc_mdns_txt("path", "/");
-        pc_mdns_txt("fw", "1.0");
-        pc_mdns_add_service("_https", "_tcp", 443);
+        protocore_mdns_txt("path", "/");
+        protocore_mdns_txt("fw", "1.0");
+        protocore_mdns_add_service("_https", "_tcp", 443);
         Serial.printf("mDNS: http://%s.local/\n", HOSTNAME);
     }
 }

@@ -8,18 +8,18 @@
 
 #include "services/transportation/nema_ts2/nema_ts2.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/crc.h" // PC_CRC16_X25
+#include "shared_primitives/crc.h" // PROTOCORE_CRC16_X25
 
-#if PC_ENABLE_NEMA_TS2
+#if PROTOCORE_ENABLE_NEMA_TS2
 
-uint16_t pc_nema_ts2_crc(const uint8_t *bytes, size_t len)
+uint16_t protocore_nema_ts2_crc(const uint8_t *bytes, size_t len)
 {
     // CRC-16/X-25: reflected poly 0x8408 (reverse of 0x1021), init 0xFFFF, xorout 0xFFFF.
-    return (uint16_t)pc_crc(&PC_CRC16_X25, bytes, len);
+    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_X25, bytes, len);
 }
 
-size_t pc_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_type, const uint8_t *data, size_t data_len,
-                         uint8_t *out, size_t cap)
+size_t protocore_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_type, const uint8_t *data,
+                                size_t data_len, uint8_t *out, size_t cap)
 {
     if (!out || (data_len && !data))
     {
@@ -37,20 +37,20 @@ size_t pc_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_type, c
     {
         mem.cpy(out + 3, data, data_len);
     }
-    uint16_t crc = pc_nema_ts2_crc(out, 3 + data_len);
+    uint16_t crc = protocore_nema_ts2_crc(out, 3 + data_len);
     out[3 + data_len] = (uint8_t)crc; // FCS low byte first
     out[3 + data_len + 1] = (uint8_t)(crc >> 8);
     return n;
 }
 
-proto_bool pc_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out)
+proto_bool protocore_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out)
 {
     if (!frame || !out || len < 5) // address + control + frame_type + 2-byte FCS
     {
         return PROTO_FALSE;
     }
     size_t body = len - 2;
-    uint16_t want = pc_nema_ts2_crc(frame, body);
+    uint16_t want = protocore_nema_ts2_crc(frame, body);
     uint16_t got = (uint16_t)(frame[body] | (frame[body + 1] << 8));
     if (want != got)
     {
@@ -64,4 +64,4 @@ proto_bool pc_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_NEMA_TS2
+#endif // PROTOCORE_ENABLE_NEMA_TS2

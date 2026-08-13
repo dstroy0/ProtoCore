@@ -9,7 +9,7 @@
  * host-testable PACKET transform (encapsulate a payload into an ESP packet / verify + decapsulate one),
  * and the device-side network-layer integration (hooking lwIP's IP input/output + the SAD/SPD), which is
  * a separate, later track. This file is only the transform, gated with the IKEv2 feature (its Child-SA
- * keys - SK_ei / SK_er from pc_ike_child_keymat - drive it) and reusing the library's AES-256-GCM.
+ * keys - SK_ei / SK_er from protocore_ike_child_keymat - drive it) and reusing the library's AES-256-GCM.
  *
  * Wire layout (RFC 4303 §2, AES-GCM per RFC 4106):
  *   SPI(4) | Sequence Number(4) | IV(8, explicit) | { AES-GCM: Payload | Padding | Pad Length | Next
@@ -27,20 +27,20 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_IKEV2
+#if PROTOCORE_ENABLE_IKEV2
 
 /** @brief ESP header size: SPI(4) + Sequence Number(4). */
-#define PC_ESP_HDR_LEN 8
+#define PROTOCORE_ESP_HDR_LEN 8
 /** @brief Explicit IV length carried in the packet (AES-GCM, RFC 4106). */
-#define PC_ESP_IV_LEN 8
+#define PROTOCORE_ESP_IV_LEN 8
 /** @brief Implicit salt length (the tail of the ESP key, not on the wire). */
-#define PC_ESP_SALT_LEN 4
+#define PROTOCORE_ESP_SALT_LEN 4
 /** @brief AES-GCM authentication tag / ICV length. */
-#define PC_ESP_ICV_LEN 16
+#define PROTOCORE_ESP_ICV_LEN 16
 /** @brief AES-256 key length. */
-#define PC_ESP_KEY_LEN 32
+#define PROTOCORE_ESP_KEY_LEN 32
 
 /**
  * @brief Encapsulate @p payload in an RFC 4303 ESP packet with AES-256-GCM.
@@ -53,9 +53,10 @@ PROTO_BEGIN_DECLS
  * @param iv    the 8-byte explicit IV (unique per packet under a key - e.g. the sequence number).
  * @return the ESP packet length written, or 0 on a bad argument / overflow.
  */
-size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_ESP_KEY_LEN],
-                              const uint8_t salt[PC_ESP_SALT_LEN], const uint8_t iv[PC_ESP_IV_LEN], uint8_t next_header,
-                              const uint8_t *payload, size_t payload_len, uint8_t *out, size_t out_cap);
+size_t protocore_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PROTOCORE_ESP_KEY_LEN],
+                                     const uint8_t salt[PROTOCORE_ESP_SALT_LEN], const uint8_t iv[PROTOCORE_ESP_IV_LEN],
+                                     uint8_t next_header, const uint8_t *payload, size_t payload_len, uint8_t *out,
+                                     size_t out_cap);
 
 /**
  * @brief Verify + decapsulate an ESP packet in place (the ciphertext is decrypted within @p packet).
@@ -65,9 +66,10 @@ size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_E
  * @param packet  the ESP packet (mutated: decrypted in place). @param payload_out points into it on success.
  * @return true iff the ICV verifies (a forged / truncated packet returns false and writes no payload).
  */
-proto_bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8_t salt[PC_ESP_SALT_LEN],
-                                  uint8_t *packet, size_t len, uint32_t *spi_out, uint32_t *seq_out,
-                                  uint8_t *next_header_out, const uint8_t **payload_out, size_t *payload_len_out);
+proto_bool protocore_esp_gcm_decapsulate(const uint8_t key[PROTOCORE_ESP_KEY_LEN],
+                                         const uint8_t salt[PROTOCORE_ESP_SALT_LEN], uint8_t *packet, size_t len,
+                                         uint32_t *spi_out, uint32_t *seq_out, uint8_t *next_header_out,
+                                         const uint8_t **payload_out, size_t *payload_len_out);
 
 // ── ESP anti-replay window (RFC 4303 §3.4.3) ───────────────────────────────────────────────────
 //
@@ -75,7 +77,7 @@ proto_bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8
 // the 32-bit-sequence (non-ESN) window; the bitmap is a single 64-bit word, so the window is 64 packets.
 
 /** @brief ESP anti-replay window size (fixed by the 64-bit bitmap). */
-#define PC_ESP_REPLAY_WINDOW 64
+#define PROTOCORE_ESP_REPLAY_WINDOW 64
 
 /** @brief Anti-replay sliding-window state for one inbound SA (zero-heap). */
 typedef struct
@@ -86,7 +88,7 @@ typedef struct
 } EspReplay;
 
 /** @brief Reset an anti-replay window (no packets seen yet). */
-void pc_esp_replay_init(EspReplay *r);
+void protocore_esp_replay_init(EspReplay *r);
 
 /**
  * @brief Anti-replay check + record for a received sequence number @p seq (RFC 4303 §3.4.3).
@@ -96,10 +98,10 @@ void pc_esp_replay_init(EspReplay *r);
  * Sequence number 0 is invalid (ESP counts from 1) and is rejected.
  * @return true to accept the packet, false to drop it.
  */
-proto_bool pc_esp_replay_check(EspReplay *r, uint32_t seq);
+proto_bool protocore_esp_replay_check(EspReplay *r, uint32_t seq);
 
-#endif // PC_ENABLE_IKEV2
+#endif // PROTOCORE_ENABLE_IKEV2
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ESP_H

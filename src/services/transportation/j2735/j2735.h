@@ -3,7 +3,7 @@
 
 /**
  * @file j2735.h
- * @brief SAE J2735 V2X - ASN.1 UPER primitive codec + Basic Safety Message core (PC_ENABLE_J2735).
+ * @brief SAE J2735 V2X - ASN.1 UPER primitive codec + Basic Safety Message core (PROTOCORE_ENABLE_J2735).
  *
  * J2735 (the Vehicle-to-Everything message dictionary: BSM, SPaT, MAP) is serialized with ASN.1 **UPER**
  * (Unaligned Packed Encoding Rules). UPER packs fields at the bit level with no padding, so the codec is
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_J2735
+#if PROTOCORE_ENABLE_J2735
 
 /** @brief A UPER bit writer over a caller buffer (MSB-first within each octet). */
 typedef struct
@@ -46,26 +46,26 @@ typedef struct
     proto_bool ok; ///< cleared on read past the end.
 } UperReader;
 
-void pc_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap);
+void protocore_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap);
 /** @return the number of whole octets produced (rounds the bit length up), or 0 if the writer overflowed. */
-size_t pc_uper_writer_finish(UperWriter *w);
+size_t protocore_uper_writer_finish(UperWriter *w);
 
 /** @brief Write @p nbits low bits of @p value, MSB-first. */
-void pc_uper_put_bits(UperWriter *w, uint32_t value, unsigned nbits);
+void protocore_uper_put_bits(UperWriter *w, uint32_t value, unsigned nbits);
 /** @brief Write a BOOLEAN (1 bit). */
-void pc_uper_put_bool(UperWriter *w, proto_bool v);
+void protocore_uper_put_bool(UperWriter *w, proto_bool v);
 /** @brief Write a constrained INTEGER in [lo, hi] as (value-lo) in ceil(log2(hi-lo+1)) bits. */
-void pc_uper_put_cint(UperWriter *w, int64_t value, int64_t lo, int64_t hi);
+void protocore_uper_put_cint(UperWriter *w, int64_t value, int64_t lo, int64_t hi);
 
-void pc_uper_reader_init(UperReader *r, const uint8_t *buf, size_t nbits);
+void protocore_uper_reader_init(UperReader *r, const uint8_t *buf, size_t nbits);
 /** @brief Read @p nbits bits, MSB-first, into the low bits of the result. */
-uint32_t pc_uper_get_bits(UperReader *r, unsigned nbits);
-proto_bool pc_uper_get_bool(UperReader *r);
+uint32_t protocore_uper_get_bits(UperReader *r, unsigned nbits);
+proto_bool protocore_uper_get_bool(UperReader *r);
 /** @brief Read a constrained INTEGER in [lo, hi]. */
-int64_t pc_uper_get_cint(UperReader *r, int64_t lo, int64_t hi);
+int64_t protocore_uper_get_cint(UperReader *r, int64_t lo, int64_t hi);
 
 /** @brief Number of bits a constrained INTEGER in [lo, hi] occupies (0 when lo == hi). */
-unsigned pc_uper_cint_bits(int64_t lo, int64_t hi);
+unsigned protocore_uper_cint_bits(int64_t lo, int64_t hi);
 
 /** @brief The J2735 BSMcoreData safety kernel (values in J2735 units; see the SAE ranges). */
 typedef struct
@@ -86,10 +86,10 @@ typedef struct
  * Encodes, in order: msgCnt [0..127], id (32 bits), secMark [0..65535], lat [-900000000..900000001],
  * long [-1799999999..1800000001], elev [-4096..61439], speed [0..8191], heading [0..28800].
  */
-size_t pc_j2735_bsm_core_encode(const J2735BsmCore *c, uint8_t *out, size_t cap);
+size_t protocore_j2735_bsm_core_encode(const J2735BsmCore *c, uint8_t *out, size_t cap);
 
 /** @brief UPER-decode a BSMcore block. @return true on success. */
-proto_bool pc_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735BsmCore *c);
+proto_bool protocore_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735BsmCore *c);
 
 /** @brief J2735 MovementPhaseState (the signal-group state in a SPaT MovementState). */
 typedef enum PROTO_ENUM_PACKED
@@ -122,7 +122,7 @@ typedef struct
  * Encodes count [0..31] then, per state: signalGroup [0..255], eventState [0..9], minEndTime [0..36000],
  * maxEndTime [0..36000] - the timing core a vehicle uses for a countdown.
  */
-size_t pc_j2735_spat_encode(const J2735MovementState *states, size_t count, uint8_t *out, size_t cap);
+size_t protocore_j2735_spat_encode(const J2735MovementState *states, size_t count, uint8_t *out, size_t cap);
 
 /**
  * @brief UPER-decode a SPaT MovementState list.
@@ -131,8 +131,8 @@ size_t pc_j2735_spat_encode(const J2735MovementState *states, size_t count, uint
  * @param out_count   set to the number decoded.
  * @return true on success (and the encoded count fit in @p max_states).
  */
-proto_bool pc_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
-                                size_t *out_count);
+proto_bool protocore_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
+                                       size_t *out_count);
 
 /** @brief One MAP lane: an id and an approach/egress flag (the minimal LaneID + directionalUse bit). */
 typedef struct
@@ -157,17 +157,17 @@ typedef struct
  * @param count number of lanes (0..31).
  * @return octets written, or 0 on overflow.
  */
-size_t pc_j2735_map_encode(const J2735MapIntersection *isect, const J2735Lane *lanes, size_t count, uint8_t *out,
-                           size_t cap);
+size_t protocore_j2735_map_encode(const J2735MapIntersection *isect, const J2735Lane *lanes, size_t count, uint8_t *out,
+                                  size_t cap);
 
 /**
  * @brief UPER-decode a MAP intersection. @return true on success (and the lane count fit @p max_lanes).
  */
-proto_bool pc_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
-                               size_t max_lanes, size_t *out_count);
+proto_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
+                                      size_t max_lanes, size_t *out_count);
 
-#endif // PC_ENABLE_J2735
+#endif // PROTOCORE_ENABLE_J2735
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_J2735_H

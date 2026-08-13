@@ -5,7 +5,7 @@
  * @file Range.ino
  * @brief HTTP Range requests / 206 Partial Content (RFC 7233) for served files.
  *
- * With PC_ENABLE_RANGE the file-serving paths (serve_file / serve_static)
+ * With PROTOCORE_ENABLE_RANGE the file-serving paths (serve_file / serve_static)
  * honor a single-range `Range: bytes=...` request header: the server replies
  * `206 Partial Content` with a `Content-Range` header and streams only the
  * requested bytes (seeking the file), advertises `Accept-Ranges: bytes` on full
@@ -23,12 +23,12 @@
  * NOTE: optional features are gated by a compile flag the *library* sources must
  * also see. The `#define` below documents intent, but for PlatformIO enable it
  * for the whole build, e.g. in platformio.ini:
- *     build_flags = -DPC_ENABLE_RANGE=1
+ *     build_flags = -DPROTOCORE_ENABLE_RANGE=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.) A define in the
  * sketch alone does not reach the separately-compiled library .cpp.
  */
 
-#define PC_ENABLE_RANGE 1
+#define PROTOCORE_ENABLE_RANGE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -83,7 +83,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    // serve_file() honors Range automatically when PC_ENABLE_RANGE is set.
+    // serve_file() honors Range automatically when PROTOCORE_ENABLE_RANGE is set.
     on_http("/data.bin", HTTP_GET,
               [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, "/data.bin", "application/octet-stream"); });
 

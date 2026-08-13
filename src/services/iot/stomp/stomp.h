@@ -3,7 +3,7 @@
 
 /**
  * @file stomp.h
- * @brief STOMP 1.2 frame codec (PC_ENABLE_STOMP) - zero-heap frame builder + parser,
+ * @brief STOMP 1.2 frame codec (PROTOCORE_ENABLE_STOMP) - zero-heap frame builder + parser,
  *        so a device can talk to a STOMP broker (ActiveMQ / RabbitMQ / Artemis) over the
  *        shipped outbound client transport (TCP, or STOMP-over-WebSocket via the WS client).
  *
@@ -23,7 +23,7 @@
  *
  * The parser is non-mutating: it reports the command, header key/value slices, and body
  * as pointers INTO the source buffer (header values are still escaped - decode one with
- * @ref pc_stomp_unescape when needed). The builder escapes header keys/values for you.
+ * @ref protocore_stomp_unescape when needed). The builder escapes header keys/values for you.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_STOMP
+#if PROTOCORE_ENABLE_STOMP
 
 /** @brief One parsed header line: key/value slices point INTO the source buffer (raw, still escaped). */
 typedef struct
@@ -52,8 +52,8 @@ typedef struct
 {
     const char *command; ///< command verb (e.g. "MESSAGE"); not NUL-terminated
     size_t command_len;
-    StompHeader headers[PC_STOMP_MAX_HEADERS];
-    size_t header_count; ///< number of parsed headers (capped at PC_STOMP_MAX_HEADERS)
+    StompHeader headers[PROTOCORE_STOMP_MAX_HEADERS];
+    size_t header_count; ///< number of parsed headers (capped at PROTOCORE_STOMP_MAX_HEADERS)
     const char *body;    ///< frame body (may contain NULs when content-length is given)
     size_t body_len;
 } StompFrame;
@@ -67,8 +67,8 @@ typedef struct
  * @param body_len    body length in bytes.
  * @return bytes written (including the terminating NUL), or 0 on overflow / bad input.
  */
-size_t pc_stomp_build_frame(char *buf, size_t cap, const char *command, const char *const *header_keys,
-                            const char *const *header_vals, size_t nheaders, const char *body, size_t body_len);
+size_t protocore_stomp_build_frame(char *buf, size_t cap, const char *command, const char *const *header_keys,
+                                   const char *const *header_vals, size_t nheaders, const char *body, size_t body_len);
 
 /**
  * @brief Parse one STOMP frame at the head of [buf, buf+len).
@@ -81,22 +81,22 @@ size_t pc_stomp_build_frame(char *buf, size_t cap, const char *command, const ch
  * @return true on a complete frame; false if the buffer holds an incomplete or malformed
  *         frame (then @p out / @p consumed are unspecified).
  */
-proto_bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, size_t *consumed);
+proto_bool protocore_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, size_t *consumed);
 
 /**
  * @brief Find a header by name; returns the RAW (still escaped) value slice.
  * @return true and fills @p val / @p val_len on the first match (per spec), else false.
  */
-proto_bool pc_stomp_header(const StompFrame *f, const char *name, const char **val, size_t *val_len);
+proto_bool protocore_stomp_header(const StompFrame *f, const char *name, const char **val, size_t *val_len);
 
 /**
  * @brief Decode STOMP 1.2 header escapes (`\r` `\n` `\c` `\\`) from @p src into @p dst.
  * @return decoded length, or 0 on overflow or an invalid escape sequence.
  */
-size_t pc_stomp_unescape(char *dst, size_t cap, const char *src, size_t src_len);
+size_t protocore_stomp_unescape(char *dst, size_t cap, const char *src, size_t src_len);
 
-#endif // PC_ENABLE_STOMP
+#endif // PROTOCORE_ENABLE_STOMP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_STOMP_H

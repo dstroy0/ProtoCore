@@ -9,9 +9,9 @@
 #include "services/web/edge_cache/edge_cache_sd.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_EDGE_CACHE
+#if PROTOCORE_ENABLE_EDGE_CACHE
 
-#define PC_EDGE_SD_VERSION 1
+#define PROTOCORE_EDGE_SD_VERSION 1
 
 static void put_u16(uint8_t *p, uint16_t v)
 {
@@ -72,7 +72,7 @@ size_t edge_sd_serialize(const EdgeEntry *e, uint8_t *out, size_t cap)
         return 0;
     }
     size_t pos = 0;
-    out[pos++] = PC_EDGE_SD_VERSION;
+    out[pos++] = PROTOCORE_EDGE_SD_VERSION;
     put_u16(out + pos, (uint16_t)e->status);
     pos += 2;
     if (!put_str(out, cap, &pos, e->key) || !put_str(out, cap, &pos, e->content_type) ||
@@ -95,7 +95,7 @@ size_t edge_sd_serialize(const EdgeEntry *e, uint8_t *out, size_t cap)
 
 proto_bool edge_sd_deserialize(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e)
 {
-    if (!buf || !e || len < 3 || buf[0] != PC_EDGE_SD_VERSION)
+    if (!buf || !e || len < 3 || buf[0] != PROTOCORE_EDGE_SD_VERSION)
     {
         return PROTO_FALSE;
     }
@@ -118,7 +118,7 @@ proto_bool edge_sd_deserialize(uint8_t *work, const uint8_t *buf, size_t len, Ed
     }
     uint16_t bl = get_u16(buf + pos);
     pos += 2;
-    if (bl > PC_EDGE_BODY_MAX || pos + bl > len)
+    if (bl > PROTOCORE_EDGE_BODY_MAX || pos + bl > len)
     {
         return PROTO_FALSE;
     }
@@ -128,10 +128,10 @@ proto_bool edge_sd_deserialize(uint8_t *work, const uint8_t *buf, size_t len, Ed
     return PROTO_TRUE;
 }
 
-#if PC_ENABLE_DBM
+#if PROTOCORE_ENABLE_DBM
 
 // The L2 key is the entry's SHA-256 digest, which must fit a dbm key exactly.
-static_assert(PC_DBM_KEY_MAX >= 32, "edge cache L2 uses a 32-byte SHA-256 digest as the dbm key");
+static_assert(PROTOCORE_DBM_KEY_MAX >= 32, "edge cache L2 uses a 32-byte SHA-256 digest as the dbm key");
 
 // The path portion of a canonical key "METHOD\nhost\npath[\nquery]" (after the 2nd '\n'), or nullptr.
 static const char *canon_path(const char *canon)
@@ -154,7 +154,7 @@ static const char *canon_path(const char *canon)
 // True if @p buf is a valid edge serialization; if so copies its canonical key into @p canon_out.
 static proto_bool peek_canon(const uint8_t *buf, size_t len, char *canon_out, size_t cap)
 {
-    if (len < 3 || buf[0] != PC_EDGE_SD_VERSION)
+    if (len < 3 || buf[0] != PROTOCORE_EDGE_SD_VERSION)
     {
         return PROTO_FALSE;
     }
@@ -163,15 +163,15 @@ static proto_bool peek_canon(const uint8_t *buf, size_t len, char *canon_out, si
 }
 
 // Batch of L2 keys collected during an iteration for deletion afterward (dbm forbids delete-in-iterate).
-#define PC_EDGE_SD_PURGE_BATCH 8
+#define PROTOCORE_EDGE_SD_PURGE_BATCH 8
 typedef struct
 {
-    struct pc_dbm *db;
+    struct protocore_dbm *db;
     const char *prefix; // nullptr = match every edge entry
     size_t plen;
     uint8_t *scratch;
     size_t scratch_cap;
-    uint8_t batch[PC_EDGE_SD_PURGE_BATCH][32];
+    uint8_t batch[PROTOCORE_EDGE_SD_PURGE_BATCH][32];
     int count;
     proto_bool full; // hit the batch cap: another pass is needed
 } CollectCtx;
@@ -183,12 +183,12 @@ static proto_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
     {
         return PROTO_TRUE; // not an edge digest key (shared dbm) - leave it be
     }
-    long n = pc_dbm_get(c->db, key, key_len, c->scratch, c->scratch_cap);
+    long n = protocore_dbm_get(c->db, key, key_len, c->scratch, c->scratch_cap);
     if (n <= 0)
     {
         return PROTO_TRUE;
     }
-    char canon[PC_EDGE_KEY_MAX];
+    char canon[PROTOCORE_EDGE_KEY_MAX];
     if (!peek_canon(c->scratch, (size_t)n, canon, sizeof(canon)))
     {
         return PROTO_TRUE; // not an edge value - do not touch it
@@ -201,7 +201,7 @@ static proto_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
             return PROTO_TRUE; // path does not match the purge prefix
         }
     }
-    if (c->count >= PC_EDGE_SD_PURGE_BATCH)
+    if (c->count >= PROTOCORE_EDGE_SD_PURGE_BATCH)
     {
         c->full = PROTO_TRUE;
         return PROTO_FALSE; // stop this pass; the caller deletes the batch then re-iterates
@@ -210,7 +210,7 @@ static proto_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
     return PROTO_TRUE;
 }
 
-static uint32_t purge_matching(struct pc_dbm *db, const char *prefix, uint8_t *scratch, size_t scratch_cap)
+static uint32_t purge_matching(struct protocore_dbm *db, const char *prefix, uint8_t *scratch, size_t scratch_cap)
 {
     uint32_t total = 0;
     for (;;)
@@ -218,15 +218,15 @@ static uint32_t purge_matching(struct pc_dbm *db, const char *prefix, uint8_t *s
         CollectCtx c;
         c.db = db;
         c.prefix = prefix;
-        c.plen = prefix ? strnlen(prefix, PC_EDGE_KEY_MAX) : 0;
+        c.plen = prefix ? strnlen(prefix, PROTOCORE_EDGE_KEY_MAX) : 0;
         c.scratch = scratch;
         c.scratch_cap = scratch_cap;
         c.count = 0;
         c.full = PROTO_FALSE;
-        pc_dbm_iterate(db, collect_cb, &c);
+        protocore_dbm_iterate(db, collect_cb, &c);
         for (int i = 0; i < c.count; i++)
         {
-            if (pc_dbm_del(db, (const char *)c.batch[i], 32))
+            if (protocore_dbm_del(db, (const char *)c.batch[i], 32))
             {
                 total++;
             }
@@ -239,7 +239,7 @@ static uint32_t purge_matching(struct pc_dbm *db, const char *prefix, uint8_t *s
     return total;
 }
 
-proto_bool edge_sd_put(struct pc_dbm *db, const EdgeEntry *e, uint8_t *scratch, size_t scratch_cap)
+proto_bool edge_sd_put(struct protocore_dbm *db, const EdgeEntry *e, uint8_t *scratch, size_t scratch_cap)
 {
     if (!db || !e || !scratch)
     {
@@ -250,21 +250,21 @@ proto_bool edge_sd_put(struct pc_dbm *db, const EdgeEntry *e, uint8_t *scratch, 
         return PROTO_FALSE; // only spill what a cheap 304 can refresh after a reboot
     }
     size_t n = edge_sd_serialize(e, scratch, scratch_cap);
-    if (n == 0 || n > PC_DBM_VAL_MAX)
+    if (n == 0 || n > PROTOCORE_DBM_VAL_MAX)
     {
         return PROTO_FALSE; // too large for the L2 value bound -> stays L1-only
     }
-    return pc_dbm_put(db, (const char *)e->digest, 32, scratch, (uint32_t)n);
+    return protocore_dbm_put(db, (const char *)e->digest, 32, scratch, (uint32_t)n);
 }
 
-proto_bool edge_sd_get(uint8_t *work, struct pc_dbm *db, const uint8_t digest[32], EdgeEntry *e, uint8_t *scratch,
-                       size_t scratch_cap)
+proto_bool edge_sd_get(uint8_t *work, struct protocore_dbm *db, const uint8_t digest[32], EdgeEntry *e,
+                       uint8_t *scratch, size_t scratch_cap)
 {
     if (!db || !digest || !e || !scratch)
     {
         return PROTO_FALSE;
     }
-    long n = pc_dbm_get(db, (const char *)digest, 32, scratch, scratch_cap);
+    long n = protocore_dbm_get(db, (const char *)digest, 32, scratch, scratch_cap);
     if (n < 0)
     {
         return PROTO_FALSE;
@@ -272,12 +272,12 @@ proto_bool edge_sd_get(uint8_t *work, struct pc_dbm *db, const uint8_t digest[32
     return edge_sd_deserialize(work, scratch, (size_t)n, e);
 }
 
-proto_bool edge_sd_del(struct pc_dbm *db, const uint8_t digest[32])
+proto_bool edge_sd_del(struct protocore_dbm *db, const uint8_t digest[32])
 {
-    return db && digest && pc_dbm_del(db, (const char *)digest, 32);
+    return db && digest && protocore_dbm_del(db, (const char *)digest, 32);
 }
 
-uint32_t edge_sd_purge_prefix(struct pc_dbm *db, const char *path_prefix, uint8_t *scratch, size_t scratch_cap)
+uint32_t edge_sd_purge_prefix(struct protocore_dbm *db, const char *path_prefix, uint8_t *scratch, size_t scratch_cap)
 {
     if (!db || !path_prefix || !scratch)
     {
@@ -286,7 +286,7 @@ uint32_t edge_sd_purge_prefix(struct pc_dbm *db, const char *path_prefix, uint8_
     return purge_matching(db, path_prefix, scratch, scratch_cap);
 }
 
-uint32_t edge_sd_purge_all(struct pc_dbm *db)
+uint32_t edge_sd_purge_all(struct protocore_dbm *db)
 {
     if (!db)
     {
@@ -294,10 +294,10 @@ uint32_t edge_sd_purge_all(struct pc_dbm *db)
     }
     // purge_all still verifies each value is an edge serialization before deleting, so a shared dbm is safe;
     // that needs a scratch buffer to read each value into.
-    uint8_t scratch[PC_EDGE_SD_VALUE_MAX];
+    uint8_t scratch[PROTOCORE_EDGE_SD_VALUE_MAX];
     return purge_matching(db, NULL, scratch, sizeof(scratch));
 }
 
-#endif // PC_ENABLE_DBM
+#endif // PROTOCORE_ENABLE_DBM
 
-#endif // PC_ENABLE_EDGE_CACHE
+#endif // PROTOCORE_ENABLE_EDGE_CACHE

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the pool bench WITH -flto, to measure cross-TU inlining of the accessor layer.
 #
-# The accessor's hot ops (pc_plaintext_span, pc_plaintext_mark, pc_plaintext_release) must stay in scratch.cpp:
+# The accessor's hot ops (protocore_plaintext_span, protocore_plaintext_mark, protocore_plaintext_release) must stay in scratch.cpp:
 # they touch anonymous-namespace state, and that TU encapsulation is what makes the pool private.
 # LTO is how they get inlined anyway - the optimizer sees across TUs while the source keeps its
 # boundaries.
@@ -20,7 +20,7 @@ ROOT=$(git rev-parse --show-toplevel)
 SKETCH="$PWD/S3PoolBench"
 SHARED="$ROOT/test/penetration_testing/rig_firmware/src/main_poolbench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
-FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
+FQBN="${PROTOCORE_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 LIBDIR="$HOME/Arduino/libraries"
 
 mkdir -p "$LIBDIR"

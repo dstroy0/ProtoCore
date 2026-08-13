@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the CoAP server codec (services/iot/coap):
-// pc_coap_server_process() takes a complete request datagram, parses the header/token/options,
+// protocore_coap_server_process() takes a complete request datagram, parses the header/token/options,
 // reconstructs the Uri-Path, dispatches against the resource table (or synthesizes the
 // /.well-known/core RFC 6690 discovery listing), and encodes the piggybacked response - pure (no
 // sockets, no heap). Benched here: a plain GET, a PUT carrying a payload + Content-Format, the
 // .well-known/core discovery listing build (walks the resource table), and RFC 7959 block-wise
 // transfer (Block2 response paging of a 150-byte resource, Block1 request-upload reassembly) -
-// enabled the same way test_matrix.json proved services/iot/coap/ compiles (PC_ENABLE_COAP_BLOCK=1,
-// PC_COAP_BLOCK_SZX_MAX=2, PC_COAP_BLOCK1_MAX=128, matching test/test_coap/test_coap.cpp's own
+// enabled the same way test_matrix.json proved services/iot/coap/ compiles (PROTOCORE_ENABLE_COAP_BLOCK=1,
+// PROTOCORE_COAP_BLOCK_SZX_MAX=2, PROTOCORE_COAP_BLOCK1_MAX=128, matching test/test_coap/test_coap.cpp's own
 // env). Worked example for performance_benching/device/<service>/: a pure protocol codec with no hardware
 // involved, so every call here exercises the real production code path (contrast with
 // performance_benching/device/ads1115, a peripheral driver where the bus transaction itself is stubbed). Request
 // datagrams below are hand-encoded to the exact byte sequences test/test_coap/test_coap.cpp's own
 // encoder produces for the same calls (test_get_content, test_put_with_payload,
 // test_well_known_core_discovery, test_block2_explicit_paging, test_block1_upload_two_blocks); out
-// of scope: the UDP transport (pc_coap_server_begin), CoAP-over-DTLS (coaps.cpp/coaps_server.cpp,
-// which need PC_ENABLE_DTLS), and Observe (PC_ENABLE_COAP_OBSERVE) - none of that is a pure CPU
+// of scope: the UDP transport (protocore_coap_server_begin), CoAP-over-DTLS (coaps.cpp/coaps_server.cpp,
+// which need PROTOCORE_ENABLE_DTLS), and Observe (PROTOCORE_ENABLE_COAP_OBSERVE) - none of that is a pure CPU
 // codec path.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -75,9 +75,10 @@ static void h_big(const CoapRequest *req, CoapResponse *resp)
 
 void dbench_run(void)
 {
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/temp", COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE, h_temp);
-    pc_coap_server_add_resource("/big", COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT, h_big);
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/temp", COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE,
+                                       h_temp);
+    protocore_coap_server_add_resource("/big", COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT, h_big);
 
     // GET /temp, token AA BB CC DD, MID 0x1234 (test_get_content): hdr(Ver1,CON,TKL4) + code GET +
     // MID + token + Uri-Path "temp".
@@ -117,20 +118,20 @@ void dbench_run(void)
         DBENCH_BANNER("coap");
         volatile size_t sink = 0;
 
-        DBENCH_OP("pc_coap_server_process GET", 20000,
-                  sink += pc_coap_server_process(get_temp, sizeof(get_temp), resp, sizeof(resp)));
+        DBENCH_OP("protocore_coap_server_process GET", 20000,
+                  sink += protocore_coap_server_process(get_temp, sizeof(get_temp), resp, sizeof(resp)));
 
-        DBENCH_OP("pc_coap_server_process PUT", 20000,
-                  sink += pc_coap_server_process(put_temp, sizeof(put_temp), resp, sizeof(resp)));
+        DBENCH_OP("protocore_coap_server_process PUT", 20000,
+                  sink += protocore_coap_server_process(put_temp, sizeof(put_temp), resp, sizeof(resp)));
 
-        DBENCH_OP("pc_coap_server_process discovery", 20000,
-                  sink += pc_coap_server_process(get_discovery, sizeof(get_discovery), resp, sizeof(resp)));
+        DBENCH_OP("protocore_coap_server_process discovery", 20000,
+                  sink += protocore_coap_server_process(get_discovery, sizeof(get_discovery), resp, sizeof(resp)));
 
-        DBENCH_BULK("pc_coap_server_process block2", 20000, 64,
-                    sink += pc_coap_server_process(get_block2, sizeof(get_block2), resp, sizeof(resp)));
+        DBENCH_BULK("protocore_coap_server_process block2", 20000, 64,
+                    sink += protocore_coap_server_process(get_block2, sizeof(get_block2), resp, sizeof(resp)));
 
-        DBENCH_BULK("pc_coap_server_process block1", 20000, 64,
-                    sink += pc_coap_server_process(post_block1, sizeof(post_block1), resp, sizeof(resp)));
+        DBENCH_BULK("protocore_coap_server_process block1", 20000, 64,
+                    sink += protocore_coap_server_process(post_block1, sizeof(post_block1), resp, sizeof(resp)));
 
         (void)sink;
         DBENCH_DONE();

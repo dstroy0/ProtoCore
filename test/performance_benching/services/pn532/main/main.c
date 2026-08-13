@@ -4,7 +4,7 @@
 // On-device CCOUNT microbenchmark for the PN532 NFC frame codec (services/peripherals/pn532): the NXP PN532
 // "normal information frame" (00 | 00 FF | LEN | LCS | TFI | PData | DCS | 00) build + parse, its
 // two running checksums (LCS over LEN, DCS over TFI+PData), and the 6-byte ACK detect/build - all
-// pure (pc_pn532_build_frame / parse_frame / is_ack / build_ack carry no I2C/SPI/HSU of their own;
+// pure (protocore_pn532_build_frame / parse_frame / is_ack / build_ack carry no I2C/SPI/HSU of their own;
 // the caller moves the bytes over the bus). Like performance_benching/device/modbus, this is a pure protocol codec
 // with no hardware involved, so every call here exercises the real production code path - the actual
 // PN532 reader on I2C/SPI/UART is out of scope everywhere on this peripheral-less rig. Sample frames
@@ -40,18 +40,18 @@ void dbench_run(void)
         volatile bool bsink = false;
 
         // Build the GetFirmwareVersion command frame (LEN/LCS + TFI + DCS + postamble).
-        DBENCH_OP("pc_pn532_build_frame gfv", 200000,
-                  sink += pc_pn532_build_frame(PN532_TFI_HOST, cmd_gfv, 1, out, sizeof(out)));
+        DBENCH_OP("protocore_pn532_build_frame gfv", 200000,
+                  sink += protocore_pn532_build_frame(PN532_TFI_HOST, cmd_gfv, 1, out, sizeof(out)));
         // Frame + verify the GetFirmwareVersion response (LCS + DCS checks over 5 PData bytes).
-        DBENCH_OP("pc_pn532_parse_frame gfv resp", 200000, {
+        DBENCH_OP("protocore_pn532_parse_frame gfv resp", 200000, {
             uint8_t tfi = 0;
             const uint8_t *pd = NULL;
             uint8_t pdlen = 0;
-            isink += pc_pn532_parse_frame(resp_gfv, sizeof(resp_gfv), &tfi, &pd, &pdlen);
+            isink += protocore_pn532_parse_frame(resp_gfv, sizeof(resp_gfv), &tfi, &pd, &pdlen);
         });
         // ACK detect (6-byte compare) and ACK build.
-        DBENCH_OP("pc_pn532_is_ack", 200000, bsink ^= pc_pn532_is_ack(ack, sizeof(ack)));
-        DBENCH_OP("pc_pn532_build_ack", 200000, sink += pc_pn532_build_ack(out, sizeof(out)));
+        DBENCH_OP("protocore_pn532_is_ack", 200000, bsink ^= protocore_pn532_is_ack(ack, sizeof(ack)));
+        DBENCH_OP("protocore_pn532_build_ack", 200000, sink += protocore_pn532_build_ack(out, sizeof(out)));
 
         (void)sink;
         (void)isink;

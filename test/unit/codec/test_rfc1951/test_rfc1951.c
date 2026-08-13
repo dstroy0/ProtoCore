@@ -78,8 +78,8 @@ static void test_distance_spans_are_contiguous(void)
 // The one instance is the same object every call, which is the point of the accessor.
 static void test_namespace_is_one_instance(void)
 {
-    TEST_ASSERT_EQUAL_PTR(pc_rfc1951(), pc_rfc1951());
-    TEST_ASSERT_EQUAL_PTR(RFC1951->len_base, pc_rfc1951()->len_base);
+    TEST_ASSERT_EQUAL_PTR(protocore_rfc1951(), protocore_rfc1951());
+    TEST_ASSERT_EQUAL_PTR(RFC1951->len_base, protocore_rfc1951()->len_base);
 }
 
 // RFC 1951 sec 3.2.6: lit 0-143 are 8 bits, 144-255 are 9, 256-279 are 7, 280-287 are 8, and every
@@ -90,7 +90,7 @@ static void test_build_fixed_lengths_match_rfc(void)
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    pc_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
 
     for (int s = 0; s < 144; s++)
     {
@@ -123,33 +123,33 @@ static void test_build_fixed_codes_are_the_rfc_codes_reversed(void)
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    pc_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
 
-    TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits(0x30, 8), ll_code[0]);   // 00110000
-    TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits(0xBF, 8), ll_code[143]); // 10111111
-    TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits(0x190, 9), ll_code[144]); // 110010000
-    TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits(0x1FF, 9), ll_code[255]); // 111111111
-    TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits(0x00, 7), ll_code[256]);  // 0000000
-    TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits(0x17, 7), ll_code[279]);  // 0010111
-    TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits(0xC0, 8), ll_code[280]);  // 11000000
-    TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits(0xC7, 8), ll_code[287]);  // 11000111
+    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x30, 8), ll_code[0]);    // 00110000
+    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0xBF, 8), ll_code[143]);  // 10111111
+    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x190, 9), ll_code[144]); // 110010000
+    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x1FF, 9), ll_code[255]); // 111111111
+    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x00, 7), ll_code[256]);  // 0000000
+    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x17, 7), ll_code[279]);  // 0010111
+    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0xC0, 8), ll_code[280]);  // 11000000
+    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0xC7, 8), ll_code[287]);  // 11000111
 
     // Distance codes are 0..29 in order, five bits each (sec 3.2.6).
     for (int s = 0; s < 30; s++)
     {
-        TEST_ASSERT_EQUAL_UINT16(pc_rfc1951_reverse_bits((uint16_t)s, 5), d_code[s]);
+        TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits((uint16_t)s, 5), d_code[s]);
     }
 }
 
 static void test_reverse_bits_is_its_own_inverse(void)
 {
-    TEST_ASSERT_EQUAL_UINT16(0x0C, pc_rfc1951_reverse_bits(0x30, 8)); // 00110000 -> 00001100
-    TEST_ASSERT_EQUAL_UINT16(0x30, pc_rfc1951_reverse_bits(0x0C, 8));
-    TEST_ASSERT_EQUAL_UINT16(0x01, pc_rfc1951_reverse_bits(0x10, 5));
-    TEST_ASSERT_EQUAL_UINT16(0x00, pc_rfc1951_reverse_bits(0x00, 7));
+    TEST_ASSERT_EQUAL_UINT16(0x0C, protocore_rfc1951_reverse_bits(0x30, 8)); // 00110000 -> 00001100
+    TEST_ASSERT_EQUAL_UINT16(0x30, protocore_rfc1951_reverse_bits(0x0C, 8));
+    TEST_ASSERT_EQUAL_UINT16(0x01, protocore_rfc1951_reverse_bits(0x10, 5));
+    TEST_ASSERT_EQUAL_UINT16(0x00, protocore_rfc1951_reverse_bits(0x00, 7));
     for (uint16_t v = 0; v < 256; v++)
     {
-        TEST_ASSERT_EQUAL_UINT16(v, pc_rfc1951_reverse_bits(pc_rfc1951_reverse_bits(v, 8), 8));
+        TEST_ASSERT_EQUAL_UINT16(v, protocore_rfc1951_reverse_bits(protocore_rfc1951_reverse_bits(v, 8), 8));
     }
 }
 

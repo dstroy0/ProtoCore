@@ -17,28 +17,28 @@
 #define PROTOCORE_WEB_ASSETS_H
 
 // ---- html ----
-/** @brief Real-time SVG telemetry dashboard page (PC_ENABLE_DASHBOARD). */
-extern const char PC_DASHBOARD_PAGE[];
+/** @brief Real-time SVG telemetry dashboard page (PROTOCORE_ENABLE_DASHBOARD). */
+extern const char PROTOCORE_DASHBOARD_PAGE[];
 
 /** @brief Captive-portal form for WiFi credential entry (provisioning service). */
-extern const char PC_PROV_FORM[];
+extern const char PROTOCORE_PROV_FORM[];
 
 /** @brief Success page shown after credentials are saved and the device reboots. */
-extern const char PC_PROV_SAVED_HTML[];
+extern const char PROTOCORE_PROV_SAVED_HTML[];
 
 /** @brief Self-contained WebSocket terminal page (green-phosphor CRT theme; auto ws/wss). */
-extern const char PC_TERMINAL_PAGE[];
+extern const char PROTOCORE_TERMINAL_PAGE[];
 
 // ---- js ----
 /** @brief Service worker: precaches the app shell from the versioned manifest and serves it stale-while-revalidate. */
-extern const char PC_SERVICE_WORKER[];
+extern const char PROTOCORE_SERVICE_WORKER[];
 
 // ---- json ----
 /** @brief Runtime stats JSON (rendered via send_template); add/rename fields to taste. */
-extern const char PC_STATS_JSON[];
+extern const char PROTOCORE_STATS_JSON[];
 
 // ---- text ----
 /** @brief All available Prometheus metrics; comment a value line out with a leading # to drop it. */
-extern const char PC_METRICS_PROM[];
+extern const char PROTOCORE_METRICS_PROM[];
 
 #endif // PROTOCORE_WEB_ASSETS_H

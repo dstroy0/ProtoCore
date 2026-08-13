@@ -9,9 +9,9 @@
 #include "services/machine_tool/mtconnect/mtconnect.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_MTCONNECT
+#if PROTOCORE_ENABLE_MTCONNECT
 
-static void put(pc_mtc_streams *s, const char *text)
+static void put(protocore_mtc_streams *s, const char *text)
 {
     // null text is a no-op: harden the helper itself, not just every call site.
     if (!s->ok || !text)
@@ -32,7 +32,7 @@ static void put(pc_mtc_streams *s, const char *text)
     s->len += tl;
 }
 
-static void put_escaped(pc_mtc_streams *s, const char *text)
+static void put_escaped(protocore_mtc_streams *s, const char *text)
 {
     // null text is a no-op: harden the helper itself, not just every call site.
     if (!s->ok || !text)
@@ -80,7 +80,7 @@ static void put_escaped(pc_mtc_streams *s, const char *text)
 }
 
 // A minimal unsigned -> decimal directly into the stream.
-static void put_u64(pc_mtc_streams *s, uint64_t v)
+static void put_u64(protocore_mtc_streams *s, uint64_t v)
 {
     char tmp[20];
     int n = 0;
@@ -98,20 +98,20 @@ static void put_u64(pc_mtc_streams *s, uint64_t v)
     put(s, out);
 }
 
-static const char *mtc_cat_str(pc_mtc_category cat)
+static const char *mtc_cat_str(protocore_mtc_category cat)
 {
-    if (cat == PC_MTC_SAMPLE)
+    if (cat == PROTOCORE_MTC_SAMPLE)
     {
         return "SAMPLE";
     }
-    if (cat == PC_MTC_EVENT)
+    if (cat == PROTOCORE_MTC_EVENT)
     {
         return "EVENT";
     }
     return "CONDITION";
 }
 
-void pc_mtc_streams_begin(pc_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, uint64_t next_seq,
+void protocore_mtc_streams_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, uint64_t next_seq,
                           const char *device_name)
 {
     s->buf = buf;
@@ -131,7 +131,7 @@ void pc_mtc_streams_begin(pc_mtc_streams *s, char *buf, size_t cap, uint64_t ins
     put(s, "\">");
 }
 
-void pc_mtc_streams_add(pc_mtc_streams *s, pc_mtc_category cat, const char *type, const char *data_id, uint64_t seq,
+void protocore_mtc_streams_add(protocore_mtc_streams *s, protocore_mtc_category cat, const char *type, const char *data_id, uint64_t seq,
                         const char *timestamp, const char *value)
 {
     if (!s->ok)
@@ -144,18 +144,18 @@ void pc_mtc_streams_add(pc_mtc_streams *s, pc_mtc_category cat, const char *type
         s->in_comp = PROTO_TRUE;
     }
     const char *wrap = "Condition";
-    if (cat == PC_MTC_SAMPLE)
+    if (cat == PROTOCORE_MTC_SAMPLE)
     {
         wrap = "Samples";
     }
-    else if (cat == PC_MTC_EVENT)
+    else if (cat == PROTOCORE_MTC_EVENT)
     {
         wrap = "Events";
     }
     put(s, "<");
     put(s, wrap);
     put(s, ">");
-    if (cat == PC_MTC_CONDITION)
+    if (cat == PROTOCORE_MTC_CONDITION)
     {
         // <Condition><Normal type="TYPE" dataItemId="ID" sequence="SEQ" timestamp="TS"/></Condition>
         const char *sub = value ? value : "Normal"; // Normal / Warning / Fault / Unavailable
@@ -193,7 +193,7 @@ void pc_mtc_streams_add(pc_mtc_streams *s, pc_mtc_category cat, const char *type
     put(s, ">");
 }
 
-size_t pc_mtc_streams_end(pc_mtc_streams *s)
+size_t protocore_mtc_streams_end(protocore_mtc_streams *s)
 {
     if (s->in_comp)
     {
@@ -208,9 +208,9 @@ size_t pc_mtc_streams_end(pc_mtc_streams *s)
     return s->len;
 }
 
-size_t pc_mtc_error(uint64_t instance_id, const char *error_code, const char *message, char *out, size_t cap)
+size_t protocore_mtc_error(uint64_t instance_id, const char *error_code, const char *message, char *out, size_t cap)
 {
-    pc_mtc_streams s;
+    protocore_mtc_streams s;
     s.buf = out;
     s.cap = cap;
     s.len = 0;
@@ -240,7 +240,7 @@ size_t pc_mtc_error(uint64_t instance_id, const char *error_code, const char *me
 
 // --- probe (MTConnectDevices): the device model a client discovers before streaming ---
 
-void pc_mtc_devices_begin(pc_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, const char *device_id,
+void protocore_mtc_devices_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, const char *device_id,
                           const char *device_name, const char *uuid)
 {
     s->buf = buf;
@@ -262,7 +262,7 @@ void pc_mtc_devices_begin(pc_mtc_streams *s, char *buf, size_t cap, uint64_t ins
     put(s, "\"><DataItems>");
 }
 
-void pc_mtc_devices_add_item(pc_mtc_streams *s, pc_mtc_category cat, const char *id, const char *type, const char *name,
+void protocore_mtc_devices_add_item(protocore_mtc_streams *s, protocore_mtc_category cat, const char *id, const char *type, const char *name,
                              const char *units)
 {
     if (!s->ok)
@@ -291,7 +291,7 @@ void pc_mtc_devices_add_item(pc_mtc_streams *s, pc_mtc_category cat, const char 
     put(s, "/>");
 }
 
-size_t pc_mtc_devices_end(pc_mtc_streams *s)
+size_t protocore_mtc_devices_end(protocore_mtc_streams *s)
 {
     put(s, "</DataItems></Device></Devices></MTConnectDevices>");
     if (!s->ok)
@@ -304,7 +304,7 @@ size_t pc_mtc_devices_end(pc_mtc_streams *s)
 
 // --- asset (MTConnectAssets): the tool/fixture inventory a client reads by GET /asset ---
 
-void pc_mtc_assets_begin(pc_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, uint32_t asset_count,
+void protocore_mtc_assets_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, uint32_t asset_count,
                          uint32_t asset_buffer_size)
 {
     s->buf = buf;
@@ -324,7 +324,7 @@ void pc_mtc_assets_begin(pc_mtc_streams *s, char *buf, size_t cap, uint64_t inst
     put(s, "<Assets>");
 }
 
-void pc_mtc_assets_cutting_tool_begin(pc_mtc_streams *s, const char *asset_id, const char *serial_number,
+void protocore_mtc_assets_cutting_tool_begin(protocore_mtc_streams *s, const char *asset_id, const char *serial_number,
                                       const char *tool_id, const char *device_uuid, const char *timestamp)
 {
     put(s, "<CuttingTool assetId=\"");
@@ -357,7 +357,7 @@ void pc_mtc_assets_cutting_tool_begin(pc_mtc_streams *s, const char *asset_id, c
     put(s, "><CuttingToolLifeCycle>");
 }
 
-void pc_mtc_assets_tool_life(pc_mtc_streams *s, const char *type, const char *count_direction, const char *limit,
+void protocore_mtc_assets_tool_life(protocore_mtc_streams *s, const char *type, const char *count_direction, const char *limit,
                              const char *value)
 {
     // <ToolLife type="MINUTES" countDirection="UP" limit="100">42</ToolLife>
@@ -377,12 +377,12 @@ void pc_mtc_assets_tool_life(pc_mtc_streams *s, const char *type, const char *co
     put(s, "</ToolLife>");
 }
 
-void pc_mtc_assets_cutting_tool_end(pc_mtc_streams *s)
+void protocore_mtc_assets_cutting_tool_end(protocore_mtc_streams *s)
 {
     put(s, "</CuttingToolLifeCycle></CuttingTool>");
 }
 
-size_t pc_mtc_assets_end(pc_mtc_streams *s)
+size_t protocore_mtc_assets_end(protocore_mtc_streams *s)
 {
     put(s, "</Assets></MTConnectAssets>");
     if (!s->ok)
@@ -398,8 +398,8 @@ size_t pc_mtc_assets_end(pc_mtc_streams *s)
 // Bounded, always-NUL-terminated copy into a fixed field.
 static void mtc_copy_str(char *dst, size_t cap, const char *src)
 {
-    // cap == 0 is unreachable: every call site passes sizeof() of a fixed pc_mtc_observation field
-    // (PC_MTC_STR_MAX/TS_MAX/PC_VAL_MAX + 1, all compile-time non-zero constants in protocore_config.h),
+    // cap == 0 is unreachable: every call site passes sizeof() of a fixed protocore_mtc_observation field
+    // (PROTOCORE_MTC_STR_MAX/TS_MAX/PROTOCORE_VAL_MAX + 1, all compile-time non-zero constants in protocore_config.h),
     // never a literal 0. Kept as a defensive backstop against a future zero-sized field.
     if (cap == 0)
     {
@@ -417,7 +417,7 @@ static void mtc_copy_str(char *dst, size_t cap, const char *src)
 }
 
 // Open an MTConnectStreams document with the full sample-cursor header (buffer/first/last/next seq).
-static void mtc_streams_begin_windowed(pc_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id,
+static void mtc_streams_begin_windowed(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id,
                                        uint64_t first_seq, uint64_t last_seq, uint64_t next_seq, uint32_t buffer_size,
                                        const char *device_name)
 {
@@ -444,7 +444,7 @@ static void mtc_streams_begin_windowed(pc_mtc_streams *s, char *buf, size_t cap,
     put(s, "\">");
 }
 
-void pc_mtc_sample_buffer_init(pc_mtc_sample_buffer *b, uint64_t start_seq)
+void protocore_mtc_sample_buffer_init(protocore_mtc_sample_buffer *b, uint64_t start_seq)
 {
     b->count = 0;
     b->head = 0;
@@ -452,18 +452,18 @@ void pc_mtc_sample_buffer_init(pc_mtc_sample_buffer *b, uint64_t start_seq)
     b->first_seq = b->next_seq; // empty: first == next (lastSequence = next-1 sits just below first)
 }
 
-uint64_t pc_mtc_sample_buffer_add(pc_mtc_sample_buffer *b, pc_mtc_category cat, const char *type, const char *data_id,
+uint64_t protocore_mtc_sample_buffer_add(protocore_mtc_sample_buffer *b, protocore_mtc_category cat, const char *type, const char *data_id,
                                   const char *timestamp, const char *value)
 {
-    pc_mtc_observation *o = &b->obs[b->head];
+    protocore_mtc_observation *o = &b->obs[b->head];
     o->cat = cat;
     o->seq = b->next_seq;
     mtc_copy_str(o->type, sizeof(o->type), type);
     mtc_copy_str(o->data_id, sizeof(o->data_id), data_id);
     mtc_copy_str(o->timestamp, sizeof(o->timestamp), timestamp);
     mtc_copy_str(o->value, sizeof(o->value), value);
-    b->head = (b->head + 1) % PC_MTC_SAMPLE_BUFFER;
-    if (b->count < PC_MTC_SAMPLE_BUFFER)
+    b->head = (b->head + 1) % PROTOCORE_MTC_SAMPLE_BUFFER;
+    if (b->count < PROTOCORE_MTC_SAMPLE_BUFFER)
     {
         b->count++;
     }
@@ -474,7 +474,7 @@ uint64_t pc_mtc_sample_buffer_add(pc_mtc_sample_buffer *b, pc_mtc_category cat, 
     return b->next_seq++;
 }
 
-size_t pc_mtc_sample_query(const pc_mtc_sample_buffer *b, char *buf, size_t cap, uint64_t instance_id,
+size_t protocore_mtc_sample_query(const protocore_mtc_sample_buffer *b, char *buf, size_t cap, uint64_t instance_id,
                            const char *device_name, uint64_t from, uint32_t count)
 {
     uint64_t first = b->first_seq;
@@ -487,19 +487,19 @@ size_t pc_mtc_sample_query(const pc_mtc_sample_buffer *b, char *buf, size_t cap,
     // Resume point: past the last one returned, or the buffer's nextSequence when nothing was in range.
     uint64_t next_report = (start >= next) ? next : start + to_emit;
 
-    pc_mtc_streams s;
-    mtc_streams_begin_windowed(&s, buf, cap, instance_id, first, last, next_report, PC_MTC_SAMPLE_BUFFER, device_name);
+    protocore_mtc_streams s;
+    mtc_streams_begin_windowed(&s, buf, cap, instance_id, first, last, next_report, PROTOCORE_MTC_SAMPLE_BUFFER, device_name);
 
     // The oldest retained observation sits `count` slots behind head; observation `first + k` is at
     // (oldest_idx + k) around the ring.
-    uint32_t oldest_idx = (b->head + PC_MTC_SAMPLE_BUFFER - b->count) % PC_MTC_SAMPLE_BUFFER;
+    uint32_t oldest_idx = (b->head + PROTOCORE_MTC_SAMPLE_BUFFER - b->count) % PROTOCORE_MTC_SAMPLE_BUFFER;
     for (uint32_t e = 0; e < to_emit; e++)
     {
         uint32_t k = (uint32_t)((start - first) + e);
-        const pc_mtc_observation *o = &b->obs[(oldest_idx + k) % PC_MTC_SAMPLE_BUFFER];
-        pc_mtc_streams_add(&s, o->cat, o->type, o->data_id, o->seq, o->timestamp, o->value);
+        const protocore_mtc_observation *o = &b->obs[(oldest_idx + k) % PROTOCORE_MTC_SAMPLE_BUFFER];
+        protocore_mtc_streams_add(&s, o->cat, o->type, o->data_id, o->seq, o->timestamp, o->value);
     }
-    return pc_mtc_streams_end(&s);
+    return protocore_mtc_streams_end(&s);
 }
 
-#endif // PC_ENABLE_MTCONNECT
+#endif // PROTOCORE_ENABLE_MTCONNECT

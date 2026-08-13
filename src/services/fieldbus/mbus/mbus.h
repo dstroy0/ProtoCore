@@ -3,7 +3,7 @@
 
 /**
  * @file mbus.h
- * @brief Wired M-Bus (Meter-Bus, EN 13757-2/-3) frame codec (PC_ENABLE_MBUS).
+ * @brief Wired M-Bus (Meter-Bus, EN 13757-2/-3) frame codec (PROTOCORE_ENABLE_MBUS).
  *
  * A pure, zero-heap builder + parser for the M-Bus link-layer frames used by utility meters
  * (water / gas / heat / electricity), plus a walker for the EN 13757-3 variable-data records
@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_MBUS
+#if PROTOCORE_ENABLE_MBUS
 
 #define MBUS_START_SHORT 0x10u ///< short-frame start octet
 #define MBUS_START_LONG 0x68u  ///< long / control-frame start octet
@@ -109,24 +109,24 @@ typedef struct
 // --- builders: write into @p buf (cap), return frame length or 0 on overflow ---
 
 /** @brief Single-character acknowledge (0xE5). */
-size_t pc_mbus_build_ack(uint8_t *buf, size_t cap);
+size_t protocore_mbus_build_ack(uint8_t *buf, size_t cap);
 
 /** @brief Short frame: 10 C A CS 16. */
-size_t pc_mbus_build_short(uint8_t *buf, size_t cap, uint8_t c, uint8_t a);
+size_t protocore_mbus_build_short(uint8_t *buf, size_t cap, uint8_t c, uint8_t a);
 
 /** @brief Long frame: 68 L L 68 C A CI [data] CS 16. @p data_len 0 builds a control frame. */
-size_t pc_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_t ci, const uint8_t *data,
-                          uint8_t data_len);
+size_t protocore_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_t ci, const uint8_t *data,
+                                 uint8_t data_len);
 
 /** @brief Convenience: a SND_NKE (link reset) short frame to address @p a. */
-size_t pc_mbus_build_snd_nke(uint8_t *buf, size_t cap, uint8_t a);
+size_t protocore_mbus_build_snd_nke(uint8_t *buf, size_t cap, uint8_t a);
 
 /** @brief Convenience: a REQ_UD2 short frame to address @p a (@p fcb toggles the FCB bit). */
-size_t pc_mbus_build_req_ud2(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb);
+size_t protocore_mbus_build_req_ud2(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb);
 
 /** @brief Convenience: a REQ_UD1 (class-1 / alarm data request) short frame to address @p a (@p fcb toggles
  *  the FCB bit). Where REQ_UD2 fetches routine class-2 data, REQ_UD1 fetches class-1 (alarm) data. */
-size_t pc_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb);
+size_t protocore_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb);
 
 // --- parser ---
 
@@ -134,19 +134,19 @@ size_t pc_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb
  * @brief Parse one M-Bus frame from @p buf. Validates the start/stop octets, the doubled
  * length, and the checksum. On success fills @p out and sets @p consumed to the frame length.
  */
-proto_bool pc_mbus_parse(const uint8_t *buf, size_t len, MbusFrame *out, size_t *consumed);
+proto_bool protocore_mbus_parse(const uint8_t *buf, size_t len, MbusFrame *out, size_t *consumed);
 
 // --- variable-data records (DIF / VIF) ---
 
 /** @brief Map a DIF low-nibble coding to its fixed data length (0 for variable / none). */
-uint8_t pc_mbus_dif_data_len(uint8_t coding);
+uint8_t protocore_mbus_dif_data_len(uint8_t coding);
 
 /**
  * @brief Walk one data record at @p *pos within a long-frame body (the octets after CI).
  * Skips DIFE / VIFE extension chains, decodes the data length (incl. the LVAR variable form),
  * and advances @p *pos past the record. Returns false at the end of data or on overflow.
  */
-proto_bool pc_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, MbusRecord *out);
+proto_bool protocore_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, MbusRecord *out);
 
 // --- record value + unit decoding ---
 
@@ -157,10 +157,10 @@ proto_bool pc_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, Mbu
  * digits, with a 0xF most-significant nibble marking a negative value. @return false for a real / variable
  * / no-data coding, or an invalid BCD nibble.
  */
-proto_bool pc_mbus_record_value_int(const MbusRecord *r, int64_t *out);
+proto_bool protocore_mbus_record_value_int(const MbusRecord *r, int64_t *out);
 
 /** @brief Decode a record's value as an IEEE-754 float (only the REAL32 DIF coding). @return false otherwise. */
-proto_bool pc_mbus_record_value_real(const MbusRecord *r, float *out);
+proto_bool protocore_mbus_record_value_real(const MbusRecord *r, float *out);
 
 /** @brief Physical unit a VIF decodes to (the common EN 13757-3 measurement ranges). */
 typedef enum PROTO_ENUM_PACKED
@@ -185,13 +185,13 @@ typedef enum PROTO_ENUM_PACKED
  * temperature, pressure). The physical value is (raw value) * 10^(@p exp10) in @p unit.
  * @return true for a decoded measurement VIF; false (unit UNKNOWN) for one outside those ranges.
  */
-proto_bool pc_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10);
+proto_bool protocore_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10);
 
 // --- variable-data-structure fixed header (EN 13757-3): the 12 octets before the data records ---
 //
 // A CI = MBUS_CI_RSP_VARIABLE (0x72) long-frame body opens with a fixed header identifying the meter -
 // its secondary-address serial, manufacturer, version, and medium - then the access / status / signature,
-// and only then the DIF/VIF data records that pc_mbus_record_next walks.
+// and only then the DIF/VIF data records that protocore_mbus_record_next walks.
 
 #define MBUS_VAR_HEADER_LEN 12u ///< octets of the fixed header preceding the records in a CI=0x72 response
 
@@ -227,10 +227,10 @@ typedef struct
  *        in a CI = MBUS_CI_RSP_VARIABLE (0x72) long-frame body) into @p out.
  * @return true iff @p len is at least 12 octets and the identification number is valid BCD; false otherwise.
  */
-proto_bool pc_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHeader *out);
+proto_bool protocore_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHeader *out);
 
-#endif // PC_ENABLE_MBUS
+#endif // PROTOCORE_ENABLE_MBUS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_MBUS_H

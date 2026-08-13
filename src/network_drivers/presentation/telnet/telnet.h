@@ -3,7 +3,7 @@
 
 /**
  * @file telnet.h
- * @brief Layer 6/7 - minimal RFC 854 Telnet server (PC_ENABLE_TELNET).
+ * @brief Layer 6/7 - minimal RFC 854 Telnet server (PROTOCORE_ENABLE_TELNET).
  *
  * A zero-heap line-oriented Telnet console dispatched from the session layer's
  * ProtoConn::PROTO_TELNET arms (the same way SSH is dispatched to ssh_conn). On connect it
@@ -18,7 +18,7 @@
  * Usage:
  * @code
  *   server.listen(23, ProtoConn::PROTO_TELNET);     // open the Telnet port
- *   pc_telnet_on_command(my_cmd_handler);   // void(const char *line, uint8_t id)
+ *   protocore_telnet_on_command(my_cmd_handler);   // void(const char *line, uint8_t id)
  * @endcode
  */
 
@@ -27,14 +27,14 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // Only ever pointed at from here, so the tags are enough and the engine's header stays out of
 // every translation unit that includes this one.
-struct pc_field;
-struct pc_fval;
+struct protocore_field;
+struct protocore_fval;
 
-#if PC_ENABLE_TELNET
+#if PROTOCORE_ENABLE_TELNET
 
 /** @brief Called with each completed input line (NUL-terminated, no CR/LF) and its client id. */
 typedef void (*TelnetCommandCb)(const char *line, uint8_t conn_id);
@@ -51,7 +51,7 @@ struct ProtoHandler;
  * @var TelnetNs::print          text to every connected client, no trailing newline added
  * @var TelnetNs::println        text + CRLF to every connected client
  * @var TelnetNs::frame          build @p spec and broadcast it. The shape is a `static const
- *                               pc_field[]` the caller declares, so a console line costs a table
+ *                               protocore_field[]` the caller declares, so a console line costs a table
  *                               walk rather than a format-string parse, and one longer than
  *                               TELNET_BUF_SIZE is dropped rather than clipped mid-word
  * @var TelnetNs::client_count   connected clients
@@ -62,9 +62,9 @@ struct ProtoHandler;
  *                               this module free of a dependency on the session layer
  *
  * @code
- *   static const pc_field HEAP[] = {{PC_FK_LIT, 0, 11, "free heap: "}, PC_U32,
- *                                   {PC_FK_LIT, 0, 8, " bytes\r\n"}, PC_END};
- *   Telnet.frame(HEAP, (const pc_fval[]){PC_VU32(ESP.getFreeHeap())}, 1);
+ *   static const protocore_field HEAP[] = {{PROTOCORE_FK_LIT, 0, 11, "free heap: "}, PROTOCORE_U32,
+ *                                   {PROTOCORE_FK_LIT, 0, 8, " bytes\r\n"}, PROTOCORE_END};
+ *   Telnet.frame(HEAP, (const protocore_fval[]){PROTOCORE_VU32(ESP.getFreeHeap())}, 1);
  * @endcode
  */
 typedef struct
@@ -72,7 +72,7 @@ typedef struct
     void (*on_command)(TelnetCommandCb cb);
     void (*print)(const char *s);
     void (*println)(const char *s);
-    void (*frame)(const struct pc_field *spec, const struct pc_fval *v, size_t nv);
+    void (*frame)(const struct protocore_field *spec, const struct protocore_fval *v, size_t nv);
     uint8_t (*client_count)(void);
 
     void (*accept)(uint8_t slot);
@@ -84,8 +84,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const TelnetNs Telnet;
 
-#endif // PC_ENABLE_TELNET
+#endif // PROTOCORE_ENABLE_TELNET
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_TELNET_H

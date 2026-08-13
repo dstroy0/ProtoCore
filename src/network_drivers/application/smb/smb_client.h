@@ -3,7 +3,7 @@
 
 /**
  * @file smb_client.h
- * @brief SMB2 client dialogue engine (PC_ENABLE_SMB) - drives the smb2 / ntlm / spnego wire
+ * @brief SMB2 client dialogue engine (PROTOCORE_ENABLE_SMB) - drives the smb2 / ntlm / spnego wire
  *        codecs through a real session to open a file on a Windows share.
  *
  * The wire codecs (smb2.h, ntlm.h, ntlmssp.h, spnego.h) are pure builders/parsers; this ties them
@@ -24,7 +24,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
 #include "smb2.h" // Smb2SignAlgo (the per-session signing algorithm carried on the handle)
 
@@ -36,12 +36,12 @@ typedef enum PROTO_ENUM_PACKED
     SMB_ERR_IO = -2,       ///< a send/recv failed, timed out, or the peer closed mid-message
     SMB_ERR_PROTOCOL = -3, ///< a malformed response, or an unexpected NT status
     SMB_ERR_AUTH = -4,     ///< SESSION_SETUP was rejected (bad user/password/domain)
-    SMB_ERR_OVERFLOW = -5, ///< a message did not fit the work buffer (PC_SMB_BUF)
+    SMB_ERR_OVERFLOW = -5, ///< a message did not fit the work buffer (PROTOCORE_SMB_BUF)
 } SmbResult;
 
 /**
  * @brief Transport seam: the engine moves raw bytes only through these, so it runs against a real
- *        socket (pc_client) or a test mock.
+ *        socket (protocore_client) or a test mock.
  * @return send: bytes written (must equal @p len), else < 0. recv: bytes read (> 0), else <= 0 on
  *         close / error / timeout.
  */
@@ -79,8 +79,8 @@ typedef struct
     uint8_t signing_key[16];   ///< the session signing key when @ref signing_active (2.x: NTLMv2 key; 3.x: KDF-derived)
     proto_bool encrypt_active; ///< SMB 3.x transport encryption is in force (server session or share required it)
     uint16_t enc_cipher;       ///< negotiated Smb2Cipher id (selects the key + nonce length) when @ref encrypt_active
-    uint8_t enc_c2s[PC_SMB2_MAX_CIPHER_KEY_LEN]; ///< client->server cipher key (encrypts requests)
-    uint8_t enc_s2c[PC_SMB2_MAX_CIPHER_KEY_LEN]; ///< server->client cipher key (decrypts responses)
+    uint8_t enc_c2s[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN]; ///< client->server cipher key (encrypts requests)
+    uint8_t enc_s2c[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN]; ///< server->client cipher key (decrypts responses)
     uint64_t enc_nonce; ///< monotonic per-session AEAD nonce counter, persisted across read/write/close
 } SmbHandle;
 
@@ -100,7 +100,7 @@ SmbResult smb_close(SmbHandle *h, SmbSendFn send, SmbRecvFn recv, void *ctx);
  * @brief Read up to @p cap bytes from @p offset of the open handle, looping READ requests until the
  *        buffer is full or the server signals end of file.
  * @param out_len receives the number of bytes actually read (may be < @p cap at EOF).
- * @return SMB_OK, or an ::SmbResult error. Reads at most PC_SMB_BUF-sized chunks per round trip.
+ * @return SMB_OK, or an ::SmbResult error. Reads at most PROTOCORE_SMB_BUF-sized chunks per round trip.
  */
 SmbResult smb_read(SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap, size_t *out_len, SmbSendFn send,
                    SmbRecvFn recv, void *ctx);
@@ -114,6 +114,6 @@ SmbResult smb_read(SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap, size
 SmbResult smb_write(SmbHandle *h, uint64_t offset, const uint8_t *data, size_t len, size_t *written, SmbSendFn send,
                     SmbRecvFn recv, void *ctx);
 
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_ENABLE_SMB
 
 #endif // PROTOCORE_SMB_CLIENT_H

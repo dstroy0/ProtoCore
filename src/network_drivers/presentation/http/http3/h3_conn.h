@@ -26,7 +26,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/h3_frame.h"
 #include "network_drivers/presentation/http/http3/quic_conn.h"
@@ -58,11 +58,11 @@ typedef struct
     H3StreamRole role;    ///< stream role
     proto_bool type_read; ///< a unidirectional stream's type varint has been consumed
     proto_bool responded; ///< a response has been sent on this request stream
-    uint8_t *buf;         ///< PC_H3_STREAM_BUF bytes of the connection's borrow
+    uint8_t *buf;         ///< PROTOCORE_H3_STREAM_BUF bytes of the connection's borrow
     size_t buf_len;
-    char *method;            ///< PC_H3_METHOD_LEN bytes of the connection's borrow
-    char *path;              ///< PC_H3_PATH_LEN bytes of the connection's borrow
-    char *authority;         ///< PC_H3_AUTHORITY_LEN bytes of the connection's borrow
+    char *method;            ///< PROTOCORE_H3_METHOD_LEN bytes of the connection's borrow
+    char *path;              ///< PROTOCORE_H3_PATH_LEN bytes of the connection's borrow
+    char *authority;         ///< PROTOCORE_H3_AUTHORITY_LEN bytes of the connection's borrow
     proto_bool have_headers; ///< a HEADERS frame has been decoded
     size_t body_off;         ///< where the accumulated body begins within buf (after the last HEADERS)
 } H3Stream;
@@ -71,11 +71,12 @@ typedef struct
  * @brief This module's draw on the plaintext pool, declared here and asserted in h3_conn.c.
  *
  * One borrow per connection from the pool's persistent end, grouped by field so every stride is a
- * power of two: PC_H3_MAX_STREAMS reassembly buffers, then that many :path, :authority and :method
+ * power of two: PROTOCORE_H3_MAX_STREAMS reassembly buffers, then that many :path, :authority and :method
  * fields. HTTP is what the plaintext pool is for, and the connection is what owns the bytes.
  */
-#define PC_H3_CONN_BORROW                                                                                              \
-    ((size_t)PC_H3_MAX_STREAMS * ((size_t)PC_H3_STREAM_BUF + PC_H3_PATH_LEN + PC_H3_AUTHORITY_LEN + PC_H3_METHOD_LEN))
+#define PROTOCORE_H3_CONN_BORROW                                                                                       \
+    ((size_t)PROTOCORE_H3_MAX_STREAMS *                                                                                \
+     ((size_t)PROTOCORE_H3_STREAM_BUF + PROTOCORE_H3_PATH_LEN + PROTOCORE_H3_AUTHORITY_LEN + PROTOCORE_H3_METHOD_LEN))
 
 /** @brief One HTTP/3 connection (wraps a QuicConn). */
 typedef struct H3Conn
@@ -87,7 +88,7 @@ typedef struct H3Conn
     proto_bool control_opened;     ///< our control + QPACK streams have been opened
     proto_bool peer_settings_seen; ///< the peer's one SETTINGS frame has arrived (sec 6.2.1)
     uint64_t next_uni_id;          ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
-    H3Stream streams[PC_H3_MAX_STREAMS];
+    H3Stream streams[PROTOCORE_H3_MAX_STREAMS];
 } H3Conn;
 
 /**
@@ -107,5 +108,5 @@ void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, vo
 proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type, const uint8_t *body,
                               size_t body_len);
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3
 #endif // PROTOCORE_H3_CONN_H

@@ -4,15 +4,15 @@
 /**
  * @file netadapt.h
  * @brief Network adaptation decisions: TCP window sizing by free RAM + DHCP->static fallback
- *        (PC_ENABLE_NETADAPT).
+ *        (PROTOCORE_ENABLE_NETADAPT).
  *
  * Two pure decisions a network manager needs on a memory-constrained, sometimes-headless device:
  *
- *  - `pc_netadapt_window()` - size the TCP receive window / RX buffer from the free heap, so a device
+ *  - `protocore_netadapt_window()` - size the TCP receive window / RX buffer from the free heap, so a device
  *    with RAM to spare uses a bigger window for throughput while a low-memory one shrinks to stay alive.
  *    Keeps a reserve untouched and clamps to a sane [min, max].
  *
- *  - `pc_netadapt_dhcp_fallback()` - decide when to stop waiting on DHCP and configure a static IP, so
+ *  - `protocore_netadapt_dhcp_fallback()` - decide when to stop waiting on DHCP and configure a static IP, so
  *    a node on a network with no DHCP server still comes up. Triggers once the elapsed wait exceeds the
  *    timeout or the retry budget is spent.
  *
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_NETADAPT
+#if PROTOCORE_ENABLE_NETADAPT
 
 /**
  * @brief Recommend a TCP receive window / RX buffer size (bytes) from the free heap.
@@ -39,7 +39,7 @@ PROTO_BEGIN_DECLS
  *
  * If max_win < min_win the result is min_win.
  */
-uint32_t pc_netadapt_window(uint32_t free_heap, uint32_t reserve, uint32_t min_win, uint32_t max_win);
+uint32_t protocore_netadapt_window(uint32_t free_heap, uint32_t reserve, uint32_t min_win, uint32_t max_win);
 
 /**
  * @brief Should we stop waiting on DHCP and switch to the configured static IP?
@@ -50,11 +50,11 @@ uint32_t pc_netadapt_window(uint32_t free_heap, uint32_t reserve, uint32_t min_w
  * @return true once the elapsed wait exceeds @p timeout_ms, or (when @p max_attempts > 0) the attempts
  *         reach @p max_attempts - i.e. DHCP has failed for long/often enough to fall back.
  */
-proto_bool pc_netadapt_dhcp_fallback(uint32_t elapsed_ms, uint32_t attempts, uint32_t timeout_ms,
-                                     uint32_t max_attempts);
+proto_bool protocore_netadapt_dhcp_fallback(uint32_t elapsed_ms, uint32_t attempts, uint32_t timeout_ms,
+                                            uint32_t max_attempts);
 
-#endif // PC_ENABLE_NETADAPT
+#endif // PROTOCORE_ENABLE_NETADAPT
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NETADAPT_H

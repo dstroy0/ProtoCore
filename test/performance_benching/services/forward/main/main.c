@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the interface forwarding plane (services/net/forward), the v5
-// bridge / router. pc_forward_ingress() is the whole hot path: it runs the ingress ACL (fixed-
+// bridge / router. protocore_forward_ingress() is the whole hot path: it runs the ingress ACL (fixed-
 // offset byte pattern under a mask), the optional inspection hook, the policy routes, then the
 // src->dst rule resolution (a DENY wins over an ALLOW, default-deny otherwise) and the per-rule
 // rate cap, before handing the bytes to each destination's egress send callback. Everything above
@@ -18,7 +18,7 @@
 // DMA-descriptor staging a real interface would do - that one is used for the MTU-sized bulk
 // figure so the MB/s number reflects a frame actually being moved, not just a pointer decision.
 // The rate cap is left unlimited (cap 0) on every benched path: on device the window is driven by
-// pc_millis() (pc_forward_test_set_now() is host-only), so a cap would start dropping frames
+// protocore_millis() (protocore_forward_test_set_now() is host-only), so a cap would start dropping frames
 // mid-measurement and time the drop path instead of the forward path.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -51,15 +51,15 @@ static bool stage_send(uint8_t, const uint8_t *d, uint16_t len, void *)
     return true;
 }
 
-#if PC_FWD_INSPECT
+#if PROTOCORE_FWD_INSPECT
 // Realistic inspector: peek the EtherType and drop IPv6 (0x86DD), pass everything else.
-static pc_fwd_verdict inspect_ethertype(uint8_t, const uint8_t *d, uint16_t n, void *)
+static protocore_fwd_verdict inspect_ethertype(uint8_t, const uint8_t *d, uint16_t n, void *)
 {
     if (n >= 14 && d[12] == 0x86 && d[13] == 0xDD)
     {
-        return PC_FWD_INSPECT_DROP;
+        return PROTOCORE_FWD_INSPECT_DROP;
     }
-    return PC_FWD_INSPECT_PASS;
+    return PROTOCORE_FWD_INSPECT_PASS;
 }
 #endif
 
@@ -82,11 +82,11 @@ static const uint8_t pat_ipv4[2] = {0x08, 0x00};
 static const uint8_t msk_ff[2] = {0xFF, 0xFF};
 
 // Register interfaces 1..n_if with `send` (ids are what the rules/routes below refer to).
-static void add_ifaces(uint8_t n_if, pc_if_send_fn send)
+static void add_ifaces(uint8_t n_if, protocore_if_send_fn send)
 {
     for (uint8_t id = 1; id <= n_if; id++)
     {
-        pc_forward_add_if(id, PC_IF_ETH, send, NULL);
+        protocore_forward_add_if(id, PROTOCORE_IF_ETH, send, NULL);
     }
 }
 
@@ -106,49 +106,49 @@ void dbench_run(void)
 
         // 1) The bridge hot path: an ALLOW rule to each of two destinations, so one ingress frame
         //    fans out to both (never reflected to the source).
-        pc_forward_reset();
+        protocore_forward_reset();
         add_ifaces(3, sink_send);
-        pc_forward_add_rule(1, 2, PC_FWD_ALLOW, 0);
-        pc_forward_add_rule(1, 3, PC_FWD_ALLOW, 0);
-        DBENCH_OP("fwd ingress allow fanout x2", 20000, sink += pc_forward_ingress(1, frame64, sizeof(frame64)));
+        protocore_forward_add_rule(1, 2, PROTOCORE_FWD_ALLOW, 0);
+        protocore_forward_add_rule(1, 3, PROTOCORE_FWD_ALLOW, 0);
+        DBENCH_OP("fwd ingress allow fanout x2", 20000, sink += protocore_forward_ingress(1, frame64, sizeof(frame64)));
 
         // 2) Default-deny: interfaces registered but no rule matches - pure rule-resolution cost.
-        pc_forward_reset();
+        protocore_forward_reset();
         add_ifaces(3, sink_send);
-        DBENCH_OP("fwd ingress default-deny", 50000, sink += pc_forward_ingress(1, frame64, sizeof(frame64)));
+        DBENCH_OP("fwd ingress default-deny", 50000, sink += protocore_forward_ingress(1, frame64, sizeof(frame64)));
 
         // 3) Ingress ACL: deny by EtherType at offset 12 (masked byte-pattern match), frame dropped
         //    before any forwarding rule runs.
-        pc_forward_reset();
+        protocore_forward_reset();
         add_ifaces(2, sink_send);
-        pc_forward_add_rule(1, 2, PC_FWD_ALLOW, 0);
-        pc_forward_acl_add(1, 12, pat_ipv4, msk_ff, 2, PC_FWD_DENY);
-        DBENCH_OP("fwd ingress acl deny", 50000, sink += pc_forward_ingress(1, frame64, sizeof(frame64)));
+        protocore_forward_add_rule(1, 2, PROTOCORE_FWD_ALLOW, 0);
+        protocore_forward_acl_add(1, 12, pat_ipv4, msk_ff, 2, PROTOCORE_FWD_DENY);
+        DBENCH_OP("fwd ingress acl deny", 50000, sink += protocore_forward_ingress(1, frame64, sizeof(frame64)));
 
         // 4) Policy route: the same pattern primitive binds IPv4 traffic to egress if 3, taking
         //    precedence over the 1->2 fan-out rule.
-        pc_forward_reset();
+        protocore_forward_reset();
         add_ifaces(3, sink_send);
-        pc_forward_add_rule(1, 2, PC_FWD_ALLOW, 0);
-        pc_forward_route_add(PC_FWD_IF_ANY, 12, pat_ipv4, msk_ff, 2, 3, 0);
-        DBENCH_OP("fwd ingress policy-routed", 20000, sink += pc_forward_ingress(1, frame64, sizeof(frame64)));
+        protocore_forward_add_rule(1, 2, PROTOCORE_FWD_ALLOW, 0);
+        protocore_forward_route_add(PROTOCORE_FWD_IF_ANY, 12, pat_ipv4, msk_ff, 2, 3, 0);
+        DBENCH_OP("fwd ingress policy-routed", 20000, sink += protocore_forward_ingress(1, frame64, sizeof(frame64)));
 
-#if PC_FWD_INSPECT
+#if PROTOCORE_FWD_INSPECT
         // 5) Inspection hook installed: ACL -> inspector (passes this frame) -> forward.
-        pc_forward_reset();
+        protocore_forward_reset();
         add_ifaces(2, sink_send);
-        pc_forward_add_rule(1, 2, PC_FWD_ALLOW, 0);
-        pc_forward_set_inspector(inspect_ethertype, NULL);
-        DBENCH_OP("fwd ingress + inspector", 20000, sink += pc_forward_ingress(1, frame64, sizeof(frame64)));
+        protocore_forward_add_rule(1, 2, PROTOCORE_FWD_ALLOW, 0);
+        protocore_forward_set_inspector(inspect_ethertype, NULL);
+        DBENCH_OP("fwd ingress + inspector", 20000, sink += protocore_forward_ingress(1, frame64, sizeof(frame64)));
 #endif
 
         // 6) MTU-sized frame across the plane with a staging egress - decision + one frame copy,
         //    i.e. the throughput a single-destination bridge hop can sustain.
-        pc_forward_reset();
+        protocore_forward_reset();
         add_ifaces(2, stage_send);
-        pc_forward_add_rule(1, 2, PC_FWD_ALLOW, 0);
+        protocore_forward_add_rule(1, 2, PROTOCORE_FWD_ALLOW, 0);
         DBENCH_BULK("fwd ingress 1500B -> egress", 5000, sizeof(frame1500),
-                    sink += pc_forward_ingress(1, frame1500, (uint16_t)sizeof(frame1500)));
+                    sink += protocore_forward_ingress(1, frame1500, (uint16_t)sizeof(frame1500)));
 
         (void)sink;
         (void)g_egress_bytes;

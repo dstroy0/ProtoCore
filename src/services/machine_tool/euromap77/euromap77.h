@@ -4,7 +4,7 @@
 /**
  * @file euromap77.h
  * @brief EUROMAP 77 / OPC 40077 - OPC UA for injection moulding machines (IMM <-> MES), the
- *        IMM_MES_Interface information model (PC_ENABLE_EUROMAP77).
+ *        IMM_MES_Interface information model (PROTOCORE_ENABLE_EUROMAP77).
  *
  * EUROMAP 77 (published as OPC 40077, namespace `http://www.euromap.org/euromap77/`) standardizes how an
  * injection molding machine (IMM) reports its identity, status, and the active job's live production
@@ -13,7 +13,7 @@
  * library (MachineModeEnumeration, JobStatusEnumeration, ...).
  *
  * This module builds the IMM_MES_Interface address space on top of the OPC UA Binary server
- * (`services/opcua`, PC_ENABLE_OPCUA): it registers a Browse + Read resolver that answers for the
+ * (`services/opcua`, PROTOCORE_ENABLE_OPCUA): it registers a Browse + Read resolver that answers for the
  * IMM_MES_Interface node hierarchy and serves live values out of a caller-owned @ref EmImm struct you
  * refresh in your loop. Same pattern as `services/umati` / `services/robotics`; no heap, no stdlib - the
  * model is a fixed node table, the values are pointers/scalars in your struct.
@@ -49,7 +49,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_EUROMAP77
+#if PROTOCORE_ENABLE_EUROMAP77
 
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
 
@@ -156,28 +156,28 @@ typedef struct
  * @brief Bind the IMM the resolvers serve. @p imm must outlive the server (own it statically). Refresh
  *        its fields any time; each Read returns the current values.
  */
-void pc_em77_bind(const EmImm *imm);
+void protocore_em77_bind(const EmImm *imm);
 
 /**
  * @brief Read resolver for the IMM_MES_Interface model (an @ref OpcUaReadHandler): fills @p out for an
  *        EUROMAP 77 node's Value attribute. Returns false for a node outside the model (the server
- *        answers BadNodeIdUnknown). Install with `pc_opcua_set_read_handler(pc_em77_read)`.
+ *        answers BadNodeIdUnknown). Install with `protocore_opcua_set_read_handler(protocore_em77_read)`.
  */
-proto_bool pc_em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
+proto_bool protocore_em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
 
 /**
  * @brief Browse resolver for the IMM_MES_Interface model (an @ref OpcUaBrowseHandler): writes the child
  *        references of an EUROMAP 77 node (and of the Objects folder, which organizes the
  *        IMM_MES_Interface) into @p out. Returns the count, or -1 for a node outside the model. Install
- *        with `pc_opcua_set_browse_handler(pc_em77_browse)`.
+ *        with `protocore_opcua_set_browse_handler(protocore_em77_browse)`.
  */
-int32_t pc_em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max);
+int32_t protocore_em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max);
 
 /**
  * @brief Convenience: bind @p imm and register both resolvers on the OPC UA server in one call
- *        (`pc_opcua_set_read_handler` + `pc_opcua_set_browse_handler`). Call before `server.begin()`.
+ *        (`protocore_opcua_set_read_handler` + `protocore_opcua_set_browse_handler`). Call before `server.begin()`.
  */
-void pc_em77_install(const EmImm *imm);
+void protocore_em77_install(const EmImm *imm);
 
-#endif // PC_ENABLE_EUROMAP77
+#endif // PROTOCORE_ENABLE_EUROMAP77
 #endif // PROTOCORE_EUROMAP77_H

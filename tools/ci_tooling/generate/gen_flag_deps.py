@@ -6,23 +6,23 @@
 The single source of truth is src/protocore_config.h. A child feature that cannot compile
 without a parent is enforced there by a preprocessor guard whose #error says "... requires ...":
 
-    #if PC_ENABLE_CHILD && !PC_ENABLE_PARENT
-    #error "... PC_ENABLE_CHILD requires PC_ENABLE_PARENT"
+    #if PROTOCORE_ENABLE_CHILD && !PROTOCORE_ENABLE_PARENT
+    #error "... PROTOCORE_ENABLE_CHILD requires PROTOCORE_ENABLE_PARENT"
     #endif
 
 and a PSRAM-class feature by a guard whose #error mentions PSRAM:
 
-    #if PC_ENABLE_HTTP2 && defined(ARDUINO) && !PC_H2_POOL_IN_PSRAM
-    #error "... PC_ENABLE_HTTP2 needs PSRAM ..."
+    #if PROTOCORE_ENABLE_HTTP2 && defined(ARDUINO) && !PROTOCORE_H2_POOL_IN_PSRAM
+    #error "... PROTOCORE_ENABLE_HTTP2 needs PSRAM ..."
     #endif
 
 This script walks the header with a preprocessor-condition stack. For each #error it reads the
-active conditions - the positive PC_ENABLE_* term is the feature being built (the child), each
-negated PC_* term a prerequisite - AND the error message: a "requires" message yields a hard
+active conditions - the positive PROTOCORE_ENABLE_* term is the feature being built (the child), each
+negated PROTOCORE_* term a prerequisite - AND the error message: a "requires" message yields a hard
 feature edge, a "PSRAM" message a resource gate, anything else (a worker-stack floor, a size range)
-is ignored. Gating on the message is what keeps a scoping clause like `!PC_ENABLE_SSH` in a
+is ignored. Gating on the message is what keeps a scoping clause like `!PROTOCORE_ENABLE_SSH` in a
 stack-size guard from being mistaken for "OIDC requires SSH". Auto-derived flags (a `#define
-PC_ENABLE_X 1` guarded by an OR of other ENABLE flags) are read too. The graph is injected into
+PROTOCORE_ENABLE_X 1` guarded by an OR of other ENABLE flags) are read too. The graph is injected into
 the "Build-flag dependencies" section of README.md between generated markers, so it can never drift
 from the guards the compiler actually enforces.
 
@@ -47,11 +47,11 @@ FEATURES_URL = "https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md"
 
 REGION = dr.Region(README, "FLAG DEPS", dr.tool_id(__file__))
 
-ENABLE = re.compile(r"(!?)\s*PC_ENABLE_(\w+)")  # positive (child) / negated (parent) enable flags
-# A declared dependency: `#define PC_ENABLE_<CHILD>_NEEDS_<PARENT> PC_ENABLE_<PARENT>`. The name
+ENABLE = re.compile(r"(!?)\s*PROTOCORE_ENABLE_(\w+)")  # positive (child) / negated (parent) enable flags
+# A declared dependency: `#define PROTOCORE_ENABLE_<CHILD>_NEEDS_<PARENT> PROTOCORE_ENABLE_<PARENT>`. The name
 # carries both ends, so the graph is read from the symbol rather than from an #error's wording.
-NEEDS = re.compile(r"^#define\s+PC_ENABLE_([A-Z0-9_]+?)_NEEDS_([A-Z0-9_]+)\s", re.M)
-NEG = re.compile(r"!\s*(PC_\w+)")  # any negated PC_* prerequisite (enable flag or resource knob)
+NEEDS = re.compile(r"^#define\s+PROTOCORE_ENABLE_([A-Z0-9_]+?)_NEEDS_([A-Z0-9_]+)\s", re.M)
+NEG = re.compile(r"!\s*(PROTOCORE_\w+)")  # any negated PROTOCORE_* prerequisite (enable flag or resource knob)
 NUM = re.compile(r"([A-Z_][A-Z0-9_]*\s*[<>]=?\s*\d+)")  # a numeric side-condition, used as an edge label
 
 
@@ -76,7 +76,7 @@ def parse_guards(text):
 
     # The declared dependencies come first, straight off the symbol names:
     #
-    #     #define PC_ENABLE_WS_DEFLATE_NEEDS_WEBSOCKET PC_ENABLE_WEBSOCKET
+    #     #define PROTOCORE_ENABLE_WS_DEFLATE_NEEDS_WEBSOCKET PROTOCORE_ENABLE_WEBSOCKET
     #
     # Both sides are IN the name, so this reads the graph without parsing a sentence. That matters:
     # this function used to find edges only by grepping the #error text for the word "requires", and
@@ -115,11 +115,11 @@ def parse_guards(text):
             # (the nested `#if A` / `#if !B` form) are only visible here.
             if "requires" in msg or "needs" in msg:
                 for prereq in prereqs:
-                    # `!PC_ENABLE_X_NEEDS_Y` is the declared symbol being tested, not a parent
+                    # `!PROTOCORE_ENABLE_X_NEEDS_Y` is the declared symbol being tested, not a parent
                     # feature. Reading it as one invents a node named after the guard itself
                     # ("CIA402 needs CIA402_NEEDS_CANOPEN"); the real edge came from the #define.
-                    if prereq.startswith("PC_ENABLE_") and "_NEEDS_" not in prereq:
-                        parent = prereq[len("PC_ENABLE_") :]
+                    if prereq.startswith("PROTOCORE_ENABLE_") and "_NEEDS_" not in prereq:
+                        parent = prereq[len("PROTOCORE_ENABLE_") :]
                         for child in children:
                             if parent != child:
                                 hard.add((parent, child))
@@ -131,14 +131,14 @@ def parse_guards(text):
                     if "PSRAM" in prereq and "ACK" not in prereq:
                         for child in children:
                             resource.add((child, label))
-        elif s.startswith("#define PC_ENABLE_"):
-            # Auto-derived flag: `#define PC_ENABLE_X 1` guarded by an OR of other ENABLE flags.
+        elif s.startswith("#define PROTOCORE_ENABLE_"):
+            # Auto-derived flag: `#define PROTOCORE_ENABLE_X 1` guarded by an OR of other ENABLE flags.
             active = " || ".join(c for c in stack if c)
-            m = re.match(r"#define\s+PC_ENABLE_(\w+)\s+1\b", s)
-            if not m or "PC_ENABLE_" not in active:
+            m = re.match(r"#define\s+PROTOCORE_ENABLE_(\w+)\s+1\b", s)
+            if not m or "PROTOCORE_ENABLE_" not in active:
                 continue
             dflag = m.group(1)
-            for src in {e for e in re.findall(r"PC_ENABLE_(\w+)", active) if e != dflag}:
+            for src in {e for e in re.findall(r"PROTOCORE_ENABLE_(\w+)", active) if e != dflag}:
                 derived.add((src, dflag))
     return hard, resource, derived
 
@@ -236,7 +236,7 @@ def dot(hard, theme):
         # (Graphviz does this natively; mermaid writes the tooltip as an attribute SVG ignores.)
         kids = sorted(c for p, c in tree if p == n)
         needs = sorted(p for p, c in tree if c == n)
-        tip = f"PC_ENABLE_{n}"
+        tip = f"PROTOCORE_ENABLE_{n}"
         if needs:
             tip += " - needs " + ", ".join(needs)
         if kids:
@@ -287,7 +287,7 @@ def build_block():
     lines = [
         # Markers and the prettier range-ignore are added by dr.apply, which keeps this
         # generator the single authority on the block's markup so --check stays exact.
-        "> Generated from the declared `PC_ENABLE_<A>_NEEDS_<B>` symbols in"
+        "> Generated from the declared `PROTOCORE_ENABLE_<A>_NEEDS_<B>` symbols in"
         " [src/protocore_config.h](src/protocore_config.h) by `tools/ci_tooling/generate/gen_flag_deps.py` - do not"
         " edit by hand. The picture is an SVG: every node is a link to that feature's entry and carries a"
         " hover tooltip naming what it needs. Graphviz source:"
@@ -295,7 +295,7 @@ def build_block():
         "",
         "Each **green** node is a parent feature and each **blue** node a child that needs it (a hard"
         " `#error` otherwise) - enable the parent to build the child. A green **`TLS`** badge on a node means"
-        " that feature also needs `PC_ENABLE_TLS` (shown as a badge rather than an edge so no lines cross)."
+        " that feature also needs `PROTOCORE_ENABLE_TLS` (shown as a badge rather than an edge so no lines cross)."
         " **Hover a flag for what it needs; click it to read the feature.** (Auto-derived flags and"
         " PSRAM-class features are listed below the picture rather than drawn as edges, so the graph stays a"
         " clean family forest.)",
@@ -310,7 +310,8 @@ def build_block():
     _, extra = primary_tree({(p, c) for p, c in hard if p != "TLS"})
     if extra:
         notes = "; ".join(
-            f"**{', '.join('`PC_ENABLE_' + c + '`' for c in cs)}** also need `PC_ENABLE_{p}`" for p, cs in extra.items()
+            f"**{', '.join('`PROTOCORE_ENABLE_' + c + '`' for c in cs)}** also need `PROTOCORE_ENABLE_{p}`"
+            for p, cs in extra.items()
         )
         lines += [f"> Not drawn (so the forest stays uncrossed): {notes}.", ""]
     if derived:
@@ -320,7 +321,7 @@ def build_block():
             "",
             "| Enabling this... | ...auto-enables |",
             "| --- | --- |",
-            *[f"| `PC_ENABLE_{s}` | `PC_ENABLE_{d}` |" for s, d in sorted(derived)],
+            *[f"| `PROTOCORE_ENABLE_{s}` | `PROTOCORE_ENABLE_{d}` |" for s, d in sorted(derived)],
             "</details>",
             "",
         ]
@@ -331,7 +332,7 @@ def build_block():
             "",
             "| Feature | Gate |",
             "| --- | --- |",
-            *[f"| `PC_ENABLE_{c}` | {lbl if lbl else 'PSRAM pool'} |" for c, lbl in sorted(resource)],
+            *[f"| `PROTOCORE_ENABLE_{c}` | {lbl if lbl else 'PSRAM pool'} |" for c, lbl in sorted(resource)],
             "</details>",
             "",
         ]

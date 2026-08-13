@@ -27,17 +27,17 @@ void dbench_run(void)
         DBENCH_BANNER("sdi12");
         volatile size_t sink = 0;
         static char buf[32];
-        DBENCH_OP("pc_sdi12_build_measure (CRC)", 200000, sink += pc_sdi12_build_measure(buf, sizeof(buf), '3', true));
+        DBENCH_OP("protocore_sdi12_build_measure (CRC)", 200000, sink += protocore_sdi12_build_measure(buf, sizeof(buf), '3', true));
         char addr;
         uint16_t ready;
         uint8_t nval;
-        DBENCH_OP("pc_sdi12_parse_measure", 200000,
-                  sink += pc_sdi12_parse_measure(measure_resp, sizeof(measure_resp) - 1, &addr, &ready, &nval));
+        DBENCH_OP("protocore_sdi12_parse_measure", 200000,
+                  sink += protocore_sdi12_parse_measure(measure_resp, sizeof(measure_resp) - 1, &addr, &ready, &nval));
         float vals[8];
         size_t n;
-        DBENCH_OP("pc_sdi12_parse_values", 200000,
-                  sink += pc_sdi12_parse_values(values_resp, sizeof(values_resp) - 1, vals, 8, &n));
-        DBENCH_BULK("pc_sdi12_crc16", 200000, 11, sink += pc_sdi12_crc16(crcbuf, 11));
+        DBENCH_OP("protocore_sdi12_parse_values", 200000,
+                  sink += protocore_sdi12_parse_values(values_resp, sizeof(values_resp) - 1, vals, 8, &n));
+        DBENCH_BULK("protocore_sdi12_crc16", 200000, 11, sink += protocore_sdi12_crc16(crcbuf, 11));
         (void)sink;
         DBENCH_DONE();
     }

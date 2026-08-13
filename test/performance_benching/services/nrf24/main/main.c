@@ -3,7 +3,7 @@
 //
 // On-device CCOUNT microbenchmark for the nRF24L01+ radio driver (services/radio/nrf24): the Nordic SPI
 // command protocol framing around init (the full config register burst + RF_CH read-back detect),
-// static-width send (W_TX_PAYLOAD, zero-padded to PC_NRF24_PAYLOAD), TX-done poll (STATUS +
+// static-width send (W_TX_PAYLOAD, zero-padded to PROTOCORE_NRF24_PAYLOAD), TX-done poll (STATUS +
 // write-1-to-clear), set-rx (PRX + CE), and payload recv (R_RX_PAYLOAD + STATUS pipe decode) - all
 // pure CPU-side work. Worked example for performance_benching/device/<service>/ peripheral drivers: this rig has no
 // nRF24 module attached, so the nrf_bus spi/ce callbacks are a tiny canned-response stub (same shape

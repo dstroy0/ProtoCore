@@ -7,9 +7,9 @@
  */
 
 #include "server/power_mgmt.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
-#if PC_ENABLE_POWER_MGMT
+#if PROTOCORE_ENABLE_POWER_MGMT
 
 #include <stdio.h>
 
@@ -17,25 +17,25 @@
 // Pure decision
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_VENDOR_BT && defined(CONFIG_BT_ENABLED)
+#if PROTOCORE_HAS_VENDOR_BT && defined(CONFIG_BT_ENABLED)
 #include <esp_bt.h>
 #endif
-void pc_power_cfg_defaults(PowerCfg *cfg)
+void protocore_power_cfg_defaults(PowerCfg *cfg)
 {
     if (!cfg)
     {
         return;
     }
-    cfg->mhz_max = PC_POWER_MHZ_MAX;
-    cfg->mhz_min = PC_POWER_MHZ_MIN;
-    cfg->busy_pct = PC_POWER_BUSY_PCT;
-    cfg->temp_hot_c = PC_POWER_TEMP_HOT_C;
-    cfg->temp_cool_c = PC_POWER_TEMP_COOL_C;
-    cfg->recover_ms = PC_POWER_RECOVER_MS;
+    cfg->mhz_max = PROTOCORE_POWER_MHZ_MAX;
+    cfg->mhz_min = PROTOCORE_POWER_MHZ_MIN;
+    cfg->busy_pct = PROTOCORE_POWER_BUSY_PCT;
+    cfg->temp_hot_c = PROTOCORE_POWER_TEMP_HOT_C;
+    cfg->temp_cool_c = PROTOCORE_POWER_TEMP_COOL_C;
+    cfg->recover_ms = PROTOCORE_POWER_RECOVER_MS;
 }
 
-PowerPlan pc_power_plan(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout_boot,
-                        uint32_t since_boot_ms, proto_bool was_throttled)
+PowerPlan protocore_power_plan(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout_boot,
+                               uint32_t since_boot_ms, proto_bool was_throttled)
 {
     PowerPlan p;
     p.cpu_mhz = 0;
@@ -76,7 +76,7 @@ PowerPlan pc_power_plan(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, p
     return p;
 }
 
-size_t pc_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t cap)
+size_t protocore_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t cap)
 {
     if (!plan || !out || cap == 0)
     {
@@ -84,24 +84,24 @@ size_t pc_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t ca
     }
     // The two forms differ by one field, so one builder emits both rather than two copies that can
     // drift apart.
-    pc_sb sb = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb, "{\"cpu_mhz\":");
-    pc_sb_u32(&sb, (uint32_t)plan->cpu_mhz);
-    pc_sb_put(&sb, ",\"throttled\":");
-    pc_sb_put(&sb, plan->throttled ? "true" : "false");
-    pc_sb_put(&sb, ",\"recovering\":");
-    pc_sb_put(&sb, plan->recovering ? "true" : "false");
-    pc_sb_put(&sb, ",\"temp_c\":");
+    protocore_sb sb = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb, "{\"cpu_mhz\":");
+    protocore_sb_u32(&sb, (uint32_t)plan->cpu_mhz);
+    protocore_sb_put(&sb, ",\"throttled\":");
+    protocore_sb_put(&sb, plan->throttled ? "true" : "false");
+    protocore_sb_put(&sb, ",\"recovering\":");
+    protocore_sb_put(&sb, plan->recovering ? "true" : "false");
+    protocore_sb_put(&sb, ",\"temp_c\":");
     if (temp_c == INT16_MIN) // no sensor: report null rather than a sentinel that reads as a reading
     {
-        pc_sb_put(&sb, "null");
+        protocore_sb_put(&sb, "null");
     }
     else
     {
-        pc_sb_i64(&sb, (int64_t)temp_c);
+        protocore_sb_i64(&sb, (int64_t)temp_c);
     }
-    pc_sb_put(&sb, "}");
-    size_t n = pc_sb_finish(&sb);
+    protocore_sb_put(&sb, "}");
+    size_t n = protocore_sb_finish(&sb);
     if (n == 0)
     {
         // Fail closed: the builder writes the pieces that fit before it latches, so without this
@@ -116,7 +116,7 @@ size_t pc_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t ca
 // Device binding
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_VENDOR_PM
+#if PROTOCORE_HAS_VENDOR_PM
 
 /** @brief Owned state: the latched boot reason and whether BT has already been released. */
 typedef struct
@@ -127,7 +127,7 @@ typedef struct
 } PowerCtx;
 static PowerCtx s_pwr = {PROTO_FALSE, PROTO_FALSE, PROTO_FALSE};
 
-proto_bool pc_power_brownout_boot(void)
+proto_bool protocore_power_brownout_boot(void)
 {
     // Read once and latch: the reset reason describes this boot, so it must not change under a
     // caller polling it every tick through the recovery window.
@@ -139,7 +139,7 @@ proto_bool pc_power_brownout_boot(void)
     return s_pwr.brownout_latched;
 }
 
-int16_t pc_power_temp_c(void)
+int16_t protocore_power_temp_c(void)
 {
 #if defined(SOC_TEMP_SENSOR_SUPPORTED) || defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3) ||  \
     defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32P4)
@@ -155,25 +155,25 @@ int16_t pc_power_temp_c(void)
 #endif
 }
 
-uint16_t pc_power_cpu_mhz(void)
+uint16_t protocore_power_cpu_mhz(void)
 {
     return (uint16_t)getCpuFrequencyMhz();
 }
 
-proto_bool pc_power_apply(const PowerPlan *plan)
+proto_bool protocore_power_apply(const PowerPlan *plan)
 {
     if (!plan || plan->cpu_mhz == 0)
     {
         return PROTO_FALSE;
     }
-    if (pc_power_cpu_mhz() == plan->cpu_mhz)
+    if (protocore_power_cpu_mhz() == plan->cpu_mhz)
     {
         return PROTO_FALSE; // already there; re-setting the clock is not free
     }
     return setCpuFrequencyMhz((uint32_t)plan->cpu_mhz);
 }
 
-proto_bool pc_power_gate_bt(void)
+proto_bool protocore_power_gate_bt(void)
 {
 #if defined(CONFIG_BT_ENABLED)
     if (s_pwr.bt_released)
@@ -194,6 +194,6 @@ proto_bool pc_power_gate_bt(void)
 #endif
 }
 
-#endif // PC_HAS_VENDOR_PM
+#endif // PROTOCORE_HAS_VENDOR_PM
 
-#endif // PC_ENABLE_POWER_MGMT
+#endif // PROTOCORE_ENABLE_POWER_MGMT

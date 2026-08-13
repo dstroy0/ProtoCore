@@ -3,11 +3,11 @@
 //
 // On-device CCOUNT microbenchmark for the PSRAM buffer-placement policy + DMA ping-pong index
 // manager (services/storage/psram_pool). Two pure, heap-free decision paths are benched:
-//   - pc_psram_place(): given a request size, DMA requirement, and the current free-heap headroom of
+//   - protocore_psram_place(): given a request size, DMA requirement, and the current free-heap headroom of
 //     both internal DRAM and external PSRAM, it returns DRAM / PSRAM / FAIL (large-cold -> PSRAM,
 //     small-hot + DMA -> DRAM, always leaving a DRAM reserve). Benched across its large-cold, small-hot,
 //     and DMA-forced branches since each takes a different arm of the policy.
-//   - pc_pingpong_swap()/fill/drain index: the classic double-buffer role flip the CPU does every DMA
+//   - protocore_pingpong_swap()/fill/drain index: the classic double-buffer role flip the CPU does every DMA
 //     swap. A single xor + read, so it is benched as a tight bookkeeping loop.
 // Both are pure integer policy - no heap_caps_calloc, no PSRAM chip, no DMA engine is touched here
 // (that allocation/transfer is the application's job and out of scope for this rig, which has no
@@ -35,7 +35,7 @@ void dbench_run(void)
     static const size_t reserve = 32768;
 
     PingPong pp;
-    pc_pingpong_init(&pp);
+    protocore_pingpong_init(&pp);
 
     for (;;)
     {
@@ -43,17 +43,17 @@ void dbench_run(void)
         volatile int sink = 0;
 
         // Large 64KB cold asset, no DMA -> prefers PSRAM.
-        DBENCH_OP("pc_psram_place large-cold->PSRAM", 200000,
-                  sink += (int)pc_psram_place(65536, false, free_dram, free_psram, threshold, reserve));
+        DBENCH_OP("protocore_psram_place large-cold->PSRAM", 200000,
+                  sink += (int)protocore_psram_place(65536, false, free_dram, free_psram, threshold, reserve));
         // Small 512B hot buffer, no DMA -> prefers DRAM.
-        DBENCH_OP("pc_psram_place small-hot->DRAM", 200000,
-                  sink += (int)pc_psram_place(512, false, free_dram, free_psram, threshold, reserve));
+        DBENCH_OP("protocore_psram_place small-hot->DRAM", 200000,
+                  sink += (int)protocore_psram_place(512, false, free_dram, free_psram, threshold, reserve));
         // 8KB buffer that must be DMA-capable -> forced to DRAM (PSRAM is not DMA-capable).
-        DBENCH_OP("pc_psram_place dma->DRAM", 200000,
-                  sink += (int)pc_psram_place(8192, true, free_dram, free_psram, threshold, reserve));
+        DBENCH_OP("protocore_psram_place dma->DRAM", 200000,
+                  sink += (int)protocore_psram_place(8192, true, free_dram, free_psram, threshold, reserve));
         // Ping-pong role flip: swap + read the new fill/drain indices (one DMA swap's worth of work).
-        DBENCH_OP("pc_pingpong_swap+index", 200000,
-                  sink += pc_pingpong_swap(&pp) + pc_pingpong_fill_index(&pp) + pc_pingpong_drain_index(&pp));
+        DBENCH_OP("protocore_pingpong_swap+index", 200000,
+                  sink += protocore_pingpong_swap(&pp) + protocore_pingpong_fill_index(&pp) + protocore_pingpong_drain_index(&pp));
         (void)sink;
         DBENCH_DONE();
     }

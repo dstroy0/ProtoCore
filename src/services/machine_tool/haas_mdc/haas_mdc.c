@@ -8,9 +8,9 @@
 
 #include "services/machine_tool/haas_mdc/haas_mdc.h"
 
-#if PC_ENABLE_HAAS_MDC
+#if PROTOCORE_ENABLE_HAAS_MDC
 
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
 // Trim leading and trailing spaces from [s, s+len); updates s and len in place.
 static void trim(const char **s, size_t *len)
@@ -67,8 +67,8 @@ static proto_bool parse_u32(const char *s, size_t len, uint32_t *out)
         }
         v = v * 10 + (uint32_t)(s[i] - '0');
     }
-    // The false half is unreachable: parse_u32() is static and both call sites (pc_haas_mdc_parse_status,
-    // pc_haas_mdc_parse_macro) always pass the address of a local, never NULL.
+    // The false half is unreachable: parse_u32() is static and both call sites (protocore_haas_mdc_parse_status,
+    // protocore_haas_mdc_parse_macro) always pass the address of a local, never NULL.
     if (out)
     {
         *out = v;
@@ -76,33 +76,33 @@ static proto_bool parse_u32(const char *s, size_t len, uint32_t *out)
     return PROTO_TRUE;
 }
 
-size_t pc_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum)
+size_t protocore_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum)
 {
     if (!buf || cap == 0)
     {
         return 0;
     }
-    pc_sb sb_q = {buf, cap, 0, PROTO_TRUE};
-    pc_sb_lit(&sb_q, "?Q");
-    pc_sb_u32(&sb_q, qnum);
-    pc_sb_ch(&sb_q, '\r');
-    return pc_sb_finish(&sb_q);
+    protocore_sb sb_q = {buf, cap, 0, PROTO_TRUE};
+    protocore_sb_lit(&sb_q, "?Q");
+    protocore_sb_u32(&sb_q, qnum);
+    protocore_sb_ch(&sb_q, '\r');
+    return protocore_sb_finish(&sb_q);
 }
 
-size_t pc_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
+size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
 {
     if (!buf || cap == 0)
     {
         return 0;
     }
-    pc_sb sb_var = {buf, cap, 0, PROTO_TRUE};
-    pc_sb_lit(&sb_var, "?Q600 ");
-    pc_sb_u32(&sb_var, var);
-    pc_sb_ch(&sb_var, '\r');
-    return pc_sb_finish(&sb_var);
+    protocore_sb sb_var = {buf, cap, 0, PROTO_TRUE};
+    protocore_sb_lit(&sb_var, "?Q600 ");
+    protocore_sb_u32(&sb_var, var);
+    protocore_sb_ch(&sb_var, '\r');
+    return protocore_sb_finish(&sb_var);
 }
 
-proto_bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)
+proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)
 {
     if (!buf || !out)
     {
@@ -115,7 +115,7 @@ proto_bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)
     proto_bool have_stx = PROTO_FALSE;
     for (size_t i = 0; i < len; i++)
     {
-        if (buf[i] == PC_HAAS_MDC_STX)
+        if (buf[i] == PROTOCORE_HAAS_MDC_STX)
         {
             stx = i;
             have_stx = PROTO_TRUE;
@@ -130,7 +130,7 @@ proto_bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)
     proto_bool have_etb = PROTO_FALSE;
     for (size_t i = stx + 1; i < len; i++)
     {
-        if (buf[i] == PC_HAAS_MDC_ETB)
+        if (buf[i] == PROTOCORE_HAAS_MDC_ETB)
         {
             etb = i;
             have_etb = PROTO_TRUE;
@@ -154,7 +154,7 @@ proto_bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)
             const char *f = p + start;
             size_t fl = i - start;
             trim(&f, &fl);
-            if (out->n_fields < PC_HAAS_MDC_MAX_FIELDS)
+            if (out->n_fields < PROTOCORE_HAAS_MDC_MAX_FIELDS)
             {
                 out->field[out->n_fields] = f;
                 out->field_len[out->n_fields] = fl;
@@ -166,7 +166,7 @@ proto_bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)
     return out->n_fields > 0;
 }
 
-proto_bool pc_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l)
+proto_bool protocore_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l)
 {
     if (!r || idx >= r->n_fields)
     {
@@ -183,17 +183,17 @@ proto_bool pc_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, s
     return PROTO_TRUE;
 }
 
-proto_bool pc_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l)
+proto_bool protocore_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l)
 {
-    return pc_haas_mdc_field(r, 1, p, l);
+    return protocore_haas_mdc_field(r, 1, p, l);
 }
 
-proto_bool pc_haas_mdc_is_error(const HaasMdcResp *r)
+proto_bool protocore_haas_mdc_is_error(const HaasMdcResp *r)
 {
     return r && field_is(r, 0, "UNKNOWN");
 }
 
-proto_bool pc_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out)
+proto_bool protocore_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out)
 {
     if (!r || !out)
     {
@@ -239,7 +239,7 @@ proto_bool pc_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out)
     return PROTO_FALSE;
 }
 
-proto_bool pc_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len)
+proto_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len)
 {
     if (!r || r->n_fields < 3 || !field_is(r, 0, "MACRO"))
     {
@@ -265,7 +265,7 @@ proto_bool pc_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const ch
     return PROTO_TRUE;
 }
 
-proto_bool pc_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len)
+proto_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len)
 {
     if (!buf || len == 0)
     {
@@ -274,7 +274,7 @@ proto_bool pc_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text
     // A framed Q response carries an STX - not a DPRNT push.
     for (size_t i = 0; i < len; i++)
     {
-        if (buf[i] == PC_HAAS_MDC_STX)
+        if (buf[i] == PROTOCORE_HAAS_MDC_STX)
         {
             return PROTO_FALSE;
         }
@@ -283,7 +283,7 @@ proto_bool pc_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text
     const char *p = buf;
     size_t n = len;
     // Strip a leading prompt / newline / POPEN (DC2).
-    while (n && (*p == (char)PC_HAAS_MDC_PROMPT || *p == '\r' || *p == '\n' || *p == 0x12))
+    while (n && (*p == (char)PROTOCORE_HAAS_MDC_PROMPT || *p == '\r' || *p == '\n' || *p == 0x12))
     {
         p++;
         n--;
@@ -308,4 +308,4 @@ proto_bool pc_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_HAAS_MDC
+#endif // PROTOCORE_ENABLE_HAAS_MDC

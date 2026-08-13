@@ -8,9 +8,9 @@
 
 #include "server/filesystem/wearlevel.h"
 
-#if PC_ENABLE_WEARLEVEL
+#if PROTOCORE_ENABLE_WEARLEVEL
 
-size_t pc_wearlevel_pick(const uint32_t *counts, size_t n)
+size_t protocore_wearlevel_pick(const uint32_t *counts, size_t n)
 {
     if (!counts || n == 0)
     {
@@ -29,7 +29,7 @@ size_t pc_wearlevel_pick(const uint32_t *counts, size_t n)
     return best;
 }
 
-void pc_wearlevel_mark(uint32_t *counts, size_t n, size_t idx)
+void protocore_wearlevel_mark(uint32_t *counts, size_t n, size_t idx)
 {
     if (!counts || idx >= n)
     {
@@ -41,7 +41,7 @@ void pc_wearlevel_mark(uint32_t *counts, size_t n, size_t idx)
     }
 }
 
-uint32_t pc_wearlevel_spread(const uint32_t *counts, size_t n)
+uint32_t protocore_wearlevel_spread(const uint32_t *counts, size_t n)
 {
     if (!counts || n == 0)
     {
@@ -63,4 +63,4 @@ uint32_t pc_wearlevel_spread(const uint32_t *counts, size_t n)
     return hi - lo;
 }
 
-#endif // PC_ENABLE_WEARLEVEL
+#endif // PROTOCORE_ENABLE_WEARLEVEL

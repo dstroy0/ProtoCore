@@ -3,17 +3,17 @@
 
 /**
  * @file ip.c
- * @brief pc_ip implementation: RFC 4291 text parsing, RFC 5952 canonical formatting, scope
+ * @brief protocore_ip implementation: RFC 4291 text parsing, RFC 5952 canonical formatting, scope
  *        classification. Pure, hand-rolled (no stdlib parsing), host-identical.
  *
- * The public entry points (pc_ip_parse / pc_ip_format / pc_ip_classify) are thin: the work is
+ * The public entry points (protocore_ip_parse / protocore_ip_format / protocore_ip_classify) are thin: the work is
  * split into single-purpose static helpers below - one per concern (parse a hextet, assemble the
  * 16 bytes, find the zero run to compress, classify one family).
  */
 
 #include "shared_primitives/ip.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
+#include "shared_primitives/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
 
 // -------------------------------------------------------------------------------------------
 // Parsing helpers (text -> bytes)
@@ -146,7 +146,7 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
     int *ncur = &nhead;
 
     size_t i = 0;
-    // len >= 1 is never false here: the only caller (pc_ip_parse) rejects an empty string before
+    // len >= 1 is never false here: the only caller (protocore_ip_parse) rejects an empty string before
     // calling parse_v6, and colon (which gates this call) requires at least one ':' character.
     if (len >= 1 && s[0] == ':')
     {
@@ -289,7 +289,7 @@ static size_t put_hex16(uint16_t v, char *o)
     int n = 0;
     do
     {
-        t[n] = PC_HEX_LOWER[v & 0xF];
+        t[n] = PROTOCORE_HEX_LOWER[v & 0xF];
         n++;
         v >>= 4;
     } while (v);
@@ -353,33 +353,33 @@ static proto_bool is_v4_mapped_bytes(const uint8_t *b)
 }
 
 /** Classify the four v4 bytes at @p b. */
-static pc_ip_scope classify_v4(const uint8_t *b)
+static protocore_ip_scope classify_v4(const uint8_t *b)
 {
     if (b[0] == 0 && b[1] == 0 && b[2] == 0 && b[3] == 0)
     {
-        return PC_IP_SCOPE_UNSPECIFIED; // 0.0.0.0
+        return PROTOCORE_IP_SCOPE_UNSPECIFIED; // 0.0.0.0
     }
     if (b[0] == 127)
     {
-        return PC_IP_SCOPE_LOOPBACK; // 127/8
+        return PROTOCORE_IP_SCOPE_LOOPBACK; // 127/8
     }
     if (b[0] == 169 && b[1] == 254)
     {
-        return PC_IP_SCOPE_LINK_LOCAL; // 169.254/16
+        return PROTOCORE_IP_SCOPE_LINK_LOCAL; // 169.254/16
     }
     if (b[0] == 10 || (b[0] == 172 && b[1] >= 16 && b[1] <= 31) || (b[0] == 192 && b[1] == 168))
     {
-        return PC_IP_SCOPE_PRIVATE; // RFC 1918
+        return PROTOCORE_IP_SCOPE_PRIVATE; // RFC 1918
     }
     if (b[0] >= 224 && b[0] <= 239)
     {
-        return PC_IP_SCOPE_MULTICAST; // 224/4
+        return PROTOCORE_IP_SCOPE_MULTICAST; // 224/4
     }
-    return PC_IP_SCOPE_GLOBAL;
+    return PROTOCORE_IP_SCOPE_GLOBAL;
 }
 
 /** Classify the sixteen v6 bytes at @p b (v4-mapped addresses defer to their embedded v4). */
-static pc_ip_scope classify_v6(const uint8_t *b)
+static protocore_ip_scope classify_v6(const uint8_t *b)
 {
     proto_bool allzero = PROTO_TRUE;
     for (int k = 0; k < 16; k++)
@@ -392,7 +392,7 @@ static pc_ip_scope classify_v6(const uint8_t *b)
     }
     if (allzero)
     {
-        return PC_IP_SCOPE_UNSPECIFIED; // ::
+        return PROTOCORE_IP_SCOPE_UNSPECIFIED; // ::
     }
 
     proto_bool loopback = (b[15] == 1);
@@ -405,7 +405,7 @@ static pc_ip_scope classify_v6(const uint8_t *b)
     }
     if (loopback)
     {
-        return PC_IP_SCOPE_LOOPBACK; // ::1
+        return PROTOCORE_IP_SCOPE_LOOPBACK; // ::1
     }
 
     if (is_v4_mapped_bytes(b))
@@ -414,24 +414,24 @@ static pc_ip_scope classify_v6(const uint8_t *b)
     }
     if (b[0] == 0xff)
     {
-        return PC_IP_SCOPE_MULTICAST; // ff00::/8
+        return PROTOCORE_IP_SCOPE_MULTICAST; // ff00::/8
     }
     if (b[0] == 0xfe && (b[1] & 0xc0) == 0x80)
     {
-        return PC_IP_SCOPE_LINK_LOCAL; // fe80::/10
+        return PROTOCORE_IP_SCOPE_LINK_LOCAL; // fe80::/10
     }
     if ((b[0] & 0xfe) == 0xfc)
     {
-        return PC_IP_SCOPE_PRIVATE; // fc00::/7 (unique-local)
+        return PROTOCORE_IP_SCOPE_PRIVATE; // fc00::/7 (unique-local)
     }
-    return PC_IP_SCOPE_GLOBAL;
+    return PROTOCORE_IP_SCOPE_GLOBAL;
 }
 
 // -------------------------------------------------------------------------------------------
 // Public API
 // -------------------------------------------------------------------------------------------
 
-static proto_bool parse(const char *s, pc_ip *out)
+static proto_bool parse(const char *s, protocore_ip *out)
 {
     if (!s || !out)
     {
@@ -468,7 +468,7 @@ static proto_bool parse(const char *s, pc_ip *out)
         {
             return PROTO_FALSE;
         }
-        out->family = PC_IP_V6;
+        out->family = PROTOCORE_IP_V6;
         return PROTO_TRUE;
     }
     if (dot)
@@ -477,29 +477,29 @@ static proto_bool parse(const char *s, pc_ip *out)
         {
             return PROTO_FALSE;
         }
-        out->family = PC_IP_V4;
+        out->family = PROTOCORE_IP_V4;
         return PROTO_TRUE;
     }
     return PROTO_FALSE;
 }
 
-static size_t format(const pc_ip *ip, char *out, size_t cap)
+static size_t format(const protocore_ip *ip, char *out, size_t cap)
 {
     if (!ip || !out || cap == 0)
     {
         return 0;
     }
-    if (ip->family == PC_IP_V4)
+    if (ip->family == PROTOCORE_IP_V4)
     {
         return format_v4(ip->bytes, out, cap);
     }
-    if (ip->family != PC_IP_V6)
+    if (ip->family != PROTOCORE_IP_V6)
     {
         return 0;
     }
 
     // IPv4-mapped addresses print with a dotted tail: ::ffff:a.b.c.d (RFC 5952 §5).
-    if (pc_ip_is_v4_mapped(ip))
+    if (protocore_ip_is_v4_mapped(ip))
     {
         char tail[16];
         size_t tn = format_v4(ip->bytes + 12, tail, sizeof(tail));
@@ -526,7 +526,7 @@ static size_t format(const pc_ip *ip, char *out, size_t cap)
     longest_zero_run(g, &zs, &zl);
 
     // Emit the hextets, replacing the [zs, zs+zl) run with "::" (inet_ntop6-style colon placement).
-    char tmp[PC_IP_STR_MAX];
+    char tmp[PROTOCORE_IP_STR_MAX];
     size_t n = 0;
     for (int k = 0; k < 8; k++)
     {
@@ -558,55 +558,55 @@ static size_t format(const pc_ip *ip, char *out, size_t cap)
     return n;
 }
 
-proto_bool pc_ip_is_v4_mapped(const pc_ip *ip)
+proto_bool protocore_ip_is_v4_mapped(const protocore_ip *ip)
 {
-    return ip && ip->family == PC_IP_V6 && is_v4_mapped_bytes(ip->bytes);
+    return ip && ip->family == PROTOCORE_IP_V6 && is_v4_mapped_bytes(ip->bytes);
 }
 
-static pc_ip_scope classify(const pc_ip *ip)
+static protocore_ip_scope classify(const protocore_ip *ip)
 {
     if (!ip)
     {
-        return PC_IP_SCOPE_UNSPECIFIED;
+        return PROTOCORE_IP_SCOPE_UNSPECIFIED;
     }
-    if (ip->family == PC_IP_V4)
+    if (ip->family == PROTOCORE_IP_V4)
     {
         return classify_v4(ip->bytes);
     }
-    if (ip->family == PC_IP_V6)
+    if (ip->family == PROTOCORE_IP_V6)
     {
         return classify_v6(ip->bytes);
     }
-    return PC_IP_SCOPE_UNSPECIFIED;
+    return PROTOCORE_IP_SCOPE_UNSPECIFIED;
 }
 
-static proto_bool equal(const pc_ip *a, const pc_ip *b)
+static proto_bool equal(const protocore_ip *a, const protocore_ip *b)
 {
     if (!a || !b || a->family != b->family)
     {
         return PROTO_FALSE;
     }
     int n = 0;
-    if (a->family == PC_IP_V4)
+    if (a->family == PROTOCORE_IP_V4)
     {
         n = 4;
     }
-    else if (a->family == PC_IP_V6)
+    else if (a->family == PROTOCORE_IP_V6)
     {
         n = 16;
     }
     if (n == 0)
     {
-        return PROTO_TRUE; // both the same non-address family (PC_IP_NONE)
+        return PROTO_TRUE; // both the same non-address family (PROTOCORE_IP_NONE)
     }
     return mem.cmp(a->bytes, b->bytes, (size_t)n) == 0;
 }
 
-pc_ip pc_ip_from_v4_octets(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
+protocore_ip protocore_ip_from_v4_octets(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
-    pc_ip ip;
+    protocore_ip ip;
     mem.set(&ip, 0, sizeof(ip));
-    ip.family = PC_IP_V4;
+    ip.family = PROTOCORE_IP_V4;
     ip.bytes[0] = a;
     ip.bytes[1] = b;
     ip.bytes[2] = c;
@@ -614,39 +614,39 @@ pc_ip pc_ip_from_v4_octets(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
     return ip;
 }
 
-pc_ip pc_ip_from_v6_bytes(const uint8_t bytes[16])
+protocore_ip protocore_ip_from_v6_bytes(const uint8_t bytes[16])
 {
-    pc_ip ip;
-    ip.family = PC_IP_V6;
+    protocore_ip ip;
+    ip.family = PROTOCORE_IP_V6;
     mem.cpy(ip.bytes, bytes, 16);
     return ip;
 }
 
-uint32_t pc_ip_to_v4_be(const pc_ip *ip)
+uint32_t protocore_ip_to_v4_be(const protocore_ip *ip)
 {
     if (!ip)
     {
         return 0;
     }
     const uint8_t *b = ip->bytes;
-    if (ip->family == PC_IP_V4)
+    if (ip->family == PROTOCORE_IP_V4)
     {
         return ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) | ((uint32_t)b[2] << 8) | b[3];
     }
-    if (pc_ip_is_v4_mapped(ip))
+    if (protocore_ip_is_v4_mapped(ip))
     {
         return ((uint32_t)b[12] << 24) | ((uint32_t)b[13] << 16) | ((uint32_t)b[14] << 8) | b[15];
     }
     return 0;
 }
 
-static proto_bool is_unspecified(const pc_ip *ip)
+static proto_bool is_unspecified(const protocore_ip *ip)
 {
-    if (!ip || ip->family == PC_IP_NONE)
+    if (!ip || ip->family == PROTOCORE_IP_NONE)
     {
         return PROTO_TRUE;
     }
-    int n = (ip->family == PC_IP_V4) ? 4 : 16;
+    int n = (ip->family == PROTOCORE_IP_V4) ? 4 : 16;
     for (int i = 0; i < n; i++)
     {
         if (ip->bytes[i])
@@ -657,13 +657,13 @@ static proto_bool is_unspecified(const pc_ip *ip)
     return PROTO_TRUE;
 }
 
-static proto_bool prefix_match(const pc_ip *addr, const pc_ip *net, uint8_t prefix_len)
+static proto_bool prefix_match(const protocore_ip *addr, const protocore_ip *net, uint8_t prefix_len)
 {
     if (!addr || !net || addr->family != net->family)
     {
         return PROTO_FALSE;
     }
-    int bits = (addr->family == PC_IP_V4) ? 32 : (addr->family == PC_IP_V6 ? 128 : 0);
+    int bits = (addr->family == PROTOCORE_IP_V4) ? 32 : (addr->family == PROTOCORE_IP_V6 ? 128 : 0);
     if (bits == 0 || prefix_len > bits)
     {
         return PROTO_FALSE;

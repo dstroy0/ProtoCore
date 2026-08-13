@@ -8,7 +8,7 @@
 
 #include "network_drivers/network/dns/dns_server.h"
 #include "network_drivers/transport/udp.h" // Udp.listener: the port 53 bind begin() makes
-#include "protocore_config.h"              // PC_DNS_NAME_MAX / PC_DNS_SERVER_MAX_RECORDS
+#include "protocore_config.h"              // PROTOCORE_DNS_NAME_MAX / PROTOCORE_DNS_SERVER_MAX_RECORDS
 #include <stdint.h>
 #include <stdio.h> // snprintf
 #include <string.h>
@@ -256,13 +256,13 @@ void test_dns_add_and_lookup_guards()
 {
     TEST_ASSERT_FALSE(DnsServer.add(NULL, 1, 2, 3, 4));
     TEST_ASSERT_FALSE(DnsServer.add("", 1, 2, 3, 4));
-    char toolong[PC_DNS_NAME_MAX + 4];
+    char toolong[PROTOCORE_DNS_NAME_MAX + 4];
     memset(toolong, 'a', sizeof(toolong) - 1);
     toolong[sizeof(toolong) - 1] = '\0';
     TEST_ASSERT_FALSE(DnsServer.add(toolong, 1, 2, 3, 4));
 
     char nm[16];
-    for (int i = 0; i < PC_DNS_SERVER_MAX_RECORDS; i++)
+    for (int i = 0; i < PROTOCORE_DNS_SERVER_MAX_RECORDS; i++)
     {
         snprintf(nm, sizeof(nm), "h%d.lan", i);
         TEST_ASSERT_TRUE(DnsServer.add(nm, 10, 0, 0, (uint8_t)i));
@@ -276,18 +276,18 @@ void test_dns_add_and_lookup_guards()
 void test_dns_begin_answers_a_query_over_the_wire()
 {
     (void)Udp.listener->close(53);
-    pc_net_host_udp_reset();
+    protocore_net_host_udp_reset();
     DnsServer.clear();
     TEST_ASSERT_TRUE(DnsServer.add("gw.lan", 192, 168, 1, 1));
     TEST_ASSERT_TRUE(DnsServer.begin());
 
     uint8_t q[256];
     size_t qn = make_query(q, 0x1234, "gw.lan", 1, PROTO_TRUE);
-    pc_net_host_udp_deliver(53, "192.168.1.50", 40000, q, (uint16_t)qn);
+    protocore_net_host_udp_deliver(53, "192.168.1.50", 40000, q, (uint16_t)qn);
     Udp.listener->poll();
 
-    TEST_ASSERT_EQUAL_size_t(1, pc_net_host_udp_count());
-    const pc_net_host_dgram *d = pc_net_host_udp_at(0);
+    TEST_ASSERT_EQUAL_size_t(1, protocore_net_host_udp_count());
+    const protocore_net_host_dgram *d = protocore_net_host_udp_at(0);
     TEST_ASSERT_EQUAL_UINT16(40000, d->dst_port);
     TEST_ASSERT_EQUAL_HEX8(0x12, d->data[0]); // the query's id, echoed
     TEST_ASSERT_EQUAL_HEX8(0x34, d->data[1]);
@@ -300,13 +300,13 @@ void test_dns_begin_answers_a_query_over_the_wire()
     TEST_ASSERT_EQUAL_UINT8(1, d->data[d->len - 1]);
 
     // A name the table does not hold is answered NXDOMAIN, not dropped.
-    pc_net_host_udp_reset();
+    protocore_net_host_udp_reset();
     qn = make_query(q, 0x5678, "absent.lan", 1, PROTO_TRUE);
-    pc_net_host_udp_deliver(53, "192.168.1.50", 40000, q, (uint16_t)qn);
+    protocore_net_host_udp_deliver(53, "192.168.1.50", 40000, q, (uint16_t)qn);
     Udp.listener->poll();
-    TEST_ASSERT_EQUAL_size_t(1, pc_net_host_udp_count());
-    TEST_ASSERT_EQUAL_HEX8(0x03, pc_net_host_udp_at(0)->data[3] & 0x0F); // RCODE = NXDOMAIN
-    TEST_ASSERT_EQUAL_HEX8(0x00, pc_net_host_udp_at(0)->data[7]);        // ANCOUNT = 0
+    TEST_ASSERT_EQUAL_size_t(1, protocore_net_host_udp_count());
+    TEST_ASSERT_EQUAL_HEX8(0x03, protocore_net_host_udp_at(0)->data[3] & 0x0F); // RCODE = NXDOMAIN
+    TEST_ASSERT_EQUAL_HEX8(0x00, protocore_net_host_udp_at(0)->data[7]);        // ANCOUNT = 0
 
     (void)Udp.listener->close(53);
 }

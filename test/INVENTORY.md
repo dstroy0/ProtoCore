@@ -8,20 +8,20 @@ it names, the commands it invokes, and whether it holds a write primitive. `W` =
 
 ## Shape
 
-| Directory               | Files | Holds                                                        |
-| ----------------------- | ----- | ------------------------------------------------------------ |
-| `unit/`                 | 251   | 245 suites across 31 groups, one per primitive or codec      |
-| `integration/`          | 57    | 56 suites that drive a connection through the session layer  |
-| `performance_benching/` | 455   | host and on-device benches, per subsystem                    |
-| `penetration_testing/`  | 197   | `pc_pentest.py` plus the ESP32 rig firmware and its builders |
-| `servers/`              | 65    | real third-party peers the library is driven against         |
-| `reverse_engineering/`  | 34    | side-channel engines and the ESP32 MAC blob analysis         |
-| `protocols/`            | 35    | protocol fixtures and captures                               |
-| `mocks/`                | 17    | host stand-ins (physical, tcp capture, rx feed)              |
-| `vectors/`              | 9     | vendored crypto KAT JSON, compiled into C by `tools/crypto/` |
-| `fixtures/`             | 4     | generated SSH keys and similar                               |
-| `support/`              | 3     | shared test helpers                                          |
-| `interop/`              | 4     | interop run artifacts                                        |
+| Directory               | Files | Holds                                                               |
+| ----------------------- | ----- | ------------------------------------------------------------------- |
+| `unit/`                 | 251   | 245 suites across 31 groups, one per primitive or codec             |
+| `integration/`          | 57    | 56 suites that drive a connection through the session layer         |
+| `performance_benching/` | 455   | host and on-device benches, per subsystem                           |
+| `penetration_testing/`  | 197   | `protocore_pentest.py` plus the ESP32 rig firmware and its builders |
+| `servers/`              | 65    | real third-party peers the library is driven against                |
+| `reverse_engineering/`  | 34    | side-channel engines and the ESP32 MAC blob analysis                |
+| `protocols/`            | 35    | protocol fixtures and captures                                      |
+| `mocks/`                | 17    | host stand-ins (physical, tcp capture, rx feed)                     |
+| `vectors/`              | 9     | vendored crypto KAT JSON, compiled into C by `tools/crypto/`        |
+| `fixtures/`             | 4     | generated SSH keys and similar                                      |
+| `support/`              | 3     | shared test helpers                                                 |
+| `interop/`              | 4     | interop run artifacts                                               |
 
 `test_matrix.json` declares **336 envs**. `platformio.ini` is generated from it - never hand-edited.
 
@@ -40,7 +40,7 @@ it names, the commands it invokes, and whether it holds a write primitive. `W` =
 | provision SSH host keys before a build      | `ensure_test_keys.py --if-absent` (pre-build hook)                   |
 | drive the device with a real protocol peer  | `servers/interop.py --list`, then pick a peer                        |
 | run a real-peer TLS/DTLS/SSH interop        | `servers/{cyclone_dtls,cyclone_ssh,dtls_wolfssl}/run_interop.sh`     |
-| attack the running server                   | `penetration_testing/pc_pentest.py`                                  |
+| attack the running server                   | `penetration_testing/protocore_pentest.py`                           |
 | build an on-device bench                    | `penetration_testing/rig_firmware/{s3,p4}/build_*.sh`                |
 | verify HAL register maps against the dies   | `penetration_testing/rig_firmware/hal_verify/verify_regmaps.sh`      |
 | time a TLS or SSH handshake against the rig | `performance_benching/{tls,ssh}/*.py`                                |

@@ -20,14 +20,15 @@ void dbench_run(void)
         DBENCH_BANNER("vxi11");
         volatile size_t sink = 0;
         static uint8_t buf[128];
-        DBENCH_OP("pc_rpc_record_mark", 200000, sink += pc_rpc_record_mark(buf, sizeof(buf), 64));
+        DBENCH_OP("protocore_rpc_record_mark", 200000, sink += protocore_rpc_record_mark(buf, sizeof(buf), 64));
         bool last;
         uint32_t frag;
-        DBENCH_OP("pc_rpc_parse_record_mark", 200000, sink += pc_rpc_parse_record_mark(buf, 4, &last, &frag));
-        DBENCH_OP("pc_vxi11_build_getport", 200000,
-                  sink += pc_vxi11_build_getport(buf, sizeof(buf), 0x0001, 0x0607AF, 1, 6));
-        DBENCH_OP("pc_vxi11_build_create_link", 200000,
-                  sink += pc_vxi11_build_create_link(buf, sizeof(buf), 0x0002, 42, false, 0, "inst0"));
+        DBENCH_OP("protocore_rpc_parse_record_mark", 200000,
+                  sink += protocore_rpc_parse_record_mark(buf, 4, &last, &frag));
+        DBENCH_OP("protocore_vxi11_build_getport", 200000,
+                  sink += protocore_vxi11_build_getport(buf, sizeof(buf), 0x0001, 0x0607AF, 1, 6));
+        DBENCH_OP("protocore_vxi11_build_create_link", 200000,
+                  sink += protocore_vxi11_build_create_link(buf, sizeof(buf), 0x0002, 42, false, 0, "inst0"));
         (void)sink;
         DBENCH_DONE();
     }

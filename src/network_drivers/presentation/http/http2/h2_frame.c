@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/http/http2/h2_frame.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP2
+#if PROTOCORE_ENABLE_HTTP2
 
 static void wr32(uint8_t *p, uint32_t v)
 {
@@ -211,4 +211,4 @@ size_t pc_h2_build_data(uint8_t *out, size_t cap, uint32_t stream_id, const uint
     return H2_FRAME_HEADER_LEN + data_len;
 }
 
-#endif // PC_ENABLE_HTTP2
+#endif // PROTOCORE_ENABLE_HTTP2

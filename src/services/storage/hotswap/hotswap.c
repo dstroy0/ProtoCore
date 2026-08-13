@@ -7,18 +7,18 @@
  */
 
 #include "services/storage/hotswap/hotswap.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
-#if PC_ENABLE_HOTSWAP
+#if PROTOCORE_ENABLE_HOTSWAP
 
-#include "server/clock/clock.h" // pc_millis
+#include "server/clock/clock.h" // protocore_millis
 #include <stdio.h>
 
 // ---------------------------------------------------------------------------
 // Pure core
 // ---------------------------------------------------------------------------
 
-void pc_hotswap_core_init(HotswapCore *c, uint8_t fail_threshold, uint32_t probe_interval_ms, uint32_t now)
+void protocore_hotswap_core_init(HotswapCore *c, uint8_t fail_threshold, uint32_t probe_interval_ms, uint32_t now)
 {
     if (!c)
     {
@@ -35,7 +35,7 @@ void pc_hotswap_core_init(HotswapCore *c, uint8_t fail_threshold, uint32_t probe
     c->faults = 0;
 }
 
-proto_bool pc_hotswap_core_io(HotswapCore *c, proto_bool ok)
+proto_bool protocore_hotswap_core_io(HotswapCore *c, proto_bool ok)
 {
     if (!c || c->state != STORAGE_STATE_READY)
     {
@@ -59,7 +59,7 @@ proto_bool pc_hotswap_core_io(HotswapCore *c, proto_bool ok)
     return PROTO_TRUE;
 }
 
-proto_bool pc_hotswap_core_due(const HotswapCore *c, uint32_t now)
+proto_bool protocore_hotswap_core_due(const HotswapCore *c, uint32_t now)
 {
     if (!c || c->state == STORAGE_STATE_READY)
     {
@@ -69,7 +69,7 @@ proto_bool pc_hotswap_core_due(const HotswapCore *c, uint32_t now)
     return (now - c->last_probe_ms) >= c->probe_interval_ms;
 }
 
-proto_bool pc_hotswap_core_probe(HotswapCore *c, proto_bool present, proto_bool mounted, uint32_t now)
+proto_bool protocore_hotswap_core_probe(HotswapCore *c, proto_bool present, proto_bool mounted, uint32_t now)
 {
     if (!c)
     {
@@ -103,10 +103,10 @@ proto_bool pc_hotswap_core_probe(HotswapCore *c, proto_bool present, proto_bool 
 typedef struct
 {
     HotswapCore core;
-    pc_hotswap_mount mount;
-    pc_hotswap_unmount unmount;
-    pc_hotswap_present present;
-    pc_hotswap_event event;
+    protocore_hotswap_mount mount;
+    protocore_hotswap_unmount unmount;
+    protocore_hotswap_present present;
+    protocore_hotswap_event event;
     void *ctx;
     proto_bool begun;
 } HotswapCtx;
@@ -115,31 +115,33 @@ static HotswapCtx s_hs = {{STORAGE_STATE_ABSENT, 0, 1, 0, 0, 0, 0}, NULL, NULL, 
 static void hs_notify(StorageState from, StorageState to)
 {
     // `from != to` has no false branch to reach: both call sites (poll_at, io) only invoke hs_notify
-    // after pc_hotswap_core_probe / pc_hotswap_core_io reported an actual state change.
+    // after protocore_hotswap_core_probe / protocore_hotswap_core_io reported an actual state change.
     if (s_hs.event && from != to)
     {
         s_hs.event(from, to, s_hs.ctx);
     }
 }
 
-void pc_hotswap_begin(pc_hotswap_mount mount, pc_hotswap_unmount unmount, pc_hotswap_present present, void *ctx)
+void protocore_hotswap_begin(protocore_hotswap_mount mount, protocore_hotswap_unmount unmount,
+                             protocore_hotswap_present present, void *ctx)
 {
     s_hs.mount = mount;
     s_hs.unmount = unmount;
     s_hs.present = present;
     s_hs.ctx = ctx;
     s_hs.begun = PROTO_TRUE;
-    pc_hotswap_core_init(&s_hs.core, PC_HOTSWAP_FAIL_THRESHOLD, PC_HOTSWAP_PROBE_MS, pc_millis());
+    protocore_hotswap_core_init(&s_hs.core, PROTOCORE_HOTSWAP_FAIL_THRESHOLD, PROTOCORE_HOTSWAP_PROBE_MS,
+                                protocore_millis());
 }
 
-void pc_hotswap_set_event_cb(pc_hotswap_event cb)
+void protocore_hotswap_set_event_cb(protocore_hotswap_event cb)
 {
     s_hs.event = cb;
 }
 
-void pc_hotswap_poll_at(uint32_t now)
+void protocore_hotswap_poll_at(uint32_t now)
 {
-    if (!s_hs.begun || !pc_hotswap_core_due(&s_hs.core, now))
+    if (!s_hs.begun || !protocore_hotswap_core_due(&s_hs.core, now))
     {
         return;
     }
@@ -159,26 +161,26 @@ void pc_hotswap_poll_at(uint32_t now)
     }
 
     StorageState was = s_hs.core.state;
-    if (pc_hotswap_core_probe(&s_hs.core, present, mounted, now))
+    if (protocore_hotswap_core_probe(&s_hs.core, present, mounted, now))
     {
         hs_notify(was, s_hs.core.state);
     }
 }
 
-void pc_hotswap_poll(void)
+void protocore_hotswap_poll(void)
 {
-    pc_hotswap_poll_at(pc_millis());
+    protocore_hotswap_poll_at(protocore_millis());
 }
 
-proto_bool pc_hotswap_ready(void)
+proto_bool protocore_hotswap_ready(void)
 {
     return s_hs.core.state == STORAGE_STATE_READY;
 }
 
-void pc_hotswap_io(proto_bool ok)
+void protocore_hotswap_io(proto_bool ok)
 {
     StorageState was = s_hs.core.state;
-    if (!pc_hotswap_core_io(&s_hs.core, ok))
+    if (!protocore_hotswap_core_io(&s_hs.core, ok))
     {
         return;
     }
@@ -191,12 +193,12 @@ void pc_hotswap_io(proto_bool ok)
     hs_notify(was, s_hs.core.state);
 }
 
-StorageState pc_hotswap_state(void)
+StorageState protocore_hotswap_state(void)
 {
     return s_hs.core.state;
 }
 
-const char *pc_hotswap_state_name(StorageState s)
+const char *protocore_hotswap_state_name(StorageState s)
 {
     switch (s)
     {
@@ -210,21 +212,21 @@ const char *pc_hotswap_state_name(StorageState s)
     }
 }
 
-size_t pc_hotswap_json(char *out, size_t cap)
+size_t protocore_hotswap_json(char *out, size_t cap)
 {
     if (!out || cap == 0)
     {
         return 0;
     }
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, "{\"storage\":\"");
-    pc_sb_put(&sb_out, pc_hotswap_state_name(s_hs.core.state));
-    pc_sb_put(&sb_out, "\",\"mounts\":");
-    pc_sb_u32(&sb_out, (uint32_t)((unsigned)s_hs.core.mounts));
-    pc_sb_put(&sb_out, ",\"faults\":");
-    pc_sb_u32(&sb_out, (uint32_t)((unsigned)s_hs.core.faults));
-    pc_sb_put(&sb_out, "}");
-    int n = (int)pc_sb_finish(&sb_out);
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, "{\"storage\":\"");
+    protocore_sb_put(&sb_out, protocore_hotswap_state_name(s_hs.core.state));
+    protocore_sb_put(&sb_out, "\",\"mounts\":");
+    protocore_sb_u32(&sb_out, (uint32_t)((unsigned)s_hs.core.mounts));
+    protocore_sb_put(&sb_out, ",\"faults\":");
+    protocore_sb_u32(&sb_out, (uint32_t)((unsigned)s_hs.core.faults));
+    protocore_sb_put(&sb_out, "}");
+    int n = (int)protocore_sb_finish(&sb_out);
     // `n < 0` has no true branch to reach: the format is a fixed literal with no encoding-dependent
     // conversion and cap == 0 was rejected above, so snprintf can only ever report truncation here.
     if (!sb_out.ok)
@@ -235,4 +237,4 @@ size_t pc_hotswap_json(char *out, size_t cap)
     return (size_t)n;
 }
 
-#endif // PC_ENABLE_HOTSWAP
+#endif // PROTOCORE_ENABLE_HOTSWAP

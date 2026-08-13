@@ -3,22 +3,22 @@
 
 /**
  * @file auth_lockout.c
- * @brief Per-peer brute-force lockout state machine (PC_ENABLE_AUTH_LOCKOUT).
+ * @brief Per-peer brute-force lockout state machine (PROTOCORE_ENABLE_AUTH_LOCKOUT).
  *
- * A bounded BSS table of buckets keyed by the source address (a pc_ip, so IPv4 and IPv6 peers are
+ * A bounded BSS table of buckets keyed by the source address (a protocore_ip, so IPv4 and IPv6 peers are
  * each their own bucket - never a lossy hash that a colliding address could poison). Each bucket
  * holds the consecutive-failure count and, once the threshold is crossed, the start and duration
- * of the current lockout (exponential backoff, capped). Compiled only when PC_ENABLE_AUTH_LOCKOUT
+ * of the current lockout (exponential backoff, capped). Compiled only when PROTOCORE_ENABLE_AUTH_LOCKOUT
  * is set; the host unit tests enable it.
  */
 
 #include "auth_lockout.h"
 
-#if PC_ENABLE_AUTH_LOCKOUT
+#if PROTOCORE_ENABLE_AUTH_LOCKOUT
 
 typedef struct
 {
-    pc_ip addr;             ///< source address (family pc_ip_family::PC_IP_NONE marks an empty bucket).
+    protocore_ip addr;      ///< source address (family protocore_ip_family::PROTOCORE_IP_NONE marks an empty bucket).
     uint32_t lock_start_ms; ///< millis() when the current lockout began.
     uint32_t lock_ms;       ///< current lockout duration (0 = not locked).
     uint32_t last_ms;       ///< millis() of the last recorded failure (LRU eviction).
@@ -29,16 +29,16 @@ typedef struct
 // so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    LockoutBucket buckets[PC_AUTH_LOCKOUT_SLOTS];
+    LockoutBucket buckets[PROTOCORE_AUTH_LOCKOUT_SLOTS];
 } LockoutCtx;
 LockoutCtx s_lock;
 
 // Returns a mutable bucket (callers mutate it), so it takes the owner by non-const reference.
-LockoutBucket *find_bucket(LockoutCtx *c, const pc_ip *ip)
+LockoutBucket *find_bucket(LockoutCtx *c, const protocore_ip *ip)
 {
-    for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
-        if (c->buckets[i].addr.family != PC_IP_NONE && Ip.equal(&c->buckets[i].addr, ip))
+        if (c->buckets[i].addr.family != PROTOCORE_IP_NONE && Ip.equal(&c->buckets[i].addr, ip))
         {
             return &c->buckets[i];
         }
@@ -52,7 +52,7 @@ proto_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
     return b->lock_ms != 0 && (uint32_t)(now_ms - b->lock_start_ms) < b->lock_ms;
 }
 
-uint32_t auth_lockout_remaining_ms(const pc_ip *ip, uint32_t now_ms)
+uint32_t auth_lockout_remaining_ms(const protocore_ip *ip, uint32_t now_ms)
 {
     if (Ip.is_unspecified(ip))
     {
@@ -71,7 +71,7 @@ uint32_t auth_lockout_remaining_ms(const pc_ip *ip, uint32_t now_ms)
     return b->lock_ms - elapsed;
 }
 
-void auth_lockout_fail(const pc_ip *ip, uint32_t now_ms)
+void auth_lockout_fail(const protocore_ip *ip, uint32_t now_ms)
 {
     if (Ip.is_unspecified(ip))
     {
@@ -87,9 +87,9 @@ void auth_lockout_fail(const pc_ip *ip, uint32_t now_ms)
         // lockout by flooding from other addresses).
         int slot = -1;
         int lru = 0;
-        for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
+        for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
         {
-            if (s_lock.buckets[i].addr.family == PC_IP_NONE)
+            if (s_lock.buckets[i].addr.family == PROTOCORE_IP_NONE)
             {
                 slot = i;
                 break;
@@ -122,32 +122,32 @@ void auth_lockout_fail(const pc_ip *ip, uint32_t now_ms)
         b->fails++;
     }
 
-    if (b->fails >= PC_AUTH_LOCKOUT_THRESHOLD)
+    if (b->fails >= PROTOCORE_AUTH_LOCKOUT_THRESHOLD)
     {
         // Exponential backoff: base << (fails - threshold), capped at max. Step the
         // double so the shift can never overflow: the cap is hit (and the loop
         // breaks) before dur could exceed MAX_MS, and the config caps MAX_MS at
         // 0x80000000 so the surviving dur << 1 always fits in a uint32.
-        uint32_t dur = PC_AUTH_LOCKOUT_BASE_MS;
-        for (uint16_t n = (uint16_t)(b->fails - PC_AUTH_LOCKOUT_THRESHOLD); n > 0; n--)
+        uint32_t dur = PROTOCORE_AUTH_LOCKOUT_BASE_MS;
+        for (uint16_t n = (uint16_t)(b->fails - PROTOCORE_AUTH_LOCKOUT_THRESHOLD); n > 0; n--)
         {
-            if (dur >= PC_AUTH_LOCKOUT_MAX_MS)
+            if (dur >= PROTOCORE_AUTH_LOCKOUT_MAX_MS)
             {
-                dur = PC_AUTH_LOCKOUT_MAX_MS;
+                dur = PROTOCORE_AUTH_LOCKOUT_MAX_MS;
                 break;
             }
             dur <<= 1;
         }
-        if (dur > PC_AUTH_LOCKOUT_MAX_MS)
+        if (dur > PROTOCORE_AUTH_LOCKOUT_MAX_MS)
         {
-            dur = PC_AUTH_LOCKOUT_MAX_MS;
+            dur = PROTOCORE_AUTH_LOCKOUT_MAX_MS;
         }
         b->lock_ms = dur;
         b->lock_start_ms = now_ms;
     }
 }
 
-void auth_lockout_succeed(const pc_ip *ip)
+void auth_lockout_succeed(const protocore_ip *ip)
 {
     if (Ip.is_unspecified(ip))
     {
@@ -156,7 +156,7 @@ void auth_lockout_succeed(const pc_ip *ip)
     LockoutBucket *b = find_bucket(&s_lock, ip);
     if (b)
     {
-        b->addr.family = PC_IP_NONE;
+        b->addr.family = PROTOCORE_IP_NONE;
         b->fails = 0;
         b->lock_ms = 0;
         b->lock_start_ms = 0;
@@ -166,9 +166,9 @@ void auth_lockout_succeed(const pc_ip *ip)
 
 void auth_lockout_reset(void)
 {
-    for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
-        s_lock.buckets[i].addr.family = PC_IP_NONE;
+        s_lock.buckets[i].addr.family = PROTOCORE_IP_NONE;
         s_lock.buckets[i].lock_start_ms = 0;
         s_lock.buckets[i].lock_ms = 0;
         s_lock.buckets[i].last_ms = 0;
@@ -176,4 +176,4 @@ void auth_lockout_reset(void)
     }
 }
 
-#endif // PC_ENABLE_AUTH_LOCKOUT
+#endif // PROTOCORE_ENABLE_AUTH_LOCKOUT

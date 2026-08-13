@@ -25,10 +25,10 @@
 #ifndef PROTOCORE_PROTOSTR_H
 #define PROTOCORE_PROTOSTR_H
 
-#include "mmgr/swar.h" // pc_swar_word and PC_SWAR_GO/YES/NO: the step members' currency
+#include "mmgr/swar.h" // protocore_swar_word and PROTOCORE_SWAR_GO/YES/NO: the step members' currency
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The bounded-run module. Every walk steps one register-width load at a time.
@@ -76,8 +76,8 @@ PROTO_BEGIN_DECLS
  * The bound belongs to the DESTINATION: nothing is claimed about how long @c src is.
  *
  * @var StrNs::step_word
- * One word of the agreement test, given the two words the caller already loaded: @ref PC_SWAR_GO to
- * keep stepping, @ref PC_SWAR_YES or @ref PC_SWAR_NO once this word settles it. Whichever lane fires
+ * One word of the agreement test, given the two words the caller already loaded: @ref PROTOCORE_SWAR_GO to
+ * keep stepping, @ref PROTOCORE_SWAR_YES or @ref PROTOCORE_SWAR_NO once this word settles it. Whichever lane fires
  * lower decides, so nothing past this word is read. @c end_wins reads the tie as a match, which is
  * what a prefix test wants and what an equality test does not.
  *
@@ -110,7 +110,7 @@ PROTO_BEGIN_DECLS
  * value like a GGA latitude needs to land on the right float.
  *
  * **None of these are constant time.** Each stops at the byte that settles it, so how long it runs
- * states how many leading bytes matched. A secret comparison uses pc_ct_eq (crypto/ct_eq.h).
+ * states how many leading bytes matched. A secret comparison uses protocore_ct_eq (crypto/ct_eq.h).
  *
  * No storage member: every operation works on the caller's pointers and holds nothing of its own.
  */
@@ -123,7 +123,7 @@ typedef struct
     const char *(*find)(const char *hay, size_t read_cap, const char *needle, size_t needle_cap, proto_bool ci);
     proto_bool (*has)(const char *hay, size_t read_cap, const char *needle, size_t needle_cap, proto_bool ci);
     size_t (*copy)(char *dst, const char *src, size_t dst_cap);
-    int (*step_word)(pc_swar_word wa, pc_swar_word wb, proto_bool ci, int end_wins);
+    int (*step_word)(protocore_swar_word wa, protocore_swar_word wb, proto_bool ci, int end_wins);
     int (*step_byte)(unsigned char ca, unsigned char cb, proto_bool ci, int end_wins);
     proto_bool (*ws)(char c);
     proto_bool (*digit)(char c);
@@ -136,6 +136,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const StrNs str;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PROTOSTR_H

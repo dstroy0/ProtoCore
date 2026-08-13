@@ -1,6 +1,6 @@
 # FileUpload - stream a POST body straight to a file
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_UPLOAD`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_UPLOAD`
 
 ## What this example teaches
 
@@ -9,12 +9,12 @@ the parser's streaming-body hook - the same mechanism OTA uses - so an upload
 never has to fit in RAM. A GET route serves the stored file back to verify the
 round-trip.
 
-**One call wires the upload sink.** `pc_upload_begin(path, dest)`
+**One call wires the upload sink.** `protocore_upload_begin(path, dest)`
 registers a POST route whose body is streamed to `dest` as it arrives:
 
 ```cpp
-pc_mnt_mount(pc_mnt_fs(&LittleFS));
-pc_upload_begin("/upload", DEST);     // POST body -> file, chunk by chunk
+protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
+protocore_upload_begin("/upload", DEST);     // POST body -> file, chunk by chunk
 server.on("/file", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {   // read it back
     server.serve_file(id, LittleFS, DEST, "application/octet-stream");
 });
@@ -36,7 +36,7 @@ server.on("/file", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {   // read i
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_UPLOAD=1 -DMAX_CONNS=4" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4" \
   --lib="." examples/L7-Application/FileUpload/FileUpload.ino
 ```
 
@@ -54,7 +54,7 @@ with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_UPLOAD 1
+#define PROTOCORE_ENABLE_UPLOAD 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -87,8 +87,8 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // POST /upload -> stream the body into DEST on LittleFS (chunked, never in RAM).
-    pc_mnt_mount(pc_mnt_fs(&LittleFS));
-pc_upload_begin("/upload", DEST);
+    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
+protocore_upload_begin("/upload", DEST);
 
     // GET /file -> serve the stored file back.
     server.on("/file", HttpMethod::HTTP_GET,

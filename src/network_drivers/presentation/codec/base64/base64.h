@@ -21,11 +21,11 @@
 #ifndef PROTOCORE_BASE64_H
 #define PROTOCORE_BASE64_H
 
-#include "protocore_config.h" // PROTO_BEGIN_DECLS: the .cpp benches and sketches include this header
+#include "protocore_config.h" // PROTOCORE_BEGIN_DECLS: the .cpp benches and sketches include this header
 #include <stddef.h>
 #include <stdint.h>
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The two alphabets, each in both directions.
@@ -53,6 +53,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const Base64Ns Base64;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

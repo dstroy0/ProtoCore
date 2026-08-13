@@ -41,7 +41,7 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Builds a JSON document into a fixed caller buffer, no heap.
@@ -129,21 +129,21 @@ typedef struct
 extern const JsonNs Json;
 
 /** @brief False after any overflow / structural error. */
-PC_INLINE proto_bool pc_json_ok(const pc_json_writer *w)
+PROTOCORE_INLINE proto_bool pc_json_ok(const pc_json_writer *w)
 {
     return w->ok;
 }
 /** @brief Bytes written so far (excludes the NUL). */
-PC_INLINE size_t pc_json_length(const pc_json_writer *w)
+PROTOCORE_INLINE size_t pc_json_length(const pc_json_writer *w)
 {
     return w->len;
 }
 /** @brief NUL-terminated output (truncated if !pc_json_ok()). */
-PC_INLINE const char *pc_json_c_str(const pc_json_writer *w)
+PROTOCORE_INLINE const char *pc_json_c_str(const pc_json_writer *w)
 {
     return w->buf;
 }
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_JSON_H

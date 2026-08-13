@@ -11,9 +11,9 @@
 #include "mmgr/protomem.h"
 #include "network_drivers/physical/physical.h"
 
-#if PC_ENABLE_PROMISC
+#if PROTOCORE_ENABLE_PROMISC
 
-#if PC_HAS_VENDOR_WIFI
+#if PROTOCORE_HAS_VENDOR_WIFI
 #include <esp_wifi.h>
 #endif
 proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *out)
@@ -100,28 +100,28 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
     return PROTO_TRUE;
 }
 
-// libpcap framing (pc_pcap_global_header / pc_pcap_record_header) is in
+// libpcap framing (protocore_pcap_global_header / protocore_pcap_record_header) is in
 // shared_primitives/pcap.h - shared with the other capture features.
 
 // --- ESP32 radio binding -----------------------------------------------------------------
-#if PC_HAS_VENDOR_WIFI
+#if PROTOCORE_HAS_VENDOR_WIFI
 
 // All promiscuous-capture state, owned by one instance (internal linkage): the frame sink.
 // One named owner, unreachable from any other translation unit.
 typedef struct
 {
-    pc_promisc_sink_fn sink;
+    protocore_promisc_sink_fn sink;
 } PromiscCtx;
 static PromiscCtx s_promisc;
 
-proto_bool pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink)
+proto_bool protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink)
 {
     if (!sink)
     {
         return PROTO_FALSE;
     }
     s_promisc.sink = sink;
-    // pc_promisc_sink_fn and pc_phy_frame_fn are the same neutral shape, so the sink goes
+    // protocore_promisc_sink_fn and protocore_phy_frame_fn are the same neutral shape, so the sink goes
     // straight down; the vendor packet struct is unwrapped in the backend.
     if (!Radio.monitor_begin(channel, sink))
     {
@@ -131,12 +131,12 @@ proto_bool pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink)
     return PROTO_TRUE;
 }
 
-void pc_promisc_set_channel(uint8_t channel)
+void protocore_promisc_set_channel(uint8_t channel)
 {
     Radio.monitor_set_channel(channel);
 }
 
-void pc_promisc_end(void)
+void protocore_promisc_end(void)
 {
     Radio.monitor_end();
     s_promisc.sink = NULL;
@@ -144,22 +144,22 @@ void pc_promisc_end(void)
 
 #else // host build - no radio
 
-proto_bool pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink)
+proto_bool protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink)
 {
     (void)channel;
     (void)sink;
     return PROTO_FALSE;
 }
-void pc_promisc_set_channel(uint8_t channel)
+void protocore_promisc_set_channel(uint8_t channel)
 {
     (void)channel;
     // host build: no radio, no channel to set
 }
-void pc_promisc_end(void)
+void protocore_promisc_end(void)
 {
     // host build: no radio, nothing to stop
 }
 
-#endif // PC_HAS_VENDOR_WIFI
+#endif // PROTOCORE_HAS_VENDOR_WIFI
 
-#endif // PC_ENABLE_PROMISC
+#endif // PROTOCORE_ENABLE_PROMISC

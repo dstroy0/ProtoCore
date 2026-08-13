@@ -30,8 +30,8 @@ void test_standard_data_frame()
         f.data[i] = (uint8_t)(0x10 + i);
     }
 
-    uint8_t out[PC_SOCKETCAN_FRAME_LEN];
-    TEST_ASSERT_EQUAL_UINT(PC_SOCKETCAN_FRAME_LEN, can_to_socketcan(&f, out, sizeof(out)));
+    uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&f, out, sizeof(out)));
     // can_id 0x00000123, big-endian, no flags.
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[1]);
@@ -52,7 +52,7 @@ void test_extended_id_sets_eff()
     f.data[0] = 0xAA;
     f.data[1] = 0xBB;
 
-    uint8_t out[PC_SOCKETCAN_FRAME_LEN];
+    uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     can_to_socketcan(&f, out, sizeof(out));
     // can_id = id | EFF (0x80000000) = 0x98FEF100, big-endian.
     TEST_ASSERT_EQUAL_HEX8(0x98, out[0]);
@@ -74,7 +74,7 @@ void test_rtr_flag_and_no_data()
     f.dlc = 4;
     f.data[0] = 0xFF; // must not appear (RTR frames carry no data)
 
-    uint8_t out[PC_SOCKETCAN_FRAME_LEN];
+    uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     can_to_socketcan(&f, out, sizeof(out));
     TEST_ASSERT_EQUAL_HEX8(0x40, out[0]); // RTR flag (0x40000000) in the top byte
     TEST_ASSERT_EQUAL_HEX8(0x07, out[2]);
@@ -92,7 +92,7 @@ void test_masks_and_bounds()
     f.id = 0xFFFFFFFF; // over-wide; a standard frame must mask to 11 bits
     f.extended = PROTO_FALSE;
     f.dlc = 20; // over-long; must clamp to 8
-    uint8_t out[PC_SOCKETCAN_FRAME_LEN];
+    uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     can_to_socketcan(&f, out, sizeof(out));
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]); // no EFF, id masked to 0x7FF
     TEST_ASSERT_EQUAL_HEX8(0x07, out[2]);
@@ -107,26 +107,26 @@ void test_masks_and_bounds()
 
 void test_pcap_can_linktype()
 {
-    uint8_t g[PC_PCAP_GLOBAL_HDR_LEN];
-    TEST_ASSERT_EQUAL_UINT(PC_PCAP_GLOBAL_HDR_LEN, pc_pcap_global_header(g, sizeof(g), PC_DLT_CAN_SOCKETCAN));
+    uint8_t g[PROTOCORE_PCAP_GLOBAL_HDR_LEN];
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PCAP_GLOBAL_HDR_LEN, protocore_pcap_global_header(g, sizeof(g), PROTOCORE_DLT_CAN_SOCKETCAN));
     TEST_ASSERT_EQUAL_HEX8(227, g[20]); // DLT_CAN_SOCKETCAN
 }
 
 void test_pcap_global_header_bounds()
 {
-    uint8_t g[PC_PCAP_GLOBAL_HDR_LEN];
-    TEST_ASSERT_EQUAL_UINT(0, pc_pcap_global_header(NULL, sizeof(g), PC_DLT_CAN_SOCKETCAN)); // null out
+    uint8_t g[PROTOCORE_PCAP_GLOBAL_HDR_LEN];
+    TEST_ASSERT_EQUAL_UINT(0, protocore_pcap_global_header(NULL, sizeof(g), PROTOCORE_DLT_CAN_SOCKETCAN)); // null out
     uint8_t tiny[8];
-    TEST_ASSERT_EQUAL_UINT(0, pc_pcap_global_header(tiny, sizeof(tiny), PC_DLT_CAN_SOCKETCAN)); // too small
+    TEST_ASSERT_EQUAL_UINT(0, protocore_pcap_global_header(tiny, sizeof(tiny), PROTOCORE_DLT_CAN_SOCKETCAN)); // too small
 }
 
 void test_pcap_record_header_bounds()
 {
-    uint8_t r[PC_PCAP_REC_HDR_LEN];
-    TEST_ASSERT_EQUAL_UINT(PC_PCAP_REC_HDR_LEN, pc_pcap_record_header(r, sizeof(r), 1, 2, 3, 4)); // valid
-    TEST_ASSERT_EQUAL_UINT(0, pc_pcap_record_header(NULL, sizeof(r), 1, 2, 3, 4));                // null out
+    uint8_t r[PROTOCORE_PCAP_REC_HDR_LEN];
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PCAP_REC_HDR_LEN, protocore_pcap_record_header(r, sizeof(r), 1, 2, 3, 4)); // valid
+    TEST_ASSERT_EQUAL_UINT(0, protocore_pcap_record_header(NULL, sizeof(r), 1, 2, 3, 4));                // null out
     uint8_t tiny[8];
-    TEST_ASSERT_EQUAL_UINT(0, pc_pcap_record_header(tiny, sizeof(tiny), 1, 2, 3, 4)); // too small
+    TEST_ASSERT_EQUAL_UINT(0, protocore_pcap_record_header(tiny, sizeof(tiny), 1, 2, 3, 4)); // too small
 }
 
 static void bus_sink_noop(const CanFrame *)

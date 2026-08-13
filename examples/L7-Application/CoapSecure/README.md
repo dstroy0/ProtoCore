@@ -1,6 +1,6 @@
 # CoapSecure - CoAP over DTLS 1.3 (CoAPs)
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_COAP`, `PC_ENABLE_DTLS`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_COAP`, `PROTOCORE_ENABLE_DTLS`
 
 ## What this example teaches
 
@@ -11,15 +11,15 @@ the open Internet you want `coaps://` - CoAP inside a DTLS 1.3 session (RFC 7252
 authenticated.
 
 **The resource table is transport-independent.** You register resources exactly
-once with `pc_coap_server_add_resource()`; the plaintext server (`pc_coap_server_begin`)
+once with `protocore_coap_server_add_resource()`; the plaintext server (`protocore_coap_server_begin`)
 and this secure front-end both dispatch against the same table. Here we bind only
 the secure one:
 
 ```cpp
-pc_coap_server_reset();
-pc_coap_server_add_resource("/info", CoapMethodMask::COAP_ALLOW_GET, coap_info);
-pc_coap_server_add_resource("/led",  CoapMethodMask::COAP_ALLOW_GET | CoapMethodMask::COAP_ALLOW_PUT, coap_led);
-pc_coap_server_add_resource("/hello", CoapMethodMask::COAP_ALLOW_GET, coap_hello);
+protocore_coap_server_reset();
+protocore_coap_server_add_resource("/info", CoapMethodMask::COAP_ALLOW_GET, coap_info);
+protocore_coap_server_add_resource("/led",  CoapMethodMask::COAP_ALLOW_GET | CoapMethodMask::COAP_ALLOW_PUT, coap_led);
+protocore_coap_server_add_resource("/hello", CoapMethodMask::COAP_ALLOW_GET, coap_hello);
 
 CoapsServerConfig cfg;
 memset(&cfg, 0, sizeof cfg);
@@ -28,18 +28,18 @@ cfg.cert_len = sizeof(COAPS_CERT_DER);
 memcpy(cfg.ed25519_seed, COAPS_ED25519_SEED, 32);
 esp_fill_random(cfg.cookie_key, 32);        // per-boot HelloRetryRequest cookie secret
 cfg.rng = coaps_rng;                        // hardware CSPRNG (esp_fill_random)
-pc_coaps_server_begin(PC_COAPS_PORT, &cfg); // UDP 5684
+protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &cfg); // UDP 5684
 ```
 
 **One poll drives everything.** `coaps_server` owns a small pool of DTLS
-connections keyed by peer address. `pc_coaps_server_poll()` - called every loop -
+connections keyed by peer address. `protocore_coaps_server_poll()` - called every loop -
 routes each queued datagram to its connection, runs the handshake (or decrypts a
 CoAP request, answers it, and re-encrypts), fires the DTLS **retransmission timer**
 so a lost handshake flight is re-sent (RFC 9147 §5.8), and reaps idle connections:
 
 ```cpp
 void loop() {
-    pc_coaps_server_poll(); // DTLS handshakes + retransmission + idle reaping
+    protocore_coaps_server_poll(); // DTLS handshakes + retransmission + idle reaping
     server.handle();     // the TCP server (CoAPs runs off lwIP UDP callbacks + this poll)
 }
 ```
@@ -58,7 +58,7 @@ so any conformant DTLS 1.3 client interoperates.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_COAP=1 -DPC_ENABLE_DTLS=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_DTLS=1" \
   --lib="." examples/L7-Application/CoapSecure/CoapSecure.ino
 ```
 

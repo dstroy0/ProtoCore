@@ -12,17 +12,17 @@
 
 #include "services/storage/partition_monitor/partition_monitor.h"
 
-#if PC_ENABLE_PARTITION_MONITOR
+#if PROTOCORE_ENABLE_PARTITION_MONITOR
 
 #include "mmgr/protoframe.h"
 
 // esp_partition type/subtype constants (mirrors esp_partition_type_t/subtype_t so
 // the classifier stays pure and host-testable without the IDF headers).
-#if PC_HAS_VENDOR_OTA
+#if PROTOCORE_HAS_VENDOR_OTA
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
 #endif
-const char *pc_partition_kind(uint8_t type, uint8_t subtype)
+const char *protocore_partition_kind(uint8_t type, uint8_t subtype)
 {
     if (type == 0) // ESP_PARTITION_TYPE_APP
     {
@@ -64,31 +64,31 @@ const char *pc_partition_kind(uint8_t type, uint8_t subtype)
 }
 
 // The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
-static const char *const PC_JSON_SEP[2] = {"", ","};
+static const char *const PROTOCORE_JSON_SEP[2] = {"", ","};
 
-static const pc_field PART_OPEN[] = {{PC_FK_LIT, 0, 15, "{\"partitions\":["}, PC_END};
-static const pc_field PART_ENTRY[] = {
-    PC_STR,                              // "," from the second entry on
-    {PC_FK_LIT, 0, 9, "{\"label\":"},    //
-    PC_JSON,                             // label
-    {PC_FK_LIT, 0, 8, ",\"kind\":"},     //
-    PC_JSON,                             // kind name
-    {PC_FK_LIT, 0, 8, ",\"type\":"},     //
-    PC_U32,                              //
-    {PC_FK_LIT, 0, 11, ",\"subtype\":"}, //
-    PC_U32,                              //
-    {PC_FK_LIT, 0, 8, ",\"addr\":"},     //
-    PC_U32,                              //
-    {PC_FK_LIT, 0, 8, ",\"size\":"},     //
-    PC_U32,                              //
-    {PC_FK_LIT, 0, 11, ",\"running\":"}, //
-    PC_STR,                              // "true" / "false" - a JSON keyword, not a string
-    {PC_FK_LIT, 0, 1, "}"},              //
-    PC_END,
+static const protocore_field PART_OPEN[] = {{PROTOCORE_FK_LIT, 0, 15, "{\"partitions\":["}, PROTOCORE_END};
+static const protocore_field PART_ENTRY[] = {
+    PROTOCORE_STR,                              // "," from the second entry on
+    {PROTOCORE_FK_LIT, 0, 9, "{\"label\":"},    //
+    PROTOCORE_JSON,                             // label
+    {PROTOCORE_FK_LIT, 0, 8, ",\"kind\":"},     //
+    PROTOCORE_JSON,                             // kind name
+    {PROTOCORE_FK_LIT, 0, 8, ",\"type\":"},     //
+    PROTOCORE_U32,                              //
+    {PROTOCORE_FK_LIT, 0, 11, ",\"subtype\":"}, //
+    PROTOCORE_U32,                              //
+    {PROTOCORE_FK_LIT, 0, 8, ",\"addr\":"},     //
+    PROTOCORE_U32,                              //
+    {PROTOCORE_FK_LIT, 0, 8, ",\"size\":"},     //
+    PROTOCORE_U32,                              //
+    {PROTOCORE_FK_LIT, 0, 11, ",\"running\":"}, //
+    PROTOCORE_STR,                              // "true" / "false" - a JSON keyword, not a string
+    {PROTOCORE_FK_LIT, 0, 1, "}"},              //
+    PROTOCORE_END,
 };
-static const pc_field PART_CLOSE[] = {{PC_FK_LIT, 0, 2, "]}"}, PC_END};
+static const protocore_field PART_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 2, "]}"}, PROTOCORE_END};
 
-int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *out, uint32_t cap)
+int32_t protocore_partition_json(const protocore_partition_info *parts, uint8_t count, char *out, uint32_t cap)
 {
     if (!out || cap == 0)
     {
@@ -105,13 +105,15 @@ int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *o
     }
     for (uint8_t i = 0; i < count; i++)
     {
-        const pc_partition_info *p = &parts[i];
-        if (frame.append(out, cap, PART_ENTRY,
-                         (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VJSON(p->label),
-                                           PC_VJSON(pc_partition_kind(p->type, p->subtype)), PC_VU32((uint32_t)p->type),
-                                           PC_VU32((uint32_t)p->subtype), PC_VU32((uint32_t)p->address),
-                                           PC_VU32((uint32_t)p->size), PC_VSTR(p->running ? "true" : "false")},
-                         8) == 0)
+        const protocore_partition_info *p = &parts[i];
+        if (frame.append(
+                out, cap, PART_ENTRY,
+                (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]), PROTOCORE_VJSON(p->label),
+                                         PROTOCORE_VJSON(protocore_partition_kind(p->type, p->subtype)),
+                                         PROTOCORE_VU32((uint32_t)p->type), PROTOCORE_VU32((uint32_t)p->subtype),
+                                         PROTOCORE_VU32((uint32_t)p->address), PROTOCORE_VU32((uint32_t)p->size),
+                                         PROTOCORE_VSTR(p->running ? "true" : "false")},
+                8) == 0)
         {
             return 0;
         }
@@ -119,9 +121,9 @@ int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *o
     return (int32_t)frame.append(out, cap, PART_CLOSE, NULL, 0);
 }
 
-#if PC_HAS_VENDOR_OTA
+#if PROTOCORE_HAS_VENDOR_OTA
 
-uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max)
+uint8_t protocore_partition_collect(protocore_partition_info *out, uint8_t max)
 {
     if (!out || max == 0)
     {
@@ -133,7 +135,7 @@ uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max)
     for (; it != NULL && n < max; it = esp_partition_next(it))
     {
         const esp_partition_t *p = esp_partition_get(it);
-        pc_partition_info *d = &out[n++];
+        protocore_partition_info *d = &out[n++];
         strncpy(d->label, p->label, sizeof(d->label) - 1);
         d->label[sizeof(d->label) - 1] = '\0';
         d->type = (uint8_t)p->type;
@@ -148,13 +150,13 @@ uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max)
 
 #else // host build - no flash
 
-uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max)
+uint8_t protocore_partition_collect(protocore_partition_info *out, uint8_t max)
 {
     (void)out;
     (void)max;
     return 0;
 }
 
-#endif // PC_HAS_VENDOR_OTA
+#endif // PROTOCORE_HAS_VENDOR_OTA
 
-#endif // PC_ENABLE_PARTITION_MONITOR
+#endif // PROTOCORE_ENABLE_PARTITION_MONITOR

@@ -1,6 +1,6 @@
 # ModbusTcp - a Modbus TCP slave/server
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_MODBUS`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_MODBUS`
 
 ## What this example teaches
 
@@ -13,10 +13,10 @@ same server.
 **A second protocol listener on its own port:**
 
 ```cpp
-pc_modbus_server_init();
-pc_modbus_set_holding_reg(0, 0x1234);  // client-writable registers
-pc_modbus_set_input_reg(0, 0);         // application-published (read-only to client)
-pc_modbus_on_write(on_write);
+protocore_modbus_server_init();
+protocore_modbus_set_holding_reg(0, 0x1234);  // client-writable registers
+protocore_modbus_set_input_reg(0, 0);         // application-published (read-only to client)
+protocore_modbus_on_write(on_write);
 
 server.listen(502, ProtoConn::PROTO_MODBUS);   // bind a Modbus listener
 server.begin();
@@ -25,7 +25,7 @@ server.begin();
 **Who owns what.** The application writes input registers / discrete inputs (which
 are read-only to the client) to publish sensor state, reads holding registers /
 coils the client has written, and is notified of client writes through
-`pc_modbus_on_write(fc, start, count)`. The loop publishes a live uptime value into
+`protocore_modbus_on_write(fc, start, count)`. The loop publishes a live uptime value into
 an input register the client can poll.
 
 **Security note.** Modbus has no authentication or encryption: run it only on a
@@ -36,7 +36,7 @@ trusted control network, fronted by the per-IP accept throttle
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_MODBUS=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_MODBUS=1" \
   --lib="." examples/L7-Application/ModbusTcp/ModbusTcp.ino
 ```
 
@@ -54,7 +54,7 @@ with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_MODBUS 1
+#define PROTOCORE_ENABLE_MODBUS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -86,10 +86,10 @@ void setup()
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_modbus_server_init();
-    pc_modbus_set_holding_reg(0, 0x1234); // client-writable registers
-    pc_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
-    pc_modbus_on_write(on_write);
+    protocore_modbus_server_init();
+    protocore_modbus_set_holding_reg(0, 0x1234); // client-writable registers
+    protocore_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
+    protocore_modbus_on_write(on_write);
 
     server.listen(502, ProtoConn::PROTO_MODBUS); // Modbus listener on its own port
     server.begin();
@@ -105,7 +105,7 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        pc_modbus_set_input_reg(0, (uint16_t)(millis() / 1000)); // uptime seconds
+        protocore_modbus_set_input_reg(0, (uint16_t)(millis() / 1000)); // uptime seconds
     }
 }
 ```

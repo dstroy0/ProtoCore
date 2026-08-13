@@ -3,7 +3,7 @@
 
 /**
  * @file OidcAuth.ino
- * @brief OpenID Connect ID-token auth, RS256 (PC_ENABLE_OIDC).
+ * @brief OpenID Connect ID-token auth, RS256 (PROTOCORE_ENABLE_OIDC).
  *
  * A client presents `Authorization: Bearer <id_token>`; the device verifies the
  * RS256 signature against the issuer's JWKS public key and checks iss / aud / exp,
@@ -22,11 +22,11 @@
  *    bundled test token validates.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_OIDC=1
+ *     build_flags = -DPROTOCORE_ENABLE_OIDC=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_OIDC 1
+#define PROTOCORE_ENABLE_OIDC 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -68,9 +68,9 @@ void setup()
         const char *token = hdr + 7;
         uint32_t now = 1700000100; // production: read from NTP
 
-        pc_oidc_claims claims;
-        pc_oidc_result rc = pc_oidc_verify(token, strlen(token), JWKS, ISSUER, AUDIENCE, now, &claims);
-        if (rc != pc_oidc_result::PC_OIDC_OK)
+        protocore_oidc_claims claims;
+        protocore_oidc_result rc = protocore_oidc_verify(token, strlen(token), JWKS, ISSUER, AUDIENCE, now, &claims);
+        if (rc != protocore_oidc_result::PROTOCORE_OIDC_OK)
         {
             char b[40];
             snprintf(b, sizeof(b), "{\"error\":%d}", (int)rc);

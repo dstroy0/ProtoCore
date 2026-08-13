@@ -3,7 +3,7 @@
 
 /**
  * @file ads.h
- * @brief Beckhoff ADS / AMS protocol codec (PC_ENABLE_ADS) - zero-heap request builders +
+ * @brief Beckhoff ADS / AMS protocol codec (PROTOCORE_ENABLE_ADS) - zero-heap request builders +
  *        response parsers for TwinCAT PLCs over TCP 48898 (the PC-based-control protocol).
  *
  * ADS (Automation Device Specification) rides on AMS (Automation Message Specification). Every
@@ -30,7 +30,7 @@
  * AMS header field order (target-before-source), command ids, and state flags verified against
  * the Beckhoff InfoSys AMS/ADS specification; payload layouts cross-checked with Beckhoff's own
  * open-source ADS library, `pyads`, and Apache PLC4X. Pure codec, host-tested - the caller owns
- * the TCP connection (`pc_client_*`) and the AMS route registration on the target router.
+ * the TCP connection (`protocore_client_*`) and the AMS route registration on the target router.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -41,9 +41,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_ADS
+#if PROTOCORE_ENABLE_ADS
 
 #define ADS_TCP_PORT 48898     ///< AMS/TCP listening port (0xBF02)
 #define ADS_AMSTCP_HDR_LEN 6   ///< reserved(2) + length(4)
@@ -165,7 +165,7 @@ typedef struct
 typedef struct
 {
     uint32_t result;
-    uint16_t pc_ads_state;
+    uint16_t protocore_ads_state;
     uint16_t device_state;
 } AdsReadStateResult;
 
@@ -185,60 +185,63 @@ typedef struct
 // ---------------------------------------------------------------------------------------------
 
 /// ReadDeviceInfo (cmd 1): no payload. Response = AdsDeviceInfo.
-size_t pc_ads_build_read_device_info(uint8_t *buf, size_t cap, const AdsRequest *r);
+size_t protocore_ads_build_read_device_info(uint8_t *buf, size_t cap, const AdsRequest *r);
 
 /// ReadState (cmd 4): no payload. Response = AdsReadStateResult.
-size_t pc_ads_build_read_state(uint8_t *buf, size_t cap, const AdsRequest *r);
+size_t protocore_ads_build_read_state(uint8_t *buf, size_t cap, const AdsRequest *r);
 
 /// Read (cmd 2): IndexGroup + IndexOffset + Length. Response = AdsReadResult.
-size_t pc_ads_build_read(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group, uint32_t index_offset,
-                         uint32_t read_len);
+size_t protocore_ads_build_read(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
+                                uint32_t index_offset, uint32_t read_len);
 
 /// Write (cmd 3): IndexGroup + IndexOffset + Length + Data. Response = a single result u32.
-size_t pc_ads_build_write(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group, uint32_t index_offset,
-                          const uint8_t *data, uint32_t len);
+size_t protocore_ads_build_write(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
+                                 uint32_t index_offset, const uint8_t *data, uint32_t len);
 
 /// ReadWrite (cmd 9): IndexGroup + IndexOffset + ReadLen + WriteLen + WriteData. The workhorse
 /// for symbol-by-name (write the name to `sym_hnd_by_name`, read back the 4-octet handle).
 /// Response = AdsReadResult.
-size_t pc_ads_build_read_write(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
-                               uint32_t index_offset, uint32_t read_len, const uint8_t *write_data, uint32_t write_len);
+size_t protocore_ads_build_read_write(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
+                                      uint32_t index_offset, uint32_t read_len, const uint8_t *write_data,
+                                      uint32_t write_len);
 
 /// WriteControl (cmd 5): AdsState + DeviceState + Length + Data. Response = a single result u32.
-size_t pc_ads_build_write_control(uint8_t *buf, size_t cap, const AdsRequest *r, uint16_t pc_ads_state,
-                                  uint16_t device_state, const uint8_t *data, uint32_t len);
+size_t protocore_ads_build_write_control(uint8_t *buf, size_t cap, const AdsRequest *r, uint16_t protocore_ads_state,
+                                         uint16_t device_state, const uint8_t *data, uint32_t len);
 
 /// AddDeviceNotification (cmd 6): subscribe to a symbol. Response = result u32 + handle u32
-/// (parse with pc_ads_parse_add_notification). max_delay / cycle_time are in 100 ns units.
-size_t pc_ads_build_add_notification(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
-                                     uint32_t index_offset, uint32_t length, AdsTransMode mode, uint32_t max_delay,
-                                     uint32_t cycle_time);
+/// (parse with protocore_ads_parse_add_notification). max_delay / cycle_time are in 100 ns units.
+size_t protocore_ads_build_add_notification(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
+                                            uint32_t index_offset, uint32_t length, AdsTransMode mode,
+                                            uint32_t max_delay, uint32_t cycle_time);
 
 /// DeleteDeviceNotification (cmd 7): NotificationHandle. Response = a single result u32.
-size_t pc_ads_build_del_notification(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t notification_handle);
+size_t protocore_ads_build_del_notification(uint8_t *buf, size_t cap, const AdsRequest *r,
+                                            uint32_t notification_handle);
 
 // ---------------------------------------------------------------------------------------------
-// Response parsers. `pc_ads_parse_ams_header` validates the framing and exposes the payload; the
+// Response parsers. `protocore_ads_parse_ams_header` validates the framing and exposes the payload; the
 // per-command parsers then decode that payload. Each returns false on a short/garbled buffer.
 // ---------------------------------------------------------------------------------------------
 
 /// Validate the AMS/TCP + AMS framing and fill `out` (its `data` points into `buf`).
-proto_bool pc_ads_parse_ams_header(const uint8_t *buf, size_t len, AdsAmsHeader *out);
+proto_bool protocore_ads_parse_ams_header(const uint8_t *buf, size_t len, AdsAmsHeader *out);
 
 /// Read / ReadWrite response payload: Result(4) + Length(4) + Data(Length).
-proto_bool pc_ads_parse_read(const uint8_t *data, size_t data_len, AdsReadResult *out);
+proto_bool protocore_ads_parse_read(const uint8_t *data, size_t data_len, AdsReadResult *out);
 
 /// Write / WriteControl / DeleteNotification response payload: a single Result(4).
-proto_bool pc_ads_parse_result(const uint8_t *data, size_t data_len, uint32_t *result);
+proto_bool protocore_ads_parse_result(const uint8_t *data, size_t data_len, uint32_t *result);
 
 /// ReadState response payload: Result(4) + AdsState(2) + DeviceState(2).
-proto_bool pc_ads_parse_read_state(const uint8_t *data, size_t data_len, AdsReadStateResult *out);
+proto_bool protocore_ads_parse_read_state(const uint8_t *data, size_t data_len, AdsReadStateResult *out);
 
 /// ReadDeviceInfo response payload: Result(4) + Major(1) + Minor(1) + Build(2) + Name(16).
-proto_bool pc_ads_parse_read_device_info(const uint8_t *data, size_t data_len, AdsDeviceInfo *out);
+proto_bool protocore_ads_parse_read_device_info(const uint8_t *data, size_t data_len, AdsDeviceInfo *out);
 
 /// AddDeviceNotification response payload: Result(4) + NotificationHandle(4).
-proto_bool pc_ads_parse_add_notification(const uint8_t *data, size_t data_len, uint32_t *result, uint32_t *handle);
+proto_bool protocore_ads_parse_add_notification(const uint8_t *data, size_t data_len, uint32_t *result,
+                                                uint32_t *handle);
 
 /// Callback invoked once per sample while walking a DeviceNotification (cmd 8) payload.
 /// `timestamp` is the raw Windows FILETIME (100 ns ticks since 1601-01-01 UTC).
@@ -248,11 +251,11 @@ typedef void (*AdsNotificationSampleFn)(uint32_t notification_handle, const uint
 /// Walk a DeviceNotification payload (Length + Stamps, each stamp = Timestamp + Samples + the
 /// per-sample handle/size/data), calling `on_sample` for every sample. Returns false if the
 /// buffer is truncated or internally inconsistent.
-proto_bool pc_ads_parse_notification(const uint8_t *data, size_t data_len, AdsNotificationSampleFn on_sample,
-                                     void *user);
+proto_bool protocore_ads_parse_notification(const uint8_t *data, size_t data_len, AdsNotificationSampleFn on_sample,
+                                            void *user);
 
-#endif // PC_ENABLE_ADS
+#endif // PROTOCORE_ENABLE_ADS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ADS_H

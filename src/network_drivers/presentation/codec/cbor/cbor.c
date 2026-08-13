@@ -9,7 +9,7 @@
 #include "cbor.h"
 #include "mmgr/protomem.h"
 
-#if PC_NEED_CBOR
+#if PROTOCORE_NEED_CBOR
 
 #include "mmgr/bytes.h"
 
@@ -174,41 +174,41 @@ static pc_codec_type pc_cbor_peek(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len)
     {
-        return PC_CODEC_INVALID;
+        return PROTOCORE_CODEC_INVALID;
     }
     uint8_t b = r->buf[r->pos];
     switch (b >> 5)
     {
     case 0:
-        return PC_CODEC_UINT;
+        return PROTOCORE_CODEC_UINT;
     case 1:
-        return PC_CODEC_INT;
+        return PROTOCORE_CODEC_INT;
     case 2:
-        return PC_CODEC_BYTES;
+        return PROTOCORE_CODEC_BYTES;
     case 3:
-        return PC_CODEC_STR;
+        return PROTOCORE_CODEC_STR;
     case 4:
-        return PC_CODEC_ARRAY;
+        return PROTOCORE_CODEC_ARRAY;
     case 5:
-        return PC_CODEC_MAP;
+        return PROTOCORE_CODEC_MAP;
     case 7: {
         uint8_t info = (uint8_t)(b & 0x1f);
         if (info == 20 || info == 21)
         {
-            return PC_CODEC_BOOL;
+            return PROTOCORE_CODEC_BOOL;
         }
         if (info == 22)
         {
-            return PC_CODEC_NULL;
+            return PROTOCORE_CODEC_NULL;
         }
         if (info == 26 || info == 27)
         {
-            return PC_CODEC_FLOAT;
+            return PROTOCORE_CODEC_FLOAT;
         }
-        return PC_CODEC_INVALID;
+        return PROTOCORE_CODEC_INVALID;
     }
     default:
-        return PC_CODEC_INVALID; // major 6 (tags) unsupported
+        return PROTOCORE_CODEC_INVALID; // major 6 (tags) unsupported
     }
 }
 
@@ -398,4 +398,4 @@ const pc_codec Cbor = {
     pc_cbor_read_bool, pc_cbor_read_null, pc_cbor_read_float,
 };
 
-#endif // PC_NEED_CBOR
+#endif // PROTOCORE_NEED_CBOR

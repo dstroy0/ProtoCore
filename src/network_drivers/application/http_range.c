@@ -8,7 +8,7 @@
 
 #include "network_drivers/application/http_range.h"
 
-#if PC_ENABLE_RANGE
+#if PROTOCORE_ENABLE_RANGE
 
 // strncasecmp, strchr
 
@@ -106,4 +106,4 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
     return 1;
 }
 
-#endif // PC_ENABLE_RANGE
+#endif // PROTOCORE_ENABLE_RANGE

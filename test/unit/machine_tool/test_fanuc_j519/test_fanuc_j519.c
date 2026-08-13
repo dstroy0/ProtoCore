@@ -44,7 +44,7 @@ static void make_motion(J519MotionCommand *m)
     m->write_io_index = 0x0506;
     m->write_io_mask = 0x0708;
     m->write_io_value = 0x090A;
-    for (int i = 0; i < PC_J519_AXES; i++)
+    for (int i = 0; i < PROTOCORE_J519_AXES; i++)
     {
         m->joint_data[i] = (float)i;
     }
@@ -63,7 +63,7 @@ static void make_status(J519RobotStatus *s)
     s->read_io_mask = 0x1314;
     s->read_io_value = 0x1516;
     s->time_stamp = 0x99AABBCC;
-    for (int i = 0; i < PC_J519_AXES; i++)
+    for (int i = 0; i < PROTOCORE_J519_AXES; i++)
     {
         s->cartesian_pose[i] = (float)(100 + i);
         s->joint_pose[i] = (float)(200 + i);
@@ -81,7 +81,7 @@ static void make_ack(J519Ack *a)
     a->threshold_type = (uint32_t)J519_THR_JERK;
     a->max_cart_speed = 2000;
     a->unknown0 = 0xDEADBEEF;
-    for (int i = 0; i < PC_J519_THRESHOLDS; i++)
+    for (int i = 0; i < PROTOCORE_J519_THRESHOLDS; i++)
     {
         a->threshold_no_load[i] = (float)i;
         a->threshold_max_load[i] = (float)(1000 + i);
@@ -92,27 +92,27 @@ static void make_ack(J519Ack *a)
 
 void test_build_start_and_stop_exact_bytes(void)
 {
-    TEST_ASSERT_EQUAL_UINT32(8, (uint32_t)pc_j519_build_start(g_buf, sizeof(g_buf), 1));
+    TEST_ASSERT_EQUAL_UINT32(8, (uint32_t)protocore_j519_build_start(g_buf, sizeof(g_buf), 1));
     static const uint8_t want_start[8] = {0, 0, 0, 0, 1, 0, 0, 0}; // type 0, version 1
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want_start, g_buf, 8);
 
-    TEST_ASSERT_EQUAL_UINT32(8, (uint32_t)pc_j519_build_stop(g_buf, sizeof(g_buf), 1));
+    TEST_ASSERT_EQUAL_UINT32(8, (uint32_t)protocore_j519_build_stop(g_buf, sizeof(g_buf), 1));
     static const uint8_t want_stop[8] = {2, 0, 0, 0, 1, 0, 0, 0}; // type 2, version 1
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want_stop, g_buf, 8);
 }
 
 void test_peek_reads_type_and_version(void)
 {
-    pc_j519_build_stop(g_buf, sizeof(g_buf), 0x01020304);
+    protocore_j519_build_stop(g_buf, sizeof(g_buf), 0x01020304);
     uint32_t type = 0, ver = 0;
-    TEST_ASSERT_TRUE(pc_j519_peek(g_buf, 8, &type, &ver));
+    TEST_ASSERT_TRUE(protocore_j519_peek(g_buf, 8, &type, &ver));
     TEST_ASSERT_EQUAL_UINT32(2, type);
     TEST_ASSERT_EQUAL_UINT32(0x01020304, ver);
 
     // null out-params are permitted; a short buffer is refused
-    TEST_ASSERT_TRUE(pc_j519_peek(g_buf, 8, NULL, NULL));
-    TEST_ASSERT_FALSE(pc_j519_peek(g_buf, 7, &type, &ver));
-    TEST_ASSERT_FALSE(pc_j519_peek(NULL, 8, &type, &ver));
+    TEST_ASSERT_TRUE(protocore_j519_peek(g_buf, 8, NULL, NULL));
+    TEST_ASSERT_FALSE(protocore_j519_peek(g_buf, 7, &type, &ver));
+    TEST_ASSERT_FALSE(protocore_j519_peek(NULL, 8, &type, &ver));
 }
 
 // --- motion command -------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ void test_build_motion_exact_field_offsets(void)
 {
     J519MotionCommand m;
     make_motion(&m);
-    TEST_ASSERT_EQUAL_UINT32(64, (uint32_t)pc_j519_build_motion(g_buf, sizeof(g_buf), &m));
+    TEST_ASSERT_EQUAL_UINT32(64, (uint32_t)protocore_j519_build_motion(g_buf, sizeof(g_buf), &m));
 
     TEST_ASSERT_EQUAL_UINT8(1, g_buf[0]); // type 1, little-endian
     TEST_ASSERT_EQUAL_UINT8(0, g_buf[1]);
@@ -156,9 +156,9 @@ void test_motion_roundtrip(void)
 {
     J519MotionCommand m, got;
     make_motion(&m);
-    TEST_ASSERT_EQUAL_UINT32(64, (uint32_t)pc_j519_build_motion(g_buf, sizeof(g_buf), &m));
+    TEST_ASSERT_EQUAL_UINT32(64, (uint32_t)protocore_j519_build_motion(g_buf, sizeof(g_buf), &m));
     memset(&got, 0, sizeof(got));
-    TEST_ASSERT_TRUE(pc_j519_parse_motion(g_buf, 64, &got));
+    TEST_ASSERT_TRUE(protocore_j519_parse_motion(g_buf, 64, &got));
 
     TEST_ASSERT_EQUAL_UINT32(m.version_no, got.version_no);
     TEST_ASSERT_EQUAL_UINT32(m.sequence_no, got.sequence_no);
@@ -171,7 +171,7 @@ void test_motion_roundtrip(void)
     TEST_ASSERT_EQUAL_UINT16(m.write_io_index, got.write_io_index);
     TEST_ASSERT_EQUAL_UINT16(m.write_io_mask, got.write_io_mask);
     TEST_ASSERT_EQUAL_UINT16(m.write_io_value, got.write_io_value);
-    for (int i = 0; i < PC_J519_AXES; i++)
+    for (int i = 0; i < PROTOCORE_J519_AXES; i++)
     {
         TEST_ASSERT_EQUAL_FLOAT(m.joint_data[i], got.joint_data[i]);
     }
@@ -183,7 +183,7 @@ void test_build_status_exact_field_offsets(void)
 {
     J519RobotStatus s;
     make_status(&s);
-    TEST_ASSERT_EQUAL_UINT32(132, (uint32_t)pc_j519_build_status(g_buf, sizeof(g_buf), &s));
+    TEST_ASSERT_EQUAL_UINT32(132, (uint32_t)protocore_j519_build_status(g_buf, sizeof(g_buf), &s));
 
     TEST_ASSERT_EQUAL_UINT8(0, g_buf[0]); // type 0 (robot->PC = Status)
     TEST_ASSERT_EQUAL_UINT8(0x88, g_buf[8]);
@@ -202,15 +202,15 @@ void test_status_roundtrip(void)
 {
     J519RobotStatus s, got;
     make_status(&s);
-    TEST_ASSERT_EQUAL_UINT32(132, (uint32_t)pc_j519_build_status(g_buf, sizeof(g_buf), &s));
+    TEST_ASSERT_EQUAL_UINT32(132, (uint32_t)protocore_j519_build_status(g_buf, sizeof(g_buf), &s));
     memset(&got, 0, sizeof(got));
-    TEST_ASSERT_TRUE(pc_j519_parse_status(g_buf, 132, &got));
+    TEST_ASSERT_TRUE(protocore_j519_parse_status(g_buf, 132, &got));
 
     TEST_ASSERT_EQUAL_UINT32(s.sequence_no, got.sequence_no);
     TEST_ASSERT_EQUAL_UINT8(s.status, got.status);
     TEST_ASSERT_EQUAL_UINT16(s.read_io_value, got.read_io_value);
     TEST_ASSERT_EQUAL_UINT32(s.time_stamp, got.time_stamp);
-    for (int i = 0; i < PC_J519_AXES; i++)
+    for (int i = 0; i < PROTOCORE_J519_AXES; i++)
     {
         TEST_ASSERT_EQUAL_FLOAT(s.cartesian_pose[i], got.cartesian_pose[i]);
         TEST_ASSERT_EQUAL_FLOAT(s.joint_pose[i], got.joint_pose[i]);
@@ -227,13 +227,13 @@ void test_request_roundtrip_and_bytes(void)
     q.version_no = 1;
     q.axis_no = 3;
     q.threshold_type = (uint32_t)J519_THR_ACCELERATION;
-    TEST_ASSERT_EQUAL_UINT32(16, (uint32_t)pc_j519_build_request(g_buf, sizeof(g_buf), &q));
+    TEST_ASSERT_EQUAL_UINT32(16, (uint32_t)protocore_j519_build_request(g_buf, sizeof(g_buf), &q));
     TEST_ASSERT_EQUAL_UINT8(3, g_buf[0]);  // type 3
     TEST_ASSERT_EQUAL_UINT8(3, g_buf[8]);  // axis
     TEST_ASSERT_EQUAL_UINT8(1, g_buf[12]); // threshold type = acceleration
 
     memset(&got, 0, sizeof(got));
-    TEST_ASSERT_TRUE(pc_j519_parse_request(g_buf, 16, &got));
+    TEST_ASSERT_TRUE(protocore_j519_parse_request(g_buf, 16, &got));
     TEST_ASSERT_EQUAL_UINT32(q.axis_no, got.axis_no);
     TEST_ASSERT_EQUAL_UINT32(q.threshold_type, got.threshold_type);
 }
@@ -242,7 +242,7 @@ void test_ack_roundtrip_and_table_offsets(void)
 {
     J519Ack a, got;
     make_ack(&a);
-    TEST_ASSERT_EQUAL_UINT32(184, (uint32_t)pc_j519_build_ack(g_buf, sizeof(g_buf), &a));
+    TEST_ASSERT_EQUAL_UINT32(184, (uint32_t)protocore_j519_build_ack(g_buf, sizeof(g_buf), &a));
     TEST_ASSERT_EQUAL_UINT8(3, g_buf[0]);     // type 3
     TEST_ASSERT_EQUAL_UINT8(0xEF, g_buf[20]); // unknown0 preserved verbatim, little-endian
     TEST_ASSERT_EQUAL_UINT8(0xDE, g_buf[23]);
@@ -250,12 +250,12 @@ void test_ack_roundtrip_and_table_offsets(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(F_ONE, g_buf + 24 + 4, 4); // no_load[1] == 1.0f
 
     memset(&got, 0, sizeof(got));
-    TEST_ASSERT_TRUE(pc_j519_parse_ack(g_buf, 184, &got));
+    TEST_ASSERT_TRUE(protocore_j519_parse_ack(g_buf, 184, &got));
     TEST_ASSERT_EQUAL_UINT32(a.axis_no, got.axis_no);
     TEST_ASSERT_EQUAL_UINT32(a.threshold_type, got.threshold_type);
     TEST_ASSERT_EQUAL_UINT32(a.max_cart_speed, got.max_cart_speed);
     TEST_ASSERT_EQUAL_UINT32(a.unknown0, got.unknown0);
-    for (int i = 0; i < PC_J519_THRESHOLDS; i++)
+    for (int i = 0; i < PROTOCORE_J519_THRESHOLDS; i++)
     {
         TEST_ASSERT_EQUAL_FLOAT(a.threshold_no_load[i], got.threshold_no_load[i]);
         TEST_ASSERT_EQUAL_FLOAT(a.threshold_max_load[i], got.threshold_max_load[i]);
@@ -270,17 +270,17 @@ void test_ack_roundtrip_and_table_offsets(void)
 void test_shared_type_codes_are_separated_by_length(void)
 {
     // an 8-octet Start must not parse as a Robot Status (both type 0)
-    TEST_ASSERT_EQUAL_UINT32(8, (uint32_t)pc_j519_build_start(g_buf, sizeof(g_buf), 1));
+    TEST_ASSERT_EQUAL_UINT32(8, (uint32_t)protocore_j519_build_start(g_buf, sizeof(g_buf), 1));
     J519RobotStatus st;
-    TEST_ASSERT_FALSE(pc_j519_parse_status(g_buf, 8, &st));
+    TEST_ASSERT_FALSE(protocore_j519_parse_status(g_buf, 8, &st));
 
     // a 16-octet Request must not parse as an Ack (both type 3)
     J519Request q;
     memset(&q, 0, sizeof(q));
     q.version_no = 1;
-    TEST_ASSERT_EQUAL_UINT32(16, (uint32_t)pc_j519_build_request(g_buf, sizeof(g_buf), &q));
+    TEST_ASSERT_EQUAL_UINT32(16, (uint32_t)protocore_j519_build_request(g_buf, sizeof(g_buf), &q));
     J519Ack ack;
-    TEST_ASSERT_FALSE(pc_j519_parse_ack(g_buf, 16, &ack));
+    TEST_ASSERT_FALSE(protocore_j519_parse_ack(g_buf, 16, &ack));
     // (The converse - handing the Ack parser len=184 for a 16-octet datagram - is caller error the
     // codec cannot detect: @p len IS the received datagram length, so the caller must pass the true
     // one. Nothing here can distinguish a short read from a genuine 184-octet Ack.)
@@ -290,25 +290,25 @@ void test_parsers_reject_wrong_type(void)
 {
     J519MotionCommand m;
     make_motion(&m);
-    pc_j519_build_motion(g_buf, sizeof(g_buf), &m);
+    protocore_j519_build_motion(g_buf, sizeof(g_buf), &m);
     // right length for a motion command, but ask the request parser for it
     J519Request q;
-    TEST_ASSERT_FALSE(pc_j519_parse_request(g_buf, 16, &q));
+    TEST_ASSERT_FALSE(protocore_j519_parse_request(g_buf, 16, &q));
 
     // corrupt the type word; the motion parser must refuse it
     g_buf[0] = 7;
     J519MotionCommand got;
-    TEST_ASSERT_FALSE(pc_j519_parse_motion(g_buf, 64, &got));
+    TEST_ASSERT_FALSE(protocore_j519_parse_motion(g_buf, 64, &got));
 }
 
 void test_parsers_reject_off_by_one_lengths(void)
 {
     J519MotionCommand m, got;
     make_motion(&m);
-    pc_j519_build_motion(g_buf, sizeof(g_buf), &m);
-    TEST_ASSERT_FALSE(pc_j519_parse_motion(g_buf, 63, &got));
-    TEST_ASSERT_FALSE(pc_j519_parse_motion(g_buf, 65, &got));
-    TEST_ASSERT_TRUE(pc_j519_parse_motion(g_buf, 64, &got));
+    protocore_j519_build_motion(g_buf, sizeof(g_buf), &m);
+    TEST_ASSERT_FALSE(protocore_j519_parse_motion(g_buf, 63, &got));
+    TEST_ASSERT_FALSE(protocore_j519_parse_motion(g_buf, 65, &got));
+    TEST_ASSERT_TRUE(protocore_j519_parse_motion(g_buf, 64, &got));
 }
 
 void test_builders_reject_short_capacity(void)
@@ -322,12 +322,12 @@ void test_builders_reject_short_capacity(void)
     J519Request q;
     memset(&q, 0, sizeof(q));
 
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_start(g_buf, 7, 1));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_stop(g_buf, 7, 1));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_motion(g_buf, 63, &m));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_request(g_buf, 15, &q));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_status(g_buf, 131, &s));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_ack(g_buf, 183, &a));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_start(g_buf, 7, 1));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_stop(g_buf, 7, 1));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_motion(g_buf, 63, &m));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_request(g_buf, 15, &q));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_status(g_buf, 131, &s));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_ack(g_buf, 183, &a));
 }
 
 void test_null_guards(void)
@@ -336,13 +336,13 @@ void test_null_guards(void)
     make_motion(&m);
     J519MotionCommand got;
 
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_start(NULL, 64, 1));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_motion(g_buf, sizeof(g_buf), NULL));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_motion(NULL, 64, &m));
-    TEST_ASSERT_FALSE(pc_j519_parse_motion(NULL, 64, &got));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_start(NULL, 64, 1));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_motion(g_buf, sizeof(g_buf), NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_motion(NULL, 64, &m));
+    TEST_ASSERT_FALSE(protocore_j519_parse_motion(NULL, 64, &got));
 
-    pc_j519_build_motion(g_buf, sizeof(g_buf), &m);
-    TEST_ASSERT_FALSE(pc_j519_parse_motion(g_buf, 64, NULL));
+    protocore_j519_build_motion(g_buf, sizeof(g_buf), &m);
+    TEST_ASSERT_FALSE(protocore_j519_parse_motion(g_buf, 64, NULL));
 }
 
 // test_null_guards and test_builders_reject_short_capacity only exercise the null-buf and
@@ -362,20 +362,20 @@ void test_remaining_null_guard_branches(void)
     make_ack(&a);
 
     // builders: null buf (buf is checked before the payload pointer or cap)
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_stop(NULL, 64, 1));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_request(NULL, 64, &q));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_status(NULL, 200, &s));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_ack(NULL, 200, &a));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_stop(NULL, 64, 1));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_request(NULL, 64, &q));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_status(NULL, 200, &s));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_ack(NULL, 200, &a));
 
     // builders: valid buf but null payload pointer
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_request(g_buf, sizeof(g_buf), NULL));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_status(g_buf, sizeof(g_buf), NULL));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_j519_build_ack(g_buf, sizeof(g_buf), NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_request(g_buf, sizeof(g_buf), NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_status(g_buf, sizeof(g_buf), NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_j519_build_ack(g_buf, sizeof(g_buf), NULL));
 
     // parsers: null out-param - `!out` short-circuits before hdr_ok touches buf/len at all
-    TEST_ASSERT_FALSE(pc_j519_parse_request(g_buf, PC_J519_LEN_REQUEST, NULL));
-    TEST_ASSERT_FALSE(pc_j519_parse_status(g_buf, PC_J519_LEN_STATUS, NULL));
-    TEST_ASSERT_FALSE(pc_j519_parse_ack(g_buf, PC_J519_LEN_ACK, NULL));
+    TEST_ASSERT_FALSE(protocore_j519_parse_request(g_buf, PROTOCORE_J519_LEN_REQUEST, NULL));
+    TEST_ASSERT_FALSE(protocore_j519_parse_status(g_buf, PROTOCORE_J519_LEN_STATUS, NULL));
+    TEST_ASSERT_FALSE(protocore_j519_parse_ack(g_buf, PROTOCORE_J519_LEN_ACK, NULL));
 }
 
 int main(void)

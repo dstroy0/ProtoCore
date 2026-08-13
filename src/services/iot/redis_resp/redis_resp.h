@@ -3,7 +3,7 @@
 
 /**
  * @file redis_resp.h
- * @brief Redis RESP2/RESP3 wire codec (PC_ENABLE_REDIS) - zero-heap command
+ * @brief Redis RESP2/RESP3 wire codec (PROTOCORE_ENABLE_REDIS) - zero-heap command
  *        encoder + reply parser, so a device can talk to a Redis server with the
  *        shipped outbound client transport.
  *
@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_REDIS
+#if PROTOCORE_ENABLE_REDIS
 
 /** @brief RESP2/RESP3 reply value types. */
 typedef enum PROTO_ENUM_PACKED
@@ -74,7 +74,8 @@ typedef struct
  * @param argc     number of arguments.
  * @return bytes written (excluding any NUL), or 0 on overflow / bad input.
  */
-size_t pc_resp_encode_command(char *buf, size_t cap, const char *const *args, const size_t *arg_lens, size_t argc);
+size_t protocore_resp_encode_command(char *buf, size_t cap, const char *const *args, const size_t *arg_lens,
+                                     size_t argc);
 
 /**
  * @brief Parse one RESP value at the head of [buf, buf+len).
@@ -84,10 +85,10 @@ size_t pc_resp_encode_command(char *buf, size_t cap, const char *const *args, co
  * @return true on a complete value; false if the buffer holds an incomplete or
  *         malformed value (then @p out / @p consumed are unspecified).
  */
-proto_bool pc_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t *consumed);
+proto_bool protocore_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t *consumed);
 
-#endif // PC_ENABLE_REDIS
+#endif // PROTOCORE_ENABLE_REDIS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_REDIS_RESP_H

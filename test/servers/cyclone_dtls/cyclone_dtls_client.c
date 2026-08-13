@@ -5,7 +5,7 @@
 // builds against Oryx CycloneSSL (GPLv2), fetched at run time by run_interop.sh - never vendored here.
 //
 // Completes a real DTLS 1.3 handshake (TLS_AES_128_GCM_SHA256 / X25519 / Ed25519) against the
-// library's pc_dtls_conn UDP test server, then does one application-data round trip: sends
+// library's protocore_dtls_conn UDP test server, then does one application-data round trip: sends
 // "hello cyclone!" and prints the echo. Exit 0 on a byte-exact round trip, non-zero otherwise.
 //
 //   usage: cyclone_dtls_client <host> <port> [--rpk]

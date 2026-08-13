@@ -6,10 +6,10 @@
 // link standalone. The device figure comes from the rig /bench pc_nats_parse op; this host ns/op + MB/s is a
 // relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_NATS=1 test/performance_benching/services/nats/host.c
+//   -DPROTOCORE_ENABLE_NATS=1 test/performance_benching/services/nats/host.c
 //   src/services/iot/nats/nats.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bnats && /tmp/bnats
 
-#define PC_ENABLE_NATS 1
+#define PROTOCORE_ENABLE_NATS 1
 #include "services/iot/nats/nats.h"
 
 #include "host_bench.h"

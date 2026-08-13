@@ -9,28 +9,28 @@
 #include "services/peripherals/ldc1614/ldc1614.h"
 #include "protocore_config.h"
 
-#if PC_ENABLE_LDC1614
+#if PROTOCORE_ENABLE_LDC1614
 
-#if PC_HAS_BUS
-#include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
+#if PROTOCORE_HAS_BUS
+#include "mmgr/endian.h" // protocore_wr16be / protocore_rd16be: the registers are big-endian
 #include "services/peripherals/i2c.h"
 #endif
-uint32_t pc_ldc1614_data(uint16_t msb_reg, uint16_t lsb_reg)
+uint32_t protocore_ldc1614_data(uint16_t msb_reg, uint16_t lsb_reg)
 {
     return ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
 }
 
-uint8_t pc_ldc1614_error(uint16_t msb_reg)
+uint8_t protocore_ldc1614_error(uint16_t msb_reg)
 {
     return (uint8_t)((msb_reg >> 12) & 0x0F);
 }
 
-uint64_t pc_ldc1614_sensor_freq_hz(uint32_t data28, uint32_t fref_hz)
+uint64_t protocore_ldc1614_sensor_freq_hz(uint32_t data28, uint32_t fref_hz)
 {
     return ((uint64_t)data28 * fref_hz) >> 28;
 }
 
-size_t pc_ldc1614_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16_t settlecount)
+size_t protocore_ldc1614_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16_t settlecount)
 {
     if (!buf || cap < LDC1614_CONFIG_MAX)
     {
@@ -55,13 +55,13 @@ size_t pc_ldc1614_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16
     return o;
 }
 
-#if PC_HAS_BUS
+#if PROTOCORE_HAS_BUS
 
 // All LDC1614 I2C-binding state, owned by one instance (internal linkage): the device address, the
 // register frame, and the bring-up sequence buffer, so it is one named owner, unreachable from any
 // other translation unit. Both buffers are members rather than locals because a transfer is
 // composed in place: a write is a register byte and a 16-bit value, and the bring-up sequence is
-// the (register, msb, lsb) triples pc_ldc1614_build_config lays down.
+// the (register, msb, lsb) triples protocore_ldc1614_build_config lays down.
 typedef struct
 {
     uint8_t addr;
@@ -72,24 +72,24 @@ static Ldc1614Ctx s_ldc = {.addr = 0x2A, .frame = {0}, .config = {0}};
 
 static proto_bool read16(uint8_t reg, uint16_t *out)
 {
-    if (!pc_i2c_write_read(s_ldc.addr, &reg, 1, s_ldc.frame, 2))
+    if (!protocore_i2c_write_read(s_ldc.addr, &reg, 1, s_ldc.frame, 2))
     {
         return PROTO_FALSE;
     }
-    *out = pc_rd16be(s_ldc.frame);
+    *out = protocore_rd16be(s_ldc.frame);
     return PROTO_TRUE;
 }
 
 static proto_bool write16(uint8_t reg, uint16_t val)
 {
     s_ldc.frame[0] = reg;
-    (void)pc_wr16be(&s_ldc.frame[1], val);
-    return pc_i2c_write(s_ldc.addr, s_ldc.frame, sizeof(s_ldc.frame));
+    (void)protocore_wr16be(&s_ldc.frame[1], val);
+    return protocore_i2c_write(s_ldc.addr, s_ldc.frame, sizeof(s_ldc.frame));
 }
 
-proto_bool pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
+proto_bool protocore_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
 {
-    pc_i2c_begin();
+    protocore_i2c_begin();
     s_ldc.addr = addr;
     uint16_t id = 0;
     if (!read16(LDC1614_REG_DEVICE_ID, &id))
@@ -100,10 +100,10 @@ proto_bool pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_ldc1614_build_config(s_ldc.config, sizeof(s_ldc.config), rcount, settlecount);
+    size_t n = protocore_ldc1614_build_config(s_ldc.config, sizeof(s_ldc.config), rcount, settlecount);
     for (size_t i = 0; i + 3 <= n; i += 3)
     {
-        if (!write16(s_ldc.config[i], pc_rd16be(&s_ldc.config[i + 1])))
+        if (!write16(s_ldc.config[i], protocore_rd16be(&s_ldc.config[i + 1])))
         {
             return PROTO_FALSE;
         }
@@ -111,7 +111,7 @@ proto_bool pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
     return PROTO_TRUE;
 }
 
-proto_bool pc_ldc1614_read_ch0(uint32_t *out)
+proto_bool protocore_ldc1614_read_ch0(uint32_t *out)
 {
     if (!out)
     {
@@ -123,10 +123,10 @@ proto_bool pc_ldc1614_read_ch0(uint32_t *out)
     {
         return PROTO_FALSE;
     }
-    *out = pc_ldc1614_data(msb, lsb);
+    *out = protocore_ldc1614_data(msb, lsb);
     return PROTO_TRUE;
 }
 
-#endif // PC_HAS_BUS
+#endif // PROTOCORE_HAS_BUS
 
-#endif // PC_ENABLE_LDC1614
+#endif // PROTOCORE_ENABLE_LDC1614

@@ -3,7 +3,7 @@
 
 /**
  * @file AuthLockout.ino
- * @brief Brute-force lockout for HTTP auth (PC_ENABLE_AUTH_LOCKOUT).
+ * @brief Brute-force lockout for HTTP auth (PROTOCORE_ENABLE_AUTH_LOCKOUT).
  *
  * Adds a per-source-IP guard in front of authenticated routes: after a few wrong
  * passwords from one address, that address is locked out with an exponential
@@ -13,15 +13,15 @@
  *
  * NOTE: enable the lockout for the whole build (a .ino #define does not reach the
  * separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_AUTH_LOCKOUT=1
- * (PC_ENABLE_AUTH is on by default. Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so
+ *     build_flags = -DPROTOCORE_ENABLE_AUTH_LOCKOUT=1
+ * (PROTOCORE_ENABLE_AUTH is on by default. Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so
  * it builds as-is.)
  *
  * Try: repeat `curl -u admin:wrong http://<ip>/secret` until you get 429, then
  * `curl -u admin:s3cret http://<ip>/secret` once the Retry-After elapses.
  */
 
-#define PC_ENABLE_AUTH_LOCKOUT 1
+#define PROTOCORE_ENABLE_AUTH_LOCKOUT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -49,7 +49,7 @@ void setup()
 
     // Protected route. Repeated wrong passwords from one IP trip the lockout
     // (429) with exponential backoff; the tuning lives in protocore_config.h
-    // (PC_AUTH_LOCKOUT_THRESHOLD / _BASE_MS / _MAX_MS).
+    // (PROTOCORE_AUTH_LOCKOUT_THRESHOLD / _BASE_MS / _MAX_MS).
     on_http_auth(
         "/secret", HTTP_GET,
         [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",

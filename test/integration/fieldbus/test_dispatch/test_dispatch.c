@@ -11,7 +11,7 @@
 
 #include "rx_feed.h"
 #include <unity.h>
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
 #include "network_drivers/transport/tcp.h"
 #include "services/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch
 #endif
@@ -27,7 +27,7 @@ static void handle_ok(uint8_t slot_id, HttpReq *req)
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     handler_called = PROTO_FALSE;
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -35,19 +35,19 @@ void setUp()
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     tcp_capture_reset();
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
     // With CSRF compiled in, state-changing methods are gated before dispatch; set a secret so a valid
-    // token can be issued (pc_csrf_issue/verify no-op without one), letting the unsafe-method tests below
+    // token can be issued (protocore_csrf_issue/verify no-op without one), letting the unsafe-method tests below
     // reach the 405/Allow method dispatch as a legitimate token-bearing client would.
-    static const uint8_t pc_csrf_key[16] = {0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65,
-                                            0x79, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
-    pc_csrf_set_secret(pc_csrf_key, sizeof(pc_csrf_key));
+    static const uint8_t protocore_csrf_key[16] = {0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65,
+                                                   0x79, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
+    protocore_csrf_set_secret(protocore_csrf_key, sizeof(protocore_csrf_key));
 #endif
 }
 
@@ -63,15 +63,15 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
     handle();
 }
 
-// Feed an unsafe-method (POST/DELETE/...) request. Under PC_ENABLE_CSRF such a method is gated before
+// Feed an unsafe-method (POST/DELETE/...) request. Under PROTOCORE_ENABLE_CSRF such a method is gated before
 // dispatch, so attach a valid token to let the request reach the 405/Allow method dispatch (as a real
 // token-bearing client would); with CSRF off the request line is plain.
 static void feed_unsafe(uint8_t slot, const char *method, const char *path)
 {
     char reqbuf[256];
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
     char tok[CSRF_TOKEN_BUF];
-    pc_csrf_issue(tok, sizeof(tok));
+    protocore_csrf_issue(tok, sizeof(tok));
     snprintf(reqbuf, sizeof(reqbuf), "%s %s HTTP/1.1\r\nX-CSRF-Token: %s\r\n\r\n", method, path, tok);
 #else
     snprintf(reqbuf, sizeof(reqbuf), "%s %s HTTP/1.1\r\n\r\n", method, path);
@@ -169,7 +169,7 @@ void test_head_on_post_only_route_405()
 
 // ---- WebSocket handoff (regression) ---------------------------------------
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 // Once a slot has upgraded to WebSocket, http_parse() must not consume its rx
 // bytes - they are WS frames the frame parser will drain. The event-queue
 // dispatch used to call http_parse() on an upgraded slot and eat the first
@@ -207,10 +207,10 @@ void test_correct_method_still_dispatches()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
 }
 
-// ---- Slow-loris / request-completion deadline (PC_REQUEST_TIMEOUT_MS) -----
-#if PC_REQUEST_TIMEOUT_MS > 0
+// ---- Slow-loris / request-completion deadline (PROTOCORE_REQUEST_TIMEOUT_MS) -----
+#if PROTOCORE_REQUEST_TIMEOUT_MS > 0
 // A connection that started a request (req_start_ms armed on the first RX byte) but never completes it within
-// PC_REQUEST_TIMEOUT_MS is answered 408 and closed, freeing the slot - the connection-slot (slow-loris)
+// PROTOCORE_REQUEST_TIMEOUT_MS is answered 408 and closed, freeing the slot - the connection-slot (slow-loris)
 // defense. Here the deadline is armed directly (push_str writes the ring buffer, bypassing the RX path that
 // arms it in the field); the HW interop test drives a real trickle. A trickle cannot reset req_start_ms (the
 // RX path arms it once, only when 0), so a drip-fed partial request still trips this.
@@ -222,10 +222,10 @@ void test_slowloris_incomplete_request_reaped_past_deadline()
     http_parse(0);
     TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
-    set_millis(1 + PC_REQUEST_TIMEOUT_MS); // elapsed == deadline
+    set_millis(1 + PROTOCORE_REQUEST_TIMEOUT_MS); // elapsed == deadline
     // The slow-loris keeps its idle timer fresh (a trickle byte refreshes last_activity_ms every few seconds),
     // so the CONN_TIMEOUT_MS idle sweep never fires - only this request-completion deadline catches it.
-    conn_pool[0].last_activity_ms = 1 + PC_REQUEST_TIMEOUT_MS;
+    conn_pool[0].last_activity_ms = 1 + PROTOCORE_REQUEST_TIMEOUT_MS;
     handle();
 
     const char *r = tcp_captured();
@@ -242,8 +242,8 @@ void test_incomplete_request_survives_before_deadline()
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n");
     http_parse(0);
 
-    set_millis(PC_REQUEST_TIMEOUT_MS);                     // armed at t=1 -> elapsed = deadline-1 < deadline
-    conn_pool[0].last_activity_ms = PC_REQUEST_TIMEOUT_MS; // fresh idle timer (trickle), so idle sweep is out
+    set_millis(PROTOCORE_REQUEST_TIMEOUT_MS);                     // armed at t=1 -> elapsed = deadline-1 < deadline
+    conn_pool[0].last_activity_ms = PROTOCORE_REQUEST_TIMEOUT_MS; // fresh idle timer (trickle), so idle sweep is out
     handle();
 
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));               // not yet reaped
@@ -262,7 +262,7 @@ void test_completed_slow_request_not_reaped()
     TEST_ASSERT_EQUAL(0, (int)conn_pool[0].req_start_ms); // disarmed on completion
 
     tcp_capture_reset();
-    set_millis(1 + PC_REQUEST_TIMEOUT_MS + 1);
+    set_millis(1 + PROTOCORE_REQUEST_TIMEOUT_MS + 1);
     handle();
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408")); // an idle keep-alive slot is not a slow request
 }
@@ -277,14 +277,14 @@ void test_streaming_body_upload_not_reaped_past_deadline()
     http_pool[0].parse_state = PARSE_BODY; // headers done, streaming the body
     http_pool[0].content_length = 100000;  // a large upload, not yet complete
     http_pool[0].body_bytes_read = 10;
-    set_millis(1 + PC_REQUEST_TIMEOUT_MS + 5000);                     // well past the header deadline
-    conn_pool[0].last_activity_ms = 1 + PC_REQUEST_TIMEOUT_MS + 5000; // body bytes keep the idle timer fresh
+    set_millis(1 + PROTOCORE_REQUEST_TIMEOUT_MS + 5000);                     // well past the header deadline
+    conn_pool[0].last_activity_ms = 1 + PROTOCORE_REQUEST_TIMEOUT_MS + 5000; // body bytes keep the idle timer fresh
     handle();
 
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));               // header-scoped: body is not reaped
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // upload continues
 }
-#endif // PC_REQUEST_TIMEOUT_MS > 0
+#endif // PROTOCORE_REQUEST_TIMEOUT_MS > 0
 
 int main()
 {
@@ -298,11 +298,11 @@ int main()
     RUN_TEST(test_head_runs_get_handler_without_body);
     RUN_TEST(test_get_route_advertises_head_in_allow);
     RUN_TEST(test_head_on_post_only_route_405);
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
     RUN_TEST(test_http_parse_skips_ws_upgraded_slot);
 #endif
     RUN_TEST(test_correct_method_still_dispatches);
-#if PC_REQUEST_TIMEOUT_MS > 0
+#if PROTOCORE_REQUEST_TIMEOUT_MS > 0
     RUN_TEST(test_slowloris_incomplete_request_reaped_past_deadline);
     RUN_TEST(test_incomplete_request_survives_before_deadline);
     RUN_TEST(test_completed_slow_request_not_reaped);

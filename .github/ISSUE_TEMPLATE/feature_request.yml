@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Features in this library are deterministic and opt-in (a `PC_ENABLE_*`
+        Features in this library are deterministic and opt-in (a `PROTOCORE_ENABLE_*`
         flag, fixed buffers, no runtime allocation). Keep that in mind below.
   - type: textarea
     id: problem

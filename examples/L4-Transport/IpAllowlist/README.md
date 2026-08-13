@@ -1,6 +1,6 @@
 # IpAllowlist - a source-IP accept-time firewall
 
-**Layer:** L4 Transport · **Build flags:** `PC_ENABLE_IP_ALLOWLIST`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_IP_ALLOWLIST`
 
 ## What this example teaches
 
@@ -39,7 +39,7 @@ The `listener.h` include is what brings in `Tcp.listener->ip_allow_add_cidr`.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_IP_ALLOWLIST=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_IP_ALLOWLIST=1" \
   --lib="." examples/L4-Transport/IpAllowlist/IpAllowlist.ino
 ```
 
@@ -55,7 +55,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_IP_ALLOWLIST 1
+#define PROTOCORE_ENABLE_IP_ALLOWLIST 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

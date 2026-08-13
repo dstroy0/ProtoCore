@@ -43,19 +43,19 @@ void dbench_run(void)
         volatile size_t sink = 0;
         CipResponse r;
 
-        DBENCH_OP("pc_cip_build_epath 8bit", 100000,
-                  sink += pc_cip_build_epath(epath8, sizeof(epath8), 0x01, 0x01, 0x07, true));
-        DBENCH_OP("pc_cip_build_epath 16bit", 100000,
-                  sink += pc_cip_build_epath(epath16, sizeof(epath16), 0x0100, 0x01, 0, false));
-        DBENCH_OP("pc_cip_build_get_attr_single", 100000,
-                  sink += pc_cip_build_get_attr_single(req, sizeof(req), 0x01, 0x01, 0x07));
-        DBENCH_OP("pc_cip_build_request (SET)", 100000,
-                  sink += pc_cip_build_request(req, sizeof(req), CIP_SC_SET_ATTR_SINGLE, set_epath, sizeof(set_epath),
-                                               set_data, sizeof(set_data)));
-        DBENCH_OP("pc_cip_parse_response ok", 100000,
-                  sink += pc_cip_parse_response(resp_ok, sizeof(resp_ok), &r) ? 1 : 0);
-        DBENCH_OP("pc_cip_parse_response addl", 100000,
-                  sink += pc_cip_parse_response(resp_addl, sizeof(resp_addl), &r) ? 1 : 0);
+        DBENCH_OP("protocore_cip_build_epath 8bit", 100000,
+                  sink += protocore_cip_build_epath(epath8, sizeof(epath8), 0x01, 0x01, 0x07, true));
+        DBENCH_OP("protocore_cip_build_epath 16bit", 100000,
+                  sink += protocore_cip_build_epath(epath16, sizeof(epath16), 0x0100, 0x01, 0, false));
+        DBENCH_OP("protocore_cip_build_get_attr_single", 100000,
+                  sink += protocore_cip_build_get_attr_single(req, sizeof(req), 0x01, 0x01, 0x07));
+        DBENCH_OP("protocore_cip_build_request (SET)", 100000,
+                  sink += protocore_cip_build_request(req, sizeof(req), CIP_SC_SET_ATTR_SINGLE, set_epath,
+                                                      sizeof(set_epath), set_data, sizeof(set_data)));
+        DBENCH_OP("protocore_cip_parse_response ok", 100000,
+                  sink += protocore_cip_parse_response(resp_ok, sizeof(resp_ok), &r) ? 1 : 0);
+        DBENCH_OP("protocore_cip_parse_response addl", 100000,
+                  sink += protocore_cip_parse_response(resp_addl, sizeof(resp_addl), &r) ? 1 : 0);
         (void)sink;
 
         DBENCH_DONE();

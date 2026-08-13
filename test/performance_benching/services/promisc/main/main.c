@@ -3,9 +3,9 @@
 //
 // On-device CCOUNT microbenchmark for the Wi-Fi promiscuous capture helpers (services/radio/promisc):
 // wifi_frame_parse() decodes an 802.11 MAC header (type/subtype + the to/from-DS src/dst/bssid
-// layout, QoS, sequence), and the shared libpcap framing (pc_pcap_record_header /
-// pc_pcap_global_header) wraps a captured frame for a wired collector - all pure, no radio. The
-// esp_wifi promiscuous bring-up (pc_promisc_begin/_end) is real-hardware and out of scope here;
+// layout, QoS, sequence), and the shared libpcap framing (protocore_pcap_record_header /
+// protocore_pcap_global_header) wraps a captured frame for a wired collector - all pure, no radio. The
+// esp_wifi promiscuous bring-up (protocore_promisc_begin/_end) is real-hardware and out of scope here;
 // only the deterministic per-frame CPU path (the hot path the rx callback runs) is benched.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -55,10 +55,10 @@ void dbench_run(void)
         DBENCH_OP("wifi_frame_parse data(from-ds)", 200000,
                   sink += wifi_frame_parse(data_fromds, sizeof(data_fromds), &fi));
         DBENCH_OP("wifi_frame_parse qos data", 200000, sink += wifi_frame_parse(qos, sizeof(qos), &fi));
-        DBENCH_OP("pc_pcap_record_header", 200000,
-                  sink += pc_pcap_record_header(pcaprec, sizeof(pcaprec), 1720700000u, 123456u, 128u, 128u));
-        DBENCH_OP("pc_pcap_global_header", 200000,
-                  sink += pc_pcap_global_header(pcapglob, sizeof(pcapglob), PC_DLT_IEEE802_11));
+        DBENCH_OP("protocore_pcap_record_header", 200000,
+                  sink += protocore_pcap_record_header(pcaprec, sizeof(pcaprec), 1720700000u, 123456u, 128u, 128u));
+        DBENCH_OP("protocore_pcap_global_header", 200000,
+                  sink += protocore_pcap_global_header(pcapglob, sizeof(pcapglob), PROTOCORE_DLT_IEEE802_11));
         (void)sink;
         DBENCH_DONE();
     }

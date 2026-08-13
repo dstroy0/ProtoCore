@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// HTTP Range requests / 206 Partial Content (PC_ENABLE_RANGE). Each test
+// HTTP Range requests / 206 Partial Content (PROTOCORE_ENABLE_RANGE). Each test
 // serves a known 20-byte file via serve_file() with a Range header and checks
 // the status line, Content-Range / Content-Length headers, and the exact bytes
 // returned (via the tcp_write capture mock).
@@ -33,7 +33,7 @@ static void serve_data_conn_gone(uint8_t slot_id, HttpReq *req)
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     on_http("/data", HTTP_GET, serve_data);
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -41,13 +41,13 @@ void setUp()
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     lfsm_format();
-    pc_mnt_mount(lfsm()); // the app hands us its filesystem; mnt is what everything reaches it through
+    protocore_mnt_mount(lfsm()); // the app hands us its filesystem; mnt is what everything reaches it through
     TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", FILE_DATA)); // the 20 bytes every test serves
     tcp_capture_reset();
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT); // reopen the window a backpressure test may have shrunk

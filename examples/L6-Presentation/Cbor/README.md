@@ -1,6 +1,6 @@
 # Cbor - compact binary telemetry with CBOR
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_CBOR`
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_CBOR`
 
 ## What this example teaches
 
@@ -9,19 +9,19 @@ matters for high-rate telemetry or constrained uplinks. This serves a small
 `{heap, uptime, rssi}` map as `application/cbor` using the zero-heap CBOR writer,
 streamed through the binary-safe chunked writer.
 
-**Encoding with `pc_span`.** You initialize the writer over a stack buffer,
-declare the map size, then emit key/value pairs; `pc_span_ok()` reports overflow and
-`pc_span_len()` gives the encoded length:
+**Encoding with `protocore_span`.** You initialize the writer over a stack buffer,
+declare the map size, then emit key/value pairs; `protocore_span_ok()` reports overflow and
+`protocore_span_len()` gives the encoded length:
 
 ```cpp
 uint8_t buf[64];
-pc_span w;
-w = pc_span_from( buf, sizeof(buf));
+protocore_span w;
+w = protocore_span_from( buf, sizeof(buf));
 Cbor.put_map(&w, 3);                    // a 3-entry map
 Cbor.put_str(&w, "heap"); Cbor.put_uint(&w, ESP.getFreeHeap());
 Cbor.put_str(&w, "uptime"); Cbor.put_uint(&w, millis() / 1000);
 Cbor.put_str(&w, "rssi"); Cbor.put_int(&w, Physical.wifi->rssi());   // signed
-ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;           // page these bytes out below
+ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;           // page these bytes out below
 ```
 
 **Why `send_chunked()`.** The response is binary, so it is sent with the
@@ -31,7 +31,7 @@ slice at a time (here the whole small map in one go) and returns 0 to finish:
 
 ```cpp
 struct CborCtx { uint8_t buf[64]; size_t len, off; };
-static size_t pc_cbor_source(uint8_t *out, size_t cap, void *vctx) {
+static size_t protocore_cbor_source(uint8_t *out, size_t cap, void *vctx) {
     CborCtx *c = (CborCtx *)vctx;
     if (c->off >= c->len) return 0;                 // done
     size_t n = c->len - c->off; if (n > cap) n = cap;
@@ -40,7 +40,7 @@ static size_t pc_cbor_source(uint8_t *out, size_t cap, void *vctx) {
 ...
 static CborCtx ctx;                                 // static: must outlive the call
 /* encode into ctx.buf, set ctx.len/off ... */
-server.send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);
+server.send_chunked(id, 200, "application/cbor", protocore_cbor_source, &ctx);
 ```
 
 For a text-based compact binary alternative, see [MsgPack](../MsgPack).
@@ -49,7 +49,7 @@ For a text-based compact binary alternative, see [MsgPack](../MsgPack).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_CBOR=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_CBOR=1" \
   --lib="." examples/L6-Presentation/Cbor/Cbor.ino
 ```
 
@@ -66,7 +66,7 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_CBOR 1
+#define PROTOCORE_ENABLE_CBOR 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -84,7 +84,7 @@ struct CborCtx
     uint8_t buf[64];
     size_t len, off;
 };
-static size_t pc_cbor_source(uint8_t *out, size_t cap, void *vctx)
+static size_t protocore_cbor_source(uint8_t *out, size_t cap, void *vctx)
 {
     CborCtx *c = (CborCtx *)vctx;
     if (c->off >= c->len)
@@ -113,8 +113,8 @@ void setup()
 
     server.on("/telemetry.cbor", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static CborCtx ctx; // static: must outlive send_chunked
-        pc_span w;
-        w = pc_span_from( ctx.buf, sizeof(ctx.buf));
+        protocore_span w;
+        w = protocore_span_from( ctx.buf, sizeof(ctx.buf));
         Cbor.put_map(&w, 3);
         Cbor.put_str(&w, "heap");
         Cbor.put_uint(&w, ESP.getFreeHeap());
@@ -122,9 +122,9 @@ void setup()
         Cbor.put_uint(&w, millis() / 1000);
         Cbor.put_str(&w, "rssi");
         Cbor.put_int(&w, Physical.wifi->rssi());
-        ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
+        ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
         ctx.off = 0;
-        server.send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);
+        server.send_chunked(id, 200, "application/cbor", protocore_cbor_source, &ctx);
     });
     server.begin(80);
 }

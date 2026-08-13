@@ -53,12 +53,12 @@ void setup()
         static const uint8_t want[32] = {0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40,
                                          0xde, 0x5d, 0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17,
                                          0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad};
-        pc_sha256_ctx c;
+        protocore_sha256_ctx c;
         uint8_t out[32];
-        pc_sha256_init(&c);
-        pc_sha256_update(&c, (const uint8_t *)"a", 1);
-        pc_sha256_update(&c, (const uint8_t *)"bc", 2); // chunked → exercises streaming
-        pc_sha256_final(&c, out);
+        protocore_sha256_init(&c);
+        protocore_sha256_update(&c, (const uint8_t *)"a", 1);
+        protocore_sha256_update(&c, (const uint8_t *)"bc", 2); // chunked → exercises streaming
+        protocore_sha256_final(&c, out);
         report("sha256 streaming", eq(out, want, 32), all_ok);
     }
 
@@ -70,7 +70,7 @@ void setup()
                                          0xce, 0xaf, 0x0b, 0xf1, 0x2b, 0x88, 0x1d, 0xc2, 0x00, 0xc9, 0x83,
                                          0x3d, 0xa7, 0x26, 0xe9, 0x37, 0x6c, 0x2e, 0x32, 0xcf, 0xf7};
         uint8_t mac[32];
-        pc_hmac_sha256(key, sizeof(key), (const uint8_t *)"Hi There", 8, mac);
+        protocore_hmac_sha256(key, sizeof(key), (const uint8_t *)"Hi There", 8, mac);
         report("hmac-sha256 rfc4231", eq(mac, want, 32), all_ok);
     }
 
@@ -89,7 +89,7 @@ void setup()
         memcpy(counter, iv, sizeof(counter));
         uint8_t out[16];
         // Key schedule and keystream ride the wiped crypto scratch; no cipher state persists on the stack.
-        pc_aes256ctr_crypt(key, counter, pt, out, 16);
+        protocore_aes256ctr_crypt(key, counter, pt, out, 16);
         report("aes256-ctr nist", eq(out, want, 16), all_ok);
     }
 

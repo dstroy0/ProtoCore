@@ -63,17 +63,18 @@
 #include "network_drivers/transport/tcp.h"
 #include "protocore_config.h"
 
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
 #include "network_drivers/presentation/codec/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 
 /**
  * @brief Scratch borrowed while compressing one outbound message.
  *
- * The deflate state and the output buffer are live together. PC_WS_DEFLATE_MAX bounds the payload
+ * The deflate state and the output buffer are live together. PROTOCORE_WS_DEFLATE_MAX bounds the payload
  * the compressor will accept, which is what turns `len + len/8 + 16` into a constant.
  */
-#define PC_PLAINTEXT_WORK_WS_SEND (DEFLATE_SCRATCH_SIZE + PC_WS_DEFLATE_MAX + (PC_WS_DEFLATE_MAX / 8) + 16)
+#define PROTOCORE_PLAINTEXT_WORK_WS_SEND                                                                               \
+    (DEFLATE_SCRATCH_SIZE + PROTOCORE_WS_DEFLATE_MAX + (PROTOCORE_WS_DEFLATE_MAX / 8) + 16)
 
 /**
  * @brief Scratch borrowed while decompressing one reassembled inbound message.
@@ -81,10 +82,10 @@
  * Input (message + the RFC 7692 00 00 ff ff marker), output, and the inflate tables are live
  * together. The parser closes 1009 before a message exceeds WS_FRAME_SIZE, which bounds the input.
  */
-#define PC_PLAINTEXT_WORK_WS_RECV (WS_FRAME_SIZE + 4 + WS_FRAME_SIZE + INFLATE_SCRATCH_SIZE)
+#define PROTOCORE_PLAINTEXT_WORK_WS_RECV (WS_FRAME_SIZE + 4 + WS_FRAME_SIZE + INFLATE_SCRATCH_SIZE)
 #else
-#define PC_PLAINTEXT_WORK_WS_SEND 0
-#define PC_PLAINTEXT_WORK_WS_RECV 0
+#define PROTOCORE_PLAINTEXT_WORK_WS_SEND 0
+#define PROTOCORE_PLAINTEXT_WORK_WS_RECV 0
 #endif
 
 // ---------------------------------------------------------------------------
@@ -171,7 +172,7 @@ typedef struct
     uint32_t msg_len;         ///< Bytes assembled so far across all fragments.
     uint8_t ctl_buf[125 + 1]; ///< Control-frame payload (ping/pong/close), null-terminated.
 
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
     proto_bool pmd;            ///< permessage-deflate negotiated on this connection (RFC 7692).
     proto_bool msg_compressed; ///< Current data message arrived compressed (RSV1 on its first frame).
 #endif
@@ -209,10 +210,10 @@ typedef void (*WsMessageHandler)(uint8_t ws_id);
 typedef void (*WsCloseHandler)(uint8_t ws_id);
 
 /** @brief The id a route carries when it serves no WebSocket. */
-#define PC_WS_NONE 0xFFu
+#define PROTOCORE_WS_NONE 0xFFu
 
 /**
- * @brief Record one route's handlers and return the id naming them, or ::PC_WS_NONE when full.
+ * @brief Record one route's handlers and return the id naming them, or ::PROTOCORE_WS_NONE when full.
  *
  * The handlers live here, not in the route table: a route decides where a request goes, and what
  * runs once the socket is open belongs to this module. A route stores the id, so nothing above
@@ -317,8 +318,8 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
 /**
  * @brief Set the outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes; 0 = off.
  *
- * A runtime override of PC_WS_FRAG_SIZE. When >0, a data message longer than @p bytes is split into
- * that-sized frames by ws_send_frame() (see PC_WS_FRAG_SIZE). Applies to all connections.
+ * A runtime override of PROTOCORE_WS_FRAG_SIZE. When >0, a data message longer than @p bytes is split into
+ * that-sized frames by ws_send_frame() (see PROTOCORE_WS_FRAG_SIZE). Applies to all connections.
  */
 void ws_set_frag_size(uint16_t bytes);
 

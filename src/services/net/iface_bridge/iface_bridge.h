@@ -3,7 +3,7 @@
 
 /**
  * @file iface_bridge.h
- * @brief User-defined address:port -> hardware-bus translation (PC_ENABLE_IFACE_BRIDGE).
+ * @brief User-defined address:port -> hardware-bus translation (PROTOCORE_ENABLE_IFACE_BRIDGE).
  *
  * A configurable "device server": the application registers rules mapping a listen address:port (plus
  * TCP/UDP) to a hardware endpoint - a UART, an SPI chip-select, or an I2C address - so a network client
@@ -30,13 +30,13 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_IFACE_BRIDGE
+#if PROTOCORE_ENABLE_IFACE_BRIDGE
 
-#include "shared_primitives/ip.h" // pc_ip (carry the full bind address, never a flattened one)
+#include "shared_primitives/ip.h" // protocore_ip (carry the full bind address, never a flattened one)
 
-// PC_BRIDGE_MAX_RULES is defined in protocore_config.h (the config owner).
+// PROTOCORE_BRIDGE_MAX_RULES is defined in protocore_config.h (the config owner).
 
-#define PC_BRIDGE_TXN_HDR 4 ///< transaction frame header: write_len(2) + read_len(2), big-endian
+#define PROTOCORE_BRIDGE_TXN_HDR 4 ///< transaction frame header: write_len(2) + read_len(2), big-endian
 
 /// Which hardware bus a rule targets.
 typedef enum PROTO_ENUM_PACKED
@@ -76,9 +76,9 @@ typedef struct
 /// A single address:port -> bus mapping.
 typedef struct
 {
-    pc_ip listen_ip;      ///< bind address (x.x.x.x / [v6]); family PC_IP_NONE = any interface
-    uint16_t listen_port; ///< nnnn
-    BridgeProto proto;    ///< TCP or UDP
+    protocore_ip listen_ip; ///< bind address (x.x.x.x / [v6]); family PROTOCORE_IP_NONE = any interface
+    uint16_t listen_port;   ///< nnnn
+    BridgeProto proto;      ///< TCP or UDP
     BridgeTarget target;
     proto_bool used;
 } BridgeRule;
@@ -88,20 +88,20 @@ typedef struct
 // ---------------------------------------------------------------------------------------------
 
 /// Remove all rules.
-void pc_iface_bridge_clear();
+void protocore_iface_bridge_clear();
 
 /// Register a rule. Returns false if the table is full or a rule already binds the same port+proto.
-proto_bool pc_iface_bridge_add(const BridgeRule *rule);
+proto_bool protocore_iface_bridge_add(const BridgeRule *rule);
 
 /// Convenience: build + add a rule in one call. @p ip may be NULL for "any interface". Returns false on
 /// a bad address, a full table, or a duplicate port+proto.
-proto_bool pc_iface_bridge_map(const char *ip, uint16_t port, BridgeProto proto, const BridgeTarget *target);
+proto_bool protocore_iface_bridge_map(const char *ip, uint16_t port, BridgeProto proto, const BridgeTarget *target);
 
 /// Find the rule bound to @p port + @p proto, or NULL. This is the listener-dispatch lookup.
-const BridgeRule *pc_iface_bridge_find(uint16_t port, BridgeProto proto);
+const BridgeRule *protocore_iface_bridge_find(uint16_t port, BridgeProto proto);
 
 /// Number of registered rules.
-uint8_t pc_iface_bridge_count();
+uint8_t protocore_iface_bridge_count();
 
 // ---------------------------------------------------------------------------------------------
 // Transaction frame codec (pure). write_len / read_len are big-endian.
@@ -115,16 +115,16 @@ uint8_t pc_iface_bridge_count();
  * does not yet hold the whole frame (the caller should read more), so a partial header or a partial write
  * payload both yield 0.
  */
-size_t pc_iface_bridge_txn_parse(const uint8_t *buf, size_t len, uint16_t *write_len, uint16_t *read_len,
-                                 const uint8_t **write_data);
+size_t protocore_iface_bridge_txn_parse(const uint8_t *buf, size_t len, uint16_t *write_len, uint16_t *read_len,
+                                        const uint8_t **write_data);
 
 /**
  * @brief Build a transaction request frame (header + write payload) into @p out.
  * @return bytes written, or 0 if @p out is too small.
  */
-size_t pc_iface_bridge_txn_build(uint8_t *out, size_t cap, const uint8_t *write_data, uint16_t write_len,
-                                 uint16_t read_len);
+size_t protocore_iface_bridge_txn_build(uint8_t *out, size_t cap, const uint8_t *write_data, uint16_t write_len,
+                                        uint16_t read_len);
 
-#endif // PC_ENABLE_IFACE_BRIDGE
+#endif // PROTOCORE_ENABLE_IFACE_BRIDGE
 
 #endif // PROTOCORE_IFACE_BRIDGE_H

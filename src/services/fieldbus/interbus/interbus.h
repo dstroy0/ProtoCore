@@ -3,7 +3,7 @@
 
 /**
  * @file interbus.h
- * @brief INTERBUS summation-frame fieldbus codec (PC_ENABLE_INTERBUS).
+ * @brief INTERBUS summation-frame fieldbus codec (PROTOCORE_ENABLE_INTERBUS).
  *
  * INTERBUS (Phoenix Contact) is a ring fieldbus with a distinctive **summation frame**: instead of
  * addressing each device, one frame circulates the whole ring and every device is a shift-register slice
@@ -24,15 +24,15 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_INTERBUS
+#if PROTOCORE_ENABLE_INTERBUS
 
 /** @brief the loopback word that opens a summation frame. */
-#define PC_INTERBUS_LOOPBACK 0xFFFF
+#define PROTOCORE_INTERBUS_LOOPBACK 0xFFFF
 
 /** @brief CRC-16/CCITT-FALSE (the INTERBUS FCS) over @p len bytes. */
-uint16_t pc_interbus_fcs(const uint8_t *bytes, size_t len);
+uint16_t protocore_interbus_fcs(const uint8_t *bytes, size_t len);
 
 /**
  * @brief Assemble a summation frame from per-device 16-bit word slices.
@@ -44,7 +44,7 @@ uint16_t pc_interbus_fcs(const uint8_t *bytes, size_t len);
  *
  * Layout: loopback(2) + words(word_count*2, big-endian) + FCS(2). The FCS covers loopback + words.
  */
-size_t pc_interbus_build(const uint16_t *words, size_t word_count, uint8_t *out, size_t cap);
+size_t protocore_interbus_build(const uint16_t *words, size_t word_count, uint8_t *out, size_t cap);
 
 /**
  * @brief Disassemble a summation frame back into device data words.
@@ -55,11 +55,11 @@ size_t pc_interbus_build(const uint16_t *words, size_t word_count, uint8_t *out,
  * @param out_count set to the number of words decoded.
  * @return true if the loopback word + FCS are valid and the words fit @p max_words.
  */
-proto_bool pc_interbus_parse(const uint8_t *frame, size_t len, uint16_t *out_words, size_t max_words,
-                             size_t *out_count);
+proto_bool protocore_interbus_parse(const uint8_t *frame, size_t len, uint16_t *out_words, size_t max_words,
+                                    size_t *out_count);
 
-#endif // PC_ENABLE_INTERBUS
+#endif // PROTOCORE_ENABLE_INTERBUS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_INTERBUS_H

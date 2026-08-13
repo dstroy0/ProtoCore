@@ -124,10 +124,10 @@ void test_decode_c31_and_index()
     const uint8_t block[] = {0x82, 0x86, 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65,
                              0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d};
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     Collected c = {0};
     char scratch[512];
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, block, sizeof block, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, block, sizeof block, scratch, sizeof scratch, collect, &c));
     TEST_ASSERT_EQUAL_INT(4, (int)c.n);
     TEST_ASSERT_EQUAL_STRING(":method", c.f[0].name);
     TEST_ASSERT_EQUAL_STRING("GET", c.f[0].value);
@@ -144,7 +144,7 @@ void test_decode_c31_and_index()
     // An indexed reference to entry 62 (0x80|62 = 0xbe) resolves it from the dynamic table.
     const uint8_t idx62[] = {0xbe};
     Collected c2 = {0};
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, idx62, 1, scratch, sizeof scratch, collect, &c2));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, idx62, 1, scratch, sizeof scratch, collect, &c2));
     TEST_ASSERT_EQUAL_INT(1, (int)c2.n);
     TEST_ASSERT_EQUAL_STRING(":authority", c2.f[0].name);
     TEST_ASSERT_EQUAL_STRING("www.example.com", c2.f[0].value);
@@ -162,7 +162,7 @@ static void vec_decode(HpackDynTable *t, const uint8_t *blk, size_t n, Collected
 {
     char scratch[512];
     memset(c, 0, sizeof *c);
-    TEST_ASSERT_TRUE(pc_hpack_decode(t, blk, n, scratch, sizeof scratch, collect, c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(t, blk, n, scratch, sizeof scratch, collect, c));
 }
 
 static void vec_field(const Collected *c, size_t i, const char *name, const char *value)
@@ -188,7 +188,7 @@ void test_c2_representation_vectors()
     // C.2.1 literal with incremental indexing, literal name: the only one that indexes.
     const uint8_t c21[26] = {0x40, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x6b, 0x65, 0x79, 0x0d,
                              0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72};
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     vec_decode(&t, c21, sizeof c21, &c);
     TEST_ASSERT_EQUAL_INT(1, (int)c.n);
     vec_field(&c, 0, "custom-key", "custom-header");
@@ -197,7 +197,7 @@ void test_c2_representation_vectors()
 
     // C.2.2 literal without indexing, indexed name (idx 4 = :path).
     const uint8_t c22[14] = {0x04, 0x0c, 0x2f, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2f, 0x70, 0x61, 0x74, 0x68};
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     vec_decode(&t, c22, sizeof c22, &c);
     TEST_ASSERT_EQUAL_INT(1, (int)c.n);
     vec_field(&c, 0, ":path", "/sample/path");
@@ -207,7 +207,7 @@ void test_c2_representation_vectors()
     // C.2.3 literal never indexed (the 0001 pattern). Sec 6.2.3: it must not reach the table.
     const uint8_t c23[17] = {0x10, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72,
                              0x64, 0x06, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74};
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     vec_decode(&t, c23, sizeof c23, &c);
     TEST_ASSERT_EQUAL_INT(1, (int)c.n);
     vec_field(&c, 0, "password", "secret");
@@ -220,7 +220,7 @@ void test_c2_representation_vectors()
     uint8_t c23_without[17];
     memcpy(c23_without, c23, sizeof c23);
     c23_without[0] = 0x00;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     vec_decode(&t, c23_without, sizeof c23_without, &c);
     TEST_ASSERT_EQUAL_INT(1, (int)c.n);
     vec_field(&c, 0, "password", "secret");
@@ -229,7 +229,7 @@ void test_c2_representation_vectors()
 
     // C.2.4 indexed header field, static index 2.
     const uint8_t c24[1] = {0x82};
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     vec_decode(&t, c24, sizeof c24, &c);
     TEST_ASSERT_EQUAL_INT(1, (int)c.n);
     vec_field(&c, 0, ":method", "GET");
@@ -248,7 +248,7 @@ void test_c3_request_sequence()
                              0x79, 0x0c, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x76, 0x61, 0x6c, 0x75, 0x65};
     HpackDynTable t;
     Collected c;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
 
     vec_decode(&t, c31, sizeof c31, &c);
     TEST_ASSERT_EQUAL_INT(4, (int)c.n);
@@ -287,7 +287,7 @@ void test_c4_request_sequence_huffman()
                              0x7d, 0x7f, 0x89, 0x25, 0xa8, 0x49, 0xe9, 0x5b, 0xb8, 0xe8, 0xb4, 0xbf};
     HpackDynTable t;
     Collected c;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
 
     vec_decode(&t, c41, sizeof c41, &c);
     TEST_ASSERT_EQUAL_INT(4, (int)c.n);
@@ -328,7 +328,7 @@ void test_c5_response_sequence_evicts()
                              0x36, 0x30, 0x30, 0x3b, 0x20, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x3d, 0x31};
     HpackDynTable t;
     Collected c;
-    pc_hpack_dyn_init(&t, 256);
+    protocore_hpack_dyn_init(&t, 256);
 
     vec_decode(&t, c51, sizeof c51, &c);
     TEST_ASSERT_EQUAL_INT(4, (int)c.n);
@@ -380,7 +380,7 @@ void test_c6_response_sequence_huffman_evicts()
                              0x03, 0xed, 0x4e, 0xe5, 0xb1, 0x06, 0x3d, 0x50, 0x07};
     HpackDynTable t;
     Collected c;
-    pc_hpack_dyn_init(&t, 256);
+    protocore_hpack_dyn_init(&t, 256);
 
     vec_decode(&t, c61, sizeof c61, &c);
     TEST_ASSERT_EQUAL_INT(4, (int)c.n);
@@ -527,7 +527,7 @@ void test_static_table_matches_appendix_a()
     for (int i = 1; i <= 61; i++)
     {
         const uint8_t indexed[1] = {(uint8_t)(0x80 | i)};
-        pc_hpack_dyn_init(&t, 4096);
+        protocore_hpack_dyn_init(&t, 4096);
         vec_decode(&t, indexed, 1, &c);
         TEST_ASSERT_EQUAL_INT(1, (int)c.n);
         TEST_ASSERT_EQUAL_STRING(RFC_STATIC[i - 1][0], c.f[0].name);
@@ -570,21 +570,21 @@ void test_huffman_table_matches_appendix_b()
 void test_dynamic_eviction()
 {
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 50); // room for one 36-byte entry, not two
+    protocore_hpack_dyn_init(&t, 50); // room for one 36-byte entry, not two
     // Two literal-with-incremental-indexing inserts (name idx 0 + inline name/value), each size
     // 2+2+32 = 36. The second must evict the first.
     const uint8_t block[] = {0x40, 0x02, 'a', 'a', 0x02, 'b', 'b',  // insert (aa: bb)
                              0x40, 0x02, 'c', 'c', 0x02, 'd', 'd'}; // insert (cc: dd) -> evicts
     Collected c = {0};
     char scratch[128];
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, block, sizeof block, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, block, sizeof block, scratch, sizeof scratch, collect, &c));
     TEST_ASSERT_EQUAL_INT(2, (int)c.n);
     TEST_ASSERT_EQUAL_INT(1, (int)t.ecount); // only the newest survives
     TEST_ASSERT_EQUAL_UINT32(36, t.used);
     // Index 62 is now (cc: dd); the evicted (aa: bb) would have been 63 (invalid now).
     const uint8_t idx62[] = {0xbe};
     Collected c2 = {0};
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, idx62, 1, scratch, sizeof scratch, collect, &c2));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, idx62, 1, scratch, sizeof scratch, collect, &c2));
     TEST_ASSERT_EQUAL_STRING("cc", c2.f[0].name);
     TEST_ASSERT_EQUAL_STRING("dd", c2.f[0].value);
 }
@@ -592,11 +592,11 @@ void test_dynamic_eviction()
 void test_encode_static()
 {
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_INT(1, (int)pc_hpack_encode_header(out, sizeof out, ":method", 7, "GET", 3));
+    TEST_ASSERT_EQUAL_INT(1, (int)protocore_hpack_encode_header(out, sizeof out, ":method", 7, "GET", 3));
     TEST_ASSERT_EQUAL_HEX8(0x82, out[0]); // static index 2
-    TEST_ASSERT_EQUAL_INT(1, (int)pc_hpack_encode_header(out, sizeof out, ":path", 5, "/", 1));
+    TEST_ASSERT_EQUAL_INT(1, (int)protocore_hpack_encode_header(out, sizeof out, ":path", 5, "/", 1));
     TEST_ASSERT_EQUAL_HEX8(0x84, out[0]); // static index 4
-    TEST_ASSERT_EQUAL_INT(1, (int)pc_hpack_encode_header(out, sizeof out, ":status", 7, "200", 3));
+    TEST_ASSERT_EQUAL_INT(1, (int)protocore_hpack_encode_header(out, sizeof out, ":status", 7, "200", 3));
     TEST_ASSERT_EQUAL_HEX8(0x88, out[0]); // static index 8
 }
 
@@ -616,15 +616,15 @@ void test_encode_decode_roundtrip()
     for (size_t k = 0; k < sizeof(hs) / sizeof(hs[0]); k++)
     {
         const KV *kv = &hs[k];
-        size_t w = pc_hpack_encode_header(block + bo, sizeof block - bo, kv->n, strlen(kv->n), kv->v, strlen(kv->v));
+        size_t w = protocore_hpack_encode_header(block + bo, sizeof block - bo, kv->n, strlen(kv->n), kv->v, strlen(kv->v));
         TEST_ASSERT_TRUE(w > 0);
         bo += w;
     }
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     Collected c = {0};
     char scratch[512];
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, block, bo, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, block, bo, scratch, sizeof scratch, collect, &c));
     TEST_ASSERT_EQUAL_INT(4, (int)c.n);
     for (int i = 0; i < 4; i++)
     {
@@ -638,13 +638,13 @@ void test_encode_decode_roundtrip()
 void test_reject_malformed()
 {
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     Collected c = {0};
     char scratch[128];
     const uint8_t idx0[] = {0x80}; // indexed field, index 0 -> error
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, idx0, 1, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, idx0, 1, scratch, sizeof scratch, collect, &c));
     const uint8_t trunc[] = {0x41, 0x0f, 'w', 'w'}; // literal len 15 but only 2 bytes present
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, trunc, sizeof trunc, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, trunc, sizeof trunc, scratch, sizeof scratch, collect, &c));
 }
 
 // RFC 7541 sec 6.3: a size update at or below the protocol's limit is applied, and one above it is a
@@ -653,28 +653,28 @@ void test_reject_malformed()
 void test_dyn_size_update()
 {
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     char scratch[256];
     Collected c = {0};
     const uint8_t ins[] = {0x40, 0x02, 'a', 'a', 0x02, 'b', 'b'}; // insert (aa: bb), size 36
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
     TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
 
     uint8_t up[8];
     Collected c2 = {0};
     size_t un = HpackPrim.encode_int(up, sizeof up, 5, 0x20, 100000); // over the limit -> refused
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
 
     un = HpackPrim.encode_int(up, sizeof up, 5, 0x20, 4097); // one over -> refused
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
 
     un = HpackPrim.encode_int(up, sizeof up, 5, 0x20, 4096); // exactly the limit -> applied
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
     TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
 
     const uint8_t z[] = {0x20}; // size update to 0 -> evicts everything
     Collected c3 = {0};
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, z, 1, scratch, sizeof scratch, collect, &c3));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, z, 1, scratch, sizeof scratch, collect, &c3));
     TEST_ASSERT_EQUAL_INT(0, (int)t.ecount);
 }
 
@@ -682,11 +682,11 @@ void test_dyn_size_update()
 void test_oversize_entry_clears()
 {
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 40); // (aaaaa: bbbbb) = 5+5+32 = 42 > 40
+    protocore_hpack_dyn_init(&t, 40); // (aaaaa: bbbbb) = 5+5+32 = 42 > 40
     char scratch[256];
     Collected c = {0};
     const uint8_t ins[] = {0x40, 0x05, 'a', 'a', 'a', 'a', 'a', 0x05, 'b', 'b', 'b', 'b', 'b'};
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
     TEST_ASSERT_EQUAL_INT(1, (int)c.n);      // still emitted
     TEST_ASSERT_EQUAL_INT(0, (int)t.ecount); // but the table was cleared, nothing indexed
 }
@@ -695,21 +695,21 @@ void test_oversize_entry_clears()
 void test_dynamic_name_and_index()
 {
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     char scratch[256];
     Collected c = {0};
     const uint8_t ins[] = {0x40, 0x06, 'm', 'y', 'n', 'a', 'm', 'e', 0x02, 'v', '1'}; // insert (myname: v1)
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
     // literal (incremental) with name index 62 (the dynamic "myname") + value "v2"
     const uint8_t litname[] = {0x7e, 0x02, 'v', '2'};
     Collected c2 = {0};
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, litname, sizeof litname, scratch, sizeof scratch, collect, &c2));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, litname, sizeof litname, scratch, sizeof scratch, collect, &c2));
     TEST_ASSERT_EQUAL_STRING("myname", c2.f[0].name); // name came from the dynamic table
     TEST_ASSERT_EQUAL_STRING("v2", c2.f[0].value);
     // indexed reference (0x80|62) to the newest dynamic entry (myname: v2)
     const uint8_t idx[] = {0xbe};
     Collected c3 = {0};
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, idx, 1, scratch, sizeof scratch, collect, &c3));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, idx, 1, scratch, sizeof scratch, collect, &c3));
     TEST_ASSERT_EQUAL_STRING("myname", c3.f[0].name);
     TEST_ASSERT_EQUAL_STRING("v2", c3.f[0].value);
 }
@@ -720,21 +720,21 @@ void test_hpack_decode_errors()
     HpackDynTable t;
     char scratch[256];
     Collected c = {0};
-    pc_hpack_dyn_init(&t, 4096); // indexed ref 62 into an empty dynamic table -> dyn_entry null
+    protocore_hpack_dyn_init(&t, 4096); // indexed ref 62 into an empty dynamic table -> dyn_entry null
     const uint8_t idx62[] = {0xbe};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, idx62, 1, scratch, sizeof scratch, collect, &c));
-    pc_hpack_dyn_init(&t, 4096); // literal, inline name, but the block ends before the name string
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, idx62, 1, scratch, sizeof scratch, collect, &c));
+    protocore_hpack_dyn_init(&t, 4096); // literal, inline name, but the block ends before the name string
     const uint8_t noname[] = {0x40};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, noname, 1, scratch, sizeof scratch, collect, &c));
-    pc_hpack_dyn_init(&t, 4096); // literal with name index 62 but the dynamic table is empty
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, noname, 1, scratch, sizeof scratch, collect, &c));
+    protocore_hpack_dyn_init(&t, 4096); // literal with name index 62 but the dynamic table is empty
     const uint8_t badname[] = {0x7e, 0x00};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, badname, sizeof badname, scratch, sizeof scratch, collect, &c));
-    pc_hpack_dyn_init(&t, 4096); // literal-without-indexing (0x00), then truncated -> decode_literal fails
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, badname, sizeof badname, scratch, sizeof scratch, collect, &c));
+    protocore_hpack_dyn_init(&t, 4096); // literal-without-indexing (0x00), then truncated -> decode_literal fails
     const uint8_t litni[] = {0x00};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, litni, 1, scratch, sizeof scratch, collect, &c));
-    pc_hpack_dyn_init(&t, 4096);           // a length varint that never terminates -> decode_int fails
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, litni, 1, scratch, sizeof scratch, collect, &c));
+    protocore_hpack_dyn_init(&t, 4096);           // a length varint that never terminates -> decode_int fails
     const uint8_t badint[] = {0x40, 0xff}; // name string byte 0xff (huff + 7-bit len 0x7f, no continuation)
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, badint, sizeof badint, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, badint, sizeof badint, scratch, sizeof scratch, collect, &c));
 }
 
 // Scratch/output too small: the resolve, emit, and decode-string bounds all fail closed.
@@ -743,23 +743,23 @@ void test_hpack_buffer_bounds()
     HpackDynTable t;
     Collected c = {0};
     char tiny[4];
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     // indexed static entry 2 (:method GET, 10 bytes) into a 4-byte scratch -> emit_indexed too big
     const uint8_t idx2[] = {0x82};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, idx2, 1, tiny, sizeof tiny, collect, &c));
-    pc_hpack_dyn_init(&t, 4096); // literal name index 1 (:authority, 10 bytes) into a 4-byte scratch
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, idx2, 1, tiny, sizeof tiny, collect, &c));
+    protocore_hpack_dyn_init(&t, 4096); // literal name index 1 (:authority, 10 bytes) into a 4-byte scratch
     const uint8_t litstatic[] = {0x41, 0x00};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, litstatic, sizeof litstatic, tiny, sizeof tiny, collect, &c));
-    pc_hpack_dyn_init(&t, 4096); // literal "" name + a 10-byte value into a 4-byte scratch
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, litstatic, sizeof litstatic, tiny, sizeof tiny, collect, &c));
+    protocore_hpack_dyn_init(&t, 4096); // literal "" name + a 10-byte value into a 4-byte scratch
     const uint8_t bigval[] = {0x40, 0x00, 0x0a, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, bigval, sizeof bigval, tiny, sizeof tiny, collect, &c));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, bigval, sizeof bigval, tiny, sizeof tiny, collect, &c));
     // indexed dynamic entry into a tiny scratch -> emit_indexed dynamic too big
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     char scratch[256];
     const uint8_t ins[] = {0x40, 0x06, 'm', 'y', 'n', 'a', 'm', 'e', 0x02, 'v', '1'};
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
     const uint8_t idxd[] = {0xbe};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, idxd, 1, tiny, sizeof tiny, collect, &c));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, idxd, 1, tiny, sizeof tiny, collect, &c));
 }
 
 // A literal whose name comes from the dynamic table (name index 62), but the entry's name is
@@ -768,40 +768,40 @@ void test_hpack_buffer_bounds()
 void test_hpack_resolve_dynamic_name_too_big(void)
 {
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     char scratch[64];
     Collected c = {0};
     // insert (longname: v1); "longname" is 8 bytes
     const uint8_t ins[] = {0x40, 0x08, 'l', 'o', 'n', 'g', 'n', 'a', 'm', 'e', 0x02, 'v', '1'};
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
     // literal (incremental), name index 62 ("longname"), value "v2" -- but scratch is only 4 bytes,
     // too small for the 8-byte dynamic name.
     char tiny[4];
     Collected c2 = {0};
     const uint8_t litname[] = {0x7e, 0x02, 'v', '2'};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, litname, sizeof litname, tiny, sizeof tiny, collect, &c2));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, litname, sizeof litname, tiny, sizeof tiny, collect, &c2));
 }
 
 // Encoder: the non-Huffman string path, output-overflow fail-closed, and the size clamp on init.
 void test_hpack_encode_paths()
 {
-    // pc_hpack_dyn_init clamps a too-large max to the table storage.
+    // protocore_hpack_dyn_init clamps a too-large max to the table storage.
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 0xffffffffu);
-    TEST_ASSERT_TRUE(t.max_size <= PC_HPACK_TABLE_BYTES);
+    protocore_hpack_dyn_init(&t, 0xffffffffu);
+    TEST_ASSERT_TRUE(t.max_size <= PROTOCORE_HPACK_TABLE_BYTES);
 
     // A value whose Huffman form is not shorter takes the literal (non-Huffman) string path.
     uint8_t out[64];
     const char nul[1] = {0}; // 0x00 has a 13-bit Huffman code: 1 byte plain < huffman
-    size_t w = pc_hpack_encode_header(out, sizeof out, "x", 1, nul, 1);
+    size_t w = protocore_hpack_encode_header(out, sizeof out, "x", 1, nul, 1);
     TEST_ASSERT_TRUE(w > 0);
     // the same non-Huffman value, but the buffer runs out during its literal body
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_hpack_encode_header(out, 4, "x", 1, nul, 1));
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_hpack_encode_header(out, 4, "x", 1, nul, 1));
 
     // Output buffer too small at each stage -> encode returns 0 (fails closed).
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_hpack_encode_header(out, 0, "x-custom", 8, "value", 5)); // prefix int
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_hpack_encode_header(out, 2, "x-custom", 8, "value", 5)); // name string
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_hpack_encode_header(out, 8, "x-custom", 8, "value", 5)); // value string
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_hpack_encode_header(out, 0, "x-custom", 8, "value", 5)); // prefix int
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_hpack_encode_header(out, 2, "x-custom", 8, "value", 5)); // name string
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_hpack_encode_header(out, 8, "x-custom", 8, "value", 5)); // value string
 }
 
 // Malformed prefix-integers in the literal name-index and the size-update, and a
@@ -811,36 +811,36 @@ void test_hpack_more_errors()
     HpackDynTable t;
     char scratch[128];
     Collected c = {0};
-    pc_hpack_dyn_init(&t, 4096); // literal, name-index prefix-6 = 63 -> needs a continuation byte, none
+    protocore_hpack_dyn_init(&t, 4096); // literal, name-index prefix-6 = 63 -> needs a continuation byte, none
     const uint8_t badnameidx[] = {0x7f};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, badnameidx, 1, scratch, sizeof scratch, collect, &c));
-    pc_hpack_dyn_init(&t, 4096); // size update, prefix-5 = 31 -> needs a continuation byte, none
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, badnameidx, 1, scratch, sizeof scratch, collect, &c));
+    protocore_hpack_dyn_init(&t, 4096); // size update, prefix-5 = 31 -> needs a continuation byte, none
     const uint8_t badupdate[] = {0x3f};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, badupdate, 1, scratch, sizeof scratch, collect, &c));
-    pc_hpack_dyn_init(&t, 4096); // literal, inline name = Huffman "0" (00000) padded with 0s, not 1s
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, badupdate, 1, scratch, sizeof scratch, collect, &c));
+    protocore_hpack_dyn_init(&t, 4096); // literal, inline name = Huffman "0" (00000) padded with 0s, not 1s
     const uint8_t badhuff[] = {0x00, 0x81, 0x00};
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, badhuff, sizeof badhuff, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, badhuff, sizeof badhuff, scratch, sizeof scratch, collect, &c));
 }
 
-// pc_hpack_dyn_init's max_bytes=0 sentinel means "default to the full table storage".
+// protocore_hpack_dyn_init's max_bytes=0 sentinel means "default to the full table storage".
 void test_hpack_dyn_init_default_size(void)
 {
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 0);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PC_HPACK_TABLE_BYTES, t.max_size);
+    protocore_hpack_dyn_init(&t, 0);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_HPACK_TABLE_BYTES, t.max_size);
 }
 
 // Indexed Header Field (top bit set) whose prefix-7 integer itself is truncated: the decode_int
-// failure must be caught by pc_hpack_decode's own "!decode_int(...) || idx == 0" guard, not just
+// failure must be caught by protocore_hpack_decode's own "!decode_int(...) || idx == 0" guard, not just
 // the idx==0 half of it.
 void test_hpack_indexed_field_truncated_int(void)
 {
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     Collected c = {0};
     char scratch[128];
     const uint8_t trunc[] = {0xff}; // prefix-7 all-ones (127) demands a continuation byte, none given
-    TEST_ASSERT_FALSE(pc_hpack_decode(&t, trunc, sizeof trunc, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_FALSE(protocore_hpack_decode(&t, trunc, sizeof trunc, scratch, sizeof scratch, collect, &c));
 }
 
 // Encoder: a name that matches several static entries (":status" appears 7 times) but whose value
@@ -849,21 +849,21 @@ void test_hpack_indexed_field_truncated_int(void)
 void test_hpack_encode_repeated_static_name(void)
 {
     uint8_t out[64];
-    size_t w = pc_hpack_encode_header(out, sizeof out, ":status", 7, "999", 3);
+    size_t w = protocore_hpack_encode_header(out, sizeof out, ":status", 7, "999", 3);
     TEST_ASSERT_TRUE(w > 0);
     TEST_ASSERT_EQUAL_HEX8(0x08, out[0]); // literal, name index 8 (the first ":status"), prefix 4
 
     HpackDynTable t;
-    pc_hpack_dyn_init(&t, 4096);
+    protocore_hpack_dyn_init(&t, 4096);
     Collected c = {0};
     char scratch[64];
-    TEST_ASSERT_TRUE(pc_hpack_decode(&t, out, w, scratch, sizeof scratch, collect, &c));
+    TEST_ASSERT_TRUE(protocore_hpack_decode(&t, out, w, scratch, sizeof scratch, collect, &c));
     TEST_ASSERT_EQUAL_INT(1, (int)c.n);
     TEST_ASSERT_EQUAL_STRING(":status", c.f[0].name);
     TEST_ASSERT_EQUAL_STRING("999", c.f[0].value);
 }
 
-// Low-level pc_hpack_prim edge guards called directly: integer-encode buffer overflow (in the
+// Low-level protocore_hpack_prim edge guards called directly: integer-encode buffer overflow (in the
 // continuation loop and on the final byte), decode of a zero-length input, Huffman encode
 // with no room for the trailing partial byte, a decoded EOS symbol, output overflow, and
 // over-a-byte trailing padding.

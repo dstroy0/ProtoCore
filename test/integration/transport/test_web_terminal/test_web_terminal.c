@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the WebSocket web-serial terminal (PC_ENABLE_WEB_TERMINAL):
+// Unit tests for the WebSocket web-serial terminal (PROTOCORE_ENABLE_WEB_TERMINAL):
 // page serving, the WS upgrade + connect tracking, browser->device commands, and
 // device->browser broadcast.
 
@@ -41,25 +41,25 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, const uint8_t *payload,
     return pos;
 }
 
-// Set for the one test that must observe the module before pc_web_terminal_begin()
+// Set for the one test that must observe the module before protocore_web_terminal_begin()
 // has ever stored a server handle (the service is a file-static, so that state is
 // only reachable from the first test that runs).
 static proto_bool g_skip_begin = PROTO_FALSE;
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     tcp_capture_reset();
     g_cmd[0] = '\0';
     g_cmd_client = 0xFF;
@@ -67,8 +67,8 @@ void setUp()
     {
         return;
     }
-    pc_web_terminal_begin("/terminal");
-    pc_web_terminal_on_command(on_cmd);
+    protocore_web_terminal_begin("/terminal");
+    protocore_web_terminal_on_command(on_cmd);
 }
 
 void tearDown()
@@ -107,12 +107,12 @@ void test_serves_terminal_page()
 
 void test_ws_upgrade_tracks_client()
 {
-    TEST_ASSERT_EQUAL_UINT(0, pc_web_terminal_client_count());
+    TEST_ASSERT_EQUAL_UINT(0, protocore_web_terminal_client_count());
     uint8_t wid = do_handshake(0);
     TEST_ASSERT_NOT_EQUAL(0xFF, wid);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "101 Switching Protocols"));
-    TEST_ASSERT_EQUAL_UINT(1, pc_web_terminal_client_count());
+    TEST_ASSERT_EQUAL_UINT(1, protocore_web_terminal_client_count());
 }
 
 // RFC 6455 4.2.1: a GET with Upgrade: websocket but no "Upgrade" token in the
@@ -156,7 +156,7 @@ void test_broadcast_reaches_client()
 {
     do_handshake(0);
     tcp_capture_reset(); // isolate the broadcast from the handshake bytes
-    pc_web_terminal_print("hello browser");
+    protocore_web_terminal_print("hello browser");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "hello browser"));
 }
@@ -165,10 +165,10 @@ void test_printf_broadcast()
 {
     do_handshake(0);
     tcp_capture_reset();
-    static const pc_field COUNT[] = {{PC_FK_LIT, 0, 6, "count="}, PC_U32, PC_END};
+    static const protocore_field COUNT[] = {{PROTOCORE_FK_LIT, 0, 6, "count="}, PROTOCORE_U32, PROTOCORE_END};
     char out[32];
-    frame.build(out, sizeof(out), COUNT, (const pc_fval[]){PC_VU32(7u)}, 1);
-    pc_web_terminal_print(out);
+    frame.build(out, sizeof(out), COUNT, (const protocore_fval[]){PROTOCORE_VU32(7u)}, 1);
+    protocore_web_terminal_print(out);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "count=7"));
 }
 
@@ -176,19 +176,19 @@ void test_no_broadcast_without_clients()
 {
     // No handshake -> no terminal clients -> print writes nothing.
     tcp_capture_reset();
-    pc_web_terminal_print("nobody home");
-    TEST_ASSERT_EQUAL_UINT(0, pc_web_terminal_client_count());
+    protocore_web_terminal_print("nobody home");
+    TEST_ASSERT_EQUAL_UINT(0, protocore_web_terminal_client_count());
     TEST_ASSERT_NULL(strstr(tcp_captured(), "nobody home"));
 }
 
 void test_close_clears_client()
 {
     do_handshake(0);
-    TEST_ASSERT_EQUAL_UINT(1, pc_web_terminal_client_count());
+    TEST_ASSERT_EQUAL_UINT(1, protocore_web_terminal_client_count());
     WsConn *ws = ws_find(0);
     ws->parse_state = WS_CLOSED; // simulate client close
     handle();                    // handle() fires the ws_close route callback
-    TEST_ASSERT_EQUAL_UINT(0, pc_web_terminal_client_count());
+    TEST_ASSERT_EQUAL_UINT(0, protocore_web_terminal_client_count());
 }
 
 // GET a path on a slot and return everything the transport captured.
@@ -206,14 +206,14 @@ static const char *get_path(uint8_t slot, const char *path)
 // than dereference it. Registered first, because the handle is never cleared again.
 void test_api_inert_before_begin()
 {
-    TEST_ASSERT_EQUAL_UINT(0, pc_web_terminal_client_count());
+    TEST_ASSERT_EQUAL_UINT(0, protocore_web_terminal_client_count());
     tcp_capture_reset();
-    pc_web_terminal_print("early");
-    pc_web_terminal_println("early");
-    static const pc_field EARLY[] = {{PC_FK_LIT, 0, 6, "early "}, PC_U32, PC_END};
+    protocore_web_terminal_print("early");
+    protocore_web_terminal_println("early");
+    static const protocore_field EARLY[] = {{PROTOCORE_FK_LIT, 0, 6, "early "}, PROTOCORE_U32, PROTOCORE_END};
     char out[32];
-    frame.build(out, sizeof(out), EARLY, (const pc_fval[]){PC_VU32(1u)}, 1);
-    pc_web_terminal_print(out);
+    frame.build(out, sizeof(out), EARLY, (const protocore_fval[]){PROTOCORE_VU32(1u)}, 1);
+    protocore_web_terminal_print(out);
     TEST_ASSERT_EQUAL_size_t(0, strlen(tcp_captured()));
 }
 
@@ -222,11 +222,11 @@ void test_println_appends_newline()
 {
     do_handshake(0);
     tcp_capture_reset();
-    pc_web_terminal_println("line one");
+    protocore_web_terminal_println("line one");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "line one\n"));
 
     tcp_capture_reset();
-    pc_web_terminal_println(NULL);
+    protocore_web_terminal_println(NULL);
     const char *r = tcp_captured();
     size_t n = strlen(r);
     TEST_ASSERT_TRUE(n > 0);
@@ -238,20 +238,20 @@ void test_print_null_is_ignored()
 {
     do_handshake(0);
     tcp_capture_reset();
-    pc_web_terminal_print(NULL);
+    protocore_web_terminal_print(NULL);
     TEST_ASSERT_EQUAL_size_t(0, strlen(tcp_captured()));
 }
 
 // A null or empty path falls back to the default "/terminal" mount point.
 void test_begin_defaults_path_when_missing()
 {
-    pc_server_reset();
-    pc_web_terminal_begin(NULL);
+    protocore_server_reset();
+    protocore_web_terminal_begin(NULL);
     tcp_capture_reset();
     TEST_ASSERT_NOT_NULL(strstr(get_path(0, "/terminal"), "PC Terminal"));
 
-    pc_server_reset();
-    pc_web_terminal_begin("");
+    protocore_server_reset();
+    protocore_web_terminal_begin("");
     tcp_capture_reset();
     TEST_ASSERT_NOT_NULL(strstr(get_path(1, "/terminal"), "PC Terminal"));
 }
@@ -260,7 +260,7 @@ void test_begin_defaults_path_when_missing()
 void test_message_without_callback()
 {
     do_handshake(0);
-    pc_web_terminal_on_command(NULL);
+    protocore_web_terminal_on_command(NULL);
     uint8_t frame[32];
     size_t n = build_frame(frame, WS_OP_TEXT, (const uint8_t *)"ignored", 7);
     push_bytes(0, frame, n);
@@ -273,13 +273,13 @@ void test_message_without_callback()
 void test_stale_client_slot_is_skipped()
 {
     do_handshake(0);
-    TEST_ASSERT_EQUAL_UINT(1, pc_web_terminal_client_count());
+    TEST_ASSERT_EQUAL_UINT(1, protocore_web_terminal_client_count());
     WsConn *ws = ws_find(0);
     TEST_ASSERT_NOT_NULL(ws);
     ws->active = PROTO_FALSE; // socket gone; the terminal has not been told yet
-    TEST_ASSERT_EQUAL_UINT(0, pc_web_terminal_client_count());
+    TEST_ASSERT_EQUAL_UINT(0, protocore_web_terminal_client_count());
     tcp_capture_reset();
-    pc_web_terminal_print("ghost");
+    protocore_web_terminal_print("ghost");
     TEST_ASSERT_NULL(strstr(tcp_captured(), "ghost"));
 }
 

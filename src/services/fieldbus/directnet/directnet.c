@@ -9,7 +9,7 @@
 #include "services/fieldbus/directnet/directnet.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_DIRECTNET
+#if PROTOCORE_ENABLE_DIRECTNET
 
 static char hex_digit(uint8_t nibble)
 {
@@ -25,7 +25,7 @@ static void put_hex(uint8_t *p, uint32_t value, int digits)
     }
 }
 
-uint8_t pc_dnet_lrc(const uint8_t *bytes, size_t len)
+uint8_t protocore_dnet_lrc(const uint8_t *bytes, size_t len)
 {
     uint8_t lrc = 0;
     for (size_t i = 0; i < len; i++)
@@ -35,7 +35,7 @@ uint8_t pc_dnet_lrc(const uint8_t *bytes, size_t len)
     return lrc;
 }
 
-size_t pc_dnet_header(uint8_t slave, uint8_t type, uint16_t address, uint8_t blocks, uint8_t *out, size_t cap)
+size_t protocore_dnet_header(uint8_t slave, uint8_t type, uint16_t address, uint8_t blocks, uint8_t *out, size_t cap)
 {
     // SOH + slave(2) + type(1) + addr(4) + blocks(2) + ETB + LRC = 11 bytes.
     const size_t n = 1 + 2 + 1 + 4 + 2 + 1 + 1;
@@ -54,12 +54,12 @@ size_t pc_dnet_header(uint8_t slave, uint8_t type, uint16_t address, uint8_t blo
     i += 2;
     out[i++] = DNET_ETB;
     // LRC over the framed body (slave..ETB), i.e. everything after SOH up to and including ETB.
-    out[i] = pc_dnet_lrc(out + 1, i - 1);
+    out[i] = protocore_dnet_lrc(out + 1, i - 1);
     i++;
     return i;
 }
 
-size_t pc_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
+size_t protocore_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
 {
     if (!out || (data_len && !data))
     {
@@ -79,12 +79,12 @@ size_t pc_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, size_t c
     }
     out[i++] = DNET_ETX;
     // LRC over data..ETX (everything after STX up to and including ETX).
-    out[i] = pc_dnet_lrc(out + 1, i - 1);
+    out[i] = protocore_dnet_lrc(out + 1, i - 1);
     i++;
     return i;
 }
 
-proto_bool pc_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **data, size_t *data_len)
+proto_bool protocore_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **data, size_t *data_len)
 {
     if (!frame || len < 3) // STX + ETX + LRC minimum
     {
@@ -100,7 +100,7 @@ proto_bool pc_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **
     {
         return PROTO_FALSE;
     }
-    if (pc_dnet_lrc(frame + 1, len - 2) != frame[len - 1]) // over data..ETX
+    if (protocore_dnet_lrc(frame + 1, len - 2) != frame[len - 1]) // over data..ETX
     {
         return PROTO_FALSE;
     }
@@ -115,4 +115,4 @@ proto_bool pc_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_DIRECTNET
+#endif // PROTOCORE_ENABLE_DIRECTNET

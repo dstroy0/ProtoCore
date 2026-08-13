@@ -1,6 +1,6 @@
 # WebDav - a WebDAV file share backed by LittleFS
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_WEBDAV`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_WEBDAV`
 
 ## What this example teaches
 
@@ -33,7 +33,7 @@ exposing it. The sketch seeds one file so a fresh share is not empty.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_WEBDAV=1 -DMAX_CONNS=3 -DMAX_WS_CONNS=1 -DMAX_SSE_CONNS=1 -DMAX_ROUTES=8 -DPC_WEBDAV_MAX_ENTRIES=8 -DPC_WEBDAV_BUF_SIZE=1024" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEBDAV=1 -DMAX_CONNS=3 -DMAX_WS_CONNS=1 -DMAX_SSE_CONNS=1 -DMAX_ROUTES=8 -DPROTOCORE_WEBDAV_MAX_ENTRIES=8 -DPROTOCORE_WEBDAV_BUF_SIZE=1024" \
   --lib="." examples/L7-Application/WebDav/WebDav.ino
 ```
 
@@ -56,7 +56,7 @@ added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_WEBDAV 1
+#define PROTOCORE_ENABLE_WEBDAV 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

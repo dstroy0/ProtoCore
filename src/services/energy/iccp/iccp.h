@@ -3,7 +3,7 @@
 
 /**
  * @file iccp.h
- * @brief ICCP / TASE.2 (IEC 60870-6) inter-control-center telemetry codec (PC_ENABLE_ICCP).
+ * @brief ICCP / TASE.2 (IEC 60870-6) inter-control-center telemetry codec (PROTOCORE_ENABLE_ICCP).
  *
  * ICCP (TASE.2, IEC 60870-6) exchanges real-time power-grid telemetry between control centers. It is an
  * application profile *on top of MMS* (the shipped services/energy/mms): a TASE.2 "indication point" (a data
@@ -14,7 +14,7 @@
  *
  * simplified here to the common **StateQ** (a discrete state 0..3 + a quality-flags byte) and **RealQ**
  * (an IEEE-754-ish scaled real + quality) indication points that most bilateral tables use. The result
- * is a BER blob the caller wraps in an MMS Read response (`pc_mms_read_response`). Pure, zero heap,
+ * is a BER blob the caller wraps in an MMS Read response (`protocore_mms_read_response`). Pure, zero heap,
  * no stdlib, host-testable; the TASE.2 bilateral-table + MMS transport are the shipped services.
  */
 
@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_ICCP
+#if PROTOCORE_ENABLE_ICCP
 
 /** @brief TASE.2 quality flags (DataFlags, the common bits). */
 // TASE.2 quality/state wire values + the 2-bit quality mask, so integer constants in a struct.
@@ -48,7 +48,7 @@ PROTO_BEGIN_DECLS
  *
  * Encodes `[A2 { 85 <stateAndQuality byte> [17 <4-octet time>] }]` (context-tagged StateQ structure).
  */
-size_t pc_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap);
+size_t protocore_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap);
 
 /**
  * @brief Build a TASE.2 RealQ Data_Value: a scaled real value (milli-units) + quality flags.
@@ -59,10 +59,10 @@ size_t pc_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4], uint
  *
  * Encodes `[A3 { 02 <INTEGER milli> 85 <quality byte> [17 <time>] }]`.
  */
-size_t pc_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap);
+size_t protocore_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap);
 
-#endif // PC_ENABLE_ICCP
+#endif // PROTOCORE_ENABLE_ICCP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ICCP_H

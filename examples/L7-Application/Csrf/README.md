@@ -1,11 +1,11 @@
 # Csrf - CSRF protection for state-changing requests
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_CSRF`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_CSRF`
 
 ## What this example teaches
 
 Cross-Site Request Forgery tricks a logged-in browser into making a state-changing
-request the user did not intend. With `PC_ENABLE_CSRF`, every
+request the user did not intend. With `PROTOCORE_ENABLE_CSRF`, every
 `POST`/`PUT`/`PATCH`/`DELETE` must carry a valid `X-CSRF-Token` header or it gets
 `403`; the safe methods `GET`/`HEAD`/`OPTIONS` are exempt. The token is stateless -
 HMAC-signed and self-validating against a secret seeded at `begin()` - so there is
@@ -34,7 +34,7 @@ header on each unsafe request.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_CSRF=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_CSRF=1" \
   --lib="." examples/L7-Application/Csrf/Csrf.ino
 ```
 
@@ -53,7 +53,7 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_CSRF 1
+#define PROTOCORE_ENABLE_CSRF 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

@@ -9,13 +9,13 @@ This one sketch builds either role. Flip `NTRIP_ROLE_BASE` at the top:
 - `#define NTRIP_ROLE_BASE 1` → **base**: survey-in + caster on port `2101`, mountpoint `BASE1`.
 - `#define NTRIP_ROLE_BASE 0` → **rover**: NTRIP client (set `BASE_IP` to the base board's IP).
 
-Enable the feature for the whole build with `-DPC_ENABLE_NTRIP_CASTER=1` (already in `build_opt.h`
-here for the Arduino IDE). It implies `PC_ENABLE_NMEA0183` (the base surveys from GGA fixes). With
+Enable the feature for the whole build with `-DPROTOCORE_ENABLE_NTRIP_CASTER=1` (already in `build_opt.h`
+here for the Arduino IDE). It implies `PROTOCORE_ENABLE_NMEA0183` (the base surveys from GGA fixes). With
 PlatformIO:
 
 ```sh
 pio ci examples/L7-Application/NtripCaster --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_NTRIP_CASTER=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_NTRIP_CASTER=1"
 ```
 
 ## Hardware
@@ -74,5 +74,5 @@ pipeline is complete; only the raw-measurement source is missing.
 - **PPS (GPIO4)** is counted via a rising-edge interrupt and printed for observability. It marks the GPS
   second boundary and can gate precise survey sampling or a stratum-1 NTP tie-in (see `NtpServer`).
 - **Security**: the caster supports optional HTTP Basic auth per mountpoint — pass the base64 of
-  `user:pass` as the third argument to `pc_ntrip_caster_add_mount()` (null = open access).
+  `user:pass` as the third argument to `protocore_ntrip_caster_add_mount()` (null = open access).
 - Tune `SURVEY_MIN_OBS` / `SURVEY_ACC_LIMIT_M` for how long/tight the survey-in must be before serving.

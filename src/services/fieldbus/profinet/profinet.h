@@ -3,7 +3,7 @@
 
 /**
  * @file profinet.h
- * @brief PROFINET DCP (Discovery and Configuration Protocol) frame codec (PC_ENABLE_PROFINET).
+ * @brief PROFINET DCP (Discovery and Configuration Protocol) frame codec (PROTOCORE_ENABLE_PROFINET).
  *
  * DCP is how PROFINET IO-Devices are discovered and named on the wire before an IO connection exists.
  * It rides raw L2 (ethertype 0x8892, PROFINET RT; see services/fieldbus/rawl2) with a fixed 10-octet frame header
@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_PROFINET
+#if PROTOCORE_ENABLE_PROFINET
 
 #define PN_FRAMEID_DCP_HELLO 0xFEFC
 #define PN_FRAMEID_DCP_GETSET 0xFEFD
@@ -49,8 +49,8 @@ PROTO_BEGIN_DECLS
  * @brief Build a DCP frame header into @p out (>= 10 bytes). @return 10, or 0 if it will not fit.
  * @param data_length the total length of the DCP blocks that follow (filled into the header).
  */
-size_t pc_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid, uint16_t data_length,
-                        uint8_t *out, size_t cap);
+size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid,
+                               uint16_t data_length, uint8_t *out, size_t cap);
 
 /**
  * @brief Append a DCP block `[option][suboption][blockLength][value...]` (no blockInfo).
@@ -58,8 +58,8 @@ size_t pc_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_t
  *
  * DCP blocks are padded to an even length with a 0x00 filler octet that is NOT counted in blockLength.
  */
-size_t pc_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, uint8_t *out,
-                       size_t cap);
+size_t protocore_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, uint8_t *out,
+                              size_t cap);
 
 /** @brief A parsed DCP frame header. */
 typedef struct
@@ -72,20 +72,20 @@ typedef struct
 } PnDcpHeader;
 
 /** @brief Parse the 10-octet DCP header. @return true if @p len >= 10. */
-proto_bool pc_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out);
+proto_bool protocore_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out);
 
-/** @brief One DCP block surfaced by pc_pn_dcp_walk. */
-typedef void (*pc_pn_dcp_block_cb)(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len,
-                                   void *arg);
+/** @brief One DCP block surfaced by protocore_pn_dcp_walk. */
+typedef void (*protocore_pn_dcp_block_cb)(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len,
+                                          void *arg);
 
 /**
  * @brief Walk the DCP blocks after the header (@p blocks points at header+10, @p len = dataLength).
  * @return true if every block fits; invokes @p cb per block (value excludes the even-pad filler).
  */
-proto_bool pc_pn_dcp_walk(const uint8_t *blocks, size_t len, pc_pn_dcp_block_cb cb, void *arg);
+proto_bool protocore_pn_dcp_walk(const uint8_t *blocks, size_t len, protocore_pn_dcp_block_cb cb, void *arg);
 
-#endif // PC_ENABLE_PROFINET
+#endif // PROTOCORE_ENABLE_PROFINET
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PROFINET_H

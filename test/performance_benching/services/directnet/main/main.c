@@ -29,7 +29,7 @@ void dbench_run(void)
     // Data frame: STX + "ABCD" + ETX + LRC (matches test_data_frame_roundtrip).
     static const uint8_t payload[4] = {'A', 'B', 'C', 'D'};
     static uint8_t data_frame[16];
-    size_t data_frame_len = pc_dnet_data(payload, sizeof(payload), data_frame, sizeof(data_frame));
+    size_t data_frame_len = protocore_dnet_data(payload, sizeof(payload), data_frame, sizeof(data_frame));
 
     // Buffer for the standalone LRC bulk bench (10 bytes of frame body).
     static const uint8_t lrc_buf[10] = {'0', '1', 0x30, '0', '0', '4', '0', '0', '2', DNET_ETB};
@@ -41,17 +41,17 @@ void dbench_run(void)
         volatile size_t sinkz = 0;
         volatile bool sinkb = false;
 
-        DBENCH_BULK("pc_dnet_lrc", 100000, sizeof(lrc_buf), sink8 += pc_dnet_lrc(lrc_buf, sizeof(lrc_buf)));
+        DBENCH_BULK("protocore_dnet_lrc", 100000, sizeof(lrc_buf), sink8 += protocore_dnet_lrc(lrc_buf, sizeof(lrc_buf)));
 
-        DBENCH_OP("pc_dnet_header build", 100000, sinkz += pc_dnet_header(1, DNET_READ, 0x0040, 2, hdr, sizeof(hdr)));
+        DBENCH_OP("protocore_dnet_header build", 100000, sinkz += protocore_dnet_header(1, DNET_READ, 0x0040, 2, hdr, sizeof(hdr)));
 
-        DBENCH_OP("pc_dnet_data build (4B)", 100000,
-                  sinkz += pc_dnet_data(payload, sizeof(payload), data_frame, sizeof(data_frame)));
+        DBENCH_OP("protocore_dnet_data build (4B)", 100000,
+                  sinkz += protocore_dnet_data(payload, sizeof(payload), data_frame, sizeof(data_frame)));
 
         {
             const uint8_t *d = NULL;
             size_t dl = 0;
-            DBENCH_OP("pc_dnet_data_parse", 100000, sinkb = pc_dnet_data_parse(data_frame, data_frame_len, &d, &dl));
+            DBENCH_OP("protocore_dnet_data_parse", 100000, sinkb = protocore_dnet_data_parse(data_frame, data_frame_len, &d, &dl));
         }
 
         (void)sink8;

@@ -3,9 +3,9 @@
 
 /**
  * @file cc1101.h
- * @brief CC1101 sub-GHz radio driver (PC_ENABLE_CC1101) - TI 300-928 MHz over SPI.
+ * @brief CC1101 sub-GHz radio driver (PROTOCORE_ENABLE_CC1101) - TI 300-928 MHz over SPI.
  *
- * A radio driver plugin for the gateway (PC_ENABLE_GATEWAY): generic ISM-band remotes and sensors
+ * A radio driver plugin for the gateway (PROTOCORE_ENABLE_GATEWAY): generic ISM-band remotes and sensors
  * (OOK / 2-FSK on 315/433/868/915 MHz) bridged to the web stack. Like the nRF24, the CC1101 speaks an
  * **SPI header protocol** - every transaction begins with a header byte (bit7 = read, bit6 = burst,
  * bits5-0 = address) and returns the **chip status byte** (CHIP_RDYn, the 3-bit state machine value, and
@@ -17,7 +17,7 @@
  * caller supplies it as a register table (a TI SmartRF Studio export); the driver resets the chip, writes
  * that table, sets the channel, and verifies the VERSION status register talks back. Packets use variable
  * length mode (a leading length byte) with appended RSSI/LQI status. Bridge received payloads northbound
- * with pc_gateway_uplink. The register/strobe/FIFO protocol is host-testable against a mock; the RF link
+ * with protocore_gateway_uplink. The register/strobe/FIFO protocol is host-testable against a mock; the RF link
  * needs the module.
  */
 
@@ -26,65 +26,65 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_CC1101
+#if PROTOCORE_ENABLE_CC1101
 
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
-typedef void (*pc_cc1101_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
+typedef void (*protocore_cc1101_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
 
 /** @brief The bus a driver call uses: your SPI transfer behind it. */
 typedef struct
 {
-    pc_cc1101_spi_fn spi;
+    protocore_cc1101_spi_fn spi;
     void *ctx;
-} pc_cc1101_bus;
+} protocore_cc1101_bus;
 
 /** @brief One modem-config register write (address + value). */
 typedef struct
 {
     uint8_t addr;
     uint8_t value;
-} pc_cc1101_reg;
+} protocore_cc1101_reg;
 
-/** @brief Radio configuration applied by pc_cc1101_init(). */
+/** @brief Radio configuration applied by protocore_cc1101_init(). */
 typedef struct
 {
-    const pc_cc1101_reg *regs; ///< SmartRF-exported register settings (may be null for none).
+    const protocore_cc1101_reg *regs; ///< SmartRF-exported register settings (may be null for none).
     size_t nregs;
     uint8_t channel; ///< CHANNR (0x0A): channel number on top of the base frequency.
-} pc_cc1101_config;
+} protocore_cc1101_config;
 
 /**
  * @brief Reset the CC1101, apply @p cfg, set the channel, and confirm it is present.
  * @return true; false if the VERSION status register reads 0x00 / 0xFF (the bus is not talking).
  */
-proto_bool pc_cc1101_init(const pc_cc1101_bus *bus, const pc_cc1101_config *cfg);
+proto_bool protocore_cc1101_init(const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg);
 
 /**
  * @brief Transmit @p len bytes as a variable-length packet (leading length byte), then strobe TX.
  * @return true; false if @p len is 0 or exceeds 63 (one FIFO fill).
  */
-proto_bool pc_cc1101_send(const pc_cc1101_bus *bus, const uint8_t *data, uint8_t len);
+proto_bool protocore_cc1101_send(const protocore_cc1101_bus *bus, const uint8_t *data, uint8_t len);
 
 /** @brief True once the state machine has returned to IDLE after a transmit. */
-proto_bool pc_cc1101_tx_done(const pc_cc1101_bus *bus);
+proto_bool protocore_cc1101_tx_done(const protocore_cc1101_bus *bus);
 
-/** @brief Flush RX and enter receive mode (strobe RX). Then poll pc_cc1101_recv(). */
-void pc_cc1101_set_rx(const pc_cc1101_bus *bus);
+/** @brief Flush RX and enter receive mode (strobe RX). Then poll protocore_cc1101_recv(). */
+void protocore_cc1101_set_rx(const protocore_cc1101_bus *bus);
 
 /**
  * @brief If a packet is waiting, read it (length byte + payload + appended RSSI/LQI status).
  * @param[out] rssi_dbm set to the decoded RSSI in dBm (may be null).
  * @return the payload length (capped at @p cap), or -1 if the RX FIFO is empty.
  */
-int pc_cc1101_recv(const pc_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm);
+int protocore_cc1101_recv(const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm);
 
 /** @brief Convert a raw CC1101 RSSI register value to dBm (TI datasheet formula). Pure. */
-int16_t pc_cc1101_rssi_dbm(uint8_t raw);
+int16_t protocore_cc1101_rssi_dbm(uint8_t raw);
 
-#endif // PC_ENABLE_CC1101
+#endif // PROTOCORE_ENABLE_CC1101
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CC1101_H

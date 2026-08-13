@@ -3,7 +3,7 @@
 
 /**
  * @file atc.h
- * @brief ATC (Advanced Traffic Controller) field-I/O interop snapshot (PC_ENABLE_ATC).
+ * @brief ATC (Advanced Traffic Controller) field-I/O interop snapshot (PROTOCORE_ENABLE_ATC).
  *
  * The ATC standard moves traffic cabinets to a standard Linux engine with an ITS-Cabinet / ATC field-I/O
  * API (the FIO): the controller reads detector/input points and drives signal/output points through a
@@ -12,7 +12,7 @@
  * / NEMA-TS2 / gpio services) to an ATC engine over the existing HTTP surface, as a compact JSON snapshot.
  *
  * This is that snapshot codec: a fixed table of named field-I/O points (each an input or output bit or
- * byte) that `pc_atc_snapshot_json` serializes as `{"inputs":[...],"outputs":[...]}` for a GET, and a
+ * byte) that `protocore_atc_snapshot_json` serializes as `{"inputs":[...],"outputs":[...]}` for a GET, and a
  * setter to drive an output point from an ATC command. Pure, zero heap, no stdlib, host-testable.
  */
 
@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_ATC
+#if PROTOCORE_ENABLE_ATC
 
 /** @brief One ATC field-I/O point. */
 typedef struct
@@ -44,19 +44,19 @@ typedef struct
  * @brief Serialize the field-I/O map as `{"inputs":[{"name":..,"value":..},...],"outputs":[...]}`.
  * @return length written (excl NUL), or 0 on overflow / bad args. Point names are JSON-escaped.
  */
-size_t pc_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap);
+size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap);
 
 /**
  * @brief Drive an output point by name from an ATC command.
  * @return true if the named point exists and is an output (its value is set); false otherwise.
  */
-proto_bool pc_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value);
+proto_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value);
 
 /** @brief Read a point's value by name; @p found (may be null) reports whether it existed. */
-uint8_t pc_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found);
+uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found);
 
-#endif // PC_ENABLE_ATC
+#endif // PROTOCORE_ENABLE_ATC
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ATC_H

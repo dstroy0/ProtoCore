@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the StatsD metrics client (services/iot/statsd):
-// pc_statsd_format() builds one `name:value|type|@rate|#tags` line into a caller buffer - the
+// protocore_statsd_format() builds one `name:value|type|@rate|#tags` line into a caller buffer - the
 // per-metric hot op before the UDP send. Pure; no socket.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -21,8 +21,8 @@ void dbench_run(void)
         DBENCH_BANNER("statsd");
         volatile size_t sink = 0;
         static char out[256];
-        DBENCH_OP("pc_statsd_format (counter+tags)", 200000,
-                  sink += pc_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f,
+        DBENCH_OP("protocore_statsd_format (counter+tags)", 200000,
+                  sink += protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f,
                                            "env:prod,host:pc-rig"));
         (void)sink;
         DBENCH_DONE();

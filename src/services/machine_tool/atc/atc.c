@@ -7,19 +7,19 @@
  */
 
 #include "services/machine_tool/atc/atc.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
-#if PC_ENABLE_ATC
+#if PROTOCORE_ENABLE_ATC
 
-static void put_json_str(pc_sb *b, const char *s)
+static void put_json_str(protocore_sb *b, const char *s)
 {
-    pc_sb_put(b, "\"");
+    protocore_sb_put(b, "\"");
     for (const char *p = s ? s : ""; *p; p++)
     {
         if (*p == '"' || *p == '\\')
         {
             char esc[3] = {'\\', *p, '\0'};
-            pc_sb_put(b, esc);
+            protocore_sb_put(b, esc);
         }
         else
         {
@@ -31,10 +31,10 @@ static void put_json_str(pc_sb *b, const char *s)
             b->p[b->len++] = *p;
         }
     }
-    pc_sb_put(b, "\"");
+    protocore_sb_put(b, "\"");
 }
 
-static void put_u8(pc_sb *b, uint8_t v)
+static void put_u8(protocore_sb *b, uint8_t v)
 {
     char t[4];
     int n = 0;
@@ -49,13 +49,13 @@ static void put_u8(pc_sb *b, uint8_t v)
         o[i] = t[n - 1 - i];
     }
     o[n] = '\0';
-    pc_sb_put(b, o);
+    protocore_sb_put(b, o);
 }
 
 // Append the points of one direction (outputs or inputs) as a JSON array.
-static void put_array(pc_sb *b, const AtcFieldIo *io, proto_bool outputs)
+static void put_array(protocore_sb *b, const AtcFieldIo *io, proto_bool outputs)
 {
-    pc_sb_put(b, "[");
+    protocore_sb_put(b, "[");
     proto_bool first = PROTO_TRUE;
     for (size_t i = 0; i < io->count; i++)
     {
@@ -65,30 +65,30 @@ static void put_array(pc_sb *b, const AtcFieldIo *io, proto_bool outputs)
         }
         if (!first)
         {
-            pc_sb_put(b, ",");
+            protocore_sb_put(b, ",");
         }
         first = PROTO_FALSE;
-        pc_sb_put(b, "{\"name\":");
+        protocore_sb_put(b, "{\"name\":");
         put_json_str(b, io->points[i].name);
-        pc_sb_put(b, ",\"value\":");
+        protocore_sb_put(b, ",\"value\":");
         put_u8(b, io->points[i].value);
-        pc_sb_put(b, "}");
+        protocore_sb_put(b, "}");
     }
-    pc_sb_put(b, "]");
+    protocore_sb_put(b, "]");
 }
 
-size_t pc_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
+size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
 {
     if (!io || !out || (io->count && !io->points))
     {
         return 0;
     }
-    pc_sb b = {out, cap, 0, cap > 0};
-    pc_sb_put(&b, "{\"inputs\":");
+    protocore_sb b = {out, cap, 0, cap > 0};
+    protocore_sb_put(&b, "{\"inputs\":");
     put_array(&b, io, PROTO_FALSE);
-    pc_sb_put(&b, ",\"outputs\":");
+    protocore_sb_put(&b, ",\"outputs\":");
     put_array(&b, io, PROTO_TRUE);
-    pc_sb_put(&b, "}");
+    protocore_sb_put(&b, "}");
     if (!b.ok)
     {
         return 0;
@@ -97,7 +97,7 @@ size_t pc_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
     return b.len;
 }
 
-proto_bool pc_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value)
+proto_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value)
 {
     if (!io || !name || !io->points)
     {
@@ -114,7 +114,7 @@ proto_bool pc_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value)
     return PROTO_FALSE;
 }
 
-uint8_t pc_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found)
+uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found)
 {
     if (found)
     {
@@ -138,4 +138,4 @@ uint8_t pc_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found)
     return 0;
 }
 
-#endif // PC_ENABLE_ATC
+#endif // PROTOCORE_ENABLE_ATC

@@ -13,7 +13,7 @@
 #define OUT_CAP 64u
 
 static uint8_t s_out[OUT_CAP];
-static pc_bit_writer w;
+static protocore_bit_writer w;
 
 static void writer_reset(size_t cap)
 {
@@ -59,9 +59,9 @@ void test_put_round_trips_lsb_first()
 
     for (unsigned i = 0; i < sizeof(widths) / sizeof(widths[0]); i++)
     {
-        pc_bitw_put(&w, vals[i], widths[i]);
+        protocore_bitw_put(&w, vals[i], widths[i]);
     }
-    pc_bitw_align(&w);
+    protocore_bitw_align(&w);
     TEST_ASSERT_FALSE(w.overflow);
 
     size_t pos = 0;
@@ -74,7 +74,7 @@ void test_put_round_trips_lsb_first()
 // Eight bits is exactly one output byte, and it spills without an align.
 void test_eight_bits_spills_one_byte()
 {
-    pc_bitw_put(&w, 0xA5u, 8);
+    protocore_bitw_put(&w, 0xA5u, 8);
     TEST_ASSERT_EQUAL_size_t(1, w.cnt);
     TEST_ASSERT_EQUAL_HEX8(0xA5u, s_out[0]);
     TEST_ASSERT_EQUAL_INT(0, w.nbits);
@@ -83,7 +83,7 @@ void test_eight_bits_spills_one_byte()
 // A single put wider than a byte spills every whole byte it completes.
 void test_wide_put_spills_every_whole_byte()
 {
-    pc_bitw_put(&w, 0x00ABCDEFu, 24);
+    protocore_bitw_put(&w, 0x00ABCDEFu, 24);
     TEST_ASSERT_EQUAL_size_t(3, w.cnt);
     TEST_ASSERT_EQUAL_HEX8(0xEFu, s_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xCDu, s_out[1]);
@@ -94,9 +94,9 @@ void test_wide_put_spills_every_whole_byte()
 // A partial byte is padded with zero in the high bits, not with stale accumulator bits.
 void test_align_pads_high_bits_with_zero()
 {
-    pc_bitw_put(&w, 0xFFu, 8); // dirty the accumulator's path first
-    pc_bitw_put(&w, 0x5u, 3);
-    pc_bitw_align(&w);
+    protocore_bitw_put(&w, 0xFFu, 8); // dirty the accumulator's path first
+    protocore_bitw_put(&w, 0x5u, 3);
+    protocore_bitw_align(&w);
     TEST_ASSERT_EQUAL_size_t(2, w.cnt);
     TEST_ASSERT_EQUAL_HEX8(0x05u, s_out[1]); // 3 bits of value, 5 zero bits above
     TEST_ASSERT_EQUAL_INT(0, w.nbits);
@@ -105,10 +105,10 @@ void test_align_pads_high_bits_with_zero()
 // Align on a byte boundary emits nothing.
 void test_align_on_boundary_emits_nothing()
 {
-    pc_bitw_put(&w, 0xA5u, 8);
-    pc_bitw_align(&w);
+    protocore_bitw_put(&w, 0xA5u, 8);
+    protocore_bitw_align(&w);
     TEST_ASSERT_EQUAL_size_t(1, w.cnt);
-    pc_bitw_align(&w);
+    protocore_bitw_align(&w);
     TEST_ASSERT_EQUAL_size_t(1, w.cnt);
     TEST_ASSERT_FALSE(w.overflow);
 }
@@ -121,7 +121,7 @@ void test_exact_fill_is_not_overflow()
     writer_reset(4);
     for (int i = 0; i < 4; i++)
     {
-        pc_bitw_put(&w, (uint32_t)(0x10u + i), 8);
+        protocore_bitw_put(&w, (uint32_t)(0x10u + i), 8);
     }
     TEST_ASSERT_FALSE(w.overflow);
     TEST_ASSERT_EQUAL_size_t(4, w.cnt);
@@ -133,7 +133,7 @@ void test_one_byte_past_cap_latches_overflow()
     writer_reset(4);
     for (int i = 0; i < 5; i++)
     {
-        pc_bitw_put(&w, 0xFFu, 8);
+        protocore_bitw_put(&w, 0xFFu, 8);
     }
     TEST_ASSERT_TRUE(w.overflow);
     TEST_ASSERT_EQUAL_size_t(4, w.cnt);
@@ -144,10 +144,10 @@ void test_one_byte_past_cap_latches_overflow()
 void test_align_at_cap_latches_overflow()
 {
     writer_reset(1);
-    pc_bitw_put(&w, 0xFFu, 8); // fills the one byte
+    protocore_bitw_put(&w, 0xFFu, 8); // fills the one byte
     TEST_ASSERT_FALSE(w.overflow);
-    pc_bitw_put(&w, 0x1u, 3); // buffered, nothing to spill yet
-    pc_bitw_align(&w);
+    protocore_bitw_put(&w, 0x1u, 3); // buffered, nothing to spill yet
+    protocore_bitw_align(&w);
     TEST_ASSERT_TRUE(w.overflow);
     TEST_ASSERT_EQUAL_size_t(1, w.cnt);
 }
@@ -158,11 +158,11 @@ void test_overflow_stays_latched()
     writer_reset(2);
     for (int i = 0; i < 4; i++)
     {
-        pc_bitw_put(&w, 0xFFu, 8);
+        protocore_bitw_put(&w, 0xFFu, 8);
     }
     TEST_ASSERT_TRUE(w.overflow);
-    pc_bitw_put(&w, 0x1u, 1);
-    pc_bitw_align(&w);
+    protocore_bitw_put(&w, 0x1u, 1);
+    protocore_bitw_align(&w);
     TEST_ASSERT_TRUE(w.overflow);
 }
 

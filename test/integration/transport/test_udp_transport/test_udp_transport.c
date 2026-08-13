@@ -3,7 +3,7 @@
 //
 // Host tests for the UDP transport's multicast receive path (Udp.listener->listen_multicast /
 // Udp.listener->leave_multicast): group validation, datagram delivery to the handler, and teardown.
-// These are the lines that ship to silicon: the stack underneath is test/mocks/pc_net_host.h, so a
+// These are the lines that ship to silicon: the stack underneath is test/mocks/protocore_net_host.h, so a
 // datagram arrives through the recv callback the listener armed and a send is read out of the
 // driver's datagram log.
 
@@ -13,10 +13,10 @@
 #include <unity.h>
 
 // The sends take an address; a test spelling a literal turns it into one here.
-static const pc_ip *addr(const char *s)
+static const protocore_ip *addr(const char *s)
 {
-    static pc_ip a;
-    a = (pc_ip){PC_IP_NONE, {0}};
+    static protocore_ip a;
+    a = (protocore_ip){PROTOCORE_IP_NONE, {0}};
     Ip.parse(s, &a);
     return &a;
 }
@@ -28,7 +28,7 @@ static char g_src_ip[16];
 static uint16_t g_src_port = 0;
 static void *g_ctx_seen = NULL;
 
-static void on_datagram(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void on_datagram(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     g_calls++;
     g_ctx_seen = ctx;
@@ -42,21 +42,21 @@ static void on_datagram(const uint8_t *data, size_t len, const struct pc_udp_pee
 // and poll() runs the handler.
 static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len)
 {
-    pc_net_host_udp_deliver(port, src_ip, src_port, (void *)(uintptr_t)data, (uint16_t)len);
+    protocore_net_host_udp_deliver(port, src_ip, src_port, (void *)(uintptr_t)data, (uint16_t)len);
     Udp.listener->poll();
 }
 
 // The last datagram the listener put on the wire, and its length; 0 / NULL when it sent none.
 static size_t sent_len(void)
 {
-    size_t n = pc_net_host_udp_count();
-    return n ? pc_net_host_udp_at(n - 1)->len : 0;
+    size_t n = protocore_net_host_udp_count();
+    return n ? protocore_net_host_udp_at(n - 1)->len : 0;
 }
 
 static const uint8_t *sent_bytes(void)
 {
-    size_t n = pc_net_host_udp_count();
-    return n ? pc_net_host_udp_at(n - 1)->data : NULL;
+    size_t n = protocore_net_host_udp_count();
+    return n ? protocore_net_host_udp_at(n - 1)->data : NULL;
 }
 
 // Every port this suite binds. close() frees the slot and drops the stack's control block; a port
@@ -74,7 +74,7 @@ static void close_all_ports(void)
 void setUp(void)
 {
     close_all_ports();
-    pc_net_host_udp_reset();
+    protocore_net_host_udp_reset();
     g_calls = 0;
     g_last_len = 0;
     g_last[0] = '\0';
@@ -181,11 +181,11 @@ void test_listen_rebinds_existing_port()
     TEST_ASSERT_EQUAL_INT(1, g_calls);
     TEST_ASSERT_EQUAL_PTR(&marker2, g_ctx_seen); // the rebind's ctx, not the original
     // Only one slot was consumed: a second, different port still gets its own slot
-    // (PC_MAX_UDP_LISTENERS == 2), proving the rebind didn't also burn a free slot.
+    // (PROTOCORE_MAX_UDP_LISTENERS == 2), proving the rebind didn't also burn a free slot.
     TEST_ASSERT_TRUE(Udp.listener->listen(9999, on_datagram, NULL));
 }
 
-// PC_MAX_UDP_LISTENERS == 2: once both slots are taken, a third distinct port is refused. Taking
+// PROTOCORE_MAX_UDP_LISTENERS == 2: once both slots are taken, a third distinct port is refused. Taking
 // a bound port's slot would stop a service that is still using it, with nothing to tell it so.
 void test_listen_refuses_a_third_port_when_the_pool_is_full()
 {
@@ -269,7 +269,7 @@ void test_peer_addr_copies_and_tolerates_null_outparams()
 
 // A reply needs the peer token its handler was given, so the reply path is driven from inside a
 // handler. The reply leaves from the same slot the datagram arrived on, inside the reply() call.
-static void reply_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void reply_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)data;
     (void)len;
@@ -289,14 +289,14 @@ void test_send_paths_are_captured()
     TEST_ASSERT_EQUAL_UINT(5, (unsigned)sent_len());
     TEST_ASSERT_EQUAL_INT(0, memcmp("reply", sent_bytes(), 5));
     // The reply goes back to the peer the handler was given, on the port it came from.
-    TEST_ASSERT_EQUAL_UINT16(5683, pc_net_host_udp_at(pc_net_host_udp_count() - 1)->dst_port);
+    TEST_ASSERT_EQUAL_UINT16(5683, protocore_net_host_udp_at(protocore_net_host_udp_count() - 1)->dst_port);
 
-    pc_net_host_udp_reset();
+    protocore_net_host_udp_reset();
     TEST_ASSERT_TRUE(Udp.client->sendto(addr("192.168.1.10"), 514, (const uint8_t *)"syslog!", 7));
     TEST_ASSERT_EQUAL_UINT(7, (unsigned)sent_len());
-    TEST_ASSERT_EQUAL_UINT16(514, pc_net_host_udp_at(pc_net_host_udp_count() - 1)->dst_port);
+    TEST_ASSERT_EQUAL_UINT16(514, protocore_net_host_udp_at(protocore_net_host_udp_count() - 1)->dst_port);
 
-    pc_net_host_udp_reset();
+    protocore_net_host_udp_reset();
     TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"notify", 6));
     TEST_ASSERT_EQUAL_UINT(6, (unsigned)sent_len());
     TEST_ASSERT_EQUAL_INT(0, memcmp("notify", sent_bytes(), 6));
@@ -309,7 +309,7 @@ void test_a_refused_send_reports_the_refusal()
     TEST_ASSERT_TRUE(Udp.listener->listen(5683, on_datagram, NULL));
     mock_udp_send_fail_after(0); // the stack refuses every datagram from here
     TEST_ASSERT_FALSE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"x", 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count());
+    TEST_ASSERT_EQUAL_size_t(0, protocore_net_host_udp_count());
 
     // The refusal leaves nothing behind: the next send goes out once the stack accepts again.
     mock_udp_send_fail_after(-1);
@@ -318,7 +318,7 @@ void test_a_refused_send_reports_the_refusal()
     TEST_ASSERT_EQUAL_UINT8('y', sent_bytes()[0]);
 }
 
-// A send rejects a null payload, a zero length, and a payload past PC_UDP_RX_BUF_SIZE before it
+// A send rejects a null payload, a zero length, and a payload past PROTOCORE_UDP_RX_BUF_SIZE before it
 // reaches the stack, so the capture stays empty.
 void test_send_rejects_null_zero_and_oversized_payload()
 {
@@ -328,7 +328,7 @@ void test_send_rejects_null_zero_and_oversized_payload()
     static uint8_t big[3000] = {0}; // past the largest datagram a bound port takes
     TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, big, sizeof(big)));
     TEST_ASSERT_FALSE(Udp.listener->reply(NULL, (const uint8_t *)"x", 1)); // no peer token
-    TEST_ASSERT_EQUAL_size_t(0, pc_net_host_udp_count());                  // none of the above landed anything
+    TEST_ASSERT_EQUAL_size_t(0, protocore_net_host_udp_count());           // none of the above landed anything
 }
 
 // A listener bound with a null handler (a legal Udp.listener->listen() call) must not be invoked -
@@ -340,7 +340,7 @@ void test_inject_skips_a_listener_with_no_handler()
     TEST_ASSERT_EQUAL_INT(0, g_calls);
 }
 
-// A source address the stack tagged with no family carries no address: it converts to PC_IP_NONE,
+// A source address the stack tagged with no family carries no address: it converts to PROTOCORE_IP_NONE,
 // which peer_addr refuses to format, rather than to a 0.0.0.0 the sender never had.
 void test_an_untagged_source_address_carries_no_address()
 {
@@ -368,7 +368,7 @@ static proto_bool g_edge_had_port_out = PROTO_FALSE;
 
 // Udp.listener->peer_addr()'s null-outparam tolerance: called from inside the handler where the peer
 // token is still valid, covering ip_out==null and ip_cap==0 (independently) and port_out==null.
-static void on_datagram_edge_cases(const uint8_t *, size_t, const struct pc_udp_peer *peer, void *)
+static void on_datagram_edge_cases(const uint8_t *, size_t, const struct protocore_udp_peer *peer, void *)
 {
     uint16_t port_tmp = 0;
     // No buffer, or one too small to hold any address, is refused rather than half-filled.

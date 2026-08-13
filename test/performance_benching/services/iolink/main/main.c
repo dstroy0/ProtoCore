@@ -30,14 +30,14 @@ void dbench_run(void)
                                0xAB,  // process data
                                0xCD,  // process data
                                0x00}; // CKT (type 2, checksum 0), filled below
-    frame[0] = pc_iol_mc(false, IOL_CH_PROCESS, 0x01);
-    frame[3] = pc_iol_ckt(IOL_MSEQ_TYPE_2, 0);
+    frame[0] = protocore_iol_mc(false, IOL_CH_PROCESS, 0x01);
+    frame[3] = protocore_iol_ckt(IOL_MSEQ_TYPE_2, 0);
     static const size_t check_idx = 3;
 
-    // A finalized copy so pc_iol_verify runs against a valid checksum on every iteration.
+    // A finalized copy so protocore_iol_verify runs against a valid checksum on every iteration.
     static uint8_t vframe[4];
     memcpy(vframe, frame, sizeof(vframe));
-    pc_iol_finalize(vframe, sizeof(vframe), check_idx);
+    protocore_iol_finalize(vframe, sizeof(vframe), check_idx);
 
     for (;;)
     {
@@ -46,19 +46,19 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         // Control-octet builders: cheap bit-packing, large N.
-        DBENCH_OP("pc_iol_mc build", 200000, sink8 += pc_iol_mc(true, IOL_CH_PAGE, 0x10));
-        DBENCH_OP("pc_iol_ckt build", 200000, sink8 += pc_iol_ckt(IOL_MSEQ_TYPE_1, 0x15));
-        DBENCH_OP("pc_iol_cks build", 200000, sink8 += pc_iol_cks(true, false, 0x0A));
+        DBENCH_OP("protocore_iol_mc build", 200000, sink8 += protocore_iol_mc(true, IOL_CH_PAGE, 0x10));
+        DBENCH_OP("protocore_iol_ckt build", 200000, sink8 += protocore_iol_ckt(IOL_MSEQ_TYPE_1, 0x15));
+        DBENCH_OP("protocore_iol_cks build", 200000, sink8 += protocore_iol_cks(true, false, 0x0A));
 
         // SDCI checksum over the 4-octet frame (seed 0x52 + 8->6 compression); bulk reports MB/s.
-        DBENCH_BULK("pc_iol_checksum6 x4B", 100000, sizeof(frame), sink8 += pc_iol_checksum6(frame, sizeof(frame)));
+        DBENCH_BULK("protocore_iol_checksum6 x4B", 100000, sizeof(frame), sink8 += protocore_iol_checksum6(frame, sizeof(frame)));
 
         // Finalize-in-place (zero checksum field, recompute, OR in) - idempotent, so re-running
         // on the same buffer stays valid.
-        DBENCH_OP("pc_iol_finalize x4B", 100000, sink8 += pc_iol_finalize(frame, sizeof(frame), check_idx));
+        DBENCH_OP("protocore_iol_finalize x4B", 100000, sink8 += protocore_iol_finalize(frame, sizeof(frame), check_idx));
 
         // Verify a known-good frame (recompute + compare the 6-bit field).
-        DBENCH_OP("pc_iol_verify x4B", 100000, sinkb = pc_iol_verify(vframe, sizeof(vframe), check_idx));
+        DBENCH_OP("protocore_iol_verify x4B", 100000, sinkb = protocore_iol_verify(vframe, sizeof(vframe), check_idx));
 
         (void)sink8;
         (void)sinkb;

@@ -31,15 +31,15 @@ specification. The notes below keep contributions aligned with that.
 The architecture is deliberately split so the logic compiles and runs on your
 host machine, separate from the hardware wrappers. There are two paths and one
 question selects between them: **does this part have the capability**. A gate in
-the core reads a `PC_HAS_*` capability and takes the hardware path or the
+the core reads a `PROTOCORE_HAS_*` capability and takes the hardware path or the
 software one. Nothing in the core asks which build this is, and nothing is
 spelled `ARDUINO` - naming one vendor's toolchain put every non-Espressif target
 on the software path.
 
 A detected vendor answers for its own silicon in
-[core_setup/board_profiles/pc_platform.h](../core_setup/board_profiles/pc_platform.h);
+[core_setup/board_profiles/protocore_platform.h](../core_setup/board_profiles/protocore_platform.h);
 a build with no vendor answers 0 and turns a capability on with
-`-DPC_HAS_<X>=1`, which is how a test env drives a hardware path on a machine
+`-DPROTOCORE_HAS_<X>=1`, which is how a test env drives a hardware path on a machine
 that has no hardware. Which vendor a build speaks to is `core_setup/`'s job, the
 backends a suite stands up live in `test/mocks/`, and no vendor header appears in
 the core.
@@ -79,7 +79,7 @@ the core.
     ```sh
     pio ci --board=esp32dev \
       --project-option="framework=arduino" \
-      --project-option="build_flags=-DPC_ENABLE_WEBSOCKET=1" \
+      --project-option="build_flags=-DPROTOCORE_ENABLE_WEBSOCKET=1" \
       --lib="." examples/L6-Presentation/WebSocket/WebSocket.ino
     ```
 
@@ -114,7 +114,7 @@ these; a PR missing them will be sent back.
   `performance_benching/core/<name>/`, same `main/main.c` + `host.c` shape as a service), a **native
   test** (+ matrix entry), and an **example**, plus a
   [docs/FEATURES.md](../docs/FEATURES.md) entry **if it is user-facing** (a
-  `PC_ENABLE_*` flag or an observable behavior); purely internal plumbing may
+  `PROTOCORE_ENABLE_*` flag or an observable behavior); purely internal plumbing may
   skip the FEATURES entry.
 
 `performance_benching/` mirrors `src/` exactly: `performance_benching/services/<name>/`,
@@ -140,7 +140,7 @@ Every example's `README.md` follows the house style - see any example under
    expected serial/HTTP output looks like, and where it fits the bigger picture -
    plus a **Troubleshooting** list for the common failure modes.
 4. **A "Build and run (PlatformIO)" block** with the exact
-   `pio ci ... --project-option="build_flags=-DPC_ENABLE_<FEATURE>=1"` command
+   `pio ci ... --project-option="build_flags=-DPROTOCORE_ENABLE_<FEATURE>=1"` command
    (the flag must reach the whole build, not just the sketch - the #1 CI gotcha).
 5. **A "How it works (for the curious)" section** that walks the **actual source
    verbatim, heavily annotated** - name the real functions and key lines, and
@@ -194,7 +194,7 @@ these READMEs, so the per-example README is where the real documentation lives.
 
 ## Build flags
 
-Features are opt-in via `PC_ENABLE_*` flags (default off) in
+Features are opt-in via `PROTOCORE_ENABLE_*` flags (default off) in
 [src/protocore_config.h](../src/protocore_config.h). Some features depend on
 others; illegal combinations fail at compile time with a clear `#error`. If you
 add a feature that builds on another, add the matching dependency guard and

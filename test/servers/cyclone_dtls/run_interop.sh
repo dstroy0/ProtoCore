@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# DTLS 1.3 real-peer interop: drive the library's pc_dtls_conn server with the CycloneSSL client.
+# DTLS 1.3 real-peer interop: drive the library's protocore_dtls_conn server with the CycloneSSL client.
 # Clones Oryx Embedded's CycloneSSL / CycloneCRYPTO / Common on first run (GPL; NOT vendored here),
 # builds a DTLS 1.3 client (test/servers/cyclone_dtls/cyclone_dtls_client.c) against them, compiles
-# the pc_dtls_conn UDP harness, then runs a full handshake + application-data round trip - twice:
+# the protocore_dtls_conn UDP harness, then runs a full handshake + application-data round trip - twice:
 # once with a plain X.509 certificate, once with an RFC 7250 RawPublicKey (--rpk). Prints PASS/FAIL.
 #
 # This is a second independent DTLS 1.3 reference peer alongside wolfSSL (test/servers/dtls_wolfssl):
@@ -65,10 +65,10 @@ if [[ ! -x "$WORK/cyclone_dtls_client" ]]; then
   gcc "$OBJ"/*.o -o "$WORK/cyclone_dtls_client" -lpthread -lm -lrt
 fi
 
-# --- 3. build the pc_dtls_conn server harness (same units as test/servers/dtls_wolfssl) ---
-echo ">> compiling pc_dtls_conn harness"
+# --- 3. build the protocore_dtls_conn server harness (same units as test/servers/dtls_wolfssl) ---
+echo ">> compiling protocore_dtls_conn harness"
 D="$ROOT/src/network_drivers/presentation"
-g++ -O2 -std=gnu++17 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_TLS_RPK=1 -I"$ROOT/src" -I"$ROOT/test/mocks" \
+g++ -O2 -std=gnu++17 -DPROTOCORE_ENABLE_DTLS=1 -DPROTOCORE_ENABLE_TLS_RPK=1 -I"$ROOT/src" -I"$ROOT/test/mocks" \
   "$ROOT/test/servers/dtls_wolfssl/dtls_interop_server.cpp" \
   "$D/dtls/dtls_conn.cpp" "$D/dtls/dtls_record.cpp" "$D/dtls/dtls_handshake.cpp" \
   "$D/http3/tls13_msg.cpp" "$ROOT/src/network_drivers/tls/tls13_kdf.c" "$D/http3/quic_hkdf.cpp" "$D/http3/quic_aead.cpp" \

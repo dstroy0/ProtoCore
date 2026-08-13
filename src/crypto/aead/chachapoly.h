@@ -24,20 +24,20 @@
 #ifndef PROTOCORE_CHACHAPOLY_H
 #define PROTOCORE_CHACHAPOLY_H
 
-#include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#define PC_CHACHAPOLY_KEY_LEN 64 ///< two 256-bit ChaCha20 keys
-#define PC_CHACHAPOLY_TAG_LEN 16 ///< Poly1305 tag
-#define PC_CHACHAPOLY_AAD_LEN 4  ///< the encrypted packet-length field
+#define PROTOCORE_CHACHAPOLY_KEY_LEN 64 ///< two 256-bit ChaCha20 keys
+#define PROTOCORE_CHACHAPOLY_TAG_LEN 16 ///< Poly1305 tag
+#define PROTOCORE_CHACHAPOLY_AAD_LEN 4  ///< the encrypted packet-length field
 
 /**
  * @brief Decrypt just the 4-byte length field to learn the packet length before reading the body.
  * @return the SSH packet_length (bytes of the packet after the length field, excluding the tag).
  */
-uint32_t pc_chachapoly_get_length(const uint8_t key[PC_CHACHAPOLY_KEY_LEN], uint32_t seqnr,
-                                  const uint8_t enc_len[PC_CHACHAPOLY_AAD_LEN]);
+uint32_t protocore_chachapoly_get_length(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr,
+                                         const uint8_t enc_len[PROTOCORE_CHACHAPOLY_AAD_LEN]);
 
 /**
  * @brief Encrypt+authenticate one packet.
@@ -45,8 +45,8 @@ uint32_t pc_chachapoly_get_length(const uint8_t key[PC_CHACHAPOLY_KEY_LEN], uint
  * @param dest  output: encrypted length (4) || encrypted payload (@p payload_len) || tag (16).
  *              May alias @p src. dest must hold 4 + payload_len + 16 bytes.
  */
-void pc_chachapoly_encrypt(const uint8_t key[PC_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest, const uint8_t *src,
-                           uint32_t payload_len);
+void protocore_chachapoly_encrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest,
+                                  const uint8_t *src, uint32_t payload_len);
 
 /**
  * @brief Verify+decrypt one packet.
@@ -54,9 +54,9 @@ void pc_chachapoly_encrypt(const uint8_t key[PC_CHACHAPOLY_KEY_LEN], uint32_t se
  * @param dest  output: plaintext length (4) || plaintext payload (@p payload_len). May alias @p src.
  * @return true if the Poly1305 tag verified; false (and no usable plaintext) otherwise.
  */
-proto_bool pc_chachapoly_decrypt(const uint8_t key[PC_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest,
-                                 const uint8_t *src, uint32_t payload_len);
+proto_bool protocore_chachapoly_decrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest,
+                                        const uint8_t *src, uint32_t payload_len);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CHACHAPOLY_H

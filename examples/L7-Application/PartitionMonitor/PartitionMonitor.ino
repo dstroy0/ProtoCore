@@ -3,7 +3,7 @@
 
 /**
  * @file PartitionMonitor.ino
- * @brief Flash partition-map monitor endpoint (PC_ENABLE_PARTITION_MONITOR).
+ * @brief Flash partition-map monitor endpoint (PROTOCORE_ENABLE_PARTITION_MONITOR).
  *
  * Serves the device's flash partition table as JSON at /partitions: each entry's
  * label, kind (factory / ota / nvs / littlefs / ...), type/subtype, flash offset,
@@ -12,13 +12,13 @@
  *
  * NOTE: enable it for the whole build (a .ino #define does not reach the
  * separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_PARTITION_MONITOR=1
+ *     build_flags = -DPROTOCORE_ENABLE_PARTITION_MONITOR=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Flash, then GET http://<ip>/partitions.
  */
 
-#define PC_ENABLE_PARTITION_MONITOR 1
+#define PROTOCORE_ENABLE_PARTITION_MONITOR 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -42,7 +42,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_partition_monitor_begin("/partitions");
+    protocore_partition_monitor_begin("/partitions");
     begin_http(80, NULL);
 }
 

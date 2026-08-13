@@ -9,7 +9,7 @@
 #include "services/web/edge_cache/edge_fetch.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_EDGE_CACHE
+#if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "mmgr/rawmemcpy.h"                       // proto_raw_read: the request into this fetch's buffer
 #include "services/net/http_client/http_client.h" // http_client_parse_response
@@ -169,7 +169,7 @@ void edge_fetch_begin(EdgeFetch *f, const EdgeFetchTransport *t, const char *hos
         f->st = EDGE_FETCH_STATUS_FAILED;
         return;
     }
-    f->cid = t->open(t->ctx, host, port, PC_EDGE_FETCH_TIMEOUT_MS);
+    f->cid = t->open(t->ctx, host, port, PROTOCORE_EDGE_FETCH_TIMEOUT_MS);
     if (f->cid < 0)
     {
         f->st = EDGE_FETCH_STATUS_FAILED;
@@ -197,7 +197,7 @@ EdgeFetchStatus edge_fetch_pump(EdgeFetch *f, const EdgeFetchTransport *t, uint3
         }
         if (!t->connected(t->ctx, f->cid))
         {
-            if (now_ms - f->start_ms >= PC_EDGE_FETCH_TIMEOUT_MS)
+            if (now_ms - f->start_ms >= PROTOCORE_EDGE_FETCH_TIMEOUT_MS)
             {
                 f->st = EDGE_FETCH_STATUS_FAILED;
             }
@@ -251,7 +251,7 @@ EdgeFetchStatus edge_fetch_pump(EdgeFetch *f, const EdgeFetchTransport *t, uint3
         f->st = EDGE_FETCH_STATUS_FAILED;
         return f->st;
     }
-    if (now_ms - f->start_ms >= PC_EDGE_FETCH_TIMEOUT_MS)
+    if (now_ms - f->start_ms >= PROTOCORE_EDGE_FETCH_TIMEOUT_MS)
     {
         f->st = EDGE_FETCH_STATUS_FAILED;
         return f->st;
@@ -268,4 +268,4 @@ void edge_fetch_end(EdgeFetch *f, const EdgeFetchTransport *t)
     }
 }
 
-#endif // PC_ENABLE_EDGE_CACHE
+#endif // PROTOCORE_ENABLE_EDGE_CACHE

@@ -4,7 +4,7 @@
 /**
  * @file HaasMdc.ino
  * @brief Haas Machine Data Collection (MDC) collector - poll a Haas CNC control's `?Q` commands over
- *        its Ethernet port and decode the framed replies (PC_ENABLE_HAAS_MDC).
+ *        its Ethernet port and decode the framed replies (PROTOCORE_ENABLE_HAAS_MDC).
  *
  * services/machine_tool/haas_mdc is a pure codec for the documented Haas MDC protocol; the sketch owns the TCP
  * socket to the control (raw socket on the Setting-143 port, default 5051). Each poll:
@@ -17,10 +17,10 @@
  * codec scans for those delimiters, so read_frame just accumulates bytes through the ETB. Point
  * HAAS_IP at a control with MDC enabled (Setting 143). See README.
  *
- * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_HAAS_MDC=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_HAAS_MDC=1
  */
 
-#define PC_ENABLE_HAAS_MDC 1
+#define PROTOCORE_ENABLE_HAAS_MDC 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -51,7 +51,7 @@ static size_t read_frame(int cid, char *out, size_t cap)
             continue;
         }
         out[o++] = (char)ch;
-        if (ch == (uint8_t)PC_HAAS_MDC_ETB)
+        if (ch == (uint8_t)PROTOCORE_HAAS_MDC_ETB)
         {
             break;
         }
@@ -66,12 +66,12 @@ static bool poll(int cid, size_t n, HaasMdcResp *r, const char *label)
     Tcp.client->send(cid, (const uint8_t *)c_cmd, n);
     char frame[192];
     size_t fl = read_frame(cid, frame, sizeof(frame));
-    if (!pc_haas_mdc_parse(frame, fl, r))
+    if (!protocore_haas_mdc_parse(frame, fl, r))
     {
         Serial.printf("[haas] %s: no response\n", label);
         return false;
     }
-    if (pc_haas_mdc_is_error(r))
+    if (protocore_haas_mdc_is_error(r))
     {
         Serial.printf("[haas] %s: UNKNOWN (unsupported)\n", label);
         return false;
@@ -82,13 +82,13 @@ static bool poll(int cid, size_t n, HaasMdcResp *r, const char *label)
 static void query_value(int cid, uint16_t q, const char *label)
 {
     HaasMdcResp r;
-    if (!poll(cid, pc_haas_mdc_build_q(c_cmd, sizeof(c_cmd), q), &r, label))
+    if (!poll(cid, protocore_haas_mdc_build_q(c_cmd, sizeof(c_cmd), q), &r, label))
     {
         return;
     }
     const char *v = nullptr;
     size_t vl = 0;
-    if (pc_haas_mdc_value(&r, &v, &vl))
+    if (protocore_haas_mdc_value(&r, &v, &vl))
     {
         Serial.printf("[haas] %s: %.*s\n", label, (int)vl, v);
     }
@@ -96,7 +96,7 @@ static void query_value(int cid, uint16_t q, const char *label)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PC_HAAS_MDC_TCP_PORT, 8000);
+    int cid = Tcp.client->open(host, PROTOCORE_HAAS_MDC_TCP_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[haas] connect failed");
@@ -109,10 +109,10 @@ static void run_session(const char *host)
 
     // Q500: program + run status + parts counter (two-branch response).
     HaasMdcResp r;
-    if (poll(cid, pc_haas_mdc_build_q(c_cmd, sizeof(c_cmd), HAAS_Q_PROGRAM_STATUS), &r, "status"))
+    if (poll(cid, protocore_haas_mdc_build_q(c_cmd, sizeof(c_cmd), HAAS_Q_PROGRAM_STATUS), &r, "status"))
     {
         HaasMdcStatus s;
-        if (pc_haas_mdc_parse_status(&r, &s))
+        if (protocore_haas_mdc_parse_status(&r, &s))
         {
             if (s.busy)
             {
@@ -127,12 +127,12 @@ static void run_session(const char *host)
     }
 
     // Q600: read macro variable #100.
-    if (poll(cid, pc_haas_mdc_build_var(c_cmd, sizeof(c_cmd), 100), &r, "macro"))
+    if (poll(cid, protocore_haas_mdc_build_var(c_cmd, sizeof(c_cmd), 100), &r, "macro"))
     {
         uint32_t var = 0;
         const char *val = nullptr;
         size_t vl = 0;
-        if (pc_haas_mdc_parse_macro(&r, &var, &val, &vl))
+        if (protocore_haas_mdc_parse_macro(&r, &var, &val, &vl))
         {
             Serial.printf("[haas] macro #%u = %.*s\n", (unsigned)var, (int)vl, val);
         }

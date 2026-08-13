@@ -3,7 +3,7 @@
 
 /**
  * @file Ld2410.ino
- * @brief Detect people with an HLK-LD2410 mmWave radar (PC_ENABLE_LD2410).
+ * @brief Detect people with an HLK-LD2410 mmWave radar (PROTOCORE_ENABLE_LD2410).
  *
  * The LD2410 is a cheap 24 GHz radar that sees a person even when they are perfectly still
  * (it senses breathing / micro-motion), through thin walls, and in the dark - no camera. It
@@ -16,10 +16,10 @@
  * VCC -> 5V (the module has its own 3.3V regulator), GND -> GND. Change the pins below if your
  * board's UART2 is elsewhere.
  *
- * Build flag (PlatformIO): `-DPC_ENABLE_LD2410=1`
+ * Build flag (PlatformIO): `-DPROTOCORE_ENABLE_LD2410=1`
  */
 
-#define PC_ENABLE_LD2410 1
+#define PROTOCORE_ENABLE_LD2410 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
 #include "services/peripherals/ld2410/ld2410.h"
@@ -48,21 +48,21 @@ void setup()
     Serial.begin(115200);
     pinMode(LED_PIN, OUTPUT);
 
-    pc_ld2410_begin(RADAR_RX, RADAR_TX);
-    pc_ld2410_set_engineering(true); // also report the per-gate energies (nice for tuning)
+    protocore_ld2410_begin(RADAR_RX, RADAR_TX);
+    protocore_ld2410_set_engineering(true); // also report the per-gate energies (nice for tuning)
     Serial.println("LD2410 radar ready - wave a hand in front of it");
 }
 
 void loop()
 {
-    // Pump the UART; pc_ld2410_poll() returns true only when a fresh report has been decoded.
-    if (!pc_ld2410_poll())
+    // Pump the UART; protocore_ld2410_poll() returns true only when a fresh report has been decoded.
+    if (!protocore_ld2410_poll())
     {
         return;
     }
 
-    const Ld2410Report *r = pc_ld2410_last();
-    digitalWrite(LED_PIN, pc_ld2410_present(r) ? HIGH : LOW);
+    const Ld2410Report *r = protocore_ld2410_last();
+    digitalWrite(LED_PIN, protocore_ld2410_present(r) ? HIGH : LOW);
 
     // Print only when the presence state changes, so the Serial Monitor stays readable.
     static uint8_t last_state = 0xFF;
@@ -70,6 +70,6 @@ void loop()
     {
         last_state = r->state;
         Serial.printf("[radar] %-17s distance=%3ucm  moving=%3ucm/%-3u static=%3ucm/%-3u\n", state_name(r->state),
-                      pc_ld2410_distance_cm(r), r->moving_cm, r->moving_energy, r->static_cm, r->static_energy);
+                      protocore_ld2410_distance_cm(r), r->moving_cm, r->moving_energy, r->static_cm, r->static_energy);
     }
 }

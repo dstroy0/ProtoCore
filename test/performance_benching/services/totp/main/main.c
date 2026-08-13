@@ -24,10 +24,11 @@ void dbench_run(void)
     {
         DBENCH_BANNER("totp");
         volatile uint32_t sink = 0;
-        DBENCH_OP("pc_hotp (HMAC-SHA1)", 20000, sink += pc_hotp(SECRET, sizeof(SECRET), 1234ull, 6));
-        DBENCH_OP("pc_totp (RFC 6238)", 20000, sink += pc_totp(SECRET, sizeof(SECRET), 1234567890ull, 30, 8));
+        DBENCH_OP("protocore_hotp (HMAC-SHA1)", 20000, sink += protocore_hotp(SECRET, sizeof(SECRET), 1234ull, 6));
+        DBENCH_OP("protocore_totp (RFC 6238)", 20000,
+                  sink += protocore_totp(SECRET, sizeof(SECRET), 1234567890ull, 30, 8));
         static uint8_t dec[20];
-        DBENCH_OP("pc_base32_decode", 100000, sink += pc_base32_decode(B32, dec, sizeof(dec)));
+        DBENCH_OP("protocore_base32_decode", 100000, sink += protocore_base32_decode(B32, dec, sizeof(dec)));
         (void)sink;
         DBENCH_DONE();
     }

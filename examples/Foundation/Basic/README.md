@@ -124,7 +124,7 @@ comments:
 ```cpp
 // The main library header. Including it pulls in the PC class, the HttpReq
 // type, the HttpMethod / HttpVersion enums, and the accessor helpers
-// (http_get_query / http_get_header). Any PC_ENABLE_* override must be
+// (http_get_query / http_get_header). Any PROTOCORE_ENABLE_* override must be
 // #defined BEFORE this include to take effect in the sketch.
 #include "protocore.h"
 // Physical.wifi->init() / Physical.wifi->ready(): the physical-layer (L1) WiFi bring-up

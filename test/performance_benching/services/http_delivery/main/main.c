@@ -3,15 +3,15 @@
 //
 // On-device CCOUNT microbenchmark for the HTTP delivery cores (services/file_transfer/http_delivery): the three
 // pure, zero-heap, zero-stdlib functions that make HTTP serving cheaper on a constrained device -
-//   - pc_delivery_swr():          RFC 5861 stale-while-revalidate freshness decision (FRESH /
+//   - protocore_delivery_swr():          RFC 5861 stale-while-revalidate freshness decision (FRESH /
 //                                  serve-stale-and-revalidate / EXPIRED) from age + max-age + swr.
-//   - pc_delivery_cache_control(): builds the matching "public, max-age=N[, stale-while-revalidate=M]"
+//   - protocore_delivery_cache_control(): builds the matching "public, max-age=N[, stale-while-revalidate=M]"
 //                                  header into a caller buffer.
-//   - pc_delivery_sw_manifest():  serializes the versioned {"version":..,"precache":[..]} JSON a
+//   - protocore_delivery_sw_manifest():  serializes the versioned {"version":..,"precache":[..]} JSON a
 //                                  generated service worker precaches the app shell from.
 // All three are pure math/string-building, so every call here exercises the real production code
 // path - like performance_benching/device/modbus, a pure codec with no hardware involved. The Arduino-only route
-// registration half (pc_delivery_serve_sw, http_delivery_routes.cpp) needs a live PC server + real
+// registration half (protocore_delivery_serve_sw, http_delivery_routes.cpp) needs a live PC server + real
 // sockets and is deliberately OUT OF SCOPE on this rig; only the deterministic cores are benched.
 // Byte-range/206 serving is network_drivers/application/http_range.h's job, not this service's, so it is not benched
 // here.
@@ -33,7 +33,7 @@ void dbench_run(void)
     // conformant): max-age=60 / swr=30, and the {"/","/app.js","/style.css"} @ "v42" precache list.
     static const char *const paths[3] = {"/", "/app.js", "/style.css"};
     static char cc[64];                       // Cache-Control header build target
-    static char mf[PC_DELIVERY_MANIFEST_BUF]; // precache manifest build target (shipped buffer size)
+    static char mf[PROTOCORE_DELIVERY_MANIFEST_BUF]; // precache manifest build target (shipped buffer size)
 
     for (;;)
     {
@@ -42,12 +42,12 @@ void dbench_run(void)
         volatile size_t sinkn = 0;
 
         // Freshness verdict: a single branch + one uint64 add, the per-request hot path. Cheap -> large N.
-        DBENCH_OP("pc_delivery_swr (stale)", 200000, sinkv += (int)pc_delivery_swr(75, 60, 30));
+        DBENCH_OP("protocore_delivery_swr (stale)", 200000, sinkv += (int)protocore_delivery_swr(75, 60, 30));
         // Cache-Control builder: hand-rolled decimal format of two windows into a small buffer.
-        DBENCH_OP("pc_delivery_cache_control", 100000, sinkn += pc_delivery_cache_control(60, 30, cc, sizeof(cc)));
+        DBENCH_OP("protocore_delivery_cache_control", 100000, sinkn += protocore_delivery_cache_control(60, 30, cc, sizeof(cc)));
         // SW precache manifest: JSON-escaped serialization of the versioned path list (per /precache.json request).
-        DBENCH_OP("pc_delivery_sw_manifest x3", 50000,
-                  sinkn += pc_delivery_sw_manifest(paths, 3, "v42", mf, sizeof(mf)));
+        DBENCH_OP("protocore_delivery_sw_manifest x3", 50000,
+                  sinkn += protocore_delivery_sw_manifest(paths, 3, "v42", mf, sizeof(mf)));
 
         (void)sinkv;
         (void)sinkn;

@@ -7,11 +7,11 @@
  */
 
 #include "services/fieldbus/df1/df1.h"
-#include "shared_primitives/crc.h" // PC_CRC16_ARC
+#include "shared_primitives/crc.h" // PROTOCORE_CRC16_ARC
 
-#if PC_ENABLE_DF1
+#if PROTOCORE_ENABLE_DF1
 
-uint8_t pc_df1_bcc(const uint8_t *data, size_t len)
+uint8_t protocore_df1_bcc(const uint8_t *data, size_t len)
 {
     uint8_t s = 0;
     for (size_t i = 0; i < len; i++)
@@ -25,18 +25,18 @@ uint8_t pc_df1_bcc(const uint8_t *data, size_t len)
 // as CRC-16/ARC.
 static uint16_t df1_crc_data_plus_etx(const uint8_t *data, size_t len, uint8_t etx)
 {
-    uint32_t c = pc_crc_begin(&PC_CRC16_ARC);
-    c = pc_crc_update(&PC_CRC16_ARC, c, data, len);
-    c = pc_crc_update(&PC_CRC16_ARC, c, &etx, 1);
-    return (uint16_t)pc_crc_final(&PC_CRC16_ARC, c);
+    uint32_t c = protocore_crc_begin(&PROTOCORE_CRC16_ARC);
+    c = protocore_crc_update(&PROTOCORE_CRC16_ARC, c, data, len);
+    c = protocore_crc_update(&PROTOCORE_CRC16_ARC, c, &etx, 1);
+    return (uint16_t)protocore_crc_final(&PROTOCORE_CRC16_ARC, c);
 }
 
-uint16_t pc_df1_crc(const uint8_t *data, size_t len)
+uint16_t protocore_df1_crc(const uint8_t *data, size_t len)
 {
-    return (uint16_t)pc_crc(&PC_CRC16_ARC, data, len);
+    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_ARC, data, len);
 }
 
-size_t pc_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, Df1Check check)
+size_t protocore_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, Df1Check check)
 {
     if (!buf || (data_len && !data))
     {
@@ -79,12 +79,12 @@ size_t pc_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t 
     }
     else
     {
-        buf[p++] = pc_df1_bcc(data, data_len); // BCC excludes the ETX
+        buf[p++] = protocore_df1_bcc(data, data_len); // BCC excludes the ETX
     }
     return p;
 }
 
-proto_bool pc_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap,
+proto_bool protocore_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap,
                               size_t *out_len)
 {
     size_t checklen = (check == DF1_CHECK_CRC) ? 2 : 1;
@@ -162,7 +162,7 @@ proto_bool pc_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, ui
         {
             return PROTO_FALSE;
         }
-        if (pc_df1_bcc(out, o) != buf[i])
+        if (protocore_df1_bcc(out, o) != buf[i])
         {
             return PROTO_FALSE;
         }
@@ -174,4 +174,4 @@ proto_bool pc_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, ui
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_DF1
+#endif // PROTOCORE_ENABLE_DF1

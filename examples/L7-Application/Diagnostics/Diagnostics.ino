@@ -3,23 +3,23 @@
 
 /**
  * @file Diagnostics.ino
- * @brief Build configuration endpoint (PC_ENABLE_DIAG).
+ * @brief Build configuration endpoint (PROTOCORE_ENABLE_DIAG).
  *
  * diag(slot_id) serves a JSON snapshot of the enabled features and buffer
  * sizes. Every value in it is a compile-time constant. Handy while developing;
  * it exposes the build configuration, so keep it OFF (or behind auth) in
  * production.
  *
- * NOTE: this feature is compiled into the library only when PC_ENABLE_DIAG
+ * NOTE: this feature is compiled into the library only when PROTOCORE_ENABLE_DIAG
  * is set for the whole build (a .ino #define does not reach the separately
  * compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_DIAG=1
+ *     build_flags = -DPROTOCORE_ENABLE_DIAG=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Flash, open Serial @ 115200 for the IP, then GET http://<ip>/diag.
  */
 
-#define PC_ENABLE_DIAG 1
+#define PROTOCORE_ENABLE_DIAG 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

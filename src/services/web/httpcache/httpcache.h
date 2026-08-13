@@ -4,7 +4,7 @@
 /**
  * @file httpcache.h
  * @brief HTTP `Cache-Control` directive builder + parser + freshness helper (RFC 9111),
- *        PC_ENABLE_HTTP_CACHE.
+ *        PROTOCORE_ENABLE_HTTP_CACHE.
  *
  * The origin-side of edge caching: first-class helpers to emit correct, edge-cacheable
  * `Cache-Control` responses from app routes (so a device sitting behind a real CDN - or the
@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HTTP_CACHE
+#if PROTOCORE_ENABLE_HTTP_CACHE
 
 /**
  * @brief A `Cache-Control` directive set (a superset of request + response directives).
@@ -62,10 +62,10 @@ typedef struct
     int32_t stale_if_error;         ///< `stale-if-error=N` (RFC 5861)
     int32_t max_stale;              ///< `max-stale[=N]` (request; -1 absent, -2 no value)
     int32_t min_fresh;              ///< `min-fresh=N` (request)
-} pc_cache_control;
+} protocore_cache_control;
 
 /** @brief Reset to an empty set (all flags false, all delta-seconds -1). */
-void cache_control_init(pc_cache_control *cc);
+void cache_control_init(protocore_cache_control *cc);
 
 /**
  * @brief Build the canonical `Cache-Control` value (no `Cache-Control:` prefix, no CRLF).
@@ -75,7 +75,7 @@ void cache_control_init(pc_cache_control *cc);
  *
  * @return bytes written (excluding NUL), or 0 on overflow or an empty directive set.
  */
-size_t cache_control_build(char *buf, size_t cap, const pc_cache_control *cc);
+size_t cache_control_build(char *buf, size_t cap, const protocore_cache_control *cc);
 
 /**
  * @brief Parse a `Cache-Control` header value into @p cc (initializes it first).
@@ -85,24 +85,24 @@ size_t cache_control_build(char *buf, size_t cap, const pc_cache_control *cc);
  *
  * @return true if at least one known directive was parsed.
  */
-proto_bool cache_control_parse(const char *s, size_t len, pc_cache_control *cc);
+proto_bool cache_control_parse(const char *s, size_t len, protocore_cache_control *cc);
 
 // --- first-class origin presets (fill @p cc for a common edge-cacheable response) ---
 
 /** @brief Long-lived immutable static asset: `public, max-age=<secs>, immutable`. */
-void cache_immutable_asset(pc_cache_control *cc, uint32_t max_age);
+void cache_immutable_asset(protocore_cache_control *cc, uint32_t max_age);
 
 /**
  * @brief Cacheable but served-while-revalidating: `public, max-age=<secs>` plus
  *        `stale-while-revalidate=<swr>` when @p stale_while_revalidate >= 0.
  */
-void cache_revalidatable(pc_cache_control *cc, uint32_t max_age, int32_t stale_while_revalidate);
+void cache_revalidatable(protocore_cache_control *cc, uint32_t max_age, int32_t stale_while_revalidate);
 
 /** @brief Dynamic / sensitive - never store: `no-store`. */
-void cache_no_store(pc_cache_control *cc);
+void cache_no_store(protocore_cache_control *cc);
 
 /** @brief Distinct shared-cache TTL: `public, max-age=<browser>, s-maxage=<shared>`. */
-void cache_shared(pc_cache_control *cc, uint32_t max_age, uint32_t s_maxage);
+void cache_shared(protocore_cache_control *cc, uint32_t max_age, uint32_t s_maxage);
 
 /**
  * @brief Freshness lifetime in seconds (RFC 9111 sec 4.2.1), first-match precedence:
@@ -112,10 +112,10 @@ void cache_shared(pc_cache_control *cc, uint32_t max_age, uint32_t s_maxage);
  * @param expires_minus_date `Expires` minus `Date` in seconds, or < 0 when that pair is absent.
  * @return the freshness lifetime in seconds, or -1 when none is explicit (caller applies a heuristic).
  */
-long cache_freshness_lifetime(const pc_cache_control *cc, proto_bool shared, long expires_minus_date);
+long cache_freshness_lifetime(const protocore_cache_control *cc, proto_bool shared, long expires_minus_date);
 
-#endif // PC_ENABLE_HTTP_CACHE
+#endif // PROTOCORE_ENABLE_HTTP_CACHE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HTTPCACHE_H

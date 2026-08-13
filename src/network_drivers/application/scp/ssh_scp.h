@@ -3,7 +3,7 @@
 
 /**
  * @file ssh_scp.h
- * @brief SCP server - the rcp SINK state machine over an SSH exec channel (PC_ENABLE_SSH_SCP).
+ * @brief SCP server - the rcp SINK state machine over an SSH exec channel (PROTOCORE_ENABLE_SSH_SCP).
  *
  * Drives the SCP/RCP codec (network_drivers/application/scp) over an SSH `exec "scp …"` channel so a
  * client can drop a file onto the device: `scp localfile admin@device:/path`. v1 serves the SINK
@@ -12,10 +12,10 @@
  *
  * Storage is reached through the filesystem accessor (server/filesystem/filesystem.h), so this file
  * names no vendor type and holds no mount, no root, and no path buffer. Mount the backend and set
- * the root once with pc_mnt_mount() + pc_fs_begin(); every server over that storage then answers
+ * the root once with protocore_mnt_mount() + protocore_fs_begin(); every server over that storage then answers
  * from the same root by construction rather than by each being told the same string.
  *
- * Streamed writes, fixed buffers, no heap. Call pc_ssh_scp_begin() once after pc_ssh_conn_setup().
+ * Streamed writes, fixed buffers, no heap. Call protocore_ssh_scp_begin() once after protocore_ssh_conn_setup().
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -26,19 +26,19 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SSH_SCP
+#if PROTOCORE_ENABLE_SSH_SCP
 
 /**
  * @brief Serve SCP uploads onto the mounted filesystem. Installs the channel exec-"scp" + data
- *        callbacks. Call once, after pc_ssh_conn_setup() and pc_fs_begin(). Coexists with
- *        pc_ssh_sftp_begin (they share the SSH channel layer).
+ *        callbacks. Call once, after protocore_ssh_conn_setup() and protocore_fs_begin(). Coexists with
+ *        protocore_ssh_sftp_begin (they share the SSH channel layer).
  */
-void pc_ssh_scp_begin(void);
+void protocore_ssh_scp_begin(void);
 
-#endif // PC_ENABLE_SSH_SCP
+#endif // PROTOCORE_ENABLE_SSH_SCP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SSH_SCP_H

@@ -33,7 +33,7 @@
 #include "network_drivers/presentation/presentation.h" // for HttpReq, http_get_header
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -86,6 +86,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const MultipartNs Multipart;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

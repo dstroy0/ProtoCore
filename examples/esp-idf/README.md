@@ -34,7 +34,7 @@ Two projects here build the library straight from this checkout (no download of 
 - [`minimal/`](minimal/) - a one-route web server, the smallest possible sketch.
 - [`Industrial_ESPIDF/`](Industrial_ESPIDF/) - an **industrial edge gateway**: a web dashboard **plus** a
   Modbus TCP slave **plus** an SNMP agent, one device fronting a control network. It also shows how to
-  turn `PC_ENABLE_*` features on for an `idf.py` build (`add_compile_definitions`, see below).
+  turn `PROTOCORE_ENABLE_*` features on for an `idf.py` build (`add_compile_definitions`, see below).
 
 Build `minimal/` (the industrial one is identical, just `cd` into its folder instead):
 
@@ -77,12 +77,12 @@ name, so keep the folder named that or derive it as the example's `main/CMakeLis
 
 ## Turning features on
 
-Every subsystem is behind a `PC_ENABLE_*` flag and defaults off (only the core HTTP server is on).
+Every subsystem is behind a `PROTOCORE_ENABLE_*` flag and defaults off (only the core HTTP server is on).
 Set the flags for a build by adding compile definitions in your project's top `CMakeLists.txt`, before
 `project()`:
 
 ```cmake
-add_compile_definitions(PC_ENABLE_WEBSOCKET=1 PC_ENABLE_TLS=1)
+add_compile_definitions(PROTOCORE_ENABLE_WEBSOCKET=1 PROTOCORE_ENABLE_TLS=1)
 ```
 
 The full flag list and what each pulls in is in [`src/protocore_config.h`](../../src/protocore_config.h) and

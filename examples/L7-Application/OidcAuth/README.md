@@ -1,6 +1,6 @@
 # OidcAuth - OpenID Connect ID-token auth (RS256)
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_OIDC`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_OIDC`
 
 ## What this example teaches
 
@@ -14,9 +14,9 @@ valid token, `401` otherwise.
 **Verify the token, then trust its claims:**
 
 ```cpp
-pc_oidc_claims claims;
-int rc = pc_oidc_verify(token, strlen(token), JWKS, ISSUER, AUDIENCE, now, &claims);
-if (rc != pc_oidc_result::PC_OIDC_OK) { /* 401 */ }
+protocore_oidc_claims claims;
+int rc = protocore_oidc_verify(token, strlen(token), JWKS, ISSUER, AUDIENCE, now, &claims);
+if (rc != protocore_oidc_result::PROTOCORE_OIDC_OK) { /* 401 */ }
 // claims.sub / claims.email are now trusted
 ```
 
@@ -40,7 +40,7 @@ validates.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_OIDC=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_OIDC=1" \
   --lib="." examples/L7-Application/OidcAuth/OidcAuth.ino
 ```
 
@@ -58,7 +58,7 @@ added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_OIDC 1
+#define PROTOCORE_ENABLE_OIDC 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -100,9 +100,9 @@ void setup()
         const char *token = hdr + 7;
         uint32_t now = 1700000100; // production: read from NTP
 
-        pc_oidc_claims claims;
-        int rc = pc_oidc_verify(token, strlen(token), JWKS, ISSUER, AUDIENCE, now, &claims);
-        if (rc != pc_oidc_result::PC_OIDC_OK)
+        protocore_oidc_claims claims;
+        int rc = protocore_oidc_verify(token, strlen(token), JWKS, ISSUER, AUDIENCE, now, &claims);
+        if (rc != protocore_oidc_result::PROTOCORE_OIDC_OK)
         {
             char b[40];
             snprintf(b, sizeof(b), "{\"error\":%d}", rc);

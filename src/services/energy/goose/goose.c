@@ -9,7 +9,7 @@
 #include "services/energy/goose/goose.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_GOOSE
+#if PROTOCORE_ENABLE_GOOSE
 
 // Number of octets to encode a BER definite length.
 static size_t len_octets(size_t len)
@@ -66,7 +66,7 @@ static proto_bool tlv(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const ui
 }
 
 // Append a BER INTEGER (unsigned value, minimal length, leading 0x00 if the MSB is set).
-static proto_bool pc_ber_int(uint8_t *out, size_t cap, size_t *n, uint8_t tag, uint32_t v)
+static proto_bool protocore_ber_int(uint8_t *out, size_t cap, size_t *n, uint8_t tag, uint32_t v)
 {
     uint8_t buf[5];
     size_t k = 0;
@@ -95,12 +95,12 @@ static proto_bool pc_ber_int(uint8_t *out, size_t cap, size_t *n, uint8_t tag, u
     return tlv(out, cap, n, tag, buf, k);
 }
 
-static proto_bool pc_ber_str(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const char *s)
+static proto_bool protocore_ber_str(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const char *s)
 {
     return tlv(out, cap, n, tag, (const uint8_t *)(s ? s : ""), s ? strnlen(s, cap + 1) : 0);
 }
 
-static proto_bool pc_ber_bool(uint8_t *out, size_t cap, size_t *n, uint8_t tag, proto_bool v)
+static proto_bool protocore_ber_bool(uint8_t *out, size_t cap, size_t *n, uint8_t tag, proto_bool v)
 {
     uint8_t b = v ? 0xFF : 0x00;
     return tlv(out, cap, n, tag, &b, 1);
@@ -152,7 +152,7 @@ static uint32_t ber_uint(const uint8_t *v, size_t n)
     return x;
 }
 
-size_t pc_goose_pdu(const pc_goose *g, uint8_t *out, size_t cap)
+size_t protocore_goose_pdu(const protocore_goose *g, uint8_t *out, size_t cap)
 {
     if (!g || !out)
     {
@@ -167,12 +167,12 @@ size_t pc_goose_pdu(const pc_goose *g, uint8_t *out, size_t cap)
     size_t n = RESERVE; // build the content after the reserved header area
     static const uint8_t ZT[8] = {0};
     proto_bool ok =
-        pc_ber_str(out, cap, &n, 0x80, g->gocb_ref) && pc_ber_int(out, cap, &n, 0x81, g->time_allowed_to_live) &&
-        pc_ber_str(out, cap, &n, 0x82, g->dat_set) && pc_ber_str(out, cap, &n, 0x83, g->go_id) &&
-        tlv(out, cap, &n, 0x84, g->t ? g->t : ZT, 8) && pc_ber_int(out, cap, &n, 0x85, g->st_num) &&
-        pc_ber_int(out, cap, &n, 0x86, g->sq_num) && pc_ber_bool(out, cap, &n, 0x87, g->simulation) &&
-        pc_ber_int(out, cap, &n, 0x88, g->conf_rev) && pc_ber_bool(out, cap, &n, 0x89, g->nds_com) &&
-        pc_ber_int(out, cap, &n, 0x8A, g->num_entries) && tlv(out, cap, &n, 0xAB, g->all_data, g->all_data_len);
+        protocore_ber_str(out, cap, &n, 0x80, g->gocb_ref) && protocore_ber_int(out, cap, &n, 0x81, g->time_allowed_to_live) &&
+        protocore_ber_str(out, cap, &n, 0x82, g->dat_set) && protocore_ber_str(out, cap, &n, 0x83, g->go_id) &&
+        tlv(out, cap, &n, 0x84, g->t ? g->t : ZT, 8) && protocore_ber_int(out, cap, &n, 0x85, g->st_num) &&
+        protocore_ber_int(out, cap, &n, 0x86, g->sq_num) && protocore_ber_bool(out, cap, &n, 0x87, g->simulation) &&
+        protocore_ber_int(out, cap, &n, 0x88, g->conf_rev) && protocore_ber_bool(out, cap, &n, 0x89, g->nds_com) &&
+        protocore_ber_int(out, cap, &n, 0x8A, g->num_entries) && tlv(out, cap, &n, 0xAB, g->all_data, g->all_data_len);
     if (!ok)
     {
         return 0;
@@ -187,7 +187,7 @@ size_t pc_goose_pdu(const pc_goose *g, uint8_t *out, size_t cap)
     return hdr + content_len;
 }
 
-size_t pc_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, const pc_goose *g, uint8_t *out,
+size_t protocore_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, const protocore_goose *g, uint8_t *out,
                       size_t cap)
 {
     if (!dst || !src || !g || !out || cap < 22)
@@ -207,7 +207,7 @@ size_t pc_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, co
     out[20] = 0;
     out[21] = 0;
 
-    size_t pdu = pc_goose_pdu(g, out + 22, cap - 22);
+    size_t pdu = protocore_goose_pdu(g, out + 22, cap - 22);
     if (!pdu)
     {
         return 0;
@@ -218,7 +218,7 @@ size_t pc_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, co
     return 22 + pdu;
 }
 
-proto_bool pc_goose_parse_frame(const uint8_t *buf, size_t len, pc_goose_rx *out)
+proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore_goose_rx *out)
 {
     if (!buf || !out || len < 24) // 14 Ethernet + 8 GOOSE header + a minimal PDU
     {
@@ -301,4 +301,4 @@ proto_bool pc_goose_parse_frame(const uint8_t *buf, size_t len, pc_goose_rx *out
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_GOOSE
+#endif // PROTOCORE_ENABLE_GOOSE

@@ -21,7 +21,7 @@ done
 mkdir -p "$OUT"
 for form in 0 1; do
     "$CC" -std=c11 -Os -ffunction-sections -fdata-sections -Wall -Wextra \
-        -DPC_NS_FORM=$form -c "$SRC" -o "$OUT/ns_abi_$form.o"
+        -DPROTOCORE_NS_FORM=$form -c "$SRC" -o "$OUT/ns_abi_$form.o"
     "$CC" -nostdlib -Wl,--gc-sections -Wl,-e,app_main \
         "$OUT/ns_abi_$form.o" -o "$OUT/ns_abi_$form.elf"
 done

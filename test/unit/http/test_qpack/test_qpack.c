@@ -55,7 +55,7 @@ static proto_bool sink_emit(void *ctx, const char *n, size_t nl, const char *v, 
 static proto_bool decode_all(const uint8_t *block, size_t len, Sink *s)
 {
     char scratch[512];
-    return pc_qpack_decode(block, len, scratch, sizeof scratch, sink_emit, s);
+    return protocore_qpack_decode(block, len, scratch, sizeof scratch, sink_emit, s);
 }
 
 void setUp(void)
@@ -80,7 +80,7 @@ void test_appendix_b1_decode(void)
 void test_encode_indexed(void)
 {
     uint8_t out[8];
-    size_t n = pc_qpack_encode_header(out, sizeof out, ":status", 7, "200", 3);
+    size_t n = protocore_qpack_encode_header(out, sizeof out, ":status", 7, "200", 3);
     TEST_ASSERT_EQUAL_INT(1, (int)n);
     TEST_ASSERT_EQUAL_HEX8(0xD9, out[0]);
     Sink s = {0};
@@ -94,7 +94,7 @@ void test_encode_indexed(void)
 void test_encode_nameref_roundtrip(void)
 {
     uint8_t out[32];
-    size_t n = pc_qpack_encode_header(out, sizeof out, ":path", 5, "/index.html", 11);
+    size_t n = protocore_qpack_encode_header(out, sizeof out, ":path", 5, "/index.html", 11);
     TEST_ASSERT_TRUE(n > 1);
     TEST_ASSERT_EQUAL_HEX8(0x51, out[0]); // 01 N=0 T=1 index=1
 
@@ -110,7 +110,7 @@ void test_encode_nameref_roundtrip(void)
 void test_literal_name(void)
 {
     uint8_t out[32];
-    size_t n = pc_qpack_encode_header(out, sizeof out, "x-test", 6, "hi", 2);
+    size_t n = protocore_qpack_encode_header(out, sizeof out, "x-test", 6, "hi", 2);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_HEX8(0x20, out[0] & 0xE0); // 001 pattern
     uint8_t block[34] = {0x00, 0x00};
@@ -132,13 +132,13 @@ void test_literal_name(void)
 void test_full_section(void)
 {
     uint8_t out[128];
-    size_t o = pc_qpack_encode_prefix(out, sizeof out);
+    size_t o = protocore_qpack_encode_prefix(out, sizeof out);
     TEST_ASSERT_EQUAL_INT(2, (int)o);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[1]);
-    o += pc_qpack_encode_header(out + o, sizeof out - o, ":status", 7, "200", 3);       // indexed
-    o += pc_qpack_encode_header(out + o, sizeof out - o, "content-type", 12, "x/y", 3); // name ref
-    o += pc_qpack_encode_header(out + o, sizeof out - o, "x-test", 6, "hello", 5);      // literal name
+    o += protocore_qpack_encode_header(out + o, sizeof out - o, ":status", 7, "200", 3);       // indexed
+    o += protocore_qpack_encode_header(out + o, sizeof out - o, "content-type", 12, "x/y", 3); // name ref
+    o += protocore_qpack_encode_header(out + o, sizeof out - o, "x-test", 6, "hello", 5);      // literal name
     Sink s = {0};
     TEST_ASSERT_TRUE(decode_all(out, o, &s));
     TEST_ASSERT_EQUAL_UINT(3, (unsigned)s.n);
@@ -168,13 +168,13 @@ void test_reject_dynamic(void)
 void test_encode_edges(void)
 {
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_qpack_encode_prefix(out, 1));                         // prefix needs 2
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_qpack_encode_header(out, 0, ":status", 7, "200", 3)); // indexed, no room
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_qpack_encode_header(out, 1, ":path", 5, "/x", 2));    // name-ref value overflow
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_qpack_encode_header(out, 1, "zzzz", 4, "v", 1));      // literal-name overflow
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_qpack_encode_prefix(out, 1));                         // prefix needs 2
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_qpack_encode_header(out, 0, ":status", 7, "200", 3)); // indexed, no room
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_qpack_encode_header(out, 1, ":path", 5, "/x", 2));    // name-ref value overflow
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_qpack_encode_header(out, 1, "zzzz", 4, "v", 1));      // literal-name overflow
 
     // A name that Huffman-compresses (8x 'a' = 40 bits = 5 bytes < 8) takes the H-bit path.
-    size_t n = pc_qpack_encode_header(out, sizeof out, "aaaaaaaa", 8, "v", 1);
+    size_t n = protocore_qpack_encode_header(out, sizeof out, "aaaaaaaa", 8, "v", 1);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE((out[0] & 0xE0) == 0x20 && (out[0] & 0x08)); // literal literal name, H set
     uint8_t blk[66] = {0x00, 0x00};
@@ -197,10 +197,10 @@ void test_decode_errors(void)
     // A decoded name that does not fit the caller's scratch is rejected.
     char tiny[4];
     const uint8_t nameref[5] = {0x00, 0x00, 0x51, 0x01, 'x'}; // :path (5 bytes) into a 4-byte scratch
-    TEST_ASSERT_FALSE(pc_qpack_decode(nameref, 5, tiny, sizeof tiny, sink_emit, &s));
+    TEST_ASSERT_FALSE(protocore_qpack_decode(nameref, 5, tiny, sizeof tiny, sink_emit, &s));
     char tiny2[2];
     const uint8_t litname[8] = {0x00, 0x00, 0x23, 'a', 'b', 'c', 0x01, 'v'}; // name "abc" into a 2-byte scratch
-    TEST_ASSERT_FALSE(pc_qpack_decode(litname, 8, tiny2, sizeof tiny2, sink_emit, &s));
+    TEST_ASSERT_FALSE(protocore_qpack_decode(litname, 8, tiny2, sizeof tiny2, sink_emit, &s));
     // A truncated field-section prefix (no Delta Base byte).
     const uint8_t prefix_only[1] = {0x00};
     TEST_ASSERT_FALSE(decode_all(prefix_only, 1, &s));
@@ -219,10 +219,10 @@ void test_value_string_paths(void)
     // A raw value that does not fit the remaining scratch after the name is copied in.
     char scratch[6]; // :path (5) fits, leaving 1 byte for the value
     const uint8_t val_over[9] = {0x00, 0x00, 0x51, 0x05, 'a', 'b', 'c', 'd', 'e'};
-    TEST_ASSERT_FALSE(pc_qpack_decode(val_over, 9, scratch, sizeof scratch, sink_emit, &s));
+    TEST_ASSERT_FALSE(protocore_qpack_decode(val_over, 9, scratch, sizeof scratch, sink_emit, &s));
     // A well-formed Huffman value round-trips (decode_str7 Huffman path): "aaaa" -> H, 3 bytes.
     uint8_t enc[16];
-    size_t n = pc_qpack_encode_header(enc, sizeof enc, ":path", 5, "aaaaaaaa", 8);
+    size_t n = protocore_qpack_encode_header(enc, sizeof enc, ":path", 5, "aaaaaaaa", 8);
     uint8_t blk[18] = {0x00, 0x00};
     memcpy(blk + 2, enc, n);
     TEST_ASSERT_TRUE(decode_all(blk, n + 2, &s));
@@ -234,19 +234,19 @@ void test_qpack_more_encode_decode_paths(void)
     uint8_t out[64];
     Sink s = {0};
     // A short literal name that does not Huffman-compress takes the raw memcpy path.
-    size_t n = pc_qpack_encode_header(out, sizeof out, "q", 1, "v", 1);
+    size_t n = protocore_qpack_encode_header(out, sizeof out, "q", 1, "v", 1);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE((out[0] & 0xE0) == 0x20 && !(out[0] & 0x08)); // literal name, H clear
     // A value that Huffman-compresses exercises encode_str7's H-bit path.
-    TEST_ASSERT_TRUE(pc_qpack_encode_header(out, sizeof out, ":path", 5, "aaaaaaaa", 8) > 0);
+    TEST_ASSERT_TRUE(protocore_qpack_encode_header(out, sizeof out, ":path", 5, "aaaaaaaa", 8) > 0);
     // Huffman value with too little room fails at the length header / body.
     for (size_t cap = 1; cap <= 5; cap++)
     {
-        (void)pc_qpack_encode_header(out, cap, ":path", 5, "aaaaaaaa", 8);
+        (void)protocore_qpack_encode_header(out, cap, ":path", 5, "aaaaaaaa", 8);
     }
     // cap=0 fails at the name-ref index and at the literal-name index.
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_qpack_encode_header(out, 0, ":path", 5, "/x", 2));
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_qpack_encode_header(out, 0, "zzzz", 4, "v", 1));
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_qpack_encode_header(out, 0, ":path", 5, "/x", 2));
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_qpack_encode_header(out, 0, "zzzz", 4, "v", 1));
     // Decode error paths.
     const uint8_t bad_ric[1] = {0xFF}; // RIC varint needs a continuation byte
     TEST_ASSERT_FALSE(decode_all(bad_ric, 1, &s));
@@ -266,14 +266,14 @@ void test_qpack_more_encode_decode_paths(void)
     // An emit callback that rejects a header aborts the decode (indexed + literal-name field lines).
     char sc[128];
     const uint8_t indexed[3] = {0x00, 0x00, 0xC0 | 17}; // Indexed Field Line, static index 17
-    TEST_ASSERT_FALSE(pc_qpack_decode(indexed, 3, sc, sizeof sc, fail_emit, NULL));
+    TEST_ASSERT_FALSE(protocore_qpack_decode(indexed, 3, sc, sizeof sc, fail_emit, NULL));
     const uint8_t litname[6] = {0x00, 0x00, 0x21, 'q', 0x01, 'v'}; // literal name "q" value "v"
-    TEST_ASSERT_FALSE(pc_qpack_decode(litname, 6, sc, sizeof sc, fail_emit, NULL));
+    TEST_ASSERT_FALSE(protocore_qpack_decode(litname, 6, sc, sizeof sc, fail_emit, NULL));
     // Literal-name encode running out of room mid-Huffman-name and at the value.
     for (size_t cap = 2; cap <= 7; cap++)
     {
-        (void)pc_qpack_encode_header(out, cap, "aaaaaaaa", 8, "v", 1); // Huffman name body overflow
-        (void)pc_qpack_encode_header(out, cap, "q", 1, "value", 5);    // literal name fits, value overflow
+        (void)protocore_qpack_encode_header(out, cap, "aaaaaaaa", 8, "v", 1); // Huffman name body overflow
+        (void)protocore_qpack_encode_header(out, cap, "q", 1, "value", 5);    // literal name fits, value overflow
     }
 }
 
@@ -282,7 +282,7 @@ void test_qpack_emit_fail_and_namelen_past(void)
     char sc[128];
     // Literal Field Line with Name Reference + a valid value, but the emit callback rejects it.
     const uint8_t nameref[5] = {0x00, 0x00, 0x51, 0x01, 'v'}; // :path name-ref, value "v"
-    TEST_ASSERT_FALSE(pc_qpack_decode(nameref, 5, sc, sizeof sc, fail_emit, NULL));
+    TEST_ASSERT_FALSE(protocore_qpack_decode(nameref, 5, sc, sizeof sc, fail_emit, NULL));
     // Literal Field Line with Literal Name whose NameLen (6, not the 3-bit escape 7) runs past the block.
     Sink s = {0};
     const uint8_t namelen_past[3] = {0x00, 0x00, 0x26}; // NameLen 6, no name octets follow

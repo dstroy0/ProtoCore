@@ -11,9 +11,9 @@
 #include "mmgr/protomem.h"
 #include "shared_primitives/hex.h"
 
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
 
-WebDavMethod pc_webdav_method(const char *m)
+WebDavMethod protocore_webdav_method(const char *m)
 {
     if (!m)
     {
@@ -70,7 +70,7 @@ WebDavMethod pc_webdav_method(const char *m)
     return DAV_M_UNSUPPORTED;
 }
 
-int pc_webdav_depth(const char *depth_hdr, int dflt)
+int protocore_webdav_depth(const char *depth_hdr, int dflt)
 {
     if (!depth_hdr || !depth_hdr[0])
     {
@@ -86,7 +86,7 @@ int pc_webdav_depth(const char *depth_hdr, int dflt)
     }
     if (!strcmp(depth_hdr, "infinity"))
     {
-        return PC_DAV_DEPTH_INFINITY;
+        return PROTOCORE_DAV_DEPTH_INFINITY;
     }
     return dflt;
 }
@@ -106,7 +106,7 @@ static proto_bool app(char *buf, size_t cap, size_t *len, const char *s)
     return PROTO_TRUE;
 }
 
-size_t pc_webdav_xml_escape(char *dst, size_t cap, const char *src)
+size_t protocore_webdav_xml_escape(char *dst, size_t cap, const char *src)
 {
     size_t o = 0;
     if (cap == 0)
@@ -159,7 +159,7 @@ size_t pc_webdav_xml_escape(char *dst, size_t cap, const char *src)
     return o;
 }
 
-proto_bool pc_webdav_dest_path(const char *destination, char *out, size_t cap)
+proto_bool protocore_webdav_dest_path(const char *destination, char *out, size_t cap)
 {
     if (!destination || !out || cap == 0)
     {
@@ -195,8 +195,8 @@ proto_bool pc_webdav_dest_path(const char *destination, char *out, size_t cap)
         char c = *p;
         if (c == '%')
         {
-            int hi = pc_hex_val(p[1]);
-            int lo = (hi >= 0) ? pc_hex_val(p[2]) : -1;
+            int hi = protocore_hex_val(p[1]);
+            int lo = (hi >= 0) ? protocore_hex_val(p[2]) : -1;
             if (hi < 0 || lo < 0)
             {
                 return PROTO_FALSE; // malformed escape
@@ -215,14 +215,14 @@ proto_bool pc_webdav_dest_path(const char *destination, char *out, size_t cap)
     return PROTO_TRUE;
 }
 
-size_t pc_webdav_ms_begin(char *buf, size_t cap, size_t len)
+size_t protocore_webdav_ms_begin(char *buf, size_t cap, size_t len)
 {
     app(buf, cap, &len, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
     return len;
 }
 
-size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, proto_bool is_collection, uint32_t size,
-                          const char *rfc1123_mtime, const char *content_type)
+size_t protocore_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, proto_bool is_collection,
+                                 uint32_t size, const char *rfc1123_mtime, const char *content_type)
 {
     // Build the whole <response> in a temp first so the append is atomic: a
     // partial element is never left in the document when the buffer fills.
@@ -230,7 +230,7 @@ size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, p
     size_t t = 0;
     char esc[256];
 
-    pc_webdav_xml_escape(esc, sizeof(esc), href);
+    protocore_webdav_xml_escape(esc, sizeof(esc), href);
     // Open the response element and write the escaped href. The block runs at most 27 + esc(<=255)
     // + 66 == 348 bytes against tmp[512].
     if (!app(tmp, sizeof(tmp), &t, "  <D:response>\n    <D:href>") || !app(tmp, sizeof(tmp), &t, esc) ||
@@ -310,7 +310,7 @@ size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, p
     return len;
 }
 
-size_t pc_webdav_ms_end(char *buf, size_t cap, size_t len)
+size_t protocore_webdav_ms_end(char *buf, size_t cap, size_t len)
 {
     app(buf, cap, &len, "</D:multistatus>\n");
     return len;
@@ -325,7 +325,7 @@ static proto_bool name_end_char(char c)
     return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '>';
 }
 
-size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const char *body, size_t body_len)
+size_t protocore_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const char *body, size_t body_len)
 {
     size_t len = 0;
     if (cap)
@@ -333,7 +333,7 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
         buf[0] = '\0'; // always a valid C-string, even if nothing below fits
     }
     char esc[256];
-    pc_webdav_xml_escape(esc, sizeof(esc), href);
+    protocore_webdav_xml_escape(esc, sizeof(esc), href);
     if (!app(buf, cap, &len,
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n"
              "  <D:response>\n    <D:href>") ||
@@ -349,7 +349,7 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
     int emitted = 0;
     proto_bool in_prop = PROTO_FALSE;
     size_t i = 0;
-    while (i < body_len && emitted < PC_WEBDAV_MAX_PROPS)
+    while (i < body_len && emitted < PROTOCORE_WEBDAV_MAX_PROPS)
     {
         if (body[i] != '<')
         {
@@ -510,7 +510,7 @@ static proto_bool dav_lock_norm(char *dst, size_t cap, const char *path)
 // True if `child` equals `parent` or lies (at a segment boundary) under it. Both trailing-slash-normalized.
 static proto_bool dav_lock_same_or_under(const char *parent, const char *child)
 {
-    size_t pn = strnlen(parent, PC_DAV_LOCK_PATH_MAX);
+    size_t pn = strnlen(parent, PROTOCORE_DAV_LOCK_PATH_MAX);
     if (strncmp(parent, child, pn) != 0)
     {
         return PROTO_FALSE;
@@ -554,38 +554,38 @@ static proto_bool dav_lock_covers(const DavLock *l, const char *np)
     return l->depth_infinity && dav_lock_same_or_under(l->path, np);
 }
 
-void pc_dav_lock_init(DavLockTable *t)
+void protocore_dav_lock_init(DavLockTable *t)
 {
     if (!t)
     {
         return;
     }
-    for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         t->locks[i].active = PROTO_FALSE;
     }
 }
 
-const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char *token, proto_bool exclusive,
-                                   proto_bool depth_infinity, uint32_t expiry_s)
+const DavLock *protocore_dav_lock_acquire(DavLockTable *t, const char *path, const char *token, proto_bool exclusive,
+                                          proto_bool depth_infinity, uint32_t expiry_s)
 {
     if (!t || !path || !token)
     {
         return NULL;
     }
-    char np[PC_DAV_LOCK_PATH_MAX];
+    char np[PROTOCORE_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
         return NULL;
     }
-    if (strnlen(token, PC_DAV_LOCK_TOKEN_MAX) + 1 > PC_DAV_LOCK_TOKEN_MAX) // token would not fit
+    if (strnlen(token, PROTOCORE_DAV_LOCK_TOKEN_MAX) + 1 > PROTOCORE_DAV_LOCK_TOKEN_MAX) // token would not fit
     {
         return NULL;
     }
 
     // Conflict: an exclusive request clashes with any overlapping lock; a shared one only with an
     // overlapping exclusive lock (two shared locks may coexist).
-    for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         const DavLock *l = &t->locks[i];
         if (l->active && dav_lock_overlap(l->path, l->depth_infinity, np, depth_infinity) &&
@@ -595,7 +595,7 @@ const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char
         }
     }
 
-    for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         DavLock *l = &t->locks[i];
         if (l->active)
@@ -613,14 +613,14 @@ const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char
     return NULL; // table full
 }
 
-size_t pc_dav_lock_sweep(DavLockTable *t, uint32_t now_s)
+size_t protocore_dav_lock_sweep(DavLockTable *t, uint32_t now_s)
 {
     if (!t)
     {
         return 0;
     }
     size_t dropped = 0;
-    for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         DavLock *l = &t->locks[i];
         if (l->active && l->expiry_s != 0 && l->expiry_s <= now_s) // 0 = never expires
@@ -632,13 +632,13 @@ size_t pc_dav_lock_sweep(DavLockTable *t, uint32_t now_s)
     return dropped;
 }
 
-const DavLock *pc_dav_lock_refresh(DavLockTable *t, const char *token, uint32_t new_expiry_s)
+const DavLock *protocore_dav_lock_refresh(DavLockTable *t, const char *token, uint32_t new_expiry_s)
 {
     if (!t || !token)
     {
         return NULL;
     }
-    for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         DavLock *l = &t->locks[i];
         if (l->active && strcmp(l->token, token) == 0)
@@ -650,18 +650,18 @@ const DavLock *pc_dav_lock_refresh(DavLockTable *t, const char *token, uint32_t 
     return NULL;
 }
 
-const DavLock *pc_dav_lock_find(const DavLockTable *t, const char *path)
+const DavLock *protocore_dav_lock_find(const DavLockTable *t, const char *path)
 {
     if (!t || !path)
     {
         return NULL;
     }
-    char np[PC_DAV_LOCK_PATH_MAX];
+    char np[PROTOCORE_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
         return NULL;
     }
-    for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         if (t->locks[i].active && dav_lock_covers(&t->locks[i], np))
         {
@@ -671,13 +671,13 @@ const DavLock *pc_dav_lock_find(const DavLockTable *t, const char *path)
     return NULL;
 }
 
-proto_bool pc_dav_lock_release(DavLockTable *t, const char *token)
+proto_bool protocore_dav_lock_release(DavLockTable *t, const char *token)
 {
     if (!t || !token)
     {
         return PROTO_FALSE;
     }
-    for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         if (t->locks[i].active && strcmp(t->locks[i].token, token) == 0)
         {
@@ -688,7 +688,7 @@ proto_bool pc_dav_lock_release(DavLockTable *t, const char *token)
     return PROTO_FALSE;
 }
 
-proto_bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const char *presented_token)
+proto_bool protocore_dav_lock_can_write(const DavLockTable *t, const char *path, const char *presented_token)
 {
     if (!t)
     {
@@ -698,13 +698,13 @@ proto_bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const 
     {
         return PROTO_FALSE;
     }
-    char np[PC_DAV_LOCK_PATH_MAX];
+    char np[PROTOCORE_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
         return PROTO_TRUE; // an unparseable path is not something the lock table can guard
     }
     proto_bool covered = PROTO_FALSE;
-    for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
+    for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         const DavLock *l = &t->locks[i];
         if (!l->active || !dav_lock_covers(l, np))
@@ -720,7 +720,7 @@ proto_bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const 
     return !covered; // unlocked => allowed; locked with no / wrong token => denied
 }
 
-proto_bool pc_dav_if_token(const char *if_header, char *out, size_t cap)
+proto_bool protocore_dav_if_token(const char *if_header, char *out, size_t cap)
 {
     if (!if_header || !out || cap == 0)
     {
@@ -753,4 +753,4 @@ proto_bool pc_dav_if_token(const char *if_header, char *out, size_t cap)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_WEBDAV
+#endif // PROTOCORE_ENABLE_WEBDAV

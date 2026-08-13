@@ -12,9 +12,9 @@
 // SNMP face for the NMS, and a small web face for humans. Every buffer is statically sized (no heap),
 // so determinism holds with all three running.
 //
-// Feature flags: PC_ENABLE_MODBUS and PC_ENABLE_SNMP are turned on for the whole build by the
+// Feature flags: PROTOCORE_ENABLE_MODBUS and PROTOCORE_ENABLE_SNMP are turned on for the whole build by the
 // project's top-level CMakeLists (add_compile_definitions, before project()) - the ESP-IDF way to set
-// a PC_ENABLE_* flag, since the guards live in the separately-compiled library sources. Do NOT
+// a PROTOCORE_ENABLE_* flag, since the guards live in the separately-compiled library sources. Do NOT
 // #define them here too; the CMake definition already reaches every translation unit.
 //
 // Arduino autostart is enabled (CONFIG_AUTOSTART_ARDUINO=y in sdkconfig.defaults), so setup() runs once
@@ -67,7 +67,7 @@ static void handle_root(uint8_t slot, HttpReq *)
                      "<li>Modbus setpoint (holding reg %u): %u</li>"
                      "</ul><p>Modbus TCP on :502 &middot; SNMP on UDP:161 &middot; HTTP on :80</p>",
                      (unsigned long)(millis() / 1000), (unsigned)ESP.getFreeHeap(), (unsigned)MB_SETPOINT_HOLD_REG,
-                     (unsigned)pc_modbus_get_holding_reg(MB_SETPOINT_HOLD_REG));
+                     (unsigned)protocore_modbus_get_holding_reg(MB_SETPOINT_HOLD_REG));
     if (n < 0 || (size_t)n >= sizeof(body))
     {
         return server.send(slot, 500, "text/plain", "render error");
@@ -98,17 +98,18 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // --- Fieldbus: Modbus TCP slave on :502 ---
-    pc_modbus_server_init();
-    pc_modbus_set_holding_reg(MB_SETPOINT_HOLD_REG, 0); // client-writable setpoint
-    pc_modbus_set_input_reg(MB_UPTIME_INPUT_REG, 0);    // application-published uptime (read-only)
-    pc_modbus_on_write(on_modbus_write);
+    protocore_modbus_server_init();
+    protocore_modbus_set_holding_reg(MB_SETPOINT_HOLD_REG, 0); // client-writable setpoint
+    protocore_modbus_set_input_reg(MB_UPTIME_INPUT_REG, 0);    // application-published uptime (read-only)
+    protocore_modbus_on_write(on_modbus_write);
     server.listen(502, PROTO_MODBUS);
 
     // --- Management: SNMP v1/v2c agent on UDP:161 ---
-    pc_snmp_agent_init("public");
-    pc_snmp_agent_set_system("ProtoCore industrial gateway", "admin@example.com", "esp32-pc-gw", "plant floor", 72);
-    pc_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, (uint8_t)SnmpTag::SNMP_GAUGE32, get_free_heap);
-    pc_snmp_agent_begin_udp(161);
+    protocore_snmp_agent_init("public");
+    protocore_snmp_agent_set_system("ProtoCore industrial gateway", "admin@example.com", "esp32-pc-gw", "plant floor",
+                                    72);
+    protocore_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, (uint8_t)SnmpTag::SNMP_GAUGE32, get_free_heap);
+    protocore_snmp_agent_begin_udp(161);
 
     // --- Web dashboard + start the TCP server (HTTP/80 + the Modbus listener) ---
     server.on("/", HTTP_GET, handle_root);
@@ -130,6 +131,6 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        pc_modbus_set_input_reg(MB_UPTIME_INPUT_REG, (uint16_t)(millis() / 1000));
+        protocore_modbus_set_input_reg(MB_UPTIME_INPUT_REG, (uint16_t)(millis() / 1000));
     }
 }

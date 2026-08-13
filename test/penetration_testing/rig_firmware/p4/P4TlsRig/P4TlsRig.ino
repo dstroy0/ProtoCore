@@ -8,8 +8,8 @@
 // software curves. Findings: docs/FEATURE_PERFORMANCE.md "Device-CPU breakdown + the ESP32-P4 (HW ECC)".
 #include "network_drivers/physical/physical.h"
 #include "protocore.h"
-#ifdef PC_TLS_HS_BENCH
-#include "network_drivers/tls/tls.h" // pc_tls_hs_bench (handshake device-CPU vs wall probe)
+#ifdef PROTOCORE_TLS_HS_BENCH
+#include "network_drivers/tls/tls.h" // protocore_tls_hs_bench (handshake device-CPU vs wall probe)
 #endif
 #include <Arduino.h>
 #include <esp_system.h> // esp_fill_random
@@ -174,13 +174,13 @@ void setup()
 void loop()
 {
     server.handle();
-#ifdef PC_TLS_HS_BENCH
+#ifdef PROTOCORE_TLS_HS_BENCH
     static unsigned seen_hs = 0;
-    if (pc_tls_hs_bench.count != seen_hs)
+    if (protocore_tls_hs_bench.count != seen_hs)
     {
-        seen_hs = pc_tls_hs_bench.count;
+        seen_hs = protocore_tls_hs_bench.count;
         Serial.printf("TLSHSBENCH #%u  cpu_us=%lld  wall_us=%lld  (cpu=device-compute, wall=incl-network)\n", seen_hs,
-                      pc_tls_hs_bench.last_cpu_us, pc_tls_hs_bench.last_wall_us);
+                      protocore_tls_hs_bench.last_cpu_us, protocore_tls_hs_bench.last_wall_us);
     }
 #endif
 }

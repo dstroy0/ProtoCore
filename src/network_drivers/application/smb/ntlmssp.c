@@ -9,7 +9,7 @@
 #include "ntlmssp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
 #include "mmgr/endian.h"
 
@@ -18,12 +18,12 @@ static const uint8_t NTLMSSP_SIG[8] = {'N', 'T', 'L', 'M', 'S', 'S', 'P', 0};
 // Write a Len/MaxLen/BufferOffset field triplet at @p f.
 static void wr_field(uint8_t *f, uint16_t len, uint32_t off)
 {
-    pc_wr16le(f + 0, len);
-    pc_wr16le(f + 2, len); // MaxLen == Len
-    pc_wr32le(f + 4, off);
+    protocore_wr16le(f + 0, len);
+    protocore_wr16le(f + 2, len); // MaxLen == Len
+    protocore_wr32le(f + 4, off);
 }
 
-size_t pc_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags)
+size_t protocore_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags)
 {
     if (!buf || cap < 32)
     {
@@ -31,27 +31,27 @@ size_t pc_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags)
     }
     mem.set(buf, 0, 32);
     mem.cpy(buf + 0, NTLMSSP_SIG, 8); // Signature
-    pc_wr32le(buf + 8, 1);            // MessageType = NEGOTIATE
-    pc_wr32le(buf + 12, flags);       // NegotiateFlags
+    protocore_wr32le(buf + 8, 1);            // MessageType = NEGOTIATE
+    protocore_wr32le(buf + 12, flags);       // NegotiateFlags
     wr_field(buf + 16, 0, 32);        // DomainNameFields (empty; offset = end of header)
     wr_field(buf + 24, 0, 32);        // WorkstationFields (empty)
     return 32;
 }
 
-proto_bool pc_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChallenge *out)
+proto_bool protocore_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChallenge *out)
 {
     if (!msg || !out || len < 48) // through TargetInfoFields
     {
         return PROTO_FALSE;
     }
-    if (mem.cmp(msg, NTLMSSP_SIG, 8) != 0 || pc_rd32le(msg + 8) != 2)
+    if (mem.cmp(msg, NTLMSSP_SIG, 8) != 0 || protocore_rd32le(msg + 8) != 2)
     {
         return PROTO_FALSE;
     }
-    out->flags = pc_rd32le(msg + 20);
+    out->flags = protocore_rd32le(msg + 20);
     mem.cpy(out->server_challenge, msg + 24, 8);
-    uint16_t ti_len = pc_rd16le(msg + 40);
-    uint32_t ti_off = pc_rd32le(msg + 44);
+    uint16_t ti_len = protocore_rd16le(msg + 40);
+    uint32_t ti_off = protocore_rd32le(msg + 44);
     if (ti_len == 0)
     {
         out->target_info = NULL;
@@ -94,7 +94,7 @@ static size_t utf16_len(const char *s)
     return n * 2;
 }
 
-size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm_resp, size_t lm_len,
+size_t protocore_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm_resp, size_t lm_len,
                                      const uint8_t *nt_resp, size_t nt_len, const char *domain, const char *user,
                                      const char *workstation, uint32_t flags, proto_bool with_mic)
 {
@@ -116,14 +116,14 @@ size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm
 
     mem.set(buf, 0, HDR);
     mem.cpy(buf + 0, NTLMSSP_SIG, 8); // Signature
-    pc_wr32le(buf + 8, 3);            // MessageType = AUTHENTICATE
+    protocore_wr32le(buf + 8, 3);            // MessageType = AUTHENTICATE
     if (with_mic)
     {
         // Version (offset 64): a plausible Windows build; servers do not validate the value. MIC (offset
         // 72) stays zero here - the caller writes it after taking HMAC-MD5 over the three messages.
         buf[64] = 6;               // ProductMajorVersion
         buf[65] = 1;               // ProductMinorVersion
-        pc_wr16le(buf + 66, 7601); // ProductBuild
+        protocore_wr16le(buf + 66, 7601); // ProductBuild
         buf[71] = 15;              // NTLMRevisionCurrent (NTLMSSP_REVISION_W2K3)
     }
 
@@ -155,8 +155,8 @@ size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm
     wr_field(buf + 36, (uint16_t)ulen, (uint32_t)usr_off);  // UserNameFields
     wr_field(buf + 44, (uint16_t)wlen, (uint32_t)wks_off);  // WorkstationFields
     wr_field(buf + 52, 0, (uint32_t)key_off);               // EncryptedRandomSessionKeyFields
-    pc_wr32le(buf + 60, flags);                             // NegotiateFlags
+    protocore_wr32le(buf + 60, flags);                             // NegotiateFlags
     return total;
 }
 
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_ENABLE_SMB

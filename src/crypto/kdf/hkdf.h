@@ -9,7 +9,7 @@
  * an Initial secret is HKDF-Extract'd from a fixed salt and the client's Destination Connection
  * ID, and every packet-protection value (key / iv / hp) is an HKDF-Expand-Label of a traffic
  * secret. This is the same HMAC-SHA256 the SSH transport already ships, so these two routines are
- * a thin layer over pc_hmac_sha256 rather than a second HMAC.
+ * a thin layer over protocore_hmac_sha256 rather than a second HMAC.
  *
  * Pure, zero heap, host-tested against the RFC 9001 Appendix A worked examples (the HkdfLabel
  * byte strings and the derived client/server secrets).
@@ -23,47 +23,47 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // Shared by the HTTP/3 (QUIC) key schedule and the DTLS 1.3 and TLS 1.3 record layers.
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 /** @brief HKDF-SHA256 output block length (== SHA-256 digest length). */
-#define PC_HKDF_HASH_LEN 32
+#define PROTOCORE_HKDF_HASH_LEN 32
 
 /**
  * @brief HKDF-Extract (RFC 5869 sec 2.2): PRK = HMAC-SHA256(salt, ikm).
  *
- * @param work      PC_HKDF_BORROW bytes of caller storage.
+ * @param work      PROTOCORE_HKDF_BORROW bytes of caller storage.
  * @param salt      Optional salt (may be NULL only when @p salt_len is 0).
  * @param salt_len  Salt length in bytes.
  * @param ikm       Input keying material.
  * @param ikm_len   Input keying material length.
- * @param prk       Output pseudo-random key, must be PC_HKDF_HASH_LEN bytes.
+ * @param prk       Output pseudo-random key, must be PROTOCORE_HKDF_HASH_LEN bytes.
  */
-void pc_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
-                     uint8_t prk[PC_HKDF_HASH_LEN]);
+void protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
+                            uint8_t prk[PROTOCORE_HKDF_HASH_LEN]);
 
 /**
  * @brief HKDF-Expand (RFC 5869 sec 2.3): OKM = T(1) | T(2) | ..., T(i) = HMAC(PRK, T(i-1) | info | i).
  *
  * The bare primitive, taking @p info verbatim rather than the RFC 8446 HkdfLabel structure that
- * pc_hkdf_expand_label() builds around it. TLS and QUIC use the labelled form; this one is what the
+ * protocore_hkdf_expand_label() builds around it. TLS and QUIC use the labelled form; this one is what the
  * RFC's own Appendix A test vectors address, since they expand an arbitrary info string.
  *
- * @param prk       Pseudo-random key from pc_hkdf_extract(), PC_HKDF_HASH_LEN bytes.
+ * @param prk       Pseudo-random key from protocore_hkdf_extract(), PROTOCORE_HKDF_HASH_LEN bytes.
  * @param info      Optional context (may be NULL only when @p info_len is 0).
  * @param info_len  Context length in bytes.
  * @param out       Output keying material.
- * @param out_len   Bytes requested; sec 2.3 caps this at 255*PC_HKDF_HASH_LEN, past which the block
+ * @param out_len   Bytes requested; sec 2.3 caps this at 255*PROTOCORE_HKDF_HASH_LEN, past which the block
  *                  counter has no encoding and @p out is zeroed instead.
  */
-void pc_hkdf_expand(uint8_t *work, const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
-                    uint8_t *out, size_t out_len);
+void protocore_hkdf_expand(uint8_t *work, const uint8_t prk[PROTOCORE_HKDF_HASH_LEN], const uint8_t *info,
+                           size_t info_len, uint8_t *out, size_t out_len);
 
 /** @brief The RFC 8446 sec 7.1 HKDF-Expand-Label prefix used by TLS 1.3 and QUIC. DTLS 1.3 overrides
  *  it with "dtls13" (RFC 9147 sec 5.9); callers that need it pass it explicitly. */
-#define PC_HKDF_LABEL_PREFIX "tls13 "
+#define PROTOCORE_HKDF_LABEL_PREFIX "tls13 "
 
 /**
  * @brief HKDF-Expand-Label (RFC 8446 sec 7.1) with the QUIC/TLS 1.3 "tls13 " label prefix.
@@ -74,36 +74,36 @@ void pc_hkdf_expand(uint8_t *work, const uint8_t prk[PC_HKDF_HASH_LEN], const ui
  * this function pass an empty context). @p out_len must not exceed 255*32 bytes; QUIC only ever asks
  * for <= 32, which is a single HMAC block.
  *
- * @param secret        Traffic secret (HKDF PRK), PC_HKDF_HASH_LEN bytes.
+ * @param secret        Traffic secret (HKDF PRK), PROTOCORE_HKDF_HASH_LEN bytes.
  * @param label         Short ASCII label, e.g. "quic key" (without the prefix), <= 249 bytes.
  * @param out           Output keying material.
  * @param out_len       Number of output bytes requested.
- * @param label_prefix  HkdfLabel prefix: PC_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
+ * @param label_prefix  HkdfLabel prefix: PROTOCORE_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
  */
-void pc_hkdf_expand_label(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, uint8_t *out,
-                          size_t out_len, const char *label_prefix);
+void protocore_hkdf_expand_label(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label,
+                                 uint8_t *out, size_t out_len, const char *label_prefix);
 
 /**
  * @brief HKDF-Expand-Label with an explicit context (RFC 8446 sec 7.1, the general form).
  *
- * Identical to pc_hkdf_expand_label() but the HkdfLabel context is @p context (0..255 bytes)
+ * Identical to protocore_hkdf_expand_label() but the HkdfLabel context is @p context (0..255 bytes)
  * instead of empty. The TLS 1.3 key schedule's Derive-Secret (sec 7.1) is exactly this with the
  * context set to a Transcript-Hash, so the whole handshake key schedule layers on this one routine.
  *
- * @param secret       PRK, PC_HKDF_HASH_LEN bytes.
+ * @param secret       PRK, PROTOCORE_HKDF_HASH_LEN bytes.
  * @param label        Short ASCII label without the "tls13 " prefix, <= 249 bytes.
  * @param context      Context bytes (may be NULL only when @p context_len is 0), <= 255 bytes.
  * @param context_len  Context length.
  * @param out          Output keying material.
  * @param out_len      Number of output bytes requested.
- * @param label_prefix HkdfLabel prefix: PC_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
+ * @param label_prefix HkdfLabel prefix: PROTOCORE_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
  */
-void pc_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label,
-                              const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
-                              const char *label_prefix);
+void protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label,
+                                     const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
+                                     const char *label_prefix);
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HKDF_H

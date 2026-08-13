@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_crypto.c
+ * @file protocore_snmp_crypto.c
  * @brief USM key localization (SHA-256) + AES-128-CFB implementation.
  */
 
@@ -10,7 +10,7 @@
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
-#if PC_ENABLE_SNMP_V3
+#if PROTOCORE_ENABLE_SNMP_V3
 
 #include "crypto/cipher/aes_sbox.h"
 #include "crypto/hash/sha256.h"
@@ -21,12 +21,12 @@
 
 // RFC 3414 passphrases are >= 8 chars with no formal upper bound; cap the localization input
 // defensively (well above any real passphrase) so a non-terminated password cannot over-read.
-#define PC_SNMP_USM_PASS_MAX 256
+#define PROTOCORE_SNMP_USM_PASS_MAX 256
 
-void pc_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id, size_t engine_id_len,
+void protocore_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id, size_t engine_id_len,
                               uint8_t key_out[SNMP_USM_KEY_LEN])
 {
-    size_t pwlen = password ? strnlen(password, PC_SNMP_USM_PASS_MAX) : 0;
+    size_t pwlen = password ? strnlen(password, PROTOCORE_SNMP_USM_PASS_MAX) : 0;
     if (pwlen == 0)
     {
         mem.set(key_out, 0, SNMP_USM_KEY_LEN);
@@ -34,8 +34,8 @@ void pc_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t
     }
 
     // Ku = SHA-256( password repeated to exactly 1 048 576 bytes ).
-    pc_sha256_ctx ctx;
-    pc_sha256_init(&ctx, work);
+    protocore_sha256_ctx ctx;
+    protocore_sha256_init(&ctx, work);
     uint8_t block[64];
     size_t pw_index = 0;
     uint32_t count = 0;
@@ -46,21 +46,21 @@ void pc_snmp_usm_localize_key(uint8_t *work, const char *password, const uint8_t
             block[i] = (uint8_t)password[pw_index];
             pw_index = (pw_index + 1) % pwlen;
         }
-        pc_sha256_update(&ctx, block, 64);
+        protocore_sha256_update(&ctx, block, 64);
         count += 64;
     }
     uint8_t ku[SNMP_USM_KEY_LEN];
-    pc_sha256_final(&ctx, ku);
+    protocore_sha256_final(&ctx, ku);
 
     // Kul = SHA-256( Ku || engineID || Ku ).
-    pc_sha256_init(&ctx, work);
-    pc_sha256_update(&ctx, ku, SNMP_USM_KEY_LEN);
-    pc_sha256_update(&ctx, engine_id, engine_id_len);
-    pc_sha256_update(&ctx, ku, SNMP_USM_KEY_LEN);
-    pc_sha256_final(&ctx, key_out);
+    protocore_sha256_init(&ctx, work);
+    protocore_sha256_update(&ctx, ku, SNMP_USM_KEY_LEN);
+    protocore_sha256_update(&ctx, engine_id, engine_id_len);
+    protocore_sha256_update(&ctx, ku, SNMP_USM_KEY_LEN);
+    protocore_sha256_final(&ctx, key_out);
 
-    pc_secure_wipe(ku, sizeof(ku));
-    pc_secure_wipe(block, sizeof(block));
+    protocore_secure_wipe(ku, sizeof(ku));
+    protocore_secure_wipe(block, sizeof(block));
 }
 
 // ---------------------------------------------------------------------------
@@ -80,10 +80,10 @@ static void aes128_key_schedule(const uint8_t key[16], uint8_t rk[176])
         if (i % 4 == 0)
         {
             uint8_t tmp = t[0]; // RotWord
-            t[0] = PC_AES_SBOX[t[1]];
-            t[1] = PC_AES_SBOX[t[2]];
-            t[2] = PC_AES_SBOX[t[3]];
-            t[3] = PC_AES_SBOX[tmp];
+            t[0] = PROTOCORE_AES_SBOX[t[1]];
+            t[1] = PROTOCORE_AES_SBOX[t[2]];
+            t[2] = PROTOCORE_AES_SBOX[t[3]];
+            t[3] = PROTOCORE_AES_SBOX[tmp];
             t[0] ^= kRcon[i / 4 - 1];
         }
         for (int j = 0; j < 4; j++)
@@ -111,7 +111,7 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
         // SubBytes
         for (int i = 0; i < 16; i++)
         {
-            s[i] = PC_AES_SBOX[s[i]];
+            s[i] = PROTOCORE_AES_SBOX[s[i]];
         }
 
         // ShiftRows (state is column-major: s[r + 4c])
@@ -151,7 +151,7 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
     mem.cpy(out, s, 16);
 }
 
-void pc_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8_t *in, uint8_t *out, size_t len,
+void protocore_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8_t *in, uint8_t *out, size_t len,
                         proto_bool encrypt)
 {
     uint8_t rk[176];
@@ -195,9 +195,9 @@ void pc_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8
         off += bl;
     }
 
-    pc_secure_wipe(rk, sizeof(rk));
-    pc_secure_wipe(ks, sizeof(ks));
-    pc_secure_wipe(fb, sizeof(fb));
+    protocore_secure_wipe(rk, sizeof(rk));
+    protocore_secure_wipe(ks, sizeof(ks));
+    protocore_secure_wipe(fb, sizeof(fb));
 }
 
-#endif // PC_ENABLE_SNMP_V3
+#endif // PROTOCORE_ENABLE_SNMP_V3

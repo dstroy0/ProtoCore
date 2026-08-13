@@ -30,7 +30,7 @@
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // The modexp below borrows its Montgomery temporaries from the secure pool as one working set. It does not
 // know where that memory comes from or that releasing it wipes - it asks for a resource and uses it.
@@ -40,7 +40,7 @@ PC_CRYPTO_HOT
 // Little-endian 32-bit limbs: d[0] = least significant.
 // ---------------------------------------------------------------------------
 
-const pc_bignum group14_p = {{
+const protocore_bignum group14_p = {{
     // 2048-bit MODP group-14 prime
     0xFFFFFFFFu, 0xFFFFFFFFu, 0x8AACaa68u, 0x15728E5Au, 0x98FA0510u, 0x15D22618u, 0xEA956AE5u, 0x3995497Cu,
     0x95581718u, 0xDE2BCBF6u, 0x6F4C52C9u, 0xB5C55DF0u, 0xEC07A28Fu, 0x9B2783A2u, 0x180E8603u, 0xE39E772Cu,
@@ -52,7 +52,7 @@ const pc_bignum group14_p = {{
     0x8A67CC74u, 0x29024E08u, 0x80DC1CD1u, 0xC4C6628Bu, 0x2168C234u, 0xC90FDAA2u, 0xFFFFFFFFu, 0xFFFFFFFFu,
 }};
 
-const pc_bignum group14_g = {{
+const protocore_bignum group14_g = {{
     2u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
     0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
     0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
@@ -82,9 +82,9 @@ int bn_cmp_raw(const uint32_t *a, const uint32_t *b, int n)
 // Public API (bn_from_bytes / bn_to_bytes / bn_cmp / ... shared both platforms)
 // ---------------------------------------------------------------------------
 
-void bn_from_bytes(pc_bignum *out, const uint8_t *bytes, size_t len)
+void bn_from_bytes(protocore_bignum *out, const uint8_t *bytes, size_t len)
 {
-    mem.set(out->d, 0, sizeof(pc_bignum));
+    mem.set(out->d, 0, sizeof(protocore_bignum));
     // bytes are big-endian; map to little-endian limbs.
     size_t blen = len < 256 ? len : 256;
     for (size_t i = 0; i < blen; i++)
@@ -94,11 +94,11 @@ void bn_from_bytes(pc_bignum *out, const uint8_t *bytes, size_t len)
     }
 }
 
-void bn_to_bytes(uint8_t bytes[256], const pc_bignum *in)
+void bn_to_bytes(uint8_t bytes[256], const protocore_bignum *in)
 {
-    for (int i = 0; i < PC_BN_LIMBS; i++)
+    for (int i = 0; i < PROTOCORE_BN_LIMBS; i++)
     {
-        uint32_t v = in->d[PC_BN_LIMBS - 1 - i];
+        uint32_t v = in->d[PROTOCORE_BN_LIMBS - 1 - i];
         bytes[i * 4 + 0] = (uint8_t)(v >> 24);
         bytes[i * 4 + 1] = (uint8_t)(v >> 16);
         bytes[i * 4 + 2] = (uint8_t)(v >> 8);
@@ -106,14 +106,14 @@ void bn_to_bytes(uint8_t bytes[256], const pc_bignum *in)
     }
 }
 
-int bn_cmp(const pc_bignum *a, const pc_bignum *b)
+int bn_cmp(const protocore_bignum *a, const protocore_bignum *b)
 {
-    return bn_cmp_raw(a->d, b->d, PC_BN_LIMBS);
+    return bn_cmp_raw(a->d, b->d, PROTOCORE_BN_LIMBS);
 }
 
-int bn_is_zero(const pc_bignum *a)
+int bn_is_zero(const protocore_bignum *a)
 {
-    for (int i = 0; i < PC_BN_LIMBS; i++)
+    for (int i = 0; i < PROTOCORE_BN_LIMBS; i++)
     {
         if (a->d[i])
         {
@@ -123,11 +123,11 @@ int bn_is_zero(const pc_bignum *a)
     return 1;
 }
 
-int bn_dh_validate(const pc_bignum *v)
+int bn_dh_validate(const protocore_bignum *v)
 {
     // Must be > 1
     int ok = 0;
-    for (int i = 1; i < PC_BN_LIMBS; i++)
+    for (int i = 1; i < PROTOCORE_BN_LIMBS; i++)
     {
         if (v->d[i])
         {
@@ -141,7 +141,7 @@ int bn_dh_validate(const pc_bignum *v)
     }
     // Must be < p-1
     // p-1: subtract 1 from p
-    pc_bignum pm1 = group14_p;
+    protocore_bignum pm1 = group14_p;
     pm1.d[0]--;
     if (bn_cmp(v, &pm1) >= 0)
     {

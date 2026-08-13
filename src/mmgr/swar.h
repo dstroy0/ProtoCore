@@ -12,18 +12,18 @@
  * operations and no branches at all.
  *
  * **The width is a typedef, not a decision.** The algebra is identical at any width - the lane masks
- * are derived from ::pc_swar_word rather than written out, so the carrier follows ::PROTO_SWAR_BITS
+ * are derived from ::protocore_swar_word rather than written out, so the carrier follows ::PROTO_SWAR_BITS
  * and every constant follows it. That knob defaults to the register width the die declares in
  * core_setup/board_profiles/, so nothing here infers a width from the toolchain.
  *
  * **This is the access layer.** Load a word, test its lanes, name the lane that fired. Nothing here
  * walks a buffer or takes a capacity, which is what keeps the byte-order claim under
- * ::pc_swar_zero_lane true: a lane count is the one place address order is decided, and stepping
+ * ::protocore_swar_zero_lane true: a lane count is the one place address order is decided, and stepping
  * across a word pair is not this file's business. The scans, compares, searches and the bounded copy
  * built on these live in mmgr/protostr.h, behind @ref str.
  *
  * **Constant time.** Every operation here is branchless and data-independent, which is why the
- * base64 decoder classifies characters with ::pc_swar_ge and ::pc_swar_le rather than a table: an
+ * base64 decoder classifies characters with ::protocore_swar_ge and ::protocore_swar_le rather than a table: an
  * address derived from a secret byte leaks it through the cache, and an arithmetic mask cannot. The
  * walks behind @ref str are NOT in that class - they stop at the byte they find, which is the whole
  * point of a bounded scan. Never run one over a secret.
@@ -46,55 +46,56 @@
  * conditionals can test. A typedef alone could do neither.
  */
 #if PROTO_SWAR_BITS == 64
-typedef uint64_t pc_swar_word;
+typedef uint64_t protocore_swar_word;
 #elif PROTO_SWAR_BITS == 32
-typedef uint32_t pc_swar_word;
+typedef uint32_t protocore_swar_word;
 #elif PROTO_SWAR_BITS == 16
-typedef uint16_t pc_swar_word;
+typedef uint16_t protocore_swar_word;
 #elif PROTO_SWAR_BITS == 8
 // One lane per word: the algebra is unchanged (ONES is 1, the guard bit is 0x80), it just answers
 // for a single byte at a time. The honest setting for a machine with no wider register, and the
 // floor the wider rungs are built from.
-typedef uint8_t pc_swar_word;
+typedef uint8_t protocore_swar_word;
 #else
 #error "PROTO_SWAR_BITS must be 8, 16, 32 or 64"
 #endif
 
-#define PC_SWAR_BYTES ((size_t)(PROTO_SWAR_BITS / 8u)) ///< lanes per word
+#define PROTOCORE_SWAR_BYTES ((size_t)(PROTO_SWAR_BITS / 8u)) ///< lanes per word
 
 // `static_assert`, not C11's `_Static_assert`: this header rides in through protocore.h to the
-// sketches, which are C++, where the underscored spelling is not a keyword. See types.h.
-static_assert(sizeof(pc_swar_word) * 8u == PROTO_SWAR_BITS, "the lane carrier must be exactly PROTO_SWAR_BITS wide");
+// sketches, which are C++, where the underscored spelling is not a keyword. See protocore_types.h.
+static_assert(sizeof(protocore_swar_word) * 8u == PROTO_SWAR_BITS,
+              "the lane carrier must be exactly PROTO_SWAR_BITS wide");
 
 // One bit per lane, derived from the width rather than written out: the all-ones word divided by
 // 0xFF leaves exactly bit 0 of each lane (0xFFFFFFFF / 0xFF == 0x01010101), and the other two masks
 // are that scaled. Spelling them as hex literals would pin the width in three more places.
-#define PC_SWAR_ONES (((pc_swar_word) ~(pc_swar_word)0) / 0xFFu) ///< bit 0 of every lane
-#define PC_SWAR_HIGH (PC_SWAR_ONES * 0x80u)                      ///< bit 7 (the guard bit) of every lane
-#define PC_SWAR_LOW7 (PC_SWAR_ONES * 0x7Fu)                      ///< bits 0-6 of every lane
+#define PROTOCORE_SWAR_ONES (((protocore_swar_word) ~(protocore_swar_word)0) / 0xFFu) ///< bit 0 of every lane
+#define PROTOCORE_SWAR_HIGH (PROTOCORE_SWAR_ONES * 0x80u) ///< bit 7 (the guard bit) of every lane
+#define PROTOCORE_SWAR_LOW7 (PROTOCORE_SWAR_ONES * 0x7Fu) ///< bits 0-6 of every lane
 
 /** @brief Per lane: 0x80 where the lane is >= @p v, else 0. */
-PC_INLINE pc_swar_word pc_swar_ge(pc_swar_word a, pc_swar_word v)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_ge(protocore_swar_word a, protocore_swar_word v)
 {
-    return ((a | PC_SWAR_HIGH) - v * PC_SWAR_ONES) & PC_SWAR_HIGH;
+    return ((a | PROTOCORE_SWAR_HIGH) - v * PROTOCORE_SWAR_ONES) & PROTOCORE_SWAR_HIGH;
 }
 
 /** @brief Per lane: 0x80 where the lane is <= @p v, else 0. */
-PC_INLINE pc_swar_word pc_swar_le(pc_swar_word a, pc_swar_word v)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_le(protocore_swar_word a, protocore_swar_word v)
 {
-    return ((v * PC_SWAR_ONES | PC_SWAR_HIGH) - a) & PC_SWAR_HIGH;
+    return ((v * PROTOCORE_SWAR_ONES | PROTOCORE_SWAR_HIGH) - a) & PROTOCORE_SWAR_HIGH;
 }
 
 /** @brief Widen a 0x80-per-lane mask to 0xFF per lane, without carrying between lanes. */
-PC_INLINE pc_swar_word pc_swar_spread(pc_swar_word m)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_spread(protocore_swar_word m)
 {
     return m + (m - (m >> 7));
 }
 
 /** @brief Per lane: (lane - @p lo) in the low 7 bits, guard bit absorbing the borrow. */
-PC_INLINE pc_swar_word pc_swar_sub7(pc_swar_word a, pc_swar_word lo)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_sub7(protocore_swar_word a, protocore_swar_word lo)
 {
-    return ((a | PC_SWAR_HIGH) - lo * PC_SWAR_ONES) & PC_SWAR_LOW7;
+    return ((a | PROTOCORE_SWAR_HIGH) - lo * PROTOCORE_SWAR_ONES) & PROTOCORE_SWAR_LOW7;
 }
 
 /**
@@ -103,7 +104,7 @@ PC_INLINE pc_swar_word pc_swar_sub7(pc_swar_word a, pc_swar_word lo)
  * Exact per lane, which is dearer than the usual spelling by one operation and worth it. The cheap
  * form is `(w - ONES) & ~w & HIGH`: a lane holding 0x00 borrows into its own high bit, which is the
  * answer, but that borrow does not stop at the lane boundary and goes on to mark lanes above it that
- * hold no zero at all. A caller reading only ::pc_swar_zero_lane never sees it, because the lowest
+ * hold no zero at all. A caller reading only ::protocore_swar_zero_lane never sees it, because the lowest
  * set bit is always a true one. A caller that ANDs two of these masks together, or reads any lane
  * but the first, gets a byte that is not there - `0x0100` reports both of its lanes zero.
  *
@@ -111,9 +112,9 @@ PC_INLINE pc_swar_word pc_swar_sub7(pc_swar_word a, pc_swar_word lo)
  * ORing @p w back in covers the lane that was exactly 0x80. So the guard bit ends up set on each
  * NONZERO lane, with nothing crossing between lanes, and the complement is the answer.
  */
-PC_INLINE pc_swar_word pc_swar_has_zero(pc_swar_word w)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_has_zero(protocore_swar_word w)
 {
-    return ~(((w & PC_SWAR_LOW7) + PC_SWAR_LOW7) | w) & PC_SWAR_HIGH;
+    return ~(((w & PROTOCORE_SWAR_LOW7) + PROTOCORE_SWAR_LOW7) | w) & PROTOCORE_SWAR_HIGH;
 }
 
 /**
@@ -124,18 +125,18 @@ PC_INLINE pc_swar_word pc_swar_has_zero(pc_swar_word w)
  * lane is the first occurrence of any of them. A scan per delimiter would re-load the same word once
  * per byte it is looking for, and then have to reconcile which hit came first.
  *
- *     pc_swar_word w = pc_swar_load(p);
- *     pc_swar_word m = pc_swar_eq(w, '&') | pc_swar_eq(w, '=');   // one load, both delimiters
+ *     protocore_swar_word w = protocore_swar_load(p);
+ *     protocore_swar_word m = protocore_swar_eq(w, '&') | protocore_swar_eq(w, '=');   // one load, both delimiters
  */
-PC_INLINE pc_swar_word pc_swar_eq(pc_swar_word w, uint8_t c)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_eq(protocore_swar_word w, uint8_t c)
 {
-    return pc_swar_has_zero(w ^ (PC_SWAR_ONES * (pc_swar_word)c));
+    return protocore_swar_has_zero(w ^ (PROTOCORE_SWAR_ONES * (protocore_swar_word)c));
 }
 
 /**
- * @brief Which lane of a ::pc_swar_has_zero mask is the first zero byte, in address order.
+ * @brief Which lane of a ::protocore_swar_has_zero mask is the first zero byte, in address order.
  *
- * The answer is one of 0..PC_SWAR_BYTES-1 and the mask already holds it - the set guard bit IS the
+ * The answer is one of 0..PROTOCORE_SWAR_BYTES-1 and the mask already holds it - the set guard bit IS the
  * position. Re-walking the word's bytes to find out would spend a compare per byte to recover what
  * the mask states, which is the same waste the word test just avoided.
  *
@@ -152,57 +153,57 @@ PC_INLINE pc_swar_word pc_swar_eq(pc_swar_word w, uint8_t c)
  * The builtin is also how the compiler reaches whatever bit-scan the die has.
  */
 #if PROTO_SWAR_BITS <= 32
-#define PC_SWAR_CTZ(v) __builtin_ctz((unsigned)(v))
-#define PC_SWAR_CLZ(v) __builtin_clz((unsigned)(v))
-#define PC_SWAR_CLZ_WIDTH 32u
+#define PROTOCORE_SWAR_CTZ(v) __builtin_ctz((unsigned)(v))
+#define PROTOCORE_SWAR_CLZ(v) __builtin_clz((unsigned)(v))
+#define PROTOCORE_SWAR_CLZ_WIDTH 32u
 #else
-#define PC_SWAR_CTZ(v) __builtin_ctzll((unsigned long long)(v))
-#define PC_SWAR_CLZ(v) __builtin_clzll((unsigned long long)(v))
-#define PC_SWAR_CLZ_WIDTH 64u
+#define PROTOCORE_SWAR_CTZ(v) __builtin_ctzll((unsigned long long)(v))
+#define PROTOCORE_SWAR_CLZ(v) __builtin_clzll((unsigned long long)(v))
+#define PROTOCORE_SWAR_CLZ_WIDTH 64u
 #endif
 
-PC_INLINE size_t pc_swar_zero_lane(pc_swar_word m)
+PROTOCORE_INLINE size_t protocore_swar_zero_lane(protocore_swar_word m)
 {
-#if PC_HW_BIG_ENDIAN
+#if PROTOCORE_HW_BIG_ENDIAN
     // The count runs over the whole builtin width; the carrier sits in the low bits, so drop the pad.
-    return (size_t)((PC_SWAR_CLZ(m) - (PC_SWAR_CLZ_WIDTH - PROTO_SWAR_BITS)) >> 3);
+    return (size_t)((PROTOCORE_SWAR_CLZ(m) - (PROTOCORE_SWAR_CLZ_WIDTH - PROTO_SWAR_BITS)) >> 3);
 #else
-    return (size_t)(PC_SWAR_CTZ(m) >> 3);
+    return (size_t)(PROTOCORE_SWAR_CTZ(m) >> 3);
 #endif
 }
 
 /**
  * @brief Load one word from @p p, whatever its alignment.
  *
- * Deferred to the raw load rather than spelled here: a `*(const pc_swar_word *)` cast is undefined
+ * Deferred to the raw load rather than spelled here: a `*(const protocore_swar_word *)` cast is undefined
  * both for an unaligned address and for reading a `char` array as a wider type, and it traps on the
- * stricter targets. Taking the width from ::PC_SWAR_BYTES keeps this correct when the lane carrier
+ * stricter targets. Taking the width from ::PROTOCORE_SWAR_BYTES keeps this correct when the lane carrier
  * is retyped.
  */
-PC_INLINE pc_swar_word pc_swar_load(const char *p)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_load(const char *p)
 {
-    return (pc_swar_word)proto_raw_load(p, PC_SWAR_BYTES);
+    return (protocore_swar_word)proto_raw_load(p, PROTOCORE_SWAR_BYTES);
 }
 
 /**
- * @brief ::pc_swar_load for an address the caller has already walked to a lane boundary.
+ * @brief ::protocore_swar_load for an address the caller has already walked to a lane boundary.
  *
- * Same value, one instruction instead of a synthesized word. ::pc_swar_load assumes nothing about
- * its address, and where PC_HW_UNALIGNED_LOAD is 0 - every xtensa in the target list - the compiler
+ * Same value, one instruction instead of a synthesized word. ::protocore_swar_load assumes nothing about
+ * its address, and where PROTOCORE_HW_UNALIGNED_LOAD is 0 - every xtensa in the target list - the compiler
  * answers that assumption by building each word out of byte loads and shifts. A caller that has
  * already paid a prologue to reach a boundary throws that away by asking for a load which disclaims
  * alignment.
  *
- * @p p must be ::PC_SWAR_BYTES-aligned. That is a real precondition, not a hint - a strict-alignment
+ * @p p must be ::PROTOCORE_SWAR_BYTES-aligned. That is a real precondition, not a hint - a strict-alignment
  * part faults on it.
  */
-PC_INLINE pc_swar_word pc_swar_load_al(const char *p)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_load_al(const char *p)
 {
-    return (pc_swar_word)proto_al_load(p, PC_SWAR_BYTES);
+    return (protocore_swar_word)proto_al_load(p, PROTOCORE_SWAR_BYTES);
 }
 
 /**
- * @brief ::pc_swar_eq's XOR, with a difference of ASCII case alone cancelled out of it.
+ * @brief ::protocore_swar_eq's XOR, with a difference of ASCII case alone cancelled out of it.
  *
  * The syndrome is @p wa ^ @p wb and the allowed class is {0, 0x20} - identical, or differing in the
  * one bit that carries ASCII case - restricted to lanes where flipping that bit still names the same
@@ -225,65 +226,66 @@ PC_INLINE pc_swar_word pc_swar_load_al(const char *p)
  * field name, RFC 7230 3.2; a Connection or Upgrade token; an SMTP verb), so treating any other byte
  * as having a case would be inventing a rule no spec here states.
  *
- * `& ~lo` is what holds that line, and it is not decoration. ::pc_swar_ge and ::pc_swar_le answer
+ * `& ~lo` is what holds that line, and it is not decoration. ::protocore_swar_ge and ::protocore_swar_le answer
  * for 7-bit lanes: the guard bit they borrow into is already set on a lane above 0x7F, so the
  * comparison it was standing in for is gone and such a lane range-tests as a letter. 0xDB and 0xFB
  * differ by exactly the case bit and would have been accepted as a case pair - a Latin-1 or UTF-8
  * byte silently matching a different one. The mask keeps a lane out of the range test's answer
  * whenever bit 7 says the answer is not the test's to give.
  */
-PC_INLINE pc_swar_word pc_swar_xor_ci(pc_swar_word wa, pc_swar_word wb)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_xor_ci(protocore_swar_word wa, protocore_swar_word wb)
 {
-    pc_swar_word x = wa ^ wb;
-    pc_swar_word lo = wa | (PC_SWAR_ONES * 0x20u);
-    pc_swar_word alpha = pc_swar_ge(lo, 'a') & pc_swar_le(lo, 'z') & ~lo;
+    protocore_swar_word x = wa ^ wb;
+    protocore_swar_word lo = wa | (PROTOCORE_SWAR_ONES * 0x20u);
+    protocore_swar_word alpha = protocore_swar_ge(lo, 'a') & protocore_swar_le(lo, 'z') & ~lo;
     return x & ~(alpha >> 2); // 0x80 per letter lane, shifted onto the case bit it is allowed to eat
 }
 
 /**
- * @brief ::pc_swar_eq ignoring ASCII case: 0x80 per lane equal to @p c under case folding.
+ * @brief ::protocore_swar_eq ignoring ASCII case: 0x80 per lane equal to @p c under case folding.
  *
  * The case bit cannot simply be masked out of both sides. Bit 5 is the case bit only for a letter;
  * clearing it elsewhere merges pairs that are not a case pair at all, and `'0'` (0x30) would report
- * equal to DLE (0x10). ::pc_swar_xor_ci is the syndrome that cancels bit 5 on letter lanes only, so
+ * equal to DLE (0x10). ::protocore_swar_xor_ci is the syndrome that cancels bit 5 on letter lanes only, so
  * a zero lane of it is a case-insensitive match and the same zero test reads the answer.
  */
-PC_INLINE pc_swar_word pc_swar_eq_ci(pc_swar_word w, uint8_t c)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_eq_ci(protocore_swar_word w, uint8_t c)
 {
-    return pc_swar_has_zero(pc_swar_xor_ci(w, PC_SWAR_ONES * (pc_swar_word)c));
+    return protocore_swar_has_zero(protocore_swar_xor_ci(w, PROTOCORE_SWAR_ONES * (protocore_swar_word)c));
 }
 
 /// @name What one step of a walk concluded
 /// @{
-#define PC_SWAR_GO 0  ///< undecided: keep stepping
-#define PC_SWAR_YES 1 ///< they agree, by whichever rule the caller asked for
-#define PC_SWAR_NO 2  ///< they do not
+#define PROTOCORE_SWAR_GO 0  ///< undecided: keep stepping
+#define PROTOCORE_SWAR_YES 1 ///< they agree, by whichever rule the caller asked for
+#define PROTOCORE_SWAR_NO 2  ///< they do not
 /// @}
 
 /** @brief The exact syndrome: zero in exactly the lanes where @p wa and @p wb match. */
-PC_INLINE pc_swar_word pc_swar_xor(pc_swar_word wa, pc_swar_word wb)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_xor(protocore_swar_word wa, protocore_swar_word wb)
 {
     return wa ^ wb;
 }
 
 // Exact and case-folding are separate tests, so the bool names which one runs rather than travelling
 // into it.
-PC_INLINE pc_swar_word pc_swar_eq_sel(pc_swar_word w, uint8_t c, proto_bool ci)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_eq_sel(protocore_swar_word w, uint8_t c, proto_bool ci)
 {
     if (ci)
     {
-        return pc_swar_eq_ci(w, c);
+        return protocore_swar_eq_ci(w, c);
     }
-    return pc_swar_eq(w, c);
+    return protocore_swar_eq(w, c);
 }
 
-PC_INLINE pc_swar_word pc_swar_xor_sel(pc_swar_word wa, pc_swar_word wb, proto_bool ci)
+PROTOCORE_INLINE protocore_swar_word protocore_swar_xor_sel(protocore_swar_word wa, protocore_swar_word wb,
+                                                            proto_bool ci)
 {
     if (ci)
     {
-        return pc_swar_xor_ci(wa, wb);
+        return protocore_swar_xor_ci(wa, wb);
     }
-    return pc_swar_xor(wa, wb);
+    return protocore_swar_xor(wa, wb);
 }
 
 /**
@@ -307,16 +309,16 @@ PC_INLINE pc_swar_word pc_swar_xor_sel(pc_swar_word wa, pc_swar_word wb, proto_b
  */
 typedef struct
 {
-    pc_swar_word (*ge)(pc_swar_word a, pc_swar_word v);
-    pc_swar_word (*le)(pc_swar_word a, pc_swar_word v);
-    pc_swar_word (*spread)(pc_swar_word m);
-    pc_swar_word (*sub7)(pc_swar_word a, pc_swar_word lo);
-    pc_swar_word (*has_zero)(pc_swar_word w);
-    pc_swar_word (*eq)(pc_swar_word w, uint8_t c, proto_bool ci);
-    pc_swar_word (*xor_)(pc_swar_word wa, pc_swar_word wb, proto_bool ci);
-    size_t (*zero_lane)(pc_swar_word m);
-    pc_swar_word (*load)(const char *p);
-    pc_swar_word (*load_al)(const char *p);
+    protocore_swar_word (*ge)(protocore_swar_word a, protocore_swar_word v);
+    protocore_swar_word (*le)(protocore_swar_word a, protocore_swar_word v);
+    protocore_swar_word (*spread)(protocore_swar_word m);
+    protocore_swar_word (*sub7)(protocore_swar_word a, protocore_swar_word lo);
+    protocore_swar_word (*has_zero)(protocore_swar_word w);
+    protocore_swar_word (*eq)(protocore_swar_word w, uint8_t c, proto_bool ci);
+    protocore_swar_word (*xor_)(protocore_swar_word wa, protocore_swar_word wb, proto_bool ci);
+    size_t (*zero_lane)(protocore_swar_word m);
+    protocore_swar_word (*load)(const char *p);
+    protocore_swar_word (*load_al)(const char *p);
 } SwarNs;
 
 /**
@@ -324,14 +326,15 @@ typedef struct
  *
  * `static const` and initialized here beside the bodies, not declared `extern` against a definition
  * in a .c: those are not the same object. A translation unit that can see this initializer knows
- * `swar.ge` IS ::pc_swar_ge, so the member read folds away, the body inlines, and the table is left
+ * `swar.ge` IS ::protocore_swar_ge, so the member read folds away, the body inlines, and the table is left
  * referenced by nothing for the linker to drop. One that can see only an `extern` declaration has to
  * load the pointer and call through it.
  *
  * `unused` because a header this wide is included by files that take none of it.
  */
-static const SwarNs swar
-    __attribute__((unused)) = {pc_swar_ge,     pc_swar_le,      pc_swar_spread,    pc_swar_sub7, pc_swar_has_zero,
-                               pc_swar_eq_sel, pc_swar_xor_sel, pc_swar_zero_lane, pc_swar_load, pc_swar_load_al};
+static const SwarNs swar __attribute__((unused)) = {
+    protocore_swar_ge,       protocore_swar_le,     protocore_swar_spread,  protocore_swar_sub7,
+    protocore_swar_has_zero, protocore_swar_eq_sel, protocore_swar_xor_sel, protocore_swar_zero_lane,
+    protocore_swar_load,     protocore_swar_load_al};
 
 #endif // PROTOCORE_SWAR_H

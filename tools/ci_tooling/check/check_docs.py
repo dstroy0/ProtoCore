@@ -8,7 +8,7 @@ nothing fails, the doc just starts lying. This checks the citations that can be
 mechanically verified:
 
   1. relative links that resolve to nothing
-  2. ``PC_ENABLE_*`` / ``PC_*`` flags that no longer exist in the config header
+  2. ``PROTOCORE_ENABLE_*`` / ``PROTOCORE_*`` flags that no longer exist in the config header
   3. ``pc_*`` functions cited in prose that no longer exist in src/
   4. ``src/`` paths cited inline (outside a link) that no longer exist
   5. ``native_*`` test envs cited that platformio.ini no longer defines
@@ -29,7 +29,7 @@ from tools.ci_tooling.lib import doc_region as dr
 ROOT = dr.repo_root(__file__)
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
-FLAG = re.compile(r"`(PC_[A-Z0-9_]+)`")
+FLAG = re.compile(r"`(PROTOCORE_[A-Z0-9_]+)`")
 FUNC = re.compile(r"`(pc_[a-z0-9_]+)\(\)`")
 SRCPATH = re.compile(r"`(src/[A-Za-z0-9_./-]+)`")
 ENV = re.compile(r"`(native_[a-z0-9_]+)`")
@@ -49,12 +49,12 @@ def read(p):
 def main() -> int:
     mds = [f for f in sh("git", "ls-files", "*.md").split() if f]
 
-    # Every PC_ / pc_ token that exists anywhere in src/. Deliberately broader than
-    # "#define": PC_OK and PC_OP_SEND are enum MEMBERS, and PC_ names also arrive via
+    # Every PROTOCORE_ / pc_ token that exists anywhere in src/. Deliberately broader than
+    # "#define": PROTOCORE_OK and PROTOCORE_OP_SEND are enum MEMBERS, and PROTOCORE_ names also arrive via
     # namespacing structs of static constexpr. The question is "does this symbol exist",
     # not "is it a macro".
-    # test/ and penetration_testing/ define their own PC_ symbols (PC_SSH_BENCH,
-    # PC_SSH_TEST_HOST_KEY_DER); a doc citing those is not stale.
+    # test/ and penetration_testing/ define their own PROTOCORE_ symbols (PROTOCORE_SSH_BENCH,
+    # PROTOCORE_SSH_TEST_HOST_KEY_DER); a doc citing those is not stale.
     src_blob = "".join(
         read(f)
         for f in sh(
@@ -74,19 +74,19 @@ def main() -> int:
             "test/penetration_testing/*.cpp",
         ).split()
     )
-    known_flags = set(re.findall(r"\b(PC_[A-Z0-9_]+)\b", src_blob))
+    known_flags = set(re.findall(r"\b(PROTOCORE_[A-Z0-9_]+)\b", src_blob))
     known_funcs = set(re.findall(r"\b(pc_[a-z0-9_]+)\s*\(", src_blob))
 
     # Symbol and env checks apply to docs written in the PRESENT tense - those describing
     # the library as it is now. Two other kinds legitimately name things absent from the
     # current tree, and checking them produces noise rather than findings:
     #
-    #   forward - ROADMAP.md names PC_ENABLE_* flags for features not yet built.
+    #   forward - ROADMAP.md names PROTOCORE_ENABLE_* flags for features not yet built.
     #   historical - BUGS.md and AUDIT.md record what happened. An entry citing a
     #                function since removed, or a test env since merged away, is accurate
     #                history; "fixing" it would falsify the record.
     #   illustrative - SYMBOLS.md documents the naming rules, so its examples are chosen to
-    #                  SHOW a shape, not to name a real symbol. PC_HTTP_PARSER_H is introduced
+    #                  SHOW a shape, not to name a real symbol. PROTOCORE_HTTP_PARSER_H is introduced
     #                  as "a plausible name for ANOTHER library's guard"; making it resolve
     #                  would defeat the point it is making.
     #

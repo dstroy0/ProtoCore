@@ -5,25 +5,23 @@
  * @file proto_builtins.c
  * @brief Installs the built-in protocol handlers.
  *
- * Each built-in exposes a `*_proto_handler()` accessor in its own module; this calls
+ * Each built-in exposes a `*_protocore_handler()` accessor in its own module; this calls
  * Protocols.add() for each one behind the matching feature flag.
- *
- * PROTO_SSH_RFWD self-registers at runtime from pc_ssh_forward_begin().
  */
 
 #include "network_drivers/session/proto_handler.h"
 
-#include "network_drivers/presentation/presentation.h" // http_proto_handler()
-#if PC_ENABLE_TELNET
+#include "network_drivers/presentation/presentation.h" // http_protocore_handler()
+#if PROTOCORE_ENABLE_TELNET
 #include "network_drivers/presentation/telnet/telnet.h"
 #endif
-#if PC_ENABLE_SSH
-#include "network_drivers/presentation/ssh/connection/ssh_conn.h"
+#if PROTOCORE_ENABLE_SSH
+#include "network_drivers/presentation/ssh/server/server.h"
 #endif
-#if PC_NEED_MODBUS
+#if PROTOCORE_NEED_MODBUS
 #include "services/fieldbus/modbus/modbus.h"
 #endif
-#if PC_ENABLE_OPCUA
+#if PROTOCORE_ENABLE_OPCUA
 #include "services/fieldbus/opcua/opcua.h"
 #endif
 
@@ -38,17 +36,20 @@ static inline void register_if(ProtoConn proto, const ProtoHandler *h)
 
 void proto_register_builtins(void)
 {
-    register_if(PROTO_HTTP, http_proto_handler()); // always present
-#if PC_ENABLE_TELNET
+    register_if(PROTO_HTTP, http_protocore_handler()); // always present
+#if PROTOCORE_ENABLE_TELNET
     register_if(PROTO_TELNET, Telnet.proto_handler());
 #endif
-#if PC_ENABLE_SSH
-    register_if(PROTO_SSH, ssh_proto_handler());
+#if PROTOCORE_ENABLE_SSH
+    register_if(PROTO_SSH, ssh_protocore_handler());
+#if PROTOCORE_SSH_PORT_FORWARD
+    register_if(PROTO_SSH_RFWD, ssh_protocore_rfwd_handler());
 #endif
-#if PC_NEED_MODBUS
-    register_if(PROTO_MODBUS, pc_modbus_proto_handler());
 #endif
-#if PC_ENABLE_OPCUA
-    register_if(PROTO_OPCUA, pc_opcua_proto_handler());
+#if PROTOCORE_NEED_MODBUS
+    register_if(PROTO_MODBUS, protocore_modbus_protocore_handler());
+#endif
+#if PROTOCORE_ENABLE_OPCUA
+    register_if(PROTO_OPCUA, protocore_opcua_protocore_handler());
 #endif
 }

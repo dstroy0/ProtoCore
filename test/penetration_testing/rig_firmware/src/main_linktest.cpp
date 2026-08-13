@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device physical (Layer 1) link bring-up test: exercises the reorganized physical/esp backend on real
-// silicon end-to-end - init_wifi_physical / init_eth_physical, wifi_ready / eth_ready, pc_net_egress_ip /
-// pc_net_egress, pc_net_mac / pc_net_ssid / pc_net_channel / pc_net_rssi - and prints "LT " lines over
-// serial. A build with PC_ENABLE_ETHERNET (the P4-POE-ETH) brings up the RMII Ethernet PHY; otherwise the S3
-// brings up the 802.11 station. A live RIG_IP + egress interface class proves the L1 vendor-partition move
-// (physical/esp/physical_esp.cpp under #if PC_VENDOR_ESP) works on hardware, not just at compile time.
+// silicon end-to-end - init_wifi_physical / init_eth_physical, wifi_ready / eth_ready, protocore_net_egress_ip /
+// protocore_net_egress, protocore_net_mac / protocore_net_ssid / protocore_net_channel / protocore_net_rssi - and
+// prints "LT " lines over serial. A build with PROTOCORE_ENABLE_ETHERNET (the P4-POE-ETH) brings up the RMII Ethernet
+// PHY; otherwise the S3 brings up the 802.11 station. A live RIG_IP + egress interface class proves the L1
+// vendor-partition move (physical/esp/physical_esp.cpp under #if PROTOCORE_VENDOR_ESP) works on hardware, not just at
+// compile time.
 //
 // Build/flash: S3 via pio (env rig_s3_linktest, WiFi); P4 via arduino-cli (p4/build_p4_linktest.sh, Ethernet).
 #include <Arduino.h>
@@ -27,7 +28,7 @@ static void lt_report(const char *tag)
     uint32_t ip = Physical.link->egress_ip();
     Serial.printf("LT %s RIG_IP=%u.%u.%u.%u\n", tag, ip & 0xFFu, (ip >> 8) & 0xFFu, (ip >> 16) & 0xFFu,
                   (ip >> 24) & 0xFFu);
-    pc_if_kind iface = Physical.link->egress();
+    protocore_if_kind iface = Physical.link->egress();
     static const char *const names[] = {"ANY", "STA", "AP", "ETH"};
     int i = (int)iface;
     Serial.printf("LT %s egress_iface=%d (%s)\n", tag, i, (i >= 0 && i <= 3) ? names[i] : "?");
@@ -46,7 +47,7 @@ void setup()
                       mac[5]);
     }
 
-#if PC_ENABLE_ETHERNET
+#if PROTOCORE_ENABLE_ETHERNET
     Serial.println("LT link=ethernet (init_eth_physical)");
     bool started = Physical.eth->init();
     Serial.printf("LT init_eth_physical=%d\n", (int)started);

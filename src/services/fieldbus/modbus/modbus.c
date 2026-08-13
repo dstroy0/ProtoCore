@@ -8,9 +8,9 @@
 
 #include "services/fieldbus/modbus/modbus.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/crc.h" // PC_CRC16_MODBUS
+#include "shared_primitives/crc.h" // PROTOCORE_CRC16_MODBUS
 
-#if PC_NEED_MODBUS
+#if PROTOCORE_NEED_MODBUS
 
 // ---------------------------------------------------------------------------
 // Data model (all BSS - no heap)
@@ -19,16 +19,16 @@
 // All Modbus data-model state, owned by one instance (internal linkage): the coil / discrete
 // bitfields, the holding / input registers, and the write callback, grouped so it is one
 // named owner, unreachable from any other translation unit.
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
 #endif
 typedef struct
 {
-    uint8_t coils[(PC_MODBUS_COILS + 7) / 8];
-    uint8_t discrete[(PC_MODBUS_DISCRETE_INPUTS + 7) / 8];
-    uint16_t holding[PC_MODBUS_HOLDING_REGS];
-    uint16_t input[PC_MODBUS_INPUT_REGS];
+    uint8_t coils[(PROTOCORE_MODBUS_COILS + 7) / 8];
+    uint8_t discrete[(PROTOCORE_MODBUS_DISCRETE_INPUTS + 7) / 8];
+    uint16_t holding[PROTOCORE_MODBUS_HOLDING_REGS];
+    uint16_t input[PROTOCORE_MODBUS_INPUT_REGS];
     ModbusWriteCb write_cb;
 } ModbusCtx;
 static ModbusCtx s_modbus;
@@ -49,7 +49,7 @@ static void bit_set(uint8_t *a, uint16_t i, proto_bool v)
     }
 }
 
-void pc_modbus_server_init()
+void protocore_modbus_server_init()
 {
     mem.set(s_modbus.coils, 0, sizeof(s_modbus.coils));
     mem.set(s_modbus.discrete, 0, sizeof(s_modbus.discrete));
@@ -58,51 +58,51 @@ void pc_modbus_server_init()
     s_modbus.write_cb = NULL;
 }
 
-void pc_modbus_on_write(ModbusWriteCb cb)
+void protocore_modbus_on_write(ModbusWriteCb cb)
 {
     s_modbus.write_cb = cb;
 }
 
-proto_bool pc_modbus_get_coil(uint16_t addr)
+proto_bool protocore_modbus_get_coil(uint16_t addr)
 {
-    return (addr < PC_MODBUS_COILS) ? bit_get(s_modbus.coils, addr) : PROTO_FALSE;
+    return (addr < PROTOCORE_MODBUS_COILS) ? bit_get(s_modbus.coils, addr) : PROTO_FALSE;
 }
-void pc_modbus_set_coil(uint16_t addr, proto_bool on)
+void protocore_modbus_set_coil(uint16_t addr, proto_bool on)
 {
-    if (addr < PC_MODBUS_COILS)
+    if (addr < PROTOCORE_MODBUS_COILS)
     {
         bit_set(s_modbus.coils, addr, on);
     }
 }
-proto_bool pc_modbus_get_discrete_input(uint16_t addr)
+proto_bool protocore_modbus_get_discrete_input(uint16_t addr)
 {
-    return (addr < PC_MODBUS_DISCRETE_INPUTS) ? bit_get(s_modbus.discrete, addr) : PROTO_FALSE;
+    return (addr < PROTOCORE_MODBUS_DISCRETE_INPUTS) ? bit_get(s_modbus.discrete, addr) : PROTO_FALSE;
 }
-void pc_modbus_set_discrete_input(uint16_t addr, proto_bool on)
+void protocore_modbus_set_discrete_input(uint16_t addr, proto_bool on)
 {
-    if (addr < PC_MODBUS_DISCRETE_INPUTS)
+    if (addr < PROTOCORE_MODBUS_DISCRETE_INPUTS)
     {
         bit_set(s_modbus.discrete, addr, on);
     }
 }
-uint16_t pc_modbus_get_holding_reg(uint16_t addr)
+uint16_t protocore_modbus_get_holding_reg(uint16_t addr)
 {
-    return (addr < PC_MODBUS_HOLDING_REGS) ? s_modbus.holding[addr] : 0;
+    return (addr < PROTOCORE_MODBUS_HOLDING_REGS) ? s_modbus.holding[addr] : 0;
 }
-void pc_modbus_set_holding_reg(uint16_t addr, uint16_t value)
+void protocore_modbus_set_holding_reg(uint16_t addr, uint16_t value)
 {
-    if (addr < PC_MODBUS_HOLDING_REGS)
+    if (addr < PROTOCORE_MODBUS_HOLDING_REGS)
     {
         s_modbus.holding[addr] = value;
     }
 }
-uint16_t pc_modbus_get_input_reg(uint16_t addr)
+uint16_t protocore_modbus_get_input_reg(uint16_t addr)
 {
-    return (addr < PC_MODBUS_INPUT_REGS) ? s_modbus.input[addr] : 0;
+    return (addr < PROTOCORE_MODBUS_INPUT_REGS) ? s_modbus.input[addr] : 0;
 }
-void pc_modbus_set_input_reg(uint16_t addr, uint16_t value)
+void protocore_modbus_set_input_reg(uint16_t addr, uint16_t value)
 {
-    if (addr < PC_MODBUS_INPUT_REGS)
+    if (addr < PROTOCORE_MODBUS_INPUT_REGS)
     {
         s_modbus.input[addr] = value;
     }
@@ -132,7 +132,7 @@ static size_t pdu_exception(ModbusFunction fc, ModbusException code, uint8_t *ou
 
 // Process one PDU (function code + data) against the data model. Returns the
 // response PDU length, or 0 if it cannot fit (caller treats 0 as "send nothing").
-static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t *out, size_t out_cap)
+static size_t protocore_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t *out, size_t out_cap)
 {
     // Both callers already guarantee at least one PDU byte, so this guard cannot fire: the TCP path
     // rejects len < 2 before computing pdu_len = len - 1, and the RTU path rejects req_len < 4 before
@@ -155,7 +155,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
         uint16_t start = rd16(pdu + 1), qty = rd16(pdu + 3);
-        uint16_t limit = (fc == MODBUS_FC_READ_COILS) ? PC_MODBUS_COILS : PC_MODBUS_DISCRETE_INPUTS;
+        uint16_t limit = (fc == MODBUS_FC_READ_COILS) ? PROTOCORE_MODBUS_COILS : PROTOCORE_MODBUS_DISCRETE_INPUTS;
         const uint8_t *src = (fc == MODBUS_FC_READ_COILS) ? s_modbus.coils : s_modbus.discrete;
         if (qty < 1 || qty > 2000)
         {
@@ -191,7 +191,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
         uint16_t start = rd16(pdu + 1), qty = rd16(pdu + 3);
-        uint16_t limit = (fc == MODBUS_FC_READ_HOLDING_REGS) ? PC_MODBUS_HOLDING_REGS : PC_MODBUS_INPUT_REGS;
+        uint16_t limit = (fc == MODBUS_FC_READ_HOLDING_REGS) ? PROTOCORE_MODBUS_HOLDING_REGS : PROTOCORE_MODBUS_INPUT_REGS;
         const uint16_t *src = (fc == MODBUS_FC_READ_HOLDING_REGS) ? s_modbus.holding : s_modbus.input;
         if (qty < 1 || qty > 125)
         {
@@ -226,7 +226,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        if (addr >= PC_MODBUS_COILS)
+        if (addr >= PROTOCORE_MODBUS_COILS)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_ADDRESS, out);
         }
@@ -250,7 +250,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
         uint16_t addr = rd16(pdu + 1), value = rd16(pdu + 3);
-        if (addr >= PC_MODBUS_HOLDING_REGS)
+        if (addr >= PROTOCORE_MODBUS_HOLDING_REGS)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_ADDRESS, out);
         }
@@ -279,7 +279,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        if ((uint32_t)start + qty > PC_MODBUS_COILS)
+        if ((uint32_t)start + qty > PROTOCORE_MODBUS_COILS)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_ADDRESS, out);
         }
@@ -314,7 +314,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        if ((uint32_t)start + qty > PC_MODBUS_HOLDING_REGS)
+        if ((uint32_t)start + qty > PROTOCORE_MODBUS_HOLDING_REGS)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_ADDRESS, out);
         }
@@ -345,7 +345,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         uint16_t addr = rd16(pdu + 1);
         uint16_t and_mask = rd16(pdu + 3);
         uint16_t or_mask = rd16(pdu + 5);
-        if (addr >= PC_MODBUS_HOLDING_REGS)
+        if (addr >= PROTOCORE_MODBUS_HOLDING_REGS)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_ADDRESS, out);
         }
@@ -380,7 +380,7 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        if ((uint32_t)r_start + r_qty > PC_MODBUS_HOLDING_REGS || (uint32_t)w_start + w_qty > PC_MODBUS_HOLDING_REGS)
+        if ((uint32_t)r_start + r_qty > PROTOCORE_MODBUS_HOLDING_REGS || (uint32_t)w_start + w_qty > PROTOCORE_MODBUS_HOLDING_REGS)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_ADDRESS, out);
         }
@@ -412,9 +412,9 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
     }
 }
 
-size_t pc_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap)
+size_t protocore_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap)
 {
-    if (req_len < 8 || pc_resp_cap < 8)
+    if (req_len < 8 || protocore_resp_cap < 8)
     {
         return 0; // need MBAP (7) + at least a function code
     }
@@ -436,7 +436,7 @@ size_t pc_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, 
     const uint8_t *pdu = req + 7;
     size_t pdu_len = (size_t)len - 1; // len counts the unit id + the PDU
 
-    size_t rlen = pc_modbus_process_pdu(pdu, pdu_len, resp + 7, pc_resp_cap - 7);
+    size_t rlen = protocore_modbus_process_pdu(pdu, pdu_len, resp + 7, protocore_resp_cap - 7);
     if (rlen == 0)
     {
         return 0;
@@ -449,22 +449,22 @@ size_t pc_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, 
     return 7 + rlen;
 }
 
-#if PC_ENABLE_MODBUS_RTU
+#if PROTOCORE_ENABLE_MODBUS_RTU
 // CRC16-Modbus (init 0xFFFF, reflected poly 0xA001); transmitted low byte first.
-static uint16_t pc_modbus_crc16(const uint8_t *data, size_t len)
+static uint16_t protocore_modbus_crc16(const uint8_t *data, size_t len)
 {
-    return (uint16_t)pc_crc(&PC_CRC16_MODBUS, data, len);
+    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_MODBUS, data, len);
 }
 
-size_t pc_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap, uint8_t my_addr)
+size_t protocore_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap, uint8_t my_addr)
 {
-    if (req_len < 4 || pc_resp_cap < 4) // addr(1) + min PDU(1) + CRC(2)
+    if (req_len < 4 || protocore_resp_cap < 4) // addr(1) + min PDU(1) + CRC(2)
     {
         return 0;
     }
 
     // Validate the trailing CRC over [addr .. last PDU byte] (low byte first).
-    uint16_t want = pc_modbus_crc16(req, req_len - 2);
+    uint16_t want = protocore_modbus_crc16(req, req_len - 2);
     uint16_t got = (uint16_t)(req[req_len - 2] | (req[req_len - 1] << 8));
     if (want != got)
     {
@@ -481,7 +481,7 @@ size_t pc_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *re
     const uint8_t *pdu = req + 1;
     size_t pdu_len = req_len - 3; // strip addr + 2 CRC bytes
 
-    size_t rlen = pc_modbus_process_pdu(pdu, pdu_len, resp + 1, pc_resp_cap - 3); // leave addr + CRC room
+    size_t rlen = protocore_modbus_process_pdu(pdu, pdu_len, resp + 1, protocore_resp_cap - 3); // leave addr + CRC room
     if (rlen == 0)
     {
         return 0;
@@ -492,38 +492,38 @@ size_t pc_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *re
     }
 
     resp[0] = my_addr;
-    uint16_t crc = pc_modbus_crc16(resp, 1 + rlen);
+    uint16_t crc = protocore_modbus_crc16(resp, 1 + rlen);
     resp[1 + rlen] = (uint8_t)(crc & 0xFFu);
     resp[2 + rlen] = (uint8_t)(crc >> 8);
     return 1 + rlen + 2;
 }
-#endif // PC_ENABLE_MODBUS_RTU
+#endif // PROTOCORE_ENABLE_MODBUS_RTU
 
 // ---------------------------------------------------------------------------
 // TCP transport (ESP32-only; the core above is host-tested standalone)
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 
 // Bytes available in the slot's rx ring.
 // Thin adapters over the transport RX read API - the ring is owned by transport;
 // this service never indexes rx_buffer or advances rx_tail itself.
 static size_t ring_avail(const TcpConn *c)
 {
-    return pc_conn_available(c->id);
+    return protocore_conn_available(c->id);
 }
 static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
 {
-    pc_conn_peek(c->id, off, dst, n);
+    protocore_conn_peek(c->id, off, dst, n);
 }
 static void ring_consume(TcpConn *c, size_t n)
 {
-    pc_conn_consume(c->id, n);
+    protocore_conn_consume(c->id, n);
 }
 
 static void raw_send(uint8_t slot, const void *data, size_t n)
 {
-    if (!pc_conn_active(slot) || n == 0)
+    if (!protocore_conn_active(slot) || n == 0)
     {
         return;
     }
@@ -536,7 +536,7 @@ static void close_conn(uint8_t slot)
     Tcp.conn->close(slot); // transport owns detach + slot reset + close
 }
 
-void pc_modbus_rx(uint8_t slot)
+void protocore_modbus_rx(uint8_t slot)
 {
     TcpConn *conn = &conn_pool[slot];
 
@@ -569,7 +569,7 @@ void pc_modbus_rx(uint8_t slot)
         ring_consume(conn, frame_total);
 
         uint8_t resp[MODBUS_ADU_MAX];
-        size_t rl = pc_modbus_process_adu(adu, frame_total, resp, sizeof(resp));
+        size_t rl = protocore_modbus_process_adu(adu, frame_total, resp, sizeof(resp));
         if (rl)
         {
             raw_send(slot, resp, rl);
@@ -580,8 +580,8 @@ void pc_modbus_rx(uint8_t slot)
 // The Modbus ProtoHandler (Layer 5 dispatch seam) - only a data handler; a partial ADU waits in the
 // rx ring, so there is no per-connection accept/close/poll state. Returned by accessor (no session
 // dependency); Session.proto->register_builtins() installs it.
-static const ProtoHandler s_modbus_handler = {NULL, pc_modbus_rx, NULL, NULL};
-const ProtoHandler *pc_modbus_proto_handler(void)
+static const ProtoHandler s_modbus_handler = {NULL, protocore_modbus_rx, NULL, NULL};
+const ProtoHandler *protocore_modbus_protocore_handler(void)
 {
     return &s_modbus_handler;
 }
@@ -590,11 +590,11 @@ const ProtoHandler *pc_modbus_proto_handler(void)
 
 // Host builds test the pure ADU codec; there is no TCP transport handler. The seam's header is not
 // reached here, so the return type is spelled by the tag the accessor's own declaration uses.
-const struct ProtoHandler *pc_modbus_proto_handler(void)
+const struct ProtoHandler *protocore_modbus_protocore_handler(void)
 {
     return NULL;
 }
 
-#endif // PC_HAS_NET_STACK
+#endif // PROTOCORE_HAS_NET_STACK
 
-#endif // PC_NEED_MODBUS
+#endif // PROTOCORE_NEED_MODBUS

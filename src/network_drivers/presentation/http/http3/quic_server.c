@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_server.c
- * @brief HTTP/3 server glue - implementation. See pc_quic_server.h.
+ * @file protocore_quic_server.c
+ * @brief HTTP/3 server glue - implementation. See protocore_quic_server.h.
  */
 
 #include "network_drivers/presentation/http/http3/quic_server.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/ring.h" // pc_atomic
+#include "mmgr/ring.h" // protocore_atomic
 #include "network_drivers/presentation/http/http3/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_tp.h"
 
@@ -19,37 +19,37 @@
 
 // The pool (QuicConn + H3Conn per slot) and the ingest ring are large, so on a PSRAM board they can
 // be moved to external RAM (like the HTTP/2 pool). Default is internal DRAM; a build that overflows
-// sets PC_QUIC_SERVER_IN_PSRAM=1 on a core built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY.
-#ifndef PC_QUIC_SERVER_IN_PSRAM
-#define PC_QUIC_SERVER_IN_PSRAM 0
+// sets PROTOCORE_QUIC_SERVER_IN_PSRAM=1 on a core built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY.
+#ifndef PROTOCORE_QUIC_SERVER_IN_PSRAM
+#define PROTOCORE_QUIC_SERVER_IN_PSRAM 0
 #endif
-#ifndef PC_QUIC_SERVER_ACK_DRAM
-#define PC_QUIC_SERVER_ACK_DRAM 0 ///< consciously accept the pool in internal DRAM (roomy S3 / P4)
+#ifndef PROTOCORE_QUIC_SERVER_ACK_DRAM
+#define PROTOCORE_QUIC_SERVER_ACK_DRAM 0 ///< consciously accept the pool in internal DRAM (roomy S3 / P4)
 #endif
 // The QuicConn + H3Conn pool plus the ingest ring are tens of KB; on a device that is a deliberate
-// footprint choice. Fail fast (like PC_ENABLE_SSH_ZLIB / PC_ENABLE_HTTP2) so it is not an
+// footprint choice. Fail fast (like PROTOCORE_ENABLE_SSH_ZLIB / PROTOCORE_ENABLE_HTTP2) so it is not an
 // accidental DRAM overflow: move the pool to PSRAM, or acknowledge the internal-DRAM cost.
-#if PC_HAS_BOUNDED_DRAM && !PC_QUIC_SERVER_IN_PSRAM && !PC_QUIC_SERVER_ACK_DRAM
+#if PROTOCORE_HAS_BOUNDED_DRAM && !PROTOCORE_QUIC_SERVER_IN_PSRAM && !PROTOCORE_QUIC_SERVER_ACK_DRAM
 #error                                                                                                                 \
-    "ProtoCore: PC_ENABLE_HTTP3 - the pc_quic_server QuicConn+H3Conn pool + ingest ring are tens of KB. Set PC_QUIC_SERVER_IN_PSRAM=1 on a PSRAM board (S3 / P4 / WROVER built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y, tools/psram/README.md), OR set PC_QUIC_SERVER_ACK_DRAM=1 to accept the internal-DRAM cost (fits a small pool on a roomy chip)."
+    "ProtoCore: PROTOCORE_ENABLE_HTTP3 - the protocore_quic_server QuicConn+H3Conn pool + ingest ring are tens of KB. Set PROTOCORE_QUIC_SERVER_IN_PSRAM=1 on a PSRAM board (S3 / P4 / WROVER built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y, tools/psram/README.md), OR set PROTOCORE_QUIC_SERVER_ACK_DRAM=1 to accept the internal-DRAM cost (fits a small pool on a roomy chip)."
 #endif
-#if PC_QUIC_SERVER_IN_PSRAM && PC_HAS_PSRAM
+#if PROTOCORE_QUIC_SERVER_IN_PSRAM && PROTOCORE_HAS_PSRAM
 #include <esp_attr.h>
 #if defined(EXT_RAM_BSS_ATTR)
-#define PC_QUIC_POOL_ATTR EXT_RAM_BSS_ATTR
+#define PROTOCORE_QUIC_POOL_ATTR EXT_RAM_BSS_ATTR
 #elif defined(EXT_RAM_ATTR)
-#define PC_QUIC_POOL_ATTR EXT_RAM_ATTR
+#define PROTOCORE_QUIC_POOL_ATTR EXT_RAM_ATTR
 #else
-#define PC_QUIC_POOL_ATTR
+#define PROTOCORE_QUIC_POOL_ATTR
 #endif
 #else
-#define PC_QUIC_POOL_ATTR
+#define PROTOCORE_QUIC_POOL_ATTR
 #endif
 
 // One buffered inbound datagram (payload + the peer it arrived from).
 typedef struct
 {
-    uint8_t data[PC_QUIC_MAX_DATAGRAM];
+    uint8_t data[PROTOCORE_QUIC_MAX_DATAGRAM];
     uint16_t len;
     char ip[16];
     uint16_t port;
@@ -59,23 +59,23 @@ typedef struct
 typedef struct
 {
     proto_bool used;
-    uint32_t id; ///< stable handle for pc_quic_server_respond()
+    uint32_t id; ///< stable handle for protocore_quic_server_respond()
     QuicConn qc;
     H3Conn h3;
     char peer_ip[16];
     uint16_t peer_port;
-    uint32_t last_ms; ///< pc_millis() of the last datagram received (idle-reaping clock)
+    uint32_t last_ms; ///< protocore_millis() of the last datagram received (idle-reaping clock)
 } QuicSlot;
 
 // HTTP/3 QUIC connection + ingest buffers, owned by one instance (internal linkage). Placed in
-// PSRAM (PC_QUIC_POOL_ATTR) when configured; kept separate from the DRAM control state below
+// PSRAM (PROTOCORE_QUIC_POOL_ATTR) when configured; kept separate from the DRAM control state below
 // so only the large buffers move off internal RAM. One named owner, unreachable cross-TU.
 typedef struct
 {
-    QuicSlot pool[PC_QUIC_MAX_CONNS];
-    QuicIngest ring[PC_QUIC_INGEST_RING];
+    QuicSlot pool[PROTOCORE_QUIC_MAX_CONNS];
+    QuicIngest ring[PROTOCORE_QUIC_INGEST_RING];
 } QuicServerPoolCtx;
-static PC_QUIC_POOL_ATTR QuicServerPoolCtx s_qpool;
+static PROTOCORE_QUIC_POOL_ATTR QuicServerPoolCtx s_qpool;
 
 // All HTTP/3 QUIC server control state, owned by one instance (internal linkage): the ingest
 // ring cursors, the server config + request callback + app pointer, the bound port / running
@@ -89,7 +89,7 @@ typedef struct
     void *app;
     uint16_t port;
     proto_bool running;
-    uint32_t next_id; ///< set to 1 by pc_quic_server_begin(); never handed out as 0
+    uint32_t next_id; ///< set to 1 by protocore_quic_server_begin(); never handed out as 0
 } QuicServerCtx;
 static QuicServerCtx s_quic;
 
@@ -112,22 +112,22 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
 
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
-    pc_ip dst = {PC_IP_NONE, {0}};
+    protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     if (Ip.parse(ip, &dst))
     {
         Udp.listener->sendto(s_quic.port, &dst, port, data, len);
     }
 }
 
-// --- ingest ring (SPSC: one producer fills, pc_quic_server_poll consumes) ------------------------
+// --- ingest ring (SPSC: one producer fills, protocore_quic_server_poll consumes) ------------------------
 static proto_bool ring_push(const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
-    if (len == 0 || len > PC_QUIC_MAX_DATAGRAM)
+    if (len == 0 || len > PROTOCORE_QUIC_MAX_DATAGRAM)
     {
         return PROTO_FALSE;
     }
     size_t head = s_quic.ring_head;
-    size_t next = (head + 1) % PC_QUIC_INGEST_RING;
+    size_t next = (head + 1) % PROTOCORE_QUIC_INGEST_RING;
     if (next == (size_t)s_quic.ring_tail)
     {
         return PROTO_FALSE; // ring full: drop (QUIC recovers via retransmission)
@@ -149,14 +149,14 @@ static proto_bool ring_pop(QuicIngest *out)
         return PROTO_FALSE;
     }
     *out = s_qpool.ring[tail];
-    s_quic.ring_tail = (tail + 1) % PC_QUIC_INGEST_RING;
+    s_quic.ring_tail = (tail + 1) % PROTOCORE_QUIC_INGEST_RING;
     return PROTO_TRUE;
 }
 
 // --- slot pool --------------------------------------------------------------------------------
 static QuicSlot *slot_by_id(uint32_t id)
 {
-    for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         if (s_qpool.pool[i].used && s_qpool.pool[i].id == id)
         {
@@ -168,7 +168,7 @@ static QuicSlot *slot_by_id(uint32_t id)
 
 static QuicSlot *alloc_slot()
 {
-    for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         if (!s_qpool.pool[i].used)
         {
@@ -197,7 +197,7 @@ static QuicSlot *alloc_slot()
 }
 
 // The HTTP/3 engine surfaces a completed request here; forward it to the application by conn id.
-static void pc_h3_on_request(void *app, H3Conn * /*h3*/, uint64_t stream_id, const char *method, const char *path,
+static void protocore_h3_on_request(void *app, H3Conn * /*h3*/, uint64_t stream_id, const char *method, const char *path,
                              const char *authority, const uint8_t *body, size_t body_len)
 {
     QuicSlot *s = (QuicSlot *)app;
@@ -221,28 +221,28 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     tc.cert_der = s_quic.cfg.cert_der;
     tc.cert_len = s_quic.cfg.cert_len;
     mem.cpy(tc.ed25519_seed, s_quic.cfg.ed25519_seed, sizeof tc.ed25519_seed);
-    pc_quic_tp_defaults(&tc.params);
+    protocore_quic_tp_defaults(&tc.params);
     // A real HTTP/3 endpoint must advertise flow-control room, or every request stream (and the
     // client's control / QPACK streams) is blocked - the RFC 9000 sec 18.2 defaults are all zero.
     tc.params.initial_max_data = 1048576;
     tc.params.initial_max_sd_bidi_remote = 262144; // client-initiated request streams
     tc.params.initial_max_sd_uni = 262144;         // client control / QPACK encoder+decoder streams
-    tc.params.initial_max_streams_bidi = PC_H3_MAX_STREAMS;
-    tc.params.initial_max_streams_uni = PC_H3_MAX_STREAMS;
-    tc.params.max_idle_timeout = PC_QUIC_IDLE_MS; // both ends reclaim the connection after this idle
+    tc.params.initial_max_streams_bidi = PROTOCORE_H3_MAX_STREAMS;
+    tc.params.initial_max_streams_uni = PROTOCORE_H3_MAX_STREAMS;
+    tc.params.max_idle_timeout = PROTOCORE_QUIC_IDLE_MS; // both ends reclaim the connection after this idle
     s_quic.cfg.rng(tc.ephemeral_priv, sizeof tc.ephemeral_priv);
     s_quic.cfg.rng(tc.random, sizeof tc.random);
-#if PC_ENABLE_PQC_KEX
+#if PROTOCORE_ENABLE_PQC_KEX
     s_quic.cfg.rng(tc.mlkem_m, sizeof tc.mlkem_m); // fresh ML-KEM Encaps randomness per handshake
 #endif
 
-    uint8_t our_scid[PC_QUIC_SCID_LEN];
+    uint8_t our_scid[PROTOCORE_QUIC_SCID_LEN];
     s_quic.cfg.rng(our_scid, sizeof our_scid);
 
     QuicConnCallbacks cb;
-    mem.set(&cb, 0, sizeof cb); // pc_h3_conn_init installs the real callbacks
-    pc_quic_conn_init(&s->qc, &tc, lh->dcid, lh->dcid_len, lh->scid, lh->scid_len, our_scid, PC_QUIC_SCID_LEN, &cb);
-    pc_h3_conn_init(&s->h3, &s->qc, pc_h3_on_request, s);
+    mem.set(&cb, 0, sizeof cb); // protocore_h3_conn_init installs the real callbacks
+    protocore_quic_conn_init(&s->qc, &tc, lh->dcid, lh->dcid_len, lh->scid, lh->scid_len, our_scid, PROTOCORE_QUIC_SCID_LEN, &cb);
+    protocore_h3_conn_init(&s->h3, &s->qc, protocore_h3_on_request, s);
 
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
     s->peer_port = port;
@@ -256,18 +256,18 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
     *is_initial = PROTO_FALSE;
     if (len < 1)
     // only the true branch is unreachable - route()'s sole call site is
-    // pc_quic_server_poll, fed by ring_pop() from a ring that ring_push() (both
+    // protocore_quic_server_poll, fed by ring_pop() from a ring that ring_push() (both
     // ingest paths) already refuses to fill with len==0, so len>=1 always holds here
     {
         return NULL;
     }
-    if (pc_quic_is_long_header(dg[0]))
+    if (protocore_quic_is_long_header(dg[0]))
     {
-        if (!pc_quic_parse_long_header(dg, len, lh_out))
+        if (!protocore_quic_parse_long_header(dg, len, lh_out))
         {
             return NULL;
         }
-        for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
+        for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
         {
             QuicSlot *s = &s_qpool.pool[i];
             if (!s->used)
@@ -287,16 +287,16 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
         return NULL;
     }
     // Short header (1-RTT): the DCID is our chosen SCID, whose length only we know.
-    if (len < (size_t)1 + PC_QUIC_SCID_LEN)
+    if (len < (size_t)1 + PROTOCORE_QUIC_SCID_LEN)
     {
         return NULL;
     }
-    for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         QuicSlot *s = &s_qpool.pool[i];
-        // scid_len is always PC_QUIC_SCID_LEN (only this server sets it, at conn init above), so its
+        // scid_len is always PROTOCORE_QUIC_SCID_LEN (only this server sets it, at conn init above), so its
         // != arm below is a defensive guard no host input can reach.
-        if (s->used && s->qc.scid_len == PC_QUIC_SCID_LEN && mem.cmp(dg + 1, s->qc.scid, PC_QUIC_SCID_LEN) == 0)
+        if (s->used && s->qc.scid_len == PROTOCORE_QUIC_SCID_LEN && mem.cmp(dg + 1, s->qc.scid, PROTOCORE_QUIC_SCID_LEN) == 0)
         {
             return s;
         }
@@ -306,30 +306,30 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
 
 static void flush_and_reap(uint32_t now_ms)
 {
-    uint8_t out[PC_QUIC_MAX_DATAGRAM];
-    for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
+    uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
+    for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         QuicSlot *s = &s_qpool.pool[i];
         if (!s->used)
         {
             continue;
         }
-        pc_quic_conn_on_timeout(&s->qc, now_ms); // retransmit a lost handshake flight (PTO)
+        protocore_quic_conn_on_timeout(&s->qc, now_ms); // retransmit a lost handshake flight (PTO)
         size_t n;
-        while ((n = pc_quic_conn_send(&s->qc, out, sizeof out)) > 0)
+        while ((n = protocore_quic_conn_send(&s->qc, out, sizeof out)) > 0)
         {
             server_send(s->peer_ip, s->peer_port, out, n);
         }
         // Reap a closed connection, or one idle past the timeout (wrap-safe delta) so a client that
         // never closes cannot leak the fixed pool.
-        if (pc_quic_conn_is_closed(&s->qc) || (uint32_t)(now_ms - s->last_ms) >= PC_QUIC_IDLE_MS)
+        if (protocore_quic_conn_is_closed(&s->qc) || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
         {
             s->used = PROTO_FALSE;
         }
     }
 }
 
-static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     char ip[16];
@@ -341,7 +341,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_p
     (void)ring_push(data, len, ip, port);
 }
 
-proto_bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, QuicServerRequestFn on_request, void *app)
+proto_bool protocore_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, QuicServerRequestFn on_request, void *app)
 {
     if (!cfg || !cfg->rng)
     {
@@ -350,8 +350,8 @@ proto_bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, Quic
     s_quic.cfg = *cfg;
     s_quic.on_request = on_request;
     s_quic.app = app;
-    s_quic.port = port ? port : PC_HTTP3_PORT;
-    for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
+    s_quic.port = port ? port : PROTOCORE_HTTP3_PORT;
+    for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         s_qpool.pool[i].used = PROTO_FALSE;
     }
@@ -362,7 +362,7 @@ proto_bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, Quic
     return Udp.listener->listen(s_quic.port, udp_ingest_cb, NULL);
 }
 
-void pc_quic_server_poll(uint32_t now_ms)
+void protocore_quic_server_poll(uint32_t now_ms)
 {
     if (!s_quic.running)
     {
@@ -383,12 +383,12 @@ void pc_quic_server_poll(uint32_t now_ms)
             continue;
         }
         s->last_ms = now_ms; // liveness for idle reaping
-        pc_quic_conn_recv(&s->qc, ig.data, ig.len);
+        protocore_quic_conn_recv(&s->qc, ig.data, ig.len);
     }
     flush_and_reap(now_ms);
 }
 
-proto_bool pc_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
+proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
                                   const uint8_t *body, size_t body_len)
 {
     QuicSlot *s = slot_by_id(conn_id);
@@ -396,13 +396,13 @@ proto_bool pc_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int stat
     {
         return PROTO_FALSE;
     }
-    return pc_h3_conn_respond(&s->h3, stream_id, status, content_type, body, body_len);
+    return protocore_h3_conn_respond(&s->h3, stream_id, status, content_type, body, body_len);
 }
 
-uint8_t pc_quic_server_active_conns(void)
+uint8_t protocore_quic_server_active_conns(void)
 {
     uint8_t n = 0;
-    for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         if (s_qpool.pool[i].used)
         {
@@ -412,11 +412,11 @@ uint8_t pc_quic_server_active_conns(void)
     return n;
 }
 
-void pc_quic_server_stop(void)
+void protocore_quic_server_stop(void)
 {
     (void)Udp.listener->close(s_quic.port); // drop the bind first: nothing more reaches the ring
     s_quic.running = PROTO_FALSE;
-    for (uint8_t i = 0; i < PC_QUIC_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         s_qpool.pool[i].used = PROTO_FALSE;
     }
@@ -424,4 +424,4 @@ void pc_quic_server_stop(void)
     s_quic.ring_tail = 0;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

@@ -1,6 +1,6 @@
 # IPv6 - serve over IPv6 (dual-stack)
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_IPV6`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_IPV6`
 
 ## What this example teaches
 
@@ -15,15 +15,15 @@ Physical.ip6->init();            // enable IPv6 (SLAAC) on the Wi-Fi netif
 while (!Physical.ip6->ready()) delay(250); // waits for a global (routable) v6 address
 ```
 
-`PC_ENABLE_IPV6` gates the bring-up. `Physical.ip6->init()` enables IPv6 on the netif
+`PROTOCORE_ENABLE_IPV6` gates the bring-up. `Physical.ip6->init()` enables IPv6 on the netif
 (SLAAC gives a `fe80::` link-local address, plus a global one if a router advertises a prefix).
-`Physical.ip6->global_addr()` reads the acquired global address straight from lwIP into a `pc_ip`.
+`Physical.ip6->global_addr()` reads the acquired global address straight from lwIP into a `protocore_ip`.
 
-## The pc_ip address core
+## The protocore_ip address core
 
 `network_drivers/network/ip.h` is one family-tagged type for both v4 and v6, with:
 
-- **`pc_ip_parse()`** - RFC 4291 text (dotted-quad; v6 with `::` zero-compression and the
+- **`protocore_ip_parse()`** - RFC 4291 text (dotted-quad; v6 with `::` zero-compression and the
   embedded-v4 `::ffff:a.b.c.d` tail).
 - **`Ip.format()`** - the RFC 5952 canonical form (lower-case, no leading zeros, longest
   zero run compressed, v4-mapped shown dotted).
@@ -46,7 +46,7 @@ The flag must reach the whole library build:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_IPV6=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_IPV6=1" \
   --lib="." examples/Foundation/IPv6/IPv6.ino
 ```
 

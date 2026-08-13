@@ -3,7 +3,7 @@
 
 /**
  * @file EspNow.ino
- * @brief ESP-NOW peer messaging (PC_ENABLE_ESPNOW).
+ * @brief ESP-NOW peer messaging (PROTOCORE_ENABLE_ESPNOW).
  *
  * Connectionless peer-to-peer radio messaging - no AP, no IP. Each board
  * broadcasts a counter every 2 s and prints any framed message it receives.
@@ -14,11 +14,11 @@
  * callback to fan ESP-NOW traffic out to browser WebSocket clients.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_ESPNOW=1
+ *     build_flags = -DPROTOCORE_ENABLE_ESPNOW=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_ESPNOW 1
+#define PROTOCORE_ENABLE_ESPNOW 1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "network_drivers/physical/physical.h"
@@ -41,7 +41,7 @@ void setup()
     // ESP-NOW needs the radio up but not associated; STA mode pinned to a fixed channel.
     Physical.wifi->init_radio(CHANNEL);
 
-    if (!pc_espnow_begin(CHANNEL, on_espnow))
+    if (!protocore_espnow_begin(CHANNEL, on_espnow))
     {
         Serial.println("ESP-NOW init failed");
         return;
@@ -61,7 +61,7 @@ void loop()
         last = millis();
         char msg[24];
         int len = snprintf(msg, sizeof(msg), "count=%lu", (unsigned long)n++);
-        bool ok = pc_espnow_broadcast(MSG_COUNTER, (const uint8_t *)msg, (size_t)len);
+        bool ok = protocore_espnow_broadcast(MSG_COUNTER, (const uint8_t *)msg, (size_t)len);
         Serial.printf("broadcast %s -> %s\n", msg, ok ? "ok" : "FAIL");
     }
 }

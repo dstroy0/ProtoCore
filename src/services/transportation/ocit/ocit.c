@@ -9,9 +9,9 @@
 #include "services/transportation/ocit/ocit.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_OCIT
+#if PROTOCORE_ENABLE_OCIT
 
-size_t pc_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type, const uint8_t *value,
+size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type, const uint8_t *value,
                      size_t value_len, uint8_t *out, size_t cap)
 {
     if (!out || (value_len && !value))
@@ -36,13 +36,13 @@ size_t pc_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, 
     return n;
 }
 
-size_t pc_ocit_set_u16(uint16_t object_type, uint16_t instance, uint16_t value, uint8_t *out, size_t cap)
+size_t protocore_ocit_set_u16(uint16_t object_type, uint16_t instance, uint16_t value, uint8_t *out, size_t cap)
 {
     uint8_t v[2] = {(uint8_t)(value >> 8), (uint8_t)value};
-    return pc_ocit_build(OCIT_MSG_SET, object_type, instance, OCIT_TYPE_UINT16, v, 2, out, cap);
+    return protocore_ocit_build(OCIT_MSG_SET, object_type, instance, OCIT_TYPE_UINT16, v, 2, out, cap);
 }
 
-proto_bool pc_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out)
+proto_bool protocore_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out)
 {
     if (!msg || !out || len < 6)
     {
@@ -57,7 +57,7 @@ proto_bool pc_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out)
     return PROTO_TRUE;
 }
 
-uint16_t pc_ocit_value_u16(const OcitMsg *m)
+uint16_t protocore_ocit_value_u16(const OcitMsg *m)
 {
     if (!m || m->data_type != OCIT_TYPE_UINT16 || m->value_len < 2 || !m->value)
     {
@@ -66,4 +66,4 @@ uint16_t pc_ocit_value_u16(const OcitMsg *m)
     return (uint16_t)((m->value[0] << 8) | m->value[1]);
 }
 
-#endif // PC_ENABLE_OCIT
+#endif // PROTOCORE_ENABLE_OCIT

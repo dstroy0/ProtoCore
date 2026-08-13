@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/http/http3/quic_frame.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 
@@ -369,4 +369,4 @@ size_t pc_quic_build_connection_close(uint8_t *out, size_t cap, proto_bool app, 
     return pos + reason_len;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

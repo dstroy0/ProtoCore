@@ -42,7 +42,7 @@ void dbench_run(void)
         DBENCH_OP("att_notify", 100000, sink += att_notify(0x0031, wr_val, sizeof(wr_val), buf, sizeof(buf)));
         DBENCH_OP("att_error_rsp", 100000, sink += att_error_rsp(ATT_OP_READ_REQ, 0x0025, 0x0A, buf, sizeof(buf)));
         DBENCH_OP("att_parse", 100000, sink += (size_t)att_parse(write_req_pdu, sizeof(write_req_pdu), &p));
-        DBENCH_OP("pc_gatt_char_json", 50000, sink += pc_gatt_char_json(chars, 2, json, sizeof(json)));
+        DBENCH_OP("protocore_gatt_char_json", 50000, sink += protocore_gatt_char_json(chars, 2, json, sizeof(json)));
 
         (void)sink;
         DBENCH_DONE();
