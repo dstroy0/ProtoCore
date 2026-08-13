@@ -108,7 +108,7 @@ these; a PR missing them will be sent back.
       for features**; the README feature table and the docs site both link to it.
 
 - **Core** - a piece of a network layer rather than a service, i.e. code under
-  `src/network_drivers/<layer>/`, `src/server/`, or `src/shared_primitives/` -
+  `src/network_drivers/<layer>/`, `src/server/`, or `src/shared/` -
   lives in the appropriate layer directory and ships a **bench** in the mirrored
   `performance_benching/` path (`performance_benching/network_drivers/<layer>/<name>/`, `performance_benching/server/<name>/`, or
   `performance_benching/core/<name>/`, same `main/main.c` + `host.c` shape as a service), a **native

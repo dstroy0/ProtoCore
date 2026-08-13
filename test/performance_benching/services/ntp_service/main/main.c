@@ -21,7 +21,7 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "network_drivers/application/ntp_service/ntp_service.h"
-#include "shared_primitives/http_date.h" // pc_http_date() - the shared IMF-fixdate formatter
+#include "shared/http_date/http_date.h" // pc_http_date() - the shared IMF-fixdate formatter
 
 #include <stdbool.h>
 #include <stddef.h>

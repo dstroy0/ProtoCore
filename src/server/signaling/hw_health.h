@@ -77,33 +77,101 @@ typedef struct
     uint16_t ok_trip;   ///< consecutive successes that double the clock.
 } HwSpiBackoff;
 
-/** @brief Initialize a rail monitor. @p min_mv starts at @p nominal_mv. */
-void protocore_hwhealth_rail_init(HwRailMonitor *m, uint32_t nominal_mv, uint32_t warn_mv, uint32_t crit_mv);
+/** @brief The rail a call watches, and the reading it just took. */
+typedef struct
+{
+    HwRailMonitor *m;          ///< the monitor a call acts on
+    const HwRailMonitor *m_ro; ///< the same monitor, where a call only reads it
+    uint32_t nominal_mv;       ///< the rail's nominal level
+    uint32_t warn_mv;          ///< below this a reading is a sag
+    uint32_t crit_mv;          ///< below this it is a brownout
+    uint32_t mv;               ///< the reading just taken
+} HwRailArgs;
 
-/** @brief Record one rail sample; updates the worst-droop min + counters. @return HW_RAIL_*. */
-HwRailVerdict protocore_hwhealth_rail_sample(HwRailMonitor *m, uint32_t mv);
+/** @brief The bus a backoff governs, and how it just fared. */
+typedef struct
+{
+    HwSpiBackoff *s;    ///< the backoff state a call acts on
+    uint32_t start_hz;  ///< the clock it starts at
+    uint32_t min_hz;    ///< its floor
+    uint32_t max_hz;    ///< its ceiling
+    uint16_t fail_trip; ///< consecutive failures before it halves
+    uint16_t ok_trip;   ///< consecutive successes before it doubles
+    proto_bool crc_ok;  ///< the transfer just completed checked out
+} HwSpiArgs;
 
-/** @brief Serialize a rail monitor: `{"nominal_mv":..,"min_mv":..,"sag":..,"brownout":..}`. */
-size_t protocore_hwhealth_rail_json(const HwRailMonitor *m, char *out, size_t cap);
+/** @brief A pin driven against what it read back, and a discharge against what was expected. */
+typedef struct
+{
+    proto_bool driven_high; ///< the level the pin was driven to
+    proto_bool read_high;   ///< the level it read back
+    uint32_t measured_ms;   ///< the discharge just timed
+    uint32_t expected_ms;   ///< what it should have been
+    uint8_t tol_pct;        ///< the tolerance band around that, as a percentage
+} HwProbeArgs;
 
-/** @brief Initialize a SPI backoff state machine. */
-void protocore_hwhealth_spi_init(HwSpiBackoff *s, uint32_t start_hz, uint32_t min_hz, uint32_t max_hz,
-                                 uint16_t fail_trip, uint16_t ok_trip);
+/** @brief Where a report is written. */
+typedef struct
+{
+    char *out;  ///< where the JSON lands
+    size_t cap; ///< how much room it has
+} HwOutArgs;
 
-/** @brief Feed one transfer's CRC result; adjusts the clock with hysteresis. @return the new clock (hz). */
-uint32_t protocore_hwhealth_spi_result(HwSpiBackoff *s, proto_bool crc_ok);
-
-/** @brief Short-circuit test from a driven level and its readback. @return HW_GPIO_*. */
-HwGpioVerdict protocore_hwhealth_gpio_short(proto_bool driven_high, proto_bool read_high);
+/** @brief The checks' own calls, described only in hw_health.c. */
+struct HwHealthInternal;
 
 /**
- * @brief Leakage test comparing a measured RC decay time to the expected one.
- * @param measured_ms observed decay time.
- * @param expected_ms nominal decay time for a healthy cap.
- * @param tol_pct     tolerance band (percent) around expected.
- * @return HW_CAP_OK / HW_CAP_LEAK (too fast) / HW_CAP_HIGH_ESR (too slow).
+ * @brief The hardware health checks over caller-owned monitors.
+ *
+ * A caller sets the members a call takes, invokes it through ::HwHealth, and reads the outcome off
+ * the same handle. Every monitor is the caller's.
+ *
+ * @var HwHealthNs::rail        the rail a call watches, and the reading it just took
+ * @var HwHealthNs::spi         the bus a backoff governs, and how it just fared
+ * @var HwHealthNs::probe       a pin driven against what it read back, and a timed discharge
+ * @var HwHealthNs::out_args    where a report is written
+ * @var HwHealthNs::rail_verdict  what a rail sample decided
+ * @var HwHealthNs::gpio_verdict  what a pin probe decided
+ * @var HwHealthNs::cap_verdict   what a discharge probe decided
+ * @var HwHealthNs::hz          the clock a backoff settled on
+ * @var HwHealthNs::n           bytes a report wrote, or 0 when it did not fit
+ * @var HwHealthNs::rail_init   arm a rail monitor at its thresholds
+ * @var HwHealthNs::rail_sample judge one reading and tally what it was
+ * @var HwHealthNs::rail_json   report the rail's tallies
+ * @var HwHealthNs::spi_init    arm a bus backoff between its floor and ceiling
+ * @var HwHealthNs::spi_result  feed one transfer's outcome in and take the new clock
+ * @var HwHealthNs::gpio_short  a pin that does not read back what it was driven to
+ * @var HwHealthNs::cap_leak    a discharge outside its tolerance band
+ * @var HwHealthNs::internal    the calls that judge and tally
+ *
+ * No storage member: every call works in the caller's monitor.
  */
-HwCapVerdict protocore_hwhealth_cap_leak(uint32_t measured_ms, uint32_t expected_ms, uint8_t tol_pct);
+typedef struct
+{
+    HwRailArgs rail;
+    HwSpiArgs spi;
+    HwProbeArgs probe;
+    HwOutArgs out_args;
+
+    HwRailVerdict rail_verdict;
+    HwGpioVerdict gpio_verdict;
+    HwCapVerdict cap_verdict;
+    uint32_t hz;
+    size_t n;
+
+    void (*rail_init)(struct HwHealthInternal *ctx);
+    void (*rail_sample)(struct HwHealthInternal *ctx);
+    void (*rail_json)(struct HwHealthInternal *ctx);
+    void (*spi_init)(struct HwHealthInternal *ctx);
+    void (*spi_result)(struct HwHealthInternal *ctx);
+    void (*gpio_short)(struct HwHealthInternal *ctx);
+    void (*cap_leak)(struct HwHealthInternal *ctx);
+
+    struct HwHealthInternal *internal;
+} HwHealthNs;
+
+/** @brief The one symbol this module exports. */
+extern HwHealthNs HwHealth;
 
 #endif // PROTOCORE_ENABLE_HW_HEALTH
 

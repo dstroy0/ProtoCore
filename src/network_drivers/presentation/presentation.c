@@ -5,27 +5,22 @@
  * @file presentation.c
  * @brief Layer 6 (Presentation) - wires the transport ring buffer to the HTTP parser.
  *
- * This file is now a thin adapter.  The HTTP parsing logic lives in
- * http_parser.c.  This layer only knows about:
- *   - The transport RX read API (protocore_conn_available / protocore_conn_read_byte) - it
- *     never indexes the ring itself; transport owns rx_buffer / rx_head / rx_tail
- *   - Slot-indexed helpers that the session and application layers expect
+ * A thin adapter. The parsing itself lives in http_parser.c; this layer holds the slot's read
+ * scratch, the per-slot HTTP state, and the ProtoHandler the session layer dispatches through.
  *
- * The slot-indexed `http_reset()` pre-stamps slot_id then delegates to
- * `http_parser_reset()`.  The slot-indexed `http_parse()` drains all
- * available bytes from the ring buffer through `http_parser_feed()` and
- * stops as soon as the parser reaches any terminal state.
+ * The worker fills the scratch once per data event through ::ConnPool and the parser walks it -
+ * nothing here reaches the transport's ring, which is the transport's.
  */
 
 #include "presentation.h"
 #include "mmgr/protostr.h"                         // str: the bounded-run walks
-#include "network_drivers/session/proto_handler.h" // ProtoHandler (the L5 dispatch seam this registers into)
-#include "network_drivers/transport/tcp.h"         // conn_pool: the slot a handler is dispatched on
+#include "server/system/proto_handler.h" // ProtoHandler (the L5 dispatch seam this registers into)
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a handler is dispatched on
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_find()/ws_free(): a WS-upgraded slot must never be HTTP-parsed
 #endif
 #if PROTOCORE_ENABLE_SSE
-#include "network_drivers/presentation/http/sse/sse.h" // protocore_sse_free(): release an SSE binding when its HTTP slot closes/reuses
+#include "network_drivers/presentation/http/sse/sse.h" // Sse.free: release a stream when its HTTP slot closes or is reused
 #endif
 #if PROTOCORE_ENABLE_TLS
 #include "network_drivers/tls/tls.h"
@@ -39,14 +34,57 @@
 uint16_t http_req_count[MAX_CONNS];
 #endif
 
-void http_reset(uint8_t slot_id)
+// HTTP's own per-slot state. All BSS, sized on the whole pool so the HTTP/3 dispatch slot fits.
+uint32_t http_req_start_ms[CONN_POOL_SLOTS];
+protocore_resp_sink_fn http_resp_sink[CONN_POOL_SLOTS];
+#if PROTOCORE_ENABLE_HTTP2
+uint8_t http_h2[CONN_POOL_SLOTS];
+uint8_t http_h2_checked[CONN_POOL_SLOTS];
+uint32_t http_h2_stream[CONN_POOL_SLOTS];
+#endif
+#if PROTOCORE_ENABLE_HTTP3
+uint8_t http_h3[CONN_POOL_SLOTS];
+uint32_t http_h3_conn_id[CONN_POOL_SLOTS];
+uint64_t http_h3_stream[CONN_POOL_SLOTS];
+#endif
+
+/**
+ * @brief The glue's compile-time storage: the read scratch each slot's bytes land in.
+ *
+ * The worker fills this once per data event and the parser walks it; nothing here reaches the
+ * transport's ring a second time. All BSS.
+ */
+struct HttpConnStorage
 {
-    if (slot_id >= MAX_CONNS)
+    uint8_t rx[RX_BUF_SIZE]; ///< where a slot's available bytes are staged for the parser
+};
+
+/**
+ * @brief The glue's state and the calls that reach it - what HttpConnNs points at.
+ *
+ * @var HttpConnInternal::store  the read scratch
+ * @var HttpConnInternal::ns     the handle a caller sets a call's members on
+ * @var HttpConnInternal::poll   the per-slot pump the application installed
+ */
+struct HttpConnInternal
+{
+    struct HttpConnStorage *store;
+    HttpConnNs *ns;
+    void (*poll)(uint8_t slot);
+};
+
+static struct HttpConnStorage s_store;
+
+static struct HttpConnInternal s_http = {.store = &s_store, .ns = &HttpConn};
+
+static void reset(struct HttpConnInternal *restrict ctx)
+{
+    if (ctx->ns->slot >= MAX_CONNS)
     {
         return;
     }
-    http_pool[slot_id].slot_id = slot_id; // ensure slot_id is correct before reset reads it
-    http_parser_reset(&http_pool[slot_id]);
+    http_pool[ctx->ns->slot].slot_id = ctx->ns->slot; // ensure slot_id is correct before reset reads it
+    http_parser_reset(&http_pool[ctx->ns->slot]);
 }
 
 // Release any WebSocket / SSE binding still attached to a slot. WS and SSE upgrades leave the slot
@@ -54,7 +92,7 @@ void http_reset(uint8_t slot_id)
 // HTTP proto handler owns their teardown. Both frees are no-ops when the slot has no such binding.
 // Called on close AND on a fresh accept, because a slot can be reaped by the idle sweep or aborted
 // (SSE pool full) without a close event ever firing - so a reused slot must not inherit a stale
-// binding. A stale sse binding is the DoS: http_poll_slot() sees protocore_sse_find(slot) and skips HTTP
+// binding. A stale sse binding is the DoS: http_poll_slot() finds a stream on the slot and skips HTTP
 // dispatch, wedging every later connection that reuses the slot.
 static inline void http_release_upgrade_bindings(uint8_t slot_id)
 {
@@ -62,49 +100,54 @@ static inline void http_release_upgrade_bindings(uint8_t slot_id)
     ws_free(slot_id);
 #endif
 #if PROTOCORE_ENABLE_SSE
-    protocore_sse_free(slot_id);
+    Sse.slot = slot_id;
+    Sse.free(Sse.internal);
 #endif
 }
 
-void http_conn_open(uint8_t slot_id)
+static void conn_open(struct HttpConnInternal *restrict ctx)
 {
-    if (slot_id >= MAX_CONNS)
+    if (ctx->ns->slot >= MAX_CONNS)
     {
         return;
     }
-    http_release_upgrade_bindings(slot_id); // a reused slot must not inherit a prior WS/SSE binding
+    http_release_upgrade_bindings(ctx->ns->slot); // a reused slot must not inherit a prior WS/SSE binding
 #if PROTOCORE_ENABLE_KEEPALIVE
-    http_req_count[slot_id] = 0; // fresh connection: clear the keep-alive request tally
+    http_req_count[ctx->ns->slot] = 0; // fresh connection: clear the keep-alive request tally
 #endif
-    http_reset(slot_id);
+    reset(ctx);
 }
 
-void http_parse(uint8_t slot_id)
+// The worker fills this slot's scratch once, then the parser walks it. Check the terminal state
+// before taking anything so a pipelined next request is left where it is; the window is reopened by
+// the worker's ack_consumed.
+static void parse(struct HttpConnInternal *restrict ctx)
 {
-    if (slot_id >= MAX_CONNS)
+    if (ctx->ns->slot >= MAX_CONNS)
     {
         return;
     }
 
 #if PROTOCORE_ENABLE_WEBSOCKET
-    // Once a slot upgrades to WebSocket its rx ring carries WS frames, not HTTP.
-    // The WS frame parser is pumped separately (handle()/the worker loop); feeding
-    // those bytes to the HTTP parser here would consume - and corrupt - the first
-    // WS frame. This guard makes "never HTTP-parse a WS slot" hold for every caller
-    // (the event-queue dispatch raced the WS pump and ate the first frame's header
-    // byte, dropping the first connection after a reboot).
-    if (ws_find(slot_id))
+    // Once a slot upgrades to WebSocket its bytes are WS frames, not HTTP. The WS frame parser is
+    // pumped separately (handle()/the worker loop); feeding those bytes to the HTTP parser here
+    // would consume - and corrupt - the first WS frame. This guard makes "never HTTP-parse a WS
+    // slot" hold for every caller (the event-queue dispatch raced the WS pump and ate the first
+    // frame's header byte, dropping the first connection after a reboot).
+    if (ws_find(ctx->ns->slot))
     {
         return;
     }
 #endif
 
-    HttpReq *req = &http_pool[slot_id];
+    HttpReq *req = &http_pool[ctx->ns->slot];
 
-    // Drain via the transport read API - the parser never touches the ring itself.
-    // Check the terminal state BEFORE consuming so a pipelined next request is left
-    // in the ring; the window is reopened by the worker's Tcp.conn->ack_consumed().
-    while (protocore_conn_available(slot_id) > 0)
+    ConnPool.slot = ctx->ns->slot;
+    ConnPool.io.buf = ctx->store->rx;
+    ConnPool.io.cap = sizeof(ctx->store->rx);
+    ConnPool.read(ConnPool.internal);
+
+    for (size_t i = 0; i < ConnPool.n; i++)
     {
         switch (req->parse_state)
         {
@@ -112,28 +155,11 @@ void http_parse(uint8_t slot_id)
         case PARSE_ERROR:
         case PARSE_ENTITY_TOO_LARGE:
         case PARSE_URI_TOO_LONG:
-            return; // terminal state - drain nothing further
+            return; // terminal state - feed nothing further
         default:
             break;
         }
-
-        uint8_t byte = 0;
-        // The false arm cannot fire on any thread count, not merely on this single-
-        // threaded host harness: protocore_conn_available() and protocore_conn_read_byte() both
-        // compare the same slot's rx_head vs rx_tail, and nothing between the two
-        // calls here mutates either (the switch above only reads req->parse_state).
-        // rx_tail is single-consumer-owned - this loop is the only writer for this
-        // slot - and the producer (tcp.c's recv callback) always checks
-        // protocore_ring_free() before writing, so rx_head can never be advanced to equal
-        // the rx_tail snapshot available() just found nonzero ("the free-space check
-        // ... guarantees it fits, so head can never overrun tail" - tcp.c). A
-        // "drain" of the ring between the two calls would require a second consumer,
-        // which the single-consumer-per-slot design does not have.
-        if (!protocore_conn_read_byte(slot_id, &byte))
-        {
-            break;
-        }
-        http_parser_feed(req, byte);
+        http_parser_feed(req, ctx->store->rx[i]);
     }
 }
 
@@ -149,13 +175,15 @@ void http_parse(uint8_t slot_id)
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_ENABLE_TLS
-// Abort a TLS connection (fatal handshake/read error). Tcp.conn->abort_slot owns
+// Abort a TLS connection (fatal handshake/read error). ConnPool.abort_slot owns
 // the whole teardown: free the TLS context (abrupt), detach the pcb, reset the
-// slot, then RST - so this never reaches into the raw tcp_pcb.
+// slot, then RST - so this never reaches into the raw control block.
 static void tls_abort(uint8_t slot)
 {
-    Tcp.conn->abort_slot(slot);
-    http_reset(slot);
+    ConnPool.slot = slot;
+    ConnPool.abort_slot(ConnPool.internal);
+    HttpConn.slot = slot;
+    reset(&s_http);
 }
 
 // Pump a TLS connection: drive the handshake to completion, then decrypt any
@@ -180,20 +208,22 @@ static void tls_data(uint8_t slot)
 #if PROTOCORE_ENABLE_HTTP2
     // Just past the handshake: if the client negotiated ALPN "h2", this connection speaks HTTP/2
     // for its lifetime - hand its decrypted bytes to the h2 engine, not the HTTP/1.1 parser.
-    if (!conn_pool[slot].protocore_h2_checked)
+    if (!http_h2_checked[slot])
     {
-        conn_pool[slot].protocore_h2_checked = 1;
+        http_h2_checked[slot] = 1;
         const char *alpn = protocore_tls_alpn(slot);
         if (alpn && strcmp(alpn, "h2") == 0)
         {
-            conn_pool[slot].h2 = 1;
-            conn_pool[slot].protocore_resp_sink = protocore_h2_server_respond; // route responses through the h2 framer
-            protocore_h2_server_open(slot);
+            http_h2[slot] = 1;
+            http_resp_sink[slot] = protocore_h2_server_respond; // route responses through the h2 framer
+            H2Server.slot = slot;
+            H2Server.open(H2Server.internal);
         }
     }
-    if (conn_pool[slot].h2)
+    if (http_h2[slot])
     {
-        protocore_h2_server_data(slot);
+        H2Server.slot = slot;
+        H2Server.data(H2Server.internal);
         return;
     }
 #endif
@@ -234,71 +264,80 @@ static void tls_data(uint8_t slot)
 // decrypted into the parser); accept maps directly.
 static void http_evt_accept(uint8_t slot)
 {
-    http_conn_open(slot); // resets the parser + (keep-alive) the per-conn request tally
+    HttpConn.slot = slot;
+    conn_open(&s_http); // resets the parser + (keep-alive) the per-conn request tally
 #if PROTOCORE_ENABLE_HTTP2
-    conn_pool[slot].h2 = 0; // a reused slot must re-run the post-handshake ALPN check
-    conn_pool[slot].protocore_h2_checked = 0;
-    conn_pool[slot].protocore_resp_sink = NULL; // back to the HTTP/1.1 builder until ALPN says otherwise
+    http_h2[slot] = 0; // a reused slot must re-run the post-handshake ALPN check
+    http_h2_checked[slot] = 0;
+    http_resp_sink[slot] = NULL; // back to the HTTP/1.1 builder until ALPN says otherwise
 #endif
 }
 static void http_evt_data(uint8_t slot)
 {
 #if PROTOCORE_ENABLE_TLS
-    if (conn_pool[slot].tls)
+    ConnPool.slot = slot;
+    ConnPool.tls(ConnPool.internal);
+    if (ConnPool.ok)
     {
         tls_data(slot);
         return;
     }
 #endif
-    http_parse(slot); // a no-op once the slot has upgraded to WebSocket (see http_parse)
+    HttpConn.slot = slot;
+    parse(&s_http); // a no-op once the slot has upgraded to WebSocket (see parse)
 }
 static void http_evt_close(uint8_t slot)
 {
 #if PROTOCORE_ENABLE_TLS
-    if (conn_pool[slot].tls)
+    ConnPool.slot = slot;
+    ConnPool.tls(ConnPool.internal);
+    if (ConnPool.ok)
     {
         protocore_tls_conn_free(slot); // also covers timeouts (EVT_ERROR)
     }
 #endif
     http_release_upgrade_bindings(slot); // FIN/RST/error on an SSE or WS slot must free its binding
-    http_reset(slot);
+    HttpConn.slot = slot;
+    reset(&s_http);
 }
-// HTTP's poll pump is instance-bound (it dispatches into a PC's routes), so the routing
-// core installs it here at begin() via http_protocore_set_poll(). The trampoline lets the ProtoHandler
-// stay a plain static const while the actual pump lives in the application TU - the on_poll analogue
-// of the protocore_resp_sink TX seam. Until installed (e.g. the native harness before begin()) it is a no-op.
-static void (*s_http_poll)(uint8_t slot) = NULL;
+// HTTP's poll pump is instance-bound (it dispatches into a PC's routes), so the routing core
+// installs it through set_poll at begin(). The trampoline lets the ProtoHandler stay a plain static
+// const while the actual pump lives in the application TU - the on_poll analogue of the
+// http_resp_sink TX seam. Until installed (e.g. the native harness before begin()) it is a no-op.
 static void http_evt_poll(uint8_t slot)
 {
-    if (s_http_poll)
+    if (s_http.poll)
     {
-        s_http_poll(slot);
+        s_http.poll(slot);
     }
 }
-void http_protocore_set_poll(void (*fn)(uint8_t slot))
+
+static void set_poll(struct HttpConnInternal *restrict ctx)
 {
-    s_http_poll = fn;
+    ctx->poll = ctx->ns->poll;
 }
 
 static const ProtoHandler s_http_handler = {http_evt_accept, http_evt_data, http_evt_close, http_evt_poll};
 
-const ProtoHandler *http_protocore_handler(void)
+static void proto_handler(struct HttpConnInternal *restrict ctx)
 {
-    return &s_http_handler;
+    ctx->ns->handler = &s_http_handler;
 }
 
 #if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
 // Case-insensitive search for @p token as a comma/space-delimited element of a
 // Connection header value (e.g. "keep-alive" in "Keep-Alive, Upgrade"). Shared by
 // keep-alive evaluation and the WebSocket Upgrade-token check.
-proto_bool protocore_http_conn_has_token(const char *hdr, const char *token)
+static void has_token(struct HttpConnInternal *restrict ctx)
 {
-    if (hdr == NULL)
+    ctx->ns->ok = PROTO_FALSE;
+    if (ctx->ns->hdr_args.hdr == NULL)
     {
-        return PROTO_FALSE;
+        return;
     }
+    const char *token = ctx->ns->hdr_args.token;
     size_t tlen = str.len(token, 32);
-    const char *p = hdr;
+    const char *p = ctx->ns->hdr_args.hdr;
     while (*p)
     {
         while (*p == ' ' || *p == ',' || *p == '\t')
@@ -320,48 +359,68 @@ proto_bool protocore_http_conn_has_token(const char *hdr, const char *token)
         // stops a longer token matching on its prefix.
         if (len == tlen && str.diff(start, token, tlen, PROTO_TRUE) == tlen)
         {
-            return PROTO_TRUE;
+            ctx->ns->ok = PROTO_TRUE;
+            return;
         }
         if (*p == ',')
         {
             p++;
         }
     }
-    return PROTO_FALSE;
 }
 #endif // PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
 
 #if PROTOCORE_ENABLE_KEEPALIVE
-proto_bool keepalive_eval(uint8_t slot_id)
+static void keepalive_eval(struct HttpConnInternal *restrict ctx)
 {
-    HttpReq *req = &http_pool[slot_id];
+    ctx->ns->ok = PROTO_FALSE;
+    HttpReq *req = &http_pool[ctx->ns->slot];
     // Only a cleanly-parsed request has a known message boundary; errors close.
     if (req->parse_state != PARSE_COMPLETE)
     {
-        return PROTO_FALSE;
+        return;
     }
 
-    const char *c = http_get_header(req, "Connection");
+    ctx->ns->hdr_args.hdr = http_get_header(req, "Connection");
     proto_bool keep;
     if (req->version == HTTP_11)
     {
-        keep = !protocore_http_conn_has_token(c, "close"); // 1.1 default: persistent
+        ctx->ns->hdr_args.token = "close";
+        has_token(ctx);
+        keep = !ctx->ns->ok; // 1.1 default: persistent
     }
     else
     {
-        keep = protocore_http_conn_has_token(c, "keep-alive"); // 1.0/unknown default: close
+        ctx->ns->hdr_args.token = "keep-alive";
+        has_token(ctx);
+        keep = ctx->ns->ok; // 1.0/unknown default: close
     }
+    ctx->ns->ok = PROTO_FALSE;
     if (!keep)
     {
-        return PROTO_FALSE;
+        return;
     }
 
     // Fairness bound: serve at most PROTOCORE_KEEPALIVE_MAX_REQUESTS, then close.
-    http_req_count[slot_id]++;
-    if (http_req_count[slot_id] >= PROTOCORE_KEEPALIVE_MAX_REQUESTS)
+    http_req_count[ctx->ns->slot]++;
+    if (http_req_count[ctx->ns->slot] >= PROTOCORE_KEEPALIVE_MAX_REQUESTS)
     {
-        return PROTO_FALSE;
+        return;
     }
-    return PROTO_TRUE;
+    ctx->ns->ok = PROTO_TRUE;
 }
 #endif // PROTOCORE_ENABLE_KEEPALIVE
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+HttpConnNs HttpConn = {.reset = reset,
+                       .conn_open = conn_open,
+                       .parse = parse,
+#if PROTOCORE_ENABLE_KEEPALIVE
+                       .keepalive_eval = keepalive_eval,
+#endif
+#if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
+                       .has_token = has_token,
+#endif
+                       .proto_handler = proto_handler,
+                       .set_poll = set_poll,
+                       .internal = &s_http};

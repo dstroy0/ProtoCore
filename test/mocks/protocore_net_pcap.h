@@ -5,11 +5,11 @@
 //
 // protocore_net_host.h records what the core handed to the stack: destination, ports, TOS, payload. That
 // is a datagram without its headers, so this file synthesizes the IPv4 or IPv6 header and the UDP
-// header around each one and frames the result with shared_primitives/pcap.h at DLT_RAW, whose
+// header around each one and frames the result with shared/pcap/pcap.h at DLT_RAW, whose
 // records start at the IP header. What comes out is a .pcap Wireshark opens and a test parses.
 //
 // Separate from protocore_net_host.h on purpose: that header is parsed from inside protocore_config.h,
-// before shared_primitives/protocore_types.h supplies PROTOCORE_INLINE, so it cannot include pcap.h. A test includes
+// before shared/protocore_types.h supplies PROTOCORE_INLINE, so it cannot include pcap.h. A test includes
 // this one afterwards, when it can.
 //
 // The source address is 0.0.0.0 / :: because the mock has no interface address to claim.
@@ -20,7 +20,7 @@
 #define PROTOCORE_PROTOCORE_NET_PCAP_H
 
 #include "protocore_config.h"       // must be complete before pcap.h is reached
-#include "shared_primitives/pcap.h" // PROTOCORE_DLT_RAW, the global and record headers
+#include "shared/pcap/pcap.h" // PROTOCORE_DLT_RAW, the global and record headers
 #include <stdint.h>
 #include <string.h>
 

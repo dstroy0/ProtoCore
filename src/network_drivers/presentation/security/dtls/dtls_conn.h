@@ -42,7 +42,7 @@
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
-#include "network_drivers/tls/tls13_kdf.h"
+#include "network_drivers/tls/key_schedule/key_schedule.h"
 
 /** @brief Largest inbound handshake message body reassembled (ClientHello / client Finished). */
 #define PROTOCORE_DTLS_CONN_REASM_CAP 1024

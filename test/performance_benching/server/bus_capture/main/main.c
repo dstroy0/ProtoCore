@@ -5,7 +5,7 @@
 // can_to_socketcan() building the 16-byte Linux SocketCAN frame (big-endian can_id, EFF/RTR flags,
 // length, data) for a standard data frame, an extended (29-bit) id frame, and an RTR frame, plus
 // protocore_pcap_global_header() writing the libpcap global header with the DLT_CAN_SOCKETCAN link type
-// (shared_primitives/pcap.h). Every call here is pure (no heap, no bus) - worked example for
+// (shared/pcap/pcap.h). Every call here is pure (no heap, no bus) - worked example for
 // performance_benching/device/<service>/: a pure protocol codec with no hardware involved, so every call exercises
 // the real production code path (contrast with performance_benching/device/ads1115, a peripheral driver where the
 // bus transaction itself is stubbed). bus_capture_begin()/poll()/end() - the ESP32 TWAI listen-only

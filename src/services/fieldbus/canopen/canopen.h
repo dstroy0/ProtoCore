@@ -6,7 +6,7 @@
  * @brief CANopen (CiA 301) application-layer message codec (PROTOCORE_ENABLE_CANOPEN).
  *
  * A pure, zero-heap builder + parser for the CANopen messaging set carried over classic
- * CAN frames (see shared_primitives/can.h): NMT node control, SYNC, TIME, the
+ * CAN frames (see shared/can/can.h): NMT node control, SYNC, TIME, the
  * heartbeat / boot-up (NMT error control), EMCY, PDO (process data), and expedited SDO
  * (service data object) read / write / abort. The 11-bit CAN identifier is a 4-bit
  * function code plus a 7-bit node id; each builder computes the right COB-ID and each
@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_CANOPEN
 
-#include "shared_primitives/can.h"
+#include "shared/can/can.h"
 
 PROTOCORE_BEGIN_DECLS
 

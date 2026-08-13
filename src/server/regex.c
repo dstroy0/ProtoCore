@@ -11,7 +11,7 @@
  * dispatcher calls regex_match() (declared in protocore.h).
  */
 
-#include "protocore.h" // RE_MAX_STEPS (ServerConfig), fixed-width types
+#include "protocore.h"// PROTOCORE_ENABLE_REGEX
 
 // ---------------------------------------------------------------------------
 // Bounded regex route matcher (see on_regex()).

@@ -15,7 +15,7 @@
 // Dependency (WEB_TERMINAL requires WEBSOCKET) is enforced centrally in protocore_config.h.
 
 #include "network_drivers/application/web_assets.h" // PROTOCORE_TERMINAL_PAGE
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 
 // ---------------------------------------------------------------------------
 // State (all static / BSS - no heap)

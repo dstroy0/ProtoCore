@@ -37,7 +37,7 @@
 
 #if PROTOCORE_ENABLE_DEVICENET
 
-#include "shared_primitives/can.h"
+#include "shared/can/can.h"
 
 // Message-group identifier bases / field widths.
 #define DEVICENET_G1_BASE 0x000u ///< Message Group 1 (0x000-0x3FF)

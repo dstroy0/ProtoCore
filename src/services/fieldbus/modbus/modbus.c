@@ -8,7 +8,7 @@
 
 #include "services/fieldbus/modbus/modbus.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_MODBUS
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_MODBUS
 
 #if PROTOCORE_NEED_MODBUS
 
@@ -20,8 +20,8 @@
 // bitfields, the holding / input registers, and the write callback, grouped so it is one
 // named owner, unreachable from any other translation unit.
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/tcp.h"
+#include "server/system/proto_handler.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #endif
 typedef struct
 {

@@ -17,7 +17,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "network_drivers/network/forward/forward.h"
 #include "server/signaling/bus_capture.h"
 

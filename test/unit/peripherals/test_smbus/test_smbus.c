@@ -6,7 +6,7 @@
 // built the way the specification lays a transaction out rather than from the payload alone.
 
 #include "services/peripherals/smbus.h"
-#include "shared_primitives/crc.h"
+#include "shared/crc/crc.h"
 #include <unity.h>
 
 void setUp(void)

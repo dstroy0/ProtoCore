@@ -9,7 +9,7 @@
  */
 
 #include "time_source.h"
-#include "shared_primitives/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
+#include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
 
 #if PROTOCORE_ENABLE_TIME_SOURCE
 

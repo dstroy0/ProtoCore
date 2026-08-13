@@ -7,7 +7,7 @@
  *
  * The RF gateway drivers (CC1101, LoRa, the Thread 802.15.4 RCP) can run receive-only - sniff a channel
  * without joining - and the frames they pull off the air belong in the same capture pipeline as the CAN
- * and Wi-Fi captures (shared_primitives/protocore_pcap). For 802.15.4 that means wrapping each frame in the
+ * and Wi-Fi captures (shared/protocore_pcap). For 802.15.4 that means wrapping each frame in the
  * Wireshark IEEE 802.15.4 **TAP** pseudo-header so the per-frame RSSI and channel travel with it, then a
  * standard pcap record, giving a `.pcap` a wired Wireshark opens with the radio metadata intact.
  *
@@ -20,7 +20,7 @@
 #define PROTOCORE_RADIO_SNIFF_H
 
 #include "protocore_config.h"
-#include "shared_primitives/pcap.h"
+#include "shared/pcap/pcap.h"
 
 PROTOCORE_BEGIN_DECLS
 

@@ -7,7 +7,7 @@
 // through the host pcb driver.
 
 #include "network_drivers/network/dns/dns_server.h"
-#include "network_drivers/transport/udp.h" // Udp.listener: the port 53 bind begin() makes
+#include "network_drivers/transport/udp/udp.h" // Udp.listener: the port 53 bind begin() makes
 #include "protocore_config.h"              // PROTOCORE_DNS_NAME_MAX / PROTOCORE_DNS_SERVER_MAX_RECORDS
 #include <stdint.h>
 #include <stdio.h> // snprintf

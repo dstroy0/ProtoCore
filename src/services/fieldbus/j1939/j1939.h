@@ -31,7 +31,7 @@
 
 #if PROTOCORE_NEED_J1939
 
-#include "shared_primitives/can.h"
+#include "shared/can/can.h"
 
 // Well-known PGNs and addresses.
 #define J1939_PGN_TP_CM 0x00EC00u         ///< Transport Protocol - Connection Management (60416)

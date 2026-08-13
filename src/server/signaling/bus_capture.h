@@ -5,15 +5,15 @@
  * @file bus_capture.h
  * @brief Wired field-bus listen-only capture (PROTOCORE_ENABLE_BUS_CAPTURE) - passive CAN sniffing.
  *
- * The wired counterpart to the Wi-Fi promiscuous tap: put the CAN (TWAI) controller in
+ * The wired counterpart to the Wi-Fi promiscuous tap: put the CAN controller in
  * **listen-only** mode - it receives and decodes every frame on the bus but never ACKs or
  * transmits, so it is invisible to the other nodes - and hand each frame to a sink. Wire the sink
  * into the forwarding plane (network_drivers/network/forward) to bridge captured CAN frames to another interface
  * (e.g. stream them to a wired collector over Ethernet), exactly like the Wi-Fi capture path.
  *
  * The pure piece is can_to_socketcan(): format a ::CanFrame as a 16-byte Linux **SocketCAN**
- * frame, which with the libpcap DLT_CAN_SOCKETCAN link type (shared_primitives/pcap.h) is a
- * capture Wireshark opens directly. The TWAI bring-up (`driver/twai.h`, listen-only) is ESP32
+ * frame, which with the libpcap DLT_CAN_SOCKETCAN link type (shared/pcap/pcap.h) is a
+ * capture Wireshark opens directly. The controller bring-up (listen-only) is the platform's
  * only and needs a CAN transceiver on the bus.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -27,8 +27,8 @@
 
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 
-#include "shared_primitives/can.h"  // CanFrame
-#include "shared_primitives/pcap.h" // PROTOCORE_DLT_CAN_SOCKETCAN
+#include "shared/can/can.h"   // CanFrame
+#include "shared/pcap/pcap.h" // PROTOCORE_DLT_CAN_SOCKETCAN
 
 /** @brief A Linux SocketCAN classic frame is 16 bytes on the wire (and in a PCAP record). */
 #define PROTOCORE_SOCKETCAN_FRAME_LEN 16
@@ -51,7 +51,7 @@ size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap);
 typedef void (*bus_capture_sink_fn)(const CanFrame *frame);
 
 /**
- * @brief Install the TWAI (CAN) controller in listen-only mode and start capturing.
+ * @brief Install the CAN controller in listen-only mode and start capturing.
  *
  * Listen-only means the controller never sends an ACK or a frame, so it does not disturb the bus.
  * @param tx_pin,rx_pin the GPIOs wired to the CAN transceiver.
@@ -64,7 +64,7 @@ proto_bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_captu
 /** @brief Drain any received frames, calling the sink for each. Call from loop(). */
 void bus_capture_poll(void);
 
-/** @brief Stop capture and release the TWAI driver. */
+/** @brief Stop capture and release the controller. */
 void bus_capture_end(void);
 
 #endif // PROTOCORE_ENABLE_BUS_CAPTURE

@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h3_conn.h
+ * @file protocore_h3_conn.h
  * @brief HTTP/3 application engine over QUIC streams (RFC 9114).
  *
- * Sits on top of the QUIC transport engine (pc_quic_conn) and speaks HTTP/3: on the handshake
+ * Sits on top of the QUIC transport engine (protocore_quic_conn) and speaks HTTP/3: on the handshake
  * completing it opens the server's unidirectional control stream (sending SETTINGS) and the two
  * QPACK encoder / decoder streams, reads the client's control stream, and on each client-initiated
  * bidirectional request stream reassembles the HTTP/3 frames - QPACK-decoding the HEADERS field
  * section into a request (method / path / authority + a small header set) and collecting the DATA
- * body - then hands the finished request to the application through a callback. pc_h3_conn_respond()
+ * body - then hands the finished request to the application through a callback. protocore_h3_conn_respond()
  * serializes a response (HEADERS + DATA) back onto the request stream and finishes it.
  *
  * QPACK is static-table only (we advertise QPACK_MAX_TABLE_CAPACITY = 0), so no dynamic-table state
  * is needed and the encoder / decoder streams carry only their stream-type byte. Fixed storage, no
- * heap; host-testable by feeding it decoded stream bytes through the pc_quic_conn callback seam.
+ * heap; host-testable by feeding it decoded stream bytes through the protocore_quic_conn callback seam.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -98,15 +98,15 @@ typedef struct H3Conn
  * engine's hooks; pass the app callback here instead). @p on_request is invoked for each completed
  * request.
  */
-void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app);
+void protocore_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app);
 
 /**
  * @brief Serialize and send a response on @p stream_id: a HEADERS field section (QPACK) with
  * :status and optional content-type / content-length, then a DATA frame with @p body, and finish
  * the stream. @return false on a bad stream or serialization overflow.
  */
-proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type, const uint8_t *body,
-                              size_t body_len);
+proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type,
+                                     const uint8_t *body, size_t body_len);
 
 #endif // PROTOCORE_ENABLE_HTTP3
 #endif // PROTOCORE_H3_CONN_H

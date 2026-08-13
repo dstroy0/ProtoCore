@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h2_frame.h
+ * @file protocore_h2_frame.h
  * @brief HTTP/2 binary framing (RFC 9113 sec 4 + sec 6).
  *
  * Every HTTP/2 frame is a 9-byte header (24-bit length, 8-bit type, 8-bit flags, 1 reserved bit
@@ -82,7 +82,7 @@ typedef struct
     uint32_t stream_id; ///< stream identifier (reserved bit cleared)
 } H2FrameHeader;
 
-/** @brief The six settings we track, with RFC defaults after pc_h2_settings_defaults(). */
+/** @brief The six settings we track, with RFC defaults after protocore_h2_settings_defaults(). */
 typedef struct
 {
     uint32_t header_table_size;      ///< default 4096
@@ -94,36 +94,37 @@ typedef struct
 } H2Settings;
 
 /** @brief Parse the 9-byte frame header at @p buf (needs >= 9 bytes). */
-proto_bool pc_h2_parse_header(const uint8_t *buf, size_t len, H2FrameHeader *out);
+proto_bool protocore_h2_parse_header(const uint8_t *buf, size_t len, H2FrameHeader *out);
 
 /** @brief Write a 9-byte frame header. @return 9, or 0 on overflow / length too large. */
-size_t pc_h2_write_header(uint8_t *out, size_t cap, uint32_t length, uint8_t type, uint8_t flags, uint32_t stream_id);
+size_t protocore_h2_write_header(uint8_t *out, size_t cap, uint32_t length, uint8_t type, uint8_t flags,
+                                 uint32_t stream_id);
 
 /** @brief Fill @p s with the RFC 9113 default settings values. */
-void pc_h2_settings_defaults(H2Settings *s);
+void protocore_h2_settings_defaults(H2Settings *s);
 /** @brief Apply a SETTINGS payload (list of id:16 + value:32) to @p s. @return false if malformed. */
-proto_bool pc_h2_parse_settings(const uint8_t *payload, size_t len, H2Settings *s);
+proto_bool protocore_h2_parse_settings(const uint8_t *payload, size_t len, H2Settings *s);
 
 // --- Frame builders (write a complete frame including its header) -----------------------------
 
 /** @brief SETTINGS frame from @p n (id, value) pairs (stream 0). */
-size_t pc_h2_build_settings(uint8_t *out, size_t cap, const uint16_t *ids, const uint32_t *vals, size_t n);
+size_t protocore_h2_build_settings(uint8_t *out, size_t cap, const uint16_t *ids, const uint32_t *vals, size_t n);
 /** @brief Empty SETTINGS with the ACK flag (stream 0). */
-size_t pc_h2_build_settings_ack(uint8_t *out, size_t cap);
+size_t protocore_h2_build_settings_ack(uint8_t *out, size_t cap);
 /** @brief WINDOW_UPDATE with a 31-bit @p increment on @p stream_id. */
-size_t pc_h2_build_window_update(uint8_t *out, size_t cap, uint32_t stream_id, uint32_t increment);
+size_t protocore_h2_build_window_update(uint8_t *out, size_t cap, uint32_t stream_id, uint32_t increment);
 /** @brief RST_STREAM with @p error on @p stream_id. */
-size_t pc_h2_build_rst_stream(uint8_t *out, size_t cap, uint32_t stream_id, uint32_t error);
+size_t protocore_h2_build_rst_stream(uint8_t *out, size_t cap, uint32_t stream_id, uint32_t error);
 /** @brief GOAWAY (stream 0) with @p last_stream_id and @p error (no debug data). */
-size_t pc_h2_build_goaway(uint8_t *out, size_t cap, uint32_t last_stream_id, uint32_t error);
+size_t protocore_h2_build_goaway(uint8_t *out, size_t cap, uint32_t last_stream_id, uint32_t error);
 /** @brief PING with the ACK flag echoing the 8 opaque bytes (stream 0). */
-size_t pc_h2_build_ping_ack(uint8_t *out, size_t cap, const uint8_t opaque[8]);
+size_t protocore_h2_build_ping_ack(uint8_t *out, size_t cap, const uint8_t opaque[8]);
 /** @brief HEADERS frame carrying an HPACK @p block on @p stream_id (END_HEADERS always set). */
-size_t pc_h2_build_headers(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *block, size_t block_len,
-                           proto_bool end_stream);
+size_t protocore_h2_build_headers(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *block, size_t block_len,
+                                  proto_bool end_stream);
 /** @brief DATA frame carrying @p data on @p stream_id. */
-size_t pc_h2_build_data(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *data, size_t data_len,
-                        proto_bool end_stream);
+size_t protocore_h2_build_data(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *data, size_t data_len,
+                               proto_bool end_stream);
 
 #endif // PROTOCORE_ENABLE_HTTP2
 

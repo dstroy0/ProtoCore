@@ -207,7 +207,7 @@ static proto_bool resolve_name(const HpackDynTable *t, uint32_t idx, char *out, 
 }
 
 // Emit a fully-indexed field (idx resolves to name+value); copies both into scratch.
-// idx>=1 is always true here: the only caller (pc_hpack_decode's 6.1 Indexed Header Field case)
+// idx>=1 is always true here: the only caller (protocore_hpack_decode's 6.1 Indexed Header Field case)
 // already rejects idx==0 before calling emit_indexed.
 static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, size_t cap, HpackEmitFn emit, void *ctx)
 {
@@ -280,7 +280,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
 
 // --- Public API ------------------------------------------------------------------------------
 
-void pc_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes)
+void protocore_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes)
 {
     mem.set(t, 0, sizeof(*t));
     t->max_size = max_bytes ? max_bytes : (uint32_t)HPACK_BYTES;
@@ -290,7 +290,7 @@ void pc_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes)
     }
 }
 
-proto_bool pc_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
+proto_bool protocore_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
                            HpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
@@ -348,7 +348,7 @@ proto_bool pc_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, c
     return PROTO_TRUE;
 }
 
-size_t pc_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
+size_t protocore_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
                               size_t value_len)
 {
     int name_idx = 0;

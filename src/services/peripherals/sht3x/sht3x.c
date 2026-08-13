@@ -9,7 +9,7 @@
 #include "services/peripherals/sht3x/sht3x.h"
 #include "protocore_config.h"
 #include "server/clock/clock.h"    // pcdelay
-#include "shared_primitives/crc.h" // PROTOCORE_CRC8_NRSC5
+#include "shared/crc/crc.h" // PROTOCORE_CRC8_NRSC5
 
 #if PROTOCORE_ENABLE_SHT3X
 

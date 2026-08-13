@@ -14,7 +14,7 @@
 #if PROTOCORE_ENABLE_DNS_SERVER
 
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves read and write
-#include "network_drivers/transport/udp.h"        // Udp.listener: the port 53 bind and the reply
+#include "network_drivers/transport/udp/udp.h"        // Udp.listener: the port 53 bind and the reply
 
 // Parse the first question: write the dotted name into @p name, set *qtype and *qend (the
 // byte just past QTYPE/QCLASS). Returns false on a malformed or over-long question. The name is

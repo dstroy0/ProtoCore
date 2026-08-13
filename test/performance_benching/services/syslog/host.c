@@ -12,7 +12,7 @@
 //   src/services/net/syslog/syslog.c src/network_drivers/transport/udp.c
 //   src/network_drivers/transport/udp/udp_listener.c src/network_drivers/transport/udp/udp_client.c
 //   src/network_drivers/transport/net_addr.c src/mmgr/protomem.c src/mmgr/protostr.c
-//   src/shared_primitives/ip.c -o /tmp/bsl && /tmp/bsl
+//   src/shared/ip/ip.c -o /tmp/bsl && /tmp/bsl
 
 #define PROTOCORE_ENABLE_SYSLOG 1
 #include "services/net/syslog/syslog.h"

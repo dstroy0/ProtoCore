@@ -11,7 +11,7 @@
 //   -DPROTOCORE_ENABLE_COAP=1 test/performance_benching/services/coap/host.c src/services/iot/coap/coap.c
 //   src/network_drivers/transport/udp.c src/network_drivers/transport/udp/udp_listener.c
 //   src/network_drivers/transport/udp/udp_client.c src/network_drivers/transport/net_addr.c
-//   src/server/clock/clock.c src/mmgr/protomem.c src/mmgr/protostr.c src/shared_primitives/ip.c
+//   src/server/clock/clock.c src/mmgr/protomem.c src/mmgr/protostr.c src/shared/ip/ip.c
 //   -o /tmp/bc && /tmp/bc
 
 #define PROTOCORE_ENABLE_COAP 1

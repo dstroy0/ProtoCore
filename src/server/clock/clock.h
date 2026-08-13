@@ -48,10 +48,57 @@ typedef uint32_t (*protocore_clock_fn)(void);
  *        it down to its internal 1000 Hz. Pass (NULL, 0) to revert to the
  *        platform default.
  */
-void protocore_set_clock(protocore_clock_fn fn, uint32_t ticks_per_second);
+/** @brief A time source and the rate it counts at. */
+typedef struct
+{
+    protocore_clock_fn fn;     ///< the source; NULL falls back to the platform's own
+    uint32_t ticks_per_second; ///< its rate, divided down to the library's
+} ClockSrcArgs;
+
+/** @brief The installed clocks and the calls that read them, described only in clock.c. */
+struct ClockInternal;
+
+/**
+ * @brief The pluggable time source.
+ *
+ * A caller sets the members a call takes, invokes it through ::Clock, and reads the outcome off the
+ * same handle. The installed sources are behind @ref internal.
+ *
+ * @var ClockNs::src       a time source and the rate it counts at
+ * @var ClockNs::ms        milliseconds since boot
+ * @var ClockNs::us        microseconds since boot
+ * @var ClockNs::cyc       the free-running CPU cycle count
+ * @var ClockNs::set_ms    install the millisecond source
+ * @var ClockNs::millis    read it, or the platform's when none is installed
+ * @var ClockNs::set_us    install the microsecond source
+ * @var ClockNs::micros    read it, or the platform's when none is installed
+ * @var ClockNs::cycles    read the cycle counter
+ * @var ClockNs::internal  the installed sources and the calls that read them
+ *
+ * The sources live behind the handle rather than in this header because a caller installing a clock
+ * and the library reading it are different translation units and have to see the same value.
+ */
+typedef struct
+{
+    ClockSrcArgs src;
+
+    uint32_t ms;
+    uint32_t us;
+    uint32_t cyc;
+
+    void (*set_ms)(struct ClockInternal *ctx);
+    void (*millis)(struct ClockInternal *ctx);
+    void (*set_us)(struct ClockInternal *ctx);
+    void (*micros)(struct ClockInternal *ctx);
+    void (*cycles)(struct ClockInternal *ctx);
+
+    struct ClockInternal *internal;
+} ClockNs;
+
+/** @brief The one symbol this module exports. */
+extern ClockNs Clock;
 
 /** @brief The library's monotonic time at 1000 Hz (milliseconds). */
-uint32_t protocore_millis(void);
 
 /**
  * @brief Block for at least @p ms milliseconds - the library's single delay primitive.
@@ -69,14 +116,16 @@ PROTOCORE_INLINE void pcdelay(uint32_t ms)
         protocore_platform_task_delay(0); // a bare cooperative yield
         return;
     }
-    uint32_t start = protocore_millis();
-    while (protocore_millis() - start < ms)
+    Clock.millis(Clock.internal);
+    const uint32_t start = Clock.ms;
+    for (Clock.millis(Clock.internal); Clock.ms - start < ms; Clock.millis(Clock.internal))
     {
         protocore_platform_task_delay(1); // one tick: sleeps the task (the core can idle) and feeds the watchdog
     }
 #else
-    uint32_t start = protocore_millis();
-    while (protocore_millis() - start < ms)
+    Clock.millis(Clock.internal);
+    const uint32_t start = Clock.ms;
+    for (Clock.millis(Clock.internal); Clock.ms - start < ms; Clock.millis(Clock.internal))
     {
         // Same one-tick hand-off the RTOS arm makes. A host has no tick timer, so its clock only
         // moves when something moves it, and this is what gives the platform that hook: without a
@@ -100,7 +149,6 @@ PROTOCORE_INLINE void pcdelay(uint32_t ms)
  *        library divides it down to 1 MHz. Pass (NULL, 0) for the platform
  *        default.
  */
-void protocore_set_micros_clock(protocore_clock_fn fn, uint32_t ticks_per_second);
 
 /**
  * @brief Monotonic microseconds - the high-resolution time base for ISR
@@ -108,7 +156,6 @@ void protocore_set_micros_clock(protocore_clock_fn fn, uint32_t ticks_per_second
  *        roughly every 71 minutes, so use it only for short deltas (unsigned
  *        subtraction is wrap-safe).
  */
-uint32_t protocore_micros(void);
 
 /**
  * @brief Block for at least @p us microseconds of REAL time - a hardware settle.
@@ -166,7 +213,8 @@ PROTOCORE_INLINE void protocore_lat_reset(protocore_latency_stat *s)
 /** @brief Start of a measured span: capture the current microsecond time. */
 PROTOCORE_INLINE uint32_t protocore_lat_begin(void)
 {
-    return protocore_micros();
+    Clock.micros(Clock.internal);
+    return Clock.us;
 }
 
 /**
@@ -175,7 +223,8 @@ PROTOCORE_INLINE uint32_t protocore_lat_begin(void)
  */
 PROTOCORE_INLINE void protocore_lat_end(protocore_latency_stat *s, uint32_t start_us, uint32_t budget_us)
 {
-    uint32_t lat = protocore_micros() - start_us; // wrap-safe unsigned delta
+    Clock.micros(Clock.internal);
+    uint32_t lat = Clock.us - start_us; // wrap-safe unsigned delta
     s->count++;
     s->sum_us += lat;
     if (lat < s->min_us)
@@ -202,29 +251,27 @@ PROTOCORE_INLINE uint32_t protocore_lat_avg_us(const protocore_latency_stat *s)
 // CPU cycle counter (v5 clock-awareness): sub-microsecond jitter measurement
 // ---------------------------------------------------------------------------
 //
-// protocore_micros() wraps the platform micros(), which on ESP32 is itself derived from
+// protocore_micros() wraps the platform micros(), which is itself commonly derived from
 // a 1 MHz-divided cycle counter - roughly 1 us of quantization noise. That is too
 // coarse to characterize a single SPI-DMA transaction: at a 20 MHz SPI clock one
 // byte is 400 ns, and a fast external DAQ/scope can complete several DMA transfers
 // within one microsecond tick. protocore_cycles() reads the CPU cycle counter directly
-// (CCOUNT on Xtensa ESP32 / ESP32-S3) for nanosecond-grade deltas - trigger-to-first-
-// -sample latency, inter-transfer jitter - the same primitive mmgr/dma and the
-// pentesting rig's cryptobench already use ad hoc via ESP.getCycleCount(); this
-// gives every subsystem one named, documented entry point instead. Like protocore_micros,
-// it wraps (roughly every 18 s at 240 MHz) - use it only for short deltas via
-// wrap-safe unsigned subtraction.
+// for nanosecond-grade deltas - trigger-to-first-sample latency, inter-transfer jitter -
+// the same primitive mmgr/dma and the pentesting rig's cryptobench already reach for ad
+// hoc; this gives every subsystem one named, documented entry point instead. Like
+// protocore_micros, it wraps (roughly every 18 s at 240 MHz) - use it only for short
+// deltas via wrap-safe unsigned subtraction.
 
 /**
- * @brief Free-running CPU cycle count. ISR-safe. On ARDUINO/ESP32 this is the
- *        hardware cycle counter (CCOUNT); on host it falls back to protocore_micros()
+ * @brief Free-running CPU cycle count. ISR-safe. On a part that has one this is the
+ *        hardware cycle counter; on host it falls back to protocore_micros()
  *        scaled by @p host_fallback_mhz (a coarse stand-in - override with a real
  *        cycle source in a host test that needs nanosecond precision).
  */
-uint32_t protocore_cycles(void);
 
 /**
  * @brief Convert a cycle-count delta to nanoseconds at @p cpu_mhz (the running CPU
- *        frequency, e.g. getCpuFrequencyMhz() on ESP32). @p delta_cycles must come
+ *        frequency, as the platform reports it). @p delta_cycles must come
  *        from a wrap-safe unsigned subtraction of two protocore_cycles() reads.
  */
 PROTOCORE_INLINE uint32_t protocore_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)

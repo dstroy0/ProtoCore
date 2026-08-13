@@ -23,12 +23,12 @@
 #include "network_drivers/presentation/http/http3/quic_tp.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
-#include "network_drivers/tls/tls13_kdf.h"
+#include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "protocore.h"
 #include <string.h>
 
-#include "network_drivers/transport/tcp.h"
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/tcp/tcp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "protocore_net_host.h"
 #include <unity.h>
 

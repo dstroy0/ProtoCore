@@ -117,25 +117,31 @@ static const char *resolve_into(int slot, int root, const char *dir, const char 
     return s_fs.path[slot];
 }
 
-uint32_t protocore_fs_status(void)
+static void fs_status(struct FilesystemInternal *restrict ctx)
 {
-    return s_fs.status;
+
+    ctx->ns->bits = s_fs.status;
 }
 
-void protocore_fs_clear_status(void)
+static void fs_clear(struct FilesystemInternal *restrict ctx)
 {
+    (void)ctx;
+
     s_fs.status = PROTOCORE_FS_OK;
 }
 
-proto_bool protocore_fs_storage_present(void)
+static void fs_present(struct FilesystemInternal *restrict ctx)
 {
+
     // Asked of the mount directly, not of the mask: the mask says what has failed, this says what is
     // true now. A hotswap can attach a store between the two.
-    return protocore_mnt_active() != NULL;
+    ctx->ns->ok = protocore_mnt_active() != NULL;
 }
 
-int protocore_fs_begin(const char *name)
+static void fs_begin(struct FilesystemInternal *restrict ctx)
 {
+    const char *name = ctx->ns->mount;
+
     const char *want = (name == NULL || name[0] == '\0') ? "/" : name;
 
     // Binding a name already bound hands back the same root. Two services naming the same storage
@@ -145,12 +151,14 @@ int protocore_fs_begin(const char *name)
     {
         if (strncmp(s_fs.root[i].name, want, PROTOCORE_FS_ROOT_NAME_MAX) == 0)
         {
-            return (int)i;
+            ctx->ns->i32 = (int)i;
+            return;
         }
     }
     if (s_fs.count >= PROTOCORE_FS_MAX_ROOTS)
     {
-        return -1; // refused, not silently aliased onto someone else's root
+        ctx->ns->i32 = -1;
+        return; // refused, not silently aliased onto someone else's root
     }
 
     FsRoot *r = &s_fs.root[s_fs.count];
@@ -159,7 +167,8 @@ int protocore_fs_begin(const char *name)
     size_t n = frame.build(r->path, PROTOCORE_FILESYSTEM_PATH_MAX - 1, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1);
     if (n == 0) // a root that does not fit - refused, not truncated into another directory
     {
-        return -1;
+        ctx->ns->i32 = -1;
+        return;
     }
     if (r->path[n - 1] != '/') // the engine returned the length, so the last byte is an index
     {
@@ -168,44 +177,66 @@ int protocore_fs_begin(const char *name)
     }
     if (frame.build(r->name, PROTOCORE_FS_ROOT_NAME_MAX, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1) == 0)
     {
-        return -1; // a name too long to record is a name that could not be matched again
+        ctx->ns->i32 = -1;
+        return; // a name too long to record is a name that could not be matched again
     }
 
     int id = (int)s_fs.count;
     s_fs.count++;
-    return id;
+    ctx->ns->i32 = id;
 }
 
-const char *protocore_fs_path(int root, const char *dir, const char *name)
+static void fs_resolve(struct FilesystemInternal *restrict ctx)
 {
-    return resolve_into(0, root, dir, name);
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+
+    ctx->ns->text = resolve_into(0, root, dir, name);
 }
 
-int protocore_fs_open(int root, const char *dir, const char *name, protocore_mnt_mode mode)
+static void fs_open(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+    const protocore_mnt_mode mode = ctx->ns->io.mode;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return -1;
+        ctx->ns->i32 = -1;
+        return;
     }
-    return b->open(p, (int)(mode)); // cross the int backend ABI
+    ctx->ns->i32 = b->open(p, (int)(mode));
+    return; // cross the int backend ABI
 }
 
-int protocore_fs_read(int handle, void *buf, size_t n)
+static void fs_read(struct FilesystemInternal *restrict ctx)
 {
+    const int handle = ctx->ns->io.handle;
+    void *buf = ctx->ns->io.buf;
+    const size_t n = ctx->ns->io.n;
+
     const protocore_mnt_backend *b = store();
-    return (b == NULL) ? -1 : b->read(handle, buf, n);
+    ctx->ns->i32 = (b == NULL) ? -1 : b->read(handle, buf, n);
 }
 
-int protocore_fs_write(int handle, const void *buf, size_t n)
+static void fs_write(struct FilesystemInternal *restrict ctx)
 {
+    const int handle = ctx->ns->io.handle;
+    const void *buf = ctx->ns->io.wbuf;
+    const size_t n = ctx->ns->io.n;
+
     const protocore_mnt_backend *b = store();
-    return (b == NULL) ? -1 : b->write(handle, buf, n);
+    ctx->ns->i32 = (b == NULL) ? -1 : b->write(handle, buf, n);
 }
 
-void protocore_fs_close(int handle)
+static void fs_close(struct FilesystemInternal *restrict ctx)
 {
+    const int handle = ctx->ns->io.handle;
+
     const protocore_mnt_backend *b = store();
     if (b != NULL)
     {
@@ -213,52 +244,76 @@ void protocore_fs_close(int handle)
     }
 }
 
-proto_bool protocore_fs_seek(int handle, uint64_t off)
+static void fs_seek(struct FilesystemInternal *restrict ctx)
 {
+    const int handle = ctx->ns->io.handle;
+    const uint64_t off = ctx->ns->io.off;
+
     const protocore_mnt_backend *b = store();
-    return (b == NULL) ? PROTO_FALSE : b->seek(handle, off);
+    ctx->ns->ok = (b == NULL) ? PROTO_FALSE : b->seek(handle, off);
 }
 
-long protocore_fs_size(int root, const char *dir, const char *name)
+static void fs_size(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return -1;
+        ctx->ns->len = -1;
+        return;
     }
-    return b->size(p);
+    ctx->ns->len = b->size(p);
 }
 
-proto_bool protocore_fs_exists(int root, const char *dir, const char *name)
+static void fs_exists(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
-    return b->exists(p);
+    ctx->ns->ok = b->exists(p);
 }
 
-proto_bool protocore_fs_stat(int root, const char *dir, const char *name, protocore_mnt_stat *out)
+static void fs_stat(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+    protocore_mnt_stat *out = ctx->ns->io.stat;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
-    return b->stat(p, out);
+    ctx->ns->ok = b->stat(p, out);
 }
 
-proto_bool protocore_fs_remove(int root, const char *dir, const char *name)
+static void fs_remove(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
 
     // A root is what this file is rooted AT, never a resource inside it, so it is not the walk's to
@@ -281,7 +336,8 @@ proto_bool protocore_fs_remove(int root, const char *dir, const char *name)
     if (plen == rlen && mem.cmp(p, rp, plen) == 0)
     {
         s_fs.status |= PROTOCORE_FS_BAD_ROOT;
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
 
     // One stat decides which of the two this is. A plain file is the one call it always was; a
@@ -290,11 +346,13 @@ proto_bool protocore_fs_remove(int root, const char *dir, const char *name)
     protocore_mnt_stat st;
     if (!b->stat(p, &st))
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     if (!st.is_dir)
     {
-        return b->remove(p);
+        ctx->ns->ok = b->remove(p);
+        return;
     }
 
     // The walk. s_fs.walk is the current level's path and the stack both: descending appends the
@@ -304,7 +362,8 @@ proto_bool protocore_fs_remove(int root, const char *dir, const char *name)
     size_t len = frame.build(s_fs.walk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(p)}, 1);
     if (len == 0)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
 
     int lvl = 0;
@@ -313,7 +372,8 @@ proto_bool protocore_fs_remove(int root, const char *dir, const char *name)
         int d = b->opendir(s_fs.walk);
         if (d < 0)
         {
-            return PROTO_FALSE;
+            ctx->ns->ok = PROTO_FALSE;
+            return;
         }
         // The entry's name is read straight onto the end of the path, one byte past the separator,
         // so a matched child is already a full path and an empty directory costs no assembly.
@@ -329,11 +389,13 @@ proto_bool protocore_fs_remove(int root, const char *dir, const char *name)
             s_fs.walk[len] = '\0'; // undo the probe, whatever readdir left there
             if (!b->rmdir(s_fs.walk))
             {
-                return PROTO_FALSE;
+                ctx->ns->ok = PROTO_FALSE;
+                return;
             }
             if (lvl == 0)
             {
-                return PROTO_TRUE;
+                ctx->ns->ok = PROTO_TRUE;
+                return;
             }
             len = walk_pop(s_fs.walk, len);
             lvl--;
@@ -350,29 +412,38 @@ proto_bool protocore_fs_remove(int root, const char *dir, const char *name)
             s_fs.walk[len] = '\0'; // back to this level, whatever happened
             if (!ok)
             {
-                return PROTO_FALSE;
+                ctx->ns->ok = PROTO_FALSE;
+                return;
             }
             continue; // same level, re-opened next pass
         }
         if (lvl + 1 > PROTOCORE_FS_MAX_DEPTH)
         {
-            return PROTO_FALSE; // refuse a pathologically deep tree rather than walk forever
+            ctx->ns->ok = PROTO_FALSE;
+            return; // refuse a pathologically deep tree rather than walk forever
         }
         len = str.len(s_fs.walk, PROTOCORE_FILESYSTEM_PATH_MAX);
         lvl++;
     }
 }
 
-proto_bool protocore_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name)
+static void fs_rename(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *from_dir = ctx->ns->path.dir;
+    const char *from_name = ctx->ns->path.name;
+    const char *to_dir = ctx->ns->dest.dir;
+    const char *to_name = ctx->ns->dest.name;
+
     const protocore_mnt_backend *b = store();
     const char *fp = resolve_into(0, root, from_dir, from_name);
     const char *tp = resolve_into(1, root, to_dir, to_name); // the one op needing both paths live at once
     if (b == NULL || fp == NULL || tp == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
-    return b->rename(fp, tp);
+    ctx->ns->ok = b->rename(fp, tp);
 }
 
 // Copy one file's bytes through the chunk buffer. The only place in this file that holds two handles
@@ -382,13 +453,15 @@ static proto_bool copy_one(const protocore_mnt_backend *b, const char *src, cons
     int in = b->open(src, (int)(PROTOCORE_MNT_READ));
     if (in < 0)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     int out = b->open(dst, (int)(PROTOCORE_MNT_WRITE));
     if (out < 0)
     {
         b->close(in);
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     proto_bool ok = PROTO_TRUE;
     for (;;)
@@ -406,38 +479,49 @@ static proto_bool copy_one(const protocore_mnt_backend *b, const char *src, cons
     }
     b->close(in);
     b->close(out);
-    return ok;
+    ctx->ns->ok = ok;
 }
 
-proto_bool protocore_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name)
+static void fs_copy(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *from_dir = ctx->ns->path.dir;
+    const char *from_name = ctx->ns->path.name;
+    const char *to_dir = ctx->ns->dest.dir;
+    const char *to_name = ctx->ns->dest.name;
+
     const protocore_mnt_backend *b = store();
     const char *sp = resolve_into(0, root, from_dir, from_name);
     const char *dp = resolve_into(1, root, to_dir, to_name); // both paths live at once, as in rename
     if (b == NULL || sp == NULL || dp == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
 
     protocore_mnt_stat st;
     if (!b->stat(sp, &st))
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     if (!st.is_dir)
     {
-        return copy_one(b, sp, dp);
+        ctx->ns->ok = copy_one(b, sp, dp);
+        return;
     }
 
     size_t slen = frame.build(s_fs.walk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(sp)}, 1);
     size_t dlen = frame.build(s_fs.dwalk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(dp)}, 1);
     if (slen == 0 || dlen == 0)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     if (!b->mkdir(s_fs.dwalk))
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     s_fs.idx[0] = 0;
 
@@ -452,7 +536,8 @@ proto_bool protocore_fs_copy(int root, const char *from_dir, const char *from_na
         int d = b->opendir(s_fs.walk);
         if (d < 0)
         {
-            return PROTO_FALSE;
+            ctx->ns->ok = PROTO_FALSE;
+            return;
         }
         // The name is read onto the end of the source path; the destination takes the same name
         // through walk_push once the entry is known to exist.
@@ -478,7 +563,8 @@ proto_bool protocore_fs_copy(int root, const char *from_dir, const char *from_na
             s_fs.walk[slen] = '\0';
             if (lvl == 0)
             {
-                return PROTO_TRUE;
+                ctx->ns->ok = PROTO_TRUE;
+                return;
             }
             slen = walk_pop(s_fs.walk, slen);
             dlen = walk_pop(s_fs.dwalk, dlen);
@@ -494,7 +580,8 @@ proto_bool protocore_fs_copy(int root, const char *from_dir, const char *from_na
         }
         if (ndlen == 0)
         {
-            return PROTO_FALSE;
+            ctx->ns->ok = PROTO_FALSE;
+            return;
         }
 
         if (!cst.is_dir)
@@ -504,18 +591,21 @@ proto_bool protocore_fs_copy(int root, const char *from_dir, const char *from_na
             s_fs.dwalk[dlen] = '\0';
             if (!ok)
             {
-                return PROTO_FALSE;
+                ctx->ns->ok = PROTO_FALSE;
+                return;
             }
             s_fs.idx[lvl]++;
             continue;
         }
         if (lvl + 1 > PROTOCORE_FS_MAX_DEPTH)
         {
-            return PROTO_FALSE;
+            ctx->ns->ok = PROTO_FALSE;
+            return;
         }
         if (!b->mkdir(s_fs.dwalk))
         {
-            return PROTO_FALSE;
+            ctx->ns->ok = PROTO_FALSE;
+            return;
         }
         slen = str.len(s_fs.walk, PROTOCORE_FILESYSTEM_PATH_MAX);
         dlen = ndlen;
@@ -524,62 +614,91 @@ proto_bool protocore_fs_copy(int root, const char *from_dir, const char *from_na
     }
 }
 
-proto_bool protocore_fs_mkdir(int root, const char *dir, const char *name)
+static void fs_mkdir(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
-    return b->mkdir(p);
+    ctx->ns->ok = b->mkdir(p);
 }
 
-proto_bool protocore_fs_rmdir(int root, const char *dir, const char *name)
+static void fs_rmdir(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
-    return b->rmdir(p);
+    ctx->ns->ok = b->rmdir(p);
 }
 
-int protocore_fs_opendir(int root, const char *dir, const char *name)
+static void fs_opendir(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return -1;
+        ctx->ns->i32 = -1;
+        return;
     }
-    return b->opendir(p);
+    ctx->ns->i32 = b->opendir(p);
 }
 
-proto_bool protocore_fs_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
+static void fs_readdir(struct FilesystemInternal *restrict ctx)
 {
+    const int handle = ctx->ns->io.handle;
+    protocore_mnt_stat *out = ctx->ns->io.stat;
+    char *name = ctx->ns->io.name_out;
+    const size_t name_cap = ctx->ns->io.name_cap;
+
     const protocore_mnt_backend *b = store();
-    return (b == NULL) ? PROTO_FALSE : b->readdir(handle, out, name, name_cap);
+    ctx->ns->ok = (b == NULL) ? PROTO_FALSE : b->readdir(handle, out, name, name_cap);
 }
 
-long protocore_fs_read_file(int root, const char *dir, const char *name, void *buf, size_t cap)
+static void fs_read_file(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+    void *buf = ctx->ns->io.buf;
+    const size_t cap = ctx->ns->io.n;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name); // resolved once; the loop below works on the handle
     if (b == NULL || p == NULL)
     {
-        return -1;
+        ctx->ns->len = -1;
+        return;
     }
     long sz = b->size(p);
     if (sz < 0 || (size_t)(sz) > cap)
     {
-        return -1;
+        ctx->ns->len = -1;
+        return;
     }
     int h = b->open(p, (int)(PROTOCORE_MNT_READ));
     if (h < 0)
     {
-        return -1;
+        ctx->ns->len = -1;
+        return;
     }
     size_t total = 0;
     uint8_t *out = (uint8_t *)(buf);
@@ -593,21 +712,29 @@ long protocore_fs_read_file(int root, const char *dir, const char *name, void *b
         total += (size_t)(r);
     }
     b->close(h);
-    return (long)(total);
+    ctx->ns->len = (long)(total);
 }
 
-proto_bool protocore_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n)
+static void fs_write_file(struct FilesystemInternal *restrict ctx)
 {
+    const int root = ctx->ns->path.root;
+    const char *dir = ctx->ns->path.dir;
+    const char *name = ctx->ns->path.name;
+    const void *buf = ctx->ns->io.wbuf;
+    const size_t n = ctx->ns->io.n;
+
     const protocore_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     int h = b->open(p, (int)(PROTOCORE_MNT_WRITE));
     if (h < 0)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     size_t total = 0;
     const uint8_t *in = (const uint8_t *)(buf);
@@ -627,7 +754,45 @@ proto_bool protocore_fs_write_file(int root, const char *dir, const char *name, 
         // a caller tests for "there is nowhere to put this", whether the cause is no store at all or
         // a store with no room left.
         s_fs.status |= PROTOCORE_FS_STORAGE_EXHAUSTED;
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
-    return PROTO_TRUE;
+    ctx->ns->ok = PROTO_TRUE;
 }
+
+/**
+ * @brief The mount state and the calls that reach it - what FilesystemNs points at.
+ *
+ * @var FilesystemInternal::ns  the handle a caller sets a call's members on
+ */
+struct FilesystemInternal
+{
+    FilesystemNs *ns;
+};
+
+static struct FilesystemInternal s_fs_ctx = {.ns = &Fs};
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+FilesystemNs Fs = {.status = fs_status,
+                   .clear = fs_clear,
+                   .present = fs_present,
+                   .begin = fs_begin,
+                   .resolve = fs_resolve,
+                   .open = fs_open,
+                   .read = fs_read,
+                   .write = fs_write,
+                   .close = fs_close,
+                   .seek = fs_seek,
+                   .size = fs_size,
+                   .exists = fs_exists,
+                   .stat = fs_stat,
+                   .remove = fs_remove,
+                   .rename = fs_rename,
+                   .copy = fs_copy,
+                   .mkdir = fs_mkdir,
+                   .rmdir = fs_rmdir,
+                   .opendir = fs_opendir,
+                   .readdir = fs_readdir,
+                   .read_file = fs_read_file,
+                   .write_file = fs_write_file,
+                   .internal = &s_fs_ctx};

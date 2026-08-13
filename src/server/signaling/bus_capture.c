@@ -3,16 +3,17 @@
 
 /**
  * @file bus_capture.c
- * @brief bus_capture implementation: the pure SocketCAN framer + the ESP32 TWAI listen-only bind.
+ * @brief bus_capture implementation: the pure SocketCAN framer + the listen-only controller bind.
+ *
+ * The controller itself is the platform's: this reaches it through the protocore_platform_can_*
+ * seam, so the framing and the drain loop run the same on a host with the seam mocked.
  */
 
+#include "core_setup/board_profiles/protocore_platform.h"
 #include "server/signaling/bus_capture.h"
 
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 
-#if PROTOCORE_HAS_VENDOR_CAN
-#include "driver/twai.h"
-#endif
 size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
 {
     if (!f || !out || cap < PROTOCORE_SOCKETCAN_FRAME_LEN)
@@ -47,7 +48,7 @@ size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
     return PROTOCORE_SOCKETCAN_FRAME_LEN;
 }
 
-// --- ESP32 TWAI (CAN) binding ------------------------------------------------------------
+// --- Controller binding ------------------------------------------------------------------
 #if PROTOCORE_HAS_VENDOR_CAN
 
 // All bus-capture bind state, owned by one instance (internal linkage): the frame sink and
@@ -59,56 +60,10 @@ typedef struct
 } BusCaptureCtx;
 static BusCaptureCtx s_bus;
 
-static proto_bool timing_for(uint32_t bitrate, twai_timing_config_t *t)
-{
-    switch (bitrate)
-    {
-    case 1000000: {
-        twai_timing_config_t c = TWAI_TIMING_CONFIG_1MBITS();
-        *t = c;
-        return PROTO_TRUE;
-    }
-    case 500000: {
-        twai_timing_config_t c = TWAI_TIMING_CONFIG_500KBITS();
-        *t = c;
-        return PROTO_TRUE;
-    }
-    case 250000: {
-        twai_timing_config_t c = TWAI_TIMING_CONFIG_250KBITS();
-        *t = c;
-        return PROTO_TRUE;
-    }
-    case 125000: {
-        twai_timing_config_t c = TWAI_TIMING_CONFIG_125KBITS();
-        *t = c;
-        return PROTO_TRUE;
-    }
-    default:
-        return PROTO_FALSE;
-    }
-}
-
 proto_bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink)
 {
-    if (!sink)
+    if (!sink || !protocore_platform_can_open(tx_pin, rx_pin, bitrate))
     {
-        return PROTO_FALSE;
-    }
-    twai_timing_config_t timing;
-    if (!timing_for(bitrate, &timing))
-    {
-        return PROTO_FALSE;
-    }
-    twai_general_config_t gen =
-        TWAI_GENERAL_CONFIG_DEFAULT((gpio_num_t)tx_pin, (gpio_num_t)rx_pin, TWAI_MODE_LISTEN_ONLY);
-    twai_filter_config_t filt = TWAI_FILTER_CONFIG_ACCEPT_ALL();
-    if (twai_driver_install(&gen, &timing, &filt) != ESP_OK)
-    {
-        return PROTO_FALSE;
-    }
-    if (twai_start() != ESP_OK)
-    {
-        twai_driver_uninstall();
         return PROTO_FALSE;
     }
     s_bus.sink = sink;
@@ -122,14 +77,14 @@ void bus_capture_poll(void)
     {
         return;
     }
-    twai_message_t m;
-    while (twai_receive(&m, 0) == ESP_OK) // 0 ticks = non-blocking drain
+    protocore_can_frame m;
+    while (protocore_platform_can_recv(&m)) // drains what is queued without blocking
     {
         CanFrame f;
-        f.id = m.identifier;
-        f.extended = m.extd;
+        f.id = m.id;
+        f.extended = m.ext;
         f.rtr = m.rtr;
-        f.dlc = m.data_length_code > PROTOCORE_CAN_MAX_DLC ? PROTOCORE_CAN_MAX_DLC : m.data_length_code;
+        f.dlc = m.len > PROTOCORE_CAN_MAX_DLC ? PROTOCORE_CAN_MAX_DLC : m.len;
         for (int i = 0; i < PROTOCORE_CAN_MAX_DLC; i++)
         {
             f.data[i] = (i < f.dlc) ? m.data[i] : 0;
@@ -144,13 +99,12 @@ void bus_capture_end(void)
     {
         return;
     }
-    twai_stop();
-    twai_driver_uninstall();
+    protocore_platform_can_close();
     s_bus.running = PROTO_FALSE;
     s_bus.sink = NULL;
 }
 
-#else // host build - no TWAI controller
+#else // no controller seam to open
 
 proto_bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink)
 {
@@ -162,11 +116,11 @@ proto_bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_captu
 }
 void bus_capture_poll(void)
 {
-    // host build: no TWAI controller, nothing to drain
+    // no controller, so nothing to drain
 }
 void bus_capture_end(void)
 {
-    // host build: no TWAI controller, nothing to stop
+    // no controller, so nothing to stop
 }
 
 #endif // PROTOCORE_HAS_VENDOR_CAN

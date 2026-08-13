@@ -5,7 +5,7 @@
 // builds a real request datagram with the BER encoder, runs it through the
 // agent, and decodes the response - no sockets, no heap.
 
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "services/net/snmp/snmp_agent.h"
 #include "services/net/snmp/snmp_ber.h"
 #include <string.h>

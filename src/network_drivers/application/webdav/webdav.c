@@ -9,7 +9,7 @@
 
 #include "network_drivers/application/webdav/webdav.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/hex.h"
+#include "shared/hex/hex.h"
 
 #if PROTOCORE_ENABLE_WEBDAV
 

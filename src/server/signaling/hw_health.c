@@ -11,25 +11,42 @@
 
 #if PROTOCORE_ENABLE_HW_HEALTH
 
-void protocore_hwhealth_rail_init(HwRailMonitor *m, uint32_t nominal_mv, uint32_t warn_mv, uint32_t crit_mv)
+/**
+ * @brief The checks' calls - what HwHealthNs points at.
+ *
+ * @var HwHealthInternal::ns  the handle a caller sets a call's members on
+ */
+struct HwHealthInternal
 {
+    HwHealthNs *ns;
+};
+
+static struct HwHealthInternal s_hw = {.ns = &HwHealth};
+
+static void rail_init(struct HwHealthInternal *restrict ctx)
+{
+    HwRailMonitor *m = ctx->ns->rail.m;
     if (!m)
     {
         return;
     }
-    m->nominal_mv = nominal_mv;
-    m->warn_mv = warn_mv;
-    m->crit_mv = crit_mv;
-    m->min_mv = nominal_mv;
+    m->nominal_mv = ctx->ns->rail.nominal_mv;
+    m->warn_mv = ctx->ns->rail.warn_mv;
+    m->crit_mv = ctx->ns->rail.crit_mv;
+    m->min_mv = ctx->ns->rail.nominal_mv;
     m->sag_events = 0;
     m->brownout_events = 0;
 }
 
-HwRailVerdict protocore_hwhealth_rail_sample(HwRailMonitor *m, uint32_t mv)
+static void rail_sample(struct HwHealthInternal *restrict ctx)
 {
+    HwRailMonitor *m = ctx->ns->rail.m;
+    const uint32_t mv = ctx->ns->rail.mv;
+
+    ctx->ns->rail_verdict = HW_RAIL_OK;
     if (!m)
     {
-        return HW_RAIL_OK;
+        return;
     }
     if (mv < m->min_mv)
     {
@@ -38,21 +55,26 @@ HwRailVerdict protocore_hwhealth_rail_sample(HwRailMonitor *m, uint32_t mv)
     if (mv < m->crit_mv)
     {
         m->brownout_events++;
-        return HW_RAIL_BROWNOUT;
+        ctx->ns->rail_verdict = HW_RAIL_BROWNOUT;
+        return;
     }
     if (mv < m->warn_mv)
     {
         m->sag_events++;
-        return HW_RAIL_SAG;
+        ctx->ns->rail_verdict = HW_RAIL_SAG;
     }
-    return HW_RAIL_OK;
 }
 
-size_t protocore_hwhealth_rail_json(const HwRailMonitor *m, char *out, size_t cap)
+static void rail_json(struct HwHealthInternal *restrict ctx)
 {
+    const HwRailMonitor *m = ctx->ns->rail.m_ro;
+    char *out = ctx->ns->out_args.out;
+    const size_t cap = ctx->ns->out_args.cap;
+
+    ctx->ns->n = 0;
     if (!m || !out || cap == 0)
     {
-        return 0;
+        return;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
     protocore_sb_put(&b, "{\"nominal_mv\":");
@@ -66,46 +88,49 @@ size_t protocore_hwhealth_rail_json(const HwRailMonitor *m, char *out, size_t ca
     protocore_sb_put(&b, "}");
     if (!b.ok)
     {
-        return 0;
+        return;
     }
     out[b.len] = '\0';
-    return b.len;
+    ctx->ns->n = b.len;
 }
 
-void protocore_hwhealth_spi_init(HwSpiBackoff *s, uint32_t start_hz, uint32_t min_hz, uint32_t max_hz, uint16_t fail_trip,
-                          uint16_t ok_trip)
+static void spi_init(struct HwHealthInternal *restrict ctx)
 {
+    HwSpiBackoff *s = ctx->ns->spi.s;
     if (!s)
     {
         return;
     }
-    s->min_hz = min_hz;
-    s->max_hz = max_hz;
-    if (start_hz < min_hz)
+    s->min_hz = ctx->ns->spi.min_hz;
+    s->max_hz = ctx->ns->spi.max_hz;
+    if (ctx->ns->spi.start_hz < ctx->ns->spi.min_hz)
     {
-        s->hz = min_hz;
+        s->hz = ctx->ns->spi.min_hz;
     }
-    else if (start_hz > max_hz)
+    else if (ctx->ns->spi.start_hz > ctx->ns->spi.max_hz)
     {
-        s->hz = max_hz;
+        s->hz = ctx->ns->spi.max_hz;
     }
     else
     {
-        s->hz = start_hz;
+        s->hz = ctx->ns->spi.start_hz;
     }
     s->fail_streak = 0;
     s->ok_streak = 0;
-    s->fail_trip = fail_trip ? fail_trip : 1;
-    s->ok_trip = ok_trip ? ok_trip : 1;
+    s->fail_trip = ctx->ns->spi.fail_trip ? ctx->ns->spi.fail_trip : 1;
+    s->ok_trip = ctx->ns->spi.ok_trip ? ctx->ns->spi.ok_trip : 1;
 }
 
-uint32_t protocore_hwhealth_spi_result(HwSpiBackoff *s, proto_bool crc_ok)
+static void spi_result(struct HwHealthInternal *restrict ctx)
 {
+    HwSpiBackoff *s = ctx->ns->spi.s;
+
+    ctx->ns->hz = 0;
     if (!s)
     {
-        return 0;
+        return;
     }
-    if (crc_ok)
+    if (ctx->ns->spi.crc_ok)
     {
         s->fail_streak = 0;
         if (++s->ok_streak >= s->ok_trip)
@@ -133,41 +158,57 @@ uint32_t protocore_hwhealth_spi_result(HwSpiBackoff *s, proto_bool crc_ok)
             s->hz = down;
         }
     }
-    return s->hz;
+    ctx->ns->hz = s->hz;
 }
 
-HwGpioVerdict protocore_hwhealth_gpio_short(proto_bool driven_high, proto_bool read_high)
+static void gpio_short(struct HwHealthInternal *restrict ctx)
 {
-    if (driven_high && !read_high)
+    if (ctx->ns->probe.driven_high && !ctx->ns->probe.read_high)
     {
-        return HW_GPIO_SHORT_GND;
+        ctx->ns->gpio_verdict = HW_GPIO_SHORT_GND;
+        return;
     }
-    if (!driven_high && read_high)
+    if (!ctx->ns->probe.driven_high && ctx->ns->probe.read_high)
     {
-        return HW_GPIO_SHORT_VCC;
+        ctx->ns->gpio_verdict = HW_GPIO_SHORT_VCC;
+        return;
     }
-    return HW_GPIO_OK;
+    ctx->ns->gpio_verdict = HW_GPIO_OK;
 }
 
-HwCapVerdict protocore_hwhealth_cap_leak(uint32_t measured_ms, uint32_t expected_ms, uint8_t tol_pct)
+static void cap_leak(struct HwHealthInternal *restrict ctx)
 {
+    const uint32_t measured_ms = ctx->ns->probe.measured_ms;
+    const uint32_t expected_ms = ctx->ns->probe.expected_ms;
+
+    ctx->ns->cap_verdict = HW_CAP_OK;
     if (expected_ms == 0)
     {
-        return HW_CAP_OK;
+        return;
     }
     // Tolerance band around expected, computed in 64-bit to avoid overflow.
-    uint64_t band = (uint64_t)expected_ms * tol_pct / 100;
+    uint64_t band = (uint64_t)expected_ms * ctx->ns->probe.tol_pct / 100;
     uint64_t lo = (uint64_t)expected_ms > band ? (uint64_t)expected_ms - band : 0;
     uint64_t hi = (uint64_t)expected_ms + band;
     if (measured_ms < lo)
     {
-        return HW_CAP_LEAK; // discharges too fast
+        ctx->ns->cap_verdict = HW_CAP_LEAK; // discharges too fast
+        return;
     }
     if (measured_ms > hi)
     {
-        return HW_CAP_HIGH_ESR; // discharges too slow
+        ctx->ns->cap_verdict = HW_CAP_HIGH_ESR; // discharges too slow
     }
-    return HW_CAP_OK;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+HwHealthNs HwHealth = {.rail_init = rail_init,
+                       .rail_sample = rail_sample,
+                       .rail_json = rail_json,
+                       .spi_init = spi_init,
+                       .spi_result = spi_result,
+                       .gpio_short = gpio_short,
+                       .cap_leak = cap_leak,
+                       .internal = &s_hw};
 
 #endif // PROTOCORE_ENABLE_HW_HEALTH

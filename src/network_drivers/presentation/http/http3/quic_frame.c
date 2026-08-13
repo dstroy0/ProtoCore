@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_frame.c
- * @brief QUIC frame parsing and building - implementation. See pc_quic_frame.h.
+ * @file protocore_quic_frame.c
+ * @brief QUIC frame parsing and building - implementation. See protocore_quic_frame.h.
  */
 
 #include "network_drivers/presentation/http/http3/quic_frame.h"
@@ -17,7 +17,7 @@
 static proto_bool rd(const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)
 {
     size_t c = 0;
-    if (!pc_quic_varint_decode(buf + *pos, len - *pos, v, &c))
+    if (!protocore_quic_varint_decode(buf + *pos, len - *pos, v, &c))
     {
         return PROTO_FALSE;
     }
@@ -25,7 +25,7 @@ static proto_bool rd(const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)
     return PROTO_TRUE;
 }
 
-size_t pc_quic_frame_parse(const uint8_t *buf, size_t len, QuicFrame *out)
+size_t protocore_quic_frame_parse(const uint8_t *buf, size_t len, QuicFrame *out)
 {
     size_t pos = 0;
     uint64_t type = 0;
@@ -226,7 +226,7 @@ size_t pc_quic_frame_parse(const uint8_t *buf, size_t len, QuicFrame *out)
     return 0; // a genuinely unknown / reserved frame type
 }
 
-size_t pc_quic_build_padding(uint8_t *out, size_t cap, size_t n)
+size_t protocore_quic_build_padding(uint8_t *out, size_t cap, size_t n)
 {
     if (n > cap)
     {
@@ -236,7 +236,7 @@ size_t pc_quic_build_padding(uint8_t *out, size_t cap, size_t n)
     return n;
 }
 
-size_t pc_quic_build_ping(uint8_t *out, size_t cap)
+size_t protocore_quic_build_ping(uint8_t *out, size_t cap)
 {
     if (cap < 1)
     {
@@ -246,7 +246,7 @@ size_t pc_quic_build_ping(uint8_t *out, size_t cap)
     return 1;
 }
 
-size_t pc_quic_build_handshake_done(uint8_t *out, size_t cap)
+size_t protocore_quic_build_handshake_done(uint8_t *out, size_t cap)
 {
     if (cap < 1)
     {
@@ -259,7 +259,7 @@ size_t pc_quic_build_handshake_done(uint8_t *out, size_t cap)
 // Append a varint; returns false on overflow.
 static proto_bool wr(uint8_t *out, size_t cap, size_t *pos, uint64_t v)
 {
-    size_t c = pc_quic_varint_encode(out + *pos, cap - *pos, v);
+    size_t c = protocore_quic_varint_encode(out + *pos, cap - *pos, v);
     if (!c)
     {
         return PROTO_FALSE;
@@ -268,7 +268,7 @@ static proto_bool wr(uint8_t *out, size_t cap, size_t *pos, uint64_t v)
     return PROTO_TRUE;
 }
 
-size_t pc_quic_build_ack(uint8_t *out, size_t cap, uint64_t largest, uint64_t delay, uint64_t first_range)
+size_t protocore_quic_build_ack(uint8_t *out, size_t cap, uint64_t largest, uint64_t delay, uint64_t first_range)
 {
     size_t pos = 0;
     if (!wr(out, cap, &pos, QUIC_FT_ACK) || !wr(out, cap, &pos, largest) || !wr(out, cap, &pos, delay) ||
@@ -279,7 +279,7 @@ size_t pc_quic_build_ack(uint8_t *out, size_t cap, uint64_t largest, uint64_t de
     return pos;
 }
 
-size_t pc_quic_build_crypto(uint8_t *out, size_t cap, uint64_t offset, const uint8_t *data, size_t len)
+size_t protocore_quic_build_crypto(uint8_t *out, size_t cap, uint64_t offset, const uint8_t *data, size_t len)
 {
     size_t pos = 0;
     if (!wr(out, cap, &pos, QUIC_FT_CRYPTO) || !wr(out, cap, &pos, offset) || !wr(out, cap, &pos, len))
@@ -297,7 +297,7 @@ size_t pc_quic_build_crypto(uint8_t *out, size_t cap, uint64_t offset, const uin
     return pos + len;
 }
 
-size_t pc_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offset, const uint8_t *data, size_t len,
+size_t protocore_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offset, const uint8_t *data, size_t len,
                             proto_bool fin)
 {
     uint64_t type = QUIC_FT_STREAM | QUIC_STREAM_LEN | (offset ? QUIC_STREAM_OFF : 0) | (fin ? QUIC_STREAM_FIN : 0);
@@ -325,7 +325,7 @@ size_t pc_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offs
     return pos + len;
 }
 
-size_t pc_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max)
+size_t protocore_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max)
 {
     size_t pos = 0;
     if (!wr(out, cap, &pos, QUIC_FT_MAX_DATA) || !wr(out, cap, &pos, max))
@@ -335,7 +335,7 @@ size_t pc_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max)
     return pos;
 }
 
-size_t pc_quic_build_connection_close(uint8_t *out, size_t cap, proto_bool app, uint64_t error_code,
+size_t protocore_quic_build_connection_close(uint8_t *out, size_t cap, proto_bool app, uint64_t error_code,
                                       uint64_t frame_type, const char *reason, size_t reason_len)
 {
     size_t pos = 0;

@@ -20,10 +20,8 @@ PROTOCORE_BEGIN_DECLS
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
 /** @brief Current lifecycle state. */
-protocore_ssh_client_state protocore_ssh_client_state_get(void);
 
 /** @brief True once authenticated and the remote forward is live. */
-proto_bool protocore_ssh_client_up(void);
 
 /**
  * @brief Derive the ssh-ed25519 public key (32 bytes) from a private @p seed.
@@ -31,9 +29,44 @@ proto_bool protocore_ssh_client_up(void);
  * Convenience for provisioning: print/serve this so it can be added to the relay's `authorized_keys`
  * (as `ssh-ed25519 <base64(0x0000000b "ssh-ed25519" 0x00000020 <pub>)>`).
  */
-void protocore_ssh_client_pubkey(const uint8_t seed[32], uint8_t pub[32]);
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT
+
+/** @brief The application face's own state and the calls that reach it, described only in client.c. */
+struct SshAppClientInternal;
+
+/**
+ * @brief What a sketch asks about the SSH forward.
+ *
+ * A caller sets the members a call takes, invokes it through ::SshAppClient, and reads the outcome
+ * off the same handle.
+ *
+ * @var SshAppClientNs::seed      the 32-byte signing seed a key derivation starts from
+ * @var SshAppClientNs::pub       where its public half is written
+ * @var SshAppClientNs::ok        the forward is up
+ * @var SshAppClientNs::state     the phase the forward is in
+ * @var SshAppClientNs::state_get read that phase
+ * @var SshAppClientNs::up        whether it is up
+ * @var SshAppClientNs::pubkey    the seed's public half, without a connection
+ * @var SshAppClientNs::internal  the face's state and the calls that reach it
+ */
+typedef struct
+{
+    const uint8_t *seed;
+    uint8_t *pub;
+
+    proto_bool ok;
+    protocore_ssh_client_state state;
+
+    void (*state_get)(struct SshAppClientInternal *ctx);
+    void (*up)(struct SshAppClientInternal *ctx);
+    void (*pubkey)(struct SshAppClientInternal *ctx);
+
+    struct SshAppClientInternal *internal;
+} SshAppClientNs;
+
+/** @brief The one symbol this module exports. */
+extern SshAppClientNs SshAppClient;
 
 PROTOCORE_END_DECLS
 

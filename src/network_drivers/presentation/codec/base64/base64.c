@@ -26,7 +26,7 @@
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-static void pc_base64_encode(const uint8_t *src, size_t src_len, char *dst)
+static void protocore_base64_encode(const uint8_t *src, size_t src_len, char *dst)
 {
     size_t i = 0;
     size_t j = 0;
@@ -139,7 +139,7 @@ static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
     return val;
 }
 
-static size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
+static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
 {
     size_t src_len = strnlen(src, ((dst_cap + 2) / 3) * 4 + 4);
     if (src_len == 0 || (src_len & 3u) != 0)
@@ -202,7 +202,7 @@ static size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
     return out;
 }
 #else
-static size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
+static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
 {
     // Bounded length (a missing NUL cannot run past what dst_cap could ever hold). Canonical base64 is
     // whole 4-character quads.
@@ -283,15 +283,15 @@ static size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
 // ---------------------------------------------------------------------------
 // Base64url (RFC 4648 section 5): '-' / '_' replace '+' / '/', no '=' padding.
 // Shared by JWT (HS256) and OIDC (RS256) so the alphabet lives in one place.
-// Platform-independent: encode builds on pc_base64_encode then rewrites the two
+// Platform-independent: encode builds on protocore_base64_encode then rewrites the two
 // differing characters in place; decode is a direct streaming decoder that
 // accepts the URL and standard alphabets and stops at '=', so it needs no temp
 // buffer or re-padding.
 // ---------------------------------------------------------------------------
 
-static size_t pc_base64url_encode(const uint8_t *src, size_t src_len, char *dst)
+static size_t protocore_base64url_encode(const uint8_t *src, size_t src_len, char *dst)
 {
-    pc_base64_encode(src, src_len, dst); // standard base64, '='-padded, NUL-terminated
+    protocore_base64_encode(src, src_len, dst); // standard base64, '='-padded, NUL-terminated
     size_t n = 0;
     for (size_t i = 0; dst[i]; i++)
     {
@@ -316,9 +316,9 @@ static size_t pc_base64url_encode(const uint8_t *src, size_t src_len, char *dst)
 
 // Constant-time base64url decode (RFC 4648 sec 5, '-'/'_'), used by JWT / JWS (RFC 7515) and OIDC - a
 // secret path, so it shares the branchless classifier above (the standard '+'/'/' are rejected here). The
-// only difference from pc_base64_decode is framing: base64url carries no padding, and the final group may
+// only difference from protocore_base64_decode is framing: base64url carries no padding, and the final group may
 // be 2 or 3 characters (an unbounded streaming decode rather than whole quads).
-size_t pc_base64url_decode(const char *src, size_t src_len, uint8_t *dst, size_t dst_cap)
+size_t protocore_base64url_decode(const char *src, size_t src_len, uint8_t *dst, size_t dst_cap)
 {
     size_t o = 0;
     uint32_t acc = 0;
@@ -352,4 +352,4 @@ size_t pc_base64url_decode(const char *src, size_t src_len, uint8_t *dst, size_t
     return o;
 }
 
-const Base64Ns Base64 = {pc_base64_encode, pc_base64_decode, pc_base64url_encode, pc_base64url_decode};
+const Base64Ns Base64 = {protocore_base64_encode, protocore_base64_decode, protocore_base64url_encode, protocore_base64url_decode};

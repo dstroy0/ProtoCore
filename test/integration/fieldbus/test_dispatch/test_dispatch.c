@@ -12,7 +12,7 @@
 #include "rx_feed.h"
 #include <unity.h>
 #if PROTOCORE_ENABLE_CSRF
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "services/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch
 #endif
 

@@ -5,7 +5,7 @@
 # Classes / types (KEYWORD1)
 ##############################
 
-PC	KEYWORD1
+PROTOCORE	KEYWORD1
 HttpReq	KEYWORD1
 Header	KEYWORD1
 QueryParam	KEYWORD1

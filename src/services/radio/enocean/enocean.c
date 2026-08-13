@@ -14,7 +14,7 @@
 
 #if PROTOCORE_ENABLE_ENOCEAN
 
-#include "shared_primitives/crc.h" // PROTOCORE_CRC8_SMBUS
+#include "shared/crc/crc.h" // PROTOCORE_CRC8_SMBUS
 
 uint8_t protocore_esp3_crc8(const uint8_t *buf, uint16_t len)
 {

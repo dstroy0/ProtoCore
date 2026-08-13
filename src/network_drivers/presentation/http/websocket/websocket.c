@@ -17,8 +17,8 @@
 
 #include "websocket.h"
 #include "mmgr/protomem.h"
-#include "network_drivers/transport/tcp.h"
-#include "shared_primitives/utf8.h"
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a frame goes out on
+#include "shared/utf8/utf8.h"
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
 #include "mmgr/plaintext.h"
@@ -28,8 +28,54 @@
 
 WsConn ws_pool[MAX_WS_CONNS];
 
-void ws_init()
+// WebSocket presentation config, owned by one instance (internal linkage): the outbound
+// fragmentation size (RFC 6455 sec 5.4), payload bytes; 0 = one frame per message (default).
+// One named owner, unreachable cross-TU. (The ws_pool[] table is the shared substrate.)
+// One route's handlers. They belong here rather than in the route table: a route decides where a
+// request goes, and what runs once a socket is open is this module's business. A route carries the
+// id that names the set, so nothing above has to hold a pointer into this module.
+typedef struct
 {
+    WsConnectHandler on_connect;
+    WsMessageHandler on_message;
+    WsCloseHandler on_close;
+} WsRoute;
+
+/**
+ * @brief The pool's compile-time storage: the per-route handler sets and the read scratch.
+ *
+ * All BSS. (The ws_pool[] table is the shared substrate.)
+ */
+struct WsStorage
+{
+    WsRoute route[MAX_ROUTES]; ///< one handler set per route
+    uint8_t route_count;       ///< how many routes recorded one
+    uint8_t rx[RX_BUF_SIZE];   ///< where a slot's bytes are staged for the frame walk
+};
+
+/**
+ * @brief The pool's state and the calls that reach it - what WsNs points at.
+ *
+ * @var WsInternal::store      the handler sets and the read scratch
+ * @var WsInternal::ns         the handle a caller sets a call's members on
+ * @var WsInternal::frag_size  the outbound fragmentation size (RFC 6455 sec 5.4), payload bytes;
+ *                             0 = one frame per message (the default)
+ */
+struct WsInternal
+{
+    struct WsStorage *store;
+    WsNs *ns;
+    uint16_t frag_size;
+};
+
+static struct WsStorage s_store;
+
+static struct WsInternal s_ws = {.store = &s_store, .ns = &Ws, .frag_size = PROTOCORE_WS_FRAG_SIZE};
+
+
+static void init(struct WsInternal *restrict ctx)
+{
+    (void)ctx;
     for (int i = 0; i < MAX_WS_CONNS; i++)
     {
         ws_pool[i] = (WsConn){0};
@@ -37,50 +83,54 @@ void ws_init()
     }
 }
 
-proto_bool ws_active(uint8_t ws_id)
+static void active(struct WsInternal *restrict ctx)
 {
-    return ws_id < MAX_WS_CONNS && ws_pool[ws_id].active;
+    ctx->ns->ok = ctx->ns->ws_id < MAX_WS_CONNS && ws_pool[ctx->ns->ws_id].active;
 }
 
-const char *ws_payload(uint8_t ws_id)
+static void payload_of(struct WsInternal *restrict ctx)
 {
-    return (ws_id < MAX_WS_CONNS && ws_pool[ws_id].active) ? (const char *)ws_pool[ws_id].buf : NULL;
+    ctx->ns->text = (ctx->ns->ws_id < MAX_WS_CONNS && ws_pool[ctx->ns->ws_id].active)
+                        ? (const char *)ws_pool[ctx->ns->ws_id].buf
+                        : NULL;
 }
 
-WsConn *ws_alloc(uint8_t slot_id)
+static void alloc(struct WsInternal *restrict ctx)
 {
+    ctx->ns->found = NULL;
     for (int i = 0; i < MAX_WS_CONNS; i++)
     {
         if (!ws_pool[i].active)
         {
             ws_pool[i] = (WsConn){0};
             ws_pool[i].ws_id = (uint8_t)i;
-            ws_pool[i].slot_id = slot_id;
+            ws_pool[i].slot_id = ctx->ns->slot;
             ws_pool[i].active = PROTO_TRUE;
             ws_pool[i].parse_state = WS_HEADER1;
-            return &ws_pool[i];
+            ctx->ns->found = &ws_pool[i];
+            return;
         }
     }
-    return NULL;
 }
 
-WsConn *ws_find(uint8_t slot_id)
+static void find(struct WsInternal *restrict ctx)
 {
+    ctx->ns->found = NULL;
     for (int i = 0; i < MAX_WS_CONNS; i++)
     {
-        if (ws_pool[i].active && ws_pool[i].slot_id == slot_id)
+        if (ws_pool[i].active && ws_pool[i].slot_id == ctx->ns->slot)
         {
-            return &ws_pool[i];
+            ctx->ns->found = &ws_pool[i];
+            return;
         }
     }
-    return NULL;
 }
 
-void ws_free(uint8_t slot_id)
+static void release(struct WsInternal *restrict ctx)
 {
     for (int i = 0; i < MAX_WS_CONNS; i++)
     {
-        if (ws_pool[i].active && ws_pool[i].slot_id == slot_id)
+        if (ws_pool[i].active && ws_pool[i].slot_id == ctx->ns->slot)
         {
             ws_pool[i] = (WsConn){0};
             ws_pool[i].ws_id = (uint8_t)i;
@@ -119,74 +169,45 @@ void ws_reset_frame(WsConn *ws)
 // Frame send helpers
 // ---------------------------------------------------------------------------
 
-// WebSocket presentation config, owned by one instance (internal linkage): the outbound
-// fragmentation size (RFC 6455 sec 5.4), payload bytes; 0 = one frame per message (default).
-// One named owner, unreachable cross-TU. (The ws_pool[] table is the shared substrate.)
-// One route's handlers. They belong here rather than in the route table: a route decides where a
-// request goes, and what runs once a socket is open is this module's business. A route carries the
-// id that names the set, so nothing above has to hold a pointer into this module.
-typedef struct
+static void route_add(struct WsInternal *restrict ctx)
 {
-    WsConnectHandler on_connect;
-    WsMessageHandler on_message;
-    WsCloseHandler on_close;
-} WsRoute;
-
-typedef struct
-{
-    uint16_t frag_size;
-    WsRoute route[MAX_ROUTES];
-    uint8_t route_count;
-} WsCtx;
-static WsCtx s_ws = {.frag_size = PROTOCORE_WS_FRAG_SIZE};
-
-uint8_t ws_route_add(WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
-{
-    if (s_ws.route_count >= MAX_ROUTES)
+    if (ctx->store->route_count >= MAX_ROUTES)
     {
-        return PROTOCORE_WS_NONE;
+        ctx->ns->u8 = PROTOCORE_WS_NONE;
+        return;
     }
-    WsRoute *w = &s_ws.route[s_ws.route_count];
-    w->on_connect = on_connect;
-    w->on_message = on_message;
-    w->on_close = on_close;
-    return s_ws.route_count++;
+    WsRoute *w = &ctx->store->route[ctx->store->route_count];
+    w->on_connect = ctx->ns->route.on_connect;
+    w->on_message = ctx->ns->route.on_message;
+    w->on_close = ctx->ns->route.on_close;
+    ctx->ns->u8 = ctx->store->route_count++;
 }
 
-WsConnectHandler ws_route_connect(uint8_t id)
+static void route_connect(struct WsInternal *restrict ctx)
 {
-    if (id >= s_ws.route_count)
-    {
-        return NULL;
-    }
-    return s_ws.route[id].on_connect;
+    ctx->ns->connect_handler =
+        (ctx->ns->id >= ctx->store->route_count) ? NULL : ctx->store->route[ctx->ns->id].on_connect;
 }
 
-WsMessageHandler ws_route_message(uint8_t id)
+static void route_message(struct WsInternal *restrict ctx)
 {
-    if (id >= s_ws.route_count)
-    {
-        return NULL;
-    }
-    return s_ws.route[id].on_message;
+    ctx->ns->message_handler =
+        (ctx->ns->id >= ctx->store->route_count) ? NULL : ctx->store->route[ctx->ns->id].on_message;
 }
 
-WsCloseHandler ws_route_close(uint8_t id)
+static void route_close(struct WsInternal *restrict ctx)
 {
-    if (id >= s_ws.route_count)
-    {
-        return NULL;
-    }
-    return s_ws.route[id].on_close;
+    ctx->ns->close_handler = (ctx->ns->id >= ctx->store->route_count) ? NULL : ctx->store->route[ctx->ns->id].on_close;
 }
-void ws_set_frag_size(uint16_t bytes)
+
+static void set_frag_size(struct WsInternal *restrict ctx)
 {
-    s_ws.frag_size = bytes;
+    ctx->frag_size = ctx->ns->frag_size;
 }
 
 // Emit one WebSocket frame. b0 is the finished first header byte (FIN | RSV1 | opcode). Server frames
 // are never masked (RFC 6455 sec 5.1). Returns false if a transport send fails.
-static proto_bool ws_emit_one(TcpConn *conn, uint8_t b0, const uint8_t *payload, uint16_t len)
+static proto_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, uint16_t len)
 {
     uint8_t header[4];
     uint8_t hlen;
@@ -203,23 +224,41 @@ static proto_bool ws_emit_one(TcpConn *conn, uint8_t b0, const uint8_t *payload,
         header[3] = (uint8_t)len;
         hlen = 4;
     }
-    if (!Tcp.conn->send(conn->id, header, hlen))
+    ConnPool.slot = slot;
+    ConnPool.io.data = header;
+    ConnPool.io.len = hlen;
+    ConnPool.send(ConnPool.internal);
+    if (!ConnPool.ok)
     {
         return PROTO_FALSE;
     }
-    if (len > 0 && payload && !Tcp.conn->send(conn->id, payload, len))
+    if (len > 0 && payload)
     {
-        return PROTO_FALSE;
+        ConnPool.io.data = payload;
+        ConnPool.io.len = len;
+        ConnPool.send(ConnPool.internal);
+        if (!ConnPool.ok)
+        {
+            return PROTO_FALSE;
+        }
     }
     return PROTO_TRUE;
 }
 
-proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, uint16_t len)
+static void send_frame(struct WsInternal *restrict ctx)
 {
-    TcpConn *conn = &conn_pool[ws->slot_id];
-    if (!protocore_conn_active(ws->slot_id))
+    WsConn *ws = ctx->ns->conn;
+    WsOpcode opcode = ctx->ns->frame.opcode;
+    const uint8_t *payload = ctx->ns->frame.payload;
+    uint16_t len = ctx->ns->frame.len;
+    const uint8_t slot = ws->slot_id;
+
+    ctx->ns->ok = PROTO_FALSE;
+    ConnPool.slot = slot;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok)
     {
-        return PROTO_FALSE;
+        return;
     }
 
     uint8_t rsv1 = 0; // permessage-deflate per-message "compressed" flag (RFC 7692)
@@ -228,7 +267,7 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
     // Compress data frames when permessage-deflate is negotiated. Control frames
     // (close/ping/pong) are never compressed (RFC 7692 sec 5.1). Scratch + output
     // are borrowed from the per-dispatch arena and released when this scope exits;
-    // Tcp.conn->send copies (TCP_WRITE_FLAG_COPY) so the buffer can go immediately.
+    // the send copies (TCP_WRITE_FLAG_COPY) so the buffer can go immediately.
     // PROTOCORE_WS_DEFLATE_MAX bounds what the compressor accepts, so the borrow below has a compile-time
     // worst case and cannot fail. A longer message is sent uncompressed, which the per-message RSV1
     // flag makes legal.
@@ -267,14 +306,15 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
     // anyway). frag == 0, a non-data frame, or a message that already fits -> a single FIN frame (the
     // default, unchanged). Server-to-client frames are never masked (§5.1).
     proto_bool data = (opcode == WS_OP_TEXT || opcode == WS_OP_BINARY);
-    uint16_t frag = s_ws.frag_size;
+    uint16_t frag = ctx->frag_size;
     if (!data || frag == 0 || len <= frag)
     {
-        proto_bool sent = ws_emit_one(conn, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
+        proto_bool sent = ws_emit_one(slot, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
 #if PROTOCORE_ENABLE_WS_DEFLATE
         protocore_plaintext_release(pt_mark);
 #endif
-        return sent;
+        ctx->ns->ok = sent;
+        return;
     }
 
     // Split into <= frag-byte frames: the opcode (+ RSV1) rides the first frame, the rest are
@@ -287,12 +327,12 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
         uint16_t chunk = (uint16_t)(len - off) < frag ? (uint16_t)(len - off) : frag;
         proto_bool last = (uint16_t)(off + chunk) >= len;
         uint8_t b0 = (uint8_t)((last ? 0x80 : 0x00) | (first ? (rsv1 | (uint8_t)opcode) : (uint8_t)WS_OP_CONTINUATION));
-        if (!ws_emit_one(conn, b0, payload + off, chunk))
+        if (!ws_emit_one(slot, b0, payload + off, chunk))
         {
 #if PROTOCORE_ENABLE_WS_DEFLATE
             protocore_plaintext_release(pt_mark);
 #endif
-            return PROTO_FALSE;
+            return;
         }
         off = (uint16_t)(off + chunk);
         first = PROTO_FALSE;
@@ -300,18 +340,24 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
 #if PROTOCORE_ENABLE_WS_DEFLATE
     protocore_plaintext_release(pt_mark);
 #endif
-    return PROTO_TRUE;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-void ws_close(WsConn *ws, WsCloseCode code)
+static void close_socket(struct WsInternal *restrict ctx)
 {
+    WsConn *ws = ctx->ns->conn;
     // Send Close frame with 2-byte status code payload
-    uint8_t payload[2] = {(uint8_t)((uint16_t)code >> 8), (uint8_t)code};
-    ws_send_frame(ws, WS_OP_CLOSE, payload, 2);
+    uint8_t payload[2] = {(uint8_t)((uint16_t)ctx->ns->frame.code >> 8), (uint8_t)ctx->ns->frame.code};
+    ctx->ns->frame.opcode = WS_OP_CLOSE;
+    ctx->ns->frame.payload = payload;
+    ctx->ns->frame.len = 2;
+    send_frame(ctx);
 
-    if (protocore_conn_active(ws->slot_id))
+    ConnPool.slot = ws->slot_id;
+    ConnPool.active(ConnPool.internal);
+    if (ConnPool.ok)
     {
-        Tcp.conn->flush(ws->slot_id);
+        ConnPool.flush(ConnPool.internal);
     }
 
     ws->parse_state = WS_CLOSED;
@@ -331,7 +377,7 @@ static inline proto_bool ws_is_control(WsOpcode op)
 // payload_len, also true immediately for zero-length frames once the masking
 // key is consumed).  Control frames are handled in place; data frames are
 // reassembled and delivered as WS_FRAME_READY only when the FIN frame arrives.
-static void ws_finish_frame(WsConn *ws, TcpConn *conn)
+static void ws_finish_frame(struct WsInternal *restrict ctx, WsConn *ws)
 {
     // ---- Control frames (ping/pong/close): use the separate ctl_buf ----
     if (ws_is_control(ws->opcode))
@@ -341,15 +387,23 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
 
         if (ws->opcode == WS_OP_PING)
         {
-            ws_send_frame(ws, WS_OP_PONG, ws->ctl_buf, (uint16_t)ws->payload_idx);
-            if (protocore_conn_active(conn->id))
+            ctx->ns->conn = ws;
+            ctx->ns->frame.opcode = WS_OP_PONG;
+            ctx->ns->frame.payload = ws->ctl_buf;
+            ctx->ns->frame.len = (uint16_t)ws->payload_idx;
+            send_frame(ctx);
+            ConnPool.slot = ws->slot_id;
+            ConnPool.active(ConnPool.internal);
+            if (ConnPool.ok)
             {
-                Tcp.conn->flush(conn->id);
+                ConnPool.flush(ConnPool.internal);
             }
         }
         else if (ws->opcode == WS_OP_CLOSE)
         {
-            ws_close(ws, WS_CLOSE_NORMAL);
+            ctx->ns->conn = ws;
+            ctx->ns->frame.code = WS_CLOSE_NORMAL;
+            close_socket(ctx);
             return;
         }
         // PONG: silently ignored.
@@ -382,7 +436,9 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             if (!in || !out || !tbl)
             {
                 protocore_plaintext_release(pt_mark);
-                ws_close(ws, WS_CLOSE_PROTOCOL); // arena exhausted: fail closed
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx); // arena exhausted: fail closed
                 ws->parse_state = WS_ERROR;
                 return;
             }
@@ -396,14 +452,18 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             if (rc == INFLATE_ERR_OVERFLOW)
             {
                 protocore_plaintext_release(pt_mark);
-                ws_close(ws, WS_CLOSE_TOO_BIG);
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_TOO_BIG;
+                close_socket(ctx);
                 ws->parse_state = WS_ERROR;
                 return;
             }
             if (rc != INFLATE_OK)
             {
                 protocore_plaintext_release(pt_mark);
-                ws_close(ws, WS_CLOSE_PROTOCOL);
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                 ws->parse_state = WS_ERROR;
                 return;
             }
@@ -419,7 +479,9 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
         // reassembled + decompressed message); otherwise fail the connection with 1007.
         if (ws->msg_opcode == WS_OP_TEXT && !protocore_utf8_valid(ws->buf, n))
         {
-            ws_close(ws, WS_CLOSE_INVALID_PAYLOAD);
+            ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_INVALID_PAYLOAD;
+                close_socket(ctx);
             ws->parse_state = WS_ERROR;
             return;
         }
@@ -438,44 +500,40 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
     }
 }
 
-void ws_parse(WsConn *ws)
+// Called by parse above its definition.
+static void feed_byte(struct WsInternal *restrict ctx);
+
+// The worker fills this slot's scratch once, then the frame state machine walks it. Stop on a
+// terminal state and leave the rest where it is.
+static void parse(struct WsInternal *restrict ctx)
 {
-    if (!protocore_conn_active(ws->slot_id))
+    WsConn *ws = ctx->ns->conn;
+    ConnPool.slot = ws->slot_id;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok)
     {
         return;
     }
 
-    while (protocore_conn_available(ws->slot_id) > 0)
+    ConnPool.io.buf = ctx->store->rx;
+    ConnPool.io.cap = sizeof(ctx->store->rx);
+    ConnPool.read(ConnPool.internal);
+
+    for (size_t i = 0; i < ConnPool.n; i++)
     {
-        // Stop if we hit a terminal state (leave the rest in the ring)
         if (ws->parse_state == WS_FRAME_READY || ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
         {
             return;
         }
-
-        uint8_t byte = 0;
-        // Unreachable by construction (not merely untested): this while-condition's
-        // protocore_conn_available() and this call's protocore_conn_read_byte() read the identical
-        // rx_head/rx_tail pair for this slot with no call in between that could touch either
-        // index. rx_head is advanced only by lowlevel_recv_cb() (tcp.cpp), which refuses
-        // (ERR_MEM, backpressure) any segment that would not fit in the free space already
-        // computed against rx_tail - so head can never overrun tail, meaning available() can
-        // only grow, never shrink, between the two reads. rx_tail is advanced only by this
-        // same synchronous consumer call. So available() > 0 here structurally guarantees
-        // read_byte() succeeds - true on the host AND on-device (SPSC ring, single producer /
-        // single consumer per slot); there is no interrupt-race window at this specific call
-        // site to reproduce.
-        if (!protocore_conn_read_byte(ws->slot_id, &byte))
-        {
-            break;
-        }
-        ws_feed_byte(ws, byte);
+        ctx->ns->byte = ctx->store->rx[i];
+        feed_byte(ctx);
     }
 }
 
-void ws_feed_byte(WsConn *ws, uint8_t byte)
+static void feed_byte(struct WsInternal *restrict ctx)
 {
-    TcpConn *conn = &conn_pool[ws->slot_id];
+    WsConn *ws = ctx->ns->conn;
+    const uint8_t byte = ctx->ns->byte;
     {
         switch (ws->parse_state)
         {
@@ -497,14 +555,18 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
             case WS_OP_PONG:
                 break;
             default:
-                ws_close(ws, WS_CLOSE_PROTOCOL);
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                 ws->parse_state = WS_ERROR;
                 return;
             }
             // RFC 6455 §5.5: control frames MUST NOT be fragmented (FIN set).
             if (ws_is_control(ws->opcode) && !ws->fin)
             {
-                ws_close(ws, WS_CLOSE_PROTOCOL);
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                 ws->parse_state = WS_ERROR;
                 return;
             }
@@ -516,7 +578,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
                     // A continuation with no message in progress is illegal.
                     if (!ws->fragmenting)
                     {
-                        ws_close(ws, WS_CLOSE_PROTOCOL);
+                        ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                         ws->parse_state = WS_ERROR;
                         return;
                     }
@@ -527,7 +591,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
                     // illegal - the previous message must finish first.
                     if (ws->fragmenting)
                     {
-                        ws_close(ws, WS_CLOSE_PROTOCOL);
+                        ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                         ws->parse_state = WS_ERROR;
                         return;
                     }
@@ -548,7 +614,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
                 proto_bool new_data = !ws_is_control(ws->opcode) && ws->opcode != WS_OP_CONTINUATION;
                 if ((rsv & 0x30) || ((rsv & 0x40) && !(ws->pmd && new_data)))
                 {
-                    ws_close(ws, WS_CLOSE_PROTOCOL);
+                    ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                     ws->parse_state = WS_ERROR;
                     return;
                 }
@@ -556,7 +624,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
 #else
             if (rsv)
             {
-                ws_close(ws, WS_CLOSE_PROTOCOL);
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                 ws->parse_state = WS_ERROR;
                 return;
             }
@@ -570,7 +640,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
             // RFC 6455 §5.1: every client-to-server frame MUST be masked.
             if (!ws->masked)
             {
-                ws_close(ws, WS_CLOSE_PROTOCOL);
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                 ws->parse_state = WS_ERROR;
                 return;
             }
@@ -579,7 +651,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
                 // RFC 6455 §5.5: control frames MUST have payload length <= 125.
                 if (ws_is_control(ws->opcode) && len7 > 125)
                 {
-                    ws_close(ws, WS_CLOSE_PROTOCOL);
+                    ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                close_socket(ctx);
                     ws->parse_state = WS_ERROR;
                     return;
                 }
@@ -591,7 +665,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
                     // Reassembled data message must fit in WS_FRAME_SIZE.
                     if (!ws_is_control(ws->opcode) && ws->msg_len + ws->payload_len > WS_FRAME_SIZE)
                     {
-                        ws_close(ws, WS_CLOSE_TOO_BIG);
+                        ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_TOO_BIG;
+                close_socket(ctx);
                         ws->parse_state = WS_ERROR;
                         return;
                     }
@@ -622,7 +698,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
             // capped at 125); the reassembled message must fit WS_FRAME_SIZE.
             if (ws->msg_len + ws->payload_len > WS_FRAME_SIZE)
             {
-                ws_close(ws, WS_CLOSE_TOO_BIG);
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_TOO_BIG;
+                close_socket(ctx);
                 ws->parse_state = WS_ERROR;
                 return;
             }
@@ -634,7 +712,9 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
             // Consume all 8 bytes then reject
             if (++ws->len64_count == 8)
             {
-                ws_close(ws, WS_CLOSE_TOO_BIG);
+                ctx->ns->conn = ws;
+                ctx->ns->frame.code = WS_CLOSE_TOO_BIG;
+                close_socket(ctx);
                 ws->parse_state = WS_ERROR;
                 return;
             }
@@ -660,7 +740,7 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
             }
             else
             {
-                ws_finish_frame(ws, conn); // zero-length frame is complete now
+                ws_finish_frame(ctx, ws); // zero-length frame is complete now
             }
             break;
 
@@ -690,7 +770,7 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
 
             if (ws->payload_idx >= ws->payload_len)
             {
-                ws_finish_frame(ws, conn);
+                ws_finish_frame(ctx, ws);
             }
             break;
         }
@@ -700,3 +780,27 @@ void ws_feed_byte(WsConn *ws, uint8_t byte)
         }
     }
 }
+
+static void reset_frame_call(struct WsInternal *restrict ctx)
+{
+    ws_reset_frame(ctx->ns->conn);
+}
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+WsNs Ws = {.route_add = route_add,
+           .route_connect = route_connect,
+           .route_message = route_message,
+           .route_close = route_close,
+           .init = init,
+           .active = active,
+           .payload_of = payload_of,
+           .alloc = alloc,
+           .find = find,
+           .free = release,
+           .parse = parse,
+           .feed_byte = feed_byte,
+           .reset_frame = reset_frame_call,
+           .send_frame = send_frame,
+           .set_frag_size = set_frag_size,
+           .close = close_socket,
+           .internal = &s_ws};

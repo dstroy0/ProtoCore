@@ -12,7 +12,7 @@
 #if PROTOCORE_ENABLE_SDI12
 
 #include "mmgr/protostr.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_ARC
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_ARC
 
 size_t protocore_sdi12_build(char *buf, size_t cap, char addr, const char *body)
 {

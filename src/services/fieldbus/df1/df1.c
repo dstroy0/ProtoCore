@@ -7,7 +7,7 @@
  */
 
 #include "services/fieldbus/df1/df1.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC16_ARC
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_ARC
 
 #if PROTOCORE_ENABLE_DF1
 

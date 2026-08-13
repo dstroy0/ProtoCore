@@ -11,18 +11,18 @@
  * matched route carries auth.
  */
 
-#include "crypto/ct_eq.h"       // pc_ct_eq
-#include "crypto/hash/sha256.h" // pc_sha256, PROTOCORE_SHA256_DIGEST_LEN (Digest)
-#include "mmgr/membuild.h"      // pc_sb frame builder
+#include "crypto/ct_eq.h"       // protocore_ct_eq
+#include "crypto/hash/sha256.h" // protocore_sha256, PROTOCORE_SHA256_DIGEST_LEN (Digest)
+#include "mmgr/membuild.h"      // protocore_sb frame builder
 #include "mmgr/protomem.h"      // mem.chr: a span scan, for the decoded credential that carries NULs
 #include "mmgr/protostr.h"      // str.len / find / starts / eq / copy
 #include "mmgr/secure.h"        // the credential table is key material
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.decode (Basic)
 #include "network_drivers/presentation/http/http.h"
-#include "network_drivers/transport/tcp.h" // conn_pool, Tcp.conn->send, TcpConn/ConnState
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a challenge writes on
 #include "protocore.h"
-#include "server/clock/clock.h"    // pc_millis() for the stateless nonce
-#include "shared_primitives/hex.h" // pc_hex_encode/decode
+#include "server/clock/clock.h"    // protocore_millis() for the stateless nonce
+#include "shared/hex/hex.h" // protocore_hex_encode/decode
 
 // ---------------------------------------------------------------------------
 // Basic Auth helpers
@@ -33,8 +33,8 @@
 static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[65])
 {
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    pc_sha256(work, data, len, d);
-    pc_hex_encode(d, PROTOCORE_SHA256_DIGEST_LEN, out, PROTO_FALSE);
+    protocore_sha256(work, data, len, d);
+    protocore_hex_encode(d, PROTOCORE_SHA256_DIGEST_LEN, out, PROTO_FALSE);
 }
 
 // Extract the value of @p key from a Digest auth header into @p out.
@@ -124,37 +124,51 @@ typedef struct
 // secure pool rather than declared, because these are the bytes an attacker wants and that pool
 // is the one that wipes on release. One table serves every route, so a route slot carries an id
 // rather than a copy of the credential.
-typedef struct
+struct AuthStorage
 {
-    uint8_t digest_secret[16];
-    AuthCred cred[MAX_ROUTES];
-    uint8_t count;
-} AuthCtx;
-static AuthCtx *s_auth;
+    uint8_t digest_secret[16];  ///< the Digest keying secret; never leaves this file
+    AuthCred cred[MAX_ROUTES];  ///< every credential set, indexed by the id a route carries
+    uint8_t count;              ///< how many rows are recorded
+};
 
-_Static_assert(sizeof(AuthCtx) <= PROTOCORE_WORK_AUTH_TABLE, "credential table outgrew PROTOCORE_WORK_AUTH_TABLE");
+/**
+ * @brief The table's state and the calls that reach it - what AuthNs points at.
+ *
+ * @var AuthInternal::store  the keying secret and the credential rows, in secure memory
+ * @var AuthInternal::ns     the handle a caller sets a call's members on
+ */
+struct AuthInternal
+{
+    struct AuthStorage *store;
+    AuthNs *ns;
+};
+
+static struct AuthInternal s_auth = {.ns = &Auth};
+
+_Static_assert(sizeof(struct AuthStorage) <= PROTOCORE_WORK_AUTH_TABLE,
+               "credential table outgrew PROTOCORE_WORK_AUTH_TABLE");
 
 // Bound on first use rather than at an init the caller has to remember: registration and the
 // first rekey both arrive before any request is served, and either one is a fine moment. The borrow
 // is from the persistent end, which no mark walks and no release reclaims, and it comes back zeroed.
-static AuthCtx *bind_auth(void)
+static struct AuthStorage *bind_auth(struct AuthInternal *restrict ctx)
 {
-    if (s_auth == NULL)
+    if (ctx->store == NULL)
     {
-        pc_span sp = pc_secure_persist_span(sizeof(AuthCtx));
-        if (pc_span_ok(sp))
+        protocore_span sp = protocore_secure_persist_span(sizeof(struct AuthStorage));
+        if (protocore_span_ok(sp))
         {
-            s_auth = (AuthCtx *)sp.buf;
+            ctx->store = (struct AuthStorage *)sp.buf;
         }
     }
-    return s_auth;
+    return ctx->store;
 }
 
-// The set @p id names, or NULL when it names nothing - an unregistered id, or a pool that could
+// The set ns->id names, or NULL when it names nothing - an unregistered id, or a pool that could
 // not be borrowed. Every caller fails closed on NULL.
-static const AuthCred *cred_at(uint8_t id)
+static const AuthCred *cred_at(struct AuthInternal *restrict ctx, uint8_t id)
 {
-    const AuthCtx *a = s_auth;
+    const struct AuthStorage *a = ctx->store;
     if (a == NULL || id >= a->count)
     {
         return NULL;
@@ -164,29 +178,31 @@ static const AuthCred *cred_at(uint8_t id)
 
 // Record one credential set and return the id that names it, or PROTOCORE_AUTH_NONE when the table is
 // full. Registration runs at setup, so there is no release path and none is offered.
-static uint8_t add(const char *realm, const char *user, const char *pass, proto_bool digest)
+static void add(struct AuthInternal *restrict ctx)
 {
-    AuthCtx *a = bind_auth();
+    struct AuthStorage *a = bind_auth(ctx);
     if (a == NULL || a->count >= MAX_ROUTES)
     {
-        return PROTOCORE_AUTH_NONE;
+        ctx->ns->u8 = PROTOCORE_AUTH_NONE;
+        return;
     }
     AuthCred *c = &a->cred[a->count];
-    (void)str.copy(c->realm, realm, MAX_AUTH_LEN);
-    (void)str.copy(c->user, user, MAX_AUTH_LEN);
-    (void)str.copy(c->pass, pass, MAX_AUTH_LEN);
-    c->digest = digest;
-    return a->count++;
+    (void)str.copy(c->realm, ctx->ns->cred.realm, MAX_AUTH_LEN);
+    (void)str.copy(c->user, ctx->ns->cred.user, MAX_AUTH_LEN);
+    (void)str.copy(c->pass, ctx->ns->cred.pass, MAX_AUTH_LEN);
+    c->digest = ctx->ns->cred.digest;
+    ctx->ns->u8 = a->count++;
 }
 
-static void rekey(uint8_t *work)
+static void rekey(struct AuthInternal *restrict ctx)
 {
-    AuthCtx *a = bind_auth();
+    uint8_t *work = ctx->ns->work;
+    struct AuthStorage *a = bind_auth(ctx);
     if (a == NULL)
     {
         return;
     }
-    // Seed a 128-bit keying secret from the hardware CSPRNG (pc_platform_rand_u32() on
+    // Seed a 128-bit keying secret from the hardware CSPRNG (protocore_platform_rand_u32() on
     // ESP32; a non-crypto mock on native test builds), folded through SHA-256 with
     // a counter + millis() so even a weak host RNG yields distinct values across
     // calls. The secret keys every timestamped nonce this server issues; it lives
@@ -196,15 +212,15 @@ static void rekey(uint8_t *work)
     uint8_t seed[24];
     for (int i = 0; i < 4; i++)
     {
-        uint32_t r = pc_platform_rand_u32();
+        uint32_t r = protocore_platform_rand_u32();
         proto_raw_put_u32(seed + i * 4, r);
     }
     uint32_t c = counter;
-    uint32_t t = (uint32_t)pc_millis();
+    uint32_t t = (uint32_t)protocore_millis();
     proto_raw_put_u32(seed + 16, c);
     proto_raw_put_u32(seed + 20, t);
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    pc_sha256(work, seed, sizeof(seed), d);
+    protocore_sha256(work, seed, sizeof(seed), d);
     proto_raw_read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
 }
 
@@ -219,39 +235,45 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     proto_raw_read(material, secret, 16);
     proto_raw_put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    pc_sha256(work, material, sizeof(material), d);
-    pc_hex_encode(d, 16, mac_hex, PROTO_FALSE); // 16 bytes -> 32 hex chars + NUL
+    protocore_sha256(work, material, sizeof(material), d);
+    protocore_hex_encode(d, 16, mac_hex, PROTO_FALSE); // 16 bytes -> 32 hex chars + NUL
     return issue;
 }
 
-static void mint_nonce(uint8_t *work, char *out, size_t cap)
+static void mint_nonce(struct AuthInternal *restrict ctx)
 {
-    if (bind_auth() == NULL)
+    uint8_t *work = ctx->ns->work;
+    char *out = ctx->ns->nonce_args.out;
+    const size_t cap = ctx->ns->nonce_args.cap;
+    if (bind_auth(ctx) == NULL)
     {
         out[0] = '\0';
         return;
     }
-    uint32_t issue = pc_millis();
+    uint32_t issue = protocore_millis();
     char issue_hex[9];
-    pc_hex_encode((const uint8_t *)&issue, 4, issue_hex, PROTO_FALSE); // 4 bytes -> 8 hex chars
+    protocore_hex_encode((const uint8_t *)&issue, 4, issue_hex, PROTO_FALSE); // 4 bytes -> 8 hex chars
     char mac_hex[33];
-    digest_nonce_mac(work, s_auth->digest_secret, issue, mac_hex);
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, issue_hex);
-    pc_sb_put(&sb_out, ".");
-    pc_sb_put(&sb_out, mac_hex);
-    if (pc_sb_finish(&sb_out) == 0)
+    digest_nonce_mac(work, ctx->store->digest_secret, issue, mac_hex);
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, issue_hex);
+    protocore_sb_put(&sb_out, ".");
+    protocore_sb_put(&sb_out, mac_hex);
+    if (protocore_sb_finish(&sb_out) == 0)
     {
         out[0] = '\0';
     }
 }
 
-static proto_bool verify_nonce(uint8_t *work, const char *nonce, proto_bool *expired)
+static void verify_nonce(struct AuthInternal *restrict ctx)
 {
-    *expired = PROTO_FALSE;
-    if (bind_auth() == NULL)
+    uint8_t *work = ctx->ns->work;
+    const char *nonce = ctx->ns->nonce_args.nonce;
+    ctx->ns->expired = PROTO_FALSE;
+    ctx->ns->ok = PROTO_FALSE;
+    if (bind_auth(ctx) == NULL)
     {
-        return PROTO_FALSE;
+        return;
     }
     // Expected shape: 8 hex (issue) + '.' + 32 hex (MAC).
     if (str.len(nonce, 42) != 8 + 1 + 32 || nonce[8] != '.')
@@ -259,12 +281,12 @@ static proto_bool verify_nonce(uint8_t *work, const char *nonce, proto_bool *exp
         return PROTO_FALSE;
     }
     uint32_t issue;
-    if (pc_hex_decode(nonce, 8, (uint8_t *)&issue, 4) != 4)
+    if (protocore_hex_decode(nonce, 8, (uint8_t *)&issue, 4) != 4)
     {
         return PROTO_FALSE;
     }
     char mac_hex[33];
-    digest_nonce_mac(work, s_auth->digest_secret, issue, mac_hex);
+    digest_nonce_mac(work, ctx->store->digest_secret, issue, mac_hex);
     // Constant-time compare of the 32 MAC hex chars: a forged nonce never reveals
     // how many leading characters matched.
     const char *got = nonce + 9;
@@ -277,22 +299,29 @@ static proto_bool verify_nonce(uint8_t *work, const char *nonce, proto_bool *exp
     {
         return PROTO_FALSE; // not a nonce this server minted
     }
-    uint32_t age = pc_millis() - issue; // unsigned: tolerant of the 32-bit millis wrap
+    uint32_t age = protocore_millis() - issue; // unsigned: tolerant of the 32-bit millis wrap
     *expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
     return PROTO_TRUE;
 }
 
-static void challenge(uint8_t *work, uint8_t slot_id, uint8_t id, proto_bool stale)
+static void challenge(struct AuthInternal *restrict ctx)
 {
-    const AuthCred *c = cred_at(id);
+    uint8_t *work = ctx->ns->work;
+    const uint8_t slot_id = ctx->ns->slot;
+    const proto_bool stale = ctx->ns->nonce_args.stale;
+    const AuthCred *c = cred_at(ctx, ctx->ns->id);
     if (c == NULL)
     {
-        http_reset(slot_id);
+        HttpConn.slot = slot_id;
+        HttpConn.reset(HttpConn.internal);
         return;
     }
-    if (!pc_conn_active(slot_id))
+    ConnPool.slot = slot_id;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok)
     {
-        http_reset(slot_id);
+        HttpConn.slot = slot_id;
+        HttpConn.reset(HttpConn.internal);
         return;
     }
 
@@ -304,61 +333,71 @@ static void challenge(uint8_t *work, uint8_t slot_id, uint8_t id, proto_bool sta
     if (c->digest)
     {
         char nonce[48];
-        mint_nonce(work, nonce, sizeof(nonce)); // a fresh, timestamped nonce per challenge
-        pc_sb sb_challenge = {challenge, sizeof(challenge), 0, PROTO_TRUE};
-        pc_sb_put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
-        pc_sb_put(&sb_challenge, c->realm);
-        pc_sb_put(&sb_challenge, "\", qop=\"auth\", algorithm=SHA-256, nonce=\"");
-        pc_sb_put(&sb_challenge, nonce);
-        pc_sb_put(&sb_challenge, "\"");
-        pc_sb_put(&sb_challenge, stale ? ", stale=true" : "");
-        pc_sb_put(&sb_challenge, "\r\n");
-        if (pc_sb_finish(&sb_challenge) == 0)
+        ctx->ns->nonce_args.out = nonce;
+        ctx->ns->nonce_args.cap = sizeof(nonce);
+        mint_nonce(ctx); // a fresh, timestamped nonce per challenge
+        protocore_sb sb_challenge = {challenge, sizeof(challenge), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
+        protocore_sb_put(&sb_challenge, c->realm);
+        protocore_sb_put(&sb_challenge, "\", qop=\"auth\", algorithm=SHA-256, nonce=\"");
+        protocore_sb_put(&sb_challenge, nonce);
+        protocore_sb_put(&sb_challenge, "\"");
+        protocore_sb_put(&sb_challenge, stale ? ", stale=true" : "");
+        protocore_sb_put(&sb_challenge, "\r\n");
+        if (protocore_sb_finish(&sb_challenge) == 0)
         {
             challenge[0] = '\0';
         }
     }
     else
     {
-        pc_sb sb_challenge2 = {challenge, sizeof(challenge), 0, PROTO_TRUE};
-        pc_sb_put(&sb_challenge2, "WWW-Authenticate: Basic realm=\"");
-        pc_sb_put(&sb_challenge2, c->realm);
-        pc_sb_put(&sb_challenge2, "\"\r\n");
-        if (pc_sb_finish(&sb_challenge2) == 0)
+        protocore_sb sb_challenge2 = {challenge, sizeof(challenge), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_challenge2, "WWW-Authenticate: Basic realm=\"");
+        protocore_sb_put(&sb_challenge2, c->realm);
+        protocore_sb_put(&sb_challenge2, "\"\r\n");
+        if (protocore_sb_finish(&sb_challenge2) == 0)
         {
             challenge[0] = '\0';
         }
     }
 
     proto_bool keep;
-    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+    const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     static const char body[] = "Unauthorized";
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    pc_sb_put(&sb_header, "HTTP/1.1 401 Unauthorized\r\n");
-    pc_sb_put(&sb_header, challenge);
-    pc_sb_put(&sb_header, "Content-Type: text/plain\r\nContent-Length: ");
-    pc_sb_i64(&sb_header, (int64_t)((int)(sizeof(body) - 1)));
-    pc_sb_put(&sb_header, "\r\n");
-    pc_sb_put(&sb_header, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
-    pc_sb_put(&sb_header, cl);
-    pc_sb_put(&sb_header, "\r\n");
-    int hlen = (int)pc_sb_finish(&sb_header);
+    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_header, "HTTP/1.1 401 Unauthorized\r\n");
+    protocore_sb_put(&sb_header, challenge);
+    protocore_sb_put(&sb_header, "Content-Type: text/plain\r\nContent-Length: ");
+    protocore_sb_i64(&sb_header, (int64_t)((int)(sizeof(body) - 1)));
+    protocore_sb_put(&sb_header, "\r\n");
+    protocore_sb_put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    protocore_sb_put(&sb_header, cl);
+    protocore_sb_put(&sb_header, "\r\n");
+    int hlen = (int)protocore_sb_finish(&sb_header);
 
     // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
     // follows the header.
     if (!Http.req_is_head(slot_id))
     {
-        Tcp.conn->send(slot_id, header, (proto_u16)hlen);
-        Tcp.conn->send_flush(slot_id, body, (proto_u16)(sizeof(body) - 1));
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = header;
+        ConnPool.io.len = (proto_u16)hlen;
+        ConnPool.send(ConnPool.internal);
+        ConnPool.io.data = body;
+        ConnPool.io.len = (proto_u16)(sizeof(body) - 1);
+        ConnPool.send_flush(ConnPool.internal);
     }
     else
     {
-        Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = header;
+        ConnPool.io.len = (proto_u16)hlen;
+        ConnPool.send_flush(ConnPool.internal);
     }
 
-    pc_resp_end(slot_id, 401, (int)(sizeof(body) - 1), keep, /*pre_flushed=*/PROTO_TRUE);
+    protocore_resp_end(slot_id, 401, (int)(sizeof(body) - 1), keep, /*pre_flushed=*/PROTO_TRUE);
 }
 
 static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
@@ -393,8 +432,8 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     // Length-bounded, constant-time compare of BOTH fields (never strcmp): an embedded NUL in the decoded
     // credential must not truncate the submitted password ("pass\0junk" must not equal "pass"), and the
     // byte compare must run to completion so it does not leak how many leading bytes matched.
-    proto_bool user_ok = (ulen == str.len(c->user, MAX_AUTH_LEN)) && pc_ct_eq(decoded, c->user, ulen);
-    proto_bool pass_ok = (plen == str.len(c->pass, MAX_AUTH_LEN)) && pc_ct_eq(pass, c->pass, plen);
+    proto_bool user_ok = (ulen == str.len(c->user, MAX_AUTH_LEN)) && protocore_ct_eq(decoded, c->user, ulen);
+    proto_bool pass_ok = (plen == str.len(c->pass, MAX_AUTH_LEN)) && protocore_ct_eq(pass, c->pass, plen);
     return user_ok && pass_ok;
 }
 
@@ -455,20 +494,20 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     char target[MAX_PATH_LEN + MAX_QUERY_LEN + 2];
     if (req->query[0])
     {
-        pc_sb sb_target = {target, sizeof(target), 0, PROTO_TRUE};
-        pc_sb_put(&sb_target, req->path);
-        pc_sb_put(&sb_target, "?");
-        pc_sb_put(&sb_target, req->query);
-        if (pc_sb_finish(&sb_target) == 0)
+        protocore_sb sb_target = {target, sizeof(target), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_target, req->path);
+        protocore_sb_put(&sb_target, "?");
+        protocore_sb_put(&sb_target, req->query);
+        if (protocore_sb_finish(&sb_target) == 0)
         {
             target[0] = '\0';
         }
     }
     else
     {
-        pc_sb sb_target2 = {target, sizeof(target), 0, PROTO_TRUE};
-        pc_sb_put(&sb_target2, req->path);
-        if (pc_sb_finish(&sb_target2) == 0)
+        protocore_sb sb_target2 = {target, sizeof(target), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_target2, req->path);
+        if (protocore_sb_finish(&sb_target2) == 0)
         {
             target[0] = '\0';
         }
@@ -483,37 +522,37 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     char ha2[65];
     char expected[65];
 
-    pc_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    pc_sb_put(&sb_tmp, c->user);
-    pc_sb_put(&sb_tmp, ":");
-    pc_sb_put(&sb_tmp, c->realm);
-    pc_sb_put(&sb_tmp, ":");
-    pc_sb_put(&sb_tmp, c->pass);
-    int n = (int)pc_sb_finish(&sb_tmp);
+    protocore_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_tmp, c->user);
+    protocore_sb_put(&sb_tmp, ":");
+    protocore_sb_put(&sb_tmp, c->realm);
+    protocore_sb_put(&sb_tmp, ":");
+    protocore_sb_put(&sb_tmp, c->pass);
+    int n = (int)protocore_sb_finish(&sb_tmp);
     sha256_hex(work, (const uint8_t *)tmp, (size_t)n, ha1);
 
     char tmp2[sizeof(uri) + 16];
-    pc_sb sb_tmp2 = {tmp2, sizeof(tmp2), 0, PROTO_TRUE};
-    pc_sb_put(&sb_tmp2, req->method);
-    pc_sb_put(&sb_tmp2, ":");
-    pc_sb_put(&sb_tmp2, uri);
-    n = (int)pc_sb_finish(&sb_tmp2);
+    protocore_sb sb_tmp2 = {tmp2, sizeof(tmp2), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_tmp2, req->method);
+    protocore_sb_put(&sb_tmp2, ":");
+    protocore_sb_put(&sb_tmp2, uri);
+    n = (int)protocore_sb_finish(&sb_tmp2);
     sha256_hex(work, (const uint8_t *)tmp2, (size_t)n, ha2);
 
     char tmp3[65 + 48 + 16 + 64 + 8 + 65 + 8];
-    pc_sb sb_tmp3 = {tmp3, sizeof(tmp3), 0, PROTO_TRUE};
-    pc_sb_put(&sb_tmp3, ha1);
-    pc_sb_put(&sb_tmp3, ":");
-    pc_sb_put(&sb_tmp3, nonce);
-    pc_sb_put(&sb_tmp3, ":");
-    pc_sb_put(&sb_tmp3, nc);
-    pc_sb_put(&sb_tmp3, ":");
-    pc_sb_put(&sb_tmp3, cnonce);
-    pc_sb_put(&sb_tmp3, ":");
-    pc_sb_put(&sb_tmp3, qop);
-    pc_sb_put(&sb_tmp3, ":");
-    pc_sb_put(&sb_tmp3, ha2);
-    n = (int)pc_sb_finish(&sb_tmp3);
+    protocore_sb sb_tmp3 = {tmp3, sizeof(tmp3), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_tmp3, ha1);
+    protocore_sb_put(&sb_tmp3, ":");
+    protocore_sb_put(&sb_tmp3, nonce);
+    protocore_sb_put(&sb_tmp3, ":");
+    protocore_sb_put(&sb_tmp3, nc);
+    protocore_sb_put(&sb_tmp3, ":");
+    protocore_sb_put(&sb_tmp3, cnonce);
+    protocore_sb_put(&sb_tmp3, ":");
+    protocore_sb_put(&sb_tmp3, qop);
+    protocore_sb_put(&sb_tmp3, ":");
+    protocore_sb_put(&sb_tmp3, ha2);
+    n = (int)protocore_sb_finish(&sb_tmp3);
     sha256_hex(work, (const uint8_t *)tmp3, (size_t)n, expected);
 
     if (!str.eq(expected, response, sizeof(expected), PROTO_TRUE))
@@ -532,31 +571,41 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
 
 // The scheme belongs to the credential, so the caller states which credential set applies and
 // nothing above this file has to know whether that set is Basic or Digest.
-static proto_bool check(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t id, proto_bool *stale)
+static void check(struct AuthInternal *restrict ctx)
 {
-    const AuthCred *c = cred_at(id);
+    const AuthCred *c = cred_at(ctx, ctx->ns->id);
     if (c == NULL)
     {
-        return PROTO_FALSE;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
     if (c->digest)
     {
-        return check_digest(work, slot_id, req, c, stale);
+        ctx->ns->ok = check_digest(ctx->ns->work, ctx->ns->slot, ctx->ns->req, c, &ctx->ns->nonce_args.stale);
+        return;
     }
-    return check_basic(slot_id, req, c);
+    ctx->ns->ok = check_basic(ctx->ns->slot, ctx->ns->req, c);
 }
 
 // The count is the table, and a row is wiped on hand-out, so nothing below the count can carry a
 // previous tenant's credential and there is nothing to wipe here. The keying secret survives: it is
 // the server's, not a route's, and rekey() is what replaces it.
-static void reset(void)
+static void reset(struct AuthInternal *restrict ctx)
 {
-    if (s_auth != NULL)
+    if (ctx->store != NULL)
     {
-        s_auth->count = 0;
+        ctx->store->count = 0;
     }
 }
 
-const AuthNs Auth = {add, check, challenge, rekey, mint_nonce, verify_nonce, reset};
+// Designated, so a member's position in the struct does not decide what it binds to.
+AuthNs Auth = {.add = add,
+               .check = check,
+               .challenge = challenge,
+               .rekey = rekey,
+               .mint_nonce = mint_nonce,
+               .verify_nonce = verify_nonce,
+               .reset = reset,
+               .internal = &s_auth};
 
 #endif // PROTOCORE_ENABLE_AUTH

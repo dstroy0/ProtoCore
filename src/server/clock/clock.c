@@ -13,49 +13,76 @@
 
 #include "server/clock/clock.h"
 
-// The installed clocks and their divisors, owned by one instance (internal linkage): the
-// millisecond source, the microsecond source, and the factor each is divided by to reach the
-// library's own rate. One named owner, unreachable from any other translation unit.
-typedef struct
+/**
+ * @brief The clocks' compile-time storage: each installed source and the factor it divides by.
+ */
+struct ClockStorage
 {
     protocore_clock_fn ms_fn;
     uint32_t ms_div;
     protocore_clock_fn us_fn;
     uint32_t us_div;
-} ClockCtx;
-static ClockCtx s_clock = {NULL, 1u, NULL, 1u};
+};
 
-void protocore_set_clock(protocore_clock_fn fn, uint32_t ticks_per_second)
+/**
+ * @brief The installed clocks and the calls that read them - what ClockNs points at.
+ *
+ * @var ClockInternal::store  each installed source and the factor it divides by
+ * @var ClockInternal::ns     the handle a caller sets a call's members on
+ */
+struct ClockInternal
 {
-    s_clock.ms_fn = fn;
-    s_clock.ms_div = (ticks_per_second >= 1000u) ? (ticks_per_second / 1000u) : 1u;
+    struct ClockStorage *store;
+    ClockNs *ns;
+};
+
+static struct ClockStorage s_store = {NULL, 1u, NULL, 1u};
+
+static struct ClockInternal s_clock = {.store = &s_store, .ns = &Clock};
+
+static void clock_set_ms(struct ClockInternal *restrict ctx)
+{
+    const uint32_t rate = ctx->ns->src.ticks_per_second;
+    ctx->store->ms_fn = ctx->ns->src.fn;
+    ctx->store->ms_div = (rate >= 1000u) ? (rate / 1000u) : 1u;
 }
 
-uint32_t protocore_millis(void)
+static void clock_millis(struct ClockInternal *restrict ctx)
 {
-    if (s_clock.ms_fn)
+    if (ctx->store->ms_fn)
     {
-        return s_clock.ms_fn() / s_clock.ms_div;
+        ctx->ns->ms = ctx->store->ms_fn() / ctx->store->ms_div;
+        return;
     }
-    return protocore_platform_millis();
+    ctx->ns->ms = protocore_platform_millis();
 }
 
-void protocore_set_micros_clock(protocore_clock_fn fn, uint32_t ticks_per_second)
+static void clock_set_us(struct ClockInternal *restrict ctx)
 {
-    s_clock.us_fn = fn;
-    s_clock.us_div = (ticks_per_second >= 1000000u) ? (ticks_per_second / 1000000u) : 1u;
+    const uint32_t rate = ctx->ns->src.ticks_per_second;
+    ctx->store->us_fn = ctx->ns->src.fn;
+    ctx->store->us_div = (rate >= 1000000u) ? (rate / 1000000u) : 1u;
 }
 
-uint32_t protocore_micros(void)
+static void clock_micros(struct ClockInternal *restrict ctx)
 {
-    if (s_clock.us_fn)
+    if (ctx->store->us_fn)
     {
-        return s_clock.us_fn() / s_clock.us_div;
+        ctx->ns->us = ctx->store->us_fn() / ctx->store->us_div;
+        return;
     }
-    return protocore_platform_micros();
+    ctx->ns->us = protocore_platform_micros();
 }
 
-uint32_t protocore_cycles(void)
+static void clock_cycles(struct ClockInternal *restrict ctx)
 {
-    return protocore_platform_cycles();
+    ctx->ns->cyc = protocore_platform_cycles();
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+ClockNs Clock = {.set_ms = clock_set_ms,
+                 .millis = clock_millis,
+                 .set_us = clock_set_us,
+                 .micros = clock_micros,
+                 .cycles = clock_cycles,
+                 .internal = &s_clock};

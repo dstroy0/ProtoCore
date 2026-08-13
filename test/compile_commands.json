@@ -66,16 +66,16 @@
     "output": ".pio/build/native_ssh_conn/src/network_drivers/presentation/presentation.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/network_drivers/session/session.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPROTOCORE_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/session.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/server/system/session.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPROTOCORE_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/server/system/session.cpp",
     "directory": "@ROOT@",
-    "file": "src/network_drivers/session/session.cpp",
-    "output": ".pio/build/native_ssh_conn/src/network_drivers/session/session.o"
+    "file": "src/server/system/session.cpp",
+    "output": ".pio/build/native_ssh_conn/src/server/system/session.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_application/src/network_drivers/session/worker.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/session/worker.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/system/worker.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/worker.c",
     "directory": "@ROOT@",
-    "file": "src/network_drivers/session/worker.c",
-    "output": ".pio/build/native_application/src/network_drivers/session/worker.o"
+    "file": "src/server/system/worker.c",
+    "output": ".pio/build/native_application/src/server/system/worker.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_application/src/network_drivers/transport/listener.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/listener.c",
@@ -174,9 +174,9 @@
     "output": ".pio/build/native_application/src/protocore.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/middleware.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/middleware.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/middleware.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/io/middleware.c",
     "directory": "@ROOT@",
-    "file": "src/server/middleware.c",
+    "file": "src/server/io/middleware.c",
     "output": ".pio/build/native_application/src/server/middleware.o"
   },
   {
@@ -186,21 +186,21 @@
     "output": ".pio/build/native_application/src/server/regex.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/response.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/response.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/response.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/io/response.c",
     "directory": "@ROOT@",
-    "file": "src/server/response.c",
+    "file": "src/server/io/response.c",
     "output": ".pio/build/native_application/src/server/response.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/webdav_handler.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/webdav_handler.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/webdav_handler.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/io/webdav_handler.c",
     "directory": "@ROOT@",
-    "file": "src/server/webdav_handler.c",
+    "file": "src/server/io/webdav_handler.c",
     "output": ".pio/build/native_application/src/server/webdav_handler.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/websocket_sse.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/websocket_sse.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/websocket_sse.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/io/websocket_sse.c",
     "directory": "@ROOT@",
-    "file": "src/server/websocket_sse.c",
+    "file": "src/server/io/websocket_sse.c",
     "output": ".pio/build/native_application/src/server/websocket_sse.o"
   },
   {
@@ -660,15 +660,15 @@
     "output": ".pio/build/native_swar/src/services/machine_tool/euromap77/euromap77.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_decoder.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/exc_decoder.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_decoder.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/exc_decoder.c",
     "directory": "@ROOT@",
-    "file": "src/server/exc_decoder.c",
+    "file": "src/server/system/exc_decoder.c",
     "output": ".pio/build/native_swar/src/server/exc_decoder.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/failsafe.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/failsafe.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/failsafe.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/failsafe.c",
     "directory": "@ROOT@",
-    "file": "src/server/failsafe.c",
+    "file": "src/server/system/failsafe.c",
     "output": ".pio/build/native_swar/src/server/failsafe.o"
   },
   {
@@ -1038,16 +1038,16 @@
     "output": ".pio/build/native_swar/src/server/signaling/link_manager.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/logbuf.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/logbuf.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/logbuf.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/logbuf.c",
     "directory": "@ROOT@",
-    "file": "src/server/logbuf.c",
+    "file": "src/server/system/logbuf.c",
     "output": ".pio/build/native_swar/src/server/logbuf.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/shared_primitives/log.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/shared_primitives/log.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/shared/log.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/shared/log/log.c",
     "directory": "@ROOT@",
-    "file": "src/shared_primitives/log.c",
-    "output": ".pio/build/native_swar/src/shared_primitives/log.o"
+    "file": "src/shared/log/log.c",
+    "output": ".pio/build/native_swar/src/shared/log.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/fieldbus/lonworks/lonworks.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/fieldbus/lonworks/lonworks.c",
@@ -1368,9 +1368,9 @@
     "output": ".pio/build/native_swar/src/services/peripherals/pn532/pn532.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/power_mgmt.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/power_mgmt.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/power_mgmt.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/power_mgmt.c",
     "directory": "@ROOT@",
-    "file": "src/server/power_mgmt.c",
+    "file": "src/server/system/power_mgmt.c",
     "output": ".pio/build/native_swar/src/server/power_mgmt.o"
   },
   {
@@ -1398,10 +1398,10 @@
     "output": ".pio/build/native_swar/src/crypto/pqc/sntrup761.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/session/preempt_queue.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/session/preempt_queue.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/system/preempt_queue.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/preempt_queue.c",
     "directory": "@ROOT@",
-    "file": "src/network_drivers/session/preempt_queue.c",
-    "output": ".pio/build/native_swar/src/network_drivers/session/preempt_queue.o"
+    "file": "src/server/system/preempt_queue.c",
+    "output": ".pio/build/native_swar/src/server/system/preempt_queue.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/fieldbus/profibus/profibus.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/fieldbus/profibus/profibus.c",
@@ -1596,9 +1596,9 @@
     "output": ".pio/build/native_swar/src/services/fieldbus/simatic/simatic.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/sleep_sched.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/sleep_sched.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/sleep_sched.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/sleep_sched.c",
     "directory": "@ROOT@",
-    "file": "src/server/sleep_sched.c",
+    "file": "src/server/system/sleep_sched.c",
     "output": ".pio/build/native_swar/src/server/sleep_sched.o"
   },
   {
@@ -1902,9 +1902,9 @@
     "output": ".pio/build/native_application/src/server/clock/clock.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_coredump.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/exc_coredump.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_coredump.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/exc_coredump.c",
     "directory": "@ROOT@",
-    "file": "src/server/exc_coredump.c",
+    "file": "src/server/system/exc_coredump.c",
     "output": ".pio/build/native_swar/src/server/exc_coredump.o"
   },
   {
@@ -2130,10 +2130,10 @@
     "output": ".pio/build/native_application/src/network_drivers/presentation/presentation.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_application/src/network_drivers/session/session.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/session/session.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_application/src/server/system/session.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/system/session.c",
     "directory": "@ROOT@",
-    "file": "src/network_drivers/session/session.c",
-    "output": ".pio/build/native_application/src/network_drivers/session/session.o"
+    "file": "src/server/system/session.c",
+    "output": ".pio/build/native_application/src/server/system/session.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_application/src/services/web/web_terminal/web_terminal.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPROTOCORE_ENFORCE_HOST_HEADER=0 -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_HTTP_EMIT_DATE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -I.pio/libdeps/native_application/littlefs/include -I.pio/libdeps/native_application/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/web/web_terminal/web_terminal.c",

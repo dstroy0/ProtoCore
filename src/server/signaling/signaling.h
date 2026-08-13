@@ -11,7 +11,7 @@
  *
  * **Signaling owns no state, and it never gathers any.** It originates nothing. The active function
  * in the server loop already knows each fact at the instant it becomes true, so it deposits it here
- * then, and only when there is something to deposit. ::protocore_signal_know hands the bucket back; it does
+ * then, and only when there is something to deposit. ::SignalingNs::know hands the bucket back; it does
  * not compose, poll, or ask an owner for anything.
  *
  * Both halves of that matter. A bucket that gathered on read would recompute what the loop had
@@ -78,37 +78,63 @@ typedef struct
 static_assert(CONN_POOL_SLOTS <= 32, "protocore_signal_snapshot::conns_active is one 32-bit word, one bit per slot");
 static_assert(MAX_LISTENERS <= 32, "protocore_signal_snapshot::listeners_up is one 32-bit word, one bit per listener");
 
-/** @brief Hand back the bucket. No gathering: this is what the loop last deposited. */
-void protocore_signal_know(protocore_signal_snapshot *out);
+/** @brief What one deposit carries: a response's status, or the loop's own figures. */
+typedef struct
+{
+    int code;              ///< the status that was sent, which is what selects the class tally
+    uint32_t uptime_ms;    ///< how long the server has been up
+    uint32_t conns_active; ///< one bit per occupied connection slot
+    uint32_t listeners_up; ///< one bit per listener that is bound
+} SignalPutArgs;
 
-/** @brief Empty the bucket. See protocore_server_reset(), which is what callers use. */
-void protocore_signal_reset(void);
-
-/**
- * @brief Deposit a response, from the send path, at the point the status went out.
- *
- * @param code the status that was sent, which is what selects the class tally.
- */
-void protocore_signal_put_response(int code);
-
-/**
- * @brief Deposit what the loop iteration already established.
- *
- * One call rather than three, because these arrive together: the loop reads the clock every
- * iteration for the idle-timeout sweep and walks the slots to service them, and the listener pool is
- * touched constantly (24 sites across 7 files, including the dynamic listeners SSH remote-forwarding
- * opens). Every value here is in hand at the moment of the call, so the deposit costs the stores and
- * nothing else. Splitting it would carry the same facts across the boundary three times.
- */
-void protocore_signal_put_tick(uint32_t uptime_ms, uint32_t conns_active, uint32_t listeners_up);
+/** @brief The bucket's own state and the calls that reach it, described only in signaling.c. */
+struct SignalingInternal;
 
 /**
- * @brief End connection @p slot, for an application that does not talk transport.
+ * @brief The server's signalling bucket.
  *
- * Resolves to the transport's teardown, so an application states the decision without taking on an
- * L4 dependency to carry it out. A remote reaches this on the slot its own request arrived on.
+ * A caller sets the members a call takes, invokes it through ::Signal, and reads the outcome off the
+ * same handle. The bucket itself is behind @ref internal.
+ *
+ * @var SignalingNs::put           what one deposit carries
+ * @var SignalingNs::slot          the connection a kill names
+ * @var SignalingNs::out           where a read copies the bucket
+ * @var SignalingNs::know          copy the bucket out; no gathering, this is what the loop deposited
+ * @var SignalingNs::reset         empty the bucket
+ * @var SignalingNs::put_response  deposit a response, from the send path, as the status goes out
+ * @var SignalingNs::put_tick      deposit what the loop iteration already established
+ * @var SignalingNs::kill          end a connection, for an application that does not talk transport
+ * @var SignalingNs::internal      the bucket and the calls that reach it
+ *
+ * know copies rather than handing out a pointer: a reader formats several fields and the loop
+ * deposits between its reads, so lending the storage would let one report mix two server states.
+ *
+ * put_tick is one call rather than three because these arrive together: the loop reads the clock
+ * every iteration for the idle-timeout sweep and walks the slots to service them, and the listener
+ * pool is touched constantly. Every value is in hand at the moment of the call, so the deposit costs
+ * the stores and nothing else.
+ *
+ * kill is a plain forward: no liveness test, no result. Transport owns the slot's lifetime and its
+ * idle sweep reaps a stale one regardless, so a check here would answer a question transport has
+ * already answered, and the answer could be stale before the caller read it.
  */
-void protocore_signal_kill(uint8_t slot);
+typedef struct
+{
+    SignalPutArgs put;
+    uint8_t slot;
+    protocore_signal_snapshot *out;
+
+    void (*know)(struct SignalingInternal *ctx);
+    void (*reset)(struct SignalingInternal *ctx);
+    void (*put_response)(struct SignalingInternal *ctx);
+    void (*put_tick)(struct SignalingInternal *ctx);
+    void (*kill)(struct SignalingInternal *ctx);
+
+    struct SignalingInternal *internal;
+} SignalingNs;
+
+/** @brief The one symbol this module exports. */
+extern SignalingNs Signal;
 
 PROTOCORE_END_DECLS
 

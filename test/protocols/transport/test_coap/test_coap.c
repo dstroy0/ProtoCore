@@ -5,7 +5,7 @@
 // real RFC 7252 request datagram, runs it through the server, and decodes the
 // response - no sockets, no heap.
 
-#include "network_drivers/transport/udp.h" // Udp.listener: the bind the server answers on
+#include "network_drivers/transport/udp/udp.h" // Udp.listener: the bind the server answers on
 #include "server/clock/clock.h"            // protocore_set_clock() to drive dedup freshness in tests
 #include "services/iot/coap/coap.h"
 #include <string.h>

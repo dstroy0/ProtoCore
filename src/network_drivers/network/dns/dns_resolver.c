@@ -23,8 +23,8 @@
 #else
 #include "mmgr/protostr.h"                 // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h"                // proto_raw_read: the server address moves whole
-#include "network_drivers/transport/udp.h" // Udp.listener: the query port and the ask
-#include "shared_primitives/ip.h"          // Ip.parse: the server, and the dotted-quad fast path
+#include "network_drivers/transport/udp/udp.h" // Udp.listener: the query port and the ask
+#include "shared/ip/ip.h"          // Ip.parse: the server, and the dotted-quad fast path
 #endif
 
 // ---------------------------------------------------------------------------

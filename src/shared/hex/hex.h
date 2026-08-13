@@ -1,0 +1,95 @@
+// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file hex.h
+ * @brief Base-16 conversion between raw bytes and their ASCII digits.
+ *
+ * Four operations cover every hex site in the library: one nibble out, one digit in, a machine
+ * word out, and a byte run in either direction. Each writes into a caller-owned buffer, takes no
+ * heap and no `<stdlib.h>`, and is inline so an unused one costs nothing.
+ *
+ * The decoders report failure through a negative return rather than a sentinel digit, so a
+ * malformed byte can never be mistaken for a valid zero.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
+ */
+
+#ifndef PROTOCORE_HEX_H
+#define PROTOCORE_HEX_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+/** @brief What a digit conversion names: one nibble, or one character. */
+typedef struct
+{
+    uint8_t nibble;    ///< the nibble a digit lookup renders
+    char ch;           ///< the character a value lookup reads
+    uint32_t v;        ///< the value a u32 render writes
+    proto_bool upper;  ///< render A-F rather than a-f
+} HexArgs;
+
+/** @brief The buffers a run conversion moves between. */
+typedef struct
+{
+    const uint8_t *in; ///< the bytes an encode reads
+    const char *text;  ///< the characters a decode reads
+    uint32_t n;        ///< how many bytes to encode, or how many characters to decode
+    char *out;         ///< where an encode or a u32 render writes
+    uint8_t *bytes;    ///< where a decode writes
+    uint32_t cap;      ///< how much room that has
+} HexIoArgs;
+
+/** @brief The digit tables and the calls that read them, described only in hex.c. */
+struct HexInternal;
+
+/**
+ * @brief Hex digits, and the conversions both directions.
+ *
+ * A caller sets the members a call takes, invokes it through ::Hex, and reads the outcome off the
+ * same handle. The digit tables are behind @ref internal.
+ *
+ * @var HexNs::args      one nibble, or one character
+ * @var HexNs::io        the buffers a run conversion moves between
+ * @var HexNs::ch        the digit a lookup rendered
+ * @var HexNs::i8        the value a digit lookup read, or -1 when it is not a hex digit
+ * @var HexNs::u8        digits a u32 render wrote (1..8)
+ * @var HexNs::i32       bytes a decode wrote, or -1 on a refusal
+ * @var HexNs::digit     the hex character for a nibble
+ * @var HexNs::val       the value of a hex character
+ * @var HexNs::u32       render a value as lowercase hex, most significant digit first
+ * @var HexNs::encode    render a byte run as hex characters plus a NUL
+ * @var HexNs::decode    read a hex run back into bytes
+ * @var HexNs::internal  the digit tables and the calls that read them
+ *
+ * u32 writes no `0x` prefix, no NUL, and no leading zeros, which is the form the HTTP/1.1 chunked
+ * size line takes; zero renders as a single "0" and @c io.out needs room for 8 characters.
+ *
+ * encode needs @c io.out to hold 2 * @c io.n + 1; the caller owns that bound, since a byte run has
+ * no self-describing end. decode refuses an odd length or a result larger than @c io.cap without
+ * writing anything; a bad digit stops the run where it is found.
+ */
+typedef struct
+{
+    HexArgs args;
+    HexIoArgs io;
+
+    char ch;
+    int8_t i8;
+    uint8_t u8;
+    int32_t i32;
+
+    void (*digit)(struct HexInternal *ctx);
+    void (*val)(struct HexInternal *ctx);
+    void (*u32)(struct HexInternal *ctx);
+    void (*encode)(struct HexInternal *ctx);
+    void (*decode)(struct HexInternal *ctx);
+
+    struct HexInternal *internal;
+} HexNs;
+
+/** @brief The one symbol this module exports. */
+extern HexNs Hex;
+
+#endif // PROTOCORE_HEX_H

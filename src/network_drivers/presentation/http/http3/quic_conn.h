@@ -2,24 +2,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_conn.h
+ * @file protocore_quic_conn.h
  * @brief Stateful QUIC v1 server connection engine (RFC 9000 / RFC 9001).
  *
  * One QuicConn drives a single QUIC connection: it parses each inbound UDP datagram into its
  * coalesced packets, removes header + AEAD protection at the right encryption level (Initial keys
  * from the client's Destination Connection ID; Handshake and 1-RTT keys from the TLS handshake it
- * runs via pc_quic_tls), dispatches the frames, reassembles the CRYPTO stream to advance the handshake,
+ * runs via protocore_quic_tls), dispatches the frames, reassembles the CRYPTO stream to advance the handshake,
  * tracks packet numbers to generate ACKs, and coalesces the outbound Initial / Handshake / 1-RTT
- * packets back into datagrams. Application streams are surfaced to HTTP/3 (pc_h3_conn) through a small
+ * packets back into datagrams. Application streams are surfaced to HTTP/3 (protocore_h3_conn) through a small
  * callback + send API, so the transport engine has no HTTP dependency.
  *
- * It is transport-free (no lwIP): pc_quic_conn_recv() takes a received datagram and pc_quic_conn_send()
+ * It is transport-free (no lwIP): protocore_quic_conn_recv() takes a received datagram and protocore_quic_conn_send()
  * pulls the next datagram to transmit, so the engine is host-testable by shuttling byte buffers
- * between a server QuicConn and a client written in the test. pc_quic_server wires it to pc_udp.
+ * between a server QuicConn and a client written in the test. protocore_quic_server wires it to protocore_udp.
  *
  * Scope (a faithful minimal server): QUIC v1 only, no Retry / 0-RTT / key update / connection
  * migration / connection-ID rotation, in-order CRYPTO and stream reassembly, and single-range ACKs.
- * Loss recovery is a Probe Timeout (RFC 9002): pc_quic_conn_on_timeout() retransmits the outstanding
+ * Loss recovery is a Probe Timeout (RFC 9002): protocore_quic_conn_on_timeout() retransmits the outstanding
  * ack-eliciting flight (handshake CRYPTO and 1-RTT streams) with exponential backoff, reset on
  * acknowledged progress. Fatal handshake / frame errors emit a transport CONNECTION_CLOSE (RFC 9000
  * sec 19.19) instead of timing out. Small packets are padded to the header-protection minimum
@@ -86,7 +86,7 @@ typedef struct
     proto_bool have_rx;          ///< at least one packet received
     proto_bool ack_eliciting_rx; ///< an ack-eliciting packet is unacknowledged (we owe an ACK)
     proto_bool discarded;        ///< this space's keys have been dropped (nothing more sent/received)
-    uint64_t crypto_rx_off;      ///< in-order CRYPTO bytes already delivered to pc_quic_tls
+    uint64_t crypto_rx_off;      ///< in-order CRYPTO bytes already delivered to protocore_quic_tls
     uint8_t *crypto_rx;          ///< PROTOCORE_QUIC_CRYPTO_RX bytes of the connection's borrow
     size_t crypto_rx_have;       ///< contiguous CRYPTO bytes buffered at crypto_rx_off
     uint64_t crypto_tx_off;      ///< CRYPTO flight bytes already sent from this level
@@ -155,47 +155,47 @@ typedef struct QuicConn
  * @param our_scid_len its length.
  * @param cb         stream / handshake callbacks (may be all NULL).
  */
-void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
-                       const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid, uint8_t our_scid_len,
-                       const QuicConnCallbacks *cb);
+void protocore_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
+                              const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
+                              uint8_t our_scid_len, const QuicConnCallbacks *cb);
 
 /**
  * @brief Process one received UDP datagram (one or more coalesced QUIC packets).
  * @return true if the datagram was processed (even partially); false if it was undecryptable /
  * malformed enough to drop entirely. Frames drive the handshake, ACK state, and stream callbacks.
  */
-proto_bool pc_quic_conn_recv(struct QuicConn *qc, const uint8_t *datagram, size_t len);
+proto_bool protocore_quic_conn_recv(struct QuicConn *qc, const uint8_t *datagram, size_t len);
 
 /**
  * @brief Build the next outbound datagram (coalesced Initial / Handshake / 1-RTT packets).
  * @return its length, or 0 when there is nothing to send right now. Call repeatedly until it
  * returns 0. Honors the pre-validation 3x anti-amplification limit.
  */
-size_t pc_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap);
+size_t protocore_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap);
 
 /**
  * @brief Drive loss recovery: if the server's handshake CRYPTO flight is outstanding (built but not
  * yet acknowledged) and the Probe Timeout has elapsed, mark the flight for retransmission (RFC 9002)
- * so the next pc_quic_conn_send() re-sends it, and back the timer off exponentially. @p now_ms is the
- * caller's monotonic millisecond clock (pc_quic_conn stays clock-free). A no-op once the flight is
- * acknowledged or the handshake completes. Call once per poll before pc_quic_conn_send().
+ * so the next protocore_quic_conn_send() re-sends it, and back the timer off exponentially. @p now_ms is the
+ * caller's monotonic millisecond clock (protocore_quic_conn stays clock-free). A no-op once the flight is
+ * acknowledged or the handshake completes. Call once per poll before protocore_quic_conn_send().
  */
-void pc_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms);
+void protocore_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms);
 
 /**
  * @brief Queue @p len bytes (with optional @p fin) to send on @p stream_id.
  * @return bytes accepted into the stream's send buffer (may be < len if it is full).
  */
-size_t pc_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
-                                proto_bool fin);
+size_t protocore_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
+                                       proto_bool fin);
 
 /**
  * @brief Initiate an immediate close: queue a transport CONNECTION_CLOSE (RFC 9000 sec 19.19) with
- * @p error_code so the next pc_quic_conn_send() reports the error to the peer instead of leaving it to
+ * @p error_code so the next protocore_quic_conn_send() reports the error to the peer instead of leaving it to
  * time out. A no-op if the connection is already closing. The engine also calls this itself on a fatal
  * handshake / frame error (CRYPTO_ERROR / FRAME_ENCODING_ERROR).
  */
-void pc_quic_conn_close(struct QuicConn *qc, uint64_t error_code);
+void protocore_quic_conn_close(struct QuicConn *qc, uint64_t error_code);
 
 /**
  * @brief Initiate an immediate close reporting an application-protocol error: a CONNECTION_CLOSE
@@ -203,13 +203,13 @@ void pc_quic_conn_close(struct QuicConn *qc, uint64_t error_code);
  * HTTP/3's codes (RFC 9114 sec 8.1) rather than the transport's. Before 1-RTT keys exist the frame
  * is not permitted, and a transport close carrying APPLICATION_ERROR goes instead.
  */
-void pc_quic_conn_close_app(struct QuicConn *qc, uint64_t error_code);
+void protocore_quic_conn_close_app(struct QuicConn *qc, uint64_t error_code);
 
 /** @brief True once the TLS handshake has completed (client Finished verified). */
-proto_bool pc_quic_conn_established(const struct QuicConn *qc);
+proto_bool protocore_quic_conn_established(const struct QuicConn *qc);
 
 /** @brief True if the connection is closed or draining. */
-proto_bool pc_quic_conn_is_closed(const struct QuicConn *qc);
+proto_bool protocore_quic_conn_is_closed(const struct QuicConn *qc);
 
 #endif // PROTOCORE_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_CONN_H

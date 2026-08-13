@@ -19,7 +19,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/file_transfer/http_delivery/http_delivery.h"
-#include "shared_primitives/mime.h" // PROTOCORE_MIME_TEXT_HTML
+#include "shared/mime/mime.h" // PROTOCORE_MIME_TEXT_HTML
 #include <SD_MMC.h>
 
 static const char *WIFI_SSID = "your-ssid";

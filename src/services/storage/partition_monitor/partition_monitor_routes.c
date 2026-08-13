@@ -14,7 +14,7 @@
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
 
 #include "protocore.h"
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 
 // All partition-monitor-routes state, owned by one instance (internal linkage): the server
 // handle. (The route handler is a fixed-signature callback, so it reaches this owner directly.)

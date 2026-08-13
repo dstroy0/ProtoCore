@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h2_conn.h
+ * @file protocore_h2_conn.h
  * @brief HTTP/2 connection + stream engine (RFC 9113) over the HPACK + frame layers.
  *
  * One H2Conn drives a single HTTP/2 connection: it consumes the client connection preface, the
  * SETTINGS exchange, and the frame stream; reassembles each request's header block (HEADERS +
  * CONTINUATION) and HPACK-decodes it; tracks per-stream state and connection / stream flow
  * control; and answers control frames (SETTINGS ACK, PING ACK, WINDOW_UPDATE). Decoded requests
- * and body data are handed to the application through callbacks, and pc_h2_conn_respond() serializes
+ * and body data are handed to the application through callbacks, and protocore_h2_conn_respond() serializes
  * a response as HEADERS + DATA frames. Outbound bytes go through a caller-supplied writer, so the
  * engine has no transport dependency and is host-testable by feeding it a byte stream.
  *
@@ -113,24 +113,24 @@ typedef struct
 } H2Conn;
 
 /** @brief Initialize a connection engine and send our initial SETTINGS via cb.write. */
-void pc_h2_conn_init(H2Conn *c, const H2Callbacks *cb);
+void protocore_h2_conn_init(H2Conn *c, const H2Callbacks *cb);
 
 /**
  * @brief Feed inbound bytes. Drives the state machine, invokes callbacks, and writes control
  * frames. @return false on a fatal connection error (the caller sends GOAWAY and closes).
  */
-proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len);
+proto_bool protocore_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len);
 
 /**
  * @brief Serialize a complete response (status + optional content-type + body) as a HEADERS
  * frame (HPACK) followed by a DATA frame on @p stream_id, and close the stream. @return false on
  * a bad stream / serialization overflow.
  */
-proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const char *content_type, const char *body,
-                              size_t body_len);
+proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const char *content_type,
+                                     const char *body, size_t body_len);
 
 /** @brief Send a GOAWAY (last accepted stream, @p error) to begin a graceful shutdown. */
-void pc_h2_conn_goaway(H2Conn *c, uint32_t error);
+void protocore_h2_conn_goaway(H2Conn *c, uint32_t error);
 
 #endif // PROTOCORE_ENABLE_HTTP2
 #endif // PROTOCORE_H2_CONN_H

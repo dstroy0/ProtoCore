@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 
 /**
  * @brief Remaining lockout time for @p ip at @p now_ms, in milliseconds.

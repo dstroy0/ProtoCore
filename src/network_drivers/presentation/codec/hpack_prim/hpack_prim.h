@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_hpack_prim.h
+ * @file protocore_hpack_prim.h
  * @brief Low-level field-coding primitives shared by HPACK and QPACK.
  *
  * RFC 7541 defines two primitives that RFC 9204 (QPACK) reuses verbatim: the prefix-integer

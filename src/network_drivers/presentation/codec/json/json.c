@@ -7,18 +7,18 @@
  */
 
 #include "json.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protostr.h"
-#include "shared_primitives/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
+#include "shared/hex/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
 
-// Longest member name pc_json_find_member will scan for.
+// Longest member name protocore_json_find_member will scan for.
 #define JSON_KEY_MAX 256
 
 // ---------------------------------------------------------------------------
-// pc_json_writer
+// protocore_json_writer
 // ---------------------------------------------------------------------------
 
-static void pc_json_init(pc_json_writer *w, char *buf, size_t cap)
+static void protocore_json_init(protocore_json_writer *w, char *buf, size_t cap)
 {
     w->buf = buf;
     w->cap = cap;
@@ -36,7 +36,7 @@ static void pc_json_init(pc_json_writer *w, char *buf, size_t cap)
     }
 }
 
-static void json_put(pc_json_writer *w, char c)
+static void json_put(protocore_json_writer *w, char c)
 {
     if (!w->ok)
     {
@@ -51,7 +51,7 @@ static void json_put(pc_json_writer *w, char c)
     w->buf[w->len] = '\0';
 }
 
-static void json_put_raw(pc_json_writer *w, const char *s)
+static void json_put_raw(protocore_json_writer *w, const char *s)
 {
     if (!s)
     {
@@ -63,7 +63,7 @@ static void json_put_raw(pc_json_writer *w, const char *s)
     }
 }
 
-static void json_put_escaped(pc_json_writer *w, const char *s)
+static void json_put_escaped(protocore_json_writer *w, const char *s)
 {
     if (!s)
     {
@@ -122,11 +122,11 @@ static void json_put_escaped(pc_json_writer *w, const char *s)
     }
 }
 
-static void json_value_prefix(pc_json_writer *w)
+static void json_value_prefix(protocore_json_writer *w)
 {
     if (w->after_key)
     {
-        w->after_key = PROTO_FALSE; // a value right after pc_json_key(w): the comma was its own
+        w->after_key = PROTO_FALSE; // a value right after protocore_json_key(w): the comma was its own
         return;
     }
     if (w->depth > 0)
@@ -140,7 +140,7 @@ static void json_value_prefix(pc_json_writer *w)
     }
 }
 
-static void json_push(pc_json_writer *w, char open)
+static void json_push(protocore_json_writer *w, char open)
 {
     json_value_prefix(w);
     json_put(w, open);
@@ -155,7 +155,7 @@ static void json_push(pc_json_writer *w, char open)
     }
 }
 
-static void json_pop(pc_json_writer *w, char close)
+static void json_pop(protocore_json_writer *w, char close)
 {
     json_put(w, close);
     if (w->depth > 0)
@@ -168,24 +168,24 @@ static void json_pop(pc_json_writer *w, char close)
     }
 }
 
-static void pc_json_begin_object(pc_json_writer *w)
+static void protocore_json_begin_object(protocore_json_writer *w)
 {
     json_push(w, '{');
 }
-static void pc_json_end_object(pc_json_writer *w)
+static void protocore_json_end_object(protocore_json_writer *w)
 {
     json_pop(w, '}');
 }
-static void pc_json_begin_array(pc_json_writer *w)
+static void protocore_json_begin_array(protocore_json_writer *w)
 {
     json_push(w, '[');
 }
-static void pc_json_end_array(pc_json_writer *w)
+static void protocore_json_end_array(protocore_json_writer *w)
 {
     json_pop(w, ']');
 }
 
-static void pc_json_key(pc_json_writer *w, const char *k)
+static void protocore_json_key(protocore_json_writer *w, const char *k)
 {
     json_value_prefix(w);
     json_put(w, '"');
@@ -195,7 +195,7 @@ static void pc_json_key(pc_json_writer *w, const char *k)
     w->after_key = PROTO_TRUE; // suppress the following value's own comma
 }
 
-static void pc_json_str(pc_json_writer *w, const char *v)
+static void protocore_json_str(protocore_json_writer *w, const char *v)
 {
     json_value_prefix(w);
     json_put(w, '"');
@@ -203,12 +203,12 @@ static void pc_json_str(pc_json_writer *w, const char *v)
     json_put(w, '"');
 }
 
-static void pc_json_int(pc_json_writer *w, long v)
+static void protocore_json_int(protocore_json_writer *w, long v)
 {
     char tmp[24];
-    pc_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    pc_sb_i64(&sb_tmp, (int64_t)(v));
-    if (pc_sb_finish(&sb_tmp) == 0)
+    protocore_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
+    protocore_sb_i64(&sb_tmp, (int64_t)(v));
+    if (protocore_sb_finish(&sb_tmp) == 0)
     {
         tmp[0] = '\0';
     }
@@ -216,12 +216,12 @@ static void pc_json_int(pc_json_writer *w, long v)
     json_put_raw(w, tmp);
 }
 
-static void pc_json_uint(pc_json_writer *w, unsigned long v)
+static void protocore_json_uint(protocore_json_writer *w, unsigned long v)
 {
     char tmp[24];
-    pc_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    pc_sb_u32(&sb_tmp2, (uint32_t)(v));
-    if (pc_sb_finish(&sb_tmp2) == 0)
+    protocore_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
+    protocore_sb_u32(&sb_tmp2, (uint32_t)(v));
+    if (protocore_sb_finish(&sb_tmp2) == 0)
     {
         tmp[0] = '\0';
     }
@@ -229,53 +229,53 @@ static void pc_json_uint(pc_json_writer *w, unsigned long v)
     json_put_raw(w, tmp);
 }
 
-static void pc_json_bool(pc_json_writer *w, proto_bool v)
+static void protocore_json_bool(protocore_json_writer *w, proto_bool v)
 {
     json_value_prefix(w);
     json_put_raw(w, v ? "true" : "false");
 }
 
-static void pc_json_null(pc_json_writer *w)
+static void protocore_json_null(protocore_json_writer *w)
 {
     json_value_prefix(w);
     json_put_raw(w, "null");
 }
 
-static void pc_json_raw(pc_json_writer *w, const char *literal)
+static void protocore_json_raw(protocore_json_writer *w, const char *literal)
 {
     json_value_prefix(w);
     json_put_raw(w, literal);
 }
 
-static void pc_json_kv_str(pc_json_writer *w, const char *k, const char *v)
+static void protocore_json_kv_str(protocore_json_writer *w, const char *k, const char *v)
 {
-    pc_json_key(w, k);
-    pc_json_str(w, v);
+    protocore_json_key(w, k);
+    protocore_json_str(w, v);
 }
-static void pc_json_kv_int(pc_json_writer *w, const char *k, long v)
+static void protocore_json_kv_int(protocore_json_writer *w, const char *k, long v)
 {
-    pc_json_key(w, k);
-    pc_json_int(w, v);
+    protocore_json_key(w, k);
+    protocore_json_int(w, v);
 }
-static void pc_json_kv_uint(pc_json_writer *w, const char *k, unsigned long v)
+static void protocore_json_kv_uint(protocore_json_writer *w, const char *k, unsigned long v)
 {
-    pc_json_key(w, k);
-    pc_json_uint(w, v);
+    protocore_json_key(w, k);
+    protocore_json_uint(w, v);
 }
-static void pc_json_kv_bool(pc_json_writer *w, const char *k, proto_bool v)
+static void protocore_json_kv_bool(protocore_json_writer *w, const char *k, proto_bool v)
 {
-    pc_json_key(w, k);
-    pc_json_bool(w, v);
+    protocore_json_key(w, k);
+    protocore_json_bool(w, v);
 }
-static void pc_json_kv_null(pc_json_writer *w, const char *k)
+static void protocore_json_kv_null(protocore_json_writer *w, const char *k)
 {
-    pc_json_key(w, k);
-    pc_json_null(w);
+    protocore_json_key(w, k);
+    protocore_json_null(w);
 }
-static void pc_json_kv_raw(pc_json_writer *w, const char *k, const char *literal)
+static void protocore_json_kv_raw(protocore_json_writer *w, const char *k, const char *literal)
 {
-    pc_json_key(w, k);
-    pc_json_raw(w, literal);
+    protocore_json_key(w, k);
+    protocore_json_raw(w, literal);
 }
 
 // ---------------------------------------------------------------------------
@@ -676,8 +676,8 @@ static proto_bool json_get_bool(const char *json, const char *key, proto_bool *o
     return PROTO_FALSE;
 }
 
-const JsonNs Json = {pc_json_init,    pc_json_begin_object, pc_json_end_object, pc_json_begin_array, pc_json_end_array,
-                     pc_json_key,     pc_json_str,          pc_json_int,        pc_json_uint,        pc_json_bool,
-                     pc_json_null,    pc_json_raw,          pc_json_kv_str,     pc_json_kv_int,      pc_json_kv_uint,
-                     pc_json_kv_bool, pc_json_kv_null,      pc_json_kv_raw,     json_get_str,        json_get_int,
+const JsonNs Json = {protocore_json_init,    protocore_json_begin_object, protocore_json_end_object, protocore_json_begin_array, protocore_json_end_array,
+                     protocore_json_key,     protocore_json_str,          protocore_json_int,        protocore_json_uint,        protocore_json_bool,
+                     protocore_json_null,    protocore_json_raw,          protocore_json_kv_str,     protocore_json_kv_int,      protocore_json_kv_uint,
+                     protocore_json_kv_bool, protocore_json_kv_null,      protocore_json_kv_raw,     json_get_str,        json_get_int,
                      json_get_bool};

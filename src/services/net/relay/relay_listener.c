@@ -12,8 +12,8 @@
 
 #if PROTOCORE_ENABLE_RELAY
 
-#include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/tcp.h"
+#include "server/system/proto_handler.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "relay.h"
 #if PROTOCORE_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power.h" // keep the radio awake during a relayed transfer

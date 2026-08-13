@@ -10,7 +10,7 @@
 //   -DPROTOCORE_ENFORCE_HOST_HEADER=0
 //   test/performance_benching/network_drivers/presentation/http_parser/host.c
 //   src/network_drivers/presentation/http/http_parser/http_parser.c
-//   src/network_drivers/presentation/codec/json/json.c src/shared_primitives/ip.c
+//   src/network_drivers/presentation/codec/json/json.c src/shared/ip/ip.c
 //   src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/br && /tmp/br
 
 #include "network_drivers/presentation/codec/json/json.h"

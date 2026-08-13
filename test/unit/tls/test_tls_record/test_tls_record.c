@@ -7,7 +7,7 @@
 // and the record counter that never travels.
 
 #include "mmgr/secure.h"
-#include "network_drivers/tls/tls_record.h"
+#include "network_drivers/tls/record/record.h"
 #include <stdint.h>
 #include <string.h>
 

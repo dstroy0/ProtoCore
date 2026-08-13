@@ -7,8 +7,8 @@
 // (listener_accept_cb is non-static - see listener.cpp - specifically so this env can drive it
 // directly with a fabricated pcb rather than needing a real lwIP accept event).
 
-#include "network_drivers/transport/diffserv.h"
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/diffserv/diffserv.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <unity.h>
 
 void setUp()

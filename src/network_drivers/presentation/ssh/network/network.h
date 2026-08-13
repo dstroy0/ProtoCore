@@ -29,6 +29,37 @@ typedef enum PROTO_ENUM_PACKED
     SSH_STREAM_DIALED        ///< outbound: the handle indexes the client transport's own pool
 } SshStreamKind;
 
+/** @brief RFC 4254 sec 5: which pool a handle indexes, and the channel it carries. */
+typedef struct
+{
+    SshStreamKind kind; ///< which pool that handle indexes
+    uint32_t channel;   ///< the channel a bridge call names
+} SshStreamRef;
+
+/** @brief The message bytes an emit or a write carries. */
+typedef struct
+{
+    const uint8_t *payload; ///< the message bytes an emit or a write carries
+    size_t len;             ///< how many
+    size_t plen;            ///< the payload length already built in the region
+} SshNetMsgArgs;
+
+/** @brief RFC 4254 sec 7.2: where a bridged channel dials, and the client slot it takes. */
+typedef struct
+{
+    const char *host;    ///< the destination a channel dials
+    uint16_t port;       ///< its port
+    uint32_t timeout_ms; ///< what that open is given
+    int cid;             ///< the client slot a channel adopts, or the one a lookup names
+} SshChanDialArgs;
+
+/** @brief Where a channel read writes. */
+typedef struct
+{
+    uint8_t *out; ///< where a channel read writes
+    size_t cap;   ///< how much room it has; a region lookup reports its own here
+} SshChanReadArgs;
+
 /**
  * @brief The binding between an SSH slot and the byte stream underneath it.
  *
@@ -36,44 +67,80 @@ typedef enum PROTO_ENUM_PACKED
  * one of the three components of RFC 4251 sec 1; this is the stream they run on, and the roles that
  * drive them (server sec 4.1, client sec 4) live above it.
  *
+ * A caller sets the members a call takes, invokes it through ::SshNetwork, and reads the outcome off
+ * the same handle.
+ *
  * @var SshNetworkNs::claim    bind an SSH slot to a stream: the handle and which pool it indexes
  * @var SshNetworkNs::release  mark an SSH slot unowned
  * @var SshNetworkNs::slot_free  lowest unowned SSH slot, or 0xFF when the pool is full
- * @var SshNetworkNs::owns     true when @p ssh_slot is bound to @p conn_slot
+ * @var SshNetworkNs::owns     true when @c ssh_slot is bound to @c conn_slot
  * @var SshNetworkNs::tx_drain put the packet the codec flagged on the wire, as the window allows
  * @var SshNetworkNs::emit     frame one SSH message and hand it to the slot's worker
  * @var SshNetworkNs::write_msg      frame one built SSH message and write it now
  * @var SshNetworkNs::payload_region the span a message may be built in for a frame without a copy
  * @var SshNetworkNs::write_msg_at   frame what is already in that span and write it
+ *
+ * @var SshNetworkNs::ssh_slot    the SSH slot a call acts on
+ * @var SshNetworkNs::conn_slot   the stream slot it is bound to
+ * @var SshNetworkNs::handle      the stream handle a claim binds
+ * @var SshNetworkNs::stream      which pool that handle indexes, and the channel it carries
+ * @var SshNetworkNs::msg         the message bytes an emit or a write carries
+ * @var SshNetworkNs::dial        where a bridged channel dials
+ * @var SshNetworkNs::read_args   where a channel read writes
+ * @var SshNetworkNs::ok          a call's true/false outcome
+ * @var SshNetworkNs::i32         a call's signed outcome
+ * @var SshNetworkNs::u8          the lowest unowned slot, or 0xFF when the pool is full
+ * @var SshNetworkNs::n           a byte count a call reports
+ * @var SshNetworkNs::region      the span a message may be built in for a frame without a copy
+ * @var SshNetworkNs::internal    the bindings' state and the calls that reach them
  */
+struct SshNetworkInternal;
+
 typedef struct
 {
-    int (*claim)(uint8_t ssh_slot, int handle, SshStreamKind kind);
-    void (*release)(uint8_t ssh_slot);
-    uint8_t (*slot_free)(void);
-    proto_bool (*owns)(uint8_t ssh_slot, uint8_t conn_slot);
-    void (*tx_drain)(uint8_t conn_slot, uint8_t ssh_slot);
-    void (*emit)(uint8_t i, const uint8_t *payload, size_t len);
-    int (*write_msg)(uint8_t ssh_slot, const uint8_t *msg, size_t len);
-    uint8_t *(*payload_region)(uint8_t ssh_slot, size_t *cap);
-    int (*write_msg_at)(uint8_t ssh_slot, size_t plen);
+    uint8_t ssh_slot;  ///< the SSH slot a call acts on
+    uint8_t conn_slot; ///< the stream slot it is bound to
+    int handle;        ///< the stream handle a claim binds
+
+    SshStreamRef stream;       ///< which pool that handle indexes, and the channel it carries
+    SshNetMsgArgs msg;         ///< the message bytes an emit or a write carries
+    SshChanDialArgs dial;      ///< where a bridged channel dials
+    SshChanReadArgs read_args; ///< where a channel read writes
+
+    proto_bool ok;
+    int i32;
+    uint8_t u8;
+    size_t n;
+    uint8_t *region;
+
+    void (*claim)(struct SshNetworkInternal *ctx);
+    void (*release)(struct SshNetworkInternal *ctx);
+    void (*slot_free)(struct SshNetworkInternal *ctx);
+    void (*owns)(struct SshNetworkInternal *ctx);
+    void (*tx_drain)(struct SshNetworkInternal *ctx);
+    void (*emit)(struct SshNetworkInternal *ctx);
+    void (*write_msg)(struct SshNetworkInternal *ctx);
+    void (*payload_region)(struct SshNetworkInternal *ctx);
+    void (*write_msg_at)(struct SshNetworkInternal *ctx);
 #if PROTOCORE_NEED_CLIENT
     // Bridging a channel to a socket of our own needs the client half of the transport, so these
-    // exist exactly when Tcp.client does.
-    int (*chan_open)(uint8_t ssh_slot, uint32_t channel, const char *host, uint16_t port, uint32_t timeout_ms);
-    int (*chan_adopt)(uint8_t ssh_slot, uint32_t channel, int cid);
-    proto_bool (*chan_by_cid)(int cid, uint8_t *ssh_slot, uint32_t *channel);
-    int (*chan_write)(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, size_t len);
-    size_t (*chan_read)(uint8_t ssh_slot, uint32_t channel, uint8_t *out, size_t cap);
-    size_t (*chan_avail)(uint8_t ssh_slot, uint32_t channel);
-    proto_bool (*chan_drained)(uint8_t ssh_slot, uint32_t channel);
-    void (*chan_close)(uint8_t ssh_slot, uint32_t channel);
-    void (*chan_close_all)(uint8_t ssh_slot);
+    // exist exactly when TcpClient does.
+    void (*chan_open)(struct SshNetworkInternal *ctx);
+    void (*chan_adopt)(struct SshNetworkInternal *ctx);
+    void (*chan_by_cid)(struct SshNetworkInternal *ctx);
+    void (*chan_write)(struct SshNetworkInternal *ctx);
+    void (*chan_read)(struct SshNetworkInternal *ctx);
+    void (*chan_avail)(struct SshNetworkInternal *ctx);
+    void (*chan_drained)(struct SshNetworkInternal *ctx);
+    void (*chan_close)(struct SshNetworkInternal *ctx);
+    void (*chan_close_all)(struct SshNetworkInternal *ctx);
 #endif // PROTOCORE_NEED_CLIENT
+
+    struct SshNetworkInternal *internal;
 } SshNetworkNs;
 
 /** @brief The one instance, defined in network.c. */
-extern const SshNetworkNs SshNetwork;
+extern SshNetworkNs SshNetwork;
 
 /** @brief Put the server identification string on the wire, raw, before any binary packet. */
 void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot);

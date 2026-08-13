@@ -3,11 +3,11 @@
 //
 // On-device CCOUNT microbenchmark for the chunked send-pump framing (src/server/response.cpp
 // chunk_send_pump): the per-chunk "<hexlen>\r\n...\r\n" HTTP/1.1 transfer-coding framing. Compares the
-// old snprintf("%x\r\n") size line against the hand-rolled protocore_hex_u32 (shared_primitives/hex.h) that
+// old snprintf("%x\r\n") size line against the hand-rolled protocore_hex_u32 (shared/hex/hex.h) that
 // replaced it, to size the win on the ESP32 (where newlib snprintf is heavy). Pure - the ChunkSource
 // that fills the body is measured elsewhere. Build/flash: pio run -d performance_benching/server/send_pump -t upload
 #include "device_bench.h"
-#include "shared_primitives/hex.h"
+#include "shared/hex/hex.h"
 
 #include <stdio.h>
 

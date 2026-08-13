@@ -7,22 +7,34 @@
  */
 
 #include "device_id.h"
-#include "shared_primitives/hex.h"
+#include "shared/hex/hex.h"
 
 #if PROTOCORE_ENABLE_DEVICE_ID
 
 #include "crypto/hash/sha1.h"
 
-#if PROTOCORE_HAS_VENDOR_MAC
-#include <esp_mac.h> // esp_read_mac()
-#endif
 
 // RFC 4122 DNS namespace UUID (6ba7b810-9dad-11d1-80b4-00c04fd430c8).
 static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
                                    0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8};
 
-void protocore_uuid_from_mac(const uint8_t mac[6], char out[PROTOCORE_UUID_STR_LEN])
+/**
+ * @brief The identity's calls - what DeviceIdNs points at.
+ *
+ * @var DeviceIdInternal::ns  the handle a caller sets a call's members on
+ */
+struct DeviceIdInternal
 {
+    DeviceIdNs *ns;
+};
+
+static struct DeviceIdInternal s_devid = {.ns = &DeviceId};
+
+static void devid_from_mac(struct DeviceIdInternal *restrict ctx)
+{
+    const uint8_t *mac = ctx->ns->args.mac;
+    char *out = ctx->ns->args.out;
+
     // UUIDv5 name = lowercase MAC hex (12 chars, no separators).
     uint8_t input[16 + 12];
     for (int i = 0; i < 16; i++)
@@ -61,12 +73,19 @@ void protocore_uuid_from_mac(const uint8_t mac[6], char out[PROTOCORE_UUID_STR_L
 }
 
 #if PROTOCORE_HAS_VENDOR_MAC
-void protocore_device_uuid(char out[PROTOCORE_UUID_STR_LEN])
+static void devid_uuid(struct DeviceIdInternal *restrict ctx)
 {
     uint8_t mac[6] = {0};
-    esp_read_mac(mac, ESP_MAC_WIFI_STA); // stable factory MAC
-    protocore_uuid_from_mac(mac, out);
+    (void)protocore_platform_mac_read(mac); // the stable factory address; leaves zeros when it has none
+    ctx->ns->args.mac = mac;
+    devid_from_mac(ctx);
 }
 #endif
+
+DeviceIdNs DeviceId = {.from_mac = devid_from_mac,
+#if PROTOCORE_HAS_VENDOR_MAC
+                       .uuid = devid_uuid,
+#endif
+                       .internal = &s_devid};
 
 #endif // PROTOCORE_ENABLE_DEVICE_ID

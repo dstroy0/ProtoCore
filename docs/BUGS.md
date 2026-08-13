@@ -233,14 +233,14 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 
 - **Status:** FIXED 2026-08-10, validated by `native_ssh_forward` building and running 14/14.
 - **What broke:** `protocore_ssh_forward_begin` calls `Session.proto->add(PROTO_SSH_RFWD, &s_rfwd_handler)`
-  at `ssh_forward.c:466`. `Session` is declared in `network_drivers/session/session.h:46`, which the
+  at `ssh_forward.c:466`. `Session` is declared in `server/system/session.h:46`, which the
   file never included - it includes `session/proto_handler.h`, which declares `ProtoRegistryNs` but
   not the `Session` instance. Any build with `PROTOCORE_SSH_PORT_FORWARD=1` fails with
   `error: 'Session' undeclared (first use in this function); did you mean 'SshSession'?`.
 - **Why it was never caught:** no environment in `test_matrix.json` compiled the file. The whole of
   `ssh -L` and `ssh -R` was unbuilt, so the error sat in the tree rather than failing CI. Found by
   adding `native_ssh_forward`, the first env that builds it.
-- **Fix:** the missing `#include "network_drivers/session/session.h"`. The direction is acyclic -
+- **Fix:** the missing `#include "server/system/session.h"`. The direction is acyclic -
   `session.h` reaches only into `session/` and `transport/`, never back into `presentation/`.
 - **Reach:** compile-time only, and only when the feature is on. `PROTOCORE_SSH_PORT_FORWARD` defaults to 0
   (`protocore_config.h:6365`), so no shipped default configuration was affected.
@@ -1396,7 +1396,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 ## The bounded-run walks existed twice, on two owners
 
 - **Status:** FIXED (2026-08-08), found auditing ARCHITECTURE.md against the tree.
-- **Symptom:** none at runtime. `shared_primitives/runops.h` and `mmgr/protostr.c` each carried a
+- **Symptom:** none at runtime. `shared/runops.h` and `mmgr/protostr.c` each carried a
   full implementation of the same operations on top of `mmgr/swar.h` - the NUL scan, the first-
   difference index, the agreement walk behind eq/starts, the search behind find/has, and the bounded
   copy. Neither was built on the other. 44 call sites across 10 files took the header, and the rest
@@ -1472,8 +1472,8 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 - **Status:** OPEN, found 2026-08-08 auditing stdio use in `src/`.
 - **Symptom:** 27 files under `src/` include `<stdio.h>` (SRCBANNED ban 25, 31 ratcheted baseline
   entries whose text reads "nothing in src/ formats"). **19 of them reference no stdio symbol at
-  all** - among them `server/middleware.c:17`, `server/websocket_sse.c:25`, `server/logbuf.c`,
-  `server/power_mgmt.c`, `codec/json/json.c`, `ssh/transport/ssh_transport.c`. Eight more mention a
+  all** - among them `server/io/middleware.c:17`, `server/io/websocket_sse.c:25`, `server/system/logbuf.c`,
+  `server/system/power_mgmt.c`, `codec/json/json.c`, `ssh/transport/ssh_transport.c`. Eight more mention a
   stdio name only inside a comment.
 - **Root cause:** the include outlived the `snprintf` calls that were replaced by `protocore_sb`; nothing
   removes an include that nothing needs, and the baseline records the site rather than expiring it.
@@ -1795,12 +1795,12 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Symptom:** `native_scp` and `native_ssh_sftp` fail at link with `undefined reference to
 'proto_scan_nul'`, preceded by an implicit-declaration warning at `src/mmgr/protoframe.c:113`.
 - **Root cause:** `protocore_frame_append` calls `proto_scan_nul`, which is a `static inline` in
-  `shared_primitives/runops.h`, and `protoframe.c` includes only `mmgr/protoframe.h` and
-  `shared_primitives/speed_opt.h`. Under C99 rules the implicit declaration makes it an external
+  `shared/runops.h`, and `protoframe.c` includes only `mmgr/protoframe.h` and
+  `shared/speed_opt/speed_opt.h`. Under C99 rules the implicit declaration makes it an external
   call to a name no TU defines, so it survives compilation and dies at link. Every other env that
   builds `frame.c` also builds a TU that pulls `runops.h` in ahead of it, which is why only the two
   filesystem-application envs showed it.
-- **Fix:** `frame.c` includes `shared_primitives/runops.h`. (2026-08-08: that header is gone and the
+- **Fix:** `frame.c` includes `shared/runops.h`. (2026-08-08: that header is gone and the
   include is now `mmgr/protostr.h` - see the entry below.)
 
 ---
@@ -1952,7 +1952,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Symptom:** `src/` is C11 only on the paths a native env compiles. Everything behind
   `#if PROTOCORE_HOT` is still C++, and no native env compiles it, so 307 envs of compile sweep
   cannot see any of it. Found: `namespace fs { class FS; }` plus `fs::FS &` parameters in
-  `server/exc_decoder.h` / `server/exc_coredump.c`, `namespace fs` and `fs::FS *` / `fs::File &` in
+  `server/system/exc_decoder.h` / `server/system/exc_coredump.c`, `namespace fs` and `fs::FS *` / `fs::File &` in
   `core_setup/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace protocore_wal_fs_detail` over `fs::File`
   in `services/storage/wal/wal_fs.h`. A target build of any of them is a hard C error.
 - **Root cause:** the conversion was driven by the native suites, which are the only thing that

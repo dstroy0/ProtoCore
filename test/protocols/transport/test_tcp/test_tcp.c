@@ -17,9 +17,9 @@
 // green and every accepted connection on the target deaf. Here a segment is delivered THROUGH the
 // pcb the accept path wired, so the wiring is what carries the test.
 
-#include "network_drivers/transport/tcp.h"
-#include "network_drivers/transport/tcp/tcp_conn.h"
-#include "network_drivers/transport/tcp/tcp_listener.h"
+#include "network_drivers/transport/tcp/tcp.h"
+#include "network_drivers/transport/tcp/protocol/protocol.h"
+#include "network_drivers/transport/tcp/server/server.h"
 
 #include "protocore_net_host.h"
 

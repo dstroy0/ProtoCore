@@ -57,43 +57,85 @@ typedef struct
 // Host-testable core
 // ---------------------------------------------------------------------------
 
-/** @brief Short name for a direction ("in", "in_pullup", "in_pulldown", "out"). */
-const char *protocore_gpio_dir_name(protocore_gpio_dir dir);
+/** @brief The pin table a call walks, and the pin it names. */
+typedef struct
+{
+    const protocore_gpio_pin *pins; ///< the table a call reads
+    protocore_gpio_pin *pins_rw;    ///< the same table, where a sample writes levels back into it
+    uint8_t count;                  ///< how many pins it holds
+    uint8_t pin;                    ///< the pin a write or a lookup names
+    uint8_t level;                  ///< the level a write drives
+    protocore_gpio_dir dir;         ///< the direction a name lookup names
+    const char *path;               ///< the route the map is served on
+} GpioArgs;
+
+/** @brief The request body a set parses, and where its two fields land. */
+typedef struct
+{
+    const char *body;  ///< the submitted body
+    size_t len;        ///< its length
+    uint8_t *pin_out;  ///< where the parsed pin lands
+    uint8_t *level_out; ///< where the parsed level lands
+} GpioParseArgs;
+
+/** @brief Where a report is written. */
+typedef struct
+{
+    char *out;     ///< where the JSON lands
+    uint32_t cap;  ///< how much room it has
+} GpioOutArgs;
+
+/** @brief The map's own calls, described only in gpio_map.c. */
+struct GpioMapInternal;
 
 /**
- * @brief Serialize a pin array as JSON `{"pins":[...]}` into @p out.
- * @return characters written, or 0 if @p cap is too small (fail-closed).
+ * @brief The pin map and its HTTP surface.
+ *
+ * A caller sets the members a call takes, invokes it through ::GpioMap, and reads the outcome off
+ * the same handle. The pin table is the caller's.
+ *
+ * @var GpioMapNs::args        the pin table a call walks, and the pin it names
+ * @var GpioMapNs::parse_args  the request body a set parses, and where its fields land
+ * @var GpioMapNs::out_args    where a report is written
+ * @var GpioMapNs::ok          a call's true/false outcome
+ * @var GpioMapNs::text        the direction name a lookup reports
+ * @var GpioMapNs::n           bytes a report wrote, or < 0 when it did not fit
+ * @var GpioMapNs::dir_name    the wire name for a direction
+ * @var GpioMapNs::json        serialize the pin table
+ * @var GpioMapNs::parse_set   parse a set request into its pin and level
+ * @var GpioMapNs::is_output   whether the named pin is configured as an output
+ * @var GpioMapNs::begin_pins  drive every pin in the table to its configured direction
+ * @var GpioMapNs::sample      read every input pin's level back into the table
+ * @var GpioMapNs::write       drive one output pin
+ * @var GpioMapNs::begin       install the map's route and arm its pins
+ * @var GpioMapNs::internal    the calls that drive and report the pins
+ *
+ * No storage member: the pin table is the caller's and the pins themselves live in the part.
  */
-int32_t protocore_gpio_json(const protocore_gpio_pin *pins, uint8_t count, char *out, uint32_t cap);
+typedef struct
+{
+    GpioArgs args;
+    GpioParseArgs parse_args;
+    GpioOutArgs out_args;
 
-/**
- * @brief Parse a control body of the form `pin=<n>&level=<0|1>` (form-encoded).
- * @return true if both fields parsed into @p pin / @p level.
- */
-proto_bool protocore_gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level);
+    proto_bool ok;
+    const char *text;
+    int32_t n;
 
-/** @brief True if @p pin is a drivable output in the table (guards a control POST). */
-proto_bool protocore_gpio_is_output(const protocore_gpio_pin *pins, uint8_t count, uint8_t pin);
+    void (*dir_name)(struct GpioMapInternal *ctx);
+    void (*json)(struct GpioMapInternal *ctx);
+    void (*parse_set)(struct GpioMapInternal *ctx);
+    void (*is_output)(struct GpioMapInternal *ctx);
+    void (*begin_pins)(struct GpioMapInternal *ctx);
+    void (*sample)(struct GpioMapInternal *ctx);
+    void (*write)(struct GpioMapInternal *ctx);
+    void (*begin)(struct GpioMapInternal *ctx);
 
-// ---------------------------------------------------------------------------
-// Pin integration (no-ops with no pin seam)
-// ---------------------------------------------------------------------------
+    struct GpioMapInternal *internal;
+} GpioMapNs;
 
-/** @brief Set the mode of every entry per its direction (call once at setup). */
-void protocore_gpio_begin_pins(const protocore_gpio_pin *pins, uint8_t count);
-
-/** @brief Refresh each pin's live @c level from the seam. */
-void protocore_gpio_read(protocore_gpio_pin *pins, uint8_t count);
-
-/** @brief Drive an output @p pin to @p level. */
-void protocore_gpio_write(uint8_t pin, uint8_t level);
-
-/**
- * @brief Serve the GPIO map at @p path: GET returns the JSON, POST drives an
- *        output (body `pin=<n>&level=<0|1>`, only pins marked PROTOCORE_GPIO_DIR_OUT).
- *        The pin table is caller-owned and must outlive the server.
- */
-void protocore_gpio_map_begin(const char *path, protocore_gpio_pin *pins, uint8_t count);
+/** @brief The one symbol this module exports. */
+extern GpioMapNs GpioMap;
 
 #endif // PROTOCORE_ENABLE_GPIO_MAP
 

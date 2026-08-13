@@ -12,8 +12,8 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/tcp.h"
+#include "server/system/proto_handler.h"
+#include "network_drivers/transport/tcp/tcp.h"
 
 // One published mountpoint on a listener.
 typedef struct

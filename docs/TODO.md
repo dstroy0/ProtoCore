@@ -199,7 +199,7 @@ not close. Defects have a [BUGS.md](BUGS.md) entry; the rest are work.
 ### SRC_LAW rule 14: the ellipsis ban
 
 - [ ] **Five live variadic definitions.** `protocore_frame_build` / `protocore_frame_append` (`mmgr/frame.{c,h}`),
-      `protocore_log_frame` / `protocore_log_discard_args` (`shared_primitives/log.{c,h}`), `protocore_telnet_frame`
+      `protocore_log_frame` / `protocore_log_discard_args` (`shared/log.{c,h}`), `protocore_telnet_frame`
       (`telnet.c:305`). `protocore_web_terminal_frame` is gone. The frame engine's whole argument-passing
       shape rests on the ellipsis, so this decides whether the frame spec can exist in its current
       form - it is not a rename.
@@ -279,7 +279,7 @@ here means measured that day, not believed.
 borrows `PROTOCORE_PLAINTEXT_WORK_DIAG` at `protocore.c:757` - the truncated-constant corruption is clean (no single-character `#define` in
 `src/` or `core_setup/`) - `bytes.h`'s 32-bit bounds wrap is fixed and the header states the
 subtraction rule - `protocore_br_take_be` no longer carries CBOR's tag byte - `SendCtx` / `extern s_send`
-are gone - bare `inline` in `shared_primitives/` headers is gone (all `PROTOCORE_INLINE`) - `crypto_scratch.h`
+are gone - bare `inline` in `shared/` headers is gone (all `PROTOCORE_INLINE`) - `crypto_scratch.h`
 is gone - `enum class protocore_mnt_mode` is gone - `regen_digest_secret()` is gone - the unconditional
 `#include <Arduino.h>` is out of `protocore.h` and `fs::FS` is out of the public API (SFTP and SCP go
 through `protocore_fs_*`) - `test/dep_graph.json` is regenerated - `check_owned_context` passes clean -
@@ -388,7 +388,7 @@ layer built first, then the store codecs on top. Substrate before stores.
       no optimization was warranted), the full **data-store stack** (section 4), and the **chunked
       send-pump framing** (section 3: `performance_benching/server/send_pump`, host + ESP32-S3) - which surfaced a real
       win: `snprintf("%x")` on the per-chunk size line cost ~4.0 us/chunk on-device, replaced by a
-      hand-written `protocore_hex_u32` (`shared_primitives/hex.h`) for an **~18x** framing speedup (v7.173.0), and
+      hand-written `protocore_hex_u32` (`shared/hex/hex.h`) for an **~18x** framing speedup (v7.173.0), and
       the **SSH KEX handshake wall-clock** (`docs/FEATURE_PERFORMANCE.md` "SSH KEX handshake wall-clock":
       a guarded `PROTOCORE_SSH_KEX_BENCH` probe in `ssh_transport.c` + `performance_benching/ssh/ssh_kex_time.py` driving a live
       OpenSSH client, HW-measured on the S3) - **67.9 ms of device compute per `curve25519-sha256` KEX**
@@ -614,7 +614,7 @@ All opt-in (`PROTOCORE_ENABLE_*`, default off), host-tested where a pure codec e
 and HW-verified on an ESP32 DevKit. Per-feature footprints are in the README.
 
 - [x] **Architecture pass.** Pluggable per-protocol handler dispatch
-      (`network_drivers/session/proto_handler.h` - a `ProtoHandler` table, so a new
+      (`server/system/proto_handler.h` - a `ProtoHandler` table, so a new
       TCP protocol registers a handler instead of editing the dispatchers),
       flow-control primitives ([`Tcp.conn->send`](@ref Tcp.conn->send) returns bool,
       `protocore_conn_sndbuf`, context-safe `Tcp.conn->raw_send`), response header+body
@@ -740,7 +740,7 @@ Open follow-ups discovered during the above:
 - [x] **IPv6 dual-stack** - _phase 1 landed (v4.83.0); phase 2 landed (v4.89.0); HW-verified 2026-07-19._ `PROTOCORE_ENABLE_IPV6`
       enables IPv6 on the netif (`Physical.ip6->init` / `Physical.ip6->global_addr` / `Physical.ip6->ready`); the
       listeners already bind `IPADDR_TYPE_ANY`, so the server accepts v6 once an address is up. The
-      `protocore_ip` address core (`shared_primitives/ip.h`) parses / formats / classifies both
+      `protocore_ip` address core (`shared/ip/ip.h`) parses / formats / classifies both
       families (`native_ip`; RFC 4291 + 5952). Example IPv6; both cores compiled. **Phase 2
       (done):** the transport carries the peer as a protocol-agnostic family-tagged `protocore_ip`
       (`Tcp.conn->remote_addr()` / `NetAddr.to_ip()`), and every IP-keyed abuse-prevention feature

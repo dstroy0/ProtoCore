@@ -10,6 +10,6 @@
 //
 // The include below is a ROOT library header (src/protocore.h): arduino-cli's dependency finder only
 // indexes a library's top-level headers to identify it, so a sketch whose only library includes are
-// subdir paths (shared_primitives/...) never attaches the library. Pulling one root header in puts the
+// subdir paths (shared/...) never attaches the library. Pulling one root header in puts the
 // whole src/ tree on the include path for every file in this build - including the staged bench source.
 #include "protocore.h"

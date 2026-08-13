@@ -238,7 +238,7 @@ Grouped by the area each belongs to.
       an intermittent fault present as a working link, so a subsequent good frame must not revive it
       (asserted). Pure, explicit `now`, wrap-safe watchdog. Host-tested (`native_safety_scl`, 16 cases).
       Still open: the **CRC-signature helper**. The engine half of it now exists -
-      `shared_primitives/crc.h` (see **Maintenance**) is the parameterized width / poly / init /
+      `shared/crc/crc.h` (see **Maintenance**) is the parameterized width / poly / init /
       reflect / xorout engine this entry asked for, so "no engine to configure" is no longer the
       blocker. What remains is genuinely profile-specific: each profile defines not just its
       polynomial, width and seed but the **input ordering** - which fields, in which order, feed the
@@ -427,7 +427,7 @@ Each item has a working piece in the tree and an explicit _Remaining_ note.
   couples to a DP segment via a segment coupler in practice).
 - [~] **CANopen** (M, CiA 301) _(message codec shipped)_ - `PROTOCORE_ENABLE_CANOPEN`
   (`services/canopen`): a zero-heap CiA 301 message codec over the shared CAN frame
-  (`shared_primitives/can.h`) - NMT, SYNC, heartbeat, EMCY, PDO, and expedited SDO
+  (`shared/can/can.h`) - NMT, SYNC, heartbeat, EMCY, PDO, and expedited SDO
   read/write/abort plus the COB-ID classifier; host-tested (`native_canopen`, 17 cases).
   _Remaining:_ a first-class object dictionary + node-guarding, the DS401 generic-I/O device
   profile, and the ESP32 TWAI/CAN transport binding. Fixed BSS, no heap.
@@ -684,7 +684,7 @@ Built-in radio:
   shipped** (`PROTOCORE_ENABLE_RADIO_SNIFF`, `services/radio_sniff`): wraps each received 802.15.4 MAC frame
   in the Wireshark IEEE 802.15.4 TAP pseudo-header (per-frame RSSI + channel TLVs, an exact int->float32
   RSSI encode) and a pcap record (new `PROTOCORE_DLT_IEEE802_15_4_TAP` / `_NOFCS` link types in
-  `shared_primitives/pcap.h`), so a sniffed channel opens directly in Wireshark; pure + host-tested
+  `shared/pcap/pcap.h`), so a sniffed channel opens directly in Wireshark; pure + host-tested
   (`native_radio_sniff`). Remaining: put the CC1101 / LoRa / Thread drivers into receive-only and route
   their frames through this into the existing forwarding sink on hardware.
 - [~] \*EM / radar presence + motion (M) - mmWave radar (24 / 60 GHz: LD2410 / MR60BHA

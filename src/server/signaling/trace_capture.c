@@ -22,7 +22,11 @@
 #include "server/clock/clock.h" // protocore_cycles()
                                 // memset
 
-typedef struct
+/**
+ * @brief The capture's compile-time storage: the pre-roll ring, the assembled window, and the
+ *        cursors over both.
+ */
+struct TraceCaptureStorage
 {
     uint16_t pre_ring[PROTOCORE_TC_MAX_WINDOW_SAMPLES];
     uint16_t window[PROTOCORE_TC_MAX_WINDOW_SAMPLES];
@@ -31,124 +35,159 @@ typedef struct
     uint16_t pretrigger_samples;
     uint16_t posttrigger_samples;
     uint16_t pre_head;   // next pre_ring write index [0, pretrigger_samples)
-    uint16_t post_count; // post-trigger samples collected since trigger() [0, posttrigger_samples]
+    uint16_t post_count; // post-trigger samples collected since a trigger [0, posttrigger_samples]
     uint32_t trace_id;
     uint32_t trigger_cycles;
     protocore_tc_stats stats;
     proto_bool capturing;
     proto_bool configured;
-} TcCtx;
-static TcCtx s_tc;
+};
 
-static void ring_push(uint16_t sample)
+/**
+ * @brief The capture's state and the calls that reach it - what TraceCaptureNs points at.
+ *
+ * @var TraceCaptureInternal::store  the pre-roll ring, the window, and the cursors over both
+ * @var TraceCaptureInternal::ns     the handle a caller sets a call's members on
+ */
+struct TraceCaptureInternal
 {
-    if (s_tc.pretrigger_samples == 0)
+    struct TraceCaptureStorage *store;
+    TraceCaptureNs *ns;
+};
+
+static struct TraceCaptureStorage s_store;
+
+static struct TraceCaptureInternal s_tc = {.store = &s_store, .ns = &TraceCapture};
+
+static void ring_push(struct TraceCaptureInternal *restrict ctx, uint16_t sample)
+{
+    if (ctx->store->pretrigger_samples == 0)
     {
         return; // no pre-roll configured - nothing to keep
     }
-    s_tc.pre_ring[s_tc.pre_head] = sample;
-    s_tc.pre_head++;
-    if (s_tc.pre_head >= s_tc.pretrigger_samples)
+    ctx->store->pre_ring[ctx->store->pre_head] = sample;
+    ctx->store->pre_head++;
+    if (ctx->store->pre_head >= ctx->store->pretrigger_samples)
     {
-        s_tc.pre_head = 0;
+        ctx->store->pre_head = 0;
     }
 }
 
-proto_bool protocore_tc_begin(const protocore_tc_config *cfg)
+static void tc_begin(struct TraceCaptureInternal *restrict ctx)
 {
+    const protocore_tc_config *cfg = ctx->ns->cfg;
+
+    ctx->ns->ok = PROTO_FALSE;
     if (!cfg || !cfg->sink)
     {
-        return PROTO_FALSE;
+        return;
     }
     if (cfg->pretrigger_samples == 0 && cfg->posttrigger_samples == 0)
     {
-        return PROTO_FALSE;
+        return;
     }
     uint32_t total = (uint32_t)cfg->pretrigger_samples + (uint32_t)cfg->posttrigger_samples;
     if (total > PROTOCORE_TC_MAX_WINDOW_SAMPLES)
     {
-        return PROTO_FALSE;
+        return;
     }
 
-    mem.set(&s_tc, 0, sizeof(s_tc));
-    s_tc.sink = cfg->sink;
-    s_tc.ctx = cfg->ctx;
-    s_tc.pretrigger_samples = cfg->pretrigger_samples;
-    s_tc.posttrigger_samples = cfg->posttrigger_samples;
-    s_tc.configured = PROTO_TRUE;
-    return PROTO_TRUE;
+    mem.set(ctx->store, 0, sizeof(*ctx->store));
+    ctx->store->sink = cfg->sink;
+    ctx->store->ctx = cfg->ctx;
+    ctx->store->pretrigger_samples = cfg->pretrigger_samples;
+    ctx->store->posttrigger_samples = cfg->posttrigger_samples;
+    ctx->store->configured = PROTO_TRUE;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-uint16_t protocore_tc_feed(const uint16_t *samples, uint16_t n)
+static void tc_feed(struct TraceCaptureInternal *restrict ctx)
 {
-    if (!s_tc.configured || !samples)
+    const uint16_t *samples = ctx->ns->feed.samples;
+    const uint16_t n = ctx->ns->feed.n;
+
+    if (!ctx->store->configured || !samples)
     {
-        s_tc.stats.samples_dropped += n;
-        return 0;
+        ctx->store->stats.samples_dropped += n;
+        ctx->ns->accepted = 0;
+        return;
     }
     for (uint16_t i = 0; i < n; i++)
     {
         uint16_t s = samples[i];
-        ring_push(s);
-        if (s_tc.capturing && s_tc.post_count < s_tc.posttrigger_samples)
+        ring_push(ctx, s);
+        if (ctx->store->capturing && ctx->store->post_count < ctx->store->posttrigger_samples)
         {
-            s_tc.window[s_tc.pretrigger_samples + s_tc.post_count] = s;
-            s_tc.post_count++;
-            if (s_tc.post_count == s_tc.posttrigger_samples)
+            ctx->store->window[ctx->store->pretrigger_samples + ctx->store->post_count] = s;
+            ctx->store->post_count++;
+            if (ctx->store->post_count == ctx->store->posttrigger_samples)
             {
                 protocore_tc_window win;
-                win.samples = s_tc.window;
-                win.n_samples = (uint16_t)(s_tc.pretrigger_samples + s_tc.posttrigger_samples);
-                win.pretrigger_samples = s_tc.pretrigger_samples;
-                win.trace_id = s_tc.trace_id++;
-                win.assembly_cycles = protocore_cycles() - s_tc.trigger_cycles; // wrap-safe unsigned delta
-                s_tc.capturing = PROTO_FALSE;
-                s_tc.stats.windows_completed++;
-                s_tc.sink(&win, s_tc.ctx);
+                win.samples = ctx->store->window;
+                win.n_samples = (uint16_t)(ctx->store->pretrigger_samples + ctx->store->posttrigger_samples);
+                win.pretrigger_samples = ctx->store->pretrigger_samples;
+                win.trace_id = ctx->store->trace_id++;
+                Clock.cycles(Clock.internal);
+                win.assembly_cycles = Clock.cyc - ctx->store->trigger_cycles; // wrap-safe unsigned delta
+                ctx->store->capturing = PROTO_FALSE;
+                ctx->store->stats.windows_completed++;
+                ctx->store->sink(&win, ctx->store->ctx);
             }
         }
     }
-    return n;
+    ctx->ns->accepted = n;
 }
 
-proto_bool protocore_tc_trigger(void)
+static void tc_trigger(struct TraceCaptureInternal *restrict ctx)
 {
-    if (!s_tc.configured)
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->store->configured)
     {
-        return PROTO_FALSE;
+        return;
     }
-    if (s_tc.capturing)
+    if (ctx->store->capturing)
     {
-        s_tc.stats.triggers_dropped++;
-        return PROTO_FALSE;
+        ctx->store->stats.triggers_dropped++;
+        return;
     }
-    for (uint16_t i = 0; i < s_tc.pretrigger_samples; i++)
+    for (uint16_t i = 0; i < ctx->store->pretrigger_samples; i++)
     {
-        s_tc.window[i] = s_tc.pre_ring[(s_tc.pre_head + i) % s_tc.pretrigger_samples];
+        ctx->store->window[i] =
+            ctx->store->pre_ring[(ctx->store->pre_head + i) % ctx->store->pretrigger_samples];
     }
-    s_tc.post_count = 0;
-    s_tc.capturing = PROTO_TRUE;
-    s_tc.trigger_cycles = protocore_cycles();
-    return PROTO_TRUE;
+    ctx->store->post_count = 0;
+    ctx->store->capturing = PROTO_TRUE;
+    Clock.cycles(Clock.internal);
+    ctx->store->trigger_cycles = Clock.cyc;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-void protocore_tc_get_stats(protocore_tc_stats *out)
+static void tc_get_stats(struct TraceCaptureInternal *restrict ctx)
 {
-    if (out)
+    if (ctx->ns->feed.stats)
     {
-        *out = s_tc.stats;
+        *ctx->ns->feed.stats = ctx->store->stats;
     }
 }
 
-proto_bool protocore_tc_capturing(void)
+static void tc_capturing(struct TraceCaptureInternal *restrict ctx)
 {
-    return s_tc.configured && s_tc.capturing;
+    ctx->ns->ok = ctx->store->configured && ctx->store->capturing;
 }
 
-void protocore_tc_end(void)
+static void tc_end(struct TraceCaptureInternal *restrict ctx)
 {
-    s_tc.configured = PROTO_FALSE;
-    s_tc.capturing = PROTO_FALSE;
+    ctx->store->configured = PROTO_FALSE;
+    ctx->store->capturing = PROTO_FALSE;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+TraceCaptureNs TraceCapture = {.begin = tc_begin,
+                               .feed_in = tc_feed,
+                               .trigger = tc_trigger,
+                               .get_stats = tc_get_stats,
+                               .capturing = tc_capturing,
+                               .end = tc_end,
+                               .internal = &s_tc};
 
 #endif // PROTOCORE_ENABLE_TRACE_CAPTURE

@@ -8,7 +8,7 @@
 
 #include "services/security/oauth2/oauth2.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/hex.h"
+#include "shared/hex/hex.h"
 
 #if PROTOCORE_ENABLE_OAUTH2
 

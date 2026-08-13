@@ -15,11 +15,11 @@
 //   ACCEPT_THROTTLE_MAX 3 / PROTOCORE_WINDOW 1000   PER_IP_MAX 2 / PROTOCORE_WINDOW 1000 / SLOTS 4   ALLOWLIST_SLOTS 4
 // Pure host tests.
 
-#include "network_drivers/session/proto_handler.h"
-#include "network_drivers/session/session.h" // Session.proto->: the handler registry this drives
-#include "network_drivers/transport/tcp.h"
+#include "server/system/proto_handler.h"
+#include "server/system/session.h" // Session.proto->: the handler registry this drives
+#include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 #include <unity.h>
 
 // A fake tick source for the protocore_millis() override tests below.

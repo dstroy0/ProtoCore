@@ -6,7 +6,7 @@
 // reference/receive/transmit stamps, big-endian encoding, and the length guards.
 
 #include "network_drivers/application/ntp_server/ntp_server.h"
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "protocore_net_host.h"
 #include "services/timing_position/time_source/time_source.h"
 #include <stdint.h>

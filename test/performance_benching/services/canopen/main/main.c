@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the CANopen (CiA 301) message codec (services/fieldbus/canopen):
-// building NMT/heartbeat/EMCY/SDO frames onto shared_primitives/can.h's CanFrame, classifying a
+// building NMT/heartbeat/EMCY/SDO frames onto shared/can/can.h's CanFrame, classifying a
 // received frame's COB-ID back to its function + node, and decoding EMCY / expedited SDO server
 // responses - all pure (no TWAI/MCP2515 bus transaction, no heap). Worked example for
 // performance_benching/device/<service>/: a pure protocol codec with no hardware involved, so every call here

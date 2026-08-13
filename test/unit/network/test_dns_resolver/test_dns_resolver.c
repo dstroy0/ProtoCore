@@ -10,7 +10,7 @@
 // would otherwise hide behind a socket, and they are what these cases drive.
 
 #include "network_drivers/network/dns/dns_resolver.h"
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "protocore_net_host.h"
 #include <string.h>
 

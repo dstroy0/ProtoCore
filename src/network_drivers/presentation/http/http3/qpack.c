@@ -6,7 +6,7 @@
  * @brief QPACK (RFC 9204) - implementation. See qpack.h.
  *
  * The static table is generated verbatim from RFC 9204 Appendix A (0-indexed). The prefix-integer
- * and Huffman primitives are shared with HPACK via pc_hpack_prim.h. No dynamic table is maintained:
+ * and Huffman primitives are shared with HPACK via protocore_hpack_prim.h. No dynamic table is maintained:
  * we encode only against the static table and reject any dynamic-table reference on decode.
  */
 
@@ -120,7 +120,7 @@ static const char *const QPACK_STATIC[99][2] = {
     {"x-frame-options", "sameorigin"},
 };
 
-size_t pc_qpack_encode_prefix(uint8_t *out, size_t cap)
+size_t protocore_qpack_encode_prefix(uint8_t *out, size_t cap)
 {
     if (cap < 2)
     {
@@ -131,7 +131,7 @@ size_t pc_qpack_encode_prefix(uint8_t *out, size_t cap)
     return 2;
 }
 
-size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
+size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
                               size_t value_len)
 {
     int name_idx = -1, full_idx = -1;
@@ -206,7 +206,7 @@ size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
     return o + vs;
 }
 
-proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size_t scratch_cap, QpackEmitFn emit,
+proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratch, size_t scratch_cap, QpackEmitFn emit,
                            void *ctx)
 {
     size_t pos = 0;

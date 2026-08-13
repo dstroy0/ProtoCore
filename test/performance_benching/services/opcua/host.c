@@ -11,7 +11,7 @@
 //   src/services/fieldbus/opcua/opcua.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bo && /tmp/bo
 
 #define PROTOCORE_ENABLE_OPCUA 1
-#include "network_drivers/transport/tcp.h" // TcpConn / conn_pool type (for the stubs)
+#include "network_drivers/transport/tcp/tcp.h" // TcpConn / conn_pool type (for the stubs)
 #include "services/fieldbus/opcua/opcua.h"
 
 #include "host_bench.h"

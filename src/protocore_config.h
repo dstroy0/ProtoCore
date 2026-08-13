@@ -174,7 +174,7 @@ from halves and is slower than the width it decomposes into"
  * When set, the transport can stamp the 6-bit DSCP into the DS field (the high 6 bits of the IPv4 TOS /
  * IPv6 Traffic-Class byte) of every outbound TCP connection and UDP datagram, so a QoS-aware network - and
  * the Wi-Fi driver's 802.11e WMM access-category mapping - can prioritize safety / real-time packets (e.g.
- * the Expedited-Forwarding class, DSCP 46) over best-effort. `network_drivers/transport/diffserv.h` exposes a
+ * the Expedited-Forwarding class, DSCP 46) over best-effort. `network_drivers/transport/diffserv/diffserv.h` exposes a
  * server-wide default (`protocore_set_default_dscp`), a UDP default (`protocore_udp_set_dscp`), a per-listener override
  * (`protocore_listen_set_dscp`), and a per-connection setter (`protocore_conn_set_dscp`) so an individual flow can
  * carry any DSCP - useful both for real QoS and for arbitrarily tagging traffic in network testing. The DSCP is applied
@@ -896,7 +896,7 @@ from halves and is slower than the width it decomposes into"
  * When set, Physical.ip6->init() turns on IPv6 for the Wi-Fi netif (SLAAC link-local plus any
  * router-advertised global address). The TCP and UDP listeners already bind IPADDR_TYPE_ANY, so
  * the server accepts IPv6 connections the moment the interface has a v6 address; the protocore_ip core
- * (shared_primitives/ip.h) parses / formats / classifies both families. Requires an
+ * (shared/ip/ip.h) parses / formats / classifies both families. Requires an
  * lwIP built with LWIP_IPV6=1 (the stock Arduino-ESP32 core ships it).
  */
 #ifndef PROTOCORE_ENABLE_IPV6
@@ -1704,7 +1704,7 @@ from halves and is slower than the width it decomposes into"
  * @brief CANopen (CiA 301) message codec (`services/canopen`).
  *
  * Default off. A zero-heap builder + parser for the CANopen messaging set over classic CAN
- * frames (`shared_primitives/can.h`): NMT node control, SYNC, TIME, heartbeat / boot-up,
+ * frames (`shared/can/can.h`): NMT node control, SYNC, TIME, heartbeat / boot-up,
  * EMCY, PDO process data, and expedited SDO read / write / abort. The 11-bit COB-ID is a
  * 4-bit function code plus a 7-bit node id; builders compute it, parsers classify it back.
  * The object dictionary is the application's; SDO is expedited only (segmented / block not
@@ -1750,7 +1750,7 @@ from halves and is slower than the width it decomposes into"
  * @brief SAE J1939 message codec (`services/j1939`).
  *
  * Default off. A zero-heap codec for the heavy-duty-vehicle / agriculture / marine / genset
- * CAN higher-layer protocol over 29-bit extended frames (`shared_primitives/can.h`):
+ * CAN higher-layer protocol over 29-bit extended frames (`shared/can/can.h`):
  * `protocore_j1939_encode_id` / `protocore_j1939_decode_id` pack and unpack the priority / PGN / SA / DA
  * identifier (PDU1 peer + PDU2 broadcast), `protocore_j1939_build_message` emits single frames,
  * `protocore_j1939_build_request` / `protocore_j1939_build_address_claim` (+ `protocore_j1939_build_name`) handle the
@@ -4923,7 +4923,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Compile-time severity floor for the PROTOCORE_LOG* macros (shared_primitives/log.h).
+ * @brief Compile-time severity floor for the PROTOCORE_LOG* macros (shared/log/log.h).
  *
  * The values are ordered low -> high and match protocore_log_level's, so a level is usable both in the
  * preprocessor (which cannot see a constexpr) and as the runtime argument. PROTOCORE_NONE sits above ERROR

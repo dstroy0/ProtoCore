@@ -50,17 +50,14 @@ typedef enum PROTO_ENUM_PACKED
  * with a >= 20480-byte stack (see the example). begin() claims a private scratch arena for the calling
  * task, so poll() must run in that same task or the packet-decrypt tripwire fires.
  */
-proto_bool protocore_ssh_client_begin(const protocore_ssh_client_cfg *cfg);
 
 /**
  * @brief Pump the forward: advance the handshake, service the relay's keepalives, accept
  *        forwarded-tcpip channels and bridge their bytes to/from the local service. Call every loop,
  *        from the same (adequately-stacked) task that called begin() - see the begin() @warning.
  */
-void protocore_ssh_client_poll(void);
 
 /** @brief Tear the forward down and close the relay connection. */
-void protocore_ssh_client_end(void);
 
 /**
  * @brief The client engine's operations, for the layers that frame messages on its connection.
@@ -69,15 +66,38 @@ void protocore_ssh_client_end(void);
  * @var SshClientNs::crypto_work the client slot's handshake scratch, or null when the pool is short
  * @var SshClientNs::state       the forward's lifecycle phase
  */
+/** @brief The message bytes one send frames as a binary packet. */
 typedef struct
 {
-    proto_bool (*send)(const uint8_t *payload, size_t len);
-    uint8_t *(*crypto_work)(void);
-    protocore_ssh_client_state (*state)(void);
+    const uint8_t *payload; ///< the message bytes a send carries
+    size_t len;             ///< how many
+} SshClientMsgArgs;
+
+/** @brief The dialling role's own state and the calls that reach it, described only in client.c. */
+struct SshClientInternal;
+
+typedef struct
+{
+    const protocore_ssh_client_cfg *cfg; ///< what a begin dials with
+
+    SshClientMsgArgs msg; ///< the message bytes a send carries
+
+    proto_bool ok;                       ///< a call's true/false outcome
+    uint8_t *work;                       ///< the crypto scratch a lookup reports
+    protocore_ssh_client_state state_of; ///< the phase a lookup reports
+
+    void (*send)(struct SshClientInternal *ctx);
+    void (*crypto_work)(struct SshClientInternal *ctx);
+    void (*state)(struct SshClientInternal *ctx);
+    void (*begin)(struct SshClientInternal *ctx);
+    void (*poll)(struct SshClientInternal *ctx);
+    void (*end)(struct SshClientInternal *ctx);
+
+    struct SshClientInternal *internal;
 } SshClientNs;
 
 /** @brief The one instance, defined in client.c. */
-extern const SshClientNs SshClient;
+extern SshClientNs SshClient;
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT
 

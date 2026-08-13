@@ -36,7 +36,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "services/timing_position/gnss/gnss_survey.h"
 #include "services/timing_position/gnss/rtcm3.h"
 #include "services/timing_position/nmea0183/nmea0183.h"

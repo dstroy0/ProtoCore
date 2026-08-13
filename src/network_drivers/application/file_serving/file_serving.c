@@ -18,11 +18,11 @@
 #include "mmgr/membuild.h"                          // protocore_sb frame builder
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (shared with the edge cache)
 #include "network_drivers/presentation/http/route/http_route.h"
-#include "network_drivers/transport/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
+#include "network_drivers/transport/tcp/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
 #include "protocore.h"
 #include "server/filesystem/filesystem.h"  // protocore_fs_* - the accessor owns the root, the join, and the .. guard
-#include "shared_primitives/mime.h"        // mime_type, PROTOCORE_MIME_*
-#include "shared_primitives/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
+#include "shared/mime/mime.h"        // mime_type, PROTOCORE_MIME_*
+#include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
 #include <stdio.h>                         // snprintf, sscanf
                                            // strncasecmp, strchr, strstr, strncmp, strnlen
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)

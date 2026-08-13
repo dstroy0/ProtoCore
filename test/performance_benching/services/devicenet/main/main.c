@@ -8,7 +8,7 @@
 // so every call here exercises the real production code path. The physical CAN transaction (ESP32
 // TWAI peripheral or an MCP2515 over SPI) is explicitly out of scope - this rig has no CAN
 // transceiver attached, and protocore_devicenet_* never touches the bus itself, only the CanFrame struct
-// (shared_primitives/can.h) and its own reassembly buffer.
+// (shared/can/can.h) and its own reassembly buffer.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/devicenet -t upload --upload-port COM7

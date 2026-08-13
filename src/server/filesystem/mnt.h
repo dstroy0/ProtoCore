@@ -18,7 +18,7 @@
  *    PROTOCORE_MNT_RAM_FILE_SIZE bytes each, all in BSS - deterministic, bounded, and identical on host
  *    and target. It is what lets the SFTP/SCP/WebDAV servers run under a native test.
  *
- *  - **Arduino FS** (board layer): wraps a real `fs::FS` (LittleFS / SD / SPIFFS) for persistent
+ *  - **Board filesystem** (board layer): wraps the framework's own file object for persistent
  *    storage. It lives in core_setup/ because it speaks a vendor framework, which the core does
  *    not.
  *
@@ -122,57 +122,63 @@ typedef struct protocore_mnt_backend
 /** @brief The id a route carries when it serves no mount point. */
 #define PROTOCORE_MNT_NONE 0xFFu
 
-/**
- * @brief Record a mount point - a backend and the subtree it serves - and return the id naming it,
- *        or ::PROTOCORE_MNT_NONE when full.
- *
- * Both registrars that offer a mount describe one with this pair, so it lives with mounting rather
- * than being copied into each of their route entries. A null @p backend is legal and means whatever
- * is currently mounted.
- */
-uint8_t protocore_mnt_point_add(const protocore_mnt_backend *backend, const char *root);
+/** @brief The mount point a call names, and what registering one takes. */
+typedef struct
+{
+    const protocore_mnt_backend *backend; ///< the filesystem behind the point
+    const char *root;                     ///< the path prefix it answers for
+    uint8_t id;                           ///< the point a lookup names
+} MntArgs;
 
-/// @brief The backend @p id names, or nullptr - which also means "use whatever is mounted".
-const protocore_mnt_backend *protocore_mnt_point_backend(uint8_t id);
-
-/// @brief The subtree @p id names, as a request-path piece. Empty, never null.
-const char *protocore_mnt_point_root(uint8_t id);
+/** @brief The mount table's own state and the calls that reach it, described only in mnt.c. */
+struct MntInternal;
 
 /**
- * @brief Empty the mount-point table.
+ * @brief The mount table and the active filesystem.
  *
- * An id names a row by index and a route holds that id, so the table empties with the routes it is
- * indexed from: protocore_server_reset() calls both. A table that kept its rows across a reset would reach
- * ::PROTOCORE_MNT_NONE after MAX_ROUTES mounts and hand every later mount an id that serves nothing.
+ * A caller sets the members a call takes, invokes it through ::Mnt, and reads the outcome off the
+ * same handle. The table itself is behind @ref internal.
+ *
+ * @var MntNs::args        the mount point a call names, and what registering one takes
+ * @var MntNs::u8          the point an add took
+ * @var MntNs::backend     the filesystem a lookup reports, or NULL
+ * @var MntNs::text        the root a lookup reports, or NULL
+ * @var MntNs::point_add   register a mount point
+ * @var MntNs::point_of    the filesystem behind a point
+ * @var MntNs::root_of     the path prefix a point answers for
+ * @var MntNs::reset       clear every registered point
+ * @var MntNs::mount       make one filesystem the active one
+ * @var MntNs::active      the active filesystem
+ * @var MntNs::ram         the in-memory filesystem, always present
+ * @var MntNs::ram_format  empty the in-memory filesystem
+ * @var MntNs::internal    the mount table and the calls that reach it
  */
-void protocore_mnt_point_reset(void);
+typedef struct
+{
+    MntArgs args;
 
-void protocore_mnt_mount(const protocore_mnt_backend *backend);
+    uint8_t u8;
+    const protocore_mnt_backend *backend;
+    const char *text;
 
-/**
- * @brief The mounted backend, or NULL if nothing is mounted.
- *
- * A hotswap: storage can come and go under a running server, so this answers the live question
- * rather than reporting whether a pointer was ever set. Every seam entry point fails closed, so a
- * cold mount degrades instead of faulting.
- *
- * Naming a store is not this file's job. mnt offers storage to connect; the mapping from a name to
- * a root belongs to the seam that resolves paths, which is the only thing that knows what a root
- * means.
- */
-const protocore_mnt_backend *protocore_mnt_active(void);
-
-// The RAM backend is the only part with a footprint (PROTOCORE_MNT_RAM_FILES x PROTOCORE_MNT_RAM_FILE_SIZE of
-// BSS), so it is the only part the flag gates.
+    void (*point_add)(struct MntInternal *ctx);
+    void (*point_of)(struct MntInternal *ctx);
+    void (*root_of)(struct MntInternal *ctx);
+    void (*reset)(struct MntInternal *ctx);
+    void (*mount)(struct MntInternal *ctx);
+    void (*active)(struct MntInternal *ctx);
+    // The RAM backend is the only part with a footprint (PROTOCORE_MNT_RAM_FILES x
+    // PROTOCORE_MNT_RAM_FILE_SIZE of BSS), so it is the only part the flag gates.
 #if PROTOCORE_ENABLE_MNT
+    void (*ram)(struct MntInternal *ctx);
+    void (*ram_format)(struct MntInternal *ctx);
+#endif
 
-/** @brief The built-in deterministic RAM backend (fixed BSS pool, no heap). */
-const protocore_mnt_backend *protocore_mnt_ram(void);
+    struct MntInternal *internal;
+} MntNs;
 
-/** @brief Clear the RAM backend (all files, directories, and open handles). */
-void protocore_mnt_ram_format(void);
-
-#endif // PROTOCORE_ENABLE_MNT
+/** @brief The one symbol this module exports. */
+extern MntNs Mnt;
 
 PROTOCORE_END_DECLS
 

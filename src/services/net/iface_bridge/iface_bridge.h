@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
-#include "shared_primitives/ip.h" // protocore_ip (carry the full bind address, never a flattened one)
+#include "shared/ip/ip.h" // protocore_ip (carry the full bind address, never a flattened one)
 
 // PROTOCORE_BRIDGE_MAX_RULES is defined in protocore_config.h (the config owner).
 

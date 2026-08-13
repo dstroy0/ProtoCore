@@ -7,7 +7,7 @@
 // own label reader, so nothing under test is its own oracle.
 
 #include "network_drivers/application/mdns_service/mdns_service.h"
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "protocore_net_host.h"
 #include <string.h>
 

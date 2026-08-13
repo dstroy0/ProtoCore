@@ -9,7 +9,7 @@
 // default sizing (THRESHOLD=5, BASE=1000 ms, MAX=300000 ms) from protocore_config.h.
 
 #include "services/security/auth_lockout/auth_lockout.h"
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 #include <unity.h>
 
 // Build a v4 protocore_ip from a host-order word (0x0A000001 -> 10.0.0.1).

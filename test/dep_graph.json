@@ -12248,10 +12248,10 @@
 "src/network_drivers/presentation/telnet/telnet.h": [
 "native_telnet"
 ],
-"src/network_drivers/session/preempt_queue.c": [
+"src/server/system/preempt_queue.c": [
 "native_preempt_queue"
 ],
-"src/network_drivers/session/preempt_queue.h": [
+"src/server/system/preempt_queue.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -12278,7 +12278,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/network_drivers/session/proto_handler.h": [
+"src/server/system/proto_handler.h": [
 "native_accept_gate",
 "native_application",
 "native_auth",
@@ -12332,7 +12332,7 @@
 "native_websocket",
 "native_ws_deflate"
 ],
-"src/network_drivers/session/session.c": [
+"src/server/system/session.c": [
 "native_accept_gate",
 "native_application",
 "native_auth",
@@ -12372,7 +12372,7 @@
 "native_websocket",
 "native_ws_deflate"
 ],
-"src/network_drivers/session/session.h": [
+"src/server/system/session.h": [
 "native_accept_gate",
 "native_application",
 "native_auth",
@@ -12412,7 +12412,7 @@
 "native_websocket",
 "native_ws_deflate"
 ],
-"src/network_drivers/session/worker.c": [
+"src/server/system/worker.c": [
 "native_accept_gate",
 "native_application",
 "native_auth",
@@ -12502,7 +12502,7 @@
 "native_workers_stack",
 "native_ws_deflate"
 ],
-"src/network_drivers/session/worker.h": [
+"src/server/system/worker.h": [
 "native_accept_gate",
 "native_application",
 "native_auth",
@@ -14303,10 +14303,10 @@
 "native_ws_client",
 "native_ws_deflate"
 ],
-"src/server/exc_decoder.c": [
+"src/server/system/exc_decoder.c": [
 "native_exc_decoder"
 ],
-"src/server/exc_decoder.h": [
+"src/server/system/exc_decoder.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -14333,10 +14333,10 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/failsafe.c": [
+"src/server/system/failsafe.c": [
 "native_failsafe"
 ],
-"src/server/failsafe.h": [
+"src/server/system/failsafe.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -14518,11 +14518,11 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/logbuf.c": [
+"src/server/system/logbuf.c": [
 "native_log",
 "native_logbuf"
 ],
-"src/server/logbuf.h": [
+"src/server/system/logbuf.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -14550,7 +14550,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/middleware.c": [
+"src/server/io/middleware.c": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -14576,10 +14576,10 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/power_mgmt.c": [
+"src/server/system/power_mgmt.c": [
 "native_power_mgmt"
 ],
-"src/server/power_mgmt.h": [
+"src/server/system/power_mgmt.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -14672,7 +14672,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/response.c": [
+"src/server/io/response.c": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -14932,10 +14932,10 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/sleep_sched.c": [
+"src/server/system/sleep_sched.c": [
 "native_sleep_sched"
 ],
-"src/server/sleep_sched.h": [
+"src/server/system/sleep_sched.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -15018,7 +15018,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/webdav_handler.c": [
+"src/server/io/webdav_handler.c": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -15044,7 +15044,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/webdav_handler.h": [
+"src/server/io/webdav_handler.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -15070,7 +15070,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/server/websocket_sse.c": [
+"src/server/io/websocket_sse.c": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -20961,7 +20961,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/shared_primitives/can.h": [
+"src/shared/can/can.h": [
 "native_bus_capture",
 "native_canopen",
 "native_cia402",
@@ -20969,7 +20969,7 @@
 "native_j1939",
 "native_nmea2000"
 ],
-"src/shared_primitives/crc.h": [
+"src/shared/crc/crc.h": [
 "native_bus_wire",
 "native_c37118",
 "native_df1",
@@ -20990,7 +20990,7 @@
 "native_thread",
 "native_zigbee"
 ],
-"src/shared_primitives/hex.h": [
+"src/shared/hex/hex.h": [
 "native_accept_gate",
 "native_application",
 "native_atc",
@@ -21119,7 +21119,7 @@
 "native_ws_client",
 "native_ws_deflate"
 ],
-"src/shared_primitives/http_date.h": [
+"src/shared/http_date/http_date.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -21147,7 +21147,7 @@
 "native_time_source",
 "native_web_terminal"
 ],
-"src/shared_primitives/ip.c": [
+"src/shared/ip/ip.c": [
 "native_accept_gate",
 "native_application",
 "native_auth",
@@ -21229,7 +21229,7 @@
 "native_workers_stack",
 "native_ws_deflate"
 ],
-"src/shared_primitives/ip.h": [
+"src/shared/ip/ip.h": [
 "native_accept_gate",
 "native_application",
 "native_auth",
@@ -21317,10 +21317,10 @@
 "native_workers_stack",
 "native_ws_deflate"
 ],
-"src/shared_primitives/log.c": [
+"src/shared/log/log.c": [
 "native_log"
 ],
-"src/shared_primitives/log.h": [
+"src/shared/log/log.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -21348,7 +21348,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/shared_primitives/mime.h": [
+"src/shared/mime/mime.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -21380,7 +21380,7 @@
 "native_webdav_handler",
 "native_webhook"
 ],
-"src/shared_primitives/pcap.h": [
+"src/shared/pcap/pcap.h": [
 "native_application",
 "native_auth",
 "native_bus_capture",
@@ -21409,7 +21409,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/shared_primitives/speed_opt.h": [
+"src/shared/speed_opt/speed_opt.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -21452,7 +21452,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/shared_primitives/time_compat.h": [
+"src/shared/time_compat/time_compat.h": [
 "native_application",
 "native_auth",
 "native_chunked",
@@ -21486,7 +21486,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/shared_primitives/protocore_types.h": [
+"src/shared/protocore_types.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",
@@ -21824,7 +21824,7 @@
 "native_zigbee",
 "native_zwave"
 ],
-"src/shared_primitives/utf8.h": [
+"src/shared/utf8/utf8.h": [
 "native_accept_gate",
 "native_application",
 "native_auth",

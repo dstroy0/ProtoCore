@@ -16,7 +16,7 @@
  * IKE_SA_INIT with an INVALID_KE_PAYLOAD / COOKIE notify, which the on_ike_reply() callback parses.
  *
  * The UDP socket is the library's own transport (services bind + exchange datagrams through
- * network_drivers/transport/udp.h - no outside UDP library): Udp.listener->listen() binds port 500 to receive
+ * network_drivers/transport/udp/udp.h - no outside UDP library): Udp.listener->listen() binds port 500 to receive
  * the responder's reply, and Udp.listener->sendto() sends the request FROM port 500 so the reply
  * (addressed back to :500) is delivered to our listener.
  *
@@ -27,7 +27,7 @@
 
 #include "protocore.h" // library entry header (pulls in Arduino + sets the src/ include root)
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "services/security/ikev2/ikev2.h"
 
 static const char *SSID = "YOUR_SSID";

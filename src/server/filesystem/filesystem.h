@@ -22,7 +22,7 @@
  * nullptr when it cannot - there is no out/capacity pair to get wrong.
  *
  * The `..` guard is a rejection, not realpath/symlink resolution: the on-flash filesystems
- * (FAT / LittleFS) have no symlinks, so a `..`-free joined path cannot leave the root.
+ * (the small embedded ones) have no symlinks, so a `..`-free joined path cannot leave the root.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -174,108 +174,120 @@ PROTOCORE_INLINE int protocore_fs_resolve(const char *root, const char *dir, con
 #define PROTOCORE_FS_TRAVERSAL (1u << 2)         ///< the request path contained `..` and was refused.
 #define PROTOCORE_FS_TOO_LONG (1u << 3)          ///< the resolved path did not fit.
 
-/** @brief The accumulated reasons operations have failed since the last clear. */
-uint32_t protocore_fs_status(void);
+/** @brief The file one call names: which mount, which directory, which entry. */
+typedef struct
+{
+    int root;         ///< the mount point the path is resolved against
+    const char *dir;  ///< the directory within it
+    const char *name; ///< the entry within that
+} FsPathArgs;
 
-/** @brief Clear the mask. Call before a sequence whose outcome you intend to test as a whole. */
-void protocore_fs_clear_status(void);
+/** @brief The second path a rename or a copy needs. */
+typedef struct
+{
+    const char *dir;  ///< the destination directory
+    const char *name; ///< the destination entry
+} FsDestArgs;
 
-/** @brief True while no store is mounted - the local-only configuration, stated rather than inferred
- *         from a call that returned false. */
-proto_bool protocore_fs_storage_present(void);
+/** @brief The open file a call acts on, and the bytes it moves. */
+typedef struct
+{
+    int handle;               ///< the open file or directory a call acts on
+    protocore_mnt_mode mode;  ///< how an open asks for it
+    void *buf;                ///< where a read lands, or what a write sends
+    const void *wbuf;         ///< the bytes a write sends, when they are const
+    size_t n;                 ///< how many
+    uint64_t off;             ///< where a seek moves to
+    char *name_out;           ///< where a directory read writes the entry name
+    size_t name_cap;          ///< how much room that has
+    protocore_mnt_stat *stat; ///< where a stat or a directory read lands its entry
+} FsIoArgs;
+
+/** @brief The filesystem's own state and the calls that reach it, described only in filesystem.c. */
+struct FilesystemInternal;
 
 /**
- * @brief Bind a root and get the handle a service works through (e.g. "mnt/scp", "mnt/sftp").
+ * @brief The path-safe filesystem surface over a mount.
  *
- * A service calls this once in its own begin() and keeps what comes back. That is what lets two of
- * them be live at the same time over different storage - SCP landing on a card while SFTP serves a
- * RAM pool - or over the same storage, which is the application's arrangement and not something
- * either service can tell.
+ * A caller sets the members a call takes, invokes it through ::Fs, and reads the outcome off the
+ * same handle. Every path is joined and bounds-checked here before it reaches a backend.
  *
- * The name maps to a root here, because this seam is the only thing that knows what a root means. A
- * root knows its own extent, so nothing downstream carries a capacity beside a pointer.
+ * @var FilesystemNs::path      the file one call names
+ * @var FilesystemNs::dest      the second path a rename or a copy needs
+ * @var FilesystemNs::io        the open file a call acts on, and the bytes it moves
+ * @var FilesystemNs::mount     the mount a begin opens, by name
+ * @var FilesystemNs::ok        a call's true/false outcome
+ * @var FilesystemNs::i32       a handle, a byte count, or < 0 on failure
+ * @var FilesystemNs::len       a file length a size or a whole-file read reports
+ * @var FilesystemNs::bits      the sticky fault bits
+ * @var FilesystemNs::text      the joined path a resolve reports, or NULL when it would escape
+ * @var FilesystemNs::status    the sticky fault bits since the last clear
+ * @var FilesystemNs::clear     drop them
+ * @var FilesystemNs::present   storage is mounted and answering
+ * @var FilesystemNs::begin     open the named mount
+ * @var FilesystemNs::resolve   join and bounds-check a path without touching storage
+ * @var FilesystemNs::open      open a file
+ * @var FilesystemNs::read      read from an open file
+ * @var FilesystemNs::write     write to an open file
+ * @var FilesystemNs::close     close an open file or directory
+ * @var FilesystemNs::seek      move an open file's cursor
+ * @var FilesystemNs::size      a file's length
+ * @var FilesystemNs::exists    a file is there
+ * @var FilesystemNs::stat      a file's metadata
+ * @var FilesystemNs::remove    delete a file
+ * @var FilesystemNs::rename    move one
+ * @var FilesystemNs::copy      duplicate one
+ * @var FilesystemNs::mkdir     create a directory
+ * @var FilesystemNs::rmdir     remove one
+ * @var FilesystemNs::opendir   open a directory for listing
+ * @var FilesystemNs::readdir   take the next entry from it
+ * @var FilesystemNs::read_file  read a whole file into one buffer
+ * @var FilesystemNs::write_file write one buffer as a whole file
+ * @var FilesystemNs::internal  the mount state and the calls that reach it
  *
- * A NULL or empty @p name binds "/". Re-binding a name already bound returns the same handle rather
- * than a second root over the same bytes.
- *
- * @return a root handle (>= 0), or -1 if the root table is full.
+ * The joined path is `..`-free by construction, and the small embedded filesystems have no
+ * symlinks, so a resolved path cannot leave its root.
  */
-int protocore_fs_begin(const char *name);
+typedef struct
+{
+    FsPathArgs path;
+    FsDestArgs dest;
+    FsIoArgs io;
+    const char *mount;
 
-/**
- * @brief The resolved on-disk path for request @p dir + leaf @p name.
- *
- * @return a pointer to this file's path storage, valid until the next protocore_fs_* call, or nullptr if
- *         the request attempts traversal or does not fit. The buffer is not the caller's: copy it
- *         if it must outlive the next call.
- */
-const char *protocore_fs_path(int root, const char *dir, const char *name);
+    proto_bool ok;
+    int i32;
+    long len;
+    uint32_t bits;
+    const char *text;
 
-// --- operations ------------------------------------------------------------------------------
-// A path-taking call carries the @p root it resolves against plus the REQUEST path as its two
-// pieces - a @p dir and a leaf @p name, "" when the dir is the whole path - and they are framed
-// onto that root here, once. A caller that joined them itself would build the same bytes twice.
-//
-// A handle-taking call carries no root and no path: the handle came from a root, so naming it
-// again would be asking the caller to keep two things in agreement that cannot disagree.
+    void (*status)(struct FilesystemInternal *ctx);
+    void (*clear)(struct FilesystemInternal *ctx);
+    void (*present)(struct FilesystemInternal *ctx);
+    void (*begin)(struct FilesystemInternal *ctx);
+    void (*resolve)(struct FilesystemInternal *ctx);
+    void (*open)(struct FilesystemInternal *ctx);
+    void (*read)(struct FilesystemInternal *ctx);
+    void (*write)(struct FilesystemInternal *ctx);
+    void (*close)(struct FilesystemInternal *ctx);
+    void (*seek)(struct FilesystemInternal *ctx);
+    void (*size)(struct FilesystemInternal *ctx);
+    void (*exists)(struct FilesystemInternal *ctx);
+    void (*stat)(struct FilesystemInternal *ctx);
+    void (*remove)(struct FilesystemInternal *ctx);
+    void (*rename)(struct FilesystemInternal *ctx);
+    void (*copy)(struct FilesystemInternal *ctx);
+    void (*mkdir)(struct FilesystemInternal *ctx);
+    void (*rmdir)(struct FilesystemInternal *ctx);
+    void (*opendir)(struct FilesystemInternal *ctx);
+    void (*readdir)(struct FilesystemInternal *ctx);
+    void (*read_file)(struct FilesystemInternal *ctx);
+    void (*write_file)(struct FilesystemInternal *ctx);
 
-/** @brief Open request path @p dir + @p name under @p root. @return a handle (>= 0), or -1. */
-int protocore_fs_open(int root, const char *dir, const char *name, protocore_mnt_mode mode);
-/** @brief Read up to @p n bytes from @p handle into @p buf. @return bytes read, or -1. */
-int protocore_fs_read(int handle, void *buf, size_t n);
-/** @brief Write @p n bytes from @p buf to @p handle. @return bytes written, or -1. */
-int protocore_fs_write(int handle, const void *buf, size_t n);
-/** @brief Close an open file or directory @p handle. */
-void protocore_fs_close(int handle);
-/** @brief Seek @p handle to absolute offset @p off. @return true on success. */
-proto_bool protocore_fs_seek(int handle, uint64_t off);
-/** @brief Size of the file at @p dir + @p name. @return the size in bytes, or -1 if absent. */
-long protocore_fs_size(int root, const char *dir, const char *name);
-/** @brief @return true if @p dir + @p name exists. */
-proto_bool protocore_fs_exists(int root, const char *dir, const char *name);
-/** @brief Fill @p out with the facts about @p dir + @p name. @return false if absent. */
-proto_bool protocore_fs_stat(int root, const char *dir, const char *name, protocore_mnt_stat *out);
-/**
- * @brief Delete @p dir + @p name: a file, or a directory and everything under it.
- *
- * The subtree is this file's operation, not the mount's and not a protocol server's. mnt is blind -
- * it does not know what a path means, so it cannot know what a subtree is - and a protocol server
- * that assembled one out of opendir/readdir/remove would need a level stack, a depth bound, a path
- * buffer per level, and a rule for not invalidating the cursor it is standing on. WebDAV, SFTP and
- * SCP would each need their own. There is one here.
- *
- * @return true when the whole tree is gone; false if any part of it could not be removed.
- */
-proto_bool protocore_fs_remove(int root, const char *dir, const char *name);
-/** @brief Rename @p from_dir + @p from_name to @p to_dir + @p to_name. @return true on success. */
-proto_bool protocore_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir,
-                               const char *to_name);
-/**
- * @brief Copy @p from_dir + @p from_name onto @p to_dir + @p to_name: a file, or a whole tree.
- *
- * The destination is replaced if it exists. @return true when the whole tree arrived.
- */
-proto_bool protocore_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir,
-                             const char *to_name);
-/** @brief Create a directory at @p dir + @p name. @return true on success. */
-proto_bool protocore_fs_mkdir(int root, const char *dir, const char *name);
-/** @brief Remove the empty directory at @p dir + @p name. @return true on success. */
-proto_bool protocore_fs_rmdir(int root, const char *dir, const char *name);
-/** @brief Open @p dir + @p name as a directory. @return a handle (>= 0), or -1. */
-int protocore_fs_opendir(int root, const char *dir, const char *name);
-/**
- * @brief Next entry of directory @p handle: facts into @p out, the entry's own name into @p name.
- * @return false at the end of the directory. @p name_cap is the caller's, derived from what that
- *         caller's own frame must hold - this file imposes no name length.
- */
-proto_bool protocore_fs_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap);
+    struct FilesystemInternal *internal;
+} FilesystemNs;
 
-/** @brief Read the whole file at @p dir + @p name into @p buf.
- *  @return bytes read (0..cap), or -1 if absent / would exceed @p cap. */
-long protocore_fs_read_file(int root, const char *dir, const char *name, void *buf, size_t cap);
-/** @brief Create/truncate @p dir + @p name and write @p n bytes. @return true on success. */
-proto_bool protocore_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n);
-
-PROTOCORE_END_DECLS
+/** @brief The one symbol this module exports. */
+extern FilesystemNs Fs;
 
 #endif // PROTOCORE_FILESYSTEM_H

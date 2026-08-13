@@ -13,7 +13,7 @@
  *
  * The Packet Error Code is a CRC-8 over every byte of the transaction, the address bytes and
  * their R/W bits included. It is the catalogue's CRC-8/SMBUS, so it comes from the shared engine
- * (::PROTOCORE_CRC8_SMBUS in shared_primitives/crc.h) rather than a loop written here. Turn it on with
+ * (::PROTOCORE_CRC8_SMBUS in shared/crc/crc.h) rather than a loop written here. Turn it on with
  * ::protocore_smbus_set_pec; a part that does not implement PEC NACKs the extra byte.
  *
  * The PEC computation is pure and host-tested. The transfers are I2C, so a build with no bus seam

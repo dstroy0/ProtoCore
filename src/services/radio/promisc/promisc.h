@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_PROMISC
 
-#include "shared_primitives/pcap.h" // protocore_pcap_* framing + PROTOCORE_DLT_IEEE802_11
+#include "shared/pcap/pcap.h" // protocore_pcap_* framing + PROTOCORE_DLT_IEEE802_11
 
 /** @brief 802.11 frame type (frame-control bits 2-3). */
 typedef enum PROTO_ENUM_PACKED
@@ -65,7 +65,7 @@ typedef struct
  */
 proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *out);
 
-// libpcap framing lives in shared_primitives/pcap.h: protocore_pcap_global_header() with
+// libpcap framing lives in shared/pcap/pcap.h: protocore_pcap_global_header() with
 // PROTOCORE_DLT_IEEE802_11 + protocore_pcap_record_header() wrap a captured 802.11 frame as a valid PCAP.
 
 /**

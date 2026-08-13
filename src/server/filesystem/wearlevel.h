@@ -25,28 +25,55 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WEARLEVEL
 
-/**
- * @brief Pick the least-worn slot to write next.
- * @param counts per-slot write/erase counts (length @p n); the app persists these across boots.
- * @param n      number of slots.
- * @return the index of the slot with the lowest count (ties resolve to the lowest index), or 0 if
- *         @p counts is null or @p n is 0.
- *
- * Round-robins naturally: after writing to the chosen slot the app bumps its count (protocore_wearlevel_mark),
- * so the next pick moves on, and the region wears uniformly.
- */
-size_t protocore_wearlevel_pick(const uint32_t *counts, size_t n);
+/** @brief The slot table a call reads, and the slot it names. */
+typedef struct
+{
+    const uint32_t *counts; ///< per-slot write/erase counts; the app persists these across boots
+    uint32_t *counts_rw;    ///< the same table, where a mark writes to it
+    size_t n;               ///< number of slots
+    size_t idx;             ///< the slot a mark records a write to
+} WearArgs;
 
-/** @brief Record a write to slot @p idx (saturating increment, so a count never wraps to 0). */
-void protocore_wearlevel_mark(uint32_t *counts, size_t n, size_t idx);
+/** @brief The wear policy's own calls, described only in wearlevel.c. */
+struct WearlevelInternal;
 
 /**
- * @brief Wear imbalance = max count - min count across the slots (0 = perfectly level).
+ * @brief The wear-levelling policy over a caller-owned count table.
  *
- * A monotone health metric for a /health-style endpoint: it stays small under `pick`+`mark` and grows
- * if the app writes off-policy.
+ * A caller sets the members a call takes, invokes it through ::Wearlevel, and reads the outcome off
+ * the same handle. The table is the caller's; nothing is held here.
+ *
+ * @var WearlevelNs::args      the slot table a call reads, and the slot it names
+ * @var WearlevelNs::n_out     the slot a pick chose
+ * @var WearlevelNs::spread    the imbalance a spread reports
+ * @var WearlevelNs::pick      the least-worn slot to write next
+ * @var WearlevelNs::mark      record a write to args.idx (saturating, so a count never wraps to 0)
+ * @var WearlevelNs::imbalance max count - min count across the slots (0 = perfectly level)
+ * @var WearlevelNs::internal  the calls that read and bump the table
+ *
+ * pick round-robins naturally: after writing to the chosen slot the app bumps its count with mark,
+ * so the next pick moves on and the region wears uniformly. Ties resolve to the lowest index, and a
+ * null table or zero length picks 0. imbalance is a monotone health metric for a /health-style
+ * endpoint: it stays small under pick+mark and grows if the app writes off-policy.
+ *
+ * No storage member: every call works in the caller's table.
  */
-uint32_t protocore_wearlevel_spread(const uint32_t *counts, size_t n);
+typedef struct
+{
+    WearArgs args;
+
+    size_t n_out;
+    uint32_t spread;
+
+    void (*pick)(struct WearlevelInternal *ctx);
+    void (*mark)(struct WearlevelInternal *ctx);
+    void (*imbalance)(struct WearlevelInternal *ctx);
+
+    struct WearlevelInternal *internal;
+} WearlevelNs;
+
+/** @brief The one symbol this module exports. */
+extern WearlevelNs Wearlevel;
 
 #endif // PROTOCORE_ENABLE_WEARLEVEL
 

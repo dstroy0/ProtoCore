@@ -25,7 +25,7 @@
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "services/instrumentation/hislip/hislip.h"
 
 static const char *SSID = "YOUR_SSID";

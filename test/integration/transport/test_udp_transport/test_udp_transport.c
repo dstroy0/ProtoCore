@@ -7,7 +7,7 @@
 // datagram arrives through the recv callback the listener armed and a send is read out of the
 // driver's datagram log.
 
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include <string.h>
 
 #include <unity.h>

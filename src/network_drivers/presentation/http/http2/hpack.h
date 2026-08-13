@@ -57,25 +57,25 @@ typedef struct
 typedef proto_bool (*HpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
 
 /** @brief Initialize a dynamic table to empty, max size @p max_bytes (0 = PROTOCORE_HPACK_TABLE_BYTES). */
-void pc_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes);
+void protocore_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes);
 
 /**
  * @brief Decode an HPACK header block, emitting each (name, value) via @p emit.
  * @param scratch     caller buffer that holds one header's name+value during each emit call.
  * @return true if the whole block decoded cleanly; false on any malformed input or overflow.
  */
-proto_bool pc_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
-                           HpackEmitFn emit, void *ctx);
+proto_bool protocore_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
+                                  HpackEmitFn emit, void *ctx);
 
 /**
  * @brief Encode one header field into @p out (server side: static-index a full or name match,
  * else literal-without-indexing; strings Huffman-coded when that is not longer).
  * @return bytes written, or 0 on overflow.
  */
-size_t pc_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                              size_t value_len);
+size_t protocore_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
+                                     size_t value_len);
 
-// The prefix-integer and Huffman primitives moved to pc_hpack_prim.h (shared with QPACK).
+// The prefix-integer and Huffman primitives moved to protocore_hpack_prim.h (shared with QPACK).
 
 #endif // PROTOCORE_ENABLE_HTTP2
 

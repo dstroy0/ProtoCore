@@ -15,7 +15,7 @@
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
 #include "mmgr/protostr.h"
-#include "shared_primitives/mime.h"
+#include "shared/mime/mime.h"
 #include <stdio.h>
 
 // ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
+#include "network_drivers/transport/tcp/tcp.h" // shared outbound TCP client (L4)
 #endif
 #if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_HTTP_CLIENT_TLS
 #include "network_drivers/tls/tls.h"

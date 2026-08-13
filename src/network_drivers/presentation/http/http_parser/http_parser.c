@@ -12,7 +12,7 @@
 
 #include "http_parser.h"
 #include "mmgr/protomem.h"
-#include "shared_primitives/ip.h" // validate a recovered proxy client IP (v4/v6)
+#include "shared/ip/ip.h" // validate a recovered proxy client IP (v4/v6)
 
 HttpReq http_pool[CONN_POOL_SLOTS];
 

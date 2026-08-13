@@ -18,7 +18,7 @@
 #include "services/net/snmp/snmp_crypto.h"
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
-#include "network_drivers/transport/udp.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "services/net/snmp/snmp_notify.h"
 #endif
 #if PROTOCORE_HAS_NET_STACK

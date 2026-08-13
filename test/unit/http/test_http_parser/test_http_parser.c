@@ -20,7 +20,7 @@
 //   STRESS     - large query, many headers, incremental feeds
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
-#include "shared_primitives/ip.h" // PROTOCORE_IP_STR_MAX for the recovered-client buffer
+#include "shared/ip/ip.h" // PROTOCORE_IP_STR_MAX for the recovered-client buffer
 #include <string.h>
 #include <unity.h>
 

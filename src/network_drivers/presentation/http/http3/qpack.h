@@ -6,7 +6,7 @@
  * @brief QPACK field-section compression for HTTP/3 (RFC 9204).
  *
  * QPACK is HTTP/3's header compression. It reuses RFC 7541's prefix-integer coding and Huffman
- * code (shared here via pc_hpack_prim.h) and adds a 99-entry static table, an encoded field-section
+ * code (shared here via protocore_hpack_prim.h) and adds a 99-entry static table, an encoded field-section
  * prefix, and its own field-line representations.
  *
  * This codec is static-table-only and needs no per-connection state: the encoder emits indexed /
@@ -37,17 +37,17 @@ typedef proto_bool (*QpackEmitFn)(void *ctx, const char *name, size_t name_len, 
  * Required Insert Count = 0, Base = 0 -> the two bytes {0x00, 0x00} (RFC 9204 sec 4.5.1).
  * @return bytes written (2), or 0 if @p cap < 2.
  */
-size_t pc_qpack_encode_prefix(uint8_t *out, size_t cap);
+size_t protocore_qpack_encode_prefix(uint8_t *out, size_t cap);
 
 /**
  * @brief Encode one header field (server side): a full static match -> Indexed Field Line; a name
  * match -> Literal Field Line with (static) Name Reference; otherwise Literal Field Line with
  * Literal Name. Strings are Huffman-coded when that is not longer.
- * @return bytes written, or 0 on overflow. A complete field section is pc_qpack_encode_prefix()
- * followed by one pc_qpack_encode_header() per field.
+ * @return bytes written, or 0 on overflow. A complete field section is protocore_qpack_encode_prefix()
+ * followed by one protocore_qpack_encode_header() per field.
  */
-size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                              size_t value_len);
+size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
+                                     size_t value_len);
 
 /**
  * @brief Decode a whole QPACK field section (prefix + representations), emitting each header.
@@ -55,8 +55,8 @@ size_t pc_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
  * @return true if the section decoded cleanly; false on malformed input, overflow, or any
  * dynamic-table reference (indexed/literal post-base, dynamic name/index, or non-zero RIC).
  */
-proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size_t scratch_cap, QpackEmitFn emit,
-                           void *ctx);
+proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratch, size_t scratch_cap, QpackEmitFn emit,
+                                  void *ctx);
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

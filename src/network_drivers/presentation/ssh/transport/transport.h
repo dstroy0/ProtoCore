@@ -153,6 +153,51 @@ const uint8_t *ssh_session_id(uint8_t i, size_t *len);
  */
 void ssh_session_id_latch(uint8_t i, const uint8_t *h, size_t h_len);
 
+/** @brief RFC 4253 sec 6 binary packet: the bytes a receive consumes, and the body it carries. */
+typedef struct
+{
+    const uint8_t *data;    ///< bytes a receive consumes
+    const uint8_t *payload; ///< a KEXINIT or KEXDH payload
+    size_t len;             ///< how many
+    size_t consumed;        ///< bytes a receive took from data
+} SshPacketArgs;
+
+/** @brief Where a build or a send writes, and what it wrote. */
+typedef struct
+{
+    uint8_t *out;   ///< where a build or a send writes
+    size_t out_len; ///< what it wrote
+    size_t cap;     ///< how much room it has
+} SshTransportOut;
+
+/** @brief RFC 4253 sec 8: every term the exchange hash H is taken over, and where H lands. */
+typedef struct
+{
+    proto_bool pub_is_string;          ///< the peer public value is a string, not an mpint
+    const uint8_t *cpub;               ///< the client public value
+    size_t cpub_len;                   ///< its length
+    const uint8_t *spub;               ///< the server public value
+    size_t spub_len;                   ///< its length
+    const uint8_t *k_be;               ///< the shared secret, big-endian
+    size_t k_len;                      ///< its length
+    const uint8_t *ks;                 ///< the host key blob
+    size_t ks_len;                     ///< its length
+    proto_bool k_is_string;            ///< that secret is a string, not an mpint
+    proto_bool is512;                  ///< the method hashes with SHA-512
+    uint8_t hash[SSH_KEXHASH_MAX_LEN]; ///< where the exchange hash H lands
+    size_t hash_len;                   ///< its length: 32 for the SHA-256 methods, 64 for the SHA-512 one
+} SshKexHashArgs;
+
+/** @brief RFC 4253 sec 9 key re-exchange: what has passed since the last one, against its budget. */
+typedef struct
+{
+    uint32_t seq_send;          ///< packets sent since the last exchange
+    uint32_t seq_recv;          ///< packets received since it
+    uint32_t elapsed_ms;        ///< time since it
+    uint32_t pkt_threshold;     ///< the volume budget
+    uint32_t time_threshold_ms; ///< the time budget
+} SshRekeyArgs;
+
 /**
  * @brief The RFC 4253 transport state machine, as the operations both roles consume.
  *
@@ -171,27 +216,44 @@ void ssh_session_id_latch(uint8_t i, const uint8_t *h, size_t h_len);
  * @var SshTransportNs::rekey_due        sec 9 the volume and time budget since the last exchange
  * @var SshTransportNs::begin_rekey      sec 9 start a re-exchange, when not already doing one
  */
+*A caller sets the members a call takes, invokes it through ::SshTransport,
+    and reads the outcome *off the same handle.**@var SshTransportNs::slot the SSH slot a call acts on *@var
+            SshTransportNs::pkt sec 6 the bytes one message occupies *@var SshTransportNs::out_args where a build or
+        a send writes *@var SshTransportNs::kexhash sec 8 the terms the exchange hash H is
+                taken over *@var SshTransportNs::rekey sec 9 the volume and time budget since the
+                    last exchange *@var SshTransportNs::ok a call's true/false outcome *@var SshTransportNs::i32 a call's signed outcome
+                        *@var SshTransportNs::internal the machine's state and the calls that reach it * /
+            struct SshTransportInternal;
+
 typedef struct
 {
-    int (*recv_ident)(uint8_t i, const uint8_t *data, size_t len, size_t *consumed);
-    int (*send_ident)(uint8_t i, uint8_t *out, size_t *out_len, size_t cap);
-    int (*kexinit_build)(uint8_t i, uint8_t *payload, size_t *len, size_t cap);
-    int (*kexinit_parse)(uint8_t i, const uint8_t *payload, size_t len);
-    int (*kex_generate)(uint8_t i);
-    int (*exchange_hash)(uint8_t i, proto_bool pub_is_string, const uint8_t *cpub, size_t cpub_len, const uint8_t *spub,
-                         size_t spub_len, const uint8_t *k_be, size_t k_len, const uint8_t *ks, size_t ks_len,
-                         uint8_t out[SSH_KEXHASH_MAX_LEN], size_t *out_len, proto_bool k_is_string, proto_bool is512);
-    int (*kexdh_reply)(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len,
-                       size_t cap);
-    void (*newkeys_sent)(uint8_t i);
-    int (*newkeys_complete)(uint8_t i);
-    proto_bool (*rekey_due)(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_ms, uint32_t pkt_threshold,
-                            uint32_t time_threshold_ms);
-    int (*begin_rekey)(uint8_t i, uint8_t *out, size_t *out_len, size_t cap);
+    uint8_t slot; ///< the SSH slot a call acts on
+
+    SshPacketArgs pkt;        ///< sec 6 the bytes one message occupies
+    SshTransportOut out_args; ///< where a build or a send writes
+    SshKexHashArgs kexhash;   ///< sec 8 the terms the exchange hash H is taken over
+    SshRekeyArgs rekey;       ///< sec 9 the volume and time budget since the last exchange
+
+    proto_bool ok;
+    int i32;
+
+    void (*recv_ident)(struct SshTransportInternal *ctx);
+    void (*send_ident)(struct SshTransportInternal *ctx);
+    void (*kexinit_build)(struct SshTransportInternal *ctx);
+    void (*kexinit_parse)(struct SshTransportInternal *ctx);
+    void (*kex_generate)(struct SshTransportInternal *ctx);
+    void (*exchange_hash)(struct SshTransportInternal *ctx);
+    void (*kexdh_reply)(struct SshTransportInternal *ctx);
+    void (*newkeys_sent)(struct SshTransportInternal *ctx);
+    void (*newkeys_complete)(struct SshTransportInternal *ctx);
+    void (*rekey_due)(struct SshTransportInternal *ctx);
+    void (*begin_rekey)(struct SshTransportInternal *ctx);
+
+    struct SshTransportInternal *internal;
 } SshTransportNs;
 
 /** @brief The one instance, defined in transport.c. */
-extern const SshTransportNs SshTransport;
+extern SshTransportNs SshTransport;
 
 /** @brief Reader shorthand: SSH_TRANSPORT->kexinit_parse(...). */
 #define SSH_TRANSPORT (&SshTransport)

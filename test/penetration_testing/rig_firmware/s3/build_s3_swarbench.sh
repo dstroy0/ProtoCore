@@ -17,7 +17,7 @@ FQBN="${PROTOCORE_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16
 
 # src/ goes on the include path directly instead of the tree being attached as a named library. The
 # sibling benches attach it, which also compiles every other header it reaches - and while the C
-# conversion is in flight, transport/tcp.h pulls shared_primitives/ring.h whose _Atomic is not a C++
+# conversion is in flight, transport/tcp.h pulls shared/ring.h whose _Atomic is not a C++
 # keyword, so the whole build fails on a file this bench never uses. swar.h needs only itself,
 # rawmemcpy.h and protocore_config.h, and an include path is enough to reach all three.
 cp "$SHARED" "$SKETCH/main_swarbench.cpp"

@@ -43,13 +43,13 @@
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/presentation/presentation.h" // http_protocore_set_poll (install the instance-bound HTTP poll)
-#include "network_drivers/session/proto_handler.h"
-#include "network_drivers/session/worker.h"
+#include "server/system/proto_handler.h"
+#include "server/system/worker.h"
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/transport/tcp.h" // TcpConn, conn_pool, protocore_ap_ip: the slots this drives
+#include "network_drivers/transport/tcp/tcp.h" // TcpConn, conn_pool, protocore_ap_ip: the slots this drives
 #include "server/clock/clock.h"            // protocore_millis(): the QUIC poll stamp and the request timeout
-#include "shared_primitives/hex.h"
-#include "shared_primitives/mime.h"
+#include "shared/hex/hex.h"
+#include "shared/mime/mime.h"
 #if PROTOCORE_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
@@ -65,7 +65,7 @@
 #endif
 #if PROTOCORE_ENABLE_WEBDAV
 #include "network_drivers/application/webdav/webdav.h"
-#include "server/webdav_handler.h" // try_serve_dav()
+#include "server/io/webdav_handler.h" // try_serve_dav()
 #include <time.h>                  // RFC 1123 Last-Modified formatting
 #endif
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
@@ -235,7 +235,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     ws_init();
 #endif
 #if PROTOCORE_ENABLE_SSE
-    protocore_sse_init();
+    Sse.init(Sse.internal);
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
@@ -367,7 +367,7 @@ void stop(void)
     ws_init();
 #endif
 #if PROTOCORE_ENABLE_SSE
-    protocore_sse_init();
+    Sse.init(Sse.internal);
 #endif
 }
 
@@ -505,7 +505,9 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 
     fill_route_base(r, path);
     r->type = ROUTE_SSE;
-    r->sse_id = protocore_sse_route_add(on_connect);
+    Sse.route.on_connect = on_connect;
+    Sse.route_add(Sse.internal);
+    r->sse_id = Sse.u8;
 }
 #endif // PROTOCORE_ENABLE_SSE
 

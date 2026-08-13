@@ -14,7 +14,7 @@
  * ## Writing
  * @code
  *   char buf[128];
- *   pc_json_writer w;
+ *   protocore_json_writer w;
  *   Json.init(&w, buf, sizeof(buf));
  *   Json.begin_object(&w);
  *     Json.kv_str(&w, "status", "ok");
@@ -23,7 +23,7 @@
  *       Json.put_str(&w, "a"); Json.put_str(&w, "b");
  *     Json.end_array(&w);
  *   Json.end_object(&w);
- *   if (pc_json_ok(&w)) server.send(slot, 200, "application/json", pc_json_c_str(&w));
+ *   if (protocore_json_ok(&w)) server.send(slot, 200, "application/json", protocore_json_c_str(&w));
  *   // -> {"status":"ok","count":3,"items":["a","b"]}
  * @endcode
  *
@@ -48,7 +48,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * Commas, key quoting, and string escaping are emitted automatically. On buffer
  * overflow or a structural error (nesting past JSON_MAX_DEPTH), writing stops
- * and pc_json_ok() returns false; pc_json_c_str() still yields a NUL-terminated
+ * and protocore_json_ok() returns false; protocore_json_c_str() still yields a NUL-terminated
  * (truncated) string so a partial result never runs off the end.
  *
  * The caller owns the struct as well as the buffer, so the whole writer is one
@@ -64,7 +64,7 @@ typedef struct
     proto_bool after_key;                  // next value follows a key(): suppress its comma
     uint8_t depth;                         // open containers
     proto_bool need_comma[JSON_MAX_DEPTH]; // per-level: has a prior item been emitted?
-} pc_json_writer;
+} protocore_json_writer;
 
 /**
  * @brief The writer's calls, the key+value shorthands, and the top-level reader.
@@ -99,26 +99,26 @@ typedef struct
  */
 typedef struct
 {
-    void (*init)(pc_json_writer *w, char *buf, size_t cap);
-    void (*begin_object)(pc_json_writer *w);
-    void (*end_object)(pc_json_writer *w);
-    void (*begin_array)(pc_json_writer *w);
-    void (*end_array)(pc_json_writer *w);
-    void (*key)(pc_json_writer *w, const char *k);
+    void (*init)(protocore_json_writer *w, char *buf, size_t cap);
+    void (*begin_object)(protocore_json_writer *w);
+    void (*end_object)(protocore_json_writer *w);
+    void (*begin_array)(protocore_json_writer *w);
+    void (*end_array)(protocore_json_writer *w);
+    void (*key)(protocore_json_writer *w, const char *k);
 
-    void (*put_str)(pc_json_writer *w, const char *v);
-    void (*put_int)(pc_json_writer *w, long v);
-    void (*put_uint)(pc_json_writer *w, unsigned long v);
-    void (*put_bool)(pc_json_writer *w, proto_bool v);
-    void (*put_null)(pc_json_writer *w);
-    void (*put_raw)(pc_json_writer *w, const char *literal);
+    void (*put_str)(protocore_json_writer *w, const char *v);
+    void (*put_int)(protocore_json_writer *w, long v);
+    void (*put_uint)(protocore_json_writer *w, unsigned long v);
+    void (*put_bool)(protocore_json_writer *w, proto_bool v);
+    void (*put_null)(protocore_json_writer *w);
+    void (*put_raw)(protocore_json_writer *w, const char *literal);
 
-    void (*kv_str)(pc_json_writer *w, const char *k, const char *v);
-    void (*kv_int)(pc_json_writer *w, const char *k, long v);
-    void (*kv_uint)(pc_json_writer *w, const char *k, unsigned long v);
-    void (*kv_bool)(pc_json_writer *w, const char *k, proto_bool v);
-    void (*kv_null)(pc_json_writer *w, const char *k);
-    void (*kv_raw)(pc_json_writer *w, const char *k, const char *literal);
+    void (*kv_str)(protocore_json_writer *w, const char *k, const char *v);
+    void (*kv_int)(protocore_json_writer *w, const char *k, long v);
+    void (*kv_uint)(protocore_json_writer *w, const char *k, unsigned long v);
+    void (*kv_bool)(protocore_json_writer *w, const char *k, proto_bool v);
+    void (*kv_null)(protocore_json_writer *w, const char *k);
+    void (*kv_raw)(protocore_json_writer *w, const char *k, const char *literal);
 
     proto_bool (*get_str)(const char *json, const char *key, char *out, size_t out_cap);
     proto_bool (*get_int)(const char *json, const char *key, long *out);
@@ -129,17 +129,17 @@ typedef struct
 extern const JsonNs Json;
 
 /** @brief False after any overflow / structural error. */
-PROTOCORE_INLINE proto_bool pc_json_ok(const pc_json_writer *w)
+PROTOCORE_INLINE proto_bool protocore_json_ok(const protocore_json_writer *w)
 {
     return w->ok;
 }
 /** @brief Bytes written so far (excludes the NUL). */
-PROTOCORE_INLINE size_t pc_json_length(const pc_json_writer *w)
+PROTOCORE_INLINE size_t protocore_json_length(const protocore_json_writer *w)
 {
     return w->len;
 }
-/** @brief NUL-terminated output (truncated if !pc_json_ok()). */
-PROTOCORE_INLINE const char *pc_json_c_str(const pc_json_writer *w)
+/** @brief NUL-terminated output (truncated if !protocore_json_ok()). */
+PROTOCORE_INLINE const char *protocore_json_c_str(const protocore_json_writer *w)
 {
     return w->buf;
 }

@@ -27,7 +27,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/tcp.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "services/fieldbus/opcua/opcua.h"
 #include "services/fieldbus/opcua_client/opcua_client.h"
 

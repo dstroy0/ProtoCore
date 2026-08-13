@@ -3,7 +3,7 @@
 //
 // A consumer of the converted swar module, in its own TU. This is the shape that matters for the
 // access layer: the lane tests inside a caller's word loop, which is what base64's classifier does.
-// Linked against src/shared_primitives/swar.c and disassembled, it shows whether the members inline
+// Linked against src/shared/swar.c and disassembled, it shows whether the members inline
 // into the loop under LTO or cost an indirect call per lane test.
 
 #include "mmgr/swar.h"

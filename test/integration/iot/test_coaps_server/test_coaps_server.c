@@ -16,7 +16,7 @@
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
-#include "network_drivers/tls/tls13_kdf.h"
+#include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "server/clock/clock.h"
 #include "services/iot/coap/coap.h"
 #include "services/iot/coap/coaps_server.h"

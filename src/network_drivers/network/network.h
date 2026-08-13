@@ -20,7 +20,7 @@
 
 #include "network_drivers/network/dns/dns.h"
 #include "protocore_config.h" // first: the feature flags the includes below are gated on
-#include "shared_primitives/ip.h"
+#include "shared/ip/ip.h"
 #if PROTOCORE_ENABLE_FORWARD
 #include "network_drivers/network/forward/forward.h" // ForwardNs: carried below as network.forward
 #endif

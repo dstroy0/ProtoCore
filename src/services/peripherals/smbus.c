@@ -12,7 +12,7 @@
 
 #include "services/peripherals/smbus.h"
 #include "protocore_config.h"
-#include "shared_primitives/crc.h" // PROTOCORE_CRC8_SMBUS: the PEC polynomial, host-tested in test_crc
+#include "shared/crc/crc.h" // PROTOCORE_CRC8_SMBUS: the PEC polynomial, host-tested in test_crc
 
 #if PROTOCORE_ENABLE_SMBUS
 

@@ -10,9 +10,9 @@
 // the core handed to the stack read back as a DLT_RAW libpcap capture (test/mocks/protocore_net_pcap.h)
 // whose IP and UDP headers are checked field by field.
 
-#include "network_drivers/transport/udp/udp_client.h"
-#include "network_drivers/transport/udp/udp_listener.h"
-#include "shared_primitives/ip.h" // Ip.parse, for the v6 address the mock cannot spell
+#include "network_drivers/transport/udp/client/client.h"
+#include "network_drivers/transport/udp/server/server.h"
+#include "shared/ip/ip.h" // Ip.parse, for the v6 address the mock cannot spell
 
 #include "protocore_net_pcap.h"
 

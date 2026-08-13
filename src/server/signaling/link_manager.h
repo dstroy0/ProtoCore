@@ -48,22 +48,59 @@ typedef struct
     int active; ///< index of the active egress, or -1 if none is up.
 } LinkManager;
 
-/** @brief Initialize over caller storage and compute the initial active egress. */
-void protocore_link_init(LinkManager *m, LinkIface *ifaces, size_t n);
+/** @brief The table a call acts on, and the interface it names. */
+typedef struct
+{
+    LinkManager *m;          ///< the manager a call acts on
+    const LinkManager *m_ro; ///< the same manager, where a call only reads it
+    LinkIface *ifaces;       ///< the interface table a bind installs
+    size_t n;                ///< how many entries it has
+    size_t idx;              ///< the interface whose state a set changes
+    proto_bool up;           ///< that interface's new carrier state
+} LinkArgs;
 
-/** @brief Best interface that is up (highest priority, lower index breaks ties). @return index or -1. */
-int protocore_link_select(const LinkManager *m);
-
-/** @brief The current active egress index (-1 if none). */
-int protocore_link_active(const LinkManager *m);
+/** @brief The manager's own calls, described only in link_manager.c. */
+struct LinkManagerInternal;
 
 /**
- * @brief Set an interface's up/down state and recompute the active egress.
- * @param from (may be null) the previous active index.
- * @param to   (may be null) the new active index.
- * @return true if the active egress changed (escalation or failover happened).
+ * @brief The interface failover policy over a caller-owned manager.
+ *
+ * A caller sets the members a call takes, invokes it through ::Link, and reads the outcome off the
+ * same handle. The manager and its table are the caller's.
+ *
+ * @var LinkManagerNs::args      the table a call acts on, and the interface it names
+ * @var LinkManagerNs::i32       the interface a select or an active lookup reports, -1 for none
+ * @var LinkManagerNs::from      the interface that was active before a set
+ * @var LinkManagerNs::to        the one active after it
+ * @var LinkManagerNs::changed   that set moved the active interface
+ * @var LinkManagerNs::init      bind the table and pick the first active interface
+ * @var LinkManagerNs::select    the highest-priority interface that is up, -1 when none is
+ * @var LinkManagerNs::active    the interface currently carrying traffic
+ * @var LinkManagerNs::set       change one interface's carrier state and reselect
+ * @var LinkManagerNs::internal  the calls that select and switch
+ *
+ * Higher priority wins; the lower index breaks a tie. No storage member: the manager is the
+ * caller's, so nothing is held here.
  */
-proto_bool protocore_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to);
+typedef struct
+{
+    LinkArgs args;
+
+    int i32;
+    int from;
+    int to;
+    proto_bool changed;
+
+    void (*init)(struct LinkManagerInternal *ctx);
+    void (*select)(struct LinkManagerInternal *ctx);
+    void (*active)(struct LinkManagerInternal *ctx);
+    void (*set)(struct LinkManagerInternal *ctx);
+
+    struct LinkManagerInternal *internal;
+} LinkManagerNs;
+
+/** @brief The one symbol this module exports. */
+extern LinkManagerNs Link;
 
 #endif // PROTOCORE_ENABLE_LINK_MANAGER
 

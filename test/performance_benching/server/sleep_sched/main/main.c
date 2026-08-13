@@ -7,7 +7,7 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/sleep_sched -t upload --upload-port COM7
 #include "device_bench.h"
-#include "server/sleep_sched.h"
+#include "server/system/sleep_sched.h"
 
 #include <stdbool.h>
 #include <stddef.h>

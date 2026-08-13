@@ -11,8 +11,8 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
-#include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/tcp.h"
+#include "server/system/proto_handler.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
 
 #if PROTOCORE_HAS_BUS

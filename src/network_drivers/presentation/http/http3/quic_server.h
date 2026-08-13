@@ -66,35 +66,83 @@ typedef struct
     void (*rng)(uint8_t *out, size_t len); ///< fills @p out with @p len random bytes (ephemeral keys, SCIDs)
 } QuicServerConfig;
 
-/**
- * @brief Start the HTTP/3 server: install @p cfg, bind @p port over UDP, and route datagrams into the
- * connection pool. @p on_request is invoked (on the poll thread) for each completed request.
- * @return false on a null config or RNG, or when the UDP bind fails.
- */
-proto_bool protocore_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, QuicServerRequestFn on_request,
-                                       void *app);
+/** @brief What binding the server takes: the port, its keys, and where requests go. */
+typedef struct
+{
+    uint16_t port;                  ///< the UDP port a begin binds
+    const QuicServerConfig *cfg;    ///< the certificate, its key, and the randomness source
+    QuicServerRequestFn on_request; ///< what a completed request is delivered to, on the poll thread
+    void *app;                      ///< the opaque pointer that callback is given back
+} QuicBeginArgs;
+
+/** @brief RFC 9000 sec 2.1: the connection and stream a response is written on. */
+typedef struct
+{
+    uint32_t conn_id;   ///< the connection a response routes back on
+    uint64_t stream_id; ///< the stream it finishes
+} QuicStreamRef;
+
+/** @brief What one response carries. */
+typedef struct
+{
+    int status;               ///< the status that response carries
+    const char *content_type; ///< its media type
+    const uint8_t *body;      ///< its body bytes
+    size_t body_len;          ///< how many
+} QuicRespArgs;
+
+/** @brief The server's own state and the calls that reach it, described only in quic_server.c. */
+struct QuicServerInternal;
 
 /**
- * @brief Drive the server once: drain queued inbound datagrams into their connections, run the
- * handshake + HTTP/3 engines (which may fire @p on_request), and flush outbound datagrams. Call every
- * loop iteration. @p now_ms is the caller's monotonic millisecond clock (the module stays
- * platform-agnostic); closed or idle (PROTOCORE_QUIC_IDLE_MS) connections are reaped here.
+ * @brief The HTTP/3 server: a QUIC connection pool over one bound UDP port.
+ *
+ * A caller sets the members a call takes, invokes it through ::QuicServer, and reads the outcome off
+ * the same handle.
+ *
+ * @var QuicServerNs::begin_args    what binding the server takes
+ * @var QuicServerNs::now_ms        the caller's monotonic clock, so this module stays platform-agnostic
+ * @var QuicServerNs::stream        the connection and stream a response names
+ * @var QuicServerNs::resp          what that response carries
+ * @var QuicServerNs::ok            a call's true/false outcome
+ * @var QuicServerNs::u8            the pool slots currently in use
+ * @var QuicServerNs::begin         install begin_args.cfg, bind its port over UDP, route datagrams into the pool
+ * @var QuicServerNs::poll          drive the server once: drain, run the engines, flush; closed or
+ *                                  idle (PROTOCORE_QUIC_IDLE_MS) connections are reaped here
+ * @var QuicServerNs::respond       send HEADERS + DATA, finishing the stream; call from within the
+ *                                  request callback
+ * @var QuicServerNs::active_conns  open connections, for diagnostics and tests
+ * @var QuicServerNs::stop          close the UDP binding and release every pool slot
+ * @var QuicServerNs::internal      the server's state and the calls that reach it
  */
-void protocore_quic_server_poll(uint32_t now_ms);
+typedef struct
+{
+    uint32_t now_ms; ///< the caller's monotonic clock, so this module stays platform-agnostic
+
+    QuicBeginArgs begin_args; ///< what binding the server takes
+    QuicStreamRef stream;     ///< the connection and stream a response names
+    QuicRespArgs resp;        ///< what that response carries
+
+    proto_bool ok;
+    uint8_t u8;
+
+    void (*begin)(struct QuicServerInternal *ctx);
+    void (*poll)(struct QuicServerInternal *ctx);
+    void (*respond)(struct QuicServerInternal *ctx);
+    void (*active_conns)(struct QuicServerInternal *ctx);
+    void (*stop)(struct QuicServerInternal *ctx);
+
+    struct QuicServerInternal *internal;
+} QuicServerNs;
+
+/** @brief The one symbol this module exports. */
+extern QuicServerNs QuicServer;
 
 /**
- * @brief Send an HTTP/3 response (HEADERS + DATA, finishing the stream) for @p stream_id on the
- * connection @p conn_id. Call from within the request callback. @return false on a stale conn_id /
- * stream or a serialization overflow.
+ * @brief The response sink the HTTP/3 bridge installs; its shape is the seam's, not this module's.
  */
 proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
                                          const uint8_t *body, size_t body_len);
-
-/** @brief Number of pool slots currently in use (open connections). For diagnostics / tests. */
-uint8_t protocore_quic_server_active_conns(void);
-
-/** @brief Stop the server: close the UDP binding and release every pool slot. */
-void protocore_quic_server_stop(void);
 
 #endif // PROTOCORE_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_SERVER_H
