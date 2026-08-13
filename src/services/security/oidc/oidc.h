@@ -3,28 +3,35 @@
 
 /**
  * @file oidc.h
- * @brief OpenID Connect ID-token verification, RS256 (PROTOCORE_ENABLE_OIDC).
+ * @brief OpenID Connect ID Token validation, RS256 (PROTOCORE_ENABLE_OIDC).
  *
- * A relying-party verifier for OIDC ID tokens (RFC 7519 JWT, OpenID Connect Core
- * 3.1.3.7). Given an ID token and the issuer's JWKS, it:
- *   1. parses the JWT header and requires `alg` == RS256,
- *   2. selects the signing key by `kid` (or the sole key if the token has none),
- *   3. verifies the RSASSA-PKCS1-v1.5 SHA-256 signature (via protocore_rsa_verify -
- *      real modular exponentiation; mbedTLS-accelerated on ESP32),
- *   4. checks `iss`, `aud` (string or array), `exp`, and `nbf` against the
- *      caller's expectations and clock,
- *   5. extracts `sub` / `email` and the times into ::protocore_oidc_claims.
+ * The Relying Party side of OpenID Connect Core 1.0 sec 3.1.3.7 "ID Token Validation". That
+ * document is an OpenID Foundation specification, not an IETF RFC; the token it carries is an
+ * IETF one, a JWS in the Compact Serialization (RFC 7515 sec 7.1) whose `alg` is RS256, which
+ * JWA (RFC 7518 sec 3.3) defines as RSASSA-PKCS1-v1_5 using SHA-256 over the JWS Signing Input
+ * (RFC 7515 sec 2). Given an ID Token and the OP's JWK Set (RFC 7517 sec 5), a verify:
+ *   1. splits the Compact Serialization and requires `alg` == RS256 (RFC 7515 sec 4.1.1;
+ *      OIDC Core sec 3.1.3.7 step 7 makes RS256 the default),
+ *   2. selects the signing key by `kid` (RFC 7515 sec 4.1.4), or the sole RSA key when the
+ *      JOSE Header carries no `kid`,
+ *   3. checks the signature over the JWS Signing Input (OIDC Core sec 3.1.3.7 step 6,
+ *      RFC 7515 sec 5.2) with protocore_rsa_verify(), which is modular exponentiation on
+ *      every target and the part's accelerator where there is one,
+ *   4. matches `iss` (step 2, RFC 7519 sec 4.1.1) and `aud` in both its string and array
+ *      forms (step 3, RFC 7519 sec 4.1.3), and reads `exp` (step 9, RFC 7519 sec 4.1.4) and
+ *      `nbf` (RFC 7519 sec 4.1.5) against the caller's clock,
+ *   5. reports `sub` (RFC 7519 sec 4.1.2), `email` (OIDC Core sec 5.1) and the times in
+ *      ::protocore_oidc_claims.
  *
- * Zero-heap (fixed stack/BSS buffers) and host-tested against real openssl-signed
- * RS256 vectors. The verifier is pure: it does NOT fetch anything. Fetching the
- * discovery document / JWKS over HTTPS and caching keys is the caller's job (do it
- * off the request hot path with the HTTP client, then pass the JWKS JSON here) -
- * which keeps key rotation, caching policy, and TLS trust in the application's
- * hands and the verifier deterministic.
+ * Zero heap: the decode buffers come from the per-dispatch arena and everything else is fixed.
+ * The verifier fetches nothing. Retrieving the JWK Set from the OP's `jwks_uri` (OpenID Connect
+ * Discovery 1.0 sec 3) over HTTPS and caching it belongs to the caller, which leaves key
+ * rotation and TLS trust in the application's hands and this module deterministic.
  *
- * Only RS256 (the OIDC default and by far the most common) is supported; HS256
- * shared-secret tokens are the JWT module's job (services/security/jwt), ES256 is out of
- * scope.
+ * Only RS256 is verified. A MAC-based `alg` (OIDC Core sec 3.1.3.7 step 8) is the JWT module's
+ * (services/security/jwt); ES256 is out of scope.
+ *
+ * The module exports one symbol, @ref Oidc. Everything in oidc.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -39,97 +46,117 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_OIDC
 
-/** @brief RSA-2048 modulus size in bytes (the supported key size). */
+/** @brief RSA modulus and signature size in bytes; RFC 7518 sec 3.3 requires at least 2048 bits. */
 #define PROTOCORE_OIDC_RSA_BYTES 256
 
-/** @brief Decode cap for the JOSE header segment; it carries only `alg`/`typ`/`kid`. */
+/** @brief Decode cap for the JOSE Header (RFC 7515 sec 4); it carries only `alg`, `typ` and `kid`. */
 #define PROTOCORE_OIDC_HDR_LEN 512
 
-/** @brief Decode cap for the `iss` claim, compared against the expected issuer URL. */
+/** @brief Decode cap for the `iss` Claim (RFC 7519 sec 4.1.1), compared against the Issuer Identifier. */
 #define PROTOCORE_OIDC_ISS_LEN 256
 
 /**
- * @brief Scratch this module borrows at once (header + signature + payload + issuer).
+ * @brief Scratch this module borrows at once: JOSE Header + signature + JWS Payload + `iss`.
  *
- * All four buffers are live together across the verify, so the term is their sum. Stated here,
- * next to the constants it is built from, because a worst case assembled anywhere else would have
- * to restate them. mmgr/scratch_budget.h collects this with every other borrower's term.
+ * All four are live together across one verify, so the term is their sum.
  */
 #define PROTOCORE_PLAINTEXT_WORK_OIDC                                                                                  \
     (PROTOCORE_OIDC_HDR_LEN + PROTOCORE_OIDC_RSA_BYTES + PROTOCORE_OIDC_MAX_LEN + PROTOCORE_OIDC_ISS_LEN)
 
-/** @brief Verification result codes (0 = success, negatives = failure reasons). */
+/** @brief Validation result codes (0 = the ID Token passes every step of OIDC Core sec 3.1.3.7). */
 typedef enum PROTO_ENUM_PACKED
 {
-    PROTOCORE_OIDC_OK = 0,             ///< Token verified and all claims pass.
-    PROTOCORE_OIDC_ERR_FORMAT = -1,    ///< Not a 3-part JWT / bad base64 / oversized.
-    PROTOCORE_OIDC_ERR_ALG = -2,       ///< Header `alg` is not RS256.
-    PROTOCORE_OIDC_ERR_KEY = -3,       ///< No usable RSA key (kid not found / malformed JWK).
-    PROTOCORE_OIDC_ERR_SIGNATURE = -4, ///< RSA signature verification failed.
-    PROTOCORE_OIDC_ERR_ISS = -5,       ///< `iss` does not match the expected issuer.
-    PROTOCORE_OIDC_ERR_AUD = -6,       ///< `aud` does not contain the expected audience.
-    PROTOCORE_OIDC_ERR_EXPIRED = -7,   ///< `exp` is missing or in the past.
-    PROTOCORE_OIDC_ERR_NOT_YET = -8,   ///< `nbf` is in the future.
+    PROTOCORE_OIDC_OK = 0,             ///< Signature and Claims all pass.
+    PROTOCORE_OIDC_ERR_FORMAT = -1,    ///< Not a 3-part Compact Serialization / bad base64url / oversized.
+    PROTOCORE_OIDC_ERR_ALG = -2,       ///< JOSE Header `alg` is not RS256 (RFC 7515 sec 4.1.1).
+    PROTOCORE_OIDC_ERR_KEY = -3,       ///< No usable RSA JWK (`kid` not found / malformed `n` or `e`).
+    PROTOCORE_OIDC_ERR_SIGNATURE = -4, ///< The RSASSA-PKCS1-v1_5 check failed (RFC 7518 sec 3.3).
+    PROTOCORE_OIDC_ERR_ISS = -5,       ///< `iss` is not the Issuer Identifier (sec 3.1.3.7 step 2).
+    PROTOCORE_OIDC_ERR_AUD = -6,       ///< `aud` does not contain the client_id (sec 3.1.3.7 step 3).
+    PROTOCORE_OIDC_ERR_EXPIRED = -7,   ///< `exp` is missing or not after now (sec 3.1.3.7 step 9).
+    PROTOCORE_OIDC_ERR_NOT_YET = -8,   ///< `nbf` is in the future (RFC 7519 sec 4.1.5).
 } protocore_oidc_result;
 
-/** @brief A parsed RSA public key (from a JWKS entry). */
+/** @brief An RSA public key from one JWK (RFC 7518 sec 6.3.1). */
 typedef struct
 {
-    uint8_t n[PROTOCORE_OIDC_RSA_BYTES]; ///< Modulus, big-endian, right-aligned.
-    uint8_t e[4];                        ///< Public exponent, big-endian (4 bytes).
-    proto_bool loaded;                   ///< True once n/e are populated.
+    uint8_t n[PROTOCORE_OIDC_RSA_BYTES]; ///< `n` (Modulus), big-endian, right-aligned (RFC 7518 sec 6.3.1.1).
+    uint8_t e[4];                        ///< `e` (Exponent), big-endian, right-aligned (RFC 7518 sec 6.3.1.2).
+    proto_bool loaded;                   ///< True once `n` and `e` are populated.
 } protocore_oidc_key;
 
-/** @brief Claims extracted from a verified token. */
+/** @brief The Claims a validated ID Token carries (OIDC Core sec 2). */
 typedef struct
 {
-    char sub[PROTOCORE_OIDC_SUB_LEN];     ///< Subject identifier.
-    char email[PROTOCORE_OIDC_EMAIL_LEN]; ///< Email (empty if the claim is absent).
-    int64_t iat;                          ///< Issued-at (0 if absent). 64-bit: epoch seconds outlive 2038.
-    int64_t exp;                          ///< Expiry (epoch seconds). 64-bit.
+    char sub[PROTOCORE_OIDC_SUB_LEN];     ///< `sub` (Subject) Claim, RFC 7519 sec 4.1.2.
+    char email[PROTOCORE_OIDC_EMAIL_LEN]; ///< `email` Standard Claim (OIDC Core sec 5.1); empty when absent.
+    int64_t iat;                          ///< `iat` (Issued At), RFC 7519 sec 4.1.6; 0 when absent. 64-bit: past 2038.
+    int64_t exp;                          ///< `exp` (Expiration Time), RFC 7519 sec 4.1.4. 64-bit.
 } protocore_oidc_claims;
 
-/**
- * @brief Read the `kid` from a token's JWT header.
- * @return true if a `kid` string is present (copied, null-terminated, into @p out).
- */
-proto_bool protocore_oidc_token_kid(const char *token, size_t token_len, char *kid_out, size_t kid_cap);
+/** @brief RFC 7517 sec 5: the JWK Set a find scans, and the RSA public key it yields. */
+typedef struct
+{
+    const char *jwks;       ///< the JWK Set document, `{"keys":[ ... ]}` (RFC 7517 sec 5.1)
+    const char *kid;        ///< the `kid` a find selects on (RFC 7517 sec 4.5); NULL or "" takes the first RSA JWK,
+                            ///< and a full verify sets it from the token's JOSE Header
+    protocore_oidc_key rsa; ///< the key: written by a find, read by a verify (RFC 7518 sec 6.3.1)
+} OidcKeyArgs;
+
+/** @brief OIDC Core sec 3.1.3.7: what the ID Token's Claims are checked against. */
+typedef struct
+{
+    const char *iss;   ///< the Issuer Identifier `iss` must equal (step 2, RFC 7519 sec 4.1.1); NULL or "" skips it
+    const char *aud;   ///< the client_id `aud` must contain (step 3, RFC 7519 sec 4.1.3); NULL or "" skips it
+    uint32_t now_unix; ///< the current time `exp` and `nbf` are read against (step 9, RFC 7519 sec 4.1.4 / 4.1.5)
+} OidcExpectArgs;
+
+/** @brief The verifier's calls, described only in oidc.c. */
+struct OidcInternal;
 
 /**
- * @brief Extract an RSA JWK by @p kid from a JWKS JSON document.
+ * @brief The Relying Party verifier: one ID Token, one JWK Set, one verdict.
  *
- * @param jwks_json  the JWKS document (`{"keys":[ {RSA JWK}, ... ]}`).
- * @param kid        key id to match; nullptr / "" selects the first RSA key.
- * @param key        receives n/e on success.
- * @return true if a matching RSA key was found and parsed.
+ * A caller sets the members a call takes, invokes it through ::Oidc, and reads the outcome off
+ * the same handle. The validation steps are OIDC Core sec 3.1.3.7's.
+ *
+ * @var OidcNs::token      the ID Token as a JWS Compact Serialization (RFC 7515 sec 7.1)
+ * @var OidcNs::token_len  how many characters of it there are
+ * @var OidcNs::key        the JWK Set a find scans and the RSA public key it yields
+ * @var OidcNs::expect     the Issuer Identifier, the client_id and the clock a validation uses
+ * @var OidcNs::ok         a find's or a header read's true/false outcome
+ * @var OidcNs::result     a validation's ::protocore_oidc_result
+ * @var OidcNs::text       the `kid` a header read reports, empty when the JOSE Header carries none
+ * @var OidcNs::claims     the Claims a validated ID Token carries, cleared before every validation
+ * @var OidcNs::token_kid        read `kid` out of the JOSE Header (RFC 7515 sec 4.1.4)
+ * @var OidcNs::jwks_find        take the RSA JWK the `kid` names out of the JWK Set (RFC 7517 sec 5.1)
+ * @var OidcNs::verify_with_key  validate the ID Token against the key already in @c key.rsa
+ * @var OidcNs::verify           the two above in order: resolve the key by the token's `kid`, then validate
+ * @var OidcNs::internal   the calls that reach the verifier
  */
-proto_bool protocore_oidc_jwks_find(const char *jwks_json, const char *kid, protocore_oidc_key *key);
+typedef struct
+{
+    const char *token; ///< the ID Token every call but a find names
+    size_t token_len;  ///< how many characters of it there are
 
-/**
- * @brief Verify an ID token against an already-resolved key.
- *
- * @param token,token_len   the compact ID token.
- * @param key               the issuer's RSA public key.
- * @param expected_iss      required `iss` value (exact match).
- * @param expected_aud      required `aud` value (string match, or membership of
- *                          the `aud` array).
- * @param now_unix          current time (epoch seconds) for exp/nbf checks.
- * @param claims            receives extracted claims on success (may be nullptr).
- * @return ::PROTOCORE_OIDC_OK or a negative ::protocore_oidc_result.
- */
-protocore_oidc_result protocore_oidc_verify_with_key(const char *token, size_t token_len, const protocore_oidc_key *key,
-                                                     const char *expected_iss, const char *expected_aud,
-                                                     uint32_t now_unix, protocore_oidc_claims *claims);
+    OidcKeyArgs key;       ///< the JWK Set and the key it yields (RFC 7517 sec 5)
+    OidcExpectArgs expect; ///< what the Claims are checked against (OIDC Core sec 3.1.3.7)
 
-/**
- * @brief Verify an ID token, resolving the key from @p jwks_json by the token's kid.
- *
- * Convenience wrapper over protocore_oidc_jwks_find() + protocore_oidc_verify_with_key().
- * @return ::PROTOCORE_OIDC_OK or a negative ::protocore_oidc_result (ERR_KEY if no key matches).
- */
-protocore_oidc_result protocore_oidc_verify(const char *token, size_t token_len, const char *jwks_json,
-                                            const char *expected_iss, const char *expected_aud, uint32_t now_unix,
-                                            protocore_oidc_claims *claims);
+    proto_bool ok;
+    protocore_oidc_result result;
+    char text[PROTOCORE_OIDC_KID_LEN];
+    protocore_oidc_claims claims;
+
+    void (*token_kid)(struct OidcInternal *ctx);
+    void (*jwks_find)(struct OidcInternal *ctx);
+    void (*verify_with_key)(struct OidcInternal *ctx);
+    void (*verify)(struct OidcInternal *ctx);
+
+    struct OidcInternal *internal;
+} OidcNs;
+
+/** @brief The one symbol this module exports. */
+extern OidcNs Oidc;
 
 #endif // PROTOCORE_ENABLE_OIDC
 

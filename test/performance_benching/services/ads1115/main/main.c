@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the ADS1115 ADC codec (services/peripherals/ads1115): building the
+// On-device CCOUNT microbenchmark for the ADS1115 ADC codec (server/peripherals/ads1115): building the
 // 16-bit single-shot config word (channel/gain/data-rate) and converting a signed raw sample to
 // microvolts - both pure, no I2C. Worked example for performance_benching/device/<service>/ peripheral drivers: this
 // rig has no ADS1115 breakout attached, so protocore_ads1115_begin/read_raw/read_uv (the I2C-over-Wire
@@ -11,7 +11,7 @@
 //   idf.py -C test/performance_benching/ads1115 -t upload --upload-port COM7
 // then open the port to capture the repeating "DB ..." lines.
 #include "device_bench.h"
-#include "services/peripherals/ads1115/ads1115.h"
+#include "server/peripherals/ads1115/ads1115.h"
 
 #include <stdbool.h>
 #include <stddef.h>

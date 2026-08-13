@@ -144,7 +144,7 @@ static void put_hex16(protocore_sb *b, uint16_t v)
     {
         t[2 + i] = PROTOCORE_HEX_LOWER[(v >> ((3 - i) * 4)) & 0xF];
     }
-    protocore_sb_put(b, t);
+    Sb.put(b, t);
 }
 
 size_t protocore_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap)
@@ -154,22 +154,22 @@ size_t protocore_gatt_char_json(const GattChar *chars, size_t n, char *out, size
         return 0;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&b, "[");
+    Sb.put(&b, "[");
     for (size_t i = 0; i < n; i++)
     {
         if (i)
         {
-            protocore_sb_put(&b, ",");
+            Sb.put(&b, ",");
         }
-        protocore_sb_put(&b, "{\"handle\":");
-        protocore_sb_u32(&b, chars[i].handle);
-        protocore_sb_put(&b, ",\"uuid\":\"");
+        Sb.put(&b, "{\"handle\":");
+        Sb.u32(&b, chars[i].handle);
+        Sb.put(&b, ",\"uuid\":\"");
         put_hex16(&b, chars[i].uuid);
-        protocore_sb_put(&b, "\",\"props\":");
-        protocore_sb_u32(&b, chars[i].props);
-        protocore_sb_put(&b, "}");
+        Sb.put(&b, "\",\"props\":");
+        Sb.u32(&b, chars[i].props);
+        Sb.put(&b, "}");
     }
-    protocore_sb_put(&b, "]");
+    Sb.put(&b, "]");
     if (!b.ok)
     {
         return 0;

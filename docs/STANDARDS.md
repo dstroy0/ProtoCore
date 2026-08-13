@@ -17,7 +17,7 @@ newer entry here.
 
 - [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) - HTTP Semantics - **impl** (methods, status, headers, conditional requests, ranges).
 - [RFC 9112](https://www.rfc-editor.org/rfc/rfc9112) - HTTP/1.1 Messaging - **impl** (request/response framing, Content-Length, Transfer-Encoding rejection).
-- [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111) - HTTP Caching - **impl** (ETag / Last-Modified / conditional GET; the structured `Cache-Control` builder/parser + freshness-lifetime precedence in services/web/httpcache).
+- [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111) - HTTP Caching - **impl** (ETag / Last-Modified / conditional GET; the structured `Cache-Control` builder/parser + freshness-lifetime precedence in network_drivers/presentation/http/httpcache).
 - [RFC 8246](https://www.rfc-editor.org/rfc/rfc8246) - HTTP Immutable Responses - **impl** (the `immutable` Cache-Control directive).
 - [RFC 5861](https://www.rfc-editor.org/rfc/rfc5861) - HTTP Cache-Control Extensions for Stale Content - **impl** (`stale-while-revalidate` / `stale-if-error`).
 - [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986) - URI Generic Syntax - **impl** (path / query parsing, percent-decoding).

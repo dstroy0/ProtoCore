@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for services/web/edge_cache/edge_cache_sd: the CDN edge cache's L2 SD-persistence tier over a
+// Host tests for server/web/edge_cache/edge_cache_sd: the CDN edge cache's L2 SD-persistence tier over a
 // RAM-backed WalDev + dbm. Covers the entry <-> dbm-value serialization roundtrip (incl. a max body, Vary
 // variants, and binary bodies), the spill/promote/del/purge API, the L1 store's on_evict write-back hook,
 // storeability gates (no-validator and oversize entries stay L1-only), reboot survival (remount + reopen),
@@ -11,8 +11,8 @@
 
 #include "services/storage/dbm/dbm.h"
 #include "services/storage/wal/wal_store.h"
-#include "services/web/edge_cache/edge_cache.h"
-#include "services/web/edge_cache/edge_cache_sd.h"
+#include "server/web/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache_sd.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>

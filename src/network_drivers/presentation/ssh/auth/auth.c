@@ -9,8 +9,8 @@
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "crypto/asymmetric/ecdsa.h"   // protocore_ecdsa_p256_verify() (ecdsa-sha2-nistp256)
 #include "crypto/asymmetric/ed25519.h" // protocore_ed25519_verify() (ssh-ed25519 client keys)
-#include "mmgr/bytes.h"                // protocore_rd_str() - the RFC 4251 sec 5 string reader
-#include "mmgr/endian.h"               // protocore_wr32be() - the one source of truth for wire integers
+#include "mmgr/bytes.h"                // bytes.rd_str() - the RFC 4251 sec 5 string reader
+#include "mmgr/endian.h"               // endian.wr32be() - the one source of truth for wire integers
 #include "mmgr/plaintext.h"            // protocore_plaintext_span() for the verify buffers
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str.eq() - the bounded string compare the wire fields use
@@ -153,11 +153,11 @@ void protocore_ssh_auth_write_publickey_request(struct SshAuthInternal *restrict
     {
         protocore_ssh_wr_str(w, sid, sid_len);
     }
-    protocore_bw_put(w, SSH_MSG_USERAUTH_REQUEST);
+    bytes.put(w, SSH_MSG_USERAUTH_REQUEST);
     protocore_ssh_wr_cstr(w, user);
     protocore_ssh_wr_cstr(w, service);
     protocore_ssh_wr_cstr(w, "publickey");
-    protocore_bw_put(w, 1); // signature present
+    bytes.put(w, 1); // signature present
     protocore_ssh_wr_cstr(w, pk_algo);
     protocore_ssh_wr_str(w, pk_blob, pk_len);
 }
@@ -252,7 +252,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     }
     size_t mark = protocore_plaintext_mark();
     protocore_span signed_data = protocore_plaintext_span(SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN, 4);
-    if (!protocore_span_ok(signed_data))
+    if (!span.ok(signed_data))
     {
         protocore_plaintext_release(mark);
         return protocore_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE); // arena exhausted: fail closed
@@ -263,7 +263,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
         return protocore_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
     }
     size_t sd = 0;
-    protocore_wr32be(signed_data.buf + sd, (uint32_t)sid_len);
+    endian.wr32be(signed_data.buf + sd, (uint32_t)sid_len);
     sd += 4;
     mem.cpy(signed_data.buf + sd, sid, sid_len);
     sd += sid_len;
@@ -358,7 +358,7 @@ void protocore_ssh_auth_parse_request(struct SshAuthInternal *restrict ctx)
             ctx->ns->i32 = -1;
             return;
         }
-        if (!protocore_rd_str(payload, len, &off, &req->pk_blob, &req->pk_blob_len))
+        if (!bytes.rd_str(payload, len, &off, &req->pk_blob, &req->pk_blob_len))
         {
             ctx->ns->i32 = -1;
             return;
@@ -372,7 +372,7 @@ void protocore_ssh_auth_parse_request(struct SshAuthInternal *restrict ctx)
         {
             const uint8_t *sigblob;
             uint32_t sigblob_len;
-            if (!protocore_rd_str(payload, len, &off, &sigblob, &sigblob_len))
+            if (!bytes.rd_str(payload, len, &off, &sigblob, &sigblob_len))
             {
                 ctx->ns->i32 = -1;
                 return;
@@ -381,12 +381,12 @@ void protocore_ssh_auth_parse_request(struct SshAuthInternal *restrict ctx)
             size_t so = 0;
             const uint8_t *salgo;
             uint32_t salgo_len;
-            if (!protocore_rd_str(sigblob, sigblob_len, &so, &salgo, &salgo_len))
+            if (!bytes.rd_str(sigblob, sigblob_len, &so, &salgo, &salgo_len))
             {
                 ctx->ns->i32 = -1;
                 return;
             }
-            if (!protocore_rd_str(sigblob, sigblob_len, &so, &req->signature, &req->signature_len))
+            if (!bytes.rd_str(sigblob, sigblob_len, &so, &req->signature, &req->signature_len))
             {
                 ctx->ns->i32 = -1;
                 return;
@@ -433,7 +433,7 @@ void protocore_ssh_auth_build_failure(struct SshAuthInternal *restrict ctx)
         return;
     }
     out[0] = SSH_MSG_USERAUTH_FAILURE;
-    protocore_wr32be(out + 1, ml);
+    endian.wr32be(out + 1, ml);
     mem.cpy(out + 5, methods, ml);
     out[5 + ml] = partial ? 1 : 0;
     *out_len = 5 + ml + 1;
@@ -468,11 +468,11 @@ static int build_pk_ok(const SshAuthReq *req, uint8_t *out, size_t *out_len, siz
     }
     size_t o = 0;
     out[o++] = SSH_MSG_USERAUTH_PK_OK;
-    protocore_wr32be(out + o, al);
+    endian.wr32be(out + o, al);
     o += 4;
     mem.cpy(out + o, req->pk_algo, al);
     o += al;
-    protocore_wr32be(out + o, req->pk_blob_len);
+    endian.wr32be(out + o, req->pk_blob_len);
     o += 4;
     mem.cpy(out + o, req->pk_blob, req->pk_blob_len);
     o += req->pk_blob_len;
@@ -494,15 +494,15 @@ static int build_info_request(uint8_t *out, size_t *out_len, size_t cap)
     }
     size_t o = 0;
     out[o++] = SSH_MSG_USERAUTH_INFO_REQUEST;
-    protocore_wr32be(out + o, 0); // name = ""
+    endian.wr32be(out + o, 0); // name = ""
     o += 4;
-    protocore_wr32be(out + o, 0); // instruction = ""
+    endian.wr32be(out + o, 0); // instruction = ""
     o += 4;
-    protocore_wr32be(out + o, 0); // language tag = "" (deprecated)
+    endian.wr32be(out + o, 0); // language tag = "" (deprecated)
     o += 4;
-    protocore_wr32be(out + o, 1); // num-prompts = 1
+    endian.wr32be(out + o, 1); // num-prompts = 1
     o += 4;
-    protocore_wr32be(out + o, pl);
+    endian.wr32be(out + o, pl);
     o += 4;
     mem.cpy(out + o, prompt, pl);
     o += pl;
@@ -740,7 +740,7 @@ void ssh_auth_dispatch(struct SshAuthInternal *restrict ctx)
     // the library. protocore_plaintext_span binds the capacity to the allocation.
     size_t mark = protocore_plaintext_mark();
     protocore_span reply = protocore_plaintext_span(SSH_PKT_BUF_SIZE, 16);
-    if (!protocore_span_ok(reply))
+    if (!span.ok(reply))
     {
         protocore_plaintext_release(mark);
         ctx->ns->i32 = -1;
@@ -903,11 +903,11 @@ void ssh_auth_passwd_change_reply(struct SshAuthInternal *restrict ctx)
     protocore_span reply = protocore_plaintext_span(SSH_PKT_BUF_SIZE, 4);
     size_t n = 0;
     int built = -1;
-    if (protocore_span_ok(reply) && pw == PROTOCORE_SSH_PW_CHANGE_OK)
+    if (span.ok(reply) && pw == PROTOCORE_SSH_PW_CHANGE_OK)
     {
         built = protocore_ssh_auth_build_success(reply.buf, &n, reply.cap);
     }
-    else if (protocore_span_ok(reply))
+    else if (span.ok(reply))
     {
         built = protocore_ssh_auth_build_failure(reply.buf, &n, reply.cap, PROTO_FALSE);
     }

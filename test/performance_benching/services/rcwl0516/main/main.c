@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the RCWL-0516 presence core (services/peripherals/rcwl0516): the pure
+// On-device CCOUNT microbenchmark for the RCWL-0516 presence core (server/peripherals/rcwl0516): the pure
 // debounce/hold state machine protocore_presence_core_update() that turns a raw doppler-radar OUT-pin
 // level into a debounced presence verdict + edge events. The GPIO read (protocore_rcwl0516_poll) is
 // real-hardware and out of scope; only the deterministic per-sample state machine is benched.
@@ -9,7 +9,7 @@
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/rcwl0516 -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/peripherals/rcwl0516/rcwl0516.h"
+#include "server/peripherals/rcwl0516/rcwl0516.h"
 
 #include <stdbool.h>
 #include <stddef.h>

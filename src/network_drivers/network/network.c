@@ -3,26 +3,41 @@
 
 /**
  * @file network.c
- * @brief Layer 3 (Network) - IP routing and packet forwarding stub. See network.h.
+ * @brief Layer 3 (Network) - the internet layer's call and its carried modules. See network.h.
  *
- * IPv4/IPv6 routing, DHCP, ARP, ICMP, and DNS resolution are all transparent to this library - they
- * run inside the lwIP stack. This is the extension point for static-route injection or custom ICMP
- * handling.
+ * RFC 1122 sec 3 "INTERNET LAYER PROTOCOLS": the platform's TCP/IP stack carries the route table,
+ * address assignment, ARP, ICMP, and the fragmentation and reassembly of RFC 791 sec 1.4, so the
+ * bring-up call runs no work. This file binds the carried modules onto the layer: name resolution
+ * (RFC 1034 sec 2.4), the address value (RFC 791, RFC 8200), and the forwarding plane
+ * (RFC 1812 sec 5).
  *
- * The one symbol this file exports is @ref Network.
+ * The one symbol this file exports is @ref network.
  */
 
 #include "network.h"
 
-static void init(void)
+static void network_init(struct NetworkInternal *restrict ctx)
 {
-    // No-op: lwIP owns all L3 (IP) operations.
+    (void)ctx; // no work: the platform stack holds the route table and selects the path
 }
 
+/**
+ * @brief The layer's calls - what NetworkNs points at.
+ *
+ * @var NetworkInternal::ns  the handle the layer is reached through
+ */
+struct NetworkInternal
+{
+    NetworkNs *ns;
+};
+
+static struct NetworkInternal s_network = {.ns = &network};
+
 // Designated, so a member's position in the struct does not decide what it binds to.
-const NetworkNs network = {.init = init,
-                           .dns = &Dns,
+NetworkNs network = {.dns = &Dns,
 #if PROTOCORE_ENABLE_FORWARD
-                           .forward = &Forward,
+                     .forward = &Forward,
 #endif
-                           .ip = &Ip};
+                     .ip = &Ip,
+                     .init = network_init,
+                     .internal = &s_network};

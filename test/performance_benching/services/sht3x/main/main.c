@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SHT3x codec (services/peripherals/sht3x): the CRC-8 (used to validate
+// On-device CCOUNT microbenchmark for the SHT3x codec (server/peripherals/sht3x): the CRC-8 (used to validate
 // each I2C word), the raw->milli-degree / raw->milli-percent conversions, and the 6-byte response
 // parser. Pure integer math - the I2C read is real-hardware and out of scope.
 //
 // Build/flash:  idf.py -C test/performance_benching/sht3x -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/peripherals/sht3x/sht3x.h"
+#include "server/peripherals/sht3x/sht3x.h"
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -9,7 +9,7 @@
 #ifndef PROTOCORE_SSH_COMMON_H
 #define PROTOCORE_SSH_COMMON_H
 
-#include "mmgr/bytes.h"       // protocore_span, protocore_bw_* writers, protocore_rd_str / protocore_rd_u32 readers
+#include "mmgr/bytes.h"       // protocore_span, bytes.* writers, bytes.rd_str / bytes.rd_u32 readers
 #include "protocore_config.h" // protocore_types.h for the fixed widths, PROTOCORE_INLINE, the SSH sizing constants
 
 #include "crypto/aead/chachapoly.h"   // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
@@ -239,8 +239,8 @@ static inline void write_u32_be(uint8_t *p, uint32_t v)
 /** @brief Append a string: uint32 length, then @p n bytes of @p data. */
 PROTOCORE_INLINE void protocore_ssh_wr_str(protocore_span *w, const void *data, size_t n)
 {
-    protocore_bw_put_be(w, (uint64_t)n, 4);
-    protocore_bw_bytes(w, data, n);
+    bytes.put_be(w, (uint64_t)n, 4);
+    bytes.raw(w, data, n);
 }
 
 /**
@@ -266,7 +266,7 @@ PROTOCORE_INLINE void protocore_ssh_wr_mpint(protocore_span *w, const uint8_t *b
     }
     if (off == len)
     {
-        protocore_bw_put_be(w, 0, 4);
+        bytes.put_be(w, 0, 4);
         return;
     }
     proto_bool pad = (be[off] & 0x80u) != 0;
@@ -275,12 +275,12 @@ PROTOCORE_INLINE void protocore_ssh_wr_mpint(protocore_span *w, const uint8_t *b
     {
         mlen++;
     }
-    protocore_bw_put_be(w, mlen, 4);
+    bytes.put_be(w, mlen, 4);
     if (pad)
     {
-        protocore_bw_put(w, 0x00);
+        bytes.put(w, 0x00);
     }
-    protocore_bw_bytes(w, be + off, len - off);
+    bytes.raw(w, be + off, len - off);
 }
 
 // ---------------------------------------------------------------------------
@@ -404,7 +404,7 @@ PROTOCORE_INLINE uint8_t protocore_ssh_rd_u8(Rd *r)
 PROTOCORE_INLINE uint32_t protocore_ssh_rd_u32(Rd *r)
 {
     uint32_t v = 0;
-    if (!protocore_rd_u32(r->buf, r->len, &r->off, &v))
+    if (!bytes.rd_u32(r->buf, r->len, &r->off, &v))
     {
         r->ok = PROTO_FALSE;
         return 0;
@@ -415,7 +415,7 @@ PROTOCORE_INLINE uint32_t protocore_ssh_rd_u32(Rd *r)
 PROTOCORE_INLINE const uint8_t *protocore_ssh_rd_string(Rd *r, uint32_t *n)
 {
     const uint8_t *p = NULL;
-    if (!protocore_rd_str(r->buf, r->len, &r->off, &p, n))
+    if (!bytes.rd_str(r->buf, r->len, &r->off, &p, n))
     {
         r->ok = PROTO_FALSE;
         *n = 0;
@@ -431,20 +431,20 @@ PROTOCORE_INLINE const uint8_t *protocore_ssh_rd_string(Rd *r, uint32_t *n)
 // Copy an SSH string into a fixed buffer and null-terminate it. Advances *off.
 // Returns false on truncation or if the string does not fit (buffer too small).
 //
-// Reading the field by reference is protocore_rd_str()'s job; this only adds the copy and the terminator,
+// Reading the field by reference is bytes.rd_str()'s job; this only adds the copy and the terminator,
 // which is what separates it from the by-reference reads below.
 static proto_bool read_string(const uint8_t *p, size_t len, size_t *off, char *out, size_t outcap)
 {
     size_t start = *off;
     const uint8_t *s = NULL;
     uint32_t n = 0;
-    if (!protocore_rd_str(p, len, off, &s, &n))
+    if (!bytes.rd_str(p, len, off, &s, &n))
     {
         return PROTO_FALSE;
     }
     if (n >= outcap)
     {
-        *off = start;       // same contract as protocore_rd_str: a failed read leaves the offset on its own field
+        *off = start;       // same contract as bytes.rd_str: a failed read leaves the offset on its own field
         return PROTO_FALSE; // does not fit our fixed buffer
     }
     mem.cpy(out, s, n);

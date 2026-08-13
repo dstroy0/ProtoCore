@@ -2,129 +2,130 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_snmp_notify.h
- * @brief Outbound SNMP notifications - Trap and InformRequest (PROTOCORE_ENABLE_SNMP_TRAP).
+ * @file snmp_notify.h
+ * @brief Notifications: the SNMPv2-Trap-PDU and the InformRequest-PDU (PROTOCORE_ENABLE_SNMP_TRAP).
  *
- * Lets the agent push events to a manager instead of only answering polls:
- * SNMPv2c (RFC 3416) and, when PROTOCORE_ENABLE_SNMP_V3 is set, SNMPv3 USM (authPriv)
- * notifications. Every notification carries the mandatory `sysUpTime.0` and
- * `snmpTrapOID.0` bindings plus any caller varbinds. Split, like the other
- * services, into a host-testable PDU builder and an ESP32 UDP send:
+ * The notification originator side of the agent: an event is pushed to a notification receiver
+ * instead of waiting to be polled.
  *
- *  - protocore_snmp_notify_build_v2c() is a pure BER function, unit-tested on the host
- *    (env:native_snmp_trap).
- *  - protocore_snmp_trap_v2c() / protocore_snmp_inform_v2c() (and the v3 variants) build and send to
- *    a manager over the transport-layer UDP service (port 162 by convention).
+ * RFC 3416 sec 4.2.6 defines the SNMPv2-Trap-PDU and sec 4.2.7 the InformRequest-PDU. Both carry
+ * the same two mandatory first variable-bindings: sysUpTime.0 and snmpTrapOID.0 (RFC 3418 sec 2),
+ * followed by whatever bindings the caller adds. The two differ in confirmation, not in shape: a
+ * trap is unacknowledged, while an InformRequest-PDU is answered by a Response-PDU that echoes its
+ * request-id, so its sender owns the retransmission.
+ *
+ * RFC 3417 sec 3.2 suggests notification receivers listen on UDP port 162.
+ *
+ * The build calls are pure: message octets in a caller buffer, no socket and no clock, so they are
+ * unit-tested with no network stack under them. The send calls add the address parse and the
+ * datagram. SNMPv3 USM notifications are the v3 layer's, reached through ::SnmpV3.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_SNMP_NOTIFY_H
 #define PROTOCORE_SNMP_NOTIFY_H
 
 #include "protocore_config.h"
+#include "services/net/snmp/snmp_ber.h" // BerEnc: the open encoder a PDU append writes into
 
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 
-/** @brief Variable-binding value types accepted in a notification. */
+/** @brief Which SMIv2 type a caller variable-binding carries (RFC 2578 sec 7.1). */
 typedef enum PROTO_ENUM_PACKED
 {
-    SNMP_VB_INT = 0,       ///< INTEGER (ival)
-    SNMP_VB_STRING = 1,    ///< OCTET STRING (bytes/blen)
-    SNMP_VB_OID = 2,       ///< OBJECT IDENTIFIER (oid_val/oid_val_len)
-    SNMP_VB_COUNTER32 = 3, ///< Counter32 (ival)
-    SNMP_VB_GAUGE32 = 4,   ///< Gauge32 (ival)
-    SNMP_VB_TIMETICKS = 5, ///< TimeTicks (ival)
-    SNMP_VB_IPADDR = 6,    ///< IpAddress (bytes, 4 octets)
+    SNMP_VB_INT = 0,       ///< INTEGER, in ival
+    SNMP_VB_STRING = 1,    ///< OCTET STRING, in bytes/blen
+    SNMP_VB_OID = 2,       ///< OBJECT IDENTIFIER, in oid_val/oid_val_len
+    SNMP_VB_COUNTER32 = 3, ///< Counter32, in ival (RFC 2578 sec 7.1.6)
+    SNMP_VB_GAUGE32 = 4,   ///< Gauge32, in ival (RFC 2578 sec 7.1.7)
+    SNMP_VB_TIMETICKS = 5, ///< TimeTicks, in ival (RFC 2578 sec 7.1.8)
+    SNMP_VB_IPADDR = 6,    ///< IpAddress, 4 octets in bytes (RFC 2578 sec 7.1.5)
 } SnmpVbType;
 
-/** @brief One caller-supplied variable-binding (OID + typed value). */
+/** @brief One variable-binding of the VarBindList: a name and its typed value (RFC 3416 sec 3). */
 typedef struct
 {
-    const uint32_t *oid;     ///< binding OID arcs
-    size_t oid_len;          ///< number of arcs
-    uint8_t type;            ///< SnmpVbType
-    long ival;               ///< INTEGER / Counter32 / Gauge32 / TimeTicks
-    const uint8_t *bytes;    ///< OCTET STRING / IpAddress bytes
-    size_t blen;             ///< byte length
-    const uint32_t *oid_val; ///< OID-valued binding arcs
-    size_t oid_val_len;      ///< OID-valued arc count
+    const uint32_t *oid;     ///< the binding's name, as subidentifiers
+    size_t oid_len;          ///< how many
+    uint8_t type;            ///< which ::SnmpVbType the value is
+    long ival;               ///< INTEGER, Counter32, Gauge32 or TimeTicks value
+    const uint8_t *bytes;    ///< OCTET STRING or IpAddress octets
+    size_t blen;             ///< how many
+    const uint32_t *oid_val; ///< an OBJECT IDENTIFIER value's subidentifiers
+    size_t oid_val_len;      ///< how many
 } SnmpVarbind;
 
-// ---------------------------------------------------------------------------
-// Pure builder (host-testable; no sockets)
-// ---------------------------------------------------------------------------
+/** @brief RFC 3416 sec 4.2.6 and sec 4.2.7: what a notification PDU carries. */
+typedef struct
+{
+    uint8_t pdu_tag;          ///< ::SNMP_TAG_SNMP_PDU_TRAPV2 or ::SNMP_TAG_SNMP_PDU_INFORM
+    uint32_t request_id;      ///< the PDU's request-id, echoed by an inform's Response-PDU
+    const uint32_t *trap_oid; ///< the snmpTrapOID.0 value (RFC 3418 sec 2)
+    size_t trap_oid_len;      ///< how many subidentifiers
+    uint32_t uptime_ticks;    ///< the sysUpTime.0 value, TimeTicks (RFC 2578 sec 7.1.8)
+    const SnmpVarbind *vbs;   ///< the caller bindings that follow the mandatory two
+    size_t vb_count;          ///< how many
+} SnmpNotifyPduArgs;
+
+/** @brief RFC 3417 sec 3.2: the notification receiver a send addresses. */
+typedef struct
+{
+    const char *dst_ip;    ///< its address, as text
+    uint16_t port;         ///< its port, 162 by convention
+    const char *community; ///< the community the message carries (RFC 1157 sec 3.2.5)
+} SnmpNotifyDstArgs;
+
+/** @brief Where a notification is built: an open encoder, or a bare buffer. */
+typedef struct
+{
+    BerEnc *enc;  ///< the open encoder a PDU append writes into
+    uint8_t *out; ///< where a complete message is built
+    size_t cap;   ///< how many octets that holds
+} SnmpNotifyBufArgs;
+
+/** @brief The originator's own state and the calls that reach it, described only in snmp_notify.c. */
+struct SnmpNotifyInternal;
 
 /**
- * @brief Build an SNMPv2c notification message (Trap or InformRequest).
+ * @brief The notification originator (RFC 3416 sec 4.2.6, sec 4.2.7).
  *
- * Emits `SEQUENCE { version(1), community, [pdu_tag] { request-id, 0, 0,
- * varbinds } }` where the varbinds begin with `sysUpTime.0` = @p uptime_ticks and
- * `snmpTrapOID.0` = @p trap_oid, followed by the @p n caller @p vbs.
+ * A caller sets the members a call takes, invokes it through ::SnmpNotify, and reads the outcome
+ * off the same handle.
  *
- * @param pdu_tag  SNMP_TAG_SNMP_PDU_TRAPV2 (0xA7) for a trap, 0xA6 for an InformRequest.
- * @return total message length, or 0 if it would not fit @p cap.
+ * @var SnmpNotifyNs::pdu           what the notification PDU carries
+ * @var SnmpNotifyNs::dst           the notification receiver a send addresses
+ * @var SnmpNotifyNs::buf           where the message is built
+ * @var SnmpNotifyNs::ok            a send's true/false outcome: the stack took the datagram
+ * @var SnmpNotifyNs::n             octets a build wrote, 0 when the buffer could not hold them
+ * @var SnmpNotifyNs::build_pdu     append the notification PDU to @c buf.enc, mandatory bindings first
+ * @var SnmpNotifyNs::build_v2c     build a complete SNMPv2c notification message into @c buf.out
+ * @var SnmpNotifyNs::trap_v2c      build and send an SNMPv2-Trap-PDU, sysUpTime.0 from the clock
+ * @var SnmpNotifyNs::inform_v2c    build and send an InformRequest-PDU under the caller's request-id
+ * @var SnmpNotifyNs::internal      the request-id counter and the calls that reach it
  */
-size_t protocore_snmp_notify_build_v2c(uint8_t *out, size_t cap, const char *community, uint8_t pdu_tag,
-                                       uint32_t request_id, const uint32_t *trap_oid, size_t trap_oid_len,
-                                       uint32_t uptime_ticks, const SnmpVarbind *vbs, size_t n);
+typedef struct
+{
+    SnmpNotifyPduArgs pdu; ///< what the notification PDU carries
+    SnmpNotifyDstArgs dst; ///< where a send goes
+    SnmpNotifyBufArgs buf; ///< where the message is built
 
-typedef struct BerEnc BerEnc; // (snmp_ber.h)
+    proto_bool ok;
+    size_t n;
 
-/**
- * @brief Append a notification PDU (request-id, 0, 0, varbinds) under @p pdu_tag
- *        to an open encoder; the varbinds begin with sysUpTime.0 + snmpTrapOID.0.
- *
- * Used by protocore_snmp_notify_build_v2c() and by the SNMPv3 notifier, which wraps this
- * PDU in a scopedPDU. @return the encoder's running length.
- */
-size_t protocore_snmp_notify_build_pdu(BerEnc *e, uint8_t pdu_tag, uint32_t request_id, const uint32_t *trap_oid,
-                                       size_t trap_oid_len, uint32_t uptime_ticks, const SnmpVarbind *vbs, size_t n);
+    void (*build_pdu)(struct SnmpNotifyInternal *ctx);
+    void (*build_v2c)(struct SnmpNotifyInternal *ctx);
+    void (*trap_v2c)(struct SnmpNotifyInternal *ctx);
+    void (*inform_v2c)(struct SnmpNotifyInternal *ctx);
 
-// ---------------------------------------------------------------------------
-// Transport (needs a UDP transport)
-// ---------------------------------------------------------------------------
+    struct SnmpNotifyInternal *internal;
+} SnmpNotifyNs;
 
-/**
- * @brief Send an SNMPv2c Trap to @p dst_ip:@p port (sysUpTime.0 is taken from millis()).
- * @return true if the datagram was queued.
- */
-proto_bool protocore_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *community, const uint32_t *trap_oid,
-                                   size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
-
-/**
- * @brief Send an SNMPv2c InformRequest to @p dst_ip:@p port.
- *
- * Fire-and-forget at this layer (the manager's Response is not awaited or
- * retransmitted); @p request_id lets the caller match a Response if it listens.
- * @return true if the datagram was queued.
- */
-proto_bool protocore_snmp_inform_v2c(const char *dst_ip, uint16_t port, const char *community, uint32_t request_id,
-                                     const uint32_t *trap_oid, size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
-
-#if PROTOCORE_ENABLE_SNMP_V3
-/**
- * @brief Send an SNMPv3 USM Trap (authPriv) using the configured engine + user.
- *
- * Builds an authenticated (and, if a privacy password is set, encrypted) v3
- * notification from the engine ID and localized keys configured via
- * protocore_snmp_v3_init() / protocore_snmp_v3_set_user(). @return true if the datagram was queued.
- */
-proto_bool protocore_snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,
-                                  const SnmpVarbind *vbs, size_t n);
-
-/**
- * @brief Send an SNMPv3 USM InformRequest (authPriv) - the confirmed counterpart
- *        to protocore_snmp_trap_v3(), symmetric with protocore_snmp_inform_v2c().
- *
- * Builds an authenticated (and, if a privacy password is set, encrypted) v3
- * InformRequest. @p request_id is echoed by the receiver in its Response; the
- * caller owns it and, for confirmed delivery, retransmits until that Response
- * arrives. @return true if the datagram was queued.
- */
-proto_bool protocore_snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
-                                    size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
-#endif
+/** @brief The one symbol this module exports. */
+extern SnmpNotifyNs SnmpNotify;
 
 #endif // PROTOCORE_ENABLE_SNMP_TRAP
 

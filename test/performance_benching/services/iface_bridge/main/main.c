@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the interface-bridge pure core (services/net/iface_bridge): the
+// On-device CCOUNT microbenchmark for the interface-bridge pure core (server/net/iface_bridge): the
 // user-defined address:port -> hardware-bus rule table (register with bind-address parse + dedup, and
 // the per-accepted-connection dispatch lookup) and the write-then-read transaction frame codec
 // (big-endian write_len/read_len header || write payload). All four ops are pure - no heap, no sockets.
@@ -15,7 +15,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/iface_bridge/iface_bridge.h"
+#include "server/net/iface_bridge/iface_bridge.h"
 
 #include <stdint.h>
 

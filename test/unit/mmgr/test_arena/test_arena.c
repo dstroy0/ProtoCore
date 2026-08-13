@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the unified double-ended arena (server/system/protocore_arena):
+// Unit tests for the unified double-ended arena (server/core/protocore_arena):
 // first-fit persistent end (bottom) + bump scratch end (top) sharing a floating middle.
 
 #include "mmgr/arena.h"

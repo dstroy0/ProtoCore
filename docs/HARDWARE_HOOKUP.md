@@ -476,7 +476,7 @@ A measurement is two steps: start it, wait, then fetch:
   `protocore_sdi12_check_crc()`.
 
 Poll a sensor string and publish the readings over Wi-Fi. See
-`src/services/peripherals/sdi12/sdi12.h`.
+`src/server/peripherals/sdi12/sdi12.h`.
 
 ### DMX512 / RDM (lighting)
 
@@ -494,7 +494,7 @@ transceiver must be switched to receive for the reply, and RDM needs proper
 direction timing). Build a request with `protocore_rdm_build()` (set the destination /
 source `protocore_rdm_uid()`, command class, and PID) and read a reply with `protocore_rdm_parse()`,
 which checks the RDM checksum. Discover, address, and configure fixtures from a
-web UI - a tidy **wireless lighting controller**. See `src/services/peripherals/dmx/dmx.h`.
+web UI - a tidy **wireless lighting controller**. See `src/server/peripherals/dmx/dmx.h`.
 
 ### NMEA 0183 (GPS / marine)
 
@@ -864,7 +864,7 @@ already include the small pull-up resistors I2C needs. If two boards share an ad
 (the PCA9685 and INA219 both default to 0x40), change one with its address solder pads.
 
 All the I2C drivers bring the bus up and address it through one shared owner
-(`services/peripherals/i2c.h`), so there is a single place to move the pins:
+(`server/peripherals/i2c.h`), so there is a single place to move the pins:
 **`PROTOCORE_I2C_SDA_PIN` / `PROTOCORE_I2C_SCL_PIN`** (default `-1` = the platform default 21 /
 22). Set both to free GPIOs to relocate the whole bus.
 

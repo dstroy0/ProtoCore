@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the TI LDC1614 inductance-to-digital codec
-// (services/peripherals/ldc1614): combining a DATA MSB/LSB register pair into the 28-bit result
+// (server/peripherals/ldc1614): combining a DATA MSB/LSB register pair into the 28-bit result
 // (protocore_ldc1614_data), pulling the 4 error flags off the MSB register (protocore_ldc1614_error),
 // scaling a 28-bit result to a sensor frequency in Hz (protocore_ldc1614_sensor_freq_hz, the
 // data / 2^28 * fref math), and emitting the single-channel CH0 continuous-conversion
@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/ldc1614/ldc1614.h"
+#include "server/peripherals/ldc1614/ldc1614.h"
 
 #include <stdbool.h>
 #include <stddef.h>

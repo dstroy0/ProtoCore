@@ -228,22 +228,22 @@ size_t protocore_wisun_nodes_json(const WisunFan *fan, char *out, size_t cap)
         return 0;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&b, "[");
+    Sb.put(&b, "[");
     for (size_t i = 0; i < fan->count; i++)
     {
         if (i)
         {
-            protocore_sb_put(&b, ",");
+            Sb.put(&b, ",");
         }
         char astr[PROTOCORE_IP_STR_MAX];
         Ip.format(&fan->nodes[i].addr, astr, sizeof(astr));
-        protocore_sb_put(&b, "{\"addr\":\"");
-        protocore_sb_put(&b, astr);
-        protocore_sb_put(&b, "\",\"joined\":");
-        protocore_sb_put(&b, fan->nodes[i].joined ? "true" : "false");
-        protocore_sb_put(&b, "}");
+        Sb.put(&b, "{\"addr\":\"");
+        Sb.put(&b, astr);
+        Sb.put(&b, "\",\"joined\":");
+        Sb.put(&b, fan->nodes[i].joined ? "true" : "false");
+        Sb.put(&b, "}");
     }
-    protocore_sb_put(&b, "]");
+    Sb.put(&b, "]");
     if (!b.ok)
     {
         return 0;

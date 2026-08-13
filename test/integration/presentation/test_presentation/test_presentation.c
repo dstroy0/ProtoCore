@@ -10,7 +10,7 @@
 //   RACE SIM      - simulated concurrent-access scenarios
 
 #include "network_drivers/presentation/presentation.h"
-#include "server/system/proto_handler.h" // ProtoHandler: full type needed to call ->on_poll()
+#include "server/core/proto_handler.h" // ProtoHandler: full type needed to call ->on_poll()
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_alloc(): upgraded-slot guard in http_parse()
 #endif

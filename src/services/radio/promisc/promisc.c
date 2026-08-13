@@ -103,7 +103,7 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
 // libpcap framing (protocore_pcap_global_header / protocore_pcap_record_header) is in
 // shared/pcap/pcap.h - shared with the other capture features.
 
-// --- ESP32 radio binding -----------------------------------------------------------------
+// --- radio binding -----------------------------------------------------------------------
 #if PROTOCORE_HAS_VENDOR_WIFI
 
 // All promiscuous-capture state, owned by one instance (internal linkage): the frame sink.
@@ -122,8 +122,11 @@ proto_bool protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn si
     }
     s_promisc.sink = sink;
     // protocore_promisc_sink_fn and protocore_phy_frame_fn are the same neutral shape, so the sink goes
-    // straight down; the vendor packet struct is unwrapped in the backend.
-    if (!Radio.monitor_begin(channel, sink))
+    // straight down; the platform's received-packet struct is unwrapped in the backend.
+    Radio.monitor.channel = channel;
+    Radio.monitor.on_frame = sink;
+    Radio.monitor_begin(Radio.internal);
+    if (!Radio.ok)
     {
         s_promisc.sink = NULL;
         return PROTO_FALSE;
@@ -133,12 +136,13 @@ proto_bool protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn si
 
 void protocore_promisc_set_channel(uint8_t channel)
 {
-    Radio.monitor_set_channel(channel);
+    Radio.monitor.channel = channel;
+    Radio.monitor_set_channel(Radio.internal);
 }
 
 void protocore_promisc_end(void)
 {
-    Radio.monitor_end();
+    Radio.monitor_end(Radio.internal);
     s_promisc.sink = NULL;
 }
 

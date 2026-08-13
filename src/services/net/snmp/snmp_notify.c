@@ -2,168 +2,283 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_snmp_notify.c
- * @brief Outbound SNMP Trap / Inform PDU builder (host-testable) + the UDP send
- *        (ESP32 only). SNMPv3 USM notifications live in protocore_snmp_v3.cpp.
+ * @file snmp_notify.c
+ * @brief The notification originator (RFC 3416 sec 4.2.6, sec 4.2.7) - implementation.
+ *        See snmp_notify.h. SNMPv3 USM notifications are bound on ::SnmpV3.
  */
 
 #include "services/net/snmp/snmp_notify.h"
+#include "mmgr/protostr.h" // str.len: the community length, bounded
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 
-#include "services/net/snmp/snmp_ber.h"
-
-// The two mandatory bindings of any v2c/v3 notification (RFC 3416 4.2.6).
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/udp/udp.h"
-#include "server/clock/clock.h" // protocore_millis() - the library's clock seam (ban 5: never bare millis)
+#include "network_drivers/transport/udp/client/client.h" // UdpClient: the datagram out
+#include "server/clock/clock.h"                          // protocore_millis(): the library's clock seam
+#include "shared/ip/ip.h"                                // Ip.parse: the receiver's address, once
 #endif
+
+// The two mandatory first bindings of every notification (RFC 3416 sec 4.2.6, RFC 3418 sec 2).
 static const uint32_t OID_SYSUPTIME_0[] = {1, 3, 6, 1, 2, 1, 1, 3, 0};
 static const uint32_t OID_SNMPTRAPOID_0[] = {1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0};
 
-// Encode one caller varbind: SEQUENCE { OID, typed-value }.
+/**
+ * @brief The originator's compile-time storage: the request-id counter and the send stage.
+ *
+ * All of it BSS, so a notification costs no heap and no message lands on a task stack.
+ *
+ * @var SnmpNotifyStorage::trap_reqid  the request-id a trap takes next (RFC 3416 sec 4.1)
+ * @var SnmpNotifyStorage::tx          one built message, for the length of one send
+ */
+struct SnmpNotifyStorage
+{
+    uint32_t trap_reqid;
+    uint8_t tx[PROTOCORE_SNMP_TRAP_BUF_SIZE];
+};
+
+/**
+ * @brief The originator's state and the calls that reach it - what SnmpNotifyNs points at.
+ *
+ * @var SnmpNotifyInternal::store  the request-id counter and the send stage
+ * @var SnmpNotifyInternal::ns     the handle a caller sets a call's members on
+ */
+struct SnmpNotifyInternal
+{
+    struct SnmpNotifyStorage *store;
+    SnmpNotifyNs *ns;
+};
+
+// A trap is unacknowledged, so its request-id only has to differ from the last one; the counter
+// starts at 1 and the rest of the storage starts at zero.
+static struct SnmpNotifyStorage s_store = {.trap_reqid = 1};
+
+static struct SnmpNotifyInternal s_notify = {.store = &s_store, .ns = &SnmpNotify};
+
+// One caller binding: SEQUENCE { name, typed value }. Reads the binding it is given and no module
+// state, so it takes that binding rather than the handle.
 static void put_varbind(BerEnc *e, const SnmpVarbind *vb)
 {
-    size_t t = protocore_ber_seq_begin(e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_oid(e, vb->oid, vb->oid_len);
+    SnmpBer.enc = e;
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t t = SnmpBer.tlv.token;
+    SnmpBer.tlv.arcs = vb->oid;
+    SnmpBer.tlv.arc_count = vb->oid_len;
+    SnmpBer.put_oid(SnmpBer.internal);
     switch (vb->type)
     {
     case (uint8_t)SNMP_VB_INT:
-        protocore_ber_put_integer(e, vb->ival);
+        SnmpBer.tlv.ival = vb->ival;
+        SnmpBer.put_integer(SnmpBer.internal);
         break;
     case (uint8_t)SNMP_VB_STRING:
-        protocore_ber_put_octet_string(e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, vb->bytes, vb->blen);
+        SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+        SnmpBer.tlv.bytes = vb->bytes;
+        SnmpBer.tlv.len = vb->blen;
+        SnmpBer.put_octet_string(SnmpBer.internal);
         break;
     case (uint8_t)SNMP_VB_OID:
-        protocore_ber_put_oid(e, vb->oid_val, vb->oid_val_len);
+        SnmpBer.tlv.arcs = vb->oid_val;
+        SnmpBer.tlv.arc_count = vb->oid_val_len;
+        SnmpBer.put_oid(SnmpBer.internal);
         break;
     case (uint8_t)SNMP_VB_COUNTER32:
-        protocore_ber_put_uint(e, (uint8_t)SNMP_TAG_SNMP_COUNTER32, (uint32_t)vb->ival);
+        SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_COUNTER32;
+        SnmpBer.tlv.uval = (uint32_t)vb->ival;
+        SnmpBer.put_uint(SnmpBer.internal);
         break;
     case (uint8_t)SNMP_VB_GAUGE32:
-        protocore_ber_put_uint(e, (uint8_t)SNMP_TAG_SNMP_GAUGE32, (uint32_t)vb->ival);
+        SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_GAUGE32;
+        SnmpBer.tlv.uval = (uint32_t)vb->ival;
+        SnmpBer.put_uint(SnmpBer.internal);
         break;
     case (uint8_t)SNMP_VB_TIMETICKS:
-        protocore_ber_put_uint(e, (uint8_t)SNMP_TAG_SNMP_TIMETICKS, (uint32_t)vb->ival);
+        SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_TIMETICKS;
+        SnmpBer.tlv.uval = (uint32_t)vb->ival;
+        SnmpBer.put_uint(SnmpBer.internal);
         break;
     case (uint8_t)SNMP_VB_IPADDR:
-        protocore_ber_put_octet_string(e, (uint8_t)SNMP_TAG_SNMP_IPADDRESS, vb->bytes, vb->blen);
+        SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_IPADDRESS;
+        SnmpBer.tlv.bytes = vb->bytes;
+        SnmpBer.tlv.len = vb->blen;
+        SnmpBer.put_octet_string(SnmpBer.internal);
         break;
     default:
         e->ok = PROTO_FALSE;
         break;
     }
-    protocore_ber_seq_end(e, t);
+    SnmpBer.enc = e;
+    SnmpBer.tlv.token = t;
+    SnmpBer.seq_end(SnmpBer.internal);
 }
 
-// Build the notification PDU (request-id, 0, 0, varbinds) under @p pdu_tag. The
-// varbinds begin with sysUpTime.0 + snmpTrapOID.0. Shared with the v3 builder
-// (which wraps this PDU in a scopedPDU); see protocore_snmp_notify_build_pdu() in the header.
-size_t protocore_snmp_notify_build_pdu(BerEnc *e, uint8_t pdu_tag, uint32_t request_id, const uint32_t *trap_oid,
-                                size_t trap_oid_len, uint32_t uptime_ticks, const SnmpVarbind *vbs, size_t n)
+// The notification PDU: request-id, error-status 0, error-index 0, then the VarBindList with
+// sysUpTime.0 and snmpTrapOID.0 first (RFC 3416 sec 4.2.6). Reads the PDU members off the handle,
+// so it takes ctx, plus the encoder it appends to.
+static void append_pdu(struct SnmpNotifyInternal *restrict ctx, BerEnc *e)
 {
-    size_t pdu = protocore_ber_seq_begin(e, pdu_tag);
-    protocore_ber_put_integer(e, (long)request_id); // request-id
-    protocore_ber_put_integer(e, 0);                // error-status
-    protocore_ber_put_integer(e, 0);                // error-index
-    size_t vbl = protocore_ber_seq_begin(e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    SnmpBer.enc = e;
+    SnmpBer.tlv.tag = ctx->ns->pdu.pdu_tag;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t pdu = SnmpBer.tlv.token;
+    SnmpBer.tlv.ival = (long)ctx->ns->pdu.request_id;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.ival = 0; // error-status
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.ival = 0; // error-index
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t vbl = SnmpBer.tlv.token;
+
     // sysUpTime.0 = TimeTicks
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t t0 = SnmpBer.tlv.token;
+    SnmpBer.tlv.arcs = OID_SYSUPTIME_0;
+    SnmpBer.tlv.arc_count = sizeof(OID_SYSUPTIME_0) / sizeof(uint32_t);
+    SnmpBer.put_oid(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_TIMETICKS;
+    SnmpBer.tlv.uval = ctx->ns->pdu.uptime_ticks;
+    SnmpBer.put_uint(SnmpBer.internal);
+    SnmpBer.tlv.token = t0;
+    SnmpBer.seq_end(SnmpBer.internal);
+
+    // snmpTrapOID.0 = OBJECT IDENTIFIER
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t t1 = SnmpBer.tlv.token;
+    SnmpBer.tlv.arcs = OID_SNMPTRAPOID_0;
+    SnmpBer.tlv.arc_count = sizeof(OID_SNMPTRAPOID_0) / sizeof(uint32_t);
+    SnmpBer.put_oid(SnmpBer.internal);
+    SnmpBer.tlv.arcs = ctx->ns->pdu.trap_oid;
+    SnmpBer.tlv.arc_count = ctx->ns->pdu.trap_oid_len;
+    SnmpBer.put_oid(SnmpBer.internal);
+    SnmpBer.tlv.token = t1;
+    SnmpBer.seq_end(SnmpBer.internal);
+
+    for (size_t i = 0; i < ctx->ns->pdu.vb_count; i++)
     {
-        size_t t = protocore_ber_seq_begin(e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-        protocore_ber_put_oid(e, OID_SYSUPTIME_0, sizeof(OID_SYSUPTIME_0) / sizeof(uint32_t));
-        protocore_ber_put_uint(e, (uint8_t)SNMP_TAG_SNMP_TIMETICKS, uptime_ticks);
-        protocore_ber_seq_end(e, t);
+        put_varbind(e, &ctx->ns->pdu.vbs[i]);
     }
-    // snmpTrapOID.0 = OID
-    {
-        size_t t = protocore_ber_seq_begin(e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-        protocore_ber_put_oid(e, OID_SNMPTRAPOID_0, sizeof(OID_SNMPTRAPOID_0) / sizeof(uint32_t));
-        protocore_ber_put_oid(e, trap_oid, trap_oid_len);
-        protocore_ber_seq_end(e, t);
-    }
-    for (size_t i = 0; i < n; i++)
-    {
-        put_varbind(e, &vbs[i]);
-    }
-    protocore_ber_seq_end(e, vbl);
-    protocore_ber_seq_end(e, pdu);
-    return e->len;
+
+    SnmpBer.enc = e;
+    SnmpBer.tlv.token = vbl;
+    SnmpBer.seq_end(SnmpBer.internal);
+    SnmpBer.tlv.token = pdu;
+    SnmpBer.seq_end(SnmpBer.internal);
+    ctx->ns->n = e->len;
 }
 
-size_t protocore_snmp_notify_build_v2c(uint8_t *out, size_t cap, const char *community, uint8_t pdu_tag, uint32_t request_id,
-                                const uint32_t *trap_oid, size_t trap_oid_len, uint32_t uptime_ticks,
-                                const SnmpVarbind *vbs, size_t n)
+static void build_pdu(struct SnmpNotifyInternal *restrict ctx)
 {
-    if (!out || !community || !trap_oid)
+    append_pdu(ctx, ctx->ns->buf.enc);
+    ctx->ns->ok = ctx->ns->buf.enc->ok;
+}
+
+// SEQUENCE { version 1, community, notification PDU }: the RFC 1157 sec 4 message wrapper carrying
+// an SNMPv2c version field.
+static void build_v2c(struct SnmpNotifyInternal *restrict ctx)
+{
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->buf.out || !ctx->ns->dst.community || !ctx->ns->pdu.trap_oid)
     {
-        return 0;
+        return;
     }
     BerEnc e;
-    protocore_ber_enc_init(&e, out, cap);
-    size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_integer(&e, 1); // version: SNMPv2c
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)community,
-                            strnlen(community, SNMP_COMMUNITY_MAX + 1));
-    protocore_snmp_notify_build_pdu(&e, pdu_tag, request_id, trap_oid, trap_oid_len, uptime_ticks, vbs, n);
-    protocore_ber_seq_end(&e, msg);
-    return e.ok ? e.len : 0;
+    SnmpBer.enc = &e;
+    SnmpBer.buf.out = ctx->ns->buf.out;
+    SnmpBer.buf.cap = ctx->ns->buf.cap;
+    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    const size_t msg = SnmpBer.tlv.token;
+    SnmpBer.tlv.ival = 1; // version: SNMPv2c
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBer.tlv.bytes = (const uint8_t *)ctx->ns->dst.community;
+    SnmpBer.tlv.len = str.len(ctx->ns->dst.community, SNMP_COMMUNITY_MAX + 1);
+    SnmpBer.put_octet_string(SnmpBer.internal);
+
+    append_pdu(ctx, &e);
+
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.token = msg;
+    SnmpBer.seq_end(SnmpBer.internal);
+    ctx->ns->n = e.ok ? e.len : 0;
+    ctx->ns->ok = e.ok;
 }
 
 // ---------------------------------------------------------------------------
-// Transport (ESP32 only)
+// Sending. RFC 3417 sec 3.2 suggests notification receivers listen on UDP 162.
 // ---------------------------------------------------------------------------
+
 #if PROTOCORE_HAS_NET_STACK
-
-// All SNMP-notify transport state, owned by one instance (internal linkage): the trap
-// request-id counter, so it is one named owner, unreachable from any other translation unit.
-typedef struct
+// Build the message into the send stage and hand it to the datagram service.
+static void send_built(struct SnmpNotifyInternal *restrict ctx)
 {
-    uint32_t trap_reqid;
-} SnmpNotifyCtx;
-static SnmpNotifyCtx s_notify = {.trap_reqid = 1};
-
-proto_bool protocore_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *community, const uint32_t *trap_oid,
-                            size_t trap_oid_len, const SnmpVarbind *vbs, size_t n)
-{
-    uint8_t buf[PROTOCORE_SNMP_TRAP_BUF_SIZE];
-    uint32_t up = (uint32_t)(protocore_millis() / 10); // TimeTicks = hundredths of a second
-    size_t len = protocore_snmp_notify_build_v2c(buf, sizeof(buf), community, (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2,
-                                          s_notify.trap_reqid++, trap_oid, trap_oid_len, up, vbs, n);
+    ctx->ns->buf.out = ctx->store->tx;
+    ctx->ns->buf.cap = sizeof(ctx->store->tx);
+    build_v2c(ctx);
+    const size_t n = ctx->ns->n;
+    if (n == 0)
+    {
+        ctx->ns->ok = PROTO_FALSE;
+        return;
+    }
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    return len && Ip.parse(dst_ip, &dst) && Udp.client->sendto(&dst, port, buf, len);
+    Ip.args.text = ctx->ns->dst.dst_ip;
+    Ip.args.out = &dst;
+    Ip.parse(Ip.internal);
+    if (!Ip.ok)
+    {
+        ctx->ns->ok = PROTO_FALSE;
+        return;
+    }
+    UdpClient.dst = &dst;
+    UdpClient.dst_port = ctx->ns->dst.port;
+    UdpClient.data = ctx->store->tx;
+    UdpClient.len = n;
+    UdpClient.sendto(UdpClient.internal);
+    ctx->ns->ok = UdpClient.ok;
 }
-
-proto_bool protocore_snmp_inform_v2c(const char *dst_ip, uint16_t port, const char *community, uint32_t request_id,
-                              const uint32_t *trap_oid, size_t trap_oid_len, const SnmpVarbind *vbs, size_t n)
-{
-    uint8_t buf[PROTOCORE_SNMP_TRAP_BUF_SIZE];
-    uint32_t up = (uint32_t)(protocore_millis() / 10);
-    size_t len = protocore_snmp_notify_build_v2c(buf, sizeof(buf), community, 0xA6 /* InformRequest */, request_id, trap_oid,
-                                          trap_oid_len, up, vbs, n);
-    protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    return len && Ip.parse(dst_ip, &dst) && Udp.client->sendto(&dst, port, buf, len);
-}
-
-#else // host build: transport is a stub
-
-proto_bool protocore_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *community, const uint32_t *trap_oid,
-                            size_t trap_oid_len, const SnmpVarbind *vbs, size_t n)
-{
-    (void)dst_ip;
-    (void)port;
-    (void)community;
-    (void)trap_oid;
-    (void)trap_oid_len;
-    (void)vbs;
-    (void)n;
-    return PROTO_FALSE;
-}
-proto_bool protocore_snmp_inform_v2c(const char *, uint16_t, const char *, uint32_t, const uint32_t *, size_t,
-                              const SnmpVarbind *, size_t)
-{
-    return PROTO_FALSE;
-}
-
 #endif // PROTOCORE_HAS_NET_STACK
+
+// SNMPv2-Trap-PDU (RFC 3416 sec 4.2.6): unacknowledged, so the request-id comes from the module's
+// counter and sysUpTime.0 from the clock.
+static void trap_v2c(struct SnmpNotifyInternal *restrict ctx)
+{
+    ctx->ns->pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
+#if PROTOCORE_HAS_NET_STACK
+    ctx->ns->pdu.request_id = ctx->store->trap_reqid++;
+    ctx->ns->pdu.uptime_ticks = (uint32_t)(protocore_millis() / 10); // TimeTicks: hundredths of a second
+    send_built(ctx);
+#else
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE; // no transport in this build
+#endif
+}
+
+// InformRequest-PDU (RFC 3416 sec 4.2.7): confirmed, so the caller owns the request-id its
+// Response-PDU echoes and retransmits until that Response arrives.
+static void inform_v2c(struct SnmpNotifyInternal *restrict ctx)
+{
+    ctx->ns->pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_INFORM;
+#if PROTOCORE_HAS_NET_STACK
+    ctx->ns->pdu.uptime_ticks = (uint32_t)(protocore_millis() / 10);
+    send_built(ctx);
+#else
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE; // no transport in this build
+#endif
+}
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+SnmpNotifyNs SnmpNotify = {.build_pdu = build_pdu,
+                           .build_v2c = build_v2c,
+                           .trap_v2c = trap_v2c,
+                           .inform_v2c = inform_v2c,
+                           .internal = &s_notify};
 
 #endif // PROTOCORE_ENABLE_SNMP_TRAP

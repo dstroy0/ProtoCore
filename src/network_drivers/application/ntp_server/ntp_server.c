@@ -15,7 +15,7 @@
 #include "mmgr/endian.h"
 // memset, memcpy
 
-#include "network_drivers/transport/udp/udp.h"                    // Udp.listener: the port 123 bind and the reply
+#include "network_drivers/transport/udp/udp.h"                // Udp.listener: the port 123 bind and the reply
 #include "server/clock/clock.h"                               // protocore_millis: the sub-second fraction
 #include "services/timing_position/time_source/time_source.h" // protocore_time_now: the seconds we serve
 
@@ -36,15 +36,15 @@ size_t protocore_ntp_server_build_response(const uint8_t *req, size_t req_len, u
     out[2] = req[2] ? req[2] : 6; // poll interval: echo the client's, else 2^6 s
     out[3] = (uint8_t)(-6);       // precision: ~2^-6 s (16 ms), the clock's granularity
     // Root delay (4..7) stays 0; root dispersion (8..11) ~ 1 s to advertise a coarse clock.
-    protocore_wr32be(out + 8, 0x00010000u);
-    protocore_wr32be(out + 12, refid);
-    protocore_wr32be(out + 16, protocore_ntp_secs); // reference timestamp (when our clock was last good = now)
-    protocore_wr32be(out + 20, protocore_ntp_frac);
-    mem.cpy(out + 24, req + 40, 8);                 // origin timestamp = the client's transmit timestamp
-    protocore_wr32be(out + 32, protocore_ntp_secs); // receive timestamp
-    protocore_wr32be(out + 36, protocore_ntp_frac);
-    protocore_wr32be(out + 40, protocore_ntp_secs); // transmit timestamp
-    protocore_wr32be(out + 44, protocore_ntp_frac);
+    endian.wr32be(out + 8, 0x00010000u);
+    endian.wr32be(out + 12, refid);
+    endian.wr32be(out + 16, protocore_ntp_secs); // reference timestamp (when our clock was last good = now)
+    endian.wr32be(out + 20, protocore_ntp_frac);
+    mem.cpy(out + 24, req + 40, 8);              // origin timestamp = the client's transmit timestamp
+    endian.wr32be(out + 32, protocore_ntp_secs); // receive timestamp
+    endian.wr32be(out + 36, protocore_ntp_frac);
+    endian.wr32be(out + 40, protocore_ntp_secs); // transmit timestamp
+    endian.wr32be(out + 44, protocore_ntp_frac);
     return PROTOCORE_NTP_PACKET_LEN;
 }
 

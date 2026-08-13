@@ -102,7 +102,7 @@ static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key,
         {
             vlen = out_size - 1;
         }
-        proto_raw_read(out, vs, vlen);
+        raw.read(out, vs, vlen);
         out[vlen] = '\0';
         return PROTO_TRUE;
     }
@@ -156,7 +156,7 @@ static struct AuthStorage *bind_auth(struct AuthInternal *restrict ctx)
     if (ctx->store == NULL)
     {
         protocore_span sp = protocore_secure_persist_span(sizeof(struct AuthStorage));
-        if (protocore_span_ok(sp))
+        if (span.ok(sp))
         {
             ctx->store = (struct AuthStorage *)sp.buf;
         }
@@ -213,15 +213,15 @@ static void rekey(struct AuthInternal *restrict ctx)
     for (int i = 0; i < 4; i++)
     {
         uint32_t r = protocore_platform_rand_u32();
-        proto_raw_put_u32(seed + i * 4, r);
+        raw.put_u32(seed + i * 4, r);
     }
     uint32_t c = counter;
     uint32_t t = (uint32_t)protocore_millis();
-    proto_raw_put_u32(seed + 16, c);
-    proto_raw_put_u32(seed + 20, t);
+    raw.put_u32(seed + 16, c);
+    raw.put_u32(seed + 20, t);
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     protocore_sha256(work, seed, sizeof(seed), d);
-    proto_raw_read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
+    raw.read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
 }
 
 // Stateless Digest nonce (RFC 7616 3.3): "<issue_ms_hex>.<mac_hex>" where the MAC
@@ -232,8 +232,8 @@ static void rekey(struct AuthInternal *restrict ctx)
 static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t issue, char *mac_hex)
 {
     uint8_t material[20];
-    proto_raw_read(material, secret, 16);
-    proto_raw_put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
+    raw.read(material, secret, 16);
+    raw.put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     protocore_sha256(work, material, sizeof(material), d);
     protocore_hex_encode(d, 16, mac_hex, PROTO_FALSE); // 16 bytes -> 32 hex chars + NUL
@@ -256,10 +256,10 @@ static void mint_nonce(struct AuthInternal *restrict ctx)
     char mac_hex[33];
     digest_nonce_mac(work, ctx->store->digest_secret, issue, mac_hex);
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&sb_out, issue_hex);
-    protocore_sb_put(&sb_out, ".");
-    protocore_sb_put(&sb_out, mac_hex);
-    if (protocore_sb_finish(&sb_out) == 0)
+    Sb.put(&sb_out, issue_hex);
+    Sb.put(&sb_out, ".");
+    Sb.put(&sb_out, mac_hex);
+    if (Sb.finish(&sb_out) == 0)
     {
         out[0] = '\0';
     }
@@ -337,14 +337,14 @@ static void challenge(struct AuthInternal *restrict ctx)
         ctx->ns->nonce_args.cap = sizeof(nonce);
         mint_nonce(ctx); // a fresh, timestamped nonce per challenge
         protocore_sb sb_challenge = {challenge, sizeof(challenge), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
-        protocore_sb_put(&sb_challenge, c->realm);
-        protocore_sb_put(&sb_challenge, "\", qop=\"auth\", algorithm=SHA-256, nonce=\"");
-        protocore_sb_put(&sb_challenge, nonce);
-        protocore_sb_put(&sb_challenge, "\"");
-        protocore_sb_put(&sb_challenge, stale ? ", stale=true" : "");
-        protocore_sb_put(&sb_challenge, "\r\n");
-        if (protocore_sb_finish(&sb_challenge) == 0)
+        Sb.put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
+        Sb.put(&sb_challenge, c->realm);
+        Sb.put(&sb_challenge, "\", qop=\"auth\", algorithm=SHA-256, nonce=\"");
+        Sb.put(&sb_challenge, nonce);
+        Sb.put(&sb_challenge, "\"");
+        Sb.put(&sb_challenge, stale ? ", stale=true" : "");
+        Sb.put(&sb_challenge, "\r\n");
+        if (Sb.finish(&sb_challenge) == 0)
         {
             challenge[0] = '\0';
         }
@@ -352,10 +352,10 @@ static void challenge(struct AuthInternal *restrict ctx)
     else
     {
         protocore_sb sb_challenge2 = {challenge, sizeof(challenge), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_challenge2, "WWW-Authenticate: Basic realm=\"");
-        protocore_sb_put(&sb_challenge2, c->realm);
-        protocore_sb_put(&sb_challenge2, "\"\r\n");
-        if (protocore_sb_finish(&sb_challenge2) == 0)
+        Sb.put(&sb_challenge2, "WWW-Authenticate: Basic realm=\"");
+        Sb.put(&sb_challenge2, c->realm);
+        Sb.put(&sb_challenge2, "\"\r\n");
+        if (Sb.finish(&sb_challenge2) == 0)
         {
             challenge[0] = '\0';
         }
@@ -367,15 +367,15 @@ static void challenge(struct AuthInternal *restrict ctx)
     static const char body[] = "Unauthorized";
     char header[RESP_HDR_BUF_SIZE];
     protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_header, "HTTP/1.1 401 Unauthorized\r\n");
-    protocore_sb_put(&sb_header, challenge);
-    protocore_sb_put(&sb_header, "Content-Type: text/plain\r\nContent-Length: ");
-    protocore_sb_i64(&sb_header, (int64_t)((int)(sizeof(body) - 1)));
-    protocore_sb_put(&sb_header, "\r\n");
-    protocore_sb_put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-    protocore_sb_put(&sb_header, cl);
-    protocore_sb_put(&sb_header, "\r\n");
-    int hlen = (int)protocore_sb_finish(&sb_header);
+    Sb.put(&sb_header, "HTTP/1.1 401 Unauthorized\r\n");
+    Sb.put(&sb_header, challenge);
+    Sb.put(&sb_header, "Content-Type: text/plain\r\nContent-Length: ");
+    Sb.i64(&sb_header, (int64_t)((int)(sizeof(body) - 1)));
+    Sb.put(&sb_header, "\r\n");
+    Sb.put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    Sb.put(&sb_header, cl);
+    Sb.put(&sb_header, "\r\n");
+    int hlen = (int)Sb.finish(&sb_header);
 
     // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
     // follows the header.
@@ -495,10 +495,10 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     if (req->query[0])
     {
         protocore_sb sb_target = {target, sizeof(target), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_target, req->path);
-        protocore_sb_put(&sb_target, "?");
-        protocore_sb_put(&sb_target, req->query);
-        if (protocore_sb_finish(&sb_target) == 0)
+        Sb.put(&sb_target, req->path);
+        Sb.put(&sb_target, "?");
+        Sb.put(&sb_target, req->query);
+        if (Sb.finish(&sb_target) == 0)
         {
             target[0] = '\0';
         }
@@ -506,8 +506,8 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     else
     {
         protocore_sb sb_target2 = {target, sizeof(target), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_target2, req->path);
-        if (protocore_sb_finish(&sb_target2) == 0)
+        Sb.put(&sb_target2, req->path);
+        if (Sb.finish(&sb_target2) == 0)
         {
             target[0] = '\0';
         }
@@ -523,36 +523,36 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     char expected[65];
 
     protocore_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_tmp, c->user);
-    protocore_sb_put(&sb_tmp, ":");
-    protocore_sb_put(&sb_tmp, c->realm);
-    protocore_sb_put(&sb_tmp, ":");
-    protocore_sb_put(&sb_tmp, c->pass);
-    int n = (int)protocore_sb_finish(&sb_tmp);
+    Sb.put(&sb_tmp, c->user);
+    Sb.put(&sb_tmp, ":");
+    Sb.put(&sb_tmp, c->realm);
+    Sb.put(&sb_tmp, ":");
+    Sb.put(&sb_tmp, c->pass);
+    int n = (int)Sb.finish(&sb_tmp);
     sha256_hex(work, (const uint8_t *)tmp, (size_t)n, ha1);
 
     char tmp2[sizeof(uri) + 16];
     protocore_sb sb_tmp2 = {tmp2, sizeof(tmp2), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_tmp2, req->method);
-    protocore_sb_put(&sb_tmp2, ":");
-    protocore_sb_put(&sb_tmp2, uri);
-    n = (int)protocore_sb_finish(&sb_tmp2);
+    Sb.put(&sb_tmp2, req->method);
+    Sb.put(&sb_tmp2, ":");
+    Sb.put(&sb_tmp2, uri);
+    n = (int)Sb.finish(&sb_tmp2);
     sha256_hex(work, (const uint8_t *)tmp2, (size_t)n, ha2);
 
     char tmp3[65 + 48 + 16 + 64 + 8 + 65 + 8];
     protocore_sb sb_tmp3 = {tmp3, sizeof(tmp3), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_tmp3, ha1);
-    protocore_sb_put(&sb_tmp3, ":");
-    protocore_sb_put(&sb_tmp3, nonce);
-    protocore_sb_put(&sb_tmp3, ":");
-    protocore_sb_put(&sb_tmp3, nc);
-    protocore_sb_put(&sb_tmp3, ":");
-    protocore_sb_put(&sb_tmp3, cnonce);
-    protocore_sb_put(&sb_tmp3, ":");
-    protocore_sb_put(&sb_tmp3, qop);
-    protocore_sb_put(&sb_tmp3, ":");
-    protocore_sb_put(&sb_tmp3, ha2);
-    n = (int)protocore_sb_finish(&sb_tmp3);
+    Sb.put(&sb_tmp3, ha1);
+    Sb.put(&sb_tmp3, ":");
+    Sb.put(&sb_tmp3, nonce);
+    Sb.put(&sb_tmp3, ":");
+    Sb.put(&sb_tmp3, nc);
+    Sb.put(&sb_tmp3, ":");
+    Sb.put(&sb_tmp3, cnonce);
+    Sb.put(&sb_tmp3, ":");
+    Sb.put(&sb_tmp3, qop);
+    Sb.put(&sb_tmp3, ":");
+    Sb.put(&sb_tmp3, ha2);
+    n = (int)Sb.finish(&sb_tmp3);
     sha256_hex(work, (const uint8_t *)tmp3, (size_t)n, expected);
 
     if (!str.eq(expected, response, sizeof(expected), PROTO_TRUE))

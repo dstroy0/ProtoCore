@@ -381,7 +381,7 @@ python -m tests.simulate_pipeline
   (the 16-bit instruction word + shadow-register transfer shared across this generation of ADI
   high-speed ADCs). Host-tested (`test/test_ad9238`); the per-register bit-field constants are
   transcribed from the datasheet and, per this project's hardware-verification policy, not yet
-  confirmed against physical silicon - see `services/peripherals/ad9238/ad9238.h`'s confidence note before
+  confirmed against physical silicon - see `server/peripherals/ad9238/ad9238.h`'s confidence note before
   writing to a real part.
 - **`services/clock.h`: `protocore_cycles()` / `protocore_cycles_to_ns()`** - a CPU-cycle-counter time
   source for sub-microsecond jitter measurement, alongside the existing millisecond/microsecond

@@ -10,8 +10,8 @@
 #include "network_drivers/presentation/ssh/network/network.h" // SshNetwork: the socket seam
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport.h" // ssh_sess, ssh_pkt - session and packet state
-#include "mmgr/bytes.h"      // protocore_rd_u32 / protocore_rd_str - the one length-prefixed reader
-#include "mmgr/endian.h"     // protocore_wr32be - the one wire-integer writer
+#include "mmgr/bytes.h"      // bytes.rd_u32 / bytes.rd_str - the one length-prefixed reader
+#include "mmgr/endian.h"     // endian.wr32be - the one wire-integer writer
 #include "mmgr/plaintext.h"  // protocore_plaintext_span / _mark / _release - the dispatch reply buffer
 #include "mmgr/protoframe.h" // protocore_fval - the log field value
 #include "mmgr/protomem.h"
@@ -130,10 +130,10 @@ int32_t protocore_ssh_sig_build_open_failure(uint8_t *out, size_t cap, uint32_t 
         return -1;
     }
     out[0] = SSH_MSG_CHANNEL_OPEN_FAILURE;
-    protocore_wr32be(out + 1, peer_id);
-    protocore_wr32be(out + 5, reason);
-    protocore_wr32be(out + 9, 0);  // empty description
-    protocore_wr32be(out + 13, 0); // empty language
+    endian.wr32be(out + 1, peer_id);
+    endian.wr32be(out + 5, reason);
+    endian.wr32be(out + 9, 0);  // empty description
+    endian.wr32be(out + 13, 0); // empty language
     *out_len = 17;
     return 0;
 }
@@ -146,10 +146,10 @@ int32_t protocore_ssh_sig_build_open_confirm(const SshFlow *f, uint32_t peer_id,
         return -1;
     }
     out[0] = SSH_MSG_CHANNEL_OPEN_CONFIRMATION;
-    protocore_wr32be(out + 1, peer_id);
-    protocore_wr32be(out + 5, local_id);
-    protocore_wr32be(out + 9, f->local_window);
-    protocore_wr32be(out + 13, SSH_CHAN_MAX_PACKET);
+    endian.wr32be(out + 1, peer_id);
+    endian.wr32be(out + 5, local_id);
+    endian.wr32be(out + 9, f->local_window);
+    endian.wr32be(out + 13, SSH_CHAN_MAX_PACKET);
     *out_len = 17;
     return 0;
 }
@@ -166,8 +166,8 @@ int32_t protocore_ssh_sig_build_data(SshFlow *f, uint32_t peer_id, const uint8_t
         return -1;
     }
     out[0] = SSH_MSG_CHANNEL_DATA;
-    protocore_wr32be(out + 1, peer_id);
-    protocore_wr32be(out + 5, (uint32_t)len);
+    endian.wr32be(out + 1, peer_id);
+    endian.wr32be(out + 5, (uint32_t)len);
     mem.cpy(out + 9, data, len);
     *out_len = 9 + len;
     protocore_ssh_flow_send_take(f, (uint32_t)len);
@@ -181,8 +181,8 @@ int32_t protocore_ssh_sig_build_window_adjust(uint32_t peer_id, uint32_t add, ui
         return -1;
     }
     out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
-    protocore_wr32be(out + 1, peer_id);
-    protocore_wr32be(out + 5, add);
+    endian.wr32be(out + 1, peer_id);
+    endian.wr32be(out + 5, add);
     *out_len = 9;
     return 0;
 }
@@ -194,7 +194,7 @@ int32_t protocore_ssh_sig_build_eof(uint32_t peer_id, uint8_t *out, size_t cap, 
         return -1;
     }
     out[0] = SSH_MSG_CHANNEL_EOF;
-    protocore_wr32be(out + 1, peer_id);
+    endian.wr32be(out + 1, peer_id);
     *out_len = 5;
     return 0;
 }
@@ -206,7 +206,7 @@ int32_t protocore_ssh_sig_build_close(uint32_t peer_id, uint8_t *out, size_t cap
         return -1;
     }
     out[0] = SSH_MSG_CHANNEL_CLOSE;
-    protocore_wr32be(out + 1, peer_id);
+    endian.wr32be(out + 1, peer_id);
     *out_len = 5;
     return 0;
 }
@@ -531,7 +531,7 @@ void ssh_global_request_handle(struct SshConnectionInternal *restrict ctx)
     size_t off = 1;
     const uint8_t *name;
     uint32_t name_len;
-    if (!protocore_rd_str(payload, len, &off, &name, &name_len))
+    if (!bytes.rd_str(payload, len, &off, &name, &name_len))
     {
         ctx->ns->i32 = -1;
         return;
@@ -551,12 +551,12 @@ void ssh_global_request_handle(struct SshConnectionInternal *restrict ctx)
         // Request-specific data: bind address (string) followed by bind port (uint32).
         const uint8_t *addr;
         uint32_t addr_len;
-        if (!protocore_rd_str(payload, len, &off, &addr, &addr_len) || off + 4 > len)
+        if (!bytes.rd_str(payload, len, &off, &addr, &addr_len) || off + 4 > len)
         {
             ctx->ns->i32 = -1;
             return;
         }
-        uint16_t bind_port = (uint16_t)protocore_rd32be(payload + off);
+        uint16_t bind_port = (uint16_t)endian.rd32be(payload + off);
 
         // The owner allocates (or cancels) the real listener; -1 means "refused".
         int bound = -1;
@@ -597,7 +597,7 @@ void ssh_global_request_handle(struct SshConnectionInternal *restrict ctx)
                     return;
                 }
                 out[0] = SSH_MSG_REQUEST_SUCCESS;
-                protocore_wr32be(out + 1, (uint32_t)(uint16_t)bound);
+                endian.wr32be(out + 1, (uint32_t)(uint16_t)bound);
                 *out_len = 5;
             }
             else
@@ -673,22 +673,22 @@ void protocore_ssh_channel_open_forwarded(struct SshConnectionInternal *restrict
 
     size_t off = 0;
     out[off++] = SSH_MSG_CHANNEL_OPEN;
-    protocore_wr32be(out + off, (uint32_t)tl);
+    endian.wr32be(out + off, (uint32_t)tl);
     mem.cpy(out + off + 4, type, tl);
     off += 4 + tl;
-    protocore_wr32be(out + off, (uint32_t)slot); // our sender channel id
-    protocore_wr32be(out + off + 4, SSH_CHAN_WINDOW);
-    protocore_wr32be(out + off + 8, SSH_CHAN_MAX_PACKET);
+    endian.wr32be(out + off, (uint32_t)slot); // our sender channel id
+    endian.wr32be(out + off + 4, SSH_CHAN_WINDOW);
+    endian.wr32be(out + off + 8, SSH_CHAN_MAX_PACKET);
     off += 12;
-    protocore_wr32be(out + off, (uint32_t)ca);
+    endian.wr32be(out + off, (uint32_t)ca);
     mem.cpy(out + off + 4, conn_addr, ca);
     off += 4 + ca;
-    protocore_wr32be(out + off, conn_port);
+    endian.wr32be(out + off, conn_port);
     off += 4;
-    protocore_wr32be(out + off, (uint32_t)oa);
+    endian.wr32be(out + off, (uint32_t)oa);
     mem.cpy(out + off + 4, orig_addr, oa);
     off += 4 + oa;
-    protocore_wr32be(out + off, orig_port);
+    endian.wr32be(out + off, orig_port);
     off += 4;
 
     SshChannel *c = chan_take(i, slot);
@@ -713,15 +713,15 @@ void protocore_ssh_channel_handle_open_confirm(struct SshConnectionInternal *res
         ctx->ns->i32 = -1;
         return;
     }
-    SshChannel *c = chan_pending_by_id(i, protocore_rd32be(payload + 1));
+    SshChannel *c = chan_pending_by_id(i, endian.rd32be(payload + 1));
     if (!c)
     {
         ctx->ns->i32 = -1;
         return;
     }
-    c->peer_id = protocore_rd32be(payload + 5);
-    protocore_ssh_flow_peer_add(&c->flow, protocore_rd32be(payload + 9));
-    c->flow.peer_max_pkt = protocore_rd32be(payload + 13);
+    c->peer_id = endian.rd32be(payload + 5);
+    protocore_ssh_flow_peer_add(&c->flow, endian.rd32be(payload + 9));
+    c->flow.peer_max_pkt = endian.rd32be(payload + 13);
     c->pending = PROTO_FALSE;
     c->open = PROTO_TRUE;
     if (s_conn.handlers.forward_confirm_cb)
@@ -744,7 +744,7 @@ void protocore_ssh_channel_handle_open_failure(struct SshConnectionInternal *res
         ctx->ns->i32 = -1;
         return;
     }
-    SshChannel *c = chan_pending_by_id(i, protocore_rd32be(payload + 1));
+    SshChannel *c = chan_pending_by_id(i, endian.rd32be(payload + 1));
     if (!c)
     {
         ctx->ns->i32 = -1;
@@ -779,7 +779,7 @@ void protocore_ssh_channel_handle_open(struct SshConnectionInternal *restrict ct
     size_t off = 1;
     const uint8_t *type;
     uint32_t type_len;
-    if (!protocore_rd_str(payload, len, &off, &type, &type_len))
+    if (!bytes.rd_str(payload, len, &off, &type, &type_len))
     {
         ctx->ns->i32 = -1;
         return;
@@ -789,9 +789,9 @@ void protocore_ssh_channel_handle_open(struct SshConnectionInternal *restrict ct
         ctx->ns->i32 = -1;
         return;
     }
-    uint32_t sender = protocore_rd32be(payload + off);
-    uint32_t init_window = protocore_rd32be(payload + off + 4);
-    uint32_t max_pkt = protocore_rd32be(payload + off + 8);
+    uint32_t sender = endian.rd32be(payload + off);
+    uint32_t init_window = endian.rd32be(payload + off + 4);
+    uint32_t max_pkt = endian.rd32be(payload + off + 8);
     off += 12;
 
     proto_bool is_session = (type_len == 7 && mem.cmp(type, "session", 7) == 0);
@@ -819,12 +819,12 @@ void protocore_ssh_channel_handle_open(struct SshConnectionInternal *restrict ct
             ctx->ns->i32 = build_open_failure(out, cap, sender, 1u, out_len);
             return; // forwarding off: prohibited
         }
-        if (!protocore_rd_str(payload, len, &off, &fhost, &fhost_len) || off + 4 > len)
+        if (!bytes.rd_str(payload, len, &off, &fhost, &fhost_len) || off + 4 > len)
         {
             ctx->ns->i32 = -1;
             return;
         }
-        fport = (uint16_t)protocore_rd32be(payload + off); // orig host/port follow but are advisory
+        fport = (uint16_t)endian.rd32be(payload + off); // orig host/port follow but are advisory
     }
 
     int slot = protocore_ssh_chan_alloc(i);
@@ -871,7 +871,7 @@ void ssh_req_strings_present(struct SshConnectionInternal *restrict ctx)
     uint32_t slen = 0;
     for (uint8_t k = 0; k < n; k++)
     {
-        if (!protocore_rd_str(p, len, &off, &s, &slen))
+        if (!bytes.rd_str(p, len, &off, &s, &slen))
         {
             ctx->ns->ok = PROTO_FALSE;
             return;
@@ -944,10 +944,10 @@ static proto_bool read_dimensions(const uint8_t *p, size_t len, size_t *off, Ssh
     {
         return PROTO_FALSE;
     }
-    out->width_chars = protocore_rd32be(p + *off);
-    out->height_rows = protocore_rd32be(p + *off + 4);
-    out->width_px = protocore_rd32be(p + *off + 8);
-    out->height_px = protocore_rd32be(p + *off + 12);
+    out->width_chars = endian.rd32be(p + *off);
+    out->height_rows = endian.rd32be(p + *off + 4);
+    out->width_px = endian.rd32be(p + *off + 8);
+    out->height_px = endian.rd32be(p + *off + 12);
     *off += 16u;
     return PROTO_TRUE;
 }
@@ -968,7 +968,7 @@ void ssh_pty_req_parse(struct SshConnectionInternal *restrict ctx)
 
     const uint8_t *term = NULL;
     uint32_t term_len = 0;
-    if (!protocore_rd_str(p, len, &off, &term, &term_len))
+    if (!bytes.rd_str(p, len, &off, &term, &term_len))
     {
         ctx->ns->ok = PROTO_FALSE;
         return;
@@ -988,7 +988,7 @@ void ssh_pty_req_parse(struct SshConnectionInternal *restrict ctx)
         ctx->ns->ok = PROTO_FALSE;
         return;
     }
-    if (!protocore_rd_str(p, len, &off, &out->modes, &out->modes_len))
+    if (!bytes.rd_str(p, len, &off, &out->modes, &out->modes_len))
     {
         ctx->ns->ok = PROTO_FALSE;
         return;
@@ -1037,11 +1037,11 @@ void protocore_ssh_channel_handle_request(struct SshConnectionInternal *restrict
         ctx->ns->i32 = -1;
         return;
     }
-    uint32_t recipient = protocore_rd32be(payload + off); // our channel id
+    uint32_t recipient = endian.rd32be(payload + off); // our channel id
     off += 4;
     const uint8_t *rtype;
     uint32_t rtype_len;
-    if (!protocore_rd_str(payload, len, &off, &rtype, &rtype_len))
+    if (!bytes.rd_str(payload, len, &off, &rtype, &rtype_len))
     {
         ctx->ns->i32 = -1;
         return;
@@ -1130,7 +1130,7 @@ void protocore_ssh_channel_handle_request(struct SshConnectionInternal *restrict
         return;
     }
     out[0] = accept ? SSH_MSG_CHANNEL_SUCCESS : SSH_MSG_CHANNEL_FAILURE;
-    protocore_wr32be(out + 1, c->peer_id);
+    endian.wr32be(out + 1, c->peer_id);
     *out_len = 5;
     ctx->ns->i32 = 0;
     return;
@@ -1162,11 +1162,11 @@ void protocore_ssh_channel_handle_data(struct SshConnectionInternal *restrict ct
         ctx->ns->i32 = -1;
         return;
     }
-    uint32_t recipient = protocore_rd32be(payload + off);
+    uint32_t recipient = endian.rd32be(payload + off);
     off += 4;
     const uint8_t *data;
     uint32_t dlen;
-    if (!protocore_rd_str(payload, len, &off, &data, &dlen))
+    if (!bytes.rd_str(payload, len, &off, &data, &dlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -1260,11 +1260,11 @@ void protocore_ssh_channel_handle_extended_data(struct SshConnectionInternal *re
         ctx->ns->i32 = -1;
         return;
     }
-    uint32_t recipient = protocore_rd32be(payload + off);
+    uint32_t recipient = endian.rd32be(payload + off);
     off += 8; // recipient channel, then the data_type_code this end does not separate
     const uint8_t *data;
     uint32_t dlen;
-    if (!protocore_rd_str(payload, len, &off, &data, &dlen))
+    if (!bytes.rd_str(payload, len, &off, &data, &dlen))
     {
         ctx->ns->i32 = -1;
         return;
@@ -1332,13 +1332,13 @@ void protocore_ssh_channel_handle_window_adjust(struct SshConnectionInternal *re
         ctx->ns->i32 = -1;
         return;
     }
-    SshChannel *c = protocore_ssh_chan_by_id(i, protocore_rd32be(payload + 1));
+    SshChannel *c = protocore_ssh_chan_by_id(i, endian.rd32be(payload + 1));
     if (!c)
     {
         ctx->ns->i32 = -1;
         return;
     }
-    protocore_ssh_flow_peer_add(&c->flow, protocore_rd32be(payload + 5));
+    protocore_ssh_flow_peer_add(&c->flow, endian.rd32be(payload + 5));
     ctx->ns->i32 = 0;
     return;
 }
@@ -1507,13 +1507,13 @@ void protocore_ssh_channel_send_exit_status(struct SshConnectionInternal *restri
         ctx->ns->i32 = -1;
         return;
     }
-    protocore_span w = protocore_span_from(region, cap);
-    protocore_bw_put(&w, SSH_MSG_CHANNEL_REQUEST);
-    protocore_bw_put_be(&w, c->peer_id, 4);
+    protocore_span w = span.from(region, cap);
+    bytes.put(&w, SSH_MSG_CHANNEL_REQUEST);
+    bytes.put_be(&w, c->peer_id, 4);
     protocore_ssh_wr_cstr(&w, "exit-status");
-    protocore_bw_put(&w, 0); // want_reply FALSE
-    protocore_bw_put_be(&w, exit_status, 4);
-    if (!protocore_span_ok(w))
+    bytes.put(&w, 0); // want_reply FALSE
+    bytes.put_be(&w, exit_status, 4);
+    if (!span.ok(w))
     {
         ctx->ns->i32 = -1;
         return;
@@ -1538,16 +1538,16 @@ void protocore_ssh_channel_send_exit_signal(struct SshConnectionInternal *restri
         ctx->ns->i32 = -1;
         return;
     }
-    protocore_span w = protocore_span_from(region, cap);
-    protocore_bw_put(&w, SSH_MSG_CHANNEL_REQUEST);
-    protocore_bw_put_be(&w, c->peer_id, 4);
+    protocore_span w = span.from(region, cap);
+    bytes.put(&w, SSH_MSG_CHANNEL_REQUEST);
+    bytes.put_be(&w, c->peer_id, 4);
     protocore_ssh_wr_cstr(&w, "exit-signal");
-    protocore_bw_put(&w, 0); // want_reply FALSE
+    bytes.put(&w, 0); // want_reply FALSE
     protocore_ssh_wr_cstr(&w, signal_name);
-    protocore_bw_put(&w, core_dumped ? 1 : 0);
+    bytes.put(&w, core_dumped ? 1 : 0);
     protocore_ssh_wr_cstr(&w, err_msg != NULL ? err_msg : "");
     protocore_ssh_wr_cstr(&w, ""); // language tag
-    if (!protocore_span_ok(w))
+    if (!span.ok(w))
     {
         ctx->ns->i32 = -1;
         return;
@@ -1594,7 +1594,7 @@ void protocore_ssh_channel_handle_eof(struct SshConnectionInternal *restrict ctx
         ctx->ns->i32 = -1;
         return;
     }
-    SshChannel *c = protocore_ssh_chan_by_id(i, protocore_rd32be(payload + 1));
+    SshChannel *c = protocore_ssh_chan_by_id(i, endian.rd32be(payload + 1));
     if (c == NULL)
     {
         ctx->ns->i32 = -1;
@@ -1620,7 +1620,7 @@ void protocore_ssh_channel_handle_close(struct SshConnectionInternal *restrict c
         ctx->ns->i32 = -1;
         return;
     }
-    SshChannel *c = protocore_ssh_chan_by_id(i, protocore_rd32be(payload + 1));
+    SshChannel *c = protocore_ssh_chan_by_id(i, endian.rd32be(payload + 1));
     if (c == NULL)
     {
         ctx->ns->i32 = -1;
@@ -1967,7 +1967,7 @@ void ssh_connection_dispatch(struct SshConnectionInternal *restrict ctx)
     // the library. protocore_plaintext_span binds the capacity to the allocation.
     size_t mark = protocore_plaintext_mark();
     protocore_span reply = protocore_plaintext_span(SSH_PKT_BUF_SIZE, 16);
-    if (!protocore_span_ok(reply))
+    if (!span.ok(reply))
     {
         protocore_plaintext_release(mark);
         ctx->ns->i32 = -1;

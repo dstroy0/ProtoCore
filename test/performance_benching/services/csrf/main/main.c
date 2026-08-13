@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the stateless HMAC-signed CSRF token (services/security/csrf):
+// On-device CCOUNT microbenchmark for the stateless HMAC-signed CSRF token (server/security/csrf):
 // protocore_csrf_issue() builds a fresh `<nonce_hex>.<sig_hex>` token (HMAC-SHA256 over a 6-byte nonce,
 // truncated + hex-encoded) and protocore_csrf_verify() recomputes that HMAC and constant-time compares
 // it - both pure (no Arduino, no sockets, no heap). Also bench the shared hex codec
@@ -18,7 +18,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/security/csrf/csrf.h"
+#include "server/security/csrf/csrf.h"
 #include "shared/hex/hex.h"
 
 #include <stdbool.h>

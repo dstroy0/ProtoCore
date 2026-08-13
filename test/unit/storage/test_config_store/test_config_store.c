@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the typed NVS config store (services/storage/config_store), exercised
+// Unit tests for the typed NVS config store (server/storage/config_store), exercised
 // against the host in-memory backend: string / u32 / blob round-trips, defaults
 // on missing keys, overwrite, capacity bounds, erase, clear, and table limits.
 
-#include "services/storage/config_store/config_store.h"
+#include "server/storage/config_store/config_store.h"
 #include <stdio.h>
 #include <string.h>
 

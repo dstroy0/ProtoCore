@@ -10,6 +10,8 @@
  *     | s|  exponent |                      mantissa                      |
  *     +--+-----------+----------------------------------------------------+
  *
+ * The module exports one symbol, @ref dbl. The field reads live in float_bits.c.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
@@ -17,7 +19,7 @@
 #ifndef PROTOCORE_FLOAT_BITS_H
 #define PROTOCORE_FLOAT_BITS_H
 
-#include "mmgr/rawmemcpy.h" // proto_raw_u64 - the one spelling of a bit read at a pointer
+#include "protocore_config.h" // proto_u64 - the integer one double's bits fill
 
 PROTOCORE_BEGIN_DECLS
 
@@ -30,38 +32,57 @@ PROTOCORE_BEGIN_DECLS
 #define PROTO_DBL_EXP_ALL 0x7FFull ///< the exponent field, shifted down: all ones is an inf or a NaN
 #define PROTO_DBL_BIAS 1023        ///< subtracted from the exponent field to get the power of two
 
-/** @brief The sign bit of @p v as 0 or 1. */
-PROTOCORE_INLINE proto_u64 proto_dbl_sign(double v)
+/**
+ * @brief The binary64 field module. Each read is one mask and one shift over the bits at the
+ *        double's own address; each write is the mirror.
+ *
+ * @var DblNs::sign
+ * The sign bit of @c v as 0 or 1.
+ *
+ * @var DblNs::exp
+ * The exponent field of @c v, still biased. ::PROTO_DBL_BIAS comes off it for the power of two.
+ *
+ * @var DblNs::mant
+ * The mantissa field of @c v, without the implicit leading bit a normal value carries.
+ *
+ * @var DblNs::merge
+ * The three fields, each masked to its own width and shifted into place, ORed: the bits of the
+ * double they describe. Bits above a field's width are dropped rather than carried into the next.
+ *
+ * @var DblNs::from_bits
+ * The double those bits are.
+ *
+ * No storage member: every entry point works on the caller's value and holds nothing of its own.
+ */
+typedef struct
 {
-    return (proto_raw_u64(&v) & PROTO_DBL_SIGN_MASK) >> PROTO_DBL_SIGN_SHIFT;
-}
+    proto_u64 (*sign)(double v);
+    proto_u64 (*exp)(double v);
+    proto_u64 (*mant)(double v);
+    proto_u64 (*merge)(proto_u64 sign, proto_u64 exp, proto_u64 mant);
+    double (*from_bits)(proto_u64 bits);
+} DblNs;
 
-/** @brief The exponent field of @p v, still biased. */
-PROTOCORE_INLINE proto_u64 proto_dbl_exp(double v)
-{
-    return (proto_raw_u64(&v) & PROTO_DBL_EXP_MASK) >> PROTO_DBL_MANT_BITS;
-}
+// The field reads, in float_bits.c. Named here because the table below has to name them, and
+// prefixed because that puts them in the linker's namespace.
+proto_u64 proto_dbl_sign(double v);
+proto_u64 proto_dbl_exp(double v);
+proto_u64 proto_dbl_mant(double v);
+proto_u64 proto_dbl_merge(proto_u64 sign, proto_u64 exp, proto_u64 mant);
+double proto_dbl_from_bits(proto_u64 bits);
 
-/** @brief The mantissa field of @p v. */
-PROTOCORE_INLINE proto_u64 proto_dbl_mant(double v)
-{
-    return proto_raw_u64(&v) & PROTO_DBL_MANT_MASK;
-}
-
-/** @brief The three fields shifted into place and merged: the bits of the double they describe. */
-PROTOCORE_INLINE proto_u64 proto_dbl_merge(proto_u64 sign, proto_u64 exp, proto_u64 mant)
-{
-    return ((sign & PROTO_DBL_SIGN_ONE) << PROTO_DBL_SIGN_SHIFT) | ((exp & PROTO_DBL_EXP_ALL) << PROTO_DBL_MANT_BITS) |
-           (mant & PROTO_DBL_MANT_MASK);
-}
-
-/** @brief The double those bits are. */
-PROTOCORE_INLINE double proto_dbl_from_bits(proto_u64 bits)
-{
-    double v = 0.0;
-    proto_raw_read(&v, &bits, sizeof(v));
-    return v;
-}
+/**
+ * @brief The names, aliased.
+ *
+ * `static const` and initialized here, not declared `extern` against a definition in the .c: a
+ * translation unit that can see this initializer knows which function each member holds, so a member
+ * read folds away and the call to the field read in float_bits.c is direct, leaving the table
+ * referenced by nothing for the linker to drop.
+ *
+ * `unused` because this header is included by files that take none of it.
+ */
+static const DblNs dbl __attribute__((unused)) = {proto_dbl_sign, proto_dbl_exp, proto_dbl_mant, proto_dbl_merge,
+                                                  proto_dbl_from_bits};
 
 PROTOCORE_END_DECLS
 

@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the interface-bridge pure core (services/net/iface_bridge): the address:port -> bus rule
+// Unit tests for the interface-bridge pure core (server/net/iface_bridge): the address:port -> bus rule
 // table (register / find / dedup / capacity, with the full protocore_ip bind address preserved) and the
 // write-then-read transaction frame codec (big-endian header, partial-frame handling, round-trip). The
 // bus I/O and listener are ESP32-only; these tests cover the portable logic.
 
-#include "services/net/iface_bridge/iface_bridge.h"
+#include "server/net/iface_bridge/iface_bridge.h"
 #include <string.h>
 
 #include <unity.h>

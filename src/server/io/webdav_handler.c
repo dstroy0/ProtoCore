@@ -80,10 +80,10 @@ static proto_bool dav_join(const char *root, const char *sub, char *out, size_t 
     proto_bool sub_slash = (sub[0] == '/');
     const char *sep = (root_slash || sub_slash) ? "" : "/";
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&sb_out, root);
-    protocore_sb_put(&sb_out, sep);
-    protocore_sb_put(&sb_out, sub);
-    int wn = (int)protocore_sb_finish(&sb_out);
+    Sb.put(&sb_out, root);
+    Sb.put(&sb_out, sep);
+    Sb.put(&sb_out, sub);
+    int wn = (int)Sb.finish(&sb_out);
     // wn <= 0 cannot fire: snprintf only returns negative on an encoding error, which "%s%s%s"
     // cannot raise, and sep is "/" whenever root and sub are both empty, so the shortest join is
     // one byte. The truncation half (wn >= cap) is exercised.
@@ -302,8 +302,8 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     if (n > 0 && url_prefix[n - 1] == '*')
     {
         protocore_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_pat, url_prefix);
-        if (protocore_sb_finish(&sb_pat) == 0)
+        Sb.put(&sb_pat, url_prefix);
+        if (Sb.finish(&sb_pat) == 0)
         {
             pat[0] = '\0';
         }
@@ -311,9 +311,9 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     else
     {
         protocore_sb sb_pat2 = {pat, sizeof(pat), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_pat2, url_prefix);
-        protocore_sb_put(&sb_pat2, "*");
-        if (protocore_sb_finish(&sb_pat2) == 0)
+        Sb.put(&sb_pat2, url_prefix);
+        Sb.put(&sb_pat2, "*");
+        if (Sb.finish(&sb_pat2) == 0)
         {
             pat[0] = '\0';
         }
@@ -345,16 +345,16 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     char header[RESP_HDR_BUF_SIZE];
     // in this file passes either "" or a string literal. Kept so the parameter stays optional.
     protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_header, "HTTP/1.1 ");
-    protocore_sb_i64(&sb_header, (int64_t)(code));
-    protocore_sb_put(&sb_header, " ");
-    protocore_sb_put(&sb_header, Http.status_text(code));
-    protocore_sb_put(&sb_header, "\r\n");
-    protocore_sb_put(&sb_header, extra_headers ? extra_headers : "");
-    protocore_sb_put(&sb_header, "Content-Length: 0\r\n");
-    protocore_sb_put(&sb_header, cl);
-    protocore_sb_put(&sb_header, "\r\n");
-    int hlen = (int)protocore_sb_finish(&sb_header);
+    Sb.put(&sb_header, "HTTP/1.1 ");
+    Sb.i64(&sb_header, (int64_t)(code));
+    Sb.put(&sb_header, " ");
+    Sb.put(&sb_header, Http.status_text(code));
+    Sb.put(&sb_header, "\r\n");
+    Sb.put(&sb_header, extra_headers ? extra_headers : "");
+    Sb.put(&sb_header, "Content-Length: 0\r\n");
+    Sb.put(&sb_header, cl);
+    Sb.put(&sb_header, "\r\n");
+    int hlen = (int)Sb.finish(&sb_header);
     Tcp.conn->send(slot_id, header, (proto_u16)hlen);
     protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
 }
@@ -634,8 +634,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         if (lk) // refreshed an existing lock: echo its stored scope / depth / token
         {
             protocore_sb sb_token = {token, sizeof(token), 0, PROTO_TRUE};
-            protocore_sb_put(&sb_token, lk->token);
-            if (protocore_sb_finish(&sb_token) == 0)
+            Sb.put(&sb_token, lk->token);
+            if (Sb.finish(&sb_token) == 0)
             {
                 token[0] = '\0';
             }
@@ -653,10 +653,10 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             protocore_rand_fill((uint8_t *)&tok_rand, sizeof(tok_rand)); // boundary: bytes into the scalar
             tok ^= (unsigned long)tok_rand;
             protocore_sb sb_token2 = {token, sizeof(token), 0, PROTO_TRUE};
-            protocore_sb_put(&sb_token2, "opaquelocktoken:");
-            protocore_sb_hex(&sb_token2, (uint64_t)(tok), 8);
-            protocore_sb_put(&sb_token2, "-pc");
-            if (protocore_sb_finish(&sb_token2) == 0)
+            Sb.put(&sb_token2, "opaquelocktoken:");
+            Sb.hex(&sb_token2, (uint64_t)(tok), 8);
+            Sb.put(&sb_token2, "-pc");
+            if (Sb.finish(&sb_token2) == 0)
             {
                 token[0] = '\0';
             }
@@ -668,29 +668,28 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             }
         }
         protocore_sb sb_buf = {s_dav.buf, sizeof(s_dav.buf), 0, PROTO_TRUE};
-        protocore_sb_put(
-            &sb_buf,
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:prop "
-            "xmlns:D=\"DAV:\"><D:lockdiscovery><D:activelock><D:locktype><D:write/></D:locktype><D:lockscope><D:");
-        protocore_sb_put(&sb_buf, shared ? "shared" : "exclusive");
-        protocore_sb_put(&sb_buf, "/></D:lockscope><D:depth>");
-        protocore_sb_put(&sb_buf, depth_inf ? "infinity" : "0");
-        protocore_sb_put(&sb_buf, "</D:depth><D:timeout>Second-");
-        protocore_sb_u32(&sb_buf, (uint32_t)((unsigned long)timeout_s));
-        protocore_sb_put(&sb_buf, "</D:timeout><D:locktoken><D:href>");
-        protocore_sb_put(&sb_buf, token);
-        protocore_sb_put(&sb_buf, "</D:href></D:locktoken></D:activelock></D:lockdiscovery></D:prop>\n");
-        if (protocore_sb_finish(&sb_buf) == 0)
+        Sb.put(&sb_buf,
+               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:prop "
+               "xmlns:D=\"DAV:\"><D:lockdiscovery><D:activelock><D:locktype><D:write/></D:locktype><D:lockscope><D:");
+        Sb.put(&sb_buf, shared ? "shared" : "exclusive");
+        Sb.put(&sb_buf, "/></D:lockscope><D:depth>");
+        Sb.put(&sb_buf, depth_inf ? "infinity" : "0");
+        Sb.put(&sb_buf, "</D:depth><D:timeout>Second-");
+        Sb.u32(&sb_buf, (uint32_t)((unsigned long)timeout_s));
+        Sb.put(&sb_buf, "</D:timeout><D:locktoken><D:href>");
+        Sb.put(&sb_buf, token);
+        Sb.put(&sb_buf, "</D:href></D:locktoken></D:activelock></D:lockdiscovery></D:prop>\n");
+        if (Sb.finish(&sb_buf) == 0)
         {
             s_dav.buf[0] = '\0';
         }
         // RFC 4918 §10.5: Lock-Token uses a Coded-URL (angle-bracketed).
         char lt[64];
         protocore_sb sb_lt = {lt, sizeof(lt), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_lt, "<");
-        protocore_sb_put(&sb_lt, token);
-        protocore_sb_put(&sb_lt, ">");
-        if (protocore_sb_finish(&sb_lt) == 0)
+        Sb.put(&sb_lt, "<");
+        Sb.put(&sb_lt, token);
+        Sb.put(&sb_lt, ">");
+        if (Sb.finish(&sb_lt) == 0)
         {
             lt[0] = '\0';
         }
@@ -743,8 +742,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // Self href: the request path, with a trailing '/' for a collection.
         char self_href[MAX_PATH_LEN + 2];
         protocore_sb sb_self_href = {self_href, sizeof(self_href), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_self_href, req->path);
-        if (protocore_sb_finish(&sb_self_href) == 0)
+        Sb.put(&sb_self_href, req->path);
+        if (Sb.finish(&sb_self_href) == 0)
         {
             self_href[0] = '\0';
         }
@@ -793,10 +792,10 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
                 }
                 char chref[MAX_PATH_LEN + 80];
                 protocore_sb sb_chref = {chref, sizeof(chref), 0, PROTO_TRUE};
-                protocore_sb_put(&sb_chref, self_href);
-                protocore_sb_put(&sb_chref, s_dav.child);
-                protocore_sb_put(&sb_chref, cst.is_dir ? "/" : "");
-                if (protocore_sb_finish(&sb_chref) == 0)
+                Sb.put(&sb_chref, self_href);
+                Sb.put(&sb_chref, s_dav.child);
+                Sb.put(&sb_chref, cst.is_dir ? "/" : "");
+                if (Sb.finish(&sb_chref) == 0)
                 {
                     chref[0] = '\0';
                 }

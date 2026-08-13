@@ -72,13 +72,13 @@
       "tests": ["unit/file_transfer/test_ftp"]
     },
     "native_httpcache": {
-      "desc": "HTTP Cache-Control helpers (services/web/httpcache, RFC 9111 + 8246 + 5861): the\nstructured directive builder + first-class origin presets (immutable asset / shared / no-store /\nrevalidatable), the tolerant directive parser (case-insensitive, quoted deltas, unknown ignored),\nand the RFC 9111 freshness-lifetime precedence. Pure host tests incl. a build->parse round-trip.",
+      "desc": "HTTP Cache-Control helpers (network_drivers/presentation/http/httpcache, RFC 9111 + 8246 + 5861): the\nstructured directive builder + first-class origin presets (immutable asset / shared / no-store /\nrevalidatable), the tolerant directive parser (case-insensitive, quoted deltas, unknown ignored),\nand the RFC 9111 freshness-lifetime precedence. Pure host tests incl. a build->parse round-trip.",
       "flags": ["-DPROTOCORE_ENABLE_HTTP_CACHE=1"],
-      "src": ["+<services/web/httpcache/httpcache.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<network_drivers/presentation/http/httpcache/httpcache.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/http/test_httpcache"]
     },
     "native_edge_cache": {
-      "desc": "CDN edge-cache engine (services/web/edge_cache): the pure freshness/validator core (response\nheader-field access, HTTP-date parsing over IMF-fixdate / RFC 850 / asctime, RFC 9111 lifetime +\nExpires-Date + heuristic + corrected age, the canonical cache key + SHA-256 digest + Vary secondary\nkey, and the L1 LRU/TTL store + storeability rules), plus the async origin-fetch engine (completion\ndetection over Content-Length / chunked / connection-close, and the state machine over a mock transport\nseam), plus the shared single-range `Range: bytes=...` parser (http_parse_byte_range) that backs serving\n206 Partial Content windows from a cached body. Pure host tests.",
+      "desc": "CDN edge-cache engine (server/web/edge_cache): the pure freshness/validator core (response\nheader-field access, HTTP-date parsing over IMF-fixdate / RFC 850 / asctime, RFC 9111 lifetime +\nExpires-Date + heuristic + corrected age, the canonical cache key + SHA-256 digest + Vary secondary\nkey, and the L1 LRU/TTL store + storeability rules), plus the async origin-fetch engine (completion\ndetection over Content-Length / chunked / connection-close, and the state machine over a mock transport\nseam), plus the shared single-range `Range: bytes=...` parser (http_parse_byte_range) that backs serving\n206 Partial Content windows from a cached body. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP_CACHE=1",
         "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
@@ -86,10 +86,10 @@
         "-DPROTOCORE_ENABLE_RANGE=1"
       ],
       "src": [
-        "+<services/web/httpcache/httpcache.c>",
+        "+<network_drivers/presentation/http/httpcache/httpcache.c>",
         "+<services/net/http_client/http_client.c>",
-        "+<services/web/edge_cache/edge_cache.c>",
-        "+<services/web/edge_cache/edge_fetch.c>",
+        "+<server/web/edge_cache/edge_cache.c>",
+        "+<server/web/edge_cache/edge_fetch.c>",
         "+<network_drivers/application/http_range.c>",
         "+<crypto/hash/sha256.c>",
         "+<server/clock/clock.c>",
@@ -99,7 +99,7 @@
       "tests": ["unit/web/test_edge_cache", "protocols/web/test_edge_fetch"]
     },
     "native_edge_cache_sd": {
-      "desc": "CDN edge-cache L2 SD-persistence tier (services/web/edge_cache/edge_cache_sd): the entry <->\ndbm-value serialization roundtrip (all response metadata, Vary variants, binary and max-size bodies),\nthe spill/promote/del/purge API over a dbm on a RAM-backed WalDev, the L1 store's on_evict write-back\nhook, the storeability gates (no-validator and oversize entries stay L1-only), reboot survival via\nremount + index replay, and that a shared dbm's foreign values are never touched. PROTOCORE_DBM_VAL_MAX is\nsized below a full entry so the oversize-stays-L1 path is exercised. Pure host tests.",
+      "desc": "CDN edge-cache L2 SD-persistence tier (server/web/edge_cache/edge_cache_sd): the entry <->\ndbm-value serialization roundtrip (all response metadata, Vary variants, binary and max-size bodies),\nthe spill/promote/del/purge API over a dbm on a RAM-backed WalDev, the L1 store's on_evict write-back\nhook, the storeability gates (no-validator and oversize entries stay L1-only), reboot survival via\nremount + index replay, and that a shared dbm's foreign values are never touched. PROTOCORE_DBM_VAL_MAX is\nsized below a full entry so the oversize-stays-L1 path is exercised. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_WAL=1",
         "-DPROTOCORE_ENABLE_DBM=1",
@@ -112,10 +112,10 @@
         "+<services/storage/wal/wal.c>",
         "+<services/storage/wal/wal_store.c>",
         "+<services/storage/dbm/dbm.c>",
-        "+<services/web/httpcache/httpcache.c>",
+        "+<network_drivers/presentation/http/httpcache/httpcache.c>",
         "+<services/net/http_client/http_client.c>",
-        "+<services/web/edge_cache/edge_cache.c>",
-        "+<services/web/edge_cache/edge_cache_sd.c>",
+        "+<server/web/edge_cache/edge_cache.c>",
+        "+<server/web/edge_cache/edge_cache_sd.c>",
         "+<crypto/hash/sha256.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
@@ -124,7 +124,7 @@
       "tests": ["protocols/web/test_edge_cache_sd"]
     },
     "native_edge_mesh": {
-      "desc": "CDN edge-cache mesh sibling-cache codec (services/web/edge_cache/edge_mesh): the request/response\nwire frames (build + tri-state accumulating parse over partial reads, magic/version/opcode validation),\nthe freshness-carrying entry frame (the shared edge_sd body plus a timing trailer) round-tripped\nbyte-exact, RFC 9111 age propagation (a peer's corrected age transfers so the receiver stays fresh for\nthe remaining lifetime and its Age keeps growing), and the async peer-query engine reaching HIT / MISS /\nFAILED (timeout, peer close, malformed) over a scripted mock transport seam. Pure host tests.",
+      "desc": "CDN edge-cache mesh sibling-cache codec (server/web/edge_cache/edge_mesh): the request/response\nwire frames (build + tri-state accumulating parse over partial reads, magic/version/opcode validation),\nthe freshness-carrying entry frame (the shared edge_sd body plus a timing trailer) round-tripped\nbyte-exact, RFC 9111 age propagation (a peer's corrected age transfers so the receiver stays fresh for\nthe remaining lifetime and its Age keeps growing), and the async peer-query engine reaching HIT / MISS /\nFAILED (timeout, peer close, malformed) over a scripted mock transport seam. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP_CACHE=1",
         "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
@@ -132,11 +132,11 @@
         "-DPROTOCORE_ENABLE_EDGE_MESH=1"
       ],
       "src": [
-        "+<services/web/httpcache/httpcache.c>",
+        "+<network_drivers/presentation/http/httpcache/httpcache.c>",
         "+<services/net/http_client/http_client.c>",
-        "+<services/web/edge_cache/edge_cache.c>",
-        "+<services/web/edge_cache/edge_cache_sd.c>",
-        "+<services/web/edge_cache/edge_mesh.c>",
+        "+<server/web/edge_cache/edge_cache.c>",
+        "+<server/web/edge_cache/edge_cache_sd.c>",
+        "+<server/web/edge_cache/edge_mesh.c>",
         "+<crypto/hash/sha256.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
@@ -157,7 +157,7 @@
       "tests": ["unit/shared/test_ip"]
     },
     "native_arena": {
-      "desc": "Unified double-ended server arena (server/system/protocore_arena): first-fit\npersistent end (bottom, individual free + coalesce + boundary shrink) + bump scratch end\n(top, mark/release/reset) sharing a floating middle; fail-closed at the boundary. Host tests.",
+      "desc": "Unified double-ended server arena (server/core/protocore_arena): first-fit\npersistent end (bottom, individual free + coalesce + boundary shrink) + bump scratch end\n(top, mark/release/reset) sharing a floating middle; fail-closed at the boundary. Host tests.",
       "flags": [],
       "src": ["+<mmgr/arena.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/mmgr/test_arena"]
@@ -207,7 +207,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -263,19 +263,19 @@
       "tests": ["unit/energy/test_iec60870"]
     },
     "native_sdi12": {
-      "desc": "SDI-12 sensor-bus codec (services/peripherals/sdi12): the command builders, the measurement\nresponse parser (atttn), the data-value splitter, and the SDI-12 CRC (compute/encode/verify).\nPure host tests.",
+      "desc": "SDI-12 sensor-bus codec (server/peripherals/sdi12): the command builders, the measurement\nresponse parser (atttn), the data-value splitter, and the SDI-12 CRC (compute/encode/verify).\nPure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_SDI12=1"],
       "src": [
-        "+<services/peripherals/sdi12/sdi12.c>",
+        "+<server/peripherals/sdi12/sdi12.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_sdi12"]
     },
     "native_dmx": {
-      "desc": "DMX512 + RDM lighting codec (services/peripherals/dmx): the DMX512 slot packet (build/get) and the\nRDM (ANSI E1.20) packet build/parse with 48-bit UIDs and the 16-bit additive checksum. Pure\nhost tests.",
+      "desc": "DMX512 + RDM lighting codec (server/peripherals/dmx): the DMX512 slot packet (build/get) and the\nRDM (ANSI E1.20) packet build/parse with 48-bit UIDs and the 16-bit additive checksum. Pure\nhost tests.",
       "flags": ["-DPROTOCORE_ENABLE_DMX=1"],
-      "src": ["+<services/peripherals/dmx/dmx.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/dmx/dmx.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_dmx"]
     },
     "native_nmea0183": {
@@ -331,11 +331,11 @@
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<mmgr/protostr.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -394,7 +394,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -411,7 +411,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -442,7 +442,7 @@
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/diffserv/diffserv.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -461,7 +461,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
@@ -488,7 +488,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -506,7 +506,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -534,7 +534,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/transport/diffserv/diffserv.c>",
         "+<server/clock/clock.c>",
@@ -567,11 +567,11 @@
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<mmgr/protostr.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -599,7 +599,7 @@
     "native_prov": {
       "desc": "Provisioning form-field parser - the only host-testable part of the captive\nportal (softAP / lwIP UDP / NVS are ESP32-only and compiled out here).",
       "src": [
-        "+<services/system/provisioning_service/provisioning_service.c>",
+        "+<server/core/provisioning_service/provisioning_service.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -644,7 +644,7 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
@@ -716,7 +716,7 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
@@ -772,7 +772,7 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
@@ -831,7 +831,7 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
@@ -889,7 +889,7 @@
         "+<crypto/pqc/sntrup761.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
@@ -940,7 +940,7 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
@@ -971,11 +971,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -1035,11 +1035,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -1107,11 +1107,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -1153,8 +1153,8 @@
         "+<mmgr/protoframe.c>",
         "+<network_drivers/application/sftp/ssh_sftp.c>",
         "+<network_drivers/application/sftp/sftp.c>",
-        "+<server/filesystem/mnt.c>",
-        "+<server/filesystem/filesystem.c>"
+        "+<server/storage/mnt.c>",
+        "+<server/storage/filesystem.c>"
       ],
       "tests": []
     },
@@ -1176,11 +1176,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -1220,8 +1220,8 @@
         "+<mmgr/protostr.c>",
         "+<core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protoframe.c>",
-        "+<server/filesystem/mnt.c>",
-        "+<server/filesystem/filesystem.c>",
+        "+<server/storage/mnt.c>",
+        "+<server/storage/filesystem.c>",
         "+<network_drivers/application/scp/ssh_scp.c>",
         "+<network_drivers/application/scp/scp.c>"
       ],
@@ -1244,11 +1244,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -1310,8 +1310,8 @@
       "src": [
         "+<network_drivers/application/sftp/sftp.c>",
         "+<mmgr/protoframe.c>",
-        "+<server/filesystem/filesystem.c>",
-        "+<server/filesystem/mnt.c>",
+        "+<server/storage/filesystem.c>",
+        "+<server/storage/mnt.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -1326,8 +1326,8 @@
       ],
       "src": [
         "+<network_drivers/application/scp/scp.c>",
-        "+<server/filesystem/filesystem.c>",
-        "+<server/filesystem/mnt.c>",
+        "+<server/storage/filesystem.c>",
+        "+<server/storage/mnt.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -1356,11 +1356,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -1378,7 +1378,7 @@
         "+<server/io/webdav_handler.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/application/web_assets.c>",
-        "+<services/web/web_terminal/web_terminal.c>",
+        "+<server/web/web_terminal/web_terminal.c>",
         "+<network_drivers/application/ntp_service/ntp_service.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
@@ -1387,8 +1387,8 @@
         "+<network_drivers/network/network.c>",
         "+<network_drivers/network/dns/dns.c>",
         "+<server/signaling/signaling.c>",
-        "+<server/filesystem/filesystem.c>",
-        "+<server/filesystem/mnt.c>",
+        "+<server/storage/filesystem.c>",
+        "+<server/storage/mnt.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/protomem.c>",
@@ -1519,11 +1519,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -1543,13 +1543,13 @@
         "+<server/io/webdav_handler.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/application/web_assets.c>",
-        "+<services/web/web_terminal/web_terminal.c>",
+        "+<server/web/web_terminal/web_terminal.c>",
         "+<network_drivers/application/webdav/webdav.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
-        "+<server/filesystem/filesystem.c>",
-        "+<server/filesystem/mnt.c>",
+        "+<server/storage/filesystem.c>",
+        "+<server/storage/mnt.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
         "+<mmgr/protomem.c>",
         "+<server/signaling/signaling.c>",
@@ -1610,7 +1610,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -1628,7 +1628,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/presentation/telnet/telnet.c>",
         "+<mmgr/protoframe.c>",
@@ -1756,7 +1756,7 @@
       "tests": ["unit/iot/test_protobuf"]
     },
     "native_preempt_queue": {
-      "desc": "Preempting work queue (server/system/preempt_queue), v5 real-time ingest: FIFO order,\nurgent-to-front, fail-closed when full, high-water, and the hand-off from a post to the lane\ntask's handler. The DMA lane is driven end to end by the host DMA driver (mmgr/dma): a fed\ntransfer completes where the ISR would fire, its callback posts the bytes onto the lane, and the\nlane's task does the work. The post and the task run on the host through the keyed queue mock;\nonly the interrupt itself and the preempt latency need hardware.",
+      "desc": "Preempting work queue (server/core/preempt_queue), v5 real-time ingest: FIFO order,\nurgent-to-front, fail-closed when full, high-water, and the hand-off from a post to the lane\ntask's handler. The DMA lane is driven end to end by the host DMA driver (mmgr/dma): a fed\ntransfer completes where the ISR would fire, its callback posts the bytes onto the lane, and the\nlane's task does the work. The post and the task run on the host through the keyed queue mock;\nonly the interrupt itself and the preempt latency need hardware.",
       "flags": [
         "-DPROTOCORE_ENABLE_PREEMPT_QUEUE=1",
         "-DPROTOCORE_PQ_DEPTH=4",
@@ -1766,8 +1766,8 @@
         "-DPROTOCORE_DMA_CHANNELS=2"
       ],
       "src": [
-        "+<server/system/preempt_queue.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/preempt_queue.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/dma.c>",
@@ -1799,9 +1799,9 @@
       "tests": ["unit/server/test_trace_capture"]
     },
     "native_ad9238": {
-      "desc": "AD9238 SPI configuration-port codec (services/peripherals/ad9238): the 16-bit instruction word\n(R/W + byte-count + 13-bit address) for single-byte register writes/reads, the device-update\ntransfer transaction, and the input-validation fail-closed paths (null buffer, undersized\ncap, zero/oversize byte count, out-of-range address). Pure host tests - the SPI clocking and\nthe per-register bit-field meanings are the datasheet's / the application's, not this codec's.",
+      "desc": "AD9238 SPI configuration-port codec (server/peripherals/ad9238): the 16-bit instruction word\n(R/W + byte-count + 13-bit address) for single-byte register writes/reads, the device-update\ntransfer transaction, and the input-validation fail-closed paths (null buffer, undersized\ncap, zero/oversize byte count, out-of-range address). Pure host tests - the SPI clocking and\nthe per-register bit-field meanings are the datasheet's / the application's, not this codec's.",
       "flags": ["-DPROTOCORE_ENABLE_AD9238=1"],
-      "src": ["+<services/peripherals/ad9238/ad9238.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/ad9238/ad9238.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_ad9238"]
     },
     "native_forward": {
@@ -1824,10 +1824,10 @@
       "tests": ["protocols/net/test_forward"]
     },
     "native_gateway": {
-      "desc": "Radio / wireless gateway bridge (services/net/gateway), v5 southbound-to-northbound: an\nuplink envelopes a received frame (src address / port / rssi / seq) and publishes it,\nfail-closed on no sink / unknown port / rate cap / sink refusal; a downlink routes to the\nport transmit callback; the topic helper formats <prefix>/<port>/<addr>; port table limits.\nPure host tests; the DMA + FORWARD-lane ingest is covered by native_dma and native_forward.",
+      "desc": "Radio / wireless gateway bridge (server/net/gateway), v5 southbound-to-northbound: an\nuplink envelopes a received frame (src address / port / rssi / seq) and publishes it,\nfail-closed on no sink / unknown port / rate cap / sink refusal; a downlink routes to the\nport transmit callback; the topic helper formats <prefix>/<port>/<addr>; port table limits.\nPure host tests; the DMA + FORWARD-lane ingest is covered by native_dma and native_forward.",
       "flags": ["-DPROTOCORE_ENABLE_GATEWAY=1", "-DPROTOCORE_GW_MAX_PORTS=4"],
       "src": [
-        "+<services/net/gateway/gateway.c>",
+        "+<server/net/gateway/gateway.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -1855,9 +1855,9 @@
       "tests": ["unit/radio/test_enocean"]
     },
     "native_pn532": {
-      "desc": "PN532 NFC frame codec (services/peripherals/pn532), v5 radio plugin: the normal-information-frame\nbuild/parse against the documented GetFirmwareVersion command + response frames (LEN/LCS +\nDCS checksums), a round trip, malformed framing (bad preamble / start / LCS / DCS), the ACK\nframe, and over-length rejection. Pure host tests.",
+      "desc": "PN532 NFC frame codec (server/peripherals/pn532), v5 radio plugin: the normal-information-frame\nbuild/parse against the documented GetFirmwareVersion command + response frames (LEN/LCS +\nDCS checksums), a round trip, malformed framing (bad preamble / start / LCS / DCS), the ACK\nframe, and over-length rejection. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_PN532=1", "-DPROTOCORE_PN532_MAX_DATA=8"],
-      "src": ["+<services/peripherals/pn532/pn532.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/pn532/pn532.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_pn532"]
     },
     "native_sigfox": {
@@ -1914,7 +1914,7 @@
         "+<network_drivers/transport/tcp/client/client.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/diffserv/diffserv.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<shared/ip/ip.c>",
         "+<server/clock/clock.c>",
@@ -1933,7 +1933,7 @@
         "+<network_drivers/transport/tcp/client/client.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/diffserv/diffserv.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<shared/ip/ip.c>",
         "+<server/clock/clock.c>",
@@ -2092,7 +2092,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protomem.c>",
@@ -2111,7 +2111,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -2128,7 +2128,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -2214,10 +2214,10 @@
       ]
     },
     "native_iface_bridge": {
-      "desc": "Interface bridge pure core (services/net/iface_bridge): the user-defined address:port -> bus\nrule table (register / find / dedup / capacity, keyed by port+proto with the full protocore_ip bind address\npreserved) and the write-then-read transaction frame codec (big-endian write_len/read_len header,\npartial-frame handling, build/parse round-trip). Bus I/O + listener are ESP32-only. Pure host tests.",
+      "desc": "Interface bridge pure core (server/net/iface_bridge): the user-defined address:port -> bus\nrule table (register / find / dedup / capacity, keyed by port+proto with the full protocore_ip bind address\npreserved) and the write-then-read transaction frame codec (big-endian write_len/read_len header,\npartial-frame handling, build/parse round-trip). Bus I/O + listener are ESP32-only. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_IFACE_BRIDGE=1"],
       "src": [
-        "+<services/net/iface_bridge/iface_bridge.c>",
+        "+<server/net/iface_bridge/iface_bridge.c>",
         "+<shared/ip/ip.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -2285,10 +2285,10 @@
       "tests": ["unit/iot/test_nats"]
     },
     "native_proxy_protocol": {
-      "desc": "HAProxy PROXY protocol codec (services/net/proxy_protocol): the v1 (text) + v2 (binary)\nTCP/IPv4 header builders and the unified parser (recover the real client IP behind a load\nbalancer). Pure host tests.",
+      "desc": "HAProxy PROXY protocol codec (network_drivers/transport/proxy_protocol): the v1 (text) + v2 (binary)\nTCP/IPv4 header builders and the unified parser (recover the real client IP behind a load\nbalancer). Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_PROXY_PROTOCOL=1"],
       "src": [
-        "+<services/net/proxy_protocol/proxy_protocol.c>",
+        "+<network_drivers/transport/proxy_protocol/proxy_protocol.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -2365,7 +2365,7 @@
         "+<network_drivers/network/dns/dns_wire.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
@@ -2378,10 +2378,10 @@
       "tests": ["unit/network/test_dns_resolver"]
     },
     "native_audit_log": {
-      "desc": "Tamper-evident hash-chained audit log (services/security/audit_log). Pure - the chain is\nidentical on host and ESP32 - so it unit-tests on the host; SHA-256 comes from\ncrypto/sha256 (software path on native), the timestamp from the pluggable clock.",
+      "desc": "Tamper-evident hash-chained audit log (server/security/audit_log). Pure - the chain is\nidentical on host and ESP32 - so it unit-tests on the host; SHA-256 comes from\ncrypto/sha256 (software path on native), the timestamp from the pluggable clock.",
       "flags": ["-DPROTOCORE_ENABLE_AUDIT_LOG=1"],
       "src": [
-        "+<services/security/audit_log/audit_log.c>",
+        "+<server/security/audit_log/audit_log.c>",
         "+<crypto/hash/sha256.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
@@ -2405,7 +2405,7 @@
         "+<crypto/hash/sha512.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
@@ -2598,7 +2598,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
@@ -2623,11 +2623,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -2654,7 +2654,7 @@
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>",
         "+<network_drivers/presentation/http/http.c>",
-        "+<server/filesystem/mnt.c>"
+        "+<server/storage/mnt.c>"
       ],
       "tests": ["integration/server/test_keepalive"]
     },
@@ -2676,11 +2676,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -2693,8 +2693,8 @@
         "+<network_drivers/presentation/http/route/http_route.c>",
         "+<mmgr/protomem.c>",
         "+<server/signaling/signaling.c>",
-        "+<server/filesystem/filesystem.c>",
-        "+<server/filesystem/mnt.c>",
+        "+<server/storage/filesystem.c>",
+        "+<server/storage/mnt.c>",
         "+<network_drivers/application/file_serving/file_serving.c>",
         "+<network_drivers/application/http_range.c>",
         "+<network_drivers/presentation/http/auth/auth.c>",
@@ -2748,7 +2748,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<crypto/rng/rng.c>",
@@ -2799,7 +2799,7 @@
       "flags": ["-DPROTOCORE_ENABLE_NTP=1"],
       "src": [
         "+<network_drivers/application/ntp_service/ntp_service.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<network_drivers/transport/udp/udp.c>",
@@ -2818,7 +2818,7 @@
       "flags": ["-DPROTOCORE_ENABLE_MDNS=1"],
       "src": [
         "+<network_drivers/application/mdns_service/mdns_service.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<network_drivers/network/dns/dns_wire.c>",
@@ -2860,21 +2860,21 @@
       "tests": ["protocols/network/test_dns_server"]
     },
     "native_rtc": {
-      "desc": "DS1307/DS3231 RTC conversions (services/peripherals/rtc): BCD time registers <-> Unix epoch in\n24- and 12-hour encodings, leap years, clock-halt/century bit masks, range validation,\nand a round-trip over the 2000-2099 range. Pure - the I2C read/write is ESP32-only.",
+      "desc": "DS1307/DS3231 RTC conversions (server/peripherals/rtc): BCD time registers <-> Unix epoch in\n24- and 12-hour encodings, leap years, clock-halt/century bit masks, range validation,\nand a round-trip over the 2000-2099 range. Pure - the I2C read/write is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_RTC=1"],
-      "src": ["+<services/peripherals/rtc/rtc.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/rtc/rtc.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_rtc"]
     },
     "native_relay": {
-      "desc": "TCP relay / DNAT byte pump (services/net/relay): the bidirectional relay engine that\npublishes an internal host:port through the server. Tests cover a bidirectional transfer, the\nbackpressure carry (a send that accepts partial writes), independent half-close with shutdown\npropagation, a large multi-step transfer (byte-exact), and a seam error - driven by two mock\nsockets over the send/recv seams. Pure host tests.",
+      "desc": "TCP relay / DNAT byte pump (server/net/relay): the bidirectional relay engine that\npublishes an internal host:port through the server. Tests cover a bidirectional transfer, the\nbackpressure carry (a send that accepts partial writes), independent half-close with shutdown\npropagation, a large multi-step transfer (byte-exact), and a seam error - driven by two mock\nsockets over the send/recv seams. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_RELAY=1"],
-      "src": ["+<services/net/relay/relay.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/net/relay/relay.c>", "+<mmgr/protomem.c>"],
       "tests": ["protocols/net/test_relay"]
     },
     "native_ld2410": {
-      "desc": "LD2410 mmWave radar codec (services/peripherals/ld2410): decoding a basic and an engineering-mode\nreport frame, rejecting malformed frames, the byte-by-byte stream reassembler (resync past\nnoise, split feeds, absurd-length drop), the presence/distance helpers, and the exact bytes\nof the config-command encoders. Pure - the UART pump is ESP32-only.",
+      "desc": "LD2410 mmWave radar codec (server/peripherals/ld2410): decoding a basic and an engineering-mode\nreport frame, rejecting malformed frames, the byte-by-byte stream reassembler (resync past\nnoise, split feeds, absurd-length drop), the presence/distance helpers, and the exact bytes\nof the config-command encoders. Pure - the UART pump is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_LD2410=1"],
-      "src": ["+<services/peripherals/ld2410/ld2410.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/ld2410/ld2410.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_ld2410"]
     },
     "native_safety_scl": {
@@ -2887,63 +2887,63 @@
       "tests": ["unit/machine_tool/test_safety_scl"]
     },
     "native_hmmd": {
-      "desc": "Waveshare HMMD 24GHz mmWave micro-motion radar codec (services/peripherals/hmmd): the LD2410-family\nlittle-endian framing, the report parse (detection flag, distance, all 16 gate energies), rejecting\nmalformed frames, the byte-by-byte stream reassembler (resync past noise, split feeds, absurd-length\ndrop), the exact bytes of the command encoders (open/close command mode, firmware 0x0000, serial\n0x0011, config 0x0008, register 0x0002), and ACK decoding. Pure - the UART pump is ESP32-only.",
+      "desc": "Waveshare HMMD 24GHz mmWave micro-motion radar codec (server/peripherals/hmmd): the LD2410-family\nlittle-endian framing, the report parse (detection flag, distance, all 16 gate energies), rejecting\nmalformed frames, the byte-by-byte stream reassembler (resync past noise, split feeds, absurd-length\ndrop), the exact bytes of the command encoders (open/close command mode, firmware 0x0000, serial\n0x0011, config 0x0008, register 0x0002), and ACK decoding. Pure - the UART pump is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_HMMD=1"],
-      "src": ["+<services/peripherals/hmmd/hmmd.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/hmmd/hmmd.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_hmmd"]
     },
     "native_rcwl0516": {
-      "desc": "RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade\n(services/peripherals/rcwl0516): the debounce that swallows comparator chatter, the hold that bridges the\nmodule's ~2s retrigger gaps into one continuous presence span, the consume-once edge event,\nwrap-safety across a millis() rollover, and the degenerate zero-debounce / zero-hold configs.\nPure core driven by a synthetic clock - no GPIO, no real time. Pure host tests.",
+      "desc": "RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade\n(server/peripherals/rcwl0516): the debounce that swallows comparator chatter, the hold that bridges the\nmodule's ~2s retrigger gaps into one continuous presence span, the consume-once edge event,\nwrap-safety across a millis() rollover, and the degenerate zero-debounce / zero-hold configs.\nPure core driven by a synthetic clock - no GPIO, no real time. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_RCWL0516=1"],
       "src": [
-        "+<services/peripherals/rcwl0516/rcwl0516.c>",
+        "+<server/peripherals/rcwl0516/rcwl0516.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_rcwl0516"]
     },
     "native_sen0192": {
-      "desc": "SEN0192 microwave motion sensor presence state machine (services/peripherals/sen0192): presence\nasserts on an active sample and holds for the configured window after the last active sample, clears\nafter it, counts clear->present edges, and honors OUT polarity. Pure - the GPIO read is ESP32-only.",
+      "desc": "SEN0192 microwave motion sensor presence state machine (server/peripherals/sen0192): presence\nasserts on an active sample and holds for the configured window after the last active sample, clears\nafter it, counts clear->present edges, and honors OUT polarity. Pure - the GPIO read is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_SEN0192=1"],
       "src": [
-        "+<services/peripherals/sen0192/sen0192.c>",
+        "+<server/peripherals/sen0192/sen0192.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_sen0192"]
     },
     "native_mpr121": {
-      "desc": "MPR121 capacitive-touch codec (services/peripherals/mpr121): decoding the touch-status word into\nan electrode bitmask (masking proximity / over-current), the per-electrode touched test, the\nproximity / over-current flags, the 10-bit filtered/baseline word, and the exact bytes of the\nregister bring-up sequence. Pure - the I2C read/write is ESP32-only.",
+      "desc": "MPR121 capacitive-touch codec (server/peripherals/mpr121): decoding the touch-status word into\nan electrode bitmask (masking proximity / over-current), the per-electrode touched test, the\nproximity / over-current flags, the 10-bit filtered/baseline word, and the exact bytes of the\nregister bring-up sequence. Pure - the I2C read/write is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_MPR121=1"],
       "src": [
-        "+<services/peripherals/mpr121/mpr121.c>",
+        "+<server/peripherals/mpr121/mpr121.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_mpr121"]
     },
     "native_sht3x": {
-      "desc": "Sensirion SHT3x temperature/humidity codec (services/peripherals/sht3x): the CRC-8 against the\ndatasheet check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity\nconversions at the range endpoints and a mid value, and the six-byte single-shot response\nparse (both CRCs checked, corrupt CRC rejected). Pure - the I2C transfer is ESP32-only.",
+      "desc": "Sensirion SHT3x temperature/humidity codec (server/peripherals/sht3x): the CRC-8 against the\ndatasheet check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity\nconversions at the range endpoints and a mid value, and the six-byte single-shot response\nparse (both CRCs checked, corrupt CRC rejected). Pure - the I2C transfer is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_SHT3X=1"],
       "src": [
-        "+<services/peripherals/sht3x/sht3x.c>",
+        "+<server/peripherals/sht3x/sht3x.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_sht3x"]
     },
     "native_smbus": {
-      "desc": "SMBus 3.1 Packet Error Code (services/peripherals/smbus): the address byte with its direction\nbit, the PEC over a write transaction and over a read transaction (which spans both halves and\nthe repeated-start address), and that the checksum depends on the address and the direction as\nwell as the payload. The PEC comes from the shared CRC engine, so each vector is checked against\npc_crc(&PROTOCORE_CRC8_SMBUS) directly rather than against a second implementation.",
+      "desc": "SMBus 3.1 Packet Error Code (server/peripherals/smbus): the address byte with its direction\nbit, the PEC over a write transaction and over a read transaction (which spans both halves and\nthe repeated-start address), and that the checksum depends on the address and the direction as\nwell as the payload. The PEC comes from the shared CRC engine, so each vector is checked against\npc_crc(&PROTOCORE_CRC8_SMBUS) directly rather than against a second implementation.",
       "flags": ["-DPROTOCORE_ENABLE_SMBUS=1"],
-      "src": ["+<services/peripherals/smbus.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/smbus.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_smbus"]
     },
     "native_pmbus": {
-      "desc": "PMBus 1.3 numeric encodings (services/peripherals/pmbus): the VOUT_MODE format selector and its\n5-bit signed exponent, the LINEAR11 11-bit signed mantissa and 5-bit signed exponent with decode\nand round trip, LINEAR16 against an exponent the part reports separately, the DIRECT coefficient\nform, and that a value the exponent pushes out of an int32 of micro-units is refused rather than\nwrapped.",
+      "desc": "PMBus 1.3 numeric encodings (server/peripherals/pmbus): the VOUT_MODE format selector and its\n5-bit signed exponent, the LINEAR11 11-bit signed mantissa and 5-bit signed exponent with decode\nand round trip, LINEAR16 against an exponent the part reports separately, the DIRECT coefficient\nform, and that a value the exponent pushes out of an int32 of micro-units is refused rather than\nwrapped.",
       "flags": ["-DPROTOCORE_ENABLE_SMBUS=1", "-DPROTOCORE_ENABLE_PMBUS=1"],
       "src": [
-        "+<services/peripherals/pmbus.c>",
-        "+<services/peripherals/smbus.c>",
+        "+<server/peripherals/pmbus.c>",
+        "+<server/peripherals/smbus.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_pmbus"]
@@ -2958,39 +2958,39 @@
         "-DPROTOCORE_ENABLE_SMBUS=1"
       ],
       "src": [
-        "+<services/peripherals/sht3x/sht3x.c>",
-        "+<services/peripherals/pca9685/pca9685.c>",
-        "+<services/peripherals/ina219/ina219.c>",
-        "+<services/peripherals/rtc/rtc.c>",
-        "+<services/peripherals/smbus.c>",
+        "+<server/peripherals/sht3x/sht3x.c>",
+        "+<server/peripherals/pca9685/pca9685.c>",
+        "+<server/peripherals/ina219/ina219.c>",
+        "+<server/peripherals/rtc/rtc.c>",
+        "+<server/peripherals/smbus.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["integration/peripherals/test_bus_wire"]
     },
     "native_pca9685": {
-      "desc": "PCA9685 PWM/servo codec (services/peripherals/pca9685): the PRESCALE computation from a PWM\nfrequency (with clamping), the per-channel register address, the servo pulse-width -> 12-bit\ncount conversion (with clamping), and the 5-byte channel PWM write encoder (including the\nfull-on/off flag). Pure - the I2C writes are ESP32-only.",
+      "desc": "PCA9685 PWM/servo codec (server/peripherals/pca9685): the PRESCALE computation from a PWM\nfrequency (with clamping), the per-channel register address, the servo pulse-width -> 12-bit\ncount conversion (with clamping), and the 5-byte channel PWM write encoder (including the\nfull-on/off flag). Pure - the I2C writes are ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_PCA9685=1"],
       "src": [
-        "+<services/peripherals/pca9685/pca9685.c>",
+        "+<server/peripherals/pca9685/pca9685.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_pca9685"]
     },
     "native_ads1115": {
-      "desc": "ADS1115 16-bit ADC codec (services/peripherals/ads1115): building the 16-bit config word for a\nsingle-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits,\nwith out-of-range fallbacks), and converting a signed 16-bit sample to microvolts across the\ngain's full-scale range. Pure - the I2C transfer is ESP32-only.",
+      "desc": "ADS1115 16-bit ADC codec (server/peripherals/ads1115): building the 16-bit config word for a\nsingle-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits,\nwith out-of-range fallbacks), and converting a signed 16-bit sample to microvolts across the\ngain's full-scale range. Pure - the I2C transfer is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_ADS1115=1"],
       "src": [
-        "+<services/peripherals/ads1115/ads1115.c>",
+        "+<server/peripherals/ads1115/ads1115.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_ads1115"]
     },
     "native_ina219": {
-      "desc": "INA219 current/power codec (services/peripherals/ina219): decoding the bus-voltage register (bits\n[15:3], LSB 4 mV, status bits ignored) and the shunt-voltage register (signed, LSB 10 uV),\ncomputing the calibration register from the current LSB and shunt resistance, and scaling the\nraw current / power registers. Pure - the I2C transfer is ESP32-only.",
+      "desc": "INA219 current/power codec (server/peripherals/ina219): decoding the bus-voltage register (bits\n[15:3], LSB 4 mV, status bits ignored) and the shunt-voltage register (signed, LSB 10 uV),\ncomputing the calibration register from the current LSB and shunt resistance, and scaling the\nraw current / power registers. Pure - the I2C transfer is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_INA219=1"],
-      "src": ["+<services/peripherals/ina219/ina219.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/ina219/ina219.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_ina219"]
     },
     "native_hpack": {
@@ -3079,7 +3079,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -3103,11 +3103,11 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -3131,7 +3131,7 @@
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
         "+<mmgr/protomem.c>",
-        "+<server/filesystem/mnt.c>",
+        "+<server/storage/mnt.c>",
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>",
@@ -3166,7 +3166,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/iot/test_mqtt"],
@@ -3190,7 +3190,7 @@
       "src": [
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/protomem.c>"
@@ -3293,7 +3293,7 @@
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
@@ -3330,11 +3330,11 @@
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<mmgr/protostr.c>",
-        "+<server/system/session.c>",
+        "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<network_drivers/presentation/http/websocket/websocket.c>",
@@ -3359,10 +3359,10 @@
       "tests": ["unit/timing_position/test_time_source"]
     },
     "native_config_store": {
-      "desc": "Typed NVS config store (services/storage/config_store): string/u32/blob round-trips,\ndefaults, capacity, erase/clear - run against the host NVS backend that hal/nvs.h\nselects off-target (the ESP32 Preferences backend is compiled in only on-target).",
+      "desc": "Typed NVS config store (server/storage/config_store): string/u32/blob round-trips,\ndefaults, capacity, erase/clear - run against the host NVS backend that hal/nvs.h\nselects off-target (the ESP32 Preferences backend is compiled in only on-target).",
       "flags": ["-DPROTOCORE_ENABLE_CONFIG_STORE=1"],
       "src": [
-        "+<services/storage/config_store/config_store.c>",
+        "+<server/storage/config_store/config_store.c>",
         "+<core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/protostr.c>"
@@ -3380,44 +3380,44 @@
       "tests": ["unit/server/test_device_id"]
     },
     "native_auth_lockout": {
-      "desc": "Per-IP brute-force auth lockout (services/security/auth_lockout): exponential-backoff\nlockout state machine. Pure core (the millisecond clock is passed in), so it\nunit-tests on the host. PROTOCORE_ENABLE_AUTH_LOCKOUT (and its required parent\nPROTOCORE_ENABLE_AUTH) are set so the flag-guarded code compiles.",
+      "desc": "Per-IP brute-force auth lockout (server/security/auth_lockout): exponential-backoff\nlockout state machine. Pure core (the millisecond clock is passed in), so it\nunit-tests on the host. PROTOCORE_ENABLE_AUTH_LOCKOUT (and its required parent\nPROTOCORE_ENABLE_AUTH) are set so the flag-guarded code compiles.",
       "flags": [
         "-DPROTOCORE_ENABLE_AUTH=1",
         "-DPROTOCORE_ENABLE_AUTH_LOCKOUT=1"
       ],
       "src": [
-        "+<services/security/auth_lockout/auth_lockout.c>",
+        "+<server/security/auth_lockout/auth_lockout.c>",
         "+<shared/ip/ip.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/security/test_auth_lockout"]
     },
     "native_forwarded_trust": {
-      "desc": "Trusted-reverse-proxy forwarded-client resolver (services/security/forwarded_trust): a\nForwarded / X-Forwarded-For client address is honored only when the real TCP peer\nis a configured trusted-upstream CIDR, else the TCP peer is kept. Pure (no\nsockets), so it host-tests; a direct/untrusted peer's spoofed header is never\nbelieved. PROTOCORE_ENABLE_FORWARDED_TRUST (+ its required parents AUTH / AUTH_LOCKOUT)\nare set so the flag-guarded config compiles.",
+      "desc": "Trusted-reverse-proxy forwarded-client resolver (server/security/forwarded_trust): a\nForwarded / X-Forwarded-For client address is honored only when the real TCP peer\nis a configured trusted-upstream CIDR, else the TCP peer is kept. Pure (no\nsockets), so it host-tests; a direct/untrusted peer's spoofed header is never\nbelieved. PROTOCORE_ENABLE_FORWARDED_TRUST (+ its required parents AUTH / AUTH_LOCKOUT)\nare set so the flag-guarded config compiles.",
       "flags": [
         "-DPROTOCORE_ENABLE_AUTH=1",
         "-DPROTOCORE_ENABLE_AUTH_LOCKOUT=1",
         "-DPROTOCORE_ENABLE_FORWARDED_TRUST=1"
       ],
       "src": [
-        "+<services/security/forwarded_trust/forwarded_trust.c>",
+        "+<server/security/forwarded_trust/forwarded_trust.c>",
         "+<shared/ip/ip.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/security/test_forwarded_trust"]
     },
     "native_csrf": {
-      "desc": "Stateless HMAC-signed CSRF token (services/security/csrf): issue/verify with a fixed\nsecret unit-tests on the host (PROTOCORE_ENABLE_CSRF set). Pulls in the SSH\nHMAC-SHA256 + SHA-256 core.",
+      "desc": "Stateless HMAC-signed CSRF token (server/security/csrf): issue/verify with a fixed\nsecret unit-tests on the host (PROTOCORE_ENABLE_CSRF set). Pulls in the SSH\nHMAC-SHA256 + SHA-256 core.",
       "flags": ["-DPROTOCORE_ENABLE_CSRF=1"],
       "src": [
         "+<mmgr/protoframe.c>",
-        "+<services/security/csrf/csrf.c>",
+        "+<server/security/csrf/csrf.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<crypto/hash/sha256.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -3431,10 +3431,10 @@
       "tests": ["unit/iot/test_telemetry"]
     },
     "native_dashboard": {
-      "desc": "Dashboard widget-table JSON serializers (services/web/dashboard core). Pure logic;\nthe route/SSE wiring (dashboard_routes.c) is excluded so this tests on the\nhost without the server.",
+      "desc": "Dashboard widget-table JSON serializers (server/web/dashboard core). Pure logic;\nthe route/SSE wiring (dashboard_routes.c) is excluded so this tests on the\nhost without the server.",
       "flags": ["-DPROTOCORE_ENABLE_DASHBOARD=1", "-DPROTOCORE_ENABLE_SSE=1"],
       "src": [
-        "+<services/web/dashboard/dashboard.c>",
+        "+<server/web/dashboard/dashboard.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -3470,7 +3470,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/transport/tcp/client/client.c>",
         "+<network_drivers/network/dns/dns_resolver.c>",
@@ -3488,10 +3488,10 @@
       "tests": ["protocols/transport/test_client"]
     },
     "native_partition": {
-      "desc": "Flash partition-map monitor (services/storage/partition_monitor core): the kind\nclassifier + JSON serializer host-test here; the esp_partition walk is ESP32-only.",
+      "desc": "Flash partition-map monitor (server/storage/partition_monitor core): the kind\nclassifier + JSON serializer host-test here; the esp_partition walk is ESP32-only.",
       "flags": ["-DPROTOCORE_ENABLE_PARTITION_MONITOR=1"],
       "src": [
-        "+<services/storage/partition_monitor/partition_monitor.c>",
+        "+<server/storage/partition_monitor/partition_monitor.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -3553,10 +3553,10 @@
       "tests": ["protocols/transport/test_statsd"]
     },
     "native_guardrails": {
-      "desc": "Heap/stack guardrails (services/security/guardrails): threshold evaluator + JSON,\nhost-tested. Live sampling is ESP32-only (#ifdef ARDUINO).",
+      "desc": "Heap/stack guardrails (server/core/guardrails): threshold evaluator + JSON,\nhost-tested. Live sampling is ESP32-only (#ifdef ARDUINO).",
       "flags": ["-DPROTOCORE_ENABLE_GUARDRAILS=1"],
       "src": [
-        "+<services/security/guardrails/guardrails.c>",
+        "+<server/core/guardrails/guardrails.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -3566,7 +3566,7 @@
       "desc": "Software watchdog / deadlock detection + safe-state (server/failsafe): the wrap-safe\noverdue predicate, the lifeline registry, fire-once-per-episode breach callback, and JSON.\nPure host tests with a synthetic clock.",
       "flags": ["-DPROTOCORE_ENABLE_FAILSAFE=1"],
       "src": [
-        "+<server/system/failsafe.c>",
+        "+<server/core/failsafe.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -3575,7 +3575,7 @@
     "native_sleep_sched": {
       "desc": "Dynamic sleep-cycle scheduler (server/sleep_sched): the wrap-safe idle->sleep-window\ndecision core with a doubling ramp clamped to a ceiling. Pure host tests, synthetic clock.",
       "flags": ["-DPROTOCORE_ENABLE_SLEEP_SCHED=1"],
-      "src": ["+<server/system/sleep_sched.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/core/sleep_sched.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/server/test_sleep_sched"]
     },
     "native_signaling": {
@@ -3584,21 +3584,21 @@
       "tests": ["unit/server/test_signaling"]
     },
     "native_wearlevel": {
-      "desc": "Flash wear-leveling slot selector (server/filesystem/wearlevel): least-worn pick (ties -> lowest\nindex), saturating mark, and the wear-imbalance spread metric. Pure host tests - a 4000-write\npick+mark loop must level every slot exactly.",
+      "desc": "Flash wear-leveling slot selector (server/storage/wearlevel): least-worn pick (ties -> lowest\nindex), saturating mark, and the wear-imbalance spread metric. Pure host tests - a 4000-write\npick+mark loop must level every slot exactly.",
       "flags": ["-DPROTOCORE_ENABLE_WEARLEVEL=1"],
-      "src": ["+<server/filesystem/wearlevel.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/storage/wearlevel.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/storage/test_wearlevel"]
     },
     "native_netadapt": {
-      "desc": "Network adaptation decisions (services/net/netadapt): TCP receive-window sizing from the free\nheap (reserve + quarter-of-spare, clamped) and the DHCP->static-IP fallback trigger. Pure host tests.",
+      "desc": "Network adaptation decisions (server/net/netadapt): TCP receive-window sizing from the free\nheap (reserve + quarter-of-spare, clamped) and the DHCP->static-IP fallback trigger. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_NETADAPT=1"],
-      "src": ["+<services/net/netadapt/netadapt.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/net/netadapt/netadapt.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/net/test_netadapt"]
     },
     "native_dshot": {
-      "desc": "DShot ESC throttle codec (services/peripherals/dshot): the 16-bit frame (11-bit value + telemetry +\n4-bit nibble-xor CRC), the bidirectional inverted-CRC variant, decode/validate, and per-rate bit\ntiming. Pure host tests with hand-computed vectors.",
+      "desc": "DShot ESC throttle codec (server/peripherals/dshot): the 16-bit frame (11-bit value + telemetry +\n4-bit nibble-xor CRC), the bidirectional inverted-CRC variant, decode/validate, and per-rate bit\ntiming. Pure host tests with hand-computed vectors.",
       "flags": ["-DPROTOCORE_ENABLE_DSHOT=1"],
-      "src": ["+<services/peripherals/dshot/dshot.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/peripherals/dshot/dshot.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/peripherals/test_dshot"]
     },
     "native_hart": {
@@ -3632,9 +3632,9 @@
       "tests": ["unit/fieldbus/test_rawl2"]
     },
     "native_spa_router": {
-      "desc": "Single-page-app micro-routing (services/web/spa_router): the serve-file / serve-shell /\npassthrough decision from a request path (extension test + API prefix). Pure host tests.",
+      "desc": "Single-page-app micro-routing (server/web/spa_router): the serve-file / serve-shell /\npassthrough decision from a request path (extension test + API prefix). Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_SPA_ROUTER=1"],
-      "src": ["+<services/web/spa_router/spa_router.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/web/spa_router/spa_router.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/web/test_spa_router"]
     },
     "native_goose": {
@@ -3817,21 +3817,21 @@
       "tests": ["unit/machine_tool/test_atc"]
     },
     "native_southbound": {
-      "desc": "Southbound protocol-driver framework (services/net/southbound): the bounded driver registry\n(register / find / clear / count) and the name-dispatched read/write/read_block/write_block facade,\nincluding capability + not-found handling and transport-error passthrough. Pure host tests.",
+      "desc": "Southbound protocol-driver framework (services/southbound): the bounded driver registry\n(register / find / clear / count) and the name-dispatched read/write/read_block/write_block facade,\nincluding capability + not-found handling and transport-error passthrough. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_SOUTHBOUND=1"],
-      "src": ["+<services/net/southbound/southbound.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<services/southbound/southbound.c>", "+<mmgr/protomem.c>"],
       "tests": ["protocols/net/test_southbound"]
     },
     "native_sb_modbus": {
-      "desc": "Modbus-master southbound driver adapter (services/net/southbound/sb_modbus): binds the\ntransport-agnostic Modbus TCP master codec into the southbound driver framework, so an app\nreads/writes register points by driver name through the one facade. Host-tested end to end\nagainst the real slave codec (protocore_modbus_process_adu) over a mock transaction seam.",
+      "desc": "Modbus-master southbound driver adapter (services/southbound/sb_modbus): binds the\ntransport-agnostic Modbus TCP master codec into the southbound driver framework, so an app\nreads/writes register points by driver name through the one facade. Host-tested end to end\nagainst the real slave codec (protocore_modbus_process_adu) over a mock transaction seam.",
       "flags": [
         "-DPROTOCORE_ENABLE_SOUTHBOUND=1",
         "-DPROTOCORE_ENABLE_MODBUS=1",
         "-DPROTOCORE_ENABLE_MODBUS_MASTER=1"
       ],
       "src": [
-        "+<services/net/southbound/southbound.c>",
-        "+<services/net/southbound/sb_modbus.c>",
+        "+<services/southbound/southbound.c>",
+        "+<services/southbound/sb_modbus.c>",
         "+<services/fieldbus/modbus/modbus.c>",
         "+<services/fieldbus/modbus/modbus_master.c>",
         "+<mmgr/protomem.c>"
@@ -3842,7 +3842,7 @@
       "desc": "ESP32 panic / exception decoder (server/exc_decoder): parse a captured Guru Meditation\ndump (cause, register PC + EXCVADDR, backtrace PC:SP frames) into a structured ExcInfo and serialize it\nas JSON for a live /exception panel; tolerates missing fields + a trailing corruption marker. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_EXC_DECODER=1"],
       "src": [
-        "+<server/system/exc_decoder.c>",
+        "+<server/core/exc_decoder.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -3879,25 +3879,25 @@
       "tests": ["unit/application/test_mdns_adaptive"]
     },
     "native_sockpool": {
-      "desc": "Dynamic socket recycling (services/net/sockpool): a fixed LRU connection-slot pool - acquire\n(free slot, else recycle the least-recently-used and report the evicted id), touch, release, find, and\nin-use count. Pure host tests.",
+      "desc": "Dynamic socket recycling (server/net/sockpool): a fixed LRU connection-slot pool - acquire\n(free slot, else recycle the least-recently-used and report the evicted id), touch, release, find, and\nin-use count. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_SOCKPOOL=1"],
-      "src": ["+<services/net/sockpool/sockpool.c>", "+<mmgr/protomem.c>"],
+      "src": ["+<server/net/sockpool/sockpool.c>", "+<mmgr/protomem.c>"],
       "tests": ["unit/transport/test_sockpool"]
     },
     "native_psram_pool": {
       "desc": "Buffer placement policy + DMA ping-pong (services/storage/psram_pool): protocore_psram_place picks\nDRAM vs PSRAM by size / DMA requirement / free-heap headroom (large-cold to PSRAM, small-hot + DMA to\nDRAM, leaving a DRAM reserve), plus the SPI DMA ping-pong double-buffer index bookkeeping. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_PSRAM_POOL=1"],
       "src": [
-        "+<services/storage/psram_pool/psram_pool.c>",
+        "+<mmgr/psram_pool.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/storage/test_psram_pool"]
     },
     "native_happy_eyeballs": {
-      "desc": "Dual-stack Happy Eyeballs selection (services/net/happy_eyeballs): RFC 6724 destination\npreference scoring, the candidate-list sort + RFC 8305 address-family interleave, and the Connection\nAttempt Delay gate, over the shipped protocore_ip. Pure host tests.",
+      "desc": "Dual-stack Happy Eyeballs selection (network_drivers/transport/happy_eyeballs): RFC 6724 destination\npreference scoring, the candidate-list sort + RFC 8305 address-family interleave, and the Connection\nAttempt Delay gate, over the shipped protocore_ip. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_HAPPY_EYEBALLS=1"],
       "src": [
-        "+<services/net/happy_eyeballs/happy_eyeballs.c>",
+        "+<network_drivers/transport/happy_eyeballs/happy_eyeballs.c>",
         "+<shared/ip/ip.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -3926,28 +3926,28 @@
       "tests": ["protocols/radio/test_cc1101"]
     },
     "native_fdc2214": {
-      "desc": "FDC2114/2214 capacitance-to-digital field sensor (services/peripherals/fdc2214): the 28-bit data\ncombine + error flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence\nbuilder. Pure codec host tests (the I2C binding is ESP32-only).",
+      "desc": "FDC2114/2214 capacitance-to-digital field sensor (server/peripherals/fdc2214): the 28-bit data\ncombine + error flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence\nbuilder. Pure codec host tests (the I2C binding is ESP32-only).",
       "flags": ["-DPROTOCORE_ENABLE_FDC2214=1"],
       "src": [
-        "+<services/peripherals/fdc2214/fdc2214.c>",
+        "+<server/peripherals/fdc2214/fdc2214.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_fdc2214"]
     },
     "native_ldc1614": {
-      "desc": "LDC1614 inductance-to-digital field sensor (services/peripherals/ldc1614): the 28-bit data combine +\nerror flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence builder.\nPure codec host tests (the I2C binding is ESP32-only).",
+      "desc": "LDC1614 inductance-to-digital field sensor (server/peripherals/ldc1614): the 28-bit data combine +\nerror flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence builder.\nPure codec host tests (the I2C binding is ESP32-only).",
       "flags": ["-DPROTOCORE_ENABLE_LDC1614=1"],
       "src": [
-        "+<services/peripherals/ldc1614/ldc1614.c>",
+        "+<server/peripherals/ldc1614/ldc1614.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_ldc1614"]
     },
     "native_vl53l0x": {
-      "desc": "VL53L0X time-of-flight ranging codec (services/peripherals/vl53l0x): the range byte-pair combine to\nmillimeters, the interrupt-status data-ready decode, and the device range-status validity check. Pure\ncodec host tests (the I2C ranging binding is ESP32-only).",
+      "desc": "VL53L0X time-of-flight ranging codec (server/peripherals/vl53l0x): the range byte-pair combine to\nmillimeters, the interrupt-status data-ready decode, and the device range-status validity check. Pure\ncodec host tests (the I2C ranging binding is ESP32-only).",
       "flags": ["-DPROTOCORE_ENABLE_VL53L0X=1"],
       "src": [
-        "+<services/peripherals/vl53l0x/vl53l0x.c>",
+        "+<server/peripherals/vl53l0x/vl53l0x.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/peripherals/test_vl53l0x"]
@@ -3972,10 +3972,10 @@
       "tests": ["unit/radio/test_ble_gatt"]
     },
     "native_tls_policy": {
-      "desc": "TLS version negotiation + pinned cipher policy (services/security/tls_policy): the server-style\nversion pick (highest supported not above the client's), the version name, cipher selection by server\npreference from the offered set, and the AEAD-suite classifier. Pure host tests.",
+      "desc": "TLS version negotiation + pinned cipher policy (server/security/tls_policy): the server-style\nversion pick (highest supported not above the client's), the version name, cipher selection by server\npreference from the offered set, and the AEAD-suite classifier. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_TLS_POLICY=1"],
       "src": [
-        "+<services/security/tls_policy/tls_policy.c>",
+        "+<server/security/tls_policy/tls_policy.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/tls/test_tls_policy"]
@@ -3995,7 +3995,7 @@
       "desc": "Rotating log ring + severity trap (server/logbuf): pure, fully host-tested.",
       "flags": ["-DPROTOCORE_ENABLE_LOGBUF=1"],
       "src": [
-        "+<server/system/logbuf.c>",
+        "+<server/core/logbuf.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -4006,17 +4006,17 @@
       "desc": "SoC power governor (server/power_mgmt): the pure clock decision from load, die\ntemperature and reset reason - load-based scaling, the thermal hysteresis that stops a part parked at\nthe limit from oscillating (asserted by feeding the plan's own output back for 20 ticks and counting\none transition), post-brownout recovery holding the floor even when busy and cool, the precedence\nbetween the three, and INT16_MIN meaning no sensor rather than ice-cold.",
       "flags": ["-DPROTOCORE_ENABLE_POWER_MGMT=1"],
       "src": [
-        "+<server/system/power_mgmt.c>",
+        "+<server/core/power_mgmt.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/server/test_power_mgmt"]
     },
     "native_hotswap": {
-      "desc": "Removable-storage hot-swap safeties (services/storage/hotswap): the ABSENT/READY/FAULTED state\nmachine - a run of consecutive I/O errors faults a volume while a single one does not, any success\nresets the run, the fail counter saturates instead of wrapping, probe attempts are rate-limited (and\nwrap-safe across a millis() rollover), present-but-unmountable stays absent, and a full\nremoval/reinsertion cycle returns to a clean mount. Pure host tests with a synthetic clock.",
+      "desc": "Removable-storage hot-swap safeties (server/storage/hotswap): the ABSENT/READY/FAULTED state\nmachine - a run of consecutive I/O errors faults a volume while a single one does not, any success\nresets the run, the fail counter saturates instead of wrapping, probe attempts are rate-limited (and\nwrap-safe across a millis() rollover), present-but-unmountable stays absent, and a full\nremoval/reinsertion cycle returns to a clean mount. Pure host tests with a synthetic clock.",
       "flags": ["-DPROTOCORE_ENABLE_HOTSWAP=1"],
       "src": [
-        "+<services/storage/hotswap/hotswap.c>",
+        "+<server/storage/hotswap/hotswap.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -4030,7 +4030,7 @@
         "-DPROTOCORE_LOG_LEVEL=PROTOCORE_LOG_LEVEL_INFO"
       ],
       "src": [
-        "+<server/system/logbuf.c>",
+        "+<server/core/logbuf.c>",
         "+<shared/log/log.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
@@ -4039,14 +4039,14 @@
       "tests": ["unit/server/test_log"]
     },
     "native_config_io": {
-      "desc": "Schema-driven config export/restore (services/storage/config_io) over the config store;\nround-trip host-tested against the in-memory backend.",
+      "desc": "Schema-driven config export/restore (server/storage/config_io) over the config store;\nround-trip host-tested against the in-memory backend.",
       "flags": [
         "-DPROTOCORE_ENABLE_CONFIG_STORE=1",
         "-DPROTOCORE_ENABLE_CONFIG_IO=1"
       ],
       "src": [
-        "+<services/storage/config_store/config_store.c>",
-        "+<services/storage/config_io/config_io.c>",
+        "+<server/storage/config_store/config_store.c>",
+        "+<server/storage/config_io/config_io.c>",
         "+<core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
@@ -4065,7 +4065,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -4167,9 +4167,9 @@
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
-        "+<services/security/audit_log/audit_log.c>",
+        "+<server/security/audit_log/audit_log.c>",
         "+<services/security/oidc/oidc.c>",
-        "+<server/filesystem/mnt.c>",
+        "+<server/storage/mnt.c>",
         "+<services/iot/graphql/graphql.c>",
         "+<services/radio/espnow/espnow.c>",
         "+<services/security/oauth2/oauth2.c>",
@@ -4180,12 +4180,12 @@
         "+<crypto/asymmetric/bignum.c>",
         "+<core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha512.c>",
-        "+<services/security/csrf/csrf.c>",
+        "+<server/security/csrf/csrf.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20.c>",
-        "+<services/security/auth_lockout/auth_lockout.c>",
+        "+<server/security/auth_lockout/auth_lockout.c>",
         "+<services/timing_position/time_source/time_source.c>",
-        "+<services/storage/config_store/config_store.c>",
+        "+<server/storage/config_store/config_store.c>",
         "+<core_setup/hal/host/host_nvs.c>",
         "+<server/signaling/device_id.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
@@ -4193,27 +4193,27 @@
         "+<crypto/mac/hmac_sha256.c>",
         "+<crypto/hash/sha256.c>",
         "+<services/iot/telemetry/telemetry.c>",
-        "+<services/web/dashboard/dashboard.c>",
-        "+<services/web/dashboard/dashboard_routes.c>",
-        "+<services/storage/partition_monitor/partition_monitor.c>",
-        "+<services/storage/partition_monitor/partition_monitor_routes.c>",
+        "+<server/web/dashboard/dashboard.c>",
+        "+<server/web/dashboard/dashboard_routes.c>",
+        "+<server/storage/partition_monitor/partition_monitor.c>",
+        "+<server/storage/partition_monitor/partition_monitor_routes.c>",
         "+<network_drivers/presentation/codec/cbor/cbor.c>",
         "+<network_drivers/presentation/codec/msgpack/msgpack.c>",
         "+<server/signaling/gpio_map.c>",
         "+<server/signaling/gpio_map_routes.c>",
         "+<services/iot/udp_telemetry/udp_telemetry.c>",
-        "+<services/security/guardrails/guardrails.c>",
-        "+<server/system/failsafe.c>",
-        "+<server/system/sleep_sched.c>",
-        "+<server/filesystem/wearlevel.c>",
-        "+<services/net/netadapt/netadapt.c>",
-        "+<services/peripherals/dshot/dshot.c>",
+        "+<server/core/guardrails/guardrails.c>",
+        "+<server/core/failsafe.c>",
+        "+<server/core/sleep_sched.c>",
+        "+<server/storage/wearlevel.c>",
+        "+<server/net/netadapt/netadapt.c>",
+        "+<server/peripherals/dshot/dshot.c>",
         "+<services/fieldbus/hart/hart.c>",
         "+<network_drivers/application/nts/nts.c>",
         "+<services/iot/dds/dds.c>",
         "+<services/iot/xmpp/xmpp.c>",
         "+<services/fieldbus/rawl2/rawl2.c>",
-        "+<services/web/spa_router/spa_router.c>",
+        "+<server/web/spa_router/spa_router.c>",
         "+<services/energy/goose/goose.c>",
         "+<services/machine_tool/mtconnect/mtconnect.c>",
         "+<services/transportation/j2735/j2735.c>",
@@ -4237,25 +4237,25 @@
         "+<services/transportation/utmc/utmc.c>",
         "+<services/transportation/ocit/ocit.c>",
         "+<services/machine_tool/atc/atc.c>",
-        "+<services/net/southbound/southbound.c>",
-        "+<server/system/exc_decoder.c>",
+        "+<services/southbound/southbound.c>",
+        "+<server/core/exc_decoder.c>",
         "+<services/file_transfer/http_delivery/http_delivery.c>",
         "+<server/signaling/hw_health.c>",
         "+<network_drivers/application/mdns_adaptive/mdns_adaptive.c>",
-        "+<services/net/sockpool/sockpool.c>",
-        "+<services/storage/psram_pool/psram_pool.c>",
-        "+<services/net/happy_eyeballs/happy_eyeballs.c>",
+        "+<server/net/sockpool/sockpool.c>",
+        "+<mmgr/psram_pool.c>",
+        "+<network_drivers/transport/happy_eyeballs/happy_eyeballs.c>",
         "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
         "+<server/signaling/link_manager.c>",
         "+<services/radio/cc1101/cc1101.c>",
-        "+<services/peripherals/fdc2214/fdc2214.c>",
-        "+<services/peripherals/ldc1614/ldc1614.c>",
-        "+<services/peripherals/vl53l0x/vl53l0x.c>",
+        "+<server/peripherals/fdc2214/fdc2214.c>",
+        "+<server/peripherals/ldc1614/ldc1614.c>",
+        "+<server/peripherals/vl53l0x/vl53l0x.c>",
         "+<services/radio/radio_sniff/radio_sniff.c>",
         "+<services/radio/ble_gatt/ble_gatt.c>",
-        "+<services/security/tls_policy/tls_policy.c>",
+        "+<server/security/tls_policy/tls_policy.c>",
         "+<services/radio/wisun/wisun.c>",
-        "+<server/system/logbuf.c>",
+        "+<server/core/logbuf.c>",
         "+<server/update/ota_rollback.c>",
         "+<services/security/totp/totp.c>",
         "+<services/net/webhook/webhook.c>",
@@ -4264,7 +4264,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
@@ -4335,7 +4335,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4355,7 +4355,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/protomem.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/tls/test_tls_record"]
@@ -4373,7 +4373,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4389,7 +4389,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4428,7 +4428,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -4453,7 +4453,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -4486,7 +4486,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -4520,7 +4520,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -4538,7 +4538,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4589,7 +4589,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4622,7 +4622,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4651,7 +4651,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4684,7 +4684,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4717,7 +4717,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4756,7 +4756,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>"
@@ -4798,7 +4798,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -4815,7 +4815,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4830,7 +4830,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4846,7 +4846,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4960,7 +4960,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
@@ -4974,18 +4974,18 @@
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
-        "+<server/system/worker.c>",
+        "+<server/core/worker.c>",
         "+<core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>"
       ],
       "tests": ["unit/mmgr/test_plaintext", "unit/mmgr/test_secure_pool"]
     },
     "native_mnt": {
-      "desc": "Mounted storage (server/filesystem/mnt) - the backend vtable and its built-in RAM backend,\nhost-tested through that backend (the Arduino FS backend is board-layer and HW-verified).\nFiles, directories, stat, and the readdir cursor. Pure, no heap.",
+      "desc": "Mounted storage (server/storage/mnt) - the backend vtable and its built-in RAM backend,\nhost-tested through that backend (the Arduino FS backend is board-layer and HW-verified).\nFiles, directories, stat, and the readdir cursor. Pure, no heap.",
       "flags": ["-DPROTOCORE_ENABLE_MNT=1"],
       "src": [
-        "+<server/filesystem/mnt.c>",
-        "+<server/filesystem/filesystem.c>",
+        "+<server/storage/mnt.c>",
+        "+<server/storage/filesystem.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>"
@@ -5002,7 +5002,7 @@
     "native_lfs_mock": {
       "desc": "The littlefs-backed protocore_mnt_backend used by the host tests that need a real tree\n(test/mocks/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
       "flags": ["-DPROTOCORE_ENABLE_MNT=1"],
-      "src": ["-<*>", "+<server/filesystem/mnt.c>", "+<mmgr/protomem.c>"],
+      "src": ["-<*>", "+<server/storage/mnt.c>", "+<mmgr/protomem.c>"],
       "tests": ["protocols/storage/test_lfs_mock"]
     }
   }

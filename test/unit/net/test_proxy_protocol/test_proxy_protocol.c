@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the HAProxy PROXY protocol codec (services/net/proxy_protocol): the v1 (text)
+// Unit tests for the HAProxy PROXY protocol codec (network_drivers/transport/proxy_protocol): the v1 (text)
 // and v2 (binary) builders + the unified parser. Per the HAProxy spec. Pure host tests.
 
-#include "services/net/proxy_protocol/proxy_protocol.h"
+#include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
 #include <string.h>
 
 #include <unity.h>

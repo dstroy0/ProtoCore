@@ -18,7 +18,7 @@
 #include <stdarg.h>
 
 #if PROTOCORE_ENABLE_LOGBUF
-#include "server/system/logbuf.h"
+#include "server/core/logbuf.h"
 #endif
 
 /**

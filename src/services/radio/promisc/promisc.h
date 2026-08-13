@@ -80,7 +80,7 @@ typedef void (*protocore_promisc_sink_fn)(const uint8_t *frame, uint16_t len, in
 /**
  * @brief Start promiscuous capture on @p channel; every frame is delivered to @p sink.
  *
- * Requires the radio to be up (Physical.wifi->init() or Physical.wifi->init_radio()).
+ * Requires the radio to be up (Physical.wifi_init or Physical.wifi_radio_init).
  * Returns immediately.
  * @return true if capture started; false if @p sink is null or on host builds.
  */

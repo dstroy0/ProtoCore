@@ -3,7 +3,7 @@
 //
 // Host tests for services/psram_pool: DRAM/PSRAM placement policy + DMA ping-pong bookkeeping.
 
-#include "services/storage/psram_pool/psram_pool.h"
+#include "mmgr/psram_pool.h"
 #include <unity.h>
 
 void setUp(void)

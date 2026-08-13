@@ -41,7 +41,7 @@ static_assert(sizeof(protocore_aes128) <= PROTOCORE_WORK_AES128, "protocore_aes1
 struct protocore_aes128 *protocore_aes128_wants(void)
 {
     protocore_span ws = protocore_secure_span(sizeof(protocore_aes128), 8);
-    return protocore_span_ok(ws) ? (struct protocore_aes128 *)(ws.buf) : NULL;
+    return span.ok(ws) ? (struct protocore_aes128 *)(ws.buf) : NULL;
 }
 
 void protocore_aes128_init(struct protocore_aes128 *ctx, const uint8_t key[16])
@@ -92,9 +92,9 @@ protocore_cspan protocore_aes128gcm_seal(struct protocore_aes128gcm_key *k, cons
     if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PROTOCORE_AES128GCM_IV_LEN, aad, aad_len, pt, ct_out,
                                   PROTOCORE_AES128GCM_TAG_LEN, tag_out) != 0)
     {
-        return protocore_cspan_from(NULL, 0);
+        return span.cfrom(NULL, 0);
     }
-    return protocore_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
+    return span.cfrom(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
 proto_bool protocore_aes128gcm_open(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the trusted-reverse-proxy forwarded-client resolver
-// (services/security/forwarded_trust): protocore_forwarded_trust_add_cidr() (text CIDR -> table insert),
+// (server/security/forwarded_trust): protocore_forwarded_trust_add_cidr() (text CIDR -> table insert),
 // protocore_forwarded_trust_contains() (per-request trusted-upstream membership test), and
 // protocore_forwarded_effective_ip() (the full resolve: honor the Forwarded/X-Forwarded-For client only
 // when the real TCP peer is a trusted upstream and the token is a valid, specified address, else
@@ -16,7 +16,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/security/forwarded_trust/forwarded_trust.h"
+#include "server/security/forwarded_trust/forwarded_trust.h"
 #include "shared/ip/ip.h"
 
 #include <stdbool.h>

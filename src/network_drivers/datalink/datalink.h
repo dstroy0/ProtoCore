@@ -3,11 +3,18 @@
 
 /**
  * @file datalink.h
- * @brief Layer 2 (Data Link) - Ethernet / 802.11 frame handling.
+ * @brief Layer 2 (Data Link) - the LINK LAYER of RFC 1122 sec 2.
  *
- * The data link layer is managed by the vendor lwIP port (WLAN device driver + IEEE 802.11 MAC).
- * This header completes the OSI layering and is the extension point for a target that needs direct
- * MAC-level access. The implementation is a no-op stub.
+ * RFC 1122 sec 2.3.3 "Ethernet and IEEE 802 Encapsulation" states what a host on the cable does
+ * with a frame: it MUST send and receive RFC 894 encapsulation (RFC 894 "Frame Format": Ether-Type
+ * 0x0800, a data field of 46 to 1500 octets, zero-padded to the minimum), SHOULD receive RFC 1042
+ * encapsulation intermixed with it (802.2 LLC/SNAP, K1=170), and MUST NOT send 802 packets using
+ * K1=6. RFC 1122 sec 2.4 fixes the interface this layer presents upward: a receive carries the
+ * link-layer-broadcast flag, a send carries the 5-bit TOS field.
+ *
+ * The platform's own link driver and IP stack port perform all of it - MAC framing, medium access,
+ * address resolution - and this module is the seam a target with direct MAC-level access extends.
+ * Its one call only reports the layer up.
  *
  * The module exports one symbol, @ref Datalink. Everything in datalink.c has internal linkage.
  *
@@ -22,21 +29,33 @@
 
 PROTOCORE_BEGIN_DECLS
 
+/** @brief The link layer's calls, described only in datalink.c. */
+struct DatalinkInternal;
+
 /**
- * @brief The data-link module.
+ * @brief The data link layer (RFC 1122 sec 2 "LINK LAYER").
  *
- * @var DatalinkNs::init  initialize the layer. A no-op: the vendor WiFi and lwIP stack handle every
- *                        Layer 2 operation internally. Call it if MAC-level extensions are added.
+ * A caller invokes a call through ::Datalink and reads the outcome off the same handle.
  *
- * No storage member: the layer holds nothing of its own, so there is no context to hand out.
+ * @var DatalinkNs::ok        PROTO_TRUE once @ref init has run
+ * @var DatalinkNs::init      bring the layer up: sets @ref ok. The platform's link driver performs
+ *                            every RFC 1122 sec 2.3.3 encapsulation step.
+ * @var DatalinkNs::internal  the calls that reach the layer
+ *
+ * No argument members: init takes none.
+ * No storage member: the layer holds nothing of its own, so there is no state to hand out.
  */
 typedef struct
 {
-    void (*init)(void);
+    proto_bool ok; ///< PROTO_TRUE once init has run
+
+    void (*init)(struct DatalinkInternal *ctx); ///< link-layer bring-up (RFC 1122 sec 2)
+
+    struct DatalinkInternal *internal;
 } DatalinkNs;
 
 /** @brief The one symbol this module exports. */
-extern const DatalinkNs Datalink;
+extern DatalinkNs Datalink;
 
 PROTOCORE_END_DECLS
 

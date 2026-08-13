@@ -12,7 +12,7 @@
 
 #include "crypto/asymmetric/curve25519.h" // protocore_x25519, protocore_x25519_base
 #include "crypto/ct_eq.h"                 // protocore_ct_eq: the Finished compare
-#include "mmgr/rawmemcpy.h"               // proto_raw_read
+#include "mmgr/rawmemcpy.h"               // raw.read
 #include "mmgr/secure.h"                  // the borrow this driver runs out of, and protocore_secure_wipe
 
 // The secure-pool term this file declares against PROTOCORE_SECURE_ARENA_SIZE: one borrow per TLS
@@ -329,7 +329,7 @@ static proto_bool slot_storage(struct TlsConnInternal *restrict ctx)
         return PROTO_TRUE;
     }
     protocore_span b = secure.persist_span(PROTOCORE_TLS_CONN_BORROW);
-    if (!protocore_span_ok(b))
+    if (!span.ok(b))
     {
         return PROTO_FALSE;
     }

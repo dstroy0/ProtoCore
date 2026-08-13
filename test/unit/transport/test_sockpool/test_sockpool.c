@@ -3,7 +3,7 @@
 //
 // Host tests for services/sockpool: the LRU connection-slot recycling pool.
 
-#include "services/net/sockpool/sockpool.h"
+#include "server/net/sockpool/sockpool.h"
 #include <unity.h>
 
 static SockSlot g_slots[3];

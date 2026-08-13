@@ -176,7 +176,7 @@ static uint16_t ref_ccitt_false(const uint8_t *d, size_t n)
     return crc;
 }
 
-// services/fieldbus/df1, services/peripherals/sdi12 (reflected 0xA001, init 0)
+// services/fieldbus/df1, server/peripherals/sdi12 (reflected 0xA001, init 0)
 static uint16_t ref_arc(const uint8_t *d, size_t n)
 {
     uint16_t crc = 0x0000;
@@ -251,7 +251,7 @@ static uint8_t ref_crc8_smbus(const uint8_t *d, size_t n)
     return crc;
 }
 
-// services/peripherals/sht3x (Sensirion CRC-8, poly 0x31 MSB-first, init 0xFF)
+// server/peripherals/sht3x (Sensirion CRC-8, poly 0x31 MSB-first, init 0xFF)
 static uint8_t ref_sensirion(const uint8_t *d, size_t n)
 {
     uint8_t crc = 0xFF;

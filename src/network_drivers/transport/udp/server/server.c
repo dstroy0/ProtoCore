@@ -208,7 +208,7 @@ static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint1
     {
         return PROTO_FALSE;
     }
-    proto_raw_read((uint8_t *)p->payload, data, len);
+    raw.read((uint8_t *)p->payload, data, len);
     protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
     protocore_net_pbuf_free(p);
     return e == PROTOCORE_NET_OK;
@@ -248,9 +248,9 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
         protocore_net_pbuf_free(p); // ring full: drop, which is what UDP already means
         return;
     }
-    protocore_span w = protocore_span_from(s_store.rx_whdr, sizeof(s_store.rx_whdr));
+    protocore_span w = span.from(s_store.rx_whdr, sizeof(s_store.rx_whdr));
     protocore_udp_dgram_encode(&w, &d);
-    if (!protocore_span_ok(w))
+    if (!span.ok(w))
     {
         protocore_net_pbuf_free(p);
         return;

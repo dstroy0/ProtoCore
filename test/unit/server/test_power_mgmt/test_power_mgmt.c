@@ -5,7 +5,7 @@
 // hysteresis that stops a part at the limit oscillating, post-brownout recovery, the precedence
 // between the three, and the no-sensor case.
 
-#include "server/system/power_mgmt.h"
+#include "server/core/power_mgmt.h"
 #include <stdio.h>
 
 #include <unity.h>

@@ -21,7 +21,7 @@
 // Build flags (whole build): PROTOCORE_ENABLE_THREAD=1 PROTOCORE_ENABLE_GATEWAY=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "services/net/gateway/gateway.h"
+#include "server/net/gateway/gateway.h"
 #include "services/radio/thread/thread.h"
 
 static const uint8_t RADIO_PORT = 0;

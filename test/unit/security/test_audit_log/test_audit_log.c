@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the hash-chained audit log (services/security/audit_log). Verify the
+// Unit tests for the hash-chained audit log (server/security/audit_log). Verify the
 // chain detects any tampering (message or hash), that the moving anchor keeps the
 // retained window verifiable after the ring wraps, and that the sink + JSON
 // rendering behave. SHA-256 is exercised through protocore_sha256.
 
-#include "services/security/audit_log/audit_log.h"
+#include "server/security/audit_log/audit_log.h"
 #include "shared/hex/hex.h"
 #include <string.h>
 

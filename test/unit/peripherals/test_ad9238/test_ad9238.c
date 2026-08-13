@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the AD9238 SPI configuration-port codec (services/peripherals/ad9238): the 16-bit
+// Unit tests for the AD9238 SPI configuration-port codec (server/peripherals/ad9238): the 16-bit
 // instruction word (R/W + byte-count + 13-bit address, MSB first), single-register
 // write/read transaction framing, the device-update transfer, and the fail-closed
 // input-validation paths. Pure host tests - no SPI transport, no real silicon.
 
-#include "services/peripherals/ad9238/ad9238.h"
+#include "server/peripherals/ad9238/ad9238.h"
 #include <unity.h>
 
 void setUp()

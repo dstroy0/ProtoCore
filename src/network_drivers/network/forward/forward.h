@@ -3,42 +3,32 @@
 
 /**
  * @file forward.h
- * @brief Interface forwarding plane (PROTOCORE_ENABLE_FORWARD) - the v5 bridge / router.
+ * @brief Layer 3 (Network) - the interface forwarding plane (PROTOCORE_ENABLE_FORWARD).
  *
- * A forwarding plane over the ingest pipeline. You register **interfaces** (Wi-Fi STA /
- * AP, Ethernet, a peripheral bus, a radio), each with an egress **send callback**, then
- * add per-pair **rules** (`src -> dst`, allow or deny, with an optional rate cap). When a
- * frame arrives on an interface you call protocore_forward_ingress(); the plane evaluates the
- * rules and forwards the bytes to **every allowed destination** by calling that
- * destination's send callback - so the device bridges / routes between its interfaces
- * instead of only terminating traffic.
+ * RFC 1812 sec 5 "INTERNET LAYER - FORWARDING". A frame that arrives on one interface runs the
+ * forwarding walk-through (sec 5.2) and leaves on every interface it is permitted to leave on. The
+ * steps this plane runs over opaque bytes are the access list (sec 5.3.9 "Packet Filtering and
+ * Access Lists"), the next hop (sec 5.2.4.3 "Next Hop Address"), the controls on forwarding
+ * (sec 5.3.11 "Controls on Forwarding"), and the drop under load (sec 5.3.6 "Congestion Control").
  *
- * The canonical wiring is DMA-driven: an inbound DMA-complete event (mmgr/dma) is
- * posted onto the FORWARD lane (services/system/preempt_queue), whose task calls
- * protocore_forward_ingress(), and each destination's send callback hands the bytes to that
- * interface's egress DMA. The plane itself is decoupled from both - it only knows
- * interfaces, rules, and the send callbacks - so it is pure and host-testable.
+ * The interfaces are layer 1's, over PROTOCORE_PHY_MAX_IFACES rows; this plane reads that registry
+ * and calls its send. A (src, dst) pair forwards when an ALLOW control matches and no DENY does; a
+ * frame never leaves on the interface it arrived on. An exceeded rate cap, or an interface that
+ * refuses the bytes, drops the frame for that next hop and counts it. Storage is static:
+ * PROTOCORE_FWD_MAX_RULES controls, PROTOCORE_FWD_MAX_ACL access-list entries,
+ * PROTOCORE_FWD_MAX_ROUTES policy routes.
  *
- * **Default-deny**: a `(src, dst)` pair is forwarded only when an ALLOW rule matches and
- * no DENY rule does (a DENY always wins). A frame is never reflected to its source
- * interface. **Fail-closed**: an exceeded rate cap or a send callback returning false
- * drops the frame for that destination and is counted - it never blocks. Storage is
- * static (zero heap): PROTOCORE_FWD_MAX_RULES rules. The interfaces are layer 1's, over
- * PROTOCORE_PHY_MAX_IFACES rows, and this plane reads that registry rather than keeping its own.
+ * A policy route matches a frame by the same byte pattern the access list uses - any field at a
+ * known offset, an EtherType, an IP protocol, a port, an address prefix - and binds it to one
+ * egress interface ahead of the (src, dst) fan-out; the first matching route wins. The access list
+ * runs first, and the rate cap, the never-reflect step and the counted drop apply to the chosen
+ * next hop.
  *
- * **Policy routing** (route-by-tag): a policy route (protocore_forward_route_add) matches a frame by
- * the same byte-pattern primitive as the ACL - so it keys on any field at a known offset
- * (EtherType, IP protocol, a port, an address prefix) - and binds the match to a single
- * **egress interface**. A matched frame is forwarded only to that interface, taking precedence
- * over the src->dst fan-out (first matching route wins); if no policy route matches, the normal
- * rules apply. This is policy-based routing layered on the plane: tagged traffic leaves a chosen
- * NIC / radio. The ingress ACL still runs first, and the same rate-cap / never-reflect /
- * fail-closed guarantees apply to the chosen egress.
+ * The inspection hook (PROTOCORE_FWD_INSPECT) runs an application callback on every frame after the
+ * access list and before the route lookup; the callback returns a verdict that passes or drops it.
  *
- * **Inspection hook** (PROTOCORE_FWD_INSPECT, off by default for cost + privacy): when built in, an
- * app can register an inspector (protocore_forward_set_inspector) that runs on every ingress frame
- * after the ACL and before routing - to observe / parse / meter, and optionally drop it. It is a
- * flexible app callback (arbitrary logic), complementing the fast fixed-offset ACL.
+ * The rate cap reads Clock.millis (server/clock/clock.h), the library's one time source; Clock.set_ms
+ * moves the window for every module at once.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -49,33 +39,36 @@
 
 #include "protocore_config.h"
 // An interface is a physical thing: its id, its kind, and how bytes reach the wire all live at L1.
-// This plane decides which interface a frame goes to and asks L1 to put it there.
+// This plane picks the interface a frame leaves on and asks L1 to put it there.
 #include "network_drivers/physical/physical.h"
 
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_FORWARD
 
-/** @brief Rule action for a `(src, dst)` interface pair or an ACL entry. */
+/**
+ * @brief What an access-list entry or a control on forwarding does to a frame.
+ *        RFC 1812 sec 5.3.9, sec 5.3.11.
+ */
 typedef enum PROTO_ENUM_PACKED
 {
     PROTOCORE_FWD_DENY = 0,
     PROTOCORE_FWD_ALLOW = 1,
 } protocore_fwd_action;
 
-/** @brief Wildcard source interface for an ACL entry (matches a frame from any source). */
+/** @brief Wildcard source interface: an entry carrying it matches a frame from any interface. */
 #define PROTOCORE_FWD_IF_ANY 0xFF
 
-/** @brief Forwarding counters (monotonic since the last protocore_forward_reset()). */
+/** @brief Forwarding counters, monotonic since the last reset. */
 typedef struct
 {
-    uint32_t frames_in;       ///< ingress calls
-    uint32_t forwarded;       ///< destination sends that succeeded
-    uint32_t blocked;         ///< destinations refused by a DENY / default-deny
-    uint32_t rate_dropped;    ///< destinations dropped by a rate cap
-    uint32_t send_fail;       ///< destination send callbacks that returned false
-    uint32_t acl_denied;      ///< frames dropped at ingress by the access-control list
-    uint32_t policy_routed;   ///< frames that matched a policy route (routed to its chosen egress)
+    uint32_t frames_in;       ///< frames offered to the forwarding algorithm (RFC 1812 sec 5.2.1)
+    uint32_t forwarded;       ///< next hops that took the frame (RFC 1812 sec 5.2.4.3)
+    uint32_t blocked;         ///< next hops refused by a DENY or by default-deny (RFC 1812 sec 5.3.11)
+    uint32_t rate_dropped;    ///< frames dropped at a rate cap (RFC 1812 sec 5.3.6)
+    uint32_t send_fail;       ///< next hops whose interface refused the bytes
+    uint32_t acl_denied;      ///< frames dropped by the access list (RFC 1812 sec 5.3.9)
+    uint32_t policy_routed;   ///< frames a policy route bound to one next hop
     uint32_t inspect_dropped; ///< frames dropped by the inspection hook (PROTOCORE_FWD_INSPECT)
 } protocore_forward_stats;
 
@@ -83,53 +76,130 @@ typedef struct
 /** @brief The verdict an inspection hook returns for a frame. */
 typedef enum PROTO_ENUM_PACKED
 {
-    PROTOCORE_FWD_INSPECT_PASS = 0, ///< let the frame continue to routing / forwarding
-    PROTOCORE_FWD_INSPECT_DROP = 1, ///< drop the frame (counted as inspect_dropped)
+    PROTOCORE_FWD_INSPECT_PASS = 0, ///< the frame continues to the route lookup and the fan-out
+    PROTOCORE_FWD_INSPECT_DROP = 1, ///< the frame is dropped and counted as inspect_dropped
 } protocore_fwd_verdict;
 
 /**
- * @brief Ingress inspection hook: observe / parse @p data (from @p src_if, @p len bytes) and
- *        return a ::protocore_fwd_verdict. Runs after the ACL and before policy routes / the fan-out.
- *        The callback must not block; it may record metrics, log, or decide to drop.
+ * @brief Ingress inspection hook: reads @p len bytes at @p data arriving on @p src_if and returns a
+ *        ::protocore_fwd_verdict. Runs after the access list and before the route lookup.
  */
 typedef protocore_fwd_verdict (*protocore_fwd_inspect_fn)(uint8_t src_if, const uint8_t *data, uint16_t len, void *ctx);
-
 #endif
 
+/** @brief One control on forwarding: the destination of a (src, dst) pair. RFC 1812 sec 5.3.11. */
+typedef struct
+{
+    uint8_t dst_if;              ///< the destination interface the pair names
+    protocore_fwd_action action; ///< ALLOW forwards the pair, DENY blocks it
+    uint16_t rate_cap_per_sec;   ///< frames per second the pair takes; 0 is uncapped (RFC 1812 sec 5.3.6)
+} FwdRuleArgs;
+
 /**
- * @brief The forwarding plane.
- *
- * @var ForwardNs::reset           clear every rule, route and counter
- * @var ForwardNs::add_rule        add a (src, dst) rule with an optional rate cap
- * @var ForwardNs::acl_set_default what happens to a frame no ACL entry matches
- * @var ForwardNs::acl_add         add an ingress access-control entry, first match wins
- * @var ForwardNs::route_add       add a policy route, taking precedence over the rules
- * @var ForwardNs::set_inspector   install the ingress inspection hook
- * @var ForwardNs::ingress         forward one received frame; returns the destinations it reached
- * @var ForwardNs::get_stats       copy out the counters
- *
- * The rate cap reads protocore_millis() (server/clock/clock.h), the library's one time source. A caller
- * that needs to drive it - a test stepping the rate window - installs its own clock with
- * protocore_set_clock(), which governs every module at once.
+ * @brief The byte pattern an access-list entry or a policy route matches on: @c patlen bytes at
+ *        @c offset, compared under @c mask. RFC 1812 sec 5.3.9.
  */
 typedef struct
 {
-    void (*reset)(void);
-    proto_bool (*add_rule)(uint8_t src_if, uint8_t dst_if, protocore_fwd_action action, uint16_t rate_cap_per_sec);
-    void (*acl_set_default)(protocore_fwd_action action);
-    proto_bool (*acl_add)(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask, uint8_t patlen,
-                          protocore_fwd_action action);
-    proto_bool (*route_add)(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
-                            uint8_t patlen, uint8_t egress_if, uint16_t rate_cap_per_sec);
+    const uint8_t *pattern; ///< the bytes to match, read only during the call that stores them
+    const uint8_t *mask;    ///< the bits of each pattern byte that are compared
+    uint16_t offset;        ///< byte offset into the frame where the pattern starts
+    uint8_t patlen;         ///< pattern length, up to PROTOCORE_FWD_ACL_PATLEN; 0 matches any content
+} FwdMatchArgs;
+
+/** @brief The access list's two verdicts: one entry's, and the one a frame matching none takes. */
+typedef struct
+{
+    protocore_fwd_action action;   ///< what the entry being added does to a matching frame
+    protocore_fwd_action fallback; ///< what a frame matching no entry takes
+} FwdAclArgs;
+
+/** @brief The next hop a policy route binds a matched frame to. RFC 1812 sec 5.2.4.3. */
+typedef struct
+{
+    uint8_t egress_if;         ///< the one interface a matched frame leaves on
+    uint16_t rate_cap_per_sec; ///< frames per second to that next hop; 0 is uncapped
+} FwdRouteArgs;
+
+/** @brief The received frame the forwarding algorithm runs on. RFC 1812 sec 5.2.1. */
+typedef struct
+{
+    const uint8_t *data; ///< the frame bytes, valid for the duration of the call
+    uint16_t len;        ///< how many of them there are
+} FwdFrameArgs;
+
 #if PROTOCORE_FWD_INSPECT
-    void (*set_inspector)(protocore_fwd_inspect_fn fn, void *ctx);
+/** @brief The inspection hook and the pointer it is handed back. */
+typedef struct
+{
+    protocore_fwd_inspect_fn fn; ///< what runs on every frame; NULL leaves the hook off
+    void *ctx;                   ///< passed to @c fn unread by this module
+} FwdInspectArgs;
 #endif
-    uint8_t (*ingress)(uint8_t src_if, const uint8_t *data, uint16_t len);
-    void (*get_stats)(protocore_forward_stats *out);
+
+/** @brief The plane's own tables and the calls that reach them, described only in forward.c. */
+struct ForwardInternal;
+
+/**
+ * @brief The interface forwarding plane. RFC 1812 sec 5.2 "FORWARDING WALK-THROUGH".
+ *
+ * A caller sets the members a call takes, invokes it through ::Forward, and reads the outcome off
+ * the same handle. The tables are behind @ref internal.
+ *
+ * @var ForwardNs::src_if           the interface a frame arrives on, and the one an entry scopes to;
+ *                                  PROTOCORE_FWD_IF_ANY on an entry matches every interface
+ * @var ForwardNs::rule             the destination of a (src, dst) pair (RFC 1812 sec 5.3.11)
+ * @var ForwardNs::match            the byte pattern an entry or a route matches on (RFC 1812 sec 5.3.9)
+ * @var ForwardNs::acl              the access list's entry verdict and its fallback (RFC 1812 sec 5.3.9)
+ * @var ForwardNs::route            the next hop a policy route binds to (RFC 1812 sec 5.2.4.3)
+ * @var ForwardNs::frame            the received frame the forwarding algorithm runs on
+ * @var ForwardNs::inspect          the inspection hook and the pointer it is handed back
+ * @var ForwardNs::ok               a call's true/false outcome
+ * @var ForwardNs::n                next hops a frame reached
+ * @var ForwardNs::stats            the counters a read reports
+ * @var ForwardNs::reset            empty every control, entry and route, and zero the counters
+ * @var ForwardNs::add_rule         add a control on forwarding for one (src, dst) pair
+ * @var ForwardNs::acl_set_default  set what a frame matching no access-list entry takes
+ * @var ForwardNs::acl_add          add an access-list entry; the first match decides
+ * @var ForwardNs::route_add        add a policy route, taken ahead of the (src, dst) fan-out
+ * @var ForwardNs::set_inspector    install the ingress inspection hook
+ * @var ForwardNs::ingress          run one received frame through the forwarding walk-through
+ * @var ForwardNs::get_stats        copy the counters onto the handle
+ * @var ForwardNs::internal         the plane's tables and the calls that reach them
+ */
+typedef struct
+{
+    uint8_t src_if; ///< the source interface a forwarding call names
+
+    FwdRuleArgs rule;   ///< the (src, dst) pair a control governs
+    FwdMatchArgs match; ///< the byte pattern an entry or a route matches on
+    FwdAclArgs acl;     ///< the access list's verdicts
+    FwdRouteArgs route; ///< the next hop a policy route binds to
+    FwdFrameArgs frame; ///< the frame the forwarding algorithm runs on
+#if PROTOCORE_FWD_INSPECT
+    FwdInspectArgs inspect; ///< the ingress inspection hook
+#endif
+
+    proto_bool ok;
+    uint8_t n;
+    protocore_forward_stats stats;
+
+    void (*reset)(struct ForwardInternal *ctx);
+    void (*add_rule)(struct ForwardInternal *ctx);
+    void (*acl_set_default)(struct ForwardInternal *ctx);
+    void (*acl_add)(struct ForwardInternal *ctx);
+    void (*route_add)(struct ForwardInternal *ctx);
+#if PROTOCORE_FWD_INSPECT
+    void (*set_inspector)(struct ForwardInternal *ctx);
+#endif
+    void (*ingress)(struct ForwardInternal *ctx);
+    void (*get_stats)(struct ForwardInternal *ctx);
+
+    struct ForwardInternal *internal;
 } ForwardNs;
 
 /** @brief The one symbol this module exports. */
-extern const ForwardNs Forward;
+extern ForwardNs Forward;
 
 #endif // PROTOCORE_ENABLE_FORWARD
 

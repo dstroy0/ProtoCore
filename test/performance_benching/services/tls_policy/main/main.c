@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the TLS policy helpers (services/security/tls_policy): the version
+// On-device CCOUNT microbenchmark for the TLS policy helpers (server/security/tls_policy): the version
 // negotiation, the cipher-suite selection (server-pinned order over the client's offered list), and
 // the AEAD classifier. Pure decision logic; no handshake.
 //
 // Build/flash:  idf.py -C test/performance_benching/tls_policy -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/security/tls_policy/tls_policy.h"
+#include "server/security/tls_policy/tls_policy.h"
 
 #include <stdbool.h>
 #include <stddef.h>

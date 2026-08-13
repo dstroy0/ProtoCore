@@ -84,9 +84,9 @@ size_t protocore_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum)
     }
     protocore_sb sb_q = {buf, cap, 0, PROTO_TRUE};
     protocore_sb_lit(&sb_q, "?Q");
-    protocore_sb_u32(&sb_q, qnum);
-    protocore_sb_ch(&sb_q, '\r');
-    return protocore_sb_finish(&sb_q);
+    Sb.u32(&sb_q, qnum);
+    Sb.ch(&sb_q, '\r');
+    return Sb.finish(&sb_q);
 }
 
 size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
@@ -97,9 +97,9 @@ size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
     }
     protocore_sb sb_var = {buf, cap, 0, PROTO_TRUE};
     protocore_sb_lit(&sb_var, "?Q600 ");
-    protocore_sb_u32(&sb_var, var);
-    protocore_sb_ch(&sb_var, '\r');
-    return protocore_sb_finish(&sb_var);
+    Sb.u32(&sb_var, var);
+    Sb.ch(&sb_var, '\r');
+    return Sb.finish(&sb_var);
 }
 
 proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)

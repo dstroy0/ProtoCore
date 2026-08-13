@@ -3,7 +3,7 @@
 //
 // Host tests for services/happy_eyeballs: RFC 6724 ordering + RFC 8305 family interleave + attempt gate.
 
-#include "services/net/happy_eyeballs/happy_eyeballs.h"
+#include "network_drivers/transport/happy_eyeballs/happy_eyeballs.h"
 #include <unity.h>
 
 void setUp(void)

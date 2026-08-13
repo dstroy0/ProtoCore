@@ -36,7 +36,7 @@ static struct HttpRouteCtx *bind_route(void)
     if (s_route == NULL)
     {
         protocore_span s = protocore_secure_persist_span(sizeof(struct HttpRouteCtx));
-        if (protocore_span_ok(s))
+        if (span.ok(s))
         {
             s_route = (struct HttpRouteCtx *)s.buf;
         }

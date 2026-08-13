@@ -26,14 +26,14 @@
 #include "server/clock/clock.h"                     // protocore_millis: the library clock, not the platform's
 
 // Render @p v as decimal into the fixed field @p dst. Both exposition snapshots below fill a
-// dozen of these. Unlike snprintf, protocore_sb_finish() does NOT terminate when the value would not
+// dozen of these. Unlike snprintf, Sb.finish() does NOT terminate when the value would not
 // fit - it reports 0 and leaves the buffer untouched - so an over-long value must be turned
 // into an empty field explicitly, or the exposition would serve the PREVIOUS snapshot's digits.
 static void num_field(char *dst, size_t cap, uint32_t v)
 {
     protocore_sb b = {dst, cap, 0, PROTO_TRUE};
-    protocore_sb_u32(&b, v);
-    if (protocore_sb_finish(&b) == 0)
+    Sb.u32(&b, v);
+    if (Sb.finish(&b) == 0)
     {
         dst[0] = '\0';
     }
@@ -119,11 +119,11 @@ void set_cors(const char *origin)
         return;
     }
     protocore_sb sb = {s_resp.cors_header_buf, sizeof(s_resp.cors_header_buf), 0, PROTO_TRUE};
-    protocore_sb_put(&sb, "Access-Control-Allow-Origin: ");
-    protocore_sb_put(&sb, origin);
-    protocore_sb_put(&sb, "\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, HEAD, "
-                          "OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n");
-    if (protocore_sb_finish(&sb) == 0)
+    Sb.put(&sb, "Access-Control-Allow-Origin: ");
+    Sb.put(&sb, origin);
+    Sb.put(&sb, "\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, HEAD, "
+                "OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n");
+    if (Sb.finish(&sb) == 0)
     {
         s_resp.cors_header_buf[0] = '\0';
     }
@@ -138,10 +138,10 @@ void set_cache_control(const char *value)
         return;
     }
     protocore_sb sb = {s_resp.cache_control_buf, sizeof(s_resp.cache_control_buf), 0, PROTO_TRUE};
-    protocore_sb_put(&sb, "Cache-Control: ");
-    protocore_sb_put(&sb, value);
-    protocore_sb_put(&sb, "\r\n");
-    if (protocore_sb_finish(&sb) == 0)
+    Sb.put(&sb, "Cache-Control: ");
+    Sb.put(&sb, value);
+    Sb.put(&sb, "\r\n");
+    if (Sb.finish(&sb) == 0)
     {
         s_resp.cache_control_buf[0] = '\0';
     }
@@ -260,15 +260,15 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     char header[RESP_HDR_BUF_SIZE];
     protocore_sb hb = {header, RESP_HDR_BUF_SIZE, 0, PROTO_TRUE};
     protocore_sb_lit(&hb, "HTTP/1.1 ");
-    protocore_sb_u32(&hb, (uint32_t)code);
+    Sb.u32(&hb, (uint32_t)code);
     protocore_sb_lit(&hb, " ");
-    protocore_sb_put(&hb, Http.status_text(code));
+    Sb.put(&hb, Http.status_text(code));
     protocore_sb_lit(&hb, "\r\nContent-Type: ");
-    protocore_sb_put(&hb, content_type);
+    Sb.put(&hb, content_type);
     protocore_sb_lit(&hb, "\r\nContent-Length: ");
-    protocore_sb_u32(&hb, (uint32_t)body_len);
+    Sb.u32(&hb, (uint32_t)body_len);
     protocore_sb_lit(&hb, "\r\n");
-    int hlen = (int)protocore_sb_finish(&hb);
+    int hlen = (int)Sb.finish(&hb);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     proto_bool head = Http.req_is_head(slot_id);
@@ -322,19 +322,19 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     {
         keep = PROTO_FALSE; // close-delimited: the connection close IS the message boundary
         cl = "Connection: close\r\n";
-        protocore_sb_put(&hb2, "HTTP/1.0 ");
+        Sb.put(&hb2, "HTTP/1.0 ");
     }
     else
     {
-        protocore_sb_put(&hb2, "HTTP/1.1 ");
+        Sb.put(&hb2, "HTTP/1.1 ");
     }
-    protocore_sb_u32(&hb2, (uint32_t)code);
-    protocore_sb_put(&hb2, " ");
-    protocore_sb_put(&hb2, Http.status_text(code));
-    protocore_sb_put(&hb2, "\r\nContent-Type: ");
-    protocore_sb_put(&hb2, content_type);
-    protocore_sb_put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
-    int hlen = (int)protocore_sb_finish(&hb2);
+    Sb.u32(&hb2, (uint32_t)code);
+    Sb.put(&hb2, " ");
+    Sb.put(&hb2, Http.status_text(code));
+    Sb.put(&hb2, "\r\nContent-Type: ");
+    Sb.put(&hb2, content_type);
+    Sb.put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
+    int hlen = (int)Sb.finish(&hb2);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     Tcp.conn->send(slot_id, header, (proto_u16)hlen);
@@ -463,13 +463,13 @@ void proto_add_response_header(uint8_t slot_id, const char *name, const char *va
     size_t used = strnlen(buf, EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
     protocore_sb hb3 = {buf + used, room, 0, PROTO_TRUE};
-    protocore_sb_put(&hb3, name);
-    protocore_sb_put(&hb3, ": ");
-    protocore_sb_put(&hb3, value);
-    protocore_sb_put(&hb3, "\r\n");
+    Sb.put(&hb3, name);
+    Sb.put(&hb3, ": ");
+    Sb.put(&hb3, value);
+    Sb.put(&hb3, "\r\n");
     // A latched builder may have written the pieces that did fit, so rewinding to `used` is what
     // drops the header whole rather than leaving a truncated one.
-    if (protocore_sb_finish(&hb3) == 0)
+    if (Sb.finish(&hb3) == 0)
     {
         buf[used] = '\0';
     }
@@ -486,17 +486,17 @@ void set_cookie(uint8_t slot_id, const char *name, const char *value, const char
     size_t used = strnlen(buf, EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
     protocore_sb cb = {buf + used, room, 0, PROTO_TRUE};
-    protocore_sb_put(&cb, "Set-Cookie: ");
-    protocore_sb_put(&cb, name);
-    protocore_sb_put(&cb, "=");
-    protocore_sb_put(&cb, value);
+    Sb.put(&cb, "Set-Cookie: ");
+    Sb.put(&cb, name);
+    Sb.put(&cb, "=");
+    Sb.put(&cb, value);
     if (attrs != NULL && attrs[0] != '\0')
     {
-        protocore_sb_put(&cb, "; ");
-        protocore_sb_put(&cb, attrs);
+        Sb.put(&cb, "; ");
+        Sb.put(&cb, attrs);
     }
-    protocore_sb_put(&cb, "\r\n");
-    if (protocore_sb_finish(&cb) == 0)
+    Sb.put(&cb, "\r\n");
+    if (Sb.finish(&cb) == 0)
     {
         buf[used] = '\0'; // would not fit: drop this cookie entirely
     }
@@ -851,7 +851,7 @@ const size_t PROTOCORE_RESP_HDR_OVERFLOW_LEN = sizeof(PROTOCORE_RESP_HDR_OVERFLO
 
 int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, const char *cl)
 {
-    // hlen is the caller's status-line length from protocore_sb_finish, which reports 0 for a status line
+    // hlen is the caller's status-line length from Sb.finish, which reports 0 for a status line
     // that did not fit. Appending the trailer at offset 0 in that case would emit a response with
     // no status line at all, so 0 propagates as failure and the caller sends a canned reply.
     //
@@ -880,10 +880,10 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
 #endif
     {
         protocore_sb sb_date_hdr = {date_hdr, sizeof(date_hdr), 0, PROTO_TRUE};
-        protocore_sb_put(&sb_date_hdr, "Date: ");
-        protocore_sb_put(&sb_date_hdr, imf);
-        protocore_sb_put(&sb_date_hdr, "\r\n");
-        if (protocore_sb_finish(&sb_date_hdr) == 0)
+        Sb.put(&sb_date_hdr, "Date: ");
+        Sb.put(&sb_date_hdr, imf);
+        Sb.put(&sb_date_hdr, "\r\n");
+        if (Sb.finish(&sb_date_hdr) == 0)
         {
             date_hdr[0] = '\0';
         }
@@ -892,12 +892,12 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
     const char *date_hdr = "";
 #endif
     protocore_sb sb411 = {buf + hlen, cap - (size_t)hlen, 0, PROTO_TRUE};
-    protocore_sb_put(&sb411, date_hdr);
-    protocore_sb_put(&sb411, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-    protocore_sb_put(&sb411, protocore_resp_extra_hdr(slot_id));
-    protocore_sb_put(&sb411, cl);
-    protocore_sb_put(&sb411, "\r\n");
-    int n = (int)protocore_sb_finish(&sb411);
+    Sb.put(&sb411, date_hdr);
+    Sb.put(&sb411, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    Sb.put(&sb411, protocore_resp_extra_hdr(slot_id));
+    Sb.put(&sb411, cl);
+    Sb.put(&sb411, "\r\n");
+    int n = (int)Sb.finish(&sb411);
     if (!sb411.ok)
     {
         return 0; // trailer does not fit: refuse the response rather than send a headless one
@@ -955,16 +955,16 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
 
     char header[RESP_HDR_BUF_SIZE];
     protocore_sb sb_header2 = {header, sizeof(header), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_header2, "HTTP/1.1 ");
-    protocore_sb_i64(&sb_header2, (int64_t)(code));
-    protocore_sb_put(&sb_header2, " ");
-    protocore_sb_put(&sb_header2, Http.status_text(code));
-    protocore_sb_put(&sb_header2, "\r\nContent-Type: ");
-    protocore_sb_put(&sb_header2, content_type);
-    protocore_sb_put(&sb_header2, "\r\nContent-Length: ");
-    protocore_sb_i64(&sb_header2, (int64_t)(payload_len));
-    protocore_sb_put(&sb_header2, "\r\n");
-    int hlen = (int)protocore_sb_finish(&sb_header2);
+    Sb.put(&sb_header2, "HTTP/1.1 ");
+    Sb.i64(&sb_header2, (int64_t)(code));
+    Sb.put(&sb_header2, " ");
+    Sb.put(&sb_header2, Http.status_text(code));
+    Sb.put(&sb_header2, "\r\nContent-Type: ");
+    Sb.put(&sb_header2, content_type);
+    Sb.put(&sb_header2, "\r\nContent-Length: ");
+    Sb.i64(&sb_header2, (int64_t)(payload_len));
+    Sb.put(&sb_header2, "\r\n");
+    int hlen = (int)Sb.finish(&sb_header2);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
     if (hlen == 0)
     {
@@ -989,7 +989,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     // small keep-alive response is one marshal (write+output).
     if (!head && payload_len > 0 && (size_t)hlen + (size_t)payload_len <= sizeof(header))
     {
-        proto_raw_read(header + hlen, payload, (size_t)payload_len);
+        raw.read(header + hlen, payload, (size_t)payload_len);
         Tcp.conn->send_flush(slot_id, header, (proto_u16)(hlen + payload_len));
     }
     else if (!head && payload_len > 0)
@@ -1040,12 +1040,12 @@ void send_empty(uint8_t slot_id, int code)
 
     char header[RESP_HDR_BUF_SIZE];
     protocore_sb sb_header3 = {header, sizeof(header), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_header3, "HTTP/1.1 ");
-    protocore_sb_i64(&sb_header3, (int64_t)(code));
-    protocore_sb_put(&sb_header3, " ");
-    protocore_sb_put(&sb_header3, Http.status_text(code));
-    protocore_sb_put(&sb_header3, "\r\nContent-Length: 0\r\n");
-    int hlen = (int)protocore_sb_finish(&sb_header3);
+    Sb.put(&sb_header3, "HTTP/1.1 ");
+    Sb.i64(&sb_header3, (int64_t)(code));
+    Sb.put(&sb_header3, " ");
+    Sb.put(&sb_header3, Http.status_text(code));
+    Sb.put(&sb_header3, "\r\nContent-Length: 0\r\n");
+    int hlen = (int)Sb.finish(&sb_header3);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
     Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
@@ -1085,14 +1085,14 @@ void redirect(uint8_t slot_id, int code, const char *location)
 
     char header[RESP_HDR_BUF_SIZE];
     protocore_sb sb_header4 = {header, sizeof(header), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_header4, "HTTP/1.1 ");
-    protocore_sb_i64(&sb_header4, (int64_t)(code));
-    protocore_sb_put(&sb_header4, " ");
-    protocore_sb_put(&sb_header4, Http.status_text(code));
-    protocore_sb_put(&sb_header4, "\r\nLocation: ");
-    protocore_sb_put(&sb_header4, location);
-    protocore_sb_put(&sb_header4, "\r\nContent-Length: 0\r\n");
-    int hlen = (int)protocore_sb_finish(&sb_header4);
+    Sb.put(&sb_header4, "HTTP/1.1 ");
+    Sb.i64(&sb_header4, (int64_t)(code));
+    Sb.put(&sb_header4, " ");
+    Sb.put(&sb_header4, Http.status_text(code));
+    Sb.put(&sb_header4, "\r\nLocation: ");
+    Sb.put(&sb_header4, location);
+    Sb.put(&sb_header4, "\r\nContent-Length: 0\r\n");
+    int hlen = (int)Sb.finish(&sb_header4);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
     Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);

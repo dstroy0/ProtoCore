@@ -26,7 +26,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/web/edge_cache/edge_cache_proxy.h"
+#include "server/web/edge_cache/edge_cache_proxy.h"
 
 // --- Optional L2 (SD) persistence tier: set PROTOCORE_ENABLE_DBM=1 (with an SD card) to keep the cached set
 // across a reboot. Evicted L1 entries spill to a dbm store on the WAL; a reboot replays the log and the

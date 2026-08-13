@@ -59,8 +59,8 @@ verbatim with added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/storage/config_io/config_io.h"
-#include "services/storage/config_store/config_store.h"
+#include "server/storage/config_io/config_io.h"
+#include "server/storage/config_store/config_store.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

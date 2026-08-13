@@ -43,7 +43,7 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     // exponent and res the shared secret, so the whole region is wiped on exit (mmgr/secure.h).
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(sizeof(BnExpmodBytes), _Alignof(BnExpmodBytes));
-    if (!protocore_span_ok(ws))
+    if (!span.ok(ws))
     {
         protocore_secure_release(mark);
         memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check

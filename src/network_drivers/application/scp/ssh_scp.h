@@ -10,7 +10,7 @@
  * direction (client -> device, `scp -t`); the SOURCE direction (`scp -f`, device -> client) is a
  * follow-up - use SFTP `get` to download.
  *
- * Storage is reached through the filesystem accessor (server/filesystem/filesystem.h), so this file
+ * Storage is reached through the filesystem accessor (server/storage/filesystem.h), so this file
  * names no vendor type and holds no mount, no root, and no path buffer. Mount the backend and set
  * the root once with protocore_mnt_mount() + protocore_fs_begin(); every server over that storage then answers
  * from the same root by construction rather than by each being told the same string.

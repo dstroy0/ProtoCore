@@ -1,0 +1,185 @@
+// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file mnt.h
+ * @brief The mount: which store is behind the filesystem, and the vtable it answers through
+ *        (PROTOCORE_ENABLE_MNT).
+ *
+ * This file answers one question - *what is mounted* - and nothing else. The operations a caller
+ * performs live on the filesystem accessor (server/filesystem.h), which resolves a request path
+ * against its root and then dispatches here. Splitting it that way means a backend author
+ * implements storage and never touches path policy, and the `..` guard cannot be bypassed by
+ * reaching a backend directly.
+ *
+ * Two backends ship:
+ *
+ *  - **RAM** (built-in, host-testable, zero-heap): a fixed pool of PROTOCORE_MNT_RAM_FILES files of up to
+ *    PROTOCORE_MNT_RAM_FILE_SIZE bytes each, all in BSS - deterministic, bounded, and identical on host
+ *    and target. It is what lets the SFTP/SCP/WebDAV servers run under a native test.
+ *
+ *  - **Board filesystem** (board layer): wraps the framework's own file object for persistent
+ *    storage. It lives in core_setup/ because it speaks a vendor framework, which the core does
+ *    not.
+ *
+ * Handles are small ints the backend assigns, and a directory cursor is one of them - so ::close
+ * releases either kind and there is no second lifetime to get wrong. Every entry point fails
+ * closed (-1 / false) when nothing is mounted.
+ *
+ * Single-accessor like the other services: use it from one context (a worker / loop), not
+ * concurrently.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
+ */
+
+#ifndef PROTOCORE_MNT_H
+#define PROTOCORE_MNT_H
+
+#include "protocore_config.h"
+
+PROTOCORE_BEGIN_DECLS
+
+/**
+ * @brief Open modes.
+ *
+ * PROTOCORE_MNT_RDWR is the only one that admits a seek before a write. Under PROTOCORE_MNT_APPEND a write lands
+ * at end-of-file whatever the position says, which is what O_APPEND means on a real filesystem, so a
+ * caller that overwrites in place has to ask for RDWR and a backend that cannot offer it answers -1.
+ */
+typedef enum PROTO_ENUM_PACKED
+{
+    PROTOCORE_MNT_READ = 0,   ///< Read existing file (fails if absent).
+    PROTOCORE_MNT_WRITE = 1,  ///< Create/truncate for writing.
+    PROTOCORE_MNT_APPEND = 2, ///< Create/open for appending at end.
+    PROTOCORE_MNT_RDWR = 3,   ///< Open existing for random read+write, no truncation (fails if absent).
+} protocore_mnt_mode;
+
+/**
+ * @brief What a stat and a directory entry both answer: the facts about one file, and no name.
+ *
+ * The name is deliberately absent. A name buffer welded into this struct would set one length for
+ * every consumer, and the consumers do not agree: the SFTP codec sizes its entry scratch from what
+ * one NAME response must hold, WebDAV from an href, the RAM backend from its own file table. Each
+ * translation unit derives the length it needs and passes a buffer, so this type stays the four
+ * facts and carries no policy.
+ *
+ * Stat and readdir share it because they answer the same question about the same directory record
+ * - asking a backend for a size, then whether it is a directory, then its mtime is three lookups
+ * of one record, which on FAT is three seeks to learn what the first read already had.
+ */
+typedef struct
+{
+    proto_bool is_dir;
+    uint64_t size;  ///< 0 for a directory
+    uint32_t mtime; ///< unix epoch seconds, 0 if the backend keeps no timestamp
+} protocore_mnt_stat;
+
+/**
+ * @brief A storage backend. Each open call returns a small handle (>= 0) or -1.
+ *
+ * Implement this to add a store; the built-in RAM disk is returned by protocore_mnt_ram().
+ *
+ * Every call here is one node. mnt is blind - it does not know what a path means, so it cannot know
+ * what a subtree is, and nothing here takes one. A whole-tree operation is composed from these by
+ * the accessor (server/storage/filesystem.h), which is the seam that does know.
+ */
+typedef struct protocore_mnt_backend
+{
+    int (*open)(const char *path, int mode);                       ///< -> handle (>=0) or -1.
+    int (*read)(int handle, void *buf, size_t n);                  ///< bytes read, or -1.
+    int (*write)(int handle, const void *buf, size_t n);           ///< bytes written, or -1.
+    void (*close)(int handle);                                     ///< release a file OR directory handle.
+    proto_bool (*seek)(int handle, uint64_t off);                  ///< absolute seek; false if unsupported.
+    long (*size)(const char *path);                                ///< file size, or -1 if absent.
+    proto_bool (*exists)(const char *path);                        ///< true if the path exists.
+    proto_bool (*remove)(const char *path);                        ///< delete a file; true on success.
+    proto_bool (*rename)(const char *from, const char *to);        ///< rename; true on success.
+    proto_bool (*mkdir)(const char *path);                         ///< create a directory; true on success.
+    proto_bool (*rmdir)(const char *path);                         ///< remove an empty directory; true on success.
+    proto_bool (*stat)(const char *path, protocore_mnt_stat *out); ///< fill @p out for @p path; false if absent.
+    int (*opendir)(const char *path);                              ///< -> directory handle (>=0) or -1.
+    /** @brief Next entry: facts into @p out, name into @p name (NUL-terminated). False at end. */
+    proto_bool (*readdir)(int handle, protocore_mnt_stat *out, char *name, size_t name_cap);
+    /**
+     * @brief Push everything written to @p handle past the backend's own buffering, and report
+     *        whether it got there. May be NULL when the backend cannot promise it.
+     *
+     * This is the durability barrier, and it is the one call here whose absence is not the same as
+     * failure: a log that orders its writes around a barrier is only power-loss-safe if the barrier
+     * is real, so a backend that cannot make the promise says so with NULL and the caller refuses to
+     * mount rather than running as though it had one. Returning true without doing anything would
+     * make an unsafe store indistinguishable from a safe one.
+     */
+    proto_bool (*sync)(int handle);
+} protocore_mnt_backend;
+
+// Everything above and the two calls below are the HAL: the shape of a store, and which one is
+// mounted. All declarations plus one pointer, so a feature that reads through the seam pays nothing
+// and never has to enable a service just to name a type. The seam fails closed when nothing is
+// mounted, which is the honest answer rather than an error.
+/** @brief Mount the active backend (call once at setup; NULL unmounts). */
+/** @brief The id a route carries when it serves no mount point. */
+#define PROTOCORE_MNT_NONE 0xFFu
+
+/** @brief The mount point a call names, and what registering one takes. */
+typedef struct
+{
+    const protocore_mnt_backend *backend; ///< the filesystem behind the point
+    const char *root;                     ///< the path prefix it answers for
+    uint8_t id;                           ///< the point a lookup names
+} MntArgs;
+
+/** @brief The mount table's own state and the calls that reach it, described only in mnt.c. */
+struct MntInternal;
+
+/**
+ * @brief The mount table and the active filesystem.
+ *
+ * A caller sets the members a call takes, invokes it through ::Mnt, and reads the outcome off the
+ * same handle. The table itself is behind @ref internal.
+ *
+ * @var MntNs::args        the mount point a call names, and what registering one takes
+ * @var MntNs::u8          the point an add took
+ * @var MntNs::backend     the filesystem a lookup reports, or NULL
+ * @var MntNs::text        the root a lookup reports, or NULL
+ * @var MntNs::point_add   register a mount point
+ * @var MntNs::point_of    the filesystem behind a point
+ * @var MntNs::root_of     the path prefix a point answers for
+ * @var MntNs::reset       clear every registered point
+ * @var MntNs::mount       make one filesystem the active one
+ * @var MntNs::active      the active filesystem
+ * @var MntNs::ram         the in-memory filesystem, always present
+ * @var MntNs::ram_format  empty the in-memory filesystem
+ * @var MntNs::internal    the mount table and the calls that reach it
+ */
+typedef struct
+{
+    MntArgs args;
+
+    uint8_t u8;
+    const protocore_mnt_backend *backend;
+    const char *text;
+
+    void (*point_add)(struct MntInternal *ctx);
+    void (*point_of)(struct MntInternal *ctx);
+    void (*root_of)(struct MntInternal *ctx);
+    void (*reset)(struct MntInternal *ctx);
+    void (*mount)(struct MntInternal *ctx);
+    void (*active)(struct MntInternal *ctx);
+    // The RAM backend is the only part with a footprint (PROTOCORE_MNT_RAM_FILES x
+    // PROTOCORE_MNT_RAM_FILE_SIZE of BSS), so it is the only part the flag gates.
+#if PROTOCORE_ENABLE_MNT
+    void (*ram)(struct MntInternal *ctx);
+    void (*ram_format)(struct MntInternal *ctx);
+#endif
+
+    struct MntInternal *internal;
+} MntNs;
+
+/** @brief The one symbol this module exports. */
+extern MntNs Mnt;
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_MNT_H

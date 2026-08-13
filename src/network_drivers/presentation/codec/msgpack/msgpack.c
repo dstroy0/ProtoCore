@@ -17,13 +17,13 @@
 // below read the same as before; the cursor invariants live in one place.
 static void put(protocore_span *w, uint8_t b)
 {
-    protocore_bw_put(w, b);
+    bytes.put(w, b);
 }
 
 // Write the low @p nbytes of @p val, big-endian (MessagePack is network order).
 static void put_be(protocore_span *w, uint64_t val, int32_t nbytes)
 {
-    protocore_bw_put_be(w, val, nbytes);
+    bytes.put_be(w, val, nbytes);
 }
 
 static void protocore_msgpack_uint(protocore_span *w, uint64_t v)
@@ -209,13 +209,13 @@ static void protocore_msgpack_label(protocore_span *w, const char *name, int64_t
 // Consume the format byte at the cursor plus the @p nbytes big-endian argument that follows it.
 //
 // The format byte is MessagePack's framing, so stepping over it is this codec's step. It used to
-// live inside protocore_br_take_be(), which made the shared cursor unable to express a plain big-endian
+// live inside bytes.take_be(), which made the shared cursor unable to express a plain big-endian
 // read; this function is where that knowledge belongs. A cursor already at the end advances to
-// len + 1 and protocore_br_take_be() rejects it, so the step needs no guard of its own.
+// len + 1 and bytes.take_be() rejects it, so the step needs no guard of its own.
 static proto_bool take_be(protocore_cspan *r, size_t nbytes, uint64_t *out)
 {
     r->pos += 1;
-    return protocore_br_take_be(r, nbytes, out);
+    return bytes.take_be(r, nbytes, out);
 }
 
 static protocore_codec_type protocore_msgpack_peek(protocore_cspan *r)

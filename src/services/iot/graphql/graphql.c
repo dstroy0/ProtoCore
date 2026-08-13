@@ -533,9 +533,9 @@ static void w_json_str(Writer *w, const char *s)
         {
             char u[7];
             protocore_sb sb_u = {u, sizeof(u), 0, PROTO_TRUE};
-            protocore_sb_put(&sb_u, "\\u");
-            protocore_sb_hex(&sb_u, (uint64_t)(ch), 4);
-            if (protocore_sb_finish(&sb_u) == 0)
+            Sb.put(&sb_u, "\\u");
+            Sb.hex(&sb_u, (uint64_t)(ch), 4);
+            if (Sb.finish(&sb_u) == 0)
             {
                 u[0] = '\0';
             }
@@ -555,8 +555,8 @@ static void w_scalar(Writer *w, const protocore_gql_value *v)
     {
     case PROTOCORE_GQL_INT: {
         protocore_sb sb_b = {b, sizeof(b), 0, PROTO_TRUE};
-        protocore_sb_i64(&sb_b, (int64_t)(v->i));
-        if (protocore_sb_finish(&sb_b) == 0)
+        Sb.i64(&sb_b, (int64_t)(v->i));
+        if (Sb.finish(&sb_b) == 0)
         {
             b[0] = '\0';
         }
@@ -565,8 +565,8 @@ static void w_scalar(Writer *w, const protocore_gql_value *v)
         break;
     case PROTOCORE_GQL_FLOAT: {
         protocore_sb sb_b2 = {b, sizeof(b), 0, PROTO_TRUE};
-        protocore_sb_g(&sb_b2, (double)(v->f), 6);
-        if (protocore_sb_finish(&sb_b2) == 0)
+        Sb.g(&sb_b2, (double)(v->f), 6);
+        if (Sb.finish(&sb_b2) == 0)
         {
             b[0] = '\0';
         }

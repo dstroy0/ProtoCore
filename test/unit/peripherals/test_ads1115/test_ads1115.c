@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the ADS1115 ADC codec (services/peripherals/ads1115): building the 16-bit config word for a
+// Unit tests for the ADS1115 ADC codec (server/peripherals/ads1115): building the 16-bit config word for a
 // single-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits,
 // with out-of-range fallbacks), and converting a signed 16-bit sample to microvolts across the
 // gain's full-scale range. The I2C transfer is ESP32-only.
 
-#include "services/peripherals/ads1115/ads1115.h"
+#include "server/peripherals/ads1115/ads1115.h"
 #include <stdint.h>
 #include <unity.h>
 

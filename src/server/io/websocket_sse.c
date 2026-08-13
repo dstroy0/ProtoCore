@@ -133,24 +133,22 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     const char *ws_ext = http_get_header(req, "Sec-WebSocket-Extensions");
     proto_bool pmd = ws_ext && strstr(ws_ext, "permessage-deflate");
     protocore_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
-    protocore_sb_put(
-        &sb_hdr,
-        "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
-    protocore_sb_put(&sb_hdr, accept);
-    protocore_sb_put(&sb_hdr, "\r\n");
-    protocore_sb_put(&sb_hdr, pmd ? "Sec-WebSocket-Extensions: permessage-deflate; client_no_context_takeover; "
-                                    "server_no_context_takeover\r\n"
-                                  : "");
-    protocore_sb_put(&sb_hdr, "\r\n");
-    hlen = (int)protocore_sb_finish(&sb_hdr);
+    Sb.put(&sb_hdr,
+           "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
+    Sb.put(&sb_hdr, accept);
+    Sb.put(&sb_hdr, "\r\n");
+    Sb.put(&sb_hdr, pmd ? "Sec-WebSocket-Extensions: permessage-deflate; client_no_context_takeover; "
+                          "server_no_context_takeover\r\n"
+                        : "");
+    Sb.put(&sb_hdr, "\r\n");
+    hlen = (int)Sb.finish(&sb_hdr);
 #else
     protocore_sb sb_hdr2 = {hdr, sizeof(hdr), 0, PROTO_TRUE};
-    protocore_sb_put(
-        &sb_hdr2,
-        "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
-    protocore_sb_put(&sb_hdr2, accept);
-    protocore_sb_put(&sb_hdr2, "\r\n\r\n");
-    hlen = (int)protocore_sb_finish(&sb_hdr2);
+    Sb.put(&sb_hdr2,
+           "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
+    Sb.put(&sb_hdr2, accept);
+    Sb.put(&sb_hdr2, "\r\n\r\n");
+    hlen = (int)Sb.finish(&sb_hdr2);
 #endif
 
     Tcp.conn->send(slot_id, hdr, (proto_u16)hlen);

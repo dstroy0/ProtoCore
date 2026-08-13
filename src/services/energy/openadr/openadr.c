@@ -13,17 +13,17 @@
 
 static void put_json_str(protocore_sb *b, const char *s)
 {
-    protocore_sb_put(b, "\"");
+    Sb.put(b, "\"");
     for (const char *p = s ? s : ""; *p; p++)
     {
         if (*p == '"' || *p == '\\')
         {
             char esc[3] = {'\\', *p, '\0'};
-            protocore_sb_put(b, esc);
+            Sb.put(b, esc);
         }
         else if (*p == '\n')
         {
-            protocore_sb_put(b, "\\n");
+            Sb.put(b, "\\n");
         }
         else
         {
@@ -35,7 +35,7 @@ static void put_json_str(protocore_sb *b, const char *s)
             b->p[b->len++] = *p;
         }
     }
-    protocore_sb_put(b, "\"");
+    Sb.put(b, "\"");
 }
 
 static void put_u64(protocore_sb *b, uint64_t v)
@@ -53,7 +53,7 @@ static void put_u64(protocore_sb *b, uint64_t v)
         out[i] = tmp[n - 1 - i];
     }
     out[n] = '\0';
-    protocore_sb_put(b, out);
+    Sb.put(b, out);
 }
 
 // Format a double with 3 decimal places (no stdlib). Rounds to milli-units; handles the sign.
@@ -61,7 +61,7 @@ static void put_double(protocore_sb *b, double v)
 {
     if (v < 0)
     {
-        protocore_sb_put(b, "-");
+        Sb.put(b, "-");
         v = -v;
     }
     // scale by 1000 and round.
@@ -69,10 +69,10 @@ static void put_double(protocore_sb *b, double v)
     uint64_t whole = scaled / 1000;
     uint32_t frac = (uint32_t)(scaled % 1000);
     put_u64(b, whole);
-    protocore_sb_put(b, ".");
+    Sb.put(b, ".");
     // three digits, zero-padded.
     char f[4] = {(char)('0' + (frac / 100) % 10), (char)('0' + (frac / 10) % 10), (char)('0' + frac % 10), '\0'};
-    protocore_sb_put(b, f);
+    Sb.put(b, f);
 }
 
 size_t protocore_openadr_event(const char *program_id, const char *event_name, const OpenAdrInterval *intervals, size_t count,
@@ -83,31 +83,31 @@ size_t protocore_openadr_event(const char *program_id, const char *event_name, c
         return 0;
     }
     protocore_sb b = {out, cap, 0, cap > 0};
-    protocore_sb_put(&b, "{\"objectType\":\"EVENT\",\"programID\":");
+    Sb.put(&b, "{\"objectType\":\"EVENT\",\"programID\":");
     put_json_str(&b, program_id);
-    protocore_sb_put(&b, ",\"eventName\":");
+    Sb.put(&b, ",\"eventName\":");
     put_json_str(&b, event_name);
-    protocore_sb_put(&b, ",\"intervals\":[");
+    Sb.put(&b, ",\"intervals\":[");
     for (size_t i = 0; i < count; i++)
     {
         if (i)
         {
-            protocore_sb_put(&b, ",");
+            Sb.put(&b, ",");
         }
-        protocore_sb_put(&b, "{\"id\":");
+        Sb.put(&b, "{\"id\":");
         put_u64(&b, i);
-        protocore_sb_put(&b, ",\"interval\":{\"start\":");
+        Sb.put(&b, ",\"interval\":{\"start\":");
         put_u64(&b, intervals[i].start);
-        protocore_sb_put(&b, ",\"duration\":");
+        Sb.put(&b, ",\"duration\":");
         put_u64(&b, intervals[i].duration);
-        protocore_sb_put(&b, "},\"payloads\":[{\"type\":");
+        Sb.put(&b, "},\"payloads\":[{\"type\":");
         put_json_str(&b, intervals[i].type);
-        protocore_sb_put(&b, ",\"values\":[");
+        Sb.put(&b, ",\"values\":[");
         put_double(&b, intervals[i].value);
-        protocore_sb_put(&b, "]}]}");
+        Sb.put(&b, "]}]}");
     }
-    protocore_sb_put(&b, "]}");
-    return protocore_sb_finish(&b);
+    Sb.put(&b, "]}");
+    return Sb.finish(&b);
 }
 
 size_t protocore_openadr_report(const char *program_id, const char *event_id, const char *resource_name, double value,
@@ -118,18 +118,18 @@ size_t protocore_openadr_report(const char *program_id, const char *event_id, co
         return 0;
     }
     protocore_sb b2 = {out, cap, 0, cap > 0};
-    protocore_sb_put(&b2, "{\"objectType\":\"REPORT\",\"programID\":");
+    Sb.put(&b2, "{\"objectType\":\"REPORT\",\"programID\":");
     put_json_str(&b2, program_id);
-    protocore_sb_put(&b2, ",\"eventID\":");
+    Sb.put(&b2, ",\"eventID\":");
     put_json_str(&b2, event_id);
-    protocore_sb_put(&b2, ",\"resources\":[{\"resourceName\":");
+    Sb.put(&b2, ",\"resources\":[{\"resourceName\":");
     put_json_str(&b2, resource_name);
-    protocore_sb_put(&b2, ",\"intervals\":[{\"interval\":{\"start\":");
+    Sb.put(&b2, ",\"intervals\":[{\"interval\":{\"start\":");
     put_u64(&b2, timestamp);
-    protocore_sb_put(&b2, "},\"payloads\":[{\"type\":\"READING\",\"values\":[");
+    Sb.put(&b2, "},\"payloads\":[{\"type\":\"READING\",\"values\":[");
     put_double(&b2, value);
-    protocore_sb_put(&b2, "]}]}]}]}");
-    return protocore_sb_finish(&b2);
+    Sb.put(&b2, "]}]}]}]}");
+    return Sb.finish(&b2);
 }
 
 #endif // PROTOCORE_ENABLE_OPENADR

@@ -13,7 +13,7 @@
  *     │       ├── network_drivers/presentation/http/http_parser/http_parser.h (parser types)
  *     │       └── network_drivers/transport/tcp/tcp.h      (L4 Transport)
  *     │               └── protocore_config.h   (compile-time config)
- *     └── server/system/session.h      (L5 Session - event drain)
+ *     └── network_drivers/session/session.h      (L5 Session - event drain)
  * @endcode
  *
  * **Feature flags** - define any of these to 0 before including to strip
@@ -72,8 +72,8 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/transport/udp/udp.h"
 
 #include "network_drivers/presentation/http/http.h"
-#include "server/system/session.h"
-#include "server/system/worker.h"
+#include "network_drivers/session/session.h"
+#include "server/core/worker.h"
 
 #include "network_drivers/presentation/codec/json/json.h"
 #include "network_drivers/presentation/presentation.h"
@@ -145,15 +145,15 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/network/network.h"
 #include "network_drivers/physical/radio_power.h"
 #include "network_drivers/presentation/http/route/http_route.h"
-#include "server/system/preempt_queue.h"
+#include "server/core/preempt_queue.h"
 #include "server/clock/clock.h"
-#include "server/system/exc_decoder.h"
-#include "server/system/failsafe.h"
-#include "server/filesystem/filesystem.h"
-#include "server/filesystem/mnt.h"
-#include "server/filesystem/wearlevel.h"
-#include "server/system/logbuf.h"
-#include "server/system/power_mgmt.h"
+#include "server/core/exc_decoder.h"
+#include "server/core/failsafe.h"
+#include "server/storage/filesystem.h"
+#include "server/storage/mnt.h"
+#include "server/storage/wearlevel.h"
+#include "server/core/logbuf.h"
+#include "server/core/power_mgmt.h"
 #include "server/signaling/bus_capture.h"
 #include "server/signaling/device_id.h"
 #include "server/signaling/gpio_map.h"
@@ -161,7 +161,7 @@ PROTOCORE_BEGIN_DECLS
 #include "server/signaling/link_manager.h"
 #include "server/signaling/signaling.h"
 #include "server/signaling/trace_capture.h"
-#include "server/system/sleep_sched.h"
+#include "server/core/sleep_sched.h"
 #include "server/update/ota_rollback.h"
 #include "server/update/ota_service.h"
 #include "services/energy/c37118/c37118.h"
@@ -249,47 +249,47 @@ PROTOCORE_BEGIN_DECLS
 #include "services/machine_tool/safety_scl/safety_scl.h"
 #include "services/machine_tool/umati/umati.h"
 #include "services/net/flow_export/flow_export.h"
-#include "services/net/gateway/gateway.h"
-#include "services/net/happy_eyeballs/happy_eyeballs.h"
+#include "server/net/gateway/gateway.h"
+#include "network_drivers/transport/happy_eyeballs/happy_eyeballs.h"
 #include "services/net/http_client/http_client.h"
-#include "services/net/iface_bridge/iface_bridge.h"
-#include "services/net/iface_bridge/iface_bridge_hw.h"
-#include "services/net/netadapt/netadapt.h"
-#include "services/net/proxy_protocol/proxy_protocol.h"
-#include "services/net/relay/relay.h"
-#include "services/net/relay/relay_listener.h"
+#include "server/net/iface_bridge/iface_bridge.h"
+#include "server/net/iface_bridge/iface_bridge_hw.h"
+#include "server/net/netadapt/netadapt.h"
+#include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
+#include "server/net/relay/relay.h"
+#include "server/net/relay/relay_listener.h"
 #include "services/net/smtp/smtp.h"
 #include "services/net/snmp/snmp_agent.h"
 #include "services/net/snmp/snmp_ber.h"
 #include "services/net/snmp/snmp_crypto.h"
 #include "services/net/snmp/snmp_notify.h"
 #include "services/net/snmp/snmp_v3.h"
-#include "services/net/sockpool/sockpool.h"
-#include "services/net/southbound/sb_modbus.h"
-#include "services/net/southbound/southbound.h"
+#include "server/net/sockpool/sockpool.h"
+#include "services/southbound/sb_modbus.h"
+#include "services/southbound/southbound.h"
 #include "services/net/syslog/syslog.h"
 #include "services/net/webhook/webhook.h"
 #include "services/net/ws_client/ws_client.h"
-#include "services/peripherals/ad9238/ad9238.h"
-#include "services/peripherals/ads1115/ads1115.h"
-#include "services/peripherals/dmx/dmx.h"
-#include "services/peripherals/dshot/dshot.h"
-#include "services/peripherals/fdc2214/fdc2214.h"
-#include "services/peripherals/hmmd/hmmd.h"
-#include "services/peripherals/i2c.h"
-#include "services/peripherals/ina219/ina219.h"
-#include "services/peripherals/ld2410/ld2410.h"
-#include "services/peripherals/ldc1614/ldc1614.h"
-#include "services/peripherals/mpr121/mpr121.h"
-#include "services/peripherals/pca9685/pca9685.h"
-#include "services/peripherals/pn532/pn532.h"
-#include "services/peripherals/rcwl0516/rcwl0516.h"
-#include "services/peripherals/rtc/rtc.h"
-#include "services/peripherals/sdi12/sdi12.h"
-#include "services/peripherals/sen0192/sen0192.h"
-#include "services/peripherals/sht3x/sht3x.h"
-#include "services/peripherals/spi.h"
-#include "services/peripherals/vl53l0x/vl53l0x.h"
+#include "server/peripherals/ad9238/ad9238.h"
+#include "server/peripherals/ads1115/ads1115.h"
+#include "server/peripherals/dmx/dmx.h"
+#include "server/peripherals/dshot/dshot.h"
+#include "server/peripherals/fdc2214/fdc2214.h"
+#include "server/peripherals/hmmd/hmmd.h"
+#include "server/peripherals/i2c.h"
+#include "server/peripherals/ina219/ina219.h"
+#include "server/peripherals/ld2410/ld2410.h"
+#include "server/peripherals/ldc1614/ldc1614.h"
+#include "server/peripherals/mpr121/mpr121.h"
+#include "server/peripherals/pca9685/pca9685.h"
+#include "server/peripherals/pn532/pn532.h"
+#include "server/peripherals/rcwl0516/rcwl0516.h"
+#include "server/peripherals/rtc/rtc.h"
+#include "server/peripherals/sdi12/sdi12.h"
+#include "server/peripherals/sen0192/sen0192.h"
+#include "server/peripherals/sht3x/sht3x.h"
+#include "server/peripherals/spi.h"
+#include "server/peripherals/vl53l0x/vl53l0x.h"
 #include "services/radio/ble_gatt/ble_gatt.h"
 #include "services/radio/cc1101/cc1101.h"
 #include "services/radio/enocean/enocean.h"
@@ -304,25 +304,25 @@ PROTOCORE_BEGIN_DECLS
 #include "services/radio/wisun/wisun.h"
 #include "services/radio/zigbee/zigbee.h"
 #include "services/radio/zwave/zwave.h"
-#include "services/security/audit_log/audit_log.h"
-#include "services/security/auth_lockout/auth_lockout.h"
-#include "services/security/csrf/csrf.h"
-#include "services/security/forwarded_trust/forwarded_trust.h"
-#include "services/security/guardrails/guardrails.h"
+#include "server/security/audit_log/audit_log.h"
+#include "server/security/auth_lockout/auth_lockout.h"
+#include "server/security/csrf/csrf.h"
+#include "server/security/forwarded_trust/forwarded_trust.h"
+#include "server/core/guardrails/guardrails.h"
 #include "services/security/ikev2/ikev2.h"
 #include "services/security/ikev2/ikev2_natt.h"
 #include "services/security/jwt/jwt.h"
 #include "services/security/oauth2/oauth2.h"
 #include "services/security/oidc/oidc.h"
-#include "services/security/tls_policy/tls_policy.h"
+#include "server/security/tls_policy/tls_policy.h"
 #include "services/security/totp/totp.h"
-#include "services/storage/config_io/config_io.h"
-#include "services/storage/config_store/config_store.h"
+#include "server/storage/config_io/config_io.h"
+#include "server/storage/config_store/config_store.h"
 #include "services/storage/dbm/dbm.h"
 #include "services/storage/docstore/docstore.h"
-#include "services/storage/hotswap/hotswap.h"
-#include "services/storage/partition_monitor/partition_monitor.h"
-#include "services/storage/psram_pool/psram_pool.h"
+#include "server/storage/hotswap/hotswap.h"
+#include "server/storage/partition_monitor/partition_monitor.h"
+#include "mmgr/psram_pool.h"
 #include "services/storage/sqlite/sqlite_format.h"
 #include "services/storage/wal/wal.h"
 #include "services/storage/wal/wal_fs.h"
@@ -330,7 +330,7 @@ PROTOCORE_BEGIN_DECLS
 #include "services/system/control/control.h"
 #include "services/system/esp/esp.h"
 #include "services/system/esp/ipsec_db.h"
-#include "services/system/provisioning_service/provisioning_service.h"
+#include "server/core/provisioning_service/provisioning_service.h"
 #include "services/timing_position/gnss/gnss_survey.h"
 #include "services/timing_position/gnss/ntrip_caster.h"
 #include "services/timing_position/gnss/ntrip_caster_listener.h"
@@ -345,18 +345,18 @@ PROTOCORE_BEGIN_DECLS
 #include "services/transportation/ocit/ocit.h"
 #include "services/transportation/utmc/utmc.h"
 #include "services/transportation/wave/wave.h"
-#include "services/web/dashboard/dashboard.h"
-#include "services/web/edge_cache/edge_cache.h"
-#include "services/web/edge_cache/edge_cache_proxy.h"
-#include "services/web/edge_cache/edge_cache_sd.h"
-#include "services/web/edge_cache/edge_fetch.h"
-#include "services/web/edge_cache/edge_mesh.h"
-#include "services/web/httpcache/httpcache.h"
-#include "services/web/spa_router/spa_router.h"
-#include "services/web/web_terminal/web_terminal.h"
+#include "server/web/dashboard/dashboard.h"
+#include "server/web/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache_proxy.h"
+#include "server/web/edge_cache/edge_cache_sd.h"
+#include "server/web/edge_cache/edge_fetch.h"
+#include "server/web/edge_cache/edge_mesh.h"
+#include "network_drivers/presentation/http/httpcache/httpcache.h"
+#include "server/web/spa_router/spa_router.h"
+#include "server/web/web_terminal/web_terminal.h"
 
 /**
- * @brief A storage backend (server/filesystem/mnt.h), named here only as a pointer.
+ * @brief A storage backend (server/storage/mnt.h), named here only as a pointer.
  *
  * Forward-declared rather than included because this API never looks inside one. A mount point takes
  * a backend and dispatches through its vtable, so what actually implements the storage - the board's
@@ -501,7 +501,9 @@ typedef size_t (*ChunkSource)(uint8_t *buf, size_t cap, void *ctx);
 //
 // Usage:
 //   void handle_api(uint8_t slot_id, HttpReq *req) { send_text(slot_id, 200, "application/json", "{}"); }
-//   void setup()  { Physical.wifi->init("SSID", "PW"); on("/api", HTTP_GET, handle_api); begin(80); }
+//   void setup()  { Physical.wifi.ssid = "SSID"; Physical.wifi.password = "PW";
+//                   Physical.wifi_init(Physical.internal);
+//                   on("/api", HTTP_GET, handle_api); begin(80); }
 //   void loop()   { handle(); }
 
 /**
@@ -846,7 +848,7 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback);
  *
  * Each accepted connection is tagged protocore_if_kind::PROTOCORE_IF_WIFI_AP when its local IP equals
  * @p ap_ip, else protocore_if_kind::PROTOCORE_IF_WIFI_STA. Call once after starting the softAP, e.g.
- * `server.set_ap_ip(Physical.wifi->ap_ip())` (already network byte order).
+ * `Physical.wifi_ap_ip(Physical.internal); set_ap_ip(Physical.u32);` (already network byte order).
  * Without it, every connection is treated as protocore_if_kind::PROTOCORE_IF_WIFI_STA.
  *
  * @param ap_ip softAP IPv4 address in network byte order (0 to clear).

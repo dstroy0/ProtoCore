@@ -3,12 +3,18 @@
 
 /**
  * @file oauth2.c
- * @brief OAuth2 token-endpoint client - implementation (no heap, no stdlib).
+ * @brief OAuth 2.0 token-endpoint client (RFC 6749): the two grant bodies and the token response.
+ *
+ * The bodies are `application/x-www-form-urlencoded` per RFC 6749 Appendix B, percent-encoded per
+ * RFC 3986 sec 2.1 over the unreserved set of sec 2.3. RFC 6749 sec 4.1.3 carries grant_type=
+ * authorization_code, sec 6 carries grant_type=refresh_token, and the reply is read as the sec 5.1
+ * parameters. No heap, no stdlib.
  */
 
 #include "services/security/oauth2/oauth2.h"
-#include "mmgr/protomem.h"
-#include "shared/hex/hex.h"
+#include "mmgr/membuild.h"  // Sb: the bounded builder the body is written with
+#include "mmgr/protomem.h"  // mem.cpy: the reply into the module's own buffer
+#include "shared/hex/hex.h" // Hex.digit: the two digits of a percent-encoded octet
 
 #if PROTOCORE_ENABLE_OAUTH2
 
@@ -16,208 +22,221 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
+
+/**
+ * @brief The exchange buffers this module owns, all BSS.
+ *
+ * @var Oauth2Storage::body  the RFC 6749 Appendix B body a request is built into
+ * @var Oauth2Storage::resp  the token-endpoint reply, NUL-terminated for the JSON reader
+ */
+struct Oauth2Storage
+{
+    char body[PROTOCORE_OAUTH2_BODY_BUF];
+    char resp[PROTOCORE_OAUTH2_RESP_BUF];
+};
+#endif // PROTOCORE_ENABLE_HTTP_CLIENT
+
+/**
+ * @brief The exchange state and the calls that reach it - what Oauth2Ns points at.
+ *
+ * @var Oauth2Internal::store  the request-body and reply buffers, only where a transport call exists
+ * @var Oauth2Internal::ns     the handle a caller sets a call's members on
+ */
+struct Oauth2Internal
+{
+#if PROTOCORE_ENABLE_HTTP_CLIENT
+    struct Oauth2Storage *store;
 #endif
-// Bounded form-body builder.
-typedef struct
-{
-    char *o;
-    size_t cap;
-    size_t n;
-    proto_bool ok;
-} Buf;
+    Oauth2Ns *ns;
+};
 
-static void put_raw(Buf *b, const char *s)
-{
-    for (; *s; s++)
-    {
-        if (b->n + 1 >= b->cap)
-        {
-            b->ok = PROTO_FALSE;
-            return;
-        }
-        b->o[b->n++] = *s;
-    }
-}
+#if PROTOCORE_ENABLE_HTTP_CLIENT
+static struct Oauth2Storage s_store;
+static struct Oauth2Internal s_oauth2 = {.store = &s_store, .ns = &Oauth2};
+#else
+static struct Oauth2Internal s_oauth2 = {.ns = &Oauth2};
+#endif
 
+// The unreserved set of RFC 3986 sec 2.3: ALPHA / DIGIT / "-" / "." / "_" / "~".
 static proto_bool unreserved(char c)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '.' ||
            c == '_' || c == '~';
 }
 
-// Percent-encode a value (application/x-www-form-urlencoded; unreserved pass).
-static void put_enc(Buf *b, const char *s)
+// Append one form value: an unreserved octet passes, every other one becomes "%" HEXDIG HEXDIG in
+// the uppercase digits RFC 3986 sec 2.1 asks a producer for.
+static void put_form_value(protocore_sb *b, const char *s)
 {
     for (; *s; s++)
     {
-        unsigned char c = (unsigned char)*s;
+        const unsigned char c = (unsigned char)*s;
         if (unreserved((char)c))
         {
-            if (b->n + 1 >= b->cap)
-            {
-                b->ok = PROTO_FALSE;
-                return;
-            }
-            b->o[b->n++] = (char)c;
+            Sb.ch(b, (char)c);
+            continue;
         }
-        else
-        {
-            if (b->n + 3 >= b->cap)
-            {
-                b->ok = PROTO_FALSE;
-                return;
-            }
-            b->o[b->n++] = '%';
-            b->o[b->n++] = protocore_hex_digit((c >> 4) & 0xF, PROTO_TRUE);
-            b->o[b->n++] = protocore_hex_digit(c & 0xF, PROTO_TRUE);
-        }
+        Sb.ch(b, '%');
+        Hex.args.upper = PROTO_TRUE;
+        Hex.args.nibble = (uint8_t)(c >> 4);
+        Hex.digit(Hex.internal);
+        Sb.ch(b, Hex.ch);
+        Hex.args.nibble = (uint8_t)(c & 0x0Fu);
+        Hex.digit(Hex.internal);
+        Sb.ch(b, Hex.ch);
     }
 }
 
-// Append "&key=<encoded value>".
-static void put_param(Buf *b, const char *key, const char *val)
+// Append "&<name>=<encoded value>": one more parameter of the form body.
+static void put_param(protocore_sb *b, const char *name, const char *value)
 {
-    put_raw(b, "&");
-    put_raw(b, key);
-    put_raw(b, "=");
-    put_enc(b, val);
+    Sb.ch(b, '&');
+    Sb.put(b, name);
+    Sb.ch(b, '=');
+    put_form_value(b, value);
 }
 
-static int finish(Buf *b)
+// RFC 6749 sec 4.1.3: grant_type=authorization_code, code, redirect_uri, client_id, the sec 2.3.1
+// client password where the client authenticates, and the RFC 7636 sec 4.5 code_verifier where it
+// does not. i32 takes the encoded length, or 0 when the body did not fit.
+static void build_code_request(struct Oauth2Internal *restrict ctx)
 {
-    if (!b->ok || b->n >= b->cap)
+    ctx->ns->i32 = 0;
+    if (!ctx->ns->code_grant.code || !ctx->ns->code_grant.redirect_uri || !ctx->ns->client.client_id ||
+        !ctx->ns->request.out || ctx->ns->request.cap == 0)
     {
-        return 0; // public builders reject cap==0 before constructing Buf, so b->n=0 < b->cap
-                  // holds at construction, and every put_raw/put_enc write only commits
-                  // after checking b->n+1 (or +3) < b->cap, so b->n < b->cap stays invariant
-                  // for as long as b->ok remains true.
+        return;
     }
-    b->o[b->n] = '\0';
-    return (int)b->n;
+    protocore_sb b = {ctx->ns->request.out, ctx->ns->request.cap, 0, PROTO_TRUE};
+    Sb.put(&b, "grant_type=authorization_code");
+    put_param(&b, "code", ctx->ns->code_grant.code);
+    put_param(&b, "redirect_uri", ctx->ns->code_grant.redirect_uri);
+    put_param(&b, "client_id", ctx->ns->client.client_id);
+    if (ctx->ns->client.client_secret)
+    {
+        put_param(&b, "client_secret", ctx->ns->client.client_secret);
+    }
+    if (ctx->ns->code_grant.code_verifier)
+    {
+        put_param(&b, "code_verifier", ctx->ns->code_grant.code_verifier);
+    }
+    ctx->ns->i32 = (int32_t)Sb.finish(&b);
 }
 
-int protocore_oauth2_build_code_request(const char *code, const char *redirect_uri, const char *client_id,
-                                        const char *client_secret, const char *code_verifier, char *out, size_t cap)
+// RFC 6749 sec 6: grant_type=refresh_token, refresh_token, client_id, and the sec 2.3.1 client
+// password where the client authenticates. i32 takes the encoded length, or 0 when it did not fit.
+static void build_refresh_request(struct Oauth2Internal *restrict ctx)
 {
-    if (!code || !redirect_uri || !client_id || !out || cap == 0)
+    ctx->ns->i32 = 0;
+    if (!ctx->ns->refresh_grant.refresh_token || !ctx->ns->client.client_id || !ctx->ns->request.out ||
+        ctx->ns->request.cap == 0)
     {
-        return 0;
+        return;
     }
-    Buf b = {out, cap, 0, PROTO_TRUE};
-    put_raw(&b, "grant_type=authorization_code");
-    put_param(&b, "code", code);
-    put_param(&b, "redirect_uri", redirect_uri);
-    put_param(&b, "client_id", client_id);
-    if (client_secret)
+    protocore_sb b = {ctx->ns->request.out, ctx->ns->request.cap, 0, PROTO_TRUE};
+    Sb.put(&b, "grant_type=refresh_token");
+    put_param(&b, "refresh_token", ctx->ns->refresh_grant.refresh_token);
+    put_param(&b, "client_id", ctx->ns->client.client_id);
+    if (ctx->ns->client.client_secret)
     {
-        put_param(&b, "client_secret", client_secret);
+        put_param(&b, "client_secret", ctx->ns->client.client_secret);
     }
-    if (code_verifier)
-    {
-        put_param(&b, "code_verifier", code_verifier);
-    }
-    return finish(&b);
+    ctx->ns->i32 = (int32_t)Sb.finish(&b);
 }
 
-int protocore_oauth2_build_refresh_request(const char *refresh_token, const char *client_id, const char *client_secret,
-                                           char *out, size_t cap)
+// RFC 6749 sec 5.1: read access_token, token_type, expires_in and refresh_token out of the reply,
+// plus the OpenID Connect id_token where the provider sends one. ok stays false when access_token is
+// absent, which is the shape of the sec 5.2 error object.
+static void parse_token_response(struct Oauth2Internal *restrict ctx)
 {
-    if (!refresh_token || !client_id || !out || cap == 0)
+    ctx->ns->ok = PROTO_FALSE;
+    const char *json = ctx->ns->response.json;
+    Oauth2Tokens *t = ctx->ns->response.tokens;
+    if (!json || !t)
     {
-        return 0;
+        return;
     }
-    Buf b = {out, cap, 0, PROTO_TRUE};
-    put_raw(&b, "grant_type=refresh_token");
-    put_param(&b, "refresh_token", refresh_token);
-    put_param(&b, "client_id", client_id);
-    if (client_secret)
-    {
-        put_param(&b, "client_secret", client_secret);
-    }
-    return finish(&b);
-}
+    t->access_token[0] = '\0';
+    t->id_token[0] = '\0';
+    t->refresh_token[0] = '\0';
+    t->token_type[0] = '\0';
+    t->expires_in = 0;
 
-proto_bool protocore_oauth2_parse_token_response(const char *json, protocore_o_auth2_tokens *out)
-{
-    if (!json || !out)
+    if (!Json.get_str(json, "access_token", t->access_token, sizeof(t->access_token)))
     {
-        return PROTO_FALSE;
+        return;
     }
-    out->access_token[0] = '\0';
-    out->id_token[0] = '\0';
-    out->refresh_token[0] = '\0';
-    out->token_type[0] = '\0';
-    out->expires_in = 0;
-
-    if (!Json.get_str(json, "access_token", out->access_token, sizeof(out->access_token)))
-    {
-        return PROTO_FALSE; // an error response (e.g. {"error":"invalid_grant"}) has no access_token
-    }
-    Json.get_str(json, "id_token", out->id_token, sizeof(out->id_token));
-    Json.get_str(json, "refresh_token", out->refresh_token, sizeof(out->refresh_token));
-    Json.get_str(json, "token_type", out->token_type, sizeof(out->token_type));
+    Json.get_str(json, "id_token", t->id_token, sizeof(t->id_token));
+    Json.get_str(json, "refresh_token", t->refresh_token, sizeof(t->refresh_token));
+    Json.get_str(json, "token_type", t->token_type, sizeof(t->token_type));
     long e = 0;
     if (Json.get_int(json, "expires_in", &e))
     {
-        out->expires_in = e;
+        t->expires_in = e;
     }
-    return PROTO_TRUE;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-// All OAuth2 exchange scratch, owned by one instance (internal linkage): the request-body
-// and response buffers (kept off the caller's stack), grouped so it is one named owner,
-// unreachable cross-TU.
-typedef struct
-{
-    char body[PROTOCORE_OAUTH2_BODY_BUF];
-    char resp[PROTOCORE_OAUTH2_RESP_BUF];
-} Oauth2Ctx;
-static Oauth2Ctx s_oauth;
-
-static int post_and_parse(Oauth2Ctx *c, const char *token_url, int body_len, protocore_o_auth2_tokens *out)
+// POST the body already built into the store to request.token_endpoint (RFC 6749 sec 3.2), copy the
+// reply in, and parse it. i32 takes the HTTP status on a sec 5.1 response, the provider's 4xx on a
+// sec 5.2 error object, and a negative Oauth2Result where the exchange never got that far.
+static void post_and_parse(struct Oauth2Internal *restrict ctx, int body_len)
 {
     if (body_len <= 0)
     {
-        return (int)PROTOCORE_OAUTH2_ERR_BUILD;
+        ctx->ns->i32 = (int32_t)PROTOCORE_OAUTH2_ERR_BUILD;
+        return;
     }
     HttpClientResult r;
-    int st = http_post(token_url, "application/x-www-form-urlencoded", (const uint8_t *)c->body, (size_t)body_len, &r);
+    int st = http_post(ctx->ns->request.token_endpoint, "application/x-www-form-urlencoded",
+                       (const uint8_t *)ctx->store->body, (size_t)body_len, &r);
     if (st <= 0)
     {
-        return (int)PROTOCORE_OAUTH2_ERR_TRANSPORT;
+        ctx->ns->i32 = (int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT;
+        return;
     }
-    size_t k = r.body_len < sizeof(c->resp) - 1 ? r.body_len : sizeof(c->resp) - 1;
+    size_t k = r.body_len < sizeof(ctx->store->resp) - 1 ? r.body_len : sizeof(ctx->store->resp) - 1;
     if (r.body && k)
     {
-        mem.cpy(c->resp, r.body, k);
+        mem.cpy(ctx->store->resp, r.body, k);
     }
-    c->resp[k] = '\0';
-    if (!protocore_oauth2_parse_token_response(c->resp, out))
-    {
-        return st >= 400 ? st : (int)PROTOCORE_OAUTH2_ERR_RESPONSE; // surface the provider's 4xx, else generic
-    }
-    return st;
+    ctx->store->resp[k] = '\0';
+    ctx->ns->response.json = ctx->store->resp;
+    parse_token_response(ctx);
+    ctx->ns->i32 = ctx->ns->ok ? (int32_t)st : (st >= 400 ? (int32_t)st : (int32_t)PROTOCORE_OAUTH2_ERR_RESPONSE);
 }
 
-int protocore_oauth2_exchange_code(const char *token_url, const char *code, const char *redirect_uri,
-                                   const char *client_id, const char *client_secret, const char *code_verifier,
-                                   protocore_o_auth2_tokens *out)
+// RFC 6749 sec 4.1.3 request, sec 4.1.4 response: the body is built into the store's own buffer, so
+// the caller sets only the endpoint, the grant members and response.tokens.
+static void exchange_code(struct Oauth2Internal *restrict ctx)
 {
-    int n = protocore_oauth2_build_code_request(code, redirect_uri, client_id, client_secret, code_verifier,
-                                                s_oauth.body, sizeof(s_oauth.body));
-    return post_and_parse(&s_oauth, token_url, n, out);
+    ctx->ns->request.out = ctx->store->body;
+    ctx->ns->request.cap = sizeof(ctx->store->body);
+    build_code_request(ctx);
+    post_and_parse(ctx, (int)ctx->ns->i32);
 }
 
-int protocore_oauth2_refresh(const char *token_url, const char *refresh_token, const char *client_id,
-                             const char *client_secret, protocore_o_auth2_tokens *out)
+// RFC 6749 sec 6: the same exchange presenting refresh_grant.refresh_token.
+static void refresh(struct Oauth2Internal *restrict ctx)
 {
-    int n = protocore_oauth2_build_refresh_request(refresh_token, client_id, client_secret, s_oauth.body,
-                                                   sizeof(s_oauth.body));
-    return post_and_parse(&s_oauth, token_url, n, out);
+    ctx->ns->request.out = ctx->store->body;
+    ctx->ns->request.cap = sizeof(ctx->store->body);
+    build_refresh_request(ctx);
+    post_and_parse(ctx, (int)ctx->ns->i32);
 }
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+Oauth2Ns Oauth2 = {.build_code_request = build_code_request,
+                   .build_refresh_request = build_refresh_request,
+                   .parse_token_response = parse_token_response,
+#if PROTOCORE_ENABLE_HTTP_CLIENT
+                   .exchange_code = exchange_code,
+                   .refresh = refresh,
+#endif
+                   .internal = &s_oauth2};
 
 #endif // PROTOCORE_ENABLE_OAUTH2

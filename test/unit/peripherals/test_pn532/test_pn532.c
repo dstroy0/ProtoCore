@@ -1,14 +1,14 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the PN532 NFC frame codec (services/peripherals/pn532): the normal-information-frame
+// Unit tests for the PN532 NFC frame codec (server/peripherals/pn532): the normal-information-frame
 // build/parse against the documented GetFirmwareVersion command + response frames (LCS +
 // DCS checksums), a round trip, malformed framing (bad preamble / start / LCS / DCS),
 // incomplete frames, over-length rejection, and the ACK frame. Pure host tests.
 //
 // The env sizes PROTOCORE_PN532_MAX_DATA = 8.
 
-#include "services/peripherals/pn532/pn532.h"
+#include "server/peripherals/pn532/pn532.h"
 
 #include <unity.h>
 

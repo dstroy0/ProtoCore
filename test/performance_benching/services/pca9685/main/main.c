@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the PCA9685 PWM/servo codec (services/peripherals/pca9685): the pure,
+// On-device CCOUNT microbenchmark for the PCA9685 PWM/servo codec (server/peripherals/pca9685): the pure,
 // host-tested CPU-side math and framing - the PRESCALE value for a PWM frequency (with clamping),
 // a channel's register base, a servo pulse-width (us) -> 12-bit OFF count (with clamping), and the
 // 5-byte channel PWM write encoder. This rig has no PCA9685 breakout wired up, so the I2C-over-Wire
@@ -14,7 +14,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/pca9685/pca9685.h"
+#include "server/peripherals/pca9685/pca9685.h"
 
 #include <stdbool.h>
 #include <stddef.h>

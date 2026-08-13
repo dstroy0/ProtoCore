@@ -20,11 +20,11 @@
 #include "mdns.h" // the vendor's responder, driven through its own component API
 #else
 #include "mmgr/protostr.h"                        // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"                       // proto_raw_read: every field moves whole
+#include "mmgr/rawmemcpy.h"                       // raw.read: every field moves whole
 #include "mmgr/secure.h"                          // protocore_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves share
-#include "network_drivers/physical/physical.h"    // protocore_net_egress_ip: the address the A record carries
-#include "network_drivers/transport/udp/udp.h"        // Udp.listener: the 5353 group bind and the reply
+#include "network_drivers/physical/physical.h"    // Physical.egress_ip: the address the A record carries
+#include "network_drivers/transport/udp/udp.h"    // Udp.listener: the 5353 group bind and the reply
 #endif
 
 #if PROTOCORE_HAS_VENDOR_MDNS
@@ -132,7 +132,7 @@ static MdnsCtx s_mdns;
 // whose release wipes. False when the pool cannot cover them; begin() fails closed on that.
 static proto_bool mdns_mem_bind(void)
 {
-    if (protocore_span_has_storage(s_mdns.tx))
+    if (span.has_storage(s_mdns.tx))
     {
         return PROTO_TRUE;
     }
@@ -145,11 +145,9 @@ static proto_bool mdns_mem_bind(void)
     s_mdns.qname = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
     s_mdns.svc_name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
     s_mdns.inst_name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    return protocore_span_has_storage(s_mdns.host) && protocore_span_has_storage(s_mdns.fqdn) &&
-           protocore_span_has_storage(s_mdns.svc) && protocore_span_has_storage(s_mdns.txt) &&
-           protocore_span_has_storage(s_mdns.tx) && protocore_span_has_storage(s_mdns.rd) &&
-           protocore_span_has_storage(s_mdns.qname) && protocore_span_has_storage(s_mdns.svc_name) &&
-           protocore_span_has_storage(s_mdns.inst_name);
+    return span.has_storage(s_mdns.host) && span.has_storage(s_mdns.fqdn) && span.has_storage(s_mdns.svc) &&
+           span.has_storage(s_mdns.txt) && span.has_storage(s_mdns.tx) && span.has_storage(s_mdns.rd) &&
+           span.has_storage(s_mdns.qname) && span.has_storage(s_mdns.svc_name) && span.has_storage(s_mdns.inst_name);
 }
 
 /** @brief Service @p i, over the borrow that holds the table. */
@@ -190,7 +188,7 @@ static size_t name_append(char *out, size_t cap, size_t n, const char *s)
     {
         return cap;
     }
-    proto_raw_read(out + n, s, l);
+    raw.read(out + n, s, l);
     n += l;
     out[n] = '\0';
     return n;
@@ -218,7 +216,11 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
     {
         return PROTO_FALSE;
     }
-    size_t w = protocore_dns_name_encode(out + p, cap - p, owner);
+    DnsWire.text.dotted = owner;
+    DnsWire.text.out = out + p;
+    DnsWire.text.out_cap = cap - p;
+    DnsWire.encode(DnsWire.internal);
+    size_t w = DnsWire.n;
     if (w == 0)
     {
         return PROTO_FALSE;
@@ -250,7 +252,7 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
     p++;
     if (rdlen != 0)
     {
-        proto_raw_read(out + p, rdata, rdlen);
+        raw.read(out + p, rdata, rdlen);
         p += rdlen;
     }
     *n = p;
@@ -261,12 +263,13 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
 // address says nothing rather than claiming 0.0.0.0.
 static uint16_t put_a(size_t *n)
 {
-    uint32_t ip = protocore_net_egress_ip();
+    Physical.egress_ip(Physical.internal);
+    uint32_t ip = Physical.u32;
     if (ip == 0)
     {
         return 0;
     }
-    proto_raw_read(s_mdns.rd.buf, &ip, 4); // network order already, as the stack keeps it
+    raw.read(s_mdns.rd.buf, &ip, 4); // network order already, as the stack keeps it
     if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, mdns_str(s_mdns.fqdn), PROTOCORE_MDNS_T_A, PROTOCORE_MDNS_C_FLUSH,
                 PROTOCORE_MDNS_TTL_HOST, s_mdns.rd.buf, 4))
     {
@@ -285,7 +288,11 @@ static uint16_t put_srv(const MdnsSvc *s, size_t *n)
     rd[3] = 0;
     rd[4] = (uint8_t)(s->port >> 8);
     rd[5] = (uint8_t)s->port;
-    size_t w = protocore_dns_name_encode(rd + 6, s_mdns.rd.cap - 6, mdns_str(s_mdns.fqdn));
+    DnsWire.text.dotted = mdns_str(s_mdns.fqdn);
+    DnsWire.text.out = rd + 6;
+    DnsWire.text.out_cap = s_mdns.rd.cap - 6;
+    DnsWire.encode(DnsWire.internal);
+    size_t w = DnsWire.n;
     if (w == 0)
     {
         return 0;
@@ -321,7 +328,11 @@ static uint16_t put_txt(size_t *n)
 // A PTR whose rdata is one name.
 static uint16_t put_ptr(const char *owner, const char *target, size_t *n)
 {
-    size_t w = protocore_dns_name_encode(s_mdns.rd.buf, s_mdns.rd.cap, target);
+    DnsWire.text.dotted = target;
+    DnsWire.text.out = s_mdns.rd.buf;
+    DnsWire.text.out_cap = s_mdns.rd.cap;
+    DnsWire.encode(DnsWire.internal);
+    size_t w = DnsWire.n;
     if (w == 0)
     {
         return 0;
@@ -345,7 +356,10 @@ static uint16_t answer_for(const char *qname, uint16_t qtype, size_t *n)
 {
     uint16_t added = 0;
 
-    if (protocore_dns_name_eq(qname, mdns_str(s_mdns.fqdn)) && wants(qtype, PROTOCORE_MDNS_T_A))
+    DnsWire.cmp.a = qname;
+    DnsWire.cmp.b = mdns_str(s_mdns.fqdn);
+    DnsWire.eq(DnsWire.internal);
+    if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_A))
     {
         added += put_a(n);
     }
@@ -363,15 +377,24 @@ static uint16_t answer_for(const char *qname, uint16_t qtype, size_t *n)
             continue;
         }
         // The enumeration name lists the types on offer, not the instances.
-        if (protocore_dns_name_eq(qname, PROTOCORE_MDNS_ENUM_NAME) && wants(qtype, PROTOCORE_MDNS_T_PTR))
+        DnsWire.cmp.a = qname;
+        DnsWire.cmp.b = PROTOCORE_MDNS_ENUM_NAME;
+        DnsWire.eq(DnsWire.internal);
+        if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
             added += put_ptr(PROTOCORE_MDNS_ENUM_NAME, mdns_str(s_mdns.svc_name), n);
         }
-        if (protocore_dns_name_eq(qname, mdns_str(s_mdns.svc_name)) && wants(qtype, PROTOCORE_MDNS_T_PTR))
+        DnsWire.cmp.a = qname;
+        DnsWire.cmp.b = mdns_str(s_mdns.svc_name);
+        DnsWire.eq(DnsWire.internal);
+        if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
             added += put_ptr(mdns_str(s_mdns.svc_name), mdns_str(s_mdns.inst_name), n);
         }
-        if (protocore_dns_name_eq(qname, mdns_str(s_mdns.inst_name)))
+        DnsWire.cmp.a = qname;
+        DnsWire.cmp.b = mdns_str(s_mdns.inst_name);
+        DnsWire.eq(DnsWire.internal);
+        if (DnsWire.ok)
         {
             if (wants(qtype, PROTOCORE_MDNS_T_SRV))
             {
@@ -419,10 +442,18 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     size_t off = 12;
     for (uint16_t q = 0; q < qd; q++)
     {
-        if (!protocore_dns_name_decode(data, len, off, mdns_str(s_mdns.qname), s_mdns.qname.cap, &off, PROTO_TRUE))
+        DnsWire.msg.pkt = data;
+        DnsWire.msg.len = len;
+        DnsWire.msg.off = off;
+        DnsWire.msg.out = mdns_str(s_mdns.qname);
+        DnsWire.msg.out_cap = s_mdns.qname.cap;
+        DnsWire.msg.allow_ptr = PROTO_TRUE;
+        DnsWire.decode(DnsWire.internal);
+        if (!DnsWire.ok)
         {
             return; // a malformed question: the rest of the message cannot be located
         }
+        off = DnsWire.next;
         if (off + 4 > len)
         {
             return;
@@ -454,7 +485,7 @@ static proto_bool label_set(char *dst, size_t cap, const char *src)
     {
         return PROTO_FALSE;
     }
-    proto_raw_read(dst, src, n);
+    raw.read(dst, src, n);
     dst[n] = '\0';
     return PROTO_TRUE;
 }
@@ -500,11 +531,11 @@ proto_bool protocore_mdns_txt(const char *key, const char *value)
     size_t n = s_mdns.txt_len;
     txt[n] = (uint8_t)entry; // each string carries its own length (RFC 6763 sec 6.1)
     n++;
-    proto_raw_read(txt + n, key, kl);
+    raw.read(txt + n, key, kl);
     n += kl;
     txt[n] = '=';
     n++;
-    proto_raw_read(txt + n, value, vl);
+    raw.read(txt + n, value, vl);
     n += vl;
     s_mdns.txt_len = n;
     return PROTO_TRUE;

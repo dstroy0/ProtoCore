@@ -3,7 +3,7 @@
 //
 // Host tests for services/netadapt: TCP window sizing by free RAM + DHCP->static fallback.
 
-#include "services/net/netadapt/netadapt.h"
+#include "server/net/netadapt/netadapt.h"
 #include <unity.h>
 
 void setUp(void)

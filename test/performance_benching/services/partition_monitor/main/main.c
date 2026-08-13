@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the flash partition-map monitor (services/storage/partition_monitor):
+// On-device CCOUNT microbenchmark for the flash partition-map monitor (server/storage/partition_monitor):
 // pc_partition_kind() (the type/subtype -> human "kind" classifier) and pc_partition_json() (the
 // {"partitions":[...]} serializer). Both are pure - no flash, no server - so every call here
 // exercises the real production code path. Like performance_benching/device/ads1115 (a peripheral driver), only the
@@ -14,7 +14,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/storage/partition_monitor/partition_monitor.h"
+#include "server/storage/partition_monitor/partition_monitor.h"
 
 #include <stdbool.h>
 #include <stddef.h>

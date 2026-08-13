@@ -11,7 +11,7 @@
  * readdir/stat/mkdir/rmdir/remove/rename/realpath) with a fixed handle table and streamed
  * reads/writes.
  *
- * Storage is reached through the filesystem accessor (server/filesystem/filesystem.h), so this file
+ * Storage is reached through the filesystem accessor (server/storage/filesystem.h), so this file
  * names no vendor type and holds no mount, no root, and no path buffer: a request path goes to an
  * operation as the bytes the client sent, and the accessor frames it onto the mount root and
  * rejects `..`. Mount the backend and set the root once with protocore_mnt_mount() + protocore_fs_begin().

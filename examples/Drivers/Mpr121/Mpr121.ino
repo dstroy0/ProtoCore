@@ -20,7 +20,7 @@
 #define PROTOCORE_ENABLE_MPR121 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
-#include "services/peripherals/mpr121/mpr121.h"
+#include "server/peripherals/mpr121/mpr121.h"
 
 static const int LED_PIN = 2; // onboard LED on most ESP32 dev boards
 

@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the stateless HMAC-signed CSRF token (services/security/csrf). A fixed
+// Unit tests for the stateless HMAC-signed CSRF token (server/security/csrf). A fixed
 // secret makes issue/verify deterministic on the host; the tests cover the
 // round trip, tamper rejection, secret binding, format, and edge cases.
 
-#include "services/security/csrf/csrf.h"
+#include "server/security/csrf/csrf.h"
 #include <string.h>
 
 #include <unity.h>

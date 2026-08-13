@@ -61,7 +61,7 @@ with added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/security/guardrails/guardrails.h"
+#include "server/core/guardrails/guardrails.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

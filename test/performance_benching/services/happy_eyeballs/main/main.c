@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the dual-stack Happy Eyeballs selection layer
-// (services/net/happy_eyeballs): the RFC 6724 destination-preference score (protocore_he_pref), the candidate
+// (network_drivers/transport/happy_eyeballs): the RFC 6724 destination-preference score (protocore_he_pref), the candidate
 // list sort + RFC 8305 address-family interleave (protocore_he_order), and the RFC 8305 Connection Attempt
 // Delay gate (protocore_he_attempt_due). This is the pure decision layer over the shipped protocore_ip value type -
 // no sockets, no DNS, no heap - so, like performance_benching/device/modbus, every call here runs the real production
@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/happy_eyeballs/happy_eyeballs.h"
+#include "network_drivers/transport/happy_eyeballs/happy_eyeballs.h"
 
 #include <stdbool.h>
 #include <stddef.h>

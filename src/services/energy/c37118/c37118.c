@@ -35,24 +35,24 @@ size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint
     size_t p = 0;
     buf[p++] = C37118_SYNC_LEADER;
     buf[p++] = (uint8_t)(((type & C37118_TYPE_MASK) << C37118_TYPE_SHIFT) | (version & C37118_VERSION_MASK));
-    p += protocore_wr16be(buf + p, (uint16_t)total);
-    p += protocore_wr16be(buf + p, idcode);
-    p += protocore_wr32be(buf + p, soc);
-    p += protocore_wr32be(buf + p, fracsec);
+    p += endian.wr16be(buf + p, (uint16_t)total);
+    p += endian.wr16be(buf + p, idcode);
+    p += endian.wr32be(buf + p, soc);
+    p += endian.wr32be(buf + p, fracsec);
     if (payload_len)
     {
         mem.cpy(buf + p, payload, payload_len);
         p += payload_len;
     }
     uint16_t crc = protocore_c37118_crc(buf, p); // over everything before CHK
-    p += protocore_wr16be(buf + p, crc);
+    p += endian.wr16be(buf + p, crc);
     return p;
 }
 
 size_t protocore_c37118_build_command(uint8_t *buf, size_t cap, uint16_t idcode, uint32_t soc, uint32_t fracsec, uint16_t cmd)
 {
     uint8_t payload[2];
-    protocore_wr16be(payload, cmd);
+    endian.wr16be(payload, cmd);
     return protocore_c37118_build_frame(buf, cap, C37118_TYPE_CMD, C37118_VERSION_2011, idcode, soc, fracsec, payload, 2);
 }
 
@@ -66,13 +66,13 @@ proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Fr
     {
         return PROTO_FALSE;
     }
-    uint16_t framesize = protocore_rd16be(buf + 2);
+    uint16_t framesize = endian.rd16be(buf + 2);
     if (framesize < C37118_MIN_FRAME || framesize > len)
     {
         return PROTO_FALSE; // out of range / not fully buffered
     }
     uint16_t want = protocore_c37118_crc(buf, (size_t)framesize - 2);
-    uint16_t got = protocore_rd16be(buf + framesize - 2);
+    uint16_t got = endian.rd16be(buf + framesize - 2);
     if (want != got)
     {
         return PROTO_FALSE; // CHK mismatch
@@ -80,9 +80,9 @@ proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Fr
     out->type = (uint8_t)((buf[1] >> C37118_TYPE_SHIFT) & C37118_TYPE_MASK);
     out->version = (uint8_t)(buf[1] & C37118_VERSION_MASK);
     out->framesize = framesize;
-    out->idcode = protocore_rd16be(buf + 4);
-    out->soc = protocore_rd32be(buf + 6);
-    out->fracsec = protocore_rd32be(buf + 10);
+    out->idcode = endian.rd16be(buf + 4);
+    out->soc = endian.rd32be(buf + 6);
+    out->fracsec = endian.rd32be(buf + 10);
     out->data = buf + 14;
     out->data_len = (size_t)framesize - C37118_MIN_FRAME;
     return PROTO_TRUE;
@@ -96,7 +96,7 @@ proto_bool protocore_c37118_parse_command(const C37118Frame *f, uint16_t *cmd)
     }
     if (cmd)
     {
-        *cmd = protocore_rd16be(f->data);
+        *cmd = endian.rd16be(f->data);
     }
     return PROTO_TRUE;
 }
@@ -107,7 +107,7 @@ proto_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out)
     {
         return PROTO_FALSE;
     }
-    uint16_t s = protocore_rd16be(f->data); // STAT is the first word of the data payload, big-endian
+    uint16_t s = endian.rd16be(f->data); // STAT is the first word of the data payload, big-endian
     out->raw = s;
     out->data_valid = (s & 0x8000u) == 0;             // bit 15: 0 = valid
     out->pmu_error = (s & 0x4000u) != 0;              // bit 14

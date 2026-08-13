@@ -12,7 +12,7 @@
 
 #if PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
 #include "network_drivers/application/mdns_service/mdns_service.h" // protocore_mdns_txt
-#include "network_drivers/physical/physical.h"                     // protocore_net_channel
+#include "network_drivers/physical/physical.h"                     // Physical.wifi_channel
 #include "server/clock/clock.h"                                    // protocore_millis
 #include "services/radio/promisc/promisc.h"                        // protocore_promisc_*
 #endif
@@ -158,7 +158,8 @@ proto_bool protocore_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
     {
         return PROTO_FALSE;
     }
-    uint8_t ch = Physical.wifi->channel();
+    Physical.wifi_channel(Physical.internal);
+    uint8_t ch = Physical.u8;
     if (ch == 0)
     {
         return PROTO_FALSE; // not associated: there is no channel to pin capture to
@@ -197,7 +198,8 @@ void protocore_mdns_adaptive_tick(void)
     uint32_t now = protocore_millis();
 
     // Follow the station if it roamed to another channel, so capture stays on the live link.
-    uint8_t ch = Physical.wifi->channel();
+    Physical.wifi_channel(Physical.internal);
+    uint8_t ch = Physical.u8;
     if (ch != 0 && ch != s_ad.channel)
     {
         protocore_promisc_set_channel(ch);

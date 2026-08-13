@@ -69,7 +69,7 @@ static void protocore_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher ci
     protocore_span k = protocore_secure_span(PROTOCORE_AES128GCM_KEY_LEN, 8);
     protocore_span ws = protocore_secure_span(PROTOCORE_HKDF_BORROW, _Alignof(uint32_t));
     protocore_span snk = protocore_secure_span(PROTOCORE_AES128GCM_KEY_LEN, 8);
-    if (!protocore_span_ok(k) || !protocore_span_ok(ws) || !protocore_span_ok(snk))
+    if (!span.ok(k) || !span.ok(ws) || !span.ok(snk))
     {
         protocore_secure_release(mark);
         mem.zero(out->iv, sizeof(out->iv));

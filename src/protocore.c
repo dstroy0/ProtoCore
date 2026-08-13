@@ -35,16 +35,16 @@
 
 #include "protocore.h"
 #include "crypto/rng/rng.h"  // protocore_rand_fill(): the CSRF secret's seed
-#include "mmgr/membuild.h"   // protocore_sb frame builder
+#include "mmgr/membuild.h"   // Sb: the frame builder
 #include "mmgr/plaintext.h"  // the diag document is borrowed, not a stack array
 #include "mmgr/protoframe.h" // the diag document is a frame spec, not a concatenation
 #include "mmgr/protostr.h"   // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"  // proto_raw_read: every move here is into our own buffer
+#include "mmgr/rawmemcpy.h"  // raw.read: every move here is into our own buffer
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/presentation/presentation.h" // http_protocore_set_poll (install the instance-bound HTTP poll)
-#include "server/system/proto_handler.h"
-#include "server/system/worker.h"
+#include "server/core/proto_handler.h"
+#include "server/core/worker.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/tcp/tcp.h" // TcpConn, conn_pool, protocore_ap_ip: the slots this drives
 #include "server/clock/clock.h"            // protocore_millis(): the QUIC poll stamp and the request timeout
@@ -61,7 +61,7 @@
 #include "services/file_transfer/http_delivery/http_delivery.h" // protocore_delivery_cache_control (SWR directive)
 #endif
 #if PROTOCORE_ENABLE_CSRF
-#include "services/security/csrf/csrf.h"
+#include "server/security/csrf/csrf.h"
 #endif
 #if PROTOCORE_ENABLE_WEBDAV
 #include "network_drivers/application/webdav/webdav.h"
@@ -211,7 +211,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
         // Fresh server keying secret per begin(): one borrow for the hash behind it, returned here.
         size_t mark = protocore_secure_mark();
         protocore_span ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-        if (protocore_span_ok(ws))
+        if (span.ok(ws))
         {
             Auth.rekey(ws.buf);
         }
@@ -252,7 +252,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
         QuicServerConfig h3cfg = {0};
         h3cfg.cert_der = s_inst.h3_cert;
         h3cfg.cert_len = s_inst.h3_cert_len;
-        proto_raw_read(h3cfg.ed25519_seed, s_inst.h3_seed, sizeof(h3cfg.ed25519_seed));
+        raw.read(h3cfg.ed25519_seed, s_inst.h3_seed, sizeof(h3cfg.ed25519_seed));
         h3cfg.rng = protocore_h3_server_rng;
         // No app pointer: the trampoline dispatches through the global route table. The QUIC server
         // records whether it came up and protocore_quic_server_poll() reads its own answer.
@@ -286,7 +286,7 @@ proto_bool protocore_h3_cert(const uint8_t *cert_der, size_t cert_len, const uin
     }
     s_inst.h3_cert = cert_der;
     s_inst.h3_cert_len = cert_len;
-    proto_raw_read(s_inst.h3_seed, ed25519_seed, sizeof(s_inst.h3_seed));
+    raw.read(s_inst.h3_seed, ed25519_seed, sizeof(s_inst.h3_seed));
     s_inst.h3_port = port;
     s_inst.h3_enabled = PROTO_TRUE;
     return PROTO_TRUE;

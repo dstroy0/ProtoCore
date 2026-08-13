@@ -8,7 +8,7 @@
 // event-queue routing is checked here: the host queue is keyed by the handle create
 // returns, so a post lands in one worker's queue and not another's.
 
-#include "server/system/worker.h"
+#include "server/core/worker.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include <Arduino.h> // set_millis
 #include <unity.h>

@@ -3,20 +3,25 @@
 
 /**
  * @file smtp.h
- * @brief Outbound SMTP client (RFC 5321) - send a device email alert.
+ * @brief Layer 7 (Application) - the client half of one SMTP session (RFC 5321).
  *
- * A blocking one-shot: connect, greet, optional AUTH LOGIN, then MAIL FROM / RCPT TO /
- * DATA a plain-text message and QUIT. It rides the shared outbound client transport
- * (`protocore_client`), with implicit TLS (SMTPS, typically port 465) when the config sets
- * `tls` and PROTOCORE_ENABLE_TLS is on. Zero heap; every buffer is a compile-time size
- * (`PROTOCORE_SMTP_*`). Gated by PROTOCORE_ENABLE_SMTP.
+ * RFC 5321 sec 3.1: an SMTP session is initiated when a client opens a connection to a server and
+ * the server responds with an opening message. This module drives that session end to end: the 220
+ * Greeting (sec 4.2), EHLO (sec 4.1.1.1), an optional in-band TLS upgrade (RFC 3207 sec 4), an
+ * optional AUTH exchange (RFC 4954 sec 4), the mail transaction MAIL / RCPT / DATA (sec 3.3,
+ * sec 4.1.1.2 - 4.1.1.4), and QUIT (sec 4.1.1.10).
  *
- * The dialogue itself (smtp_run) is written against a send/recv seam, so the whole
- * protocol exchange - greeting codes, AUTH, dot-stuffing, the terminating `.` - is
- * unit-tested on the host with a scripted mock server, no lwIP or TLS required.
+ * What DATA carries is an RFC 5322 message: a From: field (sec 3.6.2), a To: field (sec 3.6.3), a
+ * Subject: field (sec 3.6.5), an empty line, and the body (sec 2.1), labeled MIME-Version: 1.0
+ * (RFC 2045 sec 4) and text/plain (RFC 2045 sec 5.1). The body is normalized to CRLF line endings
+ * and dot-stuffed (RFC 5321 sec 4.5.2) ahead of the "<CRLF>.<CRLF>" end of mail data indication
+ * (sec 4.1.1.4).
  *
- * "SMS fallback" needs no extra code: most mobile carriers accept an email-to-SMS
- * gateway address (e.g. `5551234567@txt.example.net`) as the recipient.
+ * ::SmtpNs::run walks the dialogue over the byte seam in @ref SmtpNs::transport, so a scripted
+ * transport runs the whole exchange on the host. ::SmtpNs::send binds that seam to the outbound
+ * client transport (::TcpClient) and blocks until the message is accepted.
+ *
+ * Zero heap; every buffer is a compile-time size (PROTOCORE_SMTP_*). Gated by PROTOCORE_ENABLE_SMTP.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -31,89 +36,136 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SMTP
 
-/** @brief Result of an SMTP send. 0 is success; every failure is a distinct negative code. */
+/** @brief How one session ended. 0 is a delivered message; every failure is a distinct code. */
 typedef enum PROTO_ENUM_PACKED
 {
     SMTP_OK = 0,
-    SMTP_ERR_ARG = -1,         ///< a required field (host / from / to) was null or empty
-    SMTP_ERR_CONNECT = -2,     ///< could not open the transport (DNS / connect)
-    SMTP_ERR_TLS = -3,         ///< the TLS handshake failed (SMTPS)
-    SMTP_ERR_IO = -4,          ///< a send/recv failed or the reply timed out
-    SMTP_ERR_PROTOCOL = -5,    ///< the server returned an unexpected reply code
-    SMTP_ERR_AUTH = -6,        ///< AUTH was rejected (bad user/password)
-    SMTP_ERR_OVERFLOW = -7,    ///< a command line or the message exceeded its fixed buffer
-    SMTP_ERR_NO_STARTTLS = -8, ///< STARTTLS was required but the server did not advertise it
+    SMTP_ERR_ARG = -1,         ///< host, reverse-path or forward-path was null or empty
+    SMTP_ERR_CONNECT = -2,     ///< the transport never came up (name lookup or connect)
+    SMTP_ERR_TLS = -3,         ///< the TLS handshake did not complete
+    SMTP_ERR_IO = -4,          ///< a send or a recv failed, or a reply never arrived
+    SMTP_ERR_PROTOCOL = -5,    ///< the reply code was not the one the step requires (RFC 5321 sec 4.2)
+    SMTP_ERR_AUTH = -6,        ///< the AUTH exchange was rejected (RFC 4954 sec 6: 535)
+    SMTP_ERR_OVERFLOW = -7,    ///< a command line or the message content outgrew its fixed buffer
+    SMTP_ERR_NO_STARTTLS = -8, ///< the EHLO reply carried no STARTTLS keyword (RFC 3207 sec 3)
 } SmtpResult;
 
-/** @brief How the connection is secured. */
+/** @brief How the channel is secured. */
 typedef enum PROTO_ENUM_PACKED
 {
-    SMTP_PLAIN = 0,    ///< no TLS at all (port 25) - credentials and body travel in the clear.
-    SMTP_TLS = 1,      ///< implicit TLS from the first byte (SMTPS, port 465).
-    SMTP_STARTTLS = 2, ///< connect in the clear, then upgrade in band (submission, port 587).
+    SMTP_PLAIN = 0,    ///< no TLS; credentials and content travel in the clear (port 25)
+    SMTP_TLS = 1,      ///< implicit TLS from the first byte: the submissions service (RFC 8314 sec 3.3)
+    SMTP_STARTTLS = 2, ///< clear connect, then the in-band upgrade (RFC 3207 sec 4) on submission (RFC 6409 sec 3.1)
 } SmtpSecurity;
 
 /**
- * @brief Transport seam for smtp_run(): the engine sends and receives raw bytes only
- * through these, so it can run against a real socket or a test mock.
+ * @brief The byte seam the dialogue rides. Every octet leaves and arrives through these two, so the
+ * same engine runs over a socket or over a scripted mock.
  *
- * @return send: number of bytes written (must equal @p len), or <0 on error.
- * @return recv: number of bytes read (>0), or <=0 on close / error / timeout.
+ * @return send: bytes written, which must equal @p len, or < 0 on error.
+ * @return recv: bytes read (> 0), or <= 0 on close, error or timeout.
  */
 typedef int (*SmtpSendFn)(void *ctx, const uint8_t *data, size_t len);
 typedef int (*SmtpRecvFn)(void *ctx, uint8_t *buf, size_t cap);
 
 /**
- * @brief Upgrade the live connection to TLS in place (RFC 3207), after the server's 220.
+ * @brief Upgrade the live channel to TLS in place, after the server's 220 to STARTTLS
+ * (RFC 3207 sec 4).
  *
- * Called once, mid-dialogue. On success every later send/recv on the same ctx must be
- * encrypted - the engine keeps using the same two function pointers, so the switch belongs to
- * the transport, not to the caller.
- * @return true if the handshake completed.
+ * Called once, mid-session. Every later send and recv on the same @p ctx carries TLS records, so
+ * the switch belongs to the transport and the engine keeps the one pair of function pointers.
+ * @return true when the handshake completed.
  */
 typedef proto_bool (*SmtpStartTlsFn)(void *ctx);
 
-/** @brief Server address + credentials for one send. Addresses are bare (no angle brackets). */
+/** @brief RFC 5321 sec 3.1: the server a session is opened with, and how it is secured. */
 typedef struct
 {
-    const char *host;      ///< server hostname (also the TLS SNI name)
-    uint16_t port;         ///< 25 (plain) / 587 (STARTTLS) / 465 (implicit TLS)
-    SmtpSecurity security; ///< how to secure the connection
-    const char *user;      ///< AUTH LOGIN username (null or empty => skip AUTH)
-    const char *pass;      ///< AUTH LOGIN password
-    const char *from;      ///< envelope sender + From: header address
-    const char *helo;      ///< EHLO domain to announce (null => "esp32")
-} SmtpConfig;
-
-/** @brief One plain-text message. */
-typedef struct
-{
-    const char *to;      ///< single recipient address (envelope + To: header)
-    const char *subject; ///< Subject: header (null => empty)
-    const char *body;    ///< plain-text UTF-8 body; LF or CRLF line ends, dot-stuffed for you
-} SmtpMessage;
+    const char *host;        ///< the server it dials; also the TLS SNI name
+    uint16_t port;           ///< 25, submission 587 (RFC 6409 sec 3.1), submissions 465 (RFC 8314 sec 3.3)
+    SmtpSecurity security;   ///< how the channel is secured
+    const char *client_name; ///< the Domain the EHLO argument carries (RFC 5321 sec 4.1.1.1)
+} SmtpSessionArgs;
 
 /**
- * @brief Drive the full SMTP exchange over @p send / @p recv. Pure - no lwIP or TLS -
- * so it is host-testable with a scripted transport.
+ * @brief RFC 4954 sec 4: the identity the AUTH exchange presents.
  *
- * With SMTP_STARTTLS the engine issues STARTTLS after the first EHLO, calls
- * @p starttls to upgrade the transport, and reissues EHLO (RFC 3207 sec 4.2 requires discarding
- * the capabilities learned in the clear). If the server does not advertise STARTTLS it returns
- * SMTP_ERR_NO_STARTTLS **before** AUTH rather than continuing in the clear - a
- * stripped STARTTLS must not silently downgrade into sending credentials in plaintext.
- * @return SMTP_OK on a delivered message, else an ::SmtpResult error.
+ * The mechanism is AUTH LOGIN: the username then the password, each base64 (RFC 4648 sec 4) on its
+ * own line, each answering a 334 challenge. LOGIN is not defined by any RFC; the IANA SASL
+ * Mechanisms registry carries it with usage OBSOLETE, referencing draft-murchison-sasl-login-00.
+ * RFC 4954 sec 4 defines the AUTH verb and the 334 / 235 replies the exchange uses.
  */
-SmtpResult smtp_run(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn send, SmtpRecvFn recv,
-                    SmtpStartTlsFn starttls, void *ctx);
+typedef struct
+{
+    const char *user; ///< the authentication identity; null or empty skips AUTH entirely
+    const char *pass; ///< its password
+} SmtpAuthArgs;
+
+/** @brief RFC 5321 sec 3.3: the two paths one mail transaction names. Bare mailboxes, no brackets. */
+typedef struct
+{
+    const char *reverse_path; ///< the sender mailbox MAIL carries (RFC 5321 sec 4.1.1.2)
+    const char *forward_path; ///< the recipient mailbox RCPT carries (RFC 5321 sec 4.1.1.3)
+} SmtpEnvelopeArgs;
+
+/** @brief RFC 5322: the message DATA carries. Nothing the envelope reads. */
+typedef struct
+{
+    const char *subject; ///< the Subject: field body (RFC 5322 sec 3.6.5); null writes an empty one
+    const char *body;    ///< the body (RFC 5322 sec 2.1); LF or CRLF ends, dot-stuffed on the way out
+} SmtpContentArgs;
+
+/** @brief The seam the octets move through, and the transport state handed back to it. */
+typedef struct
+{
+    SmtpSendFn send;         ///< writes octets to the server
+    SmtpRecvFn recv;         ///< reads octets from the server
+    SmtpStartTlsFn starttls; ///< upgrades the channel in place (RFC 3207 sec 4); null when it cannot
+    void *ctx;               ///< the transport's own handle, passed back to all three
+} SmtpTransportArgs;
+
+/** @brief The session's own state and the calls that reach it, described only in smtp.c. */
+struct SmtpInternal;
 
 /**
- * @brief Blocking one-shot send over the real transport (protocore_client, plus TLS when
- * `cfg->tls`). Opens the connection, runs smtp_run(), and closes.
- * @return SMTP_OK or an ::SmtpResult error. On non-Arduino (host) builds there is no
- *         lwIP, so this returns SMTP_ERR_CONNECT; use smtp_run() directly in tests.
+ * @brief The SMTP client.
+ *
+ * A caller sets the members a call takes, invokes it through ::Smtp, and reads the outcome off the
+ * same handle. There is no slot member: the module drives one session at a time, so no call has a
+ * row to name.
+ *
+ * @var SmtpNs::session   the server a session is opened with (RFC 5321 sec 3.1)
+ * @var SmtpNs::auth      the identity the AUTH exchange presents (RFC 4954 sec 4)
+ * @var SmtpNs::envelope  the reverse-path and forward-path of the transaction (RFC 5321 sec 3.3)
+ * @var SmtpNs::content   the RFC 5322 message DATA carries
+ * @var SmtpNs::transport the seam the octets move through
+ * @var SmtpNs::ok        a call's true/false outcome: the message was accepted
+ * @var SmtpNs::result    the same outcome as a distinct ::SmtpResult code
+ * @var SmtpNs::code      the reply code of the last reply read (RFC 5321 sec 4.2)
+ * @var SmtpNs::run       walk the whole session over @ref transport
+ * @var SmtpNs::send      open the outbound client transport, walk the session, close
+ * @var SmtpNs::internal  the session's state and the calls that reach it
  */
-SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg);
+typedef struct
+{
+    SmtpSessionArgs session;     ///< the server a session is opened with
+    SmtpAuthArgs auth;           ///< the identity AUTH presents
+    SmtpEnvelopeArgs envelope;   ///< the two paths of one mail transaction
+    SmtpContentArgs content;     ///< the message DATA carries
+    SmtpTransportArgs transport; ///< the seam the octets move through
+
+    proto_bool ok;
+    SmtpResult result;
+    int16_t code;
+
+    void (*run)(struct SmtpInternal *ctx);
+    void (*send)(struct SmtpInternal *ctx);
+
+    struct SmtpInternal *internal;
+} SmtpNs;
+
+/** @brief The one symbol this module exports. */
+extern SmtpNs Smtp;
 
 #endif // PROTOCORE_ENABLE_SMTP
 

@@ -3,12 +3,12 @@
 
 /**
  * @file oidc.c
- * @brief OIDC ID-token (RS256) verification - implementation.
+ * @brief OpenID Connect ID Token validation, RS256 - implementation.
  *
- * The shared base64url decoder (base64 module), small bounded JSON field scanners
- * (no full parser, no heap), and the RS256 signature check delegated to
- * protocore_rsa_verify() (real RSA modexp; mbedTLS on ESP32). Claims are read only
- * after the signature verifies.
+ * The shared base64url decoder (Base64.url_decode, RFC 7515 sec 2 encoding), bounded JSON member
+ * scanners over the decoded JOSE Header and JWS Payload, and the RSASSA-PKCS1-v1_5 SHA-256 check
+ * (RFC 7518 sec 3.3) delegated to protocore_rsa_verify(). Claims are read only after the signature
+ * verifies, which is the order OIDC Core sec 3.1.3.7 puts steps 6 and 9 in.
  */
 
 #include "services/security/oidc/oidc.h"
@@ -19,19 +19,35 @@
 
 #include "crypto/asymmetric/rsa.h"
 #include "mmgr/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
+#include "mmgr/protostr.h"  // str.len / eq: the bounded walks, in place of <string.h>
 #include "mmgr/secure.h"    // the signature digest's working set, wiped on release
 #include "network_drivers/presentation/codec/base64/base64.h" // shared Base64.url_decode
 
-#include <stdio.h>
+// The three parts of a JWS Compact Serialization (RFC 7515 sec 7.1).
+#define OIDC_SEG_HEADER 0u    ///< BASE64URL(UTF8(JWS Protected Header))
+#define OIDC_SEG_PAYLOAD 1u   ///< BASE64URL(JWS Payload)
+#define OIDC_SEG_SIGNATURE 2u ///< BASE64URL(JWS Signature)
 
-// base64url decoding is shared with JWT in the base64 module (Base64.url_decode).
+/**
+ * @brief The verifier's calls - what OidcNs points at.
+ *
+ * No storage member: every buffer a validation uses is either the caller's handle, a bounded local,
+ * or a borrow from the per-dispatch arena returned before the call ends, so the module keeps
+ * nothing between calls.
+ *
+ * @var OidcInternal::ns  the handle a caller sets a call's members on
+ */
+struct OidcInternal
+{
+    OidcNs *ns;
+};
+
+static struct OidcInternal s_oidc = {.ns = &Oidc};
 
 // Bounded substring search of [hs, he) for the NUL-terminated needle.
 static const char *mem_find(const char *hs, const char *he, const char *needle)
 {
-    size_t nl = strnlen(needle, (size_t)(he - hs) + 1);
-    // Both callers pass a quoted member name ("\"alg\"", "\"keys\"", ...), never the empty
-    // string, and strnlen's limit is always >= 1, so nl >= 1 here.
+    size_t nl = str.len(needle, (size_t)(he - hs) + 1u);
     if (nl == 0 || (size_t)(he - hs) < nl)
     {
         return NULL;
@@ -46,9 +62,9 @@ static const char *mem_find(const char *hs, const char *he, const char *needle)
     return NULL;
 }
 
-// Locate the JSON member @p name within [s, e). On success sets *vstart/*vlen to
-// the value extent and *type to 's' (string, between the quotes), 'n' (number,
-// including a leading '-'), or 'a' (array, including the brackets).
+// Locate the JSON member @p name within [s, e). On success sets *vstart/*vlen to the value extent
+// and *type to 's' (string, between the quotes), 'n' (number, including a leading '-'), or 'a'
+// (array, including the brackets).
 static proto_bool find_field(const char *s, const char *e, const char *name, const char **vstart, size_t *vlen,
                              char *type)
 {
@@ -58,12 +74,10 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
     *type = '\0';
     char needle[96];
     protocore_sb sb_needle = {needle, sizeof(needle), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_needle, "\"");
-    protocore_sb_put(&sb_needle, name);
-    protocore_sb_put(&sb_needle, "\"");
-    int nn = (int)protocore_sb_finish(&sb_needle);
-    // Every internal caller passes a short fixed field name (alg/iss/aud/exp/nbf/sub/email/n/e/kid), so the
-    // 96-byte needle never overflows, and snprintf of one %s into memory cannot report an error.
+    Sb.put(&sb_needle, "\"");
+    Sb.put(&sb_needle, name);
+    Sb.put(&sb_needle, "\"");
+    int nn = (int)Sb.finish(&sb_needle);
     if (nn <= 0 || nn >= (int)sizeof(needle))
     {
         return PROTO_FALSE;
@@ -138,8 +152,8 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
     return PROTO_FALSE;
 }
 
-// Copy a string member into @p out (minimal unescape: drop the backslash). False
-// if absent / not a string / does not fit.
+// Copy a string member into @p out, taking the char after a backslash literally. False if absent,
+// not a string, or too long for @p cap.
 static proto_bool get_str(const char *s, const char *e, const char *name, char *out, size_t cap)
 {
     const char *v = NULL;
@@ -149,17 +163,12 @@ static proto_bool get_str(const char *s, const char *e, const char *name, char *
     {
         return PROTO_FALSE;
     }
-    // A while loop so a JSON "\x" escape can consume its second char without
-    // mutating a for-loop counter: take the char after the backslash literally.
+    // A while loop, so an escape consumes its second char without mutating a for-loop counter.
     size_t o = 0;
     size_t i = 0;
     while (i < vl)
     {
         char ch = v[i];
-        // i + 1 < vl always holds when ch is a backslash: find_field walks this same value with
-        // the same pairwise escape skip and only stops at an UNescaped '"', so a backslash it
-        // examined always had a following byte inside the value. A value can therefore never end
-        // on a backslash that this loop reaches as a fresh iteration - the bound is defensive.
         if (ch == '\\' && i + 1 < vl)
         {
             ch = v[++i];
@@ -175,22 +184,20 @@ static proto_bool get_str(const char *s, const char *e, const char *name, char *
     return PROTO_TRUE;
 }
 
-// Read a numeric member as 64-bit (epoch seconds exceed 32-bit). False if absent
-// / not a number.
+// Read a numeric member as 64-bit: epoch seconds (RFC 7519 sec 2, NumericDate) exceed 32-bit. False
+// if absent, not a number, or past the signed 64-bit range.
 static proto_bool get_int64(const char *s, const char *e, const char *name, int64_t *out)
 {
     const char *v = NULL;
     size_t vl = 0;
     char t = '\0';
-    // vl == 0 is unreachable for a type-'n' value: find_field only reports 'n' after consuming a
-    // leading '-' or at least one digit, so the extent it hands back is always >= 1 byte.
     if (!find_field(s, e, name, &v, &vl, &t) || t != 'n' || vl == 0)
     {
         return PROTO_FALSE;
     }
     proto_bool neg = (*v == '-');
     size_t i = neg ? 1 : 0;
-    // Accumulate unsigned, refuse a digit run that leaves the 64-bit signed range, apply the sign after.
+    // Accumulate unsigned, refuse a digit run past the signed range, apply the sign after.
     uint64_t val = 0U;
     for (; i < vl; i++)
     {
@@ -208,7 +215,8 @@ static proto_bool get_int64(const char *s, const char *e, const char *name, int6
     return PROTO_TRUE;
 }
 
-// True if the `aud` member equals @p want (string form) or contains it (array).
+// OIDC Core sec 3.1.3.7 step 3: true when the `aud` Claim equals @p want or, in the array form RFC
+// 7519 sec 4.1.3 allows, contains it.
 static proto_bool aud_contains(const char *s, const char *e, const char *want)
 {
     const char *v = NULL;
@@ -218,7 +226,7 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
     {
         return PROTO_FALSE;
     }
-    size_t wl = strnlen(want, vl + 1);
+    size_t wl = str.len(want, vl + 1u);
     if (t == 's')
     {
         return vl == wl && mem.cmp(v, want, wl) == 0;
@@ -227,13 +235,10 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
     {
         const char *p = v;        // points at '['
         const char *end = v + vl; // just past ']'
-        // The loop always leaves via break or return, never via this condition: find_field sizes
-        // vl to include the closing ']', so a quote found inside can be at most end - 2 and the
-        // p = r + 1 step below therefore always lands strictly before end.
         while (p < end)
         {
-            const char *q = (const char *)memchr(p, '"', (size_t)(end - p));
-            const char *r = q ? (const char *)memchr(q + 1, '"', (size_t)(end - (q + 1))) : NULL;
+            const char *q = (const char *)mem.chr(p, (size_t)(end - p), '"');
+            const char *r = q ? (const char *)mem.chr(q + 1, (size_t)(end - (q + 1)), '"') : NULL;
             if (!q || !r)
             {
                 break;
@@ -249,38 +254,38 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
     return PROTO_FALSE;
 }
 
-// Split a compact JWT into its three segments. Returns false unless there are
+// Split a JWS Compact Serialization (RFC 7515 sec 7.1) into its three parts. False unless there are
 // exactly two '.' separators and three non-empty parts.
-static proto_bool split3(const char *tok, size_t len, const char **seg, size_t *seglen)
+static proto_bool split_compact(const char *tok, size_t len, const char **seg, size_t *seglen)
 {
-    const char *d1 = (const char *)memchr(tok, '.', len);
+    const char *d1 = (const char *)mem.chr(tok, len, '.');
     if (!d1)
     {
         return PROTO_FALSE;
     }
     size_t rem = len - (size_t)(d1 + 1 - tok);
-    const char *d2 = (const char *)memchr(d1 + 1, '.', rem);
+    const char *d2 = (const char *)mem.chr(d1 + 1, rem, '.');
     if (!d2)
     {
         return PROTO_FALSE;
     }
     size_t rem2 = len - (size_t)(d2 + 1 - tok);
-    if (memchr(d2 + 1, '.', rem2))
+    if (mem.chr(d2 + 1, rem2, '.'))
     {
         return PROTO_FALSE;
     }
-    seg[0] = tok;
-    seglen[0] = (size_t)(d1 - tok);
-    seg[1] = d1 + 1;
-    seglen[1] = (size_t)(d2 - d1 - 1);
-    seg[2] = d2 + 1;
-    seglen[2] = rem2;
-    return seglen[0] && seglen[1] && seglen[2];
+    seg[OIDC_SEG_HEADER] = tok;
+    seglen[OIDC_SEG_HEADER] = (size_t)(d1 - tok);
+    seg[OIDC_SEG_PAYLOAD] = d1 + 1;
+    seglen[OIDC_SEG_PAYLOAD] = (size_t)(d2 - d1 - 1);
+    seg[OIDC_SEG_SIGNATURE] = d2 + 1;
+    seglen[OIDC_SEG_SIGNATURE] = rem2;
+    return seglen[OIDC_SEG_HEADER] && seglen[OIDC_SEG_PAYLOAD] && seglen[OIDC_SEG_SIGNATURE];
 }
 
-// Right-align @p len decoded bytes into a fixed @p width big-endian field,
-// tolerating a single leading zero byte (some encoders pad n) and leading-zero
-// omission. Returns false if the value does not fit.
+// Right-align @p len decoded bytes into a fixed @p width big-endian field. A Base64urlUInt (RFC 7518
+// sec 2) omits leading zero octets and some encoders emit one, so both a short value and a single
+// leading zero fit. False if the value does not.
 static proto_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size_t width)
 {
     if (len > width)
@@ -300,6 +305,8 @@ static proto_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size
     return PROTO_TRUE;
 }
 
+// The `n` and `e` parameters of one RSA JWK (RFC 7518 sec 6.3.1.1 / 6.3.1.2), base64url-decoded and
+// right-aligned into the key.
 static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key *key)
 {
     char b64[400];
@@ -308,7 +315,7 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
         return PROTO_FALSE;
     }
     uint8_t tmp[PROTOCORE_OIDC_RSA_BYTES + 8];
-    size_t nlen = Base64.url_decode(b64, strnlen(b64, sizeof(b64)), tmp, sizeof(tmp));
+    size_t nlen = Base64.url_decode(b64, str.len(b64, sizeof(b64)), tmp, sizeof(tmp));
     if (nlen == 0 || !right_align(tmp, nlen, key->n, PROTOCORE_OIDC_RSA_BYTES))
     {
         return PROTO_FALSE;
@@ -319,7 +326,7 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
         return PROTO_FALSE;
     }
     uint8_t e_tmp[8];
-    size_t elen = Base64.url_decode(b64, strnlen(b64, sizeof(b64)), e_tmp, sizeof(e_tmp));
+    size_t elen = Base64.url_decode(b64, str.len(b64, sizeof(b64)), e_tmp, sizeof(e_tmp));
     if (elen == 0 || !right_align(e_tmp, elen, key->e, 4))
     {
         return PROTO_FALSE;
@@ -328,54 +335,74 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
     return PROTO_TRUE;
 }
 
-proto_bool protocore_oidc_token_kid(const char *token, size_t token_len, char *kid_out, size_t kid_cap)
+// Empty every Claim, so a failed validation never leaves the previous token's subject readable.
+static void claims_clear(protocore_oidc_claims *claims)
 {
-    if (!token || !kid_out || kid_cap == 0)
+    claims->sub[0] = '\0';
+    claims->email[0] = '\0';
+    claims->iat = 0;
+    claims->exp = 0;
+}
+
+// The `kid` Header Parameter (RFC 7515 sec 4.1.4) out of the JOSE Header: split the Compact
+// Serialization, decode the header part, scan it for the member.
+static void token_kid(struct OidcInternal *restrict ctx)
+{
+    ctx->ns->text[0] = '\0';
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->token)
     {
-        return PROTO_FALSE;
+        return;
     }
     const char *seg[3];
     size_t seglen[3];
-    if (!split3(token, token_len, seg, seglen))
+    if (!split_compact(ctx->ns->token, ctx->ns->token_len, seg, seglen))
     {
-        return PROTO_FALSE;
+        return;
     }
-    uint8_t hdr[512];
-    size_t hn = Base64.url_decode(seg[0], seglen[0], hdr, sizeof(hdr) - 1);
+    uint8_t hdr[PROTOCORE_OIDC_HDR_LEN];
+    size_t hn = Base64.url_decode(seg[OIDC_SEG_HEADER], seglen[OIDC_SEG_HEADER], hdr, sizeof(hdr) - 1);
     if (hn == 0)
     {
-        return PROTO_FALSE;
+        return;
     }
     hdr[hn] = '\0';
-    return get_str((const char *)hdr, (const char *)hdr + hn, "kid", kid_out, kid_cap);
+    ctx->ns->ok = get_str((const char *)hdr, (const char *)hdr + hn, "kid", ctx->ns->text, sizeof(ctx->ns->text));
 }
 
-proto_bool protocore_oidc_jwks_find(const char *jwks_json, const char *kid, protocore_oidc_key *key)
+// The RSA JWK the `kid` names, out of the JWK Set (RFC 7517 sec 5.1). Each member of the "keys"
+// array is taken between its braces; an empty `kid` takes the first JWK whose `n` and `e` parse.
+static void jwks_find(struct OidcInternal *restrict ctx)
 {
     size_t scratch = protocore_plaintext_mark();
-    if (!jwks_json || !key)
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->key.rsa.loaded = PROTO_FALSE;
+    if (!ctx->ns->key.jwks)
     {
         protocore_plaintext_release(scratch);
-        return PROTO_FALSE;
+        return;
     }
-    const char *all_end = jwks_json + strnlen(jwks_json, PROTOCORE_OIDC_JWKS_MAX);
-    const char *p = mem_find(jwks_json, all_end, "\"keys\"");
-    p = p ? (const char *)memchr(p, '[', (size_t)(all_end - p)) : NULL;
+    const char *want_kid = ctx->ns->key.kid;
+    size_t want_len = want_kid ? str.len(want_kid, PROTOCORE_OIDC_KID_LEN) : 0u;
+    const char *jwks = ctx->ns->key.jwks;
+    const char *all_end = jwks + str.len(jwks, PROTOCORE_OIDC_JWKS_MAX);
+    const char *p = mem_find(jwks, all_end, "\"keys\"");
+    p = p ? (const char *)mem.chr(p, (size_t)(all_end - p), '[') : NULL;
     if (!p)
     {
         protocore_plaintext_release(scratch);
-        return PROTO_FALSE;
+        return;
     }
     p++;
 
     while (p < all_end)
     {
-        const char *obj = (const char *)memchr(p, '{', (size_t)(all_end - p));
+        const char *obj = (const char *)mem.chr(p, (size_t)(all_end - p), '{');
         if (!obj)
         {
             break;
         }
-        const char *end = (const char *)memchr(obj, '}', (size_t)(all_end - obj));
+        const char *end = (const char *)mem.chr(obj, (size_t)(all_end - obj), '}');
         if (!end)
         {
             break;
@@ -385,50 +412,59 @@ proto_bool protocore_oidc_jwks_find(const char *jwks_json, const char *kid, prot
         proto_bool want;
         char this_kid[PROTOCORE_OIDC_KID_LEN];
         proto_bool has_kid = get_str(obj, end, "kid", this_kid, sizeof(this_kid));
-        if (kid && *kid)
+        if (want_kid && *want_kid)
         {
-            want = has_kid && strcmp(this_kid, kid) == 0;
+            // The compare reads the wanted `kid` and its terminator, which is why one that fills the
+            // capture buffer matches nothing.
+            want = has_kid && want_len < PROTOCORE_OIDC_KID_LEN &&
+                   str.eq(this_kid, want_kid, want_len + 1u, PROTO_FALSE);
         }
         else
         {
-            want = PROTO_TRUE; // no kid requested -> first usable RSA key
+            want = PROTO_TRUE; // no `kid` requested -> first usable RSA JWK
         }
 
-        if (want && parse_rsa_jwk(obj, end, key))
+        if (want && parse_rsa_jwk(obj, end, &ctx->ns->key.rsa))
         {
+            ctx->ns->ok = PROTO_TRUE;
             protocore_plaintext_release(scratch);
-            return PROTO_TRUE;
+            return;
         }
-        if (want && kid && *kid)
+        if (want && want_kid && *want_kid)
         {
             protocore_plaintext_release(scratch);
-            return PROTO_FALSE; // kid matched but the key was unusable
+            return; // the `kid` matched but the JWK is unusable
         }
         p = end;
     }
-    return PROTO_FALSE;
+    protocore_plaintext_release(scratch);
 }
 
-protocore_oidc_result protocore_oidc_verify_with_key(const char *token, size_t token_len, const protocore_oidc_key *key,
-                                                     const char *expected_iss, const char *expected_aud,
-                                                     uint32_t now_unix, protocore_oidc_claims *claims)
+// OIDC Core sec 3.1.3.7 against the key already in ns->key.rsa: steps 6 and 7 (signature and `alg`),
+// then 2, 3 and 9 (`iss`, `aud`, `exp`), then the Claims.
+static void verify_with_key(struct OidcInternal *restrict ctx)
 {
-    if (!token || !key || !key->loaded || token_len == 0 || token_len > PROTOCORE_OIDC_MAX_LEN)
+    claims_clear(&ctx->ns->claims);
+    const char *token = ctx->ns->token;
+    size_t token_len = ctx->ns->token_len;
+    const protocore_oidc_key *key = &ctx->ns->key.rsa;
+    if (!token || !key->loaded || token_len == 0 || token_len > PROTOCORE_OIDC_MAX_LEN)
     {
-        return PROTOCORE_OIDC_ERR_FORMAT;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        return;
     }
 
     const char *seg[3];
     size_t seglen[3];
-    if (!split3(token, token_len, seg, seglen))
+    if (!split_compact(token, token_len, seg, seglen))
     {
-        return PROTOCORE_OIDC_ERR_FORMAT;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        return;
     }
 
     // Borrow the large decode buffers from the per-dispatch scratch arena rather than the worker
-    // stack. The mark below is released on every return path, so a verify gives back what it took
-    // whatever it decides. The four are live together, so PROTOCORE_PLAINTEXT_WORK_OIDC is their sum and
-    // the arena is sized to hold it.
+    // stack. The mark below is released on every return path. The four are live together, so
+    // PROTOCORE_PLAINTEXT_WORK_OIDC is their sum and the arena is sized to hold it.
     static_assert(PROTOCORE_PLAINTEXT_WORK_OIDC <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "OIDC scratch exceeds the arena");
     size_t scope = protocore_plaintext_mark();
     uint8_t *hdr = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_OIDC_HDR_LEN, 1);
@@ -438,122 +474,146 @@ protocore_oidc_result protocore_oidc_verify_with_key(const char *token, size_t t
     if (!hdr || !sig || !pl || !iss)
     {
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
+        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
+        return;
     }
 
-    // Header: require alg == RS256 (rejects alg:none / HS256 confusion).
-    size_t hn = Base64.url_decode(seg[0], seglen[0], hdr, PROTOCORE_OIDC_HDR_LEN - 1);
+    // JOSE Header: require `alg` == RS256 (RFC 7515 sec 4.1.1), which rejects alg:none and the
+    // MAC-based algorithms of OIDC Core sec 3.1.3.7 step 8.
+    size_t hn = Base64.url_decode(seg[OIDC_SEG_HEADER], seglen[OIDC_SEG_HEADER], hdr, PROTOCORE_OIDC_HDR_LEN - 1);
     if (hn == 0)
     {
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_FORMAT;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        return;
     }
     hdr[hn] = '\0';
     char alg[16];
-    if (!get_str((const char *)hdr, (const char *)hdr + hn, "alg", alg, sizeof(alg)) || strcmp(alg, "RS256") != 0)
+    if (!get_str((const char *)hdr, (const char *)hdr + hn, "alg", alg, sizeof(alg)) ||
+        !str.eq(alg, "RS256", sizeof("RS256"), PROTO_FALSE))
     {
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_ALG;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_ALG;
+        return;
     }
 
-    // Signature: RSA-2048 -> exactly 256 bytes.
-    if (Base64.url_decode(seg[2], seglen[2], sig, PROTOCORE_OIDC_RSA_BYTES) != PROTOCORE_OIDC_RSA_BYTES)
+    // JWS Signature: RSA-2048 -> exactly 256 bytes (RFC 7518 sec 3.3).
+    if (Base64.url_decode(seg[OIDC_SEG_SIGNATURE], seglen[OIDC_SEG_SIGNATURE], sig, PROTOCORE_OIDC_RSA_BYTES) !=
+        PROTOCORE_OIDC_RSA_BYTES)
     {
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_FORMAT;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        return;
     }
 
-    // Verify over the signing input "header.payload" (protocore_rsa_verify hashes it). RS256 = SHA-256.
-    // One borrow for that digest, returned either way before the claims are read.
-    size_t signing_len = (size_t)(seg[1] + seglen[1] - token);
+    // Step 6: check the signature over the JWS Signing Input, the header and payload parts with
+    // their '.' (RFC 7515 sec 2). protocore_rsa_verify() hashes it; RS256 is SHA-256. One borrow for
+    // that digest, returned either way before the Claims are read.
+    size_t signing_input_len = (size_t)(seg[OIDC_SEG_PAYLOAD] + seglen[OIDC_SEG_PAYLOAD] - token);
     size_t vmark = protocore_secure_mark();
     protocore_span vws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-    if (!protocore_span_ok(vws))
+    if (!span.ok(vws))
     {
         protocore_secure_release(vmark);
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
+        ctx->ns->result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
+        return;
     }
-    int vrc = protocore_rsa_verify(key->n, key->e, vws.buf, (const uint8_t *)token, signing_len, sig,
+    int vrc = protocore_rsa_verify(key->n, key->e, vws.buf, (const uint8_t *)token, signing_input_len, sig,
                                    PROTOCORE_OIDC_RSA_BYTES, PROTOCORE_RSA_HASH_SHA256);
     protocore_secure_release(vmark);
     if (vrc != 0)
     {
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_SIGNATURE;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_SIGNATURE;
+        return;
     }
 
-    // Claims (trusted only now that the signature is valid).
-    size_t pn = Base64.url_decode(seg[1], seglen[1], pl, PROTOCORE_OIDC_MAX_LEN - 1);
+    // JWS Payload: the Claims, trusted only now that the signature verifies.
+    size_t pn = Base64.url_decode(seg[OIDC_SEG_PAYLOAD], seglen[OIDC_SEG_PAYLOAD], pl, PROTOCORE_OIDC_MAX_LEN - 1);
     if (pn == 0)
     {
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_FORMAT;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        return;
     }
     pl[pn] = '\0';
     const char *ps = (const char *)pl;
     const char *pe = ps + pn;
 
-    if (expected_iss && *expected_iss)
+    // Step 2: `iss` must equal the Issuer Identifier exactly (RFC 7519 sec 4.1.1). The compare reads
+    // one byte past the expected string's characters, which is its terminator.
+    const char *want_iss = ctx->ns->expect.iss;
+    if (want_iss && *want_iss)
     {
-        if (!get_str(ps, pe, "iss", iss, PROTOCORE_OIDC_ISS_LEN) || strcmp(iss, expected_iss) != 0)
+        size_t want_len = str.len(want_iss, PROTOCORE_OIDC_ISS_LEN);
+        if (want_len >= PROTOCORE_OIDC_ISS_LEN || !get_str(ps, pe, "iss", iss, PROTOCORE_OIDC_ISS_LEN) ||
+            !str.eq(iss, want_iss, want_len + 1u, PROTO_FALSE))
         {
             protocore_plaintext_release(scope);
-            return PROTOCORE_OIDC_ERR_ISS;
+            ctx->ns->result = PROTOCORE_OIDC_ERR_ISS;
+            return;
         }
     }
-    if (expected_aud && *expected_aud)
+    // Step 3: `aud` must contain the client_id.
+    const char *want_aud = ctx->ns->expect.aud;
+    if (want_aud && *want_aud)
     {
-        if (!aud_contains(ps, pe, expected_aud))
+        if (!aud_contains(ps, pe, want_aud))
         {
             protocore_plaintext_release(scope);
-            return PROTOCORE_OIDC_ERR_AUD;
+            ctx->ns->result = PROTOCORE_OIDC_ERR_AUD;
+            return;
         }
     }
 
+    // Step 9: now must be before `exp` (RFC 7519 sec 4.1.4), and at or after `nbf` when the token
+    // carries one (RFC 7519 sec 4.1.5).
+    int64_t now = (int64_t)ctx->ns->expect.now_unix;
     int64_t exp = 0;
-    if (!get_int64(ps, pe, "exp", &exp) || (int64_t)now_unix >= exp)
+    if (!get_int64(ps, pe, "exp", &exp) || now >= exp)
     {
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_EXPIRED;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_EXPIRED;
+        return;
     }
     int64_t nbf = 0;
-    if (get_int64(ps, pe, "nbf", &nbf) && (int64_t)now_unix < nbf)
+    if (get_int64(ps, pe, "nbf", &nbf) && now < nbf)
     {
         protocore_plaintext_release(scope);
-        return PROTOCORE_OIDC_ERR_NOT_YET;
+        ctx->ns->result = PROTOCORE_OIDC_ERR_NOT_YET;
+        return;
     }
 
-    if (claims)
-    {
-        claims->sub[0] = '\0';
-        claims->email[0] = '\0';
-        claims->exp = exp;
-        claims->iat = 0;
-        get_str(ps, pe, "sub", claims->sub, sizeof(claims->sub));
-        get_str(ps, pe, "email", claims->email, sizeof(claims->email));
-        get_int64(ps, pe, "iat", &claims->iat);
-    }
+    ctx->ns->claims.exp = exp;
+    get_str(ps, pe, "sub", ctx->ns->claims.sub, sizeof(ctx->ns->claims.sub));
+    get_str(ps, pe, "email", ctx->ns->claims.email, sizeof(ctx->ns->claims.email));
+    get_int64(ps, pe, "iat", &ctx->ns->claims.iat);
     protocore_plaintext_release(scope);
-    return PROTOCORE_OIDC_OK;
+    ctx->ns->result = PROTOCORE_OIDC_OK;
 }
 
-protocore_oidc_result protocore_oidc_verify(const char *token, size_t token_len, const char *jwks_json,
-                                            const char *expected_iss, const char *expected_aud, uint32_t now_unix,
-                                            protocore_oidc_claims *claims)
+// The whole of OIDC Core sec 3.1.3.7: resolve the signing key from the JWK Set by the token's `kid`,
+// then validate against it. A token with no `kid` takes the first usable RSA JWK.
+static void verify(struct OidcInternal *restrict ctx)
 {
-    char kid[PROTOCORE_OIDC_KID_LEN];
-    if (!protocore_oidc_token_kid(token, token_len, kid, sizeof(kid)))
+    claims_clear(&ctx->ns->claims);
+    token_kid(ctx);
+    ctx->ns->key.kid = ctx->ns->text[0] ? ctx->ns->text : NULL;
+    jwks_find(ctx);
+    if (!ctx->ns->ok)
     {
-        kid[0] = '\0'; // no kid -> let jwks_find pick the sole key
+        ctx->ns->result = PROTOCORE_OIDC_ERR_KEY;
+        return;
     }
-    protocore_oidc_key key;
-    key.loaded = PROTO_FALSE;
-    if (!protocore_oidc_jwks_find(jwks_json, kid[0] ? kid : NULL, &key))
-    {
-        return PROTOCORE_OIDC_ERR_KEY;
-    }
-    return protocore_oidc_verify_with_key(token, token_len, &key, expected_iss, expected_aud, now_unix, claims);
+    verify_with_key(ctx);
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+OidcNs Oidc = {.token_kid = token_kid,
+               .jwks_find = jwks_find,
+               .verify_with_key = verify_with_key,
+               .verify = verify,
+               .internal = &s_oidc};
 
 #endif // PROTOCORE_ENABLE_OIDC

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the RTC codec (services/peripherals/rtc): the pure BCD-register <-> Unix
+// On-device CCOUNT microbenchmark for the RTC codec (server/peripherals/rtc): the pure BCD-register <-> Unix
 // epoch conversions protocore_rtc_regs_to_epoch() / protocore_rtc_epoch_to_regs() (24h/12h encodings, leap
 // years). The I2C register read/write (protocore_rtc_begin/read_epoch/set_epoch) is real-hardware and out
 // of scope here; only the deterministic conversion math is benched.
@@ -9,7 +9,7 @@
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/rtc -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/peripherals/rtc/rtc.h"
+#include "server/peripherals/rtc/rtc.h"
 
 #include <stdbool.h>
 #include <stddef.h>

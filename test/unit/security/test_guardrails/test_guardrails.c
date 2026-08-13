@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the guardrails core (services/security/guardrails): the threshold
+// Unit tests for the guardrails core (server/core/guardrails): the threshold
 // evaluator and the JSON serializer. Sampling the live counters is ESP32-only.
 
-#include "services/security/guardrails/guardrails.h"
+#include "server/core/guardrails/guardrails.h"
 #include <unity.h>
 
 void setUp()

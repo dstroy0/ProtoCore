@@ -3,45 +3,70 @@
 
 /**
  * @file dns_wire.c
- * @brief The DNS name codec. See dns_wire.h.
+ * @brief The DNS name codec (RFC 1035 sec 3.1, sec 4.1.4). See dns_wire.h.
  */
 
 #include "network_drivers/network/dns/dns_wire.h"
 
-#include "mmgr/rawmemcpy.h" // proto_raw_read: the label bytes move whole
+#include "mmgr/rawmemcpy.h" // raw.read: the label octets move whole
 
 PROTOCORE_BEGIN_DECLS
 
-// A label length byte carries its type in the top two bits: 00 is a length, 11 is a pointer, and
-// 01 / 10 are undefined.
+// RFC 1035 sec 4.1.4: the high order two bits of a length octet. 00 is a label, 11 is a pointer,
+// 10 and 01 are reserved.
 #define PROTOCORE_DNS_LABEL_TYPE 0xC0u
 #define PROTOCORE_DNS_LABEL_PTR 0xC0u
-#define PROTOCORE_DNS_PTR_OFF 0x3Fu
 
-proto_bool protocore_dns_name_decode(const uint8_t *pkt, size_t len, size_t off, char *out, size_t out_cap, size_t *next,
-                              proto_bool allow_ptr)
+// RFC 1035 sec 4.1.4: the low six bits of a pointer's first octet, the high half of its OFFSET.
+#define PROTOCORE_DNS_OFFSET_MASK 0x3Fu
+
+/**
+ * @brief The calls that read the handle - what DnsWireNs points at.
+ *
+ * No storage member: every octet a call touches belongs to the caller.
+ *
+ * @var DnsWireInternal::ns  the handle a caller sets a call's members on
+ */
+struct DnsWireInternal
 {
+    DnsWireNs *ns;
+};
+
+static struct DnsWireInternal s_dns_wire = {.ns = &DnsWire};
+
+// Walks the labels at msg.off, writing each one into msg.out with a dot between, and follows a
+// pointer's OFFSET when msg.allow_ptr is set.
+static void dns_name_decode(struct DnsWireInternal *restrict ctx)
+{
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->next = 0;
+
+    const uint8_t *pkt = ctx->ns->msg.pkt;
+    const size_t len = ctx->ns->msg.len;
+    char *out = ctx->ns->msg.out;
+    const size_t out_cap = ctx->ns->msg.out_cap;
     if (pkt == NULL || out == NULL || out_cap == 0)
     {
-        return PROTO_FALSE;
+        return;
     }
-    size_t n = 0;     // dotted bytes written
-    size_t cur = off; // where the next length byte sits
-    size_t after = 0; // offset just past the name as it sits at off
-    size_t hops = 0;  // pointers followed
+
+    size_t n = 0;                  // dotted octets written
+    size_t cur = ctx->ns->msg.off; // where the next length octet sits
+    size_t after = 0;              // offset just past the name as it sits at msg.off
+    size_t hops = 0;               // pointers followed
     proto_bool jumped = PROTO_FALSE;
     for (;;)
     {
         if (cur >= len)
         {
-            return PROTO_FALSE;
+            return;
         }
         uint8_t b = pkt[cur];
         if ((b & PROTOCORE_DNS_LABEL_TYPE) == PROTOCORE_DNS_LABEL_PTR)
         {
-            if (!allow_ptr || cur + 1 >= len || hops >= PROTOCORE_DNS_PTR_HOPS)
+            if (!ctx->ns->msg.allow_ptr || cur + 1 >= len || hops >= PROTOCORE_DNS_PTR_HOPS)
             {
-                return PROTO_FALSE;
+                return;
             }
             // The first pointer is where this name ends; the rest are inside what it pointed at.
             if (!jumped)
@@ -50,58 +75,64 @@ proto_bool protocore_dns_name_decode(const uint8_t *pkt, size_t len, size_t off,
                 jumped = PROTO_TRUE;
             }
             hops++;
-            cur = (size_t)(((uint16_t)(b & PROTOCORE_DNS_PTR_OFF) << 8) | pkt[cur + 1]);
+            // OFFSET: the pointer's low six bits over the whole second octet.
+            cur = (size_t)(((uint16_t)(b & PROTOCORE_DNS_OFFSET_MASK) << 8) | pkt[cur + 1]);
             continue;
         }
         if ((b & PROTOCORE_DNS_LABEL_TYPE) != 0)
         {
-            return PROTO_FALSE; // 01 / 10: no such label type
+            return; // 10 and 01 are reserved (RFC 1035 sec 4.1.4)
         }
         cur++;
         if (b == 0)
         {
             if (!jumped)
             {
-                after = cur;
+                after = cur; // the null label of the root ends the name
             }
             break;
         }
         if (b > PROTOCORE_DNS_LABEL_MAX || cur + b > len)
         {
-            return PROTO_FALSE;
+            return;
         }
         if (n != 0)
         {
             if (n + 1 >= out_cap)
             {
-                return PROTO_FALSE;
+                return;
             }
             out[n] = '.';
             n++;
         }
         if (n + b >= out_cap)
         {
-            return PROTO_FALSE;
+            return;
         }
-        proto_raw_read(out + n, pkt + cur, b);
+        raw.read(out + n, pkt + cur, b);
         n += b;
         cur += b;
     }
     out[n] = '\0';
-    if (next != NULL)
-    {
-        *next = after;
-    }
-    return PROTO_TRUE;
+    ctx->ns->next = after;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_dns_name_encode(uint8_t *out, size_t cap, const char *dotted)
+// Splits text.dotted at each dot and writes every run as a length octet followed by its octets,
+// then the null label of the root.
+static void dns_name_encode(struct DnsWireInternal *restrict ctx)
 {
+    ctx->ns->n = 0;
+
+    uint8_t *out = ctx->ns->text.out;
+    const size_t cap = ctx->ns->text.out_cap;
+    const char *dotted = ctx->ns->text.dotted;
     if (out == NULL || dotted == NULL)
     {
-        return 0;
+        return;
     }
-    size_t n = 0; // bytes written
+
+    size_t w = 0; // octets written
     size_t i = 0; // read cursor
     for (;;)
     {
@@ -117,40 +148,45 @@ size_t protocore_dns_name_encode(uint8_t *out, size_t cap, const char *dotted)
             {
                 break; // end of the name, with or without the trailing root dot
             }
-            return 0; // an empty label inside a name encodes to nothing readable
+            return; // an empty label inside a name encodes to nothing readable
         }
         if (label > PROTOCORE_DNS_LABEL_MAX)
         {
-            return 0;
+            return;
         }
-        if (n + 1 + label >= cap) // the root byte still has to fit after this label
+        if (w + 1 + label >= cap) // the root octet still has to fit after this label
         {
-            return 0;
+            return;
         }
-        out[n] = (uint8_t)label;
-        n++;
-        proto_raw_read(out + n, dotted + start, label);
-        n += label;
+        out[w] = (uint8_t)label;
+        w++;
+        raw.read(out + w, dotted + start, label);
+        w += label;
         if (dotted[i] == '\0')
         {
             break;
         }
         i++; // step over the dot
     }
-    if (n >= cap)
+    if (w >= cap)
     {
-        return 0;
+        return;
     }
-    out[n] = 0; // root
-    n++;
-    return n;
+    out[w] = 0; // the null label of the root
+    w++;
+    ctx->ns->n = w;
 }
 
-proto_bool protocore_dns_name_eq(const char *a, const char *b)
+// Folds each A-Z to lower case and compares octet by octet, ends included.
+static void dns_name_eq(struct DnsWireInternal *restrict ctx)
 {
+    ctx->ns->ok = PROTO_FALSE;
+
+    const char *a = ctx->ns->cmp.a;
+    const char *b = ctx->ns->cmp.b;
     if (a == NULL || b == NULL)
     {
-        return PROTO_FALSE;
+        return;
     }
     size_t i = 0;
     while (a[i] != '\0' && b[i] != '\0')
@@ -167,11 +203,14 @@ proto_bool protocore_dns_name_eq(const char *a, const char *b)
         }
         if (ca != cb)
         {
-            return PROTO_FALSE;
+            return;
         }
         i++;
     }
-    return a[i] == b[i];
+    ctx->ns->ok = (a[i] == b[i]) ? PROTO_TRUE : PROTO_FALSE;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+DnsWireNs DnsWire = {.decode = dns_name_decode, .encode = dns_name_encode, .eq = dns_name_eq, .internal = &s_dns_wire};
 
 PROTOCORE_END_DECLS

@@ -14,7 +14,7 @@
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport.h"
-#include "server/system/proto_handler.h"
+#include "server/core/proto_handler.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
 #if PROTOCORE_ENABLE_SSH_ZLIB

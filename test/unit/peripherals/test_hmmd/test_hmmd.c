@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the Waveshare HMMD mmWave radar codec (services/peripherals/hmmd): decoding a report frame
+// Host tests for the Waveshare HMMD mmWave radar codec (server/peripherals/hmmd): decoding a report frame
 // (detection flag, distance, all 16 gate energies), rejecting malformed frames, the byte-by-byte
 // stream reassembler (resync past noise, split feeds, absurd-length drop), the exact bytes of the
 // command encoders, and ACK decoding. Pure - the UART pump is ESP32-only.
 
-#include "services/peripherals/hmmd/hmmd.h"
+#include "server/peripherals/hmmd/hmmd.h"
 #include <stdint.h>
 #include <string.h>
 

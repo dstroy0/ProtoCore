@@ -9,7 +9,7 @@
  * Protocols.add() for each one behind the matching feature flag.
  */
 
-#include "server/system/proto_handler.h"
+#include "server/core/proto_handler.h"
 
 #include "network_drivers/presentation/presentation.h" // HttpConn: the HTTP handler this installs
 #if PROTOCORE_ENABLE_TELNET

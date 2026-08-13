@@ -9,7 +9,7 @@
  * The pure codec (protocore_ntrip_caster.h) parses requests and builds responses / the source table; this file owns
  * the connection state: it reads each rover's request off its socket, replies (stream-accept, source
  * table, error, or 401), and then fans RTCM correction bytes out to every rover subscribed to a mountpoint.
- * Layered exactly like services/net/relay - the app opens the listener, adds one or more mountpoints, then
+ * Layered exactly like server/net/relay - the app opens the listener, adds one or more mountpoints, then
  * pushes RTCM as its survey/receiver produces it:
  *
  * @code

@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the one-GPIO presence facade (services/peripherals/rcwl0516): the debounce that swallows
+// Host tests for the one-GPIO presence facade (server/peripherals/rcwl0516): the debounce that swallows
 // comparator chatter, the hold that bridges the RCWL-0516's retrigger gaps into one continuous
 // presence span, the consume-once edge event, wrap-safety across a millis() rollover, and the
 // degenerate zero-debounce / zero-hold configurations, on a synthetic clock. The binding is
 // covered too: it samples the host pin table, which the test drives with protocore_gpio_host_set().
 
-#include "services/peripherals/rcwl0516/rcwl0516.h"
+#include "server/peripherals/rcwl0516/rcwl0516.h"
 #include <unity.h>
 
 static const uint32_t DEB = 50;

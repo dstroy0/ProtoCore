@@ -14,11 +14,11 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/rng/rng.h"  // protocore_rand_fill
 #include "mmgr/arena.h"      // protocore_worker_set_self (own scratch slot)
-#include "mmgr/bytes.h"      // protocore_bw_* / protocore_rd_str() - the byte verbs this file frames with
+#include "mmgr/bytes.h"      // bytes.* writers / bytes.rd_str() - the byte verbs this file frames with
 #include "mmgr/plaintext.h"  // protocore_plaintext_alloc for the large hybrid C_INIT
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
-#include "mmgr/rawmemcpy.h" // proto_raw_put_u32 - one unaligned store, not four
+#include "mmgr/rawmemcpy.h" // raw.put_u32 - one unaligned store, not four
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
@@ -133,10 +133,10 @@ static void cli_wipe(void);
 static proto_bool send_service_request(void)
 {
     uint8_t out[1 + 4 + 12];
-    protocore_span w = protocore_span_from(out, sizeof(out));
-    protocore_bw_put(&w, SSH_MSG_SERVICE_REQUEST);
+    protocore_span w = span.from(out, sizeof(out));
+    bytes.put(&w, SSH_MSG_SERVICE_REQUEST);
     protocore_ssh_wr_cstr(&w, "ssh-userauth");
-    return protocore_span_ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -433,11 +433,11 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         {
             return PROTO_FALSE;
         }
-        protocore_span w = protocore_span_from(out, plen);
-        protocore_bw_put(&w, SSH_MSG_KEXDH_INIT);
-        protocore_bw_put_be(&w, (uint32_t)clen, 4);
-        protocore_bw_bytes(&w, hs->cpub, clen);
-        proto_bool ok = protocore_span_ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+        protocore_span w = span.from(out, plen);
+        bytes.put(&w, SSH_MSG_KEXDH_INIT);
+        bytes.put_be(&w, (uint32_t)clen, 4);
+        bytes.raw(&w, hs->cpub, clen);
+        proto_bool ok = span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -461,11 +461,11 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         {
             return PROTO_FALSE;
         }
-        protocore_span w = protocore_span_from(out, plen);
-        protocore_bw_put(&w, SSH_MSG_KEXDH_INIT);
-        protocore_bw_put_be(&w, (uint32_t)clen, 4);
-        protocore_bw_bytes(&w, hs->cpub, clen);
-        proto_bool ok = protocore_span_ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+        protocore_span w = span.from(out, plen);
+        bytes.put(&w, SSH_MSG_KEXDH_INIT);
+        bytes.put_be(&w, (uint32_t)clen, 4);
+        bytes.raw(&w, hs->cpub, clen);
+        proto_bool ok = span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -478,8 +478,8 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     hs->cpub_len = (uint16_t)s_store.qc_len;
 
     uint8_t out[1 + 4 + 260];
-    protocore_span w = protocore_span_from(out, sizeof(out));
-    protocore_bw_put(&w, SSH_MSG_KEXDH_INIT);
+    protocore_span w = span.from(out, sizeof(out));
+    bytes.put(&w, SSH_MSG_KEXDH_INIT);
     if (s_store.kex == SSH_KEX_DH_GROUP14)
     {
         // mpint(e): minimal, with a sign byte if the top bit is set.
@@ -490,18 +490,18 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         }
         size_t mag = s_store.qc_len - i;
         proto_bool pad = (mag > 0 && (s_store.qc[i] & 0x80) != 0);
-        protocore_bw_put_be(&w, (uint32_t)(mag + (pad ? 1 : 0)), 4);
+        bytes.put_be(&w, (uint32_t)(mag + (pad ? 1 : 0)), 4);
         if (pad)
         {
-            protocore_bw_put(&w, 0);
+            bytes.put(&w, 0);
         }
-        protocore_bw_bytes(&w, s_store.qc + i, mag);
+        bytes.raw(&w, s_store.qc + i, mag);
     }
     else
     {
         protocore_ssh_wr_str(&w, s_store.qc, s_store.qc_len);
     }
-    return protocore_span_ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -573,13 +573,13 @@ SshClientNs SshClient = {.send = cli_send,
 static proto_bool send_tcpip_forward(void)
 {
     uint8_t out[128];
-    protocore_span w = protocore_span_from(out, sizeof(out));
-    protocore_bw_put(&w, SSH_MSG_GLOBAL_REQUEST);
+    protocore_span w = span.from(out, sizeof(out));
+    bytes.put(&w, SSH_MSG_GLOBAL_REQUEST);
     protocore_ssh_wr_cstr(&w, "tcpip-forward");
-    protocore_bw_put(&w, 1); // want reply
+    bytes.put(&w, 1); // want reply
     protocore_ssh_wr_cstr(&w, s_store.cfg.bind_addr ? s_store.cfg.bind_addr : "");
-    protocore_bw_put_be(&w, s_store.cfg.bind_port, 4);
-    return protocore_span_ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+    bytes.put_be(&w, s_store.cfg.bind_port, 4);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
 }
 // ---------------------------------------------------------------------------
 // RFC 4252 sec 7 - the outbound role's publickey request
@@ -598,10 +598,10 @@ static proto_bool send_userauth_publickey(void)
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
     uint8_t pkblob[4 + 11 + 4 + 32];
-    protocore_span pw = protocore_span_from(pkblob, sizeof(pkblob));
+    protocore_span pw = span.from(pkblob, sizeof(pkblob));
     protocore_ssh_wr_cstr(&pw, NAME_ED25519);
     protocore_ssh_wr_str(&pw, pub, 32);
-    if (!protocore_span_ok(pw))
+    if (!span.ok(pw))
     {
         return PROTO_FALSE;
     }
@@ -616,10 +616,10 @@ static proto_bool send_userauth_publickey(void)
         return PROTO_FALSE; // no completed exchange: the signature would bind to no session
     }
     uint8_t signed_data[256 + SSH_KEXHASH_MAX_LEN];
-    protocore_span sd = protocore_span_from(signed_data, sizeof(signed_data));
+    protocore_span sd = span.from(signed_data, sizeof(signed_data));
     protocore_ssh_auth_write_publickey_request(&sd, sid, sid_len, user, "ssh-connection", NAME_ED25519, pkblob,
                                                pw.pos);
-    if (!protocore_span_ok(sd))
+    if (!span.ok(sd))
     {
         return PROTO_FALSE;
     }
@@ -629,20 +629,20 @@ static proto_bool send_userauth_publickey(void)
 
     // Signature blob: string("ssh-ed25519") || string(sig64).
     uint8_t sigblob[4 + 11 + 4 + 64];
-    protocore_span sg = protocore_span_from(sigblob, sizeof(sigblob));
+    protocore_span sg = span.from(sigblob, sizeof(sigblob));
     protocore_ssh_wr_cstr(&sg, NAME_ED25519);
     protocore_ssh_wr_str(&sg, sig, 64);
-    if (!protocore_span_ok(sg))
+    if (!span.ok(sg))
     {
         return PROTO_FALSE;
     }
 
     // The full USERAUTH_REQUEST is the signed prefix (minus the session_id) plus the signature.
     uint8_t out[300];
-    protocore_span w = protocore_span_from(out, sizeof(out));
+    protocore_span w = span.from(out, sizeof(out));
     protocore_ssh_auth_write_publickey_request(&w, NULL, 0, user, "ssh-connection", NAME_ED25519, pkblob, pw.pos);
     protocore_ssh_wr_str(&w, sigblob, sg.pos);
-    return protocore_span_ok(w) && SshClient.send(out, w.pos);
+    return span.ok(w) && SshClient.send(out, w.pos);
 }
 
 

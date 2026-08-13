@@ -32,13 +32,13 @@ static void pcap_global(struct PcapInternal *restrict ctx)
     {
         return;
     }
-    protocore_wr32le(out + 0, 0xa1b2c3d4);            // magic: usec timestamps, little-endian
-    protocore_wr16le(out + 4, 2);                     // version major
-    protocore_wr16le(out + 6, 4);                     // version minor
-    protocore_wr32le(out + 8, 0);                     // thiszone (GMT)
-    protocore_wr32le(out + 12, 0);                    // sigfigs
-    protocore_wr32le(out + 16, 65535);                // snaplen
-    protocore_wr32le(out + 20, ctx->ns->args.linktype); // network / DLT
+    endian.wr32le(out + 0, 0xa1b2c3d4);              // magic: usec timestamps, little-endian
+    endian.wr16le(out + 4, 2);                       // version major
+    endian.wr16le(out + 6, 4);                       // version minor
+    endian.wr32le(out + 8, 0);                       // thiszone (GMT)
+    endian.wr32le(out + 12, 0);                      // sigfigs
+    endian.wr32le(out + 16, 65535);                  // snaplen
+    endian.wr32le(out + 20, ctx->ns->args.linktype); // network / DLT
     ctx->ns->n = PROTOCORE_PCAP_GLOBAL_HDR_LEN;
 }
 
@@ -51,10 +51,10 @@ static void pcap_record(struct PcapInternal *restrict ctx)
     {
         return;
     }
-    protocore_wr32le(out + 0, ctx->ns->rec.ts_sec);
-    protocore_wr32le(out + 4, ctx->ns->rec.ts_usec);
-    protocore_wr32le(out + 8, ctx->ns->rec.caplen);
-    protocore_wr32le(out + 12, ctx->ns->rec.origlen);
+    endian.wr32le(out + 0, ctx->ns->rec.ts_sec);
+    endian.wr32le(out + 4, ctx->ns->rec.ts_usec);
+    endian.wr32le(out + 8, ctx->ns->rec.caplen);
+    endian.wr32le(out + 12, ctx->ns->rec.origlen);
     ctx->ns->n = PROTOCORE_PCAP_REC_HDR_LEN;
 }
 

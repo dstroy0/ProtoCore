@@ -774,6 +774,8 @@ PROTOCORE_INLINE void protocore_platform_gpio_mode(uint8_t pin, uint8_t mode)
 #define PROTOCORE_NET_ERR_CLSD ERR_CLSD
 #define PROTOCORE_NET_ERR_RST ERR_RST
 #define PROTOCORE_NET_ERR_ABRT ERR_ABRT
+// The resolver reports this while the query is on the wire: not a failure, and not an answer.
+#define PROTOCORE_NET_ERR_INPROGRESS ERR_INPROGRESS
 #define PROTOCORE_NET_ADDR_ANY IP_ANY_TYPE
 #define PROTOCORE_NET_TYPE_ANY IPADDR_TYPE_ANY
 #define PROTOCORE_NET_TYPE_V4 IPADDR_TYPE_V4
@@ -832,6 +834,12 @@ typedef ip_addr_t protocore_net_ip;
 #define protocore_net_ip4_is_multicast ip4_addr_ismulticast
 #define PROTOCORE_NET_HAS_IGMP LWIP_IGMP
 #define PROTOCORE_NET_HAS_IPV6 LWIP_IPV6
+// RFC 1034 sec 5.3.1: the resolver is asked for a name and answers now, or later through the
+// callback. PROTOCORE_NET_OK means the stack already held it and @p addr is filled; _INPROGRESS
+// means the query left and @p found fires when it lands.
+#include "lwip/dns.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#define protocore_net_dns_resolve(host, addr, found, arg) dns_gethostbyname((host), (addr), (found), (arg))
+
 #define protocore_net_igmp_join igmp_joingroup
 #define protocore_net_igmp_leave igmp_leavegroup
 

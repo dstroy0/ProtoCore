@@ -15,7 +15,7 @@
 
 static void put(protocore_span *w, uint8_t b)
 {
-    protocore_bw_put(w, b);
+    bytes.put(w, b);
 }
 
 // Write a CBOR head: the major type (top 3 bits) plus the argument, choosing the
@@ -31,22 +31,22 @@ static void head(protocore_span *w, uint8_t major, uint64_t val)
     else if (val < 0x100ULL)
     {
         put(w, (uint8_t)(m | 24));
-        protocore_bw_put_be(w, val, 1);
+        bytes.put_be(w, val, 1);
     }
     else if (val < 0x10000ULL)
     {
         put(w, (uint8_t)(m | 25));
-        protocore_bw_put_be(w, val, 2);
+        bytes.put_be(w, val, 2);
     }
     else if (val < 0x100000000ULL)
     {
         put(w, (uint8_t)(m | 26));
-        protocore_bw_put_be(w, val, 4);
+        bytes.put_be(w, val, 4);
     }
     else
     {
         put(w, (uint8_t)(m | 27));
-        protocore_bw_put_be(w, val, 8);
+        bytes.put_be(w, val, 8);
     }
 }
 
@@ -105,7 +105,7 @@ static void protocore_cbor_float(protocore_span *w, float f)
     uint32_t bits;
     mem.cpy(&bits, &f, sizeof(bits));
     put(w, 0xfa); // major 7, single-precision
-    protocore_bw_put_be(w, bits, 4);
+    bytes.put_be(w, bits, 4);
 }
 
 static void protocore_cbor_array(protocore_span *w, size_t count)
@@ -167,7 +167,7 @@ static proto_bool read_head(protocore_cspan *r, uint8_t *major, uint64_t *val)
     }
     // The argument is the `need` big-endian bytes after this head byte, so step over the head first.
     r->pos += 1;
-    return protocore_br_take_be(r, need, val);
+    return bytes.take_be(r, need, val);
 }
 
 static protocore_codec_type protocore_cbor_peek(protocore_cspan *r)
@@ -301,7 +301,7 @@ static proto_bool protocore_cbor_read_float(protocore_cspan *r, float *out)
     {
         uint64_t v;
         r->pos += 1; // step over the head byte; the argument follows it
-        if (!protocore_br_take_be(r, 4, &v))
+        if (!bytes.take_be(r, 4, &v))
         {
             return PROTO_FALSE;
         }
@@ -313,7 +313,7 @@ static proto_bool protocore_cbor_read_float(protocore_cspan *r, float *out)
     {
         uint64_t bits;
         r->pos += 1; // step over the head byte; the argument follows it
-        if (!protocore_br_take_be(r, 8, &bits))
+        if (!bytes.take_be(r, 8, &bits))
         {
             return PROTO_FALSE;
         }

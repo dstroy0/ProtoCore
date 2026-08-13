@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the provisioning form-field parser (services/system/provisioning_service):
+// On-device CCOUNT microbenchmark for the provisioning form-field parser (server/core/provisioning_service):
 // protocore_prov_form_field() locates a whole field name in an x-www-form-urlencoded body (matching only at
 // the start or just after '&'), then copies its value while URL-decoding '+' -> space and '%XX' hex
 // escapes into a caller buffer - pure, no heap, no I/O. This is the ONE non-trivial, always-compiled
@@ -18,7 +18,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/provisioning_service/provisioning_service.h"
+#include "server/core/provisioning_service/provisioning_service.h"
 
 #include <stdbool.h>
 #include <stddef.h>

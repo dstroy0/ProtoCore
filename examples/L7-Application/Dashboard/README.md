@@ -71,7 +71,7 @@ with added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/web/dashboard/dashboard.h"
+#include "server/web/dashboard/dashboard.h"
 #include <math.h>
 
 

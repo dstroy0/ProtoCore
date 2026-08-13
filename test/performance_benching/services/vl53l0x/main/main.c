@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the VL53L0X codec (services/peripherals/vl53l0x): the range-register
+// On-device CCOUNT microbenchmark for the VL53L0X codec (server/peripherals/vl53l0x): the range-register
 // decode (hi/lo -> mm), the data-ready check, and the range-status decode/validity. Pure register
 // math - the I2C transfer is real-hardware and out of scope.
 //
 // Build/flash:  idf.py -C test/performance_benching/vl53l0x -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/peripherals/vl53l0x/vl53l0x.h"
+#include "server/peripherals/vl53l0x/vl53l0x.h"
 
 #include <stdbool.h>
 #include <stddef.h>

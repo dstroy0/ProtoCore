@@ -21,7 +21,7 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/ghash.h"
-#include "mmgr/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
+#include "mmgr/rawmemcpy.h" // raw.u32 - the aliasing-permitted word load
 #include "mmgr/secure.h"
 
 #if !PROTOCORE_HAS_HW_AESGCM
@@ -70,7 +70,7 @@ static inline void xor16(uint8_t *dst, const uint8_t *src)
     // machine's own load and store at any alignment, and the fixup sequence only where the die needs it.
     for (int i = 0; i < 16; i += 4)
     {
-        proto_raw_put_u32(dst + i, proto_raw_u32(dst + i) ^ proto_raw_u32(src + i));
+        raw.put_u32(dst + i, raw.u32(dst + i) ^ raw.u32(src + i));
     }
 }
 
@@ -185,7 +185,7 @@ protocore_cspan protocore_aesgcm_seal(struct protocore_aesgcm_key *k, const uint
     inc32(w->ctr);
     gctr(w, pt, pt_len, ct_out);
     gcm_tag(w, aad, aad_len, ct_out, pt_len, tag_out);
-    return protocore_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
+    return span.cfrom(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
 proto_bool protocore_aesgcm_open(struct protocore_aesgcm_key *k, const uint8_t nonce[PROTOCORE_AESGCM_IV_LEN],

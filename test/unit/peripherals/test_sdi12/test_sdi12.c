@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the SDI-12 codec (services/peripherals/sdi12): the command builders, the measurement
+// Unit tests for the SDI-12 codec (server/peripherals/sdi12): the command builders, the measurement
 // response parser (atttn), the data-value splitter, and the SDI-12 CRC (compute / encode /
 // verify round-trip). Pure host tests.
 
-#include "services/peripherals/sdi12/sdi12.h"
+#include "server/peripherals/sdi12/sdi12.h"
 #include <string.h>
 
 #include <unity.h>

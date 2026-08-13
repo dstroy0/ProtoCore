@@ -13,7 +13,7 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "protocore.h"
-#include "server/filesystem/mnt.h" // the storage seam: protocore_mnt_active()
+#include "server/storage/mnt.h" // the storage seam: protocore_mnt_active()
 #include "shared/mime/mime.h"
 #include <stdio.h>
 

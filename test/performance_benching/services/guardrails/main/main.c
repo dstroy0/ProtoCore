@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the heap/stack guardrails core (services/security/guardrails): the two
+// On-device CCOUNT microbenchmark for the heap/stack guardrails core (server/core/guardrails): the two
 // pure, host-tested primitives - protocore_guardrail_eval() (compares a protocore_health snapshot against the
 // heap/frag/stack floors and returns a PROTOCORE_BREACH_* bitmask) and protocore_health_json() (serializes a
 // snapshot to JSON). Both are deterministic, no hardware involved, so every call here exercises the
@@ -18,7 +18,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/security/guardrails/guardrails.h"
+#include "server/core/guardrails/guardrails.h"
 
 #include <stdbool.h>
 #include <stddef.h>

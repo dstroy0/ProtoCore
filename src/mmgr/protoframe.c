@@ -44,10 +44,10 @@ size_t protocore_frame_build(char *out, size_t cap, const protocore_field *spec,
         if (f->kind == PROTOCORE_FK_LIT)
         {
 #if PROTOCORE_FRAME_SCAN_LITERALS
-            protocore_sb_put(&b, f->lit);
+            Sb.put(&b, f->lit);
 #else
             // the spec carries the length; scanning for the NUL would rediscover it every call
-            protocore_sb_put_n(&b, f->lit, f->len);
+            Sb.put_n(&b, f->lit, f->len);
 #endif
             continue;
         }
@@ -63,40 +63,40 @@ size_t protocore_frame_build(char *out, size_t cap, const protocore_field *spec,
         switch (f->kind)
         {
         case PROTOCORE_FK_STR:
-            protocore_sb_put(&b, str_or_empty(a->as.s));
+            Sb.put(&b, str_or_empty(a->as.s));
             break;
         case PROTOCORE_FK_U32:
-            protocore_sb_u32(&b, a->as.u32);
+            Sb.u32(&b, a->as.u32);
             break;
         case PROTOCORE_FK_U64:
-            protocore_sb_u64(&b, a->as.u64);
+            Sb.u64(&b, a->as.u64);
             break;
         case PROTOCORE_FK_I64:
-            protocore_sb_i64(&b, a->as.i64);
+            Sb.i64(&b, a->as.i64);
             break;
         case PROTOCORE_FK_DEC:
-            protocore_sb_u32w(&b, a->as.u32, f->width);
+            Sb.u32w(&b, a->as.u32, f->width);
             break;
         case PROTOCORE_FK_HEX:
-            protocore_sb_hex(&b, a->as.u64, f->width ? f->width : 1);
+            Sb.hex(&b, a->as.u64, f->width ? f->width : 1);
             break;
         case PROTOCORE_FK_OCT:
-            protocore_sb_uint(&b, a->as.u64, 8, f->width ? f->width : 1);
+            Sb.uint(&b, a->as.u64, 8, f->width ? f->width : 1);
             break;
         case PROTOCORE_FK_G:
-            protocore_sb_g(&b, a->as.d, f->width ? f->width : 6);
+            Sb.g(&b, a->as.d, f->width ? f->width : 6);
             break;
         case PROTOCORE_FK_FIX:
-            protocore_sb_fixed(&b, a->as.d, f->width);
+            Sb.fixed(&b, a->as.d, f->width);
             break;
         case PROTOCORE_FK_CH:
-            protocore_sb_ch(&b, a->as.c);
+            Sb.ch(&b, a->as.c);
             break;
         case PROTOCORE_FK_JSON:
-            protocore_sb_json(&b, str_or_empty(a->as.s));
+            Sb.json(&b, str_or_empty(a->as.s));
             break;
         case PROTOCORE_FK_XML:
-            protocore_sb_xml(&b, str_or_empty(a->as.s));
+            Sb.xml(&b, str_or_empty(a->as.s));
             break;
         default:
             // An unknown opcode means the spec and this engine disagree; refuse rather than
@@ -110,7 +110,7 @@ size_t protocore_frame_build(char *out, size_t cap, const protocore_field *spec,
         out[0] = '\0'; // more values than the spec declares fields
         return 0;
     }
-    size_t n = protocore_sb_finish(&b);
+    size_t n = Sb.finish(&b);
     if (n == 0)
     {
         // Did not fit (or was empty). Leave a valid, empty C string either way: callers that

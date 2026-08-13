@@ -23,7 +23,7 @@
 #include "network_drivers/application/scp/scp.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
-#include "server/filesystem/filesystem.h"
+#include "server/storage/filesystem.h"
 
 typedef enum PROTO_ENUM_PACKED
 {

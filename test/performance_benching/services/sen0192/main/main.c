@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SEN0192 motion core (services/peripherals/sen0192): the pure
+// On-device CCOUNT microbenchmark for the SEN0192 motion core (server/peripherals/sen0192): the pure
 // hold/debounce state machine protocore_sen0192_motion_update() that turns a raw PIR/microwave OUT level
 // into a debounced presence verdict + events. The GPIO read is real-hardware and out of scope.
 //
 // Build/flash:  idf.py -C test/performance_benching/sen0192 -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/peripherals/sen0192/sen0192.h"
+#include "server/peripherals/sen0192/sen0192.h"
 
 #include <stdbool.h>
 #include <stddef.h>

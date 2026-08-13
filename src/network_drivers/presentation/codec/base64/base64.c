@@ -126,14 +126,14 @@ static_assert(PROTOCORE_SWAR_BYTES == 4, "base64 SWAR decodes one four-character
 // Decode 4 packed characters (c0 in the low byte) to 4 packed 6-bit values; *ok gets 0xFF in each valid lane.
 static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
 {
-    uint32_t mAZ = protocore_swar_spread(protocore_swar_ge(a, 'A') & protocore_swar_le(a, 'Z'));
-    uint32_t maz = protocore_swar_spread(protocore_swar_ge(a, 'a') & protocore_swar_le(a, 'z'));
-    uint32_t m09 = protocore_swar_spread(protocore_swar_ge(a, '0') & protocore_swar_le(a, '9'));
-    uint32_t mpl = protocore_swar_spread(protocore_swar_ge(a, '+') & protocore_swar_le(a, '+'));
-    uint32_t msl = protocore_swar_spread(protocore_swar_ge(a, '/') & protocore_swar_le(a, '/'));
-    uint32_t val = (mAZ & (protocore_swar_sub7(a, 'A') + 0u * PROTOCORE_SWAR_ONES)) |
-                   (maz & (protocore_swar_sub7(a, 'a') + 26u * PROTOCORE_SWAR_ONES)) |
-                   (m09 & (protocore_swar_sub7(a, '0') + 52u * PROTOCORE_SWAR_ONES)) | (mpl & (62u * PROTOCORE_SWAR_ONES)) |
+    uint32_t mAZ = swar.spread(swar.ge(a, 'A') & swar.le(a, 'Z'));
+    uint32_t maz = swar.spread(swar.ge(a, 'a') & swar.le(a, 'z'));
+    uint32_t m09 = swar.spread(swar.ge(a, '0') & swar.le(a, '9'));
+    uint32_t mpl = swar.spread(swar.ge(a, '+') & swar.le(a, '+'));
+    uint32_t msl = swar.spread(swar.ge(a, '/') & swar.le(a, '/'));
+    uint32_t val = (mAZ & (swar.sub7(a, 'A') + 0u * PROTOCORE_SWAR_ONES)) |
+                   (maz & (swar.sub7(a, 'a') + 26u * PROTOCORE_SWAR_ONES)) |
+                   (m09 & (swar.sub7(a, '0') + 52u * PROTOCORE_SWAR_ONES)) | (mpl & (62u * PROTOCORE_SWAR_ONES)) |
                    (msl & (63u * PROTOCORE_SWAR_ONES));
     *ok = mAZ | maz | m09 | mpl | msl;
     return val;

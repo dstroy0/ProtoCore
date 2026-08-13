@@ -3,7 +3,7 @@
 //
 // Host tests for services/dshot: the DShot ESC throttle frame codec (hand-computed vectors).
 
-#include "services/peripherals/dshot/dshot.h"
+#include "server/peripherals/dshot/dshot.h"
 #include <unity.h>
 
 void setUp(void)

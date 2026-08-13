@@ -3,5 +3,5 @@
   "src/network_drivers/presentation/ssh/transport/ssh_transport.h|protocore_ssh_kex_bench#1",
   "src/network_drivers/tls/tls.c|protocore_tls_hs_bench#1",
   "src/network_drivers/tls/tls.h|protocore_tls_hs_bench#1",
-  "src/services/security/auth_lockout/auth_lockout.c|s_lock#1"
+  "src/server/security/auth_lockout/auth_lockout.c|s_lock#1"
 ]

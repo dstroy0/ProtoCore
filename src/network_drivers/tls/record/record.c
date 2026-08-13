@@ -73,7 +73,7 @@ static void record_keys_derive(struct TlsRecordInternal *restrict ctx)
     const size_t mark = protocore_secure_mark();
     protocore_span k = protocore_secure_span(PROTOCORE_AES128GCM_KEY_LEN, 8);
     protocore_span ws = protocore_secure_span(PROTOCORE_HKDF_BORROW, _Alignof(uint32_t));
-    if (!protocore_span_ok(k) || !protocore_span_ok(ws))
+    if (!span.ok(k) || !span.ok(ws))
     {
         protocore_secure_release(mark);
         mem.zero(out->iv, sizeof(out->iv));

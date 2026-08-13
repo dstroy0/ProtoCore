@@ -3,12 +3,21 @@
 
 /**
  * @file radio_power.h
- * @brief WiFi radio power controls (PROTOCORE_ENABLE_RADIO_POWER).
+ * @brief Layer 1 (Physical) - 802.11 power management, transmit power control, and monitor
+ *        capture (PROTOCORE_ENABLE_RADIO_POWER).
  *
- * Applies the WiFi modem-sleep mode (PROTOCORE_RADIO_WIFI_PS) and an optional max-TX cap
- * (PROTOCORE_RADIO_MAX_TX_DBM) in one call - trade throughput/latency for lower average power on a battery
- * device. The mode names are pure/host-tested; the apply + readback use the L1 phy contract on ESP32
- * (no-ops on host).
+ * IEEE Std 802.11-2020 is the normative source for every call here; no IETF RFC governs radio
+ * power management. 11.2.3.2 (Non-AP STA power management modes) names the two modes a non-AP
+ * STA runs in, active mode and PS mode, and 6.3.2.2 (MLME-POWERMGT.request) is the primitive
+ * that selects one. A STA in PS mode dozes and wakes for the DTIM of 11.2.3.4 (TIM types),
+ * across at most the beacon count of 9.4.1.6 (Listen Interval field). 11.7 (TPC procedures)
+ * governs transmit power in dBm, bounded by 11.7.5 (Specification of regulatory and local
+ * maximum transmit power levels).
+ *
+ * PROTOCORE_RADIO_WIFI_PS picks the mode and PROTOCORE_RADIO_MAX_TX_DBM the cap; @ref RadioNs::power
+ * applies both in one call, trading throughput and latency for lower average draw. The mode
+ * names are pure and host-tested; the apply and the readback go through the L1 phy contract,
+ * which reports failure when the part carries no radio backend.
  *
  * The module exports one symbol, @ref Radio. Everything in radio_power.c has internal linkage, so no
  * name from this module reaches the library-wide symbol space and none of them can collide.
@@ -25,51 +34,86 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_ENABLE_RADIO_POWER
-/** @brief The module's storage. Declared, never defined here: the layout stays in radio_power.c. */
-typedef struct RadioCtx RadioCtx;
-#endif
+/** @brief The power management mode a call applies or renders (802.11-2020 11.2.3.2). */
+typedef struct
+{
+    protocore_phy_ps mode; ///< active mode or PS mode, in L1's own protocore_phy_ps terms
+} RadioPsArgs;
+
+/** @brief The transmit power a cap applies (802.11-2020 11.7.6). */
+typedef struct
+{
+    int8_t dbm; ///< maximum transmit power in whole dBm; 802.11-2020 11.7.5 bounds it
+} RadioTxArgs;
+
+/** @brief What a monitor capture tunes to, and where its frames go. */
+typedef struct
+{
+    uint8_t channel;                 ///< channel number in the radio's operating class (802.11-2020 Annex E)
+    protocore_phy_frame_fn on_frame; ///< each captured frame, FCS stripped (802.11-2020 9.2.4.8)
+} RadioMonitorArgs;
+
+/** @brief The radio's own state and the calls that reach it, described only in radio_power.c. */
+struct RadioInternal;
 
 /**
- * @brief The radio-power module.
+ * @brief The radio: its power management mode, its transmit power cap, and monitor capture.
  *
- * @var RadioNs::ctx          the module's storage, opaque to every caller.
- * @var RadioNs::power        apply PROTOCORE_RADIO_WIFI_PS (+ TX cap) to the radio. No-op on host.
- * @var RadioNs::ps_name      name for a modem-sleep mode ("none" / "min_modem" / "max_modem").
- * @var RadioNs::busy_hold    hold the radio awake for a bulk transfer (reference-counted).
- * @var RadioNs::busy_release release one bulk-transfer hold.
- * @var RadioNs::ps_set       set the modem-sleep mode on the radio.
- * @var RadioNs::ps_mode      the mode the radio reports, in L1's own protocore_phy_ps terms.
- * @var RadioNs::tx_power_set cap transmit power, in dBm.
- * @var RadioNs::monitor_begin  start promiscuous capture on a channel.
- * @var RadioNs::monitor_set_channel  retune while capturing.
- * @var RadioNs::monitor_end  stop capturing.
+ * A caller sets the members a call takes, invokes it through ::Radio, and reads the outcome off the
+ * same handle. The keep-awake count is behind @ref internal.
  *
- * The first @ref RadioNs::busy_hold forces modem sleep off so a long transfer is not interrupted by
- * DTIM wakeups; the matching release, once the count returns to zero, restores the configured
- * PROTOCORE_RADIO_WIFI_PS mode. Balance every hold with exactly one release. The relay/DNAT listener holds
- * one while any bridge is active; other bulk paths (large file serves, streaming PUT) can do the
- * same. Both are no-ops on host.
+ * @var RadioNs::ps       the power management mode a call applies or renders (802.11-2020 11.2.3.2)
+ * @var RadioNs::tx       the transmit power a cap applies (802.11-2020 11.7)
+ * @var RadioNs::monitor  what a capture tunes to, and where its frames go
+ * @var RadioNs::ok       a call's true/false outcome
+ * @var RadioNs::mode     the mode the radio reports, in L1's own protocore_phy_ps terms
+ * @var RadioNs::text     the name a render reports ("none" / "min_modem" / "max_modem")
+ * @var RadioNs::power        apply PROTOCORE_RADIO_WIFI_PS, and PROTOCORE_RADIO_MAX_TX_DBM when nonzero
+ * @var RadioNs::ps_name      render a power management mode as text
+ * @var RadioNs::busy_hold    hold the radio in active mode for a bulk transfer (reference-counted)
+ * @var RadioNs::busy_release release one bulk-transfer hold
+ * @var RadioNs::ps_set       select active mode or PS mode (802.11-2020 6.3.2.2)
+ * @var RadioNs::ps_mode      read the mode back into @ref RadioNs::mode
+ * @var RadioNs::tx_power_set cap transmit power at @ref RadioTxArgs::dbm (802.11-2020 11.7.6)
+ * @var RadioNs::monitor_begin        start capture on @ref RadioMonitorArgs::channel
+ * @var RadioNs::monitor_set_channel  retune capture to @ref RadioMonitorArgs::channel
+ * @var RadioNs::monitor_end          stop capture
+ * @var RadioNs::internal     the keep-awake count and the calls that reach it
+ *
+ * The first @ref RadioNs::busy_hold puts the radio in active mode so a long transfer crosses no
+ * doze interval; the matching release, once the count returns to zero, applies the configured
+ * PROTOCORE_RADIO_WIFI_PS mode again. Balance every hold with exactly one release. The relay/DNAT
+ * listener holds one while any bridge is active; other bulk paths (large file serves, streaming
+ * PUT) can do the same.
  */
 typedef struct RadioNs
 {
+    RadioPsArgs ps;           ///< the power management mode a call applies or renders (802.11-2020 11.2.3.2)
+    RadioTxArgs tx;           ///< the transmit power a cap applies (802.11-2020 11.7)
+    RadioMonitorArgs monitor; ///< what a capture tunes to, and where its frames go
+
+    proto_bool ok;
+    protocore_phy_ps mode;
+    const char *text;
+
 #if PROTOCORE_ENABLE_RADIO_POWER
-    RadioCtx *ctx;
-    void (*power)(void);
-    const char *(*ps_name)(protocore_phy_ps mode);
-    void (*busy_hold)(void);
-    void (*busy_release)(void);
+    void (*power)(struct RadioInternal *ctx);
+    void (*ps_name)(struct RadioInternal *ctx);
+    void (*busy_hold)(struct RadioInternal *ctx);
+    void (*busy_release)(struct RadioInternal *ctx);
 #endif
-    proto_bool (*ps_set)(protocore_phy_ps mode);
-    protocore_phy_ps (*ps_mode)(void);
-    proto_bool (*tx_power_set)(int8_t dbm);
-    proto_bool (*monitor_begin)(uint8_t channel, protocore_phy_frame_fn cb);
-    void (*monitor_set_channel)(uint8_t channel);
-    void (*monitor_end)(void);
+    void (*ps_set)(struct RadioInternal *ctx);
+    void (*ps_mode)(struct RadioInternal *ctx);
+    void (*tx_power_set)(struct RadioInternal *ctx);
+    void (*monitor_begin)(struct RadioInternal *ctx);
+    void (*monitor_set_channel)(struct RadioInternal *ctx);
+    void (*monitor_end)(struct RadioInternal *ctx);
+
+    struct RadioInternal *internal;
 } RadioNs;
 
 /** @brief The one symbol this module exports. */
-extern const RadioNs Radio;
+extern RadioNs Radio;
 
 PROTOCORE_END_DECLS
 

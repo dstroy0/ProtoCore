@@ -9,7 +9,7 @@
 
 #include "lfs_mock.h" // the littlefs-backed store this suite walks
 #include "protocore.h"
-#include "server/filesystem/filesystem.h" // protocore_fs_join()/protocore_fs_resolve(): a pure header shared with SFTP/SCP,
+#include "server/storage/filesystem.h" // protocore_fs_join()/protocore_fs_resolve(): a pure header shared with SFTP/SCP,
                                           // neither of which is linked into this env, so tested directly below
 #include <stdio.h>
 #include <string.h>

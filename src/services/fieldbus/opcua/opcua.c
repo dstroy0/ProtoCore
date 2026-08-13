@@ -20,7 +20,7 @@
 
 // ProtoHandler is named by protocore_opcua_protocore_handler() in BOTH build arms, so it cannot sit behind
 // the PROTOCORE_HAS_NET_STACK guard below.
-#include "server/system/proto_handler.h"
+#include "server/core/proto_handler.h"
 
 // ---------------------------------------------------------------------------
 // Built-in type codec

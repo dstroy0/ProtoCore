@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the Waveshare HMMD 24GHz mmWave micro-motion radar codec
-// (services/peripherals/hmmd): the LD2410-family little-endian framing. Everything benched here is the pure,
+// (server/peripherals/hmmd): the LD2410-family little-endian framing. Everything benched here is the pure,
 // deterministic CPU-side codec -
 //   * protocore_hmmd_parse_report  - decode a whole 45-octet report frame (detect flag, distance, all 16
 //                              gate energies), validating header/footer/length (bulk, so MB/s too);
@@ -19,7 +19,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/hmmd/hmmd.h"
+#include "server/peripherals/hmmd/hmmd.h"
 
 #include <stdbool.h>
 #include <stddef.h>

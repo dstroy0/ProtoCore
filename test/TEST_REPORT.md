@@ -272,7 +272,7 @@ _Unit tests for the FTP client wire codec (services/file_transfer/ftp): command 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the HTTP Cache-Control helpers (services/web/httpcache): the directive_
+_Unit tests for the HTTP Cache-Control helpers (network_drivers/presentation/http/httpcache): the directive_
 
 |   # | Test                                                 | Status | Description                                                                           |
 | --: | :--------------------------------------------------- | :----: | :------------------------------------------------------------------------------------ |
@@ -301,7 +301,7 @@ _Unit tests for the HTTP Cache-Control helpers (services/web/httpcache): the dir
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for the CDN edge-cache async origin-fetch engine (services/web/edge_cache/edge_fetch): the_
+_Host tests for the CDN edge-cache async origin-fetch engine (server/web/edge_cache/edge_fetch): the_
 
 |   # | Test                                            | Status | Description                                                                    |
 | --: | :---------------------------------------------- | :----: | :----------------------------------------------------------------------------- |
@@ -332,7 +332,7 @@ _Host tests for the CDN edge-cache async origin-fetch engine (services/web/edge_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Pure host tests for the CDN edge-cache engine (services/web/edge_cache): response header-field access,_
+_Pure host tests for the CDN edge-cache engine (server/web/edge_cache): response header-field access,_
 
 |   # | Test                                                     | Status | Description                                                                                           |
 | --: | :------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------------- |
@@ -407,7 +407,7 @@ _Pure host tests for the CDN edge-cache engine (services/web/edge_cache): respon
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for services/web/edge_cache/edge_cache_sd: the CDN edge cache's L2 SD-persistence tier over a_
+_Host tests for server/web/edge_cache/edge_cache_sd: the CDN edge cache's L2 SD-persistence tier over a_
 
 |   # | Test                                                  | Status | Description                                                                                           |
 | --: | :---------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------------- |
@@ -444,7 +444,7 @@ _Host tests for services/web/edge_cache/edge_cache_sd: the CDN edge cache's L2 S
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for services/web/edge_cache/edge_mesh: the CDN edge cache's mesh (sibling-cache) wire codec and_
+_Host tests for server/web/edge_cache/edge_mesh: the CDN edge cache's mesh (sibling-cache) wire codec and_
 
 |   # | Test                                                                 | Status | Description                                                                                       |
 | --: | :------------------------------------------------------------------- | :----: | :------------------------------------------------------------------------------------------------ |
@@ -563,7 +563,7 @@ _Unit tests for the protocore_ip address core (network_drivers/network/protocore
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the unified double-ended arena (server/system/protocore_arena):_
+_Unit tests for the unified double-ended arena (server/core/protocore_arena):_
 
 |   # | Test                                                | Status | Description                                                                              |
 | --: | :-------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------- |
@@ -952,7 +952,7 @@ _Unit tests for the IEC 60870-5-101/-104 codec (services/energy/iec60870): the -
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the SDI-12 codec (services/peripherals/sdi12): the command builders, the measurement_
+_Unit tests for the SDI-12 codec (server/peripherals/sdi12): the command builders, the measurement_
 
 |   # | Test                                            | Status | Description                                                                                              |
 | --: | :---------------------------------------------- | :----: | :------------------------------------------------------------------------------------------------------- |
@@ -982,7 +982,7 @@ _Unit tests for the SDI-12 codec (services/peripherals/sdi12): the command build
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the DMX512 + RDM codec (services/peripherals/dmx): the DMX512 slot packet, and the RDM_
+_Unit tests for the DMX512 + RDM codec (server/peripherals/dmx): the DMX512 slot packet, and the RDM_
 
 |   # | Test                                   | Status | Description                                                                                              |
 | --: | :------------------------------------- | :----: | :------------------------------------------------------------------------------------------------------- |
@@ -3820,7 +3820,7 @@ _Unit tests for the Protocol Buffers wire codec (services/iot/protobuf): the str
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the preempting work queue (server/system/preempt_queue): a lane's FIFO_
+_Unit tests for the preempting work queue (server/core/preempt_queue): a lane's FIFO_
 
 |   # | Test                                                               | Status | Description                                                                                         |
 | --: | :----------------------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
@@ -3903,7 +3903,7 @@ _Unit tests for the pre/post-trigger sample-window assembler (server/signaling/t
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the AD9238 SPI configuration-port codec (services/peripherals/ad9238): the 16-bit_
+_Unit tests for the AD9238 SPI configuration-port codec (server/peripherals/ad9238): the 16-bit_
 
 |   # | Test                                       | Status | Description                         |
 | --: | :----------------------------------------- | :----: | :---------------------------------- |
@@ -3971,7 +3971,7 @@ _Unit tests for the interface forwarding plane (network_drivers/network/forward)
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the radio / wireless gateway bridge (services/net/gateway): an uplink_
+_Unit tests for the radio / wireless gateway bridge (server/net/gateway): an uplink_
 
 |   # | Test                                        | Status | Description                          |
 | --: | :------------------------------------------ | :----: | :----------------------------------- |
@@ -4090,7 +4090,7 @@ _Unit tests for the EnOcean ESP3 codec (services/radio/enocean): the CRC-8 (poly
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the PN532 NFC frame codec (services/peripherals/pn532): the normal-information-frame_
+_Unit tests for the PN532 NFC frame codec (server/peripherals/pn532): the normal-information-frame_
 
 |   # | Test                                         | Status | Description                                                                         |
 | --: | :------------------------------------------- | :----: | :---------------------------------------------------------------------------------- |
@@ -5347,7 +5347,7 @@ _Streamlined NTRU Prime sntrup761 KEM (network_drivers/presentation/pqc/sntrup76
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the interface-bridge pure core (services/net/iface_bridge): the address:port -> bus rule_
+_Unit tests for the interface-bridge pure core (server/net/iface_bridge): the address:port -> bus rule_
 
 |   # | Test                                 | Status | Description                                                                                 |
 | --: | :----------------------------------- | :----: | :------------------------------------------------------------------------------------------ |
@@ -5620,7 +5620,7 @@ _Unit tests for the NATS client protocol codec (services/iot/nats): the CONNECT/
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the HAProxy PROXY protocol codec (services/net/proxy_protocol): the v1 (text)_
+_Unit tests for the HAProxy PROXY protocol codec (network_drivers/transport/proxy_protocol): the v1 (text)_
 
 |   # | Test                                      | Status | Description                                                                            |
 | --: | :---------------------------------------- | :----: | :------------------------------------------------------------------------------------- |
@@ -5828,7 +5828,7 @@ _The DNS resolver (network_drivers/network/dns/dns_resolver): the answer classif
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the hash-chained audit log (services/security/audit_log). Verify the_
+_Unit tests for the hash-chained audit log (server/security/audit_log). Verify the_
 
 |   # | Test                                         | Status | Description                           |
 | --: | :------------------------------------------- | :----: | :------------------------------------ |
@@ -6798,7 +6798,7 @@ _Unit tests for the authoritative DNS server (network_drivers/network/dns/dns_se
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the DS1307/DS3231 RTC conversions (services/peripherals/rtc): the BCD time registers_
+_Unit tests for the DS1307/DS3231 RTC conversions (server/peripherals/rtc): the BCD time registers_
 
 |   # | Test                               | Status | Description                                                                          |
 | --: | :--------------------------------- | :----: | :----------------------------------------------------------------------------------- |
@@ -6826,7 +6826,7 @@ _Unit tests for the DS1307/DS3231 RTC conversions (services/peripherals/rtc): th
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the TCP relay / DNAT byte pump (services/net/relay): bidirectional transfer, the_
+_Unit tests for the TCP relay / DNAT byte pump (server/net/relay): bidirectional transfer, the_
 
 |   # | Test                                 | Status | Description                                                             |
 | --: | :----------------------------------- | :----: | :---------------------------------------------------------------------- |
@@ -6852,7 +6852,7 @@ _Unit tests for the TCP relay / DNAT byte pump (services/net/relay): bidirection
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the LD2410 mmWave radar codec (services/peripherals/ld2410): decoding a basic and an_
+_Unit tests for the LD2410 mmWave radar codec (server/peripherals/ld2410): decoding a basic and an_
 
 |   # | Test                                      | Status | Description                                                                                |
 | --: | :---------------------------------------- | :----: | :----------------------------------------------------------------------------------------- |
@@ -6910,7 +6910,7 @@ _Host tests for the IEC 61784-3 black-channel SCL primitives (services/machine_t
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for the Waveshare HMMD mmWave radar codec (services/peripherals/hmmd): decoding a report frame_
+_Host tests for the Waveshare HMMD mmWave radar codec (server/peripherals/hmmd): decoding a report frame_
 
 |   # | Test                                              | Status | Description                                                                                 |
 | --: | :------------------------------------------------ | :----: | :------------------------------------------------------------------------------------------ |
@@ -6937,7 +6937,7 @@ _Host tests for the Waveshare HMMD mmWave radar codec (services/peripherals/hmmd
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for the one-GPIO presence facade (services/peripherals/rcwl0516): the debounce that swallows_
+_Host tests for the one-GPIO presence facade (server/peripherals/rcwl0516): the debounce that swallows_
 
 |   # | Test                                                | Status | Description                                                         |
 | --: | :-------------------------------------------------- | :----: | :------------------------------------------------------------------ |
@@ -6984,7 +6984,7 @@ _Unit tests for the SEN0192 microwave motion sensor's pure presence state machin
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the MPR121 capacitive-touch codec (services/peripherals/mpr121): decoding the touch-status_
+_Unit tests for the MPR121 capacitive-touch codec (server/peripherals/mpr121): decoding the touch-status_
 
 |   # | Test                                   | Status | Description                                                                              |
 | --: | :------------------------------------- | :----: | :--------------------------------------------------------------------------------------- |
@@ -7005,7 +7005,7 @@ _Unit tests for the MPR121 capacitive-touch codec (services/peripherals/mpr121):
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the Sensirion SHT3x codec (services/peripherals/sht3x): the CRC-8 against the datasheet_
+_Unit tests for the Sensirion SHT3x codec (server/peripherals/sht3x): the CRC-8 against the datasheet_
 
 |   # | Test                          | Status | Description                            |
 | --: | :---------------------------- | :----: | :------------------------------------- |
@@ -7109,7 +7109,7 @@ _End to end from the host harness through the library: a real driver is called, 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the PCA9685 PWM/servo codec (services/peripherals/pca9685): the PRESCALE computation from a_
+_Unit tests for the PCA9685 PWM/servo codec (server/peripherals/pca9685): the PRESCALE computation from a_
 
 |   # | Test                              | Status | Description                                                           |
 | --: | :-------------------------------- | :----: | :-------------------------------------------------------------------- |
@@ -7130,7 +7130,7 @@ _Unit tests for the PCA9685 PWM/servo codec (services/peripherals/pca9685): the 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the ADS1115 ADC codec (services/peripherals/ads1115): building the 16-bit config word for a_
+_Unit tests for the ADS1115 ADC codec (server/peripherals/ads1115): building the 16-bit config word for a_
 
 |   # | Test                                      | Status | Description                                                                                    |
 | --: | :---------------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
@@ -7150,7 +7150,7 @@ _Unit tests for the ADS1115 ADC codec (services/peripherals/ads1115): building t
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the INA219 current/power codec (services/peripherals/ina219): decoding the bus-voltage_
+_Unit tests for the INA219 current/power codec (server/peripherals/ina219): decoding the bus-voltage_
 
 |   # | Test                                 | Status | Description                                                              |
 | --: | :----------------------------------- | :----: | :----------------------------------------------------------------------- |
@@ -7831,7 +7831,7 @@ _Unit tests for the multi-source time fallback matrix (services/timing_position/
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the typed NVS config store (services/storage/config_store), exercised_
+_Unit tests for the typed NVS config store (server/storage/config_store), exercised_
 
 |   # | Test                                          | Status | Description                            |
 | --: | :-------------------------------------------- | :----: | :------------------------------------- |
@@ -7887,7 +7887,7 @@ _Unit tests for the MAC-derived device UUID (server/signaling/device_id). The ex
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the per-peer brute-force auth lockout (services/security/auth_lockout)._
+_Unit tests for the per-peer brute-force auth lockout (server/security/auth_lockout)._
 
 |   # | Test                                               | Status | Description                                 |
 | --: | :------------------------------------------------- | :----: | :------------------------------------------ |
@@ -7915,7 +7915,7 @@ _Unit tests for the per-peer brute-force auth lockout (services/security/auth_lo
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the trusted-reverse-proxy forwarded-client resolver (services/security/forwarded_trust)._
+_Unit tests for the trusted-reverse-proxy forwarded-client resolver (server/security/forwarded_trust)._
 
 |   # | Test                                               | Status | Description                                                                                         |
 | --: | :------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
@@ -7944,7 +7944,7 @@ _Unit tests for the trusted-reverse-proxy forwarded-client resolver (services/se
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the stateless HMAC-signed CSRF token (services/security/csrf). A fixed_
+_Unit tests for the stateless HMAC-signed CSRF token (server/security/csrf). A fixed_
 
 |   # | Test                                   | Status | Description                     |
 | --: | :------------------------------------- | :----: | :------------------------------ |
@@ -7996,7 +7996,7 @@ _Unit tests for the telemetry math helpers (services/iot/telemetry): moving-wind
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the dashboard widget-table JSON serializers (services/web/dashboard_
+_Unit tests for the dashboard widget-table JSON serializers (server/web/dashboard_
 
 |   # | Test                                                      | Status | Description                                        |
 | --: | :-------------------------------------------------------- | :----: | :------------------------------------------------- |
@@ -8105,7 +8105,7 @@ _Unit tests for the outbound TCP client transport (network_drivers/transport/tcp
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the partition-map core (services/storage/partition_monitor): the_
+_Unit tests for the partition-map core (server/storage/partition_monitor): the_
 
 |   # | Test                                              | Status | Description                                                              |
 | --: | :------------------------------------------------ | :----: | :----------------------------------------------------------------------- |
@@ -8298,7 +8298,7 @@ _Unit tests for the StatsD client (services/iot/statsd): the pure line formatter
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the guardrails core (services/security/guardrails): the threshold_
+_Unit tests for the guardrails core (server/core/guardrails): the threshold_
 
 |   # | Test                                  | Status | Description                                                                                    |
 | --: | :------------------------------------ | :----: | :--------------------------------------------------------------------------------------------- |
@@ -8370,7 +8370,7 @@ _Host tests for services/sleep_sched: the dynamic sleep-cycle decision core. Pur
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for server/filesystem/wearlevel: the flash wear-leveling slot selector._
+_Host tests for server/storage/wearlevel: the flash wear-leveling slot selector._
 
 |   # | Test                                     | Status | Description                                                                        |
 | --: | :--------------------------------------- | :----: | :--------------------------------------------------------------------------------- |
@@ -9698,7 +9698,7 @@ _Unit tests for the SoC power governor (server/power_mgmt): load-based scaling, 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the removable-storage state machine (services/storage/hotswap): the fault threshold and_
+_Unit tests for the removable-storage state machine (server/storage/hotswap): the fault threshold and_
 
 |   # | Test                                                          | Status | Description                                                                                          |
 | --: | :------------------------------------------------------------ | :----: | :--------------------------------------------------------------------------------------------------- |
@@ -9772,7 +9772,7 @@ _Unit tests for the abstract logging layer (shared/log/log.h). Built at_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for schema-driven config export/restore (services/storage/config_io) over_
+_Unit tests for schema-driven config export/restore (server/storage/config_io) over_
 
 |   # | Test                                                      | Status | Description                                                                               |
 | --: | :-------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |
@@ -11075,7 +11075,7 @@ _Unit tests for the plaintext pool accessor (mmgr/plaintext): bump_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for mounted storage (server/filesystem/mnt) exercised the way every real caller_
+_Unit tests for mounted storage (server/storage/mnt) exercised the way every real caller_
 
 |   # | Test                                         | Status | Description                                                                                  |
 | --: | :------------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |

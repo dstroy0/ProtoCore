@@ -11,8 +11,8 @@
  * that many items (twice that for a map: key, value, key, value, ...).
  *
  * Overflow is tracked, not crashed on: writes past the buffer set the overflow
- * flag and stop, while protocore_span_len() keeps counting the bytes the full payload would
- * need, so a caller can size the buffer and check protocore_span_ok().
+ * flag and stop, while span.len() keeps counting the bytes the full payload would
+ * need, so a caller can size the buffer and check span.ok().
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_CBOR_H
 #define PROTOCORE_CBOR_H
 
-#include "mmgr/span.h" // protocore_span / protocore_cspan - the region, bound with protocore_span_from()
+#include "mmgr/span.h" // protocore_span / protocore_cspan - the region, bound with span.from()
 #include "network_drivers/presentation/codec/codec.h" // protocore_codec_type - one item vocabulary
 #include "protocore_config.h"
 
@@ -31,8 +31,8 @@ PROTOCORE_BEGIN_DECLS
 
 // The encoder writes into a protocore_span and the decoder reads from a protocore_cspan. There is no CBOR-specific
 // cursor type: this codec declared one field-identical to protocore_span, MessagePack declared another, and
-// the byte verbs were templated only to bind them by field name. Bind with protocore_span_from(buf, cap),
-// check with protocore_span_ok(), and take the encoded length from protocore_span_len().
+// the byte verbs were templated only to bind them by field name. Bind with span.from(buf, cap),
+// check with span.ok(), and take the encoded length from span.len().
 
 /**
  * @brief CBOR (RFC 8949) as an instance of the codec interface.

@@ -5,11 +5,24 @@
  * @file webhook.h
  * @brief Outbound webhooks / IFTTT (PROTOCORE_ENABLE_WEBHOOK).
  *
- * Builds an IFTTT Maker webhook URL and its value1/value2/value3 JSON payload
- * (pure, host-tested), and fires them - or any JSON to any URL - via the outbound
- * http_client (a POST). Lets the device push an event to IFTTT, a Slack/Discord
- * incoming webhook, or your own REST endpoint. Needs PROTOCORE_ENABLE_HTTP_CLIENT to
- * send; without it the API still compiles but protocore_webhook_post() returns -1.
+ * A webhook is an HTTP POST the device originates. The pattern itself is not standardized: no
+ * IETF RFC defines "webhook", and the IFTTT Maker interface these builders target is one
+ * service's own URI convention. What is standardized is everything that POST rides on.
+ *
+ * RFC 9110 sec 9.3.3: "The POST method requests that the target resource process the
+ * representation enclosed in the request according to the resource's own specific semantics."
+ * The resource is named by the target URI (RFC 9110 sec 7.1), here an https URI
+ * (RFC 9110 sec 4.2.2) whose path is a sequence of segments (RFC 3986 sec 3.3). The content
+ * (RFC 9110 sec 6.4) is a JSON object (RFC 8259 sec 4) carried under Content-Type
+ * application/json (RFC 9110 sec 8.3; the media type is registered in RFC 8259 sec 11) with a
+ * Content-Length taken from its octet count (RFC 9110 sec 8.6). The answer is a three-digit
+ * status code (RFC 9110 sec 15.1): 2xx says the request was received, understood, and accepted
+ * (RFC 9110 sec 15.3); 4xx and 5xx say it was not (RFC 9110 sec 15.5, sec 15.6).
+ *
+ * The two builders are pure and host-testable. Sending needs PROTOCORE_ENABLE_HTTP_CLIENT: on a
+ * build without it ::WebhookNs::post reports -1 and nothing is transmitted.
+ *
+ * The module exports one symbol, @ref Webhook. Everything in webhook.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -24,37 +37,74 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WEBHOOK
 
-// ---------------------------------------------------------------------------
-// Host-testable builders
-// ---------------------------------------------------------------------------
+/** @brief RFC 9110 sec 7.1 / sec 6.4: what a POST names and what it carries. */
+typedef struct
+{
+    const char *target_uri; ///< the https URI a POST is sent to (RFC 9110 sec 4.2.2)
+    const char *content;    ///< the JSON object it carries (RFC 8259 sec 4)
+} WebhookRequestArgs;
+
+/** @brief The caller region a builder writes into. */
+typedef struct
+{
+    char *out;  ///< where the built octets land
+    size_t cap; ///< how much room they have, terminator included
+} WebhookBuildArgs;
+
+/** @brief The IFTTT Maker event: the two path segments its URI carries and its three values. */
+typedef struct
+{
+    const char *event;  ///< the event name path segment (RFC 3986 sec 3.3)
+    const char *key;    ///< the Maker key path segment
+    const char *value1; ///< first member of the object; NULL omits it
+    const char *value2; ///< second member; NULL omits it
+    const char *value3; ///< third member; NULL omits it
+} WebhookIftttArgs;
+
+/** @brief The webhook's arguments and the calls that reach them, described only in webhook.c. */
+struct WebhookInternal;
 
 /**
- * @brief Build the IFTTT Maker URL `https://maker.ifttt.com/trigger/<event>/with/key/<key>`.
- * @return characters written, or 0 if it would not fit @p cap (fail-closed).
- */
-int protocore_ifttt_url(const char *event, const char *key, char *out, size_t cap);
-
-/**
- * @brief Build an IFTTT `{"value1":..,"value2":..,"value3":..}` JSON body.
+ * @brief The outbound webhook module: build a target URI and a JSON object, then POST them.
  *
- * Null values are omitted; values are JSON-escaped for `"` and `\`. An all-null
- * call yields `{}`.
- * @return characters written, or 0 if it would not fit @p cap (fail-closed).
+ * A caller sets the members a call takes, invokes it through ::Webhook, and reads the outcome off
+ * the same handle. No slot member: one call runs at a time and names no session.
+ *
+ * No storage member: the builders write the caller's region, and the URI and content a trigger
+ * builds live on that call's own frame, so nothing survives a call.
+ *
+ * @var WebhookNs::request  the target URI a POST names and the content it carries
+ * @var WebhookNs::build    the caller region a builder writes into
+ * @var WebhookNs::ifttt    the Maker event, key, and up to three values
+ * @var WebhookNs::n        octets a builder wrote, 0 when the whole build would not fit
+ * @var WebhookNs::i32      the status code a POST read back (RFC 9110 sec 15.1), or a negative
+ *                          transport error
+ * @var WebhookNs::ifttt_url      build the Maker target URI from @c ifttt.event and @c ifttt.key
+ * @var WebhookNs::ifttt_payload  build the value1/value2/value3 object (RFC 8259 sec 4)
+ * @var WebhookNs::post           POST @c request.content as application/json to
+ *                                @c request.target_uri (RFC 9110 sec 9.3.3)
+ * @var WebhookNs::ifttt_trigger  build the URI and the object into its own frames, then POST them
+ * @var WebhookNs::internal       the handle the calls read their arguments through
  */
-int protocore_ifttt_payload(const char *v1, const char *v2, const char *v3, char *out, size_t cap);
+typedef struct
+{
+    WebhookRequestArgs request; ///< what a POST names and carries
+    WebhookBuildArgs build;     ///< where a builder writes
+    WebhookIftttArgs ifttt;     ///< the Maker event fields
 
-// ---------------------------------------------------------------------------
-// Fire (ESP32 via http_client; HTTP_CLIENT_ERR_* on host)
-// ---------------------------------------------------------------------------
+    int n;
+    int i32;
 
-/** @brief POST @p json (application/json) to @p url. @return HTTP status (>0) or negative error. */
-int protocore_webhook_post(const char *url, const char *json);
+    void (*ifttt_url)(struct WebhookInternal *ctx);
+    void (*ifttt_payload)(struct WebhookInternal *ctx);
+    void (*post)(struct WebhookInternal *ctx);
+    void (*ifttt_trigger)(struct WebhookInternal *ctx);
 
-/**
- * @brief Trigger an IFTTT Maker event with up to three values.
- * @return HTTP status (>0) or a negative error (e.g. URL/payload build or transport).
- */
-int protocore_ifttt_trigger(const char *event, const char *key, const char *v1, const char *v2, const char *v3);
+    struct WebhookInternal *internal;
+} WebhookNs;
+
+/** @brief The one symbol this module exports. */
+extern WebhookNs Webhook;
 
 #endif // PROTOCORE_ENABLE_WEBHOOK
 

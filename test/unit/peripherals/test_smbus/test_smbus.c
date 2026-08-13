@@ -5,7 +5,7 @@
 // bytes and their direction bits, which is the part a driver gets wrong, so the vectors here are
 // built the way the specification lays a transaction out rather than from the payload alone.
 
-#include "services/peripherals/smbus.h"
+#include "server/peripherals/smbus.h"
 #include "shared/crc/crc.h"
 #include <unity.h>
 

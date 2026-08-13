@@ -13,13 +13,13 @@
 
 static void put_json_str(protocore_sb *b, const char *s)
 {
-    protocore_sb_put(b, "\"");
+    Sb.put(b, "\"");
     for (const char *p = s ? s : ""; *p; p++)
     {
         if (*p == '"' || *p == '\\')
         {
             char esc[3] = {'\\', *p, '\0'};
-            protocore_sb_put(b, esc);
+            Sb.put(b, esc);
         }
         else
         {
@@ -31,7 +31,7 @@ static void put_json_str(protocore_sb *b, const char *s)
             b->p[b->len++] = *p;
         }
     }
-    protocore_sb_put(b, "\"");
+    Sb.put(b, "\"");
 }
 
 static void put_u8(protocore_sb *b, uint8_t v)
@@ -49,13 +49,13 @@ static void put_u8(protocore_sb *b, uint8_t v)
         o[i] = t[n - 1 - i];
     }
     o[n] = '\0';
-    protocore_sb_put(b, o);
+    Sb.put(b, o);
 }
 
 // Append the points of one direction (outputs or inputs) as a JSON array.
 static void put_array(protocore_sb *b, const AtcFieldIo *io, proto_bool outputs)
 {
-    protocore_sb_put(b, "[");
+    Sb.put(b, "[");
     proto_bool first = PROTO_TRUE;
     for (size_t i = 0; i < io->count; i++)
     {
@@ -65,16 +65,16 @@ static void put_array(protocore_sb *b, const AtcFieldIo *io, proto_bool outputs)
         }
         if (!first)
         {
-            protocore_sb_put(b, ",");
+            Sb.put(b, ",");
         }
         first = PROTO_FALSE;
-        protocore_sb_put(b, "{\"name\":");
+        Sb.put(b, "{\"name\":");
         put_json_str(b, io->points[i].name);
-        protocore_sb_put(b, ",\"value\":");
+        Sb.put(b, ",\"value\":");
         put_u8(b, io->points[i].value);
-        protocore_sb_put(b, "}");
+        Sb.put(b, "}");
     }
-    protocore_sb_put(b, "]");
+    Sb.put(b, "]");
 }
 
 size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
@@ -84,11 +84,11 @@ size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
         return 0;
     }
     protocore_sb b = {out, cap, 0, cap > 0};
-    protocore_sb_put(&b, "{\"inputs\":");
+    Sb.put(&b, "{\"inputs\":");
     put_array(&b, io, PROTO_FALSE);
-    protocore_sb_put(&b, ",\"outputs\":");
+    Sb.put(&b, ",\"outputs\":");
     put_array(&b, io, PROTO_TRUE);
-    protocore_sb_put(&b, "}");
+    Sb.put(&b, "}");
     if (!b.ok)
     {
         return 0;

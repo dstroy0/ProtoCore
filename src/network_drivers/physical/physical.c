@@ -3,17 +3,25 @@
 
 /**
  * @file physical.c
- * @brief Layer 1 (Physical) - vendor-neutral core.
+ * @brief Layer 1 (Physical) - the platform-neutral core: the handle, the registry, the classifier.
  *
- * The two things here that are not silicon-specific: the IP-egress classifier, and the fallback
- * link stubs used when the selected vendor has no physical backend (PROTOCORE_PHYSICAL_HAS_BACKEND == 0 -
- * host/native builds, or a vendor whose PHY driver is not written). Each vendor's real bring-up
- * lives in core_setup/physical/<vendor>/, chosen by the PROTOCORE_VENDOR_* selector. The stubs never
- * bring a link up, so a target without a backend still builds and runs headless.
+ * Three things live here. The interface registry, which is this module's own state. The egress
+ * classifier, which maps a live default-route IPv4 to the interface it belongs to (RFC 1122
+ * sec 3.3.1.2). And the fallback seam, compiled when the selected backend has no PHY
+ * (PROTOCORE_PHYSICAL_HAS_BACKEND == 0): no-op definitions of every seam name, so a target with no
+ * link still builds and runs headless. The real bring-up lives in core_setup/physical/<vendor>/,
+ * chosen by the PROTOCORE_VENDOR_* selector.
+ *
+ * The seam functions keep their own signatures: each one is defined once per build, here or in the
+ * compiled backend, and the calls on @ref Physical wrap them.
  */
 
 #include "physical.h"
-#include "radio_power.h" // Radio: the layer carries the radio interface
+#include "radio_power.h" // Radio: the layer carries the radio handle
+
+// ---------------------------------------------------------------------------
+// The seam this module implements itself
+// ---------------------------------------------------------------------------
 
 // Map the live egress IP to the interface it belongs to.
 protocore_if_kind protocore_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip)
@@ -34,8 +42,8 @@ protocore_if_kind protocore_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip,
 }
 
 #if !PROTOCORE_PHYSICAL_HAS_BACKEND
-// No L1 backend for the selected vendor (host/native, or a not-yet-written PHY): safe no-ops. The radio
-// bring-up calls "succeed" (nothing to do) while the link never reports ready, and every readout is empty.
+// No L1 backend for the selected part: safe no-ops. The radio bring-up calls "succeed" (nothing to
+// do) while the link never reports ready, and every readout is empty.
 
 proto_bool init_wifi_physical(const char *ssid, const char *pass)
 {
@@ -68,7 +76,7 @@ proto_bool eth_ready(void)
 }
 proto_bool init_ipv6_physical(void)
 {
-    return PROTO_FALSE; // no netif without a backend
+    return PROTO_FALSE; // no interface without a backend
 }
 proto_bool net_global_ipv6(protocore_ip *out)
 {
@@ -151,146 +159,267 @@ uint8_t protocore_net_channel(void)
 #endif // !PROTOCORE_PHYSICAL_HAS_BACKEND
 
 // ---------------------------------------------------------------------------
-// The interface registry. One row per interface the application registered, each carrying how to
-// put bytes on it. The forwarding plane reads this to fan a frame out; nothing else needs it.
+// The layer's state: one registry row per interface the application registered, each carrying how
+// to put octets on it. The forwarding plane reads this to fan a frame out; nothing else needs it.
 // ---------------------------------------------------------------------------
 
+// One registered interface: what it is, and the callback that puts octets on it.
 typedef struct
 {
-    protocore_if_send_fn send;
-    void *ctx;
-    uint8_t id;
-    protocore_if_kind kind;
-    proto_bool used;
+    protocore_if_send_fn send; ///< how octets reach this interface
+    void *ctx;                 ///< what that callback is handed back
+    uint8_t id;                ///< the id a caller names it by
+    protocore_if_kind kind;    ///< what it is (RFC 894 wired, RFC 1042 IEEE 802 wireless, a bus, a radio)
+    proto_bool used;           ///< the row holds an interface
 } IfaceRow;
 
-// Every registered interface, owned by one instance (internal linkage).
-typedef struct
+/**
+ * @brief The layer's compile-time storage: the registry rows.
+ *
+ * All of it BSS, so an interface costs no heap and nothing lands on a task stack.
+ */
+struct PhysicalStorage
 {
     IfaceRow row[PROTOCORE_PHY_MAX_IFACES];
-} IfaceCtx;
-static IfaceCtx s_iface;
+};
 
-static IfaceRow *row_of(uint8_t id)
+/**
+ * @brief The layer's state and the calls that reach it - what PhysicalNs points at.
+ *
+ * @var PhysicalInternal::store  the registry rows
+ * @var PhysicalInternal::ns     the handle a caller sets a call's members on
+ */
+struct PhysicalInternal
+{
+    struct PhysicalStorage *store;
+    PhysicalNs *ns;
+};
+
+static struct PhysicalStorage s_store;
+
+static struct PhysicalInternal s_physical = {.store = &s_store, .ns = &Physical};
+
+// ---------------------------------------------------------------------------
+// Link bring-up and readout: each call sets the seam's arguments from the handle and puts the
+// seam's answer back on it.
+// ---------------------------------------------------------------------------
+
+static void phy_wifi_init(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = init_wifi_physical(ctx->ns->wifi.ssid, ctx->ns->wifi.password);
+}
+
+static void phy_wifi_ready(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = wifi_ready();
+}
+
+static void phy_wifi_radio_init(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = init_wifi_radio_physical(ctx->ns->wifi.channel);
+}
+
+static void phy_wifi_ap_init(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = init_wifi_ap_physical(ctx->ns->wifi.ssid, ctx->ns->wifi.password);
+}
+
+static void phy_wifi_ssid(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->n = protocore_net_ssid(ctx->ns->read.text, ctx->ns->read.cap);
+}
+
+static void phy_wifi_channel(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->u8 = protocore_net_channel();
+}
+
+static void phy_wifi_rssi(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->i8 = protocore_net_rssi();
+}
+
+static void phy_wifi_ap_ip(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->u32 = protocore_net_ap_ip();
+}
+
+static void phy_wifi_mac(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = protocore_net_mac(ctx->ns->read.mac);
+}
+
+static void phy_eth_init(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = init_eth_physical();
+}
+
+static void phy_eth_ready(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = eth_ready();
+}
+
+static void phy_ip6_init(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = init_ipv6_physical();
+}
+
+static void phy_ip6_global(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = net_global_ipv6(ctx->ns->read.ip6);
+}
+
+static void phy_ip6_ready(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = protocore_ipv6_ready();
+}
+
+static void phy_egress(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->if_kind = protocore_net_egress();
+}
+
+static void phy_egress_ip(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->u32 = protocore_net_egress_ip();
+}
+
+static void phy_egress_mac(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->ok = protocore_net_egress_mac(ctx->ns->read.mac);
+}
+
+static void phy_classify_ip(struct PhysicalInternal *restrict ctx)
+{
+    ctx->ns->if_kind = protocore_net_classify_ip(ctx->ns->route.egress_ip, ctx->ns->route.sta_ip, ctx->ns->route.ap_ip);
+}
+
+// ---------------------------------------------------------------------------
+// The interface registry
+// ---------------------------------------------------------------------------
+
+// The row holding the named id, or NULL.
+static IfaceRow *row_of(struct PhysicalInternal *restrict ctx)
 {
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
-        if (s_iface.row[i].used && s_iface.row[i].id == id)
+        if (ctx->store->row[i].used && ctx->store->row[i].id == ctx->ns->iface.id)
         {
-            return &s_iface.row[i];
+            return &ctx->store->row[i];
         }
     }
     return NULL;
 }
 
-static proto_bool iface_add(uint8_t id, protocore_if_kind kind, protocore_if_send_fn send, void *ctx)
+static void phy_iface_add(struct PhysicalInternal *restrict ctx)
 {
-    if (send == NULL || row_of(id) != NULL)
+    ctx->ns->ok = PROTO_FALSE;
+    if (ctx->ns->iface.send == NULL || row_of(ctx) != NULL)
     {
-        return PROTO_FALSE;
+        return;
     }
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
-        if (s_iface.row[i].used)
+        if (ctx->store->row[i].used)
         {
             continue;
         }
-        s_iface.row[i].send = send;
-        s_iface.row[i].ctx = ctx;
-        s_iface.row[i].id = id;
-        s_iface.row[i].kind = kind;
-        s_iface.row[i].used = PROTO_TRUE;
-        return PROTO_TRUE;
+        ctx->store->row[i].send = ctx->ns->iface.send;
+        ctx->store->row[i].ctx = ctx->ns->iface.ctx;
+        ctx->store->row[i].id = ctx->ns->iface.id;
+        ctx->store->row[i].kind = ctx->ns->iface.kind;
+        ctx->store->row[i].used = PROTO_TRUE;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
-    return PROTO_FALSE;
 }
 
-static void iface_reset(void)
+static void phy_iface_reset(struct PhysicalInternal *restrict ctx)
 {
-    // The used flag is the row: add() writes every other field before setting it.
+    // The used flag is the row: add writes every other field before setting it.
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
-        s_iface.row[i].used = PROTO_FALSE;
+        ctx->store->row[i].used = PROTO_FALSE;
     }
 }
 
-static proto_bool iface_present(uint8_t id)
+static void phy_iface_present(struct PhysicalInternal *restrict ctx)
 {
-    return row_of(id) != NULL;
+    ctx->ns->ok = row_of(ctx) != NULL;
 }
 
-static protocore_if_kind iface_kind(uint8_t id)
+static void phy_iface_kind(struct PhysicalInternal *restrict ctx)
 {
-    const IfaceRow *r = row_of(id);
-    if (r == NULL)
+    const IfaceRow *r = row_of(ctx);
+
+    ctx->ns->if_kind = (r == NULL) ? PROTOCORE_IF_ANY : r->kind;
+}
+
+static void phy_iface_at(struct PhysicalInternal *restrict ctx)
+{
+    const uint8_t i = ctx->ns->iface.i;
+
+    ctx->ns->i16 = PROTOCORE_IF_NONE;
+    if (i >= PROTOCORE_PHY_MAX_IFACES || !ctx->store->row[i].used)
     {
-        return PROTOCORE_IF_ANY;
+        return;
     }
-    return r->kind;
+    ctx->ns->i16 = (int16_t)ctx->store->row[i].id;
 }
 
-static int16_t iface_at(uint8_t i)
-{
-    if (i >= PROTOCORE_PHY_MAX_IFACES || !s_iface.row[i].used)
-    {
-        return PROTOCORE_IF_NONE;
-    }
-    return (int16_t)s_iface.row[i].id;
-}
-
-static uint8_t iface_count(void)
+static void phy_iface_count(struct PhysicalInternal *restrict ctx)
 {
     uint8_t n = 0;
+
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
-        if (s_iface.row[i].used)
+        if (ctx->store->row[i].used)
         {
             n++;
         }
     }
-    return n;
+    ctx->ns->u8 = n;
 }
 
-static proto_bool iface_send(uint8_t id, const uint8_t *data, uint16_t len)
+static void phy_iface_send(struct PhysicalInternal *restrict ctx)
 {
-    IfaceRow *r = row_of(id);
+    IfaceRow *r = row_of(ctx);
+
+    ctx->ns->ok = PROTO_FALSE;
     if (r == NULL)
     {
-        return PROTO_FALSE;
+        return;
     }
-    return r->send(r->id, data, len, r->ctx);
+    ctx->ns->ok = r->send(r->id, ctx->ns->iface.data, ctx->ns->iface.len, r->ctx);
 }
 
-// Designated, so a member's position in the struct does not decide what it binds to.
-static const PhysicalIfaceNs s_iface_ns = {.add = iface_add,
-                                           .reset = iface_reset,
-                                           .present = iface_present,
-                                           .kind = iface_kind,
-                                           .at = iface_at,
-                                           .count = iface_count,
-                                           .send = iface_send};
-
-// The sub-tables and the layer handle. Defined here, in the vendor-neutral core, so they name
-// whichever backend the PROTOCORE_VENDOR_* selector compiled: the stubs below, core_setup/physical/esp,
-// or the mock. A caller reaches L1 through Physical and never through a vendor symbol.
-static const PhysicalWifiNs s_wifi = {.init_radio = init_wifi_radio_physical,
-                                      .init_ap = init_wifi_ap_physical,
-                                      .init = init_wifi_physical,
-                                      .ready = wifi_ready,
-                                      .ssid = protocore_net_ssid,
-                                      .channel = protocore_net_channel,
-                                      .rssi = protocore_net_rssi,
-                                      .ap_ip = protocore_net_ap_ip};
-
-static const PhysicalEthNs s_eth = {.init = init_eth_physical, .ready = eth_ready};
-
-static const PhysicalIp6Ns s_ip6 = {.init = init_ipv6_physical, .global_addr = net_global_ipv6, .ready = protocore_ipv6_ready};
-
-static const PhysicalLinkNs s_link = {.egress_mac = protocore_net_egress_mac,
-                                      .classify_ip = protocore_net_classify_ip,
-                                      .egress_ip = protocore_net_egress_ip,
-                                      .egress = protocore_net_egress,
-                                      .mac = protocore_net_mac};
-
-const PhysicalNs Physical = {
-    .wifi = &s_wifi, .eth = &s_eth, .ip6 = &s_ip6, .link = &s_link, .iface = &s_iface_ns, .radio = &Radio};
+// Designated, so a member's position in the struct does not decide what it binds to. The calls name
+// the seam, so the handle reaches whichever backend the PROTOCORE_VENDOR_* selector compiled: the
+// no-op definitions above, a part's backend under core_setup/physical/, or a suite's mock.
+PhysicalNs Physical = {.wifi_init = phy_wifi_init,
+                       .wifi_ready = phy_wifi_ready,
+                       .wifi_radio_init = phy_wifi_radio_init,
+                       .wifi_ap_init = phy_wifi_ap_init,
+                       .wifi_ssid = phy_wifi_ssid,
+                       .wifi_channel = phy_wifi_channel,
+                       .wifi_rssi = phy_wifi_rssi,
+                       .wifi_ap_ip = phy_wifi_ap_ip,
+                       .wifi_mac = phy_wifi_mac,
+                       .eth_init = phy_eth_init,
+                       .eth_ready = phy_eth_ready,
+                       .ip6_init = phy_ip6_init,
+                       .ip6_global = phy_ip6_global,
+                       .ip6_ready = phy_ip6_ready,
+                       .egress = phy_egress,
+                       .egress_ip = phy_egress_ip,
+                       .egress_mac = phy_egress_mac,
+                       .classify_ip = phy_classify_ip,
+                       .iface_add = phy_iface_add,
+                       .iface_reset = phy_iface_reset,
+                       .iface_present = phy_iface_present,
+                       .iface_kind = phy_iface_kind,
+                       .iface_at = phy_iface_at,
+                       .iface_count = phy_iface_count,
+                       .iface_send = phy_iface_send,
+                       .radio = &Radio,
+                       .internal = &s_physical};

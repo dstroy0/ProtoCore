@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the southbound driver registry (services/net/southbound): the
+// On-device CCOUNT microbenchmark for the southbound driver registry (services/southbound): the
 // name -> driver dispatch for read / write / read_block, over a registered mock driver. Pure
 // bookkeeping + an indirect call; the real fieldbus driver is the application's.
 //
 // Build/flash:  idf.py -C test/performance_benching/southbound -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/net/southbound/southbound.h"
+#include "services/southbound/southbound.h"
 
 #include <stdbool.h>
 #include <stddef.h>

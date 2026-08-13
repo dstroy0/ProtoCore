@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the preempting work queue (server/system/preempt_queue): a lane's FIFO
+// Unit tests for the preempting work queue (server/core/preempt_queue): a lane's FIFO
 // order, urgent-to-front, fail-closed-when-full, high-water, and the hand-off from a post to the
 // lane task's handler.
 //
@@ -14,7 +14,7 @@
 
 #include "../../../mocks/protocore_dma_host.h"
 #include "mmgr/dma.h"
-#include "server/system/preempt_queue.h"
+#include "server/core/preempt_queue.h"
 // memcpy
 #include <string.h>
 #include <unity.h>

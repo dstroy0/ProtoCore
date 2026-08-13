@@ -12,7 +12,7 @@
 #include "network_drivers/transport/udp/client/client.h"
 
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's UDP, under our names
-#include "mmgr/rawmemcpy.h"                        // proto_raw_read: the caller's bytes into the pbuf
+#include "mmgr/rawmemcpy.h"                        // raw.read: the caller's bytes into the pbuf
 #include "network_drivers/transport/diffserv/diffserv.h"    // DSCP marking; compiles out when off
 #include "network_drivers/transport/net_addr/net_addr.h"    // NetAddr: the stack's address as a protocore_ip
 
@@ -88,7 +88,7 @@ static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint1
     {
         return PROTO_FALSE;
     }
-    proto_raw_read((uint8_t *)p->payload, data, len);
+    raw.read((uint8_t *)p->payload, data, len);
     protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
     protocore_net_pbuf_free(p);
     return e == PROTOCORE_NET_OK;

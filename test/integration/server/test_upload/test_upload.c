@@ -9,7 +9,7 @@
 #include "mnt_mock.h"
 #include "network_drivers/application/upload_service/upload_service.h"
 #include "protocore.h"
-#include "server/filesystem/mnt.h" // protocore_mnt_mount
+#include "server/storage/mnt.h" // protocore_mnt_mount
 #include <stdio.h>
 #include <string.h>
 

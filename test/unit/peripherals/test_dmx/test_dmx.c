@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the DMX512 + RDM codec (services/peripherals/dmx): the DMX512 slot packet, and the RDM
+// Unit tests for the DMX512 + RDM codec (server/peripherals/dmx): the DMX512 slot packet, and the RDM
 // (ANSI E1.20) packet build/parse with 48-bit UIDs and the 16-bit additive checksum. Pure
 // host tests.
 
-#include "services/peripherals/dmx/dmx.h"
+#include "server/peripherals/dmx/dmx.h"
 #include <string.h>
 
 #include <unity.h>

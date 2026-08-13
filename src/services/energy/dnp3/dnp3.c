@@ -7,7 +7,7 @@
  */
 
 #include "services/energy/dnp3/dnp3.h"
-#include "mmgr/endian.h" // protocore_rd16le / protocore_rd32le
+#include "mmgr/endian.h" // endian.rd16le / endian.rd32le
 #include "mmgr/protomem.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_DNP
 
@@ -346,13 +346,13 @@ size_t protocore_dnp3_build_object_header_range(uint8_t *buf, size_t cap, uint8_
     }
     else if (range_code == DNP3_RANGE_START_STOP_2)
     {
-        protocore_wr16le(buf + 3, (uint16_t)start);
-        protocore_wr16le(buf + 5, (uint16_t)stop);
+        endian.wr16le(buf + 3, (uint16_t)start);
+        endian.wr16le(buf + 5, (uint16_t)stop);
     }
     else
     {
-        protocore_wr32le(buf + 3, start);
-        protocore_wr32le(buf + 7, stop);
+        endian.wr32le(buf + 3, start);
+        endian.wr32le(buf + 7, stop);
     }
     return total;
 }
@@ -379,8 +379,8 @@ size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint
     // Control code: op-type (bits 0-3) | clear (bit 5) | trip-close (bits 6-7). The queue bit (0x10) is obsolete.
     buf[0] = (uint8_t)((op_type & 0x0Fu) | (clear ? 0x20u : 0x00u) | (uint8_t)((tcc & 0x03u) << 6));
     buf[1] = count;
-    protocore_wr32le(buf + 2, on_time_ms);
-    protocore_wr32le(buf + 6, off_time_ms);
+    endian.wr32le(buf + 2, on_time_ms);
+    endian.wr32le(buf + 6, off_time_ms);
     buf[10] = 0x00; // status: 0 in a request (the outstation reports the result in its response)
     return DNP3_CROB_LEN;
 }
@@ -391,7 +391,7 @@ size_t protocore_dnp3_build_aob32(uint8_t *buf, size_t cap, int32_t value)
     {
         return 0;
     }
-    protocore_wr32le(buf, (uint32_t)value); // 32-bit signed setpoint, little-endian (two's complement)
+    endian.wr32le(buf, (uint32_t)value); // 32-bit signed setpoint, little-endian (two's complement)
     buf[4] = 0x00;                   // control status: 0 in a request (the outstation reports the result)
     return DNP3_AOB_LEN;
 }
@@ -404,7 +404,7 @@ size_t protocore_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value)
     }
     uint32_t bits;
     mem.cpy(&bits, &value, 4); // the IEEE-754 bit pattern, written little-endian (endian-safe)
-    protocore_wr32le(buf, bits);
+    endian.wr32le(buf, bits);
     buf[4] = 0x00; // control status: 0 in a request
     return DNP3_AOB_LEN;
 }
@@ -438,8 +438,8 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
         {
             return PROTO_FALSE;
         }
-        start = protocore_rd16le(buf + p);
-        stop = protocore_rd16le(buf + p + 2);
+        start = endian.rd16le(buf + p);
+        stop = endian.rd16le(buf + p + 2);
         p += 4;
         count = stop - start + 1;
         break;
@@ -448,8 +448,8 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
         {
             return PROTO_FALSE;
         }
-        start = protocore_rd32le(buf + p);
-        stop = protocore_rd32le(buf + p + 4);
+        start = endian.rd32le(buf + p);
+        stop = endian.rd32le(buf + p + 4);
         p += 8;
         count = stop - start + 1;
         break;
@@ -469,7 +469,7 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
         {
             return PROTO_FALSE;
         }
-        count = protocore_rd16le(buf + p);
+        count = endian.rd16le(buf + p);
         p += 2;
         is_count = PROTO_TRUE;
         break;
@@ -478,7 +478,7 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
         {
             return PROTO_FALSE;
         }
-        count = protocore_rd32le(buf + p);
+        count = endian.rd32le(buf + p);
         p += 4;
         is_count = PROTO_TRUE;
         break;

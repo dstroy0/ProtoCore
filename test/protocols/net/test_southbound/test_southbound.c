@@ -3,7 +3,7 @@
 //
 // Host tests for services/southbound: the driver registry + name-dispatched read/write facade.
 
-#include "services/net/southbound/southbound.h"
+#include "services/southbound/southbound.h"
 #include <unity.h>
 
 // A fake driver backed by a small register file, to prove dispatch reaches the right ctx.

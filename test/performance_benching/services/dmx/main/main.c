@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the DMX512 + RDM (ANSI E1.20) codec (services/peripherals/dmx):
+// On-device CCOUNT microbenchmark for the DMX512 + RDM (ANSI E1.20) codec (server/peripherals/dmx):
 // assembling a DMX512 packet body ([start code][channel slots]) and reading a slot back out of
 // it, plus building/parsing a full RDM management packet (48-bit UIDs, 16-bit additive checksum)
 // - all pure (no UART, no RS-485 transceiver, no heap). Worked example for performance_benching/device/<service>/:
@@ -14,7 +14,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/dmx/dmx.h"
+#include "server/peripherals/dmx/dmx.h"
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -179,9 +179,9 @@ static int auth_send_b64(SmtpSendFn send, SmtpRecvFn recv, void *ctx, const char
     }
     Base64.encode((const uint8_t *)secret, slen, b64);
     protocore_sb sb_line = {line, sizeof(line), 0, PROTO_TRUE};
-    protocore_sb_put(&sb_line, b64);
-    protocore_sb_put(&sb_line, "\r\n");
-    protocore_sb_finish(&sb_line);
+    Sb.put(&sb_line, b64);
+    Sb.put(&sb_line, "\r\n");
+    Sb.finish(&sb_line);
     if (!sb_line.ok)
     {
         return (int)SMTP_ERR_OVERFLOW;
@@ -194,14 +194,14 @@ static int auth_send_b64(SmtpSendFn send, SmtpRecvFn recv, void *ctx, const char
 static int build_message(char *out, size_t cap, const SmtpConfig *cfg, const SmtpMessage *msg)
 {
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&sb_out, "From: <");
-    protocore_sb_put(&sb_out, cfg->from);
-    protocore_sb_put(&sb_out, ">\r\nTo: <");
-    protocore_sb_put(&sb_out, msg->to);
-    protocore_sb_put(&sb_out, ">\r\nSubject: ");
-    protocore_sb_put(&sb_out, msg->subject ? msg->subject : "");
-    protocore_sb_put(&sb_out, "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n");
-    int hn = (int)protocore_sb_finish(&sb_out);
+    Sb.put(&sb_out, "From: <");
+    Sb.put(&sb_out, cfg->from);
+    Sb.put(&sb_out, ">\r\nTo: <");
+    Sb.put(&sb_out, msg->to);
+    Sb.put(&sb_out, ">\r\nSubject: ");
+    Sb.put(&sb_out, msg->subject ? msg->subject : "");
+    Sb.put(&sb_out, "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n");
+    int hn = (int)Sb.finish(&sb_out);
     // hn < 0 is unreachable: snprintf only reports failure on an output/encoding error, which
     // formatting %s into a caller buffer cannot produce. The >= cap truncation check is live.
     if (!sb_out.ok)
@@ -297,10 +297,10 @@ static SmtpResult greet_ehlo(const SmtpConfig *cfg, SmtpSendFn send, SmtpRecvFn 
     // The capability list is only trustworthy once the channel is secure, which is why the
     // STARTTLS path reissues this command after the upgrade.
     protocore_sb sb_line2 = {line, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&sb_line2, "EHLO ");
-    protocore_sb_put(&sb_line2, (cfg->helo && cfg->helo[0]) ? cfg->helo : "esp32");
-    protocore_sb_put(&sb_line2, "\r\n");
-    int n = (int)protocore_sb_finish(&sb_line2);
+    Sb.put(&sb_line2, "EHLO ");
+    Sb.put(&sb_line2, (cfg->helo && cfg->helo[0]) ? cfg->helo : "esp32");
+    Sb.put(&sb_line2, "\r\n");
+    int n = (int)Sb.finish(&sb_line2);
     if (!sb_line2.ok)
     {
         return SMTP_ERR_OVERFLOW;
@@ -374,10 +374,10 @@ static SmtpResult send_envelope(const SmtpConfig *cfg, const SmtpMessage *msg, S
                                 void *ctx, char *line, size_t cap)
 {
     protocore_sb sb_line3 = {line, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&sb_line3, "MAIL FROM:<");
-    protocore_sb_put(&sb_line3, cfg->from);
-    protocore_sb_put(&sb_line3, ">\r\n");
-    int n = (int)protocore_sb_finish(&sb_line3);
+    Sb.put(&sb_line3, "MAIL FROM:<");
+    Sb.put(&sb_line3, cfg->from);
+    Sb.put(&sb_line3, ">\r\n");
+    int n = (int)Sb.finish(&sb_line3);
     if (!sb_line3.ok)
     {
         return SMTP_ERR_OVERFLOW;
@@ -389,10 +389,10 @@ static SmtpResult send_envelope(const SmtpConfig *cfg, const SmtpMessage *msg, S
     }
 
     protocore_sb sb_line4 = {line, cap, 0, PROTO_TRUE};
-    protocore_sb_put(&sb_line4, "RCPT TO:<");
-    protocore_sb_put(&sb_line4, msg->to);
-    protocore_sb_put(&sb_line4, ">\r\n");
-    n = (int)protocore_sb_finish(&sb_line4);
+    Sb.put(&sb_line4, "RCPT TO:<");
+    Sb.put(&sb_line4, msg->to);
+    Sb.put(&sb_line4, ">\r\n");
+    n = (int)Sb.finish(&sb_line4);
     if (!sb_line4.ok)
     {
         return SMTP_ERR_OVERFLOW;

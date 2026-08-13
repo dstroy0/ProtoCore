@@ -29,8 +29,8 @@ static size_t write_frame_header(uint8_t *buf, uint8_t type, uint16_t channel, u
 {
     size_t p = 0;
     buf[p++] = type;
-    p += protocore_wr16be(buf + p, channel);
-    p += protocore_wr32be(buf + p, size);
+    p += endian.wr16be(buf + p, channel);
+    p += endian.wr32be(buf + p, size);
     return p; // 7
 }
 
@@ -71,8 +71,8 @@ size_t protocore_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, u
     }
     // Write directly into buf (no temp): header, then the method payload, then the 0xCE end.
     size_t p = write_frame_header(buf, AMQP_FRAME_METHOD, channel, (uint32_t)payload_len);
-    p += protocore_wr16be(buf + p, class_id);
-    p += protocore_wr16be(buf + p, method_id);
+    p += endian.wr16be(buf + p, class_id);
+    p += endian.wr16be(buf + p, method_id);
     if (args_len)
     {
         mem.cpy(buf + p, args, args_len);
@@ -96,10 +96,10 @@ size_t protocore_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t ch
         return 0;
     }
     size_t p = write_frame_header(buf, AMQP_FRAME_HEADER, channel, (uint32_t)payload_len);
-    p += protocore_wr16be(buf + p, class_id);
-    p += protocore_wr16be(buf + p, 0); // weight (deprecated, always 0)
-    p += protocore_wr64be(buf + p, body_size);
-    p += protocore_wr16be(buf + p, property_flags);
+    p += endian.wr16be(buf + p, class_id);
+    p += endian.wr16be(buf + p, 0); // weight (deprecated, always 0)
+    p += endian.wr64be(buf + p, body_size);
+    p += endian.wr16be(buf + p, property_flags);
     if (properties_len)
     {
         mem.cpy(buf + p, properties, properties_len);
@@ -120,7 +120,7 @@ proto_bool protocore_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame 
     {
         return PROTO_FALSE;
     }
-    uint32_t size = protocore_rd32be(buf + 3);
+    uint32_t size = endian.rd32be(buf + 3);
     // Compare against the remaining capacity without adding (a 32-bit size_t would wrap if we
     // computed 8 + size first), so an attacker-controlled size can't slip past the bound.
     if (size > len - AMQP_FRAME_OVERHEAD)
@@ -133,7 +133,7 @@ proto_bool protocore_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame 
         return PROTO_FALSE; // missing / corrupt frame terminator
     }
     out->type = buf[0];
-    out->channel = protocore_rd16be(buf + 1);
+    out->channel = endian.rd16be(buf + 1);
     out->payload = buf + 7;
     out->payload_len = size;
     if (consumed)
@@ -152,11 +152,11 @@ proto_bool protocore_amqp_parse_method(const uint8_t *payload, size_t payload_le
     }
     if (class_id)
     {
-        *class_id = protocore_rd16be(payload);
+        *class_id = endian.rd16be(payload);
     }
     if (method_id)
     {
-        *method_id = protocore_rd16be(payload + 2);
+        *method_id = endian.rd16be(payload + 2);
     }
     if (args)
     {

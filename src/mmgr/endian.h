@@ -11,7 +11,9 @@
  * Writers return their width (2/4/8) so a caller can advance by it.
  *
  * Byte at a time, never a cast to a wider pointer: correct where loads must be aligned, and correct
- * on either byte order. Header-only, so it costs nothing when unused.
+ * on either byte order.
+ *
+ * The module exports one symbol, @ref endian. The moves themselves are in endian.c.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -20,112 +22,107 @@
 #ifndef PROTOCORE_ENDIAN_H
 #define PROTOCORE_ENDIAN_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-// --- little-endian ------------------------------------------------------------------------------
+PROTOCORE_BEGIN_DECLS
 
-/** @brief Write @p v little-endian at @p p. @return 2. */
-PROTOCORE_INLINE size_t protocore_wr16le(uint8_t *p, uint16_t v)
+/**
+ * @brief The fixed-width serializer module. Each entry steps one byte at a time over 2, 4 or 8 bytes.
+ *
+ * @var EndianNs::wr16le
+ * Write @c v at @c p low byte first, @c p[0] taking bits 0..7. Returns 2.
+ *
+ * @var EndianNs::wr32le
+ * Write @c v at @c p low byte first, each later byte shifted down another 8 bits. Returns 4.
+ *
+ * @var EndianNs::wr64le
+ * Write @c v at @c p low byte first, eight steps of the same shift. Returns 8.
+ *
+ * @var EndianNs::rd16le
+ * Read a u16 at @c p taken low byte first: @c p[0] is bits 0..7, @c p[1] shifted up 8.
+ *
+ * @var EndianNs::rd32le
+ * Read a u32 at @c p taken low byte first, each later byte shifted up another 8 bits.
+ *
+ * @var EndianNs::rd64le
+ * Read a u64 at @c p taken low byte first, eight bytes ORed in at their own shift.
+ *
+ * @var EndianNs::wr16be
+ * Write @c v at @c p high byte first, @c p[0] taking bits 8..15. Returns 2.
+ *
+ * @var EndianNs::wr32be
+ * Write @c v at @c p high byte first, each later byte shifted down another 8 bits. Returns 4.
+ *
+ * @var EndianNs::wr64be
+ * Write @c v at @c p high byte first, eight steps down from bits 56..63. Returns 8.
+ *
+ * @var EndianNs::rd16be
+ * Read a u16 at @c p taken high byte first: @c p[0] shifted up 8, @c p[1] is bits 0..7.
+ *
+ * @var EndianNs::rd32be
+ * Read a u32 at @c p taken high byte first, @c p[0] shifted up 24.
+ *
+ * @var EndianNs::rd64be
+ * Read a u64 at @c p taken high byte first, the accumulator shifted up 8 per byte.
+ *
+ * No storage member: every entry moves bytes between the caller's integer and the caller's pointer
+ * and holds nothing of its own.
+ */
+typedef struct
 {
-    p[0] = (uint8_t)v;
-    p[1] = (uint8_t)(v >> 8);
-    return 2;
-}
+    size_t (*wr16le)(uint8_t *p, uint16_t v);
+    size_t (*wr32le)(uint8_t *p, uint32_t v);
+    size_t (*wr64le)(uint8_t *p, uint64_t v);
+    uint16_t (*rd16le)(const uint8_t *p);
+    uint32_t (*rd32le)(const uint8_t *p);
+    uint64_t (*rd64le)(const uint8_t *p);
+    size_t (*wr16be)(uint8_t *p, uint16_t v);
+    size_t (*wr32be)(uint8_t *p, uint32_t v);
+    size_t (*wr64be)(uint8_t *p, uint64_t v);
+    uint16_t (*rd16be)(const uint8_t *p);
+    uint32_t (*rd32be)(const uint8_t *p);
+    uint64_t (*rd64be)(const uint8_t *p);
+} EndianNs;
 
-/** @brief Write @p v little-endian at @p p. @return 4. */
-PROTOCORE_INLINE size_t protocore_wr32le(uint8_t *p, uint32_t v)
-{
-    p[0] = (uint8_t)v;
-    p[1] = (uint8_t)(v >> 8);
-    p[2] = (uint8_t)(v >> 16);
-    p[3] = (uint8_t)(v >> 24);
-    return 4;
-}
+// The width moves, in endian.c. Named here because the table below has to name them, and prefixed
+// because that puts them in the linker's namespace.
+size_t protocore_wr16le(uint8_t *p, uint16_t v);
+size_t protocore_wr32le(uint8_t *p, uint32_t v);
+size_t protocore_wr64le(uint8_t *p, uint64_t v);
+uint16_t protocore_rd16le(const uint8_t *p);
+uint32_t protocore_rd32le(const uint8_t *p);
+uint64_t protocore_rd64le(const uint8_t *p);
+size_t protocore_wr16be(uint8_t *p, uint16_t v);
+size_t protocore_wr32be(uint8_t *p, uint32_t v);
+size_t protocore_wr64be(uint8_t *p, uint64_t v);
+uint16_t protocore_rd16be(const uint8_t *p);
+uint32_t protocore_rd32be(const uint8_t *p);
+uint64_t protocore_rd64be(const uint8_t *p);
 
-/** @brief Write @p v little-endian at @p p. @return 8. */
-PROTOCORE_INLINE size_t protocore_wr64le(uint8_t *p, uint64_t v)
-{
-    for (int i = 0; i < 8; i++)
-    {
-        p[i] = (uint8_t)(v >> (8 * i));
-    }
-    return 8;
-}
+/**
+ * @brief The names, aliased.
+ *
+ * `static const` and initialized here, not declared `extern` against a definition in the .c: a
+ * translation unit that can see this initializer knows which function each member holds, so a member
+ * read folds away and the call to the move in endian.c is direct, leaving the table referenced by
+ * nothing for the linker to drop.
+ *
+ * `unused` because this header reaches files that take none of it.
+ */
+// Designated, so a member's position in the struct does not decide what it binds to.
+static const EndianNs endian __attribute__((unused)) = {.wr16le = protocore_wr16le,
+                                                        .wr32le = protocore_wr32le,
+                                                        .wr64le = protocore_wr64le,
+                                                        .rd16le = protocore_rd16le,
+                                                        .rd32le = protocore_rd32le,
+                                                        .rd64le = protocore_rd64le,
+                                                        .wr16be = protocore_wr16be,
+                                                        .wr32be = protocore_wr32be,
+                                                        .wr64be = protocore_wr64be,
+                                                        .rd16be = protocore_rd16be,
+                                                        .rd32be = protocore_rd32be,
+                                                        .rd64be = protocore_rd64be};
 
-/** @brief Read a little-endian u16 at @p p. */
-PROTOCORE_INLINE uint16_t protocore_rd16le(const uint8_t *p)
-{
-    return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
-}
-
-/** @brief Read a little-endian u32 at @p p. */
-PROTOCORE_INLINE uint32_t protocore_rd32le(const uint8_t *p)
-{
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
-}
-
-/** @brief Read a little-endian u64 at @p p. */
-PROTOCORE_INLINE uint64_t protocore_rd64le(const uint8_t *p)
-{
-    uint64_t v = 0;
-    for (int i = 0; i < 8; i++)
-    {
-        v |= (uint64_t)p[i] << (8 * i);
-    }
-    return v;
-}
-
-// --- big-endian (network order) -----------------------------------------------------------------
-
-/** @brief Write @p v big-endian at @p p. @return 2. */
-PROTOCORE_INLINE size_t protocore_wr16be(uint8_t *p, uint16_t v)
-{
-    p[0] = (uint8_t)(v >> 8);
-    p[1] = (uint8_t)v;
-    return 2;
-}
-
-/** @brief Write @p v big-endian at @p p. @return 4. */
-PROTOCORE_INLINE size_t protocore_wr32be(uint8_t *p, uint32_t v)
-{
-    p[0] = (uint8_t)(v >> 24);
-    p[1] = (uint8_t)(v >> 16);
-    p[2] = (uint8_t)(v >> 8);
-    p[3] = (uint8_t)v;
-    return 4;
-}
-
-/** @brief Write @p v big-endian at @p p. @return 8. */
-PROTOCORE_INLINE size_t protocore_wr64be(uint8_t *p, uint64_t v)
-{
-    for (int i = 0; i < 8; i++)
-    {
-        p[i] = (uint8_t)(v >> (8 * (7 - i)));
-    }
-    return 8;
-}
-
-/** @brief Read a big-endian u16 at @p p. */
-PROTOCORE_INLINE uint16_t protocore_rd16be(const uint8_t *p)
-{
-    return (uint16_t)(((uint16_t)p[0] << 8) | (uint16_t)p[1]);
-}
-
-/** @brief Read a big-endian u32 at @p p. */
-PROTOCORE_INLINE uint32_t protocore_rd32be(const uint8_t *p)
-{
-    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
-}
-
-/** @brief Read a big-endian u64 at @p p. */
-PROTOCORE_INLINE uint64_t protocore_rd64be(const uint8_t *p)
-{
-    uint64_t v = 0;
-    for (int i = 0; i < 8; i++)
-    {
-        v = (v << 8) | p[i];
-    }
-    return v;
-}
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENDIAN_H

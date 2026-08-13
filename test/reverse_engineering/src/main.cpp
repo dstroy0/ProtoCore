@@ -23,13 +23,13 @@
  * **DAQ_FRONTEND_ADC_DMA** (build env `daq_adc_dma`). The bare-metal case for a bench with
  * no scope: an external high-speed ADC (AD9226 - 12-bit/65 MSPS single, or AD9238 - 12-bit/
  * 20-65 MSPS dual) behind an FPGA/CPLD burst-capture front end (its 12-bit parallel output
- * bus is far beyond an ESP32's reach directly - see services/peripherals/ad9238/ad9238.h) drains a
+ * bus is far beyond an ESP32's reach directly - see server/peripherals/ad9238/ad9238.h) drains a
  * triggered burst into this node over SPI or UART DMA (mmgr/dma, PROTOCORE_DMA_SPI /
  * PROTOCORE_DMA_UART), handed off ISR-safe through the preempting work queue's DMA lane
  * (services/system/preempt_queue) to server/signaling/trace_capture, which assembles the pre/post-trigger
  * window and fires the same network egress. AD9238's SPI *configuration* port (power-down,
  * output format, test pattern - not the sample data path) is set up over the real Arduino
- * SPI library via services/peripherals/ad9238's codec, with a write/read-back self-test at boot.
+ * SPI library via server/peripherals/ad9238's codec, with a write/read-back self-test at boot.
  *
  * ## Analog front end (both DAQ_FRONTEND_ADC_DMA and an external scope probe)
  *
@@ -73,8 +73,8 @@
 #else
 #include "mmgr/dma.h"
 #include "server/signaling/trace_capture.h"
-#include "server/system/preempt_queue.h"
-#include "services/peripherals/ad9238/ad9238.h"
+#include "server/core/preempt_queue.h"
+#include "server/peripherals/ad9238/ad9238.h"
 #include <SPI.h>
 #endif
 

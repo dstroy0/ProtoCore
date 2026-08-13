@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the TCP relay / DNAT byte pump (services/net/relay): bidirectional transfer, the
+// Unit tests for the TCP relay / DNAT byte pump (server/net/relay): bidirectional transfer, the
 // backpressure carry (a send that accepts partial writes), independent half-close with shutdown
 // propagation, a large multi-step transfer (byte-exact), and a seam error. Two mock sockets stand
 // in for the inbound and origin connections.
 
-#include "services/net/relay/relay.h"
+#include "server/net/relay/relay.h"
 #include <string.h>
 
 #include <unity.h>

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the removable-storage hot-swap state machine
-// (services/storage/hotswap): the ABSENT/READY/FAULTED safeties that fault a volume after a run of
+// (server/storage/hotswap): the ABSENT/READY/FAULTED safeties that fault a volume after a run of
 // consecutive I/O errors, reset the run on any success, rate-limit remount probes, and serialize a
 // one-line /health status. Everything benched here is the pure host-testable core - each core
 // function takes an explicit `now` and touches no clock, and protocore_hotswap_json() reads only the
@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/storage/hotswap/hotswap.h"
+#include "server/storage/hotswap/hotswap.h"
 
 #include <stdbool.h>
 #include <stddef.h>

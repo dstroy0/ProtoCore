@@ -8,13 +8,13 @@
 //
 // The capture lives in test/mocks/protocore_net_host.h, which backs the platform seam on a host build.
 
-#include "services/peripherals/i2c.h"
-#include "services/peripherals/ina219/ina219.h"
-#include "services/peripherals/pca9685/pca9685.h"
-#include "services/peripherals/rtc/rtc.h"
-#include "services/peripherals/sht3x/sht3x.h"
-#include "services/peripherals/smbus.h"
-#include "services/peripherals/spi.h"
+#include "server/peripherals/i2c.h"
+#include "server/peripherals/ina219/ina219.h"
+#include "server/peripherals/pca9685/pca9685.h"
+#include "server/peripherals/rtc/rtc.h"
+#include "server/peripherals/sht3x/sht3x.h"
+#include "server/peripherals/smbus.h"
+#include "server/peripherals/spi.h"
 #include <unity.h>
 
 void setUp(void)

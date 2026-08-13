@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the PN532 NFC frame codec (services/peripherals/pn532): the NXP PN532
+// On-device CCOUNT microbenchmark for the PN532 NFC frame codec (server/peripherals/pn532): the NXP PN532
 // "normal information frame" (00 | 00 FF | LEN | LCS | TFI | PData | DCS | 00) build + parse, its
 // two running checksums (LCS over LEN, DCS over TFI+PData), and the 6-byte ACK detect/build - all
 // pure (protocore_pn532_build_frame / parse_frame / is_ack / build_ack carry no I2C/SPI/HSU of their own;
@@ -16,7 +16,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/peripherals/pn532/pn532.h"
+#include "server/peripherals/pn532/pn532.h"
 
 #include <stdbool.h>
 #include <stddef.h>

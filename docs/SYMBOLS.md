@@ -162,7 +162,7 @@ a tree this deep; the filename form lands at median 20.
 | Header                                                        | Guard                        | Length |
 | ------------------------------------------------------------- | ---------------------------- | ------ |
 | `services/timing_position/gnss/ntrip_caster_listener.h`       | `PROTOCORE_NTRIP_LISTENER_H` | 26     |
-| `services/system/provisioning_service/provisioning_service.h` | `PROTOCORE_PROVISIONING_H`   | 25     |
+| `server/core/provisioning_service/provisioning_service.h` | `PROTOCORE_PROVISIONING_H`   | 25     |
 
 `caster` is implied by `ntrip`, and a `_service` header is a service. `check_symbols.py` rejects any
 guard that is neither the filename form nor a listed exception; it raises rather than inventing a
